@@ -16,6 +16,10 @@ import (
 
 	"helm.sh/helm/v3/pkg/chart"
 	appsv1 "k8s.io/api/apps/v1"
+	// kompose builds its autoscaler out of the v2beta2 structs while stamping
+	// apiVersion: autoscaling/v2 on it, so this is the type that comes back even
+	// though the rendered template is a v2 object.
+	autoscalingv2beta2 "k8s.io/api/autoscaling/v2beta2"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	kresource "k8s.io/apimachinery/pkg/api/resource"
@@ -214,15 +218,19 @@ func writeChart(opts Options, resources []runtime.Object, composeObj kobject.Kom
 
 	// Renaming only metadata.name leaves the pod-template labels intact, so the
 	// workload's Service keeps selecting it.
+	renamedFrom := ""
 	if primary.renameTarget != nil {
+		renamedFrom = primary.renameTarget.GetName()
 		result.Notices = append(result.Notices, fmt.Sprintf(
-			"renamed workload %q to %q: the app store requires a Deployment/StatefulSet named after the app", primary.renameTarget.GetName(), opts.Name))
+			"renamed workload %q to %q: the app store requires a Deployment/StatefulSet named after the app", renamedFrom, opts.Name))
 		primary.renameTarget.SetName(opts.Name)
 	}
+	alignAutoscalers(resources, renamedFrom, opts.Name)
 	if primary.renameBlocked {
 		result.Notices = append(result.Notices, fmt.Sprintf(
 			"workload %q already carries the app name, so the workload behind entrance %q kept its own name and nothing was renamed", opts.Name, host))
 	}
+	result.Notices = append(result.Notices, governingServiceNotices(resources, services)...)
 
 	templatesDir := filepath.Join(opts.OutputDir, "templates")
 	if err := os.MkdirAll(templatesDir, os.ModePerm); err != nil {
@@ -446,6 +454,64 @@ func collectServices(resources []runtime.Object) []*corev1.Service {
 		}
 	}
 	return services
+}
+
+// alignAutoscalers points every HPA kompose emitted at the workload it belongs
+// to. kompose names the scale target after the compose service and hardcodes
+// Deployment as its kind, so the target dangles once the primary workload takes
+// the app name, and it names the wrong kind whenever a controller label moved the
+// service to a StatefulSet. A target no workload carries is left alone rather
+// than guessed at.
+func alignAutoscalers(resources []runtime.Object, renamedFrom, renamedTo string) {
+	kinds := make(map[string]string)
+	for _, r := range resources {
+		switch obj := r.(type) {
+		case *appsv1.Deployment:
+			kinds[obj.GetName()] = "Deployment"
+		case *appsv1.StatefulSet:
+			kinds[obj.GetName()] = "StatefulSet"
+		}
+	}
+
+	for _, r := range resources {
+		hpa, ok := r.(*autoscalingv2beta2.HorizontalPodAutoscaler)
+		if !ok {
+			continue
+		}
+		target := hpa.Spec.ScaleTargetRef.Name
+		if renamedFrom != "" && target == renamedFrom {
+			target = renamedTo
+		}
+		kind, known := kinds[target]
+		if !known {
+			continue
+		}
+		hpa.Spec.ScaleTargetRef.Name, hpa.Spec.ScaleTargetRef.Kind = target, kind
+	}
+}
+
+// governingServiceNotices reports a StatefulSet pointed at a governing Service
+// the chart does not carry: kompose names one after the compose service but only
+// creates it when that service declares a port. Kubernetes accepts the
+// StatefulSet either way, so nothing fails until something tries to resolve a
+// pod's stable name.
+func governingServiceNotices(resources []runtime.Object, services []*corev1.Service) []string {
+	present := make(map[string]bool, len(services))
+	for _, svc := range services {
+		present[svc.GetName()] = true
+	}
+
+	notices := make([]string, 0)
+	for _, r := range resources {
+		sts, ok := r.(*appsv1.StatefulSet)
+		if !ok || sts.Spec.ServiceName == "" || present[sts.Spec.ServiceName] {
+			continue
+		}
+		notices = append(notices, fmt.Sprintf(
+			"StatefulSet %q is governed by Service %q, which the chart does not contain because the compose service declares no ports: its pods get no resolvable names, so declare a port or drop the %s label",
+			sts.GetName(), sts.Spec.ServiceName, komposeControllerLabel))
+	}
+	return notices
 }
 
 func collectWorkloads(resources []runtime.Object) []workloadRef {
@@ -779,6 +845,10 @@ func composeNotices(composeObj kobject.KomposeObject) []string {
 					"service %q sets deploy.mode: global, but was rendered as a %s rather than a DaemonSet, for the same reason", name, kind))
 			}
 		}
+		if label := hpaLabelOf(service.Labels); label != "" {
+			notices = append(notices, fmt.Sprintf(
+				"service %q sets %s, so the chart carries a HorizontalPodAutoscaler driving the same spec.replicas as workloadReplicas: Olares installs, suspends and resumes by scaling replicas, so delete the autoscaler or keep its workload out of workloadReplicas", name, label))
+		}
 		if isDatastoreImage(service.Image) {
 			notices = append(notices, fmt.Sprintf(
 				"service %q runs %q, which looks like a bundled datastore: replace it with Olares system middleware plus an options.dependencies entry, and drop its workload and volumes", name, service.Image))
@@ -786,6 +856,22 @@ func composeNotices(composeObj kobject.KomposeObject) []string {
 		notices = append(notices, bindMountNotices(name, service)...)
 	}
 	return notices
+}
+
+// hpaLabelOf returns the first autoscaler label a service carries, which is what
+// makes kompose emit a HorizontalPodAutoscaler alongside the workload.
+func hpaLabelOf(labels map[string]string) string {
+	for _, label := range []string{
+		"kompose.hpa.replicas.min",
+		"kompose.hpa.replicas.max",
+		"kompose.hpa.cpu",
+		"kompose.hpa.memory",
+	} {
+		if _, ok := labels[label]; ok {
+			return label
+		}
+	}
+	return ""
 }
 
 // bindMountNotices flags compose bind mounts, which kompose either skips, drops

@@ -75,6 +75,7 @@ func TestFromComposeProducesV3LintableChart(t *testing.T) {
 		t.Fatalf("olares dependency version = %q, want %q", systemDependency.Version, olaresSystemDepVersion)
 	}
 
+	assertChartInvariants(t, chartDir)
 	if err := oac.Lint(chartDir, oac.WithAutoOwnerScenarios()); err != nil {
 		t.Fatalf("freshly scaffolded chart must pass lint: %v", err)
 	}
@@ -159,6 +160,7 @@ volumes:
 		}
 	}
 
+	assertChartInvariants(t, chartDir)
 	if err := oac.Lint(chartDir, oac.WithAutoOwnerScenarios()); err != nil {
 		t.Fatalf("multi-service chart must pass lint: %v", err)
 	}
@@ -218,6 +220,7 @@ func TestFromComposeRestartNoBecomesDeployment(t *testing.T) {
 		t.Fatal("converting restart: no into a Deployment must be reported")
 	}
 
+	assertChartInvariants(t, chartDir)
 	if err := oac.Lint(chartDir, oac.WithAutoOwnerScenarios()); err != nil {
 		t.Fatalf("chart must pass lint: %v", err)
 	}
@@ -286,6 +289,7 @@ func TestFromComposeEntranceLabelBeatsAppNamedWorkload(t *testing.T) {
 		t.Fatalf("the skipped rename must be explained, notices: %v", result.Notices)
 	}
 
+	assertChartInvariants(t, chartDir)
 	if err := oac.Lint(chartDir, oac.WithAutoOwnerScenarios()); err != nil {
 		t.Fatalf("chart must pass lint: %v", err)
 	}
@@ -412,6 +416,7 @@ volumes:
 		t.Fatalf("ingress must point at the rendered service name:\n%s", body)
 	}
 
+	assertChartInvariants(t, chartDir)
 	if err := oac.Lint(chartDir, oac.WithAutoOwnerScenarios()); err != nil {
 		t.Fatalf("chart must pass lint: %v", err)
 	}
@@ -531,6 +536,7 @@ volumes:
 		t.Fatalf("workloadReplicas = %#v, want cronapp and backup", cfg.WorkloadReplicas)
 	}
 
+	assertChartInvariants(t, chartDir)
 	if err := oac.Lint(chartDir, oac.WithAutoOwnerScenarios()); err != nil {
 		t.Fatalf("chart must pass lint: %v", err)
 	}
@@ -570,6 +576,8 @@ func TestFromComposeReportsInvalidServiceName(t *testing.T) {
 	if body := readTemplate(t, chartDir, "service-1web.yaml"); !strings.Contains(body, "name: 1web") {
 		t.Fatalf("the Service must keep the name kompose selected on:\n%s", body)
 	}
+	// The Service name is the one thing left broken, and it is reported.
+	assertChartInvariants(t, chartDir, `Service/1web: metadata.name "1web"`)
 }
 
 // TestFromComposeReportsLostSemanticsForLabeledController pins that the notices
@@ -624,7 +632,12 @@ func TestFromComposeReportsLostSemanticsForLabeledController(t *testing.T) {
 	if strings.Contains(notices, `service "store" sets restart: no, but was rendered as a Deployment`) {
 		t.Fatalf("a labeled controller must not be described as a Deployment, notices: %v", result.Notices)
 	}
-
+	// kompose only creates a Service for a compose service with ports, so a
+	// portless StatefulSet is left governed by one that does not exist.
+	if !strings.Contains(notices, `StatefulSet "store" is governed by Service "store", which the chart does not contain`) {
+		t.Fatalf("a missing governing Service must be reported, notices: %v", result.Notices)
+	}
+	assertChartInvariants(t, chartDir, `spec.serviceName "store"`)
 	if err := oac.Lint(chartDir, oac.WithAutoOwnerScenarios()); err != nil {
 		t.Fatalf("chart must pass lint: %v", err)
 	}
@@ -680,6 +693,9 @@ func TestFromComposeDoesNotNameAWorkloadKomposeSkipped(t *testing.T) {
 	if strings.Contains(strings.Join(result.Notices, "\n"), `service "odd" sets restart: no`) {
 		t.Fatalf("a service with no workload must not be described as one, notices: %v", result.Notices)
 	}
+	// The Service kompose still emits for it has nothing to select, which is the
+	// whole point of the case.
+	assertChartInvariants(t, chartDir, "Service/odd: spec.selector")
 }
 
 // TestFromComposeNormalizesServiceReferencesOutsidePods pins the two Service
@@ -728,6 +744,7 @@ func TestFromComposeNormalizesServiceReferencesOutsidePods(t *testing.T) {
 		t.Fatalf("the Ingress backend must name the Service as it is now called:\n%s", ing)
 	}
 
+	assertChartInvariants(t, chartDir)
 	if err := oac.Lint(chartDir, oac.WithAutoOwnerScenarios()); err != nil {
 		t.Fatalf("chart must pass lint: %v", err)
 	}
@@ -780,6 +797,8 @@ func TestFromComposeRepairsTrimmedNameAndReportsSelector(t *testing.T) {
 	if !strings.Contains(strings.Join(result.Notices, "\n"), want) {
 		t.Fatalf("notices must contain %q, got: %v", want, result.Notices)
 	}
+	// Everything still broken is that one label value, which is reported.
+	assertChartInvariants(t, chartDir, `"-web" is invalid`)
 }
 
 // TestFromComposeReportsOverlongSelector covers the other way the selector
@@ -822,6 +841,64 @@ func TestFromComposeReportsOverlongSelector(t *testing.T) {
 	}
 	if !strings.Contains(notices, "stay under 64 characters") {
 		t.Fatalf("the notice must name the length as a cause, notices: %v", result.Notices)
+	}
+	// Everything still broken carries the over-long name, and it is reported.
+	assertChartInvariants(t, chartDir, long)
+}
+
+// TestFromComposeRetargetsHPAOnRename covers the autoscaler kompose emits from
+// the hpa labels: it names the scale target after the compose service, which the
+// primary workload stops being once it takes the app name, and it hardcodes
+// Deployment as the kind whatever the controller label asked for.
+func TestFromComposeRetargetsHPAOnRename(t *testing.T) {
+	root := t.TempDir()
+	composePath := filepath.Join(root, "compose.yaml")
+	compose := []byte(`services:
+  web:
+    image: nginx:1.27
+    ports:
+      - "8080:80"
+    labels:
+      kompose.hpa.replicas.max: "3"
+  store:
+    image: postgres:16
+    ports:
+      - "5432:5432"
+    labels:
+      kompose.controller.type: statefulset
+      kompose.hpa.replicas.max: "2"
+`)
+	if err := os.WriteFile(composePath, compose, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	chartDir := filepath.Join(root, "hpaapp")
+	result, err := FromCompose(Options{
+		ComposeFiles: []string{composePath},
+		OutputDir:    chartDir,
+		Name:         "hpaapp",
+	})
+	if err != nil {
+		t.Fatalf("FromCompose() error: %v", err)
+	}
+
+	renamed := readTemplate(t, chartDir, "horizontalpodautoscaler-web.yaml")
+	if !strings.Contains(renamed, "name: hpaapp") || !strings.Contains(renamed, "kind: Deployment") {
+		t.Fatalf("the scale target must follow the workload to the app name:\n%s", renamed)
+	}
+	labeled := readTemplate(t, chartDir, "horizontalpodautoscaler-store.yaml")
+	if !strings.Contains(labeled, "kind: StatefulSet") {
+		t.Fatalf("the scale target must name the kind the workload really is:\n%s", labeled)
+	}
+
+	want := `service "web" sets kompose.hpa.replicas.max, so the chart carries a HorizontalPodAutoscaler`
+	if !strings.Contains(strings.Join(result.Notices, "\n"), want) {
+		t.Fatalf("notices must contain %q, got: %v", want, result.Notices)
+	}
+
+	assertChartInvariants(t, chartDir)
+	if err := oac.Lint(chartDir, oac.WithAutoOwnerScenarios()); err != nil {
+		t.Fatalf("chart must pass lint: %v", err)
 	}
 }
 
