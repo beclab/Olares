@@ -752,7 +752,7 @@ func composeNotices(composeObj kobject.KomposeObject) []string {
 		// workload at install time, and local lint has no way to see it.
 		if len(validation.IsValidLabelValue(name)) > 0 {
 			notices = append(notices, fmt.Sprintf(
-				"compose service %q becomes the pod selector value %q, which Kubernetes rejects: rename the compose service to start and end with a letter or digit", service.Name, name))
+				"compose service %q becomes the pod selector value %q, which Kubernetes will not accept as a label value: rename the compose service to start and end with a letter or digit and stay under 64 characters", service.Name, name))
 		}
 		switch {
 		case service.Image == "":

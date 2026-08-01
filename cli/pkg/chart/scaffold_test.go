@@ -776,9 +776,52 @@ func TestFromComposeRepairsTrimmedNameAndReportsSelector(t *testing.T) {
 		t.Fatalf("the Service must be renamed to a valid name:\n%s", svc)
 	}
 
-	want := `compose service "_web" becomes the pod selector value "-web", which Kubernetes rejects`
+	want := `compose service "_web" becomes the pod selector value "-web", which Kubernetes will not accept as a label value`
 	if !strings.Contains(strings.Join(result.Notices, "\n"), want) {
 		t.Fatalf("notices must contain %q, got: %v", want, result.Notices)
+	}
+}
+
+// TestFromComposeReportsOverlongSelector covers the other way the selector
+// kompose derives can fail: 64 characters is one too many for a label value,
+// while the name is otherwise valid, so the notice must not send the reader
+// looking at its first and last character. Nothing else reports it — the Service
+// name rule is a pattern, and a pattern says nothing about length.
+func TestFromComposeReportsOverlongSelector(t *testing.T) {
+	root := t.TempDir()
+	long := strings.Repeat("a", 64)
+	composePath := filepath.Join(root, "compose.yaml")
+	compose := []byte(`services:
+  front:
+    image: nginx:1.27
+    ports:
+      - "8080:80"
+    labels:
+      olares.service.type: Entrance
+  ` + long + `:
+    image: alpine:3.20
+    command: ["sleep", "3600"]
+`)
+	if err := os.WriteFile(composePath, compose, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	chartDir := filepath.Join(root, "longapp")
+	result, err := FromCompose(Options{
+		ComposeFiles: []string{composePath},
+		OutputDir:    chartDir,
+		Name:         "longapp",
+	})
+	if err != nil {
+		t.Fatalf("FromCompose() error: %v", err)
+	}
+
+	notices := strings.Join(result.Notices, "\n")
+	if !strings.Contains(notices, `compose service "`+long+`" becomes the pod selector value`) {
+		t.Fatalf("an over-long compose name must be reported, notices: %v", result.Notices)
+	}
+	if !strings.Contains(notices, "stay under 64 characters") {
+		t.Fatalf("the notice must name the length as a cause, notices: %v", result.Notices)
 	}
 }
 
