@@ -682,6 +682,106 @@ func TestFromComposeDoesNotNameAWorkloadKomposeSkipped(t *testing.T) {
 	}
 }
 
+// TestFromComposeNormalizesServiceReferencesOutsidePods pins the two Service
+// references that live outside a pod template: a StatefulSet's governing service
+// and an Ingress backend. kompose writes the first with the raw compose name and
+// the second with its own normalized one, so renaming the Service to a valid name
+// leaves one of them dangling unless both are rewritten with it.
+func TestFromComposeNormalizesServiceReferencesOutsidePods(t *testing.T) {
+	root := t.TempDir()
+	composePath := filepath.Join(root, "compose.yaml")
+	compose := []byte(`services:
+  front:
+    image: nginx:1.27
+    ports:
+      - "8080:80"
+    labels:
+      olares.service.type: Entrance
+  web_app:
+    image: nginx:1.27
+    ports:
+      - "9000:9000"
+    labels:
+      kompose.controller.type: statefulset
+      kompose.service.expose: "web.example.com"
+`)
+	if err := os.WriteFile(composePath, compose, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	chartDir := filepath.Join(root, "refapp")
+	if _, err := FromCompose(Options{
+		ComposeFiles: []string{composePath},
+		OutputDir:    chartDir,
+		Name:         "refapp",
+	}); err != nil {
+		t.Fatalf("FromCompose() error: %v", err)
+	}
+
+	if svc := readTemplate(t, chartDir, "service-web-app.yaml"); !strings.Contains(svc, "name: web-app") {
+		t.Fatalf("the Service must be renamed to a valid name:\n%s", svc)
+	}
+	if sts := readTemplate(t, chartDir, "statefulset-web-app.yaml"); !strings.Contains(sts, "serviceName: web-app") {
+		t.Fatalf("serviceName must name the Service as it is now called:\n%s", sts)
+	}
+	if ing := readTemplate(t, chartDir, "ingress-web-app.yaml"); !strings.Contains(ing, "name: web-app") {
+		t.Fatalf("the Ingress backend must name the Service as it is now called:\n%s", ing)
+	}
+
+	if err := oac.Lint(chartDir, oac.WithAutoOwnerScenarios()); err != nil {
+		t.Fatalf("chart must pass lint: %v", err)
+	}
+}
+
+// TestFromComposeRepairsTrimmedNameAndReportsSelector covers a compose name that
+// needs trimming to be a valid Kubernetes name (_web): the Ingress backend has to
+// follow the Service to the trimmed name, and the selector kompose derived from
+// the same compose name (-web) is not a valid label value at all — which nothing
+// here can repair and lint cannot see, so it has to be reported.
+func TestFromComposeRepairsTrimmedNameAndReportsSelector(t *testing.T) {
+	root := t.TempDir()
+	composePath := filepath.Join(root, "compose.yaml")
+	compose := []byte(`services:
+  front:
+    image: nginx:1.27
+    ports:
+      - "8080:80"
+    labels:
+      olares.service.type: Entrance
+  _web:
+    image: nginx:1.27
+    ports:
+      - "9000:9000"
+    labels:
+      kompose.service.expose: "web.example.com"
+`)
+	if err := os.WriteFile(composePath, compose, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	chartDir := filepath.Join(root, "trimapp")
+	result, err := FromCompose(Options{
+		ComposeFiles: []string{composePath},
+		OutputDir:    chartDir,
+		Name:         "trimapp",
+	})
+	if err != nil {
+		t.Fatalf("FromCompose() error: %v", err)
+	}
+
+	if ing := readTemplate(t, chartDir, "ingress-web.yaml"); !strings.Contains(ing, "name: web") || strings.Contains(ing, "name: -web") {
+		t.Fatalf("the Ingress backend must follow the Service to the trimmed name:\n%s", ing)
+	}
+	if svc := readTemplate(t, chartDir, "service-web.yaml"); !strings.Contains(svc, "name: web") {
+		t.Fatalf("the Service must be renamed to a valid name:\n%s", svc)
+	}
+
+	want := `compose service "_web" becomes the pod selector value "-web", which Kubernetes rejects`
+	if !strings.Contains(strings.Join(result.Notices, "\n"), want) {
+		t.Fatalf("notices must contain %q, got: %v", want, result.Notices)
+	}
+}
+
 func readTemplate(t *testing.T, chartDir, name string) string {
 	t.Helper()
 	return readFile(t, filepath.Join(chartDir, "templates", name))

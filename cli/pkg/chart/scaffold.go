@@ -17,9 +17,11 @@ import (
 	"helm.sh/helm/v3/pkg/chart"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	kresource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"sigs.k8s.io/yaml"
 )
 
@@ -572,19 +574,26 @@ func normalizeResourceNames(resources []runtime.Object) ([]string, error) {
 	}
 
 	for _, r := range resources {
+		switch obj := r.(type) {
+		case *appsv1.StatefulSet:
+			// The governing Service is another name kompose takes from the raw
+			// compose service, so the Service object no longer carries it.
+			obj.Spec.ServiceName = normalizeDNSLabel(obj.Spec.ServiceName)
+			// A claim template's name doubles as the volume name its mounts use.
+			for i := range obj.Spec.VolumeClaimTemplates {
+				claim := &obj.Spec.VolumeClaimTemplates[i]
+				claim.Name = normalizeDNSLabel(claim.Name)
+			}
+		case *networkingv1.Ingress:
+			normalizeIngressBackends(obj)
+		}
+
 		spec := podSpecOf(r)
 		if spec == nil {
 			continue
 		}
 		if err := normalizePodSpecNames(spec, describeObject(r)); err != nil {
 			return nil, err
-		}
-		if sts, ok := r.(*appsv1.StatefulSet); ok {
-			// A claim template's name doubles as the volume name its mounts use.
-			for i := range sts.Spec.VolumeClaimTemplates {
-				claim := &sts.Spec.VolumeClaimTemplates[i]
-				claim.Name = normalizeDNSLabel(claim.Name)
-			}
 		}
 	}
 	return notices, nil
@@ -610,6 +619,23 @@ func normalizeDNSLabel(name string) string {
 		return name
 	}
 	return normalized
+}
+
+// normalizeIngressBackends normalizes the Service names a kompose.service.expose
+// Ingress routes to, which kompose writes with its own service-name rule rather
+// than the one it named the Service object with.
+func normalizeIngressBackends(ing *networkingv1.Ingress) {
+	for i := range ing.Spec.Rules {
+		http := ing.Spec.Rules[i].HTTP
+		if http == nil {
+			continue
+		}
+		for j := range http.Paths {
+			if backend := http.Paths[j].Backend.Service; backend != nil {
+				backend.Name = normalizeDNSLabel(backend.Name)
+			}
+		}
+	}
 }
 
 // normalizePodSpecNames normalizes every name a pod template points at, with the
@@ -720,6 +746,14 @@ func composeNotices(composeObj kobject.KomposeObject) []string {
 
 	for _, name := range names {
 		service := composeObj.ServiceConfigs[name]
+		// kompose normalized this name itself to build the selector it stamps on
+		// every object of the service, so normalizing the object names cannot
+		// repair it: a value Kubernetes rejects as a label fails the whole
+		// workload at install time, and local lint has no way to see it.
+		if len(validation.IsValidLabelValue(name)) > 0 {
+			notices = append(notices, fmt.Sprintf(
+				"compose service %q becomes the pod selector value %q, which Kubernetes rejects: rename the compose service to start and end with a letter or digit", service.Name, name))
+		}
 		switch {
 		case service.Image == "":
 			notices = append(notices, fmt.Sprintf(
