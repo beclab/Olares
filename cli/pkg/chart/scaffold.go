@@ -169,7 +169,8 @@ func writeChart(opts Options, resources []runtime.Object, composeObj kobject.Kom
 	// to match the rendered workloads exactly, so an autoscaler has nowhere to
 	// live in the chart whichever workload it points at. Dropped before anything
 	// else runs, so the rest of the conversion never has to know about the kind.
-	resources = withoutAutoscalers(resources)
+	resources, hpaNotices := withoutAutoscalers(resources)
+	result.Notices = append(result.Notices, hpaNotices...)
 
 	// kompose leaves the raw compose service name on Service objects (web_app),
 	// which is neither a valid Kubernetes object name nor a valid Olares
@@ -456,17 +457,31 @@ func collectServices(resources []runtime.Object) []*corev1.Service {
 }
 
 // withoutAutoscalers drops the HorizontalPodAutoscaler kompose renders from the
-// hpa labels. Matched by kind rather than by type, because kompose builds it out
-// of the v2beta2 structs while stamping apiVersion: autoscaling/v2 on it.
-func withoutAutoscalers(resources []runtime.Object) []runtime.Object {
+// hpa labels, and reports each one it dropped. Matched by kind rather than by
+// type, because kompose builds the object out of the v2beta2 structs while
+// stamping apiVersion: autoscaling/v2 on it.
+//
+// Reporting what was dropped rather than which labels asked for it keeps the two
+// from drifting: kompose could add a fifth hpa label without this going quiet.
+// It names the object, which kompose names after the compose service.
+func withoutAutoscalers(resources []runtime.Object) ([]runtime.Object, []string) {
 	kept := make([]runtime.Object, 0, len(resources))
+	notices := make([]string, 0)
 	for _, r := range resources {
-		if r.GetObjectKind().GroupVersionKind().Kind == "HorizontalPodAutoscaler" {
+		if r.GetObjectKind().GroupVersionKind().Kind != "HorizontalPodAutoscaler" {
+			kept = append(kept, r)
 			continue
 		}
-		kept = append(kept, r)
+		name := ""
+		if obj, ok := r.(metav1.Object); ok {
+			name = obj.GetName()
+		}
+		notices = append(notices, fmt.Sprintf(
+			"service %q sets kompose.hpa.* labels, and the HorizontalPodAutoscaler kompose renders from them was dropped: "+
+				"it would drive the same spec.replicas as workloadReplicas, which Olares owns to install, suspend and resume "+
+				"the app and which lint requires to match the workloads exactly", name))
 	}
-	return kept
+	return kept, notices
 }
 
 // governingServiceNotices reports a StatefulSet pointed at a governing Service
@@ -824,10 +839,6 @@ func composeNotices(composeObj kobject.KomposeObject) []string {
 					"service %q sets deploy.mode: global, but was rendered as a %s rather than a DaemonSet, for the same reason", name, kind))
 			}
 		}
-		if label := hpaLabelOf(service.Labels); label != "" {
-			notices = append(notices, fmt.Sprintf(
-				"service %q sets %s, and the HorizontalPodAutoscaler kompose renders from it was dropped: it would drive the same spec.replicas as workloadReplicas, which Olares owns to install, suspend and resume the app and which lint requires to match the workloads exactly", name, label))
-		}
 		if isDatastoreImage(service.Image) {
 			notices = append(notices, fmt.Sprintf(
 				"service %q runs %q, which looks like a bundled datastore: replace it with Olares system middleware plus an options.dependencies entry, and drop its workload and volumes", name, service.Image))
@@ -835,22 +846,6 @@ func composeNotices(composeObj kobject.KomposeObject) []string {
 		notices = append(notices, bindMountNotices(name, service)...)
 	}
 	return notices
-}
-
-// hpaLabelOf returns the first autoscaler label a service carries, which is what
-// makes kompose emit a HorizontalPodAutoscaler alongside the workload.
-func hpaLabelOf(labels map[string]string) string {
-	for _, label := range []string{
-		"kompose.hpa.replicas.min",
-		"kompose.hpa.replicas.max",
-		"kompose.hpa.cpu",
-		"kompose.hpa.memory",
-	} {
-		if _, ok := labels[label]; ok {
-			return label
-		}
-	}
-	return ""
 }
 
 // bindMountNotices flags compose bind mounts, which kompose either skips, drops

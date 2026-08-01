@@ -881,27 +881,38 @@ func TestFromComposeDropsAutoscalers(t *testing.T) {
 		t.Fatalf("FromCompose() error: %v", err)
 	}
 
-	autoscalers, err := filepath.Glob(filepath.Join(chartDir, "templates", "horizontalpodautoscaler-*.yaml"))
+	// Checked by content rather than by template name, since the file name comes
+	// from the writer the filter runs ahead of.
+	templates, err := os.ReadDir(filepath.Join(chartDir, "templates"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(autoscalers) > 0 {
-		t.Fatalf("no autoscaler may reach the chart, got: %v", autoscalers)
+	for _, entry := range templates {
+		if strings.Contains(readTemplate(t, chartDir, entry.Name()), "HorizontalPodAutoscaler") {
+			t.Fatalf("no autoscaler may reach the chart, %s carries one", entry.Name())
+		}
 	}
 
 	notices := strings.Join(result.Notices, "\n")
 	for _, want := range []string{
-		`service "web" sets kompose.hpa.replicas.max, and the HorizontalPodAutoscaler kompose renders from it was dropped`,
-		`service "store" sets kompose.hpa.replicas.max, and the HorizontalPodAutoscaler kompose renders from it was dropped`,
+		`service "web" sets kompose.hpa.* labels, and the HorizontalPodAutoscaler kompose renders from them was dropped`,
+		`service "store" sets kompose.hpa.* labels, and the HorizontalPodAutoscaler kompose renders from them was dropped`,
 	} {
 		if !strings.Contains(notices, want) {
 			t.Fatalf("notices must contain %q, got: %v", want, result.Notices)
 		}
 	}
 
-	// The workloads the autoscalers targeted are untouched by the drop.
-	readTemplate(t, chartDir, "deployment-hpaapp.yaml")
-	readTemplate(t, chartDir, "statefulset-store.yaml")
+	// kompose zeroes a hpa-labeled service's replica count for the autoscaler to
+	// own, so the workloads have to come out driven by values all the same.
+	for name, want := range map[string]string{
+		"deployment-hpaapp.yaml": "replicas: {{ .Values.workloads.hpaapp.replicaCount }}",
+		"statefulset-store.yaml": "replicas: {{ .Values.workloads.store.replicaCount }}",
+	} {
+		if workload := readTemplate(t, chartDir, name); !strings.Contains(workload, want) {
+			t.Fatalf("%s must contain %q:\n%s", name, want, workload)
+		}
+	}
 	var cfg manifest.AppConfiguration
 	if err := yaml.Unmarshal([]byte(readFile(t, filepath.Join(chartDir, appCfgFileName))), &cfg); err != nil {
 		t.Fatal(err)
