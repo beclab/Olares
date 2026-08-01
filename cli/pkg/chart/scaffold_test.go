@@ -572,6 +572,64 @@ func TestFromComposeReportsInvalidServiceName(t *testing.T) {
 	}
 }
 
+// TestFromComposeReportsLostSemanticsForLabeledController pins that the notices
+// follow the workload a service really renders as: kompose decides the CronJob
+// and bare-Pod question from the pinned controller alone, so a service moved to a
+// StatefulSet by label loses its schedule and its restart policy just the same.
+func TestFromComposeReportsLostSemanticsForLabeledController(t *testing.T) {
+	root := t.TempDir()
+	composePath := filepath.Join(root, "compose.yaml")
+	compose := []byte(`services:
+  web:
+    image: nginx:1.27
+    ports:
+      - "8080:80"
+  store:
+    image: alpine:3.20
+    restart: "no"
+    command: ["sh", "-c", "echo store"]
+    labels:
+      kompose.controller.type: statefulset
+      kompose.cronjob.schedule: "0 3 * * *"
+`)
+	if err := os.WriteFile(composePath, compose, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	chartDir := filepath.Join(root, "mixapp")
+	result, err := FromCompose(Options{
+		ComposeFiles: []string{composePath},
+		OutputDir:    chartDir,
+		Name:         "mixapp",
+	})
+	if err != nil {
+		t.Fatalf("FromCompose() error: %v", err)
+	}
+
+	workload := readTemplate(t, chartDir, "statefulset-store.yaml")
+	if !strings.Contains(workload, "restartPolicy: Always") {
+		t.Fatalf("a StatefulSet pod template only accepts restartPolicy Always, got:\n%s", workload)
+	}
+
+	notices := strings.Join(result.Notices, "\n")
+	for _, want := range []string{
+		`service "store" sets kompose.cronjob.schedule "0 3 * * *"`,
+		"always-on StatefulSet",
+		"rendered as a StatefulSet with restartPolicy Always",
+	} {
+		if !strings.Contains(notices, want) {
+			t.Fatalf("notices must contain %q, got: %v", want, result.Notices)
+		}
+	}
+	if strings.Contains(notices, `service "store" sets restart: no, but was rendered as a Deployment`) {
+		t.Fatalf("a labeled controller must not be described as a Deployment, notices: %v", result.Notices)
+	}
+
+	if err := oac.Lint(chartDir, oac.WithAutoOwnerScenarios()); err != nil {
+		t.Fatalf("chart must pass lint: %v", err)
+	}
+}
+
 func readTemplate(t *testing.T, chartDir, name string) string {
 	t.Helper()
 	return readFile(t, filepath.Join(chartDir, "templates", name))

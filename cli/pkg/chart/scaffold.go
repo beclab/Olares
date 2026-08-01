@@ -12,6 +12,7 @@ import (
 	appv1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/api/manifest"
 	"github.com/kubernetes/kompose/pkg/kobject"
+	"github.com/kubernetes/kompose/pkg/transformer/kubernetes"
 
 	"helm.sh/helm/v3/pkg/chart"
 	appsv1 "k8s.io/api/apps/v1"
@@ -727,20 +728,21 @@ func composeNotices(composeObj kobject.KomposeObject) []string {
 			notices = append(notices, fmt.Sprintf(
 				"service %q builds %q locally: push that tag to a registry Olares can reach, for every architecture in spec.supportArch", name, service.Image))
 		}
-		// The notices below describe the pinned Deployment controller, which a
-		// service-level kompose.controller.type label overrides.
-		if renderedAsDeployment(service) {
+		// Pinning the controller costs the same compose semantics whichever
+		// workload kind a service ends up as, so the notices below name that kind
+		// rather than assuming the Deployment the conversion defaults to.
+		if kind := renderedWorkloadKind(service); kind != "" {
 			if service.CronJobSchedule != "" {
 				notices = append(notices, fmt.Sprintf(
-					"service %q sets kompose.cronjob.schedule %q, which was dropped: it renders as an always-on Deployment, so either schedule the work inside the container or add a CronJob template by hand and leave it out of workloadReplicas", name, service.CronJobSchedule))
+					"service %q sets kompose.cronjob.schedule %q, which was dropped: it renders as an always-on %s, so either schedule the work inside the container or add a CronJob template by hand and leave it out of workloadReplicas", name, service.CronJobSchedule, kind))
 			}
 			if service.Restart == "no" || service.Restart == "on-failure" {
 				notices = append(notices, fmt.Sprintf(
-					"service %q sets restart: %s, but was rendered as a Deployment: Olares installs, suspends and resumes apps by scaling replicas", name, service.Restart))
+					"service %q sets restart: %s, but was rendered as a %s with restartPolicy Always: Olares installs, suspends and resumes apps by scaling replicas", name, service.Restart, kind))
 			}
-			if service.DeployMode == "global" {
+			if service.DeployMode == "global" && kind != "DaemonSet" {
 				notices = append(notices, fmt.Sprintf(
-					"service %q sets deploy.mode: global, but was rendered as a Deployment rather than a DaemonSet, for the same reason", name))
+					"service %q sets deploy.mode: global, but was rendered as a %s rather than a DaemonSet, for the same reason", name, kind))
 			}
 		}
 		if isDatastoreImage(service.Image) {
@@ -795,11 +797,20 @@ func hostPathBecomesConfigMap(path string) bool {
 	return len(entries) > 0
 }
 
-// renderedAsDeployment reports whether the Deployment controller the conversion
-// pins actually took effect for a service.
-func renderedAsDeployment(service kobject.ServiceConfig) bool {
-	controller, ok := service.Labels[komposeControllerLabel]
-	return !ok || strings.EqualFold(controller, "deployment")
+// renderedWorkloadKind names the workload a service comes out as: the conversion
+// pins Deployment and only a kompose.controller.type label moves it. Any other
+// label value leaves kompose rendering no workload for the service at all, which
+// is reported as the empty string.
+func renderedWorkloadKind(service kobject.ServiceConfig) string {
+	switch strings.ToLower(service.Labels[komposeControllerLabel]) {
+	case "", kubernetes.DeploymentController:
+		return "Deployment"
+	case kubernetes.StatefulStateController:
+		return "StatefulSet"
+	case kubernetes.DaemonSetController:
+		return "DaemonSet"
+	}
+	return ""
 }
 
 // storageNotices flags the PVCs kompose derives from compose volumes: Olares apps
