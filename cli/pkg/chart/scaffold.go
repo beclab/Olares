@@ -798,12 +798,17 @@ func hostPathBecomesConfigMap(path string) bool {
 }
 
 // renderedWorkloadKind names the workload a service comes out as: the conversion
-// pins Deployment and only a kompose.controller.type label moves it. Any other
-// label value leaves kompose rendering no workload for the service at all, which
-// is reported as the empty string.
+// pins Deployment and only a kompose.controller.type label moves it. kompose
+// compares that label verbatim against its own lowercase controller names, so
+// every other value — a differently cased one included — leaves the service with
+// no workload at all, which is reported as the empty string.
 func renderedWorkloadKind(service kobject.ServiceConfig) string {
-	switch strings.ToLower(service.Labels[komposeControllerLabel]) {
-	case "", kubernetes.DeploymentController:
+	controller, labeled := service.Labels[komposeControllerLabel]
+	if !labeled {
+		return "Deployment"
+	}
+	switch controller {
+	case kubernetes.DeploymentController:
 		return "Deployment"
 	case kubernetes.StatefulStateController:
 		return "StatefulSet"

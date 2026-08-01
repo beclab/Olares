@@ -630,6 +630,58 @@ func TestFromComposeReportsLostSemanticsForLabeledController(t *testing.T) {
 	}
 }
 
+// TestFromComposeDoesNotNameAWorkloadKomposeSkipped pins that a controller label
+// kompose does not understand is not described as a workload: kompose matches the
+// value verbatim against its own lowercase names, so a differently cased one
+// renders nothing for that service.
+func TestFromComposeDoesNotNameAWorkloadKomposeSkipped(t *testing.T) {
+	root := t.TempDir()
+	composePath := filepath.Join(root, "compose.yaml")
+	compose := []byte(`services:
+  web:
+    image: nginx:1.27
+    ports:
+      - "8080:80"
+  odd:
+    image: alpine:3.20
+    restart: "no"
+    command: ["sleep", "3600"]
+    labels:
+      kompose.controller.type: StatefulSet
+    ports:
+      - "9000:9000"
+`)
+	if err := os.WriteFile(composePath, compose, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	chartDir := filepath.Join(root, "oddapp")
+	result, err := FromCompose(Options{
+		ComposeFiles: []string{composePath},
+		OutputDir:    chartDir,
+		Name:         "oddapp",
+	})
+	if err != nil {
+		t.Fatalf("FromCompose() error: %v", err)
+	}
+
+	entries, err := os.ReadDir(filepath.Join(chartDir, "templates"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range entries {
+		if strings.HasSuffix(entry.Name(), "-odd.yaml") && !strings.HasPrefix(entry.Name(), "service-") {
+			t.Fatalf("kompose renders no workload for this service, got template %q", entry.Name())
+		}
+	}
+
+	// Claiming a kind it never became would send the reader looking for a
+	// template that does not exist.
+	if strings.Contains(strings.Join(result.Notices, "\n"), `service "odd" sets restart: no`) {
+		t.Fatalf("a service with no workload must not be described as one, notices: %v", result.Notices)
+	}
+}
+
 func readTemplate(t *testing.T, chartDir, name string) string {
 	t.Helper()
 	return readFile(t, filepath.Join(chartDir, "templates", name))
