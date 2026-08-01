@@ -846,11 +846,10 @@ func TestFromComposeReportsOverlongSelector(t *testing.T) {
 	assertChartInvariants(t, chartDir, long)
 }
 
-// TestFromComposeRetargetsHPAOnRename covers the autoscaler kompose emits from
-// the hpa labels: it names the scale target after the compose service, which the
-// primary workload stops being once it takes the app name, and it hardcodes
-// Deployment as the kind whatever the controller label asked for.
-func TestFromComposeRetargetsHPAOnRename(t *testing.T) {
+// TestFromComposeDropsAutoscalers covers the autoscaler kompose emits from the
+// hpa labels: it fights workloadReplicas over spec.replicas, so it is left out of
+// the chart entirely and the workloads it targeted render as usual.
+func TestFromComposeDropsAutoscalers(t *testing.T) {
 	root := t.TempDir()
 	composePath := filepath.Join(root, "compose.yaml")
 	compose := []byte(`services:
@@ -882,18 +881,34 @@ func TestFromComposeRetargetsHPAOnRename(t *testing.T) {
 		t.Fatalf("FromCompose() error: %v", err)
 	}
 
-	renamed := readTemplate(t, chartDir, "horizontalpodautoscaler-web.yaml")
-	if !strings.Contains(renamed, "name: hpaapp") || !strings.Contains(renamed, "kind: Deployment") {
-		t.Fatalf("the scale target must follow the workload to the app name:\n%s", renamed)
+	autoscalers, err := filepath.Glob(filepath.Join(chartDir, "templates", "horizontalpodautoscaler-*.yaml"))
+	if err != nil {
+		t.Fatal(err)
 	}
-	labeled := readTemplate(t, chartDir, "horizontalpodautoscaler-store.yaml")
-	if !strings.Contains(labeled, "kind: StatefulSet") {
-		t.Fatalf("the scale target must name the kind the workload really is:\n%s", labeled)
+	if len(autoscalers) > 0 {
+		t.Fatalf("no autoscaler may reach the chart, got: %v", autoscalers)
 	}
 
-	want := `service "web" sets kompose.hpa.replicas.max, so the chart carries a HorizontalPodAutoscaler`
-	if !strings.Contains(strings.Join(result.Notices, "\n"), want) {
-		t.Fatalf("notices must contain %q, got: %v", want, result.Notices)
+	notices := strings.Join(result.Notices, "\n")
+	for _, want := range []string{
+		`service "web" sets kompose.hpa.replicas.max, and the HorizontalPodAutoscaler kompose renders from it was dropped`,
+		`service "store" sets kompose.hpa.replicas.max, and the HorizontalPodAutoscaler kompose renders from it was dropped`,
+	} {
+		if !strings.Contains(notices, want) {
+			t.Fatalf("notices must contain %q, got: %v", want, result.Notices)
+		}
+	}
+
+	// The workloads the autoscalers targeted are untouched by the drop.
+	readTemplate(t, chartDir, "deployment-hpaapp.yaml")
+	readTemplate(t, chartDir, "statefulset-store.yaml")
+	var cfg manifest.AppConfiguration
+	if err := yaml.Unmarshal([]byte(readFile(t, filepath.Join(chartDir, appCfgFileName))), &cfg); err != nil {
+		t.Fatal(err)
+	}
+	if cfg.WorkloadReplicas == nil ||
+		(*cfg.WorkloadReplicas)["hpaapp"] != 1 || (*cfg.WorkloadReplicas)["store"] != 1 {
+		t.Fatalf("workloadReplicas = %#v, want hpaapp and store", cfg.WorkloadReplicas)
 	}
 
 	assertChartInvariants(t, chartDir)
