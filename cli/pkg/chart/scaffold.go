@@ -553,8 +553,12 @@ func normalizeResourceNames(resources []runtime.Object) ([]string, error) {
 			continue
 		}
 		obj.SetName(normalized)
-		notices = append(notices, fmt.Sprintf("%s %q was renamed to %q to be a valid Kubernetes name: update any hostname hard-coded in a compose environment or command",
-			kind, name, normalized))
+		notice := fmt.Sprintf("%s %q was renamed to %q to be a valid Kubernetes name", kind, name, normalized)
+		if _, isService := r.(*corev1.Service); isService {
+			// Only a Service rename moves a hostname other containers may dial.
+			notice += ": update any hostname hard-coded in a compose environment or command"
+		}
+		notices = append(notices, notice)
 	}
 
 	for _, r := range resources {
@@ -566,9 +570,10 @@ func normalizeResourceNames(resources []runtime.Object) ([]string, error) {
 			return nil, err
 		}
 		if sts, ok := r.(*appsv1.StatefulSet); ok {
+			// A claim template's name doubles as the volume name its mounts use.
 			for i := range sts.Spec.VolumeClaimTemplates {
 				claim := &sts.Spec.VolumeClaimTemplates[i]
-				claim.Name = normalizeResourceName(claim.Name)
+				claim.Name = normalizeDNSLabel(claim.Name)
 			}
 		}
 	}
@@ -598,9 +603,9 @@ func normalizeDNSLabel(name string) string {
 }
 
 // normalizePodSpecNames normalizes every name a pod template points at, with the
-// same rule the objects themselves were normalized with. Pod volume and container
-// names have to be valid on their own too, so a renamed volume takes its mounts
-// along.
+// same rule the object it names was normalized with. Pod volume and container
+// names have to be valid on their own too — and as DNS labels, not the subdomains
+// an object name may be — so a renamed volume takes its mounts along.
 func normalizePodSpecNames(spec *corev1.PodSpec, owner string) error {
 	volumeNames := make(map[string]string)
 	for i := range spec.Volumes {
@@ -619,7 +624,9 @@ func normalizePodSpecNames(spec *corev1.PodSpec, owner string) error {
 			}
 		}
 
-		normalized := normalizeResourceName(vol.Name)
+		// A volume name is a DNS label, unlike the PVC or ConfigMap name it
+		// points at, which may legally carry dots.
+		normalized := normalizeDNSLabel(vol.Name)
 		if previous, clash := volumeNames[normalized]; clash {
 			return fmt.Errorf("%s mounts volumes %q and %q, which both become %q once normalized to valid Kubernetes names: "+
 				"rename one of them in the compose file", owner, previous, vol.Name, normalized)

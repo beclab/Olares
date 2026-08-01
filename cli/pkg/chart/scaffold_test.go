@@ -337,9 +337,9 @@ func TestFromComposeKeepsRenamedReferences(t *testing.T) {
 		t.Fatal(err)
 	}
 	composePath := filepath.Join(root, "compose.yaml")
-	// web.ui exercises the Service name kompose leaves dotted while labeling the
-	// pods (and the Ingress backend) with web-ui; PGData and Prod.env exercise
-	// the volume and env-file names it never lowercases.
+	// web.ui exercises the Service and container names kompose leaves dotted while
+	// labeling the pods (and the Ingress backend) with web-ui; PGData, my.data and
+	// Prod.env exercise the volume and env-file names it never fully normalizes.
 	compose := []byte(`services:
   web.ui:
     image: nginx:1.27
@@ -351,8 +351,10 @@ func TestFromComposeKeepsRenamedReferences(t *testing.T) {
       - "8080:80"
     volumes:
       - PGData:/var/lib/data
+      - my.data:/var/lib/more
 volumes:
   PGData:
+  my.data:
 `)
 	if err := os.WriteFile(composePath, compose, 0o600); err != nil {
 		t.Fatal(err)
@@ -378,8 +380,8 @@ volumes:
 		rendered.WriteString(readTemplate(t, chartDir, entry.Name()))
 	}
 	for _, want := range []string{
-		"service-web-ui.yaml", "ingress-web-ui.yaml",
-		"persistentvolumeclaim-pgdata.yaml", "configmap-prod-env.yaml",
+		"service-web-ui.yaml", "ingress-web-ui.yaml", "persistentvolumeclaim-pgdata.yaml",
+		"persistentvolumeclaim-my.data.yaml", "configmap-prod-env.yaml",
 	} {
 		if !names[want] {
 			t.Fatalf("missing template %q, got %v", want, names)
@@ -396,10 +398,15 @@ volumes:
 		}
 	}
 	workload := readTemplate(t, chartDir, "deployment-webui.yaml")
-	for _, want := range []string{"claimName: pgdata", "name: pgdata", "name: prod-env"} {
+	for _, want := range []string{"claimName: pgdata", "name: pgdata", "name: prod-env",
+		// A PVC name may carry a dot, a volume name may not, so the two differ.
+		"claimName: my.data", "name: my-data"} {
 		if !strings.Contains(workload, want) {
 			t.Fatalf("workload must reference the renamed object (%q):\n%s", want, workload)
 		}
+	}
+	if strings.Contains(workload, "name: my.data") {
+		t.Fatalf("a volume and its mounts must be a DNS label, without dots:\n%s", workload)
 	}
 	if body := readTemplate(t, chartDir, "ingress-web-ui.yaml"); !strings.Contains(body, "name: web-ui") {
 		t.Fatalf("ingress must point at the rendered service name:\n%s", body)
