@@ -51,11 +51,11 @@ const (
 var (
 	// invalidNameCharRE matches everything a Kubernetes object name may not
 	// contain; dnsLabelSepRE additionally folds the dots a DNS label may not
-	// contain either; entranceHostRE is the manifest's own constraint on
-	// entrance hosts.
+	// contain either. dns1035RE is the whole-name rule a Service has to satisfy,
+	// which is also the manifest's own constraint on entrance hosts.
 	invalidNameCharRE = regexp.MustCompile(`[^a-z0-9.-]`)
 	dnsLabelSepRE     = regexp.MustCompile(`[^a-z0-9-]`)
-	entranceHostRE    = regexp.MustCompile(`^[a-z]([-a-z0-9]*[a-z0-9])?$`)
+	dns1035RE         = regexp.MustCompile(`^[a-z]([-a-z0-9]*[a-z0-9])?$`)
 
 	// datastoreImageKeywords / datastorePorts drive the entrance heuristic: a
 	// bundled database is never the app's UI, and should become system
@@ -189,7 +189,7 @@ func writeChart(opts Options, resources []runtime.Object, composeObj kobject.Kom
 	if len(workloads) == 0 {
 		return nil, fmt.Errorf("no Deployment or StatefulSet was rendered from %s: "+
 			"Olares scales apps through workloadReplicas, so at least one service must become a replica-controlled workload "+
-			"(check for kompose.controller.type / kompose.cronjob.schedule labels on the compose services)",
+			"(check for kompose.controller.type labels on the compose services)",
 			strings.Join(opts.ComposeFiles, ", "))
 	}
 
@@ -204,9 +204,9 @@ func writeChart(opts Options, resources []runtime.Object, composeObj kobject.Kom
 		result.Notices = append(result.Notices, fmt.Sprintf(
 			"no service exposes a port, so entrance %s:%d is a placeholder: point it at a real service and port before deploying", host, port))
 	}
-	if !entranceHostRE.MatchString(host) {
+	if !dns1035RE.MatchString(host) {
 		result.Notices = append(result.Notices, fmt.Sprintf(
-			"entrance host %q does not match the Olares pattern %s: rename the compose service or fix the entrance by hand", host, entranceHostRE))
+			"entrance host %q does not match the Olares pattern %s: rename the compose service or fix the entrance by hand", host, dns1035RE))
 	}
 
 	// Renaming only metadata.name leaves the pod-template labels intact, so the
@@ -231,6 +231,10 @@ func writeChart(opts Options, resources []runtime.Object, composeObj kobject.Kom
 		resource := resources[i]
 		addResourcesRequirements(resource)
 		normalizeRestartPolicy(resource)
+		// After stamping, so the manifest totals count the defaults too.
+		if spec := podSpecOf(resource); spec != nil {
+			accumulateContainerResources(spec.Containers, totalRequests, totalLimits)
+		}
 
 		// Every kind kompose emits (Deployment/StatefulSet/DaemonSet/Pod/
 		// Service/PVC/ConfigMap/Secret/Ingress/...) is namespace-scoped, so we
@@ -245,19 +249,13 @@ func writeChart(opts Options, resources []runtime.Object, composeObj kobject.Kom
 		wireReplica := false
 		switch obj := resource.(type) {
 		case *appsv1.Deployment:
-			accumulateContainerResources(obj.Spec.Template.Spec.Containers, totalRequests, totalLimits)
 			obj.Spec.Replicas = ptrInt32(1)
 			replicas[obj.GetName()] = 1
 			wireReplica = true
 		case *appsv1.StatefulSet:
-			accumulateContainerResources(obj.Spec.Template.Spec.Containers, totalRequests, totalLimits)
 			obj.Spec.Replicas = ptrInt32(1)
 			replicas[obj.GetName()] = 1
 			wireReplica = true
-		case *appsv1.DaemonSet:
-			accumulateContainerResources(obj.Spec.Template.Spec.Containers, totalRequests, totalLimits)
-		case *corev1.Pod:
-			accumulateContainerResources(obj.Spec.Containers, totalRequests, totalLimits)
 		}
 
 		mobj, ok := resource.(metav1.Object)
@@ -537,8 +535,9 @@ func normalizeResourceNames(resources []runtime.Object) ([]string, error) {
 		kind := r.GetObjectKind().GroupVersionKind().Kind
 		name := obj.GetName()
 
+		_, isService := r.(*corev1.Service)
 		normalized := normalizeResourceName(name)
-		if _, isService := r.(*corev1.Service); isService {
+		if isService {
 			normalized = normalizeDNSLabel(name)
 		}
 
@@ -549,16 +548,26 @@ func normalizeResourceNames(resources []runtime.Object) ([]string, error) {
 		}
 		taken[kind+"/"+normalized] = name
 
-		if normalized == name {
-			continue
+		if normalized != name {
+			obj.SetName(normalized)
+			notice := fmt.Sprintf("%s %q was renamed to %q to be a valid Kubernetes name", kind, name, normalized)
+			if isService {
+				// Only a Service rename moves a hostname other containers may dial.
+				notice += ": update any hostname hard-coded in a compose environment or command"
+			}
+			notices = append(notices, notice)
 		}
-		obj.SetName(normalized)
-		notice := fmt.Sprintf("%s %q was renamed to %q to be a valid Kubernetes name", kind, name, normalized)
-		if _, isService := r.(*corev1.Service); isService {
-			// Only a Service rename moves a hostname other containers may dial.
-			notice += ": update any hostname hard-coded in a compose environment or command"
+
+		// Folding the invalid characters is not enough for a Service, whose whole
+		// name has to be a DNS-1035 label: compose accepts a leading digit, and
+		// nothing here can repair that. Renaming the Service alone would not
+		// either, since kompose derived the pod labels it selects on and any
+		// Ingress backend from the same name.
+		if isService && !dns1035RE.MatchString(normalized) {
+			notices = append(notices, fmt.Sprintf(
+				"Service %q is not a valid Kubernetes name, which has to start with a letter and match %s: rename the compose service, because the pod selector and any Ingress backend carry this name too",
+				normalized, dns1035RE))
 		}
-		notices = append(notices, notice)
 	}
 
 	for _, r := range resources {
@@ -681,7 +690,9 @@ func renameVolumeMounts(containers []corev1.Container, from, to string) {
 	}
 }
 
-// podSpecOf returns the pod template of any kind that can mount a volume.
+// podSpecOf returns the pod template of every kind the conversion can emit that
+// carries containers, and is the single place that list lives: name
+// normalization, the resource defaults and the manifest totals all go through it.
 func podSpecOf(resource runtime.Object) *corev1.PodSpec {
 	switch obj := resource.(type) {
 	case *appsv1.Deployment:
@@ -716,9 +727,13 @@ func composeNotices(composeObj kobject.KomposeObject) []string {
 			notices = append(notices, fmt.Sprintf(
 				"service %q builds %q locally: push that tag to a registry Olares can reach, for every architecture in spec.supportArch", name, service.Image))
 		}
-		// Both notices below describe the pinned Deployment controller, which a
+		// The notices below describe the pinned Deployment controller, which a
 		// service-level kompose.controller.type label overrides.
 		if renderedAsDeployment(service) {
+			if service.CronJobSchedule != "" {
+				notices = append(notices, fmt.Sprintf(
+					"service %q sets kompose.cronjob.schedule %q, which was dropped: it renders as an always-on Deployment, so either schedule the work inside the container or add a CronJob template by hand and leave it out of workloadReplicas", name, service.CronJobSchedule))
+			}
 			if service.Restart == "no" || service.Restart == "on-failure" {
 				notices = append(notices, fmt.Sprintf(
 					"service %q sets restart: %s, but was rendered as a Deployment: Olares installs, suspends and resumes apps by scaling replicas", name, service.Restart))
@@ -960,15 +975,8 @@ func normalizeRestartPolicy(resource runtime.Object) {
 }
 
 func addResourcesRequirements(resource runtime.Object) {
-	switch obj := resource.(type) {
-	case *appsv1.Deployment:
-		addResourcesToContainers(obj.Spec.Template.Spec.Containers, defaultRequests, defaultLimits)
-	case *appsv1.StatefulSet:
-		addResourcesToContainers(obj.Spec.Template.Spec.Containers, defaultRequests, defaultLimits)
-	case *appsv1.DaemonSet:
-		addResourcesToContainers(obj.Spec.Template.Spec.Containers, defaultRequests, defaultLimits)
-	case *corev1.Pod:
-		addResourcesToContainers(obj.Spec.Containers, defaultRequests, defaultLimits)
+	if spec := podSpecOf(resource); spec != nil {
+		addResourcesToContainers(spec.Containers, defaultRequests, defaultLimits)
 	}
 }
 

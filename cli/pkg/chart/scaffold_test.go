@@ -458,6 +458,120 @@ volumes:
 	}
 }
 
+// TestFromComposeReportsDroppedCronJobSchedule covers the compose label the
+// pinned Deployment controller makes unreachable: the scheduled service becomes
+// an always-on workload, which has to be said out loud, and it goes through the
+// same normalization and resource stamping as every other workload.
+func TestFromComposeReportsDroppedCronJobSchedule(t *testing.T) {
+	root := t.TempDir()
+	composePath := filepath.Join(root, "compose.yaml")
+	// restart: no is what kompose needs to honour the schedule at all, so this is
+	// the compose file that would have produced a CronJob without the pinning.
+	compose := []byte(`services:
+  web:
+    image: nginx:1.27
+    ports:
+      - "8080:80"
+  backup:
+    image: alpine:3.20
+    restart: "no"
+    command: ["sh", "-c", "echo backup"]
+    labels:
+      kompose.cronjob.schedule: "0 3 * * *"
+    volumes:
+      - PGData:/var/lib/data
+volumes:
+  PGData:
+`)
+	if err := os.WriteFile(composePath, compose, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	chartDir := filepath.Join(root, "cronapp")
+	result, err := FromCompose(Options{
+		ComposeFiles: []string{composePath},
+		OutputDir:    chartDir,
+		Name:         "cronapp",
+	})
+	if err != nil {
+		t.Fatalf("FromCompose() error: %v", err)
+	}
+
+	entries, err := os.ReadDir(filepath.Join(chartDir, "templates"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range entries {
+		if strings.HasPrefix(entry.Name(), "cronjob-") || strings.HasPrefix(entry.Name(), "pod-") {
+			t.Fatalf("a scheduled service must still render as a Deployment, got %q", entry.Name())
+		}
+	}
+
+	if !strings.Contains(strings.Join(result.Notices, "\n"), "kompose.cronjob.schedule") {
+		t.Fatalf("the dropped schedule must be reported, notices: %v", result.Notices)
+	}
+
+	workload := readTemplate(t, chartDir, "deployment-backup.yaml")
+	for _, want := range []string{"claimName: pgdata", "name: pgdata", "restartPolicy: Always",
+		"cpu: 100m", "memory: 128Mi"} {
+		if !strings.Contains(workload, want) {
+			t.Fatalf("the scheduled service's workload must contain %q:\n%s", want, workload)
+		}
+	}
+	if strings.Contains(workload, "name: PGData") {
+		t.Fatalf("volume names must be normalized here too:\n%s", workload)
+	}
+
+	var cfg manifest.AppConfiguration
+	if err := yaml.Unmarshal([]byte(readFile(t, filepath.Join(chartDir, appCfgFileName))), &cfg); err != nil {
+		t.Fatal(err)
+	}
+	if cfg.WorkloadReplicas == nil ||
+		(*cfg.WorkloadReplicas)["cronapp"] != 1 || (*cfg.WorkloadReplicas)["backup"] != 1 {
+		t.Fatalf("workloadReplicas = %#v, want cronapp and backup", cfg.WorkloadReplicas)
+	}
+
+	if err := oac.Lint(chartDir, oac.WithAutoOwnerScenarios()); err != nil {
+		t.Fatalf("chart must pass lint: %v", err)
+	}
+}
+
+// TestFromComposeReportsInvalidServiceName covers the compose service name no
+// normalization can repair: a leading digit is legal in compose and illegal in a
+// Service name, and renaming the Service alone would orphan the pod selector.
+func TestFromComposeReportsInvalidServiceName(t *testing.T) {
+	root := t.TempDir()
+	composePath := filepath.Join(root, "compose.yaml")
+	compose := []byte(`services:
+  1web:
+    image: nginx:1.27
+    ports:
+      - "8080:80"
+`)
+	if err := os.WriteFile(composePath, compose, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	chartDir := filepath.Join(root, "digitapp")
+	result, err := FromCompose(Options{
+		ComposeFiles: []string{composePath},
+		OutputDir:    chartDir,
+		Name:         "digitapp",
+	})
+	if err != nil {
+		t.Fatalf("FromCompose() error: %v", err)
+	}
+
+	notices := strings.Join(result.Notices, "\n")
+	if !strings.Contains(notices, `Service "1web" is not a valid Kubernetes name`) {
+		t.Fatalf("an unusable Service name must be reported, notices: %v", result.Notices)
+	}
+	// Renaming it would point the pod selector at nothing, so it stays as it is.
+	if body := readTemplate(t, chartDir, "service-1web.yaml"); !strings.Contains(body, "name: 1web") {
+		t.Fatalf("the Service must keep the name kompose selected on:\n%s", body)
+	}
+}
+
 func readTemplate(t *testing.T, chartDir, name string) string {
 	t.Helper()
 	return readFile(t, filepath.Join(chartDir, "templates", name))
