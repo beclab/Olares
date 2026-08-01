@@ -34,6 +34,20 @@ secrets:
   My_Token:
     file: ./token.txt
 `,
+		// kompose folds the underscore in the case above on both sides of the
+		// reference, so it agrees with itself. A leading separator does not
+		// survive an object name, which is where the two sides can part ways.
+		"secret name starts with a separator": `services:
+  web:
+    image: nginx:1.27
+    ports:
+      - "8080:80"
+    secrets:
+      - _token
+secrets:
+  _token:
+    file: ./token.txt
+`,
 		"config becomes a ConfigMap": `services:
   web:
     image: nginx:1.27

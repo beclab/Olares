@@ -613,6 +613,7 @@ func normalizeResourceNames(resources []runtime.Object) ([]string, error) {
 
 		if normalized != name {
 			obj.SetName(normalized)
+			relabelRenamed(r, obj, name, normalized)
 			notice := fmt.Sprintf("%s %q was renamed to %q to be a valid Kubernetes name", kind, name, normalized)
 			if isService {
 				// Only a Service rename moves a hostname other containers may dial.
@@ -657,6 +658,30 @@ func normalizeResourceNames(resources []runtime.Object) ([]string, error) {
 		}
 	}
 	return notices, nil
+}
+
+// relabelRenamed carries a rename into the object's own kompose labels, which
+// kompose derived from the same raw name: a compose secret called _token leaves
+// io.kompose.service: -token behind, and Kubernetes rejects the whole object over
+// a label value it will not accept. Workloads and Services are left alone on
+// purpose — their labels are what a Service selector matches, so rewriting one
+// side would break the match, which is why composeNotices reports those instead.
+func relabelRenamed(resource runtime.Object, obj metav1.Object, from, to string) {
+	switch resource.(type) {
+	case *corev1.Service, *appsv1.Deployment, *appsv1.StatefulSet, *appsv1.DaemonSet:
+		return
+	}
+	labels := obj.GetLabels()
+	changed := false
+	for key, value := range labels {
+		if value == from {
+			labels[key] = to
+			changed = true
+		}
+	}
+	if changed {
+		obj.SetLabels(labels)
+	}
 }
 
 func normalizeResourceName(name string) string {
@@ -712,10 +737,19 @@ func normalizePodSpecNames(spec *corev1.PodSpec, owner string) error {
 		if cm := vol.ConfigMap; cm != nil {
 			cm.Name = normalizeResourceName(cm.Name)
 		}
+		// kompose names a compose secret and the volume referencing it through the
+		// same helper, which folds underscores but keeps the leading separator an
+		// object name cannot have, so only one of the two survives the rename.
+		if secret := vol.Secret; secret != nil {
+			secret.SecretName = normalizeResourceName(secret.SecretName)
+		}
 		if vol.Projected != nil {
 			for j := range vol.Projected.Sources {
 				if cm := vol.Projected.Sources[j].ConfigMap; cm != nil {
 					cm.Name = normalizeResourceName(cm.Name)
+				}
+				if secret := vol.Projected.Sources[j].Secret; secret != nil {
+					secret.Name = normalizeResourceName(secret.Name)
 				}
 			}
 		}
@@ -745,12 +779,18 @@ func normalizePodSpecNames(spec *corev1.PodSpec, owner string) error {
 				if ref := container.EnvFrom[j].ConfigMapRef; ref != nil {
 					ref.Name = normalizeResourceName(ref.Name)
 				}
+				if ref := container.EnvFrom[j].SecretRef; ref != nil {
+					ref.Name = normalizeResourceName(ref.Name)
+				}
 			}
 			for j := range container.Env {
 				if container.Env[j].ValueFrom == nil {
 					continue
 				}
 				if ref := container.Env[j].ValueFrom.ConfigMapKeyRef; ref != nil {
+					ref.Name = normalizeResourceName(ref.Name)
+				}
+				if ref := container.Env[j].ValueFrom.SecretKeyRef; ref != nil {
 					ref.Name = normalizeResourceName(ref.Name)
 				}
 			}
