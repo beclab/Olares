@@ -903,8 +903,8 @@ func TestFromComposeDropsAutoscalers(t *testing.T) {
 		}
 	}
 
-	// kompose zeroes a hpa-labeled service's replica count for the autoscaler to
-	// own, so the workloads have to come out driven by values all the same.
+	// Dropping the autoscaler must not stop its workloads from using the
+	// values-driven replica counts Olares owns.
 	for name, want := range map[string]string{
 		"deployment-hpaapp.yaml": "replicas: {{ .Values.workloads.hpaapp.replicaCount }}",
 		"statefulset-store.yaml": "replicas: {{ .Values.workloads.store.replicaCount }}",
