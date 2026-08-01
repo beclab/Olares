@@ -15,7 +15,7 @@ olares-cli chart from-compose --name myapp -f base.yml -f override.yml      # me
 
 - **Every service needs a pullable, target-arch `image:`.** Olares pulls images from a registry and never builds from source, so build-only services (kompose writes them as `image: <service>`, e.g. `image: app` / `image: db`) and wrong-architecture images will fail to deploy. If any service lacks a real, arch-correct image, run the **Image capability** first; if you also lack a usable compose, see the compose-input capability.
 - **Pick a valid app name**: `^[a-z][a-z0-9]{0,29}$` (lowercase, starts with a letter, ≤30 chars). It becomes `metadata.name`, `metadata.appid`, the chart name, and the default output dir (`./<name>`).
-- **Label the entrance service** in the compose file so the right workload is exposed and renamed to the app name:
+- **Label the entrance service** in the compose file so the right workload is exposed (and, unless another compose service is already named exactly like the app, renamed to the app name):
   ```yaml
   services:
     web:
@@ -24,7 +24,7 @@ olares-cli chart from-compose --name myapp -f base.yml -f override.yml      # me
         olares.service.type: Entrance
       ports: ["8080:80"]
   ```
-  Without the label, `from-compose` falls back to the first service that exposes a port, else a `port: 80` placeholder you must fix.
+  Without the label, `from-compose` skips the services that look like a datastore (by image name or by a well-known port such as 5432 / 3306 / 6379) and takes the lowest remaining TCP port; if every service looks like a datastore it takes the first one exposing a TCP port, and with no candidate at all it writes a `port: 80` placeholder you must fix. The command always prints which service it picked and why — read that line.
 
 ## What each flag controls
 
@@ -35,23 +35,28 @@ olares-cli chart from-compose --name myapp -f base.yml -f override.yml      # me
 | `-o, --output` | chart root dir (default `./<name>`) |
 | `--title` | human title (default = name) |
 | `--type` | `app` (default) / `recommend` / `middleware` |
+| `--profile` (repeatable) | activate a compose profile |
+| `--no-interpolate` | keep `${VAR}` verbatim instead of resolving it from your shell. Without it, a variable that is unset in your environment resolves to an empty string and is baked into the chart |
 | `--new-schema` | **deprecated no-op** — the scaffold always emits the canonical `apiVersion: v3` + `olaresManifest.version: 0.12.0` manifest (resources under `spec.accelerator[mode=cpu]`; the flat `spec.requiredCpu/...` envelope is the equivalent no-mode form — see the Accelerator sizing §A.1) |
 
 ## Reading the output
 
-The command prints the absolute chart path and a reminder to refine + lint. Then inspect:
+The command prints the chart path, the entrance it picked and why, and a `review before deploying:` list of every guess and lossy mapping it made (renamed objects, the workload renamed to the app name, bundled datastores, dropped bind mounts, generated PVCs, services with no pullable image). **That list is the refinement worklist** — work through it rather than rediscovering the same items in the templates. Then inspect:
 
 - `OlaresManifest.yaml` — the stub you will refine (see the Manifest refinement areas; metadata can stay a stub for local deploy). It already carries the canonical version block (`apiVersion: v3`, `olaresManifest.version: 0.12.0`, and `olares >=1.12.6-0` as a `system` dependency) plus `workloadReplicas` for every rendered Deployment/StatefulSet.
-- `templates/deployment-<app>.yaml` — the primary workload (renamed to the app name; required by lint). Its `spec.replicas` is wired to `{{ .Values.workloads.<name>.replicaCount }}` (seeded in `values.yaml`) so app-service can scale it for install / suspend / resume.
+- `templates/deployment-<app>.yaml` — the primary workload (the entrance service's workload, renamed to the app name; required by lint). If a compose service is already named exactly like the app, that one keeps the name and nothing is renamed, so the entrance may front a different workload — the notice list says so when it happens. Its `spec.replicas` is wired to `{{ .Values.workloads.<name>.replicaCount }}` (seeded in `values.yaml`) so app-service can scale it for install / suspend / resume. A workload whose name contains a dash uses the equivalent `{{ (index .Values.workloads "<name>").replicaCount }}`, because Helm cannot reach a dashed key with dotted syntax.
 - `templates/service-*.yaml` — exposed services; the entrance `host` points at one of these service names.
 - `templates/persistentvolumeclaim-*.yaml` — one per compose volume; **these are the storage decisions you must revisit** (most should become userspace volumes; PVCs belonging to a bundled db must be deleted along with that db's workload — see middleware below).
 
 ## Conversion limitations to expect
 
 - **`build:`-only services** (no `image:`, or a local-only tag) come out as `image: <service>` — not a pullable reference. These won't deploy; resolve them with the Image capability before scaffolding.
-- **`hostPath` / bind mounts** (`./dir:/path`) are dropped by kompose with a warning — the host path won't exist on Olares. Re-model these as userspace volumes.
+- **`hostPath` / bind mounts** (`./dir:/path`) never survive as mounts: kompose drops a missing or empty host path and gives you an empty PVC instead, **copies** an existing file or non-empty directory into a ConfigMap inside the chart, and skips socket paths (`docker.sock`) entirely. The notice list says which of the three happened per mount. Re-model them as userspace volumes; a host socket has no equivalent at all.
 - **Bundled db/queue services** (`postgres`/`redis`/`mongodb`/`mysql`/`mariadb`/`minio`/`rabbitmq`/`nats`) come through as plain workloads. **Delete them and wire to system middleware** — do not keep them just because they render (see manifest §3; this is the default, not optional).
-- **`depends_on`, healthchecks, restart policies** don't all map 1:1; verify the rendered templates.
+- **`depends_on` and healthchecks** don't all map 1:1; verify the rendered templates.
+- **`restart: no` / `on-failure` and `deploy.mode: global`** are rendered as Deployments anyway (kompose would emit a bare Pod and a DaemonSet), because Olares installs, suspends and resumes apps by scaling replicas. A one-shot job therefore comes out as a long-running workload — rethink it rather than shipping it.
+- **Compose names are normalized** to valid Kubernetes names (`web_app` → `web-app`, `web.ui` → `web-ui`, volume `PGData` → `pgdata`), and the references that point at them (`claimName`, `configMapRef`, pod volume and container names) are normalized with them. A hostname hard-coded in another service's `environment` or `command` is **not** rewritten and still points at the old name; fix those by hand. If two compose names normalize onto one Kubernetes name, the conversion errors out instead of letting one template overwrite the other.
+- **A compose file that renders no Deployment/StatefulSet** (e.g. every service carries `kompose.controller.type` pointing elsewhere) is rejected with an error instead of producing an unusable chart: Olares has nothing to scale.
 - **Workloads you add by hand** (extra Deployments/StatefulSets beyond what kompose rendered) must each be added to `workloadReplicas`, get a `values.yaml` `workloads.<name>.replicaCount`, and wire `spec.replicas: {{ .Values.workloads.<name>.replicaCount }}` — otherwise suspend/resume won't control them (see manifest Workloads & replicas).
 - The conversion clears the **local structural `lint`**, but a passing local `lint` is not proof the target Olares accepts it and not proof it is production-ready — confirm `workloadReplicas` and the other required manifest fields yourself (see manifest Workloads & replicas), and the four refinement areas in the parent skill are mandatory before the app will run well. Metadata (§1) can stay a stub for local deploy; functional refine (§2–§4) is always required.
 - If a fresh scaffold fails on version fields, do **not** change `OlaresManifest.yaml` to `v1`/`v2`, lower `olaresManifest.version`, or lower the Olares dependency. Check that you are running the current `olares-cli` and current skill. Remember that `Chart.yaml apiVersion: v2` is correct Helm metadata and is independent of `OlaresManifest.yaml apiVersion: v3`.

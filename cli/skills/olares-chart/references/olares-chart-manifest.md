@@ -25,7 +25,7 @@ workloadReplicas:
 **Self-check (inspect the files directly — do not rely on any tool):**
 
 1. `OlaresManifest.yaml` top-level `workloadReplicas` lists **every** Deployment/StatefulSet the chart renders (by rendered `metadata.name`) → its replica count. **DaemonSets are excluded** (one-per-node, not replica-controlled).
-2. Every listed workload's template sets `spec.replicas: {{ .Values.workloads.<name>.replicaCount }}` — **never a hardcoded number**. This `spec.replicas` is the Deployment/StatefulSet **template's** spec under `templates/`, a different field from the manifest's top-level `spec` — don't conflate the two.
+2. Every listed workload's template sets `spec.replicas: {{ .Values.workloads.<name>.replicaCount }}` — **never a hardcoded number**. If the workload name contains a dash, write `spec.replicas: {{ (index .Values.workloads "<name>").replicaCount }}` instead; Helm's dotted syntax cannot reach a dashed key and the chart fails to render. This `spec.replicas` is the Deployment/StatefulSet **template's** spec under `templates/`, a different field from the manifest's top-level `spec` — don't conflate the two.
 3. `values.yaml` carries a matching `workloads.<name>.replicaCount` for each. The `.Values.workloads.*` value is documented in the system-injected Helm values reference.
 
 **Why the template wiring matters (non-obvious).** app-service drives the whole lifecycle through this Helm value: install is two-phase (helm renders at `replicas: 0`, then scales up), suspend scales every listed workload to `0`, resume scales back to the declared counts. If a template **hardcodes** `replicas`, **suspend/resume and the staged install silently stop working** — the value override has nothing to drive.
