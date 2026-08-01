@@ -69,10 +69,10 @@ func (h *HelmOps) UninstallAll() error {
 		return err
 	}
 	if deleteData {
-		h.ClearData(client, appDataDirs)
-		if err != nil {
+		// Non-fatal: the release is already gone, so a failed data wipe must
+		// not block namespace teardown.
+		if err := h.ClearData(client, appDataDirs); err != nil {
 			klog.Errorf("Failed to clear app data dirs %v err=%v", appDataDirs, err)
-			//return err
 		}
 	}
 
