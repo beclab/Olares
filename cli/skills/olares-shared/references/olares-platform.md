@@ -21,8 +21,9 @@ Key facts:
 - **Owner is uid 1000.** All five are read/written as uid/gid 1000 (see next section).
 - **Version gates.** `appCommon` needs Olares ≥ 1.12.6; `externalData`/`sharedlib` needs `olaresManifest.version` ≥ 0.12.0.
 - **Drive's `extend` must be `Home` or `Data` exactly** — `home` is rejected with `invalid drive type`.
+- **Uninstall deletes by area, not by "everything the app wrote".** app-service scans the workload's `hostPath` volumes against exactly two prefixes: the `appcache_hostpath` annotation (`Cache/<app>` — **always** cleared, it is regenerable) and `<userspace_hostpath>/Data/` (`Data/<app>` — cleared **only** with `market uninstall --delete-data`). `Home` matches neither prefix and is **never** deleted: `permission.userData` grants an app access to the user's own files, it does not make the app their owner, and the same paths may be shared with other apps holding the permission. Consequence: an app declaring only `userData` owns no data at all, so `--delete-data` is a no-op for it and leftovers need a manual `files rm --recursive`.
 
-Used by: `files` (addressing) and `chart` (mounting).
+Used by: `files` (addressing), `chart` (mounting) and `market` (what uninstall deletes).
 
 ## Run identity: uid/gid 1000
 

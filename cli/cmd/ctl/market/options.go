@@ -202,7 +202,8 @@ func (o *MarketOptions) addEntranceTitleFlag(cmd *cobra.Command) {
 }
 
 func (o *MarketOptions) addDeleteDataFlag(cmd *cobra.Command) {
-	cmd.Flags().BoolVar(&o.DeleteData, "delete-data", false, "delete persistent data when uninstalling")
+	cmd.Flags().BoolVar(&o.DeleteData, "delete-data", false,
+		"also delete the app's private data dir (drive/Data/<app>) when uninstalling; the node-local cache (cache/<node>/<app>) is cleared either way. Paths under drive/Home granted via the manifest's permission.userData are NEVER deleted — they belong to the user, not the app; remove them yourself with `olares-cli files rm`")
 }
 
 func (o *MarketOptions) addTitleFlag(cmd *cobra.Command) {

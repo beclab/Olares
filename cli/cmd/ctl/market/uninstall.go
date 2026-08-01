@@ -58,7 +58,21 @@ is ALWAYS cascaded — the backend forces all=true and the SPA disables
 the checkbox — so --cascade=false is overridden (a stderr note reports
 the force). The --cascade=false override only takes effect on 1.12.5.
 
-Use --delete-data to also remove the app's persistent data.
+--delete-data covers only the app's OWN data (the JSON payload field
+is "deleteData"). What happens to each storage area on uninstall:
+
+  - cache/<node>/<app> — node-local and regenerable, so it is always
+    cleared, with or without the flag.
+  - drive/Data/<app> — app-private state (db files, config); cleared
+    only when --delete-data is passed.
+  - drive/Home/... — NEVER deleted. The manifest's permission.userData
+    grants an app access to the user's own files; it does not make the
+    app their owner, and the same paths may be shared with other apps
+    holding that permission. Clean up leftovers yourself with
+    "olares-cli files rm --recursive <path>".
+
+An app declaring only permission.userData therefore owns no data at
+all, and --delete-data has nothing to remove for it.
 
 --watch blocks until the row reaches 'uninstalled' or disappears
 entirely (acceptInitialAbsent=true: if the user's per-user row is
@@ -159,7 +173,7 @@ func runUninstall(opts *MarketOptions, cmd *cobra.Command, appName string) error
 		opts.info("  --cascade: will uninstall all sub-charts")
 	}
 	if opts.DeleteData {
-		opts.info("  --delete-data: will delete persistent data")
+		opts.info("  --delete-data: will delete the app's data dir (drive/Data/<app>); drive/Home is not touched")
 	}
 
 	// 1.12.6 requires source in the uninstall body, and the only place we
