@@ -51,9 +51,9 @@ Step D1 produces a chart that **already passes `lint`** but is NOT yet a good ap
 
 - Every resource is namespaced with `namespace: '{{ .Release.Namespace }}'`.
 - Default CPU/memory requests+limits are stamped onto every container.
-- One **entrance** is auto-detected (the `olares.service.type: Entrance`-labeled service, else the first service with a port, else a `port: 80` placeholder).
+- One **entrance** is auto-detected (the `olares.service.type: Entrance`-labeled service, else the service fronting a workload already named `<app>`, else the lowest TCP port among the services that do not look like a datastore, else a `port: 80` placeholder), and the workload behind it is renamed to `<app>` unless another workload already carries that name. The command prints the pick, plus a `review before deploying:` list of every other guess it made.
 - The scaffold emits the complete canonical version combination: `OlaresManifest.yaml apiVersion: v3`, `olaresManifest.version: 0.12.0`, and `options.dependencies` `olares >=1.12.6-0` (`type: system`). `Chart.yaml apiVersion: v2` remains Helm metadata and is intentionally different.
 - The scaffold also emits `workloadReplicas.<workload>: 1` (with the matching `values.yaml` `workloads.<name>.replicaCount`, and each workload's `spec.replicas` wired to `{{ .Values.workloads.<name>.replicaCount }}` so suspend/resume work), so a fresh scaffold passes `lint`.
 - Never respond to a version-related lint failure by downgrading the canonical combination to manifest v1/v2 or Olares `<1.12.6`; check for an old CLI or old skill instead.
 
-> **Tip:** label the service you want exposed in the compose file with `labels: { olares.service.type: Entrance }` so the right workload becomes the entrance and gets renamed to the app name.
+> **Tip:** label the service you want exposed in the compose file with `labels: { olares.service.type: Entrance }` so the right service becomes the entrance; it also gets renamed to the app name unless another compose service already uses that exact name.
