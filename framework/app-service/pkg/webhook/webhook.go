@@ -286,6 +286,18 @@ func (wh *Webhook) CreatePatch(
 		}
 	} // end of inject sidecar
 
+	// The macvlan bypass must stay behind every iptables writer in the init
+	// sequence (mesh-in agent iptables is appended above, linkerd-init comes
+	// from a later admission pass), so re-place it after the sidecar block.
+	injectMacvlanBypass, err := wh.ShouldInjectMacvlanInit(ctx, pod, req.Namespace)
+	if err != nil {
+		klog.Errorf("macvlan-bypass: failed to evaluate injection for pod=%s/%s err=%v", req.Namespace, pod.Name, err)
+		return nil, err
+	}
+	if injectMacvlanBypass {
+		sidecar.EnsureMacvlanBypassLast(pod)
+	}
+
 	if injectSharedPod != nil {
 		if *injectSharedPod {
 			if pod.Labels == nil {
@@ -1107,15 +1119,22 @@ func (wh *Webhook) CreateMacvlanInitPatch(req *admissionv1.AdmissionRequest, pod
 	}
 	pod.Annotations["k8s.v1.cni.cncf.io/networks"] = "kube-system/underlay-macvlan"
 
+	hasReplyInit := false
 	for _, c := range pod.Spec.InitContainers {
 		if c.Name == MacvlanInitContainerName {
 			klog.Infof("macvlan-init: container already present in pod=%s/%s, skip", pod.Namespace, pod.Name)
-			return makePatches(req, pod)
+			hasReplyInit = true
+			break
 		}
 	}
-	// Append after any existing init containers (e.g. sidecar wait-for /
-	// render-envoy-config) so we run after them but still before the main
-	// app containers.
-	pod.Spec.InitContainers = append(pod.Spec.InitContainers, GetMacvlanInitContainer())
+	if !hasReplyInit {
+		// Append after any existing init containers (e.g. sidecar wait-for /
+		// render-envoy-config) so we run after them but still before the main
+		// app containers.
+		pod.Spec.InitContainers = append(pod.Spec.InitContainers, GetMacvlanInitContainer())
+	}
+	// Keep the iptables bypass last: routing setup above only touches ip rules,
+	// while the bypass has to win the head of the nat/filter chains.
+	sidecar.EnsureMacvlanBypassLast(pod)
 	return makePatches(req, pod)
 }
