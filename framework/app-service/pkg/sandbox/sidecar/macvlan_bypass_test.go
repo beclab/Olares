@@ -7,7 +7,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-func TestMacvlanBypassScriptInstallsFourHeadAcceptRules(t *testing.T) {
+func TestMacvlanBypassScriptInstallsFourHeadAcceptRulesOnNft(t *testing.T) {
 	script := MacvlanBypassScript()
 
 	for _, want := range []string{
@@ -20,11 +20,20 @@ func TestMacvlanBypassScriptInstallsFourHeadAcceptRules(t *testing.T) {
 			t.Fatalf("bypass script missing %q in:\n%s", want, script)
 		}
 	}
-	if !strings.Contains(script, `iptables -t "$t" -I "$c" 1 "$d" "$IFACE" -j ACCEPT`) {
-		t.Fatalf("bypass script must insert ACCEPT at chain head in:\n%s", script)
+	if !strings.Contains(script, `"$IPTABLES_BIN" -t "$t" -I "$c" 1 "$d" "$IFACE" -j ACCEPT`) {
+		t.Fatalf("bypass script must insert ACCEPT at chain head via IPTABLES_BIN in:\n%s", script)
+	}
+	if !strings.Contains(script, `IPTABLES_BIN="${IPTABLES_BIN:-iptables-nft}"`) {
+		t.Fatalf("bypass script must default IPTABLES_BIN to iptables-nft in:\n%s", script)
 	}
 	if !strings.Contains(script, `IFACE="${MACVLAN_IFACE:-net1}"`) {
 		t.Fatalf("bypass script must read the iface from env with net1 default in:\n%s", script)
+	}
+	if strings.Count(script, "verify_head ") != 4 {
+		t.Fatalf("bypass script must self-check all four nft chain heads in:\n%s", script)
+	}
+	if strings.Contains(script, "iptables-legacy") {
+		t.Fatalf("bypass script must be nft-only and must not mention iptables-legacy in:\n%s", script)
 	}
 }
 
@@ -42,6 +51,15 @@ func TestMacvlanBypassScriptStaysSingleShotAndNonDestructive(t *testing.T) {
 	} {
 		if strings.Contains(script, forbidden) {
 			t.Fatalf("bypass script must not contain %q (no reclaim loop, no flush, no policy change) in:\n%s", forbidden, script)
+		}
+	}
+	// Bare `iptables` is alternatives-dependent (legacy in beclab/init); only iptables-nft.
+	for _, line := range strings.Split(script, "\n") {
+		trim := strings.TrimSpace(line)
+		if strings.HasPrefix(trim, "iptables ") || strings.Contains(trim, " iptables ") {
+			if !strings.Contains(trim, "iptables-nft") && !strings.Contains(trim, "IPTABLES_BIN") {
+				t.Fatalf("bypass script must not invoke bare iptables on line %q in:\n%s", trim, script)
+			}
 		}
 	}
 	if strings.Count(script, "exit 1") == 0 {

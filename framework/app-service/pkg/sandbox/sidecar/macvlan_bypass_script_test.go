@@ -10,8 +10,12 @@ import (
 
 // iptablesMock records rules per table/chain in files so the bypass script can
 // be executed end-to-end without a real netfilter stack: -A appends, -I
-// prepends, -C probes, -D removes, -S dumps.
+// prepends, -C probes, -D removes, -S dumps (iptables-save style with -A lines).
 const iptablesMock = `#!/bin/sh
+if [ "${1:-}" = "--version" ]; then
+  echo "iptables v1.8.8 (nf_tables)"
+  exit 0
+fi
 table=filter
 op=""
 chain=""
@@ -55,7 +59,13 @@ case "$op" in
     cat "$f" >> "$f.tmp"
     mv "$f.tmp" "$f"
     ;;
-  -S) cat "$f" ;;
+  -S)
+    printf -- '-P %s ACCEPT\n' "$chain"
+    while IFS= read -r line || [ -n "$line" ]; do
+      [ -z "$line" ] && continue
+      printf -- '-A %s %s\n' "$chain" "$line"
+    done < "$f"
+    ;;
   *) exit 2 ;;
 esac
 `
@@ -76,8 +86,8 @@ func newBypassScriptRun(t *testing.T) *bypassScriptRun {
 			t.Fatalf("mkdir %s: %v", d, err)
 		}
 	}
-	if err := os.WriteFile(filepath.Join(bin, "iptables"), []byte(iptablesMock), 0o755); err != nil {
-		t.Fatalf("write iptables mock: %v", err)
+	if err := os.WriteFile(filepath.Join(bin, "iptables-nft"), []byte(iptablesMock), 0o755); err != nil {
+		t.Fatalf("write iptables-nft mock: %v", err)
 	}
 	return &bypassScriptRun{t: t, state: state, bin: bin}
 }
@@ -135,6 +145,9 @@ func TestMacvlanBypassScriptWinsChainHeadOverProxyRules(t *testing.T) {
 	out, err := r.run()
 	if err != nil {
 		t.Fatalf("script failed: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "verified four iface ACCEPT heads on nft") {
+		t.Fatalf("self-check must confirm nft chain heads, output:\n%s", out)
 	}
 
 	for _, tc := range []struct{ table, chain, want string }{
@@ -196,5 +209,39 @@ func TestMacvlanBypassScriptFailsClosedWhenInsertFails(t *testing.T) {
 	}
 	if !strings.Contains(out, "failed to install") {
 		t.Fatalf("script must report the failing rule, output:\n%s", out)
+	}
+}
+
+func TestMacvlanBypassScriptFailsClosedWhenNftBinaryMissing(t *testing.T) {
+	r := newBypassScriptRun(t)
+
+	out, err := r.run("IPTABLES_BIN=iptables-nft-missing")
+	if err == nil {
+		t.Fatalf("script must fail when iptables-nft is missing, output:\n%s", out)
+	}
+	if !strings.Contains(out, "iptables-nft-missing not found") {
+		t.Fatalf("script must report missing nft binary, output:\n%s", out)
+	}
+}
+
+func TestMacvlanBypassScriptFailsClosedWhenNotNftVariant(t *testing.T) {
+	r := newBypassScriptRun(t)
+	legacy := `#!/bin/sh
+if [ "${1:-}" = "--version" ]; then
+  echo "iptables v1.8.8 (legacy)"
+  exit 0
+fi
+exit 0
+`
+	if err := os.WriteFile(filepath.Join(r.bin, "iptables-legacy-fake"), []byte(legacy), 0o755); err != nil {
+		t.Fatalf("write legacy fake: %v", err)
+	}
+
+	out, err := r.run("IPTABLES_BIN=iptables-legacy-fake")
+	if err == nil {
+		t.Fatalf("script must fail when binary is not nf_tables, output:\n%s", out)
+	}
+	if !strings.Contains(out, "is not nf_tables") {
+		t.Fatalf("script must reject non-nft variant, output:\n%s", out)
 	}
 }
