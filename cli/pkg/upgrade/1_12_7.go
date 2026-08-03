@@ -5,6 +5,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/certs"
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/task"
+	"github.com/beclab/Olares/cli/pkg/kubesphere/plugins"
 	"github.com/beclab/Olares/cli/version"
 )
 
@@ -40,6 +41,12 @@ func (u upgrader_1_12_7) PrepareForUpgrade() []task.Interface {
 		Prepare: new(common.OnlyK3s),
 		Action:  new(certs.UninstallAutoRenewCerts),
 	})
+
+	tasks = append(tasks, &task.LocalTask{
+		Name:   "CopyEmbeddedKSManifests",
+		Action: new(plugins.CopyEmbedFiles),
+	})
+	tasks = append(tasks, upgradeKubernetesPrometheusRule()...)
 
 	tasks = append(tasks, u.upgraderBase.PrepareForUpgrade()...)
 	return tasks
