@@ -58,6 +58,35 @@ func TestCheckStaticBundleRejectsBadManifestDigest(t *testing.T) {
 	}
 }
 
+func TestCheckStaticBundleRejectsDuplicateHFCacheTarget(t *testing.T) {
+	dir := copyStaticMarket(t)
+	bundlePath := filepath.Join(dir, BundleFileName)
+	bundle := decodeCheckBundleFile(t, bundlePath)
+	second := bundle.Apps[0]
+	second.AppID = "second-app"
+	second.AppName = "second-app"
+	second.Chart = "chart/second-app-1.0.0.tgz"
+	secondArtifact := second.Artifacts[0]
+	secondArtifact.Source = "artifacts/fixture--tiny-model-copy"
+	secondArtifact.Manifest = "manifests/fixture--tiny-model-copy.json"
+	second.Artifacts = []BundleArtifactV1{secondArtifact}
+	bundle.Apps = append(bundle.Apps, second)
+	writeCheckBundleFile(t, bundlePath, bundle)
+
+	chartData, err := os.ReadFile(filepath.Join(dir, filepath.FromSlash(bundle.Apps[0].Chart)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, filepath.FromSlash(second.Chart)), chartData, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	err = CheckStaticBundle(dir, CheckOptions{})
+	if err == nil || !strings.Contains(err.Error(), "duplicate Hugging Face cache target") {
+		t.Fatalf("CheckStaticBundle() error = %v, want duplicate cache target", err)
+	}
+}
+
 func TestCheckStaticBundleFullRejectsTamperedArtifact(t *testing.T) {
 	dir := copyStaticMarket(t)
 	payload := filepath.Join(dir, "artifacts", "fixture--tiny-model", "tiny.bin")
@@ -74,19 +103,39 @@ func TestCheckStaticBundleFullRejectsTamperedArtifact(t *testing.T) {
 	}
 }
 
-func TestCheckStaticBundleFullRejectsUndeclaredArtifactPath(t *testing.T) {
+func TestCheckStaticBundleFullRejectsHardlinkedArtifact(t *testing.T) {
+	dir := copyStaticMarket(t)
+	payload := filepath.Join(dir, "artifacts", "fixture--tiny-model", "tiny.bin")
+	external := filepath.Join(filepath.Dir(dir), "external.bin")
+	data, err := os.ReadFile(payload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(external, data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(payload); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Link(external, payload); err != nil {
+		t.Fatal(err)
+	}
+
+	err = CheckStaticBundle(dir, CheckOptions{Full: true})
+	if err == nil || !strings.Contains(err.Error(), "must not be a hardlink") {
+		t.Fatalf("CheckStaticBundle(Full) error = %v, want hardlink rejection", err)
+	}
+}
+
+func TestCheckStaticBundleFullIgnoresUndeclaredArtifactPathLikeInstaller(t *testing.T) {
 	dir := copyStaticMarket(t)
 	extra := filepath.Join(dir, "artifacts", "fixture--tiny-model", "extra.bin")
 	if err := os.WriteFile(extra, []byte("extra"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := CheckStaticBundle(dir, CheckOptions{}); err != nil {
-		t.Fatalf("contract check should pass without --full: %v", err)
-	}
-	err := CheckStaticBundle(dir, CheckOptions{Full: true})
-	if err == nil || !strings.Contains(err.Error(), "undeclared artifact path") {
-		t.Fatalf("CheckStaticBundle(Full) error = %v, want undeclared path", err)
+	if err := CheckStaticBundle(dir, CheckOptions{Full: true}); err != nil {
+		t.Fatalf("CheckStaticBundle(Full) error = %v", err)
 	}
 }
 

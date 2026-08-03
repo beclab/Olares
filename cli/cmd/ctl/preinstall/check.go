@@ -23,11 +23,12 @@ installer prepare path:
   - build a default install profile and validate it against the bundle
   - verify each chart exists, is a regular file within size limits,
     and matches chartSha256
+  - validate unique Hugging Face cache targets
   - load and validate each artifact manifest
 
 Pass --full to also verify artifact payload trees under each artifact's
-source directory against the manifest (entry types, digests, and no
-undeclared paths). This can be slow for large model payloads.
+source directory against the manifest (entry types and digests). This can
+be slow for large model payloads.
 
 Examples:
   olares-cli preinstall check ./preinstall/market
