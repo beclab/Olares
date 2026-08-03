@@ -11,7 +11,7 @@ doc_updated: "2026-08-03"
 ---
 
 :::warning
-本页面为 AI 翻译版本，内容仅供快速参考。关键信息建议以[英文原文](../../use-cases/openclaw-skills.md)为准。
+本文档由 AI 自动翻译，可能存在表述差异。如需核对，请参考[英文原文](../../use-cases/openclaw-skills.md)。
 :::
 
 # 管理 OpenClaw 技能和插件
