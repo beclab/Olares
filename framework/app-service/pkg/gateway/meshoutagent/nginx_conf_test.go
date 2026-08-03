@@ -20,9 +20,22 @@ func TestRenderMeshOutNginxConf(t *testing.T) {
 		"system-server.user-system-alice:28080",
 		"MESH_OUT_SA_TOKEN_MISSING",
 		"location /api",
+		"Bearer " + SATokenPlaceholder,
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("missing %q in:\n%s", want, got)
+		}
+	}
+	if strings.Contains(got, "Bearer `cat ") {
+		t.Fatalf("literal shell cat bearer forbidden:\n%s", got)
+	}
+}
+
+func TestRenderMeshOutEntrypointFailClosed(t *testing.T) {
+	ep := RenderMeshOutEntrypoint("", "")
+	for _, want := range []string{"MESH_OUT_SA_TOKEN_MISSING", SATokenPlaceholder, "sed", "nginx -c"} {
+		if !strings.Contains(ep, want) {
+			t.Fatalf("entrypoint missing %q:\n%s", want, ep)
 		}
 	}
 }
@@ -52,6 +65,29 @@ func TestShouldInject(t *testing.T) {
 	}
 	if !ShouldInject(false, []appcfg.ProviderPermission{{AppName: "x"}}) {
 		t.Fatal("provider must inject")
+	}
+}
+
+func TestRoutesFromPermissions(t *testing.T) {
+	routes := RoutesFromPermissions([]appcfg.ProviderPermission{{
+		AppName: "files", Namespace: "user-system", ProviderName: "files",
+	}}, "user-space-alice")
+	if len(routes) != 1 {
+		t.Fatalf("routes=%d", len(routes))
+	}
+	if routes[0].Domain != "files.user-system" {
+		t.Fatalf("domain=%q", routes[0].Domain)
+	}
+	if !strings.Contains(routes[0].UpstreamHost, "user-system-alice") {
+		t.Fatalf("upstream=%q", routes[0].UpstreamHost)
+	}
+	c := ConfRenderInitContainerSpec(routes)
+	if c.Name != ConfRenderInitContainerName {
+		t.Fatalf("conf init name=%q", c.Name)
+	}
+	joined := strings.Join(c.Command, " ")
+	if !strings.Contains(joined, "nginx.conf") || !strings.Contains(joined, SATokenPlaceholder) {
+		t.Fatalf("conf seed missing expected content: %s", joined)
 	}
 }
 

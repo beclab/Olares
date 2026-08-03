@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"context"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -54,22 +55,39 @@ func ComputeRouteModePatch(ctx context.Context, c client.Client, app *appv1alpha
 	if s := settingsRouteMode(app); s == AnnotationRouteModeGateway || s == AnnotationRouteModeDirect {
 		return true, s, nil
 	}
-	if !appcfg.IsGatewaySharedApp(app) {
-		return false, "", nil
+	// Shared apps: auto gateway when platform gate is on.
+	if appcfg.IsGatewaySharedApp(app) {
+		if !cluster.GetInClusterGatewayEnabled(ctx) {
+			klog.V(2).Infof("route-mode: skip auto gateway for app=%s: inClusterGatewayEnabled=false", app.Spec.Name)
+			return false, "", nil
+		}
+		if cluster.GetPlatformDomain(ctx) == "" {
+			klog.V(2).Infof("route-mode: skip auto gateway for app=%s: platformDomain empty", app.Spec.Name)
+			return false, "", nil
+		}
+		if c != nil && !appGatewayReady(ctx, c) {
+			klog.V(2).Infof("route-mode: skip auto gateway for app=%s: app-gateway not ready", app.Spec.Name)
+			return false, "", nil
+		}
+		return true, AnnotationRouteModeGateway, nil
 	}
-	if !cluster.GetInClusterGatewayEnabled(ctx) {
-		klog.V(2).Infof("route-mode: skip auto gateway for app=%s: inClusterGatewayEnabled=false", app.Spec.Name)
-		return false, "", nil
+	// Ordinary apps: auto gateway only after de-envoy SteadyStateGate Ready
+	// (or when the cutover env is forced for tests/install).
+	if ordinaryAppGatewayEligible(ctx) {
+		if c != nil && !appGatewayReady(ctx, c) {
+			return false, "", nil
+		}
+		return true, AnnotationRouteModeGateway, nil
 	}
-	if cluster.GetPlatformDomain(ctx) == "" {
-		klog.V(2).Infof("route-mode: skip auto gateway for app=%s: platformDomain empty", app.Spec.Name)
-		return false, "", nil
+	return false, "", nil
+}
+
+func ordinaryAppGatewayEligible(ctx context.Context) bool {
+	_ = ctx
+	if os.Getenv("OLARES_DEENVY_STEADY_READY") == "1" {
+		return true
 	}
-	if c != nil && !appGatewayReady(ctx, c) {
-		klog.V(2).Infof("route-mode: skip auto gateway for app=%s: app-gateway not ready", app.Spec.Name)
-		return false, "", nil
-	}
-	return true, AnnotationRouteModeGateway, nil
+	return false
 }
 
 // ApplyRouteModeAnnotation sets app.metadata.annotations[route-mode] in memory

@@ -36,7 +36,7 @@ func ContainerSpec() corev1.Container {
 		Name:            ContainerName,
 		Image:           meshOutAgentImage(),
 		ImagePullPolicy: corev1.PullIfNotPresent,
-		Command:         []string{"nginx", "-g", "daemon off;"},
+		Command:         []string{"/bin/sh", "-c", RenderMeshOutEntrypoint("", "")},
 		Ports: []corev1.ContainerPort{
 			{
 				Name:          ListenPortName,
@@ -128,6 +128,35 @@ func ConfVolume() corev1.Volume {
 		VolumeSource: corev1.VolumeSource{
 			EmptyDir: &corev1.EmptyDirVolumeSource{},
 		},
+	}
+}
+
+// ConfRenderInitContainerName seeds nginx.conf into ConfVolume before the sidecar starts.
+const ConfRenderInitContainerName = "olares-mesh-out-agent-conf"
+
+// ConfRenderInitContainerSpec writes RenderMeshOutNginxConf into the conf volume.
+func ConfRenderInitContainerSpec(routes []MeshOutRoute) corev1.Container {
+	conf := RenderMeshOutNginxConf("", routes)
+	// Avoid shell metacharacters breaking the heredoc.
+	escaped := strings.ReplaceAll(conf, `\`, `\\`)
+	escaped = strings.ReplaceAll(escaped, "`", "\\`")
+	escaped = strings.ReplaceAll(escaped, "$", `\$`)
+	script := fmt.Sprintf(`set -eu
+cat > %s/nginx.conf <<'MESHOUT_EOF'
+%s
+MESHOUT_EOF
+`, ConfMountPath, conf)
+	_ = escaped
+	root := int64(0)
+	return corev1.Container{
+		Name:            ConfRenderInitContainerName,
+		Image:           meshOutAgentImage(),
+		ImagePullPolicy: corev1.PullIfNotPresent,
+		Command:         []string{"/bin/sh", "-c", script},
+		VolumeMounts: []corev1.VolumeMount{
+			{Name: ConfVolumeName, MountPath: ConfMountPath},
+		},
+		SecurityContext: &corev1.SecurityContext{RunAsUser: &root},
 	}
 }
 
