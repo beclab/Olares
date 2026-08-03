@@ -488,9 +488,21 @@ func (p *Provider) buildAppInfos(username string, appList []*appv1alpha1.Applica
 			Ports:     ports,
 			Settings:  settings,
 			IsShared:  isSharedApp(app),
+			RouteMode: routeModeFromApp(app),
 		})
 	}
 	return result
+}
+
+func routeModeFromApp(app *appv1alpha1.Application) string {
+	if app == nil || app.Annotations == nil {
+		return ""
+	}
+	v := strings.ToLower(strings.TrimSpace(app.Annotations["gateway.olares.io/route-mode"]))
+	if v == "gateway" || v == "direct" {
+		return v
+	}
+	return ""
 }
 
 func (p *Provider) listUsers(ctx context.Context, userList []iamv1alpha2.User, rawAppsMap map[string][]*appv1alpha1.Application, userEnvList []sysv1alpha1.UserEnv) ([]*message.UserInfo, error) {

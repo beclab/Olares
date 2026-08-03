@@ -553,11 +553,20 @@ func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.A
 		}
 
 		clusterName := fmt.Sprintf("app_%s_%s_%s", user.Name, app.Name, entrance.Name)
+		upstreamHost := fmt.Sprintf("%s.%s.svc.cluster.local", entrance.Host, app.Namespace)
+		upstreamPort := uint32(entrance.Port)
+		useDNS := true
+		// Ordinary apps in gateway mode front through app-gateway-data; Shared
+		// keeps the existing Authelia-on-l4 path (OD-1).
+		if !app.IsShared && strings.EqualFold(strings.TrimSpace(app.RouteMode), "gateway") {
+			upstreamHost = "app-gateway-data.os-gateway.svc.cluster.local"
+			upstreamPort = 80
+		}
 		cluster := &ir.ClusterIR{
 			Name:   clusterName,
-			Host:   fmt.Sprintf("%s.%s.svc.cluster.local", entrance.Host, app.Namespace),
-			Port:   uint32(entrance.Port),
-			UseDNS: true,
+			Host:   upstreamHost,
+			Port:   upstreamPort,
+			UseDNS: useDNS,
 		}
 		// A "dev" entrance's Host is already the backing pod IP (set by
 		// proxylistener), so route straight to it as a STATIC cluster rather
@@ -568,6 +577,7 @@ func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.A
 		if entrance.Type == entranceTypeDev {
 			cluster.Host = entrance.Host
 			cluster.UseDNS = false
+			cluster.Port = uint32(entrance.Port)
 		}
 		clusterSet[clusterName] = cluster
 
@@ -794,8 +804,13 @@ func (t *Translator) buildCustomDomainVirtualHosts(user *message.UserInfo, app *
 
 		clusterName := fmt.Sprintf("custom_%s_%s_%s", user.Name, app.Name, entrance.Name)
 		upstreamHost := fmt.Sprintf("%s.%s.svc.cluster.local", entrance.Host, app.Namespace)
+		upstreamPort := uint32(entrance.Port)
+		if !app.IsShared && strings.EqualFold(strings.TrimSpace(app.RouteMode), "gateway") {
+			upstreamHost = "app-gateway-data.os-gateway.svc.cluster.local"
+			upstreamPort = 80
+		}
 		clusterSet[clusterName] = &ir.ClusterIR{
-			Name: clusterName, Host: upstreamHost, Port: uint32(entrance.Port), UseDNS: true,
+			Name: clusterName, Host: upstreamHost, Port: upstreamPort, UseDNS: true,
 		}
 
 		customRoute := &ir.HTTPRouteIR{

@@ -46,6 +46,10 @@ type AppInfo struct {
 	// as a marker on AppInfo so future per-app behaviour (logging, metrics,
 	// etc.) can distinguish them; access itself is no longer gated.
 	IsShared bool
+	// RouteMode is gateway.olares.io/route-mode: "", "direct", or "gateway".
+	// Empty is treated as direct. When gateway and !IsShared, l4 upstreams
+	// app-gateway-data:80 (DD-NET-L4-RM-01).
+	RouteMode string
 }
 
 type EntranceInfo = appv1alpha1.Entrance
