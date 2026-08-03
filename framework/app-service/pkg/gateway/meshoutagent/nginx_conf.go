@@ -12,16 +12,22 @@ type MeshOutRoute struct {
 	UpstreamHost string
 }
 
-// RenderMeshOutNginxConf builds nginx http{} config for SA Bearer inject (E-1～E-4).
+// SATokenPlaceholder is substituted at container start with the projected token.
+const SATokenPlaceholder = "__SA_TOKEN__"
+
+// RenderMeshOutNginxConf builds nginx http{} config for SA Bearer inject.
+// Authorization uses a placeholder replaced by the sidecar entrypoint from the
+// projected ServiceAccount token file — never a shell backtick literal.
 func RenderMeshOutNginxConf(saTokenPath string, routes []MeshOutRoute) string {
 	if saTokenPath == "" {
 		saTokenPath = SATokenMountPath + "/token"
 	}
 	var b strings.Builder
 	b.WriteString("worker_processes 1;\n")
+	b.WriteString("error_log /dev/stderr warn;\n")
 	b.WriteString("events { worker_connections 1024; }\n")
 	b.WriteString("http {\n")
-	b.WriteString(fmt.Sprintf("  # SA token: %s\n", saTokenPath))
+	b.WriteString(fmt.Sprintf("  # SA token file (runtime substitute): %s\n", saTokenPath))
 	b.WriteString("  # fail-closed when token missing (MESH_OUT_SA_TOKEN_MISSING)\n")
 	b.WriteString(fmt.Sprintf("  server {\n    listen %d;\n", ListenPort))
 	if len(routes) == 0 {
@@ -48,11 +54,37 @@ func RenderMeshOutNginxConf(saTokenPath string, routes []MeshOutRoute) string {
 				b.WriteString(fmt.Sprintf("      # domain match: %s\n", r.Domain))
 			}
 			b.WriteString("      proxy_set_header Temp-Authorization $http_authorization;\n")
-			b.WriteString(fmt.Sprintf("      proxy_set_header Authorization \"Bearer `cat %s`\";\n", saTokenPath))
+			b.WriteString(fmt.Sprintf("      proxy_set_header Authorization \"Bearer %s\";\n", SATokenPlaceholder))
 			b.WriteString(fmt.Sprintf("      proxy_pass http://%s;\n", host))
 			b.WriteString("    }\n")
 		}
 	}
 	b.WriteString("  }\n}\n")
 	return b.String()
+}
+
+// RenderMeshOutEntrypoint substitutes the projected token into nginx.conf and starts nginx.
+func RenderMeshOutEntrypoint(saTokenPath, confPath string) string {
+	if saTokenPath == "" {
+		saTokenPath = SATokenMountPath + "/token"
+	}
+	if confPath == "" {
+		confPath = ConfMountPath + "/nginx.conf"
+	}
+	return fmt.Sprintf(`set -eu
+TOKEN_FILE="%s"
+CONF="%s"
+WORK="/tmp/mesh-out-nginx.conf"
+if [ ! -s "$TOKEN_FILE" ]; then
+  echo "MESH_OUT_SA_TOKEN_MISSING" >&2
+  exit 1
+fi
+TOKEN="$(cat "$TOKEN_FILE")"
+if [ -z "$TOKEN" ]; then
+  echo "MESH_OUT_SA_TOKEN_MISSING" >&2
+  exit 1
+fi
+sed "s|%s|${TOKEN}|g" "$CONF" > "$WORK"
+exec nginx -c "$WORK" -g "daemon off;"
+`, saTokenPath, confPath, SATokenPlaceholder)
 }
