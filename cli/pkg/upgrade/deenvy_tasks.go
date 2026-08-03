@@ -228,32 +228,39 @@ func (a *deenvyWaitDeps) Execute(runtime connector.Runtime) error {
 		if !l4OK {
 			ok = false
 		}
-		// system-server TCP proxy backplane (platform Envoy allow-list)
-		conds["BackplaneReady"] = true
+		// system-server co-located TCP Envoy (platform allow-list; not extracted)
+		conds["SystemServerProxyReady"] = true
 		nsList, nsErr := kube.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 		if nsErr == nil {
-			backplaneSeen := false
-			backplaneOK := true
+			seen := false
+			proxyOK := true
 			for _, ns := range nsList.Items {
 				if !strings.HasPrefix(ns.Name, "user-system-") {
 					continue
 				}
-				bp, berr := kube.AppsV1().Deployments(ns.Name).Get(ctx, "system-backplane-proxy", metav1.GetOptions{})
-				if berr != nil {
-					if apierrors.IsNotFound(berr) {
+				dep, derr := kube.AppsV1().Deployments(ns.Name).Get(ctx, "system-server", metav1.GetOptions{})
+				if derr != nil {
+					if apierrors.IsNotFound(derr) {
 						continue
 					}
-					backplaneOK = false
+					proxyOK = false
 					continue
 				}
-				backplaneSeen = true
-				if bp.Status.ReadyReplicas < 1 {
-					backplaneOK = false
+				seen = true
+				hasProxy := false
+				for _, c := range dep.Spec.Template.Spec.Containers {
+					if c.Name == "proxy" && strings.Contains(strings.ToLower(c.Image), "envoy") {
+						hasProxy = true
+						break
+					}
+				}
+				if !hasProxy || dep.Status.ReadyReplicas < 1 {
+					proxyOK = false
 				}
 			}
-			if backplaneSeen {
-				conds["BackplaneReady"] = backplaneOK
-				if !backplaneOK {
+			if seen {
+				conds["SystemServerProxyReady"] = proxyOK
+				if !proxyOK {
 					ok = false
 				}
 			}

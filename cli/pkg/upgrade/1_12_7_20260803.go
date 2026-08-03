@@ -28,7 +28,7 @@ func (u upgrader_1_12_7_20260803) UpgradeSystemComponents() []task.Interface {
 	tasks := make([]task.Interface, 0)
 	tasks = append(tasks, upgradeKubernetesPrometheusRule()...)
 	tasks = append(tasks, u.upgraderBase.UpgradeSystemComponents()...)
-	// Wait for EG/Linkerd/backplane after platform charts land.
+	// Wait for EG/Linkerd/system-server proxy after platform charts land.
 	tasks = append(tasks, deenvyUpgradeTasks(ver)[2:3]...) // WaitDeps only
 	return tasks
 }

@@ -627,7 +627,7 @@ metadata:
 spec:
   type: ClusterIP
   selector:
-    app: system-backplane-proxy
+    app: systemserver
   ports:
     - protocol: TCP
       port: 3000

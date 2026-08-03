@@ -6,20 +6,19 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-// Platform Envoy allow-list (PLAN-SYS-DEENVY / ADR D-2):
+// Platform Envoy allow-list (ADR-SYS-DEENVY-STEADY-01 D-2):
 // business pods must not run olares-envoy-sidecar; these platform Envoy
-// workloads are retained by design.
+// workloads are retained by design (including system-server co-located proxy).
 const (
-	allowedEnvoyAppL4        = "l4-bfl-proxy"
-	allowedEnvoyAppEGData    = "app-gateway-data"
-	allowedEnvoyAppBackplane = "system-backplane-proxy"
-	// Legacy co-located system-server TCP proxy container name (pre-extract).
+	allowedEnvoyAppL4   = "l4-bfl-proxy"
+	allowedEnvoyAppEGData = "app-gateway-data"
+	// system-server TCP Envoy stays co-located as container "proxy".
 	allowedEnvoyContainerSystemProxy = "proxy"
 	allowedEnvoyAppSystemServer      = "systemserver"
 )
 
 // isAllowedPlatformEnvoy reports whether a container that looks like Envoy is
-// an approved platform data-plane (l4 / EG / system-backplane), not a business oes.
+// an approved platform data-plane (l4 / EG / system-server proxy), not a business oes.
 func isAllowedPlatformEnvoy(pod corev1.Pod, c corev1.Container) bool {
 	app := ""
 	if pod.Labels != nil {
@@ -36,9 +35,7 @@ func isAllowedPlatformEnvoy(pod corev1.Pod, c corev1.Container) bool {
 		return true
 	case app == allowedEnvoyAppEGData || pod.Namespace == "os-gateway":
 		return true
-	case app == allowedEnvoyAppBackplane || strings.HasPrefix(pod.Name, allowedEnvoyAppBackplane):
-		return true
-	// system-server chart: dedicated backplane Deployment, or legacy in-pod proxy.
+	// system-server Deployment keeps TCP Envoy as co-located container "proxy".
 	case app == allowedEnvoyAppSystemServer && name == allowedEnvoyContainerSystemProxy:
 		return true
 	case name == "olares-envoy-sidecar" || name == "olares-sidecar-init":
