@@ -58,20 +58,27 @@ func TestShouldInjectEnvoySidecarEntranceKeptWithoutMeshIn(t *testing.T) {
 		t.Fatal("entrance without mesh-in must still inject oes when injectPolicy is true")
 	}
 	// Shared-caller gate alone decides skip; without mesh-in it must not fire.
-	if mesh.ShouldSkipOesForSharedCaller(context.Background(), linkerdReadyKube(), false, false, false) {
+	if mesh.ShouldSkipOesForSharedCaller(context.Background(), linkerdReadyKube(), false, false, false, false, false) {
 		t.Fatal("Shared-caller skip must not fire without mesh-in")
 	}
 }
 
 func TestShouldSkipOesForSharedCallerEntranceWithMeshIn(t *testing.T) {
 	kube := linkerdReadyKube()
-	if !mesh.ShouldSkipOesForSharedCaller(context.Background(), kube, true, false, false) {
-		t.Fatal("entrance Shared caller with mesh-in and no provider must skip oes")
+	// SR-06': entrance without inbound coverage must keep oes.
+	if mesh.ShouldSkipOesForSharedCaller(context.Background(), kube, true, false, false, true, false) {
+		t.Fatal("entrance Shared caller without inbound coverage must keep oes")
 	}
-	if mesh.ShouldSkipOesForSharedCaller(context.Background(), kube, true, true, false) {
+	if !mesh.ShouldSkipOesForSharedCaller(context.Background(), kube, true, false, false, true, true) {
+		t.Fatal("entrance Shared caller with inbound coverage must skip oes")
+	}
+	if !mesh.ShouldSkipOesForSharedCaller(context.Background(), kube, true, false, false, false, false) {
+		t.Fatal("non-entrance Shared caller with mesh-in and no provider must skip oes")
+	}
+	if mesh.ShouldSkipOesForSharedCaller(context.Background(), kube, true, true, false, false, false) {
 		t.Fatal("Shared caller with provider and no mesh-out must keep oes")
 	}
-	if !mesh.ShouldSkipOesForSharedCaller(context.Background(), kube, true, true, true) {
+	if !mesh.ShouldSkipOesForSharedCaller(context.Background(), kube, true, true, true, false, false) {
 		t.Fatal("Shared caller with provider and mesh-out must skip oes")
 	}
 }
