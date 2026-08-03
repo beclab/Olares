@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/l4-bfl-proxy/internal/ir"
 	"github.com/beclab/l4-bfl-proxy/internal/message"
 	"github.com/telepresenceio/watchable"
@@ -499,7 +500,7 @@ func (t *Translator) buildUserVirtualHosts(user *message.UserInfo, zone string, 
 func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.AppInfo, zone string, isEphemeral bool, clusterSet map[string]*ir.ClusterIR) []*ir.VirtualHostIR {
 	var vhosts []*ir.VirtualHostIR
 
-	var appDomainConfigs []defaultThirdLevelDomainConfig
+	var appDomainConfigs []appv1alpha1.DefaultThirdLevelDomainConfig
 	if raw, ok := app.Settings["defaultThirdLevelDomainConfig"]; ok && raw != "" {
 		err := json.Unmarshal([]byte(raw), &appDomainConfigs)
 		if err != nil {
@@ -515,7 +516,7 @@ func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.A
 			continue
 		}
 
-		prefix := resolveEntrancePrefix(app.Entrances, index, app.Appid, appDomainConfigs)
+		prefix := appv1alpha1.ResolveEntranceIDWithDefaultThirdLevelDomainOverride(app.Entrances, index, app.Appid, appDomainConfigs)
 
 		hostname := fmt.Sprintf("%s.%s", prefix, zone)
 		if isEphemeral {
@@ -881,23 +882,6 @@ func (t *Translator) buildStreamListeners(resources *message.Resources, clusterS
 	}
 
 	return listeners
-}
-
-type defaultThirdLevelDomainConfig struct {
-	EntranceName     string `json:"entranceName"`
-	ThirdLevelDomain string `json:"thirdLevelDomain"`
-}
-
-func resolveEntrancePrefix(entrances []*message.EntranceInfo, index int, appid string, configs []defaultThirdLevelDomainConfig) string {
-	if len(entrances) == 1 {
-		return appid
-	}
-	for _, cfg := range configs {
-		if cfg.EntranceName == entrances[index].Name && cfg.ThirdLevelDomain != "" {
-			return cfg.ThirdLevelDomain
-		}
-	}
-	return fmt.Sprintf("%s%d", appid, index)
 }
 
 func toLocalDomain(hostname string) string {
