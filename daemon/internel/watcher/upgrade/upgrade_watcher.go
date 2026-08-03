@@ -113,6 +113,20 @@ func (w *upgradeWatcher) Watch(ctx context.Context) {
 	if err != nil || currentVersion.LessThan(&w.target.Version) {
 		state.CurrentState.UpgradingTarget = w.target.Version.Original()
 	} else if !w.isUpgrading() {
+		// Version CR may flip before SteadyStateGate Ready; do not clear the
+		// upgrade target until the oes-free gate commits (PLAN-SYS-DEENVY-OTA-01).
+		ready, gateErr := utils.IsDeenvySteadyGateReady(ctx)
+		if gateErr != nil {
+			klog.V(2).Infof("deenvy SteadyStateGate probe: %v", gateErr)
+		}
+		if !ready {
+			state.TerminusStateMu.Lock()
+			state.CurrentState.UpgradingState = state.InProgress
+			state.CurrentState.UpgradingStep = "WaitingSteadyStateGate"
+			state.CurrentState.UpgradingTarget = w.target.Version.Original()
+			state.TerminusStateMu.Unlock()
+			return
+		}
 		w.target = nil
 		_, err = upgrade.NewRemoveUpgradeTarget().Execute(ctx, nil)
 		if err != nil {

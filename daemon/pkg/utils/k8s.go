@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
@@ -23,6 +24,7 @@ import (
 	"github.com/joho/godotenv"
 	corev1 "k8s.io/api/core/v1"
 	apixclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
@@ -41,7 +43,6 @@ import (
 	"github.com/beclab/api/manifest"
 	"github.com/beclab/api/pkg/generated/clientset/versioned"
 	nadutils "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/utils"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 const (
@@ -585,6 +586,33 @@ func GetTerminusVersion(ctx context.Context, client dynamic.Interface) (*string,
 	}
 
 	return &terminus.Spec.Version, nil
+}
+
+// IsDeenvySteadyGateReady reports whether the oes-free SteadyStateGate is Ready.
+// Missing ConfigMap → true (non-deenvy upgrades / greenfield without gate object).
+func IsDeenvySteadyGateReady(ctx context.Context) (bool, error) {
+	client, err := GetKubeClient()
+	if err != nil {
+		return false, err
+	}
+	cm, err := client.CoreV1().ConfigMaps("os-framework").Get(ctx, "olares-deenvy-steady-state", metav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return true, nil
+		}
+		return false, err
+	}
+	phase := strings.TrimSpace(cm.Data["phase"])
+	if phase == "" && cm.Data["state"] != "" {
+		// Prefer top-level phase; fall back to JSON state.phase when present.
+		var st struct {
+			Phase string `json:"phase"`
+		}
+		if json.Unmarshal([]byte(cm.Data["state"]), &st) == nil {
+			phase = st.Phase
+		}
+	}
+	return strings.EqualFold(phase, "Ready"), nil
 }
 
 func GetTerminusInstalledTime(ctx context.Context, client kubernetes.Interface) (*int64, error) {
