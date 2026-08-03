@@ -5,6 +5,7 @@ import (
 	"sort"
 	"time"
 
+	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/l4-bfl-proxy/internal/ir"
 	cachetypes "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	"github.com/telepresenceio/watchable"
@@ -47,19 +48,7 @@ type AppInfo struct {
 	IsShared bool
 }
 
-type EntranceInfo struct {
-	Name            string
-	Host            string
-	Port            int32
-	AuthLevel       string
-	WindowPushState bool
-	// Type is the entrance type from the Application CR. A "dev" entrance's
-	// Host is the backing pod IP (written by proxylistener), and it is routed
-	// straight to that IP as a STATIC cluster instead of a Kubernetes service
-	// DNS name (see translator.buildAppVirtualHosts). It also gets a
-	// `<appid>-<port>.<zone>` alias.
-	Type string
-}
+type EntranceInfo = appv1alpha1.Entrance
 
 type PortInfo struct {
 	Name       string
