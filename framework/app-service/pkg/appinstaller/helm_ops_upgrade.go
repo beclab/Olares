@@ -2,6 +2,7 @@ package appinstaller
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
@@ -21,7 +22,30 @@ import (
 
 // Upgrade do a upgrade operation for release.
 func (h *HelmOps) Upgrade() error {
-	return h.upgrade()
+	if err := h.upgrade(); err != nil {
+		klog.Errorf("Upgrade failed for app %s: %v; attempting Helm rollback", h.app.AppName, err)
+		if rbErr := h.RollBack(); rbErr != nil {
+			klog.Errorf("Helm rollback after upgrade failure also failed app=%s err=%v", h.app.AppName, rbErr)
+		}
+		return err
+	}
+	ok, err := h.WaitForStartUp()
+	if err != nil {
+		klog.Errorf("WaitForStartUp after upgrade failed app=%s err=%v; attempting Helm rollback", h.app.AppName, err)
+		if rbErr := h.RollBack(); rbErr != nil {
+			klog.Errorf("Helm rollback after WaitForStartUp failure also failed app=%s err=%v", h.app.AppName, rbErr)
+		}
+		return err
+	}
+	if !ok {
+		err = fmt.Errorf("app %s failed to start up after upgrade", h.app.AppName)
+		klog.Error(err)
+		if rbErr := h.RollBack(); rbErr != nil {
+			klog.Errorf("Helm rollback after startup failure also failed app=%s err=%v", h.app.AppName, rbErr)
+		}
+		return err
+	}
+	return nil
 }
 
 func (h *HelmOps) upgrade() error {
