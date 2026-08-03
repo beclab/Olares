@@ -119,6 +119,9 @@ func ReconcileSharedRoute(ctx context.Context, c client.Client, gw GatewayRef, s
 		if err := deleteSecurityPolicy(ctx, c, srr); err != nil {
 			return ReconcileResult{}, fmt.Errorf("delete SecurityPolicy: %w", err)
 		}
+		if err := deleteEntranceExtAuthPolicy(ctx, c, srr); err != nil {
+			return ReconcileResult{}, fmt.Errorf("delete entrance ExtAuth SecurityPolicy: %w", err)
+		}
 		if err := deleteJWKSReferenceGrant(ctx, c, srr); err != nil {
 			return ReconcileResult{}, fmt.Errorf("delete JWKS ReferenceGrant: %w", err)
 		}
@@ -197,11 +200,24 @@ func reconcileGatewayMode(ctx context.Context, c client.Client, gw GatewayRef, s
 	if err := ensureSharedNamespaceLinkerdInject(ctx, c, injectNS, true); err != nil {
 		return ReconcileResult{}, fmt.Errorf("enable shared namespace linkerd inject: %w", err)
 	}
-	if err := applySecurityPolicy(ctx, c, srr); err != nil {
-		return ReconcileResult{}, fmt.Errorf("apply SecurityPolicy: %w", err)
-	}
-	if err := applyJWKSReferenceGrant(ctx, c, srr); err != nil {
-		return ReconcileResult{}, fmt.Errorf("apply JWKS ReferenceGrant: %w", err)
+	if needsEntranceExtAuth(srr) {
+		if err := applyEntranceExtAuthPolicy(ctx, c, srr); err != nil {
+			return ReconcileResult{}, fmt.Errorf("apply entrance ExtAuth SecurityPolicy: %w", err)
+		}
+		// Ordinary entrances must not keep Shared JWT SecurityPolicy.
+		if err := deleteSecurityPolicy(ctx, c, srr); err != nil {
+			return ReconcileResult{}, fmt.Errorf("delete JWT SecurityPolicy for entrance: %w", err)
+		}
+	} else {
+		if err := applySecurityPolicy(ctx, c, srr); err != nil {
+			return ReconcileResult{}, fmt.Errorf("apply SecurityPolicy: %w", err)
+		}
+		if err := applyJWKSReferenceGrant(ctx, c, srr); err != nil {
+			return ReconcileResult{}, fmt.Errorf("apply JWKS ReferenceGrant: %w", err)
+		}
+		if err := deleteEntranceExtAuthPolicy(ctx, c, srr); err != nil {
+			return ReconcileResult{}, fmt.Errorf("delete stale entrance ExtAuth: %w", err)
+		}
 	}
 	return ReconcileResult{
 		Status:        metav1.ConditionTrue,
