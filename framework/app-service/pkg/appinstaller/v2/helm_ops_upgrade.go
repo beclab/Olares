@@ -91,11 +91,17 @@ func (h *HelmOpsV2) Upgrade() error {
 
 	ok, err := h.WaitForStartUp()
 	if err != nil && (errors.Is(err, errcode.ErrPodPending) || errors.Is(err, errcode.ErrServerSidePodPending)) {
+		if rbErr := h.RollBack(); rbErr != nil {
+			klog.Errorf("Helm rollback after pending WaitForStartUp also failed app=%s err=%v", h.App().AppName, rbErr)
+		}
 		return err
 	}
 
 	if !ok {
 		klog.Errorf("Failed to wait for app %s startup", h.App().AppName)
+		if rbErr := h.RollBack(); rbErr != nil {
+			klog.Errorf("Helm rollback after WaitForStartUp failure also failed app=%s err=%v", h.App().AppName, rbErr)
+		}
 		return fmt.Errorf("app %s failed to start up", h.App().AppName)
 	}
 
