@@ -51,6 +51,11 @@ type hfMaterializeHooks struct {
 	syncParentDirectory func(*os.Root) error
 }
 
+type hfArtifactTarget struct {
+	artifact BundleArtifactV1
+	target   string
+}
+
 func markerFor(artifact BundleArtifactV1) hfCacheMarker {
 	return hfCacheMarker{
 		Kind:           artifact.Kind,
@@ -81,22 +86,9 @@ func materializeHFArtifactsWithHooks(installerDir, targetRootPath string, owners
 	if len(artifacts) == 0 {
 		return nil
 	}
-	type hfArtifactTarget struct {
-		artifact BundleArtifactV1
-		target   string
-	}
-	declarations := make([]hfArtifactTarget, 0, len(artifacts))
-	targets := make(map[string]string, len(artifacts))
-	for _, artifact := range artifacts {
-		target, err := hfTargetName(artifact.Repo)
-		if err != nil {
-			return err
-		}
-		if previous, exists := targets[target]; exists {
-			return fmt.Errorf("duplicate Hugging Face cache target %q for repositories %q and %q", target, previous, artifact.Repo)
-		}
-		targets[target] = artifact.Repo
-		declarations = append(declarations, hfArtifactTarget{artifact: artifact, target: target})
+	declarations, err := hfArtifactTargets(artifacts)
+	if err != nil {
+		return err
 	}
 
 	targetRoot, err := openDirectoryNoSymlink(targetRootPath)
@@ -144,6 +136,23 @@ func bundleHFArtifacts(bundle BundleV1) []BundleArtifactV1 {
 		}
 	}
 	return artifacts
+}
+
+func hfArtifactTargets(artifacts []BundleArtifactV1) ([]hfArtifactTarget, error) {
+	declarations := make([]hfArtifactTarget, 0, len(artifacts))
+	targets := make(map[string]string, len(artifacts))
+	for _, artifact := range artifacts {
+		target, err := hfTargetName(artifact.Repo)
+		if err != nil {
+			return nil, err
+		}
+		if previous, exists := targets[target]; exists {
+			return nil, fmt.Errorf("duplicate Hugging Face cache target %q for repositories %q and %q", target, previous, artifact.Repo)
+		}
+		targets[target] = artifact.Repo
+		declarations = append(declarations, hfArtifactTarget{artifact: artifact, target: target})
+	}
+	return declarations, nil
 }
 
 func hfTargetName(repo string) (string, error) {
@@ -232,19 +241,9 @@ func materializeOneHFArtifact(staticRoot, targetRoot *os.Root, target string, ar
 		}
 	}
 
-	if err := rejectRootSymlinkComponents(staticRoot, artifact.Source); err != nil {
+	sourceRoot, err := openHFArtifactSource(staticRoot, artifact)
+	if err != nil {
 		return err
-	}
-	sourceInfo, err := staticRoot.Lstat(artifact.Source)
-	if err != nil {
-		return fmt.Errorf("inspect artifact source %q: %w", artifact.Source, err)
-	}
-	if !sourceInfo.IsDir() || sourceInfo.Mode()&os.ModeSymlink != 0 {
-		return fmt.Errorf("artifact source %q must be a directory", artifact.Source)
-	}
-	sourceRoot, err := staticRoot.OpenRoot(artifact.Source)
-	if err != nil {
-		return fmt.Errorf("open artifact source %q: %w", artifact.Source, err)
 	}
 	defer sourceRoot.Close()
 
@@ -350,53 +349,26 @@ func hfInterruptedPublish(root *os.Root, target, repo string) (bool, error) {
 }
 
 func materializeHFEntry(sourceRoot, stagingRoot *os.Root, entry ArtifactManifestEntryV1) error {
-	if err := rejectHFReservedTarget(entry.Path); err != nil {
-		return err
-	}
-	if parent := path.Dir(entry.Path); parent != "." {
-		if err := rejectRootSymlinkComponents(sourceRoot, parent); err != nil {
-			return err
-		}
-	}
-	info, err := sourceRoot.Lstat(entry.Path)
+	_, symlinkTarget, err := inspectHFEntry(sourceRoot, entry)
 	if err != nil {
-		return fmt.Errorf("inspect artifact entry %q: %w", entry.Path, err)
+		return err
 	}
 	switch entry.Type {
 	case "directory":
-		if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
-			return fmt.Errorf("artifact entry %q must be a directory", entry.Path)
-		}
 		if err := stagingRoot.MkdirAll(entry.Path, 0o755); err != nil {
 			return fmt.Errorf("create artifact directory %q: %w", entry.Path, err)
 		}
 		return stagingRoot.Chmod(entry.Path, 0o755)
 	case "file":
-		if !info.Mode().IsRegular() {
-			return fmt.Errorf("artifact entry %q must be a regular file", entry.Path)
-		}
 		if err := stagingRoot.MkdirAll(path.Dir(entry.Path), 0o755); err != nil {
 			return fmt.Errorf("create artifact file parent %q: %w", entry.Path, err)
 		}
-		return copyHFFile(sourceRoot, stagingRoot, entry, info)
+		return copyHFFile(sourceRoot, stagingRoot, entry)
 	case "symlink":
-		if info.Mode()&os.ModeSymlink == 0 {
-			return fmt.Errorf("artifact entry %q must be a symlink", entry.Path)
-		}
-		target, err := sourceRoot.Readlink(entry.Path)
-		if err != nil {
-			return fmt.Errorf("read artifact symlink %q: %w", entry.Path, err)
-		}
-		if target != entry.Target {
-			return fmt.Errorf("artifact symlink %q target mismatch", entry.Path)
-		}
-		if err := validateSymlinkTarget(entry.Path, target); err != nil {
-			return fmt.Errorf("artifact symlink %q target: %w", entry.Path, err)
-		}
 		if err := stagingRoot.MkdirAll(path.Dir(entry.Path), 0o755); err != nil {
 			return fmt.Errorf("create artifact symlink parent %q: %w", entry.Path, err)
 		}
-		if err := stagingRoot.Symlink(target, entry.Path); err != nil {
+		if err := stagingRoot.Symlink(symlinkTarget, entry.Path); err != nil {
 			return fmt.Errorf("create artifact symlink %q: %w", entry.Path, err)
 		}
 		return nil
@@ -405,10 +377,72 @@ func materializeHFEntry(sourceRoot, stagingRoot *os.Root, entry ArtifactManifest
 	}
 }
 
-func copyHFFile(sourceRoot, stagingRoot *os.Root, entry ArtifactManifestEntryV1, lstatInfo fs.FileInfo) error {
-	if lstatInfo.Size() != entry.Size {
-		return fmt.Errorf("artifact file %q size mismatch: got %d, want %d", entry.Path, lstatInfo.Size(), entry.Size)
+func openHFArtifactSource(staticRoot *os.Root, artifact BundleArtifactV1) (*os.Root, error) {
+	if err := rejectRootSymlinkComponents(staticRoot, artifact.Source); err != nil {
+		return nil, err
 	}
+	sourceInfo, err := staticRoot.Lstat(artifact.Source)
+	if err != nil {
+		return nil, fmt.Errorf("inspect artifact source %q: %w", artifact.Source, err)
+	}
+	if !sourceInfo.IsDir() || sourceInfo.Mode()&os.ModeSymlink != 0 {
+		return nil, fmt.Errorf("artifact source %q must be a directory", artifact.Source)
+	}
+	sourceRoot, err := staticRoot.OpenRoot(artifact.Source)
+	if err != nil {
+		return nil, fmt.Errorf("open artifact source %q: %w", artifact.Source, err)
+	}
+	return sourceRoot, nil
+}
+
+func inspectHFEntry(sourceRoot *os.Root, entry ArtifactManifestEntryV1) (fs.FileInfo, string, error) {
+	if err := rejectHFReservedTarget(entry.Path); err != nil {
+		return nil, "", err
+	}
+	if parent := path.Dir(entry.Path); parent != "." {
+		if err := rejectRootSymlinkComponents(sourceRoot, parent); err != nil {
+			return nil, "", err
+		}
+	}
+	info, err := sourceRoot.Lstat(entry.Path)
+	if err != nil {
+		return nil, "", fmt.Errorf("inspect artifact entry %q: %w", entry.Path, err)
+	}
+	switch entry.Type {
+	case "directory":
+		if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
+			return nil, "", fmt.Errorf("artifact entry %q must be a directory", entry.Path)
+		}
+		return info, "", nil
+	case "file":
+		if !info.Mode().IsRegular() {
+			return nil, "", fmt.Errorf("artifact entry %q must be a regular file", entry.Path)
+		}
+		if info.Size() != entry.Size {
+			return nil, "", fmt.Errorf("artifact file %q size mismatch: got %d, want %d", entry.Path, info.Size(), entry.Size)
+		}
+		return info, "", nil
+	case "symlink":
+		if info.Mode()&os.ModeSymlink == 0 {
+			return nil, "", fmt.Errorf("artifact entry %q must be a symlink", entry.Path)
+		}
+		target, err := sourceRoot.Readlink(entry.Path)
+		if err != nil {
+			return nil, "", fmt.Errorf("read artifact symlink %q: %w", entry.Path, err)
+		}
+		if target != entry.Target {
+			return nil, "", fmt.Errorf("artifact symlink %q target mismatch", entry.Path)
+		}
+		if err := validateSymlinkTarget(entry.Path, target); err != nil {
+			return nil, "", fmt.Errorf("artifact symlink %q target: %w", entry.Path, err)
+		}
+		return info, target, nil
+	default:
+		return nil, "", fmt.Errorf("artifact entry %q has unsupported type %q", entry.Path, entry.Type)
+	}
+}
+
+func copyHFFile(sourceRoot, stagingRoot *os.Root, entry ArtifactManifestEntryV1) error {
 	_, err := copyVerifiedRegularFile(sourceRoot, stagingRoot, verifiedCopy{
 		Source:     entry.Path,
 		Target:     entry.Path,

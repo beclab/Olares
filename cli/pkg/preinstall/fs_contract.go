@@ -113,6 +113,32 @@ func writeRootFile(root *os.Root, name string, data []byte, options rootFileWrit
 }
 
 func copyVerifiedRegularFile(sourceRoot, targetRoot *os.Root, spec verifiedCopy) (int64, error) {
+	var output *os.File
+	copied, copyErr := consumeVerifiedRegularFile(sourceRoot, spec, func() (io.Writer, error) {
+		var err error
+		output, err = targetRoot.OpenFile(spec.Target, os.O_CREATE|os.O_EXCL|os.O_WRONLY, spec.OutputMode)
+		if err != nil {
+			return nil, fmt.Errorf("create %q: %w", spec.Target, err)
+		}
+		return output, nil
+	})
+	if output == nil {
+		return 0, copyErr
+	}
+	closeErr := sealFile(output, spec.Target, spec.OutputMode)
+	if err := errors.Join(copyErr, closeErr); err != nil {
+		return 0, err
+	}
+	return copied, nil
+}
+
+func verifyRegularFile(root *os.Root, spec verifiedCopy) (int64, error) {
+	return consumeVerifiedRegularFile(root, spec, func() (io.Writer, error) {
+		return io.Discard, nil
+	})
+}
+
+func consumeVerifiedRegularFile(sourceRoot *os.Root, spec verifiedCopy, destination func() (io.Writer, error)) (int64, error) {
 	if err := rejectRootSymlinkComponents(sourceRoot, spec.Source); err != nil {
 		return 0, err
 	}
@@ -154,9 +180,9 @@ func copyVerifiedRegularFile(sourceRoot, targetRoot *os.Root, spec verifiedCopy)
 			return 0, err
 		}
 	}
-	output, err := targetRoot.OpenFile(spec.Target, os.O_CREATE|os.O_EXCL|os.O_WRONLY, spec.OutputMode)
+	output, err := destination()
 	if err != nil {
-		return 0, fmt.Errorf("create %q: %w", spec.Target, err)
+		return 0, err
 	}
 	hasher := sha256.New()
 	copied, copyErr := io.Copy(io.MultiWriter(output, hasher), io.LimitReader(input, spec.Size+1))
@@ -178,11 +204,7 @@ func copyVerifiedRegularFile(sourceRoot, targetRoot *os.Root, spec verifiedCopy)
 	if spec.SHA256 != "" && !strings.EqualFold(hex.EncodeToString(hasher.Sum(nil)), spec.SHA256) {
 		copyErr = errors.Join(copyErr, fmt.Errorf("%q digest mismatch", spec.Source))
 	}
-	closeErr := sealFile(output, spec.Target, spec.OutputMode)
-	if err := errors.Join(copyErr, closeErr); err != nil {
-		return 0, err
-	}
-	return copied, nil
+	return copied, copyErr
 }
 
 func fileMetadataChanged(before, after os.FileInfo) bool {
@@ -265,17 +287,24 @@ func openStaticBundle(installerDir string) (*os.Root, []byte, BundleV1, bool, er
 	if err != nil {
 		return nil, nil, BundleV1{}, false, fmt.Errorf("open preinstall source: %w", err)
 	}
-	data, err := readRootFileLimited(root, BundleFileName, MaxBundleJSONBytes)
-	if err != nil {
-		_ = root.Close()
-		return nil, nil, BundleV1{}, false, err
-	}
-	bundle, err := DecodeBundle(data)
+	data, bundle, err := decodeBundleRoot(root)
 	if err != nil {
 		_ = root.Close()
 		return nil, nil, BundleV1{}, false, err
 	}
 	return root, data, bundle, true, nil
+}
+
+func decodeBundleRoot(root *os.Root) ([]byte, BundleV1, error) {
+	data, err := readRootFileLimited(root, BundleFileName, MaxBundleJSONBytes)
+	if err != nil {
+		return nil, BundleV1{}, err
+	}
+	bundle, err := DecodeBundle(data)
+	if err != nil {
+		return nil, BundleV1{}, err
+	}
+	return data, bundle, nil
 }
 
 func openRootRegularFile(root *os.Root, name string) (*os.File, error) {
