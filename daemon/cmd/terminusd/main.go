@@ -157,9 +157,31 @@ func main() {
 					FieldSelector: "metadata.name=steamheadless",
 				}); err == nil {
 					if len(deployments.Items) > 0 {
-						found = true
-						if err := sunshine.Restart(); err != nil {
-							klog.Error(err)
+						// check if the overlay gateway is enabled and the steamheadless
+						// is running with the overlay gateway enabled, if not restart the sunshine mdns proxy
+						var overlaygatewayEnabled bool
+
+						c, err := utils.FindBridgeConnection(mainCtx)
+						if err != nil {
+							klog.Error("find bridge connection error, ", err)
+						} else {
+							if c != nil && c.Active {
+								enabled, err := utils.GetApplicationSettings(mainCtx, "steamheadless", "enableOverlayGateway")
+								if err != nil {
+									klog.Error("get application settings error, ", err)
+								} else {
+									if enabled == "true" {
+										overlaygatewayEnabled = true
+									}
+								}
+							}
+						}
+
+						if !overlaygatewayEnabled {
+							found = true
+							if err := sunshine.Restart(); err != nil {
+								klog.Error(err)
+							}
 						}
 					}
 				}
