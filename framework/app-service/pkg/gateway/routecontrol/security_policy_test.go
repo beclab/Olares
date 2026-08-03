@@ -75,7 +75,7 @@ func TestDesiredSharedRouteSecurityPolicyJWTAuthn(t *testing.T) {
 	}
 
 	claimToHeaders, ok := provider["claimToHeaders"].([]any)
-	if !ok || len(claimToHeaders) != 2 {
+	if !ok || len(claimToHeaders) != 3 {
 		t.Fatalf("claimToHeaders = %#v", provider["claimToHeaders"])
 	}
 	claimMap := claimToHeaders[0].(map[string]any)
@@ -93,7 +93,14 @@ func TestDesiredSharedRouteSecurityPolicyJWTAuthn(t *testing.T) {
 	if appidMap["header"] != "X-Shared-Appid" {
 		t.Fatalf("shared appid header must remain X-Shared-Appid, got %#v", appidMap["header"])
 	}
-	// Both mappings stay configured; a given token carries only one identity claim.
+	clientMap := claimToHeaders[2].(map[string]any)
+	if clientMap["claim"] != CallerJWTClientAppidClaim || clientMap["header"] != CallerJWTClientAppidHeader {
+		t.Fatalf("claimToHeaders[2] = %#v", clientMap)
+	}
+	if clientMap["header"] != "X-Caller-Appid" {
+		t.Fatalf("ordinary client appid header must remain X-Caller-Appid, got %#v", clientMap["header"])
+	}
+	// Three mappings stay configured; a given token carries the claims for its caller type.
 
 	extractFrom, ok := provider["extractFrom"].(map[string]any)
 	if !ok {

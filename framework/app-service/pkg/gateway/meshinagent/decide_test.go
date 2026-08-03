@@ -25,10 +25,20 @@ func TestDecideEligibilityWithoutCallees(t *testing.T) {
 	}
 }
 
-func TestDecideSharedNoEligibility(t *testing.T) {
+func TestDecideSharedDefaultCaller(t *testing.T) {
 	r := Decide("ollamallmbase", map[string]string{SettingNeedsSharedAccess: "true"}, DefaultRules(), true)
+	if !r.Inject || r.Source != DecideSourceSharedDefault {
+		t.Fatalf("Shared app must default to caller: %+v", r)
+	}
+	if len(r.Callees) != 0 {
+		t.Fatalf("shared-default edges must be empty: %+v", r)
+	}
+}
+
+func TestDecideSharedOptOutBlocksDefault(t *testing.T) {
+	r := Decide("ollamallmbase", map[string]string{SettingOptOutMesh: "disabled"}, DefaultRules(), true)
 	if r.Inject {
-		t.Fatalf("Shared pure callee must not get eligibility decide: %+v", r)
+		t.Fatalf("opt-out must block shared-default: %+v", r)
 	}
 }
 
@@ -138,11 +148,22 @@ func TestApplyDecideSharedPlatformRule(t *testing.T) {
 	}
 }
 
-func TestApplyDecideSharedPureCallee(t *testing.T) {
+func TestApplyDecideSharedDefaultCaller(t *testing.T) {
 	s := map[string]string{SettingNeedsSharedAccess: "true"}
 	r := ApplyDecide("ollamallmbase", s, DefaultRules(), true)
-	if r.Inject || s[AnnotDecide] != "false" {
-		t.Fatalf("pure Shared callee must not decide: %+v settings=%v", r, s)
+	if !r.Inject || r.Source != DecideSourceSharedDefault || s[AnnotDecide] != "true" {
+		t.Fatalf("Shared must default decide: %+v settings=%v", r, s)
+	}
+	if s[AnnotDecideSource] != DecideSourceSharedDefault || s[AnnotDecideEdges] != "" {
+		t.Fatalf("shared-default settings: %v", s)
+	}
+}
+
+func TestApplyDecideSharedRenameStillCaller(t *testing.T) {
+	s := map[string]string{}
+	r := ApplyDecide("router", s, DefaultRules(), true)
+	if !r.Inject || r.Source != DecideSourceSharedDefault {
+		t.Fatalf("renamed Shared must still decide: %+v", r)
 	}
 }
 
