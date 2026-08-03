@@ -10,8 +10,8 @@ const (
 	// the macvlan NIC out of any in-pod transparent proxy interception.
 	MacvlanBypassInitContainerName = "macvlan-bypass-iptables"
 
-	// macvlanBypassImage must ship an iptables binary; it is the same image the
-	// envoy sidecar iptables init uses.
+	// macvlanBypassImage must ship iptables-nft. The image's bare `iptables`
+	// resolves to legacy; this bypass intentionally never calls it.
 	macvlanBypassImage = "beclab/init:v1.2.3"
 
 	// macvlanIfaceEnv carries the macvlan NIC name into the bypass script.
@@ -26,12 +26,32 @@ const (
 // jump a data-plane proxy installed (linkerd-init appends its jump to
 // PREROUTING/OUTPUT, mesh-in inserts its own REDIRECT at the head of OUTPUT).
 //
+// requirement: use iptables-nft only. Linkerd and mesh-in write nf_tables; a
+// bare `iptables` call in beclab/init lands on legacy and leaves the nft hijack
+// untouched (empty bypass). Envoy's macvlan RETURN still lives in the envoy
+// iptables init on legacy (#3239) and is not this container's job.
+// behavior: write four head ACCEPT rules on nft, then fail closed unless each
+// of the four chain heads is the iface ACCEPT.
 // The container must therefore run as the last init that touches iptables; it
 // writes once and exits instead of polling to reclaim the chain head.
 func MacvlanBypassScript() string {
 	return `set -u
 IFACE="${MACVLAN_IFACE:-net1}"
-echo "macvlan-bypass: interface=$IFACE"
+# Prefer PATH override for tests; production image has /sbin/iptables-nft.
+IPTABLES_BIN="${IPTABLES_BIN:-iptables-nft}"
+echo "macvlan-bypass: interface=$IFACE bin=$IPTABLES_BIN"
+command -v "$IPTABLES_BIN" >/dev/null 2>&1 || {
+  echo "macvlan-bypass: $IPTABLES_BIN not found (need nf_tables variant)" >&2
+  exit 1
+}
+version=$("$IPTABLES_BIN" --version 2>/dev/null || true)
+case "$version" in
+  *nf_tables*) ;;
+  *)
+    echo "macvlan-bypass: $IPTABLES_BIN is not nf_tables (got: ${version:-unknown})" >&2
+    exit 1
+    ;;
+esac
 ip link show "$IFACE" >/dev/null 2>&1 \
   || echo "macvlan-bypass: $IFACE not attached yet; interface-matched rules apply once it appears" >&2
 
@@ -39,17 +59,30 @@ reinsert() {
   t="$1"
   c="$2"
   d="$3"
-  while iptables -t "$t" -C "$c" "$d" "$IFACE" -j ACCEPT 2>/dev/null; do
-    iptables -t "$t" -D "$c" "$d" "$IFACE" -j ACCEPT || {
+  while "$IPTABLES_BIN" -t "$t" -C "$c" "$d" "$IFACE" -j ACCEPT 2>/dev/null; do
+    "$IPTABLES_BIN" -t "$t" -D "$c" "$d" "$IFACE" -j ACCEPT || {
       echo "macvlan-bypass: failed to drop stale rule -t $t $c $d $IFACE" >&2
       exit 1
     }
   done
-  iptables -t "$t" -I "$c" 1 "$d" "$IFACE" -j ACCEPT || {
+  "$IPTABLES_BIN" -t "$t" -I "$c" 1 "$d" "$IFACE" -j ACCEPT || {
     echo "macvlan-bypass: failed to install -t $t $c $d $IFACE" >&2
     exit 1
   }
   echo "macvlan-bypass: installed -t $t -I $c 1 $d $IFACE -j ACCEPT"
+}
+
+verify_head() {
+  t="$1"
+  c="$2"
+  d="$3"
+  dump=$("$IPTABLES_BIN" -t "$t" -S "$c" 2>/dev/null || true)
+  first=$(printf '%s\n' "$dump" | awk '/^-A /{print; exit}')
+  want="-A $c $d $IFACE -j ACCEPT"
+  if [ "$first" != "$want" ]; then
+    echo "macvlan-bypass: $t/$c head is not iface ACCEPT (got: ${first:-empty})" >&2
+    exit 1
+  fi
 }
 
 reinsert nat PREROUTING -i
@@ -57,11 +90,11 @@ reinsert nat OUTPUT -o
 reinsert filter INPUT -i
 reinsert filter OUTPUT -o
 
-echo "macvlan-bypass: nat/filter head after install:"
-iptables -t nat -S PREROUTING 2>/dev/null || true
-iptables -t nat -S OUTPUT 2>/dev/null || true
-iptables -t filter -S INPUT 2>/dev/null || true
-iptables -t filter -S OUTPUT 2>/dev/null || true
+verify_head nat PREROUTING -i
+verify_head nat OUTPUT -o
+verify_head filter INPUT -i
+verify_head filter OUTPUT -o
+echo "macvlan-bypass: verified four iface ACCEPT heads on nft"
 `
 }
 
