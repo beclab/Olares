@@ -35,27 +35,23 @@ func TestIsAllowedPlatformEnvoy(t *testing.T) {
 			wantBizOES: false,
 		},
 		{
-			name: "system-backplane",
-			pod: corev1.Pod{ObjectMeta: metav1.ObjectMeta{
-				Name: "system-backplane-proxy-abc",
-				Labels: map[string]string{
-					"app":                    "system-backplane-proxy",
-					"envoy.olares.io/role":   "platform-backplane",
-					"envoy.olares.io/allowlist": "true",
-				},
-			}},
-			c:          corev1.Container{Name: "proxy", Image: "beclab/envoy:v1.25.11.1"},
-			wantAllow:  true,
-			wantBizOES: false,
-		},
-		{
-			name: "legacy system-server proxy",
+			name: "system-server co-located proxy",
 			pod: corev1.Pod{ObjectMeta: metav1.ObjectMeta{
 				Name: "system-server-xyz", Labels: map[string]string{"app": "systemserver"},
 			}},
 			c:          corev1.Container{Name: "proxy", Image: "beclab/envoy:v1.25.11.1"},
 			wantAllow:  true,
 			wantBizOES: false,
+		},
+		{
+			name: "extracted backplane no longer allowed by default",
+			pod: corev1.Pod{ObjectMeta: metav1.ObjectMeta{
+				Name: "system-backplane-proxy-abc",
+				Labels: map[string]string{"app": "system-backplane-proxy"},
+			}},
+			c:          corev1.Container{Name: "proxy", Image: "beclab/envoy:v1.25.11.1"},
+			wantAllow:  false,
+			wantBizOES: true,
 		},
 		{
 			name: "business oes",
