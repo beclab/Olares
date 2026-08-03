@@ -26,6 +26,7 @@ const (
 	ClaimEntrance       = "olares.entrance"
 	ClaimViewer         = "olares.viewer"
 	ClaimAppid          = "olares.caller.appid"
+	ClaimClientAppid    = "olares.caller.clientAppid"
 	// CallerJWTHeaderName is the platform caller-jwt transport header (bare JWT,
 	// no Bearer prefix). Distinct from Authorization so app credentials pass through.
 	CallerJWTHeaderName = "X-Olares-Caller-Jwt"
@@ -40,8 +41,9 @@ const (
 )
 
 // IssueRequest carries workload identity for a caller JWT.
-// Ordinary callers set Viewer (user); Shared callers set Appid and leave Viewer empty.
-// Viewer and Appid must not both be set.
+// Shared callers set Appid only. Ordinary callers set Viewer and ClientAppid.
+// Appid (Shared) and ClientAppid (ordinary) must not both be set; Viewer must
+// not accompany Appid.
 type IssueRequest struct {
 	Namespace          string
 	ServiceAccountName string
@@ -49,16 +51,18 @@ type IssueRequest struct {
 	Entrance           string
 	Viewer             string
 	Appid              string
+	ClientAppid        string
 	TTL                time.Duration
 }
 
 // Claims is the caller JWT claim schema published to Envoy Gateway.
 type Claims struct {
 	jwt.RegisteredClaims
-	AppRef   string `json:"olares.caller.appRef"`
-	Entrance string `json:"olares.entrance,omitempty"`
-	Viewer   string `json:"olares.viewer,omitempty"`
-	Appid    string `json:"olares.caller.appid,omitempty"`
+	AppRef      string `json:"olares.caller.appRef"`
+	Entrance    string `json:"olares.entrance,omitempty"`
+	Viewer      string `json:"olares.viewer,omitempty"`
+	Appid       string `json:"olares.caller.appid,omitempty"`
+	ClientAppid string `json:"olares.caller.clientAppid,omitempty"`
 }
 
 // KeyPair holds one RS256 signing key and its JWKS key ID.
@@ -107,8 +111,12 @@ func (i *Issuer) Issue(req IssueRequest) (string, error) {
 	}
 	viewer := strings.TrimSpace(req.Viewer)
 	appid := strings.TrimSpace(req.Appid)
+	clientAppid := strings.TrimSpace(req.ClientAppid)
+	if appid != "" && clientAppid != "" {
+		return "", errors.New("callerjwt: shared appid and clientAppid claims are mutually exclusive")
+	}
 	if viewer != "" && appid != "" {
-		return "", errors.New("callerjwt: viewer and appid identity claims are mutually exclusive")
+		return "", errors.New("callerjwt: viewer and shared appid identity claims are mutually exclusive")
 	}
 	ttl := req.TTL
 	if ttl <= 0 {
@@ -137,6 +145,9 @@ func (i *Issuer) Issue(req IssueRequest) (string, error) {
 	}
 	if appid != "" {
 		claims.Appid = appid
+	}
+	if clientAppid != "" {
+		claims.ClientAppid = clientAppid
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
 	token.Header["kid"] = i.keys.Active.KID
