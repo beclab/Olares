@@ -92,6 +92,12 @@ func (r *IssuerReconciler) reconcileApplication(ctx context.Context, app *appv1a
 		RecordIssueFail(app.Spec.Namespace)
 		return err
 	}
+	if !appcfg.IsShared(app) && strings.TrimSpace(req.ClientAppid) == "" {
+		err := fmt.Errorf("callerjwt: ordinary caller requires spec.appid")
+		klog.Errorf("caller_jwt_issue_fail app=%s ns=%s err=%v", app.Spec.Name, app.Spec.Namespace, err)
+		RecordIssueFail(app.Spec.Namespace)
+		return err
+	}
 	token, err := r.issuer.Issue(req)
 	if err != nil {
 		klog.Warningf("caller_jwt_issue_fail app=%s ns=%s err=%v", app.Spec.Name, app.Spec.Namespace, err)
@@ -299,6 +305,7 @@ func issueRequestFromApplication(app *appv1alpha1.Application) IssueRequest {
 		return req
 	}
 	req.Viewer = strings.TrimSpace(app.Spec.Owner)
+	req.ClientAppid = strings.TrimSpace(app.Spec.Appid)
 	return req
 }
 
