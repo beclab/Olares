@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/connector"
@@ -395,6 +396,10 @@ func (a *RestoreLabelsFromRenamedNode) Execute(runtime connector.Runtime) error 
 		return fmt.Errorf("new node %q is not ready yet", a.NewNode)
 	}
 
+	// patch instead of update: the kubelet and the controllers keep writing to
+	// the freshly registered node, so a full update would race with them
+	patch := ctrlclient.MergeFrom(newNode.DeepCopy())
+
 	if newNode.Labels == nil {
 		newNode.Labels = map[string]string{}
 	}
@@ -435,8 +440,13 @@ func (a *RestoreLabelsFromRenamedNode) Execute(runtime connector.Runtime) error 
 		logger.Infof("no labels/annotations need restoring onto node %q", a.NewNode)
 		return nil
 	}
-	if _, err := kubeClient.CoreV1().Nodes().Update(ctx, newNode, metav1.UpdateOptions{}); err != nil {
-		return errors.Wrapf(err, "failed to update node %q with restored labels", a.NewNode)
+
+	patchData, err := patch.Data(newNode)
+	if err != nil {
+		return errors.Wrapf(err, "failed to build metadata patch for node %q", a.NewNode)
+	}
+	if _, err := kubeClient.CoreV1().Nodes().Patch(ctx, a.NewNode, patch.Type(), patchData, metav1.PatchOptions{}); err != nil {
+		return errors.Wrapf(err, "failed to patch node %q with restored labels", a.NewNode)
 	}
 	return nil
 }

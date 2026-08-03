@@ -108,12 +108,12 @@ func (u *LabelIntelGPUs) Execute(runtime connector.Runtime) error {
 	}
 
 	if plan.labelIntel {
-		if err := gpu.SetNodeGpuModeLabel(context.Background(), client.Kubernetes(), gpu.IntelType, nil, nil, nil); err != nil {
+		if err := gpu.SetNodeGpuModeLabel(context.Background(), client.CtrlRuntime(), gpu.IntelType, nil, nil, nil); err != nil {
 			return err
 		}
 	}
 	if plan.labelIntelGPU {
-		if err := gpu.SetNodeGpuModeLabel(context.Background(), client.Kubernetes(), gpu.IntelGpuType, nil, nil, nil); err != nil {
+		if err := gpu.SetNodeGpuModeLabel(context.Background(), client.CtrlRuntime(), gpu.IntelGpuType, nil, nil, nil); err != nil {
 			return err
 		}
 	}
