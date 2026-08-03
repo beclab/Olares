@@ -99,13 +99,10 @@ func HasEntranceExtAuthPolicy(ctx context.Context, ns, srrName string) bool {
 	return err == nil
 }
 
-// ShouldSkipEnvoySidecar is reserved for a future L2-c blanket retire of outbound
-// olares-envoy-sidecar. R1 (ADR-DEENVY-SCOPE-SHARED) must not skip solely because
-// Linkerd Layer 1 is ready; Shared callers use ShouldSkipOesForSharedCaller instead.
+// ShouldSkipEnvoySidecar retires outbound/whole oes only when SteadyStateGate is Ready.
+// Until the gate flips, admission must keep oes (fail-closed).
 func ShouldSkipEnvoySidecar(ctx context.Context, kube kubernetes.Interface) bool {
-	_ = ctx
-	_ = kube
-	return false
+	return steadyGateReadyOrOverride(ctx, kube)
 }
 
 // ShouldSkipInboundEntranceSidecar skips inbound oes when Linkerd is ready and extAuth exists.
@@ -116,7 +113,7 @@ func ShouldSkipInboundEntranceSidecar(ctx context.Context, kube kubernetes.Inter
 	return HasEntranceExtAuthPolicy(ctx, appNamespace, srrName)
 }
 
-// EvaluateSkipOes is the pure L2-c gate (REF §3.9.5):
+// EvaluateSkipOes is the pure L2-c gate:
 // LinkerdReady ∧ L2aExtAuthReady ∧ (¬HasProvider ∨ EgressAgentReady).
 func EvaluateSkipOes(linkerdReady, extAuthReady, hasProvider, egressAgentReady bool) bool {
 	if !linkerdReady || !extAuthReady {
@@ -138,26 +135,31 @@ func ShouldSkipOes(ctx context.Context, kube kubernetes.Interface, appNamespace,
 	)
 }
 
-// EvaluateSkipOesForSharedCaller is the R1 Shared-caller gate:
-// injectMeshIn ∧ LinkerdReady ∧ (¬HasProvider ∨ MeshOutReady).
-// Unlike EvaluateSkipOes (L2-c), this does not require entrance extAuth and applies only
-// when mesh-in will be injected.
-func EvaluateSkipOesForSharedCaller(injectMeshIn, linkerdReady, hasProvider, injectMeshOut bool) bool {
+// EvaluateSkipOesForSharedCaller is the Shared-caller whole-oes gate with SR-06′:
+// injectMeshIn ∧ LinkerdReady ∧ (¬HasProvider ∨ MeshOutReady)
+// ∧ (¬HasEntrance ∨ InboundCovered).
+// Entrance pods without inbound coverage must keep oes (cannot whole-skip).
+func EvaluateSkipOesForSharedCaller(injectMeshIn, linkerdReady, hasProvider, injectMeshOut, hasEntrance, inboundCovered bool) bool {
 	if !injectMeshIn || !linkerdReady {
 		return false
 	}
 	if hasProvider && !injectMeshOut {
 		return false
 	}
+	if hasEntrance && !inboundCovered {
+		return false
+	}
 	return true
 }
 
-// ShouldSkipOesForSharedCaller probes Linkerd readiness for the Shared-caller skip gate.
-func ShouldSkipOesForSharedCaller(ctx context.Context, kube kubernetes.Interface, injectMeshIn, hasProvider, injectMeshOut bool) bool {
+// ShouldSkipOesForSharedCaller probes Linkerd readiness and applies SR-06′.
+func ShouldSkipOesForSharedCaller(ctx context.Context, kube kubernetes.Interface, injectMeshIn, hasProvider, injectMeshOut, hasEntrance, inboundCovered bool) bool {
 	return EvaluateSkipOesForSharedCaller(
 		injectMeshIn,
 		IsLinkerdLayer1Ready(ctx, kube),
 		hasProvider,
 		injectMeshOut,
+		hasEntrance,
+		inboundCovered,
 	)
 }

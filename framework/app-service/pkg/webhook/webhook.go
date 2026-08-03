@@ -198,13 +198,38 @@ func (wh *Webhook) CreatePatch(
 	// inject sidecar only for the app's namespace
 	if req.Namespace == appmgr.Spec.AppNamespace {
 		needsEnvoySidecar := wh.shouldInjectEnvoySidecar(ctx, injectPolicy, appConfig, pod)
-		// Shared callers with mesh-in skip the whole oes container (including
-		// entrance pods) when Linkerd is ready and provider outbound is covered
-		// (no provider, or mesh-out will be injected).
+		// Shared callers with mesh-in may drop whole oes only when provider
+		// outbound is covered and, if this is an entrance pod, inbound PEP is
+		// already covered (SR-06': never whole-skip entrance without ExtAuth).
+		hasEntrance := injectPolicy
+		inboundCovered := false
+		if hasEntrance && appConfig != nil {
+			for _, e := range appConfig.Entrances {
+				ok, err := wh.shouldSkipInboundEntranceSidecar(ctx, appConfig, req.Namespace, e.Name)
+				if err != nil {
+					klog.Errorf("deenvy: probe inbound coverage for entrance=%s pod=%s/%s: %v", e.Name, req.Namespace, pod.Name, err)
+					inboundCovered = false
+					break
+				}
+				if !ok {
+					inboundCovered = false
+					break
+				}
+				inboundCovered = true
+			}
+		}
 		if wh != nil && wh.kubeClient != nil && mesh.ShouldSkipOesForSharedCaller(
-			ctx, wh.kubeClient, injectMeshInAgent, len(perms) > 0, injectMeshOutAgent,
+			ctx, wh.kubeClient, injectMeshInAgent, len(perms) > 0, injectMeshOutAgent, hasEntrance, inboundCovered,
 		) {
 			needsEnvoySidecar = false
+		}
+		// SteadyStateGate Ready + coverage: retire oes for non-Shared paths too.
+		if needsEnvoySidecar && wh != nil && wh.kubeClient != nil && mesh.ShouldSkipEnvoySidecar(ctx, wh.kubeClient) {
+			outboundCovered := len(perms) == 0 || injectMeshOutAgent
+			inboundOK := !hasEntrance || inboundCovered
+			if mesh.CanRemoveOES(ctx, wh.kubeClient, inboundOK, outboundCovered, true) {
+				needsEnvoySidecar = false
+			}
 		}
 
 		configMapName, err := wh.createSidecarConfigMap(ctx, pod, proxyUUID.String(), req.Namespace, injectPolicy, injectWs, injectUpload, appmgr, appConfig, perms)
@@ -285,8 +310,12 @@ func (wh *Webhook) CreatePatch(
 			}
 		}
 		if injectMeshOutAgent {
+			routes := meshoutagent.RoutesFromPermissions(perms, req.Namespace)
 			pod.Spec.Volumes = append(pod.Spec.Volumes, meshoutagent.SATokenVolume(), meshoutagent.ConfVolume())
-			pod.Spec.InitContainers = append(pod.Spec.InitContainers, meshoutagent.InitContainerSpec())
+			pod.Spec.InitContainers = append(pod.Spec.InitContainers,
+				meshoutagent.ConfRenderInitContainerSpec(routes),
+				meshoutagent.InitContainerSpec(),
+			)
 			pod.Spec.Containers = append(pod.Spec.Containers, meshoutagent.ContainerSpec())
 		}
 	} // end of inject sidecar

@@ -48,7 +48,7 @@ func TestIsLinkerdLayer1ReadyFalseWhenPKIGuardianAbsent(t *testing.T) {
 	if IsLinkerdLayer1Ready(context.Background(), client) {
 		t.Fatal("expected Linkerd not ready when linkerd-pki-guardian is missing")
 	}
-	if ShouldSkipOesForSharedCaller(context.Background(), client, true, false, false) {
+	if ShouldSkipOesForSharedCaller(context.Background(), client, true, false, false, false, false) {
 		t.Fatal("must not skip Shared-caller oes without a ready PKI guardian")
 	}
 }
@@ -76,10 +76,14 @@ func TestIsLinkerdLayer1ReadyFalseWhenPKIGuardianLookupFails(t *testing.T) {
 	}
 }
 
-func TestShouldSkipEnvoySidecarNeverBlanketsOnLinkerdReady(t *testing.T) {
-	// R1: Linkerd ready alone must not retire outbound oes (ADR-DEENVY-SCOPE-SHARED).
+func TestShouldSkipEnvoySidecarRequiresSteadyGate(t *testing.T) {
 	if ShouldSkipEnvoySidecar(context.Background(), linkerdReadyClient()) {
-		t.Fatal("ShouldSkipEnvoySidecar must stay false until L2-c blanket retire")
+		t.Fatal("ShouldSkipEnvoySidecar must stay false until SteadyStateGate Ready")
+	}
+	setSteadyGateReadyForTest(true)
+	defer clearSteadyGateReadyForTest()
+	if !ShouldSkipEnvoySidecar(context.Background(), linkerdReadyClient()) {
+		t.Fatal("ShouldSkipEnvoySidecar must be true when SteadyStateGate Ready")
 	}
 }
 
@@ -119,20 +123,21 @@ func TestEvaluateSkipOes(t *testing.T) {
 
 func TestEvaluateSkipOesForSharedCaller(t *testing.T) {
 	cases := []struct {
-		name                                           string
-		meshIn, linkerd, provider, meshOut bool
-		want                                           bool
+		name                                                                  string
+		meshIn, linkerd, provider, meshOut, hasEntrance, inboundCovered bool
+		want                                                                  bool
 	}{
-		{"mesh-in no provider", true, true, false, false, true},
-		{"mesh-in provider needs mesh-out", true, true, true, false, false},
-		{"mesh-in provider with mesh-out", true, true, true, true, true},
-		{"no mesh-in", false, true, false, false, false},
-		{"mesh-in no linkerd", true, false, false, false, false},
-		{"entrance-like mesh-in still skips", true, true, false, false, true},
+		{"mesh-in no provider no entrance", true, true, false, false, false, false, true},
+		{"mesh-in provider needs mesh-out", true, true, true, false, false, false, false},
+		{"mesh-in provider with mesh-out", true, true, true, true, false, false, true},
+		{"no mesh-in", false, true, false, false, false, false, false},
+		{"mesh-in no linkerd", true, false, false, false, false, false, false},
+		{"entrance without inbound covered", true, true, false, false, true, false, false},
+		{"entrance with inbound covered", true, true, false, false, true, true, true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := EvaluateSkipOesForSharedCaller(tc.meshIn, tc.linkerd, tc.provider, tc.meshOut)
+			got := EvaluateSkipOesForSharedCaller(tc.meshIn, tc.linkerd, tc.provider, tc.meshOut, tc.hasEntrance, tc.inboundCovered)
 			if got != tc.want {
 				t.Fatalf("got %v want %v", got, tc.want)
 			}
@@ -141,10 +146,13 @@ func TestEvaluateSkipOesForSharedCaller(t *testing.T) {
 }
 
 func TestShouldSkipOesForSharedCallerUsesLinkerdReady(t *testing.T) {
-	if !ShouldSkipOesForSharedCaller(context.Background(), linkerdReadyClient(), true, false, false) {
+	if !ShouldSkipOesForSharedCaller(context.Background(), linkerdReadyClient(), true, false, false, false, false) {
 		t.Fatal("expected Shared-caller oes skip when mesh-in and Linkerd ready")
 	}
-	if ShouldSkipOesForSharedCaller(context.Background(), fake.NewSimpleClientset(), true, false, false) {
+	if ShouldSkipOesForSharedCaller(context.Background(), fake.NewSimpleClientset(), true, false, false, false, false) {
 		t.Fatal("must not skip Shared-caller oes when Linkerd is not ready")
+	}
+	if ShouldSkipOesForSharedCaller(context.Background(), linkerdReadyClient(), true, false, false, true, false) {
+		t.Fatal("SR-06': entrance without inbound coverage must keep oes")
 	}
 }
