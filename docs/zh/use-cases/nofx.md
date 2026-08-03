@@ -215,16 +215,16 @@ NOFX 需要两个不同的钱包用于不同的目的：
 1. 从启动台打开模型应用。其模型控制台会自动打开。
 2. 等待**模型**显示**就绪**，且**引擎**显示**运行中**。
 
-   ![Qwen3.6-27B 模型控制台](/images/manual/use-cases/qwen3.6-27b-model-console1.png#bordered)
+   ![Qwen3.6-27B 模型控制台](/images/zh/manual/use-cases/qwen3.6-27b-model-console1.png#bordered)
 
 3. 在**模型**部分，按显示内容原样复制**模型名称**。
 4. 在**引擎**部分：
 
-   a. **连接来源**：选择 **Apps in Olares**。 
-   
+   a. **连接来源**：选择 **Olares 内应用**。
+
    b. **API 格式**：选择 **OpenAI-Compatible**。
-   
-   c. 按显示内容原样复制 **Base URL** 地址。
+
+   c.按显示内容原样复制 **Base URL** 地址。
 
 <!-- #endregion get-model-connection-details -->
 5. 打开 NOFX，然后点击 **Config** 页面上的 **+ MODELS_CONFIG**。
