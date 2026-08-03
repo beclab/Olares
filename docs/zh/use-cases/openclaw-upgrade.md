@@ -10,6 +10,10 @@ doc_version: "1.3"
 doc_updated: "2026-07-31"
 ---
 
+:::warning
+本文档由 AI 自动翻译，可能存在表述差异。如需核对，请参考[英文原文](../../use-cases/openclaw-upgrade.md)。
+:::
+
 # 升级 OpenClaw
 
 升级 OpenClaw 前，建议先查看本页面的版本变更内容和故障排除步骤，确保升级顺利。

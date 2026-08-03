@@ -10,6 +10,10 @@ doc_version: "1.1"
 doc_updated: "2026-07-31"
 ---
 
+:::warning
+本文档由 AI 自动翻译，可能存在表述差异。如需核对，请参考[英文原文](../../use-cases/openclaw-olares-skills.md)。
+:::
+
 # 使用 OpenClaw 智能体管理 Olares
 
 OpenClaw 内置 Olares CLI [Agent Skills](/zh/developer/cli-agent-skills.md)，因此你的智能体可以开箱即用地管理 Olares 设备上的文件和应用。例如，让它列出文件、读取日志，或从 Olares 应用市场安装应用。

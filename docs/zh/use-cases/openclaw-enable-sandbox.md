@@ -10,6 +10,10 @@ doc_version: "1.2"
 doc_updated: "2026-08-03"
 ---
 
+:::warning
+本文档由 AI 自动翻译，可能存在表述差异。如需核对，请参考[英文原文](../../use-cases/openclaw-enable-sandbox.md)。
+:::
+
 # 启用 OpenClaw 沙盒
 
 默认情况下，OpenClaw 在其主容器内直接执行命令和代码。虽然这对于日常任务通常是安全的，但赋予智能体运行任意代码或安装外部依赖的能力仍存在固有风险。
