@@ -972,7 +972,7 @@ func GetOverlayGatewaySupportedApps(ctx context.Context, user string) ([]Overlay
 	return supportedApps, nil
 }
 
-func UpdateApplicationSettings(ctx context.Context, appName string, option string, value string) error {
+func UpdateApplicationSettings(ctx context.Context, appResourceName string, option string, value string) error {
 	clientset, err := GetAppClientSet()
 	if err != nil {
 		klog.Error("get app clientset error, ", err)
@@ -980,7 +980,7 @@ func UpdateApplicationSettings(ctx context.Context, appName string, option strin
 	}
 
 	retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		app, err := clientset.AppV1alpha1().Applications().Get(ctx, appName, metav1.GetOptions{})
+		app, err := clientset.AppV1alpha1().Applications().Get(ctx, appResourceName, metav1.GetOptions{})
 		if err != nil {
 			klog.Error("get application error, ", err)
 			return err
@@ -997,6 +997,33 @@ func UpdateApplicationSettings(ctx context.Context, appName string, option strin
 	})
 
 	return nil
+}
+
+func GetApplicationSettings(ctx context.Context, appName, option string) (string, error) {
+	clientset, err := GetAppClientSet()
+	if err != nil {
+		klog.Error("get app clientset error, ", err)
+		return "", err
+	}
+
+	apps, err := clientset.AppV1alpha1().Applications().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		klog.Error("get application error, ", err)
+		return "", err
+	}
+
+	for _, app := range apps.Items {
+		if app.Spec.Name != appName {
+			continue
+		}
+		value, ok := app.Spec.Settings[option]
+		if !ok {
+			return "", errors.New("option not found")
+		}
+		return value, nil
+	}
+
+	return "", errors.New("app not found")
 }
 
 func RestartOverlayGatewaySupportedApps(ctx context.Context, apps []OverlayGatewaySupportedApp) error {
