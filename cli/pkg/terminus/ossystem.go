@@ -23,6 +23,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/core/connector"
 	"github.com/beclab/Olares/cli/pkg/core/task"
 	"github.com/beclab/Olares/cli/pkg/core/util"
+	"github.com/beclab/Olares/cli/pkg/systemcomponents"
 	configmaptemplates "github.com/beclab/Olares/cli/pkg/terminus/templates"
 	"github.com/beclab/Olares/cli/pkg/utils"
 	"github.com/pkg/errors"
@@ -365,30 +366,20 @@ func (m *InstallOsSystemModule) Init() {
 		Action: &CreateBackupConfigMap{},
 	}
 
+	// everything installed after this point is reconciled by app-service, so it
+	// is awaited on its own before the rest of the system comes up
 	checkSystemService := &task.LocalTask{
-		Name: "CheckSystemServiceStatus",
-		Action: &CheckPodsRunning{
-			labels: map[string][]string{
-				"os-framework": {"tier=app-service"},
-			},
-		},
-		Retry: 20,
-		Delay: 10 * time.Second,
+		Name:   "CheckSystemServiceStatus",
+		Action: &CheckSystemComponentsReady{Components: systemcomponents.AppService()},
+		Retry:  20,
+		Delay:  10 * time.Second,
 	}
 
 	checkLinkerdControlPlane := &task.LocalTask{
-		Name: "CheckLinkerdControlPlane",
-		Action: &CheckPodsRunning{
-			labels: map[string][]string{
-				agwconfig.LinkerdNamespace(): {
-					"linkerd.io/control-plane-component=destination",
-					"linkerd.io/control-plane-component=identity",
-					"linkerd.io/control-plane-component=proxy-injector",
-				},
-			},
-		},
-		Retry: 20,
-		Delay: 10 * time.Second,
+		Name:   "CheckLinkerdControlPlane",
+		Action: &CheckSystemComponentsReady{Components: systemcomponents.Mesh(agwconfig.LinkerdNamespace())},
+		Retry:  20,
+		Delay:  10 * time.Second,
 	}
 
 	patchOs := &task.LocalTask{

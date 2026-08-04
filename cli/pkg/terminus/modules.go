@@ -400,8 +400,8 @@ func (m *StartOlaresModule) Init() {
 			Prepare: &prepare.InitialDelay{
 				Duration: 30 * time.Second,
 			},
-			Name:   "EnsurePodsUpAndRunningAgain",
-			Action: &CheckKeyPodsRunning{Node: m.Runtime.GetLocalHost().GetName()},
+			Name:   "EnsureSystemComponentsUpAndRunningAgain",
+			Action: &CheckSystemComponentsReady{Node: m.Runtime.GetLocalHost().GetName()},
 			Delay:  10 * time.Second,
 			Retry:  60,
 		})
@@ -725,8 +725,8 @@ func (m *ChangeIPModule) addRestartTasks() {
 	}
 
 	m.Tasks = append(m.Tasks, &task.LocalTask{
-		Name:   "EnsurePodsUpAndRunningAgain",
-		Action: &CheckKeyPodsRunning{Node: ensureNode},
+		Name:   "EnsureSystemComponentsUpAndRunningAgain",
+		Action: &CheckSystemComponentsReady{Node: ensureNode},
 		Delay:  10 * time.Second,
 		Retry:  60,
 	})
