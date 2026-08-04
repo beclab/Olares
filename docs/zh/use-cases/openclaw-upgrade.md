@@ -5,16 +5,20 @@ head:
   - - meta
     - name: keywords
       content: Olares, OpenClaw, OpenClaw 升级, 升级故障排除
-app_version: "1.0.8"
-doc_version: "1.2"
-doc_updated: "2026-06-10"
+app_version: "1.0.17"
+doc_version: "1.3"
+doc_updated: "2026-07-31"
 ---
+
+:::warning
+本文档由 AI 自动翻译，可能存在表述差异。如需核对，请参考[英文原文](../../use-cases/openclaw-upgrade.md)。
+:::
 
 # 升级 OpenClaw
 
 升级 OpenClaw 前，建议先查看本页面的版本变更内容和故障排除步骤，确保升级顺利。
 
-## 升级到 2026.06.05
+## 升级到 v2026.6.5
 
 OpenClaw 2026.06.05 版本将认证配置文件、认证状态和定时任务从旧版 JSON 文件迁移到了内部 SQLite 数据库。网关现在从 SQLite 中读取这些配置，而非原始 JSON。
 
@@ -46,7 +50,7 @@ auth, then try again.
 
 更多信息，请参阅 [OpenClaw 发布说明](https://github.com/openclaw/openclaw/releases/tag/v2026.6.5)。
 
-## 升级到 2026.05.26
+## 升级到 v2026.5.26
 
 OpenClaw 2026.05.26 版本引入了重大的架构变更。升级到该版本后，你的智能体可能会暂时失去部分功能，直到你将已安装的插件和技能更新到最新的兼容版本。
 
@@ -69,7 +73,7 @@ OpenClaw 2026.05.26 版本引入了重大的架构变更。升级到该版本后
 
 更多信息，请参阅 [OpenClaw 发布说明](https://github.com/openclaw/openclaw/releases/tag/v2026.5.26)。
 
-## 升级到 2026.03.22
+## 升级到 v2026.3.22
 
 :::tip 前提条件
 在将 OpenClaw 升级到 2026.03.22 之前，你必须先将 Olares OS 升级到 V1.12.5。
@@ -81,7 +85,7 @@ OpenClaw 2026.03.22 版本引入了多项限制插件权限的变更。由于这
 - **更新插件**：检查是否有符合更新后权限限制的新版本可用。
 - **验证配置方式**：咨询插件提供方，了解 OpenClaw 2026.03.22 及更高版本是否需要新的配置。
 
-## 升级到 2026.02.25
+## 升级到 v2026.2.25
 
 OpenClaw 2026.02.25 版本引入了一项安全增强，要求现有用户显式声明允许的 Control UI 访问地址。因此，如果升级后 Control UI 无法启动，可按照以下步骤解决。
 

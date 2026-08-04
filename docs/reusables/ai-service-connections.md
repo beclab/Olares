@@ -62,3 +62,20 @@ When a client connects to another Olares app, it uses that app's endpoint as the
    c. Copy the provided **Base URL** exactly as shown.
 
 <!-- #endregion get-model-connection-details-anthropic -->
+
+<!-- #region get-model-connection-details-ollama -->
+1. Open the model app from Launchpad. Its Model Console opens automatically.
+2. Wait until **Model** shows **READY** and **Engine** shows **RUNNING**.
+
+   ![Gemma4 26B model console](/images/manual/use-cases/gemma4-26b-model-console1.png#bordered)
+
+3. Under **Model**, copy the **Model name** exactly as shown.
+4. Under **Engine**:
+
+   a. **Connection source**: Select **Apps in Olares**. 
+   
+   b. **API format**: Select **Ollama**.
+   
+   c. Copy the provided **Base URL** exactly as shown.
+
+<!-- #endregion get-model-connection-details-ollama -->

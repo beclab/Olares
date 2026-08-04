@@ -9,6 +9,10 @@ doc_version: "1.2"
 doc_updated: "2026-06-10"
 ---
 
+:::warning
+本文档由 AI 自动翻译，可能存在表述差异。如需核对，请参考[英文原文](../../use-cases/openclaw-common-issues.md)。
+:::
+
 # OpenClaw 常见问题
 
 本页面整理了在 Olares 上运行 OpenClaw 时的常见问题及解决方法。
