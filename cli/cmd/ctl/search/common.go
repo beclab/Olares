@@ -19,7 +19,15 @@ import (
 )
 
 const (
-	appFilesV2 = "files_v2"
+	appFilesV2     = "files_v2"
+	appGoogleDrive = "google_drive"
+	appDropbox     = "dropbox"
+	appKnowledge   = "knowledge"
+
+	// searchSessionAppMinOlaresVersion is the first Olares line whose
+	// search3 accepts app=google_drive|dropbox|knowledge. Mirrors
+	// TermiPass's seachOSVersionLargeThan12_7 gate.
+	searchSessionAppMinOlaresVersion = "1.12.7"
 
 	searchTypeAggregate = "aggregate"
 	searchTypeFileName  = "file_name"
