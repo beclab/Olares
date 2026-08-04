@@ -60,8 +60,8 @@ type IssueRequest struct {
 // Claims is the caller JWT claim schema published to Envoy Gateway.
 // Identity fields are nested under "olares" so Envoy claim_to_headers paths
 // resolve (dots are JSON path separators):
-// olares.viewer → X-BFL-USER, olares.caller.appid → X-Shared-Appid,
-// olares.caller.clientAppid → X-Caller-Appid.
+// olares.viewer → X-BFL-USER; olares.caller.appid and
+// olares.caller.clientAppid both map to X-Caller-Appid (mutually exclusive).
 type Claims struct {
 	jwt.RegisteredClaims
 	Olares OlaresClaims `json:"olares"`

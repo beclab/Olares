@@ -93,15 +93,18 @@ func TestDesiredSharedRouteSecurityPolicyJWTAuthn(t *testing.T) {
 	if appidMap["claim"] != CallerJWTAppidClaim || appidMap["header"] != CallerJWTAppidHeader {
 		t.Fatalf("claimToHeaders[1] = %#v", appidMap)
 	}
-	if appidMap["header"] != "X-Shared-Appid" {
-		t.Fatalf("shared appid header must remain X-Shared-Appid, got %#v", appidMap["header"])
+	if appidMap["header"] != "X-Caller-Appid" {
+		t.Fatalf("shared appid claim must map to X-Caller-Appid, got %#v", appidMap["header"])
 	}
 	clientMap := claimToHeaders[2].(map[string]any)
 	if clientMap["claim"] != CallerJWTClientAppidClaim || clientMap["header"] != CallerJWTClientAppidHeader {
 		t.Fatalf("claimToHeaders[2] = %#v", clientMap)
 	}
 	if clientMap["header"] != "X-Caller-Appid" {
-		t.Fatalf("ordinary client appid header must remain X-Caller-Appid, got %#v", clientMap["header"])
+		t.Fatalf("ordinary client appid claim must map to X-Caller-Appid, got %#v", clientMap["header"])
+	}
+	if CallerJWTAppidHeader != CallerJWTClientAppidHeader {
+		t.Fatalf("shared and ordinary appid headers must be unified, got %q vs %q", CallerJWTAppidHeader, CallerJWTClientAppidHeader)
 	}
 	// Three mappings stay configured; a given token carries the claims for its caller type.
 	if CallerJWTViewerClaim != callerjwt.ClaimViewer ||
@@ -161,7 +164,7 @@ func TestIssuedJWTSatisfiesClaimToHeaderPaths(t *testing.T) {
 		want   string
 	}{
 		{
-			name:   "X-Shared-Appid",
+			name:   "X-Caller-Appid-from-shared-appid",
 			req:    callerjwt.IssueRequest{Namespace: "router-shared", ServiceAccountName: "router", AppRef: "router", Appid: "f3395cd5"},
 			header: CallerJWTAppidHeader,
 			claim:  CallerJWTAppidClaim,
@@ -175,7 +178,7 @@ func TestIssuedJWTSatisfiesClaimToHeaderPaths(t *testing.T) {
 			want:   "alice",
 		},
 		{
-			name:   "X-Caller-Appid",
+			name:   "X-Caller-Appid-from-clientAppid",
 			req:    callerjwt.IssueRequest{Namespace: "ns", ServiceAccountName: "sa", AppRef: "demo", Viewer: "alice", ClientAppid: "6bf98da2"},
 			header: CallerJWTClientAppidHeader,
 			claim:  CallerJWTClientAppidClaim,
