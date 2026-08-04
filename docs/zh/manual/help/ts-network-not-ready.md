@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 排查 Olares One 设备已连接网络但无法通过标准访问方式连接的问题。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Olares One, Network not ready, 连接错误, SSH, Pod 状态, 网络排查
 ---
 
 # 网络尚未准备好或 olares 连接错误

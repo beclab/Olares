@@ -7,7 +7,7 @@ import Layout from "./components/Layout.vue";
 import { App } from "vue";
 import Tabs from "./components/tabs.vue";
 import LaunchCard from "./components/LaunchCard.vue";
-import FilterableList from "./components/FilterableList.vue";
+import UseCaseGallery from "./components/UseCaseGallery.vue";
 import { onMounted, watch, nextTick, onBeforeMount,computed } from "vue";
 import mediumZoom from "medium-zoom";
 import OSTabs from "./components/OStabs.vue";
@@ -29,7 +29,7 @@ export default {
 enhanceApp({ app, router }: { app: App; router: Router }) {
     app.component("Tabs", Tabs);
     app.component("LaunchCard", LaunchCard);
-    app.component("FilterableList", FilterableList);
+    app.component("UseCaseGallery", UseCaseGallery);
     app.component("OSTabs", OSTabs);
     app.component("VersionSwitcher", VersionSwitcher);
     app.component('AppLinkGlobal', AppLinkGlobal)
@@ -52,43 +52,70 @@ enhanceApp({ app, router }: { app: App; router: Router }) {
   setup() {
     const route = useRoute();
     const router = useRouter();
-    const { lang } = useData();
+    const { lang, site } = useData();
 
+    // Auto-redirect a fresh page load to the visitor's *remembered* language
+    // (set when they pick a locale in the language menu — see the `lang`
+    // watcher below). router.route.path includes the site base (e.g. "/docs/"
+    // or "/docs/1.12.4/"); the version, when present, lives entirely in that
+    // base. We therefore strip the base first and match the language prefix on
+    // the base-relative path. (The previous implementation matched against the
+    // raw path without accounting for the base, so under a "/docs" deploy the
+    // default+en combination produced an empty prefix that matched everything
+    // and corrupted the URL, e.g. /docs/zh/... -> /zh/docs/zh/...).
+    //
+    // Critical for SEO: do NOT default to 'en' when localStorage is empty.
+    // Crawlers (Googlebot Live Test / rendering) have no preference, and the
+    // old `|| 'en'` default JS-redirected every /zh/... URL to the English
+    // twin — so GSC reported the English page as the "user-declared
+    // canonical" on Chinese URLs even though the static HTML was correct.
+    // No stored preference → respect the URL the crawler (or first-time
+    // visitor) actually opened.
     const routerRedirect = () => {
-      let localLanguage = localStorage.getItem(LANGUAGE_LOCAL_KEY) || 'en';
-      
-      const versions = process.env.VERSIONS!.split(",") ||[];
-      versions.push('default');
+      const stored = localStorage.getItem(LANGUAGE_LOCAL_KEY);
+      if (!stored) return;
 
-      const languages = process.env.LANGUAGES!.split(",") || [];
-      languages.push('en');
-      console.log(versions, languages,localLanguage)
+      let localLanguage = stored;
 
-      if(!languages?.includes(localLanguage) ){
-        localLanguage = 'en';
+      const languages = process.env.LANGUAGES ? process.env.LANGUAGES.split(",") : [];
+      if (!languages.includes('en')) languages.push('en');
+
+      if (!languages.includes(localLanguage)) {
+        return;
       }
 
+      const base = site.value.base || '/';
+      const rawPath = router.route.path;
+      // Base-relative path without a leading slash, e.g. "zh/manual/x" or
+      // "manual/x". Handle the base both with and without its trailing slash:
+      // router.route.path can be "/docs" as well as "/docs/".
+      let rel: string;
+      if (rawPath.startsWith(base)) {
+        rel = rawPath.slice(base.length);
+      } else if (base.endsWith('/') && rawPath === base.slice(0, -1)) {
+        rel = '';
+      } else {
+        rel = rawPath.replace(/^\//, '');
+      }
 
-      const currentPath = router.route.path;
-      
-      console.log('router.route.path', router.route.path);
-      for( const l of languages ) {
-        let localLanguagePath = (l === 'en' ? '' : `/${l}`);
-        for (const v of versions) {
-            let localVersionPath = (v === 'default' ? '' : `/${v}`);
-            const u = `${localVersionPath}${localLanguagePath}`;
-            console.log('checkPrefix', u);
-            if (currentPath.startsWith(u)) {
-                console.log('find localLanguage', localLanguage, l);
-                if( l !== localLanguage ) {
-                  let targetLanguagePath = (localLanguage === 'en' ? '' : `/${localLanguage}`);
-                  const nextUrl = `${localVersionPath}${targetLanguagePath}${route.path.replace(u, '')}`;
-                  router.go(nextUrl);
-                }            
-                return;
-            
-          }
+      // Detect the current language from the (non-en) prefix, if any.
+      let currentLanguage = 'en';
+      let pagePath = rel;
+      for (const l of languages) {
+        if (l === 'en') continue;
+        if (rel === l || rel.startsWith(`${l}/`)) {
+          currentLanguage = l;
+          pagePath = rel.slice(l.length).replace(/^\//, '');
+          break;
         }
+      }
+
+      if (currentLanguage === localLanguage) return;
+
+      const langPrefix = localLanguage === 'en' ? '' : `${localLanguage}/`;
+      const target = `${base}${langPrefix}${pagePath}`;
+      if (target !== rawPath) {
+        router.go(target);
       }
     };
 

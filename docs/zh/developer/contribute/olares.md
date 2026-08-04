@@ -1,3 +1,7 @@
+---
+noindex: true
+description: 运行以上脚本，你将获得 debug 版本安装包 install-wizard-debug.tar.gz。
+---
 # Olares
 
 ## 目录结构

@@ -99,9 +99,10 @@ The default username for Olares One is `olares`.
    :::
 3. When prompted, enter the password obtained in Step 3.
 
-:::tip Connect using the local IP address instead
+<!-- :::tip Connect using the local IP address instead
 If **Subnet routes** is enabled in **Settings** > **VPN**, all devices on Olares One's local network become reachable through the VPN. You can then SSH using the local IP address (`192.168.x.x`) instead of the Tailscale IP (`100.64.x.x`), even when accessing from a different network.
 :::
+-->
 
 ## Reset SSH password
 <!--@include: ./reusables-reset-ssh.md#reset-ssh-in-settings-->

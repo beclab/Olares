@@ -1,0 +1,267 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.20.1
+  name: httproutefilters.gateway.envoyproxy.io
+spec:
+  group: gateway.envoyproxy.io
+  names:
+    categories:
+    - envoy-gateway
+    kind: HTTPRouteFilter
+    listKind: HTTPRouteFilterList
+    plural: httproutefilters
+    shortNames:
+    - hrf
+    singular: httproutefilter
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              credentialInjection:
+                properties:
+                  credential:
+                    properties:
+                      valueRef:
+                        properties:
+                          group:
+                            default: ''
+                            maxLength: 253
+                            pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                            type: string
+                          kind:
+                            default: Secret
+                            maxLength: 63
+                            minLength: 1
+                            pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                            type: string
+                          name:
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          namespace:
+                            maxLength: 63
+                            minLength: 1
+                            pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                            type: string
+                        required:
+                        - name
+                        type: object
+                    required:
+                    - valueRef
+                    type: object
+                  header:
+                    type: string
+                  overwrite:
+                    type: boolean
+                required:
+                - credential
+                type: object
+              directResponse:
+                properties:
+                  body:
+                    properties:
+                      inline:
+                        type: string
+                      type:
+                        allOf:
+                        - enum:
+                          - Inline
+                          - ValueRef
+                        - enum:
+                          - Inline
+                          - ValueRef
+                        default: Inline
+                        type: string
+                      valueRef:
+                        properties:
+                          group:
+                            maxLength: 253
+                            pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                            type: string
+                          kind:
+                            maxLength: 63
+                            minLength: 1
+                            pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                            type: string
+                          name:
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                        required:
+                        - group
+                        - kind
+                        - name
+                        type: object
+                    required:
+                    - type
+                    type: object
+                    x-kubernetes-validations:
+                    - message: inline must be set for type Inline
+                      rule: '(!has(self.type) || self.type == ''Inline'')? has(self.inline)
+                        : true'
+                    - message: valueRef must be set for type ValueRef
+                      rule: '(has(self.type) && self.type == ''ValueRef'')? has(self.valueRef)
+                        : true'
+                    - message: only ConfigMap is supported for ValueRef
+                      rule: 'has(self.valueRef) ? self.valueRef.kind == ''ConfigMap''
+                        : true'
+                  contentType:
+                    type: string
+                  header:
+                    properties:
+                      add:
+                        items:
+                          properties:
+                            name:
+                              maxLength: 256
+                              minLength: 1
+                              pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
+                              type: string
+                            value:
+                              maxLength: 4096
+                              minLength: 1
+                              type: string
+                          required:
+                          - name
+                          - value
+                          type: object
+                        maxItems: 16
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
+                      remove:
+                        items:
+                          type: string
+                        maxItems: 16
+                        type: array
+                        x-kubernetes-list-type: set
+                      set:
+                        items:
+                          properties:
+                            name:
+                              maxLength: 256
+                              minLength: 1
+                              pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
+                              type: string
+                            value:
+                              maxLength: 4096
+                              minLength: 1
+                              type: string
+                          required:
+                          - name
+                          - value
+                          type: object
+                        maxItems: 16
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
+                    type: object
+                    x-kubernetes-validations:
+                    - message: header.remove is not supported for DirectResponse
+                      rule: '!has(self.remove) || size(self.remove) == 0'
+                  statusCode:
+                    type: integer
+                type: object
+              matches:
+                items:
+                  minProperties: 1
+                  properties:
+                    cookies:
+                      items:
+                        properties:
+                          name:
+                            maxLength: 256
+                            minLength: 1
+                            type: string
+                          type:
+                            default: Exact
+                            enum:
+                            - Exact
+                            - RegularExpression
+                            type: string
+                          value:
+                            maxLength: 4096
+                            minLength: 1
+                            type: string
+                        required:
+                        - name
+                        - value
+                        type: object
+                      maxItems: 16
+                      minItems: 1
+                      type: array
+                  type: object
+                maxItems: 8
+                type: array
+              urlRewrite:
+                properties:
+                  appendXForwardedHost:
+                    type: boolean
+                  hostname:
+                    properties:
+                      header:
+                        type: string
+                      type:
+                        enum:
+                        - Header
+                        - Backend
+                        type: string
+                    required:
+                    - type
+                    type: object
+                    x-kubernetes-validations:
+                    - message: header must be nil if the type is not Header
+                      rule: '!(has(self.header) && self.type != ''Header'')'
+                    - message: header must be specified for Header type
+                      rule: '!(!has(self.header) && self.type == ''Header'')'
+                  path:
+                    properties:
+                      replaceRegexMatch:
+                        properties:
+                          pattern:
+                            minLength: 1
+                            type: string
+                          substitution:
+                            type: string
+                        required:
+                        - pattern
+                        - substitution
+                        type: object
+                      type:
+                        enum:
+                        - ReplaceRegexMatch
+                        type: string
+                    required:
+                    - type
+                    type: object
+                    x-kubernetes-validations:
+                    - message: If HTTPPathModifier type is ReplaceRegexMatch, replaceRegexMatch
+                        field needs to be set.
+                      rule: 'self.type == ''ReplaceRegexMatch'' ? has(self.replaceRegexMatch)
+                        : !has(self.replaceRegexMatch)'
+                type: object
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources: {}

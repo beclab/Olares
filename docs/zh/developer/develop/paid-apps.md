@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 学习如何发布付费应用，并使用 Merchant 管理销售与收款。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 付费应用, Merchant, 许可证管理, RSA 密钥, 区块链支付
 ---
 # 发布付费应用
 

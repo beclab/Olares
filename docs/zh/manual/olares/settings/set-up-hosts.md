@@ -1,5 +1,9 @@
 ---
 description: 在 Olares 中修改 Hosts 配置，解决网络访问限制问题。配置 IP 映射和验证解析的方法，确保应用正常访问外部资源。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Hosts 配置, 修改 hosts, DNS 解析, GitHub 访问, 网络设置
 ---
 # 修改 Hosts 配置
 

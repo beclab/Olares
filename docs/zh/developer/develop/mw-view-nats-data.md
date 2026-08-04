@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 了解如何在 Olares 中使用 NATS CLI 订阅和发布消息，并理解 NATS 主题的命名规则与权限模型。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, NATS, 消息订阅, 消息发布, nats-box, 主题命名, 权限模型
 ---
 # 使用 NATS 订阅与发布消息
 
@@ -25,7 +29,7 @@ description: 了解如何在 Olares 中使用 NATS CLI 订阅和发布消息，�
 
 ### 部署 `nats-box`
 
-1. 下载示例文件 [`nats-box.yaml`](http://cdn.olares.com/common/nats-box.yaml)，并将其上传到 Olares 机器。
+1. 下载示例文件 [`nats-box.yaml`](https://cdn.olares.com/common/nats-box.yaml)，并将其上传到 Olares 机器。
 2. 进入 YAML 文件所在目录，部署 `nats-box`：
     ```bash
     kubectl apply -f nats-box.yaml

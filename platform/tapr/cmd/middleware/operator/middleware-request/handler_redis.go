@@ -2,6 +2,7 @@ package middlewarerequest
 
 import (
 	"fmt"
+	"strings"
 
 	aprv1 "bytetrade.io/web3os/tapr/pkg/apis/apr/v1alpha1"
 	"bytetrade.io/web3os/tapr/pkg/constants"
@@ -69,7 +70,7 @@ func (c *controller) deleteRedixRequest(req *aprv1.MiddlewareRequest) error {
 	return nil
 }
 
-func (c *controller) createOrUpdateKVRocksRequest(req *aprv1.MiddlewareRequest, cluster *aprv1.RedixCluster, isUpdate bool) error {
+func (c *controller) createOrUpdateKVRocksRequest(req *aprv1.MiddlewareRequest, cluster *aprv1.RedixCluster, _ bool) error {
 	cli, err := kvrocks.GetKVRocksClient(c.ctx, c.k8sClientSet, cluster)
 	if err != nil {
 		klog.Error("get kvrocks client error, ", err)
@@ -78,7 +79,7 @@ func (c *controller) createOrUpdateKVRocksRequest(req *aprv1.MiddlewareRequest, 
 	defer cli.Close()
 
 	// TODO: redis db support
-	requestNamespace := GetKVRocksNamespaceName(req.Namespace, req.Spec.Redis.Namespace)
+	requestNamespace := GetKVRocksNamespaceName(req, req.Spec.Redis.Namespace)
 	token, err := req.Spec.Redis.Password.GetVarValue(c.ctx, c.k8sClientSet, req.Namespace)
 	if err != nil {
 		klog.Error("get redis request password error, ", err, ", ", req.Name, ", ", req.Namespace)
@@ -91,27 +92,23 @@ func (c *controller) createOrUpdateKVRocksRequest(req *aprv1.MiddlewareRequest, 
 	}
 
 	if ns == nil {
-		if isUpdate {
-			// update requets, but namespace is a new one. we must check if the token exists.
-			// if token exists, remove the old namesapce and create the new namespace
-			// if not, just create a new namespace
-			allns, err := cli.ListNamespace(c.ctx)
-			if err != nil {
-				klog.Error("list kvrocks namespace error, ", err, ", ", req.Name, ", ", req.Namespace)
-				return err
-			}
+		// The target namespace does not exist yet. Before creating it, clean up any
+		// stale namespace that belongs to this request: a namespace whose name differs
+		// from the current one but shares the same token (e.g. legacy namespaces created
+		// with req.Namespace before switching to AppNamespace-based naming).
+		allns, err := cli.ListNamespace(c.ctx)
+		if err != nil {
+			klog.Error("list kvrocks namespace error, ", err, ", ", req.Name, ", ", req.Namespace)
+			return err
+		}
 
-			for _, n := range allns {
-				if n.Token == token {
-					err = cli.DeleteNamespace(c.ctx, n.Name)
-					if err != nil {
-						klog.Warning("delete kvrocks namespace error, ", err, ", ", n.Name)
-					}
+		for _, n := range allns {
+			if n.Name != requestNamespace && n.Token == token {
+				err = cli.DeleteNamespace(c.ctx, n.Name)
+				if err != nil {
+					klog.Warning("delete kvrocks namespace error, ", err, ", ", n.Name)
 				}
 			}
-
-			// FIXME: if both the namespace's name and token are changed, the old namespace
-			// shoud be deleted
 		}
 
 		// create namespace
@@ -140,7 +137,7 @@ func (c *controller) deleteKVRocksRequest(req *aprv1.MiddlewareRequest, cluster 
 	defer cli.Close()
 
 	// TODO: redis db support
-	requestNamespace := GetKVRocksNamespaceName(req.Namespace, req.Spec.Redis.Namespace)
+	requestNamespace := GetKVRocksNamespaceName(req, req.Spec.Redis.Namespace)
 	ns, err := cli.GetNamespace(c.ctx, requestNamespace)
 	if err != nil {
 		klog.Error("get kvrocks namespace error, ", err, ", ", req.Name, ", ", req.Namespace)
@@ -163,6 +160,10 @@ func (c *controller) deleteKVRocksRequest(req *aprv1.MiddlewareRequest, cluster 
 	return nil
 }
 
-func GetKVRocksNamespaceName(reqNamespace, dbNamespace string) string {
-	return fmt.Sprintf("%s_%s", reqNamespace, dbNamespace)
+func GetKVRocksNamespaceName(req *aprv1.MiddlewareRequest, dbNamespace string) string {
+	appNamespace := req.Spec.AppNamespace
+	if strings.HasPrefix(appNamespace, "os-") || strings.HasPrefix(appNamespace, "user-space-") {
+		return fmt.Sprintf("%s_%s", req.Namespace, dbNamespace)
+	}
+	return fmt.Sprintf("%s_%s", appNamespace, dbNamespace)
 }

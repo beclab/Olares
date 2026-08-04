@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Olares 已知问题，包括影响范围、影响说明、临时绕过方式和修复状态。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 已知问题, LarePass, Chrome, 本地网络访问, WebSocket, 临时绕过
 ---
 
 # 已知问题

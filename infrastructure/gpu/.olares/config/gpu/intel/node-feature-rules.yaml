@@ -1,0 +1,426 @@
+apiVersion: nfd.k8s-sigs.io/v1alpha1
+kind: NodeFeatureRule
+metadata:
+  name: intel-dp-devices
+spec:
+  rules:
+  - labels:
+      intel.feature.node.kubernetes.io/dlb: "true"
+    matchFeatures:
+    - feature: pci.device
+      matchExpressions:
+        class:
+          op: In
+          value:
+          - 0b40
+        device:
+          op: In
+          value:
+          - "2710"
+        vendor:
+          op: In
+          value:
+          - "8086"
+    - feature: kernel.loadedmodule
+      matchExpressions:
+        dlb2:
+          op: Exists
+    name: intel.dlb
+  - labels:
+      intel.feature.node.kubernetes.io/dsa: "true"
+    matchFeatures:
+    - feature: pci.device
+      matchExpressions:
+        class:
+          op: In
+          value:
+          - "0880"
+        device:
+          op: In
+          value:
+          - 0b25
+          - 11fb
+          - "1212"
+        vendor:
+          op: In
+          value:
+          - "8086"
+    - feature: kernel.loadedmodule
+      matchExpressions:
+        idxd:
+          op: Exists
+    name: intel.dsa
+  - labels:
+      intel.feature.node.kubernetes.io/fpga-arria10: "true"
+    matchAny:
+    - matchFeatures:
+      - feature: kernel.loadedmodule
+        matchExpressions:
+          dfl_pci:
+            op: Exists
+    - matchFeatures:
+      - feature: kernel.loadedmodule
+        matchExpressions:
+          intel_fpga_pci:
+            op: Exists
+    matchFeatures:
+    - feature: pci.device
+      matchExpressions:
+        class:
+          op: In
+          value:
+          - "1200"
+        device:
+          op: In
+          value:
+          - 09c4
+        vendor:
+          op: In
+          value:
+          - "8086"
+    name: intel.fpga-arria10
+  - labels:
+      intel.feature.node.kubernetes.io/gpu: "true"
+    matchAny:
+    - matchFeatures:
+      - feature: kernel.loadedmodule
+        matchExpressions:
+          i915:
+            op: Exists
+    - matchFeatures:
+      - feature: kernel.enabledmodule
+        matchExpressions:
+          i915:
+            op: Exists
+    - matchFeatures:
+      - feature: kernel.loadedmodule
+        matchExpressions:
+          xe:
+            op: Exists
+    - matchFeatures:
+      - feature: kernel.enabledmodule
+        matchExpressions:
+          xe:
+            op: Exists
+    matchFeatures:
+    - feature: pci.device
+      matchExpressions:
+        class:
+          op: In
+          value:
+          - "0300"
+          - "0380"
+        vendor:
+          op: In
+          value:
+          - "8086"
+    name: intel.gpu
+  - labels:
+      intel.feature.node.kubernetes.io/iaa: "true"
+    matchFeatures:
+    - feature: pci.device
+      matchExpressions:
+        class:
+          op: In
+          value:
+          - "0880"
+        device:
+          op: In
+          value:
+          - 0cfe
+          - "1216"
+        vendor:
+          op: In
+          value:
+          - "8086"
+    - feature: kernel.loadedmodule
+      matchExpressions:
+        idxd:
+          op: Exists
+    name: intel.iaa
+  - labels:
+      intel.feature.node.kubernetes.io/qat: "true"
+    matchAny:
+    - matchFeatures:
+      - feature: kernel.loadedmodule
+        matchExpressions:
+          vfio_pci:
+            op: Exists
+    - matchFeatures:
+      - feature: kernel.enabledmodule
+        matchExpressions:
+          vfio-pci:
+            op: Exists
+    matchFeatures:
+    - feature: pci.device
+      matchExpressions:
+        class:
+          op: In
+          value:
+          - 0b40
+        device:
+          op: In
+          value:
+          - 37c8
+          - "4940"
+          - "4942"
+          - "4944"
+          - "4946"
+          - "4948"
+        vendor:
+          op: In
+          value:
+          - "8086"
+    - feature: kernel.loadedmodule
+      matchExpressions:
+        intel_qat:
+          op: Exists
+    name: intel.qat
+  - extendedResources:
+      sgx.intel.com/epc: '@cpu.security.sgx.epc'
+    labels:
+      intel.feature.node.kubernetes.io/sgx: "true"
+    matchFeatures:
+    - feature: cpu.cpuid
+      matchExpressions:
+        SGX:
+          op: Exists
+        SGXLC:
+          op: Exists
+    - feature: cpu.security
+      matchExpressions:
+        sgx.enabled:
+          op: IsTrue
+    - feature: kernel.config
+      matchExpressions:
+        X86_SGX:
+          op: Exists
+    name: intel.sgx
+  - labels:
+      intel.feature.node.kubernetes.io/npu: "true"
+    matchAny:
+    - matchFeatures:
+      - feature: kernel.loadedmodule
+        matchExpressions:
+          intel_vpu:
+            op: Exists
+    - matchFeatures:
+      - feature: kernel.enabledmodule
+        matchExpressions:
+          intel_vpu:
+            op: Exists
+    matchFeatures:
+    - feature: pci.device
+      matchExpressions:
+        class:
+          op: In
+          value:
+          - "1200"
+        device:
+          op: In
+          value:
+          - 7e4c
+          - 643e
+          - ad1d
+          - 7d1d
+          - b03e
+          - fd3e
+          - d71d
+        vendor:
+          op: In
+          value:
+          - "8086"
+    name: intel.npu
+---
+apiVersion: nfd.k8s-sigs.io/v1alpha1
+kind: NodeFeatureRule
+metadata:
+  name: intel-gpu-platform-labeling
+spec:
+  rules:
+  - labelsTemplate: |
+      {{ range .pci.device }}gpu.intel.com/device-id.{{ .class }}-{{ .device }}.present=true
+      {{ end }}
+    matchFeatures:
+    - feature: pci.device
+      matchExpressions:
+        class:
+          op: In
+          value:
+          - "0300"
+          - "0380"
+        vendor:
+          op: In
+          value:
+          - "8086"
+    name: intel.gpu.generic.deviceid
+  - labelsTemplate: gpu.intel.com/device-id.0300-{{ (index .pci.device 0).device }}.count={{
+      len .pci.device }}
+    matchFeatures:
+    - feature: pci.device
+      matchExpressions:
+        class:
+          op: In
+          value:
+          - "0300"
+        vendor:
+          op: In
+          value:
+          - "8086"
+    name: intel.gpu.generic.count.300
+  - labelsTemplate: gpu.intel.com/device-id.0380-{{ (index .pci.device 0).device }}.count={{
+      len .pci.device }}
+    matchFeatures:
+    - feature: pci.device
+      matchExpressions:
+        class:
+          op: In
+          value:
+          - "0380"
+        vendor:
+          op: In
+          value:
+          - "8086"
+    name: intel.gpu.generic.count.380
+  - labels:
+      gpu.intel.com/product: Max_1100
+    labelsTemplate: gpu.intel.com/device.count={{ len .pci.device }}
+    matchFeatures:
+    - feature: pci.device
+      matchExpressions:
+        class:
+          op: In
+          value:
+          - "0380"
+        device:
+          op: In
+          value:
+          - 0bda
+        vendor:
+          op: In
+          value:
+          - "8086"
+    name: intel.gpu.max.1100
+  - labels:
+      gpu.intel.com/product: Max_1550
+    labelsTemplate: gpu.intel.com/device.count={{ len .pci.device }}
+    matchFeatures:
+    - feature: pci.device
+      matchExpressions:
+        class:
+          op: In
+          value:
+          - "0380"
+        device:
+          op: In
+          value:
+          - 0bd5
+        vendor:
+          op: In
+          value:
+          - "8086"
+    name: intel.gpu.max.1550
+  - labels:
+      gpu.intel.com/family: Max_Series
+    matchFeatures:
+    - feature: pci.device
+      matchExpressions:
+        class:
+          op: In
+          value:
+          - "0380"
+        device:
+          op: In
+          value:
+          - 0bda
+          - 0bd5
+          - 0bd9
+          - 0bdb
+          - 0bd7
+          - 0bd6
+          - 0bd0
+        vendor:
+          op: In
+          value:
+          - "8086"
+    name: intel.gpu.max.series
+  - labels:
+      gpu.intel.com/family: Flex_Series
+      gpu.intel.com/product: Flex_170
+    labelsTemplate: gpu.intel.com/device.count={{ len .pci.device }}
+    matchFeatures:
+    - feature: pci.device
+      matchExpressions:
+        class:
+          op: In
+          value:
+          - "0380"
+        device:
+          op: In
+          value:
+          - 56c0
+        vendor:
+          op: In
+          value:
+          - "8086"
+    name: intel.gpu.flex.170
+  - labels:
+      gpu.intel.com/family: Flex_Series
+      gpu.intel.com/product: Flex_140
+    labelsTemplate: gpu.intel.com/device.count={{ len .pci.device }}
+    matchFeatures:
+    - feature: pci.device
+      matchExpressions:
+        class:
+          op: In
+          value:
+          - "0380"
+        device:
+          op: In
+          value:
+          - 56c1
+        vendor:
+          op: In
+          value:
+          - "8086"
+    name: intel.gpu.flex.140
+  - labels:
+      gpu.intel.com/family: A_Series
+    matchFeatures:
+    - feature: pci.device
+      matchExpressions:
+        class:
+          op: In
+          value:
+          - "0300"
+        device:
+          op: In
+          value:
+          - 56a6
+          - 56a5
+          - 56a1
+          - 56a0
+          - "5694"
+          - "5693"
+          - "5692"
+          - "5691"
+          - "5690"
+          - 56b3
+          - 56b2
+          - 56a4
+          - 56a3
+          - "5697"
+          - "5696"
+          - "5695"
+          - 56b1
+          - 56b0
+          - 56a2
+          - 56ba
+          - 56bc
+          - 56bd
+          - 56bb
+        vendor:
+          op: In
+          value:
+          - "8086"
+    name: intel.gpu.a.series

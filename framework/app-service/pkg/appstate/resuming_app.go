@@ -4,22 +4,31 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"k8s.io/client-go/kubernetes"
 	"time"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
-	"github.com/beclab/Olares/framework/app-service/pkg/kubeblocks"
+	"github.com/beclab/Olares/framework/app-service/pkg/podhealth"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
 	appsv1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	kbopv1alpha1 "github.com/apecloud/kubeblocks/apis/operations/v1alpha1"
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+// errUnrecoverablePod is returned by IsStartUp when a resumed app has a pod in
+// a state that will not self-heal, so poll surfaces a precise ResumeFailed
+// reason instead of the generic startup-timeout message.
+var errUnrecoverablePod = errors.New("resume aborted: unrecoverable pod")
 
 var _ OperationApp = &ResumingApp{}
 
@@ -29,10 +38,10 @@ type ResumingApp struct {
 
 var errStopRequestedDueToPendingPod = errors.New("stop requested due to pending pod")
 
-func NewResumingApp(c client.Client,
+func NewResumingApp(deps Deps,
 	manager *appsv1.ApplicationManager, ttl time.Duration) (StatefulApp, StateError) {
 
-	return appFactory.New(c, manager, ttl,
+	return deps.Factory.New(deps, manager, ttl,
 		func(c client.Client, manager *appsv1.ApplicationManager, ttl time.Duration) StatefulApp {
 			return &ResumingApp{
 				&baseOperationApp{
@@ -93,12 +102,12 @@ func (p *ResumingApp) scaleOrPatchResume(ctx context.Context, resumeServer bool)
 
 	token := p.manager.Annotations[api.AppTokenKey]
 
-	kubeConfig, err := getKubeConfig()
+	kubeConfig, err := p.deps.KubeConfig()
 	if err != nil {
 		klog.Errorf("get kube config failed %v", err)
 		return err
 	}
-	ops, err := newHelmOps(ctx, kubeConfig, &appCfg, token,
+	ops, err := p.deps.NewHelmOps(ctx, kubeConfig, &appCfg, token,
 		appinstaller.Opt{
 			Source:       p.manager.Spec.Source,
 			MarketSource: appcfg.GetMarketSource(p.manager),
@@ -130,7 +139,7 @@ func (p *ResumingApp) resumeViaPatch(ctx context.Context, resumeServer bool) err
 }
 
 func (p *ResumingApp) Cancel(ctx context.Context) error {
-	err := p.updateStatus(ctx, p.manager, appsv1.ResumingCanceling, nil, constants.OperationCanceledByTerminusTpl, appsv1.ResumingCanceling.String())
+	err := p.updateStatus(ctx, p.manager, appsv1.ResumingCanceling, nil, constants.ResumeCanceledByTimeout, constants.ResumeCancelBySystem)
 	if err != nil {
 		klog.Errorf("update appmgr state to resumingCanceling state failed %v", err)
 		return err
@@ -154,7 +163,7 @@ func (p *resumingInProgressApp) Exec(ctx context.Context) (StatefulInProgressApp
 
 // WaitAsync implements PollableStatefulInProgressApp.
 func (p *resumingInProgressApp) WaitAsync(ctx context.Context) {
-	appFactory.waitForPolling(ctx, p, func(err error) {
+	p.deps.Factory.waitForPolling(ctx, p, func(err error) {
 		if err != nil {
 			if errors.Is(err, errStopRequestedDueToPendingPod) {
 				klog.Infof("app %s stop requested while resuming, skip setting ResumeFailed", p.manager.Spec.AppName)
@@ -172,9 +181,7 @@ func (p *resumingInProgressApp) WaitAsync(ctx context.Context) {
 		updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.Initializing, nil, appsv1.Initializing.String(), appsv1.Initializing.String())
 		if updateErr != nil {
 			klog.Errorf("update app manager %s to %s state failed %v", p.manager.Name, appsv1.Initializing.String(), updateErr)
-			return
 		}
-		return
 	})
 }
 
@@ -183,25 +190,63 @@ func (p *resumingInProgressApp) poll(ctx context.Context) error {
 	if p.manager.Spec.Type == appsv1.Middleware {
 		return nil
 	}
-	ok := p.IsStartUp(ctx)
-
-	if !ok {
-		isPending, err := p.stopRequested(ctx)
-		if err != nil {
-			return err
-		}
-		if isPending {
-			return errStopRequestedDueToPendingPod
-		}
-		return fmt.Errorf("wait for app %s startup failed", p.manager.Spec.AppName)
+	ok, unrecoverableErr := p.IsStartUp(ctx)
+	if ok {
+		return nil
 	}
 
-	return nil
+	// An unrecoverable pod is a definitive failure; surface its reason so
+	// WaitAsync records a precise ResumeFailed message rather than the generic
+	// startup-timeout one.
+	if unrecoverableErr != nil {
+		return unrecoverableErr
+	}
+
+	isPending, err := p.stopRequested(ctx)
+	if err != nil {
+		return err
+	}
+	if isPending {
+		return errStopRequestedDueToPendingPod
+	}
+	return fmt.Errorf("wait for app %s startup failed", p.manager.Spec.AppName)
 }
 
-func (p *resumingInProgressApp) IsStartUp(ctx context.Context) bool {
+// IsStartUp polls until the resumed app's pods have started, ctx is canceled,
+// or an unrecoverable pod condition persists past its grace window. It returns
+// (true, nil) on startup, (false, nil) on ctx cancel, and (false, err) with a
+// descriptive error when it aborts early on an unrecoverable pod.
+func (p *resumingInProgressApp) IsStartUp(ctx context.Context) (bool, error) {
 	timer := time.NewTicker(time.Second)
+	defer timer.Stop()
 	start := time.Now()
+
+	// Build a direct clientset for the (event-based) permanent mount-failure
+	// scan. Deliberately NOT the controller-runtime cache client: Events are
+	// high-churn and caching them would spin up an expensive informer.
+	kubeConfig, err := p.deps.KubeConfig()
+	if err != nil {
+		klog.Errorf("get kube config failed %v", err)
+		return false, err
+	}
+	kubeClient, err := kubernetes.NewForConfig(kubeConfig)
+	if err != nil {
+		return false, err
+	}
+
+	// fetchEvents backs podhealth's mount-failure checker. A failing List only
+	// skips that tier for the tick; the container-status tiers still run off the
+	// cache client.
+	fetchEvents := func(pod corev1.Pod) ([]corev1.Event, error) {
+		fieldSelector := fields.OneTermEqualSelector("involvedObject.name", pod.Name).String()
+		events, err := kubeClient.CoreV1().Events(pod.Namespace).List(ctx, metav1.ListOptions{FieldSelector: fieldSelector})
+		if err != nil {
+			return nil, err
+		}
+		return events.Items, nil
+	}
+
+	var health podhealth.GraceTracker
 	for {
 		select {
 		case <-timer.C:
@@ -209,11 +254,26 @@ func (p *resumingInProgressApp) IsStartUp(ctx context.Context) bool {
 			klog.Infof("wait app %s pod to startup, time elapsed: %v", p.manager.Spec.AppName, time.Since(start))
 			if startedUp {
 				klog.Infof("app: %s,time: %v, appState: %v", p.manager.Spec.AppName, time.Now(), appsv1.Initializing)
-				return true
+				return true, nil
 			}
+
+			pods, err := listAppPods(p.manager, p.client)
+			if err != nil || len(pods) == 0 {
+				continue
+			}
+
+			sig, fatal, started := health.Observe(podhealth.Run(podhealth.Input{Pods: pods, FetchEvents: fetchEvents}))
+			if fatal {
+				return false, fmt.Errorf("%w: %s", errUnrecoverablePod, sig.Message)
+			}
+			if started {
+				klog.Warningf("resume %s pod-health signal (%s: %s); will fail if it persists for %s",
+					p.manager.Spec.AppName, sig.Reason, sig.Message, sig.Grace)
+			}
+
 		case <-ctx.Done():
 			klog.Infof("Waiting for app startup canceled appName=%s", p.manager.Spec.AppName)
-			return false
+			return false, nil
 		}
 	}
 }
@@ -228,7 +288,7 @@ func (p *resumingInProgressApp) stopRequested(ctx context.Context) (bool, error)
 }
 
 func (p *ResumingApp) execMiddleware(ctx context.Context) error {
-	op := kubeblocks.NewOperation(ctx, kbopv1alpha1.StartType, p.manager, p.client)
+	op := p.deps.NewMiddlewareOp(ctx, kbopv1alpha1.StartType, p.manager, p.client)
 	err := op.Start()
 	if err != nil {
 		klog.Errorf("failed to resume middleware %s,err=%v", p.manager.Spec.AppName, err)

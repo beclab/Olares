@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 学习如何向 Olares 应用市场提交应用。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 提交应用, Pull Request, Terminus-Gitbot, 应用市场, Chart 校验
 ---
 # 提交 Olares 应用
 
@@ -14,8 +18,8 @@ Terminus-Gitbot 会基于 PR 标题、文件范围与所有权规则对 PR 进�
 
 推荐流程：
 
-- 使用 [Studio](/zh/developer/develop/tutorial/develop.md) 开发容器，在真实的在线环境中测试和调试。
-- [通过应用市场安装应用](/zh/developer/develop/tutorial/package-upload.md)，从用户视角测试安装与升级流程。
+- 阅读 [Olares 应用 Chart 结构](/zh/developer/develop/package/chart.md)，确认所有必需文件都已准备完整。
+- 在测试用 Olares 设备上安装打包后的应用，从用户视角检查安装、升级和运行表现。
 
 ## 提交新应用
 

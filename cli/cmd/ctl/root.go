@@ -13,11 +13,14 @@ import (
 	"github.com/beclab/Olares/cli/cmd/ctl/doctor"
 	"github.com/beclab/Olares/cli/cmd/ctl/files"
 	"github.com/beclab/Olares/cli/cmd/ctl/gpu"
+	"github.com/beclab/Olares/cli/cmd/ctl/knowledge"
 	"github.com/beclab/Olares/cli/cmd/ctl/market"
 	"github.com/beclab/Olares/cli/cmd/ctl/node"
 	"github.com/beclab/Olares/cli/cmd/ctl/os"
 	"github.com/beclab/Olares/cli/cmd/ctl/osinfo"
+	"github.com/beclab/Olares/cli/cmd/ctl/preinstall"
 	"github.com/beclab/Olares/cli/cmd/ctl/profile"
+	"github.com/beclab/Olares/cli/cmd/ctl/search"
 	"github.com/beclab/Olares/cli/cmd/ctl/settings"
 	"github.com/beclab/Olares/cli/cmd/ctl/user"
 	"github.com/beclab/Olares/cli/cmd/ctl/wizard"
@@ -60,12 +63,21 @@ func NewDefaultCommand() *cobra.Command {
 	}
 	cmds.Flags().BoolVar(&showVendor, "vendor", false, "show the vendor type of olares-cli")
 
-	// Version-compat controls (--olares-version / --refresh-version) live on
-	// the `profile` command tree, not here: backend version is a per-profile
-	// property (cached in config.json, eagerly fetched at login). Other
+	// Keep the first line byte-for-byte identical to Cobra's default
+	// ("olares-cli version <VERSION>") so existing parsers that read only
+	// the first line / the third whitespace-delimited token keep working,
+	// while appending the build metadata on following lines.
+	cmds.SetVersionTemplate(fmt.Sprintf(
+		"{{with .Name}}{{.}} {{end}}version {{.Version}}\nGit commit: %s\nBuild time: %s\n",
+		version.GitCommit, version.BuildTime,
+	))
+
+	// Version-compat controls (--olares-version) live on the `profile`
+	// command tree, not here: backend version is a per-profile property
+	// (cached in config.json, eagerly fetched at login). Other
 	// command trees that branch on it (market, version-aware settings) read
 	// that cache and auto-detect on demand; to override or force a refresh,
-	// use the profile namespace (e.g. `profile list --refresh-version`).
+	// use the profile namespace (e.g. `profile list --refresh`).
 	// Identity is single-source: whichever profile `olares-cli profile use`
 	// (or the most recent `profile login` / `profile import`) selected. There
 	// is intentionally no per-invocation `--profile` override — agents and
@@ -93,15 +105,18 @@ func NewDefaultCommand() *cobra.Command {
 		cmds.AddCommand(disk.NewDiskCommand())
 	}
 
-	// Always-on: developer utilities (chart) + remote/agent verbs that go
-	// through control-hub.<terminus> via the active profile's token.
+	// Always-on: developer utilities (chart, preinstall) + remote/agent verbs
+	// that go through control-hub.<terminus> via the active profile's token.
 	cmds.AddCommand(chart.NewChartCommand())
+	cmds.AddCommand(preinstall.NewPreinstallCommand())
 	cmds.AddCommand(market.NewMarketCommand(factory))
 	cmds.AddCommand(profile.NewProfileCommand(factory))
+	cmds.AddCommand(knowledge.NewKnowledgeCommand(factory))
 	cmds.AddCommand(files.NewFilesCommand(factory))
 	cmds.AddCommand(doctor.NewDoctorCommand(factory))
 	cmds.AddCommand(dashboard.NewDashboardCommand(factory))
 	cmds.AddCommand(settings.NewSettingsCommand(factory))
+	cmds.AddCommand(search.NewSearchCommand(factory))
 	cmds.AddCommand(cluster.NewClusterCommand(factory))
 
 	return cmds

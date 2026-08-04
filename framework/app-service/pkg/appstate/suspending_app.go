@@ -12,7 +12,6 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
 	"github.com/beclab/Olares/framework/app-service/pkg/compute"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
-	"github.com/beclab/Olares/framework/app-service/pkg/kubeblocks"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
@@ -30,11 +29,11 @@ type SuspendingApp struct {
 	*baseOperationApp
 }
 
-func NewSuspendingApp(c client.Client,
+func NewSuspendingApp(deps Deps,
 	manager *appsv1.ApplicationManager, ttl time.Duration) (StatefulApp, StateError) {
 	// TODO: check app state
 
-	return appFactory.New(c, manager, ttl,
+	return deps.Factory.New(deps, manager, ttl,
 		func(c client.Client, manager *appsv1.ApplicationManager, ttl time.Duration) StatefulApp {
 			return &SuspendingApp{
 				&baseOperationApp{
@@ -52,6 +51,12 @@ func (p *SuspendingApp) Exec(ctx context.Context) (StatefulInProgressApp, error)
 	err := p.exec(ctx)
 	if err != nil {
 		klog.Errorf("suspend app %s failed %v", p.manager.Spec.AppName, err)
+		if IsRetryableWebhookError(err) {
+			// Keep Stopping so cold-start webhook/Service lag can recover without
+			// permanently landing in StopFailed. TTL Cancel still applies.
+			klog.Infof("suspend app %s hit retryable webhook error, requeue: %v", p.manager.Spec.AppName, err)
+			return nil, NewWaitingInLine(5)
+		}
 		opRecord := makeRecord(p.manager, appsv1.StopFailed, fmt.Sprintf(constants.OperationFailedTpl, p.manager.Spec.OpType, err.Error()))
 		updateErr := p.updateStatus(ctx, p.manager, appsv1.StopFailed, opRecord, err.Error(), appsv1.StopFailed.String())
 		if updateErr != nil {
@@ -164,8 +169,10 @@ func (p *SuspendingApp) exec(ctx context.Context) error {
 }
 
 func (p *SuspendingApp) Cancel(ctx context.Context) error {
-	// FIXME: cancel suspend operation if timeout
-	return nil
+	opRecord := makeRecord(p.manager, appsv1.StopFailed,
+		fmt.Sprintf(constants.OperationFailedTpl, p.manager.Spec.OpType, "stopping ttl exceeded"))
+	return p.updateStatus(ctx, p.manager, appsv1.StopFailed, opRecord,
+		"stopping ttl exceeded", appsv1.StopFailed.String())
 }
 
 // scaleOrPatchSuspend chooses between the helm-upgrade-based Scale(0)
@@ -183,13 +190,13 @@ func (p *SuspendingApp) scaleOrPatchSuspend(ctx context.Context, stopServer bool
 		return p.suspendViaPatch(ctx, stopServer)
 	}
 
-	kubeConfig, err := getKubeConfig()
+	kubeConfig, err := p.deps.KubeConfig()
 	if err != nil {
 		klog.Errorf("get kube config failed %v", err)
 		return err
 	}
 	token := p.manager.Annotations[api.AppTokenKey]
-	ops, err := newHelmOps(ctx, kubeConfig, &appCfg, token,
+	ops, err := p.deps.NewHelmOps(ctx, kubeConfig, &appCfg, token,
 		appinstaller.Opt{
 			Source:       p.manager.Spec.Source,
 			MarketSource: appcfg.GetMarketSource(p.manager),
@@ -224,7 +231,7 @@ func (p *SuspendingApp) suspendViaPatch(ctx context.Context, stopServer bool) er
 }
 
 func (p *SuspendingApp) execMiddleware(ctx context.Context) error {
-	op := kubeblocks.NewOperation(ctx, kbopv1alpha1.StopType, p.manager, p.client)
+	op := p.deps.NewMiddlewareOp(ctx, kbopv1alpha1.StopType, p.manager, p.client)
 	err := op.Stop()
 	if err != nil {
 		klog.Errorf("failed to stop middleware %s,err=%v", p.manager.Spec.AppName, err)

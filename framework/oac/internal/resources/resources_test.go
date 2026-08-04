@@ -311,8 +311,16 @@ func TestCheckResourceLimits_ContainerLimitOverApp(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected aggregate cap error")
 	}
-	if !strings.Contains(err.Error(), "spec.limitedCpu") || !strings.Contains(err.Error(), "spec.limitedMemory") {
-		t.Fatalf("error should mention spec caps: %v", err)
+	// Aggregate-cap messages reference the limit field by its bare name
+	// (e.g. "limitedCpu") rather than the dotted "spec.limitedCpu" path,
+	// so the assertion uses the unqualified substring. The "must be <="
+	// fragment pins us to the aggregate-cap rule and rules out a stray
+	// match from any other error.
+	msg := err.Error()
+	if !strings.Contains(msg, "limitedCpu") ||
+		!strings.Contains(msg, "limitedMemory") ||
+		!strings.Contains(msg, "must be <=") {
+		t.Fatalf("error should mention both limit caps and the <= rule: %v", err)
 	}
 }
 

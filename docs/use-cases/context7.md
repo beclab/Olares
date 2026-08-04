@@ -1,13 +1,14 @@
 ---
 outline: [2, 3]
-description: Set up Context7 on Olares to provide AI coding assistants with up-to-date library documentation via MCP. Connect it to Olares-hosted agents or external tools like Cursor.
+title: Connect AI coding tools to docs with Context7
+description: Run Context7 on Olares to give AI coding assistants current library documentation through MCP, including Olares-hosted agents and Cursor.
 head:
   - - meta
     - name: keywords
       content: Olares, Context7, MCP, Model Context Protocol, AI coding assistant, documentation, Cursor, Agent Zero, LibreChat, OpenCode
 app_version: "1.0.0"
-doc_version: "1.0"
-doc_updated: "2026-04-02"
+doc_version: "1.1"
+doc_updated: "2026-07-28"
 ---
 
 # Connect AI coding assistants to up-to-date docs with Context7
@@ -127,14 +128,16 @@ To configure an API key:
 
 Before proceeding, ensure that you have configured the necessary settings within each agent app, such as the model provider, model name, and base URL.
 
-### Obtain MCP endpoint
+### Get Context7 MCP endpoint
 
-To use Context7 with Olares-hosted AI agents, you need to obtain the MCP endpoint URL first, and then configure Context7 in your preferred agent app.
+<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
 
-1. Open Settings, and then go to **Applications** > **Context7** > **Context7 MCP**.
-2. Copy the endpoint URL. For example, `https://f86d25051.olaresdemo.olares.com`.
+For Context7:
 
-    ![Context7 MCP endpoint](/images/manual/use-cases/context7-mcp-endpoint.png#bordered){width=70%}
+1. Go to Olares **Settings** > **Applications** > **Context7** > **Entrances**.
+2. Select **Context7 MCP**, then copy the **Endpoint** URL.
+
+When configuring an MCP client, append `/mcp` to this Endpoint.
 
 ### Agent Zero
 
@@ -156,19 +159,6 @@ Add Context7 as an MCP server in Agent Zero, then configure your model provider 
       }
     }
     ```
-
-    For example,
-
-    ```json
-    {
-      "mcpServers": {
-        "context7": {
-          "type": "streamable-http",
-          "url": "https://f86d25051.olaresdemo.olares.com/mcp"
-        }
-      }
-    }
-    ```    
 
 3. Click **Apply now**, and then close the window.
 4. Click **Save**.
@@ -279,7 +269,7 @@ You can also connect Context7 to coding assistants running on your computer, suc
    ![Enable LarePass VPN on desktop](/images/manual/get-started/larepass-vpn-desktop.png#bordered)
 
     :::tip On the same local network?
-    If your computer and Olares are on the same LAN, you can skip VPN and use the `.local` domain instead. Replace `https://f86d25051.{username}.olares.com` with `http://f86d25051.{username}.olares.local` in the config in Step 3. For details, see [Use `.local` domain](../manual/best-practices/local-access.md#method-2-use-local-domain).
+    If your computer and Olares are on the same LAN, you can skip VPN and use the `.local` domain instead. Change `https://<route-id>.<username>.olares.com` to `http://<route-id>.<username>.olares.local` in Step 3. For details, see [Use `.local` domain](../manual/best-practices/local-access.md#method-2-use-local-domain).
     :::
 
 2. Open Cursor, and then go to **Settings** > **Tools & MCP** > **Add custom MCP**.

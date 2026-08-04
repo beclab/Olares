@@ -3,15 +3,15 @@ package utils
 import (
 	"context"
 	"fmt"
+	"github.com/Masterminds/semver/v3"
+	"k8s.io/klog/v2"
 	"os"
 	"strings"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
 	"github.com/beclab/api/pkg/generated/clientset/versioned"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -53,10 +53,10 @@ func AppNamespace(app, owner, ns string) (string, error) {
 			if a.Spec.AppName != app {
 				continue
 			}
-			// v1/v2 apps: owner-equals; v3 apps: cluster-wide AM
+			// v1/v2 apps: owner-equals; shared apps: cluster-wide AM
 			// carries the AppApiVersionLabel and is visible to every viewer.
-			isV3 := a.Labels[constants.AppApiVersionLabel] == constants.AppVersionV3
-			if a.Spec.AppOwner == owner || isV3 {
+			isShared := a.Labels[constants.AppSharedLabel] == constants.AppSharedTrue
+			if a.Spec.AppOwner == owner || isShared {
 				return a.Spec.AppNamespace, nil
 			}
 		}

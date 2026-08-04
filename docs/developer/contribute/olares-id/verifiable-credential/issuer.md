@@ -1,3 +1,10 @@
+---
+description: How the Issuer service issues verifiable credentials in the Olares ID system.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, VC Issuer, verifiable credential issuer, Olares ID, issue credentials, Issuer service
+---
 # Issuer
 
 ![alt text](/images/developer/contribute/issuer.png)

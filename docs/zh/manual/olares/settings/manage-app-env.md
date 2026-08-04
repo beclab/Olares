@@ -1,6 +1,10 @@
 ---
 outline: [2, 3] 
 description: 了解如何在 Olares 中管理应用环境变量。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 环境变量, 应用配置, 容器变量, 应用管理, 系统环境变量
 ---
 
 # 管理应用环境变量

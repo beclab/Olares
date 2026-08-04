@@ -1,4 +1,5 @@
 ---
+noindex: true
 outline: [2, 3]
 description: 了解 Olares 中的应用分发机制。
 ---

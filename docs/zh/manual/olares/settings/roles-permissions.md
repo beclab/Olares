@@ -1,5 +1,9 @@
 ---
 description: Olares 团队中的用户角色和权限体系说明。了解不同角色的权限范围，确保团队成员安全高效协作。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 角色权限, 超级管理员, 管理员, 成员, 多用户权限, 访问控制
 ---
 
 # 用户角色与权限

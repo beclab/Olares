@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 了解 Olares 中应用分发的整体机制。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 应用分发, Olares Market, OAC, Terminus-Gitbot, 应用索引, 应用生命周期
 ---
 # 分发 Olares 应用
 
@@ -92,7 +96,9 @@ Olares 应用市场从 Git 仓库索引应用。 要将应用发布到默认的�
 详情请参阅[推广你的应用](/zh/developer/develop/promote-apps.md)。
 
 
+<!--
 ### 6. (可选) 发布付费应用
 Olares 应用市场同样支持付费应用分发。付费应用需要额外的身份注册、定价配置以及许可证管理。
 
 详情请参阅[发布付费应用](/zh/developer/develop/paid-apps.md)。
+-->

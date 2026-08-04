@@ -1,0 +1,111 @@
+/* Vertical user path: a journey timeline of stages with links, e.g. on the Olares One index. */
+.vpath {
+  margin: 2rem 0 3rem;
+}
+
+.vpath-stage {
+  display: flex;
+  gap: 1.25rem;
+  align-items: flex-start;
+}
+
+.vpath-marker {
+  position: relative;
+  flex-shrink: 0;
+  align-self: stretch;
+  display: flex;
+  justify-content: center;
+  width: 44px;
+}
+
+/* The vertical line behind the icons, connecting consecutive stages. */
+.vpath-marker::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  transform: translateX(-50%);
+  background-color: var(--vp-c-divider);
+}
+
+.vpath-stage:first-child .vpath-marker::before {
+  top: 22px;
+}
+
+.vpath-stage:last-child .vpath-marker::before {
+  bottom: calc(100% - 22px);
+}
+
+.vpath-icon {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background-color: var(--vp-c-bg);
+  border: 1px solid var(--vp-c-divider);
+}
+
+.vpath-icon .material-symbols-outlined {
+  font-size: 24px;
+  line-height: 1;
+  color: var(--vp-c-text-1);
+}
+
+.vpath-body {
+  flex: 1;
+  min-width: 0;
+  padding-bottom: 2rem;
+}
+
+.vpath-stage:last-child .vpath-body {
+  padding-bottom: 0;
+}
+
+.vpath-title {
+  margin-bottom: 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  line-height: 44px;
+  color: var(--vp-c-text-1);
+}
+
+.vpath-links {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 0.15rem 1.5rem;
+}
+
+.vpath-links a {
+  display: block;
+  padding: 0.35rem 0;
+  font-size: 0.9rem;
+  color: var(--vp-c-text-2);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.vpath-links a:hover {
+  color: var(--vp-c-brand-1);
+}
+
+.vpath-seealso {
+  grid-column: 1 / -1;
+  margin-top: 0.6rem;
+  font-size: 0.85rem;
+  color: var(--vp-c-text-3);
+}
+
+.vpath-seealso a {
+  color: var(--vp-c-text-2);
+  text-decoration: none;
+}
+
+.vpath-seealso a:hover {
+  color: var(--vp-c-brand-1);
+}

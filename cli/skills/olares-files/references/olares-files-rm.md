@@ -10,7 +10,7 @@ Delete one or more files / directories. Batch-aware: multiple targets that share
 - **Destructive verb — confirm intent with the user before invocation.** The CLI prompts y/N by default; `-f` skips the prompt.
 - **`-f` does NOT bypass the preflight existence check** — a missing path still aborts (safer-than-Unix `rm -f`). This means a typo cannot half-delete a batch.
 - **Trailing slash signals directory intent.** Without `-r`, `rm drive/Home/Foo/` errors with "<Foo> is a folder, pass -r". Without trailing slash AND target is actually a dir, errors with the same CTA.
-- **Protected names** ([quirk #4](../SKILL.md#4-drivehomepictures-music-movies-downloads-documents-code-cache-data-home-ollama-huggingface-are-system-managed)) are refused at the first level under `drive/Home/` only; deeper paths (`drive/Home/Pictures/Trip2024/`) are fully deletable.
+- **Protected names** ([quirk #4](../SKILL.md#4-the-system-managed-drivehome-directories-are-protected)) are refused at the first level under `drive/Home/` only; deeper paths (`drive/Home/Pictures/Trip2024/`) are fully deletable.
 
 ## Examples
 

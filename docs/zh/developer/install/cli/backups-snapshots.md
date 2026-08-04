@@ -1,4 +1,6 @@
 ---
+noindex: true
+description: snapshots 子命令用于列出指定备份仓库中的所有可用快照。它支持多种存储后端，并提供必要的选项来进行身份验证和查询快照。
 outline: [2, 3]
 ---
 # `snapshots`

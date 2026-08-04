@@ -125,6 +125,7 @@ data:
 
     [bytetrade]
     DNS.1 = app-service.os-framework.svc
+    DNS.2 = authz.olares.system
 
 ---
 apiVersion: apps/v1
@@ -170,16 +171,15 @@ spec:
       priorityClassName: "system-cluster-critical"
       containers:
       - name: app-service
-        image: beclab/app-service:0.5.37
+        image: beclab/app-service:0.6.15
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 6755
-        readinessProbe:
-          failureThreshold: 5
-          initialDelaySeconds: 10
-          periodSeconds: 5
-          tcpSocket:
-            port: 6755
+          name: api
+        - containerPort: 8433
+          name: webhook
+        - containerPort: 8444
+          name: jwks
         securityContext:
           runAsUser: 0
         env:
@@ -205,6 +205,10 @@ spec:
           value: "beclab/upload:v1.0.3"
         - name: JOB_IMAGE
           value: "beclab/upgrade-job:0.1.7"
+        - name: MESH_IN_AGENT_IMAGE
+          value: "beclab/mesh-in-agent:1.30.0-r5"
+        - name: MESH_OUT_AGENT_IMAGE
+          value: "beclab/mesh-out-agent:1.30.0-r4"
         - name: SHARED_LIB_PATH
           value: {{ .Values.sharedlib }}
         - name: CLUSTER_CPU_THRESHOLD
@@ -215,6 +219,8 @@ spec:
           value: "0"
         - name: USER_MEMORY_THRESHOLD
           value: "0"
+        - name: SHARED_BACKEND_RESPONSE_TIMEOUT
+          value: "600s"
         - name: NATS_HOST
           value: nats.os-platform
         - name: NATS_PORT
@@ -236,6 +242,10 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.hostIP
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
         - name: OLARESD_HOST
           value: master-node:18088
         volumeMounts:
@@ -245,7 +255,7 @@ spec:
           name: user-apps-template
         - mountPath: /etc/certs
           name: certs
-        - mountPath: /etc/containerd/config.toml
+        - mountPath: /etc/containerd
           name: configtoml
         - mountPath: /Cache
           name: app-cache
@@ -278,7 +288,8 @@ spec:
           type: DirectoryOrCreate
       - name: configtoml
         hostPath:
-          path: /etc/containerd/config.toml
+          path: /etc/containerd
+          type: Directory
       - name: charts-store
         persistentVolumeClaim:
           claimName: {{ default $charts_pvc .Values.charts_pvc }}
@@ -310,6 +321,10 @@ spec:
     port: 8433
     protocol: TCP
     targetPort: 8433
+  - name: jwks
+    port: 8444
+    protocol: TCP
+    targetPort: jwks
   selector:
     tier: app-service
   type: ClusterIP
@@ -403,7 +418,7 @@ spec:
       priorityClassName: "system-cluster-critical"
       containers:
         - name: image-service
-          image: beclab/image-service:0.4.65
+          image: beclab/image-service:0.6.9
           imagePullPolicy: IfNotPresent
           securityContext:
             runAsUser: 0

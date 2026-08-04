@@ -1,5 +1,6 @@
 ---
 search: false
+noindex: true
 ---
 ## 安装并激活 Olares
 :::warning 检查网络连接

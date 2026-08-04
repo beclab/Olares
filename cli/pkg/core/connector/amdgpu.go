@@ -98,8 +98,8 @@ func HasAmdAPUOrGPU(execRuntime Runtime) (bool, error) {
 	})
 }
 
-func HasStrixHaloLocal() (bool, error) {
-	return hasStrixHaloChip(func(s string) (string, error) {
+func HasRyzenAIMaxLocal() (bool, error) {
+	return hasRyzenAIMax(func(s string) (string, error) {
 		out, err := exec.Command("sh", "-c", s).Output()
 		if err != nil {
 			return "", err
@@ -108,8 +108,8 @@ func HasStrixHaloLocal() (bool, error) {
 	})
 }
 
-func HasStrixHalo(execRuntime Runtime) (bool, error) {
-	return hasStrixHaloChip(func(s string) (string, error) {
+func HasRyzenAIMax(execRuntime Runtime) (bool, error) {
+	return hasRyzenAIMax(func(s string) (string, error) {
 		return execRuntime.GetRunner().SudoCmd(s, false, false)
 	})
 }
@@ -132,7 +132,9 @@ func RocmVersion() (*semver.Version, error) {
 	return cur, nil
 }
 
-func hasStrixHaloChip(cmdExec func(s string) (string, error)) (bool, error) {
+// hasRyzenAIMax detects an AMD "Ryzen AI Max" APU (the integrated-GPU part
+// labeled as the generic "amd" mode).
+func hasRyzenAIMax(cmdExec func(s string) (string, error)) (bool, error) {
 	target := "Ryzen AI Max"
 
 	// try lscpu first: extract 'Model name' field

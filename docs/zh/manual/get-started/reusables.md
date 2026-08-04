@@ -1,5 +1,9 @@
 ---
 search: false
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 安装命令, 系统要求, 配置 Wizard, 安装脚本, root 密码
 ---
 
 <!-- #region install-script-command -->

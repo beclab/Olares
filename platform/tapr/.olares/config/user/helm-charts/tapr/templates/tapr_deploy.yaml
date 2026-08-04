@@ -22,6 +22,7 @@ spec:
     spec:
       serviceAccountName: tapr-images
       serviceAccount: tapr-images
+      priorityClassName: "system-cluster-critical"
       securityContext:
         runAsUser: 1000
         runAsGroup: 1000

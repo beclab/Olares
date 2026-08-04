@@ -1,9 +1,13 @@
 ---
 outline: [2, 3]
 description: Known issues in Olares, including affected environments, impact, workarounds, and fix status.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, known issues, LarePass VPN, Chrome WebSocket, local network access, workaround
 ---
 
-# Known issues
+# Olares known issues
 
 This page lists confirmed issues that may affect Olares users. Each issue includes the affected environment, user impact, current status, and available workarounds.
 

@@ -1,5 +1,10 @@
 ---
+description: 每一个 Olares 应用的 Chart 根目录下都必须有一个名为 OlaresManifest.yaml 的文件。OlaresManifest.yaml 描述了一个 Olares 应用的所有基本信息。
 outline: [2, 3]
+head:
+  - - meta
+    - name: keywords
+      content: Olares, OlaresManifest, 应用规范, YAML 配置, 应用市场, 权限声明
 ---
 
 # OlaresManifest 规范
@@ -7,14 +12,31 @@ outline: [2, 3]
 每一个 Olares 应用的 Chart 根目录下都必须有一个名为 `OlaresManifest.yaml` 的文件。`OlaresManifest.yaml` 描述了一个 Olares 应用的所有基本信息。Olares 应用市场协议和 Olares 系统依赖这些关键信息来正确分发和安装应用。
 
 :::info 提示
-最新的 Olares 系统使用的 Manifest 版本为: `0.11.0`
-- 移除 已不支持的sysData 配置项
-- 修改 共享应用的案例
-- 增加 apiVersion 字段说明
-- 增加 共享入口的配置说明
-
+最新的 Olares 系统使用的 Manifest 版本为： `0.12.0`
+- 要求 Olares 系统版本在 1.12.6 以上
+- **不再支持模版渲染**：`OlaresManifest.yaml` 中不能使用 <code v-pre>{{ ... }}</code> 等模板渲染函数
+- 修改 `apiVersion` 字段有效值，增加`v3`，原 `v2` 格式将在 1.12.6 不再支持
+- 增加 `options.shared` 字段，用于标识共享应用
+- 增加 `spec.accelerator` 字段，用于 GPU 资源声明
+- 增加 `workloadReplicas` 字段，声明所有 workload 的副本数
+- 增加 `overlayGateway` 字段，支持 L2 overlay 局域网发现
+- 增加 `LLMGatewaySupported` 选项，支持 LLM Gateway
+- 增加 `appCommon` 和 `externalData` 权限（均默认为 `false`）
+- 增加 `templateOnly` 字段，用于标记模版类应用
+- 移除 [已废弃字段](#废弃字段-0-12-0)
 :::
+
+:::tip 升级至 Manifest 0.12.0
+如果你正在维护已有的应用 Chart，在升级至新版本前，务必重点关注 `apiVersion`、`workloadReplicas` 以及 `permission.externalData` 这几个字段。它们涉及显著变更或新增的强制要求，可能需要你根据实际情况对现有配置进行适配和调整。
+:::
+
 :::details Changelog
+`0.11.0`
+- 移除已不支持的 `sysData` 配置项
+- 修改共享应用的案例
+- 增加 `apiVersion` 字段说明
+- 增加共享入口的配置说明
+
 `0.10.0`
 - 修改 `categories` 分类
 - 增加 Permission 部分中 `provider` 权限的申请
@@ -25,7 +47,7 @@ outline: [2, 3]
 - 增加 Envs 部分，支持应用声明需要的环境变量
 
 `0.9.0`
-- 在 `options` 中增加 `conflict` 字段, 用于声明不兼容的应用
+- 在 `options` 中增加 `conflict` 字段，用于声明不兼容的应用
 - 移除 `options` 中 `analytics` 配置项
 - 修改 `tailscale` 字段的配置格式
 - 增加 `allowedOutboundPorts` 配置，允许通过指定端口进行非 HTTP 协议的对外访问
@@ -51,8 +73,13 @@ outline: [2, 3]
 ::: details `OlaresManifest.yaml` 示例
 
 ```yaml
-olaresManifest.version: '0.10.0'
+olaresManifest.version: '0.12.0'
 olaresManifest.type: app
+apiVersion: 'v3'
+
+workloadReplicas:
+  helloworld: 1
+
 metadata:
   name: helloworld
   title: Hello World
@@ -60,7 +87,8 @@ metadata:
   icon: https://app.cdn.olares.com/appstore/default/defaulticon.webp
   version: 0.0.1
   categories:
-  - Utilities
+  - AI
+
 entrances:
 - name: helloworld
   port: 8080
@@ -68,13 +96,25 @@ entrances:
   host: helloworld
   icon: https://app.cdn.olares.com/appstore/default/defaulticon.webp
   authLevel: private
+  openMethod: default
+
+sharedEntrances:
+- name: helloworld
+  host: sharedentrances-api
+  port: 0
+  title: Hello World API
+  invisible: true
+  authLevel: internal
+  icon: https://app.cdn.olares.com/appstore/default/defaulticon.webp
+
 permission:
   appCache: true
   appData: true
+  appCommon: true
   userData:
   - Home/Documents/
-  - Home/Pictures/
-  - Home/Downloads/BTDownloads/
+  externalData: true
+  
 spec:
   versionName: '0.0.1'
   featuredImage: https://link.to/featured_image.webp
@@ -90,34 +130,52 @@ spec:
   sourceCode: https://link.to.sourceCode
   submitter: Submitter's Name
   locale:
-  - en
+  - en-US
+  - zh-CN
   doc: https://link.to.documents
   supportArch:
   - amd64
-  limitedCpu: 1000m
-  limitedMemory: 1000Mi
-  requiredCpu: 50m
-  requiredDisk: 50Mi
-  requiredMemory: 12Mi
+  - arm64
+  onlyAdmin: true
+
+  accelerator:
+  - mode: nvidia
+    requiredCpu: "1"
+    limitedCpu: "7"
+    requiredMemory: 13Gi
+    limitedMemory: 34Gi
+    requiredDisk: 36Gi
+    limitedDisk: 100Gi
+    requiredGPUMemory: 12Gi
+    limitedGPUMemory: 24Gi
+  - mode: cpu  
+    requiredCpu: 50m
+    limitedCpu: 1000m
+    requiredMemory: 12Mi
+    limitedMemory: 1000Mi
+    requiredDisk: 50Mi
+    limitedDisk: 100Gi
 
 options:
   dependencies:
   - name: olares
     type: system
-    version: '>=0.1.0'
+    version: '>=1.12.6-0'
+  shared: true
+  apiTimeout: 0
+  conflicts:
+    - name: conflictapp
+      type: application
+
+envs:
+  - envName: USERNAME
+    required: true
+    type: string
+    editable: true
+    applyOnChange: true
+    description: 'default username'
+    regex: '^[\w\-!@#$%^&*()+={}\[\]:,.?~]{6,}$'
 ```
-:::
-
-## olaresManifest.type
-
-- 类型：`string`
-- 有效值： `app`、`recommend`、`middleware`
-
-Olares 市场目前支持 3 种类型的应用，各自对应不同场景。本文档以 “app” 为例来解释各个字段。其他类型请参考相应的配置指南。
-- [推荐算法配置指南](recommend.md)
-
-:::info 提示
-Olares Market 目前不展示 `recommend` 类型的应用，但你可以上传自定义 Chart 来给 Wise 安装推荐算法
 :::
 
 ## olaresManifest.version
@@ -127,26 +185,44 @@ Olares Market 目前不展示 `recommend` 类型的应用，但你可以上传�
 随着 Olares 更新，`OlaresManifest.yaml` 的配置规范可能会发生变化。你可以通过检查 `olaresManifest.version` 来确定这些更改是否会影响你的应用程序。 `olaresManifest.version` 由三个用英文句点分隔的整数组成。
 
 - 第 1 位数字增加意味着引入了不兼容的配置项，未升级对应 `OlaresManifest.yaml` 的应用将无法分发或安装。
-- 第 2 位数字增加意味着分发和安装必须字段存在变化，但 Olares 系统仍兼容之前所有版本配置的应用分发与安装。我们建议开发者尽快更新升级应用的 `OlaresManifest.yaml` 文件。
+- 第 2 位数字增加意味着分发和安装必须的字段存在变化，但 Olares 系统仍兼容之前版本配置的应用分发与安装。我们建议开发者尽快更新升级应用的 `OlaresManifest.yaml` 文件。
 - 第 3 位数字的改变，不影响应用分发和安装。
 
-开发者可以使用 1-3 位的版本号来标识该应用遵循的配置版本。以下是有效版本的一些示例：
+请使用 3 位的版本号来标识该应用遵循的配置版本。以下是有效版本的一些示例：
 ```yaml
-olaresManifest.version: 1
-olaresManifest.version: 1.1.0
-olaresManifest.version: '2.2'
-olaresManifest.version: "3.0.122"
+olaresManifest.version: 0.1.0
+olaresManifest.version: '0.1.2'
+olaresManifest.version: "0.12.0"
 ```
+
+## olaresManifest.type
+
+- 类型：`string`
+- 有效值： `app`、`middleware`
+
+Olares 市场目前支持 2 种类型的应用，在字段上有一定的区别。本文档以 `app` 类型为例来解释各个字段。
+
+:::info
+`recommend` 类型已不再包含在最新的 OlaresManifest 规范中。
+:::
 
 ## apiVersion
 - 类型：`string`
-- 可选
-- 有效值：`v1`,`v2`
+- 有效值：`v1`、`v3`
 - 默认值：`v1`
 
-共享应用需使用 `v2` 版本，支持一个 OAC 中包含多个子图表。其他应用请使用`v1`
+从 olaresManifest.version: '0.12.0' 版本开始，apiVersion升级至 `v3` 版本，采用新的资源声明和共享应用配置格式，移除了OlaresManifest的模版渲染。如果没有填写该字段，将默认按照 `v1` 格式进行解析。
 
-## Metadata
+Olare OS 1.12.6 同时支持 `v1` 和 `v3` 格式应用的安装，但不再兼容 `v2` 格式的共享应用安装。
+
+:::warning `apiVersion: 'v2'`将废弃
+- `apiVersion: 'v2'` 用于 Olares OS 1.12.5 及以前版本的共享应用，将在 1.12.6 发布后逐步停止支持。
+- 升级到 Olares OS 1.12.6 版本后：
+  - 已安装的`apiVersion: 'v2'`不受影响，仍可继续使用，但无法继续升级。建议尽快迁移到 `apiVersion: 'v3'` 版本的共享应用。
+  - 商店列表中 `apiVersion: 'v2'` 的应用不再显示，也无法安装
+:::
+
+## metadata
 
 应用的基本信息，用于在 Olares 系统和应用市场中展示应用。
 
@@ -159,8 +235,8 @@ metadata:
   icon: https://app.cdn.olares.com/appstore/nextcloud/icon.png
   version: 0.0.2
   categories:
-  - Utilities
-  - Productivity
+  - Utilities_v112
+  - Productivity_v112
 ```
 :::
 
@@ -203,9 +279,6 @@ Olares 应用市场中的应用名称下方显示的简短说明。
 
 描述在应用市场的哪个类别下展示应用。
 
-OS 1.11 有效值：
-- `Blockchain`, `Utilities`, `Social Network`, `Entertainment`, `Productivity`
-
 OS 1.12 有效值：
 - `Creativity`：设计创作
 - `Productivity_v112`：工作效率
@@ -215,11 +288,7 @@ OS 1.12 有效值：
 - `Utilities_v112`：实用工具
 - `AI`：AI
 
-:::info 提示
-Olares OS 1.12.0 版本对应用商店的应用分类进行了调整，因此如果应用需要同时兼容 1.11 和 1.12 版本，请同时填写两个版本所需的分类。
-:::
-
-## Entrances
+## entrances
 
 指定此应用访问入口的数量。每个应用允许最少 1 个，最多 10 个入口 。
 
@@ -242,7 +311,7 @@ entrances:
 ### name
 
 - 类型：`string`
-- Accepted Value: `[a-z]([-a-z0-9]*[a-z0-9])?`
+- Accepted Value: ``[a-z]([-a-z0-9]*[a-z0-9])?``
 
   入口的名称，长度不超过 `63` 个字符。一个应用内不能重复。
 
@@ -254,7 +323,7 @@ entrances:
 ### host
 
 - 类型：`string`
-- 有效值： `[a-z]([-a-z0-9]*[a-z0-9])?`
+- 有效值： ``[a-z]([-a-z0-9]*[a-z0-9])?``
 
   当前入口的 Ingress 名称，只包含小写字母和数字和中划线`-`，长度不超过 63 个字符。
 
@@ -281,7 +350,7 @@ entrances:
 指定入口的认证级别。
 - **Public**：互联网上的任何人都可以不受限制地访问。
 - **Private**：需要从内部和外部网络访问的授权。
-- **Internal**：需要授权才能从外部网络访问。从内部网络（通过 LAN/专用网络）访问时不需要身份验证。
+- **Internal**：需要授权才能从外部网络访问。从内部网络(通过 LAN/专用网络)访问时不需要身份验证。
 
 ### invisible
 
@@ -307,9 +376,9 @@ entrances:
 - 默认值：`false`
 - 可选
 
-将应用嵌入到桌面上的 iframe 中时，应用的 URL 可能会动态更改。由于浏览器的同源策略，桌面（父窗口）无法直接检测到 iframe URL 中的这些变化。因此，如果你重新打开应用程序选项卡，它将显示初始 URL，而不是更新后的 URL。
+将应用嵌入到桌面上的 iframe 中时，应用的 URL 可能会动态更改。由于浏览器的同源策略，桌面(父窗口)无法直接检测到 iframe URL 中的这些变化。因此，如果你重新打开应用程序选项卡，它将显示初始 URL，而不是更新后的 URL。
 
-为了确保无缝的用户体验，你可以通过将其设置为 true 来启用此选项。此操作会提示网关自动将以下代码注入到 iframe 中。每当 iframe 的 URL 发生更改时，此代码都会向父窗口（桌面）发送一个事件。因此，桌面可以跟踪 URL 更改并打开正确的页面。
+为了确保无缝的用户体验，你可以通过将其设置为 true 来启用此选项。此操作会提示网关自动将以下代码注入到 iframe 中。每当 iframe 的 URL 发生更改时，此代码都会向父窗口(桌面)发送一个事件。因此，桌面可以跟踪 URL 更改并打开正确的页面。
 
 ::: details 代码
 ```Javascript
@@ -352,7 +421,7 @@ sharedEntrances:
 ```
 :::
 
-## Ports
+## ports
 
 定义暴露的端口
 
@@ -362,7 +431,7 @@ ports:
 - name: rdp-tcp             # 提供服务的入口名称
   host: windows-svc         # 提供服务的 Ingress 主机名称
   port: 3389                # 提供服务的端口号
-  protocol: udp             # 暴露端口使用的协议 
+  protocol: udp             # 暴露端口使用的协议
   exposePort: 46879         # 暴露的端口，在集群内一次只能分配给一个应用程序
   addToTailscaleAcl: true   # 自动添加到 Tailscale 的 ACL 列表中
 ```
@@ -371,7 +440,7 @@ ports:
 ### exposePort
 - 类型： `int`
 - 可选
-- 有效值： `0-65535`，保留端口 `22`, `80`, `81`, `443`, `444`, `2379`, `18088` 除外
+- 有效值： `0-65535`,保留端口 `22`, `80`, `81`, `443`, `444`, `2379`, `18088` 除外
 Olares 会为你的应用暴露指定的端口，这些端口可通过应用域名在本地网络下访问，如`84864c1f.your_olares_id.olares.com:46879`。对于每个公开的端口，Olares 会自动配置相同端口号的 TCP 和 UDP。
 
 :::info 提示
@@ -392,11 +461,11 @@ Olares 会为你的应用暴露指定的端口，这些端口可通过应用域�
 
 当将 addToTailscaleAcl 字段设置为 true 时，系统会为该端口分配一个随机端口，并自动将其加入到 Tailscale 的 ACL 中。
 
-## Tailscale
+## tailscale
 - 类型：`map`
 - 可选
 
-允许应用在 Tailscale 的ACL(Access Control Lists)中开放指定端口。
+允许应用在 Tailscale 的 ACL(Access Control Lists) 中开放指定端口。
 
 :::info 示例
 ```yaml
@@ -405,93 +474,69 @@ tailscale:
   - proto: tcp
     dst:
     - "*:46879"
-  - proto: "" # 可选, 如果未指定，则允许使用所有支持的协议
+  - proto: "" # 可选，如果未指定，则允许使用所有支持的协议
     dst:
-    -  "*:4557"  
+    -  "*:4557"
 ```
 :::
 
-## Permission
-
-:::info 示例
-```yaml
-permission:
-  appCache: true
-  appData: true
-  userData:
-    - /Home/
-```
-:::
+## permission
 
 ### appCache
 
 - 类型： `boolean`
+- 默认值：`false`
 - 可选
 
-是否需要在 `Cache` 目录创建应用的目录。如需要在部署 yaml 文件中使用`.Values.userspace.appCache`,  `appCache` 必须设为 `true`。
+应用是否需要在 `Cache` 目录创建应用的目录。设置为 `true` 时，应用在部署 YAML 中可通过 `.Values.userspace.appCache` 获取 `Cache` 目录的路径。
 
 ### appData
 
 - 类型： `boolean`
+- 默认值：`false`
 - 可选
 
-是否需要在 `Data` 目录创建应用的目录。如需要在部署 yaml 中使用`.Values.userspace.appData`,  `appData` 必须设为 `true`。
+应用是否需要 `Data` 目录创建应用的目录。设置为 `true` 时，应用在部署 YAML 中可通过 `.Values.userspace.appData` 获取 `Data` 目录的路径。
+
+### appCommon
+
+- 类型： `boolean`
+- 默认值：`false`
+- 可选
+
+应用是否需要 `App Common` 目录的读写权限。设置为 `true` 时，应用在部署 YAML 中可通过 `.Values.userspace.appCommon` 获取 App Common 目录的路径。从而在多个应用或节点间共享的文件（如 AI 模型等）。
+
+### externalData
+
+- 类型： `boolean`
+- 默认值：`false`
+- 可选
+
+应用是否需要 `External` 目录（通常用于访问挂载的 NAS 或其他外部磁盘数据）的读写权限。设置为 `true` 时，应用在部署 YAML 中可通过 `.Values.sharedlib` 获取 `External` 目录的路径。
+
+:::warning
+从 Manifest 0.12.0 版本开始，`externalData` 权限默认不会开启。如果您的应用需要访问挂载的 NAS 或外部磁盘，必须显式声明 `externalData: true`。若未声明，将无法获得该权限。
+:::
 
 ### userData
 
-- 类型：`string`
+- 类型： `list<string>`
 - 可选
 
-应用是否需要对用户的 `Home` 文件夹进行读写权限。列出应用需要访问的用户 `Home` 下的所有目录。部署 YAML 中配置的所有 `userData` 目录都必须包含在此处。
-
-### provider
-
-- 类型：`list<map>`
-- 可选
-
-用于声明本应用需访问的其他应用接口。被访问的应用需在其 `provider` 部分声明对外开放的 `providerName`，详见下方 Provider 章节。
-
-配置访问的方式如下
-1. 在 `appName` 字段填写目标应用的 `name` 字段。
-2. 在`providerName` 字段填写目标应用 `provider` 配置中的 `name` 字段。
-
-你可以使用 `podSelectors` 字段来指定本应用中哪些 pod 需要访问目标应用。如果未声明此字段，则默认为本应用的所有 pod 注入 `outbound envoy sidecar`。
-
-:::info 调用应用示例
-```yaml
-# 需要调用其他应用的应用，如 sonarr
-permission:  
-  provider:
-  - appName: bazarr
-    providerName: bazarr-svc
-    podSelectors:
-      - matchLabels:
-          io.kompose.service: api
-```
-:::
-:::info 被调用应用示例
-```yaml
-# 被调用方应用，如 bazarr
-provider:
-- name: bazarr-svc
-  entrance: bazarr-svc
-  paths: ["/*"]
-  verbs: ["*"]
-```
-:::
+应用是否需要用户 `Home` 文件夹中的特定目录的读写权限。请在此字段列出应用需访问的所有 `Home` 子目录。部署 YAML 文件中，可通过 `.Values.userspace.userData` 获取 Home 目录的根路径。所有需要挂载的 Home 子目录，必须在本字段中明确声明后方可访问。
 
 
-## Spec
-记录额外的应用信息，主要用于应用商店的展示。
+## spec
+记录额外的应用信息
 
 :::info 示例
 ```yaml
 spec:
-  versionName: '10.8.11' 
+  versionName: '10.8.11'
   # 此 Chart 包含的应用程序的版本。建议将版本号括在引号中。该值对应于 Chart.yaml 文件中的 appVersion 字段。请注意，它与 version 字段无关。
 
   featuredImage: https://app.cdn.olares.com/appstore/jellyfin/promote_image_1.jpg
-  # 当应用在应用市场上推荐时，会显示特色图像。
+  # 当应用安装后，会在 My Olares 页展示此图片。
 
   promoteImage:
   - https://app.cdn.olares.com/appstore/jellyfin/promote_image_1.jpg
@@ -509,23 +554,27 @@ spec:
   locale:
   - en-US
   - zh-CN
-  # 列出该应用支持的语言和地区
-
-  requiredMemory: 256Mi
-  requiredDisk: 128Mi
-  requiredCpu: 0.5
-  # 指定安装和运行应用所需的最少资源。安装应用后，系统将保留这些资源以确保最佳性能。
-
-  limitedDisk: 256Mi
-  limitedCpu: 1
-  limitedMemory: 512Mi
-  # 指定应用的最大资源限制。如果应用超出这些限制，它将暂时暂停，以防止系统过载并确保稳定性。
-
-  legal:
-  - text: Community Standards
-    url: https://jellyfin.org/docs/general/community-standards/
-  - text: Security policy
-    url: https://github.com/jellyfin/jellyfin/security/policy
+  # 列出该应用商店页支持的语言和地区
+  
+  accelerator:
+  - mode: nvidia
+    limitedCpu: 7000m
+    requiredCpu: 150m
+    requiredDisk: 50Mi
+    limitedDisk: 500Gi
+    limitedMemory: 40Gi
+    requiredMemory: 5Gi
+    requiredGPUMemory: 1Gi
+    limitedGPUMemory: 24Gi
+  - mode: cpu
+    limitedCpu: 7000m
+    requiredCpu: 150m
+    requiredDisk: 50Mi
+    limitedDisk: 500Gi
+    limitedMemory: 40Gi
+    requiredMemory: 5Gi
+  # 如果应用需要使用 GPU 或其他硬件加速设备，请在此处详细列出所有支持的加速模式及相关资源需求。仅使用 CPU 的场景，请填 mode: cpu, 下方配置与之前版本一致。
+  
   license:
   - text: GPL-2.0
     url: https://github.com/jellyfin/jellyfin/blob/master/LICENSE
@@ -572,8 +621,8 @@ spec:
 ```
 
 ### supportArch
-- 类型: `list<string>`
-- 有效值: `amd64`, `arm64`
+- 类型： `list<string>`
+- 有效值： `amd64`, `arm64`
 - 可选
 
 该字段用于声明应用程序支持的 CPU 架构。目前仅支持 `amd64` 和 `arm64` 两种类型。
@@ -592,19 +641,92 @@ Olares 目前不支持混合架构的集群。
 :::
 
 ### onlyAdmin
-- 类型: `boolean`
-- 默认值: `false`
+- 类型： `boolean`
+- 默认值： `false`
 - 可选
 
 设置为 `true` 时，只有管理员可以安装此应用程序。
 
 ### runAsUser
-- 类型: `boolean`
+- 类型： `boolean`
 - 可选
 
-当设置为 `true` 时，Olares 会强制以用户 ID “1000”（非 root 用户）运行应用程序。
+当设置为 `true` 时，Olares 会强制以用户 ID "1000"（非 root 用户）运行应用程序。
 
-## Middleware
+### accelerator
+- 类型：`list<map>`
+- 可选
+
+声明应用所需的加速计算资源（如 GPU，核显等）。对于需要加速能力的应用（如大语言模型、图像生成、视频处理或人工智能模型服务等），应该使用 `spec.accelerator` 字段声明资源，不能包含原来的 `spec.requiredMemory` 等字段。
+
+:::info 提示
+当使用 accelerator 字段时，所有相关的资源需求（CPU、内存、磁盘、GPU 显存等）都必须在该字段内部进行声明，而不能再依赖于 spec.requiredMemory 或 spec.requiredCpu 这些根级别字段。
+:::
+
+支持的模式
+
+- `nvidia`、`nvidia-gb10`、`apple-m`、`strix-halo`、`intel`、`amd`、`intel-gpu`、`amd-gpu`：适用于支持特定的 GPU/NPU 硬件加速的应用。
+- `cpu`：用于常规应用，或在支持加速的应用中强制只使用 CPU 计算。
+
+:::info 示例
+```yaml
+spec:
+  accelerator:
+  - mode: nvidia  # 支持的 mode：nvidia、nvidia-gb10、apple-m、strix-halo、mthreads-m1000、intel、amd、intel-gpu、amd-gpu、cpu
+    limitedCpu: 7000m
+    requiredCpu: 150m
+    requiredDisk: 50Mi
+    limitedDisk: 500Gi
+    limitedMemory: 40Gi
+    requiredMemory: 5Gi
+    requiredGPUMemory: 1Gi
+    limitedGPUMemory: 24Gi
+```
+:::
+
+不需要 GPU 的应用，建议使用 cpu mode 来声明：
+:::info 示例
+```yaml
+spec:
+  accelerator:
+  - mode: cpu
+    requiredMemory: 2Gi
+    requiredDisk: 50Mi
+    requiredCpu: 0.25
+    limitedMemory: 10240Mi
+    limitedCpu: '4'
+```
+:::
+
+## workloadReplicas
+- 类型： `map`
+
+声明 chart 中所有 workload 的副本数。从 0.12.0 开始，应用需要在`workloadReplicas` 中声明 chart 中所有 workload 的副本数量。
+
+开发者还需要在 `values.yaml` 文件下对应的变量，并保证在 `workloadReplicas` 中指定的 workload 名称必须与 `values.yaml` 文件下 `workloads` 中的 workload 名称完全一致。从而保证兼容性。
+:::info OlaresManifest.yaml
+```yaml 
+workloadReplicas:
+  affine: 1
+```
+:::
+:::info values.yaml
+```yaml
+workloads:
+  affine:
+    replicaCount: 1
+```
+:::
+
+部署时，请确保引用该值来设置每个 workload 的副本数量。
+:::info deployment.yaml
+```yaml 
+spec:
+  replicas: {{ .Values.workloads.affine.replicaCount }}
+```
+:::
+
+## middleware
 - 类型：`map`
 - 可选
 
@@ -613,7 +735,7 @@ Olares 目前不支持混合架构的集群。
 使用 `scripts` 字段指定创建数据库后应执行的脚本。此外，使用 `extension` 字段在数据库中添加相应的扩展名。
 
 :::info 提示
-MongoDB，MySQL，MariaDB，MinIO，RabbitMQ 需要管理员从 Market 安装后才能被其他应用使用
+MongoDB、MySQL、MariaDB、MinIO、RabbitMQ 需要管理员从 Market 安装后才能被其他应用使用
 :::
 
 ### PostgreSQL
@@ -628,7 +750,7 @@ middleware:
       - vectors
       - earthdistance
       scripts:
-      - BEGIN;                                           
+      - BEGIN;
       - ALTER DATABASE $databasename SET search_path TO "$user", public, vectors;
       - ALTER SCHEMA vectors OWNER TO $dbusername;
       - COMMIT;
@@ -670,7 +792,7 @@ password --> "{{ .Values.redis.password }}"
 ### MongoDB
 :::info 示例
 ```yaml
-middleware:    
+middleware:
   mongodb:
     username: chromium
     databases:
@@ -692,7 +814,7 @@ databases --> "{{ .Values.mongodb.databases }}" # 数据库的值类型是 map�
 ### MinIO
 :::info 示例
 ```yaml
-middleware: 
+middleware:
   minio:
     username: miniouser
     buckets:
@@ -717,7 +839,7 @@ middleware:
 ### RabbitMQ
 :::info 示例
 ```yaml
-middleware: 
+middleware:
   rabbitmq:
     username: rabbitmquser
     vhosts:
@@ -737,7 +859,7 @@ middleware:
   - name: RABBITMQ_PASSWORD
     value: "{{ .Values.rabbitmq.password }}"
   - name: RABBITMQ_VHOST
-    value: "{{ .Values.rabbitmq.vhosts.aaa }}"    
+    value: "{{ .Values.rabbitmq.vhosts.aaa }}"
 
 user := os.Getenv("RABBITMQ_USER")
 password := os.Getenv("RABBITMQ_PASSWORD")
@@ -749,7 +871,7 @@ url := fmt.Sprintf("amqp://%s:%s@%s:%s/%s", user, password, host, portMQ, vhost)
 ### MariaDB
 :::info 示例
 ```yaml
-middleware:               
+middleware:
   mariadb:
     username: mariadbclient
     databases:
@@ -774,11 +896,11 @@ middleware:
 ### MySQL
 :::info 示例
 ```yaml
-middleware:   
+middleware:
   mysql:
     username: mysqlclient
     databases:
-    - name: aaa        
+    - name: aaa
 ```
 :::
 使用 deployment YAML 中的中间件信息：
@@ -795,10 +917,10 @@ middleware:
   - name: MDB_PASSWORD
     value: "{{ .Values.mysql.password }}"
   - name: MDB_DB
-    value: "{{ .Values.mysql.databases.aaa }}"    
+    value: "{{ .Values.mysql.databases.aaa }}"
 ```
 
-## Options
+## options
 
 此部分用于配置与Olares系统相关的选项。
 
@@ -819,41 +941,6 @@ options:
       entranceName: gitlab
 ```
 :::
-
-### appScope
-- 类型：`map`
-- 可选
-
-是否为 Olares 集群中的所有用户安装此应用程序。对用共享应用，需要设置 `clusterScoped` 为 `true`, 同时在 `appRef` 字段填入应用名称
-
-
-:::info 应用ollamav2示例
-```yaml
-metadata:
-  name: ollamav2
-options:
-  appScope:
-  {{- if and .Values.admin .Values.bfl.username (eq .Values.admin .Values.bfl.username) }}  # 仅管理员安装共享服务
-    clusterScoped: true
-    appRef:
-      - ollamav2  # 此应用在 metadata.name 中声明的名字
-  {{- else }}
-    clusterScoped: false
-  {{- end }}
-  dependencies:
-    - name: olares
-      version: '>=1.12.3-0'
-      type: system
-  {{- if and .Values.admin .Values.bfl.username (eq .Values.admin .Values.bfl.username) }}
-  {{- else }} 
-    - name: ollamav2
-      type: application
-      version: '>=1.0.1'
-      mandatory: true  # 其他用户安装客户端，依赖管理员安装的共享服务
-  {{- end }}
-```
-:::
-
 
 ### dependencies
 - 类型：`list<map>`
@@ -889,7 +976,7 @@ options:
   - name: comfyui
     type: application
   - name: comfyuiclient
-    type: application  
+    type: application
 ```
 :::
 
@@ -932,7 +1019,7 @@ oidc:
 - 类型：`int`
 - 可选
 
-指定 API 提供程序的超时限制（以秒为单位）。默认值为 `15`。使用 `0` 允许无限制的 API 连接。
+指定 API 提供程序的超时限制(以秒为单位)。默认值为 `15`。使用 `0` 允许无限制的 API 连接。
 
 :::info 示例
 ```yaml
@@ -952,7 +1039,7 @@ allowedOutboundPorts:
   - 465
   - 587
 ```
-:::    
+:::
 
 ### allowMultipleInstall
 - 类型： `boolean`
@@ -961,13 +1048,69 @@ allowedOutboundPorts:
 
 该应用支持在同一 Olares 集群中部署多个独立实例。此设置对付费应用和共享应用客户端无效。
 
-## Envs
+### shared
+- 类型： `boolean`
+- 默认值： `false`
+- 可选
+
+设置为 `true` 时，表示该应用为共享应用。应用将被安装在`<appname>-shared`命名空间下。 
+
+当 `options.shared: true` 时：
+- `apiVersion` 必须设置为 `'v3'`
+- `onlyAdmin` 必须设置为 `true`
+- 不允许包含以下 `apiVersion: 'v3'` 字段：
+  ```yaml
+  spec:
+    subCharts:
+    - name: ollamaserver
+      shared: true
+    - name: ollamav2
+  options:
+    appScope:
+      clusterScoped: true
+      appRef:
+      - ollamav2
+  ```
+
+### templateOnly
+- 类型： `boolean`
+- 默认值： `false`
+- 可选
+
+设置为 `true` 时，应用会被标记为模板应用，无法直接安装，必须先创建一个实例后才能使用。由于模板应用主要用于生成多个实例，因此 `allowMultipleInstall` 也必须设为 `true`。
+
+### LLMGatewaySupported
+- 类型： `boolean`
+- 默认值： `false`
+- 可选
+
+设置为 `true` 时，表示应用支持 LLM Gateway 调用。主要用于模型相关的应用服务。
+
+### overlayGateway
+- 类型： `map`
+- 可选
+
+声明应用支持 L2 overlay 局域网发现。开启后，其他应用可通过 IP 地址在局域网内访问该应用。
+:::info 示例
+```yaml
+overlayGateway:
+  enable: true  # 开启 L2 overlay 局域网发现，默认为 false
+  entrances:
+  - port: 8096  # Overlay 监听端口号
+    title: Jellyfin  # Overlay 入口名称
+    workload: jellyfin  # Workload 的名字，oac 需要校验
+    description: "Access Jellyfin using IP address in LAN"
+    protocol: tcp  # 支持的协议：tcp/udp，不填默认 tcp/udp 都支持
+```
+:::
+
+## envs
 
 在此声明应用运行所需的环境变量，既支持用户手动输入，也可以直接引用已有的系统环境变量值。
 
 :::info 提示
 该配置需要 Olares OS 版本在 1.12.2 及以上才生效
-:::    
+:::
 
 :::info 示例
 ```yaml
@@ -985,7 +1128,7 @@ envs:
     type: string
     # 环境变量的类型，目前有int/bool/url/ip/domain/email/string/password。如果声明，会对value进行类型校验
 
-    editable: true    
+    editable: true
     # 是否可在应用部署后编辑
 
     options:
@@ -999,18 +1142,22 @@ envs:
     remoteOptions: https://xxx.xxx/xx
     # 提供允许值列表的一个url，response body需为JSON编码的options列表
 
-    regex: '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    multiSelect: true
+    splitter: ","
+    # 当 options 或 remoteOptions 字段为 true 时可启用，允许用户进行多项选择。所有选择项会通过 splitter 字符拼接为字符串传入应用。
+
+    regex: '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2，}$'
     # 该环境变量的值必须匹配此正则表达式
 
     valueFrom:
       envName: OLARES_SYSTEM_CLUSTER_DNS_SERVICE
     # 引用系统环境变量的值。如果采用该方式，将不允许用户手动指定/修改其value
-    # 引用后，此环境变量的可声明字段(type,editable)将被系统环境变量的对应属性覆盖，default/value字段也会失效
-    
+    # 引用后，此环境变量的可声明字段(type，editable)将被系统环境变量的对应属性覆盖，default/value字段也会失效
+
     applyOnChange: true
     # 是否在此环境变量的值变化时自动重新部署应用，使变化生效
     # 若该字段为false，在环境变量变化时，即使停止/启动应用，也不会生效，只有升级/重装会生效
-    
+
     description: "DESCRIPTION"
     # 对环境变量的描述
 ```
@@ -1029,17 +1176,17 @@ BACKEND_MAIL_SENDER: "{{ .Values.olaresEnv.MAIL_SENDER }}"
 ```
 :::
 
-## Provider
+## 废弃字段（0.12.0）
 
-在此声明本应用向其他应用开放的接口。系统会自动为这些接口生成 Service，让集群内其他应用能够通过内部网络访问。如果其他应用要调用这些接口，需要在 permission 部分申请访问该 provider 的权限。
+以下字段已在 OlaresManifest 0.12.0 版本中废弃，请务必及时移除。若安装包中包含这些字段，应用在安装时可能会被**拒绝通过**。
 
-:::info 示例
-```yaml
-provider:
-- name: bazarr
-  entrance: bazarr-svc   # 该服务的入口名称
-  paths: ["/api*"]       # 开放的接口路径，不能只包含通配符 *
-  verbs: ["*"]           # 支持post,get,put,delete,patch；"*"表示允许所有方法
-
-```
-:::
+| 字段 | 修改方式 |
+|------|----------|
+| `metadata.appid` | 移除，会自动根据 metadata.name 创建 |
+| `provider`（顶层） | 移除，改为使用 authLevel: interal 的 entrance 供其他应用调用 |
+| `permission.provider` | 移除 |
+| `permission.sysData` | 移除 |
+| `options.appScope` | 移除，使用 `apiVersion: 'v3'` 格式声明共享应用 |
+| `spec.subCharts` | 移除，使用 `apiVersion: 'v3'` 格式声明共享应用 |
+| `spec.requiredMemory`等 | 修改，请在 `spec.accelerator` 的 `mode: cpu` 配置下声明 |
+| OS 1.11 分类值：`Blockchain`、`Utilities`、`Social Network`、`Entertainment`、`Productivity` | 使用 OS 1.12 分类值 |

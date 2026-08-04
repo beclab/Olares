@@ -154,4 +154,3 @@ You should see your new disk (e.g., `nvme0n1`) listed under the `olares--vg-data
 ## Resources
 - [Expand storage via USB devices](expand-storage-usb-drive.md)
 - [Expand storage using external SSD](expand-storage-external-ssd.md)
-- [`olares-cli disk`](../developer/install/cli/disk.md).

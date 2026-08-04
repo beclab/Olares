@@ -51,6 +51,7 @@ endpoint (/api/v1/namespaces/<ns>/pods/<name>).
 	cmd.AddCommand(NewListCommand(f))
 	cmd.AddCommand(NewEnvCommand(f))
 	cmd.AddCommand(NewLogsCommand(f))
+	cmd.AddCommand(NewExecCommand(f))
 
 	return cmd
 }

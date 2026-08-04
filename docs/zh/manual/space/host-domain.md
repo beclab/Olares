@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 在 Olares Space 中设置自定义域名，包括域名验证和 DNS 配置。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Olares Space, 自定义域名, 域名验证, DNS 配置, TXT 记录, NS 记录
 ---
 
 # 设置自定义域名

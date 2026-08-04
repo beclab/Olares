@@ -24,7 +24,7 @@ Any integer is accepted, but these are the values the GUI surfaces.
 
 ## Supported namespaces (allow-list)
 
-`drive/Home/<sub>`, `drive/Data/<sub>`, `cache/<node>/<sub>` only.
+`drive/Home/<sub>`, `drive/Data/<sub>`, `drive/Common/<sub>`, `cache/<node>/<sub>` only. (`drive/Common` needs Olares >= 1.12.6.)
 
 Refused namespaces:
 
@@ -65,6 +65,6 @@ olares-cli files chown cache/<node>/scratch/build/ --uid 1000 -r
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `chown is not supported for this namespace` | sync / external / cloud target | Use `files repos` (sync) or LarePass GUI (external) |
-| `refusing to chown a volume root` | `drive/Home/` / `drive/Data/` / `cache/<node>/` | Pick a sub-path |
-| 403 from server | Server-side ACL rejection | Confirm via `files ls -ld` (when available) or LarePass that the active user has permission |
+| `namespace "<ns>" is not supported by 'files chown'` | sync / external / cloud target | Use `files repos` (sync) or LarePass GUI (external) |
+| `refusing to chown the root of <fileType>/<extend>; pick a child path` | targeting a volume root (`drive/Home/`, `drive/Data/`, `cache/<node>/`) | Pick a sub-path (use `-r` to fan out) |
+| 403 from server | Server-side ACL rejection | Confirm via `files ls --json` or LarePass that the active user has permission |

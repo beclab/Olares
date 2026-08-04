@@ -34,16 +34,24 @@ func NewRemoveCommand() *cobra.Command {
 }
 
 func runRemove(key string) error {
-	cfg, err := cliconfig.LoadMultiProfileConfig()
-	if err != nil {
+	// Mutate under the config lock (re-reading inside) so the removal can't
+	// race a concurrent background location write into a lost update.
+	var (
+		removed        *cliconfig.ProfileConfig
+		currentProfile string
+		remaining      int
+	)
+	if err := cliconfig.UpdateLocked(func(cfg *cliconfig.MultiProfileConfig) error {
+		r, ok := cfg.Remove(key)
+		if !ok {
+			return fmt.Errorf("profile %q not found", key)
+		}
+		removed = r
+		currentProfile = cfg.CurrentProfile
+		remaining = len(cfg.Profiles)
+		return nil
+	}); err != nil {
 		return err
-	}
-	removed, ok := cfg.Remove(key)
-	if !ok {
-		return fmt.Errorf("profile %q not found", key)
-	}
-	if err := cliconfig.SaveMultiProfileConfig(cfg); err != nil {
-		return fmt.Errorf("save config: %w", err)
 	}
 
 	store := auth.NewTokenStore()
@@ -53,9 +61,9 @@ func runRemove(key string) error {
 	}
 
 	fmt.Printf("removed profile %s (%s)\n", removed.DisplayName(), removed.OlaresID)
-	if cfg.CurrentProfile != "" {
-		fmt.Printf("current profile is now: %s\n", cfg.CurrentProfile)
-	} else if len(cfg.Profiles) == 0 {
+	if currentProfile != "" {
+		fmt.Printf("current profile is now: %s\n", currentProfile)
+	} else if remaining == 0 {
 		fmt.Println("no profiles remain.")
 		// Last profile gone → no remaining account is keyed under our
 		// keychain service. Wipe the master key + storage dir so we don't

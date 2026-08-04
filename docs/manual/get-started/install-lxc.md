@@ -1,5 +1,9 @@
 ---
 description: Instructions for installing Olares on Linux Containers (LXC) including container setup, system requirements, and activation steps.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, LXC, Proxmox VE, Linux Containers, PVE, container setup
 ---
 # Install Olares on LXC
 LXC (Linux Containers) is a lightweight virtualization method that runs applications in isolated containers. When used on PVE, it enables an efficient way to deploy Olares without the overhead of a full virtual machine.

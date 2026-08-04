@@ -178,6 +178,10 @@ func (h *Handler) proxyRemoteOptions(req *restful.Request, resp *restful.Respons
 		api.HandleBadRequest(resp, req, fmt.Errorf("unsupported scheme: %s", u.Scheme))
 		return
 	}
+	if !constants.IsRemoteOptionsHostAllowed(u.Hostname()) {
+		api.HandleForbidden(resp, req, fmt.Errorf("endpoint host %q is not allowed", u.Hostname()))
+		return
+	}
 
 	client := &http.Client{Timeout: 10 * time.Second}
 	httpReq, err := http.NewRequestWithContext(req.Request.Context(), http.MethodGet, body.Endpoint, nil)

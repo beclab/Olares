@@ -1,13 +1,13 @@
 ---
 outline: [2, 3]
-description: Set up Navidrome on Olares to build a private music streaming server, organize your music library, and play it from a mobile Subsonic-compatible client.
+description: Self-host Navidrome on Olares as a Spotify alternative. Organize your music library and stream it with Subsonic-compatible mobile apps.
 head:
   - - meta
     - name: keywords
-      content: Olares, Navidrome, music streaming, self-hosted music server, Subsonic, mobile music client
+      content: Olares, Navidrome, self-hosted spotify, home music server, self-hosted music server, Subsonic, navidrome on synology, navidrome on olares
 app_version: "1.0.0"
-doc_version: "1.0"
-doc_updated: "2026-05-26"
+doc_version: "1.1"
+doc_updated: "2026-07-29"
 ---
 
 # Stream your music library with Navidrome
@@ -81,36 +81,37 @@ Navidrome scans the music folder automatically. If newly uploaded songs do not a
 
 ## Connect a mobile music client
 
-To stream from your phone, allow client access to Navidrome, enable LarePass VPN, and sign in from a Subsonic-compatible client.
+To stream from your phone, get the Navidrome endpoint, enable LarePass VPN, and sign in from a Subsonic-compatible client.
 
-1. Update Navidrome's access policy and copy its endpoint:
+### Get the Navidrome endpoint
 
-   a. Open Settings, then go to **Applications** > **Navidrome**.
+<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
 
-   b. Under **Entrances**, click **Navidrome**.
+For Navidrome:
 
-   c. Set **Authentication level** to **Internal**, then click **Submit**.
+1. Go to Olares **Settings** > **Applications** > **Navidrome** > **Entrances**.
+2. Select **Navidrome**, then copy the **Endpoint** URL.
 
-   d. Under **Endpoint settings**, copy the URL displayed in **Endpoint**.
+Use this Endpoint as the **Host address** in the mobile client.
 
-   ![Set Navidrome authentication level to Internal](/images/manual/use-cases/alex-navidrome-endpoint.png#bordered){width=95%}
+### Connect from Stream Music
 
-2. Enable LarePass VPN on your phone.
+1. Enable LarePass VPN on your phone.
 
    ![Enable LarePass VPN on mobile](/images/manual/get-started/larepass-vpn-mobile.png#bordered){width=95%}
 
-3. Open Stream Music on your phone, then choose the option to connect to Navidrome.
+2. Open Stream Music on your phone, then choose the option to connect to Navidrome.
 
    ![Connect Stream Music to Navidrome](/images/manual/use-cases/navidrome-music-stream-connect.png#bordered){width=95%}
 
-4. In the login page, enter your info:
-   - **Host address**: The Navidrome endpoint you copied from Olares Settings.
+3. On the login page, enter your information:
+   - **Host address**: The Navidrome Endpoint you copied from Olares Settings.
    - **Username**: Your Navidrome username.
    - **Password**: Your Navidrome password.
    
    ![Log in to Navidrome](/images/manual/use-cases/navidrome-log-in.png#bordered){width=95%}
 
-5. Tap **Login**.
+4. Tap **Login**.
 
 When the app shows a login success message, return to the home page. Your Navidrome library should appear in the mobile client.
 
@@ -124,5 +125,5 @@ To make lyrics work consistently, embed synchronized lyrics into the audio files
 
 ## Learn more
 
-- [Build your private media server with Jellyfin](stream-media.md): Stream movies, shows, and music from Olares with Jellyfin.
+- [Build your private media server with Jellyfin](jellyfin.md): Stream movies, shows, and music from Olares with Jellyfin.
 - [Build your digital library with Komga](komga.md): Manage comics, manga, magazines, and e-books on Olares.

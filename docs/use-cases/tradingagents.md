@@ -1,13 +1,13 @@
 ---
 outline: [2, 3]
-description: Run TradingAgents on Olares to simulate a professional financial trading firm with multiple AI agents. Configure local models, run market analysis, and generate trading strategies.
+description: Run TradingAgents on Olares to simulate a multi-agent trading firm. Configure local models, analyze financial markets, and generate strategies.
 head:
   - - meta
     - name: keywords
       content: Olares, TradingAgents, AI trading, multi-agent, local LLM, Ollama, market analysis, financial research
-app_version: "1.0.4"
-doc_version: "1.0"
-doc_updated: "2026-05-27"
+app_version: "1.0.7"
+doc_version: "2.0"
+doc_updated: "2026-08-03"
 ---
 
 # Analyze financial markets with TradingAgents
@@ -34,13 +34,18 @@ In this guide, you will learn how to:
 
 ## Prerequisites
 
-Ensure you have a local AI model running on Olares using one of the following methods:
-- **Ollama application**: One app that hosts multiple models. Ensure [Ollama is installed](ollama.md) with at least one model downloaded, such as `llama3.1:8b`.
-- **Single-model application**: Runs one specific model as a standalone application. Ensure a model app is installed from Market with the model fully downloaded, such as **Qwen3.5 27B Q4_K_M (Ollama)**.
+Before you begin, you need:
+
+The following model:
+| Model type | Model | How to get it |
+| :--- | :--- | :--- |
+| Chat | Gemma 4 26B (Ollama) | Install from Market |
+
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## Install TradingAgents
 
-1. Open **Market**, and search for "TradingAgents".
+1. Open Market, and search for "TradingAgents".
 
    ![TradingAgents in Market](/images/manual/use-cases/trading-agents.png#bordered)
 
@@ -50,66 +55,39 @@ Ensure you have a local AI model running on Olares using one of the following me
 
 To power your AI agents, connect TradingAgents to a local model.
 
-### Get model name and endpoint
+### Get model connection details
 
-Obtain the model name and shared endpoint URL for the local model you have prepared. Select the tab that matches your setup.
+1. Open the model app from Launchpad. Its Model Console opens automatically.
+2. Wait until **Model** shows **READY** and **Engine** shows **RUNNING**.
 
-<Tabs>
-<template #Ollama>
+   <!--![Gemma4 26B model console](/images/manual/use-cases/gemma4-26b-model-console1.png#bordered)-->
 
-One app that hosts multiple models behind a single shared endpoint.
+3. Under **Model**, copy the **Model name** exactly as shown.
+4. Under **Engine**:
 
-1. Open the Ollama app from the Launchpad.
-2. Check the installed models by running the following command:
-
-    ```bash
-    ollama list
-    ```
-3. Copy and save your model name exactly as shown in the **NAME** column. For example, `qwen3.5:27b`.
-4. Open Settings, and then go to **Applications** > **Ollama** > **Shared entrances** > **Ollama API**.
-
-   ![Get shared endpoint](/images/manual/use-cases/ollama-shared.png#bordered){width=70%}
-
-5. Note down the shared endpoint URL. For example, `http://d54536a50.shared.olares.com`.
-</template>
-<template #Single-model-apps>
-
-Each app packages one specific model and exposes its own shared endpoint. The following example uses **Qwen3.5 27B Q4_K_M (Ollama)**.
-
-1. Open the Qwen3.5 27B Q4_K_M (Ollama) app from the Launchpad, and then note down the model name exactly as shown. For example, `qwen3.5:27b-q4_K_M`.
-
-   ![Get model name in app](/images/manual/use-cases/qwen3.5-27b-model-name.png#bordered){width=70%}
-
-2. Open Settings, and then go to **Applications** > **Qwen3.5 27B Q4_K_M (Ollama)**.
-3. In **Shared entrances**, click the model name to view its endpoint URL.
-
-   ![Get shared endpoint](/images/one/qwen3.5-27b-shared-entrance.png#bordered){width=70%}
-
-4. Note down the shared endpoint URL. For example, `http://94a553e00.shared.olares.com`.
-
-:::tip Why not use the URL shown on the model page?
-The URL shown on the model app page is user-specific and relies on browser-based frontend calls. If your device and Olares are not on the same local network, those calls might trigger Olares sign-in and you might encounter cross-origin restrictions (CORS). To avoid these issues, use the shared endpoint URL.
-:::
-</template>
-</Tabs>
+   a. **Connection source**: Select **Apps in Olares**. 
+   
+   b. **API format**: Select **Ollama**.
+   
+   c. Copy the provided **Base URL** exactly as shown.
 
 ### Configure TradingAgents
 
 1. Open Settings, and then go to **Applications** > **TradingAgents** > **Manage environment variables**.
 2. Click <i class="material-symbols-outlined">edit_square</i> next to `OLLAMA_BASE_URL`.
 
-   ![Configure environment variables](/images/manual/use-cases/tradingagents-env-vars.png#bordered){width=70%}
+   ![Configure environment variables](/images/manual/use-cases/tradingagents-env-vars1.png#bordered){width=70%}
 
-3. Enter the shared endpoint URL you noted down earlier, then append `/v1` to the end. For example, `http://d54536a50.shared.olares.com/v1`.
+3. Enter the **Base URL** copied from the Model Console and append `/v1` to the end. For example, `https://74bfa5ee.laresprime.olares.com/v1`.
 4. Click **Confirm**, and then click **Apply**.
 
    :::tip Connect a cloud model
    To use a cloud model instead of a local model, edit the corresponding API key variable, such as `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`. Enter your key, click **Confirm**, and then click **Apply**.
    :::
 
-5. (Optional) To set advanced environment variables that are not listed in the UI, open **Files**, go to **Data** > **tradingagents**, and then open the `.env` file to add your custom configuration directly.
+5. (Optional) To set advanced environment variables that are not listed in the UI, open Files, go to **Data** > **tradingagents**, and then open the `.env` file to add your custom configuration directly.
 
-   ![Edit environment file](/images/manual/use-cases/tradingagents-env-file.png#bordered)
+   ![Edit environment file](/images/manual/use-cases/tradingagents-env-file1.png#bordered)
 
 ## Run a market analysis
 
@@ -122,31 +100,33 @@ With your local model configured, start a market analysis session using the app'
    tradingagents
    ```
 
+   ![Configure CLI parameters](/images/manual/use-cases/tradingagents-cli-parameters1.png#bordered)
+
 3. Follow the on-screen prompts to configure your analysis parameters step by step:
    
    a. **Ticker Symbol**: Enter the exact ticker code for the asset you want to analyze. For example, `SPY`.
    
    b. **Analysis Date**: Enter the target date for the analysis in the `YYYY-MM-DD` format. For example, `2026-05-20`.
    
-   c. **Output Language**: Select the language for the generated reports.
+   c. **Select Output Language**: Select the language for the generated reports.
    
-   d. **Analysts Team**: Select the specific AI analysts to include in the research, such as market, sentiment, news, and fundamental analysts.
+   d. **Select Your [Analysts Team]**: Select the specific AI analysts to include in the research, such as market, sentiment, news, and fundamental analysts.
    
       :::tip Start with core analysts
       News and sentiment analysts rely on live external data streams, which might fail or return inaccurate results if the sources are temporarily unavailable. For your first test run, select the market and fundamental analysts to familiarize yourself with the workflow.
       :::
    
-   e. **Research Depth**: Choose how thoroughly the agents should research and debate the strategy.
+   e. **Select Your [Research Depth]**: Choose how thoroughly the agents should research and debate the strategy.
    
       :::tip Start with the shallow depth
       Deeper research requires significantly more time to process. Select the lowest depth for your initial run to understand the workflow before starting a comprehensive analysis.
       :::
       
-   f. **LLM Provider**: Select **Ollama**.
-   
-   g. **Thinking Agents**: Assign specific models for **Quick-Thinking LLM Engine** and **Deep-Thinking LLM Engine**. If your local model name is not listed, select **Custom model ID**, and then enter the exact model name.
+   f. **Select Your LLM Provider**: Select **Ollama**.
 
-   ![Configure CLI parameters](/images/manual/use-cases/tradingagents-cli-parameters.png#bordered)
+   g. **Select Your [Quick-Thinking LLM Engine]**: Choose the model for quick analysis. If your local model is not listed, select **Custom model ID**, and then enter the exact model name copied from the Model Console.
+
+   h. **Select Your [Deep-Thinking LLM Engine]**: Choose the model for deep analysis. If your local model is not listed, select **Custom model ID**, and then enter the exact model name copied from the Model Console.
 
 ## Review analysis reports
 
@@ -169,7 +149,7 @@ After you submit the configuration, the agents research, debate, and make decisi
 4. To display the full report on screen, type `y`, and then press **Enter**.
 5. To view the detailed reports later:
 
-   a. Open **Files**, and then go to **Data** > **tradingagents** > **reports**.
+   a. Open Files, and then go to **Data** > **tradingagents** > **reports**.
 
    ![Analysis detail reports in Files](/images/manual/use-cases/tradingagents-reports.png#bordered)
 

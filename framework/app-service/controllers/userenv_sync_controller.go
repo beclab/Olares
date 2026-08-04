@@ -44,6 +44,36 @@ var localeEnvAnnotations = map[string]string{
 	"OLARES_USER_TIMEZONE": users.UserAnnotationTimezone,
 }
 
+// userEnvTypeLabel categorizes a UserEnv so other components can select it by
+// type. For example, l4-bfl-proxy lists the language preference env via the
+// label selector sys.bytetrade.io/env-type=language.
+const userEnvTypeLabel = "sys.bytetrade.io/env-type"
+
+// envTypeLabels maps a user env to the value of the userEnvTypeLabel that the
+// controller stamps on it when creating or syncing the env, so downstream
+// consumers can discover it by type.
+var envTypeLabels = map[string]string{
+	"OLARES_USER_LANGUAGE": "language",
+}
+
+// ensureEnvTypeLabel stamps the env-type label on envs that declare one in
+// envTypeLabels, adding it when missing or correcting a stale value. Envs not in
+// the map are left untouched. Returns true if ue.Labels was changed.
+func ensureEnvTypeLabel(ue *sysv1alpha1.UserEnv) bool {
+	envType, ok := envTypeLabels[ue.EnvName]
+	if !ok {
+		return false
+	}
+	if ue.Labels[userEnvTypeLabel] == envType {
+		return false
+	}
+	if ue.Labels == nil {
+		ue.Labels = make(map[string]string)
+	}
+	ue.Labels[userEnvTypeLabel] = envType
+	return true
+}
+
 // syncLocaleValue reconciles a locale-backed env's Value from the user CR
 // annotation that owns it. The direction is driven by the env's Editable flag:
 //
@@ -273,6 +303,9 @@ func (r *UserEnvSyncController) syncUserEnvForUser(ctx context.Context, username
 			if syncLocaleValue(ue, userAnnotations) {
 				updated = true
 			}
+			if ensureEnvTypeLabel(ue) {
+				updated = true
+			}
 
 			if updated {
 				if err := r.Patch(ctx, ue, client.MergeFrom(original)); err != nil {
@@ -291,6 +324,7 @@ func (r *UserEnvSyncController) syncUserEnvForUser(ctx context.Context, username
 		ue.Name = name
 		ue.Namespace = userNs
 		ue.EnvVarSpec = spec
+		ensureEnvTypeLabel(ue)
 		// seed locale-managed envs from the user CR annotation on first creation
 		syncLocaleValue(ue, userAnnotations)
 		if err := r.Create(ctx, ue); err != nil {

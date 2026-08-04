@@ -39,19 +39,20 @@ func listAvailableForLaunch(req Requirement, nodes []Node, pressure PressureSnap
 func classifyLaunchNodes(req Requirement, nodes []Node, pressure PressureSnapshot) []NodeOption {
 	out := make([]NodeOption, 0, len(nodes))
 	for _, node := range nodes {
-		if node.GPUType != req.Mode {
+		if !node.SupportsMode(req.Mode) {
 			out = append(out, NodeOption{
 				NodeName: node.NodeName,
-				GPUType:  node.GPUType,
+				GPUType:  node.primaryGPUType(),
 				Status:   NodeStatusNotMatch,
 			})
 			continue
 		}
+		view := node.viewForMode(req.Mode)
 		var option NodeOption
 		if req.Mode == utils.NvidiaCardType {
-			option = classifyNvidiaNode(req, node, pressure)
+			option = classifyNvidiaNode(req, view, pressure)
 		} else {
-			option = classifyNonNvidiaNode(req, node, pressure)
+			option = classifyNonNvidiaNode(req, view, pressure)
 		}
 		out = append(out, option)
 	}
@@ -62,7 +63,7 @@ func classifyNvidiaNode(req Requirement, node Node, pressure PressureSnapshot) N
 	summary := summarizeNvidiaNode(req, node, pressure)
 	option := NodeOption{
 		NodeName: node.NodeName,
-		GPUType:  node.GPUType,
+		GPUType:  req.Mode,
 		Devices:  summary.devices,
 	}
 	if req.SupportMultiCards || req.SupportMultiNodes {
@@ -74,7 +75,7 @@ func classifyNvidiaNode(req Requirement, node Node, pressure PressureSnapshot) N
 }
 
 func classifyNonNvidiaNode(req Requirement, node Node, pressure PressureSnapshot) NodeOption {
-	option := NodeOption{NodeName: node.NodeName, GPUType: node.GPUType}
+	option := NodeOption{NodeName: node.NodeName, GPUType: req.Mode}
 	if len(node.Devices) == 0 {
 		option.Status = NodeStatusNotAvailable
 		return option
@@ -152,7 +153,7 @@ func makeDeviceOption(req Requirement, node Node, device Device, pressure Pressu
 		option.Health = deviceHealthYes
 	}
 	for _, level := range []string{FitLevelLimit, FitLevelRequired} {
-		fits, _ := deviceFitsLevel(req, node, device, pressure, level, req.SupportMultiCards || req.SupportMultiNodes)
+		fits, _ := deviceFitsLevel(req, node, device, pressure, level, req.SupportMultiCards || req.SupportMultiNodes, 0)
 		if fits {
 			option.FitLevel = level
 			break
@@ -168,10 +169,10 @@ func availabilityScope(req Requirement) string {
 	if req.Mode == utils.NvidiaCardType && req.SupportMultiCards {
 		return AvailabilityScopeSingleNode
 	}
-	if req.Mode == utils.NvidiaCardType {
-		return AvailabilityScopeCard
-	}
-	return AvailabilityScopeNode
+	// Single-nvidia-card and every non-nvidia mode (cpu / amd / intel /
+	// apple-m / moore-soc — each modeled as one node-level device) share the
+	// per-card scope: the unit of scheduling is a single device.
+	return AvailabilityScopeCard
 }
 
 func markOperable(result *AvailabilityResult) {
@@ -436,7 +437,7 @@ func validateResolvedBindingSelection(req Requirement, resolved []resolvedSelect
 		if item.device.Health != "" && item.device.Health != deviceHealthYes {
 			return invalidBinding("device-unhealthy:" + item.device.ID)
 		}
-		if item.node.GPUType != req.Mode {
+		if item.device.Mode != req.Mode {
 			return invalidBinding("gpu-type-mismatch")
 		}
 		available := deviceAvailableMemory(item.device)
@@ -472,25 +473,34 @@ func validateResolvedBindingSelection(req Requirement, resolved []resolvedSelect
 	}
 	for nodeName := range selectedNodes {
 		node := findResolvedNode(nodeName, resolved)
-		hasTimeSlice := false
-		for _, item := range resolved {
-			if item.node.NodeName == nodeName && item.device.SupportType == SupportTypeTimeSlice {
-				hasTimeSlice = true
-				break
-			}
-		}
-		addedGPU := int64(0)
-		if req.Mode == utils.NvidiaCardType && hasTimeSlice {
-			addedGPU = req.LimitedGPU
-		}
-		if pressure.WouldPressure(node, AddedResources{
+		addedGPU := nodeTimeSliceAddedMemory(req, nodeName, resolved)
+		if dims := pressure.PressuredDimensions(node, AddedResources{
 			CPU:    req.RequiredCPU,
 			Memory: req.RequiredMemory + addedGPU,
-		}) {
-			return invalidBinding("node-pressure:" + nodeName)
+		}); len(dims) > 0 {
+			result := invalidBinding("node-pressure:" + nodeName)
+			result.NodePressure = &NodePressureDetail{NodeName: nodeName, Dimensions: dims}
+			return result
 		}
 	}
 	return &BindingValidationResult{OK: true, Code: BindingValidationReasonValid}
+}
+
+// nodeTimeSliceAddedMemory sums the full physical memory of every time-slice
+// card selected on a single node. It deliberately ignores the app's GPU
+// request and limit, matching the install scheduler's pressure accounting.
+func nodeTimeSliceAddedMemory(req Requirement, nodeName string, resolved []resolvedSelection) int64 {
+	if req.Mode != utils.NvidiaCardType {
+		return 0
+	}
+	var total int64
+	for _, item := range resolved {
+		if item.node.NodeName != nodeName {
+			continue
+		}
+		total += timeSliceAddedMemory(item.device)
+	}
+	return total
 }
 
 type resolvedSelection struct {
@@ -563,13 +573,23 @@ func allocationsFromResolvedSelection(appConfig *appcfg.ApplicationConfig, req R
 	remaining := target
 	for _, item := range resolved {
 		amount := target
-		if item.device.SupportType == SupportTypeMemorySlice && item.memory > 0 {
+		switch {
+		case item.device.SupportType == SupportTypeMemorySlice && item.memory > 0:
+			// Memory-slice cards carve out an explicit per-card slice; the
+			// frontend always sends a positive Memory for them (enforced by
+			// validateResolvedBindingSelection).
 			amount = item.memory
-		}
-		if len(resolved) > 1 {
-			if item.device.SupportType != SupportTypeMemorySlice || item.memory <= 0 {
-				amount = minInt64(deviceAvailableMemory(item.device), remaining)
-			}
+		case isWholeCardMode(req.Mode, item.device.SupportType):
+			// Exclusive / TimeSlice hand the pod the whole card and
+			// buildAllocation records Memory=0, so every selected card must
+			// produce its own binding. These must never be gated on the
+			// shared `remaining` VRAM budget: once an earlier card covered
+			// the RequiredGPU target the budget reaches zero and the rest of
+			// a multi-card selection would be silently dropped, leaving only
+			// a single HAMI binding for a two-card request.
+			amount = deviceAvailableMemory(item.device)
+		case len(resolved) > 1:
+			amount = minInt64(deviceAvailableMemory(item.device), remaining)
 		}
 		if amount <= 0 {
 			continue

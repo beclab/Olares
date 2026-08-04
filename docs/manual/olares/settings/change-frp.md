@@ -1,5 +1,9 @@
 ---
 description: Learn how to change the reverse proxy option in Olares Settings to expose internal services securely.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Settings, reverse proxy, Olares Tunnel, FRP, network access
 ---
 # Change reverse proxy
 

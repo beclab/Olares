@@ -1,5 +1,9 @@
 ---
-description: Technical glossary of Olares, providing standard definitions and explanations for common technical concepts. Alphabetically organized for easy reference of professional terminology.
+description: Find clear definitions of common Olares and personal cloud terms in this alphabetized technical glossary.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, glossary, personal cloud terms, DID, TOTP, FRP, VC
 ---
 # Glossary
 <div style="text-align: center; font-size: 18px; margin-bottom: 20px;">

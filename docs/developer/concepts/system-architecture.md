@@ -1,9 +1,13 @@
 ---
 outline: [2, 3]
-description: Comprehensive guide to Olares architecture covering infrastructure, platform services, and application framework. Learn about container orchestration, storage, networking, and system components.
+description: Explore Olares system architecture across infrastructure, platform services, and the app framework, including orchestration, storage, and networking.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Olares system architecture, infrastructure, platform services, app framework, orchestration
 ---
 
-# Olares architecture
+# Olares system architecture
 
 This document provides a comprehensive explanation of the Olares architecture, outlining the purpose and functionality of each layer and its components.
 
@@ -65,7 +69,7 @@ Olares uses [containerd](../install/installation-overview.md#container-runtime-c
 
 The management of Olares is implemented through the following:
 
-- [olares-cli](../install/cli/olares-cli.md): A command-line tool for managing Olares clusters, applications, and hardware nodes.
+- [olares-cli](../cli-overview.md): A command-line tool for managing Olares clusters, applications, and hardware nodes.
 - [olaresd](../install/installation-overview.md#container-runtime-containerd): A daemon process that monitors hardware and network changes, while also managing cluster upgrades, restarts, and other maintenance operations.
 
 These tools streamline installation, maintenance, and scaling for Olares.
@@ -209,10 +213,6 @@ An app for monitoring system resource usage.
 ### Control Hub
 
 The console for Olares, providing precise and autonomous control over the system and its environment.
-
-### Studio
-
-A development tool for building and deploying Olares applications.
 
 ## Learn more
 - To get started with Olares, see the [Getting Started guide](../../manual/get-started/index.md).

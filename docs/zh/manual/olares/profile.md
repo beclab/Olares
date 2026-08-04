@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 创建独特的 Olares 个人主页，设计个性化封面、添加社交媒体链接、选择布局风格，并通过访问数据分析优化展示效果。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 个人主页, Profile, 自定义主页, 社交媒体链接, 数字名片, 分享主页
 ---
 
 # 设计你的 Olares 个人主页

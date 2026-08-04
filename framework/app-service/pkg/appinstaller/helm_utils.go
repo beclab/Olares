@@ -72,16 +72,25 @@ func BuildBaseHelmValues(ctx context.Context, kubeConfig *rest.Config, appConfig
 	}
 	values["nodes"] = nodeInfo
 
-	deviceName, err := utils.GetDeviceName()
-	if err != nil {
-		return values, err
-	}
-	values["deviceName"] = deviceName
-
 	kClient, err := kubernetes.NewForConfig(kubeConfig)
 	if err != nil {
 		return values, err
 	}
+
+	isOnMinikube, err := utils.IsRunningOnMinikube(ctx, kClient)
+	if err != nil {
+		return values, err
+	}
+	if isOnMinikube {
+		values["deviceName"] = "selfhosted"
+	} else {
+		deviceName, err := utils.GetDeviceName()
+		if err != nil {
+			return values, err
+		}
+		values["deviceName"] = deviceName
+	}
+
 	nodes, err := kClient.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return values, err
@@ -433,11 +442,15 @@ func addEnvironmentVariables(ctx context.Context, kubeConfig *rest.Config, appCo
 		return err
 	}
 
+	envNames := make([]string, 0, len(appEnv.Envs))
 	for _, env := range appEnv.Envs {
 		values[constants.OlaresEnvHelmValuesKey].(map[string]interface{})[env.EnvName] = env.GetEffectiveValue()
+		envNames = append(envNames, env.EnvName)
 	}
 
-	klog.Infof("Added environment variables to Helm values: %+v", values[constants.OlaresEnvHelmValuesKey])
+	// Names only: an env declared type=password carries what the user typed at install.
+	klog.Infof("Added %d environment variables to Helm values for %s/%s: %v",
+		len(envNames), appConfig.Namespace, appConfig.AppName, envNames)
 	return nil
 }
 

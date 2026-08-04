@@ -40,3 +40,7 @@ overlayGateway:
 options:
   policies: []
   resetCookie: { enabled: false }
+  dependencies:
+    - name: olares
+      type: system
+      version: ">=1.12.3-0,<1.12.6"

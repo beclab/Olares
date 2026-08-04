@@ -259,6 +259,13 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
 		Returns(http.StatusOK, "Success to list compute resources", &ComputeResourcesResponse{}))
 
+	ws.Route(ws.POST("/compute-resources/preflight").
+		To(handler.computeResourcesPreflight).
+		Reads(ComputePreflightRequest{}).
+		Doc("simulate compute resource demands against the current cluster snapshot").
+		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
+		Returns(http.StatusOK, "Compute resource preflight report", &ComputePreflightResponse{}))
+
 	ws.Route(ws.PUT("/compute-resources/nodes/{"+ParamNodeName+"}/devices/{"+ParamDeviceID+"}/support-type").
 		To(handler.updateDeviceSupportType).
 		Doc("switch compute device support type").
@@ -282,6 +289,13 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 		Doc("validating webhook for validate app install namespace").
 		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
 		Returns(http.StatusOK, "App namespace validated success", nil)).
+		Consumes(restful.MIME_JSON)
+
+	ws.Route(ws.POST("/tls-replica-mount/validate").
+		To(handler.tlsReplicaMountValidate).
+		Doc("validating webhook denying cross-tenant tls-replica private-key bypass mounts").
+		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
+		Returns(http.StatusOK, "Pod tls-replica mount validated success", nil)).
 		Consumes(restful.MIME_JSON)
 
 	ws.Route(ws.POST("/runasuser/inject").

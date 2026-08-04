@@ -12,7 +12,6 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
 	"github.com/beclab/Olares/framework/app-service/pkg/compute"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
-	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 	appsv1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
@@ -36,10 +35,10 @@ func (p *InstallingCancelingApp) IsAppCreated() bool {
 	return true
 }
 
-func NewInstallingCancelingApp(c client.Client,
+func NewInstallingCancelingApp(deps Deps,
 	manager *appsv1.ApplicationManager, ttl time.Duration) (StatefulApp, StateError) {
 
-	return appFactory.New(c, manager, ttl,
+	return deps.Factory.New(deps, manager, ttl,
 		func(c client.Client, manager *appsv1.ApplicationManager, ttl time.Duration) StatefulApp {
 			return &InstallingCancelingApp{
 				baseOperationApp: &baseOperationApp{
@@ -79,12 +78,12 @@ func (p *InstallingCancelingApp) Exec(ctx context.Context) (StatefulInProgressAp
 }
 
 func (p *InstallingCancelingApp) handleInstallCancel(ctx context.Context) error {
-	if ok := appFactory.cancelOperation(p.manager.Name); !ok {
+	if ok := p.deps.Factory.cancelOperation(p.manager.Name); !ok {
 		klog.Errorf("app %s operation is not running", p.manager.Name)
 	}
 
 	token := p.manager.Annotations[api.AppTokenKey]
-	kubeConfig, err := getKubeConfig()
+	kubeConfig, err := p.deps.KubeConfig()
 	if err != nil {
 		klog.Errorf("get kube config failed %v", err)
 		return err
@@ -98,7 +97,7 @@ func (p *InstallingCancelingApp) handleInstallCancel(ctx context.Context) error 
 		return err
 	}
 
-	ops, err := newHelmOps(ctx, kubeConfig, appCfg, token, appinstaller.Opt{})
+	ops, err := p.deps.NewHelmOps(ctx, kubeConfig, appCfg, token, appinstaller.Opt{})
 	if err != nil {
 		klog.Errorf("make helm ops failed %v", err)
 		return err
@@ -106,7 +105,7 @@ func (p *InstallingCancelingApp) handleInstallCancel(ctx context.Context) error 
 
 	// find if there is a shared chart installed by this app owner
 	sharedInstalled := false
-	isAdmin, err := kubesphere.IsAdmin(ctx, kubeConfig, appCfg.OwnerName)
+	isAdmin, err := p.deps.IsAdmin(ctx, kubeConfig, appCfg.OwnerName)
 	if err != nil {
 		klog.Errorf("Failed to check if user is admin: %v", err)
 		return err
@@ -162,7 +161,7 @@ func (p *InstallingCancelingApp) handleInstallCancel(ctx context.Context) error 
 }
 
 func (p *InstallingCancelingApp) Cancel(ctx context.Context) error {
-	ok := appFactory.cancelOperation(p.manager.Name)
+	ok := p.deps.Factory.cancelOperation(p.manager.Name)
 	if !ok {
 		klog.Errorf("app %s operation is not ", p.manager.Name)
 	}
@@ -213,7 +212,7 @@ func (p *installingCancelInProgressApp) poll(ctx context.Context) error {
 }
 
 func (p *installingCancelInProgressApp) WaitAsync(ctx context.Context) {
-	appFactory.waitForPolling(ctx, p, func(err error) {
+	p.deps.Factory.waitForPolling(ctx, p, func(err error) {
 		if err != nil {
 			updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.InstallingCancelFailed, nil, appsv1.InstallingCancelFailed.String(), appsv1.InstallingCancelFailed.String())
 			if updateErr != nil {
@@ -223,12 +222,8 @@ func (p *installingCancelInProgressApp) WaitAsync(ctx context.Context) {
 
 			return
 		}
-		message := constants.OperationCanceledByUserTpl
-		if p.manager.Status.Message == constants.OperationCanceledByTerminusTpl {
-			message = constants.OperationCanceledByTerminusTpl
-		}
-		opRecord := makeRecord(p.manager, appsv1.InstallingCanceled, message)
-		updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.InstallingCanceled, opRecord, message, appsv1.InstallingCanceled.String())
+
+		updateErr := p.finishCancelToCanceled(context.TODO(), p.manager, appsv1.InstallingCanceled, true)
 		if updateErr != nil {
 			klog.Errorf("update app manager %s to %s state failed %v", p.manager.Name, appsv1.InstallingCanceled.String(), updateErr)
 			return

@@ -13,9 +13,9 @@ type UpgradeFailedApp struct {
 	*DoNothingApp
 }
 
-func NewUpgradeFailedApp(c client.Client,
+func NewUpgradeFailedApp(deps Deps,
 	manager *appsv1.ApplicationManager) (StatefulApp, StateError) {
-	return appFactory.New(c, manager, 0,
+	return deps.Factory.New(deps, manager, 0,
 		func(c client.Client, manager *appsv1.ApplicationManager, ttl time.Duration) StatefulApp {
 			return &UpgradeFailedApp{
 				DoNothingApp: &DoNothingApp{

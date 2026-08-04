@@ -1,5 +1,9 @@
 ---
 description: 介绍 Olares ID 去中心化声誉系统的设计理念与实现，包括区块链数据记录、开放算法、自定义评估与实体域名支持。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 去中心化声誉, DID, VC, 链上评分, 应用声誉, 实体域名
 ---
 
 # 去中心化声誉系统

@@ -1,4 +1,5 @@
 ---
+noindex: true
 outline: [2,3]
 description: Install Ubuntu on a secondary SSD and set up dual-boot with Olares OS on Olares One.
 head:

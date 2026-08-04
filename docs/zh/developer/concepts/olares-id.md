@@ -1,5 +1,9 @@
 ---
 description: 了解 Olares ID 的定义、结构及其用途，涵盖个人/组织/实体域名类型，并阐释与去中心化标识符 (DID) 的关系。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Olares ID, 去中心化身份, DID, 个人域名, 组织域名, 可验证凭证
 ---
 
 # Olares ID
@@ -37,7 +41,7 @@ Olares ID 带来无缝访问、增强安全与个性化体验：
 - **本地名（前缀）**
 - **域名（后缀）**
 
-如 `alice123@olares.com` 中，`alice123` 为本地名，`olares.com` 为域名。本地名在域内唯一，保证整体唯一性。
+如 `alice123@olares.com` 中，`alice123` 为本地名，`olares.com` 为域名。本地名在域内唯一，保证整体唯一性。Olares ID 的用户名部分长度应为 8-24 个字符。
 
 ### 域名类型
 
@@ -46,7 +50,7 @@ Olares 提供三类域名：
 | 类型       | 说明                                       |
 |------------|--------------------------------------------|
 | 个人域名   | 供个人使用，目前提供默认域名 `olares.com` |
-| 组织域名   | 供企业/组织使用，管理员可在成员离职时回收 |
+| 组织域名   | 供企业/组织使用，组织域名长度应为 2-24 个字符，管理员可在成员离职时回收 |
 | 实体域名   | 供应用或其他无法归类为个人/组织的实体使用 |
 
 ### 个人 Olares ID 创建方式
@@ -66,4 +70,3 @@ Olares ID 采用类似邮箱的可读格式，使 DID 更易用，同时保持�
 
 - [创建 Olares ID](../../manual/larepass/create-account.md)
 - [去中心化标识符 (DID)](did.md)
-- [Gmail issuer 服务](/zh/developer/contribute/olares-id/verifiable-credential/olares.md#gmail-issuer-service)

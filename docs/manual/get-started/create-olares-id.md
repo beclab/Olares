@@ -1,5 +1,9 @@
 ---
 description: Step-by-step guide to creating your Olares ID using LarePass mobile app.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Olares ID, LarePass, create account, digital identity, domain
 ---
 :::warning Note for Mainland China users
 The steps in this guide differ for users in Mainland China due to regional differences. For a version tailored to your region, please read the Simplified Chinese documentation.
@@ -33,11 +37,11 @@ For advanced use cases, such as creating an Olares ID using your social account 
 1. In the LarePass app, tap **Create an account**.
 2. Enter your desired Olares ID. It must meet the following requirements:
    * never be registered before
-   * at least 8 characters long
+   * 8-24 characters long
    * only lowercase letters and numbers
 3. Click **Continue** to finish the creation process.
 
-![Fast creation](/images/manual/get-started/create-olares-id.png)
+![Fast creation](/images/manual/get-started/create-olares-id-1.12.6.png)
 
 :::tip `.cn` vs. `.com` domains
 To ensure the best connectivity and performance, Olares automatically assigns a domain based on your phone's system language and region.

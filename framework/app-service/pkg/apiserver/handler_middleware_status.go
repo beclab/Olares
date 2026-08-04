@@ -158,7 +158,10 @@ func (h *Handler) operateMiddleware(req *restful.Request, resp *restful.Response
 	owner := req.Attribute(constants.UserContextAttribute).(string)
 
 	var am v1alpha1.ApplicationManager
-	name, err := apputils.FmtAppMgrName(app, owner, "")
+	// Resolve to the actual AM (shared or per-user) so any admin can operate
+	// shared middleware installed by another admin without hitting a spurious
+	// not-found.
+	name, _, err := apputils.ResolveAppMgrName(req.Request.Context(), app, owner)
 	if err != nil {
 		api.HandleError(resp, req, err)
 		return

@@ -5,12 +5,16 @@ head:
   - - meta
     - name: keywords
       content: Olares, OpenClaw, OpenClaw 教程, OpenClaw 使用指南, 安装技能, 安装插件
-app_version: "1.0.3"
-doc_version: "1.1"
-doc_updated: "2026-06-09"      
+app_version: "1.0.17"
+doc_version: "1.2"
+doc_updated: "2026-08-03"
 ---
 
-# 管理技能和插件
+:::warning
+本页面为 AI 翻译版本，内容仅供快速参考。关键信息建议以[英文原文](../../use-cases/openclaw-skills.md)为准。
+:::
+
+# 管理 OpenClaw 技能和插件
 
 OpenClaw 可以通过技能和插件进行扩展：
 - 技能为 AI 添加新能力。例如，管理模型上下文协议（MCP）服务器。
@@ -64,7 +68,7 @@ OpenClaw 可以通过技能和插件进行扩展：
 
 ### 通过 `openclaw config` 安装
 
-你可以使用内置配置向导安装默认或官方支持的技能。本示例将安装 `clawhub` 技能，供后续方法使用。
+你可以使用内置配置向导安装默认或官方支持的技能及其缺失的依赖项。
 
 1. 打开 OpenClaw CLI。
 2. 输入以下命令启动向导：
@@ -78,12 +82,11 @@ OpenClaw 可以通过技能和插件进行扩展：
     |:---------|:-------|
     | Where will the Gateway run | Local (this machine) |
     | What do you want to configure | Skills |
-    | Configure skills now | Yes |
-    | Install missing skill dependencies | 导航到 **clawhub** 技能，按**空格**键<br>选中它，然后按**回车**。 |
-    | Preferred node manager for skill installs | npm<br>等待 `Installed clawhub` 消息出现<br>后再继续。 |
-    | Set [API_KEY] for [skill] | 对所有这些设置选择 **No**。|
 
-4. 最后，对 **What do you want to configure** 选择 **Done**。出现 `Configure complete` 消息时，表示设置已完成。
+    向导会自动检查技能状态并显示摘要，然后自动开始安装缺失的技能依赖。
+
+4. 等待安装完成，并查看已安装摘要。
+5. 当提示 **What do you want to configure** 时，选择 **Done**。出现 `Configuration updated` 消息时，表示设置已完成。
 
 ### 从 ClawHub 安装
 
@@ -136,7 +139,7 @@ OpenClaw 可以通过技能和插件进行扩展：
 
 ### 上传技能
 
-1. 打开文件管理器，然后进入**应用** > **数据** > **clawdbot** > **config**。
+1. 从启动台打开文件管理器，然后进入**应用** > **数据** > **clawdbot** > **config**。
 2. 创建一个名为 `skills` 的新文件夹。
 3. 将你的技能包（例如解压后的 `.zip` 文件）上传到此 `skills` 文件夹中。
 4. 如有缺失，安装所需的包依赖。
@@ -164,7 +167,7 @@ OpenClaw 可以通过技能和插件进行扩展：
         ```
 3. 缺失组件安装完成后，重启 OpenClaw 容器使更改生效：
 
-    a. 从启动台打开控制面板。
+    a. 从桌面打开控制面板。
     
     b. 点击**部署**下的 **clawdbot**，然后点击**重启**。
 
@@ -189,10 +192,10 @@ OpenClaw 可以通过技能和插件进行扩展：
     ```bash
     openclaw plugins install {Name}
     ```
-    例如，要安装 BlueBubbles，应输入以下命令：
+    例如，要安装 LLM Task，应输入以下命令：
 
     ```bash
-    openclaw plugins install @openclaw/bluebubbles
+    openclaw plugins install @openclaw/llm-task
     ```
 
     :::warning 插件安装被阻止
@@ -213,17 +216,17 @@ OpenClaw 可以通过技能和插件进行扩展：
 
     现在插件的状态为 **enabled**。
 
-5. 打开 Control UI，从左侧边栏选择 **Settings**，然后进入 **Automation** > **Plugins**。
-6. 找到 **@openclaw/bluebubbles** 并点击它以展开面板：
+5. 打开 Control UI，点击左侧边栏的 <i class="material-symbols-outlined">settings</i>，然后进入 **Automation** > **Plugins**。
+6. 找到 **@openclaw/llm-task** 并点击它以展开面板：
 
     - 如果已启用，关闭切换开关，然后再打开，以强制系统显式保存配置。
     - 如果已禁用，打开切换开关。
 
-    ![开启插件](/images/manual/use-cases/toggle-plugin2.png#bordered)
+    ![开启插件](/images/manual/use-cases/toggle-plugin3.png#bordered)
 
 7. 点击右上角的 **Save**。系统验证配置并自动应用更改。
 
-    ::: tip 手动重启
+    :::tip 手动重启
     如果你需要手动重启 OpenClaw，请不要使用 OpenClaw CLI。请使用以下方法之一：
     - **从设置或应用市场重启应用**：
         - 打开**设置**，进入**应用** > **OpenClaw**，点击**暂停**，然后点击**恢复**。

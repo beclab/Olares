@@ -764,20 +764,23 @@ func GetUserspacePvc(owner string) (string, string, string, string, error) {
 	return p, userspacePvc, cachePath, appcachePvc, nil
 }
 
-func TrimPathPrefix(p string) (bool, bool, string) {
+func TrimPathPrefix(p string) (bool, bool, bool,string) {
 	if !strings.HasSuffix(p, "/") {
 		p = p + "/"
 	}
 	var external = fmt.Sprintf("/Files/External/%s/", constant.NodeName)
 	var cache = fmt.Sprintf("/Cache/%s/", constant.NodeName)
+	var common = "/Common/"
 	if strings.HasPrefix(p, external) {
-		return true, false, strings.TrimPrefix(p, external)
+		return true, false,false, strings.TrimPrefix(p, external)
 	} else if strings.HasPrefix(p, cache) {
-		return false, true, strings.TrimPrefix(p, cache)
-	} else if strings.HasPrefix(p, "/Files/") {
-		return false, false, strings.TrimPrefix(p, "/Files/")
+		return false, true,false, strings.TrimPrefix(p, cache)
+	} else if strings.HasPrefix(p,common) {
+		return false,false,true,strings.TrimPrefix(p, common)
+	}else if strings.HasPrefix(p, "/Files/") {
+		return false, false,false, strings.TrimPrefix(p, "/Files/")
 	} else {
-		return false, false, p
+		return false, false,false, p
 	}
 }
 
@@ -799,13 +802,15 @@ func FormatEndpoint(location, schema, host, urlPath, pvc, cachepvc string) (*rep
 		result.Endpoint = strings.TrimPrefix(result.Endpoint, "s3:")
 		return result, nil
 	case constant.BackupLocationFileSystem.String():
-		external, cache, relativePath := TrimPathPrefix(p)
+		external, cache,common, relativePath := TrimPathPrefix(p)
 		var endpoint string
 		if external {
 			endpoint = path.Join(constant.ExternalPath, relativePath)
 		} else if cache {
 			endpoint = path.Join(cachepvc, relativePath)
-		} else {
+		} else if common{
+			endpoint = path.Join(constant.CommonPath,relativePath)
+		}else {
 			endpoint = path.Join(pvc, relativePath)
 		}
 		return &repo.RepositoryInfo{

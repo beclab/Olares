@@ -41,7 +41,7 @@ For example, if Isaac Lab runs on an Olares One with an Intel CPU and NVIDIA GPU
 :::
 
 :::tip Recommended GPU mode
-Isaac Lab and Isaac Sim use significant GPU resources. For better stability, set the GPU mode to [**App exclusive**](/manual/olares/settings/single-gpu.md#app-exclusive) and bind the GPU to Isaac Lab before running workloads. This helps reduce resource contention with other GPU apps.
+Isaac Lab and Isaac Sim use significant GPU resources. For better stability, set the GPU mode to [**Exclusive**](/manual/olares/settings/gpu-resource.md#change-a-gpu-mode) and bind the GPU to Isaac Lab before running workloads. This helps reduce resource contention with other GPU apps.
 :::
 
 ## Understand Isaac Lab and Isaac Sim

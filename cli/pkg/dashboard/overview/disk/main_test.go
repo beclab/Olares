@@ -9,7 +9,6 @@ import (
 	"time"
 
 	pkgdashboard "github.com/beclab/Olares/cli/pkg/dashboard"
-	"github.com/beclab/Olares/cli/pkg/dashboard/format"
 )
 
 // diskMainFixtureSrv stubs /v1alpha3/nodes returning two SMART
@@ -96,9 +95,18 @@ func TestBuildMainEnvelope_SortsAndJoinsAuxiliaries(t *testing.T) {
 		t.Errorf("health display = %v / %v, want Exception / Normal",
 			row0.Display["health"], row1.Display["health"])
 	}
-	// nvme0n1: cap=500e9, avail=125e9 → used=375e9; ratio = 0.75
-	if row0.Display["util"] != "75%" {
-		t.Errorf("nvme0n1 util = %v, want 75%% (used/cap)", row0.Display["util"])
+	// nvme0n1: cap=500e9, avail=125e9 → used=375e9; ratio = 0.75.
+	// The SPA card does not render utilisation, so it is absent from
+	// Display but preserved in Raw for JSON consumers.
+	if _, ok := row0.Display["util"]; ok {
+		t.Errorf("util should be absent from Display (SPA card does not render it)")
+	}
+	if r, _ := row0.Raw["used_ratio"].(float64); r != 0.75 {
+		t.Errorf("nvme0n1 used_ratio = %v, want 0.75 (used/cap)", row0.Raw["used_ratio"])
+	}
+	// temperature: dual-unit "<c>°C/<f>°F" like the SPA card.
+	if row0.Display["temperature"] != "42°C/107.6°F" {
+		t.Errorf("nvme0n1 temperature = %v, want 42°C/107.6°F", row0.Display["temperature"])
 	}
 	// power_on_hours: nvme0n1 has 500h, sda has no row → "-".
 	if poh, _ := row0.Display["power_on_hours"].(string); !strings.Contains(poh, "500") {
@@ -113,24 +121,19 @@ func TestBuildMainEnvelope_SortsAndJoinsAuxiliaries(t *testing.T) {
 	}
 }
 
-// TestRenderDiskTemperature_HonoursUnitAndDash pins the disk-area
-// "0 → '-'" wrapper around pkgdashboard.RenderTemperature. Empty
-// samples (Celsius == 0) render as a dash to mirror the SPA's
-// config.ts:219 behaviour; non-zero values pass through to the
-// pkg-root unit converter and pick up the active --temp-unit. This
-// test was migrated from the pkg-root dashboard_test.go (P7) so
-// it lives next to the production helper it exercises.
-func TestRenderDiskTemperature_HonoursUnitAndDash(t *testing.T) {
-	if got := renderDiskTemperature(0, format.TempC); got != "-" {
-		t.Errorf("zero celsius should print '-', got %q", got)
+// TestRenderDiskTemperature_DualUnitAndDash pins the disk-area
+// dual-unit temperature cell. Empty samples (Celsius == 0) render
+// as "-/-" to mirror the SPA's config.ts:218–223 behaviour; non-zero
+// values always emit both Celsius and Fahrenheit regardless of
+// --temp-unit, matching the SPA card which hardcodes "<c>°C/<f>°F".
+func TestRenderDiskTemperature_DualUnitAndDash(t *testing.T) {
+	if got := renderDiskTemperature(0); got != "-/-" {
+		t.Errorf("zero celsius should print '-/-', got %q", got)
 	}
-	if got := renderDiskTemperature(40, format.TempC); got != "40°C" {
-		t.Errorf("40C → %q, want 40°C", got)
+	if got := renderDiskTemperature(40); got != "40°C/104°F" {
+		t.Errorf("40C → %q, want 40°C/104°F", got)
 	}
-	if got := renderDiskTemperature(40, format.TempF); got != "104°F" {
-		t.Errorf("40C in F → %q, want 104°F", got)
-	}
-	if got := renderDiskTemperature(40, format.TempK); got != "313.1K" {
-		t.Errorf("40C in K → %q, want 313.1K", got)
+	if got := renderDiskTemperature(35); got != "35°C/95°F" {
+		t.Errorf("35C → %q, want 35°C/95°F", got)
 	}
 }

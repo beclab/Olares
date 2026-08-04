@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 了解如何在 Olares 中将你的应用接入 RabbitMQ 服务。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, RabbitMQ, 中间件集成, OlaresManifest, 消息队列, AMQP, 环境变量映射
 ---
 # 集成 RabbitMQ
 

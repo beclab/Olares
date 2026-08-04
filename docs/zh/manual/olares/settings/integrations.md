@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 统一管理 Olares 的第三方服务连接、SMB 网络存储凭据及网站 Cookie，扩展文件存储能力，确保订阅与自动化任务顺畅运行。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 集成, 第三方服务, AWS S3, 腾讯云 COS, Cookie 管理, SMB 账号
 ---
 
 # 在设置中管理集成

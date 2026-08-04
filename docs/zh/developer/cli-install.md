@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
-description: 通过 npm 或 npx 安装 olares-cli。涵盖首次安装向导、持久安装、免安装运行，以及机器上已运行 Olares OS 的特殊情况。
+description: 通过 npm 或 npx 安装和更新 olares-cli。涵盖首次安装向导、持久安装、免安装运行，以及机器上已运行 Olares OS 的特殊情况。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, olares-cli, npm, npx, 安装 CLI, Agent Skills, 更新 CLI, Linux 安装
 ---
 
 # 安装 olares-cli
@@ -17,7 +21,7 @@ Olares 会把 `olares-cli` 装在主机的 `/usr/local/bin/olares-cli`。如果�
 
 ### 同时安装 CLI 和 Agent Skills
 
-本方式适合用 AI Agent 操作 Olares，也是推荐做法。
+如果希望通过 AI Agent 操作 Olares，推荐使用本方式。
 
 打开终端，运行以下命令，通过交互式向导一次装好 CLI 和 Agent Skills：
 
@@ -44,7 +48,7 @@ Then tell your AI agent: "Load the olares-shared skill, then use olares-cli to .
 ```
 
 :::info
-向导会运行 `npm install -g @olares/cli`，然后安装六个 Agent Skills。它不会安装 Olares OS，也不会帮你登录。
+向导会运行 `npm install -g @olares/cli`，然后安装 Agent Skills。它不会安装 Olares OS，也不会帮你登录。
 :::
 
 ### 仅安装 CLI
@@ -71,19 +75,47 @@ npx @olares/cli files ls /drive/Home
 通过 npm 安装或用 npx 运行的 CLI，以 Olares 用户身份工作。它可以管理运行中的 Olares 上的文件、应用、设置和集群，但不能安装或维护 Olares OS 本身。`upgrade`、`node`、`gpu`、`disk` 等主机命令只能通过 Olares OS 自带的 `/usr/local/bin/olares-cli` 运行。
 :::
 
-## 特殊情况：在运行 Olares OS 的 Linux 主机上
+## 更新 olares-cli
 
-只有直接在已运行 Olares OS 的 Linux 机器上安装 CLI 时才会遇到这种情况，因为此时 `/usr/local/bin/olares-cli` 已经存在。macOS 和 Windows 则不会，因为自带的二进制文件位于 Linux 环境中，即便上面运行着 Olares OS 也是如此。这两类机器直接用上面的方式即可。
+要将通过 npm 安装的 CLI 更新到最新发行版本，可运行以下任一命令。
 
-在 Linux Olares 主机上运行 `npm install -g @olares/cli` 会提示 `EEXIST` 错误并中止。这是正常现象：npm 不会覆盖不归它管理的二进制文件，因此你的系统 `olares-cli` 不受影响。如需在它旁边再装一份 npm 版本，可指定单独的前缀目录：
+明确安装最新版：
+
+```bash
+npm install -g @olares/cli@latest
+```
+
+或者使用 npm 自带的 update 命令：
+
+```bash
+npm update -g @olares/cli
+```
+
+验证更新结果：
+
+```bash
+olares-cli --version
+```
+
+输出会显示已安装的版本号，具体数字取决于你当前安装的发行版本。
+
+:::info
+更新 CLI 不会同时更新 Agent Skills。CLI 更新完成后如需更新技能，参见[更新技能](./cli-agent-skills.md#更新技能)。
+:::
+
+## 特殊情况：在运行 Olares OS 的 Linux 主机上安装 CLI
+
+Olares OS 运行在 Linux 上，并在 `/usr/local/bin/olares-cli` 预置了一份系统自带的 CLI。因此，在这类主机上安装 CLI 时需要注意版本冲突。macOS 和 Windows [直接安装](#选择安装方式)即可。
+
+在运行 Olares OS 的 Linux 主机上执行 `npm install -g @olares/cli` 时，npm 会检测到 `/usr/local/bin/olares-cli` 已存在，报出 `EEXIST` 错误并终止安装。这是一种保护机制，可避免 npm 覆盖非自身安装的文件，系统自带的 `olares-cli` 因此得以保留。若需在系统自带版本之外再安装一份 npm 版本，请将其安装到独立目录：
 
 ```bash
 npm install -g @olares/cli --prefix ~/.olares-cli-npm
 export PATH="$HOME/.olares-cli-npm/bin:$PATH"
 ```
 
-:::warning
-不要在 Olares 主机上运行 `npm install -g @olares/cli --force`。这会覆盖由系统管理的 `/usr/local/bin/olares-cli`，破坏它与 `olaresd` 和集群之间的版本一致性。系统自带版本只能通过 `olares-cli upgrade` 升级。
+:::warning 不要覆盖系统自带的 olares-cli
+请勿在 Olares 主机上执行 `npm install -g @olares/cli --force`。该命令会覆盖由系统管理的 `/usr/local/bin/olares-cli`，破坏它与 `olaresd` 及集群之间的版本一致性。系统自带版本只能通过 `olares-cli upgrade` 升级。
 :::
 
 ## 下一步

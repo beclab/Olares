@@ -1,6 +1,10 @@
 ---
 outline: [2, 4]
 description: Olares 在应用部署期间注入到 `application values.yaml` 中的运行时变量。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 运行时变量, 系统注入, Helm Values, 中间件变量, 应用依赖, values.yaml
 ---
 
 # 系统注入的运行时变量

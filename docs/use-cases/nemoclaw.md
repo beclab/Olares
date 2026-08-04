@@ -1,20 +1,20 @@
 ---
 outline: [2, 3]
-description: Run NemoClaw on Olares with a local LLM such as Gemma4. Set up an always-on AI agent backed by the NVIDIA OpenShell runtime, with no cloud API required.
+description: Run NemoClaw on Olares with Qwen3.6-27B as a local LLM. Set up an always-on AI agent backed by the NVIDIA OpenShell runtime, with no cloud API required.
 head:
   - - meta
     - name: keywords
       content: Olares, NemoClaw, NVIDIA, OpenShell, OpenClaw, local LLM, AI assistant, Discord, web search, ClawHub, skills, plugins
 app_version: "1.0.8"
-doc_version: "1.1"
-doc_updated: "2026-05-11"
+doc_version: "1.2"
+doc_updated: "2026-07-29"
 ---
 
 # Run NemoClaw with a local LLM
 
 NemoClaw is an open-source reference stack from NVIDIA that runs OpenClaw with the NVIDIA OpenShell runtime bundled.
 
-This guide walks you through running NemoClaw on Olares with the Gemma4 26B model app as the backend LLM.
+This guide walks you through running NemoClaw on Olares with the Qwen3.6-27B (llama.cpp) model app as the backend LLM.
 
 :::warning Alpha software
 NemoClaw is an early preview release from NVIDIA and is not recommended for production use. For official updates and community feedback, see [NVIDIA/NemoClaw](https://github.com/NVIDIA/NemoClaw).
@@ -25,38 +25,32 @@ NemoClaw is an early preview release from NVIDIA and is not recommended for prod
 In this guide, you will learn how to:
 
 - Install and configure NemoClaw with a local LLM.
-- Keep the model loaded for always-on responses.
 - Start your first chat with the agent.
 - Connect the agent to Discord for remote chat.
 - Enable real-time web search.
 
 ## Prerequisites
 
-- A local model app installed and running on your Olares device.
-- Admin privileges to install apps from Market and edit application settings.
+Before you begin, you need:
 
-## Get the model name and endpoint URL
+- Admin privileges to install apps from Market and edit application settings.
+- The following model:
+
+  | Model type | Model | How to get it |
+  | :--- | :--- | :--- |
+  | Chat | Qwen3.6-27B (llama.cpp) | Install from Market|
+
+## Get model connection details
+
+<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
 NemoClaw needs the model name and its shared endpoint URL during installation.
 
-1. Open your model app from Launchpad and note the model name shown on the page. In this example, it's `gemma4:26b`.
+For Qwen3.6-27B (llama.cpp), NemoClaw uses the OpenAI-compatible API format:
 
-   ![Model name shown in the model app](/images/manual/use-cases/gemma4-26b-downloaded.png#bordered)
-
-2. Open Settings, then go to **Applications** > **Gemma4 26B Q4_K_M (Ollama)**.
-3. In **Shared entrances**, select **Gemma4 26B Q4_K_M** to view the endpoint URL.
-
-   ![Get shared endpoint](/images/manual/use-cases/gemma4-26b-shared-laresprime.png#bordered){width=90%}
-
-4. Note the shared endpoint. For example:
-
-   ```plain
-   http://2e53d5230.shared.olares.com
-   ```
-
-   :::tip Why the shared endpoint?
-   The URL on the model app's main page is user-specific and routes through the browser. The shared endpoint is reachable from other apps on Olares without sign-in or CORS issues, which is what NemoClaw needs.
-   :::
+1. Open the model app from Launchpad. Its Model Console opens automatically.
+2. Wait until **Model** shows **READY** and **Engine** shows **RUNNING**.
+3. Under **Service status**, make sure **Apps in Olares** is selected. Copy the **Model name** and **Base URL** exactly as shown.
 
 ## Install NemoClaw
 
@@ -67,8 +61,8 @@ NemoClaw needs the model name and its shared endpoint URL during installation.
 2. Click **Get**, then **Install**.
 3. When prompted, set the environment variables:
 
-   - **NEMOCLAW_ENDPOINT_URL**: Enter or paste the shared endpoint URL, and append `/v1`, such as `http://2e53d5230.shared.olares.com/v1`.
-   - **NEMOCLAW_MODEL**: Enter or paste the model name, such as `gemma4:26b`.
+   - **NEMOCLAW_ENDPOINT_URL**: Paste the Base URL copied from the Qwen3.6-27B Model Console. Use it exactly as displayed.
+   - **NEMOCLAW_MODEL**: Enter the Model name copied from the Model Console. In this example, it is `unsloth/Qwen3.6-27B-GGUF:Q4_K_M`.
 
    ![Set environment variables for NemoClaw](/images/manual/use-cases/nemoclaw-set-environment-variables.png#bordered){width=70%}
 
@@ -88,21 +82,6 @@ When the installation finishes, two shortcuts appear on Launchpad:
 
 - **NemoClaw CLI**: The terminal interface for running NemoClaw and OpenClaw commands.
 - **OpenClaw Web UI**: The browser-based dashboard for OpenClaw.
-
-## Keep the model loaded (optional)
-
-By default, the local LLM unloads from memory after 5 minutes of inactivity, and the next reply has to wait for the model to reload. For an always-on agent, enable the keep-alive setting on the model app to keep it resident in memory.
-
-1. Open Settings and go to **Applications** > **Gemma4 26B Q4_K_M** > **Manage environment variables**.
-2. Find **KEEP_ALIVE**, click <i class="material-symbols-outlined">edit_square</i>, set the value to **true**, and click **Confirm**.
-
-   ![Enable KEEP_ALIVE for the model app](/images/manual/use-cases/keep-alive-enable.png#bordered){width=80%}
-
-3. Click **Apply**.
-
-:::tip When to leave KEEP_ALIVE unset
-Keeping the model loaded consumes VRAM continuously. If you only use the agent occasionally and don't mind the cold-start delay, leave **KEEP_ALIVE** unset.
-:::
 
 ## Start your first chat
 
@@ -269,41 +248,43 @@ For security, the bot doesn't respond to unauthorized users. You must pair your 
 
 By default, the agent answers only from its training data. To let it fetch real-time internet information, you can use a web search provider. The following uses SearXNG as an example, which you can install as a self-hosted instance from Olares Market.
 
-1. Install SearXNG from Olares Market.
-2. Open Settings, then go to **Applications** > **SearXNG**.
-3. In **Shared entrances**, select **SearXNG** to view the endpoint URL.
+### Get the SearXNG endpoint
 
-   ![Get shared endpoint](/images/manual/use-cases/searxng-shared-laresprime.png#bordered){width=90%}
-4. Copy the shared endpoint. For example:
+Install SearXNG from Market before continuing.
 
-   ```plain
-   http://d1236e020.shared.olares.com
-   ```
+<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
 
-5. Open the NemoClaw CLI app from Launchpad.
-6. Connect to the runtime sandbox:
+For SearXNG:
+
+1. Go to Olares **Settings** > **Applications** > **SearXNG** > **Entrances**.
+2. Select **SearXNG**, then copy the **Endpoint** URL.
+
+### Configure web search
+
+1. Open the NemoClaw CLI app from Launchpad.
+2. Connect to the runtime sandbox:
 
    ```bash
    nemoclaw my-assistant connect
    ```
 
-7. Run the web tool configuration wizard:
+3. Run the web tool configuration wizard:
 
    ```bash
    openclaw config --section web
    ```
 
-8. Configure as follows:
+4. Configure as follows:
 
    | Settings | Option |
    |:---------|:-------|
    | Where will the Gateway run | Local (this machine) |
    | Enable web_search | Yes |
    | Search provider | SearXNG |
-   | SearXNG Base URL | Paste the shared SearXNG endpoint from Step 4 |
+   | SearXNG Base URL | Paste the SearXNG Endpoint copied from Olares Settings |
    | Enable web_fetch (keyless HTTP fetch) | Yes |
 
-9. To verify, ask your agent a question that requires real-time information. For example:
+5. To verify, ask your agent a question that requires real-time information. For example:
 
    ```text
    What are today's top tech news headlines?

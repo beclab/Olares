@@ -113,7 +113,7 @@ func RequirementFromMode(mode appcfg.ResourceMode) Requirement {
 	}
 	reqDisk := parseQuantityBytes(source.RequiredDisk)
 	supportMultiNodes := mode.Mode == utils.NvidiaCardType && mode.SupportMultiNodes
-	supportMultiCards := mode.Mode == utils.NvidiaCardType && (mode.SupportMultiCard || supportMultiNodes)
+	supportMultiCards := mode.Mode == utils.NvidiaCardType && (mode.SupportMultiCards || supportMultiNodes)
 	return Requirement{
 		Mode:              mode.Mode,
 		RequiredCPU:       reqCPU,
@@ -155,24 +155,37 @@ func EvaluateInstallMode(req Requirement, nodes []Node) ModePlanResult {
 }
 
 func PickAllocations(appConfig *appcfg.ApplicationConfig, req Requirement, nodes []Node, pressure PressureSnapshot) ([]Allocation, bool) {
+	return pickAllocations(appConfig, req, nodes, pressure, allocationOptions{checkPressure: true})
+}
+
+type allocationOptions struct {
+	checkPressure bool
+	deterministic bool
+	pressureAdded *AddedResources
+}
+
+func pickAllocations(appConfig *appcfg.ApplicationConfig, req Requirement, nodes []Node, pressure PressureSnapshot, pressureOptions allocationOptions) ([]Allocation, bool) {
 	if req.Mode == utils.CPUType {
 		return nil, false
 	}
 	matching := matchingNodes(req.Mode, nodes)
 	if req.Mode == utils.NvidiaCardType && req.SupportMultiNodes {
-		return pickAggregateAllocations(appConfig, req, matching, pressure, true)
+		return pickAggregateAllocations(appConfig, req, matching, pressure, pressureOptions, true)
 	}
 	if req.Mode == utils.NvidiaCardType && req.SupportMultiCards {
-		return pickAggregateAllocations(appConfig, req, matching, pressure, false)
+		return pickAggregateAllocations(appConfig, req, matching, pressure, pressureOptions, false)
 	}
-	return pickSingleAllocation(appConfig, req, matching, pressure)
+	return pickSingleAllocation(appConfig, req, matching, pressure, pressureOptions)
 }
 
+// matchingNodes returns the nodes that support `mode`, each projected onto that
+// single mode (Devices filtered to the mode) so the device-centric scheduling
+// helpers only ever see the relevant devices of a multi-mode node.
 func matchingNodes(mode string, nodes []Node) []Node {
 	out := make([]Node, 0)
 	for _, node := range nodes {
-		if node.GPUType == mode {
-			out = append(out, node)
+		if node.SupportsMode(mode) {
+			out = append(out, node.viewForMode(mode))
 		}
 	}
 	return out
@@ -180,11 +193,18 @@ func matchingNodes(mode string, nodes []Node) []Node {
 
 func evaluateCPUInstallMode(req Requirement, nodes []Node) ModePlanResult {
 	for _, node := range nodes {
-		if node.memoryCapacity*75/100 >= req.RequiredMemory {
+		if usableCPUNodeMemory(node.memoryCapacity) >= req.RequiredMemory {
 			return ModePlanResult{ComputeType: utils.CPUType, Status: StatusInstallable}
 		}
 	}
 	return ModePlanResult{ComputeType: utils.CPUType, Status: StatusInsufficientResources, Reason: "insufficient_resources"}
+}
+
+func usableCPUNodeMemory(capacity int64) int64 {
+	if capacity < 0 {
+		return -1
+	}
+	return capacity/4*3 + (capacity%4)*3/4
 }
 
 func installCapacityFits(req Requirement, nodes []Node) bool {
@@ -227,7 +247,7 @@ func installCapacityFits(req Requirement, nodes []Node) bool {
 	return false
 }
 
-func pickSingleAllocation(appConfig *appcfg.ApplicationConfig, req Requirement, nodes []Node, pressure PressureSnapshot) ([]Allocation, bool) {
+func pickSingleAllocation(appConfig *appcfg.ApplicationConfig, req Requirement, nodes []Node, pressure PressureSnapshot, pressureOptions allocationOptions) ([]Allocation, bool) {
 	for _, level := range []string{FitLevelLimit, FitLevelRequired} {
 		for _, supportType := range supportTypeOrder(req.Mode) {
 			candidates := make([]Allocation, 0)
@@ -236,7 +256,7 @@ func pickSingleAllocation(appConfig *appcfg.ApplicationConfig, req Requirement, 
 					if supportType != "" && device.SupportType != supportType {
 						continue
 					}
-					fits, amount := deviceFitsLevel(req, node, device, pressure, level, false)
+					fits, amount := deviceFitsLevelWithPressure(req, node, device, pressure, level, false, 0, pressureOptions)
 					if fits {
 						assigned := requiredTargetForMode(req)
 						if assigned == 0 {
@@ -247,6 +267,9 @@ func pickSingleAllocation(appConfig *appcfg.ApplicationConfig, req Requirement, 
 				}
 			}
 			if len(candidates) > 0 {
+				if pressureOptions.deterministic {
+					return []Allocation{candidates[0]}, true
+				}
 				return []Allocation{candidates[rand.Intn(len(candidates))]}, true
 			}
 		}
@@ -254,21 +277,21 @@ func pickSingleAllocation(appConfig *appcfg.ApplicationConfig, req Requirement, 
 	return nil, false
 }
 
-func pickAggregateAllocations(appConfig *appcfg.ApplicationConfig, req Requirement, nodes []Node, pressure PressureSnapshot, crossNode bool) ([]Allocation, bool) {
+func pickAggregateAllocations(appConfig *appcfg.ApplicationConfig, req Requirement, nodes []Node, pressure PressureSnapshot, pressureOptions allocationOptions, crossNode bool) ([]Allocation, bool) {
 	for _, level := range []string{FitLevelLimit, FitLevelRequired} {
 		target := targetGPU(req, level)
 		if target <= 0 {
 			continue
 		}
 		if crossNode {
-			picked, ok := collectDevicesForTarget(appConfig, req, nodes, pressure, level, target, req.RequiredGPU)
+			picked, ok := collectDevicesForTarget(appConfig, req, nodes, pressure, pressureOptions, level, target, req.RequiredGPU)
 			if ok {
 				return picked, ok
 			}
 			continue
 		}
 		for _, node := range nodes {
-			picked, ok := collectDevicesForTarget(appConfig, req, []Node{node}, pressure, level, target, req.RequiredGPU)
+			picked, ok := collectDevicesForTarget(appConfig, req, []Node{node}, pressure, pressureOptions, level, target, req.RequiredGPU)
 			if ok {
 				return picked, ok
 			}
@@ -277,20 +300,26 @@ func pickAggregateAllocations(appConfig *appcfg.ApplicationConfig, req Requireme
 	return nil, false
 }
 
-func collectDevicesForTarget(appConfig *appcfg.ApplicationConfig, req Requirement, nodes []Node, pressure PressureSnapshot, level string, target, allocationTarget int64) ([]Allocation, bool) {
+func collectDevicesForTarget(appConfig *appcfg.ApplicationConfig, req Requirement, nodes []Node, pressure PressureSnapshot, pressureOptions allocationOptions, level string, target, allocationTarget int64) ([]Allocation, bool) {
 	fitRemaining := target
 	allocationRemaining := allocationTarget
 	var out []Allocation
+	timeSliceMemoryByNode := make(map[string]int64)
 	for _, supportType := range supportTypeOrder(req.Mode) {
 		for _, node := range nodes {
 			for _, device := range node.Devices {
 				if supportType != "" && device.SupportType != supportType {
 					continue
 				}
-				fits, amount := deviceFitsLevel(req, node, device, pressure, level, true)
+				fits, amount := deviceFitsLevelWithPressure(req, node, device, pressure, level, true, timeSliceMemoryByNode[node.NodeName], pressureOptions)
 				if !fits || amount <= 0 {
 					continue
 				}
+				nextMemory, ok := checkedAdd(timeSliceMemoryByNode[node.NodeName], timeSliceAddedMemory(device))
+				if !ok {
+					continue
+				}
+				timeSliceMemoryByNode[node.NodeName] = nextMemory
 				if allocationRemaining > 0 {
 					assigned := minInt64(amount, allocationRemaining)
 					out = append(out, buildAllocation(appConfig, req, node, device, assigned))
@@ -306,17 +335,20 @@ func collectDevicesForTarget(appConfig *appcfg.ApplicationConfig, req Requiremen
 	return nil, false
 }
 
-func deviceFitsLevel(req Requirement, node Node, device Device, pressure PressureSnapshot, level string, allowPartial bool) (bool, int64) {
+func deviceFitsLevel(req Requirement, node Node, device Device, pressure PressureSnapshot, level string, allowPartial bool, priorTimeSliceMemory int64) (bool, int64) {
+	return deviceFitsLevelWithPressure(req, node, device, pressure, level, allowPartial, priorTimeSliceMemory, allocationOptions{checkPressure: true})
+}
+
+func deviceFitsLevelWithPressure(req Requirement, node Node, device Device, pressure PressureSnapshot, level string, allowPartial bool, priorTimeSliceMemory int64, pressureOptions allocationOptions) (bool, int64) {
 	if device.Health != "" && device.Health != deviceHealthYes {
 		return false, 0
 	}
 	required := targetForMode(req, level)
 	if required <= 0 {
-		return !pressure.WouldPressure(node, AddedResources{
-			CPU:    req.RequiredCPU,
-			Memory: levelMemory(req, level),
-			Disk:   req.RequiredDisk,
-		}), 0
+		if !pressureOptions.checkPressure {
+			return true, 0
+		}
+		return !pressure.WouldPressure(node, levelAddedResources(req, level, pressureOptions)), 0
 	}
 	available := deviceAvailableMemory(device)
 	if available <= 0 {
@@ -325,18 +357,46 @@ func deviceFitsLevel(req Requirement, node Node, device Device, pressure Pressur
 	if available < required && !(allowPartial && req.Mode == utils.NvidiaCardType) {
 		return false, available
 	}
-	addedGPU := int64(0)
-	if req.Mode == utils.NvidiaCardType && device.SupportType == SupportTypeTimeSlice {
-		addedGPU = minInt64(available, required)
-	}
-	if pressure.WouldPressure(node, AddedResources{
-		CPU:    req.RequiredCPU,
-		Memory: levelMemory(req, level) + addedGPU,
-		Disk:   req.RequiredDisk,
-	}) {
+	if allocationWouldPressure(req, node, device, pressure, level, priorTimeSliceMemory, pressureOptions) {
 		return false, available
 	}
 	return true, available
+}
+
+func allocationWouldPressure(req Requirement, node Node, device Device, pressure PressureSnapshot, level string, priorTimeSliceMemory int64, options allocationOptions) bool {
+	if !options.checkPressure {
+		return false
+	}
+	added := levelAddedResources(req, level, options)
+	timeSliceMemory, ok := checkedAdd(priorTimeSliceMemory, timeSliceAddedMemory(device))
+	if !ok {
+		return true
+	}
+	added.Memory, ok = checkedAdd(added.Memory, timeSliceMemory)
+	if !ok {
+		return true
+	}
+	return pressure.WouldPressure(node, added)
+}
+
+func levelAddedResources(req Requirement, level string, options allocationOptions) AddedResources {
+	if options.pressureAdded != nil {
+		return *options.pressureAdded
+	}
+	return AddedResources{
+		CPU:    req.RequiredCPU,
+		Memory: levelMemory(req, level),
+		Disk:   req.RequiredDisk,
+	}
+}
+
+// A time-slice GPU with a positive target needs host-memory headroom equal to
+// the card's physical memory. Zero-target fit checks preserve legacy behavior.
+func timeSliceAddedMemory(device Device) int64 {
+	if device.SupportType != SupportTypeTimeSlice {
+		return 0
+	}
+	return device.Memory
 }
 
 func targetForMode(req Requirement, level string) int64 {
@@ -376,8 +436,7 @@ func buildAllocation(appConfig *appcfg.ApplicationConfig, req Requirement, node 
 	// omits spec.memory and HAMI treats the pod as unrestricted. The
 	// scheduler's accounting (deviceAvailableMemory / remainingMemory)
 	// never reads Allocation.Memory for these modes, so this is safe.
-	if req.Mode == utils.NvidiaCardType &&
-		(device.SupportType == SupportTypeExclusive || device.SupportType == SupportTypeTimeSlice) {
+	if isWholeCardMode(req.Mode, device.SupportType) {
 		memory = 0
 	}
 	return Allocation{
@@ -391,11 +450,29 @@ func buildAllocation(appConfig *appcfg.ApplicationConfig, req Requirement, node 
 	}
 }
 
+// isWholeCardMode reports whether binding a pod to a device with this NVIDIA
+// support type grants it the entire card: Exclusive (solo binding) or
+// TimeSlice (full memory during the pod's slice). buildAllocation records
+// Memory=0 for these, and they are always one-binding-per-card, so allocation
+// distribution must emit a separate binding for every selected card instead of
+// folding several of them into a single shared VRAM budget.
+func isWholeCardMode(mode, supportType string) bool {
+	return mode == utils.NvidiaCardType &&
+		(supportType == SupportTypeExclusive || supportType == SupportTypeTimeSlice)
+}
+
 func supportTypeOrder(mode string) []string {
 	if mode == utils.NvidiaCardType {
 		return []string{SupportTypeExclusive, SupportTypeMemorySlice, SupportTypeTimeSlice}
 	}
-	return []string{SupportTypeExclusive, SupportTypeMemoryShared}
+	// Every non-nvidia mode (nvidia-gb10 plus the unified-memory accelerators:
+	// cpu / apple-m / intel / amd / moore-soc / discrete GPUs) only ever
+	// carries Exclusive or MemorySlice devices — TimeSlice is nvidia-only.
+	// Listing Exclusive first keeps the scheduler's preference for whole-device
+	// placement before it falls back to a memory slice, and including
+	// MemorySlice is what lets GB10 (decoded as MemorySlice by default) and the
+	// memory-slicing accelerators be scheduled at all.
+	return []string{SupportTypeExclusive, SupportTypeMemorySlice}
 }
 
 func deviceAvailableMemory(device Device) int64 {
@@ -405,7 +482,7 @@ func deviceAvailableMemory(device Device) int64 {
 			return 0
 		}
 		return device.Memory
-	case SupportTypeMemorySlice, SupportTypeMemoryShared:
+	case SupportTypeMemorySlice:
 		return remainingMemory(device)
 	case SupportTypeTimeSlice:
 		return device.Memory

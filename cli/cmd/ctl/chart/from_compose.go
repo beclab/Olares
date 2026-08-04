@@ -10,12 +10,16 @@ import (
 )
 
 type fromComposeOpts struct {
-	Files     []string
-	Output    string
-	Name      string
-	Title     string
-	Type      string
-	NewSchema bool
+	Files         []string
+	Output        string
+	Name          string
+	Title         string
+	Type          string
+	Profiles      []string
+	NoInterpolate bool
+	// newSchema is a deprecated no-op flag kept for backward compatibility;
+	// scaffolds always emit the 0.12.0 schema regardless of its value.
+	newSchema bool
 }
 
 func NewCmdChartFromCompose() *cobra.Command {
@@ -51,10 +55,13 @@ Validate your edits at any time with:
 
   olares-cli chart lint <output>
 
+The scaffolded OlaresManifest always uses the 0.12.0 schema (resources under
+spec.accelerator[mode=cpu]).
+
 Examples:
   olares-cli chart from-compose --name myapp -f docker-compose.yml
   olares-cli chart from-compose --name myapp -f compose.yml -o ./charts/myapp --title "My App"
-  olares-cli chart from-compose --name myapp -f a.yml -f b.yml --new-schema`,
+  olares-cli chart from-compose --name myapp -f a.yml -f b.yml`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runFromCompose(o)
@@ -66,7 +73,10 @@ Examples:
 	fs.StringVar(&o.Name, "name", "", "Olares app name (lowercase alphanumeric, required)")
 	fs.StringVar(&o.Title, "title", "", "human-facing app title (default: name)")
 	fs.StringVar(&o.Type, "type", "app", "OlaresManifest type: app | recommend | middleware")
-	fs.BoolVar(&o.NewSchema, "new-schema", false, "emit the 0.12.0 schema (spec.accelerator) instead of legacy 0.8.0")
+	fs.StringArrayVar(&o.Profiles, "profile", nil, "compose profile to activate (repeatable)")
+	fs.BoolVar(&o.NoInterpolate, "no-interpolate", false, "keep ${VAR} references verbatim instead of resolving them from the current environment")
+	fs.BoolVar(&o.newSchema, "new-schema", false, "deprecated no-op: the 0.12.0 schema (spec.accelerator) is always emitted")
+	_ = fs.MarkHidden("new-schema")
 	_ = cmd.MarkFlagRequired("name")
 	return cmd
 }
@@ -79,19 +89,32 @@ func runFromCompose(o *fromComposeOpts) error {
 	if output == "" {
 		output = "./" + o.Name
 	}
-	if err := chartpkg.FromCompose(chartpkg.Options{
-		ComposeFiles: o.Files,
-		OutputDir:    output,
-		Name:         o.Name,
-		Title:        o.Title,
-		Type:         o.Type,
-		NewSchema:    o.NewSchema,
-	}); err != nil {
+	result, err := chartpkg.FromCompose(chartpkg.Options{
+		ComposeFiles:  o.Files,
+		OutputDir:     output,
+		Name:          o.Name,
+		Title:         o.Title,
+		Type:          o.Type,
+		Profiles:      o.Profiles,
+		NoInterpolate: o.NoInterpolate,
+	})
+	if err != nil {
 		return err
 	}
 
 	abs, _ := filepath.Abs(output)
 	fmt.Fprintf(os.Stdout, "scaffolded Olares chart at %s\n", abs)
+	fmt.Fprintf(os.Stdout, "entrance: %s:%d (%s)\n", result.EntranceHost, result.EntrancePort, result.EntranceReason)
+	if result.EntranceGuessed {
+		fmt.Fprintln(os.Stdout, "          to choose another one, label that compose service with `olares.service.type: Entrance`")
+	}
+	if len(result.Notices) > 0 {
+		fmt.Fprintf(os.Stdout, "\nreview before deploying:\n")
+		for _, notice := range result.Notices {
+			fmt.Fprintf(os.Stdout, "  - %s\n", notice)
+		}
+		fmt.Fprintln(os.Stdout)
+	}
 	fmt.Fprintf(os.Stdout, "next: refine metadata / storage / middleware / entrances, then run `olares-cli chart lint %s`\n", output)
 	return nil
 }

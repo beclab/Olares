@@ -204,7 +204,7 @@ spec:
             - name: LLDAP_HTTP_READONLY_PORT
               value: "17171"
 
-          image: beclab/lldap:0.0.19
+          image: beclab/lldap:0.0.20
           imagePullPolicy: IfNotPresent
           name: lldap
           ports:

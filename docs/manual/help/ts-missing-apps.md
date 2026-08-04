@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Troubleshoot when apps from the Market website are missing on your device.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Market, missing apps, chart repository, troubleshooting
 ---
 
 # Missing apps in Market

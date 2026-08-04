@@ -32,7 +32,7 @@ Do not use Olares ISO images linked from other Olares installation documentation
 
 ## Create the bootable USB drive
 
-1. Download [the latest official Olares One ISO image](https://cdn.olares.com/one/olares-latest-amd64.iso) to your computer.
+1. Download [the latest official Olares One ISO image](https://cdn.olares.com/one/olares-v1.12.6-amd64.iso) to your computer.
 
 2. Download and install [**Balena Etcher**](https://etcher.balena.io/).
 

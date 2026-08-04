@@ -5,16 +5,16 @@ head:
   - - meta
     - name: keywords
       content: Olares, OpenClaw, OpenClaw tutorial, OpenClaw learning, OpenClaw upgrade, upgrade troubleshooting
-app_version: "1.0.8"
-doc_version: "1.2"
-doc_updated: "2026-06-10"
+app_version: "1.0.17"
+doc_version: "1.3"
+doc_updated: "2026-07-31"
 ---
 
 # Upgrade OpenClaw
 
 Before upgrading an existing OpenClaw installation, review the version-specific changes and troubleshooting steps on this page to ensure a smooth transition.
 
-## Upgrade to 2026.06.05
+## Upgrade to v2026.6.5
 
 The OpenClaw 2026.06.05 update migrates auth profiles, auth state, and cron jobs from legacy JSON files into an internal SQLite database. The gateway now reads these configurations from SQLite instead of raw JSON.
 
@@ -46,7 +46,7 @@ When the upgrade is completed, perform the following steps to migrate your data 
 
 For more information, see the [OpenClaw release notes](https://github.com/openclaw/openclaw/releases/tag/v2026.6.5).
 
-## Upgrade to 2026.05.26
+## Upgrade to v2026.5.26
 
 The OpenClaw 2026.05.26 update introduces significant architectural changes. After upgrading to this version, your agent might temporarily lose some functionality until you update your installed plugins and skills to their latest compatible versions.
 
@@ -69,7 +69,7 @@ To restore your agent's functionality, open the OpenClaw CLI and use one of the 
 
 For more information, see the [OpenClaw release notes](https://github.com/openclaw/openclaw/releases/tag/v2026.5.26)
 
-## Upgrade to 2026.03.22
+## Upgrade to v2026.3.22
 
 :::tip Prerequisite
 You must upgrade your Olares OS to V1.12.5 before updating OpenClaw to 2026.03.22.
@@ -81,7 +81,7 @@ If you find that a previously working plugin is unavailable after upgrading to t
 - **Update the plugin**: Check if a newer version is available that complies with the updated permission restrictions.
 - **Verify configuration methods**: Check with the plugin provider to see if new configurations are required for OpenClaw 2026.03.22 and later.
 
-## Upgrade to 2026.02.25
+## Upgrade to v2026.2.25
 
 The OpenClaw 2026.02.25 update introduced a security enhancement that requires existing users to explicitly declare the allowed Control UI access address. Therefore, if your Control UI fails to start after the upgrade, follow these steps to resolve the issue.
 

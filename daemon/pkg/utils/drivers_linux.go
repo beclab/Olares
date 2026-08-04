@@ -518,17 +518,24 @@ func MountSambaDriver(ctx context.Context, mountBaseDir string, smbPath string, 
 		}
 	}
 
-	opts = append(opts, "uid=1000", "gid=1000", "cache=none", "fsc", "noserverino")
-	err = mounter.Mount(smbPath, mntPath, "cifs", opts)
+	tryOpts := append(opts, "uid=1000", "gid=1000", "cache=none", "fsc", "noserverino")
+	err = mounter.Mount(smbPath, mntPath, "cifs", tryOpts)
 	if err != nil {
-		klog.Error("mount path as rw error, ", err)
-
-		// retry to mount as read-only
-		opts = append(opts, "ro")
-		err = mounter.Mount(smbPath, mntPath, "cifs", opts)
+		// maybe it's an older version cifs, option "fsc" is not supported, retry without it
+		klog.Warning("mount path as rw error, ", err, ", retry without fsc option")
+		tryOpts := append(opts, "uid=1000", "gid=1000", "cache=none", "noserverino")
+		err = mounter.Mount(smbPath, mntPath, "cifs", tryOpts)
 		if err != nil {
-			if e := os.Remove(mntPath); e != nil {
-				klog.Error("remove dir error, ", e, ", ", mntPath)
+
+			klog.Error("mount path as rw error, ", err)
+
+			// retry to mount as read-only
+			tryOpts = append(tryOpts, "ro")
+			err = mounter.Mount(smbPath, mntPath, "cifs", tryOpts)
+			if err != nil {
+				if e := os.Remove(mntPath); e != nil {
+					klog.Error("remove dir error, ", e, ", ", mntPath)
+				}
 			}
 		}
 	}

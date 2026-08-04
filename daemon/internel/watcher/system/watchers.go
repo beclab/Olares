@@ -7,6 +7,7 @@ import (
 	"github.com/beclab/Olares/daemon/pkg/cluster/state"
 	changeip "github.com/beclab/Olares/daemon/pkg/commands/change_ip"
 	"github.com/beclab/Olares/daemon/pkg/commands/uninstall"
+	"github.com/beclab/Olares/daemon/pkg/nets"
 	"github.com/beclab/Olares/daemon/pkg/utils"
 	"k8s.io/klog/v2"
 )
@@ -31,6 +32,40 @@ func (w *systemWatcher) Watch(ctx context.Context) {
 		_, err := cmd.Execute(ctx, nil)
 		if err != nil {
 			klog.Error("change ip error, ", err)
+		}
+	case state.IPChanging, state.Installing, state.Uninstalling,
+		state.Upgrading, state.Restarting, state.NetworkNotReady:
+		// do nothing, wait for the operation to finish
+	default:
+		client, err := utils.GetKubeClient()
+		if err != nil {
+			klog.V(8).ErrorS(err, "failed to get kube client")
+			// k8s client is not ready, skip the check
+			return
+		}
+
+		masterIp, err := utils.GetMasterNodeIpInCluster(ctx, client)
+		if err != nil {
+			klog.V(8).ErrorS(err, "failed to get master node IP")
+			// master node IP is not available, skip the check
+			return
+		}
+
+		masterIpInHosts, err := nets.GetHostIpFromHostsFile(nets.MASTER_NODE_HOSTNAME)
+		if err != nil {
+			klog.ErrorS(err, "failed to get master node IP from hosts file")
+			// master node IP is not available in hosts file, skip the check
+			return
+		}
+
+		if masterIp != masterIpInHosts {
+			klog.Info("master node IP is invalid, updating hosts file")
+			err := nets.WriteIpToHostsFile(masterIp, nets.MASTER_NODE_HOSTNAME)
+			if err != nil {
+				klog.ErrorS(err, "failed to update hosts file with new master node IP")
+				return
+			}
+			klog.Info("hosts file updated with new master node IP")
 		}
 	}
 }

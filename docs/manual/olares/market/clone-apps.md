@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Learn how to use the Clone feature in Olares to run multiple instances of the same application with independent configurations.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Market, clone applications, app cloning, multiple instances, Windows app
 ---
 
 # Clone applications

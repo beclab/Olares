@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Extend OpenCode on Olares with skills and plugins. Use pre-installed skills for package management and web preview, or add community plugins for extra functionality.
+description: Extend OpenCode on Olares with built-in skills for package management and web preview, plus community plugins for additional workflows.
 head:
   - - meta
     - name: keywords

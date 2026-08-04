@@ -164,6 +164,16 @@ func (h *Handler) deleteUserEnv(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
+	refMap, err := h.collectAppEnvReferrers(ctx, username)
+	if err != nil {
+		api.HandleError(resp, req, err)
+		return
+	}
+	if refs := refMap[current.EnvName]; len(refs) > 0 {
+		api.HandleBadRequest(resp, req, fmt.Errorf("userenv '%s' is referenced by %d app(s) and cannot be deleted", current.EnvName, len(refs)))
+		return
+	}
+
 	if err := h.ctrlClient.Delete(ctx, &current); err != nil {
 		if !apierrors.IsNotFound(err) {
 			api.HandleError(resp, req, err)
@@ -174,20 +184,31 @@ func (h *Handler) deleteUserEnv(req *restful.Request, resp *restful.Response) {
 	resp.WriteEntity(api.Response{Code: 200})
 }
 
-// listUserEnvs returns all user env specs for the current user
+// listUserEnvs returns all user env specs for the current user, along with the
+// current user's apps that reference each env.
 func (h *Handler) listUserEnvs(req *restful.Request, resp *restful.Response) {
 	username := getCurrentUser(req)
 
+	ctx := req.Request.Context()
 	userNamespace := utils.UserspaceName(username)
 	var list sysv1alpha1.UserEnvList
-	if err := h.ctrlClient.List(req.Request.Context(), &list, client.InNamespace(userNamespace)); err != nil {
+	if err := h.ctrlClient.List(ctx, &list, client.InNamespace(userNamespace)); err != nil {
 		api.HandleError(resp, req, err)
 		return
 	}
 
-	result := make([]sysv1alpha1.EnvVarSpec, 0, len(list.Items))
+	refMap, err := h.collectAppEnvReferrers(ctx, username)
+	if err != nil {
+		api.HandleError(resp, req, err)
+		return
+	}
+
+	result := make([]UserEnvDetail, 0, len(list.Items))
 	for _, item := range list.Items {
-		result = append(result, item.EnvVarSpec)
+		result = append(result, UserEnvDetail{
+			EnvVarSpec:   item.EnvVarSpec,
+			ReferencedBy: refMap[item.EnvName],
+		})
 	}
 	resp.WriteAsJson(result)
 }
@@ -218,27 +239,12 @@ func (h *Handler) getUserEnvDetail(req *restful.Request, resp *restful.Response)
 
 	detail := UserEnvDetail{EnvVarSpec: current.EnvVarSpec}
 
-	var appEnvList sysv1alpha1.AppEnvList
-	if err := h.ctrlClient.List(ctx, &appEnvList); err != nil {
+	refMap, err := h.collectAppEnvReferrers(ctx, username)
+	if err != nil {
 		api.HandleError(resp, req, err)
 		return
 	}
-	for _, ae := range appEnvList.Items {
-		// Only check AppEnvs that belong to the same user
-		if ae.AppOwner != username {
-			continue
-		}
-		for _, envVar := range ae.Envs {
-			if envVar.ValueFrom != nil && envVar.ValueFrom.EnvName == current.EnvName {
-				detail.ReferencedBy = append(detail.ReferencedBy, AppEnvReferrer{
-					AppName:   ae.AppName,
-					AppOwner:  ae.AppOwner,
-					Namespace: ae.Namespace,
-				})
-				break
-			}
-		}
-	}
+	detail.ReferencedBy = refMap[current.EnvName]
 
 	resp.WriteAsJson(detail)
 }

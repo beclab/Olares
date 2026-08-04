@@ -65,7 +65,7 @@ func NewPipeline(olaresVersion string, strat Strategy) Pipeline {
 	if isLegacyVersion(olaresVersion) {
 		return dualOwnerPipeline{strat: strat}
 	}
-	return singlePipeline{strat: strat}
+	return singlePipeline{strat: strat, olaresVersion: olaresVersion}
 }
 
 func isLegacyVersion(v string) bool {
@@ -79,26 +79,53 @@ func isLegacyVersion(v string) bool {
 	return got.LessThan(legacyVersionBoundary)
 }
 
-type singlePipeline struct{ strat Strategy }
+type singlePipeline struct {
+	strat Strategy
+	// olaresVersion is the manifest's olaresManifest.version probed by
+	// NewPipeline. Modern manifests (>= 0.12.0) are parsed verbatim, so
+	// any helm template placeholder `{{ ... }}` left in the raw bytes
+	// would corrupt the YAML before the strategy ever sees it. The
+	// version is retained here so the pre-parse template-syntax gate can
+	// fire only when resourcesCheckApplies confirms the manifest is
+	// modern; empty or malformed versions skip the gate to preserve the
+	// "unknown version → behave like the strategy chose to parse it"
+	// fallback used by tests and probing callers.
+	olaresVersion string
+}
 
 func (p singlePipeline) Parse(raw []byte, _ Renderer, _, _ string) (Manifest, error) {
-	return p.strat.Parse(raw)
+	return p.parseRaw(raw)
 }
 
 // Validate reuses parsed when the caller already parsed raw; the raw bytes
 // and their parse result cannot disagree in the single-owner flow (there is
 // no per-scenario render indirection), so a second Parse would be a pure
-// overhead. When parsed is nil we fall back to parsing raw ourselves.
+// overhead. When parsed is nil we fall back to parsing raw ourselves --
+// going through parseRaw so the template-syntax gate fires on this branch
+// too if the caller jumps straight into Validate without a prior Parse.
 func (p singlePipeline) Validate(raw []byte, parsed Manifest, _ Renderer, _, _ string) error {
 	m := parsed
 	if m == nil {
 		var err error
-		m, err = p.strat.Parse(raw)
+		m, err = p.parseRaw(raw)
 		if err != nil {
 			return err
 		}
 	}
 	return p.strat.Validate(m)
+}
+
+// parseRaw centralises the modern-manifest pre-parse checks so Parse and
+// the parsed==nil branch of Validate share one implementation. Today it
+// runs the template-syntax gate before handing the bytes to the strategy;
+// any future "must hold before YAML decode" check belongs here too.
+func (p singlePipeline) parseRaw(raw []byte) (Manifest, error) {
+	if resourcesCheckApplies(p.olaresVersion) {
+		if err := checkNoTemplateSyntax(raw); err != nil {
+			return nil, err
+		}
+	}
+	return p.strat.Parse(raw)
 }
 
 func (p singlePipeline) Strategy() Strategy { return p.strat }

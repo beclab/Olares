@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM golang:1.24.11 as builder
+FROM golang:1.25.0 as builder
 
 WORKDIR /workspace
 # Copy the Go Modules manifests
@@ -20,7 +20,7 @@ RUN cd github.com/beclab/Olares/framework/app-service && \
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM gcr.io/distroless/static:debug
+FROM beclab/distroless-static:debug
 WORKDIR /
 COPY --from=builder /workspace/github.com/beclab/Olares/framework/app-service/app-service .
 

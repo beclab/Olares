@@ -1,15 +1,15 @@
 ---
 outline: [2, 3]
-description: Set up Vane (previously Perplexica) on Olares for private, AI-powered search and Q&A. Use local LLMs with Ollama and SearXNG as the search backend.
+description: Self-host Vane (formerly Perplexica) on Olares as a private Perplexity alternative. Get cited AI answers using local Ollama models and a SearXNG search backend.
 head:
   - - meta
     - name: keywords
-      content: Olares, Vane, Perplexica, AI search, privacy, Ollama, SearXNG, self-hosted
+      content: Olares, Vane, Perplexica, perplexity alternative, self-hosted perplexity, AI search, SearXNG, vane on olares
 app_version: "1.12.0"
 doc_version: "1.2"
 doc_updated: "2026-04-17"
 ---
-# Set up a privacy-focused AI search engine with Vane
+# Self-host a private AI search engine with Vane
 
 Vane (previously Perplexica) is an open-source AI-powered answering engine. It combines web search with local or cloud LLMs to deliver cited, conversational answers while keeping your queries private.
 

@@ -4,9 +4,9 @@ output:
   binaries:
     - 
       id: cuda-driver
-      name: cuda-driver-595.80.run
-      amd64: https://us.download.nvidia.com/XFree86/Linux-x86_64/595.80/NVIDIA-Linux-x86_64-595.80.run
-      arm64: https://us.download.nvidia.com/XFree86/aarch64/595.80/NVIDIA-Linux-aarch64-595.80.run
+      name: cuda-driver-595.84.run
+      amd64: https://us.download.nvidia.com/XFree86/Linux-x86_64/595.84/NVIDIA-Linux-x86_64-595.84.run
+      arm64: https://us.download.nvidia.com/XFree86/aarch64/595.84/NVIDIA-Linux-aarch64-595.84.run
     - 
       id: libnvidia-gpgkey 
       name: libnvidia-gpgkey

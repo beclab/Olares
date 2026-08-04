@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 排查在 Olares 1.12.5 中，已暂停的应用在独占模式下无法移除的问题。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 应用独占, 暂停应用, GPU, 共享应用, 移除应用, 状态不同步
 ---
 
 # 无法在应用独占模式移除已暂停应用

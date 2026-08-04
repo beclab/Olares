@@ -5,12 +5,12 @@ head:
   - - meta
     - name: keywords
       content: Olares, OpenClaw, OpenClaw tutorial, sandbox, security, code execution
-app_version: "1.0.2"
-doc_version: "1.1"
-doc_updated: "2026-05-28"
+app_version: "1.0.17"
+doc_version: "1.2"
+doc_updated: "2026-08-03"
 ---
 
-# Optional: Enable sandbox
+# Enable the OpenClaw sandbox
 
 By default, OpenClaw executes commands and code directly within its primary container. While this is generally safe for everyday tasks, granting your agent the ability to run arbitrary code or install external dependencies carries inherent risks. 
 
@@ -70,8 +70,8 @@ The OpenClaw sandbox is disabled by default. You can enable it by modifying the 
 </template>
 <template #Enable-via-Control-UI>
 
-1. Open the Control UI, and then select **Settings** from the left sidebar.
-2. Click **AI & Agents**.
+1. Open the Control UI, click the Settings icon from the left sidebar.
+2. Select **AI & Agents**.
 3. Scroll down to locate the **Sandbox** section, and then expand it.
 4. Configure the settings as follows:
     - **Backend**: Enter `docker`.
@@ -86,7 +86,7 @@ The OpenClaw sandbox is disabled by default. You can enable it by modifying the 
     - **Scope**: Select **agent**.
     - **Workspace Access**: Select **rw**.
 
-    ![Enable sandbox in Control UI](/images/manual/use-cases/openclaw-sandbox-enable-ui1.png#bordered)
+    ![Enable sandbox in Control UI](/images/manual/use-cases/openclaw-sandbox-enable-ui2.png#bordered)
     
 5. Click **Save** in the upper-right corner.
 6. Restart OpenClaw for the changes to take effect.

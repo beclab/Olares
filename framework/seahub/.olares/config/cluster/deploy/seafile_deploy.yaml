@@ -225,6 +225,7 @@ spec:
       labels:
         tier: seafile
     spec:
+      priorityClassName: "system-cluster-critical"
       initContainers:
       - name: seahub-init
         image: beclab/seahub-init:v0.0.8

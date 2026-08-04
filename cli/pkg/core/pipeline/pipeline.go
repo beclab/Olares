@@ -103,14 +103,14 @@ func (p *Pipeline) Start(ctx context.Context) error {
 		res := p.RunModule(ctx, m)
 		err := m.CallPostHook(res)
 		if res.IsFailed() {
-			logger.Errorf("[Job] [%s] execute failed %v", p.Name, err)
-			// return errors.Wrapf(res.CombineResult, "Pipeline[%s] execute failed", p.Name)
+			// Deliberately not logged here: the failing task already reported it
+			// with per-host attribution, and the caller reports the returned
+			// error. Logging it again in between is how one failure came to be
+			// printed three times.
 			return res.CombineResult
 		}
 		if err != nil {
-			logger.Errorf("[Job] [%s] execute failed %v", p.Name, err)
-			// return errors.Wrapf(err, "Job[%s] execute failed", p.Name)
-			return err
+			return errors.Wrapf(err, "[Job] [%s] post hook failed", p.Name)
 		}
 		p.releaseModuleCache(moduleCache)
 	}

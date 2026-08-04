@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Create an Olares ID using LarePass mobile app. Get started with your Olares account in a few simple steps.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, create Olares ID, LarePass, account, sign up
 ---
 
 # Create an Olares ID
@@ -18,7 +22,7 @@ If you want to create an Olares ID under a custom domain, see [Create an Olares 
 ## Create your Olares ID
 
 1. In the LarePass app, tap **Create an account**.
-2. Enter your desired username. It must be at least 8 characters long and contain only lowercase letters and numbers.
+2. Enter your desired username. It must be 8-24 characters long and contain only lowercase letters and numbers.
 3. Tap **Continue** to finish the creation process.
 
    ![Create Olares ID](/images/manual/larepass/create-olares-id1.png#bordered)
@@ -28,5 +32,5 @@ After you get your Olares ID, wait for [Olares installation](../get-started/inst
 ## Learn more
 
 - [Create an Olares ID with a custom domain](create-org-account.md)
-- [Import an existing account](import-account.md)
+- [Manage accounts](manage-accounts.md)
 - [Back up mnemonics](back-up-mnemonics.md)

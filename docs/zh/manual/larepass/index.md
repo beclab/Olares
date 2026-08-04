@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: LarePass 用户文档。了解 LarePass 的核心功能与使用方法，包括账户管理、文件同步、设备与网络管理、系统升级、密码管理，内容收藏等，并提供下载与安装指南。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, LarePass, 官方客户端, 跨平台, 文件同步, 密码管理, 下载安装
 ---
 
 # LarePass 使用文档
@@ -60,7 +64,7 @@ description: LarePass 用户文档。了解 LarePass 的核心功能与使用方
 ## 设置账户
 
 - 在移动设备上，你可以使用 LarePass 直接[创建 Olares ID](/zh/manual/larepass/create-account.md#创建-olares-id)。
-- 在桌面客户端<!--或 Chrome 扩展-->上，你需要[导入 Olares 账户](/zh/manual/larepass/create-account.md#导入账户)。
+- 在桌面客户端<!--或 Chrome 扩展-->上，你需要[导入 Olares 账户](manage-accounts.md#导入账户)。
 
 ## 功能对比
 

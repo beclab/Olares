@@ -1,0 +1,153 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: sharedrouteregistries.gateway.olares.io
+spec:
+  group: gateway.olares.io
+  names:
+    categories:
+      - olares
+    kind: SharedRouteRegistry
+    listKind: SharedRouteRegistryList
+    plural: sharedrouteregistries
+    shortNames:
+      - srr
+    singular: sharedrouteregistry
+  scope: Namespaced
+  versions:
+    - additionalPrinterColumns:
+        - jsonPath: .spec.routeMode
+          name: mode
+          type: string
+        - jsonPath: .spec.upstream.serviceName
+          name: upstream
+          type: string
+        - jsonPath: .spec.upstream.port
+          name: port
+          type: integer
+        - jsonPath: .status.conditions[?(@.type=="Ready")].status
+          name: ready
+          type: string
+        - jsonPath: .metadata.creationTimestamp
+          name: age
+          type: date
+      name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |-
+            SharedRouteRegistry (SRR) declares one v3 shared-app entry that the
+            app-gateway should expose. app-service writes SRRs and applies an
+            HTTPRoute in the same namespace ({app}-shared).
+            Hosts are normalized: lowercase, no port. No service mesh.
+          type: object
+          required:
+            - spec
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              type: object
+              required:
+                - hostPatterns
+                - upstream
+              properties:
+                routeMode:
+                  description: |-
+                    gateway = Envoy Gateway data plane (HTTPRoute);
+                    direct = legacy L4 -> backend Service.
+                    app-service only creates the HTTPRoute when routeMode=gateway.
+                  type: string
+                  enum:
+                    - gateway
+                    - direct
+                  default: gateway
+                entranceClass:
+                  description: Marks whether this SRR came from an application/shared entrance.
+                  type: string
+                  enum:
+                    - application
+                    - shared
+                  default: shared
+                hostPatterns:
+                  description: |-
+                    Externally-visible hostnames Envoy Gateway must route to
+                    the upstream. Must be lowercase and contain no port.
+                    Two forms are accepted:
+                      - exact host:            abc.shared.example.com
+                      - logical pattern:       <hash8>.*.<platformDomain>
+                        (the literal "*" segment is required to be the 2nd
+                        label; app-service translates it into a Host
+                        RegularExpression header match).
+                  type: array
+                  minItems: 1
+                  items:
+                    type: string
+                    pattern: '^([a-z0-9]([-a-z0-9.]*[a-z0-9])?|[a-z0-9]([-a-z0-9]*[a-z0-9])?\.\*\.[a-z0-9]([-a-z0-9.]*[a-z0-9])?)$'
+                upstream:
+                  description: Backend Service inside the same namespace.
+                  type: object
+                  required:
+                    - serviceName
+                  properties:
+                    serviceName:
+                      type: string
+                    serviceNamespace:
+                      description: |-
+                        Optional. Defaults to the SRR's own namespace
+                        ({app}-shared).
+                      type: string
+                    port:
+                      description: TCP port (1-65535). Either port or portName must be set.
+                      type: integer
+                      minimum: 1
+                      maximum: 65535
+                    portName:
+                      description: Optional named port; mutually exclusive with port.
+                      type: string
+            status:
+              type: object
+              properties:
+                observedGeneration:
+                  type: integer
+                  format: int64
+                httpRouteName:
+                  description: Name of the HTTPRoute created by app-service route control.
+                  type: string
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - type
+                      - status
+                      - lastTransitionTime
+                      - reason
+                      - message
+                    properties:
+                      type:
+                        type: string
+                      status:
+                        type: string
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                      observedGeneration:
+                        type: integer
+                        format: int64
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                      reason:
+                        type: string
+                      message:
+                        type: string
+      served: true
+      storage: true
+      subresources:
+        status: {}

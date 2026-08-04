@@ -1,3 +1,7 @@
+---
+noindex: true
+description: logs 命令用于获取本机上的 Olares 组件和服务日志。
+---
 # `logs`
 
 ## 命令说明

@@ -205,6 +205,10 @@ jobs:
           coscmd upload install-wizard-v${{ needs.daily-version.outputs.version }}.md5sum.txt ${{ secrets.REPO_PATH }}install-wizard-v${{ needs.daily-version.outputs.version }}.${{ needs.release-id.outputs.id }}.md5sum.txt && \
           coscmd upload install-wizard-v${{ needs.daily-version.outputs.version }}.tar.gz ${{ secrets.REPO_PATH }}install-wizard-v${{ needs.daily-version.outputs.version }}.${{ needs.release-id.outputs.id }}.tar.gz 
 
+      - name: Upload join script to COS
+        run: |
+          coscmd upload .dist/install-wizard/joincluster.sh /joincluster-v${{ needs.daily-version.outputs.version }}.sh
+
 
   release:
     needs: [daily-version, upload-package, release-cli, release-id]

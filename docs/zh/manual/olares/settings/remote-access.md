@@ -1,12 +1,20 @@
 ---
 outline: [2,3]
-description: 了解如何使用设置在 Olares 上配置专用网络，包括强制 VPN 访问、SSH 远程连接与子网路由。
+description: 了解如何使用设置在 Olares 上配置专用网络，包括强制 VPN 访问、SSH 远程连接与 ACL 端口。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 专用网络, VPN, LarePass VPN, SSH 远程连接, ACL 端口, 远程访问
 ---
 # 配置 Olares 的专用网络
 
+<!--
 [LarePass 专用网络](../../larepass/private-network.md)为你的 Olares 提供安全的远程访问，即使您身处不同网络或远程位置。Olares 的设置应用为专用网络提供了高级配置，以满足你的特定需求。在这里，您可以强制应用使用专用网络连接、通过专用网络远程实现 SSH 访问，或通过自定义端口路由流量。
+-->
 
-![VPN](/images/zh/manual/olares/vpn.png#bordered)
+[LarePass 专用网络](../../larepass/private-network.md)为你的 Olares 提供安全的远程访问，即使你身处不同网络或远程位置。你可以在 Olares 的设置应用中强制应用使用专用网络连接、通过专用网络远程使用 SSH 访问 Olares，或为需要专用网络访问的服务管理 ACL 端口。
+
+![VPN](/images/zh/manual/olares/vpn-12.6.png#bordered)
 
 ## 允许通过专用网络建立 SSH 连接
 启用此功能后，即使在不同网络或远程工作时，也可以通过 LarePass 专用网络使用 SSH 访问 Olares 设备。
@@ -14,11 +22,12 @@ description: 了解如何使用设置在 Olares 上配置专用网络，包括�
 1. 打开设置应用，选择**系统** > **VPN**。
 2. 开启**允许通过 VPN 进行 SSH 连接**。端口 **22**（SSH）会自动添加到配置中。
 
-## 允许子网路由
+<!-- ## 允许子网路由
 启用此功能后，你可以访问与 Olares 位于同一局域网的其他设备。
 
 1. 打开设置应用，选择**系统** > **VPN**。
 2. 开启**允许子网路由**。
+-->
 
 ## 强制使用专用网络
 
@@ -28,16 +37,18 @@ description: 了解如何使用设置在 Olares 上配置专用网络，包括�
 
 1. 先在两台设备的 LarePass 上（建议一台电脑和一部手机）上开启专用网络。参考[开启专用网络](../../larepass/private-network.md#在-larepass-中启用专用网络)。
 2. 在 Olares 里，打开**设置** > **VPN**。
-3. 打开**强制通过 VPN 访问私有入口**开关。
+3. 打开**强制通过 VPN 访问**开关。
 
 启用成功后，屏幕底部会显示确认消息。
 
-## 配置端口访问的访问控制规则
-启用子网路由后，你可以通过配置访问控制列表（ACL）规则来允许访问特定端口，以便使用所需的网络服务。
+## 配置 ACL 端口
+
+ACL 端口用于允许专用网络流量访问特定目标端口。请仅添加服务所需的端口。
 
 例如，要通过远程桌面访问 Windows 服务器：
-1. 点击 <i class="material-symbols-outlined">add</i> 打开**添加 ACL**对话框。
-2. 输入 `3389`（远程桌面协议的默认端口），然后点击**确认**。
+
+1. 在 **ACL 端口**中，点击 <i class="material-symbols-outlined">add</i> 打开**添加端口**对话框。
+2. 输入 `3389`（RDP 的默认端口），然后点击**添加**。
 3. 点击**应用**使更改生效。
 
 完成配置后，你就可以使用 Windows 远程桌面来访问与 Olares 位于同一局域网的 Windows 服务器了。

@@ -1,6 +1,10 @@
 ---
-description: User documentation for LarePass. Learn how to access and manage Olares through the LarePass client, including account management, file synchronization, device management, system upgrade, password management, and content collection.
+description: Use LarePass to access and manage Olares accounts, files, devices, system updates, passwords, integrations, and saved content.
 outline: [2, 3]
+head:
+  - - meta
+    - name: keywords
+      content: Olares, LarePass, client, file sync, password manager, VPN, knowledge
 ---
 
 # LarePass documentation
@@ -57,7 +61,7 @@ After installation, click the puzzle icon in your browser toolbar and pin the La
 -->
 ## Set up account 
 - On mobile devices, you can [create an Olares ID](create-account.md) directly in the app. To use a custom domain, see [Create an Olares ID with a custom domain](create-org-account.md).
-- On the desktop client<!-- or Chrome extension-->, you must [import an existing account](import-account.md).
+- On the desktop client<!-- or Chrome extension-->, you must [import an existing account](manage-accounts.md#import-an-account).
 
 ## Feature comparison
 

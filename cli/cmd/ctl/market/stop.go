@@ -34,6 +34,11 @@ csAppStop() dialog:
     single-user CS auto-default; matches the SPA where the user
     unchecks the cascade checkbox in the multi-user dialog).
 
+On Olares 1.12.6+ a CS/shared app (simpleInfo apiVersion=='v2' || shared)
+is ALWAYS cascaded — the backend forces all=true and the SPA disables
+the checkbox — so --cascade=false is overridden (a stderr note reports
+the force). The --cascade=false override only takes effect on 1.12.5.
+
 --watch blocks until the row settles at 'stopped' (or one of the
 stopFailed / stoppingCanceled / stoppingCancelFailed failure states).
 The watcher is idempotent: 'stop' against an already-stopped row
@@ -65,24 +70,10 @@ func runStop(opts *MarketOptions, cmd *cobra.Command, appName string) error {
 	}
 
 	ctx := context.Background()
-	cascade := opts.Cascade
-	cascadeExplicit := cmd != nil && cmd.Flags().Changed("cascade")
-	if !cascadeExplicit {
-		// Auto-cascade only ever flips OFF → ON (never the other way),
-		// matching the SPA's "default all:true for single-user CS apps,
-		// otherwise default all:false" rule in csAppStop() — same probe
-		// the uninstall path uses (single-user + isCSV2). On any
-		// detection error we soft-fail to the original false default;
-		// the user can always force the decision with --cascade=true.
-		if auto, why := shouldAutoCascade(ctx, opts, mc, appName); auto {
-			cascade = true
-			opts.info("--cascade auto-enabled: %s (pass --cascade=false to override)", why)
-		}
-	}
 
-	opts.info("Stopping '%s' for user '%s'...", appName, mc.olaresID)
-	if cascade {
-		opts.info("  --cascade: will stop all sub-charts")
+	atLeast126, err := opts.factory.OlaresBackendAtLeast(ctx, "1.12.6")
+	if err != nil {
+		return opts.failOp("stop", appName, err)
 	}
 
 	// Resolve the installed app's source: this both enforces the
@@ -95,9 +86,24 @@ func runStop(opts *MarketOptions, cmd *cobra.Command, appName string) error {
 		return opts.failOp("stop", appName, err)
 	}
 
-	atLeast126, err := opts.factory.OlaresBackendAtLeast(ctx, "1.12.6")
-	if err != nil {
-		return opts.failOp("stop", appName, err)
+	// cascade (`all`) decision: on 1.12.6 a CS/shared app (read from
+	// simpleInfo) forces all=true even against --cascade=false, matching
+	// the SPA's stopChoicePrompt() which forces the shared-server stop and
+	// disables the checkbox; on 1.12.5 we keep the legacy single-user +
+	// isCSV2 auto-enable.
+	cascadeExplicit := cmd != nil && cmd.Flags().Changed("cascade")
+	cascade, why := resolveCascade(ctx, opts, mc, appName, atLeast126, opts.Cascade, cascadeExplicit)
+	if why != "" {
+		if cascadeExplicit && !opts.Cascade {
+			opts.info("--cascade force-enabled: %s (CS/shared apps always cascade)", why)
+		} else {
+			opts.info("--cascade auto-enabled: %s", why)
+		}
+	}
+
+	opts.info("Stopping '%s' for user '%s'...", appName, mc.olaresID)
+	if cascade {
+		opts.info("  --cascade: will stop all sub-charts")
 	}
 
 	// 1.12.6 moved the body to {app_name, source, all}; 1.12.5 keeps

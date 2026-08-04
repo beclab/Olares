@@ -31,6 +31,14 @@ surface a structured error from the backend (HTTP 422 / type=appenv)
 that the CLI parses into a 'missing required env var(s): ...' message
 listing exactly which vars and their value-source constraints.
 
+Compute mode (Olares 1.12.6+ only): apps that can run on more than one
+accelerator (e.g. cpu vs nvidia) need a mode picked at install time. Use
+--compute-mode <type> to pin it; if omitted, an interactive terminal
+prompts you to choose from the installable modes, while a non-interactive
+session (-q, -o json, or a pipe) fails with the list so you can re-run
+with the flag. On Olares 1.12.5 the install path is unchanged and
+--compute-mode is rejected.
+
 --watch blocks until the row settles at 'running' (success) or one of
 the *Failed / *Canceled states (failure). Image-pull-heavy charts
 (Stable Diffusion, Ollama, ...) often need --watch-timeout > 15m.
@@ -42,6 +50,7 @@ Examples:
   olares-cli market install firefox -o json                                  # one accepted-payload JSON doc
   olares-cli market install firefox --watch -o json | jq -r '.finalState'    # scripted success check
   olares-cli market install firefox --watch -q                               # silent + block; exit code = terminal verdict
+  olares-cli market install comfyui --compute-mode nvidia --watch            # pin GPU mode (1.12.6+)
   olares-cli market install myapp -s upload --watch                          # install from locally-uploaded chart
   olares-cli market install ollama-webui --watch --watch-timeout 30m         # image-pull-heavy
   olares-cli market install firefox --watch --watch-interval 1s --watch-timeout 5m   # tight CI bounds`,
@@ -54,6 +63,7 @@ Examples:
 	opts.addOutputFlags(cmd)
 	opts.addVersionFlag(cmd)
 	opts.addEnvFlag(cmd)
+	opts.addComputeModeFlag(cmd)
 	opts.addWatchFlags(cmd)
 	return cmd
 }
@@ -88,10 +98,49 @@ func runInstall(opts *MarketOptions, appName string) error {
 		return opts.failOp("install", appName, err)
 	}
 
+	ctx := context.Background()
+
+	// Compute-mode selection is a 1.12.6+ feature. Detect the backend
+	// version so we never touch the (untouched) 1.12.5 install path: on
+	// 1.12.5 we send no selectedGpuType and never interpret a
+	// computeModeSelect 422.
+	atLeast126, verr := opts.factory.OlaresBackendAtLeast(ctx, "1.12.6")
+	if verr != nil {
+		if strings.TrimSpace(opts.ComputeMode) != "" {
+			return opts.failOp("install", appName, fmt.Errorf("cannot determine Olares backend version to honor --compute-mode: %w", verr))
+		}
+		atLeast126 = false
+	}
+	computeMode := strings.TrimSpace(opts.ComputeMode)
+	if computeMode != "" && !atLeast126 {
+		return opts.failOp("install", appName, fmt.Errorf("--compute-mode requires Olares 1.12.6+; this backend uses a different (unchanged) install path — re-run without --compute-mode"))
+	}
+
 	opts.info("Installing '%s' version '%s' from '%s' for user '%s'...", appName, version, source, mc.olaresID)
 
-	ctx := context.Background()
-	resp, err := mc.InstallApp(ctx, appName, version, source, envs)
+	selected := ""
+	if atLeast126 {
+		selected = computeMode
+	}
+	resp, err := mc.InstallApp(ctx, appName, version, source, selected, envs)
+	// Recover once from a computeModeSelect 422 by resolving the mode (from
+	// --compute-mode, an interactive prompt, or a clear error) and retrying.
+	// This is keyed off the response check type, NOT the pre-flight version
+	// probe: computeModeSelect is a 1.12.6+ signal that 1.12.5 never emits, so
+	// 1.12.5 can't enter this branch even when the version probe was skipped or
+	// failed (atLeast126 conservatively false). That closes the gap where a
+	// real 1.12.6 backend returns computeModeSelect but the probe couldn't
+	// confirm the version, leaving the user with a raw API error.
+	if err != nil {
+		if checkType, raw := parseFailedCheck(resp); isComputeModeSelect(checkType) {
+			mode, merr := resolveComputeMode(raw, appName, computeMode, opts.isInteractive())
+			if merr != nil {
+				return opts.failOp("install", appName, merr)
+			}
+			opts.info("Selected compute mode: %s", mode)
+			resp, err = mc.InstallApp(ctx, appName, version, source, mode, envs)
+		}
+	}
 	if err != nil {
 		if envErr := parseServerEnvError(resp, appName); envErr != nil {
 			return opts.failOp("install", appName, envErr)

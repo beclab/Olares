@@ -6,9 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/beclab/Olares/framework/app-service/pkg/utils"
+	appevent "github.com/beclab/Olares/framework/app-service/pkg/event"
 
-	"github.com/nats-io/nats.go"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
@@ -55,8 +54,6 @@ type NodeAlertController struct {
 	// lastPressureState tracks the last known pressure state for each node and pressure type
 	lastPressureState map[string]bool
 	mutex             sync.RWMutex
-	NatsConn          *nats.Conn
-	natsConnMux       sync.Mutex
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -166,32 +163,13 @@ func (r *NodeAlertController) checkPressureStateChange(node *corev1.Node, pressu
 	defer r.mutex.Unlock()
 
 	key := fmt.Sprintf("%s-%s", node.Name, pressureType)
-	lastPressure, _ := r.lastPressureState[key]
+	lastPressure := r.lastPressureState[key]
 	if lastPressure != currentPressure {
-		if currentPressure {
-			// from available to pressure
-			err := r.sendNodeAlert(node.Name, pressureType, conditionMessage, true)
-			if err != nil {
-				klog.Errorf("failed to publish available to pressure, type: %s, err: %v", pressureType, err)
-				return err
-			}
-		} else {
-			// from pressure to available
-			err := r.sendNodeAlert(node.Name, pressureType, conditionMessage, false)
-			if err != nil {
-				klog.Errorf("failed to publish pressure to available, type: %s, err: %v", pressureType, err)
-				return err
-			}
-		}
-	} else if currentPressure {
-		// pressure persists
-		if r.shouldSendAlert(node.Name, pressureType) {
-			err := r.sendNodeAlert(node.Name, pressureType, conditionMessage, true)
-			if err != nil {
-				klog.Errorf("failed to publish persists pressure, type: %s, err: %v", pressureType, err)
-				return err
-			}
-		}
+		// state changed: pressure onset or recovery
+		r.sendNodeAlert(node.Name, pressureType, conditionMessage, currentPressure)
+	} else if currentPressure && r.shouldSendAlert(node.Name, pressureType) {
+		// pressure persists; re-alert after cooldown
+		r.sendNodeAlert(node.Name, pressureType, conditionMessage, true)
 	}
 	r.lastPressureState[key] = currentPressure
 	return nil
@@ -209,14 +187,10 @@ func (r *NodeAlertController) shouldSendAlert(nodeName string, pressureType Node
 	return time.Since(lastTime) >= 60*time.Minute
 }
 
-// sendNodeAlertUnlocked sends an alert message to NATS
-func (r *NodeAlertController) sendNodeAlert(nodeName string, pressureType NodePressureType, message string, isPressure bool) error {
+// sendNodeAlert enqueues an alert message for delivery to NATS via the
+// shared AppEventQueue connection.
+func (r *NodeAlertController) sendNodeAlert(nodeName string, pressureType NodePressureType, message string, isPressure bool) {
 	key := fmt.Sprintf("%s-%s", nodeName, pressureType)
-
-	status := false
-	if isPressure {
-		status = true
-	}
 
 	data := NodeAlertEvent{
 		Topic: pressureType,
@@ -225,53 +199,15 @@ func (r *NodeAlertController) sendNodeAlert(nodeName string, pressureType NodePr
 			PressureType: pressureType,
 			Timestamp:    time.Now(),
 			Message:      message,
-			Status:       status,
+			Status:       isPressure,
 		},
 	}
 
-	if err := r.publishToNats("os.notification", data); err != nil {
-		klog.Errorf("failed to publish node alert to NATS: %v", err)
-		return err
-	} else {
-		if isPressure {
-			klog.Infof("successfully published node pressure alert for %s: %s", nodeName, pressureType)
-		} else {
-			klog.Infof("successfully published node pressure recovery for %s: %s", nodeName, pressureType)
-		}
-	}
+	appevent.PublishToQueue("os.notification", data)
 	if isPressure {
+		klog.Infof("enqueued node pressure alert for %s: %s", nodeName, pressureType)
 		r.lastAlertTime[key] = time.Now()
+	} else {
+		klog.Infof("enqueued node pressure recovery for %s: %s", nodeName, pressureType)
 	}
-	return nil
-}
-
-// publishToNats publishes a message to the specified NATS subject
-func (r *NodeAlertController) publishToNats(subject string, data interface{}) error {
-	if err := r.ensureNatsConnected(); err != nil {
-		return fmt.Errorf("failed to ensure NATS connection: %w", err)
-	}
-	return utils.PublishEvent(r.NatsConn, subject, data)
-}
-
-func (r *NodeAlertController) ensureNatsConnected() error {
-	r.natsConnMux.Lock()
-	defer r.natsConnMux.Unlock()
-
-	if r.NatsConn != nil && r.NatsConn.IsConnected() {
-		return nil
-	}
-	if r.NatsConn != nil {
-		r.NatsConn.Close()
-	}
-
-	klog.Info("NATS connection not established in NodeAlertController, attempting to connect...")
-	nc, err := utils.NewNatsConn()
-	if err != nil {
-		klog.Errorf("NodeAlertController failed to connect to NATS: %v", err)
-		return err
-	}
-
-	r.NatsConn = nc
-	klog.Info("NodeAlertController successfully connected to NATS")
-	return nil
 }

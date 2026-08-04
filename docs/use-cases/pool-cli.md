@@ -26,13 +26,14 @@ In this guide, you will learn how to:
 
 ## Prerequisites
 
-- An Olares device with sufficient disk space and memory.
-- A Poolside account, if you plan to use the cloud API service.
-- A local model optimized for coding running on your Olares device, if you plan to run tasks locally.
+Before you begin, you need:
 
-   You can install local models using one of the following methods:
-   - **Single-model application**: One app that runs one specific model. This guide uses **Qwen3-Coder 30B (Ollama)**.
-   - **Ollama application**: One app that hosts multiple models. Ensure [Ollama](ollama.md) is installed with at least one model downloaded, such as `qwen3-coder:30b`.
+- An Olares device with sufficient disk space and memory.
+- The following model:
+
+  | Used for | Model | How to get it |
+  | :--- | :--- | :--- |
+  | Local model connection | Qwen3.6-27B (llama.cpp) | Install from Market |
 
 ## Install Pool CLI
 
@@ -49,6 +50,8 @@ Start the Pool CLI and connect it to a language model. Choose one of the followi
 ### Connect using Poolside cloud service
 
 Use this method to leverage Poolside's cloud-based inference API.
+
+Before you begin, create a Poolside account and obtain an API key.
 
 1. Open the Pool CLI from the Launchpad.
 2. Enter the following command to trigger the login authentication:
@@ -95,30 +98,26 @@ Use this method to leverage Poolside's cloud-based inference API.
 
 ### Connect using a local model
 
-Use this method to run Pool CLI entirely offline with a local model. This example uses the model app **Qwen3-Coder 30B (Ollama)**.
+Use this method to run Pool CLI entirely offline with Qwen3.6-27B.
 
-1. Install the model app **Qwen3-Coder 30B (Ollama)** from Market.
+#### Get model connection details
 
-   ![Qwen3-Coder 30B (Ollama)](/images/manual/use-cases/qwen3-coder-30b.png#bordered)
+<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
-2. Open the model app from the Launchpad and wait for the download to complete.
-3. Note down the exact model name displayed on the page. For example, `qwen3-coder:30b`.
+For Qwen3.6-27B (llama.cpp):
 
-   ![Model name on the model app page](/images/manual/use-cases/qwen3-coder-model-name.png#bordered){width=50%}
+<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
-4. Open Settings, and then go to **Applications** > **Qwen3-Coder 30B (Ollama)** > **Shared entrances**.
+#### Configure Pool CLI
 
-   ![Model app endpoint in Settings](/images/manual/use-cases/qwen3-coder-30b-endpoint.png#bordered){width=70%}
-
-5. Click **Qwen3-Coder 30B**, and then note down the endpoint URL. For example, `http://609c5d0c0.shared.olares.com`.
-6. Go to **Applications** > **Pool CLI** > **Manage environment variables**, and then click <i class="material-symbols-outlined">edit</i> to configure the following variables:
+1. Go to **Settings** > **Applications** > **Pool CLI** > **Manage environment variables**, and click <i class="material-symbols-outlined">edit</i> to configure the following variables:
 
    - **USE_LOCAL_LLM**: Set it to `true` to enable local model mode.
-   - **POOLSIDE_STANDALONE_BASE_URL**: Enter the model app's endpoint URL with `/v1` appended. For example, `http://609c5d0c0.shared.olares.com/v1`.
-   - **POOL_MODEL**: Enter the model name you noted down earlier. For example, `qwen3-coder:30b`.
+   - **POOLSIDE_STANDALONE_BASE_URL**: Enter the Base URL copied from Model Console. Use it exactly as displayed.
+   - **POOL_MODEL**: Enter the Model name copied from Model Console.
 
-7. Click **Apply**. Wait for the Pool CLI container to restart.
-8. Open the Pool CLI from the Launchpad, and then enter the following command to start a session.
+2. Click **Apply** and wait for the Pool CLI container to restart.
+3. Open Pool CLI from Launchpad, and enter the following command to start a session:
 
    ```bash
    pool-local

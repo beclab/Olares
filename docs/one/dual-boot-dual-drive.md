@@ -242,4 +242,3 @@ Use the GRUB boot menu to choose your preferred operating system every time you 
 ## Resources
 
 - [Install drivers on Windows](install-nvidia-driver.md)
-- [Dual-boot Ubuntu on a secondary SSD](dual-boot-ubuntu-dual-drive.md)

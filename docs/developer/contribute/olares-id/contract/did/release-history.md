@@ -1,3 +1,10 @@
+---
+description: Release history and changelog for the TerminusDID contract module.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, TerminusDID release history, contract changelog, DID contract updates, version history
+---
 # Release History
 
 ## V2.0.0

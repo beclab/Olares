@@ -1,6 +1,9 @@
 ---
-outline: [2, 3]
-description: Learn how to get technical support for Olares by submitting a ticket or raising an issue on GitHub.
+description: Learn how to get technical support for Olares。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, technical support, system logs, GitHub issue, help
 ---
 # Get technical support
 

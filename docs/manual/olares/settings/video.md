@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Configure Olares' video playback, transcoding, and hardware acceleration parameters to optimize media playback performance and compatibility.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Settings, video settings, hardware acceleration, transcoding, H.264, H.265, AV1
 ---
 
 # Video settings

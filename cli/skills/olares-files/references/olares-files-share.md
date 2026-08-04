@@ -17,9 +17,9 @@ Create and manage shares for directories. **All three flavors are directory-only
 
 | Flavor | Allowed | Notes |
 |---|---|---|
-| `internal` | `drive`, `sync`, `external`, `cache` | Cloud rejected — cross-cloud-account share doesn't work. `external/<node>/` bare-root and `cache/<node>/` bare-root rejected (quirks #3, #5) — point at a sub-path |
-| `smb` | `drive`, `external`, `cache` | Sync rejected (Seafile has its own mount story, not Samba) + cloud rejected. Same bare-root guards as internal |
-| `public` | `drive` ONLY | Tightest of the three. Sync / external / cache / cloud all refused (the GUI restricts Public to drive only). Error messages route the user to `share internal` (sync) or `share internal` / `share smb` (external / cache) |
+| `internal` | `drive`, `sync`, `external`, `cache` | Cloud rejected — cross-cloud-account share doesn't work. `external/<node>/` bare-root and `cache/<node>/` bare-root rejected (quirks #3, #5) — point at a sub-path. **`drive/Common` refused** — public-only |
+| `smb` | `drive`, `external`, `cache` | Sync rejected (Seafile has its own mount story, not Samba) + cloud rejected. Same bare-root guards as internal. **`drive/Common` refused** — public-only |
+| `public` | `drive` ONLY | Tightest of the three. Sync / external / cache / cloud all refused (the GUI restricts Public to drive only). **`drive/Common` is allowed here** — `public` is the only share flavor it supports. Error messages route the user to `share internal` (sync) or `share internal` / `share smb` (external / cache) |
 
 ## `--users` format (internal / smb / set-members)
 
@@ -121,6 +121,7 @@ olares-cli files share set-members <share-id> --users "$CURRENT,carol:view"
 | `share target is a file, not a directory` | Tried to share a single file | Wrap it in a directory and share that |
 | `Public only supports the drive namespace` | `share public sync/...` / `share public external/...` / etc. | Use `share internal` instead (or `share smb` for external/cache) |
 | `cloud namespaces are not supported` | `share <flavor> awss3/...` etc. | Move the data into drive first, then share |
+| `drive/Common (the app common data area) only supports outbound public links` | `share internal` / `share smb` on a `drive/Common` path | Use `files share public` (the only flavor Common allows) |
 | `refusing to share external/<node>/` | Quirk #3 bare root | Point at `external/<node>/<volume>/<sub>/` |
 | `refusing to share cache/<node>/` | Quirk #5 node-picker layer | Point at `cache/<node>/<sub>/` |
 | `--users and --clear are mutually exclusive` | Both passed to `set-members` | Pick one |

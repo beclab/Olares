@@ -1,3 +1,7 @@
+---
+noindex: true
+description: prepare 命令用于配置 Olares 运行所需的环境，包括安装依赖项、导入容器镜像和启动 Olares 守护进程（olaresd）。
+---
 # `prepare`
 
 ## 命令说明

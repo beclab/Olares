@@ -410,7 +410,7 @@ func (c *ConfigWSLHostsAndDns) Execute(runtime connector.Runtime) error {
 	_, _ = cmd.RunCmd("wsl", utils.DEFAULT)
 
 	cmd = &utils.DefaultCommandExecutor{
-		Commands: []string{"-d", distro, "-u", "root", "bash", "-c", "echo -e '127.0.0.1 localhost\\n$(ip -4 addr show eth0 | grep -oP '(?<=inet\\s)\\d+(\\.\\d+){3}') $(hostname)' > /etc/hosts && echo -e 'nameserver 1.1.1.1\\nnameserver 1.0.0.1' > /etc/resolv.conf"},
+		Commands: []string{"-d", distro, "-u", "root", "bash", "-c", "echo -e '127.0.0.1 localhost\\n$(ip -4 addr show eth0 | grep -oP '(?<=inet\\s)\\d+(\\.\\d+){3}') $(hostname)\\n$(ip -4 addr show eth0 | grep -oP '(?<=inet\\s)\\d+(\\.\\d+){3}') master-node' > /etc/hosts && echo -e 'nameserver 1.1.1.1\\nnameserver 1.0.0.1' > /etc/resolv.conf"},
 	}
 
 	if _, err := cmd.RunCmd("wsl", utils.DEFAULT); err != nil {

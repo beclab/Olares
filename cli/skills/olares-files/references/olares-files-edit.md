@@ -58,4 +58,5 @@ The binary is resolved up-front BEFORE the CLI dials the server. A missing / mis
 | `file too large: <N> bytes > max-size <M>` | Three-tier cap pre-fetch | Pass `--max-size 0` (unbounded) or `--max-size <bigger>` |
 | `binary content detected (extension/NUL)` | Text-only guard | Confirm intent, then `--allow-binary` |
 | `file disappeared between stat and fetch` | Someone else deleted the file between probes | Re-pull parent, ask user |
-| `cloud drive edit is not supported` | awss3/google/dropbox/tencent target | Use download → edit → upload workflow |
+| `edit: cloud-drive namespace "<ns>" is not supported end-to-end` | awss3/google/dropbox/tencent target (writeback not wired) | Use download → edit → upload workflow |
+| `edit: fileType "<ns>" is not supported (supported: ...)` | share / internal / other non-editable namespace | Edit only works on `drive` / `sync` / `cache` / `external` |

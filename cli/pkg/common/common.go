@@ -208,6 +208,14 @@ const (
 
 	CacheCountPodsWaitForRecreation = "count_pods_wait_for_recreation"
 
+	// CacheHostnameChanged is set to true by the change-ip flow when it detects
+	// that the current machine is already registered in Kubernetes under a
+	// different (old) node name, i.e. the hostname was changed before running
+	// change-ip. The old node name and UID identify the exact stale resource.
+	CacheHostnameChanged = "hostname_changed"
+	CacheOldNodeName     = "old_node_name"
+	CacheOldNodeUID      = "old_node_uid"
+
 	CacheUpgradeUsers     = "upgrade_users"
 	CacheUpgradeAdminUser = "upgrade_admin_user"
 
@@ -253,6 +261,16 @@ const (
 	FlagMasterSSHPassword       = "master-ssh-password"
 	FlagMasterSSHPrivateKeyPath = "master-ssh-private-key-path"
 	FlagMasterSSHPort           = "master-ssh-port"
+	FlagMasterAuthInfo          = "master-auth-info"
+	// FlagNodeName is the Kubernetes node name this machine should join under.
+	// Supplying it up front keeps `node join` unattended on hardware that ships
+	// with a hostname the cluster already uses.
+	FlagNodeName = "node-name"
+	// The environment variable forms of the master connection flags, which is how
+	// the generated worker bootstrap command and its documentation refer to them.
+	ENV_MASTER_AUTH_INFO            = "MASTER_AUTH_INFO"
+	ENV_MASTER_SSH_PASSWORD         = "MASTER_SSH_PASSWORD"
+	ENV_MASTER_SSH_PRIVATE_KEY_PATH = "MASTER_SSH_PRIVATE_KEY_PATH"
 
 	FlagOSUserName      = "os-username"
 	EnvLegacyOSUserName = "TERMINUS_OS_USERNAME"
@@ -311,4 +329,5 @@ func SetSystemEnv(key, value string) {
 
 const (
 	HelmValuesKeyOlaresRootFSPath = "rootPath"
+	HelmValuesKeyPreinstall       = "preinstall"
 )

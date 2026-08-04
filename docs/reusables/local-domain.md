@@ -1,5 +1,9 @@
 ---
 search: false
+head:
+  - - meta
+    - name: keywords
+      content: Olares, local domain, .local domain, LAN access, hosts file
 ---
 <!-- Reusable .local domain content. Include by named region. -->
 

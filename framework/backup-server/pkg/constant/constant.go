@@ -70,6 +70,7 @@ const (
 
 	CachePath    string = "/appcache"
 	ExternalPath string = "/shares"
+	CommonPath   string = "/rootfs/Common"
 
 	DefaultStoragePrefix = "olares-backups/"
 

@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -9,8 +10,11 @@ import (
 	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	"github.com/nats-io/nats.go"
+	"github.com/nats-io/nats.go/jetstream"
 	"k8s.io/klog/v2"
 )
+
+const natsPublishTimeout = 10 * time.Second
 
 type Event struct {
 	EventID          string                    `json:"eventID"`
@@ -30,6 +34,10 @@ type Event struct {
 	Message          string                    `json:"message,omitempty"`
 	SharedEntrances  []v1alpha1.Entrance       `json:"sharedEntrances,omitempty"`
 	MarketSource     string                    `json:"marketSource,omitempty"`
+	// ChartOwner identifies the owner of the chart the app was installed
+	// from: for market apps it is the installing user; for uploaded apps it
+	// is the user who uploaded the chart. Always present on push events.
+	ChartOwner string `json:"chartOwner"`
 }
 
 // EventParams defines parameters to publish an app-related event
@@ -49,6 +57,10 @@ type EventParams struct {
 	SharedEntrances  []v1alpha1.Entrance
 	Icon             string
 	MarketSource     string
+	// ChartOwner identifies the owner of the chart the app was installed
+	// from: the installing user for market apps, or the uploading user for
+	// uploaded apps. See appcfg.GetChartOwner.
+	ChartOwner string
 	// IsShared marks the event as originating from a shared application
 	// (apiVersion: v3 + options.shared: true). When true,
 	// PublishAppEventToQueue fans out the event to every activated user
@@ -68,7 +80,14 @@ func publish(nc *nats.Conn, subject string, data interface{}) error {
 	if err != nil {
 		return err
 	}
-	err = nc.Publish(subject, d)
+	js, err := jetstream.New(nc)
+	if err != nil {
+		klog.Infof("jetstream init err=%v", err)
+		return err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), natsPublishTimeout)
+	defer cancel()
+	_, err = js.Publish(ctx, subject, d)
 	if err != nil {
 		klog.Infof("publish err=%v", err)
 		return err

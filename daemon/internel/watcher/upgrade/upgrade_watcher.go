@@ -3,13 +3,14 @@ package upgrade
 import (
 	"context"
 	"fmt"
-	"github.com/Masterminds/semver/v3"
-	"github.com/beclab/Olares/daemon/pkg/utils"
 	"math"
 	"os"
 	"path/filepath"
 	"sync"
 	"time"
+
+	"github.com/Masterminds/semver/v3"
+	"github.com/beclab/Olares/daemon/pkg/utils"
 
 	"github.com/beclab/Olares/daemon/internel/watcher"
 	"github.com/beclab/Olares/daemon/pkg/cluster/state"
@@ -35,6 +36,31 @@ func NewUpgradeWatcher() watcher.Watcher {
 }
 
 func (w *upgradeWatcher) Watch(ctx context.Context) {
+	// A post-upgrade reboot can be in progress while the upgrade target file
+	// still exists: in the daemon-driven flow the target is only removed by a
+	// later phase that the reboot usually preempts, so we cannot rely on
+	// target == nil to detect it. Check this up front, regardless of the
+	// target: if olares-cli wrote the reboot marker (before flipping the
+	// OlaresVersion CR) and the system is actually shutting down, the upgrade
+	// is not really done yet - it only takes full effect after the reboot - so
+	// surface a dedicated "Rebooting" step instead of letting the rest of the
+	// watcher report it as complete. The marker stat is cheap and runs every
+	// tick; the shutdown probe (dbus) only runs when the marker is present.
+	// Gating on the real shutdown signal also means a stale marker left behind
+	// by a reboot that never happened cannot wedge the upgrade state.
+	if _, statErr := os.Stat(state.UpgradeRebootMarkFile); statErr == nil {
+		if shuttingDown, _ := state.IsSystemShuttingdown(); shuttingDown {
+			state.TerminusStateMu.Lock()
+			state.CurrentState.UpgradingState = state.InProgress
+			state.CurrentState.UpgradingStep = state.UpgradeStepRebooting
+			state.CurrentState.UpgradingRetryNum = 0
+			state.CurrentState.UpgradingNextRetryAt = nil
+			state.CurrentState.UpgradingError = ""
+			state.TerminusStateMu.Unlock()
+			return
+		}
+	}
+
 	var err error
 	w.target, err = state.GetOlaresUpgradeTarget()
 	if err != nil {

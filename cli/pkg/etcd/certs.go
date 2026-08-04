@@ -179,7 +179,7 @@ func (g *GenerateCerts) Execute(runtime connector.Runtime) error {
 			}
 			lastCACert = c
 		} else {
-			err := certs.GenerateCerts(c, lastCACert, pkiPath, g.KubeConf)
+			err := certs.CreateCertAndKeyFilesWithCA(lastCACert, c, pkiPath, g.KubeConf)
 			if err != nil {
 				return err
 			}

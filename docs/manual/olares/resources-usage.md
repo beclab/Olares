@@ -1,9 +1,13 @@
 ---
 outline: [2, 3]
 description: Monitor your Olares system and application performance with comprehensive dashboards tracking CPU, memory, and disk usage for optimal resource management.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, system monitoring, resource usage, CPU usage, memory usage, disk usage, GPU monitoring, Dashboard
 ---
 
-# Monitor system and application status
+# Monitor resource usage
 The Dashboard app in Olares provides a centralized and intuitive view of your system's status, offering deep insights without requiring extensive technical expertise. From the dashboard, you can monitor key resource usage patterns and access detailed real-time metrics across your cluster.
 
 ## Access monitoring dashboards
@@ -155,7 +159,7 @@ Use the dropdown menu in the top right to change the time range, or click <i cla
 
 The following metrics help you maintain optimal system performance:
 
-| Metric           | Description                        | Impact                                        |
+| Metric           | Description                        | Why it matters                                |
 |------------------|------------------------------------|-----------------------------------------------|
 | CPU usage        | Percentage of CPU resources used   | Prolonged spikes can slow down the system     |
 | Memory usage     | Percentage of memory in use        | Impacts application performance and stability |
@@ -208,3 +212,9 @@ For applications supporting multiple entrances (such as Wordpress), you can clic
 * When your application list grows large, quickly locate specific applications by typing their names in the search box at the top of the page.
 * Regularly checking resource consumption patterns helps you identify applications that might need optimization or attention.
 :::
+
+## Resources
+
+- [Manage accelerator resources](settings/gpu-resource.md): Check GPU usage and switch GPU modes.
+- [My hardware](settings/my-olares.md#my-hardware): View your device model and hardware status.
+- [Manage applications in Market](market/market.md#uninstall-applications): Free up resources by stopping or uninstalling apps.

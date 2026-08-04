@@ -5,7 +5,7 @@
 
 "Application space" = a K8s Namespace seen through the KubeSphere lens (grouped by workspace). Same underlying resource as `cluster namespace`, but framed for app-level navigation. Read-only.
 
-> **NOT to be confused with app-store lifecycle.** For install / uninstall / upgrade / start / stop of an Olares app, use [`olares-market`](../../olares-market/SKILL.md). This tree is the runtime-state view of the resulting K8s namespaces.
+> **NOT to be confused with app-store lifecycle.** For install / uninstall / upgrade / stop / resume of an Olares app, use [`olares-market`](../../olares-market/SKILL.md). This tree is the runtime-state view of the resulting K8s namespaces.
 
 ## Verbs at a glance
 
@@ -31,7 +31,7 @@ Produces three sections in parallel:
 
 Per-lane errors render as `(failed: ...)` — **one section's failure does not blackout the rest**. This means partial output is normal and useful; don't treat any failed section as a hard error of the whole verb.
 
-`--watch` polls on `--interval` (default 5s). `--watch-timeout` caps the polling duration.
+`--watch` re-polls on `--interval` (default `2s`); there is no timeout flag — stop it with Ctrl-C.
 
 ## Examples
 

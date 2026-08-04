@@ -1,5 +1,9 @@
 ---
 search: false
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 文件同步, 同步到本地, 资料库, LarePass, 双向同步
 ---
 <!-- 可复用的同步文件内容。请通过命名 region 引用。 -->
 

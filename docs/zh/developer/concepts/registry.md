@@ -1,10 +1,14 @@
 ---
 description: 介绍在区块链上注册 DID 的机制，涵盖智能合约实现、去中心化优势与当前部署方案。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, DID Registry, 区块链, 智能合约, Optimistic Rollups, 去中心化注册
 ---
 
 # 区块链上的 DID Registry
 
-当生成 DID 后，用户需在 **DID Registry** 中注册其所有权。W3C 标准并未规定具体实现方式，**Olares ID** 采用 [智能合约](/zh/developer/contribute/olares-id/contract/contract.md#smart-contract.md) 完成注册，具有以下优势：
+当生成 DID 后，用户需在 **DID Registry** 中注册其所有权。W3C 标准并未规定具体实现方式，**Olares ID** 采用智能合约完成注册，具有以下优势：
 
 - **去中心化**：无需依赖中心化机构或服务商  
 - **抗审查**：结构对审查与干预具有韧性  

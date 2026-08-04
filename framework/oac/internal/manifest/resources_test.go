@@ -10,7 +10,11 @@ import (
 // version above the gate (so checkResources actually runs). Because the
 // modern path rejects every legacy flat spec.required*/spec.limited* field
 // (Rule 7), this helper explicitly clears the legacy quantities populated
-// by newValidConfig.
+// by newValidConfig. workloadReplicas is populated too: it is required for
+// olaresManifest.version >= 0.12.0 on non-v2 manifests, and every modern
+// resources test inherits that gate. The Olares system dependency is also
+// installed at the v1/v2-compatible default range (>=1.12.3-0,<1.12.6),
+// because validateOlaresDependency rejects modern manifests that omit it.
 func newResourcesConfig(modes ...ResourceMode) *AppConfiguration {
 	c := newValidConfig()
 	c.ConfigVersion = "0.13.0" // >= 0.12.0 -> rules apply
@@ -25,7 +29,24 @@ func newResourcesConfig(modes ...ResourceMode) *AppConfiguration {
 	c.Spec.LimitedDisk = ""
 	c.Spec.RequiredGPU = ""
 	c.Spec.LimitedGPU = ""
+	wr := WorkloadReplicas{c.Metadata.Name: 1}
+	c.WorkloadReplicas = &wr
+	c.Options.Dependencies = []Dependency{newOlaresSystemDep(c)}
 	return c
+}
+
+// newOlaresSystemDep returns the canonical options.dependencies entry
+// that satisfies validateOlaresDependency for c. apiVersion=v3 selects
+// the post-v3 (>=1.12.6-0) constraint; apiVersion in {empty, v1, v2}
+// always selects the pre-v3 (>=1.12.3-0,<1.12.6) constraint regardless
+// of 1.12.6-only feature fields.
+func newOlaresSystemDep(c *AppConfiguration) Dependency {
+	rule, _ := pickOlaresDepRule(c)
+	return Dependency{
+		Name:    olaresSystemDepName,
+		Version: rule.requirement,
+		Type:    "system",
+	}
 }
 
 func TestResourcesCheckApplies(t *testing.T) {
@@ -184,7 +205,10 @@ func TestRule1_ModeArchRequirement(t *testing.T) {
 		{"nvidia ok with amd64", ResourceModeNvidia, []string{"amd64"}, false, ""},
 		{"amd-gpu needs amd64", ResourceModeAMDGPU, []string{"arm64"}, true, "amd64"},
 		{"nvidia-gb10 needs arm64", ResourceModeNvidiaGB10, []string{"amd64"}, true, "arm64"},
-		{"mthreads-m1000 needs arm64", ResourceModeMThreadsM1000, []string{"amd64"}, true, "arm64"},
+		{"moore-soc needs arm64", ResourceModeMooreSoc, []string{"amd64"}, true, "arm64"},
+		{"amd ok with amd64", ResourceModeAMD, []string{"amd64"}, false, ""},
+		{"intel ok with amd64", ResourceModeIntel, []string{"amd64"}, false, ""},
+		{"apple-m needs arm64", ResourceModeAppleM, []string{"amd64"}, true, "arm64"},
 		{"cpu has no arch constraint", ResourceModeCPU, []string{"amd64"}, false, ""},
 	}
 	for _, tc := range cases {
@@ -249,9 +273,9 @@ func TestRule2_NvidiaModeRequiresGPUPair(t *testing.T) {
 }
 
 func TestRule2_NonGPUModeAcceptsCompleteEnvelope(t *testing.T) {
-	// Non-GPU-memory modes (cpu / amd-apu / apple-m / nvidia-gb10 /
-	// mthreads-m1000) cannot declare standalone gpu fields. A fully
-	// populated cpu/memory/disk envelope therefore must validate cleanly.
+	// Non-GPU-memory modes (cpu / apple-m / nvidia-gb10 / intel / amd /
+	// moore-soc) cannot declare standalone gpu fields. A fully populated
+	// cpu/memory/disk envelope therefore must validate cleanly.
 	c := newResourcesConfig(ResourceMode{
 		Mode:                ResourceModeCPU,
 		ResourceRequirement: fullCPUMemoryDisk(),
@@ -280,12 +304,12 @@ func TestRule2_InlineMissingFieldRejected(t *testing.T) {
 	}
 }
 
-// Rule 3: modes outside the gpuMemoryModes whitelist (nvidia / amd-gpu)
-// cannot declare gpu fields. Disk is allowed on every mode after the
-// relaxation of the old "cpu+memory only" constraint.
+// Rule 3: modes outside the gpuMemoryModes whitelist (nvidia / amd-gpu /
+// intel-gpu) cannot declare gpu fields. Disk is allowed on every mode after
+// the relaxation of the old "cpu+memory only" constraint.
 func TestRule3_NonGPUFamilyModesForbidGPU(t *testing.T) {
 	for _, mode := range []string{
-		ResourceModeCPU, ResourceModeStrixHalo, ResourceModeAppleM, ResourceModeNvidiaGB10, ResourceModeMThreadsM1000,
+		ResourceModeCPU, ResourceModeAMD, ResourceModeIntel, ResourceModeAppleM, ResourceModeNvidiaGB10, ResourceModeMooreSoc,
 	} {
 		mode := mode
 		t.Run(mode+"_disk_allowed", func(t *testing.T) {
@@ -325,8 +349,8 @@ func TestRule3_NonGPUFamilyModesForbidGPU(t *testing.T) {
 	}
 }
 
-// Rule 4: nvidia and amd-gpu may declare a standalone gpu memory quantity;
-// every other mode must leave requiredGpu/limitedGpu empty.
+// Rule 4: nvidia, amd-gpu and intel-gpu may declare a standalone gpu memory
+// quantity; every other mode must leave requiredGpu/limitedGpu empty.
 func TestRule4_GPUMemoryAllowedModes(t *testing.T) {
 	cases := []struct {
 		mode    string
@@ -334,8 +358,10 @@ func TestRule4_GPUMemoryAllowedModes(t *testing.T) {
 	}{
 		{ResourceModeNvidia, false},
 		{ResourceModeAMDGPU, false},
-		{ResourceModeCPU, true},           // non-GPU family
-		{ResourceModeMThreadsM1000, true}, // GPU-family but not yet whitelisted
+		{ResourceModeIntelGPU, false},
+		{ResourceModeCPU, true},      // non-GPU family
+		{ResourceModeMooreSoc, true}, // GPU-family but not yet whitelisted
+		{ResourceModeAMD, true},      // integrated AMD: unified memory, no standalone gpu pool
 	}
 	for _, tc := range cases {
 		tc := tc

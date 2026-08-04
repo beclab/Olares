@@ -1,6 +1,9 @@
 package ir
 
-import "reflect"
+import (
+	"reflect"
+	"time"
+)
 
 type ProtocolType string
 
@@ -26,6 +29,10 @@ type HTTPListenerIR struct {
 	SourceCIDRs []string  // source CIDR restrictions (deny_all)
 	TLSCert     *SecretIR // per-user TLS certificate
 	UserName    string    // user identifier for per-user ext_authz
+	// CreatedAt is the creation time of the underlying config (custom domain
+	// cert). When two chains match the same SNI, the earliest-created wins and
+	// later duplicates are dropped. Zero for chains without a dated source.
+	CreatedAt time.Time
 }
 
 type VirtualHostIR struct {
@@ -38,6 +45,17 @@ type VirtualHostIR struct {
 	UserZone              string
 	UserName              string
 	SourceCIDRs           []string // When non-empty, only these source IPs may reach this VH (RBAC).
+	// IsFileserver is true for vhosts that host fileserver routes (files/settings apps).
+	// Used by the xds layer to attach CORS response headers
+	// that the upstream fileserver / nginx do not emit, so Capacitor / browser
+	// cross-origin requests to /api/preview/*, /api/raw/*, etc. succeed.
+	IsFileserver bool
+	// Priority controls who keeps a domain when two virtual hosts in the same
+	// route config declare it. Domains are claimed in descending Priority order
+	// (higher wins); within the same priority the earlier-declared vhost wins.
+	// System services (auth/desktop/wizard) use a high priority so a
+	// misconfigured app can never hijack their domains. Default 0.
+	Priority int
 }
 
 type HTTPRouteIR struct {

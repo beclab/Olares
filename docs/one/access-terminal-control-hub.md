@@ -31,5 +31,5 @@ If you need to run quick, occasional commands, use the Olares CLI. This web-base
 
 ## Learn more
 
-- [Olares CLI](../developer/install/cli/olares-cli.md)
+- [Olares CLI](../developer/cli-overview.md)
 - [Manage Olares with Control Hub](../manual/olares/controlhub/index.md)

@@ -1,5 +1,9 @@
 ---
 description: Learn how to log in to Olares Space with a DID or Olares ID, manage multiple accounts, and log out.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Olares Space, login, manage accounts, DID, Olares ID, QR code
 ---
 
 # Log in and manage accounts

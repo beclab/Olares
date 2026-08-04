@@ -176,7 +176,7 @@ func (i *preCheck) Execute(ctx context.Context, p any) (res any, err error) {
 		return nil, err
 	}
 
-	users, err := utils.ListUsers(ctx, dynamicClient)
+	users, err := utils.ListUsers(ctx)
 	if err != nil {
 		err = fmt.Errorf("failed to list users: %v", err)
 		klog.Error(err.Error())

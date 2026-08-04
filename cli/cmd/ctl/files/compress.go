@@ -24,7 +24,7 @@ type compressOptions struct {
 	format           string
 	level            int
 	volumeSizeMB     int    // explicit MiB (legacy/precise knob)
-	volumeSize       string // unit-aware: "100MB" / "1.5GB" / "500KB" / bare MiB
+	volumeSize       string // unit-aware: "100MB" / "1.5GB" / bare MiB
 	preserveSymlinks bool
 	conflict         string
 	passwordStdin    bool
@@ -98,7 +98,7 @@ Supported formats:
 
 The format is derived from <dst>'s filename suffix when --format
 is omitted (.zip / .7z / .tar.gz / .tgz / .tar.bz2 / .tar.xz /
-.tar / .gz / .bz2 / .xz). Pass --format when the destination has
+.tar / .gz / .gzip / .bz2 / .bzip2 / .xz). Pass --format when the destination has
 no canonical suffix.
 
 Format constraints (mirrors the LarePass web app):
@@ -118,8 +118,8 @@ Knobs (most apply only to specific formats):
                         default.
 
     --volume-size SIZE  Split-archive volume size with a unit
-                        suffix: KB / MB / GB (e.g. 100MB, 1.5GB,
-                        500KB). A bare number is MiB. Rounded up,
+                        suffix: MB / GB (e.g. 100MB, 1.5GB).
+                        A bare number is MiB. Rounded up,
                         floored at 1 MiB. zip / 7z only. Preferred
                         over --volume-size-mb.
 
@@ -191,7 +191,7 @@ Examples:
 	cmd.Flags().IntVar(&o.volumeSizeMB, "volume-size-mb", 0,
 		"split-archive volume size in MiB (zip / 7z only; 0 = single volume). Prefer --volume-size for unit suffixes")
 	cmd.Flags().StringVar(&o.volumeSize, "volume-size", "",
-		"split-archive volume size with a unit suffix: KB / MB / GB (e.g. 100MB, 1.5GB, 500KB; bare number = MiB). zip / 7z only")
+		"split-archive volume size with a unit suffix: MB / GB (e.g. 100MB, 1.5GB; bare number = MiB). zip / 7z only")
 	cmd.Flags().BoolVar(&o.preserveSymlinks, "preserve-symlinks", false,
 		"archive symlinks as symlinks (default: dereference at compress time)")
 	cmd.Flags().StringVar(&o.conflict, "conflict", string(archive.ConflictDefault),
@@ -376,7 +376,7 @@ func runCompress(
 //
 //   - --volume-size (unit-aware string) takes precedence and is the
 //     documented knob (parsed via archive.ParseVolumeSize so
-//     100MB / 1.5GB / 500KB all work, rounding up, floored at 1).
+//     100MB / 1.5GB all work, rounding up, floored at 1).
 //   - --volume-size-mb (raw int MiB) stays for back-compat.
 //   - Supplying BOTH is rejected — there is no sensible merge and a
 //     silent winner would surprise the user.
@@ -520,6 +520,16 @@ func preflightCompress(
 				return fmt.Errorf("compress: source %s: %w", plain, err)
 			}
 		}
+		// Product policy: refuse "single source file that is already an
+		// archive/compressed file" to avoid accidental double-compression.
+		// Intentionally scoped to the single-file case only — when the
+		// user compresses multiple sources, we skip this format check.
+		if detectedFormat, reject := detectCompressedSingleSource(len(srcs), info.IsDir, plain, info.Name); reject {
+			return fmt.Errorf(
+				"compress: source %s appears to already be a compressed/archive file (detected format %q from filename %q); "+
+					"single-file compression of an already compressed file is blocked",
+				plain, detectedFormat, info.Name)
+		}
 		srcHasTrailingSlash := strings.HasSuffix(s.SubPath, "/")
 		if srcHasTrailingSlash && !info.IsDir {
 			return fmt.Errorf(
@@ -556,6 +566,28 @@ func preflightCompress(
 	}
 	_ = dstWire // already in the caller's plan log
 	return nil
+}
+
+// detectCompressedSingleSource reports whether the source should be
+// rejected by the "single-file already compressed" gate:
+//   - applies ONLY when sourceCount == 1
+//   - applies ONLY to files (not directories)
+//   - detects archive/compressed formats by filename suffix via
+//     archive.FormatFromExtension (zip / 7z / tar.* / gzip / bzip2 / xz,
+//     including split main-part names like .zip.001 / .7z.001).
+//
+// Returns the detected format when reject=true.
+func detectCompressedSingleSource(sourceCount int, isDir bool, plainPath, statName string) (string, bool) {
+	if sourceCount != 1 || isDir {
+		return "", false
+	}
+	if f := archive.FormatFromExtension(statName); f != "" {
+		return f, true
+	}
+	if f := archive.FormatFromExtension(plainPath); f != "" {
+		return f, true
+	}
+	return "", false
 }
 
 // waitArchiveTask blocks on the supplied task_id, printing

@@ -1,9 +1,13 @@
 ---
 outline: [2, 3]
-description: Core principles of Olares account system, including synchronization mechanisms, account stages and unified authentication. Covers multi-factor authentication and multi-device sync fundamentals.
+description: Understand the Olares account system, from account stages and synchronization to unified authentication, multi-factor security, and multi-device sync.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Olares account, account system, unified authentication, multi-factor security, multi-device sync
 ---
 
-# Olares account
+# Olares account system
 
 This document covers concepts and designs related to account system in Olares.
 
@@ -61,11 +65,5 @@ When users perform sensitive operations such as login, Olares requires users to 
 
 ## Learn more
 
-### Users
-
 - [Create Olares ID](../../manual/get-started/create-olares-id.md)
 - [User roles and permissions](../../manual/olares/settings/roles-permissions.md)
-
-### Developers
-
-- [Account system callback](../develop/advanced/account.md)

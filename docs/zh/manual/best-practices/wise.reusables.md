@@ -1,5 +1,9 @@
 ---
 search: false
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Wise, 聚合搜索, 知识库搜索, 文档搜索
 ---
 <!-- #region wise-aggregated-search -->
 将内容收集到 Wise 后，可以使用 Olares 的聚合搜索功能查找特定的主题或条目。

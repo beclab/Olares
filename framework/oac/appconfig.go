@@ -37,6 +37,13 @@ type AppConfiguration = apimanifest.AppConfiguration
 // manifests (<0.12.0) are template-rendered with the Checker's
 // owner/admin before parsing; modern (>=0.12.0) manifests are parsed
 // verbatim.
+//
+// metadata.appid is normalized to md5(metadata.name)[:8] before returning,
+// matching what framework/app-service derives at runtime
+// (appcfg.(AppName).GetAppID). Anything the manifest wrote into the field is
+// discarded; an empty metadata.name leaves the appid empty so the
+// downstream validation error keys off the missing name rather than a
+// meaningless hash.
 func (c *OAC) LoadAppConfiguration(oacPath string) (*AppConfiguration, error) {
 	m, err := c.LoadManifestFile(oacPath)
 	if err != nil {
@@ -46,11 +53,13 @@ func (c *OAC) LoadAppConfiguration(oacPath string) (*AppConfiguration, error) {
 	if !ok {
 		return nil, errAppConfigUnavailable
 	}
+	normalizeAppID(cfg)
 	return cfg, nil
 }
 
 // LoadAppConfigurationContent is the byte-slice counterpart of
-// LoadAppConfiguration.
+// LoadAppConfiguration. It applies the same metadata.appid normalization
+// (see LoadAppConfiguration for details).
 func (c *OAC) LoadAppConfigurationContent(content []byte) (*AppConfiguration, error) {
 	m, err := c.LoadManifestContent(content)
 	if err != nil {
@@ -60,7 +69,19 @@ func (c *OAC) LoadAppConfigurationContent(content []byte) (*AppConfiguration, er
 	if !ok {
 		return nil, errAppConfigUnavailable
 	}
+	normalizeAppID(cfg)
 	return cfg, nil
+}
+
+// normalizeAppID overwrites cfg.Metadata.AppID with the deterministic value
+// the platform derives from metadata.name. Centralised so both load entry
+// points behave identically and so the rule (and its empty-name edge case)
+// is documented exactly once.
+func normalizeAppID(cfg *AppConfiguration) {
+	if cfg == nil {
+		return
+	}
+	cfg.Metadata.AppID = olm.AppIDFromName(cfg.Metadata.Name)
 }
 
 // AsAppConfiguration unwraps a Manifest into the concrete

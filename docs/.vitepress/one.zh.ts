@@ -7,182 +7,83 @@ export const oneSidebar: DefaultTheme.Sidebar = {
       link: "/zh/one/",
       items: [
         {
-          text: "Technical spec",
+          text: "技术规格",
           link: "/zh/one/spec",
         },
         {
-          text: "FAQs",
+          text: "常见问题",
           link: "/zh/one/faq",
         },
         {
-          text: "Known issues",
+          text: "已知问题",
           link: "/zh/one/known-issues",
         },         
       ],
     },
     {
-      text: "Initial setup",
+      text: "初始设置",
       items: [
         {
-          text: "First boot",
+          text: "首次启动",
           link: "/zh/one/first-boot",
         },
         {
-          text: "Access Olares via VPN",
-          link: "/zh/one/access-olares-via-vpn",
-        },
-        {
-          text: "Access Olares via .local domain",
-          link: "/zh/one/access-olares-via-local-domain",
-        },
-        {
-          text: "Redeem membership",
+          text: "兑换会员",
           link: "/zh/one/redeem-membership",
         },
       ]
     },
     {
-      text: "Onboarding",
+      text: "入门使用",
       items: [
         {
-          text: "Chat with local LLMs",
-          link: "/zh/one/open-webui",
+          text: "通过自然语言管理 Olares",
+          link: "/zh/one/olares-onboarding",
         },
         {
-          text: "Generate images and videos with ComfyUI",
-          link: "/zh/one/comfyui",
+          text: "通过 VPN 访问 Olares",
+          link: "/zh/one/access-olares-via-vpn",
         },
         {
-          text: "Switch GPU mode",
-          link: "/zh/one/gpu",
+          text: "通过 .local 域名访问 Olares",
+          link: "/zh/one/access-olares-via-local-domain",
         },
       ]
     },
     {
-      text: "Use",
+      text: "高级",
       items: [
         {
-          text: "Customize Olares",
-          link: "/zh/one/customize",
-        },
-        {
-          text: "Manage files",
-          link: "/zh/one/files",
-        },
-        {
-          text: "Back up & restore data",
-          link: "/zh/one/backup-restore",
-        },        
-        {
-          text: "Install & update apps",
-          link: "/zh/one/market",
-        },
-        {
-          text: "Secure passwords",
-          link: "/zh/one/vault",
-        },
-        /*{
-          text: "Download YouTube videos",
-          link: "/zh/one/wise-download",
-        },*/
-        {
-          text: "Deploy an app",
-          link: "/zh/one/deploy",
-        },
-
-      ]
-    },
-    {
-       text: "Manage",
-       items: [
-        {
-          text: "Add and manage users",
-          link: "/zh/one/create-users",
-        },
-         {
-           text: "Configure application access",
-           link: "/zh/one/config-app-access",
-         },
-       ]
-     },
-    {
-      text: "Monitor",
-      items: [
-        {
-          text: "System resources",
-          link: "/zh/one/dashboard",
-        },
-        {
-          text: "Traffic",
-          link: "/zh/one/space",
-        },
-      ]
-    },
-    {
-      text: "Explore",
-      items: [
-        {
-          text: "Play Steam games",
-          collapsed: true,
-          items: [
-            {
-              text: "Streaming",
-              link: "/zh/one/steam-stream"
-            },
-            {
-              text: "Direct play",
-              link: "/zh/one/steam-direct-play",
-            }]
-        },
-        {
-          text: "Access Windows in Olares",
-          link: "/zh/one/windows",
-        },
-        /*{
-          text: "Generate music with ACE-Step",
-          link: "/zh/one/ace-step",
-        },*/
-
-        // {
-        //   text: "Deep research with DeerFlow",
-        //   link: "/zh/one/deerflow",
-        // },
-      ]
-    },
-    {
-      text: "Advanced",
-      items: [
-        {
-          text: "Access Olares One terminal",
+          text: "访问 Olares One 终端",
           collapsed: true,
           link: "/zh/one/access-overview",
           items:
             [
               {
-                text: "Access via Control Hub",
+                text: "通过 Control Hub 访问",
                 link: "/zh/one/access-terminal-control-hub",
               },
               {
-                text: "Access via SSH",
+                text: "通过 SSH 访问",
                 link: "/zh/one/access-terminal-ssh",
               },
               {
-                text: "Access directly on the device",
+                text: "直接在设备上访问",
                 link: "/zh/one/access-physical-console",
               },
             ]
         },        
         {
-          text: "Expand storage",
+          text: "扩展存储",
           collapsed: true,
           items:
             [
               {
-                text: "USB drive",
+                text: "USB 驱动器",
                 link: "/zh/one/expand-storage-usb-drive",
               },
               {
-                text: "External SSD",
+                text: "外置 SSD",
                 link: "/zh/one/expand-storage-external-ssd",
               },
               {
@@ -192,12 +93,12 @@ export const oneSidebar: DefaultTheme.Sidebar = {
             ]
         },
         {
-          text: "Connect two Olares One",
+          text: "连接两台 Olares One",
           link: "/zh/one/connect-two-olares-one",
           // items:
           //   [
           //     {
-          //       text: "Manage GPU",
+          //       text: "Manage accelerator resources",
           //       link: "/zh/one/two-one-gpu",
           //     },
           //     {
@@ -207,52 +108,52 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           //   ]
         },
         {
-          text: "Set up with eGPU",
+          text: "使用 eGPU 设置",
           link: "/zh/one/egpu",
         },        
         {
-          text: "Dual-boot Olares OS with Windows",
+          text: "Olares OS 与 Windows 双启动",
           collapsed: true,
           items:
             [
               {
-                text: "Dual-drive setup (Recommended)",
+                text: "双硬盘设置（推荐）",
                 link: "/zh/one/dual-boot-dual-drive",
               },
               {
-                text: "Single-drive setup",
+                text: "单硬盘设置",
                 link: "/zh/one/dual-boot-single-drive",
               }
               ,
               {
-                text: "Install drivers on Windows",
+                text: "在 Windows 上安装驱动",
                 link: "/zh/one/install-nvidia-driver",
               },
               {
-                text: "Troubleshooting",
+                text: "故障排除",
                 link: "/zh/one/dual-boot-windows-troubleshooting",
               }
             ]
         },
         /*{
-          text: "Dual-boot Olares OS with Ubuntu",
+          text: "Olares OS 与 Ubuntu 双启动",
           link: "/zh/one/dual-boot-ubuntu-dual-drive",
         },*/
         {
-          text: "Install Windows on Olares One",
+          text: "在 Olares One 上安装 Windows",
           link: "/zh/one/install-windows-primary-drive",
         },
         {
-          text: "Install Ubuntu on Olares One",
+          text: "在 Olares One 上安装 Ubuntu",
           collapsed: true,
           items:
             [
               {
-                text: "Install Ubuntu Server on Olares One",
+                text: "在 Olares One 上安装 Ubuntu Server",
                 link: "/zh/one/install-ubuntu-server",
               },
               {
-                text: "Install Ubuntu Desktop on Olares One",
+                text: "在 Olares One 上安装 Ubuntu Desktop",
                 link: "/zh/one/install-ubuntu-desktop",
               }
             ]
@@ -260,35 +161,39 @@ export const oneSidebar: DefaultTheme.Sidebar = {
       ]
     },
     {
-      text: "System update",
+      text: "系统更新",
       items: [
         {
-          text: "Update OS",
+          text: "更新 OS",
           link: "/zh/one/update",
-        },       
+        },
         {
-          text: "Restore Olares One",
+          text: "升级双节点 Olares 集群",
+          link: "/zh/one/upgrade-multi-node-cluster",
+        },
+        {
+          text: "恢复 Olares One",
           items: [
             {
-              text: "Factory reset",
+              text: "恢复出厂设置",
               link: "/zh/one/factory-reset",
             },
             {
-              text: "Restore BIOS defaults",
+              text: "恢复 BIOS 默认设置",
               link: "/zh/one/factory-reset-in-bios",
             },
             {
-              text: "Reinstall Olares OS",
+              text: "重新安装 Olares OS",
               link: "/zh/one/create-drive",
             },
             {
-              text: "Create bootable USB drive",
+              text: "创建可启动 USB 驱动器",
               link: "/zh/one/create-bootable-usb",
             },
           ],
         },
         {
-          text: "Manage BIOS and EC",
+          text: "管理 BIOS 和 EC",
           link: "/zh/one/update-firmware",
         },         
       ]

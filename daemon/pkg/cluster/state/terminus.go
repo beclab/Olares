@@ -45,6 +45,11 @@ const (
 	NetworkNotReady  = clistate.NetworkNotReady
 )
 
+const (
+	UpgradeRebootMarkFile = clistate.UpgradeRebootMarkFile
+	UpgradeStepRebooting  = clistate.UpgradeStepRebooting
+)
+
 // ValidateOp returns nil if the operation is allowed in the given
 // state, or a descriptive error otherwise. It replaces the previous
 // (TerminusState).ValidateOp method, since methods cannot be defined

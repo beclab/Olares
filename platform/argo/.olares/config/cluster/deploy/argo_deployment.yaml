@@ -158,6 +158,7 @@ spec:
         runAsNonRoot: true
       serviceAccountName: argo-server
       serviceAccount: argo-server
+      priorityClassName: "system-cluster-critical"
       volumes:
         - emptyDir: {}
           name: tmp
@@ -257,7 +258,7 @@ spec:
             runAsNonRoot: true
       nodeSelector:
         kubernetes.io/os: linux
-      priorityClassName: workflow-controller
+      priorityClassName: "system-cluster-critical"
       securityContext:
         runAsNonRoot: true
       serviceAccountName: argo

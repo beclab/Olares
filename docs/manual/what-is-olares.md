@@ -1,3 +1,7 @@
+---
+noindex: true
+description: "Learn what Olares is: an open-source personal cloud OS that brings public-cloud power to your own hardware, so your data, apps, and local AI stay fully yours."
+---
 # What is Olares
 
 Olares is the sovereign cloud that puts you in control. It's an open-source, self-hosted alternative to public clouds like AWS, built to reclaim your data ownership and privacy. By combining the power of Kubernetes with a streamlined interface, Olares enables you to take full control of your data and computing resources. Whether you're managing a homelab, hosting applications, or safeguarding your privacy, Olares delivers the flexibility and capabilities of public clouds, without compromising privacy or security.

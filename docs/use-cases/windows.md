@@ -1,6 +1,10 @@
 ---
 outline: [2, 4]
-description: A comprehensive guide to installing and running a Windows virtual machine on Olares. Learn how to configure initial credentials, connect via browser-based VNC or Microsoft Remote Desktop (RDP), and transfer files between your computer and the VM.
+description: Install and run a Windows VM on Olares. Set credentials, connect with browser VNC or Remote Desktop (RDP), and transfer files between systems.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Windows VM, run Windows on Olares, Windows virtual machine, self-hosted Windows, Windows RDP, Windows VM on Olares
 ---
 
 # Run a Windows VM on your Olares device
@@ -10,8 +14,8 @@ Olares lets you run a full Windows virtual machine directly on your device, givi
 :::info System capabilities
 - Olares supports running essential Windows applications. 
 - By default, the Windows VM uses CPU-based virtualization and virtual display output.
-- Intel integrated GPU support is available only on supported hardware and requires additional host configuration. See [Enable Intel integrated GPU passthrough for Windows VM](./windows-intel-gpu-passthrough.md).
-- Audio output is **only supported** when connected via Remote Desktop (RDP).
+- Intel integrated GPU support is available only on supported hardware. On Olares One, the required GPU configuration is included by default, so no host setup is needed. On self-hosted devices, it requires additional host configuration. See [Enable Intel integrated GPU passthrough for Windows VM](./windows-intel-gpu-passthrough.md).
+- Audio output is only supported when connected via Remote Desktop (RDP).
 :::
 
 This guide walks you through installing the Windows VM, enabling secure networking, and connecting using Remote Desktop for the best experience.

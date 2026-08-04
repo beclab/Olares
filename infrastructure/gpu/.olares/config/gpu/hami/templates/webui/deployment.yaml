@@ -22,6 +22,7 @@ spec:
         {{- include "hami-webui.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: "hami-webui"
     spec:
+      priorityClassName: system-cluster-critical
       serviceAccountName: {{ include "hami-webui.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.webui.podSecurityContext | nindent 8 }}

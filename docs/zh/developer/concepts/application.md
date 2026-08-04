@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Olares 应用系统的核心概念，包括应用标识符、类型分类和权限体系。阐述系统应用、社区应用和集群范围应用的特性及依赖关系。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 应用, 系统应用, 社区应用, 共享应用, Service Provider, 命名空间, 应用标识符
 ---
 
 # 应用
@@ -65,7 +69,7 @@ Olares 支持多用户，并为管理员和普通成员用户提供两个不同�
 
   系统应用和用户的内置应用通常不允许第三方应用直接访问。
 
-  但如果数据库集群和内置应用通过[ Service Provider](../develop/advanced/provider.md) 开放了某些接口，社区应用可以通过[声明访问权限](../develop/package/manifest.md)来使用这些服务。
+  但如果数据库集群和内置应用通过 Service Provider 开放了某些接口，社区应用可以通过[声明访问权限](../develop/package/manifest.md)来使用这些服务。
 
   在这种情况下，系统会在 `user-system` 命名空间下为这些资源提供网络代理，并对来自第三方应用的网络请求进行鉴权。
 
@@ -82,15 +86,7 @@ gitlab-client-bob
 
 ### 共享应用
 
-**共享应用**是 Olares 平台中的一类特殊社区应用，旨在为 Olares 集群内的所有用户提供统一的、共享的资源或服务。
-
-共享应用的特点包括：
-
-* **集中管理**：只有管理员账户才安装共享版应用的核心服务。管理员负责在 Olares 集群内**安装、配置和托管**应用的服务、资源以及运行环境。
-* **易于识别**：在 Olares 应用市场中，共享版应用通常带有 "Shared" 标识以便用户区分。
-* **灵活访问**：访问共享版应用的方式取决于共享应用本身的形态：
-    * **无界面的后端服务**: 对于通常作为后台服务运行、没有图形用户界面的共享应用（如 Ollama），无需专用的引用应用。该服务会暴露标准 API 和共享入口，可直接被任何兼容的第三方客户端（如 LobeChat 和 Open WebUI）调用。成员安装客户端后，将其指向共享应用的 API 端点，该端点可在 Olares **设置** > **应用** > **入口** 中获取。
-    * **自带用户界面的完整应用**: 对于共享版应用本身就包含完整用户界面和后端服务的（如 ComfyUI 共享版 或 Dify 共享版），管理员和集群中的其他用户都可通过直接安装该共享版应用本身获取服务的访问入口。
+<!--@include: ../../manual/olares/market/shared-apps.md{12,26}-->
 
 ### 依赖项
 依赖项是某些应用正常运行所必需的前置应用。安装带有依赖项的应用前，用户必须确保集群中已安装所有必需的依赖项。
@@ -103,10 +99,10 @@ Service Provider 机制使社区应用能够与系统应用、其他社区应用
 
 该机制包含三个步骤：
 
-1. Provider 声明：开发者必须[将其应用声明为特定服务接口的 Provider](../../developer/develop/advanced/provider#申明-Provider)。
+1. Provider 声明：开发者必须将其应用声明为特定服务接口的 Provider。
    系统包含内置的 Provider。
 
-2. 权限请求：需要使用 Service 接口的应用必须明确[申请 Provider 的权限](../../developer/develop/advanced/provider#申请-Provider-的访问权限)。
+2. 权限请求：需要使用 Service 接口的应用必须明确申请 Provider 的权限。
 
 3. 请求处理：调用时，`user-system` 下的 `system-server` 服务作为代理，处理传入请求并执行必要的权限验证。
 

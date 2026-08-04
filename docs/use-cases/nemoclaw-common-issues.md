@@ -10,7 +10,7 @@ doc_version: "1.0"
 doc_updated: "2026-05-11"
 ---
 
-# Common issues
+# NemoClaw common issues
 
 This page lists common issues for NemoClaw on Olares and their workarounds.
 

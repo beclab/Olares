@@ -9,7 +9,7 @@ doc_version: "1.2"
 doc_updated: "2026-06-10"
 ---
 
-# Common issues
+# OpenClaw common issues
 
 This page provides solutions to common issues and answers to frequently asked questions when running OpenClaw on Olares.
 

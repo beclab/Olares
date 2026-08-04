@@ -1,5 +1,9 @@
 ---
 search: false
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 导出日志, 系统日志, 故障排查, 设置, 高级
 ---
 <!-- 可复用的导出系统日志内容。请通过命名 region 引用。 -->
 

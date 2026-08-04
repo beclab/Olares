@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 查找关于 Olares 日常使用、应用及系统管理的常见问题解答。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 使用问题, 应用市场, Ollama, ComfyUI, 存储, 多节点集群
 ---
 
 # 使用常见问题
@@ -13,14 +17,14 @@ description: 查找关于 Olares 日常使用、应用及系统管理的常见�
 
 [Olares 应用市场](https://market.olares.com/)提供了 Ollama、ComfyUI 和 Open WebUI 等热门开源应用。
 
-如果你有 Docker 使用经验，也可以在测试环境中[手动部署](../../developer/develop/tutorial/index.md)应用市场未收录的应用。
+如果你有 Docker 使用经验，也可以将应用市场未收录的应用打包为 [Olares 应用 Chart](../../developer/develop/package/chart.md)，并在自己的 Olares 设备上测试。
 
 ### 可以在 Olares 设备上玩游戏吗？
 
 可以。安装 Steam Headless 应用，就能把 Olares 设备变成游戏服务器。
 
-* [**串流**](../../use-cases/stream-game.md)：你可以在 Olares 上本地运行游戏，并将其画面串流到手机或平板等设备上玩。
-* [**直连**](../../use-cases/play-games-directly.md)：你可以将显示器、键盘和鼠标直接连接到 Olares 设备，无需串流即可玩游戏。
+* [**串流**](../../use-cases/steam-stream.md)：你可以在 Olares 上本地运行游戏，并将其画面串流到手机或平板等设备上玩。
+* [**直连**](../../use-cases/steam-direct-play.md)：你可以将显示器、键盘和鼠标直接连接到 Olares 设备，无需串流即可玩游戏。
 
 ### 如何在 Olares 中使用 Windows 环境？
 
@@ -28,7 +32,7 @@ description: 查找关于 Olares 日常使用、应用及系统管理的常见�
 
 ### 可以在 Olares 上开发应用吗？
 
-可以。安装 [Studio](../../developer/develop/tutorial/index.md) 后，你既可以直接在浏览器中编写代码，也可以将本地 VS Code 连接到设备。这能提供与本地机器相似的开发体验，同时利用服务器硬件更强大的算力。
+可以。你可以使用自己熟悉的本地开发工具构建应用，将其打包为 [Olares 应用 Chart](../../developer/develop/package/chart.md)，并在提交到应用市场前先在 Olares 设备上测试。
 
 ### 可以手动更新应用版本吗？
 

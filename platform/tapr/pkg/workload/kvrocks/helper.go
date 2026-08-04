@@ -15,6 +15,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
@@ -126,6 +127,8 @@ func GetKVRocksDefineByUser(ctx context.Context, client *kubernetes.Clientset,
 		sts.Spec.Template.Spec.Containers[0].Command =
 			append(sts.Spec.Template.Spec.Containers[0].Command, []string{"--requirepass", password}...)
 	}
+
+	sts.Spec.Template.Spec.PriorityClassName = "system-cluster-critical"
 
 	return sts, nil
 
@@ -274,6 +277,40 @@ func CreateOrUpdateKVRocks(ctx context.Context,
 		return nil, err
 	}
 
+	if retSts != nil {
+		retSts, err = patchKVRocksPriorityClassName(ctx, client, clusterDef.Namespace, clusterDef.Name)
+		if err != nil {
+			klog.Error("patch kvrocks priorityClassName error, ", err)
+			return nil, err
+		}
+	}
+
+	return retSts, nil
+}
+
+func patchKVRocksPriorityClassName(ctx context.Context, client *kubernetes.Clientset, namespace, name string) (*appv1.StatefulSet, error) {
+	const priorityClassName = "system-cluster-critical"
+
+	sts, err := client.AppsV1().StatefulSets(namespace).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	if sts.Spec.Template.Spec.PriorityClassName == priorityClassName {
+		return sts, nil
+	}
+
+	patch := []byte(`{"spec":{"template":{"spec":{"priorityClassName":"system-cluster-critical"}}}}`)
+	var retSts *appv1.StatefulSet
+	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		retSts, err = client.AppsV1().StatefulSets(namespace).Patch(
+			ctx, name, types.MergePatchType, patch, metav1.PatchOptions{})
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	klog.Infof("patched kvrocks statefulset %s/%s priorityClassName to %s", namespace, name, priorityClassName)
 	return retSts, nil
 }
 

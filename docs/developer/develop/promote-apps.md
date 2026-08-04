@@ -1,6 +1,10 @@
 ---
 outline: [2, 3] 
 description: Optimize your app listing with images and icons in Olares Market.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, promote apps, Olares Market, app icons, featured image, promote images, app assets
 ---
 # Promote your apps
 

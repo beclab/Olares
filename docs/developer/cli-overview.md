@@ -1,9 +1,13 @@
 ---
 outline: [2, 3]
 description: How to use olares-cli for cluster management, system diagnostics, and AI agent integration. Covers host, user, and in-cluster modes of operation.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, olares-cli, CLI overview, cluster management, system diagnostics, AI agent integration
 ---
 
-# Olares CLI
+# Olares CLI overview
 
 `olares-cli` is the command-line tool for Olares. It is included when you install Olares, and you can also install the standalone Olares CLI on macOS, Windows, or Linux without installing the full OS. You can use it for the following tasks:
 

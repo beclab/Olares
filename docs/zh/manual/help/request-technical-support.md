@@ -1,6 +1,9 @@
 ---
-outline: [2, 3]
-description: 了解如何通过提交工单或在 GitHub 上提 issue 来获取 Olares 技术支持。
+description: 了解如何获取 Olares 技术支持。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 技术支持, 系统日志, GitHub Issue, 故障排查, 提交问题
 ---
 # 获取技术支持
 

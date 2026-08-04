@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Learn how to manage application entrances in Olares, including setting up endpoints and creating access policies.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, application access, authentication, access policy, entrance, custom domain, reverse proxy
 ---
 
 # Manage application entrances
@@ -38,7 +42,15 @@ Options include:
 
 ## Access policies
 
-Access policies control who can access your application and their required authentication method. 
+Access policies control who can access your application and their required authentication method.
+
+Use the following table to choose the right authentication level for each entrance:
+
+| Authentication level | Available authentication modes | Access behavior |
+| --- | --- | --- |
+| **Public** | None | Anyone can open the app without logging in. |
+| **Private** | System, One Factor, Two Factor | Everyone must authenticate before access. |
+| **Internal** | System, One Factor, Two Factor | Users on LarePass VPN skip authentication; all other access requires it. |
 
 ![Access policies panel](/images/manual/olares/app-entrance-access-policy-panel.png#bordered){width=70%}
 
@@ -62,3 +74,8 @@ Options include:
   1. Click <i class="material-symbols-outlined">chevron_forward</i> to open the **Manage sub policies** page.
   2. Click **Add sub policy**, then enter the target paths in **Affected URLs** and select an **Authentication mode**.
   3. Click **Submit**.
+
+## Resources
+
+- [Customize app domain](custom-app-domain.md): Use your own domain to access an app.
+- [Entrance concept](../../../developer/concepts/network.md#entrance): Learn the technical background.

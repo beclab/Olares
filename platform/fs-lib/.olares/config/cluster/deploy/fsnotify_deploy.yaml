@@ -23,6 +23,7 @@ spec:
     spec:
       serviceAccountName: os-internal
       serviceAccount: os-internal
+      priorityClassName: "system-cluster-critical"
       containers:
         - name: proxy
           image: beclab/fsnotify-proxy:0.1.11

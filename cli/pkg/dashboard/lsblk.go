@@ -49,6 +49,43 @@ func HasPknameLabels(rows []LsblkRow) bool {
 	return false
 }
 
+// IsPartitionOfDisk reports whether `childName` is a partition of the
+// disk `diskName` by the kernel naming convention (see `disk_name()` in
+// block/genhd.c), mirroring `isPartitionOfDisk` in
+// Overview2/Disk/config.ts:318. The partition name is the disk name plus
+// a `p` separator when the disk name ends in a digit (e.g. `nvme0n1` ->
+// `nvme0n1p1`, `mmcblk0` -> `mmcblk0p1`), or just the appended partition
+// number otherwise (e.g. `sda` -> `sda1`). A plain prefix check is not
+// disk-specific and would wrongly match siblings such as `nvme0n10`
+// against `nvme0n1`, or `sdaa` against `sda`.
+func IsPartitionOfDisk(childName, diskName string) bool {
+	if childName == "" || diskName == "" {
+		return false
+	}
+	if childName == diskName {
+		return true
+	}
+	if !strings.HasPrefix(childName, diskName) {
+		return false
+	}
+	suffix := childName[len(diskName):]
+	if last := diskName[len(diskName)-1]; last >= '0' && last <= '9' {
+		if !strings.HasPrefix(suffix, "p") {
+			return false
+		}
+		suffix = suffix[1:]
+	}
+	if suffix == "" {
+		return false
+	}
+	for _, c := range suffix {
+		if c < '0' || c > '9' {
+			return false
+		}
+	}
+	return true
+}
+
 // CollectSubtreeByPkname BFS-walks the pkname graph from `rootName`,
 // returning the rows in their original order. Mirrors
 // `collectSubtreeByPkname` in Overview2/Disk/config.ts:273.

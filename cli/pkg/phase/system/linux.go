@@ -84,7 +84,7 @@ func (l *linuxPhaseBuilder) build() []module.Module {
 			return []module.Module{
 				&amdgpu.InstallAmdRocmModule{},
 				&amdgpu.InstallAmdContainerToolkitModule{Skip: func() bool {
-					if l.runtime.GetSystemInfo().IsStrixHalo() {
+					if l.runtime.GetSystemInfo().IsRyzenAIMax() {
 						return false
 					}
 					return true
@@ -114,6 +114,12 @@ func (l *linuxPhaseBuilder) build() []module.Module {
 				},
 			},
 		).
+		addModule(marketPreinstallModules(
+			l.manifestMap,
+			l.runtime.GetInstallerDir(),
+			l.runtime.GetBaseDir(),
+			productionPreinstallSelections(l.runtime),
+		)...).
 		addModule(terminusBoxModuleBuilder(func() []module.Module {
 			return []module.Module{
 				&daemon.InstallTerminusdBinaryModule{

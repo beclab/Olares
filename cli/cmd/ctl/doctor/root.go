@@ -13,11 +13,13 @@ func NewDoctorCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "doctor",
 		Short: "Run read-only Olares diagnostics",
-		Long: `Run read-only diagnostics that combine Olares API surfaces.
+		Long: `Run Olares diagnostics that combine API surfaces.
 
-Doctor commands do not mutate cluster, settings, market, or files state.`,
+Most doctor commands are read-only. Exceptions that mutate (when an
+explicit flag is set) are documented on the subcommand help.`,
 	}
 	cmd.SilenceUsage = true
 	cmd.AddCommand(workload.NewDoctorImagesCommand(f))
+	cmd.AddCommand(NewThirdLevelDomainCommand(f))
 	return cmd
 }

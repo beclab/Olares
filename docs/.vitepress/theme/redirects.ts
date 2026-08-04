@@ -2,14 +2,46 @@ export const redirects = {
     // Root → default docs landing
     '/': '/manual/overview',
 
-    // Refactor: /manual/olares/studio/** → /developer/develop/tutorial/**
-    '/manual/olares/studio/': '/developer/develop/tutorial/',
-    '/manual/olares/studio/deploy': '/developer/develop/tutorial/deploy',
-    '/manual/olares/studio/develop': '/developer/develop/tutorial/develop',
-    '/manual/olares/studio/package-upload': '/developer/develop/tutorial/package-upload',
-    '/manual/olares/studio/assets': '/developer/develop/tutorial/assets',
-    '/developer/develop/tutorial/studio': '/developer/develop/tutorial',
-    '/zh/developer/develop/tutorial/studio': '/zh/developer/develop/tutorial',
+    // Studio docs are hidden; redirect legacy Studio URLs to the docs overview.
+    '/manual/olares/studio/': '/manual/overview',
+    '/manual/olares/studio/deploy': '/manual/overview',
+    '/manual/olares/studio/develop': '/manual/overview',
+    '/manual/olares/studio/package-upload': '/manual/overview',
+    '/manual/olares/studio/assets': '/manual/overview',
+    '/developer/develop/tutorial/studio': '/manual/overview',
+    '/zh/developer/develop/tutorial/studio': '/zh/manual/overview',
+
+    // Hidden Studio docs → docs overview
+    '/developer/develop/tutorial/': '/manual/overview',
+    '/developer/develop/tutorial/deploy': '/manual/overview',
+    '/developer/develop/tutorial/develop': '/manual/overview',
+    '/developer/develop/tutorial/package-upload': '/manual/overview',
+    '/developer/develop/tutorial/assets': '/manual/overview',
+    '/developer/develop/tutorial/note/': '/manual/overview',
+    '/developer/develop/tutorial/note/create': '/manual/overview',
+    '/developer/develop/tutorial/note/backend': '/manual/overview',
+    '/developer/develop/tutorial/note/frontend': '/manual/overview',
+    '/developer/contribute/system-app/overview': '/manual/overview',
+    '/developer/contribute/system-app/deployment': '/manual/overview',
+    '/developer/contribute/system-app/olares-manifest': '/manual/overview',
+    '/developer/contribute/system-app/install': '/manual/overview',
+    '/developer/contribute/system-app/other': '/manual/overview',
+    '/one/deploy': '/manual/overview',
+    '/zh/developer/develop/tutorial/': '/zh/manual/overview',
+    '/zh/developer/develop/tutorial/deploy': '/zh/manual/overview',
+    '/zh/developer/develop/tutorial/develop': '/zh/manual/overview',
+    '/zh/developer/develop/tutorial/package-upload': '/zh/manual/overview',
+    '/zh/developer/develop/tutorial/assets': '/zh/manual/overview',
+    '/zh/developer/develop/tutorial/note/': '/zh/manual/overview',
+    '/zh/developer/develop/tutorial/note/create': '/zh/manual/overview',
+    '/zh/developer/develop/tutorial/note/backend': '/zh/manual/overview',
+    '/zh/developer/develop/tutorial/note/frontend': '/zh/manual/overview',
+    '/zh/developer/contribute/system-app/overview': '/zh/manual/overview',
+    '/zh/developer/contribute/system-app/deployment': '/zh/manual/overview',
+    '/zh/developer/contribute/system-app/olares-manifest': '/zh/manual/overview',
+    '/zh/developer/contribute/system-app/install': '/zh/manual/overview',
+    '/zh/developer/contribute/system-app/other': '/zh/manual/overview',
+    '/zh/one/deploy': '/zh/manual/overview',
 
     // Refactor: /space/** → /manual/space/**
     '/space/': '/manual/space/',
@@ -43,6 +75,18 @@ export const redirects = {
     '/use-cases/openwebui-ollama': '/use-cases/openwebui',
     '/zh/use-cases/openwebui-ollama': '/zh/use-cases/openwebui',
 
+    // Rename: descriptive slugs → brand slugs (permanent: old names retired)
+    '/use-cases/stream-media': '/use-cases/jellyfin',
+    '/zh/use-cases/stream-media': '/zh/use-cases/jellyfin',
+    '/use-cases/stream-game': '/use-cases/steam-stream',
+    '/zh/use-cases/stream-game': '/zh/use-cases/steam-stream',
+    '/use-cases/play-games-directly': '/use-cases/steam-direct-play',
+    '/zh/use-cases/play-games-directly': '/zh/use-cases/steam-direct-play',
+
+    // Removed: host-cloud-android use case → docs overview.
+    '/use-cases/host-cloud-android': '/manual/overview',
+    '/zh/use-cases/host-cloud-android': '/zh/manual/overview',
+
     // Refactor: /manual/concepts/** → /developer/concepts/**
     '/manual/system-architecture': '/developer/concepts/system-architecture',
     '/manual/concepts/': '/developer/concepts/',
@@ -51,7 +95,6 @@ export const redirects = {
     '/manual/concepts/architecture': '/developer/concepts/architecture',
     '/manual/concepts/data': '/developer/concepts/data',
     '/manual/concepts/did': '/developer/concepts/did',
-    '/manual/concepts/faq': '/developer/concepts/faq',
     '/manual/concepts/network': '/developer/concepts/network',
     '/manual/concepts/olares-id': '/developer/concepts/olares-id',
     '/manual/concepts/registry': '/developer/concepts/registry',
@@ -73,6 +116,9 @@ export const redirects = {
     '/developer/install/cli/olares-logs': '/developer/install/cli/logs',
     '/developer/install/cli/olares-backups': '/developer/install/cli/backups',
 
+    // Removed: legacy alphabetical host-mode command reference → CLI overview.
+    '/developer/install/cli/olares-cli': '/developer/cli-overview',
+
     // Rename: /zh/developer/install/cli/olares-* → /zh/developer/install/cli/*
     '/zh/developer/install/cli/olares-info': '/zh/developer/install/cli/info',
     '/zh/developer/install/cli/olares-start': '/zh/developer/install/cli/start',
@@ -83,6 +129,9 @@ export const redirects = {
     '/zh/developer/install/cli/olares-download': '/zh/developer/install/cli/download',
     '/zh/developer/install/cli/olares-logs': '/zh/developer/install/cli/logs',
     '/zh/developer/install/cli/olares-backups': '/zh/developer/install/cli/backups',
+
+    // Removed: legacy alphabetical host-mode command reference → CLI overview.
+    '/zh/developer/install/cli/olares-cli': '/zh/developer/cli-overview',
 
     // Refactor: /zh/manual/concepts/** → /zh/developer/concepts/**
     '/zh/manual/system-architecture': '/zh/developer/concepts/system-architecture',
@@ -107,17 +156,90 @@ export const redirects = {
     
     // Refactor: /zh/manual/docs-home → /zh/manual/overview
     '/zh/manual/docs-home': '/zh/manual/overview',
+
+    // Consolidated LarePass account-management guides
+    '/manual/larepass/import-account': '/manual/larepass/manage-accounts',
+    '/manual/larepass/switch-account': '/manual/larepass/manage-accounts',
+    '/zh/manual/larepass/import-account': '/zh/manual/larepass/manage-accounts',
+    '/zh/manual/larepass/switch-account': '/zh/manual/larepass/manage-accounts',
+
+    // Removed: legacy developer install-step pages (onboarding docs that once lived
+    // under /developer/install/) → the real Get started install overview. Note:
+    // /developer/install/ is now the "Cluster management" (olares-cli) page, so these
+    // must NOT redirect there. No zh installation-troubleshooting: it never existed in zh.
+    '/developer/install/activate-olares': '/manual/get-started/install-olares',
+    '/developer/install/install-and-activate-olares': '/manual/get-started/install-olares',
+    '/developer/install/log-in-to-olares': '/manual/get-started/install-olares',
+    '/developer/install/installation-troubleshooting': '/manual/get-started/install-olares',
+    '/developer/install/reusables': '/manual/get-started/install-olares',
+    '/zh/developer/install/activate-olares': '/zh/manual/get-started/install-olares',
+    '/zh/developer/install/install-and-activate-olares': '/zh/manual/get-started/install-olares',
+    '/zh/developer/install/log-in-to-olares': '/zh/manual/get-started/install-olares',
+    '/zh/developer/install/reusables': '/zh/manual/get-started/install-olares',
+
+    // Removed: empty advanced-dev stub pages → advanced overview
+    '/developer/develop/advanced/rss': '/developer/develop/advanced/',
+    '/developer/develop/advanced/frontend': '/developer/develop/advanced/',
+    '/developer/develop/advanced/notification': '/developer/develop/advanced/',
+    '/zh/developer/develop/advanced/rss': '/zh/developer/develop/advanced/',
+    '/zh/developer/develop/advanced/frontend': '/zh/developer/develop/advanced/',
+    '/zh/developer/develop/advanced/notification': '/zh/developer/develop/advanced/',
+
+    // Removed: empty contribute overview stub → contribute landing
+    '/developer/contribute/overview': '/developer/contribute/olares',
+    '/zh/developer/contribute/overview': '/zh/developer/contribute/olares',
+
+    // Removed: stale olares-id section hero page → first olares-id doc
+    '/developer/contribute/olares-id/': '/developer/contribute/olares-id/contract/contract',
+
+    // Removed: single-gpu/multi-gpu were noindex include-only fragments of gpu-resource → consolidated page
+    '/manual/olares/settings/single-gpu': '/manual/olares/settings/gpu-resource',
+    '/manual/olares/settings/multi-gpu': '/manual/olares/settings/gpu-resource',
+    '/zh/manual/olares/settings/single-gpu': '/zh/manual/olares/settings/gpu-resource',
+    '/zh/manual/olares/settings/multi-gpu': '/zh/manual/olares/settings/gpu-resource',
+
+    // Removed: /one/ software-feature duplicates consolidated into /manual/ and /use-cases/
+    // (hardware/device docs under /one/ are kept). See docs cleanup for SEO consolidation.
+    '/one/files': '/manual/olares/files/',
+    '/one/vault': '/manual/olares/vault/',
+    '/one/market': '/manual/olares/market/market',
+    '/one/dashboard': '/manual/olares/resources-usage',
+    '/one/gpu': '/manual/olares/settings/gpu-resource',
+    '/one/backup-restore': '/manual/olares/settings/backup',
+    '/one/customize': '/manual/olares/settings/language-appearance',
+    '/one/space': '/manual/space/manage-olares',
+    '/one/windows': '/use-cases/windows',
+    '/one/steam-stream': '/use-cases/steam-stream',
+    '/one/steam-direct-play': '/use-cases/steam-direct-play',
+    '/one/wise-download': '/manual/olares/wise/',
+    '/one/open-webui': '/use-cases/openwebui',
+    '/one/comfyui': '/use-cases/comfyui',
+    '/one/deerflow': '/use-cases/deerflow2',
+    '/one/ace-step': '/use-cases/ace-step-1.5',
+    '/one/create-users': '/manual/olares/settings/manage-team',
+    '/one/config-app-access': '/manual/olares/settings/manage-entrance',
+    '/zh/one/files': '/zh/manual/olares/files/',
+    '/zh/one/vault': '/zh/manual/olares/vault/',
+    '/zh/one/market': '/zh/manual/olares/market/market',
+    '/zh/one/dashboard': '/zh/manual/olares/resources-usage',
+    '/zh/one/gpu': '/zh/manual/olares/settings/gpu-resource',
+    '/zh/one/backup-restore': '/zh/manual/olares/settings/backup',
+    '/zh/one/customize': '/zh/manual/olares/settings/language-appearance',
+    '/zh/one/space': '/zh/manual/space/manage-olares',
+    '/zh/one/windows': '/zh/use-cases/windows',
+    '/zh/one/steam-stream': '/zh/use-cases/steam-stream',
+    '/zh/one/steam-direct-play': '/zh/use-cases/steam-direct-play',
+    '/zh/one/wise-download': '/zh/manual/olares/wise/',
+    '/zh/one/open-webui': '/zh/use-cases/openwebui',
+    '/zh/one/comfyui': '/zh/use-cases/comfyui',
+    '/zh/one/deerflow': '/zh/use-cases/deerflow2',
+    '/zh/one/ace-step': '/zh/use-cases/ace-step-1.5',
+    '/zh/one/create-users': '/zh/manual/olares/settings/manage-team',
+    '/zh/one/config-app-access': '/zh/manual/olares/settings/manage-entrance',
 }
 
 // Temporary redirects (302): content is offline but the URL may be reused later.
 // Once the page is restored at its original URL, remove the entry here.
 // Once the move is confirmed permanent, promote the entry to `redirects` above.
 export const temporaryRedirects = {
-    // /one/deerflow content temporarily offline; redirecting to deerflow2 in the meantime
-    '/one/deerflow': '/use-cases/deerflow2',
-    '/zh/one/deerflow': '/zh/use-cases/deerflow2',
-
-    // /one/ace-step content temporarily offline; redirecting to ace-step-1.5 in the meantime
-    '/one/ace-step': '/use-cases/ace-step-1.5',
-    '/zh/one/ace-step': '/zh/use-cases/ace-step-1.5',
 }

@@ -3,6 +3,6 @@ target: prebuilt
 output:
   containers:
     - 
-      name: beclab/ks-apiserver:0.0.29
+      name: beclab/ks-apiserver:0.0.30
 
 # must have blank new line

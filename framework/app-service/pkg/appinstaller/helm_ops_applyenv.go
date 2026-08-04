@@ -21,7 +21,8 @@ func (h *HelmOps) ApplyEnv() error {
 		return err
 	}
 
-	err = helm.UpgradeCharts(h.ctx, h.actionConfig, h.settings, h.app.AppName, h.app.ChartsName, h.app.RepoURL, h.app.Namespace, values, true)
+	// ReuseValues: only env-related overrides change; do not absorb new chart defaults.
+	err = helm.UpgradeCharts(h.ctx, h.actionConfig, h.settings, h.app.AppName, h.app.ChartsName, h.app.RepoURL, h.app.Namespace, values, helm.ReuseValues)
 	if err != nil {
 		klog.Errorf("Failed to upgrade chart name=%s err=%v", h.app.AppName, err)
 		return err
@@ -31,6 +32,12 @@ func (h *HelmOps) ApplyEnv() error {
 		return err
 	}
 	if h.app.Type == appv1alpha1.Middleware.String() {
+		return nil
+	}
+	if h.options.SkipWaitForStartUp {
+		// App was Stopped (release scaled to zero); the env upgrade keeps it at
+		// zero replicas, so there are no pods to wait for.
+		klog.Infof("App %s applyenv with skipWaitForStartUp, not waiting for pods", h.app.AppName)
 		return nil
 	}
 	ok, err := h.WaitForStartUp()

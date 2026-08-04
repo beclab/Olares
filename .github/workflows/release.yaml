@@ -211,6 +211,10 @@ jobs:
           coscmd upload install-wizard-v${{ github.event.inputs.tags }}.md5sum.txt ${{ secrets.REPO_PATH }}install-wizard-v${{ github.event.inputs.tags }}.${{ needs.release-id.outputs.id }}.md5sum.txt && \
           coscmd upload install-wizard-v${{ github.event.inputs.tags }}.tar.gz ${{ secrets.REPO_PATH }}install-wizard-v${{ github.event.inputs.tags }}.${{ needs.release-id.outputs.id }}.tar.gz
 
+      - name: Upload join script to COS
+        run: |
+          coscmd upload .dist/install-wizard/joincluster.sh /joincluster-v${{ github.event.inputs.tags }}.sh
+
   release:
     runs-on: ubuntu-latest
     needs: [upload-package, release-cli, release-id]

@@ -1,5 +1,9 @@
 ---
 description: Olares 新手上路指南，包括系统初始配置、基础功能和核心特性的使用方法。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 新手上路, 使用场景, 系统应用, LarePass, 快速入门
 ---
 
 # 探索 Olares

@@ -61,6 +61,7 @@ spec:
     spec:
       serviceAccountName: bytetrade-sys-ops
       serviceAccount: bytetrade-sys-ops
+      priorityClassName: "system-cluster-critical"
       containers:
       - name: proxy
         image: beclab/fsnotify-proxy:0.1.11

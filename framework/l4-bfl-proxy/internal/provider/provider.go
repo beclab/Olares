@@ -12,6 +12,7 @@ import (
 	"time"
 
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
+	sysv1alpha1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
 	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
 	"github.com/beclab/l4-bfl-proxy/internal/message"
 	toolscache "k8s.io/client-go/tools/cache"
@@ -42,14 +43,13 @@ const (
 	settingsCustomDomain                 = "customDomain"
 	settingsCustomDomainThirdLevelDomain = "third_level_domain"
 	settingsCustomDomainThirdPartyDomain = "third_party_domain"
+	settingsCustomDomainCert             = "cert"
+	settingsCustomDomainKey              = "key"
 	applicationAuthLevelPublic           = "public"
 
-	nameSSLConfigMapName                     = "zone-ssl-config"
-	applicationThirdPartyDomainCertKeySuffix = "-domain-ssl-config"
-	appEntranceCertConfigMapLabel            = "app.bytetrade.io/custom-domain-cert"
-	appEntranceCertConfigMapCertKey          = "cert"
-	appEntranceCertConfigMapKeyKey           = "key"
-	appEntranceCertConfigMapZoneKey          = "zone"
+	nameSSLConfigMapName = "zone-ssl-config"
+	userEnvLanguage      = "olares-user-language"
+	defaultUserLanguage  = "en-US"
 )
 
 type Config struct {
@@ -102,6 +102,11 @@ func (p *Provider) SetupWithManager(ctx context.Context) error {
 		return fmt.Errorf("get pod informer: %w", err)
 	}
 
+	userEnvInformer, err := p.cache.GetInformer(ctx, &sysv1alpha1.UserEnv{})
+	if err != nil {
+		return fmt.Errorf("get userEnv informer: %w", err)
+	}
+
 	baseHandler := cache.ResourceEventHandlerFuncs{
 		AddFunc:    func(_ interface{}) { p.notifyChanged() },
 		UpdateFunc: func(_, _ interface{}) { p.notifyChanged() },
@@ -114,7 +119,7 @@ func (p *Provider) SetupWithManager(ctx context.Context) error {
 			if !ok {
 				return false
 			}
-			return isSSLConfigMap(cm, p.cfg.UserNamespacePrefix) || isCustomDomainCertConfigMap(cm)
+			return isSSLConfigMap(cm, p.cfg.UserNamespacePrefix)
 		},
 		Handler: baseHandler,
 	}); err != nil {
@@ -133,8 +138,14 @@ func (p *Provider) SetupWithManager(ctx context.Context) error {
 
 	if _, err = userInformer.AddEventHandler(toolscache.FilteringResourceEventHandler{
 		FilterFunc: func(obj interface{}) bool {
-			_, ok := obj.(*iamv1alpha2.User)
-			return ok
+			user, ok := obj.(*iamv1alpha2.User)
+			if !ok {
+				return false
+			}
+			if user.Status.State != "Created" {
+				return false
+			}
+			return true
 		},
 		Handler: baseHandler,
 	}); err != nil {
@@ -152,6 +163,19 @@ func (p *Provider) SetupWithManager(ctx context.Context) error {
 		Handler: baseHandler,
 	}); err != nil {
 		return fmt.Errorf("add pod event handler: %w", err)
+	}
+
+	if _, err = userEnvInformer.AddEventHandler(toolscache.FilteringResourceEventHandler{
+		FilterFunc: func(obj interface{}) bool {
+			userEnv, ok := obj.(*sysv1alpha1.UserEnv)
+			if !ok {
+				return false
+			}
+			return isUserEnvLanguage(userEnv)
+		},
+		Handler: baseHandler,
+	}); err != nil {
+		return fmt.Errorf("add userEnv event handler: %w", err)
 	}
 
 	klog.Info("provider: informers and event handlers registered...")
@@ -259,8 +283,12 @@ func (p *Provider) buildResources(ctx context.Context) (*message.Resources, erro
 	if err != nil {
 		return nil, err
 	}
+	userEnvList, err := p.getUserEnvList(ctx)
+	if err != nil {
+		return nil, err
+	}
 	rawAppsMap = fanOutSharedApps(rawAppsMap, userList)
-	users, err := p.listUsers(ctx, userList, rawAppsMap)
+	users, err := p.listUsers(ctx, userList, rawAppsMap, userEnvList)
 	if err != nil {
 		return nil, err
 	}
@@ -425,6 +453,7 @@ func (p *Provider) buildAppInfos(username string, appList []*appv1alpha1.Applica
 				Port:            e.Port,
 				AuthLevel:       e.AuthLevel,
 				WindowPushState: e.WindowPushState,
+				Type:            e.Type,
 			})
 		}
 
@@ -464,14 +493,10 @@ func (p *Provider) buildAppInfos(username string, appList []*appv1alpha1.Applica
 	return result
 }
 
-func (p *Provider) listUsers(ctx context.Context, userList []iamv1alpha2.User, rawAppsMap map[string][]*appv1alpha1.Application) ([]*message.UserInfo, error) {
+func (p *Provider) listUsers(ctx context.Context, userList []iamv1alpha2.User, rawAppsMap map[string][]*appv1alpha1.Application, userEnvList []sysv1alpha1.UserEnv) ([]*message.UserInfo, error) {
 	var result []*message.UserInfo
 
 	// Fetch cluster-wide data once; reused for every user below.
-	allCerts, err := p.getCustomDomainCerts(ctx)
-	if err != nil {
-		return nil, err
-	}
 	fsGlobal, err := p.getFileserverGlobalData(ctx)
 	if err != nil {
 		return nil, err
@@ -485,6 +510,18 @@ func (p *Provider) listUsers(ctx context.Context, userList []iamv1alpha2.User, r
 			if name == "cli" && userList[i].Annotations[userAnnotationOwnerRole] == "owner" {
 				return &userList[i]
 			}
+		}
+		return nil
+	}
+	getUserEnvByName := func(name string) *sysv1alpha1.UserEnv {
+		for i := range userEnvList {
+			if userEnvList[i].Namespace != fmt.Sprintf("%s-%s", p.cfg.UserNamespacePrefix, name) {
+				continue
+			}
+			if userEnvList[i].Name != userEnvLanguage {
+				continue
+			}
+			return &userEnvList[i]
 		}
 		return nil
 	}
@@ -562,7 +599,7 @@ func (p *Provider) listUsers(ctx context.Context, userList []iamv1alpha2.User, r
 
 		cidrs := parseAllowCIDRs(allowCIDR)
 
-		language := getUserLanguage(&user)
+		language := getUserLanguage(getUserEnvByName(user.Name))
 		sslConfig, err := p.getSSLConfig(ctx, user.Name)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
@@ -596,7 +633,7 @@ func (p *Provider) listUsers(ctx context.Context, userList []iamv1alpha2.User, r
 			Language:          language,
 			Apps:              p.buildAppInfos(user.Name, rawAppsMap[user.Name]),
 			SSL:               sslConfig,
-			CustomDomainCerts: allCerts[user.Name],
+			CustomDomainCerts: customDomainCertsForUser(user.Name, rawAppsMap[user.Name]),
 			FileserverNodes:   fileserverNodes,
 			MasterNodeCIDR:    masterNodeCIDR,
 		}
@@ -606,37 +643,45 @@ func (p *Provider) listUsers(ctx context.Context, userList []iamv1alpha2.User, r
 	return result, nil
 }
 
-func (p *Provider) getCustomDomainCerts(ctx context.Context) (map[string][]*message.CertInfo, error) {
-	var cmList corev1.ConfigMapList
-	if err := p.cache.List(ctx, &cmList, client.MatchingLabels{
-		appEntranceCertConfigMapLabel: "true",
-	}); err != nil {
-		return nil, fmt.Errorf("list custom domain cert configmaps: %w", err)
-	}
-
-	certs := make(map[string][]*message.CertInfo)
-	for _, cm := range cmList.Items {
-		owner := strings.TrimPrefix(cm.Namespace, "user-space-")
-		domain := cm.Data[appEntranceCertConfigMapZoneKey]
-		certData := cm.Data[appEntranceCertConfigMapCertKey]
-		keyData := cm.Data[appEntranceCertConfigMapKeyKey]
-		if domain == "" || certData == "" || keyData == "" {
-			continue
+// customDomainCertsForUser derives the user's custom-domain TLS certs from the
+// per-user `customDomain` settings on their apps, instead of from standalone
+// cert ConfigMaps. Sourcing the cert (and therefore the filter-chain SNI) from
+// the same JSON that drives the routing virtual host guarantees the two never
+// desync: a domain the app no longer configures (empty third_party_domain) or
+// one whose cert has not been issued yet (empty cert/key) produces no cert and
+// thus no filter chain, so it can never 421 nor steal another user's SNI.
+//
+// Certs are de-duped by domain (first wins) and sorted by domain for stable
+// output. CreatedAt is the app's creation time, feeding the xDS de-dup
+// tie-break when two users legitimately claim the same domain.
+func customDomainCertsForUser(username string, appList []*appv1alpha1.Application) []*message.CertInfo {
+	var certs []*message.CertInfo
+	seen := make(map[string]bool)
+	for _, app := range appList {
+		customDomainMap := getSettingsKeyMap(app, username, settingsCustomDomain)
+		for _, entranceCustomDomain := range customDomainMap {
+			domain := entranceCustomDomain[settingsCustomDomainThirdPartyDomain]
+			certData := entranceCustomDomain[settingsCustomDomainCert]
+			keyData := entranceCustomDomain[settingsCustomDomainKey]
+			if domain == "" || certData == "" || keyData == "" {
+				continue
+			}
+			if seen[domain] {
+				continue
+			}
+			seen[domain] = true
+			certs = append(certs, &message.CertInfo{
+				Domain:    domain,
+				CertData:  certData,
+				KeyData:   keyData,
+				CreatedAt: app.CreationTimestamp.Time,
+			})
 		}
-		certs[owner] = append(certs[owner], &message.CertInfo{
-			Domain:   domain,
-			CertData: certData,
-			KeyData:  keyData,
-		})
 	}
-	for owner := range certs {
-		ownerCerts := certs[owner]
-		sort.Slice(ownerCerts, func(i, j int) bool {
-			return ownerCerts[i].Domain < ownerCerts[j].Domain
-		})
-	}
-
-	return certs, nil
+	sort.Slice(certs, func(i, j int) bool {
+		return certs[i].Domain < certs[j].Domain
+	})
+	return certs
 }
 
 func (p *Provider) getSSLConfig(ctx context.Context, username string) (*message.SSLConfig, error) {
@@ -666,11 +711,12 @@ func (p *Provider) getSSLConfig(ctx context.Context, username string) (*message.
 	}
 	return cfg, nil
 }
-func getUserLanguage(user *iamv1alpha2.User) string {
-	if user.Annotations != nil {
-		return user.Annotations["bytetrade.io/language"]
+
+func getUserLanguage(userEnv *sysv1alpha1.UserEnv) string {
+	if userEnv == nil {
+		return defaultUserLanguage
 	}
-	return ""
+	return userEnv.GetEffectiveValue()
 }
 
 // listApplicationDetails summarises the viewer's per-user view of a set
@@ -778,6 +824,15 @@ func (p *Provider) getUsers(ctx context.Context) ([]iamv1alpha2.User, error) {
 	return users, nil
 }
 
+func (p *Provider) getUserEnvList(ctx context.Context) ([]sysv1alpha1.UserEnv, error) {
+	var userEnvList sysv1alpha1.UserEnvList
+	if err := p.cache.List(ctx, &userEnvList, client.MatchingLabels{"sys.bytetrade.io/env-type": "language"}); err != nil {
+		klog.Errorf("provider: list userEnv from cache failed: %v", err)
+		return nil, fmt.Errorf("list userEnv from cache failed: %v", err)
+	}
+	return userEnvList.Items, nil
+}
+
 func (p *Provider) getMasterNodeCIDR(ctx context.Context) (string, error) {
 	var nodeList corev1.NodeList
 	if err := p.cache.List(ctx, &nodeList, client.HasLabels{"node-role.kubernetes.io/control-plane"}); err != nil {
@@ -850,10 +905,10 @@ func isSSLConfigMap(cm *corev1.ConfigMap, namespacePrefix string) bool {
 	return strings.HasPrefix(cm.Namespace, namespacePrefix) && cm.Name == nameSSLConfigMapName
 }
 
-func isCustomDomainCertConfigMap(cm *corev1.ConfigMap) bool {
-	return strings.Contains(cm.Name, applicationThirdPartyDomainCertKeySuffix)
-}
-
 func isFileServerPod(pod *corev1.Pod) bool {
 	return pod.Labels["app"] == "files"
+}
+
+func isUserEnvLanguage(userEnv *sysv1alpha1.UserEnv) bool {
+	return userEnv.Name == userEnvLanguage
 }

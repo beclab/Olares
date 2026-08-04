@@ -71,7 +71,7 @@ func runLogin(ctx context.Context, o *loginOptions) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	id, _, authURL, err := o.commonCredFlags.validateAndDeriveAuthURL()
+	id, _, _, err := o.commonCredFlags.validateAndDeriveAuthURL()
 	if err != nil {
 		return err
 	}
@@ -98,12 +98,23 @@ func runLogin(ctx context.Context, o *loginOptions) error {
 		return err
 	}
 
+	// Detect where we sit relative to this Olares before authenticating, so
+	// the auth round-trips (and every later command) use the fastest reachable
+	// connection method. On --auth-url-override this is a no-op (external).
+	loc, authURL, err := probeProfileLocation(ctx, id, profile.LocalURLPrefix, profile.InsecureSkipVerify, o.authURLOverride)
+	if err != nil {
+		return err
+	}
+	profile.Location = string(loc)
+	profile.LocationProbedAt = time.Now().Unix()
+
 	tok, err := loginWithTOTPPrompt(ctx, auth.LoginRequest{
 		AuthURL:   authURL,
 		LocalName: id.Local(),
 		OlaresID:  olaresID,
 		Password:  password,
 		TOTP:      o.totp,
+		Location:  loc,
 		// NeedTwoFactor=true sends targetURL=desktop.<name>/ on
 		// /api/firstfactor so Authelia evaluates its 2FA access policy
 		// and reports `fa2=true` for accounts that actually have 2FA
@@ -133,16 +144,12 @@ func runLogin(ctx context.Context, o *loginOptions) error {
 	fmt.Printf("logged in as %s (profile: %s)\n", olaresID, profile.DisplayName())
 	printSwitchNotice(res, profile.DisplayName())
 	printStorageNotice(profile.OlaresID)
-	// Best-effort: populate the role cache so `settings` preflight checks
-	// have something to compare against without a follow-up
-	// `profile whoami --refresh`. Failures here downgrade to a stderr
-	// warning so a transient backend blip doesn't shadow a successful
-	// login (see eagerWhoami doc comment).
-	eagerWhoami(ctx, cfg, profile, tok.AccessToken)
-	// Best-effort: pre-fill the backend-version cache so version-aware help
-	// / subcommand visibility (settings gpu, settings network overlay) is
-	// accurate from the first command. Same downgrade-to-warning contract.
-	eagerBackendVersion(ctx, cfg, profile, tok.AccessToken)
+	// Best-effort: run the unified detect (role + backend version) at the
+	// just-probed location so `settings` preflight + version-aware command
+	// visibility are accurate from the first command, without a follow-up
+	// `profile whoami --refresh`. Failures downgrade to a stderr warning so a
+	// transient backend blip doesn't shadow a successful login.
+	eagerDetect(ctx, cfg, profile, tok.AccessToken)
 	return nil
 }
 

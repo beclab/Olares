@@ -1,6 +1,6 @@
 # Environment variables — worked examples & default variables
 
-> **Prerequisite:** read [olares-chart-env.md](olares-chart-env.md) first for the three levels, declaration fields, and validation semantics. This file is the reference half: copy-pasteable examples plus the default `OLARES_SYSTEM_*` / `OLARES_USER_*` variables you can map via `valueFrom`.
+> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) first; this is the worked-examples half of the Env area (three levels, declaration fields, and validation semantics). It adds copy-pasteable examples plus the default `OLARES_SYSTEM_*` / `OLARES_USER_*` variables you can map via `valueFrom`.
 
 ## Worked examples
 
@@ -24,15 +24,24 @@ envs:
 ```
 
 ```yaml
+# templates/secret.yaml — the password travels through a Secret
+stringData:
+  ADMIN_PASSWORD: {{ .Values.olaresEnv.ADMIN_PASSWORD | quote }}
+```
+
+```yaml
 # templates/deployment.yaml
         env:
         - name: APP_ADMIN_USER
           value: "{{ .Values.olaresEnv.ADMIN_USERNAME }}"
         - name: APP_ADMIN_PASSWORD
-          value: "{{ .Values.olaresEnv.ADMIN_PASSWORD }}"
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Release.Name }}-app
+              key: ADMIN_PASSWORD
 ```
 
-Both are `required` with no `default`, so the user must fill them in on the install screen.
+Both are `required` with no `default`, so the user must fill them in on the install screen. The username is plain config and maps straight into `env:`; the password is a credential and goes through the Secret — full recipe in [secrets.md](olares-chart-secrets.md).
 
 ### Reuse a user-level variable (don't re-ask)
 

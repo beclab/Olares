@@ -1,3 +1,7 @@
+---
+noindex: true
+description: status 命令通过调用本机 olaresd 守护进程的 /system/status HTTP 接口，输出当前 Olares 系统的状态。
+---
 # `status`
 
 ## 命令说明
@@ -73,6 +77,7 @@ olares-cli status --endpoint http://127.0.0.1:18088 --timeout 10s
 | Memory     | `memory`      | 物理内存总量，格式为 `<N> G`。             |
 | Disk       | `disk`        | 数据分区的文件系统总容量，格式为 `<N> G`。 |
 | GPU        | `gpu_info`    | 检测到的 GPU 型号（若有）。                |
+| GPUList   | `gpu_list`    | 检测到的全部 GPU 型号。   |
 
 ### Network
 

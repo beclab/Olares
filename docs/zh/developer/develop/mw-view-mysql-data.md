@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 了解如何在 Olares 中通过 CLI 或 Bytebase 查看并管理 MySQL 数据。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, MySQL, Bytebase, 数据库管理, CLI 访问, 可视化管理
 ---
 # 查看 MySQL 数据
 

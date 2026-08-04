@@ -1,4 +1,5 @@
 ---
+noindex: true
 description: 在 Olares 中使用 Bytebase 查看数据库状态。学习添加和管理 PostgreSQL、MongoDB 实例，使用 SQL 编辑器操作数据库。
 ---
 # 在 Olares 中查看数据库状态

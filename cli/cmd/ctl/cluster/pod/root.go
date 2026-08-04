@@ -55,6 +55,7 @@ Endpoints (all under https://control-hub.<terminus>):
 	cmd.AddCommand(NewLogsCommand(f))
 	cmd.AddCommand(NewDeleteCommand(f))
 	cmd.AddCommand(NewRestartCommand(f))
+	cmd.AddCommand(NewExecCommand(f))
 
 	return cmd
 }

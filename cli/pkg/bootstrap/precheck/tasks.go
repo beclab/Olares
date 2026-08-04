@@ -64,8 +64,7 @@ func (t *RunChecks) Execute(runtime connector.Runtime) error {
 		}
 	}
 	if errBuffer.Len() > 0 {
-		logger.Errorf("Some checks have failed:\n%s", errBuffer.String())
-		os.Exit(1)
+		return fmt.Errorf("some checks have failed:\n%s", strings.TrimSpace(errBuffer.String()))
 	}
 	return nil
 }
@@ -329,8 +328,7 @@ func (n *NouveauChecker) Check(runtime connector.Runtime) error {
 	}
 	model, _, err := utils.DetectNvidiaModelAndArch(runtime)
 	if err != nil {
-		fmt.Println("Error detecting NVIDIA card:", err)
-		os.Exit(1)
+		return fmt.Errorf("error detecting NVIDIA card: %w", err)
 	}
 	if strings.TrimSpace(model) == "" {
 		return nil
@@ -343,8 +341,7 @@ func (n *NouveauChecker) Check(runtime connector.Runtime) error {
 	const modesetPath = "/sys/module/nouveau/parameters/modeset"
 	data, err := os.ReadFile(modesetPath)
 	if err != nil {
-		fmt.Printf("Error reading modeset parameter of nouveau kernel module by reading file %s: %v", modesetPath, err)
-		os.Exit(1)
+		return fmt.Errorf("error reading nouveau modeset parameter from %s: %w", modesetPath, err)
 	}
 	val := strings.TrimSpace(string(data))
 	if val == "1" || val == "-1" {
@@ -412,13 +409,13 @@ func (r *RocmChecker) Check(runtime connector.Runtime) error {
 		return nil
 	}
 
-	// detect Strix-Halo presence
-	strixHaloExists, err := connector.HasStrixHalo(runtime)
+	// detect AMD Ryzen AI Max APU presence
+	ryzenAIMaxExists, err := connector.HasRyzenAIMax(runtime)
 	if err != nil {
 		return err
 	}
-	// no Strix-Halo found, no need to check rocm
-	if !strixHaloExists {
+	// no AMD Ryzen AI Max found, no need to check rocm
+	if !ryzenAIMaxExists {
 		return nil
 	}
 

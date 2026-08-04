@@ -23,6 +23,7 @@ package archive
 import (
 	"fmt"
 	"math"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -309,23 +310,21 @@ func ValidateFormat(format, usage string) error {
 
 // ParseVolumeSize parses a split-volume size string with an
 // optional unit suffix into whole MiB — the unit the compress
-// endpoint's `volumeSizeMB` field expects. It mirrors the
-// LarePass web app's KB / MB / GB selector (see
-// ArchiveCompressDialog's splitVolumeMB() and
-// olaresTask/archive.ts's normalizeSplitVolume):
+// endpoint's `volumeSizeMB` field expects. The server accepts
+// integer MiB only, so this parser normalizes the user input to
+// an integer MiB count.
 //
 //	"100"     → 100   (bare number = MiB)
 //	"100MB"   → 100
 //	"1.5GB"   → 1536  (1.5 * 1024, rounded up)
-//	"500KB"   → 1     (500/1024 = 0.49 MiB, floored at 1)
 //	"2G"      → 2048
 //
-// Accepted suffixes (case-insensitive): K / KB, M / MB, G / GB.
+// Accepted suffixes (case-insensitive): M / MB, G / GB.
 // A bare number is treated as MiB. The result is rounded UP to the
 // nearest MiB and floored at 1, matching the web app's
 // Math.max(1, ceil(mbValue)) — the backend rejects a 0-size
-// volume, and rounding up keeps "500KB" from silently becoming
-// "no split".
+// volume, and rounding up keeps fractional GiB inputs from silently
+// shrinking the split size.
 //
 // Returns an error for empty input, a non-numeric value, an
 // unknown suffix, or a non-positive size, so a typo surfaces as a
@@ -345,21 +344,22 @@ func ParseVolumeSize(raw string) (int, error) {
 		numPart, unit = lower[:len(lower)-2], "g"
 	case strings.HasSuffix(lower, "mb"):
 		numPart, unit = lower[:len(lower)-2], "m"
-	case strings.HasSuffix(lower, "kb"):
-		numPart, unit = lower[:len(lower)-2], "k"
 	case strings.HasSuffix(lower, "g"):
 		numPart, unit = lower[:len(lower)-1], "g"
 	case strings.HasSuffix(lower, "m"):
 		numPart, unit = lower[:len(lower)-1], "m"
-	case strings.HasSuffix(lower, "k"):
-		numPart, unit = lower[:len(lower)-1], "k"
 	default:
+		// Reject other alpha suffixes early (e.g. KB/TB) so the
+		// error points at unsupported units explicitly.
+		if strings.HasSuffix(lower, "b") || strings.HasSuffix(lower, "k") || strings.HasSuffix(lower, "t") {
+			return 0, fmt.Errorf("invalid volume size %q: unsupported unit (only MB and GB are supported)", raw)
+		}
 		numPart, unit = lower, "m" // bare number = MiB
 	}
 	numPart = strings.TrimSpace(numPart)
 	value, err := strconv.ParseFloat(numPart, 64)
 	if err != nil {
-		return 0, fmt.Errorf("invalid volume size %q: %q is not a number (use forms like 100MB, 1.5GB, 500KB, or a bare MiB count)", raw, numPart)
+		return 0, fmt.Errorf("invalid volume size %q: %q is not a number (use forms like 100MB, 1.5GB, or a bare MiB count)", raw, numPart)
 	}
 	if value <= 0 || math.IsNaN(value) || math.IsInf(value, 0) {
 		return 0, fmt.Errorf("invalid volume size %q: must be a positive number", raw)
@@ -368,8 +368,6 @@ func ParseVolumeSize(raw string) (int, error) {
 	switch unit {
 	case "g":
 		mb = value * 1024
-	case "k":
-		mb = value / 1024
 	default: // "m"
 		mb = value
 	}
@@ -420,6 +418,14 @@ func joinConflicts(cs []Conflict) string {
 // format with its own contextualised message.
 func FormatFromExtension(name string) string {
 	lower := strings.ToLower(name)
+	// Multi-volume main-part naming used by backend/archive tools:
+	//   *.zip.001 / *.zip.002 / ...
+	//   *.7z.001  / *.7z.002  / ...
+	// The user may pass the first (main) part directly; treat it as
+	// zip / 7z for extract and preview format inference.
+	if m := splitVolumeMainRe.FindStringSubmatch(lower); len(m) == 2 {
+		return m[1]
+	}
 	// Longest-suffix-first. The order here is the contract the
 	// cobra-layer help text quotes; do NOT alphabetise.
 	for _, c := range []struct {
@@ -429,6 +435,8 @@ func FormatFromExtension(name string) string {
 		{".tar.gz", "tar.gz"},
 		{".tar.bz2", "tar.bz2"},
 		{".tar.xz", "tar.xz"},
+		{".bzip2", "bzip2"},
+		{".gzip", "gzip"},
 		{".tgz", "tgz"},
 		{".7z", "7z"},
 		{".tar", "tar"},
@@ -443,3 +451,5 @@ func FormatFromExtension(name string) string {
 	}
 	return ""
 }
+
+var splitVolumeMainRe = regexp.MustCompile(`\.(zip|7z)\.\d+$`)
