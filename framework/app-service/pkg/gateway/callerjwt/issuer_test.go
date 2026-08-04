@@ -2,9 +2,11 @@ package callerjwt
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -66,20 +68,20 @@ func TestIssueCallerJWTClaimsAndVerify(t *testing.T) {
 	if !audienceContains(claims.Audience, Audience) {
 		t.Fatalf("aud = %v, want %q", claims.Audience, Audience)
 	}
-	if claims.AppRef != "demo" {
-		t.Fatalf("appRef = %q", claims.AppRef)
+	if claims.AppRef() != "demo" {
+		t.Fatalf("appRef = %q", claims.AppRef())
 	}
-	if claims.Entrance != "web" {
-		t.Fatalf("entrance = %q", claims.Entrance)
+	if claims.Entrance() != "web" {
+		t.Fatalf("entrance = %q", claims.Entrance())
 	}
-	if claims.Viewer != "alice" {
-		t.Fatalf("viewer = %q", claims.Viewer)
+	if claims.Viewer() != "alice" {
+		t.Fatalf("viewer = %q", claims.Viewer())
 	}
-	if claims.Appid != "" {
-		t.Fatalf("ordinary caller must omit shared appid, got %q", claims.Appid)
+	if claims.Appid() != "" {
+		t.Fatalf("ordinary caller must omit shared appid, got %q", claims.Appid())
 	}
-	if claims.ClientAppid != "6bf98da2" {
-		t.Fatalf("clientAppid = %q", claims.ClientAppid)
+	if claims.ClientAppid() != "6bf98da2" {
+		t.Fatalf("clientAppid = %q", claims.ClientAppid())
 	}
 	if claims.ExpiresAt == nil || claims.ExpiresAt.Time.Before(time.Now()) {
 		t.Fatalf("exp missing or in the past")
@@ -150,14 +152,133 @@ func TestIssueSharedCallerAppidOmitsViewer(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ParseClaims: %v", err)
 	}
-	if claims.Appid != "a1b2c3d4" {
-		t.Fatalf("appid = %q", claims.Appid)
+	if claims.Appid() != "a1b2c3d4" {
+		t.Fatalf("appid = %q", claims.Appid())
 	}
-	if claims.Viewer != "" {
-		t.Fatalf("shared caller must omit viewer, got %q", claims.Viewer)
+	if claims.Viewer() != "" {
+		t.Fatalf("shared caller must omit viewer, got %q", claims.Viewer())
 	}
-	if claims.ClientAppid != "" {
-		t.Fatalf("shared caller must omit clientAppid, got %q", claims.ClientAppid)
+	if claims.ClientAppid() != "" {
+		t.Fatalf("shared caller must omit clientAppid, got %q", claims.ClientAppid())
+	}
+}
+
+func TestIssuePayloadNestedForEnvoyClaimPaths(t *testing.T) {
+	ring, err := NewKeyRingForTest(false)
+	if err != nil {
+		t.Fatalf("NewKeyRingForTest: %v", err)
+	}
+	issuer, err := NewIssuer(ring)
+	if err != nil {
+		t.Fatalf("NewIssuer: %v", err)
+	}
+
+	sharedToken, err := issuer.Issue(IssueRequest{
+		Namespace:          "router-shared",
+		ServiceAccountName: "router",
+		AppRef:             "router",
+		Appid:              "f3395cd5",
+	})
+	if err != nil {
+		t.Fatalf("Issue shared: %v", err)
+	}
+	assertEnvoyClaimPath(t, sharedToken, ClaimAppid, "f3395cd5")
+	assertEnvoyClaimPathMissing(t, sharedToken, ClaimViewer)
+	assertEnvoyClaimPathMissing(t, sharedToken, ClaimClientAppid)
+	assertNoFlatDottedIdentityKeys(t, sharedToken)
+
+	ordinaryToken, err := issuer.Issue(IssueRequest{
+		Namespace:          "user-space-alice-demo",
+		ServiceAccountName: "demo",
+		AppRef:             "demo",
+		Entrance:           "web",
+		Viewer:             "alice",
+		ClientAppid:        "6bf98da2",
+	})
+	if err != nil {
+		t.Fatalf("Issue ordinary: %v", err)
+	}
+	// All three post-authn identity headers' claim paths must resolve for the
+	// claims that token type carries (viewer + clientAppid; not shared appid).
+	assertEnvoyClaimPath(t, ordinaryToken, ClaimViewer, "alice")
+	assertEnvoyClaimPath(t, ordinaryToken, ClaimClientAppid, "6bf98da2")
+	assertEnvoyClaimPathMissing(t, ordinaryToken, ClaimAppid)
+	assertEnvoyClaimPath(t, ordinaryToken, ClaimEntrance, "web")
+	assertEnvoyClaimPath(t, ordinaryToken, ClaimAppRef, "demo")
+	assertNoFlatDottedIdentityKeys(t, ordinaryToken)
+}
+
+func decodeJWTPayload(t *testing.T, token string) map[string]any {
+	t.Helper()
+	parts := strings.Split(token, ".")
+	if len(parts) < 2 {
+		t.Fatalf("token parts = %d", len(parts))
+	}
+	raw, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		t.Fatalf("decode payload: %v", err)
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		t.Fatalf("unmarshal payload: %v", err)
+	}
+	return payload
+}
+
+func assertNoFlatDottedIdentityKeys(t *testing.T, token string) {
+	t.Helper()
+	payload := decodeJWTPayload(t, token)
+	for _, k := range []string{
+		ClaimAppid, ClaimClientAppid, ClaimViewer, ClaimAppRef, ClaimEntrance,
+	} {
+		if _, ok := payload[k]; ok {
+			t.Fatalf("payload must not use flat key %q", k)
+		}
+	}
+}
+
+func assertEnvoyClaimPath(t *testing.T, token, claimPath, want string) {
+	t.Helper()
+	payload := decodeJWTPayload(t, token)
+	cur := any(payload)
+	for _, part := range strings.Split(claimPath, ".") {
+		obj, ok := cur.(map[string]any)
+		if !ok {
+			t.Fatalf("claim path %q: not an object before %q", claimPath, part)
+		}
+		next, ok := obj[part]
+		if !ok {
+			t.Fatalf("claim path %q: missing %q in %#v", claimPath, part, obj)
+		}
+		cur = next
+	}
+	got, ok := cur.(string)
+	if !ok {
+		t.Fatalf("claim path %q: got %#v, want string %q", claimPath, cur, want)
+	}
+	if got != want {
+		t.Fatalf("claim path %q = %q, want %q", claimPath, got, want)
+	}
+}
+
+func assertEnvoyClaimPathMissing(t *testing.T, token, claimPath string) {
+	t.Helper()
+	payload := decodeJWTPayload(t, token)
+	cur := any(payload)
+	parts := strings.Split(claimPath, ".")
+	for i, part := range parts {
+		obj, ok := cur.(map[string]any)
+		if !ok {
+			return
+		}
+		next, ok := obj[part]
+		if !ok {
+			return
+		}
+		if i == len(parts)-1 {
+			t.Fatalf("claim path %q must be absent for this token type, got %#v", claimPath, next)
+		}
+		cur = next
 	}
 }
 
@@ -308,17 +429,17 @@ func TestIssuerReconcilerCreatesJWTSecretForCaller(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ParseClaims: %v", err)
 	}
-	if claims.AppRef != "demo" {
-		t.Fatalf("appRef = %q", claims.AppRef)
+	if claims.AppRef() != "demo" {
+		t.Fatalf("appRef = %q", claims.AppRef())
 	}
-	if claims.Viewer != "alice" {
-		t.Fatalf("viewer = %q", claims.Viewer)
+	if claims.Viewer() != "alice" {
+		t.Fatalf("viewer = %q", claims.Viewer())
 	}
-	if claims.ClientAppid != "6bf98da2" {
-		t.Fatalf("clientAppid = %q", claims.ClientAppid)
+	if claims.ClientAppid() != "6bf98da2" {
+		t.Fatalf("clientAppid = %q", claims.ClientAppid())
 	}
-	if claims.Appid != "" {
-		t.Fatalf("ordinary caller must omit shared appid, got %q", claims.Appid)
+	if claims.Appid() != "" {
+		t.Fatalf("ordinary caller must omit shared appid, got %q", claims.Appid())
 	}
 }
 
