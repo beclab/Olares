@@ -1157,19 +1157,39 @@ func ListenNetworkCarrierChanges(ctx context.Context, downCallback func()) error
 
 	for {
 		select {
-		case update := <-updates:
-			if update.Attrs().Name == bridgeConnectionName {
-				isLowerUp := (update.Flags & 0x10000) != 0
-				isUp := (update.Flags & 1) != 0
-
-				if !isLowerUp || !isUp {
-					klog.Infof("network change detected: %s, state: %s", update.Attrs().Name, update.Link.Attrs().OperState.String())
-					downCallback()
-				}
+		case update, ok := <-updates:
+			if handleCarrierLinkUpdate(ctx, update, ok, downCallback) {
+				klog.Info("stop listening network changes")
+				return nil
 			}
 		case <-ctx.Done():
 			klog.Info("stop listening network changes")
 			return nil
 		}
 	}
+}
+
+// handleCarrierLinkUpdate processes one LinkUpdate. Returns true when the
+// watcher should stop (channel closed or context cancelled). A closed channel
+// yields a zero-value LinkUpdate whose Link is nil; callers must not call
+// Attrs() on it.
+func handleCarrierLinkUpdate(ctx context.Context, update netlink.LinkUpdate, ok bool, downCallback func()) (stop bool) {
+	if !ok || ctx.Err() != nil {
+		return true
+	}
+	if update.Link == nil {
+		return false
+	}
+	attrs := update.Attrs()
+	if attrs == nil || attrs.Name != bridgeConnectionName {
+		return false
+	}
+
+	isLowerUp := (update.Flags & 0x10000) != 0
+	isUp := (update.Flags & 1) != 0
+	if !isLowerUp || !isUp {
+		klog.Infof("network change detected: %s, state: %s", attrs.Name, attrs.OperState.String())
+		downCallback()
+	}
+	return false
 }
