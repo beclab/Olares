@@ -70,9 +70,11 @@ Upload system logs directly from your Olares device to create a ticket automatic
 
    ![CLI logs ticket](/images/how-to/space/cli-logs-ticket.png#bordered)
 
-## View your tickets
+## Manage tickets
 
-Use the ticket list to track the status and details of your existing support requests.
+Use the ticket list to track the status and details of your existing support requests, and update tickets as needed.
+
+### View your tickets
 
 1. To view all your tickets, open the **Tickets** page. The list shows the title, status, ticket number, issue type, and creation time for each ticket.
 2. To filter tickets by status, click the status drop-down list and select a state:
@@ -83,10 +85,6 @@ Use the ticket list to track the status and details of your existing support req
    - **In progress**: Tickets the support team is actively handling.
    - **Resolved**: Tickets that have been resolved.
    - **Closed**: Tickets that have been closed.
-
-## Manage tickets
-
-After submitting a ticket, you can add replies and update its status to keep the support request moving forward.
 
 ### Reply to a ticket
 

@@ -1,55 +1,95 @@
 ---
-description: Learn how to get technical support for Olares。
+outline: [2, 3]
+description: Learn how to get technical support for Olares through the Assist Hub app, Olares Space, or GitHub.
 head:
   - - meta
     - name: keywords
-      content: Olares, technical support, system logs, GitHub issue, help
+      content: Olares, technical support, system logs, GitHub issue, Assist Hub, help
 ---
 # Get technical support
 
-If you cannot resolve an issue using the troubleshooting guides, you can contact the Olares team for assistance.
+If you cannot resolve an issue using the troubleshooting guides, contact the Olares team for assistance through one of the following channels.
 
-To resolve your issue faster, collect and export your system logs before contacting support.
+## Submit a ticket in the Assist Hub app
 
-## Step 1: Export system logs
+The Assist Hub app on your Olares device is the recommended way to get help. It has a built-in log collection feature, so you can submit a ticket directly without manually exporting logs first.
 
-<!--@include: ../../reusables/export-system-logs.md#export-system-logs-steps-->
+:::info Link Olares Space first
+Before submitting a ticket, make sure your Olares Space account is linked to your Olares device. If not, you will be prompted to bind it in LarePass under **Settings** > **Integration**. See [Monitor Olares in Olares Space](../space/manage-olares.md) for linking instructions.
+:::
 
-## Step 2: Choose a support channel
+### Install Assist Hub
 
-Submit your request from the Ticket app on your device, or use the Olares GitHub repository.
-
-### Option A: Use the Ticket app
-
-You can ask for help directly from your Olares device by using the Ticket app. This allows you to send questions, report problems, and track replies all in one place.
-
-1. Open Market, search for "Ticket", and install the app.
-2. Open the Ticket app. A login QR code appears on the screen.
+1. Open Market, search for "Assist Hub", and install the app.
+2. Open the Assist Hub app. A login QR code appears on the screen.
 3. Open the LarePass app on your mobile device and go to the **Settings** tab.
 4. Tap the scan icon in the upper-right corner, scan the QR code on your screen, and tap **Confirm** to log in.
-5. To submit a ticket:
 
-   a. Click **Create Ticket** in the left menu or at the bottom of the page.
+### Submit a ticket
 
-   b. Describe your issue and upload your exported system logs.
+1. Click **Create Ticket** in the left sidebar or at the bottom of the page.
+2. Fill in the form:
+   - **Issue Type**: Select the category that best matches your issue.
+   - **Subcategory**: Optional. Select a more specific subcategory.
+   - **Issue Title**: Enter a short summary of the issue.
+   - **Description**: Describe the issue, what triggered it, and how to reproduce it. You can paste or drop images directly into the editor.
+   - **Attachments**: Optional. Click the upload area or drag files into it.
+3. Review **System Information**. This section is automatically collected from your Olares instance. Toggle **Attach in ticket** off if you do not want to include it.
+4. To collect and attach system logs, expand **Collect Logs**, and then click **Collect**.
+5. Click **Submit** to send the ticket.
 
-6. To check issue progress:
+### Manage tickets
 
-   a. Select **All Tickets** from the left sidebar.
+After submitting a ticket, you can view its status, add replies, and update its status.
 
-   b. Look for the status: Pending, In progress, Resolved, or Closed.
+#### View ticket status
 
-   c. After checking the status, click a ticket to see its details.
+1. Select a status from the left sidebar to filter tickets. **Home** shows all tickets, and the other sections show tickets by status.
+2. Click a ticket to see its details.
 
-### Option B: Use the Olares GitHub repository
+#### Reply to a ticket
 
-If you cannot access your Olares dashboard, or prefer to report the issue publicly, use GitHub.
+1. Open the ticket details page.
+2. Click **Add a Reply**.
+3. Enter your message and click **Send reply**.
 
-1. Visit the [Olares GitHub Repository](https://github.com/beclab/Olares) and choose one of the following options:
-    - Open a new **[Discussion](https://github.com/beclab/Olares/discussions/new?category=q-a)** for general questions or assistance.
-    - Create a new **[Issue](https://github.com/beclab/Olares/issues/new)** for bug reports or technical problems.
-2. Describe the issue and include the following information:
-    - Steps to reproduce the issue
-    - Any error messages or unexpected behaviors
-    - Your environment details (operating system, Olares version, etc.)
-    - The exported system log file
+#### Close or resolve a ticket
+
+When the issue is fixed or no longer needs follow-up:
+
+1. Open the ticket details page.
+2. Click **Close** or **Resolved** at the bottom of the page.
+
+:::info
+You cannot delete a submitted ticket. If you no longer need it, close it.
+:::
+
+#### Reopen a ticket
+
+If the issue returns or was not fully fixed:
+
+1. Open the ticket details page.
+2. Click **Reopen**.
+3. Add a reply explaining why you are reopening it.
+
+## Submit a ticket in Olares Space
+
+You can also create and manage support tickets directly in Olares Space through a web browser. This option does not require installing a separate Assist Hub app or having access to an Olares device, unless you want to upload logs using `olares-cli`.
+
+For detailed steps, see [Manage support tickets in Olares Space](../space/tickets.md).
+
+## Report on GitHub
+
+Use the Olares GitHub repository if you prefer to report the issue publicly, or if you cannot access your Olares device.
+
+1. Export and download your system logs from Olares Settings:
+
+   <!--@include: ../../reusables/export-system-logs.md#export-system-logs-steps-->
+
+2. Visit the [Olares GitHub Repository](https://github.com/beclab/Olares) and choose one of the following options:
+   - Open a new **[Discussion](https://github.com/beclab/Olares/discussions/new?category=q-a)** for general questions or assistance.
+   - Create a new **[Issue](https://github.com/beclab/Olares/issues/new)** for bug reports or technical problems.
+3. Describe the issue and attach the exported system log file. Include the following information when applicable:
+   - Steps to reproduce the issue
+   - Any error messages or unexpected behaviors
+   - Your environment details (operating system, Olares version, etc.)
