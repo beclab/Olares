@@ -55,7 +55,7 @@ Multiple words are joined into one keyword (quote multi-word phrases to be expli
 - The only difference between these sources is the `app` field sent on `/init`: `files_v2`, `google_drive`, `dropbox`, or `knowledge`.
 - `drive` / `gdrive` / `dropbox` expose `--type aggregate` (default, full-content) and `--type file_name` (filename only). `knowledge` is fixed to `aggregate` (no `--type` flag).
 - `--limit` (default 20) caps results; `--offset` pages. `/init` always returns the first 20 hits and ignores offset/limit, so the CLI honors them itself: when the requested window fits inside those 20 hits (or the search returned fewer), it is sliced client-side with no extra call; only a window past the first 20 triggers `/more` (limit clamped to the backend's 1-100). A single search resolves at most ~50 hits server-side, so `--limit` is effectively capped around 50, and an `--offset` past the end prints "no results" rather than erroring.
-- `gdrive` / `dropbox` / `knowledge` are **fail-closed version-gated** to Olares >= 1.12.7 (same line TermiPass exposes those Desktop search sources). On an older or undetectable backend the CLI rejects up front with an upgrade message instead of hitting an opaque empty/error response.
+- `gdrive` / `dropbox` / `knowledge` are **fail-closed version-gated** to Olares >= 1.12.7 — the line on which Desktop exposes the two cloud sources, and on which the new Wise (the only one indexed under `app=knowledge`) can be installed. On an older or undetectable backend the CLI rejects up front with an upgrade message instead of hitting an opaque empty/error response.
 
 ### sync
 

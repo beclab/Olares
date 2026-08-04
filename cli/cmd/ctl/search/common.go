@@ -24,9 +24,16 @@ const (
 	appDropbox     = "dropbox"
 	appKnowledge   = "knowledge"
 
-	// searchSessionAppMinOlaresVersion is the first Olares line whose
-	// search3 accepts app=google_drive|dropbox|knowledge. Mirrors
-	// TermiPass's seachOSVersionLargeThan12_7 gate.
+	// searchSessionAppMinOlaresVersion is the first Olares line on which
+	// search3 serves app=google_drive|dropbox|knowledge.
+	//
+	// For google_drive and dropbox this mirrors TermiPass's
+	// seachOSVersionLargeThan12_7 gate directly. knowledge has no such
+	// gate in the SPA -- it offers the Wise source whenever Wise is
+	// installed -- but it lands on the same floor anyway, because only
+	// the new Wise feeds search3's knowledge partition and it can only be
+	// installed on Olares >= 1.12.7. Supporting the older Wise is
+	// explicitly out of scope for the CLI.
 	searchSessionAppMinOlaresVersion = "1.12.7"
 
 	searchTypeAggregate = "aggregate"
