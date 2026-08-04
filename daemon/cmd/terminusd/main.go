@@ -11,6 +11,7 @@ import (
 
 	"github.com/beclab/Olares/daemon/cmd/terminusd/version"
 	"github.com/beclab/Olares/daemon/internel/apiserver"
+	"github.com/beclab/Olares/daemon/internel/apiserver/handlers"
 	"github.com/beclab/Olares/daemon/internel/ble"
 	"github.com/beclab/Olares/daemon/internel/mdns"
 	"github.com/beclab/Olares/daemon/internel/watcher"
@@ -57,6 +58,11 @@ func main() {
 	}
 
 	commands.Init()
+
+	// Clear leftover overlay op locks from a previous crash so status does not
+	// report a permanent activating/deactivating state. Do not reconcile app
+	// settings or cni-dhcp here.
+	handlers.ClearOverlayGatewayOpLocks()
 
 	mainCtx, cancel := context.WithCancel(context.Background())
 

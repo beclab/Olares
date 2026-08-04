@@ -2,6 +2,7 @@ package system
 
 import (
 	"context"
+	"sync"
 
 	"github.com/beclab/Olares/daemon/internel/watcher"
 	"github.com/beclab/Olares/daemon/pkg/cluster/state"
@@ -92,6 +93,7 @@ func (w *autoRepair) Watch(ctx context.Context) {
 
 type bridgeConnectionWatcher struct {
 	watcher.Watcher
+	mu     sync.Mutex
 	ctx    context.Context
 	cancel context.CancelFunc
 }
@@ -105,17 +107,37 @@ func (w *bridgeConnectionWatcher) Watch(ctx context.Context) {
 		klog.Error("find bridge connection error, ", err)
 	} else if c == nil {
 		// bridge connection is removed, stop watching
+		w.mu.Lock()
 		if w.cancel != nil {
 			w.cancel()
 			w.cancel = nil
 			w.ctx = nil
 		}
-	} else if w.ctx == nil {
+		w.mu.Unlock()
+	} else {
+		w.mu.Lock()
+		if w.ctx != nil {
+			w.mu.Unlock()
+			return
+		}
 		// bridge connection is back, start watching
 		w.ctx, w.cancel = context.WithCancel(context.Background())
+		watchCtx := w.ctx
+		w.mu.Unlock()
+
 		klog.Info("start watching network carrier changes for bridge connection")
 		go func() {
-			err := utils.ListenNetworkCarrierChanges(w.ctx, func() {
+			defer func() {
+				if r := recover(); r != nil {
+					klog.Errorf("bridge carrier watch panic recovered: %v", r)
+				}
+				w.mu.Lock()
+				w.cancel = nil
+				w.ctx = nil
+				w.mu.Unlock()
+			}()
+
+			err := utils.ListenNetworkCarrierChanges(watchCtx, func() {
 				// disable the overlay gateway supported apps' option for all users
 				apps, err := utils.GetOverlayGatewaySupportedApps(ctx, "")
 				if err != nil {
