@@ -142,6 +142,17 @@ func (h *Handler) mutate(ctx context.Context, req *admissionv1.AdmissionRequest,
 	}
 
 	if nothingToInject {
+		// Still harden linkerd admin probes when proxy was injected by an earlier webhook.
+		patchBytes, patched, err := h.sidecarWebhook.PatchLinkerdAdminProbesOnly(ctx, req, &pod)
+		if err != nil {
+			klog.Errorf("Failed to harden linkerd probes uuid=%s namespace=%s err=%v", proxyUUID, req.Namespace, err)
+			return h.sidecarWebhook.AdmissionError(req.UID, err)
+		}
+		if patched {
+			h.sidecarWebhook.PatchAdmissionResponse(resp, patchBytes)
+			klog.Infof("Hardened linkerd-proxy probes for pod uuid=%s namespace=%s (nothing else to inject)", proxyUUID, req.Namespace)
+			return resp
+		}
 		klog.Infof("Skipping sidecar injection for pod with uuid=%s namespace=%s", proxyUUID, req.Namespace)
 		return resp
 	}
