@@ -18,6 +18,7 @@ import (
 	"github.com/beclab/Olares/cli/cmd/ctl/node"
 	"github.com/beclab/Olares/cli/cmd/ctl/os"
 	"github.com/beclab/Olares/cli/cmd/ctl/osinfo"
+	"github.com/beclab/Olares/cli/cmd/ctl/preinstall"
 	"github.com/beclab/Olares/cli/cmd/ctl/profile"
 	"github.com/beclab/Olares/cli/cmd/ctl/search"
 	"github.com/beclab/Olares/cli/cmd/ctl/settings"
@@ -104,9 +105,10 @@ func NewDefaultCommand() *cobra.Command {
 		cmds.AddCommand(disk.NewDiskCommand())
 	}
 
-	// Always-on: developer utilities (chart) + remote/agent verbs that go
-	// through control-hub.<terminus> via the active profile's token.
+	// Always-on: developer utilities (chart, preinstall) + remote/agent verbs
+	// that go through control-hub.<terminus> via the active profile's token.
 	cmds.AddCommand(chart.NewChartCommand())
+	cmds.AddCommand(preinstall.NewPreinstallCommand())
 	cmds.AddCommand(market.NewMarketCommand(factory))
 	cmds.AddCommand(profile.NewProfileCommand(factory))
 	cmds.AddCommand(knowledge.NewKnowledgeCommand(factory))

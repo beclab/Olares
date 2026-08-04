@@ -6,8 +6,8 @@ head:
     - name: keywords
       content: Olares, ComfyUI, Krita, AI art, digital painting, Krita AI Diffusion, image generation
 app_version: "1.0.21"
-doc_version: "1.0"
-doc_updated: "2026-03-20"
+doc_version: "1.1"
+doc_updated: "2026-07-28"
 ---
 
 :::warning
@@ -28,7 +28,7 @@ ComfyUI 提供强大的 AI 图像生成能力，但要让它真正有用，你�
 
 ## 前提条件
 
-- 已安装并运行 [ComfyUI Shared](comfyui.md) 的 Olares 工作实例。
+- Olares 上已[安装 ComfyUI](comfyui.md)，且服务正在运行。
 - 你的电脑上已安装 [Krita](https://krita.org/en/download/)。
 - Olares 设备上有足够的系统资源来下载模型。
 
@@ -40,14 +40,15 @@ ComfyUI 提供强大的 AI 图像生成能力，但要让它真正有用，你�
 你可以在 **Settings** > **GPU** 中将 GPU 模式设置为 **App exclusive** 并分配 ComfyUI 完整的 GPU 访问权限，以确保最大性能。
 :::
 
-## 获取 ComfyUI 的端点
+## 获取 ComfyUI 连接信息
 
-1. 在 Olares 上，打开 Settings，然后前往 **Application** > **ComfyUI Shared**。
-2. 在 **Entrances** 下，点击 **ComfyUI**。
-3. 确保其 **Authentication level** 设置为 **Internal**。
-4. 在 **Endpoint** 旁边，点击 <i class="material-symbols-outlined">content_copy</i> 复制显示的端点 URL。
+<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
 
-   ![设置端点](/images/manual/use-cases/comfyui-set-up-endpoint1.png#bordered){width=90%}
+对于 ComfyUI：
+
+1. 前往 Olares **Settings** > **Applications** > **ComfyUI** > **Entrances**。
+2. 选择 **ComfyUI**，并将 **Authentication level** 设置为 **Internal**。
+3. 复制 **Endpoint** URL。
 
 ## 下载并启用 AI Diffusion 插件
 1. 下载 [Krita AI Diffusion 插件](https://github.com/Acly/krita-ai-diffusion/releases)。
@@ -301,7 +302,7 @@ Krita AI Diffusion 插件需要以下自定义节点：
 | 检查 | 解决方法 |
 |:------|:-----------|
 | 网络连接 | 确保你的电脑和 Olares 在同一网络上。 |
-| ComfyUI 认证级别 | 在 **Settings** > **Application** > **ComfyUI Shared** 中，确认设置为 **Internal**。 |
+| ComfyUI 认证级别 | 在 **Settings** > **Applications** > **ComfyUI** > **Entrances** > **ComfyUI** 中，确认设置为 **Internal**。 |
 | `.com` URL 的 LarePass VPN | 在 LarePass 桌面应用中启用 **VPN connection**。 |
 | 干扰的代理/VPN | 暂时禁用其他 VPN 或代理软件。 |
 | ComfyUI 服务状态 | 打开 ComfyUI Launcher 并验证服务正在 **Running**。 |

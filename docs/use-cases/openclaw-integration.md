@@ -5,9 +5,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, OpenClaw, OpenClaw tutorial, OpenClaw learning, channel integration, Discord integration
-app_version: "1.0.1"
-doc_version: "2.0"
-doc_updated: "2026-05-27"
+app_version: "1.0.17"
+doc_version: "2.1"
+doc_updated: "2026-08-03"
 ---
 
 # Integrate OpenClaw with Discord
@@ -84,8 +84,7 @@ Run the OpenClaw configuration wizard to connect your Discord bot.
 
    | Settings | Option |
    |:---------|:-------|
-   | Where will the Gateway run | Local (this machine) |
-   | Channels | Configure/link |
+   | Channel setup | Add or update channels |
    | Select a channel | Discord (Bot API) |
    | How do you want to provide this Discord bot token | Enter Discord bot token |
    | Enter Discord bot token | Paste the bot token from [Step 1](#step-1-create-a-discord-bot) |

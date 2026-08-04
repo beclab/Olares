@@ -5,12 +5,12 @@ head:
   - - meta
     - name: keywords
       content: Olares, OpenClaw, OpenClaw tutorial, OpenClaw learning, install skills, install plug-ins
-app_version: "1.0.3"
-doc_version: "1.1"
-doc_updated: "2026-05-29"      
+app_version: "1.0.17"
+doc_version: "1.2"
+doc_updated: "2026-08-03"      
 ---
 
-# Manage OpenClaw skills and plugins
+# Manage OpenClaw skills and plug-ins
 
 OpenClaw can be extended using skills and plugins:
 - Skills add new capabilities to the AI. For example, managing Model Context Protocol servers.
@@ -64,7 +64,7 @@ There are three ways to add new skills to your OpenClaw:
 
 ### Install via `openclaw config`
 
-You can use the built-in configuration wizard to install default or officially supported skills. In this example, we will install the `clawhub` skill, which is required for the next method.
+You can use the built-in configuration wizard to install default or officially supported skills and their missing dependencies.
 
 1. Open the OpenClaw CLI.
 2. Enter the following command to start the wizard:
@@ -77,20 +77,19 @@ You can use the built-in configuration wizard to install default or officially s
     | Settings | Option |
     |:---------|:-------|
     | Where will the Gateway run | Local (this machine) |
-    | What do you want to configure | Skills |
-    | Configure skills now | Yes |
-    | Install missing skill dependencies | Navigate to the skill **clawhub**, press the **Space** key <br>to select it, and then press **Enter**. |
-    | Preferred node manager for skill installs | npm<br>Wait for the message `Installed clawhub` to appear<br> before proceeding. |
-    | Set [API_KEY] for [skill] | Select **No** for all these settings.| 
+    | What do you want to configure | Skills | 
 
-4. Finally, select **Done** for **What do you want to configure**. The message `Configure complete` appears, indicating the setup is finished. 
+    The wizard automatically checks your skills and displays a status summary. Then it automatically starts to install missing skill dependencies.
+
+4. Wait for the installation to finish and review the installed summary.
+5. When prompted **What do you want to configure**, select **Done**. The message `Configuration updated` appears, indicating the setup is finished.
 
 ### Install from ClawHub
 
 Use the ClawHub CLI to search and install skills from [ClawHub](https://clawhub.ai/). Installing skills via ClawHub automatically handles the necessary package dependencies.
 
 :::tip Prerequisite
-Ensure that the [clawhub skill is installed](#install-via-openclaw-config). This skill enables the openclaw skills commands like `list`, `search`, and `install`, which allows you install more ClawHub-backed skills.
+Ensure that the [clawhub skill is installed](#install-via-openclaw-config). This skill enables the openclaw skills commands like `list`, `search`, and `install`, which allows you to install more ClawHub-backed skills.
 :::
 
 1. Open the OpenClaw CLI.
@@ -255,10 +254,10 @@ If a skill is blocked or unusable, you need to identify and install its missing 
     ```bash
     openclaw plugins install {Name}
     ```
-    For example, to install BlueBubbles, enter the following command:
+    For example, to install LLM Task, enter the following command:
 
     ```bash
-    openclaw plugins install @openclaw/bluebubbles
+    openclaw plugins install @openclaw/llm-task
     ```
 
     :::warning Blocked plugin installation
@@ -280,17 +279,17 @@ If a skill is blocked or unusable, you need to identify and install its missing 
 
     Now the status of the plug-in is **enabled**.
 
-5. Open the Control UI, select **Settings** from the left sidebar, and then go to **Automation** > **Plugins**.
-6. Find **@openclaw/bluebubbles** and click it to expand its panel:
+5. Open the Control UI, click <i class="material-symbols-outlined">settings</i> from the left sidebar, and then go to **Automation** > **Plugins**.
+6. Find **@openclaw/llm-task** and click it to expand its panel:
 
     - If it is enabled, turn off the toggle switch, and then turn it on again to force the system to explicitly save the configuration.
     - If it is disabled, turn on the toggle switch.
 
-    ![Toggle on plugin](/images/manual/use-cases/toggle-plugin2.png#bordered)
+    ![Toggle on plugin](/images/manual/use-cases/toggle-plugin3.png#bordered)
 
 7. Click **Save** in the upper-right corner. The system validates the config and applies the change automatically.
 
-    ::: tip Manual restart
+    :::tip Manual restart
     If you need to restart OpenClaw manually, do not use the OpenClaw CLI. Use one of the following methods:
     - **Restart the app from Settings or Market**: 
         - Open **Settings**, go to **Applications** > **OpenClaw**, click **Stop**, and then click **Resume**.

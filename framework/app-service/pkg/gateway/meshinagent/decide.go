@@ -12,13 +12,14 @@ const (
 	AnnotDecideRuleID       = "gateway.olares.io/shared-caller-rule-id"
 	SettingOptOutMesh       = "mesh-inject"
 	SettingAppRef           = "appRef"
-	DecideSourceExplicit    = "explicit"
-	DecideSourceRule        = "rule"
-	DecideSourceEligibility = "eligibility"
-	DecideSourceNone        = "none"
+	DecideSourceExplicit       = "explicit"
+	DecideSourceRule           = "rule"
+	DecideSourceEligibility    = "eligibility"
+	DecideSourceSharedDefault  = "shared-default"
+	DecideSourceNone           = "none"
 
-	// RuleAllowSharedLLMGateway auto-Decides Shared AI Router apps as callers
-	// with empty edges (OPEN-01). Pure Shared callees (e.g. ollama*) do not match.
+	// RuleAllowSharedLLMGateway keeps name-based Shared AI Router Decide for
+	// compatibility. All Shared apps also default to caller via shared-default.
 	RuleAllowSharedLLMGateway = "R-ALLOW-shared-llmgateway"
 )
 
@@ -155,8 +156,8 @@ func isOptOut(settings map[string]string) bool {
 
 // Decide chooses mesh-in for a caller: deny and opt-out win, then named callees,
 // then allow rules. Ordinary apps may fall through to eligibility (empty edges).
-// Shared apps never use eligibility — only explicit callees, allow rules, or a
-// preserved settings decide=true (ApplyDecide explicit path).
+// Shared apps default to Inject=true with source shared-default (OPEN-01 empty
+// edges) when no explicit callees or allow rule matched.
 func Decide(appName string, settings map[string]string, rules RuleSet, sharedApp bool) DecideResult {
 	if rules == nil {
 		rules = DefaultRules()
@@ -185,6 +186,8 @@ func Decide(appName string, settings map[string]string, rules RuleSet, sharedApp
 		return res
 	}
 	if sharedApp {
+		res.Inject = true
+		res.Source = DecideSourceSharedDefault
 		return res
 	}
 	res.Inject = true
@@ -208,7 +211,8 @@ func DeclaresSharedCaller(settings map[string]string) bool {
 
 // ApplyDecide mutates settings with decide facts and sets Changed vs previous annotate.
 // When source is already explicit and decide=true (vendor settings patch), preserve
-// those keys so rules cannot clear the opt-in. sharedApp disables eligibility.
+// those keys so rules cannot clear the opt-in. Shared apps without explicit/rule
+// facts receive source=shared-default.
 func ApplyDecide(appName string, settings map[string]string, rules RuleSet, sharedApp bool) DecideResult {
 	if settings == nil {
 		return DecideResult{}

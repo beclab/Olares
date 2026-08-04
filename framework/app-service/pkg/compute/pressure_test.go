@@ -1,6 +1,7 @@
 package compute
 
 import (
+	"math"
 	"testing"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
@@ -78,6 +79,23 @@ func TestWouldPressure_ZeroThresholdUsesDefault(t *testing.T) {
 	}
 }
 
+func TestWouldPressure_OverflowFailsClosed(t *testing.T) {
+	snap, node := oneNodeSnapshot(1, prometheus.NodeResourceUsage{
+		CPUCapacity:     math.MaxInt64,
+		CPUUtilization:  1,
+		MemoryCapacity:  math.MaxInt64,
+		MemoryAvailable: 0,
+		DiskCapacity:    math.MaxInt64,
+		DiskAvailable:   0,
+	})
+	got := snap.Evaluate(node, AddedResources{CPU: 1, Memory: 1, Disk: 1})
+	for _, dimension := range got {
+		if !dimension.Pressured {
+			t.Fatalf("overflow must fail closed: %#v", got)
+		}
+	}
+}
+
 // Pressure is monotonic in the added request: if a smaller request
 // already pressures the node, any larger request must pressure it too.
 func TestWouldPressure_MonotonicInAddedRequest(t *testing.T) {
@@ -114,14 +132,63 @@ func TestAddedResourcesFromAppConfig(t *testing.T) {
 		t.Errorf("nil config: got %+v, want zero", got)
 	}
 
-	cfg := &appcfg.ApplicationConfig{AppName: "legacy"}
-	cfg.Requirement.CPU = resource.NewMilliQuantity(1500, resource.DecimalSI)
-	cfg.Requirement.Memory = resource.NewQuantity(2<<30, resource.BinarySI)
-	cfg.Requirement.Disk = resource.NewQuantity(4<<30, resource.BinarySI)
+	legacy := &appcfg.ApplicationConfig{AppName: "legacy"}
+	legacy.Requirement.CPU = resource.NewMilliQuantity(1500, resource.DecimalSI)
+	legacy.Requirement.Memory = resource.NewQuantity(2<<30, resource.BinarySI)
+	legacy.Requirement.Disk = resource.NewQuantity(4<<30, resource.BinarySI)
 
-	got := AddedResourcesFromAppConfig(cfg)
-	want := AddedResources{CPU: 1500, Memory: 2 << 30, Disk: 4 << 30}
-	if got != want {
-		t.Errorf("legacy requirement: got %+v, want %+v", got, want)
+	mode := &appcfg.ApplicationConfig{
+		AppName:         "mode",
+		SelectedGpuType: "nvidia",
+		Accelerator: []appcfg.ResourceMode{{
+			Mode: "nvidia",
+			ResourceRequirement: appcfg.ResourceRequirement{
+				RequiredCPU:    "2500m",
+				RequiredMemory: "3Gi",
+				RequiredDisk:   "5Gi",
+			},
+		}},
+	}
+
+	cases := []struct {
+		name string
+		cfg  *appcfg.ApplicationConfig
+		want AddedResources
+	}{
+		{"legacy quantities", legacy, AddedResources{CPU: 1500, Memory: 2 << 30, Disk: 4 << 30}},
+		{"selected resource mode", mode, AddedResources{CPU: 2500, Memory: 3 << 30, Disk: 5 << 30}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := AddedResourcesFromAppConfig(tc.cfg); got != tc.want {
+				t.Errorf("got %+v, want %+v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestPressureSnapshotEvaluateReportsDimensionDetails(t *testing.T) {
+	snap, node := oneNodeSnapshot(0.9, prometheus.NodeResourceUsage{
+		CPUCapacity:     2000,
+		CPUUtilization:  0.25,
+		MemoryCapacity:  1000,
+		MemoryAvailable: 400,
+		DiskCapacity:    1000,
+		DiskAvailable:   1200,
+	})
+
+	got := snap.Evaluate(node, AddedResources{CPU: 1400, Memory: 300, Disk: 901})
+	want := []DimensionPressure{
+		{Resource: PressureResourceCPU, Required: 1400, Used: 500, Capacity: 2000, Available: 1300, Pressured: true},
+		{Resource: PressureResourceMemory, Required: 300, Used: 600, Capacity: 1000, Available: 300, Pressured: false},
+		{Resource: PressureResourceDisk, Required: 901, Used: 0, Capacity: 1000, Available: 900, Pressured: true},
+	}
+	if len(got) != len(want) {
+		t.Fatalf("Evaluate returned %d dimensions, want %d: %#v", len(got), len(want), got)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("dimension %d: got %#v, want %#v", i, got[i], want[i])
+		}
 	}
 }

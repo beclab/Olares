@@ -16,6 +16,11 @@ if [[ "${REPO_PATH}" != "" && "$REPO_PATH" != "/" ]]; then
         file=$(awk -F "$path" '{print $1$2}' <<< "$l")  
         if [[ "$file" != ".gitkeep" ]]; then
             echo "replace [$file] with [$l]"
+            replace_path=$(dirname $file)
+            if [ ! -d $replace_path ]; then
+                echo "create replace dir [$replace_path]"
+                mkdir -p $replace_path
+            fi
             cp -f "$l" "$file"
         fi
     done
@@ -63,7 +68,6 @@ fi
 if [ ! -z $RELEASE_ID ]; then
     sh -c "$SED 's/#__RELEASE_ID__/${RELEASE_ID}/' install.sh"
     sh -c "$SED 's/#__RELEASE_ID__/${RELEASE_ID}/' install.ps1"
-    sh -c "$SED 's/#__RELEASE_ID__/${RELEASE_ID}/' joincluster.sh"
 fi
 
 # replace repo path placeholder in scripts if provided

@@ -52,11 +52,11 @@ Jellyfin 是一款强大的开源媒体服务器软件，让你完全掌控自�
 
 ### 安装 Jellyfin
 
-1. 在 Olares 网页界面中打开应用市场。
-2. 在**休闲娱乐**类别中找到 **Jellyfin**，或使用搜索栏。
-3. 点击**获取**，然后点击**安装**。
+1. 打开 Market，搜索 "Jellyfin"。
+
    ![安装 Jellyfin](/images/manual/use-cases/jellyfin-install.png#bordered)
-4. 安装完成后，点击**打开**启动设置向导。
+
+2. 点击**获取**，然后点击**安装**，等待安装完成。
 
 ### 完成初始设置
 
@@ -221,33 +221,35 @@ Overlay 网关会将 Jellyfin 直接暴露到当前局域网中。仅当需要�
 9. 选择电视，确认视频开始在电视上播放。
 
 ## 通过 Jellyfin 客户端访问你的媒体库
-### 获取 Jellyfin 的端点
+### 获取 Jellyfin Endpoint
 
 Jellyfin 设置完成且媒体库准备就绪后，你可以从客户端设备连接并开始串流你的媒体。
 
-:::info 启用 LarePass VPN
-在开始之前，需确保 LarePass VPN 已启用。
+<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
 
-如果未启用，可参阅[在 LarePass 上启用 VPN](../manual/larepass/private-network.md#enable-vpn-on-larepass)。
-:::
+对于 Jellyfin：
 
-1. 在 Olares 上，打开设置，然后进入**应用** > **Jellyfin**。
-2. 在**入口**下，点击 **Jellyfin**。
-3. 确保**认证级别**设置为**内部**。如果你更改了设置，点击**提交**。
-4. 在**端点配置**下，复制**端点**中显示的 URL。在你的 Jellyfin 客户端中使用此地址作为服务器 URL。
+1. 前往 Olares **Settings** > **Applications** > **Jellyfin** > **Entrances**。
+2. 选择 **Jellyfin**，然后复制 **Endpoint** URL。
 
-   ![Jellyfin 端点](/images/manual/use-cases/lp-endpoint-jellyfin.png#bordered){width=90%}
+在 Jellyfin 客户端中，将该 Endpoint 用作服务器地址。
 
 ### 连接你的 Jellyfin 客户端
 
 假设你已经在设备上安装了官方的 [Jellyfin 客户端](https://jellyfin.org/downloads/)。
+
+:::info 启用 LarePass VPN
+连接前，请确保已启用 LarePass VPN。
+
+如果未启用，可参阅[在 LarePass 上启用 VPN](../manual/larepass/private-network.md#enable-vpn-on-larepass)。
+:::
 
 1. 在你的设备上打开 Jellyfin 客户端应用。
 2. 点击 **Add Server**。
 
    ![添加服务器](/images/manual/use-cases/jellyfin-add-server.png#bordered){width=90%}
 
-3. 将你刚刚复制的 Jellyfin URL 粘贴到客户端中，然后点击 **Connect**。
+3. 粘贴刚刚复制的 Jellyfin Endpoint，然后点击 **Connect**。
 
    ![连接到服务器](/images/manual/use-cases/jellyfin-connect.png#bordered){width=90%}
 

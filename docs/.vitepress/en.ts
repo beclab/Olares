@@ -457,19 +457,12 @@ const side = {
       collapsed: true,
       items: [
         {
-          text: "Set up accounts",
+          text: "Create and manage accounts",
           collapsed: true,
           items: [
             { text: "Create an account", link: "/manual/larepass/create-account" },
             { text: "Create with a custom domain", link: "/manual/larepass/create-org-account" },
-            { text: "Import an account", link: "/manual/larepass/import-account" },
-          ],
-        },
-        {
-          text: "Manage accounts",
-          collapsed: true,
-          items: [
-           { text: "Switch accounts", link: "/manual/larepass/switch-account" },       
+            { text: "Manage existing accounts", link: "/manual/larepass/manage-accounts" },
             { text: "Back up mnemonics", link: "/manual/larepass/back-up-mnemonics" },
           ],
         },

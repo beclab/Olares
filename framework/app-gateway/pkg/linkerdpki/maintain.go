@@ -13,9 +13,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// MaintainLinkerdPKI performs one level-triggered check/rotate cycle. It reads
-// the in-cluster olares-linkerd-pki Secret only and rotates the identity issuer
-// when its remaining validity drops below IssuerRotateThreshold.
+// MaintainLinkerdPKI checks whether the vault issuer needs rotation, then
+// always syncs linkerd-identity-issuer and restarts linkerd-identity when
+// it still lags the vault.
 func MaintainLinkerdPKI(ctx context.Context, c client.Client, linkerdNS string) error {
 	mat, ok, err := loadPKISecret(ctx, c, linkerdNS)
 	if err != nil {
@@ -28,36 +28,48 @@ func MaintainLinkerdPKI(ctx context.Context, c client.Client, linkerdNS string) 
 	if err != nil {
 		return err
 	}
-	if !need {
+	if need {
+		slog.Info("linkerd issuer needs rotation", "remaining_hours", remaining.Round(time.Hour).Hours())
+		rotated, err := rotateIssuer(mat.CACrt, mat.CAKey)
+		if err != nil {
+			slog.Error("linkerd pki rotate issuer failed",
+				"op", "maintain", "namespace", linkerdNS, "error", err)
+			return fmt.Errorf("rotate linkerd issuer: %w", err)
+		}
+		version := nextPKIVersion(ctx, c, linkerdNS)
+		if err := writePKISecret(ctx, c, linkerdNS, rotated, version); err != nil {
+			slog.Error("linkerd pki write vault failed",
+				"op", "maintain", "namespace", linkerdNS, "error", err)
+			return err
+		}
+		mat = rotated
+		slog.Info("linkerd pki vault rotated", "op", "maintain", "namespace", linkerdNS, "version", version)
+	} else {
 		slog.Info("linkerd issuer ok", "remaining_hours", remaining.Round(time.Hour).Hours())
-		return nil
-	}
-	slog.Info("linkerd issuer needs rotation", "remaining_hours", remaining.Round(time.Hour).Hours())
-
-	rotated, err := rotateIssuer(mat.CACrt, mat.CAKey)
-	if err != nil {
-		return fmt.Errorf("rotate linkerd issuer: %w", err)
 	}
 
+	if _, err := syncIdentityIssuerSecret(ctx, c, linkerdNS, mat); err != nil {
+		slog.Error("linkerd pki sync identity issuer failed",
+			"op", "maintain", "namespace", linkerdNS, "error", err)
+		return fmt.Errorf("sync identity issuer: %w", err)
+	}
+	if err := ensureIdentityRollout(ctx, c, linkerdNS, mat.IssuerCrt); err != nil {
+		return err
+	}
+	return nil
+}
+
+func nextPKIVersion(ctx context.Context, c client.Client, ns string) int {
 	version := 1
 	var sec corev1.Secret
-	if err := c.Get(ctx, types.NamespacedName{Namespace: linkerdNS, Name: PKISecretName}, &sec); err == nil {
-		if metaBytes := sec.Data[pkiMetadataKey]; len(metaBytes) > 0 {
-			var meta metadata
-			if json.Unmarshal(metaBytes, &meta) == nil {
-				version = meta.Version + 1
-			}
+	if err := c.Get(ctx, types.NamespacedName{Namespace: ns, Name: PKISecretName}, &sec); err != nil {
+		return version
+	}
+	if metaBytes := sec.Data[pkiMetadataKey]; len(metaBytes) > 0 {
+		var meta metadata
+		if json.Unmarshal(metaBytes, &meta) == nil {
+			version = meta.Version + 1
 		}
 	}
-	if err := writePKISecret(ctx, c, linkerdNS, rotated, version); err != nil {
-		return err
-	}
-	if err := patchIdentityIssuerSecret(ctx, c, linkerdNS, rotated); err != nil {
-		return err
-	}
-	if err := restartIdentity(ctx, c, linkerdNS); err != nil {
-		return err
-	}
-	slog.Info("linkerd identity issuer rotated", "version", version)
-	return nil
+	return version
 }

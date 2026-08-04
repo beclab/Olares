@@ -180,8 +180,13 @@ function authDeny(r) {
 }
 
 function decideOffload(s) {
+  // Empty SNI means the connection was redirected by IP (no hostname). Under
+  // REDIRECT the original destination is unrecoverable — log and fail closed.
   const host = normalizeHost(s.variables.ssl_preread_server_name);
-  if (!host) { return passthrough(host); }
+  if (!host) {
+    s.error('mesh-in: no SNI on hijacked 443; original destination unrecoverable under REDIRECT, connection dropped');
+    return passthrough(host);
+  }
   if (!isPlatformHost(host)) { return passthrough(host); }
   const hosts = reloadTLSHosts();
   if (hosts[host]) { return TERMINATE; }

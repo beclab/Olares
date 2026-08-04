@@ -397,7 +397,7 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 		return resp
 	}
 
-	_, appcfg, _, err := h.sidecarWebhook.GetAppConfig(req.Namespace)
+	_, appcfg, _, _, err := h.sidecarWebhook.GetAppConfig(req.Namespace)
 	if err != nil {
 		klog.Error(err)
 		return resp
@@ -1082,7 +1082,7 @@ func (h *Handler) appLabelMutate(ctx context.Context, req *admissionv1.Admission
 		UID:     req.UID,
 	}
 
-	_, appCfg, _, _ := h.sidecarWebhook.GetAppConfig(req.Namespace)
+	_, appCfg, _, _, _ := h.sidecarWebhook.GetAppConfig(req.Namespace)
 	if appCfg == nil {
 		klog.Error("get appcfg is empty")
 		return resp

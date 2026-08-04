@@ -9,16 +9,6 @@ metadata:
     linkerd.io/control-plane-component: destination
     linkerd.io/control-plane-ns: os-mesh
 ---
-# Source: linkerd-control-plane/templates/heartbeat-rbac.yaml
-kind: ServiceAccount
-apiVersion: v1
-metadata:
-  name: linkerd-heartbeat
-  namespace: os-mesh
-  labels:
-    linkerd.io/control-plane-component: heartbeat
-    linkerd.io/control-plane-ns: os-mesh
----
 # Source: linkerd-control-plane/templates/identity-rbac.yaml
 kind: ServiceAccount
 apiVersion: v1
@@ -94,7 +84,7 @@ data:
       podAnnotations: {}
       readinessProbe:
         timeoutSeconds: 1
-    disableHeartBeat: false
+    disableHeartBeat: true
     disableIPv6: true
     egress:
       globalEgressNetworkNamespace: linkerd-egress
@@ -492,21 +482,6 @@ rules:
       - get
       - patch
 ---
-# Source: linkerd-control-plane/templates/heartbeat-rbac.yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: linkerd-heartbeat
-  labels:
-    linkerd.io/control-plane-ns: os-mesh
-rules:
-- apiGroups: [""]
-  resources: ["namespaces"]
-  verbs: ["list"]
-- apiGroups: ["linkerd.io"]
-  resources: ["serviceprofiles"]
-  verbs: ["list"]
----
 # Source: linkerd-control-plane/templates/identity-rbac.yaml
 ###
 ### Identity Controller Service RBAC
@@ -591,22 +566,6 @@ subjects:
     name: linkerd-destination
     namespace: os-mesh
 ---
-# Source: linkerd-control-plane/templates/heartbeat-rbac.yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: linkerd-heartbeat
-  labels:
-    linkerd.io/control-plane-ns: os-mesh
-roleRef:
-  kind: ClusterRole
-  name: linkerd-heartbeat
-  apiGroup: rbac.authorization.k8s.io
-subjects:
-- kind: ServiceAccount
-  name: linkerd-heartbeat
-  namespace: os-mesh
----
 # Source: linkerd-control-plane/templates/identity-rbac.yaml
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
@@ -678,23 +637,6 @@ rules:
       - list
       - watch
 ---
-# Source: linkerd-control-plane/templates/heartbeat-rbac.yaml
-###
-### Heartbeat RBAC
-###
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: linkerd-heartbeat
-  namespace: os-mesh
-  labels:
-    linkerd.io/control-plane-ns: os-mesh
-rules:
-- apiGroups: [""]
-  resources: ["configmaps"]
-  verbs: ["get"]
-  resourceNames: ["linkerd-config"]
----
 # Source: linkerd-control-plane/templates/destination-rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -713,23 +655,6 @@ subjects:
   - kind: ServiceAccount
     name: linkerd-destination
     namespace: os-mesh
----
-# Source: linkerd-control-plane/templates/heartbeat-rbac.yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: linkerd-heartbeat
-  namespace: os-mesh
-  labels:
-    linkerd.io/control-plane-ns: os-mesh
-roleRef:
-  kind: Role
-  name: linkerd-heartbeat
-  apiGroup: rbac.authorization.k8s.io
-subjects:
-- kind: ServiceAccount
-  name: linkerd-heartbeat
-  namespace: os-mesh
 ---
 # Source: linkerd-control-plane/templates/destination.yaml
 ###
@@ -2036,89 +1961,3 @@ spec:
       - emptyDir:
           medium: Memory
         name: linkerd-identity-end-entity
----
-# Source: linkerd-control-plane/templates/heartbeat.yaml
-###
-### Heartbeat
-###
-apiVersion: batch/v1
-kind: CronJob
-metadata:
-  name: linkerd-heartbeat
-  namespace: os-mesh
-  labels:
-    app.kubernetes.io/name: heartbeat
-    app.kubernetes.io/part-of: Linkerd
-    app.kubernetes.io/version: edge-26.5.1
-    linkerd.io/control-plane-component: heartbeat
-    linkerd.io/control-plane-ns: os-mesh
-  annotations:
-    linkerd.io/created-by: linkerd/helm edge-26.5.1
-spec:
-  concurrencyPolicy: Replace
-  schedule: "13 09 * * *"
-  successfulJobsHistoryLimit: 0
-  jobTemplate:
-    spec:
-      template:
-        metadata:
-          labels:
-            linkerd.io/control-plane-component: heartbeat
-            linkerd.io/workload-ns: linkerd
-          annotations:
-            linkerd.io/created-by: linkerd/helm edge-26.5.1
-        spec:
-          nodeSelector:
-            kubernetes.io/os: linux
-          securityContext:
-            seccompProfile:
-              type: RuntimeDefault
-          serviceAccountName: linkerd-heartbeat
-          restartPolicy: Never
-          automountServiceAccountToken: false
-          containers:
-          - name: heartbeat
-            image: cr.l5d.io/linkerd/controller:edge-26.5.1
-            imagePullPolicy: IfNotPresent
-            env:
-            - name: LINKERD_DISABLED
-              value: "the heartbeat controller does not use the proxy"
-            args:
-            - "heartbeat"
-            - "-controller-namespace=os-mesh"
-            - "-log-level=info"
-            - "-log-format=plain"
-            - "-prometheus-url=http://prometheus-k8s.kubesphere-monitoring-system.svc.cluster.local:9090"
-            securityContext:
-              capabilities:
-                drop:
-                - ALL
-              readOnlyRootFilesystem: true
-              runAsNonRoot: true
-              runAsUser: 2103
-              allowPrivilegeEscalation: false
-              seccompProfile:
-                type: RuntimeDefault
-            volumeMounts:
-            - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
-              name: kube-api-access
-              readOnly: true
-          volumes:
-          - name: kube-api-access
-            projected:
-              defaultMode: 420
-              sources:
-              - serviceAccountToken:
-                  expirationSeconds: 3607
-                  path: token
-              - configMap:
-                  items:
-                  - key: ca.crt
-                    path: ca.crt
-                  name: kube-root-ca.crt
-              - downwardAPI:
-                  items:
-                  - fieldRef:
-                      apiVersion: v1
-                      fieldPath: metadata.namespace
-                    path: namespace

@@ -28,6 +28,8 @@ const (
 	CallerJWTViewerHeader        = "X-BFL-USER"
 	CallerJWTAppidClaim          = "olares.caller.appid"
 	CallerJWTAppidHeader         = "X-Shared-Appid"
+	CallerJWTClientAppidClaim    = "olares.caller.clientAppid"
+	CallerJWTClientAppidHeader   = "X-Caller-Appid"
 	CallerJWTJWKSServiceName     = "caller-jwt-jwks"
 	CallerJWTJWKSServiceNamespace = "os-framework"
 	CallerJWTJWKSServicePort     = int32(443)
@@ -46,9 +48,10 @@ func securityPolicyName(srr *srrv1alpha1.SharedRouteRegistry) string {
 }
 
 // desiredSharedRouteSecurityPolicy builds JWT authn for a Shared HTTPRoute.
-// After verification, the gateway copies olares.viewer → X-BFL-USER for ordinary
-// callers and olares.caller.appid → X-Shared-Appid for Shared callers. A header
-// is written only when that claim exists in the token; missing Bearer is rejected.
+// After verification, the gateway copies olares.viewer → X-BFL-USER,
+// olares.caller.appid → X-Shared-Appid (Shared callers), and
+// olares.caller.clientAppid → X-Caller-Appid (ordinary callers). A header is
+// written only when that claim exists in the token; missing JWT is rejected.
 func desiredSharedRouteSecurityPolicy(srr *srrv1alpha1.SharedRouteRegistry) *unstructured.Unstructured {
 	routeName := httpRouteName(srr)
 	return &unstructured.Unstructured{Object: map[string]any{
@@ -89,6 +92,10 @@ func desiredSharedRouteSecurityPolicy(srr *srrv1alpha1.SharedRouteRegistry) *uns
 							map[string]any{
 								"claim":  CallerJWTAppidClaim,
 								"header": CallerJWTAppidHeader,
+							},
+							map[string]any{
+								"claim":  CallerJWTClientAppidClaim,
+								"header": CallerJWTClientAppidHeader,
 							},
 						},
 						"remoteJWKS": map[string]any{

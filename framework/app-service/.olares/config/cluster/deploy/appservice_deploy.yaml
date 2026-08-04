@@ -171,7 +171,7 @@ spec:
       priorityClassName: "system-cluster-critical"
       containers:
       - name: app-service
-        image: beclab/app-service:0.6.11
+        image: beclab/app-service:0.6.15
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 6755
@@ -242,6 +242,10 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.hostIP
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
         - name: OLARESD_HOST
           value: master-node:18088
         volumeMounts:

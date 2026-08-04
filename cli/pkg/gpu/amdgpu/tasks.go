@@ -250,7 +250,7 @@ func (u *UpdateNodeAMDInfo) Execute(runtime connector.Runtime) error {
 	rocmVersion := rocmV.Original()
 
 	// Use the ROCm version as the driver label for the "amd" mode.
-	return gpu.SetNodeGpuModeLabel(context.Background(), client.Kubernetes(), gpu.AMDType, &rocmVersion, nil, nil)
+	return gpu.SetNodeGpuModeLabel(context.Background(), client.CtrlRuntime(), gpu.AMDType, &rocmVersion, nil, nil)
 }
 
 // InstallAmdPlugin installs the AMD GPU device plugin DaemonSet.

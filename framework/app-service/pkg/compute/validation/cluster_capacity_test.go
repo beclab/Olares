@@ -222,6 +222,25 @@ func TestClusterCapacityValidator_PropagatesProviderError(t *testing.T) {
 	}
 }
 
+func TestClusterCapacityValidator_ReturnsMetricsUnavailableDecision(t *testing.T) {
+	withMetricsProvider(t, constantMetrics(0, 16<<30, 200<<30, nil))
+
+	decision, err := clusterCapacityValidator{}.Validate(context.Background(), Input{
+		AppConfig: appWithLegacyReq(1000, 0, 0),
+		Op:        v1alpha1.InstallOp,
+	})
+	if err != nil {
+		t.Fatalf("validate: %v", err)
+	}
+	if decision.OK || decision.Resource != constants.CPU || decision.Reason != constants.MetricsUnavailable {
+		t.Fatalf("unexpected decision: %#v", decision)
+	}
+	want := "Resource metrics are temporarily unavailable. Unable to install the application. Please try again later."
+	if decision.Message != want {
+		t.Fatalf("message=%q, want %q", decision.Message, want)
+	}
+}
+
 // TestClusterCapacityValidator_ForwardsToken verifies that the
 // Input.Token reaches the metrics provider unchanged. The kubesphere
 // monitoring endpoint authenticates with the caller's service account

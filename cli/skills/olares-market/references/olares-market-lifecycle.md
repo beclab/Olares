@@ -87,6 +87,14 @@ The JSON payload field is `all`. Behavior depends on the backend version:
 
 > **1.12.6 caveat — cascade-cleanup after the row is gone:** once a prior uninstall has cleared the per-user row, 1.12.6's uninstall body has no source to send, so the CLI reports an idempotent `nothing to uninstall`. `market uninstall` does **not** expose `--source`, so re-running it to tear down leftover shared sub-charts is not reachable from the CLI — clean those up from the Market SPA.
 
+### `--delete-data`
+
+The JSON payload field is `deleteData`. It gates **only** the app's private `drive/Data/<app>`; `cache/<node>/<app>` is cleared either way and `drive/Home` is never touched. The full per-area rule and the reason `Home` is exempt live in the platform [storage model](../../olares-shared/references/olares-platform.md#userspace-storage-model).
+
+> **"Persistent data" is narrower than it sounds.** An app whose manifest declares only `permission.userData` (paths under `Home`) owns no app-private data, so `--delete-data` finds nothing to remove and its files survive the uninstall. That is by design, not a backend bug — clean them up with `olares-cli files rm --recursive <path>`.
+
+On a **cascading uninstall of a v2 multi-chart app** the flag reaches only the user's own client chart. The shared sub-charts are torn down with their cache cleared but their `Data/<subChart>` left in place — `v2`'s uninstall path never consults `deleteData`. Remove those by hand if you need the storage back.
+
 ### Uninstalling an in-flight app (auto-orchestrated)
 
 app-service only accepts `uninstall` from a settled state (`running` / `stopped` / a terminal `*Failed`, including `installFailed`); while an operation is in flight it accepts only `cancel`. `market uninstall` handles this for you so **`uninstall` always means "fully remove"** regardless of state:

@@ -30,7 +30,11 @@ In this guide, you will learn how to:
 ## Prerequisites
 
 - Olares is running on a device with an NVIDIA GPU.
-- [Ollama installed and running](ollama.md) with at least one chat model downloaded (required for Audio Chat only).
+- To use Audio Chat, install the following chat model:
+
+  | Model type | Model | How to get it |
+  | :--- | :--- | :--- |
+  | Chat | Qwen3.6-27B (llama.cpp) | Install from Market |
 
 ## Install Speaches
 
@@ -103,16 +107,31 @@ The English translation appears in **Textbox** after processing completes.
 
 Use **Audio Chat** to talk to an AI model with voice, text, or an audio file. Speaches first converts your voice to text, sends the text to the chat model, and can convert the reply back to speech.
 
-
 :::info
-- Audio Chat requires Ollama to be installed, with at least one chat model downloaded.
 - Audio playback is currently available for English replies only. For other languages, the reply is shown as text only.
 :::
+
+#### Get model connection details
+
+<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
+
+In this guide, Audio Chat uses Qwen3.6-27B (llama.cpp) with the **OpenAI-Compatible** API format.
+
+<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
+
+#### Configure Speaches
+
+1. Go to Olares **Settings** > **Applications** > **Speaches** > **Manage environment variables**.
+2. Click <i class="material-symbols-outlined">edit_square</i> next to `CHAT_COMPLETION_BASE_URL`.
+3. Paste the OpenAI-compatible **Base URL** from the Model Console exactly as shown, including the trailing `/v1`, then click **Confirm**.
+4. Click **Apply** to save the changes.
+
+Speaches restarts automatically and loads the models available from the configured endpoint.
 
 #### Start a voice conversation
 
 1. Open Speaches and click the **Audio Chat** tab.
-2. Under **Chat Model**, select an Ollama model, such as `qwen2.5:7b`.
+2. Under **Chat Model**, select `unsloth/Qwen3.6-27B-GGUF:Q4_K_M`.
 3. Send a message using one of these methods:
    - **Audio file**: Upload an audio file.
    - **Text**: Type your message in the input field next to the microphone icon and send it.
@@ -281,9 +300,7 @@ Speaches automatically redeploys in CPU mode. Processing will be slower compared
 
 ### Why does Audio Chat show an error?
 
-Audio Chat requires Ollama to be running with at least one chat model downloaded. If Ollama is not installed or has no models available, Audio Chat displays an error. 
-
-To fix this issue, install Ollama and download a chat model by following the [Ollama guide](ollama.md). Speaches detects Ollama automatically, so you do not need to restart Speaches.
+Audio Chat cannot load models if `CHAT_COMPLETION_BASE_URL` is empty, incorrect, or unavailable. Make sure the chat model is running, then [configure Speaches](#configure-speaches) again using the OpenAI-compatible Base URL shown in its Model Console.
 
 ### Why do tasks fail after switching to a larger model?
 
@@ -297,24 +314,12 @@ To fix this issue:
 
 For detailed instructions, see [Manage accelerator resources](/manual/olares/settings/gpu-resource.md).
 
-### Can I use a different Ollama instance for Audio Chat?
+### Can I use a different chat model provider for Audio Chat?
 
-Yes. Update the `CHAT_COMPLETION_BASE_URL` in the deployment configuration:
-
-1. Open Control Hub and navigate to **Browse** > **System** > **speachesserver-shared** > **Deployments** > **speaches**.
-2. Click <i class="material-symbols-outlined">edit_square</i> to edit the YAML file.
-
-   ![Navigate to Speaches deployment](/images/manual/use-cases/speaches-controlhub-deployment.png#bordered){width=90%}
-
-3. In **Edit YAML**, find `CHAT_COMPLETION_BASE_URL`, and update its value to your Ollama endpoint. Make sure the URL ends with `/v1`.
-   
-   ![Edit CHAT_COMPLETION_BASE_URL](/images/manual/use-cases/speaches-edit-base-url.png#bordered){width=90%}
-
-4. Go to **Settings** > **Applications** > **Speaches**, click **Stop**, then click **Resume** to restart Speaches.
+Yes. Set `CHAT_COMPLETION_BASE_URL` to the provider's OpenAI-compatible Base URL. The URL must end with `/v1`.
 
 ## Learn more
 
 - [Speaches official documentation](https://speaches.ai/): Full API reference and model compatibility.
-- [Ollama](ollama.md): Download and run local AI models.
 - [Open WebUI](openwebui.md): Chat interface that can use Speaches as a speech backend.
 - [IndexTTS2](indextts2.md): Generate speech from text with zero-shot voice cloning.

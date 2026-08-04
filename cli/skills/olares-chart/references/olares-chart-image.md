@@ -5,7 +5,7 @@
 
 ## Arch strategy
 
-Deploying to your Olares only needs **this node's arch** (single-arch) — query it with `olares-cli cluster node list` (needs login); `spec.supportArch` is optional. Multi-arch (`linux/amd64,linux/arm64` + a matching `spec.supportArch: [amd64, arm64]`) is only required when **publishing to the public Market** — see the [`../../olares-publish/SKILL.md`](../../olares-publish/SKILL.md) skill.
+Deploying to your Olares only needs the **target Olares node's arch** (single-arch) — query it with `olares-cli cluster node list` (needs login); `spec.supportArch` is optional. The development host may have a different architecture, so never derive the image platform from `uname`, `runtime.GOARCH`, or Docker's default platform. Multi-arch (`linux/amd64,linux/arm64` + a matching `spec.supportArch: [amd64, arm64]`) is only required when **publishing to the public Market** — see the [`../../olares-publish/SKILL.md`](../../olares-publish/SKILL.md) skill.
 
 ## When you need it
 
@@ -32,14 +32,15 @@ A wrong-architecture image installs but never runs (`ImagePullBackOff` with `no 
 
 1. **Find the target node arch:**
    ```bash
-   olares-cli cluster node list          # the node row shows amd64 / arm64 (needs login)
+   olares-cli cluster node list          # ARCHITECTURE shows amd64 / arm64 (needs login)
    ```
+   If more than one architecture is listed, identify the node that will run the workload and confirm it with `olares-cli cluster node get <name>`. Do not silently choose the development host's architecture. If the target cannot be identified, stop and ask rather than building an image for a guessed platform.
 2. **Inspect a candidate image's platforms** before trusting it:
    ```bash
    docker manifest inspect <image-ref>   # look for the platform.architecture entries
    ```
    (No docker daemon? Query the registry manifest list over HTTP and read each `platform.architecture`.)
-3. **Build single platform matching the node** — `--platform linux/amd64` or `linux/arm64`. A single-arch image **must** equal the node arch. (Multi-arch is only for publishing — see [`../../olares-publish/SKILL.md`](../../olares-publish/SKILL.md).)
+3. **Build single platform matching the target node** — `--platform linux/amd64` or `linux/arm64`. Always pass `--platform` explicitly; a single-arch image **must** equal the target node arch. (Multi-arch is only for publishing — see [`../../olares-publish/SKILL.md`](../../olares-publish/SKILL.md).)
 
 ## GPU / CUDA images
 
@@ -49,37 +50,38 @@ Building a CUDA image (no GPU needed on the build box, custom-kernel arch flags,
 
 You drive this end to end — ask the registry, check login, build, push, verify. The **only** manual step is the developer typing a registry token into `docker login`, and only when they are not already authenticated. **Never invent/hardcode tokens or push under an account the developer didn't choose.**
 
-1. **Ask which registry the developer uses + the target `<user>/<repo>`** before anything else (don't assume one):
+1. **Resolve the target Olares node architecture before any build** using `olares-cli cluster node list`, following the multi-node rule above. Keep the resolved value as `<target-arch>`; do not substitute the development host architecture.
+
+2. **Ask which registry the developer uses + the target `<user>/<repo>`** (don't assume one):
    - **Docker Hub** — image ref `<dockerhub-user>/<repo>`
    - **GitHub Container Registry (ghcr)** — image ref `ghcr.io/<owner>/<repo>`
    > An Olares-local private registry is not supported here — the image must live on a registry the Olares node can pull from publicly.
 
-2. **Check docker is usable:**
+3. **Check docker is usable:**
    ```bash
    docker version          # must show a Server section; if it errors, the daemon isn't running
-   docker buildx version   # buildx is needed for --platform multi-arch
+   docker buildx version   # buildx is needed for the explicit --platform build
    ```
    If docker is missing or the daemon is down, point the developer to install / start it: Docker Desktop on macOS/Windows, or the engine on Linux — https://docs.docker.com/get-docker/ . Stop and wait until `docker version` shows a Server.
 
-3. **Check whether they're already logged in to that registry** — don't ask for a login they already have:
+4. **Check whether they're already logged in to that registry** — don't ask for a login they already have:
    ```bash
    docker login <registry>   # already authed? prints "Authenticating with existing credentials" / "Login Succeeded"
    ```
    Or read `~/.docker/config.json` `auths` for the registry key (Docker Hub → `https://index.docker.io/v1/`, ghcr → `ghcr.io`; a `credsStore`/`credHelpers` entry can be empty but present). A push that later fails with `unauthorized` / `denied` is the authoritative "not logged in / wrong account" signal.
-   - **Already logged in** → go straight to build + push (step 4).
+   - **Already logged in** → go straight to build + push (step 5).
    - **Not logged in** → ask the developer to run the right `docker login` (this is the one step you can't do — it needs their secret token), then continue:
      - Docker Hub: `docker login` with a Docker Hub **access token** (Account Settings → Security → New Access Token).
      - ghcr: `docker login ghcr.io -u <github-user>` with a **GitHub PAT** that has `write:packages`. After the first push, set the package **visibility to public** so Olares can pull it without auth.
 
-4. **Build for the node arch and push** — you run this, after confirming `<registry-ref>:<tag>` with the developer:
+5. **Build for the target node arch and push** — you run this, after confirming `<registry-ref>:<tag>` with the developer:
    ```bash
-   # this node (example: amd64):
-   docker buildx build --platform linux/amd64 -t <registry-ref>:<tag> --push <build-context>
+   docker buildx build --platform linux/<target-arch> -t <registry-ref>:<tag> --push <build-context>
    ```
    (Publishing to the public Market? Build multi-arch instead — `--platform linux/amd64,linux/arm64` — per [`../../olares-publish/SKILL.md`](../../olares-publish/SKILL.md).)
    `<build-context>` can be a local path (`.`) or a git URL (e.g. `https://github.com/org/repo.git#main`). Use the upstream Dockerfile or one you authored.
 
-5. **Verify the pushed image** before wiring it in:
+6. **Verify the pushed image** before wiring it in:
    ```bash
    docker manifest inspect <registry-ref>:<tag>   # confirm the expected platforms are present
    ```

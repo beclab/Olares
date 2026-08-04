@@ -29,13 +29,12 @@ import (
 	"github.com/pelletier/go-toml"
 
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	apixclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/util/retry"
 )
 
 type CheckWslGPU struct {
@@ -385,7 +384,7 @@ func (u *UpdateNodeGPUInfo) Execute(runtime connector.Runtime) error {
 		gpuType = GB10ChipType
 	}
 
-	return SetNodeGpuModeLabel(context.Background(), client.Kubernetes(), gpuType, &driverVersion, &st.CudaVersion, &supported)
+	return SetNodeGpuModeLabel(context.Background(), client.CtrlRuntime(), gpuType, &driverVersion, &st.CudaVersion, &supported)
 }
 
 type RemoveNodeLabels struct {
@@ -398,24 +397,29 @@ func (u *RemoveNodeLabels) Execute(runtime connector.Runtime) error {
 		return errors.Wrap(errors.WithStack(err), "kubeclient create error")
 	}
 
-	return RemoveAllNodeGpuLabels(context.Background(), client.Kubernetes())
+	return RemoveAllNodeGpuLabels(context.Background(), client.CtrlRuntime())
 }
 
 // updateCurrentNodeLabels reads the node matching the local hostname, hands its
 // label map to mutate (which returns whether it changed anything) and persists
-// the result with conflict retries when needed.
-func updateCurrentNodeLabels(ctx context.Context, client kubernetes.Interface, mutate func(labels map[string]string) bool) error {
+// the result as a merge patch carrying only the labels that were touched.
+// Patching rather than updating the whole node avoids resourceVersion conflicts
+// with the kubelet and the controllers writing to the same object.
+func updateCurrentNodeLabels(ctx context.Context, client ctrlclient.Client, mutate func(labels map[string]string) bool) error {
 	nodeName, err := os.Hostname()
 	if err != nil {
 		logger.Error("get hostname error, ", err)
 		return err
 	}
 
-	node, err := client.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
-	if err != nil {
+	var node corev1.Node
+	if err := client.Get(ctx, types.NamespacedName{Name: nodeName}, &node); err != nil {
 		logger.Error("get node error, ", err)
 		return err
 	}
+
+	// mutate edits the node's own label map, so snapshot it to diff against
+	patch := ctrlclient.MergeFrom(node.DeepCopy())
 
 	labels := node.GetLabels()
 	if labels == nil {
@@ -425,15 +429,11 @@ func updateCurrentNodeLabels(ctx context.Context, client kubernetes.Interface, m
 	if !mutate(labels) {
 		return nil
 	}
-
 	node.SetLabels(labels)
-	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		logger.Infof("updating node gpu labels for %s", nodeName)
-		_, err := client.CoreV1().Nodes().Update(ctx, node, metav1.UpdateOptions{})
-		return err
-	})
-	if err != nil {
-		logger.Error("update node error, ", err)
+
+	logger.Infof("patching node gpu labels for %s", nodeName)
+	if err := client.Patch(ctx, &node, patch); err != nil {
+		logger.Error("patch node error, ", err)
 		return err
 	}
 	return nil
@@ -447,7 +447,7 @@ func updateCurrentNodeLabels(ctx context.Context, client kubernetes.Interface, m
 // corresponding gpu.bytetrade.io/{driver,cuda,cuda-supported} labels (used by
 // the nvidia path); a nil pointer means "leave that label as-is". The legacy
 // gpu.bytetrade.io/type label is intentionally never written.
-func SetNodeGpuModeLabel(ctx context.Context, client kubernetes.Interface, mode string, driver, cuda, cudaSupported *string) error {
+func SetNodeGpuModeLabel(ctx context.Context, client ctrlclient.Client, mode string, driver, cuda, cudaSupported *string) error {
 	err := updateCurrentNodeLabels(ctx, client, func(labels map[string]string) bool {
 		update := false
 		if mode != "" && mode != CPUType {
@@ -493,7 +493,7 @@ func SetNodeGpuModeLabel(ctx context.Context, client kubernetes.Interface, mode 
 // current node: the driver / cuda / cuda-supported labels, all per-mode
 // existence labels (gpu.bytetrade.io/<mode>), and the legacy
 // gpu.bytetrade.io/type label.
-func RemoveAllNodeGpuLabels(ctx context.Context, client kubernetes.Interface) error {
+func RemoveAllNodeGpuLabels(ctx context.Context, client ctrlclient.Client) error {
 	return updateCurrentNodeLabels(ctx, client, func(labels map[string]string) bool {
 		update := false
 		del := func(key string) {

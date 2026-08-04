@@ -259,21 +259,29 @@ func copyArtifactManifest(
 }
 
 func copyChart(sourceRoot, stagingRoot *os.Root, app BundleAppV1, totalRemaining int64) (int64, error) {
+	spec, err := chartVerifiedCopy(sourceRoot, app, totalRemaining)
+	if err != nil {
+		return 0, err
+	}
+	return copyVerifiedRegularFile(sourceRoot, stagingRoot, spec)
+}
+
+func chartVerifiedCopy(sourceRoot *os.Root, app BundleAppV1, totalRemaining int64) (verifiedCopy, error) {
 	info, err := sourceRoot.Lstat(app.Chart)
 	if err != nil {
-		return 0, fmt.Errorf("inspect chart %q: %w", app.Chart, err)
+		return verifiedCopy{}, fmt.Errorf("inspect chart %q: %w", app.Chart, err)
 	}
 	if info.Size() > totalRemaining {
-		return 0, fmt.Errorf("total chart size exceeds %d bytes", MaxTotalChartBytes)
+		return verifiedCopy{}, fmt.Errorf("total chart size exceeds %d bytes", MaxTotalChartBytes)
 	}
-	return copyVerifiedRegularFile(sourceRoot, stagingRoot, verifiedCopy{
+	return verifiedCopy{
 		Source:     app.Chart,
 		Target:     app.Chart,
 		Size:       info.Size(),
 		MaxSize:    min(MaxChartBytes, totalRemaining),
 		SHA256:     app.ChartSHA256,
 		OutputMode: 0o444,
-	})
+	}, nil
 }
 
 func writeSealedRootFile(root *os.Root, name string, data []byte) error {

@@ -45,6 +45,7 @@ func TestIssueCallerJWTClaimsAndVerify(t *testing.T) {
 		AppRef:             "demo",
 		Entrance:           "web",
 		Viewer:             "alice",
+		ClientAppid:        "6bf98da2",
 		TTL:                30 * time.Minute,
 	})
 	if err != nil {
@@ -75,7 +76,10 @@ func TestIssueCallerJWTClaimsAndVerify(t *testing.T) {
 		t.Fatalf("viewer = %q", claims.Viewer)
 	}
 	if claims.Appid != "" {
-		t.Fatalf("ordinary caller must omit appid, got %q", claims.Appid)
+		t.Fatalf("ordinary caller must omit shared appid, got %q", claims.Appid)
+	}
+	if claims.ClientAppid != "6bf98da2" {
+		t.Fatalf("clientAppid = %q", claims.ClientAppid)
 	}
 	if claims.ExpiresAt == nil || claims.ExpiresAt.Time.Before(time.Now()) {
 		t.Fatalf("exp missing or in the past")
@@ -99,7 +103,28 @@ func TestIssueRejectsViewerAndAppidTogether(t *testing.T) {
 		Appid:              "deadbeef",
 	})
 	if err == nil {
-		t.Fatal("expected error when viewer and appid are both set")
+		t.Fatal("expected error when viewer and shared appid are both set")
+	}
+}
+
+func TestIssueRejectsAppidAndClientAppidTogether(t *testing.T) {
+	ring, err := NewKeyRingForTest(false)
+	if err != nil {
+		t.Fatalf("NewKeyRingForTest: %v", err)
+	}
+	issuer, err := NewIssuer(ring)
+	if err != nil {
+		t.Fatalf("NewIssuer: %v", err)
+	}
+	_, err = issuer.Issue(IssueRequest{
+		Namespace:          "ns",
+		ServiceAccountName: "sa",
+		AppRef:             "demo",
+		Appid:              "deadbeef",
+		ClientAppid:        "6bf98da2",
+	})
+	if err == nil {
+		t.Fatal("expected error when shared appid and clientAppid are both set")
 	}
 }
 
@@ -131,6 +156,9 @@ func TestIssueSharedCallerAppidOmitsViewer(t *testing.T) {
 	if claims.Viewer != "" {
 		t.Fatalf("shared caller must omit viewer, got %q", claims.Viewer)
 	}
+	if claims.ClientAppid != "" {
+		t.Fatalf("shared caller must omit clientAppid, got %q", claims.ClientAppid)
+	}
 }
 
 func TestShouldIssueCallerJWTSharedAppRefAndOptOut(t *testing.T) {
@@ -159,8 +187,8 @@ func TestShouldIssueCallerJWTSharedAppRefAndOptOut(t *testing.T) {
 			},
 		},
 	}
-	if shouldIssueCallerJWT(optOut) {
-		t.Fatal("shared app with mesh-inject opt-out must not issue JWT")
+	if !shouldIssueCallerJWT(optOut) {
+		t.Fatal("shared app always issues JWT even with mesh-inject opt-out")
 	}
 	intentOnly := &appv1alpha1.Application{
 		ObjectMeta: metav1.ObjectMeta{Name: "agg", Labels: sharedLabels},
@@ -171,8 +199,20 @@ func TestShouldIssueCallerJWTSharedAppRefAndOptOut(t *testing.T) {
 			Settings:  map[string]string{settingNeedsSharedAccess: "true"},
 		},
 	}
-	if shouldIssueCallerJWT(intentOnly) {
-		t.Fatal("shared app with needsSharedAccess alone must not issue JWT")
+	if !shouldIssueCallerJWT(intentOnly) {
+		t.Fatal("shared app always issues JWT even with needsSharedAccess alone")
+	}
+	pureCallee := &appv1alpha1.Application{
+		ObjectMeta: metav1.ObjectMeta{Name: "engine", Labels: sharedLabels},
+		Spec: appv1alpha1.ApplicationSpec{
+			Name:      "engine",
+			Appid:     "82f26852",
+			Namespace: "engine-shared",
+			Settings:  map[string]string{settingSharedCallerDecide: "false"},
+		},
+	}
+	if !shouldIssueCallerJWT(pureCallee) {
+		t.Fatal("shared pure callee (decide=false) must still issue JWT")
 	}
 }
 
@@ -237,6 +277,7 @@ func TestIssuerReconcilerCreatesJWTSecretForCaller(t *testing.T) {
 		},
 		Spec: appv1alpha1.ApplicationSpec{
 			Name:      "demo",
+			Appid:     "6bf98da2",
 			Namespace: "user-space-alice-demo",
 			Owner:     "alice",
 			Settings: map[string]string{
@@ -273,6 +314,12 @@ func TestIssuerReconcilerCreatesJWTSecretForCaller(t *testing.T) {
 	if claims.Viewer != "alice" {
 		t.Fatalf("viewer = %q", claims.Viewer)
 	}
+	if claims.ClientAppid != "6bf98da2" {
+		t.Fatalf("clientAppid = %q", claims.ClientAppid)
+	}
+	if claims.Appid != "" {
+		t.Fatalf("ordinary caller must omit shared appid, got %q", claims.Appid)
+	}
 }
 
 func TestIssuerReconcilerCreatesJWTSecretWhenDecideTrue(t *testing.T) {
@@ -293,6 +340,7 @@ func TestIssuerReconcilerCreatesJWTSecretWhenDecideTrue(t *testing.T) {
 		},
 		Spec: appv1alpha1.ApplicationSpec{
 			Name:      "litellm",
+			Appid:     "6aead52a",
 			Namespace: "litellm-alice",
 			Owner:     "alice",
 			Settings: map[string]string{
@@ -343,6 +391,7 @@ func TestIssuerReconcileRequeuesForJWTRefresh(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Name: "demo", Namespace: "user-space-alice"},
 		Spec: appv1alpha1.ApplicationSpec{
 			Name:      "demo",
+			Appid:     "6bf98da2",
 			Namespace: "user-space-alice-demo",
 			Owner:     "alice",
 			Settings: map[string]string{
@@ -370,6 +419,7 @@ func TestIssueRequestFromApplicationOmitsCalleeAsEntrance(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Name: "demo", Namespace: "user-space-alice"},
 		Spec: appv1alpha1.ApplicationSpec{
 			Name:      "demo",
+			Appid:     "6bf98da2",
 			Namespace: "user-space-alice-demo",
 			Owner:     "alice",
 			Settings: map[string]string{
@@ -387,6 +437,9 @@ func TestIssueRequestFromApplicationOmitsCalleeAsEntrance(t *testing.T) {
 	}
 	if req.Appid != "" {
 		t.Fatalf("ordinary caller Appid = %q, want empty", req.Appid)
+	}
+	if req.ClientAppid != "6bf98da2" {
+		t.Fatalf("ClientAppid = %q", req.ClientAppid)
 	}
 	if req.Namespace != "user-space-alice-demo" {
 		t.Fatalf("Namespace = %q", req.Namespace)
@@ -416,6 +469,106 @@ func TestIssueRequestFromSharedApplicationUsesAppid(t *testing.T) {
 	}
 	if req.Viewer != "" {
 		t.Fatalf("Viewer = %q, want empty for shared caller", req.Viewer)
+	}
+	if req.ClientAppid != "" {
+		t.Fatalf("ClientAppid = %q, want empty for shared caller", req.ClientAppid)
+	}
+}
+
+func TestIssuerReconcilerOrdinaryMissingAppidErrors(t *testing.T) {
+	scheme := testScheme(t)
+	ring, err := NewKeyRingForTest(false)
+	if err != nil {
+		t.Fatalf("NewKeyRingForTest: %v", err)
+	}
+	issuer, err := NewIssuer(ring)
+	if err != nil {
+		t.Fatalf("NewIssuer: %v", err)
+	}
+	app := &appv1alpha1.Application{
+		ObjectMeta: metav1.ObjectMeta{Name: "demo", Namespace: "user-space-alice"},
+		Spec: appv1alpha1.ApplicationSpec{
+			Name:      "demo",
+			Namespace: "user-space-alice-demo",
+			Owner:     "alice",
+			Settings: map[string]string{
+				settingSharedCallerDecide: "true",
+			},
+		},
+	}
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(app).Build()
+	r := &IssuerReconciler{Client: c, Scheme: scheme, issuer: issuer}
+	if err := r.reconcileApplication(context.Background(), app); err == nil {
+		t.Fatal("expected error when ordinary caller has empty spec.appid")
+	}
+}
+
+func TestIssuerReconcilerIssuesJWTForSharedPureCallee(t *testing.T) {
+	scheme := testScheme(t)
+	ring, err := NewKeyRingForTest(false)
+	if err != nil {
+		t.Fatalf("NewKeyRingForTest: %v", err)
+	}
+	issuer, err := NewIssuer(ring)
+	if err != nil {
+		t.Fatalf("NewIssuer: %v", err)
+	}
+	app := &appv1alpha1.Application{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "engine",
+			Namespace: "user-system",
+			Labels:    map[string]string{"app.bytetrade.io/app-shared": "true"},
+		},
+		Spec: appv1alpha1.ApplicationSpec{
+			Name:      "engine",
+			Appid:     "82f26852",
+			Namespace: "engine-shared",
+			Settings:  map[string]string{settingSharedCallerDecide: "false"},
+		},
+	}
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(app).Build()
+	r := &IssuerReconciler{Client: c, Scheme: scheme, issuer: issuer}
+	if err := r.reconcileApplication(context.Background(), app); err != nil {
+		t.Fatalf("reconcileApplication: %v", err)
+	}
+	secret := &corev1.Secret{}
+	if err := c.Get(context.Background(), types.NamespacedName{
+		Namespace: app.Spec.Namespace,
+		Name:      AppJWTSecretName,
+	}, secret); err != nil {
+		t.Fatalf("get secret: %v", err)
+	}
+	if len(secret.Data[AppJWTSecretDataKey]) == 0 {
+		t.Fatal("expected non-empty caller-jwt token")
+	}
+}
+
+func TestIssuerReconcilerSharedMissingAppidErrors(t *testing.T) {
+	scheme := testScheme(t)
+	ring, err := NewKeyRingForTest(false)
+	if err != nil {
+		t.Fatalf("NewKeyRingForTest: %v", err)
+	}
+	issuer, err := NewIssuer(ring)
+	if err != nil {
+		t.Fatalf("NewIssuer: %v", err)
+	}
+	app := &appv1alpha1.Application{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "engine",
+			Namespace: "user-system",
+			Labels:    map[string]string{"app.bytetrade.io/app-shared": "true"},
+		},
+		Spec: appv1alpha1.ApplicationSpec{
+			Name:      "engine",
+			Namespace: "engine-shared",
+			Settings:  map[string]string{settingSharedCallerDecide: "false"},
+		},
+	}
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(app).Build()
+	r := &IssuerReconciler{Client: c, Scheme: scheme, issuer: issuer}
+	if err := r.reconcileApplication(context.Background(), app); err == nil {
+		t.Fatal("expected error when shared app has empty spec.appid")
 	}
 }
 

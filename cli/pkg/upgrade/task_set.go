@@ -39,6 +39,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/phase"
 	"github.com/beclab/Olares/cli/pkg/plugins/network"
 	"github.com/beclab/Olares/cli/pkg/plugins/network/templates"
+	"github.com/beclab/Olares/cli/pkg/preinstall"
 	"github.com/beclab/Olares/cli/pkg/storage"
 	"github.com/beclab/Olares/cli/pkg/terminus"
 	"github.com/beclab/Olares/cli/pkg/utils"
@@ -62,6 +63,15 @@ import (
 )
 
 const cacheRebootNeeded = "reboot.needed"
+
+func publishMarketEnsureApps() []task.Interface {
+	return []task.Interface{
+		&task.LocalTask{
+			Name:   "PublishMarketEnsureApps",
+			Action: new(preinstall.PublishEnsureAppsAction),
+		},
+	}
+}
 
 type upgradeContainerdAction struct {
 	common.KubeAction
@@ -600,7 +610,7 @@ func (a *upgradeGPUDriverIfNeeded) Execute(runtime connector.Runtime) error {
 		if err != nil {
 			return errors.Wrap(errors.WithStack(err), "kubeclient create error")
 		}
-		err = gpu.SetNodeGpuModeLabel(context.Background(), client.Kubernetes(), gpu.NvidiaCardType, &targetDriverVersionStr, ptr.To(common.CurrentVerifiedCudaVersion), ptr.To("true"))
+		err = gpu.SetNodeGpuModeLabel(context.Background(), client.CtrlRuntime(), gpu.NvidiaCardType, &targetDriverVersionStr, ptr.To(common.CurrentVerifiedCudaVersion), ptr.To("true"))
 		if err != nil {
 			return err
 		}

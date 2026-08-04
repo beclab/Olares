@@ -6,8 +6,8 @@ head:
     - name: keywords
       content: Olares, Karakeep, Hoarder, bookmark manager, self-hosted, AI auto-tag, mobile app, Ollama, video download
 app_version: "1.0.4"
-doc_version: "1.0"
-doc_updated: "2026-05-15"
+doc_version: "1.1"
+doc_updated: "2026-07-29"
 ---
 
 :::warning
@@ -31,13 +31,21 @@ Karakeep（前身为 Hoarder）是一个自托管的书签和内容管理应用�
 - 为书签链接启用视频下载。
 - 配置 SMTP 以发送邮件邀请。
 
+## 前提条件
+
+如需完成 AI 自动标签部分，请准备以下模型：
+
+| 模型类型 | 模型 | 获取方式 |
+| :--- | :--- | :--- |
+| 聊天 | Gemma 4 26B (Ollama) | 从 Market 安装 |
+
 ## 安装 Karakeep
 
 1. 打开 Market 并搜索 "Karakeep"。
 
    ![Karakeep in Market](/images/manual/use-cases/karakeep.png#bordered)
 
-2. 点击 **获取**，然后点击 **安装**，等待安装完成。
+2. 点击**获取**，然后点击**安装**，等待安装完成。
 
 安装完成后，从 Launchpad 打开 Karakeep 并创建第一个账户。第一个注册的用户将成为 Karakeep 管理员。
 
@@ -46,7 +54,7 @@ Karakeep（前身为 Hoarder）是一个自托管的书签和内容管理应用�
 Karakeep 会在你粘贴 URL 时自动获取页面标题、内容和元数据。
 
 1. 从 Launchpad 打开 Karakeep。
-2. 将任意 URL 粘贴到仪表板顶部的输入框中，然后点击 **保存**。Karakeep 会保存链接并在后台开始获取页面。
+2. 将任意 URL 粘贴到仪表板顶部的输入框中，然后点击**保存**。Karakeep 会保存链接并在后台开始获取页面。
 
    ![在 Karakeep 中保存 URL](/images/manual/use-cases/karakeep-save-url.png#bordered)
 
@@ -66,8 +74,8 @@ Karakeep 移动应用允许你直接从手机将图片和链接保存到你的 O
 
 默认情况下，Karakeep 仅对你的 Olares 账户私有。要让移动应用登录，请更改认证级别。
 
-1. 打开 **设置**，然后前往 **应用** > **Karakeep** > **入口** > **Karakeep**。
-2. 将 **认证级别** 设置为以下之一，然后点击 **提交**：
+1. 打开**设置**，然后前往**应用** > **Karakeep** > **入口** > **Karakeep**。
+2. 将**认证级别** 设置为以下之一，然后点击**提交**：
 
    - **内部**：需要 LarePass VPN。推荐个人使用。
    - **公开**：无需 LarePass VPN 即可访问，但会将 Karakeep 暴露到互联网并使用 FRP 流量。
@@ -80,36 +88,34 @@ Karakeep 移动应用允许你直接从手机将图片和链接保存到你的 O
 
 ### 获取你的 Karakeep 端点 URL
 
-在同一 **入口** 页面上，复制 Karakeep 显示的端点 URL。例如：
+<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
 
-```text
-https://abc123.{username}.olares.com
-```
+在同一 **Entrances** 页面上，复制 Karakeep 显示的 **Endpoint** URL。
 
-保存此 URL 供后续使用。
+在 Karakeep 移动应用中，将该 Endpoint 用作 **Server Address**。
 
 ### 生成 API 密钥
 
 1. 返回浏览器中的 Karakeep。
-2. 点击你的个人资料图标，然后选择 **用户设置**。
-3. 前往 **API 密钥** 标签页，然后点击 **新建 API 密钥**。
-4. 输入密钥名称（例如，`mobile`），然后点击 **创建**。复制生成的密钥。你只能看到它一次。
+2. 点击你的个人资料图标，然后选择**用户设置**。
+3. 前往 **API 密钥** 标签页，然后点击**新建 API 密钥**。
+4. 输入密钥名称（例如，`mobile`），然后点击**创建**。复制生成的密钥。你只能看到它一次。
 
    ![在 Karakeep 中生成 API 密钥](/images/manual/use-cases/karakeep-api-key.png#bordered)
 
 ### 从移动应用登录
 
-1. 如果你在认证步骤中选择了 **内部**，请在手机上打开 LarePass 并开启 VPN。
+1. 如果你在认证步骤中选择了**内部**，请在手机上打开 LarePass 并开启 VPN。
 
    ![在移动设备上启用 LarePass VPN](/images/manual/get-started/larepass-vpn-mobile.png#bordered)
 
-2. 打开 Karakeep 应用，然后选择 **改用 API 密钥**。
+2. 打开 Karakeep 应用，然后选择**改用 API 密钥**。
 3. 输入你的详细信息：
 
-   - **服务器地址**：粘贴你之前复制的端点 URL。
+   - **Server Address**：粘贴之前复制的 Karakeep Endpoint。
    - **API 密钥**：粘贴你生成的 API 密钥。
 
-4. 点击 **登录**。你现在可以从手机保存图片和链接了。
+4. 点击**登录**。你现在可以从手机保存图片和链接了。
 
    ![Karakeep 移动登录](/images/manual/use-cases/karakeep-mobile-signin.png#bordered)
 
@@ -117,45 +123,32 @@ Karakeep 还支持浏览器扩展和其他客户端。有关完整列表，请�
 
 ## 使用本地模型自动为书签添加标签
 
-Karakeep 可以使用 Olares 上托管的本地模型为你的保存内容生成标签。本指南使用 Qwen3.5 27B Q4_K_M (Ollama) 作为文本模型。
+Karakeep 可以使用 Olares 上托管的本地模型为保存的内容生成标签。目前，Karakeep 通过 Ollama API 连接本地模型。
 
-### 前提条件
+本指南使用 Market 中预构建的 Gemma 4 26B (Ollama) 模型应用。
 
-- 从 Market 安装的本地模型应用，且模型已完全下载。对于图像标签，还需安装 [Ollama](ollama.md) 并拉取视觉模型，如 `llava`。
+### 获取模型连接信息
 
-### 获取模型端点和名称
+<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
-1. 从 Launchpad 打开你的模型应用。模型名称显示在页面上（例如，`qwen3.5:27b-q4_K_M`）。记下它供后续使用。
+对于 Gemma 4 26B (Ollama)：
 
-   ![获取模型名称](/images/manual/use-cases/deerflow2-get-model-name.png#bordered)
+1. 从 Launchpad 打开模型应用。模型控制台会自动打开。
+2. 等待 **Model** 显示 **READY**，且 **Engine** 显示 **RUNNING**。
+3. 在 **Service status** 下，选择 **Apps in Olares** 和 **Ollama**，然后按显示内容原样复制 **Model name** 和 **Base URL**。
 
-2. 打开 **设置**，然后前往 **应用** > **Qwen3.5 27B Q4_K_M (Ollama)**。
-3. 在 **共享入口** 下，选择模型应用以查看端点 URL。
-
-   ![获取共享端点](/images/manual/use-cases/ollama-shared.png#bordered){width=70%}
-
-4. 复制共享端点。例如：
-
-   ```text
-   http://94a553e00.shared.olares.com
-   ```
+   ![Gemma4-26B model console](/images/manual/use-cases/gemma4-26b-model-console.png#bordered){width=90%}
 
 ### 将 Karakeep 连接到本地模型
 
-1. 打开 **设置**，然后前往 **应用** > **Karakeep** > **管理环境变量**。
-2. 点击每个变量旁边的 <i class="material-symbols-outlined">edit_square</i>，输入值，然后点击 **确认**：
+1. 打开**设置**，然后前往**应用** > **Karakeep** > **管理环境变量**。
+2. 点击每个变量旁边的 <i class="material-symbols-outlined">edit_square</i>，输入值，然后点击**确认**：
 
-   - **OLLAMA_BASE_URL**：上一步中的共享端点 URL。例如：
-     ```text
-     http://94a553e00.shared.olares.com
-     ```
-   - **INFERENCE_TEXT_MODEL**：上一步中的模型名称。例如：
-     ```text
-     qwen3.5:27b-q4_K_M
-     ```
-   - **INFERENCE_IMAGE_MODEL**（可选）：在 Ollama 中拉取的视觉模型名称。仅当你希望 Karakeep 为图像添加标签时才设置此项。
+   - **OLLAMA_BASE_URL**：从 Gemma 4 26B 模型控制台复制的 Base URL。
+   - **INFERENCE_TEXT_MODEL**：从模型控制台复制的 Model name。本示例中为 `gemma4:26b`。
+   - **INFERENCE_IMAGE_MODEL**（可选）：如需为图像添加标签，请安装 [Ollama](ollama.md)，拉取 `llava` 等视觉模型，并填写其模型名称。
 
-3. 点击 **应用**，等待 Karakeep 重启。
+3. 点击**应用**，等待 Karakeep 重启。
 
    ![管理 Karakeep 环境变量](/images/manual/use-cases/karakeep-manage-env-vars.png#bordered)
 
@@ -165,10 +158,10 @@ Karakeep 可以使用 Olares 上托管的本地模型为你的保存内容生成
 
 ### 为现有书签生成标签
 
-1. 打开 Karakeep，点击你的个人资料图标，然后选择 **用户设置**。
+1. 打开 Karakeep，点击你的个人资料图标，然后选择**用户设置**。
 2. 前往 **AI 设置**。默认提示适用于大多数情况。
-3. 点击你的个人资料图标，选择 **管理员设置**，然后前往 **后台任务**。
-4. 在 **推理任务** 中，点击 **为所有书签重新生成 AI 标签**。队列大小会增加。
+3. 点击你的个人资料图标，选择**管理员设置**，然后前往**后台任务**。
+4. 在**推理任务** 中，点击**为所有书签重新生成 AI 标签**。队列大小会增加。
 
    ![在 Karakeep 中重新生成标签](/images/manual/use-cases/karakeep-regenerate-tags.png#bordered)
 
@@ -180,9 +173,9 @@ Karakeep 可以使用 Olares 上托管的本地模型为你的保存内容生成
 
 Karakeep 可以使用 `yt-dlp` 自动从保存的链接下载视频到 Olares。视频下载后，你可以在 Karakeep 中离线观看，或从书签附件中将视频文件下载到你的本地计算机。
 
-1. 打开 **设置**，然后前往 **应用** > **Karakeep** > **管理环境变量**。
-2. 点击 `CRAWLER_VIDEO_DOWNLOAD` 旁边的 <i class="material-symbols-outlined">edit_square</i>，将值设置为 `true`，然后点击 **确认**。
-3. 点击 **应用**，等待 Karakeep 重启。
+1. 打开**设置**，然后前往**应用** > **Karakeep** > **管理环境变量**。
+2. 点击 `CRAWLER_VIDEO_DOWNLOAD` 旁边的 <i class="material-symbols-outlined">edit_square</i>，将值设置为 `true`，然后点击**确认**。
+3. 点击**应用**，等待 Karakeep 重启。
 4. Karakeep 重启后，像添加任何其他书签一样添加视频链接。
 
    Karakeep 会在后台将视频下载到 Olares。根据视频大小和网络条件，这可能需要一些时间。
@@ -191,7 +184,7 @@ Karakeep 可以使用 `yt-dlp` 自动从保存的链接下载视频到 Olares。
 
    视频下载到 Olares 后，**视频** 将出现在详情页面顶部的内容类型下拉菜单中。
 
-6. 可选：要将视频文件下载到你的本地计算机，请在右侧边栏的 **附件** 下找到 **视频**，然后点击其旁边的 <i class="material-symbols-outlined">download</i>。
+6. 可选：要将视频文件下载到你的本地计算机，请在右侧边栏的**附件**下找到**视频**，然后点击其旁边的 <i class="material-symbols-outlined">download</i>。
 
    ![视频下载](/images/manual/use-cases/karakeep-video-download.png#bordered)
 
@@ -203,7 +196,7 @@ Karakeep 可以使用 `yt-dlp` 自动从保存的链接下载视频到 Olares。
 
 要通过电子邮件邀请用户，请在 Olares 中配置系统 SMTP 设置。Karakeep 默认使用系统 SMTP 设置。
 
-1. 打开 **设置**，然后前往 **高级** > **系统环境变量**。
+1. 打开**设置**，然后前往**高级** > **系统环境变量**。
 2. 根据邮件提供商提供的 SMTP 设置配置以下系统 SMTP 变量：
 
    - `OLARES_USER_SMTP_ENABLED`：设置为 `true`。
@@ -215,7 +208,7 @@ Karakeep 可以使用 `yt-dlp` 自动从保存的链接下载视频到 Olares。
 
    对于大多数邮件提供商，这些变量已足够。如果你的提供商需要特定的 SSL/TLS 设置，请按照提供商的说明配置相关的 SMTP 安全变量。
 
-3. 点击 **应用**。Karakeep 将重启以使新的 SMTP 设置生效。
+3. 点击**应用**。Karakeep 将重启以使新的 SMTP 设置生效。
 
 Karakeep 重启后，你可以从管理员用户管理页面发送电子邮件邀请。
 
@@ -229,8 +222,8 @@ Karakeep 重启后，你可以从管理员用户管理页面发送电子邮件�
 
 #### 解决方案
 
-1. 打开 Control Hub，点击 **浏览**，选择你的 Karakeep 项目，展开 **部署**，然后选择正在运行的 Pod。
-2. 在右侧面板中，向下滚动到 **容器** 部分，找到 `karakeep` 容器，然后点击其旁边的 <i class="material-symbols-outlined">article</i>。
+1. 打开 Control Hub，点击**浏览**，选择你的 Karakeep 项目，展开**部署**，然后选择正在运行的 Pod。
+2. 在右侧面板中，向下滚动到**容器** 部分，找到 `karakeep` 容器，然后点击其旁边的 <i class="material-symbols-outlined">article</i>。
 
    ![检查容器日志](/images/manual/use-cases/karakeep-container-logs.png#bordered)
 

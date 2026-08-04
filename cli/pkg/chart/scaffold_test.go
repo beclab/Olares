@@ -3,6 +3,8 @@ package chart
 import (
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 	"testing"
 
 	oac "github.com/beclab/Olares/framework/oac"
@@ -26,13 +28,17 @@ func TestFromComposeProducesV3LintableChart(t *testing.T) {
 	}
 
 	chartDir := filepath.Join(root, "testapp")
-	if err := FromCompose(Options{
+	result, err := FromCompose(Options{
 		ComposeFiles: []string{composePath},
 		OutputDir:    chartDir,
 		Name:         "testapp",
 		Title:        "Test App",
-	}); err != nil {
+	})
+	if err != nil {
 		t.Fatalf("FromCompose() error: %v", err)
+	}
+	if result.EntranceHost != "web" || result.EntrancePort != 8080 {
+		t.Fatalf("entrance = %s:%d, want web:8080", result.EntranceHost, result.EntrancePort)
 	}
 
 	raw, err := os.ReadFile(filepath.Join(chartDir, appCfgFileName))
@@ -69,7 +75,869 @@ func TestFromComposeProducesV3LintableChart(t *testing.T) {
 		t.Fatalf("olares dependency version = %q, want %q", systemDependency.Version, olaresSystemDepVersion)
 	}
 
+	assertChartInvariants(t, chartDir)
 	if err := oac.Lint(chartDir, oac.WithAutoOwnerScenarios()); err != nil {
 		t.Fatalf("freshly scaffolded chart must pass lint: %v", err)
 	}
+}
+
+// TestFromComposeMultiServiceChart covers what a single-service compose cannot:
+// names kompose leaves invalid or unreachable from Helm, and a bundled datastore
+// that must not be mistaken for the app itself.
+func TestFromComposeMultiServiceChart(t *testing.T) {
+	root := t.TempDir()
+	composePath := filepath.Join(root, "compose.yaml")
+	compose := []byte(`services:
+  db:
+    image: postgres:16
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+  web_app:
+    image: nginx:1.27
+    ports:
+      - "8080:80"
+  redis_cache:
+    image: redis:7
+    ports:
+      - "6379:6379"
+volumes:
+  pgdata:
+`)
+	if err := os.WriteFile(composePath, compose, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	chartDir := filepath.Join(root, "testapp")
+	result, err := FromCompose(Options{
+		ComposeFiles: []string{composePath},
+		OutputDir:    chartDir,
+		Name:         "testapp",
+		Title:        "Test App",
+	})
+	if err != nil {
+		t.Fatalf("FromCompose() error: %v", err)
+	}
+
+	if result.EntranceHost != "web-app" || result.EntrancePort != 8080 {
+		t.Fatalf("entrance = %s:%d, want web-app:8080 (the datastores must be skipped)", result.EntranceHost, result.EntrancePort)
+	}
+
+	primary := readTemplate(t, chartDir, "deployment-testapp.yaml")
+	if !strings.Contains(primary, "image: nginx:1.27") {
+		t.Fatalf("workload named after the app must be the web service, got:\n%s", primary)
+	}
+
+	// A dashed workload name is only reachable through index.
+	cached := readTemplate(t, chartDir, "deployment-redis-cache.yaml")
+	if !strings.Contains(cached, `replicas: {{ (index .Values.workloads "redis-cache").replicaCount }}`) {
+		t.Fatalf("dashed workload must use the index form, got:\n%s", cached)
+	}
+	db := readTemplate(t, chartDir, "deployment-db.yaml")
+	if !strings.Contains(db, "replicas: {{ .Values.workloads.db.replicaCount }}") {
+		t.Fatalf("plain workload name should keep the dotted form, got:\n%s", db)
+	}
+
+	entries, err := os.ReadDir(filepath.Join(chartDir, "templates"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	invalidName := regexp.MustCompile(`(?m)^\s*name: \S*_`)
+	for _, entry := range entries {
+		if strings.Contains(entry.Name(), "_") {
+			t.Fatalf("template file %q keeps an invalid Kubernetes name", entry.Name())
+		}
+		if body := readTemplate(t, chartDir, entry.Name()); invalidName.MatchString(body) {
+			t.Fatalf("template %q declares a name with an underscore:\n%s", entry.Name(), body)
+		}
+	}
+
+	values := readFile(t, filepath.Join(chartDir, "values.yaml"))
+	for _, workload := range []string{"testapp", "db", "redis-cache"} {
+		if !strings.Contains(values, workload+":") {
+			t.Fatalf("values.yaml is missing workload %q:\n%s", workload, values)
+		}
+	}
+
+	assertChartInvariants(t, chartDir)
+	if err := oac.Lint(chartDir, oac.WithAutoOwnerScenarios()); err != nil {
+		t.Fatalf("multi-service chart must pass lint: %v", err)
+	}
+}
+
+// TestFromComposeRestartNoBecomesDeployment pins the workload kind for a service
+// kompose would render as a bare Pod, which Olares cannot install or suspend.
+func TestFromComposeRestartNoBecomesDeployment(t *testing.T) {
+	root := t.TempDir()
+	composePath := filepath.Join(root, "compose.yaml")
+	compose := []byte(`services:
+  worker:
+    image: alpine:3.20
+    restart: "no"
+    command: ["sleep", "3600"]
+    ports:
+      - "9000:9000"
+`)
+	if err := os.WriteFile(composePath, compose, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	chartDir := filepath.Join(root, "workerapp")
+	result, err := FromCompose(Options{
+		ComposeFiles: []string{composePath},
+		OutputDir:    chartDir,
+		Name:         "workerapp",
+	})
+	if err != nil {
+		t.Fatalf("FromCompose() error: %v", err)
+	}
+
+	entries, err := os.ReadDir(filepath.Join(chartDir, "templates"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range entries {
+		if strings.HasPrefix(entry.Name(), "pod-") {
+			t.Fatalf("restart: no must not render a bare Pod, got %q", entry.Name())
+		}
+	}
+
+	workload := readTemplate(t, chartDir, "deployment-workerapp.yaml")
+	if !strings.Contains(workload, "restartPolicy: Always") {
+		t.Fatalf("a Deployment pod template only accepts restartPolicy Always, got:\n%s", workload)
+	}
+
+	raw := readFile(t, filepath.Join(chartDir, appCfgFileName))
+	var cfg manifest.AppConfiguration
+	if err := yaml.Unmarshal([]byte(raw), &cfg); err != nil {
+		t.Fatal(err)
+	}
+	if cfg.WorkloadReplicas == nil || (*cfg.WorkloadReplicas)["workerapp"] != 1 {
+		t.Fatalf("workloadReplicas = %#v, want workerapp: 1", cfg.WorkloadReplicas)
+	}
+	if len(result.Notices) == 0 {
+		t.Fatal("converting restart: no into a Deployment must be reported")
+	}
+
+	assertChartInvariants(t, chartDir)
+	if err := oac.Lint(chartDir, oac.WithAutoOwnerScenarios()); err != nil {
+		t.Fatalf("chart must pass lint: %v", err)
+	}
+}
+
+// TestFromComposeEntranceLabelBeatsAppNamedWorkload keeps an explicit entrance
+// label authoritative when another compose service happens to be named after the
+// app: that workload blocks the rename, it must not steal the entrance.
+func TestFromComposeEntranceLabelBeatsAppNamedWorkload(t *testing.T) {
+	root := t.TempDir()
+	composePath := filepath.Join(root, "compose.yaml")
+	// app owns the app name and the lower port, so it would win both the
+	// already-named-after-the-app and the lowest-port paths.
+	compose := []byte(`services:
+  app:
+    image: alpine:3.20
+    command: ["sleep", "3600"]
+    ports:
+      - "8080:8080"
+  web:
+    image: nginx:1.27
+    labels:
+      olares.service.type: Entrance
+    ports:
+      - "9000:80"
+`)
+	if err := os.WriteFile(composePath, compose, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	chartDir := filepath.Join(root, "app")
+	result, err := FromCompose(Options{
+		ComposeFiles: []string{composePath},
+		OutputDir:    chartDir,
+		Name:         "app",
+	})
+	if err != nil {
+		t.Fatalf("FromCompose() error: %v", err)
+	}
+
+	if result.EntranceHost != "web" || result.EntrancePort != 9000 {
+		t.Fatalf("entrance = %s:%d, want web:9000 (%s)", result.EntranceHost, result.EntrancePort, result.EntranceReason)
+	}
+	if result.EntranceGuessed {
+		t.Fatalf("a labeled entrance is not a guess, reason: %s", result.EntranceReason)
+	}
+
+	// Renaming web to app would have overwritten deployment-app.yaml.
+	if body := readTemplate(t, chartDir, "deployment-app.yaml"); !strings.Contains(body, "image: alpine:3.20") {
+		t.Fatalf("the workload named after the app must still be the app service, got:\n%s", body)
+	}
+	if body := readTemplate(t, chartDir, "deployment-web.yaml"); !strings.Contains(body, "image: nginx:1.27") {
+		t.Fatalf("the labeled service keeps its own workload, got:\n%s", body)
+	}
+
+	var cfg manifest.AppConfiguration
+	if err := yaml.Unmarshal([]byte(readFile(t, filepath.Join(chartDir, appCfgFileName))), &cfg); err != nil {
+		t.Fatal(err)
+	}
+	if cfg.WorkloadReplicas == nil ||
+		(*cfg.WorkloadReplicas)["app"] != 1 || (*cfg.WorkloadReplicas)["web"] != 1 {
+		t.Fatalf("workloadReplicas = %#v, want app and web", cfg.WorkloadReplicas)
+	}
+
+	if !strings.Contains(strings.Join(result.Notices, "\n"), "already carries the app name") {
+		t.Fatalf("the skipped rename must be explained, notices: %v", result.Notices)
+	}
+
+	assertChartInvariants(t, chartDir)
+	if err := oac.Lint(chartDir, oac.WithAutoOwnerScenarios()); err != nil {
+		t.Fatalf("chart must pass lint: %v", err)
+	}
+}
+
+// TestFromComposeWithoutScalableWorkloadWritesNothing pins the fail-fast: a
+// compose file that renders no Deployment/StatefulSet must not leave a partial
+// chart behind.
+func TestFromComposeWithoutScalableWorkloadWritesNothing(t *testing.T) {
+	root := t.TempDir()
+	composePath := filepath.Join(root, "compose.yaml")
+	compose := []byte(`services:
+  agent:
+    image: alpine:3.20
+    command: ["sleep", "3600"]
+    labels:
+      kompose.controller.type: daemonset
+`)
+	if err := os.WriteFile(composePath, compose, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	chartDir := filepath.Join(root, "agentapp")
+	if _, err := FromCompose(Options{
+		ComposeFiles: []string{composePath},
+		OutputDir:    chartDir,
+		Name:         "agentapp",
+	}); err == nil {
+		t.Fatal("a chart without any Deployment/StatefulSet must be rejected")
+	} else if !strings.Contains(err.Error(), "no Deployment or StatefulSet") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	entries, err := os.ReadDir(filepath.Join(chartDir, "templates"))
+	if err != nil && !os.IsNotExist(err) {
+		t.Fatal(err)
+	}
+	if len(entries) != 0 {
+		t.Fatalf("a rejected conversion must not write templates, got %d files", len(entries))
+	}
+}
+
+// TestFromComposeKeepsRenamedReferences covers the names kompose only
+// half-normalizes: renaming the object without following its references would
+// leave a chart that lints clean and then never starts.
+func TestFromComposeKeepsRenamedReferences(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "Prod.env"), []byte("TOKEN=abc\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	composePath := filepath.Join(root, "compose.yaml")
+	// web.ui exercises the Service and container names kompose leaves dotted while
+	// labeling the pods (and the Ingress backend) with web-ui; PGData, my.data and
+	// Prod.env exercise the volume and env-file names it never fully normalizes.
+	compose := []byte(`services:
+  web.ui:
+    image: nginx:1.27
+    labels:
+      kompose.service.expose: "ui.example.com"
+    env_file:
+      - ./Prod.env
+    ports:
+      - "8080:80"
+    volumes:
+      - PGData:/var/lib/data
+      - my.data:/var/lib/more
+volumes:
+  PGData:
+  my.data:
+`)
+	if err := os.WriteFile(composePath, compose, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	chartDir := filepath.Join(root, "webui")
+	if _, err := FromCompose(Options{
+		ComposeFiles: []string{composePath},
+		OutputDir:    chartDir,
+		Name:         "webui",
+	}); err != nil {
+		t.Fatalf("FromCompose() error: %v", err)
+	}
+
+	entries, err := os.ReadDir(filepath.Join(chartDir, "templates"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	names := make(map[string]bool)
+	var rendered strings.Builder
+	for _, entry := range entries {
+		names[entry.Name()] = true
+		rendered.WriteString(readTemplate(t, chartDir, entry.Name()))
+	}
+	for _, want := range []string{
+		"service-web-ui.yaml", "ingress-web-ui.yaml", "persistentvolumeclaim-pgdata.yaml",
+		"persistentvolumeclaim-my.data.yaml", "configmap-prod-env.yaml",
+	} {
+		if !names[want] {
+			t.Fatalf("missing template %q, got %v", want, names)
+		}
+	}
+
+	// A name or claim still spelled the compose way points at no object. Labels
+	// are exempt: kompose keeps the raw compose name there and that is legal.
+	nameValues := regexp.MustCompile(`(?m)^\s*-?\s*(?:name|claimName): (\S+)$`)
+	for _, match := range nameValues.FindAllStringSubmatch(rendered.String(), -1) {
+		switch match[1] {
+		case "PGData", "Prod-env", "web.ui":
+			t.Fatalf("templates still reference the pre-normalization name %q:\n%s", match[1], rendered.String())
+		}
+	}
+	workload := readTemplate(t, chartDir, "deployment-webui.yaml")
+	for _, want := range []string{"claimName: pgdata", "name: pgdata", "name: prod-env",
+		// A PVC name may carry a dot, a volume name may not, so the two differ.
+		"claimName: my.data", "name: my-data"} {
+		if !strings.Contains(workload, want) {
+			t.Fatalf("workload must reference the renamed object (%q):\n%s", want, workload)
+		}
+	}
+	if strings.Contains(workload, "name: my.data") {
+		t.Fatalf("a volume and its mounts must be a DNS label, without dots:\n%s", workload)
+	}
+	if body := readTemplate(t, chartDir, "ingress-web-ui.yaml"); !strings.Contains(body, "name: web-ui") {
+		t.Fatalf("ingress must point at the rendered service name:\n%s", body)
+	}
+
+	assertChartInvariants(t, chartDir)
+	if err := oac.Lint(chartDir, oac.WithAutoOwnerScenarios()); err != nil {
+		t.Fatalf("chart must pass lint: %v", err)
+	}
+}
+
+// TestFromComposeRejectsNameCollision pins that two objects normalizing onto one
+// name fail instead of overwriting each other's template.
+func TestFromComposeRejectsNameCollision(t *testing.T) {
+	root := t.TempDir()
+	composePath := filepath.Join(root, "compose.yaml")
+	compose := []byte(`services:
+  app:
+    image: nginx:1.27
+    ports:
+      - "8080:80"
+    volumes:
+      - PGData:/data/one
+      - pgdata:/data/two
+volumes:
+  PGData:
+  pgdata:
+`)
+	if err := os.WriteFile(composePath, compose, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	chartDir := filepath.Join(root, "collide")
+	if _, err := FromCompose(Options{
+		ComposeFiles: []string{composePath},
+		OutputDir:    chartDir,
+		Name:         "collide",
+	}); err == nil {
+		t.Fatal("two PVCs normalizing onto one name must be rejected")
+	} else if !strings.Contains(err.Error(), "both become") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	entries, err := os.ReadDir(filepath.Join(chartDir, "templates"))
+	if err != nil && !os.IsNotExist(err) {
+		t.Fatal(err)
+	}
+	if len(entries) != 0 {
+		t.Fatalf("a rejected conversion must not write templates, got %d files", len(entries))
+	}
+}
+
+// TestFromComposeReportsDroppedCronJobSchedule covers the compose label the
+// pinned Deployment controller makes unreachable: the scheduled service becomes
+// an always-on workload, which has to be said out loud, and it goes through the
+// same normalization and resource stamping as every other workload.
+func TestFromComposeReportsDroppedCronJobSchedule(t *testing.T) {
+	root := t.TempDir()
+	composePath := filepath.Join(root, "compose.yaml")
+	// restart: no is what kompose needs to honour the schedule at all, so this is
+	// the compose file that would have produced a CronJob without the pinning.
+	compose := []byte(`services:
+  web:
+    image: nginx:1.27
+    ports:
+      - "8080:80"
+  backup:
+    image: alpine:3.20
+    restart: "no"
+    command: ["sh", "-c", "echo backup"]
+    labels:
+      kompose.cronjob.schedule: "0 3 * * *"
+    volumes:
+      - PGData:/var/lib/data
+volumes:
+  PGData:
+`)
+	if err := os.WriteFile(composePath, compose, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	chartDir := filepath.Join(root, "cronapp")
+	result, err := FromCompose(Options{
+		ComposeFiles: []string{composePath},
+		OutputDir:    chartDir,
+		Name:         "cronapp",
+	})
+	if err != nil {
+		t.Fatalf("FromCompose() error: %v", err)
+	}
+
+	entries, err := os.ReadDir(filepath.Join(chartDir, "templates"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range entries {
+		if strings.HasPrefix(entry.Name(), "cronjob-") || strings.HasPrefix(entry.Name(), "pod-") {
+			t.Fatalf("a scheduled service must still render as a Deployment, got %q", entry.Name())
+		}
+	}
+
+	if !strings.Contains(strings.Join(result.Notices, "\n"), "kompose.cronjob.schedule") {
+		t.Fatalf("the dropped schedule must be reported, notices: %v", result.Notices)
+	}
+
+	workload := readTemplate(t, chartDir, "deployment-backup.yaml")
+	for _, want := range []string{"claimName: pgdata", "name: pgdata", "restartPolicy: Always",
+		"cpu: 100m", "memory: 128Mi"} {
+		if !strings.Contains(workload, want) {
+			t.Fatalf("the scheduled service's workload must contain %q:\n%s", want, workload)
+		}
+	}
+	if strings.Contains(workload, "name: PGData") {
+		t.Fatalf("volume names must be normalized here too:\n%s", workload)
+	}
+
+	var cfg manifest.AppConfiguration
+	if err := yaml.Unmarshal([]byte(readFile(t, filepath.Join(chartDir, appCfgFileName))), &cfg); err != nil {
+		t.Fatal(err)
+	}
+	if cfg.WorkloadReplicas == nil ||
+		(*cfg.WorkloadReplicas)["cronapp"] != 1 || (*cfg.WorkloadReplicas)["backup"] != 1 {
+		t.Fatalf("workloadReplicas = %#v, want cronapp and backup", cfg.WorkloadReplicas)
+	}
+
+	assertChartInvariants(t, chartDir)
+	if err := oac.Lint(chartDir, oac.WithAutoOwnerScenarios()); err != nil {
+		t.Fatalf("chart must pass lint: %v", err)
+	}
+}
+
+// TestFromComposeReportsInvalidServiceName covers the compose service name no
+// normalization can repair: a leading digit is legal in compose and illegal in a
+// Service name, and renaming the Service alone would orphan the pod selector.
+func TestFromComposeReportsInvalidServiceName(t *testing.T) {
+	root := t.TempDir()
+	composePath := filepath.Join(root, "compose.yaml")
+	compose := []byte(`services:
+  1web:
+    image: nginx:1.27
+    ports:
+      - "8080:80"
+`)
+	if err := os.WriteFile(composePath, compose, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	chartDir := filepath.Join(root, "digitapp")
+	result, err := FromCompose(Options{
+		ComposeFiles: []string{composePath},
+		OutputDir:    chartDir,
+		Name:         "digitapp",
+	})
+	if err != nil {
+		t.Fatalf("FromCompose() error: %v", err)
+	}
+
+	notices := strings.Join(result.Notices, "\n")
+	if !strings.Contains(notices, `Service "1web" is not a valid Kubernetes name`) {
+		t.Fatalf("an unusable Service name must be reported, notices: %v", result.Notices)
+	}
+	// Renaming it would point the pod selector at nothing, so it stays as it is.
+	if body := readTemplate(t, chartDir, "service-1web.yaml"); !strings.Contains(body, "name: 1web") {
+		t.Fatalf("the Service must keep the name kompose selected on:\n%s", body)
+	}
+	// The Service name is the one thing left broken, and it is reported.
+	assertChartInvariants(t, chartDir, `Service/1web: metadata.name "1web"`)
+}
+
+// TestFromComposeReportsLostSemanticsForLabeledController pins that the notices
+// follow the workload a service really renders as: kompose decides the CronJob
+// and bare-Pod question from the pinned controller alone, so a service moved to a
+// StatefulSet by label loses its schedule and its restart policy just the same.
+func TestFromComposeReportsLostSemanticsForLabeledController(t *testing.T) {
+	root := t.TempDir()
+	composePath := filepath.Join(root, "compose.yaml")
+	compose := []byte(`services:
+  web:
+    image: nginx:1.27
+    ports:
+      - "8080:80"
+  store:
+    image: alpine:3.20
+    restart: "no"
+    command: ["sh", "-c", "echo store"]
+    labels:
+      kompose.controller.type: statefulset
+      kompose.cronjob.schedule: "0 3 * * *"
+`)
+	if err := os.WriteFile(composePath, compose, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	chartDir := filepath.Join(root, "mixapp")
+	result, err := FromCompose(Options{
+		ComposeFiles: []string{composePath},
+		OutputDir:    chartDir,
+		Name:         "mixapp",
+	})
+	if err != nil {
+		t.Fatalf("FromCompose() error: %v", err)
+	}
+
+	workload := readTemplate(t, chartDir, "statefulset-store.yaml")
+	if !strings.Contains(workload, "restartPolicy: Always") {
+		t.Fatalf("a StatefulSet pod template only accepts restartPolicy Always, got:\n%s", workload)
+	}
+
+	notices := strings.Join(result.Notices, "\n")
+	for _, want := range []string{
+		`service "store" sets kompose.cronjob.schedule "0 3 * * *"`,
+		"always-on StatefulSet",
+		"rendered as a StatefulSet with restartPolicy Always",
+	} {
+		if !strings.Contains(notices, want) {
+			t.Fatalf("notices must contain %q, got: %v", want, result.Notices)
+		}
+	}
+	if strings.Contains(notices, `service "store" sets restart: no, but was rendered as a Deployment`) {
+		t.Fatalf("a labeled controller must not be described as a Deployment, notices: %v", result.Notices)
+	}
+	// kompose only creates a Service for a compose service with ports, so a
+	// portless StatefulSet is left governed by one that does not exist.
+	if !strings.Contains(notices, `StatefulSet "store" is governed by Service "store", which the chart does not contain`) {
+		t.Fatalf("a missing governing Service must be reported, notices: %v", result.Notices)
+	}
+	assertChartInvariants(t, chartDir, `spec.serviceName "store"`)
+	if err := oac.Lint(chartDir, oac.WithAutoOwnerScenarios()); err != nil {
+		t.Fatalf("chart must pass lint: %v", err)
+	}
+}
+
+// TestFromComposeDoesNotNameAWorkloadKomposeSkipped pins that a controller label
+// kompose does not understand is not described as a workload: kompose matches the
+// value verbatim against its own lowercase names, so a differently cased one
+// renders nothing for that service.
+func TestFromComposeDoesNotNameAWorkloadKomposeSkipped(t *testing.T) {
+	root := t.TempDir()
+	composePath := filepath.Join(root, "compose.yaml")
+	compose := []byte(`services:
+  web:
+    image: nginx:1.27
+    ports:
+      - "8080:80"
+  odd:
+    image: alpine:3.20
+    restart: "no"
+    command: ["sleep", "3600"]
+    labels:
+      kompose.controller.type: StatefulSet
+    ports:
+      - "9000:9000"
+`)
+	if err := os.WriteFile(composePath, compose, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	chartDir := filepath.Join(root, "oddapp")
+	result, err := FromCompose(Options{
+		ComposeFiles: []string{composePath},
+		OutputDir:    chartDir,
+		Name:         "oddapp",
+	})
+	if err != nil {
+		t.Fatalf("FromCompose() error: %v", err)
+	}
+
+	entries, err := os.ReadDir(filepath.Join(chartDir, "templates"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range entries {
+		if strings.HasSuffix(entry.Name(), "-odd.yaml") && !strings.HasPrefix(entry.Name(), "service-") {
+			t.Fatalf("kompose renders no workload for this service, got template %q", entry.Name())
+		}
+	}
+
+	// Claiming a kind it never became would send the reader looking for a
+	// template that does not exist.
+	if strings.Contains(strings.Join(result.Notices, "\n"), `service "odd" sets restart: no`) {
+		t.Fatalf("a service with no workload must not be described as one, notices: %v", result.Notices)
+	}
+	// The Service kompose still emits for it has nothing to select, which is the
+	// whole point of the case.
+	assertChartInvariants(t, chartDir, "Service/odd: spec.selector")
+}
+
+// TestFromComposeNormalizesServiceReferencesOutsidePods pins the two Service
+// references that live outside a pod template: a StatefulSet's governing service
+// and an Ingress backend. kompose writes the first with the raw compose name and
+// the second with its own normalized one, so renaming the Service to a valid name
+// leaves one of them dangling unless both are rewritten with it.
+func TestFromComposeNormalizesServiceReferencesOutsidePods(t *testing.T) {
+	root := t.TempDir()
+	composePath := filepath.Join(root, "compose.yaml")
+	compose := []byte(`services:
+  front:
+    image: nginx:1.27
+    ports:
+      - "8080:80"
+    labels:
+      olares.service.type: Entrance
+  web_app:
+    image: nginx:1.27
+    ports:
+      - "9000:9000"
+    labels:
+      kompose.controller.type: statefulset
+      kompose.service.expose: "web.example.com"
+`)
+	if err := os.WriteFile(composePath, compose, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	chartDir := filepath.Join(root, "refapp")
+	if _, err := FromCompose(Options{
+		ComposeFiles: []string{composePath},
+		OutputDir:    chartDir,
+		Name:         "refapp",
+	}); err != nil {
+		t.Fatalf("FromCompose() error: %v", err)
+	}
+
+	if svc := readTemplate(t, chartDir, "service-web-app.yaml"); !strings.Contains(svc, "name: web-app") {
+		t.Fatalf("the Service must be renamed to a valid name:\n%s", svc)
+	}
+	if sts := readTemplate(t, chartDir, "statefulset-web-app.yaml"); !strings.Contains(sts, "serviceName: web-app") {
+		t.Fatalf("serviceName must name the Service as it is now called:\n%s", sts)
+	}
+	if ing := readTemplate(t, chartDir, "ingress-web-app.yaml"); !strings.Contains(ing, "name: web-app") {
+		t.Fatalf("the Ingress backend must name the Service as it is now called:\n%s", ing)
+	}
+
+	assertChartInvariants(t, chartDir)
+	if err := oac.Lint(chartDir, oac.WithAutoOwnerScenarios()); err != nil {
+		t.Fatalf("chart must pass lint: %v", err)
+	}
+}
+
+// TestFromComposeRepairsTrimmedNameAndReportsSelector covers a compose name that
+// needs trimming to be a valid Kubernetes name (_web): the Ingress backend has to
+// follow the Service to the trimmed name, and the selector kompose derived from
+// the same compose name (-web) is not a valid label value at all — which nothing
+// here can repair and lint cannot see, so it has to be reported.
+func TestFromComposeRepairsTrimmedNameAndReportsSelector(t *testing.T) {
+	root := t.TempDir()
+	composePath := filepath.Join(root, "compose.yaml")
+	compose := []byte(`services:
+  front:
+    image: nginx:1.27
+    ports:
+      - "8080:80"
+    labels:
+      olares.service.type: Entrance
+  _web:
+    image: nginx:1.27
+    ports:
+      - "9000:9000"
+    labels:
+      kompose.service.expose: "web.example.com"
+`)
+	if err := os.WriteFile(composePath, compose, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	chartDir := filepath.Join(root, "trimapp")
+	result, err := FromCompose(Options{
+		ComposeFiles: []string{composePath},
+		OutputDir:    chartDir,
+		Name:         "trimapp",
+	})
+	if err != nil {
+		t.Fatalf("FromCompose() error: %v", err)
+	}
+
+	if ing := readTemplate(t, chartDir, "ingress-web.yaml"); !strings.Contains(ing, "name: web") || strings.Contains(ing, "name: -web") {
+		t.Fatalf("the Ingress backend must follow the Service to the trimmed name:\n%s", ing)
+	}
+	if svc := readTemplate(t, chartDir, "service-web.yaml"); !strings.Contains(svc, "name: web") {
+		t.Fatalf("the Service must be renamed to a valid name:\n%s", svc)
+	}
+
+	want := `compose service "_web" becomes the pod selector value "-web", which Kubernetes will not accept as a label value`
+	if !strings.Contains(strings.Join(result.Notices, "\n"), want) {
+		t.Fatalf("notices must contain %q, got: %v", want, result.Notices)
+	}
+	// Everything still broken is that one label value, which is reported.
+	assertChartInvariants(t, chartDir, `"-web" is invalid`)
+}
+
+// TestFromComposeReportsOverlongSelector covers the other way the selector
+// kompose derives can fail: 64 characters is one too many for a label value,
+// while the name is otherwise valid, so the notice must not send the reader
+// looking at its first and last character. Nothing else reports it — the Service
+// name rule is a pattern, and a pattern says nothing about length.
+func TestFromComposeReportsOverlongSelector(t *testing.T) {
+	root := t.TempDir()
+	long := strings.Repeat("a", 64)
+	composePath := filepath.Join(root, "compose.yaml")
+	compose := []byte(`services:
+  front:
+    image: nginx:1.27
+    ports:
+      - "8080:80"
+    labels:
+      olares.service.type: Entrance
+  ` + long + `:
+    image: alpine:3.20
+    command: ["sleep", "3600"]
+`)
+	if err := os.WriteFile(composePath, compose, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	chartDir := filepath.Join(root, "longapp")
+	result, err := FromCompose(Options{
+		ComposeFiles: []string{composePath},
+		OutputDir:    chartDir,
+		Name:         "longapp",
+	})
+	if err != nil {
+		t.Fatalf("FromCompose() error: %v", err)
+	}
+
+	notices := strings.Join(result.Notices, "\n")
+	if !strings.Contains(notices, `compose service "`+long+`" becomes the pod selector value`) {
+		t.Fatalf("an over-long compose name must be reported, notices: %v", result.Notices)
+	}
+	if !strings.Contains(notices, "stay under 64 characters") {
+		t.Fatalf("the notice must name the length as a cause, notices: %v", result.Notices)
+	}
+	// Everything still broken carries the over-long name, and it is reported.
+	assertChartInvariants(t, chartDir, long)
+}
+
+// TestFromComposeDropsAutoscalers covers the autoscaler kompose emits from the
+// hpa labels: it fights workloadReplicas over spec.replicas, so it is left out of
+// the chart entirely and the workloads it targeted render as usual.
+func TestFromComposeDropsAutoscalers(t *testing.T) {
+	root := t.TempDir()
+	composePath := filepath.Join(root, "compose.yaml")
+	compose := []byte(`services:
+  web:
+    image: nginx:1.27
+    ports:
+      - "8080:80"
+    labels:
+      kompose.hpa.replicas.max: "3"
+  store:
+    image: postgres:16
+    ports:
+      - "5432:5432"
+    labels:
+      kompose.controller.type: statefulset
+      kompose.hpa.replicas.max: "2"
+`)
+	if err := os.WriteFile(composePath, compose, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	chartDir := filepath.Join(root, "hpaapp")
+	result, err := FromCompose(Options{
+		ComposeFiles: []string{composePath},
+		OutputDir:    chartDir,
+		Name:         "hpaapp",
+	})
+	if err != nil {
+		t.Fatalf("FromCompose() error: %v", err)
+	}
+
+	// Checked by content rather than by template name, since the file name comes
+	// from the writer the filter runs ahead of.
+	templates, err := os.ReadDir(filepath.Join(chartDir, "templates"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range templates {
+		if strings.Contains(readTemplate(t, chartDir, entry.Name()), "HorizontalPodAutoscaler") {
+			t.Fatalf("no autoscaler may reach the chart, %s carries one", entry.Name())
+		}
+	}
+
+	notices := strings.Join(result.Notices, "\n")
+	for _, want := range []string{
+		`service "web" sets kompose.hpa.* labels, and the HorizontalPodAutoscaler kompose renders from them was dropped`,
+		`service "store" sets kompose.hpa.* labels, and the HorizontalPodAutoscaler kompose renders from them was dropped`,
+	} {
+		if !strings.Contains(notices, want) {
+			t.Fatalf("notices must contain %q, got: %v", want, result.Notices)
+		}
+	}
+
+	// Dropping the autoscaler must not stop its workloads from using the
+	// values-driven replica counts Olares owns.
+	for name, want := range map[string]string{
+		"deployment-hpaapp.yaml": "replicas: {{ .Values.workloads.hpaapp.replicaCount }}",
+		"statefulset-store.yaml": "replicas: {{ .Values.workloads.store.replicaCount }}",
+	} {
+		if workload := readTemplate(t, chartDir, name); !strings.Contains(workload, want) {
+			t.Fatalf("%s must contain %q:\n%s", name, want, workload)
+		}
+	}
+	var cfg manifest.AppConfiguration
+	if err := yaml.Unmarshal([]byte(readFile(t, filepath.Join(chartDir, appCfgFileName))), &cfg); err != nil {
+		t.Fatal(err)
+	}
+	if cfg.WorkloadReplicas == nil ||
+		(*cfg.WorkloadReplicas)["hpaapp"] != 1 || (*cfg.WorkloadReplicas)["store"] != 1 {
+		t.Fatalf("workloadReplicas = %#v, want hpaapp and store", cfg.WorkloadReplicas)
+	}
+
+	assertChartInvariants(t, chartDir)
+	if err := oac.Lint(chartDir, oac.WithAutoOwnerScenarios()); err != nil {
+		t.Fatalf("chart must pass lint: %v", err)
+	}
+}
+
+func readTemplate(t *testing.T, chartDir, name string) string {
+	t.Helper()
+	return readFile(t, filepath.Join(chartDir, "templates", name))
+}
+
+func readFile(t *testing.T, path string) string {
+	t.Helper()
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(raw)
 }

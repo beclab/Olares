@@ -7,9 +7,11 @@
 
 ```
  Packaging (agent-driven; only if an image is missing / wrong-arch):
- P1. docker?    docker version && docker buildx version   # else guide install
- P2. registry   ask which registry + <user>/<repo>; check login — if not authed, the developer runs `docker login` (agent can't type their token)
- P3. build+push docker buildx build --platform linux/<node-arch> -t <ref>:<tag> --push <ctx>
+ P1. target     olares-cli cluster node list              # read the target node's ARCHITECTURE; never infer it from the development host
+                -> if nodes have different architectures, identify the scheduled target with `cluster node get <name>`; stop and ask if unknown
+ P2. docker?    docker version && docker buildx version   # else guide install
+ P3. registry   ask which registry + <user>/<repo>; check login — if not authed, the developer runs `docker login` (agent can't type their token)
+ P4. build+push docker buildx build --platform linux/<target-arch> -t <ref>:<tag> --push <ctx>
                 -> you run build+push, then wire <ref>:<tag> into every build-only `image:` in the compose
 
  Deployment authoring (no login):
@@ -25,7 +27,7 @@
  V3. upload     olares-cli market upload ./<app>-<ver>.tgz
  V4. run        olares-cli market install <app> -s upload --version <ver> --watch -o json
  V5. on failure diagnose via olares-doctor (symptom -> root cause), then loop back
- V6. decide     loop back: chart problem -> D2 ; image problem -> P3 ; uid/EACCES -> run identity (uid 1000) guidance ; not a chart problem -> break out, report & ask
+ V6. decide     loop back: chart problem -> D2 ; image problem -> P1/P4 ; uid/EACCES -> run identity (uid 1000) guidance ; not a chart problem -> break out, report & ask
  V7. cleanup    olares-cli market uninstall <app> --watch ; olares-cli market delete <app>
 ```
 
@@ -49,9 +51,9 @@ Step D1 produces a chart that **already passes `lint`** but is NOT yet a good ap
 
 - Every resource is namespaced with `namespace: '{{ .Release.Namespace }}'`.
 - Default CPU/memory requests+limits are stamped onto every container.
-- One **entrance** is auto-detected (the `olares.service.type: Entrance`-labeled service, else the first service with a port, else a `port: 80` placeholder).
+- One **entrance** is auto-detected (the `olares.service.type: Entrance`-labeled service, else the service fronting a workload already named `<app>`, else the lowest TCP port among the services that do not look like a datastore, else a `port: 80` placeholder), and the workload behind it is renamed to `<app>` unless another workload already carries that name. The command prints the pick, plus a `review before deploying:` list of every other guess it made.
 - The scaffold emits the complete canonical version combination: `OlaresManifest.yaml apiVersion: v3`, `olaresManifest.version: 0.12.0`, and `options.dependencies` `olares >=1.12.6-0` (`type: system`). `Chart.yaml apiVersion: v2` remains Helm metadata and is intentionally different.
 - The scaffold also emits `workloadReplicas.<workload>: 1` (with the matching `values.yaml` `workloads.<name>.replicaCount`, and each workload's `spec.replicas` wired to `{{ .Values.workloads.<name>.replicaCount }}` so suspend/resume work), so a fresh scaffold passes `lint`.
 - Never respond to a version-related lint failure by downgrading the canonical combination to manifest v1/v2 or Olares `<1.12.6`; check for an old CLI or old skill instead.
 
-> **Tip:** label the service you want exposed in the compose file with `labels: { olares.service.type: Entrance }` so the right workload becomes the entrance and gets renamed to the app name.
+> **Tip:** label the service you want exposed in the compose file with `labels: { olares.service.type: Entrance }` so the right service becomes the entrance; it also gets renamed to the app name unless another compose service already uses that exact name.

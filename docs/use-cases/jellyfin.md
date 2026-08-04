@@ -6,8 +6,8 @@ head:
     - name: keywords
       content: Olares, Jellyfin, jellyfin vs plex, plex alternative, self-hosted media server, jellyfin remote access, DLNA, jellyfin on olares
 app_version: "1.0.19"
-doc_version: "1.1"
-doc_updated: "2026-07-20"
+doc_version: "1.2"
+doc_updated: "2026-07-28"
 ---
 
 # Build your private media server with Jellyfin
@@ -56,11 +56,11 @@ With your media ready, install Jellyfin and complete its setup wizard.
 
 ### Install Jellyfin
 
-1. Open the **Market** app in your Olares web interface.
-2. Find **Jellyfin** in the **Fun** category or use the search bar.
-3. Click **Get**, then **Install**.
+1. Open Market and search for "Jellyfin".
+
    ![Install Jellyfin](/images/manual/use-cases/jellyfin-install.png#bordered)
-4. Once the installation is finished, click **Open** to launch the setup wizard.
+
+2. Click **Get**, then click **Install**, and wait for the installation to complete.
 
 ### Complete the initial setup
 
@@ -226,33 +226,35 @@ Start a video in Jellyfin on Olares, then send it to a DLNA-capable TV. You do n
 9. Select the TV and confirm that the video starts playing on the TV.
 
 ## Access your media library through Jellyfin clients
-### Get the endpoint for Jellyfin
+### Get the Jellyfin endpoint
 
 After Jellyfin is set up and your libraries are ready, you can connect from your client devices and start streaming your media.
 
-:::info Enable LarePass VPN
-Before you begin, make sure LarePass VPN is enabled.
+<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
 
-If not, see [Enable VPN on LarePass](../manual/larepass/private-network.md#enable-vpn-on-larepass).
-:::
+For Jellyfin:
 
-1. On Olares, open Settings, then go to **Application** > **Jellyfin**.
-2. Under **Entrances**, click **Jellyfin**.
-3. Make sure that **Authentication level** is set to **Internal**. If you change the setting, click **Submit**.
-4. Under **Endpoint settings**, copy the URL displayed in **Endpoint**. Use this address as the server URL in your Jellyfin client.
+1. Go to Olares **Settings** > **Applications** > **Jellyfin** > **Entrances**.
+2. Select **Jellyfin**, then copy the **Endpoint** URL.
 
-   ![Jellyfin endpoint](/images/manual/use-cases/lp-endpoint-jellyfin.png#bordered){width=90%}
+Use this Endpoint as the server address in the Jellyfin client.
 
 ### Connect your Jellyfin client
 
 Assume you've already installed the official [Jellyfin client app](https://jellyfin.org/downloads/) on your device.
+
+:::info Enable LarePass VPN
+Before connecting, make sure LarePass VPN is enabled.
+
+If not, see [Enable VPN on LarePass](../manual/larepass/private-network.md#enable-vpn-on-larepass).
+:::
 
 1. Open the Jellyfin client app on your device.
 2. Click **Add Server**.
 
    ![Add server](/images/manual/use-cases/jellyfin-add-server.png#bordered){width=90%}
 
-3. Paste your Jellyfin URL you just copied into the client and click **Connect**.
+3. Paste the Jellyfin Endpoint you just copied and click **Connect**.
    
    ![Connect to server](/images/manual/use-cases/jellyfin-connect.png#bordered){width=90%}
 

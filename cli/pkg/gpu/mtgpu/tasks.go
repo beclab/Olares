@@ -31,7 +31,7 @@ func (u *UpdateNodeMThreadsGPUInfo) Execute(runtime connector.Runtime) error {
 	}
 
 	if runtime.GetSystemInfo().IsMThreadsM1000() {
-		return gpu.SetNodeGpuModeLabel(context.Background(), client.Kubernetes(), gpu.MooreSocType, nil, nil, nil)
+		return gpu.SetNodeGpuModeLabel(context.Background(), client.CtrlRuntime(), gpu.MooreSocType, nil, nil, nil)
 	}
 
 	return nil
