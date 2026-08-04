@@ -33,14 +33,14 @@ Before you begin, ensure you have the following in place:
 
 ## Retrieve Speaches configuration details
 
-To link Open WebUI and Speaches, you must obtain the Speaches shared endpoint URL and identify the specific STT and TTS model names used within Speaches.
+To link Open WebUI and Speaches, you must obtain the Speaches endpoint URL and identify the specific STT and TTS model names used within Speaches.
 
-### Get the shared endpoint URL
+### Get the Speaches endpoint URL
 
 1. Open Olares Settings, and then go to **Applications** > **Speaches**.
-2. In **Shared entrances**, click **Speaches API**, and then note down the endpoint URL.
+2. In **Entrances**, click **Speaches API**, and then note down the endpoint URL.
 
-   For example, `http://7c6f50e7.shared.olares.com`.
+   For example, `https://7b3172692.laresprime.olares.com`.
 
    ![Speaches shared entrance](/images/manual/use-cases/openwebui-speaches-shared-entrance1.png#bordered){width=70%}
 
@@ -60,19 +60,19 @@ To link Open WebUI and Speaches, you must obtain the Speaches shared endpoint UR
 3. In the **Speech-to-Text** section, specify the following settings:
 
    - **Speech-to-Text Engine**: Select **OpenAI**.
-   - **API Base URL**: Enter the Speaches shared endpoint URL and append `/v1` to the end. For example, `http://7c6f50e7.shared.olares.com/v1`.
+   - **API Base URL**: Enter the Speaches endpoint URL and append `/v1` to the end. For example, `https://7b3172691.laresprime.olares.com/v1`.
    - **API Key**: Enter any text. Do not leave it empty.
    - **STT Model**: Enter the STT model name you noted down earlier. That is `Systran/faster-whisper-small`.
 
 4. In the **Text-to-Speech** section, specify the following settings:
 
    - **Text-to-Speech Engine**: Select **OpenAI**.
-   - **API Base URL**: Enter the Speaches shared endpoint URL and append `/v1` to the end. For example, `http://7c6f50e7.shared.olares.com/v1`.
+   - **API Base URL**: Enter the Speaches endpoint URL and append `/v1` to the end. For example, `https://7b3172691.laresprime.olares.com/v1`.
    - **API Key**: Enter any text. Do not leave it empty.
    - **TTS Voice**: Enter the voice name you noted down earlier. For example, `am_eric`.
    - **TTS Model**: Enter the TTS model name you noted earlier. That is, `speaches-ai/Kokoro-82M-v1.0-ONNX`.
 
-   ![Audio settings in Open WebUI](/images/manual/use-cases/openwebui-audio-settings1.png#bordered)
+   ![Audio settings in Open WebUI](/images/manual/use-cases/openwebui-audio-settings2.png#bordered)
 
 5. Click **Save**.
 

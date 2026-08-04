@@ -37,7 +37,7 @@ By default, Open WebUI restricts access to the Olares owner. To grant access to 
 1. Open Olares Settings, and then go to **Applications** > **Open WebUI** > **Entrances** > **Open WebUI**.
 2. Change the **Authentication level** from **Private** to **Public**, and then click **Submit**.
    
-   ![Entrance public](/images/manual/use-cases/openwebui-entrance-public.png#bordered){width=70%}
+   ![Entrance public](/images/manual/use-cases/openwebui-entrance-public1.png#bordered){width=70%}
 
 :::warning Security notice
 Setting the entrance to **Public** exposes Open WebUI directly to the internet. The Open WebUI account system becomes your primary protection. Ensure the admin account and all sub-user accounts use strong passwords.

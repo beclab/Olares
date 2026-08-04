@@ -41,7 +41,7 @@ doc_updated: "2026-07-30"
 1. 打开 Olares 设置，然后前往**应用** > **Open WebUI** > **入口** > **Open WebUI**。
 2. 将**认证级别**从**私有**改为**公开**，然后点击**提交**。
 
-   ![Entrance public](/images/manual/use-cases/openwebui-entrance-public.png#bordered){width=70%}
+   ![Entrance public](/images/manual/use-cases/openwebui-entrance-public1.png#bordered){width=70%}
 
 :::warning 安全提示
 将入口设置为**公开**会把 Open WebUI 直接暴露到互联网。此时 Open WebUI 的账号系统会成为主要保护措施。需确保管理员账号和所有子用户账号都使用强密码。
