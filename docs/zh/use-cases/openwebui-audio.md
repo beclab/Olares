@@ -37,16 +37,16 @@ doc_updated: "2026-07-30"
 
 ## 获取 Speaches 配置信息
 
-要连接 Open WebUI 和 Speaches，你需要获取 Speaches 共享端点 URL，并确认 Speaches 中使用的 STT 和 TTS 模型名称。
+要连接 Open WebUI 和 Speaches，你需要获取 Speaches 端点 URL，并确认 Speaches 中使用的 STT 和 TTS 模型名称。
 
-### 获取共享端点 URL
+### 获取端点 URL
 
 1. 打开 Olares 设置，然后前往**应用** > **Speaches**。
-2. 在**共享入口**中，点击 **Speaches API**，并记录端点 URL。
+2. 在**入口**中，点击 **Speaches API**，并记录端点 URL。
 
-   例如：`http://edd26bab0.shared.olares.com`。
+   例如：`https://7b3172692.laresprime.olares.com`。
 
-   ![Speaches shared entrance](/images/manual/use-cases/openwebui-speaches-shared-entrance1.png#bordered){width=70%}
+   ![Speaches 入口](/images/manual/use-cases/openwebui-speaches-shared-entrance1.png#bordered){width=70%}
 
 ### 查找模型和语音名称
 
@@ -64,19 +64,19 @@ doc_updated: "2026-07-30"
 3. 在 **Speech-to-Text** 区域中，指定以下设置：
 
    - **Speech-to-Text Engine**：选择 **OpenAI**。
-   - **API Base URL**：输入 Speaches 共享端点 URL，并在末尾追加 `/v1`。例如：`http://edd26bab0.shared.olares.com/v1`。
+   - **API Base URL**：输入 Speaches 端点 URL，并在末尾追加 `/v1`。例如：`https://7b3172692.laresprime.olares.com/v1`。
    - **API Key**：输入任意文本。不要留空。
    - **STT Model**：输入你之前记录的 STT 模型名称，即 `Systran/faster-whisper-small`。
 
 4. 在 **Text-to-Speech** 区域中，指定以下设置：
 
    - **Text-to-Speech Engine**：选择 **OpenAI**。
-   - **API Base URL**：输入 Speaches 共享端点 URL，并在末尾追加 `/v1`。例如：`http://edd26bab0.shared.olares.com/v1`。
+   - **API Base URL**：输入 Speaches 端点 URL，并在末尾追加 `/v1`。例如：`https://7b3172692.laresprime.olares.com/v1`。
    - **API Key**：输入任意文本。不要留空。
    - **TTS Voice**：输入你之前记录的语音名称。例如：`am_eric`。
    - **TTS Model**：输入你之前记录的 TTS 模型名称，即 `speaches-ai/Kokoro-82M-v1.0-ONNX`。
 
-   ![Audio settings in Open WebUI](/images/manual/use-cases/openwebui-audio-settings1.png#bordered)
+   ![Audio settings in Open WebUI](/images/manual/use-cases/openwebui-audio-settings2.png#bordered)
 
 5. 点击 **Save**。
 

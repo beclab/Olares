@@ -60,14 +60,14 @@ To link Open WebUI and Speaches, you must obtain the Speaches endpoint URL and i
 3. In the **Speech-to-Text** section, specify the following settings:
 
    - **Speech-to-Text Engine**: Select **OpenAI**.
-   - **API Base URL**: Enter the Speaches endpoint URL and append `/v1` to the end. For example, `https://7b3172691.laresprime.olares.com/v1`.
+   - **API Base URL**: Enter the Speaches endpoint URL and append `/v1` to the end. For example, `https://7b3172692.laresprime.olares.com/v1`.
    - **API Key**: Enter any text. Do not leave it empty.
    - **STT Model**: Enter the STT model name you noted down earlier. That is `Systran/faster-whisper-small`.
 
 4. In the **Text-to-Speech** section, specify the following settings:
 
    - **Text-to-Speech Engine**: Select **OpenAI**.
-   - **API Base URL**: Enter the Speaches endpoint URL and append `/v1` to the end. For example, `https://7b3172691.laresprime.olares.com/v1`.
+   - **API Base URL**: Enter the Speaches endpoint URL and append `/v1` to the end. For example, `https://7b3172692.laresprime.olares.com/v1`.
    - **API Key**: Enter any text. Do not leave it empty.
    - **TTS Voice**: Enter the voice name you noted down earlier. For example, `am_eric`.
    - **TTS Model**: Enter the TTS model name you noted earlier. That is, `speaches-ai/Kokoro-82M-v1.0-ONNX`.
