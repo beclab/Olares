@@ -6,8 +6,8 @@ require (
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/apecloud/kubeblocks v1.0.0
 	github.com/argoproj/argo-workflows/v3 v3.7.10
-	github.com/beclab/Olares/framework/oac v0.0.0-20260701053251-3464afdb6268
-	github.com/beclab/api v0.0.24-0.20260722064044-8d08c0653ee5
+	github.com/beclab/Olares/framework/oac v0.0.0-20260804143153-7a64d00df3e3
+	github.com/beclab/api v0.0.24
 	github.com/beclab/lldap-client v0.0.11
 	github.com/containerd/containerd v1.7.29
 	github.com/containers/image/v5 v5.36.1
@@ -16,10 +16,12 @@ require (
 	github.com/envoyproxy/go-control-plane/envoy v1.36.0
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/go-crypt/crypt v0.4.5
+	github.com/go-jose/go-jose/v4 v4.1.4
 	github.com/go-logr/logr v1.4.3
 	github.com/go-openapi/spec v0.21.0
 	github.com/go-resty/resty/v2 v2.16.5
 	github.com/go-viper/mapstructure/v2 v2.4.0
+	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/golang/protobuf v1.5.4
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/go-getter v1.8.0
@@ -140,7 +142,6 @@ require (
 	github.com/go-crypt/x v0.4.7 // indirect
 	github.com/go-errors/errors v1.5.1 // indirect
 	github.com/go-gorp/gorp/v3 v3.1.0 // indirect
-	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-logr/zapr v1.3.0 // indirect
 	github.com/go-openapi/jsonpointer v0.21.1 // indirect
@@ -150,7 +151,6 @@ require (
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/gobwas/glob v0.2.4-0.20181002190808-e7a84e9525fe // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/golang-jwt/jwt/v5 v5.3.0 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/google/btree v1.1.3 // indirect
 	github.com/google/gnostic-models v0.7.0 // indirect
