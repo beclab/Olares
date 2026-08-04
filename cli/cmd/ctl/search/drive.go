@@ -2,9 +2,7 @@ package search
 
 import (
 	"context"
-	"encoding/json"
 
-	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
@@ -63,52 +61,7 @@ func runDriveSearch(ctx context.Context, f *cmdutil.Factory, keyword string, o *
 		return err
 	}
 
-	doer, err := newDoer(ctx, f)
-	if err != nil {
-		return err
-	}
-
-	reqid := uuid.NewString()
-	defer func() {
-		_ = doEnvelope(ctx, doer, "POST", "/api/search/cancel",
-			map[string]interface{}{"reqid": reqid}, nil)
-	}()
-
-	// init runs the search, caches the full (server-capped) result set, and
-	// returns only the first initPageSize hits. It ignores offset/limit, so we
-	// don't send them.
-	initBody := map[string]interface{}{
-		"reqid":   reqid,
-		"keyword": keyword,
-		"type":    searchType,
-		"app":     appFilesV2,
-	}
-	var initRows []json.RawMessage
-	if err := doEnvelope(ctx, doer, "POST", "/api/search/init", initBody, &initRows); err != nil {
-		return err
-	}
-
-	// Honor --offset/--limit client-side. If the requested window already lies
-	// within what init returned -- or init returned a short final page (fewer
-	// than initPageSize hits means the cache holds no more) -- serve it
-	// directly. Otherwise page the exact window via /search/more, whose limit
-	// must stay within the backend's 1-100 range; a past-the-end offset comes
-	// back as codeNoMoreResults, which we treat as an empty result set.
-	var window []json.RawMessage
-	if needsMorePage(o.offset, o.limit, len(initRows)) {
-		moreBody := map[string]interface{}{
-			"reqid":  reqid,
-			"offset": o.offset,
-			"limit":  clampMoreLimit(o.limit),
-		}
-		if err := doEnvelopeAllowing(ctx, doer, "POST", "/api/search/more", moreBody, &window, codeNoMoreResults); err != nil {
-			return err
-		}
-	} else {
-		window = paginateRaw(initRows, o.offset, o.limit)
-	}
-
-	items, err := decodeResultRows(window)
+	items, err := runSessionSearch(ctx, f, keyword, appFilesV2, searchType, &o.pagingOptions)
 	if err != nil {
 		return err
 	}
