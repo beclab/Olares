@@ -22,11 +22,13 @@ const (
 	// JWKSURI is the HTTPS URL EG remoteJWKS uses (hostname must match TLS SAN).
 	JWKSURI             = "https://" + IssuerHost + JWKSPath
 	Audience            = "app-gateway-data"
-	ClaimAppRef         = "olares.caller.appRef"
-	ClaimEntrance       = "olares.entrance"
-	ClaimViewer         = "olares.viewer"
-	ClaimAppid          = "olares.caller.appid"
-	ClaimClientAppid    = "olares.caller.clientAppid"
+	// Claim* constants are Envoy jwt_authn claim_to_headers paths (dot =
+	// nested JSON), not flat JWT object keys.
+	ClaimAppRef      = "olares.caller.appRef"
+	ClaimEntrance    = "olares.entrance"
+	ClaimViewer      = "olares.viewer"
+	ClaimAppid       = "olares.caller.appid"
+	ClaimClientAppid = "olares.caller.clientAppid"
 	// CallerJWTHeaderName is the platform caller-jwt transport header (bare JWT,
 	// no Bearer prefix). Distinct from Authorization so app credentials pass through.
 	CallerJWTHeaderName = "X-Olares-Caller-Jwt"
@@ -56,13 +58,67 @@ type IssueRequest struct {
 }
 
 // Claims is the caller JWT claim schema published to Envoy Gateway.
+// Identity fields are nested under "olares" so Envoy claim_to_headers paths
+// resolve (dots are JSON path separators):
+// olares.viewer → X-BFL-USER, olares.caller.appid → X-Shared-Appid,
+// olares.caller.clientAppid → X-Caller-Appid.
 type Claims struct {
 	jwt.RegisteredClaims
-	AppRef      string `json:"olares.caller.appRef"`
-	Entrance    string `json:"olares.entrance,omitempty"`
-	Viewer      string `json:"olares.viewer,omitempty"`
-	Appid       string `json:"olares.caller.appid,omitempty"`
-	ClientAppid string `json:"olares.caller.clientAppid,omitempty"`
+	Olares OlaresClaims `json:"olares"`
+}
+
+// OlaresClaims holds platform identity claims under the "olares" JSON object.
+type OlaresClaims struct {
+	Caller   CallerClaims `json:"caller"`
+	Viewer   string       `json:"viewer,omitempty"`
+	Entrance string       `json:"entrance,omitempty"`
+}
+
+// CallerClaims holds caller application identity under "olares.caller".
+type CallerClaims struct {
+	AppRef      string `json:"appRef,omitempty"`
+	Appid       string `json:"appid,omitempty"`
+	ClientAppid string `json:"clientAppid,omitempty"`
+}
+
+// AppRef returns olares.caller.appRef.
+func (c *Claims) AppRef() string {
+	if c == nil {
+		return ""
+	}
+	return c.Olares.Caller.AppRef
+}
+
+// Entrance returns olares.entrance.
+func (c *Claims) Entrance() string {
+	if c == nil {
+		return ""
+	}
+	return c.Olares.Entrance
+}
+
+// Viewer returns olares.viewer.
+func (c *Claims) Viewer() string {
+	if c == nil {
+		return ""
+	}
+	return c.Olares.Viewer
+}
+
+// Appid returns olares.caller.appid (Shared callers).
+func (c *Claims) Appid() string {
+	if c == nil {
+		return ""
+	}
+	return c.Olares.Caller.Appid
+}
+
+// ClientAppid returns olares.caller.clientAppid (ordinary callers).
+func (c *Claims) ClientAppid() string {
+	if c == nil {
+		return ""
+	}
+	return c.Olares.Caller.ClientAppid
 }
 
 // KeyPair holds one RS256 signing key and its JWKS key ID.
@@ -135,19 +191,21 @@ func (i *Issuer) Issue(req IssueRequest) (string, error) {
 			NotBefore: jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(ttl)),
 		},
-		AppRef: appRef,
+		Olares: OlaresClaims{
+			Caller: CallerClaims{AppRef: appRef},
+		},
 	}
 	if v := strings.TrimSpace(req.Entrance); v != "" {
-		claims.Entrance = v
+		claims.Olares.Entrance = v
 	}
 	if viewer != "" {
-		claims.Viewer = viewer
+		claims.Olares.Viewer = viewer
 	}
 	if appid != "" {
-		claims.Appid = appid
+		claims.Olares.Caller.Appid = appid
 	}
 	if clientAppid != "" {
-		claims.ClientAppid = clientAppid
+		claims.Olares.Caller.ClientAppid = clientAppid
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
 	token.Header["kid"] = i.keys.Active.KID
