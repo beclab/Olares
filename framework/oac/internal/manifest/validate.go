@@ -312,6 +312,8 @@ func validateAppSpec(configVersion, apiVersion string, templateOnly bool, s AppS
 		validation.Field(&s.RequiredGPU, optionalGPUQuantity),
 		validation.Field(&s.LimitedGPU, optionalLimitedGPUQuantity),
 		validation.Field(&s.SupportArch,
+			validation.Required.Error("spec.supportArch is required"),
+			validation.Length(1, 0).Error("spec.supportArch must contain at least one item"),
 			validation.Each(validation.By(validateSupportArchEntry)),
 			validation.By(uniqueSupportArches),
 		),
