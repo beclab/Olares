@@ -10,7 +10,7 @@ head:
 
 Use the Tickets page in Olares Space to report issues, ask for help, and track the status of your support requests. You can submit tickets through the web interface or upload logs directly from your Olares device using `olares-cli`.
 
-## Create a ticket
+## Create tickets
 
 Submit a new support request with details and optional attachments.
 
