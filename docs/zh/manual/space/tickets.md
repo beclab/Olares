@@ -69,7 +69,8 @@ head:
 
    ![使用 olares-cli 上传日志](/images/how-to/space/cli-upload-log.png#bordered)
 
-6. 返回 Olares Space 并打开 **Tickets** 页面。你会看到一个名为 **Olares CLI logs {creation-date}** 的新工单，状态为 **Open**。
+6. 返回 Olares Space 并打开 **Tickets** 页面。
+7. 找到你在第 5 步中记下的工单编号对应的工单。该工单名为 **Olares CLI logs {creation-date}**，状态为 **Open**。 
 
    ![CLI 日志工单](/images/how-to/space/cli-logs-ticket.png#bordered)
 

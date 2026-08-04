@@ -65,7 +65,8 @@ Upload system logs directly from your Olares device to create a ticket automatic
 
    ![Upload logs using olares-cli](/images/how-to/space/cli-upload-log.png#bordered)
 
-6. Return to Olares Space and open the **Tickets** page. You will see a new ticket named **Olares CLI logs {creation-date}** in **Open** status.
+6. Return to Olares Space and open the **Tickets** page.
+7. Find the ticket with the number you noted in Step 5. It is named **Olares CLI logs {creation-date}** and appears in the **Open** status.
 
    ![CLI logs ticket](/images/how-to/space/cli-logs-ticket.png#bordered)
 
