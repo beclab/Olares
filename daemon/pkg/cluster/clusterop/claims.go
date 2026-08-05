@@ -78,6 +78,9 @@ func (s *ReplayGuard) Cleanup() error {
 // Consume atomically records key until expiresAt. A pre-existing unexpired
 // marker is a replay conflict; expired markers are removed before retrying.
 func (s *ReplayGuard) Consume(key string, expiresAt time.Time) error {
+	if err := s.Cleanup(); err != nil {
+		return err
+	}
 	path := s.path(key)
 	if marker, err := s.read(path); err == nil && !time.Now().Before(time.UnixMilli(marker.ExpiresAt)) {
 		if err := s.Forget(key); err != nil {
