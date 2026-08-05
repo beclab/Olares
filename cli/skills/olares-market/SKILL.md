@@ -1,6 +1,6 @@
 ---
 name: olares-market
-version: 4.6.0
+version: 4.7.0
 description: "Olares Market via olares-cli market — install, upgrade, uninstall, clone, stop, resume, restart apps; catalog, status, chart upload/download, --watch. Use for Olares app store, my apps, 我的应用, install app, restart app, upload chart, download an app chart."
 compatibility: Requires olares-cli on PATH and active Olares profile
 metadata:
@@ -146,6 +146,8 @@ The same `State` can mean different things depending on which mutation is in fli
 | `app 'X' requires a compute binding ... re-run with --compute-binding ...` | 1.12.6+ `resume` (non-interactive) of a GPU app needing a device | Re-run with `--compute-binding <node>:<device>[:<mem>]` (mem accepts Gi/Mi; repeat the flag once per card for multi-GPU apps) from `settings compute list`; a TTY would prompt instead (comma-separated for multi-card) |
 | `the supplied --compute-binding (...) was rejected ...: <reason>` | 1.12.6+ `resume` with an explicit binding the backend refused | `<reason>` mirrors the SPA wording for that `validation.code` — e.g. `aggregate-vram-insufficient` (combined VRAM), `device-vram-insufficient`, `node-pressure` (lists Memory/CPU/Disk Total/Used/Needed), or a raw structural code like `multi-card-not-supported` / `gpu-type-mismatch`. Pick different/more cards per the available list |
 | `--compute-mode/--compute-binding requires Olares 1.12.6+ ...` | Flag passed against a 1.12.5 backend | Drop the flag — 1.12.5 uses a different, unchanged code path |
+| `upload rejected: manifest supports [...] cluster provides [...]` | Uploaded chart supports none of the cluster's node architectures | Fix `spec.supportArch` and image platforms, then repackage; do not retry unchanged bytes |
+| `upload blocked: cluster node discovery is unavailable` | Market's initial Node watch has not produced an authoritative architecture set | Keep the package/version unchanged and retry after node discovery recovers |
 | Lifecycle watcher hangs near `*Failed` state | Backend failed but kept the failure row visible | Inspect `market status <app>` for the failure detail; cancel with `market cancel <app>` if applicable |
 | `cannot --watch 'status' (no app argument)` | `market status` without an app + `--watch` | Use `status <app> --watch` |
 | 401 / 403 from any verb after refresh | Token rotation / consistent server-side rejection | See [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) |

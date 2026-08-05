@@ -5,7 +5,7 @@
 
 ## Arch strategy
 
-Deploying to your Olares only needs the **target Olares node's arch** (single-arch) — query it with `olares-cli cluster node list` (needs login); `spec.supportArch` is optional. The development host may have a different architecture, so never derive the image platform from `uname`, `runtime.GOARCH`, or Docker's default platform. Multi-arch (`linux/amd64,linux/arm64` + a matching `spec.supportArch: [amd64, arm64]`) is only required when **publishing to the public Market** — see the [`../../olares-publish/SKILL.md`](../../olares-publish/SKILL.md) skill.
+Deploying to your Olares only needs the **target Olares node's arch** (single-arch) — query it with `olares-cli cluster node list` (needs login), then declare that architecture in `spec.supportArch`. Cluster upload requires this set to intersect at least one current node. The development host may have a different architecture, so never derive the image platform from `uname`, `runtime.GOARCH`, or Docker's default platform. Multi-arch (`linux/amd64,linux/arm64` + a matching `spec.supportArch: [amd64, arm64]`) is only required when **publishing to the public Market** — see the [`../../olares-publish/SKILL.md`](../../olares-publish/SKILL.md) skill.
 
 ## When you need it
 

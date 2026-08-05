@@ -3,7 +3,7 @@
 > **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) first; pass `chart lint` before starting any of this.
 > This is the **deploy** capability — the done step of the two axes. Unlike `from-compose` / `lint`, **everything here talks to a running Olares and REQUIRES login** — first read [`../../olares-shared/SKILL.md`](../../olares-shared/SKILL.md) for the profile model, login flow, and auth-error recovery.
 
-> **Automation model: automatic after `lint` passes.** Once `lint` is green and the profile clears olares-shared's [auth-readiness gate](../../olares-shared/SKILL.md#auth-readiness-gate), drive the whole loop without asking: package → upload → install → watch → diagnose → fix → retry. Only stop to ask when the gate says stop, or when a failure is clearly **not** a chart problem. Start app workload inspection in parallel as soon as install/upgrade begins; never wait only on the coarse market row (see [§3 Don't just wait](#dont-just-wait--diagnose-the-apps-own-pods-in-parallel)).
+> **Automation model: automatic after `lint` passes.** Once `lint` is green and the profile clears olares-shared's [auth-readiness gate](../../olares-shared/SKILL.md#auth-readiness-gate), drive the whole loop without asking: architecture preflight → package → upload → install → watch → diagnose → fix → retry. Only stop to ask when the gate says stop, or when a failure is clearly **not** a chart problem. Start app workload inspection in parallel as soon as install/upgrade begins; never wait only on the coarse market row (see [§3 Don't just wait](#dont-just-wait--diagnose-the-apps-own-pods-in-parallel)).
 
 `lint` proves the chart is structurally valid. It does **not** prove the app actually pulls its images, wires its middleware, and reaches `running`. This loop does — by pushing the chart to the developer's Olares and watching it install.
 
@@ -35,7 +35,9 @@ Run `olares-cli profile list` and apply olares-shared's [auth-readiness gate](..
 
 ## 2. Package + upload (automatic — no confirmation needed)
 
-`lint` passed and the profile cleared the auth-readiness gate — proceed immediately. **Bump the version on every (re)upload.** Before packaging, bump `Chart.yaml` `version` and `OlaresManifest.yaml` `metadata.version` together (keep them equal — `lint` enforces it); a patch bump (e.g. `0.0.1 → 0.0.2`) is the default. Market's upload gate only requires `>=` the stored version, but always presenting a strictly-newer version keeps each upload distinct and makes the `upgrade --version` unambiguous. (Same-version overwrite still works as a fallback when the chart didn't change — see §3.)
+`lint` passed and the profile cleared the auth-readiness gate — proceed immediately. Before packaging, run `olares-cli cluster node list` and require `spec.supportArch` to intersect the listed architectures; verify every referenced image supports the selected target architecture. Market repeats this check against its Node watch and fails closed.
+
+**Bump only after a material chart, manifest, or image change.** Keep `Chart.yaml` `version` and `OlaresManifest.yaml` `metadata.version` equal; a patch bump (e.g. `0.0.1 → 0.0.2`) is the default after such a change. Never bump merely to retry the same rejected bytes.
 
 `market upload` takes a `.tgz` / `.tar.gz`, not a raw chart directory, so package first with the built-in verb (no `helm` binary needed):
 
@@ -47,7 +49,9 @@ olares-cli market upload ./<app>-<version>.tgz   # use the new <version> in the 
 `chart package` mirrors `helm package` and preserves `OlaresManifest.yaml`, so the archive is accepted as-is by both `chart lint` and `market upload`. Because the filename is `<app>-<version>.tgz`, a bumped version produces a new `.tgz` name — pass that name to `upload` and the new number to `install` / `upgrade --version`.
 
 - `upload` always lands the chart in the `upload` source (see [`../../olares-market/SKILL.md`](../../olares-market/SKILL.md)). `-s` is intentionally not exposed.
-- Upload runs the server-side ingest, so a chart that passed local `lint` can still be rejected here (e.g. cluster-specific checks). Surface that message as a chart problem and go back to refine.
+- `architecture_incompatible`: compare the CLI's manifest/cluster sets, fix `spec.supportArch` and image platforms, then repackage and upload. Do not retry the unchanged package.
+- `cluster_arch_unavailable`: this is cluster discovery, not a chart defect. Keep package/version unchanged and retry after node discovery recovers.
+- Other upload ingest errors may still identify a chart problem; surface the message and refine only when it points to chart content.
 - Nothing left locally to package? `market download <app>` pulls the stored `.tgz` back — never re-author a chart the Olares still holds ([olares-market-charts.md](../../olares-market/references/olares-market-charts.md#download)).
 
 ## 3. Actually run it

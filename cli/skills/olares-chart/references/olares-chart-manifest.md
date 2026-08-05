@@ -71,7 +71,7 @@ spec:
 
 ### Keep as stub (deploy to your Olares)
 
-Keep the stub: `Utilities` category, default icon, and empty `spec.developer`/`submitter`/`website`/`sourceCode`/`fullDescription`/`featuredImage`/`promoteImage`/`locale`/`supportArch` are all fine (skip `supportArch` unless using accelerator modes). Optional polish: set `metadata.title`/`description` to something readable and `spec.versionName` to the upstream version.
+Keep the stub: `Utilities` category, default icon, and empty `spec.developer`/`submitter`/`website`/`sourceCode`/`fullDescription`/`featuredImage`/`promoteImage`/`locale` are fine. Set `spec.supportArch` to the image architecture that intersects `olares-cli cluster node list`; Cluster upload rejects an empty or non-matching set. Optional polish: set `metadata.title`/`description` to something readable and `spec.versionName` to the upstream version.
 
 ## 2. Storage (compose volumes → Olares userspace)
 
