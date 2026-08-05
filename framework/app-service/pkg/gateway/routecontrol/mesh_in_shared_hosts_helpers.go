@@ -50,6 +50,9 @@ const (
 	rDropInvalidChars    = "invalid_chars"
 	rDropEmptyPatterns   = "empty_patterns"
 	rDropSharedAuthOnly  = "shared_auth_only"
+	// rDropRefUnresolved means a caller named a shared dep that publishes no
+	// gateway SRR, so there is nothing to materialize for it.
+	rDropRefUnresolved = "shared_ref_unresolved"
 	// GC reason label values.
 	rGCNSOptOut  = "ns_opt_out"
 	rGCNSDeleted = "ns_deleted"
@@ -64,6 +67,9 @@ const (
 	// platformDomainWarnInterval throttles the unavailability warning: the
 	// condition fans out over every opt-in namespace on each retry.
 	platformDomainWarnInterval = time.Minute
+	// emptyAllowlistWarnInterval throttles the empty-allowlist warning per
+	// caller namespace; reconciles fan out on every SRR or Application event.
+	emptyAllowlistWarnInterval = time.Minute
 )
 
 var (
@@ -95,12 +101,19 @@ var (
 		Name: "olares_mesh_in_shared_hosts_platform_domain_ready",
 		Help: "1 when the platform domain resolves for host materialization, 0 while it is unavailable.",
 	})
+	sharedHostsEmptyAllowlistTotal = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "olares_mesh_in_shared_hosts_empty_allowlist_total",
+		Help: "Count of reconciles where a declared caller viewer resolved zero auth hosts.",
+	}, []string{"caller_ns"})
 
 	sharedHostsHashStateMu sync.Mutex
 	sharedHostsHashState   = map[string]meshInHashSnapshot{}
 
 	platformDomainWarnMu   sync.Mutex
 	platformDomainWarnedAt time.Time
+
+	emptyAllowlistWarnMu   sync.Mutex
+	emptyAllowlistWarnedAt = map[string]time.Time{}
 )
 
 // warnPlatformDomainUnavailable logs at default verbosity, throttled to one line
@@ -117,6 +130,34 @@ func warnPlatformDomainUnavailable(callerNS string) {
 		sharedHostsPlatformDomainRequeue, hashCallerNS(callerNS))
 }
 
+// noteEmptySharedHostsTargets reports caller viewers that opted in but resolved
+// no auth host. mesh-in then falls back to passthrough without injecting the
+// platform JWT and the callee answers "Jwt is missing", which used to be silent
+// on the control plane side. Returns how many targets were reported.
+func noteEmptySharedHostsTargets(callerNS string, targets []SharedHostsTarget) int {
+	empty := 0
+	for _, t := range targets {
+		if len(t.Hosts) > 0 {
+			continue
+		}
+		empty++
+		sharedHostsEmptyAllowlistTotal.WithLabelValues(hashCallerNS(callerNS)).Inc()
+		warnEmptySharedHostsAllowlist(callerNS, t.Viewer)
+	}
+	return empty
+}
+
+func warnEmptySharedHostsAllowlist(callerNS, viewer string) {
+	emptyAllowlistWarnMu.Lock()
+	defer emptyAllowlistWarnMu.Unlock()
+	if at, ok := emptyAllowlistWarnedAt[callerNS]; ok && time.Since(at) < emptyAllowlistWarnInterval {
+		return
+	}
+	emptyAllowlistWarnedAt[callerNS] = time.Now()
+	klog.Warningf("shared_hosts: caller declared shared access but allowlist is empty ns=%s viewer=%s",
+		hashCallerNS(callerNS), viewer)
+}
+
 type meshInHashSnapshot struct {
 	hash string
 	at   time.Time
@@ -126,7 +167,7 @@ func init() {
 	prometheus.MustRegister(
 		sharedHostsReconcileTotal, sharedHostsDropTotal, sharedHostsGCTotal,
 		sharedHostsTargetCount, sharedHostsCount, sharedHostsContentHashAgeSeconds,
-		sharedHostsPlatformDomainReady,
+		sharedHostsPlatformDomainReady, sharedHostsEmptyAllowlistTotal,
 	)
 }
 
@@ -388,42 +429,52 @@ func countSharedHostsRows(targets []SharedHostsTarget) int {
 	return len(all)
 }
 
-func buildNamespaceOwnerIndex(apps []appv1alpha1.Application) map[string]string {
-	idx := map[string]string{}
+// sharedGatewaySRRIndex is the routable menu offered to in-cluster callers: the
+// gateway-mode SRRs published by shared server Applications. It is deliberately
+// keyed by callee, never by the installer of the shared app -- the installer is
+// only one of the users allowed to call it, so indexing by owner left every
+// other user with an empty allowlist (DEFECT-SH-N6-OWNER-01).
+type sharedGatewaySRRIndex struct {
+	// all backs eligibility callers, which declare no named callee and may
+	// reach any installed shared app.
+	all []srrv1alpha1.SharedRouteRegistry
+	// byAppRef narrows the menu for callers with named shared deps. The key is
+	// Application spec.name, matching gateway.BuildClusterAppOwnerIndex refs.
+	byAppRef map[string][]srrv1alpha1.SharedRouteRegistry
+}
+
+func buildSharedGatewaySRRIndex(srrs []srrv1alpha1.SharedRouteRegistry, apps []appv1alpha1.Application) sharedGatewaySRRIndex {
+	refsByNS := map[string][]string{}
 	for i := range apps {
 		app := apps[i]
 		if !appcfg.IsSharedServerApp(&app) {
 			continue
 		}
 		ns := strings.TrimSpace(app.Spec.Namespace)
-		owner := strings.ToLower(strings.TrimSpace(app.Spec.Owner))
-		if ns == "" || owner == "" {
+		name := strings.TrimSpace(app.Spec.Name)
+		if ns == "" || name == "" {
 			continue
 		}
-		idx[ns] = owner
+		refsByNS[ns] = append(refsByNS[ns], name)
 	}
-	return idx
-}
-func groupSRRByOwner(srrs []srrv1alpha1.SharedRouteRegistry, nsOwnerIdx map[string]string) map[string][]srrv1alpha1.SharedRouteRegistry {
-	out := map[string][]srrv1alpha1.SharedRouteRegistry{}
+	idx := sharedGatewaySRRIndex{byAppRef: map[string][]srrv1alpha1.SharedRouteRegistry{}}
 	for i := range srrs {
 		srr := srrs[i]
 		if srr.Spec.RouteMode != srrv1alpha1.RouteModeGateway && srr.Spec.RouteMode != "" {
 			continue
 		}
-		viewer := ""
-		if v, ok := viewerFromUserSpaceNS(srr.Namespace); ok {
-			viewer = v
-		} else if owner, ok := nsOwnerIdx[srr.Namespace]; ok {
-			viewer = owner
-		}
-		viewer = strings.ToLower(strings.TrimSpace(viewer))
-		if viewer == "" {
+		// A gateway SRR outside a shared server namespace is a private per-user
+		// route; keeping it out bounds the allowlist to shared traffic.
+		refs, ok := refsByNS[strings.TrimSpace(srr.Namespace)]
+		if !ok {
 			continue
 		}
-		out[viewer] = append(out[viewer], srr)
+		idx.all = append(idx.all, srr)
+		for _, ref := range refs {
+			idx.byAppRef[ref] = append(idx.byAppRef[ref], srr)
+		}
 	}
-	return out
+	return idx
 }
 
 func hashCallerNS(ns string) string {
