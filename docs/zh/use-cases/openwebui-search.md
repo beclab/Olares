@@ -7,7 +7,7 @@ head:
       content: Olares, Open WebUI, 网页搜索, SearXNG, 嵌入模型, RAG
 app_version: "1.0.38"
 doc_version: "2.0"
-doc_updated: "2026-07-30"
+doc_updated: "2026-08-05"
 ---
 
 :::warning
@@ -51,9 +51,9 @@ doc_updated: "2026-07-30"
 ### 获取 SearXNG 端点
 
 1. 打开 Olares 设置，然后前往**应用** > **SearXNG**。
-2. 在**共享入口**下，点击 **SearXNG**，然后复制端点 URL。例如：`http://d1236e020.shared.olares.com`。
+2. 在**入口**下，点击 **SearXNG**，然后复制端点 URL。例如：`https://84a93c3c.laresprime.olares.com`。
 
-   ![SearXNG shared endpoint](/images/manual/use-cases/openwebui-searxng-shared-endpoint1.png#bordered){width=70%}
+   ![SearXNG endpoint](/images/manual/use-cases/openwebui-searxng-shared-endpoint1.png#bordered){width=70%}
 
 ## 配置 Open WebUI
 
@@ -84,7 +84,7 @@ doc_updated: "2026-07-30"
 
    - **Web Search**：启用此设置。
    - **Web Search Engine**：选择 **SearXNG**。
-   - **Searxng Query URL**：输入你的 SearXNG 端点 URL，并在末尾追加 `/search?q=<query>`。例如：`http://d1236e020.shared.olares.com/search?q=<query>`。
+   - **Searxng Query URL**：输入你的 SearXNG 端点 URL，并在末尾追加 `/search?q=<query>`。例如：`https://84a93c3c.laresprime.olares.com/search?q=<query>`。
    - **Bypass Web Loader**：如果你只需要搜索结果摘要，请启用此设置。如果你希望 Open WebUI 通过网页加载器获取完整页面内容，请保持禁用。
 
       :::tip 全文检索
@@ -114,3 +114,25 @@ doc_updated: "2026-07-30"
 5. 提交提示词。AI 会生成包含检索到的搜索结果及其来源链接的回复。
 
    ![Web search results in Open WebUI](/images/manual/use-cases/openwebui-web-search-results1.png#bordered)
+
+## 常见问题
+
+### 为什么 Open WebUI 没有进行网页搜索？
+
+如果 AI 回复中没有包含网页搜索结果，请按以下顺序排查：
+
+1. **对话中已启用搜索功能。**  
+   在聊天区域，点击 **Integrations** 图标，并确保 **Web Search** 已启用。
+
+2. **嵌入模型已配置且可访问。**  
+   前往 **Admin Panel** > **Settings** > **Tools** > **Documents**，验证嵌入模型设置。如果嵌入模型缺失或无法访问，Open WebUI 将无法处理网页搜索结果。
+
+3. **SearXNG 能返回你的查询结果。**  
+   从启动台打开 SearXNG，运行相同的搜索。如果 SearXNG 没有返回结果，请检查 **Preferences** > **ENGINES** 中是否已启用可用的搜索引擎。
+
+4. **网页加载器被拦截。**  
+   如果你需要完整网页内容，而默认网页加载器因反爬取机制失败，请前往 **Admin Panel** > **Settings** > **Tools** > **Web Search**，然后启用 **Bypass Web Loader**。这将使用搜索结果摘要，而不是获取完整页面。
+
+   :::tip
+   如需稳定地检索完整网页，请安装并配置 Firecrawl 作为网页加载器。参阅[将 Firecrawl 用作网页加载器](firecrawl.md#configure-open-webui)。
+   :::

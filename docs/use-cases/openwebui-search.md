@@ -7,7 +7,7 @@ head:
       content: Olares, Open WebUI, web search, SearXNG, embedding, RAG
 app_version: "1.0.38"
 doc_version: "2.0"
-doc_updated: "2026-07-30"
+doc_updated: "2026-08-05"
 ---
 
 # Enable web search in Open WebUI
@@ -49,7 +49,7 @@ To link Open WebUI with your background services, you need to locate the connect
 1. Open Olares Settings, and then go to **Applications** > **SearXNG**.
 2. Under **Entrances**, click **SearXNG**, and then copy the endpoint URL. For example, `https://84a93c3c.laresprime.olares.com`.
 
-   ![SearXNG shared endpoint](/images/manual/use-cases/openwebui-searxng-shared-endpoint1.png#bordered){width=70%}
+   ![SearXNG endpoint](/images/manual/use-cases/openwebui-searxng-shared-endpoint1.png#bordered){width=70%}
 
 ## Configure Open WebUI
 
@@ -113,3 +113,25 @@ Test the feature to ensure the AI successfully retrieves up-to-date information 
 5. Submit the prompt. The AI generates a response that includes the retrieved search results and their source links.
 
    ![Web search results in Open WebUI](/images/manual/use-cases/openwebui-web-search-results1.png#bordered)
+
+## FAQ
+
+### Why doesn't Open WebUI search the web?
+
+If the AI response does not include web search results, work through the following checks:
+
+1. **Search is enabled for the conversation.**  
+   In the chat area, click the **Integrations** icon, and make sure **Web Search** is enabled.
+
+2. **The embedding model is configured and reachable.**  
+   Go to **Admin Panel** > **Settings** > **Tools** > **Documents**,  and verify the embedding model settings. If the embedding model is missing or unreachable, Open WebUI cannot process web search results.
+
+3. **SearXNG returns results for your query.**  
+   Open SearXNG from the Launchpad and run the same search. If SearXNG returns no results, check that its search engines are enabled and working in **Preferences** > **ENGINES**.
+
+4. **The web loader is being blocked.**  
+   If you need full-page content and the default web loader fails because of anti-scraping measures, go to **Admin Panel** > **Settings** > **Tools** > **Web Search**, and then enable **Bypass Web Loader**. This uses search result summaries instead of fetching full pages.
+
+   :::tip
+   For reliable full-page retrieval, install and configure Firecrawl as the web loader. See [Use Firecrawl as a web page loader](firecrawl.md#configure-open-webui).
+   :::
