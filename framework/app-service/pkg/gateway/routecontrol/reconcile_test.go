@@ -79,6 +79,8 @@ func testScheme(t *testing.T) *runtime.Scheme {
 	s.AddKnownTypeWithName(eg.WithKind("BackendTrafficPolicyList"), &unstructured.UnstructuredList{})
 	s.AddKnownTypeWithName(eg.WithKind("SecurityPolicy"), &unstructured.Unstructured{})
 	s.AddKnownTypeWithName(eg.WithKind("SecurityPolicyList"), &unstructured.UnstructuredList{})
+	s.AddKnownTypeWithName(eg.WithKind("EnvoyExtensionPolicy"), &unstructured.Unstructured{})
+	s.AddKnownTypeWithName(eg.WithKind("EnvoyExtensionPolicyList"), &unstructured.UnstructuredList{})
 	return s
 }
 
