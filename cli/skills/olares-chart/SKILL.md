@@ -1,8 +1,8 @@
 ---
 name: olares-chart
-version: 4.14.0
+version: 4.15.0
 description: "Olares app packaging and chart authoring via olares-cli chart — port a repo, docker-compose, or generic Helm chart; build/push the image; author, lint, package, and deploy an OlaresManifest; wire storage, middleware, entrances, env, and GPU; edit the chart after diagnosis. Runtime failure diagnosis is olares-doctor; public Market submission is olares-publish."
-compatibility: Requires olares-cli on PATH; chart authoring is local-only, deploy needs login
+compatibility: Requires olares-cli on PATH; chart authoring is local-only, building an image for a specific Olares and deploying both need login
 metadata:
   openclaw:
     requires:
@@ -18,7 +18,7 @@ metadata:
 
 > **Canonical manifest combination:** new ports use `OlaresManifest.yaml apiVersion: v3` + `olaresManifest.version: 0.12.0` + an `olares` `type: system` dependency at `>=1.12.6-0`; current `from-compose` emits all three. Never downgrade these to satisfy `lint`—check for an old CLI or skill. `Chart.yaml apiVersion: v2` is a separate Helm field and remains `v2`.
 
-> **Platform model (read once, no login needed for authoring).** Porting decisions rely on the Olares storage model, uid-1000 run identity, app/namespace & networking, system middleware, and version model — all defined once in [`../olares-shared/references/olares-platform.md`](../olares-shared/references/olares-platform.md). Packaging an image and authoring/validating the chart need no login; only **deploy to your Olares** (`market upload` + `install`) does.
+> **Platform model (read once, no login needed for authoring).** Porting decisions rely on the Olares storage model, uid-1000 run identity, app/namespace & networking, system middleware, and version model — all defined once in [`../olares-shared/references/olares-platform.md`](../olares-shared/references/olares-platform.md). Authoring and validating the chart (`from-compose` / `lint` / `package`) need no login. **Login is needed earlier than the deploy step, though:** as soon as the app is meant to run on a specific Olares, its image must be built for that node's architecture — so the target has to be resolved *before* the first `docker build`. See Axis 1.
 
 ## When to use
 
@@ -41,7 +41,9 @@ Porting an app is **not** a fixed `from-compose → lint → deploy` pipeline �
 
 ## Axis 1 — Packaging (the image)
 
-Olares **pulls images from a registry and never builds from source**, so every workload must reference a publicly pullable, node-arch-correct image. Image work is **agent-driven**: first query the **target Olares node's architecture** with `olares-cli cluster node list`, then ask which registry the developer uses (Docker Hub / ghcr), check docker is usable and logged in, and **build + push yourself** — only `docker login` stays manual, and only when not already authenticated ([references/olares-chart-image.md](references/olares-chart-image.md)). Querying the target needs an Olares profile login; Docker packaging itself does not. Build for the target node's arch (single-arch), never the development host's implicit/default arch; multi-arch is only for publishing.
+Olares **pulls images from a registry and never builds from source**, so every workload must reference a publicly pullable, node-arch-correct image. Image work is **agent-driven**: resolve the **target Olares node's architecture** with `olares-cli cluster node list`, then ask which registry the developer uses (Docker Hub / ghcr), check docker is usable and logged in, and **build + push yourself** — only `docker login` stays manual, and only when not already authenticated ([references/olares-chart-image.md](references/olares-chart-image.md)). Build for the target node's arch (single-arch), never the development host's implicit/default arch; multi-arch is only for publishing.
+
+> **The target architecture is a build input, and resolving it cannot be deferred.** `spec.supportArch` and the platform checks around it describe what the chart *claims*; what a built image *is* is a separate fact that no platform-side check inspects. So a wrong guess survives everything you can run locally — build succeeds, push succeeds, `lint` passes — and first shows up as `exec format error` inside the cluster. Docker on Apple Silicon defaults to arm64, which is what an unresolved target silently becomes. Either log in and query the node, or have the developer state the architecture; with **neither, ask instead of building on a guess.** Authoring a chart nobody is deploying yet is the one case that needs no target.
 
 | Packaging state | Do this | Ready when |
 |---|---|---|
@@ -73,7 +75,7 @@ For deploying to your own Olares, **metadata can stay a stub** as long as `lint`
 
 | Axis | Concern | Get this right | Loop back when | Reference |
 |---|---|---|---|---|
-| packaging | **Image** | pullable, pinned to a version tag (never `:latest`), arch-correct for the **target Olares node**; pass it explicitly through Buildx `--platform` rather than using the development host default | `ImagePullBackOff` / wrong arch, or a deploy constraint forces a rebuild | [image.md](references/olares-chart-image.md) |
+| packaging | **Image** | pullable, pinned to a version tag (never `:latest`), arch-correct for the **target Olares node**; pass it explicitly through Buildx `--platform` rather than using the development host default, then clear the **image-readiness gate** (assert the built arch, prove an anonymous pull) before wiring it into the chart | `ImagePullBackOff` / wrong arch, or a deploy constraint forces a rebuild | [image.md](references/olares-chart-image.md) |
 | packaging+deployment | **Run identity** | final app process uid 1000; normally `spec.runAsUser: true`; for verified PUID/PGID root-init images leave it false/absent so the entrypoint can initialize then drop privileges; use initContainer `chown` only for root-owned volumes | EACCES on appData/appCache/userData; forced uid breaks a root-init entrypoint; admission denies an explicit root securityContext | [run-as-user.md](references/olares-chart-run-as-user.md) |
 | deployment | **Storage** | every compose volume → the right userspace area (Data/Cache/Home/Common/External), matching `permission`, leftover kompose PVCs deleted | a volume isn't persisting or lands in the wrong area | [manifest.md](references/olares-chart-manifest.md) §2 |
 | deployment | **Middleware & deps** | no bundled `postgres`/`redis`/`mongo`/…; wire to system middleware; SQLite→Postgres where supported; companion apps as `type: application` deps | a bundled db/queue remains, or a companion should be a dependency | [middleware.md](references/olares-chart-middleware.md) |
@@ -90,6 +92,7 @@ For deploying to your own Olares, **metadata can stay a stub** as long as `lint`
 | deployment | **Metadata** | stub OK for local deploy (`Utilities`, default icon) while `lint` passes; full `metadata.*` + listing images only when publishing | `lint` flags missing metadata, or you want a public listing | [manifest.md](references/olares-chart-manifest.md) §1 |
 | deployment | **Validate-local** | `olares-cli chart lint ./<app>` passes, then `chart package` | a refinement changed the manifest/templates | [lint.md](references/olares-chart-lint.md) |
 | deploy | **Deploy** | `market upload` + `market install`, then diagnose from logs — automatic after `lint` passes (login required) | proving the chart actually runs on the developer's Olares | [deploy.md](references/olares-chart-deploy.md) |
+| deploy | **Custom URL** | only once the app is `running`: a memorable route ID (one command, no DNS), or the developer's own FQDN (auth level `public` + RSA PEM cert + a CNAME only they can add, then activate and poll) | the developer wants a nicer URL, or their own domain | [custom-domain.md](references/olares-chart-custom-domain.md) |
 
 > **Deploy** leans on sibling skills: [`olares-shared`](../olares-shared/SKILL.md) (login check), [`olares-market`](../olares-market/SKILL.md) (upload / install / cleanup), [`olares-cluster`](../olares-cluster/SKILL.md) (logs), and [`olares-doctor`](../olares-doctor/SKILL.md) (runtime root-cause diagnosis when a deploy fails or the app won't start). **After `lint` passes, drive the deploy loop automatically without asking** (proceed unless olares-shared's auth-readiness gate says stop); **never log in on the developer's behalf without asking.** One way to sequence the whole assembly (and the file tree `from-compose` emits) lives in [references/olares-chart-workflow.md](references/olares-chart-workflow.md) — a reference, not a required order.
 

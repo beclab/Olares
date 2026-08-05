@@ -19,6 +19,8 @@ RUN chown -R 1000:1000 /var/lib/myapp
 USER 1000
 ```
 
+`chown` the **runtime** paths too, not just the data ones: pid files, sockets, lock files and scratch dirs under `/run`, `/var/run` or `/tmp` are written before the app does anything useful, and a base image whose default config puts them in a root-owned directory (nginx, php-fpm, supervisor) fails at startup under `USER 1000`. Either relocate the path in the image's config or make it writable here — a path baked into the image cannot be fixed from the chart.
+
 Verify before pushing:
 
 ```bash
@@ -151,6 +153,7 @@ Omitting `spec.runAsUser` is equivalent for webhook injection. Do not set Pod/co
 | Symptom | Likely cause | Fix |
 |---|---|---|
 | CrashLoop, `Permission denied` writing data dir | uid ≠ 1000 or dir owned by root | A or B above |
+| Container exits at once; the log names a **pid / socket / lock / temp file** it cannot open, under `/run`, `/var/run`, `/var/lib/<app>` or similar | A non-root process is writing a **runtime path the image left owned by root**. This is not about volumes — the path is inside the image, so no chart-side mount or `chown` reaches it | Fix it in the **Dockerfile**, where you are still root: point the path at somewhere the process owns (e.g. nginx `pid /tmp/nginx.pid;`), or `chown 1000:1000` / `chmod` it before `USER 1000`. Rebuild and bump the tag |
 | Install OK but config/data not persisted | Writes go to container-local path, or EACCES silently ignored | Check mount paths + run identity |
 | Admission denied: untrusted image + root | Chart explicitly sets a root-equivalent Pod/container securityContext | Remove the explicit root context; use A, B, or the verified PUID/PGID pattern C |
 | OPA OK but app still can't write | Final process uid is not 1000, or volume pre-dates chown | Use A + B for ordinary images; for pattern C verify `PUID`/`PGID` and the post-init process identity |
