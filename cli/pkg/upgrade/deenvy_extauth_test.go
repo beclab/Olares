@@ -116,6 +116,49 @@ func TestProbeEntranceExtAuthCoveredWithMatchingPolicy(t *testing.T) {
 	}
 }
 
+func TestAssignCookieDepConditionsIndependent(t *testing.T) {
+	conds := map[string]bool{"AppGatewayDataReady": true}
+	assignCookieDepConditions(conds, false)
+	if conds["EntranceCookieCovered"] {
+		t.Fatal("missing Cookie EEP must record Covered=false")
+	}
+	if !conds["AppGatewayDataReady"] {
+		t.Fatal("cookie assign must not clear AppGatewayDataReady")
+	}
+}
+
+func TestProbeEntranceCookieCoveredMissing(t *testing.T) {
+	srr := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": "gateway.olares.io/v1alpha1",
+		"kind":       "SharedRouteRegistry",
+		"metadata": map[string]any{
+			"name":      "app-web",
+			"namespace": "demo-user",
+		},
+		"spec": map[string]any{
+			"entranceClass": deenvyEntranceClassApp,
+			"hostPatterns":  []any{"app.example.com"},
+			"upstream": map[string]any{
+				"serviceName": "app",
+				"port":        int64(80),
+			},
+		},
+	}}
+	scheme := runtime.NewScheme()
+	listKinds := map[schema.GroupVersionResource]string{
+		deenvySRR_GVR:                   "SharedRouteRegistryList",
+		deenvyEnvoyExtensionPolicyGVR: "EnvoyExtensionPolicyList",
+	}
+	dc := fake.NewSimpleDynamicClientWithCustomListKinds(scheme, listKinds, srr)
+	ok, err := probeEntranceCookieCovered(context.Background(), dc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ok {
+		t.Fatal("missing Cookie EEP must be false")
+	}
+}
+
 func newDeenvyExtAuthDynamic(t *testing.T, objs ...runtime.Object) *fake.FakeDynamicClient {
 	t.Helper()
 	scheme := runtime.NewScheme()
@@ -125,3 +168,4 @@ func newDeenvyExtAuthDynamic(t *testing.T, objs ...runtime.Object) *fake.FakeDyn
 	}
 	return fake.NewSimpleDynamicClientWithCustomListKinds(scheme, listKinds, objs...)
 }
+

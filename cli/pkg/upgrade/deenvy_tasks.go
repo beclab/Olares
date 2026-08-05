@@ -244,6 +244,12 @@ func (a *deenvyWaitDeps) Execute(runtime connector.Runtime) error {
 		if !egOK || !extOK {
 			ok = false
 		}
+		if dc != nil && !ensureCookieProbeOK(ctx, dc, conds) {
+			ok = false
+		} else if dc == nil {
+			assignCookieDepConditions(conds, false)
+			ok = false
+		}
 		// l4 retained platform Envoy
 		l4, err := kube.AppsV1().Deployments("os-network").Get(ctx, "l4-bfl-proxy", metav1.GetOptions{})
 		l4OK := err == nil && l4.Status.ReadyReplicas >= 1
