@@ -54,9 +54,9 @@ flowchart TD
 | 3 | `docker image inspect <ref>:<tag> --format '{{.Architecture}}'` | the output **equals** the target arch |
 | 4 | Start the container (when that proves something — see below) | the process does not exit immediately; an HTTP service answers on its declared port |
 | 5 | `docker buildx build ... --push` (or `docker push <ref>:<tag>`) | the push reports success for that exact tag |
-| 6 | Pull anonymously, with an empty `DOCKER_CONFIG` | the registry serves the manifest **and** the right architecture to a caller holding no credentials |
+| 6 | Inspect anonymously, with an empty `DOCKER_CONFIG` | the registry serves that tag to a caller holding no credentials |
 
-Step 3 is what turns "remember to pass `--platform`" into something that can fail. Step 6 is what turns "the push printed no error" into evidence: Olares nodes pull anonymously, and a logged-in shell cannot tell a public repository from a private one.
+Step 3 is what turns "remember to pass `--platform`" into something that can fail. Step 6 is what turns "the push printed no error" into evidence: Olares nodes pull anonymously, and a logged-in shell cannot tell a public repository from a private one. The remote manifest for a single-platform image does not always carry a `platform` field, so architecture is asserted locally in step 3; step 6 proves anonymous registry access.
 
 Do not wire an image into the chart until step 6 passes.
 
@@ -76,11 +76,15 @@ A mismatch means `--platform` was wrong or missing: rebuild, and do not push. (P
 For an ordinary long-running service, a container that exits at once is a defect visible in seconds — a missing entrypoint dependency, an unwritable runtime path ([run-as-user.md](olares-chart-run-as-user.md)), a wrong `CMD`:
 
 ```bash
-docker run --rm -d --name <app>-smoke -p <host>:<container> <ref>:<tag>
-sleep 5 && docker ps --filter name=<app>-smoke     # still up?
+docker run -d --name <app>-smoke -p <host>:<container> <ref>:<tag>
+sleep 5
+running=$(docker inspect --format '{{.State.Running}}' <app>-smoke)
 docker logs <app>-smoke                            # then curl the declared port for an HTTP service
 docker rm -f <app>-smoke
+test "$running" = true                             # assert only after preserving logs and cleanup
 ```
+
+Do not add `--rm`: if startup fails, automatic removal deletes the container before `docker logs` can explain why. Remove it explicitly after inspecting the result.
 
 Emulating a foreign architecture makes this slow and sometimes impossible. If the container cannot run on this host at all, say so and move on rather than skipping in silence.
 
@@ -89,10 +93,14 @@ Emulating a foreign architecture makes this slow and sometimes impossible. If th
 ### Step 6: verify the pull the node will actually make
 
 ```bash
-DOCKER_CONFIG=$(mktemp -d) docker manifest inspect <ref>:<tag>
+(
+  tmp=$(mktemp -d)
+  trap 'rm -rf "$tmp"' EXIT
+  DOCKER_CONFIG="$tmp" docker manifest inspect <ref>:<tag>
+)
 ```
 
-Run it against a throwaway config dir. **Never `docker logout`** to simulate an anonymous client — that destroys credentials the developer then has to retype. `denied` / `unauthorized` here means the repository is private (ghcr defaults to private on first push: set the package visibility to public) or that the tag was never pushed. Check the `platform.architecture` entry against the target arch while you are here.
+Run it against a throwaway config dir. **Never `docker logout`** to simulate an anonymous client — that destroys credentials the developer then has to retype. `denied` / `unauthorized` here means the repository is private (ghcr defaults to private on first push: set the package visibility to public) or that the tag was never pushed. A manifest list may show `platform.architecture`; a single-image manifest may not, so absence of that field is not a failure.
 
 ## Resolving the target architecture
 
@@ -149,10 +157,10 @@ You drive this end to end — ask the registry, check login, build, push, verify
    docker buildx build --platform linux/<target-arch> --load -t <registry-ref>:<tag> <build-context>
    docker image inspect <registry-ref>:<tag> --format '{{.Architecture}}'      # == <target-arch>
    # start smoke where meaningful, then:
-   docker buildx build --platform linux/<target-arch> --push -t <registry-ref>:<tag> <build-context>
-   DOCKER_CONFIG=$(mktemp -d) docker manifest inspect <registry-ref>:<tag>     # anonymous pull
+   docker push <registry-ref>:<tag>                                           # push the image just inspected
+   # run the anonymous manifest check from step 6
    ```
-   The second build reuses the buildx cache, so it publishes the layers you just asserted rather than rebuilding them. `<build-context>` can be a local path (`.`) or a git URL (e.g. `https://github.com/org/repo.git#main`); use the upstream Dockerfile or one you authored. (Publishing to the public Market? Build multi-arch instead — `--platform linux/amd64,linux/arm64` — per [`../../olares-publish/SKILL.md`](../../olares-publish/SKILL.md).)
+   `<build-context>` can be a local path (`.`) or a git URL (e.g. `https://github.com/org/repo.git#main`); use the upstream Dockerfile or one you authored. (Publishing to the public Market? Build multi-arch instead — `--platform linux/amd64,linux/arm64` — per [`../../olares-publish/SKILL.md`](../../olares-publish/SKILL.md).)
 
 ## Handoff: wire the image into the compose
 

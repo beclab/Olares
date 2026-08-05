@@ -19,7 +19,7 @@ The **post-install** surface for an Olares app. Inspect the app, list its entran
 | `domain get <app> <entrance>` | normal | VERIFIED | Per-entrance custom-domain setup |
 | `domain list <app>` | normal | VERIFIED | Every entrance's domain setup |
 | `domain set <app> <entrance> [flags]` | normal | UNVERIFIED | RMW update |
-| `domain finish <app> <entrance>` | normal | UNVERIFIED | Confirm third-party CNAME after DNS propagates |
+| `domain finish <app> <entrance>` | normal | UNVERIFIED | Record that the CNAME exists and start asynchronous verification |
 | `policy get <app> <entrance>` | normal | VERIFIED | Per-entrance auth policy |
 | `policy list <app>` | normal | VERIFIED | Every entrance's policy |
 | `policy set <app> <entrance> [flags]` | normal | UNVERIFIED | RMW update |
@@ -70,7 +70,7 @@ olares-cli settings apps domain set firefox www --clear-third-level
 
 ## `domain get` — reading the third-party stage
 
-Both status fields start empty / `unset` after `domain set`. `finish` is what moves `cname_target_status` to `set` and `cname_status` to `pending`; everything after that is the platform's own asynchronous check writing back.
+Adding or changing the third-party domain resets both status fields to empty / `unset`. `finish` moves `cname_target_status` to `set` and `cname_status` to `pending`; everything after that is the platform's own asynchronous check writing back. An RMW update that keeps the same third-party domain can preserve its existing state.
 
 | `cname_target_status` | `cname_status` | Means |
 |---|---|---|
@@ -80,7 +80,7 @@ Both status fields start empty / `unset` after `domain set`. `finish` is what mo
 | `set` | `cert-not-found` / `cert-invalid` | The certificate side failed, not DNS |
 | any | `timeout` / `error` | The CNAME did not resolve to `cname_target`, or the upstream check failed |
 
-`cname_target` is the user's Olares **zone** (e.g. `laresprime.olares.com`) — it is the CNAME's *value*, while its *name* is only the custom domain's own subdomain label. Print it verbatim; it cannot be derived from the app's current URL. Values outside this table are possible (the field is a plain string on the wire): show them as-is rather than guessing.
+`cname_target` is the user's Olares **zone** (e.g. `laresprime.olares.com`) and is the CNAME's *value*. Its *name* is the custom domain relative to the DNS zone managed at that provider (`media` for `media.n1.monster` in zone `n1.monster`, or `foo.bar` in zone `example.com`). Print the target verbatim; it cannot be derived from the app's current URL. Values outside this table are possible (the field is a plain string on the wire): show them as-is rather than guessing.
 
 ## `policy set` — replace sub-policies
 

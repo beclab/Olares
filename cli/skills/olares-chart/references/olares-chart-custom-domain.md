@@ -64,7 +64,7 @@ olares-cli settings apps domain get <app> <entrance>
 | Record field | Value | Common mistake |
 |---|---|---|
 | Type | `CNAME` | — |
-| Name / Host | only the **subdomain label** of the custom domain — `media` for `media.example.com` | pasting the whole FQDN, or `@` |
+| Name / Host | the record name **relative to the DNS zone** — `media` for `media.n1.monster` when the managed zone is `n1.monster`; `foo.bar` when it is `example.com` | using `@`, or copying a full FQDN into a provider that expects a relative name |
 | Value / Target | `cname_target` **exactly as printed** | using the app's current Olares URL, the `<appid>` host, or the FQDN being set up |
 
 Never derive the target from the app's access URL. It is not the same string, and the resulting record resolves to something that will never activate.
@@ -94,7 +94,7 @@ olares-cli settings apps domain get <app> <entrance>
 ## Hard constraints
 
 - **Auth level must be `public`.** A custom domain cannot carry Olares authentication, so the platform declines to combine the two: BFL rejects the write outright while the entrance is `private` (`custom domain can not be set when auth level is private`). Treat `public` as the requirement rather than probing what else the backend happens to tolerate — `internal` is not reachable from the internet, which is the entire point of the exercise.
-- **The certificate and its private key must be RSA, PEM, and readable by you.** `--cert-file` / `--key-file` are read verbatim from disk, so a cert sitting in a root-only directory (`/etc/letsencrypt/live/...` is the usual one) has to be copied somewhere readable first — and copied, not moved, or renewal breaks. The cert is normally the full chain.
+- **The certificate and its private key must be RSA, PEM, and readable by you.** `--cert-file` / `--key-file` are read verbatim from disk, so files in a root-only directory (`/etc/letsencrypt/live/...` is the usual one) have to be copied into a private temporary directory first — and copied, not moved, or renewal breaks. Keep the private-key copy mode `0600` and delete it after `domain set` returns. The cert is normally the full chain.
 - **Certbot defaults to ECDSA and must be told otherwise.** `--key-type rsa` at issue time. A default certbot key arrives as an ECDSA key inside a `-----BEGIN PRIVATE KEY-----` (PKCS#8) block, and the platform's validator assumes PKCS#8 means RSA; the result is a failure with nothing useful to read, not a clean rejection. This is worth stating to the developer before they issue, because re-issuing later is another round of DNS work.
 - **`domain set` is read-modify-write.** Passing only `--third-level` leaves an existing third-party domain in place, and vice versa. Dropping one dimension needs `--clear-third-level` / `--clear-third-party`.
 - **The domain must be fully qualified.** `example.com` and `media.example.com` are fine; a bare label or a trailing-dot form is rejected before anything is stored.
@@ -133,5 +133,5 @@ Two facts about issuing are worth passing on, because both cost a DNS round trip
 | `custom domain can not be set when auth level is private` | Pipeline B started before the auth level was changed | `auth-level set --level public`, then retry |
 | `--third-party requires both --cert-file and --key-file` | Domain passed without its cert pair | Supply both, or `--clear-third-party` to drop the domain |
 | `app not set custom domain` from `finish` | `finish` ran on an entrance with no third-party domain — often a typo'd entrance, or `set` silently targeted a different one | `domain get` the entrance and confirm `third_party_domain` before finishing |
-| Cert file unreadable | The PEM lives in a root-only directory | Copy it somewhere readable; do not move it |
+| Cert file unreadable | The PEM lives in a root-only directory | Copy it into a private temporary directory; preserve `0600` on the key, delete the copy after use, and do not move the renewal source |
 | `cname_status` stuck at `pending` | The record is missing, still propagating, or points somewhere other than `cname_target` | Re-read `cname_target` and compare it against what the panel actually holds |

@@ -246,8 +246,10 @@ domain is complete as soon as it is set.
                        cert-invalid | timeout | error -- the result
                        of the upstream's asynchronous check
 
-Both statuses read unset right after "domain set"; "domain finish"
-moves them to set / pending. Unrecognized values are printed as-is.
+Adding or changing the third-party domain resets both statuses to
+unset; "domain finish" moves them to set / pending. Updating an
+unchanged domain may preserve its existing state. Unrecognized values
+are printed as-is.
 
 cert / key are NEVER printed in the default table view; pass
 --output json to retrieve them too.
@@ -513,7 +515,7 @@ func certKeyMark(s string) string {
 func newDomainFinishCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "finish <app> <entrance>",
-		Short: "confirm a third-party CNAME is live (Settings UI's \"Finish\" button)",
+		Short: "record a third-party CNAME and start verification (Settings UI's \"Finish\" button)",
 		Long: `Record that the third-party domain's CNAME has been created, and ask
 the upstream to start verifying it. This is the same action triggered
 by the Settings UI's "Finish" button on the Custom Domain dialog.
