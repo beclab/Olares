@@ -76,15 +76,17 @@ A mismatch means `--platform` was wrong or missing: rebuild, and do not push. (P
 For an ordinary long-running service, a container that exits at once is a defect visible in seconds — a missing entrypoint dependency, an unwritable runtime path ([run-as-user.md](olares-chart-run-as-user.md)), a wrong `CMD`:
 
 ```bash
-docker run -d --name <app>-smoke -p <host>:<container> <ref>:<tag>
-sleep 5
-running=$(docker inspect --format '{{.State.Running}}' <app>-smoke)
-docker logs <app>-smoke                            # then curl the declared port for an HTTP service
-docker rm -f <app>-smoke
-test "$running" = true                             # assert only after preserving logs and cleanup
+name=<app>-smoke-$$
+if docker run -d --name "$name" -p <host>:<container> <ref>:<tag>; then
+  sleep 5
+  running=$(docker inspect --format '{{.State.Running}}' "$name")
+  docker logs "$name"                              # then curl the declared port for an HTTP service
+  docker rm -f "$name"
+  test "$running" = true                           # assert only after preserving logs
+fi
 ```
 
-Do not add `--rm`: if startup fails, automatic removal deletes the container before `docker logs` can explain why. Remove it explicitly after inspecting the result.
+Two details are load-bearing. No `--rm`, because automatic removal deletes the container before `docker logs` can explain a failed start. And a unique name guarded by `if`, because a fixed name that already exists fails the `run` and would send `docker rm -f` at somebody else's container.
 
 Emulating a foreign architecture makes this slow and sometimes impossible. If the container cannot run on this host at all, say so and move on rather than skipping in silence.
 

@@ -35,12 +35,12 @@ Folder name (lowercase letters and digits only, **no hyphens**, <=30 chars), PR 
 
 ## Tier 2: functional reach
 
-Nothing checks these. They do not block the merge — they decide whether the app actually installs for the user who clicks Install.
+Nothing here checks that these are *true*: `lint` requires `spec.supportArch` to be present and well-formed, but no check opens the image to see what was built. They decide whether the app actually installs for the user who clicks Install.
 
 | Concern | Local deploy needed | Public Market needs |
 |---|---|---|
 | **Image arch** | Single-arch matching this node (`olares-cli cluster node list`) | Multi-arch build (`--platform linux/amd64,linux/arm64`) |
-| **`spec.supportArch`** | Optional | Must list every arch your image actually supports |
+| **`spec.supportArch`** | Required and non-empty (`lint` rejects an empty list) — this node's arch | Must list every arch your image actually supports |
 | **`spec.accelerator`** | Only if the app needs GPU on **this** node | Fully declared with quantities when the app uses GPU/NPU; the mode -> arch cross-check applies at `lint` |
 
 `supportArch` and the image platforms must agree in **both** directions. Declaring an arch you did not build fails the install; omitting one you did build hides the app from those users.

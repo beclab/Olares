@@ -9,9 +9,11 @@ Both pipelines run against a **live app** through `olares-cli settings apps doma
 olares-cli settings apps entrances list <app>     # ENTRANCE / STATE / AUTH LEVEL / DOMAIN
 ```
 
+**Either pipeline's `domain set` is an app upgrade.** app-service moves the app to `Upgrading` and reconciles asynchronously, which has two consequences in both pipelines: the call is refused with `<op> operation is not allowed for <state> state` while the app is mid-operation, and the routing is live only once the app reads `running` again — not when the command returns.
+
 ## Two pipelines, not one flow
 
-The two options share a verb and nothing else. A custom **route ID** stays inside the Olares zone, so the platform owns DNS and TLS and the change is effectively instant. A **third-party domain** is the developer's own FQDN: they own DNS, they supply the certificate, and part of the work happens in a control panel this CLI cannot reach.
+The two options share a verb and nothing else. A custom **route ID** stays inside the Olares zone, so the platform owns DNS and TLS and there is no DNS or certificate work at all. A **third-party domain** is the developer's own FQDN: they own DNS, they supply the certificate, and part of the work happens in a control panel this CLI cannot reach.
 
 ```mermaid
 flowchart TD
@@ -33,9 +35,9 @@ The user manual calls this the **custom route ID**; the CLI flag and the wire fi
 olares-cli settings apps domain set <app> <entrance> --third-level <prefix>
 ```
 
-The old URL keeps working; the new one is `https://<prefix>.<zone>`. There is no CNAME and no `finish` in this pipeline — an agent that waits for `cname_status` here waits forever.
+The old URL keeps working; the new one is `https://<prefix>.<zone>`. There is no CNAME and no `finish` in this pipeline — an agent that waits for `cname_status` here waits forever. Wait for the app to read `running` again (the upgrade above), then confirm the new URL over HTTPS.
 
-- `auth`, `desktop` and `wizard` are reserved. So is any prefix already taken in that user's zone: two entrances sharing one prefix is a collision the write itself does not reject. Audit with [`doctor thirdleveldomain`](../../olares-doctor/references/olares-doctor-thirdleveldomain.md), which reports `duplicate` and `reserved` findings across the zone.
+**Conflicts are rejected by the write itself**, so read the error instead of pre-checking: `auth`, `desktop` and `wizard` are reserved, a prefix already used in the caller's zone (or colliding with an app's default domain) is refused, and a third-party domain must be unique across **every user**, not just your own apps. [`doctor thirdleveldomain`](../../olares-doctor/references/olares-doctor-thirdleveldomain.md) audits a zone after the fact; it is not the gate.
 
 ## Pipeline B — the developer's own domain
 
@@ -54,7 +56,8 @@ olares-cli settings apps domain get <app> <entrance>
 | `cname_target_status=set`, `cname_status=pending` | activating | Poll `domain get`. Nothing to change |
 | `cname_status=active` | done | Confirm over HTTPS and stop |
 | `cname_status=cert-not-found` / `cert-invalid` | the certificate, not DNS | Re-check the PEM pair (below), then `domain set` again |
-| `cname_status=timeout` / `error`, or `pending` for far too long | verification stalled or failed | Compare the live record with `cname_target`; fix and `finish` again if it differs. If it already matches, treat a persistent error as platform-side |
+| `cname_status=pending` for far longer than the registrar's TTL | most likely no record, or one aimed elsewhere | Compare the live record with `cname_target`, fix it, `finish` again. A missing record has no failure state — this is where it lands |
+| `cname_status=timeout` (rarely `error`) | verification gave up | Same comparison; if the record already matches, treat it as platform-side |
 | anything else | unknown to this skill | Show the value as-is. Never fold an unrecognized status into "probably fine" |
 
 ### The CNAME is where this goes wrong
@@ -89,7 +92,7 @@ olares-cli settings apps domain finish <app> <entrance>
 olares-cli settings apps domain get <app> <entrance>
 ```
 
-**`finish` does not check DNS.** It flips `cname_target_status` to `set` and `cname_status` to `pending`, and asks the platform to start verifying — that is all. Running it before the record exists is not an error and produces no warning; it leaves the entrance pending while the asynchronous checker retries, and any later failure appears only in `domain get`. So gate it on the developer confirming the record, not on a guess about propagation.
+**`finish` does not check DNS.** It flips `cname_target_status` to `set` and `cname_status` to `pending`, and asks the platform to start verifying — that is all. Running it before the record exists is not an error and produces no warning, and **a missing or broken record never turns into a failed status**: when the platform's lookup comes back empty or errored it abandons the pass without writing anything back, so the entrance simply stays `pending`. Judge that case by elapsed time, and gate `finish` on the developer confirming the record.
 
 ## Hard constraints
 
@@ -131,6 +134,9 @@ Two facts about issuing are worth passing on, because both cost a DNS round trip
 | Symptom | Cause | Fix |
 |---|---|---|
 | `custom domain can not be set when auth level is private` | Pipeline B started before the auth level was changed | `auth-level set --level public`, then retry |
+| `third_level_domain "x" is reserved and cannot be used` | The prefix is `auth`, `desktop` or `wizard` | Pick another prefix |
+| `... is already used by entrance "e" of app "a"` / `... conflicts with the default domain of ...` | The prefix is taken in this zone, or the FQDN is already claimed — third-party domains are unique across every user | Pick another value; `doctor thirdleveldomain` lists what a zone already holds |
+| `<op> operation is not allowed for <state> state` | `domain set` arrived while the app was mid-operation | Wait until the app reads `running`, then retry |
 | `--third-party requires both --cert-file and --key-file` | Domain passed without its cert pair | Supply both, or `--clear-third-party` to drop the domain |
 | `app not set custom domain` from `finish` | `finish` ran on an entrance with no third-party domain — often a typo'd entrance, or `set` silently targeted a different one | `domain get` the entrance and confirm `third_party_domain` before finishing |
 | Cert file unreadable | The PEM lives in a root-only directory | Copy it into a private temporary directory; preserve `0600` on the key, delete the copy after use, and do not move the renewal source |
