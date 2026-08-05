@@ -9,7 +9,7 @@ head:
 # 在 Olares Space 管理支持工单
 
 :::warning
-当前文档由 AI 翻译生成，若发现术语或表述不准确，请查看[英文原文](../../manual/space/tickets.md)。
+当前文档由 AI 翻译生成，若发现术语或表述不准确，请查看[英文原文](../../../manual/space/tickets.md)。
 :::
 
 在 Olares Space 的 **Tickets** 页面中，你可以报告问题、寻求帮助并跟踪支持请求的状态。你可以通过网页界面提交工单，也可以直接在 Olares 设备上使用 `olares-cli` 上传日志。
@@ -122,7 +122,7 @@ head:
 
 ### 工单与我的 Olares ID 有什么关系？
 
-每个工单都与创建时使用的 Olares ID 关联。要查看某个工单，请使用对应的 Olares ID 登录 Olares Space。如果你切换到其他 Olares ID，之前 ID 创建的工单不会显示在列表中。
+Olares Space 的 **Tickets** 页面仅展示当前登录的 Olares ID 所创建的工单。要查看某个工单，请使用创建该工单时所用的 Olares ID 登录 Olares Space。
 
 ### 提交工单后可以编辑吗？
 
@@ -130,4 +130,4 @@ head:
 
 ### 可以删除工单吗？
 
-不可以。已提交的工单无法删除。你可以选择关闭它。
+不可以。已提交的工单无法删除。你可以选择关闭它们。

@@ -103,3 +103,19 @@ Use the Olares GitHub repository if you prefer to report the issue publicly, or 
    - Steps to reproduce the issue
    - Any error messages or unexpected behaviors
    - Your environment details (operating system, Olares version, etc.)
+
+## FAQs
+
+### How are tickets associated with my Olares ID?
+
+Tickets are linked to the Olares ID used when they were created. The Assist Hub app only shows tickets created with your current Olares ID.
+
+If you reinstall Olares and switch to a new Olares ID, you will not see tickets created with the previous ID in Assist Hub. To view those tickets, log in to Olares Space using the original Olares ID, and then find them on the **Tickets** page.
+
+### Can I edit a ticket after submitting it?
+
+No. You cannot edit the title or description after submission. You can add replies to provide additional information.
+
+### Can I delete a ticket?
+
+No. Submitted tickets cannot be deleted. Close them instead.

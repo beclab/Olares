@@ -114,7 +114,7 @@ The ticket status changes back to **In progress**, and the support team continue
 
 ### How are tickets associated with my Olares ID?
 
-Each ticket is linked to the Olares ID used when it was created. To view a ticket, log in to Olares Space with the corresponding Olares ID. If you switch to a different Olares ID, tickets created with the previous Olares ID do not appear in the list.
+The **Tickets** page in Olares Space only shows tickets created with the Olares ID you are currently logged in with. To view a specific ticket, log in to Olares Space using the same Olares ID that was used to create it.
 
 ### Can I edit a ticket after submitting it?
 
