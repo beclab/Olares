@@ -74,9 +74,19 @@ func AllocateForInstall(ctx context.Context, c client.Client, appConfig *appcfg.
 	var pickedAllocations []Allocation
 	allocation, err := mutateAllocations(ctx, c, func(nodes []Node, allocations []Allocation) ([]Allocation, *Allocation, error) {
 		attachBindings(nodes, withoutAppAllocations(allocations, appConfig.AppName, appConfig.OwnerName))
-		picked, ok := PickAllocations(appConfig, req, nodes, pressure)
+		// Same first step as resume: classify every node and device against
+		// the app's requirement. Where resume hands that view to the user,
+		// install picks from it here and then runs the pick through resume's
+		// own validation so an automatic placement can't bypass a rule a
+		// manual one has to satisfy.
+		availability := listAvailableForLaunch(req, nodes, pressure)
+		selections, ok := pickLaunchSelection(req, availability, pressure, allocationOptions{checkPressure: true})
 		if !ok {
 			return nil, nil, fmt.Errorf("no available compute resource for type %s", req.Mode)
+		}
+		picked, validation := bindAllocations(appConfig, req, selections, nodes, pressure)
+		if !validation.OK {
+			return nil, nil, fmt.Errorf("no available compute resource for type %s: %s", req.Mode, validation.Code)
 		}
 		pickedAllocations = picked
 		next := replaceAppAllocations(allocations, picked)
@@ -85,15 +95,8 @@ func AllocateForInstall(ctx context.Context, c client.Client, appConfig *appcfg.
 	if err != nil {
 		return nil, err
 	}
-	if err := deleteHAMIBindingsForApp(ctx, c, appConfig.AppName, appConfig.OwnerName); err != nil {
-		_ = DeleteAllocationsForApp(ctx, c, appConfig.AppName, appConfig.OwnerName)
+	if err := syncHAMIBindings(ctx, c, appConfig.AppName, appConfig.OwnerName, pickedAllocations); err != nil {
 		return nil, err
-	}
-	for _, item := range pickedAllocations {
-		if err := createHAMIBinding(ctx, c, item); err != nil {
-			_ = DeleteAllocationsForApp(ctx, c, appConfig.AppName, appConfig.OwnerName)
-			return nil, err
-		}
 	}
 	return allocation, nil
 }
@@ -154,6 +157,19 @@ func EvaluateInstallMode(req Requirement, nodes []Node) ModePlanResult {
 	return ModePlanResult{ComputeType: req.Mode, Status: StatusInsufficientResources, Reason: "insufficient_resources"}
 }
 
+// matchingNodes returns the nodes that support `mode`, each projected onto that
+// single mode (Devices filtered to the mode) so the device-centric helpers only
+// ever see the relevant devices of a multi-mode node.
+func matchingNodes(mode string, nodes []Node) []Node {
+	out := make([]Node, 0)
+	for _, node := range nodes {
+		if node.SupportsMode(mode) {
+			out = append(out, node.viewForMode(mode))
+		}
+	}
+	return out
+}
+
 func PickAllocations(appConfig *appcfg.ApplicationConfig, req Requirement, nodes []Node, pressure PressureSnapshot) ([]Allocation, bool) {
 	return pickAllocations(appConfig, req, nodes, pressure, allocationOptions{checkPressure: true})
 }
@@ -164,31 +180,45 @@ type allocationOptions struct {
 	pressureAdded *AddedResources
 }
 
+// pickAllocations places an app automatically: it builds the availability view
+// resume would show the user, picks a binding out of it, and turns that binding
+// into allocation rows through the same resolve/build path resume uses for a
+// manually submitted one.
 func pickAllocations(appConfig *appcfg.ApplicationConfig, req Requirement, nodes []Node, pressure PressureSnapshot, pressureOptions allocationOptions) ([]Allocation, bool) {
-	if req.Mode == utils.CPUType {
+	availability := listAvailableForLaunchWithOptions(req, nodes, pressure, pressureOptions)
+	selections, ok := pickLaunchSelection(req, availability, pressure, pressureOptions)
+	if !ok {
 		return nil, false
 	}
-	matching := matchingNodes(req.Mode, nodes)
-	if req.Mode == utils.NvidiaCardType && req.SupportMultiNodes {
-		return pickAggregateAllocations(appConfig, req, matching, pressure, pressureOptions, true)
+	resolved, err := resolveSelection(selections, nodes)
+	if err != nil {
+		return nil, false
 	}
-	if req.Mode == utils.NvidiaCardType && req.SupportMultiCards {
-		return pickAggregateAllocations(appConfig, req, matching, pressure, pressureOptions, false)
+	allocations := allocationsFromResolvedSelection(appConfig, req, resolved)
+	if len(allocations) == 0 {
+		return nil, false
 	}
-	return pickSingleAllocation(appConfig, req, matching, pressure, pressureOptions)
+	return allocations, true
 }
 
-// matchingNodes returns the nodes that support `mode`, each projected onto that
-// single mode (Devices filtered to the mode) so the device-centric scheduling
-// helpers only ever see the relevant devices of a multi-mode node.
-func matchingNodes(mode string, nodes []Node) []Node {
-	out := make([]Node, 0)
-	for _, node := range nodes {
-		if node.SupportsMode(mode) {
-			out = append(out, node.viewForMode(mode))
-		}
+// pickLaunchSelection auto-picks a compute binding out of the availability view
+// that resume hands to the user for a manual pick. Install runs this instead of
+// prompting, so both flows choose among exactly the same devices, ranked the
+// same way: the best fit level first (an app that fits its limit is placed
+// before one that only fits its request), then whole cards before shared ones,
+// then at random among the remaining ties to spread load across the cluster.
+func pickLaunchSelection(req Requirement, availability *AvailabilityResult, pressure PressureSnapshot, opts allocationOptions) ([]BindingSelection, bool) {
+	if availability == nil || req.Mode == utils.CPUType {
+		return nil, false
 	}
-	return out
+	switch availability.Scope {
+	case AvailabilityScopeCrossNode:
+		return pickAggregateSelection(req, availability.Nodes, pressure, opts, true)
+	case AvailabilityScopeSingleNode:
+		return pickAggregateSelection(req, availability.Nodes, pressure, opts, false)
+	default:
+		return pickSingleSelection(req, availability.Nodes, pressure, opts)
+	}
 }
 
 func evaluateCPUInstallMode(req Requirement, nodes []Node) ModePlanResult {
@@ -239,82 +269,87 @@ func installCapacityFits(req Requirement, nodes []Node) bool {
 		}
 		return false
 	}
+	// Non-nvidia modes are scheduled one device at a time, but a node can still
+	// expose several of them (nvidia-gb10 cards, discrete Intel GPUs), so every
+	// device gets a look rather than just the first.
 	for _, node := range nodes {
-		if len(node.Devices) > 0 && node.Devices[0].Memory >= req.RequiredMemory {
-			return true
+		for _, device := range node.Devices {
+			if device.Memory >= req.RequiredMemory {
+				return true
+			}
 		}
 	}
 	return false
 }
 
-func pickSingleAllocation(appConfig *appcfg.ApplicationConfig, req Requirement, nodes []Node, pressure PressureSnapshot, pressureOptions allocationOptions) ([]Allocation, bool) {
+// pickSingleSelection places the app on one device, which is the unit of
+// scheduling for every mode except multi-card nvidia.
+func pickSingleSelection(req Requirement, nodes []NodeOption, pressure PressureSnapshot, opts allocationOptions) ([]BindingSelection, bool) {
 	for _, level := range []string{FitLevelLimit, FitLevelRequired} {
 		for _, supportType := range supportTypeOrder(req.Mode) {
-			candidates := make([]Allocation, 0)
+			candidates := make([]BindingSelection, 0)
 			for _, node := range nodes {
-				for _, device := range node.Devices {
-					if supportType != "" && device.SupportType != supportType {
+				for _, option := range node.Devices {
+					if option.SupportType != supportType || !option.Operable {
 						continue
 					}
-					fits, amount := deviceFitsLevelWithPressure(req, node, device, pressure, level, false, 0, pressureOptions)
-					if fits {
-						assigned := requiredTargetForMode(req)
-						if assigned == 0 {
-							assigned = amount
-						}
-						candidates = append(candidates, buildAllocation(appConfig, req, node, device, assigned))
+					if fits, _ := deviceOptionFits(req, option, pressure, level, false, 0, opts); !fits {
+						continue
 					}
+					candidates = append(candidates, selectDevice(option, requiredTargetForMode(req)))
 				}
 			}
 			if len(candidates) > 0 {
-				if pressureOptions.deterministic {
-					return []Allocation{candidates[0]}, true
+				if opts.deterministic {
+					return []BindingSelection{candidates[0]}, true
 				}
-				return []Allocation{candidates[rand.Intn(len(candidates))]}, true
+				return []BindingSelection{candidates[rand.Intn(len(candidates))]}, true
 			}
 		}
 	}
 	return nil, false
 }
 
-func pickAggregateAllocations(appConfig *appcfg.ApplicationConfig, req Requirement, nodes []Node, pressure PressureSnapshot, pressureOptions allocationOptions, crossNode bool) ([]Allocation, bool) {
+// pickAggregateSelection places a multi-card nvidia app across several cards,
+// either within a single node or — when the app declares multi-node support —
+// across the whole cluster.
+func pickAggregateSelection(req Requirement, nodes []NodeOption, pressure PressureSnapshot, opts allocationOptions, crossNode bool) ([]BindingSelection, bool) {
 	for _, level := range []string{FitLevelLimit, FitLevelRequired} {
 		target := targetGPU(req, level)
 		if target <= 0 {
 			continue
 		}
 		if crossNode {
-			picked, ok := collectDevicesForTarget(appConfig, req, nodes, pressure, pressureOptions, level, target, req.RequiredGPU)
-			if ok {
-				return picked, ok
+			if picked, ok := collectDevicesForTarget(req, nodes, pressure, opts, level, target, req.RequiredGPU); ok {
+				return picked, true
 			}
 			continue
 		}
 		for _, node := range nodes {
-			picked, ok := collectDevicesForTarget(appConfig, req, []Node{node}, pressure, pressureOptions, level, target, req.RequiredGPU)
-			if ok {
-				return picked, ok
+			if picked, ok := collectDevicesForTarget(req, []NodeOption{node}, pressure, opts, level, target, req.RequiredGPU); ok {
+				return picked, true
 			}
 		}
 	}
 	return nil, false
 }
 
-func collectDevicesForTarget(appConfig *appcfg.ApplicationConfig, req Requirement, nodes []Node, pressure PressureSnapshot, pressureOptions allocationOptions, level string, target, allocationTarget int64) ([]Allocation, bool) {
+func collectDevicesForTarget(req Requirement, nodes []NodeOption, pressure PressureSnapshot, opts allocationOptions, level string, target, allocationTarget int64) ([]BindingSelection, bool) {
 	fitRemaining := target
 	allocationRemaining := allocationTarget
-	var out []Allocation
+	var out []BindingSelection
 	timeSliceMemoryByNode := make(map[string]int64)
 	for _, supportType := range supportTypeOrder(req.Mode) {
 		for _, node := range nodes {
-			for _, device := range node.Devices {
-				if supportType != "" && device.SupportType != supportType {
+			for _, option := range node.Devices {
+				if option.SupportType != supportType || !option.Operable {
 					continue
 				}
-				fits, amount := deviceFitsLevelWithPressure(req, node, device, pressure, level, true, timeSliceMemoryByNode[node.NodeName], pressureOptions)
+				fits, amount := deviceOptionFits(req, option, pressure, level, true, timeSliceMemoryByNode[node.NodeName], opts)
 				if !fits || amount <= 0 {
 					continue
 				}
+				_, device := option.asNodeDevice(req.Mode)
 				nextMemory, ok := checkedAdd(timeSliceMemoryByNode[node.NodeName], timeSliceAddedMemory(device))
 				if !ok {
 					continue
@@ -322,7 +357,7 @@ func collectDevicesForTarget(appConfig *appcfg.ApplicationConfig, req Requiremen
 				timeSliceMemoryByNode[node.NodeName] = nextMemory
 				if allocationRemaining > 0 {
 					assigned := minInt64(amount, allocationRemaining)
-					out = append(out, buildAllocation(appConfig, req, node, device, assigned))
+					out = append(out, selectDevice(option, assigned))
 					allocationRemaining -= assigned
 				}
 				fitRemaining -= amount
@@ -335,8 +370,21 @@ func collectDevicesForTarget(appConfig *appcfg.ApplicationConfig, req Requiremen
 	return nil, false
 }
 
-func deviceFitsLevel(req Requirement, node Node, device Device, pressure PressureSnapshot, level string, allowPartial bool, priorTimeSliceMemory int64) (bool, int64) {
-	return deviceFitsLevelWithPressure(req, node, device, pressure, level, allowPartial, priorTimeSliceMemory, allocationOptions{checkPressure: true})
+// selectDevice records a picked device as the same BindingSelection the resume
+// frontend submits. `assigned` only reaches the allocation for memory-slice
+// cards, where the binding carves out an explicit slice; whole-card placements
+// ignore it. A non-positive amount means the app declared no concrete demand
+// for this mode, so it takes whatever the card has free.
+func selectDevice(option DeviceOption, assigned int64) BindingSelection {
+	if assigned <= 0 {
+		assigned = option.Available
+	}
+	return BindingSelection{NodeName: option.NodeName, DeviceID: option.DeviceID, Memory: assigned}
+}
+
+func deviceOptionFits(req Requirement, option DeviceOption, pressure PressureSnapshot, level string, allowPartial bool, priorTimeSliceMemory int64, opts allocationOptions) (bool, int64) {
+	node, device := option.asNodeDevice(req.Mode)
+	return deviceFitsLevelWithPressure(req, node, device, pressure, level, allowPartial, priorTimeSliceMemory, opts)
 }
 
 func deviceFitsLevelWithPressure(req Requirement, node Node, device Device, pressure PressureSnapshot, level string, allowPartial bool, priorTimeSliceMemory int64, pressureOptions allocationOptions) (bool, int64) {

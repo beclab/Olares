@@ -34,13 +34,14 @@ func TestDeviceFitsLevelTimeSliceMemoryForZeroRequirement(t *testing.T) {
 		RequiredMemory: 5 * gib,
 	}
 
-	fits, _ := deviceFitsLevel(req, node, device, pressure, FitLevelRequired, false, 0)
+	opts := allocationOptions{checkPressure: true}
+	fits, _ := deviceFitsLevelWithPressure(req, node, device, pressure, FitLevelRequired, false, 0, opts)
 	if !fits {
 		t.Fatal("zero GPU requirement should preserve the legacy fit decision without time-slice host memory")
 	}
 
 	req.RequiredGPU = gib
-	fits, _ = deviceFitsLevel(req, node, device, pressure, FitLevelRequired, false, 0)
+	fits, _ = deviceFitsLevelWithPressure(req, node, device, pressure, FitLevelRequired, false, 0, opts)
 	if fits {
 		t.Fatal("positive GPU requirement must include time-slice host memory")
 	}
