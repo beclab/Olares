@@ -49,7 +49,7 @@ A chart carries several "version" fields with different jobs. Their values are f
 | `version` | `Chart.yaml` | Helm chart version | `== metadata.version` |
 | `spec.versionName` | `OlaresManifest.yaml` | **upstream app** version (display) | tracks `Chart.yaml` `appVersion` — convention, not enforced |
 
-> **Bump on every upload:** raise `metadata.version` (= `Chart.yaml` `version`, kept equal) before each `market upload` — a patch bump (e.g. `0.0.1 → 0.0.2`) by default. The upload gate only requires `>=` the stored version, but presenting a strictly-newer version keeps each upload distinct; same-version overwrite is a fallback for when the chart didn't change. See the Deploy step §2.
+> **Bump after a material change:** raise `metadata.version` (= `Chart.yaml` `version`, kept equal) after changing the chart, manifest, or image — a patch bump (e.g. `0.0.1 → 0.0.2`) by default. Do not bump solely to retry an architecture rejection or transient node-discovery failure; unchanged bytes cannot fix either condition. See the Deploy step §2.
 
 > **Name clash:** `Chart.yaml apiVersion: v2` is Helm's chart API. It is separate from `OlaresManifest.yaml apiVersion: v3`; both values are correct and neither should be copied over the other.
 

@@ -28,6 +28,14 @@ kind: ClusterRole
 metadata:
   name: market-role
 rules:
+  - apiGroups:
+      - ""
+    resources:
+      - nodes
+    verbs:
+      - get
+      - list
+      - watch
   # Access to systemenvs resources
   - apiGroups:
       - sys.bytetrade.io
