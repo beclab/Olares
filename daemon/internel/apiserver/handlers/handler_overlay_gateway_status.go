@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"net/http"
-	"os"
 	"sync"
 
 	"github.com/beclab/Olares/daemon/pkg/utils"
@@ -66,13 +65,17 @@ func (h *Handlers) GetOverlayGatewayStatus(ctx *fiber.Ctx) error {
 		s.ErrorMessage = disableOverlayGatewayError
 	}
 
-	if _, err := os.Stat(OverlayGatewayEnableLockFile); err == nil {
+	if inFlight, stale := consumeOverlayGatewayOpLock(OverlayGatewayEnableLockFile); inFlight {
 		s.Status = OverlayGatewayActivating
 		return h.OkJSON(ctx, "success", s)
+	} else if stale != "" {
+		s.ErrorMessage = stale
 	}
-	if _, err := os.Stat(OverlayGatewayDisableLockFile); err == nil {
+	if inFlight, stale := consumeOverlayGatewayOpLock(OverlayGatewayDisableLockFile); inFlight {
 		s.Status = OverlayGatewayDeactivating
 		return h.OkJSON(ctx, "success", s)
+	} else if stale != "" {
+		s.ErrorMessage = stale
 	}
 
 	if s.Status == OverlayGatewayOn {

@@ -31,8 +31,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	bootstraptpl "github.com/beclab/Olares/cli/pkg/bootstrap/os/templates"
+	"github.com/beclab/Olares/cli/pkg/clientset"
 	"github.com/beclab/Olares/cli/pkg/core/action"
+	"github.com/beclab/Olares/cli/pkg/systemcomponents"
 	"github.com/beclab/Olares/cli/pkg/terminus/templates"
+	agwconfig "github.com/beclab/Olares/framework/app-gateway/pkg/config"
 
 	"github.com/beclab/Olares/cli/pkg/common"
 	cc "github.com/beclab/Olares/cli/pkg/core/common"
@@ -71,82 +74,56 @@ func (t *GetOlaresVersion) Execute() (string, error) {
 	}
 }
 
-type CheckKeyPodsRunning struct {
+// systemComponentsConfig resolves the system namespaces that a vendored build
+// is allowed to relocate.
+func systemComponentsConfig() systemcomponents.Config {
+	return systemcomponents.Config{
+		MeshNamespace:    agwconfig.LinkerdNamespace(),
+		GatewayNamespace: agwconfig.Namespace(),
+	}
+}
+
+// CheckSystemComponentsReady waits for the Olares system components to be
+// ready, by comparing the ready replicas of their Deployments, StatefulSets and
+// DaemonSets against the desired ones.
+//
+// This is deliberately not a scan of every pod in the system namespaces. Such a
+// scan can only judge pods that already exist, so it accepts a component whose
+// workload was never created or was scaled to zero, and it cannot tell an
+// Olares workload apart from an installed app sharing the user's namespace.
+type CheckSystemComponentsReady struct {
 	common.KubeAction
+
+	// Components limits the check to a subset of the registry. When empty every
+	// component of the installation is checked.
+	Components []systemcomponents.Component
+
+	// Node limits pod level assertions to a single node. Use it after
+	// restarting or re-addressing one node, when the rest of the cluster is not
+	// the concern.
 	Node string
 }
 
-func (t *CheckKeyPodsRunning) Execute(runtime connector.Runtime) error {
-	kubeConfig, err := ctrl.GetConfig()
-	if err != nil {
-		return errors.Wrap(err, "failed to load kubeconfig")
-	}
-	kubeClient, err := kubernetes.NewForConfig(kubeConfig)
+func (t *CheckSystemComponentsReady) Execute(_ connector.Runtime) error {
+	kubeClient, err := clientset.NewKubeClient()
 	if err != nil {
 		return errors.Wrap(err, "failed to create kube client")
 	}
-	pods, err := kubeClient.CoreV1().Pods(corev1.NamespaceAll).List(context.Background(), metav1.ListOptions{})
-	if err != nil {
-		return errors.Wrap(err, "failed to list pods")
-	}
-	for _, pod := range pods.Items {
-		if t.Node != "" && pod.Spec.NodeName != t.Node {
-			logger.Debugf("skipping pod %s that's not on node %s", pod.Name, t.Node)
-			continue
-		}
-		if !strings.HasPrefix(pod.Namespace, "user-") && !strings.HasPrefix(pod.Namespace, "os-") && !strings.HasPrefix(pod.Namespace, "kube") {
-			continue
-		}
-		if err := utils.AssertPodReady(&pod); err != nil {
-			return err
-		}
-	}
-	return nil
-}
 
-type CheckPodsRunning struct {
-	common.KubeAction
-	labels map[string][]string
-}
-
-func (c *CheckPodsRunning) Execute(_ connector.Runtime) error {
-	if c.labels == nil {
-		return nil
-	}
-
-	var ctx, cancel = context.WithTimeout(context.Background(), 3*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()
 
-	kubeConfig, err := ctrl.GetConfig()
-	if err != nil {
-		return errors.Wrap(err, "failed to load kubeconfig")
-	}
-	kubeClient, err := kubernetes.NewForConfig(kubeConfig)
-	if err != nil {
-		return errors.Wrap(err, "failed to create kube client")
+	components := t.Components
+	if len(components) == 0 {
+		components = systemcomponents.All(systemComponentsConfig())
 	}
 
-	for ns, labels := range c.labels {
-		for _, label := range labels {
-			podList, err := kubeClient.CoreV1().Pods(ns).List(ctx, metav1.ListOptions{LabelSelector: label})
-			if err != nil {
-				return fmt.Errorf("pod status invalid, namespace: %s, label: %s, waiting ...", ns, label)
-			}
-
-			if podList == nil || len(podList.Items) == 0 {
-				return fmt.Errorf("no pod found, namespace: %s, label: %s, waiting ...", ns, label)
-			}
-
-			for i := range podList.Items {
-				pod := &podList.Items[i]
-				if err := utils.AssertPodReady(pod); err != nil {
-					return err
-				}
-			}
-		}
+	checker := systemcomponents.NewChecker(systemcomponents.NewClientSource(kubeClient.CtrlRuntime()))
+	if t.Node != "" {
+		checker.OnNode(t.Node)
 	}
 
-	return nil
+	return checker.Check(ctx, components)
 }
 
 type Download struct {

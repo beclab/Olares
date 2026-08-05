@@ -49,8 +49,7 @@ olares-cli market install firefox --watch              # block until terminal (a
 
 ```bash
 olares-cli market upgrade firefox                      # latest catalog
-olares-cli market upgrade firefox --version 1.5.0
-olares-cli market upgrade firefox --watch
+olares-cli market upgrade firefox --version 1.5.0 --watch
 ```
 
 ### Pre-flight gates (run BEFORE the PUT request)
@@ -64,17 +63,13 @@ Mirrors the SPA's `canUpgrade()`. Bails locally with a self-contained error (for
 
 ### Where an upgrade lands
 
-Two outcomes settle on `stopped` rather than `running`, and `--watch` tells them apart by `reason` (see [olares-market-watch.md](olares-market-watch.md#--watch-interaction-with-each-verb)):
-
-- **Upgrading an already-`stopped` app** re-renders the chart at `replicas=0` and returns to `stopped` — a normal success, nothing to launch.
-- **A cancelled upgrade** also settles at `stopped`, but the row carries `reason=upgradeCancelByUser` (or `upgradeCancelBySystem` when the backend TTL fired). The app stays on its **previous** version, and `--watch` reports failure.
+Two outcomes settle on `stopped` rather than `running`, and `reason` is what tells them apart (see [olares-market-watch.md](olares-market-watch.md#--watch-interaction-with-each-verb)). **Upgrading an already-`stopped` app** re-renders the chart at `replicas=0` and returns to `stopped` — a normal success with nothing to launch. **A cancelled upgrade** also settles at `stopped`, but carries `reason=upgradeCancelByUser` (or `upgradeCancelBySystem` when the backend TTL fired), stays on its **previous** version, and is reported by `--watch` as failure.
 
 ## `uninstall`
 
 ```bash
 olares-cli market uninstall firefox                    # implicit source
-olares-cli market uninstall firefox --cascade=true     # tear down shared sub-charts (C/S v2 multi-chart)
-olares-cli market uninstall firefox --watch
+olares-cli market uninstall firefox --cascade=true --watch  # tear down shared sub-charts too (C/S v2 multi-chart)
 ```
 
 ### `--cascade` (C/S v2 multi-chart apps)
@@ -89,7 +84,7 @@ The JSON payload field is `all`. Behavior depends on the backend version:
 
 ### `--delete-data`
 
-The JSON payload field is `deleteData`. It gates **only** the app's private `drive/Data/<app>`; `cache/<node>/<app>` is cleared either way and `drive/Home` is never touched. The full per-area rule and the reason `Home` is exempt live in the platform [storage model](../../olares-shared/references/olares-platform.md#userspace-storage-model).
+The JSON payload field is `deleteData`. It gates **only** the app's private `drive/Data/<app>`; `cache/<node>/<app>` is cleared either way and `drive/Home` is never touched. The full per-area rule and the reason `Home` is exempt live in the platform **Userspace storage model** (loaded via this skill's prerequisite).
 
 > **"Persistent data" is narrower than it sounds.** An app whose manifest declares only `permission.userData` (paths under `Home`) owns no app-private data, so `--delete-data` finds nothing to remove and its files survive the uninstall. That is by design, not a backend bug — clean them up with `olares-cli files rm --recursive <path>`.
 
@@ -99,9 +94,7 @@ On a **cascading uninstall of a v2 multi-chart app** the flag reaches only the u
 
 app-service only accepts `uninstall` from a settled state (`running` / `stopped` / a terminal `*Failed`, including `installFailed`); while an operation is in flight it accepts only `cancel`. `market uninstall` handles this for you so **`uninstall` always means "fully remove"** regardless of state:
 
-- If the app is **in-flight** (`pending` / `downloading` / `installing` / `initializing` / `upgrading` / `applyingEnv` / `resuming`), the CLI **cancels first**, then:
-  - the `pending` / `downloading` / `installing` flow cancels into a `*Canceled` state that **tears the partial install down (namespace deleted)** — equivalent to uninstalled, so the command finishes there;
-  - `initializing` / `upgrading` / `applyingEnv` / `resuming` cancel only **stops** the app (lands in `stopped`), so the CLI then issues the **real uninstall** to finish removing it.
+- If the app is **in-flight** (`pending` / `downloading` / `installing` / `initializing` / `upgrading` / `applyingEnv` / `resuming`), the CLI **cancels first**, then follows the teardown-vs-stop split under `cancel` below: a cancel that tore the partial install down finishes the job, while one that only stopped the app is followed by the **real uninstall**.
 - The cancel step always blocks (it must, to decide the next step) even without `--watch`.
 - `installFailed` no longer needs this dance — `uninstall` is accepted directly.
 
@@ -110,13 +103,11 @@ app-service only accepts `uninstall` from a settled state (`running` / `stopped`
 ```bash
 olares-cli market clone firefox --title "Work Browser"
 olares-cli market clone firefox --title "Work Browser" --entrance-title web=WorkWeb
-olares-cli market clone comfyui --title "ComfyUI Dev" --compute-mode nvidia  # pin GPU mode (1.12.6+)
-olares-cli market clone firefox --title "Work Browser" --watch
+olares-cli market clone comfyui --title "ComfyUI Dev" --compute-mode nvidia --watch  # pin GPU mode (1.12.6+)
 ```
 
 - **Clonable apps** are either multi-instance apps (`allowMultipleInstall: true`) **or** template apps (`templateOnly: true`). A template app has no installable body — instances are created from it via clone — and on 1.12.6+ the CLI sends `templateClone:true` for it automatically. Pre-flight check the source app's `market get <app> -o json` if unsure.
-- `--title` is REQUIRED — feeds the cloned app's desktop shortcut title.
-- For apps with multiple entrances: `--entrance-title NAME=TITLE` (repeatable) overrides per-entrance titles. For single-entrance apps, the entrance title defaults to `--title`.
+- `--title` is REQUIRED — it feeds the cloned app's desktop shortcut title, and is also the default entrance title. On a multi-entrance app, `--entrance-title NAME=TITLE` (repeatable) overrides individual entrances.
 - `--compute-mode <type>` (**Olares 1.12.6+ only**) works exactly like on `install`: apps runnable on more than one accelerator (`cpu`, `nvidia`, ...) require a choice, so when it is omitted the backend returns HTTP 422 / `type=computeModeSelect` and the CLI either **prompts interactively** (TTY) or **fails listing the installable modes** (non-interactive: `-q`, `-o json`, or a pipe) so you re-run with the flag. On **1.12.5 the clone path is unchanged** and `--compute-mode` is rejected.
 - **The backend mints a per-instance app name** (e.g. `firefoxe992`). The CLI surfaces it as `targetApp` in the JSON output so scripted callers can chain follow-ups (`jq -r '.targetApp'`). **`--watch` tracks the new clone name, not the source app.**
 
@@ -130,24 +121,16 @@ olares-cli market stop firefox --watch                 # block until `stopped`
 olares-cli market resume firefox                       # un-suspend
 olares-cli market resume firefox --watch               # block until `running`
 olares-cli market resume comfyui --compute-binding node-1:gpu-0        # pin a device (1.12.6+)
-olares-cli market resume comfyui --compute-binding node-1:gpu-0:8      # MemorySlice: 8 Gi
-olares-cli market resume comfyui --compute-binding node-1:gpu-0:512Mi  # MemorySlice: 512 Mi
-
-# Multi-GPU apps: repeat --compute-binding once per card.
-olares-cli market resume vllm --compute-binding node-1:gpu-0 --compute-binding node-1:gpu-1                # two cards on one node
-olares-cli market resume vllm --compute-binding node-1:gpu-0:8 --compute-binding node-1:gpu-1:8            # two MemorySlice cards, 8 Gi each (cross-node form: node-2:gpu-0, multi-node apps only)
+olares-cli market resume comfyui --compute-binding node-1:gpu-0:512Mi  # MemorySlice: 512 Mi (bare number = Gi)
+olares-cli market resume vllm --compute-binding node-1:gpu-0:8 --compute-binding node-1:gpu-1:8  # once per card
 ```
 
 - Source is implicit on both.
 - `--cascade` on `stop` follows the same rules as `uninstall` — including the 1.12.6 force-on for CS/shared apps (`--cascade=false` cannot disable it there).
 - **`resume` is idempotent**: against an already-`running` row, returns immediately with success (`{state=running, opType=""}`), instead of hanging until `--watch-timeout` fires.
-- `--compute-binding <node>:<device>[:<mem>]` (repeatable; **Olares 1.12.6+ only**) pins the accelerator device(s) a GPU app resumes onto; the optional `mem` is a `MemorySlice` allocation — a bare number is Gi, or add a `Gi`/`Mi` suffix (e.g. `8`, `8Gi`, `512Mi`), mirroring the SPA's two-unit VRAM input. `<node>` / `<device>` are the NODE / DEVICE-ID from `olares-cli settings compute list`. When a binding is required and the flag is omitted, the backend returns HTTP 422 / `type=computeBindingRequired` (or `computeBindingUnavailable` when a prior choice no longer fits) and the CLI **prompts interactively** (TTY) or **fails listing the available devices** (non-interactive). An explicit `--compute-binding` the backend rejects is reported with the reason rather than retried. **`stop` takes no compute flags** — the backend releases the device allocation automatically. On **1.12.5 the resume path is unchanged** and `--compute-binding` is rejected.
-- **Multi-GPU apps**: pass `--compute-binding` once per card. How many cards / which nodes are allowed is decided by the app and enforced server-side (the backend reports the binding `scope`):
-  - **single card** (`scope=card`): exactly one binding. Passing more is rejected with `multi-card-not-supported`.
-  - **single-node multi-card** (`scope=single-node-cards`): several cards, but all on the **same** node. Spanning nodes is rejected with `multi-node-not-supported`.
-  - **cross-node multi-card** (`scope=cross-node-cards`): cards may span nodes.
-  - For multi-card VRAM the backend checks the **combined** VRAM of the selected cards; a shortfall is reported as `aggregate-vram-insufficient` (vs. `device-vram-insufficient` for a single card).
-- **Interactive selection** (TTY, no `--compute-binding`): the CLI lists the operable devices and prompts. For a multi-card scope it accepts a **comma-separated** list (e.g. `1,2`); for a single-card scope it takes one choice. Each selected `MemorySlice` card then prompts for its allocation (Gi by default, or a `Gi`/`Mi` suffix). Non-interactive sessions (piped/`--quiet`/`-o json`) never prompt — they fail listing the available devices so you can re-run with the flag.
+- `--compute-binding <node>:<device>[:<mem>]` (repeatable; **Olares 1.12.6+ only**) pins the accelerator device(s) a GPU app resumes onto; the optional `mem` is a `MemorySlice` allocation — a bare number is Gi, or add a `Gi`/`Mi` suffix (e.g. `8`, `8Gi`, `512Mi`), mirroring the SPA's two-unit VRAM input. `<node>` / `<device>` are the NODE / DEVICE-ID from `olares-cli settings compute list`. When a binding is required and the flag is omitted, the backend returns HTTP 422 / `type=computeBindingRequired` (or `computeBindingUnavailable` when a prior choice no longer fits) and the CLI **prompts** the operable devices (TTY — a multi-card scope accepts a comma-separated list like `1,2`, and each `MemorySlice` card then prompts for its allocation) or **fails listing them** (non-interactive: piped / `-q` / `-o json`) so you re-run with the flag. An explicit binding the backend rejects is reported with the reason rather than retried. **`stop` takes no compute flags** — the backend releases the allocation automatically. On **1.12.5 the resume path is unchanged** and `--compute-binding` is rejected.
+- **Multi-GPU apps**: pass `--compute-binding` once per card. How many cards and which nodes are allowed is the app's decision, enforced server-side and reported as the binding `scope`: `scope=card` takes exactly one binding (more is `multi-card-not-supported`), `scope=single-node-cards` takes several on the **same** node (spanning is `multi-node-not-supported`), and `scope=cross-node-cards` may span nodes (`node-2:gpu-0` form).
+- Multi-card VRAM is checked against the **combined** VRAM of the selected cards, so a shortfall reads `aggregate-vram-insufficient` rather than the single-card `device-vram-insufficient`.
 - **Rejection reasons mirror the SPA**: the failure text is the same wording `SelectComputeBindingDialog` shows for that backend `validation.code` — e.g. `aggregate-vram-insufficient` / `device-vram-insufficient` / `device-memory-insufficient`, and `node-pressure` additionally lists the pressured `Memory` / `CPU` / `Disk` dimensions as `Total / Used / Needed`. Structural codes the dialog can't produce (e.g. `gpu-type-mismatch`, `exclusive-already-bound`, `multi-card-not-supported`) surface the raw code.
 
 ## `cancel`
@@ -160,7 +143,6 @@ olares-cli market cancel firefox --watch               # block until row stops m
 - Source is normally implicit (read from the per-user state row). On **1.12.6+** the cancel body requires a source; if the row is gone (or `/market/state` is unreadable) the CLI reports an idempotent `nothing to cancel` — pass `--source <id>` to still send the request. On 1.12.5 the body needs no source, so a failed state read never blocks cancel.
 - **Cancelling a `resuming` or an `upgrading` app requires Olares >= 1.12.7.** Both reuse this same `DELETE /apps/{name}/install`, and both arrived on that line: the SPA shipped the resume-cancel UX in 1.12.7, and Market's cancel state whitelist gained its `upgrading` entry there. On an older backend the request comes back as a bare 404 (`App not found or current state does not allow operation`), so the CLI rejects it up front; on an undetectable backend, confirm the active profile is logged in and run `olares-cli profile list --refresh`. Every other in-flight state (`pending` / `downloading` / `installing` / `initializing` / `applyingEnv`) is unaffected and cancels on any backend.
 - A cancelled resume settles at `stopped` (it never reaches a `resumingCanceled` state — that transition does not exist); a rejected cancel request lands at `resumingCancelFailed`. A cancelled upgrade likewise settles at `stopped`, on the **previous** version, with `reason=upgradeCancelByUser`; a rejected one lands at `upgradingCancelFailed`.
-- **The widest watcher in the tree**: any "row stopped moving" state counts as success, including `*Canceled`, `*Failed` (the underlying op died, cancel "won by default"), and stable resting states `running` / `stopped` / `uninstalled` (cancel raced and lost, OR rollback landed).
-- Failure is ONLY surfaced for `*CancelFailed` (the cancel request itself was rejected).
+- **The widest watcher in the tree**: any "row stopped moving" state counts as success, including `*Canceled`, `*Failed` (the underlying op died, cancel "won by default"), and stable resting states `running` / `stopped` / `uninstalled` (cancel raced and lost, OR rollback landed). Failure is surfaced ONLY for `*CancelFailed` — the cancel request itself was rejected.
 - The terminal row carries the **underlying op** (install / upgrade / ...) as its `opType`, not `cancel`. `matchOpType` is OFF — no race-tracking gate applies.
 - **Teardown vs stop**: cancel of the `pending` / `downloading` / `installing` flow **tears the partial install down (namespace deleted)** — functionally equivalent to uninstall. Cancel of `initializing` / `upgrading` / `applyingEnv` / `resuming` only **stops** the app (lands in `stopped`); the app is still installed. `market uninstall` relies on this split when auto-orchestrating (see `uninstall` above).

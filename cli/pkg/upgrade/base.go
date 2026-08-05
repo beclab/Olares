@@ -176,8 +176,8 @@ func (u upgraderBase) UpdateOlaresVersion() []task.Interface {
 func (u upgraderBase) PostUpgrade() []task.Interface {
 	return []task.Interface{
 		&task.LocalTask{
-			Name:   "EnsurePodsUpAndRunningAgain",
-			Action: new(terminus.CheckKeyPodsRunning),
+			Name:   "EnsureSystemComponentsUpAndRunningAgain",
+			Action: new(terminus.CheckSystemComponentsReady),
 			Delay:  15 * time.Second,
 			Retry:  60,
 		},

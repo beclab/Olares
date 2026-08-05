@@ -60,6 +60,11 @@ func main() {
 
 	commands.Init()
 
+	// Clear leftover overlay op locks from a previous crash so status does not
+	// report a permanent activating/deactivating state. Do not reconcile app
+	// settings or cni-dhcp here.
+	handlers.ClearOverlayGatewayOpLocks()
+
 	// Cluster power operations are recorded on disk before they are carried
 	// out. A daemon that cannot record them serves the routes and refuses,
 	// rather than powering off a cluster it will not be able to report on.

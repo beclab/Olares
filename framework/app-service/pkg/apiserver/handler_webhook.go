@@ -108,10 +108,10 @@ func (h *Handler) mutate(ctx context.Context, req *admissionv1.AdmissionRequest,
 	}
 	var (
 		injectPolicy, injectWs, injectUpload, injectMeshInAgent, injectMeshOutAgent bool
-		injectSharedPod                                                            *bool
-		appMgr                                                                     *v1alpha1.ApplicationManager
-		appCfg                                                                     *appcfg_mod.ApplicationConfig
-		perms                                                                      []appcfg.ProviderPermission
+		injectSharedPod                                                             *bool
+		appMgr                                                                      *v1alpha1.ApplicationManager
+		appCfg                                                                      *appcfg_mod.ApplicationConfig
+		perms                                                                       []appcfg.ProviderPermission
 	)
 	if injectPolicy, injectWs, injectUpload, injectMeshInAgent, injectMeshOutAgent, injectSharedPod, perms, appCfg, appMgr, err = h.sidecarWebhook.MustInject(ctx, &pod, req.Namespace); err != nil {
 		return h.sidecarWebhook.AdmissionError(req.UID, err)
@@ -142,6 +142,17 @@ func (h *Handler) mutate(ctx context.Context, req *admissionv1.AdmissionRequest,
 	}
 
 	if nothingToInject {
+		// Still harden linkerd admin probes when proxy was injected by an earlier webhook.
+		patchBytes, patched, err := h.sidecarWebhook.PatchLinkerdAdminProbesOnly(ctx, req, &pod)
+		if err != nil {
+			klog.Errorf("Failed to harden linkerd probes uuid=%s namespace=%s err=%v", proxyUUID, req.Namespace, err)
+			return h.sidecarWebhook.AdmissionError(req.UID, err)
+		}
+		if patched {
+			h.sidecarWebhook.PatchAdmissionResponse(resp, patchBytes)
+			klog.Infof("Hardened linkerd-proxy probes for pod uuid=%s namespace=%s (nothing else to inject)", proxyUUID, req.Namespace)
+			return resp
+		}
 		klog.Infof("Skipping sidecar injection for pod with uuid=%s namespace=%s", proxyUUID, req.Namespace)
 		return resp
 	}
@@ -258,7 +269,6 @@ func (h *Handler) validate(ctx context.Context, req *admissionv1.AdmissionReques
 	klog.Infof("Done validate with UID=%s in protected namespace, that's APPROVE", object.GetUID())
 	return resp
 }
-
 
 // tlsReplicaMountValidate is the validating admission entrypoint that blocks
 // tls-replica private-key bypass mounts. Decode/unmarshal failures fail closed.
@@ -1029,6 +1039,90 @@ func (h *Handler) runAsUserInject(ctx context.Context, pod *corev1.Pod, namespac
 	}
 
 	return pod, nil
+}
+
+func (h *Handler) podArchInject(req *restful.Request, resp *restful.Response) {
+	klog.Infof("Received mutating webhook[pod-arch inject] request: Method=%v, URL=%v", req.Request.Method, req.Request.URL)
+	admissionRequestBody, ok := h.sidecarWebhook.GetAdmissionRequestBody(req, resp)
+	if !ok {
+		return
+	}
+	var admissionReq, admissionResp admissionv1.AdmissionReview
+	proxyUUID := uuid.New()
+	if _, _, err := webhook.Deserializer.Decode(admissionRequestBody, nil, &admissionReq); err != nil {
+		klog.Errorf("Failed to decode admission request body err=%v", err)
+		admissionResp.Response = h.sidecarWebhook.AdmissionError("", err)
+	} else {
+		admissionResp.Response = h.podArchMutate(req.Request.Context(), admissionReq.Request, proxyUUID)
+	}
+	admissionResp.TypeMeta = admissionReq.TypeMeta
+	admissionResp.Kind = admissionReq.Kind
+
+	requestForNamespace := "unknown"
+	if admissionReq.Request != nil {
+		requestForNamespace = admissionReq.Request.Namespace
+	}
+	err := resp.WriteAsJson(&admissionResp)
+	if err != nil {
+		klog.Errorf("Failed to write response[pod-arch inject] admin review in namespace=%s err=%v", requestForNamespace, err)
+		return
+	}
+	klog.Infof("Done[pod-arch inject] with uuid=%s in namespace=%s", proxyUUID, requestForNamespace)
+}
+
+// podArchMutate injects a kubernetes.io/arch nodeSelector into the pod when its
+// owning app's OlaresManifest declares exactly one spec.supportArch. Apps that
+// declare zero or multiple architectures are left untouched, as are pods whose
+// namespace has no resolvable app config or that already pin an arch selector.
+func (h *Handler) podArchMutate(ctx context.Context, req *admissionv1.AdmissionRequest, proxyUUID uuid.UUID) *admissionv1.AdmissionResponse {
+	if req == nil {
+		klog.Error("Failed to get admission request err=admission request is nil")
+		return h.sidecarWebhook.AdmissionError("", errNilAdmissionRequest)
+	}
+	resp := &admissionv1.AdmissionResponse{
+		Allowed: true,
+		UID:     req.UID,
+	}
+	var pod corev1.Pod
+	if err := json.Unmarshal(req.Object.Raw, &pod); err != nil {
+		klog.Errorf("Failed to unmarshal request object raw to pod with uuid=%s namespace=%s", proxyUUID, req.Namespace)
+		return h.sidecarWebhook.AdmissionError(req.UID, err)
+	}
+
+	_, appCfg, _, _, _ := h.sidecarWebhook.GetAppConfig(req.Namespace)
+	if appCfg == nil {
+		return resp
+	}
+	// len==0: covers apps installed before the SupportArch field existed, whose
+	// ApplicationManager.Spec.Config has no supportArch — leave them
+	// unpinned for backward compatibility. len==2: dual-arch (amd64+arm64),
+	// no single node arch to select.
+	if len(appCfg.SupportArch) == 0 || len(appCfg.SupportArch) == 2 {
+		return resp
+	}
+
+	arch := appCfg.SupportArch[0]
+	if _, ok := pod.Spec.NodeSelector[constants.ArchLabelKey]; ok {
+		// Respect an explicit arch nodeSelector already set by the chart.
+		return resp
+	}
+	if pod.Spec.NodeSelector == nil {
+		pod.Spec.NodeSelector = make(map[string]string)
+	}
+	pod.Spec.NodeSelector[constants.ArchLabelKey] = arch
+
+	current, err := json.Marshal(&pod)
+	if err != nil {
+		return h.sidecarWebhook.AdmissionError(req.UID, err)
+	}
+	admissionResp := admission.PatchResponseFromRaw(req.Object.Raw, current)
+	patchBytes, err := json.Marshal(admissionResp.Patches)
+	if err != nil {
+		return h.sidecarWebhook.AdmissionError(req.UID, err)
+	}
+	h.sidecarWebhook.PatchAdmissionResponse(resp, patchBytes)
+	klog.Infof("Injected arch nodeSelector=%s for pod uuid=%s namespace=%s", arch, proxyUUID, req.Namespace)
+	return resp
 }
 
 func (h *Handler) appLabelInject(req *restful.Request, resp *restful.Response) {

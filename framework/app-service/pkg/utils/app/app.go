@@ -1119,6 +1119,7 @@ func toApplicationConfig(opt *ConfigOptions, chart string, cfg *appcfg.AppConfig
 		SharedEntrances:      cfg.SharedEntrances,
 		SelectedGpuType:      opt.SelectedGpu,
 		Accelerator:          cfg.Spec.Accelerator,
+		SupportArch:          cfg.Spec.SupportArch,
 		NeedsSharedAccess:    cfg.Options.NeedsSharedAccess,
 		LLMGatewaySupported:  cfg.Options.LLMGatewaySupported,
 		OverlayGateway:       cfg.OverlayGateway,

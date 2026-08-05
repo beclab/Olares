@@ -19,12 +19,9 @@ RUN chown -R 1000:1000 /var/lib/myapp
 USER 1000
 ```
 
-Verify before pushing:
+`chown` the **runtime** paths too, not just the data ones. Pid files, sockets, lock files and scratch dirs under `/run`, `/var/run` or `/tmp` are written before the app does anything useful, so a base image that puts them in a root-owned directory (nginx, php-fpm, supervisor) fails at startup under `USER 1000`. In an image you build, relocate the path in its config or make it writable here; in a third-party image, point a configurable runtime path at `/tmp`, or mount a writable `emptyDir` and prepare its ownership with the init-container pattern below.
 
-```bash
-docker inspect <registry-ref>:<tag> --format '{{.Config.User}}'
-docker run --rm --entrypoint /bin/sh <registry-ref>:<tag> -c 'exec id'    # expect uid=1000
-```
+Before pushing, run the two probes below against your own ref and expect `uid=1000`.
 
 ## Third-party images — inspect before editing the chart
 
@@ -60,13 +57,7 @@ flowchart TD
 
 ### A — `spec.runAsUser` + optional `securityContext` (preferred)
 
-```yaml
-# OlaresManifest.yaml
-spec:
-  runAsUser: true
-```
-
-Optionally reinforce in the deployment template (Kubernetes overrides the Dockerfile `USER`):
+Set `spec.runAsUser: true` in `OlaresManifest.yaml`. Optionally reinforce it in the deployment template, since Kubernetes overrides the Dockerfile `USER`:
 
 ```yaml
 spec:
@@ -112,9 +103,9 @@ Also set `spec.runAsUser: true` in `OlaresManifest.yaml`. Run `chown` for **each
 > - **Fresh install:** the `hostPath` root dir is created empty by `DirectoryOrCreate` (owned by kubelet/root). The busybox initContainer runs as root and can `chown` it because root owns the directory. Works.
 > - **Upgrade:** if the main container previously created subdirectories as uid 1000, the busybox initContainer **fails to** `chown` those uid-1000-owned subdirs — `Operation not permitted` — crash-loops, and the pod stays in `Initializing` indefinitely.
 >
-> A plain root container normally keeps `CAP_CHOWN`, so the cap-dropping layer is environment-specific (likely enforced below the cluster at the node / container-runtime level). It is **not** the Olares OPA policy, which only denies untrusted-image + root/`privileged` pods (see [OPA and lint boundaries](#opa-and-lint-boundaries) below) and mutates nothing about capabilities. Treat the rule below as the safe pattern regardless of the exact mechanism.
+> The cap-dropping layer is environment-specific, likely below the cluster at the node / container-runtime level. It is **not** the Olares OPA policy, which only denies untrusted-image + root/`privileged` pods (see [OPA and lint boundaries](#opa-and-lint-boundaries)) and mutates nothing about capabilities.
 >
-> **Practical rule:** For `appData` / `appCache` with `permission.appData: true`, Olares already creates the root dir with uid 1000 ownership. If the app creates its own subdirectories at runtime (e.g. `os.makedirs("/data/models")` in Python), the whole tree stays uid 1000 and **no initContainer is needed**. Only reach for initContainer `chown` when the upstream image's entrypoint writes root-owned files before the process drops to uid 1000.
+> **Practical rule:** for `appData` / `appCache` with `permission.appData: true`, Olares already creates the root dir owned by uid 1000, so subdirectories the app makes at runtime stay uid 1000 and **no initContainer is needed**. Reach for initContainer `chown` only when the upstream entrypoint writes root-owned files before dropping to uid 1000.
 
 ### C — root-init entrypoint that drops to `PUID`/`PGID`
 
@@ -151,6 +142,7 @@ Omitting `spec.runAsUser` is equivalent for webhook injection. Do not set Pod/co
 | Symptom | Likely cause | Fix |
 |---|---|---|
 | CrashLoop, `Permission denied` writing data dir | uid ≠ 1000 or dir owned by root | A or B above |
+| Container exits at once; the log names a **pid / socket / lock / temp file** it cannot open, under `/run`, `/var/run`, `/var/lib/<app>` or similar | A non-root process is writing a **runtime path the image left owned by root** | Self-built image: relocate or `chown` the path in the Dockerfile before `USER 1000`, then rebuild and bump the tag. Third-party image: configure a writable path, or overlay it with an `emptyDir` whose ownership is prepared by B |
 | Install OK but config/data not persisted | Writes go to container-local path, or EACCES silently ignored | Check mount paths + run identity |
 | Admission denied: untrusted image + root | Chart explicitly sets a root-equivalent Pod/container securityContext | Remove the explicit root context; use A, B, or the verified PUID/PGID pattern C |
 | OPA OK but app still can't write | Final process uid is not 1000, or volume pre-dates chown | Use A + B for ordinary images; for pattern C verify `PUID`/`PGID` and the post-init process identity |

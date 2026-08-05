@@ -12,6 +12,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/connector"
 	"github.com/beclab/Olares/cli/pkg/core/task"
+	"github.com/beclab/Olares/cli/pkg/systemcomponents"
 	"github.com/beclab/Olares/cli/pkg/utils"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
@@ -87,14 +88,10 @@ func (m *InstallLauncherModule) Init() {
 	}
 
 	checkBFLRunning := &task.LocalTask{
-		Name: "CheckLauncherStatus",
-		Action: &CheckPodsRunning{
-			labels: map[string][]string{
-				fmt.Sprintf("user-space-%s", m.KubeConf.Arg.User.UserName): {"tier=bfl"},
-			},
-		},
-		Retry: 20,
-		Delay: 10 * time.Second,
+		Name:   "CheckLauncherStatus",
+		Action: &CheckSystemComponentsReady{Components: systemcomponents.Launcher(m.KubeConf.Arg.User.UserName)},
+		Retry:  20,
+		Delay:  10 * time.Second,
 	}
 
 	m.Tasks = []task.Interface{
