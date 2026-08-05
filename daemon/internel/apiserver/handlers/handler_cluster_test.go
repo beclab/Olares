@@ -242,7 +242,7 @@ func TestClusterSummaryDescribesEachNodeItCounted(t *testing.T) {
 	got := decodeSummary(t, body)
 	byName := map[string]clusterstatus.NodeEntry{}
 	for _, n := range got.NodeList {
-		byName[n.Name] = n
+		byName[n.NodeName] = n
 	}
 	if len(byName) != 2 {
 		t.Fatalf("nodeList = %+v, want both nodes: %s", got.NodeList, body)
@@ -285,7 +285,7 @@ func TestClusterSummaryLeavesAnUnreachableNodeUndescribed(t *testing.T) {
 	got := decodeSummary(t, body)
 	var worker clusterstatus.NodeEntry
 	for _, n := range got.NodeList {
-		if n.Name == "worker-1" {
+		if n.NodeName == "worker-1" {
 			worker = n
 		}
 	}

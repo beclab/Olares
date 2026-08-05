@@ -26,7 +26,7 @@ func TestSummaryListsTheNodesItCounted(t *testing.T) {
 		t.Fatalf("nodeList = %+v, want one entry per node", got.NodeList)
 	}
 	first := got.NodeList[0]
-	if first.Name != "master-1" || first.Role != inventory.RoleMaster {
+	if first.NodeName != "master-1" || first.Role != inventory.RoleMaster {
 		t.Errorf("first entry = %+v", first)
 	}
 	if first.IP != "10.0.0.1" {
@@ -57,11 +57,11 @@ func TestAnUnreachableNodeContributesNoHardware(t *testing.T) {
 
 	var entry NodeEntry
 	for _, n := range got.NodeList {
-		if n.Name == "worker-1" {
+		if n.NodeName == "worker-1" {
 			entry = n
 		}
 	}
-	if entry.Name == "" {
+	if entry.NodeName == "" {
 		t.Fatalf("the unreachable node is missing from the list: %+v", got.NodeList)
 	}
 	if entry.Connectivity != nodestatus.ConnectivityUnreachable {
@@ -113,11 +113,14 @@ func TestNodeEntryWireFieldNames(t *testing.T) {
 		t.Fatalf("nodeList = %+v", decoded.NodeList)
 	}
 	for _, key := range []string{
-		"name", "role", "ready", "health", "connectivity", "phase",
+		"nodeName", "role", "ready", "health", "connectivity", "phase",
 		"ip", "deviceType", "olaresdVersion", "cpu", "memory", "disk",
 	} {
 		if _, ok := decoded.NodeList[0][key]; !ok {
 			t.Errorf("field %q missing from a node entry: %s", key, raw)
 		}
+	}
+	if _, ok := decoded.NodeList[0]["name"]; ok {
+		t.Errorf("node entry retained deprecated name field: %s", raw)
 	}
 }

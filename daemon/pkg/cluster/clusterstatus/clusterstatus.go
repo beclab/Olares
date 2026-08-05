@@ -166,9 +166,9 @@ type NodeView struct {
 // nodestatus.Status. There is no node id: nothing in this cluster issues one,
 // and a name that looked like an id would be relied upon as stable.
 type NodeEntry struct {
-	Name  string         `json:"name"`
-	Role  inventory.Role `json:"role"`
-	Ready bool           `json:"ready"`
+	NodeName string         `json:"nodeName"`
+	Role     inventory.Role `json:"role"`
+	Ready    bool           `json:"ready"`
 
 	Health       nodestatus.Health       `json:"health"`
 	Connectivity nodestatus.Connectivity `json:"connectivity"`
@@ -185,7 +185,7 @@ type NodeEntry struct {
 
 func entryFor(n NodeView) NodeEntry {
 	return NodeEntry{
-		Name:           n.Name,
+		NodeName:       n.Name,
 		Role:           n.Role,
 		Ready:          n.Ready,
 		Health:         n.Health,
