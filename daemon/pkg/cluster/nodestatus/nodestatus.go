@@ -32,9 +32,7 @@ type Connectivity string
 
 const (
 	ConnectivityOnline      Connectivity = "online"
-	ConnectivityStale       Connectivity = "stale"
 	ConnectivityUnreachable Connectivity = "unreachable"
-	ConnectivityOffline     Connectivity = "offline"
 )
 
 // Phase is what the node is currently doing.

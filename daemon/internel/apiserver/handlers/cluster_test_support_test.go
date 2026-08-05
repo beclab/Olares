@@ -40,9 +40,12 @@ func asOwnerSignature(t *testing.T) {
 	}
 	prevID := olaresIDFromRelease
 	olaresIDFromRelease = func() (string, error) { return testOwner, nil }
+	prevClusterID := clusterIDOf
+	clusterIDOf = func(context.Context) (string, error) { return "cluster-test", nil }
 	t.Cleanup(func() {
 		newTermipassClient = prevClient
 		olaresIDFromRelease = prevID
+		clusterIDOf = prevClusterID
 	})
 }
 
@@ -61,6 +64,7 @@ var _ client.SignedClient = signedFakeClient{}
 func ownerBinding(ty clusterop.Type, requestID string) map[string]any {
 	return map[string]any{
 		"username":  "alice",
+		"clusterId": "cluster-test",
 		"type":      string(ty),
 		"requestId": requestID,
 		"scope":     clusterop.ScopeCluster,

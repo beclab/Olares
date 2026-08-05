@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"reflect"
-	"strings"
 	"sync"
 	"testing"
 
@@ -36,7 +34,7 @@ func withLocalPower(t *testing.T, r *powerRecorder) *powerRecorder {
 	prevPower := powerThisNode
 	prevClaims := powerClaims
 	powerThisNode = func(_ context.Context, op clusterop.Type) error { return r.record(op) }
-	claims, err := clusterop.NewClaimStore(t.TempDir())
+	claims, err := clusterop.NewReplayGuard(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -164,35 +162,15 @@ func TestPowerNodeExecutesAClaimedRequestOnlyOnce(t *testing.T) {
 
 	for i := 0; i < 2; i++ {
 		resp, body := callRegisteredMethod(t, http.MethodPost, "/command/power-node", request, headers)
-		if resp.StatusCode != http.StatusOK {
+		if i == 0 && resp.StatusCode != http.StatusOK {
 			t.Fatalf("attempt %d status = %d: %s", i+1, resp.StatusCode, body)
+		}
+		if i == 1 && resp.StatusCode != http.StatusConflict {
+			t.Fatalf("attempt %d status = %d, want replay conflict: %s", i+1, resp.StatusCode, body)
 		}
 	}
 	if got := r.seen(); len(got) != 1 {
 		t.Fatalf("powered %v, want one execution", got)
-	}
-}
-
-func TestPowerNodeDoesNotReportAPendingClaimAsAccepted(t *testing.T) {
-	r := withLocalPower(t, &powerRecorder{})
-	asOwnerSignature(t)
-	asWorker(t)
-	key := strings.Join([]string{
-		testOwner, string(clusterop.TypeReboot), "client-pending", clusterop.ScopeCluster, "",
-	}, "\x00")
-	if err := powerClaims.Claim(key); err != nil {
-		t.Fatal(err)
-	}
-
-	resp, body := callRegisteredMethod(t, http.MethodPost, "/command/power-node",
-		`{"type":"reboot","operationId":"op-pending","requestId":"client-pending"}`,
-		signedFor(t, clusterop.TypeReboot, "client-pending"))
-
-	if resp.StatusCode != http.StatusConflict {
-		t.Fatalf("status = %d, want 409: %s", resp.StatusCode, body)
-	}
-	if got := r.seen(); len(got) != 0 {
-		t.Fatalf("pending duplicate executed power: %v", got)
 	}
 }
 
@@ -232,24 +210,13 @@ func TestPowerNodeCannotBeAimedAtAnotherMachine(t *testing.T) {
 		`{"type":"reboot","operationId":"op-1","requestId":"client-1","nodeName":"master-1","target":"10.0.0.1","ip":"10.0.0.1"}`,
 		signedFor(t, clusterop.TypeReboot, "client-1"))
 
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("status = %d: %s", resp.StatusCode, body)
+	if resp.StatusCode != http.StatusForbidden {
+		t.Fatalf("status = %d, want 403: %s", resp.StatusCode, body)
 	}
-	if got := r.seen(); len(got) != 1 {
+	if got := r.seen(); len(got) != 0 {
 		t.Fatalf("powered %v", got)
 	}
 
-	// The extra fields were not merely ignored by this handler: there is
-	// nowhere in the request type for a target to be carried at all.
-	rt := reflect.TypeOf(clusterop.PeerRequest{})
-	for i := 0; i < rt.NumField(); i++ {
-		name := strings.ToLower(rt.Field(i).Name)
-		for _, aim := range []string{"node", "target", "ip", "host", "addr"} {
-			if strings.Contains(name, aim) {
-				t.Errorf("the peer request can name a machine: field %q", rt.Field(i).Name)
-			}
-		}
-	}
 }
 
 func TestPowerNodeRejectsAnUnusableRequest(t *testing.T) {

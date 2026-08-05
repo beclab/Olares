@@ -34,6 +34,15 @@ func (m *Manager) run(ctx context.Context, id string, opType Type, creds Credent
 		return
 	}
 
+	op, ok := m.Get(id)
+	if !ok {
+		return
+	}
+	if op.Scope == ScopeNode {
+		m.runNode(ctx, id, opType, op.Target, creds)
+		return
+	}
+
 	p, err := m.precheck(ctx, id, opType, creds)
 	if err != nil {
 		klog.Warningf("clusterop: %s %s stopped at the precheck: %v", opType, id, err)
@@ -46,6 +55,84 @@ func (m *Manager) run(ctx context.Context, id string, opType Type, creds Credent
 	case TypeShutdown:
 		m.runShutdown(ctx, id, p, creds)
 	}
+}
+
+func (m *Manager) runNode(ctx context.Context, id string, opType Type, target string, creds Credentials) {
+	m.startStep(id, StepPrecheck)
+	nodes, err := m.deps.Inventory(ctx)
+	if err != nil {
+		reason := suppress(CodeInventoryUnavailable, "read the node directory for the precheck", err)
+		m.failStep(id, StepPrecheck, CodeInventoryUnavailable, reason)
+		m.fail(id, StatusFailed, CodeInventoryUnavailable, reason)
+		return
+	}
+	var node inventory.Node
+	for _, candidate := range nodes {
+		if candidate.NodeName == target {
+			node = candidate
+			break
+		}
+	}
+	if node.NodeName == "" {
+		m.failStep(id, StepPrecheck, CodeNodeIdentityUnknown, "the node directory could not identify this node")
+		m.fail(id, StatusFailed, CodeNodeIdentityUnknown, "the node directory could not identify this node")
+		return
+	}
+	m.update(id, func(op *Operation) {
+		op.Nodes = []NodeResult{{NodeName: node.NodeName, Role: node.Role, Status: NodePending}}
+	})
+
+	if node.Role == inventory.RoleMaster {
+		if opType != TypeReboot {
+			m.failStep(id, StepPrecheck, CodePowerUnsupported, "the control node cannot be shut down by a node operation")
+			m.fail(id, StatusFailed, CodePowerUnsupported, "the control node cannot be shut down by a node operation")
+			return
+		}
+		if code, reason := m.checkControlNode(opType); code != "" {
+			m.failStep(id, StepPrecheck, code, reason)
+			m.fail(id, StatusFailed, code, reason)
+			return
+		}
+		m.finishStep(id, StepPrecheck, StepSucceeded, "", "")
+		m.powerMaster(ctx, id, plan{master: node}, opType, false)
+		return
+	}
+
+	baseline, err := m.baseline(ctx, opType)
+	if err != nil {
+		reason := suppress(CodeInventoryUnavailable, "read the reboot baseline", err)
+		m.failStep(id, StepPrecheck, CodeInventoryUnavailable, reason)
+		m.fail(id, StatusFailed, CodeInventoryUnavailable, reason)
+		return
+	}
+	required := requiredCapability(opType)
+	if code, reason := m.checkWorker(ctx, node, opType, required, baseline, creds); code != "" {
+		m.setNode(id, node.NodeName, func(n *NodeResult) {
+			n.Status = NodeFailed
+			n.Code = code
+			n.Error = reason
+		})
+		m.failStep(id, StepPrecheck, code, reason)
+		m.fail(id, StatusFailed, code, reason)
+		return
+	}
+	m.finishStep(id, StepPrecheck, StepSucceeded, "", "")
+	issued, ok := m.commandWorkers(ctx, id, plan{workers: []inventory.Node{node}, baseline: baseline}, opType, creds)
+	if !ok {
+		return
+	}
+	if opType == TypeShutdown {
+		m.update(id, func(op *Operation) { op.Status = StatusCommandIssued })
+		return
+	}
+	m.startStep(id, StepWorkerRestart)
+	if m.awaitRestarts(ctx, id, issued, baseline) > 0 {
+		m.failStep(id, StepWorkerRestart, CodeWorkerRestartFailed, "the node did not come back")
+		m.fail(id, StatusFailed, CodeWorkerRestartFailed, "the node did not come back")
+		return
+	}
+	m.finishStep(id, StepWorkerRestart, StepSucceeded, "", "")
+	m.update(id, func(op *Operation) { op.Status = StatusSucceeded })
 }
 
 // precheck refuses the whole operation unless every compute node can be told
@@ -299,9 +386,12 @@ func (m *Manager) commandWorkers(ctx context.Context, id string, p plan, opType 
 		m.setNode(id, name, func(n *NodeResult) { n.StartedAt = &at })
 	}
 
-	var requestID string
+	var requestID, scope, target, clusterID string
 	if op, ok := m.Get(id); ok {
 		requestID = op.RequestID
+		scope = op.Scope
+		target = op.Target
+		clusterID = op.ClusterID
 	}
 	if !m.canContinue(id) {
 		return nil, false
@@ -310,6 +400,9 @@ func (m *Manager) commandWorkers(ctx context.Context, id string, p plan, opType 
 		Type:        opType,
 		OperationID: id,
 		RequestID:   requestID,
+		Scope:       scope,
+		Target:      target,
+		ClusterID:   clusterID,
 	}, creds)
 
 	accepted := map[string]bool{}

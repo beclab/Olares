@@ -181,6 +181,9 @@ type Operation struct {
 	ID        string `json:"id"`
 	Type      Type   `json:"type"`
 	RequestID string `json:"requestId"`
+	Scope     string `json:"scope"`
+	Target    string `json:"target,omitempty"`
+	ClusterID string `json:"clusterId"`
 
 	// Owner is the Olares ID the operation was created for. It is part of the
 	// idempotency key, so one owner's retry can never join another's run.

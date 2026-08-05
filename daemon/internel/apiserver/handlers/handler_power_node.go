@@ -20,10 +20,8 @@ import (
 // reboots.
 var powerThisNode func(context.Context, clusterop.Type) error
 var powerClaims interface {
-	Claim(string) error
-	Release(string) error
-	Complete(string) error
-	Completed(string) (bool, error)
+	Consume(string, time.Time) error
+	Forget(string) error
 }
 
 const powerExecutionUnavailable = "this node cannot carry out power commands yet"
@@ -35,10 +33,8 @@ func InstallPowerExecution(power func(context.Context, clusterop.Type) error) {
 }
 
 func InstallPowerClaims(claims interface {
-	Claim(string) error
-	Release(string) error
-	Complete(string) error
-	Completed(string) (bool, error)
+	Consume(string, time.Time) error
+	Forget(string) error
 }) {
 	powerClaims = claims
 }
@@ -72,13 +68,28 @@ func (h *Handlers) PostPowerNode(ctx *fiber.Ctx) error {
 		return h.errPower(ctx, http.StatusConflict,
 			clusterop.CodePowerUnsupported, "the control node only powers itself through cluster orchestration")
 	}
+	if req.Scope != clusterop.ScopeCluster && req.Scope != clusterop.ScopeNode ||
+		(req.Scope == clusterop.ScopeCluster && req.Target != "") ||
+		(req.Scope == clusterop.ScopeNode && req.Target != nodeName) {
+		return h.errBinding(ctx, &clusterop.BindingError{
+			Code: clusterop.CodeSignatureUnbound, Message: "the signature does not authorize this operation",
+		})
+	}
 	binding, err := requireBinding(ctx, clusterop.Binding{
+		ClusterID: req.ClusterID,
 		Type:      opType,
 		RequestID: strings.TrimSpace(req.RequestID),
-		Scope:     clusterop.ScopeCluster,
+		Scope:     req.Scope,
+		Target:    req.Target,
 	})
 	if err != nil {
 		return h.errBinding(ctx, err)
+	}
+	localClusterID, err := clusterIDOf(ctx.Context())
+	if err != nil || localClusterID == "" || binding.ClusterID != localClusterID {
+		return h.errBinding(ctx, &clusterop.BindingError{
+			Code: clusterop.CodeSignatureMismatch, Message: "the signature authorizes a different operation",
+		})
 	}
 
 	return h.executePower(ctx, opType, req.OperationID, binding)
@@ -136,21 +147,12 @@ func (h *Handlers) executePower(ctx *fiber.Ctx, opType clusterop.Type, operation
 			clusterop.CodeStatePersistenceFailed, "power request persistence is unavailable")
 	}
 	claimKey := strings.Join([]string{
-		ownerOf(ctx), string(binding.Type), binding.RequestID, binding.Scope, binding.Target,
+		ctx.Get(SIGNATURE_HEADER), binding.ClusterID, binding.RequestID,
 	}, "\x00")
-	if err := powerClaims.Claim(claimKey); err != nil {
-		if errors.Is(err, clusterop.ErrClaimExists) {
-			completed, stateErr := powerClaims.Completed(claimKey)
-			if stateErr != nil {
-				klog.Error("read power request claim: ", stateErr)
-				return h.errPower(ctx, http.StatusServiceUnavailable,
-					clusterop.CodeStatePersistenceFailed, "power request state is unavailable")
-			}
-			if completed {
-				return h.OkJSON(ctx, "success", fiber.Map{"accepted": opType})
-			}
+	if err := powerClaims.Consume(claimKey, time.UnixMilli(binding.ExpiresAt)); err != nil {
+		if errors.Is(err, clusterop.ErrReplayConflict) {
 			return h.errPower(ctx, http.StatusConflict,
-				clusterop.CodeRequestInProgress, "this power request is still in progress")
+				clusterop.CodeRequestInProgress, "this power request was already used")
 		}
 		klog.Error("persist power request claim: ", err)
 		return h.errPower(ctx, http.StatusServiceUnavailable,
@@ -166,7 +168,7 @@ func (h *Handlers) executePower(ctx *fiber.Ctx, opType clusterop.Type, operation
 
 	klog.Infof("power operation %s: %s this node", operationID, opType)
 	if err := powerThisNode(runCtx, opType); err != nil {
-		if releaseErr := powerClaims.Release(claimKey); releaseErr != nil {
+		if releaseErr := powerClaims.Forget(claimKey); releaseErr != nil {
 			klog.Error("release failed power request claim: ", releaseErr)
 		}
 		// The detail belongs in this node's log. What goes back is the stable
@@ -178,11 +180,6 @@ func (h *Handlers) executePower(ctx *fiber.Ctx, opType clusterop.Type, operation
 		}
 		return h.errPower(ctx, http.StatusInternalServerError,
 			clusterop.CodeHostPowerFailed, "this node could not be powered")
-	}
-	if err := powerClaims.Complete(claimKey); err != nil {
-		klog.Error("complete power request claim: ", err)
-		return h.errPower(ctx, http.StatusServiceUnavailable,
-			clusterop.CodeStatePersistenceFailed, "power request completion could not be recorded")
 	}
 
 	return h.OkJSON(ctx, "success", fiber.Map{"accepted": opType})

@@ -147,7 +147,7 @@ func TestAnUnreachableNodeDegradesTheClusterAndIsNotCalledOffline(t *testing.T) 
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
 	}
-	if strings.Contains(string(raw), string(nodestatus.ConnectivityOffline)) {
+	if strings.Contains(string(raw), `"offline"`) {
 		t.Errorf("a timeout was turned into a confirmed shutdown: %s", raw)
 	}
 }

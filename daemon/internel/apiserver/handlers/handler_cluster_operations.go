@@ -47,7 +47,7 @@ func InitClusterOperations(dir string, deps clusterop.Deps) error {
 	if err != nil {
 		return err
 	}
-	claims, err := clusterop.NewClaimStore(filepath.Join(dir, "power-claims"))
+	claims, err := clusterop.NewReplayGuard(filepath.Join(dir, "power-replays"))
 	if err != nil {
 		return err
 	}
@@ -65,6 +65,9 @@ func InitClusterOperations(dir string, deps clusterop.Deps) error {
 type createClusterOperationRequest struct {
 	Type      string `json:"type"`
 	RequestID string `json:"requestId"`
+	Scope     string `json:"scope"`
+	Target    string `json:"target"`
+	ClusterID string `json:"clusterId"`
 }
 
 // PostClusterOperation starts a cluster-wide power operation and answers with
@@ -86,16 +89,31 @@ func (h *Handlers) PostClusterOperation(ctx *fiber.Ctx) error {
 	if strings.TrimSpace(req.RequestID) == "" {
 		return h.ErrJSON(ctx, http.StatusBadRequest, clusterop.ErrRequestIDRequired.Error())
 	}
+	if req.Scope != clusterop.ScopeCluster && req.Scope != clusterop.ScopeNode ||
+		(req.Scope == clusterop.ScopeCluster && req.Target != "") ||
+		(req.Scope == clusterop.ScopeNode && req.Target == "") {
+		return h.errBinding(ctx, &clusterop.BindingError{
+			Code: clusterop.CodeSignatureUnbound, Message: "the signature does not authorize this operation",
+		})
+	}
 
 	// The owner signed this operation, not "anything dangerous for the next
 	// twenty minutes". Without the check, a signature captured from any other
 	// owner-only route would power the cluster off.
 	if _, err := requireBinding(ctx, clusterop.Binding{
+		ClusterID: req.ClusterID,
 		Type:      opType,
 		RequestID: strings.TrimSpace(req.RequestID),
-		Scope:     clusterop.ScopeCluster,
+		Scope:     req.Scope,
+		Target:    req.Target,
 	}); err != nil {
 		return h.errBinding(ctx, err)
+	}
+	localClusterID, err := clusterIDOf(ctx.Context())
+	if err != nil || localClusterID == "" || localClusterID != req.ClusterID {
+		return h.errBinding(ctx, &clusterop.BindingError{
+			Code: clusterop.CodeSignatureMismatch, Message: "the signature authorizes a different operation",
+		})
 	}
 
 	owner := ownerOf(ctx)
@@ -106,6 +124,9 @@ func (h *Handlers) PostClusterOperation(ctx *fiber.Ctx) error {
 	op, err := clusterOperations.Create(ctx.Context(), clusterop.CreateRequest{
 		Type:      opType,
 		RequestID: strings.TrimSpace(req.RequestID),
+		Scope:     req.Scope,
+		Target:    req.Target,
+		ClusterID: req.ClusterID,
 		Owner:     owner,
 		Creds: clusterop.Credentials{
 			// The token authorizes this request and stays on this node; only

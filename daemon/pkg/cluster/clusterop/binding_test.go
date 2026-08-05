@@ -34,6 +34,7 @@ func bindingCode(t *testing.T, err error) string {
 func TestParseBindingReadsWhatTheOwnerSigned(t *testing.T) {
 	body := signedBody(t, `{
 		"username": "alice",
+		"clusterId": "cluster-1",
 		"type": "reboot",
 		"requestId": "client-1",
 		"scope": "cluster",
@@ -44,14 +45,30 @@ func TestParseBindingReadsWhatTheOwnerSigned(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ParseBinding: %v", err)
 	}
-	want := Binding{Type: TypeReboot, RequestID: "client-1", Scope: ScopeCluster, ExpiresAt: 1700000600000}
+	want := Binding{ClusterID: "cluster-1", Type: TypeReboot, RequestID: "client-1", Scope: ScopeCluster, ExpiresAt: 1700000600000}
 	if b != want {
 		t.Errorf("binding = %+v, want %+v", b, want)
 	}
 }
 
+func TestParseBindingRefusesMissingClusterID(t *testing.T) {
+	_, err := ParseBinding(signedBody(t, `{
+		"type": "reboot",
+		"requestId": "client-1",
+		"scope": "cluster",
+		"expiresAt": 1700000600000
+	}`))
+	if err == nil {
+		t.Fatal("binding without cluster id was accepted")
+	}
+	if got := bindingCode(t, err); got != CodeSignatureUnbound {
+		t.Errorf("code = %q, want %s", got, CodeSignatureUnbound)
+	}
+}
+
 func TestNodeBindingIncludesTheTargetNode(t *testing.T) {
 	body := signedBody(t, `{
+		"clusterId": "cluster-1",
 		"type": "reboot",
 		"requestId": "client-1",
 		"scope": "node",
@@ -64,7 +81,7 @@ func TestNodeBindingIncludesTheTargetNode(t *testing.T) {
 		t.Fatalf("ParseBinding: %v", err)
 	}
 	want := Binding{
-		Type: TypeReboot, RequestID: "client-1", Scope: ScopeNode,
+		ClusterID: "cluster-1", Type: TypeReboot, RequestID: "client-1", Scope: ScopeNode,
 		Target: "worker-1", ExpiresAt: 1700000600000,
 	}
 	if b != want {

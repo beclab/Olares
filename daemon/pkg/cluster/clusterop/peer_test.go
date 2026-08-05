@@ -2,7 +2,6 @@ package clusterop
 
 import (
 	"encoding/json"
-	"strings"
 	"testing"
 
 	"github.com/beclab/Olares/daemon/pkg/cluster/fanout"
@@ -66,10 +65,11 @@ func TestNodeStatusPrecheckUsesTheLeastCredentialAvailable(t *testing.T) {
 	}
 }
 
-// The peer payload is what the master sends each node. It has to name the
-// operation, and it must not be able to name a machine.
-func TestPeerRequestCarriesNoTarget(t *testing.T) {
-	body, err := json.Marshal(PeerRequest{Type: TypeShutdown, OperationID: "op-1", RequestID: "client-1"})
+func TestPeerRequestCarriesTheFullBinding(t *testing.T) {
+	body, err := json.Marshal(PeerRequest{
+		Type: TypeShutdown, OperationID: "op-1", RequestID: "client-1",
+		Scope: ScopeNode, Target: "worker-1", ClusterID: "cluster-1",
+	})
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
 	}
@@ -77,16 +77,7 @@ func TestPeerRequestCarriesNoTarget(t *testing.T) {
 	if err := json.Unmarshal(body, &fields); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
-	// Type, operation id and the request id the signature is bound to. Every
-	// one of them names the operation; none of them names a machine.
-	if len(fields) != 3 {
-		t.Errorf("peer request carries something beyond the operation it names: %s", body)
-	}
-	for key := range fields {
-		for _, aim := range []string{"node", "target", "ip", "host", "addr"} {
-			if strings.Contains(strings.ToLower(key), aim) {
-				t.Errorf("peer request can name a machine: %q", key)
-			}
-		}
+	if fields["scope"] != ScopeNode || fields["target"] != "worker-1" || fields["clusterId"] != "cluster-1" {
+		t.Errorf("peer request omitted its authorization binding: %s", body)
 	}
 }

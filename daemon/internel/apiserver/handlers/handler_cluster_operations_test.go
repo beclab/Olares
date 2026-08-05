@@ -21,6 +21,22 @@ func callRegisteredMethod(t *testing.T, method, path, body string, headers map[s
 	t.Helper()
 	var reader io.Reader
 	if body != "" {
+		if path == "/cluster/operations" || path == "/command/power-node" {
+			var request map[string]any
+			if json.Unmarshal([]byte(body), &request) == nil {
+				if _, ok := request["scope"]; !ok {
+					request["scope"] = clusterop.ScopeCluster
+				}
+				if _, ok := request["clusterId"]; !ok {
+					request["clusterId"] = "cluster-test"
+				}
+				encoded, err := json.Marshal(request)
+				if err != nil {
+					t.Fatal(err)
+				}
+				body = string(encoded)
+			}
+		}
 		reader = strings.NewReader(body)
 	}
 	req := httptest.NewRequest(method, path, reader)
@@ -151,6 +167,23 @@ func TestCreateClusterOperationAcceptsTheSignedScanCallbackWithoutAnAccessToken(
 	reqs := f.requests()
 	if len(reqs) != 1 || reqs[0].Creds.Token != "" {
 		t.Fatalf("requests = %+v, want one without an access token", reqs)
+	}
+}
+
+func TestCreateClusterOperationRejectsAnotherCluster(t *testing.T) {
+	operationsMustNotBeCreated(t)
+	asOwnerSignature(t)
+	asMaster(t)
+	withClusterID(t, "cluster-local", nil)
+
+	resp, body := callRegisteredMethod(t, http.MethodPost, "/cluster/operations",
+		`{"type":"reboot","requestId":"client-1","scope":"cluster","clusterId":"cluster-remote"}`,
+		signedHeaders(t, map[string]any{
+			"type": "reboot", "requestId": "client-1", "scope": "cluster",
+			"clusterId": "cluster-remote", "expiresAt": time.Now().Add(time.Minute).UnixMilli(),
+		}))
+	if resp.StatusCode != http.StatusForbidden || !strings.Contains(string(body), clusterop.CodeSignatureMismatch) {
+		t.Fatalf("status = %d, want an opaque binding mismatch: %s", resp.StatusCode, body)
 	}
 }
 

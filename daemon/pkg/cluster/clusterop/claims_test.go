@@ -3,58 +3,54 @@ package clusterop
 import (
 	"errors"
 	"testing"
+	"time"
 )
 
-func TestClaimStorePersistsClaimsAcrossInstances(t *testing.T) {
+func TestReplayGuardPersistsConsumedBindingAcrossInstances(t *testing.T) {
 	dir := t.TempDir()
-	first, err := NewClaimStore(dir)
+	expiresAt := time.Now().Add(time.Minute)
+	first, err := NewReplayGuard(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := first.Claim("alice\x00reboot\x00request-1"); err != nil {
+	if err := first.Consume("signature/request-1", expiresAt); err != nil {
 		t.Fatal(err)
 	}
 
-	second, err := NewClaimStore(dir)
+	second, err := NewReplayGuard(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := second.Claim("alice\x00reboot\x00request-1"); !errors.Is(err, ErrClaimExists) {
-		t.Fatalf("second claim error = %v, want %v", err, ErrClaimExists)
+	if err := second.Consume("signature/request-1", expiresAt); !errors.Is(err, ErrReplayConflict) {
+		t.Fatalf("second consume error = %v, want %v", err, ErrReplayConflict)
 	}
 }
 
-func TestReleasedClaimCanBeClaimedAgain(t *testing.T) {
-	store, err := NewClaimStore(t.TempDir())
+func TestReplayGuardDeletesExpiredMarkerBeforeConsume(t *testing.T) {
+	guard, err := NewReplayGuard(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := store.Claim("request"); err != nil {
+	if err := guard.Consume("request", time.Now().Add(-time.Second)); err != nil {
 		t.Fatal(err)
 	}
-	if err := store.Release("request"); err != nil {
-		t.Fatal(err)
-	}
-	if err := store.Claim("request"); err != nil {
-		t.Fatalf("claim after release: %v", err)
+	if err := guard.Consume("request", time.Now().Add(time.Minute)); err != nil {
+		t.Fatalf("consume after expiry: %v", err)
 	}
 }
 
-func TestClaimDistinguishesPendingFromCompleted(t *testing.T) {
-	store, err := NewClaimStore(t.TempDir())
+func TestReplayGuardCanForgetRejectedCommand(t *testing.T) {
+	guard, err := NewReplayGuard(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := store.Claim("request"); err != nil {
+	if err := guard.Consume("request", time.Now().Add(time.Minute)); err != nil {
 		t.Fatal(err)
 	}
-	if completed, err := store.Completed("request"); err != nil || completed {
-		t.Fatalf("pending claim completed = %v, error = %v", completed, err)
-	}
-	if err := store.Complete("request"); err != nil {
+	if err := guard.Forget("request"); err != nil {
 		t.Fatal(err)
 	}
-	if completed, err := store.Completed("request"); err != nil || !completed {
-		t.Fatalf("completed claim completed = %v, error = %v", completed, err)
+	if err := guard.Consume("request", time.Now().Add(time.Minute)); err != nil {
+		t.Fatalf("consume after rejected command: %v", err)
 	}
 }

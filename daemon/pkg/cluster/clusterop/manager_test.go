@@ -306,6 +306,57 @@ func createOp(t *testing.T, m *Manager, ty Type, requestID string) Operation {
 	return op
 }
 
+func TestCreatePersistsTheOperationBinding(t *testing.T) {
+	c := newCluster(master("master-1", "10.0.0.1"))
+	m, _ := newManager(t, c)
+
+	op, err := m.Create(context.Background(), CreateRequest{
+		Type:      TypeReboot,
+		RequestID: "request-1",
+		Scope:     ScopeNode,
+		Target:    "master-1",
+		ClusterID: "cluster-1",
+		Owner:     "alice@olares.com",
+		Creds:     Credentials{Signature: "jws"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if op.Scope != ScopeNode || op.Target != "master-1" || op.ClusterID != "cluster-1" {
+		t.Fatalf("operation binding = %+v", op)
+	}
+}
+
+func TestNodeOperationDispatchesOnlyItsTarget(t *testing.T) {
+	c := newCluster(
+		master("master-1", "10.0.0.1"),
+		worker("worker-1", "10.0.0.2"),
+		worker("worker-2", "10.0.0.3"),
+	)
+	m, _ := newManager(t, c)
+	op, err := m.Create(context.Background(), CreateRequest{
+		Type:      TypeShutdown,
+		RequestID: "request-1",
+		Scope:     ScopeNode,
+		Target:    "worker-1",
+		ClusterID: "cluster-1",
+		Owner:     "alice@olares.com",
+		Creds:     Credentials{Signature: "jws"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := awaitTerminal(t, m, op.ID)
+	if len(got.Nodes) != 1 || got.Nodes[0].NodeName != "worker-1" {
+		t.Fatalf("node operation recorded %v, want only worker-1", got.Nodes)
+	}
+	for _, event := range c.log() {
+		if event == "dispatch worker-2" || event == "power self shutdown" {
+			t.Fatalf("node operation touched another node: %v", c.log())
+		}
+	}
+}
+
 func awaitTerminal(t *testing.T, m *Manager, id string) Operation {
 	t.Helper()
 	deadline := time.Now().Add(10 * time.Second)

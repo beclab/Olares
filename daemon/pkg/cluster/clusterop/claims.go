@@ -3,106 +3,114 @@ package clusterop
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
-// ErrClaimExists makes a repeated request idempotent.
-var ErrClaimExists = errors.New("power request was already claimed")
+// ErrReplayConflict means the binding was already consumed.
+var ErrReplayConflict = errors.New("power request binding was already consumed")
 
-const completedClaim = "completed"
-
-// ClaimStore persists one at-most-once claim per signed power request.
-type ClaimStore struct {
+// ReplayGuard persists the one fact needed to prevent a signed command from
+// being executed more than once: its binding was consumed until expiry.
+type ReplayGuard struct {
 	dir string
 }
 
-// NewClaimStore prepares a claim directory.
-func NewClaimStore(dir string) (*ClaimStore, error) {
+type replayMarker struct {
+	ExpiresAt int64 `json:"expiresAt"`
+}
+
+// NewReplayGuard prepares a persistent replay guard directory.
+func NewReplayGuard(dir string) (*ReplayGuard, error) {
 	if strings.TrimSpace(dir) == "" {
-		return nil, errors.New("power claim store: empty directory")
+		return nil, errors.New("power replay guard: empty directory")
 	}
 	if err := os.MkdirAll(dir, dirMode); err != nil {
-		return nil, fmt.Errorf("create power claim dir: %w", err)
+		return nil, fmt.Errorf("create power replay guard dir: %w", err)
 	}
 	if err := os.Chmod(dir, dirMode); err != nil {
-		return nil, fmt.Errorf("secure power claim dir: %w", err)
+		return nil, fmt.Errorf("secure power replay guard dir: %w", err)
 	}
-	return &ClaimStore{dir: dir}, nil
+	return &ReplayGuard{dir: dir}, nil
 }
 
-// Claim records key before the corresponding power command is executed.
-func (s *ClaimStore) Claim(key string) error {
+// Consume atomically records key until expiresAt. A pre-existing unexpired
+// marker is a replay conflict; expired markers are removed before retrying.
+func (s *ReplayGuard) Consume(key string, expiresAt time.Time) error {
 	path := s.path(key)
+	if marker, err := s.read(path); err == nil && !time.Now().Before(time.UnixMilli(marker.ExpiresAt)) {
+		if err := s.Forget(key); err != nil {
+			return err
+		}
+	} else if err == nil {
+		return ErrReplayConflict
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("read power replay marker: %w", err)
+	}
+
+	data, err := json.Marshal(replayMarker{ExpiresAt: expiresAt.UnixMilli()})
+	if err != nil {
+		return fmt.Errorf("encode power replay marker: %w", err)
+	}
 	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, recordMode)
 	if errors.Is(err, os.ErrExist) {
-		return ErrClaimExists
+		return ErrReplayConflict
 	}
 	if err != nil {
-		return fmt.Errorf("claim power request: %w", err)
+		return fmt.Errorf("consume power request binding: %w", err)
+	}
+	if _, err := f.Write(data); err != nil {
+		_ = f.Close()
+		_ = os.Remove(path)
+		return fmt.Errorf("write power replay marker: %w", err)
 	}
 	if err := f.Sync(); err != nil {
 		_ = f.Close()
 		_ = os.Remove(path)
-		return fmt.Errorf("persist power request claim: %w", err)
+		return fmt.Errorf("persist power replay marker: %w", err)
 	}
 	if err := f.Close(); err != nil {
 		_ = os.Remove(path)
-		return fmt.Errorf("close power request claim: %w", err)
+		return fmt.Errorf("close power replay marker: %w", err)
 	}
 	if err := syncDir(s.dir); err != nil {
 		_ = os.Remove(path)
-		return fmt.Errorf("sync power claim directory: %w", err)
+		return fmt.Errorf("sync power replay directory: %w", err)
 	}
 	return nil
 }
 
-// Release removes a claim when command execution failed before acceptance.
-func (s *ClaimStore) Release(key string) error {
+// Forget removes the marker only when the underlying command synchronously
+// refused to start, allowing the same still-valid authorization to be retried.
+func (s *ReplayGuard) Forget(key string) error {
 	path := s.path(key)
 	if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
-		return fmt.Errorf("release power request claim: %w", err)
+		return fmt.Errorf("forget power replay marker: %w", err)
 	}
 	if err := syncDir(s.dir); err != nil {
-		return fmt.Errorf("sync released power claim: %w", err)
+		return fmt.Errorf("sync power replay directory: %w", err)
 	}
 	return nil
 }
 
-// Complete records that the claimed command was accepted.
-func (s *ClaimStore) Complete(key string) error {
-	path := s.path(key)
-	f, err := os.OpenFile(path, os.O_WRONLY|os.O_TRUNC, recordMode)
+func (s *ReplayGuard) read(path string) (replayMarker, error) {
+	data, err := os.ReadFile(path)
 	if err != nil {
-		return fmt.Errorf("open power request claim: %w", err)
+		return replayMarker{}, err
 	}
-	if _, err := f.WriteString(completedClaim); err != nil {
-		_ = f.Close()
-		return fmt.Errorf("complete power request claim: %w", err)
+	var marker replayMarker
+	if err := json.Unmarshal(data, &marker); err != nil {
+		return replayMarker{}, err
 	}
-	if err := f.Sync(); err != nil {
-		_ = f.Close()
-		return fmt.Errorf("persist completed power request claim: %w", err)
-	}
-	if err := f.Close(); err != nil {
-		return fmt.Errorf("close completed power request claim: %w", err)
-	}
-	return nil
+	return marker, nil
 }
 
-// Completed reports whether an existing claim reached command acceptance.
-func (s *ClaimStore) Completed(key string) (bool, error) {
-	data, err := os.ReadFile(s.path(key))
-	if err != nil {
-		return false, fmt.Errorf("read power request claim: %w", err)
-	}
-	return string(data) == completedClaim, nil
-}
-
-func (s *ClaimStore) path(key string) string {
+func (s *ReplayGuard) path(key string) string {
 	sum := sha256.Sum256([]byte(key))
-	return filepath.Join(s.dir, hex.EncodeToString(sum[:])+".claim")
+	return filepath.Join(s.dir, hex.EncodeToString(sum[:])+".replay")
 }

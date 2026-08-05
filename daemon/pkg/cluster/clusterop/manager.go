@@ -48,6 +48,9 @@ type PeerRequest struct {
 	// against each other, so a signature captured from one operation cannot
 	// be replayed to power a node during another.
 	RequestID string `json:"requestId"`
+	Scope     string `json:"scope"`
+	Target    string `json:"target"`
+	ClusterID string `json:"clusterId"`
 }
 
 // DispatchOutcome is the per-node result of handing out one power command.
@@ -210,6 +213,9 @@ func newOperationID() string {
 type CreateRequest struct {
 	Type      Type
 	RequestID string
+	Scope     string
+	Target    string
+	ClusterID string
 	Owner     string
 	Creds     Credentials
 }
@@ -303,7 +309,7 @@ func NewManager(deps Deps) (*Manager, error) {
 		}
 		m.ops[op.ID] = &op
 		m.order = append(m.order, op.ID)
-		m.byRequest[requestKey(op.Owner, op.Type, op.RequestID)] = op.ID
+		m.byRequest[requestKey(op.Owner, op.Type, op.RequestID, op.Scope, op.Target, op.ClusterID)] = op.ID
 	}
 	for _, id := range pendingReboots {
 		go m.confirmRebootWhenReady(id, boot)
@@ -412,8 +418,8 @@ func (m *Manager) confirmRebootWhenReady(id, boot string) {
 	}
 }
 
-func requestKey(owner string, t Type, requestID string) string {
-	return owner + "\x00" + string(t) + "\x00" + requestID
+func requestKey(owner string, t Type, requestID, scope, target, clusterID string) string {
+	return owner + "\x00" + string(t) + "\x00" + requestID + "\x00" + scope + "\x00" + target + "\x00" + clusterID
 }
 
 // Create starts a cluster power operation, or returns the one this request
@@ -433,7 +439,7 @@ func (m *Manager) Create(_ context.Context, req CreateRequest) (Operation, error
 	}
 
 	m.mu.Lock()
-	key := requestKey(req.Owner, opType, req.RequestID)
+	key := requestKey(req.Owner, opType, req.RequestID, req.Scope, req.Target, req.ClusterID)
 	if id, ok := m.byRequest[key]; ok {
 		existing := m.ops[id].Clone()
 		m.mu.Unlock()
@@ -451,6 +457,9 @@ func (m *Manager) Create(_ context.Context, req CreateRequest) (Operation, error
 		ID:        m.deps.NewID(),
 		Type:      opType,
 		RequestID: req.RequestID,
+		Scope:     req.Scope,
+		Target:    req.Target,
+		ClusterID: req.ClusterID,
 		Owner:     req.Owner,
 		Status:    StatusPending,
 		CreatedAt: at,
@@ -597,7 +606,7 @@ func (m *Manager) pruneLocked() {
 			}
 			m.order = append(m.order[:i], m.order[i+1:]...)
 			delete(m.ops, id)
-			delete(m.byRequest, requestKey(op.Owner, op.Type, op.RequestID))
+			delete(m.byRequest, requestKey(op.Owner, op.Type, op.RequestID, op.Scope, op.Target, op.ClusterID))
 			if err := m.deps.Store.Delete(id); err != nil {
 				klog.Warningf("clusterop: prune operation %s: %v", id, err)
 			}

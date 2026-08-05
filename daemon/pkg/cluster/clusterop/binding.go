@@ -53,6 +53,7 @@ func (e *BindingError) Error() string { return e.Code + ": " + e.Message }
 // that these fields describe the request that arrived. Node scope also carries
 // the target node name.
 type Binding struct {
+	ClusterID string
 	Type      Type
 	RequestID string
 	Scope     string
@@ -66,6 +67,7 @@ type Binding struct {
 // bindingWire is the signed body as it is written. It is decoded rather than
 // asserted field by field so that a wrong type reads as an absent field.
 type bindingWire struct {
+	ClusterID string `json:"clusterId"`
 	Type      string `json:"type"`
 	RequestID string `json:"requestId"`
 	Scope     string `json:"scope"`
@@ -99,7 +101,7 @@ func ParseBinding(signed any) (Binding, error) {
 	if wire.Type == "" && wire.Body != nil {
 		wire = *wire.Body
 	}
-	if wire.RequestID == "" || wire.Scope == "" || wire.ExpiresAt == 0 ||
+	if wire.ClusterID == "" || wire.RequestID == "" || wire.Scope == "" || wire.ExpiresAt == 0 ||
 		(wire.Scope == ScopeNode && wire.Target == "") {
 		return Binding{}, unbound
 	}
@@ -108,6 +110,7 @@ func ParseBinding(signed any) (Binding, error) {
 		return Binding{}, unbound
 	}
 	return Binding{
+		ClusterID: wire.ClusterID,
 		Type:      opType,
 		RequestID: wire.RequestID,
 		Scope:     wire.Scope,
@@ -120,7 +123,8 @@ func ParseBinding(signed any) (Binding, error) {
 // want carries no expiry: the request describes itself, the signature says
 // until when.
 func (b Binding) Authorizes(want Binding, now time.Time) error {
-	if b.Type != want.Type || b.RequestID != want.RequestID ||
+	if (want.ClusterID != "" && b.ClusterID != want.ClusterID) ||
+		b.Type != want.Type || b.RequestID != want.RequestID ||
 		b.Scope != want.Scope || b.Target != want.Target {
 		return &BindingError{
 			Code:    CodeSignatureMismatch,
