@@ -1,7 +1,7 @@
 # Custom URL: route ID or your own domain (post-deploy)
 
 > **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) first. This is the last step of a port — the app is already installed and `running`, and the developer wants a URL they can say out loud.
-> **Verb mechanics** (flags, RMW merge, wire fields) live in [`olares-settings-apps.md`](../../olares-settings/references/olares-settings-apps.md#domain-set--rmw-semantics--certkey-handling). This file owns the **process**: which of the two pipelines applies, which stage the entrance is in, and what to ask the developer for next.
+> **Verb mechanics** (flags, RMW merge, wire fields) live in the [`olares-settings`](../../olares-settings/SKILL.md) skill, under `apps` → **`domain set` — RMW semantics + cert/key handling**. This file owns the **process**: which of the two pipelines applies, which stage the entrance is in, and what to ask the developer for next.
 
 Both pipelines run against a **live app** through `olares-cli settings apps domain`, so they need login and an entrance name. Never guess the entrance:
 
@@ -25,7 +25,7 @@ olares-cli settings apps domain set <app> <entrance> --third-level <prefix>
 
 The old URL keeps working; the new one is `https://<prefix>.<zone>`. There is no CNAME and no `finish` in this pipeline — an agent that waits for `cname_status` here waits forever. Wait for the app to read `running` again (the upgrade above), then confirm the new URL over HTTPS.
 
-**Conflicts are rejected by the write itself**, so read the error instead of pre-checking: `auth`, `desktop` and `wizard` are reserved, a prefix already used in the caller's zone (or colliding with an app's default domain) is refused, and a third-party domain must be unique across **every user**, not just your own apps. [`doctor thirdleveldomain`](../../olares-doctor/references/olares-doctor-thirdleveldomain.md) audits a zone after the fact; it is not the gate.
+**Conflicts are rejected by the write itself**, so read the error instead of pre-checking: `auth`, `desktop` and `wizard` are reserved, a prefix already used in the caller's zone (or colliding with an app's default domain) is refused, and a third-party domain must be unique across **every user**, not just your own apps. `doctor thirdleveldomain` in the [`olares-doctor`](../../olares-doctor/SKILL.md) skill audits a zone after the fact; it is not the gate.
 
 ## Pipeline B — the developer's own domain
 

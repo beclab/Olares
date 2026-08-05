@@ -89,7 +89,7 @@ The JSON payload field is `all`. Behavior depends on the backend version:
 
 ### `--delete-data`
 
-The JSON payload field is `deleteData`. It gates **only** the app's private `drive/Data/<app>`; `cache/<node>/<app>` is cleared either way and `drive/Home` is never touched. The full per-area rule and the reason `Home` is exempt live in the platform [storage model](../../olares-shared/references/olares-platform.md#userspace-storage-model).
+The JSON payload field is `deleteData`. It gates **only** the app's private `drive/Data/<app>`; `cache/<node>/<app>` is cleared either way and `drive/Home` is never touched. The full per-area rule and the reason `Home` is exempt live in the platform **Userspace storage model** (loaded via this skill's prerequisite).
 
 > **"Persistent data" is narrower than it sounds.** An app whose manifest declares only `permission.userData` (paths under `Home`) owns no app-private data, so `--delete-data` finds nothing to remove and its files survive the uninstall. That is by design, not a backend bug — clean them up with `olares-cli files rm --recursive <path>`.
 

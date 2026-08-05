@@ -44,7 +44,7 @@ olares-cli settings apps domain set firefox www --third-level my-firefox
 olares-cli settings apps policy set firefox www --default-policy two_factor
 ```
 
-> **The two domain kinds are two different pipelines, not two steps of one.** `--third-level` is complete on its own — no DNS record, no `finish`, and no `cname_*` field ever becomes relevant. Only `--third-party` involves a certificate, a CNAME the user adds at their registrar, `finish`, and then polling. End-to-end procedure, including which stage an entrance is in and what to ask the user for: [`olares-chart-custom-domain.md`](../../olares-chart/references/olares-chart-custom-domain.md).
+> **The two domain kinds are two different pipelines, not two steps of one.** `--third-level` is complete on its own — no DNS record, no `finish`, and no `cname_*` field ever becomes relevant. Only `--third-party` involves a certificate, a CNAME the user adds at their registrar, `finish`, and then polling. The end-to-end procedure, including which stage an entrance is in and what to ask the user for, is the **Custom URL** capability of the [`olares-chart`](../../olares-chart/SKILL.md) skill.
 
 ## `domain set` — RMW semantics + cert/key handling
 
