@@ -17,9 +17,7 @@ Submit a new support request with details and optional attachments.
 1. [Log in to Olares Space](manage-accounts.md#log-in-to-olares-space).
 2. On the left sidebar, click **Tickets**.
 3. Click **+ New ticket**.
-
    ![Create a ticket in Olares Space](/images/how-to/space/create_ticket.png#bordered)
-
 4. Fill in the form:
    - **Issue Type**: Select the category that best matches your issue.
    - **Subcategory**: Optional. Select a more specific subcategory.
@@ -44,11 +42,10 @@ Upload system logs directly from your Olares device to create a ticket automatic
 
    ![Upload logs dialog](/images/how-to/space/upload_logs_window.png#bordered){width=60%}
 
-3. Open a terminal on your Olares device. Choose the method that fits your setup:
-   - [Access Terminal in Control Hub](/one/access-terminal-control-hub.md): Use the web-based terminal for quick access.
-   - [Access via SSH](/one/access-terminal-ssh.md): Connect securely over the network.
+3. Access the terminal on your Olares device. Choose the method that fits your setup:
+   - [Access Terminal in Control Hub](/one/access-terminal-control-hub.md): Use the web-based terminal in your browser.
+   - [Access via SSH](/one/access-terminal-ssh.md): Connect from your computer over the network.
    - [Access physically](/one/access-physical-console.md): Log in directly on the device.
-
 4. Run the command copied from the window:
 
    ```bash
@@ -62,6 +59,8 @@ Upload system logs directly from your Olares device to create a ticket automatic
    ```
 
 5. When the command finishes, it creates a ticket with your logs attached. Note the ticket number for follow-up.
+
+   The following example shows running the command in the terminal inside Control Hub:
 
    ![Upload logs using olares-cli](/images/how-to/space/cli-upload-log.png#bordered)
 
@@ -78,7 +77,6 @@ Use the ticket list to track the status and details of your existing support req
 
 1. To view all your tickets, open the **Tickets** page. The list shows the title, status, ticket number, issue type, and creation time for each ticket.
 2. To filter tickets by status, click the status drop-down list and select a state:
-
    - **All**: Every ticket.
    - **Draft**: Tickets you saved but have not submitted yet.
    - **Open**: Tickets waiting for the first response.
@@ -102,19 +100,15 @@ When the issue is fixed or no longer needs follow-up, mark the ticket as **Resol
 1. Open the ticket details page.
 2. Click **Resolved** or **Close** at the bottom of the page.
 
-:::info
-You cannot delete a submitted ticket. If you no longer need it, close it.
-:::
-
 ### Reopen a ticket
 
-You can reopen a **Closed** or **Resolved** ticket if the issue returns or was not fully fixed:
+You can reopen a **Closed** or **Resolved** ticket if the issue returns or was not fully fixed.
 
 1. Open the ticket details page.
 2. Click **Reopen** at the bottom of the page.
 3. Add a reply explaining why you are reopening it.
 
-The ticket status changes back to **Open** or **In progress**, and the support team continues handling it.
+The ticket status changes back to **In progress**, and the support team continues handling it.
 
 ## FAQs
 

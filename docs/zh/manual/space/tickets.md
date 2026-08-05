@@ -48,9 +48,9 @@ head:
 
    ![上传日志对话框](/images/how-to/space/upload_logs_window.png#bordered){width=60%}
 
-3. 在 Olares 设备上打开终端。根据你的环境选择合适的方式：
-   - [通过 Control Hub 访问终端](/one/access-terminal-control-hub.md)：使用网页终端快速访问。
-   - [通过 SSH 访问](/one/access-terminal-ssh.md)：通过网络安全连接。
+3. 访问 Olares 设备上的终端。根据你的环境选择合适的方式：
+   - [通过 Control Hub 访问终端](/one/access-terminal-control-hub.md)：在浏览器中使用网页终端。
+   - [通过 SSH 访问](/one/access-terminal-ssh.md)：从你的电脑通过网络连接。
    - [直接物理访问](/one/access-physical-console.md)：在设备上直接登录。
 
 4. 运行从窗口中复制的命令：
@@ -66,6 +66,8 @@ head:
    ```
 
 5. 命令执行完成后，会创建一个附带日志的工单。记下工单编号以便后续跟进。
+
+   以下示例展示在 Control Hub 的 Terminal 中运行命令：
 
    ![使用 olares-cli 上传日志](/images/how-to/space/cli-upload-log.png#bordered)
 
@@ -106,10 +108,6 @@ head:
 1. 打开工单详情页。
 2. 在页面底部点击 **Resolved** 或 **Close**。
 
-:::info
-你无法删除已提交的工单。如果不再需要，请关闭它。
-:::
-
 ### 重新打开工单
 
 如果问题再次出现或未完全修复，你可以重新打开 **Closed** 或 **Resolved** 状态的工单：
@@ -118,7 +116,7 @@ head:
 2. 在页面底部点击 **Reopen**。
 3. 添加回复，说明重新打开的原因。
 
-工单状态会变回 **Open** 或 **In progress**，支持团队将继续处理。
+工单状态会变回 **In progress**，支持团队将继续处理。
 
 ## 常见问题
 
