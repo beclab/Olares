@@ -171,6 +171,25 @@ func TestDirectNodePowerAcceptsOnlyTheTargetNodeBinding(t *testing.T) {
 	}
 }
 
+func TestDirectNodePowerRefusesAnotherClusterBinding(t *testing.T) {
+	r := withLocalPower(t, &powerRecorder{})
+	asOwnerSignature(t)
+	asWorker(t)
+	binding := ownerNodeBinding(clusterop.TypeReboot, "client-1", "worker-1")
+	binding["clusterId"] = "another-cluster"
+
+	resp, body := callRegisteredMethod(t, http.MethodPost, "/command/power-this-node",
+		`{"type":"reboot","requestId":"client-1"}`,
+		map[string]string{SIGNATURE_HEADER: signatureCarrying(t, binding)})
+
+	if resp.StatusCode != http.StatusForbidden || reasonOf(t, body) != clusterop.CodeSignatureMismatch {
+		t.Fatalf("status = %d, body = %s", resp.StatusCode, body)
+	}
+	if len(r.seen()) != 0 {
+		t.Error("another cluster's signature powered this node")
+	}
+}
+
 func TestDirectNodePowerRefusesSingleNodeShutdownOnTheMaster(t *testing.T) {
 	r := withLocalPower(t, &powerRecorder{})
 	asOwnerSignature(t)

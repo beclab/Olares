@@ -123,7 +123,14 @@ func (h *Handlers) PostPowerThisNode(ctx *fiber.Ctx) error {
 		return h.errPower(ctx, http.StatusConflict,
 			clusterop.CodePowerUnsupported, "the control node cannot be shut down by a node operation")
 	}
+	localClusterID, err := clusterIDOf(ctx.Context())
+	if err != nil || localClusterID == "" {
+		return h.errBinding(ctx, &clusterop.BindingError{
+			Code: clusterop.CodeSignatureMismatch, Message: "the signature authorizes a different operation",
+		})
+	}
 	binding, err := requireBinding(ctx, clusterop.Binding{
+		ClusterID: localClusterID,
 		Type:      opType,
 		RequestID: strings.TrimSpace(req.RequestID),
 		Scope:     clusterop.ScopeNode,

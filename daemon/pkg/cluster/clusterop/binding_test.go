@@ -88,7 +88,7 @@ func TestNodeBindingIncludesTheTargetNode(t *testing.T) {
 		t.Errorf("binding = %+v, want %+v", b, want)
 	}
 	if err := b.Authorizes(Binding{
-		Type: TypeReboot, RequestID: "client-1", Scope: ScopeNode, Target: "worker-2",
+		ClusterID: "cluster-1", Type: TypeReboot, RequestID: "client-1", Scope: ScopeNode, Target: "worker-2",
 	}, at(1700000000000)); bindingCode(t, err) != CodeSignatureMismatch {
 		t.Errorf("another node was authorized: %v", err)
 	}
@@ -120,8 +120,8 @@ func TestParseBindingRefusesASignatureThatBindsNothing(t *testing.T) {
 }
 
 func TestBindingAuthorizesTheRequestItNames(t *testing.T) {
-	b := Binding{Type: TypeReboot, RequestID: "client-1", Scope: ScopeCluster, ExpiresAt: 1700000600000}
-	want := Binding{Type: TypeReboot, RequestID: "client-1", Scope: ScopeCluster}
+	b := Binding{ClusterID: "cluster-1", Type: TypeReboot, RequestID: "client-1", Scope: ScopeCluster, ExpiresAt: 1700000600000}
+	want := Binding{ClusterID: "cluster-1", Type: TypeReboot, RequestID: "client-1", Scope: ScopeCluster}
 
 	if err := b.Authorizes(want, at(1700000000000)); err != nil {
 		t.Fatalf("a matching request was refused: %v", err)
@@ -131,15 +131,16 @@ func TestBindingAuthorizesTheRequestItNames(t *testing.T) {
 // This is the point of the binding: a signature the owner produced for one
 // dangerous thing cannot be replayed at another.
 func TestBindingRefusesADifferentRequest(t *testing.T) {
-	b := Binding{Type: TypeReboot, RequestID: "client-1", Scope: ScopeCluster, ExpiresAt: 1700000600000}
+	b := Binding{ClusterID: "cluster-1", Type: TypeReboot, RequestID: "client-1", Scope: ScopeCluster, ExpiresAt: 1700000600000}
 
 	for _, tc := range []struct {
 		name string
 		want Binding
 	}{
-		{"another operation type", Binding{Type: TypeShutdown, RequestID: "client-1", Scope: ScopeCluster}},
-		{"another request id", Binding{Type: TypeReboot, RequestID: "client-2", Scope: ScopeCluster}},
-		{"another scope", Binding{Type: TypeReboot, RequestID: "client-1", Scope: "node"}},
+		{"another cluster", Binding{ClusterID: "cluster-2", Type: TypeReboot, RequestID: "client-1", Scope: ScopeCluster}},
+		{"another operation type", Binding{ClusterID: "cluster-1", Type: TypeShutdown, RequestID: "client-1", Scope: ScopeCluster}},
+		{"another request id", Binding{ClusterID: "cluster-1", Type: TypeReboot, RequestID: "client-2", Scope: ScopeCluster}},
+		{"another scope", Binding{ClusterID: "cluster-1", Type: TypeReboot, RequestID: "client-1", Scope: "node"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			err := b.Authorizes(tc.want, at(1700000000000))
@@ -154,9 +155,9 @@ func TestBindingRefusesADifferentRequest(t *testing.T) {
 }
 
 func TestBindingExpires(t *testing.T) {
-	b := Binding{Type: TypeReboot, RequestID: "client-1", Scope: ScopeCluster, ExpiresAt: 1700000600000}
+	b := Binding{ClusterID: "cluster-1", Type: TypeReboot, RequestID: "client-1", Scope: ScopeCluster, ExpiresAt: 1700000600000}
 
-	err := b.Authorizes(Binding{Type: TypeReboot, RequestID: "client-1", Scope: ScopeCluster}, at(1700000600001))
+	err := b.Authorizes(Binding{ClusterID: "cluster-1", Type: TypeReboot, RequestID: "client-1", Scope: ScopeCluster}, at(1700000600001))
 	if err == nil {
 		t.Fatal("an expired signature was accepted")
 	}
@@ -170,13 +171,14 @@ func TestBindingExpires(t *testing.T) {
 func TestBindingRefusesAnExpiryFurtherOutThanTheDaemonAllows(t *testing.T) {
 	now := at(1700000000000)
 	b := Binding{
+		ClusterID: "cluster-1",
 		Type:      TypeReboot,
 		RequestID: "client-1",
 		Scope:     ScopeCluster,
 		ExpiresAt: now.Add(MaxSignatureLifetime + time.Minute).UnixMilli(),
 	}
 
-	err := b.Authorizes(Binding{Type: TypeReboot, RequestID: "client-1", Scope: ScopeCluster}, now)
+	err := b.Authorizes(Binding{ClusterID: "cluster-1", Type: TypeReboot, RequestID: "client-1", Scope: ScopeCluster}, now)
 	if err == nil {
 		t.Fatal("a signature valid for longer than the daemon permits was accepted")
 	}

@@ -2,6 +2,7 @@ package clusterop
 
 import (
 	"errors"
+	"os"
 	"testing"
 	"time"
 )
@@ -36,6 +37,45 @@ func TestReplayGuardDeletesExpiredMarkerBeforeConsume(t *testing.T) {
 	}
 	if err := guard.Consume("request", time.Now().Add(time.Minute)); err != nil {
 		t.Fatalf("consume after expiry: %v", err)
+	}
+}
+
+func TestReplayGuardCleansExpiredMarkersAcrossInstances(t *testing.T) {
+	dir := t.TempDir()
+	first, err := NewReplayGuard(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := first.Consume("expired-request", time.Now().Add(-time.Second)); err != nil {
+		t.Fatal(err)
+	}
+
+	second, err := NewReplayGuard(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := second.Cleanup(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(second.path("expired-request")); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("expired marker remains: %v", err)
+	}
+}
+
+func TestReplayGuardCleanupLeavesDamagedMarkersConsumed(t *testing.T) {
+	guard, err := NewReplayGuard(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := guard.path("damaged-request")
+	if err := os.WriteFile(path, []byte("{"), recordMode); err != nil {
+		t.Fatal(err)
+	}
+	if err := guard.Cleanup(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(path); err != nil {
+		t.Fatalf("damaged marker was not retained safely: %v", err)
 	}
 }
 

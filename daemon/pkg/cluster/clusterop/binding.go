@@ -123,8 +123,7 @@ func ParseBinding(signed any) (Binding, error) {
 // want carries no expiry: the request describes itself, the signature says
 // until when.
 func (b Binding) Authorizes(want Binding, now time.Time) error {
-	if (want.ClusterID != "" && b.ClusterID != want.ClusterID) ||
-		b.Type != want.Type || b.RequestID != want.RequestID ||
+	if b.ClusterID != want.ClusterID || b.Type != want.Type || b.RequestID != want.RequestID ||
 		b.Scope != want.Scope || b.Target != want.Target {
 		return &BindingError{
 			Code:    CodeSignatureMismatch,

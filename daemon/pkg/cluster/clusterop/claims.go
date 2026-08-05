@@ -36,7 +36,43 @@ func NewReplayGuard(dir string) (*ReplayGuard, error) {
 	if err := os.Chmod(dir, dirMode); err != nil {
 		return nil, fmt.Errorf("secure power replay guard dir: %w", err)
 	}
-	return &ReplayGuard{dir: dir}, nil
+	guard := &ReplayGuard{dir: dir}
+	if err := guard.Cleanup(); err != nil {
+		return nil, err
+	}
+	return guard, nil
+}
+
+// Cleanup removes every readable marker that has expired. Damaged markers stay
+// consumed: deleting an unreadable record could turn a corrupted disk write
+// into permission to replay a power command.
+func (s *ReplayGuard) Cleanup() error {
+	entries, err := os.ReadDir(s.dir)
+	if err != nil {
+		return fmt.Errorf("list power replay markers: %w", err)
+	}
+	removed := false
+	now := time.Now()
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".replay") {
+			continue
+		}
+		path := filepath.Join(s.dir, entry.Name())
+		marker, err := s.read(path)
+		if err != nil || now.Before(time.UnixMilli(marker.ExpiresAt)) {
+			continue
+		}
+		if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("remove expired power replay marker: %w", err)
+		}
+		removed = true
+	}
+	if removed {
+		if err := syncDir(s.dir); err != nil {
+			return fmt.Errorf("sync power replay directory: %w", err)
+		}
+	}
+	return nil
 }
 
 // Consume atomically records key until expiresAt. A pre-existing unexpired
