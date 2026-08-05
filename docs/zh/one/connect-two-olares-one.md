@@ -103,17 +103,23 @@ sudo olares-cli uninstall
     :::info
     默认情况下，所有 Olares One 设备的主机名都是 `olares`。Kubernetes 要求集群中每个节点的主机名唯一。在将工作节点加入集群之前，必须确保它具有唯一的主机名。
     :::
-3. 下载 `joincluster.sh`：
+3. 设置 Olares 版本，然后下载匹配的 `joincluster.sh`：
+
+    :::info 关于 `VERSION`
+    `VERSION` 用于选择要下载的 `joincluster.sh` 版本。本指南使用 `1.12.6`。
+    :::
 
     ::: code-group
     ```bash [curl]
     # 此命令适用于已安装 curl 的用户。
-    curl -fsSL https://raw.githubusercontent.com/beclab/Olares/refs/heads/main/build/base-package/joincluster.sh -o joincluster.sh
+    export VERSION=1.12.6
+    curl -fsSL "https://github.com/beclab/Olares/releases/download/${VERSION}/joincluster.sh" -o joincluster.sh
     ```
 
     ```bash [wget]
     # 此命令适用于已安装 wget 的用户。
-    wget https://raw.githubusercontent.com/beclab/Olares/refs/heads/main/build/base-package/joincluster.sh
+    export VERSION=1.12.6
+    wget "https://github.com/beclab/Olares/releases/download/${VERSION}/joincluster.sh"
     ```
     :::
 4. 使用主节点信息运行脚本：
