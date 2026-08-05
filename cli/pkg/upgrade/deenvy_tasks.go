@@ -247,12 +247,16 @@ func (a *deenvyWaitDeps) Execute(runtime connector.Runtime) error {
 		if dcErr != nil {
 			assignCookieDepConditions(conds, false)
 			assignProbeBypassDepConditions(conds, false)
+			assignAuxDepConditions(conds, false)
 			ok = false
 		} else {
 			if !ensureCookieProbeOK(ctx, dc, conds) {
 				ok = false
 			}
 			if !ensureProbeBypassProbeOK(ctx, dc, conds) {
+				ok = false
+			}
+			if !ensureAuxProbeOK(ctx, dc, conds) {
 				ok = false
 			}
 		}
