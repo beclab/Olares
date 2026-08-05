@@ -12,7 +12,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
@@ -69,6 +71,12 @@ type Dispatcher struct {
 	// AuthToken is forwarded as X-Authorization so each node authenticates the
 	// same caller.
 	AuthToken string
+	// Headers are forwarded verbatim, for a node-local endpoint that needs
+	// more than the access token to accept the call.
+	Headers map[string]string
+	// Port overrides the olaresd port. Zero means OlaresdPort; anything else
+	// is a test pointing the fan-out at a server it started.
+	Port int
 	// Timeout bounds each per-node call. Defaults to defaultTimeout.
 	Timeout time.Duration
 	// Parallel bounds concurrent calls. Defaults to defaultParallel.
@@ -159,7 +167,11 @@ func (d *Dispatcher) call(ctx context.Context, t NodeTarget, payload any, timeou
 	if t.IsSelf {
 		host = "127.0.0.1"
 	}
-	url := fmt.Sprintf("http://%s:%d%s", host, OlaresdPort, d.PeerPath)
+	port := d.Port
+	if port == 0 {
+		port = OlaresdPort
+	}
+	url := nodeURL(host, port, d.PeerPath)
 
 	reqCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
@@ -172,6 +184,9 @@ func (d *Dispatcher) call(ctx context.Context, t NodeTarget, payload any, timeou
 	req.Header.Set("Content-Type", "application/json")
 	if d.AuthToken != "" {
 		req.Header.Set(authHeader, d.AuthToken)
+	}
+	for k, v := range d.Headers {
+		req.Header.Set(k, v)
 	}
 
 	resp, err := http.DefaultClient.Do(req)
@@ -196,6 +211,10 @@ func (d *Dispatcher) call(ctx context.Context, t NodeTarget, payload any, timeou
 	res.Status = StatusOK
 	res.Data = respBody
 	return res
+}
+
+func nodeURL(host string, port int, path string) string {
+	return "http://" + net.JoinHostPort(host, strconv.Itoa(port)) + path
 }
 
 func internalIP(n *corev1.Node) string {
