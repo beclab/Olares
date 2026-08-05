@@ -64,13 +64,13 @@ olares-cli settings apps domain set firefox www --clear-third-level
 ```
 
 - **Unspecified flags survive** — RMW under the hood. Pass `--clear-*` to drop a dimension.
-- **Third-party domains REQUIRE both `--cert-file` AND `--key-file`** (unless `--clear-third-party`). The PEM bytes are POSTed verbatim as multi-line strings, so the files must be readable by the CLI's own user, and the key must be RSA.
-- **A third-party domain also requires the entrance's auth level to be `public`** — BFL rejects the write with `custom domain can not be set when auth level is private`. Change it with `auth-level set` first.
+- **Third-party domains REQUIRE both `--cert-file` AND `--key-file`** (unless `--clear-third-party`) and an entrance whose auth level is already `public` — BFL rejects the write with `custom domain can not be set when auth level is private`. The PEM bytes are POSTed verbatim as multi-line strings, so the files must be readable by the CLI's own user and the key must be RSA.
 - After `domain set --third-party`, the user adds a CNAME pointing at `cname_target`, and **then** `domain finish` records that they have done so. `finish` does not resolve DNS itself.
+- Either domain kind makes app-service upgrade the app, so the write is refused mid-operation and the route is live only once the app runs again.
 
 ## `domain get` — reading the third-party stage
 
-Adding or changing the third-party domain resets both status fields to empty / `unset`. `finish` moves `cname_target_status` to `set` and `cname_status` to `pending`; everything after that is the platform's own asynchronous check writing back. An RMW update that keeps the same third-party domain can preserve its existing state.
+Adding or changing the third-party domain resets both status fields to empty / `unset`; `finish` moves them to `set` / `pending`, and everything after that is the platform's asynchronous check writing back. An RMW update that keeps the same domain can preserve its existing state.
 
 | `cname_target_status` | `cname_status` | Means |
 |---|---|---|
@@ -78,34 +78,24 @@ Adding or changing the third-party domain resets both status fields to empty / `
 | `set` | `pending` | Activation submitted; the platform is verifying the CNAME and the certificate |
 | `set` | `active` | Live. The custom domain serves the entrance |
 | `set` | `cert-not-found` / `cert-invalid` | The certificate side failed, not DNS |
-| any | `timeout` / `error` | The CNAME did not resolve to `cname_target`, or the upstream check failed |
+| `set` | `timeout` | Verification gave up. A record that is simply missing stays `pending` instead — it never turns into a failure |
 
 `cname_target` is the user's Olares **zone** (e.g. `laresprime.olares.com`) and is the CNAME's *value*. Its *name* is the custom domain relative to the DNS zone managed at that provider (`media` for `media.n1.monster` in zone `n1.monster`, or `foo.bar` in zone `example.com`). Print the target verbatim; it cannot be derived from the app's current URL. Values outside this table are possible (the field is a plain string on the wire): show them as-is rather than guessing.
 
 ## `policy set` — replace sub-policies
 
 ```bash
-# Update default policy.
-olares-cli settings apps policy set firefox www --default-policy two_factor
-
-# Set one-time-link mode (factor cap).
-olares-cli settings apps policy set firefox www --one-time true --valid-duration 3600
-
-# Replace sub-policies (any --sub-policy flag drops the existing set).
+# Any --sub-policy flag REPLACES the existing set. Bulk form: --sub-policies-file ./sub-policies.json
 olares-cli settings apps policy set firefox www \
   --sub-policy "uri=/admin,policy=two_factor" \
   --sub-policy "uri=/api,policy=public"
 
-# Explicitly drop sub-policies.
+# Drop the set without adding new entries.
 olares-cli settings apps policy set firefox www --clear-sub-policies
-
-# Bulk file form.
-olares-cli settings apps policy set firefox www --sub-policies-file ./sub-policies.json
 ```
 
-- `--default-policy` values: `system` | `one_factor` | `two_factor` | `public`
-- Default-policy / one-time / valid-duration flags follow RMW semantics.
-- **Sub-policy entries are REPLACED in full whenever any sub-policy flag is passed.** This is intentional — partial sub-policy edits don't compose safely. Pass `--clear-sub-policies` to drop the existing set without adding new ones.
+- `--default-policy` values: `system` | `one_factor` | `two_factor` | `public`. That flag, `--one-time` and `--valid-duration` follow RMW semantics.
+- **Sub-policy entries are REPLACED in full whenever any sub-policy flag is passed** — partial sub-policy edits don't compose safely, so this is intentional.
 
 ## `auth-level set` — no GET endpoint upstream
 
@@ -143,10 +133,10 @@ olares-cli settings apps list --all            # also include uninstalled / pend
 
 ## Agent best practices
 
-- **Always run `entrances list <app>` before any per-entrance edit.** Don't assume entrance names; the user-facing names (e.g. `www`) often differ from the chart-defined service names.
-- **For `policy set`**, surface `policy get` output to the user BEFORE applying — the sub-policy replacement semantics are easy to misuse.
-- **For `domain set --third-party`**, run `domain get` first and act on that one stage only (table above). Hand the user the CNAME name/value split verbatim, wait for them to confirm the record exists, then `finish` — a full command list given up front reliably ends with `finish` run against a record nobody added yet.
-- **For UNVERIFIED verbs** (`env set`, `domain set/finish`, `policy set`, `auth-level set`), the result is provisional (not yet smoke-tested against a live instance) — confirm the outcome after running.
+- **Always run `entrances list <app>` before any per-entrance edit.** User-facing names (e.g. `www`) often differ from the chart-defined service names.
+- **For `policy set`**, surface `policy get` output to the user BEFORE applying — the replacement semantics are easy to misuse.
+- **For `domain set --third-party`**, run `domain get` first and act on that one stage only (table above). Hand over the CNAME name/value split verbatim, wait for them to confirm the record, then `finish` — a full command list given up front reliably ends with `finish` run against a record nobody added yet.
+- **For UNVERIFIED verbs** (`env set`, `domain set/finish`, `policy set`, `auth-level set`), the result is provisional — confirm the outcome after running.
 
 ## Common errors
 

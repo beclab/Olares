@@ -13,19 +13,7 @@ olares-cli settings apps entrances list <app>     # ENTRANCE / STATE / AUTH LEVE
 
 ## Two pipelines, not one flow
 
-The two options share a verb and nothing else. A custom **route ID** stays inside the Olares zone, so the platform owns DNS and TLS and there is no DNS or certificate work at all. A **third-party domain** is the developer's own FQDN: they own DNS, they supply the certificate, and part of the work happens in a control panel this CLI cannot reach.
-
-```mermaid
-flowchart TD
-  start["entrances list"] --> choose{"which kind?"}
-  choose -->|"custom route ID"| A1["domain set --third-level"]
-  A1 --> Adone["done: no DNS, no finish"]
-  choose -->|"own FQDN"| B0["auth level must be public"]
-  B0 --> B2["domain set --third-party + cert + key"]
-  B2 --> B3["developer adds the CNAME"]
-  B3 --> B4["domain finish"]
-  B4 --> B5["poll until cname_status=active"]
-```
+The two options share a verb and nothing else. A custom **route ID** stays inside the Olares zone, so the platform owns DNS and TLS and there is no DNS or certificate work at all — one `domain set` and you are done. A **third-party domain** is the developer's own FQDN: they own DNS, they supply the certificate, part of the work happens in a control panel this CLI cannot reach, and it runs a five-stage pipeline that starts with the auth level and ends with polling for `cname_status=active`.
 
 ## Pipeline A — custom route ID
 
@@ -96,38 +84,27 @@ olares-cli settings apps domain get <app> <entrance>
 
 ## Hard constraints
 
-- **Auth level must be `public`.** A custom domain cannot carry Olares authentication, so the platform declines to combine the two: BFL rejects the write outright while the entrance is `private` (`custom domain can not be set when auth level is private`). Treat `public` as the requirement rather than probing what else the backend happens to tolerate — `internal` is not reachable from the internet, which is the entire point of the exercise.
-- **The certificate and its private key must be RSA, PEM, and readable by you.** `--cert-file` / `--key-file` are read verbatim from disk, so files in a root-only directory (`/etc/letsencrypt/live/...` is the usual one) have to be copied into a private temporary directory first — and copied, not moved, or renewal breaks. Keep the private-key copy mode `0600` and delete it after `domain set` returns. The cert is normally the full chain.
-- **Certbot defaults to ECDSA and must be told otherwise.** `--key-type rsa` at issue time. A default certbot key arrives as an ECDSA key inside a `-----BEGIN PRIVATE KEY-----` (PKCS#8) block, and the platform's validator assumes PKCS#8 means RSA; the result is a failure with nothing useful to read, not a clean rejection. State this before issuance so the developer does not have to repeat the certificate challenge.
+- **Auth level must be `public`.** A custom domain cannot carry Olares authentication, so BFL rejects the write while the entrance is `private` (`custom domain can not be set when auth level is private`). `internal` is not reachable from the internet, which defeats the purpose.
+- **The certificate and its private key must be RSA, PEM, and readable by you.** `--cert-file` / `--key-file` are read verbatim from disk, so a root-only path (usually `/etc/letsencrypt/live/...`) must be **copied** — not moved, or renewal breaks — into a private temporary directory. Keep the key copy at `0600` and delete it after `domain set` returns. The cert is normally the full chain.
+- **Certbot defaults to ECDSA; ask for `--key-type rsa` at issue time.** Its default key arrives as ECDSA inside a `-----BEGIN PRIVATE KEY-----` (PKCS#8) block, and the platform's validator assumes PKCS#8 means RSA — the result is an unreadable failure, not a clean rejection. Say this before issuance so the challenge is not repeated.
 - **`domain set` is read-modify-write.** Passing only `--third-level` leaves an existing third-party domain in place, and vice versa. Dropping one dimension needs `--clear-third-level` / `--clear-third-party`.
 - **The domain must be fully qualified.** `example.com` and `media.example.com` are fine; a bare label or a trailing-dot form is rejected before anything is stored.
 - **One entrance at a time.** Domain setup is per-entrance, and an app with several entrances needs the whole pipeline repeated per entrance that should get its own hostname.
 
 ## Auth level persistence: know the version boundary
 
-On the **1.12.7** line, a runtime auth-level change is stored in an override slot — per-user `Spec.UserSettings[caller]` for shared apps, the app-global `Spec.Settings["authLevel"]` otherwise — specifically so it survives the reconciler reprojecting chart values over `Spec.Entrances`. The custom domain configuration itself is stored the same way. Two consequences:
+On the **1.12.7** line, a runtime auth-level change is stored in an override slot — per-user `Spec.UserSettings[caller]` for shared apps, app-global `Spec.Settings["authLevel"]` otherwise — so it survives the reconciler reprojecting chart values over `Spec.Entrances`. The custom domain is stored the same way. Two consequences:
 
-- The chart's `entrances[].authLevel` is the **install-time default**, nothing more. Do **not** edit the chart and redeploy to make a `public` entrance "stick"; that is a rebuild-and-reinstall for something the override already handles.
-- **On 1.12.6 and older** there is no override slot, so a reconcile or an upgrade can put the chart's value back and quietly return the entrance to `private` — taking the custom domain's requirement with it. On those versions, re-read the auth level after any upgrade instead of assuming it held.
+- The chart's `entrances[].authLevel` is the **install-time default**, nothing more. Do not edit the chart and redeploy to make a `public` entrance stick; the override already handles it.
+- **On 1.12.6 and older** there is no override slot, so a reconcile or upgrade can put the chart's value back and return the entrance to `private`, taking the custom domain's requirement with it. Re-read the auth level after any upgrade there.
 
-Either way, **read state back rather than assuming a side effect**: after changing the auth level, re-run `entrances list` and check the app's state, and only call `market resume` if the app actually reads as `stopped`. An unconditional resume is a no-op at best and a surprise restart at worst.
+Either way, **read state back rather than assuming a side effect**: re-run `entrances list`, and call `market resume` only if the app actually reads `stopped`. An unconditional resume is a surprise restart at worst.
 
 ## Tools you may need but must not install
 
-If the developer already has a valid certificate, none of this applies — take the files and move on.
+If the developer already has a valid certificate, none of this applies — take the files and move on. When one has to be issued and they choose certbot, `command -v certbot`; if it is missing, say what it is for and let them install it. Do not install it for them.
 
-When a certificate has to be issued and they choose certbot, check for it and stop if it is missing:
-
-```bash
-command -v certbot
-```
-
-Missing → say so, name what it is for, and let them install it. Do not install it for them and do not turn this reference into an installation guide for four operating systems.
-
-Two facts about issuing are worth passing on, because both cost a DNS round trip to discover:
-
-- A DNS-01 challenge needs a **TXT** record, which is a different record from the **CNAME** that puts the domain into service. Two records, two purposes, and the TXT one can be removed afterwards.
-- Ask for RSA explicitly (`--key-type rsa`), per the constraint above.
+Two facts about issuing are worth passing on, because each costs a DNS round trip to discover: a DNS-01 challenge needs a **TXT** record, which is a different record from the **CNAME** that puts the domain into service (the TXT one can be removed afterwards), and RSA must be asked for explicitly per the constraint above.
 
 ## Common errors
 
