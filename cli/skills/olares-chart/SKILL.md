@@ -1,6 +1,6 @@
 ---
 name: olares-chart
-version: 4.15.0
+version: 4.16.0
 description: "Olares app packaging and chart authoring via olares-cli chart — port a repo, docker-compose, or generic Helm chart; build/push the image; author, lint, package, and deploy an OlaresManifest; wire storage, middleware, entrances, env, and GPU; edit the chart after diagnosis. Runtime failure diagnosis is olares-doctor; public Market submission is olares-publish."
 compatibility: Requires olares-cli on PATH; chart authoring is local-only, building an image for a specific Olares and deploying both need login
 metadata:
@@ -43,7 +43,7 @@ Porting an app is **not** a fixed `from-compose → lint → deploy` pipeline �
 
 Olares **pulls images from a registry and never builds from source**, so every workload must reference a publicly pullable, node-arch-correct image. Image work is **agent-driven**: resolve the **target Olares node's architecture** with `olares-cli cluster node list`, then ask which registry the developer uses (Docker Hub / ghcr), check docker is usable and logged in, and **build + push yourself** — only `docker login` stays manual, and only when not already authenticated ([references/olares-chart-image.md](references/olares-chart-image.md)). Build for the target node's arch (single-arch), never the development host's implicit/default arch; multi-arch is only for publishing.
 
-> **The target architecture is a build input, and resolving it cannot be deferred.** `spec.supportArch` and the platform checks around it describe what the chart *claims*; what a built image *is* is a separate fact that no platform-side check inspects. So a wrong guess survives everything you can run locally — build succeeds, push succeeds, `lint` passes — and first shows up as `exec format error` inside the cluster. Docker on Apple Silicon defaults to arm64, which is what an unresolved target silently becomes. Either log in and query the node, or have the developer state the architecture; with **neither, ask instead of building on a guess.** Authoring a chart nobody is deploying yet is the one case that needs no target.
+> **The target architecture is a build input, so resolving it cannot be deferred.** `spec.supportArch` says what the chart *claims*; nothing opens the image to check what it *is*. A wrong guess therefore survives build, push and `lint`, and first appears as `exec format error` in the cluster — and on Apple Silicon an unresolved target silently becomes arm64. Query the node or have the developer state the arch; with **neither, ask instead of guessing.** Only a chart nobody is deploying yet needs no target.
 
 | Packaging state | Do this | Ready when |
 |---|---|---|

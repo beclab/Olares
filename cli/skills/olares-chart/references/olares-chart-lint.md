@@ -12,7 +12,8 @@
 | Folder layout, manifest structure, helm dry-run | ✅ | ✅ |
 | `metadata.categories` enum | ❌ (stub `Utilities` passes) | ✅ |
 | `featuredImage`, `promoteImage`, `fullDescription` | ❌ | recommended for listing |
-| Multi-arch / `spec.supportArch` alignment | partial (cross-field if accelerator set) | expected for public Market |
+| `spec.supportArch` present and non-empty | ✅ | ✅ |
+| Whether `spec.supportArch` matches the image's built arch | ❌ (declaration only; cross-checked against accelerator mode) | expected for public Market |
 
 **Deploy to your Olares:** `lint OK` + a live install reaching `running` → sufficient. Stub metadata is fine.
 
