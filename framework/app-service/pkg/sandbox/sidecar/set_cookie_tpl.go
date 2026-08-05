@@ -69,3 +69,9 @@ end
 func genEnvoySetCookieScript() []byte {
 	return []byte(envoySetCookie)
 }
+
+// EnvoySetCookieLua returns the Lua that clears Set-Cookie Domain= values.
+// EnvoyExtensionPolicy for ordinary entrances must use this script verbatim.
+func EnvoySetCookieLua() string {
+	return envoySetCookie
+}
