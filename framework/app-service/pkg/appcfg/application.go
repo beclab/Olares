@@ -109,6 +109,11 @@ type ApplicationConfig struct {
 	SharedEntrances      []Entrance
 	SelectedGpuType      string
 	Accelerator          []ResourceMode
+	// SupportArch mirrors spec.supportArch in OlaresManifest.yaml. When it
+	// declares exactly one architecture (amd64 or arm64) the pod-arch
+	// mutating webhook pins the app's pods to matching nodes via a
+	// kubernetes.io/arch nodeSelector.
+	SupportArch []string
 	// NeedsSharedAccess signals that the app needs cross-namespace access to
 	// a shared app's services (e.g. for service-mesh sidecar injection).
 	// Force-set to true for SHARED apps in toApplicationConfig regardless of

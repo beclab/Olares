@@ -187,6 +187,11 @@ func (wh *Webhook) CreatePatch(
 	if isInjected {
 		// TODO: force mutate
 		klog.Infof("Pod is injected with uuid=%s namespace=%s", prevUUID, req.Namespace)
+		mesh.HardenLinkerdProxyAdminProbes(pod)
+		if err := wh.patchProbeHeaders(ctx, pod); err != nil {
+			klog.Errorf("Failed to patch probe headers for already-injected pod=%s/%s err=%v", pod.Namespace, pod.Name, err)
+			return nil, err
+		}
 		return makePatches(req, pod)
 	}
 
@@ -316,12 +321,37 @@ func (wh *Webhook) CreatePatch(
 	}
 	pod.Annotations[UUIDAnnotation] = proxyUUID.String()
 
+	// Avoid kubelet httpGet to PodIP:4191 (stolen by in-pod DNAT on virt workloads).
+	mesh.HardenLinkerdProxyAdminProbes(pod)
+
 	// add header to probes
 	if err := wh.patchProbeHeaders(ctx, pod); err != nil {
 		klog.Errorf("Failed to patch probe headers for pod=%s/%s err=%v", pod.Namespace, pod.Name, err)
 		return nil, err
 	}
 	return makePatches(req, pod)
+}
+
+// PatchLinkerdAdminProbesOnly hardens linkerd-proxy admin probes when no other
+// sidecar work is required. Returns patched=false when nothing changed.
+func (wh *Webhook) PatchLinkerdAdminProbesOnly(
+	ctx context.Context,
+	req *admissionv1.AdmissionRequest,
+	pod *corev1.Pod,
+) (patchBytes []byte, patched bool, err error) {
+	if !mesh.HardenLinkerdProxyAdminProbes(pod) {
+		return nil, false, nil
+	}
+	if err := wh.patchProbeHeaders(ctx, pod); err != nil {
+		klog.Errorf("Failed to patch probe headers after linkerd harden pod=%s/%s err=%v", pod.Namespace, pod.Name, err)
+		return nil, false, err
+	}
+	patchBytes, err = makePatches(req, pod)
+	if err != nil {
+		klog.Errorf("Failed to build patch after linkerd harden pod=%s/%s err=%v", pod.Namespace, pod.Name, err)
+		return nil, false, err
+	}
+	return patchBytes, true, nil
 }
 
 func (wh *Webhook) shouldInjectEnvoySidecar(ctx context.Context, injectPolicy bool, appConfig *appcfg.ApplicationConfig, pod *corev1.Pod) bool {

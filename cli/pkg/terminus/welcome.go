@@ -91,7 +91,7 @@ func (m *WelcomeModule) Init() {
 
 	waitServicesReady := &task.LocalTask{
 		Name:   "WaitServicesReady",
-		Action: new(CheckKeyPodsRunning),
+		Action: new(CheckSystemComponentsReady),
 		Retry:  60,
 		Delay:  15 * time.Second,
 	}

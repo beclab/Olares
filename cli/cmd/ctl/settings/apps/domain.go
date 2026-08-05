@@ -103,15 +103,20 @@ Set semantics: unspecified flags survive (read-modify-write). Use
 --clear-third-level / --clear-third-party to explicitly drop a
 domain dimension.
 
-Setting a third-party domain requires --cert-file AND --key-file
-(unless you're using --clear-third-party). The cert/key files are
-read verbatim and POSTed as multi-line strings; whatever PEM the
-upstream accepts will round-trip.
+The two kinds are separate pipelines. A third-level domain (the
+"custom route ID" in the UI) is done as soon as it is set: no DNS
+record, no finish, no cname_* state. A third-party domain needs a
+certificate, a CNAME record, a finish and then polling.
 
-After setting a third-party domain you typically need to point the
-DNS CNAME at the upstream's cname_target value (visible via
-"domain get") and then run "domain finish" to ask the upstream to
-verify and activate the cert.
+Setting a third-party domain requires --cert-file AND --key-file
+(unless you're using --clear-third-party), and the entrance's auth
+level must be "public" -- the upstream rejects a private entrance.
+The cert/key files are read verbatim and POSTed as multi-line
+strings, so they must be readable here, and the key must be RSA.
+
+After setting a third-party domain, point the DNS CNAME at the
+upstream's cname_target value (visible via "domain get"), then run
+"domain finish" and poll "domain get" until cname_status is active.
 `,
 	}
 	cmd.SilenceUsage = true
@@ -229,11 +234,25 @@ func newDomainGetCommand(f *cmdutil.Factory) *cobra.Command {
 		Long: `Show the current third-level / third-party / CNAME state for an
 entrance.
 
-The output includes cname_status (None / Default / ThirdLevel /
-ThirdParty), cname_target (the value users should CNAME their
-custom domain at), and cname_target_status (whether the upstream
-has detected the CNAME yet). cert / key are NEVER printed in the
-default table view; pass --output json to retrieve them too.
+Only a third-party domain uses the cname_* fields; a third-level
+domain is complete as soon as it is set.
+
+  cname_target         the value to CNAME the custom domain at --
+                       the Olares zone, not the app's current URL
+  cname_target_status  unset | set -- whether "domain finish" has
+                       been submitted for this domain. It does NOT
+                       mean the upstream has detected the CNAME
+  cname_status         unset | pending | active | cert-not-found |
+                       cert-invalid | timeout | error -- the result
+                       of the upstream's asynchronous check
+
+Adding or changing the third-party domain resets both statuses to
+unset; "domain finish" moves them to set / pending. Updating an
+unchanged domain may preserve its existing state. Unrecognized values
+are printed as-is.
+
+cert / key are NEVER printed in the default table view; pass
+--output json to retrieve them too.
 
 Examples:
   olares-cli settings apps domain get files file
@@ -328,10 +347,11 @@ flags survive untouched (RMW); pass --clear-third-level or
 
 Setting a third-party domain requires --cert-file AND --key-file. The
 files are read verbatim — pass the same PEM the upstream's UI would
-accept (typically the full chain for the cert).
+accept: the full chain for the cert, and an RSA private key. It also
+requires the entrance's auth level to be "public".
 
 Examples:
-  # Add a sub.example.com CNAME-style third-level domain
+  # Serve the entrance at sub.<zone> as well (no DNS work needed)
   olares-cli settings apps domain set files file --third-level sub
 
   # Switch to a fully custom third-party domain with cert/key
@@ -495,16 +515,21 @@ func certKeyMark(s string) string {
 func newDomainFinishCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "finish <app> <entrance>",
-		Short: "confirm a third-party CNAME is live (Settings UI's \"Finish\" button)",
-		Long: `Ask the upstream to re-check the third-party domain CNAME and finish
-the domain setup. This is the same action triggered by the Settings
-UI's "Finish" button on the Custom Domain dialog.
+		Short: "record a third-party CNAME and start verification (Settings UI's \"Finish\" button)",
+		Long: `Record that the third-party domain's CNAME has been created, and ask
+the upstream to start verifying it. This is the same action triggered
+by the Settings UI's "Finish" button on the Custom Domain dialog.
 
-Run this AFTER you've pointed the DNS CNAME at cname_target (see
-"domain get") and given DNS time to propagate. The upstream will
-re-resolve the CNAME and, if it now resolves to cname_target,
-activate the third-party cert and flip cname_target_status to
-"completed".
+This call does NOT resolve DNS. It sets cname_target_status to "set"
+and cname_status to "pending", then returns; verification of both the
+CNAME and the certificate happens asynchronously afterwards. Running
+it before the record exists is accepted silently and simply leaves the
+entrance pending while the asynchronous checker retries; any later
+failure is visible only through "domain get".
+
+So run it AFTER you've pointed the DNS CNAME at cname_target (see
+"domain get"), then poll "domain get" until cname_status reads
+"active".
 
 Examples:
   olares-cli settings apps domain finish files file

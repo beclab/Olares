@@ -340,6 +340,13 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 		Returns(http.StatusOK, "Success to inject", nil)).
 		Consumes(restful.MIME_JSON)
 
+	ws.Route(ws.POST("/podarch/inject").
+		To(handler.podArchInject).
+		Doc("mutating webhook to inject kubernetes.io/arch nodeSelector for single-arch apps").
+		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
+		Returns(http.StatusOK, "Success to inject", nil)).
+		Consumes(restful.MIME_JSON)
+
 	ws.Route(ws.POST("/provider-registry/validate").
 		To(handler.providerRegistryValidate).
 		Doc("validating webhook for validate app install namespace").

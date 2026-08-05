@@ -2,6 +2,9 @@ package routecontrol
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
+	"strings"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
@@ -90,17 +93,25 @@ func TestDesiredSharedRouteSecurityPolicyJWTAuthn(t *testing.T) {
 	if appidMap["claim"] != CallerJWTAppidClaim || appidMap["header"] != CallerJWTAppidHeader {
 		t.Fatalf("claimToHeaders[1] = %#v", appidMap)
 	}
-	if appidMap["header"] != "X-Shared-Appid" {
-		t.Fatalf("shared appid header must remain X-Shared-Appid, got %#v", appidMap["header"])
+	if appidMap["header"] != "X-Caller-Appid" {
+		t.Fatalf("shared appid claim must map to X-Caller-Appid, got %#v", appidMap["header"])
 	}
 	clientMap := claimToHeaders[2].(map[string]any)
 	if clientMap["claim"] != CallerJWTClientAppidClaim || clientMap["header"] != CallerJWTClientAppidHeader {
 		t.Fatalf("claimToHeaders[2] = %#v", clientMap)
 	}
 	if clientMap["header"] != "X-Caller-Appid" {
-		t.Fatalf("ordinary client appid header must remain X-Caller-Appid, got %#v", clientMap["header"])
+		t.Fatalf("ordinary client appid claim must map to X-Caller-Appid, got %#v", clientMap["header"])
+	}
+	if CallerJWTAppidHeader != CallerJWTClientAppidHeader {
+		t.Fatalf("shared and ordinary appid headers must be unified, got %q vs %q", CallerJWTAppidHeader, CallerJWTClientAppidHeader)
 	}
 	// Three mappings stay configured; a given token carries the claims for its caller type.
+	if CallerJWTViewerClaim != callerjwt.ClaimViewer ||
+		CallerJWTAppidClaim != callerjwt.ClaimAppid ||
+		CallerJWTClientAppidClaim != callerjwt.ClaimClientAppid {
+		t.Fatalf("SecurityPolicy claim paths must alias callerjwt nested claim constants")
+	}
 
 	extractFrom, ok := provider["extractFrom"].(map[string]any)
 	if !ok {
@@ -133,6 +144,92 @@ func TestDesiredSharedRouteSecurityPolicyJWTAuthn(t *testing.T) {
 	if backend["name"] != CallerJWTJWKSServiceName || backend["namespace"] != CallerJWTJWKSServiceNamespace {
 		t.Fatalf("backendRef = %#v", backend)
 	}
+}
+
+func TestIssuedJWTSatisfiesClaimToHeaderPaths(t *testing.T) {
+	ring, err := callerjwt.NewKeyRingForTest(false)
+	if err != nil {
+		t.Fatalf("NewKeyRingForTest: %v", err)
+	}
+	issuer, err := callerjwt.NewIssuer(ring)
+	if err != nil {
+		t.Fatalf("NewIssuer: %v", err)
+	}
+
+	cases := []struct {
+		name   string
+		req    callerjwt.IssueRequest
+		header string
+		claim  string
+		want   string
+	}{
+		{
+			name:   "X-Caller-Appid-from-shared-appid",
+			req:    callerjwt.IssueRequest{Namespace: "router-shared", ServiceAccountName: "router", AppRef: "router", Appid: "f3395cd5"},
+			header: CallerJWTAppidHeader,
+			claim:  CallerJWTAppidClaim,
+			want:   "f3395cd5",
+		},
+		{
+			name:   "X-BFL-USER",
+			req:    callerjwt.IssueRequest{Namespace: "ns", ServiceAccountName: "sa", AppRef: "demo", Viewer: "alice", ClientAppid: "6bf98da2"},
+			header: CallerJWTViewerHeader,
+			claim:  CallerJWTViewerClaim,
+			want:   "alice",
+		},
+		{
+			name:   "X-Caller-Appid-from-clientAppid",
+			req:    callerjwt.IssueRequest{Namespace: "ns", ServiceAccountName: "sa", AppRef: "demo", Viewer: "alice", ClientAppid: "6bf98da2"},
+			header: CallerJWTClientAppidHeader,
+			claim:  CallerJWTClientAppidClaim,
+			want:   "6bf98da2",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			token, err := issuer.Issue(tc.req)
+			if err != nil {
+				t.Fatalf("Issue: %v", err)
+			}
+			got := walkJWTClaimPath(t, token, tc.claim)
+			if got != tc.want {
+				t.Fatalf("header %s claim %s = %q, want %q", tc.header, tc.claim, got, tc.want)
+			}
+		})
+	}
+}
+
+func walkJWTClaimPath(t *testing.T, token, claimPath string) string {
+	t.Helper()
+	parts := strings.Split(token, ".")
+	if len(parts) < 2 {
+		t.Fatalf("token parts = %d", len(parts))
+	}
+	raw, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	cur := any(payload)
+	for _, part := range strings.Split(claimPath, ".") {
+		obj, ok := cur.(map[string]any)
+		if !ok {
+			t.Fatalf("path %q: not object before %q", claimPath, part)
+		}
+		next, ok := obj[part]
+		if !ok {
+			t.Fatalf("path %q: missing %q", claimPath, part)
+		}
+		cur = next
+	}
+	got, ok := cur.(string)
+	if !ok {
+		t.Fatalf("path %q: got %#v", claimPath, cur)
+	}
+	return got
 }
 
 func TestReconcileSharedRouteGatewayModeCreatesSecurityPolicy(t *testing.T) {

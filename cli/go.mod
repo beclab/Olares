@@ -13,9 +13,10 @@ require (
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/PaesslerAG/jsonpath v0.1.1
 	github.com/alecthomas/assert/v2 v2.11.0
+	github.com/beclab/Olares/framework/app-gateway v0.0.0-20260726095421-227ff69bef01
 	github.com/beclab/Olares/framework/app-service v0.0.0-20260311124303-23a6533bc2ad
 	github.com/beclab/Olares/framework/oac v0.0.0-00010101000000-000000000000
-	github.com/beclab/api v0.0.17
+	github.com/beclab/api v0.0.24
 	github.com/cavaliergopher/grab/v3 v3.0.1
 	github.com/containerd/containerd v1.7.29
 	github.com/decentralized-identity/web5-go v0.25.0
@@ -85,7 +86,6 @@ require (
 	github.com/PaesslerAG/gval v1.0.0 // indirect
 	github.com/alecthomas/repr v0.4.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
-	github.com/beclab/Olares/framework/app-gateway v0.0.0-20260726095421-227ff69bef01 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect

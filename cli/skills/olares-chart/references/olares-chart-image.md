@@ -5,42 +5,88 @@
 
 ## Arch strategy
 
-Deploying to your Olares only needs the **target Olares node's arch** (single-arch) — query it with `olares-cli cluster node list` (needs login), then declare that architecture in `spec.supportArch`. Cluster upload requires this set to intersect at least one current node. The development host may have a different architecture, so never derive the image platform from `uname`, `runtime.GOARCH`, or Docker's default platform. Multi-arch (`linux/amd64,linux/arm64` + a matching `spec.supportArch: [amd64, arm64]`) is only required when **publishing to the public Market** — see the [`../../olares-publish/SKILL.md`](../../olares-publish/SKILL.md) skill.
+Deploying to your Olares only needs the **target Olares node's arch** (single-arch) — query it with `olares-cli cluster node list` (needs login). The development host may have a different architecture, so never derive the image platform from `uname`, `runtime.GOARCH`, or Docker's default platform. Multi-arch (`linux/amd64,linux/arm64` + a matching `spec.supportArch: [amd64, arm64]`) is only required when **publishing to the public Market** — see the [`../../olares-publish/SKILL.md`](../../olares-publish/SKILL.md) skill.
+
+Declare that same architecture in `spec.supportArch`: it is **required and must be non-empty** (`lint` rejects a missing or empty list), and a single entry also makes app-service pin the pods to matching nodes via a `kubernetes.io/arch` nodeSelector. It remains a **declaration about the chart** — nothing opens the image to check — so a chart declaring `amd64` around an arm64 image passes every check and still crashes.
 
 ## When you need it
 
 Olares installs apps by **pulling images from a registry; it never builds from source.** So every workload must reference an image that is publicly pullable **for the target node's architecture**. Skip this capability only when every service already does.
 
-```mermaid
-flowchart TD
-  start["a service's image"] --> ok{"pullable + right arch?"}
-  ok -->|yes| ready["image ready"]
-  ok -->|no| hasDockerfile{"repo has a Dockerfile?"}
-  hasDockerfile -->|yes| build["build + push"]
-  hasDockerfile -->|no| authorDf["author a Dockerfile, then build + push"]
-  authorDf --> build
-  build --> ready
-```
-
 - **Already pullable + arch-correct:** nothing to do for that service.
 - **Repo has no Dockerfile:** read the code to infer the runtime (language, start command, listening port, required env, data directories), **author a Dockerfile**, then build+push.
 - **Repo has a Dockerfile but no official (or no target-arch) image:** build+push from the Dockerfile.
 
-## Image architecture must match the target
+## The image-readiness gate
 
-A wrong-architecture image installs but never runs (`ImagePullBackOff` with `no match for platform`, or the container `exec format error`-crashes):
+For an image **you** build, three properties stay invisible until the cluster rejects it: the architecture actually built, whether it can be pulled **without credentials**, and whether the process starts at all. Run each step and read its output — that is the difference between a defect found here in seconds and one found a deploy cycle later.
 
-1. **Find the target node arch:**
-   ```bash
-   olares-cli cluster node list          # ARCHITECTURE shows amd64 / arm64 (needs login)
-   ```
-   If more than one architecture is listed, identify the node that will run the workload and confirm it with `olares-cli cluster node get <name>`. Do not silently choose the development host's architecture. If the target cannot be identified, stop and ask rather than building an image for a guessed platform.
-2. **Inspect a candidate image's platforms** before trusting it:
-   ```bash
-   docker manifest inspect <image-ref>   # look for the platform.architecture entries
-   ```
-   (No docker daemon? Query the registry manifest list over HTTP and read each `platform.architecture`.)
-3. **Build single platform matching the target node** — `--platform linux/amd64` or `linux/arm64`. Always pass `--platform` explicitly; a single-arch image **must** equal the target node arch. (Multi-arch is only for publishing — see [`../../olares-publish/SKILL.md`](../../olares-publish/SKILL.md).)
+| # | Step | The assertion |
+|---|---|---|
+| 1 | Resolve the target arch (`olares-cli cluster node list`) | a value exists, and it came from the target rather than from `uname` |
+| 2 | `docker buildx build --platform linux/<target-arch> --load -t <ref>:<tag> <ctx>` | the build carries an explicit platform |
+| 3 | `docker image inspect <ref>:<tag> --format '{{.Architecture}}'` | the output **equals** the target arch |
+| 4 | Start the container (when that proves something — see below) | the process does not exit immediately; an HTTP service answers on its declared port |
+| 5 | `docker buildx build ... --push` (or `docker push <ref>:<tag>`) | the push reports success for that exact tag |
+| 6 | Inspect anonymously, with an empty `DOCKER_CONFIG` | the registry serves that tag to a caller holding no credentials |
+
+Step 6 exists because Olares nodes pull anonymously and a logged-in shell cannot tell a public repository from a private one. It proves access, not architecture: a single-platform manifest does not always carry a `platform` field, which is why step 3 asserts the arch locally.
+
+A reused tag is the fourth failure mode and the one no check here can see — a node keeps serving the layers it already cached. Hence the rule under Hard rules: every rebuild gets a new tag. Do not wire an image into the chart until step 6 passes.
+
+### Steps 2-3: build locally first, then assert the architecture
+
+`--push` on its own leaves nothing behind to inspect, so load the image and assert before publishing it:
+
+```bash
+docker buildx build --platform linux/<target-arch> --load -t <ref>:<tag> <build-context>
+docker image inspect <ref>:<tag> --format '{{.Architecture}}'   # must print <target-arch>
+```
+
+A mismatch means `--platform` was wrong or missing: rebuild, and do not push. (Publishing to the public Market builds multi-arch and cannot use `--load` — that path is [`../../olares-publish/SKILL.md`](../../olares-publish/SKILL.md).)
+
+### Step 4: start it, when starting it proves something
+
+For an ordinary long-running service, a container that exits at once is a defect visible in seconds — a missing entrypoint dependency, an unwritable runtime path ([run-as-user.md](olares-chart-run-as-user.md)), a wrong `CMD`:
+
+```bash
+name=<app>-smoke-$$
+if docker run -d --name "$name" -p <host>:<container> <ref>:<tag>; then
+  sleep 5
+  running=$(docker inspect --format '{{.State.Running}}' "$name")
+  docker logs "$name"                              # then curl the declared port for an HTTP service
+  docker rm -f "$name"
+  test "$running" = true                           # assert only after preserving logs
+fi
+```
+
+No `--rm`: automatic removal deletes the container before `docker logs` can explain a failed start. Unique name behind an `if`: a fixed name that already exists fails the `run` and would send `docker rm -f` at somebody else's container. Emulating a foreign architecture is slow and sometimes impossible — if it cannot run here, say so rather than skipping in silence.
+
+**Skip the port probe — and say why — when the workload cannot answer one here:** GPU / accelerator images, images bound to host devices, anything needing cluster middleware (Postgres, Redis, an `.Values.olaresEnv` value) to finish booting, and jobs that are *supposed* to exit. The deploy loop is their real test.
+
+### Step 6: verify the pull the node will actually make
+
+```bash
+(
+  tmp=$(mktemp -d)
+  trap 'rm -rf "$tmp"' EXIT
+  DOCKER_CONFIG="$tmp" docker manifest inspect <ref>:<tag>
+)
+```
+
+**Never `docker logout`** to simulate an anonymous client — that destroys credentials the developer has to retype. `denied` / `unauthorized` means the repository is private (ghcr defaults to private on first push: set the package visibility to public) or the tag was never pushed. Absence of `platform.architecture` is not a failure: a single-image manifest need not carry it.
+
+## Resolving the target architecture
+
+A wrong-architecture image installs but never runs (`ImagePullBackOff` with `no match for platform`, or the container `exec format error`-crashes). Gate step 1 is where that value comes from:
+
+```bash
+olares-cli cluster node list          # ARCHITECTURE shows amd64 / arm64 (needs login)
+```
+
+If more than one architecture is listed, identify the node that will run the workload and confirm it with `olares-cli cluster node get <name>` — a single-arch app is pinned to matching nodes, so on a mixed cluster that choice also decides where it can run. Never fall back to the development host's architecture; if the target cannot be identified, stop and ask.
+
+**For an image you did not build**, read its platforms before trusting it — `docker manifest inspect <image-ref>`, or the registry manifest list over HTTP with no docker daemon. One that already covers the target arch needs no gate run; one that doesn't sends you back to building your own.
 
 ## GPU / CUDA images
 
@@ -48,9 +94,9 @@ Building a CUDA image (no GPU needed on the build box, custom-kernel arch flags,
 
 ## Registry + build/push (agent-driven)
 
-You drive this end to end — ask the registry, check login, build, push, verify. The **only** manual step is the developer typing a registry token into `docker login`, and only when they are not already authenticated. **Never invent/hardcode tokens or push under an account the developer didn't choose.**
+You drive this end to end. The **only** manual step is the developer typing a registry token into `docker login`, and only when they are not already authenticated. **Never invent/hardcode tokens or push under an account the developer didn't choose.**
 
-1. **Resolve the target Olares node architecture before any build** using `olares-cli cluster node list`, following the multi-node rule above. Keep the resolved value as `<target-arch>`; do not substitute the development host architecture.
+1. **Resolve `<target-arch>` first** (gate step 1, plus the multi-node rule above).
 
 2. **Ask which registry the developer uses + the target `<user>/<repo>`** (don't assume one):
    - **Docker Hub** — image ref `<dockerhub-user>/<repo>`
@@ -68,27 +114,15 @@ You drive this end to end — ask the registry, check login, build, push, verify
    ```bash
    docker login <registry>   # already authed? prints "Authenticating with existing credentials" / "Login Succeeded"
    ```
-   Or read `~/.docker/config.json` `auths` for the registry key (Docker Hub → `https://index.docker.io/v1/`, ghcr → `ghcr.io`; a `credsStore`/`credHelpers` entry can be empty but present). A push that later fails with `unauthorized` / `denied` is the authoritative "not logged in / wrong account" signal.
-   - **Already logged in** → go straight to build + push (step 5).
-   - **Not logged in** → ask the developer to run the right `docker login` (this is the one step you can't do — it needs their secret token), then continue:
-     - Docker Hub: `docker login` with a Docker Hub **access token** (Account Settings → Security → New Access Token).
-     - ghcr: `docker login ghcr.io -u <github-user>` with a **GitHub PAT** that has `write:packages`. After the first push, set the package **visibility to public** so Olares can pull it without auth.
+   Or read `~/.docker/config.json` `auths` for the registry key (Docker Hub → `https://index.docker.io/v1/`, ghcr → `ghcr.io`; a `credsStore`/`credHelpers` entry can be empty but present). A push failing with `unauthorized` / `denied` is the authoritative "not logged in / wrong account" signal. Already logged in → go to step 5. Otherwise ask them to run it — it needs their secret token:
+     - Docker Hub: `docker login` with an **access token** (Account Settings → Security → New Access Token).
+     - ghcr: `docker login ghcr.io -u <github-user>` with a **GitHub PAT** holding `write:packages`. After the first push, set the package **visibility to public** so Olares can pull it without auth.
 
-5. **Build for the target node arch and push** — you run this, after confirming `<registry-ref>:<tag>` with the developer:
-   ```bash
-   docker buildx build --platform linux/<target-arch> -t <registry-ref>:<tag> --push <build-context>
-   ```
-   (Publishing to the public Market? Build multi-arch instead — `--platform linux/amd64,linux/arm64` — per [`../../olares-publish/SKILL.md`](../../olares-publish/SKILL.md).)
-   `<build-context>` can be a local path (`.`) or a git URL (e.g. `https://github.com/org/repo.git#main`). Use the upstream Dockerfile or one you authored.
-
-6. **Verify the pushed image** before wiring it in:
-   ```bash
-   docker manifest inspect <registry-ref>:<tag>   # confirm the expected platforms are present
-   ```
+5. **Run gate steps 2-6** against `<registry-ref>:<tag>`, once the developer has confirmed that ref. `<build-context>` can be a local path (`.`) or a git URL (e.g. `https://github.com/org/repo.git#main`). Publishing to the public Market instead? Build multi-arch — `--platform linux/amd64,linux/arm64` — per [`../../olares-publish/SKILL.md`](../../olares-publish/SKILL.md).
 
 ## Handoff: wire the image into the compose
 
-In the compose (the compose-input capability), replace every `build:` block (and any local-only `image:` tag like `image: app`) with the pushed `<registry-ref>:<tag>`. Now every service is pullable and arch-correct, so proceed to scaffold:
+Once the gate has passed for every service, replace each `build:` block in the compose (and any local-only `image:` tag like `image: app`) with the pushed `<registry-ref>:<tag>`. Every service is now proven pullable and arch-correct, so proceed to scaffold:
 
 ```bash
 olares-cli chart from-compose --name <app> -f docker-compose.yml
@@ -108,6 +142,7 @@ When using a **third-party** image, inspect `docker inspect <ref> --format '{{.C
 ## Hard rules
 
 - **Every service must reference a publicly pullable image** for the node arch — no `build:`, no local-only tags, no private registry (until Olares-local registry support lands).
-- **Deploy to your Olares:** arch must match the node. Verify with `docker manifest inspect`. (Multi-arch + `spec.supportArch` is only for publishing — [`../../olares-publish/SKILL.md`](../../olares-publish/SKILL.md).)
+- **Deploy to your Olares:** the image's built architecture must equal the node's. Assert it (gate step 3) rather than inferring it from the chart's `spec.supportArch`, which is a declaration and not a fact about the image. (Multi-arch is only for publishing — [`../../olares-publish/SKILL.md`](../../olares-publish/SKILL.md); `spec.supportArch` itself is required either way.)
 - **Never bake registry credentials into the chart** (no `imagePullSecrets` with inline tokens, no secrets in `values.yaml`). Public images only.
-- **Pin every image to a specific version tag** — **never `:latest`** or an untagged image (implicit `latest`). `latest` drifts, so installs become non-reproducible and rollbacks/caching unreliable. Bump the tag when you rebuild. (`lint` does not enforce this — it's on you.)
+- **Pin every image to a specific version tag** — **never `:latest`** or an untagged image (implicit `latest`), which drifts and makes installs non-reproducible. `lint` does not enforce this.
+- **Bump the tag on every rebuild.** A node that already pulled `<ref>:<tag>` keeps serving the cached layers, so new bytes under a seen tag change nothing there. A fix that "did not take effect" is usually this, not the fix.
