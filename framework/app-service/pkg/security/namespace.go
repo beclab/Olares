@@ -37,6 +37,12 @@ var (
 	OSProtectedNamespaces = []string{
 		"os-protected",
 	}
+	OSMeshNamespaces = []string{
+		"os-mesh",
+	}
+	OSGatewayNamespaces = []string{
+		"os-gateway",
+	}
 )
 
 // IsUserInternalNamespaces returns true if namespace is user level namespace for a user application, false otherwise.

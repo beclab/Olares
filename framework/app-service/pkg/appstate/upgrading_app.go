@@ -103,6 +103,22 @@ func (p *UpgradingApp) Exec(ctx context.Context) (StatefulInProgressApp, error) 
 						execErr = fmt.Errorf("panic: %v", r)
 					}
 					if execErr != nil {
+						// A cancel (POST /cancel, the TTL watchdog or a force
+						// uninstall) cancels opCtx, which is what aborts the image
+						// download / helm upgrade / startup wait, so execErr here is
+						// the cancellation itself rather than an upgrade failure. The
+						// initiator already wrote the terminal target state
+						// (UpgradingCanceling for cancel, Uninstalling for force
+						// uninstall) and UpgradingCancelingApp owns the transition to
+						// Stopping; UpgradingCanceling -> UpgradeFailed is not a
+						// declared transition, so this write would only be rejected
+						// by the guard. Bail out quietly (Finally() tolerates the
+						// closed channel) and let the initiator drive the state.
+						if c.Err() != nil {
+							klog.Infof("upgrade of app %s canceled; leaving terminal state to the initiator", p.manager.Spec.AppName)
+							return
+						}
+
 						reason := appsv1.UpgradeFailed.String()
 						if errors.Is(execErr, errcode.ErrPodPending) || errors.Is(execErr, errcode.ErrServerSidePodPending) {
 							reason = constants.AppUnschedulable
