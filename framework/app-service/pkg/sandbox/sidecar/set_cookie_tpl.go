@@ -19,6 +19,11 @@ func getHTTProbePath(pod *corev1.Pod) (probesPath []string) {
 	return probesPath
 }
 
+// GetHTTPProbePaths returns Exact probe paths from Pod HTTPGet probes (Liveness/Readiness/Startup).
+func GetHTTPProbePaths(pod *corev1.Pod) []string {
+	return getHTTProbePath(pod)
+}
+
 const envoySetCookie = `
 local pattern = "Domain=([^;]*)"
 function split(str, sep)
