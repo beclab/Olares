@@ -87,6 +87,10 @@ const (
 	MeshInCertCacheValid            = "1m"
 	MeshInProxyReadTimeout          = "600s"
 	MeshInProxySendTimeout          = "600s"
+	// MeshInMaxBodySize lifts nginx's built-in 1m request-body cap. mesh-in is a
+	// transparent identity-injection hop, so body-size policy belongs to the
+	// destination app; "0" means no limit at this hop.
+	MeshInMaxBodySize               = "0"
 	LabelTLSReplica                 = "gateway.olares.io/tls-replica"
 	DefaultEnvoyLogLevel                  = "debug"
 	EnvoyImageVersion                     = "beclab/envoy:v1.25.11.1"
