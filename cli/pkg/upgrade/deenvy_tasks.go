@@ -248,6 +248,7 @@ func (a *deenvyWaitDeps) Execute(runtime connector.Runtime) error {
 			assignCookieDepConditions(conds, false)
 			assignProbeBypassDepConditions(conds, false)
 			assignAuxDepConditions(conds, false)
+			assignRouteModeDepConditions(conds, false)
 			ok = false
 		} else {
 			if !ensureCookieProbeOK(ctx, dc, conds) {
@@ -257,6 +258,9 @@ func (a *deenvyWaitDeps) Execute(runtime connector.Runtime) error {
 				ok = false
 			}
 			if !ensureAuxProbeOK(ctx, dc, conds) {
+				ok = false
+			}
+			if !ensureRouteModeGatewayOK(ctx, dc, conds) {
 				ok = false
 			}
 		}
@@ -329,30 +333,23 @@ func (a *deenvyCutover) Execute(runtime connector.Runtime) error {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
-	// Annotate Applications for gateway route-mode; provider/l4 consume annotation.
-	// Full Application list patch is best-effort via label on namespaces.
-	nsList, err := kube.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
-	if err != nil {
+	dc, dcErr := dynamicClientFromRuntime()
+	conds := map[string]bool{}
+	if dcErr != nil {
+		logger.Errorf("deenvy: dynamic client for route-mode cutover: %v", dcErr)
+		assignRouteModeDepConditions(conds, false)
+		_ = advanceDeenvyCheckpoint(ctx, kube, a.TargetVersion, cpRollback, conds, "route-mode cutover: dynamic client failed")
+		return dcErr
+	}
+	if err := annotateEntranceAppsRouteModeGateway(ctx, dc); err != nil {
+		logger.Errorf("deenvy: annotate Applications route-mode=gateway: %v", err)
+		assignRouteModeDepConditions(conds, false)
 		return err
 	}
-	for _, ns := range nsList.Items {
-		if !strings.HasPrefix(ns.Name, "user-space-") && !strings.HasPrefix(ns.Name, "user-system-") {
-			continue
-		}
-		if ns.Annotations == nil {
-			ns.Annotations = map[string]string{}
-		}
-		if ns.Annotations["gateway.olares.io/route-mode"] == "gateway" {
-			continue
-		}
-		ns.Annotations["gateway.olares.io/route-mode"] = "gateway"
-		if _, err := kube.CoreV1().Namespaces().Update(ctx, &ns, metav1.UpdateOptions{}); err != nil {
-			logger.Warnf("deenvy: annotate namespace %s: %v", ns.Name, err)
-		}
+	if !ensureRouteModeGatewayOK(ctx, dc, conds) {
+		return fmt.Errorf("deenvy: RouteModeGateway not fully covered after cutover annotate: %#v", conds)
 	}
-	return advanceDeenvyCheckpoint(ctx, kube, a.TargetVersion, cpCutover, map[string]bool{
-		"RouteModeGateway": true,
-	}, "cutover route-mode=gateway")
+	return advanceDeenvyCheckpoint(ctx, kube, a.TargetVersion, cpCutover, conds, "cutover route-mode=gateway")
 }
 
 type deenvyRollout struct {
@@ -398,13 +395,12 @@ func (a *deenvyAccept) Execute(runtime connector.Runtime) error {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
-	invOK, msg := inventoryZeroUnauthorizedOES(ctx, kube)
-	conds := map[string]bool{
-		"ZeroOesInventory": invOK,
-		"KeyPodsReady":     true,
+	dc, _ := dynamicClientFromRuntime()
+	conds, msg, err := runAcceptSuiteProbes(ctx, kube, dc)
+	if err != nil {
+		return err
 	}
-	if !invOK {
-		// Keep Phase Ready=false for next attempt after rollback charts.
+	if !conds["AcceptSuitePassed"] {
 		st, _ := loadDeenvyGate(ctx, kube)
 		if st != nil {
 			st.Phase = "Rollback"
@@ -415,7 +411,7 @@ func (a *deenvyAccept) Execute(runtime connector.Runtime) error {
 		}
 		return fmt.Errorf("deenvy accept failed: %s", msg)
 	}
-	return advanceDeenvyCheckpoint(ctx, kube, a.TargetVersion, cpAccept, conds, "accept suite passed")
+	return advanceDeenvyCheckpoint(ctx, kube, a.TargetVersion, cpAccept, conds, msg)
 }
 
 func inventoryZeroUnauthorizedOES(ctx context.Context, kube kubernetes.Interface) (bool, string) {

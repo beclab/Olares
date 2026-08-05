@@ -171,6 +171,59 @@ func TestAssignProbeBypassDepConditions(t *testing.T) {
 	}
 }
 
+func TestAssignRouteModeDepConditions(t *testing.T) {
+	conds := map[string]bool{}
+	assignRouteModeDepConditions(conds, false)
+	if conds["RouteModeGateway"] {
+		t.Fatal("expected false")
+	}
+	assignRouteModeDepConditions(conds, true)
+	if !conds["RouteModeGateway"] {
+		t.Fatal("expected true")
+	}
+}
+
+func TestEvaluateEntranceRouteModeGatewayReadyPartial(t *testing.T) {
+	targets := []entranceRouteModeTarget{
+		{Namespace: "ns", AppName: "a", Mode: "gateway"},
+		{Namespace: "ns", AppName: "b", Mode: ""},
+	}
+	if evaluateEntranceRouteModeGatewayReady(targets) {
+		t.Fatal("partial gateway must be false")
+	}
+	if !hasPartialEntranceRouteModeGateway(targets) {
+		t.Fatal("expected partial")
+	}
+	if !evaluateEntranceRouteModeGatewayReady(nil) {
+		t.Fatal("vacuous must be true")
+	}
+}
+
+func TestEvaluateAcceptSuitePassed(t *testing.T) {
+	good := map[string]bool{
+		"ZeroOesInventory":         true,
+		"EntranceExtAuthCovered":   true,
+		"EntranceCookieCovered":    true,
+		"EntranceProbeBypassReady": true,
+		"EntranceAuxCovered":       true,
+		"RouteModeGateway":         true,
+	}
+	if !evaluateAcceptSuitePassed(good) {
+		t.Fatal("full coverage must pass")
+	}
+	bad := map[string]bool{}
+	for k, v := range good {
+		bad[k] = v
+	}
+	bad["EntranceCookieCovered"] = false
+	if evaluateAcceptSuitePassed(bad) {
+		t.Fatal("missing Cookie must fail AcceptSuite")
+	}
+	if evaluateAcceptSuitePassed(nil) {
+		t.Fatal("nil must fail")
+	}
+}
+
 func TestAssignAuxDepConditions(t *testing.T) {
 	conds := map[string]bool{}
 	assignAuxDepConditions(conds, false)
