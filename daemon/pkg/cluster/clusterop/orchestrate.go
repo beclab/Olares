@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/beclab/Olares/daemon/pkg/cluster/inventory"
 	"github.com/beclab/Olares/daemon/pkg/cluster/nodestatus"
@@ -126,6 +127,7 @@ func (m *Manager) runNode(ctx context.Context, id string, opType Type, target st
 			op.Status = StatusCommandIssued
 			op.CommandIssuedUntil = m.deps.Now().Add(m.deps.Timeouts.Down)
 		})
+		m.awaitWorkerShutdown(ctx, id, node.NodeName)
 		return
 	}
 	m.startStep(id, StepWorkerRestart)
@@ -467,13 +469,36 @@ func (m *Manager) commandWorkers(ctx context.Context, id string, p plan, opType 
 // restart would take the control node down next on a cluster that is not in
 // the state the operation claims.
 func rebootProgress(obs inventory.Observation, present bool, baseline string) (down, up bool) {
-	if !present {
+	if nodeUnavailable(obs, present) {
 		return true, false
 	}
 	rebooted := obs.BootID != baseline
-	down = rebooted || !obs.Ready
+	down = rebooted
 	up = rebooted && obs.Ready
 	return down, up
+}
+
+func nodeUnavailable(obs inventory.Observation, present bool) bool {
+	return !present || !obs.Ready
+}
+
+func (m *Manager) awaitWorkerShutdown(ctx context.Context, id, target string) {
+	deadline := m.deps.Now().Add(m.deps.Timeouts.Down)
+	for m.deps.Now().Before(deadline) {
+		seen, err := m.deps.Observe(ctx)
+		if err == nil {
+			obs, present := seen[target]
+			if nodeUnavailable(obs, present) {
+				m.update(id, func(op *Operation) {
+					op.CommandIssuedUntil = time.Time{}
+				})
+				return
+			}
+		}
+		if err := m.deps.Sleep(ctx, m.deps.Timeouts.Poll); err != nil {
+			return
+		}
+	}
 }
 
 // awaitRestarts waits for every node that was told to reboot. They restart at

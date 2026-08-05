@@ -357,6 +357,37 @@ func TestNodeOperationDispatchesOnlyItsTarget(t *testing.T) {
 	}
 }
 
+func TestNodeWorkerShutdownReleasesTransientAfterTargetBecomesUnreachable(t *testing.T) {
+	c := newCluster(master("master-1", "10.0.0.1"), worker("worker-1", "10.0.0.2"))
+	c.neverComesBack("worker-1")
+	m, _ := newManager(t, c)
+	op, err := m.Create(context.Background(), CreateRequest{
+		Type: TypeShutdown, RequestID: "request-1", Scope: ScopeNode, Target: "worker-1",
+		ClusterID: "cluster-1", Owner: "alice@olares.com", Creds: Credentials{Signature: "jws"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	deadline := time.Now().Add(time.Second)
+	for {
+		if _, active := m.ActivePhase(); !active {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("unreachable worker did not release the shutdown transient")
+		}
+		time.Sleep(time.Millisecond)
+	}
+	got, _ := m.Get(op.ID)
+	if got.Status != StatusCommandIssued {
+		t.Fatalf("status = %q, want command_issued", got.Status)
+	}
+	if c.observeCount() == 0 {
+		t.Fatal("worker shutdown was never observed")
+	}
+}
+
 func TestNodeScopeControlRebootUsesPersistedMasterCommand(t *testing.T) {
 	c := newCluster(master("master-1", "10.0.0.1"))
 	m, _ := newManager(t, c)
