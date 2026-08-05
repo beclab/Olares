@@ -66,12 +66,12 @@ func TestRenderNginxConfContainsListenAndJWT(t *testing.T) {
 	}
 }
 
-// TestRenderNginxConfDoesNotCapRequestBody guards the 413 regression: nginx -c
+// TestRenderNginxConfLiftsDefaultBodyCap guards the 413 regression: nginx -c
 // replaces the image's main config, so without an explicit directive the
 // built-in 1m client_max_body_size applied and every relayed upload above 1 MiB
 // was rejected with "413 Request Entity Too Large" on both the plain and the
 // TLS-offload listener.
-func TestRenderNginxConfDoesNotCapRequestBody(t *testing.T) {
+func TestRenderNginxConfLiftsDefaultBodyCap(t *testing.T) {
 	for _, tc := range []struct {
 		name        string
 		enableHTTPS bool
@@ -103,11 +103,11 @@ func TestRenderNginxConfDoesNotCapRequestBody(t *testing.T) {
 	}
 }
 
-func TestMeshInMaxBodySizeIsUnlimited(t *testing.T) {
-	// "0" disables the cap. Any other value silently reintroduces a hop-local
-	// limit that the destination app cannot see or override.
-	if constants.MeshInMaxBodySize != "0" {
-		t.Fatalf("MeshInMaxBodySize = %q, want \"0\" (no limit at the mesh-in hop)", constants.MeshInMaxBodySize)
+func TestMeshInMaxBodySizeIsAPIUploadBound(t *testing.T) {
+	// Keep above nginx's 1m default and below multi-GB fileserver caps; 100m
+	// is the hop-local ceiling for Shared east-west relays.
+	if constants.MeshInMaxBodySize != "100m" {
+		t.Fatalf("MeshInMaxBodySize = %q, want \"100m\"", constants.MeshInMaxBodySize)
 	}
 }
 

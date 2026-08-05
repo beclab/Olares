@@ -130,8 +130,8 @@ func RenderNginxConf(in NginxConfInput) string {
 	b.WriteString("  access_log off;\n")
 	// nginx -c replaces the image's main config, so nothing seeds a body limit
 	// and the built-in 1m default would reject every upload above it with 413.
-	// Set it once at http level so both the plain and TLS-offload servers, and
-	// any location added later, inherit it.
+	// Set MeshInMaxBodySize once at http level so both the plain and TLS-offload
+	// servers, and any location added later, inherit it.
 	b.WriteString(fmt.Sprintf("  client_max_body_size %s;\n", constants.MeshInMaxBodySize))
 	b.WriteString("  js_import main from /tmp/mesh-in/bearer.js;\n")
 	b.WriteString(fmt.Sprintf("  # jwt path: %s\n", in.JWTTokenPath))
