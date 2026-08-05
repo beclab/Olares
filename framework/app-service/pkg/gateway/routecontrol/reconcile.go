@@ -125,6 +125,9 @@ func ReconcileSharedRoute(ctx context.Context, c client.Client, gw GatewayRef, s
 		if err := deleteEntranceCookiePolicy(ctx, c, srr); err != nil {
 			return ReconcileResult{}, fmt.Errorf("delete entrance Cookie EnvoyExtensionPolicy: %w", err)
 		}
+		if err := deleteEntranceProbeBypass(ctx, c, srr); err != nil {
+			return ReconcileResult{}, fmt.Errorf("delete entrance probe bypass: %w", err)
+		}
 		if err := deleteJWKSReferenceGrant(ctx, c, srr); err != nil {
 			return ReconcileResult{}, fmt.Errorf("delete JWKS ReferenceGrant: %w", err)
 		}
@@ -210,6 +213,9 @@ func reconcileGatewayMode(ctx context.Context, c client.Client, gw GatewayRef, s
 		if err := applyEntranceCookiePolicy(ctx, c, srr); err != nil {
 			return ReconcileResult{}, fmt.Errorf("apply entrance Cookie EnvoyExtensionPolicy: %w", err)
 		}
+		if err := applyOrDeleteEntranceProbeBypass(ctx, c, gw, srr, svc, port); err != nil {
+			return ReconcileResult{}, fmt.Errorf("apply entrance probe bypass: %w", err)
+		}
 		// Ordinary entrances must not keep Shared JWT SecurityPolicy.
 		if err := deleteSecurityPolicy(ctx, c, srr); err != nil {
 			return ReconcileResult{}, fmt.Errorf("delete JWT SecurityPolicy for entrance: %w", err)
@@ -226,6 +232,9 @@ func reconcileGatewayMode(ctx context.Context, c client.Client, gw GatewayRef, s
 		}
 		if err := deleteEntranceCookiePolicy(ctx, c, srr); err != nil {
 			return ReconcileResult{}, fmt.Errorf("delete stale entrance Cookie EEP: %w", err)
+		}
+		if err := deleteEntranceProbeBypass(ctx, c, srr); err != nil {
+			return ReconcileResult{}, fmt.Errorf("delete stale entrance probe bypass: %w", err)
 		}
 	}
 	return ReconcileResult{
