@@ -199,6 +199,31 @@ func TestEvaluateEntranceRouteModeGatewayReadyPartial(t *testing.T) {
 	}
 }
 
+func TestCanEnableOesFreeGate(t *testing.T) {
+	good := map[string]bool{
+		"EntranceExtAuthCovered":   true,
+		"EntranceCookieCovered":    true,
+		"EntranceProbeBypassReady": true,
+		"EntranceAuxCovered":       true,
+		"RouteModeGateway":         true,
+		"L4ProxyReady":             true,
+	}
+	if !canEnableOesFreeGate(good) {
+		t.Fatal("full coverage must allow oes-free gate")
+	}
+	bad := map[string]bool{}
+	for k, v := range good {
+		bad[k] = v
+	}
+	bad["EntranceExtAuthCovered"] = false
+	if canEnableOesFreeGate(bad) {
+		t.Fatal("missing ExtAuth must refuse oes-free gate")
+	}
+	if canEnableOesFreeGate(nil) {
+		t.Fatal("nil must refuse")
+	}
+}
+
 func TestEvaluateAcceptSuitePassed(t *testing.T) {
 	good := map[string]bool{
 		"ZeroOesInventory":         true,
