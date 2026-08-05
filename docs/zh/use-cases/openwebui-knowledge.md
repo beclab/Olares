@@ -7,7 +7,7 @@ head:
       content: Olares, Open WebUI, 知识库, RAG, 文档上传, PDF
 app_version: "1.0.38"
 doc_version: "2.0"
-doc_updated: "2026-07-31"
+doc_updated: "2026-08-05"
 ---
 
 :::warning
@@ -119,7 +119,7 @@ PaddleOCR 需要更多 GPU VRAM，处理文档也比默认引擎更慢。仅在�
 
    a. 打开 Olares 设置，然后前往**应用** > **PaddleOCR** > **入口**。
 
-   b. 复制端点 URL。例如：`http://6b2a6fc50.shared.olares.com`。
+   b. 点击 **PaddleOCR**，然后复制端点 URL。例如：`https://17b4c78a.laresprime.olares.com`。
 
 3. 在 Open WebUI 中，前往 **Admin Panel** > **Settings**。
 4. 在左侧边栏中，找到 **Tools** 部分，然后选择 **Documents**。

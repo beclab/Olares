@@ -8,7 +8,7 @@ head:
       content: Olares, Open WebUI, knowledge base, RAG, document upload, PDF
 app_version: "1.0.38"
 doc_version: "2.0"
-doc_updated: "2026-07-31"
+doc_updated: "2026-08-05"
 ---
 
 # Chat with documents and knowledge bases in Open WebUI
@@ -115,7 +115,7 @@ PaddleOCR requires more GPU VRAM and processes documents slower than the default
 
    a. Open Olares Settings, and then go to **Applications** > **PaddleOCR** > **Entrances**.
    
-   b. Copy the endpoint URL. For example, `https://17b4c78a.laresprime.olares.com`.
+   b. Click **PaddleOCR**, and then copy the endpoint URL. For example, `https://17b4c78a.laresprime.olares.com`.
 
 3. In Open WebUI, go to **Admin Panel** > **Settings**.
 4. On the left sidebar, locate the **Tools** section, and then select **Documents**.
