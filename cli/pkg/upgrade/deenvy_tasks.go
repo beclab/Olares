@@ -357,30 +357,126 @@ type deenvyRollout struct {
 	TargetVersion string
 }
 
+// canEnableOesFreeGate reports whether inbound coverage conditions allow opening
+// the SteadyStateGate (ShouldSkipEnvoySidecar). Partial coverage must refuse.
+func canEnableOesFreeGate(conds map[string]bool) bool {
+	if conds == nil {
+		return false
+	}
+	required := []string{
+		"EntranceExtAuthCovered",
+		"EntranceCookieCovered",
+		"EntranceProbeBypassReady",
+		"EntranceAuxCovered",
+		"RouteModeGateway",
+		"L4ProxyReady",
+	}
+	for _, k := range required {
+		if !conds[k] {
+			return false
+		}
+	}
+	return true
+}
+
 func (a *deenvyRollout) Execute(runtime connector.Runtime) error {
 	kube, err := kubeClientFromRuntime()
 	if err != nil {
 		return err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
-	// Enable oes-free admission BEFORE inventory accept so rebuilt pods drop oes.
 	st, err := loadDeenvyGate(ctx, kube)
 	if err != nil {
 		return err
 	}
-	if conditions := st.Conditions; conditions == nil {
-		st.Conditions = map[string]bool{}
+	if st.Checkpoint != cpCutover && st.Checkpoint != cpRollout {
+		return fmt.Errorf("deenvy: refuse oes-free gate; checkpoint=%s (need cutover)", st.Checkpoint)
 	}
-	st.Conditions["WorkloadRolloutComplete"] = true
+	dc, dcErr := dynamicClientFromRuntime()
+	conds := map[string]bool{}
+	if st.Conditions != nil {
+		for k, v := range st.Conditions {
+			conds[k] = v
+		}
+	}
+	if dcErr != nil {
+		return fmt.Errorf("deenvy: dynamic client for rollout gate: %w", dcErr)
+	}
+	eg, err := kube.AppsV1().Deployments("os-gateway").Get(ctx, "app-gateway-data", metav1.GetOptions{})
+	egOK := err == nil && eg.Status.ReadyReplicas >= 1
+	extOK, extErr := probeEntranceExtAuthCovered(ctx, dc)
+	if extErr != nil {
+		extOK = false
+	}
+	assignExtAuthDepConditions(conds, egOK, extOK)
+	_ = ensureCookieProbeOK(ctx, dc, conds)
+	_ = ensureProbeBypassProbeOK(ctx, dc, conds)
+	_ = ensureAuxProbeOK(ctx, dc, conds)
+	_ = ensureRouteModeGatewayOK(ctx, dc, conds)
+	l4, err := kube.AppsV1().Deployments("os-network").Get(ctx, "l4-bfl-proxy", metav1.GetOptions{})
+	conds["L4ProxyReady"] = err == nil && l4.Status.ReadyReplicas >= 1
+	if !canEnableOesFreeGate(conds) {
+		st.Phase = "Rollback"
+		st.Checkpoint = cpRollback
+		st.Message = fmt.Sprintf("refuse oes-free gate; coverage incomplete: %#v", conds)
+		st.Conditions = conds
+		_ = storeDeenvyGate(ctx, kube, st)
+		return fmt.Errorf("deenvy: refuse oes-free gate; coverage incomplete: %#v", conds)
+	}
+	// Open SteadyStateGate so admission may drop business sidecars on next Pod create.
+	st.Conditions = conds
+	st.Conditions["WorkloadRolloutComplete"] = false
 	st.Checkpoint = cpRollout
 	st.TargetVersion = a.TargetVersion
 	st.Phase = deenvyGateReady
-	st.Message = "oes-free gate enabled; workloads may rebuild without oes"
+	st.Message = "oes-free gate enabled; rolling user-space workloads"
 	if err := storeDeenvyGate(ctx, kube, st); err != nil {
 		return err
 	}
-	return nil
+	if err := restartUserSpaceDeployments(ctx, kube); err != nil {
+		logger.Warnf("deenvy: workload restart best-effort: %v", err)
+	}
+	st.Conditions["WorkloadRolloutComplete"] = true
+	st.Message = "oes-free gate enabled; workload restart triggered"
+	return storeDeenvyGate(ctx, kube, st)
+}
+
+// restartUserSpaceDeployments bumps a restart annotation so Pods recreate under
+// the oes-free admission gate (best-effort; Accept re-checks inventory).
+func restartUserSpaceDeployments(ctx context.Context, kube kubernetes.Interface) error {
+	nsList, err := kube.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+	now := time.Now().UTC().Format(time.RFC3339)
+	var firstErr error
+	for _, ns := range nsList.Items {
+		if !strings.HasPrefix(ns.Name, "user-space-") {
+			continue
+		}
+		deps, err := kube.AppsV1().Deployments(ns.Name).List(ctx, metav1.ListOptions{})
+		if err != nil {
+			if firstErr == nil {
+				firstErr = err
+			}
+			continue
+		}
+		for i := range deps.Items {
+			dep := &deps.Items[i]
+			if dep.Spec.Template.Annotations == nil {
+				dep.Spec.Template.Annotations = map[string]string{}
+			}
+			dep.Spec.Template.Annotations["olares.io/deenvy-restarted-at"] = now
+			if _, err := kube.AppsV1().Deployments(ns.Name).Update(ctx, dep, metav1.UpdateOptions{}); err != nil {
+				logger.Warnf("deenvy: restart Deployment %s/%s: %v", ns.Name, dep.Name, err)
+				if firstErr == nil {
+					firstErr = err
+				}
+			}
+		}
+	}
+	return firstErr
 }
 
 type deenvyAccept struct {
