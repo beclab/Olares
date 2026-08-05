@@ -171,6 +171,60 @@ func TestAssignProbeBypassDepConditions(t *testing.T) {
 	}
 }
 
+func TestAssignAuxDepConditions(t *testing.T) {
+	conds := map[string]bool{}
+	assignAuxDepConditions(conds, false)
+	if conds["EntranceAuxCovered"] {
+		t.Fatal("expected false")
+	}
+	assignAuxDepConditions(conds, true)
+	if !conds["EntranceAuxCovered"] {
+		t.Fatal("expected true")
+	}
+}
+
+func TestEvaluateEntranceAuxCoveredVacuousAndWS(t *testing.T) {
+	if !evaluateEntranceAuxCovered([]entranceAuxTarget{{
+		Namespace: "ns", SRRName: "a", HTTPRoute: "a", Needs: entranceAuxNeeds{},
+	}}, func(entranceAuxTarget) bool { return false }) {
+		t.Fatal("vacuous must be true")
+	}
+	if evaluateEntranceAuxCovered([]entranceAuxTarget{{
+		Namespace: "ns", SRRName: "a", HTTPRoute: "a", Needs: entranceAuxNeeds{WS: true},
+	}}, func(entranceAuxTarget) bool { return false }) {
+		t.Fatal("ws without ready must be false")
+	}
+}
+
+func TestImagesRouteBypassesExtAuthCLI(t *testing.T) {
+	good := &unstructured.Unstructured{Object: map[string]any{
+		"metadata": map[string]any{
+			"labels":      map[string]any{"gateway.olares.io/auth-kind": deenvyAuthKindImages},
+			"annotations": map[string]any{deenvyAuxExtAuthBypassAnn: "true"},
+		},
+		"spec": map[string]any{
+			"rules": []any{
+				map[string]any{
+					"matches": []any{
+						map[string]any{"path": map[string]any{"type": "PathPrefix", "value": "/images/upload"}},
+					},
+					"backendRefs": []any{
+						map[string]any{"name": deenvyAuxImagesSvc, "port": int64(8080)},
+					},
+				},
+			},
+		},
+	}}
+	if !imagesRouteBypassesExtAuth(good) {
+		t.Fatal("expected bypass ready")
+	}
+	bad := good.DeepCopy()
+	bad.SetAnnotations(nil)
+	if imagesRouteBypassesExtAuth(bad) {
+		t.Fatal("missing bypass ann must fail")
+	}
+}
+
 func TestProbeBypassObjectsReadyRequiresUALabel(t *testing.T) {
 	route := &unstructured.Unstructured{Object: map[string]any{
 		"metadata": map[string]any{"annotations": map[string]any{deenvyProbePathsAnn: "/healthz"}},
