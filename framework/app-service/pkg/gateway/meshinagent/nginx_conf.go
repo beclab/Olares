@@ -101,6 +101,10 @@ func RenderNginxConf(in NginxConfInput) string {
 		}
 		lb.WriteString("      proxy_http_version 1.1;\n")
 		lb.WriteString("      proxy_buffering off;\n")
+		// Stream the request body instead of spooling it to disk first: the
+		// sidecar runs under a 64Mi memory limit and buffering a large upload
+		// adds a full write-then-read round trip before the gateway sees it.
+		lb.WriteString("      proxy_request_buffering off;\n")
 		lb.WriteString(fmt.Sprintf("      proxy_read_timeout %s;\n", constants.MeshInProxyReadTimeout))
 		lb.WriteString(fmt.Sprintf("      proxy_send_timeout %s;\n", constants.MeshInProxySendTimeout))
 		lb.WriteString("      proxy_set_header Host $host;\n")
@@ -124,6 +128,11 @@ func RenderNginxConf(in NginxConfInput) string {
 	b.WriteString(failClosedNote + "\n")
 	b.WriteString("http {\n")
 	b.WriteString("  access_log off;\n")
+	// nginx -c replaces the image's main config, so nothing seeds a body limit
+	// and the built-in 1m default would reject every upload above it with 413.
+	// Set it once at http level so both the plain and TLS-offload servers, and
+	// any location added later, inherit it.
+	b.WriteString(fmt.Sprintf("  client_max_body_size %s;\n", constants.MeshInMaxBodySize))
 	b.WriteString("  js_import main from /tmp/mesh-in/bearer.js;\n")
 	b.WriteString(fmt.Sprintf("  # jwt path: %s\n", in.JWTTokenPath))
 	b.WriteString(fmt.Sprintf("  # certs: %s\n", in.CertDir))
