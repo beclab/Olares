@@ -19,7 +19,7 @@ The **post-install** surface for an Olares app. Inspect the app, list its entran
 | `domain get <app> <entrance>` | normal | VERIFIED | Per-entrance custom-domain setup |
 | `domain list <app>` | normal | VERIFIED | Every entrance's domain setup |
 | `domain set <app> <entrance> [flags]` | normal | UNVERIFIED | RMW update |
-| `domain finish <app> <entrance>` | normal | UNVERIFIED | Confirm third-party CNAME after DNS propagates |
+| `domain finish <app> <entrance>` | normal | UNVERIFIED | Record that the CNAME exists and start asynchronous verification |
 | `policy get <app> <entrance>` | normal | VERIFIED | Per-entrance auth policy |
 | `policy list <app>` | normal | VERIFIED | Every entrance's policy |
 | `policy set <app> <entrance> [flags]` | normal | UNVERIFIED | RMW update |
@@ -42,11 +42,9 @@ olares-cli settings apps policy get firefox www
 # 3. RMW update (unspecified flags survive).
 olares-cli settings apps domain set firefox www --third-level my-firefox
 olares-cli settings apps policy set firefox www --default-policy two_factor
-# 4. Third-party domains: confirm CNAME after DNS propagation.
-olares-cli settings apps domain set firefox www --third-party firefox.example.com \
-  --cert-file /path/to/cert.pem --key-file /path/to/key.pem
-olares-cli settings apps domain finish firefox www
 ```
+
+> **The two domain kinds are two different pipelines, not two steps of one.** `--third-level` is complete on its own — no DNS record, no `finish`, and no `cname_*` field ever becomes relevant. Only `--third-party` involves a certificate, a CNAME the user adds at their registrar, `finish`, and then polling. End-to-end procedure, including which stage an entrance is in and what to ask the user for: [`olares-chart-custom-domain.md`](../../olares-chart/references/olares-chart-custom-domain.md).
 
 ## `domain set` — RMW semantics + cert/key handling
 
@@ -66,8 +64,23 @@ olares-cli settings apps domain set firefox www --clear-third-level
 ```
 
 - **Unspecified flags survive** — RMW under the hood. Pass `--clear-*` to drop a dimension.
-- **Third-party domains REQUIRE both `--cert-file` AND `--key-file`** (unless `--clear-third-party`). The PEM bytes are POSTed verbatim as multi-line strings.
-- After `domain set --third-party`, run `domain finish` once the CNAME propagates. Without `finish`, the SPA shows "pending" status.
+- **Third-party domains REQUIRE both `--cert-file` AND `--key-file`** (unless `--clear-third-party`). The PEM bytes are POSTed verbatim as multi-line strings, so the files must be readable by the CLI's own user, and the key must be RSA.
+- **A third-party domain also requires the entrance's auth level to be `public`** — BFL rejects the write with `custom domain can not be set when auth level is private`. Change it with `auth-level set` first.
+- After `domain set --third-party`, the user adds a CNAME pointing at `cname_target`, and **then** `domain finish` records that they have done so. `finish` does not resolve DNS itself.
+
+## `domain get` — reading the third-party stage
+
+Adding or changing the third-party domain resets both status fields to empty / `unset`. `finish` moves `cname_target_status` to `set` and `cname_status` to `pending`; everything after that is the platform's own asynchronous check writing back. An RMW update that keeps the same third-party domain can preserve its existing state.
+
+| `cname_target_status` | `cname_status` | Means |
+|---|---|---|
+| empty or `unset` | empty or `unset` | Domain registered; **`finish` has not run**. Waiting on the user's DNS record |
+| `set` | `pending` | Activation submitted; the platform is verifying the CNAME and the certificate |
+| `set` | `active` | Live. The custom domain serves the entrance |
+| `set` | `cert-not-found` / `cert-invalid` | The certificate side failed, not DNS |
+| any | `timeout` / `error` | The CNAME did not resolve to `cname_target`, or the upstream check failed |
+
+`cname_target` is the user's Olares **zone** (e.g. `laresprime.olares.com`) and is the CNAME's *value*. Its *name* is the custom domain relative to the DNS zone managed at that provider (`media` for `media.n1.monster` in zone `n1.monster`, or `foo.bar` in zone `example.com`). Print the target verbatim; it cannot be derived from the app's current URL. Values outside this table are possible (the field is a plain string on the wire): show them as-is rather than guessing.
 
 ## `policy set` — replace sub-policies
 
@@ -132,7 +145,7 @@ olares-cli settings apps list --all            # also include uninstalled / pend
 
 - **Always run `entrances list <app>` before any per-entrance edit.** Don't assume entrance names; the user-facing names (e.g. `www`) often differ from the chart-defined service names.
 - **For `policy set`**, surface `policy get` output to the user BEFORE applying — the sub-policy replacement semantics are easy to misuse.
-- **For `domain set --third-party`**, remind the user to set up the CNAME at their DNS provider AND run `domain finish` once it propagates.
+- **For `domain set --third-party`**, run `domain get` first and act on that one stage only (table above). Hand the user the CNAME name/value split verbatim, wait for them to confirm the record exists, then `finish` — a full command list given up front reliably ends with `finish` run against a record nobody added yet.
 - **For UNVERIFIED verbs** (`env set`, `domain set/finish`, `policy set`, `auth-level set`), the result is provisional (not yet smoke-tested against a live instance) — confirm the outcome after running.
 
 ## Common errors
@@ -141,5 +154,7 @@ olares-cli settings apps list --all            # also include uninstalled / pend
 |---|---|---|
 | `entrance '<name>' not found on app '<app>'` | Typo / chart vs user-facing name mismatch | `apps entrances list <app>` to enumerate |
 | `--cert-file and --key-file are required when --third-party is set` | Third-party domain without cert | Provide both, or use `--clear-third-party` |
+| `custom domain can not be set when auth level is private` | Third-party domain on a `private` entrance | `auth-level set <app> <entrance> --level public`, then retry |
+| `app not set custom domain` from `domain finish` | `finish` ran on an entrance with no third-party domain — usually the wrong entrance | `domain get` that entrance and check `third_party_domain` first |
 | `--default-policy: invalid value 'X' (allowed: system, one_factor, two_factor, public)` | Typo | Use one of the four valid values |
 | `auth-level get is not supported (no upstream endpoint); use 'apps entrances list <app>' to read the AUTH LEVEL column` | Tried to GET auth-level | Read from `entrances list` |
