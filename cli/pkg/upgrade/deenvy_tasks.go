@@ -14,6 +14,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
@@ -108,6 +109,14 @@ func kubeClientFromRuntime() (kubernetes.Interface, error) {
 		return nil, err
 	}
 	return kubernetes.NewForConfig(cfg)
+}
+
+func dynamicClientFromRuntime() (dynamic.Interface, error) {
+	cfg, err := ctrl.GetConfig()
+	if err != nil {
+		return nil, err
+	}
+	return dynamic.NewForConfig(cfg)
 }
 
 func advanceDeenvyCheckpoint(ctx context.Context, kube kubernetes.Interface, targetVersion, checkpoint string, conditions map[string]bool, msg string) error {
@@ -214,11 +223,25 @@ func (a *deenvyWaitDeps) Execute(runtime connector.Runtime) error {
 				ok = false
 			}
 		}
-		// EG data plane
+		// EG data plane readiness is NOT ExtAuth coverage (true SecurityPolicy probe).
 		eg, err := kube.AppsV1().Deployments("os-gateway").Get(ctx, "app-gateway-data", metav1.GetOptions{})
 		egOK := err == nil && eg.Status.ReadyReplicas >= 1
-		conds["EntranceExtAuthCovered"] = egOK
-		if !egOK {
+		extOK := false
+		dc, dcErr := dynamicClientFromRuntime()
+		if dcErr != nil {
+			logger.Errorf("deenvy: dynamic client for ExtAuth probe: %v", dcErr)
+			ok = false
+		} else {
+			var probeErr error
+			extOK, probeErr = probeEntranceExtAuthCovered(ctx, dc)
+			if probeErr != nil {
+				logger.Errorf("deenvy: EntranceExtAuthCovered probe failed: %v", probeErr)
+				extOK = false
+				ok = false
+			}
+		}
+		assignExtAuthDepConditions(conds, egOK, extOK)
+		if !egOK || !extOK {
 			ok = false
 		}
 		// l4 retained platform Envoy
