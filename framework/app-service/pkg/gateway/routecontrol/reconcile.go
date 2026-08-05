@@ -128,6 +128,9 @@ func ReconcileSharedRoute(ctx context.Context, c client.Client, gw GatewayRef, s
 		if err := deleteEntranceProbeBypass(ctx, c, srr); err != nil {
 			return ReconcileResult{}, fmt.Errorf("delete entrance probe bypass: %w", err)
 		}
+		if err := deleteEntranceAux(ctx, c, srr, nil); err != nil {
+			return ReconcileResult{}, fmt.Errorf("delete entrance aux: %w", err)
+		}
 		if err := deleteJWKSReferenceGrant(ctx, c, srr); err != nil {
 			return ReconcileResult{}, fmt.Errorf("delete JWKS ReferenceGrant: %w", err)
 		}
@@ -216,6 +219,9 @@ func reconcileGatewayMode(ctx context.Context, c client.Client, gw GatewayRef, s
 		if err := applyOrDeleteEntranceProbeBypass(ctx, c, gw, srr, svc, port); err != nil {
 			return ReconcileResult{}, fmt.Errorf("apply entrance probe bypass: %w", err)
 		}
+		if err := applyOrDeleteEntranceAux(ctx, c, gw, srr, svc, port); err != nil {
+			return ReconcileResult{}, fmt.Errorf("apply entrance aux: %w", err)
+		}
 		// Ordinary entrances must not keep Shared JWT SecurityPolicy.
 		if err := deleteSecurityPolicy(ctx, c, srr); err != nil {
 			return ReconcileResult{}, fmt.Errorf("delete JWT SecurityPolicy for entrance: %w", err)
@@ -235,6 +241,9 @@ func reconcileGatewayMode(ctx context.Context, c client.Client, gw GatewayRef, s
 		}
 		if err := deleteEntranceProbeBypass(ctx, c, srr); err != nil {
 			return ReconcileResult{}, fmt.Errorf("delete stale entrance probe bypass: %w", err)
+		}
+		if err := deleteEntranceAux(ctx, c, srr, svc); err != nil {
+			return ReconcileResult{}, fmt.Errorf("delete stale entrance aux: %w", err)
 		}
 	}
 	return ReconcileResult{
