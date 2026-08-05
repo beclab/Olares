@@ -524,7 +524,8 @@ This call does NOT resolve DNS. It sets cname_target_status to "set"
 and cname_status to "pending", then returns; verification of both the
 CNAME and the certificate happens asynchronously afterwards. Running
 it before the record exists is accepted silently and simply leaves the
-entrance pending until the upstream check fails.
+entrance pending while the asynchronous checker retries; any later
+failure is visible only through "domain get".
 
 So run it AFTER you've pointed the DNS CNAME at cname_target (see
 "domain get"), then poll "domain get" until cname_status reads

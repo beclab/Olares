@@ -54,7 +54,7 @@ olares-cli settings apps domain get <app> <entrance>
 | `cname_target_status=set`, `cname_status=pending` | activating | Poll `domain get`. Nothing to change |
 | `cname_status=active` | done | Confirm over HTTPS and stop |
 | `cname_status=cert-not-found` / `cert-invalid` | the certificate, not DNS | Re-check the PEM pair (below), then `domain set` again |
-| `cname_status=timeout` / `error`, or `pending` for far too long | the CNAME never resolved to the target | Re-read `cname_target`, have them fix the record, then `finish` again |
+| `cname_status=timeout` / `error`, or `pending` for far too long | verification stalled or failed | Compare the live record with `cname_target`; fix and `finish` again if it differs. If it already matches, treat a persistent error as platform-side |
 | anything else | unknown to this skill | Show the value as-is. Never fold an unrecognized status into "probably fine" |
 
 ### The CNAME is where this goes wrong
@@ -89,13 +89,13 @@ olares-cli settings apps domain finish <app> <entrance>
 olares-cli settings apps domain get <app> <entrance>
 ```
 
-**`finish` does not check DNS.** It flips `cname_target_status` to `set` and `cname_status` to `pending`, and asks the platform to start verifying — that is all. Running it before the record exists is not an error and produces no warning; it just leaves the entrance in `pending` until the platform's own check eventually fails. So gate it on the developer confirming the record, not on a guess about propagation.
+**`finish` does not check DNS.** It flips `cname_target_status` to `set` and `cname_status` to `pending`, and asks the platform to start verifying — that is all. Running it before the record exists is not an error and produces no warning; it leaves the entrance pending while the asynchronous checker retries, and any later failure appears only in `domain get`. So gate it on the developer confirming the record, not on a guess about propagation.
 
 ## Hard constraints
 
 - **Auth level must be `public`.** A custom domain cannot carry Olares authentication, so the platform declines to combine the two: BFL rejects the write outright while the entrance is `private` (`custom domain can not be set when auth level is private`). Treat `public` as the requirement rather than probing what else the backend happens to tolerate — `internal` is not reachable from the internet, which is the entire point of the exercise.
 - **The certificate and its private key must be RSA, PEM, and readable by you.** `--cert-file` / `--key-file` are read verbatim from disk, so files in a root-only directory (`/etc/letsencrypt/live/...` is the usual one) have to be copied into a private temporary directory first — and copied, not moved, or renewal breaks. Keep the private-key copy mode `0600` and delete it after `domain set` returns. The cert is normally the full chain.
-- **Certbot defaults to ECDSA and must be told otherwise.** `--key-type rsa` at issue time. A default certbot key arrives as an ECDSA key inside a `-----BEGIN PRIVATE KEY-----` (PKCS#8) block, and the platform's validator assumes PKCS#8 means RSA; the result is a failure with nothing useful to read, not a clean rejection. This is worth stating to the developer before they issue, because re-issuing later is another round of DNS work.
+- **Certbot defaults to ECDSA and must be told otherwise.** `--key-type rsa` at issue time. A default certbot key arrives as an ECDSA key inside a `-----BEGIN PRIVATE KEY-----` (PKCS#8) block, and the platform's validator assumes PKCS#8 means RSA; the result is a failure with nothing useful to read, not a clean rejection. State this before issuance so the developer does not have to repeat the certificate challenge.
 - **`domain set` is read-modify-write.** Passing only `--third-level` leaves an existing third-party domain in place, and vice versa. Dropping one dimension needs `--clear-third-level` / `--clear-third-party`.
 - **The domain must be fully qualified.** `example.com` and `media.example.com` are fine; a bare label or a trailing-dot form is rejected before anything is stored.
 - **One entrance at a time.** Domain setup is per-entrance, and an app with several entrances needs the whole pipeline repeated per entrance that should get its own hostname.

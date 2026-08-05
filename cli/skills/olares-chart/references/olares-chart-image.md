@@ -30,7 +30,7 @@ flowchart TD
 
 ## The image-readiness gate
 
-Everything below applies to an image **you** build. Four of its properties stay invisible until the cluster rejects it: the architecture actually built, whether it can be pulled **without credentials**, whether the process even starts, and whether the node is still serving older layers under a tag you reused. Reading these rules is not the same as applying them — run the gate and look at its output, because each step is an assertion that can fail here, in seconds, instead of a deploy cycle later.
+Everything below applies to an image **you** build. Three of its properties stay invisible until the cluster rejects it: the architecture actually built, whether it can be pulled **without credentials**, and whether the process even starts. A fourth failure mode — a node continuing to serve cached layers under a reused tag — cannot be detected from the build host, so the hard rule is simpler: every rebuild gets a new tag. Reading these rules is not the same as applying them — run the gate and look at its output, because each step is an assertion that can fail here, in seconds, instead of a deploy cycle later.
 
 ```mermaid
 flowchart TD
