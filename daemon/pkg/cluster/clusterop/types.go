@@ -204,6 +204,10 @@ type Operation struct {
 	// It is an opaque kernel identifier and authorizes nothing.
 	HostBootID string `json:"hostBootId,omitempty"`
 
+	// CommandIssuedUntil is the persisted transient lock deadline. The command
+	// may outlive this daemon, so the deadline cannot live only in Manager.
+	CommandIssuedUntil time.Time `json:"commandIssuedUntil,omitempty"`
+
 	Steps []Step       `json:"steps"`
 	Nodes []NodeResult `json:"nodes"`
 }

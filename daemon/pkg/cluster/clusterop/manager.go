@@ -238,26 +238,6 @@ func (e *ConflictError) Error() string {
 	return fmt.Sprintf("cluster operation %s (%s) is already in progress", e.ActiveID, e.ActiveType)
 }
 
-// issuedPower is the gap between a machine being told to go down and it going.
-// The command has been accepted, so the operation is over and holds nothing;
-// but the control node is still answering and its own state machine still says
-// running, and a phase read from that alone puts the page back to "running" a
-// moment after the user asked for a reboot.
-//
-// It is set by the run that issued the command and never by loading a record
-// from disk: a daemon that is answering at all is running on a machine that is
-// on, and a shutdown is never promoted to succeeded, so its record says
-// command_issued for as long as it is kept.
-type issuedPower struct {
-	id    string
-	phase nodestatus.Phase
-
-	// until bounds the claim. A machine still answering this long after being
-	// told to go down did not go: "shutting down" would then be an answer that
-	// never becomes true, and the node's own state is the better one.
-	until time.Time
-}
-
 // Manager owns every cluster power operation this master has performed.
 type Manager struct {
 	deps Deps
@@ -267,7 +247,6 @@ type Manager struct {
 	order         []string
 	byRequest     map[string]string
 	activeID      string
-	issued        issuedPower
 	persistFailed map[string]bool
 }
 
@@ -310,6 +289,9 @@ func NewManager(deps Deps) (*Manager, error) {
 		m.ops[op.ID] = &op
 		m.order = append(m.order, op.ID)
 		m.byRequest[requestKey(op.Owner, op.Type, op.RequestID, op.Scope, op.Target, op.ClusterID)] = op.ID
+		if m.operationActive(&op, deps.Now()) {
+			m.activeID = op.ID
+		}
 	}
 	for _, id := range pendingReboots {
 		go m.confirmRebootWhenReady(id, boot)
@@ -445,8 +427,7 @@ func (m *Manager) Create(_ context.Context, req CreateRequest) (Operation, error
 		m.mu.Unlock()
 		return existing, nil
 	}
-	if m.activeID != "" {
-		active := m.ops[m.activeID]
+	if active := m.activeOperationLocked(); active != nil {
 		err := &ConflictError{ActiveID: active.ID, ActiveType: active.Type}
 		m.mu.Unlock()
 		return Operation{}, err
@@ -508,28 +489,38 @@ func (m *Manager) ActivePhase() (nodestatus.Phase, bool) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	// An operation still moving outranks the gap left by the last one.
-	if m.activeID != "" {
-		if phase, ok := PhaseFor(m.ops[m.activeID]); ok {
-			return phase, true
-		}
+	active := m.activeOperationLocked()
+	if active == nil {
+		return "", false
 	}
-	return m.issuedPhaseLocked()
+	if active.Status == StatusCommandIssued {
+		return phaseForType(active.Type)
+	}
+	return PhaseFor(active)
 }
 
-func (m *Manager) issuedPhaseLocked() (nodestatus.Phase, bool) {
-	if m.issued.phase == "" {
-		return "", false
+func (m *Manager) activeOperationLocked() *Operation {
+	now := m.deps.Now()
+	if m.activeID != "" {
+		if active := m.ops[m.activeID]; active != nil && m.operationActive(active, now) {
+			return active
+		}
+		m.activeID = ""
 	}
-	if !m.deps.Now().Before(m.issued.until) {
-		return "", false
+	for _, id := range m.order {
+		if active := m.ops[id]; active != nil && m.operationActive(active, now) {
+			m.activeID = id
+			return active
+		}
 	}
-	// A reboot this daemon could prove happened is no longer command_issued,
-	// and its phase ended with the boot that proved it.
-	if op, ok := m.ops[m.issued.id]; !ok || op.Status != StatusCommandIssued {
-		return "", false
+	return nil
+}
+
+func (m *Manager) operationActive(op *Operation, now time.Time) bool {
+	if !op.Status.Terminal() {
+		return true
 	}
-	return m.issued.phase, true
+	return op.Status == StatusCommandIssued && now.Before(op.CommandIssuedUntil)
 }
 
 // update applies fn to the stored operation and writes the result out. The
@@ -553,19 +544,8 @@ func (m *Manager) update(id string, fn func(*Operation)) bool {
 			at := op.UpdatedAt
 			op.FinishedAt = &at
 		}
-		if m.activeID == id {
+		if m.activeID == id && !m.operationActive(op, op.UpdatedAt) {
 			m.activeID = ""
-		}
-		if op.Status == StatusCommandIssued {
-			// The lock is released above and stays released: the machine may
-			// not have gone down, and another attempt has to be possible.
-			if phase, ok := phaseForType(op.Type); ok {
-				m.issued = issuedPower{
-					id:    id,
-					phase: phase,
-					until: op.UpdatedAt.Add(m.deps.Timeouts.Down),
-				}
-			}
 		}
 	}
 	if err := m.deps.Store.Save(*op); err != nil {

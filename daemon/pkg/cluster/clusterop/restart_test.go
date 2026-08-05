@@ -1,6 +1,7 @@
 package clusterop
 
 import (
+	"context"
 	"strings"
 	"testing"
 	"time"
@@ -156,8 +157,15 @@ func TestARebootedControlNodeIsConfirmedByTheNextDaemon(t *testing.T) {
 	c.hostBootID = "host-boot-1"
 	m, dir := newManager(t, c)
 
-	id := createOp(t, m, TypeReboot, "client-1").ID
-	op := awaitTerminal(t, m, id)
+	op, err := m.Create(context.Background(), CreateRequest{
+		Type: TypeReboot, RequestID: "client-1", Scope: ScopeNode, Target: "master-1",
+		ClusterID: "cluster-1", Owner: "alice@olares.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := op.ID
+	op = awaitTerminal(t, m, id)
 	if op.Status != StatusCommandIssued {
 		t.Fatalf("status = %q, want command_issued", op.Status)
 	}

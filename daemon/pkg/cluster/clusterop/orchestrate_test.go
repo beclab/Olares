@@ -1,6 +1,7 @@
 package clusterop
 
 import (
+	"context"
 	"errors"
 	"strings"
 	"testing"
@@ -120,6 +121,9 @@ func TestPrecheckAsksForTheCapabilityTheOperationNeeds(t *testing.T) {
 	rebooted := awaitTerminal(t, m, createOp(t, m, TypeReboot, "client-1").ID)
 	if rebooted.Status != StatusCommandIssued {
 		t.Fatalf("a missing shutdown capability blocked a reboot: %+v", rebooted)
+	}
+	if err := m.deps.Sleep(context.Background(), 2*m.deps.Timeouts.Ready); err != nil {
+		t.Fatal(err)
 	}
 
 	shutdown := awaitTerminal(t, m, createOp(t, m, TypeShutdown, "client-2").ID)

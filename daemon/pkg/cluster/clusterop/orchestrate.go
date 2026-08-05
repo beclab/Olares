@@ -122,7 +122,10 @@ func (m *Manager) runNode(ctx context.Context, id string, opType Type, target st
 		return
 	}
 	if opType == TypeShutdown {
-		m.update(id, func(op *Operation) { op.Status = StatusCommandIssued })
+		m.update(id, func(op *Operation) {
+			op.Status = StatusCommandIssued
+			op.CommandIssuedUntil = m.deps.Now().Add(m.deps.Timeouts.Down)
+		})
 		return
 	}
 	m.startStep(id, StepWorkerRestart)
@@ -600,6 +603,11 @@ func (m *Manager) powerMaster(ctx context.Context, id string, p plan, opType Typ
 		// Not succeeded: the machine that would confirm the result is the one
 		// carrying out the command.
 		op.Status = StatusCommandIssued
+		if opType == TypeReboot {
+			op.CommandIssuedUntil = m.deps.Now().Add(m.deps.Timeouts.Ready)
+		} else {
+			op.CommandIssuedUntil = m.deps.Now().Add(m.deps.Timeouts.Down)
+		}
 	})
 }
 

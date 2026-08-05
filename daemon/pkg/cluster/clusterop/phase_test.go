@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/beclab/Olares/daemon/pkg/cluster/inventory"
 	"github.com/beclab/Olares/daemon/pkg/cluster/nodestatus"
 )
 
@@ -39,10 +40,7 @@ func TestThePhaseSurvivesTheCommandBeingIssued(t *testing.T) {
 	}
 }
 
-// Holding the phase must not hold the lock. The operation is over as far as the
-// cluster is concerned, and a machine that did not go down has to be reachable
-// for another attempt.
-func TestHoldingThePhaseDoesNotBlockTheNextOperation(t *testing.T) {
+func TestCommandIssuedTransientBlocksTheNextOperation(t *testing.T) {
 	c := newCluster(master("master-1", "10.0.0.1"))
 	m, _ := newManager(t, c)
 
@@ -51,13 +49,12 @@ func TestHoldingThePhaseDoesNotBlockTheNextOperation(t *testing.T) {
 		t.Fatal("the phase was dropped as soon as the command was issued")
 	}
 
-	next, err := m.Create(context.Background(), CreateRequest{
+	_, err := m.Create(context.Background(), CreateRequest{
 		Type: TypeReboot, RequestID: "client-2", Owner: "alice@olares.com",
 	})
-	if err != nil {
-		t.Fatalf("an operation that only holds the phase blocked the next one: %v", err)
+	if err == nil {
+		t.Fatal("command_issued transient did not block the next operation")
 	}
-	awaitTerminal(t, m, next.ID)
 }
 
 // A machine still answering long after it was told to switch off did not switch
@@ -78,7 +75,7 @@ func TestThePhaseLapsesOnAMachineThatNeverWentDown(t *testing.T) {
 	}
 
 	// Long enough that a machine which was going to go down has done so.
-	if err := deps.Sleep(context.Background(), 2*deps.Timeouts.Down); err != nil {
+	if err := deps.Sleep(context.Background(), 2*deps.Timeouts.Ready); err != nil {
 		t.Fatalf("sleep: %v", err)
 	}
 
@@ -87,12 +84,7 @@ func TestThePhaseLapsesOnAMachineThatNeverWentDown(t *testing.T) {
 	}
 }
 
-// The daemon that comes up after the machine really did go down must not
-// resurrect the phase out of the record. The machine is demonstrably on: a
-// shutdown is never promoted to succeeded, so the record it left behind says
-// command_issued forever, and reading a phase off it would pin the cluster to
-// shutting_down for the rest of its life.
-func TestARestartedDaemonDoesNotResurrectTheIssuedPhase(t *testing.T) {
+func TestRestartedDaemonRestoresThePersistedShutdownTransient(t *testing.T) {
 	c := newCluster(master("master-1", "10.0.0.1"))
 	m, dir := newManager(t, c)
 
@@ -103,8 +95,8 @@ func TestARestartedDaemonDoesNotResurrectTheIssuedPhase(t *testing.T) {
 
 	restarted := newManagerAt(t, c, dir)
 
-	if phase, ok := restarted.ActivePhase(); ok {
-		t.Errorf("phase = %q, want none: the machine answering is proof it is on", phase)
+	if phase, ok := restarted.ActivePhase(); !ok || phase != nodestatus.PhaseShuttingDown {
+		t.Errorf("phase = %q, want persisted shutdown transient", phase)
 	}
 }
 
@@ -117,45 +109,17 @@ func TestAConfirmedRebootStopsImposingAPhase(t *testing.T) {
 
 	// The machine came back on another boot, which is the only proof there is.
 	c.hostBootID = "host-boot-2"
+	c.obs["master-1"] = inventory.Observation{Ready: true, BootID: "host-boot-2"}
 	restarted := newManagerAt(t, c, dir)
-
-	if phase, ok := restarted.ActivePhase(); ok {
-		t.Errorf("phase = %q, want none after the reboot was confirmed", phase)
-	}
-}
-
-// An operation still in flight decides the phase. The hold is for the gap after
-// one ends, and must not outrank the next one.
-func TestAnOperationInFlightOutranksTheHeldPhase(t *testing.T) {
-	c := newCluster(master("master-1", "10.0.0.1"))
-	release := make(chan struct{})
-	m, _ := newManager(t, c)
-
-	awaitTerminal(t, m, createOp(t, m, TypeShutdown, "client-1").ID)
-
-	c.mu.Lock()
-	c.onPowerSelf = func() { <-release }
-	c.mu.Unlock()
-
-	next, err := m.Create(context.Background(), CreateRequest{
-		Type: TypeReboot, RequestID: "client-2", Owner: "alice@olares.com",
-	})
-	if err != nil {
-		t.Fatalf("Create: %v", err)
-	}
 
 	deadline := time.Now().Add(5 * time.Second)
 	for {
-		phase, ok := m.ActivePhase()
-		if ok && phase == nodestatus.PhaseRestarting {
+		if got, ok := restarted.Get("op-a"); ok && got.Status == StatusSucceeded {
 			break
 		}
 		if time.Now().After(deadline) {
-			t.Fatalf("phase = %q ok = %v, want the reboot in flight to decide", phase, ok)
+			t.Fatal("confirmed reboot remained command_issued")
 		}
-		time.Sleep(2 * time.Millisecond)
+		time.Sleep(time.Millisecond)
 	}
-
-	close(release)
-	awaitTerminal(t, m, next.ID)
 }

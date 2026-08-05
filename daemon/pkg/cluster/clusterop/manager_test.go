@@ -357,6 +357,50 @@ func TestNodeOperationDispatchesOnlyItsTarget(t *testing.T) {
 	}
 }
 
+func TestNodeScopeControlRebootUsesPersistedMasterCommand(t *testing.T) {
+	c := newCluster(master("master-1", "10.0.0.1"))
+	m, _ := newManager(t, c)
+	op, err := m.Create(context.Background(), CreateRequest{
+		Type:      TypeReboot,
+		RequestID: "request-control",
+		Scope:     ScopeNode,
+		Target:    "master-1",
+		ClusterID: "cluster-1",
+		Owner:     "alice@olares.com",
+		Creds:     Credentials{Signature: "jws"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := awaitTerminal(t, m, op.ID)
+	if got.Status != StatusCommandIssued || got.HostBootID == "" || len(got.Nodes) != 1 ||
+		got.Nodes[0].NodeName != "master-1" || got.Nodes[0].Status != NodeCommandIssued {
+		t.Fatalf("control node operation = %+v", got)
+	}
+	if dispatch, power := c.counts(); dispatch != 0 || power != 1 {
+		t.Fatalf("dispatches=%d powerSelf=%d, want local master reboot only", dispatch, power)
+	}
+}
+
+func TestNodeScopeControlShutdownIsRejected(t *testing.T) {
+	c := newCluster(master("master-1", "10.0.0.1"))
+	m, _ := newManager(t, c)
+	op, err := m.Create(context.Background(), CreateRequest{
+		Type: TypeShutdown, RequestID: "request-control", Scope: ScopeNode, Target: "master-1",
+		ClusterID: "cluster-1", Owner: "alice@olares.com", Creds: Credentials{Signature: "jws"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := awaitTerminal(t, m, op.ID)
+	if got.Status != StatusFailed || got.Code != CodePowerUnsupported {
+		t.Fatalf("control node shutdown = %+v", got)
+	}
+	if _, power := c.counts(); power != 0 {
+		t.Fatalf("control node shutdown powered the host %d times", power)
+	}
+}
+
 func awaitTerminal(t *testing.T, m *Manager, id string) Operation {
 	t.Helper()
 	deadline := time.Now().Add(10 * time.Second)
@@ -496,26 +540,22 @@ func TestCreateDoesNotRunOnTheCallersContext(t *testing.T) {
 	}
 }
 
-func TestCreateDoesNotShareAnOperationBetweenOwners(t *testing.T) {
+func TestCommandIssuedTransientBlocksAnotherOwner(t *testing.T) {
 	c := newCluster(master("master-1", "10.0.0.1"))
 	m, _ := newManager(t, c)
 
 	first := createOp(t, m, TypeReboot, "client-1")
 	awaitTerminal(t, m, first.ID)
 
-	second, err := m.Create(context.Background(), CreateRequest{
+	_, err := m.Create(context.Background(), CreateRequest{
 		Type: TypeReboot, RequestID: "client-1", Owner: "bob@olares.com",
 	})
-	if err != nil {
-		t.Fatalf("Create for a second owner: %v", err)
+	if err == nil {
+		t.Fatal("another owner bypassed the command_issued transient")
 	}
-	if second.ID == first.ID {
-		t.Error("another owner's request id resolved to the first owner's operation")
-	}
-	awaitTerminal(t, m, second.ID)
 }
 
-func TestCreateAllowsANewOperationOnceTheLastOneSettled(t *testing.T) {
+func TestCreateAllowsANewOperationAfterTheTransientDeadline(t *testing.T) {
 	c := newCluster(master("master-1", "10.0.0.1"))
 	m, _ := newManager(t, c)
 
@@ -524,11 +564,14 @@ func TestCreateAllowsANewOperationOnceTheLastOneSettled(t *testing.T) {
 		t.Fatalf("status = %q, want command_issued", first.Status)
 	}
 
+	if err := m.deps.Sleep(context.Background(), 2*m.deps.Timeouts.Ready); err != nil {
+		t.Fatal(err)
+	}
 	next, err := m.Create(context.Background(), CreateRequest{
 		Type: TypeShutdown, RequestID: "client-2", Owner: "alice@olares.com",
 	})
 	if err != nil {
-		t.Fatalf("a settled operation still blocks the next one: %v", err)
+		t.Fatalf("an expired transient still blocks the next one: %v", err)
 	}
 	awaitTerminal(t, m, next.ID)
 }
@@ -653,6 +696,9 @@ func TestManagerPrunesOldRecords(t *testing.T) {
 		op := createOp(t, m, TypeReboot, req)
 		awaitTerminal(t, m, op.ID)
 		ids = append(ids, op.ID)
+		if err := m.deps.Sleep(context.Background(), 2*m.deps.Timeouts.Ready); err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	entries, err := os.ReadDir(dir)
@@ -685,6 +731,38 @@ func TestActivePhaseFollowsTheOperationInFlight(t *testing.T) {
 
 	close(release)
 	awaitTerminal(t, m, op.ID)
+}
+
+func TestPersistedCommandIssuedOperationBlocksUntilItsDeadline(t *testing.T) {
+	c := newCluster(master("master-1", "10.0.0.1"))
+	dir := filepath.Join(t.TempDir(), "operations")
+	deps := c.deps(t, dir)
+	now := deps.Now()
+	if err := deps.Store.Save(Operation{
+		ID:                 "op-issued",
+		Type:               TypeShutdown,
+		RequestID:          "request-issued",
+		Scope:              ScopeCluster,
+		Owner:              "alice@olares.com",
+		Status:             StatusCommandIssued,
+		CreatedAt:          now,
+		UpdatedAt:          now,
+		CommandIssuedUntil: now.Add(time.Minute),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	m, err := NewManager(deps)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if phase, ok := m.ActivePhase(); !ok || phase != nodestatus.PhaseShuttingDown {
+		t.Fatalf("phase = %q ok = %v, want persisted shutting_down", phase, ok)
+	}
+	if _, err := m.Create(context.Background(), CreateRequest{
+		Type: TypeReboot, RequestID: "request-next", Scope: ScopeCluster, Owner: "alice@olares.com",
+	}); err == nil {
+		t.Fatal("command_issued operation did not block another power operation")
+	}
 }
 
 // An operation that failed changes nothing about the machine, so it imposes
