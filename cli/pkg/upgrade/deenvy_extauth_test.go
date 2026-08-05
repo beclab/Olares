@@ -159,6 +159,31 @@ func TestProbeEntranceCookieCoveredMissing(t *testing.T) {
 	}
 }
 
+func TestAssignProbeBypassDepConditions(t *testing.T) {
+	conds := map[string]bool{}
+	assignProbeBypassDepConditions(conds, false)
+	if conds["EntranceProbeBypassReady"] {
+		t.Fatal("expected false")
+	}
+	assignProbeBypassDepConditions(conds, true)
+	if !conds["EntranceProbeBypassReady"] {
+		t.Fatal("expected true")
+	}
+}
+
+func TestProbeBypassObjectsReadyRequiresUALabel(t *testing.T) {
+	route := &unstructured.Unstructured{Object: map[string]any{
+		"metadata": map[string]any{"annotations": map[string]any{deenvyProbePathsAnn: "/healthz"}},
+	}}
+	pol := &unstructured.Unstructured{Object: map[string]any{
+		"metadata": map[string]any{"labels": map[string]any{}},
+		"spec":     map[string]any{"lua": []any{map[string]any{"inline": "x"}}},
+	}}
+	if probeBypassObjectsReady(route, pol) {
+		t.Fatal("missing UA label must fail")
+	}
+}
+
 func newDeenvyExtAuthDynamic(t *testing.T, objs ...runtime.Object) *fake.FakeDynamicClient {
 	t.Helper()
 	scheme := runtime.NewScheme()
@@ -168,4 +193,5 @@ func newDeenvyExtAuthDynamic(t *testing.T, objs ...runtime.Object) *fake.FakeDyn
 	}
 	return fake.NewSimpleDynamicClientWithCustomListKinds(scheme, listKinds, objs...)
 }
+
 
