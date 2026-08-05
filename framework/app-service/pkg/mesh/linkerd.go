@@ -95,8 +95,11 @@ func HasEntranceExtAuthPolicy(ctx context.Context, ns, srrName string) bool {
 	if err != nil {
 		return false
 	}
-	_, err = dc.Resource(securityPolicyGVR).Namespace(ns).Get(ctx, EntranceExtAuthPolicyName(srrName), metav1.GetOptions{})
-	return err == nil
+	obj, err := GetEntranceExtAuthPolicy(ctx, dc, ns, srrName)
+	if err != nil {
+		return false
+	}
+	return SecurityPolicyMatchesEntranceExtAuth(obj, srrName)
 }
 
 // ShouldSkipEnvoySidecar retires outbound/whole oes only when SteadyStateGate is Ready.
