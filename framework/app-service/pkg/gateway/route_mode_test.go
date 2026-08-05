@@ -97,6 +97,8 @@ func TestComputeRouteModePatch_autoGatewayForSharedApp(t *testing.T) {
 	resetGatewayReadyCacheForTest()
 	cluster.PrimeInClusterGatewayEnabledForTest(true)
 	defer cluster.ResetInClusterGatewayEnabledForTest()
+	cluster.PrimePlatformDomainForTest("olares.com")
+	defer cluster.ResetPlatformDomainForTest()
 
 	ctx := context.Background()
 	c := newFakeClient(t, newAcceptedGateway())
@@ -111,11 +113,13 @@ func TestComputeRouteModePatch_skipsNonSharedApp(t *testing.T) {
 	resetGatewayReadyCacheForTest()
 	cluster.PrimeInClusterGatewayEnabledForTest(true)
 	defer cluster.ResetInClusterGatewayEnabledForTest()
+	cluster.PrimePlatformDomainForTest("olares.com")
+	defer cluster.ResetPlatformDomainForTest()
 
 	ctx := context.Background()
 	c := newFakeClient(t, newAcceptedGateway())
 
-	// Per-user app: no options.shared label, no clusterScoped setting.
+	// Per-user app without Spec.Entrances: no auto gateway.
 	app := newSharedApp()
 	app.Labels = map[string]string{constants.AppApiVersionLabel: constants.AppVersionV3}
 	need, mode, err := ComputeRouteModePatch(ctx, c, app)
@@ -129,6 +133,49 @@ func TestComputeRouteModePatch_skipsNonSharedApp(t *testing.T) {
 	need, mode, err = ComputeRouteModePatch(ctx, c, app)
 	if err != nil || !need || mode != AnnotationRouteModeGateway {
 		t.Fatalf("shared without sharedEntrances: got need=%v mode=%q err=%v, want gateway patch", need, mode, err)
+	}
+}
+
+func TestComputeRouteModePatch_autoGatewayForOrdinaryEntrances(t *testing.T) {
+	resetGatewayReadyCacheForTest()
+	cluster.PrimeInClusterGatewayEnabledForTest(true)
+	defer cluster.ResetInClusterGatewayEnabledForTest()
+	cluster.PrimePlatformDomainForTest("olares.com")
+	defer cluster.ResetPlatformDomainForTest()
+
+	ctx := context.Background()
+	c := newFakeClient(t, newAcceptedGateway())
+
+	app := &appv1alpha1.Application{
+		ObjectMeta: metav1.ObjectMeta{Name: "files", Namespace: "user-space-alice"},
+		Spec: appv1alpha1.ApplicationSpec{
+			Name:      "files",
+			Namespace: "user-space-alice",
+			Entrances: []appv1alpha1.Entrance{{Name: "web", Host: "files-svc", Port: 80}},
+		},
+	}
+	need, mode, err := ComputeRouteModePatch(ctx, c, app)
+	if err != nil || !need || mode != AnnotationRouteModeGateway {
+		t.Fatalf("ordinary entrances: got need=%v mode=%q err=%v, want gateway", need, mode, err)
+	}
+}
+
+func TestComputeRouteModePatch_ordinaryEntrancesNeedPlatformReady(t *testing.T) {
+	resetGatewayReadyCacheForTest()
+	cluster.PrimeInClusterGatewayEnabledForTest(false)
+	defer cluster.ResetInClusterGatewayEnabledForTest()
+
+	ctx := context.Background()
+	c := newFakeClient(t, newAcceptedGateway())
+	app := &appv1alpha1.Application{
+		ObjectMeta: metav1.ObjectMeta{Name: "files"},
+		Spec: appv1alpha1.ApplicationSpec{
+			Entrances: []appv1alpha1.Entrance{{Name: "web", Host: "svc"}},
+		},
+	}
+	need, mode, err := ComputeRouteModePatch(ctx, c, app)
+	if err != nil || need || mode != "" {
+		t.Fatalf("gate off: got need=%v mode=%q err=%v, want no patch", need, mode, err)
 	}
 }
 
@@ -164,6 +211,8 @@ func TestApplyRouteModeAnnotation_mutatesApp(t *testing.T) {
 	resetGatewayReadyCacheForTest()
 	cluster.PrimeInClusterGatewayEnabledForTest(true)
 	defer cluster.ResetInClusterGatewayEnabledForTest()
+	cluster.PrimePlatformDomainForTest("olares.com")
+	defer cluster.ResetPlatformDomainForTest()
 
 	ctx := context.Background()
 	c := newFakeClient(t, newAcceptedGateway())

@@ -44,7 +44,8 @@ const gatewayReadyCacheTTL = 30 * time.Second
 // Priority: explicit annotation (P0, never overwritten) > manifest settings
 // gatewayRouteMode (P1) > automatic gateway for shared apps when the cluster
 // gate is on, the platform domain resolves and the app-gateway Gateway is
-// ready. Everything else is left untouched (direct semantics).
+// ready > automatic gateway for ordinary apps that declare entrances under the
+// same readiness checks. Everything else is left untouched (direct semantics).
 func ComputeRouteModePatch(ctx context.Context, c client.Client, app *appv1alpha1.Application) (needsPatch bool, mode string, err error) {
 	if app == nil {
 		return false, "", nil
@@ -71,8 +72,14 @@ func ComputeRouteModePatch(ctx context.Context, c client.Client, app *appv1alpha
 		}
 		return true, AnnotationRouteModeGateway, nil
 	}
-	// Ordinary apps: auto gateway only after de-envoy SteadyStateGate Ready
-	// (or when the cutover env is forced for tests/install).
+	// Ordinary apps with north-south entrances: auto gateway when platform is ready.
+	if ordinaryAppNeedsGateway(app) {
+		if !ordinaryAppGatewayPlatformReady(ctx, c) {
+			return false, "", nil
+		}
+		return true, AnnotationRouteModeGateway, nil
+	}
+	// Test/install force path (no entrance declaration required).
 	if ordinaryAppGatewayEligible(ctx) {
 		if c != nil && !appGatewayReady(ctx, c) {
 			return false, "", nil
@@ -80,6 +87,27 @@ func ComputeRouteModePatch(ctx context.Context, c client.Client, app *appv1alpha
 		return true, AnnotationRouteModeGateway, nil
 	}
 	return false, "", nil
+}
+
+// ordinaryAppNeedsGateway reports ordinary (non-shared) apps that expose entrances.
+func ordinaryAppNeedsGateway(app *appv1alpha1.Application) bool {
+	if app == nil || appcfg.IsGatewaySharedApp(app) {
+		return false
+	}
+	return len(app.Spec.Entrances) > 0
+}
+
+func ordinaryAppGatewayPlatformReady(ctx context.Context, c client.Client) bool {
+	if !cluster.GetInClusterGatewayEnabled(ctx) {
+		return false
+	}
+	if cluster.GetPlatformDomain(ctx) == "" {
+		return false
+	}
+	if c != nil && !appGatewayReady(ctx, c) {
+		return false
+	}
+	return true
 }
 
 func ordinaryAppGatewayEligible(ctx context.Context) bool {
