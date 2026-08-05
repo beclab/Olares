@@ -10,15 +10,6 @@ import (
 	"k8s.io/client-go/dynamic/fake"
 )
 
-// assignExtAuthDepConditions records platform EG readiness separately from ExtAuth coverage.
-func assignExtAuthDepConditions(conds map[string]bool, egReady, extAuthCovered bool) {
-	if conds == nil {
-		return
-	}
-	conds["AppGatewayDataReady"] = egReady
-	conds["EntranceExtAuthCovered"] = extAuthCovered
-}
-
 func TestAssignExtAuthDepConditionsDoesNotEquateEGReady(t *testing.T) {
 	conds := map[string]bool{}
 	assignExtAuthDepConditions(conds, true, false)

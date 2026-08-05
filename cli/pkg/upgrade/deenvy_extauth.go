@@ -52,6 +52,15 @@ func evaluateEntranceExtAuthCovered(targets []entranceExtAuthTarget, hasMatching
 	return true
 }
 
+// assignExtAuthDepConditions records platform EG readiness separately from ExtAuth coverage.
+func assignExtAuthDepConditions(conds map[string]bool, egReady, extAuthCovered bool) {
+	if conds == nil {
+		return
+	}
+	conds["AppGatewayDataReady"] = egReady
+	conds["EntranceExtAuthCovered"] = extAuthCovered
+}
+
 func securityPolicyMatchesEntranceExtAuth(obj *unstructured.Unstructured, expectedHTTPRoute string) bool {
 	if obj == nil {
 		return false
