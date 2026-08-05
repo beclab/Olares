@@ -502,7 +502,7 @@ const side = {
             link: "/zh/manual/space/manage-accounts",
           },
           {
-            text: "监控 Olares",
+            text: "监控 Olares 状态与流量",
             link: "/zh/manual/space/manage-olares",
           },
           {

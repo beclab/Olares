@@ -1,48 +1,76 @@
 ---
 outline: [2, 3]
-description: Monitor your Olares system status in Olares Space, including storage usage and traffic consumption.
+description: Monitor your Olares system status and traffic usage in Olares Space.
 head:
   - - meta
     - name: keywords
-      content: Olares, Olares Space, monitor Olares, system status, storage usage, traffic usage
+      content: Olares, Olares Space, monitor Olares, system status, resource usage, traffic usage
 ---
-# Monitor Olares in Olares Space
+# Monitor Olares status and traffic in Olares Space
 
-This page covers how to monitor your Olares system status in Olares Space, including storage usage and traffic consumption.
+This page covers how to monitor your Olares system status and traffic usage in Olares Space.
 
-## View system status
+## Before you begin
 
-You can monitor the system status of Olares through **Olares Space**:
+Before you can monitor your Olares in Olares Space, you must authorize Olares Space to access your system data. To do this, link your Olares Space account to the Olares device in LarePass:
 
-1. In your LarePass app, go to **Settings** > **Integration**.
-2. Click <i class="material-symbols-outlined">add</i> in the top right corner and link your Olares Space account to the Olares device. This authorizes Olares Space's access to your system data.
-3. Log into [**Olares Space**](https://space.olares.com/).
-4. On the **Olares** page, view **Storage usage** and **Traffic consumption** in the system panel.
+1. In the LarePass app on your mobile device, go to **Settings** > **Integrations**.
+2. Tap <i class="material-symbols-outlined">add</i> in the upper-right corner, and then select **Olares Space**.
 
-![System Panel](/images/how-to/space/my_olares.jpg#bordered)
+## Monitor resource usage
 
-:::info
-For self-hosted Olares users, it's important to monitor **Traffic statistics** for intranet penetration services, and **Storage usage** for backup services. These services may incur charges based on usage.
-:::
+Check CPU, memory, and disk usage to make sure your Olares has enough resources.
+
+1. On the **Olares** page, select the **Overview** tab.
+
+   ![Olares page, overview tab](/images/how-to/space/olares_page_overview.png#bordered)
+
+2. Locate the **Resource Monitor** section. It displays the real-time usage of CPU, memory, and disk.
+
+   | Metric | Description |
+   | ------ | ----------- |
+   | **CPU (Cores)** | Current CPU usage in cores and the total available cores. |
+   | **Memory (GB)** | Current memory usage in GB and the total available memory. |
+   | **Disk (GB)** | Current disk usage in GB and the total available disk space. |
+
+## View active hosts
+
+Check which hosts are currently running in your Olares cluster and their status.
+
+1. On the **Olares** page, select the **Overview** tab.
+2. Locate the **Active hosts** section. It displays the hosts currently running in the Olares cluster.
 
 ## Check traffic usage
 
-Monitor how much data you have used for remote access to avoid exceeding the monthly limit of your subscription plan.
+Check recent traffic usage to spot sudden increases and avoid exceeding your plan's limit.
 
-1. Log in to [Olares Space](https://space.olares.com/).
-2. From the left navigation pane, click **Usage & billing**.
+:::info
+For self-hosted Olares users, it's important to monitor traffic statistics for intranet penetration services. These services may incur charges based on usage.
+:::
+
+1. On the **Olares** page, select the **Usage statistics** tab.
+
+   ![Olares Space traffic usage](/images/how-to/space/olares_usage_statistics1.png#bordered)
+
+2. Locate the **Traffic Usage** section. By default, it shows traffic used by all users over the last 12 hours.
+3. To change the time range, select one from the **Last 12 hours** drop-down list.
+4. To view traffic for a specific user, select the account from the **All Users** drop-down list.
+
+## View billing-cycle traffic usage
+
+Review your monthly traffic usage to see how much data you have consumed in the current billing cycle.
+
+1. From the left navigation pane, select **Usage & billing**.
 
    ![Olares Space traffic details](/images/one/olares-space-traffic-usage.png#bordered)
 
-3. On the **Usage** tab, check the **Traffic details** section. By default, the traffic details of the latest billing cycle are displayed.
+2. On the **Usage** tab, locate the **Traffic details** section. By default, the traffic details of the latest billing cycle are displayed.
 
    - **Progress bar**: Shows how much data you have consumed against your plan's limit. For example, 0.05 GB/2.0 GB.
    - **Daily chart**: A bar chart displaying your data usage day by day, helping you spot sudden increases in activity.
 
-4. To check usage from a previous billing cycle:
+3. To view a previous billing period, select one from the date range drop-down list.
 
-   a. Click the date range dropdown list.
+   ![Olares Space traffic by month](/images/one/space-traffic-filter.png#bordered)
 
-      ![Olares Space traffic by month](/images/one/space-traffic-filter.png#bordered)
-
-   b. Select a specific billing period to view the traffic history for that month. For example, 2025-12-02 ~ 2026-01-02.
+4. To view traffic for a specific user, select the account from the **All Users** drop-down list.
