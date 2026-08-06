@@ -1,15 +1,13 @@
 ---
-description: Olares Space 为 Olares 提供基础设施服务，包括账户管理、自定义域名配置、数据备份和共享 GPU 资源。
+description: 探索 Olares Space 服务，包括云托管、账户管理、自定义域名、数据备份、流量和存储资源。
 head:
   - - meta
     - name: keywords
-      content: Olares, Olares Space, 基础设施服务, 数据备份, 自定义域名, 反向代理, GPU 资源
+      content: Olares, Olares Space, 云托管, 备份, 自定义域名, 反向代理
 ---
 # Olares Space 概述
 
-Olares Space 为 Olares 提供基础设施服务，包括数据备份、自定义域名配置、反向代理和共享 GPU 资源。
-
-Olares Space 账户与你的 Olares ID 或 DID 关联。你可以通过 LarePass 扫描二维码登录 Olares Space。
+Olares Space 通过基础设施服务扩展 Olares 环境，例如数据备份、自定义域名配置和反向代理。
 
 本章节介绍 Olares Space 的使用方法：
 
@@ -18,4 +16,4 @@ Olares Space 账户与你的 Olares ID 或 DID 关联。你可以通过 LarePass
 - [设置自定义域名](host-domain.md)
 - [管理域名成员](manage-domain.md)
 - [从 Olares Space 备份中恢复数据](backup-restore.md)
-- [计费](billing.md)
+- [计费与支付](billing.md)
