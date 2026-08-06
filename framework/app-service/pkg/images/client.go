@@ -63,6 +63,13 @@ func (imc *ImageManagerClient) Create(ctx context.Context, am *appv1alpha1.Appli
 	var im appv1alpha1.ImageManager
 	err = imc.Get(ctx, types.NamespacedName{Name: am.Name}, &im)
 	if err == nil {
+		// Reuse an in-flight IM (e.g. app-service restarted while download
+		// was still running). Delete+recreate would cancel the pull and
+		// lose progress for no benefit.
+		if im.Status.State == appv1alpha1.Downloading.String() {
+			klog.Infof("imagemanager name=%s already downloading, skip recreate", im.Name)
+			return nil
+		}
 		err = imc.Delete(ctx, &im)
 		if err != nil && !apierrors.IsNotFound(err) {
 			return err
