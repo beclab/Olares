@@ -66,4 +66,4 @@ Olares 提供灵活的备份方案，可对**指定文件夹**与 **Wise 应用*
 ## 资源
 
 - [恢复备份数据](restore.md)：从快照中恢复文件或应用数据。
-- [在 Olares Space 中备份和恢复](../../space/backup-restore.md)：管理 Olares 的云端备份。
+- [从 Olares Space 备份中恢复数据](../../space/backup-restore.md)：查看云端备份并将文件恢复到 Olares。

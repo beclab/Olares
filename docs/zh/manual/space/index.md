@@ -17,5 +17,5 @@ Olares Space 账户与你的 Olares ID 或 DID 关联。你可以通过 LarePass
 - [监控 Olares 状态与流量](manage-olares.md)
 - [设置自定义域名](host-domain.md)
 - [管理域名成员](manage-domain.md)
-- [备份与恢复](backup-restore.md)
+- [从 Olares Space 备份中恢复数据](backup-restore.md)
 - [计费](billing.md)

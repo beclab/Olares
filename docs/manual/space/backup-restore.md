@@ -5,9 +5,9 @@ head:
     - name: keywords
       content: Olares, Olares Space, backup, restore, snapshots, cloud backup
 ---
-# Back up and restore
+# Restore data from Olares Space backups
 
-Use Olares Space to back up your Olares data to the cloud and restore it when needed.
+Use Olares Space to view your cloud backups and restore files to your Olares.
 
 ## View backup storage usage
 
@@ -87,3 +87,7 @@ Understand charges for storage and bandwidth before using backup and restore ser
     b. On the **Restore details** page, click **Open in Files**. The Files app opens the folder containing the restored files.
 
       ![Restore details page](/images/how-to/space/restore_details.png#bordered){width=70%}
+
+## Resources
+
+- [Back up your data in Olares](../olares/settings/backup.md): Learn how to create backup tasks in Olares.

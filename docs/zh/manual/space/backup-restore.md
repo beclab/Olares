@@ -5,9 +5,9 @@ head:
     - name: keywords
       content: Olares, Olares Space, 备份恢复, 系统快照, 数据恢复, 云端备份
 ---
-# 备份与恢复
+# 从 Olares Space 备份中恢复数据
 
-使用 Olares Space 将 Olares 数据备份到云端，并在需要时恢复。
+使用 Olares Space 查看云端备份并将文件恢复到 Olares。
 
 ## 查看备份存储用量
 
@@ -87,3 +87,7 @@ head:
     b. 在 **Restore details** 页面，点击 **Open in Files**。文件管理器会打开包含恢复文件的文件夹。
 
       ![恢复详情页面](/images/how-to/space/restore_details.png#bordered){width=70%}
+
+## 资源
+
+- [备份 Olares 数据](../olares/settings/backup.md)：了解如何在 Olares 中创建备份任务。

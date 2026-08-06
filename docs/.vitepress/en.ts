@@ -524,7 +524,7 @@ const side = {
           ],
         },
         {
-          text: "Back up and restore",
+          text: "Restore data from Olares Space backups",
           link: "/manual/space/backup-restore",
         },
         { text: "Billing", link: "/manual/space/billing" },
