@@ -1,5 +1,5 @@
 ---
-description: 使用 Olares Space 备份和恢复 Olares 数据，包括查看备份用量、管理快照以及将文件恢复到 Olares。
+description: 从 Olares Space 云端备份中恢复文件，包括查看备份用量和快照。
 head:
   - - meta
     - name: keywords

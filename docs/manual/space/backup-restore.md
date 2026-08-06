@@ -1,9 +1,9 @@
 ---
-description: Back up and restore your Olares data using Olares Space, including viewing backup usage, managing snapshots, and restoring files to your Olares.
+description: Restore files from your Olares Space backups, including viewing backup usage and snapshots.
 head:
   - - meta
     - name: keywords
-      content: Olares, Olares Space, backup, restore, snapshots, cloud backup
+      content: Olares, Olares Space, restore, cloud backup, snapshots
 ---
 # Restore data from Olares Space backups
 
