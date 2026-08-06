@@ -150,7 +150,7 @@ func validateAppMetaData(v interface{}) error {
 			validation.Required.Error("metadata.version is required"),
 			isSemver.Error("metadata.version must be a valid semantic version (e.g. 1.2.3)"),
 		),
-		validation.Field(&m.AppID,
+		validation.Field(&m.Name,
 			validation.By(validateMetadataAppID),
 		),
 	)
@@ -164,14 +164,14 @@ func validateAppMetaData(v interface{}) error {
 func validateMetadataAppID(v interface{}) error {
 	s, ok := v.(string)
 	if !ok {
-		return fmt.Errorf("metadata.appid: unexpected type %T", v)
+		return fmt.Errorf("metadata.name: unexpected type %T", v)
 	}
 	if s == "" {
 		return nil
 	}
 	if IsReservedSystemAppID(s) {
 		return fmt.Errorf(
-			"metadata.appid %q collides with a reserved system app id; choose a different value (the loader normalizes appid to md5(metadata.name)[:8] anyway, so leaving the field empty is also fine)",
+			"%q collides with a reserved system app; choose a different value",
 			s,
 		)
 	}
