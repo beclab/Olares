@@ -48,7 +48,7 @@ data:
         shutdownManager:
           # Pin after publishing translator build with ExtAuth allowed_client_headers
           # + headers_to_add (IWO-SYSAPP-AUTH-03). Replace digest when new image ships.
-          image: beclab/envoy-gateway@sha256:292a7f1ee559d022f6ed35aa86328bc5ff932543e327e5bfe09d5343bb13cb75
+          image: beclab/envoy-gateway@sha256:43ad92a60cb4e4d5e2876fd5941d0078318cf8dd2bd8da5dcda133b76605a3db
       type: Kubernetes
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -432,7 +432,7 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: cluster.local
-        image: beclab/envoy-gateway@sha256:292a7f1ee559d022f6ed35aa86328bc5ff932543e327e5bfe09d5343bb13cb75
+        image: beclab/envoy-gateway@sha256:43ad92a60cb4e4d5e2876fd5941d0078318cf8dd2bd8da5dcda133b76605a3db
         imagePullPolicy: IfNotPresent
         livenessProbe:
           httpGet:
@@ -645,7 +645,7 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: cluster.local
-        image: beclab/envoy-gateway@sha256:292a7f1ee559d022f6ed35aa86328bc5ff932543e327e5bfe09d5343bb13cb75
+        image: beclab/envoy-gateway@sha256:43ad92a60cb4e4d5e2876fd5941d0078318cf8dd2bd8da5dcda133b76605a3db
         imagePullPolicy: IfNotPresent
         name: envoy-gateway-certgen
         securityContext:
