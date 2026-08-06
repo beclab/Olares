@@ -190,6 +190,11 @@ func ListEntranceExtAuthTargets(ctx context.Context, dc dynamic.Interface) ([]En
 		if class != entranceClassApplication {
 			continue
 		}
+		authLevel, _, _ := unstructured.NestedString(item.Object, "spec", "authLevel")
+		if strings.EqualFold(strings.TrimSpace(authLevel), "public") {
+			// public entrances have no ExtAuth PEP; treat as covered elsewhere.
+			continue
+		}
 		route := item.GetName()
 		if statusRoute, ok, _ := unstructured.NestedString(item.Object, "status", "httpRouteName"); ok && strings.TrimSpace(statusRoute) != "" {
 			route = statusRoute

@@ -166,3 +166,19 @@ func ShouldSkipOesForSharedCaller(ctx context.Context, kube kubernetes.Interface
 		inboundCovered,
 	)
 }
+
+// EvaluateSkipOesForGatewayCovered retires whole oes when the Application uses
+// route-mode=gateway and inbound + outbound coverage are satisfied.
+// SteadyStateGate Ready is intentionally not required here (release Accept only).
+func EvaluateSkipOesForGatewayCovered(routeModeGateway, hasEntrance, inboundCovered, hasProvider, outboundCovered bool) bool {
+	if !routeModeGateway {
+		return false
+	}
+	if hasEntrance && !inboundCovered {
+		return false
+	}
+	if hasProvider && !outboundCovered {
+		return false
+	}
+	return true
+}

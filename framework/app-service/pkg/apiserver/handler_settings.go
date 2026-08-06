@@ -787,6 +787,10 @@ func (h *Handler) setupAppAuthLevel(req *restful.Request, resp *restful.Response
 		case authLevel == constants.AuthorizationLevelOfPrivate &&
 			baselineAuth == constants.AuthorizationLevelOfPublic:
 			policy[entranceName]["default_policy"] = "system"
+		case authLevel == constants.AuthorizationLevelOfInternal:
+			// Keep Authelia rule explicit when switching to internal so LAN
+			// bypass still evaluates against system policy + real client IP.
+			policy[entranceName]["default_policy"] = "system"
 		}
 		policyStr, err := json.Marshal(policy)
 		if err != nil {

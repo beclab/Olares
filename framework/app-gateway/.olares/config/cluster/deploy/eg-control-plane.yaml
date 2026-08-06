@@ -46,6 +46,8 @@ data:
                     - imagePullPolicy: IfNotPresent
                       name: envoy-ratelimit
         shutdownManager:
+          # Pin after publishing translator build with ExtAuth allowed_client_headers
+          # + headers_to_add (IWO-SYSAPP-AUTH-03). Replace digest when new image ships.
           image: beclab/envoy-gateway@sha256:292a7f1ee559d022f6ed35aa86328bc5ff932543e327e5bfe09d5343bb13cb75
       type: Kubernetes
 ---

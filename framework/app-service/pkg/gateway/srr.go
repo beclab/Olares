@@ -125,9 +125,18 @@ func BuildSpecForEntrance(app *appv1alpha1.Application, entrance appv1alpha1.Ent
 		return srrv1alpha1.SharedRouteRegistrySpec{}, fmt.Errorf("service %s/%s has no usable TCP port", svc.Namespace, svc.Name)
 	}
 
+	authLevel := ""
+	if class == srrv1alpha1.EntranceClassApplication {
+		authLevel = strings.ToLower(strings.TrimSpace(entrance.AuthLevel))
+		if authLevel == "" {
+			authLevel = "private"
+		}
+	}
+
 	return srrv1alpha1.SharedRouteRegistrySpec{
 		RouteMode:     srrv1alpha1.RouteModeGateway,
 		EntranceClass: class,
+		AuthLevel:     authLevel,
 		HostPatterns:  []string{norm},
 		Upstream:      upstream,
 	}, nil

@@ -274,10 +274,17 @@ func deleteAutheliaExtAuthReferenceGrant(ctx context.Context, c client.Client, s
 }
 
 // needsEntranceExtAuth reports whether this SRR should get Authelia ExtAuth
-// (ordinary application entrances) instead of Shared JWT authn.
+// (ordinary application entrances that are not public) instead of Shared JWT authn.
 func needsEntranceExtAuth(srr *srrv1alpha1.SharedRouteRegistry) bool {
 	if srr == nil {
 		return false
 	}
-	return srr.Spec.EntranceClass == srrv1alpha1.EntranceClassApplication
+	if srr.Spec.EntranceClass != srrv1alpha1.EntranceClassApplication {
+		return false
+	}
+	level := strings.ToLower(strings.TrimSpace(srr.Spec.AuthLevel))
+	if level == "public" {
+		return false
+	}
+	return true
 }

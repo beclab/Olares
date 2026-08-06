@@ -225,3 +225,4 @@ func TestApplyRouteModeAnnotation_mutatesApp(t *testing.T) {
 		t.Fatalf("annotation = %q, want gateway", got)
 	}
 }
+

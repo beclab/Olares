@@ -136,7 +136,7 @@ func ApplyRouteModeAnnotation(ctx context.Context, c client.Client, app *appv1al
 // EnsureRouteModeAnnotation persists the route-mode annotation when the
 // automation policy requires it. It is the convergence path for Applications
 // whose annotation was removed or that were created before app-gateway became
-// ready; explicit operator annotations are never overwritten.
+// ready. Explicit operator annotations are never overwritten.
 func EnsureRouteModeAnnotation(ctx context.Context, c client.Client, app *appv1alpha1.Application) error {
 	need, mode, err := ComputeRouteModePatch(ctx, c, app)
 	if err != nil || !need {

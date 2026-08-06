@@ -7,6 +7,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -16,6 +17,7 @@ import (
 
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway/callerjwt"
 	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
+	"github.com/beclab/Olares/framework/app-service/pkg/mesh"
 )
 
 func mustHTTPRouteSectionName(t *testing.T, route *unstructured.Unstructured) string {
@@ -202,6 +204,62 @@ func TestReconcileSharedRouteGatewayModeApplicationSection(t *testing.T) {
 		t.Fatalf("parentRefs[0].name = %v, want app-gateway", got)
 	}
 	mustHTTPRouteSectionNameAbsent(t, route)
+}
+
+func TestReconcileSharedRouteGatewayModePublicApplicationSkipsAuthPolicies(t *testing.T) {
+	s := testScheme(t)
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Name: "demo-svc", Namespace: "demo-user"},
+		Spec:       corev1.ServiceSpec{Ports: []corev1.ServicePort{{Port: 8080, Protocol: corev1.ProtocolTCP}}},
+	}
+	srr := &srrv1alpha1.SharedRouteRegistry{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "app-demo-web",
+			Namespace: "demo-user",
+			UID:       "uid-public",
+			Labels:    map[string]string{"applications.app.bytetrade.io/owner": "alice"},
+		},
+		Spec: srrv1alpha1.SharedRouteRegistrySpec{
+			RouteMode:     srrv1alpha1.RouteModeGateway,
+			EntranceClass: srrv1alpha1.EntranceClassApplication,
+			AuthLevel:     "public",
+			HostPatterns:  []string{"demo.*.olares.com"},
+			Upstream:      srrv1alpha1.UpstreamRef{ServiceName: "demo-svc", Port: 8080},
+		},
+	}
+	c := fake.NewClientBuilder().WithScheme(s).WithObjects(svc, srr).Build()
+
+	if _, err := ReconcileSharedRoute(context.Background(), c, GatewayRef{}, srr); err != nil {
+		t.Fatalf("ReconcileSharedRoute: %v", err)
+	}
+
+	extAuth := &unstructured.Unstructured{}
+	extAuth.SetGroupVersionKind(schema.GroupVersionKind{
+		Group: "gateway.envoyproxy.io", Version: "v1alpha1", Kind: "SecurityPolicy",
+	})
+	err := c.Get(context.Background(), types.NamespacedName{
+		Namespace: "demo-user", Name: mesh.EntranceExtAuthPolicyName(srr.Name),
+	}, extAuth)
+	if err == nil {
+		t.Fatal("public application must not create entrance ExtAuth SecurityPolicy")
+	}
+	if !apierrors.IsNotFound(err) {
+		t.Fatalf("unexpected get ExtAuth err: %v", err)
+	}
+
+	jwt := &unstructured.Unstructured{}
+	jwt.SetGroupVersionKind(schema.GroupVersionKind{
+		Group: "gateway.envoyproxy.io", Version: "v1alpha1", Kind: "SecurityPolicy",
+	})
+	err = c.Get(context.Background(), types.NamespacedName{
+		Namespace: "demo-user", Name: srr.Name,
+	}, jwt)
+	if err == nil {
+		t.Fatal("public application must not create Shared JWT SecurityPolicy")
+	}
+	if !apierrors.IsNotFound(err) {
+		t.Fatalf("unexpected get JWT policy err: %v", err)
+	}
 }
 
 func TestReconcileSharedRouteGatewayModeEmptyEntranceClassDefaultsToShared(t *testing.T) {

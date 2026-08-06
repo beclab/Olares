@@ -132,6 +132,14 @@ func (r *SharedRouteProducerReconciler) reconcileApp(ctx context.Context, app *a
 			klog.Warningf("SRR skip: app=%s entrance#%d has empty host", app.Spec.Name, i)
 			continue
 		}
+		// Prefer EffectiveEntrances AuthLevel (settings / per-user overlay) over
+		// install-time Spec.Entrances baseline.
+		for _, e := range app.EffectiveEntrances(strings.TrimSpace(app.Spec.Owner)) {
+			if e.Name == entrance.Name {
+				entrance.AuthLevel = e.AuthLevel
+				break
+			}
+		}
 		svc, err := resolveApplicationEntranceService(ctx, r.Client, app, entrance.Host)
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("resolve backing service for application entrance %q: %w", entrance.Name, err)

@@ -226,6 +226,24 @@ func reconcileGatewayMode(ctx context.Context, c client.Client, gw GatewayRef, s
 		if err := deleteSecurityPolicy(ctx, c, srr); err != nil {
 			return ReconcileResult{}, fmt.Errorf("delete JWT SecurityPolicy for entrance: %w", err)
 		}
+	} else if srr.Spec.EntranceClass == srrv1alpha1.EntranceClassApplication {
+		// public (or otherwise non-ExtAuth) application entrances: no Authelia
+		// ExtAuth and no Shared JWT — clear any stale PEP objects.
+		if err := deleteEntranceExtAuthPolicy(ctx, c, srr); err != nil {
+			return ReconcileResult{}, fmt.Errorf("delete entrance ExtAuth for public: %w", err)
+		}
+		if err := deleteEntranceCookiePolicy(ctx, c, srr); err != nil {
+			return ReconcileResult{}, fmt.Errorf("delete entrance Cookie EEP for public: %w", err)
+		}
+		if err := deleteEntranceProbeBypass(ctx, c, srr); err != nil {
+			return ReconcileResult{}, fmt.Errorf("delete entrance probe bypass for public: %w", err)
+		}
+		if err := deleteEntranceAux(ctx, c, srr, svc); err != nil {
+			return ReconcileResult{}, fmt.Errorf("delete entrance aux for public: %w", err)
+		}
+		if err := deleteSecurityPolicy(ctx, c, srr); err != nil {
+			return ReconcileResult{}, fmt.Errorf("delete JWT SecurityPolicy for public entrance: %w", err)
+		}
 	} else {
 		if err := applySecurityPolicy(ctx, c, srr); err != nil {
 			return ReconcileResult{}, fmt.Errorf("apply SecurityPolicy: %w", err)

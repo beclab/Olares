@@ -19,6 +19,22 @@ func TestNeedsEntranceExtAuth(t *testing.T) {
 	}) {
 		t.Fatal("application class needs extAuth")
 	}
+	if !needsEntranceExtAuth(&srrv1alpha1.SharedRouteRegistry{
+		Spec: srrv1alpha1.SharedRouteRegistrySpec{
+			EntranceClass: srrv1alpha1.EntranceClassApplication,
+			AuthLevel:     "private",
+		},
+	}) {
+		t.Fatal("private needs extAuth")
+	}
+	if needsEntranceExtAuth(&srrv1alpha1.SharedRouteRegistry{
+		Spec: srrv1alpha1.SharedRouteRegistrySpec{
+			EntranceClass: srrv1alpha1.EntranceClassApplication,
+			AuthLevel:     "public",
+		},
+	}) {
+		t.Fatal("public must skip extAuth")
+	}
 	if needsEntranceExtAuth(&srrv1alpha1.SharedRouteRegistry{
 		Spec: srrv1alpha1.SharedRouteRegistrySpec{EntranceClass: srrv1alpha1.EntranceClassShared},
 	}) {

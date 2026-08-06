@@ -205,6 +205,10 @@ func (wh *Webhook) CreatePatch(
 		inboundCovered := false
 		if hasEntrance && appConfig != nil {
 			for _, e := range appConfig.Entrances {
+				if strings.EqualFold(strings.TrimSpace(e.AuthLevel), constants.AuthorizationLevelOfPublic) {
+					inboundCovered = true
+					continue
+				}
 				ok, err := wh.shouldSkipInboundEntranceSidecar(ctx, appConfig, req.Namespace, e.Name)
 				if err != nil {
 					klog.Errorf("deenvy: probe inbound coverage for entrance=%s pod=%s/%s: %v", e.Name, req.Namespace, pod.Name, err)
@@ -223,9 +227,19 @@ func (wh *Webhook) CreatePatch(
 		) {
 			needsEnvoySidecar = false
 		}
+		// Gateway route-mode + inbound/outbound coverage: retire oes without
+		// waiting for whole-cluster SteadyStateGate (release Accept stays separate).
+		outboundCovered := len(perms) == 0 || injectMeshOutAgent
+		if needsEnvoySidecar && wh != nil {
+			if mesh.EvaluateSkipOesForGatewayCovered(
+				wh.appRouteModeGateway(ctx, appConfig, req.Namespace),
+				hasEntrance, inboundCovered, len(perms) > 0, outboundCovered,
+			) {
+				needsEnvoySidecar = false
+			}
+		}
 		// SteadyStateGate Ready + coverage: retire oes for non-Shared paths too.
 		if needsEnvoySidecar && wh != nil && wh.kubeClient != nil && mesh.ShouldSkipEnvoySidecar(ctx, wh.kubeClient) {
-			outboundCovered := len(perms) == 0 || injectMeshOutAgent
 			inboundOK := !hasEntrance || inboundCovered
 			if mesh.CanRemoveOES(ctx, wh.kubeClient, inboundOK, outboundCovered, true) {
 				needsEnvoySidecar = false
@@ -386,12 +400,33 @@ func (wh *Webhook) PatchLinkerdAdminProbesOnly(
 func (wh *Webhook) shouldInjectEnvoySidecar(ctx context.Context, injectPolicy bool, appConfig *appcfg.ApplicationConfig, pod *corev1.Pod) bool {
 	// R1 does not blanket-retire outbound oes when Linkerd is ready
 	// (ShouldSkipEnvoySidecar stays false until L2-c). Shared-caller skip is
-	// applied in CreatePatch via ShouldSkipOesForSharedCaller.
+	// applied in CreatePatch via ShouldSkipOesForSharedCaller; gateway coverage
+	// skip via EvaluateSkipOesForGatewayCovered.
 	_ = ctx
 	if appConfig == nil {
 		return injectPolicy
 	}
 	return injectPolicy || len(appConfig.PodsSelectors) == 0 || wh.isSelected(appConfig.PodsSelectors, pod)
+}
+
+// appRouteModeGateway reports whether the owning Application is opted into
+// gateway.olares.io/route-mode=gateway. Fail-closed on lookup errors.
+func (wh *Webhook) appRouteModeGateway(ctx context.Context, appConfig *appcfg.ApplicationConfig, ns string) bool {
+	if appConfig == nil || wh == nil || wh.dynamicClient == nil {
+		return false
+	}
+	applicationName, err := apputils.FmtAppMgrName(appConfig.AppName, appConfig.OwnerName, ns)
+	if err != nil {
+		return false
+	}
+	app, err := wh.dynamicClient.AppV1alpha1().Applications().Get(ctx, applicationName, metav1.GetOptions{})
+	if err != nil {
+		if !apierrors.IsNotFound(err) {
+			klog.V(2).Infof("webhook: get Application %s for route-mode: %v", applicationName, err)
+		}
+		return false
+	}
+	return gateway.IsOptedIn(app)
 }
 
 func (wh *Webhook) shouldSkipInboundEntranceSidecar(ctx context.Context, appConfig *appcfg.ApplicationConfig, ns, entranceName string) (bool, error) {

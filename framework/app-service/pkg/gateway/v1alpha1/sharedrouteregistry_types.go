@@ -76,6 +76,12 @@ type SharedRouteRegistrySpec struct {
 	// +kubebuilder:default=shared
 	EntranceClass EntranceClass `json:"entranceClass,omitempty"`
 
+	// AuthLevel is the Authelia authorization level for application entrances
+	// (public|private|internal). Empty means private. Shared SRRs leave this empty.
+	// +optional
+	// +kubebuilder:validation:Enum=public;private;internal
+	AuthLevel string `json:"authLevel,omitempty"`
+
 	// HostPatterns must be lowercase DNS names without a port.
 	// +kubebuilder:validation:MinItems=1
 	HostPatterns []string `json:"hostPatterns"`

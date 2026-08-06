@@ -133,6 +133,9 @@ func TestBuildSpecForEntranceApplication(t *testing.T) {
 	if spec.EntranceClass != srrv1alpha1.EntranceClassApplication {
 		t.Errorf("entranceClass = %q, want %q", spec.EntranceClass, srrv1alpha1.EntranceClassApplication)
 	}
+	if spec.AuthLevel != "private" {
+		t.Errorf("authLevel = %q, want private default", spec.AuthLevel)
+	}
 }
 
 func TestBuildSpecForEntranceApplicationUsesThirdLevelOverride(t *testing.T) {

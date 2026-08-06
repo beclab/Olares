@@ -156,3 +156,24 @@ func TestShouldSkipOesForSharedCallerUsesLinkerdReady(t *testing.T) {
 		t.Fatal("SR-06': entrance without inbound coverage must keep oes")
 	}
 }
+
+func TestEvaluateSkipOesForGatewayCovered(t *testing.T) {
+	if EvaluateSkipOesForGatewayCovered(false, true, true, false, true) {
+		t.Fatal("non-gateway must keep oes")
+	}
+	if EvaluateSkipOesForGatewayCovered(true, true, false, false, true) {
+		t.Fatal("gateway without inbound coverage must keep oes")
+	}
+	if EvaluateSkipOesForGatewayCovered(true, false, false, true, false) {
+		t.Fatal("gateway with provider but no outbound coverage must keep oes")
+	}
+	if !EvaluateSkipOesForGatewayCovered(true, true, true, false, true) {
+		t.Fatal("gateway + inbound covered + no provider must skip oes")
+	}
+	if !EvaluateSkipOesForGatewayCovered(true, true, true, true, true) {
+		t.Fatal("gateway + inbound + outbound covered must skip oes")
+	}
+	if !EvaluateSkipOesForGatewayCovered(true, false, false, false, false) {
+		t.Fatal("gateway non-entrance pod without provider must skip oes")
+	}
+}
