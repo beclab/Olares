@@ -87,7 +87,7 @@ export const useCases: UseCase[] = [
   { title: "Penpot", link: "/use-cases/penpot", category: "Productivity", description: "Self-hosted design workspace, with Cursor via MCP", descriptionZh: "自托管设计工作空间，可通过 MCP 接入 Cursor" },
   { title: "Plane", link: "/use-cases/plane", category: "Productivity", description: "Self-hosted project management", descriptionZh: "自托管的项目管理" },
   { title: "RNA Sequencing", link: "/use-cases/rna-sequencing", category: "Productivity", description: "GPU-accelerated single-cell RNA analysis", descriptionZh: "GPU 加速的单细胞 RNA 测序分析" },
-  { title: "OnlyOffice", link: "/use-cases/onlyoffice", category: "Productivity", description: "Self-hosted document editing and collaboration", descriptionZh: "自托管的文档编辑与协作" },
+  { title: "OnlyOffice", link: "/use-cases/onlyoffice", category: "Productivity", description: "Edit documents in your browser", descriptionZh: "在浏览器中编辑文档" },
   { title: "JupyterHub", link: "/use-cases/jupyterhub", category: "Developer tools", description: "Multi-user Jupyter notebook environment", descriptionZh: "多用户 Jupyter Notebook 环境" },
   { title: "PDFMathTranslate", link: "/use-cases/pdfmathtranslate", category: "Utilities", description: "Translate scientific PDFs while preserving layout", descriptionZh: "翻译科学 PDF 并保留排版" },
   { title: "Context7", link: "/use-cases/context7", category: "Utilities", description: "Give AI coding assistants up-to-date docs via MCP", descriptionZh: "通过 MCP 为 AI 编程助手提供最新文档" },
