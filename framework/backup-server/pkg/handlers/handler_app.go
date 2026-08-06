@@ -26,7 +26,7 @@ const (
 )
 
 var appNameMap = map[string]string{
-	"wise": "knowledge",
+	"wisev3": "knowledge",
 }
 
 type AppHandler struct {
