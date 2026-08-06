@@ -36,3 +36,23 @@ To bypass this security restriction and use your microphone:
 1. In the top-right corner of the Open WebUI window on the Olares desktop, select <i class="material-symbols-outlined">open_in_new</i> to open it in a new browser tab.
 2. In the new browser tab, select the microphone icon in the chat interface.
 3. When the browser prompts you, allow microphone access.
+
+## Open WebUI does not search the web
+
+If the AI response does not include web search results, work through the following checks:
+
+1. **Search is enabled for the conversation.**  
+   In the chat area, click the **Integrations** icon, and make sure **Web Search** is enabled.
+
+2. **The embedding model is configured and reachable.**  
+   Go to **Admin Panel** > **Settings** > **Tools** > **Documents**,  and verify the embedding model settings. If the embedding model is missing or unreachable, Open WebUI cannot process web search results.
+
+3. **SearXNG returns results for your query.**  
+   Open SearXNG from the Launchpad and run the same search. If SearXNG returns no results, check that its search engines are enabled and working in **Preferences** > **ENGINES**.
+
+4. **The web loader is being blocked.**  
+   If you need full-page content and the default web loader fails because of anti-scraping measures, go to **Admin Panel** > **Settings** > **Tools** > **Web Search**, and then enable **Bypass Web Loader**. This uses search result summaries instead of fetching full pages.
+
+   :::tip
+   For reliable full-page retrieval, install and configure Firecrawl as the web loader. See [Use Firecrawl as a web page loader](firecrawl.md#configure-open-webui).
+   :::

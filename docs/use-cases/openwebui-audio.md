@@ -119,3 +119,7 @@ Modern web browsers block microphone access for applications running inside the 
    :::tip Non-English speech
    The default STT and TTS models might not perform well for non-English languages. You can switch to different models in the Speaches Playground if needed. For instructions on changing models, see [Manage models in Speaches](speaches.md#manage-models).
    :::
+
+## Learn more
+
+- [Open WebUI common issues](openwebui-common-issues.md): Resolve common issues with Open WebUI.

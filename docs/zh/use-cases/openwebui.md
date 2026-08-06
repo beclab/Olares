@@ -97,3 +97,4 @@ Open WebUI 是一个自托管的聊天界面，让你在 Olares 设备上与本�
 - [配置音频](openwebui-audio.md)：启用语音转文字和文字转语音。
 - [启用网页搜索](openwebui-search.md)：为聊天增加网页搜索能力。
 - [使用知识库](openwebui-knowledge.md)：上传文档并创建用于 RAG 的知识库。
+- [Open WebUI 常见问题](openwebui-common-issues.md)：解决 Open WebUI 的常见问题。

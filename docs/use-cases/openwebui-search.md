@@ -114,24 +114,6 @@ Test the feature to ensure the AI successfully retrieves up-to-date information 
 
    ![Web search results in Open WebUI](/images/manual/use-cases/openwebui-web-search-results1.png#bordered)
 
-## FAQ
+## Learn more
 
-### Why doesn't Open WebUI search the web?
-
-If the AI response does not include web search results, work through the following checks:
-
-1. **Search is enabled for the conversation.**  
-   In the chat area, click the **Integrations** icon, and make sure **Web Search** is enabled.
-
-2. **The embedding model is configured and reachable.**  
-   Go to **Admin Panel** > **Settings** > **Tools** > **Documents**,  and verify the embedding model settings. If the embedding model is missing or unreachable, Open WebUI cannot process web search results.
-
-3. **SearXNG returns results for your query.**  
-   Open SearXNG from the Launchpad and run the same search. If SearXNG returns no results, check that its search engines are enabled and working in **Preferences** > **ENGINES**.
-
-4. **The web loader is being blocked.**  
-   If you need full-page content and the default web loader fails because of anti-scraping measures, go to **Admin Panel** > **Settings** > **Tools** > **Web Search**, and then enable **Bypass Web Loader**. This uses search result summaries instead of fetching full pages.
-
-   :::tip
-   For reliable full-page retrieval, install and configure Firecrawl as the web loader. See [Use Firecrawl as a web page loader](firecrawl.md#configure-open-webui).
-   :::
+- [Open WebUI common issues](openwebui-common-issues.md): Resolve common issues with Open WebUI.

@@ -94,3 +94,4 @@ Once you connect a model, you are ready to use the chat interface.
 - [Configure audio](openwebui-audio.md): Enable speech-to-text and text-to-speech.
 - [Enable web search](openwebui-search.md): Add web search capabilities to your chats.
 - [Use knowledge base](openwebui-knowledge.md): Upload documents and create a knowledge base for RAG.
+- [Open WebUI common issues](openwebui-common-issues.md): Resolve common issues with Open WebUI.

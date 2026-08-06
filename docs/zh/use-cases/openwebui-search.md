@@ -115,24 +115,6 @@ doc_updated: "2026-08-05"
 
    ![Web search results in Open WebUI](/images/manual/use-cases/openwebui-web-search-results1.png#bordered)
 
-## 常见问题
+## 了解更多
 
-### 为什么 Open WebUI 没有进行网页搜索？
-
-如果 AI 回复中没有包含网页搜索结果，请按以下顺序排查：
-
-1. **对话中已启用搜索功能。**  
-   在聊天区域，点击 **Integrations** 图标，并确保 **Web Search** 已启用。
-
-2. **嵌入模型已配置且可访问。**  
-   前往 **Admin Panel** > **Settings** > **Tools** > **Documents**，验证嵌入模型设置。如果嵌入模型缺失或无法访问，Open WebUI 将无法处理网页搜索结果。
-
-3. **SearXNG 能返回你的查询结果。**  
-   从启动台打开 SearXNG，运行相同的搜索。如果 SearXNG 没有返回结果，请检查 **Preferences** > **ENGINES** 中是否已启用可用的搜索引擎。
-
-4. **网页加载器被拦截。**  
-   如果你需要完整网页内容，而默认网页加载器因反爬取机制失败，请前往 **Admin Panel** > **Settings** > **Tools** > **Web Search**，然后启用 **Bypass Web Loader**。这将使用搜索结果摘要，而不是获取完整页面。
-
-   :::tip
-   如需稳定地检索完整网页，请安装并配置 Firecrawl 作为网页加载器。参阅[将 Firecrawl 用作网页加载器](firecrawl.md#configure-open-webui)。
-   :::
+- [Open WebUI 常见问题](openwebui-common-issues.md#open-webui-无法搜索网页)：解决 Open WebUI 的常见问题。

@@ -123,3 +123,7 @@ doc_updated: "2026-07-30"
    :::tip 非英语语音
    默认 STT 和 TTS 模型对非英语语言的效果可能不佳。如有需要，你可以在 Speaches Playground 中切换到其他模型。关于更换模型的说明，可参阅[在 Speaches 中管理模型](speaches.md#manage-models)。
    :::
+
+## 了解更多
+
+- [Open WebUI 常见问题](openwebui-common-issues.md)：解决 Open WebUI 的常见问题。
