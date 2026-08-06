@@ -17,11 +17,15 @@ var (
 	sharedRouteRegistryGVR = schema.GroupVersionResource{
 		Group: "gateway.olares.io", Version: "v1alpha1", Resource: "sharedrouteregistries",
 	}
+	referenceGrantGVR = schema.GroupVersionResource{
+		Group: "gateway.networking.k8s.io", Version: "v1", Resource: "referencegrants",
+	}
 )
 
 const (
-	entranceClassApplication = "application"
-	authKindEntranceExtAuth  = "entrance-ext-auth"
+	entranceClassApplication     = "application"
+	authKindEntranceExtAuth      = "entrance-ext-auth"
+	autheliaVerifyPathNormalized = "/api/verify"
 )
 
 // EntranceExtAuthTarget is one ordinary entrance that must have ExtAuth SecurityPolicy.
@@ -30,6 +34,8 @@ type EntranceExtAuthTarget struct {
 	SRRName   string
 	// HTTPRoute is the expected SecurityPolicy targetRef.name (usually SRR name).
 	HTTPRoute string
+	// Owner is the install owner used to locate user-system-{owner} Authelia Grant.
+	Owner string
 }
 
 // EvaluateEntranceExtAuthCovered is the pure ExtAuth coverage predicate.
@@ -49,8 +55,55 @@ func EvaluateEntranceExtAuthCovered(targets []EntranceExtAuthTarget, hasMatching
 	return true
 }
 
+// NormalizeEntranceExtAuthPath returns the canonical Authelia verify path for
+// comparison (trim space and trailing slash). Empty input yields "".
+func NormalizeEntranceExtAuthPath(path string) string {
+	p := strings.TrimSpace(path)
+	p = strings.TrimSuffix(p, "/")
+	return p
+}
+
+// EntranceExtAuthPathOK reports whether the SecurityPolicy CR declares verify
+// via pathOverride (preferred) or path, normalized to /api/verify.
+func EntranceExtAuthPathOK(obj *unstructured.Unstructured) bool {
+	if obj == nil {
+		return false
+	}
+	pathOverride, _, _ := unstructured.NestedString(obj.Object, "spec", "extAuth", "http", "pathOverride")
+	path, _, _ := unstructured.NestedString(obj.Object, "spec", "extAuth", "http", "path")
+	p := NormalizeEntranceExtAuthPath(pathOverride)
+	if p == "" {
+		p = NormalizeEntranceExtAuthPath(path)
+	}
+	return p == autheliaVerifyPathNormalized
+}
+
+// EntranceExtAuthAcceptedOK is fail-closed when status says not Accepted.
+// Missing status is allowed (policy still reconciling).
+func EntranceExtAuthAcceptedOK(obj *unstructured.Unstructured) bool {
+	if obj == nil {
+		return false
+	}
+	conditions, found, err := unstructured.NestedSlice(obj.Object, "status", "conditions")
+	if err != nil || !found || len(conditions) == 0 {
+		return true
+	}
+	for _, item := range conditions {
+		m, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		typ, _ := m["type"].(string)
+		status, _ := m["status"].(string)
+		if typ == "Accepted" && status != "True" {
+			return false
+		}
+	}
+	return true
+}
+
 // SecurityPolicyMatchesEntranceExtAuth reports whether an object is a valid
-// entrance ExtAuth SecurityPolicy for the expected HTTPRoute name.
+// entrance ExtAuth SecurityPolicy for the expected HTTPRoute name, with verify path.
 func SecurityPolicyMatchesEntranceExtAuth(obj *unstructured.Unstructured, expectedHTTPRoute string) bool {
 	if obj == nil {
 		return false
@@ -64,6 +117,12 @@ func SecurityPolicyMatchesEntranceExtAuth(obj *unstructured.Unstructured, expect
 			return false
 		}
 	}
+	if !EntranceExtAuthPathOK(obj) {
+		return false
+	}
+	if !EntranceExtAuthAcceptedOK(obj) {
+		return false
+	}
 	expectedHTTPRoute = strings.TrimSpace(expectedHTTPRoute)
 	if expectedHTTPRoute == "" {
 		return true
@@ -74,6 +133,45 @@ func SecurityPolicyMatchesEntranceExtAuth(obj *unstructured.Unstructured, expect
 		return false
 	}
 	return name == expectedHTTPRoute
+}
+
+// AutheliaExtAuthReferenceGrantName matches routecontrol grant naming.
+func AutheliaExtAuthReferenceGrantName(fromNS string) string {
+	raw := "allow-securitypolicy-authelia-" + fromNS
+	if len(raw) <= 63 {
+		return raw
+	}
+	return strings.TrimRight(raw[:63], "-")
+}
+
+// ownerFromAppNamespace extracts owner suffix from app or user-system namespaces.
+func ownerFromAppNamespace(ns string) string {
+	const prefix = "user-system-"
+	if strings.HasPrefix(ns, prefix) {
+		return strings.TrimPrefix(ns, prefix)
+	}
+	parts := strings.Split(ns, "-")
+	if len(parts) >= 2 {
+		return parts[len(parts)-1]
+	}
+	return ""
+}
+
+// HasAutheliaExtAuthReferenceGrant reports whether the Authelia Grant exists.
+func HasAutheliaExtAuthReferenceGrant(ctx context.Context, dc dynamic.Interface, fromNS, owner string) bool {
+	if dc == nil || fromNS == "" || owner == "" {
+		return false
+	}
+	ns := "user-system-" + owner
+	name := AutheliaExtAuthReferenceGrantName(fromNS)
+	_, err := dc.Resource(referenceGrantGVR).Namespace(ns).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		if !apierrors.IsNotFound(err) {
+			klog.Errorf("mesh: get Authelia ReferenceGrant %s/%s failed: %v", ns, name, err)
+		}
+		return false
+	}
+	return true
 }
 
 // ListEntranceExtAuthTargets lists application-class SRRs that require ExtAuth.
@@ -96,10 +194,18 @@ func ListEntranceExtAuthTargets(ctx context.Context, dc dynamic.Interface) ([]En
 		if statusRoute, ok, _ := unstructured.NestedString(item.Object, "status", "httpRouteName"); ok && strings.TrimSpace(statusRoute) != "" {
 			route = statusRoute
 		}
+		owner := ""
+		if labels := item.GetLabels(); labels != nil {
+			owner = strings.TrimSpace(labels["applications.app.bytetrade.io/owner"])
+		}
+		if owner == "" {
+			owner = ownerFromAppNamespace(item.GetNamespace())
+		}
 		out = append(out, EntranceExtAuthTarget{
 			Namespace: item.GetNamespace(),
 			SRRName:   item.GetName(),
 			HTTPRoute: route,
+			Owner:     owner,
 		})
 	}
 	return out, nil
@@ -118,7 +224,8 @@ func GetEntranceExtAuthPolicy(ctx context.Context, dc dynamic.Interface, ns, srr
 }
 
 // ProbeEntranceExtAuthCovered lists application entrances and verifies each has
-// a matching ExtAuth SecurityPolicy (existence + targetRef). Fail-closed on API errors.
+// a matching ExtAuth SecurityPolicy (existence + targetRef + path + Accepted)
+// and Authelia ReferenceGrant. Fail-closed on API errors.
 func ProbeEntranceExtAuthCovered(ctx context.Context, dc dynamic.Interface) (bool, error) {
 	targets, err := ListEntranceExtAuthTargets(ctx, dc)
 	if err != nil {
@@ -136,7 +243,11 @@ func ProbeEntranceExtAuthCovered(ctx context.Context, dc dynamic.Interface) (boo
 			return false
 		}
 		if !SecurityPolicyMatchesEntranceExtAuth(obj, t.HTTPRoute) {
-			klog.Errorf("mesh: entrance ExtAuth SecurityPolicy %s/%s targetRef mismatch want HTTPRoute=%s", t.Namespace, obj.GetName(), t.HTTPRoute)
+			klog.Errorf("mesh: entrance ExtAuth SecurityPolicy %s/%s mismatch want HTTPRoute=%s path=/api/verify", t.Namespace, obj.GetName(), t.HTTPRoute)
+			return false
+		}
+		if t.Owner == "" || !HasAutheliaExtAuthReferenceGrant(ctx, dc, t.Namespace, t.Owner) {
+			klog.Errorf("mesh: Authelia ReferenceGrant missing for entrance ExtAuth ns=%s owner=%s", t.Namespace, t.Owner)
 			return false
 		}
 		return true

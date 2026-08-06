@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
@@ -98,7 +100,8 @@ func BuildSpecForEntrance(app *appv1alpha1.Application, entrance appv1alpha1.Ent
 	var pattern string
 	switch class {
 	case srrv1alpha1.EntranceClassApplication:
-		pattern = fmt.Sprintf("%s.*.%s", appv1alpha1.EntranceID(appid, entranceIndex, entranceCount), platformDomain)
+		prefix := applicationEntranceHostPrefix(app, entranceIndex, entranceCount, appid)
+		pattern = fmt.Sprintf("%s.*.%s", prefix, platformDomain)
 	default:
 		var err error
 		isShared := appv1alpha1.IsShared(app)
@@ -128,6 +131,32 @@ func BuildSpecForEntrance(app *appv1alpha1.Application, entrance appv1alpha1.Ent
 		HostPatterns:  []string{norm},
 		Upstream:      upstream,
 	}, nil
+}
+
+// applicationEntranceHostPrefix resolves the third-level host prefix for an
+// ordinary application entrance, matching l4's
+// ResolveEntranceIDWithDefaultThirdLevelDomainOverride (friendly domain override).
+func applicationEntranceHostPrefix(app *appv1alpha1.Application, entranceIndex, entranceCount int, appid string) string {
+	if app == nil {
+		return appv1alpha1.EntranceID(appid, entranceIndex, entranceCount)
+	}
+	entrances := app.Spec.Entrances
+	if entranceIndex < 0 || entranceIndex >= len(entrances) || entranceCount != len(entrances) {
+		return appv1alpha1.EntranceID(appid, entranceIndex, entranceCount)
+	}
+	ptrs := make([]*appv1alpha1.Entrance, len(entrances))
+	for i := range entrances {
+		ptrs[i] = &entrances[i]
+	}
+	var configs []appv1alpha1.DefaultThirdLevelDomainConfig
+	if app.Spec.Settings != nil {
+		if raw := strings.TrimSpace(app.Spec.Settings["defaultThirdLevelDomainConfig"]); raw != "" {
+			if err := json.Unmarshal([]byte(raw), &configs); err != nil {
+				klog.Warningf("shared-route: parse defaultThirdLevelDomainConfig for app=%s failed: %v", app.Spec.Name, err)
+			}
+		}
+	}
+	return appv1alpha1.ResolveEntranceIDWithDefaultThirdLevelDomainOverride(ptrs, entranceIndex, appid, configs)
 }
 
 // pickHTTPPort prefers the entrance-declared port; otherwise the first TCP port

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -13,9 +14,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/cluster"
 	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
 )
+
+// routeModePlatformRequeue paces retries while platform domain / app-gateway
+// readiness is not yet available for auto gateway opt-in.
+const routeModePlatformRequeue = 15 * time.Second
 
 // SharedRouteProducerReconciler turns shared gateway-mode Applications into
 // SharedRouteRegistry objects (one per sharedEntrance). It is the SRR producer;
@@ -35,12 +41,27 @@ func (r *SharedRouteProducerReconciler) Reconcile(ctx context.Context, req recon
 		// Application gone: owner-ref GC removes the SRRs, nothing to do.
 		return reconcile.Result{}, client.IgnoreNotFound(err)
 	}
-	return reconcile.Result{}, r.reconcileApp(ctx, app)
+	return r.reconcileApp(ctx, app)
 }
 
-func (r *SharedRouteProducerReconciler) reconcileApp(ctx context.Context, app *appv1alpha1.Application) error {
+func (r *SharedRouteProducerReconciler) reconcileApp(ctx context.Context, app *appv1alpha1.Application) (reconcile.Result, error) {
 	if app == nil || app.Spec.Namespace == "" || app.Spec.Name == "" {
-		return nil
+		return reconcile.Result{}, nil
+	}
+	// Zone / Gateway may arrive after the Application. Requeue instead of
+	// returning success with no route-mode write (false-green empty reconcile).
+	// Still delete SRRs when not opted in so stale gateway state is not left behind.
+	if wait, delay := routeModeWaitForPlatform(ctx, r.Client, app); wait {
+		klog.V(2).Infof("shared-route-producer: requeue app=%s/%s: platform not ready for route-mode",
+			app.Namespace, app.Name)
+		if !IsOptedIn(app) {
+			if err := DeleteAllForApp(ctx, r.Client, app); err != nil {
+				klog.Errorf("shared-route-producer: delete SRRs while waiting for platform app=%s/%s: %v",
+					app.Namespace, app.Name, err)
+				return reconcile.Result{}, err
+			}
+		}
+		return reconcile.Result{RequeueAfter: delay}, nil
 	}
 	// Convergence path for the route-mode automation: shared apps created
 	// before app-gateway was ready, or whose annotation was removed, get the
@@ -48,23 +69,25 @@ func (r *SharedRouteProducerReconciler) reconcileApp(ctx context.Context, app *a
 	// another reconcile that then passes the opt-in check below.
 	if err := EnsureRouteModeAnnotation(ctx, r.Client, app); err != nil {
 		klog.Warningf("ensure gateway route-mode for app %s err=%v", app.Spec.Name, err)
+		return reconcile.Result{}, err
 	}
 	if !IsOptedIn(app) {
-		return DeleteAllForApp(ctx, r.Client, app)
+		return reconcile.Result{}, DeleteAllForApp(ctx, r.Client, app)
 	}
 
 	// Remove the legacy "shared-<appName>" SRR, then write one per entrance.
 	if err := Delete(ctx, r.Client, app); err != nil {
-		return fmt.Errorf("remove legacy SRR: %w", err)
+		return reconcile.Result{}, fmt.Errorf("remove legacy SRR: %w", err)
 	}
 
 	platformDomain := cluster.GetPlatformDomain(ctx)
 	if platformDomain == "" {
-		return fmt.Errorf("platformDomain is empty")
+		klog.Warningf("shared-route-producer: platformDomain empty, requeue app=%s/%s", app.Namespace, app.Name)
+		return reconcile.Result{RequeueAfter: routeModePlatformRequeue}, nil
 	}
 	appid := strings.ToLower(strings.TrimSpace(app.Spec.Appid))
 	if appid == "" {
-		return fmt.Errorf("invalid appid in app.spec.appid for app %q", app.Spec.Name)
+		return reconcile.Result{}, fmt.Errorf("invalid appid in app.spec.appid for app %q", app.Spec.Name)
 	}
 	desired := make(map[string]struct{}, len(app.Spec.SharedEntrances)+len(app.Spec.Entrances))
 
@@ -75,23 +98,23 @@ func (r *SharedRouteProducerReconciler) reconcileApp(ctx context.Context, app *a
 			continue
 		}
 		if entrance.Host == "" {
-			return fmt.Errorf("shared entrance %q on app %s has empty host", entrance.Name, app.Spec.Name)
+			return reconcile.Result{}, fmt.Errorf("shared entrance %q on app %s has empty host", entrance.Name, app.Spec.Name)
 		}
 		svc, err := ResolveSharedEntranceService(ctx, r.Client, app, entrance.Host)
 		if err != nil {
-			return fmt.Errorf("resolve backing service for entrance %q: %w", entrance.Name, err)
+			return reconcile.Result{}, fmt.Errorf("resolve backing service for entrance %q: %w", entrance.Name, err)
 		}
 		spec, err := BuildSpecForEntrance(app, entrance, i, len(app.Spec.SharedEntrances), svc, platformDomain,
 			srrv1alpha1.EntranceClassShared)
 		if err != nil {
-			return fmt.Errorf("build SRR spec for entrance %q: %w", entrance.Name, err)
+			return reconcile.Result{}, fmt.Errorf("build SRR spec for entrance %q: %w", entrance.Name, err)
 		}
 		name := ResourceNameForEntrance(appid, entrance.Name)
 		if err := CheckLogicalPatternUniqueness(ctx, r.Client, spec.HostPatterns[0], app.Spec.Namespace, name); err != nil {
-			return fmt.Errorf("uniqueness check for entrance %q: %w", entrance.Name, err)
+			return reconcile.Result{}, fmt.Errorf("uniqueness check for entrance %q: %w", entrance.Name, err)
 		}
 		if _, err := ReconcileForEntrance(ctx, r.Client, app, entrance, spec); err != nil {
-			return err
+			return reconcile.Result{}, err
 		}
 		desired[name] = struct{}{}
 		klog.V(1).Infof("SRR reconciled app=%s/%s entrance=%s name=%s hostPatterns=%v upstream=%s/%s:%d",
@@ -111,19 +134,19 @@ func (r *SharedRouteProducerReconciler) reconcileApp(ctx context.Context, app *a
 		}
 		svc, err := resolveApplicationEntranceService(ctx, r.Client, app, entrance.Host)
 		if err != nil {
-			return fmt.Errorf("resolve backing service for application entrance %q: %w", entrance.Name, err)
+			return reconcile.Result{}, fmt.Errorf("resolve backing service for application entrance %q: %w", entrance.Name, err)
 		}
 		spec, err := BuildSpecForEntrance(app, entrance, i, len(app.Spec.Entrances), svc, platformDomain,
 			srrv1alpha1.EntranceClassApplication)
 		if err != nil {
-			return fmt.Errorf("build SRR spec for application entrance %q: %w", entrance.Name, err)
+			return reconcile.Result{}, fmt.Errorf("build SRR spec for application entrance %q: %w", entrance.Name, err)
 		}
 		name := ResourceNameForEntranceApp(appid, entrance.Name)
 		if err := CheckLogicalPatternUniqueness(ctx, r.Client, spec.HostPatterns[0], app.Spec.Namespace, name); err != nil {
-			return fmt.Errorf("uniqueness check for application entrance %q: %w", entrance.Name, err)
+			return reconcile.Result{}, fmt.Errorf("uniqueness check for application entrance %q: %w", entrance.Name, err)
 		}
 		if _, err := ReconcileForEntrance(ctx, r.Client, app, entrance, spec); err != nil {
-			return err
+			return reconcile.Result{}, err
 		}
 		desired[name] = struct{}{}
 		klog.V(1).Infof("application SRR reconciled app=%s/%s entrance=%s name=%s hostPatterns=%v upstream=%s/%s:%d",
@@ -132,9 +155,39 @@ func (r *SharedRouteProducerReconciler) reconcileApp(ctx context.Context, app *a
 	}
 
 	if err := PruneEntranceSRRs(ctx, r.Client, app, desired); err != nil {
-		return fmt.Errorf("prune stale SRRs: %w", err)
+		return reconcile.Result{}, fmt.Errorf("prune stale SRRs: %w", err)
 	}
-	return nil
+	return reconcile.Result{}, nil
+}
+
+// routeModeWaitForPlatform reports whether auto gateway opt-in should wait for
+// platform domain / app-gateway readiness instead of returning success with no write.
+func routeModeWaitForPlatform(ctx context.Context, c client.Client, app *appv1alpha1.Application) (bool, time.Duration) {
+	if app == nil || IsOptedIn(app) {
+		return false, 0
+	}
+	if _, ok := explicitRouteModeAnnotation(app); ok {
+		return false, 0
+	}
+	if s := settingsRouteMode(app); s == AnnotationRouteModeDirect {
+		return false, 0
+	}
+	if appcfg.IsGatewaySharedApp(app) {
+		if !cluster.GetInClusterGatewayEnabled(ctx) {
+			return false, 0
+		}
+		if cluster.GetPlatformDomain(ctx) == "" || (c != nil && !appGatewayReady(ctx, c)) {
+			return true, routeModePlatformRequeue
+		}
+		return false, 0
+	}
+	if ordinaryAppNeedsGateway(app) && !ordinaryAppGatewayPlatformReady(ctx, c) {
+		return true, routeModePlatformRequeue
+	}
+	if ordinaryAppGatewayEligible(ctx) && c != nil && !appGatewayReady(ctx, c) {
+		return true, routeModePlatformRequeue
+	}
+	return false, 0
 }
 
 func resolveApplicationEntranceService(ctx context.Context, c client.Client,
