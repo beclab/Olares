@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/md5"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,7 +14,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/beclab/Olares/cli/pkg/access"
 	"github.com/beclab/Olares/cli/pkg/olares"
 )
 
@@ -88,14 +88,6 @@ type LoginRequest struct {
 	AcceptCookie       bool
 	InsecureSkipVerify bool
 	Timeout            time.Duration // zero → 10s default
-
-	// Location selects the connection method for the auth round-trips: it
-	// drives both the targetURL the CLI sends to Authelia (vault/desktop
-	// under the right scheme + host) and the http.Transport's resolver (the
-	// `host` position resolves via the in-cluster DNS). The zero value is
-	// treated as LocationExternal, so callers that don't probe (e.g. the
-	// wizard signup flow) keep the historical public behavior.
-	Location olares.Location
 }
 
 // ErrTOTPRequired is returned from Login when the first-factor response
@@ -120,7 +112,7 @@ func FirstFactor(ctx context.Context, req LoginRequest) (*Token, error) {
 	if err := validateLoginRequest(req); err != nil {
 		return nil, err
 	}
-	client := newHTTPClient(req.Timeout, req.Location, req.InsecureSkipVerify)
+	client := newHTTPClient(req.Timeout, req.InsecureSkipVerify)
 	return firstFactorWithClient(ctx, client, req)
 }
 
@@ -149,7 +141,7 @@ func Login(ctx context.Context, req LoginRequest) (*Token, error) {
 	if err := validateLoginRequest(req); err != nil {
 		return nil, err
 	}
-	client := newHTTPClient(req.Timeout, req.Location, req.InsecureSkipVerify)
+	client := newHTTPClient(req.Timeout, req.InsecureSkipVerify)
 
 	tok, err := firstFactorWithClient(ctx, client, req)
 	if err != nil {
@@ -232,10 +224,9 @@ func firstFactorWithClient(ctx context.Context, client *http.Client, req LoginRe
 		return nil, err
 	}
 
-	ep := id.Endpoints(req.Location, "")
-	targetURL := ep.Vault
+	targetURL := id.VaultURL("")
 	if req.NeedTwoFactor {
-		targetURL = ep.Desktop
+		targetURL = id.DesktopURL("")
 	}
 	body := firstFactorBody{
 		Username:       req.LocalName,
@@ -288,7 +279,7 @@ func postSecondFactorTOTP(ctx context.Context, client *http.Client, req LoginReq
 	}
 
 	body := secondFactorBody{
-		TargetURL: id.Endpoints(req.Location, "").Desktop,
+		TargetURL: id.DesktopURL(""),
 		Token:     req.TOTP,
 	}
 	headers := map[string]string{
@@ -343,16 +334,21 @@ func postJSON(ctx context.Context, client *http.Client, url string, body any, he
 // newHTTPClient returns an http.Client suitable for auth flows: short timeout,
 // cookie jar (so first-factor session cookies attach to second-factor), and
 // optional InsecureSkipVerify for dev environments.
-func newHTTPClient(timeout time.Duration, loc olares.Location, insecure bool) *http.Client {
+func newHTTPClient(timeout time.Duration, insecure bool) *http.Client {
 	if timeout <= 0 {
 		timeout = 10 * time.Second
 	}
 	jar, _ := cookiejar.New(nil)
-	return &http.Client{
-		Timeout:   timeout,
-		Jar:       jar,
-		Transport: access.Transport(loc, insecure),
+	c := &http.Client{
+		Timeout: timeout,
+		Jar:     jar,
 	}
+	if insecure {
+		c.Transport = &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // #nosec G402 -- dev override gated behind explicit flag
+		}
+	}
+	return c
 }
 
 // truncate caps a body snippet for inclusion in error messages.

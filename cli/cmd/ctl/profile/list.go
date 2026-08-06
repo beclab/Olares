@@ -13,7 +13,6 @@ import (
 	"github.com/beclab/Olares/cli/pkg/auth"
 	"github.com/beclab/Olares/cli/pkg/cliconfig"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
-	"github.com/beclab/Olares/cli/pkg/whoami"
 )
 
 // NewListCommand: `olares-cli profile list`
@@ -35,17 +34,17 @@ import (
 // claims (username / groups / mfa / jid). The OlaresID column is the local
 // authoritative identity.
 func NewListCommand(f *cmdutil.Factory) *cobra.Command {
-	var refresh bool
-	cmd := &cobra.Command{
+	return &cobra.Command{
 		Use:   "list",
-		Short: "list all profiles with login status, current marker, cached location and backend version",
+		Short: "list all profiles with login status, current marker, and cached backend version",
 		Args:  cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
+			// --refresh-version is inherited from the `profile` parent's
+			// persistent flags; treat a read error as "no refresh".
+			refresh, _ := c.Flags().GetBool(cmdutil.FlagRefreshVersion)
 			return runList(c.Context(), f, refresh, os.Stdout)
 		},
 	}
-	cmd.Flags().BoolVar(&refresh, "refresh", false, "re-detect the CURRENT profile (location, role, backend version) before listing")
-	return cmd
 }
 
 func runList(ctx context.Context, f *cmdutil.Factory, refresh bool, out *os.File) error {
@@ -53,25 +52,14 @@ func runList(ctx context.Context, f *cmdutil.Factory, refresh bool, out *os.File
 		ctx = context.Background()
 	}
 
-	// With --refresh, run the unified detect for the ACTIVE profile (re-probe
-	// location + refetch role + version) and persist it before we render. This
-	// only touches the current profile (the only one we have a token for); the
-	// rest still show their last-cached values. Best-effort: any failure
+	// With --refresh-version, re-read /api/olares-info for the ACTIVE profile
+	// and update its cache before we render. This only touches the current
+	// profile (the only one we have a resolved http.Client for); the rest
+	// still show their last-cached version. Best-effort: a fetch failure
 	// degrades to a stderr warning so the listing itself never breaks.
 	if refresh && f != nil {
-		if rp, rerr := f.ResolveProfile(ctx); rerr != nil {
-			fmt.Fprintf(os.Stderr, "warning: could not resolve the current profile to refresh: %v\n", rerr)
-		} else if cfg0, cerr := cliconfig.LoadMultiProfileConfig(); cerr == nil {
-			if _, derr := whoami.DetectAndCache(ctx, whoami.DetectInput{
-				Cfg:         cfg0,
-				OlaresID:    rp.OlaresID,
-				LocalPrefix: rp.LocalURLPrefix,
-				Insecure:    rp.InsecureSkipVerify,
-				AccessToken: rp.AccessToken,
-				Now:         time.Now,
-			}); derr != nil {
-				fmt.Fprintf(os.Stderr, "warning: could not refresh the current profile: %v\n", derr)
-			}
+		if _, _, err := f.RefreshOlaresBackendVersion(ctx); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: could not refresh backend version for the current profile: %v\n", err)
 		}
 	}
 
@@ -91,7 +79,7 @@ func runList(ctx context.Context, f *cmdutil.Factory, refresh bool, out *os.File
 	now := time.Now()
 
 	w := tabwriter.NewWriter(out, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "  \tNAME\tOLARES-ID\tSTATUS\tLOCATION\tVERSION")
+	fmt.Fprintln(w, "  \tNAME\tOLARES-ID\tSTATUS\tVERSION")
 	for i := range cfg.Profiles {
 		p := &cfg.Profiles[i]
 		marker := " "
@@ -99,19 +87,9 @@ func runList(ctx context.Context, f *cmdutil.Factory, refresh bool, out *os.File
 			marker = "*"
 		}
 		status := profileStatus(store, p, now)
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\n", marker, p.DisplayName(), p.OlaresID, status, locationCell(p), backendVersionCell(p))
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", marker, p.DisplayName(), p.OlaresID, status, backendVersionCell(p))
 	}
 	return w.Flush()
-}
-
-// locationCell renders the LOCATION column: the cached network position
-// ("external" / "lan" / "host" / "cluster"), or "-" when it hasn't been
-// probed yet (pre-existing profile, or a login where probing failed).
-func locationCell(p *cliconfig.ProfileConfig) string {
-	if p.Location != "" {
-		return p.Location
-	}
-	return "-"
 }
 
 // backendVersionCell renders the VERSION column for a profile: the cached
