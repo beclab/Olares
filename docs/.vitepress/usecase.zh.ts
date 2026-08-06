@@ -427,6 +427,13 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "OnlyOffice",
               link: "/zh/use-cases/onlyoffice",
+              collapsed: true,
+              items: [
+                {
+                  text: "迁移指南",
+                  link: "/zh/use-cases/onlyoffice-migration",
+                },
+              ],
             },
             // {
             //   text: "Stirling PDF",
