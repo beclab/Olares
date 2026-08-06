@@ -34,7 +34,7 @@ head:
    ![LarePass 账户列表中的 DID](/images/manual/tutorials/did-stage1.png)
 
 2. 点击右上角的扫码图标，扫描 Olares Space 登录页面上的二维码。
-   ![LarePass 扫码](/images/manual/tutorials/scan-qr-code1.png)
+   ![LarePass 扫码](/images/manual/tutorials/scan-qr-code2.png)
 
 ## 退出登录
 
