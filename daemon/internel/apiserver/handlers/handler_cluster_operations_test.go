@@ -82,6 +82,17 @@ func (f *fakeOperations) Get(id string) (clusterop.Operation, bool) {
 	return op, ok
 }
 
+func (f *fakeOperations) GetByRequest(requestID string) (clusterop.Operation, bool) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	for _, op := range f.stored {
+		if op.RequestID == requestID {
+			return op, true
+		}
+	}
+	return clusterop.Operation{}, false
+}
+
 func (f *fakeOperations) ActivePhase() (nodestatus.Phase, bool) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -326,6 +337,24 @@ func TestCreateClusterOperationReportsAConflict(t *testing.T) {
 	}
 }
 
+func TestCreateClusterOperationReportsARequestIDConflict(t *testing.T) {
+	withClusterOperations(t, &fakeOperations{
+		createEr: &clusterop.RequestConflictError{RequestID: "client-1", ExistingID: "op-existing"},
+	})
+	asAuthorizedUser(t)
+	asOwnerSignature(t)
+	asMaster(t)
+
+	resp, body := callRegisteredMethod(t, http.MethodPost, "/cluster/operations",
+		`{"type":"reboot","requestId":"client-1"}`, signedFor(t, clusterop.TypeReboot, "client-1"))
+	if resp.StatusCode != http.StatusConflict {
+		t.Fatalf("status = %d, want 409: %s", resp.StatusCode, body)
+	}
+	if !strings.Contains(string(body), "op-existing") {
+		t.Errorf("the caller cannot identify the existing operation: %s", body)
+	}
+}
+
 func TestGetClusterOperationRequiresAuthorization(t *testing.T) {
 	withClusterOperations(t, &fakeOperations{stored: map[string]clusterop.Operation{"op-1": sampleOperation()}})
 	asMaster(t)
@@ -401,6 +430,65 @@ func TestGetClusterOperationIsRefusedOnAWorker(t *testing.T) {
 
 	if resp.StatusCode != http.StatusForbidden {
 		t.Fatalf("status = %d, want 403 on a worker: %s", resp.StatusCode, body)
+	}
+}
+
+func TestGetClusterOperationByRequestReturnsTheRecord(t *testing.T) {
+	op := sampleOperation()
+	op.RequestID = "client/request 1"
+	withClusterOperations(t, &fakeOperations{stored: map[string]clusterop.Operation{op.ID: op}})
+	asAuthorizedUser(t)
+	asMaster(t)
+
+	resp, body := callRegistered(t, "/cluster/operations/by-request/client%2Frequest%201", authHeaders())
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d: %s", resp.StatusCode, body)
+	}
+	if got := decodeOperation(t, body); got.ID != op.ID {
+		t.Fatalf("operation = %+v, want %s", got, op.ID)
+	}
+}
+
+func TestGetClusterOperationByRequestRequiresAuthorization(t *testing.T) {
+	withClusterOperations(t, &fakeOperations{})
+	asMaster(t)
+
+	resp, body := callRegistered(t, "/cluster/operations/by-request/client-1", nil)
+	if resp.StatusCode != http.StatusForbidden {
+		t.Fatalf("status = %d, want 403: %s", resp.StatusCode, body)
+	}
+}
+
+func TestGetClusterOperationByRequestIsRefusedOnAWorker(t *testing.T) {
+	withClusterOperations(t, &fakeOperations{})
+	asAuthorizedUser(t)
+	asWorker(t)
+
+	resp, body := callRegistered(t, "/cluster/operations/by-request/client-1", authHeaders())
+	if resp.StatusCode != http.StatusForbidden {
+		t.Fatalf("status = %d, want 403 on a worker: %s", resp.StatusCode, body)
+	}
+}
+
+func TestGetClusterOperationByRequestRejectsAnEmptyRequestID(t *testing.T) {
+	withClusterOperations(t, &fakeOperations{})
+	asAuthorizedUser(t)
+	asMaster(t)
+
+	resp, body := callRegistered(t, "/cluster/operations/by-request/", authHeaders())
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400: %s", resp.StatusCode, body)
+	}
+}
+
+func TestGetClusterOperationByRequestIsNotFound(t *testing.T) {
+	withClusterOperations(t, &fakeOperations{})
+	asAuthorizedUser(t)
+	asMaster(t)
+
+	resp, body := callRegistered(t, "/cluster/operations/by-request/missing", authHeaders())
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("status = %d, want 404: %s", resp.StatusCode, body)
 	}
 }
 

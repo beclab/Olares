@@ -137,77 +137,11 @@ func TestPowerNodeAcceptsTheOperationItWasSignedFor(t *testing.T) {
 	}
 }
 
-func TestDirectNodePowerAcceptsOnlyTheTargetNodeBinding(t *testing.T) {
-	for _, tc := range []struct {
-		name   string
-		target string
-		status int
-	}{
-		{name: "this node", target: "worker-1", status: http.StatusOK},
-		{name: "another node", target: "worker-2", status: http.StatusForbidden},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			r := withLocalPower(t, &powerRecorder{})
-			asOwnerSignature(t)
-			asWorker(t)
-
-			headers := map[string]string{
-				SIGNATURE_HEADER: signatureCarrying(t,
-					ownerNodeBinding(clusterop.TypeReboot, "client-1", tc.target)),
-			}
-			resp, body := callRegisteredMethod(t, http.MethodPost, "/command/power-this-node",
-				`{"type":"reboot","requestId":"client-1"}`, headers)
-
-			if resp.StatusCode != tc.status {
-				t.Fatalf("status = %d, want %d: %s", resp.StatusCode, tc.status, body)
-			}
-			if tc.status == http.StatusOK && len(r.seen()) != 1 {
-				t.Error("this node was not powered")
-			}
-			if tc.status != http.StatusOK && len(r.seen()) != 0 {
-				t.Error("another node's signature powered this node")
-			}
-		})
-	}
-}
-
-func TestDirectNodePowerRefusesAnotherClusterBinding(t *testing.T) {
-	r := withLocalPower(t, &powerRecorder{})
-	asOwnerSignature(t)
-	asWorker(t)
-	binding := ownerNodeBinding(clusterop.TypeReboot, "client-1", "worker-1")
-	binding["clusterId"] = "another-cluster"
-
-	resp, body := callRegisteredMethod(t, http.MethodPost, "/command/power-this-node",
-		`{"type":"reboot","requestId":"client-1"}`,
-		map[string]string{SIGNATURE_HEADER: signatureCarrying(t, binding)})
-
-	if resp.StatusCode != http.StatusForbidden || reasonOf(t, body) != clusterop.CodeSignatureMismatch {
-		t.Fatalf("status = %d, body = %s", resp.StatusCode, body)
-	}
-	if len(r.seen()) != 0 {
-		t.Error("another cluster's signature powered this node")
-	}
-}
-
-func TestDirectNodePowerRefusesSingleNodeShutdownOnTheMaster(t *testing.T) {
-	r := withLocalPower(t, &powerRecorder{})
-	asOwnerSignature(t)
-	asMaster(t)
-	headers := map[string]string{
-		SIGNATURE_HEADER: signatureCarrying(t,
-			ownerNodeBinding(clusterop.TypeShutdown, "client-1", "master-1")),
-	}
-
-	resp, body := callRegisteredMethod(t, http.MethodPost, "/command/power-this-node",
-		`{"type":"shutdown","requestId":"client-1"}`, headers)
-
-	if resp.StatusCode != http.StatusConflict ||
-		reasonOf(t, body) != clusterop.CodePowerUnsupported {
-		t.Fatalf("status = %d, body = %s", resp.StatusCode, body)
-	}
-	if len(r.seen()) != 0 {
-		t.Error("the master was shut down as a single-node operation")
+func TestDirectNodePowerEndpointIsNotRegistered(t *testing.T) {
+	resp, _ := callRegisteredMethod(t, http.MethodPost, "/command/power-this-node",
+		`{"type":"reboot","requestId":"client-1"}`, nil)
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("status = %d, want 404", resp.StatusCode)
 	}
 }
 

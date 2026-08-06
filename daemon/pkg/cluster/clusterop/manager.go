@@ -238,6 +238,16 @@ func (e *ConflictError) Error() string {
 	return fmt.Sprintf("cluster operation %s (%s) is already in progress", e.ActiveID, e.ActiveType)
 }
 
+// RequestConflictError refuses a requestId already bound to another intent.
+type RequestConflictError struct {
+	RequestID  string
+	ExistingID string
+}
+
+func (e *RequestConflictError) Error() string {
+	return fmt.Sprintf("requestId %q is already bound to cluster operation %s", e.RequestID, e.ExistingID)
+}
+
 // Manager owns every cluster power operation this master has performed.
 type Manager struct {
 	deps Deps
@@ -286,9 +296,14 @@ func NewManager(deps Deps) (*Manager, error) {
 		case rebootChangedBoot(&op, boot):
 			pendingReboots = append(pendingReboots, op.ID)
 		}
+		if id, ok := m.byRequest[op.RequestID]; ok && id != op.ID {
+			return nil, fmt.Errorf("load cluster operations: %w", &RequestConflictError{
+				RequestID: op.RequestID, ExistingID: id,
+			})
+		}
 		m.ops[op.ID] = &op
 		m.order = append(m.order, op.ID)
-		m.byRequest[requestKey(op.Owner, op.Type, op.RequestID, op.Scope, op.Target, op.ClusterID)] = op.ID
+		m.byRequest[op.RequestID] = op.ID
 		if m.operationActive(&op, deps.Now()) {
 			m.activeID = op.ID
 		}
@@ -400,8 +415,12 @@ func (m *Manager) confirmRebootWhenReady(id, boot string) {
 	}
 }
 
-func requestKey(owner string, t Type, requestID, scope, target, clusterID string) string {
-	return owner + "\x00" + string(t) + "\x00" + requestID + "\x00" + scope + "\x00" + target + "\x00" + clusterID
+func sameIntent(op *Operation, req CreateRequest, opType Type) bool {
+	return op.Owner == req.Owner &&
+		op.Type == opType &&
+		op.Scope == req.Scope &&
+		op.Target == req.Target &&
+		op.ClusterID == req.ClusterID
 }
 
 // Create starts a cluster power operation, or returns the one this request
@@ -421,11 +440,15 @@ func (m *Manager) Create(_ context.Context, req CreateRequest) (Operation, error
 	}
 
 	m.mu.Lock()
-	key := requestKey(req.Owner, opType, req.RequestID, req.Scope, req.Target, req.ClusterID)
-	if id, ok := m.byRequest[key]; ok {
-		existing := m.ops[id].Clone()
+	if id, ok := m.byRequest[req.RequestID]; ok {
+		existing := m.ops[id]
+		if !sameIntent(existing, req, opType) {
+			m.mu.Unlock()
+			return Operation{}, &RequestConflictError{RequestID: req.RequestID, ExistingID: id}
+		}
+		cloned := existing.Clone()
 		m.mu.Unlock()
-		return existing, nil
+		return cloned, nil
 	}
 	if active := m.activeOperationLocked(); active != nil {
 		err := &ConflictError{ActiveID: active.ID, ActiveType: active.Type}
@@ -450,12 +473,12 @@ func (m *Manager) Create(_ context.Context, req CreateRequest) (Operation, error
 	}
 	m.ops[op.ID] = op
 	m.order = append(m.order, op.ID)
-	m.byRequest[key] = op.ID
+	m.byRequest[req.RequestID] = op.ID
 	m.activeID = op.ID
 	if err := m.deps.Store.Save(*op); err != nil {
 		delete(m.ops, op.ID)
 		m.order = m.order[:len(m.order)-1]
-		delete(m.byRequest, key)
+		delete(m.byRequest, req.RequestID)
 		m.activeID = ""
 		m.mu.Unlock()
 		return Operation{}, fmt.Errorf("record cluster operation: %w", err)
@@ -475,6 +498,21 @@ func (m *Manager) Create(_ context.Context, req CreateRequest) (Operation, error
 func (m *Manager) Get(id string) (Operation, bool) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	op, ok := m.ops[id]
+	if !ok {
+		return Operation{}, false
+	}
+	return op.Clone(), true
+}
+
+// GetByRequest returns a copy of the operation bound to requestID.
+func (m *Manager) GetByRequest(requestID string) (Operation, bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	id, ok := m.byRequest[requestID]
+	if !ok {
+		return Operation{}, false
+	}
 	op, ok := m.ops[id]
 	if !ok {
 		return Operation{}, false
@@ -584,12 +622,13 @@ func (m *Manager) pruneLocked() {
 			if !op.Status.Terminal() {
 				continue
 			}
-			m.order = append(m.order[:i], m.order[i+1:]...)
-			delete(m.ops, id)
-			delete(m.byRequest, requestKey(op.Owner, op.Type, op.RequestID, op.Scope, op.Target, op.ClusterID))
 			if err := m.deps.Store.Delete(id); err != nil {
 				klog.Warningf("clusterop: prune operation %s: %v", id, err)
+				return
 			}
+			m.order = append(m.order[:i], m.order[i+1:]...)
+			delete(m.ops, id)
+			delete(m.byRequest, op.RequestID)
 			removed = true
 			break
 		}

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/beclab/Olares/daemon/pkg/cluster/fanout"
+	"github.com/beclab/Olares/daemon/pkg/cluster/inventory"
 	"github.com/beclab/Olares/daemon/pkg/cluster/state"
 	"github.com/beclab/Olares/daemon/pkg/commands"
 	"github.com/beclab/Olares/daemon/pkg/utils"
@@ -16,6 +17,11 @@ import (
 
 // nodeLocalPath is the node-local endpoint the orchestrator fans out to.
 const nodeLocalPath = "/command/collect-logs-node"
+
+// nodeCollectTimeout bounds each per-node collect call on the master and the
+// node-local executor (minus one minute of headroom). Long enough for large
+// host/pod log packs; not a fanout package default.
+const nodeCollectTimeout = 15 * time.Minute
 
 // olaresUID/olaresGID own user-facing files under a user's Home; the daemon
 // runs as root, so results it writes must be chowned back to the user.
@@ -131,18 +137,23 @@ func (i *collectLogs) Execute(ctx context.Context, p any) (res any, err error) {
 		}()
 
 		bgCtx := context.Background()
-		nodes, e := fanout.ListReadyNodes(bgCtx)
+		allNodes, e := inventory.List(bgCtx)
 		if e != nil {
 			ferr, errStr = e, fmt.Sprintf("list nodes error, %v", e)
 			return
 		}
+		nodes := readyCollectTargets(allNodes)
 		if len(nodes) == 0 {
 			ferr = errors.New("no ready nodes found")
 			errStr = ferr.Error()
 			return
 		}
 
-		dispatcher := &fanout.Dispatcher{PeerPath: nodeLocalPath, AuthToken: authToken}
+		dispatcher := &fanout.Dispatcher{
+			PeerPath:  nodeLocalPath,
+			AuthToken: authToken,
+			Timeout:   nodeCollectTimeout,
+		}
 		results = dispatcher.Run(bgCtx, nodes, func(t fanout.NodeTarget) any {
 			req := &NodeRequest{Param: nodeReqTemplate, RunID: runID}
 			return req
@@ -196,6 +207,25 @@ func (i *collectLogs) Execute(ctx context.Context, p any) (res any, err error) {
 		File:  fileName,
 		Path:  relPath,
 	}, nil
+}
+
+// readyCollectTargets keeps only Ready nodes with an addressable olaresd.
+// NotReady / no-IP nodes stay in the inventory directory for the UI but cannot
+// serve a collect-logs fan-out.
+func readyCollectTargets(nodes []inventory.Node) []fanout.NodeTarget {
+	var targets []fanout.NodeTarget
+	for _, n := range nodes {
+		if !n.Ready || n.IP == "" {
+			continue
+		}
+		targets = append(targets, fanout.NodeTarget{
+			Name:     n.NodeName,
+			IP:       n.IP,
+			IsSelf:   n.IsSelf,
+			IsMaster: n.Role == inventory.RoleMaster,
+		})
+	}
+	return targets
 }
 
 // nodeSummaries condenses fan-out results into the per-node view stored on a

@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 )
 
 // localDispatcher points the fan-out at a test server instead of the fixed
@@ -24,7 +25,7 @@ func localDispatcher(t *testing.T, srv *httptest.Server) (*Dispatcher, NodeTarge
 	if err != nil {
 		t.Fatalf("test server port: %v", err)
 	}
-	return &Dispatcher{PeerPath: "/command/power-node", Port: port},
+	return &Dispatcher{PeerPath: "/command/power-node", Port: port, Timeout: time.Second},
 		NodeTarget{Name: "worker-1", IP: u.Hostname()}
 }
 

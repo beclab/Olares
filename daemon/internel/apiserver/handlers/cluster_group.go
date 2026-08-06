@@ -27,6 +27,10 @@ func init() {
 
 	// Following an operation is an ordinary read: whoever is signed in may
 	// watch what the owner started.
+	cluster.Get("/operations/by-request", handlers.RequireAuthorization(
+		handlers.RequireMaster(handlers.GetClusterOperationByRequest)))
+	cluster.Get("/operations/by-request/:requestId", handlers.RequireAuthorization(
+		handlers.RequireMaster(handlers.GetClusterOperationByRequest)))
 	cluster.Get("/operations/:id", handlers.RequireAuthorization(
 		handlers.RequireMaster(handlers.GetClusterOperation)))
 

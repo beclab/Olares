@@ -68,8 +68,6 @@ func init() {
 	// wider grant than the one operation being carried out.
 	cmd.Post("/power-node", handlers.RequireSignature(
 		handlers.RequireOwner(handlers.PostPowerNode)))
-	cmd.Post("/power-this-node", handlers.RequireSignature(
-		handlers.RequireOwner(handlers.PostPowerThisNode)))
 
 	cmd.Post("/connect-wifi", handlers.RequireSignature(
 		handlers.WaitServerRunning(

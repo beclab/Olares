@@ -1,8 +1,11 @@
 // Package fanout is a generic mechanism for the master olaresd to dispatch the
-// same node-local action to every node's olaresd and aggregate the results per
-// node. It is intentionally decoupled from any specific command (collect-logs
-// is the first consumer): a node being unreachable is a first-class result, not
-// a silently dropped item.
+// same node-local action to a caller-chosen set of node olaresds and aggregate
+// the results per node. It is intentionally decoupled from any specific command:
+// a node being unreachable is a first-class result, not a silently dropped item.
+//
+// Target selection and per-call timeout belong to the consumer. Inventory is the
+// node directory; collect-logs filters Ready nodes and sets a 15-minute timeout;
+// power ops pass the full inventory with their own short timeout.
 package fanout
 
 import (
@@ -17,21 +20,15 @@ import (
 	"strconv"
 	"sync"
 	"time"
-
-	"github.com/beclab/Olares/daemon/pkg/nets"
-	"github.com/beclab/Olares/daemon/pkg/utils"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/klog/v2"
 )
 
 const (
 	// OlaresdPort is the fixed port every node's olaresd listens on.
 	OlaresdPort = 18088
 
-	// DefaultTimeout bounds each per-node dispatch call. Exported so node-local
-	// executors can cap their own work to finish before the master gives up.
-	DefaultTimeout = 15 * time.Minute
+	// fallbackTimeout applies only when a caller forgets Timeout. Consumers must
+	// set their own bound; log collection must not rely on this value.
+	fallbackTimeout = 30 * time.Second
 
 	defaultParallel = 4
 	authHeader      = "X-Authorization"
@@ -77,52 +74,11 @@ type Dispatcher struct {
 	// Port overrides the olaresd port. Zero means OlaresdPort; anything else
 	// is a test pointing the fan-out at a server it started.
 	Port int
-	// Timeout bounds each per-node call. Defaults to defaultTimeout.
+	// Timeout bounds each per-node call. Callers must set this; zero falls
+	// back to fallbackTimeout only as a safety net.
 	Timeout time.Duration
 	// Parallel bounds concurrent calls. Defaults to defaultParallel.
 	Parallel int
-}
-
-// ListReadyNodes enumerates Ready nodes with an internal IP, tagging the local
-// node and master nodes.
-func ListReadyNodes(ctx context.Context) ([]NodeTarget, error) {
-	client, err := utils.GetKubeClient()
-	if err != nil {
-		return nil, err
-	}
-	nodes, err := client.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-
-	selfIPs := map[string]struct{}{}
-	if ips, err := nets.LookupHostIps(); err != nil {
-		klog.Warningf("fanout: lookup host ips error: %v", err)
-	} else {
-		for _, ip := range ips {
-			selfIPs[ip] = struct{}{}
-		}
-	}
-
-	var targets []NodeTarget
-	for i := range nodes.Items {
-		n := &nodes.Items[i]
-		if !utils.IsNodeReady(n) {
-			continue
-		}
-		ip := internalIP(n)
-		if ip == "" {
-			continue
-		}
-		_, self := selfIPs[ip]
-		targets = append(targets, NodeTarget{
-			Name:     n.Name,
-			IP:       ip,
-			IsSelf:   self,
-			IsMaster: utils.IsMasterNode(n),
-		})
-	}
-	return targets, nil
 }
 
 // Run dispatches to every target concurrently and returns one result per
@@ -130,7 +86,7 @@ func ListReadyNodes(ctx context.Context) ([]NodeTarget, error) {
 func (d *Dispatcher) Run(ctx context.Context, targets []NodeTarget, payloadFor func(NodeTarget) any) []NodeResult {
 	timeout := d.Timeout
 	if timeout <= 0 {
-		timeout = DefaultTimeout
+		timeout = fallbackTimeout
 	}
 	parallel := d.Parallel
 	if parallel <= 0 {
@@ -215,13 +171,4 @@ func (d *Dispatcher) call(ctx context.Context, t NodeTarget, payload any, timeou
 
 func nodeURL(host string, port int, path string) string {
 	return "http://" + net.JoinHostPort(host, strconv.Itoa(port)) + path
-}
-
-func internalIP(n *corev1.Node) string {
-	for _, addr := range n.Status.Addresses {
-		if addr.Type == corev1.NodeInternalIP {
-			return addr.Address
-		}
-	}
-	return ""
 }

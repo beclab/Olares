@@ -95,54 +95,6 @@ func (h *Handlers) PostPowerNode(ctx *fiber.Ctx) error {
 	return h.executePower(ctx, opType, req.OperationID, binding)
 }
 
-type directNodePowerRequest struct {
-	Type      string `json:"type"`
-	RequestID string `json:"requestId"`
-}
-
-// PostPowerThisNode handles an owner-approved operation aimed directly at the
-// node serving the request. The signed target must match this node's cluster
-// name, so routing a valid request to another node cannot power it.
-func (h *Handlers) PostPowerThisNode(ctx *fiber.Ctx) error {
-	var req directNodePowerRequest
-	if err := ctx.BodyParser(&req); err != nil {
-		return h.errPower(ctx, http.StatusBadRequest, clusterop.CodeInvalidRequest, "unable to parse body")
-	}
-	opType, err := clusterop.ParseType(strings.TrimSpace(req.Type))
-	if err != nil {
-		return h.errPower(ctx, http.StatusBadRequest, clusterop.CodeUnsupportedOperation,
-			"this daemon does not perform that operation")
-	}
-	nodeName, role, err := thisNodeInCluster(ctx.Context())
-	if err != nil || nodeName == "" {
-		klog.Error("resolve this node for a power command: ", err)
-		return h.errPower(ctx, http.StatusConflict,
-			clusterop.CodeNodeIdentityUnknown, "this node's cluster identity is unavailable")
-	}
-	if opType == clusterop.TypeShutdown && role != inventory.RoleWorker {
-		return h.errPower(ctx, http.StatusConflict,
-			clusterop.CodePowerUnsupported, "the control node cannot be shut down by a node operation")
-	}
-	localClusterID, err := clusterIDOf(ctx.Context())
-	if err != nil || localClusterID == "" {
-		return h.errBinding(ctx, &clusterop.BindingError{
-			Code: clusterop.CodeSignatureMismatch, Message: "the signature authorizes a different operation",
-		})
-	}
-	binding, err := requireBinding(ctx, clusterop.Binding{
-		ClusterID: localClusterID,
-		Type:      opType,
-		RequestID: strings.TrimSpace(req.RequestID),
-		Scope:     clusterop.ScopeNode,
-		Target:    nodeName,
-	})
-	if err != nil {
-		return h.errBinding(ctx, err)
-	}
-
-	return h.executePower(ctx, opType, req.RequestID, binding)
-}
-
 func (h *Handlers) executePower(ctx *fiber.Ctx, opType clusterop.Type, operationID string,
 	binding clusterop.Binding) error {
 	if powerThisNode == nil {

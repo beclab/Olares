@@ -498,6 +498,61 @@ func TestCreateIsIdempotentPerRequestID(t *testing.T) {
 	}
 }
 
+func TestCreateRejectsAReusedRequestIDWithDifferentIntent(t *testing.T) {
+	base := CreateRequest{
+		Type: TypeReboot, RequestID: "client-1", Owner: "alice@olares.com",
+		Scope: ScopeNode, Target: "master-1", ClusterID: "cluster-1",
+	}
+	for _, tc := range []struct {
+		name   string
+		change func(*CreateRequest)
+	}{
+		{"owner", func(req *CreateRequest) { req.Owner = "bob@olares.com" }},
+		{"type", func(req *CreateRequest) { req.Type = TypeShutdown }},
+		{"scope", func(req *CreateRequest) { req.Scope = ScopeCluster }},
+		{"target", func(req *CreateRequest) { req.Target = "worker-1" }},
+		{"cluster", func(req *CreateRequest) { req.ClusterID = "cluster-2" }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			c := newCluster(master("master-1", "10.0.0.1"))
+			m, _ := newManager(t, c)
+			first, err := m.Create(context.Background(), base)
+			if err != nil {
+				t.Fatal(err)
+			}
+			awaitTerminal(t, m, first.ID)
+
+			changed := base
+			tc.change(&changed)
+			_, err = m.Create(context.Background(), changed)
+			var conflict *RequestConflictError
+			if !errors.As(err, &conflict) {
+				t.Fatalf("err = %v, want a requestId conflict", err)
+			}
+			if conflict.RequestID != "client-1" || conflict.ExistingID != first.ID {
+				t.Fatalf("conflict = %+v, want request client-1 and operation %s", conflict, first.ID)
+			}
+		})
+	}
+}
+
+func TestGetByRequestSurvivesRestartAndReturnsACopy(t *testing.T) {
+	c := newCluster(master("master-1", "10.0.0.1"))
+	m, dir := newManager(t, c)
+	op := awaitTerminal(t, m, createOp(t, m, TypeReboot, "client/request 1").ID)
+
+	restarted := newManagerAt(t, c, dir)
+	got, ok := restarted.GetByRequest("client/request 1")
+	if !ok || got.ID != op.ID {
+		t.Fatalf("operation = %+v ok = %v, want %s", got, ok, op.ID)
+	}
+	got.RequestID = "tampered"
+	again, _ := restarted.GetByRequest("client/request 1")
+	if again.RequestID != "client/request 1" {
+		t.Fatal("a caller wrote back into the request index")
+	}
+}
+
 func TestCreateRefusesASecondPowerOperationWhileOneIsInFlight(t *testing.T) {
 	c := newCluster(master("master-1", "10.0.0.1"))
 	release := make(chan struct{})
@@ -537,9 +592,9 @@ func TestCreateDoesNotJoinADifferentOperationTypeOnTheSameRequestID(t *testing.T
 	_, err := m.Create(context.Background(), CreateRequest{
 		Type: TypeShutdown, RequestID: "client-1", Owner: "alice@olares.com",
 	})
-	var conflict *ConflictError
+	var conflict *RequestConflictError
 	if !errors.As(err, &conflict) {
-		t.Fatalf("err = %v, want a conflict rather than the reboot back", err)
+		t.Fatalf("err = %v, want a requestId conflict rather than the reboot back", err)
 	}
 
 	close(release)
@@ -741,6 +796,80 @@ func TestManagerPrunesOldRecords(t *testing.T) {
 	}
 	if _, ok := m.Get(ids[len(ids)-1]); !ok {
 		t.Error("the newest operation was pruned")
+	}
+	if _, ok := m.GetByRequest("r1"); ok {
+		t.Error("a pruned operation remains in the request index")
+	}
+}
+
+func TestManagerKeepsIndexesWhenStoreDeleteFails(t *testing.T) {
+	c := newCluster(master("master-1", "10.0.0.1"))
+	m, _ := newManager(t, c)
+	op := &Operation{
+		ID: "invalid/id", Type: TypeReboot, RequestID: "request-retained",
+		Owner: "alice@olares.com", Status: StatusSucceeded,
+	}
+	m.ops[op.ID] = op
+	m.order = []string{op.ID}
+	m.byRequest[op.RequestID] = op.ID
+	m.deps.Retention = 0
+
+	m.mu.Lock()
+	m.pruneLocked()
+	m.mu.Unlock()
+
+	if _, ok := m.Get(op.ID); !ok {
+		t.Fatal("operation was removed from memory after Store.Delete failed")
+	}
+	if got, ok := m.GetByRequest(op.RequestID); !ok || got.ID != op.ID {
+		t.Fatal("requestId was released after Store.Delete failed")
+	}
+	if len(m.order) != 1 || m.order[0] != op.ID {
+		t.Fatalf("order = %v, want the failed record retained", m.order)
+	}
+	same, err := m.Create(context.Background(), CreateRequest{
+		Type: op.Type, RequestID: op.RequestID, Owner: op.Owner,
+	})
+	if err != nil || same.ID != op.ID {
+		t.Fatalf("same request after failed prune = %+v, %v", same, err)
+	}
+	_, err = m.Create(context.Background(), CreateRequest{
+		Type: TypeShutdown, RequestID: op.RequestID, Owner: op.Owner,
+	})
+	var conflict *RequestConflictError
+	if !errors.As(err, &conflict) || conflict.ExistingID != op.ID {
+		t.Fatalf("changed request after failed prune err = %v, want conflict with %s", err, op.ID)
+	}
+}
+
+func TestRestoredRequestIDKeepsCreateIdempotentAndUnambiguous(t *testing.T) {
+	c := newCluster(master("master-1", "10.0.0.1"))
+	m, dir := newManager(t, c)
+	req := CreateRequest{
+		Type: TypeReboot, RequestID: "request-restored", Scope: ScopeCluster,
+		ClusterID: "cluster-1", Owner: "alice@olares.com",
+	}
+	first, err := m.Create(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	awaitTerminal(t, m, first.ID)
+
+	restarted := newManagerAt(t, c, dir)
+	same, err := restarted.Create(context.Background(), req)
+	if err != nil {
+		t.Fatalf("same intent after restart: %v", err)
+	}
+	if same.ID != first.ID {
+		t.Fatalf("same intent created %s, want %s", same.ID, first.ID)
+	}
+
+	changed := req
+	changed.Target = "worker-1"
+	_, err = restarted.Create(context.Background(), changed)
+	var conflict *RequestConflictError
+	if !errors.As(err, &conflict) || conflict.ExistingID != first.ID {
+		t.Fatalf("different intent err = %v, want conflict with %s", err, first.ID)
 	}
 }
 

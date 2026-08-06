@@ -1,10 +1,11 @@
 // Package inventory is the master olaresd's node directory: the full list of
 // Kubernetes nodes with the facts needed to address each node's olaresd.
 //
-// Unlike pkg/cluster/fanout's dispatch list, nothing here is filtered out. A
-// NotReady node and a node with no internal IP are both first-class entries:
-// dropping them would make a node vanish from the UI exactly when the user
-// needs to see that it is in trouble.
+// Nothing here is filtered out. A NotReady node and a node with no internal IP
+// are both first-class entries: dropping them would make a node vanish from the
+// UI exactly when the user needs to see that it is in trouble. Consumers that
+// only want Ready, addressable nodes (for example collect-logs) filter after
+// List; fanout itself does not discover nodes.
 package inventory
 
 import (

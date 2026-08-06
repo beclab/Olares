@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"net/url"
 	"path/filepath"
 	"strings"
 
@@ -20,6 +21,7 @@ import (
 type clusterOperationManager interface {
 	Create(ctx context.Context, req clusterop.CreateRequest) (clusterop.Operation, error)
 	Get(id string) (clusterop.Operation, bool)
+	GetByRequest(requestID string) (clusterop.Operation, bool)
 
 	// ActivePhase is what the operation in flight, if any, makes the cluster
 	// as a whole be doing. The cluster summary reads it; ok is false when
@@ -136,8 +138,14 @@ func (h *Handlers) PostClusterOperation(ctx *fiber.Ctx) error {
 		},
 	})
 	if err != nil {
+		var requestConflict *clusterop.RequestConflictError
 		var conflict *clusterop.ConflictError
 		switch {
+		case errors.As(err, &requestConflict):
+			return h.ErrJSON(ctx, http.StatusConflict, requestConflict.Error(), fiber.Map{
+				"requestId":           requestConflict.RequestID,
+				"existingOperationId": requestConflict.ExistingID,
+			})
 		case errors.As(err, &conflict):
 			return h.ErrJSON(ctx, http.StatusConflict, conflict.Error(), fiber.Map{
 				"activeOperationId": conflict.ActiveID,
@@ -151,6 +159,25 @@ func (h *Handlers) PostClusterOperation(ctx *fiber.Ctx) error {
 		}
 	}
 
+	return h.OkJSON(ctx, "success", op)
+}
+
+// GetClusterOperationByRequest serves the operation bound to a caller request id.
+func (h *Handlers) GetClusterOperationByRequest(ctx *fiber.Ctx) error {
+	if clusterOperations == nil {
+		return h.ErrJSON(ctx, http.StatusServiceUnavailable, orchestratorUnavailable)
+	}
+	requestID, err := url.PathUnescape(ctx.Params("requestId"))
+	if err != nil {
+		return h.ErrJSON(ctx, http.StatusBadRequest, "invalid requestId")
+	}
+	if strings.TrimSpace(requestID) == "" {
+		return h.ErrJSON(ctx, http.StatusBadRequest, clusterop.ErrRequestIDRequired.Error())
+	}
+	op, ok := clusterOperations.GetByRequest(requestID)
+	if !ok {
+		return h.ErrJSON(ctx, http.StatusNotFound, "no such cluster operation")
+	}
 	return h.OkJSON(ctx, "success", op)
 }
 
