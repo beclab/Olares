@@ -1,179 +1,200 @@
 ---
 outline: [2, 3]
-description: Olares 多节点集群部署教程，包括主节点配置、工作节点添加和网络变更处理，助你搭建可扩展的分布式环境。
+description: 使用 Olares One、NVIDIA DGX Spark 或其他兼容的 Linux 设备，将单节点 Olares 扩展为多节点集群。
 head:
   - - meta
     - name: keywords
-      content: Olares, 多节点集群, JuiceFS, 主节点, 子节点, 分布式存储
+      content: Olares One, NVIDIA DGX Spark, 多节点集群, JuiceFS, 工作节点, 主节点
 ---
 
-# 安装多节点 Olares 集群 <Badge type="warning" text="Alpha" />
-
-默认情况下，Olares 的安装会部署单节点集群。自 v1.11.3 起，Olares 支持 Linux 系统节点加入 Olares 集群。本教程将介绍如何配置主节点并添加子节点，以创建一个可扩展的多节点 Olares 集群。
-
-:::warning Alpha 功能
-此功能目前处于 **Alpha** 阶段，可能存在性能问题并需要额外的手动配置，不建议用于生产环境。如果遇到任何问题，请在 [Olares 的 GitHub 仓库](https://github.com/beclab/Olares/issues)中提交 Issue。
+:::warning
+本文档由 AI 自动翻译，可能存在表述差异。如需核对，请参考[英文原文](../../../manual/best-practices/install-olares-multi-node.md)。
 :::
-:::info 关于使用 Olares One 硬件
-如需使用两台 Olares One 设备组建多节点 Olares 集群，可参阅[连接两台 Olares One](/zh/one/connect-two-olares-one.md)。
+
+# 设置多节点 Olares 集群 <Badge type="warning" text="Preview" />
+
+对于需要更多计算资源和分布式存储的工作负载，你可以为现有单节点 Olares 添加工作节点，组成多节点集群。此流程适用于 Olares One、NVIDIA DGX Spark，以及其他满足 Olares 系统要求的 Linux 设备。本文以 Olares One 作为主节点、NVIDIA DGX Spark 作为工作节点进行演示。
+
+:::warning 预览功能
+此流程需要使用尚未正式发布的 Olares 1.12.7。请勿在 Olares 1.12.6 上执行以下步骤。
+
+如需在 Olares 1.12.6 上使用两台 Olares One 组建集群，请参阅[当前手动设置流程](../../one/connect-two-olares-one.md)。
+
+不要使用本文步骤升级现有多节点集群。请按照当前 Olares 版本对应的更新指南操作。
 :::
 
 ## 学习目标
 
-通过本教程，你将学习：
+完成本指南后，你将学会：
 
-- 在主节点上安装支持 JuiceFS 的 Olares。
-- 向集群中添加子节点。
-- 处理可能的网络变化，确保集群能够持续高效运行。
+- 在现有 Olares 主节点上启用 JuiceFS。
+- 生成并妥善保管工作节点加入命令。
+- 添加工作节点，并检查集群是否就绪。
 
-## 准备工作
+## 开始之前
 
-在开始之前，请确保满足以下条件：
+开始前，先确定两台设备的角色：
 
-- 熟悉 Kubernetes 和系统管理。
-- 主节点和子节点必须在同一个本地网络中。
-- 主节点和子节点必须有唯一的主机名，以避免冲突。
-- 子节点必须能够通过 SSH 连接到主节点。这意味着：
-  - 如果使用 root 用户或具有 `sudo` 权限的用户：需要将子节点的 SSH 公钥添加到主节点的 `authorized_keys` 文件中。
-  - 如果使用非 root 用户：需要在主节点上启用基于密码的 SSH 身份验证。
+- 现有单节点 Olares 系统作为 `master`（主节点）。
+- 准备加入的设备作为 `worker`（工作节点）。
 
-## 第一步：设置主节点
+为两台设备分别打开一个终端窗口。在整个设置过程中，让每个窗口始终连接同一台设备。
 
-::: tip 卸载已有的 Olares 集群
-如果你已经使用默认的安装命令在当前节点上安装了 Olares 集群，运行 `olares-cli uninstall --all` 命令将其卸载。
+:::warning 在正确的节点上运行命令
+操作过程中需要在主节点和工作节点的终端之间切换。运行每条命令前，请检查终端提示符中的 hostname（主机名）。如果在错误的节点上运行迁移或卸载命令，可能会导致 Olares 无法正常使用。
 :::
 
-在主节点上运行以下命令以启用 JuiceFS 支持：
+## 前提条件
 
-```bash
-export JUICEFS=1 \
-&& curl -sSfL https://cn.olares.sh | bash -
-```
+确保满足以下条件：
 
-此命令将安装 Olares，并内置一个 MinIO 实例作为后端存储。安装过程与单节点安装相同，系统会提示你输入域名并提供 Olares ID 的用户名。
+- 主节点已安装并激活 Olares 1.12.7 或更高版本，且 Olares 正在运行。
+- 可以通过 SSH 访问两台设备并运行 `sudo` 命令。主节点已启用 SSH 密码登录。
+- 工作节点可以访问主节点的 SSH 地址，以及主节点生成的加入脚本地址。
 
-:::tip 自定义存储
-如果你已经有自己的 MinIO 集群，或有一个 S3（或 S3 兼容）存储桶，可以将 Olares 配置为使用这些存储，而不是内置的 MinIO 实例。
+:::warning 备份主节点
+启用 JuiceFS 会停止 Olares，并迁移其本地文件系统。继续前请备份重要数据。迁移过程中不要关闭主节点。
 :::
 
-## 第二步：向集群添加子节点
+## 步骤 1：启用 JuiceFS <Badge type="tip" text="在主节点上操作" />
 
-::: tip 子节点前置条件
-子节点必须处于干净的 Linux 状态，未安装 Olares。如果子节点上之前安装过 Olares，请先运行 `olares-cli uninstall --all` 将设备清理为干净的 Linux 状态。
-:::
+多节点集群需要使用 JuiceFS 提供共享文件系统。
 
-1. 在子节点上，使用以下方式下载 `joincluster.sh`：
-::: code-group
+1. 通过 SSH 连接主节点。
 
-```bash [curl]
-# 使用 Curl 方式下载
-curl -fsSL https://raw.githubusercontent.com/beclab/Olares/refs/heads/main/build/base-package/joincluster.sh -o joincluster.sh
-```
+   对于已经运行 Olares 的设备，可以在 LarePass 的 **Settings** > **System** > 设备 > **Network** > **Intranet IP** 中查看其局域网 IP 地址。如果使用 Olares One，但不知道如何获取 SSH 密码，请参阅[通过 SSH 访问 Olares One](../../one/access-terminal-ssh.md)。
 
-```bash [wget]
-# 使用 wget 方式下载
-wget https://raw.githubusercontent.com/beclab/Olares/refs/heads/main/build/base-package/joincluster.sh
-```
-:::
-
-2. 使用必要的环境变量运行 `joincluster.sh` 脚本。这些变量用于告诉子节点如何连接到主节点。必须要设置 `MASTER_HOST` 变量，该变量指定主节点的 IP 地址：
    ```bash
-   export MASTER_HOST=192.168.1.15
-   ./joincluster.sh
+   ssh <用户名>@<主节点 IP 地址>
    ```
 
-下面是可能需要设置的变量列表：
+2. 停止 Olares。
 
-| **变量**                      | **描述**                                                                                                                |
-| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `MASTER_HOST`                 | 主节点的 IP 地址。<br/>必填项。                                                                                         |
-| `MASTER_NODE_NAME`            | 主节点的 Kubernetes 节点名称。<br/>如果未指定，脚本会交互式提示你确认所需参数。<br/>可选项。                            |
-| `MASTER_SSH_USER`             | 用于通过 SSH 登录主节点的用户名。<br/>默认是 root。                                                                     |
-| `MASTER_SSH_PASSWORD`         | SSH 用户的密码。<br/>如果未使用 SSH 密钥，则必填。                                                                      |
-| `MASTER_SSH_PRIVATE_KEY_PATH` | 用于身份验证的私有 SSH 密钥路径。<br/>如果未指定，脚本会交互式提示你确认所需参数。<br/>默认路径为 `/root/.ssh/id_rsa`。 |
-| `MASTER_SSH_PORT`             | 主节点 SSH 服务的端口号。<br/>默认值为 `22`。                                                                           |
+   ```bash
+   sudo olares-cli stop
+   ```
 
-:::info
+3. 启用 JuiceFS，并迁移现有 Olares 文件系统。
 
-- 非 root 用户必须提供密码以用 `sudo` 执行命令。因此，如果使用非 root 用户作为 `MASTER_SSH_USER`，且未指定 `MASTER_SSH_PASSWORD`，将无法继续。
-- 使用 `export` 设置的环境变量会在当前终端会话中保持有效。切换不同配置时，需清除（`unset`）任何冲突的变量。
-  `bash
-  unset MASTER_SSH_PRIVATE_KEY_PATH
-  `
-  :::
+   ```bash
+   sudo olares-cli node enable-juicefs
+   ```
 
-## 使用示例
+   迁移完成后，Olares 会自动重启。等待命令提示 JuiceFS 已启用，且主节点可以接受工作节点。
 
-以下是一些实际示例，帮助你理解在不同场景下如何使用 `joincluster.sh` 脚本。
+   输出示例：
 
-### 示例 1：默认设置
+   ```plain
+   [Job] Enable JuiceFS on the master node and migrate rootfs execute successfully!!! (...)
+   JuiceFS is enabled on this master node (version <version>); it is now ready to accept worker nodes.
+   Run 'olares-cli node join-command' on this master to print the command for a worker node.
+   ```
 
-如果主节点的 IP 是 `192.168.1.15`，使用默认用户（`root`）和端口（`22`），主节点已在 `/root/.ssh/authorized_keys` 中包含当前节点的公钥 `/root/.ssh/id_rsa.pub`，运行：
+## 步骤 2：生成工作节点加入命令 <Badge type="tip" text="在主节点上操作" />
 
-```bash
-export MASTER_HOST=192.168.1.15
-./joincluster.sh
+1. 在主节点上运行：
+
+   ```bash
+   sudo olares-cli node join-command
+   ```
+
+2. 检查检测到的 SSH 地址和用户名。输入 `y` 确认；如果信息不正确，请按提示输入正确的用户名。
+
+3. 输入该用户的 SSH 密码。
+
+   Olares 会检查工作节点能否使用此账号连接主节点并运行 `sudo` 命令。如果检查失败，请确认 IP 地址、用户名、密码、SSH 服务和防火墙设置，然后重试。
+
+4. 复制生成的命令。下一步需要在工作节点上运行它。
+
+   输出示例：
+
+   ```plain
+   SSH login and sudo access verified for <用户名>@<主节点 IP 地址>:22.
+
+   Run the following command on the worker node:
+
+   export MASTER_AUTH_INFO='<编码后的认证信息>' OLARES_SYSTEM_CDN_SERVICE='<Olares CDN 地址>' && curl -fsSL '<加入脚本地址>' | bash
+
+   MASTER_AUTH_INFO is Base64-encoded, not encrypted. Anyone holding this command can recover the master's SSH credentials, so share it only with the intended worker administrator.
+   ```
+
+:::danger 保护加入命令
+生成的 `MASTER_AUTH_INFO` 只经过 Base64 编码，并未加密。拿到命令的人可以还原主节点的 SSH 凭据。请只将命令提供给目标工作节点的管理员，切勿发布到公开群聊或代码仓库。
+:::
+
+## 步骤 3：添加工作节点 <Badge type="warning" text="在工作节点上操作" />
+
+:::warning 检查工作节点状态
+工作节点上不能有完整安装的 Olares。如果已安装 Olares，请先备份重要数据，再运行 `sudo olares-cli uninstall`。如果加入命令检测到已有安装，它会停止并显示该操作提示。
+:::
+
+1. 通过 SSH 连接工作节点。
+
+2. 在工作节点上，粘贴并运行步骤 2 生成的完整命令。命令格式如下：
+
+   ```bash
+   export MASTER_AUTH_INFO='<编码后的主节点连接信息>' \
+     OLARES_SYSTEM_CDN_SERVICE='<Olares CDN 地址>' \
+     && curl -fsSL '<加入脚本地址>' | bash
+   ```
+
+   请完整使用系统生成的命令，不要复制上面的占位示例。
+
+3. 如果命令提示已安装 Olares，请先卸载：
+
+   ```plain
+   Joining this machine to an Olares cluster as a worker node, using the Olares <version> installer.
+   error: Olares <version> is already installed on this node; run 'sudo olares-cli uninstall' before joining it to another cluster
+   ```
+
+   ```bash
+   sudo olares-cli uninstall
+   ```
+
+   卸载完成后，再次运行生成的加入命令。
+
+4. 加入流程默认使用工作节点当前的 hostname（主机名）作为节点名称。如果主机名格式有效且在集群中没有重名，无需进行任何操作。
+
+   如果当前主机名不可用，请按提示输入新名称。加入流程会自动更新工作节点的主机名。
+
+   主机名必须：
+
+   - 只包含小写字母、数字、连字符（`-`）或句点（`.`）。
+   - 以字母或数字开头和结尾。
+   - 在集群中保持唯一。
+
+   例如，可以使用 `olares-worker`。
+
+加入流程会检查主节点连接、准备匹配的 Olares 版本，并将工作节点添加到集群。
+
+工作节点成功加入后，输出末尾会显示类似以下内容：
+
+```plain
+[Job] Add Worker Node To The Cluster execute successfully!!! (...)
+
+This node joined the Olares cluster at <主节点 IP 地址> as "<工作节点名称>".
+Verify it on the master with: sudo /usr/local/bin/kubectl get nodes
 ```
 
-### 示例 2：自定义 SSH 密钥路径
+## 步骤 4：验证集群 <Badge type="tip" text="在主节点上操作" />
 
-如果主节点的 IP 是 `192.168.1.15`，SSH 端口是 `22`，用户是 `root`，而子节点使用位于 `/home/olares/.ssh/id_rsa` 的自定义 SSH 密钥，运行：
-
-```bash
-export MASTER_HOST=192.168.1.15 \
-MASTER_SSH_PRIVATE_KEY_PATH=/home/olares/.ssh/id_rsa
-./joincluster.sh
-```
-
-### 示例 3：使用非 root 用户和密码
-
-如果主节点的 IP 是 `192.168.1.15`，SSH 端口是 `22`，用户是具有 `sudo` 权限的 `olares`，并且密码是 `olares`，运行：
+Olares 使用 Kubernetes 管理集群。在主节点上运行以下 `kubectl` 命令，检查所有节点的状态：
 
 ```bash
-export MASTER_HOST=192.168.1.15 \
-MASTER_SSH_USER=olares \
-MASTER_SSH_PASSWORD=olares
-./joincluster.sh
+sudo /usr/local/bin/kubectl get nodes
 ```
 
-## 卸载子节点
+确认主节点和工作节点均已显示，且状态为 `Ready`。
 
-在子节点上运行以下命令：
+示例输出：
 
-```bash
-olares-cli olares uninstall
+```plain
+NAME          STATUS   ROLES                         AGE   VERSION
+master-node   Ready    control-plane,master,worker   1h    v1.33.3+k3s1
+worker-node   Ready    worker                        1m    v1.33.3+k3s1
 ```
 
-## 处理网络变化
+## 资源
 
-集群设置完成后，网络配置的变化可能会中断主节点与子节点的通信。
-
-### 如果主节点网络发生变化
-
-- **如果主节点切换到另一个局域网**：Olares 系统守护进程（olaresd）会检测到这一变化，触发 `olares-cli` 调用 `changeip` 命令。此时主节点将继续工作，但子节点无法与主节点通信，导致无法正常运行。
-
-- **如果主节点的 IP 在同一局域网内发生变化**：子节点同样会失去通信，因为它们无法自动检测新的 IP。为解决此问题，可以在子节点上使用 `olares-cli` 命令更新主节点的 IP 地址并重启相关服务：
-
-  ```bash
-  sudo olares-cli olares change-ip -b /home/olares/.olares --new-master-host 192.168.1.18
-  ```
-
-  其中：
-
-  - `-b /home/olares/.olares`：指定 Olares 的基础目录（默认值为 `$HOME/.olares`）。
-  - `--new-master-host 192.168.1.18`：指定主节点的新 IP 地址。
-
-### 如果子节点网络发生变化
-
-- **如果子节点切换到另一个局域网**：子节点将失去与主节点的通信，无法正常运行。
-
-- **如果子节点的 IP 在同一局域网内发生变化**：olaresd 会自动将新 IP 上报给主节点，无需手动干预。
-
-## 了解更多
-
-- [Olares 系统架构](../../developer/concepts/system-architecture.md#分布式存储)：了解支持 Olares 的分布式文件系统，确保可扩展性、高可用性以及无缝的数据管理。
-- [系统守护进程](../../developer/install/installation-overview.md#系统守护进程olaresd)：olaresd：了解 orchestrates 和管理 Olares 核心功能的中央系统进程。
-- [数据](../../developer/concepts/data.md#juicefs)：探索 Olares 如何利用 JuiceFS 提供统一文件系统，实现高效的数据存储和检索。
-- [Olares CLI](../../developer/cli-overview.md)：深入了解用于管理 Olares 安装的命令行工具。
-- [Olares 环境变量](../../developer/install/environment-variables.md)：了解支持 Olares 高级配置的环境变量。
-- [安装 Olares](../get-started/install-olares.md)：了解安装与激活 Olares 的过程。
+- [Olares 环境变量](../../developer/install/environment-variables.md)：了解用于 Olares 高级配置的环境变量。
+- [在 Olares 1.12.6 上使用两台 Olares One 组建集群](../../one/connect-two-olares-one.md)：Olares 1.12.7 正式发布前，请使用当前手动流程。
