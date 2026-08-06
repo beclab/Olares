@@ -1,55 +1,89 @@
 ---
-description: Protect your Olares instances with cloud backup and restore features. Handle snapshots, perform restore operations, and manage storage quotas in Olares Space.
+description: Back up and restore your Olares data using Olares Space, including viewing backup usage, managing snapshots, and restoring files to your Olares.
 head:
   - - meta
     - name: keywords
       content: Olares, Olares Space, backup, restore, snapshots, cloud backup
 ---
-:::warning Documentation does not match current experience
-We are currently updating this documentation to match the latest experience on the Olares Space platform. If there are differences, follow the actual platform.
-:::
 # Back up and restore
 
-Olares Space is the official solution to back up snapshots for your Olares instances. You can restore an Olares to its most recent state whenever needed. This section provides instructions for managing backups and restores in Olares Space. 
+Use Olares Space to back up your Olares data to the cloud and restore it when needed.
 
-## View backup list
+## View backup storage usage
 
-The backup task list shows information for each backup task, including:
-
-- Initial creation time
-- Most recent snapshot time
-- Overall storage usage 
-
-![Backup task list in Olares Space](/images/how-to/space/backup_list.jpg#bordered)
-
-Click **View Details** on a task to see its detail page. The detail page shows the storage usage since the task was created and a list of all successful snapshots.
+Check how much storage your backups are using against your quota.
 
 :::info
-Currently, only restoring from the most recent snapshot is supported.
+For self-hosted Olares users, it's important to monitor the storage usage for backup services. These services may incur charges based on usage. For more information, see [Billing](billing.md).
 :::
 
-## Restore backup to the Olares Space
+1. Click **Backup** in the left navigation pane.
 
-![Snapshots in Olares Space](/images/how-to/space/restore_backup_to_the_olares_space.jpg#bordered)
+  ![Backup list in Olares Space](/images/how-to/space/backup_list.png#bordered)
 
-Restoring a snapshot to the cloud is similar to setting up a new cloud-based Olares.
+2. Locate the **Backup Usage** section. It shows the total storage used by all backups and the total quota.
 
-1. Set up relevant details.
+## View backup details
 
-   a. Select the cloud service provider and their data center location. 
+View the snapshots of a backup task to see what has been backed up.
 
-   b. Choose the hardware configuration for the instance. 
+1. Click **Backup** in the left navigation pane.
+2. Locate the **Backup List** section. You can find all backup tasks in the table.
+3. To view the snapshots of a backup task:
 
-   c. Confirm the snapshot details and enter the backup password.
+    a. Click **View Details** on the backup task.
 
-2. Understand charges for storage and bandwidth. <br>Each instance includes a certain amount of free traffic. Any usage exceeding the quota will incur charges. For more information, see [Billing](billing.md).
+    b. Review the backup information and snapshots.
 
-3. Confirm the order and complete the payment. After that, the Olares begins to install.
+    ![Snapshots list in Olares Space](/images/how-to/space/snapshots_list.png#bordered)
+
+## Restore from a backup
+
+Restore files from a backup to your Olares.
 
 :::info
-During the installation process, Olares will verify the backup password. If it is incorrect, you'll be asked to re-enter the correct one. If you forget the backup password, the restoration process won't be able to continue. In this case, please return your instance and try restoring again.
+Understand charges for storage and bandwidth before using backup and restore services. Each instance includes a certain amount of free traffic, and any usage exceeding the quota will incur charges. For more information, see [Billing](billing.md).
 :::
 
-:::info
-To avoid conflicts or other unforeseeable problem, you must return the existing Olares that uses the same name before restoring to a cloud-based Olares.
-:::
+1. On the backup details page, select the snapshot you want to restore:
+
+   - To restore the most recent snapshot, click **Restore** in the upper-right corner.
+   - To restore a specific snapshot, find it in the **Snapshots** table, and then click **Restore** on that row.
+
+2. In the **Restore** window:
+
+    a. Copy the **Backup Url**.
+
+      ![Restore window in Olares Space](/images/how-to/space/backup_restore_dialog.png#bordered){width=70%}
+
+    b. Click the **Settings > Restore** link. This opens the **Restore** page in a new browser tab. You can also go to **Settings** > **Restore** in your Olares directly.
+
+3. On the **Restore** page, add a restore task:
+
+   - If the page is empty, click **Add restore task**, and then select **From Olares Space**.
+   - If the page already has restore tasks, click <i class="material-symbols-outlined">add</i> in the upper-right corner, and then select **From Olares Space**. 
+ 
+  ![Add restore task options](/images/how-to/space/restore_add_task.png#bordered){width=70%}
+
+4. Fill in the restore information:
+
+    a. **Backup URL**: Paste the copied **Backup Url**.
+
+    b. **Restore password**: Enter the password you set when creating the backup task.
+
+    c. **Restore location**: Select the directory where you want to restore the files.
+
+    d. **New folder name**: Enter a name for the new folder that will contain the restored files.
+
+    ![Restore from Olares Space form](/images/how-to/space/restore_from_olares_space.png#bordered){width=70%}
+
+5. Click **Start restore**.
+6. After the restoration finishes, view and access the restored files:
+
+    a. Click the restore task card to open the restore details.
+
+      ![Restore task completed](/images/how-to/space/restore_complete.png#bordered){width=70%}
+
+    b. On the **Restore details** page, click **Open in Files**. The Files app opens the folder containing the restored files.
+
+      ![Restore details page](/images/how-to/space/restore_details.png#bordered){width=70%}
