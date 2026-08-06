@@ -8,6 +8,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 // fakeValidator is the only Validator the run-level tests use so the
@@ -276,13 +277,17 @@ func TestChainShapes(t *testing.T) {
 	}
 	assertChainNames(t, "InstallabilityValidators", InstallabilityValidators(), wantInstall)
 
-	// UpgradabilityValidators is intentionally just cluster-capacity:
-	// upgrade reuses the existing allocation (compute-mode), the
-	// running deployment is already counted against the owner's quota
-	// (user-quota), and helm upgrade goes through kube-scheduler for
-	// the rest. See UpgradabilityValidators in validators.go.
+	// UpgradabilityValidators gates cluster-capacity on the new chart's
+	// absolute requirements, then cluster-pressure / k8s-request on the
+	// non-negative delta (new − old). user-quota, compute-mode,
+	// node-pressure and compute-allocation stay excluded: install/resume
+	// remain the quota gates, upgrade reuses the existing allocation,
+	// and helm upgrade goes through kube-scheduler. See
+	// UpgradabilityValidators in validators.go.
 	wantUpgrade := []string{
 		"cluster-capacity",
+		"cluster-pressure",
+		"k8s-request",
 	}
 	assertChainNames(t, "UpgradabilityValidators", UpgradabilityValidators(), wantUpgrade)
 
@@ -324,19 +329,18 @@ func assertChainNames(t *testing.T, label string, chain []Validator, want []stri
 // here would silently include or exclude the wrong validator for a
 // given lifecycle stage.
 //
-// UpgradeOp is opted into ONLY by cluster-capacity (so the upgrade
-// handler can reject a new chart whose declared requirements exceed
-// the cluster's total schedulable capacity before any helm work
-// happens). Every other validator in this package is intentionally
-// false for UpgradeOp.
+// UpgradeOp is opted into by cluster-capacity (absolute new
+// requirements) and by cluster-pressure / k8s-request (which run
+// against the delta new − old on upgrade). user-quota, compute-mode,
+// node-pressure and compute-allocation stay false for UpgradeOp.
 //
 // The remaining semantic mapping (matching the comments inside
 // validators.go):
 //
-//   - cluster-pressure, k8s-request, node-pressure :
-//     install + resume.
-//   - user-quota         : install + resume (quota is a running total
-//     that grows on either transition).
+//   - cluster-pressure, k8s-request : install + resume + upgrade.
+//   - node-pressure                 : install + resume.
+//   - user-quota         : install + resume only (upgrade does not
+//     re-check owner quota).
 //   - cluster-capacity   : install + upgrade — resume reuses the
 //     placement chosen at install; the cluster's
 //     total schedulable capacity hasn't shrunk in
@@ -372,16 +376,20 @@ func TestAppliesToMatrix(t *testing.T) {
 			},
 		},
 		{
+			// cluster-pressure runs on upgrade too, but against the
+			// resource delta (new − old) rather than absolute new.
 			name: "cluster-pressure",
 			v:    clusterPressureValidator{},
 			want: map[Op]bool{
 				v1alpha1.InstallOp: true,
-				v1alpha1.UpgradeOp: false,
+				v1alpha1.UpgradeOp: true,
 				v1alpha1.ResumeOp:  true,
 				v1alpha1.StopOp:    false,
 			},
 		},
 		{
+			// user-quota is install + resume only; upgrade does not
+			// re-check owner quota (see UpgradabilityValidators).
 			name: "user-quota",
 			v:    userQuotaValidator{},
 			want: map[Op]bool{
@@ -392,11 +400,13 @@ func TestAppliesToMatrix(t *testing.T) {
 			},
 		},
 		{
+			// k8s-request runs on upgrade too, but against the resource
+			// delta so already-scheduled requests are not double-counted.
 			name: "k8s-request",
 			v:    k8sRequestValidator{},
 			want: map[Op]bool{
 				v1alpha1.InstallOp: true,
-				v1alpha1.UpgradeOp: false,
+				v1alpha1.UpgradeOp: true,
 				v1alpha1.ResumeOp:  true,
 				v1alpha1.StopOp:    false,
 			},
@@ -446,5 +456,106 @@ func TestAppliesToMatrix(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func upgradeConfig(name string, cpuMilli, memory int64) *appcfg.ApplicationConfig {
+	cfg := &appcfg.ApplicationConfig{AppName: name, OwnerName: "alice"}
+	if cpuMilli > 0 {
+		cfg.Requirement.CPU = resource.NewMilliQuantity(cpuMilli, resource.DecimalSI)
+	}
+	if memory > 0 {
+		cfg.Requirement.Memory = resource.NewQuantity(memory, resource.BinarySI)
+	}
+	return cfg
+}
+
+// TestUpgradeDeltaFeedsPressureChecks verifies the delta-aware upgrade
+// validators receive the non-negative delta (new − old) on UpgradeOp,
+// not the new chart's absolute requirements.
+func TestUpgradeDeltaFeedsPressureChecks(t *testing.T) {
+	originalCluster := checkAppRequirement
+	originalK8s := checkAppK8sRequestResource
+	t.Cleanup(func() {
+		checkAppRequirement = originalCluster
+		checkAppK8sRequestResource = originalK8s
+	})
+
+	var gotCPU int64 = -1
+	capture := func(cfg *appcfg.ApplicationConfig) {
+		if cfg != nil && cfg.Requirement.CPU != nil {
+			gotCPU = cfg.Requirement.CPU.MilliValue()
+		}
+	}
+	checkAppRequirement = func(_ string, cfg *appcfg.ApplicationConfig, _ v1alpha1.OpType) (constants.ResourceType, constants.ResourceConditionType, error) {
+		capture(cfg)
+		return "", "", nil
+	}
+	checkAppK8sRequestResource = func(cfg *appcfg.ApplicationConfig, _ v1alpha1.OpType) (constants.ResourceType, constants.ResourceConditionType, error) {
+		capture(cfg)
+		return "", "", nil
+	}
+
+	// new needs 3000m, old needs 1000m -> delta 2000m.
+	in := Input{
+		AppConfig:     upgradeConfig("app", 3000, 4<<30),
+		PrevAppConfig: upgradeConfig("app", 1000, 2<<30),
+		Op:            v1alpha1.UpgradeOp,
+	}
+
+	for _, v := range []Validator{clusterPressureValidator{}, k8sRequestValidator{}} {
+		gotCPU = -1
+		decision, err := v.Validate(context.Background(), in)
+		if err != nil {
+			t.Fatalf("%s validate: %v", v.Name(), err)
+		}
+		if !decision.OK {
+			t.Fatalf("%s decision=%#v, want OK", v.Name(), decision)
+		}
+		if gotCPU != 2000 {
+			t.Fatalf("%s received CPU=%dm, want delta 2000m", v.Name(), gotCPU)
+		}
+	}
+}
+
+// TestUpgradeZeroDeltaShortCircuits verifies the delta-aware upgrade
+// validators pass without touching any backend when the new version
+// keeps or lowers its requests.
+func TestUpgradeZeroDeltaShortCircuits(t *testing.T) {
+	originalCluster := checkAppRequirement
+	originalK8s := checkAppK8sRequestResource
+	t.Cleanup(func() {
+		checkAppRequirement = originalCluster
+		checkAppK8sRequestResource = originalK8s
+	})
+
+	var calls int
+	checkAppRequirement = func(string, *appcfg.ApplicationConfig, v1alpha1.OpType) (constants.ResourceType, constants.ResourceConditionType, error) {
+		calls++
+		return "", "", nil
+	}
+	checkAppK8sRequestResource = func(*appcfg.ApplicationConfig, v1alpha1.OpType) (constants.ResourceType, constants.ResourceConditionType, error) {
+		calls++
+		return "", "", nil
+	}
+
+	// new <= old on every dimension -> delta zero.
+	in := Input{
+		AppConfig:     upgradeConfig("app", 1000, 2<<30),
+		PrevAppConfig: upgradeConfig("app", 2000, 3<<30),
+		Op:            v1alpha1.UpgradeOp,
+	}
+
+	for _, v := range []Validator{clusterPressureValidator{}, k8sRequestValidator{}} {
+		decision, err := v.Validate(context.Background(), in)
+		if err != nil {
+			t.Fatalf("%s validate: %v", v.Name(), err)
+		}
+		if !decision.OK {
+			t.Fatalf("%s decision=%#v, want OK", v.Name(), decision)
+		}
+	}
+	if calls != 0 {
+		t.Fatalf("expected zero backend calls for zero delta, got %d", calls)
 	}
 }
