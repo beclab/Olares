@@ -110,8 +110,8 @@ github.com/aws/aws-sdk-go-v2/service/sts v1.33.20 h1:oIaQ1e17CSKaWmUTu62MtraRWVI
 github.com/aws/aws-sdk-go-v2/service/sts v1.33.20/go.mod h1:cQnB8CUnxbMU82JvlqjKR2HBOm3fe9pWorWBza6MBJ4=
 github.com/aws/smithy-go v1.22.3 h1:Z//5NuZCSW6R4PhQ93hShNbyBbn8BWCmCVCt+Q8Io5k=
 github.com/aws/smithy-go v1.22.3/go.mod h1:t1ufH5HMublsJYulve2RKmHDC15xu1f26kHCp/HgceI=
-github.com/beclab/Olares/framework/oac v0.0.0-20260804143153-7a64d00df3e3 h1:8GGNH/ciRtGwePzDthdlge6Uol+V6dfBV1J5DAfdCfQ=
-github.com/beclab/Olares/framework/oac v0.0.0-20260804143153-7a64d00df3e3/go.mod h1:5hm6YNfFzaiiSOsCvCapYiJhtGQeNxd1oXnp4+2LNBw=
+github.com/beclab/Olares/framework/oac v0.0.0-20260806133352-17b88f3cc421 h1:+nDNYQHujaVK0FIWdLKLZmmXhEmWkGWpp4r3/uTowvg=
+github.com/beclab/Olares/framework/oac v0.0.0-20260806133352-17b88f3cc421/go.mod h1:5hm6YNfFzaiiSOsCvCapYiJhtGQeNxd1oXnp4+2LNBw=
 github.com/beclab/api v0.0.24 h1:Ob01wkENbiBWis/O32Sn7xLQc8sAtCVmP6zksrMAlaQ=
 github.com/beclab/api v0.0.24/go.mod h1:okd0RExsvSsuW5MsRh7v56Xex3vi5B26xHOGH3LT6yQ=
 github.com/beclab/lldap-client v0.0.11 h1:/XWzEd2pAFS7nwOtapyr7ClQViyGIUsMiyQ2d8t8sEo=
