@@ -1,4 +1,5 @@
 ---
+outline: [2, 3]
 description: 从 Olares Space 云端备份中恢复文件，包括查看备份用量和快照。
 head:
   - - meta

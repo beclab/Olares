@@ -1,4 +1,5 @@
 ---
+outline: [2, 3]
 description: 使用 LarePass 扫码登录 Olares Space，支持 DID 和 Olares ID 两种登录方式，以及多账户管理和切换。
 head:
   - - meta

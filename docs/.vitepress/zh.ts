@@ -523,7 +523,7 @@ const side = {
             text: "从 Olares Space 备份中恢复数据",
             link: "/zh/manual/space/backup-restore",
           },
-          { text: "计费", link: "/zh/manual/space/billing" },
+          { text: "计费与支付", link: "/zh/manual/space/billing" },
         ],
       },
     {
