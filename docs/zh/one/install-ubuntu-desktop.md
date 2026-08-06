@@ -7,11 +7,11 @@ head:
       content: Olares One, Ubuntu Desktop, NVMe SSD, 操作系统安装, 全新安装, 图形化设置
 ---
 
-# 在 Olares One 上安装 Ubuntu Desktop <Badge type="tip" text="30 min" />
-
 :::warning
-本页面为 AI 翻译版本，内容仅供快速参考。关键信息建议以[英文原文](../../one/install-ubuntu-desktop.md)为准。
+本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../one/install-ubuntu-desktop.md)为准。
 :::
+
+# 在 Olares One 上安装 Ubuntu Desktop <Badge type="tip" text="30 min" />
 
 将 Olares One 主 NVMe SSD 上预装的 Olares OS 替换为 Ubuntu Desktop 的全新安装。
 

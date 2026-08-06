@@ -11,7 +11,7 @@ doc_updated: "2026-05-14"
 ---
 
 :::warning
-本页面由 AI 自动翻译，部分技术术语可能与中文习惯存在差异。如有疑问，请以[英文原文](../../use-cases/openwebui-knowledge.md)为准。
+本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../use-cases/openwebui-knowledge.md)为准。
 :::
 
 # 在 Open WebUI 中与文档和知识库聊天

@@ -7,11 +7,11 @@ head:
       content: Olares, Olares One, Windows 驱动, NVIDIA 显卡驱动, GPU
 ---
 
-# 在 Windows 上安装驱动 <Badge type="tip" text="15 min"/>
-
 :::warning
-本文档由 AI 自动翻译，可能存在表述差异。如需核对，请参考[英文原文](../../one/install-nvidia-driver.md)。
+本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../one/install-nvidia-driver.md)为准。
 :::
+
+# 在 Windows 上安装驱动 <Badge type="tip" text="15 min"/>
 
 为了确保在 Olares One 上运行 Windows 时获得最佳性能和系统稳定性，Olares 提供了一个经过测试的一体化驱动包。该包包含设备的所有必要驱动，如音频、网络和 NVIDIA 显卡驱动。
 

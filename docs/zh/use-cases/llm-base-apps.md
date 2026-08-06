@@ -8,7 +8,7 @@ head:
 ---
 
 :::warning
-WARNING 本页面由 AI 自动翻译，部分技术术语可能与中文习惯存在差异。如有疑问，请以[英文原文](../../use-cases/llm-base-apps.md)为准。
+本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../use-cases/llm-base-apps.md)为准。
 :::
 
 # 使用引擎基座应用托管本地大语言模型

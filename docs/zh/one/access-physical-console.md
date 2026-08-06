@@ -8,7 +8,7 @@ head:
 ---
 
 :::warning
-当前文档由 AI 翻译生成，若发现术语或表述不准确，请查看[英文原文](../../one/access-physical-console.md)。
+本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../one/access-physical-console.md)为准。
 :::
 
 # 物理访问 Olares One 终端
