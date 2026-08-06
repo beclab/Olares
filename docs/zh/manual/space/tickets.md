@@ -12,11 +12,19 @@ head:
 当前文档由 AI 翻译生成，若发现术语或表述不准确，请查看[英文原文](../../../manual/space/tickets.md)。
 :::
 
-在 Olares Space 的 **Tickets** 页面中，你可以报告问题、寻求帮助并跟踪支持请求的状态。你可以通过网页界面提交工单，也可以直接在 Olares 设备上使用 `olares-cli` 上传日志。
+使用 Olares Space 的 **Tickets** 页面报告问题、寻求帮助并跟踪支持请求的状态。
 
 ## 创建工单
 
-提交新的支持请求，并附上详情和可选附件。
+使用以下任一方式在 Olares Space 中创建支持工单。
+
+### 手动创建工单
+
+通过网页表单提交新的支持请求。描述你的问题，并附加截图、导出的系统日志或其他文件，帮助支持团队更快地诊断和解决问题。
+
+:::tip 提前准备系统日志
+如需附加系统日志，请先从 Olares **设置 > 高级 > 导出系统日志**导出。导出所需时间取决于日志量大小。有关详细说明，请参阅[导出系统日志](../olares/settings/developer.md#导出系统日志)。
+:::
 
 1. [登录 Olares Space](manage-accounts.md#log-in-to-olares-space)。
 2. 在左侧边栏中，点击 **Tickets**。
@@ -35,9 +43,9 @@ head:
    - **Save draft**：保存当前进度，暂不提交。
    - **Delete draft**：删除当前草稿。
 
-## 使用 olares-cli 上传日志
+### 使用 olares-cli 自动创建工单
 
-直接从 Olares 设备收集并上传系统日志，系统会自动创建一个工单。
+直接从 Olares 设备上传系统日志。系统会自动创建工单并附加收集到的日志。
 
 1. 在 **Tickets** 页面，点击 **+ New ticket** 旁边的 <i class="material-symbols-outlined">terminal</i>。
 2. 在 **Upload logs via olares-cli** 窗口中，复制 **Full command line**。

@@ -12,24 +12,24 @@ If you cannot resolve an issue using the troubleshooting guides, contact the Ola
 
 ## Submit a ticket in the Assist Hub app
 
-The Assist Hub app is the recommended way to get help. It has a built-in log collection feature, so you can submit a ticket directly without manually exporting logs first.
+The Ticket app is the recommended way to get help. It has a built-in log collection feature, so you can submit a ticket directly without manually exporting logs first.
 
 :::info Link Olares Space first
 Before submitting a ticket, make sure your Olares Space account is linked to your Olares device. If not, you will be prompted to bind it in LarePass under **Settings** > **Integration**. See [Monitor Olares in Olares Space](../space/manage-olares.md) for linking instructions.
 :::
 
-### Install Assist Hub
+### Install Ticket
 
-Install the Assist Hub app from Market and log in with LarePass to submit tickets from your Olares device.
+Install the Ticket app from Market and log in with LarePass to submit tickets from your Olares device.
 
-1. Open Market, search for "Assist Hub", and then install the app.
-2. Open the Assist Hub app. A login QR code appears on the screen.
+1. Open Market, search for "Ticket", and then install the app.
+2. When the installation finishes, open Ticket. A login QR code appears on the screen.
 3. Open the LarePass app on your mobile device and go to the **Settings** tab.
 4. Tap the scan icon in the upper-right corner, scan the QR code on the screen, and then tap **Confirm** to log in.
 
 ### Submit a ticket
 
-Create a ticket with details about your issue. Assist Hub can automatically collect system information and logs from your Olares device.
+Create a ticket with details about your issue. The app can automatically collect system information and logs from your Olares device.
 
 1. Click **Create Ticket** in the left sidebar or at the bottom of the page.
 2. Fill in the form:
@@ -39,7 +39,7 @@ Create a ticket with details about your issue. Assist Hub can automatically coll
    - **Description**: Describe the issue, what triggered it, and how to reproduce it. You can paste or drop images directly into the editor.
    - **Attachments**: Optional. Click the upload area or drag files into it.
 3. Review **System Information**. The information is automatically collected from your Olares instance. If you do not want to include the info in the ticket, toggle off **Attach in ticket**.
-4. To collect and attach system logs, expand **Collect Logs**, and then click **Collect**. Wait until the collection completes.
+4. To collect and attach system logs, expand **Collect Logs**, and then click **Collect**. When the collection finishes, the log file appears as an attachment.
 5. Click **Submit** to send the ticket.
 
 ### Manage tickets

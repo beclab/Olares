@@ -43,7 +43,7 @@ Olares 设备上的 Assist Hub 应用是获取帮助的推荐方式。它内置�
    - **Description**：描述问题、触发条件以及复现步骤。可以直接粘贴或拖拽图片到编辑器中。
    - **Attachments**（可选）：点击上传区域或拖拽文件到该区域上传附件。
 3. 查看**System Information**。该区域的信息会从你的 Olares 实例自动收集。如果不想让该信息包含在工单中，请关闭**Attach in ticket**开关。
-4. 如需附加完整系统日志，展开**Collect Logs**，开启**Full logs**，然后点击**Collect**。等待收集完成。
+4. 如需附加完整系统日志，展开**Collect Logs**，然后点击**Collect**。收集完成后，日志文件会作为附件显示在该区域。
 5. 点击**Submit**提交工单。
 
 ### 管理工单

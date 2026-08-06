@@ -8,11 +8,19 @@ head:
 ---
 # Manage support tickets in Olares Space
 
-Use the Tickets page in Olares Space to report issues, ask for help, and track the status of your support requests. You can submit tickets through the web interface or upload logs directly from your Olares device using `olares-cli`.
+Use the Tickets page in Olares Space to report issues, ask for help, and track the status of your support requests.
 
 ## Create tickets
 
-Submit a new support request with details and optional attachments.
+Use one of the following methods to create a support ticket in Olares Space.
+
+### Create a ticket manually
+
+Submit a new support request through the web form. Describe your issue, and attach screenshots, exported system logs, or other files to help the support team diagnose and resolve your issue faster.
+
+:::tip Prepare system logs in advance
+If you want to attach system logs, export them first from Olares **Settings > Advanced > Export system logs**. The export might take some time depending on the amount of logs collected. For detailed instructions, see [Export system logs](../olares/settings/developer.md#export-system-logs).
+:::
 
 1. [Log in to Olares Space](manage-accounts.md#log-in-to-olares-space).
 2. On the left sidebar, click **Tickets**.
@@ -29,9 +37,9 @@ Submit a new support request with details and optional attachments.
    - **Save draft**: Save your progress without submitting.
    - **Delete draft**: Remove the current draft.
 
-## Upload logs with olares-cli
+### Create a ticket automatically via olares-cli
 
-Upload system logs directly from your Olares device to create a ticket automatically.
+Upload system logs directly from your Olares device. This creates a ticket automatically with the collected logs attached.
 
 1. On the **Tickets** page, click <i class="material-symbols-outlined">terminal</i> next to **+ New ticket**.
 2. In the **Upload logs via olares-cli** window, copy the **Full command line**.
