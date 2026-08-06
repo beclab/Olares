@@ -48,8 +48,15 @@ func TestDesiredEntranceExtAuthPolicy(t *testing.T) {
 		t.Fatal("extAuth must be fail-closed")
 	}
 	httpCfg, _ := ext["http"].(map[string]any)
-	if path, _ := httpCfg["path"].(string); path != autheliaVerifyPath {
-		t.Fatalf("path = %q", path)
+	if path, _ := httpCfg["pathOverride"].(string); path != autheliaVerifyPathOverride {
+		t.Fatalf("pathOverride = %q, want %q", path, autheliaVerifyPathOverride)
+	}
+	if _, hasPath := httpCfg["path"]; hasPath {
+		t.Fatal("must not set path when pathOverride is used")
+	}
+	headers, _ := ext["headersToExtAuth"].([]any)
+	if len(headers) == 0 {
+		t.Fatal("headersToExtAuth required")
 	}
 	if !strings.Contains(pol.GetLabels()["gateway.olares.io/auth-kind"], "entrance-ext-auth") {
 		t.Fatalf("labels = %#v", pol.GetLabels())

@@ -42,6 +42,12 @@ func TestSecurityPolicyMatchesEntranceExtAuth(t *testing.T) {
 				"kind":  "HTTPRoute",
 				"name":  "app-web",
 			},
+			"extAuth": map[string]any{
+				"failOpen": false,
+				"http": map[string]any{
+					"pathOverride": "/api/verify",
+				},
+			},
 		},
 	}}
 	if !SecurityPolicyMatchesEntranceExtAuth(good, "app-web") {
@@ -51,6 +57,18 @@ func TestSecurityPolicyMatchesEntranceExtAuth(t *testing.T) {
 	_ = unstructured.SetNestedField(wrongRoute.Object, "other-route", "spec", "targetRef", "name")
 	if SecurityPolicyMatchesEntranceExtAuth(wrongRoute, "app-web") {
 		t.Fatal("wrong targetRef must not match")
+	}
+	wrongPath := good.DeepCopy()
+	_ = unstructured.SetNestedField(wrongPath.Object, "/api/authz/ext-authz/", "spec", "extAuth", "http", "pathOverride")
+	if SecurityPolicyMatchesEntranceExtAuth(wrongPath, "app-web") {
+		t.Fatal("wrong pathOverride must not match")
+	}
+	rejected := good.DeepCopy()
+	_ = unstructured.SetNestedSlice(rejected.Object, []any{
+		map[string]any{"type": "Accepted", "status": "False"},
+	}, "status", "conditions")
+	if SecurityPolicyMatchesEntranceExtAuth(rejected, "app-web") {
+		t.Fatal("Accepted=False must not match")
 	}
 }
 
@@ -90,6 +108,9 @@ func TestProbeEntranceExtAuthCoveredWithMatchingPolicy(t *testing.T) {
 		"metadata": map[string]any{
 			"name":      "app-web",
 			"namespace": "demo-user",
+			"labels": map[string]any{
+				"applications.app.bytetrade.io/owner": "user",
+			},
 		},
 		"spec": map[string]any{
 			"entranceClass": entranceClassApplication,
@@ -116,7 +137,81 @@ func TestProbeEntranceExtAuthCoveredWithMatchingPolicy(t *testing.T) {
 				"kind":  "HTTPRoute",
 				"name":  "app-web",
 			},
-			"extAuth": map[string]any{"failOpen": false},
+			"extAuth": map[string]any{
+				"failOpen": false,
+				"http": map[string]any{
+					"pathOverride": "/api/verify",
+				},
+			},
+		},
+	}}
+	grant := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": "gateway.networking.k8s.io/v1",
+		"kind":       "ReferenceGrant",
+		"metadata": map[string]any{
+			"name":      AutheliaExtAuthReferenceGrantName("demo-user"),
+			"namespace": "user-system-user",
+		},
+		"spec": map[string]any{
+			"from": []any{
+				map[string]any{
+					"group": "gateway.envoyproxy.io", "kind": "SecurityPolicy", "namespace": "demo-user",
+				},
+			},
+			"to": []any{
+				map[string]any{"group": "", "kind": "Service", "name": "authelia-backend"},
+			},
+		},
+	}}
+	dc := newExtAuthProbeDynamic(t, srr, pol, grant)
+	ok, err := ProbeEntranceExtAuthCovered(context.Background(), dc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ok {
+		t.Fatal("matching SecurityPolicy+Grant must yield ExtAuthCovered=true")
+	}
+}
+
+func TestProbeEntranceExtAuthCoveredMissingGrant(t *testing.T) {
+	srr := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": "gateway.olares.io/v1alpha1",
+		"kind":       "SharedRouteRegistry",
+		"metadata": map[string]any{
+			"name":      "app-web",
+			"namespace": "demo-user",
+			"labels": map[string]any{
+				"applications.app.bytetrade.io/owner": "user",
+			},
+		},
+		"spec": map[string]any{
+			"entranceClass": entranceClassApplication,
+			"hostPatterns":  []any{"app.example.com"},
+			"upstream": map[string]any{
+				"serviceName": "app",
+				"port":        int64(80),
+			},
+		},
+	}}
+	pol := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": "gateway.envoyproxy.io/v1alpha1",
+		"kind":       "SecurityPolicy",
+		"metadata": map[string]any{
+			"name":      EntranceExtAuthPolicyName("app-web"),
+			"namespace": "demo-user",
+			"labels": map[string]any{
+				"gateway.olares.io/auth-kind": authKindEntranceExtAuth,
+			},
+		},
+		"spec": map[string]any{
+			"targetRef": map[string]any{
+				"group": "gateway.networking.k8s.io",
+				"kind":  "HTTPRoute",
+				"name":  "app-web",
+			},
+			"extAuth": map[string]any{
+				"http": map[string]any{"pathOverride": "/api/verify"},
+			},
 		},
 	}}
 	dc := newExtAuthProbeDynamic(t, srr, pol)
@@ -124,8 +219,8 @@ func TestProbeEntranceExtAuthCoveredWithMatchingPolicy(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !ok {
-		t.Fatal("matching SecurityPolicy must yield ExtAuthCovered=true")
+	if ok {
+		t.Fatal("missing Authelia ReferenceGrant must yield ExtAuthCovered=false")
 	}
 }
 
@@ -162,6 +257,7 @@ func newExtAuthProbeDynamic(t *testing.T, objs ...runtime.Object) *fake.FakeDyna
 	listKinds := map[schema.GroupVersionResource]string{
 		sharedRouteRegistryGVR: "SharedRouteRegistryList",
 		securityPolicyGVR:      "SecurityPolicyList",
+		referenceGrantGVR:      "ReferenceGrantList",
 	}
 	return fake.NewSimpleDynamicClientWithCustomListKinds(scheme, listKinds, objs...)
 }

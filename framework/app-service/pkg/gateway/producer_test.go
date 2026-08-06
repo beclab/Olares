@@ -59,7 +59,7 @@ func TestSharedRouteProducerReconcilerSetsEntranceClassShared(t *testing.T) {
 
 	c := fake.NewClientBuilder().WithScheme(producerTestScheme(t)).WithObjects(app, svc).Build()
 	r := &SharedRouteProducerReconciler{Client: c}
-	if err := r.reconcileApp(context.Background(), app); err != nil {
+	if _, err := r.reconcileApp(context.Background(), app); err != nil {
 		t.Fatalf("reconcileApp: %v", err)
 	}
 
@@ -106,7 +106,7 @@ func TestSharedRouteProducerReconcilerBuildsApplicationSRRs(t *testing.T) {
 
 	c := fake.NewClientBuilder().WithScheme(producerTestScheme(t)).WithObjects(app, webSvc, apiSvc).Build()
 	r := &SharedRouteProducerReconciler{Client: c}
-	if err := r.reconcileApp(context.Background(), app); err != nil {
+	if _, err := r.reconcileApp(context.Background(), app); err != nil {
 		t.Fatalf("reconcileApp: %v", err)
 	}
 
@@ -154,7 +154,7 @@ func TestSharedRouteProducerReconcilerSingleApplicationEntranceUsesBareAppID(t *
 
 	c := fake.NewClientBuilder().WithScheme(producerTestScheme(t)).WithObjects(app, webSvc).Build()
 	r := &SharedRouteProducerReconciler{Client: c}
-	if err := r.reconcileApp(context.Background(), app); err != nil {
+	if _, err := r.reconcileApp(context.Background(), app); err != nil {
 		t.Fatalf("reconcileApp: %v", err)
 	}
 
@@ -218,7 +218,7 @@ func TestSharedRouteProducerReconcilerNotOptedInDeletesOwnedSRRs(t *testing.T) {
 	c := fake.NewClientBuilder().WithScheme(producerTestScheme(t)).
 		WithObjects(app, targetAppSRR, targetSharedSRR, otherAppSRR).Build()
 	r := &SharedRouteProducerReconciler{Client: c}
-	if err := r.reconcileApp(context.Background(), app); err != nil {
+	if _, err := r.reconcileApp(context.Background(), app); err != nil {
 		t.Fatalf("reconcileApp: %v", err)
 	}
 
@@ -289,7 +289,7 @@ func TestSharedRouteProducerReconcilerPrunesSharedAndApplicationSeparately(t *te
 	c := fake.NewClientBuilder().WithScheme(producerTestScheme(t)).
 		WithObjects(app, sharedSvc, appSvc, staleShared, staleApp).Build()
 	r := &SharedRouteProducerReconciler{Client: c}
-	if err := r.reconcileApp(context.Background(), app); err != nil {
+	if _, err := r.reconcileApp(context.Background(), app); err != nil {
 		t.Fatalf("reconcileApp: %v", err)
 	}
 
@@ -310,5 +310,36 @@ func TestSharedRouteProducerReconcilerPrunesSharedAndApplicationSeparately(t *te
 		if !apierrors.IsNotFound(err) {
 			t.Fatalf("expected stale SRR %s to be pruned, get err=%v", name, err)
 		}
+	}
+}
+
+func TestSharedRouteProducerRequeuesWhenPlatformDomainEmpty(t *testing.T) {
+	cluster.PrimePlatformDomainForTest("")
+	defer cluster.ResetPlatformDomainForTest()
+	cluster.PrimeInClusterGatewayEnabledForTest(true)
+	defer cluster.ResetInClusterGatewayEnabledForTest()
+
+	app := &appv1alpha1.Application{
+		ObjectMeta: metav1.ObjectMeta{Name: "demo", Namespace: "default"},
+		Spec: appv1alpha1.ApplicationSpec{
+			Name:      "demo",
+			Namespace: "demo-user",
+			Appid:     "demo1234",
+			Entrances: []appv1alpha1.Entrance{
+				{Name: "web", Host: "web-svc", Port: 8080},
+			},
+		},
+	}
+	c := fake.NewClientBuilder().WithScheme(producerTestScheme(t)).WithObjects(app).Build()
+	r := &SharedRouteProducerReconciler{Client: c}
+	res, err := r.reconcileApp(context.Background(), app)
+	if err != nil {
+		t.Fatalf("reconcileApp: %v", err)
+	}
+	if res.RequeueAfter != routeModePlatformRequeue {
+		t.Fatalf("RequeueAfter=%v want %v", res.RequeueAfter, routeModePlatformRequeue)
+	}
+	if IsOptedIn(app) {
+		t.Fatal("must not write route-mode while platform domain empty")
 	}
 }

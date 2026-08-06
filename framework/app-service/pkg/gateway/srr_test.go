@@ -134,3 +134,34 @@ func TestBuildSpecForEntranceApplication(t *testing.T) {
 		t.Errorf("entranceClass = %q, want %q", spec.EntranceClass, srrv1alpha1.EntranceClassApplication)
 	}
 }
+
+func TestBuildSpecForEntranceApplicationUsesThirdLevelOverride(t *testing.T) {
+	app := &appv1alpha1.Application{
+		ObjectMeta: metav1.ObjectMeta{Name: "olares-app"},
+		Spec: appv1alpha1.ApplicationSpec{
+			Appid:     "olares-app",
+			Name:      "olares-app",
+			Namespace: "olares-app-user",
+			Entrances: []appv1alpha1.Entrance{
+				{Name: "market", Host: "market-svc", Port: 80},
+				{Name: "settings", Host: "settings-svc", Port: 80},
+			},
+			Settings: map[string]string{
+				"defaultThirdLevelDomainConfig": `[{"entranceName":"market","thirdLevelDomain":"market"},{"entranceName":"settings","thirdLevelDomain":"settings"}]`,
+			},
+		},
+	}
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Name: "market-svc", Namespace: "olares-app-user"},
+		Spec:       corev1.ServiceSpec{Ports: []corev1.ServicePort{{Port: 80, Protocol: corev1.ProtocolTCP}}},
+	}
+	spec, err := BuildSpecForEntrance(app, app.Spec.Entrances[0], 0, len(app.Spec.Entrances), svc, "olares.com",
+		srrv1alpha1.EntranceClassApplication)
+	if err != nil {
+		t.Fatalf("BuildSpecForEntrance: %v", err)
+	}
+	wantHost := "market.*.olares.com"
+	if len(spec.HostPatterns) != 1 || spec.HostPatterns[0] != wantHost {
+		t.Fatalf("hostPatterns = %v, want %q", spec.HostPatterns, wantHost)
+	}
+}
