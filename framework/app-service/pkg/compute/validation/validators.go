@@ -2,11 +2,17 @@ package validation
 
 import (
 	"context"
+	"errors"
 	"fmt"
+
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/compute"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	ctrl "sigs.k8s.io/controller-runtime"
 
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 )
@@ -23,6 +29,18 @@ var clusterMetricsProvider = apputils.GetClusterResource
 var checkAppRequirement = apputils.CheckAppRequirement
 var checkUserResRequirement = apputils.CheckUserResRequirement
 var checkAppK8sRequestResource = apputils.CheckAppK8sRequestResource
+
+// kubeClientset builds the client used to inspect a deployed workload
+// directly. Kept as a variable for the same reason as the providers
+// above: the checks that need it must be exercisable without a live
+// cluster.
+var kubeClientset = func() (kubernetes.Interface, error) {
+	config, err := ctrl.GetConfig()
+	if err != nil {
+		return nil, err
+	}
+	return kubernetes.NewForConfig(config)
+}
 
 // clusterCapacityValidator answers the most fundamental feasibility
 // question: "is the cluster physically big enough to host this app at
@@ -155,7 +173,9 @@ func (clusterCapacityValidator) Validate(ctx context.Context, in Input) (Decisio
 //
 // On UpgradeOp the check uses the non-negative resource delta
 // (new − old) so the running deployment already counted in cluster
-// usage is not double-counted.
+// usage is not double-counted — but only while the deployed version
+// still has pods on the cluster. Upgrading a workload that is down falls
+// back to the new chart's absolute requirements.
 type clusterPressureValidator struct{}
 
 func (clusterPressureValidator) Name() string { return NameClusterPressure }
@@ -169,7 +189,10 @@ func (clusterPressureValidator) AppliesTo(op Op) bool {
 }
 
 func (clusterPressureValidator) Validate(ctx context.Context, in Input) (Decision, error) {
-	cfg, skip := requirementConfigForOp(in)
+	cfg, skip, err := requirementConfigForOp(ctx, in)
+	if err != nil {
+		return Decision{}, fmt.Errorf("cluster-pressure check: %w", err)
+	}
 	if skip {
 		return ok(), nil
 	}
@@ -211,7 +234,10 @@ func (userQuotaValidator) AppliesTo(op Op) bool {
 }
 
 func (userQuotaValidator) Validate(ctx context.Context, in Input) (Decision, error) {
-	cfg, skip := requirementConfigForOp(in)
+	cfg, skip, err := requirementConfigForOp(ctx, in)
+	if err != nil {
+		return Decision{}, fmt.Errorf("user-quota check: %w", err)
+	}
 	if skip {
 		return ok(), nil
 	}
@@ -241,7 +267,9 @@ func (userQuotaValidator) Validate(ctx context.Context, in Input) (Decision, err
 //
 // On UpgradeOp the check uses the non-negative resource delta
 // (new − old) so already-scheduled requests of the running deployment
-// are not double-counted. Rolling-update surge is left to kube-scheduler.
+// are not double-counted, falling back to the new chart's absolute
+// requirements when the deployed version has no pods left holding them.
+// Rolling-update surge is left to kube-scheduler.
 type k8sRequestValidator struct{}
 
 func (k8sRequestValidator) Name() string { return NameK8sRequest }
@@ -255,7 +283,10 @@ func (k8sRequestValidator) AppliesTo(op Op) bool {
 }
 
 func (k8sRequestValidator) Validate(ctx context.Context, in Input) (Decision, error) {
-	cfg, skip := requirementConfigForOp(in)
+	cfg, skip, err := requirementConfigForOp(ctx, in)
+	if err != nil {
+		return Decision{}, fmt.Errorf("k8s-request check: %w", err)
+	}
 	if skip {
 		return ok(), nil
 	}
@@ -281,17 +312,88 @@ func (k8sRequestValidator) Validate(ctx context.Context, in Input) (Decision, er
 // requirementConfigForOp returns the ApplicationConfig whose declared
 // Requirement should be checked. For install/resume that is AppConfig
 // as-is. For upgrade it is a shallow copy with Requirement set to
-// max(0, new−old); skip is true when the delta is zero on every
-// dimension (caller should treat as OK without hitting metrics).
-func requirementConfigForOp(in Input) (cfg *appcfg.ApplicationConfig, skip bool) {
+// max(0, new−old), but only when the previous version still holds its
+// requests (see upgradePrevHoldsRequests); otherwise the new chart's
+// absolute requirements are checked, because nothing is being freed.
+// skip is true when the delta is zero on every dimension (caller should
+// treat as OK without hitting metrics).
+func requirementConfigForOp(ctx context.Context, in Input) (cfg *appcfg.ApplicationConfig, skip bool, err error) {
 	if in.Op != v1alpha1.UpgradeOp {
-		return in.AppConfig, false
+		return in.AppConfig, false, nil
+	}
+	holds, err := upgradePrevHoldsRequests(ctx, in.PrevAppConfig, in.PrevState)
+	if err != nil {
+		return nil, false, err
+	}
+	if !holds {
+		return in.AppConfig, false, nil
 	}
 	delta := compute.UpgradeResourceDelta(in.PrevAppConfig, in.AppConfig)
 	if delta.CPU <= 0 && delta.Memory <= 0 && delta.Disk <= 0 {
-		return nil, true
+		return nil, true, nil
 	}
-	return compute.AppConfigWithRequirement(in.AppConfig, delta), false
+	return compute.AppConfigWithRequirement(in.AppConfig, delta), false, nil
+}
+
+// upgradePrevHoldsRequests reports whether the deployed version an
+// upgrade starts from still holds its requests, so only the (new − old)
+// increase needs to fit in live headroom.
+//
+// PrevState covers the steady cases without a kube round trip:
+//
+//   - Running → delta (pods are expected to be up)
+//   - Stopped → full (nothing to discount; the following resume needs
+//     the whole amount)
+//
+// Every other state falls through to a live-pod probe in the previous
+// config's namespace. Terminated and unscheduled pods hold nothing, so
+// Failed, Succeeded and pods without a NodeName are excluded. That
+// covers UpgradeFailed (pods may still be up), StopFailed /
+// ResumeFailed (state and cluster can disagree), and any unset state.
+//
+// Every uncertainty on the probe path is an error rather than a
+// fallback: an unreadable namespace, an unknown previous config or one
+// without a namespace all leave us unable to tell whether the discount
+// is real, and assuming headroom that may not exist is the failure mode
+// this guards against.
+func upgradePrevHoldsRequests(ctx context.Context, cfg *appcfg.ApplicationConfig, state v1alpha1.ApplicationManagerState) (bool, error) {
+	switch state {
+	case v1alpha1.Running:
+		return true, nil
+	case v1alpha1.Stopped:
+		return false, nil
+	}
+
+	if cfg == nil {
+		return false, errors.New("no previous app config to locate the deployed workload")
+	}
+	if cfg.Namespace == "" {
+		return false, fmt.Errorf("app config %q has no namespace", cfg.AppName)
+	}
+
+	kube, err := kubeClientset()
+	if err != nil {
+		return false, fmt.Errorf("build kube client: %w", err)
+	}
+	if _, err = kube.CoreV1().Namespaces().Get(ctx, cfg.Namespace, metav1.GetOptions{}); err != nil {
+		return false, fmt.Errorf("get namespace %s: %w", cfg.Namespace, err)
+	}
+
+	pods, err := kube.CoreV1().Pods(cfg.Namespace).List(ctx, metav1.ListOptions{
+		FieldSelector: "status.phase!=Failed,status.phase!=Succeeded",
+	})
+	if err != nil {
+		return false, fmt.Errorf("list pods in namespace %s: %w", cfg.Namespace, err)
+	}
+
+	for _, pod := range pods.Items {
+		if pod.Status.Phase != corev1.PodFailed &&
+			pod.Status.Phase != corev1.PodSucceeded &&
+			pod.Spec.NodeName != "" {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // computeModeValidator wraps compute.AppInstallable which validates
@@ -478,7 +580,10 @@ func InstallabilityValidators() []Validator {
 //     in cluster usage / scheduled requests is not double-counted.
 //     When the delta is zero on every dimension (the common case where
 //     a new version keeps or lowers its requests) these validators
-//     short-circuit to OK without any metrics round trip.
+//     short-circuit to OK without any metrics round trip. Upgrades of a
+//     workload whose pods are gone have nothing to discount, so they are
+//     checked against the new chart's absolute requirements instead —
+//     see upgradePrevHoldsRequests.
 //
 // Intentionally excluded:
 //
