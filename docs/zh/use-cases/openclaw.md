@@ -12,7 +12,7 @@ doc_updated: "2026-08-03"
 ---
 
 :::warning
-当前文档由 AI 翻译生成，若发现术语或表述不准确，请查看[英文原文](../../use-cases/openclaw.md)。
+本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../use-cases/openclaw.md)为准。
 :::
 
 # 将 OpenClaw 作为你的自托管个人 AI 助手运行

@@ -11,7 +11,7 @@ doc_updated: "2026-08-05"
 ---
 
 :::warning
-本文档由 AI 自动翻译，可能存在表述差异。如需核对，请参考[英文原文](../../use-cases/openwebui-knowledge.md)。
+本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../use-cases/openwebui-knowledge.md)为准。
 :::
 
 # 在 Open WebUI 中与文档和知识库聊天
@@ -130,7 +130,7 @@ PaddleOCR 需要更多 GPU VRAM，处理文档也比默认引擎更慢。仅在�
    b. **API Base URL**：输入 PaddleOCR 端点 URL。
 
    c. **API Token**：输入任意文本，例如 `local`。不要留空。
-   
+
    ![PaddleOCR config in Open WebUI](/images/manual/use-cases/openwebui-paddleocr-config1.png#bordered)
 
 6. 点击 **Save**。
