@@ -2,6 +2,7 @@ package market
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -52,6 +53,27 @@ type uploadItemResult struct {
 	File    string `json:"file"`
 	Status  string `json:"status"`
 	Message string `json:"message,omitempty"`
+}
+
+type uploadArchitectureError struct {
+	Code                  string
+	ManifestArchitectures []string
+	ClusterArchitectures  []string
+}
+
+func (e *uploadArchitectureError) Error() string {
+	switch e.Code {
+	case "architecture_incompatible":
+		return fmt.Sprintf(
+			"upload rejected: manifest supports %v, cluster provides %v; update spec.supportArch and image platforms, repackage, and do not retry the unchanged package",
+			e.ManifestArchitectures,
+			e.ClusterArchitectures,
+		)
+	case "cluster_arch_unavailable":
+		return "upload blocked: cluster node discovery is unavailable; keep the current package and version, then retry after node discovery recovers"
+	default:
+		return "upload architecture validation failed"
+	}
 }
 
 func isChartFile(name string) bool {
@@ -166,9 +188,35 @@ func doUploadFile(opts *MarketOptions, mc *MarketClient, filePath, source string
 	absPath, _ := filepath.Abs(filePath)
 	opts.info("Uploading '%s' to source '%s'...", filepath.Base(absPath), source)
 	ctx := context.Background()
-	_, err := mc.UploadChart(ctx, absPath, source)
+	response, err := mc.UploadChart(ctx, absPath, source)
 	if err != nil {
+		if architectureErr := parseUploadArchitectureError(response); architectureErr != nil {
+			return architectureErr
+		}
 		return fmt.Errorf("upload failed: %w", err)
 	}
 	return nil
+}
+
+func parseUploadArchitectureError(response *APIResponse) error {
+	if response == nil {
+		return nil
+	}
+	switch response.Code {
+	case "cluster_arch_unavailable":
+		return &uploadArchitectureError{Code: response.Code}
+	case "architecture_incompatible":
+		var data struct {
+			ManifestArchitectures []string `json:"manifest_architectures"`
+			ClusterArchitectures  []string `json:"cluster_architectures"`
+		}
+		_ = json.Unmarshal(response.Data, &data)
+		return &uploadArchitectureError{
+			Code:                  response.Code,
+			ManifestArchitectures: data.ManifestArchitectures,
+			ClusterArchitectures:  data.ClusterArchitectures,
+		}
+	default:
+		return nil
+	}
 }

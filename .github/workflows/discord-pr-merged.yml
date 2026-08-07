@@ -1,0 +1,213 @@
+name: Discord PR Merged Notification
+
+on:
+  pull_request_target:
+    types: [closed]
+
+permissions:
+  contents: read
+
+jobs:
+  notify-discord:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    steps:
+      - name: Send notification to Discord
+        shell: bash
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+
+          REPOSITORY: ${{ github.repository }}
+          REPOSITORY_URL: ${{ github.event.repository.html_url }}
+
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_AUTHOR_URL: ${{ github.event.pull_request.user.html_url }}
+          PR_AUTHOR_AVATAR: ${{ github.event.pull_request.user.avatar_url }}
+
+          MERGED_BY: ${{ github.event.pull_request.merged_by.login }}
+          MERGED_BY_URL: ${{ github.server_url }}/${{ github.event.pull_request.merged_by.login }}
+
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
+          BASE_BRANCH: ${{ github.event.pull_request.base.ref }}
+
+          ADDITIONS: ${{ github.event.pull_request.additions }}
+          DELETIONS: ${{ github.event.pull_request.deletions }}
+          CHANGED_FILES: ${{ github.event.pull_request.changed_files }}
+          COMMITS: ${{ github.event.pull_request.commits }}
+          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+          MERGED_AT: ${{ github.event.pull_request.merged_at }}
+
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${DISCORD_WEBHOOK}" ]]; then
+            echo "::error::DISCORD_WEBHOOK is not configured"
+            exit 1
+          fi
+
+          jq -n \
+            --arg number "${PR_NUMBER}" \
+            --arg title "${PR_TITLE}" \
+            --arg body "${PR_BODY}" \
+            --arg url "${PR_URL}" \
+            --arg repository "${REPOSITORY}" \
+            --arg repository_url "${REPOSITORY_URL}" \
+            --arg author "${PR_AUTHOR}" \
+            --arg author_url "${PR_AUTHOR_URL}" \
+            --arg author_avatar "${PR_AUTHOR_AVATAR}" \
+            --arg merged_by "${MERGED_BY}" \
+            --arg merged_by_url "${MERGED_BY_URL}" \
+            --arg head "${HEAD_BRANCH}" \
+            --arg base "${BASE_BRANCH}" \
+            --arg additions "${ADDITIONS}" \
+            --arg deletions "${DELETIONS}" \
+            --arg changed_files "${CHANGED_FILES}" \
+            --arg commits "${COMMITS}" \
+            --arg merge_sha "${MERGE_SHA}" \
+            --arg timestamp "${MERGED_AT}" \
+            '
+            (
+              $body
+              | gsub("\r"; "")
+              # Drop Cursor Bugbot auto-summary (kept on GitHub, noisy on Discord).
+              | gsub("(?s)<!--\\s*CURSOR_SUMMARY\\s-->.*?<!--\\s*/CURSOR_SUMMARY\\s-->"; "")
+              # Drop leftover HTML comments from the PR template.
+              | gsub("(?s)<!--.*?-->"; "")
+              | gsub("\n{3,}"; "\n\n")
+              | gsub("^\\s+|\\s+$"; "")
+            ) as $clean_body |
+
+            (
+              if ($clean_body | length) == 0 then
+                "_No description provided._"
+              elif ($clean_body | length) > 3000 then
+                (
+                  $clean_body[0:3000] +
+                  "\n\n_[Description truncated — view full PR](" +
+                  $url +
+                  ")_"
+                )
+              else
+                $clean_body
+              end
+            ) as $pr_description |
+
+            {
+              username: "GitHub Merge",
+              avatar_url: "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
+
+              allowed_mentions: {
+                parse: []
+              },
+
+              embeds: [{
+                author: {
+                  name: $repository,
+                  url: $repository_url
+                },
+
+                title: (
+                  "✅ PR #" +
+                  $number +
+                  " merged · " +
+                  ($title[0:210])
+                ),
+
+                url: $url,
+
+                description: (
+                  "**`" +
+                  $head +
+                  "` → `" +
+                  $base +
+                  "`**" +
+                  "\n\n### Description\n" +
+                  $pr_description
+                ),
+
+                color: 5763719,
+
+                thumbnail: {
+                  url: $author_avatar
+                },
+
+                fields: [
+                  {
+                    name: "✍️ Author",
+                    value: (
+                      "[@" +
+                      $author +
+                      "](" +
+                      $author_url +
+                      ")"
+                    ),
+                    inline: true
+                  },
+                  {
+                    name: "✅ Merged by",
+                    value: (
+                      "[@" +
+                      $merged_by +
+                      "](" +
+                      $merged_by_url +
+                      ")"
+                    ),
+                    inline: true
+                  },
+                  {
+                    name: "📊 Changes",
+                    value: (
+                      "🟢 **+" +
+                      $additions +
+                      "**  🔴 **-" +
+                      $deletions +
+                      "**  📄 **" +
+                      $changed_files +
+                      "** files"
+                    ),
+                    inline: false
+                  },
+                  {
+                    name: "🔗 Merge commit",
+                    value: (
+                      "[`" +
+                      ($merge_sha[0:7]) +
+                      "`](" +
+                      $repository_url +
+                      "/commit/" +
+                      $merge_sha +
+                      ") · " +
+                      $commits +
+                      " commits"
+                    ),
+                    inline: false
+                  }
+                ],
+
+                footer: {
+                  text: "Merged via GitHub Actions"
+                },
+
+                timestamp: $timestamp
+              }]
+            }
+            ' > payload.json
+
+          curl \
+            --fail-with-body \
+            --silent \
+            --show-error \
+            --retry 2 \
+            --retry-all-errors \
+            --connect-timeout 10 \
+            --max-time 30 \
+            -H "Content-Type: application/json" \
+            --data-binary @payload.json \
+            "${DISCORD_WEBHOOK}"

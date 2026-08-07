@@ -87,6 +87,12 @@ const (
 	MeshInCertCacheValid            = "1m"
 	MeshInProxyReadTimeout          = "600s"
 	MeshInProxySendTimeout          = "600s"
+	// MeshInMaxBodySize lifts nginx's built-in 1m request-body cap for Shared
+	// east-west relays (e.g. audio embeddings). 100m covers typical API uploads
+	// while still bounding abuse at this hop; destination apps may set a lower
+	// limit. With proxy_request_buffering off, this does not require buffering
+	// the full body in the 64Mi sidecar.
+	MeshInMaxBodySize               = "100m"
 	LabelTLSReplica                 = "gateway.olares.io/tls-replica"
 	DefaultEnvoyLogLevel                  = "debug"
 	EnvoyImageVersion                     = "beclab/envoy:v1.25.11.1"

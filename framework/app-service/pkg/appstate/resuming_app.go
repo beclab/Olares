@@ -169,6 +169,15 @@ func (p *resumingInProgressApp) WaitAsync(ctx context.Context) {
 				klog.Infof("app %s stop requested while resuming, skip setting ResumeFailed", p.manager.Spec.AppName)
 				return
 			}
+			// A canceled poll means another path (Resuming -> ResumingCanceling
+			// via Cancel, which stops the polling) already owns the next
+			// transition, so ResumeFailed must not be written here: the
+			// transition guard would reject it anyway
+			// (ResumingCanceling -> ResumeFailed is not declared).
+			if errors.Is(err, context.Canceled) {
+				klog.Infof("app %s resume canceled while waiting for startup, skip setting ResumeFailed", p.manager.Spec.AppName)
+				return
+			}
 			opRecord := makeRecord(p.manager, appsv1.ResumeFailed, fmt.Sprintf(constants.OperationFailedTpl, p.manager.Spec.OpType, err.Error()))
 			updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.ResumeFailed, opRecord, err.Error(), appsv1.ResumeFailed.String())
 			if updateErr != nil {
@@ -202,13 +211,26 @@ func (p *resumingInProgressApp) poll(ctx context.Context) error {
 		return unrecoverableErr
 	}
 
-	isPending, err := p.stopRequested(ctx)
+	// Reaching here means IsStartUp returned (false, nil), which only happens
+	// when the poll context was canceled. Use a detached context for the
+	// annotation lookup so the canceled poll context doesn't turn the check
+	// into a spurious error (and clobber the real reason we stopped polling).
+	isPending, err := p.stopRequested(context.WithoutCancel(ctx))
 	if err != nil {
 		return err
 	}
 	if isPending {
 		return errStopRequestedDueToPendingPod
 	}
+
+	// The operation was canceled or superseded (e.g. cancel-by-timeout moved
+	// the app to ResumingCanceling and stopped polling). Surface the context
+	// error so WaitAsync skips the ResumeFailed write, the same way
+	// downloadingInProgressApp.WaitAsync skips DownloadFailed.
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	return fmt.Errorf("wait for app %s startup failed", p.manager.Spec.AppName)
 }
 

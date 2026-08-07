@@ -3,6 +3,7 @@ package whoami
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -11,9 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/beclab/Olares/cli/pkg/access"
 	"github.com/beclab/Olares/cli/pkg/credential"
-	"github.com/beclab/Olares/cli/pkg/olares"
 )
 
 // HTTPClient is a Doer that talks to the desktop ingress directly. It's
@@ -70,13 +69,15 @@ func NewHTTPClient(hc *http.Client, desktopURL, olaresID string) *HTTPClient {
 // is still the previous one" hazard.
 //
 // insecureSkipVerify mirrors the profile's TLS knob — we honor whatever
-// the user opted into for this profile rather than re-derive it. loc selects
-// the http.Transport's resolver so the `host` position reaches the intranet
-// via the in-cluster DNS (access.Transport).
-func NewHTTPClientWithToken(desktopURL, olaresID, accessToken string, insecureSkipVerify bool, loc olares.Location) *HTTPClient {
+// the user opted into for this profile rather than re-derive it.
+func NewHTTPClientWithToken(desktopURL, olaresID, accessToken string, insecureSkipVerify bool) *HTTPClient {
+	tr := http.DefaultTransport.(*http.Transport).Clone()
+	if insecureSkipVerify {
+		tr.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} // #nosec G402 -- explicit profile opt-in
+	}
 	hc := &http.Client{
 		Timeout:   10 * time.Second,
-		Transport: access.Transport(loc, insecureSkipVerify),
+		Transport: tr,
 	}
 	return &HTTPClient{
 		hc:          hc,

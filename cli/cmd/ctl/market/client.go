@@ -21,10 +21,11 @@ import (
 const apiPrefix = "/app-store/api/v2"
 
 // APIResponse is the canonical envelope the app-store v2 backend wraps every
-// response in (success/message/data). We keep it identical to the shape the
+// response in (success/code/message/data). We keep it identical to the shape the
 // SPA's axios layer parses so the CLI's diagnostics can use the same fields.
 type APIResponse struct {
 	Success bool            `json:"success"`
+	Code    string          `json:"code,omitempty"`
 	Message string          `json:"message"`
 	Data    json.RawMessage `json:"data,omitempty"`
 }

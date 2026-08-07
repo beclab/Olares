@@ -192,38 +192,152 @@ func TestCallerSharedAppRefsFromDecideEdges(t *testing.T) {
 	}
 }
 
-func TestBuildSharedHostsDemandEligibilityWithoutRefs(t *testing.T) {
+// sharedHostsScheme registers the types BuildSharedHostsDemand lists.
+func sharedHostsScheme() *runtime.Scheme {
 	scheme := runtime.NewScheme()
 	_ = corev1.AddToScheme(scheme)
 	_ = appv1alpha1.AddToScheme(scheme)
 	_ = srrv1alpha1.AddToScheme(scheme)
+	return scheme
+}
 
-	callerNS := &corev1.Namespace{
+func callerNamespace(ns string) *corev1.Namespace {
+	return &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   "chat-alice",
+			Name:   ns,
 			Labels: map[string]string{security.NamespaceInClusterCallerLabel: "true"},
 		},
 	}
-	app := &appv1alpha1.Application{
-		ObjectMeta: metav1.ObjectMeta{Name: "chat-alice-chat"},
+}
+
+// sharedServerApp is an installed shared app. owner is the installer, which is
+// deliberately not the caller viewer in these tests.
+func sharedServerApp(name, ns, owner string) *appv1alpha1.Application {
+	return &appv1alpha1.Application{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   ns + "-" + name,
+			Labels: map[string]string{constants.AppSharedLabel: constants.AppSharedTrue},
+		},
+		Spec: appv1alpha1.ApplicationSpec{Name: name, Namespace: ns, Owner: owner},
+	}
+}
+
+func callerApp(name, ns, owner string, settings map[string]string) *appv1alpha1.Application {
+	return &appv1alpha1.Application{
+		ObjectMeta: metav1.ObjectMeta{Name: ns + "-" + name},
 		Spec: appv1alpha1.ApplicationSpec{
-			Name:      "chat",
-			Namespace: "chat-alice",
-			Owner:     "alice",
-			Settings: map[string]string{
-				"gateway.olares.io/shared-caller-decide":        "true",
-				"gateway.olares.io/shared-caller-decide-source": "eligibility",
-			},
+			Name:      name,
+			Namespace: ns,
+			Owner:     owner,
+			Settings:  settings,
 		},
 	}
-	srr := &srrv1alpha1.SharedRouteRegistry{
-		ObjectMeta: metav1.ObjectMeta{Name: "shared-demo", Namespace: "user-space-alice"},
+}
+
+func eligibilityCallerApp(name, ns, owner string) *appv1alpha1.Application {
+	return callerApp(name, ns, owner, map[string]string{
+		"gateway.olares.io/shared-caller-decide":        "true",
+		"gateway.olares.io/shared-caller-decide-source": "eligibility",
+	})
+}
+
+func gatewaySRR(name, ns, pattern string) *srrv1alpha1.SharedRouteRegistry {
+	return &srrv1alpha1.SharedRouteRegistry{
+		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: ns},
 		Spec: srrv1alpha1.SharedRouteRegistrySpec{
 			RouteMode:    srrv1alpha1.RouteModeGateway,
-			HostPatterns: []string{"abcd1234.*.olares.com"},
+			HostPatterns: []string{pattern},
 		},
 	}
-	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(callerNS, app, srr).Build()
+}
+
+func demandFor(t *testing.T, got []SharedHostsTarget, ns, viewer string) SharedHostsTarget {
+	t.Helper()
+	for _, target := range got {
+		if target.CallerNamespace == ns && target.Viewer == viewer {
+			return target
+		}
+	}
+	t.Fatalf("no demand for ns=%s viewer=%s: %+v", ns, viewer, got)
+	return SharedHostsTarget{}
+}
+
+// TestBuildSharedHostsDemandEligibilityWithoutRefs pins AC-1/AC-2: the host is
+// materialized under the caller's own owner even though the shared app was
+// installed by someone else, and one caller's demand does not depend on the
+// other's (DEFECT-SH-N6-OWNER-01).
+func TestBuildSharedHostsDemandEligibilityWithoutRefs(t *testing.T) {
+	c := fake.NewClientBuilder().WithScheme(sharedHostsScheme()).WithObjects(
+		callerNamespace("chat-alice"),
+		callerNamespace("chat-bob"),
+		eligibilityCallerApp("chat", "chat-alice", "alice"),
+		eligibilityCallerApp("chat", "chat-bob", "bob"),
+		sharedServerApp("ollama", "ollama-shared", "admin"),
+		gatewaySRR("shared-ollama", "ollama-shared", "abcd1234.*.olares.com"),
+	).Build()
+
+	got, err := BuildSharedHostsDemand(context.Background(), c, "olares.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("demand len=%d want 2: %+v", len(got), got)
+	}
+	alice := demandFor(t, got, "chat-alice", "alice")
+	if len(alice.Hosts) != 1 || alice.Hosts[0] != "abcd1234.alice.olares.com" {
+		t.Fatalf("alice hosts=%v", alice.Hosts)
+	}
+	bob := demandFor(t, got, "chat-bob", "bob")
+	if len(bob.Hosts) != 1 || bob.Hosts[0] != "abcd1234.bob.olares.com" {
+		t.Fatalf("bob hosts=%v", bob.Hosts)
+	}
+}
+
+// TestBuildSharedHostsDemandCoversEverySharedApp pins AC-3: an eligibility
+// caller may reach any installed shared app, so every shared gateway SRR is
+// materialized, not only those of the app its owner installed.
+func TestBuildSharedHostsDemandCoversEverySharedApp(t *testing.T) {
+	c := fake.NewClientBuilder().WithScheme(sharedHostsScheme()).WithObjects(
+		callerNamespace("chat-alice"),
+		eligibilityCallerApp("chat", "chat-alice", "alice"),
+		sharedServerApp("ollama", "ollama-shared", "admin"),
+		gatewaySRR("shared-ollama", "ollama-shared", "abcd1234.*.olares.com"),
+		sharedServerApp("whisper", "whisper-shared", "bob"),
+		gatewaySRR("shared-whisper", "whisper-shared", "deadbeef.*.olares.com"),
+	).Build()
+
+	got, err := BuildSharedHostsDemand(context.Background(), c, "olares.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	alice := demandFor(t, got, "chat-alice", "alice")
+	want := []string{"abcd1234.alice.olares.com", "deadbeef.alice.olares.com"}
+	if len(alice.Hosts) != len(want) {
+		t.Fatalf("hosts=%v want %v", alice.Hosts, want)
+	}
+	for i, h := range want {
+		if alice.Hosts[i] != h {
+			t.Fatalf("hosts=%v want %v", alice.Hosts, want)
+		}
+	}
+}
+
+// TestBuildSharedHostsDemandNamedDepsUseCallerViewer pins AC-4: a caller with
+// named shared deps gets only that callee's routes, still materialized under
+// its own viewer rather than the callee installer's.
+func TestBuildSharedHostsDemandNamedDepsUseCallerViewer(t *testing.T) {
+	c := fake.NewClientBuilder().WithScheme(sharedHostsScheme()).WithObjects(
+		callerNamespace("litellm-alice"),
+		callerApp("litellm", "litellm-alice", "alice", map[string]string{
+			"gateway.olares.io/shared-caller-decide": "true",
+			"clusterAppRef":                          "ollama",
+		}),
+		sharedServerApp("ollama", "ollama-shared", "admin"),
+		gatewaySRR("shared-ollama", "ollama-shared", "abcd1234.*.olares.com"),
+		sharedServerApp("whisper", "whisper-shared", "admin"),
+		gatewaySRR("shared-whisper", "whisper-shared", "deadbeef.*.olares.com"),
+	).Build()
+
 	got, err := BuildSharedHostsDemand(context.Background(), c, "olares.com")
 	if err != nil {
 		t.Fatal(err)
@@ -231,11 +345,62 @@ func TestBuildSharedHostsDemandEligibilityWithoutRefs(t *testing.T) {
 	if len(got) != 1 {
 		t.Fatalf("demand len=%d want 1: %+v", len(got), got)
 	}
-	if got[0].CallerNamespace != "chat-alice" || got[0].Viewer != "alice" {
-		t.Fatalf("got %+v", got[0])
+	target := demandFor(t, got, "litellm-alice", "alice")
+	if len(target.Hosts) != 1 || target.Hosts[0] != "abcd1234.alice.olares.com" {
+		t.Fatalf("hosts=%v want only the named callee under the caller viewer", target.Hosts)
 	}
-	if len(got[0].Hosts) != 1 || got[0].Hosts[0] != "abcd1234.alice.olares.com" {
-		t.Fatalf("hosts=%v", got[0].Hosts)
+}
+
+func TestBuildSharedHostsDemandDropsUnresolvedRef(t *testing.T) {
+	c := fake.NewClientBuilder().WithScheme(sharedHostsScheme()).WithObjects(
+		callerNamespace("litellm-alice"),
+		callerApp("litellm", "litellm-alice", "alice", map[string]string{
+			"gateway.olares.io/shared-caller-decide": "true",
+			"clusterAppRef":                          "gone",
+		}),
+		sharedServerApp("ollama", "ollama-shared", "admin"),
+		gatewaySRR("shared-ollama", "ollama-shared", "abcd1234.*.olares.com"),
+	).Build()
+
+	got, err := BuildSharedHostsDemand(context.Background(), c, "olares.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 0 {
+		t.Fatalf("demand=%+v want none for an unresolved dep", got)
+	}
+}
+
+// TestBuildSharedHostsDemandSkipsNonSharedSRR pins AC-5: gateway SRRs outside a
+// shared server namespace are private per-user routes and must stay out of the
+// eligibility allowlist.
+func TestBuildSharedHostsDemandSkipsNonSharedSRR(t *testing.T) {
+	c := fake.NewClientBuilder().WithScheme(sharedHostsScheme()).WithObjects(
+		callerNamespace("chat-alice"),
+		eligibilityCallerApp("chat", "chat-alice", "alice"),
+		callerApp("private", "private-bob", "bob", nil),
+		gatewaySRR("private-route", "private-bob", "cafebabe.*.olares.com"),
+	).Build()
+
+	got, err := BuildSharedHostsDemand(context.Background(), c, "olares.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	target := demandFor(t, got, "chat-alice", "alice")
+	if len(target.Hosts) != 0 {
+		t.Fatalf("hosts=%v want none: non-shared SRR leaked into the allowlist", target.Hosts)
+	}
+}
+
+// TestNoteEmptySharedHostsTargets pins AC-6: an opted-in caller that resolves no
+// host is reported instead of silently falling back to passthrough.
+func TestNoteEmptySharedHostsTargets(t *testing.T) {
+	got := noteEmptySharedHostsTargets("chat-alice", []SharedHostsTarget{
+		{CallerNamespace: "chat-alice", Viewer: "alice"},
+		{CallerNamespace: "chat-alice", Viewer: "bob", Hosts: []string{"abcd1234.bob.olares.com"}},
+	})
+	if got != 1 {
+		t.Fatalf("empty targets reported = %d want 1", got)
 	}
 }
 
@@ -245,41 +410,19 @@ func sharedHostsRequest(ns string) reconcile.Request {
 	}}
 }
 
-// sharedHostsCallerFixture builds an opted-in caller NS whose viewer resolves a
-// single logical SRR pattern to abcd1234.alice.olares.com.
+// sharedHostsCallerFixture builds an opted-in caller NS owned by alice plus a
+// shared app installed by admin, so the single logical SRR pattern resolves to
+// abcd1234.alice.olares.com.
 func sharedHostsCallerFixture(extra ...client.Object) client.Client {
-	scheme := runtime.NewScheme()
-	_ = corev1.AddToScheme(scheme)
-	_ = appv1alpha1.AddToScheme(scheme)
-	_ = srrv1alpha1.AddToScheme(scheme)
-
 	objs := []client.Object{
-		&corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:   "chat-alice",
-				Labels: map[string]string{security.NamespaceInClusterCallerLabel: "true"},
-			},
-		},
-		&appv1alpha1.Application{
-			ObjectMeta: metav1.ObjectMeta{Name: "chat-alice-chat"},
-			Spec: appv1alpha1.ApplicationSpec{
-				Name:      "chat",
-				Namespace: "chat-alice",
-				Owner:     "alice",
-				Settings: map[string]string{
-					"gateway.olares.io/shared-caller-decide": "true",
-				},
-			},
-		},
-		&srrv1alpha1.SharedRouteRegistry{
-			ObjectMeta: metav1.ObjectMeta{Name: "shared-demo", Namespace: "user-space-alice"},
-			Spec: srrv1alpha1.SharedRouteRegistrySpec{
-				RouteMode:    srrv1alpha1.RouteModeGateway,
-				HostPatterns: []string{"abcd1234.*.olares.com"},
-			},
-		},
+		callerNamespace("chat-alice"),
+		callerApp("chat", "chat-alice", "alice", map[string]string{
+			"gateway.olares.io/shared-caller-decide": "true",
+		}),
+		sharedServerApp("ollama", "ollama-shared", "admin"),
+		gatewaySRR("shared-ollama", "ollama-shared", "abcd1234.*.olares.com"),
 	}
-	return fake.NewClientBuilder().WithScheme(scheme).WithObjects(append(objs, extra...)...).Build()
+	return fake.NewClientBuilder().WithScheme(sharedHostsScheme()).WithObjects(append(objs, extra...)...).Build()
 }
 
 func TestMeshInSharedHostsKeepsAllowlistWhenPlatformDomainUnavailable(t *testing.T) {

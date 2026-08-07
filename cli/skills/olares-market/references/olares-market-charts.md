@@ -118,6 +118,8 @@ olares-cli market list -s upload                                   # confirm
 |---|---|---|
 | `unsupported file extension: must be .tgz or .tar.gz` | Wrong file type | Repackage with `helm package` |
 | `failed to upload: HTTP 413 (Payload Too Large)` | Chart exceeds the server's upload size limit | Slim the chart's contents; ask the operator about the limit |
+| `upload rejected: manifest supports [...] cluster provides [...]` | `spec.supportArch` has no intersection with the current cluster nodes | Check `olares-cli cluster node list`, fix `supportArch` and image platforms, then repackage; do not bump or retry the unchanged package |
+| `upload blocked: cluster node discovery is unavailable` | Market cannot yet establish an authoritative node architecture set | Keep the package and version unchanged; retry after node discovery recovers |
 | `chart not found in source 'upload'` (delete) | The chart was never uploaded, or was uploaded to a different bucket | `market list -s upload` to confirm |
 | `API error (HTTP 404): Chart not found` (download) | No stored chart for that app in that source | `market list -s upload` to confirm the bucket; pass `-s <id>` for another source |
 | `API error (HTTP 501)` (download) | The Olares predates the chart-package endpoint | Upgrade the Olares; there is no client-side fallback |

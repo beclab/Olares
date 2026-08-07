@@ -609,7 +609,7 @@ data:
 
       sendfile        on;
       keepalive_timeout  2700;
-      client_max_body_size 4000M;
+      client_max_body_size 100M;
 
       client_body_buffer_size 64m;
       proxy_buffers 32 256k;
@@ -643,7 +643,7 @@ data:
       gzip_http_version 1.1;
       gzip_comp_level 6;
       gzip_types *;
-      client_max_body_size 2000M;
+      client_max_body_size 100M;
       root /app;
 
       # normal routes
@@ -666,7 +666,7 @@ data:
           proxy_set_header X-Forwarded-Host $host;
 
           client_body_timeout 600s;
-          client_max_body_size 2000M;
+          client_max_body_size 100M;
           proxy_request_buffering off;
           keepalive_timeout 750s;
           proxy_read_timeout 600s;
@@ -683,7 +683,7 @@ data:
           proxy_set_header X-Forwarded-Host $host;
 
           client_body_timeout 1800s;
-          client_max_body_size 4000M;
+          client_max_body_size 100M;
           proxy_request_buffering off;
           keepalive_timeout 2700s;
           proxy_read_timeout 1800s;
@@ -700,7 +700,7 @@ data:
           proxy_set_header X-Forwarded-Host $host;
 
           client_body_timeout 1800s;
-          client_max_body_size 4000M;
+          client_max_body_size 100M;
           proxy_request_buffering off;
           keepalive_timeout 2700s;
           proxy_read_timeout 1800s;
@@ -716,7 +716,7 @@ data:
           proxy_set_header X-Forwarded-Host $host;
           add_header Accept-Ranges bytes;
           client_body_timeout 1800s;
-          client_max_body_size 4000M;
+          client_max_body_size 100M;
           proxy_request_buffering off;
           keepalive_timeout 2700s;
           proxy_read_timeout 1800s;
@@ -732,7 +732,7 @@ data:
           proxy_set_header X-Forwarded-Host $host;
           add_header Accept-Ranges bytes;
           client_body_timeout 1800s;
-          client_max_body_size 4000M;
+          client_max_body_size 100M;
           proxy_request_buffering off;
           keepalive_timeout 2700s;
           proxy_read_timeout 1800s;
@@ -748,7 +748,7 @@ data:
           proxy_set_header X-Forwarded-Host $host;
           add_header Accept-Ranges bytes;
           client_body_timeout 1800s;
-          client_max_body_size 4000M;
+          client_max_body_size 100M;
           proxy_request_buffering off;
           keepalive_timeout 2700s;
           proxy_read_timeout 1800s;
@@ -765,7 +765,7 @@ data:
           proxy_set_header X-Forwarded-Host $host;
 
           client_body_timeout 60s;
-          client_max_body_size 2000M;
+          client_max_body_size 100M;
           proxy_request_buffering off;
           keepalive_timeout 75s;
           proxy_read_timeout 60s;
@@ -784,7 +784,7 @@ data:
           add_header Accept-Ranges bytes;
 
           client_body_timeout 600s;
-          client_max_body_size 4000M;
+          client_max_body_size 100M;
           proxy_request_buffering off;
           keepalive_timeout 750s;
           proxy_read_timeout 600s;
@@ -803,7 +803,7 @@ data:
           add_header Accept-Ranges bytes;
 
           client_body_timeout 600s;
-          client_max_body_size 4000M;
+          client_max_body_size 100M;
           proxy_request_buffering off;
           keepalive_timeout 750s;
           proxy_read_timeout 600s;
@@ -849,7 +849,7 @@ data:
           add_header Accept-Ranges bytes;
 
           client_body_timeout 600s;
-          client_max_body_size 4000M;
+          client_max_body_size 100M;
           proxy_request_buffering off;
           keepalive_timeout 750s;
           proxy_read_timeout 600s;
@@ -868,7 +868,7 @@ data:
           add_header Accept-Ranges bytes;
 
           client_body_timeout 600s;
-          client_max_body_size 4000M;
+          client_max_body_size 100M;
           proxy_request_buffering off;
           keepalive_timeout 750s;
           proxy_read_timeout 600s;
@@ -887,7 +887,7 @@ data:
           add_header Accept-Ranges bytes;
 
           client_body_timeout 600s;
-          client_max_body_size 2000M;
+          client_max_body_size 100M;
           proxy_request_buffering off;
           keepalive_timeout 750s;
           proxy_read_timeout 600s;
@@ -906,7 +906,7 @@ data:
           add_header Accept-Ranges bytes;
 
           client_body_timeout 600s;
-          client_max_body_size 2000M;
+          client_max_body_size 100M;
           proxy_request_buffering off;
           keepalive_timeout 750s;
           proxy_read_timeout 600s;
@@ -925,7 +925,7 @@ data:
           add_header Accept-Ranges bytes;
 
           client_body_timeout 600s;
-          client_max_body_size 2000M;
+          client_max_body_size 100M;
           proxy_request_buffering off;
           keepalive_timeout 750s;
           proxy_read_timeout 600s;
