@@ -206,6 +206,22 @@ func (wh *Webhook) CreatePatch(
 		) {
 			needsEnvoySidecar = false
 		}
+		// EDGE direct stop-inject: M-L4 via live l4 Deployment Ready ∧
+		// (¬provider ∨ mesh-out). No Linkerd gate; Shared E/W uses mesh-in path.
+		if needsEnvoySidecar && wh != nil && wh.kubeClient != nil &&
+			mesh.ShouldSkipOes(ctx, wh.kubeClient, req.Namespace, "", len(perms) > 0, injectMeshOutAgent) {
+			needsEnvoySidecar = false
+			klog.Infof("deenvy: skip oes for pod=%s/%s (L4 edge PEP ready)", req.Namespace, pod.Name)
+		}
+		// SteadyGate Ready retires remaining oes when inbound/outbound covered.
+		if needsEnvoySidecar && wh != nil && wh.kubeClient != nil && mesh.ShouldSkipEnvoySidecar(ctx, wh.kubeClient) {
+			inboundOK := !injectPolicy || mesh.IsL4EdgePEPReady(ctx, wh.kubeClient)
+			outboundOK := len(perms) == 0 || injectMeshOutAgent
+			if mesh.CanRemoveOES(ctx, wh.kubeClient, inboundOK, outboundOK, true) {
+				needsEnvoySidecar = false
+				klog.Infof("deenvy: skip oes for pod=%s/%s (SteadyGate Ready)", req.Namespace, pod.Name)
+			}
+		}
 
 		configMapName, err := wh.createSidecarConfigMap(ctx, pod, proxyUUID.String(), req.Namespace, injectPolicy, injectWs, injectUpload, appmgr, appConfig, perms)
 		if err != nil {

@@ -77,15 +77,28 @@ func TestIsLinkerdLayer1ReadyFalseWhenPKIGuardianLookupFails(t *testing.T) {
 }
 
 func TestShouldSkipEnvoySidecarNeverBlanketsOnLinkerdReady(t *testing.T) {
-	// R1: Linkerd ready alone must not retire outbound oes (ADR-DEENVY-SCOPE-SHARED).
+	// Linkerd ready alone must not retire outbound oes until SteadyGate Ready.
 	if ShouldSkipEnvoySidecar(context.Background(), linkerdReadyClient()) {
-		t.Fatal("ShouldSkipEnvoySidecar must stay false until L2-c blanket retire")
+		t.Fatal("ShouldSkipEnvoySidecar must stay false until SteadyGate Ready")
 	}
 }
 
-func TestShouldSkipInboundEntranceSidecarRequiresExtAuth(t *testing.T) {
+func TestShouldSkipInboundEntranceSidecarRequiresL4EdgePEP(t *testing.T) {
 	if ShouldSkipInboundEntranceSidecar(context.Background(), linkerdReadyClient(), "demo-user", "app-demo-web") {
-		t.Fatal("must not skip entrance sidecar without extAuth SecurityPolicy")
+		t.Fatal("must not skip entrance sidecar without L4 edge PEP ready")
+	}
+}
+
+func TestShouldSkipInboundEntranceSidecarWhenL4DeploymentReady(t *testing.T) {
+	kube := fake.NewSimpleClientset(&appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{Name: L4ProxyDeploymentName, Namespace: L4ProxyNamespace},
+		Status:     appsv1.DeploymentStatus{ReadyReplicas: 1},
+	})
+	if !ShouldSkipInboundEntranceSidecar(context.Background(), kube, "demo-user", "app-demo-web") {
+		t.Fatal("expected entrance skip when l4 Deployment Ready (no Linkerd gate)")
+	}
+	if !ShouldSkipOes(context.Background(), kube, "demo-user", "", false, false) {
+		t.Fatal("expected ShouldSkipOes when l4 Ready and no provider")
 	}
 }
 
@@ -98,18 +111,18 @@ func TestEntranceExtAuthPolicyName(t *testing.T) {
 func TestEvaluateSkipOes(t *testing.T) {
 	cases := []struct {
 		name                                 string
-		linkerd, extAuth, provider, egress bool
+		linkerd, edgePEP, provider, egress bool
 		want                                 bool
 	}{
 		{"all ready no provider", true, true, false, false, true},
 		{"provider needs egress", true, true, true, false, false},
 		{"provider with egress", true, true, true, true, true},
-		{"no linkerd", false, true, false, false, false},
-		{"no extAuth", true, false, false, false, false},
+		{"no linkerd still skips", false, true, false, false, true},
+		{"no edge PEP", true, false, false, false, false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := EvaluateSkipOes(tc.linkerd, tc.extAuth, tc.provider, tc.egress)
+			got := EvaluateSkipOes(tc.linkerd, tc.edgePEP, tc.provider, tc.egress)
 			if got != tc.want {
 				t.Fatalf("got %v want %v", got, tc.want)
 			}
