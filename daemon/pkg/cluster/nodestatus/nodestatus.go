@@ -97,6 +97,14 @@ type Status struct {
 	// capability its neighbour does not, so the detail page shows it.
 	OlaresdVersion string `json:"olaresdVersion"`
 
+	// Host detail fields projected from the local state snapshot. Keys match
+	// /system/status where those already exist; os_kernel is node-status only.
+	OsArch         string `json:"os_arch"`
+	OsKernel       string `json:"os_kernel"`
+	HostIP         string `json:"hostIp"`
+	WiredConnected bool   `json:"wiredConnected"`
+	WifiSSID       string `json:"wifiSSID,omitempty"`
+
 	// ObservedAt is when the state below was last refreshed, not when this
 	// response was produced. It is null until the first refresh, because a
 	// response that timestamps itself is a stale answer that looks fresh.
@@ -150,6 +158,11 @@ func Build(id Identity, st clistate.State, caps map[string]Capability, observedA
 		olaresdVersion = *st.OlaresdVersion
 	}
 
+	var wifiSSID string
+	if st.WifiSSID != nil {
+		wifiSSID = *st.WifiSSID
+	}
+
 	return Status{
 		NodeName:       id.NodeName,
 		Hostname:       id.Hostname,
@@ -164,6 +177,11 @@ func Build(id Identity, st clistate.State, caps map[string]Capability, observedA
 		Memory:         st.Memory,
 		Disk:           st.Disk,
 		OlaresdVersion: olaresdVersion,
+		OsArch:         st.OsArch,
+		OsKernel:       st.OsKernel,
+		HostIP:         st.HostIP,
+		WiredConnected: st.WiredConnected,
+		WifiSSID:       wifiSSID,
 		ObservedAt:     observed,
 		Conditions:     conditions,
 		Capabilities:   caps,

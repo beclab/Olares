@@ -74,3 +74,70 @@ func TestMemoryAndDiskAreNotPresentedAsByteCounts(t *testing.T) {
 		}
 	}
 }
+
+func TestBuildReportsHostDetailFields(t *testing.T) {
+	ssid := "olares-lab"
+	st := clistate.State{
+		TerminusState:  clistate.TerminusRunning,
+		OsArch:         "amd64",
+		OsKernel:       "6.8.0-60-generic",
+		HostIP:         "10.0.0.2",
+		WiredConnected: true,
+		WifiSSID:       &ssid,
+	}
+
+	got := Build(Identity{}, st, nil, time.Now())
+
+	if got.OsArch != "amd64" {
+		t.Errorf("os_arch = %q, want amd64", got.OsArch)
+	}
+	if got.OsKernel != "6.8.0-60-generic" {
+		t.Errorf("os_kernel = %q, want 6.8.0-60-generic", got.OsKernel)
+	}
+	if got.HostIP != "10.0.0.2" {
+		t.Errorf("hostIp = %q, want 10.0.0.2", got.HostIP)
+	}
+	if !got.WiredConnected {
+		t.Errorf("wiredConnected = false, want true")
+	}
+	if got.WifiSSID != ssid {
+		t.Errorf("wifiSSID = %q, want %q", got.WifiSSID, ssid)
+	}
+}
+
+func TestBuildOmitsWifiSSIDWhenDisconnected(t *testing.T) {
+	st := clistate.State{
+		TerminusState:  clistate.TerminusRunning,
+		WiredConnected: true,
+		HostIP:         "10.0.0.2",
+	}
+
+	raw, err := json.Marshal(Build(Identity{}, st, nil, time.Now()))
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &fields); err != nil {
+		t.Fatalf("decode %s: %v", raw, err)
+	}
+	if _, ok := fields["wifiSSID"]; ok {
+		t.Errorf("wifiSSID must be omitted when disconnected: %s", raw)
+	}
+	for _, key := range []string{"os_arch", "os_kernel", "hostIp", "wiredConnected"} {
+		if _, ok := fields[key]; !ok {
+			t.Errorf("field %q missing: %s", key, raw)
+		}
+	}
+}
+
+func TestBuildLeavesUnknownHostDetailsEmpty(t *testing.T) {
+	got := Build(Identity{}, clistate.State{TerminusState: clistate.TerminusRunning}, nil, time.Now())
+
+	if got.OsArch != "" || got.OsKernel != "" || got.HostIP != "" || got.WifiSSID != "" {
+		t.Errorf("want empty host detail strings: %+v", got)
+	}
+	if got.WiredConnected {
+		t.Errorf("wiredConnected = true, want false when unknown")
+	}
+}
