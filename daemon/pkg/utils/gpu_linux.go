@@ -47,7 +47,8 @@ func GetGpuInfo() ([]string, error) {
 	}
 	gpuLastScan = time.Now()
 
-	result := collectGpuInfos(gpu.GraphicsCards)
+	cards := filterSriovVirtualFunctions(gpu.GraphicsCards, "/sys/bus/pci/devices")
+	result := collectGpuInfos(cards)
 	gpuInfoValue = result
 	if len(result) > 0 {
 		gpuInfoCached = true
