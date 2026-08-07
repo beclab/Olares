@@ -65,6 +65,7 @@ jobs:
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v3.1.0
         env:
+          GORELEASER_CURRENT_TAG: ${{ inputs.version }}
           OLARES_RELEASE_ID: ${{ inputs.release-id }}
         with:
           distribution: goreleaser
