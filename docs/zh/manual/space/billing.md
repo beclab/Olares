@@ -12,30 +12,17 @@ Olares 与 Stripe 合作提供安全的支付服务。账单和收据会通过�
 
 ## 计费概览
 
+Olares Space 的账单包括订阅费用和按量计费费用。了解计费项目以及扣费方式。
+
 ### 计费项目
 
-以下服务或产品需要付费：
+以下服务会产生费用：
 
-| 项目 | 计费方式 | 说明 |
-|---|---|---|
-| **套餐订阅** | 按月订阅 | 付费套餐（如 **Basic**）的月费。**Free** 套餐无月费。 |
-| **备份存储** | 后付费（按量） | 主机数据备份到公共存储。每月前 50 GB 免费，超出部分按结算周期结束时的使用量计费。 |
-| **Cloudflare 网络流量** | 后付费（按量） | 通过公共链接访问自托管 Olares 时，公网用户与 Olares Space 之间经过 Cloudflare 网络（CDN/WAF/DDoS）的流量。每月前 50 GB 免费。 |
-| **Olares Tunnel 流量（FRP）** | 后付费（按量） | Olares Space 与你的自托管 Olares 之间通过 Olares Tunnel（反向代理）转发的流量。每月前 50 GB 免费。 |
-
-:::tip 避免流量费用
-如需避免 Cloudflare 网络流量和 Olares Tunnel 流量费用，请通过 [LarePass VPN](../larepass/private-network.md) 访问 Olares，而不是使用公共链接。
-:::
-
-### 账单生成时机
-
-以下操作会生成账单：
-
-| 操作 | 计费结果 |
+| 项目 | 说明 |
 |---|---|
-| **升级套餐** | 从 Free 升级到 Basic 时，结账环节会生成一笔费用。 |
-| **备份数据到 Olares Space** | 备份存储用量按结算周期结束时计费。 |
-| **通过公共链接访问 Olares** | 超出每月免费额度的 Cloudflare 网络流量和 Olares Tunnel（FRP）流量按实际用量计费。 |
+| **套餐订阅** | 付费套餐（如 **Basic**）的月费。**Free** 套餐无月费。 |
+| **备份存储** | 主机数据备份到公共存储。每月前 50 GB 免费。超出免费额度部分按结算周期结束时的实际使用量计费。 |
+| **Olares Tunnel 流量（FRP）** | Olares Space 与你的自托管 Olares 之间通过 Olares Tunnel（反向代理）转发的流量。每月前 50 GB 免费。超出免费额度部分按实际使用量计费。<br><br>如需避免流量费用，请通过 [LarePass VPN](../larepass/private-network.md) 访问 Olares，而不是使用公共链接。 |
 
 ### 月度扣费方式
 
@@ -121,12 +108,7 @@ Olares 采用月度计费周期。每月会生成一笔账单，包括基础订�
 
 ### 别人访问部署在 Olares 上的 WordPress 站点时，我会产生费用吗？
 
-会的。当别人通过公共链接访问你的 Olares 服务时，可能产生两类流量费用：
-
-- **Cloudflare 网络流量**：经过 Cloudflare 网络（CDN/WAF/DDoS）的流量。
-- **Olares Tunnel 流量（FRP）**：通过 Olares Tunnel 转发到你自托管 Olares 的流量。
-
-两类流量都有每月免费额度，超出后按量计费。如果不想产生这些费用，可以使用 [LarePass VPN](../larepass/private-network.md) 而不是公共链接。
+是否产生费用取决于流量是否超出每月免费额度。当别人通过公共链接访问你的 Olares 服务时，会产生 Olares Tunnel（FRP）流量。超出每月免费额度部分按实际使用量计费。如果不想产生这些费用，可以使用 [LarePass VPN](../larepass/private-network.md) 而不是公共链接。
 
 ### 账单金额不足 1 美元会怎样？
 

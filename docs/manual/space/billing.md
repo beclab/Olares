@@ -13,30 +13,17 @@ Olares partners with Stripe for secure payment processing. Your invoices and rec
 
 ## Billing overview
 
+Olares Space billing includes subscription fees and usage-based charges. Learn what you are billed for and how payments are processed.
+
 ### What you are billed for
 
-The following services or products are billed:
+The following services are billed:
 
-| Item | Billing type | Description |
-|---|---|---|
-| **Subscription** | Monthly subscription | Monthly plan fee for the paid plan **Basic**. The **Free** plan has no subscription fee. |
-| **Backup storage** | Postpaid (usage-based) | Host data backed up to public storage. The first 50 GB per month is free. Additional usage is billed at the end of the billing cycle. |
-| **Cloudflare network traffic** | Postpaid (usage-based) | Traffic between the public internet and Olares Space, routed through Cloudflare's network (CDN/WAF/DDoS) when accessing self-hosted Olares via public links. The first 50 GB per month is free. |
-| **Olares Tunnel traffic (FRP)** | Postpaid (usage-based) | Traffic between Olares Space and your self-hosted Olares, forwarded through Olares Tunnel (reverse proxy). The first 50 GB per month is free. |
-
-:::tip Avoid traffic charges
-To avoid Cloudflare network and Olares Tunnel traffic charges, access your Olares via [LarePass VPN](../larepass/private-network.md) instead of public links.
-:::
-
-### When bills are generated
-
-The following actions generate bills:
-
-| Action | Billing result |
+| Item | Description |
 |---|---|
-| **Upgrade your plan** | A charge is generated at checkout when you upgrade from Free to Basic. |
-| **Back up data to Olares Space** | Storage usage is billed at the end of the billing cycle. |
-| **Access Olares via a public link** | Cloudflare network traffic and Olares Tunnel (FRP) traffic are billed based on usage beyond the free monthly quota. |
+| **Subscription** | Monthly subscription fee for the paid plan **Basic**.<br>The **Free** plan has no subscription fee. |
+| **Backup storage** | Host data backed up to public storage. The first 50 GB per month is free. Usage beyond the free quota is billed based on actual usage at the end of the billing cycle. |
+| **Olares Tunnel traffic (FRP)** | Traffic between Olares Space and your self-hosted Olares, forwarded through Olares Tunnel (reverse proxy). The first 50 GB per month is free. Usage beyond the free quota is billed based on actual usage.<br><br>To avoid traffic charges, access your Olares via [LarePass VPN](../larepass/private-network.md) instead of public links. |
 
 ### How fees are deducted monthly
 
@@ -136,12 +123,7 @@ Add, update, or remove your credit card on the **Payment methods** tab.
 
 ### Will I be charged if someone accesses the WordPress site deployed on Olares?
 
-Yes. When someone accesses your Olares services through a public link, two types of traffic charges may apply:
-
-- **Cloudflare network traffic**: Traffic routed through Cloudflare's network for CDN, WAF, and DDoS protection.
-- **Olares Tunnel traffic (FRP)**: Traffic forwarded through Olares Tunnel to your self-hosted Olares.
-
-Both include a free monthly quota. Usage beyond the quota is billed. To avoid these charges, access your Olares via [LarePass VPN](../larepass/private-network.md) instead of public links.
+It depends on whether the traffic exceeds the free monthly quota. When someone accesses your Olares services through a public link, Olares Tunnel (FRP) traffic is generated. Usage beyond the free monthly quota is billed based on actual usage. To avoid these charges, access your Olares via [LarePass VPN](../larepass/private-network.md) instead of public links.
 
 ### What happens if my bill is less than $1?
 
