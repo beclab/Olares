@@ -19,6 +19,10 @@ func getHTTProbePath(pod *corev1.Pod) (probesPath []string) {
 	return probesPath
 }
 
+func GetHTTPProbePaths(pod *corev1.Pod) []string {
+	return getHTTProbePath(pod)
+}
+
 const envoySetCookie = `
 local pattern = "Domain=([^;]*)"
 function split(str, sep)

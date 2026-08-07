@@ -46,7 +46,17 @@ func TestShouldInjectEnvoySidecarKeepsEntranceBeforeLinkerdCutover(t *testing.T)
 
 func TestShouldSkipInboundEntranceSidecarWithoutExtAuth(t *testing.T) {
 	if mesh.ShouldSkipInboundEntranceSidecar(context.Background(), linkerdReadyKube(), "demo-user", "app-demo-web") {
-		t.Fatal("entrance sidecar must not skip without extAuth policy")
+		t.Fatal("entrance sidecar must not skip without l4 Deployment Ready")
+	}
+}
+
+func TestShouldSkipOesWhenL4DeploymentReady(t *testing.T) {
+	kube := fake.NewSimpleClientset(&appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{Name: mesh.L4ProxyDeploymentName, Namespace: mesh.L4ProxyNamespace},
+		Status:     appsv1.DeploymentStatus{ReadyReplicas: 1},
+	})
+	if !mesh.ShouldSkipOes(context.Background(), kube, "demo-user", "", false, false) {
+		t.Fatal("direct stop: l4 Ready must skip oes without Linkerd or SteadyGate")
 	}
 }
 
