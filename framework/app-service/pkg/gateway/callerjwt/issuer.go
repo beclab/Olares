@@ -20,8 +20,8 @@ const (
 	// IssuerURL is the JWT iss value and logical issuer base URL.
 	IssuerURL = "https://" + IssuerHost + "/"
 	// JWKSURI is the HTTPS URL EG remoteJWKS uses (hostname must match TLS SAN).
-	JWKSURI             = "https://" + IssuerHost + JWKSPath
-	Audience            = "app-gateway-data"
+	JWKSURI  = "https://" + IssuerHost + JWKSPath
+	Audience = "app-gateway-data"
 	// Claim* constants are Envoy jwt_authn claim_to_headers paths (dot =
 	// nested JSON), not flat JWT object keys.
 	ClaimAppRef      = "olares.caller.appRef"
@@ -31,15 +31,15 @@ const (
 	ClaimClientAppid = "olares.caller.clientAppid"
 	// CallerJWTHeaderName is the platform caller-jwt transport header (bare JWT,
 	// no Bearer prefix). Distinct from Authorization so app credentials pass through.
-	CallerJWTHeaderName = "X-Olares-Caller-Jwt"
-	AppJWTSecretName    = "caller-jwt"
-	AppJWTSecretDataKey = "token"
+	CallerJWTHeaderName  = "X-Olares-Caller-Jwt"
+	AppJWTSecretName     = "caller-jwt"
+	AppJWTSecretDataKey  = "token"
 	IssuerKeysSecretName = "caller-jwt-issuer-keys"
-	SigningKeyPEM       = "signing.pem"
-	SigningKeyIDKey     = "signing.kid"
-	PreviousKeyPEM      = "previous.pem"
-	PreviousKeyIDKey    = "previous.kid"
-	MaxTTL              = time.Hour
+	SigningKeyPEM        = "signing.pem"
+	SigningKeyIDKey      = "signing.kid"
+	PreviousKeyPEM       = "previous.pem"
+	PreviousKeyIDKey     = "previous.kid"
+	MaxTTL               = time.Hour
 )
 
 // IssueRequest carries workload identity for a caller JWT.

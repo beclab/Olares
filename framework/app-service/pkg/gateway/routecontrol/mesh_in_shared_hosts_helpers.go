@@ -241,8 +241,10 @@ func callerSharedAppRefs(app *appv1alpha1.Application) []string {
 }
 func inClusterCallerNamespacePredicate() predicate.Predicate {
 	return predicate.Funcs{
-		CreateFunc:  func(e event.CreateEvent) bool { return hasInClusterCallerLabel(e.Object) },
-		UpdateFunc:  func(e event.UpdateEvent) bool { return hasInClusterCallerLabel(e.ObjectOld) || hasInClusterCallerLabel(e.ObjectNew) },
+		CreateFunc: func(e event.CreateEvent) bool { return hasInClusterCallerLabel(e.Object) },
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			return hasInClusterCallerLabel(e.ObjectOld) || hasInClusterCallerLabel(e.ObjectNew)
+		},
 		DeleteFunc:  func(e event.DeleteEvent) bool { return hasInClusterCallerLabel(e.Object) },
 		GenericFunc: func(e event.GenericEvent) bool { return hasInClusterCallerLabel(e.Object) },
 	}

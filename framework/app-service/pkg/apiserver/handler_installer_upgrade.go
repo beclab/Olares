@@ -451,7 +451,7 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 	// cluster-capacity against the new chart's absolute requirements, plus
 	// cluster-pressure / k8s-request against the non-negative delta
 	// (new − old) so the running deployment is not double-counted (see
-	// that function for details). 
+	// that function for details).
 	decision, err := validation.Run(req.Request.Context(), validation.Input{
 		Client:        h.ctrlClient,
 		AppConfig:     appCfg,
