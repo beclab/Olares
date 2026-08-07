@@ -6,7 +6,7 @@ head:
     - name: keywords
       content: Olares, Olares Space, 监控 Olares, 系统状态, 资源使用, 流量使用
 ---
-# 监控 Olares 状态与流量
+# 在 Olares Space 中监控 Olares 状态与流量
 
 本页介绍如何在 Olares Space 中监控 Olares 的系统状态和流量使用情况。
 
@@ -45,7 +45,7 @@ head:
 检查近期流量使用情况，发现突增并避免超出套餐限制。
 
 :::info
-对于自托管 Olares 用户，请重点关注内网穿透服务的流量统计。这些服务可能会根据使用情况产生费用。
+对于自托管 Olares 用户，请关注反向代理服务的流量统计。如果超出月度配额，速度将限速至 5 Mbps。免费的替代方案是使用 [LarePass VPN](../larepass/private-network.md) 或自行托管 FRP 服务器。
 :::
 
 1. 在 **Olares** 页面，选择 **Usage statistics** 标签页。

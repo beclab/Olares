@@ -45,7 +45,7 @@ Check which hosts are currently running in your Olares cluster and their status.
 Check recent traffic usage to spot sudden increases and avoid exceeding your plan's limit.
 
 :::info
-For self-hosted Olares users, it's important to monitor traffic statistics for intranet penetration services. These services may incur charges based on usage.
+For self-hosted Olares users, monitor traffic statistics for the reverse proxy service. If you exceed the monthly quota, speed is throttled to 5 Mbps. The free alternative is to use [LarePass VPN](../larepass/private-network.md) or host your own FRP server.
 :::
 
 1. On the **Olares** page, select the **Usage statistics** tab.
