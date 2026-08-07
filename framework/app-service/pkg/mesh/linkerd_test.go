@@ -110,9 +110,9 @@ func TestEntranceExtAuthPolicyName(t *testing.T) {
 
 func TestEvaluateSkipOes(t *testing.T) {
 	cases := []struct {
-		name                                 string
+		name                               string
 		linkerd, edgePEP, provider, egress bool
-		want                                 bool
+		want                               bool
 	}{
 		{"all ready no provider", true, true, false, false, true},
 		{"provider needs egress", true, true, true, false, false},
@@ -132,9 +132,9 @@ func TestEvaluateSkipOes(t *testing.T) {
 
 func TestEvaluateSkipOesForSharedCaller(t *testing.T) {
 	cases := []struct {
-		name                                           string
+		name                               string
 		meshIn, linkerd, provider, meshOut bool
-		want                                           bool
+		want                               bool
 	}{
 		{"mesh-in no provider", true, true, false, false, true},
 		{"mesh-in provider needs mesh-out", true, true, true, false, false},

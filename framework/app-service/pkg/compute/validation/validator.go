@@ -4,9 +4,11 @@
 // after helm at replicas=0 and before Scale(-1). The upgrade handler
 // runs UpgradabilityValidators at HTTP submit time: cluster-capacity
 // against the new chart's absolute requirements, plus cluster-pressure /
-// k8s-request against the non-negative delta (new − old) so the running
-// deployment is not double-counted (see that function). User-quota is
-// not part of the upgrade chain (install/resume remain the quota gates).
+// k8s-request against the non-negative delta (new − old) when the
+// deployed version still holds its requests, or against the new chart's
+// absolute requirements when the upgrade starts from a stopped state
+// (see that function). User-quota is not part of the upgrade chain
+// (install/resume remain the quota gates).
 //
 // Each individual check (cluster pressure, per-user quota, k8s request
 // availability, per-node pressure, GPU compute plan) is wrapped in a
@@ -33,15 +35,20 @@ type Op = v1alpha1.OpType
 // only the cluster-pressure / cluster-capacity validators currently use
 // it; the others ignore unset fields.
 //
-// PrevAppConfig is required for UpgradeOp when running cluster-pressure /
-// k8s-request: those validators check only the non-negative resource
-// delta (new − old) against live headroom so the running deployment is
-// not double-counted. Cluster-capacity still uses AppConfig (the new
-// chart) absolutely, and install/resume ignore PrevAppConfig.
+// PrevAppConfig and PrevState are required for UpgradeOp when running
+// cluster-pressure / k8s-request. Those validators check only the
+// non-negative resource delta (new − old) against live headroom so a
+// deployment that already holds its requests is not double-counted.
+// PrevState short-circuits the common cases (Running → delta, Stopped →
+// full); other states fall through to a live-pod probe located via
+// PrevAppConfig (see upgradePrevHoldsRequests). Cluster-capacity always
+// uses AppConfig (the new chart) absolutely, and install/resume ignore
+// both fields.
 type Input struct {
 	Client        client.Client
 	AppConfig     *appcfg.ApplicationConfig
 	PrevAppConfig *appcfg.ApplicationConfig
+	PrevState     v1alpha1.ApplicationManagerState
 	Op            Op
 	Token         string
 }

@@ -11,9 +11,9 @@ import (
 
 func TestEvaluateCanRemoveOES(t *testing.T) {
 	cases := []struct {
-		name                                 string
+		name                                string
 		steady, inbound, outbound, rollback bool
-		want                                 bool
+		want                                bool
 	}{
 		{"all true", true, true, true, true, true},
 		{"no steady", false, true, true, true, false},
@@ -38,7 +38,7 @@ func TestStoreLoadSteadyGate(t *testing.T) {
 		TargetVersion: "1.12.9",
 		Checkpoint:    "commit",
 		Conditions: map[string]bool{
-			"ZeroOesInventory":  true,
+			"ZeroOesInventory":    true,
 			ConditionL4ProxyReady: true,
 		},
 	}
