@@ -8,6 +8,7 @@ import (
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	extauthzv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/ext_authz/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	ppupstreamv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/proxy_protocol/v3"
 	cachetypes "github.com/envoyproxy/go-control-plane/pkg/cache/types"
@@ -933,14 +934,63 @@ func TestTranslateVirtualHost_CORSFileserverOnly(t *testing.T) {
 		Name:         "app_alice_files_files",
 		Domains:      []string{"files.alice.example.com"},
 		IsFileserver: true,
-	})
+	}, nil)
 	assert.True(t, hasCORSOrigin(fs), "fileserver vhost must carry allow-origin")
 
 	other := translateVirtualHost(&ir.VirtualHostIR{
 		Name:    "app_alice_vault_vault-frontend",
 		Domains: []string{"vault.alice.example.com"},
-	})
+	}, nil)
 	assert.False(t, hasCORSOrigin(other), "non-fileserver vhost must not carry allow-origin")
+}
+
+func TestSubFilterLuaScript_RewritesSetCookieDomain(t *testing.T) {
+	assert.Contains(t, subFilterLuaScript, "rewrite_set_cookie_domains")
+	assert.Contains(t, subFilterLuaScript, `Domain=`)
+	assert.Contains(t, subFilterLuaScript, `headers:replace("Set-Cookie"`)
+}
+
+func TestTranslateRoute_PerRouteHttpServicePathPrefix(t *testing.T) {
+	clusterMap := map[string]*ir.ClusterIR{
+		"authelia_backend_alice": {Name: "authelia_backend_alice", Host: "authelia-backend.user-system-alice.svc.cluster.local", Port: 9091},
+	}
+	route := translateRoute(&ir.HTTPRouteIR{
+		Name:       "app",
+		PathPrefix: "/",
+		Cluster:    "app_upstream",
+		ExtAuth: &ir.ExtAuthConfigIR{
+			Cluster:    "authelia_backend_alice",
+			PathPrefix: "/api/verify/",
+		},
+	}, clusterMap)
+	require.NotNil(t, route.TypedPerFilterConfig)
+	anyCfg := route.TypedPerFilterConfig["envoy.filters.http.ext_authz"]
+	require.NotNil(t, anyCfg)
+
+	var perRoute extauthzv3.ExtAuthzPerRoute
+	require.NoError(t, anyCfg.UnmarshalTo(&perRoute))
+	cs := perRoute.GetCheckSettings()
+	require.NotNil(t, cs)
+	hs := cs.GetHttpService()
+	require.NotNil(t, hs, "ordinary apps must override Authelia HttpService PathPrefix")
+	assert.Equal(t, "/api/verify/", hs.GetPathPrefix())
+}
+
+func TestTranslateRoute_ProbeBypassHeaderMatch(t *testing.T) {
+	route := translateRoute(&ir.HTTPRouteIR{
+		Name:      "probe",
+		PathExact: "/healthz",
+		Cluster:   "app",
+		HeaderMatches: []ir.HeaderMatchIR{{
+			Name:      "user-agent",
+			SafeRegex: `^[0-9a-fA-F-]+/[0-9a-fA-F]+$`,
+		}},
+	}, nil)
+	require.NotNil(t, route.GetMatch())
+	assert.Equal(t, "/healthz", route.GetMatch().GetPath())
+	require.Len(t, route.GetMatch().GetHeaders(), 1)
+	assert.Equal(t, "user-agent", route.GetMatch().GetHeaders()[0].GetName())
+	assert.Nil(t, route.TypedPerFilterConfig, "probe bypass keeps VH-level ExtAuth disabled")
 }
 
 // ---------------------------------------------------------------------------
