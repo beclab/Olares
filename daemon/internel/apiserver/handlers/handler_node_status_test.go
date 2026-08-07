@@ -96,11 +96,17 @@ func TestNodeStatusReportsTheDetailFields(t *testing.T) {
 	asAuthorizedUser(t)
 	asNode(t, "worker-1", inventory.RoleWorker, nil)
 	version := "1.12.6-rc.2"
+	ssid := "olares-lab"
 	withCurrentState(t, clistate.State{
 		TerminusState:  clistate.TerminusRunning,
 		Memory:         "128 G",
 		Disk:           "3725 G",
 		OlaresdVersion: &version,
+		OsArch:         "amd64",
+		OsKernel:       "6.8.0-60-generic",
+		HostIP:         "10.0.0.2",
+		WiredConnected: true,
+		WifiSSID:       &ssid,
 	}, time.Now())
 
 	_, body := callRegistered(t, "/system/node-status", authHeaders())
@@ -112,6 +118,12 @@ func TestNodeStatusReportsTheDetailFields(t *testing.T) {
 	if got.OlaresdVersion != version {
 		t.Errorf("olaresdVersion = %q, want %q: %s", got.OlaresdVersion, version, body)
 	}
+	if got.OsArch != "amd64" || got.OsKernel != "6.8.0-60-generic" {
+		t.Errorf("os_arch/os_kernel = %q / %q: %s", got.OsArch, got.OsKernel, body)
+	}
+	if got.HostIP != "10.0.0.2" || !got.WiredConnected || got.WifiSSID != ssid {
+		t.Errorf("hostIp/wired/wifi = %q / %v / %q: %s", got.HostIP, got.WiredConnected, got.WifiSSID, body)
+	}
 
 	var env struct {
 		Data map[string]any `json:"data"`
@@ -119,7 +131,7 @@ func TestNodeStatusReportsTheDetailFields(t *testing.T) {
 	if err := json.Unmarshal(body, &env); err != nil {
 		t.Fatalf("decode %s: %v", body, err)
 	}
-	for _, key := range []string{"memory", "disk", "olaresdVersion", "observedAt", "deviceType"} {
+	for _, key := range []string{"memory", "disk", "olaresdVersion", "observedAt", "deviceType", "os_arch", "os_kernel", "hostIp", "wiredConnected", "wifiSSID"} {
 		if _, ok := env.Data[key]; !ok {
 			t.Errorf("field %q missing from the node wire format: %s", key, body)
 		}
@@ -130,6 +142,34 @@ func TestNodeStatusReportsTheDetailFields(t *testing.T) {
 		if _, ok := env.Data[absent]; ok {
 			t.Errorf("field %q is not something this node knows: %s", absent, body)
 		}
+	}
+}
+
+func TestNodeStatusOmitsWifiSSIDWhenDisconnected(t *testing.T) {
+	asAuthorizedUser(t)
+	asNode(t, "worker-1", inventory.RoleWorker, nil)
+	withCurrentState(t, clistate.State{
+		TerminusState:  clistate.TerminusRunning,
+		HostIP:         "10.0.0.2",
+		WiredConnected: true,
+	}, time.Now())
+
+	_, body := callRegistered(t, "/system/node-status", authHeaders())
+
+	var env struct {
+		Data map[string]any `json:"data"`
+	}
+	if err := json.Unmarshal(body, &env); err != nil {
+		t.Fatalf("decode %s: %v", body, err)
+	}
+	if _, ok := env.Data["wifiSSID"]; ok {
+		t.Errorf("wifiSSID must be omitted when disconnected: %s", body)
+	}
+	if env.Data["hostIp"] != "10.0.0.2" {
+		t.Errorf("hostIp = %#v, want 10.0.0.2: %s", env.Data["hostIp"], body)
+	}
+	if env.Data["wiredConnected"] != true {
+		t.Errorf("wiredConnected = %#v, want true: %s", env.Data["wiredConnected"], body)
 	}
 }
 
