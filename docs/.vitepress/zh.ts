@@ -524,6 +524,7 @@ const side = {
             link: "/zh/manual/space/backup-restore",
           },
           { text: "计费", link: "/zh/manual/space/billing" },
+          { text: "管理支持工单", link: "/zh/manual/space/tickets" },
         ],
       },
     {
