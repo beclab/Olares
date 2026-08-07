@@ -143,6 +143,7 @@ jobs:
           version: v1.18.2
           args: release --clean
         env:
+          GORELEASER_CURRENT_TAG: ${{ needs.resolve-versions.outputs.npm_version }}
           OLARES_RELEASE_ID: ${{ inputs.release-id }}
           BINARY_VERSION: ${{ needs.resolve-versions.outputs.binary_version }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
