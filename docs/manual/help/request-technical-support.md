@@ -1,16 +1,16 @@
 ---
 outline: [2, 3]
-description: Learn how to get technical support for Olares through the Assist Hub app, Olares Space, or GitHub.
+description: Learn how to get technical support for Olares through the Ticket app, Olares Space, or GitHub.
 head:
   - - meta
     - name: keywords
-      content: Olares, technical support, system logs, GitHub issue, Assist Hub, help
+      content: Olares, technical support, system logs, GitHub issue, Ticket, help
 ---
 # Get technical support
 
 If you cannot resolve an issue using the troubleshooting guides, contact the Olares team for assistance through one of the following channels.
 
-## Submit a ticket in the Assist Hub app
+## Submit a ticket in the Ticket app
 
 The Ticket app is the recommended way to get help. It has a built-in log collection feature, so you can submit a ticket directly without manually exporting logs first.
 
@@ -84,7 +84,7 @@ The ticket status changes back to **In progress**, and the support team continue
 
 ## Submit a ticket in Olares Space
 
-You can also create and manage support tickets directly in Olares Space through a web browser. This option does not require installing a separate Assist Hub app or having access to an Olares device, unless you want to upload logs using `olares-cli`.
+You can also create and manage support tickets directly in Olares Space through a web browser. This option does not require installing a separate Ticket app or having access to an Olares device, unless you want to upload logs using `olares-cli`.
 
 For detailed steps, see [Manage support tickets in Olares Space](../space/tickets.md).
 
@@ -108,9 +108,9 @@ Use the Olares GitHub repository if you prefer to report the issue publicly, or 
 
 ### How are tickets associated with my Olares ID?
 
-Tickets are linked to the Olares ID used when they were created. The Assist Hub app only shows tickets created with your current Olares ID.
+Tickets are linked to the Olares ID used when they were created. The Ticket app only shows tickets created with your current Olares ID.
 
-If you reinstall Olares and switch to a new Olares ID, you will not see tickets created with the previous ID in Assist Hub. To view those tickets, log in to Olares Space using the original Olares ID, and then find them on the **Tickets** page.
+If you reinstall Olares and switch to a new Olares ID, you will not see tickets created with the previous ID in Ticket. To view those tickets, log in to Olares Space using the original Olares ID, and then find them on the **Tickets** page.
 
 ### Can I edit a ticket after submitting it?
 
