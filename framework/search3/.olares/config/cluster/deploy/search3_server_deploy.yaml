@@ -310,7 +310,7 @@ spec:
       priorityClassName: "system-cluster-critical"
       containers:
       - name: search3monitor
-        image: beclab/search3monitor:v0.3.7
+        image: beclab/search3monitor:v0.3.8
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8081
