@@ -602,11 +602,9 @@ func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.A
 			WebSocketUpgrade: true,
 		}
 
-		// Shared (v3) apps are cluster-wide and open to all users, so the
-		// whole app is gated behind the viewing user's Authelia instance.
-		if app.IsShared {
-			defaultRoute.ExtAuth = buildSharedAppExtAuthConfig(user)
-		}
+		// The whole app is gated behind the viewing user's Authelia instance,
+		// regardless of whether it is shared cluster-wide.
+		defaultRoute.ExtAuth = buildAppExtAuthConfig(user)
 
 		routes = append(routes, defaultRoute)
 
@@ -617,11 +615,11 @@ func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.A
 	return vhosts
 }
 
-// buildSharedAppExtAuthConfig returns the Authelia ext_auth config used to gate
-// shared (v3) apps behind the viewing user's per-user Authelia instance. It is
+// buildAppExtAuthConfig returns the Authelia ext_auth config used to gate
+// app routes behind the viewing user's per-user Authelia instance. It is
 // intentionally independent from the fileserver ext_auth wiring so the two can
 // evolve separately.
-func buildSharedAppExtAuthConfig(user *message.UserInfo) *ir.ExtAuthConfigIR {
+func buildAppExtAuthConfig(user *message.UserInfo) *ir.ExtAuthConfigIR {
 	return &ir.ExtAuthConfigIR{
 		Cluster:    fmt.Sprintf("%s_%s", autheliaClusterPrefix, user.Name),
 		PathPrefix: autheliaPathPrefix,
@@ -808,11 +806,9 @@ func (t *Translator) buildCustomDomainVirtualHosts(user *message.UserInfo, app *
 			WebSocketUpgrade: true,
 		}
 
-		// Shared (v3) apps stay gated behind Authelia even when reached via a
-		// custom domain, so the auth requirement can't be bypassed.
-		if app.IsShared {
-			customRoute.ExtAuth = buildSharedAppExtAuthConfig(user)
-		}
+		// Apps stay gated behind Authelia even when reached via a custom
+		// domain, so the auth requirement can't be bypassed.
+		customRoute.ExtAuth = buildAppExtAuthConfig(user)
 
 		vhost := &ir.VirtualHostIR{
 			Name:     fmt.Sprintf("custom_%s_%s_%s", user.Name, app.Name, entrance.Name),

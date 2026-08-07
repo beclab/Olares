@@ -622,7 +622,8 @@ func TestBuildCustomDomainVirtualHosts_SharedApp_ExtAuth(t *testing.T) {
 	assert.Equal(t, autheliaPathPrefix, r.ExtAuth.PathPrefix)
 }
 
-// v1/v2 (non-shared) apps continue to reach their upstream cluster directly.
+// v1/v2 (non-shared) apps reach their upstream cluster and are gated behind
+// the viewing user's Authelia instance just like shared apps.
 func TestBuildAppVirtualHosts_NonSharedApp(t *testing.T) {
 	tr := &Translator{cfg: &Config{}}
 	user := &message.UserInfo{Name: "alice", Language: "en"}
@@ -641,8 +642,12 @@ func TestBuildAppVirtualHosts_NonSharedApp(t *testing.T) {
 	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", false, clusterSet)
 	require.Len(t, vhosts, 1)
 	require.Len(t, vhosts[0].Routes, 1)
-	assert.Nil(t, vhosts[0].Routes[0].DirectResponse)
-	assert.Nil(t, vhosts[0].Routes[0].ExtAuth, "non-shared apps must not be gated behind ext_auth")
+	r := vhosts[0].Routes[0]
+	assert.Nil(t, r.DirectResponse)
+	require.NotNil(t, r.ExtAuth, "non-shared apps must also be gated behind Authelia ext_auth")
+	assert.Equal(t, "authelia_backend_alice", r.ExtAuth.Cluster)
+	assert.Equal(t, autheliaPathPrefix, r.ExtAuth.PathPrefix)
+	assert.False(t, r.ExtAuth.Disabled)
 	assert.NotEmpty(t, clusterSet)
 }
 
