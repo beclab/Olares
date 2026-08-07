@@ -2,9 +2,11 @@
 // upgrade and resume. Legacy installs run InstallRuntimePressureValidators
 // before helm; two-phase installs (workloadReplicas) run the same chain
 // after helm at replicas=0 and before Scale(-1). The upgrade handler
-// runs UpgradabilityValidators at HTTP submit time, which currently only
-// gates on cluster-capacity (see that function for the rationale on why
-// the other install-time checks are intentionally skipped on upgrade).
+// runs UpgradabilityValidators at HTTP submit time: cluster-capacity
+// against the new chart's absolute requirements, plus cluster-pressure /
+// k8s-request against the non-negative delta (new − old) so the running
+// deployment is not double-counted (see that function). User-quota is
+// not part of the upgrade chain (install/resume remain the quota gates).
 //
 // Each individual check (cluster pressure, per-user quota, k8s request
 // availability, per-node pressure, GPU compute plan) is wrapped in a
@@ -28,13 +30,20 @@ import (
 type Op = v1alpha1.OpType
 
 // Input bundles everything a Validator might need. Token is optional and
-// only the cluster-pressure validator currently uses it; the others
-// ignore unset fields.
+// only the cluster-pressure / cluster-capacity validators currently use
+// it; the others ignore unset fields.
+//
+// PrevAppConfig is required for UpgradeOp when running cluster-pressure /
+// k8s-request: those validators check only the non-negative resource
+// delta (new − old) against live headroom so the running deployment is
+// not double-counted. Cluster-capacity still uses AppConfig (the new
+// chart) absolutely, and install/resume ignore PrevAppConfig.
 type Input struct {
-	Client    client.Client
-	AppConfig *appcfg.ApplicationConfig
-	Op        Op
-	Token     string
+	Client        client.Client
+	AppConfig     *appcfg.ApplicationConfig
+	PrevAppConfig *appcfg.ApplicationConfig
+	Op            Op
+	Token         string
 }
 
 // Decision is the structured outcome of a single validator (or the chain

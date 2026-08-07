@@ -3,6 +3,7 @@ package validation
 import (
 	"context"
 	"fmt"
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/compute"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
@@ -68,9 +69,10 @@ func (clusterCapacityValidator) Name() string { return NameClusterCapacity }
 // Upgrade is included so we reject an upgrade whose new chart declares
 // resource requirements the cluster can never satisfy (e.g. the new
 // version raised CPU/memory/disk past the cluster's total schedulable
-// capacity) at HTTP submit time, before any helm work happens. None
-// of the other validators in this file apply to UpgradeOp — runtime
-// pressure / per-user quota are handled separately on the upgrade path.
+// capacity) at HTTP submit time, before any helm work happens. This
+// validator uses the new chart's ABSOLUTE requirements on upgrade;
+// cluster-pressure / k8s-request handle the headroom side against the
+// delta (new − old) — see UpgradabilityValidators.
 func (clusterCapacityValidator) AppliesTo(op Op) bool {
 	switch op {
 	case v1alpha1.InstallOp, v1alpha1.UpgradeOp:
@@ -150,22 +152,28 @@ func (clusterCapacityValidator) Validate(ctx context.Context, in Input) (Decisio
 // checks aggregate cluster headroom (disk/memory/CPU) against the app's
 // declared requirements. Requires a kubesphere token because the
 // underlying call hits the kubesphere monitoring API.
+//
+// On UpgradeOp the check uses the non-negative resource delta
+// (new − old) so the running deployment already counted in cluster
+// usage is not double-counted.
 type clusterPressureValidator struct{}
 
 func (clusterPressureValidator) Name() string { return NameClusterPressure }
 
-// Applies to install and resume only. UpgradeOp is excluded (upgrade
-// does not run validation).
 func (clusterPressureValidator) AppliesTo(op Op) bool {
 	switch op {
-	case v1alpha1.InstallOp, v1alpha1.ResumeOp:
+	case v1alpha1.InstallOp, v1alpha1.ResumeOp, v1alpha1.UpgradeOp:
 		return true
 	}
 	return false
 }
 
 func (clusterPressureValidator) Validate(ctx context.Context, in Input) (Decision, error) {
-	resource, reason, err := checkAppRequirement(in.Token, in.AppConfig, in.Op)
+	cfg, skip := requirementConfigForOp(in)
+	if skip {
+		return ok(), nil
+	}
+	resource, reason, err := checkAppRequirement(in.Token, cfg, in.Op)
 	if err != nil {
 		// CheckAppRequirement returns an empty resource/reason only when
 		// the check itself couldn't be evaluated (e.g. the kubesphere
@@ -189,12 +197,11 @@ func (clusterPressureValidator) Validate(ctx context.Context, in Input) (Decisio
 
 // userQuotaValidator wraps apputils.CheckUserResRequirement which
 // checks the owner's per-user memory / CPU quota via prometheus.
+
 type userQuotaValidator struct{}
 
 func (userQuotaValidator) Name() string { return NameUserQuota }
 
-// Applies to install and resume only. UpgradeOp is excluded (upgrade
-// does not run validation).
 func (userQuotaValidator) AppliesTo(op Op) bool {
 	switch op {
 	case v1alpha1.InstallOp, v1alpha1.ResumeOp:
@@ -204,7 +211,11 @@ func (userQuotaValidator) AppliesTo(op Op) bool {
 }
 
 func (userQuotaValidator) Validate(ctx context.Context, in Input) (Decision, error) {
-	resource, reason, err := checkUserResRequirement(ctx, in.AppConfig, in.Op)
+	cfg, skip := requirementConfigForOp(in)
+	if skip {
+		return ok(), nil
+	}
+	resource, reason, err := checkUserResRequirement(ctx, cfg, in.Op)
 	if err != nil {
 		// Empty resource/reason means the prometheus user-metrics call
 		// failed, not that the user is over quota. Treat it as a fatal
@@ -227,22 +238,28 @@ func (userQuotaValidator) Validate(ctx context.Context, in Input) (Decision, err
 // the cluster has room for the app's CPU/memory request. Runs as part
 // of RuntimePressureValidators in installing_app after helm install and
 // before Scale(-1).
+//
+// On UpgradeOp the check uses the non-negative resource delta
+// (new − old) so already-scheduled requests of the running deployment
+// are not double-counted. Rolling-update surge is left to kube-scheduler.
 type k8sRequestValidator struct{}
 
 func (k8sRequestValidator) Name() string { return NameK8sRequest }
 
-// Applies to install and resume only. UpgradeOp is excluded (upgrade
-// does not run validation).
 func (k8sRequestValidator) AppliesTo(op Op) bool {
 	switch op {
-	case v1alpha1.InstallOp, v1alpha1.ResumeOp:
+	case v1alpha1.InstallOp, v1alpha1.ResumeOp, v1alpha1.UpgradeOp:
 		return true
 	}
 	return false
 }
 
 func (k8sRequestValidator) Validate(ctx context.Context, in Input) (Decision, error) {
-	resource, reason, err := checkAppK8sRequestResource(in.AppConfig, in.Op)
+	cfg, skip := requirementConfigForOp(in)
+	if skip {
+		return ok(), nil
+	}
+	resource, reason, err := checkAppK8sRequestResource(cfg, in.Op)
 	if err != nil {
 		// Empty resource/reason means the node/allocatable lookup failed
 		// (or appConfig was nil), not that the cluster lacks room. Surface
@@ -259,6 +276,22 @@ func (k8sRequestValidator) Validate(ctx context.Context, in Input) (Decision, er
 		}, nil
 	}
 	return ok(), nil
+}
+
+// requirementConfigForOp returns the ApplicationConfig whose declared
+// Requirement should be checked. For install/resume that is AppConfig
+// as-is. For upgrade it is a shallow copy with Requirement set to
+// max(0, new−old); skip is true when the delta is zero on every
+// dimension (caller should treat as OK without hitting metrics).
+func requirementConfigForOp(in Input) (cfg *appcfg.ApplicationConfig, skip bool) {
+	if in.Op != v1alpha1.UpgradeOp {
+		return in.AppConfig, false
+	}
+	delta := compute.UpgradeResourceDelta(in.PrevAppConfig, in.AppConfig)
+	if delta.CPU <= 0 && delta.Memory <= 0 && delta.Disk <= 0 {
+		return nil, true
+	}
+	return compute.AppConfigWithRequirement(in.AppConfig, delta), false
 }
 
 // computeModeValidator wraps compute.AppInstallable which validates
@@ -430,35 +463,43 @@ func InstallabilityValidators() []Validator {
 	}
 }
 
-// UpgradabilityValidators returns the structural feasibility chain
-// applied at HTTP submit time by the upgrade handler. The upgrade flow
-// only needs to ask "is the cluster big enough to host the NEW chart's
-// declared requirements at all?", because:
+// UpgradabilityValidators returns the feasibility chain applied at HTTP
+// submit time by the upgrade handler. It answers two questions:
 //
+//   - cluster-capacity: "is the cluster physically big enough to host
+//     the NEW chart's declared requirements at all?" — evaluated
+//     against the new chart's ABSOLUTE requirements (Total, not
+//     Total−Usage), since a running old version does not shrink the
+//     cluster's total schedulable size.
+//   - cluster-pressure / k8s-request: "can live headroom absorb the
+//     resource INCREASE this upgrade introduces?" — each runs against
+//     the non-negative delta (new − old) computed from
+//     Input.PrevAppConfig, so the running deployment already reflected
+//     in cluster usage / scheduled requests is not double-counted.
+//     When the delta is zero on every dimension (the common case where
+//     a new version keeps or lowers its requests) these validators
+//     short-circuit to OK without any metrics round trip.
+//
+// Intentionally excluded:
+//
+//   - user-quota: install/resume remain the per-user quota gates;
+//     upgrade does not re-check owner quota.
 //   - compute-mode: the existing app already has an allocation, the
 //     upgrade reuses prevCfg.SelectedGpuType. Re-running the planner
 //     would either no-op or spuriously fail on a transiently-degraded
 //     node.
-//   - user-quota: the running deployment is already counted against
-//     the owner's quota, so re-checking on upgrade would double-count
-//     for templates whose new version raises requests only marginally.
-//   - runtime-pressure / k8s-request / node-pressure: the upgrade goes
-//     through helm upgrade which schedules its own replacement pods;
-//     kubelet/kube-scheduler are the authoritative gate there.
+//   - node-pressure / compute-allocation: rolling-update surge and pod
+//     placement go through helm upgrade + kube-scheduler, which are the
+//     authoritative gate there.
 //
-// So the chain is intentionally just clusterCapacityValidator. We keep
-// it as a separate exported chain (rather than letting callers pass a
-// single validator inline) so that:
-//
-//   - The "what validates on upgrade?" answer lives in one place that
-//     matches the InstallabilityValidators / RuntimePressureValidators
-//     pattern.
-//   - The clusterCapacityValidator type stays unexported.
-//   - Adding another upgrade-time gate later only touches this file
-//     and TestChainShapes, not every upgrade call site.
+// The delta-aware validators REQUIRE Input.PrevAppConfig to be set for
+// UpgradeOp; the upgrade handler is the only caller of this chain and
+// always supplies it.
 func UpgradabilityValidators() []Validator {
 	return []Validator{
 		clusterCapacityValidator{},
+		clusterPressureValidator{},
+		k8sRequestValidator{},
 	}
 }
 
