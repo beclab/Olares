@@ -7,14 +7,14 @@ head:
 ---
 # Restore data from Olares Space backups
 
-Use Olares Space to view your cloud backups and restore files to your Olares.
+Use Olares Space to view your cloud backups and restore files to your Olares. If you haven't created a backup task yet, see [Back up your data in Olares](../olares/settings/backup.md).
 
 ## View backup storage usage
 
 Check how much storage your backups are using against your quota.
 
 :::info
-For self-hosted Olares users, it's important to monitor the storage usage for backup services. These services may incur charges based on usage. For more information, see [Billing](billing.md).
+For self-hosted Olares users, it's important to monitor the storage usage for backup services. These services might incur charges based on usage. For more information, see [Billing](billing.md).
 :::
 
 1. Click **Backup** in the left navigation pane.
@@ -87,7 +87,3 @@ Understand charges for storage and bandwidth before using backup and restore ser
     b. On the **Restore details** page, click **Open in Files**. The Files app opens the folder containing the restored files.
 
       ![Restore details page](/images/how-to/space/restore_details.png#bordered){width=70%}
-
-## Resources
-
-- [Back up your data in Olares](../olares/settings/backup.md): Learn how to create backup tasks in Olares.

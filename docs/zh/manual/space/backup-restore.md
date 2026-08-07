@@ -8,7 +8,7 @@ head:
 ---
 # 从 Olares Space 备份中恢复数据
 
-使用 Olares Space 查看云端备份并将文件恢复到 Olares。
+使用 Olares Space 查看云端备份并将文件恢复到 Olares。如果你还没有创建备份任务，可参阅[备份 Olares 数据](../olares/settings/backup.md)。
 
 ## 查看备份存储用量
 
@@ -88,7 +88,3 @@ head:
     b. 在 **Restore details** 页面，点击 **Open in Files**。文件管理器会打开包含恢复文件的文件夹。
 
       ![恢复详情页面](/images/how-to/space/restore_details.png#bordered){width=70%}
-
-## 资源
-
-- [备份 Olares 数据](../olares/settings/backup.md)：了解如何在 Olares 中创建备份任务。
