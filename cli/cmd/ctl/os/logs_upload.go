@@ -147,24 +147,23 @@ func runLogsUpload(options *logUploadOptions) error {
 	}
 	client := &http.Client{Timeout: timeout}
 
-	fmt.Println("requesting upload URL...")
+	fmt.Fprintln(os.Stderr, "requesting upload URL...")
 	presign, err := requestPresign(client, endpoint, options, filepath.Base(archivePath), info.Size())
 	if err != nil {
 		return err
 	}
 
-	fmt.Println("uploading log archive...")
 	if err := putArchive(client, presign, archivePath, info.Size()); err != nil {
 		return err
 	}
 
-	fmt.Println("creating ticket...")
+	fmt.Fprintln(os.Stderr, "creating ticket...")
 	ticket, err := createTicket(client, endpoint, options, presign.AttachmentID)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("logs uploaded, ticket created: %s (%s)\n", ticket.TicketNumber, ticket.TicketID)
+	fmt.Fprintf(os.Stderr, "logs uploaded, ticket created: %s (%s)\n", ticket.TicketNumber, ticket.TicketID)
 	return nil
 }
 
@@ -183,9 +182,11 @@ func collectForUpload() (string, func(), error) {
 		OutputDir:        tempDir,
 		IgnoreKubeErrors: true,
 	}
+	fmt.Fprintln(os.Stderr, "collecting logs...")
 	if err := collectLogs(options); err != nil {
 		return "", cleanup, err
 	}
+	fmt.Fprintln(os.Stderr, "collection complete")
 
 	matches, err := filepath.Glob(filepath.Join(tempDir, "olares-logs-*.tar.gz"))
 	if err != nil || len(matches) == 0 {
@@ -224,7 +225,8 @@ func putArchive(client *http.Client, presign *presignResponse, path string, size
 	if method == "" {
 		method = http.MethodPut
 	}
-	req, err := http.NewRequest(method, presign.UploadURL, f)
+	body := &progressReader{r: f, total: size, label: "Uploading"}
+	req, err := http.NewRequest(method, presign.UploadURL, body)
 	if err != nil {
 		return fmt.Errorf("build upload request: %v", err)
 	}
@@ -241,6 +243,7 @@ func putArchive(client *http.Client, presign *presignResponse, path string, size
 	}
 
 	resp, err := client.Do(req)
+	fmt.Fprint(os.Stderr, "\n")
 	if err != nil {
 		return fmt.Errorf("upload archive: %v", err)
 	}
@@ -250,6 +253,56 @@ func putArchive(client *http.Client, presign *presignResponse, path string, size
 		return fmt.Errorf("upload archive: storage returned %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
 	}
 	return nil
+}
+
+// progressReader wraps an io.Reader and prints a single-line stderr progress
+// update (percent + bytes) without pulling in a TUI dependency.
+type progressReader struct {
+	r     io.Reader
+	total int64
+	read  int64
+	label string
+	last  int
+}
+
+func (p *progressReader) Read(b []byte) (int, error) {
+	n, err := p.r.Read(b)
+	if n > 0 {
+		p.read += int64(n)
+		percent := 100
+		if p.total > 0 {
+			percent = int((p.read * 100) / p.total)
+			if percent > 100 {
+				percent = 100
+			}
+		}
+		// Throttle redraws to whole-percent steps (plus the final byte).
+		if percent != p.last || p.read == p.total || err == io.EOF {
+			p.last = percent
+			fmt.Fprintf(
+				os.Stderr,
+				"\r%s… %d%% (%s/%s)",
+				p.label,
+				percent,
+				humanBytes(p.read),
+				humanBytes(p.total),
+			)
+		}
+	}
+	return n, err
+}
+
+func humanBytes(n int64) string {
+	const unit = 1024
+	if n < unit {
+		return fmt.Sprintf("%d B", n)
+	}
+	div, exp := int64(unit), 0
+	for v := n / unit; v >= unit; v /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %cB", float64(n)/float64(div), "KMGTPE"[exp])
 }
 
 func createTicket(client *http.Client, endpoint string, options *logUploadOptions, attachmentID string) (*ticketResponse, error) {
