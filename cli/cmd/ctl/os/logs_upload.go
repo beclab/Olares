@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 )
 
 // logUploadOptions holds inputs for `olares-cli logs upload`. The pairing code
@@ -225,7 +226,7 @@ func putArchive(client *http.Client, presign *presignResponse, path string, size
 	if method == "" {
 		method = http.MethodPut
 	}
-	body := &progressReader{r: f, total: size, label: "Uploading"}
+	body, finish := uploadBody(f, size)
 	req, err := http.NewRequest(method, presign.UploadURL, body)
 	if err != nil {
 		return fmt.Errorf("build upload request: %v", err)
@@ -243,7 +244,7 @@ func putArchive(client *http.Client, presign *presignResponse, path string, size
 	}
 
 	resp, err := client.Do(req)
-	fmt.Fprint(os.Stderr, "\n")
+	finish()
 	if err != nil {
 		return fmt.Errorf("upload archive: %v", err)
 	}
@@ -255,14 +256,30 @@ func putArchive(client *http.Client, presign *presignResponse, path string, size
 	return nil
 }
 
-// progressReader wraps an io.Reader and prints a single-line stderr progress
-// update (percent + bytes) without pulling in a TUI dependency.
+// uploadBody wraps the archive with a live stderr progress line when stderr is
+// a terminal. Redirected stderr (scripts, CI, log capture) gets a single plain
+// status line instead, so no carriage returns end up in captured output. The
+// returned func must be called once the request finishes, to settle the line
+// before anything else is written.
+func uploadBody(f io.Reader, size int64) (io.Reader, func()) {
+	if !term.IsTerminal(int(os.Stderr.Fd())) {
+		fmt.Fprintln(os.Stderr, "uploading log archive...")
+		return f, func() {}
+	}
+	p := &progressReader{r: f, total: size, label: "Uploading", last: -1}
+	return p, p.finish
+}
+
+// progressReader wraps an io.Reader and redraws a single-line stderr progress
+// update (percent + bytes) without pulling in a TUI dependency. Only used when
+// stderr is a terminal; see uploadBody.
 type progressReader struct {
 	r     io.Reader
 	total int64
 	read  int64
 	label string
 	last  int
+	drawn bool
 }
 
 func (p *progressReader) Read(b []byte) (int, error) {
@@ -279,17 +296,33 @@ func (p *progressReader) Read(b []byte) (int, error) {
 		// Throttle redraws to whole-percent steps (plus the final byte).
 		if percent != p.last || p.read == p.total || err == io.EOF {
 			p.last = percent
-			fmt.Fprintf(
-				os.Stderr,
-				"\r%s… %d%% (%s/%s)",
-				p.label,
-				percent,
-				humanBytes(p.read),
-				humanBytes(p.total),
-			)
+			p.draw(percent)
 		}
 	}
 	return n, err
+}
+
+func (p *progressReader) draw(percent int) {
+	p.drawn = true
+	// \033[K erases to end of line so a shorter update can't leave residue
+	// from the previous, longer one.
+	fmt.Fprintf(
+		os.Stderr,
+		"\r\033[K%s… %d%% (%s/%s)",
+		p.label,
+		percent,
+		humanBytes(p.read),
+		humanBytes(p.total),
+	)
+}
+
+// finish closes out the progress line so later output starts clean. It is a
+// no-op when nothing was drawn, e.g. an empty archive or a request that failed
+// before the body was read.
+func (p *progressReader) finish() {
+	if p.drawn {
+		fmt.Fprintln(os.Stderr)
+	}
 }
 
 func humanBytes(n int64) string {
