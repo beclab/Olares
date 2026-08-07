@@ -46,6 +46,9 @@ type AppInfo struct {
 	// as a marker on AppInfo so future per-app behaviour (logging, metrics,
 	// etc.) can distinguish them; access itself is no longer gated.
 	IsShared bool
+	// EntranceProbePaths maps entrance name → Exact HTTP probe paths collected
+	// from Pods behind the entrance Service (Liveness/Readiness/Startup HTTPGet).
+	EntranceProbePaths map[string][]string
 }
 
 type EntranceInfo = appv1alpha1.Entrance

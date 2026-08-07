@@ -99,27 +99,52 @@ func HasEntranceExtAuthPolicy(ctx context.Context, ns, srrName string) bool {
 	return err == nil
 }
 
-// ShouldSkipEnvoySidecar is reserved for a future L2-c blanket retire of outbound
-// olares-envoy-sidecar. R1 (ADR-DEENVY-SCOPE-SHARED) must not skip solely because
-// Linkerd Layer 1 is ready; Shared callers use ShouldSkipOesForSharedCaller instead.
+// ShouldSkipEnvoySidecar retires outbound/whole oes only when SteadyStateGate is Ready.
+// Until the gate flips, admission must keep oes (fail-closed).
 func ShouldSkipEnvoySidecar(ctx context.Context, kube kubernetes.Interface) bool {
-	_ = ctx
-	_ = kube
-	return false
+	return steadyGateReadyOrOverride(ctx, kube)
 }
 
-// ShouldSkipInboundEntranceSidecar skips inbound oes when Linkerd is ready and extAuth exists.
-func ShouldSkipInboundEntranceSidecar(ctx context.Context, kube kubernetes.Interface, appNamespace, srrName string) bool {
-	if !IsLinkerdLayer1Ready(ctx, kube) {
+// IsL4EdgePEPReady reports whether Track-A M-L4 is satisfied for oes skip gates.
+// Order: env override (tests) → live l4 Deployment Ready (direct stop-inject for
+// new installs / post-Track-A upgrade) → SteadyGate condition L4ProxyReady.
+// Live probe avoids Accept chicken-egg (ZeroOesInventory required Accept before
+// writing the condition that webhook used to wait on). Does not consult EG
+// SecurityPolicy (EDGE path uses l4 as north-south PEP).
+func IsL4EdgePEPReady(ctx context.Context, kube kubernetes.Interface) bool {
+	if os.Getenv("OLARES_L4_EDGE_PEP_READY") == "1" {
+		return true
+	}
+	if IsL4ProxyDeploymentReady(ctx, kube) {
+		return true
+	}
+	st, err := LoadSteadyGate(ctx, kube)
+	if err != nil {
+		klog.V(2).Infof("mesh: IsL4EdgePEPReady load gate failed: %v", err)
 		return false
 	}
-	return HasEntranceExtAuthPolicy(ctx, appNamespace, srrName)
+	if st == nil || st.Conditions == nil {
+		return false
+	}
+	return st.Conditions[ConditionL4ProxyReady]
 }
 
-// EvaluateSkipOes is the pure L2-c gate (REF §3.9.5):
-// LinkerdReady ∧ L2aExtAuthReady ∧ (¬HasProvider ∨ EgressAgentReady).
-func EvaluateSkipOes(linkerdReady, extAuthReady, hasProvider, egressAgentReady bool) bool {
-	if !linkerdReady || !extAuthReady {
+// ShouldSkipInboundEntranceSidecar skips inbound oes when M-L4 is true (l4 Ready).
+// EDGE direct stop does not wait on Linkerd (E/W is mesh-in/Linkerd on Shared path).
+func ShouldSkipInboundEntranceSidecar(ctx context.Context, kube kubernetes.Interface, appNamespace, srrName string) bool {
+	_ = appNamespace
+	_ = srrName
+	return IsL4EdgePEPReady(ctx, kube)
+}
+
+// EvaluateSkipOes is the EDGE direct stop-inject gate:
+// EdgePEPReady ∧ (¬HasProvider ∨ EgressAgentReady).
+// linkerdReady is ignored (kept for call-site compatibility); Shared-caller
+// E/W still uses EvaluateSkipOesForSharedCaller which does require Linkerd.
+// edgePEPReady is M-L4 (l4 verify/302), not EG Entrance ExtAuth.
+func EvaluateSkipOes(linkerdReady, edgePEPReady, hasProvider, egressAgentReady bool) bool {
+	_ = linkerdReady
+	if !edgePEPReady {
 		return false
 	}
 	if hasProvider && !egressAgentReady {
@@ -128,11 +153,13 @@ func EvaluateSkipOes(linkerdReady, extAuthReady, hasProvider, egressAgentReady b
 	return true
 }
 
-// ShouldSkipOes combines Linkerd/extAuth cluster probes with provider/egress readiness.
+// ShouldSkipOes probes M-L4 and provider/egress readiness (no Linkerd gate).
 func ShouldSkipOes(ctx context.Context, kube kubernetes.Interface, appNamespace, entranceSRRName string, hasProvider, egressAgentReady bool) bool {
+	_ = appNamespace
+	_ = entranceSRRName
 	return EvaluateSkipOes(
-		IsLinkerdLayer1Ready(ctx, kube),
-		HasEntranceExtAuthPolicy(ctx, appNamespace, entranceSRRName),
+		true,
+		IsL4EdgePEPReady(ctx, kube),
 		hasProvider,
 		egressAgentReady,
 	)
