@@ -190,6 +190,33 @@
       }
     },
     {
+      "name": "authelia_backend_bob",
+      "type": "STRICT_DNS",
+      "connectTimeout": "5s",
+      "loadAssignment": {
+        "clusterName": "authelia_backend_bob",
+        "endpoints": [
+          {
+            "lbEndpoints": [
+              {
+                "endpoint": {
+                  "address": {
+                    "socketAddress": {
+                      "address": "authelia-backend.user-system-bob.svc.cluster.local",
+                      "portValue": 9091
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "commonHttpProtocolOptions": {
+        "idleTimeout": "10s"
+      }
+    },
+    {
       "name": "nonapp_auth_bob",
       "type": "STRICT_DNS",
       "connectTimeout": "5s",
@@ -258,33 +285,6 @@
                     "socketAddress": {
                       "address": "wizard.user-space-bob.svc.cluster.local",
                       "portValue": 80
-                    }
-                  }
-                }
-              }
-            ]
-          }
-        ]
-      },
-      "commonHttpProtocolOptions": {
-        "idleTimeout": "10s"
-      }
-    },
-    {
-      "name": "authelia_backend_bob",
-      "type": "STRICT_DNS",
-      "connectTimeout": "5s",
-      "loadAssignment": {
-        "clusterName": "authelia_backend_bob",
-        "endpoints": [
-          {
-            "lbEndpoints": [
-              {
-                "endpoint": {
-                  "address": {
-                    "socketAddress": {
-                      "address": "authelia-backend.user-system-bob.svc.cluster.local",
-                      "portValue": 9091
                     }
                   }
                 }
@@ -1557,6 +1557,12 @@
                   }
                 ]
               },
+              "typedPerFilterConfig": {
+                "envoy.filters.http.ext_authz": {
+                  "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+                  "checkSettings": {}
+                }
+              },
               "requestHeadersToAdd": [
                 {
                   "header": {
@@ -2294,6 +2300,12 @@
                     "upgradeType": "tailscale-control-protocol"
                   }
                 ]
+              },
+              "typedPerFilterConfig": {
+                "envoy.filters.http.ext_authz": {
+                  "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+                  "checkSettings": {}
+                }
               },
               "requestHeadersToAdd": [
                 {
