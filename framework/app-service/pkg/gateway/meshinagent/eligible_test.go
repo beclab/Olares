@@ -159,7 +159,6 @@ func TestAllowOutboundMeshIn(t *testing.T) {
 	}
 }
 
-
 func TestContainerSpecFailClosed(t *testing.T) {
 	c := ContainerSpec()
 	if c.Name != ContainerName {

@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	meshReadyMu   sync.RWMutex
+	meshReadyMu    sync.RWMutex
 	meshReadyCheck func(context.Context, kubernetes.Interface) bool
 )
 

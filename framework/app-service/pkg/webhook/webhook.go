@@ -23,7 +23,6 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/provider"
 	"github.com/beclab/Olares/framework/app-service/pkg/sandbox/sidecar"
 	"github.com/beclab/Olares/framework/app-service/pkg/security"
-	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/api/pkg/generated/clientset/versioned"
 
@@ -176,7 +175,7 @@ func (wh *Webhook) CreatePatch(
 	ctx context.Context,
 	pod *corev1.Pod,
 	req *admissionv1.AdmissionRequest,
-	proxyUUID uuid.UUID, injectPolicy, injectWs, injectUpload, injectMeshInAgent, injectMeshOutAgent bool,
+	proxyUUID uuid.UUID, injectPolicy, injectMeshInAgent, injectMeshOutAgent bool,
 	injectSharedPod *bool,
 	appmgr *v1alpha1.ApplicationManager,
 	appConfig *appcfg.ApplicationConfig,
@@ -197,88 +196,10 @@ func (wh *Webhook) CreatePatch(
 
 	// inject sidecar only for the app's namespace
 	if req.Namespace == appmgr.Spec.AppNamespace {
-		needsEnvoySidecar := wh.shouldInjectEnvoySidecar(ctx, injectPolicy, appConfig, pod)
-		// Shared callers with mesh-in skip the whole oes container (including
-		// entrance pods) when Linkerd is ready and provider outbound is covered
-		// (no provider, or mesh-out will be injected).
-		if wh != nil && wh.kubeClient != nil && mesh.ShouldSkipOesForSharedCaller(
-			ctx, wh.kubeClient, injectMeshInAgent, len(perms) > 0, injectMeshOutAgent,
-		) {
-			needsEnvoySidecar = false
-		}
-		// EDGE direct stop-inject: M-L4 via live l4 Deployment Ready ∧
-		// (¬provider ∨ mesh-out). No Linkerd gate; Shared E/W uses mesh-in path.
-		if needsEnvoySidecar && wh != nil && wh.kubeClient != nil &&
-			mesh.ShouldSkipOes(ctx, wh.kubeClient, req.Namespace, "", len(perms) > 0, injectMeshOutAgent) {
-			needsEnvoySidecar = false
-			klog.Infof("deenvy: skip oes for pod=%s/%s (L4 edge PEP ready)", req.Namespace, pod.Name)
-		}
-		// SteadyGate Ready retires remaining oes when inbound/outbound covered.
-		if needsEnvoySidecar && wh != nil && wh.kubeClient != nil && mesh.ShouldSkipEnvoySidecar(ctx, wh.kubeClient) {
-			inboundOK := !injectPolicy || mesh.IsL4EdgePEPReady(ctx, wh.kubeClient)
-			outboundOK := len(perms) == 0 || injectMeshOutAgent
-			if mesh.CanRemoveOES(ctx, wh.kubeClient, inboundOK, outboundOK, true) {
-				needsEnvoySidecar = false
-				klog.Infof("deenvy: skip oes for pod=%s/%s (SteadyGate Ready)", req.Namespace, pod.Name)
-			}
-		}
-
-		configMapName, err := wh.createSidecarConfigMap(ctx, pod, proxyUUID.String(), req.Namespace, injectPolicy, injectWs, injectUpload, appmgr, appConfig, perms)
-		if err != nil {
-			return nil, err
-		}
-
-		volume := sidecar.GetSidecarVolumeSpec(configMapName)
-
 		if pod.Spec.Volumes == nil {
 			pod.Spec.Volumes = []corev1.Volume{}
 		}
 
-		if needsEnvoySidecar {
-			pod.Spec.Volumes = append(pod.Spec.Volumes, volume, sidecar.GetEnvoyConfigWorkVolume())
-
-			clusterID := fmt.Sprintf("%s.%s", pod.Spec.ServiceAccountName, req.Name)
-			envoyFilename := constants.EnvoyConfigFilePath + "/" + constants.EnvoyConfigFileName
-			// pod is not an entrance pod, just inject outbound proxy
-			if !injectPolicy {
-				envoyFilename = constants.EnvoyConfigFilePath + "/" + constants.EnvoyConfigOnlyOutBoundFileName
-			}
-			appKey, appSecret, _ := wh.getAppKeySecret(req.Namespace)
-
-			// If the owning Application enables overlay-gateway, multus will
-			// attach a macvlan NIC (net1) to the pod. Tell the iptables init
-			// container to install bypass RETURN rules for that interface so
-			// north/south traffic on net1 doesn't get redirected to envoy.
-			injectMacvlan, err := wh.ShouldInjectMacvlanInit(ctx, pod, req.Namespace)
-			if err != nil {
-				klog.Errorf("Failed to evaluate macvlan-init for sidecar pod=%s/%s err=%v", req.Namespace, pod.Name, err)
-				return nil, err
-			}
-			initContainer := sidecar.GetInitContainerSpec(appConfig, injectMacvlan)
-			pod.Spec.InitContainers = append(pod.Spec.InitContainers, initContainer)
-			policySidecar := sidecar.GetEnvoySidecarContainerSpec(clusterID, envoyFilename, appKey, appSecret)
-			pod.Spec.Containers = append(pod.Spec.Containers, policySidecar)
-
-			pod.Spec.InitContainers = append(
-				[]corev1.Container{
-					sidecar.GetInitContainerSpecForWaitFor(appConfig.OwnerName),
-					sidecar.GetInitContainerSpecForRenderEnvoyConfig(),
-				},
-				pod.Spec.InitContainers...)
-		} else if injectWs || injectUpload {
-			pod.Spec.Volumes = append(pod.Spec.Volumes, volume)
-		}
-
-		if injectWs {
-			wsSidecar := sidecar.GetWebSocketSideCarContainerSpec(&appConfig.WsConfig)
-			pod.Spec.Containers = append(pod.Spec.Containers, wsSidecar)
-		}
-		if injectUpload {
-			uploadSidecar := sidecar.GetUploadSideCarContainerSpec(pod, &appConfig.Upload)
-			if uploadSidecar != nil {
-				pod.Spec.Containers = append(pod.Spec.Containers, *uploadSidecar)
-			}
-		}
 		if injectMeshInAgent {
 			// Conf is materialized at sidecar start (base64 → /tmp/mesh-in); do not
 			// mount an emptyDir over /etc/nginx (would hide image modules path).
@@ -483,7 +404,7 @@ func (wh *Webhook) AdmissionError(uid types.UID, err error) *admissionv1.Admissi
 
 // MustInject checks which inject operation should do for a pod.
 func (wh *Webhook) MustInject(ctx context.Context, pod *corev1.Pod, namespace string) (
-	injectPolicy, injectWs, injectUpload, injectMeshInAgent, injectMeshOutAgent bool, injectSharedPod *bool, perms []appcfg.ProviderPermission,
+	injectPolicy, injectMeshInAgent, injectMeshOutAgent bool, injectSharedPod *bool, perms []appcfg.ProviderPermission,
 	appConfig *appcfg.ApplicationConfig, appMgr *v1alpha1.ApplicationManager, err error) {
 	var isShared bool
 
@@ -521,12 +442,6 @@ func (wh *Webhook) MustInject(ctx context.Context, pod *corev1.Pod, namespace st
 	}
 
 	if !isShared {
-		if appConfig.WsConfig.URL != "" && appConfig.WsConfig.Port > 0 {
-			injectWs = true
-		}
-		if appConfig.Upload.Dest != "" {
-			injectUpload = true
-		}
 		for _, p := range appConfig.Permission {
 			klog.Info("found permission: ", p)
 			if providerP, ok := p.([]interface{}); ok {
@@ -555,13 +470,13 @@ func (wh *Webhook) MustInject(ctx context.Context, pod *corev1.Pod, namespace st
 			isEntrancePod, err = wh.isAppEntrancePod(ctx, appConfig.AppName, e.Host, pod, namespace)
 			klog.Infof("entranceName=%s isEntrancePod=%v", e.Name, isEntrancePod)
 			if err != nil {
-				return false, false, false, false, false, nil, perms, nil, nil, err
+				return false, false, false, nil, perms, nil, nil, err
 			}
 
 			if isEntrancePod {
 				skip, skipErr := wh.shouldSkipInboundEntranceSidecar(ctx, appConfig, namespace, e.Name)
 				if skipErr != nil {
-					return false, false, false, false, false, nil, perms, nil, nil, skipErr
+					return false, false, false, nil, perms, nil, nil, skipErr
 				}
 				if !skip {
 					injectPolicy = true
@@ -576,7 +491,7 @@ func (wh *Webhook) MustInject(ctx context.Context, pod *corev1.Pod, namespace st
 		isEntrancePod, err = wh.isAppEntrancePod(ctx, appConfig.AppName, e.Host, pod, namespace)
 		klog.Infof("entranceName=%s isEntrancePod=%v", e.Name, isEntrancePod)
 		if err != nil {
-			return false, false, false, false, false, nil, perms, nil, nil, err
+			return false, false, false, nil, perms, nil, nil, err
 		}
 
 		if isEntrancePod {
@@ -595,7 +510,7 @@ func (wh *Webhook) MustInject(ctx context.Context, pod *corev1.Pod, namespace st
 	var declaresSharedCaller bool
 	injectMeshInAgent, declaresSharedCaller, err = wh.shouldInjectMeshInAgent(ctx, appConfig, namespace, isSharedApp)
 	if err != nil {
-		return false, false, false, false, false, nil, perms, nil, nil, err
+		return false, false, false, nil, perms, nil, nil, err
 	}
 	isEntrancePod := isSharedEntranceWorkload(injectSharedPod, pod.GetLabels())
 	injectMeshInAgent = applyOutboundMeshInGate(injectMeshInAgent, isEntrancePod, declaresSharedCaller, pod.GetLabels())
@@ -688,45 +603,6 @@ func (wh *Webhook) isAppEntrancePod(ctx context.Context, appname, host string, p
 	}
 
 	return selector.Matches(labels.Set(pod.GetLabels())), nil
-}
-
-func (wh *Webhook) createSidecarConfigMap(
-	ctx context.Context, pod *corev1.Pod,
-	proxyUUID, namespace string, injectPolicy, injectWs, injectUpload bool,
-	appmgr *v1alpha1.ApplicationManager, appConfig *appcfg.ApplicationConfig,
-	perms []appcfg.ProviderPermission,
-) (string, error) {
-	configMapName := fmt.Sprintf("%s-%s", constants.SidecarConfigMapVolumeName, proxyUUID)
-	if deployName := utils.GetDeploymentName(pod); deployName != "" {
-		configMapName = fmt.Sprintf("%s-%s", constants.SidecarConfigMapVolumeName, deployName)
-	}
-	cm, e := wh.kubeClient.CoreV1().ConfigMaps(namespace).Get(ctx, configMapName, metav1.GetOptions{})
-	if e != nil && !apierrors.IsNotFound(e) {
-		return "", e
-	}
-
-	permCfg, err := apputils.ProviderPermissionsConvertor(perms).ToPermissionCfg(ctx, appConfig.OwnerName, appcfg.GetMarketSource(appmgr))
-	if err != nil {
-		klog.Errorf("Failed to convert permissions for app %s: %v", appConfig.AppName, err)
-		return "", err
-	}
-
-	newConfigMap := sidecar.GetSidecarConfigMap(configMapName, namespace, appConfig, injectPolicy, injectWs, injectUpload, pod, permCfg)
-	if e == nil {
-		// configmap found
-		cm.Data = newConfigMap.Data
-		if _, err := wh.kubeClient.CoreV1().ConfigMaps(namespace).Update(ctx, cm, metav1.UpdateOptions{}); err != nil {
-			klog.Errorf("Failed to update sidecar configmap=%s in namespace=%s err=%v", configMapName, namespace, err)
-			return "", err
-		}
-	} else {
-		if _, err := wh.kubeClient.CoreV1().ConfigMaps(namespace).Create(ctx, newConfigMap, metav1.CreateOptions{}); err != nil {
-			klog.Errorf("Failed to create sidecar configmap=%s in namespace=%s err=%v", configMapName, namespace, err)
-			return "", err
-		}
-	}
-
-	return configMapName, nil
 }
 
 func isNamespaceInjectable(namespace string) bool {

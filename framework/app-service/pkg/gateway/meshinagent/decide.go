@@ -6,17 +6,17 @@ import (
 )
 
 const (
-	AnnotDecide             = "gateway.olares.io/shared-caller-decide"
-	AnnotDecideSource       = "gateway.olares.io/shared-caller-decide-source"
-	AnnotDecideEdges        = "gateway.olares.io/shared-caller-edges"
-	AnnotDecideRuleID       = "gateway.olares.io/shared-caller-rule-id"
-	SettingOptOutMesh       = "mesh-inject"
-	SettingAppRef           = "appRef"
-	DecideSourceExplicit       = "explicit"
-	DecideSourceRule           = "rule"
-	DecideSourceEligibility    = "eligibility"
-	DecideSourceSharedDefault  = "shared-default"
-	DecideSourceNone           = "none"
+	AnnotDecide               = "gateway.olares.io/shared-caller-decide"
+	AnnotDecideSource         = "gateway.olares.io/shared-caller-decide-source"
+	AnnotDecideEdges          = "gateway.olares.io/shared-caller-edges"
+	AnnotDecideRuleID         = "gateway.olares.io/shared-caller-rule-id"
+	SettingOptOutMesh         = "mesh-inject"
+	SettingAppRef             = "appRef"
+	DecideSourceExplicit      = "explicit"
+	DecideSourceRule          = "rule"
+	DecideSourceEligibility   = "eligibility"
+	DecideSourceSharedDefault = "shared-default"
+	DecideSourceNone          = "none"
 
 	// RuleAllowSharedLLMGateway keeps name-based Shared AI Router Decide for
 	// compatibility. All Shared apps also default to caller via shared-default.
