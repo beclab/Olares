@@ -33,6 +33,34 @@ func TestStateGPUFieldsKeepLegacyInfoAndExposeFullList(t *testing.T) {
 	}
 }
 
+func TestStateOsKernelIsExcludedFromSystemStatusWire(t *testing.T) {
+	raw, err := json.Marshal(State{
+		OsArch:   "amd64",
+		OsKernel: "6.8.0-60-generic",
+		HostIP:   "10.0.0.2",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var got map[string]any
+	if err := json.Unmarshal(raw, &got); err != nil {
+		t.Fatal(err)
+	}
+	if _, exists := got["os_kernel"]; exists {
+		t.Fatalf("os_kernel must not appear on /system/status wire, got %#v", got)
+	}
+	if _, exists := got["OsKernel"]; exists {
+		t.Fatalf("OsKernel must not appear on /system/status wire, got %#v", got)
+	}
+	if got["os_arch"] != "amd64" {
+		t.Fatalf("os_arch = %#v, want amd64", got["os_arch"])
+	}
+	if got["hostIp"] != "10.0.0.2" {
+		t.Fatalf("hostIp = %#v, want 10.0.0.2", got["hostIp"])
+	}
+}
+
 func TestStateGPUListIsEmptyArrayWhenNoGPUDetected(t *testing.T) {
 	raw, err := json.Marshal(State{GPUList: []string{}})
 	if err != nil {

@@ -121,7 +121,7 @@ func refreshCurrentStatus(ctx context.Context) error {
 	}
 
 	// get machine info
-	osType, osInfo, osArch, osVersion, _, err := GetMachineInfo(ctx)
+	osType, osInfo, osArch, osVersion, osKernel, err := GetMachineInfo(ctx)
 	if err != nil {
 		klog.Error("get machine info from terminus cli error, ", err)
 	}
@@ -145,6 +145,7 @@ func refreshCurrentStatus(ctx context.Context) error {
 	}
 
 	CurrentState.OsArch = osArch
+	CurrentState.OsKernel = osKernel
 	CurrentState.OsInfo = osInfo
 	CurrentState.OsVersion = osVersion
 	CurrentState.OsType = osType
