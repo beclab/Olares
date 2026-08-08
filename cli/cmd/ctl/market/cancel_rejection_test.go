@@ -18,7 +18,7 @@ func TestSettledStateCancelExplainsItselfAndKeepsTheOriginalText(t *testing.T) {
 		StatusCode: http.StatusNotFound,
 		Message:    "App not found or current state does not allow operation",
 	}
-	got := explainCancelRejection(wire, "jellyfin", &installedAppRow{State: "running"})
+	got := explainCancelRejection(wire, "jellyfin", "market-local", &installedAppRow{State: "running", Source: "market-local"})
 
 	if errors.Is(got, wire) == false {
 		t.Fatalf("the wire error must stay in the chain, got %v", got)
@@ -39,20 +39,46 @@ func TestCancelRejectionIsLeftAloneWhenTheAppWasNeverFound(t *testing.T) {
 	// No state row means "not found" is the half that plausibly applied, and
 	// inventing a settled state the CLI never saw would be worse than silence.
 	wire := &APIError{StatusCode: http.StatusNotFound, Message: "App not found"}
-	if got := explainCancelRejection(wire, "nosuchapp", nil); got != error(wire) {
+	if got := explainCancelRejection(wire, "nosuchapp", "", nil); got != error(wire) {
 		t.Fatalf("expected the wire error untouched, got %v", got)
+	}
+}
+
+func TestCancelRejectionIsLeftAloneWhenTheRequestedSourceMissesTheRow(t *testing.T) {
+	// A --source the row disagrees with earns the same 404 by itself, so
+	// "it most likely finished" would talk past the actual mistake.
+	wire := &APIError{
+		StatusCode: http.StatusNotFound,
+		Message:    "App not found or current state does not allow operation",
+	}
+	row := &installedAppRow{State: "installing", Source: "market-local"}
+	if got := explainCancelRejection(wire, "jellyfin", "appstore", row); got != error(wire) {
+		t.Fatalf("expected the wire error untouched, got %v", got)
+	}
+}
+
+func TestCancelRejectionStillExplainsWhenTheRowCarriesNoSource(t *testing.T) {
+	// Nothing to disagree with: an older row without a source cannot rule the
+	// settled-state reading out, and the hint ends in `market status` anyway.
+	wire := &APIError{
+		StatusCode: http.StatusNotFound,
+		Message:    "App not found or current state does not allow operation",
+	}
+	got := explainCancelRejection(wire, "jellyfin", "appstore", &installedAppRow{State: "running"})
+	if !strings.Contains(got.Error(), "was in state 'running'") {
+		t.Fatalf("expected the settled-state hint, got %v", got)
 	}
 }
 
 func TestNonNotFoundCancelFailuresAreLeftAlone(t *testing.T) {
 	// A 500 is not the ambiguous sentence this helper exists to disambiguate.
 	wire := &APIError{StatusCode: http.StatusInternalServerError, Message: "boom"}
-	if got := explainCancelRejection(wire, "jellyfin", &installedAppRow{State: "running"}); got != error(wire) {
+	if got := explainCancelRejection(wire, "jellyfin", "", &installedAppRow{State: "running"}); got != error(wire) {
 		t.Fatalf("expected the wire error untouched, got %v", got)
 	}
 
 	plain := errors.New("connection refused")
-	if got := explainCancelRejection(plain, "jellyfin", &installedAppRow{State: "running"}); got != plain {
+	if got := explainCancelRejection(plain, "jellyfin", "", &installedAppRow{State: "running"}); got != plain {
 		t.Fatalf("expected the transport error untouched, got %v", got)
 	}
 }

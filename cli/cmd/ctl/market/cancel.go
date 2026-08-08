@@ -111,10 +111,17 @@ Examples:
 // description — for a backend that is too old.
 //
 // The state row read moments earlier is what separates them: having found the
-// app, "not found" cannot be the half that applied.
-func explainCancelRejection(err error, appName string, row *installedAppRow) error {
+// app, "not found" cannot be the half that applied — unless the request went
+// out under a source the row disagrees with, which earns the same 404 on its
+// own. requestedSource is the source actually sent, so an explicit --source
+// that misses leaves the backend's sentence alone rather than sending the
+// reader past their own mistake.
+func explainCancelRejection(err error, appName, requestedSource string, row *installedAppRow) error {
 	var apiErr *APIError
 	if row == nil || !errors.As(err, &apiErr) || apiErr.StatusCode != http.StatusNotFound {
+		return err
+	}
+	if rowSource := strings.TrimSpace(row.Source); rowSource != "" && strings.TrimSpace(requestedSource) != rowSource {
 		return err
 	}
 	state := strings.TrimSpace(row.State)
@@ -180,7 +187,7 @@ func runCancel(opts *MarketOptions, appName string) error {
 	method, path, body := cancel.Build(atLeast126, appName, source, version)
 	resp, err := mc.doRequest(ctx, method, path, body)
 	if err != nil {
-		return opts.failOp("cancel", appName, explainCancelRejection(err, appName, row))
+		return opts.failOp("cancel", appName, explainCancelRejection(err, appName, source, row))
 	}
 
 	result := newOperationResult(mc, "cancel", appName, "", "", "cancel requested", resp)
