@@ -25,7 +25,7 @@ import (
 // refreshingTransport so X-Authorization auto-rotation is transparent.
 // HTTPClient here is purely the standalone variant.
 //
-// Auth + 401/403 reformatting are handled by the upstream http.Client
+// Auth + 401/403/459 reformatting are handled by the upstream http.Client
 // (factory.refreshingTransport when the caller used NewHTTPClient with
 // a Factory client) and by formatBackendErr below. The wording matches
 // pkg/whoami.HTTPClient verbatim so users see one CTA across all
@@ -92,7 +92,7 @@ func (c *HTTPClient) DoJSON(ctx context.Context, method, path string, body, out 
 		return fmt.Errorf("read response body: %w", err)
 	}
 
-	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
+	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden || resp.StatusCode == 459 {
 		return formatBackendAuthErr(resp.StatusCode, respBody, c.olaresID)
 	}
 	if resp.StatusCode/100 != 2 {
@@ -108,26 +108,11 @@ func (c *HTTPClient) DoJSON(ctx context.Context, method, path string, body, out 
 	return nil
 }
 
-// formatBackendAuthErr keeps the 401/403 CTA word-for-word identical to
-// pkg/whoami.formatBackendAuthErr so users see the same message
-// regardless of which per-user origin rejected them.
 func formatBackendAuthErr(status int, respBody []byte, olaresID string) error {
-	body := strings.TrimSpace(string(respBody))
-	if len(body) > 200 {
-		body = body[:200]
-	}
-	if olaresID != "" {
-		if body != "" {
-			return fmt.Errorf("server rejected the access token (HTTP %d: %s); please run: olares-cli profile login --olares-id %s",
-				status, body, olaresID)
-		}
-		return fmt.Errorf("server rejected the access token (HTTP %d); please run: olares-cli profile login --olares-id %s",
-			status, olaresID)
-	}
-	return fmt.Errorf("server rejected the access token (HTTP %d); please re-run `olares-cli profile login`", status)
+	return credential.FormatHTTPAuthError(status, respBody, olaresID)
 }
 
-// formatBackendErr handles non-401/403 non-2xx responses. ControlHub
+// formatBackendErr handles non-authentication non-2xx responses. ControlHub
 // proxies several upstream services (kube-apiserver, KubeSphere, /capi/*
 // aggregator), each with its own error shape; we try the structured
 // shapes and fall back to a body-truncated raw dump.
