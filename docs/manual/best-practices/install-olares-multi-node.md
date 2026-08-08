@@ -1,183 +1,198 @@
 ---
 outline: [2, 3]
-description: Install a multi-node Olares cluster with master and worker nodes. Configure JuiceFS, add workers, and handle network changes.
+description: Expand Olares into a multi-node cluster using Olares One, NVIDIA DGX Spark, or other compatible Linux devices.
 head:
   - - meta
     - name: keywords
-      content: Olares, multi-node cluster, worker nodes, JuiceFS, joincluster.sh, master node, distributed storage
+      content: Olares One, NVIDIA DGX Spark, multi-node cluster, JuiceFS, worker node, master node
 ---
 
-# Install a multi-node Olares cluster <Badge type="warning" text="Alpha" />
+# Set up a multi-node Olares cluster <Badge type="warning" text="Preview" />
 
-The default Olares installation sets up a single-node cluster. Starting from v1.11.3, support is added for adding worker nodes to Olares installations on Linux systems.
+For workloads that require more computing resources and distributed storage, you can add a worker device to an existing single-node Olares system to form a multi-node cluster.
 
-This tutorial explains how to configure a master node and add worker nodes to create a scalable, multi-node Olares cluster.
+This workflow applies to Olares One, NVIDIA DGX Spark, and other Linux devices that meet the Olares system requirements. This guide uses an Olares One as the master and an NVIDIA DGX Spark as the worker.
 
-:::warning Alpha feature
-This feature is currently in the **Alpha** stage and is not recommended for production environments. It may contain performance issues and require additional manual configurations. If you encounter any issues, please report them to the [Olares GitHub repository](https://github.com/beclab/Olares/issues).
-:::
+:::warning Preview feature
+This workflow requires Olares 1.12.7, which is not yet available as a stable release. Do not use these steps with Olares 1.12.6.
 
-:::info For Olares One hardware
-If you want to set up a multi-node Olares cluster using two Olares One devices, see [Connect two Olares One](/one/connect-two-olares-one.md).
+To set up a cluster with two Olares One devices on Olares 1.12.6, follow the [current manual setup procedure](../../one/connect-two-olares-one.md).
+
+Do not use these steps to upgrade an existing multi-node cluster. Follow the update guidance for your Olares version instead.
 :::
 
 ## Learning objectives
 
-In this tutorial, you will learn how to:
+By the end of this guide, you will learn how to:
 
-- Install Olares on the master node with support for JuiceFS.
-- Add a worker node to the cluster.
-- Handle potential network changes to ensure the cluster continues to function properly and efficiently.
+- Enable JuiceFS on an existing Olares master node.
+- Generate and securely handle the command for joining a worker node.
+- Add a worker node and check that the cluster is ready.
 
 ## Before you begin
 
-Before you begin, make sure the following requirements are met:
+Choose the role of each device before you start:
 
-- Prior experience with Kubernetes and system administration.
-- Both master and worker nodes must be on the same local network.
-- Master and worker nodes must have unique hostnames to avoid conflicts.
-- The worker node must be able to connect to the master node via SSH. This means:
-  - For the root user or a user with `sudo` privileges: add the worker node's SSH public key to the master node's `authorized_keys` file.
-  - For non-root user: enable password-based SSH authentication on the master node.
+- The existing single-node Olares system is the `master` node.
+- The device you are adding is the `worker` node.
 
-## Step 1: Set up the master node
+Use a separate terminal window for each device, and keep each window connected to the same device throughout the setup.
 
-::: tip Uninstall existing Olares cluster
-If you have already installed an Olares cluster using the default installation command, uninstall it using `olares-cli uninstall --all` before you set up your master node.
+:::warning Run commands on the correct node
+This guide switches between the master and worker terminals. Check the hostname in your terminal prompt before running each command. Running a migration or uninstall command on the wrong node can disrupt your Olares system.
 :::
 
-To set up the master node with the JuiceFS support, run the following command:
+## Prerequisites
 
-```bash
-export JUICEFS=1 \
-&& curl -sSfL https://olares.sh | bash -
-```
+Make sure the following requirements are met:
 
-This command installs Olares with a built-in MinIO instance as the backend storage. The installation process is identical to a single-node one and will prompt you to enter the domain name, and provide username of your Olares ID.
+- Olares 1.12.7 or later is installed, activated, and running on the master.
+- You can access both devices over SSH and run commands with `sudo`. Password-based SSH sign-in is enabled on the master.
+- The worker can reach the master's SSH address and the join script URL generated by the master.
 
-:::tip Custom storage
-If you already have your own MinIO cluster or an S3 (or S3-compatible) bucket, you can configure Olares to use it instead of the built-in MinIO instance.
+:::warning Back up the master node
+Enabling JuiceFS stops Olares and migrates its local file system. Back up important data before you continue, and do not power off the master node during the migration.
 :::
 
-## Step 2: Add a worker node to the cluster
+## Step 1: Enable JuiceFS <Badge type="tip" text="On master node" />
 
-::: tip Worker node prerequisites
-The worker node must be in a clean Linux state, with no Olares installed. If Olares was previously installed on the worker, run `olares-cli uninstall --all` first to wipe the device back to a clean Linux state.
-:::
+JuiceFS provides the shared file system required by a multi-node cluster.
 
-1. On the worker node, download `joincluster.sh` using:
+1. Connect to the master node over SSH.
 
-::: code-group
+   For a device running Olares, you can find its local IP address in LarePass under **Settings** > **System** > your device > **Network** > **Intranet IP**. If you use Olares One and need help finding its SSH password, see [Access Olares One via SSH](../../one/access-terminal-ssh.md).
 
-```bash [curl]
-# This command is for users who have curl installed.
-curl -fsSL https://raw.githubusercontent.com/beclab/Olares/refs/heads/main/build/base-package/joincluster.sh -o joincluster.sh
-```
-
-```bash [wget]
-# This command is for users who have wget installed.
-wget https://raw.githubusercontent.com/beclab/Olares/refs/heads/main/build/base-package/joincluster.sh
-```
-:::
-
-2. Run the `joincluster.sh` script with the necessary environment variables. These variables tell the worker node how to connect to the master node. At a minimum, you must set the MASTER_HOST variable, which specifies the IP address of the master node:
    ```bash
-   export MASTER_HOST=192.168.1.15
-   ./joincluster.sh
+   ssh <username>@<master-node-ip-address>
    ```
 
-Below is a list of the variables you might need to set:
+2. Stop Olares.
 
-| **Variable**                  | **Description**                                                                                                                                                                            |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `MASTER_HOST`                 | The IP address of the master node.<br/>Required.                                                                                                                                           |
-| `MASTER_NODE_NAME`            | The Kubernetes node name of the master node.<br/>If not specified, the script will prompt you interactively to confirm the required parameter.<br/>Optional.                               |
-| `MASTER_SSH_USER`             | The username to log in to the master node via SSH.<br/> By default, this is root.                                                                                                          |
-| `MASTER_SSH_PASSWORD`         | The password for the SSH user.<br/> This is required if you're not using SSH keys.                                                                                                         |
-| `MASTER_SSH_PRIVATE_KEY_PATH` | The path to the private SSH key for authentication.<br/>If not specified, the script will prompt you interactively to confirm the required parameter.<br/>Defaults to `/root/.ssh/id_rsa`. |
-| `MASTER_SSH_PORT`             | The port number for the SSH service on the master node.<br/>Defaults to `22`.                                                                                                              |
+   ```bash
+   sudo olares-cli stop
+   ```
 
-:::info
+3. Enable JuiceFS and migrate the existing Olares file system.
 
-- Non-root users must provide a password to execute commands with `sudo`. Therefore, using a non-root `MASTER_SSH_USER` without specifying `MASTER_SSH_PASSWORD` is not allowed.
-- Environment variables set with `export` will remain active in your current terminal session. Be careful to clear (`unset`) any conflicting variables when switching between different setups.
-  `bash
-    unset MASTER_SSH_PRIVATE_KEY_PATH
-    `
-  :::
+   ```bash
+   sudo olares-cli node enable-juicefs
+   ```
 
-## Examples
+   Olares restarts automatically after the migration. Wait until the command reports that JuiceFS is enabled and the master is ready to accept worker nodes.
 
-Here are practical examples to help you understand how to run the `joincluster.sh` script under different scenarios.
+   Example output:
 
-### Example 1: Default setup
+   ```plain
+   [Job] Enable JuiceFS on the master node and migrate rootfs execute successfully!!! (...)
+   JuiceFS is enabled on this master node (version <version>); it is now ready to accept worker nodes.
+   Run 'olares-cli node join-command' on this master to print the command for a worker node.
+   ```
 
-If the master node IP is `192.168.1.15`, the default user is `root`, the port is `22`, and the master node's `/root/.ssh/authorized_keys` already contains the public key `/root/.ssh/id_rsa.pub` from the current node, run:
+## Step 2: Generate the worker join command <Badge type="tip" text="On master node" />
 
-```bash
-export MASTER_HOST=192.168.1.15
-./joincluster.sh
+1. On the master node, run:
+
+   ```bash
+   sudo olares-cli node join-command
+   ```
+
+2. Check the detected SSH address and username. Enter `y` to confirm them, or enter the correct username when prompted.
+
+3. Enter the SSH password for the selected user.
+
+   Olares checks that the worker can use this account to connect to the master and run commands with `sudo`. If the check fails, confirm the IP address, username, password, SSH service, and firewall settings, then try again.
+
+4. Copy the generated command. You will run it on the worker node in the next step.
+
+   Example output:
+
+   ```plain
+   SSH login and sudo access verified for <username>@<master-ip-address>:22.
+
+   Run the following command on the worker node:
+
+   export MASTER_AUTH_INFO='<encoded-auth-info>' OLARES_SYSTEM_CDN_SERVICE='<olares-cdn-url>' && curl -fsSL '<join-script-url>' | bash
+
+   MASTER_AUTH_INFO is Base64-encoded, not encrypted. Anyone holding this command can recover the master's SSH credentials, so share it only with the intended worker administrator.
+   ```
+
+:::danger Protect the join command
+The generated `MASTER_AUTH_INFO` value is Base64-encoded, not encrypted. Anyone who has the command can recover the master's SSH credentials. Share it only with the administrator of the intended worker, and never post it in a public channel or repository.
+:::
+
+## Step 3: Add the worker node <Badge type="warning" text="On worker node" />
+
+:::warning Check the worker state
+The worker must not have a complete Olares installation. If Olares is installed, back up any important data and run `sudo olares-cli uninstall` before joining the worker. The join command stops and displays this instruction if it detects an existing installation.
+:::
+
+1. Connect to the worker node over SSH.
+
+2. On the worker, paste and run the complete command you generated in Step 2. The command follows this pattern:
+
+   ```bash
+   export MASTER_AUTH_INFO='<encoded-master-connection-information>' \
+     OLARES_SYSTEM_CDN_SERVICE='<olares-cdn-url>' \
+     && curl -fsSL '<join-script-url>' | bash
+   ```
+
+   Use the generated command exactly as shown. Do not copy the placeholder command above.
+
+3. If the command reports that Olares is already installed, uninstall it:
+
+   ```plain
+   Joining this machine to an Olares cluster as a worker node, using the Olares <version> installer.
+   error: Olares <version> is already installed on this node; run 'sudo olares-cli uninstall' before joining it to another cluster
+   ```
+
+   ```bash
+   sudo olares-cli uninstall
+   ```
+
+   When the uninstall finishes, run the generated join command again.
+
+4. The join process uses the worker's current hostname as its node name. If the hostname is valid and unique in the cluster, no action is required.
+
+   If the hostname cannot be used, enter a new one when prompted. The join process updates the worker's hostname automatically.
+
+   The hostname must:
+
+   - Contain only lowercase letters, numbers, hyphens (`-`), or periods (`.`).
+   - Start and end with a letter or number.
+   - Be unique in the cluster.
+
+   For example, you can use `olares-worker`.
+
+The join process checks the connection to the master, prepares the matching Olares version, and adds the worker to the cluster.
+
+When the worker joins successfully, the output ends with a confirmation similar to this:
+
+```plain
+[Job] Add Worker Node To The Cluster execute successfully!!! (...)
+
+This node joined the Olares cluster at <master-ip-address> as "<worker-node-name>".
+Verify it on the master with: sudo /usr/local/bin/kubectl get nodes
 ```
 
-### Example 2: Custom SSH key path
+## Step 4: Verify the cluster <Badge type="tip" text="On master node" />
 
-If the master node IP is `192.168.1.15`, with SSH port `22` and SSH user `root`, and the worker node uses a custom SSH key located at `/home/olares/.ssh/id_rsa`, run:
-
-```bash
-export MASTER_HOST=192.168.1.15 \
-    MASTER_SSH_PRIVATE_KEY_PATH=/home/olares/.ssh/id_rsa
-./joincluster.sh
-```
-
-### Example 3: Non-root user with password
-
-If the master node is at `192.168.1.15`, with SSH port `22`, and the SSH user is `olares` (a sudo-privileged user) with the password `olares`, run:
+Olares uses Kubernetes to manage the cluster. On the master node, run the following `kubectl` command to check the status of all nodes:
 
 ```bash
-export MASTER_HOST=192.168.1.15 \
-    MASTER_SSH_USER=olares \
-    MASTER_SSH_PASSWORD=olares
-./joincluster.sh
+sudo /usr/local/bin/kubectl get nodes
 ```
 
-## Uninstall a worker node
+Confirm that the master and worker nodes both appear and their status is `Ready`.
 
-On the worker node, run the following:
+Example output:
 
-```bash
-olares-cli olares uninstall
+```plain
+NAME          STATUS   ROLES                         AGE   VERSION
+master-node   Ready    control-plane,master,worker   1h    v1.33.3+k3s1
+worker-node   Ready    worker                        1m    v1.33.3+k3s1
 ```
 
-## Handle network changes
+## Resources
 
-Once your cluster is set up, changes in network configurations can disrupt the master-worker communication.
-
-### If the network of master node changes
-
-- **If the master node moves to a different LAN**: The Olares system daemon (olaresd) will detect this and trigger a `changeip` event with `olares-cli`. The master node will continue working, but worker nodes will lose communication with it and stop functioning.
-
-- **If the master node's IP changes within the same LAN**: The worker nodes will still lose communication because they cannot detect the new IP automatically. To resolve this, use the `olares-cli` command on the worker nodes to update the master node's IP address and restart the dependent services:
-
-  ```bash
-  sudo olares-cli olares change-ip -b /home/olares/.olares --new-master-host 192.168.1.18
-  ```
-
-  where:
-
-  - `-b /home/olares/.olares`: Specifies the base directory for Olares (default: `$HOME/.olares`).
-  - `--new-master-host 192.168.1.18`: Specifies the new IP address of the master node.
-
-### If the network of worker node changes
-
-- **If a worker node moves to a different LAN**: The worker node will lose communication with the master node and stop functioning.
-
-- **If the worker node's IP changes within the same LAN**: olaresd will automatically report the new IP to the master node, and no manual intervention is required.
-
-## Learn more
-
-- [Olares system architecture](../../developer/concepts/system-architecture.md#distributed-file-system): Understand the distributed file system that underpins Olares, ensuring scalability, high availability, and seamless data management.
-- [The system daemon: olaresd](../../developer/install/installation-overview.md#system-daemon-olaresd): Learn about the central system process that orchestrates and manages core Olares functions.
-- [Data](../../developer/concepts/data.md#juicefs): Dive into how Olares leverages JuiceFS to provide a unified file system for efficient data storage and retrieval.
-- [Olares CLI](../../developer/cli-overview.md): Explore the command-line interface for managing Olares installation.
-- [Olares environment variables](../../developer/install/environment-variables.md): Learn about the environment variables that enable advanced configurations of Olares.
-- [Install Olares](../get-started/install-olares.md): Understand how to install and activate Olares.
+- [Olares environment variables](../../developer/install/environment-variables.md): Learn about the environment variables used for advanced Olares configurations.
+- [Set up a cluster with two Olares One devices on Olares 1.12.6](../../one/connect-two-olares-one.md): Follow the current manual procedure before Olares 1.12.7 is released.
