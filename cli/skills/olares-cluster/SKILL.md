@@ -1,6 +1,6 @@
 ---
 name: olares-cluster
-version: 4.4.1
+version: 4.5.0
 description: "Olares ControlHub K8s runtime view via olares-cli cluster — inspect pods, containers, workloads, logs, jobs, cronjobs, namespaces, nodes, and middleware; exec, scale, restart, or delete K8s objects. Use for raw runtime objects and logs, not app lifecycle (market), resource metrics (dashboard), or host install."
 compatibility: Requires olares-cli on PATH and active Olares profile
 metadata:
@@ -12,140 +12,54 @@ metadata:
 
 # cluster (per-user K8s view)
 
-**CRITICAL — before doing anything, load the `olares-shared` skill first (profile model, login, token refresh, auth-error recovery). Flag reference: `olares-cli cluster --help`.**
+> **Shared front door:** load [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) for suite routing, active-profile selection, platform entry points, and the auth proceed/stop gate. Load its auth reference only when login, profile switching, token storage, or auth recovery is actually needed.
 
-> **Platform model (read once):** the app/namespace model (`<app>-<owner>` vs `<app>-shared`, application spaces, cross-namespace DNS) and the system-middleware model that this view surfaces are defined once in [`../olares-shared/references/olares-platform.md`](../olares-shared/references/olares-platform.md). This skill is the **K8s runtime** view of them.
-
-> **Source of truth for flags & wire shapes is always `olares-cli cluster <noun> <verb> --help`.** This file only carries what `--help` cannot give: routing, the mental model of nouns, the identity-vs-server principle, the mutating-verb safety contract, cross-verb output conventions, and the common-errors → fix table.
+Load the shared [platform model](../olares-shared/references/olares-platform.md) when the task depends on app namespaces, application spaces, cross-namespace DNS, or system middleware. Use `olares-cli cluster <noun> <verb> --help` for syntax.
 
 ## When to use
 
-Against the cluster the active profile can see:
-
-- Olares ControlHub, olares-cli cluster, what's running on my Olares
-- "What pods / containers / workloads / jobs / cronjobs / namespaces / nodes are running?"
-- "Tail / show logs of `<pod>` (or `<container>` of `<pod>`)"
-- "Run a command inside a container / debug in-container" (`pod exec` / `container exec` — one-shot is the agent path, `-it` is human-only)
-- "Restart / scale / stop / start / delete `<workload>`" — the K8s controller, not the Olares app lifecycle. `workload stop/start` scales replicas and does not update the app-store state row; use `market stop/resume` for app-level lifecycle (mutating verbs prompt for confirmation; `--yes` skips)
-- "Suspend / resume `<cronjob>`" or "rerun `<job>`"
-- "Who am I on this cluster, what's my role?" (`cluster context`)
-- "What does this object's YAML look like?" (`cluster <noun> yaml`)
-- Watch / follow: pod `-w`, workload `rollout-status -w`, application `status -w`, logs `-f` (poll on `--interval`)
-
-> Anything outside this scope -> see the **Skill suite map** in [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) (already loaded as the suite prerequisite).
+- Inspect K8s runtime objects, YAML, events, logs, or identity context.
+- Execute a one-shot command in a container.
+- Scale, restart, stop, start, or delete a workload; suspend/resume cronjobs; rerun jobs.
+- Watch pod, workload, application, or log state.
 
 > **Diagnosing *why* an app is broken** (stuck install, crash loop, `running` but unreachable, image won't pull, resource pressure) is [`../olares-doctor/SKILL.md`](../olares-doctor/SKILL.md) — it orchestrates these `cluster` commands into symptom→root-cause routing. `cluster` stays the raw runtime view and the place that mutates K8s objects.
 
-> **Mental model:** if the question is *runtime state* of an existing cluster, you are here. If it's *lifecycle* of an Olares app or *day-zero* host setup, you are not.
-
-## Core concepts
-
-| Noun | Identifier grammar | What it is |
-|---|---|---|
-| **Pod** | `<ns>/<pod>` (or `-n NS <pod>`) | One running pod with one or more containers |
-| **Container** | `<ns>/<pod>/<container>` (or `-n NS <pod> -c NAME`) | A single container inside a pod (logs / env / exec target) |
-| **Workload** | `<ns>/<name>` + `--kind deployment\|statefulset\|daemonset` | The controller that owns pods. Subject of `scale` / `restart` / `stop` / `start` / `rollout-status` |
-| **Application space** | `<namespace>` | A KubeSphere-grouped K8s namespace; the "Olares Application Space" framing groups namespaces by workspace |
-| **Namespace** | `<name>` | The same K8s namespace, kubectl-style framing (no workspace grouping) |
-| **Node** | `<name>` | A K8s node visible to the active profile. **Different** from `olares-cli node` (host maintenance) |
-| **Job** | `<ns>/<name>` | A one-shot batch run (`apis/batch/v1`) |
-| **CronJob** | `<ns>/<name>` | A scheduled Job template (`apis/batch/v1`) |
-| **Middleware** | `--type T --name N --namespace NS` | An Olares-managed database / queue / object store; NOT a K8s native resource (separate `/middleware/v1/*` aggregator) |
-
-### Resource relationships
-
-```
-Application space (namespace)
-├── Workload  (Deployment | StatefulSet | DaemonSet)
-│   └── Pod
-│       └── Container       (logs | env)
-├── Job
-│   └── Pod
-└── CronJob
-    └── Job
-        └── Pod
-
-Cluster
-├── Node                    (per-user view, not host maintenance)
-└── Middleware              (DB / queue / object store, separate aggregator)
-
-cluster context             (identity / role / accessible workspaces)
-```
+`workload stop/start` changes controller replicas; it does not update the Market lifecycle row. Use `market stop/resume` for app-level lifecycle.
 
 ## The identity-vs-server-decides principle (cross-cutting)
 
-1. **Identity = the currently-selected profile.** Switch with `olares-cli profile use <name>` ahead of time. There is no per-invocation `--profile` override — agents must commit to one role up-front.
-2. **The server decides what the active profile can see; the CLI never preflights.** Pass the request, render whatever the server returns. **A 403 is the authoritative "no" — surface it.** Never gate a call against the locally cached `cluster context`; that cache is for display only. (**Exception — `exec`:** it is gated client-side by namespace so the main account can't shell into a sub-account's container. Details in [references/olares-cluster-exec.md](references/olares-cluster-exec.md).)
-3. All requests go through `https://control-hub.<terminus>` and ride the active profile's `access_token` via the auto-refreshing transport. See [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) for refresh mechanics and `ErrTokenInvalidated` recovery.
-4. The same nginx fans out four prefixes: `/capi/*` (Olares aggregator), `/api/v1/*` + `/apis/<g>/<v>/*` (K8s native), `/kapis/*` (KubeSphere paginated), `/middleware/v1/*` (Olares middleware aggregator). The right helper is picked per-call by the CLI.
-
-> `cluster context` is identity-only — it does NOT own resources. Use it once at the start of a session to confirm "I am `<id>`, role `<X>`, can see `<workspaces>`". Never gate other verbs on its cached value.
+- Identity is the active profile; there is no per-invocation profile override.
+- The server decides visibility and authorization. `cluster context` is identity display, not a permission preflight.
+- Surface a 403 as authoritative. The exception is `exec`, whose namespace safety gate is described in its reference.
 
 ## Verb index
 
-For flags, examples, and wire shapes, **always start with `olares-cli cluster <noun> <verb> --help`**.
-
-| Noun | Verbs | `--help` first, then... |
+| Noun | Verbs | Read when triggered |
 |---|---|---|
 | `context` | (single verb) | `olares-cli cluster context --help` |
-| `pod` | `list`, `get`, `yaml`, `events`, `logs`, `delete`, `restart`, `exec` | [references/olares-cluster-pod.md](references/olares-cluster-pod.md); exec → [references/olares-cluster-exec.md](references/olares-cluster-exec.md) |
-| `container` | `list`, `env`, `logs`, `exec` | `olares-cli cluster container --help`; exec → [references/olares-cluster-exec.md](references/olares-cluster-exec.md) |
-| `workload` (alias `wl`) | `list`, `images`, `get`, `yaml`, `rollout-status`, `scale`, `restart`, `stop`, `start`, `delete` | [references/olares-cluster-workload.md](references/olares-cluster-workload.md) |
-| `application` (alias `app`) | `list`, `get`, `workloads`, `pods`, `status` | [references/olares-cluster-application.md](references/olares-cluster-application.md) |
+| `pod` | `list`, `get`, `yaml`, `events`, `logs`, `delete`, `restart`, `exec` | `exec` requires Olares 1.12.7+; [pod operations](references/olares-cluster-pod.md); [exec safety](references/olares-cluster-exec.md) |
+| `container` | `list`, `env`, `logs`, `exec` | `exec` requires Olares 1.12.7+; [exec safety](references/olares-cluster-exec.md) |
+| `workload` (`wl`) | `list`, `images`, `get`, `yaml`, `rollout-status`, `scale`, `restart`, `stop`, `start`, `delete` | [workload operations](references/olares-cluster-workload.md) |
+| `application` (`app`) | `list`, `get`, `workloads`, `pods`, `status` | [application aggregation](references/olares-cluster-application.md) |
 | `namespace` (alias `ns`) | `list`, `get` | `olares-cli cluster namespace --help` |
 | `node` (alias `nodes`) | `list`, `get` | `olares-cli cluster node --help` |
-| `job` (alias `jobs`) | `list`, `get`, `yaml`, `pods`, `events`, `rerun` | [references/olares-cluster-job.md](references/olares-cluster-job.md) |
-| `cronjob` (aliases `cronjobs` / `cj`) | `list`, `get`, `yaml`, `jobs`, `suspend`, `resume` | [references/olares-cluster-cronjob.md](references/olares-cluster-cronjob.md) |
-| `middleware` (alias `mw`) | `list` | [references/olares-cluster-middleware.md](references/olares-cluster-middleware.md) |
+| `job` (`jobs`) | `list`, `get`, `yaml`, `pods`, `events`, `rerun` | [job operations](references/olares-cluster-job.md) |
+| `cronjob` (`cronjobs`, `cj`) | `list`, `get`, `yaml`, `jobs`, `suspend`, `resume` | [cronjob operations](references/olares-cluster-cronjob.md) |
+| `middleware` (`mw`) | `list` | [middleware model](references/olares-cluster-middleware.md) |
 
-## Mutating verb safety contract (cross-cutting)
+## Watch and asynchronous semantics
 
-Every mutating verb — `pod delete` / `pod restart`, all of `workload scale|restart|stop|start|delete`, `cronjob suspend`, `job rerun` — follows the same contract:
+- Watches and log follow poll; they are not streaming API watches.
+- Transient network/5xx failures are retried within a bounded streak. Terminal 4xx responses stop immediately; 408 and 429 remain retryable.
+- Ctrl-C stops the local poll cleanly. It does not undo a mutation already accepted by the server.
+- A rollout/status watch ending is not proof that the application entrance is healthy; use `olares-doctor` when runtime symptoms remain.
 
-1. **Wrapped in a `ConfirmDestructive` y/N prompt.** Even for "reversible" changes — the prompt is the safety net. **`--yes` / `-y` opts out for scripts.**
-2. **Authorization follows the identity-vs-server principle above** — no client-side preflight; a 403 surfaces as the authoritative "no".
-3. **Stable JSON summary on success**, not the apiserver's response. JSON consumers care whether the change took, not every field of the object.
+## Safety and escalation
 
-Non-destructive verbs (`cronjob resume`, `workload start`, `pod logs`) are NOT wrapped. **Confirm intent with the user BEFORE invoking any destructive verb, even when scripts pass `--yes`.**
-
-## Output conventions
-
-- `-o table` (default): tabwriter columns. List verbs add a `NAMESPACE` column when scope is cross-namespace; `get` verbs render a vertical key/value layout. Paginated lists print `(showing X of Y total — pass --limit Y to see more)` to stderr when truncated.
-- `-o json`: pretty-printed JSON. List/get verbs decode through minimal typed structs and re-emit only the fields the CLI knows about. The four `* yaml` verbs forward server bytes verbatim through JSON→YAML.
-- `-q` / `--quiet`: suppress all stdout; exit code carries success/failure.
-- `--no-headers`: omit table headers (handy for shell pipelines).
-
-### Pagination (`--page N` / `--all`)
-
-Every `list` verb under `pod` / `cronjob` / `job` / `namespace` / `node` / `workload` (and the `application pods` / `application workloads` wrappers) supports pagination. Defaults: `--limit 100`, `--page 1`. Pass `--page N` to walk pages, or `--all` to drain every page.
-
-Two image-inventory commands ride on top of this:
-
-- `cluster workload images [IMAGE]` follows the same pagination contract. An IMAGE-argument lookup always full-scans the cluster, but the plain listing is NOT full-cluster unless `--all` is set. See [references/olares-cluster-workload.md](references/olares-cluster-workload.md).
-- For a local-image-vs-workload diagnostic, use the top-level `doctor images` instead — always full-scans (no pagination), annotates each local containerd image with its workload reference count, and takes `--unused` for zero-reference orphans. It is owned by [`../olares-doctor/SKILL.md`](../olares-doctor/SKILL.md), which routes to its image-diagnosis reference for the completeness/coverage caveats.
-
-### `--watch` / `--follow` semantics (uniform)
-
-`pod get -w`, `workload rollout-status -w`, `application status -w`, `pod logs -f`, `container logs -f` all share the same plumbing:
-
-- **Polling, never streaming.** Avoids chunked transfer encoding; matches `olares-cli market --watch`.
-- `signal.NotifyContext(os.Interrupt, SIGTERM)` for graceful Ctrl-C; exits nil on voluntary stop.
-- Tolerates up to 5 consecutive transient errors (network blips, 5xx) before aborting. **Terminal 4xx responses short-circuit immediately** — a NotFound / Forbidden / Unauthorized won't fix itself on the next poll. `408` and `429` are still retried.
-- TTY detection: clear-screen-redraw for table, raw stream for piped output, JSONL for `-o json`.
-- `--interval D` / `--timeout D` are **rejected with an error** when their gate flag (`-w` or `-f`) isn't also set — don't silently waste a flag.
-
-## Common errors
-
-| Symptom | Cause | Fix |
-|---|---|---|
-| `server rejected the request (HTTP 401: ...); please run: olares-cli profile login --olares-id <id>` | Auto-refresh failed, OR refreshed token still rejected | Run the suggested `profile login` |
-| `server rejected the request (HTTP 403: ...)` | The active profile's role can't perform this | `cluster context --refresh` to confirm the cached role matches the server. If still 403, the user genuinely lacks permission |
-| `... HTTP 404 (NotFound): ...` on a list verb | Namespace doesn't exist OR the user can't see it (KubeSphere often returns 404 instead of 403 for "no access") | `cluster application list` to see what the server thinks is visible |
-| `--field-selector: field "..." is not supported (supported: ...)` (from `cluster pod list`) | The pod list `--field-selector` accepts only a translatable subset of kubectl selectors (KubeSphere doesn't speak the raw `fieldSelector=` wire syntax) | Use one of the supported fields (`status.phase`, `spec.nodeName`, `metadata.name`, `metadata.namespace`), or drop `--field-selector` and filter client-side |
-| `--field-selector: "..." uses the '!=' operator which the upstream KubeSphere pods endpoint does not support` | KubeSphere only matches equality | Rephrase as a positive match, or filter the output through `jq` |
-| `aborted by user` / `stdin is not a terminal — pass --yes to confirm: ...` | Destructive prompt rejected, or non-TTY context without `--yes` | Interactive: answer `y`. Scripted: add `--yes` |
-| `--interval requires --follow` / `--interval requires --watch` / `--timeout requires --watch` | Polling cadence flags set without their gate flag | Add `-f` / `-w`, or drop the offending flag |
-| `decode ... response: ...` | Endpoint returned something we couldn't parse | Re-run with `-o json` to see the raw shape; may indicate a server-side schema change |
-| `refresh token for ... became invalid at ...` (typed `*credential.ErrTokenInvalidated`) | The refresh_token itself is dead — auto-refresh can't recover | `olares-cli profile login` |
-
-For the full auth-error matrix see [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md).
+- Confirm every destructive runtime mutation before invoking it, even if `--yes` is available.
+- `exec` is a remote code-execution boundary. Confirm namespace, pod, container, command, and whether writes are expected. Prefer one-shot execution; interactive TTY belongs to the human.
+- Do not delete or restart objects merely because a diagnostic found them unhealthy. Establish controller ownership and the app-level consequence first.
+- A 404 may hide a namespace the profile cannot see. Compare against `cluster application list`; do not broaden scope or switch identity without user approval.
+- For complete image-reference diagnostics use `doctor images`, not a paginated workload listing.
+- Stop on ambiguous namespace/resource identity, missing permission, or any request to access another user's container.

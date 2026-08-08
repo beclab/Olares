@@ -111,8 +111,8 @@ func runPrefsSet(ctx context.Context, f *cmdutil.Factory, app, quality, outputRa
 		app = defaultApp
 	}
 	quality = strings.TrimSpace(quality)
-	if quality == "" {
-		return fmt.Errorf("--quality is required")
+	if err := validateYTDLPQuality(quality, true); err != nil {
+		return err
 	}
 	pc, err := prepare(ctx, f)
 	if err != nil {

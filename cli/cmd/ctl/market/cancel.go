@@ -2,6 +2,9 @@ package market
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -98,6 +101,36 @@ Examples:
 	return cmd
 }
 
+// explainCancelRejection turns Market's one-size-fits-all 404 into the reason
+// that actually applies. The backend answers "App not found or current state
+// does not allow operation" both for an app it has never heard of and for one
+// whose operation has already settled, and the second is the ordinary outcome
+// of racing a watch: by the time the cancel lands, the install it was meant to
+// stop has finished. Left as-is the sentence sends a reader looking for a
+// misspelt name, or — since the same words appear in the version gate's
+// description — for a backend that is too old.
+//
+// The state row read moments earlier is what separates them: having found the
+// app, "not found" cannot be the half that applied — unless the request went
+// out under a source the row disagrees with, which earns the same 404 on its
+// own. requestedSource is the source actually sent, so an explicit --source
+// that misses leaves the backend's sentence alone rather than sending the
+// reader past their own mistake.
+func explainCancelRejection(err error, appName, requestedSource string, row *installedAppRow) error {
+	var apiErr *APIError
+	if row == nil || !errors.As(err, &apiErr) || apiErr.StatusCode != http.StatusNotFound {
+		return err
+	}
+	if rowSource := strings.TrimSpace(row.Source); rowSource != "" && strings.TrimSpace(requestedSource) != rowSource {
+		return err
+	}
+	state := strings.TrimSpace(row.State)
+	if state == "" {
+		state = "unknown"
+	}
+	return fmt.Errorf("%w\n'%s' was in state '%s' and has no operation left to cancel — it most likely finished, or was already cancelled, before this request landed. Run \"olares-cli market status %s\" to see where it settled", err, appName, state, appName)
+}
+
 func runCancel(opts *MarketOptions, appName string) error {
 	mc, err := opts.prepare()
 	if err != nil {
@@ -154,7 +187,7 @@ func runCancel(opts *MarketOptions, appName string) error {
 	method, path, body := cancel.Build(atLeast126, appName, source, version)
 	resp, err := mc.doRequest(ctx, method, path, body)
 	if err != nil {
-		return opts.failOp("cancel", appName, err)
+		return opts.failOp("cancel", appName, explainCancelRejection(err, appName, source, row))
 	}
 
 	result := newOperationResult(mc, "cancel", appName, "", "", "cancel requested", resp)

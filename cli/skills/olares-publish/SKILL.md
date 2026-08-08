@@ -1,6 +1,6 @@
 ---
 name: olares-publish
-version: 4.6.0
+version: 4.7.0
 description: "Publish an Olares app that already runs locally to a public Olares Market listing — release targets, market-ready metadata/architectures, producing the listing assets (256x256 icon, 1440x900 featured/promote images), the beclab/apps PR and GitBot lifecycle, and paid listings. Use for submitting, distributing, 上架, opening a beclab/apps PR, generating an app icon or Market screenshots, or selling an app; not for browsing `market list` or managing installed apps."
 compatibility: Requires olares-cli on PATH; PR submission needs a GitHub account
 metadata:
@@ -12,9 +12,11 @@ metadata:
 
 # Publish an Olares app to the public Market
 
+> **Shared front door:** load [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) for suite routing and platform entry points. Publishing itself does not require an Olares login; apply the shared auth gate only when returning to local upload/install validation.
+
 > **This skill is the public-distribution step, not the authoring step.** Turning a repo / compose / Helm chart into an Olares app, refining it, and proving it installs and reaches `running` on your own Olares all live in [`../olares-chart/SKILL.md`](../olares-chart/SKILL.md). Come here **after** the app already runs locally and you want it in the public Olares Market.
 
-> **Source of truth for chart fields is `olares-cli chart lint` + the manifest authoring** guidance in the [`olares-chart`](../olares-chart/SKILL.md) skill (its Manifest refinement areas). This skill carries only what distribution adds on top of a working local chart: market-ready depth, the `beclab/apps` PR contract, and paid-app extras.
+Use `olares-cli chart lint --help` and [`olares-chart`](../olares-chart/SKILL.md) for chart syntax and authoring.
 
 ## When to use
 
@@ -26,52 +28,36 @@ metadata:
 
 > **Prerequisite — the app must already run on your Olares.** Public submission without a working local install wastes GitBot cycles and reviewer time. Do the deploy loop in the [`olares-chart`](../olares-chart/SKILL.md) skill (its Deploy step) first.
 
-> Anything outside this scope -> see the **Skill suite map** in [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md).
-
 ## Mental model
 
-Publishing is a **one-way diff against `beclab/apps`**, not a CLI lifecycle. There is no `olares-cli publish` verb: the only command you run is `olares-cli chart lint` (flags owned by [`../olares-chart/SKILL.md`](../olares-chart/SKILL.md)); everything else is git/GitHub plus a metadata/image/PR checklist that `lint` does **not** enforce. So the work is: take a chart that already installs and runs locally, layer on market-ready metadata + multi-arch images, then open a PR that GitBot will gate and a human will merge. You own the chart edits and PR authoring; you never run on-chain or wallet writes for the developer.
+Publishing is a one-way contribution to `beclab/apps`, not an `olares-cli publish` lifecycle. Start from a locally proven chart, add public-listing metadata/assets and matching multi-arch support, re-lint, then submit through GitHub and GitBot.
 
-**The Market is permissionless**, and that changes the job in two ways. There is no review board, so the gate is mechanical — GitBot checks title format, file scope, duplicate PRs, and category enums; it never judges whether the app is any good. Which means, first, that **only a short list can actually reject you** and everything else can ship later via an `UPDATE` PR, so treating the requirements as one flat checklist makes submission feel far heavier than it is — sort them by consequence instead ([olares-publish-targets.md](references/olares-publish-targets.md)). And second, that the honesty bar a reviewed store enforces institutionally lands on the submitter here: nothing stops a fabricated icon or a fake screenshot from reaching the catalog except the person filing the PR.
+GitBot checks mechanical policy; it does not validate product quality, screenshot truthfulness, or security claims. The submitter owns those claims.
 
-## What publishing adds on top of a working local chart
+## Workflow index
 
-A chart that installs and runs locally is **functionally** done (storage / middleware / entrances / a pullable image are all settled in `olares-chart`). Public distribution adds four layers, none of which `chart lint` enforces:
+| Current intent / state | Read |
+|---|---|
+| Decide what blocks submission, what can be deferred, metadata depth, architectures | [release targets](references/olares-publish-targets.md) |
+| Produce the required 256×256 icon from upstream material | [icon workflow](references/olares-publish-icon.md) |
+| Capture/source 1440×900 Market images | [listing images](references/olares-publish-listing-images.md) |
+| Compose listing copy and image layout | [listing layout](references/olares-publish-listing-layout.md) |
+| Prepare folder, owners, PR title, and respond to GitBot state | [submission workflow](references/olares-publish-submit.md) |
+| Add pay-to-download | [paid apps](references/olares-publish-paid-apps.md) |
 
-| Layer | What it adds | Reference |
-|---|---|---|
-| **Market-ready metadata** | full `metadata.*` + `spec.{developer,website,sourceCode,submitter,fullDescription}`, dual-version `categories`, `spec.locale` — sorted there by what actually blocks a merge | [olares-publish-targets.md](references/olares-publish-targets.md) |
-| **Listing assets** | the 256x256 app icon (`lint`-required), and the 1440x900 hero + screenshot set (optional, deferrable) — fetched and composited, never invented | [olares-publish-icon.md](references/olares-publish-icon.md), [olares-publish-listing-images.md](references/olares-publish-listing-images.md), [olares-publish-listing-layout.md](references/olares-publish-listing-layout.md) |
-| **Multi-arch images** | build `--platform linux/amd64,linux/arm64` and declare matching `spec.supportArch` (local deploy only needs this node's arch) | [olares-publish-targets.md](references/olares-publish-targets.md) |
-| **The `beclab/apps` PR** | `owners` file, strict PR title, GitBot rules, lifecycle (`NEW`/`UPDATE`/`SUSPEND`/`REMOVE`), and a public folder whose credentials all come from install-time env, middleware or chart generation | [olares-publish-submit.md](references/olares-publish-submit.md) |
+## Release decisions
 
-> **Assets are fetched, not generated.** Icons and screenshots must come from the project's repo, its site, or your own running instance — a public catalog entry showing an invented mark or a fabricated UI misrepresents the upstream project, and no reviewer will catch it. Diagrams are the one thing you may draw.
+- The icon is on the critical path because `metadata.icon` is lint-required. Hero/screenshots are optional and may follow in an `UPDATE`.
+- Build images for the architectures declared by `spec.supportArch`; a local single-node success does not prove public multi-arch availability.
+- Assets must come from the upstream project, its site, or the user's running instance. Do not invent logos, screenshots, testimonials, or capabilities.
+- Public chart credentials must come from install-time inputs, middleware, or chart generation; never commit live secrets.
+- Paid distribution adds `price.yaml` and application-side `VERIFIABLE_CREDENTIAL` enforcement; it does not replace the normal public-listing requirements.
 
-> **Paid (pay-to-download)** is a public-Market app plus `price.yaml` + a `VERIFIABLE_CREDENTIAL` license check — see [olares-publish-paid-apps.md](references/olares-publish-paid-apps.md).
+## Validation and asynchronous semantics
 
-## The flow
-
-```mermaid
-flowchart TD
-  runs["app runs locally (olares-chart deploy)"] --> icon["icon 256x256 -- metadata.icon is lint-required"]
-  icon --> polish["market-ready polish: metadata, multi-arch + supportArch"]
-  polish --> relint["chart lint after edits"]
-  relint --> owners["add owners file, verify folder name"]
-  owners --> pr["fork beclab/apps, draft PR [NEW][app][ver]"]
-  pr --> gitbot{"GitBot checks"}
-  gitbot -->|waiting to submit| fix["push fixes"]
-  fix --> gitbot
-  gitbot -->|waiting to merge| merged["merged -> indexed in public Market"]
-  polish -.->|"optional, or later via UPDATE PR"| images["listing images 1440x900"]
-  images -.-> relint
-```
-
-1. **Produce the icon** — on the critical path, because `metadata.icon` is required by `lint` and an app cannot merge without it. Runs fully offline, no API key — [olares-publish-icon.md](references/olares-publish-icon.md).
-2. **Produce the listing images, if you have the material** — nothing enforces these and they can ship later via an `UPDATE` PR, but they are most of what decides whether anyone clicks Install. Degrades gracefully when no image model is available — [olares-publish-listing-images.md](references/olares-publish-listing-images.md).
-3. **Polish to market-ready** — work the requirements matrix + checklist in [olares-publish-targets.md](references/olares-publish-targets.md).
-4. **Re-lint** — `olares-cli chart lint ./<app>` after every metadata/image edit.
-5. **Submit the PR** — fork, add the OAC + `owners` file, open a `[NEW][<app>][<ver>]` PR to `beclab/apps:main`, then track GitBot labels — [olares-publish-submit.md](references/olares-publish-submit.md).
-6. **Paid?** — add `price.yaml` + license enforcement on top — [olares-publish-paid-apps.md](references/olares-publish-paid-apps.md).
+- Re-run chart lint after every manifest or asset-path change.
+- Local install and `running` validation belong to Chart/Market and can be asynchronous; do not infer that a successful upload ACK proves installability.
+- GitBot processing is asynchronous. Interpret its current label/check state using the submission reference; do not repeatedly open duplicate PRs.
 
 ## Agent boundaries
 
@@ -79,4 +65,5 @@ flowchart TD
 - **The fork here is legitimate and required.** Submitting to the public Market is the standard open-source contribution flow: fork [`beclab/apps`](https://github.com/beclab/apps), push a branch, open a PR. This is the *public app catalog*, a different repo from the beclab dev repos the workspace "no-fork, push to `origin`" rule covers — that rule does not apply to `beclab/apps` submissions.
 - **Do NOT** run `did-cli rsa set` (an on-chain, gas-costing write), touch the wallet mnemonic, or handle `rsa-private.pem` for paid apps — guide the user to run those themselves.
 - **Do** verify the chart against the market-ready checklist, author `price.yaml`, wire the manifest, and interpret GitBot labels.
-- Login / token / auth-error recovery: [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md). Upload / install verbs (for the local-validation prerequisite): [`../olares-market/SKILL.md`](../olares-market/SKILL.md).
+- Stop on unclear upstream licensing, asset provenance, architecture support, owner identity, pricing, wallet actions, or permission to use GitHub.
+- Upload/install verbs for local validation belong to [`olares-market`](../olares-market/SKILL.md).

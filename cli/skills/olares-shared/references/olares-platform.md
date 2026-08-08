@@ -38,7 +38,7 @@ Used by: `chart` (runAsUser) and `files` (chown).
 
 ## System-managed Home directories
 
-These eleven names directly under `drive/Home/` are LarePass bootstrap directories that user apps look up by exact name:
+These eleven names are reserved directly under `drive/Home/` as LarePass bootstrap directories that user apps look up by exact name:
 
 ```
 Pictures  Music  Movies  Downloads  Documents  Code  Cache  Data  Home  Ollama  Huggingface
@@ -47,6 +47,7 @@ Pictures  Music  Movies  Downloads  Documents  Code  Cache  Data  Home  Ollama  
 Platform invariants:
 
 - They are created and managed by LarePass; apps depend on the exact names (e.g. the model-runtime app's `Ollama` cache, the LarePass UI's `Pictures` sidebar tile).
+- Reserved is not the same as present. A given instance materialises only the ones it has needed, so `files ls drive/Home` routinely returns fewer than eleven entries; the missing names are still protected.
 - Casing is significant: `Huggingface` is one word (not `HuggingFace`).
 - `files` enforces them as protected names: `rename` / `rm` / `mv source` refuse them at the **first level under `drive/Home/` only**; `cp` (copy) is allowed; nested content (`drive/Home/Pictures/Trip2024/`) is fully editable; other namespaces (`drive/Data/Pictures`, `sync/...`) are unaffected.
 

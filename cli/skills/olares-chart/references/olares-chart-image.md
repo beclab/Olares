@@ -132,12 +132,13 @@ Then continue with the four refinement areas (the Manifest refinement areas) and
 
 ## Run identity (UID/GID 1000)
 
-Olares userspace volumes expect the app process as **uid/gid 1000**. When **authoring** a Dockerfile:
-
-- Create a user with uid/gid 1000 and `USER 1000`
-- `chown -R 1000:1000` every path the app writes before switching user
-
-When using a **third-party** image, inspect `docker inspect <ref> --format '{{.Config.User}}'` before wiring it in. Root or non-1000 uids that create directories on userspace mounts need chart-side fixes (`spec.runAsUser`, `securityContext`, or an initContainer) — full decision tree in the run identity (uid 1000) guidance.
+Olares userspace volumes expect the app process as **uid/gid 1000**, which is a
+choice you make while picking or building the image, not only afterwards. Probe
+a candidate third-party image with `docker inspect <ref> --format '{{.Config.User}}'`
+before wiring it in: an image that stays root needs chart-side work, and one
+that cannot be made to run as 1000 needs replacing. What that work is — in the
+Dockerfile, the manifest, or an initContainer — is the run identity (uid 1000)
+guidance, which owns the decision tree.
 
 ## Hard rules
 

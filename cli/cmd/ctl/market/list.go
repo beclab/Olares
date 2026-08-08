@@ -192,13 +192,7 @@ func runList(opts *MarketOptions) error {
 	}
 
 	if len(apps) == 0 {
-		if category != "" {
-			fmt.Fprintf(os.Stderr, "No apps found in category '%s'\n", category)
-		} else if source != "" {
-			fmt.Fprintf(os.Stderr, "No apps found in source '%s'\n", source)
-		} else {
-			fmt.Fprintln(os.Stderr, "No apps found")
-		}
+		fmt.Fprintln(os.Stderr, emptyListMessage(category, source))
 		return nil
 	}
 
@@ -216,6 +210,20 @@ func runList(opts *MarketOptions) error {
 		fmt.Fprintf(os.Stderr, "\nTotal: %d app(s)\n", len(apps))
 	}
 	return nil
+}
+
+func emptyListMessage(category, source string) string {
+	switch {
+	case category != "":
+		return fmt.Sprintf("No apps found in category '%s'", category)
+	case source != "":
+		return fmt.Sprintf(
+			"No apps found in source '%s'; inspect all sources with `olares-cli market list -a`",
+			source,
+		)
+	default:
+		return "No apps found"
+	}
 }
 
 // fetchInstalledApps queries /market/state for the active profile's "My

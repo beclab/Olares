@@ -90,6 +90,22 @@ Note wise defaults HF to cache; this CLI defaults to local unless you pass _hf_d
 	return cmd
 }
 
+func validateYTDLPQuality(raw string, required bool) error {
+	quality := strings.TrimSpace(raw)
+	if quality == "" {
+		if required {
+			return fmt.Errorf("--quality is required")
+		}
+		return nil
+	}
+	switch quality {
+	case "best", "2160p", "1080p", "720p", "480p", "360p", "audio":
+		return nil
+	default:
+		return fmt.Errorf("unsupported --quality %q (allowed: %s)", raw, ytdlpQualityValues)
+	}
+}
+
 // normalizeSelectFiles validates and normalises the --select-files flag into
 // the extra.selected_files CSV, using the same validator as
 // `torrent files --select` so both paths agree. It returns ok=false (omit the
@@ -139,8 +155,16 @@ func runCreate(ctx context.Context, f *cmdutil.Factory, rawURL, app, path, name,
 			extra[k] = v
 		}
 	}
+	if err := validateYTDLPQuality(quality, false); err != nil {
+		return err
+	}
 	if q := strings.TrimSpace(quality); q != "" {
 		extra["ytdlp_quality"] = q
+	}
+	if q, ok := extra["ytdlp_quality"]; ok {
+		if err := validateYTDLPQuality(q, false); err != nil {
+			return fmt.Errorf("invalid ytdlp_quality in --extra: %w", err)
+		}
 	}
 	if fid := strings.TrimSpace(formatID); fid != "" {
 		extra["format_id"] = fid

@@ -6,10 +6,12 @@ package download
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -33,6 +35,8 @@ const (
 	// so the CLI seeds this to match what wise users see.
 	defaultDownloadPath = "drive/Home/Downloads/"
 )
+
+var taskActionPathRE = regexp.MustCompile(`^/api/download/(?:pause|resume|cancel|info)/(\d+)(?:/|$)`)
 
 type Format string
 
@@ -123,16 +127,23 @@ func doGet(ctx context.Context, d Doer, path string, out interface{}) error {
 func doMutate(ctx context.Context, d Doer, method, path string, body, out interface{}) error {
 	var env dsEnvelope
 	if err := d.DoJSON(ctx, method, path, body, &env); err != nil {
+		var httpErr *whoami.HTTPError
+		if errors.As(err, &httpErr) {
+			if recovery := taskErrorRecovery(method, path, httpErr.Status, string(httpErr.Body), body); recovery != "" {
+				return fmt.Errorf("%w%s", err, recovery)
+			}
+		}
 		return err
 	}
 	switch env.Code {
 	case 0, 200:
 	default:
 		msg := strings.TrimSpace(env.Message)
+		recovery := taskErrorRecovery(method, path, env.Code, msg, body)
 		if msg == "" {
-			return fmt.Errorf("%s %s: code %d", method, path, env.Code)
+			return fmt.Errorf("%s %s: code %d%s", method, path, env.Code, recovery)
 		}
-		return fmt.Errorf("%s %s: code %d: %s", method, path, env.Code, msg)
+		return fmt.Errorf("%s %s: code %d: %s%s", method, path, env.Code, msg, recovery)
 	}
 	if out == nil {
 		return nil
@@ -188,6 +199,38 @@ func doMutate(ctx context.Context, d Doer, method, path string, body, out interf
 		return fmt.Errorf("%s %s: decode data: %w", method, path, err)
 	}
 	return nil
+}
+
+func taskErrorRecovery(method, path string, status int, message string, body interface{}) string {
+	lowerMsg := strings.ToLower(message)
+	taskID := ""
+	if taskPathMatch := taskActionPathRE.FindStringSubmatch(path); len(taskPathMatch) > 0 {
+		taskID = taskPathMatch[1]
+	} else if path == "/api/download/remove" {
+		switch req := body.(type) {
+		case RemoveReq:
+			taskID = fmt.Sprintf("%d", req.TaskID)
+		case *RemoveReq:
+			if req != nil {
+				taskID = fmt.Sprintf("%d", req.TaskID)
+			}
+		}
+	}
+	switch {
+	case method == "POST" && path == "/api/download" && status == 409 &&
+		strings.Contains(lowerMsg, "task") &&
+		(strings.Contains(lowerMsg, "already") || strings.Contains(lowerMsg, "exist")):
+		return "; inspect existing tasks with `olares-cli knowledge download list`"
+	case taskID != "" && status == 409:
+		return fmt.Sprintf(
+			"; wait for the move to finish, then retry; inspect progress with `olares-cli knowledge download info %s`",
+			taskID,
+		)
+	case taskID != "" &&
+		(status == 404 || strings.Contains(lowerMsg, "task not found")):
+		return "; refresh task IDs with `olares-cli knowledge download list`"
+	}
+	return ""
 }
 
 func printJSON(w io.Writer, v interface{}) error {

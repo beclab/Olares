@@ -7,7 +7,7 @@ Create a directory on the per-user files-backend. Uniform across all namespaces 
 
 ## Critical caveat: auto-rename quirk
 
-`POST /api/resources/<dir>/` against an existing directory does NOT return 409 — the server silently creates `<dir> (1)` instead (see [quirk #1](../SKILL.md#1-post-apiresourcesdir-auto-renames-on-collision)).
+`POST /api/resources/<dir>/` against an existing directory does NOT return 409 — the server silently creates `<dir> (1)` instead (see [backend quirks](../SKILL.md#backend-quirks-that-change-decisions)).
 
 - `-p` mode side-steps this for parents (it lists each prefix's parent and skips when the basename already exists).
 - For the LEAF, the CLI prints a hint after the call so the user can `files ls` and confirm.

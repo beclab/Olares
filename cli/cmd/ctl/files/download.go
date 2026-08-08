@@ -14,9 +14,9 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/beclab/Olares/cli/internal/files/download"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 	"github.com/beclab/Olares/cli/pkg/credential"
-	"github.com/beclab/Olares/cli/internal/files/download"
 )
 
 type downloadOptions struct {
@@ -372,11 +372,7 @@ func reformatHTTPErr(err error, olaresID, op, target string) error {
 	if errors.As(err, &hErr) {
 		switch hErr.Status {
 		case 401, 403:
-			if olaresID != "" {
-				return fmt.Errorf("server rejected the access token (HTTP %d); please run: olares-cli profile login --olares-id %s",
-					hErr.Status, olaresID)
-			}
-			return fmt.Errorf("server rejected the access token (HTTP %d); please re-run `olares-cli profile login`", hErr.Status)
+			return credential.FormatHTTPAuthError(hErr.Status, nil, olaresID)
 		case 404:
 			return fmt.Errorf("%s %s: not found on the server (HTTP 404)", op, target)
 		}

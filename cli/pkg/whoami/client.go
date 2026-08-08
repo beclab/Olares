@@ -28,7 +28,7 @@ import (
 // would have to import settings. Keeping it here lets login.go fetch
 // the role without pulling the settings package into the auth flow.
 //
-// Auth + 401/403 reformatting are handled by the upstream http.Client
+// Auth + 401/403/459 reformatting are handled by the upstream http.Client
 // (factory.refreshingTransport injects X-Authorization and auto-rotates
 // expired access_tokens) and by formatBackendErr below — kept consistent
 // with files/download.go's reformatHTTPError so users see one message for
@@ -44,6 +44,20 @@ type HTTPClient struct {
 	// none). When empty, we trust the underlying http.Client's RoundTripper
 	// to inject the header (factory.refreshingTransport does this).
 	accessToken string
+}
+
+// HTTPError preserves non-authentication HTTP response details for callers
+// that can add operation-specific recovery guidance.
+type HTTPError struct {
+	Method string
+	URL    string
+	Status int
+	Body   []byte
+	detail string
+}
+
+func (e *HTTPError) Error() string {
+	return e.detail
 }
 
 // NewHTTPClient builds a whoami Doer pointed at <desktopURL>, reusing a
@@ -138,7 +152,7 @@ func (c *HTTPClient) DoJSON(ctx context.Context, method, path string, body, out 
 		return fmt.Errorf("read response body: %w", err)
 	}
 
-	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
+	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden || resp.StatusCode == 459 {
 		return formatBackendAuthErr(resp.StatusCode, respBody, c.olaresID)
 	}
 	if resp.StatusCode/100 != 2 {
@@ -154,30 +168,15 @@ func (c *HTTPClient) DoJSON(ctx context.Context, method, path string, body, out 
 	return nil
 }
 
-// formatBackendAuthErr mirrors files/download.go's 401/403 branch and
-// market/client.go's reformatMarketAuthErr — turn the edge proxy's "you
-// are not authenticated" into the same actionable CTA the rest of the CLI
-// uses, so the user's troubleshooting story is consistent across verbs.
 func formatBackendAuthErr(status int, respBody []byte, olaresID string) error {
-	body := strings.TrimSpace(string(respBody))
-	if len(body) > 200 {
-		body = body[:200]
-	}
-	if olaresID != "" {
-		if body != "" {
-			return fmt.Errorf("server rejected the access token (HTTP %d: %s); please run: olares-cli profile login --olares-id %s",
-				status, body, olaresID)
-		}
-		return fmt.Errorf("server rejected the access token (HTTP %d); please run: olares-cli profile login --olares-id %s",
-			status, olaresID)
-	}
-	return fmt.Errorf("server rejected the access token (HTTP %d); please re-run `olares-cli profile login`", status)
+	return credential.FormatHTTPAuthError(status, respBody, olaresID)
 }
 
-// formatBackendErr handles non-401/403 non-2xx responses. user-service and
+// formatBackendErr handles non-authentication non-2xx responses. user-service and
 // BFL both speak loose JSON; we try the structured shapes and fall through
 // to a body-truncated raw dump so the user always gets something to grep.
 func formatBackendErr(method, url string, status int, body []byte) error {
+	detail := ""
 	var generic struct {
 		Error   string `json:"error"`
 		Message string `json:"message"`
@@ -186,12 +185,21 @@ func formatBackendErr(method, url string, status int, body []byte) error {
 	if err := json.Unmarshal(body, &generic); err == nil {
 		switch {
 		case generic.Error != "":
-			return fmt.Errorf("%s %s: HTTP %d: %s", method, url, status, generic.Error)
+			detail = fmt.Sprintf("%s %s: HTTP %d: %s", method, url, status, generic.Error)
 		case generic.Message != "":
-			return fmt.Errorf("%s %s: HTTP %d (code=%d): %s", method, url, status, generic.Code, generic.Message)
+			detail = fmt.Sprintf("%s %s: HTTP %d (code=%d): %s", method, url, status, generic.Code, generic.Message)
 		}
 	}
-	return fmt.Errorf("%s %s: HTTP %d: %s", method, url, status, truncate(string(body), 500))
+	if detail == "" {
+		detail = fmt.Sprintf("%s %s: HTTP %d: %s", method, url, status, truncate(string(body), 500))
+	}
+	return &HTTPError{
+		Method: method,
+		URL:    url,
+		Status: status,
+		Body:   append([]byte(nil), body...),
+		detail: detail,
+	}
 }
 
 func truncate(s string, n int) string {

@@ -78,6 +78,23 @@ func TestUploadUnknownCodeKeepsGenericAPIError(t *testing.T) {
 	}
 }
 
+func TestUploadMissingAppIDIncludesManifestFix(t *testing.T) {
+	srv := newUploadErrorServer(t, http.StatusUnprocessableEntity, `{
+		"success": false,
+		"code": "invalid_manifest",
+		"message": "appid is required"
+	}`)
+	err := doUploadFile(&MarketOptions{Quiet: true}, newTestMarketClient(t, srv.URL), testChart(t), chartUploadSource)
+	if err == nil {
+		t.Fatal("expected upload error")
+	}
+	for _, want := range []string{"metadata.appid", "repackage", "do not retry the unchanged package"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("error %q missing %q", err, want)
+		}
+	}
+}
+
 func newUploadErrorServer(t *testing.T, status int, body string) *httptest.Server {
 	t.Helper()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
