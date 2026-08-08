@@ -16,6 +16,8 @@ const (
 
 	// macvlanIfaceEnv carries the macvlan NIC name into the bypass script.
 	macvlanIfaceEnv = "MACVLAN_IFACE"
+
+	defaultMacvlanIface = "net1"
 )
 
 // MacvlanBypassScript renders the bypass shell (unit-tested).

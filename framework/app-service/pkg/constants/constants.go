@@ -61,18 +61,18 @@ const (
 
 	UserChartsPath = "./userapps"
 
-	EnvoyUID                        int64 = 1555
+	EnvoyUID int64 = 1555
 	// LinkerdProxyUID is the upstream linkerd-proxy default runAsUser.
-	LinkerdProxyUID                 int64 = 2102
+	LinkerdProxyUID int64 = 2102
 	// Linkerd admin / inbound / tap ports (align with linkerd-init inbound-ports-to-ignore).
-	LinkerdTapPort                  = 4190
-	LinkerdAdminPort                = 4191
-	LinkerdInboundPort              = 4143
+	LinkerdTapPort     = 4190
+	LinkerdAdminPort   = 4191
+	LinkerdInboundPort = 4143
 	// Mesh agent UIDs (16xx band; orthogonal to Envoy 1555 / d2 1556 / linkerd 2102 / nginx:alpine 101).
-	MeshInAgentUID                  int64 = 1651
-	MeshOutAgentUID                 int64 = 1652
+	MeshInAgentUID  int64 = 1651
+	MeshOutAgentUID int64 = 1652
 	// MeshAgentUIDReservedStart marks 1653+ for future mesh-* sidecars (do not reuse for apps).
-	MeshAgentUIDReservedStart       int64 = 1653
+	MeshAgentUIDReservedStart int64 = 1653
 
 	// Mesh-in CT-1 control-plane object names (WI-OC-MESH-IN-CT1-02).
 	MeshInSharedHostsCMName         = "olares-mesh-in-shared-hosts"
@@ -94,21 +94,21 @@ const (
 	// the full body in the 64Mi sidecar.
 	MeshInMaxBodySize               = "100m"
 	LabelTLSReplica                 = "gateway.olares.io/tls-replica"
-	DefaultEnvoyLogLevel                  = "debug"
-	EnvoyImageVersion                     = "beclab/envoy:v1.25.11.1"
-	EnvoyContainerName                    = "olares-envoy-sidecar"
-	EnvoyAdminPort                        = 15000
-	EnvoyAdminPortName                    = "proxy-admin"
-	EnvoyInboundListenerPort              = 15003
-	EnvoyInboundListenerPortName          = "proxy-inbound"
-	EnvoyOutboundListenerPort             = 15001
-	EnvoyOutboundListenerPortName         = "proxy-outbound"
-	EnvoyLivenessProbePort                = 15008
-	EnvoyConfigFileName                   = "envoy.yaml"
-	EnvoyConfigFilePath                   = "/config"
-	EnvoyConfigOnlyOutBoundFileName       = "envoy2.yaml"
-	WsContainerName                       = "olares-ws-sidecar"
-	WsContainerImage                      = "WS_CONTAINER_IMAGE"
+	DefaultEnvoyLogLevel            = "debug"
+	EnvoyImageVersion               = "beclab/envoy:v1.25.11.1"
+	EnvoyContainerName              = "olares-envoy-sidecar"
+	EnvoyAdminPort                  = 15000
+	EnvoyAdminPortName              = "proxy-admin"
+	EnvoyInboundListenerPort        = 15003
+	EnvoyInboundListenerPortName    = "proxy-inbound"
+	EnvoyOutboundListenerPort       = 15001
+	EnvoyOutboundListenerPortName   = "proxy-outbound"
+	EnvoyLivenessProbePort          = 15008
+	EnvoyConfigFileName             = "envoy.yaml"
+	EnvoyConfigFilePath             = "/config"
+	EnvoyConfigOnlyOutBoundFileName = "envoy2.yaml"
+	WsContainerName                 = "olares-ws-sidecar"
+	WsContainerImage                = "WS_CONTAINER_IMAGE"
 
 	UploadContainerName  = "olares-upload-sidecar"
 	UploadContainerImage = "UPLOAD_CONTAINER_IMAGE"

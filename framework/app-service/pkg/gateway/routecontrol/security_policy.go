@@ -17,14 +17,14 @@ import (
 )
 
 const (
-	SecurityPolicySuffix         = "-jwt-authn"
-	CallerJWTIssuer              = callerjwt.IssuerURL
-	CallerJWTAudience            = "app-gateway-data"
+	SecurityPolicySuffix  = "-jwt-authn"
+	CallerJWTIssuer       = callerjwt.IssuerURL
+	CallerJWTAudience     = "app-gateway-data"
 	CallerJWTProviderName = "caller-jwt"
 	// Claim paths must match callerjwt nested JSON (Envoy treats '.' as path sep).
-	CallerJWTViewerClaim       = callerjwt.ClaimViewer
-	CallerJWTAppidClaim        = callerjwt.ClaimAppid
-	CallerJWTClientAppidClaim  = callerjwt.ClaimClientAppid
+	CallerJWTViewerClaim      = callerjwt.ClaimViewer
+	CallerJWTAppidClaim       = callerjwt.ClaimAppid
+	CallerJWTClientAppidClaim = callerjwt.ClaimClientAppid
 	// CallerJWTViewerHeader is filled from the verified JWT viewer claim after
 	// gateway authn. Client-supplied X-BFL-USER is overwritten and must not be
 	// trusted as identity on its own.
@@ -33,12 +33,12 @@ const (
 	// X-Caller-Appid: Shared tokens carry olares.caller.appid, ordinary
 	// callers carry olares.caller.clientAppid; the claims stay mutually
 	// exclusive so only one value is written per request.
-	CallerJWTAppidHeader       = "X-Caller-Appid"
-	CallerJWTClientAppidHeader = "X-Caller-Appid"
-	CallerJWTJWKSServiceName     = "caller-jwt-jwks"
+	CallerJWTAppidHeader          = "X-Caller-Appid"
+	CallerJWTClientAppidHeader    = "X-Caller-Appid"
+	CallerJWTJWKSServiceName      = "caller-jwt-jwks"
 	CallerJWTJWKSServiceNamespace = "os-framework"
-	CallerJWTJWKSServicePort     = int32(443)
-	CallerJWTJWKSURI             = callerjwt.JWKSURI
+	CallerJWTJWKSServicePort      = int32(443)
+	CallerJWTJWKSURI              = callerjwt.JWKSURI
 )
 
 var securityPolicyGVK = schema.GroupVersionKind{

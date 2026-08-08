@@ -450,12 +450,15 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 	// env-batch lease or kick off helm. UpgradabilityValidators runs
 	// cluster-capacity against the new chart's absolute requirements, plus
 	// cluster-pressure / k8s-request against the non-negative delta
-	// (new − old) so the running deployment is not double-counted (see
-	// that function for details). 
+	// (new − old) so the running deployment is not double-counted. That
+	// discount is decided from PrevState for the steady cases (Running →
+	// delta, Stopped → full) and otherwise from whether prevCfg's
+	// namespace still has scheduled pods (see that function for details).
 	decision, err := validation.Run(req.Request.Context(), validation.Input{
 		Client:        h.ctrlClient,
 		AppConfig:     appCfg,
 		PrevAppConfig: &prevCfg,
+		PrevState:     appMgr.Status.State,
 		Op:            appv1alpha1.UpgradeOp,
 		Token:         token,
 	}, validation.UpgradabilityValidators()...)
