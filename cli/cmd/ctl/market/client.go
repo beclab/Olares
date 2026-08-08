@@ -187,7 +187,7 @@ func (c *MarketClient) downloadStream(ctx context.Context, path string, query ur
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, errorBodyLimit))
 		resp.Body.Close()
-		return nil, fmt.Errorf("API error (HTTP %d): %s", resp.StatusCode, envelopeMessage(body, resp.StatusCode))
+		return nil, &APIError{StatusCode: resp.StatusCode, Message: envelopeMessage(body, resp.StatusCode)}
 	}
 	// A 200 carrying the JSON envelope means the backend answered a
 	// different question than the one asked. Writing that to a .tgz would
@@ -204,6 +204,23 @@ func (c *MarketClient) downloadStream(ctx context.Context, path string, query ur
 // The edge proxy can answer an HTML page, and a whole one in a terminal
 // buries the line that matters.
 const errorBodyLimit = 8 << 10
+
+// APIError is a non-2xx answer from the app-store API, carrying the status
+// alongside the message so a caller can tell apart two failures the backend
+// spells identically. Market answers both "no such app" and "that app is not
+// in a state this operation accepts" with one 404 and one sentence, and only
+// the caller knows which of the two it was in a position to ask for.
+//
+// Error() reproduces the string this was formatted as before the type
+// existed, so callers matching on the text keep working; prefer errors.As.
+type APIError struct {
+	StatusCode int
+	Message    string
+}
+
+func (e *APIError) Error() string {
+	return fmt.Sprintf("API error (HTTP %d): %s", e.StatusCode, e.Message)
+}
 
 // envelopeMessage extracts the human-readable part of an app-store error
 // body: the envelope's `message` when it parses, the trimmed body when it
@@ -303,7 +320,7 @@ func (c *MarketClient) executeRequest(hc *http.Client, req *http.Request) (*APIR
 		if message == "" {
 			message = fmt.Sprintf("HTTP %d", resp.StatusCode)
 		}
-		return &apiResp, fmt.Errorf("API error (HTTP %d): %s", resp.StatusCode, message)
+		return &apiResp, &APIError{StatusCode: resp.StatusCode, Message: message}
 	}
 
 	return &apiResp, nil
