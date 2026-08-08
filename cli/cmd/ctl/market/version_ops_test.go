@@ -1,14 +1,19 @@
 package market
 
 import (
+	"context"
 	"net/http"
 	"reflect"
+	"strings"
 	"testing"
+
+	"github.com/spf13/viper"
 
 	"github.com/beclab/Olares/cli/cmd/ctl/market/cancel"
 	"github.com/beclab/Olares/cli/cmd/ctl/market/resume"
 	"github.com/beclab/Olares/cli/cmd/ctl/market/stop"
 	"github.com/beclab/Olares/cli/cmd/ctl/market/uninstall"
+	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
 // These tests pin the per-version wire format of the stop/resume/uninstall
@@ -107,4 +112,31 @@ func TestUninstallWireFormat(t *testing.T) {
 		"app_name": "firefox", "source": "market.olares",
 		"sync": true, "all": true, "deleteData": true, "version": "1.2.3",
 	})
+}
+
+func TestRequireRestartBackendVersion(t *testing.T) {
+	previous := viper.GetString(cmdutil.FlagOlaresVersion)
+	t.Cleanup(func() { viper.Set(cmdutil.FlagOlaresVersion, previous) })
+
+	viper.Set(cmdutil.FlagOlaresVersion, "1.12.5")
+	err := requireRestartBackendVersion(context.Background(), &MarketOptions{factory: cmdutil.NewFactory()})
+	if err == nil {
+		t.Fatal("expected version gate error")
+	}
+	for _, want := range []string{"market restart requires Olares >= 1.12.6", "this backend is 1.12.5"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("error %q missing %q", err, want)
+		}
+	}
+
+	viper.Set(cmdutil.FlagOlaresVersion, "1.12.6-20260808")
+	if err := requireRestartBackendVersion(context.Background(), &MarketOptions{factory: cmdutil.NewFactory()}); err != nil {
+		t.Fatalf("daily build should pass: %v", err)
+	}
+
+	viper.Set(cmdutil.FlagOlaresVersion, "not-a-version")
+	err = requireRestartBackendVersion(context.Background(), &MarketOptions{factory: cmdutil.NewFactory()})
+	if err == nil || !strings.Contains(err.Error(), "profile list --refresh-version") {
+		t.Fatalf("expected fail-closed refresh hint, got %v", err)
+	}
 }
