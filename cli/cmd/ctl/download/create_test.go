@@ -1,6 +1,10 @@
 package download
 
-import "testing"
+import (
+	"context"
+	"strings"
+	"testing"
+)
 
 func TestNormalizeSelectFiles(t *testing.T) {
 	cases := []struct {
@@ -39,5 +43,46 @@ func TestNormalizeSelectFiles(t *testing.T) {
 				t.Fatalf("normalizeSelectFiles(%q) csv=%q want %q", tc.in, csv, tc.wantCSV)
 			}
 		})
+	}
+}
+
+func TestValidateYTDLPQuality(t *testing.T) {
+	for _, valid := range []string{"", "best", "2160p", "1080p", "720p", "480p", "360p", "audio"} {
+		if err := validateYTDLPQuality(valid, false); err != nil {
+			t.Fatalf("validateYTDLPQuality(%q) unexpected error: %v", valid, err)
+		}
+	}
+
+	if err := validateYTDLPQuality("", true); err == nil || !strings.Contains(err.Error(), "--quality is required") {
+		t.Fatalf("required empty quality should fail locally, got %v", err)
+	}
+	err := validateYTDLPQuality("4k", false)
+	if err == nil {
+		t.Fatal("unsupported quality should fail locally")
+	}
+	for _, want := range []string{"unsupported --quality", ytdlpQualityValues} {
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("quality error %q missing %q", err, want)
+		}
+	}
+}
+
+func TestRunCreateValidatesQualityFromExtra(t *testing.T) {
+	err := runCreate(
+		context.Background(),
+		nil,
+		"https://example.com/video",
+		"",
+		"",
+		"",
+		"",
+		"",
+		`{"ytdlp_quality":"4k"}`,
+		"",
+		"",
+		"table",
+	)
+	if err == nil || !strings.Contains(err.Error(), "unsupported --quality") {
+		t.Fatalf("invalid quality in --extra should fail locally, got %v", err)
 	}
 }

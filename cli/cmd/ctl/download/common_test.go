@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -12,6 +14,7 @@ import (
 
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 	"github.com/beclab/Olares/cli/pkg/credential"
+	"github.com/beclab/Olares/cli/pkg/whoami"
 )
 
 type fakeDoer struct {
@@ -128,6 +131,120 @@ func TestDoMutateErrorCode(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "code 400") || !strings.Contains(err.Error(), "bad url") {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestDoMutateAddsRecoveryForKnownTaskErrors(t *testing.T) {
+	d := &fakeDoer{resp: []byte(`{"code":409,"message":"task already exists"}`)}
+	err := doMutate(context.Background(), d, "POST", "/api/download", nil, nil)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	for _, want := range []string{"task already exists", "olares-cli knowledge download list"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("error %q missing %q", err, want)
+		}
+	}
+
+	d = &fakeDoer{resp: []byte(`{"code":409,"message":"preference already exists"}`)}
+	err = doMutate(context.Background(), d, "PUT", "/api/user/preferences", nil, nil)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if strings.Contains(err.Error(), "knowledge download list") {
+		t.Fatalf("unrelated conflict received task recovery: %q", err)
+	}
+
+	d = &fakeDoer{resp: []byte(`{"code":404,"message":"task not found"}`)}
+	err = doMutate(context.Background(), d, "PUT", "/api/download/pause/42", nil, nil)
+	if err == nil || !strings.Contains(err.Error(), "olares-cli knowledge download list") {
+		t.Fatalf("task 404 should refresh IDs, got %v", err)
+	}
+
+	d = &fakeDoer{resp: []byte(`{"code":404,"message":"file not found"}`)}
+	err = doGet(context.Background(), d, "/api/download/file_check/none", nil)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if strings.Contains(err.Error(), "knowledge download list") {
+		t.Fatalf("non-task 404 received task recovery: %q", err)
+	}
+
+	d = &fakeDoer{resp: []byte(`{"code":409,"message":"task is moving to its destination"}`)}
+	err = doMutate(context.Background(), d, "PUT", "/api/download/cancel/42", nil, nil)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	for _, want := range []string{"wait for the move to finish", "olares-cli knowledge download info 42"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("mid-move conflict %q missing %q", err, want)
+		}
+	}
+}
+
+func TestDoMutateAddsRecoveryForHTTPTaskErrors(t *testing.T) {
+	tests := []struct {
+		name    string
+		status  int
+		path    string
+		want    []string
+		notWant string
+	}{
+		{
+			name:    "mid-move conflict",
+			status:  http.StatusConflict,
+			path:    "/api/download/cancel/42",
+			want:    []string{"wait for the move to finish", "olares-cli knowledge download info 42"},
+			notWant: "knowledge download status",
+		},
+		{
+			name:   "missing task",
+			status: http.StatusNotFound,
+			path:   "/api/download/pause/42",
+			want:   []string{"refresh task IDs", "olares-cli knowledge download list"},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(test.status)
+			}))
+			t.Cleanup(server.Close)
+
+			client := whoami.NewHTTPClient(server.Client(), server.URL, "")
+			err := doMutate(context.Background(), client, "POST", test.path, nil, nil)
+			if err == nil {
+				t.Fatal("expected error")
+			}
+			for _, want := range test.want {
+				if !strings.Contains(err.Error(), want) {
+					t.Fatalf("error %q missing %q", err, want)
+				}
+			}
+			if test.notWant != "" && strings.Contains(err.Error(), test.notWant) {
+				t.Fatalf("error %q contains obsolete CTA %q", err, test.notWant)
+			}
+		})
+	}
+}
+
+func TestDoMutateAddsRecoveryForRemoveConflict(t *testing.T) {
+	d := &fakeDoer{resp: []byte(`{"code":409}`)}
+	err := doMutate(
+		context.Background(),
+		d,
+		http.MethodDelete,
+		"/api/download/remove",
+		RemoveReq{TaskID: 42},
+		nil,
+	)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	for _, want := range []string{"wait for the move to finish", "olares-cli knowledge download info 42"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("remove conflict %q missing %q", err, want)
+		}
 	}
 }
 
