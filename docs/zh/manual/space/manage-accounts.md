@@ -1,4 +1,5 @@
 ---
+outline: [2, 3]
 description: 使用 LarePass 扫码登录 Olares Space，支持 DID 和 Olares ID 两种登录方式，以及多账户管理和切换。
 head:
   - - meta
@@ -33,7 +34,7 @@ head:
    ![LarePass 账户列表中的 DID](/images/manual/tutorials/did-stage1.png)
 
 2. 点击右上角的扫码图标，扫描 Olares Space 登录页面上的二维码。
-   ![LarePass 扫码](/images/manual/tutorials/scan-qr-code1.png)
+   ![LarePass 扫码](/images/manual/tutorials/scan-qr-code2.png)
 
 ## 退出登录
 

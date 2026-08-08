@@ -66,4 +66,4 @@ At the bottom of the backup management page, you’ll see a list of snapshots fo
 ## Resources
 
 - [Restore backup data](restore.md): Recover files or app data from a snapshot.
-- [Back up and restore in Olares Space](../../space/backup-restore.md): Manage cloud backups for your Olares.
+- [Restore data from Olares Space backups](../../space/backup-restore.md): View cloud backups and restore files to your Olares.

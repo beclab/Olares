@@ -67,7 +67,7 @@ Available actions are:
 
 ## Olares Space
 
-Check your subscribed plan details and usage in Olares Space, including reverse proxy solution, backup storage, and traffic consumption. Log in to Olares Space as prompted to use this feature. For details, see [View system status](../../space/manage-olares.md#view-system-status).
+Check your subscribed plan details and usage in Olares Space, including reverse proxy solution, backup storage, and traffic consumption. Log in to Olares Space as prompted to use this feature. For details, see [Monitor Olares status and traffic](../../space/manage-olares.md#view-the-olares-overview).
 
 ## Change password
 
