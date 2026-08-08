@@ -19,6 +19,8 @@ RUN chown -R 1000:1000 /var/lib/myapp
 USER 1000
 ```
 
+An image-time `chown` only survives where nothing mounts over it: a `hostPath` mounted at that path shadows the image's directory along with its ownership, which is why a uid-1000 image can still hit `Permission denied` on its own data dir. Ownership of a mount is settled at runtime, by pattern B below.
+
 `chown` the **runtime** paths too, not just the data ones. Pid files, sockets, lock files and scratch dirs under `/run`, `/var/run` or `/tmp` are written before the app does anything useful, so a base image that puts them in a root-owned directory (nginx, php-fpm, supervisor) fails at startup under `USER 1000`. In an image you build, relocate the path in its config or make it writable here; in a third-party image, point a configurable runtime path at `/tmp`, or mount a writable `emptyDir` and prepare its ownership with the init-container pattern below.
 
 Before pushing, run the two probes below against your own ref and expect `uid=1000`.
@@ -43,14 +45,14 @@ The inspect result is the image's declared `USER`; empty means the runtime start
 
 ```mermaid
 flowchart TD
-  start["Third-party or root image + writes userspace volume"]
+  start["App writes a userspace volume"]
   start --> rootInit{"Does entrypoint require root then drop via PUID/PGID?"}
   rootInit -->|yes| solC["C: keep runAsUser false/absent; set PUID/PGID 1000; no explicit root SC"]
   rootInit -->|no| canNonRoot{"Can main process run as UID 1000?"}
   canNonRoot -->|yes| solA["A: spec.runAsUser true + optional securityContext"]
   canNonRoot -->|no| rebuild["Rebuild image so app does not stay root"]
-  solA --> needChown{"Volume has root-owned files?"}
-  needChown -->|yes| solB["B: initContainer chown 1000:1000"]
+  solA --> needChown{"Writes to a userspace mount?"}
+  needChown -->|yes| solB["B: initContainer chown 1000:1000 (mount root is root-owned)"]
   needChown -->|no| fsGroup["Optional fsGroup 1000 for new files"]
   solB --> busyboxImg["Image: beclab/aboveos-busybox:1.37.0"]
 ```
@@ -71,7 +73,7 @@ spec:
 
 `fsGroup` helps for **new** mounts; it does not always fix directories already created as root — use B when that happens.
 
-### B — initContainer `chown` (third-party root + wrong volume ownership)
+### B — initContainer `chown` (any uid-1000 app that writes to a userspace mount)
 
 Use Olares' trusted busybox image (same as platform init containers). **Do not** pair a root initContainer on a non-trusted image with a third-party main image — OPA denies that Pod.
 
@@ -98,14 +100,9 @@ spec:
 
 Also set `spec.runAsUser: true` in `OlaresManifest.yaml`. Run `chown` for **each** userspace mount the app writes to (combine paths in one command if needed).
 
-> **`chown` of pre-owned subdirs can fail on upgrade.** A root initContainer can `chown` a root-owned directory, but has been observed to fail with `Operation not permitted` when `chown`-ing subdirectories the main container previously created as uid 1000 — as if `CAP_CHOWN` is unavailable. This means:
+> **Olares does not pre-`chown` userspace paths.** Declaring `permission.appData` grants the mount; it does not hand you ownership of it. `DirectoryOrCreate` makes the root dir as root, so a uid-1000 app that writes to `appData` / `appCache` needs this initContainer — without it the first write fails with `Permission denied`. Shipped apps that run as uid 1000 all carry one.
 >
-> - **Fresh install:** the `hostPath` root dir is created empty by `DirectoryOrCreate` (owned by kubelet/root). The busybox initContainer runs as root and can `chown` it because root owns the directory. Works.
-> - **Upgrade:** if the main container previously created subdirectories as uid 1000, the busybox initContainer **fails to** `chown` those uid-1000-owned subdirs — `Operation not permitted` — crash-loops, and the pod stays in `Initializing` indefinitely.
->
-> The cap-dropping layer is environment-specific, likely below the cluster at the node / container-runtime level. It is **not** the Olares OPA policy, which only denies untrusted-image + root/`privileged` pods (see [OPA and lint boundaries](#opa-and-lint-boundaries)) and mutates nothing about capabilities.
->
-> **Practical rule:** for `appData` / `appCache` with `permission.appData: true`, Olares already creates the root dir owned by uid 1000, so subdirectories the app makes at runtime stay uid 1000 and **no initContainer is needed**. Reach for initContainer `chown` only when the upstream entrypoint writes root-owned files before dropping to uid 1000.
+> **It can still fail on upgrade.** A root initContainer `chown`s a root-owned directory fine, but has been observed to fail with `Operation not permitted` on subdirectories the main container previously created as uid 1000 — as if `CAP_CHOWN` were unavailable — which crash-loops the pod and leaves it `Initializing` indefinitely. So a fresh install works and the upgrade of the same chart does not. The cap-dropping layer is environment-specific, below the cluster at the node / container-runtime level; it is **not** the Olares OPA policy, which only denies untrusted-image + root/`privileged` pods (see [OPA and lint boundaries](#opa-and-lint-boundaries)) and mutates nothing about capabilities. Where it bites, narrow the `chown` to the paths that still need it rather than dropping the initContainer.
 
 ### C — root-init entrypoint that drops to `PUID`/`PGID`
 

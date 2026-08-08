@@ -1,6 +1,6 @@
 ---
 name: olares-chart
-version: 4.16.0
+version: 4.17.0
 description: "Olares app packaging and chart authoring via olares-cli chart — port a repo, docker-compose, or generic Helm chart; build/push the image; author, lint, package, and deploy an OlaresManifest; wire storage, middleware, entrances, env, and GPU; edit the chart after diagnosis. Runtime failure diagnosis is olares-doctor; public Market submission is olares-publish."
 compatibility: Requires olares-cli on PATH; chart authoring is local-only, building an image for a specific Olares and deploying both need login
 metadata:
@@ -12,23 +12,19 @@ metadata:
 
 # Deploy your code or any project to your Olares
 
-> **Source of truth for flags is always `olares-cli chart <verb> --help`.** This file only carries what `--help` cannot: the two coupled axes of a port, where to start on each, the per-axis concerns to get right, and the gotchas `lint` won't catch.
+Flags and syntax come from `olares-cli chart <verb> --help`. Read the shared [Olares platform model](../olares-shared/references/olares-platform.md) before porting: chart decisions depend on its storage, uid-1000, namespace, middleware and version semantics.
 
-> **Porting baseline: Olares >= 1.12.6.** Check the target with `olares-cli profile list` (VERSION column). Full version rules — `apiVersion: v3`, the chart version fields, the `olares` `type: system` dependency — are in [references/olares-chart-versioning.md](references/olares-chart-versioning.md).
+Authoring (`from-compose`, `lint`, `package`) is local-only. Building for a specific Olares needs the target node architecture before the first image build, and deployment needs the active profile.
 
-> **Canonical manifest combination:** new ports use `OlaresManifest.yaml apiVersion: v3` + `olaresManifest.version: 0.12.0` + an `olares` `type: system` dependency at `>=1.12.6-0`; current `from-compose` emits all three. Never downgrade these to satisfy `lint`—check for an old CLI or skill. `Chart.yaml apiVersion: v2` is a separate Helm field and remains `v2`.
-
-> **Platform model (read once, no login needed for authoring).** Porting decisions rely on the Olares storage model, uid-1000 run identity, app/namespace & networking, system middleware, and version model — all defined once in [`../olares-shared/references/olares-platform.md`](../olares-shared/references/olares-platform.md). Authoring and validating the chart (`from-compose` / `lint` / `package`) need no login. **Login is needed earlier than the deploy step, though:** as soon as the app is meant to run on a specific Olares, its image must be built for that node's architecture — so the target has to be resolved *before* the first `docker build`. See Axis 1.
+Porting targets Olares 1.12.6+; load [versioning](references/olares-chart-versioning.md) before writing manifest/chart version and dependency fields.
 
 ## When to use
 
 - Turn a repo / docker-compose / generic Helm chart into an Olares app, or validate an OlaresManifest; package its image; wire storage / middleware / entrances / env / GPU
 - Deploy / run the app on **your own** Olares (`market upload` + `install`); after `olares-doctor` identifies a chart-owned root cause, edit, lint, and redeploy the chart
-- Serve a generation/chat model with an official base app ([llm-models.md](references/olares-chart-llm-models.md), then [llm-ops.md](references/olares-chart-llm-ops.md)); embed `llm-init` in a custom chart ([llm-init-integration.md](references/olares-chart-llm-init-integration.md)); or install the dedicated EmbeddingGemma app through [`olares-market`](../olares-market/SKILL.md) with `market install embeddinggemmav3`
+- Serve a generation/chat model with an official base app, integrate `llm-init`, or route an embedding app to the appropriate Market install
 
-> Anything outside this scope -> see the **Skill suite map** in [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) (already loaded as the suite prerequisite).
-
-> **Mental model:** this skill authors, validates, and **deploys your own chart to your own Olares**, and owns the **fixes that mean editing your chart**. **Diagnosing a runtime failure** (won't install / start, crashes, `running` but unreachable, image won't pull) is [`../olares-doctor/SKILL.md`](../olares-doctor/SKILL.md) — it finds the root cause and points back here for the chart edit. Listing / selling it on the **public** Olares Market is [`../olares-publish/SKILL.md`](../olares-publish/SKILL.md); installing or managing an **already-published** catalog app is [`../olares-market/SKILL.md`](../olares-market/SKILL.md); inspecting pods/logs of an unrelated running app is [`../olares-cluster/SKILL.md`](../olares-cluster/SKILL.md).
+This skill owns changes to your chart. [`olares-doctor`](../olares-doctor/SKILL.md) finds runtime root causes, [`olares-market`](../olares-market/SKILL.md) manages published apps, and [`olares-publish`](../olares-publish/SKILL.md) prepares a public listing.
 
 ## The shape of the work — two axes
 
@@ -69,32 +65,38 @@ Both axes ready → **deploy to the current Olares automatically**. `lint` prove
 
 For deploying to your own Olares, **metadata can stay a stub** as long as `lint` passes; functional refinement (storage / middleware / entrances) is still required.
 
-## The concerns to get right (reflect on these per axis)
+## Concern router
 
-`from-compose` produces a chart that **lints but is not yet a good Olares app**. These are the same concerns viewed two ways — what triggers them, what they let you do, and when they're done — collapsed into one row each. Drive each to "get this right", and loop back here when its trigger reappears.
+`from-compose` produces a skeleton that may lint without being a correct Olares app. Use this index to load only the references triggered by the current port. All 18 original concerns remain represented.
 
-| Axis | Concern | Get this right | Loop back when | Reference |
-|---|---|---|---|---|
-| packaging | **Image** | pullable, pinned to a version tag (never `:latest`), arch-correct for the **target Olares node**; pass it explicitly through Buildx `--platform` rather than using the development host default, then clear the **image-readiness gate** (assert the built arch, prove an anonymous pull) before wiring it into the chart | `ImagePullBackOff` / wrong arch, or a deploy constraint forces a rebuild | [image.md](references/olares-chart-image.md) |
-| packaging+deployment | **Run identity** | final app process uid 1000; normally `spec.runAsUser: true`; for verified PUID/PGID root-init images leave it false/absent so the entrypoint can initialize then drop privileges; use initContainer `chown` only for root-owned volumes | EACCES on appData/appCache/userData; forced uid breaks a root-init entrypoint; admission denies an explicit root securityContext | [run-as-user.md](references/olares-chart-run-as-user.md) |
-| deployment | **Storage** | every compose volume → the right userspace area (Data/Cache/Home/Common/External), matching `permission`, leftover kompose PVCs deleted | a volume isn't persisting or lands in the wrong area | [manifest.md](references/olares-chart-manifest.md) §2 |
-| deployment | **Middleware & deps** | no bundled `postgres`/`redis`/`mongo`/…; wire to system middleware; SQLite→Postgres where supported; companion apps as `type: application` deps | a bundled db/queue remains, or a companion should be a dependency | [middleware.md](references/olares-chart-middleware.md) |
-| deployment | **Env** | app config in `envs[]` (v3 `valueFrom`, no inline `OLARES_USER`); install-time `required` prompts; middleware/system/user vars via `.Values.olaresEnv`; platform context via `.Values.*` | install fails on `appenv` 422, or config must be user-supplied | [env.md](references/olares-chart-env.md), [env-defaults.md](references/olares-chart-env-defaults.md), [system-values.md](references/olares-chart-system-values.md) |
-| deployment | **Secrets** | passwords, API keys and generated keys reach the container from a Secret via `secretKeyRef` / `envFrom`; install-time values declared `type: password`; middleware credentials left to the platform (no `password` in `middleware:`); chart-generated keys wrapped in `lookup` so an upgrade keeps the same value | a credential sits in a ConfigMap, `values.yaml` or a literal `env: value:`; an upgrade signs every user out or leaves stored data unreadable | [secrets.md](references/olares-chart-secrets.md) |
-| deployment | **Entrances & ports** | ≥1 `entrances[]`; HTTP via entrances, non-HTTP via `ports[]`; internal-only services `invisible: true` | a service is unreachable, or an internal port is exposed as a desktop entrance | [manifest.md](references/olares-chart-manifest.md) §4 |
-| packaging+deployment | **GPU / models** | build a CUDA image without a local GPU; download model weights via initContainer into the shared `appCommon` Hugging Face cache | AI app needs a CUDA build, model provisioning, or a shared model cache | [gpu.md](references/olares-chart-gpu.md) |
-| deployment | **LLM model serving** | generation/chat: clone an official base app; custom chart: integrate `llm-init`; embedding: install `embeddinggemmav3` through `olares-market` | a model-serving request needs routing before chart work | [llm-models.md](references/olares-chart-llm-models.md), [llm-ops.md](references/olares-chart-llm-ops.md), [llm-init-integration.md](references/olares-chart-llm-init-integration.md) |
-| deployment | **Accelerator** | **GPU/accelerator apps only:** declare `spec.accelerator` modes per repo support; set `requiredGPUMemory`. A non-accelerator app needs no `mode` — use the flat `spec.requiredCpu/limitedCpu/requiredMemory/limitedMemory/requiredDisk` envelope (mutually exclusive with `spec.accelerator`) | app targets a GPU/accelerator device, or `lint` flags `spec.resources` | [accelerator.md](references/olares-chart-accelerator.md) |
-| packaging+deployment | **DinD** | a privileged `beclab/docker` daemon sidecar (`ENABLE_DIND`, `DOCKER_HOST`); main container stays non-privileged | a terminal/agent app must run `docker` / `docker compose` | [dind.md](references/olares-chart-dind.md) |
-| deployment | **Shared backend** | `options.shared: true` (on a v3 app) ⇒ admin-only install into `<app>-shared`; consumers reach it via cross-namespace Service DNS; flag the admin-install | a heavy/accelerator backend serves many users over shared data | [shared.md](references/olares-chart-shared.md) |
-| deployment | **Version & deps fields** | fixed values every chart writes: `apiVersion: v3`; `olaresManifest.version: '0.12.0'`; `metadata.version` == `Chart.yaml` `version`; `options.dependencies` includes `olares >=1.12.6-0` (`type: system`) — authored by you; bump after a material chart/image/manifest change, never to retry unchanged rejected bytes | every manifest edit — confirm these fields + the `olares` system dep (`lint` rejects a missing system dep); after a material deploy change — bump before upload | [versioning.md](references/olares-chart-versioning.md) |
-| deployment | **Workloads / replicas** | `workloadReplicas` lists every Deployment/StatefulSet → count (authored by you); each `spec.replicas` wired to `{{ .Values.workloads.<name>.replicaCount }}` + matching `values.yaml` | every time you author/add/rename a workload — run the three-point self-check; a hardcoded `replicas` silently no-ops suspend/resume / staged install | [manifest.md](references/olares-chart-manifest.md) Workloads & replicas |
-| deployment | **Metadata** | stub OK for local deploy (`Utilities`, default icon) while `lint` passes; full `metadata.*` + listing images only when publishing | `lint` flags missing metadata, or you want a public listing | [manifest.md](references/olares-chart-manifest.md) §1 |
-| deployment | **Validate-local** | `olares-cli chart lint ./<app>` passes, then `chart package` | a refinement changed the manifest/templates | [lint.md](references/olares-chart-lint.md) |
-| deploy | **Deploy** | `market upload` + `market install`, then diagnose from logs — automatic after `lint` passes (login required) | proving the chart actually runs on the developer's Olares | [deploy.md](references/olares-chart-deploy.md) |
-| deploy | **Custom URL** | only once the app is `running`: a memorable route ID (one command, no DNS), or the developer's own FQDN (auth level `public` + RSA PEM cert + a CNAME only they can add, then activate and poll) | the developer wants a nicer URL, or their own domain | [custom-domain.md](references/olares-chart-custom-domain.md) |
+### Every port
 
-> **Deploy** leans on sibling skills: [`olares-shared`](../olares-shared/SKILL.md) (login check), [`olares-market`](../olares-market/SKILL.md) (upload / install / cleanup), [`olares-cluster`](../olares-cluster/SKILL.md) (logs), and [`olares-doctor`](../olares-doctor/SKILL.md) (runtime root-cause diagnosis when a deploy fails or the app won't start). **After `lint` passes, drive the deploy loop automatically without asking** (proceed unless olares-shared's auth-readiness gate says stop); **never log in on the developer's behalf without asking.** One way to sequence the whole assembly (and the file tree `from-compose` emits) lives in [references/olares-chart-workflow.md](references/olares-chart-workflow.md) — a reference, not a required order.
+| Trigger | Read |
+|---|---|
+| Build or select every workload image | [image](references/olares-chart-image.md) |
+| Decide process uid and mounted-volume ownership | [run identity](references/olares-chart-run-as-user.md) |
+| Map persistence, entrances, metadata and workload replicas | [manifest](references/olares-chart-manifest.md) |
+| Map configuration and platform values | [environment](references/olares-chart-env.md), then [defaults](references/olares-chart-env-defaults.md) or [system values](references/olares-chart-system-values.md) only when needed |
+| Handle passwords, API keys or generated keys | [secrets](references/olares-chart-secrets.md) |
+| Set manifest/chart versions and dependencies | [versioning](references/olares-chart-versioning.md) |
+| Validate after a chart change | [lint](references/olares-chart-lint.md) |
+| Prove the chart on the target Olares | [deploy](references/olares-chart-deploy.md) |
+
+The manifest reference covers four concerns separately: storage, entrances/ports, workloads/replicas and metadata. Together with image, run identity, env, secrets, versioning, validation and deployment, these are the 11 concerns every port checks.
+
+### Conditional
+
+| Trigger | Read |
+|---|---|
+| Compose bundles a database/queue, or an app dependency is needed | [middleware and dependencies](references/olares-chart-middleware.md) |
+| CUDA image, model provisioning or shared model cache | [GPU and models](references/olares-chart-gpu.md) |
+| Generation/chat, custom `llm-init`, or embedding serving | [model routing](references/olares-chart-llm-models.md), [model operations](references/olares-chart-llm-ops.md), [custom integration](references/olares-chart-llm-init-integration.md) |
+| GPU/accelerator scheduling modes or resource envelope | [accelerator](references/olares-chart-accelerator.md) |
+| The app must run Docker or Compose | [DinD](references/olares-chart-dind.md) |
+| One heavy backend serves multiple users | [shared backend](references/olares-chart-shared.md) |
+| The running app needs a memorable route or custom FQDN | [custom URL](references/olares-chart-custom-domain.md) |
+
+After `lint` passes, drive the deploy/debug loop within the authorised chart task without asking at every install, upgrade, restart, uninstall or clean reinstall. Stop for login, missing registry credentials, an ambiguous target or work outside that task scope. The full assembly sequence is in [workflow](references/olares-chart-workflow.md).
 
 ## CLI verbs
 
@@ -106,22 +108,20 @@ The only `olares-cli chart` subcommands (source of truth: `--help`). Everything 
 | `lint` | validate a chart dir / `.tgz` with the Market ingest pipeline | [lint.md](references/olares-chart-lint.md) |
 | `package` | package a chart dir into a `<name>-<version>.tgz` for upload (mirrors `helm package`, no helm binary needed) | [workflow.md](references/olares-chart-workflow.md) (D4) |
 
-## Special porting patterns & official ports (beclab/apps)
+## Special porting patterns
 
 Most of this skill assumes a web app with an HTTP entrance. When the upstream doesn't fit, match a known pattern first; if still unsure, see how the official ports solved it.
 
 - **Headless CLI / service (no web UI)** — no GUI to point an entrance at: add a web-terminal sidecar as a **visible** entrance + expose the API/MCP port as an `invisible` internal entrance. → [archetype-headless.md](references/olares-chart-archetype-headless.md)
 - **GUI desktop app (browser-streamed)** — a native Linux desktop app with no web UI: wrap it in a web-desktop base image (Selkies default, or KasmVNC for old hardware/static UIs), point one visible window entrance at HTTP `:3000`, and device-gate optional iGPU/VAAPI acceleration on `.Values.deviceName`. → [archetype-gui.md](references/olares-chart-archetype-gui.md)
-- **Still no idea?** look at how the official ports wire it (manifest fields, entrance shapes, middleware/app dependencies, GPU specs) in [beclab/apps](https://github.com/beclab/apps) before guessing:
+- If no documented pattern fits, inspect a current active port in [beclab/apps](https://github.com/beclab/apps) before guessing:
 
 ```bash
 gh search code --repo beclab/apps <keyword>      # find charts using a pattern (e.g. type: application, accelerator, appCommon)
 # then browse https://github.com/beclab/apps/tree/main/<app> — its OlaresManifest.yaml + templates/
 ```
 
-This is the canonical source for cross-app wiring this skill intentionally does not hardcode.
-
-**When picking a reference app, skip these — they mislead more than they help:**
+Skip references that would mislead:
 
 - **Apps with a `.suspend` (or `.remove`) control file in the OAC root** — suspended / no longer distributed; not a current, reliable pattern.
 - **Shared / cluster-scoped charts** that express sharing with `spec.subCharts[].shared: true` + `options.appScope.clusterScoped: true` + `appRef` (the `ollamaserver`/`ollamav2` shape). Copy the shared-app pattern from an `apiVersion: v3` app, not from these. See [shared.md](references/olares-chart-shared.md).
@@ -130,7 +130,7 @@ This is the canonical source for cross-app wiring this skill intentionally does 
 
 `lint` validates structure, not Olares correctness. Beyond the concerns table above, these blind spots bite and are entirely on you:
 
-- **`metadata.name` must match the chart folder and `Chart.yaml` `name`**, and be `^[a-z][a-z0-9]{0,29}$`. Keep `metadata.appid` equal to `metadata.name` (`from-compose` sets it; it backs the entrance domain `<appid>.<zone>`). Rename all four together. **`lint` does NOT require `metadata.appid`** — an empty value passes (the loader normalizes it to `md5(metadata.name)[:8]`), but **`market upload` rejects a missing `appid`**, so set it explicitly or a lint-clean chart still fails to upload.
+- **`metadata.name` must match the chart folder and `Chart.yaml` `name`**, and be `^[a-z][a-z0-9]{0,29}$`. Keep `metadata.appid` equal to `metadata.name` (`from-compose` sets it). Rename all four together. **`lint` does NOT require `metadata.appid`** — a chart lints without it, but **`market upload` rejects a missing `appid`**, so set it explicitly or a lint-clean chart still fails to upload. It does not decide the entrance host: the platform derives that from the app name, so read the real value from the `URL` column of `settings apps list` rather than computing it.
 - **Cluster upload requires `spec.supportArch` to intersect at least one current node architecture.** Query `olares-cli cluster node list`; ensure the referenced images support the same target architecture. If upload reports `architecture_incompatible`, fix and repackage before retrying. If it reports `cluster_arch_unavailable`, keep the package/version unchanged and wait for node discovery to recover.
 - **Declared `.Values.userspace.appData`/`appCache`/`userData` mounts MUST have the matching `permission` field**, or the app-data cross-check fails.
 - **`hostPath` volumes + rolling updates are incompatible** — replace host mounts with the userspace volumes above.

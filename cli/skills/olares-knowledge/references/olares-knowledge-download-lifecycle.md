@@ -64,4 +64,6 @@ olares-cli knowledge download remove 42
 olares-cli knowledge download remove 42 --remove-file
 ```
 
-`--remove-file` sets `remove_flag=true` (delete artefact on PVC). Default keeps the file and only drops the task row.
+`--remove-file` sets `remove_flag=true` (delete artefact on PVC). Without it the downloaded file is kept.
+
+`remove` retires the task rather than deleting it: the row stays in `list` with status `removed`, which is terminal. So a `list` that still shows the task is not a failed remove, and the id is not freed for reuse — check the status, not the presence of the row.

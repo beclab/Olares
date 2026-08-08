@@ -1,6 +1,6 @@
 ---
 name: olares-dashboard
-version: 4.2.1
+version: 4.3.0
 description: "Olares Dashboard via olares-cli dashboard — CPU, memory, disk, network, pod counts, fan, GPU, application/resource rankings, JSON envelopes, and --watch. Use for Dashboard metrics, overview, resource usage, and Olares One fan; not for pod logs or K8s object inspection (olares-cluster)."
 compatibility: Requires olares-cli on PATH and active Olares profile
 metadata:
@@ -12,67 +12,46 @@ metadata:
 
 # dashboard (overview + applications, AI-agent first)
 
-**CRITICAL — before doing anything, load the `olares-shared` skill first (profile selection, login, token refresh, auth-error recovery). Flag reference: `olares-cli dashboard --help`.**
+> **Shared front door:** load [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) for suite routing, active-profile selection, platform entry points, and the auth proceed/stop gate. Load its auth reference only when login, profile switching, token storage, or auth recovery is actually needed.
 
-> **Source of truth for flags is always `olares-cli dashboard --help` (global flags) and `olares-cli dashboard <verb> --help` (per-leaf flags).** This file only carries what `--help` cannot give: the dual-shape JSON envelope contract, three-state empty-data semantics, capability gates, watch / window rules, and the verb index.
+Use `olares-cli dashboard <verb> --help` for syntax.
 
 ## When to use
 
-This subtree is an **AI-agent-first JSON mirror of the Olares Dashboard SPA's Overview and Applications routes**. Use it when:
-
-- The user asks for runtime metrics: CPU / memory / disk / pods / network / fan / GPU.
-- The user wants the workload-grain or application-grain resource ranking.
-- The user wants the JSON form of what the SPA Overview / Applications pages show.
-- The user wants `--watch` for live-tailing one of the above.
-- Errors: `fan is only available on Olares One devices`, `gpu data temporarily unavailable`
-- Empty-data reasons: `no_<feature>_integration`, `no_<feature>_detected`, `vgpu_unavailable`; windows: `--since` vs `--start`/`--end`
-
-> Anything outside this scope -> see the **Skill suite map** in [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) (already loaded as the suite prerequisite).
+- Read CPU, memory, disk, network, pod, fan, or GPU metrics.
+- Rank applications/workloads by resource use.
+- Observe dashboard metrics over time or consume their stable JSON envelopes.
 
 > **Mental model:** dashboard answers *"what's the resource usage and health"*. For inventory and lifecycle, route elsewhere. When the metrics reveal a problem (resource pressure, an app that's `running` but slow/unreachable), hand off to [`../olares-doctor/SKILL.md`](../olares-doctor/SKILL.md) for root-cause diagnosis.
 
-## JSON envelope and empty data
-
-Every command emits a stable JSON envelope. Agents should pin on `kind`, `raw`, and `meta.empty_reason`; never pin on table/display strings. Empty hardware/integration states are predictable `exit 0` envelopes, not failures.
-
-For the exact Shape A / Shape B wire forms, fan/GPU gate semantics, and the decision tree, read [references/olares-dashboard-envelope.md](references/olares-dashboard-envelope.md).
-
 ## Verb index
 
-For flags & examples, **always start with `olares-cli dashboard <verb> --help`**.
-
-| Verb | Purpose | `--help` first, then... |
+| Verb | Purpose | Read when triggered |
 |---|---|---|
-| `applications` (alias `apps`) | Workload-grain application table (mirrors SPA Applications page) | `olares-cli dashboard applications --help` |
-| `overview` (no subverb) | Default sections envelope (physical + user + ranking) | [references/olares-dashboard-overview.md](references/olares-dashboard-overview.md) + [references/olares-dashboard-envelope.md](references/olares-dashboard-envelope.md) |
-| `overview <section>` | Per-section snapshot (10 sub-verbs: cpu / memory / disk / pods / network / fan / gpu / physical / user / ranking) | [references/olares-dashboard-overview.md](references/olares-dashboard-overview.md) + [references/olares-dashboard-envelope.md](references/olares-dashboard-envelope.md) |
-| `schema` | Introspect the JSON Schemas served by `olares-cli dashboard` | `olares-cli dashboard schema --help` |
+| `applications` (`apps`) | Workload-grain resource table | `dashboard applications --help` |
+| `overview` | Physical, user, and ranking sections | [overview section meanings](references/olares-dashboard-overview.md); [envelope and empty states](references/olares-dashboard-envelope.md) |
+| `overview cpu|memory|disk|pods|network|fan|gpu|physical|user|ranking` | One section | [overview section meanings](references/olares-dashboard-overview.md); [envelope and capability gates](references/olares-dashboard-envelope.md) |
+| `schema` | Served JSON schemas | `dashboard schema --help` |
+| any metric with watch/window intent | Repeated snapshots / historical window | [watch, windows, NDJSON](references/olares-dashboard-watch.md) |
 
-For `--watch`, `--since` / `--start/--end`, `--user`, `--timezone`, and the NDJSON contract, see [references/olares-dashboard-watch.md](references/olares-dashboard-watch.md).
+## Envelope and capability semantics
 
-## Global flags (cross-cutting)
+- Pin automation to `kind`, `raw`, and `meta.empty_reason`, not table labels.
+- No hardware, no integration, or a capability gate is usually an `exit 0` empty envelope, not a command failure.
+- Aggregate verbs (`overview`, `overview disk|fan|gpu`) exit non-zero only when *every* section carries `meta.error`; a partly degraded envelope is still `exit 0` real data. The envelope reaches stdout either way, so read the per-section error rather than treating the exit code as the whole story.
+- A whole-instance outage surfaces as `HTTP 530` on every section — the Olares is unreachable, so confirm it is online before diagnosing dashboard itself.
+- Fan is meaningful only on Olares One. Stop probing after the device gate says it is unavailable.
+- A hidden GPU sidebar for a non-admin profile is advisory if data is still returned. `vgpu_unavailable` is transient evidence, not proof that the device has no GPU.
 
-Root flags are inherited by every leaf; trust `olares-cli dashboard --help` for the complete list. Defaults are sensible — don't pass `--head`, pagination, time-window, temp-unit, timezone, user, or watch knobs unless the user asks. For watch/window semantics, read [references/olares-dashboard-watch.md](references/olares-dashboard-watch.md).
+## Watch and diagnosis
 
-## Exit codes & error semantics
+- Watch emits repeated snapshots; JSON mode is NDJSON. Ctrl-C ends observation, not any workload.
+- A watch aborts after repeated iteration failures. Separate transient metric collection failure from actual resource pressure.
+- Choose either a relative or absolute time window based on the user's question; do not combine them.
+- Dashboard locates pressure; it does not explain pod scheduling, crashes, image pulls, or entrance failures. Route those to `olares-doctor`.
 
-- **Exit `0`** for every gated / advisory / empty path — these are predictable states, not failures.
-- **Exit non-zero** only on:
-  - Auth-class errors (`ErrTokenInvalidated` / `ErrNotLoggedIn`) — propagated immediately
-  - 3 consecutive iteration failures inside a `--watch` loop
-  - A real upstream `meta.error` on a one-shot invocation
-- **Stderr** carries one human-readable line in non-JSON modes. JSON / NDJSON modes stay silent on stderr — agents read stdout exclusively.
+## Safety and escalation
 
-## Common errors
-
-| Symptom | Cause | Fix |
-|---|---|---|
-| `fan is only available on Olares One devices (current: <device_name>)` (stderr) | Hard gate; `meta.empty_reason=not_olares_one` | Stop probing fan on this device |
-| `(advisory) GPU sidebar entry is hidden for non-admin profiles ...` (stderr) | Soft gate; data still returned | Surface to user as a note; don't treat as error |
-| `gpu data temporarily unavailable: HAMI returned HTTP 500` | `vgpu_unavailable`; transient | Retry; if persistent, file a server-side issue |
-| `--user requires platform-admin role` | Non-admin profile passing `--user` | Use the active profile, or switch with `olares-cli profile use` |
-| `--watch-iterations requires --watch` (or `--watch-interval` / `--watch-timeout` similarly) | Polling knob without gate flag | Add `--watch` or drop the knob |
-| `--since and --start/--end are mutually exclusive` | Both window forms set | Pick one |
-| 401/403 from any dashboard verb | Token rotation / invalidation | See [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) |
-
-For the full auth-error matrix see [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md).
+- Dashboard is read-only, but cross-user metrics require platform-admin authority. Do not switch profiles or broaden the target user without approval.
+- Do not report an empty integration envelope as "healthy" or "zero usage"; preserve its empty reason.
+- Stop and escalate persistent upstream metric errors after a bounded retry, including the affected section and time window.

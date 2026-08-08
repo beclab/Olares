@@ -6,7 +6,7 @@
 Both pipelines run against a **live app** through `olares-cli settings apps domain`, so they need login and an entrance name. Never guess the entrance:
 
 ```bash
-olares-cli settings apps entrances list <app>     # ENTRANCE / STATE / AUTH LEVEL / DOMAIN
+olares-cli settings apps entrances list <app>     # entrance NAME + AUTH LEVEL (its STATE and URL columns read '-')
 ```
 
 **Either pipeline's `domain set` is an app upgrade.** app-service moves the app to `Upgrading` and reconciles asynchronously, which has two consequences in both pipelines: the call is refused with `<op> operation is not allowed for <state> state` while the app is mid-operation, and the routing is live only once the app reads `running` again — not when the command returns.
