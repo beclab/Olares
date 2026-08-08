@@ -2,12 +2,14 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/beclab/Olares/cli/cmd/ctl"
+	"github.com/beclab/Olares/cli/pkg/clierr"
 )
 
 func main() {
@@ -33,6 +35,9 @@ func main() {
 	cmd := ctl.NewDefaultCommand()
 
 	if err := cmd.ExecuteContext(ctx); err != nil {
+		if errors.Is(err, clierr.ErrAlreadyReported) {
+			os.Exit(1)
+		}
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}

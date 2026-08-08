@@ -3,7 +3,6 @@ package market
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -12,10 +11,14 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 
+	"github.com/beclab/Olares/cli/pkg/clierr"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
-var errReported = errors.New("(already reported)")
+// errReported marks a command whose OperationResult has already been
+// printed. cmd/main.go recognises the shared sentinel and exits without
+// appending an error line of its own.
+var errReported = clierr.ErrAlreadyReported
 
 // MarketOptions is the per-command shared option bag. Identity (--user) and
 // transport (--host, --kubeconfig) flags from the legacy `app` tree are gone:
