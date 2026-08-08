@@ -76,6 +76,40 @@ class ValidatorTests(unittest.TestCase):
                 validate.ROOT = original_root
             self.assertTrue(any("container exec" in error for error in errors), errors)
 
+    def test_front_door_may_link_the_shared_models_but_no_other_peer_reference(self):
+        with tempfile.TemporaryDirectory() as directory:
+            # Resolved because the validator resolves every link target before
+            # taking it relative to ROOT, and /var is a symlink on macOS.
+            root = Path(directory).resolve()
+            skill_dir = root / "olares-chart"
+            (skill_dir / "references").mkdir(parents=True)
+            (root / "olares-shared" / "references").mkdir(parents=True)
+            (root / "olares-market" / "references").mkdir(parents=True)
+            (skill_dir / "SKILL.md").write_text(
+                "[platform model](../olares-shared/references/olares-platform.md)\n"
+                "[own reference](references/olares-chart-deploy.md)\n"
+                "[market front door](../olares-market/SKILL.md)\n"
+                "[market charts](../olares-market/references/olares-market-charts.md#download)\n",
+                encoding="utf-8",
+            )
+            # The carve-out is the front door's alone: a reference reaches the
+            # shared models by name, relying on that prerequisite.
+            (skill_dir / "references" / "olares-chart-deploy.md").write_text(
+                "[platform model](../../olares-shared/references/olares-platform.md)\n",
+                encoding="utf-8",
+            )
+            original_root = validate.ROOT
+            validate.ROOT = root
+            try:
+                errors = []
+                validate.validate_structure(skill_dir, errors)
+            finally:
+                validate.ROOT = original_root
+            self.assertEqual(len(errors), 2, errors)
+            joined = "\n".join(errors)
+            self.assertIn("olares-chart/SKILL.md: deep-links olares-market/references", joined)
+            self.assertIn("olares-chart-deploy.md: deep-links olares-shared/references", joined)
+
 
 if __name__ == "__main__":
     unittest.main()

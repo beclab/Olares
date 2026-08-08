@@ -16,6 +16,9 @@ HEADING_RE = re.compile(r"^#{1,6}\s+(.+?)\s*$", re.MULTILINE)
 HTML_ANCHOR_RE = re.compile(r'<a\s+(?:name|id)=["\']([^"\']+)["\']', re.IGNORECASE)
 SKILL_MAX_LINES = 250
 REFERENCE_MAX_LINES = 150
+# The one skill whose references every front door is expected to link directly:
+# it hosts the platform and app-state models the runtime skills read once.
+SHARED_SKILL = "olares-shared"
 REQUIRED_ENTRYPOINT_FACTS = {
     "olares-knowledge/SKILL.md": [
         (
@@ -218,6 +221,11 @@ def validate_structure(skill_dir: Path, errors: list[str]) -> None:
     of the same skill is allowed on purpose -- both ends are already one hop
     from the front door -- but pointing into a peer skill's references lands
     the agent on a file whose prerequisites it has not loaded.
+
+    The SKILL.md is checked too, with one carve-out the README requires: the
+    shared platform and app-state models are linked one hop from every front
+    door, because every runtime skill loads them as prerequisites. Any other
+    peer skill has to be reached through its own SKILL.md.
     """
     skill = skill_dir / "SKILL.md"
     references = sorted(skill_dir.glob("references/*.md"))
@@ -227,7 +235,7 @@ def validate_structure(skill_dir: Path, errors: list[str]) -> None:
         if count > limit:
             errors.append(f"{path.relative_to(ROOT)}: {count} lines exceeds the {limit}-line limit")
 
-    for path in references:
+    for path in [skill] + references:
         for target in LINK_RE.findall(without_fenced_code(path.read_text(encoding="utf-8"))):
             link = unquote(target.split("#", 1)[0]).strip()
             if not link or "://" in link:
@@ -236,11 +244,14 @@ def validate_structure(skill_dir: Path, errors: list[str]) -> None:
                 rel = (path.parent / link).resolve().relative_to(ROOT)
             except ValueError:
                 continue
-            if len(rel.parts) >= 2 and rel.parts[1] == "references" and rel.parts[0] != skill_dir.name:
-                errors.append(
-                    f"{path.relative_to(ROOT)}: deep-links {rel} — reach a peer skill through "
-                    "its SKILL.md, not by pointing into its references"
-                )
+            if len(rel.parts) < 2 or rel.parts[1] != "references" or rel.parts[0] == skill_dir.name:
+                continue
+            if path == skill and rel.parts[0] == SHARED_SKILL:
+                continue
+            errors.append(
+                f"{path.relative_to(ROOT)}: deep-links {rel} — reach a peer skill through "
+                "its SKILL.md, not by pointing into its references"
+            )
 
 
 def main() -> int:
