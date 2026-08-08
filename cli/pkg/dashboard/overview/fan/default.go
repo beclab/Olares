@@ -45,6 +45,10 @@ func RunDefault(ctx context.Context, c *pkgdashboard.Client, cf *pkgdashboard.Co
 	} else if err := WriteSectionsTable(os.Stdout, env, liveErr); err != nil {
 		return err
 	}
+	// Unreachable today, and deliberately kept: curve is computed
+	// locally, so a failed live fetch still leaves one section of real
+	// data and exit 0 is the honest answer. The check is here so the
+	// exit code follows if curve ever becomes a remote read.
 	if pkgdashboard.EverySectionFailed(env) {
 		return pkgdashboard.ErrAlreadyReported
 	}
