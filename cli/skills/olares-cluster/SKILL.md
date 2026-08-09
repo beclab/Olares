@@ -1,6 +1,6 @@
 ---
 name: olares-cluster
-version: 4.5.0
+version: 4.6.0
 description: "Olares ControlHub K8s runtime view via olares-cli cluster — inspect pods, containers, workloads, logs, jobs, cronjobs, namespaces, nodes, and middleware; exec, scale, restart, or delete K8s objects. Use for raw runtime objects and logs, not app lifecycle (market), resource metrics (dashboard), or host install."
 compatibility: Requires olares-cli on PATH and active Olares profile
 metadata:
@@ -40,7 +40,7 @@ Load the shared [platform model](../olares-shared/references/olares-platform.md)
 | `context` | (single verb) | `olares-cli cluster context --help` |
 | `pod` | `list`, `get`, `yaml`, `events`, `logs`, `delete`, `restart`, `exec` | `exec` requires Olares 1.12.7+; [pod operations](references/olares-cluster-pod.md); [exec safety](references/olares-cluster-exec.md) |
 | `container` | `list`, `env`, `logs`, `exec` | `exec` requires Olares 1.12.7+; [exec safety](references/olares-cluster-exec.md) |
-| `workload` (`wl`) | `list`, `images`, `get`, `yaml`, `rollout-status`, `scale`, `restart`, `stop`, `start`, `delete` | [workload operations](references/olares-cluster-workload.md) |
+| `workload` (`wl`) | `list`, `images`, `get`, `yaml`, `rollout-status`, `scale`, `set-image`, `restart`, `stop`, `start`, `delete` | [workload operations](references/olares-cluster-workload.md) |
 | `application` (`app`) | `list`, `get`, `workloads`, `pods`, `status` | [application aggregation](references/olares-cluster-application.md) |
 | `namespace` (alias `ns`) | `list`, `get` | `olares-cli cluster namespace --help` |
 | `node` (alias `nodes`) | `list`, `get` | `olares-cli cluster node --help` |

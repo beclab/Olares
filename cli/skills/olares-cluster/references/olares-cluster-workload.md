@@ -24,6 +24,7 @@
 | `yaml <ns/name> --kind X` | Full K8s-native YAML |
 | `rollout-status <ns/name> --kind X` | Reports whether the rollout has converged (kind-aware). Without `-w`: one GET, exit 0 if converged or 2 if not. With `-w`: poll on `--interval` until converged, `--timeout` (default 10m), or Ctrl-C. Emits only on state change |
 | `scale <ns/name> --kind X --replicas N` | **Destructive.** PATCH merge-patch+json `{"spec":{"replicas":N}}`. DaemonSet rejected. `--replicas=0` triggers `ConfirmDestructive`. `-w` chains into `rollout-status -w` automatically |
+| `set-image <ns/name> --kind X --image REF` | **Destructive.** PATCH **strategic**-merge-patch+json on the container entry (merge key `name`), so sibling containers survive — a plain merge-patch would replace the whole array. `-c` optional when the pod template has exactly one container; initContainers are addressed by the same flag. Records the replaced image + pull policy in the `dev.olares.io/previous-images` annotation for `dev revert`. `--pull-policy` defaults to `IfNotPresent`; `""` leaves it untouched. `-w` chains into `rollout-status -w` |
 | `restart <ns/name> --kind X` | **Destructive.** 3-step: (1) GET selector; (2) GET pods by selector; (3) parallel DELETE pods. `--concurrency` (default 5) bounds parallel deletes. NOT the kubectl `restartedAt` annotation trick |
 | `stop <ns/name> --kind X` | **Destructive.** Alias for `scale --replicas=0`. DaemonSet rejected (delete the workload instead) |
 | `start <ns/name> --kind X --replicas N` | Non-destructive. Alias for `scale --replicas=N`. `--replicas` REQUIRED (no cached previous count). No `--yes` |
@@ -36,6 +37,7 @@ Every destructive verb follows the parent SKILL.md's Mutating verb safety contra
 - **DaemonSet has no `replicas`** — `scale` / `stop` reject it client-side. `start` requires `--replicas` so it implicitly excludes DaemonSet too.
 - **`restart` deletes pods one-by-one (parallel-bounded).** During the operation pods are recreated by the controller. For Deployments with a single replica, this means a brief downtime.
 - **`delete --propagation foreground` waits for the cascade.** Pass `background` only when you intentionally want fire-and-forget.
+- **`set-image` recreates pods.** It is the same disruption as `restart`, plus the new image has to be pullable or already present on the node. Pointing a workload at an image the node cannot obtain leaves it in `ImagePullBackOff` until reverted — check with `cluster workload images <IMAGE>` before and `dev status` after.
 
 ## Examples
 
@@ -58,6 +60,10 @@ olares-cli cluster workload images docker.io/library/nginx:latest
 # Get + watch rollout to convergence.
 olares-cli cluster workload get user-system-alice/api --kind deploy
 olares-cli cluster workload rollout-status user-system-alice/api --kind deploy -w --interval 3s --timeout 5m
+
+# Repoint one container at a different image, then wait for the rollout.
+# The original image + pull policy are recorded for `olares-cli dev revert`.
+olares-cli cluster workload set-image os-framework/app-service --kind sts --image beclab/app-service:dev -w
 
 # Scale + watch (auto-chains into rollout-status).
 olares-cli cluster workload scale user-system-alice/api --kind deploy --replicas 3 -w

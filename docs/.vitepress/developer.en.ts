@@ -384,6 +384,10 @@ export const developerSidebar: DefaultTheme.Sidebar = {
     {
       text: "Contribute to Olares",
       items: [
+        {
+          text: "Test a local build on your Olares",
+          link: "/developer/contribute/dev-deploy",
+        },
         /*
         {
           text: "Develop system app",
