@@ -105,7 +105,7 @@ func TestResolveImageScanKinds(t *testing.T) {
 }
 
 func TestFilterRefsByImageNormalizesAndMatches(t *testing.T) {
-	refs := []workloadImageRef{
+	refs := []ImageRef{
 		{Workload: "web", Image: "docker.io/library/nginx:latest"},
 		{Workload: "cache", Image: "docker.io/library/redis:7"},
 		{Workload: "edge", Image: "nginx"},

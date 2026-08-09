@@ -20,7 +20,7 @@ func TestComputeImageUsageCountsReferences(t *testing.T) {
 		{ID: "sha256:used", RepoTags: []string{"docker.io/example/api:v1", "registry.local/example/api:v1"}},
 		{ID: "sha256:orphan", RepoTags: []string{"docker.io/example/old:v1"}},
 	}
-	refs := []workloadImageRef{
+	refs := []ImageRef{
 		{Workload: "api", Image: "docker.io/example/api:v1"},
 		{Workload: "api-canary", Image: "docker.io/example/api:v1"},
 	}
@@ -47,7 +47,7 @@ func TestComputeImageUsageNormalizesDockerHubShorthand(t *testing.T) {
 	local := []containerdimages.Image{
 		{ID: "sha256:nginx", RepoTags: []string{"docker.io/library/nginx:latest"}},
 	}
-	refs := []workloadImageRef{{Image: "nginx"}}
+	refs := []ImageRef{{Image: "nginx"}}
 
 	usage := computeImageUsage(local, refs)
 
@@ -84,7 +84,7 @@ func TestComputeImageUsageMatchesDigestPinnedReference(t *testing.T) {
 	}
 	// Workload pins by digest against a mirror host so the tag will not
 	// line up — only the digest can prove the image is used.
-	refs := []workloadImageRef{{Image: "registry.local/example/api@" + digest}}
+	refs := []ImageRef{{Image: "registry.local/example/api@" + digest}}
 
 	usage := computeImageUsage(local, refs)
 

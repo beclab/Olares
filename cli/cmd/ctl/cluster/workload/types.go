@@ -133,6 +133,12 @@ type WorkloadPodSpec struct {
 type WorkloadContainer struct {
 	Name  string `json:"name,omitempty"`
 	Image string `json:"image,omitempty"`
+	// ImagePullPolicy is carried so `set-image` can stash the
+	// pre-override value alongside the image and restore both on
+	// revert. Side-loaded dev images need IfNotPresent (there is no
+	// registry to pull them from), which means the verb has to mutate
+	// the policy too — and therefore has to remember it.
+	ImagePullPolicy string `json:"imagePullPolicy,omitempty"`
 }
 
 type WorkloadStatus struct {

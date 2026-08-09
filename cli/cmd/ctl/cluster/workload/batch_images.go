@@ -53,7 +53,7 @@ func fetchBatchImageRefs(
 	p *clusteropts.PaginationOptions,
 	namespace, labelSelector string,
 	kinds []string,
-) ([]workloadImageRef, []workloadImageScan, error) {
+) ([]ImageRef, []workloadImageScan, error) {
 	if len(kinds) == 0 {
 		return nil, nil, nil
 	}
@@ -62,7 +62,7 @@ func fetchBatchImageRefs(
 		return nil, nil, err
 	}
 	var (
-		refs []workloadImageRef
+		refs []ImageRef
 		scan []workloadImageScan
 	)
 	for _, kind := range kinds {
@@ -83,14 +83,14 @@ func fetchBatchImageRefs(
 	return refs, scan, nil
 }
 
-func collectBatchImageRefs(kindPlural string, items []batchWorkload) []workloadImageRef {
-	var refs []workloadImageRef
+func collectBatchImageRefs(kindPlural string, items []batchWorkload) []ImageRef {
+	var refs []ImageRef
 	for _, b := range items {
 		tmpl := b.podTemplate()
 		if tmpl == nil {
 			continue
 		}
-		base := workloadImageRef{
+		base := ImageRef{
 			Namespace: b.Metadata.Namespace,
 			Kind:      nonEmpty(b.Kind, SingularKind(kindPlural)),
 			Workload:  b.Metadata.Name,

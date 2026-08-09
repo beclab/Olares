@@ -83,8 +83,8 @@ Two caveats before you prune:
 // top level of the JSON object.
 type imageUsage struct {
 	containerdimages.Image
-	Refs   int                `json:"refs"`
-	UsedBy []workloadImageRef `json:"used_by,omitempty"`
+	Refs   int        `json:"refs"`
+	UsedBy []ImageRef `json:"used_by,omitempty"`
 }
 
 func runDoctorImages(ctx context.Context, f *cmdutil.Factory, o *clusteropts.ClusterOptions, namespace, labelSelector, registry string, unusedOnly bool) error {
@@ -175,7 +175,7 @@ func sortBySizeDesc(usage []imageUsage) {
 // computeImageUsage joins local images with workload references, counting
 // distinct references per image (digest- and tag-aware) and skipping
 // runtime-pinned pause images. Output is deterministically sorted.
-func computeImageUsage(images []containerdimages.Image, refs []workloadImageRef) []imageUsage {
+func computeImageUsage(images []containerdimages.Image, refs []ImageRef) []imageUsage {
 	keyToRefs := map[string][]int{}
 	for i, ref := range refs {
 		for _, key := range imageMatchKeys(ref.Image) {
