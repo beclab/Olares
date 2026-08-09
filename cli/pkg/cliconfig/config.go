@@ -128,6 +128,39 @@ type ProfileConfig struct {
 	// successful /api/olares-info read that wrote BackendVersion. Surfaced
 	// for diagnostics ("last refreshed" hints); it does NOT drive any TTL.
 	BackendVersionRefreshedAt int64 `json:"backendVersionRefreshedAt,omitempty"`
+
+	// DevNode is the SSH coordinate of this profile's Olares node, used
+	// by `olares-cli dev push --transport ssh` to side-load a locally
+	// built image into the node's containerd. Optional: unset simply
+	// means the ssh transport is unavailable and `--transport auto`
+	// falls through to the next option.
+	//
+	// nil for every profile that has never run `dev node set`.
+	DevNode *DevNodeConfig `json:"devNode,omitempty"`
+}
+
+// DevNodeConfig is how to reach the Olares node over SSH.
+//
+// There is deliberately NO password field. A password would have to be
+// stored either in this world-readable JSON or in the keychain, and the
+// keychain is reserved for the auth tokens that actually gate access to
+// the instance. Key- or agent-based auth is the only supported mode;
+// `pkg/pipelines/join_credentials.go` already treats a key at the
+// conventional path as the default for exactly this reason.
+type DevNodeConfig struct {
+	// Address is the hostname or IP of the node.
+	Address string `json:"address"`
+
+	// Port defaults to 22 when zero.
+	Port int `json:"port,omitempty"`
+
+	// User is the SSH account. It must be able to reach containerd,
+	// which in practice means root or a sudoer.
+	User string `json:"user"`
+
+	// PrivateKeyPath points at the identity file. Empty means "let the
+	// SSH agent decide" (SSH_AUTH_SOCK).
+	PrivateKeyPath string `json:"privateKeyPath,omitempty"`
 }
 
 // ClusterContextCache is the per-profile snapshot of /capi/app/detail

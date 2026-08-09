@@ -9,6 +9,7 @@ import (
 	"github.com/beclab/Olares/cli/cmd/ctl/chart"
 	"github.com/beclab/Olares/cli/cmd/ctl/cluster"
 	"github.com/beclab/Olares/cli/cmd/ctl/dashboard"
+	"github.com/beclab/Olares/cli/cmd/ctl/dev"
 	"github.com/beclab/Olares/cli/cmd/ctl/disk"
 	"github.com/beclab/Olares/cli/cmd/ctl/doctor"
 	"github.com/beclab/Olares/cli/cmd/ctl/files"
@@ -108,6 +109,7 @@ func NewDefaultCommand() *cobra.Command {
 	// Always-on: developer utilities (chart, preinstall) + remote/agent verbs
 	// that go through control-hub.<terminus> via the active profile's token.
 	cmds.AddCommand(chart.NewChartCommand())
+	cmds.AddCommand(dev.NewDevCommand(factory))
 	cmds.AddCommand(preinstall.NewPreinstallCommand())
 	cmds.AddCommand(market.NewMarketCommand(factory))
 	cmds.AddCommand(profile.NewProfileCommand(factory))

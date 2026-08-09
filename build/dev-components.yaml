@@ -1,0 +1,159 @@
+# Component -> image build map, used by the root Makefile's dev-* targets
+# to turn a component name into "which Dockerfile, which context, which
+# image tag" so you can type `make dev-deploy C=app-service` instead of
+# remembering three paths.
+#
+# This mirrors the .github/workflows/module_*_publish_*.yaml files, which
+# remain the source of truth for what actually gets published. Each entry
+# names the workflow it was derived from, and `make dev-validate` checks
+# that every context and dockerfile still exists on disk — so a moved
+# Dockerfile fails loudly here instead of silently building the wrong
+# thing.
+#
+# Fields:
+#   image       repository the released chart references (no tag)
+#   context     docker build context, relative to the repo root
+#   dockerfile  path to the Dockerfile, relative to the repo root
+#   workflow    the publish workflow this entry mirrors
+#
+# The dev tag is not recorded here: `make dev-build` derives it as
+# <image>:dev unless you pass TAG=.
+
+components:
+  app-service:
+    image: beclab/app-service
+    context: framework/app-service
+    dockerfile: framework/app-service/Dockerfile
+    workflow: module_appservice_publish_docker.yaml
+
+  image-service:
+    image: beclab/image-service
+    context: framework/app-service
+    dockerfile: framework/app-service/Dockerfile.image
+    workflow: module_appservice_publish_imageservice.yaml
+
+  mesh-in-agent:
+    image: beclab/mesh-in-agent
+    context: framework/app-service/build/mesh-in-agent
+    dockerfile: framework/app-service/build/mesh-in-agent/Dockerfile
+    workflow: module_appservice_publish_mesh_in_agent.yaml
+
+  mesh-out-agent:
+    image: beclab/mesh-out-agent
+    context: framework/app-service/build/mesh-out-agent
+    dockerfile: framework/app-service/build/mesh-out-agent/Dockerfile
+    workflow: module_appservice_publish_mesh_out_agent.yaml
+
+  linkerd-pki-guardian:
+    image: beclab/linkerd-pki-guardian
+    context: framework/app-gateway
+    dockerfile: framework/app-gateway/cmd/linkerd-pki-guardian/Dockerfile
+    workflow: module_appgateway_publish_pki_guardian.yaml
+
+  backup-server:
+    image: beclab/backup-server
+    context: framework/backup-server
+    dockerfile: framework/backup-server/Dockerfile
+    workflow: module_backup_publish_docker.yaml
+
+  sidecar-backup-sync:
+    image: beclab/sidecar-backup-sync
+    context: framework/backup-server
+    dockerfile: framework/backup-server/Dockerfile.sidecar
+    workflow: module_backup_publish_sidecar.yaml
+
+  bfl:
+    image: beclab/bfl
+    context: framework/bfl
+    dockerfile: framework/bfl/Dockerfile.api
+    workflow: module_bfl_publish_docker.yaml
+
+  frpc:
+    image: beclab/frpc
+    context: framework/bfl
+    dockerfile: framework/bfl/Dockerfile.frpc
+    workflow: module_bfl_publish_frpc.yaml
+
+  integration-server:
+    image: beclab/integration-server
+    context: framework/integration
+    dockerfile: framework/integration/Dockerfile
+    workflow: module_integration_publish_docker.yaml
+
+  kube-state-metrics:
+    image: beclab/kube-state-metrics
+    context: framework/kube-state-metrics
+    dockerfile: framework/kube-state-metrics/Dockerfile
+    workflow: module_kubemetrics_publish_docker.yaml
+
+  ks-apiserver:
+    image: beclab/ks-apiserver
+    context: infrastructure/kubesphere
+    dockerfile: infrastructure/kubesphere/build/ks-apiserver/Dockerfile
+    workflow: module_kubesphere_publish_docker.yaml
+
+  l4-bfl-proxy:
+    image: beclab/l4-bfl-proxy
+    context: framework/l4-bfl-proxy
+    dockerfile: framework/l4-bfl-proxy/Dockerfile
+    workflow: module_l4_publish_docker.yaml
+
+  osnode-init:
+    image: beclab/osnode-init
+    context: framework/osnode-init
+    dockerfile: framework/osnode-init/Dockerfile
+    workflow: module_nodeinit_publish_docker.yaml
+
+  system-server:
+    image: beclab/system-server
+    context: framework/system-server
+    dockerfile: framework/system-server/Dockerfile
+    workflow: module_systemserver_publish_docker.yaml
+
+  provider-proxy:
+    image: beclab/provider-proxy
+    context: framework/system-server
+    dockerfile: framework/system-server/Dockerfile.provider
+    workflow: module_systemserver_publish_proxy.yaml
+
+  citus:
+    image: beclab/citus
+    context: platform/tapr
+    dockerfile: platform/tapr/docker/citus/Dockerfile
+    workflow: module_tapr_publish_citus.yaml
+
+  images-uploader:
+    image: beclab/images-uploader
+    context: platform/tapr
+    dockerfile: platform/tapr/docker/uploader/Dockerfile
+    workflow: module_tapr_publish_image.yaml
+
+  middleware-operator:
+    image: beclab/middleware-operator
+    context: platform/tapr
+    dockerfile: platform/tapr/docker/middleware/Dockerfile
+    workflow: module_tapr_publish_middleware.yaml
+
+  s3rver:
+    image: beclab/s3rver
+    context: platform/tapr
+    dockerfile: platform/tapr/docker/middleware/Dockerfile.s3rver
+    workflow: module_tapr_publish_s3rver.yaml
+
+  sys-event:
+    image: beclab/sys-event
+    context: platform/tapr
+    dockerfile: platform/tapr/docker/sys-event/Dockerfile
+    workflow: module_tapr_publish_sysevent.yaml
+
+  secret-vault:
+    image: beclab/secret-vault
+    context: platform/tapr
+    dockerfile: platform/tapr/docker/vault/Dockerfile
+    workflow: module_tapr_publish_vault.yaml
+
+  ws-gateway:
+    image: beclab/ws-gateway
+    context: platform/tapr
+    dockerfile: platform/tapr/docker/ws-gateway/Dockerfile
+    workflow: module_tapr_publish_wsgateway.yaml
