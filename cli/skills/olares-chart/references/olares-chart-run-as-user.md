@@ -145,4 +145,4 @@ The non-recursive form above sidesteps this whatever the layer turns out to be: 
 
 This red line is about the **runtime** initContainer. An image-build `RUN chown -R` is fine and often necessary — at build time there are no uid-1000-owned subdirectories to trip over.
 
-After any template change, re-run `olares-cli chart lint ./<app>` (the Validate-local (lint) step). When a deployed app misbehaves, the symptom-to-cause routing lives in [`olares-doctor`](../../olares-doctor/SKILL.md), under **Symptom routing** → the crash / permission-error row, which opens [app-crash](../../olares-doctor/references/olares-doctor-app-crash.md); the fixes it points back to are the two questions above.
+After any template change, re-run `olares-cli chart lint ./<app>` (the Validate-local (lint) step). When a deployed app misbehaves, the symptom-to-cause routing lives in [`olares-doctor`](../../olares-doctor/SKILL.md), under **Symptom routing** → the crash / permission-error row; the fixes it points back to are the two questions above.
