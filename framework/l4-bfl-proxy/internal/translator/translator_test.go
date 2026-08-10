@@ -906,8 +906,7 @@ func TestBuildSystemVirtualHost_DesktopWizardVerify_AuthSkipped(t *testing.T) {
 	assert.Equal(t, autheliaVerifyPathPrefix, desktop.Routes[0].ExtAuth.PathPrefix)
 
 	wizard := tr.buildSystemVirtualHost(user, systemServiceDef{Name: "wizard", SvcFormat: "wizard.%s.svc.cluster.local"}, "alice.example.com", false, user.Namespace, clusterSet)
-	require.NotNil(t, wizard.Routes[0].ExtAuth)
-	assert.Equal(t, autheliaVerifyPathPrefix, wizard.Routes[0].ExtAuth.PathPrefix)
+	assert.Nil(t, wizard.Routes[0].ExtAuth, "wizard must not attach ExtAuth (pre-auth activation)")
 
 	auth := tr.buildSystemVirtualHost(user, systemServiceDef{Name: "auth", SvcFormat: "authelia-svc.%s.svc.cluster.local"}, "alice.example.com", false, user.Namespace, clusterSet)
 	assert.Nil(t, auth.Routes[0].ExtAuth, "auth IdP must not attach ExtAuth")
