@@ -245,7 +245,7 @@ spec:
             value: os_framework_search3
       containers:
       - name: search3
-        image: beclab/search3:v0.3.7
+        image: beclab/search3:v0.3.9
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
@@ -310,7 +310,7 @@ spec:
       priorityClassName: "system-cluster-critical"
       containers:
       - name: search3monitor
-        image: beclab/search3monitor:v0.3.8
+        image: beclab/search3monitor:v0.3.9
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8081
@@ -354,6 +354,10 @@ spec:
           value: os.users
         - name: NATS_SUBJECT_SYSTEM_GROUPS
           value: os.groups
+        - name: LOG_MAX_FILE_BYTES
+          value: "16777216"
+        - name: LOG_DIR_MAX_BYTES
+          value: "1073741824"
         volumeMounts:
           - name: fb-data
             mountPath: /appdata
