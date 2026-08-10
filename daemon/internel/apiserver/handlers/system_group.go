@@ -9,6 +9,7 @@ func init() {
 	s := server.API
 	system := s.App.Group("system")
 	system.Get("/status", handlers.RequireLocal(handlers.GetTerminusState))
+	system.Get("/node-status", handlers.RequireAuthorizationOrOwnerSignature(handlers.RequireLocal(handlers.GetNodeStatus)))
 	system.Get("/ifs", handlers.RequireLocal(handlers.GetNetIfs))
 	system.Get("/hosts-file", handlers.RequireMaster(handlers.RequireLocal(handlers.GetHostsfile)))
 	system.Post("/hosts-file", handlers.RequireMaster(handlers.RequireLocal(handlers.PostHostsfile)))

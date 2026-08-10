@@ -12,11 +12,24 @@ import (
 	"k8s.io/klog/v2"
 )
 
-func ValidateJWS(token string) (bool, string, error) {
+// SignedRequest is a verified JWS: who signed it, and what their key covered.
+//
+// Body matters as much as OlaresID. A route that reads only the identity
+// treats every signature as a bearer credential for everything that identity
+// may do; the body is where a caller says which single operation it signed
+// for, so a dangerous route can insist on being named.
+type SignedRequest struct {
+	OlaresID string
+	Body     any
+}
+
+// ValidateJWSDetail verifies a JWS and reports both who signed it and what
+// their key covered.
+func ValidateJWSDetail(token string) (SignedRequest, error) {
 	didServiceURL, err := url.JoinPath(commands.OLARES_REMOTE_SERVICE, "/did/1.0/name/")
 	if err != nil {
 		klog.Errorf("failed to parse DID gate service URL: %v, Olares remote service: %s", err, commands.OLARES_REMOTE_SERVICE)
-		return false, "", err
+		return SignedRequest{}, err
 	}
 
 	// Validate the JWS token with a 20-minute expiration time
@@ -26,13 +39,13 @@ func ValidateJWS(token string) (bool, string, error) {
 			err = fmt.Errorf("%v, server time: %s", err, time.Now().UTC().Format(time.RFC3339))
 		}
 		klog.Errorf("failed to check JWS: %v, on %s", err, didServiceURL)
-		return false, "", err
+		return SignedRequest{}, err
 	}
 
 	if checkJWS == nil {
 		err := fmt.Errorf("JWS validation failed: JWS is nil")
 		klog.Error(err)
-		return false, "", err
+		return SignedRequest{}, err
 	}
 
 	// Convert to JSON with indentation
@@ -42,5 +55,5 @@ func ValidateJWS(token string) (bool, string, error) {
 	}
 
 	klog.Infof("JWS validation successful: %s", string(bytes))
-	return true, checkJWS.OlaresID, nil
+	return SignedRequest{OlaresID: checkJWS.OlaresID, Body: checkJWS.Body}, nil
 }
