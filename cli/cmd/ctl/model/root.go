@@ -28,6 +28,9 @@ status" first if anything here behaves unexpectedly.
   default       which model answers when a request names none
   provider      the upstreams Router routes to, and the models they serve
   app           model applications that run models on this machine
+  key           API keys for software that calls Router
+  quota         spend and rate ceilings on a key, a person, or a model
+  user          the people Router knows
 
 Most of Router's management surface is admin-only. Requires Olares 1.12.6+.
 
@@ -48,5 +51,8 @@ Run "olares-cli model <verb> --help" for details.
 	cmd.AddCommand(NewDefaultCommand(f))
 	cmd.AddCommand(NewProviderCommand(f))
 	cmd.AddCommand(NewAppCommand(f))
+	cmd.AddCommand(NewKeyCommand(f))
+	cmd.AddCommand(NewQuotaCommand(f))
+	cmd.AddCommand(NewUserCommand(f))
 	return cmd
 }

@@ -147,6 +147,17 @@ func TestSkillCommandPathsExist(t *testing.T) {
 		"model app uninstall",
 		"model app tasks",
 		"model app watch",
+		"model key",
+		"model key list",
+		"model key issue",
+		"model key update",
+		"model key revoke",
+		"model quota",
+		"model quota list",
+		"model quota set",
+		"model quota clear",
+		"model user",
+		"model user list",
 	}
 
 	root := NewDefaultCommand()
