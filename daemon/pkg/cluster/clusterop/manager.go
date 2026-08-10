@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -217,6 +218,7 @@ type CreateRequest struct {
 	Target    string
 	ClusterID string
 	Owner     string
+	Params    json.RawMessage
 	Creds     Credentials
 }
 
@@ -415,12 +417,17 @@ func (m *Manager) confirmRebootWhenReady(id, boot string) {
 	}
 }
 
-func sameIntent(op *Operation, req CreateRequest, opType Type) bool {
+func sameIntent(op *Operation, req CreateRequest, opType Type, paramsDigest, emptyParamsDigest string) bool {
+	storedDigest := op.ParamsDigest
+	if storedDigest == "" {
+		storedDigest = emptyParamsDigest
+	}
 	return op.Owner == req.Owner &&
 		op.Type == opType &&
 		op.Scope == req.Scope &&
 		op.Target == req.Target &&
-		op.ClusterID == req.ClusterID
+		op.ClusterID == req.ClusterID &&
+		storedDigest == paramsDigest
 }
 
 // Create starts a cluster power operation, or returns the one this request
@@ -438,11 +445,19 @@ func (m *Manager) Create(_ context.Context, req CreateRequest) (Operation, error
 	if strings.TrimSpace(req.Owner) == "" {
 		return Operation{}, ErrOwnerRequired
 	}
+	paramsDigest, err := DigestParams(req.Params)
+	if err != nil {
+		return Operation{}, err
+	}
+	emptyParamsDigest, err := DigestParams(nil)
+	if err != nil {
+		return Operation{}, err
+	}
 
 	m.mu.Lock()
 	if id, ok := m.byRequest[req.RequestID]; ok {
 		existing := m.ops[id]
-		if !sameIntent(existing, req, opType) {
+		if !sameIntent(existing, req, opType, paramsDigest, emptyParamsDigest) {
 			m.mu.Unlock()
 			return Operation{}, &RequestConflictError{RequestID: req.RequestID, ExistingID: id}
 		}
@@ -458,18 +473,19 @@ func (m *Manager) Create(_ context.Context, req CreateRequest) (Operation, error
 
 	at := m.deps.Now()
 	op := &Operation{
-		ID:        m.deps.NewID(),
-		Type:      opType,
-		RequestID: req.RequestID,
-		Scope:     req.Scope,
-		Target:    req.Target,
-		ClusterID: req.ClusterID,
-		Owner:     req.Owner,
-		Status:    StatusPending,
-		CreatedAt: at,
-		UpdatedAt: at,
-		Steps:     []Step{},
-		Nodes:     []NodeResult{},
+		ID:           m.deps.NewID(),
+		Type:         opType,
+		RequestID:    req.RequestID,
+		Scope:        req.Scope,
+		Target:       req.Target,
+		ClusterID:    req.ClusterID,
+		Owner:        req.Owner,
+		ParamsDigest: paramsDigest,
+		Status:       StatusPending,
+		CreatedAt:    at,
+		UpdatedAt:    at,
+		Steps:        []Step{},
+		Nodes:        []NodeResult{},
 	}
 	m.ops[op.ID] = op
 	m.order = append(m.order, op.ID)

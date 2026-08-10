@@ -2,9 +2,12 @@ package clusterop
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
+	"reflect"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -536,6 +539,69 @@ func TestCreateRejectsAReusedRequestIDWithDifferentIntent(t *testing.T) {
 	}
 }
 
+func TestCreateRejectsSameRequestIDWithDifferentParams(t *testing.T) {
+	c := newCluster(master("master-1", "10.0.0.1"))
+	m, _ := newManager(t, c)
+	first := CreateRequest{
+		Type:      TypeReboot,
+		RequestID: "client-params",
+		Scope:     ScopeNode,
+		Target:    "master-1",
+		ClusterID: "cluster-1",
+		Owner:     "alice@olares.com",
+		Params:    json.RawMessage(`{"value":1}`),
+	}
+	if _, err := m.Create(context.Background(), first); err != nil {
+		t.Fatal(err)
+	}
+
+	second := first
+	second.Params = json.RawMessage(`{"value":2}`)
+	_, err := m.Create(context.Background(), second)
+	var conflict *RequestConflictError
+	if !errors.As(err, &conflict) {
+		t.Fatalf("Create() error = %v, want RequestConflictError", err)
+	}
+}
+
+func TestCreatePersistsParamsDigestWithoutRawParams(t *testing.T) {
+	c := newCluster(master("master-1", "10.0.0.1"))
+	m, dir := newManager(t, c)
+	req := CreateRequest{
+		Type:      TypeReboot,
+		RequestID: "client-digest",
+		Scope:     ScopeNode,
+		Target:    "master-1",
+		ClusterID: "cluster-1",
+		Owner:     "alice@olares.com",
+		Params:    json.RawMessage(`{"password":"secret","value":1}`),
+	}
+	op, err := m.Create(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if op.ParamsDigest == "" {
+		t.Fatal("Create() returned an empty params digest")
+	}
+	if _, ok := reflect.TypeOf(op).FieldByName("Params"); ok {
+		t.Fatal("Operation must not carry raw params")
+	}
+
+	data, err := os.ReadFile(filepath.Join(dir, op.ID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), `"paramsDigest"`) {
+		t.Fatalf("persisted JSON = %s, want paramsDigest", data)
+	}
+	if strings.Contains(string(data), `"params":`) {
+		t.Fatalf("persisted JSON leaked params field: %s", data)
+	}
+	if strings.Contains(string(data), "secret") || strings.Contains(string(data), `"value":1`) {
+		t.Fatalf("persisted JSON leaked raw params: %s", data)
+	}
+}
+
 func TestGetByRequestSurvivesRestartAndReturnsACopy(t *testing.T) {
 	c := newCluster(master("master-1", "10.0.0.1"))
 	m, dir := newManager(t, c)
@@ -550,6 +616,38 @@ func TestGetByRequestSurvivesRestartAndReturnsACopy(t *testing.T) {
 	again, _ := restarted.GetByRequest("client/request 1")
 	if again.RequestID != "client/request 1" {
 		t.Fatal("a caller wrote back into the request index")
+	}
+}
+
+func TestOperationJSONBackwardCompatibleWithoutModuleState(t *testing.T) {
+	data := []byte(`{"id":"op-1","type":"reboot","requestId":"request-1","owner":"alice@olares.com","status":"pending","createdAt":"2024-01-01T00:00:00Z","updatedAt":"2024-01-01T00:00:00Z","steps":[],"nodes":[]}`)
+	var op Operation
+	if err := json.Unmarshal(data, &op); err != nil {
+		t.Fatal(err)
+	}
+	if len(op.ModuleState) != 0 {
+		t.Fatalf("moduleState = %s, want empty", op.ModuleState)
+	}
+
+	op.ModuleState = json.RawMessage(`{"resume":"ok"}`)
+	encoded, err := json.Marshal(op)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(encoded), `"moduleState":{"resume":"ok"}`) {
+		t.Fatalf("marshaled JSON = %s, want moduleState", encoded)
+	}
+}
+
+func TestOperationCloneCopiesModuleState(t *testing.T) {
+	op := Operation{ModuleState: json.RawMessage(`{"resume":"ok"}`)}
+	cloned := op.Clone()
+	if string(cloned.ModuleState) != `{"resume":"ok"}` {
+		t.Fatalf("Clone() moduleState = %s", cloned.ModuleState)
+	}
+	cloned.ModuleState[0] = '['
+	if string(op.ModuleState) != `{"resume":"ok"}` {
+		t.Fatalf("Clone() shared moduleState backing bytes: %s", op.ModuleState)
 	}
 }
 
@@ -870,6 +968,60 @@ func TestRestoredRequestIDKeepsCreateIdempotentAndUnambiguous(t *testing.T) {
 	var conflict *RequestConflictError
 	if !errors.As(err, &conflict) || conflict.ExistingID != first.ID {
 		t.Fatalf("different intent err = %v, want conflict with %s", err, first.ID)
+	}
+}
+
+func TestRestoredEmptyParamsDigestMatchesOnlyEmptyParams(t *testing.T) {
+	c := newCluster(master("master-1", "10.0.0.1"))
+	dir := filepath.Join(t.TempDir(), "operations")
+	deps := c.deps(t, dir)
+	now := deps.Now()
+	if err := deps.Store.Save(Operation{
+		ID:        "op-legacy",
+		Type:      TypeReboot,
+		RequestID: "request-legacy",
+		Scope:     ScopeCluster,
+		ClusterID: "cluster-1",
+		Owner:     "alice@olares.com",
+		Status:    StatusSucceeded,
+		CreatedAt: now,
+		UpdatedAt: now,
+		Steps:     []Step{},
+		Nodes:     []NodeResult{},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	m, err := NewManager(deps)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	same, err := m.Create(context.Background(), CreateRequest{
+		Type:      TypeReboot,
+		RequestID: "request-legacy",
+		Scope:     ScopeCluster,
+		ClusterID: "cluster-1",
+		Owner:     "alice@olares.com",
+	})
+	if err != nil {
+		t.Fatalf("empty params retry after restart: %v", err)
+	}
+	if same.ID != "op-legacy" {
+		t.Fatalf("same request returned %s, want op-legacy", same.ID)
+	}
+
+	_, err = m.Create(context.Background(), CreateRequest{
+		Type:      TypeReboot,
+		RequestID: "request-legacy",
+		Scope:     ScopeCluster,
+		ClusterID: "cluster-1",
+		Owner:     "alice@olares.com",
+		Params:    json.RawMessage(`{"value":1}`),
+	})
+	var conflict *RequestConflictError
+	if !errors.As(err, &conflict) || conflict.ExistingID != "op-legacy" {
+		t.Fatalf("non-empty params err = %v, want conflict with op-legacy", err)
 	}
 }
 

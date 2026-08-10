@@ -10,6 +10,7 @@
 package clusterop
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -189,6 +190,10 @@ type Operation struct {
 	// idempotency key, so one owner's retry can never join another's run.
 	Owner string `json:"owner"`
 
+	// ParamsDigest is the caller intent hash for module params. The raw params
+	// are never written to the operation record.
+	ParamsDigest string `json:"paramsDigest,omitempty"`
+
 	Status     Status     `json:"status"`
 	Code       string     `json:"code,omitempty"`
 	Error      string     `json:"error,omitempty"`
@@ -208,6 +213,10 @@ type Operation struct {
 	// may outlive this daemon, so the deadline cannot live only in Manager.
 	CommandIssuedUntil time.Time `json:"commandIssuedUntil,omitempty"`
 
+	// ModuleState is optional restart evidence for a module. It must never
+	// contain raw params or secrets.
+	ModuleState json.RawMessage `json:"moduleState,omitempty"`
+
 	Steps []Step       `json:"steps"`
 	Nodes []NodeResult `json:"nodes"`
 }
@@ -216,6 +225,9 @@ type Operation struct {
 // handed to a caller cannot be written back into the stored record.
 func (o Operation) Clone() Operation {
 	out := o
+	if o.ModuleState != nil {
+		out.ModuleState = append(json.RawMessage(nil), o.ModuleState...)
+	}
 	if o.Steps != nil {
 		out.Steps = append([]Step(nil), o.Steps...)
 	}
