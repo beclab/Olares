@@ -3,6 +3,16 @@ import { defineConfig, type DefaultTheme } from "vitepress";
 export const useCaseSidebar: DefaultTheme.Sidebar = {
     "/use-cases/": [
         {
+          text: "Olares essentials",
+          collapsed: false,
+          items: [
+            {
+              text: "Local LLMs",
+              link: "/use-cases/llm-base-apps",
+            },
+          ],
+        },
+        {
           text: "AI",
           collapsed: false,
           items: [
@@ -240,10 +250,6 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "Model services",
               collapsed: true,
               items: [
-                {
-                  text: "Engine Base apps",
-                  link: "/use-cases/llm-base-apps",
-                },
                 {
                   text: "Ollama",
                   link: "/use-cases/ollama",

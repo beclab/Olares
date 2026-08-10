@@ -85,6 +85,11 @@ Explore how Olares works, build for the platform, and discover real-world workfl
 Find answers when you're stuck, and join the community to share setups and stay up to date.
 
 <div class="doc-map">
+  <a class="doc-map-card" href="./release-notes">
+    <span class="doc-map-icon"><span class="material-symbols-outlined">fiber_new</span></span>
+    <span class="doc-map-title">What's new in docs</span>
+    <span class="doc-map-desc">Track new guides, updates, and deprecations after each Olares release</span>
+  </a>
   <a class="doc-map-card" href="./help/olares">
     <span class="doc-map-icon"><span class="material-symbols-outlined">help</span></span>
     <span class="doc-map-title">Help &amp; troubleshooting</span>

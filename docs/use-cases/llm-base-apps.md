@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-title: Host local LLMs with Engine Base apps
+title: Run local AI models with Engine Base apps
 description: Learn how to use the Engine Base applications on Olares to self-host large language models and run different inference engines by cloning the base apps.
 head:
   - - meta
@@ -8,7 +8,7 @@ head:
       content: Olares, Model Console, Engine Base, self-hosted LLM, vLLM, llama.cpp, SGLang, run LLM locally
 ---
 
-# Host local large language models with Engine Base apps
+# Run local LLMs with Ollama, vLLM, llama.cpp, and SGLang
 
 Olares v1.12.6 introduces **Model Console**, a platform that manages the full lifecycle of local large language models (LLMs). This platform provides four Engine Base applications, each built on a different inference engine: **Ollama Engine Base**, **vLLM Engine Base**, **llama.cpp Engine Base**, and **SGLang Engine Base**.
 
