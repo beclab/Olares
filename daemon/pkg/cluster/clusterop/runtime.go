@@ -77,10 +77,38 @@ type operationRuntime struct {
 	ctx context.Context
 }
 
-// newRuntime binds a Runtime to one operation for the lifetime of one Run (or
-// future Recover) call.
+// newRuntime binds a Runtime to one operation for the lifetime of one Run or
+// Recover call.
 func newRuntime(m *Manager, id string, ctx context.Context) Runtime {
 	return &operationRuntime{m: m, id: id, ctx: ctx}
+}
+
+// managedRuntime is the manager's own Runtime, as the modules built into
+// this package need it. Sequencing a power operation takes side effects
+// Runtime deliberately does not expose — the node directory, the fan-out,
+// the cluster's own view of itself, this machine's power point — because a
+// module has no business reaching past the operation it was handed. A
+// built-in module asks for them by asserting this unexported interface, so
+// what it can reach is still decided here rather than by whoever wrote the
+// module.
+type managedRuntime interface {
+	Runtime
+	managed() (*Manager, string)
+}
+
+func (rt *operationRuntime) managed() (*Manager, string) { return rt.m, rt.id }
+
+// managerOf names the manager and the operation behind rt. ok is false for
+// any Runtime this manager did not create, which is the answer a module has
+// to act on rather than work around: nothing else can carry out a power
+// operation.
+func managerOf(rt Runtime) (m *Manager, id string, ok bool) {
+	managed, ok := rt.(managedRuntime)
+	if !ok {
+		return nil, "", false
+	}
+	m, id = managed.managed()
+	return m, id, m != nil
 }
 
 func (rt *operationRuntime) Operation() (Operation, bool) {
@@ -115,7 +143,11 @@ func (rt *operationRuntime) FinishStep(name string, status StepStatus, code, rea
 		if step == nil {
 			return ErrStepNotFound
 		}
-		if step.Status != StepRunning {
+		// A command_issued step is still open: it says a command was handed
+		// out and its result is not known yet, which is exactly what a
+		// RecoverableModule comes back to settle. Every other non-running
+		// status is a stage that has already reported what it did.
+		if step.Status != StepRunning && step.Status != StepCommandIssued {
 			return ErrStepSettled
 		}
 		return nil
@@ -164,7 +196,10 @@ func (rt *operationRuntime) UpdateNode(name string, mutate func(*NodeResult)) er
 		return err
 	}
 
-	after := before
+	// The copy mutate is handed is a deep one: a NodeResult keeps its times
+	// behind pointers, and a callback writing a timestamp in place would
+	// otherwise change the very snapshot the commit below compares against.
+	after := cloneNode(before)
 	mutate(&after)
 
 	return rt.m.replaceNode(rt.id, name, before, after)

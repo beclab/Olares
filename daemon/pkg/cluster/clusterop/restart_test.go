@@ -9,7 +9,7 @@ import (
 	"github.com/beclab/Olares/daemon/pkg/cluster/inventory"
 )
 
-// rebootProgress is the whole proof that a node restarted, and it is a pure
+// restartProgress is the whole proof that a node restarted, and it is a pure
 // function of what the cluster reports so it can be stated exhaustively.
 func TestRebootProgressReadsTheClustersOwnView(t *testing.T) {
 	const baseline = "boot-1"
@@ -51,7 +51,7 @@ func TestRebootProgressReadsTheClustersOwnView(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			down, up := rebootProgress(tc.obs, tc.present, baseline)
+			down, up := restartProgress(tc.obs, tc.present, baseline)
 			if down != tc.down || up != tc.up {
 				t.Errorf("down=%v up=%v, want down=%v up=%v", down, up, tc.down, tc.up)
 			}

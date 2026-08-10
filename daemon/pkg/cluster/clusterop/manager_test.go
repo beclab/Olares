@@ -1139,7 +1139,7 @@ func TestPersistenceFailureStopsBeforePoweringTheControlNode(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	m.powerMaster(context.Background(), op.ID, plan{master: control}, TypeReboot, false)
+	m.powerMaster(context.Background(), op.ID, plan{master: control}, rebootSpec, false)
 
 	_, powered := c.counts()
 	if powered != 0 {

@@ -185,6 +185,51 @@ func TestRuntimeRejectsDuplicateStepCompletion(t *testing.T) {
 	}
 }
 
+// A command_issued step is the one stage a RecoverableModule exists to
+// settle: the command was handed out, and what it did is only knowable
+// later. Refusing to finish it would leave a confirmed operation whose own
+// record still says the command is outstanding.
+func TestRuntimeFinishStepSettlesACommandIssuedStep(t *testing.T) {
+	rt, m, id := newTestRuntime(t, StatusRunning)
+	if err := rt.StartStep(StepMasterCommand); err != nil {
+		t.Fatal(err)
+	}
+	if err := rt.FinishStep(StepMasterCommand, StepCommandIssued, "", ""); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := rt.FinishStep(StepMasterCommand, StepSucceeded, "", ""); err != nil {
+		t.Fatalf("FinishStep() on a command_issued step = %v, want it settled", err)
+	}
+	got, _ := m.Get(id)
+	if got.Steps[0].Status != StepSucceeded {
+		t.Fatalf("Steps[0].Status = %q, want succeeded", got.Steps[0].Status)
+	}
+}
+
+// FinishedAt says when the operation settled. A command_issued record
+// already carries one, and promoting it to a final status once the outcome
+// is known has to move it to the moment that outcome was established — the
+// alternative reports a reboot as having finished before the machine was
+// even told to go down.
+func TestRuntimeCompleteRestampsFinishedAtOnACommandIssuedRecord(t *testing.T) {
+	rt, m, id := buildCommandIssuedRuntime(t, time.Hour)
+	before, _ := m.Get(id)
+	if before.FinishedAt == nil {
+		t.Fatal("a command_issued record must already say when it settled")
+	}
+
+	if err := rt.Complete(Outcome{Status: StatusSucceeded}); err != nil {
+		t.Fatal(err)
+	}
+
+	after, _ := m.Get(id)
+	if after.FinishedAt == nil || !after.FinishedAt.After(*before.FinishedAt) {
+		t.Fatalf("FinishedAt = %v, want the moment the reboot was confirmed (after %v)",
+			after.FinishedAt, before.FinishedAt)
+	}
+}
+
 func TestRuntimeUpdateNodeRejectsUnknownNode(t *testing.T) {
 	rt := newRuntimeWithOperation(t, StatusRunning)
 	err := rt.UpdateNode("missing", func(*NodeResult) {})
@@ -298,6 +343,73 @@ func TestRuntimeUpdateNodeRejectsConcurrentChange(t *testing.T) {
 	got, _ := m.Get(id)
 	if got.Nodes[0].Status != NodeCommandIssued {
 		t.Fatalf("Nodes[0].Status = %q, want the concurrent writer's committed value preserved", got.Nodes[0].Status)
+	}
+}
+
+// UpdateNode promises mutate runs against a private copy. A NodeResult
+// carries its times behind pointers, so "private" has to mean the times too:
+// otherwise a module writing a timestamp through the pointer it was handed
+// reaches straight into the stored record, with no lock held, no validation
+// and nothing written to disk.
+func TestRuntimeUpdateNodeMutateCannotWriteThroughTheTimeItWasHanded(t *testing.T) {
+	rt, m, id := newTestRuntime(t, StatusRunning)
+	at := time.Unix(1700000000, 0).UTC()
+	if err := rt.InitNodes([]NodeResult{{
+		NodeName: "node-a", Role: inventory.RoleWorker, Status: NodeCommandIssued, FinishedAt: &at,
+	}}); err != nil {
+		t.Fatal(err)
+	}
+
+	var duringMutate time.Time
+	if err := rt.UpdateNode("node-a", func(n *NodeResult) {
+		*n.FinishedAt = at.Add(time.Hour)
+		current, _ := rt.Operation()
+		duringMutate = *current.Nodes[0].FinishedAt
+	}); err != nil {
+		t.Fatalf("UpdateNode() = %v", err)
+	}
+
+	if !duringMutate.Equal(at) {
+		t.Errorf("stored FinishedAt during mutate = %v, want the record untouched at %v", duringMutate, at)
+	}
+	got, _ := m.Get(id)
+	if !got.Nodes[0].FinishedAt.Equal(at.Add(time.Hour)) {
+		t.Errorf("committed FinishedAt = %v, want the mutation applied through the commit", got.Nodes[0].FinishedAt)
+	}
+}
+
+// The compare-and-replace exists to catch a writer whose change would
+// otherwise be lost. Two timestamps that say the same moment are not such a
+// change, and refusing an update because somebody rewrote a pointer would be
+// a conflict a caller can neither see nor act on.
+func TestRuntimeUpdateNodeComparesNodesByValueRatherThanPointerIdentity(t *testing.T) {
+	rt, m, id := newTestRuntime(t, StatusRunning)
+	at := time.Unix(1700000000, 0).UTC()
+	if err := rt.InitNodes([]NodeResult{{
+		NodeName: "node-a", Role: inventory.RoleWorker, Status: NodeCommandIssued, FinishedAt: &at,
+	}}); err != nil {
+		t.Fatal(err)
+	}
+
+	before, err := m.snapshotNode(id, "node-a")
+	if err != nil {
+		t.Fatal(err)
+	}
+	same := *before.FinishedAt
+	rewritten := before
+	rewritten.FinishedAt = &same
+	if err := m.replaceNode(id, "node-a", before, rewritten); err != nil {
+		t.Fatalf("replaceNode() rewriting a timestamp to the same moment = %v", err)
+	}
+
+	next := before
+	next.Status = NodeRestarted
+	if err := m.replaceNode(id, "node-a", before, next); err != nil {
+		t.Fatalf("replaceNode() against an unchanged node = %v, want it committed", err)
+	}
+	got, _ := m.Get(id)
+	if got.Nodes[0].Status != NodeRestarted {
+		t.Errorf("Nodes[0].Status = %q, want restarted", got.Nodes[0].Status)
 	}
 }
 

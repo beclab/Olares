@@ -19,10 +19,7 @@ import (
 // defaultRetention bounds how many operation records the state directory
 // keeps. Records are tiny and a cluster performs very few power operations,
 // but a daemon that runs for years must not accumulate them without limit.
-const (
-	defaultRetention   = 20
-	observationTimeout = 10 * time.Second
-)
+const defaultRetention = 20
 
 // Credentials authorize one run. They are passed to the seams that talk to
 // other nodes and are never written anywhere: no field of Operation can hold
@@ -256,6 +253,12 @@ func (e *RequestConflictError) Error() string {
 type Manager struct {
 	deps Deps
 
+	// registry is the one module set this manager answers from. Creating,
+	// running, reporting a phase for and recovering an operation all look
+	// the type up here, so a manager can never carry an operation out
+	// through a module that a different part of it would not recognize.
+	registry *ModuleRegistry
+
 	mu            sync.Mutex
 	ops           map[string]*Operation
 	order         []string
@@ -264,8 +267,20 @@ type Manager struct {
 	persistFailed map[string]bool
 }
 
-// NewManager loads the recorded operations and returns a manager over them.
+// NewManager loads the recorded operations and returns a manager over the
+// modules built into this daemon.
 func NewManager(deps Deps) (*Manager, error) {
+	return NewManagerWithRegistry(deps, DefaultRegistry())
+}
+
+// NewManagerWithRegistry is NewManager over an explicit set of modules. It is
+// how a test drives the manager against a module of its own; the daemon
+// passes the default registry, which is where the built-in power operations
+// register themselves.
+func NewManagerWithRegistry(deps Deps, registry *ModuleRegistry) (*Manager, error) {
+	if registry == nil {
+		return nil, errors.New("cluster operation manager is missing: ModuleRegistry")
+	}
 	if err := deps.validate(); err != nil {
 		return nil, err
 	}
@@ -273,6 +288,7 @@ func NewManager(deps Deps) (*Manager, error) {
 
 	m := &Manager{
 		deps:          deps,
+		registry:      registry,
 		ops:           map[string]*Operation{},
 		byRequest:     map[string]string{},
 		persistFailed: map[string]bool{},
@@ -282,13 +298,7 @@ func NewManager(deps Deps) (*Manager, error) {
 	if err != nil {
 		return nil, fmt.Errorf("load cluster operations: %w", err)
 	}
-	boot, err := deps.HostBootID()
-	if err != nil {
-		// Without a boot id nothing is promoted. Reporting a reboot that may
-		// not have happened is worse than leaving it at command_issued.
-		klog.Warningf("clusterop: read this machine's boot id: %v", err)
-	}
-	var pendingReboots []string
+	var unfinished []string
 	for i := range stored {
 		op := stored[i]
 		switch {
@@ -297,8 +307,11 @@ func NewManager(deps Deps) (*Manager, error) {
 			if err := deps.Store.Save(op); err != nil {
 				klog.Warningf("clusterop: record interrupted operation %s: %v", op.ID, err)
 			}
-		case rebootChangedBoot(&op, boot):
-			pendingReboots = append(pendingReboots, op.ID)
+		case op.Status == StatusCommandIssued:
+			// The command outlived the daemon that issued it, and what it
+			// did is only knowable from outside. Whether that is knowable at
+			// all is the module's answer, not this one's.
+			unfinished = append(unfinished, op.ID)
 		}
 		if id, ok := m.byRequest[op.RequestID]; ok && id != op.ID {
 			return nil, fmt.Errorf("load cluster operations: %w", &RequestConflictError{
@@ -312,15 +325,35 @@ func NewManager(deps Deps) (*Manager, error) {
 			m.activeID = op.ID
 		}
 	}
-	for _, id := range pendingReboots {
-		go m.confirmRebootWhenReady(id, boot)
+	for _, id := range unfinished {
+		m.resume(id)
 	}
 	return m, nil
 }
 
-func rebootChangedBoot(op *Operation, boot string) bool {
-	return op.Type == TypeReboot && op.Status == StatusCommandIssued &&
-		boot != "" && op.HostBootID != "" && boot != op.HostBootID
+// resume hands an operation whose command outlived this daemon back to the
+// module that issued it. Only that module knows what evidence would settle
+// it, and a module that offers no recovery leaves the record exactly as it
+// was found — which is the only honest answer for a machine that was told to
+// switch off.
+//
+// It is called from NewManagerWithRegistry, before the manager is reachable
+// by anything else; the goroutine it starts reaches the record the same way
+// every other caller does.
+func (m *Manager) resume(id string) {
+	op, ok := m.ops[id]
+	if !ok {
+		return
+	}
+	module, ok := m.registry.Lookup(op.Type)
+	if !ok {
+		return
+	}
+	recoverable, ok := module.(RecoverableModule)
+	if !ok {
+		return
+	}
+	go recoverable.Recover(m.deps.Base, newRuntime(m, id, m.deps.Base), op.Clone())
 }
 
 // markInterrupted settles an operation that was still moving when olaresd
@@ -350,75 +383,6 @@ func (m *Manager) markInterrupted(op *Operation) {
 	}
 }
 
-// confirmReboot promotes a control-node reboot that this daemon can prove
-// happened. The proof is the machine being on a different boot than the one
-// recorded before the command was issued; olaresd restarting on the same boot
-// proves nothing, and a shutdown is never promoted at all — the machine being
-// on again means somebody turned it back on, not that the operation succeeded.
-func (m *Manager) confirmReboot(op *Operation, boot string,
-	observed map[string]inventory.Observation) bool {
-	if !rebootChangedBoot(op, boot) {
-		return false
-	}
-	if !controlNodeReady(op, boot, observed) {
-		return false
-	}
-
-	at := m.deps.Now()
-	op.Status = StatusSucceeded
-	op.UpdatedAt = at
-	op.FinishedAt = &at
-	for i := range op.Steps {
-		if op.Steps[i].Name == StepMasterCommand && op.Steps[i].Status == StepCommandIssued {
-			op.Steps[i].Status = StepSucceeded
-			op.Steps[i].FinishedAt = &at
-		}
-	}
-	for i := range op.Nodes {
-		if op.Nodes[i].Status == NodeCommandIssued && op.Nodes[i].Role == inventory.RoleMaster {
-			op.Nodes[i].Status = NodeRestarted
-			op.Nodes[i].FinishedAt = &at
-		}
-	}
-	return true
-}
-
-func controlNodeReady(op *Operation, boot string,
-	observed map[string]inventory.Observation) bool {
-	for _, node := range op.Nodes {
-		if node.Role != inventory.RoleMaster {
-			continue
-		}
-		obs, ok := observed[node.NodeName]
-		return ok && obs.Ready && obs.BootID == boot
-	}
-	return false
-}
-
-func (m *Manager) confirmRebootWhenReady(id, boot string) {
-	deadline := m.deps.Now().Add(m.deps.Timeouts.Ready)
-	for m.deps.Now().Before(deadline) {
-		observeCtx, cancel := context.WithTimeout(m.deps.Base, observationTimeout)
-		observed, err := m.deps.Observe(observeCtx)
-		cancel()
-		if err == nil {
-			op, ok := m.Get(id)
-			if !ok || op.Status != StatusCommandIssued {
-				return
-			}
-			if controlNodeReady(&op, boot, observed) {
-				m.update(id, func(stored *Operation) {
-					m.confirmReboot(stored, boot, observed)
-				})
-				return
-			}
-		}
-		if err := m.deps.Sleep(m.deps.Base, m.deps.Timeouts.Poll); err != nil {
-			return
-		}
-	}
-}
-
 func sameIntent(op *Operation, req CreateRequest, opType Type, paramsDigest, emptyParamsDigest string) bool {
 	storedDigest := op.ParamsDigest
 	if storedDigest == "" {
@@ -437,9 +401,15 @@ func sameIntent(op *Operation, req CreateRequest, opType Type, paramsDigest, emp
 // commands themselves are issued by the run it launches.
 // The caller's context is deliberately unused: see Deps.Base.
 func (m *Manager) Create(_ context.Context, req CreateRequest) (Operation, error) {
-	opType, err := ParseType(string(req.Type))
+	opType, err := m.registry.Parse(string(req.Type))
 	if err != nil {
 		return Operation{}, err
+	}
+	module, ok := m.registry.Lookup(opType)
+	if !ok {
+		// Parse only accepts a type this registry holds, so reaching here
+		// means it lost the module in between.
+		return Operation{}, fmt.Errorf("unsupported cluster operation type %q", req.Type)
 	}
 	if strings.TrimSpace(req.RequestID) == "" {
 		return Operation{}, ErrRequestIDRequired
@@ -449,6 +419,12 @@ func (m *Manager) Create(_ context.Context, req CreateRequest) (Operation, error
 	}
 	paramsDigest, err := DigestParams(req.Params)
 	if err != nil {
+		return Operation{}, err
+	}
+	// Asked before anything is recorded or started: what the module cannot
+	// carry out must not become an operation that exists, holds the
+	// cluster's single-operation lock, and then fails.
+	if err := module.Validate(req); err != nil {
 		return Operation{}, err
 	}
 
@@ -502,8 +478,10 @@ func (m *Manager) Create(_ context.Context, req CreateRequest) (Operation, error
 	m.mu.Unlock()
 
 	// Detached from the request: the caller polls by id, and a browser that
-	// navigates away must not cancel a reboot half way through.
-	go m.run(m.deps.Base, created.ID, created.Type, req.Creds)
+	// navigates away must not cancel a reboot half way through. The
+	// credentials and the params go with it and no further: neither is
+	// reachable from the record this returns.
+	go m.run(m.deps.Base, created.ID, created.Type, RunRequest{Creds: req.Creds, Params: req.Params})
 
 	return created, nil
 }
@@ -537,18 +515,27 @@ func (m *Manager) GetByRequest(requestID string) (Operation, bool) {
 // ActivePhase is the cluster phase implied by the operation in flight, or by
 // one whose command has been issued and whose machine has not gone down yet. ok
 // is false when there is neither, which leaves the caller's own phase alone.
+// The module is asked outside the manager's lock, and about a copy: a module
+// is other people's code, and neither reaching back into the manager nor
+// writing to the stored record is something it should be able to do from
+// here.
 func (m *Manager) ActivePhase() (nodestatus.Phase, bool) {
 	m.mu.Lock()
-	defer m.mu.Unlock()
-
 	active := m.activeOperationLocked()
 	if active == nil {
+		m.mu.Unlock()
 		return "", false
 	}
-	if active.Status == StatusCommandIssued {
-		return phaseForType(active.Type)
+	op := active.Clone()
+	m.mu.Unlock()
+
+	// A command_issued operation is terminal, and PhaseFor answers nothing
+	// for it. Here it is exactly the case that matters: the command has gone
+	// out and the machine has not gone down yet.
+	if op.Status != StatusCommandIssued && op.Status.Terminal() {
+		return "", false
 	}
-	return PhaseFor(active)
+	return phaseOf(m.registry, &op)
 }
 
 func (m *Manager) activeOperationLocked() *Operation {
@@ -649,6 +636,11 @@ func (m *Manager) complete(id string, outcome Outcome) error {
 		op.Code = outcome.Code
 		op.Error = safeReason(outcome.Code, outcome.Error)
 		op.CommandIssuedUntil = outcome.CommandIssuedUntil
+		// Cleared so applyLocked stamps it with this settlement's own time.
+		// A command_issued record already carries the moment its command
+		// went out, and an operation promoted to a final status once its
+		// outcome is known finished when that outcome was established.
+		op.FinishedAt = nil
 	})
 }
 
@@ -659,6 +651,11 @@ func (m *Manager) complete(id string, outcome Outcome) error {
 // once the caller's mutate callback has run, because the operation or the
 // node can change while that callback is running without any manager lock
 // held.
+//
+// What it returns shares nothing with the stored node, times included: the
+// caller mutates it with no lock held, and a *time.Time it could write
+// through would be a way into the record that no validation and no save ever
+// sees.
 func (m *Manager) snapshotNode(id, name string) (NodeResult, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -677,7 +674,7 @@ func (m *Manager) snapshotNode(id, name string) (NodeResult, error) {
 	if node == nil {
 		return NodeResult{}, ErrNodeNotFound
 	}
-	return *node, nil
+	return cloneNode(*node), nil
 }
 
 // replaceNode is UpdateNode's compare-and-replace commit. before is the
@@ -686,6 +683,12 @@ func (m *Manager) snapshotNode(id, name string) (NodeResult, error) {
 // a change in between, and this call refuses to overwrite it — it returns
 // ErrConcurrentUpdate instead of silently discarding whatever that other
 // writer recorded.
+//
+// "Equals" is by value, down to the moments its timestamps name, because
+// that is what a caller can observe and therefore lose. Comparing the
+// pointers instead would make a rewritten but identical timestamp look like
+// somebody else's change, and it would make a timestamp mutated in place
+// look like no change at all.
 func (m *Manager) replaceNode(id, name string, before, after NodeResult) error {
 	return m.checkedUpdate(id, func(op *Operation) error {
 		if err := m.rejectSettled(op); err != nil {
@@ -695,15 +698,44 @@ func (m *Manager) replaceNode(id, name string, before, after NodeResult) error {
 		if current == nil {
 			return ErrNodeNotFound
 		}
-		if *current != before {
+		if !sameNode(*current, before) {
 			return ErrConcurrentUpdate
 		}
 		return nil
 	}, func(op *Operation) {
 		if current := findNode(op, name); current != nil {
-			*current = after
+			// Stored by value for the same reason it was handed out by
+			// value: the caller keeps its copy and may write to it again.
+			*current = cloneNode(after)
 		}
 	})
+}
+
+// cloneNode copies a node result and the moments behind its timestamps, so
+// the copy and the original can be mutated without reaching each other.
+func cloneNode(n NodeResult) NodeResult {
+	n.StartedAt = cloneTime(n.StartedAt)
+	n.FinishedAt = cloneTime(n.FinishedAt)
+	return n
+}
+
+// sameNode compares two node results the way a reader of the record would:
+// same fields, and timestamps naming the same moment.
+func sameNode(a, b NodeResult) bool {
+	return a.NodeName == b.NodeName &&
+		a.Role == b.Role &&
+		a.Status == b.Status &&
+		a.Code == b.Code &&
+		a.Error == b.Error &&
+		sameMoment(a.StartedAt, b.StartedAt) &&
+		sameMoment(a.FinishedAt, b.FinishedAt)
+}
+
+func sameMoment(a, b *time.Time) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	return a.Equal(*b)
 }
 
 // applyLocked mutates op through fn and persists the result, then applies

@@ -11,31 +11,22 @@ package clusterop
 
 import (
 	"encoding/json"
-	"fmt"
 	"time"
 
 	"github.com/beclab/Olares/daemon/pkg/cluster/inventory"
 	"github.com/beclab/Olares/daemon/pkg/cluster/nodestatus"
 )
 
-// Type is the power operation a caller asked for.
+// Type is the power operation a caller asked for. Each value is declared by
+// the module that carries it out, next to the code that does the work; this
+// package holds no list of them, because what this daemon can do is whatever
+// registered itself.
 type Type string
 
-const (
-	TypeReboot   Type = "reboot"
-	TypeShutdown Type = "shutdown"
-)
-
-// ParseType accepts only what this daemon can actually carry out.
+// ParseType accepts only what this daemon can actually carry out, which is
+// exactly what a module has registered itself for.
 func ParseType(s string) (Type, error) {
-	switch Type(s) {
-	case TypeReboot:
-		return TypeReboot, nil
-	case TypeShutdown:
-		return TypeShutdown, nil
-	default:
-		return "", fmt.Errorf("unsupported cluster operation type %q", s)
-	}
+	return DefaultRegistry().Parse(s)
 }
 
 // Status is the state of a whole cluster operation.
@@ -269,20 +260,24 @@ func PhaseFor(op *Operation) (nodestatus.Phase, bool) {
 	if op == nil || op.Status.Terminal() {
 		return "", false
 	}
-	return phaseForType(op.Type)
+	return phaseOf(DefaultRegistry(), op)
 }
 
-// phaseForType is what an operation of this kind makes the cluster look like
-// while it is happening. It says nothing about whether it still is: that is the
+// phaseOf asks the module that carries this operation out what it makes the
+// cluster look like while it is happening. The module answers for its own
+// operation and nothing else: whether the operation still is happening is the
 // caller's question, and the two have different answers once the command has
 // been issued and the machine has not gone down yet.
-func phaseForType(t Type) (nodestatus.Phase, bool) {
-	switch t {
-	case TypeReboot:
-		return nodestatus.PhaseRestarting, true
-	case TypeShutdown:
-		return nodestatus.PhaseShuttingDown, true
-	default:
+//
+// An operation whose module is not registered imposes no phase. There is
+// nothing left that knows what it was doing.
+func phaseOf(registry *ModuleRegistry, op *Operation) (nodestatus.Phase, bool) {
+	if op == nil {
 		return "", false
 	}
+	module, ok := registry.Lookup(op.Type)
+	if !ok {
+		return "", false
+	}
+	return module.Phase(*op)
 }

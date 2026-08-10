@@ -24,6 +24,22 @@ var reasons = map[string]string{
 	CodePowerUnsupported:     "this node cannot perform this operation",
 	CodeHostPowerFailed:      "this node could not be powered",
 	CodeNodeUnaddressable:    "node has no internal address",
+
+	// The codes a whole operation settles on. A module reports one of these
+	// through its Outcome, and the reviewed sentence is all the record keeps
+	// of what the module itself said.
+	// The same sentence the node-local power endpoint refuses with, so an
+	// operation nothing here can carry out reads the same wherever it is
+	// refused.
+	CodeUnsupportedOperation: "this daemon does not perform that operation",
+
+	CodeUnsupportedTopology:    "this daemon powers a cluster with exactly one control node",
+	CodeSelfUnresolved:         "this daemon could not identify which node it is running on",
+	CodeNodeIdentityUnknown:    "the node directory could not identify this node",
+	CodePrecheckFailed:         "one or more nodes cannot perform this operation",
+	CodeWorkerCommandFailed:    "one or more nodes did not accept the power command",
+	CodeWorkerRestartFailed:    "one or more nodes did not come back",
+	CodeStatePersistenceFailed: "the operation stopped because its state could not be recorded",
 }
 
 // reasonFor is the message that accompanies a code on the wire and on disk.
