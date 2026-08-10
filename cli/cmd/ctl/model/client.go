@@ -47,6 +47,7 @@ type routerClient struct {
 	hc       *http.Client
 	baseURL  string
 	olaresID string
+	headers  map[string]string
 }
 
 func newRouterClient(hc *http.Client, baseURL, olaresID string) *routerClient {
@@ -54,6 +55,26 @@ func newRouterClient(hc *http.Client, baseURL, olaresID string) *routerClient {
 		hc:       hc,
 		baseURL:  strings.TrimRight(baseURL, "/"),
 		olaresID: olaresID,
+	}
+}
+
+// withHeader returns a copy that adds one header to every request. The data
+// plane needs an `sk-*` bearer that the management plane must never carry, so
+// the two are separate clients over the same session rather than one client
+// with a mutable header.
+func (c *routerClient) withHeader(name, value string) *routerClient {
+	clone := *c
+	clone.headers = make(map[string]string, len(c.headers)+1)
+	for k, v := range c.headers {
+		clone.headers[k] = v
+	}
+	clone.headers[name] = value
+	return &clone
+}
+
+func (c *routerClient) applyHeaders(req *http.Request) {
+	for k, v := range c.headers {
+		req.Header.Set(k, v)
 	}
 }
 
@@ -79,6 +100,13 @@ func (e *RouterError) Error() string {
 	msg := e.Message
 	if msg == "" {
 		msg = truncate(string(e.Body), 200)
+	}
+	if strings.TrimSpace(msg) == "" {
+		// A status with no body at all. Router's own refusals always carry an
+		// envelope, and it passes an upstream's reply through unchanged, so an
+		// empty one was written by a proxy on the way rather than by anything
+		// that knew what was being asked.
+		msg = http.StatusText(e.Status) + ", with an empty response body"
 	}
 	if label == "" {
 		return fmt.Sprintf("%s %s: HTTP %d: %s", e.Method, e.Path, e.Status, msg)
@@ -154,6 +182,7 @@ func (c *routerClient) do(ctx context.Context, method, path string, body io.Read
 	if body != nil && contentType != "" {
 		req.Header.Set("Content-Type", contentType)
 	}
+	c.applyHeaders(req)
 
 	resp, err := c.hc.Do(req)
 	if err != nil {
@@ -186,6 +215,7 @@ func (c *routerClient) doStream(ctx context.Context, path string) (*http.Respons
 	}
 	req.Header.Set("Accept", "text/event-stream")
 	req.Header.Set("Cache-Control", "no-cache")
+	c.applyHeaders(req)
 
 	resp, err := c.hc.Do(req)
 	if err != nil {

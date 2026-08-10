@@ -9,13 +9,17 @@
 // settings.<terminus> do — app-service gives it a per-install host. Every
 // verb therefore resolves the entrance at runtime; see discovery.go.
 //
-// Identity. The active profile's access token, exactly as elsewhere: the
-// Olares edge turns it into the X-BFL-USER header that Router's console
-// plane trusts. This tree owns no credential of its own, so authentication
-// questions belong to the profile verbs, not here. The `sk-*` API keys it
-// can issue are a resource to hand to OTHER applications — Router's /v1
-// data plane accepts only `Authorization: Bearer sk-*` or a
-// platform-injected x-caller-appid, and by design never a console session.
+// Identity. Configuration runs on the active profile's access token, exactly
+// as elsewhere: the Olares edge turns it into the X-BFL-USER header that
+// Router's console plane trusts, so authentication questions there belong to
+// the profile verbs rather than here.
+//
+// Calling a model is the exception, and the reason this tree keeps a secret of
+// its own. Router's /v1 data plane accepts an `sk-*` key or a
+// platform-injected caller identity and by design never a console session, so
+// `model call` presents whichever of the two it can get and mints a key when
+// it can get neither. See dataplane.go for the order and why. Keys issued with
+// `model key` remain what they were — a credential to hand to other software.
 package model
 
 import (

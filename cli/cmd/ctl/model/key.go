@@ -61,10 +61,14 @@ func NewKeyCommand(f *cmdutil.Factory) *cobra.Command {
 		Short: "API keys for software that calls Router",
 		Long: `Issue and manage the sk- keys other software uses to call models.
 
-You do not need a key to run this CLI: the console plane trusts your Olares
-session. A key is what you hand to something that has no Olares session of its
-own — a script, a container, a service elsewhere. Applications installed on this
-Olares are recognised by the platform and do not need one either.
+Configuring Router needs no key: its console plane trusts your Olares session.
+A key is what you hand to something that has no Olares session of its own — a
+script, a container, a service elsewhere. Applications installed on this Olares
+are recognised by the platform and do not need one either.
+
+"model call" is the exception, and it looks after itself: the data plane refuses
+a console session, so this machine keeps one key of its own and mints it on
+first use. "key local" is where that copy is inspected or dropped.
 
 The plaintext is shown once, when the key is issued, because Router stores only
 its hash. Nothing can recover it afterwards; a lost key is replaced, not looked
@@ -75,6 +79,7 @@ Subcommands:
   issue <name>     create one and print the plaintext once
   update <key>     rename, enable, disable, re-expire, or change its models
   revoke <key>     stop it working, keeping the row and its usage history
+  local            the key this machine saved for its own calls
 
 A key can be restricted to named models, which is how a key given to one
 application stops being a key to everything. Without that restriction it reaches
@@ -86,7 +91,138 @@ every model in the workspace.
 	cmd.AddCommand(newKeyIssueCommand(f))
 	cmd.AddCommand(newKeyUpdateCommand(f))
 	cmd.AddCommand(newKeyRevokeCommand(f))
+	cmd.AddCommand(newKeyLocalCommand(f))
 	return cmd
+}
+
+func newKeyLocalCommand(f *cmdutil.Factory) *cobra.Command {
+	var (
+		output string
+		forget bool
+	)
+	cmd := &cobra.Command{
+		Use:   "local",
+		Short: "the key this machine saved for its own calls",
+		Long: `Show, or drop, the data-plane key this machine keeps.
+
+"model call" needs a credential the console plane cannot give it, so on first use
+it issues one key and saves it in the OS keychain under the active profile. Every
+later call reuses that copy instead of issuing another.
+
+Only its prefix is shown. The secret is in the keychain and reading it back out
+here would put it in a shell history for no reason — anything that needs the
+plaintext should be given a key of its own with "model key issue".
+
+--forget deletes the local copy. The key itself keeps working, because Router
+does not know a copy was discarded: this is how a machine stops calling, and
+"model key revoke" is how a key stops working. The next call issues a new one.
+
+Examples:
+  olares-cli model key local
+  olares-cli model key local --forget
+`,
+		Args: cobra.NoArgs,
+		RunE: func(c *cobra.Command, _ []string) error {
+			return runKeyLocal(c.Context(), f, forget, output)
+		},
+	}
+	cmd.Flags().BoolVar(&forget, "forget", false, "delete the local copy; the key itself stays valid")
+	addOutputFlag(cmd, &output)
+	return cmd
+}
+
+func runKeyLocal(ctx context.Context, f *cmdutil.Factory, forget bool, outputRaw string) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	format, err := parseFormat(outputRaw)
+	if err != nil {
+		return err
+	}
+	rp, err := f.ResolveProfile(ctx)
+	if err != nil {
+		return err
+	}
+	if forget {
+		if err := forgetDataPlaneKey(rp.OlaresID); err != nil {
+			return fmt.Errorf("drop the saved key: %w", err)
+		}
+		fmt.Printf("forgot the saved key for %s. It still works — `olares-cli model key list` "+
+			"shows it and `model key revoke` ends it. The next call will issue a new one.\n", rp.OlaresID)
+		return nil
+	}
+
+	stored, gerr := cachedDataPlaneKey(rp.OlaresID)
+	state := map[string]any{
+		"profile":      rp.OlaresID,
+		"saved":        stored != "",
+		"in_container": inContainer(),
+	}
+	if stored != "" {
+		state["key_prefix"] = keyPrefixOf(stored)
+	}
+	if gerr != nil {
+		state["keychain_error"] = gerr.Error()
+	}
+	if env := strings.TrimSpace(os.Getenv(dataPlaneKeyEnv)); env != "" {
+		state["env_override"] = dataPlaneKeyEnv
+	}
+	if format == FormatJSON {
+		return printJSON(os.Stdout, state)
+	}
+	return renderKeyLocal(os.Stdout, state)
+}
+
+func renderKeyLocal(w io.Writer, state map[string]any) error {
+	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
+	rows := [][2]string{{"PROFILE", fmt.Sprintf("%v", state["profile"])}}
+	saved, _ := state["saved"].(bool)
+	rows = append(rows, [2]string{"SAVED KEY", boolStr(saved)})
+	if p, ok := state["key_prefix"].(string); ok {
+		rows = append(rows, [2]string{"PREFIX", p})
+	}
+	if e, ok := state["env_override"].(string); ok {
+		rows = append(rows, [2]string{"OVERRIDDEN BY", e})
+	}
+	if e, ok := state["keychain_error"].(string); ok {
+		rows = append(rows, [2]string{"KEYCHAIN", "unreadable: " + e})
+	}
+	inC, _ := state["in_container"].(bool)
+	rows = append(rows, [2]string{"IN CONTAINER", boolStr(inC)})
+	for _, r := range rows {
+		if _, err := fmt.Fprintf(tw, "%s\t%s\n", r[0], r[1]); err != nil {
+			return err
+		}
+	}
+	if err := tw.Flush(); err != nil {
+		return err
+	}
+	switch {
+	case state["env_override"] != nil:
+		_, err := fmt.Fprintf(w, "\n%s is set, so calls use that key and ignore the saved one.\n", state["env_override"])
+		return err
+	case saved:
+		_, err := fmt.Fprintln(w, "\nCalls use this key. --forget drops the copy; `model key revoke` ends the key.")
+		return err
+	case inC:
+		_, err := fmt.Fprintln(w, "\nNo key saved. Inside the cluster the platform supplies the caller identity, "+
+			"so a call tries that first and only issues a key if it is refused.")
+		return err
+	default:
+		_, err := fmt.Fprintln(w, "\nNo key saved. The first `model call` will issue one and save it here.")
+		return err
+	}
+}
+
+// keyPrefixOf shows enough of a key to match it against a row in `key list`
+// without reproducing the secret. Router's own prefix is the first characters,
+// so the same slice lines the two up.
+func keyPrefixOf(key string) string {
+	const shown = 11
+	if len(key) <= shown {
+		return key
+	}
+	return key[:shown] + "…"
 }
 
 func newKeyListCommand(f *cmdutil.Factory) *cobra.Command {
