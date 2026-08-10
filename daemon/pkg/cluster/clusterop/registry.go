@@ -60,12 +60,12 @@ func (r *ModuleRegistry) Lookup(typ Type) (OperationModule, bool) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	module, ok := r.modules[Type(strings.TrimSpace(string(typ)))]
+	module, ok := r.modules[typ]
 	return module, ok
 }
 
 func (r *ModuleRegistry) Parse(value string) (Type, error) {
-	typ := Type(strings.TrimSpace(value))
+	typ := Type(value)
 	if _, ok := r.Lookup(typ); ok {
 		return typ, nil
 	}

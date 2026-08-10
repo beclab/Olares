@@ -21,6 +21,20 @@ func (registryTestModule) Run(context.Context, Runtime, RunRequest) Outcome {
 	return Outcome{Status: StatusSucceeded}
 }
 
+type registryTypedNilModule struct{}
+
+func (*registryTypedNilModule) Type() Type { return Type("typed-nil") }
+
+func (*registryTypedNilModule) Validate(CreateRequest) error { return nil }
+
+func (*registryTypedNilModule) Phase(Operation) (nodestatus.Phase, bool) {
+	return "", false
+}
+
+func (*registryTypedNilModule) Run(context.Context, Runtime, RunRequest) Outcome {
+	return Outcome{Status: StatusSucceeded}
+}
+
 func TestRegistryParseRegisteredType(t *testing.T) {
 	reg := NewRegistry()
 	if err := reg.Register(registryTestModule{typ: Type("example")}); err != nil {
@@ -29,6 +43,16 @@ func TestRegistryParseRegisteredType(t *testing.T) {
 	got, err := reg.Parse("example")
 	if err != nil || got != Type("example") {
 		t.Fatalf("Parse() = %q, %v", got, err)
+	}
+}
+
+func TestRegistryRejectsWhitespaceWrappedType(t *testing.T) {
+	reg := NewRegistry()
+	if err := reg.Register(registryTestModule{typ: Type("reboot")}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := reg.Parse(" reboot "); err == nil {
+		t.Fatal("whitespace-wrapped type was accepted")
 	}
 }
 
@@ -46,6 +70,20 @@ func TestRegistryRejectsDuplicateType(t *testing.T) {
 func TestRegistryRejectsEmptyType(t *testing.T) {
 	if err := NewRegistry().Register(registryTestModule{}); err == nil {
 		t.Fatal("empty type registration succeeded")
+	}
+}
+
+func TestRegistryRejectsNilModule(t *testing.T) {
+	var module OperationModule
+	if err := NewRegistry().Register(module); err == nil {
+		t.Fatal("nil module registration succeeded")
+	}
+}
+
+func TestRegistryRejectsTypedNilModule(t *testing.T) {
+	var module *registryTypedNilModule
+	if err := NewRegistry().Register(module); err == nil {
+		t.Fatal("typed-nil module registration succeeded")
 	}
 }
 
