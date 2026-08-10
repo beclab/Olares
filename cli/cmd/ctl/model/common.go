@@ -7,7 +7,9 @@
 // Addressing. Router is a Market application rather than a system service,
 // so it has no fixed subdomain the way files.<terminus> and
 // settings.<terminus> do — app-service gives it a per-install host. Every
-// verb therefore resolves the entrance at runtime; see discovery.go.
+// verb therefore resolves the entrance at runtime; see discovery.go. The
+// `model local` verbs address a second host the same way, because a model
+// application serves its own Model Console on its own entrance.
 //
 // Identity. Configuration runs on the active profile's access token, exactly
 // as elsewhere: the Olares edge turns it into the X-BFL-USER header that
@@ -27,6 +29,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"strings"
 
@@ -69,11 +72,15 @@ func addOutputFlag(cmd *cobra.Command, target *string) {
 // addressing and diagnostics), where Router turned out to live, a client
 // pointed at it, and the Desktop client discovery used — kept because Olares
 // itself, not Router, is the authority on which applications are installed.
+// The session itself is kept alongside them: it carries the profile's token
+// and its refresh, and a model application's Model Console is a third host
+// reached over the same one.
 type preparedClient struct {
 	profile *credential.ResolvedProfile
 	router  *routerClient
 	found   *discoveredRouter
 	desktop *whoami.HTTPClient
+	hc      *http.Client
 }
 
 // prepare resolves the profile, checks the version floor, and locates Router.
@@ -108,6 +115,7 @@ func prepare(ctx context.Context, f *cmdutil.Factory) (*preparedClient, error) {
 		router:  newRouterClient(hc, found.BaseURL, rp.OlaresID),
 		found:   found,
 		desktop: desktop,
+		hc:      hc,
 	}, nil
 }
 

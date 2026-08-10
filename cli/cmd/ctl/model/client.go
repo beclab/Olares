@@ -81,7 +81,9 @@ func (c *routerClient) applyHeaders(req *http.Request) {
 // RouterError is a non-2xx response that carried one of Router's two error
 // envelopes. Both nest under "error" and agree on `code` and `message` — the
 // console plane adds `details`, the OpenAI-shaped data plane adds `type` and
-// `param` — so a single decoder serves the whole surface.
+// `param` — so a single decoder serves the whole surface. The Model Console
+// behind a local model uses the same shape and adds `phase`, which is why this
+// client serves that host too.
 type RouterError struct {
 	Method  string
 	Path    string
@@ -89,6 +91,7 @@ type RouterError struct {
 	Code    string
 	Type    string
 	Message string
+	Phase   string
 	Body    []byte
 }
 
@@ -107,6 +110,9 @@ func (e *RouterError) Error() string {
 		// empty one was written by a proxy on the way rather than by anything
 		// that knew what was being asked.
 		msg = http.StatusText(e.Status) + ", with an empty response body"
+	}
+	if p := strings.TrimSpace(e.Phase); p != "" {
+		msg += " (phase " + p + ")"
 	}
 	if label == "" {
 		return fmt.Sprintf("%s %s: HTTP %d: %s", e.Method, e.Path, e.Status, msg)
@@ -243,6 +249,7 @@ func (c *routerClient) formatErr(method, path string, status int, body []byte) e
 			Code    string `json:"code"`
 			Type    string `json:"type"`
 			Message string `json:"message"`
+			Phase   string `json:"phase"`
 		} `json:"error"`
 	}
 	fromRouter := json.Unmarshal(body, &env) == nil &&
@@ -272,6 +279,7 @@ func (c *routerClient) formatErr(method, path string, status int, body []byte) e
 		Code:    env.Error.Code,
 		Type:    env.Error.Type,
 		Message: env.Error.Message,
+		Phase:   env.Error.Phase,
 		Body:    append([]byte(nil), body...),
 	}
 }

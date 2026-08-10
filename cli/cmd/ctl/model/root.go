@@ -28,6 +28,7 @@ status" first if anything here behaves unexpectedly.
   default       which model answers when a request names none
   provider      the upstreams Router routes to, and the models they serve
   app           model applications that run models on this machine
+  local         the Model Console inside one of those applications
   call          send work to a model: chat, embed, transcribe, speak, OCR
   key           API keys for software that calls Router
   quota         spend and rate ceilings on a key, a person, or a model
@@ -56,6 +57,7 @@ Run "olares-cli model <verb> --help" for details.
 	cmd.AddCommand(NewDefaultCommand(f))
 	cmd.AddCommand(NewProviderCommand(f))
 	cmd.AddCommand(NewAppCommand(f))
+	cmd.AddCommand(NewLocalCommand(f))
 	cmd.AddCommand(NewCallCommand(f))
 	cmd.AddCommand(NewKeyCommand(f))
 	cmd.AddCommand(NewQuotaCommand(f))

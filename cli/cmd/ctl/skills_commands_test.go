@@ -179,6 +179,18 @@ func TestSkillCommandPathsExist(t *testing.T) {
 		"model trace capture",
 		"model user",
 		"model user list",
+		"model local",
+		"model local status",
+		"model local progress",
+		"model local spec",
+		"model local spec file",
+		"model local spec set",
+		"model local config",
+		"model local endpoints",
+		"model local gpu",
+		"model local perf",
+		"model local retry",
+		"model local restart",
 	}
 
 	root := NewDefaultCommand()
