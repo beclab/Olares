@@ -825,9 +825,10 @@ func (t *Translator) buildSystemVirtualHost(user *message.UserInfo, def systemSe
 		},
 		WebSocketUpgrade: true,
 	}
-	// desktop/wizard are system human HTTP and must use Authelia /api/verify/.
+	// desktop is system human HTTP and must use Authelia /api/verify/.
+	// wizard is pre-auth activation UI — no ExtAuth (cookie chicken-egg).
 	// auth is the IdP itself — do not attach ExtAuth (loop risk).
-	if def.Name == "desktop" || def.Name == "wizard" {
+	if def.Name == "desktop" {
 		route.ExtAuth = buildAppExtAuthConfig(user, false)
 	}
 
