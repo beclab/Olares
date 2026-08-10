@@ -321,7 +321,7 @@ func requirementConfigForOp(ctx context.Context, in Input) (cfg *appcfg.Applicat
 	if in.Op != v1alpha1.UpgradeOp {
 		return in.AppConfig, false, nil
 	}
-	holds, err := upgradePrevHoldsRequests(ctx, in.PrevAppConfig, in.PrevState)
+	holds, err := upgradePrevHoldsRequests(ctx, in.PrevAppConfig, in.PrevState, in.PreUpgradeSteadyState)
 	if err != nil {
 		return nil, false, err
 	}
@@ -339,29 +339,35 @@ func requirementConfigForOp(ctx context.Context, in Input) (cfg *appcfg.Applicat
 // upgrade starts from still holds its requests, so only the (new − old)
 // increase needs to fit in live headroom.
 //
-// PrevState covers the steady cases without a kube round trip:
+// Decision order:
 //
 //   - Running → delta (pods are expected to be up)
-//   - Stopped → full (nothing to discount; the following resume needs
-//     the whole amount)
-//
-// Every other state falls through to a live-pod probe in the previous
-// config's namespace. Terminated and unscheduled pods hold nothing, so
-// Failed, Succeeded and pods without a NodeName are excluded. That
-// covers UpgradeFailed (pods may still be up), StopFailed /
-// ResumeFailed (state and cluster can disagree), and any unset state.
+//   - Stopped → full (nothing to discount)
+//   - UpgradeFailed + preUpgradeSteadyState running/stopped → same as above
+//     (AppPreUpgradeStateKey snapshot from the attempt that failed)
+//   - UpgradeFailed with missing/illegal preUpgradeSteadyState, and every
+//     other state → live-pod probe in the previous config's namespace.
+//     Terminated and unscheduled pods hold nothing, so Failed,
+//     Succeeded and pods without a NodeName are excluded.
 //
 // Every uncertainty on the probe path is an error rather than a
 // fallback: an unreadable namespace, an unknown previous config or one
 // without a namespace all leave us unable to tell whether the discount
 // is real, and assuming headroom that may not exist is the failure mode
 // this guards against.
-func upgradePrevHoldsRequests(ctx context.Context, cfg *appcfg.ApplicationConfig, state v1alpha1.ApplicationManagerState) (bool, error) {
+func upgradePrevHoldsRequests(ctx context.Context, cfg *appcfg.ApplicationConfig, state v1alpha1.ApplicationManagerState, preUpgradeSteadyState string) (bool, error) {
 	switch state {
 	case v1alpha1.Running:
 		return true, nil
 	case v1alpha1.Stopped:
 		return false, nil
+	case v1alpha1.UpgradeFailed:
+		switch preUpgradeSteadyState {
+		case string(v1alpha1.Running):
+			return true, nil
+		case string(v1alpha1.Stopped):
+			return false, nil
+		}
 	}
 
 	if cfg == nil {

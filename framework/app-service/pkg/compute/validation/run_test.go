@@ -502,7 +502,7 @@ func TestUpgradePrevHoldsRequestsIgnoresUnscheduledPods(t *testing.T) {
 	pod.Spec.NodeName = ""
 	stubKube(t, namespaceObj("app-alice"), pod)
 
-	holds, err := upgradePrevHoldsRequests(context.Background(), upgradeConfig("app", 1000, 2<<30), v1alpha1.UpgradeFailed)
+	holds, err := upgradePrevHoldsRequests(context.Background(), upgradeConfig("app", 1000, 2<<30), v1alpha1.UpgradeFailed, "")
 	if err != nil {
 		t.Fatalf("upgradePrevHoldsRequests: %v", err)
 	}
@@ -516,7 +516,7 @@ func TestUpgradePrevHoldsRequestsRunningForcesDelta(t *testing.T) {
 	// cluster is intentional: the state alone decides.
 	stubKube(t)
 
-	holds, err := upgradePrevHoldsRequests(context.Background(), upgradeConfig("app", 1000, 2<<30), v1alpha1.Running)
+	holds, err := upgradePrevHoldsRequests(context.Background(), upgradeConfig("app", 1000, 2<<30), v1alpha1.Running, "")
 	if err != nil {
 		t.Fatalf("upgradePrevHoldsRequests: %v", err)
 	}
@@ -528,12 +528,66 @@ func TestUpgradePrevHoldsRequestsRunningForcesDelta(t *testing.T) {
 func TestUpgradePrevHoldsRequestsStoppedForcesFull(t *testing.T) {
 	stubKube(t, namespaceObj("app-alice"), podObj("app-alice", "app-0", corev1.PodRunning))
 
-	holds, err := upgradePrevHoldsRequests(context.Background(), upgradeConfig("app", 1000, 2<<30), v1alpha1.Stopped)
+	holds, err := upgradePrevHoldsRequests(context.Background(), upgradeConfig("app", 1000, 2<<30), v1alpha1.Stopped, "")
 	if err != nil {
 		t.Fatalf("upgradePrevHoldsRequests: %v", err)
 	}
 	if holds {
 		t.Fatal("Stopped must force the full path even when pods remain")
+	}
+}
+
+func TestUpgradePrevHoldsRequestsUpgradeFailedUsesAnnotation(t *testing.T) {
+	cases := []struct {
+		name      string
+		preState  string
+		withPod   bool
+		wantHolds bool
+	}{
+		{
+			name:      "annotation running forces delta without probe",
+			preState:  string(v1alpha1.Running),
+			wantHolds: true,
+		},
+		{
+			name:      "annotation stopped forces full even with pods",
+			preState:  string(v1alpha1.Stopped),
+			withPod:   true,
+			wantHolds: false,
+		},
+		{
+			name:      "empty annotation falls back to probe with scheduled pod",
+			preState:  "",
+			withPod:   true,
+			wantHolds: true,
+		},
+		{
+			name:      "empty annotation falls back to probe without pods",
+			preState:  "",
+			wantHolds: false,
+		},
+		{
+			name:      "garbage annotation falls back to probe without pods",
+			preState:  "upgradeFailed",
+			wantHolds: false,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			objs := []runtime.Object{namespaceObj("app-alice")}
+			if tc.withPod {
+				objs = append(objs, podObj("app-alice", "app-0", corev1.PodRunning))
+			}
+			stubKube(t, objs...)
+
+			holds, err := upgradePrevHoldsRequests(context.Background(), upgradeConfig("app", 1000, 2<<30), v1alpha1.UpgradeFailed, tc.preState)
+			if err != nil {
+				t.Fatalf("upgradePrevHoldsRequests: %v", err)
+			}
+			if holds != tc.wantHolds {
+				t.Fatalf("holds=%v want %v", holds, tc.wantHolds)
+			}
+		})
 	}
 }
 

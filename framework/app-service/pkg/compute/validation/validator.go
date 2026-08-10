@@ -35,22 +35,25 @@ type Op = v1alpha1.OpType
 // only the cluster-pressure / cluster-capacity validators currently use
 // it; the others ignore unset fields.
 //
-// PrevAppConfig and PrevState are required for UpgradeOp when running
-// cluster-pressure / k8s-request. Those validators check only the
-// non-negative resource delta (new − old) against live headroom so a
-// deployment that already holds its requests is not double-counted.
-// PrevState short-circuits the common cases (Running → delta, Stopped →
-// full); other states fall through to a live-pod probe located via
-// PrevAppConfig (see upgradePrevHoldsRequests). Cluster-capacity always
-// uses AppConfig (the new chart) absolutely, and install/resume ignore
-// both fields.
+// PrevAppConfig, PrevState and PreUpgradeSteadyState are used for
+// UpgradeOp when running cluster-pressure / k8s-request. Those validators
+// check only the non-negative resource delta (new − old) against live
+// headroom so a deployment that already holds its requests is not
+// double-counted. PrevState short-circuits the common cases (Running →
+// delta, Stopped → full). On UpgradeFailed, PreUpgradeSteadyState (the
+// bytetrade.io/pre-upgrade-state annotation: Running or Stopped intent
+// snapped before the failed attempt) short-circuits the same way when
+// set; otherwise a live-pod probe located via PrevAppConfig decides
+// (see upgradePrevHoldsRequests). Cluster-capacity always uses AppConfig
+// (the new chart) absolutely, and install/resume ignore these fields.
 type Input struct {
-	Client        client.Client
-	AppConfig     *appcfg.ApplicationConfig
-	PrevAppConfig *appcfg.ApplicationConfig
-	PrevState     v1alpha1.ApplicationManagerState
-	Op            Op
-	Token         string
+	Client                client.Client
+	AppConfig             *appcfg.ApplicationConfig
+	PrevAppConfig         *appcfg.ApplicationConfig
+	PrevState             v1alpha1.ApplicationManagerState
+	PreUpgradeSteadyState string
+	Op                    Op
+	Token                 string
 }
 
 // Decision is the structured outcome of a single validator (or the chain
