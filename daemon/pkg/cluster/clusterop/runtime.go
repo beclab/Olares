@@ -282,24 +282,60 @@ func (rt *operationRuntime) SetCommandIssuedUntil(until time.Time) error {
 		if err := rt.settled(op); err != nil {
 			return err
 		}
-		if rt.recovery {
-			now := rt.m.deps.Now()
-			if !until.IsZero() && until.After(now) && !op.CommandIssuedUntil.After(now) {
-				return ErrRecoveryCannotExtendDeadline
-			}
-		}
-		return nil
+		return rt.checkCommandIssuedUntilTransition(op.CommandIssuedUntil, until)
 	}
 	return rt.m.checkedUpdate(rt.id, validate, func(op *Operation) {
 		op.CommandIssuedUntil = until
 	})
 }
 
+// checkCommandIssuedUntilTransition is the one rule shared by every path
+// that can write CommandIssuedUntil through a recovery runtime —
+// SetCommandIssuedUntil, Complete, and Settle all call through here rather
+// than each carrying its own copy of the check. It is a no-op for an
+// ordinary run: this restriction exists only because recovery is allowed to
+// touch a record however long its own grace deadline has passed, and that
+// latitude must not become a way to re-arm the cluster's lock.
+//
+// A record whose CommandIssuedUntil is the zero value has never held a
+// deadline at all — nothing to have "expired" — so recovery may still name
+// one for the first time, the same way an ordinary run does; that is what
+// lets a RecoverableModule hand a running record its own command_issued
+// grace period during recovery. What is refused is naming a new future
+// deadline for a record whose own, previously set, deadline has already run
+// out: confirming or releasing such a command is not evidence the cluster
+// should go back on hold for it. Clearing a deadline (next is the zero
+// value) is always allowed, at any time, for the same reason
+// rejectSettledDuringRecovery lets recovery touch an expired command_issued
+// record in the first place — see confirmReboot.
+func (rt *operationRuntime) checkCommandIssuedUntilTransition(current, next time.Time) error {
+	if !rt.recovery {
+		return nil
+	}
+	now := rt.m.deps.Now()
+	if next.IsZero() || !next.After(now) {
+		return nil
+	}
+	if current.IsZero() || current.After(now) {
+		return nil
+	}
+	return ErrRecoveryCannotExtendDeadline
+}
+
 func (rt *operationRuntime) Complete(outcome Outcome) error {
 	if !outcome.valid(rt.m.deps.Now()) {
 		return ErrInvalidOutcome
 	}
-	return rt.m.complete(rt.id, outcome, rt.settled)
+	validate := rt.settled
+	if rt.recovery {
+		validate = func(op *Operation) error {
+			if err := rt.settled(op); err != nil {
+				return err
+			}
+			return rt.checkCommandIssuedUntilTransition(op.CommandIssuedUntil, outcome.CommandIssuedUntil)
+		}
+	}
+	return rt.m.complete(rt.id, outcome, validate)
 }
 
 // findStep returns the most recently started step of this name, matching the

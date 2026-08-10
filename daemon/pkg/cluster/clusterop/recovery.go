@@ -87,14 +87,16 @@ func (m *Manager) recoverLoadedOperations() (unfinished []string) {
 			// is; one still moving is settled rather than left to hold the
 			// cluster's lock until this daemon restarts again.
 			if !op.Status.Terminal() {
-				m.update(id, func(op *Operation) { settleUnknownModule(op, m.deps.Now()) })
+				now := m.deps.Now()
+				m.updateAt(id, now, func(op *Operation) { settleUnknownModule(op, now) })
 			}
 			continue
 		}
 		recoverable, ok := module.(RecoverableModule)
 		if !ok {
 			if !op.Status.Terminal() {
-				m.update(id, func(op *Operation) { MarkInterrupted(op, m.deps.Now()) })
+				now := m.deps.Now()
+				m.updateAt(id, now, func(op *Operation) { MarkInterrupted(op, now) })
 			}
 			continue
 		}
@@ -123,7 +125,8 @@ func (m *Manager) recoverLoadedOperations() (unfinished []string) {
 			// can prove happened. Nothing else is going to, so this is the
 			// same fallback a module with no recovery interface at all
 			// would have gotten.
-			m.update(id, func(op *Operation) { MarkInterrupted(op, m.deps.Now()) })
+			now := m.deps.Now()
+			m.updateAt(id, now, func(op *Operation) { MarkInterrupted(op, now) })
 		}
 	}
 	return unfinished
@@ -162,23 +165,58 @@ func (m *Manager) safeRecover(ctx context.Context, recoverable RecoverableModule
 
 // safeRun calls a module's Run inside a panic boundary, the Run counterpart
 // to safeRecover. A module that panics has stopped the same way one that
-// returns no usable Outcome has: nothing is known about what it did, and
-// leaving the record running would hold the cluster's single-operation
-// lock until this daemon restarts. CodeModuleFailed is the same stable code
-// an outcome the record cannot hold already settles on (see Manager.settle
-// in orchestrate.go), so a caller sees one framework-owned failure mode
-// either way, never the panic's own text. Any lock the module already
-// released through its Runtime — a step, a node — stays released; only
-// Complete has not been called, and settle (the only caller of safeRun)
-// calls it next with the outcome this returns.
+// returns no usable Outcome has: nothing is known about what it did beyond
+// whatever it already committed through its own Runtime before the panic,
+// and that is exactly what recoverFromRunPanic decides between. Any lock
+// the module already released through its Runtime — a step, a node — stays
+// released either way.
 func safeRun(module OperationModule, ctx context.Context, rt Runtime, req RunRequest) (outcome Outcome) {
 	defer func() {
 		if r := recover(); r != nil {
 			klog.Errorf("clusterop: module %s panicked in Run: %v\n%s", module.Type(), r, debug.Stack())
-			outcome = failedWith(CodeModuleFailed, reasonFor(CodeModuleFailed))
+			outcome = recoverFromRunPanic(rt)
 		}
 	}()
 	return module.Run(ctx, rt, req)
+}
+
+// recoverFromRunPanic decides what a panicking Run leaves behind, once the
+// panic itself has already been contained and logged by safeRun.
+//
+// A module that already moved the record away from running before it
+// panicked — a command_issued handoff through Complete, a step or node
+// closed through Settle, a terminal status reported through Complete — has
+// committed real state, and none of that is this wrapper's to second-guess
+// or overwrite: it reports the outcome as already recorded, so
+// Manager.settle (the only caller of safeRun) leaves the record exactly as
+// the module left it.
+//
+// A module that panicked before committing anything is still exactly where
+// m.run left it: running. That case is settled failed with the same stable
+// CodeModuleFailed an outcome the record cannot hold already settles on
+// (see Manager.settle), and — because nothing else is ever going to — any
+// step or node the module started but never finished is closed alongside
+// it, the same way MarkInterrupted closes one for an interruption nothing
+// observed the end of. Without that a caller could see an operation
+// reported failed with a step still reading running.
+func recoverFromRunPanic(rt Runtime) Outcome {
+	m, id, ok := managerOf(rt)
+	if !ok {
+		// A Runtime this package did not build carries no way to check what,
+		// if anything, was already committed through it. Best effort: the
+		// same generic failure a foreign Runtime's own Complete is left to
+		// accept or refuse, exactly as safeRun always returned before this
+		// check existed.
+		return failedWith(CodeModuleFailed, reasonFor(CodeModuleFailed))
+	}
+	if current, ok := m.Get(id); !ok || current.Status != StatusRunning {
+		return Outcome{}.alreadyRecorded()
+	}
+	now := m.deps.Now()
+	m.updateAt(id, now, func(op *Operation) {
+		settleTerminated(op, now, CodeModuleFailed, reasonFor(CodeModuleFailed))
+	})
+	return Outcome{}.alreadyRecorded()
 }
 
 // ExecuteNode carries a node-scope command out through the module
@@ -187,6 +225,14 @@ func safeRun(module OperationModule, ctx context.Context, rt Runtime, req RunReq
 // unsupported type, a module with no node capability, and a module that
 // panics while executing is decided exactly once, here.
 func ExecuteNode(ctx context.Context, registry *ModuleRegistry, req NodeRequest) (err error) {
+	// A nil registry answers no differently than one that just does not
+	// hold req.Type: there is nothing here that can act on a single node
+	// for it either way. Checked before Lookup, which is a pointer method
+	// that would otherwise panic on a nil receiver before the recover below
+	// is even in place to catch it.
+	if registry == nil {
+		return unsupportedNodeOperationError()
+	}
 	module, ok := registry.Lookup(req.Type)
 	if !ok {
 		return unsupportedNodeOperationError()

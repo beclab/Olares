@@ -704,6 +704,103 @@ func TestRunRuntimeMaySetAFutureDeadlineRegardless(t *testing.T) {
 	}
 }
 
+// The deadline guard has to be the same rule no matter which Runtime method
+// writes CommandIssuedUntil — Complete and Settle carry it just as much as
+// SetCommandIssuedUntil does, because a RecoverableModule normally reaches
+// the field through one of those two, not through SetCommandIssuedUntil
+// directly. See checkCommandIssuedUntilTransition in runtime.go.
+
+func TestRecoveryCannotExtendAnExpiredDeadlineViaComplete(t *testing.T) {
+	_, m, id := buildCommandIssuedRuntime(t, -time.Hour)
+	recovery := newRecoveryRuntime(m, id, context.Background())
+	before, _ := m.Get(id)
+
+	err := recovery.Complete(Outcome{Status: StatusCommandIssued, CommandIssuedUntil: m.deps.Now().Add(time.Hour)})
+	if !errors.Is(err, ErrRecoveryCannotExtendDeadline) {
+		t.Fatalf("Complete() = %v, want ErrRecoveryCannotExtendDeadline", err)
+	}
+	got, _ := m.Get(id)
+	if got.Status != StatusCommandIssued || !got.CommandIssuedUntil.Equal(before.CommandIssuedUntil) {
+		t.Errorf("operation = %+v, want it left exactly as it was found (CommandIssuedUntil %v)",
+			got, before.CommandIssuedUntil)
+	}
+}
+
+func TestRecoveryCannotExtendAnExpiredDeadlineViaSettle(t *testing.T) {
+	_, m, id := buildCommandIssuedRuntime(t, -time.Hour)
+	recovery := newRecoveryRuntime(m, id, context.Background())
+	before, _ := m.Get(id)
+
+	s := settlement{outcome: Outcome{Status: StatusCommandIssued, CommandIssuedUntil: m.deps.Now().Add(time.Hour)}}
+	if err := recovery.Settle(s); !errors.Is(err, ErrRecoveryCannotExtendDeadline) {
+		t.Fatalf("Settle() = %v, want ErrRecoveryCannotExtendDeadline", err)
+	}
+	got, _ := m.Get(id)
+	if got.Status != StatusCommandIssued || !got.CommandIssuedUntil.Equal(before.CommandIssuedUntil) {
+		t.Errorf("operation = %+v, want it left exactly as it was found (CommandIssuedUntil %v)",
+			got, before.CommandIssuedUntil)
+	}
+}
+
+// A record whose CommandIssuedUntil has never been set is not "expired" —
+// there was nothing to re-arm — so recovery may still give a running record
+// its own first command_issued grace period, through any of the three
+// paths that write the field.
+
+func TestRecoveryMaySetAFirstDeadlineFromZeroViaSetCommandIssuedUntil(t *testing.T) {
+	rt, m, id := newTestRuntime(t, StatusRunning)
+	if got, _ := m.Get(id); !got.CommandIssuedUntil.IsZero() {
+		t.Fatalf("fixture already has a deadline: %v", got.CommandIssuedUntil)
+	}
+	recovery := newRecoveryRuntime(m, id, context.Background())
+
+	future := rt.Now().Add(time.Hour)
+	if err := recovery.SetCommandIssuedUntil(future); err != nil {
+		t.Fatalf("SetCommandIssuedUntil() = %v, want nil for a first-time deadline from zero", err)
+	}
+	got, _ := m.Get(id)
+	if !got.CommandIssuedUntil.Equal(future) {
+		t.Errorf("CommandIssuedUntil = %v, want %v", got.CommandIssuedUntil, future)
+	}
+}
+
+func TestRecoveryMaySettleCommandIssuedFromRunningWithAFreshDeadline(t *testing.T) {
+	rt, m, id := newTestRuntime(t, StatusRunning)
+	recovery := newRecoveryRuntime(m, id, context.Background())
+	future := rt.Now().Add(time.Hour)
+
+	if err := recovery.Complete(Outcome{Status: StatusCommandIssued, CommandIssuedUntil: future}); err != nil {
+		t.Fatalf("Complete() = %v, want nil for a first-time deadline from zero", err)
+	}
+	got, _ := m.Get(id)
+	if got.Status != StatusCommandIssued || !got.CommandIssuedUntil.Equal(future) {
+		t.Errorf("operation = %+v, want command_issued with CommandIssuedUntil %v", got, future)
+	}
+}
+
+// Late reboot confirmation — the whole reason recovery is allowed to touch
+// an expired command_issued record at all — clears the deadline (the zero
+// value) rather than naming a new one, so it must keep succeeding through
+// Settle exactly as confirmReboot relies on. See
+// TestARebootIsConfirmedAfterItsGraceDeadlineHasLongPassed for the same
+// guarantee end to end through rebootModule.
+func TestRecoveryMaySettleWithZeroDeadlineEvenWhenExpired(t *testing.T) {
+	_, m, id := buildCommandIssuedRuntime(t, -time.Hour)
+	recovery := newRecoveryRuntime(m, id, context.Background())
+
+	s := settlement{outcome: Outcome{Status: StatusSucceeded}}
+	if err := recovery.Settle(s); err != nil {
+		t.Fatalf("Settle() = %v, want nil: clearing the deadline must still succeed for a late confirmation", err)
+	}
+	got, _ := m.Get(id)
+	if got.Status != StatusSucceeded {
+		t.Errorf("Status = %q, want succeeded", got.Status)
+	}
+	if !got.CommandIssuedUntil.IsZero() {
+		t.Errorf("CommandIssuedUntil = %v, want cleared", got.CommandIssuedUntil)
+	}
+}
+
 // --- I3: a module's own error text never reaches the persisted record. ---
 
 func TestRuntimeFinishStepPersistsSafeReasonNotRawDetail(t *testing.T) {

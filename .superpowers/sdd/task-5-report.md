@@ -270,5 +270,292 @@ Changed
 ## Commit
 
 `refactor(clusterop): delegate recovery to operation modules` — local commit
-only, not pushed, per this task's authorization. See `git log -1` in the
-working tree for the hash.
+only, not pushed, per this task's authorization.
+Hash: `ab7b4ca7b13ed5f93c5a5a73a4828e7d19d71b3d`.
+
+---
+
+# Review fix round — I1 (recovery deadline guard), I2 (Run panic overwrite), and five minors
+
+Status: **COMPLETE**
+Base: `ab7b4ca7b13ed5f93c5a5a73a4828e7d19d71b3d` (the commit above)
+Commit: see "Commit" at the end of this section.
+
+## What changed, in one paragraph
+
+I1 and I2 were both the same shape of bug: a check that existed on one
+call path but not on the others that reach the same state. I1's
+`ErrRecoveryCannotExtendDeadline` guard lived only in
+`SetCommandIssuedUntil`; `Complete` and `Settle` — the two paths a
+`RecoverableModule` actually uses to move a `command_issued` record forward
+— wrote `CommandIssuedUntil` with no check at all. I2's `safeRun` treated
+every panic identically, settling `failed/module_failed` even when the
+module had already committed a real `command_issued` handoff or terminal
+outcome through its own `Runtime` moments before it panicked. Both are
+fixed by moving the decision to one place each path calls through
+(`checkCommandIssuedUntilTransition`, `recoverFromRunPanic`) rather than by
+patching each call site separately. Five minors from the same review round
+are fixed alongside them: the zero-value bug that `checkCommandIssuedUntilTransition`
+would otherwise have inherited from the original `SetCommandIssuedUntil`
+check, a nil-registry panic in `ExecuteNode`, a busy-poll in
+`TestRecoverPanicDuringResumeLeavesTheRecordIntact` replaced with a
+deterministic signal, and a double-`Now()`-call bug in the settlement
+primitive `MarkInterrupted` (and `recoverFromRunPanic`'s own settlement)
+share, which could stamp `UpdatedAt` a moment apart from `FinishedAt` and
+every step/node `FinishedAt` it closes.
+
+## TDD cycles
+
+Each cycle was RED first: the four touched production files
+(`manager.go`, `recovery.go`, `runtime.go`, `settlement.go`) were reverted
+to the pre-fix commit above, the new tests were added, and each was run to
+fail for the reason described — then the fixed files were restored and the
+same tests re-run to GREEN. Two failure modes showed up: a genuine
+assertion failure (the bug), and, for `ExecuteNode`'s nil-registry case, an
+actual unrecovered panic that crashed the test binary — both are RED in
+the sense the fix removes them.
+
+### I1 — recovery deadline guard was one call site, not one rule
+
+RED:
+
+```
+--- FAIL: TestRecoveryCannotExtendAnExpiredDeadlineViaComplete
+    runtime_test.go:720: Complete() = <nil>, want ErrRecoveryCannotExtendDeadline
+--- FAIL: TestRecoveryCannotExtendAnExpiredDeadlineViaSettle
+    runtime_test.go:736: Settle() = <nil>, want ErrRecoveryCannotExtendDeadline
+--- FAIL: TestRecoveryMaySetAFirstDeadlineFromZeroViaSetCommandIssuedUntil
+    runtime_test.go:759: SetCommandIssuedUntil() = recovery cannot extend an
+    expired command deadline, want nil for a first-time deadline from zero
+```
+
+The third failure is the zero-value minor: the original check compared
+`!op.CommandIssuedUntil.After(now)` with no `IsZero()` guard, so a record
+that had *never* held a deadline (the zero value, always "not after now")
+was treated exactly like one whose deadline had expired, and recovery could
+not give a `running` record its own first `command_issued` grace period.
+
+GREEN — `runtime.go` adds `checkCommandIssuedUntilTransition(current, next
+time.Time) error` on `*operationRuntime`: a no-op for an ordinary run, a
+no-op for clearing (`next.IsZero()`) or for extending a still-active
+deadline, and `ErrRecoveryCannotExtendDeadline` only when `next` names a
+future time and `current` is *both* non-zero *and* already expired.
+`SetCommandIssuedUntil`, `Complete` (`runtime.go`), and `Settle`
+(`settlement.go`) all call through it — `Complete`/`Settle` build a
+composite `validate` that runs `rt.settled` first and this check second,
+only when `rt.recovery` is true, so an ordinary run's `Complete`/`Settle`
+take no new code path at all.
+
+Tests: `TestRecoveryCannotExtendAnExpiredDeadlineViaComplete`,
+`TestRecoveryCannotExtendAnExpiredDeadlineViaSettle`,
+`TestRecoveryMaySetAFirstDeadlineFromZeroViaSetCommandIssuedUntil`,
+`TestRecoveryMaySettleCommandIssuedFromRunningWithAFreshDeadline`,
+`TestRecoveryMaySettleWithZeroDeadlineEvenWhenExpired` (the last is the
+direct `Settle`-level regression guard for late reboot confirmation — zero
+deadline, already-expired record, must still succeed). The existing
+`TestARebootIsConfirmedAfterItsGraceDeadlineHasLongPassed` (end-to-end
+through `rebootModule`/`confirmReboot`) and
+`TestRecoveryCannotExtendAnExpiredDeadline` /
+`TestRecoveryCanClearAnExpiredDeadline` /
+`TestRunRuntimeMaySetAFutureDeadlineRegardless` (the original
+`SetCommandIssuedUntil`-only tests from the first round) all still pass
+unmodified.
+
+### I2 — a panicking Run could overwrite state the module already committed
+
+RED:
+
+```
+--- FAIL: TestRunPanicAfterCommandIssuedLeavesItIntact
+    panic_test.go:123: status = "failed", want command_issued left exactly
+    as the module committed it
+--- FAIL: TestRunPanicAfterAStartedStepClosesItAndSettlesFailed
+    panic_test.go:185: Steps[0] = [{Name:work Status:running
+    FinishedAt:<nil> ...}], want the started step closed failed rather than
+    left running
+```
+
+(`TestRunPanicAfterSucceededLeavesItIntact` did not fail against the old
+code — a `Succeeded` record is already `Terminal()`/non-`command_issued`,
+so the old code's *unconditional* `rejectSettled` already refused the
+follow-up `Complete`, just noisily, with a `klog.Warningf`. `command_issued`
+is the one status `rejectSettled` treats as still "active" while its
+deadline holds, which is exactly why only that case corrupted the record.)
+
+GREEN — `recovery.go`'s `safeRun` now calls a new `recoverFromRunPanic(rt
+Runtime) Outcome` from its `recover()` instead of building
+`failedWith(CodeModuleFailed, ...)` directly. It re-reads the operation
+through `rt`: if the status is no longer `running` — the module already
+called `Complete` or `Settle` before it panicked — it returns
+`Outcome{}.alreadyRecorded()` so `Manager.settle` leaves the record exactly
+as the module left it. If the status is still `running`, it settles
+`failed`/`module_failed` itself, through the same `settleTerminated` helper
+`MarkInterrupted` uses, which also closes any step or node the module
+started but never finished — so a caller never sees a `failed` operation
+with a step still reading `running`. A `Runtime` this package did not build
+(`managerOf(rt)` fails) falls back to the old unconditional behavior, since
+there is no committed state to check.
+
+Tests: `TestRunPanicAfterCommandIssuedLeavesItIntact`,
+`TestRunPanicAfterSucceededLeavesItIntact`,
+`TestRunPanicAfterAStartedStepClosesItAndSettlesFailed`. The existing
+`TestRunPanicSettlesTheOperationFailed` and
+`TestRunPanicReleasesTheOperationLock` (ordinary panic, nothing committed
+first: still settles `failed`/`module_failed`, still releases the lock,
+still never leaks the panic's own text) pass unmodified.
+
+### Minors
+
+1. **Zero-value semantics** — folded into I1 above
+   (`checkCommandIssuedUntilTransition`'s `current.IsZero()` branch); no
+   separate fix, one shared RED/GREEN.
+2. **`TestRecoverPanicDuringResumeLeavesTheRecordIntact`'s busy-poll.** The
+   test closed a channel the instant *before* a panic and then polled
+   `m.Get` on a 1ms timer for up to a second, hoping to observe the
+   deferred `recover()` having already run — correct by construction but
+   timing-based. `Deps` gains an unexported `recoveryDone chan string`
+   (production never sets it; zero cost when nil) and `Manager.resume`
+   sends the operation's id on it after `safeRecover` returns, panic or
+   not. The test sets `deps.recoveryDone` before calling
+   `NewManagerWithRegistry` and blocks on a channel receive instead of a
+   timer — it now fails deterministically (channel timeout) rather than
+   flaking if the recovery goroutine is ever slow, and succeeds the instant
+   the goroutine actually finishes rather than up to 1ms late. Not
+   independently RED/GREEN-able as a logic bug (the old poll already
+   reached the correct answer, just non-deterministically); verified by
+   running it, along with the whole package, under `-race -count=1`.
+3. **`ExecuteNode` nil-registry panic.** RED (see above): an actual
+   unrecovered `nil` pointer dereference inside `(*ModuleRegistry).Lookup`,
+   thrown *before* `ExecuteNode`'s own `defer`/`recover` was even
+   registered, crashing the test binary. Fixed with an explicit `registry
+   == nil` check at the top of `ExecuteNode`, returning the same
+   `unsupportedNodeOperationError()` an unknown type already gets.
+   Test: `TestExecuteNodeRefusesANilRegistry`.
+4. **`MarkInterrupted` timestamp consistency.** RED:
+
+   ```
+   --- FAIL: TestMarkInterruptedStampsEveryTimestampFromTheSameMoment
+       recovery_test.go:365: UpdatedAt = ...20.002 UTC, FinishedAt =
+       ...20.001 UTC, want the same settlement moment
+   ```
+
+   `MarkInterrupted`/`settleUnknownModule` (via `settleTerminated`) already
+   used one `now` consistently for `FinishedAt` and every step/node they
+   close — the second, disagreeing clock read came from `applyLocked`,
+   which unconditionally called `m.deps.Now()` again for `UpdatedAt` after
+   `fn(op)` ran. Fixed by threading the caller's own `now` through:
+   `manager.go` adds `updateAt(id, at, fn)` / `applyLockedAt(op, at, fn)`
+   (parallel to `update`/`applyLocked`, which now delegate to them with
+   `m.deps.Now()`), and the three call sites in `recoverLoadedOperations`
+   plus the new `recoverFromRunPanic` compute `now` once and pass it both
+   to the settlement helper and to `updateAt`. `update`/`applyLocked`'s own
+   single-`Now()`-call behavior for every other caller (`StartStep`,
+   `FinishStep`, `Complete`, etc.) is unchanged — this fix is scoped to the
+   three "framework forces a terminal settlement with one `now`" call
+   sites, not to every checked mutation.
+   Test: `TestMarkInterruptedStampsEveryTimestampFromTheSameMoment`
+   (asserts `UpdatedAt`, `FinishedAt`, `Steps[0].FinishedAt`, and
+   `Nodes[0].FinishedAt` are all `.Equal` to each other).
+5. **Recover hang timeout** — explicitly out of scope for this round, per
+   instruction; still listed under Concerns below.
+
+## Files
+
+Changed
+
+- `pkg/cluster/clusterop/runtime.go` (`checkCommandIssuedUntilTransition`;
+  `Complete` validates through it when `rt.recovery`)
+- `pkg/cluster/clusterop/settlement.go` (`Settle` validates through
+  `checkCommandIssuedUntilTransition` when `rt.recovery`)
+- `pkg/cluster/clusterop/recovery.go` (`recoverFromRunPanic`; `safeRun`
+  calls it; `ExecuteNode` nil-registry guard; `recoverLoadedOperations`'s
+  three settlement sites now compute `now` once and call `updateAt`)
+- `pkg/cluster/clusterop/manager.go` (`Deps.recoveryDone` test seam;
+  `resume` signals it; `updateAt`/`applyLockedAt` added, `update`/`applyLocked`
+  delegate to them)
+- `pkg/cluster/clusterop/runtime_test.go`, `pkg/cluster/clusterop/panic_test.go`,
+  `pkg/cluster/clusterop/recovery_test.go` (new tests; the busy-poll fix in
+  `panic_test.go`)
+
+## Tests
+
+- `go build ./pkg/cluster/clusterop/...` and
+  `go vet ./pkg/cluster/clusterop/...` — clean.
+- `gofmt -l ./pkg/cluster/clusterop/` — clean (no output).
+- Focused run of the 11 new/rewritten tests (`-v -count=1`) — all PASS,
+  confirmed RED beforehand against the reverted production files (see
+  transcript above for the exact RED output).
+- `go test ./pkg/cluster/clusterop/... -count=1 -v` — 239 `--- PASS`, 0
+  `--- FAIL`.
+- `go test ./pkg/cluster/clusterop/... -race -count=1` — ok (~16.6s), no
+  data races.
+
+## Self-review
+
+- `checkCommandIssuedUntilTransition` is a method on `*operationRuntime`
+  (not a free function) so it reads `rt.recovery` and `rt.m.deps.Now()`
+  without either caller needing to pass them in; `SetCommandIssuedUntil`,
+  `Complete`, and `Settle` each still run their own `rt.settled(op)` check
+  first — the new check only ever narrows what recovery may additionally
+  do, never widens what an ordinary run may do.
+- `recoverFromRunPanic` reads the operation through `m.Get(id)` (a fresh
+  lock/copy) rather than through `rt.Operation()`, then commits through
+  `m.updateAt` directly rather than `rt.Complete` — this is intentional:
+  the settlement it performs (closing steps/nodes) is not expressible
+  through `Complete`'s `Outcome`, and it mirrors exactly how
+  `MarkInterrupted`/`settleUnknownModule` already commit a forced
+  settlement in this package (via `m.update`, now `m.updateAt`), not a new
+  pattern.
+- Checked whether `recoverFromRunPanic`'s two-step read-then-write
+  (`m.Get` then `m.updateAt`) is racy: no other goroutine mutates this
+  operation while its own `Run` goroutine is inside `safeRun`'s deferred
+  `recover()` — the same single-writer assumption `Manager.settle` (the
+  only caller of `safeRun`) already depends on.
+- `updateAt`/`applyLockedAt` are additive: `update`/`applyLocked` keep
+  their old signatures and behavior for every existing caller
+  (`checkedUpdate` still calls `applyLocked`, i.e. `m.deps.Now()` derived
+  internally, unchanged for `StartStep`/`FinishStep`/`SetHostBootID`/etc.).
+  Only `recoverLoadedOperations` and `recoverFromRunPanic` — both of which
+  already had their own external `now` before this round, just not
+  threaded all the way through — were switched to the `...At` variants.
+- `deps.recoveryDone` is unexported on an exported struct, so it is
+  settable only from inside this package (tests), invisible and zero-cost
+  (nil channel, `if done != nil` guard) for every production caller and
+  every existing test that does not set it.
+- Re-ran the full pre-existing suite (not just the new tests) under `-race`
+  to make sure `checkCommandIssuedUntilTransition`'s extra `rt.m.deps.Now()`
+  call and the `updateAt` refactor did not change behavior for any test
+  from the first round — all 239 tests pass.
+- Hardcoding scan: no new `reboot`/`shutdown` literal in any of the four
+  changed production files.
+
+## Concerns / follow-ups
+
+1. **Recover hang timeout** (noted in the review, explicitly deferred):
+   `rebootModule.Recover`'s poll loop is bounded by `Timeouts.Ready`, but
+   nothing bounds a third-party `RecoverableModule.Recover` that never
+   returns — `recoverLoadedOperations` would block `NewManagerWithRegistry`
+   forever on such a module for a non-`command_issued` record (see Concern
+   2 from the first round). Not addressed here, per instruction.
+2. `recoverFromRunPanic`'s "was anything already committed" check is
+   `current.Status != StatusRunning`. This is exactly right for every
+   status this package defines (`command_issued` and every terminal status
+   are all "not running"), but it means a hypothetical future `Status`
+   value that is neither `running` nor one of today's committed/terminal
+   meanings would also be treated as "already committed, leave it alone" —
+   the same implicit assumption `operationActive`/`Status.Terminal()`
+   already make elsewhere in this package, not a new one.
+3. The RED demonstrations for this round were done by reverting the four
+   touched production files to commit `ab7b4ca7b13ed5f93c5a5a73a4828e7d19d71b3d`
+   and adding a *minimal* stand-alone `recoveryDone` stub to that reverted
+   `manager.go` so the new tests could compile at all — that stub is not
+   itself part of the graded RED/GREEN cycle for I1/I2, only scaffolding so
+   `TestRecoverPanicDuringResumeLeavesTheRecordIntact`'s rewrite could run
+   in the same batch as the other new tests.
+
+## Commit
+
+`fix(clusterop): close recovery deadline and Run-panic overwrite gaps from
+Task 5 review` — local commit only, not pushed, per this task's
+authorization.
+Hash: `af5d6ab216bf4fa693b6432291b5cd5ffd8fd2b9`.

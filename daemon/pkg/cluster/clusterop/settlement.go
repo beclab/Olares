@@ -58,7 +58,16 @@ func (rt *operationRuntime) Settle(s settlement) error {
 	if !s.outcome.valid(rt.m.deps.Now()) {
 		return ErrInvalidOutcome
 	}
-	return rt.m.settleAtomically(rt.id, s, rt.settled)
+	validate := rt.settled
+	if rt.recovery {
+		validate = func(op *Operation) error {
+			if err := rt.settled(op); err != nil {
+				return err
+			}
+			return rt.checkCommandIssuedUntilTransition(op.CommandIssuedUntil, s.outcome.CommandIssuedUntil)
+		}
+	}
+	return rt.m.settleAtomically(rt.id, s, validate)
 }
 
 // settleAtomically applies s to a copy of the record, writes the copy, and

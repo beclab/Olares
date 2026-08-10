@@ -338,6 +338,42 @@ func TestUnknownHistoricalModuleRetainsTerminalRecord(t *testing.T) {
 	}
 }
 
+// MarkInterrupted (and settleUnknownModule alongside it) stamp UpdatedAt,
+// FinishedAt and every step/node FinishedAt they close from one "now". If
+// the primitive that persists the settlement re-derived its own moment
+// afterward, UpdatedAt would disagree with the FinishedAt the settlement
+// itself just wrote — the same settlement pretending to be two different
+// moments. updateAt (manager.go) is what keeps them the same value.
+func TestMarkInterruptedStampsEveryTimestampFromTheSameMoment(t *testing.T) {
+	fake := newFake(Type("bake-cake"))
+	dir := filepath.Join(t.TempDir(), "operations")
+	storeOperation(t, dir, historicalOperation("op-1", fake.typ, StatusRunning))
+
+	m := newManagerWithRegistry(t, dir, registryWith(t, fake))
+
+	got, ok := m.Get("op-1")
+	if !ok {
+		t.Fatal("operation op-1 is gone")
+	}
+	if got.Status != StatusFailed || got.Code != CodeDaemonRestarted {
+		t.Fatalf("status = %q code = %q, want failed/%s", got.Status, got.Code, CodeDaemonRestarted)
+	}
+	if got.FinishedAt == nil {
+		t.Fatal("a settled operation must say when it settled")
+	}
+	if !got.UpdatedAt.Equal(*got.FinishedAt) {
+		t.Errorf("UpdatedAt = %v, FinishedAt = %v, want the same settlement moment", got.UpdatedAt, *got.FinishedAt)
+	}
+	if len(got.Steps) == 0 || got.Steps[0].FinishedAt == nil || !got.Steps[0].FinishedAt.Equal(*got.FinishedAt) {
+		t.Errorf("Steps[0].FinishedAt = %v, want it to match the operation's own FinishedAt %v",
+			got.Steps[0].FinishedAt, got.FinishedAt)
+	}
+	if len(got.Nodes) == 0 || got.Nodes[0].FinishedAt == nil || !got.Nodes[0].FinishedAt.Equal(*got.FinishedAt) {
+		t.Errorf("Nodes[0].FinishedAt = %v, want it to match the operation's own FinishedAt %v",
+			got.Nodes[0].FinishedAt, got.FinishedAt)
+	}
+}
+
 // recoveringTestModule is a RecoverableModule a test can watch: it counts
 // every call to Recover and, unless told to settle something, leaves the
 // operation exactly as it found it — the common case of a module that has

@@ -76,26 +76,133 @@ func TestRunPanicReleasesTheOperationLock(t *testing.T) {
 	awaitTerminal(t, m, next.ID)
 }
 
+// panicAfterCommitModule is an OperationModule whose Run first commits
+// something real through its Runtime and only then panics — the shape every
+// "the module already said something before it blew up" scenario shares.
+type panicAfterCommitModule struct {
+	fakeModule
+	typ      Type
+	panicMsg string
+	commit   func(Runtime) error
+}
+
+func (p *panicAfterCommitModule) Type() Type { return p.typ }
+
+func (p *panicAfterCommitModule) Run(_ context.Context, rt Runtime, _ RunRequest) Outcome {
+	if err := p.commit(rt); err != nil {
+		panic("commit before the real panic failed: " + err.Error())
+	}
+	panic(p.panicMsg)
+}
+
+// A module that hands out a command and then panics has already told the
+// record the truth: the command_issued handoff is real, committed state,
+// and a panic afterward must not be allowed to overwrite it with a generic
+// module_failed the module never actually reported.
+func TestRunPanicAfterCommandIssuedLeavesItIntact(t *testing.T) {
+	module := &panicAfterCommitModule{
+		typ: Type("kaboom-issued"), panicMsg: "boom: after command_issued",
+		commit: func(rt Runtime) error {
+			return rt.Complete(Outcome{Status: StatusCommandIssued, CommandIssuedUntil: rt.Now().Add(time.Hour)})
+		},
+	}
+	c := newCluster(master("master-1", "10.0.0.1"))
+	m, _ := newManagerWith(t, c, registryWith(t, module))
+
+	op, err := createFake(t, m, module.typ, "client-1")
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	settled := awaitTerminal(t, m, op.ID)
+	// Give a wrongly-still-running settlement a moment to land, if the fix
+	// is not in place, rather than trusting the first terminal read.
+	time.Sleep(20 * time.Millisecond)
+	settled, _ = m.Get(op.ID)
+
+	if settled.Status != StatusCommandIssued {
+		t.Fatalf("status = %q, want command_issued left exactly as the module committed it", settled.Status)
+	}
+	if settled.Code != "" || settled.Error != "" {
+		t.Errorf("code = %q error = %q, want the committed outcome untouched by the later panic",
+			settled.Code, settled.Error)
+	}
+}
+
+// The same rule applies to any terminal status, not just command_issued: a
+// module that already reported succeeded before it panicked must not have
+// that overwritten with failed/module_failed.
+func TestRunPanicAfterSucceededLeavesItIntact(t *testing.T) {
+	module := &panicAfterCommitModule{
+		typ: Type("kaboom-succeeded"), panicMsg: "boom: after succeeded",
+		commit: func(rt Runtime) error {
+			return rt.Complete(Outcome{Status: StatusSucceeded})
+		},
+	}
+	c := newCluster(master("master-1", "10.0.0.1"))
+	m, _ := newManagerWith(t, c, registryWith(t, module))
+
+	op, err := createFake(t, m, module.typ, "client-1")
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	awaitTerminal(t, m, op.ID)
+	time.Sleep(20 * time.Millisecond)
+	settled, _ := m.Get(op.ID)
+
+	if settled.Status != StatusSucceeded {
+		t.Fatalf("status = %q, want succeeded left exactly as the module committed it", settled.Status)
+	}
+	if settled.Code != "" || settled.Error != "" {
+		t.Errorf("code = %q error = %q, want the committed outcome untouched by the later panic",
+			settled.Code, settled.Error)
+	}
+}
+
+// A module that panics without ever committing anything — the ordinary
+// case, still exactly at running — is settled failed/module_failed as
+// before, and any step it started but never finished is closed alongside
+// it rather than left reading running under a failed operation.
+func TestRunPanicAfterAStartedStepClosesItAndSettlesFailed(t *testing.T) {
+	module := &panicAfterCommitModule{
+		typ: Type("kaboom-step"), panicMsg: "boom: after starting a step",
+		commit: func(rt Runtime) error {
+			return rt.StartStep("work")
+		},
+	}
+	c := newCluster(master("master-1", "10.0.0.1"))
+	m, _ := newManagerWith(t, c, registryWith(t, module))
+
+	op, err := createFake(t, m, module.typ, "client-1")
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	settled := awaitTerminal(t, m, op.ID)
+
+	if settled.Status != StatusFailed || settled.Code != CodeModuleFailed {
+		t.Fatalf("status = %q code = %q, want failed/%s", settled.Status, settled.Code, CodeModuleFailed)
+	}
+	if len(settled.Steps) == 0 || settled.Steps[0].Status != StepFailed {
+		t.Fatalf("Steps[0] = %+v, want the started step closed failed rather than left running", settled.Steps)
+	}
+	if settled.Steps[0].Code != CodeModuleFailed {
+		t.Errorf("Steps[0].Code = %q, want %s", settled.Steps[0].Code, CodeModuleFailed)
+	}
+}
+
 // --- Recover: a module that panics while recovering must not corrupt the
 // record it was trying to explain, and must not take the daemon down. ---
 
 // panickingRecoverModule is a RecoverableModule whose Recover always
-// panics. done, if set, is closed the instant before the panic happens, so
-// a test driving it through an asynchronous path (Manager.resume) can wait
-// for it to have run without racing the goroutine that runs it.
+// panics.
 type panickingRecoverModule struct {
 	fakeModule
 	typ      Type
 	panicMsg string
-	done     chan struct{}
 }
 
 func (p *panickingRecoverModule) Type() Type { return p.typ }
 
 func (p *panickingRecoverModule) Recover(context.Context, Runtime, Operation) {
-	if p.done != nil {
-		close(p.done)
-	}
 	panic(p.panicMsg)
 }
 
@@ -133,11 +240,13 @@ func TestRecoverPanicDuringLoadFallsBackToMarkInterrupted(t *testing.T) {
 // nothing after it ever ran, so the record is left exactly at command_issued
 // — the same answer offering no recovery at all would have given for a
 // command nothing could confirm.
+//
+// deps.recoveryDone (a test-only seam on Deps, see manager.go) is what
+// makes this deterministic: it is signalled exactly when the resume
+// goroutine that ran this panicking Recover returns, so the assertion below
+// never races that goroutine's own deferred recover.
 func TestRecoverPanicDuringResumeLeavesTheRecordIntact(t *testing.T) {
-	module := &panickingRecoverModule{
-		typ: Type("kaboom-recover"), panicMsg: "boom: recover panic detail",
-		done: make(chan struct{}),
-	}
+	module := &panickingRecoverModule{typ: Type("kaboom-recover"), panicMsg: "boom: recover panic detail"}
 	reg := NewRegistry()
 	if err := reg.Register(module); err != nil {
 		t.Fatal(err)
@@ -146,25 +255,24 @@ func TestRecoverPanicDuringResumeLeavesTheRecordIntact(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "operations")
 	id := storeCommandIssued(t, c, dir, module.typ)
 
-	m, err := NewManagerWithRegistry(c.deps(t, dir), reg)
+	deps := c.deps(t, dir)
+	recoveryDone := make(chan string, 1)
+	deps.recoveryDone = recoveryDone
+
+	m, err := NewManagerWithRegistry(deps, reg)
 	if err != nil {
 		t.Fatalf("NewManagerWithRegistry: %v", err)
 	}
 
 	select {
-	case <-module.done:
-	case <-time.After(time.Second):
-		t.Fatal("the module was never handed its unfinished command")
-	}
-	// The panic already happened by the time done closed; give the deferred
-	// recover a moment to run before asserting on the record.
-	deadline := time.Now().Add(time.Second)
-	for time.Now().Before(deadline) {
-		if got, ok := m.Get(id); ok && got.Status == StatusCommandIssued {
-			return
+	case got := <-recoveryDone:
+		if got != id {
+			t.Fatalf("recovery finished for %q, want %q", got, id)
 		}
-		time.Sleep(time.Millisecond)
+	case <-time.After(time.Second):
+		t.Fatal("the panicking recovery never finished")
 	}
+
 	got, ok := m.Get(id)
 	if !ok {
 		t.Fatal("the stored operation was lost")
@@ -218,6 +326,18 @@ func TestExecuteNodeDispatchesToTheRegisteredModule(t *testing.T) {
 	}
 	if module.callCount() != 1 {
 		t.Fatalf("ExecuteNode calls = %d, want 1", module.callCount())
+	}
+}
+
+// A nil registry is refused the same safe way an unknown type is, rather
+// than panicking on the nil pointer before the function's own recover is
+// even in place to catch it.
+func TestExecuteNodeRefusesANilRegistry(t *testing.T) {
+	req := NodeRequest{PeerRequest: PeerRequest{Type: Type("node-op"), OperationID: "op-1", RequestID: "client-1"}}
+
+	err := ExecuteNode(context.Background(), nil, req)
+	if powerCode(t, err) != CodeUnsupportedOperation {
+		t.Fatalf("ExecuteNode() code = %q, want %s", powerCode(t, err), CodeUnsupportedOperation)
 	}
 }
 

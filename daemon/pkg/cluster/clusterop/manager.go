@@ -135,6 +135,15 @@ type Deps struct {
 
 	Retention int
 	Timeouts  Timeouts
+
+	// recoveryDone, if set, receives the id of every operation whose
+	// asynchronous recovery (Manager.resume) has just returned, whether it
+	// panicked or not. It is unexported: nothing outside this package may
+	// depend on when a background recovery goroutine finishes, and
+	// production never sets it. A test in this package uses it instead of
+	// polling the record on a timer to know a panicking Recover has
+	// already run its course.
+	recoveryDone chan string
 }
 
 // storeIsNil reports whether s is unusable as an OperationStore: either the
@@ -368,7 +377,13 @@ func (m *Manager) resume(id string) {
 	if !ok {
 		return
 	}
-	go m.safeRecover(m.deps.Base, recoverable, id)
+	done := m.deps.recoveryDone
+	go func() {
+		m.safeRecover(m.deps.Base, recoverable, id)
+		if done != nil {
+			done <- id
+		}
+	}()
 }
 
 func sameIntent(op *Operation, req CreateRequest, opType Type, paramsDigest, emptyParamsDigest string) bool {
@@ -596,6 +611,17 @@ func (m *Manager) rejectSettledDuringRecovery(op *Operation) error {
 // record is saved under the same lock that changed it, so the file never goes
 // backwards relative to what a reader is told in memory.
 func (m *Manager) update(id string, fn func(*Operation)) bool {
+	return m.updateAt(id, m.deps.Now(), fn)
+}
+
+// updateAt is update with an explicit settlement moment rather than one
+// applyLocked derives itself. It exists for a caller that has already used
+// one "now" to stamp several fields of its own — MarkInterrupted's
+// FinishedAt and every step and node it closes with it, for instance — and
+// must not let applyLocked's own, separate clock read disagree with what it
+// already wrote: against a real clock the skew is a few nanoseconds, but it
+// is still the same settlement pretending to be two different moments.
+func (m *Manager) updateAt(id string, at time.Time, fn func(*Operation)) bool {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -606,7 +632,7 @@ func (m *Manager) update(id string, fn func(*Operation)) bool {
 	if m.persistFailed[id] {
 		return false
 	}
-	return m.applyLocked(op, fn) == nil
+	return m.applyLockedAt(op, at, fn) == nil
 }
 
 // checkedUpdate is the persistence-safe primitive every Runtime mutation
@@ -755,16 +781,24 @@ func sameMoment(a, b *time.Time) bool {
 // applyLocked mutates op through fn and persists the result, then applies
 // the same state_persistence_failed settlement update has always applied.
 // The caller must already hold m.mu and must already have confirmed the
-// operation exists and has not previously failed to persist. update and
-// checkedUpdate are its only two callers, so a save failure is handled
-// exactly one way regardless of which one triggered it.
+// operation exists and has not previously failed to persist. checkedUpdate
+// is its only caller that does not already have its own "now"; update goes
+// through applyLockedAt directly. See applyLockedAt for what "at" means.
 func (m *Manager) applyLocked(op *Operation, fn func(*Operation)) error {
+	return m.applyLockedAt(op, m.deps.Now(), fn)
+}
+
+// applyLockedAt is applyLocked with an explicit "at" for UpdatedAt (and,
+// when fn left FinishedAt nil, for FinishedAt too) instead of one this
+// derives itself. The caller must already hold m.mu and must already have
+// confirmed the operation exists and has not previously failed to persist.
+func (m *Manager) applyLockedAt(op *Operation, at time.Time, fn func(*Operation)) error {
 	fn(op)
-	op.UpdatedAt = m.deps.Now()
+	op.UpdatedAt = at
 	if op.Status.Terminal() {
 		if op.FinishedAt == nil {
-			at := op.UpdatedAt
-			op.FinishedAt = &at
+			finishedAt := at
+			op.FinishedAt = &finishedAt
 		}
 		if m.activeID == op.ID && !m.operationActive(op, op.UpdatedAt) {
 			m.activeID = ""
