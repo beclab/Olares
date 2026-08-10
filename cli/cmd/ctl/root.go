@@ -12,9 +12,10 @@ import (
 	"github.com/beclab/Olares/cli/cmd/ctl/disk"
 	"github.com/beclab/Olares/cli/cmd/ctl/doctor"
 	"github.com/beclab/Olares/cli/cmd/ctl/files"
-	"github.com/beclab/Olares/cli/cmd/ctl/knowledge"
 	"github.com/beclab/Olares/cli/cmd/ctl/gpu"
+	"github.com/beclab/Olares/cli/cmd/ctl/knowledge"
 	"github.com/beclab/Olares/cli/cmd/ctl/market"
+	"github.com/beclab/Olares/cli/cmd/ctl/model"
 	"github.com/beclab/Olares/cli/cmd/ctl/node"
 	"github.com/beclab/Olares/cli/cmd/ctl/os"
 	"github.com/beclab/Olares/cli/cmd/ctl/osinfo"
@@ -117,6 +118,7 @@ func NewDefaultCommand() *cobra.Command {
 	cmds.AddCommand(dashboard.NewDashboardCommand(factory))
 	cmds.AddCommand(settings.NewSettingsCommand(factory))
 	cmds.AddCommand(search.NewSearchCommand(factory))
+	cmds.AddCommand(model.NewModelCommand(factory))
 	cmds.AddCommand(cluster.NewClusterCommand(factory))
 
 	return cmds
