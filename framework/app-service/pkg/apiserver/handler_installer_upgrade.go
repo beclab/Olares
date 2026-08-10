@@ -517,7 +517,7 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 	// to scale workloads back up after the helm upgrade. When the app was
 	// already Stopped, the upgrade should land back in Stopped with the
 	// new chart version installed at replicas=0.
-	appCopy.Annotations[api.AppPreUpgradeStateKey] = string(appMgr.Status.State)
+	api.SnapshotPreUpgradeState(appCopy.Annotations, appMgr.Status.State)
 
 	err = h.ctrlClient.Patch(req.Request.Context(), appCopy, client.MergeFrom(&appMgr))
 	if err != nil {
