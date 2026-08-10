@@ -193,7 +193,6 @@ var StateTransitions = map[appv1alpha1.ApplicationManagerState][]appv1alpha1.App
 
 	appv1alpha1.StopFailed: {
 		appv1alpha1.Stopping,
-		appv1alpha1.Upgrading,
 		appv1alpha1.ApplyingEnv,
 		appv1alpha1.Uninstalling,
 	},
@@ -211,10 +210,9 @@ var StateTransitions = map[appv1alpha1.ApplicationManagerState][]appv1alpha1.App
 	appv1alpha1.ResumeFailed: {
 		appv1alpha1.Resuming,
 		appv1alpha1.Uninstalling,
-		// OperationAllowedInState[ResumeFailed] also allows UpgradeOp and
-		// ApplyEnvOp; handler_installer_upgrade.go and handler_applyenv.go
-		// drive these edges.
-		appv1alpha1.Upgrading,
+		// ApplyEnvOp remains allowed from ResumeFailed; UpgradeOp does not —
+		// callers must resume (or stop) back to a steady state first so
+		// upgrade resource checks see Running/Stopped (or UpgradeFailed).
 		appv1alpha1.ApplyingEnv,
 	},
 	appv1alpha1.UninstallFailed: {
@@ -439,12 +437,10 @@ var OperationAllowedInState = map[appv1alpha1.ApplicationManagerState]map[appv1a
 	//},
 	appv1alpha1.StopFailed: {
 		appv1alpha1.StopOp:      true,
-		appv1alpha1.UpgradeOp:   true,
 		appv1alpha1.UninstallOp: true,
 	},
 	appv1alpha1.ResumeFailed: {
 		appv1alpha1.ResumeOp:    true,
-		appv1alpha1.UpgradeOp:   true,
 		appv1alpha1.ApplyEnvOp:  true,
 		appv1alpha1.UninstallOp: true,
 	},
