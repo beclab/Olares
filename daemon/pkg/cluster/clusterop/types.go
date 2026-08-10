@@ -136,6 +136,12 @@ const (
 	// down is indistinguishable from one that restarted.
 	CodeBootIDUnavailable = "boot_id_unavailable"
 
+	// CodeModuleFailed marks an operation whose module stopped without
+	// leaving a usable outcome. Nothing is known about what it did, but
+	// leaving the record running would hold the cluster's single-operation
+	// lock until the daemon restarts.
+	CodeModuleFailed = "module_failed"
+
 	// CodeDaemonRestarted marks an operation that was still moving when
 	// olaresd stopped. Nothing observed how it ended, so it is reported as
 	// failed rather than left running and blocking the next one.

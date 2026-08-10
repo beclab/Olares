@@ -25,6 +25,14 @@ var reasons = map[string]string{
 	CodeHostPowerFailed:      "this node could not be powered",
 	CodeNodeUnaddressable:    "node has no internal address",
 
+	// A node-scope operation settles on whatever refused its one node, so
+	// every per-node refusal is also something a whole operation can end on.
+	// The sentences match the ones the per-node records carry.
+	CodeNodeNotReady:      "the cluster does not consider this node ready",
+	CodeBootIDUnavailable: "the cluster does not report which boot this node is on",
+	CodeNodeDidNotGoDown:  "this node was still up after the power command",
+	CodeRestartTimeout:    "this node did not come back ready on a new boot in time",
+
 	// The codes a whole operation settles on. A module reports one of these
 	// through its Outcome, and the reviewed sentence is all the record keeps
 	// of what the module itself said.
@@ -33,6 +41,8 @@ var reasons = map[string]string{
 	// refused.
 	CodeUnsupportedOperation: "this daemon does not perform that operation",
 
+	CodeModuleFailed: "the operation stopped without reporting what it did",
+
 	CodeUnsupportedTopology:    "this daemon powers a cluster with exactly one control node",
 	CodeSelfUnresolved:         "this daemon could not identify which node it is running on",
 	CodeNodeIdentityUnknown:    "the node directory could not identify this node",
@@ -40,6 +50,40 @@ var reasons = map[string]string{
 	CodeWorkerCommandFailed:    "one or more nodes did not accept the power command",
 	CodeWorkerRestartFailed:    "one or more nodes did not come back",
 	CodeStatePersistenceFailed: "the operation stopped because its state could not be recorded",
+}
+
+// settledWith is how a power operation inside this package reports an
+// outcome whose sentence is already reviewed. The sentence is kept on the
+// record exactly as written, which is what lets a stage and the operation it
+// belongs to say the same thing: both are given this same text, rather than
+// one keeping it and the other being handed a summary chosen by code.
+//
+// It is not a way around safeReason. Text only reaches a record through here
+// if it was written in this package, next to the condition it describes and
+// reviewed with it. Anything a module supplies from outside is Error, which
+// is logged and never persisted.
+func settledWith(status Status, code, reason string) Outcome {
+	return Outcome{Status: status, Code: code, reason: reason}
+}
+
+// failedWith is settledWith for the common case: the operation stops here.
+func failedWith(code, reason string) Outcome {
+	return settledWith(StatusFailed, code, reason)
+}
+
+// persistedReason is the text the record keeps for this outcome. A reviewed
+// sentence is kept as written; anything else is replaced by the reviewed
+// sentence for the code. A blank code keeps nothing at all, so neither a
+// module's detail nor a sentence disconnected from any stable code can be
+// left on the record on its own.
+func (o Outcome) persistedReason() string {
+	if o.Code == "" {
+		return ""
+	}
+	if o.reason != "" {
+		return o.reason
+	}
+	return safeReason(o.Code, o.Error)
 }
 
 // reasonFor is the message that accompanies a code on the wire and on disk.

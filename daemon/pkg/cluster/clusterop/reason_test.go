@@ -23,6 +23,16 @@ func TestEveryOutcomeCodeAPowerOperationSettlesOnHasAReviewedReason(t *testing.T
 		CodeHostPowerFailed,
 		CodeStatePersistenceFailed,
 		CodeUnsupportedOperation,
+
+		// A node-scope operation settles on whatever refused its one node,
+		// so every per-node refusal is also an operation outcome.
+		CodeNodeNotReady,
+		CodeNodeUnaddressable,
+		CodeBootIDUnavailable,
+		CodeNodeUnreachable,
+		CodeDispatchFailed,
+		CodeNodeDidNotGoDown,
+		CodeRestartTimeout,
 	} {
 		reason, ok := reasons[code]
 		if !ok {

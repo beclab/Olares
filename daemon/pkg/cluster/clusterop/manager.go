@@ -87,7 +87,7 @@ func (t Timeouts) withDefaults() Timeouts {
 // injected: a unit test drives a whole cluster reboot without a cluster, a
 // network, a clock or a machine that can be powered off.
 type Deps struct {
-	Store *Store
+	Store OperationStore
 
 	// Inventory is the node directory, including nodes that are NotReady or
 	// have no address — a precheck cannot refuse what it cannot see.
@@ -337,9 +337,12 @@ func NewManagerWithRegistry(deps Deps, registry *ModuleRegistry) (*Manager, erro
 // was found — which is the only honest answer for a machine that was told to
 // switch off.
 //
-// It is called from NewManagerWithRegistry, before the manager is reachable
-// by anything else; the goroutine it starts reaches the record the same way
-// every other caller does.
+// It is called from NewManagerWithRegistry while the manager is still being
+// built, and it reads m.ops without the lock: at that point the constructor
+// is the only writer, and it has finished loading. The goroutine it starts
+// runs concurrently with the rest of the constructor and with every later
+// caller, and reaches the record only through a Runtime, which takes the lock
+// like everything else.
 func (m *Manager) resume(id string) {
 	op, ok := m.ops[id]
 	if !ok {
@@ -353,7 +356,7 @@ func (m *Manager) resume(id string) {
 	if !ok {
 		return
 	}
-	go recoverable.Recover(m.deps.Base, newRuntime(m, id, m.deps.Base), op.Clone())
+	go recoverable.Recover(m.deps.Base, newRecoveryRuntime(m, id, m.deps.Base), op.Clone())
 }
 
 // markInterrupted settles an operation that was still moving when olaresd
@@ -562,6 +565,12 @@ func (m *Manager) operationActive(op *Operation, now time.Time) bool {
 	return op.Status == StatusCommandIssued && now.Before(op.CommandIssuedUntil)
 }
 
+// settledCheck decides whether an operation is still allowed to move. There
+// are two of them — one for a run, one for a recovery — and a runtime is
+// built with the one that applies to it, so no caller chooses at the point of
+// mutation which rules it would rather be judged by.
+type settledCheck func(*Operation) error
+
 // rejectSettled is the validate check shared by every checked mutation that
 // has no state to inspect beyond "is this operation still allowed to move".
 // An operation is settled — and every further mutation refused — once it is
@@ -577,6 +586,25 @@ func (m *Manager) rejectSettled(op *Operation) error {
 		return ErrOperationTerminal
 	}
 	return nil
+}
+
+// rejectSettledDuringRecovery is rejectSettled for the one caller that
+// exists to settle a command nobody was left to watch: a module handed an
+// operation back after the daemon that issued its command was replaced.
+//
+// A record still at command_issued stays mutable however long ago its grace
+// deadline passed. That deadline bounds how long the cluster is held for an
+// operation, not how long the evidence stays true: a machine that came back
+// on a boot other than the one it was told to leave rebooted whether that
+// took two minutes or two days, and refusing to record it would leave a
+// record saying a command is outstanding about a reboot this daemon can
+// prove finished. Every other terminal status is refused exactly as it is
+// for a run, so recovery can settle an outstanding command and nothing else.
+func (m *Manager) rejectSettledDuringRecovery(op *Operation) error {
+	if op.Status == StatusCommandIssued {
+		return nil
+	}
+	return m.rejectSettled(op)
 }
 
 // update applies fn to the stored operation and writes the result out. The
@@ -627,14 +655,15 @@ func (m *Manager) checkedUpdate(id string, validate func(*Operation) error, fn f
 
 // complete is the checked mutation behind Runtime.Complete. Outcome.valid()
 // has already been checked by the caller, so this only has to refuse an
-// operation that has already settled. The error text it persists comes only
-// from safeReason(outcome.Code, ...): a module's own outcome.Error is never
+// operation that has already settled. The text it persists comes from
+// Outcome.persistedReason: a reviewed sentence written in this package, or
+// the reviewed sentence for the code. A module's own outcome.Error is never
 // written to the record or the file it is saved to, only to the log.
-func (m *Manager) complete(id string, outcome Outcome) error {
-	return m.checkedUpdate(id, m.rejectSettled, func(op *Operation) {
+func (m *Manager) complete(id string, outcome Outcome, settled settledCheck) error {
+	return m.checkedUpdate(id, settled, func(op *Operation) {
 		op.Status = outcome.Status
 		op.Code = outcome.Code
-		op.Error = safeReason(outcome.Code, outcome.Error)
+		op.Error = outcome.persistedReason()
 		op.CommandIssuedUntil = outcome.CommandIssuedUntil
 		// Cleared so applyLocked stamps it with this settlement's own time.
 		// A command_issued record already carries the moment its command
@@ -656,7 +685,7 @@ func (m *Manager) complete(id string, outcome Outcome) error {
 // caller mutates it with no lock held, and a *time.Time it could write
 // through would be a way into the record that no validation and no save ever
 // sees.
-func (m *Manager) snapshotNode(id, name string) (NodeResult, error) {
+func (m *Manager) snapshotNode(id, name string, settled settledCheck) (NodeResult, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -667,7 +696,7 @@ func (m *Manager) snapshotNode(id, name string) (NodeResult, error) {
 	if m.persistFailed[id] {
 		return NodeResult{}, ErrOperationTerminal
 	}
-	if err := m.rejectSettled(op); err != nil {
+	if err := settled(op); err != nil {
 		return NodeResult{}, err
 	}
 	node := findNode(op, name)
@@ -689,9 +718,9 @@ func (m *Manager) snapshotNode(id, name string) (NodeResult, error) {
 // pointers instead would make a rewritten but identical timestamp look like
 // somebody else's change, and it would make a timestamp mutated in place
 // look like no change at all.
-func (m *Manager) replaceNode(id, name string, before, after NodeResult) error {
+func (m *Manager) replaceNode(id, name string, before, after NodeResult, settled settledCheck) error {
 	return m.checkedUpdate(id, func(op *Operation) error {
-		if err := m.rejectSettled(op); err != nil {
+		if err := settled(op); err != nil {
 			return err
 		}
 		current := findNode(op, name)
@@ -759,13 +788,7 @@ func (m *Manager) applyLocked(op *Operation, fn func(*Operation)) error {
 	if err := m.deps.Store.Save(*op); err != nil {
 		klog.Errorf("clusterop: persist operation %s: %v", op.ID, err)
 		m.persistFailed[op.ID] = true
-		op.Status = StatusFailed
-		op.Code = CodeStatePersistenceFailed
-		op.Error = "the operation stopped because its state could not be recorded"
-		at := m.deps.Now()
-		op.UpdatedAt = at
-		op.FinishedAt = &at
-		m.activeID = op.ID
+		m.forceStatePersistenceFailedLocked(op, m.deps.Now())
 		return errStatePersistenceFailed
 	}
 	return nil

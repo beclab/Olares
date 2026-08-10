@@ -75,12 +75,41 @@ type operationRuntime struct {
 	m   *Manager
 	id  string
 	ctx context.Context
+
+	// settled is the rule this runtime's mutations are checked against. A
+	// run and a recovery are allowed different things — see
+	// Manager.rejectSettledDuringRecovery — and which one this is decided
+	// when the runtime was built, not by whoever calls a method on it.
+	settled settledCheck
 }
 
-// newRuntime binds a Runtime to one operation for the lifetime of one Run or
-// Recover call.
+// newRuntime binds a Runtime to one operation for the lifetime of one Run
+// call.
 func newRuntime(m *Manager, id string, ctx context.Context) Runtime {
-	return &operationRuntime{m: m, id: id, ctx: ctx}
+	return &operationRuntime{m: m, id: id, ctx: ctx, settled: m.rejectSettled}
+}
+
+// newRecoveryRuntime binds a Runtime to an operation whose command outlived
+// the daemon that issued it. It differs from newRuntime in exactly two ways,
+// both of which exist because the thing it settles was left outstanding: an
+// operation still at command_issued stays mutable however long ago its grace
+// deadline passed, and the whole confirmation can be recorded as one write.
+func newRecoveryRuntime(m *Manager, id string, ctx context.Context) recoveryRuntime {
+	return &operationRuntime{m: m, id: id, ctx: ctx, settled: m.rejectSettledDuringRecovery}
+}
+
+// recoveryRuntime is what a RecoverableModule in this package is handed. The
+// extra method is deliberately a description of a final state rather than
+// access to anything: no manager, no store, no lock, and no callback that
+// would run while the record is held.
+type recoveryRuntime interface {
+	Runtime
+
+	// Settle records a stage, the nodes it was waiting on, and the outcome
+	// the operation ends on, as one change. Either all of it is written or
+	// none of it is, so nothing can read a confirmed stage on an operation
+	// that still says its command is outstanding.
+	Settle(settlement) error
 }
 
 // managedRuntime is the manager's own Runtime, as the modules built into
@@ -128,7 +157,7 @@ func (rt *operationRuntime) Context() context.Context {
 }
 
 func (rt *operationRuntime) StartStep(name string) error {
-	return rt.m.checkedUpdate(rt.id, rt.m.rejectSettled, func(op *Operation) {
+	return rt.m.checkedUpdate(rt.id, rt.settled, func(op *Operation) {
 		at := rt.m.deps.Now()
 		op.Steps = append(op.Steps, Step{Name: name, Status: StepRunning, StartedAt: &at})
 	})
@@ -136,7 +165,7 @@ func (rt *operationRuntime) StartStep(name string) error {
 
 func (rt *operationRuntime) FinishStep(name string, status StepStatus, code, reason string) error {
 	validate := func(op *Operation) error {
-		if err := rt.m.rejectSettled(op); err != nil {
+		if err := rt.settled(op); err != nil {
 			return err
 		}
 		step := findStep(op, name)
@@ -176,7 +205,7 @@ func (rt *operationRuntime) InitNodes(nodes []NodeResult) error {
 		cloned[i].StartedAt = cloneTime(n.StartedAt)
 		cloned[i].FinishedAt = cloneTime(n.FinishedAt)
 	}
-	return rt.m.checkedUpdate(rt.id, rt.m.rejectSettled, func(op *Operation) {
+	return rt.m.checkedUpdate(rt.id, rt.settled, func(op *Operation) {
 		op.Nodes = cloned
 	})
 }
@@ -191,7 +220,7 @@ func (rt *operationRuntime) InitNodes(nodes []NodeResult) error {
 // inside mutate touches only a local copy and never the manager, and a
 // concurrent writer's update is never silently lost.
 func (rt *operationRuntime) UpdateNode(name string, mutate func(*NodeResult)) error {
-	before, err := rt.m.snapshotNode(rt.id, name)
+	before, err := rt.m.snapshotNode(rt.id, name, rt.settled)
 	if err != nil {
 		return err
 	}
@@ -202,11 +231,11 @@ func (rt *operationRuntime) UpdateNode(name string, mutate func(*NodeResult)) er
 	after := cloneNode(before)
 	mutate(&after)
 
-	return rt.m.replaceNode(rt.id, name, before, after)
+	return rt.m.replaceNode(rt.id, name, before, after, rt.settled)
 }
 
 func (rt *operationRuntime) SetHostBootID(bootID string) error {
-	return rt.m.checkedUpdate(rt.id, rt.m.rejectSettled, func(op *Operation) {
+	return rt.m.checkedUpdate(rt.id, rt.settled, func(op *Operation) {
 		op.HostBootID = bootID
 	})
 }
@@ -225,13 +254,13 @@ func (rt *operationRuntime) SetModuleState(raw json.RawMessage) error {
 	if len(raw) > 0 {
 		cp = append(json.RawMessage(nil), raw...)
 	}
-	return rt.m.checkedUpdate(rt.id, rt.m.rejectSettled, func(op *Operation) {
+	return rt.m.checkedUpdate(rt.id, rt.settled, func(op *Operation) {
 		op.ModuleState = cp
 	})
 }
 
 func (rt *operationRuntime) SetCommandIssuedUntil(until time.Time) error {
-	return rt.m.checkedUpdate(rt.id, rt.m.rejectSettled, func(op *Operation) {
+	return rt.m.checkedUpdate(rt.id, rt.settled, func(op *Operation) {
 		op.CommandIssuedUntil = until
 	})
 }
@@ -240,7 +269,7 @@ func (rt *operationRuntime) Complete(outcome Outcome) error {
 	if !outcome.valid(rt.m.deps.Now()) {
 		return ErrInvalidOutcome
 	}
-	return rt.m.complete(rt.id, outcome)
+	return rt.m.complete(rt.id, outcome, rt.settled)
 }
 
 // findStep returns the most recently started step of this name, matching the

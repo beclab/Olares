@@ -24,6 +24,17 @@ const (
 // request from naming a file outside the state directory.
 var ErrInvalidID = errors.New("invalid operation id")
 
+// OperationStore is where a manager keeps its records. The daemon passes a
+// Store; it is an interface so that a test can watch what is written and when
+// — the difference between a settlement that reaches disk in one write and one
+// that reaches it in three is not otherwise observable from outside.
+type OperationStore interface {
+	List() ([]Operation, error)
+	Load(id string) (Operation, bool, error)
+	Save(op Operation) error
+	Delete(id string) error
+}
+
 // Store keeps operation records as one JSON file each under a directory in the
 // daemon's state area.
 //

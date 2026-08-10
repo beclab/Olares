@@ -40,13 +40,28 @@ func (m *Manager) run(ctx context.Context, id string, opType Type, req RunReques
 
 // settle records the outcome a module ended on.
 //
-// ErrOperationTerminal is not a failure here. A module may settle its own
-// operation and keep going — a node shutdown holds the record at
-// command_issued until the machine stops answering — and it hands back the
-// outcome it settled on so that a manager which has not recorded one yet
-// still can. Whichever of the two wrote it, the record is not written twice.
+// A module that already recorded its own outcome says so, and this leaves the
+// record alone rather than writing it again and reading the refusal as
+// agreement.
+//
+// An outcome the record cannot hold is the one case that must not be passed
+// on: the module has stopped, and an operation left running holds the
+// cluster's single-operation lock until the daemon restarts. It is settled as
+// failed, which is all that is known.
 func (m *Manager) settle(rt Runtime, id string, outcome Outcome) {
-	if err := rt.Complete(outcome); err != nil && !errors.Is(err, ErrOperationTerminal) {
-		klog.Warningf("clusterop: settle operation %s: %v", id, err)
+	if outcome.recorded {
+		return
 	}
+	err := rt.Complete(outcome)
+	if err == nil {
+		return
+	}
+	if errors.Is(err, ErrInvalidOutcome) {
+		klog.Warningf("clusterop: operation %s reported an unusable outcome %+v", id, outcome)
+		err = rt.Complete(failedWith(CodeModuleFailed, reasonFor(CodeModuleFailed)))
+		if err == nil {
+			return
+		}
+	}
+	klog.Warningf("clusterop: settle operation %s: %v", id, err)
 }

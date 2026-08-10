@@ -57,6 +57,19 @@ type refusal struct {
 	reason string
 }
 
+// The two sentences a precheck refuses a whole operation with. They are
+// named because the stage and the operation are given the same one: a caller
+// shown one sentence and an operator reading the other cannot tell which
+// describes what happened.
+const (
+	controlNodeRefused = "the control node cannot perform this operation"
+	nodesRefused       = "one or more nodes cannot perform this operation"
+)
+
+// stopped is the precheck's way of saying "and this is what the operation
+// ends on". The pointer is what distinguishes a refusal from a plan.
+func stopped(o Outcome) *Outcome { return &o }
+
 // plan is the node layout one operation will act on: every compute node first,
 // the control node last.
 type plan struct {
@@ -164,7 +177,7 @@ func (m *Manager) powerNode(ctx context.Context, rt Runtime, id string, spec pow
 	if err != nil {
 		reason := suppress(CodeInventoryUnavailable, "read the node directory for the precheck", err)
 		m.failStep(id, StepPrecheck, CodeInventoryUnavailable, reason)
-		return Outcome{Status: StatusFailed, Code: CodeInventoryUnavailable, Error: reason}
+		return failedWith(CodeInventoryUnavailable, reason)
 	}
 	var node inventory.Node
 	for _, candidate := range nodes {
@@ -176,7 +189,7 @@ func (m *Manager) powerNode(ctx context.Context, rt Runtime, id string, spec pow
 	if node.NodeName == "" {
 		const reason = "the node directory could not identify this node"
 		m.failStep(id, StepPrecheck, CodeNodeIdentityUnknown, reason)
-		return Outcome{Status: StatusFailed, Code: CodeNodeIdentityUnknown, Error: reason}
+		return failedWith(CodeNodeIdentityUnknown, reason)
 	}
 	m.update(id, func(op *Operation) {
 		op.Nodes = []NodeResult{{NodeName: node.NodeName, Role: node.Role, Status: NodePending}}
@@ -185,15 +198,11 @@ func (m *Manager) powerNode(ctx context.Context, rt Runtime, id string, spec pow
 	if node.Role == inventory.RoleMaster {
 		if spec.refuseControlNode != nil {
 			m.failStep(id, StepPrecheck, spec.refuseControlNode.code, spec.refuseControlNode.reason)
-			return Outcome{
-				Status: StatusFailed,
-				Code:   spec.refuseControlNode.code,
-				Error:  spec.refuseControlNode.reason,
-			}
+			return failedWith(spec.refuseControlNode.code, spec.refuseControlNode.reason)
 		}
 		if code, reason := m.checkControlNode(spec.opType); code != "" {
 			m.failStep(id, StepPrecheck, code, reason)
-			return Outcome{Status: StatusFailed, Code: code, Error: reason}
+			return failedWith(code, reason)
 		}
 		m.finishStep(id, StepPrecheck, StepSucceeded, "", "")
 		return m.powerMaster(ctx, id, plan{master: node}, spec, false)
@@ -203,7 +212,7 @@ func (m *Manager) powerNode(ctx context.Context, rt Runtime, id string, spec pow
 	if err != nil {
 		reason := suppress(CodeInventoryUnavailable, "read the reboot baseline", err)
 		m.failStep(id, StepPrecheck, CodeInventoryUnavailable, reason)
-		return Outcome{Status: StatusFailed, Code: CodeInventoryUnavailable, Error: reason}
+		return failedWith(CodeInventoryUnavailable, reason)
 	}
 	if code, reason := m.checkWorker(ctx, node, spec, baseline, creds); code != "" {
 		m.setNode(id, node.NodeName, func(n *NodeResult) {
@@ -212,7 +221,7 @@ func (m *Manager) powerNode(ctx context.Context, rt Runtime, id string, spec pow
 			n.Error = reason
 		})
 		m.failStep(id, StepPrecheck, code, reason)
-		return Outcome{Status: StatusFailed, Code: code, Error: reason}
+		return failedWith(code, reason)
 	}
 	m.finishStep(id, StepPrecheck, StepSucceeded, "", "")
 
@@ -236,14 +245,16 @@ func (m *Manager) powerNode(ctx context.Context, rt Runtime, id string, spec pow
 			return settled
 		}
 		m.awaitNodeDown(ctx, id, node.NodeName)
-		return settled
+		// Recorded above, before the wait. Saying so is what keeps the
+		// sequence from being written a second time on the way out.
+		return settled.alreadyRecorded()
 	}
 
 	m.startStep(id, StepWorkerRestart)
 	if m.awaitRestarts(ctx, id, issued, baseline) > 0 {
 		const reason = "the node did not come back"
 		m.failStep(id, StepWorkerRestart, CodeWorkerRestartFailed, reason)
-		return Outcome{Status: StatusFailed, Code: CodeWorkerRestartFailed, Error: reason}
+		return failedWith(CodeWorkerRestartFailed, reason)
 	}
 	m.finishStep(id, StepWorkerRestart, StepSucceeded, "", "")
 	return Outcome{Status: StatusSucceeded}
@@ -261,7 +272,7 @@ func (m *Manager) precheck(ctx context.Context, id string, spec powerSpec,
 	if err != nil {
 		reason := suppress(CodeInventoryUnavailable, "read the node directory for the precheck", err)
 		m.failStep(id, StepPrecheck, CodeInventoryUnavailable, reason)
-		return plan{}, &Outcome{Status: StatusFailed, Code: CodeInventoryUnavailable, Error: reason}
+		return plan{}, stopped(failedWith(CodeInventoryUnavailable, reason))
 	}
 
 	// The topology gate runs before anything is inspected: a cluster this
@@ -269,8 +280,12 @@ func (m *Manager) precheck(ctx context.Context, id string, spec powerSpec,
 	// is going to refuse anyway.
 	p, code, err := splitCluster(nodes)
 	if err != nil {
+		// splitCluster's errors are sentences written for this, and describe
+		// only the shape of the node directory — how many control nodes it
+		// lists, how many rows claim to be this machine. That is why they can
+		// be shown; nothing here forwards an error from anywhere else.
 		m.failStep(id, StepPrecheck, code, err.Error())
-		return plan{}, &Outcome{Status: StatusFailed, Code: code, Error: err.Error()}
+		return plan{}, stopped(failedWith(code, err.Error()))
 	}
 
 	m.update(id, func(op *Operation) {
@@ -293,12 +308,8 @@ func (m *Manager) precheck(ctx context.Context, id string, spec powerSpec,
 			n.FinishedAt = &at
 		})
 		m.skipRemainingNodes(id, "blocked by the precheck")
-		m.failStep(id, StepPrecheck, CodePrecheckFailed, "the control node cannot perform this operation")
-		return plan{}, &Outcome{
-			Status: StatusFailed,
-			Code:   CodePrecheckFailed,
-			Error:  "the control node cannot perform this operation",
-		}
+		m.failStep(id, StepPrecheck, CodePrecheckFailed, controlNodeRefused)
+		return plan{}, stopped(failedWith(CodePrecheckFailed, controlNodeRefused))
 	}
 
 	// An operation proved by a boot change is only provable against the boot
@@ -308,7 +319,7 @@ func (m *Manager) precheck(ctx context.Context, id string, spec powerSpec,
 	if err != nil {
 		reason := suppress(CodeInventoryUnavailable, "read the reboot baseline", err)
 		m.failStep(id, StepPrecheck, CodeInventoryUnavailable, reason)
-		return plan{}, &Outcome{Status: StatusFailed, Code: CodeInventoryUnavailable, Error: reason}
+		return plan{}, stopped(failedWith(CodeInventoryUnavailable, reason))
 	}
 	p.baseline = baseline
 
@@ -332,12 +343,8 @@ func (m *Manager) precheck(ctx context.Context, id string, spec powerSpec,
 		// Nothing has been dispatched, so every other node is untouched
 		// rather than merely unfinished.
 		m.skipRemainingNodes(id, "blocked by the precheck")
-		m.failStep(id, StepPrecheck, CodePrecheckFailed, "one or more nodes cannot perform this operation")
-		return plan{}, &Outcome{
-			Status: StatusFailed,
-			Code:   CodePrecheckFailed,
-			Error:  "one or more nodes cannot perform this operation",
-		}
+		m.failStep(id, StepPrecheck, CodePrecheckFailed, nodesRefused)
+		return plan{}, stopped(failedWith(CodePrecheckFailed, nodesRefused))
 	}
 
 	m.finishStep(id, StepPrecheck, StepSucceeded, "", "")
@@ -699,7 +706,7 @@ func (m *Manager) powerMaster(ctx context.Context, id string, p plan, spec power
 		if workersDone {
 			status = StatusPartiallyFailed
 		}
-		return Outcome{Status: status, Code: code, Error: reason}
+		return settledWith(status, code, reason)
 	}
 
 	m.setNode(id, p.master.NodeName, func(n *NodeResult) {
@@ -726,7 +733,7 @@ func (m *Manager) stopBeforeMaster(id string, partial bool, code, reason string)
 	if partial {
 		status = StatusPartiallyFailed
 	}
-	return Outcome{Status: status, Code: code, Error: reason}
+	return settledWith(status, code, reason)
 }
 
 func (m *Manager) skipRemainingNodes(id string, reason string) {

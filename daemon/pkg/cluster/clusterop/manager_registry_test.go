@@ -345,6 +345,50 @@ func awaitPhase(t *testing.T, m *Manager, want nodestatus.Phase) (nodestatus.Pha
 	return m.ActivePhase()
 }
 
+// A module may put its own outcome on the record — a node shutdown does,
+// because the record has to say the command went out while the machine is on
+// its way down. When it says so, the manager does not write it a second time
+// and does not rely on being refused for that to happen.
+func TestSettleLeavesAnOutcomeTheModuleAlreadyRecorded(t *testing.T) {
+	rt, m, id := newTestRuntime(t, StatusRunning)
+
+	m.settle(rt, id, Outcome{Status: StatusSucceeded}.alreadyRecorded())
+
+	got, _ := m.Get(id)
+	if got.Status != StatusRunning {
+		t.Fatalf("status = %q, want the record left exactly as the module left it", got.Status)
+	}
+}
+
+// A module that reports something the record cannot hold has still stopped
+// working. Leaving the operation running would hold the cluster's
+// single-operation lock until the daemon restarts, so it is settled — as
+// failed, which is the only thing known about it.
+func TestAnUnusableOutcomeStillSettlesTheOperation(t *testing.T) {
+	fake := newFake(Type("bake-cake"))
+	// Not a status an operation may end on, so Complete refuses it.
+	fake.outcome = Outcome{Status: StatusRunning}
+	c := newCluster(master("master-1", "10.0.0.1"))
+	m, _ := newManagerWith(t, c, registryWith(t, fake))
+
+	op, err := createFake(t, m, fake.typ, "client-1")
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	settled := awaitTerminal(t, m, op.ID)
+
+	if settled.Status != StatusFailed || settled.Code != CodeModuleFailed {
+		t.Errorf("status = %q code = %q, want failed/%s", settled.Status, settled.Code, CodeModuleFailed)
+	}
+	if settled.Error != reasonFor(CodeModuleFailed) {
+		t.Errorf("error = %q, want the reviewed sentence %q", settled.Error, reasonFor(CodeModuleFailed))
+	}
+	// The lock is free again, which is the reason any of this matters.
+	if _, err := createFake(t, m, fake.typ, "client-2"); err != nil {
+		t.Errorf("Create() after an unusable outcome = %v, want the cluster free again", err)
+	}
+}
+
 // A command that outlived the daemon that issued it goes back to the module
 // that issued it, because only that module knows what would settle it.
 func TestARecoverableModuleIsHandedItsUnfinishedCommand(t *testing.T) {

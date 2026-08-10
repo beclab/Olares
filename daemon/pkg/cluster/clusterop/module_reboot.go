@@ -66,6 +66,14 @@ func (rebootModule) Recover(ctx context.Context, rt Runtime, op Operation) {
 	if !ok {
 		return
 	}
+	// Confirming a reboot moves a stage, a node and the operation together,
+	// which is one write or none. A runtime that cannot do that is not one
+	// this can safely confirm through.
+	recovery, ok := rt.(recoveryRuntime)
+	if !ok {
+		klog.Warningf("clusterop: cannot confirm reboot %s: this runtime cannot settle it in one write", op.ID)
+		return
+	}
 	boot, err := m.deps.HostBootID()
 	if err != nil {
 		// Without a boot id nothing is promoted. Reporting a reboot that may
@@ -87,7 +95,7 @@ func (rebootModule) Recover(ctx context.Context, rt Runtime, op Operation) {
 				return
 			}
 			if controlNodeReady(&current, boot, observed) {
-				confirmReboot(rt, &current)
+				confirmReboot(recovery, &current)
 				return
 			}
 		}
@@ -129,15 +137,16 @@ func controlNodeReady(op *Operation, boot string,
 	return false
 }
 
-// confirmReboot settles what the issued command turned out to have done. The
-// stage and the node are closed before the operation is, because completing
-// it is what makes the record terminal and refuses every mutation after.
-func confirmReboot(rt Runtime, op *Operation) {
-	for _, s := range op.Steps {
-		if s.Name == StepMasterCommand && s.Status == StepCommandIssued {
-			if err := rt.FinishStep(StepMasterCommand, StepSucceeded, "", ""); err != nil {
-				klog.Warningf("clusterop: confirm the control node's reboot step: %v", err)
-			}
+// confirmReboot settles what the issued command turned out to have done: the
+// control node's power stage succeeded, the control node itself restarted,
+// and the operation ends succeeded. All three are asked for at once, because
+// a record that had only some of them applied would describe a cluster that
+// never existed.
+func confirmReboot(rt recoveryRuntime, op *Operation) {
+	s := settlement{outcome: Outcome{Status: StatusSucceeded}}
+	for _, step := range op.Steps {
+		if step.Name == StepMasterCommand && step.Status == StepCommandIssued {
+			s.step = stepSettlement{name: StepMasterCommand, status: StepSucceeded}
 			break
 		}
 	}
@@ -145,15 +154,11 @@ func confirmReboot(rt Runtime, op *Operation) {
 		if node.Status != NodeCommandIssued || node.Role != inventory.RoleMaster {
 			continue
 		}
-		if err := rt.UpdateNode(node.NodeName, func(n *NodeResult) {
-			n.Status = NodeRestarted
-			at := rt.Now()
-			n.FinishedAt = &at
-		}); err != nil {
-			klog.Warningf("clusterop: confirm the control node's restart: %v", err)
-		}
+		s.nodes = append(s.nodes, nodeSettlement{
+			name: node.NodeName, from: NodeCommandIssued, to: NodeRestarted,
+		})
 	}
-	if err := rt.Complete(Outcome{Status: StatusSucceeded}); err != nil {
+	if err := rt.Settle(s); err != nil {
 		klog.Warningf("clusterop: confirm the reboot: %v", err)
 	}
 }

@@ -319,7 +319,7 @@ func TestRuntimeUpdateNodeCallbackPanicLeavesOperationUnchanged(t *testing.T) {
 func TestRuntimeUpdateNodeRejectsConcurrentChange(t *testing.T) {
 	rt, m, id := newTestRuntime(t, StatusRunning)
 
-	before, err := m.snapshotNode(id, "node-a")
+	before, err := m.snapshotNode(id, "node-a", m.rejectSettled)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -327,13 +327,13 @@ func TestRuntimeUpdateNodeRejectsConcurrentChange(t *testing.T) {
 	// Another writer commits between our snapshot and our own commit.
 	winner := before
 	winner.Status = NodeCommandIssued
-	if err := m.replaceNode(id, "node-a", before, winner); err != nil {
+	if err := m.replaceNode(id, "node-a", before, winner, m.rejectSettled); err != nil {
 		t.Fatal(err)
 	}
 
 	loser := before
 	loser.Status = NodeRestarted
-	if err := m.replaceNode(id, "node-a", before, loser); !errors.Is(err, ErrConcurrentUpdate) {
+	if err := m.replaceNode(id, "node-a", before, loser, m.rejectSettled); !errors.Is(err, ErrConcurrentUpdate) {
 		t.Fatalf("replaceNode() with a stale snapshot = %v, want ErrConcurrentUpdate", err)
 	}
 
@@ -391,20 +391,20 @@ func TestRuntimeUpdateNodeComparesNodesByValueRatherThanPointerIdentity(t *testi
 		t.Fatal(err)
 	}
 
-	before, err := m.snapshotNode(id, "node-a")
+	before, err := m.snapshotNode(id, "node-a", m.rejectSettled)
 	if err != nil {
 		t.Fatal(err)
 	}
 	same := *before.FinishedAt
 	rewritten := before
 	rewritten.FinishedAt = &same
-	if err := m.replaceNode(id, "node-a", before, rewritten); err != nil {
+	if err := m.replaceNode(id, "node-a", before, rewritten, m.rejectSettled); err != nil {
 		t.Fatalf("replaceNode() rewriting a timestamp to the same moment = %v", err)
 	}
 
 	next := before
 	next.Status = NodeRestarted
-	if err := m.replaceNode(id, "node-a", before, next); err != nil {
+	if err := m.replaceNode(id, "node-a", before, next, m.rejectSettled); err != nil {
 		t.Fatalf("replaceNode() against an unchanged node = %v, want it committed", err)
 	}
 	got, _ := m.Get(id)
@@ -826,7 +826,7 @@ func TestRuntimeInitNodesPersistsEmptySliceNotNull(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	data, err := os.ReadFile(filepath.Join(m.deps.Store.Dir(), id+".json"))
+	data, err := os.ReadFile(filepath.Join(m.deps.Store.(*Store).Dir(), id+".json"))
 	if err != nil {
 		t.Fatal(err)
 	}
