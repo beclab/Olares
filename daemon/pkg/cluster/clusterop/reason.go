@@ -2,6 +2,7 @@ package clusterop
 
 import (
 	"errors"
+	"regexp"
 
 	"k8s.io/klog/v2"
 )
@@ -71,14 +72,31 @@ func failedWith(code, reason string) Outcome {
 	return settledWith(StatusFailed, code, reason)
 }
 
+// persistedCode is the code the record keeps for this outcome: the module's
+// own, or module_failed when what it reported is not shaped like a code.
+// Every path that writes an outcome to a record goes through it and
+// persistedReason together, so the two can never disagree about which code
+// the record ended up carrying.
+func (o Outcome) persistedCode() string {
+	return safeCode(o.Code)
+}
+
 // persistedReason is the text the record keeps for this outcome. A reviewed
 // sentence is kept as written; anything else is replaced by the reviewed
 // sentence for the code. A blank code keeps nothing at all, so neither a
 // module's detail nor a sentence disconnected from any stable code can be
 // left on the record on its own.
 func (o Outcome) persistedReason() string {
-	if o.Code == "" {
+	code := o.persistedCode()
+	if code == "" {
 		return ""
+	}
+	if code != o.Code {
+		// The record is not keeping the code this outcome named, so it
+		// must not keep the sentence that was written for that code
+		// either — reviewed or not, it describes something the record no
+		// longer says.
+		return reasonFor(code)
 	}
 	if o.reason != "" {
 		if o.Error != "" {
@@ -91,6 +109,41 @@ func (o Outcome) persistedReason() string {
 		return o.reason
 	}
 	return safeReason(o.Code, o.Error)
+}
+
+// codeShape is what a code may look like. A code is an identifier callers
+// match on — user-service and TermiPass switch on these — not a place to put
+// a sentence, a stack trace or a payload. Lower case, digits and underscores
+// keep it matchable and safe to put in a log line, a JSON field or a URL
+// without anyone having to escape it; the length bound keeps a record, and
+// the reply built from it, from carrying text a module decided the size of.
+var codeShape = regexp.MustCompile(`^[a-z0-9_]{1,64}$`)
+
+// safeCode is what a record keeps for a module-supplied code. A code that is
+// not shaped like one is not kept: the record says module_failed, which is
+// what is actually known — the module reported something this daemon cannot
+// pass on — and the code it tried to report goes to the log, truncated,
+// because its length is the module's choice and not this one's.
+//
+// A blank code is not a bad code. It means the module reported no code at
+// all, which callers already read as "nothing to act on"; see safeReason.
+func safeCode(code string) string {
+	if code == "" || codeShape.MatchString(code) {
+		return code
+	}
+	klog.Warningf("clusterop: module reported an unusable code %q; recorded as %s",
+		truncateForLog(code), CodeModuleFailed)
+	return CodeModuleFailed
+}
+
+// truncateForLog bounds text this package did not write before it reaches a
+// log line, so a module cannot choose how many bytes one entry takes.
+func truncateForLog(s string) string {
+	const max = 64
+	if len(s) <= max {
+		return s
+	}
+	return s[:max] + "…"
 }
 
 // reasonFor is the message that accompanies a code on the wire and on disk.

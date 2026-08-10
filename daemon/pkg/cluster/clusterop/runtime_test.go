@@ -431,7 +431,10 @@ func TestRuntimeUpdateNodeConcurrentCallersSettleWithoutCorruption(t *testing.T)
 		go func(i int) {
 			defer wg.Done()
 			err := rt.UpdateNode("node-a", func(n *NodeResult) {
-				n.Code = fmt.Sprintf("attempt-%d", i)
+				// Shaped like a code (see safeCode), so each writer's
+				// value is kept as written and the record can be asked
+				// afterwards what actually landed.
+				n.Code = fmt.Sprintf("attempt_%d", i)
 			})
 			mu.Lock()
 			defer mu.Unlock()

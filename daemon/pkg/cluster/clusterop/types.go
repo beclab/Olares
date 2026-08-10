@@ -276,7 +276,8 @@ func PhaseFor(op *Operation) (nodestatus.Phase, bool) {
 // been issued and the machine has not gone down yet.
 //
 // An operation whose module is not registered imposes no phase. There is
-// nothing left that knows what it was doing.
+// nothing left that knows what it was doing, and neither has a module that
+// panicked when asked — see safePhase.
 func phaseOf(registry *ModuleRegistry, op *Operation) (nodestatus.Phase, bool) {
 	if op == nil {
 		return "", false
@@ -285,5 +286,5 @@ func phaseOf(registry *ModuleRegistry, op *Operation) (nodestatus.Phase, bool) {
 	if !ok {
 		return "", false
 	}
-	return module.Phase(*op)
+	return safePhase(module, *op)
 }

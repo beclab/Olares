@@ -119,7 +119,7 @@ func (m *Manager) settleAtomically(id string, s settlement, settled settledCheck
 		node.FinishedAt = &at
 	}
 	next.Status = s.outcome.Status
-	next.Code = s.outcome.Code
+	next.Code = s.outcome.persistedCode()
 	next.Error = s.outcome.persistedReason()
 	next.CommandIssuedUntil = s.outcome.CommandIssuedUntil
 	next.UpdatedAt = at

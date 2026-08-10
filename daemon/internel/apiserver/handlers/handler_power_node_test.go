@@ -45,7 +45,41 @@ func withLocalPower(t *testing.T, r *powerRecorder) *powerRecorder {
 		&nodeModuleRecorder{typ: clusterop.TypeShutdown, onExecute: r.recordFor(clusterop.TypeShutdown)},
 	)
 	withReplayGuard(t)
+	withPowerReachingTheInstalledModule(t)
 	return r
+}
+
+// The power endpoint serves the two operations clusterop implements itself
+// and nothing else — not merely a request whose type is named "reboot", but
+// a request whose module is one of those two. It asks no module whether it
+// accepts what arrived, so anything else reached through it would act on a
+// request nothing judged, and would power a machine outside the record and
+// the single-operation lock a cluster power operation is.
+//
+// This is the one power test that keeps the real executor, so it is also
+// what holds the route to it: with the endpoint pointed anywhere else, the
+// stand-in module below would be carried out.
+func TestPowerNodeServesOnlyThePowerOperationsThisDaemonImplements(t *testing.T) {
+	module := &nodeModuleRecorder{typ: clusterop.TypeReboot}
+	withNodeOperations(t, module)
+	withReplayGuard(t)
+	asAuthorizedUser(t)
+	asOwnerSignature(t)
+	asWorker(t)
+
+	resp, body := callRegisteredMethod(t, http.MethodPost, "/command/power-node",
+		`{"type":"reboot","operationId":"op-1","requestId":"client-1"}`,
+		signedFor(t, clusterop.TypeReboot, "client-1"))
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400: %s", resp.StatusCode, body)
+	}
+	if got := reasonOf(t, body); got != clusterop.CodeUnsupportedOperation {
+		t.Errorf("reason = %q, want %q: %s", got, clusterop.CodeUnsupportedOperation, body)
+	}
+	if ran := module.ran(); len(ran) != 0 {
+		t.Errorf("a module this daemon did not write was carried out: %+v", ran)
+	}
 }
 
 func hostMustNotBePowered(t *testing.T) *powerRecorder {
@@ -150,6 +184,7 @@ func TestPowerNodeCarriesTheRequestOutThroughTheRegisteredModule(t *testing.T) {
 	module := &nodeModuleRecorder{typ: clusterop.TypeReboot}
 	withNodeOperations(t, module)
 	withReplayGuard(t)
+	withPowerReachingTheInstalledModule(t)
 	asOwnerSignature(t)
 	asWorker(t)
 
@@ -177,6 +212,7 @@ func TestPowerNodeSendsNoParamsItWasNotGiven(t *testing.T) {
 	module := &nodeModuleRecorder{typ: clusterop.TypeReboot}
 	withNodeOperations(t, module)
 	withReplayGuard(t)
+	withPowerReachingTheInstalledModule(t)
 	asOwnerSignature(t)
 	asWorker(t)
 

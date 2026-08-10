@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"net/http"
-	"runtime/debug"
 	"strings"
 
 	"github.com/beclab/Olares/daemon/pkg/cluster/clusterop"
@@ -113,7 +112,10 @@ func (h *Handlers) PostClusterOperationNode(ctx *fiber.Ctx) error {
 		// record name the same operation.
 		OperationID: req.OperationID,
 	}
-	refused, judged := askModuleAbout(module, clusterop.CreateRequest{
+	// The same boundary the master's own Create asks a module through: a
+	// module that cannot answer is not a module that refused, and neither
+	// end of the operation may decide that differently from the other.
+	refused, judged := clusterop.SafeValidate(module, clusterop.CreateRequest{
 		Type:      signed.Type,
 		RequestID: signed.RequestID,
 		Scope:     signed.Scope,
@@ -139,20 +141,4 @@ func (h *Handlers) PostClusterOperationNode(ctx *fiber.Ctx) error {
 	// module was shown can differ from what it is then asked to act on.
 	return h.runNodeOperation(ctx, clusterOperationNodeEndpoint, registry,
 		clusterop.NodeRequest{PeerRequest: signed, Params: req.Params}, claim)
-}
-
-// askModuleAbout puts the request to the module and reports both what it
-// said and whether it managed to say anything. A module is code from outside
-// this package judging params nothing signed, so a panic here is contained
-// the way one during execution is — except that a module which could not
-// answer is not the same as one that refused, and the two are not reported
-// as each other.
-func askModuleAbout(module clusterop.OperationModule, req clusterop.CreateRequest) (refusal error, answered bool) {
-	defer func() {
-		if r := recover(); r != nil {
-			klog.Errorf("cluster operation %s panicked while validating: %v\n%s", req.Type, r, debug.Stack())
-			refusal, answered = nil, false
-		}
-	}()
-	return module.Validate(req), true
 }

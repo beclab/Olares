@@ -2,11 +2,24 @@ package clusterop
 
 import (
 	"context"
+	"errors"
 	"runtime/debug"
 	"time"
 
 	"k8s.io/klog/v2"
 )
+
+// startupRecoveryTimeout bounds the one recovery this daemon waits for while
+// it is still starting: a record that was left mid-flight, handed to its
+// module before the framework assumes the worst about it.
+//
+// It is short because nothing is being watched here. A module built into
+// this package returns from that call immediately — the case that can take
+// minutes, confirming a command that outlived this daemon, runs in the
+// background instead (see Manager.resume). A module that does not return is
+// a module holding up a daemon that has not yet served a single request, and
+// this is what stops it.
+const startupRecoveryTimeout = 10 * time.Second
 
 // settleTerminated is the shape MarkInterrupted and settleUnknownModule
 // share: both close out a record nothing is going to keep moving, the same
@@ -76,7 +89,10 @@ func settleUnknownModule(op *Operation, now time.Time) {
 // rather than block construction on it.
 func (m *Manager) recoverLoadedOperations() (unfinished []string) {
 	for _, id := range m.order {
-		op, ok := m.ops[id]
+		// Read through the lock like every other reader: a Recover that ran
+		// out of time below is still running, still holds a Runtime, and
+		// commits through the same map this is reading.
+		op, ok := m.Get(id)
 		if !ok {
 			continue
 		}
@@ -112,24 +128,55 @@ func (m *Manager) recoverLoadedOperations() (unfinished []string) {
 			continue
 		}
 		// The module gets to look at a run that stopped mid-flight before
-		// this daemon assumes the worst about it. Every module built into
-		// this package returns immediately for anything other than a
-		// command_issued record it can prove happened, so this is not
-		// expected to block construction; a module written otherwise is a
-		// bug in that module, the same way a Store call that never
-		// returned would be a bug in the store.
-		m.safeRecover(m.deps.Base, recoverable, id)
-		if current, ok := m.ops[id]; ok && !current.Status.Terminal() {
+		// this daemon assumes the worst about it, but only for as long as
+		// a daemon that has not started serving yet can afford to wait.
+		// Every module built into this package returns immediately for
+		// anything other than a command_issued record it can prove
+		// happened; one that does not return is not allowed to hold up
+		// olaresd's start.
+		m.recoverWithinStartupLimit(recoverable, id)
+		if current, ok := m.Get(id); ok && !current.Status.Terminal() {
 			// Recover looked and did not settle anything — the common case
 			// for an interruption that is not a command_issued record it
-			// can prove happened. Nothing else is going to, so this is the
-			// same fallback a module with no recovery interface at all
-			// would have gotten.
+			// can prove happened, and also what a Recover that ran out of
+			// time leaves behind. Nothing else is going to settle it, so
+			// this is the same fallback a module with no recovery
+			// interface at all would have gotten. Once it lands the record
+			// is failed, and a Recover still running is refused every
+			// further mutation like any other caller holding a Runtime for
+			// a settled operation.
 			now := m.deps.Now()
 			m.updateAt(id, now, func(op *Operation) { MarkInterrupted(op, now) })
 		}
 	}
 	return unfinished
+}
+
+// recoverWithinStartupLimit runs one module's Recover while this daemon is
+// still being built, and stops waiting for it after startupRecoveryTimeout.
+//
+// The call is not cancelled, because it cannot be: a module that ignores the
+// context it was handed — or waits on something that will never answer — is
+// exactly the case this bounds, and there is no way to take a goroutine back.
+// What is bounded is how long the constructor waits, which is what decides
+// whether olaresd starts. The goroutine left behind reaches the record only
+// through its Runtime, so once the caller settles the record every mutation
+// it attempts afterwards is refused the same way any other caller's would be.
+func (m *Manager) recoverWithinStartupLimit(recoverable RecoverableModule, id string) {
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		m.safeRecover(m.deps.Base, recoverable, id)
+	}()
+
+	timer := time.NewTimer(m.deps.recoveryTimeout)
+	defer timer.Stop()
+	select {
+	case <-done:
+	case <-timer.C:
+		klog.Errorf("clusterop: module recovery for operation %s did not return within %s; "+
+			"settling it as interrupted and carrying on", id, m.deps.recoveryTimeout)
+	}
 }
 
 // safeRecover calls a module's Recover inside a panic boundary: Recover is
@@ -209,24 +256,50 @@ func recoverFromRunPanic(rt Runtime) Outcome {
 		// check existed.
 		return failedWith(CodeModuleFailed, reasonFor(CodeModuleFailed))
 	}
-	if m.moduleAlreadyCommitted(id) {
-		return Outcome{}.alreadyRecorded()
-	}
+	// Decided and written in one turn of the manager's lock. Reading
+	// "did the module already commit something?" and then writing the
+	// settlement would leave a window: a goroutine the module left running
+	// can commit a real command_issued handoff in between, and this would
+	// overwrite a command that really went out with a generic failure.
 	now := m.deps.Now()
-	m.updateAt(id, now, func(op *Operation) {
+	err := m.checkedUpdateAt(id, now, stillRunning, func(op *Operation) {
 		settleTerminated(op, now, CodeModuleFailed, reasonFor(CodeModuleFailed))
 	})
+	if err != nil && !errors.Is(err, ErrOperationTerminal) && !errors.Is(err, errOperationNotFound) &&
+		!errors.Is(err, errStatePersistenceFailed) {
+		klog.Warningf("clusterop: settle a panicking run for operation %s: %v", id, err)
+	}
 	return Outcome{}.alreadyRecorded()
+}
+
+// stillRunning refuses a mutation for a record the module has already moved
+// off running — a command_issued handoff, or a terminal status it reported
+// itself. It is the validate half of the framework's own fallbacks, which
+// have nothing to add to a record that already says what the module
+// committed. ErrOperationTerminal is the answer because that is what every
+// other refusal of a settled record returns; the caller does not act on it
+// beyond leaving the record alone.
+func stillRunning(op *Operation) error {
+	if op.Status != StatusRunning {
+		return ErrOperationTerminal
+	}
+	return nil
 }
 
 // moduleAlreadyCommitted reports whether the module moved this record away
 // from running before it stopped — a command_issued handoff, or a terminal
-// status it reported itself. Both framework fallbacks that force a
-// settlement on a module that stopped without one (a panicking Run, and a
-// Run whose final outcome the record cannot hold) ask this first, because
-// neither has anything to add to a record that already says what the module
+// status it reported itself. Manager.settle asks it before forcing a
+// settlement on a Run whose final outcome the record cannot hold, because it
+// has nothing to add to a record that already says what the module
 // committed, and overwriting a command_issued record would report a failure
 // for a command that really was issued.
+//
+// It is a read, and the settlement it guards is a separate write. That is
+// safe for the caller it has: by then the module's Run has returned, so the
+// answer is not being changed underneath it by the same call stack. The
+// other fallback — a Run that panicked, where a goroutine the module left
+// behind may still be committing — does not read and then write; it validates
+// stillRunning inside the same locked mutation. See recoverFromRunPanic.
 //
 // A record the manager no longer holds counts as committed: there is nothing
 // left to settle.
@@ -323,12 +396,41 @@ func ExecuteNode(ctx context.Context, registry *ModuleRegistry, req NodeRequest)
 // module whether it accepts the request that arrived — it never has, and its
 // request shape cannot grow one — so reaching any other module through it
 // would be a way around the validation the generic endpoint performs.
+//
+// Both halves of "built-in" are checked. The type must be one of the two
+// this package registered for itself, and the module the registry actually
+// holds for it must be one this package wrote — it has to carry the
+// unexported marker. The type alone would be enough only for as long as
+// nothing else can be registered under that name: the module set this runs
+// against is whichever one the caller passed, and a module registered under
+// "reboot" in some other set would otherwise be handed a request nothing
+// judged, and would power a machine outside the sequence the master records.
 func ExecutePowerNode(ctx context.Context, registry *ModuleRegistry, req NodeRequest) error {
-	if !isBuiltInPowerOperation(req.Type) {
+	if !isBuiltInPowerOperation(req.Type) || !registryHoldsBuiltInPower(registry, req.Type) {
 		return unsupportedNodeOperationError()
 	}
 	err, _ := runNodeModule(ctx, registry, req)
 	return err
+}
+
+// registryHoldsBuiltInPower reports whether the module registry holds for
+// typ is a power operation this package implements itself. A registry that
+// is nil, does not hold the type, or holds something else under it all
+// answer the same way: there is nothing here the legacy endpoint may serve.
+func registryHoldsBuiltInPower(registry *ModuleRegistry, typ Type) bool {
+	if registry == nil {
+		return false
+	}
+	module, ok := registry.Lookup(typ)
+	if !ok {
+		return false
+	}
+	if _, ok := module.(builtInPowerOperation); !ok {
+		klog.Errorf("clusterop: %q is registered to a module this daemon did not write; "+
+			"the power endpoint serves only the operations it implements itself", typ)
+		return false
+	}
+	return true
 }
 
 // runNodeModule finds the module for req.Type and runs it. fromModule

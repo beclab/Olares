@@ -136,6 +136,14 @@ type Deps struct {
 	Retention int
 	Timeouts  Timeouts
 
+	// recoveryTimeout, if set, replaces startupRecoveryTimeout for the one
+	// recovery this daemon waits for while it is still starting. It is
+	// unexported for the same reason recoveryDone below is: how long
+	// olaresd is willing to be held up by a module is a framework decision,
+	// not something a caller configures. A test in this package sets it so
+	// that proving the limit works does not take the limit's own length.
+	recoveryTimeout time.Duration
+
 	// recoveryDone, if set, receives the id of every operation whose
 	// asynchronous recovery (Manager.resume) has just returned, whether it
 	// panicked or not. It is unexported: nothing outside this package may
@@ -205,6 +213,9 @@ func (d Deps) withDefaults() Deps {
 	}
 	if d.Retention <= 0 {
 		d.Retention = defaultRetention
+	}
+	if d.recoveryTimeout <= 0 {
+		d.recoveryTimeout = startupRecoveryTimeout
 	}
 	d.Timeouts = d.Timeouts.withDefaults()
 	return d
@@ -357,11 +368,15 @@ func NewManagerWithRegistry(deps Deps, registry *ModuleRegistry) (*Manager, erro
 	// first and only marked interrupted if that leaves it still moving.
 	unfinished := m.recoverLoadedOperations()
 
+	// Under the lock, because a module's Recover that ran out of time up
+	// there is still running and still commits through the same map.
+	m.mu.Lock()
 	for _, id := range m.order {
 		if op := m.ops[id]; op != nil && m.operationActive(op, deps.Now()) {
 			m.activeID = id
 		}
 	}
+	m.mu.Unlock()
 	for _, id := range unfinished {
 		m.resume(id)
 	}
@@ -375,13 +390,11 @@ func NewManagerWithRegistry(deps Deps, registry *ModuleRegistry) (*Manager, erro
 // switch off.
 //
 // It is called from NewManagerWithRegistry while the manager is still being
-// built, and it reads m.ops without the lock: at that point the constructor
-// is the only writer, and it has finished loading. The goroutine it starts
-// runs concurrently with the rest of the constructor and with every later
-// caller, and reaches the record only through a Runtime, which takes the lock
-// like everything else.
+// built. The goroutine it starts runs concurrently with the rest of the
+// constructor and with every later caller, and reaches the record only
+// through a Runtime, which takes the lock like everything else.
 func (m *Manager) resume(id string) {
-	op, ok := m.ops[id]
+	op, ok := m.Get(id)
 	if !ok {
 		return
 	}
@@ -442,9 +455,16 @@ func (m *Manager) Create(_ context.Context, req CreateRequest) (Operation, error
 	}
 	// Asked before anything is recorded or started: what the module cannot
 	// carry out must not become an operation that exists, holds the
-	// cluster's single-operation lock, and then fails.
-	if err := module.Validate(req); err != nil {
-		return Operation{}, &ModuleValidationError{Type: opType, Err: err}
+	// cluster's single-operation lock, and then fails. A module that cannot
+	// answer at all is the same for those purposes and different for the
+	// caller's: nothing is recorded either way, but a request nothing judged
+	// is not a request that was refused. See SafeValidate.
+	refusal, answered := SafeValidate(module, req)
+	if !answered {
+		return Operation{}, ErrModuleFailed
+	}
+	if refusal != nil {
+		return Operation{}, &ModuleValidationError{Type: opType, Err: refusal}
 	}
 
 	m.mu.Lock()
@@ -658,6 +678,16 @@ func (m *Manager) updateAt(id string, at time.Time, fn func(*Operation)) bool {
 // would otherwise have produced. It shares applyLocked with update so a save
 // failure settles exactly one way no matter which caller triggered it.
 func (m *Manager) checkedUpdate(id string, validate func(*Operation) error, fn func(*Operation)) error {
+	return m.checkedUpdateAt(id, m.deps.Now(), validate, fn)
+}
+
+// checkedUpdateAt is checkedUpdate with an explicit settlement moment, for
+// the same reason updateAt is update with one: a caller whose fn already
+// stamped several fields from a single "now" must not have applyLocked read
+// the clock again and disagree with it. The clock is read before the lock is
+// taken, so a seam behind Deps.Now never runs while the manager is held.
+func (m *Manager) checkedUpdateAt(id string, at time.Time,
+	validate func(*Operation) error, fn func(*Operation)) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -677,7 +707,7 @@ func (m *Manager) checkedUpdate(id string, validate func(*Operation) error, fn f
 			return err
 		}
 	}
-	return m.applyLocked(op, fn)
+	return m.applyLockedAt(op, at, fn)
 }
 
 // complete is the checked mutation behind Runtime.Complete. Outcome.valid()
@@ -689,7 +719,7 @@ func (m *Manager) checkedUpdate(id string, validate func(*Operation) error, fn f
 func (m *Manager) complete(id string, outcome Outcome, settled settledCheck) error {
 	return m.checkedUpdate(id, settled, func(op *Operation) {
 		op.Status = outcome.Status
-		op.Code = outcome.Code
+		op.Code = outcome.persistedCode()
 		op.Error = outcome.persistedReason()
 		op.CommandIssuedUntil = outcome.CommandIssuedUntil
 		// Cleared so applyLocked stamps it with this settlement's own time.
@@ -794,20 +824,14 @@ func sameMoment(a, b *time.Time) bool {
 	return a.Equal(*b)
 }
 
-// applyLocked mutates op through fn and persists the result, then applies
-// the same state_persistence_failed settlement update has always applied.
-// The caller must already hold m.mu and must already have confirmed the
-// operation exists and has not previously failed to persist. checkedUpdate
-// is its only caller that does not already have its own "now"; update goes
-// through applyLockedAt directly. See applyLockedAt for what "at" means.
-func (m *Manager) applyLocked(op *Operation, fn func(*Operation)) error {
-	return m.applyLockedAt(op, m.deps.Now(), fn)
-}
-
-// applyLockedAt is applyLocked with an explicit "at" for UpdatedAt (and,
-// when fn left FinishedAt nil, for FinishedAt too) instead of one this
-// derives itself. The caller must already hold m.mu and must already have
-// confirmed the operation exists and has not previously failed to persist.
+// applyLockedAt mutates op through fn and persists the result, then applies
+// the same state_persistence_failed settlement every failed write applies.
+// "at" is the moment the change is stamped with — UpdatedAt, and FinishedAt
+// too when fn left it nil — and it is the caller's rather than one derived
+// here, so a settlement that already stamped a step or a node from its own
+// clock reading cannot end up disagreeing with itself. The caller must
+// already hold m.mu and must already have confirmed the operation exists and
+// has not previously failed to persist.
 func (m *Manager) applyLockedAt(op *Operation, at time.Time, fn func(*Operation)) error {
 	fn(op)
 	op.UpdatedAt = at

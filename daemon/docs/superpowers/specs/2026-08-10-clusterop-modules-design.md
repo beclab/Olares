@@ -185,6 +185,21 @@ It delegates to the reboot or shutdown module. Built-in power modules may keep
 using that endpoint until the compatibility window ends, so a newly upgraded
 master can still communicate with older workers.
 
+The two endpoints serve disjoint sets of operations, and each refuses what the
+other serves:
+
+- `/command/power-node` serves only reboot and shutdown, and only when the
+  registered module for the type is one this package wrote — it must carry the
+  package-private `builtInPowerOperation` marker, which no module declared
+  elsewhere can hold. The endpoint's request shape carries no parameters and it
+  asks no module whether it accepts what arrived, so anything else reached
+  through it would act on a request nothing validated.
+- `/command/cluster-operation` refuses reboot and shutdown. A master dispatches
+  those to the legacy endpoint, so nothing legitimate arrives here as one; what
+  would is a machine — the control node included, since the generic endpoint
+  answers for every role — powered off outside the record, the sequence and the
+  single-operation lock that a cluster power operation is.
+
 ## Built-in power module migration
 
 Move operation-specific behavior out of core switches:
@@ -223,6 +238,19 @@ When `NewManager` loads records:
 
 Recovery never receives raw parameters.
 
+Startup is never frozen by a module. `Recover` runs in its own goroutine under
+a short framework limit, and a module that blocks or ignores its context loses
+the race rather than holding up `NewManager` and with it olaresd's startup. On
+that timeout the record is settled conservatively as interrupted, with the same
+`now` the rest of the load used, and the late `Recover` — should it ever
+return — cannot overwrite what was settled: the settlement checks that the
+operation is still running before it writes, so a rogue mutation arriving
+afterwards is rejected.
+
+The limit binds only the synchronous startup path. A `command_issued` reboot is
+confirmed asynchronously after `NewManager` returns, and keeps its own
+`Timeouts.Ready` budget.
+
 ## Error handling
 
 - Registry errors fail startup deterministically.
@@ -231,9 +259,20 @@ Recovery never receives raw parameters.
 - Module validation errors are safe client errors with stable codes.
 - Module execution errors carry stable code, safe message, and an internal
   cause that is logged only.
-- A panic in `Run`, `Recover`, or `ExecuteNode` is recovered at the framework
-  boundary. The affected operation is settled as failed when possible, and the
-  global lock is released according to normal persistence rules.
+- A panic in `Run`, `Recover`, `ExecuteNode`, `Validate`, or `Phase` is
+  recovered at the framework boundary. The affected operation is settled as
+  failed when possible, and the global lock is released according to normal
+  persistence rules. A panic while validating creates and persists nothing and
+  takes no lock: the caller sees the same stable `module_failed` error every
+  other unusable module answer produces, and the HTTP layer answers 500 while
+  an ordinary validation refusal keeps its 400. A panic in `Phase` is logged
+  and reported as no phase, so the cluster summary keeps serving.
+- Every code a module puts on an operation, a step or a node is kept only if it
+  is shaped like a code — `[a-z0-9_]{1,64}`. Anything else is logged and
+  replaced with `module_failed`, so no module can put arbitrary text where a
+  caller reads a stable code. A module in this package that wants a reviewed
+  sentence of its own nominates it through `settledWith`/`failedWith` rather
+  than by editing the core reason map, so custom codes need no core change.
 - Store failure stops further module execution and preserves the existing
   `state_persistence_failed` behavior.
 

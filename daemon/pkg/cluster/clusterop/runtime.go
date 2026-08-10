@@ -182,6 +182,10 @@ func (rt *operationRuntime) StartStep(name string) error {
 }
 
 func (rt *operationRuntime) FinishStep(name string, status StepStatus, code, reason string) error {
+	// Checked before anything else looks at it: a stage is read out of the
+	// same record by the same callers as the operation, so what it may
+	// carry is decided the same way. See safeCode.
+	code = safeCode(code)
 	validate := func(op *Operation) error {
 		if err := rt.settled(op); err != nil {
 			return err
@@ -222,6 +226,7 @@ func (rt *operationRuntime) InitNodes(nodes []NodeResult) error {
 		cloned[i] = n
 		cloned[i].StartedAt = cloneTime(n.StartedAt)
 		cloned[i].FinishedAt = cloneTime(n.FinishedAt)
+		sanitizeNodeCode(&cloned[i])
 	}
 	return rt.m.checkedUpdate(rt.id, rt.settled, func(op *Operation) {
 		op.Nodes = cloned
@@ -248,8 +253,22 @@ func (rt *operationRuntime) UpdateNode(name string, mutate func(*NodeResult)) er
 	// otherwise change the very snapshot the commit below compares against.
 	after := cloneNode(before)
 	mutate(&after)
+	sanitizeNodeCode(&after)
 
 	return rt.m.replaceNode(rt.id, name, before, after, rt.settled)
+}
+
+// sanitizeNodeCode holds a per-node result to the same rule the operation
+// and its stages are held to: a code a caller could not act on is not kept.
+// The message goes with it — a node reading module_failed must not carry a
+// sentence written for the code that was refused.
+func sanitizeNodeCode(n *NodeResult) {
+	code := safeCode(n.Code)
+	if code == n.Code {
+		return
+	}
+	n.Code = code
+	n.Error = reasonFor(code)
 }
 
 func (rt *operationRuntime) SetHostBootID(bootID string) error {

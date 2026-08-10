@@ -67,11 +67,55 @@ func TestExecutePowerNodeRefusesAnOperationItDoesNotServe(t *testing.T) {
 	}
 }
 
-func TestExecutePowerNodeCarriesOutABuiltInPowerOperation(t *testing.T) {
+// asBuiltInPower is a stand-in for one of the two power operations this
+// package implements itself: the same recorder every other node test uses,
+// carrying the marker that says the legacy endpoint may serve it.
+//
+// Only a type declared in this package can carry that marker — it is an
+// unexported method of an unexported interface, and nothing exported here
+// holds one to embed. So a test in this package can stand in for a built-in
+// module, and a test written anywhere else cannot, which is exactly the
+// property the endpoint's rule rests on.
+type builtInPowerFake struct {
+	*nodeCapableModule
+}
+
+func (builtInPowerFake) builtInPowerOperation() {}
+
+func asBuiltInPower(module *nodeCapableModule) builtInPowerOperation {
+	return builtInPowerFake{nodeCapableModule: module}
+}
+
+// The type being one of the two the legacy endpoint serves is not enough on
+// its own: what is registered for that type has to be a module this package
+// wrote. A module from anywhere else, registered under the name of a power
+// operation, would otherwise be handed a request that no Validate ever saw —
+// and would power a machine outside the sequence the master records.
+func TestExecutePowerNodeRefusesAModuleThatIsNotBuiltIn(t *testing.T) {
 	for _, typ := range []Type{TypeReboot, TypeShutdown} {
 		t.Run(string(typ), func(t *testing.T) {
 			module := &nodeCapableModule{typ: typ}
 			reg := registryWith(t, module)
+
+			err := ExecutePowerNode(context.Background(), reg, nodeRequestFor(typ))
+
+			if powerCode(t, err) != CodeUnsupportedOperation {
+				t.Fatalf("ExecutePowerNode(%q) code = %q, want %s",
+					typ, powerCode(t, err), CodeUnsupportedOperation)
+			}
+			if module.callCount() != 0 {
+				t.Errorf("a module this package did not write was carried out %d times "+
+					"through the endpoint that asks nothing", module.callCount())
+			}
+		})
+	}
+}
+
+func TestExecutePowerNodeCarriesOutABuiltInPowerOperation(t *testing.T) {
+	for _, typ := range []Type{TypeReboot, TypeShutdown} {
+		t.Run(string(typ), func(t *testing.T) {
+			module := &nodeCapableModule{typ: typ}
+			reg := registryWith(t, asBuiltInPower(module))
 
 			if err := ExecutePowerNode(context.Background(), reg, nodeRequestFor(typ)); err != nil {
 				t.Fatalf("ExecutePowerNode(%q): %v", typ, err)
@@ -92,7 +136,7 @@ func TestExecutePowerNodeKeepsABuiltInRefusalExactlyAsItWasWritten(t *testing.T)
 		Message: "olaresd runs in a container on this node, so it cannot power the machine",
 	}
 	module := &nodeCapableModule{typ: TypeReboot, err: refusal}
-	reg := registryWith(t, module)
+	reg := registryWith(t, asBuiltInPower(module))
 
 	err := ExecutePowerNode(context.Background(), reg, nodeRequestFor(TypeReboot))
 

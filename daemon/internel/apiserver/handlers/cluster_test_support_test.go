@@ -231,6 +231,47 @@ func withNodeOperations(t *testing.T, modules ...clusterop.OperationModule) {
 	t.Cleanup(func() { nodeOperations = prev })
 }
 
+// withPowerReachingTheInstalledModule lets a test drive the power route all
+// the way to the module it installed.
+//
+// The real executor serves only the two power operations clusterop wrote
+// itself, which it recognizes by a marker no type outside that package can
+// carry. That is deliberate and is tested where it lives — in clusterop,
+// where a test can hold such a module, and here by the one test that keeps
+// the real executor. It does mean a test out here cannot both install a fake
+// reboot and reach it, and the alternative is a module that really powers
+// the machine running this test.
+//
+// So what this swaps in is the rest of that executor: reach the module the
+// installed set holds for the type, and let what it said travel back
+// unchanged, which is what the power endpoint does with a module it is
+// willing to serve.
+func withPowerReachingTheInstalledModule(t *testing.T) {
+	t.Helper()
+	prev := powerNodeEndpoint.execute
+	powerNodeEndpoint.execute = executeInstalledNodeModule
+	t.Cleanup(func() { powerNodeEndpoint.execute = prev })
+}
+
+func executeInstalledNodeModule(ctx context.Context, registry *clusterop.ModuleRegistry,
+	req clusterop.NodeRequest) error {
+	unsupported := &clusterop.PowerError{
+		Code: clusterop.CodeUnsupportedOperation, Message: "this daemon does not perform that operation",
+	}
+	if registry == nil {
+		return unsupported
+	}
+	module, ok := registry.Lookup(req.Type)
+	if !ok {
+		return unsupported
+	}
+	nodeModule, ok := module.(clusterop.NodeOperationModule)
+	if !ok {
+		return unsupported
+	}
+	return nodeModule.ExecuteNode(ctx, req)
+}
+
 // withReplayGuard gives the node routes somewhere to record the signature
 // they just spent, in a directory that goes away with the test.
 func withReplayGuard(t *testing.T) {

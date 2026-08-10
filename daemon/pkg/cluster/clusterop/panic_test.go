@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -185,6 +186,90 @@ func TestRunPanicAfterAStartedStepClosesItAndSettlesFailed(t *testing.T) {
 	}
 	if settled.Steps[0].Code != CodeModuleFailed {
 		t.Errorf("Steps[0].Code = %q, want %s", settled.Steps[0].Code, CodeModuleFailed)
+	}
+}
+
+// racingPanicModule commits nothing before it panics, and arms the clock
+// seam the test installs so that the framework's very next reading of the
+// time — the one it takes on its way to settling a panicking run — is when a
+// goroutine the module left behind commits its command_issued handoff.
+//
+// That instant is the whole point: a fallback that reads the record ("did
+// the module already commit something?") and then writes it in a separate
+// step decides on a state that was true a moment ago, and overwrites a real
+// command with a generic failure.
+type racingPanicModule struct {
+	fakeModule
+	typ Type
+
+	// rt is written by Run and read by the clock seam and the goroutine it
+	// starts, both of which happen after Run wrote it, on the same
+	// goroutine or one it created.
+	rt    Runtime
+	armed atomic.Bool
+
+	// commit carries what the concurrent handoff returned, so the test
+	// asserts against a commit that actually landed.
+	commit chan error
+}
+
+func (p *racingPanicModule) Type() Type { return p.typ }
+
+func (p *racingPanicModule) Run(_ context.Context, rt Runtime, _ RunRequest) Outcome {
+	p.rt = rt
+	p.armed.Store(true)
+	panic("boom: raced by a commit from the module's own goroutine")
+}
+
+// A module may leave a goroutine of its own running, and that goroutine may
+// commit a command_issued handoff at the very moment the framework is
+// settling the panic. The command really was issued: a machine is on its way
+// down, and reporting module_failed over it would say the opposite of what
+// happened. The settlement is therefore decided and written in one turn of
+// the manager's lock rather than across a read and a later write.
+func TestARunPanicDoesNotOverwriteACommitThatLandedInTheSameInstant(t *testing.T) {
+	module := &racingPanicModule{typ: Type("kaboom-race"), commit: make(chan error, 1)}
+	c := newCluster(master("master-1", "10.0.0.1"))
+	dir := filepath.Join(t.TempDir(), "operations")
+	deps := c.deps(t, dir)
+	clock := deps.Now
+	deps.Now = func() time.Time {
+		if module.armed.CompareAndSwap(true, false) {
+			done := make(chan struct{})
+			go func() {
+				defer close(done)
+				module.commit <- module.rt.Complete(Outcome{
+					Status:             StatusCommandIssued,
+					CommandIssuedUntil: module.rt.Now().Add(time.Hour),
+				})
+			}()
+			<-done
+		}
+		return clock()
+	}
+
+	m, err := NewManagerWithRegistry(deps, registryWith(t, module))
+	if err != nil {
+		t.Fatalf("NewManagerWithRegistry: %v", err)
+	}
+	op, err := createFake(t, m, module.typ, "client-1")
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	awaitTerminal(t, m, op.ID)
+
+	if err := <-module.commit; err != nil {
+		t.Fatalf("the module's own handoff was refused (%v), so this proves nothing", err)
+	}
+	// Give a settlement that decided on a stale reading time to land.
+	time.Sleep(20 * time.Millisecond)
+	got, _ := m.Get(op.ID)
+
+	if got.Status != StatusCommandIssued {
+		t.Fatalf("status = %q, want the command_issued handoff the module committed", got.Status)
+	}
+	if got.Code != "" || got.Error != "" {
+		t.Errorf("code = %q error = %q, want the committed outcome untouched", got.Code, got.Error)
 	}
 }
 

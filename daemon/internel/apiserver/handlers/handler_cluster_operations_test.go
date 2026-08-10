@@ -569,6 +569,31 @@ func TestCreateClusterOperationReportsAModuleRefusalAsABadRequest(t *testing.T) 
 	}
 }
 
+// A module that could not judge the request at all is not a module that
+// refused it. Nothing was recorded and nothing was started, but the request
+// was well formed, so this is the daemon failing rather than the caller —
+// and what the module was holding when it went wrong stays in this node's
+// log.
+func TestCreateClusterOperationReportsAModuleThatCouldNotAnswerAsAFailure(t *testing.T) {
+	withClusterOperations(t, &fakeOperations{createEr: clusterop.ErrModuleFailed})
+	asAuthorizedUser(t)
+	asOwnerSignature(t)
+	asMaster(t)
+
+	resp, body := callRegisteredMethod(t, http.MethodPost, "/cluster/operations",
+		`{"type":"reboot","requestId":"client-1","params":{"grace":1}}`,
+		signedFor(t, clusterop.TypeReboot, "client-1"))
+
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want 500: %s", resp.StatusCode, body)
+	}
+	for _, leak := range []string{"panic", "boom", "grace"} {
+		if strings.Contains(string(body), leak) {
+			t.Errorf("the reply leaked %q: %s", leak, body)
+		}
+	}
+}
+
 // A body whose params are not JSON is not a request at all.
 func TestCreateClusterOperationRejectsUnparsableParams(t *testing.T) {
 	operationsMustNotBeCreated(t)
