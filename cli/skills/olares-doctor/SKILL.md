@@ -1,6 +1,6 @@
 ---
 name: olares-doctor
-version: 1.1.0
+version: 1.3.0
 description: "Runtime diagnosis for Olares apps and the system via olares-cli — find the root cause when an app won't install or start, crashes, cannot pull an image, is `running` but unreachable, or is slow; includes doctor images and thirdleveldomain. Use for diagnosing catalog and dev app failures, not for authoring or editing charts."
 compatibility: Requires olares-cli on PATH and active Olares profile
 metadata:
@@ -37,6 +37,8 @@ This skill is a thin diagnostic router over Market, Cluster, and Dashboard. Load
 | Image won't pull (`ImagePullBackOff` / `ErrImagePull` / `InvalidImageName` / arch mismatch); finding unused local images | [references/olares-doctor-image.md](references/olares-doctor-image.md) |
 | App is `running` but the entrance is unreachable / 5xx / times out / blank | [references/olares-doctor-running-unhealthy.md](references/olares-doctor-running-unhealthy.md) |
 | System or app slow; resource pressure; GPU/compute binding rejected (`node-pressure`) | [references/olares-doctor-resources.md](references/olares-doctor-resources.md) |
+
+A **model** that is configured but does not answer is diagnosed one layer up first: [`olares-router`](../olares-router/SKILL.md) separates the gateway, its access control and the model application's own download/engine state from the pod-level failures here, and routes back when the cause is below the application.
 
 > **First, rule out the normal queue.** Before declaring an install stuck, check whether another app is `downloading` — app-service runs **one download at a time**, so a `pending` row is often just queuing (see the appstate reference and the app-stuck reference).
 

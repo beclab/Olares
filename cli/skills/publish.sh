@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Publish the 11 olares-cli skills under cli/skills/ to ClawHub (clawhub.ai).
+# Publish the 12 olares-cli skills under cli/skills/ to ClawHub (clawhub.ai).
 #
 # Prerequisites:
 #   1. Node.js 22+ (clawhub uses ES2025 import attributes).
@@ -9,7 +9,7 @@
 #      this script can call `clawhub login --token "$CLAWHUB_TOKEN"`.
 #
 # Usage:
-#   ./publish.sh                  # publish all 11 skills (real upload)
+#   ./publish.sh                  # publish all 12 skills (real upload)
 #   ./publish.sh --dry-run        # local validation only — no network
 #   ./publish.sh olares-files     # publish a single skill by slug
 #   ./publish.sh --dry-run olares-shared olares-files
@@ -41,6 +41,7 @@ SKILLS=(
   "olares-dashboard|Olares Dashboard (olares-cli dashboard)"
   "olares-cluster|Olares Cluster (olares-cli cluster)"
   "olares-doctor|Olares Doctor (runtime diagnosis)"
+  "olares-router|Olares Router (Router and model applications)"
   "olares-chart|Olares Chart (olares-cli chart)"
   "olares-publish|Olares Publish (Olares Market distribution)"
 )

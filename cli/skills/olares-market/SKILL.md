@@ -1,6 +1,6 @@
 ---
 name: olares-market
-version: 4.8.0
+version: 4.10.0
 description: "Olares Market via olares-cli market — install, upgrade, uninstall, clone, stop, resume, restart apps; catalog, status, chart upload/download, --watch. Use for Olares app store, my apps, 我的应用, install app, restart app, upload chart, download an app chart."
 compatibility: Requires olares-cli on PATH and active Olares profile
 metadata:
@@ -23,6 +23,8 @@ Use `olares-cli market <verb> --help` for authoritative syntax.
 - Inspect lifecycle status or manage uploaded charts.
 
 > **Mental model:** `market` is **lifecycle and inventory** at the app-store level (install / upgrade / chart push). For runtime K8s objects, settings, or metrics, route to a sibling.
+
+A **model** application is a special case: [`olares-router`](../olares-router/SKILL.md) installs it and creates the gateway provider that routes to it in one step, and it owns the model's own download and engine state afterwards. Come back here to stop, resume, cancel, or install an engine base that needs its model chosen on the install form.
 
 ## Verb index
 
