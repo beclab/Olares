@@ -11,28 +11,28 @@ Olares exposes five mountable storage areas. Each has a stable frontend path (ho
 | **Home** | `drive/Home` | `.Values.userspace.userData` | `userData` (list paths) | user-level (shared by the user's apps granted the perm) | JuiceFS — cross-node, backed up; for **user-visible** files |
 | **Data** | `drive/Data` | `.Values.userspace.appData` | `appData: true` | per-app (auto `/<appName>`) | JuiceFS — cross-node, backed up; for **app-private persistent state** (db files, config) |
 | **Cache** | `cache/<node>` | `.Values.userspace.appCache` | `appCache: true` | per-app (auto `/<appName>`) | **node-local PV** (`/olares/userdata/Cache/`) — pins the pod to that node via `schedule.nodeName`; fast, regenerable, not guaranteed durable/backed-up |
-| **Common** | `drive/Common` | `.Values.userspace.appCommon` | `appCommon: true` | **cross-app shared** (no `appName` suffix) | JuiceFS; reserved `huggingface`/`ollama`/`llama.cpp`/`comfyui` shared caches; needs Olares ≥ 1.12.6 |
+| **Common** | `drive/Common` | `.Values.userspace.appCommon` | `appCommon: true` | **cross-app shared** (no `appName` suffix) | JuiceFS; reserved `huggingface`/`ollama`/`comfyui` shared caches (GGUF engines share the `huggingface` one); needs Olares ≥ 1.12.6 |
 | **External** | `external/<node>/<volume>` | `.Values.sharedlib` | `externalData: true` | user's external storage | SMB/NFS/USB volumes attached via LarePass; needs schema ≥ 0.12.0 |
 
 Key facts:
 
 - **Per-app vs shared vs user.** `appData`/`appCache` auto-append `/<appName>` (app-private); `appCommon` is a bare cross-app dir (every app with the perm sees the same dir — that is what makes shared model caches work); `userData` is the user's `/Home`.
 - **Backend decides scheduling + durability.** `userData`/`appData`/`appCommon` are JuiceFS (cross-node, backed up). `appCache` is a node-local PV, so app-service pins the pod to that node — fast local disk, treat as disposable.
-- **Owner is uid 1000.** All five are read/written as uid/gid 1000 (see next section).
+- **Owner is uid 1000 — the four platform-managed areas.** Home, Data, Cache and Common are owned as `1000:1000` and expected to be written by a uid-1000 process (see next section). **External is not:** ownership there comes from the SMB/NFS/USB volume and its mount options, which is why `files chown` refuses that namespace outright.
 - **Version gates.** `appCommon` needs Olares ≥ 1.12.6; `externalData`/`sharedlib` needs `olaresManifest.version` ≥ 0.12.0.
-- **Drive's `extend` must be `Home` or `Data` exactly** — `home` is rejected with `invalid drive type`.
+- **Drive's `extend` must be `Home`, `Data` or `Common` exactly** — matching is case-sensitive, so `home` is rejected client-side with `drive extend must be Home, Data, or Common`.
 - **Uninstall deletes by area, not by "everything the app wrote".** app-service scans the workload's `hostPath` volumes against exactly two prefixes: the `appcache_hostpath` annotation (`Cache/<app>` — **always** cleared, it is regenerable) and `<userspace_hostpath>/Data/` (`Data/<app>` — cleared **only** with `market uninstall --delete-data`). `Home` matches neither prefix and is **never** deleted: `permission.userData` grants an app access to the user's own files, it does not make the app their owner, and the same paths may be shared with other apps holding the permission. Consequence: an app declaring only `userData` owns no data at all, so `--delete-data` is a no-op for it and leftovers need a manual `files rm --recursive`.
 
 Used by: `files` (addressing), `chart` (mounting) and `market` (what uninstall deletes).
 
 ## Run identity: uid/gid 1000
 
-Every userspace area above is owned and accessed as **uid/gid 1000**. This is the shared root cause behind two skills:
+Every userspace area above is owned as **`1000:1000`**. Directory ownership and process identity are separate, though — the platform injects a uid only. This is the shared root cause behind two skills:
 
-- `chart` — the app process must run as 1000 (`spec.runAsUser: true` injects `pod.spec.securityContext.runAsUser: 1000`). If the image runs as root or another uid, writes to userspace mounts fail with `Permission denied` or never persist. `appCommon` is created `chown 1000:1000`.
-- `files` — `chown` UID conventions: 0 (root) vs 1000 (the userspace owner). Only `drive/Home`, `drive/Data`, `cache/<node>` accept `chown`.
+- `chart` — the app process must run as 1000 (`spec.runAsUser: true` injects `pod.spec.securityContext.runAsUser: 1000`, and **only** that: no `runAsGroup`, no `fsGroup`, so the process gid stays whatever the image declares). If the image runs as root or another uid, writes to userspace mounts fail with `Permission denied` or never persist. Install prepares `appCommon` and its reserved sub-caches as `1000:1000`, non-recursively — anything else created under it starts out root-owned.
+- `files` — `chown` UID conventions: 0 (root) vs 1000 (the userspace owner). Only `drive/Home`, `drive/Data`, `drive/Common` (Olares ≥ 1.12.6) and `cache/<node>` accept `chown`.
 
-OPA admission: a non-trusted image running as root (or `privileged`/`runAsNonRoot: false`) is denied. Init containers may run as root only with a trusted `beclab/` image. Chart-side alignment recipes (Dockerfile `USER`, initContainer `chown`, OPA boundaries) live in `chart`'s run-as-user reference.
+OPA admission: within an ordinary app namespace (`<app>-<owner>`), a container whose image is not trusted and whose **explicit** `securityContext` is root-equivalent (`runAsUser: 0`, `runAsNonRoot: false`, `privileged: true`) is denied; it does not inspect the image's declared `USER`. System-app namespaces (`ns-type` `user-space` / `user-internal`) are outside its scope. Init containers may run as root only with a trusted `beclab/` image, and `chart lint` trusts a narrower set than the cluster does. Chart-side alignment recipes (Dockerfile `USER`, the non-recursive permissions initContainer) live in `chart`'s run-as-user reference; the install-gate side lives in its lint reference.
 
 Used by: `chart` (runAsUser) and `files` (chown).
 

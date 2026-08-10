@@ -74,7 +74,7 @@ For deploying to your own Olares, **metadata can stay a stub** as long as `lint`
 | Trigger | Read |
 |---|---|
 | Build or select every workload image | [image](references/olares-chart-image.md) |
-| Decide process uid and mounted-volume ownership | [run identity](references/olares-chart-run-as-user.md) |
+| Decide process uid, then mounted-volume ownership — two independent questions, see below | [run identity](references/olares-chart-run-as-user.md) |
 | Map persistence, entrances, metadata and workload replicas | [manifest](references/olares-chart-manifest.md) |
 | Map configuration and platform values | [environment](references/olares-chart-env.md), then [defaults](references/olares-chart-env-defaults.md) or [system values](references/olares-chart-system-values.md) only when needed |
 | Handle passwords, API keys or generated keys | [secrets](references/olares-chart-secrets.md) |
@@ -83,6 +83,20 @@ For deploying to your own Olares, **metadata can stay a stub** as long as `lint`
 | Prove the chart on the target Olares | [deploy](references/olares-chart-deploy.md) |
 
 The manifest reference covers four concerns separately: storage, entrances/ports, workloads/replicas and metadata. Together with image, run identity, env, secrets, versioning, validation and deployment, these are the 11 concerns every port checks.
+
+### Run identity: answer two questions
+
+Q1 (what uid the process ends up as) and Q2 (who owns the directories it writes) are **independent**: every Q1 answer can be paired with either Q2 answer. Answer both, then open the run identity reference for the how.
+
+| Question | Answer | Do |
+|---|---|---|
+| **Q1** What is the image's effective uid? | 1000 | `spec.runAsUser: true`; on non-primary workloads also set `securityContext.runAsUser: 1000` yourself |
+| | 0, and the entrypoint drops via `PUID`/`PGID` | Leave `spec.runAsUser` off, set `PUID=PGID=1000`, verify the final process |
+| | 0 and stays root, or any other non-1000 uid | Try `securityContext.runAsUser: 1000`; if the app breaks, rebuild the image |
+| **Q2** Does it write a userspace mount? | no | Done |
+| | yes | Add a **non-recursive** `init-permissions` initContainer (`beclab/` image, container-level `runAsUser: 0`) — on the `PUID`/`PGID` path read the startup log first, that entrypoint often does it already |
+
+Two red lines: never `chown -R` at runtime, and never set an explicit root `securityContext` — the `beclab/` permissions initContainer is the only exception.
 
 ### Conditional
 
