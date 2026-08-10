@@ -452,15 +452,17 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 	// cluster-pressure / k8s-request against the non-negative delta
 	// (new − old) so the running deployment is not double-counted. That
 	// discount is decided from PrevState for the steady cases (Running →
-	// delta, Stopped → full) and otherwise from whether prevCfg's
-	// namespace still has scheduled pods (see that function for details).
+	// delta, Stopped → full), from AppPreUpgradeStateKey on UpgradeFailed
+	// when present, and otherwise from whether prevCfg's namespace still
+	// has scheduled pods (see upgradePrevHoldsRequests).
 	decision, err := validation.Run(req.Request.Context(), validation.Input{
-		Client:        h.ctrlClient,
-		AppConfig:     appCfg,
-		PrevAppConfig: &prevCfg,
-		PrevState:     appMgr.Status.State,
-		Op:            appv1alpha1.UpgradeOp,
-		Token:         token,
+		Client:                h.ctrlClient,
+		AppConfig:             appCfg,
+		PrevAppConfig:         &prevCfg,
+		PrevState:             appMgr.Status.State,
+		PreUpgradeSteadyState: appMgr.Annotations[api.AppPreUpgradeStateKey],
+		Op:                    appv1alpha1.UpgradeOp,
+		Token:                 token,
 	}, validation.UpgradabilityValidators()...)
 	if err != nil {
 		api.HandleError(resp, req, err)
