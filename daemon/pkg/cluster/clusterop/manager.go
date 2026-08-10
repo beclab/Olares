@@ -218,8 +218,10 @@ type CreateRequest struct {
 	Target    string
 	ClusterID string
 	Owner     string
-	Params    json.RawMessage
-	Creds     Credentials
+	// Params carries optional module input for idempotency only. It is not
+	// bound into the caller's JWS, stays in memory, and is never persisted.
+	Params json.RawMessage
+	Creds  Credentials
 }
 
 // Errors a caller can act on.
@@ -446,10 +448,6 @@ func (m *Manager) Create(_ context.Context, req CreateRequest) (Operation, error
 		return Operation{}, ErrOwnerRequired
 	}
 	paramsDigest, err := DigestParams(req.Params)
-	if err != nil {
-		return Operation{}, err
-	}
-	emptyParamsDigest, err := DigestParams(nil)
 	if err != nil {
 		return Operation{}, err
 	}

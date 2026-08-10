@@ -50,6 +50,20 @@ func TestDigestParamsCanonicalizesObjectOrder(t *testing.T) {
 	}
 }
 
+func TestDigestParamsDoesNotCollideOnLargeIntegers(t *testing.T) {
+	left, err := DigestParams(json.RawMessage(`{"value":9007199254740992}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	right, err := DigestParams(json.RawMessage(`{"value":9007199254740993}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if left == right {
+		t.Fatalf("large integers collided: %q", left)
+	}
+}
+
 func TestDigestParamsChangesWhenValuesOrArraysChange(t *testing.T) {
 	first, err := DigestParams(json.RawMessage(`{"value":1,"items":["a","b"]}`))
 	if err != nil {

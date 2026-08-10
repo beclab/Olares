@@ -8,6 +8,8 @@ import (
 	"strings"
 )
 
+var emptyParamsDigest = mustDigestParams(nil)
+
 // CanonicalParams normalizes caller-supplied params without persisting them.
 // Missing or whitespace-only params mean "no params", which is represented as
 // the empty JSON object for idempotency.
@@ -17,6 +19,7 @@ func CanonicalParams(raw json.RawMessage) (json.RawMessage, error) {
 	}
 
 	decoder := json.NewDecoder(strings.NewReader(string(raw)))
+	decoder.UseNumber()
 	var value any
 	if err := decoder.Decode(&value); err != nil {
 		return nil, err
@@ -35,6 +38,7 @@ func CanonicalParams(raw json.RawMessage) (json.RawMessage, error) {
 	return json.RawMessage(canonical), nil
 }
 
+// DigestParams returns the SHA-256 hex digest of canonicalized params.
 func DigestParams(raw json.RawMessage) (string, error) {
 	canonical, err := CanonicalParams(raw)
 	if err != nil {
@@ -42,4 +46,12 @@ func DigestParams(raw json.RawMessage) (string, error) {
 	}
 	sum := sha256.Sum256(canonical)
 	return hex.EncodeToString(sum[:]), nil
+}
+
+func mustDigestParams(raw json.RawMessage) string {
+	digest, err := DigestParams(raw)
+	if err != nil {
+		panic(err)
+	}
+	return digest
 }
