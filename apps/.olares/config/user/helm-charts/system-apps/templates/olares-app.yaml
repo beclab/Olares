@@ -269,7 +269,7 @@ spec:
           imagePullPolicy: IfNotPresent
           name: check-auth
         - name: olares-app-init
-          image: beclab/system-frontend:v1.11.23
+          image: beclab/system-frontend:v1.11.25
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -365,7 +365,7 @@ spec:
             - name: NATS_SUBJECT_VAULT
               value: os.vault.{{ .Values.bfl.username}}
         - name: user-service
-          image: beclab/user-service:v0.1.10
+          image: beclab/user-service:v0.1.12
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
@@ -815,4 +815,16 @@ kind: ServiceAccount
 metadata:
   namespace: {{ .Release.Namespace }}
   name: system-frontend
-
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tapr-images-svc
+  namespace: user-space-{{ .Values.bfl.username }}
+spec:
+  type: ExternalName
+  externalName: tapr-images-svc.user-system-{{ .Values.bfl.username }}.svc.cluster.local
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
