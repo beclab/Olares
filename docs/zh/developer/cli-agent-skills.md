@@ -29,6 +29,7 @@ head:
 | `olares-dashboard` | 查看系统资源使用情况，包括 CPU、内存、磁盘、网络、Pod、GPU、风扇和应用资源排行。 |
 | `olares-cluster` | 查看 K8s 运行状态，包括 Pod、容器、工作负载、Job、CronJob、节点和中间件。可以查日志、进入容器、扩缩容、重启、暂停和恢复 CronJob。 |
 | `olares-doctor` | 排查应用运行问题，比如安装卡住、崩溃、镜像拉取失败、状态为运行但无法访问、运行缓慢等。会自动调用 `cluster`、`dashboard`、`market` 收集信息。 |
+| `olares-model` | 配置和使用 AI 模型：接入云端厂商的模型、安装本地模型应用、设置默认模型、签发 key 和配额、查看用量，也可以直接调用模型做对话、向量、语音转写、语音合成和 OCR。 |
 | `olares-search` | 搜索文件和应用。支持在 `drive` 和 `sync` 中全文搜索，也可以按标题查找已安装应用。 |
 
 :::warning 务必先安装 `olares-shared`

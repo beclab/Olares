@@ -42,25 +42,43 @@ type localSpec struct {
 }
 
 func newLocalSpecCommand(f *cmdutil.Factory) *cobra.Command {
-	var output string
 	cmd := &cobra.Command{
-		Use:   "spec <app>",
+		Use:   "spec",
 		Short: "the model card this application serves to Router",
-		Long: `Show the model card — the capability document Router reads from this
-application and stores as the model's spec.
+		Long: `Read or replace the model card — the capability document Router reads from
+this application and stores as the model's spec.
 
 Capabilities, prices, context window and parameter rules all come from here.
 When Router offers a capability a model turns out not to have, this is the copy
 the application itself stands behind, and "model provider sync-models" is what
 brings the two back together.
 
-  spec <app>        the card as served, after parsing
+  spec show <app>   the card as served, after parsing
   spec file <app>   the bytes on disk, before parsing
   spec set <app>    replace the card wholesale
+`,
+	}
+	cmd.AddCommand(newLocalSpecShowCommand(f))
+	cmd.AddCommand(newLocalSpecFileCommand(f))
+	cmd.AddCommand(newLocalSpecSetCommand(f))
+	return cmd
+}
+
+func newLocalSpecShowCommand(f *cmdutil.Factory) *cobra.Command {
+	var output string
+	cmd := &cobra.Command{
+		Use:     "show <app>",
+		Aliases: []string{"get"},
+		Short:   "the card as this application serves it",
+		Long: `Show the model card this application serves, after parsing.
+
+JSON output is the card itself rather than a summary of it, including any field
+this CLI does not know about, which is what makes it the thing to edit and hand
+back to "spec set".
 
 Examples:
-  olares-cli model local spec llamacppqwen3627bggufv3
-  olares-cli model local spec llamacppqwen3627bggufv3 -o json
+  olares-cli model local spec show llamacppqwen3627bggufv3
+  olares-cli model local spec show llamacppqwen3627bggufv3 -o json
 `,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
@@ -68,8 +86,6 @@ Examples:
 		},
 	}
 	addOutputFlag(cmd, &output)
-	cmd.AddCommand(newLocalSpecFileCommand(f))
-	cmd.AddCommand(newLocalSpecSetCommand(f))
 	return cmd
 }
 
@@ -230,7 +246,7 @@ func newLocalSpecFileCommand(f *cmdutil.Factory) *cobra.Command {
 		Short: "the model card file on disk, verbatim",
 		Long: `Print the model card exactly as it is stored on disk.
 
-"model local spec" serves the parsed card held in memory; this is the file a
+"model local spec show" serves the parsed card held in memory; this is the file a
 previous write actually left behind. They differ in whitespace, in key order,
 and in the record of keys the Model Console did not recognise — so this is the
 copy to compare against something you wrote, and that is the whole reason it
@@ -280,11 +296,11 @@ func specFileErr(ctx context.Context, li *llmInit, err error) error {
 	}
 	if served := consoleServes(ctx, li, "GET", "/api/model-spec/file"); served != nil && !*served {
 		return fmt.Errorf("this application's Model Console (%s) does not serve the card's file, only "+
-			"the card it parsed from it. `olares-cli model local spec %s -o json` is that card, and it "+
+			"the card it parsed from it. `olares-cli model local spec show %s -o json` is that card, and it "+
 			"is what `model local spec set` takes back", consoleVersion(li), li.AppName)
 	}
 	return fmt.Errorf("%w\nNothing has written a card to disk, so this application is serving the one "+
-		"built from its configuration at boot. `olares-cli model local spec %s` shows it", err, li.AppName)
+		"built from its configuration at boot. `olares-cli model local spec show %s` shows it", err, li.AppName)
 }
 
 // consoleVersion names the build in a sentence about what it can do. The open
@@ -310,7 +326,7 @@ func newLocalSpecSetCommand(f *cmdutil.Factory) *cobra.Command {
 This is a replacement, not a merge: what you send becomes the card, and any
 field you leave out is gone. Start from the current one —
 
-  olares-cli model local spec <app> -o json > card.json
+  olares-cli model local spec show <app> -o json > card.json
 
 — edit that, and send it back. The write is atomic and survives restarts,
 because disk wins over the boot-time seed from then on. Until the first write
@@ -353,7 +369,7 @@ func readSpecSource(from string) ([]byte, error) {
 		}
 		if len(bytes.TrimSpace(raw)) == 0 {
 			return nil, fmt.Errorf("no card to send: pass --from <file>, or pipe one in. " +
-				"`olares-cli model local spec <app> -o json` prints the current card to start from")
+				"`olares-cli model local spec show <app> -o json` prints the current card to start from")
 		}
 		return raw, nil
 	}
@@ -378,7 +394,7 @@ func runLocalSpecSet(ctx context.Context, f *cmdutil.Factory, ref, from string, 
 	}
 	if len(candidate) == 0 {
 		return fmt.Errorf("the card is empty; a replacement has to carry the whole document, and " +
-			"`olares-cli model local spec file <app>` prints the current one to start from")
+			"`olares-cli model local spec show <app> -o json` prints the current one to start from")
 	}
 
 	li, err := openLocal(ctx, f, ref)

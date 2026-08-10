@@ -1,6 +1,6 @@
 ---
 name: olares-shared
-version: 4.4.0
+version: 4.5.0
 description: "Foundation for the olares-cli skill suite: choose the right domain skill, understand the Olares platform model each task depends on, and decide whether the active profile can proceed or needs login recovery. Use first for runtime skills, and directly for Olares ID, profile, login, 2FA/TOTP, refresh token, keychain, auth errors, or uncertainty about which Olares skill owns a task."
 compatibility: Requires olares-cli on PATH
 metadata:
@@ -32,6 +32,7 @@ Read this thin front door before a runtime skill. It supplies suite routing, the
 | [`olares-files`](../olares-files/SKILL.md) | Browse and modify Drive, Sync, cache, external and cloud files |
 | [`olares-knowledge`](../olares-knowledge/SKILL.md) | URL, yt-dlp, aria2, torrent and Hugging Face download tasks |
 | [`olares-search`](../olares-search/SKILL.md) | Full-content file search and installed-app title search |
+| [`olares-model`](../olares-model/SKILL.md) | Configure, install, call and diagnose models through Router |
 | [`olares-chart`](../olares-chart/SKILL.md) | Author, validate and deploy an app's Olares chart |
 | [`olares-publish`](../olares-publish/SKILL.md) | Prepare and submit a public Olares Market listing |
 | [`olares-doctor`](../olares-doctor/SKILL.md) | Diagnose an app/system runtime failure and route the fix |

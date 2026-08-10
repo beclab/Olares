@@ -183,6 +183,7 @@ func TestSkillCommandPathsExist(t *testing.T) {
 		"model local status",
 		"model local progress",
 		"model local spec",
+		"model local spec show",
 		"model local spec file",
 		"model local spec set",
 		"model local config",
