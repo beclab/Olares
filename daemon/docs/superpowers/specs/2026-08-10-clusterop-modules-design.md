@@ -1,7 +1,7 @@
 # Design: Extensible cluster operation modules
 
 **Date:** 2026-08-10
-**Status:** Approved for implementation planning
+**Status:** Implemented
 
 ## Goal
 

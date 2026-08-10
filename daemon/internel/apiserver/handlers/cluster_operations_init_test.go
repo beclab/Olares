@@ -65,6 +65,77 @@ func TestInitClusterOperationsReadsWhatWasRecorded(t *testing.T) {
 	}
 }
 
+// What this daemon can be asked to do is settled when it starts serving. A
+// module registered after that would be reachable by name from an HTTP route
+// while the orchestrator that was already built, the signature reader and
+// every node's own set disagree about whether it exists, so the set is
+// closed before anything can be asked for.
+func TestInitClusterOperationsClosesTheModuleSet(t *testing.T) {
+	prev := clusterOperations
+	t.Cleanup(func() { clusterOperations = prev })
+
+	if err := InitClusterOperations(t.TempDir(), harmlessDeps(t)); err != nil {
+		t.Fatalf("InitClusterOperations: %v", err)
+	}
+
+	late := &nodeModuleRecorder{typ: clusterop.Type("late-op")}
+	if err := clusterop.DefaultRegistry().Register(late); err == nil {
+		t.Fatal("an operation registered itself after the daemon started serving")
+	}
+	if _, err := clusterop.ParseType("late-op"); err == nil {
+		t.Error("a route would accept an operation the orchestrator was never built with")
+	}
+}
+
+// Closing the set is not a one-shot that a second startup path would trip
+// over: a daemon may open its records more than once, and doing so must not
+// turn a working setup into a failed one.
+func TestInitClusterOperationsCanBeCalledAgain(t *testing.T) {
+	prev := clusterOperations
+	t.Cleanup(func() { clusterOperations = prev })
+
+	for i := 0; i < 2; i++ {
+		if err := InitClusterOperations(t.TempDir(), harmlessDeps(t)); err != nil {
+			t.Fatalf("InitClusterOperations call %d: %v", i+1, err)
+		}
+		if clusterOperations == nil {
+			t.Fatalf("call %d published no orchestrator", i+1)
+		}
+	}
+	if err := clusterop.DefaultRegistry().Register(
+		&nodeModuleRecorder{typ: clusterop.Type("late-op-again")}); err == nil {
+		t.Error("the module set reopened")
+	}
+}
+
+// The orchestrator and the node routes answer from one set, not two. The
+// master decides an operation exists, dispatches its node half, and reads the
+// owner's signature against modules; a node carries that half out against
+// its own. Two sets could disagree, and the disagreement would surface as a
+// node refusing work the record already says was dispatched.
+func TestTheNodeRoutesAndTheOrchestratorShareOneClosedModuleSet(t *testing.T) {
+	prevOps := clusterOperations
+	prevNode := nodeOperations
+	t.Cleanup(func() {
+		clusterOperations = prevOps
+		nodeOperations = prevNode
+	})
+
+	// Exactly what main wires, in the order main wires it.
+	InstallNodeOperations(clusterop.DefaultRegistry())
+	if err := InitClusterOperations(t.TempDir(), harmlessDeps(t)); err != nil {
+		t.Fatalf("InitClusterOperations: %v", err)
+	}
+
+	if nodeOperations != clusterop.DefaultRegistry() {
+		t.Fatal("the node routes answer from a different module set than the orchestrator")
+	}
+	if err := nodeOperations.Register(
+		&nodeModuleRecorder{typ: clusterop.Type("late-node-op")}); err == nil {
+		t.Error("the set the node routes act through is still open")
+	}
+}
+
 func TestInitClusterOperationsRefusesAnUnusableSetup(t *testing.T) {
 	prev := clusterOperations
 	t.Cleanup(func() { clusterOperations = prev })

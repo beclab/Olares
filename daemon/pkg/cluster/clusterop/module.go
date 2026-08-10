@@ -86,10 +86,45 @@ type Runtime interface {
 	Context() context.Context
 }
 
+// OperationModule is one cluster operation: what it is called, what it will
+// accept, what it makes the cluster look like while it happens, and how it
+// is carried out. Everything this daemon can do is a module, and adding one
+// is the only thing adding an operation requires — no switch, no list and no
+// type constant anywhere else names it.
+//
+// A module is asked things by two different machines. The master asks
+// Validate before an operation exists and then calls Run; a node asks
+// Validate again for its own half of the request and then calls
+// NodeOperationModule.ExecuteNode. Both are reached only with the owner's
+// signature, and neither hop signs the params.
 type OperationModule interface {
 	Type() Type
+
+	// Validate says whether the module will carry out the request as asked.
+	// It is the only judgement made about Params, which no signature covers
+	// at any hop: whoever can reach the route chose those bytes.
+	//
+	// It must be deterministic and free of side effects. Two things depend
+	// on that. The same request is judged more than once — once by the
+	// master before the operation is recorded, once again by each node that
+	// receives its half — and a module that answered differently would
+	// leave a recorded operation whose nodes refuse it. And the owner's
+	// signature is spent before the answer is known: it is consumed whether
+	// this returns nil, returns a refusal, or panics, so a caller can drive
+	// this method exactly once per signature and must not be able to make
+	// anything happen by doing so.
+	//
+	// The error is detail for the log. It is text written outside this
+	// package, about params nothing checked, so it never reaches a caller.
 	Validate(CreateRequest) error
+
+	// Phase is what the operation makes the cluster as a whole look like
+	// while it is happening, or false to impose nothing. It is asked about
+	// a copy and must not mutate anything.
 	Phase(Operation) (nodestatus.Phase, bool)
+
+	// Run carries the operation out on the master. It records what it does
+	// through the Runtime and returns the outcome the record settles on.
 	Run(context.Context, Runtime, RunRequest) Outcome
 }
 

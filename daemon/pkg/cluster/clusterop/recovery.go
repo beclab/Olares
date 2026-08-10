@@ -242,13 +242,15 @@ func (m *Manager) moduleAlreadyCommitted(id string) bool {
 //
 // Two things follow from the marker and nothing else does:
 //
-//   - the legacy /command/power-node endpoint serves the operation. That
-//     endpoint predates module validation and hands a request straight to a
-//     module without asking whether the module accepts it, so it may only
-//     reach node code written here. See ExecutePowerNode.
+//   - the legacy /command/power-node endpoint serves the operation, and only
+//     that endpoint does. It predates module validation and hands a request
+//     straight to a module without asking whether the module accepts it, so
+//     it may only reach node code written here; and a power operation
+//     reaching a machine any other way would be a machine powered outside
+//     the sequence the master records. See ExecutePowerNode and ExecuteNode.
 //   - the operation's errors reach a caller unchanged, because their code
 //     and message are reviewed text from this package rather than whatever a
-//     module chose to put in them. See ExecuteNode.
+//     module chose to put in them. See ExecutePowerNode.
 type builtInPowerOperation interface {
 	OperationModule
 	NodeOperationModule
@@ -292,12 +294,21 @@ func isBuiltInPowerOperation(typ Type) bool {
 // could pick a code that means something else here, or put an address or a
 // token in a message somebody reads. What it said goes to this node's log,
 // and what comes back is the one thing actually known — that the module
-// failed. The built-in power operations are the exception, because their
-// codes and sentences are this package's own and callers have been reading
-// them since before modules existed.
+// failed.
+//
+// The built-in power operations are refused before they are reached at all,
+// which makes the two endpoints serve disjoint sets. The master dispatches a
+// reboot or a shutdown to /command/power-node, so nothing legitimate arrives
+// here as one; what would is a machine — the control node included, since
+// the generic endpoint answers for every role — powered off outside the
+// sequence, the record and the single-operation lock that a cluster power
+// operation is.
 func ExecuteNode(ctx context.Context, registry *ModuleRegistry, req NodeRequest) error {
+	if isBuiltInPowerOperation(req.Type) {
+		return unsupportedNodeOperationError()
+	}
 	err, fromModule := runNodeModule(ctx, registry, req)
-	if err == nil || !fromModule || isBuiltInPowerOperation(req.Type) {
+	if err == nil || !fromModule {
 		return err
 	}
 	klog.Errorf("clusterop: module %s failed on this node: %v", req.Type, err)

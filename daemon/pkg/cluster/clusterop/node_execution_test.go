@@ -153,17 +153,29 @@ func TestExecuteNodeStillReportsAnUnknownTypeAsUnsupported(t *testing.T) {
 	}
 }
 
-// The generic helper carries the built-in operations too — the master's own
-// node runs one through it — and their refusals are this package's own text,
-// so those still reach the caller unchanged.
-func TestExecuteNodeKeepsABuiltInPowerRefusal(t *testing.T) {
-	refusal := &PowerError{Code: CodeHostPowerFailed, Message: "this node could not be powered"}
-	module := &nodeCapableModule{typ: TypeShutdown, err: refusal}
-	reg := registryWith(t, module)
+// The two endpoints serve disjoint sets. A cluster power operation reaches a
+// machine one way only: the master sequences it and hands it to the legacy
+// power endpoint, which is the one an old worker serves. Reaching a power
+// module through the generic endpoint instead would power a machine — the
+// control node included, since that route answers for every role — outside
+// the sequence, the record and the single-operation lock that make a cluster
+// power operation safe.
+func TestExecuteNodeRefusesTheBuiltInPowerOperations(t *testing.T) {
+	for _, typ := range []Type{TypeReboot, TypeShutdown} {
+		t.Run(string(typ), func(t *testing.T) {
+			module := &nodeCapableModule{typ: typ}
+			reg := registryWith(t, module)
 
-	err := ExecuteNode(context.Background(), reg, nodeRequestFor(TypeShutdown))
+			err := ExecuteNode(context.Background(), reg, nodeRequestFor(typ))
 
-	if powerCode(t, err) != CodeHostPowerFailed {
-		t.Fatalf("ExecuteNode() code = %q, want %s", powerCode(t, err), CodeHostPowerFailed)
+			if powerCode(t, err) != CodeUnsupportedOperation {
+				t.Fatalf("ExecuteNode(%q) code = %q, want %s",
+					typ, powerCode(t, err), CodeUnsupportedOperation)
+			}
+			if module.callCount() != 0 {
+				t.Errorf("%q was carried out %d times outside cluster orchestration",
+					typ, module.callCount())
+			}
+		})
 	}
 }

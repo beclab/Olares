@@ -98,13 +98,27 @@ func (h *Handlers) PostClusterOperationNode(ctx *fiber.Ctx) error {
 
 	// Every field the module judges the request by comes from the binding
 	// rather than from the body. The two agree — the binding was checked
-	// against the body to get here — but only one of them the owner signed.
-	refused, judged := askModuleAbout(module, clusterop.CreateRequest{
+	// against the body to get here — but only one of them the owner signed,
+	// and they are not character for character the same: the request id was
+	// compared after trimming, so a body may still carry a padded one.
+	signed := clusterop.PeerRequest{
 		Type:      binding.Type,
 		RequestID: binding.RequestID,
 		Scope:     binding.Scope,
 		Target:    binding.Target,
 		ClusterID: binding.ClusterID,
+
+		// The master's own id for the run. Nothing signs it and nothing is
+		// decided by it; it is carried so this node's log and the master's
+		// record name the same operation.
+		OperationID: req.OperationID,
+	}
+	refused, judged := askModuleAbout(module, clusterop.CreateRequest{
+		Type:      signed.Type,
+		RequestID: signed.RequestID,
+		Scope:     signed.Scope,
+		Target:    signed.Target,
+		ClusterID: signed.ClusterID,
 		Owner:     ownerOf(ctx),
 		Params:    req.Params,
 	})
@@ -121,7 +135,10 @@ func (h *Handlers) PostClusterOperationNode(ctx *fiber.Ctx) error {
 			"this node cannot carry out the operation as asked")
 	}
 
-	return h.runNodeOperation(ctx, clusterOperationNodeEndpoint, registry, req, claim)
+	// Carried out against the same fields it was judged by, so nothing the
+	// module was shown can differ from what it is then asked to act on.
+	return h.runNodeOperation(ctx, clusterOperationNodeEndpoint, registry,
+		clusterop.NodeRequest{PeerRequest: signed, Params: req.Params}, claim)
 }
 
 // askModuleAbout puts the request to the module and reports both what it

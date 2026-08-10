@@ -256,6 +256,39 @@ func TestClusterOperationNodeShowsTheModuleTheRequestItValidates(t *testing.T) {
 	}
 }
 
+// What the module is told about the request is what the owner signed, not
+// what the body happened to say. The two were checked against each other to
+// get this far — the request id after trimming, so a body may still carry a
+// padded one — and a module that keyed anything off the body's version would
+// be keying it off text nobody signed.
+func TestClusterOperationNodeHandsTheModuleTheSignedRequestFields(t *testing.T) {
+	module := withTestNodeOperation(t, &nodeModuleRecorder{})
+	asOwnerSignature(t)
+	asWorker(t)
+
+	resp, body := callRegisteredMethod(t, http.MethodPost, "/command/cluster-operation",
+		`{"type":"bake-cake","operationId":"op-1","requestId":"  client-1  ","params":{"flavour":"almond"}}`,
+		signedFor(t, testOperationType, "client-1"))
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d: %s", resp.StatusCode, body)
+	}
+
+	ran := module.ran()
+	if len(ran) != 1 {
+		t.Fatalf("the module was asked to act %d times, want once", len(ran))
+	}
+	want := clusterop.PeerRequest{
+		Type:        testOperationType,
+		OperationID: "op-1",
+		RequestID:   "client-1",
+		Scope:       clusterop.ScopeCluster,
+		ClusterID:   "cluster-test",
+	}
+	if ran[0].PeerRequest != want {
+		t.Errorf("request = %+v, want the verified binding %+v", ran[0].PeerRequest, want)
+	}
+}
+
 // A module chooses the code and the message of the error it returns, and
 // both would reach whoever called if they were passed along. What it said
 // belongs in this node's log; the reply carries the one stable code that
@@ -441,6 +474,38 @@ func TestOnlyTheGenericEndpointServesAnOperationTheDaemonLearnedLater(t *testing
 	}
 	if len(module.ran()) != 1 {
 		t.Errorf("the power endpoint carried out an operation it does not serve: %+v", module.ran())
+	}
+}
+
+// The generic endpoint answers for every role, the control node included,
+// and the control node is the one machine a cluster power operation may only
+// reach last and through its own sequence. A reboot or a shutdown presented
+// here is therefore refused outright: the master dispatches those to
+// /command/power-node, so nothing legitimate arrives this way, and what does
+// would be a machine powered off outside the record and the
+// single-operation lock.
+func TestClusterOperationNodeRefusesABuiltInPowerOperation(t *testing.T) {
+	for _, typ := range []clusterop.Type{"reboot", "shutdown"} {
+		t.Run(string(typ), func(t *testing.T) {
+			module := withTestNodeOperation(t, &nodeModuleRecorder{typ: typ})
+			asOwnerSignature(t)
+			asMaster(t)
+
+			resp, body := callRegisteredMethod(t, http.MethodPost, "/command/cluster-operation",
+				`{"type":"`+string(typ)+`","operationId":"op-1","requestId":"client-1"}`,
+				signedFor(t, typ, "client-1"))
+
+			if resp.StatusCode != http.StatusBadRequest {
+				t.Fatalf("status = %d, want 400: %s", resp.StatusCode, body)
+			}
+			if got := reasonOf(t, body); got != clusterop.CodeUnsupportedOperation {
+				t.Errorf("reason = %q, want %q: %s", got, clusterop.CodeUnsupportedOperation, body)
+			}
+			if len(module.ran()) != 0 {
+				t.Errorf("the control node was powered outside cluster orchestration: %+v",
+					module.ran())
+			}
+		})
 	}
 }
 

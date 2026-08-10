@@ -73,6 +73,11 @@ func main() {
 	// this machine: the node-local half of an operation runs through the
 	// modules built into this daemon, and they are handed to the routes here
 	// rather than at package level, so no test binary holds them.
+	//
+	// Both halves are given the same set, which InitClusterOperations then
+	// closes: the master decides an operation exists and dispatches its node
+	// half against these modules, and a node carries that half out against
+	// the same ones.
 	handlers.InstallNodeOperations(clusterop.DefaultRegistry())
 	if err := handlers.InitClusterOperations(commands.CLUSTER_OPERATIONS_DIR, clusterop.NewDeps()); err != nil {
 		klog.Error("cluster operations are unavailable, ", err)

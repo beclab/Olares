@@ -45,7 +45,22 @@ const orchestratorUnavailable = "cluster operations are not available on this no
 // deps carries every side effect the orchestrator may have, and is a parameter
 // rather than something built here so that no test can install one wired to a
 // real cluster and a real power command by accident.
+//
+// What this daemon can be asked to do is settled here too. The module set is
+// closed before the orchestrator is built over it, so what the routes accept,
+// what the owner's signature can be read against, and what the manager can
+// carry out are one set decided once — and a module registering itself after
+// the daemon started serving is refused rather than becoming an operation
+// half of this process knows about. The same set is what main gives the node
+// routes; see InstallNodeOperations.
 func InitClusterOperations(dir string, deps clusterop.Deps) error {
+	// Closed first, and whatever happens next: a daemon that could not open
+	// its records still serves the routes, and the set they answer from must
+	// not stay open just because there was nowhere to write to. Freezing is
+	// idempotent, so a second call is not a failure.
+	registry := clusterop.DefaultRegistry()
+	registry.Freeze()
+
 	store, err := clusterop.NewStore(dir)
 	if err != nil {
 		return err
@@ -55,7 +70,12 @@ func InitClusterOperations(dir string, deps clusterop.Deps) error {
 		return err
 	}
 	deps.Store = store
-	m, err := clusterop.NewManager(deps)
+
+	// The manager is built over the set that was just closed, rather than
+	// looking it up again: a module that got in while the records were being
+	// read would be one the manager has and no other reader of the same
+	// registry ever saw.
+	m, err := clusterop.NewManagerWithRegistry(deps, registry)
 	if err != nil {
 		return err
 	}
