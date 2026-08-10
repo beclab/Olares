@@ -589,6 +589,57 @@ func (m *Manager) update(id string, fn func(*Operation)) bool {
 	if m.persistFailed[id] {
 		return false
 	}
+	return m.applyLocked(op, fn) == nil
+}
+
+// checkedUpdate is the persistence-safe primitive every Runtime mutation
+// uses instead of update. Unlike update, validate inspects the operation's
+// current state and can reject the mutation before fn ever runs — so a
+// rejected mutation leaves no trace, not even the in-memory copy update
+// would otherwise have produced. It shares applyLocked with update so a save
+// failure settles exactly one way no matter which caller triggered it.
+func (m *Manager) checkedUpdate(id string, validate func(*Operation) error, fn func(*Operation)) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	op, ok := m.ops[id]
+	if !ok {
+		return errOperationNotFound
+	}
+	// A previous save failure already forced this operation terminal (see
+	// applyLocked); reporting the same rejection here keeps callers from
+	// having to distinguish "terminal from a normal outcome" from "terminal
+	// because its state could no longer be recorded".
+	if m.persistFailed[id] {
+		return ErrOperationTerminal
+	}
+	if validate != nil {
+		if err := validate(op); err != nil {
+			return err
+		}
+	}
+	return m.applyLocked(op, fn)
+}
+
+// complete is the checked mutation behind Runtime.Complete. Outcome.valid()
+// has already been checked by the caller, so this only has to refuse an
+// operation that has already ended.
+func (m *Manager) complete(id string, outcome Outcome) error {
+	return m.checkedUpdate(id, rejectTerminal, func(op *Operation) {
+		op.Status = outcome.Status
+		op.Code = outcome.Code
+		op.Error = outcome.Error
+		op.CommandIssuedUntil = outcome.CommandIssuedUntil
+	})
+}
+
+// applyLocked mutates op through fn and persists the result, then applies
+// the same state_persistence_failed settlement update has always applied.
+// The caller must already hold m.mu and must already have confirmed the
+// operation exists and has not previously failed to persist. update and
+// checkedUpdate are its only two callers, so a save failure is handled
+// exactly one way regardless of which one triggered it.
+func (m *Manager) applyLocked(op *Operation, fn func(*Operation)) error {
 	fn(op)
 	op.UpdatedAt = m.deps.Now()
 	if op.Status.Terminal() {
@@ -596,23 +647,23 @@ func (m *Manager) update(id string, fn func(*Operation)) bool {
 			at := op.UpdatedAt
 			op.FinishedAt = &at
 		}
-		if m.activeID == id && !m.operationActive(op, op.UpdatedAt) {
+		if m.activeID == op.ID && !m.operationActive(op, op.UpdatedAt) {
 			m.activeID = ""
 		}
 	}
 	if err := m.deps.Store.Save(*op); err != nil {
-		klog.Errorf("clusterop: persist operation %s: %v", id, err)
-		m.persistFailed[id] = true
+		klog.Errorf("clusterop: persist operation %s: %v", op.ID, err)
+		m.persistFailed[op.ID] = true
 		op.Status = StatusFailed
 		op.Code = CodeStatePersistenceFailed
 		op.Error = "the operation stopped because its state could not be recorded"
 		at := m.deps.Now()
 		op.UpdatedAt = at
 		op.FinishedAt = &at
-		m.activeID = id
-		return false
+		m.activeID = op.ID
+		return errStatePersistenceFailed
 	}
-	return true
+	return nil
 }
 
 func (m *Manager) canContinue(id string) bool {
