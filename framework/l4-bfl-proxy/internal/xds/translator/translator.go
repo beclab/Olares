@@ -179,6 +179,15 @@ func SetTimeouts(tcpIdle, httpStream, connect, route, clusterIdle time.Duration)
 	clusterIdleTimeout = clusterIdle
 }
 
+// spoofableAppIdentityHeadersToRemove lists north-south client headers that
+// must not reach entrance Services. Envoy matches these case-insensitively.
+func spoofableAppIdentityHeadersToRemove() []string {
+	return []string{
+		"x-caller-appid",
+		"x-olares-app-id",
+	}
+}
+
 // mustAny marshals a proto.Message into an anypb.Any, panicking on error.
 // All callers use well-known Envoy types whose type URLs are always registered,
 // so a failure here indicates a programming error rather than a runtime condition.
@@ -561,6 +570,11 @@ func buildMultiUserHTTPSListener(port uint32, proxyProtocol bool, httpListeners 
 				{Header: &corev3.HeaderValue{Key: "X-Real-IP", Value: "%DOWNSTREAM_REMOTE_ADDRESS_WITHOUT_PORT%"}, AppendAction: corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD},
 				{Header: &corev3.HeaderValue{Key: "X-Original-Forwarded-For", Value: "%REQ(X-FORWARDED-FOR)%"}, AppendAction: corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD},
 			},
+			// Strip client-supplied app identity headers before upstream.
+			// North-south is L4 → entrance Service only; there is no gateway
+			// rewrite of these headers on this path, so edge clients must not
+			// be able to set them. East-west does not use this L4 RDS.
+			RequestHeadersToRemove: spoofableAppIdentityHeadersToRemove(),
 		}
 		routeConfigs = append(routeConfigs, routeConfig)
 

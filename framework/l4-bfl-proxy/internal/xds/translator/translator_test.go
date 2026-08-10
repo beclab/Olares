@@ -903,9 +903,18 @@ func TestTranslate_HTTPSListeners(t *testing.T) {
 	require.Len(t, snap.Routes, 1)
 	rc := asRouteConfig(t, snap.Routes[0])
 	assert.Equal(t, "https_443_alice_routes", rc.Name)
+	assert.Equal(t, []string{"x-caller-appid", "x-olares-app-id"}, rc.GetRequestHeadersToRemove(),
+		"north-south RDS must strip spoofable app identity headers before upstream")
 
 	// 1 cluster
 	require.Len(t, snap.Clusters, 1)
+}
+
+func TestSpoofableAppIdentityHeadersToRemove(t *testing.T) {
+	got := spoofableAppIdentityHeadersToRemove()
+	require.Equal(t, []string{"x-caller-appid", "x-olares-app-id"}, got)
+	// Stable order for xDS determinism / snapshot diffs.
+	require.Equal(t, got, spoofableAppIdentityHeadersToRemove())
 }
 
 func TestTranslate_EmptyIR(t *testing.T) {
