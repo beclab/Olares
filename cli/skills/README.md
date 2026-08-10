@@ -33,7 +33,7 @@ cli/skills/
 ├── olares-doctor/     # runtime diagnosis (thin router over cluster / market / dashboard)
 │   ├── SKILL.md
 │   └── references/    # one file per symptom (app stuck / crash / image / unhealthy / resources)
-├── olares-model/      # olares-cli model (Router gateway + the Model Console inside a model app)
+├── olares-router/     # olares-cli router (Router gateway + the Model Console inside a model app)
 │   ├── SKILL.md
 │   └── references/    # architecture / external providers / local LLM / multimodal /
 │                      # console / defaults+access / usage+audit+trace / calling / diagnosis
@@ -189,7 +189,7 @@ The 12 skills publish under their canonical short names:
 | `olares-dashboard`| Olares Dashboard (olares-cli dashboard)     |
 | `olares-cluster`  | Olares Cluster (olares-cli cluster)         |
 | `olares-doctor`   | Olares Doctor (runtime diagnosis)           |
-| `olares-model`    | Olares Model (Router and model applications)|
+| `olares-router`   | Olares Router (Router and model applications)|
 | `olares-chart`    | Olares Chart (olares-cli chart)             |
 | `olares-publish`  | Olares Publish (Olares Market distribution) |
 

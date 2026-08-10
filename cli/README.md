@@ -131,7 +131,7 @@ Each skill ships a single `SKILL.md` plus a `references/` folder, all loaded on 
 | [`olares-settings`](skills/olares-settings/SKILL.md) | `olares-cli settings` — read & mutate the Olares Settings SPA | settings, account, GPU, app settings, integrations |
 | [`olares-dashboard`](skills/olares-dashboard/SKILL.md) | `olares-cli dashboard` — Overview / Apps / GPU views | dashboard, overview, resource usage |
 | [`olares-cluster`](skills/olares-cluster/SKILL.md) | `olares-cli cluster` — Olares ControlHub Kubernetes view | ControlHub, cluster, pods, workloads, namespaces, nodes, logs |
-| [`olares-model`](skills/olares-model/SKILL.md) | `olares-cli model` — Router and the model applications behind it | models, Router, AI gateway, API key for a model, model quota, chat / embed / transcribe / OCR |
+| [`olares-router`](skills/olares-router/SKILL.md) | `olares-cli router` — Router and the model applications behind it | models, Router, AI gateway, API key for a model, model quota, chat / embed / transcribe / OCR |
 
 Skills are also published on [ClawHub](https://clawhub.io) (search "olares"); both channels read the same `SKILL.md` files, so you only need one of them installed.
 
@@ -142,7 +142,7 @@ olares-cli <area> [<noun>] <verb> [flags]
 ```
 
 - **System layer** (root-level, no `<area>` prefix): `install`, `uninstall`, `upgrade`, `start`, `stop`, `status`, `backup`, `precheck`, `prepare`, `download`, `change-ip`, `release`, `printinfo`, `logs`, `node`, `gpu`, `amdgpu`, `disk`, `osinfo`, `wizard`. These manage the host running Olares OS itself and require root / kubeconfig access — they are not driven by an Olares ID. *Channel availability*: the Go binary only registers them when `OLARES_CLI_REMOTE_ONLY` is unset, i.e. only when invoked from an Olares host's OS-bundled `/usr/local/bin/olares-cli`. Through `npm install -g @olares/cli` or `npx @olares/cli`, the Node shim sets `OLARES_CLI_REMOTE_ONLY=1` and they are hidden. The lone exception is `install`, which the Node shim itself intercepts and routes to the [first-run wizard](#first-run-wizard-scenario-a-recommended) — it never reaches the Go binary on the npm channel.
-- **Identity-bound layer** (`<area>` = `profile` / `files` / `market` / `settings` / `dashboard` / `cluster` / `doctor` / `model`): act on behalf of the currently-selected Olares ID against a running Olares HTTP API. Pick the identity once with `olares-cli profile use <name>`, then every verb in this layer uses it. Reachable through both `npm install -g` and `npx`.
+- **Identity-bound layer** (`<area>` = `profile` / `files` / `market` / `settings` / `dashboard` / `cluster` / `doctor` / `router`): act on behalf of the currently-selected Olares ID against a running Olares HTTP API. Pick the identity once with `olares-cli profile use <name>`, then every verb in this layer uses it. Reachable through both `npm install -g` and `npx`.
 
 For every command, `--help` is the source of truth for flags and wire shapes:
 

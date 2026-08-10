@@ -41,7 +41,7 @@ SKILLS=(
   "olares-dashboard|Olares Dashboard (olares-cli dashboard)"
   "olares-cluster|Olares Cluster (olares-cli cluster)"
   "olares-doctor|Olares Doctor (runtime diagnosis)"
-  "olares-model|Olares Model (Router and model applications)"
+  "olares-router|Olares Router (Router and model applications)"
   "olares-chart|Olares Chart (olares-cli chart)"
   "olares-publish|Olares Publish (Olares Market distribution)"
 )
