@@ -2,9 +2,12 @@ package clusterop
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
+	"reflect"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -325,6 +328,10 @@ func TestCreatePersistsTheOperationBinding(t *testing.T) {
 	if op.Scope != ScopeNode || op.Target != "master-1" || op.ClusterID != "cluster-1" {
 		t.Fatalf("operation binding = %+v", op)
 	}
+	// Create starts the operation, and its run goroutine writes to the store
+	// this test's temporary directory holds. Waiting it out is what keeps
+	// that write from racing the framework's own cleanup.
+	awaitTerminal(t, m, op.ID)
 }
 
 func TestNodeOperationDispatchesOnlyItsTarget(t *testing.T) {
@@ -509,7 +516,10 @@ func TestCreateRejectsAReusedRequestIDWithDifferentIntent(t *testing.T) {
 	}{
 		{"owner", func(req *CreateRequest) { req.Owner = "bob@olares.com" }},
 		{"type", func(req *CreateRequest) { req.Type = TypeShutdown }},
-		{"scope", func(req *CreateRequest) { req.Scope = ScopeCluster }},
+		// A whole-cluster operation names no node, so the scope and the
+		// target change together: the module refuses a cluster scope that
+		// still names one before the request id is ever looked at.
+		{"scope", func(req *CreateRequest) { req.Scope, req.Target = ScopeCluster, "" }},
 		{"target", func(req *CreateRequest) { req.Target = "worker-1" }},
 		{"cluster", func(req *CreateRequest) { req.ClusterID = "cluster-2" }},
 	} {
@@ -536,6 +546,73 @@ func TestCreateRejectsAReusedRequestIDWithDifferentIntent(t *testing.T) {
 	}
 }
 
+func TestCreateRejectsSameRequestIDWithDifferentParams(t *testing.T) {
+	c := newCluster(master("master-1", "10.0.0.1"))
+	m, _ := newManager(t, c)
+	first := CreateRequest{
+		Type:      TypeReboot,
+		RequestID: "client-params",
+		Scope:     ScopeNode,
+		Target:    "master-1",
+		ClusterID: "cluster-1",
+		Owner:     "alice@olares.com",
+		Params:    json.RawMessage(`{"value":1}`),
+	}
+	created, err := m.Create(context.Background(), first)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The first request is still being carried out in the background, and it
+	// writes to the same directory the test is about to take away.
+	awaitTerminal(t, m, created.ID)
+
+	second := first
+	second.Params = json.RawMessage(`{"value":2}`)
+	_, err = m.Create(context.Background(), second)
+	var conflict *RequestConflictError
+	if !errors.As(err, &conflict) {
+		t.Fatalf("Create() error = %v, want RequestConflictError", err)
+	}
+}
+
+func TestCreatePersistsParamsDigestWithoutRawParams(t *testing.T) {
+	c := newCluster(master("master-1", "10.0.0.1"))
+	m, dir := newManager(t, c)
+	req := CreateRequest{
+		Type:      TypeReboot,
+		RequestID: "client-digest",
+		Scope:     ScopeNode,
+		Target:    "master-1",
+		ClusterID: "cluster-1",
+		Owner:     "alice@olares.com",
+		Params:    json.RawMessage(`{"password":"secret","value":1}`),
+	}
+	op, err := m.Create(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if op.ParamsDigest == "" {
+		t.Fatal("Create() returned an empty params digest")
+	}
+	if _, ok := reflect.TypeOf(op).FieldByName("Params"); ok {
+		t.Fatal("Operation must not carry raw params")
+	}
+
+	data, err := os.ReadFile(filepath.Join(dir, op.ID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), `"paramsDigest"`) {
+		t.Fatalf("persisted JSON = %s, want paramsDigest", data)
+	}
+	if strings.Contains(string(data), `"params":`) {
+		t.Fatalf("persisted JSON leaked params field: %s", data)
+	}
+	if strings.Contains(string(data), "secret") || strings.Contains(string(data), `"value":1`) {
+		t.Fatalf("persisted JSON leaked raw params: %s", data)
+	}
+}
+
 func TestGetByRequestSurvivesRestartAndReturnsACopy(t *testing.T) {
 	c := newCluster(master("master-1", "10.0.0.1"))
 	m, dir := newManager(t, c)
@@ -550,6 +627,38 @@ func TestGetByRequestSurvivesRestartAndReturnsACopy(t *testing.T) {
 	again, _ := restarted.GetByRequest("client/request 1")
 	if again.RequestID != "client/request 1" {
 		t.Fatal("a caller wrote back into the request index")
+	}
+}
+
+func TestOperationJSONBackwardCompatibleWithoutModuleState(t *testing.T) {
+	data := []byte(`{"id":"op-1","type":"reboot","requestId":"request-1","owner":"alice@olares.com","status":"pending","createdAt":"2024-01-01T00:00:00Z","updatedAt":"2024-01-01T00:00:00Z","steps":[],"nodes":[]}`)
+	var op Operation
+	if err := json.Unmarshal(data, &op); err != nil {
+		t.Fatal(err)
+	}
+	if len(op.ModuleState) != 0 {
+		t.Fatalf("moduleState = %s, want empty", op.ModuleState)
+	}
+
+	op.ModuleState = json.RawMessage(`{"resume":"ok"}`)
+	encoded, err := json.Marshal(op)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(encoded), `"moduleState":{"resume":"ok"}`) {
+		t.Fatalf("marshaled JSON = %s, want moduleState", encoded)
+	}
+}
+
+func TestOperationCloneCopiesModuleState(t *testing.T) {
+	op := Operation{ModuleState: json.RawMessage(`{"resume":"ok"}`)}
+	cloned := op.Clone()
+	if string(cloned.ModuleState) != `{"resume":"ok"}` {
+		t.Fatalf("Clone() moduleState = %s", cloned.ModuleState)
+	}
+	cloned.ModuleState[0] = '['
+	if string(op.ModuleState) != `{"resume":"ok"}` {
+		t.Fatalf("Clone() shared moduleState backing bytes: %s", op.ModuleState)
 	}
 }
 
@@ -767,6 +876,24 @@ func TestNewManagerRefusesMissingSeams(t *testing.T) {
 	}
 }
 
+// A store field that holds a nil *Store compares unequal to nil as an
+// OperationStore interface — the interface has a type, even though the
+// pointer inside it is nil — so the plain nil check above lets it through.
+// The very first call through it would then panic instead of refusing to
+// build the manager.
+func TestNewManagerRefusesTypedNilStore(t *testing.T) {
+	c := newCluster(master("master-1", "10.0.0.1"))
+	dir := filepath.Join(t.TempDir(), "operations")
+	deps := c.deps(t, dir)
+
+	var nilStore *Store
+	deps.Store = nilStore
+
+	if _, err := NewManager(deps); err == nil {
+		t.Fatal("NewManager(deps with a typed-nil Store) = nil error, want a refusal")
+	}
+}
+
 func TestManagerPrunesOldRecords(t *testing.T) {
 	c := newCluster(master("master-1", "10.0.0.1"))
 	dir := filepath.Join(t.TempDir(), "operations")
@@ -865,11 +992,65 @@ func TestRestoredRequestIDKeepsCreateIdempotentAndUnambiguous(t *testing.T) {
 	}
 
 	changed := req
-	changed.Target = "worker-1"
+	changed.Scope, changed.Target = ScopeNode, "worker-1"
 	_, err = restarted.Create(context.Background(), changed)
 	var conflict *RequestConflictError
 	if !errors.As(err, &conflict) || conflict.ExistingID != first.ID {
 		t.Fatalf("different intent err = %v, want conflict with %s", err, first.ID)
+	}
+}
+
+func TestRestoredEmptyParamsDigestMatchesOnlyEmptyParams(t *testing.T) {
+	c := newCluster(master("master-1", "10.0.0.1"))
+	dir := filepath.Join(t.TempDir(), "operations")
+	deps := c.deps(t, dir)
+	now := deps.Now()
+	if err := deps.Store.Save(Operation{
+		ID:        "op-legacy",
+		Type:      TypeReboot,
+		RequestID: "request-legacy",
+		Scope:     ScopeCluster,
+		ClusterID: "cluster-1",
+		Owner:     "alice@olares.com",
+		Status:    StatusSucceeded,
+		CreatedAt: now,
+		UpdatedAt: now,
+		Steps:     []Step{},
+		Nodes:     []NodeResult{},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	m, err := NewManager(deps)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	same, err := m.Create(context.Background(), CreateRequest{
+		Type:      TypeReboot,
+		RequestID: "request-legacy",
+		Scope:     ScopeCluster,
+		ClusterID: "cluster-1",
+		Owner:     "alice@olares.com",
+	})
+	if err != nil {
+		t.Fatalf("empty params retry after restart: %v", err)
+	}
+	if same.ID != "op-legacy" {
+		t.Fatalf("same request returned %s, want op-legacy", same.ID)
+	}
+
+	_, err = m.Create(context.Background(), CreateRequest{
+		Type:      TypeReboot,
+		RequestID: "request-legacy",
+		Scope:     ScopeCluster,
+		ClusterID: "cluster-1",
+		Owner:     "alice@olares.com",
+		Params:    json.RawMessage(`{"value":1}`),
+	})
+	var conflict *RequestConflictError
+	if !errors.As(err, &conflict) || conflict.ExistingID != "op-legacy" {
+		t.Fatalf("non-empty params err = %v, want conflict with op-legacy", err)
 	}
 }
 
@@ -987,7 +1168,7 @@ func TestPersistenceFailureStopsBeforePoweringTheControlNode(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	m.powerMaster(context.Background(), op.ID, plan{master: control}, TypeReboot, false)
+	m.powerMaster(context.Background(), op.ID, plan{master: control}, rebootSpec, false)
 
 	_, powered := c.counts()
 	if powered != 0 {

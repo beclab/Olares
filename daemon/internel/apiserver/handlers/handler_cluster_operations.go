@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/url"
@@ -44,7 +45,22 @@ const orchestratorUnavailable = "cluster operations are not available on this no
 // deps carries every side effect the orchestrator may have, and is a parameter
 // rather than something built here so that no test can install one wired to a
 // real cluster and a real power command by accident.
+//
+// What this daemon can be asked to do is settled here too. The module set is
+// closed before the orchestrator is built over it, so what the routes accept,
+// what the owner's signature can be read against, and what the manager can
+// carry out are one set decided once — and a module registering itself after
+// the daemon started serving is refused rather than becoming an operation
+// half of this process knows about. The same set is what main gives the node
+// routes; see InstallNodeOperations.
 func InitClusterOperations(dir string, deps clusterop.Deps) error {
+	// Closed first, and whatever happens next: a daemon that could not open
+	// its records still serves the routes, and the set they answer from must
+	// not stay open just because there was nowhere to write to. Freezing is
+	// idempotent, so a second call is not a failure.
+	registry := clusterop.DefaultRegistry()
+	registry.Freeze()
+
 	store, err := clusterop.NewStore(dir)
 	if err != nil {
 		return err
@@ -54,7 +70,12 @@ func InitClusterOperations(dir string, deps clusterop.Deps) error {
 		return err
 	}
 	deps.Store = store
-	m, err := clusterop.NewManager(deps)
+
+	// The manager is built over the set that was just closed, rather than
+	// looking it up again: a module that got in while the records were being
+	// read would be one the manager has and no other reader of the same
+	// registry ever saw.
+	m, err := clusterop.NewManagerWithRegistry(deps, registry)
 	if err != nil {
 		return err
 	}
@@ -70,6 +91,16 @@ type createClusterOperationRequest struct {
 	Scope     string `json:"scope"`
 	Target    string `json:"target"`
 	ClusterID string `json:"clusterId"`
+
+	// Params is the module's input, carried through untouched. It is
+	// deliberately outside what the owner signs: the signature binds the
+	// operation, the request id, the cluster and the scope, and nothing
+	// under here is part of that. Whoever can reach this route can choose
+	// these bytes freely, so the module that reads them is the one that
+	// has to say what it will accept — see OperationModule.Validate. They
+	// are also never written down; only a digest of them is, so that a
+	// retried request id can be told apart from a changed one.
+	Params json.RawMessage `json:"params,omitempty"`
 }
 
 // PostClusterOperation starts a cluster-wide power operation and answers with
@@ -130,6 +161,7 @@ func (h *Handlers) PostClusterOperation(ctx *fiber.Ctx) error {
 		Target:    req.Target,
 		ClusterID: req.ClusterID,
 		Owner:     owner,
+		Params:    req.Params,
 		Creds: clusterop.Credentials{
 			// The token authorizes this request and stays on this node; only
 			// the operation-bound signature is presented to a worker.
@@ -140,7 +172,17 @@ func (h *Handlers) PostClusterOperation(ctx *fiber.Ctx) error {
 	if err != nil {
 		var requestConflict *clusterop.RequestConflictError
 		var conflict *clusterop.ConflictError
+		var refused *clusterop.ModuleValidationError
 		switch {
+		case errors.As(err, &refused):
+			// The module refused the request before anything was recorded.
+			// Its sentence is about params nothing signed and is written
+			// outside this package, so it goes to the log and the caller is
+			// told only that the request is not one this daemon can carry
+			// out as asked.
+			klog.Error("cluster operation refused the request, ", err)
+			return h.ErrJSON(ctx, http.StatusBadRequest,
+				"this cluster cannot carry out the operation as asked")
 		case errors.As(err, &requestConflict):
 			return h.ErrJSON(ctx, http.StatusConflict, requestConflict.Error(), fiber.Map{
 				"requestId":           requestConflict.RequestID,

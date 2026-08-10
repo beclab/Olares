@@ -10,31 +10,23 @@
 package clusterop
 
 import (
-	"fmt"
+	"encoding/json"
 	"time"
 
 	"github.com/beclab/Olares/daemon/pkg/cluster/inventory"
 	"github.com/beclab/Olares/daemon/pkg/cluster/nodestatus"
 )
 
-// Type is the power operation a caller asked for.
+// Type is the power operation a caller asked for. Each value is declared by
+// the module that carries it out, next to the code that does the work; this
+// package holds no list of them, because what this daemon can do is whatever
+// registered itself.
 type Type string
 
-const (
-	TypeReboot   Type = "reboot"
-	TypeShutdown Type = "shutdown"
-)
-
-// ParseType accepts only what this daemon can actually carry out.
+// ParseType accepts only what this daemon can actually carry out, which is
+// exactly what a module has registered itself for.
 func ParseType(s string) (Type, error) {
-	switch Type(s) {
-	case TypeReboot:
-		return TypeReboot, nil
-	case TypeShutdown:
-		return TypeShutdown, nil
-	default:
-		return "", fmt.Errorf("unsupported cluster operation type %q", s)
-	}
+	return DefaultRegistry().Parse(s)
 }
 
 // Status is the state of a whole cluster operation.
@@ -144,6 +136,12 @@ const (
 	// down is indistinguishable from one that restarted.
 	CodeBootIDUnavailable = "boot_id_unavailable"
 
+	// CodeModuleFailed marks an operation whose module stopped without
+	// leaving a usable outcome. Nothing is known about what it did, but
+	// leaving the record running would hold the cluster's single-operation
+	// lock until the daemon restarts.
+	CodeModuleFailed = "module_failed"
+
 	// CodeDaemonRestarted marks an operation that was still moving when
 	// olaresd stopped. Nothing observed how it ended, so it is reported as
 	// failed rather than left running and blocking the next one.
@@ -189,6 +187,10 @@ type Operation struct {
 	// idempotency key, so one owner's retry can never join another's run.
 	Owner string `json:"owner"`
 
+	// ParamsDigest is the caller intent hash for module params. The raw params
+	// are never written to the operation record.
+	ParamsDigest string `json:"paramsDigest,omitempty"`
+
 	Status     Status     `json:"status"`
 	Code       string     `json:"code,omitempty"`
 	Error      string     `json:"error,omitempty"`
@@ -208,21 +210,50 @@ type Operation struct {
 	// may outlive this daemon, so the deadline cannot live only in Manager.
 	CommandIssuedUntil time.Time `json:"commandIssuedUntil,omitempty"`
 
+	// ModuleState is optional restart evidence for a module. It must never
+	// contain raw params or secrets.
+	ModuleState json.RawMessage `json:"moduleState,omitempty"`
+
 	Steps []Step       `json:"steps"`
 	Nodes []NodeResult `json:"nodes"`
 }
 
-// Clone returns a copy that shares no slice with the original, so a value
-// handed to a caller cannot be written back into the stored record.
+// Clone returns a copy that shares no slice, and no *time.Time inside those
+// slices or the operation itself, with the original — so a value handed to a
+// caller cannot be written back into the stored record, whether the caller
+// reassigns a field or writes through a timestamp pointer it kept.
 func (o Operation) Clone() Operation {
 	out := o
+	out.StartedAt = cloneTime(o.StartedAt)
+	out.FinishedAt = cloneTime(o.FinishedAt)
+	if o.ModuleState != nil {
+		out.ModuleState = append(json.RawMessage(nil), o.ModuleState...)
+	}
 	if o.Steps != nil {
 		out.Steps = append([]Step(nil), o.Steps...)
+		for i := range out.Steps {
+			out.Steps[i].StartedAt = cloneTime(out.Steps[i].StartedAt)
+			out.Steps[i].FinishedAt = cloneTime(out.Steps[i].FinishedAt)
+		}
 	}
 	if o.Nodes != nil {
 		out.Nodes = append([]NodeResult(nil), o.Nodes...)
+		for i := range out.Nodes {
+			out.Nodes[i].StartedAt = cloneTime(out.Nodes[i].StartedAt)
+			out.Nodes[i].FinishedAt = cloneTime(out.Nodes[i].FinishedAt)
+		}
 	}
 	return out
+}
+
+// cloneTime copies the value a *time.Time points to, so two copies of a
+// record can never alias the same timestamp memory.
+func cloneTime(t *time.Time) *time.Time {
+	if t == nil {
+		return nil
+	}
+	cp := *t
+	return &cp
 }
 
 // PhaseFor derives the cluster phase from the operation currently in flight.
@@ -235,20 +266,25 @@ func PhaseFor(op *Operation) (nodestatus.Phase, bool) {
 	if op == nil || op.Status.Terminal() {
 		return "", false
 	}
-	return phaseForType(op.Type)
+	return phaseOf(DefaultRegistry(), op)
 }
 
-// phaseForType is what an operation of this kind makes the cluster look like
-// while it is happening. It says nothing about whether it still is: that is the
+// phaseOf asks the module that carries this operation out what it makes the
+// cluster look like while it is happening. The module answers for its own
+// operation and nothing else: whether the operation still is happening is the
 // caller's question, and the two have different answers once the command has
 // been issued and the machine has not gone down yet.
-func phaseForType(t Type) (nodestatus.Phase, bool) {
-	switch t {
-	case TypeReboot:
-		return nodestatus.PhaseRestarting, true
-	case TypeShutdown:
-		return nodestatus.PhaseShuttingDown, true
-	default:
+//
+// An operation whose module is not registered imposes no phase. There is
+// nothing left that knows what it was doing, and neither has a module that
+// panicked when asked — see safePhase.
+func phaseOf(registry *ModuleRegistry, op *Operation) (nodestatus.Phase, bool) {
+	if op == nil {
 		return "", false
 	}
+	module, ok := registry.Lookup(op.Type)
+	if !ok {
+		return "", false
+	}
+	return safePhase(module, *op)
 }

@@ -79,12 +79,22 @@ type bindingWire struct {
 	Body *bindingWire `json:"body"`
 }
 
-// ParseBinding reads the binding out of a verified signature's signed body.
+// ParseBinding reads the binding out of a verified signature's signed body,
+// against the modules built into this daemon.
 //
 // A body that says nothing about an operation is refused rather than treated
 // as a general grant: an unbound owner signature is a bearer token for every
 // dangerous route at once, for as long as the daemon's clock skew allows.
 func ParseBinding(signed any) (Binding, error) {
+	return ParseBindingIn(DefaultRegistry(), signed)
+}
+
+// ParseBindingIn is ParseBinding against an explicit module set. A route that
+// answers for one — a test's isolated registry, or a future caller with its
+// own — reads the signature against the same set it would carry the
+// operation out through, so the two can never disagree about which operation
+// the owner authorized.
+func ParseBindingIn(registry *ModuleRegistry, signed any) (Binding, error) {
 	unbound := &BindingError{
 		Code:    CodeSignatureUnbound,
 		Message: "the signature does not authorize this operation",
@@ -105,7 +115,10 @@ func ParseBinding(signed any) (Binding, error) {
 		(wire.Scope == ScopeNode && wire.Target == "") {
 		return Binding{}, unbound
 	}
-	opType, err := ParseType(wire.Type)
+	if registry == nil {
+		return Binding{}, unbound
+	}
+	opType, err := registry.Parse(wire.Type)
 	if err != nil {
 		return Binding{}, unbound
 	}

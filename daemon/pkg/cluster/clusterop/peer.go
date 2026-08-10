@@ -15,8 +15,19 @@ import (
 )
 
 const (
-	// PeerPath is the node-local endpoint the master hands a power command to.
+	// PeerPath is the node-local endpoint the master hands a power command
+	// to. It predates cluster operation modules and it is not going to
+	// move: a master upgraded before its workers still has to be able to
+	// reboot and shut them down, and an older worker serves this path and
+	// no other. The built-in power operations therefore keep dispatching
+	// here; see ClusterOperationPath for everything else.
 	PeerPath = "/command/power-node"
+
+	// ClusterOperationPath is the node-local endpoint for any other
+	// operation. It carries the same request the power path does plus the
+	// module's params, and only a daemon new enough to have this package's
+	// module registry serves it.
+	ClusterOperationPath = "/command/cluster-operation"
 
 	// dispatchTimeout bounds one power command. The node answers as soon as it
 	// has accepted the command, before it acts on it, so this is short.
@@ -26,6 +37,12 @@ const (
 	// every restart probe.
 	inspectTimeout = 10 * time.Second
 )
+
+// peerPort is the port another node's olaresd is dialled on. Zero means
+// fanout.OlaresdPort, which is what production uses and the only value it
+// ever has there; a test points it at a server it started, so that what a
+// dispatch put on the wire can be asserted rather than assumed.
+var peerPort int
 
 // NewDeps assembles the orchestrator's side effects against the real cluster.
 // Everything it builds is a seam the tests replace; this is the only place the
@@ -58,12 +75,38 @@ func NewDeps() Deps {
 // ask one question. The signature names the operation it authorizes and
 // nothing else, and the node checks it against the request it received.
 func dispatchPower(ctx context.Context, nodes []inventory.Node, req PeerRequest, creds Credentials) []DispatchOutcome {
+	return dispatchToPeers(ctx, PeerPath, nodes, req, creds)
+}
+
+// DispatchNodeOperation is dispatchPower for every operation that is not one
+// of the two the power endpoint predates. It carries the module's params to
+// the node alongside the same binding a power command carries, and it goes
+// to the generic endpoint, which only a daemon that has this package's
+// module registry serves.
+//
+// It presents the same single credential dispatchPower does, for the same
+// reason: the operation-bound signature names what it authorizes, and the
+// caller's access token does not. That signature covers the operation, the
+// request id, the cluster and the scope — and not the params, which are
+// outside what the owner signed at every hop they travel. The module the
+// node hands them to is what decides whether they are acceptable.
+func DispatchNodeOperation(ctx context.Context, nodes []inventory.Node, req NodeRequest,
+	creds Credentials) []DispatchOutcome {
+	return dispatchToPeers(ctx, ClusterOperationPath, nodes, req, creds)
+}
+
+// dispatchToPeers is the transport both dispatches share, so the path is the
+// only thing that separates them and neither can acquire a credential the
+// other does not have.
+func dispatchToPeers(ctx context.Context, path string, nodes []inventory.Node, body any,
+	creds Credentials) []DispatchOutcome {
 	d := &fanout.Dispatcher{
-		PeerPath: PeerPath,
+		PeerPath: path,
 		Headers:  signatureHeader(creds),
+		Port:     peerPort,
 		Timeout:  dispatchTimeout,
 	}
-	results := d.Run(ctx, peerTargets(nodes), func(fanout.NodeTarget) any { return req })
+	results := d.Run(ctx, peerTargets(nodes), func(fanout.NodeTarget) any { return body })
 	return peerOutcomes(results)
 }
 

@@ -8,8 +8,6 @@ import (
 	"github.com/beclab/Olares/daemon/pkg/cluster/nodestatus"
 	"github.com/beclab/Olares/daemon/pkg/cluster/state"
 	"github.com/beclab/Olares/daemon/pkg/commands"
-	"github.com/beclab/Olares/daemon/pkg/commands/reboot"
-	"github.com/beclab/Olares/daemon/pkg/commands/shutdown"
 )
 
 // PowerError is a refusal or failure from the point that would power a
@@ -31,18 +29,45 @@ func (e *PowerError) Error() string {
 
 func (e *PowerError) Unwrap() error { return e.Err }
 
+// hostPowerModule is the part of a power module that acts on the machine
+// this daemon runs on. A module that does not implement it declares that it
+// has nothing to run here, and PowerHost refuses rather than guessing.
+type hostPowerModule interface {
+	// commandName is the executable this operation needs on this node. It is
+	// looked up before anything is run, because a node without it cannot
+	// carry the operation out however willing the rest of the daemon is.
+	commandName() string
+
+	// newCommand builds the same node-local command the single-node power
+	// endpoint runs.
+	newCommand() commands.Interface
+}
+
+// hostPowerModuleFor names the module that would act on this machine. It
+// reads the default registry rather than any manager's, because this is the
+// execution point: it answers for the node it is running on, whether that
+// node is orchestrating anything or was told to do this by one that is.
+func hostPowerModuleFor(op Type) (hostPowerModule, error) {
+	if module, ok := DefaultRegistry().Lookup(op); ok {
+		if host, ok := module.(hostPowerModule); ok {
+			return host, nil
+		}
+	}
+	return nil, &PowerError{
+		Code:    CodeUnsupportedOperation,
+		Message: "this daemon does not perform that operation",
+	}
+}
+
 // The seams that make the machine actually power off. A unit test replaces
 // them; nothing else does.
 var (
 	newPowerCommand = func(op Type) commands.Interface {
-		switch op {
-		case TypeReboot:
-			return reboot.New()
-		case TypeShutdown:
-			return shutdown.New()
-		default:
+		host, err := hostPowerModuleFor(op)
+		if err != nil {
 			return nil
 		}
+		return host.newCommand()
 	}
 
 	// The published snapshot rather than the live struct: the refresh loop
@@ -99,17 +124,11 @@ func hostPowerSupportIn(st clistate.State, op Type) error {
 func LocalPowerSupport(op Type) error { return hostPowerSupport(op) }
 
 func powerCommandName(op Type) (string, error) {
-	switch op {
-	case TypeReboot:
-		return "reboot", nil
-	case TypeShutdown:
-		return "shutdown", nil
-	default:
-		return "", &PowerError{
-			Code:    CodeUnsupportedOperation,
-			Message: "this daemon does not perform that operation",
-		}
+	host, err := hostPowerModuleFor(op)
+	if err != nil {
+		return "", err
 	}
+	return host.commandName(), nil
 }
 
 // PowerHost reboots or shuts down the machine this daemon runs on, through the

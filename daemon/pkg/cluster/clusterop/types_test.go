@@ -187,3 +187,36 @@ func TestCloneDoesNotShareStepsOrNodes(t *testing.T) {
 		t.Errorf("a handed-out copy wrote back into the stored operation: %+v", op)
 	}
 }
+
+// TestCloneDeepCopiesTimestamps is a Minor fix: Clone must copy the value
+// behind every *time.Time, not just the pointer, or a caller that writes
+// through a timestamp it was handed reaches back into the stored record.
+func TestCloneDeepCopiesTimestamps(t *testing.T) {
+	at := time.Unix(1700000000, 0).UTC()
+	op := Operation{
+		ID:         "op-1",
+		StartedAt:  &at,
+		FinishedAt: &at,
+		Steps:      []Step{{Name: StepPrecheck, StartedAt: &at, FinishedAt: &at}},
+		Nodes:      []NodeResult{{NodeName: "worker-1", StartedAt: &at, FinishedAt: &at}},
+	}
+
+	clone := op.Clone()
+	later := at.Add(time.Hour)
+	*clone.StartedAt = later
+	*clone.FinishedAt = later
+	*clone.Steps[0].StartedAt = later
+	*clone.Steps[0].FinishedAt = later
+	*clone.Nodes[0].StartedAt = later
+	*clone.Nodes[0].FinishedAt = later
+
+	if !op.StartedAt.Equal(at) || !op.FinishedAt.Equal(at) {
+		t.Errorf("mutating the clone's own timestamps changed the original operation: %+v", op)
+	}
+	if !op.Steps[0].StartedAt.Equal(at) || !op.Steps[0].FinishedAt.Equal(at) {
+		t.Errorf("mutating a cloned step's timestamps changed the original: %+v", op.Steps[0])
+	}
+	if !op.Nodes[0].StartedAt.Equal(at) || !op.Nodes[0].FinishedAt.Equal(at) {
+		t.Errorf("mutating a cloned node's timestamps changed the original: %+v", op.Nodes[0])
+	}
+}
