@@ -9,13 +9,13 @@ head:
 
 # 已知问题
 
-本页面记录已确认可能影响 Olares 用户的问题，并提供问题的影响范围、当前状态和临时方案。
+本页面记录已确认会影响 Olares 用户的问题，并提供影响范围、修复状态和临时方案。
 
 :::info 状态更新
 Olares 会在问题确认、缓解或修复后同步更新本页面。
 :::
 
-## 启用 LarePass 专用网络后，Chrome 实时更新可能异常
+## 启用 LarePass 专用网络后，Chrome 实时更新可能异常 <Badge type="warning" text="仅适用于 Olares 1.12.5" />
 
 ### 摘要
 
@@ -25,7 +25,7 @@ Olares 会在问题确认、缓解或修复后同步更新本页面。
 | 影响浏览器 | Google Chrome 148 或更高版本 |
 | 触发条件 | 启用 LarePass 专用网络后通过 Chrome 使用 `olares.com` 地址访问 Olares |
 | 影响 | 依赖 WebSocket 的实时更新可能停止工作 |
-| 状态 | 计划在后续 Olares 版本中修复 |
+| 状态 | 已在 Olares 1.12.6 中修复 |
 
 ### 问题表现
 
@@ -45,18 +45,18 @@ Olares 会在问题确认、缓解或修复后同步更新本页面。
 
 启用 LarePass 专用网络后通过 `olares.com` 地址打开 Olares 时，Chrome 可能会将部分 WebSocket 连接视为本地网络请求。对于 WebSocket 连接，Chrome 会检查 `101 Switching Protocols` 响应。如果响应中缺少 Chrome 期望的响应头，连接会被拦截。
 
-Olares 目前未在 WebSocket upgrade 响应中携带该响应头，因此会被 Chrome 拦截。该响应头会在后续版本中补充。
+Olares 1.12.5 未在 WebSocket upgrade 响应中携带该响应头，因此会被 Chrome 拦截。Olares 1.12.6 已补充所需响应头并修复此问题。
 
 ### 临时绕过方式
 
-在升级到包含修复的 Olares 新版本前，可使用以下任一方式临时绕过。
+如果暂时无法从 Olares 1.12.5 升级，可使用以下任一方式临时绕过。
 
 #### 方案 1：临时关闭 Chrome 本地网络访问检查
 
 如果你需要继续通过 `olares.com` 地址在 LarePass 专用网络下访问 Olares，可临时关闭 Chrome 的本地网络访问检查。
 
 :::warning
-这会修改浏览器安全设置。建议仅作为临时绕过方式使用。升级到包含修复的 Olares 新版本后，请将该设置恢复为 **Default** 或 **Enabled**。
+这会修改浏览器安全设置。建议仅作为临时绕过方式使用。升级到 Olares 1.12.6 或更高版本后，请将该设置恢复为 **Default** 或 **Enabled**。
 :::
 
 1. 在 Chrome 中打开：
