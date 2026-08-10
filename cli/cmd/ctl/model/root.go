@@ -30,6 +30,10 @@ status" first if anything here behaves unexpectedly.
   app           model applications that run models on this machine
   key           API keys for software that calls Router
   quota         spend and rate ceilings on a key, a person, or a model
+  caller        the applications that call Router
+  usage         what has been called, and what it cost
+  audit         who changed Router, and to what
+  trace         the spans an agent framework reported for a call
   user          the people Router knows
 
 Most of Router's management surface is admin-only. Requires Olares 1.12.6+.
@@ -53,6 +57,10 @@ Run "olares-cli model <verb> --help" for details.
 	cmd.AddCommand(NewAppCommand(f))
 	cmd.AddCommand(NewKeyCommand(f))
 	cmd.AddCommand(NewQuotaCommand(f))
+	cmd.AddCommand(NewCallerCommand(f))
+	cmd.AddCommand(NewUsageCommand(f))
+	cmd.AddCommand(NewAuditCommand(f))
+	cmd.AddCommand(NewTraceCommand(f))
 	cmd.AddCommand(NewUserCommand(f))
 	return cmd
 }

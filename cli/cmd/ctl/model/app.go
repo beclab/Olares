@@ -183,8 +183,8 @@ func renderCatalog(w io.Writer, items []marketApp) error {
 		// State is empty against a real Market, so it is not a column. The
 		// installed ones are known from the provider list instead.
 		if _, err := fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n",
-			nonEmpty(it.AppName), truncate(nonEmpty(it.Title), 34), nonEmpty(it.VersionName),
-			truncate(nonEmpty(it.Description), 60)); err != nil {
+			nonEmpty(it.AppName), clip(nonEmpty(it.Title), 34), nonEmpty(it.VersionName),
+			clip(nonEmpty(it.Description), 60)); err != nil {
 			return err
 		}
 	}
@@ -520,7 +520,7 @@ func renderInstallTasks(ctx context.Context, pc *preparedClient, w io.Writer, p 
 		}
 		errText := "-"
 		if it.ErrorMessage != nil && *it.ErrorMessage != "" {
-			errText = truncate(*it.ErrorMessage, 48)
+			errText = clip(*it.ErrorMessage, 48)
 		}
 		if _, err := fmt.Fprintf(tw, "%d\t%s\t%s\t%s\t%s\t%s\t%s\n",
 			it.ID, nonEmpty(it.Action), nonEmpty(it.Status),

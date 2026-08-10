@@ -124,7 +124,7 @@ func renderCredentialHistory(w io.Writer, p *providerRow, items []credentialVers
 			marker,
 			nonEmpty(it.CreatedAt),
 			nonEmpty(changedBy),
-			nonEmpty(truncate(derefOr(it.Note, ""), 60)),
+			nonEmpty(clip(derefOr(it.Note, ""), 60)),
 		); err != nil {
 			return err
 		}

@@ -171,7 +171,7 @@ func renderKeyList(ctx context.Context, pc *preparedClient, w io.Writer, keys []
 		}
 		if _, err := fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
 			nonEmpty(k.Name), nonEmpty(k.KeyPrefix), nonEmpty(owner), keyState(k),
-			keyExpiry(k), keyLastUsed(k), truncate(models, 48)); err != nil {
+			keyExpiry(k), keyLastUsed(k), clip(models, 48)); err != nil {
 			return err
 		}
 	}

@@ -136,3 +136,17 @@ func truncate(s string, n int) string {
 	}
 	return s[:n] + "...(truncated)"
 }
+
+// clip shortens a table cell. Unlike truncate it says so with one character:
+// inside a column, "...(truncated)" is longer than most of the values around it
+// and turns a readable row into a wall of the same word.
+func clip(s string, n int) string {
+	if len([]rune(s)) <= n {
+		return s
+	}
+	r := []rune(s)
+	if n <= 1 {
+		return "…"
+	}
+	return string(r[:n-1]) + "…"
+}

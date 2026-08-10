@@ -116,7 +116,7 @@ func renderUserList(w io.Writer, users []consoleUser) error {
 		}
 		if _, err := fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\n",
 			nonEmpty(u.BflName), nonEmpty(u.Role), nonEmpty(u.Status),
-			nonEmpty(u.Source), truncate(models, 40), nonEmpty(u.ID)); err != nil {
+			nonEmpty(u.Source), clip(models, 40), nonEmpty(u.ID)); err != nil {
 			return err
 		}
 	}

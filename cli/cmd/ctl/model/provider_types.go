@@ -323,7 +323,7 @@ func renderCatalogEntry(w io.Writer, e *catalogEntry, withModels bool, models []
 		{"SERVES", nonEmpty(strings.Join(e.SupportedModelTypes, ", "))},
 	}
 	if d := e.Description.text(); d != "" {
-		rows = append(rows, [2]string{"DESCRIPTION", truncate(d, 120)})
+		rows = append(rows, [2]string{"DESCRIPTION", clip(d, 120)})
 	}
 	if u := e.Help.URL.text(); u != "" {
 		rows = append(rows, [2]string{"WHERE TO GET A KEY", u})
@@ -409,7 +409,7 @@ func formatFieldDefault(v any) string {
 	if v == nil {
 		return ""
 	}
-	return truncate(fmt.Sprintf("%v", v), 40)
+	return clip(fmt.Sprintf("%v", v), 40)
 }
 
 // formatShowOn renders a field's visibility condition, which is the difference
@@ -428,7 +428,7 @@ func formatShowOn(fld *catalogFormField) string {
 
 func fieldDescription(fld *catalogFormField) string {
 	if l := fld.Label.text(); l != "" {
-		return truncate(l, 48)
+		return clip(l, 48)
 	}
-	return truncate(fld.Placeholder.text(), 48)
+	return clip(fld.Placeholder.text(), 48)
 }
