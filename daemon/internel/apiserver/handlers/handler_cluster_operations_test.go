@@ -21,14 +21,19 @@ func callRegisteredMethod(t *testing.T, method, path, body string, headers map[s
 	t.Helper()
 	var reader io.Reader
 	if body != "" {
-		if path == "/cluster/operations" || path == "/command/power-node" {
-			var request map[string]any
+		if path == "/cluster/operations" || path == "/command/power-node" ||
+			path == "/command/cluster-operation" {
+			// Held as raw JSON rather than decoded values: a body is filled
+			// in here and put back on the wire, and a test that asserts what
+			// reached a module needs the bytes it wrote, not what a round
+			// trip through Go's default types would make of them.
+			var request map[string]json.RawMessage
 			if json.Unmarshal([]byte(body), &request) == nil {
 				if _, ok := request["scope"]; !ok {
-					request["scope"] = clusterop.ScopeCluster
+					request["scope"] = json.RawMessage(`"` + clusterop.ScopeCluster + `"`)
 				}
 				if _, ok := request["clusterId"]; !ok {
-					request["clusterId"] = "cluster-test"
+					request["clusterId"] = json.RawMessage(`"cluster-test"`)
 				}
 				encoded, err := json.Marshal(request)
 				if err != nil {
@@ -489,6 +494,94 @@ func TestGetClusterOperationByRequestIsNotFound(t *testing.T) {
 	resp, body := callRegistered(t, "/cluster/operations/by-request/missing", authHeaders())
 	if resp.StatusCode != http.StatusNotFound {
 		t.Fatalf("status = %d, want 404: %s", resp.StatusCode, body)
+	}
+}
+
+// Params are the module's input. They travel from the caller to the module
+// untouched, because a module is entitled to read them as the caller wrote
+// them: a number this route re-encoded on the way through would be a
+// different request than the one that was asked for.
+func TestCreateClusterOperationAcceptsParams(t *testing.T) {
+	f := withClusterOperations(t, &fakeOperations{op: sampleOperation()})
+	asAuthorizedUser(t)
+	asOwnerSignature(t)
+	asMaster(t)
+
+	resp, body := callRegisteredMethod(t, http.MethodPost, "/cluster/operations",
+		`{"type":"reboot","requestId":"client-1","params":{"drain":true,"grace":10000000000000000001}}`,
+		signedFor(t, clusterop.TypeReboot, "client-1"))
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d: %s", resp.StatusCode, body)
+	}
+	reqs := f.requests()
+	if len(reqs) != 1 {
+		t.Fatalf("orchestrator called %d times", len(reqs))
+	}
+	const want = `{"drain":true,"grace":10000000000000000001}`
+	if got := strings.TrimSpace(string(reqs[0].Params)); got != want {
+		t.Errorf("params = %s, want %s", got, want)
+	}
+}
+
+// Params are absent from most requests, and a module that reads them has to
+// be able to tell "nothing was sent" from "something empty was sent".
+func TestCreateClusterOperationLeavesAbsentParamsAbsent(t *testing.T) {
+	f := withClusterOperations(t, &fakeOperations{op: sampleOperation()})
+	asAuthorizedUser(t)
+	asOwnerSignature(t)
+	asMaster(t)
+
+	resp, body := callRegisteredMethod(t, http.MethodPost, "/cluster/operations",
+		`{"type":"reboot","requestId":"client-1"}`, signedFor(t, clusterop.TypeReboot, "client-1"))
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d: %s", resp.StatusCode, body)
+	}
+	if got := f.requests()[0].Params; len(got) != 0 {
+		t.Errorf("params = %s, want nothing", got)
+	}
+}
+
+// The owner signs the operation, not the params under it. Saying otherwise
+// anywhere in this codebase would be a lie a reviewer could rely on, so the
+// place it matters most is asserted: what a module refuses never becomes an
+// operation, and the refusal is the module's to make.
+func TestCreateClusterOperationReportsAModuleRefusalAsABadRequest(t *testing.T) {
+	const detail = "grace exceeds what this node will wait"
+	withClusterOperations(t, &fakeOperations{
+		createEr: &clusterop.ModuleValidationError{
+			Type: clusterop.TypeReboot, Err: errors.New(detail),
+		},
+	})
+	asAuthorizedUser(t)
+	asOwnerSignature(t)
+	asMaster(t)
+
+	resp, body := callRegisteredMethod(t, http.MethodPost, "/cluster/operations",
+		`{"type":"reboot","requestId":"client-1","params":{"grace":1}}`,
+		signedFor(t, clusterop.TypeReboot, "client-1"))
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400: %s", resp.StatusCode, body)
+	}
+	if strings.Contains(string(body), detail) {
+		t.Errorf("the reply leaked the module's own sentence: %s", body)
+	}
+}
+
+// A body whose params are not JSON is not a request at all.
+func TestCreateClusterOperationRejectsUnparsableParams(t *testing.T) {
+	operationsMustNotBeCreated(t)
+	asAuthorizedUser(t)
+	asOwnerSignature(t)
+	asMaster(t)
+
+	resp, body := callRegisteredMethod(t, http.MethodPost, "/cluster/operations",
+		`{"type":"reboot","requestId":"client-1","params":{"grace":}}`,
+		signedFor(t, clusterop.TypeReboot, "client-1"))
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400: %s", resp.StatusCode, body)
 	}
 }
 

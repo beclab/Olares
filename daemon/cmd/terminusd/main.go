@@ -69,10 +69,11 @@ func main() {
 	// out. A daemon that cannot record them serves the routes and refuses,
 	// rather than powering off a cluster it will not be able to report on.
 	//
-	// This is also the only place anything is given the ability to power a
-	// machine: both seams are installed here rather than at package level, so
-	// no test binary holds one.
-	handlers.InstallPowerExecution(clusterop.PowerHost)
+	// This is also the only place anything is given the ability to act on
+	// this machine: the node-local half of an operation runs through the
+	// modules built into this daemon, and they are handed to the routes here
+	// rather than at package level, so no test binary holds them.
+	handlers.InstallNodeOperations(clusterop.DefaultRegistry())
 	if err := handlers.InitClusterOperations(commands.CLUSTER_OPERATIONS_DIR, clusterop.NewDeps()); err != nil {
 		klog.Error("cluster operations are unavailable, ", err)
 	}

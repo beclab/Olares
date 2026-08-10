@@ -69,6 +69,13 @@ func init() {
 	cmd.Post("/power-node", handlers.RequireSignature(
 		handlers.RequireOwner(handlers.PostPowerNode)))
 
+	// The same hop for every other cluster operation, guarded identically.
+	// It is a second path rather than a wider power-node because an older
+	// worker serves power-node and nothing else, so that one's request JSON
+	// cannot grow; see clusterop.ClusterOperationPath.
+	cmd.Post("/cluster-operation", handlers.RequireSignature(
+		handlers.RequireOwner(handlers.PostClusterOperationNode)))
+
 	cmd.Post("/connect-wifi", handlers.RequireSignature(
 		handlers.WaitServerRunning(
 			handlers.RunCommand(handlers.PostConnectWifi, connectwifi.New))))

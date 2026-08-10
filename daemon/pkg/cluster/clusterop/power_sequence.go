@@ -90,16 +90,31 @@ var outcomeStatePersistenceFailed = Outcome{
 	Code:   CodeStatePersistenceFailed,
 }
 
-// validatePowerScope refuses a request for a scope this daemon has never
-// carried out, before anything is recorded or started.
+// validatePowerScope refuses a request this module cannot carry out as
+// asked, before anything is recorded or started.
 //
-// An empty scope is one it has: records written before scope existed carry
+// An empty scope is one it can: records written before scope existed carry
 // none, and every run path has always read anything that is not "node" as
-// covering the whole cluster. Which nodes a scope may name is checked by the
-// route that accepts the request, against the signature that authorized it.
+// covering the whole cluster.
+//
+// Whether the scope and the target describe the same operation is asked here
+// rather than by the route, because it is a question about what this module
+// does: powerNode is the only path that reads Target, and it is reached only
+// for node scope, so a whole-cluster request naming one node would silently
+// power every machine the caller did not name. The route's own check is a
+// different one and still runs: that the owner signed this exact scope and
+// this exact target.
 func validatePowerScope(req CreateRequest) error {
 	switch req.Scope {
-	case "", ScopeCluster, ScopeNode:
+	case "", ScopeCluster:
+		if req.Target != "" {
+			return fmt.Errorf("a %s-wide operation cannot name a target node", ScopeCluster)
+		}
+		return nil
+	case ScopeNode:
+		if req.Target == "" {
+			return fmt.Errorf("a %s operation must name the node it acts on", ScopeNode)
+		}
 		return nil
 	default:
 		return fmt.Errorf("unsupported cluster operation scope %q", req.Scope)

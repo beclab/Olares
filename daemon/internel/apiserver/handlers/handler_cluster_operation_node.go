@@ -1,0 +1,128 @@
+package handlers
+
+import (
+	"net/http"
+	"runtime/debug"
+	"strings"
+
+	"github.com/beclab/Olares/daemon/pkg/cluster/clusterop"
+	"github.com/gofiber/fiber/v2"
+	"k8s.io/klog/v2"
+)
+
+// nodeOperations is the module set this node can carry an operation out
+// through, left nil until the daemon installs it in main. A test binary
+// therefore holds nothing that can act on the machine running it: a node
+// route reached without a module set of its own refuses rather than acts.
+var nodeOperations *clusterop.ModuleRegistry
+
+// InstallNodeOperations gives this node the ability to carry out the
+// node-local half of a cluster operation. The daemon calls it once at
+// startup with the modules built into this build; nothing else does.
+func InstallNodeOperations(registry *clusterop.ModuleRegistry) {
+	nodeOperations = registry
+}
+
+const nodeExecutionUnavailable = "this node cannot carry out cluster operations yet"
+
+// PostClusterOperationNode carries out the node-local half of a cluster
+// operation, whichever operation it is. Only a daemon new enough to hold
+// this package's module registry serves it, which is why reboot and shutdown
+// are still dispatched to the power endpoint instead: an older worker has
+// that one and nothing else.
+//
+// It is guarded exactly as the power endpoint is — the owner's signature,
+// bound to this operation and checked here rather than trusted from the
+// master — and it can only act on the machine it reached, so reaching it
+// grants no authority over any other node in the cluster.
+//
+// The request carries the module's params. They are not covered by the
+// owner's signature: what the owner signed is the operation, the request id,
+// the cluster and the scope, and nothing under params is part of that. A
+// module must therefore treat params as input from whoever could reach this
+// route, and Validate is where it says what it will accept — which is why it
+// is asked before anything is carried out.
+func (h *Handlers) PostClusterOperationNode(ctx *fiber.Ctx) error {
+	var req clusterop.NodeRequest
+	if err := ctx.BodyParser(&req); err != nil {
+		return h.errPower(ctx, http.StatusBadRequest, clusterop.CodeInvalidRequest, "unable to parse body")
+	}
+	registry := nodeOperations
+	if registry == nil {
+		return h.errPower(ctx, http.StatusServiceUnavailable,
+			clusterop.CodePowerUnsupported, nodeExecutionUnavailable)
+	}
+	// Resolved against the set this node actually holds, which is the same
+	// set the operation will be carried out through. Asking a wider one
+	// would accept a type here and fail to find it a moment later.
+	opType, err := registry.Parse(strings.TrimSpace(string(req.Type)))
+	if err != nil {
+		return h.errPower(ctx, http.StatusBadRequest, clusterop.CodeUnsupportedOperation,
+			"this daemon does not perform that operation")
+	}
+	req.Type = opType
+
+	// Every role answers here, control node included. Which machines an
+	// operation may act on is the module's to decide, and deciding it once
+	// for all modules at the door would answer for operations this build
+	// does not yet contain.
+	nodeName, _, err := thisNodeInCluster(ctx.Context())
+	if err != nil || nodeName == "" {
+		klog.Error("resolve this node for a cluster operation: ", err)
+		return h.errPower(ctx, http.StatusConflict,
+			clusterop.CodeNodeIdentityUnknown, "this node's cluster identity is unavailable")
+	}
+	binding, err := bindNodeRequest(ctx, registry, req.PeerRequest, nodeName)
+	if err != nil {
+		return h.errBinding(ctx, err)
+	}
+
+	module, ok := registry.Lookup(opType)
+	if !ok {
+		// Parse only accepts a type this registry holds, so reaching here
+		// means it lost the module in between.
+		return h.errPower(ctx, http.StatusBadRequest, clusterop.CodeUnsupportedOperation,
+			"this daemon does not perform that operation")
+	}
+	moduleFailure := nodeFailure{
+		Code: clusterop.CodeModuleFailed, Message: "this node could not carry out the operation",
+	}
+	refusal, answered := askModuleAbout(module, clusterop.CreateRequest{
+		Type:      opType,
+		RequestID: binding.RequestID,
+		Scope:     req.Scope,
+		Target:    req.Target,
+		ClusterID: req.ClusterID,
+		Owner:     ownerOf(ctx),
+		Params:    req.Params,
+	})
+	if !answered {
+		return h.errPower(ctx, http.StatusInternalServerError, moduleFailure.Code, moduleFailure.Message)
+	}
+	if refusal != nil {
+		// The module's own sentence is detail: it is text written outside
+		// this package, about params this node did not check, and it goes
+		// to the log rather than to the caller.
+		klog.Errorf("cluster operation %s refused a node request: %v", opType, refusal)
+		return h.errPower(ctx, http.StatusBadRequest, clusterop.CodeInvalidRequest,
+			"this node cannot carry out the operation as asked")
+	}
+
+	return h.executeNodeOperation(ctx, registry, req, binding, moduleFailure)
+}
+
+// askModuleAbout puts the request to the module and reports both what it
+// said and whether it managed to say anything. A module is code from outside
+// this package judging params nothing signed, so a panic here is contained
+// the way one during execution is — except that a module which could not
+// answer is not the same as one that refused, and the two are not reported
+// as each other.
+func askModuleAbout(module clusterop.OperationModule, req clusterop.CreateRequest) (refusal error, answered bool) {
+	defer func() {
+		if r := recover(); r != nil {
+			klog.Errorf("cluster operation %s panicked while validating: %v\n%s", req.Type, r, debug.Stack())
+			refusal, answered = nil, false
+		}
+	}()
+	return module.Validate(req), true
+}

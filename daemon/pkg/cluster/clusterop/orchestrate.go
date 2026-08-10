@@ -58,6 +58,14 @@ func (m *Manager) settle(rt Runtime, id string, outcome Outcome) {
 	}
 	if errors.Is(err, ErrInvalidOutcome) {
 		klog.Warningf("clusterop: operation %s reported an unusable outcome %+v", id, outcome)
+		// The fallback exists to release a record nothing else is going to
+		// move. A module that already committed a command_issued handoff or
+		// a terminal status through its own Runtime and then returned
+		// something unusable on the way out is not that case: what it
+		// committed is real, and this must not report a failure over it.
+		if m.moduleAlreadyCommitted(id) {
+			return
+		}
 		err = rt.Complete(failedWith(CodeModuleFailed, reasonFor(CodeModuleFailed)))
 		if err == nil {
 			return

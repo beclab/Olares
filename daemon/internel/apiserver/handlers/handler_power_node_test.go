@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"errors"
 	"net/http"
 	"sync"
@@ -23,26 +22,29 @@ func (p *powerRecorder) record(t clusterop.Type) error {
 	return p.err
 }
 
+// recordFor is what one module does instead of powering the machine.
+func (p *powerRecorder) recordFor(t clusterop.Type) func(clusterop.NodeRequest) error {
+	return func(clusterop.NodeRequest) error { return p.record(t) }
+}
+
 func (p *powerRecorder) seen() []clusterop.Type {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	return append([]clusterop.Type(nil), p.calls...)
 }
 
+// withLocalPower stands in for the two modules that really power a machine.
+// The power endpoint reaches them the same way every other node-local
+// operation is reached — through the installed module set — so a test can
+// give this node a set of its own and watch what was asked of it without the
+// real modules being reachable from the test binary at all.
 func withLocalPower(t *testing.T, r *powerRecorder) *powerRecorder {
 	t.Helper()
-	prevPower := powerThisNode
-	prevClaims := powerClaims
-	powerThisNode = func(_ context.Context, op clusterop.Type) error { return r.record(op) }
-	claims, err := clusterop.NewReplayGuard(t.TempDir())
-	if err != nil {
-		t.Fatal(err)
-	}
-	powerClaims = claims
-	t.Cleanup(func() {
-		powerThisNode = prevPower
-		powerClaims = prevClaims
-	})
+	withNodeOperations(t,
+		&nodeModuleRecorder{typ: clusterop.TypeReboot, onExecute: r.recordFor(clusterop.TypeReboot)},
+		&nodeModuleRecorder{typ: clusterop.TypeShutdown, onExecute: r.recordFor(clusterop.TypeShutdown)},
+	)
+	withReplayGuard(t)
 	return r
 }
 
@@ -136,6 +138,58 @@ func TestPowerNodePowersTheMachineItReaches(t *testing.T) {
 				t.Errorf("powered %v, want one %s", got, tc.want)
 			}
 		})
+	}
+}
+
+// The power endpoint decides nothing about what reboot or shutdown means. It
+// hands the request to the module registered for the type, which is the same
+// module the generic endpoint would reach and the same one the master's own
+// node runs, so there is one implementation of powering a machine rather
+// than one per entry point.
+func TestPowerNodeCarriesTheRequestOutThroughTheRegisteredModule(t *testing.T) {
+	module := &nodeModuleRecorder{typ: clusterop.TypeReboot}
+	withNodeOperations(t, module)
+	withReplayGuard(t)
+	asOwnerSignature(t)
+	asWorker(t)
+
+	resp, body := callRegisteredMethod(t, http.MethodPost, "/command/power-node",
+		`{"type":"reboot","operationId":"op-1","requestId":"client-1"}`,
+		signedFor(t, clusterop.TypeReboot, "client-1"))
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d: %s", resp.StatusCode, body)
+	}
+	ran := module.ran()
+	if len(ran) != 1 {
+		t.Fatalf("the module was asked to act %d times, want once", len(ran))
+	}
+	if ran[0].Type != clusterop.TypeReboot || ran[0].RequestID != "client-1" ||
+		ran[0].OperationID != "op-1" {
+		t.Errorf("the module was not shown the request that arrived: %+v", ran[0].PeerRequest)
+	}
+}
+
+// An old master reaches this endpoint, and an old master sends no params.
+// Whatever a new one puts in the body, the module sees the request it was
+// handed rather than something this route invented.
+func TestPowerNodeSendsNoParamsItWasNotGiven(t *testing.T) {
+	module := &nodeModuleRecorder{typ: clusterop.TypeReboot}
+	withNodeOperations(t, module)
+	withReplayGuard(t)
+	asOwnerSignature(t)
+	asWorker(t)
+
+	callRegisteredMethod(t, http.MethodPost, "/command/power-node",
+		`{"type":"reboot","operationId":"op-1","requestId":"client-1"}`,
+		signedFor(t, clusterop.TypeReboot, "client-1"))
+
+	ran := module.ran()
+	if len(ran) != 1 {
+		t.Fatalf("the module was asked to act %d times, want once", len(ran))
+	}
+	if len(ran[0].Params) != 0 {
+		t.Errorf("params = %s, want nothing", ran[0].Params)
 	}
 }
 

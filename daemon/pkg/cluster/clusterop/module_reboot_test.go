@@ -66,19 +66,44 @@ func TestRebootModulePhaseOutlivesTheCommandBeingIssued(t *testing.T) {
 // cluster.
 func TestRebootModuleAcceptsOnlyTheScopesItCanCarryOut(t *testing.T) {
 	module := rebootModuleUnderTest(t)
-	for _, scope := range []string{"", ScopeCluster, ScopeNode} {
+	for _, tc := range []struct{ scope, target string }{
+		{"", ""},
+		{ScopeCluster, ""},
+		{ScopeNode, "master-1"},
+	} {
 		req := CreateRequest{
 			Type: TypeReboot, RequestID: "client-1", Owner: "alice@olares.com",
-			Scope: scope, Target: "master-1", ClusterID: "cluster-1",
+			Scope: tc.scope, Target: tc.target, ClusterID: "cluster-1",
 		}
 		if err := module.Validate(req); err != nil {
-			t.Errorf("Validate(scope %q) = %v, want it accepted", scope, err)
+			t.Errorf("Validate(scope %q) = %v, want it accepted", tc.scope, err)
 		}
 	}
 	if err := module.Validate(CreateRequest{
 		Type: TypeReboot, RequestID: "client-1", Owner: "alice@olares.com", Scope: "everything",
 	}); err == nil {
 		t.Error("a scope this daemon has never carried out was accepted")
+	}
+}
+
+// Which nodes a scope may name is the module's own question, asked before
+// anything is recorded: the route checks that the owner signed this exact
+// scope and target, not whether the two describe an operation this module
+// could carry out.
+func TestRebootModuleRefusesAScopeAndTargetThatDisagree(t *testing.T) {
+	module := rebootModuleUnderTest(t)
+	for _, tc := range []struct{ name, scope, target string }{
+		{"a whole-cluster reboot naming one node", ScopeCluster, "master-1"},
+		{"a single-node reboot naming none", ScopeNode, ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if err := module.Validate(CreateRequest{
+				Type: TypeReboot, RequestID: "client-1", Owner: "alice@olares.com",
+				Scope: tc.scope, Target: tc.target, ClusterID: "cluster-1",
+			}); err == nil {
+				t.Error("a request whose scope and target describe different operations was accepted")
+			}
+		})
 	}
 }
 

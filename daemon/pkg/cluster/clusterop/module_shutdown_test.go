@@ -38,19 +38,40 @@ func TestShutdownModulePhaseOutlivesTheCommandBeingIssued(t *testing.T) {
 
 func TestShutdownModuleAcceptsOnlyTheScopesItCanCarryOut(t *testing.T) {
 	module := shutdownModuleUnderTest(t)
-	for _, scope := range []string{"", ScopeCluster, ScopeNode} {
+	for _, tc := range []struct{ scope, target string }{
+		{"", ""},
+		{ScopeCluster, ""},
+		{ScopeNode, "worker-1"},
+	} {
 		req := CreateRequest{
 			Type: TypeShutdown, RequestID: "client-1", Owner: "alice@olares.com",
-			Scope: scope, Target: "worker-1", ClusterID: "cluster-1",
+			Scope: tc.scope, Target: tc.target, ClusterID: "cluster-1",
 		}
 		if err := module.Validate(req); err != nil {
-			t.Errorf("Validate(scope %q) = %v, want it accepted", scope, err)
+			t.Errorf("Validate(scope %q) = %v, want it accepted", tc.scope, err)
 		}
 	}
 	if err := module.Validate(CreateRequest{
 		Type: TypeShutdown, RequestID: "client-1", Owner: "alice@olares.com", Scope: "everything",
 	}); err == nil {
 		t.Error("a scope this daemon has never carried out was accepted")
+	}
+}
+
+func TestShutdownModuleRefusesAScopeAndTargetThatDisagree(t *testing.T) {
+	module := shutdownModuleUnderTest(t)
+	for _, tc := range []struct{ name, scope, target string }{
+		{"a whole-cluster shutdown naming one node", ScopeCluster, "worker-1"},
+		{"a single-node shutdown naming none", ScopeNode, ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if err := module.Validate(CreateRequest{
+				Type: TypeShutdown, RequestID: "client-1", Owner: "alice@olares.com",
+				Scope: tc.scope, Target: tc.target, ClusterID: "cluster-1",
+			}); err == nil {
+				t.Error("a request whose scope and target describe different operations was accepted")
+			}
+		})
 	}
 }
 

@@ -51,6 +51,32 @@ func TestParseBindingReadsWhatTheOwnerSigned(t *testing.T) {
 	}
 }
 
+// A route that answers for an explicit module set reads the signature
+// against that same set. Without it a request for a type only that set holds
+// would be refused as unbound before the route ever saw it — and, worse, the
+// two could disagree about which operation a signature authorized.
+func TestParseBindingInReadsATypeOnlyTheGivenModuleSetHolds(t *testing.T) {
+	registry := registryWith(t, registryTestModule{typ: Type("bake-cake")})
+	body := signedBody(t, `{
+		"clusterId": "cluster-1",
+		"type": "bake-cake",
+		"requestId": "client-1",
+		"scope": "cluster",
+		"expiresAt": 1700000600000
+	}`)
+
+	b, err := ParseBindingIn(registry, body)
+	if err != nil {
+		t.Fatalf("ParseBindingIn: %v", err)
+	}
+	if b.Type != Type("bake-cake") {
+		t.Errorf("type = %q, want the type the given module set holds", b.Type)
+	}
+	if _, err := ParseBinding(body); err == nil {
+		t.Error("the daemon-wide module set accepted a type nothing registered into it")
+	}
+}
+
 func TestParseBindingRefusesMissingClusterID(t *testing.T) {
 	_, err := ParseBinding(signedBody(t, `{
 		"type": "reboot",

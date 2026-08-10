@@ -197,6 +197,31 @@ func TestCreateAsksTheModuleBeforeTheOperationExists(t *testing.T) {
 	}
 }
 
+// A module refusing a request it cannot carry out is the caller's mistake,
+// not this daemon's failure. Create says so in a way a route can act on
+// without reading the module's own sentence, which is text this package
+// cannot vouch for.
+func TestCreateReportsAModuleRefusalAsAValidationError(t *testing.T) {
+	refused := errors.New("this module will not do that")
+	fake := newFake(Type("bake-cake"))
+	fake.validateErr = refused
+	c := newCluster(master("master-1", "10.0.0.1"))
+	m, _ := newManagerWith(t, c, registryWith(t, fake))
+
+	_, err := createFake(t, m, fake.typ, "client-1")
+
+	var invalid *ModuleValidationError
+	if !errors.As(err, &invalid) {
+		t.Fatalf("Create() = %v, want a refusal a route can map to a bad request", err)
+	}
+	if invalid.Type != fake.typ {
+		t.Errorf("Type = %q, want the module that refused", invalid.Type)
+	}
+	if !errors.Is(err, refused) {
+		t.Errorf("Create() = %v, want the module's own refusal still reachable", err)
+	}
+}
+
 // Running an operation is the module's own work, and the manager settles the
 // record on whatever the module returns.
 func TestRunHandsTheOperationToItsModule(t *testing.T) {
@@ -383,9 +408,39 @@ func TestAnUnusableOutcomeStillSettlesTheOperation(t *testing.T) {
 	if settled.Error != reasonFor(CodeModuleFailed) {
 		t.Errorf("error = %q, want the reviewed sentence %q", settled.Error, reasonFor(CodeModuleFailed))
 	}
-	// The lock is free again, which is the reason any of this matters.
-	if _, err := createFake(t, m, fake.typ, "client-2"); err != nil {
-		t.Errorf("Create() after an unusable outcome = %v, want the cluster free again", err)
+	// The lock is free again, which is the reason any of this matters. The
+	// second operation is waited out rather than left running: its own run
+	// goroutine writes to the store, and this test's store is a temporary
+	// directory the test framework deletes the moment the test returns.
+	next, err := createFake(t, m, fake.typ, "client-2")
+	if err != nil {
+		t.Fatalf("Create() after an unusable outcome = %v, want the cluster free again", err)
+	}
+	awaitTerminal(t, m, next.ID)
+}
+
+// A module that handed the record a command_issued outcome and then returned
+// something the record cannot hold has still committed real state: the
+// command went out, and the machine it went to is on its way down. The
+// fallback settlement for an unusable outcome exists to release a record
+// nothing else will move, so it must leave that one exactly as the module
+// left it rather than reporting a failure for a command that was issued.
+func TestAnUnusableOutcomeLeavesARecordTheModuleAlreadySettled(t *testing.T) {
+	rt, m, id := buildCommandIssuedRuntime(t, time.Minute)
+
+	// Not a status an operation may end on, so Complete refuses it and the
+	// fallback runs.
+	m.settle(rt, id, Outcome{Status: StatusRunning})
+
+	got, ok := m.Get(id)
+	if !ok {
+		t.Fatal("the stored operation was lost")
+	}
+	if got.Status != StatusCommandIssued {
+		t.Fatalf("status = %q, want the issued command left on the record", got.Status)
+	}
+	if got.Code == CodeModuleFailed {
+		t.Errorf("code = %q, want the command_issued record not overwritten", got.Code)
 	}
 }
 

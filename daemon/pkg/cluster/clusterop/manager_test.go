@@ -512,7 +512,10 @@ func TestCreateRejectsAReusedRequestIDWithDifferentIntent(t *testing.T) {
 	}{
 		{"owner", func(req *CreateRequest) { req.Owner = "bob@olares.com" }},
 		{"type", func(req *CreateRequest) { req.Type = TypeShutdown }},
-		{"scope", func(req *CreateRequest) { req.Scope = ScopeCluster }},
+		// A whole-cluster operation names no node, so the scope and the
+		// target change together: the module refuses a cluster scope that
+		// still names one before the request id is ever looked at.
+		{"scope", func(req *CreateRequest) { req.Scope, req.Target = ScopeCluster, "" }},
 		{"target", func(req *CreateRequest) { req.Target = "worker-1" }},
 		{"cluster", func(req *CreateRequest) { req.ClusterID = "cluster-2" }},
 	} {
@@ -551,13 +554,17 @@ func TestCreateRejectsSameRequestIDWithDifferentParams(t *testing.T) {
 		Owner:     "alice@olares.com",
 		Params:    json.RawMessage(`{"value":1}`),
 	}
-	if _, err := m.Create(context.Background(), first); err != nil {
+	created, err := m.Create(context.Background(), first)
+	if err != nil {
 		t.Fatal(err)
 	}
+	// The first request is still being carried out in the background, and it
+	// writes to the same directory the test is about to take away.
+	awaitTerminal(t, m, created.ID)
 
 	second := first
 	second.Params = json.RawMessage(`{"value":2}`)
-	_, err := m.Create(context.Background(), second)
+	_, err = m.Create(context.Background(), second)
 	var conflict *RequestConflictError
 	if !errors.As(err, &conflict) {
 		t.Fatalf("Create() error = %v, want RequestConflictError", err)
@@ -981,7 +988,7 @@ func TestRestoredRequestIDKeepsCreateIdempotentAndUnambiguous(t *testing.T) {
 	}
 
 	changed := req
-	changed.Target = "worker-1"
+	changed.Scope, changed.Target = ScopeNode, "worker-1"
 	_, err = restarted.Create(context.Background(), changed)
 	var conflict *RequestConflictError
 	if !errors.As(err, &conflict) || conflict.ExistingID != first.ID {

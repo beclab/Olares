@@ -6,18 +6,19 @@ import (
 )
 
 // Nothing in a test binary may be able to power the machine running it. The
-// execution seam is installed by main, not by package initialization, so a
-// route reached by a test that forgot to fake it refuses rather than reboots.
+// module set a node acts through is installed by main, not by package
+// initialization, so a route reached by a test that forgot to fake it
+// refuses rather than reboots.
 func TestPowerExecutionIsNotInstalledUntilTheDaemonInstallsIt(t *testing.T) {
-	if powerThisNode != nil {
-		t.Fatal("the real power command is reachable from a test binary")
+	if nodeOperations != nil {
+		t.Fatal("the real power modules are reachable from a test binary")
 	}
 }
 
 func TestPowerNodeRefusesUntilPowerExecutionIsInstalled(t *testing.T) {
-	prev := powerThisNode
-	powerThisNode = nil
-	t.Cleanup(func() { powerThisNode = prev })
+	prev := nodeOperations
+	nodeOperations = nil
+	t.Cleanup(func() { nodeOperations = prev })
 	asAuthorizedUser(t)
 	asOwnerSignature(t)
 	asWorker(t)

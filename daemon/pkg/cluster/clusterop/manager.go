@@ -249,6 +249,22 @@ var (
 	ErrOwnerRequired     = errors.New("owner is required")
 )
 
+// ModuleValidationError is a module refusing a request before anything is
+// recorded: the request is one this daemon knows the type of and cannot
+// carry out as asked. It is distinct from the errors above so a route can
+// answer "bad request" without reading the module's own sentence, which is
+// text written outside this package and never shown to a caller.
+type ModuleValidationError struct {
+	Type Type
+	Err  error
+}
+
+func (e *ModuleValidationError) Error() string {
+	return fmt.Sprintf("cluster operation %s refused the request: %v", e.Type, e.Err)
+}
+
+func (e *ModuleValidationError) Unwrap() error { return e.Err }
+
 // ConflictError refuses a second cluster power operation while one is running.
 // Two of them at once would race over the same machines, and the second one's
 // precheck would be answered by nodes the first one is already powering down.
@@ -428,7 +444,7 @@ func (m *Manager) Create(_ context.Context, req CreateRequest) (Operation, error
 	// carry out must not become an operation that exists, holds the
 	// cluster's single-operation lock, and then fails.
 	if err := module.Validate(req); err != nil {
-		return Operation{}, err
+		return Operation{}, &ModuleValidationError{Type: opType, Err: err}
 	}
 
 	m.mu.Lock()

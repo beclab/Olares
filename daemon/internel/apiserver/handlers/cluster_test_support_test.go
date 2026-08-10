@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"sync"
 	"testing"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/beclab/Olares/daemon/internel/client"
 	"github.com/beclab/Olares/daemon/pkg/cluster/clusterop"
 	"github.com/beclab/Olares/daemon/pkg/cluster/inventory"
+	"github.com/beclab/Olares/daemon/pkg/cluster/nodestatus"
 	"github.com/beclab/Olares/daemon/pkg/cluster/state"
 	"github.com/beclab/Olares/daemon/pkg/utils"
 )
@@ -137,6 +139,109 @@ func asWorker(t *testing.T) {
 	t.Helper()
 	asNode(t, "worker-1", inventory.RoleWorker, nil)
 	withCurrentState(t, clistate.State{TerminusState: clistate.TerminusRunning}, time.Now())
+}
+
+// nodeModuleRecorder is an operation this daemon does not have. A test
+// registers it into a registry of its own and installs that, so a node route
+// can be driven end to end without the modules that really power a machine
+// being reachable from the test binary at all.
+type nodeModuleRecorder struct {
+	typ            clusterop.Type
+	validateEr     error
+	execEr         error
+	panics         bool
+	panicsValidate bool
+
+	// onExecute stands in for the work, for a test that wants to observe
+	// something other than the request itself.
+	onExecute func(clusterop.NodeRequest) error
+
+	mu        sync.Mutex
+	validated []clusterop.CreateRequest
+	executed  []clusterop.NodeRequest
+}
+
+func (m *nodeModuleRecorder) Type() clusterop.Type { return m.typ }
+
+func (m *nodeModuleRecorder) Validate(req clusterop.CreateRequest) error {
+	m.mu.Lock()
+	m.validated = append(m.validated, req)
+	m.mu.Unlock()
+	if m.panicsValidate {
+		panic(modulePanicDetail)
+	}
+	return m.validateEr
+}
+
+func (m *nodeModuleRecorder) Phase(clusterop.Operation) (nodestatus.Phase, bool) { return "", false }
+
+func (m *nodeModuleRecorder) Run(context.Context, clusterop.Runtime, clusterop.RunRequest) clusterop.Outcome {
+	return clusterop.Outcome{Status: clusterop.StatusFailed, Code: clusterop.CodeModuleFailed}
+}
+
+func (m *nodeModuleRecorder) ExecuteNode(_ context.Context, req clusterop.NodeRequest) error {
+	m.mu.Lock()
+	m.executed = append(m.executed, req)
+	onExecute := m.onExecute
+	m.mu.Unlock()
+	if m.panics {
+		panic(modulePanicDetail)
+	}
+	if onExecute != nil {
+		return onExecute(req)
+	}
+	return m.execEr
+}
+
+func (m *nodeModuleRecorder) ran() []clusterop.NodeRequest {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return append([]clusterop.NodeRequest(nil), m.executed...)
+}
+
+func (m *nodeModuleRecorder) checked() []clusterop.CreateRequest {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return append([]clusterop.CreateRequest(nil), m.validated...)
+}
+
+// modulePanicDetail is what a module panics with. It is a distinctive string
+// so a test can prove none of it reached the caller.
+const modulePanicDetail = "boom: module panic detail"
+
+var (
+	_ clusterop.OperationModule     = (*nodeModuleRecorder)(nil)
+	_ clusterop.NodeOperationModule = (*nodeModuleRecorder)(nil)
+)
+
+// withNodeOperations gives this node a module set of its own for one test.
+// The daemon-wide registry is never touched: modules cannot be unregistered
+// from it, so a test that added one would change what every later test in
+// this binary sees.
+func withNodeOperations(t *testing.T, modules ...clusterop.OperationModule) {
+	t.Helper()
+	registry := clusterop.NewRegistry()
+	for _, module := range modules {
+		if err := registry.Register(module); err != nil {
+			t.Fatalf("register %q: %v", module.Type(), err)
+		}
+	}
+	prev := nodeOperations
+	nodeOperations = registry
+	t.Cleanup(func() { nodeOperations = prev })
+}
+
+// withReplayGuard gives the node routes somewhere to record the signature
+// they just spent, in a directory that goes away with the test.
+func withReplayGuard(t *testing.T) {
+	t.Helper()
+	claims, err := clusterop.NewReplayGuard(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	prev := powerClaims
+	powerClaims = claims
+	t.Cleanup(func() { powerClaims = prev })
 }
 
 // withCurrentState sets both what the middleware reads from the live state and

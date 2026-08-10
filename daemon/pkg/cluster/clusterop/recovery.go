@@ -209,7 +209,7 @@ func recoverFromRunPanic(rt Runtime) Outcome {
 		// check existed.
 		return failedWith(CodeModuleFailed, reasonFor(CodeModuleFailed))
 	}
-	if current, ok := m.Get(id); !ok || current.Status != StatusRunning {
+	if m.moduleAlreadyCommitted(id) {
 		return Outcome{}.alreadyRecorded()
 	}
 	now := m.deps.Now()
@@ -217,6 +217,22 @@ func recoverFromRunPanic(rt Runtime) Outcome {
 		settleTerminated(op, now, CodeModuleFailed, reasonFor(CodeModuleFailed))
 	})
 	return Outcome{}.alreadyRecorded()
+}
+
+// moduleAlreadyCommitted reports whether the module moved this record away
+// from running before it stopped — a command_issued handoff, or a terminal
+// status it reported itself. Both framework fallbacks that force a
+// settlement on a module that stopped without one (a panicking Run, and a
+// Run whose final outcome the record cannot hold) ask this first, because
+// neither has anything to add to a record that already says what the module
+// committed, and overwriting a command_issued record would report a failure
+// for a command that really was issued.
+//
+// A record the manager no longer holds counts as committed: there is nothing
+// left to settle.
+func (m *Manager) moduleAlreadyCommitted(id string) bool {
+	current, ok := m.Get(id)
+	return !ok || current.Status != StatusRunning
 }
 
 // ExecuteNode carries a node-scope command out through the module
