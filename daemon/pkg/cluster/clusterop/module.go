@@ -15,10 +15,16 @@ type Outcome struct {
 	CommandIssuedUntil time.Time
 }
 
-func (o Outcome) valid() bool {
+// valid checks Outcome against now in addition to Status: command_issued is
+// the one status that carries a live lock deadline, and that deadline is
+// meaningless unless it is both present and still in the future. Every other
+// outcome is final the moment it is recorded, so it must not carry one.
+func (o Outcome) valid(now time.Time) bool {
 	switch o.Status {
-	case StatusSucceeded, StatusPartiallyFailed, StatusFailed, StatusCommandIssued:
-		return true
+	case StatusSucceeded, StatusPartiallyFailed, StatusFailed:
+		return o.CommandIssuedUntil.IsZero()
+	case StatusCommandIssued:
+		return !o.CommandIssuedUntil.IsZero() && o.CommandIssuedUntil.After(now)
 	default:
 		return false
 	}

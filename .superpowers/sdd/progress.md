@@ -1,6 +1,17 @@
+# Clusterop Modules SDD Progress
+
+Plan: `daemon/docs/superpowers/plans/2026-08-10-clusterop-modules.md`
+Baseline: related clusterop, handlers, and fanout packages pass; daemon-wide baseline has approved unrelated macOS/BLE/Kubernetes failures.
 # Offline preinstall convergence
 
 - Task 5: Olares production `+369/-375` (net `-6`); tests/fixtures `+241/-278` (net `-37`); repository total `+640/-653` (net `-13`).
 - Shared secure filesystem primitives now serve bundle and HF materialization while their publish policies remain separate.
 - Minimal cross-repository contract constants remain because Market and Olares CI cannot share one generated artifact.
 - Task 6: complete; contract decode coverage was consolidated without removing independent filesystem, ownership, crash, rollback, no-replace, or TOCTOU scenarios.
+
+## Clusterop modules
+
+- Task 1: complete (commits d1117ab9f..39a0be8df, review clean).
+- Task 2: complete (commits 39a0be8df..efd5db616, review clean).
+- Task 3: complete (commit efd5db616..8022cdf92). Runtime and checked mutations only; reboot/shutdown/recovery/HTTP untouched.
+- Task 3 fix round 1: complete. Addressed review I1 (UpdateNode callback no longer runs under Manager.mu; optimistic compare-and-replace with ErrConcurrentUpdate), I2 (command_issued stays mutable through its operationActive grace window via new rejectSettled), I3 (Complete/FinishStep persist only safeReason(code), never a module's raw error text), and related Minor fixes (InitNodes empty-slice/deep-copy, SetModuleState JSON pre-validation, Outcome cross-field validation, sentinel comment corrections, real concurrent -race coverage). See `.superpowers/sdd/task-3-report.md` "Fix Round 1" section.

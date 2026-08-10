@@ -575,6 +575,23 @@ func (m *Manager) operationActive(op *Operation, now time.Time) bool {
 	return op.Status == StatusCommandIssued && now.Before(op.CommandIssuedUntil)
 }
 
+// rejectSettled is the validate check shared by every checked mutation that
+// has no state to inspect beyond "is this operation still allowed to move".
+// An operation is settled — and every further mutation refused — once it is
+// no longer operationActive: a normal terminal status (succeeded, failed,
+// partially_failed), or a command_issued operation whose grace deadline has
+// already passed. A command_issued operation still inside that deadline
+// stays mutable on purpose: it is exactly the "confirm what a command
+// already issued actually did" window a RecoverableModule needs in order to
+// still clear the deadline, finish a step, update a node, or Complete to a
+// final status once the outcome is known.
+func (m *Manager) rejectSettled(op *Operation) error {
+	if !m.operationActive(op, m.deps.Now()) {
+		return ErrOperationTerminal
+	}
+	return nil
+}
+
 // update applies fn to the stored operation and writes the result out. The
 // record is saved under the same lock that changed it, so the file never goes
 // backwards relative to what a reader is told in memory.
@@ -623,13 +640,69 @@ func (m *Manager) checkedUpdate(id string, validate func(*Operation) error, fn f
 
 // complete is the checked mutation behind Runtime.Complete. Outcome.valid()
 // has already been checked by the caller, so this only has to refuse an
-// operation that has already ended.
+// operation that has already settled. The error text it persists comes only
+// from safeReason(outcome.Code, ...): a module's own outcome.Error is never
+// written to the record or the file it is saved to, only to the log.
 func (m *Manager) complete(id string, outcome Outcome) error {
-	return m.checkedUpdate(id, rejectTerminal, func(op *Operation) {
+	return m.checkedUpdate(id, m.rejectSettled, func(op *Operation) {
 		op.Status = outcome.Status
 		op.Code = outcome.Code
-		op.Error = outcome.Error
+		op.Error = safeReason(outcome.Code, outcome.Error)
 		op.CommandIssuedUntil = outcome.CommandIssuedUntil
+	})
+}
+
+// snapshotNode locks just long enough to read one node's current value. It
+// applies the same activity check every other checked mutation applies, so
+// UpdateNode fails the same way the others do for a settled operation; the
+// check that actually matters for correctness is the one replaceNode repeats
+// once the caller's mutate callback has run, because the operation or the
+// node can change while that callback is running without any manager lock
+// held.
+func (m *Manager) snapshotNode(id, name string) (NodeResult, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	op, ok := m.ops[id]
+	if !ok {
+		return NodeResult{}, errOperationNotFound
+	}
+	if m.persistFailed[id] {
+		return NodeResult{}, ErrOperationTerminal
+	}
+	if err := m.rejectSettled(op); err != nil {
+		return NodeResult{}, err
+	}
+	node := findNode(op, name)
+	if node == nil {
+		return NodeResult{}, ErrNodeNotFound
+	}
+	return *node, nil
+}
+
+// replaceNode is UpdateNode's compare-and-replace commit. before is the
+// value snapshotNode returned before the caller's mutate callback ran; if
+// the stored node no longer equals it, some other checked mutation committed
+// a change in between, and this call refuses to overwrite it — it returns
+// ErrConcurrentUpdate instead of silently discarding whatever that other
+// writer recorded.
+func (m *Manager) replaceNode(id, name string, before, after NodeResult) error {
+	return m.checkedUpdate(id, func(op *Operation) error {
+		if err := m.rejectSettled(op); err != nil {
+			return err
+		}
+		current := findNode(op, name)
+		if current == nil {
+			return ErrNodeNotFound
+		}
+		if *current != before {
+			return ErrConcurrentUpdate
+		}
+		return nil
+	}, func(op *Operation) {
+		if current := findNode(op, name); current != nil {
+			*current = after
+		}
 	})
 }
 

@@ -221,20 +221,42 @@ type Operation struct {
 	Nodes []NodeResult `json:"nodes"`
 }
 
-// Clone returns a copy that shares no slice with the original, so a value
-// handed to a caller cannot be written back into the stored record.
+// Clone returns a copy that shares no slice, and no *time.Time inside those
+// slices or the operation itself, with the original — so a value handed to a
+// caller cannot be written back into the stored record, whether the caller
+// reassigns a field or writes through a timestamp pointer it kept.
 func (o Operation) Clone() Operation {
 	out := o
+	out.StartedAt = cloneTime(o.StartedAt)
+	out.FinishedAt = cloneTime(o.FinishedAt)
 	if o.ModuleState != nil {
 		out.ModuleState = append(json.RawMessage(nil), o.ModuleState...)
 	}
 	if o.Steps != nil {
 		out.Steps = append([]Step(nil), o.Steps...)
+		for i := range out.Steps {
+			out.Steps[i].StartedAt = cloneTime(out.Steps[i].StartedAt)
+			out.Steps[i].FinishedAt = cloneTime(out.Steps[i].FinishedAt)
+		}
 	}
 	if o.Nodes != nil {
 		out.Nodes = append([]NodeResult(nil), o.Nodes...)
+		for i := range out.Nodes {
+			out.Nodes[i].StartedAt = cloneTime(out.Nodes[i].StartedAt)
+			out.Nodes[i].FinishedAt = cloneTime(out.Nodes[i].FinishedAt)
+		}
 	}
 	return out
+}
+
+// cloneTime copies the value a *time.Time points to, so two copies of a
+// record can never alias the same timestamp memory.
+func cloneTime(t *time.Time) *time.Time {
+	if t == nil {
+		return nil
+	}
+	cp := *t
+	return &cp
 }
 
 // PhaseFor derives the cluster phase from the operation currently in flight.

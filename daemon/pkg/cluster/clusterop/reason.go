@@ -34,6 +34,24 @@ func reasonFor(code string) string {
 	return "this operation could not be completed"
 }
 
+// safeReason is what a checked Runtime mutation persists for a module-
+// supplied code and detail pair. The code chooses a fixed, reviewed message
+// through reasonFor; the module's own detail — which may carry a node
+// address, a token, or any other text this package cannot vouch for — goes
+// only to the log, never to the Operation record or the file it is saved to.
+// A blank code always persists an empty message, so a module bug that sends
+// detail text without a code cannot make the record carry unreviewed text
+// disconnected from any stable code either.
+func safeReason(code, detail string) string {
+	if code == "" {
+		return ""
+	}
+	if detail != "" {
+		klog.Warningf("clusterop: module reported %s: %s", code, detail)
+	}
+	return reasonFor(code)
+}
+
 // suppress records the detail of an internal failure in the log and returns the
 // fixed text that stands in for it everywhere a caller can read.
 //
