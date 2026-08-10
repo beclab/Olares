@@ -25,7 +25,9 @@ status" first if anything here behaves unexpectedly.
   whoami        the identity and role Router sees for the active profile
   list          every model configured, across every provider
   capabilities  the capability flags a model row can declare
+  default       which model answers when a request names none
   provider      the upstreams Router routes to, and the models they serve
+  app           model applications that run models on this machine
 
 Most of Router's management surface is admin-only. Requires Olares 1.12.6+.
 
@@ -43,6 +45,8 @@ Run "olares-cli model <verb> --help" for details.
 	cmd.AddCommand(NewWhoamiCommand(f))
 	cmd.AddCommand(NewListCommand(f))
 	cmd.AddCommand(NewCapabilitiesCommand(f))
+	cmd.AddCommand(NewDefaultCommand(f))
 	cmd.AddCommand(NewProviderCommand(f))
+	cmd.AddCommand(NewAppCommand(f))
 	return cmd
 }

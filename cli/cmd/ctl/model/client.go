@@ -100,6 +100,9 @@ func (e *RouterError) recovery() string {
 	case "predefined_models_unknown":
 		return "; Router does not say which name it rejected — compare against " +
 			"`olares-cli model provider types <vendor> --models`"
+	case "market_app_not_found":
+		return "; the Market will not act on this application in its current state — " +
+			"`olares-cli market status <app>` says what that state is, and a stopped app has to be resumed first"
 	}
 	return ""
 }
@@ -169,6 +172,39 @@ func (c *routerClient) do(ctx context.Context, method, path string, body io.Read
 	return resp, nil
 }
 
+// doStream opens a server-sent event stream and hands back the live body. The
+// status is checked here rather than by the caller: an error arrives as a JSON
+// envelope on the same connection an event stream would have used, and reading
+// it as SSE would report a rejection as an empty stream.
+func (c *routerClient) doStream(ctx context.Context, path string) (*http.Response, error) {
+	fullURL := c.baseURL + path
+	req, err := http.NewRequestWithContext(ctx, "GET", fullURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("build request: %w", err)
+	}
+	req.Header.Set("Accept", "text/event-stream")
+	req.Header.Set("Cache-Control", "no-cache")
+
+	resp, err := c.hc.Do(req)
+	if err != nil {
+		var invalidated *credential.ErrTokenInvalidated
+		if errors.As(err, &invalidated) {
+			return nil, invalidated
+		}
+		var notLoggedIn *credential.ErrNotLoggedIn
+		if errors.As(err, &notLoggedIn) {
+			return nil, notLoggedIn
+		}
+		return nil, fmt.Errorf("GET %s: %w", fullURL, err)
+	}
+	if resp.StatusCode/100 != 2 {
+		body, _ := io.ReadAll(resp.Body)
+		_ = resp.Body.Close()
+		return nil, c.formatErr("GET", path, resp.StatusCode, body)
+	}
+	return resp, nil
+}
+
 func (c *routerClient) formatErr(method, path string, status int, body []byte) error {
 	var env struct {
 		Error struct {
@@ -187,8 +223,15 @@ func (c *routerClient) formatErr(method, path string, status int, body []byte) e
 			// request away before Router ever saw it.
 			return credential.FormatHTTPAuthError(status, body, c.olaresID)
 		}
-		return fmt.Errorf("%s %s: HTTP %d: %s",
-			method, path, status, truncate(string(body), 500))
+		// Still a RouterError, with no code. An unmounted route answers
+		// this way — gin's own 404 carries no envelope — and callers that
+		// can explain their absence need the status to recognise it.
+		return &RouterError{
+			Method: method,
+			Path:   path,
+			Status: status,
+			Body:   append([]byte(nil), body...),
+		}
 	}
 	return &RouterError{
 		Method:  method,

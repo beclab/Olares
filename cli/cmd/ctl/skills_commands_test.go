@@ -136,6 +136,17 @@ func TestSkillCommandPathsExist(t *testing.T) {
 		"model provider models add",
 		"model provider models update",
 		"model provider models delete",
+		"model default",
+		"model default show",
+		"model default set",
+		"model default clear",
+		"model app",
+		"model app catalog",
+		"model app install",
+		"model app upgrade",
+		"model app uninstall",
+		"model app tasks",
+		"model app watch",
 	}
 
 	root := NewDefaultCommand()

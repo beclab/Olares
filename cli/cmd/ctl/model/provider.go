@@ -234,6 +234,17 @@ func resolveProvider(ctx context.Context, pc *preparedClient, ref string) (*prov
 			return &rows[i], nil
 		}
 	}
+	// The provider list drops a Market-sourced provider whose application is
+	// not running, while the aggregate model list keeps it. Asking there
+	// second is what lets a name — the only handle anyone has — reach a
+	// provider that exists but is hidden.
+	if id := providerIDFromModels(ctx, pc, ref); id != "" {
+		detail, derr := getProvider(ctx, pc, id)
+		if derr == nil {
+			row := detail.providerRow
+			return &row, nil
+		}
+	}
 	known := make([]string, 0, len(rows))
 	for i := range rows {
 		known = append(known, rows[i].Name)
@@ -243,6 +254,23 @@ func resolveProvider(ctx context.Context, pc *preparedClient, ref string) (*prov
 	}
 	return nil, fmt.Errorf("no provider %q; listed providers are %s. %s",
 		ref, strings.Join(known, ", "), hiddenProviderNote)
+}
+
+// providerIDFromModels finds a provider id by name in the aggregate model list.
+// Empty when the name is unknown there too, or when the list cannot be read —
+// this is a fallback, and its failure should read as "not found" rather than
+// replace the caller's error with one about a different route.
+func providerIDFromModels(ctx context.Context, pc *preparedClient, name string) string {
+	rows, err := listAllModels(ctx, pc)
+	if err != nil {
+		return ""
+	}
+	for i := range rows {
+		if strings.EqualFold(rows[i].ProviderName, name) {
+			return rows[i].ProviderID
+		}
+	}
+	return ""
 }
 
 // hiddenProviderNote explains the one case where a provider exists but is not

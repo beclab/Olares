@@ -40,7 +40,7 @@ import (
 // it again.
 var providerModelModes = []string{
 	"chat", "completion", "embedding", "rerank", "moderation",
-	"audio", "translate", "image_generation", "responses",
+	"audio", "translate", "image_generation", "responses", "ocr",
 }
 
 func newProviderModelsCommand(f *cmdutil.Factory) *cobra.Command {

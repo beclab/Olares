@@ -30,6 +30,7 @@ import (
 
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 	"github.com/beclab/Olares/cli/pkg/credential"
+	"github.com/beclab/Olares/cli/pkg/whoami"
 )
 
 // minOlaresVersion is the oldest line whose Market carries Router. The
@@ -61,12 +62,14 @@ func addOutputFlag(cmd *cobra.Command, target *string) {
 }
 
 // preparedClient is what every verb needs: the resolved profile (for Desktop
-// addressing and diagnostics), where Router turned out to live, and a client
-// pointed at it.
+// addressing and diagnostics), where Router turned out to live, a client
+// pointed at it, and the Desktop client discovery used — kept because Olares
+// itself, not Router, is the authority on which applications are installed.
 type preparedClient struct {
 	profile *credential.ResolvedProfile
 	router  *routerClient
 	found   *discoveredRouter
+	desktop *whoami.HTTPClient
 }
 
 // prepare resolves the profile, checks the version floor, and locates Router.
@@ -91,7 +94,8 @@ func prepare(ctx context.Context, f *cmdutil.Factory) (*preparedClient, error) {
 	if err != nil {
 		return nil, err
 	}
-	found, err := discoverRouter(ctx, hc, rp)
+	desktop := whoami.NewHTTPClient(hc, rp.DesktopURL, rp.OlaresID)
+	found, err := discoverRouter(ctx, desktop, rp)
 	if err != nil {
 		return nil, err
 	}
@@ -99,6 +103,7 @@ func prepare(ctx context.Context, f *cmdutil.Factory) (*preparedClient, error) {
 		profile: rp,
 		router:  newRouterClient(hc, found.BaseURL, rp.OlaresID),
 		found:   found,
+		desktop: desktop,
 	}, nil
 }
 

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"strings"
 
 	"github.com/beclab/Olares/cli/pkg/credential"
@@ -63,19 +62,18 @@ type myApp struct {
 	Entrances []myAppEntrance `json:"entrances"`
 }
 
-func discoverRouter(ctx context.Context, hc *http.Client, rp *credential.ResolvedProfile) (*discoveredRouter, error) {
-	if rp == nil {
-		return nil, fmt.Errorf("internal error: model discovery called without a resolved profile")
-	}
-	doer := whoami.NewHTTPClient(hc, rp.DesktopURL, rp.OlaresID)
-
+// listMyApps reads every application installed for this account. Discovery
+// needs it to find Router; the Market verbs need it because Olares, not Router,
+// is the authority on what is installed — Router hides the provider of an
+// application that is not running.
+func listMyApps(ctx context.Context, doer *whoami.HTTPClient) ([]myApp, error) {
 	var env struct {
 		Code    int             `json:"code"`
 		Message string          `json:"message"`
 		Data    json.RawMessage `json:"data"`
 	}
 	if err := doer.DoJSON(ctx, "GET", "/api/myapps", nil, &env); err != nil {
-		return nil, fmt.Errorf("list installed apps to locate Router: %w", err)
+		return nil, fmt.Errorf("list installed apps: %w", err)
 	}
 	switch env.Code {
 	case 0, 200:
@@ -84,13 +82,24 @@ func discoverRouter(ctx context.Context, hc *http.Client, rp *credential.Resolve
 		if msg == "" {
 			msg = fmt.Sprintf("code %d", env.Code)
 		}
-		return nil, fmt.Errorf("list installed apps to locate Router: %s", msg)
+		return nil, fmt.Errorf("list installed apps: %s", msg)
 	}
 	var installed []myApp
 	if len(env.Data) > 0 {
 		if err := json.Unmarshal(env.Data, &installed); err != nil {
 			return nil, fmt.Errorf("decode installed apps: %w", err)
 		}
+	}
+	return installed, nil
+}
+
+func discoverRouter(ctx context.Context, doer *whoami.HTTPClient, rp *credential.ResolvedProfile) (*discoveredRouter, error) {
+	if rp == nil {
+		return nil, fmt.Errorf("internal error: model discovery called without a resolved profile")
+	}
+	installed, err := listMyApps(ctx, doer)
+	if err != nil {
+		return nil, fmt.Errorf("locate Router: %w", err)
 	}
 
 	app := pickRouterApp(installed)
