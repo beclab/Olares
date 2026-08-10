@@ -19,7 +19,7 @@ const observationTimeout = 10 * time.Second
 // node. It is declared here because this module is what answers for it.
 const TypeReboot Type = "reboot"
 
-func init() { MustRegisterModule(rebootModule{}) }
+func init() { registerBuiltInPowerOperation(rebootModule{}) }
 
 // rebootModule is the cluster reboot: every compute node restarts, is watched
 // back onto a new boot, and only then is the control node told to go.
@@ -123,6 +123,10 @@ func (rebootModule) Recover(ctx context.Context, rt Runtime, op Operation) {
 func (rebootModule) ExecuteNode(ctx context.Context, _ NodeRequest) error {
 	return PowerHost(ctx, TypeReboot)
 }
+
+// builtInPowerOperation says this package wrote the node half above. See the
+// marker's own documentation for what that permits.
+func (rebootModule) builtInPowerOperation() {}
 
 // commandName and newCommand are how PowerHost reaches a reboot without
 // knowing that a reboot is what it is doing.

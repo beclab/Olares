@@ -41,7 +41,8 @@ const nodeExecutionUnavailable = "this node cannot carry out cluster operations 
 // the cluster and the scope, and nothing under params is part of that. A
 // module must therefore treat params as input from whoever could reach this
 // route, and Validate is where it says what it will accept — which is why it
-// is asked before anything is carried out.
+// is asked before anything is carried out, and after the signature that got
+// the request this far has already been spent.
 func (h *Handlers) PostClusterOperationNode(ctx *fiber.Ctx) error {
 	var req clusterop.NodeRequest
 	if err := ctx.BodyParser(&req); err != nil {
@@ -84,31 +85,43 @@ func (h *Handlers) PostClusterOperationNode(ctx *fiber.Ctx) error {
 		return h.errPower(ctx, http.StatusBadRequest, clusterop.CodeUnsupportedOperation,
 			"this daemon does not perform that operation")
 	}
-	moduleFailure := nodeFailure{
-		Code: clusterop.CodeModuleFailed, Message: "this node could not carry out the operation",
+
+	// Spent before the module is asked anything, and not given back if the
+	// module then refuses. Judging a request is work this node performs on
+	// the strength of the signature, and a caller who could present the same
+	// one repeatedly would have an unlimited way to drive somebody else's
+	// code with params nothing signed.
+	claim, spent, unspent := h.spendSignature(ctx, clusterOperationNodeEndpoint, binding)
+	if !spent {
+		return unspent
 	}
-	refusal, answered := askModuleAbout(module, clusterop.CreateRequest{
-		Type:      opType,
+
+	// Every field the module judges the request by comes from the binding
+	// rather than from the body. The two agree — the binding was checked
+	// against the body to get here — but only one of them the owner signed.
+	refused, judged := askModuleAbout(module, clusterop.CreateRequest{
+		Type:      binding.Type,
 		RequestID: binding.RequestID,
-		Scope:     req.Scope,
-		Target:    req.Target,
-		ClusterID: req.ClusterID,
+		Scope:     binding.Scope,
+		Target:    binding.Target,
+		ClusterID: binding.ClusterID,
 		Owner:     ownerOf(ctx),
 		Params:    req.Params,
 	})
-	if !answered {
-		return h.errPower(ctx, http.StatusInternalServerError, moduleFailure.Code, moduleFailure.Message)
+	if !judged {
+		return h.errPower(ctx, http.StatusInternalServerError,
+			clusterOperationNodeEndpoint.failureCode, clusterOperationNodeEndpoint.failureMessage)
 	}
-	if refusal != nil {
+	if refused != nil {
 		// The module's own sentence is detail: it is text written outside
 		// this package, about params this node did not check, and it goes
 		// to the log rather than to the caller.
-		klog.Errorf("cluster operation %s refused a node request: %v", opType, refusal)
+		klog.Errorf("cluster operation %s refused a node request: %v", opType, refused)
 		return h.errPower(ctx, http.StatusBadRequest, clusterop.CodeInvalidRequest,
 			"this node cannot carry out the operation as asked")
 	}
 
-	return h.executeNodeOperation(ctx, registry, req, binding, moduleFailure)
+	return h.runNodeOperation(ctx, clusterOperationNodeEndpoint, registry, req, claim)
 }
 
 // askModuleAbout puts the request to the module and reports both what it

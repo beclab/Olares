@@ -2,7 +2,6 @@ package clusterop
 
 import (
 	"context"
-	"errors"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -367,18 +366,9 @@ func TestExecuteNodeRefusesAModuleWithNoNodeCapability(t *testing.T) {
 	}
 }
 
-// A module's own ExecuteNode error is returned as-is: task 6's handlers, not
-// this helper, decide how a module's own refusal is reported.
-func TestExecuteNodeReturnsTheModulesOwnError(t *testing.T) {
-	refused := errors.New("this node cannot do that right now")
-	module := &nodeCapableModule{typ: Type("node-op"), err: refused}
-	reg := registryWith(t, module)
-	req := NodeRequest{PeerRequest: PeerRequest{Type: module.typ, OperationID: "op-1", RequestID: "client-1"}}
-
-	if err := ExecuteNode(context.Background(), reg, req); !errors.Is(err, refused) {
-		t.Fatalf("ExecuteNode() = %v, want the module's own refusal", err)
-	}
-}
+// What a module's own ExecuteNode error becomes is decided in
+// node_execution_test.go: this package's own refusals reach the caller, a
+// module's do not.
 
 // A module that panics while executing a node command must not crash the
 // daemon or leak the panic's own text to whatever is waiting on the HTTP

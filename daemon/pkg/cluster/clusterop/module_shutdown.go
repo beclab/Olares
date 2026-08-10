@@ -13,7 +13,7 @@ import (
 // node. It is declared here because this module is what answers for it.
 const TypeShutdown Type = "shutdown"
 
-func init() { MustRegisterModule(shutdownModule{}) }
+func init() { registerBuiltInPowerOperation(shutdownModule{}) }
 
 // shutdownModule is the cluster shutdown: every compute node is told to
 // switch off, and then the control node is.
@@ -61,6 +61,10 @@ func (shutdownModule) Run(ctx context.Context, rt Runtime, req RunRequest) Outco
 func (shutdownModule) ExecuteNode(ctx context.Context, _ NodeRequest) error {
 	return PowerHost(ctx, TypeShutdown)
 }
+
+// builtInPowerOperation says this package wrote the node half above. See the
+// marker's own documentation for what that permits.
+func (shutdownModule) builtInPowerOperation() {}
 
 func (shutdownModule) commandName() string { return "shutdown" }
 

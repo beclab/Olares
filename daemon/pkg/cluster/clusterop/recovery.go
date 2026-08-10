@@ -235,35 +235,120 @@ func (m *Manager) moduleAlreadyCommitted(id string) bool {
 	return !ok || current.Status != StatusRunning
 }
 
+// builtInPowerOperation marks an operation this package implements itself.
+// Only reboot and shutdown do, and only this package can say so: the marker
+// is an unexported method, and there is no exported type here holding one to
+// embed, so a module written anywhere else cannot claim it.
+//
+// Two things follow from the marker and nothing else does:
+//
+//   - the legacy /command/power-node endpoint serves the operation. That
+//     endpoint predates module validation and hands a request straight to a
+//     module without asking whether the module accepts it, so it may only
+//     reach node code written here. See ExecutePowerNode.
+//   - the operation's errors reach a caller unchanged, because their code
+//     and message are reviewed text from this package rather than whatever a
+//     module chose to put in them. See ExecuteNode.
+type builtInPowerOperation interface {
+	OperationModule
+	NodeOperationModule
+
+	builtInPowerOperation()
+}
+
+// builtInPowerTypes is what the marker resolves to at request time. It is
+// written only by registerBuiltInPowerOperation, from the two power modules'
+// package initializers, and read only afterwards.
+//
+// The check is by type rather than by asking the module in hand, because the
+// module in hand comes from whichever registry the caller passed: resolving
+// it there would make the answer depend on what that registry happens to
+// hold. The types themselves are decided here, once, and a later module
+// cannot take one — DefaultRegistry refuses a second module for a type it
+// already has.
+var builtInPowerTypes = map[Type]struct{}{}
+
+// registerBuiltInPowerOperation registers a power operation this package
+// implements. It takes builtInPowerOperation rather than OperationModule so
+// that only a module carrying the marker can get in, which is what makes the
+// set below unforgeable from outside.
+func registerBuiltInPowerOperation(module builtInPowerOperation) {
+	MustRegisterModule(module)
+	builtInPowerTypes[module.Type()] = struct{}{}
+}
+
+func isBuiltInPowerOperation(typ Type) bool {
+	_, ok := builtInPowerTypes[typ]
+	return ok
+}
+
 // ExecuteNode carries a node-scope command out through the module
-// registered for req.Type. Both node-execution HTTP handlers (task 6) call
-// this instead of a module's own ExecuteNode directly, so the policy for an
-// unsupported type, a module with no node capability, and a module that
-// panics while executing is decided exactly once, here.
-func ExecuteNode(ctx context.Context, registry *ModuleRegistry, req NodeRequest) (err error) {
+// registered for req.Type. The generic node endpoint calls it, so the policy
+// for an unsupported type, a module with no node capability, and a module
+// that fails or panics while executing is decided exactly once, here.
+//
+// A module's own failure does not travel: a module chooses the code and the
+// message of the error it returns, and both would reach an HTTP caller. It
+// could pick a code that means something else here, or put an address or a
+// token in a message somebody reads. What it said goes to this node's log,
+// and what comes back is the one thing actually known — that the module
+// failed. The built-in power operations are the exception, because their
+// codes and sentences are this package's own and callers have been reading
+// them since before modules existed.
+func ExecuteNode(ctx context.Context, registry *ModuleRegistry, req NodeRequest) error {
+	err, fromModule := runNodeModule(ctx, registry, req)
+	if err == nil || !fromModule || isBuiltInPowerOperation(req.Type) {
+		return err
+	}
+	klog.Errorf("clusterop: module %s failed on this node: %v", req.Type, err)
+	return moduleFailedNodeOperationError()
+}
+
+// ExecutePowerNode is ExecuteNode for the legacy /command/power-node
+// endpoint, which an older worker serves and which a newer master still
+// dispatches reboot and shutdown to.
+//
+// It refuses anything but a built-in power operation. That endpoint asks no
+// module whether it accepts the request that arrived — it never has, and its
+// request shape cannot grow one — so reaching any other module through it
+// would be a way around the validation the generic endpoint performs.
+func ExecutePowerNode(ctx context.Context, registry *ModuleRegistry, req NodeRequest) error {
+	if !isBuiltInPowerOperation(req.Type) {
+		return unsupportedNodeOperationError()
+	}
+	err, _ := runNodeModule(ctx, registry, req)
+	return err
+}
+
+// runNodeModule finds the module for req.Type and runs it. fromModule
+// reports whether err is the module's own answer rather than this package's
+// refusal to reach it at all, which is what decides whether the error may be
+// repeated to a caller.
+func runNodeModule(ctx context.Context, registry *ModuleRegistry,
+	req NodeRequest) (err error, fromModule bool) {
 	// A nil registry answers no differently than one that just does not
 	// hold req.Type: there is nothing here that can act on a single node
 	// for it either way. Checked before Lookup, which is a pointer method
 	// that would otherwise panic on a nil receiver before the recover below
 	// is even in place to catch it.
 	if registry == nil {
-		return unsupportedNodeOperationError()
+		return unsupportedNodeOperationError(), false
 	}
 	module, ok := registry.Lookup(req.Type)
 	if !ok {
-		return unsupportedNodeOperationError()
+		return unsupportedNodeOperationError(), false
 	}
 	nodeModule, ok := module.(NodeOperationModule)
 	if !ok {
-		return unsupportedNodeOperationError()
+		return unsupportedNodeOperationError(), false
 	}
 	defer func() {
 		if r := recover(); r != nil {
 			klog.Errorf("clusterop: module %s panicked in ExecuteNode: %v\n%s", req.Type, r, debug.Stack())
-			err = moduleFailedNodeOperationError()
+			err, fromModule = moduleFailedNodeOperationError(), false
 		}
 	}()
-	return nodeModule.ExecuteNode(ctx, req)
+	return nodeModule.ExecuteNode(ctx, req), true
 }
 
 // unsupportedNodeOperationError is what ExecuteNode returns for a type this

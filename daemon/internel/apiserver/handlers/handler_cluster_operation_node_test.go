@@ -256,6 +256,39 @@ func TestClusterOperationNodeShowsTheModuleTheRequestItValidates(t *testing.T) {
 	}
 }
 
+// A module chooses the code and the message of the error it returns, and
+// both would reach whoever called if they were passed along. What it said
+// belongs in this node's log; the reply carries the one stable code that
+// describes what is actually known.
+func TestClusterOperationNodeHidesWhatAModuleFailedWith(t *testing.T) {
+	module := withTestNodeOperation(t, &nodeModuleRecorder{
+		execEr: &clusterop.PowerError{
+			Code:    clusterop.CodePowerUnsupported,
+			Message: "token=super-secret; reach the oven at 10.0.0.9",
+		},
+	})
+	asOwnerSignature(t)
+	asWorker(t)
+
+	resp, body := callRegisteredMethod(t, http.MethodPost, "/command/cluster-operation",
+		nodeOperationRequest, signedFor(t, testOperationType, "client-1"))
+
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want 500: %s", resp.StatusCode, body)
+	}
+	if got := reasonOf(t, body); got != clusterop.CodeModuleFailed {
+		t.Errorf("reason = %q, want %q: %s", got, clusterop.CodeModuleFailed, body)
+	}
+	for _, leak := range []string{"super-secret", "10.0.0.9", clusterop.CodePowerUnsupported} {
+		if strings.Contains(string(body), leak) {
+			t.Errorf("the reply repeated what the module said (%q): %s", leak, body)
+		}
+	}
+	if len(module.ran()) != 1 {
+		t.Errorf("the module ran %d times", len(module.ran()))
+	}
+}
+
 // One signature authorizes one operation once. A replayed request is refused
 // before the module is asked to act a second time.
 func TestClusterOperationNodeRefusesAReplayedSignature(t *testing.T) {
@@ -276,6 +309,58 @@ func TestClusterOperationNodeRefusesAReplayedSignature(t *testing.T) {
 	}
 	if got := module.ran(); len(got) != 1 {
 		t.Fatalf("the module acted %d times, want once", len(got))
+	}
+}
+
+// The signature is spent before the module is asked anything. A module that
+// refuses is still work this node did on the strength of that signature, and
+// a caller able to present the same one again and again would have an
+// unlimited way to drive somebody else's code with input nothing signed.
+func TestClusterOperationNodeSpendsTheSignatureEvenWhenTheModuleRefuses(t *testing.T) {
+	module := withTestNodeOperation(t, &nodeModuleRecorder{
+		validateEr: errors.New("this node has never baked almond"),
+	})
+	asOwnerSignature(t)
+	asWorker(t)
+	headers := signedFor(t, testOperationType, "client-1")
+
+	resp, body := callRegisteredMethod(t, http.MethodPost, "/command/cluster-operation",
+		nodeOperationRequest, headers)
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("first status = %d, want 400: %s", resp.StatusCode, body)
+	}
+
+	resp, body = callRegisteredMethod(t, http.MethodPost, "/command/cluster-operation",
+		nodeOperationRequest, headers)
+	if resp.StatusCode != http.StatusConflict {
+		t.Fatalf("replay status = %d, want 409: %s", resp.StatusCode, body)
+	}
+	if got := module.checked(); len(got) != 1 {
+		t.Errorf("the module was asked to judge %d requests, want one", len(got))
+	}
+}
+
+// The same holds for a module that cannot answer at all. A panic in Validate
+// is the cheapest thing to provoke and the most expensive to repeat.
+func TestClusterOperationNodeSpendsTheSignatureEvenWhenValidationPanics(t *testing.T) {
+	module := withTestNodeOperation(t, &nodeModuleRecorder{panicsValidate: true})
+	asOwnerSignature(t)
+	asWorker(t)
+	headers := signedFor(t, testOperationType, "client-1")
+
+	resp, body := callRegisteredMethod(t, http.MethodPost, "/command/cluster-operation",
+		nodeOperationRequest, headers)
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Fatalf("first status = %d, want 500: %s", resp.StatusCode, body)
+	}
+
+	resp, body = callRegisteredMethod(t, http.MethodPost, "/command/cluster-operation",
+		nodeOperationRequest, headers)
+	if resp.StatusCode != http.StatusConflict {
+		t.Fatalf("replay status = %d, want 409: %s", resp.StatusCode, body)
+	}
+	if got := module.checked(); len(got) != 1 {
+		t.Errorf("the module was asked to judge %d requests, want one", len(got))
 	}
 }
 
@@ -320,6 +405,42 @@ func TestClusterOperationNodeContainsAPanicWhileValidating(t *testing.T) {
 	}
 	if strings.Contains(string(body), "boom") || strings.Contains(string(body), "panic") {
 		t.Errorf("the reply leaked the panic: %s", body)
+	}
+}
+
+// The legacy power endpoint hands a request straight to a module: it
+// predates module validation and never asks whether the module accepts what
+// arrived. So it serves the two power operations this daemon implements
+// itself and nothing else. A module registered later is reachable through
+// the generic endpoint, which does ask — and is refused by the old one,
+// which would otherwise be a way around that question.
+func TestOnlyTheGenericEndpointServesAnOperationTheDaemonLearnedLater(t *testing.T) {
+	module := withTestNodeOperation(t, &nodeModuleRecorder{})
+	asOwnerSignature(t)
+	asWorker(t)
+
+	resp, body := callRegisteredMethod(t, http.MethodPost, "/command/cluster-operation",
+		nodeOperationRequest, signedFor(t, testOperationType, "client-1"))
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("generic endpoint status = %d: %s", resp.StatusCode, body)
+	}
+	if len(module.ran()) != 1 {
+		t.Fatalf("the generic endpoint carried the operation out %d times, want once",
+			len(module.ran()))
+	}
+
+	resp, body = callRegisteredMethod(t, http.MethodPost, "/command/power-node",
+		`{"type":"bake-cake","operationId":"op-2","requestId":"client-2"}`,
+		signedFor(t, testOperationType, "client-2"))
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("power endpoint status = %d, want 400: %s", resp.StatusCode, body)
+	}
+	if got := reasonOf(t, body); got != clusterop.CodeUnsupportedOperation {
+		t.Errorf("reason = %q, want %q: %s", got, clusterop.CodeUnsupportedOperation, body)
+	}
+	if len(module.ran()) != 1 {
+		t.Errorf("the power endpoint carried out an operation it does not serve: %+v", module.ran())
 	}
 }
 

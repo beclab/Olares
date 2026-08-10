@@ -328,6 +328,10 @@ func TestCreatePersistsTheOperationBinding(t *testing.T) {
 	if op.Scope != ScopeNode || op.Target != "master-1" || op.ClusterID != "cluster-1" {
 		t.Fatalf("operation binding = %+v", op)
 	}
+	// Create starts the operation, and its run goroutine writes to the store
+	// this test's temporary directory holds. Waiting it out is what keeps
+	// that write from racing the framework's own cleanup.
+	awaitTerminal(t, m, op.ID)
 }
 
 func TestNodeOperationDispatchesOnlyItsTarget(t *testing.T) {
