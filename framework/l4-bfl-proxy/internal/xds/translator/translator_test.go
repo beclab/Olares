@@ -1,6 +1,7 @@
 package translator
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -878,6 +879,9 @@ func TestTranslate_HTTPSListeners(t *testing.T) {
 							Name:       "profile_root",
 							PathPrefix: "/",
 							Cluster:    "profile_service_alice",
+							RequestHeaders: map[string]string{
+								"X-BFL-USER": "alice",
+							},
 						}},
 					},
 				},
@@ -903,9 +907,161 @@ func TestTranslate_HTTPSListeners(t *testing.T) {
 	require.Len(t, snap.Routes, 1)
 	rc := asRouteConfig(t, snap.Routes[0])
 	assert.Equal(t, "https_443_alice_routes", rc.Name)
+	assert.Equal(t, []string{"x-bfl-user", "x-caller-appid"}, rc.GetRequestHeadersToRemove(),
+		"north-south RDS must force-delete client identity headers before upstream")
+	assert.True(t, rc.GetMostSpecificHeaderMutationsWins(),
+		"RDS must apply remove before route reinject (most_specific_header_mutations_wins)")
+
+	// Trusted X-BFL-USER must be re-injected on the app route after the RDS remove.
+	var sawBFL bool
+	for _, vh := range rc.GetVirtualHosts() {
+		for _, route := range vh.GetRoutes() {
+			if route.GetName() != "profile_root" {
+				continue
+			}
+			for _, h := range route.GetRequestHeadersToAdd() {
+				if strings.EqualFold(h.GetHeader().GetKey(), "X-BFL-USER") {
+					sawBFL = true
+					assert.Equal(t, "alice", h.GetHeader().GetValue())
+					assert.Equal(t, corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD, h.GetAppendAction())
+				}
+			}
+		}
+	}
+	require.True(t, sawBFL, "route must re-inject X-BFL-USER after force-delete")
 
 	// 1 cluster
 	require.Len(t, snap.Clusters, 1)
+}
+
+func TestSpoofableAppIdentityHeadersToRemove(t *testing.T) {
+	got := spoofableAppIdentityHeadersToRemove()
+	require.Equal(t, []string{"x-bfl-user", "x-caller-appid"}, got)
+	// Stable order for xDS determinism / snapshot diffs.
+	require.Equal(t, got, spoofableAppIdentityHeadersToRemove())
+}
+
+// applyEnvoyRequestHeaderMutations models Envoy request-header mutation order
+// for one RouteConfiguration + selected Route (VH mutations empty). Within a
+// level, remove runs before add. Across levels, MostSpecificHeaderMutationsWins
+// reverses the default most→least order (route.proto / envoy#5858).
+func applyEnvoyRequestHeaderMutations(headers map[string]string, rc *routev3.RouteConfiguration, route *routev3.Route) map[string]string {
+	out := make(map[string]string, len(headers))
+	for k, v := range headers {
+		out[strings.ToLower(k)] = v
+	}
+	applyLevel := func(remove []string, add []*corev3.HeaderValueOption) {
+		for _, h := range remove {
+			delete(out, strings.ToLower(h))
+		}
+		for _, opt := range add {
+			if opt.GetHeader() == nil {
+				continue
+			}
+			key := strings.ToLower(opt.GetHeader().GetKey())
+			val := opt.GetHeader().GetValue()
+			switch opt.GetAppendAction() {
+			case corev3.HeaderValueOption_APPEND_IF_EXISTS_OR_ADD:
+				if prev, ok := out[key]; ok {
+					out[key] = prev + "," + val
+				} else {
+					out[key] = val
+				}
+			case corev3.HeaderValueOption_ADD_IF_ABSENT:
+				if _, ok := out[key]; !ok {
+					out[key] = val
+				}
+			default: // OVERWRITE_IF_EXISTS_OR_ADD and unspecified
+				out[key] = val
+			}
+		}
+	}
+	routeRemove := route.GetRequestHeadersToRemove()
+	routeAdd := route.GetRequestHeadersToAdd()
+	rcRemove := rc.GetRequestHeadersToRemove()
+	rcAdd := rc.GetRequestHeadersToAdd()
+	if rc.GetMostSpecificHeaderMutationsWins() {
+		applyLevel(rcRemove, rcAdd)
+		applyLevel(routeRemove, routeAdd)
+	} else {
+		applyLevel(routeRemove, routeAdd)
+		applyLevel(rcRemove, rcAdd)
+	}
+	return out
+}
+
+func findNamedRoute(t *testing.T, rc *routev3.RouteConfiguration, name string) *routev3.Route {
+	t.Helper()
+	for _, vh := range rc.GetVirtualHosts() {
+		for _, route := range vh.GetRoutes() {
+			if route.GetName() == name {
+				return route
+			}
+		}
+	}
+	t.Fatalf("route %q not found", name)
+	return nil
+}
+
+func TestNorthSouthXBFLUserForceDeleteThenReinject_EnvoyOrder(t *testing.T) {
+	xdsIR := &ir.Xds{
+		HTTPListeners: []*ir.HTTPListenerIR{{
+			Name:       "https_443_alice",
+			Address:    "0.0.0.0",
+			Port:       443,
+			TLS:        true,
+			SNIMatches: []string{"alice.example.com"},
+			TLSCert:    &ir.SecretIR{Name: "main-tls-alice", CertData: "cert", KeyData: "key"},
+			UserName:   "alice",
+			VirtualHosts: []*ir.VirtualHostIR{{
+				Name:    "profile_alice",
+				Domains: []string{"alice.example.com"},
+				Routes: []*ir.HTTPRouteIR{{
+					Name:       "profile_root",
+					PathPrefix: "/",
+					Cluster:    "profile_service_alice",
+					RequestHeaders: map[string]string{
+						"X-BFL-USER": "alice",
+					},
+				}},
+			}},
+			DefaultResponse: &ir.DirectResponseIR{Status: 421, Body: "err"},
+		}},
+		Clusters: []*ir.ClusterIR{
+			{Name: "profile_service_alice", Host: "profile-service.user-space-alice.svc.cluster.local", Port: 3000, UseDNS: true},
+		},
+	}
+	rc := asRouteConfig(t, (&XdsTranslator{}).Translate(xdsIR).Routes[0])
+	route := findNamedRoute(t, rc, "profile_root")
+	require.True(t, rc.GetMostSpecificHeaderMutationsWins())
+
+	client := map[string]string{
+		"x-bfl-user":     "attacker",
+		"x-caller-appid": "spoofed-app",
+		"host":           "alice.example.com",
+	}
+	got := applyEnvoyRequestHeaderMutations(client, rc, route)
+	assert.Equal(t, "alice", got["x-bfl-user"],
+		"with most_specific_header_mutations_wins, RDS remove then route add must yield trusted viewer")
+	_, hasAppid := got["x-caller-appid"]
+	assert.False(t, hasAppid, "spoofed x-caller-appid must stay removed")
+	assert.Equal(t, "alice.example.com", got["host"])
+
+	// Characterization: without the flag, RDS remove runs after route add and
+	// strips the reinjected viewer — the bug this flag closes.
+	rcNoFlag := protoCloneRouteConfig(t, rc)
+	rcNoFlag.MostSpecificHeaderMutationsWins = false
+	broken := applyEnvoyRequestHeaderMutations(client, rcNoFlag, route)
+	_, hasBFL := broken["x-bfl-user"]
+	assert.False(t, hasBFL,
+		"default Envoy order must drop reinjected X-BFL-USER (documents why the flag is required)")
+}
+
+func protoCloneRouteConfig(t *testing.T, rc *routev3.RouteConfiguration) *routev3.RouteConfiguration {
+	t.Helper()
+	// Shallow field copy is enough: test only toggles MostSpecificHeaderMutationsWins.
+	out := *rc
+	return &out
 }
 
 func TestTranslate_EmptyIR(t *testing.T) {
