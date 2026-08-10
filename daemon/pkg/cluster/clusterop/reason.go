@@ -81,6 +81,13 @@ func (o Outcome) persistedReason() string {
 		return ""
 	}
 	if o.reason != "" {
+		if o.Error != "" {
+			// Not a leak: reason is already the reviewed sentence this
+			// settles on, and Error never overrides or blends with it. It
+			// is logged only because a caller inside this package setting
+			// both at once is unusual enough to be worth a look.
+			klog.Warningf("clusterop: outcome %s carried both a reviewed reason and detail: %s", o.Code, o.Error)
+		}
 		return o.reason
 	}
 	return safeReason(o.Code, o.Error)

@@ -48,6 +48,17 @@ var (
 	// status/deadline combination, that is not one an operation may
 	// legally end a Run on.
 	ErrInvalidOutcome = errors.New("invalid operation outcome")
+
+	// ErrRecoveryCannotExtendDeadline rejects a recovery Runtime naming a
+	// future CommandIssuedUntil for a record whose own deadline has already
+	// passed. rejectSettledDuringRecovery deliberately lets recovery touch
+	// such a record however long ago its grace ran out — that is what lets
+	// an old reboot still be confirmed — but confirming or releasing a
+	// command is not evidence that the cluster should go back on hold for
+	// it. Clearing the deadline (the zero value) is always allowed; only
+	// naming a new one in the future, for a record already past its old
+	// one, is refused.
+	ErrRecoveryCannotExtendDeadline = errors.New("recovery cannot extend an expired command deadline")
 )
 
 // errStatePersistenceFailed is returned by a checked mutation whose write to
@@ -81,6 +92,11 @@ type operationRuntime struct {
 	// Manager.rejectSettledDuringRecovery — and which one this is decided
 	// when the runtime was built, not by whoever calls a method on it.
 	settled settledCheck
+
+	// recovery marks a runtime built by newRecoveryRuntime. It gates the one
+	// restriction that is specific to recovery rather than to settled: see
+	// SetCommandIssuedUntil.
+	recovery bool
 }
 
 // newRuntime binds a Runtime to one operation for the lifetime of one Run
@@ -90,12 +106,14 @@ func newRuntime(m *Manager, id string, ctx context.Context) Runtime {
 }
 
 // newRecoveryRuntime binds a Runtime to an operation whose command outlived
-// the daemon that issued it. It differs from newRuntime in exactly two ways,
-// both of which exist because the thing it settles was left outstanding: an
-// operation still at command_issued stays mutable however long ago its grace
-// deadline passed, and the whole confirmation can be recorded as one write.
+// the daemon that issued it. It differs from newRuntime in exactly three
+// ways, all of which exist because the thing it settles was left
+// outstanding: an operation still at command_issued stays mutable however
+// long ago its grace deadline passed, the whole confirmation can be recorded
+// as one write, and it may not use that latitude to name a new deadline for
+// a record whose own deadline has already run out.
 func newRecoveryRuntime(m *Manager, id string, ctx context.Context) recoveryRuntime {
-	return &operationRuntime{m: m, id: id, ctx: ctx, settled: m.rejectSettledDuringRecovery}
+	return &operationRuntime{m: m, id: id, ctx: ctx, settled: m.rejectSettledDuringRecovery, recovery: true}
 }
 
 // recoveryRuntime is what a RecoverableModule in this package is handed. The
@@ -260,7 +278,19 @@ func (rt *operationRuntime) SetModuleState(raw json.RawMessage) error {
 }
 
 func (rt *operationRuntime) SetCommandIssuedUntil(until time.Time) error {
-	return rt.m.checkedUpdate(rt.id, rt.settled, func(op *Operation) {
+	validate := func(op *Operation) error {
+		if err := rt.settled(op); err != nil {
+			return err
+		}
+		if rt.recovery {
+			now := rt.m.deps.Now()
+			if !until.IsZero() && until.After(now) && !op.CommandIssuedUntil.After(now) {
+				return ErrRecoveryCannotExtendDeadline
+			}
+		}
+		return nil
+	}
+	return rt.m.checkedUpdate(rt.id, validate, func(op *Operation) {
 		op.CommandIssuedUntil = until
 	})
 }

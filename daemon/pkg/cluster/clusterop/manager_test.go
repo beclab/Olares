@@ -865,6 +865,24 @@ func TestNewManagerRefusesMissingSeams(t *testing.T) {
 	}
 }
 
+// A store field that holds a nil *Store compares unequal to nil as an
+// OperationStore interface — the interface has a type, even though the
+// pointer inside it is nil — so the plain nil check above lets it through.
+// The very first call through it would then panic instead of refusing to
+// build the manager.
+func TestNewManagerRefusesTypedNilStore(t *testing.T) {
+	c := newCluster(master("master-1", "10.0.0.1"))
+	dir := filepath.Join(t.TempDir(), "operations")
+	deps := c.deps(t, dir)
+
+	var nilStore *Store
+	deps.Store = nilStore
+
+	if _, err := NewManager(deps); err == nil {
+		t.Fatal("NewManager(deps with a typed-nil Store) = nil error, want a refusal")
+	}
+}
+
 func TestManagerPrunesOldRecords(t *testing.T) {
 	c := newCluster(master("master-1", "10.0.0.1"))
 	dir := filepath.Join(t.TempDir(), "operations")

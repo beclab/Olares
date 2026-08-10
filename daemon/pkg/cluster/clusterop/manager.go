@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -136,9 +137,21 @@ type Deps struct {
 	Timeouts  Timeouts
 }
 
+// storeIsNil reports whether s is unusable as an OperationStore: either the
+// interface itself is nil, or it holds a nil pointer of a concrete type — a
+// typed nil, which compares unequal to nil as an interface but panics the
+// moment anything calls through it.
+func storeIsNil(s OperationStore) bool {
+	if s == nil {
+		return true
+	}
+	v := reflect.ValueOf(s)
+	return v.Kind() == reflect.Ptr && v.IsNil()
+}
+
 func (d Deps) validate() error {
 	var missing []string
-	if d.Store == nil {
+	if storeIsNil(d.Store) {
 		missing = append(missing, "Store")
 	}
 	if d.Inventory == nil {
@@ -298,21 +311,8 @@ func NewManagerWithRegistry(deps Deps, registry *ModuleRegistry) (*Manager, erro
 	if err != nil {
 		return nil, fmt.Errorf("load cluster operations: %w", err)
 	}
-	var unfinished []string
 	for i := range stored {
 		op := stored[i]
-		switch {
-		case !op.Status.Terminal():
-			m.markInterrupted(&op)
-			if err := deps.Store.Save(op); err != nil {
-				klog.Warningf("clusterop: record interrupted operation %s: %v", op.ID, err)
-			}
-		case op.Status == StatusCommandIssued:
-			// The command outlived the daemon that issued it, and what it
-			// did is only knowable from outside. Whether that is knowable at
-			// all is the module's answer, not this one's.
-			unfinished = append(unfinished, op.ID)
-		}
 		if id, ok := m.byRequest[op.RequestID]; ok && id != op.ID {
 			return nil, fmt.Errorf("load cluster operations: %w", &RequestConflictError{
 				RequestID: op.RequestID, ExistingID: id,
@@ -321,8 +321,20 @@ func NewManagerWithRegistry(deps Deps, registry *ModuleRegistry) (*Manager, erro
 		m.ops[op.ID] = &op
 		m.order = append(m.order, op.ID)
 		m.byRequest[op.RequestID] = op.ID
-		if m.operationActive(&op, deps.Now()) {
-			m.activeID = op.ID
+	}
+
+	// Every loaded record now has an entry in m.ops/m.order/m.byRequest, so
+	// a module's Recover — which mutates through the same checked Runtime
+	// any other caller uses — can look any of them up. See
+	// recoverLoadedOperations for what happens to each: an unknown type is
+	// settled, a non-terminal record without a RecoverableModule is marked
+	// interrupted, and one with a RecoverableModule is handed to Recover
+	// first and only marked interrupted if that leaves it still moving.
+	unfinished := m.recoverLoadedOperations()
+
+	for _, id := range m.order {
+		if op := m.ops[id]; op != nil && m.operationActive(op, deps.Now()) {
+			m.activeID = id
 		}
 	}
 	for _, id := range unfinished {
@@ -356,34 +368,7 @@ func (m *Manager) resume(id string) {
 	if !ok {
 		return
 	}
-	go recoverable.Recover(m.deps.Base, newRecoveryRuntime(m, id, m.deps.Base), op.Clone())
-}
-
-// markInterrupted settles an operation that was still moving when olaresd
-// stopped. Nothing watched how it ended, so it is not reported as anything but
-// failed — and settling it is what stops it from holding the cluster's
-// single-operation lock forever.
-func (m *Manager) markInterrupted(op *Operation) {
-	at := m.deps.Now()
-	op.Status = StatusFailed
-	op.Code = CodeDaemonRestarted
-	op.Error = "olaresd restarted while this operation was in progress"
-	op.UpdatedAt = at
-	op.FinishedAt = &at
-	for i := range op.Steps {
-		if op.Steps[i].Status == StepRunning || op.Steps[i].Status == StepPending {
-			op.Steps[i].Status = StepFailed
-			op.Steps[i].Code = CodeDaemonRestarted
-			op.Steps[i].FinishedAt = &at
-		}
-	}
-	for i := range op.Nodes {
-		if op.Nodes[i].Status == NodePending {
-			op.Nodes[i].Status = NodeFailed
-			op.Nodes[i].Code = CodeDaemonRestarted
-			op.Nodes[i].FinishedAt = &at
-		}
-	}
+	go m.safeRecover(m.deps.Base, recoverable, id)
 }
 
 func sameIntent(op *Operation, req CreateRequest, opType Type, paramsDigest, emptyParamsDigest string) bool {

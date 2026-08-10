@@ -45,6 +45,21 @@ func TestEveryOutcomeCodeAPowerOperationSettlesOnHasAReviewedReason(t *testing.T
 	}
 }
 
+// A trusted, already-reviewed reason is always what the record keeps —
+// nothing a module's own Error detail says can replace it — even when a
+// module supplied both at once. What that coexistence means for the log is
+// not observable through this package's public surface, only that detail
+// is never a way to override or blend with reviewed text.
+func TestPersistedReasonKeepsTheTrustedReasonEvenWithDetailPresent(t *testing.T) {
+	o := settledWith(StatusFailed, CodePowerUnsupported,
+		"the control node cannot be shut down by a node operation")
+	o.Error = "detail nobody reviewed, but worth a note in the log"
+
+	if got := o.persistedReason(); got != o.reason {
+		t.Fatalf("persistedReason() = %q, want the trusted reason %q unaffected by Error", got, o.reason)
+	}
+}
+
 // The reviewed text stands in for an internal error precisely because it
 // cannot carry one. A reason that named an address or a local path would
 // put back exactly what suppressing the error took out.

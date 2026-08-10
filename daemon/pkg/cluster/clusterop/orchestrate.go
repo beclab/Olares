@@ -35,7 +35,7 @@ func (m *Manager) run(ctx context.Context, id string, opType Type, req RunReques
 		return
 	}
 
-	m.settle(rt, id, module.Run(ctx, rt, req))
+	m.settle(rt, id, safeRun(module, ctx, rt, req))
 }
 
 // settle records the outcome a module ended on.
@@ -63,5 +63,30 @@ func (m *Manager) settle(rt Runtime, id string, outcome Outcome) {
 			return
 		}
 	}
+	if m.settlementFailedToPersist(id, err) {
+		// applyLocked already logged this at error level the moment the
+		// write itself failed; warning about it again here would read as a
+		// second, unrelated problem rather than the expected fallout of the
+		// first.
+		return
+	}
 	klog.Warningf("clusterop: settle operation %s: %v", id, err)
+}
+
+// settlementFailedToPersist reports whether err is Complete refusing this
+// settlement because the record's state could no longer be recorded, rather
+// than for any ordinary reason a run can already be terminal. errStatePersistenceFailed
+// is this call's own write failing; ErrOperationTerminal alongside
+// m.persistFailed[id] is a previous call's write having already failed and
+// forced the record there first.
+func (m *Manager) settlementFailedToPersist(id string, err error) bool {
+	if errors.Is(err, errStatePersistenceFailed) {
+		return true
+	}
+	if !errors.Is(err, ErrOperationTerminal) {
+		return false
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.persistFailed[id]
 }

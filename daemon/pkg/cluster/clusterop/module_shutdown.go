@@ -23,7 +23,10 @@ func init() { MustRegisterModule(shutdownModule{}) }
 // later is somebody pressing the power button rather than the operation
 // having succeeded — so the record ends at command_issued and no daemon that
 // starts afterwards may promote it. That is also why the module implements
-// no Recover at all.
+// no Recover at all: with no RecoverableModule to ask, the generic recovery
+// framework (recovery.go) leaves a command_issued shutdown exactly where it
+// was found, and applies MarkInterrupted to anything of this type it loads
+// that never got that far.
 type shutdownModule struct{}
 
 var shutdownSpec = powerSpec{

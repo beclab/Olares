@@ -652,6 +652,58 @@ func TestRuntimeRejectsMutationsAfterCommandIssuedGraceExpires(t *testing.T) {
 	}
 }
 
+// A recovery runtime is allowed to touch a command_issued record however
+// long its grace deadline has passed — that is the whole point of
+// rejectSettledDuringRecovery — but it must never use that latitude to put
+// the cluster back on hold for a deadline that has already run out. Naming
+// a new deadline is not evidence of anything; it would just be this daemon
+// re-arming a lock nothing asked it to hold.
+func TestRecoveryCannotExtendAnExpiredDeadline(t *testing.T) {
+	_, m, id := buildCommandIssuedRuntime(t, -time.Hour)
+	recovery := newRecoveryRuntime(m, id, context.Background())
+	before, _ := m.Get(id)
+
+	err := recovery.SetCommandIssuedUntil(m.deps.Now().Add(time.Hour))
+	if !errors.Is(err, ErrRecoveryCannotExtendDeadline) {
+		t.Fatalf("SetCommandIssuedUntil() = %v, want ErrRecoveryCannotExtendDeadline", err)
+	}
+
+	got, _ := m.Get(id)
+	if !got.CommandIssuedUntil.Equal(before.CommandIssuedUntil) {
+		t.Errorf("CommandIssuedUntil = %v, want it left exactly as it was found (%v)",
+			got.CommandIssuedUntil, before.CommandIssuedUntil)
+	}
+}
+
+// Recovery clearing an expired deadline is exactly the confirm-a-command
+// case this package exists for: it releases the lock, it never re-arms it.
+func TestRecoveryCanClearAnExpiredDeadline(t *testing.T) {
+	_, m, id := buildCommandIssuedRuntime(t, -time.Hour)
+	recovery := newRecoveryRuntime(m, id, context.Background())
+
+	if err := recovery.SetCommandIssuedUntil(time.Time{}); err != nil {
+		t.Fatalf("SetCommandIssuedUntil(zero) = %v, want nil", err)
+	}
+	got, _ := m.Get(id)
+	if !got.CommandIssuedUntil.IsZero() {
+		t.Errorf("CommandIssuedUntil = %v, want it cleared", got.CommandIssuedUntil)
+	}
+}
+
+// A run's own runtime gets no new restriction from this: recovery is the
+// only caller this guards against, because it is the only one allowed to
+// touch a record whose deadline has already passed.
+func TestRunRuntimeMaySetAFutureDeadlineRegardless(t *testing.T) {
+	rt, m, id := buildCommandIssuedRuntime(t, time.Hour)
+	if err := rt.SetCommandIssuedUntil(m.deps.Now().Add(2 * time.Hour)); err != nil {
+		t.Fatalf("SetCommandIssuedUntil() = %v, want nil for an ordinary run", err)
+	}
+	got, _ := m.Get(id)
+	if got.CommandIssuedUntil.IsZero() {
+		t.Error("CommandIssuedUntil was not persisted")
+	}
+}
+
 // --- I3: a module's own error text never reaches the persisted record. ---
 
 func TestRuntimeFinishStepPersistsSafeReasonNotRawDetail(t *testing.T) {

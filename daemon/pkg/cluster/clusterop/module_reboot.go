@@ -61,6 +61,15 @@ func (rebootModule) Run(ctx context.Context, rt Runtime, req RunRequest) Outcome
 // nothing. Nothing is promoted until the control node is Ready on that new
 // boot either, because a machine part way through coming up has not finished
 // the operation it was asked for.
+//
+// The generic recovery framework (recovery.go) also calls this for a
+// non-terminal record — one that stopped before it ever reached
+// command_issued — so rebootChangedBoot's own status check is what makes
+// this return immediately for that case rather than block: there is no
+// command to confirm yet, and the framework's own MarkInterrupted fallback
+// is what settles it once this returns. It never blocks on the cluster or
+// the clock for anything but an outstanding command_issued reboot, and even
+// that is bounded by Timeouts.Ready.
 func (rebootModule) Recover(ctx context.Context, rt Runtime, op Operation) {
 	m, _, ok := managerOf(rt)
 	if !ok {
@@ -68,7 +77,11 @@ func (rebootModule) Recover(ctx context.Context, rt Runtime, op Operation) {
 	}
 	// Confirming a reboot moves a stage, a node and the operation together,
 	// which is one write or none. A runtime that cannot do that is not one
-	// this can safely confirm through.
+	// this can safely confirm through. In production this assertion always
+	// succeeds: every caller of Recover — Manager.recoverLoadedOperations
+	// and Manager.resume — builds it with newRecoveryRuntime. It exists so
+	// a Runtime built some other way (a test, or a future caller) is
+	// refused rather than silently trusted to behave like one.
 	recovery, ok := rt.(recoveryRuntime)
 	if !ok {
 		klog.Warningf("clusterop: cannot confirm reboot %s: this runtime cannot settle it in one write", op.ID)

@@ -205,11 +205,16 @@ func TestAConfirmationThatCannotBePersistedConfirmsNothing(t *testing.T) {
 	_, store, deps := rebootedControlNode(t, dir)
 	stored := interruptedReboot(t, deps.Store, deps.Now(), -time.Hour)
 
+	// Told to fail before the manager is even built: the goroutine that
+	// confirms this reboot starts inside NewManager, and a store that only
+	// starts refusing writes afterward would race that goroutine for
+	// whether the failure is seen. Failing from the very first write makes
+	// the outcome the same regardless of how that race would have gone.
+	store.refuseWrites()
 	m, err := NewManager(deps)
 	if err != nil {
 		t.Fatalf("NewManager: %v", err)
 	}
-	store.refuseWrites()
 
 	got := awaitOperationStatus(t, m, stored.ID, StatusFailed)
 	if got.Status != StatusFailed || got.Code != CodeStatePersistenceFailed {
@@ -231,5 +236,211 @@ func TestAConfirmationThatCannotBePersistedConfirmsNothing(t *testing.T) {
 	}
 	if step := stepResult(t, onDisk, StepMasterCommand); step.Status != StepCommandIssued {
 		t.Errorf("on-disk %s = %q, want it left as it was found", StepMasterCommand, step.Status)
+	}
+}
+
+// --- Generic recovery: unknown modules and module-driven dispatch. ---
+
+// storeOperation writes op directly to a store rooted at dir, the way a
+// daemon that wrote it in an earlier build would have — before the manager
+// under test ever sees it.
+func storeOperation(t *testing.T, dir string, op Operation) {
+	t.Helper()
+	store, err := NewStore(dir)
+	if err != nil {
+		t.Fatalf("NewStore: %v", err)
+	}
+	if err := store.Save(op); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+}
+
+// newManagerWithRegistry builds a manager over reg against whatever was
+// already stored at dir, the way a daemon restarting into a different build
+// of this package would.
+func newManagerWithRegistry(t *testing.T, dir string, reg *ModuleRegistry) *Manager {
+	t.Helper()
+	c := newCluster(master("master-1", "10.0.0.1"))
+	m, err := NewManagerWithRegistry(c.deps(t, dir), reg)
+	if err != nil {
+		t.Fatalf("NewManagerWithRegistry: %v", err)
+	}
+	return m
+}
+
+// historicalOperation is the minimal record shape a store round-trips: enough
+// for List/Load to succeed and for a caller to read Status/Code back.
+func historicalOperation(id string, typ Type, status Status) Operation {
+	at := time.Unix(1700000000, 0).UTC()
+	return Operation{
+		ID: id, Type: typ, RequestID: "client-" + id, Owner: "alice@olares.com",
+		Status: status, CreatedAt: at, UpdatedAt: at,
+		Steps: []Step{{Name: StepPrecheck, Status: StepRunning, StartedAt: &at}},
+		Nodes: []NodeResult{{NodeName: "master-1", Status: NodePending}},
+	}
+}
+
+// A type nothing in this build can carry out any more is not an operation
+// this daemon can retry or guess at — its module is gone. Left running it
+// would hold the cluster's single-operation lock forever, so it is settled
+// the same way a fresh request for that type is refused today.
+func TestUnknownHistoricalModuleSettlesFailed(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "operations")
+	op := historicalOperation("op-1", Type("removed"), StatusRunning)
+	storeOperation(t, dir, op)
+
+	m := newManagerWithRegistry(t, dir, NewRegistry())
+
+	got, ok := m.Get(op.ID)
+	if !ok {
+		t.Fatalf("operation %s is gone, want it queryable", op.ID)
+	}
+	if got.Status != StatusFailed || got.Code != CodeUnsupportedOperation {
+		t.Fatalf("loaded operation = %#v", got)
+	}
+	if got.Steps[0].Status != StepFailed {
+		t.Errorf("Steps[0].Status = %q, want the open step closed", got.Steps[0].Status)
+	}
+	if got.Nodes[0].Status != NodeFailed {
+		t.Errorf("Nodes[0].Status = %q, want the pending node closed", got.Nodes[0].Status)
+	}
+	if got.FinishedAt == nil {
+		t.Error("a settled operation must say when it settled")
+	}
+}
+
+// An unknown type that already reported something — including a
+// command_issued command nothing here can confirm anymore — is retained
+// exactly as it is: still queryable, and not rewritten into a different
+// answer than the one it was found with.
+func TestUnknownHistoricalModuleRetainsTerminalRecord(t *testing.T) {
+	for _, status := range []Status{StatusSucceeded, StatusFailed, StatusPartiallyFailed, StatusCommandIssued} {
+		t.Run(string(status), func(t *testing.T) {
+			dir := filepath.Join(t.TempDir(), "operations")
+			op := historicalOperation("op-1", Type("removed"), status)
+			at := op.CreatedAt
+			op.FinishedAt = &at
+			if status == StatusCommandIssued {
+				op.CommandIssuedUntil = at.Add(time.Hour)
+			}
+			storeOperation(t, dir, op)
+
+			m := newManagerWithRegistry(t, dir, NewRegistry())
+
+			got, ok := m.Get(op.ID)
+			if !ok {
+				t.Fatalf("operation %s is gone, want it queryable", op.ID)
+			}
+			if got.Status != status {
+				t.Errorf("Status = %q, want it left exactly as it was found (%q)", got.Status, status)
+			}
+		})
+	}
+}
+
+// recoveringTestModule is a RecoverableModule a test can watch: it counts
+// every call to Recover and, unless told to settle something, leaves the
+// operation exactly as it found it — the common case of a module that has
+// nothing new to report about a run that stopped mid-flight.
+type recoveringTestModule struct {
+	fakeModule
+	typ Type
+
+	mu           sync.Mutex
+	recoverCalls int
+	settle       func(Runtime, Operation)
+}
+
+func (m *recoveringTestModule) Type() Type { return m.typ }
+
+func (m *recoveringTestModule) Recover(_ context.Context, rt Runtime, op Operation) {
+	m.mu.Lock()
+	m.recoverCalls++
+	settle := m.settle
+	m.mu.Unlock()
+	if settle != nil {
+		settle(rt, op)
+	}
+}
+
+func (m *recoveringTestModule) calls() int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.recoverCalls
+}
+
+// A module that can recover a run is asked about one that stopped
+// mid-flight before this daemon decides anything on its own: the run is not
+// yet a command this daemon can prove happened or not, but the module may
+// know more than "nothing was observed".
+func TestManagerCallsModuleRecovery(t *testing.T) {
+	module := &recoveringTestModule{typ: Type("recoverable")}
+	reg := NewRegistry()
+	if err := reg.Register(module); err != nil {
+		t.Fatal(err)
+	}
+	dir := filepath.Join(t.TempDir(), "operations")
+	storeOperation(t, dir, historicalOperation("op-1", module.typ, StatusRunning))
+
+	newManagerWithRegistry(t, dir, reg)
+
+	if calls := module.calls(); calls != 1 {
+		t.Fatalf("Recover calls = %d, want 1", calls)
+	}
+}
+
+// A module asked to recover a run may look and have nothing to add. Nothing
+// else is going to settle it, so the framework applies the same
+// MarkInterrupted fallback a module with no recovery interface at all would
+// have gotten — the module's Recover ran, but daemon_restarted is still what
+// the record ends on.
+func TestManagerFallsBackToMarkInterruptedWhenRecoveryLeavesItRunning(t *testing.T) {
+	module := &recoveringTestModule{typ: Type("recoverable")}
+	reg := NewRegistry()
+	if err := reg.Register(module); err != nil {
+		t.Fatal(err)
+	}
+	dir := filepath.Join(t.TempDir(), "operations")
+	storeOperation(t, dir, historicalOperation("op-1", module.typ, StatusRunning))
+
+	m := newManagerWithRegistry(t, dir, reg)
+
+	got, ok := m.Get("op-1")
+	if !ok {
+		t.Fatal("operation op-1 is gone")
+	}
+	if got.Status != StatusFailed || got.Code != CodeDaemonRestarted {
+		t.Fatalf("status = %q code = %q, want failed/%s", got.Status, got.Code, CodeDaemonRestarted)
+	}
+	if calls := module.calls(); calls != 1 {
+		t.Fatalf("Recover calls = %d, want 1 even though it settled nothing", calls)
+	}
+}
+
+// A module that settles the run itself during recovery is trusted: the
+// framework's own fallback only applies once Recover has returned and the
+// operation is still non-terminal.
+func TestManagerRecoveryFallbackDoesNotOverwriteWhatTheModuleSettled(t *testing.T) {
+	module := &recoveringTestModule{typ: Type("recoverable")}
+	module.settle = func(rt Runtime, _ Operation) {
+		if err := rt.Complete(Outcome{Status: StatusSucceeded}); err != nil {
+			panic(err)
+		}
+	}
+	reg := NewRegistry()
+	if err := reg.Register(module); err != nil {
+		t.Fatal(err)
+	}
+	dir := filepath.Join(t.TempDir(), "operations")
+	storeOperation(t, dir, historicalOperation("op-1", module.typ, StatusRunning))
+
+	m := newManagerWithRegistry(t, dir, reg)
+
+	got, ok := m.Get("op-1")
+	if !ok {
+		t.Fatal("operation op-1 is gone")
+	}
+	if got.Status != StatusSucceeded {
+		t.Fatalf("status = %q, want the module's own settlement left alone", got.Status)
 	}
 }
