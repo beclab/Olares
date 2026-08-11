@@ -150,15 +150,20 @@ func parseTaskIDs(raws []string) ([]int64, error) {
 func renderBatchResult(w io.Writer, format Format, verb string, res BatchResult) error {
 	switch format {
 	case FormatJSON:
-		return printJSON(w, res)
+		if err := printJSON(w, res); err != nil {
+			return err
+		}
 	default:
 		fmt.Fprintf(w, "%s: %d succeeded, %d failed\n", verb, len(res.Succeeded), len(res.Failed))
 		for _, f := range res.Failed {
 			fmt.Fprintf(w, "  %d: %s\n", f.TaskID, orDash(f.Error))
 		}
-		if len(res.Failed) > 0 {
-			return fmt.Errorf("%s: %d of %d tasks failed", verb, len(res.Failed), len(res.Succeeded)+len(res.Failed))
-		}
-		return nil
 	}
+	// Both table and json print the payload first; any failed id still
+	// exits non-zero so automation that trusts the exit code cannot miss
+	// leftover tasks.
+	if len(res.Failed) > 0 {
+		return fmt.Errorf("%s: %d of %d tasks failed", verb, len(res.Failed), len(res.Succeeded)+len(res.Failed))
+	}
+	return nil
 }

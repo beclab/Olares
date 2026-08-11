@@ -73,4 +73,16 @@ func TestRenderBatchResult(t *testing.T) {
 	if !strings.Contains(buf.String(), "1 succeeded, 0 failed") {
 		t.Fatalf("got %q", buf.String())
 	}
+
+	buf.Reset()
+	err = renderBatchResult(&buf, FormatJSON, "pause", BatchResult{
+		Succeeded: []int64{1},
+		Failed:    []BatchItemError{{TaskID: 2, Error: "gone"}},
+	})
+	if err == nil || !strings.Contains(err.Error(), "1 of 2") {
+		t.Fatalf("json partial failure should exit non-zero, got %v", err)
+	}
+	if !strings.Contains(buf.String(), `"task_id": 2`) && !strings.Contains(buf.String(), `"task_id":2`) {
+		t.Fatalf("json payload missing failed entry: %q", buf.String())
+	}
 }
