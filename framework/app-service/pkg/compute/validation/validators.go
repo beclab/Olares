@@ -224,7 +224,10 @@ func (clusterPressureValidator) Validate(ctx context.Context, in Input) (Decisio
 
 // userQuotaValidator wraps apputils.CheckUserResRequirement which
 // checks the owner's per-user memory / CPU quota via prometheus.
-
+//
+// Not currently wired into InstallabilityValidators,
+// ResumePressureValidators, or UpgradabilityValidators; retained for
+// direct/unit use and potential future re-introduction into a chain.
 type userQuotaValidator struct{}
 
 func (userQuotaValidator) Name() string { return NameUserQuota }
@@ -578,8 +581,8 @@ func (computeAllocationValidator) Validate(ctx context.Context, in Input) (Decis
 // InstallabilityValidators returns the structural feasibility chain.
 // These answer the question "can this cluster ever host this app?" —
 // they look at static / slowly-changing properties (total schedulable
-// capacity, GPU mode availability, per-user quota) and ignore the
-// momentary level of pod scheduling pressure.
+// capacity, GPU mode availability) and ignore the momentary level of
+// pod scheduling pressure.
 //
 // Used at HTTP submit time (install handler) to reject requests the
 // cluster fundamentally cannot accommodate before any helm work starts.
@@ -589,16 +592,18 @@ func (computeAllocationValidator) Validate(ctx context.Context, in Input) (Decis
 // Upgrade uses its own chain (UpgradabilityValidators) instead of this
 // one — see that function for the rationale.
 //
+// Intentionally excluded:
+//
+//   - user-quota: per-user quota is not gated at install submit time.
+//
 // Ordering matches the user-facing failure mode they reveal:
 //
 //  1. cluster-capacity     — "your cluster is too small, period."
 //  2. compute-mode         — "no node has the requested GPU mode."
-//  3. user-quota           — "your account is over its limit."
 func InstallabilityValidators() []Validator {
 	return []Validator{
 		clusterCapacityValidator{},
 		computeModeValidator{},
-		userQuotaValidator{},
 	}
 }
 
@@ -622,8 +627,8 @@ func InstallabilityValidators() []Validator {
 //
 // Intentionally excluded:
 //
-//   - user-quota: install/resume remain the per-user quota gates;
-//     upgrade does not re-check owner quota.
+//   - user-quota: per-user quota is not gated on upgrade (nor on
+//     install/resume submit chains).
 //   - compute-mode: the existing app already has an allocation, the
 //     upgrade reuses prevCfg.SelectedGpuType. Re-running the planner
 //     would either no-op or spuriously fail on a transiently-degraded
@@ -679,11 +684,21 @@ func InstallRuntimePressureValidators() []Validator {
 	return append(RuntimePressureValidators(), computeAllocationValidator{})
 }
 
+// ResumePressureValidators returns the resume-time resource gate used by
+// the resume HTTP handler. It checks live cluster headroom
+// (cluster-pressure + k8s-request) before flipping a stopped app back
+// to running.
+//
+// Intentionally excluded:
+//
+//   - user-quota: per-user quota is not gated at resume submit time.
+//   - compute-mode / node-pressure / compute-allocation: resume reuses
+//     the binding chosen at install; re-running those would either
+//     no-op or spuriously fail on a transiently-degraded node.
 func ResumePressureValidators() []Validator {
 	return []Validator{
 		clusterPressureValidator{},
 		k8sRequestValidator{},
-		userQuotaValidator{},
 	}
 }
 

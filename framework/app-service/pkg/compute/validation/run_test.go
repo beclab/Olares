@@ -279,17 +279,16 @@ func TestChainShapes(t *testing.T) {
 	wantInstall := []string{
 		"cluster-capacity",
 		"compute-mode",
-		"user-quota",
 	}
 	assertChainNames(t, "InstallabilityValidators", InstallabilityValidators(), wantInstall)
 
 	// UpgradabilityValidators gates cluster-capacity on the new chart's
 	// absolute requirements, then cluster-pressure / k8s-request on the
 	// non-negative delta (new − old). user-quota, compute-mode,
-	// node-pressure and compute-allocation stay excluded: install/resume
-	// remain the quota gates, upgrade reuses the existing allocation,
-	// and helm upgrade goes through kube-scheduler. See
-	// UpgradabilityValidators in validators.go.
+	// node-pressure and compute-allocation stay excluded: user-quota is
+	// not gated on install/resume/upgrade submit, upgrade reuses the
+	// existing allocation, and helm upgrade goes through kube-scheduler.
+	// See UpgradabilityValidators in validators.go.
 	wantUpgrade := []string{
 		"cluster-capacity",
 		"cluster-pressure",
@@ -303,6 +302,15 @@ func TestChainShapes(t *testing.T) {
 		"node-pressure",
 	}
 	assertChainNames(t, "RuntimePressureValidators", RuntimePressureValidators(), wantRuntime)
+
+	// ResumePressureValidators is the resume HTTP submit gate:
+	// cluster-pressure + k8s-request only. user-quota / compute-mode /
+	// node-pressure / compute-allocation stay excluded.
+	wantResume := []string{
+		"cluster-pressure",
+		"k8s-request",
+	}
+	assertChainNames(t, "ResumePressureValidators", ResumePressureValidators(), wantResume)
 
 	// InstallRuntimePressureValidators = RuntimePressure ++ compute-allocation,
 	// with the heavier side-effecting allocator strictly last so the
@@ -341,12 +349,14 @@ func assertChainNames(t *testing.T, label string, chain []Validator, want []stri
 // node-pressure and compute-allocation stay false for UpgradeOp.
 //
 // The remaining semantic mapping (matching the comments inside
-// validators.go):
+// validators.go). Note AppliesTo for user-quota still reports
+// install+resume, but InstallabilityValidators / ResumePressureValidators
+// no longer include that validator in their chains:
 //
 //   - cluster-pressure, k8s-request : install + resume + upgrade.
 //   - node-pressure                 : install + resume.
-//   - user-quota         : install + resume only (upgrade does not
-//     re-check owner quota).
+//   - user-quota         : AppliesTo install + resume only; not wired
+//     into any exported submit chain.
 //   - cluster-capacity   : install + upgrade — resume reuses the
 //     placement chosen at install; the cluster's
 //     total schedulable capacity hasn't shrunk in
@@ -394,8 +404,9 @@ func TestAppliesToMatrix(t *testing.T) {
 			},
 		},
 		{
-			// user-quota is install + resume only; upgrade does not
-			// re-check owner quota (see UpgradabilityValidators).
+			// user-quota.AppliesTo remains install + resume, but the
+			// validator is no longer included in InstallabilityValidators
+			// or ResumePressureValidators (see those chain constructors).
 			name: "user-quota",
 			v:    userQuotaValidator{},
 			want: map[Op]bool{
