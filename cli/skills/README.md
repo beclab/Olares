@@ -33,7 +33,7 @@ cli/skills/
 ├── olares-doctor/     # runtime diagnosis (thin router over cluster / market / dashboard)
 │   ├── SKILL.md
 │   └── references/    # one file per symptom (app stuck / crash / image / unhealthy / resources)
-├── olares-router/     # olares-cli router (Router gateway + the Model Console inside a model app)
+├── olares-router/     # olares-cli router (Router gateway + the Model Console inside a model app; Olares >= 1.12.7)
 │   ├── SKILL.md
 │   └── references/    # architecture / external providers / local LLM / multimodal /
 │                      # console / defaults+access / usage+audit+trace / calling / diagnosis

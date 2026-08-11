@@ -26,10 +26,16 @@ import (
 // gets that package's login guidance.
 
 // routerAppNames are the Market ids Router ships under, newest first. `router`
-// (Olares 1.12.7+) supersedes `llmgatewayv3`, and each lists the other under
-// `conflicts`, so at most one is ever installed — we still probe both because
-// an instance that has not moved listings yet runs the older id.
+// is the current listing; `llmgatewayv3` is the id it went by before the
+// rename. Each lists the other under `conflicts`, so at most one is ever
+// installed. Both are probed because the older listing only asks for Olares
+// 1.12.6, so an instance that meets this tree's floor may still be running it.
 var routerAppNames = []string{"router", "llmgatewayv3"}
+
+// legacyRouterAppName is the pre-rename id. Reaching Router through it means
+// the 2.0.x backend, which `router status` says out loud: the verbs here are
+// written against 2.1.x, so a route added since can answer 404.
+const legacyRouterAppName = "llmgatewayv3"
 
 // discoveredRouter is the addressing decision, kept whole so `router status`
 // can report how it was reached rather than just the URL it settled on.
@@ -95,7 +101,7 @@ func listMyApps(ctx context.Context, doer *whoami.HTTPClient) ([]myApp, error) {
 
 func discoverRouter(ctx context.Context, doer *whoami.HTTPClient, rp *credential.ResolvedProfile) (*discoveredRouter, error) {
 	if rp == nil {
-		return nil, fmt.Errorf("internal error: model discovery called without a resolved profile")
+		return nil, fmt.Errorf("internal error: router discovery called without a resolved profile")
 	}
 	installed, err := listMyApps(ctx, doer)
 	if err != nil {

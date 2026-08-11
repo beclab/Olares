@@ -38,7 +38,7 @@ status" first if anything here behaves unexpectedly.
   trace         the spans an agent framework reported for a call
   user          the people Router knows
 
-Most of Router's management surface is admin-only. Requires Olares 1.12.6+.
+Most of Router's management surface is admin-only. Requires Olares 1.12.7+.
 
 Run "olares-cli router <verb> --help" for details.
 `,

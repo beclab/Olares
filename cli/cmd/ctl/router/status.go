@@ -26,6 +26,7 @@ import (
 
 type statusReport struct {
 	Router      *discoveredRouter      `json:"router"`
+	Note        string                 `json:"note,omitempty"`
 	Health      map[string]interface{} `json:"health,omitempty"`
 	HealthError string                 `json:"health_error,omitempty"`
 	Identity    *consoleUser           `json:"identity,omitempty"`
@@ -76,7 +77,7 @@ func runStatus(ctx context.Context, f *cmdutil.Factory, outputRaw string) error 
 		return err
 	}
 
-	report := statusReport{Router: pc.found}
+	report := statusReport{Router: pc.found, Note: routerNote(pc.found)}
 	var health map[string]interface{}
 	if herr := pc.router.doJSON(ctx, "GET", "/healthz", nil, &health); herr != nil {
 		report.HealthError = herr.Error()
@@ -95,6 +96,19 @@ func runStatus(ctx context.Context, f *cmdutil.Factory, outputRaw string) error 
 	return renderStatus(os.Stdout, report)
 }
 
+// routerNote reports what answering under the pre-rename id implies. The
+// listing was renamed at Router 2.1.0, so an instance still on `llmgatewayv3`
+// serves the 2.0.x backend, and a verb here can meet a route that does not
+// exist yet. Saying so once beats nine different 404s.
+func routerNote(found *discoveredRouter) string {
+	if found == nil || found.AppName != legacyRouterAppName {
+		return ""
+	}
+	return "reached under the pre-rename app id, which serves the 2.0.x backend, " +
+		"so a verb written against 2.1.x can report a route as missing. The two " +
+		"listings conflict, so moving to `router` means uninstalling this one first"
+}
+
 func renderStatus(w io.Writer, r statusReport) error {
 	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
 	rows := [][2]string{
@@ -103,6 +117,9 @@ func renderStatus(w io.Writer, r statusReport) error {
 		{"STATE", nonEmpty(r.Router.State)},
 		{"ENTRANCE", nonEmpty(r.Router.EntranceName)},
 		{"BASE URL", nonEmpty(r.Router.BaseURL)},
+	}
+	if r.Note != "" {
+		rows = append(rows, [2]string{"NOTE", r.Note})
 	}
 
 	switch {
