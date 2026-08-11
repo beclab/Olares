@@ -41,7 +41,7 @@ For the highlights and walk-through of Olares v1.12.6, see the [Olares 1.12.6 bl
   - [Ollama](/use-cases/ollama)
   - [ComfyUI](/use-cases/comfyui-common-issues)
   - [Dify](/use-cases/dify-upgrade)
-  - [OnlyOffice](/use-cases/onlyoffice)
+  - [OnlyOffice](/use-cases/onlyoffice-migration)
   - [SearXNG](/use-cases/searxng)
   - [Xinference](/use-cases/xinference)
 - Added [Configure Overlay Gateway](/manual/olares/settings/overlay-gateway), for managing Overlay Gateway settings.
