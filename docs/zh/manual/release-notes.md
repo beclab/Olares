@@ -45,7 +45,7 @@ Olares v1.12.6 的亮点和详细介绍请参见 [Olares 1.12.6 发布博客](ht
   - [Ollama](/zh/use-cases/ollama)
   - [ComfyUI](/zh/use-cases/comfyui-common-issues)
   - [Dify](/zh/use-cases/dify-upgrade)
-  - [OnlyOffice](/zh/use-cases/onlyoffice)
+  - [OnlyOffice](/zh/use-cases/onlyoffice-migration)
   - [SearXNG](/zh/use-cases/searxng)
   - [Xinference](/zh/use-cases/xinference)
 - 新增[配置 Overlay Gateway](/zh/manual/olares/settings/overlay-gateway)，介绍如何管理 Overlay Gateway 设置。
