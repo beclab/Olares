@@ -66,15 +66,17 @@ func runFileExists(ctx context.Context, f *cmdutil.Factory, rawURL, app, path, n
 	if rawURL == "" {
 		return fmt.Errorf("url is required")
 	}
+	app, err = validateApp(app)
+	if err != nil {
+		return err
+	}
 	pc, err := prepare(ctx, f)
 	if err != nil {
 		return err
 	}
 	q := url.Values{}
 	q.Set("url", rawURL)
-	if a := strings.TrimSpace(app); a != "" {
-		q.Set("app", a)
-	}
+	q.Set("app", app)
 	if p := strings.TrimSpace(path); p != "" {
 		q.Set("path", p)
 	}
@@ -129,8 +131,8 @@ func runFileCheck(ctx context.Context, f *cmdutil.Factory, path, outputRaw strin
 		return err
 	}
 	path = strings.TrimSpace(path)
-	if path == "" {
-		return fmt.Errorf("--path is required")
+	if err := validateDrivePath(path); err != nil {
+		return err
 	}
 	pc, err := prepare(ctx, f)
 	if err != nil {
@@ -188,8 +190,8 @@ func runFileRemove(ctx context.Context, f *cmdutil.Factory, path, outputRaw stri
 		return err
 	}
 	path = strings.TrimSpace(path)
-	if path == "" {
-		return fmt.Errorf("--path is required")
+	if err := validateDrivePath(path); err != nil {
+		return err
 	}
 	pc, err := prepare(ctx, f)
 	if err != nil {

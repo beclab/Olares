@@ -45,7 +45,7 @@ olares-cli knowledge download list --status downloading --page 1 --page-size 20 
 olares-cli knowledge download info 42
 ```
 
-Table columns: `ID`, `STATUS`, `PROVIDER`, `PERCENT`, `NAME`, `APP`, `UPDATED`. Footer shows `N of total` when the server returns `total`.
+Table columns: `ID`, `STATUS`, `PROVIDER`, `PERCENT`, `NAME`, `SOURCE`, `APP`, `UPDATED`. `SOURCE` is the task URL (magnet / http / …). Footer shows `N of total` when the server returns `total`.
 
 ## pause / resume / cancel
 

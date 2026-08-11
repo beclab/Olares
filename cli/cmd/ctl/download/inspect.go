@@ -61,10 +61,36 @@ func runInspect(ctx context.Context, f *cmdutil.Factory, rawURL, outputRaw strin
 
 	switch format {
 	case FormatJSON:
-		return printJSON(os.Stdout, data)
+		if err := printJSON(os.Stdout, data); err != nil {
+			return err
+		}
 	default:
-		return renderInspect(os.Stdout, data)
+		if err := renderInspect(os.Stdout, data); err != nil {
+			return err
+		}
 	}
+	// Advisory probe: still exit 0, but always surface the install CTA when
+	// the yt-dlp daemon is unreachable so the next step is not buried in
+	// skill docs.
+	if hint := inspectYTDLPHint(data); hint != "" {
+		fmt.Fprintln(os.Stderr, hint)
+	}
+	return nil
+}
+
+// inspectYTDLPHint returns the install CTA when inspect reports the yt-dlp
+// provider is unavailable. Empty string means no hint.
+func inspectYTDLPHint(d InspectData) string {
+	if d.Available != nil && !*d.Available {
+		provider := strings.ToLower(strings.TrimSpace(d.Provider))
+		if provider == "" || provider == "yt-dlp" || provider == "ytdlp" {
+			return ytdlpUnavailableHint()
+		}
+	}
+	if shouldHintYTDLPUnavailable(d.Error) || shouldHintYTDLPUnavailable(d.ErrorCategory) {
+		return ytdlpUnavailableHint()
+	}
+	return ""
 }
 
 func renderInspect(w io.Writer, d InspectData) error {

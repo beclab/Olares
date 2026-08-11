@@ -71,9 +71,9 @@ func runPrefsGet(ctx context.Context, f *cmdutil.Factory, app, outputRaw string)
 	if err != nil {
 		return err
 	}
-	app = strings.TrimSpace(app)
-	if app == "" {
-		app = defaultApp
+	app, err = validateApp(app)
+	if err != nil {
+		return err
 	}
 	pc, err := prepare(ctx, f)
 	if err != nil {
@@ -106,9 +106,9 @@ func runPrefsSet(ctx context.Context, f *cmdutil.Factory, app, quality, outputRa
 	if err != nil {
 		return err
 	}
-	app = strings.TrimSpace(app)
-	if app == "" {
-		app = defaultApp
+	app, err = validateApp(app)
+	if err != nil {
+		return err
 	}
 	quality = strings.TrimSpace(quality)
 	if err := validateYTDLPQuality(quality, true); err != nil {

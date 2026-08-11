@@ -127,6 +127,26 @@ func normalizeSelectFiles(raw string) (csv string, ok bool, err error) {
 	return joinIndicesCSV(sel), true, nil
 }
 
+// readTorrentFile validates a local --torrent path before upload: it must
+// end in .torrent (case-insensitive), exist, and be non-empty. A missing
+// path that looks space-split gets a quote hint for shell users.
+func readTorrentFile(path string) ([]byte, error) {
+	if !strings.HasSuffix(strings.ToLower(path), ".torrent") {
+		return nil, fmt.Errorf("unsupported --torrent file %q (need a .torrent file); if the path contains spaces, quote it: --torrent './name with spaces.torrent'", path)
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("read torrent file: %w; if the path contains spaces, quote it: --torrent './name with spaces.torrent'", err)
+		}
+		return nil, fmt.Errorf("read torrent file: %w", err)
+	}
+	if len(raw) == 0 {
+		return nil, fmt.Errorf("unsupported --torrent file %q (file is empty)", path)
+	}
+	return raw, nil
+}
+
 func runCreate(ctx context.Context, f *cmdutil.Factory, rawURL, app, path, name, quality, formatID, extraRaw, torrentFile, selectFiles, outputRaw string) error {
 	if ctx == nil {
 		ctx = context.Background()
@@ -140,9 +160,9 @@ func runCreate(ctx context.Context, f *cmdutil.Factory, rawURL, app, path, name,
 	if rawURL == "" && torrentFile == "" {
 		return fmt.Errorf("provide a URL/magnet argument or --torrent <file>")
 	}
-	app = strings.TrimSpace(app)
-	if app == "" {
-		app = defaultApp
+	app, err = validateApp(app)
+	if err != nil {
+		return err
 	}
 
 	extra := map[string]string{}
@@ -170,9 +190,9 @@ func runCreate(ctx context.Context, f *cmdutil.Factory, rawURL, app, path, name,
 		extra["format_id"] = fid
 	}
 	if torrentFile != "" {
-		raw, err := os.ReadFile(torrentFile)
+		raw, err := readTorrentFile(torrentFile)
 		if err != nil {
-			return fmt.Errorf("read torrent file: %w", err)
+			return err
 		}
 		extra["torrent_file_b64"] = base64.StdEncoding.EncodeToString(raw)
 	}

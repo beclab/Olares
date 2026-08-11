@@ -65,6 +65,16 @@ func runSync(ctx context.Context, f *cmdutil.Factory, app string, limit int, sin
 	if err != nil {
 		return err
 	}
+	app, err = validateApp(app)
+	if err != nil {
+		return err
+	}
+	if err := validateLimit(limit); err != nil {
+		return err
+	}
+	if err := validateSinceID(sinceID); err != nil {
+		return err
+	}
 	since, err := parseSince(sinceRaw)
 	if err != nil {
 		return err
