@@ -126,7 +126,7 @@ func TestNewManagerCarriesTheBuiltInOperations(t *testing.T) {
 	c := newCluster(master("master-1", "10.0.0.1"))
 	m, _ := newManager(t, c)
 
-	for _, typ := range []Type{TypeReboot, TypeShutdown} {
+	for _, typ := range []Type{TypeReboot, TypeShutdown, TypeSetSSHPassword} {
 		if _, ok := m.registry.Lookup(typ); !ok {
 			t.Errorf("NewManager cannot carry out %q", typ)
 		}
