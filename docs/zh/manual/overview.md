@@ -85,6 +85,11 @@ Olares 是一款可以用自然语言操作的开源个人云操作系统，让�
 遇到问题时查找答案，并加入社区与其他用户交流。
 
 <div class="doc-map">
+  <a class="doc-map-card" href="./release-notes">
+    <span class="doc-map-icon"><span class="material-symbols-outlined">fiber_new</span></span>
+    <span class="doc-map-title">文档更新动态</span>
+    <span class="doc-map-desc">跟踪每次 Olares 发版后的新增指南、更新内容与下架说明</span>
+  </a>
   <a class="doc-map-card" href="./help/olares">
     <span class="doc-map-icon"><span class="material-symbols-outlined">help</span></span>
     <span class="doc-map-title">帮助与故障排查</span>

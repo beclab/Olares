@@ -1,5 +1,6 @@
 ---
 outline: [2, 3]
+title: 使用 Engine Base 运行本地大模型
 description: 了解如何在 Olares 中使用引擎基座应用来自托管本地大语言模型，并通过克隆基座应用运行不同的推理引擎。
 head:
   - - meta
@@ -11,7 +12,7 @@ head:
 WARNING 本页面由 AI 自动翻译，部分技术术语可能与中文习惯存在差异。如有疑问，请以[英文原文](../../use-cases/llm-base-apps.md)为准。
 :::
 
-# 使用引擎基座应用托管本地大语言模型
+# 使用 Ollama、vLLM、llama.cpp 和 SGLang 运行本地大模型
 
 Olares v1.12.6 推出了 **Model Console**，一个用于管理本地大语言模型（LLM）全生命周期的平台。该平台提供四个引擎基座应用，每个基于不同的推理引擎构建：**Ollama 引擎基座**、**vLLM 引擎基座**、**llama.cpp 引擎基座**和**SGLang 引擎基座**。
 
