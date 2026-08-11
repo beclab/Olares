@@ -24,6 +24,9 @@ import (
 const (
 	minOlaresVersion = "1.12.7"
 	defaultApp       = "wise"
+	// allowedApps is the --app whitelist (kept in sync with validateApp).
+	// Default remains wise; larepass is the TermiPass / LarePass namespace.
+	allowedApps = "wise, larepass"
 	// ytdlpQualityValues is the server-accepted --quality enum
 	// (download-server services.IsValidYtdlpQuality). Kept here so the
 	// --help text stays in sync with what the backend validates.
@@ -34,6 +37,12 @@ const (
 	// itself applies no default (empty task.Path lands at the PVC root),
 	// so the CLI seeds this to match what wise users see.
 	defaultDownloadPath = "drive/Home/Downloads/"
+	// ytdlpMarketInstall is the next-step CTA when the yt-dlp provider
+	// is unreachable (often not installed). Chart name matches the
+	// Market listing / shared service namespace ytdlpv3-shared.
+	ytdlpMarketInstall = "olares-cli market install ytdlpv3"
+	// syncLimitMax matches the download-server sync page-size cap.
+	syncLimitMax = 100
 )
 
 var taskActionPathRE = regexp.MustCompile(`^/api/download/(?:pause|resume|cancel|info)/(\d+)(?:/|$)`)
@@ -62,7 +71,97 @@ func addOutputFlag(cmd *cobra.Command, target *string) {
 }
 
 func addAppFlag(cmd *cobra.Command, target *string) {
-	cmd.Flags().StringVar(target, "app", defaultApp, "app namespace for the download task (default: wise)")
+	cmd.Flags().StringVar(target, "app", defaultApp, "app namespace for the download task (one of: "+allowedApps+"; default: wise)")
+}
+
+// validateApp trims --app, defaults empty to wise, and rejects values
+// outside the whitelist. Returns the normalised app name.
+func validateApp(raw string) (string, error) {
+	app := strings.TrimSpace(raw)
+	if app == "" {
+		return defaultApp, nil
+	}
+	switch app {
+	case "wise", "larepass":
+		return app, nil
+	default:
+		return "", fmt.Errorf("unsupported --app %q (allowed: %s)", raw, allowedApps)
+	}
+}
+
+// validateNonNegativeFlag rejects negative paging / size flags. Zero
+// means "server default" and stays valid.
+func validateNonNegativeFlag(name string, v int) error {
+	if v < 0 {
+		return fmt.Errorf("unsupported %s %d (need >= 0; 0 = server default)", name, v)
+	}
+	return nil
+}
+
+// validateLimit rejects negative sync --limit and enforces the server
+// max of 100. Zero means "server default".
+func validateLimit(limit int) error {
+	if limit < 0 {
+		return fmt.Errorf("unsupported --limit %d (need >= 0; 0 = server default, max %d)", limit, syncLimitMax)
+	}
+	if limit > syncLimitMax {
+		return fmt.Errorf("unsupported --limit %d (max %d)", limit, syncLimitMax)
+	}
+	return nil
+}
+
+// validateSinceID rejects a negative --since-id. Zero is omitted from
+// the query (full drain / no tie-breaker).
+func validateSinceID(id int64) error {
+	if id < 0 {
+		return fmt.Errorf("unsupported --since-id %d (need >= 0)", id)
+	}
+	return nil
+}
+
+// validateDrivePath requires drive/Home/ or drive/Data/ (case-sensitive),
+// matching the create --path contract used by download-server.
+func validateDrivePath(raw string) error {
+	path := strings.TrimSpace(raw)
+	if path == "" {
+		return fmt.Errorf("--path is required")
+	}
+	if strings.HasPrefix(path, "drive/Home/") || strings.HasPrefix(path, "drive/Data/") {
+		return nil
+	}
+	return fmt.Errorf("unsupported --path %q (need a path starting with drive/Home/ or drive/Data/)", raw)
+}
+
+// ytdlpUnavailableHint is printed when inspect reports Available=false
+// (or create fails because the yt-dlp daemon is unreachable).
+func ytdlpUnavailableHint() string {
+	return "yt-dlp is not available; install it with `" + ytdlpMarketInstall + "`"
+}
+
+// shouldHintYTDLPUnavailable reports whether a server message points at
+// a missing / unreachable yt-dlp provider.
+func shouldHintYTDLPUnavailable(message string) bool {
+	lower := strings.ToLower(message)
+	if !(strings.Contains(lower, "yt-dlp") || strings.Contains(lower, "ytdlp")) {
+		return false
+	}
+	return strings.Contains(lower, "unavailable") ||
+		strings.Contains(lower, "unreachable") ||
+		strings.Contains(lower, "not available") ||
+		strings.Contains(lower, "not installed") ||
+		strings.Contains(lower, "missing") ||
+		strings.Contains(lower, "no such") ||
+		strings.Contains(lower, "connection refused") ||
+		strings.Contains(lower, "dial")
+}
+
+// shouldHintInspectTimeout reports whether an inspect failure looks like
+// the server's short probe deadline (channel / RSS URLs).
+func shouldHintInspectTimeout(message string) bool {
+	lower := strings.ToLower(message)
+	return strings.Contains(lower, "timeout") ||
+		strings.Contains(lower, "deadline exceeded") ||
+		strings.Contains(lower, "timed out")
 }
 
 // Doer is the JSON transport used by download verbs (whoami.HTTPClient).
@@ -117,7 +216,10 @@ type dsEnvelope struct {
 	List    json.RawMessage `json:"list"`
 	Total   *int64          `json:"total"`
 	HasMore *bool           `json:"has_more"`
-	Exist   *bool           `json:"exist"`
+	// Batch lifecycle responses carry succeeded/failed at the top level
+	// (alongside code), not under data — see BatchResult.
+	Succeeded json.RawMessage `json:"succeeded"`
+	Failed    json.RawMessage `json:"failed"`
 }
 
 func doGet(ctx context.Context, d Doer, path string, out interface{}) error {
@@ -172,9 +274,16 @@ func doMutate(ctx context.Context, d Doer, method, path string, body, out interf
 		}
 		return nil
 	}
-	if fc, ok := out.(*FileCheckResult); ok {
-		if env.Exist != nil {
-			fc.Exist = *env.Exist
+	if br, ok := out.(*BatchResult); ok {
+		if len(env.Succeeded) > 0 {
+			if err := json.Unmarshal(env.Succeeded, &br.Succeeded); err != nil {
+				return fmt.Errorf("%s %s: decode succeeded: %w", method, path, err)
+			}
+		}
+		if len(env.Failed) > 0 {
+			if err := json.Unmarshal(env.Failed, &br.Failed); err != nil {
+				return fmt.Errorf("%s %s: decode failed: %w", method, path, err)
+			}
 		}
 		return nil
 	}
@@ -218,9 +327,14 @@ func taskErrorRecovery(method, path string, status int, message string, body int
 	}
 	switch {
 	case method == "POST" && path == "/api/download" && status == 409 &&
-		strings.Contains(lowerMsg, "task") &&
-		(strings.Contains(lowerMsg, "already") || strings.Contains(lowerMsg, "exist")):
+		(strings.Contains(lowerMsg, "already") ||
+			strings.Contains(lowerMsg, "exist") ||
+			strings.Contains(lowerMsg, "registered")):
 		return "; inspect existing tasks with `olares-cli knowledge download list`"
+	case method == "POST" && path == "/api/download" && shouldHintYTDLPUnavailable(message):
+		return "; " + ytdlpUnavailableHint()
+	case strings.Contains(path, "/api/url/inspect") && shouldHintInspectTimeout(message):
+		return "; channel/RSS probes can exceed the server inspect timeout; retry later or create the task directly if the URL is known good"
 	case taskID != "" && status == 409:
 		return fmt.Sprintf(
 			"; wait for the move to finish, then retry; inspect progress with `olares-cli knowledge download info %s`",

@@ -16,10 +16,9 @@ import (
 func NewFileCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "file",
-		Short: "check / remove downloaded files and pre-check URL destinations",
+		Short: "pre-check URL destinations and remove downloaded files",
 	}
 	cmd.AddCommand(newFileExistsCommand(f))
-	cmd.AddCommand(newFileCheckCommand(f))
 	cmd.AddCommand(newFileRemoveCommand(f))
 	return cmd
 }
@@ -29,32 +28,38 @@ func newFileExistsCommand(f *cmdutil.Factory) *cobra.Command {
 		app    string
 		path   string
 		name   string
+		hfDest string
 		output string
 	)
 	cmd := &cobra.Command{
 		Use:   "exists <url>",
 		Short: "pre-check whether a URL download would collide at the destination",
-		Long: `Pre-check a URL download destination (GET /api/url/file-exists).
+		Long: `Check whether downloading a URL would overwrite an existing file.
 
 Quote the URL. A URL with ?, & or = must be wrapped in single quotes,
-otherwise the shell splits it on & and drops the query string:
-  olares-cli knowledge download file exists 'https://host/v?a=1&b=2'
+otherwise your shell may split it.
 
-The server resolves the target file name from the URL (or --name) under
---path for the given --app and reports whether it already exists.`,
+The target name is taken from the URL unless --name is provided. Use --path
+and --app to check the same destination you intend to use with create.
+
+For HuggingFace URLs, --hf-dest selects cache vs local destination
+semantics. Omit it to use the default.`,
+		Example: `  olares-cli knowledge download file exists 'https://host/v?a=1&b=2'
+  olares-cli knowledge download file exists https://huggingface.co/org/repo --hf-dest cache`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
-			return runFileExists(c.Context(), f, args[0], app, path, name, output)
+			return runFileExists(c.Context(), f, args[0], app, path, name, hfDest, output)
 		},
 	}
 	addAppFlag(cmd, &app)
 	addOutputFlag(cmd, &output)
 	cmd.Flags().StringVar(&path, "path", "", "destination path (e.g. drive/Home/Downloads/)")
 	cmd.Flags().StringVar(&name, "name", "", "expected file_name override")
+	cmd.Flags().StringVar(&hfDest, "hf-dest", "", "HuggingFace destination: cache or local (optional)")
 	return cmd
 }
 
-func runFileExists(ctx context.Context, f *cmdutil.Factory, rawURL, app, path, name, outputRaw string) error {
+func runFileExists(ctx context.Context, f *cmdutil.Factory, rawURL, app, path, name, hfDest, outputRaw string) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -66,20 +71,29 @@ func runFileExists(ctx context.Context, f *cmdutil.Factory, rawURL, app, path, n
 	if rawURL == "" {
 		return fmt.Errorf("url is required")
 	}
+	app, err = validateApp(app)
+	if err != nil {
+		return err
+	}
+	hfDest, err = validateHFDest(hfDest)
+	if err != nil {
+		return err
+	}
 	pc, err := prepare(ctx, f)
 	if err != nil {
 		return err
 	}
 	q := url.Values{}
 	q.Set("url", rawURL)
-	if a := strings.TrimSpace(app); a != "" {
-		q.Set("app", a)
-	}
+	q.Set("app", app)
 	if p := strings.TrimSpace(path); p != "" {
 		q.Set("path", p)
 	}
 	if n := strings.TrimSpace(name); n != "" {
 		q.Set("file_name", n)
+	}
+	if hfDest != "" {
+		q.Set("hf_dest", hfDest)
 	}
 	var data FileExistsData
 	if err := doGet(ctx, pc.doer, "/api/url/file-exists"+encodeQuery(q), &data); err != nil {
@@ -97,62 +111,14 @@ func runFileExists(ctx context.Context, f *cmdutil.Factory, rawURL, app, path, n
 	}
 }
 
-func newFileCheckCommand(f *cmdutil.Factory) *cobra.Command {
-	var (
-		path   string
-		output string
-	)
-	cmd := &cobra.Command{
-		Use:   "check",
-		Short: "check whether a downloaded file exists on the PVC",
-		Long: `Check whether a file-manager resource exists
-(GET /api/download/file_check).
-
---path is a file-manager resource path such as drive/Home/xxx.`,
-		Args: cobra.NoArgs,
-		RunE: func(c *cobra.Command, _ []string) error {
-			return runFileCheck(c.Context(), f, path, output)
-		},
-	}
-	addOutputFlag(cmd, &output)
-	cmd.Flags().StringVar(&path, "path", "", "file-manager resource path, e.g. drive/Home/xxx (required)")
-	_ = cmd.MarkFlagRequired("path")
-	return cmd
-}
-
-func runFileCheck(ctx context.Context, f *cmdutil.Factory, path, outputRaw string) error {
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	format, err := parseFormat(outputRaw)
-	if err != nil {
-		return err
-	}
-	path = strings.TrimSpace(path)
-	if path == "" {
-		return fmt.Errorf("--path is required")
-	}
-	pc, err := prepare(ctx, f)
-	if err != nil {
-		return err
-	}
-	q := url.Values{}
-	// user only satisfies the IDL binding (required query field); the real
-	// identity is the gateway-injected X-Bfl-User, so the profile OlaresID
-	// is just a placeholder here.
-	q.Set("user", pc.profile.OlaresID)
-	q.Set("path", path)
-	var res FileCheckResult
-	// /none is a mandatory placeholder suffix in the route; do not drop it.
-	if err := doGet(ctx, pc.doer, "/api/download/file_check/none"+encodeQuery(q), &res); err != nil {
-		return err
-	}
-	switch format {
-	case FormatJSON:
-		return printJSON(os.Stdout, res)
+// validateHFDest accepts empty (omit query), "cache", or "local".
+func validateHFDest(raw string) (string, error) {
+	v := strings.ToLower(strings.TrimSpace(raw))
+	switch v {
+	case "", "cache", "local":
+		return v, nil
 	default:
-		fmt.Printf("Exist:  %v\n", res.Exist)
-		return nil
+		return "", fmt.Errorf("unsupported --hf-dest %q (allowed: cache, local)", raw)
 	}
 }
 
@@ -164,11 +130,12 @@ func newFileRemoveCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "remove",
 		Short: "remove a downloaded file from the PVC",
-		Long: `Remove a file-manager resource (DELETE /api/download/file_remove).
+		Long: `Remove a downloaded file from Olares storage.
 
 --path is a file-manager resource path such as drive/Home/xxx. A file
-that does not exist is still treated as success by the server.`,
-		Args: cobra.NoArgs,
+that does not exist is still treated as successfully removed.`,
+		Example: `  olares-cli knowledge download file remove --path drive/Home/Downloads/video.mp4`,
+		Args:    cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
 			return runFileRemove(c.Context(), f, path, output)
 		},
@@ -188,8 +155,8 @@ func runFileRemove(ctx context.Context, f *cmdutil.Factory, path, outputRaw stri
 		return err
 	}
 	path = strings.TrimSpace(path)
-	if path == "" {
-		return fmt.Errorf("--path is required")
+	if err := validateDrivePath(path); err != nil {
+		return err
 	}
 	pc, err := prepare(ctx, f)
 	if err != nil {

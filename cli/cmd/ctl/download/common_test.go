@@ -161,13 +161,37 @@ func TestDoMutateAddsRecoveryForKnownTaskErrors(t *testing.T) {
 		t.Fatalf("task 404 should refresh IDs, got %v", err)
 	}
 
-	d = &fakeDoer{resp: []byte(`{"code":404,"message":"file not found"}`)}
-	err = doGet(context.Background(), d, "/api/download/file_check/none", nil)
+	d = &fakeDoer{resp: []byte(`{"code":409,"message":"GID xxxx isalready registered"}`)}
+	err = doMutate(context.Background(), d, "POST", "/api/download", nil, nil)
 	if err == nil {
 		t.Fatal("expected error")
 	}
-	if strings.Contains(err.Error(), "knowledge download list") {
-		t.Fatalf("non-task 404 received task recovery: %q", err)
+	for _, want := range []string{"isalready registered", "olares-cli knowledge download list"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("duplicate torrent %q missing %q", err, want)
+		}
+	}
+
+	d = &fakeDoer{resp: []byte(`{"code":500,"message":"yt-dlp unavailable: connection refused"}`)}
+	err = doMutate(context.Background(), d, "POST", "/api/download", nil, nil)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	for _, want := range []string{"yt-dlp unavailable", ytdlpMarketInstall} {
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("yt-dlp create failure %q missing %q", err, want)
+		}
+	}
+
+	d = &fakeDoer{resp: []byte(`{"code":500,"message":"timeout of 3000ms exceeded"}`)}
+	err = doGet(context.Background(), d, "/api/url/inspect?url=https://example.com", nil)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	for _, want := range []string{"timeout of 3000ms", "channel/RSS probes", "create the task directly"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("inspect timeout %q missing %q", err, want)
+		}
 	}
 
 	d = &fakeDoer{resp: []byte(`{"code":409,"message":"task is moving to its destination"}`)}
@@ -266,14 +290,17 @@ func TestDoMutateTransportError(t *testing.T) {
 	}
 }
 
-func TestDoMutateFileCheckEnvelope(t *testing.T) {
-	d := &fakeDoer{resp: []byte(`{"code":200,"exist":true}`)}
-	var res FileCheckResult
-	if err := doGet(context.Background(), d, "/api/download/file_check/none?user=alice&path=drive/Home/x", &res); err != nil {
+func TestDoMutateBatchEnvelope(t *testing.T) {
+	d := &fakeDoer{resp: []byte(`{"code":200,"succeeded":[1,2],"failed":[{"task_id":3,"error":"not found"}]}`)}
+	var res BatchResult
+	if err := doMutate(context.Background(), d, "PUT", "/api/download/batch/pause", BatchReq{TaskIDs: []int64{1, 2, 3}}, &res); err != nil {
 		t.Fatal(err)
 	}
-	if !res.Exist {
-		t.Fatalf("expected Exist=true, got %+v", res)
+	if len(res.Succeeded) != 2 || res.Succeeded[0] != 1 || res.Succeeded[1] != 2 {
+		t.Fatalf("succeeded: %+v", res.Succeeded)
+	}
+	if len(res.Failed) != 1 || res.Failed[0].TaskID != 3 || res.Failed[0].Error != "not found" {
+		t.Fatalf("failed: %+v", res.Failed)
 	}
 }
 
@@ -412,5 +439,109 @@ func TestParseTaskID(t *testing.T) {
 	}
 	if _, err := parseTaskID("x"); err == nil {
 		t.Fatal("expected error for non-int")
+	}
+}
+
+func TestValidateApp(t *testing.T) {
+	for _, valid := range []string{"", "wise", " larepass ", "larepass"} {
+		got, err := validateApp(valid)
+		if err != nil {
+			t.Fatalf("validateApp(%q) unexpected error: %v", valid, err)
+		}
+		switch strings.TrimSpace(valid) {
+		case "", "wise":
+			if got != "wise" {
+				t.Fatalf("validateApp(%q)=%q want wise", valid, got)
+			}
+		default:
+			if got != "larepass" {
+				t.Fatalf("validateApp(%q)=%q want larepass", valid, got)
+			}
+		}
+	}
+	_, err := validateApp("namespace")
+	if err == nil {
+		t.Fatal("unknown app should fail")
+	}
+	for _, want := range []string{"unsupported --app", allowedApps} {
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("validateApp error %q missing %q", err, want)
+		}
+	}
+}
+
+func TestValidateNonNegativeFlag(t *testing.T) {
+	if err := validateNonNegativeFlag("--page", 0); err != nil {
+		t.Fatal(err)
+	}
+	if err := validateNonNegativeFlag("--page", 2); err != nil {
+		t.Fatal(err)
+	}
+	err := validateNonNegativeFlag("--page", -1)
+	if err == nil || !strings.Contains(err.Error(), "unsupported --page") {
+		t.Fatalf("negative page should fail, got %v", err)
+	}
+}
+
+func TestValidateLimit(t *testing.T) {
+	if err := validateLimit(0); err != nil {
+		t.Fatal(err)
+	}
+	if err := validateLimit(100); err != nil {
+		t.Fatal(err)
+	}
+	if err := validateLimit(-1); err == nil || !strings.Contains(err.Error(), "unsupported --limit") {
+		t.Fatalf("negative limit should fail, got %v", err)
+	}
+	if err := validateLimit(101); err == nil || !strings.Contains(err.Error(), "max 100") {
+		t.Fatalf("over-max limit should fail, got %v", err)
+	}
+}
+
+func TestValidateSinceID(t *testing.T) {
+	if err := validateSinceID(0); err != nil {
+		t.Fatal(err)
+	}
+	if err := validateSinceID(-1); err == nil || !strings.Contains(err.Error(), "unsupported --since-id") {
+		t.Fatalf("negative since-id should fail, got %v", err)
+	}
+}
+
+func TestValidateDrivePath(t *testing.T) {
+	for _, valid := range []string{"drive/Home/Downloads/x", "drive/Data/cache/y"} {
+		if err := validateDrivePath(valid); err != nil {
+			t.Fatalf("validateDrivePath(%q): %v", valid, err)
+		}
+	}
+	for _, bad := range []string{"", "Home/Downloads/x", "drive/home/x", "/Files/Home/x"} {
+		if err := validateDrivePath(bad); err == nil {
+			t.Fatalf("validateDrivePath(%q) should fail", bad)
+		}
+	}
+}
+
+func TestInspectYTDLPHint(t *testing.T) {
+	falseVal := false
+	trueVal := true
+	if hint := inspectYTDLPHint(InspectData{Provider: "yt-dlp", Available: &falseVal}); !strings.Contains(hint, ytdlpMarketInstall) {
+		t.Fatalf("Available=false should hint install, got %q", hint)
+	}
+	if hint := inspectYTDLPHint(InspectData{Provider: "aria2", Available: &falseVal}); hint != "" {
+		t.Fatalf("aria2 Available=false should not hint yt-dlp, got %q", hint)
+	}
+	if hint := inspectYTDLPHint(InspectData{Provider: "yt-dlp", Available: &trueVal}); hint != "" {
+		t.Fatalf("Available=true should not hint, got %q", hint)
+	}
+	if hint := inspectYTDLPHint(InspectData{Error: "yt-dlp daemon unreachable"}); !strings.Contains(hint, ytdlpMarketInstall) {
+		t.Fatalf("error text should hint install, got %q", hint)
+	}
+}
+
+func TestShouldHintInspectTimeout(t *testing.T) {
+	if !shouldHintInspectTimeout("timeout of 3000ms exceeded") {
+		t.Fatal("expected timeout hint")
+	}
+	if shouldHintInspectTimeout("bad url") {
+		t.Fatal("non-timeout should not hint")
 	}
 }

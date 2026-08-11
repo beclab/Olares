@@ -38,11 +38,12 @@ func newTorrentInspectCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "inspect",
 		Short: "inspect a local .torrent file (metadata + file list)",
-		Long: `Inspect a local .torrent file (POST /api/download/torrent/inspect).
+		Long: `Inspect a local .torrent file before creating a download task.
 
-The file is read locally, base64-encoded and uploaded; the server parses
-the metainfo and returns the info hash, mode, piece layout and the 1-based
-file list used by torrent files --select and create --select-files.`,
+The result includes metadata and a 1-based file list. Use those indices
+with create --select-files or torrent files --select.`,
+		Example: `  olares-cli knowledge download torrent inspect --file ./x.torrent
+  olares-cli knowledge download torrent inspect --file ./x.torrent -o json`,
 		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
 			return runTorrentInspect(c.Context(), f, file, output)
@@ -66,9 +67,9 @@ func runTorrentInspect(ctx context.Context, f *cmdutil.Factory, file, outputRaw 
 	if file == "" {
 		return fmt.Errorf("--file is required")
 	}
-	raw, err := os.ReadFile(file)
+	raw, err := readTorrentFile(file, "--file")
 	if err != nil {
-		return fmt.Errorf("read torrent file: %w", err)
+		return err
 	}
 	pc, err := prepare(ctx, f)
 	if err != nil {
@@ -228,13 +229,13 @@ func newTorrentFilesCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "files <id>",
 		Short: "select which files of a multi-file torrent to download",
-		Long: `Set the selected files of a multi-file torrent
-(PUT /api/download/<id>/torrent/files).
+		Long: `Choose which files of a multi-file torrent task to download.
 
 --select takes a comma-separated list of 1-based file indices (as reported
 by torrent inspect), e.g. --select 1,3,5. The list is the full selection,
-not a delta. Pass --select all to download every file (sends an empty
-selection so the server keeps all files).`,
+not a delta. Pass --select all to download every file.`,
+		Example: `  olares-cli knowledge download torrent files 42 --select 1,3,5
+  olares-cli knowledge download torrent files 42 --select all`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			return runTorrentFiles(c.Context(), f, args[0], selectRaw, output)
@@ -333,12 +334,10 @@ func newTorrentSeedCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "seed",
 		Short: "control seeding for a completed torrent",
-		Long: `Start or stop seeding a completed torrent
-(POST /api/download/<id>/torrent/seed/stop|resume).
+		Long: `Start or stop seeding a completed torrent.
 
-409 semantics:
-  seed stop   requires the task to be currently seeding.
-  seed resume requires the task to be completed (download finished).`,
+"seed stop" requires a task that is currently seeding. "seed resume"
+requires a completed torrent task.`,
 	}
 	cmd.AddCommand(newTorrentSeedActionCommand(f, "stop"))
 	cmd.AddCommand(newTorrentSeedActionCommand(f, "resume"))

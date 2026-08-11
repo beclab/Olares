@@ -28,47 +28,41 @@ func NewCreateCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create [url]",
 		Short: "create a download task",
-		Long: `Create a download task (POST /api/download).
+		Long: `Create a download task from a URL, magnet link, or local .torrent file.
 
 Quote the URL. A URL with ?, & or = must be wrapped in single quotes,
-otherwise the shell splits it on & and drops the query string:
-  olares-cli knowledge download create 'https://host/v?a=1&b=2'
+otherwise your shell may split it.
 
 Torrent / magnet:
-  A magnet link is passed as an ordinary URL argument:
-    olares-cli knowledge download create 'magnet:?xt=urn:btih:...'
-  A local .torrent file is uploaded with --torrent (base64); the URL
-  argument may be omitted in that case:
-    olares-cli knowledge download create --torrent ./x.torrent --select-files 1,3
---torrent reads a local .torrent file and sends it as extra.torrent_file_b64.
+  A magnet link is passed as the URL argument. For a local .torrent file,
+  use --torrent and omit the URL.
 --select-files takes a comma-separated list of 1-based file indices (as
-reported by "torrent inspect"), normalised into extra.selected_files. Pass
---select-files all (or omit the flag) to download every file. Bad tokens
-(0, negatives, non-integers) are rejected locally, same as
-"torrent files --select".
+reported by "torrent inspect"). Pass --select-files all, or omit the flag,
+to download every file.
 
---quality maps to extra.ytdlp_quality (one of: ` + ytdlpQualityValues + `).
---format-id maps to extra.format_id.
---extra accepts a JSON object of string values merged into extra (wins last).
+--quality accepts: ` + ytdlpQualityValues + `.
+--format-id selects a specific yt-dlp format.
+--extra accepts additional provider options as a JSON object of strings.
 --path must start with drive/Home/ or drive/Data/, e.g.
   --path drive/Home/Pictures/
-The first segment is literally "drive"; the second is "Home" or "Data"
-(case-sensitive). A full API URL also works:
-  --path 'https://files.<user>.olares.cn/api/resources/drive/Home/Pictures/'
-NOT accepted: the browser address like .../Files/Home/... , or a bare
-Home/... without the drive/ prefix (both fail as unsupported file type).
-Defaults to ` + defaultDownloadPath + ` (aligned with wise). Pass --path ""
-to send an empty path (e.g. HuggingFace cache mode) and let the server decide.
+The names "drive", "Home", and "Data" are case-sensitive. Browser URLs and
+bare Home/... paths are not accepted. The default is ` + defaultDownloadPath + `.
+Pass --path "" when the provider should choose the destination.
 
-HuggingFace: the destination is picked by extra._hf_dest, not by --path/--name.
-  local (default when _hf_dest is unset): lands under <path>/<repoID>/. --path
-         applies; --name is unnecessary (the repo id is the folder name).
-  cache: shared HF_HOME (Files UI: /Common/huggingface/). --path and --name are
-         ignored; send --path "" to match wise.
-Set HF options via --extra (keys map to hf CLI flags), e.g.:
-  --extra '{"_hf_dest":"cache"}'
-  --extra '{"_hf_dest":"local","token":"hf_xxx","revision":"v1.0","include":"*.safetensors"}'
-Note wise defaults HF to cache; this CLI defaults to local unless you pass _hf_dest.`,
+For HuggingFace, set _hf_dest in --extra:
+  local (default) downloads under <path>/<repoID>/.
+  cache downloads to the shared HuggingFace cache and ignores --path/--name.`,
+		Example: `  # URL
+  olares-cli knowledge download create 'https://host/v?a=1&b=2'
+
+  # magnet link
+  olares-cli knowledge download create 'magnet:?xt=urn:btih:...'
+
+  # selected files from a local torrent
+  olares-cli knowledge download create --torrent ./x.torrent --select-files 1,3
+
+  # HuggingFace shared cache
+  olares-cli knowledge download create https://huggingface.co/org/repo --path "" --extra '{"_hf_dest":"cache"}'`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			rawURL := ""
@@ -127,6 +121,31 @@ func normalizeSelectFiles(raw string) (csv string, ok bool, err error) {
 	return joinIndicesCSV(sel), true, nil
 }
 
+// readTorrentFile validates a local torrent path before upload: it must
+// end in .torrent (case-insensitive), exist, and be non-empty. flag is the
+// CLI flag name used in error messages (e.g. "--torrent" or "--file") so
+// create and torrent inspect can share the validator without pointing at
+// the wrong flag. A missing path gets a quote hint for shell users.
+func readTorrentFile(path, flag string) ([]byte, error) {
+	if flag == "" {
+		flag = "--torrent"
+	}
+	if !strings.HasSuffix(strings.ToLower(path), ".torrent") {
+		return nil, fmt.Errorf("unsupported %s file %q (need a .torrent file); if the path contains spaces, quote it: %s './name with spaces.torrent'", flag, path, flag)
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("read torrent file: %w; if the path contains spaces, quote it: %s './name with spaces.torrent'", err, flag)
+		}
+		return nil, fmt.Errorf("read torrent file: %w", err)
+	}
+	if len(raw) == 0 {
+		return nil, fmt.Errorf("unsupported %s file %q (file is empty)", flag, path)
+	}
+	return raw, nil
+}
+
 func runCreate(ctx context.Context, f *cmdutil.Factory, rawURL, app, path, name, quality, formatID, extraRaw, torrentFile, selectFiles, outputRaw string) error {
 	if ctx == nil {
 		ctx = context.Background()
@@ -140,9 +159,9 @@ func runCreate(ctx context.Context, f *cmdutil.Factory, rawURL, app, path, name,
 	if rawURL == "" && torrentFile == "" {
 		return fmt.Errorf("provide a URL/magnet argument or --torrent <file>")
 	}
-	app = strings.TrimSpace(app)
-	if app == "" {
-		app = defaultApp
+	app, err = validateApp(app)
+	if err != nil {
+		return err
 	}
 
 	extra := map[string]string{}
@@ -170,9 +189,9 @@ func runCreate(ctx context.Context, f *cmdutil.Factory, rawURL, app, path, name,
 		extra["format_id"] = fid
 	}
 	if torrentFile != "" {
-		raw, err := os.ReadFile(torrentFile)
+		raw, err := readTorrentFile(torrentFile, "--torrent")
 		if err != nil {
-			return fmt.Errorf("read torrent file: %w", err)
+			return err
 		}
 		extra["torrent_file_b64"] = base64.StdEncoding.EncodeToString(raw)
 	}

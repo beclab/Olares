@@ -2,6 +2,7 @@ package download
 
 import (
 	"context"
+	"os"
 	"strings"
 	"testing"
 )
@@ -84,5 +85,59 @@ func TestRunCreateValidatesQualityFromExtra(t *testing.T) {
 	)
 	if err == nil || !strings.Contains(err.Error(), "unsupported --quality") {
 		t.Fatalf("invalid quality in --extra should fail locally, got %v", err)
+	}
+}
+
+func TestRunCreateValidatesApp(t *testing.T) {
+	err := runCreate(
+		context.Background(),
+		nil,
+		"https://example.com/video",
+		"namespace",
+		"",
+		"",
+		"",
+		"",
+		"",
+		"",
+		"",
+		"table",
+	)
+	if err == nil || !strings.Contains(err.Error(), "unsupported --app") {
+		t.Fatalf("unknown --app should fail locally, got %v", err)
+	}
+}
+
+func TestReadTorrentFile(t *testing.T) {
+	dir := t.TempDir()
+	good := dir + "/ok.torrent"
+	if err := os.WriteFile(good, []byte("d4:infod4:name1:aee"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := readTorrentFile(good, "--torrent"); err != nil {
+		t.Fatalf("valid torrent should pass: %v", err)
+	}
+
+	yamlPath := dir + "/test.yaml"
+	if err := os.WriteFile(yamlPath, []byte("a: 1\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	err := func() error { _, e := readTorrentFile(yamlPath, "--file"); return e }()
+	if err == nil || !strings.Contains(err.Error(), "need a .torrent file") || !strings.Contains(err.Error(), "--file") || strings.Contains(err.Error(), "--torrent") {
+		t.Fatalf("non-torrent should fail with --file quote hint, got %v", err)
+	}
+
+	empty := dir + "/empty.torrent"
+	if err := os.WriteFile(empty, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := readTorrentFile(empty, "--torrent"); err == nil || !strings.Contains(err.Error(), "file is empty") {
+		t.Fatalf("empty torrent should fail, got %v", err)
+	}
+
+	missing := dir + "/missing with spaces.torrent"
+	_, err = readTorrentFile(missing, "--torrent")
+	if err == nil || !strings.Contains(err.Error(), "quote it") || !strings.Contains(err.Error(), "--torrent") {
+		t.Fatalf("missing torrent should hint quoting, got %v", err)
 	}
 }

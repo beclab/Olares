@@ -49,15 +49,23 @@ func runList(ctx context.Context, f *cmdutil.Factory, app, status string, page, 
 	if err != nil {
 		return err
 	}
+	app, err = validateApp(app)
+	if err != nil {
+		return err
+	}
+	if err := validateNonNegativeFlag("--page", page); err != nil {
+		return err
+	}
+	if err := validateNonNegativeFlag("--page-size", pageSize); err != nil {
+		return err
+	}
 	pc, err := prepare(ctx, f)
 	if err != nil {
 		return err
 	}
 
 	q := url.Values{}
-	if a := strings.TrimSpace(app); a != "" {
-		q.Set("app", a)
-	}
+	q.Set("app", app)
 	if s := strings.TrimSpace(status); s != "" {
 		q.Set("status", s)
 	}
@@ -94,14 +102,15 @@ func renderListTable(w io.Writer, result ListResult) error {
 // renderTasksTable prints the shared task table (list / sync / unfinished).
 func renderTasksTable(w io.Writer, tasks []DownloadTask) error {
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(tw, "ID\tSTATUS\tPROVIDER\tPERCENT\tNAME\tAPP\tUPDATED")
+	fmt.Fprintln(tw, "ID\tSTATUS\tPROVIDER\tPERCENT\tNAME\tSOURCE\tAPP\tUPDATED")
 	for _, t := range tasks {
-		fmt.Fprintf(tw, "%d\t%s\t%s\t%s\t%s\t%s\t%s\n",
+		fmt.Fprintf(tw, "%d\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
 			t.ID,
 			orDash(t.Status),
 			orDash(t.DownloadProvider),
 			fmt.Sprintf("%.1f%%", t.Percent),
-			truncate(displayName(t), 48),
+			truncate(displayName(t), 40),
+			truncate(orDash(t.URL), 48),
 			orDash(t.App),
 			formatTime(t.UpdatedAt),
 		)

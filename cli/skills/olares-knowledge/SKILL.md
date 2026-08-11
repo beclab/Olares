@@ -36,7 +36,7 @@ All verbs require Olares 1.12.7+ because the Settings download edge and provider
 | probe + prefs | `inspect`, `prefs get`, `prefs set` | [provider/quality inspection](references/olares-knowledge-download-inspect.md) |
 | sync | `unfinished`, `sync` | [cursor and drain semantics](references/olares-knowledge-download-sync.md) |
 | torrent | `torrent inspect`, `stats`, `peers`, `files`, `seed stop/resume`; torrent create | [torrent selection and seeding](references/olares-knowledge-download-torrent.md) |
-| file tools | `file exists`, `file check`, `file remove` | [URL vs resource-path decisions](references/olares-knowledge-download-files.md) |
+| file tools | `file exists`, `file remove` | [URL vs resource-path decisions](references/olares-knowledge-download-files.md) |
 | settings | `settings get`, `settings set` | [global download-server settings](references/olares-knowledge-download-settings.md) |
 | hidden cookies surface | production retrieval only | [why cookie writes are unavailable](references/olares-knowledge-download-cookies.md) |
 

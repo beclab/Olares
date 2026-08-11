@@ -45,25 +45,30 @@ olares-cli knowledge download list --status downloading --page 1 --page-size 20 
 olares-cli knowledge download info 42
 ```
 
-Table columns: `ID`, `STATUS`, `PROVIDER`, `PERCENT`, `NAME`, `APP`, `UPDATED`. Footer shows `N of total` when the server returns `total`.
+Table columns: `ID`, `STATUS`, `PROVIDER`, `PERCENT`, `NAME`, `SOURCE`, `APP`, `UPDATED`. `SOURCE` is the task URL (magnet / http / …). Footer shows `N of total` when the server returns `total`.
 
 ## pause / resume / cancel
 
 ```bash
 olares-cli knowledge download pause 42
+olares-cli knowledge download pause 42 43 44
 olares-cli knowledge download resume 42
 olares-cli knowledge download cancel 42
 ```
 
-No body. 409 means the task is in the yt-dlp mover phase — wait and retry.
+One id uses the single-task route. Two or more ids use
+`PUT /api/download/batch/{pause,resume,cancel}` (max 500). Table prints
+succeeded/failed counts; any failure exits non-zero. 409 on a single-task
+call means the task is in the yt-dlp mover phase — wait and retry.
 
 ## remove
 
 ```bash
 olares-cli knowledge download remove 42
 olares-cli knowledge download remove 42 --remove-file
+olares-cli knowledge download remove 42 43 44 --remove-file
 ```
 
-`--remove-file` sets `remove_flag=true` (delete artefact on PVC). Without it the downloaded file is kept.
+`--remove-file` sets `remove_flag=true` (delete artefact on PVC). Without it the downloaded file is kept. Multiple ids use `DELETE /api/download/batch/remove`.
 
 `remove` retires the task rather than deleting it: the row stays in `list` with status `removed`, which is terminal. So a `list` that still shows the task is not a failed remove, and the id is not freed for reuse — check the status, not the presence of the row.
