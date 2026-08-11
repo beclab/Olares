@@ -88,6 +88,8 @@ After submitting a ticket, you can track its progress, view replies from the Ola
 
 ### View your tickets
 
+View your ticket status, and open any ticket to check replies and details.
+
 1. To view all your tickets, open the **Tickets** page. The list shows the title, status, ticket number, request type, and creation time for each ticket.
 2. Click a ticket to open its details page and view replies from the Olares Support team.
 3. To filter by status, select a state from the drop-down list:
@@ -134,6 +136,6 @@ The **Tickets** page in Olares Space only shows tickets created with the Olares 
 
 No. You cannot edit the title or description after submission. You can only add replies to provide additional information.
 
-### Can I delete a ticket?
+## Learn more
 
-No. Submitted tickets cannot be deleted. You can close them instead.
+- [Get technical support](../help/request-technical-support.md): Learn more ways to get help through the Ticket app or GitHub.

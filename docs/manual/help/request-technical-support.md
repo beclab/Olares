@@ -8,15 +8,11 @@ head:
 ---
 # Get technical support
 
-If you cannot resolve an issue using the troubleshooting guides, contact the Olares team for assistance through one of the following channels.
+If you cannot resolve an issue using the troubleshooting guides, contact the Olares Support team for assistance through one of the following channels.
 
-## Submit a ticket in the Ticket app
+## Submit tickets in the Ticket app
 
-The Ticket app has a built-in log collection feature, so you can submit a ticket directly without manually exporting logs.
-
-:::info Link Olares Space first
-Before submitting a ticket, make sure your Olares Space account is linked to your Olares device. If not, you will be prompted to bind it in LarePass under **Settings** > **Integration**. See [Monitor Olares in Olares Space](../space/manage-olares.md) for linking instructions.
-:::
+Install and use the Ticket app to create and manage support tickets, track their progress, and communicate with the Olares Support team directly from your Olares device. It can automatically collect system information and logs, so you don't need to export them manually.
 
 ### Install Ticket
 
@@ -53,7 +49,7 @@ Create a ticket with details about your issue. The app can automatically collect
    ![Collect logs](/images/manual/help/collect-logs.png#bordered)
 
    :::tip Prefer not to use automatic collection
-   You can also export system logs manually from Olares **Settings > Advanced > Export system logs**, and then attach them in **Attachments**. For detailed instructions, see [Export system logs](/manual/olares/settings/developer.md#export-system-logs).
+   You can also export system logs manually from Olares **Settings > Advanced > Export system logs**, and then attach them in **Attachments**. For detailed steps, see [Export system logs](/manual/olares/settings/developer.md#export-system-logs).
    :::
 
 5. Click **Create ticket**.
@@ -62,16 +58,16 @@ Create a ticket with details about your issue. The app can automatically collect
 
 After submitting a ticket, you can track its progress, view replies from the Olares team, and communicate by replying to resolve the issue in a timely manner.
 
-#### View ticket status
+#### View your tickets
 
-Check the status of your tickets and open any ticket to see its details.
+View your ticket status, and open any ticket to check replies and details.
 
 1. Select a status from the left sidebar to filter tickets. **All tickets** shows all your tickets, and the other sections show tickets by status.
-2. Click a ticket to see its details.
+2. Click a ticket to see its details and view replies from the Olares Support team.
 
 #### Reply to a ticket
 
-Use replies to add more details or answer questions from the Olares team.
+Use replies to communicate with the Olares Support team, provide updates, or ask follow-up questions.
 
 1. Open the ticket details page.
 2. Click **Add message**.
@@ -80,7 +76,7 @@ Use replies to add more details or answer questions from the Olares team.
 
 #### Close or resolve a ticket
 
-When your issue is resolved or no longer needs follow-up, mark the ticket as closed or resolved.
+When the issue is fixed or no longer needs follow-up, mark the ticket as **Resolved** or **Closed**:
 
 1. Open the ticket details page.
 2. Click **Close** or **Resolved** at the bottom of the page.
@@ -91,23 +87,28 @@ You cannot delete a submitted ticket. If you no longer need it, close it.
 
 #### Reopen a ticket
 
-If the issue returns or was not fully fixed, you can reopen a closed or resolved ticket.
+You can reopen a **Closed** or **Resolved** ticket if the issue returns or was not fully fixed.
 
 1. Open the ticket details page.
 2. Click **Reopen ticket**.
-3. Add a message explaining why you are reopening it.
+3. Add a message explaining why you reopened it.
 
 The ticket status changes back to **Open**, and the Olares team will continue to handle it.
 
-## Submit a ticket in Olares Space
+## Submit tickets in Olares Space
 
-You can also create and manage support tickets directly in Olares Space through a web browser. This option does not require installing a separate Ticket app or having access to an Olares device, unless you want to upload logs using `olares-cli`.
+Create and manage support tickets directly in Olares Space through a web browser.
 
-For detailed steps, see [Manage support tickets in Olares Space](../space/tickets.md).
+In Olares Space, you can create a ticket in one of the following ways:
 
-## Report on GitHub
+- **Manually**: Fill in the web form and optionally attach exported system logs.
+- **Automatically with Olares CLI**: Upload logs directly from the Olares terminal. A ticket is created automatically for follow-up.
 
-Use the Olares GitHub repository if you prefer to report the issue publicly, or if you cannot access your Olares device.
+For detailed steps, see [Create and manage support tickets in Olares Space](../space/tickets.md).
+
+## Report issues on GitHub
+
+Use the Olares GitHub repository if you prefer to report the issue publicly.
 
 1. [Export your system logs](/manual/olares/settings/developer.md#export-system-logs) from Olares Settings.
 2. Visit the [Olares GitHub Repository](https://github.com/beclab/Olares) and choose one of the following options:

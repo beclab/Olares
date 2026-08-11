@@ -528,7 +528,7 @@ const side = {
           link: "/manual/space/backup-restore",
         },
         { text: "Billing", link: "/manual/space/billing" },
-        { text: "Manage support tickets", link: "/manual/space/tickets" },
+        { text: "Create and manage support tickets", link: "/manual/space/tickets" },
       ],
     },
     {
