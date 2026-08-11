@@ -24,9 +24,6 @@ import (
 	k3sGpuTemplates "github.com/beclab/Olares/cli/pkg/gpu/templates"
 	"github.com/beclab/Olares/cli/pkg/manifest"
 	"github.com/beclab/Olares/cli/pkg/utils"
-	criconfig "github.com/containerd/containerd/pkg/cri/config"
-	cdsrvconfig "github.com/containerd/containerd/services/server/config"
-	"github.com/pelletier/go-toml"
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -36,6 +33,12 @@ import (
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 )
+
+// nvidiaContainerdDropIn is where nvidia-ctk writes the nvidia runtime settings.
+// Keeping them out of config.toml leaves the Olares-managed registry config
+// untouched; the path is pinned explicitly on both the write and the remove side
+// so the two stay in sync.
+const nvidiaContainerdDropIn = "/etc/containerd/conf.d/99-nvidia.toml"
 
 type CheckWslGPU struct {
 }
@@ -283,7 +286,8 @@ func (t *ConfigureContainerdRuntime) Execute(runtime connector.Runtime) error {
 	// keeps the Olares-managed registry config (config_path/certs.d) untouched, so
 	// docker.io mirrors survive an `nvidia-ctk runtime configure`. The drop-in path
 	// is set explicitly to avoid the nvidia-ctk <=1.18.0 conf.d/config.d bug.
-	if _, err := runtime.GetRunner().SudoCmd("nvidia-ctk runtime configure --runtime=containerd --set-as-default --config-source=file --drop-in-config=/etc/containerd/conf.d/99-nvidia.toml", false, true); err != nil {
+	cmd := fmt.Sprintf("nvidia-ctk runtime configure --runtime=containerd --set-as-default --config-source=file --drop-in-config=%s", nvidiaContainerdDropIn)
+	if _, err := runtime.GetRunner().SudoCmd(cmd, false, true); err != nil {
 		return errors.Wrap(errors.WithStack(err), "Failed to nvidia-ctk runtime configure")
 	}
 
@@ -400,6 +404,22 @@ func (u *RemoveNodeLabels) Execute(runtime connector.Runtime) error {
 	return RemoveAllNodeGpuLabels(context.Background(), client.CtrlRuntime())
 }
 
+// RemoveNvidiaNodeLabels is the uninstall-time counterpart of RemoveNodeLabels:
+// it only clears the NVIDIA-owned labels so other accelerators on the node keep
+// advertising their modes.
+type RemoveNvidiaNodeLabels struct {
+	common.KubeAction
+}
+
+func (u *RemoveNvidiaNodeLabels) Execute(runtime connector.Runtime) error {
+	client, err := clientset.NewKubeClient()
+	if err != nil {
+		return errors.Wrap(errors.WithStack(err), "kubeclient create error")
+	}
+
+	return RemoveNvidiaNodeGpuLabels(context.Background(), client.CtrlRuntime())
+}
+
 // updateCurrentNodeLabels reads the node matching the local hostname, hands its
 // label map to mutate (which returns whether it changed anything) and persists
 // the result as a merge patch carrying only the labels that were touched.
@@ -494,6 +514,23 @@ func SetNodeGpuModeLabel(ctx context.Context, client ctrlclient.Client, mode str
 // existence labels (gpu.bytetrade.io/<mode>), and the legacy
 // gpu.bytetrade.io/type label.
 func RemoveAllNodeGpuLabels(ctx context.Context, client ctrlclient.Client) error {
+	return removeNodeGpuLabels(ctx, client, AllGpuModeTypes)
+}
+
+// RemoveNvidiaNodeGpuLabels strips only the labels that the NVIDIA driver stack
+// owns: the nvidia per-mode existence labels, the driver / cuda /
+// cuda-supported labels and the legacy gpu.bytetrade.io/type label (which only
+// ever held nvidia values). Per-mode labels of other accelerators on the same
+// node are preserved, so uninstalling the NVIDIA driver on a machine that also
+// has an Intel iGPU doesn't silently drop its intel mode.
+func RemoveNvidiaNodeGpuLabels(ctx context.Context, client ctrlclient.Client) error {
+	return removeNodeGpuLabels(ctx, client, NvidiaGpuModeTypes)
+}
+
+// removeNodeGpuLabels deletes the per-mode existence labels for modes plus the
+// driver / cuda / cuda-supported and legacy type labels, which are all written
+// by the nvidia path and therefore never outlive it.
+func removeNodeGpuLabels(ctx context.Context, client ctrlclient.Client, modes []string) error {
 	return updateCurrentNodeLabels(ctx, client, func(labels map[string]string) bool {
 		update := false
 		del := func(key string) {
@@ -506,7 +543,7 @@ func RemoveAllNodeGpuLabels(ctx context.Context, client ctrlclient.Client) error
 		del(GpuCudaLabel)
 		del(GpuCudaSupportedLabel)
 		del(GpuType)
-		for _, mode := range AllGpuModeTypes {
+		for _, mode := range modes {
 			del(GpuModeLabel(mode))
 		}
 		return update
@@ -590,55 +627,14 @@ type RemoveContainerRuntimeConfig struct {
 }
 
 func (t *RemoveContainerRuntimeConfig) Execute(runtime connector.Runtime) error {
-	var configFile = "/etc/containerd/config.toml"
-	var nvidiaRuntime = "nvidia"
-	var criPluginUri = "io.containerd.grpc.v1.cri"
-
-	if !util.IsExist(configFile) {
-		logger.Infof("containerd config file not found")
-		return nil
-	}
-
-	config := &cdsrvconfig.Config{}
-	err := cdsrvconfig.LoadConfig(configFile, config)
-	if err != nil {
-		return fmt.Errorf("failed to load containerd config: %w", err)
-	}
-	plugins := config.Plugins[criPluginUri]
-	var criConfig criconfig.PluginConfig
-	if err := plugins.Unmarshal(&criConfig); err != nil {
-		logger.Error("unmarshal cri config error: ", err)
-		return err
-	}
-
-	// found nvidia runtime, remove it
-	if _, ok := criConfig.ContainerdConfig.Runtimes[nvidiaRuntime]; ok {
-		delete(criConfig.ContainerdConfig.Runtimes, nvidiaRuntime)
-		criConfig.DefaultRuntimeName = "runc"
-
-		// save config
-		criConfigData, err := toml.Marshal(criConfig)
-		if err != nil {
-			return fmt.Errorf("failed to marshal containerd cri plugin config: %w", err)
-		}
-
-		criPluginConfigTree, err := toml.LoadBytes(criConfigData)
-		if err != nil {
-			return fmt.Errorf("failed to load containerd cri plugin config: %w", err)
-		}
-
-		config.Plugins[criPluginUri] = *criPluginConfigTree
-
-		// save config to file
-		tmpConfigFile, err := os.OpenFile(configFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
-		if err != nil {
-			return fmt.Errorf("failed to open minikube containerd config temp file for writing: %w", err)
-		}
-		defer tmpConfigFile.Close()
-		if err := toml.NewEncoder(tmpConfigFile).Encode(config); err != nil {
-			return fmt.Errorf("failed to write minikube containerd config temp file: %w", err)
-		}
-
+	// Deleting the drop-in is the exact inverse of ConfigureContainerdRuntime:
+	// the nvidia runtime lives entirely in that file, and the base config.toml
+	// still declares runc as the default runtime. Editing config.toml the way
+	// this used to is both unnecessary and impossible now — containerd's own
+	// loader caps at config version 2 and resolves `imports`, so it fails on a
+	// current install and took the whole uninstall down with it.
+	if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("rm -f %s", nvidiaContainerdDropIn), false, true); err != nil {
+		return errors.Wrap(errors.WithStack(err), fmt.Sprintf("failed to remove the nvidia containerd drop-in %s", nvidiaContainerdDropIn))
 	}
 
 	return nil

@@ -43,6 +43,15 @@ var AllGpuModeTypes = []string{
 	MooreSocType,
 }
 
+// NvidiaGpuModeTypes is the subset of AllGpuModeTypes backed by the NVIDIA
+// driver stack. Uninstalling that stack only invalidates these modes, so the
+// uninstall path strips them alone and leaves the labels of other accelerators
+// on the same node (e.g. an Intel iGPU) intact.
+var NvidiaGpuModeTypes = []string{
+	NvidiaCardType,
+	GB10ChipType,
+}
+
 // GpuModeLabel returns the existence-based per-mode node label key for a mode,
 // e.g. GpuModeLabel(NvidiaCardType) == "gpu.bytetrade.io/nvidia". A node
 // supports the mode iff it carries this label (value is "true"); a node may
