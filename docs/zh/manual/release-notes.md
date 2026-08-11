@@ -30,24 +30,26 @@ Olares v1.12.6 的亮点和详细介绍请参见 [Olares 1.12.6 发布博客](ht
 ### 新增文档
 
 - 新增 [Olares CLI](/zh/developer/cli-overview)，介绍如何通过命令行管理 Olares。
-- 新增 [安装 olares-cli](/zh/developer/cli-install)，说明如何在本地或 Agent 应用内安装 `olares-cli`。
-- 新增 [登录 Olares](/zh/developer/cli-log-in)，说明如何使用 Olares ID 认证 `olares-cli`。
-- 新增 [安装与使用 Agent Skills](/zh/developer/cli-agent-skills)，介绍集群管理、应用、设置等内置技能的使用方法。
-- 新增 [使用 Olares CLI 激活 Olares 设备](/zh/manual/best-practices/activate-olares-using-cli)，无需 LarePass 移动应用即可激活设备。
+  - 新增 [安装 olares-cli](/zh/developer/cli-install)，说明如何在本地或 Agent 应用内安装 `olares-cli`。
+  - 新增 [登录 Olares](/zh/developer/cli-log-in)，说明如何使用 Olares ID 认证 `olares-cli`。
+  - 新增 [安装与使用 Agent Skills](/zh/developer/cli-agent-skills)，介绍集群管理、应用、设置等内置技能的使用方法。
+- 新增 [使用 Olares CLI 激活 Olares 设备](/zh/manual/best-practices/activate-olares-using-cli)，介绍如何通过命令行激活设备。
 - 新增 [使用公共目录管理共享 AI 模型](/zh/manual/olares/files/files-common)，说明如何使用 Common 目录在应用间共享模型。
 - 新增 [压缩与解压缩文件](/zh/manual/olares/files/compress-extract-files)，涵盖 Olares Files 中 ZIP、7z、TAR 和加密压缩包的操作。
 - 新增 [挂载 NFS 共享](/zh/manual/olares/files/mount-nfs)，说明如何从 Olares 访问 NFS 共享目录。
-- 新增 [共享应用](/zh/manual/olares/market/shared-apps)，介绍 Engine Base 架构以及如何迁移旧版 v2 共享应用。
-- 新增 [配置 Overlay Gateway](/zh/manual/olares/settings/overlay-gateway)，Settings 中管理 Overlay Gateway 的新指南。
-- 新增 [Olares One 新手引导](/zh/one/olares-onboarding)，Olares One 设置的分步向导。
+- 新增 [共享应用](/zh/manual/olares/market/shared-apps)，介绍新的共享应用架构以及旧版 v2 共享应用的迁移方式。
+  - [Ollama](/zh/use-cases/ollama)
+  - [ComfyUI](/zh/use-cases/comfyui-common-issues)
+  - [Dify](/zh/use-cases/dify-upgrade)
+  - [OnlyOffice](/zh/use-cases/onlyoffice)
+  - [SearXNG](/zh/use-cases/searxng)
+  - [Xinference](/zh/use-cases/xinference)
+- 新增 [配置 Overlay Gateway](/zh/manual/olares/settings/overlay-gateway)，介绍如何管理 Overlay Gateway 设置。
+- 新增 [Olares One 新手引导](/zh/one/olares-onboarding)，介绍如何通过自然语言管理 Olares One。
 - 新增 [桌面小组件](/zh/manual/olares/desktop#widgets)，介绍 Olares 桌面上的新小组件。
-- 新增 [使用 Engine Base 运行本地大模型](/zh/use-cases/llm-base-apps)，介绍如何在 Olares 上运行本地 AI 模型。
-- 新增 [通过 Overlay Gateway 使用 Home Assistant](/zh/use-cases/home-assistant#enable-the-overlay-gateway)，说明如何通过 Overlay Gateway 访问 Home Assistant。
+- 新增 [使用 Engine Base 运行本地大模型](/zh/use-cases/llm-base-apps)，介绍如何在 Olares 上部署和运行本地 AI 模型。
+- 新增 [通过 Overlay Gateway 使用 Home Assistant](/zh/use-cases/home-assistant#enable-the-overlay-gateway)，说明如何通过局域网访问 Home Assistant。
 - 新增 [通过 Overlay Gateway 使用 Jellyfin](/zh/use-cases/jellyfin#enable-overlay-gateway-for-jellyfin)，说明如何通过 Overlay Gateway 访问 Jellyfin。
-- 新增 [SearXNG](/zh/use-cases/searxng)，搭建私有元搜索引擎的指南。
-- 新增 [OnlyOffice](/zh/use-cases/onlyoffice)，使用 OnlyOffice 编辑文档的指南。
-- 新增 [Xinference](/zh/use-cases/xinference)，使用 Xinference 运行模型的指南，包含迁移说明。
-- 新增 [Dify 升级指南](/zh/use-cases/dify-upgrade)，说明如何升级现有 Dify 部署。
 - 新增 [*Arr 应用升级指南](/zh/use-cases/arrs-upgrade)，在 Olares v1.12.6 内部入口变更后升级 *Arr 应用的指南。
 
 ### 更新文档
