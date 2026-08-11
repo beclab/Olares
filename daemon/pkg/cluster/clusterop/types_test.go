@@ -9,7 +9,7 @@ import (
 )
 
 func TestParseTypeAcceptsOnlyRegisteredOperations(t *testing.T) {
-	for _, in := range []string{"reboot", "shutdown", "reset-password"} {
+	for _, in := range []string{"reboot", "shutdown", "set-ssh-password"} {
 		got, err := ParseType(in)
 		if err != nil {
 			t.Errorf("ParseType(%q) errored: %v", in, err)
