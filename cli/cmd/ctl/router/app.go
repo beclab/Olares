@@ -356,8 +356,10 @@ func refuseReinstall(ctx context.Context, pc *preparedClient, appName string) er
 // Router's catalog offers them anyway — it filters on the manifest's
 // LLMGatewaySupported alone, and the official engine bases carry templateOnly
 // as well. Left to itself the install is accepted here and refused by the
-// Market a moment later as a bare invalid request, naming neither the reason
-// nor the way through.
+// Market a moment later with "template apps cannot be installed directly;
+// clone it instead", which Router passes through verbatim. That names the
+// reason but not the way through: which command, that it needs a title, and
+// that the model is chosen in the same breath.
 func refuseTemplateInstall(ctx context.Context, pc *preparedClient, appName string) error {
 	if !marketTemplateApps(ctx, pc, []string{appName})[appName] {
 		return nil
@@ -374,8 +376,10 @@ func refuseTemplateInstall(ctx context.Context, pc *preparedClient, appName stri
 // marketTemplateApps reports which of the named applications the Market holds
 // as template bodies, keyed by application name.
 //
-// The Market is asked directly because Router's catalog does not carry the
-// flag. An application missing from the answer is absent from the map rather
+// The Market is asked directly because that answer is the same on every
+// Router: only recent ones report the flag in their own catalog, and one
+// request here beats a version check plus two code paths. An application
+// missing from the answer is absent from the map rather
 // than recorded as installable, and a failed request yields nothing at all:
 // this drives a refusal and a column, so not knowing must read as not knowing
 // instead of as permission.
