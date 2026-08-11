@@ -60,7 +60,7 @@ Create a ticket with details about your issue. The app can automatically collect
 
 ### Manage tickets
 
-After submitting a ticket, you can track its status, view replies from the Olares team, and continue the conversation by adding your own replies.
+After submitting a ticket, you can track its progress, view replies from the Olares team, and communicate by replying to resolve the issue in a timely manner.
 
 #### View ticket status
 
