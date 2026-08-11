@@ -7,6 +7,7 @@ import (
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/prometheus"
 	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -525,7 +526,7 @@ func TestUpgradePrevHoldsRequestsRunningForcesDelta(t *testing.T) {
 	}
 }
 
-func TestUpgradePrevHoldsRequestsStoppedForcesFull(t *testing.T) {
+func TestUpgradePrevHoldsRequestsStoppedDoesNotHold(t *testing.T) {
 	stubKube(t, namespaceObj("app-alice"), podObj("app-alice", "app-0", corev1.PodRunning))
 
 	holds, err := upgradePrevHoldsRequests(context.Background(), upgradeConfig("app", 1000, 2<<30), v1alpha1.Stopped, "")
@@ -533,7 +534,91 @@ func TestUpgradePrevHoldsRequestsStoppedForcesFull(t *testing.T) {
 		t.Fatalf("upgradePrevHoldsRequests: %v", err)
 	}
 	if holds {
-		t.Fatal("Stopped must force the full path even when pods remain")
+		t.Fatal("Stopped must not report holding requests")
+	}
+}
+
+func TestSkipUpgradeResourceCheck(t *testing.T) {
+	cases := []struct {
+		name     string
+		state    v1alpha1.ApplicationManagerState
+		preState string
+		want     bool
+	}{
+		{name: "stopped skips", state: v1alpha1.Stopped, want: true},
+		{name: "upgradeFailed+stopped skips", state: v1alpha1.UpgradeFailed, preState: string(v1alpha1.Stopped), want: true},
+		{name: "running does not skip", state: v1alpha1.Running, want: false},
+		{name: "upgradeFailed+running does not skip", state: v1alpha1.UpgradeFailed, preState: string(v1alpha1.Running), want: false},
+		{name: "upgradeFailed+empty does not skip", state: v1alpha1.UpgradeFailed, want: false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := skipUpgradeResourceCheck(Input{
+				Op:                    v1alpha1.UpgradeOp,
+				PrevState:             tc.state,
+				PreUpgradeSteadyState: tc.preState,
+			})
+			if got != tc.want {
+				t.Fatalf("skip=%v want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+// TestUpgradeStoppedSkipsResourceChecks verifies Stopped (and
+// UpgradeFailed with pre-upgrade-state=stopped) skip capacity / pressure /
+// k8s-request without backend calls.
+func TestUpgradeStoppedSkipsResourceChecks(t *testing.T) {
+	originalCluster := checkAppRequirement
+	originalK8s := checkAppK8sRequestResource
+	originalMetrics := clusterMetricsProvider
+	t.Cleanup(func() {
+		checkAppRequirement = originalCluster
+		checkAppK8sRequestResource = originalK8s
+		clusterMetricsProvider = originalMetrics
+	})
+
+	var calls int
+	checkAppRequirement = func(string, *appcfg.ApplicationConfig, v1alpha1.OpType) (constants.ResourceType, constants.ResourceConditionType, error) {
+		calls++
+		return "", "", nil
+	}
+	checkAppK8sRequestResource = func(*appcfg.ApplicationConfig, v1alpha1.OpType) (constants.ResourceType, constants.ResourceConditionType, error) {
+		calls++
+		return "", "", nil
+	}
+	clusterMetricsProvider = func(string) (*prometheus.ClusterMetrics, []string, error) {
+		calls++
+		return nil, nil, errors.New("metrics should not be called")
+	}
+
+	cases := []Input{
+		{
+			AppConfig:     upgradeConfig("app", 3000, 4<<30),
+			PrevAppConfig: upgradeConfig("app", 1000, 2<<30),
+			PrevState:     v1alpha1.Stopped,
+			Op:            v1alpha1.UpgradeOp,
+		},
+		{
+			AppConfig:             upgradeConfig("app", 3000, 4<<30),
+			PrevAppConfig:         upgradeConfig("app", 1000, 2<<30),
+			PrevState:             v1alpha1.UpgradeFailed,
+			PreUpgradeSteadyState: string(v1alpha1.Stopped),
+			Op:                    v1alpha1.UpgradeOp,
+		},
+	}
+	for _, in := range cases {
+		calls = 0
+		decision, err := Run(context.Background(), in, UpgradabilityValidators()...)
+		if err != nil {
+			t.Fatalf("Run(%s): %v", in.PrevState, err)
+		}
+		if !decision.OK {
+			t.Fatalf("Run(%s) decision=%#v, want OK", in.PrevState, decision)
+		}
+		if calls != 0 {
+			t.Fatalf("Run(%s) expected zero backend calls, got %d", in.PrevState, calls)
+		}
 	}
 }
 
@@ -550,7 +635,7 @@ func TestUpgradePrevHoldsRequestsUpgradeFailedUsesAnnotation(t *testing.T) {
 			wantHolds: true,
 		},
 		{
-			name:      "annotation stopped forces full even with pods",
+			name:      "annotation stopped does not hold (skip at requirementConfigForOp)",
 			preState:  string(v1alpha1.Stopped),
 			withPod:   true,
 			wantHolds: false,
