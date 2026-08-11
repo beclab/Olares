@@ -40,12 +40,10 @@ import (
 	"github.com/beclab/Olares/cli/pkg/whoami"
 )
 
-// minOlaresVersion is the oldest line this tree speaks to. Router ships as the
-// `router` listing, which declares `olares >= 1.12.7-0`, and the mode vector
-// here includes `translate` — a mode only Router 2.1.x serves. The `router
-// local` verbs share the floor even though a model application declares
-// `>= 1.12.6-0` of its own: a Model Console with no Router in front of it is
-// not a shape this tree addresses.
+// minOlaresVersion is the oldest line this tree speaks to: the `router`
+// application declares `olares >= 1.12.7-0`. The `router local` verbs share the
+// floor, because a Model Console with no Router in front of it is not a shape
+// this tree addresses.
 const minOlaresVersion = "1.12.7"
 
 type Format string

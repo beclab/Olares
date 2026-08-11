@@ -26,7 +26,7 @@ A locally installed model application does not simply "contain a model". Inside 
 
 ## Addressing
 
-Router is a Market application, not a system service, so it has no fixed subdomain the way `files.<olares-id>` does — app-service gives each install its own host. Every verb resolves the entrance at runtime from the installed-app list. `router` is the current listing and asks for Olares 1.12.7+; `llmgatewayv3` is the id it went by before the rename and only asks for 1.12.6, so an instance that meets this skill's floor may still be running it. `router status` prints which id and entrance it settled on, and says so when it answered under the old id — that backend is 2.0.x, so a verb written against 2.1.x can report a route as missing.
+Router is a Market application, not a system service, so it has no fixed subdomain the way `files.<olares-id>` does — app-service gives each install its own host. Every verb resolves the entrance at runtime from the installed-app list, where Router is the `router` application. `router status` prints the entrance it settled on.
 
 A model application is reached the same way, by its own entrance, which is why `router local` accepts an Olares app id.
 
