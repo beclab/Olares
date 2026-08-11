@@ -40,10 +40,6 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                       text: "使用 OpenClaw 管理 Olares",
                       link: "/zh/use-cases/openclaw-olares-skills",
                     },
-                    //{
-                    //  text: "启用本地文件访问",
-                    //  link: "/zh/use-cases/openclaw-local-access",
-                    //},
                     {
                       text: "启用沙盒",
                       link: "/zh/use-cases/openclaw-enable-sandbox",

@@ -40,10 +40,6 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                       text: "Manage Olares with OpenClaw",
                       link: "/use-cases/openclaw-olares-skills",
                     },
-                    //{
-                    //  text: "Enable local file access",
-                    //  link: "/use-cases/openclaw-local-access",
-                    //},
                     {
                       text: "Enable sandbox",
                       link: "/use-cases/openclaw-enable-sandbox",
