@@ -1,8 +1,8 @@
 ---
 name: olares-router
-version: 1.0.0
-description: "Olares models via olares-cli router — Router (the AI gateway) and the Model Console inside a locally installed model application. Configure cloud vendors and their models, install and manage local LLM / embedding / audio / OCR model applications, pick default models, issue API keys and quotas, read usage, audit and traces, and call a model: chat, embed, transcribe, speak, OCR. Use for Router, llm-gateway, AI gateway, 模型, 模型网关, 本地模型, add an OpenAI/Anthropic/DeepSeek key, install a Qwen or Gemma model, sk- key, model quota, token spend, which model answers by default, why a model call fails."
-compatibility: Requires olares-cli on PATH and active Olares profile
+version: 1.2.0
+description: "Olares models via olares-cli router — Router (the AI gateway) and the Model Console inside a locally installed model application. Configure cloud vendors and their models, install and manage local LLM / embedding / audio / OCR model applications, pick default models, issue API keys and quotas, read usage, audit and traces, and call a model: chat, embed, transcribe, speak, OCR. Requires Olares 1.12.7+. Use for Router, llm-gateway, AI gateway, 模型, 模型网关, 本地模型, add an OpenAI/Anthropic/DeepSeek key, install a Qwen or Gemma model, sk- key, model quota, token spend, which model answers by default, why a model call fails."
+compatibility: Requires olares-cli on PATH, active Olares profile, Olares >= 1.12.7
 metadata:
   openclaw:
     requires:
@@ -26,14 +26,14 @@ Use `olares-cli router <verb> --help` for authoritative syntax.
 
 > **Mental model:** every call goes through **Router**, one AI gateway per Olares. Router holds providers, models, keys, quotas and the usage record; it runs no model itself. A local model runs inside a **model application**, whose own **Model Console** downloads the weights, launches the engine and serves the OpenAI-compatible endpoint Router forwards to. Router is the plane where access is decided; the Model Console is the plane where one model lives.
 
-All verbs require Olares 1.12.6+, the oldest line whose Market carries Router. Router is an admin-only application: a non-admin profile cannot see its entrance, so every verb here reports it is not installed. Confirm with `router status` before concluding anything is missing.
+All verbs require Olares 1.12.7+ because Router ships as the `router` Market listing, which asks for that line. Router is an admin-only application: a non-admin profile cannot see its entrance, so every verb here reports it is not installed. Confirm with `router status` before concluding anything is missing.
 
 ## Verb index
 
 | Family | Verbs | Read when triggered |
 |---|---|---|
 | where Router is, and who you are | `status`, `whoami` | [architecture and identity](references/olares-router-architecture.md) |
-| cloud vendors and their models | `provider list/get/types/create/update/delete/validate/credentials/history/rollback/sync-models`, `provider models import/add/update/delete` | [configuring an external provider](references/olares-router-external.md) |
+| cloud vendors and their models | `provider list/get/types/create/update/delete/validate/credentials/history/rollback/sync-models`, `provider models get/import/add/update/delete` | [configuring an external provider](references/olares-router-external.md) |
 | local LLM applications | `app catalog/install/upgrade/uninstall/tasks/watch`, `provider register`, `local status/progress/spec/retry/restart` | [local LLM applications](references/olares-router-local-llm.md) |
 | local embedding, audio, OCR, CLIP | the same verbs, different modes | [local multimodal applications](references/olares-router-local-multimodal.md) |
 | what is configured | `list`, `capabilities`, `default show/set/clear` | [defaults and access control](references/olares-router-governance.md) |

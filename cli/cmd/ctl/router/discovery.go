@@ -25,11 +25,8 @@ import (
 // here really is a profile problem, so it goes through whoami.HTTPClient and
 // gets that package's login guidance.
 
-// routerAppNames are the Market ids Router ships under, newest first. `router`
-// (Olares 1.12.7+) supersedes `llmgatewayv3`, and each lists the other under
-// `conflicts`, so at most one is ever installed — we still probe both because
-// an instance that has not moved listings yet runs the older id.
-var routerAppNames = []string{"router", "llmgatewayv3"}
+// routerAppName is the Market id Router ships under.
+const routerAppName = "router"
 
 // discoveredRouter is the addressing decision, kept whole so `router status`
 // can report how it was reached rather than just the URL it settled on.
@@ -95,7 +92,7 @@ func listMyApps(ctx context.Context, doer *whoami.HTTPClient) ([]myApp, error) {
 
 func discoverRouter(ctx context.Context, doer *whoami.HTTPClient, rp *credential.ResolvedProfile) (*discoveredRouter, error) {
 	if rp == nil {
-		return nil, fmt.Errorf("internal error: model discovery called without a resolved profile")
+		return nil, fmt.Errorf("internal error: router discovery called without a resolved profile")
 	}
 	installed, err := listMyApps(ctx, doer)
 	if err != nil {
@@ -105,8 +102,8 @@ func discoverRouter(ctx context.Context, doer *whoami.HTTPClient, rp *credential
 	app := pickRouterApp(installed)
 	if app == nil {
 		return nil, fmt.Errorf(
-			"Router is not installed for %s (looked for the app ids %s); install it with `olares-cli market install router`",
-			rp.OlaresID, strings.Join(routerAppNames, ", "))
+			"Router is not installed for %s (no app named %q); install it with `olares-cli market install %s`",
+			rp.OlaresID, routerAppName, routerAppName)
 	}
 
 	entrance, base := pickEntrance(*app)
@@ -124,14 +121,10 @@ func discoverRouter(ctx context.Context, doer *whoami.HTTPClient, rp *credential
 	}, nil
 }
 
-// pickRouterApp honours routerAppNames' order rather than the server's, so a
-// mid-migration instance that somehow reports both resolves to the newer one.
 func pickRouterApp(installed []myApp) *myApp {
-	for _, want := range routerAppNames {
-		for i := range installed {
-			if strings.EqualFold(strings.TrimSpace(installed[i].Name), want) {
-				return &installed[i]
-			}
+	for i := range installed {
+		if strings.EqualFold(strings.TrimSpace(installed[i].Name), routerAppName) {
+			return &installed[i]
 		}
 	}
 	return nil

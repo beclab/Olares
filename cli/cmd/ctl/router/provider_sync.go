@@ -24,6 +24,10 @@ import (
 // One guard is worth relying on: an upstream that answers with zero models
 // prunes nothing. A blank list from a starting-up application must not wipe a
 // working catalog.
+//
+// For a model application Router also pulls that application's model card and
+// writes it into its own copy of the row, which is how a stale `engine_args`
+// gets corrected without touching the application.
 
 type syncModelsResult struct {
 	Created    int    `json:"created"`
@@ -62,6 +66,11 @@ application that is still starting must not be able to erase a working catalog.
 
 Removal is real. A model that comes back on the next sync returns as a fresh
 row, without the settings the old one carried.
+
+For a model application, a sync does one thing more: it re-reads the model card
+the application serves and refreshes Router's copy of it, engine launch flags
+included. That makes this the verb to run when "provider models get" shows
+engine arguments the application no longer starts with.
 
 Example:
   olares-cli router provider sync-models ollama-local

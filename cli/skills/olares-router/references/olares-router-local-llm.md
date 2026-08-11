@@ -14,9 +14,11 @@ olares-cli router app install llamacppqwen3627bggufv3 --watch
 The catalog is the Market's own list of model applications, so two kinds appear in it:
 
 - **A pinned model** — `Qwen3.6-27B (llama.cpp)`, `Gemma 4 26B (Ollama)`. The application knows which weights it serves; installing it is the whole decision.
-- **An engine base** — `llama.cpp Engine Base`, `vLLM Engine Base`, `Ollama Engine Base`, `SGLang Engine Base`. The engine is fixed and the model is chosen when it is installed.
+- **An engine base** — `llama.cpp Engine Base`, `vLLM Engine Base`, `Ollama Engine Base`, `SGLang Engine Base`. The engine is fixed and the model is chosen while an instance is created from it.
 
-`app install` carries only the application's name. An engine base therefore arrives with nothing chosen: install it through [`olares-market`](../../olares-market/SKILL.md), where the install form exists, or install it here and then set its model card with `router local spec set` followed by `router local retry`.
+`app install` carries only the application's name, so it can install a pinned model and nothing else. An engine base is a template: it has no installable form, and the Market refuses a direct install. `app catalog`'s TAKES column says which of the two a row is, and `app install` refuses a template rather than letting the Market refuse it a moment later.
+
+Creating an instance from a base is [`olares-market`](../../olares-market/SKILL.md)'s `market clone`, where the model, the engine arguments and the compute mode are chosen; the workflow is in [`olares-chart`](../../olares-chart/SKILL.md). Router discovers the instance on its own once it is running, and `router local spec set` followed by `router local retry` changes what it serves after that.
 
 The same application name can appear twice at different versions when more than one Market source offers it. Install names the application; the Market picks the version.
 

@@ -50,6 +50,12 @@ REQUIRED_ENTRYPOINT_FACTS = {
             r"^\| `container` \| `list`, `env`, `logs`, `exec` \| `exec` requires Olares 1\.12\.7\+; \[exec safety\]\(references/olares-cluster-exec\.md\) \|$",
         ),
     ],
+    "olares-router/SKILL.md": [
+        (
+            "router requires Olares 1.12.7+",
+            r"^All verbs require Olares 1\.12\.7\+ because Router ships as the `router` Market listing, which asks for that line\. ",
+        ),
+    ],
     "olares-market/SKILL.md": [
         (
             "canceling resuming/upgrading apps requires Olares 1.12.7+",

@@ -23,6 +23,10 @@ import (
 // PATCH  /console/api/providers/:id/models/:model_id
 // DELETE /console/api/providers/:id/models/:model_id
 //
+// Reads have no route of their own: Router serves a provider's models inline on
+// the provider detail, so `models get` and every verb that resolves a model by
+// name go through GET /console/api/providers/:id.
+//
 // A provider having credentials does not make its models available: each one is
 // a row you attach on purpose. Where that row comes from depends on the vendor —
 // imported from the catalog Router ships, named by hand for an endpoint whose
@@ -53,6 +57,8 @@ Credentials alone offer nothing: every model is a row attached on purpose, so
 that a key does not silently expose a vendor's entire catalog.
 
 Subcommands:
+  get <provider> <model>        one model in full: every capability, price,
+                                and the engine flags of a local model
   import <provider> <model>...  attach models from Router's vendor catalog,
                                 with their capabilities and prices filled in
   add <provider> <model>        attach a model you name yourself, for an
@@ -71,6 +77,7 @@ Admin only, except for reading.
 `,
 	}
 	cmd.SilenceUsage = true
+	cmd.AddCommand(newProviderModelsGetCommand(f))
 	cmd.AddCommand(newProviderModelsImportCommand(f))
 	cmd.AddCommand(newProviderModelsAddCommand(f))
 	cmd.AddCommand(newProviderModelsUpdateCommand(f))

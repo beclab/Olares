@@ -18,6 +18,7 @@ import (
 
 	"github.com/beclab/Olares/cli/pkg/cliutil"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
+	"github.com/beclab/Olares/cli/pkg/whoami"
 )
 
 // `olares-cli router app …` — model applications, installed through Router.
@@ -38,6 +39,10 @@ import (
 //
 // The lifecycle is asynchronous everywhere. Every verb here returns a task, and
 // the task is the thing to watch.
+
+// defaultMarketSource is the catalog the official engine templates are
+// published in, and the source `olares-cli market` also defaults to.
+const defaultMarketSource = "market.olares"
 
 type marketApp struct {
 	AppName     string     `json:"app_name"`
@@ -127,6 +132,10 @@ installed, whose state says so.
 --category narrows the list the way the Market does; without it every category
 comes back.
 
+TAKES says which verb the row accepts. An engine template has no installable
+form — "install" refuses it, and "olares-cli market clone" creates an instance
+from it, which is also where the model and the engine arguments are chosen.
+
 Examples:
   olares-cli router app catalog
   olares-cli router app catalog --category AI
@@ -166,33 +175,64 @@ func runAppCatalog(ctx context.Context, f *cmdutil.Factory, category, outputRaw 
 	if format == FormatJSON {
 		return printJSON(os.Stdout, env)
 	}
-	return renderCatalog(os.Stdout, env.Items)
+	names := make([]string, 0, len(env.Items))
+	for i := range env.Items {
+		names = append(names, env.Items[i].AppName)
+	}
+	return renderCatalog(os.Stdout, env.Items, marketTemplateApps(ctx, pc, names))
 }
 
-func renderCatalog(w io.Writer, items []marketApp) error {
+// renderCatalog prints the catalog with the verb each row actually takes.
+//
+// Router's catalog does not distinguish an engine template from an installable
+// application, and `app install` refuses the former — so the distinction is
+// resolved against the Market and shown here, where the choice is made.
+func renderCatalog(w io.Writer, items []marketApp, templates map[string]bool) error {
 	if len(items) == 0 {
 		_, err := fmt.Fprintln(w, "the Market offers no model applications for this account.")
 		return err
 	}
+	anyTemplate, anyUnknown := false, false
 	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	if _, err := fmt.Fprintln(tw, "APP\tTITLE\tVERSION\tWHAT IT SERVES"); err != nil {
+	if _, err := fmt.Fprintln(tw, "APP\tTITLE\tVERSION\tTAKES\tWHAT IT SERVES"); err != nil {
 		return err
 	}
 	for i := range items {
 		it := &items[i]
+		takes := "install"
+		if known, ok := templates[it.AppName]; !ok {
+			takes = "-"
+			anyUnknown = true
+		} else if known {
+			takes = "clone"
+			anyTemplate = true
+		}
 		// State is empty against a real Market, so it is not a column. The
 		// installed ones are known from the provider list instead.
-		if _, err := fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n",
-			nonEmpty(it.AppName), clip(nonEmpty(it.Title), 34), nonEmpty(it.VersionName),
-			clip(nonEmpty(it.Description), 60)); err != nil {
+		if _, err := fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n",
+			nonEmpty(it.AppName), clip(nonEmpty(it.Title), 30), nonEmpty(it.VersionName),
+			takes, clip(nonEmpty(it.Description), 52)); err != nil {
 			return err
 		}
 	}
 	if err := tw.Flush(); err != nil {
 		return err
 	}
-	_, err := fmt.Fprintln(w, "\nAPP is the name `app install` takes. `olares-cli router provider list` shows which are already installed.")
-	return err
+	if _, err := fmt.Fprintln(w, "\nAPP is the name `app install` takes. `olares-cli router provider list` shows which are already installed."); err != nil {
+		return err
+	}
+	if anyTemplate {
+		if _, err := fmt.Fprintln(w, "TAKES clone means an engine template: it has no installable form, and "+
+			"`olares-cli market clone <app> --title <name>` creates an instance from it, choosing the model there."); err != nil {
+			return err
+		}
+	}
+	if anyUnknown {
+		if _, err := fmt.Fprintln(w, "A TAKES of - means the Market did not answer for that row; `app install` will find out."); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func newAppInstallCommand(f *cmdutil.Factory) *cobra.Command {
@@ -216,6 +256,12 @@ application, which is what "app uninstall" does.
 
 The command returns as soon as the task is accepted. Pass --watch to follow it
 instead, which is usually what you want for an install that takes minutes.
+
+This installs a published application as it stands; it chooses nothing. An
+engine template is refused, because a template has no installable form and the
+model, engine arguments and compute mode are chosen while an instance is made
+from it: "olares-cli market clone" is that verb. "app catalog" says which of the
+two a row takes.
 
 Examples:
   olares-cli router app install qwen3-8b --watch
@@ -252,6 +298,9 @@ func runAppInstall(ctx context.Context, f *cmdutil.Factory, appName string, watc
 	// provider. Saying so up front is the difference between an answer and a
 	// piece of history to explain.
 	if err := refuseReinstall(ctx, pc, appName); err != nil {
+		return err
+	}
+	if err := refuseTemplateInstall(ctx, pc, appName); err != nil {
 		return err
 	}
 	var started startedTask
@@ -297,6 +346,89 @@ func refuseReinstall(ctx context.Context, pc *preparedClient, appName string) er
 		"`olares-cli router app uninstall %q` removes it, and "+
 		"`olares-cli market resume %s` starts it if it is stopped",
 		appName, state, handle, handle, appName)
+}
+
+// refuseTemplateInstall stops an install of an engine template.
+//
+// The Market will not install a template at all: a template body has no
+// installable form, and an instance is made from it by cloning, which is also
+// where the model, the engine arguments and the compute mode are chosen.
+// Router's catalog offers them anyway — it filters on the manifest's
+// LLMGatewaySupported alone, and the official engine bases carry templateOnly
+// as well. Left to itself the install is accepted here and refused by the
+// Market a moment later with "template apps cannot be installed directly;
+// clone it instead", which Router passes through verbatim. That names the
+// reason but not the way through: which command, that it needs a title, and
+// that the model is chosen in the same breath.
+func refuseTemplateInstall(ctx context.Context, pc *preparedClient, appName string) error {
+	if !marketTemplateApps(ctx, pc, []string{appName})[appName] {
+		return nil
+	}
+	return fmt.Errorf("%s is an engine template rather than an installable application; "+
+		"an instance is created from it with `olares-cli market clone %s --title <name> "+
+		"--compute-mode nvidia --env ...`, which is where the model is chosen. Only "+
+		"--title is enforced there, so a clone missing the rest of the template's "+
+		"published environment is created and then fails to serve: MODEL_SOURCE, "+
+		"MODEL_NAME, MODEL_MODE, MODEL_SUPPORTS, ENGINE_ARGS and the engine's own "+
+		"<ENGINE>_REQUIRED_GPU_MEMORY all belong on that command, and the olares-chart "+
+		"skill's LLM model workflow gives the per-engine values. Router picks the "+
+		"instance up once it is running, and `olares-cli router local spec set` is what "+
+		"changes what it serves afterwards",
+		appName, appName)
+}
+
+// marketTemplateApps reports which of the named applications the Market holds
+// as template bodies, keyed by application name.
+//
+// The Market is asked directly because that answer is the same on every
+// Router: only recent ones report the flag in their own catalog, and one
+// request here beats a version check plus two code paths. An application
+// missing from the answer is absent from the map rather
+// than recorded as installable, and a failed request yields nothing at all:
+// this drives a refusal and a column, so not knowing must read as not knowing
+// instead of as permission. What each caller then does with "not known" differs
+// on purpose: the column prints - and says the install will find out, and the
+// install itself goes ahead, because a Market that cannot be reached must not
+// stand between someone and a pinned model the Market would have accepted. The
+// Market is still the one that refuses a template; this only says so earlier.
+//
+// Only the default catalog is consulted, which is where the official engine
+// templates are published. The flag is the manifest's options.templateOnly,
+// surfaced on app_simple_info — the same field `olares-cli market clone` reads.
+func marketTemplateApps(ctx context.Context, pc *preparedClient, appNames []string) map[string]bool {
+	out := map[string]bool{}
+	if pc == nil || pc.profile == nil || strings.TrimSpace(pc.profile.MarketURL) == "" || len(appNames) == 0 {
+		return out
+	}
+	query := make([]map[string]string, 0, len(appNames))
+	for _, name := range appNames {
+		if n := strings.TrimSpace(name); n != "" {
+			query = append(query, map[string]string{"appid": n, "sourceDataName": defaultMarketSource})
+		}
+	}
+	if len(query) == 0 {
+		return out
+	}
+	var env struct {
+		Data struct {
+			Apps []struct {
+				SimpleInfo struct {
+					AppName      string `json:"app_name"`
+					TemplateOnly bool   `json:"templateOnly"`
+				} `json:"app_simple_info"`
+			} `json:"apps"`
+		} `json:"data"`
+	}
+	market := whoami.NewHTTPClient(pc.hc, pc.profile.MarketURL, pc.profile.OlaresID)
+	if err := market.DoJSON(ctx, "POST", "/app-store/api/v2/apps", map[string]any{"apps": query}, &env); err != nil {
+		return out
+	}
+	for _, app := range env.Data.Apps {
+		if name := strings.TrimSpace(app.SimpleInfo.AppName); name != "" {
+			out[name] = app.SimpleInfo.TemplateOnly
+		}
+	}
+	return out
 }
 
 // providerForApp finds the provider Router keeps for a Market application. Nil

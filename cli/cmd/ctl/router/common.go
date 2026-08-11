@@ -40,11 +40,11 @@ import (
 	"github.com/beclab/Olares/cli/pkg/whoami"
 )
 
-// minOlaresVersion is the oldest line whose Market carries Router. The
-// `llmgatewayv3` listing declares `olares >= 1.12.6-0`; its successor
-// `router` raises that to 1.12.7, but gating on the lower bound keeps the
-// tree usable on an instance that has not switched listings yet.
-const minOlaresVersion = "1.12.6"
+// minOlaresVersion is the oldest line this tree speaks to: the `router`
+// application declares `olares >= 1.12.7-0`. The `router local` verbs share the
+// floor, because a Model Console with no Router in front of it is not a shape
+// this tree addresses.
+const minOlaresVersion = "1.12.7"
 
 type Format string
 
@@ -88,10 +88,10 @@ type preparedClient struct {
 // process runs a single verb, so there is nothing to memoize across calls.
 func prepare(ctx context.Context, f *cmdutil.Factory) (*preparedClient, error) {
 	if f == nil {
-		return nil, fmt.Errorf("internal error: model not wired with cmdutil.Factory")
+		return nil, fmt.Errorf("internal error: router not wired with cmdutil.Factory")
 	}
 	if err := cmdutil.RequireMinVersion(ctx, f, cmdutil.MinVersionGate{
-		Verb:       "model",
+		Verb:       "router",
 		MinVersion: minOlaresVersion,
 		Reason:     "Router, the AI gateway Market app",
 	}); err != nil {
