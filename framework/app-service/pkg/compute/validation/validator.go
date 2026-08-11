@@ -5,10 +5,11 @@
 // runs UpgradabilityValidators at HTTP submit time: cluster-capacity
 // against the new chart's absolute requirements, plus cluster-pressure /
 // k8s-request against the non-negative delta (new − old) when the
-// deployed version still holds its requests, or against the new chart's
-// absolute requirements when the upgrade starts from a stopped state
-// (see that function). User-quota is not part of the upgrade chain
-// (install/resume remain the quota gates).
+// deployed version still holds its requests. Stopped upgrades (and
+// UpgradeFailed with pre-upgrade-state=stopped) skip those checks;
+// other upgrades with nothing to discount use absolute requirements
+// (see skipUpgradeResourceCheck / upgradePrevHoldsRequests). User-quota
+// is not part of the upgrade chain (install/resume remain the quota gates).
 //
 // Each individual check (cluster pressure, per-user quota, k8s request
 // availability, per-node pressure, GPU compute plan) is wrapped in a
@@ -36,16 +37,16 @@ type Op = v1alpha1.OpType
 // it; the others ignore unset fields.
 //
 // PrevAppConfig, PrevState and PreUpgradeSteadyState are used for
-// UpgradeOp when running cluster-pressure / k8s-request. Those validators
-// check only the non-negative resource delta (new − old) against live
-// headroom so a deployment that already holds its requests is not
-// double-counted. PrevState short-circuits the common cases (Running →
-// delta, Stopped → full). On UpgradeFailed, PreUpgradeSteadyState (the
-// bytetrade.io/pre-upgrade-state annotation: Running or Stopped intent
-// snapped before the failed attempt) short-circuits the same way when
-// set; otherwise a live-pod probe located via PrevAppConfig decides
-// (see upgradePrevHoldsRequests). Cluster-capacity always uses AppConfig
-// (the new chart) absolutely, and install/resume ignore these fields.
+// UpgradeOp when running cluster-pressure / k8s-request (and to decide
+// whether cluster-capacity may be skipped). Those headroom validators
+// check the non-negative resource delta (new − old) when the previous
+// version still holds requests (Running, or UpgradeFailed with
+// pre-upgrade-state=running). Stopped upgrades — and UpgradeFailed with
+// pre-upgrade-state=stopped — skip headroom/capacity checks entirely:
+// the release stays at replicas=0 until resume, which has its own gates.
+// UpgradeFailed without a usable annotation falls through to a live-pod
+// probe via PrevAppConfig (see upgradePrevHoldsRequests). Install/resume
+// ignore these fields.
 type Input struct {
 	Client                client.Client
 	AppConfig             *appcfg.ApplicationConfig
