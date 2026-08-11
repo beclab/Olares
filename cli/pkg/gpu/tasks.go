@@ -400,6 +400,22 @@ func (u *RemoveNodeLabels) Execute(runtime connector.Runtime) error {
 	return RemoveAllNodeGpuLabels(context.Background(), client.CtrlRuntime())
 }
 
+// RemoveNvidiaNodeLabels is the uninstall-time counterpart of RemoveNodeLabels:
+// it only clears the NVIDIA-owned labels so other accelerators on the node keep
+// advertising their modes.
+type RemoveNvidiaNodeLabels struct {
+	common.KubeAction
+}
+
+func (u *RemoveNvidiaNodeLabels) Execute(runtime connector.Runtime) error {
+	client, err := clientset.NewKubeClient()
+	if err != nil {
+		return errors.Wrap(errors.WithStack(err), "kubeclient create error")
+	}
+
+	return RemoveNvidiaNodeGpuLabels(context.Background(), client.CtrlRuntime())
+}
+
 // updateCurrentNodeLabels reads the node matching the local hostname, hands its
 // label map to mutate (which returns whether it changed anything) and persists
 // the result as a merge patch carrying only the labels that were touched.
@@ -494,6 +510,23 @@ func SetNodeGpuModeLabel(ctx context.Context, client ctrlclient.Client, mode str
 // existence labels (gpu.bytetrade.io/<mode>), and the legacy
 // gpu.bytetrade.io/type label.
 func RemoveAllNodeGpuLabels(ctx context.Context, client ctrlclient.Client) error {
+	return removeNodeGpuLabels(ctx, client, AllGpuModeTypes)
+}
+
+// RemoveNvidiaNodeGpuLabels strips only the labels that the NVIDIA driver stack
+// owns: the nvidia per-mode existence labels, the driver / cuda /
+// cuda-supported labels and the legacy gpu.bytetrade.io/type label (which only
+// ever held nvidia values). Per-mode labels of other accelerators on the same
+// node are preserved, so uninstalling the NVIDIA driver on a machine that also
+// has an Intel iGPU doesn't silently drop its intel mode.
+func RemoveNvidiaNodeGpuLabels(ctx context.Context, client ctrlclient.Client) error {
+	return removeNodeGpuLabels(ctx, client, NvidiaGpuModeTypes)
+}
+
+// removeNodeGpuLabels deletes the per-mode existence labels for modes plus the
+// driver / cuda / cuda-supported and legacy type labels, which are all written
+// by the nvidia path and therefore never outlive it.
+func removeNodeGpuLabels(ctx context.Context, client ctrlclient.Client, modes []string) error {
 	return updateCurrentNodeLabels(ctx, client, func(labels map[string]string) bool {
 		update := false
 		del := func(key string) {
@@ -506,7 +539,7 @@ func RemoveAllNodeGpuLabels(ctx context.Context, client ctrlclient.Client) error
 		del(GpuCudaLabel)
 		del(GpuCudaSupportedLabel)
 		del(GpuType)
-		for _, mode := range AllGpuModeTypes {
+		for _, mode := range modes {
 			del(GpuModeLabel(mode))
 		}
 		return update
