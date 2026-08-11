@@ -216,7 +216,10 @@ type dsEnvelope struct {
 	List    json.RawMessage `json:"list"`
 	Total   *int64          `json:"total"`
 	HasMore *bool           `json:"has_more"`
-	Exist   *bool           `json:"exist"`
+	// Batch lifecycle responses carry succeeded/failed at the top level
+	// (alongside code), not under data — see BatchResult.
+	Succeeded json.RawMessage `json:"succeeded"`
+	Failed    json.RawMessage `json:"failed"`
 }
 
 func doGet(ctx context.Context, d Doer, path string, out interface{}) error {
@@ -271,9 +274,16 @@ func doMutate(ctx context.Context, d Doer, method, path string, body, out interf
 		}
 		return nil
 	}
-	if fc, ok := out.(*FileCheckResult); ok {
-		if env.Exist != nil {
-			fc.Exist = *env.Exist
+	if br, ok := out.(*BatchResult); ok {
+		if len(env.Succeeded) > 0 {
+			if err := json.Unmarshal(env.Succeeded, &br.Succeeded); err != nil {
+				return fmt.Errorf("%s %s: decode succeeded: %w", method, path, err)
+			}
+		}
+		if len(env.Failed) > 0 {
+			if err := json.Unmarshal(env.Failed, &br.Failed); err != nil {
+				return fmt.Errorf("%s %s: decode failed: %w", method, path, err)
+			}
 		}
 		return nil
 	}
@@ -325,8 +335,6 @@ func taskErrorRecovery(method, path string, status int, message string, body int
 		return "; " + ytdlpUnavailableHint()
 	case strings.Contains(path, "/api/url/inspect") && shouldHintInspectTimeout(message):
 		return "; channel/RSS probes can exceed the server inspect timeout; retry later or create the task directly if the URL is known good"
-	case strings.Contains(path, "/api/download/file_check") && status == 404:
-		return "; confirm the path with `olares-cli files ls` or `olares-cli knowledge download list`"
 	case taskID != "" && status == 409:
 		return fmt.Sprintf(
 			"; wait for the move to finish, then retry; inspect progress with `olares-cli knowledge download info %s`",

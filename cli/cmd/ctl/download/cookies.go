@@ -110,11 +110,12 @@ func newCookiesSetCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "set",
 		Short: "store or replace the cookie for a domain",
-		Long: `Store or replace a domain's cookie (PUT /api/integration/cookies).
+		Long: `Store or replace a domain's provider cookie.
 
 --cookie-file points to a local Netscape cookies.txt file whose full text
-is uploaded. --provider defaults to the server default (yt-dlp) when unset.`,
-		Args: cobra.NoArgs,
+is uploaded. --provider defaults to yt-dlp when unset.`,
+		Example: `  olares-cli knowledge download cookies set --domain youtube.com --cookie-file ./cookies.txt`,
+		Args:    cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
 			return runCookiesSet(c.Context(), f, domain, provider, cookieFile, output)
 		},
@@ -232,11 +233,12 @@ func newCookiesRetrieveCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "retrieve",
 		Short: "test-retrieve the stored cookie for a domain",
-		Long: `Retrieve the stored cookie for a domain
-(POST /api/integration/cookies/retrieve).
+		Long: `Retrieve the stored provider cookie for a domain.
 
 The plaintext cookie is only printed with -o json; the table output shows
 whether a cookie was found and when it was updated.`,
+		Example: `  olares-cli knowledge download cookies retrieve --domain youtube.com
+  olares-cli knowledge download cookies retrieve --domain youtube.com -o json`,
 		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
 			return runCookiesRetrieve(c.Context(), f, domain, provider, output)

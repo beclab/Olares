@@ -18,14 +18,16 @@ func NewInspectCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "inspect <url>",
 		Short: "probe a URL for provider and available qualities",
-		Long: `Probe a URL (GET /api/url/inspect).
+		Long: `Inspect a URL to identify its download provider, title, and available
+yt-dlp qualities.
 
 Quote the URL. A URL with ?, & or = must be wrapped in single quotes,
-otherwise the shell splits it on & and drops the query string:
-  olares-cli knowledge download inspect 'https://host/v?a=1&b=2'
+otherwise your shell may split it.
 
-Inspect is advisory: the server may return HTTP 200 with data.error set
-when the probe fails. That does not block create.`,
+Inspect is advisory: a probe failure does not necessarily mean that create
+will fail.`,
+		Example: `  olares-cli knowledge download inspect 'https://host/v?a=1&b=2'
+  olares-cli knowledge download inspect https://huggingface.co/org/repo -o json`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			return runInspect(c.Context(), f, args[0], output)
@@ -75,6 +77,9 @@ func runInspect(ctx context.Context, f *cmdutil.Factory, rawURL, outputRaw strin
 	if hint := inspectYTDLPHint(data); hint != "" {
 		fmt.Fprintln(os.Stderr, hint)
 	}
+	if hint := inspectHFTokenHint(data); hint != "" {
+		fmt.Fprintln(os.Stderr, hint)
+	}
 	return nil
 }
 
@@ -89,6 +94,16 @@ func inspectYTDLPHint(d InspectData) string {
 	}
 	if shouldHintYTDLPUnavailable(d.Error) || shouldHintYTDLPUnavailable(d.ErrorCategory) {
 		return ytdlpUnavailableHint()
+	}
+	return ""
+}
+
+// inspectHFTokenHint returns a create-time token hint when HuggingFace reports
+// a gated or private repo. Empty string means no hint.
+func inspectHFTokenHint(d InspectData) string {
+	cat := strings.ToLower(strings.TrimSpace(d.ErrorCategory))
+	if cat == "gated" || cat == "private" {
+		return `HuggingFace repo needs a token; create with --extra '{"token":"hf_xxx"}'`
 	}
 	return ""
 }

@@ -28,13 +28,13 @@ func NewUnfinishedCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "unfinished",
 		Short: "list tasks that have not reached a terminal state",
-		Long: `List unfinished download tasks (GET /api/download/unfinished).
+		Long: `List download tasks that have not reached a terminal state.
 
-The server endpoint filters by a single required 'provider' (one of:
-yt-dlp, aria2, huggingface) and does not accept an app filter. Pass
---provider to scope to one; omit it to query every provider and merge
-the results. Only your own tasks are returned (scoped by the
-gateway-injected identity).`,
+Pass --provider to show only yt-dlp, aria2, or huggingface tasks. Omit it
+to combine unfinished tasks from all providers. Only tasks belonging to
+the active profile are shown.`,
+		Example: `  olares-cli knowledge download unfinished
+  olares-cli knowledge download unfinished --provider aria2`,
 		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
 			return runUnfinished(c.Context(), f, provider, output)

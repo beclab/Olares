@@ -48,10 +48,11 @@ func newPrefsSetCommand(f *cmdutil.Factory) *cobra.Command {
 		output  string
 	)
 	cmd := &cobra.Command{
-		Use:   "set",
-		Short: "set yt-dlp quality preference for an app",
-		Long:  `PUT /api/user/preferences. --quality must be one of: ` + ytdlpQualityValues + `.`,
-		Args:  cobra.NoArgs,
+		Use:     "set",
+		Short:   "set yt-dlp quality preference for an app",
+		Long:    `Set the default yt-dlp quality used when create does not specify --quality or --format-id. Allowed values: ` + ytdlpQualityValues + `.`,
+		Example: `  olares-cli knowledge download prefs set --app wise --quality 1080p`,
+		Args:    cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
 			return runPrefsSet(c.Context(), f, app, quality, output)
 		},

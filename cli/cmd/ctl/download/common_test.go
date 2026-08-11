@@ -161,17 +161,6 @@ func TestDoMutateAddsRecoveryForKnownTaskErrors(t *testing.T) {
 		t.Fatalf("task 404 should refresh IDs, got %v", err)
 	}
 
-	d = &fakeDoer{resp: []byte(`{"code":404,"message":"file not found"}`)}
-	err = doGet(context.Background(), d, "/api/download/file_check/none", nil)
-	if err == nil {
-		t.Fatal("expected error")
-	}
-	for _, want := range []string{"confirm the path", "olares-cli files ls", "olares-cli knowledge download list"} {
-		if !strings.Contains(err.Error(), want) {
-			t.Fatalf("file_check 404 %q missing %q", err, want)
-		}
-	}
-
 	d = &fakeDoer{resp: []byte(`{"code":409,"message":"GID xxxx isalready registered"}`)}
 	err = doMutate(context.Background(), d, "POST", "/api/download", nil, nil)
 	if err == nil {
@@ -301,14 +290,17 @@ func TestDoMutateTransportError(t *testing.T) {
 	}
 }
 
-func TestDoMutateFileCheckEnvelope(t *testing.T) {
-	d := &fakeDoer{resp: []byte(`{"code":200,"exist":true}`)}
-	var res FileCheckResult
-	if err := doGet(context.Background(), d, "/api/download/file_check/none?user=alice&path=drive/Home/x", &res); err != nil {
+func TestDoMutateBatchEnvelope(t *testing.T) {
+	d := &fakeDoer{resp: []byte(`{"code":200,"succeeded":[1,2],"failed":[{"task_id":3,"error":"not found"}]}`)}
+	var res BatchResult
+	if err := doMutate(context.Background(), d, "PUT", "/api/download/batch/pause", BatchReq{TaskIDs: []int64{1, 2, 3}}, &res); err != nil {
 		t.Fatal(err)
 	}
-	if !res.Exist {
-		t.Fatalf("expected Exist=true, got %+v", res)
+	if len(res.Succeeded) != 2 || res.Succeeded[0] != 1 || res.Succeeded[1] != 2 {
+		t.Fatalf("succeeded: %+v", res.Succeeded)
+	}
+	if len(res.Failed) != 1 || res.Failed[0].TaskID != 3 || res.Failed[0].Error != "not found" {
+		t.Fatalf("failed: %+v", res.Failed)
 	}
 }
 
