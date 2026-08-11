@@ -1,6 +1,6 @@
 ---
 name: olares-chart
-version: 4.17.0
+version: 4.18.0
 description: "Olares app packaging and chart authoring via olares-cli chart — port a repo, docker-compose, or generic Helm chart; build/push the image; author, lint, package, and deploy an OlaresManifest; wire storage, middleware, entrances, env, and GPU; edit the chart after diagnosis. Runtime failure diagnosis is olares-doctor; public Market submission is olares-publish."
 compatibility: Requires olares-cli on PATH; chart authoring is local-only, building an image for a specific Olares and deploying both need login
 metadata:
@@ -24,7 +24,7 @@ Porting targets Olares 1.12.6+; load [versioning](references/olares-chart-versio
 - Deploy / run the app on **your own** Olares (`market upload` + `install`); after `olares-doctor` identifies a chart-owned root cause, edit, lint, and redeploy the chart
 - Serve a generation/chat model with an official base app, integrate `llm-init`, or route an embedding app to the appropriate Market install
 
-This skill owns changes to your chart. [`olares-doctor`](../olares-doctor/SKILL.md) finds runtime root causes, [`olares-market`](../olares-market/SKILL.md) manages published apps, and [`olares-publish`](../olares-publish/SKILL.md) prepares a public listing.
+This skill owns changes to your chart. [`olares-doctor`](../olares-doctor/SKILL.md) finds runtime root causes, [`olares-market`](../olares-market/SKILL.md) manages published apps, [`olares-router`](../olares-router/SKILL.md) configures and calls a model once its application is running, and [`olares-publish`](../olares-publish/SKILL.md) prepares a public listing.
 
 ## The shape of the work — two axes
 
@@ -105,6 +105,7 @@ Two red lines: never `chown -R` at runtime, and never set an explicit root `secu
 | Compose bundles a database/queue, or an app dependency is needed | [middleware and dependencies](references/olares-chart-middleware.md) |
 | CUDA image, model provisioning or shared model cache | [GPU and models](references/olares-chart-gpu.md) |
 | Generation/chat, custom `llm-init`, or embedding serving | [model routing](references/olares-chart-llm-models.md), [model operations](references/olares-chart-llm-ops.md), [custom integration](references/olares-chart-llm-init-integration.md) |
+| The model application is already running and serves the wrong thing | [`olares-router`](../olares-router/SKILL.md) — the card inside it, not the chart |
 | GPU/accelerator scheduling modes or resource envelope | [accelerator](references/olares-chart-accelerator.md) |
 | The app must run Docker or Compose | [DinD](references/olares-chart-dind.md) |
 | One heavy backend serves multiple users | [shared backend](references/olares-chart-shared.md) |
