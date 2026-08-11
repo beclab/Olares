@@ -365,11 +365,15 @@ func refuseTemplateInstall(ctx context.Context, pc *preparedClient, appName stri
 		return nil
 	}
 	return fmt.Errorf("%s is an engine template rather than an installable application; "+
-		"an instance is created from it, and the model is chosen at that moment: "+
-		"`olares-cli market clone %s --title <name> --compute-mode nvidia "+
-		"--env MODEL_SOURCE=... --env MODEL_NAME=...`. Router picks the instance up "+
-		"once it is running, and `olares-cli router local spec` is what changes "+
-		"what it serves afterwards",
+		"an instance is created from it with `olares-cli market clone %s --title <name> "+
+		"--compute-mode nvidia --env ...`, which is where the model is chosen. Only "+
+		"--title is enforced there, so a clone missing the rest of the template's "+
+		"published environment is created and then fails to serve: MODEL_SOURCE, "+
+		"MODEL_NAME, MODEL_MODE, MODEL_SUPPORTS, ENGINE_ARGS and the engine's own "+
+		"<ENGINE>_REQUIRED_GPU_MEMORY all belong on that command, and the olares-chart "+
+		"skill's LLM model workflow gives the per-engine values. Router picks the "+
+		"instance up once it is running, and `olares-cli router local spec set` is what "+
+		"changes what it serves afterwards",
 		appName, appName)
 }
 
@@ -382,7 +386,11 @@ func refuseTemplateInstall(ctx context.Context, pc *preparedClient, appName stri
 // missing from the answer is absent from the map rather
 // than recorded as installable, and a failed request yields nothing at all:
 // this drives a refusal and a column, so not knowing must read as not knowing
-// instead of as permission.
+// instead of as permission. What each caller then does with "not known" differs
+// on purpose: the column prints - and says the install will find out, and the
+// install itself goes ahead, because a Market that cannot be reached must not
+// stand between someone and a pinned model the Market would have accepted. The
+// Market is still the one that refuses a template; this only says so earlier.
 //
 // Only the default catalog is consulted, which is where the official engine
 // templates are published. The flag is the manifest's options.templateOnly,
