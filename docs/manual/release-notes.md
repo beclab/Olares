@@ -29,25 +29,18 @@ For the highlights and walk-through of Olares v1.12.6, see the [Olares 1.12.6 bl
 
 ### New docs
 
-- Added [Olares CLI overview](/developer/cli-overview), an introduction to managing Olares from the command line.
-- Added [Install Olares CLI](/developer/cli-install), covering how to install `olares-cli` locally or inside an agent app.
-- Added [Log in with Olares CLI](/developer/cli-log-in), explaining how to authenticate `olares-cli` with your Olares ID.
-- Added [Olares CLI agent skills](/developer/cli-agent-skills), describing how to use built-in skills for cluster management, apps, settings, and more.
-- Added [Activate an Olares device using the Olares CLI](/manual/best-practices/activate-olares-using-cli), for activating a device without the LarePass mobile app.
+- Added Olares CLI docs, including an [overview](/developer/cli-overview), [installation](/developer/cli-install), [login with Olares ID](/developer/cli-log-in), and [built-in agent skills](/developer/cli-agent-skills) for managing Olares from the command line.
+- Added [Activate an Olares device using the Olares CLI](/manual/best-practices/activate-olares-using-cli), for activating a device from the command line.
 - Added [Manage shared AI models with the Common directory](/manual/olares/files/files-common), explaining how to use the Common directory for models shared across apps.
 - Added [Compress and extract files](/manual/olares/files/compress-extract-files), covering ZIP, 7z, TAR, and password-protected archives in Olares Files.
 - Added [Mount NFS shares](/manual/olares/files/mount-nfs), for accessing NFS shared directories from Olares.
-- Added [Shared applications](/manual/olares/market/shared-apps), explaining the Engine Base architecture and how to migrate legacy v2 shared apps.
-- Added [Configure Overlay Gateway](/manual/olares/settings/overlay-gateway), a Settings guide for managing the Overlay Gateway.
-- Added [Olares One onboarding](/one/olares-onboarding), a guided walkthrough for setting up Olares One.
+- Added [Shared applications](/manual/olares/market/shared-apps), explaining the new shared app architecture and migration options for legacy v2 shared apps, such as [Ollama](/use-cases/ollama), [ComfyUI](/use-cases/comfyui-common-issues), [Dify](/use-cases/dify-upgrade), [OnlyOffice](/use-cases/onlyoffice), [SearXNG](/use-cases/searxng), and [Xinference](/use-cases/xinference).
+- Added [Configure Overlay Gateway](/manual/olares/settings/overlay-gateway), for managing Overlay Gateway settings.
+- Added [Olares One onboarding](/one/olares-onboarding), a guided walkthrough for managing Olares One through natural language.
 - Added [Desktop widgets](/manual/olares/desktop#widgets), documenting the new widgets on the Olares desktop.
-- Added [Run local AI models with Engine Base apps](/use-cases/llm-base-apps), for running local AI models on Olares.
-- Added [Home Assistant with Overlay Gateway](/use-cases/home-assistant#enable-the-overlay-gateway), for accessing Home Assistant over the Overlay Gateway.
+- Added [Run local AI models with Engine Base apps](/use-cases/llm-base-apps), for deploying and running local AI models on Olares.
+- Added [Home Assistant with Overlay Gateway](/use-cases/home-assistant#enable-the-overlay-gateway), for accessing Home Assistant over the local network.
 - Added [Jellyfin with Overlay Gateway](/use-cases/jellyfin#enable-overlay-gateway-for-jellyfin), for accessing Jellyfin over the Overlay Gateway.
-- Added [SearXNG](/use-cases/searxng), a guide to setting up a private metasearch engine.
-- Added [OnlyOffice](/use-cases/onlyoffice), a guide to editing documents with OnlyOffice.
-- Added [Xinference](/use-cases/xinference), a guide to running models with Xinference, including migration notes.
-- Added [Dify upgrade guide](/use-cases/dify-upgrade), a guide to upgrading an existing Dify deployment.
 - Added [*Arr apps upgrade guide](/use-cases/arrs-upgrade), a guide to updating *Arr apps after the Olares v1.12.6 internal entrance changes.
 
 ### Updated docs
