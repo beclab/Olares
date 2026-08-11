@@ -825,7 +825,7 @@ spec:
           record: node:node_memory_Cached_bytes
         - expr: |
             sum by (node, role) (
-              (node_memory_Slab_bytes{job="node-exporter"} + node_memory_KernelStack_bytes{job="node-exporter"} + node_memory_PageTables_bytes{job="node-exporter"}+ node_memory_HardwareCorrupted_bytes{job="node-exporter"}+node_memory_Bounce_bytes{job="node-exporter"}-node_memory_SReclaimable_bytes{job="node-exporter"})
+              (node_memory_Slab_bytes{job="node-exporter"} + node_memory_KernelStack_bytes{job="node-exporter"} + node_memory_PageTables_bytes{job="node-exporter"}+ (node_memory_HardwareCorrupted_bytes{job="node-exporter"} or on(instance, job) (node_memory_MemTotal_bytes{job="node-exporter"} * 0))+node_memory_Bounce_bytes{job="node-exporter"}-node_memory_SReclaimable_bytes{job="node-exporter"})
               * on (namespace, pod) group_left(node, role)
                 node_namespace_pod:kube_pod_info:
             )
