@@ -121,22 +121,27 @@ func normalizeSelectFiles(raw string) (csv string, ok bool, err error) {
 	return joinIndicesCSV(sel), true, nil
 }
 
-// readTorrentFile validates a local --torrent path before upload: it must
-// end in .torrent (case-insensitive), exist, and be non-empty. A missing
-// path that looks space-split gets a quote hint for shell users.
-func readTorrentFile(path string) ([]byte, error) {
+// readTorrentFile validates a local torrent path before upload: it must
+// end in .torrent (case-insensitive), exist, and be non-empty. flag is the
+// CLI flag name used in error messages (e.g. "--torrent" or "--file") so
+// create and torrent inspect can share the validator without pointing at
+// the wrong flag. A missing path gets a quote hint for shell users.
+func readTorrentFile(path, flag string) ([]byte, error) {
+	if flag == "" {
+		flag = "--torrent"
+	}
 	if !strings.HasSuffix(strings.ToLower(path), ".torrent") {
-		return nil, fmt.Errorf("unsupported --torrent file %q (need a .torrent file); if the path contains spaces, quote it: --torrent './name with spaces.torrent'", path)
+		return nil, fmt.Errorf("unsupported %s file %q (need a .torrent file); if the path contains spaces, quote it: %s './name with spaces.torrent'", flag, path, flag)
 	}
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("read torrent file: %w; if the path contains spaces, quote it: --torrent './name with spaces.torrent'", err)
+			return nil, fmt.Errorf("read torrent file: %w; if the path contains spaces, quote it: %s './name with spaces.torrent'", err, flag)
 		}
 		return nil, fmt.Errorf("read torrent file: %w", err)
 	}
 	if len(raw) == 0 {
-		return nil, fmt.Errorf("unsupported --torrent file %q (file is empty)", path)
+		return nil, fmt.Errorf("unsupported %s file %q (file is empty)", flag, path)
 	}
 	return raw, nil
 }
@@ -184,7 +189,7 @@ func runCreate(ctx context.Context, f *cmdutil.Factory, rawURL, app, path, name,
 		extra["format_id"] = fid
 	}
 	if torrentFile != "" {
-		raw, err := readTorrentFile(torrentFile)
+		raw, err := readTorrentFile(torrentFile, "--torrent")
 		if err != nil {
 			return err
 		}

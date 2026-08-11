@@ -67,7 +67,7 @@ func runTorrentInspect(ctx context.Context, f *cmdutil.Factory, file, outputRaw 
 	if file == "" {
 		return fmt.Errorf("--file is required")
 	}
-	raw, err := readTorrentFile(file)
+	raw, err := readTorrentFile(file, "--file")
 	if err != nil {
 		return err
 	}
