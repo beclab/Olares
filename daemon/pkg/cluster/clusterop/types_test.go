@@ -8,8 +8,8 @@ import (
 	"github.com/beclab/Olares/daemon/pkg/cluster/nodestatus"
 )
 
-func TestParseTypeAcceptsOnlyThePowerOperations(t *testing.T) {
-	for _, in := range []string{"reboot", "shutdown"} {
+func TestParseTypeAcceptsOnlyRegisteredOperations(t *testing.T) {
+	for _, in := range []string{"reboot", "shutdown", "reset-password"} {
 		got, err := ParseType(in)
 		if err != nil {
 			t.Errorf("ParseType(%q) errored: %v", in, err)
