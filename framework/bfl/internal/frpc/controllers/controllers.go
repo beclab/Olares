@@ -354,11 +354,13 @@ func (f *FrpcController) getApps(parentCtx context.Context) (*v1alpha1App.Applic
 func (f *FrpcController) getCustomDomains(apps *v1alpha1App.ApplicationList) (customDomains []string, err error) {
 	for i := range apps.Items {
 		app := &apps.Items[i]
-		// For shared apps, the customDomain blob lives in
-		// Spec.UserSettings[constants.Username]; for v1/v2 it stays in
-		// Spec.Settings. EffectiveSettings hides the difference. We
-		// reject shared apps that this BFL has no overlay for so we don't
-		// publish another user's domains via this user's frpc.
+		// Same ownership gate as reverse-proxy conf sync: non-shared apps are
+		// only published by their owner. Shared apps keep using EffectiveSettings
+		// so Spec.UserSettings[username] overlays Spec.Settings.
+		if !v1alpha1App.IsShared(app) && app.Spec.Owner != constants.Username {
+			continue
+		}
+
 		settings := app.EffectiveSettings(constants.Username)
 		if len(settings) == 0 {
 			continue
