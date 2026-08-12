@@ -601,7 +601,7 @@ func TestBuildAppVirtualHosts_SharedApp_OpenToAllUsers(t *testing.T) {
 
 			require.NotNil(t, r.ExtAuth, "shared apps must be gated behind Authelia ext_auth")
 			assert.Equal(t, fmt.Sprintf("authelia_backend_%s", name), r.ExtAuth.Cluster)
-			assert.Equal(t, autheliaPathPrefix, r.ExtAuth.PathPrefix)
+			assert.Equal(t, autheliaVerifyPathPrefix, r.ExtAuth.PathPrefix)
 			assert.False(t, r.ExtAuth.Disabled)
 		})
 	}
@@ -619,7 +619,7 @@ func TestBuildCustomDomainVirtualHosts_SharedApp_ExtAuth(t *testing.T) {
 	r := vhosts[0].Routes[0]
 	require.NotNil(t, r.ExtAuth, "shared apps must stay gated even on a custom domain")
 	assert.Equal(t, "authelia_backend_alice", r.ExtAuth.Cluster)
-	assert.Equal(t, autheliaPathPrefix, r.ExtAuth.PathPrefix)
+	assert.Equal(t, autheliaVerifyPathPrefix, r.ExtAuth.PathPrefix)
 }
 
 // v1/v2 (non-shared) apps reach their upstream cluster and are gated behind
@@ -876,6 +876,10 @@ func TestBuildFileserverRoutes_NodeScopedBeforeMasterGeneric(t *testing.T) {
 	assert.Equal(t, "files_testip162_olares-work", routes[nodeExternal].Cluster)
 	assert.Equal(t, "files_testip162_olares", routes[masterExternal].Cluster)
 	assert.Equal(t, "olares-work", routes[nodeExternal].RequestHeaders["X-Terminus-Node"])
+	require.NotNil(t, routes[nodeExternal].ExtAuth)
+	assert.Equal(t, autheliaVerifyPathPrefix, routes[nodeExternal].ExtAuth.PathPrefix)
+	require.NotNil(t, routes[masterExternal].ExtAuth)
+	assert.Equal(t, autheliaVerifyPathPrefix, routes[masterExternal].ExtAuth.PathPrefix)
 
 	// Every node-scoped prefix that overlaps a master prefix must precede ALL
 	// master generic routes. Compute the first master-route index and assert

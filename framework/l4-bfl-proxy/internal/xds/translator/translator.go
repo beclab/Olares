@@ -164,6 +164,10 @@ const xForwardedProtoValue = "%REQ(x-forwarded-proto?:SCHEME)%"
 // without this header Authelia builds rd from the check URI (e.g. /api/verify//).
 const xOriginalURLValue = "%REQ(x-forwarded-proto?:SCHEME)%://%REQ(:AUTHORITY)%%REQ(:PATH)%"
 
+// autheliaVerifyPathPrefix is the filter-default Authelia Legacy verify path.
+// Per-route overrides are only emitted when PathPrefix differs from this value.
+const autheliaVerifyPathPrefix = "/api/verify/"
+
 var (
 	tcpIdleTimeout        = time.Hour
 	httpStreamIdleTimeout = 30 * time.Minute
@@ -917,11 +921,12 @@ func translateRoute(routeIR *ir.HTTPRouteIR, clusterMap map[string]*ir.ClusterIR
 
 	if routeIR.ExtAuth != nil && !routeIR.ExtAuth.Disabled {
 		checkSettings := &extauthzv3.CheckSettings{}
-		if path := routeIR.ExtAuth.PathPrefix; path != "" && clusterMap != nil {
+		// CheckSettings.http_service replaces the filter-level HttpService
+		// entirely. When PathPrefix matches the filter default (/api/verify/),
+		// emit an empty CheckSettings only so the filter Auth block is reused
+		// and we never ship a path-only override shell.
+		if path := routeIR.ExtAuth.PathPrefix; path != "" && path != autheliaVerifyPathPrefix && clusterMap != nil {
 			if c, ok := clusterMap[routeIR.ExtAuth.Cluster]; ok && c.Host != "" {
-				// CheckSettings.http_service replaces the filter-level HttpService
-				// entirely, so reuse the same AuthorizationRequest/Response as
-				// buildExtAuthzFilter (only PathPrefix differs).
 				userName := ""
 				if routeIR.RequestHeaders != nil {
 					userName = routeIR.RequestHeaders["X-BFL-USER"]
@@ -967,7 +972,7 @@ func buildExtAuthzFilter(autheliaClusterName string, clusterMap map[string]*ir.C
 
 	extAuthz := &extauthzv3.ExtAuthz{
 		Services: &extauthzv3.ExtAuthz_HttpService{
-			HttpService: buildAutheliaHttpService(autheliaClusterName, clusterIR.Host, "/api/authz/ext-authz/", userName),
+			HttpService: buildAutheliaHttpService(autheliaClusterName, clusterIR.Host, autheliaVerifyPathPrefix, userName),
 		},
 		// AllowedHeaders is filter-level (not part of HttpService); per-route
 		// CheckSettings.http_service does not override it.
