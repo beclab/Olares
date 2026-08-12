@@ -1,6 +1,7 @@
 package manifest
 
 import (
+	"errors"
 	"fmt"
 
 	"sigs.k8s.io/yaml"
@@ -16,7 +17,11 @@ func (s *ManifestStrategy) Parse(rendered []byte) (Manifest, error) {
 	if err := yaml.Unmarshal(rendered, &cfg); err != nil {
 		return nil, err
 	}
-	return &parsedManifest{cfg: &cfg}, nil
+	taxonomy, err := ParseTaxonomy(rendered)
+	if err != nil {
+		return nil, err
+	}
+	return &parsedManifest{cfg: &cfg, taxonomy: taxonomy}, nil
 }
 
 // Validate runs structural and cross-field checks.
@@ -25,12 +30,20 @@ func (s *ManifestStrategy) Validate(m Manifest) error {
 	if !ok {
 		return fmt.Errorf("manifest strategy received foreign manifest type: %T", m)
 	}
-	return ValidateAppConfiguration(mm.cfg)
+	return errors.Join(
+		ValidateAppConfiguration(mm.cfg),
+		ValidateTaxonomy(mm.taxonomy),
+	)
 }
 
 type parsedManifest struct {
-	cfg *AppConfiguration
+	cfg      *AppConfiguration
+	taxonomy Taxonomy
 }
+
+// Taxonomy exposes the catalog fields the shared AppConfiguration does not
+// carry; callers that only build cluster resources never ask for it.
+func (m *parsedManifest) Taxonomy() Taxonomy { return m.taxonomy }
 
 func (m *parsedManifest) APIVersion() string {
 	if m.cfg.APIVersion == "" {
@@ -61,8 +74,8 @@ func (m *parsedManifest) OptionsImages() []string {
 	return out
 }
 
-func (m *parsedManifest) PermissionAppData() bool       { return m.cfg.Permission.AppData }
-func (m *parsedManifest) PermissionAppCommon() bool     { return m.cfg.Permission.AppCommon }
-func (m *parsedManifest) PermissionExternalData() bool  { return m.cfg.Permission.ExternalData }
+func (m *parsedManifest) PermissionAppData() bool      { return m.cfg.Permission.AppData }
+func (m *parsedManifest) PermissionAppCommon() bool    { return m.cfg.Permission.AppCommon }
+func (m *parsedManifest) PermissionExternalData() bool { return m.cfg.Permission.ExternalData }
 
 func (m *parsedManifest) Raw() any { return m.cfg }
