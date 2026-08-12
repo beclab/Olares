@@ -804,29 +804,25 @@ func sharedInclusterEntrancesFromSRRItems(
 		if err != nil || !found || len(patterns) == 0 {
 			continue
 		}
-		entranceID := ""
-		platformDomain := ""
-		hostPattern := ""
+		// One CoreDNS rewrite per logical hostPattern so friendly + hash
+		// aliases on the same SRR both point at app-gateway-data.
 		for _, pattern := range patterns {
 			id, domain, _, ok := parseLogicalHostPattern(pattern)
 			if !ok {
 				continue
 			}
-			entranceID = id
-			platformDomain = domain
-			hostPattern = strings.ToLower(strings.TrimSpace(strings.TrimSuffix(pattern, ".")))
-			break
+			hostPattern := strings.ToLower(strings.TrimSpace(strings.TrimSuffix(pattern, ".")))
+			if domain == "" || id == "" || hostPattern == "" {
+				continue
+			}
+			entrances = append(entrances, SharedInclusterEntrance{
+				AppID:          appid,
+				EntranceName:   entranceName,
+				EntranceID:     id,
+				PlatformDomain: domain,
+				HostPattern:    hostPattern,
+			})
 		}
-		if platformDomain == "" || entranceID == "" || hostPattern == "" {
-			continue
-		}
-		entrances = append(entrances, SharedInclusterEntrance{
-			AppID:          appid,
-			EntranceName:   entranceName,
-			EntranceID:     entranceID,
-			PlatformDomain: platformDomain,
-			HostPattern:    hostPattern,
-		})
 	}
 	return entrances
 }
