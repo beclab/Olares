@@ -15,6 +15,7 @@ import (
 	sysv1alpha1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
 	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
 	"github.com/beclab/l4-bfl-proxy/internal/message"
+	"github.com/beclab/l4-bfl-proxy/internal/tlsutil"
 	toolscache "k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -603,8 +604,19 @@ func (p *Provider) listUsers(ctx context.Context, userList []iamv1alpha2.User, r
 		denyAllStatus = getAnnotation(annoUser, userDenyAllPolicy)
 		allowedDomains = getPublicAccessDomain(zone, publicAppIDs, publicCustomDomainApps, denyAllStatus)
 
-		if userCustomDomains, ok := customDomainAppsWithUsers[annoUser.Name]; ok && len(userCustomDomains) > 0 {
-			serverNameDomains = append(serverNameDomains, userCustomDomains...)
+		customDomainCerts := customDomainCertsForUser(user.Name, rawAppsMap[user.Name])
+		validCustomDomains := make(map[string]bool, len(customDomainCerts))
+		for _, c := range customDomainCerts {
+			validCustomDomains[c.Domain] = true
+		}
+		// Only advertise custom domains that have a loadable TLS key pair.
+		// Otherwise buildUserFilterChains would attach them to the zone cert.
+		if userCustomDomains, ok := customDomainAppsWithUsers[annoUser.Name]; ok {
+			for _, d := range userCustomDomains {
+				if validCustomDomains[d] {
+					serverNameDomains = append(serverNameDomains, d)
+				}
+			}
 		}
 
 		var accessLevel uint64
@@ -633,6 +645,10 @@ func (p *Provider) listUsers(ctx context.Context, userList []iamv1alpha2.User, r
 			}
 			return nil, err
 		}
+		if err := tlsutil.ValidateKeyPair(sslConfig.CertData, sslConfig.KeyData); err != nil {
+			klog.Warningf("provider: user %s SSL cert/key invalid, skipping HTTPS: %v", user.Name, err)
+			continue
+		}
 		fileserverNodes, err := p.getFileserverNodesForUser(ctx, user.Name, fsGlobal)
 		if err != nil {
 			return nil, err
@@ -658,7 +674,7 @@ func (p *Provider) listUsers(ctx context.Context, userList []iamv1alpha2.User, r
 			Language:          language,
 			Apps:              p.buildAppInfos(user.Name, rawAppsMap[user.Name]),
 			SSL:               sslConfig,
-			CustomDomainCerts: customDomainCertsForUser(user.Name, rawAppsMap[user.Name]),
+			CustomDomainCerts: customDomainCerts,
 			FileserverNodes:   fileserverNodes,
 			MasterNodeCIDR:    masterNodeCIDR,
 		}
@@ -675,6 +691,8 @@ func (p *Provider) listUsers(ctx context.Context, userList []iamv1alpha2.User, r
 // desync: a domain the app no longer configures (empty third_party_domain) or
 // one whose cert has not been issued yet (empty cert/key) produces no cert and
 // thus no filter chain, so it can never 421 nor steal another user's SNI.
+// Invalid PEM placeholders (e.g. cert/key = "test") are also skipped so they
+// cannot NACK the whole Envoy SDS secret batch.
 //
 // Certs are de-duped by domain (first wins) and sorted by domain for stable
 // output. CreatedAt is the app's creation time, feeding the xDS de-dup
@@ -689,6 +707,11 @@ func customDomainCertsForUser(username string, appList []*appv1alpha1.Applicatio
 			certData := entranceCustomDomain[settingsCustomDomainCert]
 			keyData := entranceCustomDomain[settingsCustomDomainKey]
 			if domain == "" || certData == "" || keyData == "" {
+				continue
+			}
+			if err := tlsutil.ValidateKeyPair(certData, keyData); err != nil {
+				klog.Warningf("provider: user %s custom domain %q has invalid TLS cert/key, skipping: %v",
+					username, domain, err)
 				continue
 			}
 			if seen[domain] {

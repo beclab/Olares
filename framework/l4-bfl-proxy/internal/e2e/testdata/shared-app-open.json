@@ -28,33 +28,6 @@
       }
     },
     {
-      "name": "app_admin_shareme_web",
-      "type": "STRICT_DNS",
-      "connectTimeout": "5s",
-      "loadAssignment": {
-        "clusterName": "app_admin_shareme_web",
-        "endpoints": [
-          {
-            "lbEndpoints": [
-              {
-                "endpoint": {
-                  "address": {
-                    "socketAddress": {
-                      "address": "shareme-svc.shareme-shared.svc.cluster.local",
-                      "portValue": 8080
-                    }
-                  }
-                }
-              }
-            ]
-          }
-        ]
-      },
-      "commonHttpProtocolOptions": {
-        "idleTimeout": "10s"
-      }
-    },
-    {
       "name": "authelia_backend_admin",
       "type": "STRICT_DNS",
       "connectTimeout": "5s",
@@ -69,6 +42,33 @@
                     "socketAddress": {
                       "address": "authelia-backend.user-system-admin.svc.cluster.local",
                       "portValue": 9091
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "commonHttpProtocolOptions": {
+        "idleTimeout": "10s"
+      }
+    },
+    {
+      "name": "app_admin_shareme_web",
+      "type": "STRICT_DNS",
+      "connectTimeout": "5s",
+      "loadAssignment": {
+        "clusterName": "app_admin_shareme_web",
+        "endpoints": [
+          {
+            "lbEndpoints": [
+              {
+                "endpoint": {
+                  "address": {
+                    "socketAddress": {
+                      "address": "shareme-svc.shareme-shared.svc.cluster.local",
+                      "portValue": 8080
                     }
                   }
                 }
@@ -190,33 +190,6 @@
       }
     },
     {
-      "name": "app_alice_shareme_web",
-      "type": "STRICT_DNS",
-      "connectTimeout": "5s",
-      "loadAssignment": {
-        "clusterName": "app_alice_shareme_web",
-        "endpoints": [
-          {
-            "lbEndpoints": [
-              {
-                "endpoint": {
-                  "address": {
-                    "socketAddress": {
-                      "address": "shareme-svc.shareme-shared.svc.cluster.local",
-                      "portValue": 8080
-                    }
-                  }
-                }
-              }
-            ]
-          }
-        ]
-      },
-      "commonHttpProtocolOptions": {
-        "idleTimeout": "10s"
-      }
-    },
-    {
       "name": "authelia_backend_alice",
       "type": "STRICT_DNS",
       "connectTimeout": "5s",
@@ -231,6 +204,33 @@
                     "socketAddress": {
                       "address": "authelia-backend.user-system-alice.svc.cluster.local",
                       "portValue": 9091
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "commonHttpProtocolOptions": {
+        "idleTimeout": "10s"
+      }
+    },
+    {
+      "name": "app_alice_shareme_web",
+      "type": "STRICT_DNS",
+      "connectTimeout": "5s",
+      "loadAssignment": {
+        "clusterName": "app_alice_shareme_web",
+        "endpoints": [
+          {
+            "lbEndpoints": [
+              {
+                "endpoint": {
+                  "address": {
+                    "socketAddress": {
+                      "address": "shareme-svc.shareme-shared.svc.cluster.local",
+                      "portValue": 8080
                     }
                   }
                 }
@@ -352,33 +352,6 @@
       }
     },
     {
-      "name": "app_bob_shareme_web",
-      "type": "STRICT_DNS",
-      "connectTimeout": "5s",
-      "loadAssignment": {
-        "clusterName": "app_bob_shareme_web",
-        "endpoints": [
-          {
-            "lbEndpoints": [
-              {
-                "endpoint": {
-                  "address": {
-                    "socketAddress": {
-                      "address": "shareme-svc.shareme-shared.svc.cluster.local",
-                      "portValue": 8080
-                    }
-                  }
-                }
-              }
-            ]
-          }
-        ]
-      },
-      "commonHttpProtocolOptions": {
-        "idleTimeout": "10s"
-      }
-    },
-    {
       "name": "authelia_backend_bob",
       "type": "STRICT_DNS",
       "connectTimeout": "5s",
@@ -393,6 +366,33 @@
                     "socketAddress": {
                       "address": "authelia-backend.user-system-bob.svc.cluster.local",
                       "portValue": 9091
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "commonHttpProtocolOptions": {
+        "idleTimeout": "10s"
+      }
+    },
+    {
+      "name": "app_bob_shareme_web",
+      "type": "STRICT_DNS",
+      "connectTimeout": "5s",
+      "loadAssignment": {
+        "clusterName": "app_bob_shareme_web",
+        "endpoints": [
+          {
+            "lbEndpoints": [
+              {
+                "endpoint": {
+                  "address": {
+                    "socketAddress": {
+                      "address": "shareme-svc.shareme-shared.svc.cluster.local",
+                      "portValue": 8080
                     }
                   }
                 }
@@ -581,12 +581,32 @@
                           "cluster": "authelia_backend_admin",
                           "timeout": "15s"
                         },
-                        "pathPrefix": "/api/authz/ext-authz/",
+                        "pathPrefix": "/api/verify/",
                         "authorizationRequest": {
                           "headersToAdd": [
                             {
                               "key": "X-Forwarded-Proto",
                               "value": "%REQ(x-forwarded-proto?:SCHEME)%"
+                            },
+                            {
+                              "key": "X-Original-URL",
+                              "value": "%REQ(x-forwarded-proto?:SCHEME)%://%REQ(:AUTHORITY)%%REQ(:PATH)%"
+                            },
+                            {
+                              "key": "X-Forwarded-Uri",
+                              "value": "%REQ(:PATH)%"
+                            },
+                            {
+                              "key": "X-Forwarded-Host",
+                              "value": "%REQ(:AUTHORITY)%"
+                            },
+                            {
+                              "key": "X-Original-Method",
+                              "value": "%REQ(:METHOD)%"
+                            },
+                            {
+                              "key": "X-Forwarded-Method",
+                              "value": "%REQ(:METHOD)%"
                             },
                             {
                               "key": "X-BFL-USER",
@@ -650,6 +670,9 @@
                           },
                           {
                             "exact": "x-forwarded-for"
+                          },
+                          {
+                            "exact": "x-unauth-error"
                           }
                         ]
                       }
@@ -666,7 +689,7 @@
                     "typedConfig": {
                       "@type": "type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua",
                       "defaultSourceCode": {
-                        "inlineString": "\nlocal PUSH_STATE_SCRIPT = \"\u003cscript\u003e\\n\" ..\n  \"(function () {\\n\" ..\n  \"  if (window.top == window) {\\n\" ..\n  \"    return;\\n\" ..\n  \"  }\\n\" ..\n  \"  const originalPushState = history.pushState;\\n\" ..\n  \"  const pushStateEvent = new Event(\\\"pushstate\\\");\\n\" ..\n  \"  history.pushState = function (...args) {\\n\" ..\n  \"    originalPushState.apply(this, args);\\n\" ..\n  \"    window.dispatchEvent(pushStateEvent);\\n\" ..\n  \"  };\\n\" ..\n  \"  window.addEventListener(\\\"pushstate\\\", () =\u003e {\\n\" ..\n  \"    window.parent.postMessage(\\n\" ..\n  \"      {type: \\\"locationHref\\\", message: location.href},\\n\" ..\n  \"      \\\"*\\\"\\n\" ..\n  \"    );\\n\" ..\n  \"  });\\n\" ..\n  \"})();\\n\" ..\n  \"\u003c/script\u003e\"\n\nfunction envoy_on_request(request_handle)\n  local meta = request_handle:metadata()\n  if not meta then return end\n  local pushstate = meta:get(\"pushstate\")\n  local language = meta:get(\"language\")\n  if not pushstate and not language then return end\n  local dm = request_handle:streamInfo():dynamicMetadata()\n  dm:set(\"envoy.filters.http.lua\", \"needs_sub_filter\", \"1\")\n  if pushstate then\n    dm:set(\"envoy.filters.http.lua\", \"pushstate\", pushstate)\n  end\n  if language then\n    dm:set(\"envoy.filters.http.lua\", \"language\", language)\n  end\nend\n\nfunction envoy_on_response(response_handle)\n  local dm = response_handle:streamInfo():dynamicMetadata():get(\"envoy.filters.http.lua\")\n  if not dm or not dm[\"needs_sub_filter\"] then return end\n\n  local ct = response_handle:headers():get(\"content-type\")\n  if not ct or not string.find(ct, \"text/html\") then return end\n\n  local body = response_handle:body()\n  if not body or body:length() == 0 then return end\n  local body_str = body:getBytes(0, body:length())\n\n  local modified = false\n  local pushstate = dm[\"pushstate\"]\n  if pushstate then\n    local new_str = string.gsub(body_str, \"\u003c/html\u003e\", PUSH_STATE_SCRIPT .. \"\\n\u003c/html\u003e\", 1)\n    if new_str ~= body_str then\n      body_str = new_str\n      modified = true\n    end\n  end\n\n  local language = dm[\"language\"]\n  if language then\n    local meta_tag = '\u003cmeta name=\"terminus-language\" content=\"' .. language .. '\"/\u003e'\n    local new_str = string.gsub(body_str, \"\u003c/head\u003e\", meta_tag .. \"\\n\u003c/head\u003e\", 1)\n    if new_str ~= body_str then\n      body_str = new_str\n      modified = true\n    end\n  end\n\n  if modified then\n    body:setBytes(body_str)\n    response_handle:headers():replace(\"content-length\", tostring(#body_str))\n  end\nend\n"
+                        "inlineString": "\nlocal PUSH_STATE_SCRIPT = \"\u003cscript\u003e\\n\" ..\n  \"(function () {\\n\" ..\n  \"  if (window.top == window) {\\n\" ..\n  \"    return;\\n\" ..\n  \"  }\\n\" ..\n  \"  const originalPushState = history.pushState;\\n\" ..\n  \"  const pushStateEvent = new Event(\\\"pushstate\\\");\\n\" ..\n  \"  history.pushState = function (...args) {\\n\" ..\n  \"    originalPushState.apply(this, args);\\n\" ..\n  \"    window.dispatchEvent(pushStateEvent);\\n\" ..\n  \"  };\\n\" ..\n  \"  window.addEventListener(\\\"pushstate\\\", () =\u003e {\\n\" ..\n  \"    window.parent.postMessage(\\n\" ..\n  \"      {type: \\\"locationHref\\\", message: location.href},\\n\" ..\n  \"      \\\"*\\\"\\n\" ..\n  \"    );\\n\" ..\n  \"  });\\n\" ..\n  \"})();\\n\" ..\n  \"\u003c/script\u003e\"\n\n-- F2: clear Set-Cookie Domain= values (parity with historic oes set_cookie_tpl).\nlocal COOKIE_DOMAIN_PATTERN = \"Domain=([^;]*)\"\n\nfunction rewrite_set_cookie_domains(response_handle)\n  local headers = response_handle:headers()\n  local n = headers:getNumValues(\"Set-Cookie\")\n  if n == 0 then return end\n  local cookies = {}\n  for i = 0, n - 1 do\n    local v = headers:getAtIndex(\"Set-Cookie\", i)\n    if v and v ~= \"\" then\n      table.insert(cookies, v)\n    end\n  end\n  local first = true\n  for _, cookie in ipairs(cookies) do\n    local updated = cookie\n    local set_cookie_domain = string.match(cookie, COOKIE_DOMAIN_PATTERN)\n    if set_cookie_domain ~= nil and set_cookie_domain ~= \"\" then\n      updated = string.gsub(cookie, COOKIE_DOMAIN_PATTERN, \"Domain=\", 1)\n    end\n    if first then\n      headers:replace(\"Set-Cookie\", updated)\n      first = false\n    else\n      headers:add(\"Set-Cookie\", updated)\n    end\n  end\nend\n\nfunction envoy_on_request(request_handle)\n  local meta = request_handle:metadata()\n  if not meta then return end\n  local pushstate = meta:get(\"pushstate\")\n  local language = meta:get(\"language\")\n  if not pushstate and not language then return end\n  local dm = request_handle:streamInfo():dynamicMetadata()\n  dm:set(\"envoy.filters.http.lua\", \"needs_sub_filter\", \"1\")\n  if pushstate then\n    dm:set(\"envoy.filters.http.lua\", \"pushstate\", pushstate)\n  end\n  if language then\n    dm:set(\"envoy.filters.http.lua\", \"language\", language)\n  end\nend\n\nfunction envoy_on_response(response_handle)\n  -- Always rewrite Cookie Domain before optional HTML body filters.\n  rewrite_set_cookie_domains(response_handle)\n\n  local dm = response_handle:streamInfo():dynamicMetadata():get(\"envoy.filters.http.lua\")\n  if not dm or not dm[\"needs_sub_filter\"] then return end\n\n  local ct = response_handle:headers():get(\"content-type\")\n  if not ct or not string.find(ct, \"text/html\") then return end\n\n  local body = response_handle:body()\n  if not body or body:length() == 0 then return end\n  local body_str = body:getBytes(0, body:length())\n\n  local modified = false\n  local pushstate = dm[\"pushstate\"]\n  if pushstate then\n    local new_str = string.gsub(body_str, \"\u003c/html\u003e\", PUSH_STATE_SCRIPT .. \"\\n\u003c/html\u003e\", 1)\n    if new_str ~= body_str then\n      body_str = new_str\n      modified = true\n    end\n  end\n\n  local language = dm[\"language\"]\n  if language then\n    local meta_tag = '\u003cmeta name=\"terminus-language\" content=\"' .. language .. '\"/\u003e'\n    local new_str = string.gsub(body_str, \"\u003c/head\u003e\", meta_tag .. \"\\n\u003c/head\u003e\", 1)\n    if new_str ~= body_str then\n      body_str = new_str\n      modified = true\n    end\n  end\n\n  if modified then\n    body:setBytes(body_str)\n    response_handle:headers():replace(\"content-length\", tostring(#body_str))\n  end\nend\n"
                       }
                     }
                   },
@@ -763,12 +786,32 @@
                           "cluster": "authelia_backend_alice",
                           "timeout": "15s"
                         },
-                        "pathPrefix": "/api/authz/ext-authz/",
+                        "pathPrefix": "/api/verify/",
                         "authorizationRequest": {
                           "headersToAdd": [
                             {
                               "key": "X-Forwarded-Proto",
                               "value": "%REQ(x-forwarded-proto?:SCHEME)%"
+                            },
+                            {
+                              "key": "X-Original-URL",
+                              "value": "%REQ(x-forwarded-proto?:SCHEME)%://%REQ(:AUTHORITY)%%REQ(:PATH)%"
+                            },
+                            {
+                              "key": "X-Forwarded-Uri",
+                              "value": "%REQ(:PATH)%"
+                            },
+                            {
+                              "key": "X-Forwarded-Host",
+                              "value": "%REQ(:AUTHORITY)%"
+                            },
+                            {
+                              "key": "X-Original-Method",
+                              "value": "%REQ(:METHOD)%"
+                            },
+                            {
+                              "key": "X-Forwarded-Method",
+                              "value": "%REQ(:METHOD)%"
                             },
                             {
                               "key": "X-BFL-USER",
@@ -832,6 +875,9 @@
                           },
                           {
                             "exact": "x-forwarded-for"
+                          },
+                          {
+                            "exact": "x-unauth-error"
                           }
                         ]
                       }
@@ -848,7 +894,7 @@
                     "typedConfig": {
                       "@type": "type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua",
                       "defaultSourceCode": {
-                        "inlineString": "\nlocal PUSH_STATE_SCRIPT = \"\u003cscript\u003e\\n\" ..\n  \"(function () {\\n\" ..\n  \"  if (window.top == window) {\\n\" ..\n  \"    return;\\n\" ..\n  \"  }\\n\" ..\n  \"  const originalPushState = history.pushState;\\n\" ..\n  \"  const pushStateEvent = new Event(\\\"pushstate\\\");\\n\" ..\n  \"  history.pushState = function (...args) {\\n\" ..\n  \"    originalPushState.apply(this, args);\\n\" ..\n  \"    window.dispatchEvent(pushStateEvent);\\n\" ..\n  \"  };\\n\" ..\n  \"  window.addEventListener(\\\"pushstate\\\", () =\u003e {\\n\" ..\n  \"    window.parent.postMessage(\\n\" ..\n  \"      {type: \\\"locationHref\\\", message: location.href},\\n\" ..\n  \"      \\\"*\\\"\\n\" ..\n  \"    );\\n\" ..\n  \"  });\\n\" ..\n  \"})();\\n\" ..\n  \"\u003c/script\u003e\"\n\nfunction envoy_on_request(request_handle)\n  local meta = request_handle:metadata()\n  if not meta then return end\n  local pushstate = meta:get(\"pushstate\")\n  local language = meta:get(\"language\")\n  if not pushstate and not language then return end\n  local dm = request_handle:streamInfo():dynamicMetadata()\n  dm:set(\"envoy.filters.http.lua\", \"needs_sub_filter\", \"1\")\n  if pushstate then\n    dm:set(\"envoy.filters.http.lua\", \"pushstate\", pushstate)\n  end\n  if language then\n    dm:set(\"envoy.filters.http.lua\", \"language\", language)\n  end\nend\n\nfunction envoy_on_response(response_handle)\n  local dm = response_handle:streamInfo():dynamicMetadata():get(\"envoy.filters.http.lua\")\n  if not dm or not dm[\"needs_sub_filter\"] then return end\n\n  local ct = response_handle:headers():get(\"content-type\")\n  if not ct or not string.find(ct, \"text/html\") then return end\n\n  local body = response_handle:body()\n  if not body or body:length() == 0 then return end\n  local body_str = body:getBytes(0, body:length())\n\n  local modified = false\n  local pushstate = dm[\"pushstate\"]\n  if pushstate then\n    local new_str = string.gsub(body_str, \"\u003c/html\u003e\", PUSH_STATE_SCRIPT .. \"\\n\u003c/html\u003e\", 1)\n    if new_str ~= body_str then\n      body_str = new_str\n      modified = true\n    end\n  end\n\n  local language = dm[\"language\"]\n  if language then\n    local meta_tag = '\u003cmeta name=\"terminus-language\" content=\"' .. language .. '\"/\u003e'\n    local new_str = string.gsub(body_str, \"\u003c/head\u003e\", meta_tag .. \"\\n\u003c/head\u003e\", 1)\n    if new_str ~= body_str then\n      body_str = new_str\n      modified = true\n    end\n  end\n\n  if modified then\n    body:setBytes(body_str)\n    response_handle:headers():replace(\"content-length\", tostring(#body_str))\n  end\nend\n"
+                        "inlineString": "\nlocal PUSH_STATE_SCRIPT = \"\u003cscript\u003e\\n\" ..\n  \"(function () {\\n\" ..\n  \"  if (window.top == window) {\\n\" ..\n  \"    return;\\n\" ..\n  \"  }\\n\" ..\n  \"  const originalPushState = history.pushState;\\n\" ..\n  \"  const pushStateEvent = new Event(\\\"pushstate\\\");\\n\" ..\n  \"  history.pushState = function (...args) {\\n\" ..\n  \"    originalPushState.apply(this, args);\\n\" ..\n  \"    window.dispatchEvent(pushStateEvent);\\n\" ..\n  \"  };\\n\" ..\n  \"  window.addEventListener(\\\"pushstate\\\", () =\u003e {\\n\" ..\n  \"    window.parent.postMessage(\\n\" ..\n  \"      {type: \\\"locationHref\\\", message: location.href},\\n\" ..\n  \"      \\\"*\\\"\\n\" ..\n  \"    );\\n\" ..\n  \"  });\\n\" ..\n  \"})();\\n\" ..\n  \"\u003c/script\u003e\"\n\n-- F2: clear Set-Cookie Domain= values (parity with historic oes set_cookie_tpl).\nlocal COOKIE_DOMAIN_PATTERN = \"Domain=([^;]*)\"\n\nfunction rewrite_set_cookie_domains(response_handle)\n  local headers = response_handle:headers()\n  local n = headers:getNumValues(\"Set-Cookie\")\n  if n == 0 then return end\n  local cookies = {}\n  for i = 0, n - 1 do\n    local v = headers:getAtIndex(\"Set-Cookie\", i)\n    if v and v ~= \"\" then\n      table.insert(cookies, v)\n    end\n  end\n  local first = true\n  for _, cookie in ipairs(cookies) do\n    local updated = cookie\n    local set_cookie_domain = string.match(cookie, COOKIE_DOMAIN_PATTERN)\n    if set_cookie_domain ~= nil and set_cookie_domain ~= \"\" then\n      updated = string.gsub(cookie, COOKIE_DOMAIN_PATTERN, \"Domain=\", 1)\n    end\n    if first then\n      headers:replace(\"Set-Cookie\", updated)\n      first = false\n    else\n      headers:add(\"Set-Cookie\", updated)\n    end\n  end\nend\n\nfunction envoy_on_request(request_handle)\n  local meta = request_handle:metadata()\n  if not meta then return end\n  local pushstate = meta:get(\"pushstate\")\n  local language = meta:get(\"language\")\n  if not pushstate and not language then return end\n  local dm = request_handle:streamInfo():dynamicMetadata()\n  dm:set(\"envoy.filters.http.lua\", \"needs_sub_filter\", \"1\")\n  if pushstate then\n    dm:set(\"envoy.filters.http.lua\", \"pushstate\", pushstate)\n  end\n  if language then\n    dm:set(\"envoy.filters.http.lua\", \"language\", language)\n  end\nend\n\nfunction envoy_on_response(response_handle)\n  -- Always rewrite Cookie Domain before optional HTML body filters.\n  rewrite_set_cookie_domains(response_handle)\n\n  local dm = response_handle:streamInfo():dynamicMetadata():get(\"envoy.filters.http.lua\")\n  if not dm or not dm[\"needs_sub_filter\"] then return end\n\n  local ct = response_handle:headers():get(\"content-type\")\n  if not ct or not string.find(ct, \"text/html\") then return end\n\n  local body = response_handle:body()\n  if not body or body:length() == 0 then return end\n  local body_str = body:getBytes(0, body:length())\n\n  local modified = false\n  local pushstate = dm[\"pushstate\"]\n  if pushstate then\n    local new_str = string.gsub(body_str, \"\u003c/html\u003e\", PUSH_STATE_SCRIPT .. \"\\n\u003c/html\u003e\", 1)\n    if new_str ~= body_str then\n      body_str = new_str\n      modified = true\n    end\n  end\n\n  local language = dm[\"language\"]\n  if language then\n    local meta_tag = '\u003cmeta name=\"terminus-language\" content=\"' .. language .. '\"/\u003e'\n    local new_str = string.gsub(body_str, \"\u003c/head\u003e\", meta_tag .. \"\\n\u003c/head\u003e\", 1)\n    if new_str ~= body_str then\n      body_str = new_str\n      modified = true\n    end\n  end\n\n  if modified then\n    body:setBytes(body_str)\n    response_handle:headers():replace(\"content-length\", tostring(#body_str))\n  end\nend\n"
                       }
                     }
                   },
@@ -945,12 +991,32 @@
                           "cluster": "authelia_backend_bob",
                           "timeout": "15s"
                         },
-                        "pathPrefix": "/api/authz/ext-authz/",
+                        "pathPrefix": "/api/verify/",
                         "authorizationRequest": {
                           "headersToAdd": [
                             {
                               "key": "X-Forwarded-Proto",
                               "value": "%REQ(x-forwarded-proto?:SCHEME)%"
+                            },
+                            {
+                              "key": "X-Original-URL",
+                              "value": "%REQ(x-forwarded-proto?:SCHEME)%://%REQ(:AUTHORITY)%%REQ(:PATH)%"
+                            },
+                            {
+                              "key": "X-Forwarded-Uri",
+                              "value": "%REQ(:PATH)%"
+                            },
+                            {
+                              "key": "X-Forwarded-Host",
+                              "value": "%REQ(:AUTHORITY)%"
+                            },
+                            {
+                              "key": "X-Original-Method",
+                              "value": "%REQ(:METHOD)%"
+                            },
+                            {
+                              "key": "X-Forwarded-Method",
+                              "value": "%REQ(:METHOD)%"
                             },
                             {
                               "key": "X-BFL-USER",
@@ -1014,6 +1080,9 @@
                           },
                           {
                             "exact": "x-forwarded-for"
+                          },
+                          {
+                            "exact": "x-unauth-error"
                           }
                         ]
                       }
@@ -1030,7 +1099,7 @@
                     "typedConfig": {
                       "@type": "type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua",
                       "defaultSourceCode": {
-                        "inlineString": "\nlocal PUSH_STATE_SCRIPT = \"\u003cscript\u003e\\n\" ..\n  \"(function () {\\n\" ..\n  \"  if (window.top == window) {\\n\" ..\n  \"    return;\\n\" ..\n  \"  }\\n\" ..\n  \"  const originalPushState = history.pushState;\\n\" ..\n  \"  const pushStateEvent = new Event(\\\"pushstate\\\");\\n\" ..\n  \"  history.pushState = function (...args) {\\n\" ..\n  \"    originalPushState.apply(this, args);\\n\" ..\n  \"    window.dispatchEvent(pushStateEvent);\\n\" ..\n  \"  };\\n\" ..\n  \"  window.addEventListener(\\\"pushstate\\\", () =\u003e {\\n\" ..\n  \"    window.parent.postMessage(\\n\" ..\n  \"      {type: \\\"locationHref\\\", message: location.href},\\n\" ..\n  \"      \\\"*\\\"\\n\" ..\n  \"    );\\n\" ..\n  \"  });\\n\" ..\n  \"})();\\n\" ..\n  \"\u003c/script\u003e\"\n\nfunction envoy_on_request(request_handle)\n  local meta = request_handle:metadata()\n  if not meta then return end\n  local pushstate = meta:get(\"pushstate\")\n  local language = meta:get(\"language\")\n  if not pushstate and not language then return end\n  local dm = request_handle:streamInfo():dynamicMetadata()\n  dm:set(\"envoy.filters.http.lua\", \"needs_sub_filter\", \"1\")\n  if pushstate then\n    dm:set(\"envoy.filters.http.lua\", \"pushstate\", pushstate)\n  end\n  if language then\n    dm:set(\"envoy.filters.http.lua\", \"language\", language)\n  end\nend\n\nfunction envoy_on_response(response_handle)\n  local dm = response_handle:streamInfo():dynamicMetadata():get(\"envoy.filters.http.lua\")\n  if not dm or not dm[\"needs_sub_filter\"] then return end\n\n  local ct = response_handle:headers():get(\"content-type\")\n  if not ct or not string.find(ct, \"text/html\") then return end\n\n  local body = response_handle:body()\n  if not body or body:length() == 0 then return end\n  local body_str = body:getBytes(0, body:length())\n\n  local modified = false\n  local pushstate = dm[\"pushstate\"]\n  if pushstate then\n    local new_str = string.gsub(body_str, \"\u003c/html\u003e\", PUSH_STATE_SCRIPT .. \"\\n\u003c/html\u003e\", 1)\n    if new_str ~= body_str then\n      body_str = new_str\n      modified = true\n    end\n  end\n\n  local language = dm[\"language\"]\n  if language then\n    local meta_tag = '\u003cmeta name=\"terminus-language\" content=\"' .. language .. '\"/\u003e'\n    local new_str = string.gsub(body_str, \"\u003c/head\u003e\", meta_tag .. \"\\n\u003c/head\u003e\", 1)\n    if new_str ~= body_str then\n      body_str = new_str\n      modified = true\n    end\n  end\n\n  if modified then\n    body:setBytes(body_str)\n    response_handle:headers():replace(\"content-length\", tostring(#body_str))\n  end\nend\n"
+                        "inlineString": "\nlocal PUSH_STATE_SCRIPT = \"\u003cscript\u003e\\n\" ..\n  \"(function () {\\n\" ..\n  \"  if (window.top == window) {\\n\" ..\n  \"    return;\\n\" ..\n  \"  }\\n\" ..\n  \"  const originalPushState = history.pushState;\\n\" ..\n  \"  const pushStateEvent = new Event(\\\"pushstate\\\");\\n\" ..\n  \"  history.pushState = function (...args) {\\n\" ..\n  \"    originalPushState.apply(this, args);\\n\" ..\n  \"    window.dispatchEvent(pushStateEvent);\\n\" ..\n  \"  };\\n\" ..\n  \"  window.addEventListener(\\\"pushstate\\\", () =\u003e {\\n\" ..\n  \"    window.parent.postMessage(\\n\" ..\n  \"      {type: \\\"locationHref\\\", message: location.href},\\n\" ..\n  \"      \\\"*\\\"\\n\" ..\n  \"    );\\n\" ..\n  \"  });\\n\" ..\n  \"})();\\n\" ..\n  \"\u003c/script\u003e\"\n\n-- F2: clear Set-Cookie Domain= values (parity with historic oes set_cookie_tpl).\nlocal COOKIE_DOMAIN_PATTERN = \"Domain=([^;]*)\"\n\nfunction rewrite_set_cookie_domains(response_handle)\n  local headers = response_handle:headers()\n  local n = headers:getNumValues(\"Set-Cookie\")\n  if n == 0 then return end\n  local cookies = {}\n  for i = 0, n - 1 do\n    local v = headers:getAtIndex(\"Set-Cookie\", i)\n    if v and v ~= \"\" then\n      table.insert(cookies, v)\n    end\n  end\n  local first = true\n  for _, cookie in ipairs(cookies) do\n    local updated = cookie\n    local set_cookie_domain = string.match(cookie, COOKIE_DOMAIN_PATTERN)\n    if set_cookie_domain ~= nil and set_cookie_domain ~= \"\" then\n      updated = string.gsub(cookie, COOKIE_DOMAIN_PATTERN, \"Domain=\", 1)\n    end\n    if first then\n      headers:replace(\"Set-Cookie\", updated)\n      first = false\n    else\n      headers:add(\"Set-Cookie\", updated)\n    end\n  end\nend\n\nfunction envoy_on_request(request_handle)\n  local meta = request_handle:metadata()\n  if not meta then return end\n  local pushstate = meta:get(\"pushstate\")\n  local language = meta:get(\"language\")\n  if not pushstate and not language then return end\n  local dm = request_handle:streamInfo():dynamicMetadata()\n  dm:set(\"envoy.filters.http.lua\", \"needs_sub_filter\", \"1\")\n  if pushstate then\n    dm:set(\"envoy.filters.http.lua\", \"pushstate\", pushstate)\n  end\n  if language then\n    dm:set(\"envoy.filters.http.lua\", \"language\", language)\n  end\nend\n\nfunction envoy_on_response(response_handle)\n  -- Always rewrite Cookie Domain before optional HTML body filters.\n  rewrite_set_cookie_domains(response_handle)\n\n  local dm = response_handle:streamInfo():dynamicMetadata():get(\"envoy.filters.http.lua\")\n  if not dm or not dm[\"needs_sub_filter\"] then return end\n\n  local ct = response_handle:headers():get(\"content-type\")\n  if not ct or not string.find(ct, \"text/html\") then return end\n\n  local body = response_handle:body()\n  if not body or body:length() == 0 then return end\n  local body_str = body:getBytes(0, body:length())\n\n  local modified = false\n  local pushstate = dm[\"pushstate\"]\n  if pushstate then\n    local new_str = string.gsub(body_str, \"\u003c/html\u003e\", PUSH_STATE_SCRIPT .. \"\\n\u003c/html\u003e\", 1)\n    if new_str ~= body_str then\n      body_str = new_str\n      modified = true\n    end\n  end\n\n  local language = dm[\"language\"]\n  if language then\n    local meta_tag = '\u003cmeta name=\"terminus-language\" content=\"' .. language .. '\"/\u003e'\n    local new_str = string.gsub(body_str, \"\u003c/head\u003e\", meta_tag .. \"\\n\u003c/head\u003e\", 1)\n    if new_str ~= body_str then\n      body_str = new_str\n      modified = true\n    end\n  end\n\n  if modified then\n    body:setBytes(body_str)\n    response_handle:headers():replace(\"content-length\", tostring(#body_str))\n  end\nend\n"
                       }
                     }
                   },
@@ -1147,12 +1216,32 @@
                           "cluster": "authelia_backend_admin",
                           "timeout": "15s"
                         },
-                        "pathPrefix": "/api/authz/ext-authz/",
+                        "pathPrefix": "/api/verify/",
                         "authorizationRequest": {
                           "headersToAdd": [
                             {
                               "key": "X-Forwarded-Proto",
                               "value": "%REQ(x-forwarded-proto?:SCHEME)%"
+                            },
+                            {
+                              "key": "X-Original-URL",
+                              "value": "%REQ(x-forwarded-proto?:SCHEME)%://%REQ(:AUTHORITY)%%REQ(:PATH)%"
+                            },
+                            {
+                              "key": "X-Forwarded-Uri",
+                              "value": "%REQ(:PATH)%"
+                            },
+                            {
+                              "key": "X-Forwarded-Host",
+                              "value": "%REQ(:AUTHORITY)%"
+                            },
+                            {
+                              "key": "X-Original-Method",
+                              "value": "%REQ(:METHOD)%"
+                            },
+                            {
+                              "key": "X-Forwarded-Method",
+                              "value": "%REQ(:METHOD)%"
                             },
                             {
                               "key": "X-BFL-USER",
@@ -1216,6 +1305,9 @@
                           },
                           {
                             "exact": "x-forwarded-for"
+                          },
+                          {
+                            "exact": "x-unauth-error"
                           }
                         ]
                       }
@@ -1232,7 +1324,7 @@
                     "typedConfig": {
                       "@type": "type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua",
                       "defaultSourceCode": {
-                        "inlineString": "\nlocal PUSH_STATE_SCRIPT = \"\u003cscript\u003e\\n\" ..\n  \"(function () {\\n\" ..\n  \"  if (window.top == window) {\\n\" ..\n  \"    return;\\n\" ..\n  \"  }\\n\" ..\n  \"  const originalPushState = history.pushState;\\n\" ..\n  \"  const pushStateEvent = new Event(\\\"pushstate\\\");\\n\" ..\n  \"  history.pushState = function (...args) {\\n\" ..\n  \"    originalPushState.apply(this, args);\\n\" ..\n  \"    window.dispatchEvent(pushStateEvent);\\n\" ..\n  \"  };\\n\" ..\n  \"  window.addEventListener(\\\"pushstate\\\", () =\u003e {\\n\" ..\n  \"    window.parent.postMessage(\\n\" ..\n  \"      {type: \\\"locationHref\\\", message: location.href},\\n\" ..\n  \"      \\\"*\\\"\\n\" ..\n  \"    );\\n\" ..\n  \"  });\\n\" ..\n  \"})();\\n\" ..\n  \"\u003c/script\u003e\"\n\nfunction envoy_on_request(request_handle)\n  local meta = request_handle:metadata()\n  if not meta then return end\n  local pushstate = meta:get(\"pushstate\")\n  local language = meta:get(\"language\")\n  if not pushstate and not language then return end\n  local dm = request_handle:streamInfo():dynamicMetadata()\n  dm:set(\"envoy.filters.http.lua\", \"needs_sub_filter\", \"1\")\n  if pushstate then\n    dm:set(\"envoy.filters.http.lua\", \"pushstate\", pushstate)\n  end\n  if language then\n    dm:set(\"envoy.filters.http.lua\", \"language\", language)\n  end\nend\n\nfunction envoy_on_response(response_handle)\n  local dm = response_handle:streamInfo():dynamicMetadata():get(\"envoy.filters.http.lua\")\n  if not dm or not dm[\"needs_sub_filter\"] then return end\n\n  local ct = response_handle:headers():get(\"content-type\")\n  if not ct or not string.find(ct, \"text/html\") then return end\n\n  local body = response_handle:body()\n  if not body or body:length() == 0 then return end\n  local body_str = body:getBytes(0, body:length())\n\n  local modified = false\n  local pushstate = dm[\"pushstate\"]\n  if pushstate then\n    local new_str = string.gsub(body_str, \"\u003c/html\u003e\", PUSH_STATE_SCRIPT .. \"\\n\u003c/html\u003e\", 1)\n    if new_str ~= body_str then\n      body_str = new_str\n      modified = true\n    end\n  end\n\n  local language = dm[\"language\"]\n  if language then\n    local meta_tag = '\u003cmeta name=\"terminus-language\" content=\"' .. language .. '\"/\u003e'\n    local new_str = string.gsub(body_str, \"\u003c/head\u003e\", meta_tag .. \"\\n\u003c/head\u003e\", 1)\n    if new_str ~= body_str then\n      body_str = new_str\n      modified = true\n    end\n  end\n\n  if modified then\n    body:setBytes(body_str)\n    response_handle:headers():replace(\"content-length\", tostring(#body_str))\n  end\nend\n"
+                        "inlineString": "\nlocal PUSH_STATE_SCRIPT = \"\u003cscript\u003e\\n\" ..\n  \"(function () {\\n\" ..\n  \"  if (window.top == window) {\\n\" ..\n  \"    return;\\n\" ..\n  \"  }\\n\" ..\n  \"  const originalPushState = history.pushState;\\n\" ..\n  \"  const pushStateEvent = new Event(\\\"pushstate\\\");\\n\" ..\n  \"  history.pushState = function (...args) {\\n\" ..\n  \"    originalPushState.apply(this, args);\\n\" ..\n  \"    window.dispatchEvent(pushStateEvent);\\n\" ..\n  \"  };\\n\" ..\n  \"  window.addEventListener(\\\"pushstate\\\", () =\u003e {\\n\" ..\n  \"    window.parent.postMessage(\\n\" ..\n  \"      {type: \\\"locationHref\\\", message: location.href},\\n\" ..\n  \"      \\\"*\\\"\\n\" ..\n  \"    );\\n\" ..\n  \"  });\\n\" ..\n  \"})();\\n\" ..\n  \"\u003c/script\u003e\"\n\n-- F2: clear Set-Cookie Domain= values (parity with historic oes set_cookie_tpl).\nlocal COOKIE_DOMAIN_PATTERN = \"Domain=([^;]*)\"\n\nfunction rewrite_set_cookie_domains(response_handle)\n  local headers = response_handle:headers()\n  local n = headers:getNumValues(\"Set-Cookie\")\n  if n == 0 then return end\n  local cookies = {}\n  for i = 0, n - 1 do\n    local v = headers:getAtIndex(\"Set-Cookie\", i)\n    if v and v ~= \"\" then\n      table.insert(cookies, v)\n    end\n  end\n  local first = true\n  for _, cookie in ipairs(cookies) do\n    local updated = cookie\n    local set_cookie_domain = string.match(cookie, COOKIE_DOMAIN_PATTERN)\n    if set_cookie_domain ~= nil and set_cookie_domain ~= \"\" then\n      updated = string.gsub(cookie, COOKIE_DOMAIN_PATTERN, \"Domain=\", 1)\n    end\n    if first then\n      headers:replace(\"Set-Cookie\", updated)\n      first = false\n    else\n      headers:add(\"Set-Cookie\", updated)\n    end\n  end\nend\n\nfunction envoy_on_request(request_handle)\n  local meta = request_handle:metadata()\n  if not meta then return end\n  local pushstate = meta:get(\"pushstate\")\n  local language = meta:get(\"language\")\n  if not pushstate and not language then return end\n  local dm = request_handle:streamInfo():dynamicMetadata()\n  dm:set(\"envoy.filters.http.lua\", \"needs_sub_filter\", \"1\")\n  if pushstate then\n    dm:set(\"envoy.filters.http.lua\", \"pushstate\", pushstate)\n  end\n  if language then\n    dm:set(\"envoy.filters.http.lua\", \"language\", language)\n  end\nend\n\nfunction envoy_on_response(response_handle)\n  -- Always rewrite Cookie Domain before optional HTML body filters.\n  rewrite_set_cookie_domains(response_handle)\n\n  local dm = response_handle:streamInfo():dynamicMetadata():get(\"envoy.filters.http.lua\")\n  if not dm or not dm[\"needs_sub_filter\"] then return end\n\n  local ct = response_handle:headers():get(\"content-type\")\n  if not ct or not string.find(ct, \"text/html\") then return end\n\n  local body = response_handle:body()\n  if not body or body:length() == 0 then return end\n  local body_str = body:getBytes(0, body:length())\n\n  local modified = false\n  local pushstate = dm[\"pushstate\"]\n  if pushstate then\n    local new_str = string.gsub(body_str, \"\u003c/html\u003e\", PUSH_STATE_SCRIPT .. \"\\n\u003c/html\u003e\", 1)\n    if new_str ~= body_str then\n      body_str = new_str\n      modified = true\n    end\n  end\n\n  local language = dm[\"language\"]\n  if language then\n    local meta_tag = '\u003cmeta name=\"terminus-language\" content=\"' .. language .. '\"/\u003e'\n    local new_str = string.gsub(body_str, \"\u003c/head\u003e\", meta_tag .. \"\\n\u003c/head\u003e\", 1)\n    if new_str ~= body_str then\n      body_str = new_str\n      modified = true\n    end\n  end\n\n  if modified then\n    body:setBytes(body_str)\n    response_handle:headers():replace(\"content-length\", tostring(#body_str))\n  end\nend\n"
                       }
                     }
                   },
@@ -1329,12 +1421,32 @@
                           "cluster": "authelia_backend_alice",
                           "timeout": "15s"
                         },
-                        "pathPrefix": "/api/authz/ext-authz/",
+                        "pathPrefix": "/api/verify/",
                         "authorizationRequest": {
                           "headersToAdd": [
                             {
                               "key": "X-Forwarded-Proto",
                               "value": "%REQ(x-forwarded-proto?:SCHEME)%"
+                            },
+                            {
+                              "key": "X-Original-URL",
+                              "value": "%REQ(x-forwarded-proto?:SCHEME)%://%REQ(:AUTHORITY)%%REQ(:PATH)%"
+                            },
+                            {
+                              "key": "X-Forwarded-Uri",
+                              "value": "%REQ(:PATH)%"
+                            },
+                            {
+                              "key": "X-Forwarded-Host",
+                              "value": "%REQ(:AUTHORITY)%"
+                            },
+                            {
+                              "key": "X-Original-Method",
+                              "value": "%REQ(:METHOD)%"
+                            },
+                            {
+                              "key": "X-Forwarded-Method",
+                              "value": "%REQ(:METHOD)%"
                             },
                             {
                               "key": "X-BFL-USER",
@@ -1398,6 +1510,9 @@
                           },
                           {
                             "exact": "x-forwarded-for"
+                          },
+                          {
+                            "exact": "x-unauth-error"
                           }
                         ]
                       }
@@ -1414,7 +1529,7 @@
                     "typedConfig": {
                       "@type": "type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua",
                       "defaultSourceCode": {
-                        "inlineString": "\nlocal PUSH_STATE_SCRIPT = \"\u003cscript\u003e\\n\" ..\n  \"(function () {\\n\" ..\n  \"  if (window.top == window) {\\n\" ..\n  \"    return;\\n\" ..\n  \"  }\\n\" ..\n  \"  const originalPushState = history.pushState;\\n\" ..\n  \"  const pushStateEvent = new Event(\\\"pushstate\\\");\\n\" ..\n  \"  history.pushState = function (...args) {\\n\" ..\n  \"    originalPushState.apply(this, args);\\n\" ..\n  \"    window.dispatchEvent(pushStateEvent);\\n\" ..\n  \"  };\\n\" ..\n  \"  window.addEventListener(\\\"pushstate\\\", () =\u003e {\\n\" ..\n  \"    window.parent.postMessage(\\n\" ..\n  \"      {type: \\\"locationHref\\\", message: location.href},\\n\" ..\n  \"      \\\"*\\\"\\n\" ..\n  \"    );\\n\" ..\n  \"  });\\n\" ..\n  \"})();\\n\" ..\n  \"\u003c/script\u003e\"\n\nfunction envoy_on_request(request_handle)\n  local meta = request_handle:metadata()\n  if not meta then return end\n  local pushstate = meta:get(\"pushstate\")\n  local language = meta:get(\"language\")\n  if not pushstate and not language then return end\n  local dm = request_handle:streamInfo():dynamicMetadata()\n  dm:set(\"envoy.filters.http.lua\", \"needs_sub_filter\", \"1\")\n  if pushstate then\n    dm:set(\"envoy.filters.http.lua\", \"pushstate\", pushstate)\n  end\n  if language then\n    dm:set(\"envoy.filters.http.lua\", \"language\", language)\n  end\nend\n\nfunction envoy_on_response(response_handle)\n  local dm = response_handle:streamInfo():dynamicMetadata():get(\"envoy.filters.http.lua\")\n  if not dm or not dm[\"needs_sub_filter\"] then return end\n\n  local ct = response_handle:headers():get(\"content-type\")\n  if not ct or not string.find(ct, \"text/html\") then return end\n\n  local body = response_handle:body()\n  if not body or body:length() == 0 then return end\n  local body_str = body:getBytes(0, body:length())\n\n  local modified = false\n  local pushstate = dm[\"pushstate\"]\n  if pushstate then\n    local new_str = string.gsub(body_str, \"\u003c/html\u003e\", PUSH_STATE_SCRIPT .. \"\\n\u003c/html\u003e\", 1)\n    if new_str ~= body_str then\n      body_str = new_str\n      modified = true\n    end\n  end\n\n  local language = dm[\"language\"]\n  if language then\n    local meta_tag = '\u003cmeta name=\"terminus-language\" content=\"' .. language .. '\"/\u003e'\n    local new_str = string.gsub(body_str, \"\u003c/head\u003e\", meta_tag .. \"\\n\u003c/head\u003e\", 1)\n    if new_str ~= body_str then\n      body_str = new_str\n      modified = true\n    end\n  end\n\n  if modified then\n    body:setBytes(body_str)\n    response_handle:headers():replace(\"content-length\", tostring(#body_str))\n  end\nend\n"
+                        "inlineString": "\nlocal PUSH_STATE_SCRIPT = \"\u003cscript\u003e\\n\" ..\n  \"(function () {\\n\" ..\n  \"  if (window.top == window) {\\n\" ..\n  \"    return;\\n\" ..\n  \"  }\\n\" ..\n  \"  const originalPushState = history.pushState;\\n\" ..\n  \"  const pushStateEvent = new Event(\\\"pushstate\\\");\\n\" ..\n  \"  history.pushState = function (...args) {\\n\" ..\n  \"    originalPushState.apply(this, args);\\n\" ..\n  \"    window.dispatchEvent(pushStateEvent);\\n\" ..\n  \"  };\\n\" ..\n  \"  window.addEventListener(\\\"pushstate\\\", () =\u003e {\\n\" ..\n  \"    window.parent.postMessage(\\n\" ..\n  \"      {type: \\\"locationHref\\\", message: location.href},\\n\" ..\n  \"      \\\"*\\\"\\n\" ..\n  \"    );\\n\" ..\n  \"  });\\n\" ..\n  \"})();\\n\" ..\n  \"\u003c/script\u003e\"\n\n-- F2: clear Set-Cookie Domain= values (parity with historic oes set_cookie_tpl).\nlocal COOKIE_DOMAIN_PATTERN = \"Domain=([^;]*)\"\n\nfunction rewrite_set_cookie_domains(response_handle)\n  local headers = response_handle:headers()\n  local n = headers:getNumValues(\"Set-Cookie\")\n  if n == 0 then return end\n  local cookies = {}\n  for i = 0, n - 1 do\n    local v = headers:getAtIndex(\"Set-Cookie\", i)\n    if v and v ~= \"\" then\n      table.insert(cookies, v)\n    end\n  end\n  local first = true\n  for _, cookie in ipairs(cookies) do\n    local updated = cookie\n    local set_cookie_domain = string.match(cookie, COOKIE_DOMAIN_PATTERN)\n    if set_cookie_domain ~= nil and set_cookie_domain ~= \"\" then\n      updated = string.gsub(cookie, COOKIE_DOMAIN_PATTERN, \"Domain=\", 1)\n    end\n    if first then\n      headers:replace(\"Set-Cookie\", updated)\n      first = false\n    else\n      headers:add(\"Set-Cookie\", updated)\n    end\n  end\nend\n\nfunction envoy_on_request(request_handle)\n  local meta = request_handle:metadata()\n  if not meta then return end\n  local pushstate = meta:get(\"pushstate\")\n  local language = meta:get(\"language\")\n  if not pushstate and not language then return end\n  local dm = request_handle:streamInfo():dynamicMetadata()\n  dm:set(\"envoy.filters.http.lua\", \"needs_sub_filter\", \"1\")\n  if pushstate then\n    dm:set(\"envoy.filters.http.lua\", \"pushstate\", pushstate)\n  end\n  if language then\n    dm:set(\"envoy.filters.http.lua\", \"language\", language)\n  end\nend\n\nfunction envoy_on_response(response_handle)\n  -- Always rewrite Cookie Domain before optional HTML body filters.\n  rewrite_set_cookie_domains(response_handle)\n\n  local dm = response_handle:streamInfo():dynamicMetadata():get(\"envoy.filters.http.lua\")\n  if not dm or not dm[\"needs_sub_filter\"] then return end\n\n  local ct = response_handle:headers():get(\"content-type\")\n  if not ct or not string.find(ct, \"text/html\") then return end\n\n  local body = response_handle:body()\n  if not body or body:length() == 0 then return end\n  local body_str = body:getBytes(0, body:length())\n\n  local modified = false\n  local pushstate = dm[\"pushstate\"]\n  if pushstate then\n    local new_str = string.gsub(body_str, \"\u003c/html\u003e\", PUSH_STATE_SCRIPT .. \"\\n\u003c/html\u003e\", 1)\n    if new_str ~= body_str then\n      body_str = new_str\n      modified = true\n    end\n  end\n\n  local language = dm[\"language\"]\n  if language then\n    local meta_tag = '\u003cmeta name=\"terminus-language\" content=\"' .. language .. '\"/\u003e'\n    local new_str = string.gsub(body_str, \"\u003c/head\u003e\", meta_tag .. \"\\n\u003c/head\u003e\", 1)\n    if new_str ~= body_str then\n      body_str = new_str\n      modified = true\n    end\n  end\n\n  if modified then\n    body:setBytes(body_str)\n    response_handle:headers():replace(\"content-length\", tostring(#body_str))\n  end\nend\n"
                       }
                     }
                   },
@@ -1511,12 +1626,32 @@
                           "cluster": "authelia_backend_bob",
                           "timeout": "15s"
                         },
-                        "pathPrefix": "/api/authz/ext-authz/",
+                        "pathPrefix": "/api/verify/",
                         "authorizationRequest": {
                           "headersToAdd": [
                             {
                               "key": "X-Forwarded-Proto",
                               "value": "%REQ(x-forwarded-proto?:SCHEME)%"
+                            },
+                            {
+                              "key": "X-Original-URL",
+                              "value": "%REQ(x-forwarded-proto?:SCHEME)%://%REQ(:AUTHORITY)%%REQ(:PATH)%"
+                            },
+                            {
+                              "key": "X-Forwarded-Uri",
+                              "value": "%REQ(:PATH)%"
+                            },
+                            {
+                              "key": "X-Forwarded-Host",
+                              "value": "%REQ(:AUTHORITY)%"
+                            },
+                            {
+                              "key": "X-Original-Method",
+                              "value": "%REQ(:METHOD)%"
+                            },
+                            {
+                              "key": "X-Forwarded-Method",
+                              "value": "%REQ(:METHOD)%"
                             },
                             {
                               "key": "X-BFL-USER",
@@ -1580,6 +1715,9 @@
                           },
                           {
                             "exact": "x-forwarded-for"
+                          },
+                          {
+                            "exact": "x-unauth-error"
                           }
                         ]
                       }
@@ -1596,7 +1734,7 @@
                     "typedConfig": {
                       "@type": "type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua",
                       "defaultSourceCode": {
-                        "inlineString": "\nlocal PUSH_STATE_SCRIPT = \"\u003cscript\u003e\\n\" ..\n  \"(function () {\\n\" ..\n  \"  if (window.top == window) {\\n\" ..\n  \"    return;\\n\" ..\n  \"  }\\n\" ..\n  \"  const originalPushState = history.pushState;\\n\" ..\n  \"  const pushStateEvent = new Event(\\\"pushstate\\\");\\n\" ..\n  \"  history.pushState = function (...args) {\\n\" ..\n  \"    originalPushState.apply(this, args);\\n\" ..\n  \"    window.dispatchEvent(pushStateEvent);\\n\" ..\n  \"  };\\n\" ..\n  \"  window.addEventListener(\\\"pushstate\\\", () =\u003e {\\n\" ..\n  \"    window.parent.postMessage(\\n\" ..\n  \"      {type: \\\"locationHref\\\", message: location.href},\\n\" ..\n  \"      \\\"*\\\"\\n\" ..\n  \"    );\\n\" ..\n  \"  });\\n\" ..\n  \"})();\\n\" ..\n  \"\u003c/script\u003e\"\n\nfunction envoy_on_request(request_handle)\n  local meta = request_handle:metadata()\n  if not meta then return end\n  local pushstate = meta:get(\"pushstate\")\n  local language = meta:get(\"language\")\n  if not pushstate and not language then return end\n  local dm = request_handle:streamInfo():dynamicMetadata()\n  dm:set(\"envoy.filters.http.lua\", \"needs_sub_filter\", \"1\")\n  if pushstate then\n    dm:set(\"envoy.filters.http.lua\", \"pushstate\", pushstate)\n  end\n  if language then\n    dm:set(\"envoy.filters.http.lua\", \"language\", language)\n  end\nend\n\nfunction envoy_on_response(response_handle)\n  local dm = response_handle:streamInfo():dynamicMetadata():get(\"envoy.filters.http.lua\")\n  if not dm or not dm[\"needs_sub_filter\"] then return end\n\n  local ct = response_handle:headers():get(\"content-type\")\n  if not ct or not string.find(ct, \"text/html\") then return end\n\n  local body = response_handle:body()\n  if not body or body:length() == 0 then return end\n  local body_str = body:getBytes(0, body:length())\n\n  local modified = false\n  local pushstate = dm[\"pushstate\"]\n  if pushstate then\n    local new_str = string.gsub(body_str, \"\u003c/html\u003e\", PUSH_STATE_SCRIPT .. \"\\n\u003c/html\u003e\", 1)\n    if new_str ~= body_str then\n      body_str = new_str\n      modified = true\n    end\n  end\n\n  local language = dm[\"language\"]\n  if language then\n    local meta_tag = '\u003cmeta name=\"terminus-language\" content=\"' .. language .. '\"/\u003e'\n    local new_str = string.gsub(body_str, \"\u003c/head\u003e\", meta_tag .. \"\\n\u003c/head\u003e\", 1)\n    if new_str ~= body_str then\n      body_str = new_str\n      modified = true\n    end\n  end\n\n  if modified then\n    body:setBytes(body_str)\n    response_handle:headers():replace(\"content-length\", tostring(#body_str))\n  end\nend\n"
+                        "inlineString": "\nlocal PUSH_STATE_SCRIPT = \"\u003cscript\u003e\\n\" ..\n  \"(function () {\\n\" ..\n  \"  if (window.top == window) {\\n\" ..\n  \"    return;\\n\" ..\n  \"  }\\n\" ..\n  \"  const originalPushState = history.pushState;\\n\" ..\n  \"  const pushStateEvent = new Event(\\\"pushstate\\\");\\n\" ..\n  \"  history.pushState = function (...args) {\\n\" ..\n  \"    originalPushState.apply(this, args);\\n\" ..\n  \"    window.dispatchEvent(pushStateEvent);\\n\" ..\n  \"  };\\n\" ..\n  \"  window.addEventListener(\\\"pushstate\\\", () =\u003e {\\n\" ..\n  \"    window.parent.postMessage(\\n\" ..\n  \"      {type: \\\"locationHref\\\", message: location.href},\\n\" ..\n  \"      \\\"*\\\"\\n\" ..\n  \"    );\\n\" ..\n  \"  });\\n\" ..\n  \"})();\\n\" ..\n  \"\u003c/script\u003e\"\n\n-- F2: clear Set-Cookie Domain= values (parity with historic oes set_cookie_tpl).\nlocal COOKIE_DOMAIN_PATTERN = \"Domain=([^;]*)\"\n\nfunction rewrite_set_cookie_domains(response_handle)\n  local headers = response_handle:headers()\n  local n = headers:getNumValues(\"Set-Cookie\")\n  if n == 0 then return end\n  local cookies = {}\n  for i = 0, n - 1 do\n    local v = headers:getAtIndex(\"Set-Cookie\", i)\n    if v and v ~= \"\" then\n      table.insert(cookies, v)\n    end\n  end\n  local first = true\n  for _, cookie in ipairs(cookies) do\n    local updated = cookie\n    local set_cookie_domain = string.match(cookie, COOKIE_DOMAIN_PATTERN)\n    if set_cookie_domain ~= nil and set_cookie_domain ~= \"\" then\n      updated = string.gsub(cookie, COOKIE_DOMAIN_PATTERN, \"Domain=\", 1)\n    end\n    if first then\n      headers:replace(\"Set-Cookie\", updated)\n      first = false\n    else\n      headers:add(\"Set-Cookie\", updated)\n    end\n  end\nend\n\nfunction envoy_on_request(request_handle)\n  local meta = request_handle:metadata()\n  if not meta then return end\n  local pushstate = meta:get(\"pushstate\")\n  local language = meta:get(\"language\")\n  if not pushstate and not language then return end\n  local dm = request_handle:streamInfo():dynamicMetadata()\n  dm:set(\"envoy.filters.http.lua\", \"needs_sub_filter\", \"1\")\n  if pushstate then\n    dm:set(\"envoy.filters.http.lua\", \"pushstate\", pushstate)\n  end\n  if language then\n    dm:set(\"envoy.filters.http.lua\", \"language\", language)\n  end\nend\n\nfunction envoy_on_response(response_handle)\n  -- Always rewrite Cookie Domain before optional HTML body filters.\n  rewrite_set_cookie_domains(response_handle)\n\n  local dm = response_handle:streamInfo():dynamicMetadata():get(\"envoy.filters.http.lua\")\n  if not dm or not dm[\"needs_sub_filter\"] then return end\n\n  local ct = response_handle:headers():get(\"content-type\")\n  if not ct or not string.find(ct, \"text/html\") then return end\n\n  local body = response_handle:body()\n  if not body or body:length() == 0 then return end\n  local body_str = body:getBytes(0, body:length())\n\n  local modified = false\n  local pushstate = dm[\"pushstate\"]\n  if pushstate then\n    local new_str = string.gsub(body_str, \"\u003c/html\u003e\", PUSH_STATE_SCRIPT .. \"\\n\u003c/html\u003e\", 1)\n    if new_str ~= body_str then\n      body_str = new_str\n      modified = true\n    end\n  end\n\n  local language = dm[\"language\"]\n  if language then\n    local meta_tag = '\u003cmeta name=\"terminus-language\" content=\"' .. language .. '\"/\u003e'\n    local new_str = string.gsub(body_str, \"\u003c/head\u003e\", meta_tag .. \"\\n\u003c/head\u003e\", 1)\n    if new_str ~= body_str then\n      body_str = new_str\n      modified = true\n    end\n  end\n\n  if modified then\n    body:setBytes(body_str)\n    response_handle:headers():replace(\"content-length\", tostring(#body_str))\n  end\nend\n"
                       }
                     }
                   },
@@ -1699,6 +1837,12 @@
               "route": {
                 "cluster": "profile_service_admin",
                 "timeout": "300s"
+              },
+              "typedPerFilterConfig": {
+                "envoy.filters.http.ext_authz": {
+                  "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+                  "checkSettings": {}
+                }
               },
               "requestHeadersToAdd": [
                 {
@@ -1831,6 +1975,12 @@
                     "upgradeType": "tailscale-control-protocol"
                   }
                 ]
+              },
+              "typedPerFilterConfig": {
+                "envoy.filters.http.ext_authz": {
+                  "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+                  "checkSettings": {}
+                }
               },
               "requestHeadersToAdd": [
                 {
@@ -2021,6 +2171,12 @@
                 "cluster": "profile_service_alice",
                 "timeout": "300s"
               },
+              "typedPerFilterConfig": {
+                "envoy.filters.http.ext_authz": {
+                  "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+                  "checkSettings": {}
+                }
+              },
               "requestHeadersToAdd": [
                 {
                   "header": {
@@ -2152,6 +2308,12 @@
                     "upgradeType": "tailscale-control-protocol"
                   }
                 ]
+              },
+              "typedPerFilterConfig": {
+                "envoy.filters.http.ext_authz": {
+                  "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+                  "checkSettings": {}
+                }
               },
               "requestHeadersToAdd": [
                 {
@@ -2342,6 +2504,12 @@
                 "cluster": "profile_service_bob",
                 "timeout": "300s"
               },
+              "typedPerFilterConfig": {
+                "envoy.filters.http.ext_authz": {
+                  "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+                  "checkSettings": {}
+                }
+              },
               "requestHeadersToAdd": [
                 {
                   "header": {
@@ -2473,6 +2641,12 @@
                     "upgradeType": "tailscale-control-protocol"
                   }
                 ]
+              },
+              "typedPerFilterConfig": {
+                "envoy.filters.http.ext_authz": {
+                  "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+                  "checkSettings": {}
+                }
               },
               "requestHeadersToAdd": [
                 {
@@ -2663,6 +2837,12 @@
                 "cluster": "profile_service_admin",
                 "timeout": "300s"
               },
+              "typedPerFilterConfig": {
+                "envoy.filters.http.ext_authz": {
+                  "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+                  "checkSettings": {}
+                }
+              },
               "requestHeadersToAdd": [
                 {
                   "header": {
@@ -2794,6 +2974,12 @@
                     "upgradeType": "tailscale-control-protocol"
                   }
                 ]
+              },
+              "typedPerFilterConfig": {
+                "envoy.filters.http.ext_authz": {
+                  "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+                  "checkSettings": {}
+                }
               },
               "requestHeadersToAdd": [
                 {
@@ -2984,6 +3170,12 @@
                 "cluster": "profile_service_alice",
                 "timeout": "300s"
               },
+              "typedPerFilterConfig": {
+                "envoy.filters.http.ext_authz": {
+                  "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+                  "checkSettings": {}
+                }
+              },
               "requestHeadersToAdd": [
                 {
                   "header": {
@@ -3115,6 +3307,12 @@
                     "upgradeType": "tailscale-control-protocol"
                   }
                 ]
+              },
+              "typedPerFilterConfig": {
+                "envoy.filters.http.ext_authz": {
+                  "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+                  "checkSettings": {}
+                }
               },
               "requestHeadersToAdd": [
                 {
@@ -3305,6 +3503,12 @@
                 "cluster": "profile_service_bob",
                 "timeout": "300s"
               },
+              "typedPerFilterConfig": {
+                "envoy.filters.http.ext_authz": {
+                  "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+                  "checkSettings": {}
+                }
+              },
               "requestHeadersToAdd": [
                 {
                   "header": {
@@ -3436,6 +3640,12 @@
                     "upgradeType": "tailscale-control-protocol"
                   }
                 ]
+              },
+              "typedPerFilterConfig": {
+                "envoy.filters.http.ext_authz": {
+                  "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+                  "checkSettings": {}
+                }
               },
               "requestHeadersToAdd": [
                 {
