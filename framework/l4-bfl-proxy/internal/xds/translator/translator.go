@@ -159,6 +159,11 @@ end
 //	}
 const xForwardedProtoValue = "%REQ(x-forwarded-proto?:SCHEME)%"
 
+// xOriginalURLValue is the original client URL for Authelia /api/verify/.
+// Envoy path_prefix rewrites the auth check path to /api/verify/<orig>, so
+// without this header Authelia builds rd from the check URI (e.g. /api/verify//).
+const xOriginalURLValue = "%REQ(x-forwarded-proto?:SCHEME)%://%REQ(:AUTHORITY)%%REQ(:PATH)%"
+
 var (
 	tcpIdleTimeout        = time.Hour
 	httpStreamIdleTimeout = 30 * time.Minute
@@ -1038,6 +1043,14 @@ func autheliaAuthorizationRequest(userName string) *extauthzv3.AuthorizationRequ
 	return &extauthzv3.AuthorizationRequest{
 		HeadersToAdd: []*corev3.HeaderValue{
 			{Key: "X-Forwarded-Proto", Value: xForwardedProtoValue},
+			// Authelia ForwardAuth/Verify uses these for the post-login rd=
+			// target. Values are Envoy formatters evaluated from the original
+			// downstream request (not the /api/verify/<path> check URI).
+			{Key: "X-Original-URL", Value: xOriginalURLValue},
+			{Key: "X-Forwarded-Uri", Value: "%REQ(:PATH)%"},
+			{Key: "X-Forwarded-Host", Value: "%REQ(:AUTHORITY)%"},
+			{Key: "X-Original-Method", Value: "%REQ(:METHOD)%"},
+			{Key: "X-Forwarded-Method", Value: "%REQ(:METHOD)%"},
 			{Key: "X-BFL-USER", Value: userName},
 		},
 	}
