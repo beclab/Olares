@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 
+	"golang.org/x/text/language"
 	"sigs.k8s.io/yaml"
 )
 
@@ -44,20 +45,11 @@ type taxonomyEnvelope struct {
 	} `json:"spec"`
 }
 
-const (
-	maxCategoriesV2 = 5
-	maxTags         = 10
-)
-
 // A category id and a tag slug are the same shape: they are typed into a
 // manifest by hand and then compared for equality across three services, so
 // anything that has a second spelling -- case, spaces, underscores -- is a
 // mismatch waiting to be reported as "unknown category".
 var taxonomySlug = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
-
-// Language codes follow the BCP 47 subset the market registers: a lowercase
-// language, optionally a titled script, optionally an uppercase region.
-var localeCode = regexp.MustCompile(`^[a-z]{2,3}(-[A-Z][a-z]{3})?(-[A-Z]{2})?$`)
 
 // ParseTaxonomy reads the taxonomy fields out of an already-rendered manifest.
 func ParseTaxonomy(rendered []byte) (Taxonomy, error) {
@@ -77,18 +69,15 @@ func ParseTaxonomy(rendered []byte) (Taxonomy, error) {
 // back to its legacy `categories`.
 func ValidateTaxonomy(t Taxonomy) error {
 	return errors.Join(
-		validateSlugList("metadata.categories_v2", t.CategoriesV2, maxCategoriesV2),
-		validateSlugList("metadata.tags", t.Tags, maxTags),
+		validateSlugList("metadata.categories_v2", t.CategoriesV2),
+		validateSlugList("metadata.tags", t.Tags),
 		validateLocaleList(t.Locale),
 	)
 }
 
-func validateSlugList(field string, values []string, max int) error {
+func validateSlugList(field string, values []string) error {
 	if len(values) == 0 {
 		return nil
-	}
-	if len(values) > max {
-		return fmt.Errorf("%s must have at most %d items", field, max)
 	}
 
 	seen := make(map[string]struct{}, len(values))
@@ -119,8 +108,13 @@ func validateLocaleList(values []string) error {
 	seen := make(map[string]struct{}, len(values))
 	var errs []error
 	for _, value := range values {
-		if !localeCode.MatchString(value) {
-			errs = append(errs, fmt.Errorf("spec.locale value %q must be a language code such as en-US or zh-CN", value))
+		tag, err := language.Parse(value)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("spec.locale value %q must be a valid BCP 47 language tag", value))
+			continue
+		}
+		if tag.String() != value {
+			errs = append(errs, fmt.Errorf("spec.locale value %q must use canonical spelling %q", value, tag.String()))
 			continue
 		}
 		if _, dup := seen[value]; dup {

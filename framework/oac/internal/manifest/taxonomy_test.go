@@ -74,11 +74,6 @@ func TestValidateTaxonomyRejectsShape(t *testing.T) {
 			want:     "more than once",
 		},
 		{
-			name:     "too many categories",
-			taxonomy: Taxonomy{CategoriesV2: []string{"a", "b", "c", "d", "e", "f"}},
-			want:     "at most 5",
-		},
-		{
 			name:     "padded tag",
 			taxonomy: Taxonomy{Tags: []string{" coding"}},
 			want:     "whitespace",
@@ -91,12 +86,12 @@ func TestValidateTaxonomyRejectsShape(t *testing.T) {
 		{
 			name:     "locale is not a language code",
 			taxonomy: Taxonomy{Locale: []string{"english"}},
-			want:     "language code",
+			want:     "BCP 47",
 		},
 		{
 			name:     "locale region is lowercase",
 			taxonomy: Taxonomy{Locale: []string{"zh-cn"}},
-			want:     "language code",
+			want:     "canonical",
 		},
 	}
 
@@ -113,8 +108,25 @@ func TestValidateTaxonomyRejectsShape(t *testing.T) {
 	}
 }
 
-func TestValidateTaxonomyAcceptsScriptedLocale(t *testing.T) {
-	if err := ValidateTaxonomy(Taxonomy{Locale: []string{"zh-Hans-CN", "en", "pt-BR"}}); err != nil {
-		t.Fatalf("scripted locale rejected: %v", err)
+func TestValidateTaxonomyDoesNotImposeBusinessCountLimits(t *testing.T) {
+	taxonomy := Taxonomy{
+		CategoriesV2: []string{"a", "b", "c", "d", "e", "f"},
+		Tags:         []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"},
+	}
+	if err := ValidateTaxonomy(taxonomy); err != nil {
+		t.Fatalf("valid taxonomy rejected: %v", err)
+	}
+}
+
+func TestValidateTaxonomyAcceptsCanonicalBCP47Locales(t *testing.T) {
+	locales := []string{
+		"es-419",
+		"de-DE-1996",
+		"sl-rozaj",
+		"en-US-u-ca-gregory",
+		"x-private",
+	}
+	if err := ValidateTaxonomy(Taxonomy{Locale: locales}); err != nil {
+		t.Fatalf("valid BCP 47 locales rejected: %v", err)
 	}
 }
