@@ -11,7 +11,7 @@ doc_updated: "2026-04-14"
 ---
 
 :::warning
-本页面为 AI 翻译版本，内容仅供快速参考。关键信息建议以[英文原文](../../use-cases/speaches.md)为准。
+本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../use-cases/speaches.md)为准。
 :::
 
 # 使用 Speaches 搭建语音服务

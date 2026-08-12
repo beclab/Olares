@@ -9,11 +9,12 @@ app_version: "1.12.0"
 doc_version: "1.2"
 doc_updated: "2026-04-17"
 ---
-# 自托管私人 AI 搜索引擎 Vane
 
 :::warning
-当前文档由 AI 翻译生成，若发现术语或表述不准确，请查看[英文原文](../../use-cases/perplexica.md)。
+本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../use-cases/perplexica.md)为准。
 :::
+
+# 自托管私人 AI 搜索引擎 Vane
 
 Vane（前身为 Perplexica）是一款开源的 AI 驱动问答引擎。它将网络搜索与本地或云端大语言模型（LLM）相结合，在保护你查询隐私的同时，提供带有引用来源的对话式回答。
 

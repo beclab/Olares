@@ -8,7 +8,7 @@ head:
 ---
 
 :::warning
-本页面内容经 AI 翻译生成，仅供参考。具体细节请以[英文原文](../../one/expand-storage-external-ssd.md)为准。
+本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../one/expand-storage-external-ssd.md)为准。
 :::
 
 # 通过外接 SSD 扩展存储 <Badge type="tip" text="30 min" />

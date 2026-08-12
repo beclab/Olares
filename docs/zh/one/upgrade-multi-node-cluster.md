@@ -7,11 +7,11 @@ head:
       content: Olares One, 多节点, 双节点, 升级, 1.12.5, 1.12.6
 ---
 
-# 将双节点 Olares 集群从 1.12.5 升级到 1.12.6
-
 :::warning
-当前文档由 AI 翻译生成，若发现术语或表述不准确，请查看[英文原文](../../one/upgrade-multi-node-cluster.md)。
+本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../one/upgrade-multi-node-cluster.md)为准。
 :::
+
+# 将双节点 Olares 集群从 1.12.5 升级到 1.12.6
 
 本教程介绍如何手动将双节点 Olares 集群从 1.12.5 升级到 1.12.6。升级过程包括在两个节点上下载升级包、升级 Olares CLI 和守护进程，以及分别升级 master 节点和 worker 节点。
 
