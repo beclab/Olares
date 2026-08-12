@@ -15,11 +15,11 @@ import (
 )
 
 const (
-	vpnCIDR               = "100.64.0.0/16"
-	autheliaClusterPrefix = "authelia_backend"
-	autheliaHostFormat    = "authelia-backend.user-system-%s.svc.cluster.local"
-	fileserverHostFormat  = "files-%s.user-system-%s.svc.cluster.local"
-	autheliaPort          = uint32(9091)
+	vpnCIDR                  = "100.64.0.0/16"
+	autheliaClusterPrefix    = "authelia_backend"
+	autheliaHostFormat       = "authelia-backend.user-system-%s.svc.cluster.local"
+	fileserverHostFormat     = "files-%s.user-system-%s.svc.cluster.local"
+	autheliaPort             = uint32(9091)
 	autheliaPathPrefix       = "/api/authz/ext-authz/"
 	autheliaVerifyPathPrefix = "/api/verify/"
 

@@ -958,6 +958,9 @@ func TestTranslateRoute_PerRouteHttpServicePathPrefix(t *testing.T) {
 		Name:       "app",
 		PathPrefix: "/",
 		Cluster:    "app_upstream",
+		RequestHeaders: map[string]string{
+			"X-BFL-USER": "alice",
+		},
 		ExtAuth: &ir.ExtAuthConfigIR{
 			Cluster:    "authelia_backend_alice",
 			PathPrefix: "/api/verify/",
@@ -974,6 +977,36 @@ func TestTranslateRoute_PerRouteHttpServicePathPrefix(t *testing.T) {
 	hs := cs.GetHttpService()
 	require.NotNil(t, hs, "ordinary apps must override Authelia HttpService PathPrefix")
 	assert.Equal(t, "/api/verify/", hs.GetPathPrefix())
+	require.NotNil(t, hs.GetAuthorizationRequest())
+	headers := hs.GetAuthorizationRequest().GetHeadersToAdd()
+	require.Len(t, headers, 7)
+	assert.Equal(t, "X-Forwarded-Proto", headers[0].GetKey())
+	assert.Equal(t, "X-Original-URL", headers[1].GetKey())
+	assert.Equal(t, "%REQ(x-forwarded-proto?:SCHEME)%://%REQ(:AUTHORITY)%%REQ(:PATH)%", headers[1].GetValue())
+	assert.Equal(t, "X-Forwarded-Uri", headers[2].GetKey())
+	assert.Equal(t, "%REQ(:PATH)%", headers[2].GetValue())
+	assert.Equal(t, "X-Forwarded-Host", headers[3].GetKey())
+	assert.Equal(t, "%REQ(:AUTHORITY)%", headers[3].GetValue())
+	assert.Equal(t, "X-Original-Method", headers[4].GetKey())
+	assert.Equal(t, "%REQ(:METHOD)%", headers[4].GetValue())
+	assert.Equal(t, "X-Forwarded-Method", headers[5].GetKey())
+	assert.Equal(t, "%REQ(:METHOD)%", headers[5].GetValue())
+	assert.Equal(t, "X-BFL-USER", headers[6].GetKey())
+	assert.Equal(t, "alice", headers[6].GetValue())
+	resp := hs.GetAuthorizationResponse()
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.GetAllowedUpstreamHeaders())
+	require.Len(t, resp.GetAllowedUpstreamHeaders().GetPatterns(), 2)
+	assert.Equal(t, "remote-", resp.GetAllowedUpstreamHeaders().GetPatterns()[0].GetPrefix())
+	assert.Equal(t, "authelia-", resp.GetAllowedUpstreamHeaders().GetPatterns()[1].GetPrefix())
+	require.NotNil(t, resp.GetAllowedClientHeaders())
+	require.Len(t, resp.GetAllowedClientHeaders().GetPatterns(), 3)
+	assert.Equal(t, "set-cookie", resp.GetAllowedClientHeaders().GetPatterns()[0].GetExact())
+	assert.Equal(t, "location", resp.GetAllowedClientHeaders().GetPatterns()[1].GetExact())
+	assert.Equal(t, "www-authenticate", resp.GetAllowedClientHeaders().GetPatterns()[2].GetExact())
+	require.NotNil(t, resp.GetAllowedClientHeadersOnSuccess())
+	require.Len(t, resp.GetAllowedClientHeadersOnSuccess().GetPatterns(), 1)
+	assert.Equal(t, "set-cookie", resp.GetAllowedClientHeadersOnSuccess().GetPatterns()[0].GetExact())
 }
 
 func TestTranslateRoute_ProbeBypassHeaderMatch(t *testing.T) {

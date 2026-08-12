@@ -159,6 +159,11 @@ end
 //	}
 const xForwardedProtoValue = "%REQ(x-forwarded-proto?:SCHEME)%"
 
+// xOriginalURLValue is the original client URL for Authelia /api/verify/.
+// Envoy path_prefix rewrites the auth check path to /api/verify/<orig>, so
+// without this header Authelia builds rd from the check URI (e.g. /api/verify//).
+const xOriginalURLValue = "%REQ(x-forwarded-proto?:SCHEME)%://%REQ(:AUTHORITY)%%REQ(:PATH)%"
+
 var (
 	tcpIdleTimeout        = time.Hour
 	httpStreamIdleTimeout = 30 * time.Minute
@@ -914,15 +919,15 @@ func translateRoute(routeIR *ir.HTTPRouteIR, clusterMap map[string]*ir.ClusterIR
 		checkSettings := &extauthzv3.CheckSettings{}
 		if path := routeIR.ExtAuth.PathPrefix; path != "" && clusterMap != nil {
 			if c, ok := clusterMap[routeIR.ExtAuth.Cluster]; ok && c.Host != "" {
+				// CheckSettings.http_service replaces the filter-level HttpService
+				// entirely, so reuse the same AuthorizationRequest/Response as
+				// buildExtAuthzFilter (only PathPrefix differs).
+				userName := ""
+				if routeIR.RequestHeaders != nil {
+					userName = routeIR.RequestHeaders["X-BFL-USER"]
+				}
 				checkSettings.ServiceOverride = &extauthzv3.CheckSettings_HttpService{
-					HttpService: &extauthzv3.HttpService{
-						ServerUri: &corev3.HttpUri{
-							Uri:              fmt.Sprintf("http://%s", c.Host),
-							HttpUpstreamType: &corev3.HttpUri_Cluster{Cluster: routeIR.ExtAuth.Cluster},
-							Timeout:          durationpb.New(15 * time.Second),
-						},
-						PathPrefix: path,
-					},
+					HttpService: buildAutheliaHttpService(routeIR.ExtAuth.Cluster, c.Host, path, userName),
 				}
 			}
 		}
@@ -962,54 +967,11 @@ func buildExtAuthzFilter(autheliaClusterName string, clusterMap map[string]*ir.C
 
 	extAuthz := &extauthzv3.ExtAuthz{
 		Services: &extauthzv3.ExtAuthz_HttpService{
-			HttpService: &extauthzv3.HttpService{
-				ServerUri: &corev3.HttpUri{
-					Uri:              fmt.Sprintf("http://%s", clusterIR.Host),
-					HttpUpstreamType: &corev3.HttpUri_Cluster{Cluster: autheliaClusterName},
-					Timeout:          durationpb.New(15 * time.Second),
-				},
-				PathPrefix: "/api/authz/ext-authz/",
-				AuthorizationRequest: &extauthzv3.AuthorizationRequest{
-					HeadersToAdd: []*corev3.HeaderValue{
-						{Key: "X-Forwarded-Proto", Value: xForwardedProtoValue},
-						{Key: "X-BFL-USER", Value: userName},
-					},
-				},
-				AuthorizationResponse: &extauthzv3.AuthorizationResponse{
-					AllowedUpstreamHeaders: &matcherv3.ListStringMatcher{
-						Patterns: []*matcherv3.StringMatcher{
-							{MatchPattern: &matcherv3.StringMatcher_Prefix{Prefix: "remote-"}},
-							{MatchPattern: &matcherv3.StringMatcher_Prefix{Prefix: "authelia-"}},
-						},
-					},
-					AllowedClientHeaders: &matcherv3.ListStringMatcher{
-						Patterns: []*matcherv3.StringMatcher{
-							{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "set-cookie"}},
-							{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "location"}},
-							{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "www-authenticate"}},
-						},
-					},
-					AllowedClientHeadersOnSuccess: &matcherv3.ListStringMatcher{
-						Patterns: []*matcherv3.StringMatcher{
-							{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "set-cookie"}},
-						},
-					},
-				},
-			},
+			HttpService: buildAutheliaHttpService(autheliaClusterName, clusterIR.Host, "/api/authz/ext-authz/", userName),
 		},
-		// AllowedHeaders replaces the deprecated AuthorizationRequest.allowed_headers.
-		// It controls which request headers are forwarded to the authz server.
-		AllowedHeaders: &matcherv3.ListStringMatcher{
-			Patterns: []*matcherv3.StringMatcher{
-				{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "host"}},
-				{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "authorization"}},
-				{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "proxy-authorization"}},
-				{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "accept"}},
-				{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "cookie"}},
-				{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "x-authorization"}},
-				{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "x-forwarded-for"}},
-			},
-		},
+		// AllowedHeaders is filter-level (not part of HttpService); per-route
+		// CheckSettings.http_service does not override it.
+		AllowedHeaders:      autheliaAllowedHeaders,
 		TransportApiVersion: corev3.ApiVersion_V3,
 		FailureModeAllow:    false,
 		ClearRouteCache:     false,
@@ -1018,6 +980,83 @@ func buildExtAuthzFilter(autheliaClusterName string, clusterMap map[string]*ir.C
 	return &hcmv3.HttpFilter{
 		Name:       "envoy.filters.http.ext_authz",
 		ConfigType: &hcmv3.HttpFilter_TypedConfig{TypedConfig: mustAny(extAuthz)},
+	}
+}
+
+// Shared Authelia ext_authz pieces used by both the filter-level HttpService
+// and per-route CheckSettings overrides. AllowedHeaders stays filter-only.
+var (
+	autheliaAllowedUpstreamHeaders = &matcherv3.ListStringMatcher{
+		Patterns: []*matcherv3.StringMatcher{
+			{MatchPattern: &matcherv3.StringMatcher_Prefix{Prefix: "remote-"}},
+			{MatchPattern: &matcherv3.StringMatcher_Prefix{Prefix: "authelia-"}},
+		},
+	}
+	autheliaAllowedClientHeaders = &matcherv3.ListStringMatcher{
+		Patterns: []*matcherv3.StringMatcher{
+			{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "set-cookie"}},
+			{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "location"}},
+			{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "www-authenticate"}},
+		},
+	}
+	autheliaAllowedClientHeadersOnSuccess = &matcherv3.ListStringMatcher{
+		Patterns: []*matcherv3.StringMatcher{
+			{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "set-cookie"}},
+		},
+	}
+	autheliaAllowedHeaders = &matcherv3.ListStringMatcher{
+		Patterns: []*matcherv3.StringMatcher{
+			{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "host"}},
+			{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "authorization"}},
+			{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "proxy-authorization"}},
+			{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "accept"}},
+			{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "cookie"}},
+			{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "x-authorization"}},
+			{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "x-forwarded-for"}},
+			{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "x-unauth-error"}},
+		},
+	}
+)
+
+func autheliaAuthorizationRequest(userName string) *extauthzv3.AuthorizationRequest {
+	return &extauthzv3.AuthorizationRequest{
+		HeadersToAdd: []*corev3.HeaderValue{
+			{Key: "X-Forwarded-Proto", Value: xForwardedProtoValue},
+			// Authelia ForwardAuth/Verify uses these for the post-login rd=
+			// target. Values are Envoy formatters evaluated from the original
+			// downstream request (not the /api/verify/<path> check URI).
+			{Key: "X-Original-URL", Value: xOriginalURLValue},
+			{Key: "X-Forwarded-Uri", Value: "%REQ(:PATH)%"},
+			{Key: "X-Forwarded-Host", Value: "%REQ(:AUTHORITY)%"},
+			{Key: "X-Original-Method", Value: "%REQ(:METHOD)%"},
+			{Key: "X-Forwarded-Method", Value: "%REQ(:METHOD)%"},
+			{Key: "X-BFL-USER", Value: userName},
+		},
+	}
+}
+
+func autheliaAuthorizationResponse() *extauthzv3.AuthorizationResponse {
+	return &extauthzv3.AuthorizationResponse{
+		AllowedUpstreamHeaders:        autheliaAllowedUpstreamHeaders,
+		AllowedClientHeaders:          autheliaAllowedClientHeaders,
+		AllowedClientHeadersOnSuccess: autheliaAllowedClientHeadersOnSuccess,
+	}
+}
+
+// buildAutheliaHttpService builds Authelia HttpService for the filter default
+// and per-route CheckSettings overrides. Envoy replaces the filter HttpService
+// entirely when CheckSettings.http_service is set, so PathPrefix overrides must
+// carry the same AuthorizationRequest/Response as buildExtAuthzFilter.
+func buildAutheliaHttpService(clusterName, host, pathPrefix, userName string) *extauthzv3.HttpService {
+	return &extauthzv3.HttpService{
+		ServerUri: &corev3.HttpUri{
+			Uri:              fmt.Sprintf("http://%s", host),
+			HttpUpstreamType: &corev3.HttpUri_Cluster{Cluster: clusterName},
+			Timeout:          durationpb.New(15 * time.Second),
+		},
+		PathPrefix:            pathPrefix,
+		AuthorizationRequest:  autheliaAuthorizationRequest(userName),
+		AuthorizationResponse: autheliaAuthorizationResponse(),
 	}
 }
 
