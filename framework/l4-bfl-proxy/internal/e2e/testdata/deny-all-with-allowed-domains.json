@@ -230,7 +230,7 @@
                           "cluster": "authelia_backend_bob",
                           "timeout": "15s"
                         },
-                        "pathPrefix": "/api/authz/ext-authz/",
+                        "pathPrefix": "/api/verify/",
                         "authorizationRequest": {
                           "headersToAdd": [
                             {
@@ -455,7 +455,7 @@
                           "cluster": "authelia_backend_bob",
                           "timeout": "15s"
                         },
-                        "pathPrefix": "/api/authz/ext-authz/",
+                        "pathPrefix": "/api/verify/",
                         "authorizationRequest": {
                           "headersToAdd": [
                             {
@@ -670,80 +670,7 @@
               "typedPerFilterConfig": {
                 "envoy.filters.http.ext_authz": {
                   "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
-                  "checkSettings": {
-                    "httpService": {
-                      "serverUri": {
-                        "uri": "http://authelia-backend.user-system-bob.svc.cluster.local",
-                        "cluster": "authelia_backend_bob",
-                        "timeout": "15s"
-                      },
-                      "pathPrefix": "/api/verify/",
-                      "authorizationRequest": {
-                        "headersToAdd": [
-                          {
-                            "key": "X-Forwarded-Proto",
-                            "value": "%REQ(x-forwarded-proto?:SCHEME)%"
-                          },
-                          {
-                            "key": "X-Original-URL",
-                            "value": "%REQ(x-forwarded-proto?:SCHEME)%://%REQ(:AUTHORITY)%%REQ(:PATH)%"
-                          },
-                          {
-                            "key": "X-Forwarded-Uri",
-                            "value": "%REQ(:PATH)%"
-                          },
-                          {
-                            "key": "X-Forwarded-Host",
-                            "value": "%REQ(:AUTHORITY)%"
-                          },
-                          {
-                            "key": "X-Original-Method",
-                            "value": "%REQ(:METHOD)%"
-                          },
-                          {
-                            "key": "X-Forwarded-Method",
-                            "value": "%REQ(:METHOD)%"
-                          },
-                          {
-                            "key": "X-BFL-USER",
-                            "value": "bob"
-                          }
-                        ]
-                      },
-                      "authorizationResponse": {
-                        "allowedUpstreamHeaders": {
-                          "patterns": [
-                            {
-                              "prefix": "remote-"
-                            },
-                            {
-                              "prefix": "authelia-"
-                            }
-                          ]
-                        },
-                        "allowedClientHeaders": {
-                          "patterns": [
-                            {
-                              "exact": "set-cookie"
-                            },
-                            {
-                              "exact": "location"
-                            },
-                            {
-                              "exact": "www-authenticate"
-                            }
-                          ]
-                        },
-                        "allowedClientHeadersOnSuccess": {
-                          "patterns": [
-                            {
-                              "exact": "set-cookie"
-                            }
-                          ]
-                        }
-                      }
-                    }
-                  }
+                  "checkSettings": {}
                 }
               },
               "requestHeadersToAdd": [
@@ -893,80 +820,7 @@
               "typedPerFilterConfig": {
                 "envoy.filters.http.ext_authz": {
                   "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
-                  "checkSettings": {
-                    "httpService": {
-                      "serverUri": {
-                        "uri": "http://authelia-backend.user-system-bob.svc.cluster.local",
-                        "cluster": "authelia_backend_bob",
-                        "timeout": "15s"
-                      },
-                      "pathPrefix": "/api/verify/",
-                      "authorizationRequest": {
-                        "headersToAdd": [
-                          {
-                            "key": "X-Forwarded-Proto",
-                            "value": "%REQ(x-forwarded-proto?:SCHEME)%"
-                          },
-                          {
-                            "key": "X-Original-URL",
-                            "value": "%REQ(x-forwarded-proto?:SCHEME)%://%REQ(:AUTHORITY)%%REQ(:PATH)%"
-                          },
-                          {
-                            "key": "X-Forwarded-Uri",
-                            "value": "%REQ(:PATH)%"
-                          },
-                          {
-                            "key": "X-Forwarded-Host",
-                            "value": "%REQ(:AUTHORITY)%"
-                          },
-                          {
-                            "key": "X-Original-Method",
-                            "value": "%REQ(:METHOD)%"
-                          },
-                          {
-                            "key": "X-Forwarded-Method",
-                            "value": "%REQ(:METHOD)%"
-                          },
-                          {
-                            "key": "X-BFL-USER",
-                            "value": "bob"
-                          }
-                        ]
-                      },
-                      "authorizationResponse": {
-                        "allowedUpstreamHeaders": {
-                          "patterns": [
-                            {
-                              "prefix": "remote-"
-                            },
-                            {
-                              "prefix": "authelia-"
-                            }
-                          ]
-                        },
-                        "allowedClientHeaders": {
-                          "patterns": [
-                            {
-                              "exact": "set-cookie"
-                            },
-                            {
-                              "exact": "location"
-                            },
-                            {
-                              "exact": "www-authenticate"
-                            }
-                          ]
-                        },
-                        "allowedClientHeadersOnSuccess": {
-                          "patterns": [
-                            {
-                              "exact": "set-cookie"
-                            }
-                          ]
-                        }
-                      }
-                    }
-                  }
+                  "checkSettings": {}
                 }
               },
               "requestHeadersToAdd": [
@@ -1221,80 +1075,7 @@
               "typedPerFilterConfig": {
                 "envoy.filters.http.ext_authz": {
                   "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
-                  "checkSettings": {
-                    "httpService": {
-                      "serverUri": {
-                        "uri": "http://authelia-backend.user-system-bob.svc.cluster.local",
-                        "cluster": "authelia_backend_bob",
-                        "timeout": "15s"
-                      },
-                      "pathPrefix": "/api/verify/",
-                      "authorizationRequest": {
-                        "headersToAdd": [
-                          {
-                            "key": "X-Forwarded-Proto",
-                            "value": "%REQ(x-forwarded-proto?:SCHEME)%"
-                          },
-                          {
-                            "key": "X-Original-URL",
-                            "value": "%REQ(x-forwarded-proto?:SCHEME)%://%REQ(:AUTHORITY)%%REQ(:PATH)%"
-                          },
-                          {
-                            "key": "X-Forwarded-Uri",
-                            "value": "%REQ(:PATH)%"
-                          },
-                          {
-                            "key": "X-Forwarded-Host",
-                            "value": "%REQ(:AUTHORITY)%"
-                          },
-                          {
-                            "key": "X-Original-Method",
-                            "value": "%REQ(:METHOD)%"
-                          },
-                          {
-                            "key": "X-Forwarded-Method",
-                            "value": "%REQ(:METHOD)%"
-                          },
-                          {
-                            "key": "X-BFL-USER",
-                            "value": "bob"
-                          }
-                        ]
-                      },
-                      "authorizationResponse": {
-                        "allowedUpstreamHeaders": {
-                          "patterns": [
-                            {
-                              "prefix": "remote-"
-                            },
-                            {
-                              "prefix": "authelia-"
-                            }
-                          ]
-                        },
-                        "allowedClientHeaders": {
-                          "patterns": [
-                            {
-                              "exact": "set-cookie"
-                            },
-                            {
-                              "exact": "location"
-                            },
-                            {
-                              "exact": "www-authenticate"
-                            }
-                          ]
-                        },
-                        "allowedClientHeadersOnSuccess": {
-                          "patterns": [
-                            {
-                              "exact": "set-cookie"
-                            }
-                          ]
-                        }
-                      }
-                    }
-                  }
+                  "checkSettings": {}
                 }
               },
               "requestHeadersToAdd": [
@@ -1444,80 +1225,7 @@
               "typedPerFilterConfig": {
                 "envoy.filters.http.ext_authz": {
                   "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
-                  "checkSettings": {
-                    "httpService": {
-                      "serverUri": {
-                        "uri": "http://authelia-backend.user-system-bob.svc.cluster.local",
-                        "cluster": "authelia_backend_bob",
-                        "timeout": "15s"
-                      },
-                      "pathPrefix": "/api/verify/",
-                      "authorizationRequest": {
-                        "headersToAdd": [
-                          {
-                            "key": "X-Forwarded-Proto",
-                            "value": "%REQ(x-forwarded-proto?:SCHEME)%"
-                          },
-                          {
-                            "key": "X-Original-URL",
-                            "value": "%REQ(x-forwarded-proto?:SCHEME)%://%REQ(:AUTHORITY)%%REQ(:PATH)%"
-                          },
-                          {
-                            "key": "X-Forwarded-Uri",
-                            "value": "%REQ(:PATH)%"
-                          },
-                          {
-                            "key": "X-Forwarded-Host",
-                            "value": "%REQ(:AUTHORITY)%"
-                          },
-                          {
-                            "key": "X-Original-Method",
-                            "value": "%REQ(:METHOD)%"
-                          },
-                          {
-                            "key": "X-Forwarded-Method",
-                            "value": "%REQ(:METHOD)%"
-                          },
-                          {
-                            "key": "X-BFL-USER",
-                            "value": "bob"
-                          }
-                        ]
-                      },
-                      "authorizationResponse": {
-                        "allowedUpstreamHeaders": {
-                          "patterns": [
-                            {
-                              "prefix": "remote-"
-                            },
-                            {
-                              "prefix": "authelia-"
-                            }
-                          ]
-                        },
-                        "allowedClientHeaders": {
-                          "patterns": [
-                            {
-                              "exact": "set-cookie"
-                            },
-                            {
-                              "exact": "location"
-                            },
-                            {
-                              "exact": "www-authenticate"
-                            }
-                          ]
-                        },
-                        "allowedClientHeadersOnSuccess": {
-                          "patterns": [
-                            {
-                              "exact": "set-cookie"
-                            }
-                          ]
-                        }
-                      }
-                    }
-                  }
+                  "checkSettings": {}
                 }
               },
               "requestHeadersToAdd": [
