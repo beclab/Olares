@@ -66,7 +66,6 @@ func (h *HelmOps) UninstallAll() error {
 	err = h.ClearCache(client, appCacheDirs)
 	if err != nil {
 		klog.Errorf("Failed to clear app cache dirs %v err=%v", appCacheDirs, err)
-		return err
 	}
 	if deleteData {
 		// Non-fatal: the release is already gone, so a failed data wipe must
@@ -79,9 +78,10 @@ func (h *HelmOps) UninstallAll() error {
 	err = h.DeleteNamespace(client, h.app.Namespace)
 	if err != nil {
 		klog.Errorf("Failed to delete namespace %s err=%v", h.app.Namespace, err)
+		return err
 	}
 
-	return err
+	return nil
 }
 
 func (h *HelmOps) Uninstall_(client kubernetes.Interface, actionConfig *action.Configuration,

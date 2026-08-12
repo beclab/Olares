@@ -187,6 +187,7 @@ func (wh *Webhook) CreatePatch(
 		// TODO: force mutate
 		klog.Infof("Pod is injected with uuid=%s namespace=%s", prevUUID, req.Namespace)
 		mesh.HardenLinkerdProxyAdminProbes(pod)
+		sidecar.ApplyNestedIfaceBypass(pod)
 		if err := wh.patchProbeHeaders(ctx, pod); err != nil {
 			klog.Errorf("Failed to patch probe headers for already-injected pod=%s/%s err=%v", pod.Namespace, pod.Name, err)
 			return nil, err
@@ -239,6 +240,9 @@ func (wh *Webhook) CreatePatch(
 	if injectMacvlanBypass {
 		sidecar.EnsureMacvlanBypassLast(pod)
 	}
+	if sidecar.ApplyNestedIfaceBypass(pod) {
+		klog.Infof("nested-iface-bypass: inject pod=%s/%s", req.Namespace, pod.Name)
+	}
 
 	if injectSharedPod != nil {
 		if *injectSharedPod {
@@ -276,7 +280,12 @@ func (wh *Webhook) PatchLinkerdAdminProbesOnly(
 	req *admissionv1.AdmissionRequest,
 	pod *corev1.Pod,
 ) (patchBytes []byte, patched bool, err error) {
-	if !mesh.HardenLinkerdProxyAdminProbes(pod) {
+	changed := mesh.HardenLinkerdProxyAdminProbes(pod)
+	if sidecar.ApplyNestedIfaceBypass(pod) {
+		changed = true
+		klog.Infof("nested-iface-bypass: inject (probe-only) pod=%s/%s", req.Namespace, pod.Name)
+	}
+	if !changed {
 		return nil, false, nil
 	}
 	if err := wh.patchProbeHeaders(ctx, pod); err != nil {
