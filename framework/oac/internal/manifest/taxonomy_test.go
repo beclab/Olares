@@ -93,6 +93,11 @@ func TestValidateTaxonomyRejectsShape(t *testing.T) {
 			taxonomy: Taxonomy{Locale: []string{"zh-cn"}},
 			want:     "canonical",
 		},
+		{
+			name:     "locale includes a suppressed script",
+			taxonomy: Taxonomy{Locale: []string{"en-Latn"}},
+			want:     "canonical",
+		},
 	}
 
 	for _, tc := range cases {
@@ -120,6 +125,7 @@ func TestValidateTaxonomyDoesNotImposeBusinessCountLimits(t *testing.T) {
 
 func TestValidateTaxonomyAcceptsCanonicalBCP47Locales(t *testing.T) {
 	locales := []string{
+		"en",
 		"es-419",
 		"de-DE-1996",
 		"sl-rozaj",

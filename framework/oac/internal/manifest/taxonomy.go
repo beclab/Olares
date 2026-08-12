@@ -108,7 +108,7 @@ func validateLocaleList(values []string) error {
 	seen := make(map[string]struct{}, len(values))
 	var errs []error
 	for _, value := range values {
-		tag, err := language.Parse(value)
+		tag, err := language.BCP47.Parse(value)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("spec.locale value %q must be a valid BCP 47 language tag", value))
 			continue
