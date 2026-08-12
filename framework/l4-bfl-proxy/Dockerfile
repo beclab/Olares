@@ -14,7 +14,7 @@ COPY internal/ bytetrade.io/web3os/l4-bfl-proxy/internal/
 RUN cd bytetrade.io/web3os/l4-bfl-proxy/ && \
     CGO_ENABLED=0 go build -o l4-bfl-proxy ./cmd/
 
-FROM beclab/envoyproxy-envoy:v1.36-latest
+FROM beclab/envoyproxy-envoy:v1.38-latest
 WORKDIR /
 
 COPY --from=builder /workspace/bytetrade.io/web3os/l4-bfl-proxy/l4-bfl-proxy .
