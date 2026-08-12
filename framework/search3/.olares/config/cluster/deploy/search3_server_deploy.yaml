@@ -289,6 +289,8 @@ spec:
           value: "true"
         - name: NATS_SEARCH_CACHE_HITS
           value: "true"
+        - name: JINA_CLIP_V2_URL
+          value: http://sharedentrances-api.jinaclipv2embed-shared
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -358,6 +360,8 @@ spec:
           value: "16777216"
         - name: LOG_DIR_MAX_BYTES
           value: "1073741824"
+        - name: JINA_CLIP_V2_URL
+          value: http://sharedentrances-api.jinaclipv2embed-shared
         volumeMounts:
           - name: fb-data
             mountPath: /appdata
