@@ -12,9 +12,10 @@ import (
 // new capability is a new key: a client that has never heard of it ignores it
 // instead of failing to parse the node.
 const (
-	CapPowerShutdown = "power.shutdown"
-	CapPowerReboot   = "power.reboot"
-	CapLogsCollect   = "logs.collect"
+	CapPowerShutdown  = "power.shutdown"
+	CapPowerReboot    = "power.reboot"
+	CapLogsCollect    = "logs.collect"
+	CapSetSSHPassword = "ssh.setPassword"
 )
 
 // Capability is what a node can be asked to do. Config carries whatever that
@@ -47,6 +48,7 @@ const (
 	shutdownCommand = "shutdown"
 	rebootCommand   = "reboot"
 	collectCommand  = "olares-cli"
+	passwordCommand = "chpasswd"
 )
 
 // lookPath resolves the power commands the way the command layer will when it
@@ -66,7 +68,7 @@ func Detect(ctx context.Context, in ProbeInput, extra ...Probe) map[string]Capab
 	return caps
 }
 
-var defaultProbes = []Probe{probePowerShutdown, probePowerReboot, probeLogsCollect}
+var defaultProbes = []Probe{probePowerShutdown, probePowerReboot, probeLogsCollect, probeSetSSHPassword}
 
 // probePowerShutdown declares a shutdown only on a node that is both able and
 // entitled to perform one. The control node is deliberately excluded: turning
@@ -117,4 +119,11 @@ func CanPowerHost(st clistate.State) bool {
 func commandAvailable(name string) bool {
 	_, err := lookPath(name)
 	return err == nil
+}
+
+func probeSetSSHPassword(context.Context, ProbeInput) (string, Capability, bool) {
+	if !commandAvailable(passwordCommand) {
+		return CapSetSSHPassword, Capability{}, false
+	}
+	return CapSetSSHPassword, Capability{Supported: true}, true
 }
