@@ -20,6 +20,7 @@ import (
 	"github.com/beclab/Olares/cli/cmd/ctl/osinfo"
 	"github.com/beclab/Olares/cli/cmd/ctl/preinstall"
 	"github.com/beclab/Olares/cli/cmd/ctl/profile"
+	"github.com/beclab/Olares/cli/cmd/ctl/router"
 	"github.com/beclab/Olares/cli/cmd/ctl/search"
 	"github.com/beclab/Olares/cli/cmd/ctl/settings"
 	"github.com/beclab/Olares/cli/cmd/ctl/user"
@@ -72,12 +73,12 @@ func NewDefaultCommand() *cobra.Command {
 		version.GitCommit, version.BuildTime,
 	))
 
-	// Version-compat controls (--olares-version) live on the `profile`
-	// command tree, not here: backend version is a per-profile property
-	// (cached in config.json, eagerly fetched at login). Other
+	// Version-compat controls (--olares-version / --refresh-version) live on
+	// the `profile` command tree, not here: backend version is a per-profile
+	// property (cached in config.json, eagerly fetched at login). Other
 	// command trees that branch on it (market, version-aware settings) read
 	// that cache and auto-detect on demand; to override or force a refresh,
-	// use the profile namespace (e.g. `profile list --refresh`).
+	// use the profile namespace (e.g. `profile list --refresh-version`).
 	// Identity is single-source: whichever profile `olares-cli profile use`
 	// (or the most recent `profile login` / `profile import`) selected. There
 	// is intentionally no per-invocation `--profile` override — agents and
@@ -117,6 +118,7 @@ func NewDefaultCommand() *cobra.Command {
 	cmds.AddCommand(dashboard.NewDashboardCommand(factory))
 	cmds.AddCommand(settings.NewSettingsCommand(factory))
 	cmds.AddCommand(search.NewSearchCommand(factory))
+	cmds.AddCommand(router.NewRouterCommand(factory))
 	cmds.AddCommand(cluster.NewClusterCommand(factory))
 
 	return cmds

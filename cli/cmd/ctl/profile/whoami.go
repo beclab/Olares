@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/spf13/cobra"
 
@@ -48,18 +47,17 @@ func NewWhoamiCommand(f *cmdutil.Factory) *cobra.Command {
 	)
 	cmd := &cobra.Command{
 		Use:   "whoami",
-		Short: "show the current profile's identity, network position, role and backend version",
-		Long: `Show the active profile's olaresId and friendly name, where the CLI sits
-relative to the target Olares (location + connection method), the user's role
-("Owner" / "Admin" / "User"), and the detected Olares backend version.
+		Short: "show the current profile's identity and role",
+		Long: `Show the active profile's olaresId, friendly name, and role
+("Owner" / "Admin" / "User") on the target Olares instance.
 
-Defaults to the locally cached values written by ` + "`profile login`" + ` /
+Defaults to the locally cached role written by ` + "`profile login`" + ` /
 ` + "`profile import`" + ` / a previous ` + "`whoami --refresh`" + `. Pass --refresh to
-re-detect everything: re-probe the network position and force fresh GETs
-against /api/backend/v1/user-info (role) and /api/olares-info (version),
-updating the cache.
+force a fresh GET against /api/backend/v1/user-info and update the
+cache; if the role changed since the last refresh you'll see a
+"role changed: X -> Y" notice.
 
-Aliases (role only):
+Aliases:
   olares-cli settings users me
   olares-cli settings me whoami
 `,
@@ -68,14 +66,14 @@ Aliases (role only):
 			return runWhoami(c.Context(), f, refresh, outputRaw)
 		},
 	}
-	cmd.Flags().BoolVar(&refresh, "refresh", false, "re-detect location, role and backend version, updating the cache")
+	cmd.Flags().BoolVar(&refresh, "refresh", false, "force a fresh /api/backend/v1/user-info roundtrip and update the cached role")
 	cmd.Flags().StringVarP(&outputRaw, "output", "o", "table", "output format: table, json")
 	return cmd
 }
 
-// runWhoami is the cobra-side glue: it resolves the active profile, parses the
-// --output flag, then runs the unified detect — from cache by default, or a
-// full re-probe + role/version refetch with --refresh.
+// runWhoami is the cobra-side glue: it resolves the active profile + http
+// client, parses the --output flag, then delegates to pkg/whoami.Run for
+// the actual cache/server policy and rendering.
 func runWhoami(ctx context.Context, f *cmdutil.Factory, refresh bool, outputRaw string) error {
 	if ctx == nil {
 		ctx = context.Background()
@@ -93,25 +91,15 @@ func runWhoami(ctx context.Context, f *cmdutil.Factory, refresh bool, outputRaw 
 	if err != nil {
 		return err
 	}
+	hc, err := f.HTTPClient(ctx)
+	if err != nil {
+		return err
+	}
 	cfg, err := cliconfig.LoadMultiProfileConfig()
 	if err != nil {
 		return err
 	}
 
-	if !refresh {
-		return whoami.RenderDetect(os.Stdout, whoami.DetectFromCache(cfg, rp.OlaresID), format)
-	}
-
-	d, err := whoami.DetectAndCache(ctx, whoami.DetectInput{
-		Cfg:         cfg,
-		OlaresID:    rp.OlaresID,
-		LocalPrefix: rp.LocalURLPrefix,
-		Insecure:    rp.InsecureSkipVerify,
-		AccessToken: rp.AccessToken,
-		Now:         time.Now,
-	})
-	if err != nil {
-		return err
-	}
-	return whoami.RenderDetect(os.Stdout, d, format)
+	client := whoami.NewHTTPClient(hc, rp.DesktopURL, rp.OlaresID)
+	return whoami.Run(ctx, client, cfg, rp.OlaresID, refresh, format, nil, os.Stdout)
 }

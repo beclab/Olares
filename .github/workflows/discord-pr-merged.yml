@@ -1,7 +1,7 @@
 name: Discord PR Merged Notification
 
 on:
-  pull_request:
+  pull_request_target:
     types: [closed]
 
 permissions:
@@ -73,7 +73,16 @@ jobs:
             --arg merge_sha "${MERGE_SHA}" \
             --arg timestamp "${MERGED_AT}" \
             '
-            ($body | gsub("\r"; "")) as $clean_body |
+            (
+              $body
+              | gsub("\r"; "")
+              # Drop Cursor Bugbot auto-summary (kept on GitHub, noisy on Discord).
+              | gsub("(?s)<!--\\s*CURSOR_SUMMARY\\s-->.*?<!--\\s*/CURSOR_SUMMARY\\s-->"; "")
+              # Drop leftover HTML comments from the PR template.
+              | gsub("(?s)<!--.*?-->"; "")
+              | gsub("\n{3,}"; "\n\n")
+              | gsub("^\\s+|\\s+$"; "")
+            ) as $clean_body |
 
             (
               if ($clean_body | length) == 0 then

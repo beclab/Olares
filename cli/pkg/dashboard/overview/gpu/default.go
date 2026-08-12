@@ -38,9 +38,16 @@ func RunDefault(ctx context.Context, c *pkgdashboard.Client, cf *pkgdashboard.Co
 	now := time.Now()
 	env := BuildSectionsEnvelope(ctx, c, cf, now)
 	if cf.Output == pkgdashboard.OutputJSON {
-		return pkgdashboard.WriteJSON(os.Stdout, env)
+		if err := pkgdashboard.WriteJSON(os.Stdout, env); err != nil {
+			return err
+		}
+	} else if err := WriteSectionsTable(os.Stdout, env); err != nil {
+		return err
 	}
-	return WriteSectionsTable(os.Stdout, env)
+	if pkgdashboard.EverySectionFailed(env) {
+		return pkgdashboard.ErrAlreadyReported
+	}
+	return nil
 }
 
 // BuildSectionsEnvelope assembles { graphics, tasks } in one

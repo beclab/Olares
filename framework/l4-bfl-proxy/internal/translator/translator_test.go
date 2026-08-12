@@ -622,7 +622,8 @@ func TestBuildCustomDomainVirtualHosts_SharedApp_ExtAuth(t *testing.T) {
 	assert.Equal(t, autheliaPathPrefix, r.ExtAuth.PathPrefix)
 }
 
-// v1/v2 (non-shared) apps continue to reach their upstream cluster directly.
+// v1/v2 (non-shared) apps reach their upstream cluster and are gated behind
+// the viewing user's Authelia instance just like shared apps.
 func TestBuildAppVirtualHosts_NonSharedApp(t *testing.T) {
 	tr := &Translator{cfg: &Config{}}
 	user := &message.UserInfo{Name: "alice", Language: "en"}
@@ -641,9 +642,72 @@ func TestBuildAppVirtualHosts_NonSharedApp(t *testing.T) {
 	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", false, clusterSet)
 	require.Len(t, vhosts, 1)
 	require.Len(t, vhosts[0].Routes, 1)
-	assert.Nil(t, vhosts[0].Routes[0].DirectResponse)
-	assert.Nil(t, vhosts[0].Routes[0].ExtAuth, "non-shared apps must not be gated behind ext_auth")
+	r := vhosts[0].Routes[0]
+	assert.Nil(t, r.DirectResponse)
+	require.NotNil(t, r.ExtAuth, "non-shared apps must also be gated behind Authelia ext_auth")
+	assert.Equal(t, "authelia_backend_alice", r.ExtAuth.Cluster)
+	assert.Equal(t, autheliaVerifyPathPrefix, r.ExtAuth.PathPrefix)
+	assert.False(t, r.ExtAuth.Disabled)
 	assert.NotEmpty(t, clusterSet)
+}
+
+func TestBuildAppVirtualHosts_PublicSkipsExtAuth(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+	user := &message.UserInfo{Name: "alice", Language: "en"}
+	clusterSet := make(map[string]*ir.ClusterIR)
+	app := &message.AppInfo{
+		Name:      "pub",
+		Appid:     "pub",
+		Namespace: "pub-alice",
+		Owner:     "alice",
+		Entrances: []*message.EntranceInfo{
+			{Name: "web", Host: "pub-svc", Port: 8080, AuthLevel: "public"},
+		},
+	}
+	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", false, clusterSet)
+	require.Len(t, vhosts, 1)
+	require.Len(t, vhosts[0].Routes, 1)
+	assert.Nil(t, vhosts[0].Routes[0].ExtAuth, "public must skip ExtAuth")
+}
+
+func TestBuildProbeBypassRoutes_ExactPathAndUA(t *testing.T) {
+	routes := buildProbeBypassRoutes("alice_app_web", "cluster", "alice", []string{"/healthz", "/ready", "/", "healthz", "/healthz"})
+	require.Len(t, routes, 2, "dedupe and drop root path")
+	assert.Equal(t, "/healthz", routes[0].PathExact)
+	assert.Equal(t, "/ready", routes[1].PathExact)
+	for _, r := range routes {
+		assert.Nil(t, r.ExtAuth, "probe bypass must not re-enable ExtAuth")
+		require.Len(t, r.HeaderMatches, 1)
+		assert.Equal(t, "user-agent", r.HeaderMatches[0].Name)
+		assert.Equal(t, probeUARegex, r.HeaderMatches[0].SafeRegex)
+	}
+}
+
+func TestBuildAppVirtualHosts_ProbeBypassBeforeDefault(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+	user := &message.UserInfo{Name: "alice", Language: "en"}
+	clusterSet := make(map[string]*ir.ClusterIR)
+	app := &message.AppInfo{
+		Name:      "v1app",
+		Appid:     "v1app",
+		Namespace: "v1app-alice",
+		Owner:     "alice",
+		EntranceProbePaths: map[string][]string{
+			"web": {"/healthz"},
+		},
+		Entrances: []*message.EntranceInfo{
+			{Name: "web", Host: "v1app-svc", Port: 8080},
+		},
+	}
+	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", false, clusterSet)
+	require.Len(t, vhosts, 1)
+	require.GreaterOrEqual(t, len(vhosts[0].Routes), 2)
+	assert.Equal(t, "/healthz", vhosts[0].Routes[0].PathExact)
+	assert.Nil(t, vhosts[0].Routes[0].ExtAuth)
+	last := vhosts[0].Routes[len(vhosts[0].Routes)-1]
+	assert.Equal(t, "/", last.PathPrefix)
+	require.NotNil(t, last.ExtAuth)
+	assert.Equal(t, autheliaVerifyPathPrefix, last.ExtAuth.PathPrefix)
 }
 
 // A "dev" entrance answers on both its normal hostname and a
@@ -829,4 +893,45 @@ func TestBuildFileserverRoutes_NodeScopedBeforeMasterGeneric(t *testing.T) {
 				"node-scoped route %q must come before any master generic route", r.Name)
 		}
 	}
+}
+
+func TestBuildSystemVirtualHost_DesktopWizardVerify_AuthSkipped(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+	user := &message.UserInfo{Name: "alice", Language: "en", Namespace: "user-space-alice"}
+	clusterSet := make(map[string]*ir.ClusterIR)
+
+	desktop := tr.buildSystemVirtualHost(user, systemServiceDef{Name: "desktop", SvcFormat: "edge-desktop.%s.svc.cluster.local"}, "alice.example.com", false, user.Namespace, clusterSet)
+	require.Len(t, desktop.Routes, 1)
+	require.NotNil(t, desktop.Routes[0].ExtAuth)
+	assert.Equal(t, autheliaVerifyPathPrefix, desktop.Routes[0].ExtAuth.PathPrefix)
+
+	wizard := tr.buildSystemVirtualHost(user, systemServiceDef{Name: "wizard", SvcFormat: "wizard.%s.svc.cluster.local"}, "alice.example.com", false, user.Namespace, clusterSet)
+	assert.Nil(t, wizard.Routes[0].ExtAuth, "wizard must not attach ExtAuth (pre-auth activation)")
+
+	auth := tr.buildSystemVirtualHost(user, systemServiceDef{Name: "auth", SvcFormat: "authelia-svc.%s.svc.cluster.local"}, "alice.example.com", false, user.Namespace, clusterSet)
+	assert.Nil(t, auth.Routes[0].ExtAuth, "auth IdP must not attach ExtAuth")
+}
+
+func TestBuildUserVirtualHosts_ProfileRootVerify(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+	user := &message.UserInfo{
+		Name:      "alice",
+		Language:  "en",
+		Namespace: "user-space-alice",
+		SSL:       &message.SSLConfig{Zone: "alice.example.com"},
+	}
+	clusterSet := make(map[string]*ir.ClusterIR)
+	vhosts := tr.buildUserVirtualHosts(user, user.SSL.Zone, false, clusterSet)
+	require.NotEmpty(t, vhosts)
+	var profile *ir.VirtualHostIR
+	for _, vh := range vhosts {
+		if vh.Name == "profile_alice" {
+			profile = vh
+			break
+		}
+	}
+	require.NotNil(t, profile, "profile VH required")
+	require.Len(t, profile.Routes, 1)
+	require.NotNil(t, profile.Routes[0].ExtAuth, "zone root profile must attach ExtAuth")
+	assert.Equal(t, autheliaVerifyPathPrefix, profile.Routes[0].ExtAuth.PathPrefix)
 }

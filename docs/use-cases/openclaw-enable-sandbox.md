@@ -6,8 +6,8 @@ head:
     - name: keywords
       content: Olares, OpenClaw, OpenClaw tutorial, sandbox, security, code execution
 app_version: "1.0.17"
-doc_version: "1.2"
-doc_updated: "2026-08-03"
+doc_version: "1.3"
+doc_updated: "2026-08-11"
 ---
 
 # Enable the OpenClaw sandbox
@@ -126,7 +126,16 @@ If you want the sandbox to interact with your Olares files, you must explicitly 
 ### Grant access
 
 For example, to grant the sandbox read-only (`ro`) access to your **Home** directory:
-1. Ensure OpenClaw has access to your local files in the **Home** directory by enabling the `ALLOW_HOME_DIR_ACCESS` environment variable. For more information, see [Enable file access settings](../use-cases/openclaw-local-access.md#step-1-enable-file-access-settings).
+1. Ensure OpenClaw has access to your local files in the **Home** directory by enabling the `ALLOW_HOME_DIR_ACCESS` environment variable:
+
+    a. Open **Settings**, and then go to **Applications** > **OpenClaw** > **Manage environment variables**.
+
+    ![Enable file access settings](/images/manual/use-cases/openclaw-file-access.png#bordered){width=70%}
+
+    b. For **ALLOW_HOME_DIR_ACCESS**, click <i class="material-symbols-outlined">edit_square</i>, set the value to **true**, and then click **Confirm**.
+
+    c. Click **Apply**. Wait about a minute for the OpenClaw container to restart and apply the new permissions.
+
 2. Open the Files app, and then go to **Data** > **clawdbot** > **config**.
 3. Double-click the `openclaw.json` file to open it.
 4. Click <i class="material-symbols-outlined">edit_square</i> in the upper-right corner to enter the edit mode.

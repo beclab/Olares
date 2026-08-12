@@ -23,9 +23,9 @@ Resumable chunked upload of a local file or directory tree into the per-user fil
 
 ## Safety constraints
 
-- **Destructive (writes new bytes on the server) — confirm intent with the user.** Especially when the user typed a path without trailing `/`: `upload <local> drive/Home/Documents/2026.pdf` would CREATE that exact path, possibly clobbering an existing `2026.pdf`.
-- **The destination directory MUST already exist on the server.** `upload` does NOT pre-create it (because [quirk #1](../SKILL.md#1-post-apiresourcesdir-auto-renames-on-collision) would auto-rename to `Documents (1)`). Always `files mkdir -p <dest-dir>` first if the parent is new.
-- **`external/<node>/` (no `<volume>`) is rejected** — virtual layer ([quirk #3](../SKILL.md#3-externalnode-is-a-virtual-volume-listing-layer-read-only)).
+- **Writes new bytes on the server.** The requested upload authorises the named destination, but a path without trailing `/` creates that exact path and may clobber an existing file; ask when overwrite intent is not explicit.
+- **The destination directory MUST already exist on the server.** `upload` does NOT pre-create it because [directory creation may auto-rename on collision](../SKILL.md#backend-quirks-that-change-decisions). Always `files mkdir -p <dest-dir>` first if the parent is new.
+- **`external/<node>/` (no `<volume>`) is rejected** — see [backend quirks](../SKILL.md#backend-quirks-that-change-decisions).
 
 ## Examples
 
@@ -91,7 +91,7 @@ The per-file errgroup slot stays held during stage 2 so `--parallel N` remains h
 
 ## Token refresh on streaming chunks
 
-`upload` uses the **pro-active** refresh path: before each chunk, the CLI decodes the access_token's JWT exp; if within 60s of expiry, it refreshes BEFORE sending. This avoids the impossible scenario where a streaming `*os.File` body is consumed by the first send and then can't be replayed on a 401. See [`../../olares-shared/SKILL.md`](../../olares-shared/SKILL.md#automatic-token-refresh).
+`upload` uses the **pro-active** refresh path: before each chunk, the CLI decodes the access_token's JWT exp; if within 60s of expiry, it refreshes BEFORE sending. This avoids the impossible scenario where a streaming `*os.File` body is consumed by the first send and then can't be replayed on a 401. The general refresh behaviour is in [`../../olares-shared/SKILL.md`](../../olares-shared/SKILL.md), under the auth model.
 
 ## Agent notes
 

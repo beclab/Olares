@@ -34,7 +34,7 @@ type APIResponse struct {
 // `<MarketURL>/app-store/api/v2`. It is the moral counterpart of `files`'s
 // `download.Client`: a thin HTTP wrapper that delegates auth to the caller's
 // http.Client (Factory's refreshingTransport injects `X-Authorization` and
-// transparently refreshes on 401/403) and otherwise just maps Go method
+// transparently refreshes on 401/403/459) and otherwise just maps Go method
 // calls to JSON requests.
 //
 // Two HTTP clients are stored:
@@ -51,7 +51,7 @@ type MarketClient struct {
 	source       string
 
 	// olaresID is captured for OperationResult.User (diagnostics /
-	// scripting) and for reformatting 401/403 messages with the user's
+	// scripting) and for reformatting 401/403/459 messages with the user's
 	// own ID in the CTA.
 	olaresID string
 }
@@ -179,7 +179,7 @@ func (c *MarketClient) downloadStream(ctx context.Context, path string, query ur
 		return nil, fmt.Errorf("request failed: %w", err)
 	}
 
-	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
+	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden || resp.StatusCode == 459 {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, errorBodyLimit))
 		resp.Body.Close()
 		return nil, reformatMarketAuthErr(resp.StatusCode, body, c.olaresID)
@@ -187,7 +187,7 @@ func (c *MarketClient) downloadStream(ctx context.Context, path string, query ur
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, errorBodyLimit))
 		resp.Body.Close()
-		return nil, fmt.Errorf("API error (HTTP %d): %s", resp.StatusCode, envelopeMessage(body, resp.StatusCode))
+		return nil, &APIError{StatusCode: resp.StatusCode, Message: envelopeMessage(body, resp.StatusCode)}
 	}
 	// A 200 carrying the JSON envelope means the backend answered a
 	// different question than the one asked. Writing that to a .tgz would
@@ -204,6 +204,23 @@ func (c *MarketClient) downloadStream(ctx context.Context, path string, query ur
 // The edge proxy can answer an HTML page, and a whole one in a terminal
 // buries the line that matters.
 const errorBodyLimit = 8 << 10
+
+// APIError is a non-2xx answer from the app-store API, carrying the status
+// alongside the message so a caller can tell apart two failures the backend
+// spells identically. Market answers both "no such app" and "that app is not
+// in a state this operation accepts" with one 404 and one sentence, and only
+// the caller knows which of the two it was in a position to ask for.
+//
+// Error() reproduces the string this was formatted as before the type
+// existed, so callers matching on the text keep working; prefer errors.As.
+type APIError struct {
+	StatusCode int
+	Message    string
+}
+
+func (e *APIError) Error() string {
+	return fmt.Sprintf("API error (HTTP %d): %s", e.StatusCode, e.Message)
+}
 
 // envelopeMessage extracts the human-readable part of an app-store error
 // body: the envelope's `message` when it parses, the trimmed body when it
@@ -275,7 +292,7 @@ func (c *MarketClient) executeRequest(hc *http.Client, req *http.Request) (*APIR
 		return nil, fmt.Errorf("failed to read response: %w", err)
 	}
 
-	// 401/403 reaches us only when the factory's refreshingTransport
+	// 401/403/459 reaches us only when the factory's refreshingTransport
 	// already attempted a refresh+retry and STILL got rejected (the
 	// server is consistently saying no — usually a server-side state
 	// drift the user can't recover from). Reformat with the standard
@@ -283,7 +300,7 @@ func (c *MarketClient) executeRequest(hc *http.Client, req *http.Request) (*APIR
 	// `files ls`/`files cat`. The body may not be JSON (the edge proxy
 	// can short-circuit to a plaintext page), so the JSON parse below
 	// is best-effort.
-	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
+	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden || resp.StatusCode == 459 {
 		return nil, reformatMarketAuthErr(resp.StatusCode, respBody, c.olaresID)
 	}
 
@@ -303,29 +320,14 @@ func (c *MarketClient) executeRequest(hc *http.Client, req *http.Request) (*APIR
 		if message == "" {
 			message = fmt.Sprintf("HTTP %d", resp.StatusCode)
 		}
-		return &apiResp, fmt.Errorf("API error (HTTP %d): %s", resp.StatusCode, message)
+		return &apiResp, &APIError{StatusCode: resp.StatusCode, Message: message}
 	}
 
 	return &apiResp, nil
 }
 
-// reformatMarketAuthErr mirrors reformatHTTPErr in cmd/ctl/files/download.go:
-// turn 401/403 into the same `olares-cli profile login --olares-id <id>` CTA
-// users see from the files verbs, so the troubleshooting story is consistent.
 func reformatMarketAuthErr(status int, respBody []byte, olaresID string) error {
-	body := strings.TrimSpace(string(respBody))
-	if len(body) > 200 {
-		body = body[:200]
-	}
-	if olaresID != "" {
-		if body != "" {
-			return fmt.Errorf("server rejected the access token (HTTP %d: %s); please run: olares-cli profile login --olares-id %s",
-				status, body, olaresID)
-		}
-		return fmt.Errorf("server rejected the access token (HTTP %d); please run: olares-cli profile login --olares-id %s",
-			status, olaresID)
-	}
-	return fmt.Errorf("server rejected the access token (HTTP %d); please re-run `olares-cli profile login`", status)
+	return credential.FormatHTTPAuthError(status, respBody, olaresID)
 }
 
 func (c *MarketClient) GetMarketData(ctx context.Context) (*APIResponse, error) {

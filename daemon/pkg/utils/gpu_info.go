@@ -2,6 +2,8 @@ package utils
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/jaypipes/ghw"
@@ -25,4 +27,28 @@ func collectGpuInfos(cards []*ghw.GraphicsCard) []string {
 		}
 	}
 	return append(nvidia, others...)
+}
+
+// filterSriovVirtualFunctions removes cards that sysfs identifies as SR-IOV
+// virtual functions. Cards are retained when their VF status cannot be
+// confirmed.
+func filterSriovVirtualFunctions(cards []*ghw.GraphicsCard, sysfsDevices string) []*ghw.GraphicsCard {
+	filtered := make([]*ghw.GraphicsCard, 0, len(cards))
+	for _, card := range cards {
+		address := ""
+		if card != nil {
+			address = card.Address
+			if address == "" && card.DeviceInfo != nil {
+				address = card.DeviceInfo.Address
+			}
+		}
+		if address != "" {
+			physfn := filepath.Join(sysfsDevices, address, "physfn")
+			if _, err := os.Lstat(physfn); err == nil {
+				continue
+			}
+		}
+		filtered = append(filtered, card)
+	}
+	return filtered
 }

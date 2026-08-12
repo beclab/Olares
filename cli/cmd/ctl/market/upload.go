@@ -193,7 +193,22 @@ func doUploadFile(opts *MarketOptions, mc *MarketClient, filePath, source string
 		if architectureErr := parseUploadArchitectureError(response); architectureErr != nil {
 			return architectureErr
 		}
+		if manifestErr := parseUploadManifestError(response); manifestErr != nil {
+			return manifestErr
+		}
 		return fmt.Errorf("upload failed: %w", err)
+	}
+	return nil
+}
+
+func parseUploadManifestError(response *APIResponse) error {
+	if response == nil {
+		return nil
+	}
+	message := strings.ToLower(strings.TrimSpace(response.Message))
+	if strings.Contains(message, "appid") &&
+		(strings.Contains(message, "required") || strings.Contains(message, "missing") || strings.Contains(message, "empty")) {
+		return fmt.Errorf("upload rejected: OlaresManifest.yaml metadata.appid is required; set it explicitly, repackage the chart, and do not retry the unchanged package")
 	}
 	return nil
 }

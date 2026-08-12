@@ -3,6 +3,16 @@ import { defineConfig, type DefaultTheme } from "vitepress";
 export const useCaseSidebar: DefaultTheme.Sidebar = {
     "/zh/use-cases/": [
         {
+          text: "Olares 必备",
+          collapsed: false,
+          items: [
+            {
+              text: "本地大模型",
+              link: "/zh/use-cases/llm-base-apps",
+            },
+          ],
+        },
+        {
           text: "AI",
           collapsed: false,
           items: [
@@ -40,10 +50,6 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                       text: "使用 OpenClaw 管理 Olares",
                       link: "/zh/use-cases/openclaw-olares-skills",
                     },
-                    //{
-                    //  text: "启用本地文件访问",
-                    //  link: "/zh/use-cases/openclaw-local-access",
-                    //},
                     {
                       text: "启用沙盒",
                       link: "/zh/use-cases/openclaw-enable-sandbox",
@@ -244,10 +250,6 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "模型服务",
               collapsed: true,
               items: [
-                {
-                  text: "引擎基座",
-                  link: "/zh/use-cases/llm-base-apps",
-                },
                 {
                   text: "Ollama",
                   link: "/zh/use-cases/ollama",

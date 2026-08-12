@@ -82,6 +82,10 @@ const side = {
           text: "获取技术支持",
           link: "/zh/manual/help/request-technical-support",
         },
+        {
+          text: "文档更新动态",
+          link: "/zh/manual/release-notes",
+        },
       ],
     },
     {

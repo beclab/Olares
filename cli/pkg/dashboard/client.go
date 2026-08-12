@@ -34,7 +34,7 @@ func debugHTTPEnabled() bool {
 // `prepareClient` declared in each cmd subpackage's `common.go`
 // (cli/cmd/ctl/dashboard/<area>/common.go) and calls DoJSON / DoEmpty
 // / Get* helpers; the underlying refreshingTransport handles X-Authorization
-// injection + transparent /api/refresh on 401/403.
+// injection + transparent /api/refresh on 401/403/459.
 //
 // Why a typed Client (vs. a raw http.Client + URL constants per file)?
 // Because we need to reformat 4xx/5xx into agent-friendly errors, expose an
@@ -152,7 +152,7 @@ func ClassifyTransportErr(err error) string {
 //
 // Behaviour on non-2xx:
 //
-//   - 401/403 → reformatted as "server rejected the access token (HTTP X)"
+//   - 401/403/459 → reformatted with the matching authentication or permission CTA
 //     with the standard CTA. The factory's refreshingTransport already had
 //     a chance to refresh+retry; reaching us means the grant is dead.
 //   - 4xx     → *HTTPError with ErrorKind="http_4xx".
@@ -318,7 +318,7 @@ func classifyStatus(status int, endpoint string, raw []byte, olaresID string) er
 	if len(body) > 512 {
 		body = body[:512]
 	}
-	if status == http.StatusUnauthorized || status == http.StatusForbidden {
+	if status == http.StatusUnauthorized || status == http.StatusForbidden || status == 459 {
 		return reformatAuthErr(status, body, olaresID, endpoint)
 	}
 	kind := "http_5xx"
@@ -333,18 +333,8 @@ func classifyStatus(status int, endpoint string, raw []byte, olaresID string) er
 	}
 }
 
-// reformatAuthErr matches the wording used by the files / market trees so
-// the troubleshooting story stays uniform across CLI commands.
 func reformatAuthErr(status int, body, olaresID, endpoint string) error {
-	if olaresID != "" {
-		if body != "" {
-			return fmt.Errorf("server rejected the access token (HTTP %d from %s: %s); please run: olares-cli profile login --olares-id %s",
-				status, endpoint, body, olaresID)
-		}
-		return fmt.Errorf("server rejected the access token (HTTP %d from %s); please run: olares-cli profile login --olares-id %s",
-			status, endpoint, olaresID)
-	}
-	return fmt.Errorf("server rejected the access token (HTTP %d from %s); please re-run `olares-cli profile login`", status, endpoint)
+	return fmt.Errorf("request %s: %w", endpoint, credential.FormatHTTPAuthError(status, []byte(body), olaresID))
 }
 
 // ----------------------------------------------------------------------------

@@ -54,6 +54,8 @@ Parent commands aggregate multiple sub-views:
 
 Sections are fetched concurrently. A single failed section degrades to `meta.error` on that section; the other sections still return. Surface partial outputs, do not blackout the whole envelope. To enumerate every live kind: `olares-cli dashboard schema -o json`.
 
+Exit code on a sections envelope: partial failure is `exit 0`, because the surviving sections are real data. Only a run where **every** section carries `meta.error` exits non-zero, and the envelope is still written to stdout first — read it for the per-section cause instead of retrying blind. A gated or empty section (`meta.empty`) is not a failure and never affects the exit code.
+
 ## Empty data and gates
 
 Optional hardware and integrations have three legitimate empty states:

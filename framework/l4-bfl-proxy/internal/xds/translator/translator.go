@@ -64,6 +64,36 @@ local PUSH_STATE_SCRIPT = "<script>\n" ..
   "})();\n" ..
   "</script>"
 
+-- F2: clear Set-Cookie Domain= values (parity with historic oes set_cookie_tpl).
+local COOKIE_DOMAIN_PATTERN = "Domain=([^;]*)"
+
+function rewrite_set_cookie_domains(response_handle)
+  local headers = response_handle:headers()
+  local n = headers:getNumValues("Set-Cookie")
+  if n == 0 then return end
+  local cookies = {}
+  for i = 0, n - 1 do
+    local v = headers:getAtIndex("Set-Cookie", i)
+    if v and v ~= "" then
+      table.insert(cookies, v)
+    end
+  end
+  local first = true
+  for _, cookie in ipairs(cookies) do
+    local updated = cookie
+    local set_cookie_domain = string.match(cookie, COOKIE_DOMAIN_PATTERN)
+    if set_cookie_domain ~= nil and set_cookie_domain ~= "" then
+      updated = string.gsub(cookie, COOKIE_DOMAIN_PATTERN, "Domain=", 1)
+    end
+    if first then
+      headers:replace("Set-Cookie", updated)
+      first = false
+    else
+      headers:add("Set-Cookie", updated)
+    end
+  end
+end
+
 function envoy_on_request(request_handle)
   local meta = request_handle:metadata()
   if not meta then return end
@@ -81,6 +111,9 @@ function envoy_on_request(request_handle)
 end
 
 function envoy_on_response(response_handle)
+  -- Always rewrite Cookie Domain before optional HTML body filters.
+  rewrite_set_cookie_domains(response_handle)
+
   local dm = response_handle:streamInfo():dynamicMetadata():get("envoy.filters.http.lua")
   if not dm or not dm["needs_sub_filter"] then return end
 
@@ -144,6 +177,20 @@ func SetTimeouts(tcpIdle, httpStream, connect, route, clusterIdle time.Duration)
 	connectTimeout = connect
 	routeTimeout = route
 	clusterIdleTimeout = clusterIdle
+}
+
+// spoofableAppIdentityHeadersToRemove lists north-south client headers that
+// must not reach entrance Services as client-supplied values. Envoy matches
+// these case-insensitively.
+//
+// x-bfl-user is force-removed here, then re-injected from the trusted viewer
+// on each route via RequestHeadersToAdd (OVERWRITE_IF_EXISTS_OR_ADD).
+// x-caller-appid is removed and never rewritten on this L4 path.
+func spoofableAppIdentityHeadersToRemove() []string {
+	return []string{
+		"x-bfl-user",
+		"x-caller-appid",
+	}
 }
 
 // mustAny marshals a proto.Message into an anypb.Any, panicking on error.
@@ -446,7 +493,7 @@ func buildMultiUserHTTPSListener(port uint32, proxyProtocol bool, httpListeners 
 				continue
 			}
 
-			vh := translateVirtualHost(vhIR)
+			vh := translateVirtualHost(vhIR, clusterMap)
 			vh.Domains = keptDomains[i]
 			virtualHosts = append(virtualHosts, vh)
 
@@ -528,6 +575,13 @@ func buildMultiUserHTTPSListener(port uint32, proxyProtocol bool, httpListeners 
 				{Header: &corev3.HeaderValue{Key: "X-Real-IP", Value: "%DOWNSTREAM_REMOTE_ADDRESS_WITHOUT_PORT%"}, AppendAction: corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD},
 				{Header: &corev3.HeaderValue{Key: "X-Original-Forwarded-For", Value: "%REQ(X-FORWARDED-FOR)%"}, AppendAction: corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD},
 			},
+			// Force-delete client identity headers at RDS, then re-inject
+			// X-BFL-USER on each route (see translateRoute). Default Envoy
+			// order is most→least specific (route add before RDS remove),
+			// which would strip the reinjected header; reverse so RDS remove
+			// runs first and route add wins (envoy#5858).
+			MostSpecificHeaderMutationsWins: true,
+			RequestHeadersToRemove:          spoofableAppIdentityHeadersToRemove(),
 		}
 		routeConfigs = append(routeConfigs, routeConfig)
 
@@ -712,7 +766,7 @@ func buildMultiUserHTTPSListener(port uint32, proxyProtocol bool, httpListeners 
 // virtual-host level (routes that require auth re-enable it via per-route
 // TypedPerFilterConfig). If SourceCIDRs is non-empty, an RBAC per-route
 // override is added to restrict traffic to those CIDRs (deny_all mode).
-func translateVirtualHost(vhIR *ir.VirtualHostIR) *routev3.VirtualHost {
+func translateVirtualHost(vhIR *ir.VirtualHostIR, clusterMap map[string]*ir.ClusterIR) *routev3.VirtualHost {
 	vh := &routev3.VirtualHost{
 		Name:    vhIR.Name,
 		Domains: vhIR.Domains,
@@ -735,7 +789,7 @@ func translateVirtualHost(vhIR *ir.VirtualHostIR) *routev3.VirtualHost {
 	}
 
 	for _, routeIR := range vhIR.Routes {
-		route := translateRoute(routeIR)
+		route := translateRoute(routeIR, clusterMap)
 		if subFilterMeta != nil && route.GetDirectResponse() == nil {
 			route.Metadata = subFilterMeta
 		}
@@ -794,7 +848,7 @@ func translateVirtualHost(vhIR *ir.VirtualHostIR) *routev3.VirtualHost {
 // sorted key order for deterministic output. If ExtAuth is set and not
 // disabled, a per-route TypedPerFilterConfig enables the ext_authz check for
 // that route.
-func translateRoute(routeIR *ir.HTTPRouteIR) *routev3.Route {
+func translateRoute(routeIR *ir.HTTPRouteIR, clusterMap map[string]*ir.ClusterIR) *routev3.Route {
 	route := &routev3.Route{
 		Name: routeIR.Name,
 	}
@@ -812,6 +866,28 @@ func translateRoute(routeIR *ir.HTTPRouteIR) *routev3.Route {
 			pfx = "/"
 		}
 		match.PathSpecifier = &routev3.RouteMatch_Prefix{Prefix: pfx}
+	}
+	for _, hm := range routeIR.HeaderMatches {
+		header := &routev3.HeaderMatcher{Name: hm.Name}
+		switch {
+		case hm.SafeRegex != "":
+			header.HeaderMatchSpecifier = &routev3.HeaderMatcher_StringMatch{
+				StringMatch: &matcherv3.StringMatcher{
+					MatchPattern: &matcherv3.StringMatcher_SafeRegex{
+						SafeRegex: &matcherv3.RegexMatcher{Regex: hm.SafeRegex},
+					},
+				},
+			}
+		case hm.Exact != "":
+			header.HeaderMatchSpecifier = &routev3.HeaderMatcher_StringMatch{
+				StringMatch: &matcherv3.StringMatcher{
+					MatchPattern: &matcherv3.StringMatcher_Exact{Exact: hm.Exact},
+				},
+			}
+		default:
+			continue
+		}
+		match.Headers = append(match.Headers, header)
 	}
 	route.Match = match
 
@@ -856,10 +932,25 @@ func translateRoute(routeIR *ir.HTTPRouteIR) *routev3.Route {
 	}
 
 	if routeIR.ExtAuth != nil && !routeIR.ExtAuth.Disabled {
+		checkSettings := &extauthzv3.CheckSettings{}
+		if path := routeIR.ExtAuth.PathPrefix; path != "" && clusterMap != nil {
+			if c, ok := clusterMap[routeIR.ExtAuth.Cluster]; ok && c.Host != "" {
+				checkSettings.ServiceOverride = &extauthzv3.CheckSettings_HttpService{
+					HttpService: &extauthzv3.HttpService{
+						ServerUri: &corev3.HttpUri{
+							Uri:              fmt.Sprintf("http://%s", c.Host),
+							HttpUpstreamType: &corev3.HttpUri_Cluster{Cluster: routeIR.ExtAuth.Cluster},
+							Timeout:          durationpb.New(15 * time.Second),
+						},
+						PathPrefix: path,
+					},
+				}
+			}
+		}
 		route.TypedPerFilterConfig = map[string]*anypb.Any{
 			"envoy.filters.http.ext_authz": mustAny(&extauthzv3.ExtAuthzPerRoute{
 				Override: &extauthzv3.ExtAuthzPerRoute_CheckSettings{
-					CheckSettings: &extauthzv3.CheckSettings{},
+					CheckSettings: checkSettings,
 				},
 			}),
 		}

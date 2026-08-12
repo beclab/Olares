@@ -66,6 +66,27 @@ type Envelope struct {
 	Sections map[string]Envelope `json:"sections,omitempty"`
 }
 
+// EverySectionFailed reports whether an aggregate envelope carries at
+// least one section and every one of them holds a Meta.Error.
+//
+// Partial degradation stays exit 0 on purpose: one dead section must not
+// suppress the others. Total failure is different — the command produced
+// no data at all, and an exit code of 0 there tells a script that a
+// wholly unreachable Olares is healthy. A capability gate or an empty
+// result sets Meta.Empty rather than Meta.Error, so gated sections do
+// not count as failures.
+func EverySectionFailed(env Envelope) bool {
+	if len(env.Sections) == 0 {
+		return false
+	}
+	for _, s := range env.Sections {
+		if s.Meta.Error == "" {
+			return false
+		}
+	}
+	return true
+}
+
 // Item is one row of a leaf Envelope.
 //
 // The split between Raw and Display is deliberate:

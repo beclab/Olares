@@ -16,15 +16,12 @@ import (
 func NewDownloadCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "download",
-		Short: "Manage download-server tasks (Settings /download edge)",
-		Long: `Manage download tasks via download-server.
+		Short: "manage download tasks",
+		Long: `Create and manage Olares download tasks.
 
 Invoked as: olares-cli knowledge download <verb>
 
-Requires Olares 1.12.7+. Calls go through the active profile's Settings
-URL with a /download prefix (user-service relay → download provider →
-download-server). Auth is the profile access token (X-Authorization);
-the gateway injects X-Bfl-User — do not set it from the CLI.
+Requires Olares 1.12.7+ and uses the active profile.
 
 This is the download *task centre* (create / list / pause / …). It is
 not the top-level "download" command (installer packages) and not
@@ -37,13 +34,13 @@ Verb families:
   prefs       prefs get, prefs set
   sync        unfinished, sync
   torrent     torrent inspect, stats, peers, files, seed stop|resume
-  file        file exists, file check, file remove
+  file        file exists, file remove
   settings    settings get, settings set  (download-server global config)
 
 Universal flags:
 
   -o, --output {table,json}
-      --app <name>     default wise (create / list / prefs)
+      --app <name>     one of: wise, larepass (default wise; create / list / prefs / sync)
 
 Run "olares-cli knowledge download <verb> --help" for verb-specific flags.
 `,

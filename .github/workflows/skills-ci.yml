@@ -1,0 +1,61 @@
+name: Validate olares-cli skills
+
+on:
+  pull_request:
+    paths:
+      - "cli/skills/**"
+      - "cli/cmd/ctl/**"
+      - "cli/pkg/clusterclient/**"
+      - "cli/pkg/clusterctx/**"
+      - "cli/pkg/credential/**"
+      - "cli/pkg/dashboard/**"
+      - "cli/pkg/whoami/**"
+      - ".github/workflows/skills-ci.yml"
+  push:
+    branches:
+      - main
+      - "release-*"
+    paths:
+      - "cli/skills/**"
+      - "cli/cmd/ctl/**"
+      - "cli/pkg/clusterclient/**"
+      - "cli/pkg/clusterctx/**"
+      - "cli/pkg/credential/**"
+      - "cli/pkg/dashboard/**"
+      - "cli/pkg/whoami/**"
+      - ".github/workflows/skills-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: cli/go.mod
+          cache-dependency-path: cli/go.sum
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+          cache: pip
+          cache-dependency-path: cli/skills/requirements.txt
+
+      - name: Validate skill content
+        run: |
+          python3 -m pip install -r cli/skills/requirements.txt
+          python3 -m unittest cli/skills/test_validate.py
+          python3 cli/skills/validate.py
+          bash cli/skills/publish.sh --dry-run
+
+      - name: Probe skill-owned command paths
+        working-directory: cli
+        run: |
+          go build -o /tmp/olares-cli ./cmd
+          go test ./cmd/ctl -run '^TestSkillCommandPathsExist$|^TestEveryCommandTheSkillsDocumentResolves$'
+          go test ./cmd/ctl/... ./pkg/clusterclient ./pkg/clusterctx ./pkg/credential ./pkg/dashboard ./pkg/whoami

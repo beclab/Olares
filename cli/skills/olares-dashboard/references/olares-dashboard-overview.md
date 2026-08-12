@@ -92,4 +92,4 @@ For `gpu tasks <ref>`, `<ref>` accepts EITHER the TASK column (`name`) OR the PO
 
 ## Common errors
 
-The fan / GPU gate, `--user` admin-only, and HAMI-absent errors are in the consolidated [Common errors](../SKILL.md#common-errors) table in the parent skill.
+Interpret fan/GPU capability gates, `--user` authority and HAMI-absent results with the parent skill's [envelope and capability semantics](../SKILL.md#envelope-and-capability-semantics).

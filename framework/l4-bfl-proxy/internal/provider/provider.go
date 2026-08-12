@@ -102,6 +102,11 @@ func (p *Provider) SetupWithManager(ctx context.Context) error {
 		return fmt.Errorf("get pod informer: %w", err)
 	}
 
+	svcInformer, err := p.cache.GetInformer(ctx, &corev1.Service{})
+	if err != nil {
+		return fmt.Errorf("get service informer: %w", err)
+	}
+
 	userEnvInformer, err := p.cache.GetInformer(ctx, &sysv1alpha1.UserEnv{})
 	if err != nil {
 		return fmt.Errorf("get userEnv informer: %w", err)
@@ -158,11 +163,21 @@ func (p *Provider) SetupWithManager(ctx context.Context) error {
 			if !ok {
 				return false
 			}
-			return isFileServerPod(pod)
+			return isFileServerPod(pod) || podHasHTTPProbe(pod)
 		},
 		Handler: baseHandler,
 	}); err != nil {
 		return fmt.Errorf("add pod event handler: %w", err)
+	}
+
+	if _, err = svcInformer.AddEventHandler(toolscache.FilteringResourceEventHandler{
+		FilterFunc: func(obj interface{}) bool {
+			_, ok := obj.(*corev1.Service)
+			return ok
+		},
+		Handler: baseHandler,
+	}); err != nil {
+		return fmt.Errorf("add service event handler: %w", err)
 	}
 
 	if _, err = userEnvInformer.AddEventHandler(toolscache.FilteringResourceEventHandler{
@@ -446,6 +461,7 @@ func (p *Provider) buildAppInfos(username string, appList []*appv1alpha1.Applica
 
 		effectiveEntrances := app.EffectiveEntrances(username)
 		entrances := make([]*message.EntranceInfo, 0, len(effectiveEntrances))
+		probePaths := make(map[string][]string)
 		for _, e := range effectiveEntrances {
 			entrances = append(entrances, &message.EntranceInfo{
 				Name:            e.Name,
@@ -455,6 +471,11 @@ func (p *Provider) buildAppInfos(username string, appList []*appv1alpha1.Applica
 				WindowPushState: e.WindowPushState,
 				Type:            e.Type,
 			})
+			if e.Host != "" && app.Spec.Namespace != "" {
+				if paths := p.listProbePathsForService(context.Background(), app.Spec.Namespace, e.Host); len(paths) > 0 {
+					probePaths[e.Name] = paths
+				}
+			}
 		}
 
 		ports := make([]*message.PortInfo, 0, len(app.Spec.Ports))
@@ -478,7 +499,7 @@ func (p *Provider) buildAppInfos(username string, appList []*appv1alpha1.Applica
 			owner = username
 		}
 
-		result = append(result, &message.AppInfo{
+		info := &message.AppInfo{
 			Name:      app.Spec.Name,
 			Appid:     app.Spec.Appid,
 			IsSysApp:  app.Spec.IsSysApp,
@@ -488,7 +509,11 @@ func (p *Provider) buildAppInfos(username string, appList []*appv1alpha1.Applica
 			Ports:     ports,
 			Settings:  settings,
 			IsShared:  isSharedApp(app),
-		})
+		}
+		if len(probePaths) > 0 {
+			info.EntranceProbePaths = probePaths
+		}
+		result = append(result, info)
 	}
 	return result
 }
@@ -907,6 +932,85 @@ func isSSLConfigMap(cm *corev1.ConfigMap, namespacePrefix string) bool {
 
 func isFileServerPod(pod *corev1.Pod) bool {
 	return pod.Labels["app"] == "files"
+}
+
+func podHasHTTPProbe(pod *corev1.Pod) bool {
+	return len(httpProbePathsFromPod(pod)) > 0
+}
+
+func httpProbePathsFromPod(pod *corev1.Pod) []string {
+	if pod == nil {
+		return nil
+	}
+	var paths []string
+	for _, c := range pod.Spec.Containers {
+		if c.LivenessProbe != nil && c.LivenessProbe.HTTPGet != nil {
+			paths = append(paths, c.LivenessProbe.HTTPGet.Path)
+		}
+		if c.ReadinessProbe != nil && c.ReadinessProbe.HTTPGet != nil {
+			paths = append(paths, c.ReadinessProbe.HTTPGet.Path)
+		}
+		if c.StartupProbe != nil && c.StartupProbe.HTTPGet != nil {
+			paths = append(paths, c.StartupProbe.HTTPGet.Path)
+		}
+	}
+	return paths
+}
+
+// listProbePathsForService collects Exact HTTP probe paths from Pods selected by the Service.
+// Data source matches historic oes getHTTProbePath / deenvy entrance_probe.
+func (p *Provider) listProbePathsForService(ctx context.Context, namespace, svcName string) []string {
+	if p == nil || p.cache == nil || namespace == "" || svcName == "" {
+		return nil
+	}
+	var svc corev1.Service
+	if err := p.cache.Get(ctx, client.ObjectKey{Namespace: namespace, Name: svcName}, &svc); err != nil {
+		if !apierrors.IsNotFound(err) {
+			klog.V(2).Infof("provider: get service %s/%s for probe paths failed: %v", namespace, svcName, err)
+		}
+		return nil
+	}
+	if len(svc.Spec.Selector) == 0 {
+		return nil
+	}
+	var pods corev1.PodList
+	if err := p.cache.List(ctx, &pods, client.InNamespace(namespace), client.MatchingLabels(svc.Spec.Selector)); err != nil {
+		klog.V(2).Infof("provider: list pods for probe paths %s/%s failed: %v", namespace, svcName, err)
+		return nil
+	}
+	seen := map[string]struct{}{}
+	var out []string
+	for i := range pods.Items {
+		for _, path := range uniqueHTTPProbePaths(httpProbePathsFromPod(&pods.Items[i])) {
+			if _, ok := seen[path]; ok {
+				continue
+			}
+			seen[path] = struct{}{}
+			out = append(out, path)
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
+func uniqueHTTPProbePaths(raw []string) []string {
+	seen := map[string]struct{}{}
+	var out []string
+	for _, p := range raw {
+		p = strings.TrimSpace(p)
+		if p == "" || p == "/" {
+			continue
+		}
+		if !strings.HasPrefix(p, "/") {
+			p = "/" + p
+		}
+		if _, ok := seen[p]; ok {
+			continue
+		}
+		seen[p] = struct{}{}
+		out = append(out, p)
+	}
+	return out
 }
 
 func isUserEnvLanguage(userEnv *sysv1alpha1.UserEnv) bool {

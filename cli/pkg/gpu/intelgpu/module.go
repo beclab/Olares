@@ -5,7 +5,30 @@ import (
 
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/task"
+	"github.com/beclab/Olares/cli/pkg/gpu"
 )
+
+// LabelNodeModule only (re-)applies the Intel mode labels, without touching the
+// device plugin or the host drivers. `gpu enable` uses it to restore the labels
+// that `gpu disable` wiped; the action is a no-op on nodes without an Intel GPU.
+type LabelNodeModule struct {
+	common.KubeModule
+}
+
+func (m *LabelNodeModule) Init() {
+	m.Name = "LabelIntelGPUNode"
+
+	labelNode := &task.LocalTask{
+		Name:    "LabelIntelGPUs",
+		Prepare: new(gpu.CurrentNodeInK8s),
+		Action:  new(LabelIntelGPUs),
+		Retry:   1,
+	}
+
+	m.Tasks = []task.Interface{
+		labelNode,
+	}
+}
 
 // InstallIntelPluginModule advertises Intel integrated-GPU support on the node.
 // There is no device plugin to install in this version (Intel iGPUs use unified
