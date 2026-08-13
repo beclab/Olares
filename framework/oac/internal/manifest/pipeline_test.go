@@ -11,6 +11,7 @@ import (
 type fakeManifest struct {
 	apiVersion    string
 	configVersion string
+	taxonomy      Taxonomy
 	raw           any
 }
 
@@ -21,6 +22,7 @@ func (f *fakeManifest) AppName() string               { return "x" }
 func (f *fakeManifest) AppVersion() string            { return "0.0.0" }
 func (f *fakeManifest) Entrances() []EntranceInfo     { return nil }
 func (f *fakeManifest) OptionsImages() []string       { return nil }
+func (f *fakeManifest) Taxonomy() Taxonomy            { return f.taxonomy }
 func (f *fakeManifest) PermissionAppData() bool      { return false }
 func (f *fakeManifest) PermissionAppCommon() bool    { return false }
 func (f *fakeManifest) PermissionExternalData() bool { return false }
