@@ -75,6 +75,16 @@ func TestValidateTaxonomyRejectsShape(t *testing.T) {
 			want:     "more than once",
 		},
 		{
+			name:     "empty category",
+			taxonomy: Taxonomy{CategoriesV2: []string{""}},
+			want:     "must not be empty",
+		},
+		{
+			name:     "empty locale",
+			taxonomy: Taxonomy{Locale: []string{""}},
+			want:     "must not be empty",
+		},
+		{
 			name:     "padded tag",
 			taxonomy: Taxonomy{Tags: []string{" coding"}},
 			want:     "whitespace",
@@ -119,6 +129,44 @@ func TestValidateTaxonomyRejectsShape(t *testing.T) {
 			}
 			if !strings.Contains(err.Error(), tc.want) {
 				t.Fatalf("error %q does not mention %q", err, tc.want)
+			}
+		})
+	}
+}
+
+// A value that is both misspelt and repeated is two separate mistakes, and the
+// reader needs to be told each of them once: repeating the shape complaint
+// hides the fact that the list has a duplicate in it at all.
+func TestValidateTaxonomyReportsARepeatedValueAsADuplicate(t *testing.T) {
+	cases := []struct {
+		name     string
+		taxonomy Taxonomy
+		shape    string
+	}{
+		{
+			name:     "misspelt category twice",
+			taxonomy: Taxonomy{CategoriesV2: []string{"Agents", "Agents"}},
+			shape:    "lowercase",
+		},
+		{
+			name:     "misspelt locale twice",
+			taxonomy: Taxonomy{Locale: []string{"english", "english"}},
+			shape:    "BCP 47",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := ValidateTaxonomy(tc.taxonomy)
+			if err == nil {
+				t.Fatalf("%+v was accepted", tc.taxonomy)
+			}
+			msg := err.Error()
+			if got := strings.Count(msg, tc.shape); got != 1 {
+				t.Fatalf("shape complaint appears %d times in %q, want once", got, msg)
+			}
+			if !strings.Contains(msg, "more than once") {
+				t.Fatalf("error %q does not report the duplicate", msg)
 			}
 		})
 	}

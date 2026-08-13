@@ -196,22 +196,29 @@ func validateSlugList(field string, values []string) error {
 		return nil
 	}
 
+	// Duplicates are looked for before shape, so a value that is both
+	// misspelt and repeated is reported as two distinct mistakes rather than
+	// as the same shape complaint twice.
 	seen := make(map[string]struct{}, len(values))
 	var errs []error
 	for _, value := range values {
+		if _, dup := seen[value]; dup {
+			errs = append(errs, fmt.Errorf("%s value %q is listed more than once", field, value))
+			continue
+		}
+		seen[value] = struct{}{}
+
+		if value == "" {
+			errs = append(errs, fmt.Errorf("%s must not be empty", field))
+			continue
+		}
 		if value != strings.TrimSpace(value) {
 			errs = append(errs, fmt.Errorf("%s value %q must not have surrounding whitespace", field, value))
 			continue
 		}
 		if !taxonomySlug.MatchString(value) {
 			errs = append(errs, fmt.Errorf("%s value %q must be lowercase alphanumeric words joined by single hyphens", field, value))
-			continue
 		}
-		if _, dup := seen[value]; dup {
-			errs = append(errs, fmt.Errorf("%s value %q is listed more than once", field, value))
-			continue
-		}
-		seen[value] = struct{}{}
 	}
 	return errors.Join(errs...)
 }
@@ -224,6 +231,16 @@ func validateLocaleList(values []string) error {
 	seen := make(map[string]struct{}, len(values))
 	var errs []error
 	for _, value := range values {
+		if _, dup := seen[value]; dup {
+			errs = append(errs, fmt.Errorf("spec.locale value %q is listed more than once", value))
+			continue
+		}
+		seen[value] = struct{}{}
+
+		if value == "" {
+			errs = append(errs, errors.New("spec.locale must not be empty"))
+			continue
+		}
 		tag, err := language.BCP47.Parse(value)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("spec.locale value %q must be a valid BCP 47 language tag", value))
@@ -235,13 +252,7 @@ func validateLocaleList(values []string) error {
 		}
 		if namesUndefinedLanguage(value) {
 			errs = append(errs, fmt.Errorf("spec.locale value %q names the undefined language; list the languages the app is actually written in", value))
-			continue
 		}
-		if _, dup := seen[value]; dup {
-			errs = append(errs, fmt.Errorf("spec.locale value %q is listed more than once", value))
-			continue
-		}
-		seen[value] = struct{}{}
 	}
 	return errors.Join(errs...)
 }
