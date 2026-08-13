@@ -17,11 +17,11 @@ func (s *ManifestStrategy) Parse(rendered []byte) (Manifest, error) {
 	if err := yaml.Unmarshal(rendered, &cfg); err != nil {
 		return nil, err
 	}
-	taxonomy, err := ParseTaxonomy(rendered)
+	taxonomy, metadataFields, err := parseTaxonomy(rendered, &cfg)
 	if err != nil {
 		return nil, err
 	}
-	return &parsedManifest{cfg: &cfg, taxonomy: taxonomy}, nil
+	return &parsedManifest{cfg: &cfg, taxonomy: taxonomy, metadataFields: metadataFields}, nil
 }
 
 // Validate runs structural and cross-field checks.
@@ -32,6 +32,7 @@ func (s *ManifestStrategy) Validate(m Manifest) error {
 	}
 	return errors.Join(
 		ValidateAppConfiguration(mm.cfg),
+		validateMetadataFields(mm.metadataFields),
 		ValidateTaxonomy(mm.taxonomy),
 	)
 }
@@ -39,6 +40,10 @@ func (s *ManifestStrategy) Validate(m Manifest) error {
 type parsedManifest struct {
 	cfg      *AppConfiguration
 	taxonomy Taxonomy
+	// metadataFields is every key the manifest spelled under `metadata`,
+	// kept from the parse so validation can name one the schema has no
+	// field for.
+	metadataFields []string
 }
 
 // Taxonomy exposes the catalog fields the shared AppConfiguration does not

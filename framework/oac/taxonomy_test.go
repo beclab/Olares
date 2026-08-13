@@ -63,6 +63,24 @@ func TestParseTaxonomyReadsRenderedBytes(t *testing.T) {
 	}
 }
 
+// spec.locale is a field of the shared AppConfiguration, and the taxonomy view
+// of it must be that same value rather than a second decode of the same bytes:
+// two decoders of one field can disagree, and then lint and the market read
+// different languages off the same manifest.
+func TestTaxonomyLocaleIsTheParsedSpecLocale(t *testing.T) {
+	m, err := oac.New().LoadManifestContent([]byte(taxonomyManifest))
+	if err != nil {
+		t.Fatalf("LoadManifestContent: %v", err)
+	}
+	cfg, ok := oac.AsAppConfiguration(m)
+	if !ok {
+		t.Fatal("expected an *AppConfiguration")
+	}
+	if !reflect.DeepEqual(m.Taxonomy().Locale, cfg.Spec.Locale) {
+		t.Fatalf("Taxonomy().Locale = %v, spec.locale = %v", m.Taxonomy().Locale, cfg.Spec.Locale)
+	}
+}
+
 // An app that predates the taxonomy declares none of it, and reading it back
 // must not invent empty lists a caller would have to distinguish from real ones.
 func TestTaxonomyIsAbsentWhenUndeclared(t *testing.T) {

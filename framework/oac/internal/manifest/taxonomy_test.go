@@ -1,6 +1,7 @@
 package manifest
 
 import (
+	"errors"
 	"strings"
 	"testing"
 )
@@ -121,6 +122,84 @@ func TestValidateTaxonomyDoesNotImposeBusinessCountLimits(t *testing.T) {
 	if err := ValidateTaxonomy(taxonomy); err != nil {
 		t.Fatalf("valid taxonomy rejected: %v", err)
 	}
+}
+
+// A misspelt catalog field is the failure this gate exists for: YAML decoding
+// drops the key silently, so the app ships with no categories at all and
+// nothing anywhere says why.
+func TestValidateRejectsUnknownMetadataFields(t *testing.T) {
+	cases := []struct {
+		name string
+		key  string
+		want string
+	}{
+		{name: "camel-cased categories_v2", key: "categoriesV2", want: "categories_v2"},
+		{name: "singular category_v2", key: "category_v2", want: "category_v2"},
+		{name: "plain typo", key: "tagz", want: "tagz"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := validateManifestYAML(t, `
+metadata:
+  name: demo
+  `+tc.key+`:
+    - agents
+`)
+			if err == nil {
+				t.Fatalf("metadata.%s was accepted", tc.key)
+			}
+			if !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("error %q does not mention %q", err, tc.want)
+			}
+		})
+	}
+}
+
+// The counterweight: every field the shared AppMetaData carries must still
+// pass, or the gate rejects manifests that have always been legal.
+func TestValidateAcceptsEveryDeclaredMetadataField(t *testing.T) {
+	err := validateManifestYAML(t, `
+metadata:
+  name: demo
+  icon: https://example.com/icon.png
+  description: a demo
+  appid: 1234abcd
+  title: Demo
+  version: 1.0.0
+  categories:
+    - Productivity
+  rating: 4.5
+  target: browser
+  type: app
+  categories_v2:
+    - agents
+  tags:
+    - coding
+`)
+	if err != nil {
+		t.Fatalf("declared metadata fields rejected: %v", err)
+	}
+}
+
+// validateManifestYAML runs one manifest fragment through the real parse and
+// validate path and returns only what the taxonomy rules said about it; the
+// fragments here are deliberately not complete manifests.
+func validateManifestYAML(t *testing.T, doc string) error {
+	t.Helper()
+	strategy := &ManifestStrategy{}
+	m, err := strategy.Parse([]byte(doc))
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	parsed, ok := m.(*parsedManifest)
+	if !ok {
+		t.Fatalf("unexpected manifest type %T", m)
+	}
+	return errors.Join(
+		validateMetadataFields(parsed.metadataFields),
+		ValidateTaxonomy(parsed.Taxonomy()),
+	)
 }
 
 func TestValidateTaxonomyAcceptsCanonicalBCP47Locales(t *testing.T) {
