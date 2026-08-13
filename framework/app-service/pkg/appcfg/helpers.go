@@ -24,13 +24,7 @@ var getUserZone = kubesphere.GetUserZone
 // github.com/beclab/api types, methods cannot be defined on them directly,
 // so the helpers are exposed as package-level functions instead.
 
-// DefaultThirdLevelDomainConfig is re-exported here for backwards
-// compatibility with call sites that referenced the in-tree alias.
-type DefaultThirdLevelDomainConfig struct {
-	AppName          string `json:"appName"`
-	EntranceName     string `json:"entranceName"`
-	ThirdLevelDomain string `json:"thirdLevelDomain"`
-}
+type DefaultThirdLevelDomainConfig = appv1alpha1.DefaultThirdLevelDomainConfig
 
 // IsV3 reports whether the given object (Application or
 // ApplicationManager) carries the v3 SCHEMA marker label. This does NOT
@@ -167,18 +161,14 @@ func GenEntranceURL(ctx context.Context, app *Application) ([]Entrance, error) {
 		}
 
 		appid := strings.ToLower(strings.TrimSpace(app.Spec.Appid))
-		if len(app.Spec.Entrances) == 1 {
-			app.Spec.Entrances[0] = app.Spec.Entrances[0].ForZone(appid, zone, 0, 1)
-		} else {
-			entrancesForZone := appv1alpha1.Entrances(app.Spec.Entrances).ForZone(appid, zone)
-			for i := range app.Spec.Entrances {
-				app.Spec.Entrances[i] = entrancesForZone[i]
-				for _, adc := range appDomainConfigs {
-					if adc.AppName == app.Spec.Name && adc.EntranceName == app.Spec.Entrances[i].Name && len(adc.ThirdLevelDomain) > 0 {
-						app.Spec.Entrances[i].URL = fmt.Sprintf("%s.%s", adc.ThirdLevelDomain, zone)
-					}
-				}
-			}
+		apiEntrances := make([]*appv1alpha1.Entrance, len(app.Spec.Entrances))
+		for k := range app.Spec.Entrances {
+			entrance := app.Spec.Entrances[k]
+			apiEntrances[k] = &entrance
+		}
+		for i := range app.Spec.Entrances {
+			prefix := appv1alpha1.ResolveEntranceIDWithDefaultThirdLevelDomainOverride(apiEntrances, i, appid, appDomainConfigs)
+			app.Spec.Entrances[i].URL = fmt.Sprintf("%s.%s", prefix, zone)
 		}
 	}
 	return app.Spec.Entrances, nil
