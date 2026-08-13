@@ -634,17 +634,27 @@ type SharedInclusterEntrance struct {
 const (
 	hostPatternSharedExact    = "shared-exact"
 	hostPatternViewerWildcard = "viewer-wildcard"
+	hostPatternExactFQDN      = "exact-fqdn"
 )
 
 // matchRegex returns an anchored host regex for one SRR host pattern:
 // - shared exact host:  ^<id>\.shared\.<base>\.$
 // - application logical: ^<id>\.[^.]+\.<base>\.$
+// - eligible third-party exact FQDN: ^<fqdn>\.$
 func (e SharedInclusterEntrance) matchRegex() string {
 	entranceID, platformDomain, hostPatternType, ok := parseLogicalHostPattern(e.HostPattern)
 	if !ok {
 		platformDomain = strings.ToLower(strings.TrimSpace(strings.TrimSuffix(e.PlatformDomain, ".")))
 		entranceID = strings.ToLower(strings.TrimSpace(e.EntranceID))
 		hostPatternType = hostPatternSharedExact
+	}
+	if hostPatternType == hostPatternExactFQDN {
+		fqdn := strings.ToLower(strings.TrimSpace(strings.TrimSuffix(e.HostPattern, ".")))
+		if fqdn == "" {
+			return ""
+		}
+		escaped := strings.ReplaceAll(fqdn, ".", `\.`)
+		return `"^` + escaped + `\.$"`
 	}
 	if platformDomain == "" || entranceID == "" || hostPatternType == "" {
 		return ""
@@ -774,7 +784,37 @@ func parseLogicalHostPattern(pattern string) (entranceID, platformDomain, hostPa
 		}
 		return entranceID, platformDomain, hostPatternViewerWildcard, true
 	}
-	return "", "", "", false
+
+	// Eligible third-party exact FQDN (no wildcards; not a shared/logical pattern).
+	if strings.Contains(pattern, "*") {
+		return "", "", "", false
+	}
+	if !validExactFQDNHost(pattern) {
+		return "", "", "", false
+	}
+	return pattern, "", hostPatternExactFQDN, true
+}
+
+func validExactFQDNHost(host string) bool {
+	if host == "" || strings.Contains(host, "..") {
+		return false
+	}
+	labels := strings.Split(host, ".")
+	if len(labels) < 2 {
+		return false
+	}
+	for _, lab := range labels {
+		if lab == "" || len(lab) > 63 {
+			return false
+		}
+		for i, r := range lab {
+			ok := (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || (r == '-' && i > 0 && i < len(lab)-1)
+			if !ok {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 func sharedInclusterEntrancesFromSRRItems(
@@ -807,12 +847,24 @@ func sharedInclusterEntrancesFromSRRItems(
 		// One CoreDNS rewrite per logical hostPattern so friendly + hash
 		// aliases on the same SRR both point at app-gateway-data.
 		for _, pattern := range patterns {
-			id, domain, _, ok := parseLogicalHostPattern(pattern)
+			id, domain, hostType, ok := parseLogicalHostPattern(pattern)
 			if !ok {
 				continue
 			}
 			hostPattern := strings.ToLower(strings.TrimSpace(strings.TrimSuffix(pattern, ".")))
-			if domain == "" || id == "" || hostPattern == "" {
+			if hostPattern == "" {
+				continue
+			}
+			if hostType == hostPatternExactFQDN {
+				entrances = append(entrances, SharedInclusterEntrance{
+					AppID:        appid,
+					EntranceName: entranceName,
+					EntranceID:   id,
+					HostPattern:  hostPattern,
+				})
+				continue
+			}
+			if domain == "" || id == "" {
 				continue
 			}
 			entrances = append(entrances, SharedInclusterEntrance{

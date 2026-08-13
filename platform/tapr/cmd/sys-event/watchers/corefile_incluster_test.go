@@ -240,7 +240,6 @@ func TestParseLogicalHostPattern(t *testing.T) {
 	}
 
 	for _, pattern := range []string{
-		"bc2bd381.bob.olares.com",
 		".shared.olares.com",
 		"*.shared.olares.com",
 		"bc2bd381.*.",
@@ -248,6 +247,62 @@ func TestParseLogicalHostPattern(t *testing.T) {
 		if _, _, _, ok := parseLogicalHostPattern(pattern); ok {
 			t.Fatalf("expected pattern %q to be rejected", pattern)
 		}
+	}
+
+	id, domain, hostType, ok = parseLogicalHostPattern("chat.example.com")
+	if !ok || hostType != hostPatternExactFQDN || id != "chat.example.com" || domain != "" {
+		t.Fatalf("exact FQDN: id=%q domain=%q hostType=%q ok=%v", id, domain, hostType, ok)
+	}
+	// Platform-shaped exact hosts are accepted as exact FQDN at parse time;
+	// Eligible gates keep them out of SRR.
+	id, domain, hostType, ok = parseLogicalHostPattern("bc2bd381.bob.olares.com")
+	if !ok || hostType != hostPatternExactFQDN {
+		t.Fatalf("platform exact as FQDN: id=%q domain=%q hostType=%q ok=%v", id, domain, hostType, ok)
+	}
+}
+
+func TestBuildSharedInclusterTemplates_exactFQDN(t *testing.T) {
+	plugins := buildSharedInclusterTemplates([]SharedInclusterEntrance{
+		{
+			AppID:        "demo1234",
+			EntranceName: "web",
+			EntranceID:   "chat.example.com",
+			HostPattern:  "chat.example.com",
+		},
+	}, "10.0.0.8")
+	if len(plugins) != 1 {
+		t.Fatalf("expected 1 template, got %d", len(plugins))
+	}
+	wantMatch := `"^chat\.example\.com\.$"`
+	if !templateMatchesRegex(plugins[0], wantMatch, "10.0.0.8") {
+		t.Fatalf("template missing exact FQDN match: %s", plugins[0].ToString())
+	}
+}
+
+func TestSharedInclusterEntrancesFromSRRItems_exactFQDN(t *testing.T) {
+	srr := unstructured.Unstructured{Object: map[string]interface{}{
+		"apiVersion": "gateway.olares.io/v1alpha1",
+		"kind":       "SharedRouteRegistry",
+		"metadata": map[string]interface{}{
+			"name":      "shared-demo-web",
+			"namespace": "demo-shared",
+			"labels": map[string]interface{}{
+				labelSRRAppID:    "demo1234",
+				labelSRREntrance: "web",
+			},
+		},
+		"spec": map[string]interface{}{
+			"routeMode":    srrRouteModeGateway,
+			"hostPatterns": []interface{}{"deadbeef.shared.olares.com", "chat.example.com"},
+		},
+	}}
+	got := sharedInclusterEntrancesFromSRRItems([]unstructured.Unstructured{srr}, nil)
+	if len(got) != 2 {
+		t.Fatalf("got %d entrances: %#v", len(got), got)
+	}
+	plugins := buildSharedInclusterTemplates(got, "10.0.0.5")
+	if len(plugins) != 2 {
+		t.Fatalf("expected 2 templates, got %d", len(plugins))
 	}
 }
 
