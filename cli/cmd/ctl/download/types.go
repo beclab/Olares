@@ -156,10 +156,23 @@ type FileExistsData struct {
 	ConflictPath string `json:"conflict_path,omitempty"`
 }
 
-// FileCheckResult mirrors GET /api/download/file_check, whose success body is
-// top-level {code, exist} with NO data wrapper (note: "exist", not "exists").
-type FileCheckResult struct {
-	Exist bool `json:"exist"`
+// BatchReq is the body for PUT/DELETE /api/download/batch/{pause,resume,cancel,remove}.
+type BatchReq struct {
+	TaskIDs    []int64 `json:"task_ids"`
+	RemoveFlag bool    `json:"remove_flag,omitempty"`
+}
+
+// BatchItemError is one failed entry in a batch response.
+type BatchItemError struct {
+	TaskID int64  `json:"task_id"`
+	Error  string `json:"error"`
+}
+
+// BatchResult is the top-level success body for batch lifecycle endpoints
+// ({code, succeeded, failed} — not wrapped in data).
+type BatchResult struct {
+	Succeeded []int64          `json:"succeeded"`
+	Failed    []BatchItemError `json:"failed"`
 }
 
 // RemoveActionResult is the -o json body for mutating verbs whose server

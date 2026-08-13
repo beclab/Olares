@@ -419,12 +419,7 @@ func reformatReposHTTPErr(err error, olaresID, op string) error {
 	if errors.As(err, &hErr) {
 		switch hErr.Status {
 		case 401, 403:
-			if olaresID != "" {
-				return fmt.Errorf("server rejected the access token (HTTP %d) during %s; please run: olares-cli profile login --olares-id %s",
-					hErr.Status, op, olaresID)
-			}
-			return fmt.Errorf("server rejected the access token (HTTP %d) during %s; please re-run `olares-cli profile login`",
-				hErr.Status, op)
+			return fmt.Errorf("%s: %w", op, credential.FormatHTTPAuthError(hErr.Status, nil, olaresID))
 		case 404:
 			return fmt.Errorf("%s: not found on the server (HTTP 404)", op)
 		}

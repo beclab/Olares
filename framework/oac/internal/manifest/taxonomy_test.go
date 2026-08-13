@@ -1,0 +1,277 @@
+package manifest
+
+import (
+	"errors"
+	"strings"
+	"testing"
+)
+
+func TestParseTaxonomyReadsBothLevelsAndLocale(t *testing.T) {
+	raw := []byte(`
+metadata:
+  name: wise
+  categories_v2:
+    - agents
+    - workspace
+  tags:
+    - coding
+    - self-hosted
+spec:
+  locale:
+    - en-US
+    - zh-CN
+`)
+
+	got, err := ParseTaxonomy(raw)
+	if err != nil {
+		t.Fatalf("ParseTaxonomy: %v", err)
+	}
+	if len(got.CategoriesV2) != 2 || got.CategoriesV2[0] != "agents" {
+		t.Fatalf("categories_v2 = %v", got.CategoriesV2)
+	}
+	if len(got.Tags) != 2 || got.Tags[1] != "self-hosted" {
+		t.Fatalf("tags = %v", got.Tags)
+	}
+	if len(got.Locale) != 2 || got.Locale[1] != "zh-CN" {
+		t.Fatalf("locale = %v", got.Locale)
+	}
+	if err := ValidateTaxonomy(got); err != nil {
+		t.Fatalf("valid manifest rejected: %v", err)
+	}
+}
+
+// An app written before the new taxonomy declares none of it and must still
+// pass: the market falls back to its legacy categories.
+func TestValidateTaxonomyAcceptsAbsence(t *testing.T) {
+	if err := ValidateTaxonomy(Taxonomy{}); err != nil {
+		t.Fatalf("empty taxonomy rejected: %v", err)
+	}
+}
+
+func TestValidateTaxonomyRejectsShape(t *testing.T) {
+	cases := []struct {
+		name     string
+		taxonomy Taxonomy
+		want     string
+	}{
+		{
+			name:     "category with capitals",
+			taxonomy: Taxonomy{CategoriesV2: []string{"Agents"}},
+			want:     "lowercase",
+		},
+		{
+			name:     "category with a space",
+			taxonomy: Taxonomy{CategoriesV2: []string{"social network"}},
+			want:     "lowercase",
+		},
+		{
+			name:     "category with an underscore",
+			taxonomy: Taxonomy{CategoriesV2: []string{"social_network"}},
+			want:     "lowercase",
+		},
+		{
+			name:     "duplicate category",
+			taxonomy: Taxonomy{CategoriesV2: []string{"agents", "agents"}},
+			want:     "more than once",
+		},
+		{
+			name:     "empty category",
+			taxonomy: Taxonomy{CategoriesV2: []string{""}},
+			want:     "must not be empty",
+		},
+		{
+			name:     "empty locale",
+			taxonomy: Taxonomy{Locale: []string{""}},
+			want:     "must not be empty",
+		},
+		{
+			name:     "padded tag",
+			taxonomy: Taxonomy{Tags: []string{" coding"}},
+			want:     "whitespace",
+		},
+		{
+			name:     "duplicate tag",
+			taxonomy: Taxonomy{Tags: []string{"coding", "coding"}},
+			want:     "more than once",
+		},
+		{
+			name:     "locale is not a language code",
+			taxonomy: Taxonomy{Locale: []string{"english"}},
+			want:     "BCP 47",
+		},
+		{
+			name:     "locale region is lowercase",
+			taxonomy: Taxonomy{Locale: []string{"zh-cn"}},
+			want:     "canonical",
+		},
+		{
+			name:     "locale includes a suppressed script",
+			taxonomy: Taxonomy{Locale: []string{"en-Latn"}},
+			want:     "canonical",
+		},
+		{
+			name:     "locale is the undefined language",
+			taxonomy: Taxonomy{Locale: []string{"und"}},
+			want:     "undefined",
+		},
+		{
+			name:     "locale is the undefined language with a region",
+			taxonomy: Taxonomy{Locale: []string{"und-US"}},
+			want:     "undefined",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := ValidateTaxonomy(tc.taxonomy)
+			if err == nil {
+				t.Fatalf("%+v was accepted", tc.taxonomy)
+			}
+			if !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("error %q does not mention %q", err, tc.want)
+			}
+		})
+	}
+}
+
+// A value that is both misspelt and repeated is two separate mistakes, and the
+// reader needs to be told each of them once: repeating the shape complaint
+// hides the fact that the list has a duplicate in it at all.
+func TestValidateTaxonomyReportsARepeatedValueAsADuplicate(t *testing.T) {
+	cases := []struct {
+		name     string
+		taxonomy Taxonomy
+		shape    string
+	}{
+		{
+			name:     "misspelt category twice",
+			taxonomy: Taxonomy{CategoriesV2: []string{"Agents", "Agents"}},
+			shape:    "lowercase",
+		},
+		{
+			name:     "misspelt locale twice",
+			taxonomy: Taxonomy{Locale: []string{"english", "english"}},
+			shape:    "BCP 47",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := ValidateTaxonomy(tc.taxonomy)
+			if err == nil {
+				t.Fatalf("%+v was accepted", tc.taxonomy)
+			}
+			msg := err.Error()
+			if got := strings.Count(msg, tc.shape); got != 1 {
+				t.Fatalf("shape complaint appears %d times in %q, want once", got, msg)
+			}
+			if !strings.Contains(msg, "more than once") {
+				t.Fatalf("error %q does not report the duplicate", msg)
+			}
+		})
+	}
+}
+
+func TestValidateTaxonomyDoesNotImposeBusinessCountLimits(t *testing.T) {
+	taxonomy := Taxonomy{
+		CategoriesV2: []string{"a", "b", "c", "d", "e", "f"},
+		Tags:         []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"},
+	}
+	if err := ValidateTaxonomy(taxonomy); err != nil {
+		t.Fatalf("valid taxonomy rejected: %v", err)
+	}
+}
+
+// A misspelt catalog field is the failure this gate exists for: YAML decoding
+// drops the key silently, so the app ships with no categories at all and
+// nothing anywhere says why.
+func TestValidateRejectsUnknownMetadataFields(t *testing.T) {
+	cases := []struct {
+		name string
+		key  string
+		want string
+	}{
+		{name: "camel-cased categories_v2", key: "categoriesV2", want: "categories_v2"},
+		{name: "singular category_v2", key: "category_v2", want: "category_v2"},
+		{name: "plain typo", key: "tagz", want: "tagz"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := validateManifestYAML(t, `
+metadata:
+  name: demo
+  `+tc.key+`:
+    - agents
+`)
+			if err == nil {
+				t.Fatalf("metadata.%s was accepted", tc.key)
+			}
+			if !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("error %q does not mention %q", err, tc.want)
+			}
+		})
+	}
+}
+
+// The counterweight: every field the shared AppMetaData carries must still
+// pass, or the gate rejects manifests that have always been legal.
+func TestValidateAcceptsEveryDeclaredMetadataField(t *testing.T) {
+	err := validateManifestYAML(t, `
+metadata:
+  name: demo
+  icon: https://example.com/icon.png
+  description: a demo
+  appid: 1234abcd
+  title: Demo
+  version: 1.0.0
+  categories:
+    - Productivity
+  rating: 4.5
+  target: browser
+  type: app
+  categories_v2:
+    - agents
+  tags:
+    - coding
+`)
+	if err != nil {
+		t.Fatalf("declared metadata fields rejected: %v", err)
+	}
+}
+
+// validateManifestYAML runs one manifest fragment through the real parse and
+// validate path and returns only what the taxonomy rules said about it; the
+// fragments here are deliberately not complete manifests.
+func validateManifestYAML(t *testing.T, doc string) error {
+	t.Helper()
+	strategy := &ManifestStrategy{}
+	m, err := strategy.Parse([]byte(doc))
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	parsed, ok := m.(*parsedManifest)
+	if !ok {
+		t.Fatalf("unexpected manifest type %T", m)
+	}
+	return errors.Join(
+		validateMetadataFields(parsed.metadataFields),
+		ValidateTaxonomy(parsed.Taxonomy()),
+	)
+}
+
+func TestValidateTaxonomyAcceptsCanonicalBCP47Locales(t *testing.T) {
+	locales := []string{
+		"en",
+		"es-419",
+		"de-DE-1996",
+		"sl-rozaj",
+		"en-US-u-ca-gregory",
+		// Wholly private use: nothing standard names this language, but the
+		// tag is well-formed and an app is entitled to say so.
+		"x-private",
+	}
+	if err := ValidateTaxonomy(Taxonomy{Locale: locales}); err != nil {
+		t.Fatalf("valid BCP 47 locales rejected: %v", err)
+	}
+}

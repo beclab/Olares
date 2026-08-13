@@ -29,6 +29,7 @@ The bundles are located in [`cli/skills/`](https://github.com/beclab/Olares/tree
 | `olares-dashboard` | View system resource usage including CPU, memory, disk, network, pods, GPU, fan, and application ranking. |
 | `olares-cluster` | Inspect K8s runtime state including pods, containers, workloads, jobs, cronjobs, nodes, and middleware. Read logs, exec, scale, restart, and suspend/resume cronjobs. |
 | `olares-doctor` | Find out why an app is broken, such as stuck installs, crashes, image pull failures, running-but-unreachable apps, or slowdowns. Pulls evidence from cluster, dashboard, and market. |
+| `olares-router` | Configure and use AI models: add a cloud vendor's models, install a local model app, pick the defaults, issue keys and quotas, read usage, and call a model for chat, embeddings, transcription, speech, or OCR. |
 | `olares-search` | Search files and apps. Full-content search across Drive files and Sync libraries, plus search installed apps by title. |
 
 :::warning Always install `olares-shared` first

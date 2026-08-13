@@ -141,7 +141,7 @@ spec:
           name: check-appservice
       containers:
       - name: appstore-backend
-        image: beclab/market-backend:v0.6.86
+        image: beclab/market-backend:v0.6.91
         imagePullPolicy: IfNotPresent
         ports:
           - containerPort: 81
@@ -210,6 +210,14 @@ spec:
             value: /api/v1/applications/{chart_name}/chart
           - name: API_DETAIL_PATH
             value: /api/v1/applications/info
+          - name: API_CATALOG_PATH
+            value: /api/v2/catalog
+          - name: API_TAXONOMY_PATH
+            value: /api/v2/taxonomy
+          - name: API_APPLICATIONS_PATH
+            value: /api/v2/applications
+          - name: API_BROWSE_PATH
+            value: /api/v2/browse/applications
           - name: CHART_ROOT
             value: /opt/app/data
           - name: NATS_SUBJECT_SYSTEM_USER_STATE

@@ -6,12 +6,12 @@ head:
     - name: keywords
       content: Olares, OpenClaw, 沙盒, 安全, 代码执行
 app_version: "1.0.17"
-doc_version: "1.2"
-doc_updated: "2026-08-03"
+doc_version: "1.3"
+doc_updated: "2026-08-11"
 ---
 
 :::warning
-本文档由 AI 自动翻译，可能存在表述差异。如需核对，请参考[英文原文](../../use-cases/openclaw-enable-sandbox.md)。
+本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../use-cases/openclaw-enable-sandbox.md)为准。
 :::
 
 # 启用 OpenClaw 沙盒
@@ -130,7 +130,16 @@ OpenClaw 沙盒默认处于禁用状态。你可以通过修改配置文件或�
 ### 授予访问权限
 
 例如，要授予沙盒对 **Home** 目录的只读（`ro`）访问权限：
-1. 确保 OpenClaw 可以通过启用 `ALLOW_HOME_DIR_ACCESS` 环境变量来访问 **Home** 目录中的本地文件。
+1. 确保 OpenClaw 可以通过启用 `ALLOW_HOME_DIR_ACCESS` 环境变量来访问 **Home** 目录中的本地文件：
+
+    a. 打开**设置**，然后前往**应用** > **OpenClaw** > **管理环境变量**。
+
+    ![Enable file access settings](/images/manual/use-cases/openclaw-file-access.png#bordered){width=70%}
+
+    b. 对于变量**ALLOW_HOME_DIR_ACCESS**，点击 <i class="material-symbols-outlined">edit_square</i>，将值设置为 **true**，然后点击 **确认**。
+
+    c. 点击**应用**。等待大约一分钟，让 OpenClaw 容器重启并应用新权限。
+
 2. 打开文件管理器，然后进入**数据** > **clawdbot** > **config**。
 3. 双击打开 `openclaw.json` 文件。
 4. 点击右上角的 <i class="material-symbols-outlined">edit_square</i> 进入编辑模式。

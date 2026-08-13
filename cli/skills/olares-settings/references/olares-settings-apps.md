@@ -13,7 +13,7 @@ The **post-install** surface for an Olares app. Inspect the app, list its entran
 |---|---|---|---|
 | `list [--all] [--show-system]` | normal | VERIFIED | Installed apps for the current user. Default filter mirrors the SPA |
 | `get <app>` | normal | VERIFIED | Detail view (filtered client-side; no per-app endpoint) |
-| `entrances list <app>` | normal | VERIFIED | **Live** entrance vector — names, state, auth-level |
+| `entrances list <app>` | normal | VERIFIED | Entrance names, auth levels, visibility. Its `STATE` and `URL` columns read `-`; for the app's host use `list` / `get` |
 | `env get <app>` | normal | VERIFIED | Current per-app env vector |
 | `env set <app> KEY=VALUE [KEY=VALUE...]` | normal | UNVERIFIED | Replace the env vector |
 | `domain get <app> <entrance>` | normal | VERIFIED | Per-entrance custom-domain setup |

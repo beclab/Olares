@@ -8,8 +8,16 @@ rules:
   - ""
   resources:
   - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
   - pods
   verbs:
+  - delete
   - get
   - list
   - watch
@@ -50,6 +58,15 @@ rules:
   - applications/finalizers
   verbs:
   - update
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  - replicasets
+  verbs:
+  - get
+  - list
+  - watch
 - apiGroups:
   - iam.kubesphere.io
   resources:

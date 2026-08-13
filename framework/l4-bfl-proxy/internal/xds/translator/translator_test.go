@@ -1,6 +1,7 @@
 package translator
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -8,6 +9,7 @@ import (
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	extauthzv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/ext_authz/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	ppupstreamv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/proxy_protocol/v3"
 	cachetypes "github.com/envoyproxy/go-control-plane/pkg/cache/types"
@@ -877,6 +879,9 @@ func TestTranslate_HTTPSListeners(t *testing.T) {
 							Name:       "profile_root",
 							PathPrefix: "/",
 							Cluster:    "profile_service_alice",
+							RequestHeaders: map[string]string{
+								"X-BFL-USER": "alice",
+							},
 						}},
 					},
 				},
@@ -902,9 +907,161 @@ func TestTranslate_HTTPSListeners(t *testing.T) {
 	require.Len(t, snap.Routes, 1)
 	rc := asRouteConfig(t, snap.Routes[0])
 	assert.Equal(t, "https_443_alice_routes", rc.Name)
+	assert.Equal(t, []string{"x-bfl-user", "x-caller-appid"}, rc.GetRequestHeadersToRemove(),
+		"north-south RDS must force-delete client identity headers before upstream")
+	assert.True(t, rc.GetMostSpecificHeaderMutationsWins(),
+		"RDS must apply remove before route reinject (most_specific_header_mutations_wins)")
+
+	// Trusted X-BFL-USER must be re-injected on the app route after the RDS remove.
+	var sawBFL bool
+	for _, vh := range rc.GetVirtualHosts() {
+		for _, route := range vh.GetRoutes() {
+			if route.GetName() != "profile_root" {
+				continue
+			}
+			for _, h := range route.GetRequestHeadersToAdd() {
+				if strings.EqualFold(h.GetHeader().GetKey(), "X-BFL-USER") {
+					sawBFL = true
+					assert.Equal(t, "alice", h.GetHeader().GetValue())
+					assert.Equal(t, corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD, h.GetAppendAction())
+				}
+			}
+		}
+	}
+	require.True(t, sawBFL, "route must re-inject X-BFL-USER after force-delete")
 
 	// 1 cluster
 	require.Len(t, snap.Clusters, 1)
+}
+
+func TestSpoofableAppIdentityHeadersToRemove(t *testing.T) {
+	got := spoofableAppIdentityHeadersToRemove()
+	require.Equal(t, []string{"x-bfl-user", "x-caller-appid"}, got)
+	// Stable order for xDS determinism / snapshot diffs.
+	require.Equal(t, got, spoofableAppIdentityHeadersToRemove())
+}
+
+// applyEnvoyRequestHeaderMutations models Envoy request-header mutation order
+// for one RouteConfiguration + selected Route (VH mutations empty). Within a
+// level, remove runs before add. Across levels, MostSpecificHeaderMutationsWins
+// reverses the default most→least order (route.proto / envoy#5858).
+func applyEnvoyRequestHeaderMutations(headers map[string]string, rc *routev3.RouteConfiguration, route *routev3.Route) map[string]string {
+	out := make(map[string]string, len(headers))
+	for k, v := range headers {
+		out[strings.ToLower(k)] = v
+	}
+	applyLevel := func(remove []string, add []*corev3.HeaderValueOption) {
+		for _, h := range remove {
+			delete(out, strings.ToLower(h))
+		}
+		for _, opt := range add {
+			if opt.GetHeader() == nil {
+				continue
+			}
+			key := strings.ToLower(opt.GetHeader().GetKey())
+			val := opt.GetHeader().GetValue()
+			switch opt.GetAppendAction() {
+			case corev3.HeaderValueOption_APPEND_IF_EXISTS_OR_ADD:
+				if prev, ok := out[key]; ok {
+					out[key] = prev + "," + val
+				} else {
+					out[key] = val
+				}
+			case corev3.HeaderValueOption_ADD_IF_ABSENT:
+				if _, ok := out[key]; !ok {
+					out[key] = val
+				}
+			default: // OVERWRITE_IF_EXISTS_OR_ADD and unspecified
+				out[key] = val
+			}
+		}
+	}
+	routeRemove := route.GetRequestHeadersToRemove()
+	routeAdd := route.GetRequestHeadersToAdd()
+	rcRemove := rc.GetRequestHeadersToRemove()
+	rcAdd := rc.GetRequestHeadersToAdd()
+	if rc.GetMostSpecificHeaderMutationsWins() {
+		applyLevel(rcRemove, rcAdd)
+		applyLevel(routeRemove, routeAdd)
+	} else {
+		applyLevel(routeRemove, routeAdd)
+		applyLevel(rcRemove, rcAdd)
+	}
+	return out
+}
+
+func findNamedRoute(t *testing.T, rc *routev3.RouteConfiguration, name string) *routev3.Route {
+	t.Helper()
+	for _, vh := range rc.GetVirtualHosts() {
+		for _, route := range vh.GetRoutes() {
+			if route.GetName() == name {
+				return route
+			}
+		}
+	}
+	t.Fatalf("route %q not found", name)
+	return nil
+}
+
+func TestNorthSouthXBFLUserForceDeleteThenReinject_EnvoyOrder(t *testing.T) {
+	xdsIR := &ir.Xds{
+		HTTPListeners: []*ir.HTTPListenerIR{{
+			Name:       "https_443_alice",
+			Address:    "0.0.0.0",
+			Port:       443,
+			TLS:        true,
+			SNIMatches: []string{"alice.example.com"},
+			TLSCert:    &ir.SecretIR{Name: "main-tls-alice", CertData: "cert", KeyData: "key"},
+			UserName:   "alice",
+			VirtualHosts: []*ir.VirtualHostIR{{
+				Name:    "profile_alice",
+				Domains: []string{"alice.example.com"},
+				Routes: []*ir.HTTPRouteIR{{
+					Name:       "profile_root",
+					PathPrefix: "/",
+					Cluster:    "profile_service_alice",
+					RequestHeaders: map[string]string{
+						"X-BFL-USER": "alice",
+					},
+				}},
+			}},
+			DefaultResponse: &ir.DirectResponseIR{Status: 421, Body: "err"},
+		}},
+		Clusters: []*ir.ClusterIR{
+			{Name: "profile_service_alice", Host: "profile-service.user-space-alice.svc.cluster.local", Port: 3000, UseDNS: true},
+		},
+	}
+	rc := asRouteConfig(t, (&XdsTranslator{}).Translate(xdsIR).Routes[0])
+	route := findNamedRoute(t, rc, "profile_root")
+	require.True(t, rc.GetMostSpecificHeaderMutationsWins())
+
+	client := map[string]string{
+		"x-bfl-user":     "attacker",
+		"x-caller-appid": "spoofed-app",
+		"host":           "alice.example.com",
+	}
+	got := applyEnvoyRequestHeaderMutations(client, rc, route)
+	assert.Equal(t, "alice", got["x-bfl-user"],
+		"with most_specific_header_mutations_wins, RDS remove then route add must yield trusted viewer")
+	_, hasAppid := got["x-caller-appid"]
+	assert.False(t, hasAppid, "spoofed x-caller-appid must stay removed")
+	assert.Equal(t, "alice.example.com", got["host"])
+
+	// Characterization: without the flag, RDS remove runs after route add and
+	// strips the reinjected viewer — the bug this flag closes.
+	rcNoFlag := protoCloneRouteConfig(t, rc)
+	rcNoFlag.MostSpecificHeaderMutationsWins = false
+	broken := applyEnvoyRequestHeaderMutations(client, rcNoFlag, route)
+	_, hasBFL := broken["x-bfl-user"]
+	assert.False(t, hasBFL,
+		"default Envoy order must drop reinjected X-BFL-USER (documents why the flag is required)")
+}
+
+func protoCloneRouteConfig(t *testing.T, rc *routev3.RouteConfiguration) *routev3.RouteConfiguration {
+	t.Helper()
+	// Shallow field copy is enough: test only toggles MostSpecificHeaderMutationsWins.
+	out := *rc
+	return &out
 }
 
 func TestTranslate_EmptyIR(t *testing.T) {
@@ -933,14 +1090,113 @@ func TestTranslateVirtualHost_CORSFileserverOnly(t *testing.T) {
 		Name:         "app_alice_files_files",
 		Domains:      []string{"files.alice.example.com"},
 		IsFileserver: true,
-	})
+	}, nil)
 	assert.True(t, hasCORSOrigin(fs), "fileserver vhost must carry allow-origin")
 
 	other := translateVirtualHost(&ir.VirtualHostIR{
 		Name:    "app_alice_vault_vault-frontend",
 		Domains: []string{"vault.alice.example.com"},
-	})
+	}, nil)
 	assert.False(t, hasCORSOrigin(other), "non-fileserver vhost must not carry allow-origin")
+}
+
+func TestSubFilterLuaScript_RewritesSetCookieDomain(t *testing.T) {
+	assert.Contains(t, subFilterLuaScript, "rewrite_set_cookie_domains")
+	assert.Contains(t, subFilterLuaScript, `Domain=`)
+	assert.Contains(t, subFilterLuaScript, `headers:replace("Set-Cookie"`)
+}
+
+func TestTranslateRoute_VerifyPathSkipsServiceOverride(t *testing.T) {
+	clusterMap := map[string]*ir.ClusterIR{
+		"authelia_backend_alice": {Name: "authelia_backend_alice", Host: "authelia-backend.user-system-alice.svc.cluster.local", Port: 9091},
+	}
+	route := translateRoute(&ir.HTTPRouteIR{
+		Name:       "app",
+		PathPrefix: "/",
+		Cluster:    "app_upstream",
+		RequestHeaders: map[string]string{
+			"X-BFL-USER": "alice",
+		},
+		ExtAuth: &ir.ExtAuthConfigIR{
+			Cluster:    "authelia_backend_alice",
+			PathPrefix: "/api/verify/",
+		},
+	}, clusterMap)
+	require.NotNil(t, route.TypedPerFilterConfig)
+	anyCfg := route.TypedPerFilterConfig["envoy.filters.http.ext_authz"]
+	require.NotNil(t, anyCfg)
+
+	var perRoute extauthzv3.ExtAuthzPerRoute
+	require.NoError(t, anyCfg.UnmarshalTo(&perRoute))
+	cs := perRoute.GetCheckSettings()
+	require.NotNil(t, cs)
+	assert.Nil(t, cs.GetHttpService(), "verify path must reuse filter default HttpService without ServiceOverride")
+}
+
+func TestBuildExtAuthzFilter_DefaultVerifyPath(t *testing.T) {
+	clusterMap := map[string]*ir.ClusterIR{
+		"authelia_backend_alice": {Name: "authelia_backend_alice", Host: "authelia-backend.user-system-alice.svc.cluster.local", Port: 9091},
+	}
+	filter := buildExtAuthzFilter("authelia_backend_alice", clusterMap, "alice")
+	require.NotNil(t, filter)
+	var extAuthz extauthzv3.ExtAuthz
+	require.NoError(t, filter.GetTypedConfig().UnmarshalTo(&extAuthz))
+	hs := extAuthz.GetHttpService()
+	require.NotNil(t, hs)
+	assert.Equal(t, "/api/verify/", hs.GetPathPrefix())
+	require.NotNil(t, hs.GetAuthorizationRequest())
+	require.NotEmpty(t, hs.GetAuthorizationRequest().GetHeadersToAdd())
+}
+
+func TestTranslateRoute_NonDefaultPathKeepsFullOverride(t *testing.T) {
+	clusterMap := map[string]*ir.ClusterIR{
+		"authelia_backend_alice": {Name: "authelia_backend_alice", Host: "authelia-backend.user-system-alice.svc.cluster.local", Port: 9091},
+	}
+	route := translateRoute(&ir.HTTPRouteIR{
+		Name:       "legacy",
+		PathPrefix: "/",
+		Cluster:    "app_upstream",
+		RequestHeaders: map[string]string{
+			"X-BFL-USER": "alice",
+		},
+		ExtAuth: &ir.ExtAuthConfigIR{
+			Cluster:    "authelia_backend_alice",
+			PathPrefix: "/api/authz/ext-authz/",
+		},
+	}, clusterMap)
+	require.NotNil(t, route.TypedPerFilterConfig)
+	anyCfg := route.TypedPerFilterConfig["envoy.filters.http.ext_authz"]
+	require.NotNil(t, anyCfg)
+
+	var perRoute extauthzv3.ExtAuthzPerRoute
+	require.NoError(t, anyCfg.UnmarshalTo(&perRoute))
+	cs := perRoute.GetCheckSettings()
+	require.NotNil(t, cs)
+	hs := cs.GetHttpService()
+	require.NotNil(t, hs, "non-default Authelia path still needs a full HttpService override")
+	assert.Equal(t, "/api/authz/ext-authz/", hs.GetPathPrefix())
+	require.NotNil(t, hs.GetAuthorizationRequest())
+	headers := hs.GetAuthorizationRequest().GetHeadersToAdd()
+	require.Len(t, headers, 7)
+	assert.Equal(t, "X-BFL-USER", headers[6].GetKey())
+	assert.Equal(t, "alice", headers[6].GetValue())
+}
+
+func TestTranslateRoute_ProbeBypassHeaderMatch(t *testing.T) {
+	route := translateRoute(&ir.HTTPRouteIR{
+		Name:      "probe",
+		PathExact: "/healthz",
+		Cluster:   "app",
+		HeaderMatches: []ir.HeaderMatchIR{{
+			Name:      "user-agent",
+			SafeRegex: `^[0-9a-fA-F-]+/[0-9a-fA-F]+$`,
+		}},
+	}, nil)
+	require.NotNil(t, route.GetMatch())
+	assert.Equal(t, "/healthz", route.GetMatch().GetPath())
+	require.Len(t, route.GetMatch().GetHeaders(), 1)
+	assert.Equal(t, "user-agent", route.GetMatch().GetHeaders()[0].GetName())
+	assert.Nil(t, route.TypedPerFilterConfig, "probe bypass keeps VH-level ExtAuth disabled")
 }
 
 // ---------------------------------------------------------------------------

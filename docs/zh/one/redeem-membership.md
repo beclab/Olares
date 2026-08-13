@@ -8,7 +8,7 @@ head:
 ---
 
 :::warning
-本页面由 AI 自动翻译，部分技术术语可能与中文习惯存在差异。如有疑问，请以[英文原文](../../one/redeem-membership.md)为准。
+本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../one/redeem-membership.md)为准。
 :::
 
 # 兑换 Olares Space 会员

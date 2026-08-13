@@ -446,18 +446,23 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	// Reject upgrades whose new chart's declared resource requirements
-	// exceed the cluster's total schedulable capacity, before we acquire
-	// any env-batch lease or kick off helm. Mirrors the install handler's
-	// cluster-capacity gate (handler_installer_install.go) but uses the
-	// upgrade-specific chain — UpgradabilityValidators currently only
-	// runs clusterCapacityValidator (see that function for why the other
-	// install-time checks are intentionally skipped on upgrade).
+	// Reject upgrades the cluster can't accommodate before we acquire any
+	// env-batch lease or kick off helm. UpgradabilityValidators runs
+	// cluster-capacity against the new chart's absolute requirements, plus
+	// cluster-pressure / k8s-request against the non-negative delta
+	// (new − old) so the running deployment is not double-counted. That
+	// discount is decided from PrevState (Running → delta); Stopped and
+	// UpgradeFailed with pre-upgrade-state=stopped skip these checks;
+	// other UpgradeFailed cases use the annotation or a live-pod probe
+	// (see upgradePrevHoldsRequests / skipUpgradeResourceCheck).
 	decision, err := validation.Run(req.Request.Context(), validation.Input{
-		Client:    h.ctrlClient,
-		AppConfig: appCfg,
-		Op:        appv1alpha1.UpgradeOp,
-		Token:     token,
+		Client:                h.ctrlClient,
+		AppConfig:             appCfg,
+		PrevAppConfig:         &prevCfg,
+		PrevState:             appMgr.Status.State,
+		PreUpgradeSteadyState: appMgr.Annotations[api.AppPreUpgradeStateKey],
+		Op:                    appv1alpha1.UpgradeOp,
+		Token:                 token,
 	}, validation.UpgradabilityValidators()...)
 	if err != nil {
 		api.HandleError(resp, req, err)
@@ -514,7 +519,7 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 	// to scale workloads back up after the helm upgrade. When the app was
 	// already Stopped, the upgrade should land back in Stopped with the
 	// new chart version installed at replicas=0.
-	appCopy.Annotations[api.AppPreUpgradeStateKey] = string(appMgr.Status.State)
+	api.SnapshotPreUpgradeState(appCopy.Annotations, appMgr.Status.State)
 
 	err = h.ctrlClient.Patch(req.Request.Context(), appCopy, client.MergeFrom(&appMgr))
 	if err != nil {

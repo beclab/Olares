@@ -6,7 +6,30 @@ import (
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/prepare"
 	"github.com/beclab/Olares/cli/pkg/core/task"
+	"github.com/beclab/Olares/cli/pkg/gpu"
 )
+
+// LabelNodeModule only (re-)applies the AMD mode label, without touching the
+// device plugin or ROCm. `gpu enable` uses it to restore the label that
+// `gpu disable` wiped; the action is a no-op without a Ryzen AI Max APU or ROCm.
+type LabelNodeModule struct {
+	common.KubeModule
+}
+
+func (m *LabelNodeModule) Init() {
+	m.Name = "LabelAMDGPUNode"
+
+	labelNode := &task.LocalTask{
+		Name:    "UpdateNodeAMDInfo",
+		Prepare: new(gpu.CurrentNodeInK8s),
+		Action:  new(UpdateNodeAMDInfo),
+		Retry:   1,
+	}
+
+	m.Tasks = []task.Interface{
+		labelNode,
+	}
+}
 
 // InstallAmdContainerToolkitModule installs AMD container toolkit on supported Ubuntu if ROCm is installed.
 type InstallAmdContainerToolkitModule struct {

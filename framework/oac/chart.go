@@ -193,6 +193,18 @@ func (c *OAC) lintRenderedScenario(oacPath string, m Manifest, sc ownerScenario)
 			return err
 		}
 	}
+
+	if !c.skipSubPathExpr {
+		if err := resources.CheckSubPathExpr(list); err != nil {
+			return err
+		}
+	}
+
+	if c.checkBlindChown {
+		if err := resources.CheckBlindRecursiveChown(list); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

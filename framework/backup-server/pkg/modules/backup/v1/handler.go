@@ -718,7 +718,7 @@ func (h *Handler) addRestore(req *restful.Request, resp *restful.Response) {
 			return
 		}
 	} else {
-		if ok := h.handler.GetBackupHandler().CheckAppInstalled(fmt.Sprintf("wise-%s-wise", owner)); !ok {
+		if ok := h.handler.GetBackupHandler().CheckAppInstalled(fmt.Sprintf("wisev3-%s-wisev3", owner)); !ok {
 			response.HandleError(resp, fmt.Errorf("Wise is not installed. Please go to the Market to install this app."))
 			return
 		}

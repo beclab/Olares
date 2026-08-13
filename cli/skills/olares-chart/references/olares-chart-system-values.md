@@ -52,7 +52,7 @@ Populated in `SetValues` from the install's owner, entrances, permissions, and d
 | Value | Meaning |
 |---|---|
 | `.Values.user.zone` | the owner's zone (used to build app URLs) |
-| `.Values.domain.<entranceName>` | the public host for each entrance — `<appid>.<zone>` (or `<appid><i>.<zone>` for multiple entrances) |
+| `.Values.domain.<entranceName>` | the public host for each entrance — see the host derivation below |
 | `.Values.schedule.nodeName` | node the pod is pinned to (set when the app requests storage permissions, so it co-locates with its node-local data) |
 | `.Values.userspace.appData` / `.appCache` / `.userData` / `.appCommon` | userspace mount host paths — granted per declared `permission`; defined in the platform model (storage model) and used in the Manifest refinement areas §2. `appData` / `appCache` already include the per-app suffix (`.../Data/<appName>`, `.../Cache/<appName>`) |
 | `.Values.os.appKey` / `.Values.os.appSecret` | provider-access credentials, issued when the app declares provider permissions |
@@ -67,6 +67,28 @@ Populated in `SetValues` from the install's owner, entrances, permissions, and d
         - name: OIDC_ISSUER
           value: "{{ .Values.oidc.issuer }}"
 ```
+
+### Where an entrance host comes from
+
+The platform derives the host from the **app name**, not from `metadata.appid`:
+a system app uses the name as-is, any other app uses `md5(<app name>)[:8]`. The
+first entrance gets `<that>.<zone>` and each later one has its index appended.
+An authored `metadata.appid` does not feed this — the derived value is written
+*into* the Application resource, so setting `appid` to something else changes
+nothing about the URL. Keep it equal to `metadata.name` anyway, because
+`market upload` rejects a manifest without it.
+
+Inside the chart, template `.Values.domain.<entranceName>`; never reconstruct
+the host from the app name. To read the live value:
+
+```sh
+olares-cli settings apps list                  # URL column, per app
+olares-cli settings apps get <app> -o json     # .url, and .entrances[].url
+```
+
+`settings apps entrances list <app>` is the wrong place to look for it: that
+verb reports names, auth levels and visibility, and leaves its `URL` column
+empty on every app.
 
 A `userspace` path is most often consumed as a `hostPath` volume (the value already ends in `/<appName>`; append a further subdir only if you want to organize within it):
 

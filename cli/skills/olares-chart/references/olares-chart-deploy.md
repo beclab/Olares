@@ -25,13 +25,9 @@ flowchart TD
   isChart -->|no/unsure| report["cleanup + report to developer, ask for instructions"]
 ```
 
-> **Want it in the public Olares Market afterwards?** Listing publicly (market-ready metadata, multi-arch, the `beclab/apps` PR, paid apps) is the [`../../olares-publish/SKILL.md`](../../olares-publish/SKILL.md) skill — start there once the app runs here.
-
 ## 1. Is the CLI logged in?
 
-Run `olares-cli profile list` and apply olares-shared's [auth-readiness gate](../../olares-shared/SKILL.md#auth-readiness-gate): `logged-in` / `expired` → **go** (an `expired` token auto-refreshes on the first call — not a reason to stop); `invalidated` / `never` → **stop**.
-
-- When the gate says **stop**, **do NOT log in on the developer's behalf unilaterally.** Tell them local `lint` passed and that deploy needs `olares-cli profile login --olares-id <id>` first. Stop here unless they ask you to drive the login (then follow olares-shared's agent-driven login flow).
+Run `olares-cli profile list` and apply olares-shared's [auth-readiness gate](../../olares-shared/SKILL.md#auth-readiness-gate): `logged-in` / `expired` → **go** (an `expired` token auto-refreshes on the first call — not a reason to stop); `invalidated` / `never` → **stop**. When it says stop, **do NOT log in on the developer's behalf unilaterally** — tell them local `lint` passed and that deploy needs `olares-cli profile login --olares-id <id>` first, and stop unless they ask you to drive the login (then follow olares-shared's agent-driven login flow).
 
 ## 2. Package + upload (automatic — no confirmation needed)
 
@@ -81,6 +77,12 @@ The `--watch` market row (`downloading` / `initializing`) is a **coarse** signal
 
 **The runtime diagnosis itself lives in [`../../olares-doctor/SKILL.md`](../../olares-doctor/SKILL.md)** — it owns the symptom→root-cause routing (stalled image pull, crashlooping / non-starting container, `running`-but-unreachable) shared by catalog and dev apps. Doctor diagnoses the root cause; **for a chart you author, it points back here** — the fix is a manifest/template edit (§4b below), then re-lint + re-deploy.
 
+### `running` is not the same as serving
+
+`running` only says app-service scaled the workload up: an app whose first write to a userspace mount was refused still reads `running` and answers 403. Before calling it deployed, read the app's own evidence — `cluster pod list -n <ns>` for READY, `cluster container logs <ns>/<pod>/<container>` for its startup and first-request lines, and `settings apps list` for the real host in its `URL` column (**never compute it**; `entrances list` leaves that column empty) — then request that host. Anything unreachable from there is doctor's routing, above.
+
+**`cluster pod exec` requires Olares >= 1.12.7** — it is the direct way to read a mount's owner or curl the app on localhost, and it is gated. The baseline this skill scaffolds against is `>= 1.12.6`, where the commands above are the entire verification surface.
+
 ## 4. Diagnose: deploy-pipeline logs (chart-specific), then the app's runtime via doctor
 
 ### 4a. Deploy-pipeline log sources (specific to pushing your chart)
@@ -105,9 +107,7 @@ Once the app's container is the problem (it pulled, scheduled, and started but m
 | Main container `Completed` (exit 0) with **empty logs**, or app reads a bogus port/host (k8s service-link env collision) | `spec.template.spec.enableServiceLinks: false` — the Env area |
 | Frontend 504 / connection closed at ~15s on a long request, app pod healthy (entrance proxy `options.apiTimeout` defaults to 15s) | `options.apiTimeout: 0` or a large value — the Manifest refinement areas |
 | `Permission denied` / EACCES writing data, or data not persisting (uid != 1000) | the run identity (uid 1000) guidance |
-| Admission denied: untrusted image runs as root | force uid 1000 or initContainer chown — the run identity (uid 1000) guidance |
-
-After the chart fix: re-lint, bump the version, re-package, re-upload, and re-apply with the right verb (§3 / §5).
+| Admission denied: untrusted image runs as root | force uid 1000, or move the root work into a `beclab/` permissions initContainer — the run identity (uid 1000) guidance |
 
 ### 4c. Upgrade recovery: `stopped` after upgrade
 

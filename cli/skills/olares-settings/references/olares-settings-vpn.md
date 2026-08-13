@@ -10,8 +10,9 @@ Manage the per-Olares Headscale mesh — devices, routes, per-app ACL, SSH toggl
 | Sub-tree | Floor | Verbs |
 |---|---|---|
 | `devices` | normal | `list`, `routes <id>` |
+| `routes` | admin | hidden `enable <route-id>`, `disable <route-id>` |
 | `ssh` | admin | `status`, `enable`, `disable` |
-| `subroutes` | admin | `status` (read-only) |
+| `subroutes` | admin | `status`, hidden `enable`, hidden `disable` |
 | `acl` | admin | `all`, `get`, `add`, `remove` (alias `rm`) |
 | `public-domain-policy` | admin | `get` (read-only `deny_all` 0/1 flag) |
 
@@ -37,13 +38,26 @@ olares-cli settings vpn ssh disable
 - `enable` / `disable` send an explicit empty `{}` body to match the SPA's request shape, even though the upstream doesn't read it.
 - Run `vpn ssh status` after to confirm the resulting state.
 
-## `subroutes` — read-only toggle
+## `routes` — per-route toggle
+
+The `routes` command and both verbs are hidden for compatibility, so `--help` does not list them. Discover route IDs with `vpn devices routes <device-id>`, then:
+
+```bash
+olares-cli settings vpn routes enable <route-id>
+olares-cli settings vpn routes disable <route-id>
+```
+
+Disabling a route leaves it advertised but blocks traffic through it.
+
+## `subroutes` — mesh-wide toggle
 
 ```bash
 olares-cli settings vpn subroutes status
+olares-cli settings vpn subroutes enable
+olares-cli settings vpn subroutes disable
 ```
 
-Returns the `allow_subroutes` flag plus the current sub-route list. `-o json` emits the unwrapped `[]string` the SPA reads.
+`status` returns the `allow_subroutes` flag plus the current sub-route list. `-o json` emits the unwrapped `[]string` the SPA reads. The enable/disable verbs are hidden for compatibility and toggle sub-domain access across the mesh.
 
 ## `acl` — per-app ACL (RMW under the hood)
 

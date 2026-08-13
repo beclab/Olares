@@ -539,16 +539,16 @@ func promptSMBUserIfNeeded(o *smbMountOptions, historyPwHint string, in io.Reade
 //  1. --password         explicit literal, used as-is
 //  2. --password-stdin   first line of stdin, CR/LF stripped
 //  3. historyPwHint      pre-resolved by applySMBHistoryDefaults;
-//                        non-empty only when the URL matched a
-//                        favorite AND the effective username matches
-//                        the favorite's username (no cross-account
-//                        lending). Passed in rather than re-fetched
-//                        here so this helper stays free of an
-//                        smbmount.Client dependency and easy to
-//                        unit-test in isolation.
+//     non-empty only when the URL matched a
+//     favorite AND the effective username matches
+//     the favorite's username (no cross-account
+//     lending). Passed in rather than re-fetched
+//     here so this helper stays free of an
+//     smbmount.Client dependency and easy to
+//     unit-test in isolation.
 //  4. interactive        TTY-only prompt without echo via
-//                        golang.org/x/term — same UX as the
-//                        original implementation.
+//     golang.org/x/term — same UX as the
+//     original implementation.
 //
 // Note on empty passwords: anonymous SMB shares accept an empty
 // password, so when --password is the literal "" we DO pass it
@@ -1056,8 +1056,8 @@ func runSMBHistoryRm(
 // messages, mirroring the rename / rm / cp / chown counterparts.
 //
 // Status branches:
-//   - 401/403: token rejected → suggest `profile login`. Same
-//     wording as the other verbs so the user gets one consistent CTA.
+//   - 401: persistent authentication failure → suggest `profile login`.
+//   - 403: permission denial → suggest refreshing the current identity.
 //   - 404: target / endpoint not found → echo what we were doing so
 //     the user can re-target.
 //
@@ -1079,16 +1079,7 @@ func reformatSMBHTTPErr(err error, olaresID, op string) error {
 	if errors.As(err, &hErr) {
 		switch hErr.Status {
 		case 401, 403:
-			if olaresID != "" {
-				return fmt.Errorf(
-					"server rejected the access token (HTTP %d); please run: olares-cli profile login --olares-id %s",
-					hErr.Status, olaresID,
-				)
-			}
-			return fmt.Errorf(
-				"server rejected the access token (HTTP %d); please re-run `olares-cli profile login`",
-				hErr.Status,
-			)
+			return credential.FormatHTTPAuthError(hErr.Status, nil, olaresID)
 		case 404:
 			return fmt.Errorf("%s: not found on the server (HTTP 404)", op)
 		}

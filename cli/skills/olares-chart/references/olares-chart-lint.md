@@ -43,6 +43,8 @@ olares-cli chart lint ./myapp --auto-owner=false --owner alice --admin root
 
 > **The RBAC + securityContext checks run unconditionally.** `--with-rbac` / `--with-security-context` exist as flags (and their `--help` text claims "off by default"), but the CLI never actually disables either check — both run on every `chart lint`, so passing the flags is a no-op. Don't rely on them to *enable* anything; treat both checks as always-on.
 
+> **lint trusts a narrower image set than the cluster does, and it is an install gate.** The runtime admission policy trusts roughly 21 prefixes (`beclab/`, `aboveos/`, `minio/`, `onlyoffice/`, `busybox:`, …, matched after stripping `docker.io/`); `chart lint` trusts **only** `beclab/`. Since app-service lints on install and on upgrade, an `aboveos/` container asking for root would be admitted at runtime and still cannot be installed. Use a `beclab/` image for anything that must run as root — see the run identity (uid 1000) guidance.
+
 > **lint does not check middleware usage.** A chart that bundles its own `postgres`/`redis` instead of using system middleware passes `lint` cleanly — removing the bundled db is the author's responsibility (see the Middleware & dependencies area).
 
 ## Owner scenarios

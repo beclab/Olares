@@ -13,13 +13,27 @@ import (
 
 var errBindingUnavailable = errors.New("compute binding unavailable")
 
+// listAvailableForLaunch classifies every node and device in the cluster
+// against the app's selected requirement. It is the shared first step of both
+// placement flows: resume hands the result to the user and waits for a manual
+// pick, while install feeds the very same result to pickLaunchSelection and
+// picks automatically. Neither flow can therefore place an app on a device the
+// other wouldn't offer.
 func listAvailableForLaunch(req Requirement, nodes []Node, pressure PressureSnapshot) *AvailabilityResult {
+	return listAvailableForLaunchWithOptions(req, nodes, pressure, allocationOptions{checkPressure: true})
+}
+
+// listAvailableForLaunchWithOptions is listAvailableForLaunch with the fit
+// checks parameterized, so preflight can build the same view against a
+// simulated cluster (its own added-resources budget, and a first pass that
+// ignores node pressure entirely).
+func listAvailableForLaunchWithOptions(req Requirement, nodes []Node, pressure PressureSnapshot, opts allocationOptions) *AvailabilityResult {
 	result := &AvailabilityResult{
 		Requirement: req,
 		Scope:       availabilityScope(req),
 		Nodes:       make([]NodeOption, 0, len(nodes)),
 	}
-	classified := classifyLaunchNodes(req, nodes, pressure)
+	classified := classifyLaunchNodes(req, nodes, pressure, opts)
 	for _, node := range classified {
 		if node.Status == NodeStatusNotMatch {
 			continue
@@ -36,7 +50,7 @@ func listAvailableForLaunch(req Requirement, nodes []Node, pressure PressureSnap
 	return result
 }
 
-func classifyLaunchNodes(req Requirement, nodes []Node, pressure PressureSnapshot) []NodeOption {
+func classifyLaunchNodes(req Requirement, nodes []Node, pressure PressureSnapshot, opts allocationOptions) []NodeOption {
 	out := make([]NodeOption, 0, len(nodes))
 	for _, node := range nodes {
 		if !node.SupportsMode(req.Mode) {
@@ -50,17 +64,17 @@ func classifyLaunchNodes(req Requirement, nodes []Node, pressure PressureSnapsho
 		view := node.viewForMode(req.Mode)
 		var option NodeOption
 		if req.Mode == utils.NvidiaCardType {
-			option = classifyNvidiaNode(req, view, pressure)
+			option = classifyNvidiaNode(req, view, pressure, opts)
 		} else {
-			option = classifyNonNvidiaNode(req, view, pressure)
+			option = classifyNonNvidiaNode(req, view, pressure, opts)
 		}
 		out = append(out, option)
 	}
 	return out
 }
 
-func classifyNvidiaNode(req Requirement, node Node, pressure PressureSnapshot) NodeOption {
-	summary := summarizeNvidiaNode(req, node, pressure)
+func classifyNvidiaNode(req Requirement, node Node, pressure PressureSnapshot, opts allocationOptions) NodeOption {
+	summary := summarizeNvidiaNode(req, node, pressure, opts)
 	option := NodeOption{
 		NodeName: node.NodeName,
 		GPUType:  req.Mode,
@@ -74,28 +88,58 @@ func classifyNvidiaNode(req Requirement, node Node, pressure PressureSnapshot) N
 	return option
 }
 
-func classifyNonNvidiaNode(req Requirement, node Node, pressure PressureSnapshot) NodeOption {
+// classifyNonNvidiaNode classifies every device a node exposes for a non-nvidia
+// mode. Most such modes are unified memory and model the whole node as a single
+// device, but nvidia-gb10 and discrete Intel GPUs can expose several cards on
+// one node, so the node's status is taken from its best card the way
+// classifyNvidiaNode does — listing only the first one would hide the rest from
+// both the resume picker and install's auto-pick.
+func classifyNonNvidiaNode(req Requirement, node Node, pressure PressureSnapshot, opts allocationOptions) NodeOption {
 	option := NodeOption{NodeName: node.NodeName, GPUType: req.Mode}
 	if len(node.Devices) == 0 {
 		option.Status = NodeStatusNotAvailable
 		return option
 	}
-	devOpt := makeDeviceOption(req, node, node.Devices[0], pressure)
-	option.Devices = []DeviceOption{devOpt}
-	switch {
-	case devOpt.Health != deviceHealthYes:
+	option.Devices = make([]DeviceOption, 0, len(node.Devices))
+	var healthy bool
+	var maxCapacity, maxAvailable int64
+	for _, device := range node.Devices {
+		devOpt := makeDeviceOption(req, node, device, pressure, opts)
+		option.Devices = append(option.Devices, devOpt)
+		if devOpt.Health != deviceHealthYes {
+			continue
+		}
+		healthy = true
+		if devOpt.Capacity > maxCapacity {
+			maxCapacity = devOpt.Capacity
+		}
+		if devOpt.Available > maxAvailable {
+			maxAvailable = devOpt.Available
+		}
+	}
+	if !healthy {
 		option.Status = NodeStatusNotAvailable
-	case devOpt.Capacity < req.RequiredMemory:
-		option.Status = NodeStatusNotEnough
-	case devOpt.Available >= req.RequiredMemory && !pressure.WouldPressure(node, AddedResources{
-		CPU:    req.RequiredCPU,
-		Memory: req.RequiredMemory,
-	}):
-		option.Status = NodeStatusAvailable
-	default:
+		return option
+	}
+	option.Status = nodeStatusFromCapacity(req.RequiredMemory, maxCapacity, maxAvailable)
+	if option.Status == NodeStatusAvailable && nodeWouldPressure(req, node, pressure, opts) {
 		option.Status = NodeStatusNotAvailable
 	}
 	return option
+}
+
+// nodeWouldPressure reports whether hosting the app would push the node past
+// its pressure threshold. Unlike the per-device fit checks it deliberately
+// leaves disk out: node status has always been a cpu/memory judgement.
+func nodeWouldPressure(req Requirement, node Node, pressure PressureSnapshot, opts allocationOptions) bool {
+	if !opts.checkPressure {
+		return false
+	}
+	added := AddedResources{CPU: req.RequiredCPU, Memory: req.RequiredMemory}
+	if opts.pressureAdded != nil {
+		added = *opts.pressureAdded
+	}
+	return pressure.WouldPressure(node, added)
 }
 
 type nvidiaNodeSummary struct {
@@ -106,10 +150,10 @@ type nvidiaNodeSummary struct {
 	maxAvailable   int64
 }
 
-func summarizeNvidiaNode(req Requirement, node Node, pressure PressureSnapshot) nvidiaNodeSummary {
+func summarizeNvidiaNode(req Requirement, node Node, pressure PressureSnapshot, opts allocationOptions) nvidiaNodeSummary {
 	summary := nvidiaNodeSummary{devices: make([]DeviceOption, 0, len(node.Devices))}
 	for _, device := range node.Devices {
-		devOpt := makeDeviceOption(req, node, device, pressure)
+		devOpt := makeDeviceOption(req, node, device, pressure, opts)
 		summary.devices = append(summary.devices, devOpt)
 		if devOpt.Health != deviceHealthYes {
 			continue
@@ -136,7 +180,7 @@ func nodeStatusFromCapacity(required, capacity, available int64) string {
 	return NodeStatusNotAvailable
 }
 
-func makeDeviceOption(req Requirement, node Node, device Device, pressure PressureSnapshot) DeviceOption {
+func makeDeviceOption(req Requirement, node Node, device Device, pressure PressureSnapshot, opts allocationOptions) DeviceOption {
 	req.RequiredDisk = 0
 	available := deviceAvailableMemory(device)
 	option := DeviceOption{
@@ -153,13 +197,46 @@ func makeDeviceOption(req Requirement, node Node, device Device, pressure Pressu
 		option.Health = deviceHealthYes
 	}
 	for _, level := range []string{FitLevelLimit, FitLevelRequired} {
-		fits, _ := deviceFitsLevel(req, node, device, pressure, level, req.SupportMultiCards || req.SupportMultiNodes, 0)
+		fits, _ := deviceFitsLevelWithPressure(req, node, device, pressure, level, req.SupportMultiCards || req.SupportMultiNodes, 0, opts)
 		if fits {
 			option.FitLevel = level
 			break
 		}
 	}
 	return option
+}
+
+// asNodeDevice re-materializes the (node, device) pair a DeviceOption was
+// derived from, so the auto-picker can run the fit checks straight against the
+// availability view rather than against a second copy of the node snapshot.
+// That is what keeps install's automatic pick and resume's manual pick anchored
+// to the same candidate set: both are choosing among the very devices this view
+// exposes, judged by the very fit level it reports.
+//
+// The conversion goes this direction, rather than deviceFitsLevelWithPressure
+// simply taking a DeviceOption, because that function is also what builds the
+// view: makeDeviceOption calls it to compute FitLevel, at which point only the
+// raw Node and Device exist and the DeviceOption does not yet. The fit logic
+// therefore has to stay Device-shaped, and the view side adapts.
+//
+// The round trip is exact for everything the fit checks read — Health, plus
+// SupportType/Memory/Bindings, which are what deviceAvailableMemory and
+// timeSliceAddedMemory consume, plus the node name that pressure lookups are
+// keyed by. Recomputing deviceAvailableMemory on the result therefore
+// reproduces DeviceOption.Available. The identity fields (ID, Mode, CardModel)
+// are along for the ride so the value is a well-formed Device; no fit check
+// reads them.
+func (o DeviceOption) asNodeDevice(mode string) (Node, Device) {
+	return Node{NodeName: o.NodeName}, Device{
+		ID:          o.DeviceID,
+		NodeName:    o.NodeName,
+		Mode:        mode,
+		CardModel:   o.CardModel,
+		Memory:      o.Capacity,
+		Health:      o.Health,
+		SupportType: o.SupportType,
+		Bindings:    o.Bindings,
+	}
 }
 
 func availabilityScope(req Requirement) string {
@@ -284,21 +361,12 @@ func ApplyBindingSelection(ctx context.Context, c client.Client, appConfig *appc
 	var unavailable *BindingApplyResult
 	if _, err := mutateAllocations(ctx, c, func(nodes []Node, existing []Allocation) ([]Allocation, *Allocation, error) {
 		attachBindings(nodes, withoutAppAllocations(existing, appConfig.AppName, appConfig.OwnerName))
-		resolved, resolveErr := resolveSelection(selections, nodes)
-		if resolveErr != nil {
-			unavailable = unavailableBindingApplyResult(req, nodes, pressure, invalidBinding(resolveErr.Error()))
-			return nil, nil, errBindingUnavailable
-		}
-		validation := validateResolvedBindingSelection(req, resolved, pressure)
+		bound, validation := bindAllocations(appConfig, req, selections, nodes, pressure)
 		if !validation.OK {
 			unavailable = unavailableBindingApplyResult(req, nodes, pressure, validation)
 			return nil, nil, errBindingUnavailable
 		}
-		allocations = allocationsFromResolvedSelection(appConfig, req, resolved)
-		if len(allocations) == 0 {
-			unavailable = unavailableBindingApplyResult(req, nodes, pressure, invalidBinding("empty-compute-binding"))
-			return nil, nil, errBindingUnavailable
-		}
+		allocations = bound
 		next := replaceAppAllocations(existing, allocations)
 		return next, &allocations[0], nil
 	}); err != nil {
@@ -307,15 +375,8 @@ func ApplyBindingSelection(ctx context.Context, c client.Client, appConfig *appc
 		}
 		return nil, err
 	}
-	if err := deleteHAMIBindingsForApp(ctx, c, appConfig.AppName, appConfig.OwnerName); err != nil {
-		_ = DeleteAllocationsForApp(ctx, c, appConfig.AppName, appConfig.OwnerName)
+	if err := syncHAMIBindings(ctx, c, appConfig.AppName, appConfig.OwnerName, allocations); err != nil {
 		return nil, err
-	}
-	for _, allocation := range allocations {
-		if err := createHAMIBinding(ctx, c, allocation); err != nil {
-			_ = DeleteAllocationsForApp(ctx, c, appConfig.AppName, appConfig.OwnerName)
-			return nil, err
-		}
 	}
 	return &BindingApplyResult{
 		Status:      BindingApplyStatusApplied,
@@ -323,6 +384,45 @@ func ApplyBindingSelection(ctx context.Context, c client.Client, appConfig *appc
 		TargetApp:   appConfig.AppName,
 		TargetOwner: appConfig.OwnerName,
 	}, nil
+}
+
+// bindAllocations turns a compute binding selection — the user's manual pick on
+// resume, or install's automatic pick out of the same availability view — into
+// the app's allocation rows. Both flows converge here so a placement install
+// makes on its own is held to exactly the same rules as one a user submits.
+// The returned validation result is always non-nil; the allocations are only
+// meaningful when it reports OK.
+func bindAllocations(appConfig *appcfg.ApplicationConfig, req Requirement, selections []BindingSelection, nodes []Node, pressure PressureSnapshot) ([]Allocation, *BindingValidationResult) {
+	resolved, err := resolveSelection(selections, nodes)
+	if err != nil {
+		return nil, invalidBinding(err.Error())
+	}
+	validation := validateResolvedBindingSelection(req, resolved, pressure)
+	if !validation.OK {
+		return nil, validation
+	}
+	allocations := allocationsFromResolvedSelection(appConfig, req, resolved)
+	if len(allocations) == 0 {
+		return nil, invalidBinding("empty-compute-binding")
+	}
+	return allocations, validation
+}
+
+// syncHAMIBindings replaces the app's HAMI GPUBindings with the ones its new
+// allocations call for. A failure at this point leaves the allocation rows
+// pointing at bindings that were never created, so it releases them.
+func syncHAMIBindings(ctx context.Context, c client.Client, appName, owner string, allocations []Allocation) error {
+	if err := deleteHAMIBindingsForApp(ctx, c, appName, owner); err != nil {
+		_ = DeleteAllocationsForApp(ctx, c, appName, owner)
+		return err
+	}
+	for _, allocation := range allocations {
+		if err := createHAMIBinding(ctx, c, allocation); err != nil {
+			_ = DeleteAllocationsForApp(ctx, c, appName, owner)
+			return err
+		}
+	}
+	return nil
 }
 
 // ValidateBindingForResume mirrors ApplyBindingSelection's feasibility
@@ -372,17 +472,9 @@ func ValidateBindingForResume(ctx context.Context, c client.Client, appConfig *a
 			TargetOwner:  appConfig.OwnerName,
 		}, nil
 	}
-	resolved, resolveErr := resolveSelection(selections, nodes)
-	if resolveErr != nil {
-		return unavailableBindingApplyResult(req, nodes, pressure, invalidBinding(resolveErr.Error())), nil
-	}
-	validation := validateResolvedBindingSelection(req, resolved, pressure)
+	allocations, validation := bindAllocations(appConfig, req, selections, nodes, pressure)
 	if !validation.OK {
 		return unavailableBindingApplyResult(req, nodes, pressure, validation), nil
-	}
-	allocations := allocationsFromResolvedSelection(appConfig, req, resolved)
-	if len(allocations) == 0 {
-		return unavailableBindingApplyResult(req, nodes, pressure, invalidBinding("empty-compute-binding")), nil
 	}
 	// Even when the selection is valid we still hand back the full list of
 	// available options so the frontend can render the current selection in
@@ -590,6 +682,13 @@ func allocationsFromResolvedSelection(appConfig *appcfg.ApplicationConfig, req R
 			amount = deviceAvailableMemory(item.device)
 		case len(resolved) > 1:
 			amount = minInt64(deviceAvailableMemory(item.device), remaining)
+		}
+		if amount <= 0 {
+			// The app declares no concrete demand for this mode, so the
+			// selection's own amount is all we have to go on. Without this the
+			// allocation would be dropped and the whole binding rejected as
+			// empty.
+			amount = item.memory
 		}
 		if amount <= 0 {
 			continue

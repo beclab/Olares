@@ -53,7 +53,7 @@ For deploying to your own Olares, metadata can stay a stub as long as `lint` pas
 ```yaml
 metadata:
   name: myapp                 # must match folder + Chart.yaml name; do not change casually
-  appid: myapp                # app identifier; set = name. from-compose scaffolds it; backs the entrance domain <appid>.<zone>
+  appid: myapp                # app identifier; set = name. from-compose scaffolds it
   title: My App               # stub title=name is OK for local deploy
   description: One-line summary
   icon: https://app.cdn.olares.com/appstore/default/defaulticon.webp  # default OK for local deploy
@@ -67,7 +67,7 @@ spec:
 
 > **Resource envelope (optional, under `spec`):** a non-accelerator app sets flat `spec.requiredCpu` / `limitedCpu` / `requiredMemory` / `limitedMemory` / `requiredDisk` (no `mode`); a GPU/accelerator app uses `spec.accelerator[]` instead — the two are mutually exclusive. See the Accelerator sizing §A.1.
 
-> **`appid` vs `lint`:** `chart lint` only requires `name`, `icon`, `description`, `title`, `version` (`appid` is `omitempty` in the schema, so a chart lints without it). But `from-compose` always writes `appid: <name>`, and the platform uses it as the app's identity (e.g. the entrance host `<appid>.<zone>` — see the system-injected Helm values reference). **Keep `appid` present and equal to `metadata.name`** when hand-authoring a manifest (e.g. from a generic Helm chart); rename it alongside `name` / the folder / `Chart.yaml`. **`lint` passes without it; `market upload` does not** — omitting it produces `upload payload missing ... metadata.appid`.
+> **`appid` vs `lint`:** `chart lint` only requires `name`, `icon`, `description`, `title`, `version` (`appid` is `omitempty` in the schema, so a chart lints without it). **Keep `appid` present and equal to `metadata.name`** when hand-authoring a manifest (e.g. from a generic Helm chart); rename it alongside `name` / the folder / `Chart.yaml`. **`lint` passes without it; `market upload` does not** — omitting it produces `upload payload missing ... metadata.appid`. It does not decide the entrance host, which the platform derives from the app name — see the system-injected Helm values reference.
 
 ### Keep as stub (deploy to your Olares)
 
@@ -94,9 +94,13 @@ In the deployment template, replace the PVC mount with the injected host path (`
       volumes:
       - name: app-data
         hostPath:
-          path: {{ .Values.userspace.appData }}/myapp
+          path: {{ .Values.userspace.appData }}
           type: DirectoryOrCreate
 ```
+
+> The injected value already ends in the app's own name, so appending it again
+> lands the data one level deeper than intended. Add a subdirectory only to
+> organize *within* the app's area.
 
 > Anything declared in a template (`.Values.userspace.appData/appCache/userData`) MUST have the matching `permission` field, or `lint`'s app-data cross-check fails. Drop leftover kompose PVCs.
 

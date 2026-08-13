@@ -282,6 +282,48 @@ func (l *NodeUnlabelingModule) Init() {
 	}
 }
 
+// NvidiaNodeUnlabelingModule clears only the NVIDIA-owned node labels. It is
+// used by the driver uninstall path, where other accelerators on the same node
+// (e.g. an Intel iGPU) are unaffected and must keep advertising their modes.
+// The full wipe lives in NodeUnlabelingModule, used by `gpu disable`.
+type NvidiaNodeUnlabelingModule struct {
+	common.KubeModule
+}
+
+func (l *NvidiaNodeUnlabelingModule) Init() {
+	l.Name = "NvidiaNodeUnlabeling"
+
+	removeNode := &task.RemoteTask{
+		Name:  "RemoveNvidiaNodeLabels",
+		Hosts: l.Runtime.GetHostsByRole(common.Master),
+		Prepare: &prepare.PrepareCollection{
+			new(common.OnlyFirstMaster),
+			new(CurrentNodeInK8s),
+		},
+		Action:   new(RemoveNvidiaNodeLabels),
+		Parallel: false,
+		Retry:    1,
+	}
+
+	restartPlugin := &task.RemoteTask{
+		Name:  "RestartPlugin",
+		Hosts: l.Runtime.GetHostsByRole(common.Master),
+		Prepare: &prepare.PrepareCollection{
+			new(common.OnlyFirstMaster),
+			new(CurrentNodeInK8s),
+			new(GpuDevicePluginInstalled),
+		},
+		Action:   new(RestartPlugin),
+		Parallel: false,
+		Retry:    1,
+	}
+
+	l.Tasks = []task.Interface{
+		removeNode,
+		restartPlugin,
+	}
+}
+
 type UninstallCudaModule struct {
 	common.KubeModule
 }

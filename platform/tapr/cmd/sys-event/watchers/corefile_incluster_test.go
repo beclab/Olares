@@ -337,14 +337,33 @@ func TestSharedInclusterEntrancesFromSRRItems_logicalPatternNotFirst(t *testing.
 		[]unstructured.Unstructured{*srr},
 		nil,
 	)
-	if len(got) != 1 {
-		t.Fatalf("expected 1 entrance, got %d (%+v)", len(got), got)
+	if len(got) != 2 {
+		t.Fatalf("expected 2 entrances (one per hostPattern), got %d (%+v)", len(got), got)
 	}
-	if got[0].EntranceID != "api" {
-		t.Fatalf("unexpected entranceID %q", got[0].EntranceID)
+	if got[0].EntranceID != "api" || got[0].HostPattern != "api.*.olares.com" {
+		t.Fatalf("first = %+v, want api / api.*.olares.com", got[0])
 	}
-	if got[0].HostPattern != "api.*.olares.com" {
-		t.Fatalf("unexpected hostPattern %q", got[0].HostPattern)
+	if got[1].EntranceID != prefix || got[1].HostPattern != prefix+".shared.olares.com" {
+		t.Fatalf("second = %+v, want %s / %s.shared.olares.com", got[1], prefix, prefix)
+	}
+}
+
+func TestSharedInclusterEntrancesFromSRRItems_friendlyAndHash(t *testing.T) {
+	srr := unstructuredSRR("router-shared", "app-f3395cd5-web", map[string]string{
+		labelSRRAppID: "f3395cd5", labelSRREntrance: "web",
+	}, "gateway", []string{
+		"router.*.olares.com",
+		"f3395cd5.*.olares.com",
+	})
+	got := sharedInclusterEntrancesFromSRRItems(
+		[]unstructured.Unstructured{*srr},
+		nil,
+	)
+	if len(got) != 2 {
+		t.Fatalf("expected 2, got %d (%+v)", len(got), got)
+	}
+	if got[0].HostPattern != "router.*.olares.com" || got[1].HostPattern != "f3395cd5.*.olares.com" {
+		t.Fatalf("patterns = %q, %q", got[0].HostPattern, got[1].HostPattern)
 	}
 }
 

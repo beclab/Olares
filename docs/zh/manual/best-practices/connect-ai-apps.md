@@ -8,7 +8,7 @@ head:
 ---
 
 :::warning
-本文档由 AI 翻译生成，仅供参考。如有歧义，请参阅[英文原文](/manual/best-practices/connect-ai-apps.md)。
+本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](/manual/best-practices/connect-ai-apps.md)为准。
 :::
 
 # 连接 AI 应用 <Badge type="tip" text="^ 1.12.6" />

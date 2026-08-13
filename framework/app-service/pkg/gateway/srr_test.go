@@ -134,3 +134,81 @@ func TestBuildSpecForEntranceApplication(t *testing.T) {
 		t.Errorf("entranceClass = %q, want %q", spec.EntranceClass, srrv1alpha1.EntranceClassApplication)
 	}
 }
+
+func TestBuildSpecForEntranceApplicationUsesThirdLevelOverride(t *testing.T) {
+	app := &appv1alpha1.Application{
+		ObjectMeta: metav1.ObjectMeta{Name: "router"},
+		Spec: appv1alpha1.ApplicationSpec{
+			Appid:     "f3395cd5",
+			Name:      "router",
+			Namespace: "router-shared",
+			Settings: map[string]string{
+				"defaultThirdLevelDomainConfig": `[{"appName":"router","entranceName":"web","thirdLevelDomain":"router"}]`,
+			},
+			Entrances: []appv1alpha1.Entrance{
+				{Name: "web", Host: "router-svc", Port: 8080},
+				{Name: "api", Host: "router-api", Port: 9090},
+			},
+		},
+	}
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Name: "router-svc", Namespace: "router-shared"},
+		Spec:       corev1.ServiceSpec{Ports: []corev1.ServicePort{{Port: 8080, Protocol: corev1.ProtocolTCP}}},
+	}
+
+	spec, err := BuildSpecForEntrance(app, app.Spec.Entrances[0], 0, len(app.Spec.Entrances), svc, "olares.com",
+		srrv1alpha1.EntranceClassApplication)
+	if err != nil {
+		t.Fatalf("BuildSpecForEntrance: %v", err)
+	}
+	wantHost := "router.*.olares.com"
+	wantHash := appv1alpha1.EntranceID(app.Spec.Appid, 0, len(app.Spec.Entrances)) + ".*.olares.com"
+	if len(spec.HostPatterns) != 2 || spec.HostPatterns[0] != wantHost || spec.HostPatterns[1] != wantHash {
+		t.Fatalf("hostPatterns = %v, want [%q %q]", spec.HostPatterns, wantHost, wantHash)
+	}
+
+	// Unmatched entrance keeps positional EntranceID.
+	apiSvc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Name: "router-api", Namespace: "router-shared"},
+		Spec:       corev1.ServiceSpec{Ports: []corev1.ServicePort{{Port: 9090, Protocol: corev1.ProtocolTCP}}},
+	}
+	apiSpec, err := BuildSpecForEntrance(app, app.Spec.Entrances[1], 1, len(app.Spec.Entrances), apiSvc, "olares.com",
+		srrv1alpha1.EntranceClassApplication)
+	if err != nil {
+		t.Fatalf("BuildSpecForEntrance api: %v", err)
+	}
+	wantAPI := appv1alpha1.EntranceID(app.Spec.Appid, 1, len(app.Spec.Entrances)) + ".*.olares.com"
+	if len(apiSpec.HostPatterns) != 1 || apiSpec.HostPatterns[0] != wantAPI {
+		t.Fatalf("api hostPatterns = %v, want %q", apiSpec.HostPatterns, wantAPI)
+	}
+}
+
+func TestBuildSpecForEntranceApplicationMalformedThirdLevelFallsBack(t *testing.T) {
+	app := &appv1alpha1.Application{
+		ObjectMeta: metav1.ObjectMeta{Name: "demo"},
+		Spec: appv1alpha1.ApplicationSpec{
+			Appid: "demo1234",
+			Name:  "demo",
+			Settings: map[string]string{
+				"defaultThirdLevelDomainConfig": `{not-json`,
+			},
+			Entrances: []appv1alpha1.Entrance{
+				{Name: "web", Host: "demo-svc", Port: 8080},
+				{Name: "api", Host: "demo-api", Port: 9090},
+			},
+		},
+	}
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Name: "demo-svc", Namespace: "demo-user"},
+		Spec:       corev1.ServiceSpec{Ports: []corev1.ServicePort{{Port: 8080, Protocol: corev1.ProtocolTCP}}},
+	}
+	spec, err := BuildSpecForEntrance(app, app.Spec.Entrances[0], 0, len(app.Spec.Entrances), svc, "olares.com",
+		srrv1alpha1.EntranceClassApplication)
+	if err != nil {
+		t.Fatalf("BuildSpecForEntrance: %v", err)
+	}
+	wantHost := appv1alpha1.EntranceID(app.Spec.Appid, 0, len(app.Spec.Entrances)) + ".*.olares.com"
+	if len(spec.HostPatterns) != 1 || spec.HostPatterns[0] != wantHost {
+		t.Fatalf("hostPatterns = %v, want fallback %q", spec.HostPatterns, wantHost)
+	}
+}

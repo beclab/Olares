@@ -44,7 +44,7 @@ func NewShareCommand(f *cmdutil.Factory) *cobra.Command {
 		Short: "create and manage internal / public / SMB shares for files-backend directories",
 		Long: `Create and manage shares for directories on the per-user files-backend.
 
-All three create flavors are DIRECTORY-ONLY: each ` + "`share <flavor>"+ "`" + `
+All three create flavors are DIRECTORY-ONLY: each ` + "`share <flavor>" + "`" + `
 verb Stats the target before posting the create record and refuses
 up front when the path is a file (or doesn't exist on the server).
 This matches the LarePass GUI's per-driver share-menu gating on
@@ -964,12 +964,7 @@ func reformatShareHTTPErr(err error, olaresID, op string) error {
 	}
 	switch status {
 	case 401, 403, 459:
-		if olaresID != "" {
-			return fmt.Errorf("server rejected the access token (HTTP %d) during %s; please run: olares-cli profile login --olares-id %s",
-				status, op, olaresID)
-		}
-		return fmt.Errorf("server rejected the access token (HTTP %d) during %s; please re-run `olares-cli profile login`",
-			status, op)
+		return fmt.Errorf("%s: %w", op, credential.FormatHTTPAuthError(status, nil, olaresID))
 	case 404:
 		return fmt.Errorf("%s: not found on the server (HTTP 404)", op)
 	case 409:

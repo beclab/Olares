@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	JWKSServiceName      = "caller-jwt-jwks"
+	JWKSServiceName = "caller-jwt-jwks"
 	// JWKS Service must live with app-service pods (selector is namespaced).
 	JWKSServiceNamespace = "os-framework"
 	JWKSPath             = "/.well-known/jwks.json"

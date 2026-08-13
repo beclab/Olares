@@ -37,7 +37,7 @@ Refused namespaces:
 ## Safety constraints
 
 - **Destructive when `--uid` is provided — confirm intent with the user.** UID changes affect every app that reads the directory.
-- **Volume roots are refused** (`drive/Home/`, `drive/Data/`, `cache/<node>/`) — chowning an entire namespace root has too much blast radius. Pick a one-level-deeper path with `-r` if you need to fan out.
+- **Volume roots are refused** (`drive/Home/`, `drive/Data/`, `drive/Common/`, `cache/<node>/`) — chowning an entire namespace root has too much blast radius. Pick a one-level-deeper path with `-r` if you need to fan out.
 - **`-r` recurses** — every descendant gets the new uid. Confirm directory contents with `files ls` first.
 
 ## Examples
@@ -66,5 +66,5 @@ olares-cli files chown cache/<node>/scratch/build/ --uid 1000 -r
 | Symptom | Cause | Fix |
 |---|---|---|
 | `namespace "<ns>" is not supported by 'files chown'` | sync / external / cloud target | Use `files repos` (sync) or LarePass GUI (external) |
-| `refusing to chown the root of <fileType>/<extend>; pick a child path` | targeting a volume root (`drive/Home/`, `drive/Data/`, `cache/<node>/`) | Pick a sub-path (use `-r` to fan out) |
+| `refusing to chown the root of <fileType>/<extend>; pick a child path` | targeting a volume root (`drive/Home/`, `drive/Data/`, `drive/Common/`, `cache/<node>/`) | Pick a sub-path (use `-r` to fan out) |
 | 403 from server | Server-side ACL rejection | Confirm via `files ls --json` or LarePass that the active user has permission |

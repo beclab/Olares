@@ -16,6 +16,9 @@ import (
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	kbopv1alpha1 "github.com/apecloud/kubeblocks/apis/operations/v1alpha1"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -83,6 +86,149 @@ func (f *fakeHelmOps) WaitForLaunch() (bool, error) {
 		return f.waitForLaunch()
 	}
 	return true, nil
+}
+
+// scaleAwareHelmOps wraps fakeHelmOps and mirrors a replica-set controller
+// for HelmOps.Scale: replicas==0 deletes pods in the app namespace;
+// scale-up recreates a ready pod when the namespace is empty. Lineage tests
+// seed static pods and have no real RS controller, so without this
+// SuspendingApp.waitForPodsGone would hang forever after Scale(0).
+type scaleAwareHelmOps struct {
+	*fakeHelmOps
+	client    client.Client
+	namespace string
+}
+
+func (s *scaleAwareHelmOps) Scale(replicas int32) error {
+	if err := s.fakeHelmOps.Scale(replicas); err != nil {
+		return err
+	}
+	if s.client == nil || s.namespace == "" {
+		return nil
+	}
+	desired := replicas
+	if desired < 0 {
+		desired = 1
+	}
+	// Keep Deployment/STS replica counts in sync so the fake RS controller
+	// does not recreate pods after Helm Scale(0).
+	if err := setWorkloadReplicasInNamespace(context.TODO(), s.client, s.namespace, desired); err != nil {
+		return err
+	}
+	if desired == 0 {
+		return deletePodsInNamespace(context.TODO(), s.client, s.namespace)
+	}
+	return ensureReadyPodInNamespace(context.TODO(), s.client, s.namespace)
+}
+
+func setWorkloadReplicasInNamespace(ctx context.Context, c client.Client, ns string, replicas int32) error {
+	var deps appsv1.DeploymentList
+	if err := c.List(ctx, &deps, client.InNamespace(ns)); err != nil {
+		return err
+	}
+	for i := range deps.Items {
+		d := deps.Items[i]
+		r := replicas
+		d.Spec.Replicas = &r
+		if err := c.Update(ctx, &d); err != nil {
+			return err
+		}
+	}
+	var stss appsv1.StatefulSetList
+	if err := c.List(ctx, &stss, client.InNamespace(ns)); err != nil {
+		return err
+	}
+	for i := range stss.Items {
+		s := stss.Items[i]
+		r := replicas
+		s.Spec.Replicas = &r
+		if err := c.Update(ctx, &s); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func deletePodsInNamespace(ctx context.Context, c client.Client, ns string) error {
+	var pods corev1.PodList
+	if err := c.List(ctx, &pods, client.InNamespace(ns)); err != nil {
+		return err
+	}
+	for i := range pods.Items {
+		pod := pods.Items[i]
+		if err := c.Delete(ctx, &pod); err != nil && !apierrors.IsNotFound(err) {
+			return err
+		}
+	}
+	return nil
+}
+
+func ensureReadyPodInNamespace(ctx context.Context, c client.Client, ns string) error {
+	var pods corev1.PodList
+	if err := c.List(ctx, &pods, client.InNamespace(ns)); err != nil {
+		return err
+	}
+	if len(pods.Items) > 0 {
+		return nil
+	}
+	_, pod := integrationReadyWorkload("demo", ns)
+	return c.Create(ctx, pod)
+}
+
+// startFakeReplicaSetController periodically syncs pods to Deployment /
+// StatefulSet replica counts so the direct-patch suspend/resume path
+// (no Helm Scale) still drains and restores pods like a real cluster.
+func startFakeReplicaSetController(t *testing.T, c client.Client) {
+	t.Helper()
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	go func() {
+		ticker := time.NewTicker(50 * time.Millisecond)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				syncFakeWorkloadPods(ctx, c)
+			}
+		}
+	}()
+}
+
+func syncFakeWorkloadPods(ctx context.Context, c client.Client) {
+	desired := map[string]int32{}
+	var deps appsv1.DeploymentList
+	if err := c.List(ctx, &deps); err == nil {
+		for _, d := range deps.Items {
+			r := int32(1)
+			if d.Spec.Replicas != nil {
+				r = *d.Spec.Replicas
+			}
+			if cur, ok := desired[d.Namespace]; !ok || r > cur {
+				desired[d.Namespace] = r
+			}
+		}
+	}
+	var stss appsv1.StatefulSetList
+	if err := c.List(ctx, &stss); err == nil {
+		for _, s := range stss.Items {
+			r := int32(1)
+			if s.Spec.Replicas != nil {
+				r = *s.Spec.Replicas
+			}
+			if cur, ok := desired[s.Namespace]; !ok || r > cur {
+				desired[s.Namespace] = r
+			}
+		}
+	}
+	for ns, r := range desired {
+		if r == 0 {
+			_ = deletePodsInNamespace(ctx, c, ns)
+			continue
+		}
+		_ = ensureReadyPodInNamespace(ctx, c, ns)
+	}
 }
 
 type fakeImageManager struct {
@@ -161,6 +307,7 @@ func newTestController(t *testing.T, objs ...client.Object) (*ApplicationManager
 		WithScheme(integrationScheme(t)).
 		WithObjects(objs...).
 		Build()
+	startFakeReplicaSetController(t, c)
 
 	f := &ctrlFakes{
 		helm: &fakeHelmOps{},
@@ -173,7 +320,11 @@ func newTestController(t *testing.T, objs ...client.Object) (*ApplicationManager
 		func() (*rest.Config, error) { return &rest.Config{}, nil },
 		func(ctx context.Context, kubeConfig *rest.Config, app *appcfg.ApplicationConfig,
 			token string, options appinstaller.Opt) (appinstaller.HelmOpsInterface, error) {
-			return f.helm, nil
+			ns := ""
+			if app != nil {
+				ns = app.Namespace
+			}
+			return &scaleAwareHelmOps{fakeHelmOps: f.helm, client: c, namespace: ns}, nil
 		},
 		func(ctx context.Context, opsType kbopv1alpha1.OpsType,
 			manager *appv1alpha1.ApplicationManager, cl client.Client) appstate.MiddlewareOperator {

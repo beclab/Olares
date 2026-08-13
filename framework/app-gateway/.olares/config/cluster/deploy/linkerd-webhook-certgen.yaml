@@ -18,6 +18,10 @@ metadata:
     app.kubernetes.io/component: linkerd-webhook-certgen
 webhooks:
 - name: linkerd-proxy-injector.linkerd.io
+  # IfNeeded: sandbox webhook may set linkerd.io/inject=enabled after this
+  # webhook's first pass; re-invoke so mesh-in callers still get linkerd-proxy
+  # (default full inject for Shared-caller apps). Never left half-injected pods.
+  reinvocationPolicy: IfNeeded
   namespaceSelector:
     matchExpressions:
     - key: config.linkerd.io/admission-webhooks

@@ -83,6 +83,10 @@ const side = {
           text: "Get technical support",
           link: "/manual/help/request-technical-support",
         },
+        {
+          text: "What's new in docs",
+          link: "/manual/release-notes",
+        },
       ],
     },
     {
