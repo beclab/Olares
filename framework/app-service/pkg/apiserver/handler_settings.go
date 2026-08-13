@@ -19,6 +19,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/provider"
 	"github.com/beclab/Olares/framework/app-service/pkg/tapr"
+	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/api/pkg/generated/clientset/versioned"
@@ -225,6 +226,31 @@ func (h *Handler) setupAppEntranceDomain(req *restful.Request, resp *restful.Res
 		if err = checkEntranceDomainDuplicate(req.Request.Context(), kclient.AppClient, caller, appCopy.Spec.Name, entranceName, reqThirdLevel, reqThirdParty); err != nil {
 			api.HandleBadRequest(resp, req, err)
 			return
+		}
+
+		// Validate cert/key only when the request newly adds or changes them.
+		reqCert, _ := customDomain["cert"].(string)
+		reqKey, _ := customDomain["key"].(string)
+		var oldCert, oldKey, oldThirdParty string
+		if len(existing) > 0 {
+			var origins map[string]interface{}
+			if err = json.Unmarshal([]byte(existing), &origins); err == nil {
+				if originV, ok := origins[entranceName].(map[string]interface{}); ok {
+					oldCert, _ = originV["cert"].(string)
+					oldKey, _ = originV["key"].(string)
+					oldThirdParty, _ = originV["third_party_domain"].(string)
+				}
+			}
+		}
+		if (reqCert != "" || reqKey != "") && (reqCert != oldCert || reqKey != oldKey) {
+			hostname := reqThirdParty
+			if hostname == "" {
+				hostname = oldThirdParty
+			}
+			if err = utils.CheckSSLCertificate([]byte(reqCert), []byte(reqKey), hostname); err != nil {
+				api.HandleBadRequest(resp, req, err)
+				return
+			}
 		}
 	}
 
