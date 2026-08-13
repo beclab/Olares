@@ -31,6 +31,14 @@ const (
 	ApplicationImageLabel         = "applications.app.bytetrade.io/images"
 	ApplicationTargetLabel        = "applications.app.bytetrade.io/target"
 	ApplicationRunAsUserLabel     = "applications.apps.bytetrade.io/runasuser"
+	// UserspacePrepareInitContainerName is the platform-injected init
+	// container that brings userspace hostPath directories to 1000:1000.
+	UserspacePrepareInitContainerName = "olares-prepare-userspace"
+	// UserspaceUID / UserspaceGID are the ownership and access identity
+	// Olares fixes for everything under a user's space. Both the
+	// directories on disk and the app processes converge on this pair.
+	UserspaceUID int64 = 1000
+	UserspaceGID int64 = 1000
 	ApplicationVersionLabel       = "applications.app.bytetrade.io/version"
 	ApplicationSourceLabel        = "applications.app.bytetrade.io/source"
 	ApplicationTailScaleKey       = "applications.app.bytetrade.io/tailscale"
