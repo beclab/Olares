@@ -64,7 +64,7 @@ func TestBuildSpecForEntrance(t *testing.T) {
 		Spec:       corev1.ServiceSpec{Ports: []corev1.ServicePort{{Port: 8080, Protocol: corev1.ProtocolTCP}}},
 	}
 	spec, err := BuildSpecForEntrance(app, app.Spec.SharedEntrances[0], 0, len(app.Spec.SharedEntrances), svc, "olares.com",
-		srrv1alpha1.EntranceClassShared)
+		srrv1alpha1.EntranceClassShared, nil)
 	if err != nil {
 		t.Fatalf("BuildSpecForEntrance: %v", err)
 	}
@@ -96,7 +96,7 @@ func TestBuildSpecForEntranceRequiresAppID(t *testing.T) {
 		Spec:       corev1.ServiceSpec{Ports: []corev1.ServicePort{{Port: 8080, Protocol: corev1.ProtocolTCP}}},
 	}
 	_, err := BuildSpecForEntrance(app, app.Spec.SharedEntrances[0], 0, len(app.Spec.SharedEntrances), svc, "olares.com",
-		srrv1alpha1.EntranceClassShared)
+		srrv1alpha1.EntranceClassShared, nil)
 	if err == nil {
 		t.Fatal("expected error when app.spec.appid is empty")
 	}
@@ -121,7 +121,7 @@ func TestBuildSpecForEntranceApplication(t *testing.T) {
 	}
 
 	spec, err := BuildSpecForEntrance(app, app.Spec.Entrances[0], 0, len(app.Spec.Entrances), svc, "olares.com",
-		srrv1alpha1.EntranceClassApplication)
+		srrv1alpha1.EntranceClassApplication, nil)
 	if err != nil {
 		t.Fatalf("BuildSpecForEntrance application: %v", err)
 	}
@@ -157,7 +157,7 @@ func TestBuildSpecForEntranceApplicationUsesThirdLevelOverride(t *testing.T) {
 	}
 
 	spec, err := BuildSpecForEntrance(app, app.Spec.Entrances[0], 0, len(app.Spec.Entrances), svc, "olares.com",
-		srrv1alpha1.EntranceClassApplication)
+		srrv1alpha1.EntranceClassApplication, nil)
 	if err != nil {
 		t.Fatalf("BuildSpecForEntrance: %v", err)
 	}
@@ -173,7 +173,7 @@ func TestBuildSpecForEntranceApplicationUsesThirdLevelOverride(t *testing.T) {
 		Spec:       corev1.ServiceSpec{Ports: []corev1.ServicePort{{Port: 9090, Protocol: corev1.ProtocolTCP}}},
 	}
 	apiSpec, err := BuildSpecForEntrance(app, app.Spec.Entrances[1], 1, len(app.Spec.Entrances), apiSvc, "olares.com",
-		srrv1alpha1.EntranceClassApplication)
+		srrv1alpha1.EntranceClassApplication, nil)
 	if err != nil {
 		t.Fatalf("BuildSpecForEntrance api: %v", err)
 	}
@@ -203,7 +203,7 @@ func TestBuildSpecForEntranceApplicationMalformedThirdLevelFallsBack(t *testing.
 		Spec:       corev1.ServiceSpec{Ports: []corev1.ServicePort{{Port: 8080, Protocol: corev1.ProtocolTCP}}},
 	}
 	spec, err := BuildSpecForEntrance(app, app.Spec.Entrances[0], 0, len(app.Spec.Entrances), svc, "olares.com",
-		srrv1alpha1.EntranceClassApplication)
+		srrv1alpha1.EntranceClassApplication, nil)
 	if err != nil {
 		t.Fatalf("BuildSpecForEntrance: %v", err)
 	}

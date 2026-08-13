@@ -364,3 +364,73 @@ func TestSharedRouteProducerReconcilerPrunesSharedAndApplicationSeparately(t *te
 		}
 	}
 }
+
+func TestCollectApplicationThirdPartyDomains(t *testing.T) {
+	app := &appv1alpha1.Application{
+		Spec: appv1alpha1.ApplicationSpec{
+			Settings: map[string]string{
+				"customDomain": `{"web":{"third_party_domain":"Chat.Example.com"}}`,
+			},
+			UserSettings: map[string]map[string]string{
+				"alice": {"customDomain": `{"api":{"third_party_domain":"alice.example.org"}}`},
+				"bob":   {"customDomain": `{"web":{"third_level_domain":"api"}}`},
+			},
+		},
+	}
+	got := CollectApplicationThirdPartyDomains(app)
+	want := map[string]bool{"chat.example.com": true, "alice.example.org": true}
+	if len(got) != 2 {
+		t.Fatalf("got %v", got)
+	}
+	for _, h := range got {
+		if !want[h] {
+			t.Fatalf("unexpected %q in %v", h, got)
+		}
+	}
+}
+
+func TestFanOutAppsOnCustomDomainCertIndexed(t *testing.T) {
+	hit := &appv1alpha1.Application{
+		ObjectMeta: metav1.ObjectMeta{Name: "hit", Namespace: "ns-a"},
+		Spec: appv1alpha1.ApplicationSpec{
+			Name: "hit",
+			UserSettings: map[string]map[string]string{
+				"alice": {"customDomain": `{"web":{"third_party_domain":"chat.example.com"}}`},
+			},
+		},
+	}
+	miss := &appv1alpha1.Application{
+		ObjectMeta: metav1.ObjectMeta{Name: "miss", Namespace: "ns-b"},
+		Spec: appv1alpha1.ApplicationSpec{
+			Name: "miss",
+			Settings: map[string]string{
+				"customDomain": `{"web":{"third_party_domain":"other.example.com"}}`,
+			},
+		},
+	}
+	c := fake.NewClientBuilder().WithScheme(producerTestScheme(t)).
+		WithIndex(&appv1alpha1.Application{}, indexApplicationThirdPartyDomain, indexApplicationByThirdPartyDomain).
+		WithObjects(hit, miss).Build()
+	r := &SharedRouteProducerReconciler{Client: c}
+
+	cm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "chat-example-com-ssl-config",
+			Namespace: "user-space-alice",
+			Labels:    map[string]string{customDomainCertLabel: customDomainCertLabelValue},
+		},
+		Data: map[string]string{"zone": "chat.example.com", "cert": "x", "key": "y"},
+	}
+	reqs := r.fanOutAppsOnCustomDomainCert(context.Background(), cm)
+	if len(reqs) != 1 || reqs[0].Name != "hit" || reqs[0].Namespace != "ns-a" {
+		t.Fatalf("want only hit app, got %#v", reqs)
+	}
+
+	if got := r.fanOutAppsOnCustomDomainCert(context.Background(), &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{Name: "no-zone", Labels: map[string]string{customDomainCertLabel: customDomainCertLabelValue}},
+		Data:       map[string]string{},
+	}); got != nil {
+		t.Fatalf("empty zone must not fan-out, got %#v", got)
+	}
+}
+

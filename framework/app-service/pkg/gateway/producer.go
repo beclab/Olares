@@ -8,9 +8,15 @@ import (
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/cluster"
@@ -66,6 +72,7 @@ func (r *SharedRouteProducerReconciler) reconcileApp(ctx context.Context, app *a
 	if appid == "" {
 		return fmt.Errorf("invalid appid in app.spec.appid for app %q", app.Spec.Name)
 	}
+	materializer := NewConfigMapCertMaterializer(ctx, r.Client)
 	desired := make(map[string]struct{}, len(app.Spec.SharedEntrances)+len(app.Spec.Entrances))
 
 	for i := range app.Spec.SharedEntrances {
@@ -82,7 +89,7 @@ func (r *SharedRouteProducerReconciler) reconcileApp(ctx context.Context, app *a
 			return fmt.Errorf("resolve backing service for entrance %q: %w", entrance.Name, err)
 		}
 		spec, err := BuildSpecForEntrance(app, entrance, i, len(app.Spec.SharedEntrances), svc, platformDomain,
-			srrv1alpha1.EntranceClassShared)
+			srrv1alpha1.EntranceClassShared, materializer)
 		if err != nil {
 			return fmt.Errorf("build SRR spec for entrance %q: %w", entrance.Name, err)
 		}
@@ -92,7 +99,7 @@ func (r *SharedRouteProducerReconciler) reconcileApp(ctx context.Context, app *a
 				return fmt.Errorf("uniqueness check for entrance %q pattern %q: %w", entrance.Name, hp, err)
 			}
 		}
-		if _, err := ReconcileForEntrance(ctx, r.Client, app, entrance, spec); err != nil {
+		if _, err := ReconcileForEntrance(ctx, r.Client, app, entrance, spec, platformDomain, materializer); err != nil {
 			return err
 		}
 		desired[name] = struct{}{}
@@ -116,7 +123,7 @@ func (r *SharedRouteProducerReconciler) reconcileApp(ctx context.Context, app *a
 			return fmt.Errorf("resolve backing service for application entrance %q: %w", entrance.Name, err)
 		}
 		spec, err := BuildSpecForEntrance(app, entrance, i, len(app.Spec.Entrances), svc, platformDomain,
-			srrv1alpha1.EntranceClassApplication)
+			srrv1alpha1.EntranceClassApplication, materializer)
 		if err != nil {
 			return fmt.Errorf("build SRR spec for application entrance %q: %w", entrance.Name, err)
 		}
@@ -126,7 +133,7 @@ func (r *SharedRouteProducerReconciler) reconcileApp(ctx context.Context, app *a
 				return fmt.Errorf("uniqueness check for application entrance %q pattern %q: %w", entrance.Name, hp, err)
 			}
 		}
-		if _, err := ReconcileForEntrance(ctx, r.Client, app, entrance, spec); err != nil {
+		if _, err := ReconcileForEntrance(ctx, r.Client, app, entrance, spec, platformDomain, materializer); err != nil {
 			return err
 		}
 		desired[name] = struct{}{}
@@ -159,7 +166,8 @@ func resolveApplicationEntranceService(ctx context.Context, c client.Client,
 	return svc, nil
 }
 
-// SetupWithManager registers the producer against Applications.
+// SetupWithManager registers the producer against Applications and custom-domain
+// cert ConfigMaps (cert late-arrival / rotation must re-run Eligible).
 func (r *SharedRouteProducerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	if r == nil {
 		return nil
@@ -167,8 +175,121 @@ func (r *SharedRouteProducerReconciler) SetupWithManager(mgr ctrl.Manager) error
 	if r.Client == nil {
 		r.Client = mgr.GetClient()
 	}
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(),
+		&appv1alpha1.Application{},
+		indexApplicationThirdPartyDomain,
+		indexApplicationByThirdPartyDomain,
+	); err != nil {
+		return fmt.Errorf("index Applications by third_party_domain: %w", err)
+	}
 	return ctrl.NewControllerManagedBy(mgr).
 		Named("shared-route-producer").
 		For(&appv1alpha1.Application{}).
+		Watches(&corev1.ConfigMap{}, r.customDomainCertEventHandler(),
+			builder.WithPredicates(customDomainCertConfigMapPredicate())).
 		Complete(r)
+}
+
+func indexApplicationByThirdPartyDomain(obj client.Object) []string {
+	app, ok := obj.(*appv1alpha1.Application)
+	if !ok || app == nil {
+		return nil
+	}
+	return CollectApplicationThirdPartyDomains(app)
+}
+
+func (r *SharedRouteProducerReconciler) customDomainCertEventHandler() handler.EventHandler {
+	enqueue := func(ctx context.Context, obj client.Object, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+		for _, req := range r.fanOutAppsOnCustomDomainCert(ctx, obj) {
+			q.Add(req)
+		}
+	}
+	return handler.Funcs{
+		CreateFunc: func(ctx context.Context, e event.CreateEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+			enqueue(ctx, e.Object, q)
+		},
+		UpdateFunc: func(ctx context.Context, e event.UpdateEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+			// Zone corrections must refresh both old and new referring apps.
+			enqueue(ctx, e.ObjectOld, q)
+			enqueue(ctx, e.ObjectNew, q)
+		},
+		DeleteFunc: func(ctx context.Context, e event.DeleteEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+			enqueue(ctx, e.Object, q)
+		},
+		GenericFunc: func(ctx context.Context, e event.GenericEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+			enqueue(ctx, e.Object, q)
+		},
+	}
+}
+
+// fanOutAppsOnCustomDomainCert enqueues only Applications that declare the CM
+// zone as third_party_domain. Empty/unknown zone → no enqueue (fail closed,
+// never broadcast to all apps).
+func (r *SharedRouteProducerReconciler) fanOutAppsOnCustomDomainCert(ctx context.Context, obj client.Object) []reconcile.Request {
+	if r == nil || r.Client == nil || obj == nil {
+		return nil
+	}
+	zone := customDomainCertZone(obj)
+	if zone == "" {
+		klog.V(4).Infof("gateway-tpd: custom-domain-cert %s/%s missing zone; skip fan-out",
+			obj.GetNamespace(), obj.GetName())
+		return nil
+	}
+	list := &appv1alpha1.ApplicationList{}
+	if err := r.Client.List(ctx, list, client.MatchingFields{indexApplicationThirdPartyDomain: zone}); err != nil {
+		klog.Errorf("gateway-tpd: list Applications by third_party_domain=%s failed: %v", zone, err)
+		return nil
+	}
+	if len(list.Items) == 0 {
+		return nil
+	}
+	out := make([]reconcile.Request, 0, len(list.Items))
+	seen := make(map[types.NamespacedName]struct{}, len(list.Items))
+	for i := range list.Items {
+		key := client.ObjectKeyFromObject(&list.Items[i])
+		if _, dup := seen[key]; dup {
+			continue
+		}
+		seen[key] = struct{}{}
+		out = append(out, reconcile.Request{NamespacedName: key})
+	}
+	klog.V(4).Infof("gateway-tpd: custom-domain-cert zone=%s enqueue %d Application(s)", zone, len(out))
+	return out
+}
+
+func customDomainCertZone(obj client.Object) string {
+	cm, ok := obj.(*corev1.ConfigMap)
+	if !ok || cm == nil || cm.Data == nil {
+		return ""
+	}
+	zone, err := NormalizeHostPattern(cm.Data["zone"])
+	if err != nil {
+		return ""
+	}
+	return zone
+}
+
+func customDomainCertConfigMapPredicate() predicate.Predicate {
+	return predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			return isCustomDomainCertConfigMap(e.Object)
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			// Cert rotation or zone fix — either generation of the labeled CM.
+			return isCustomDomainCertConfigMap(e.ObjectNew) || isCustomDomainCertConfigMap(e.ObjectOld)
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			return isCustomDomainCertConfigMap(e.Object)
+		},
+		GenericFunc: func(e event.GenericEvent) bool {
+			return isCustomDomainCertConfigMap(e.Object)
+		},
+	}
+}
+
+func isCustomDomainCertConfigMap(obj client.Object) bool {
+	if obj == nil {
+		return false
+	}
+	return obj.GetLabels()[customDomainCertLabel] == customDomainCertLabelValue
 }

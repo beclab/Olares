@@ -69,7 +69,7 @@ func IsOptedIn(app *appv1alpha1.Application) bool {
 // resolves the backing Service so this helper stays I/O-free.
 func BuildSpecForEntrance(app *appv1alpha1.Application, entrance appv1alpha1.Entrance,
 	entranceIndex, entranceCount int, svc *corev1.Service, platformDomain string,
-	entranceClass srrv1alpha1.EntranceClass) (srrv1alpha1.SharedRouteRegistrySpec, error) {
+	entranceClass srrv1alpha1.EntranceClass, materializer CertMaterializer) (srrv1alpha1.SharedRouteRegistrySpec, error) {
 	if app == nil {
 		return srrv1alpha1.SharedRouteRegistrySpec{}, errors.New("application is nil")
 	}
@@ -119,6 +119,25 @@ func BuildSpecForEntrance(app *appv1alpha1.Application, entrance appv1alpha1.Ent
 		norm, err := NormalizeHostOrLogicalPattern(pattern)
 		if err != nil {
 			return srrv1alpha1.SharedRouteRegistrySpec{}, fmt.Errorf("normalize host pattern %q: %w", pattern, err)
+		}
+		if _, dup := seen[norm]; dup {
+			continue
+		}
+		seen[norm] = struct{}{}
+		norms = append(norms, norm)
+	}
+	// Eligible third_party_domain + per-owner third_level exact Hosts (Scheme A).
+	// Keep default/logical patterns above; append only gated / owned exact FQDNs.
+	exactOwners := MergeExactHostOwners(
+		CollectEligibleExactHosts(app, entrance.Name, platformDomain, materializer),
+		CollectUserThirdLevelExactHosts(app, entrance.Name, platformDomain),
+	)
+	for _, eh := range exactOwners {
+		norm, err := NormalizeHostOrLogicalPattern(eh.Host)
+		if err != nil {
+			klog.Warningf("BuildSpecForEntrance: skip exact host app=%s entrance=%s: %v",
+				app.Spec.Name, entrance.Name, err)
+			continue
 		}
 		if _, dup := seen[norm]; dup {
 			continue
@@ -218,8 +237,21 @@ func pickHTTPPort(svc *corev1.Service, preferred int32) int32 {
 
 // ReconcileForEntrance creates or updates the per-entrance SRR in the
 // Application's workload namespace, owned by the Application for GC.
+// platformDomain is required to recompute exact-host ownership for the
+// gateway.olares.io/exact-host-owners annotation.
 func ReconcileForEntrance(ctx context.Context, c client.Client, app *appv1alpha1.Application,
-	entrance appv1alpha1.Entrance, spec srrv1alpha1.SharedRouteRegistrySpec) (*srrv1alpha1.SharedRouteRegistry, error) {
+	entrance appv1alpha1.Entrance, spec srrv1alpha1.SharedRouteRegistrySpec,
+	platformDomain string, materializer CertMaterializer) (*srrv1alpha1.SharedRouteRegistry, error) {
+	owners := MergeExactHostOwners(
+		CollectEligibleExactHosts(app, entrance.Name, platformDomain, materializer),
+		CollectUserThirdLevelExactHosts(app, entrance.Name, platformDomain),
+	)
+	return reconcileForEntranceWithOwners(ctx, c, app, entrance, spec, owners)
+}
+
+func reconcileForEntranceWithOwners(ctx context.Context, c client.Client, app *appv1alpha1.Application,
+	entrance appv1alpha1.Entrance, spec srrv1alpha1.SharedRouteRegistrySpec,
+	owners []ExactHostOwner) (*srrv1alpha1.SharedRouteRegistry, error) {
 	if app == nil {
 		return nil, errors.New("application is nil")
 	}
@@ -232,11 +264,16 @@ func ReconcileForEntrance(ctx context.Context, c client.Client, app *appv1alpha1
 	if name == "" {
 		return nil, fmt.Errorf("compute SRR name for entrance %q on app %s", entrance.Name, app.Spec.Name)
 	}
+	ownersJSON := EncodeExactHostOwnersJSON(owners)
 
 	got := &srrv1alpha1.SharedRouteRegistry{}
 	getErr := c.Get(ctx, types.NamespacedName{Namespace: ns, Name: name}, got)
 	switch {
 	case apierrors.IsNotFound(getErr):
+		anns := map[string]string{}
+		if ownersJSON != "" {
+			anns[AnnotationExactHostOwners] = ownersJSON
+		}
 		obj := &srrv1alpha1.SharedRouteRegistry{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
@@ -247,6 +284,7 @@ func ReconcileForEntrance(ctx context.Context, c client.Client, app *appv1alpha1
 					"gateway.olares.io/appid":      appid,
 					"gateway.olares.io/entrance":   entrance.Name,
 				},
+				Annotations:     anns,
 				OwnerReferences: ownerRefs(app),
 			},
 			Spec: spec,
@@ -271,6 +309,14 @@ func ReconcileForEntrance(ctx context.Context, c client.Client, app *appv1alpha1
 	patched.Labels["app.kubernetes.io/instance"] = app.Spec.Name
 	patched.Labels["gateway.olares.io/appid"] = appid
 	patched.Labels["gateway.olares.io/entrance"] = entrance.Name
+	if patched.Annotations == nil {
+		patched.Annotations = map[string]string{}
+	}
+	if ownersJSON == "" {
+		delete(patched.Annotations, AnnotationExactHostOwners)
+	} else {
+		patched.Annotations[AnnotationExactHostOwners] = ownersJSON
+	}
 
 	if err := c.Patch(ctx, patched, client.MergeFrom(got)); err != nil {
 		return nil, fmt.Errorf("patch SRR %s/%s: %w", ns, name, err)
