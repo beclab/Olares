@@ -18,10 +18,10 @@ func init() {
 	cluster.Get("/nodes", handlers.RequireAuthorizationOrOwnerSignature(
 		handlers.RequireMaster(handlers.RequireLocal(handlers.GetClusterNodes))))
 
-	// Powering the cluster is the owner's decision, so the scan callback's
-	// operation-bound owner signature is sufficient. Read routes still require
-	// an access token.
-	cluster.Post("/operations", handlers.RequireSignature(
+	// Creating a cluster operation is the owner's decision. Types that
+	// register themselves as needing a signature must present one; others
+	// are admitted with an access token. RequireOwner still runs either way.
+	cluster.Post("/operations", handlers.RequireSignatureForRegisteredClusterOp(
 		handlers.RequireOwner(
 			handlers.RequireMaster(handlers.PostClusterOperation))))
 

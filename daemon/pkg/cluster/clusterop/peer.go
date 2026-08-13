@@ -84,30 +84,47 @@ func dispatchPower(ctx context.Context, nodes []inventory.Node, req PeerRequest,
 // to the generic endpoint, which only a daemon that has this package's
 // module registry serves.
 //
-// It presents the same single credential dispatchPower does, for the same
-// reason: the operation-bound signature names what it authorizes, and the
-// caller's access token does not. That signature covers the operation, the
-// request id, the cluster and the scope — and not the params, which are
-// outside what the owner signed at every hop they travel. The module the
-// node hands them to is what decides whether they are acceptable.
+// Types that require an owner signature present only that credential, for the
+// same reason dispatchPower does: the signature names what it authorizes, and
+// the caller's access token does not. Types that do not require a signature
+// present the access token instead, which is the credential the master's
+// create route already admitted them with — see RequiresSignature.
 func DispatchNodeOperation(ctx context.Context, nodes []inventory.Node, req NodeRequest,
 	creds Credentials) []DispatchOutcome {
-	return dispatchToPeers(ctx, ClusterOperationPath, nodes, req, creds)
+	return dispatchToPeersWithHeaders(ctx, ClusterOperationPath, nodes, req,
+		clusterOperationHeaders(req.Type, creds))
 }
 
-// dispatchToPeers is the transport both dispatches share, so the path is the
-// only thing that separates them and neither can acquire a credential the
-// other does not have.
+// dispatchToPeers is the transport power dispatch uses: signature only.
 func dispatchToPeers(ctx context.Context, path string, nodes []inventory.Node, body any,
 	creds Credentials) []DispatchOutcome {
+	return dispatchToPeersWithHeaders(ctx, path, nodes, body, signatureHeader(creds))
+}
+
+func dispatchToPeersWithHeaders(ctx context.Context, path string, nodes []inventory.Node, body any,
+	headers map[string]string) []DispatchOutcome {
 	d := &fanout.Dispatcher{
 		PeerPath: path,
-		Headers:  signatureHeader(creds),
+		Headers:  headers,
 		Port:     peerPort,
 		Timeout:  dispatchTimeout,
 	}
 	results := d.Run(ctx, peerTargets(nodes), func(fanout.NodeTarget) any { return body })
 	return peerOutcomes(results)
+}
+
+// clusterOperationHeaders chooses the credential the generic node hop may
+// carry. A type that registered itself as needing a signature still leaves
+// the access token behind; every other type forwards the token the master
+// already checked.
+func clusterOperationHeaders(typ Type, creds Credentials) map[string]string {
+	if RequiresSignature(typ) {
+		return signatureHeader(creds)
+	}
+	if creds.Token == "" {
+		return nil
+	}
+	return map[string]string{authorizationHeaderName: creds.Token}
 }
 
 func signatureHeader(creds Credentials) map[string]string {
