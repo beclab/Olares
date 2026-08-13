@@ -182,6 +182,15 @@ func foldMetadataField(field string) string {
 	return folded.String()
 }
 
+// namesUndefinedLanguage reports whether a canonical tag has `und` as its
+// language subtag. It parses and canonicalizes cleanly, but a catalog cannot
+// offer it to anybody: an app declaring it has declared nothing. A wholly
+// private-use tag such as `x-private` carries no language subtag at all and is
+// left alone -- it is unknown to the standard, not undefined by the app.
+func namesUndefinedLanguage(canonical string) bool {
+	return canonical == "und" || strings.HasPrefix(canonical, "und-")
+}
+
 func validateSlugList(field string, values []string) error {
 	if len(values) == 0 {
 		return nil
@@ -222,6 +231,10 @@ func validateLocaleList(values []string) error {
 		}
 		if tag.String() != value {
 			errs = append(errs, fmt.Errorf("spec.locale value %q must use canonical spelling %q", value, tag.String()))
+			continue
+		}
+		if namesUndefinedLanguage(value) {
+			errs = append(errs, fmt.Errorf("spec.locale value %q names the undefined language; list the languages the app is actually written in", value))
 			continue
 		}
 		if _, dup := seen[value]; dup {

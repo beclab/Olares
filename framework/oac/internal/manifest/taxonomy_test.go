@@ -99,6 +99,16 @@ func TestValidateTaxonomyRejectsShape(t *testing.T) {
 			taxonomy: Taxonomy{Locale: []string{"en-Latn"}},
 			want:     "canonical",
 		},
+		{
+			name:     "locale is the undefined language",
+			taxonomy: Taxonomy{Locale: []string{"und"}},
+			want:     "undefined",
+		},
+		{
+			name:     "locale is the undefined language with a region",
+			taxonomy: Taxonomy{Locale: []string{"und-US"}},
+			want:     "undefined",
+		},
 	}
 
 	for _, tc := range cases {
@@ -209,6 +219,8 @@ func TestValidateTaxonomyAcceptsCanonicalBCP47Locales(t *testing.T) {
 		"de-DE-1996",
 		"sl-rozaj",
 		"en-US-u-ca-gregory",
+		// Wholly private use: nothing standard names this language, but the
+		// tag is well-formed and an app is entitled to say so.
 		"x-private",
 	}
 	if err := ValidateTaxonomy(Taxonomy{Locale: locales}); err != nil {
