@@ -192,9 +192,10 @@ func (h *Handlers) spendSignature(ctx *fiber.Ctx, ep nodeEndpoint,
 // releaseClaim gives a spent signature back, for the one case that warrants
 // it: the operation was attempted and failed, so the caller may retry the
 // same request. A signature spent on work this node actually did — including
-// asking a module to judge the request — is not given back.
+// asking a module to judge the request — is not given back. An empty claim
+// is a no-op: types admitted without a signature never spent one.
 func releaseClaim(claim string) {
-	if powerClaims == nil {
+	if claim == "" || powerClaims == nil {
 		return
 	}
 	if err := powerClaims.Forget(claim); err != nil {

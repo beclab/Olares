@@ -13,7 +13,10 @@ import (
 // node. It is declared here because this module is what answers for it.
 const TypeShutdown Type = "shutdown"
 
-func init() { registerBuiltInPowerOperation(shutdownModule{}) }
+func init() {
+	registerBuiltInPowerOperation(shutdownModule{})
+	MustRequireSignature(TypeShutdown)
+}
 
 // shutdownModule is the cluster shutdown: every compute node is told to
 // switch off, and then the control node is.

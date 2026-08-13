@@ -1,11 +1,13 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/beclab/Olares/daemon/internel/client"
+	"github.com/beclab/Olares/daemon/pkg/cluster/clusterop"
 	"github.com/beclab/Olares/daemon/pkg/cluster/inventory"
 	"github.com/beclab/Olares/daemon/pkg/cluster/state"
 	"github.com/beclab/Olares/daemon/pkg/commands"
@@ -57,6 +59,24 @@ func (h *Handlers) RequireSignature(next func(ctx *fiber.Ctx) error) func(ctx *f
 		}
 
 		return next(ctx)
+	}
+}
+
+// RequireSignatureForRegisteredClusterOp admits POST /cluster/operations with
+// an owner signature when the requested type has registered itself as needing
+// one, and with an access token otherwise. An empty type fails closed to the
+// signature path. The signature verification itself is unchanged.
+func (h *Handlers) RequireSignatureForRegisteredClusterOp(next func(ctx *fiber.Ctx) error) func(ctx *fiber.Ctx) error {
+	return func(ctx *fiber.Ctx) error {
+		var peek struct {
+			Type string `json:"type"`
+		}
+		_ = json.Unmarshal(ctx.Body(), &peek)
+		typ := strings.TrimSpace(peek.Type)
+		if typ == "" || clusterop.RequiresSignature(clusterop.Type(typ)) {
+			return h.RequireSignature(next)(ctx)
+		}
+		return h.RequireAuthorization(next)(ctx)
 	}
 }
 

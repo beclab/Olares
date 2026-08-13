@@ -32,7 +32,10 @@ const (
 	codeSetSSHPasswordFailed = "set_ssh_password_failed"
 )
 
-func init() { MustRegisterModule(setSSHPasswordModule{}) }
+func init() {
+	MustRegisterModule(setSSHPasswordModule{})
+	MustRequireSignature(TypeSetSSHPassword)
+}
 
 // setSSHPasswordModule sets the SSH login password on the nodes the request
 // names. It reuses the same node-local command the single-node /ssh-password

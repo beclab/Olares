@@ -209,15 +209,16 @@ func TestGenericNodeDispatchCarriesTheParamsUnchanged(t *testing.T) {
 	}
 }
 
-// The generic hop is no wider than the power hop: the operation-bound
-// signature crosses it and the caller's access token does not, because a
-// token opens every route that user can reach for as long as it lives.
+// The generic hop for a signature-bound type is no wider than the power hop:
+// the operation-bound signature crosses it and the caller's access token does
+// not, because a token opens every route that user can reach for as long as
+// it lives.
 func TestGenericNodeDispatchPresentsOnlyTheOperationSignature(t *testing.T) {
 	peer := newPeerRecorder(t)
 
 	DispatchNodeOperation(context.Background(), recordingNode(), NodeRequest{
 		PeerRequest: PeerRequest{
-			Type: Type("bake-cake"), OperationID: "op-1", RequestID: "client-1",
+			Type: TypeReboot, OperationID: "op-1", RequestID: "client-1",
 			Scope: ScopeNode, Target: "worker-1", ClusterID: "cluster-1",
 		},
 	}, Credentials{Token: "access-token", Signature: "signature"})
@@ -228,6 +229,32 @@ func TestGenericNodeDispatchPresentsOnlyTheOperationSignature(t *testing.T) {
 	}
 	if got := header.Get(authorizationHeaderName); got != "" {
 		t.Errorf("%s = %q, want the access token left behind", authorizationHeaderName, got)
+	}
+}
+
+// A type that did not register a signature requirement is admitted on the
+// master with an access token, so that same token is what the fan-out presents
+// to the node — otherwise the node hop would have no credential at all.
+func TestGenericNodeDispatchPresentsTokenWhenSignatureNotRequired(t *testing.T) {
+	peer := newPeerRecorder(t)
+	typ := Type("fold-laundry")
+	if RequiresSignature(typ) {
+		t.Fatalf("%q unexpectedly requires a signature", typ)
+	}
+
+	DispatchNodeOperation(context.Background(), recordingNode(), NodeRequest{
+		PeerRequest: PeerRequest{
+			Type: typ, OperationID: "op-1", RequestID: "client-1",
+			Scope: ScopeNode, Target: "worker-1", ClusterID: "cluster-1",
+		},
+	}, Credentials{Token: "access-token", Signature: "signature"})
+
+	header := peer.oneCall(t).header
+	if got := header.Get(authorizationHeaderName); got != "access-token" {
+		t.Errorf("%s = %q, want the access token", authorizationHeaderName, got)
+	}
+	if got := header.Get(signatureHeaderName); got != "" {
+		t.Errorf("%s = %q, want the signature left behind for a token-admitted type", signatureHeaderName, got)
 	}
 }
 
