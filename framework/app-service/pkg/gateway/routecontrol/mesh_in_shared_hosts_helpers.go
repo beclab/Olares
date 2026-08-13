@@ -46,6 +46,7 @@ const (
 	rDropOwnerUnresolved = "owner_unresolved"
 	rDropMultiRef        = "multi_ref_unsupported"
 	rDropNonPlatformHost = "non_platform_host"
+	rDropCrossViewerHost = "cross_viewer_host"
 	rDropMultiWildcard   = "multi_wildcard"
 	rDropInvalidChars    = "invalid_chars"
 	rDropEmptyPatterns   = "empty_patterns"
@@ -182,6 +183,22 @@ type SharedHostsTarget struct {
 func isSharedHostsConfigMap(obj client.Object) bool {
 	return obj != nil && obj.GetName() == constants.MeshInSharedHostsCMName
 }
+
+// isCustomDomainTLSSecret matches os-gateway CustomDomainTLS Secrets that
+// listMaterializedCustomTLSDomains uses to admit exact FQDNs into tls-hosts.
+func isCustomDomainTLSSecret(obj client.Object) bool {
+	if obj == nil {
+		return false
+	}
+	if obj.GetNamespace() != defaultGatewayNS {
+		return false
+	}
+	if strings.HasPrefix(obj.GetName(), customDomainTLSPrefix) {
+		return true
+	}
+	labels := obj.GetLabels()
+	return labels != nil && strings.TrimSpace(labels[labelTLSCustomDomain]) != ""
+}
 func isGatewayModeSRR(obj client.Object) bool {
 	srr, ok := obj.(*srrv1alpha1.SharedRouteRegistry)
 	if !ok || srr == nil {
@@ -283,16 +300,21 @@ func sharedHostsManagedByUs(cm *corev1.ConfigMap) bool {
 func enumerateHostsForViewer(viewer string, srrs []srrv1alpha1.SharedRouteRegistry, platformDomain string) (auth, tls []string) {
 	authSeen := map[string]struct{}{}
 	tlsSeen := map[string]struct{}{}
+	domLower := strings.ToLower(strings.TrimSpace(platformDomain))
 	for i := range srrs {
 		patterns := srrs[i].Spec.HostPatterns
 		if len(patterns) == 0 {
 			sharedHostsDropTotal.WithLabelValues(rDropEmptyPatterns).Inc()
 			continue
 		}
+		owners := map[string]string{}
+		if srrs[i].Annotations != nil {
+			owners = gateway.ParseExactHostOwnersJSON(srrs[i].Annotations[gateway.AnnotationExactHostOwners])
+		}
 		// Empty EntranceClass matches HTTPRoute parent selection: treat as shared.
-		allowTLS := srrs[i].Spec.EntranceClass == srrv1alpha1.EntranceClassApplication
+		allowTLSApp := srrs[i].Spec.EntranceClass == srrv1alpha1.EntranceClassApplication
 		for _, pattern := range patterns {
-			h, reason := materializeHost(pattern, viewer, platformDomain)
+			h, reason := materializeHost(pattern, viewer, platformDomain, owners)
 			if h == "" {
 				if reason != "" {
 					sharedHostsDropTotal.WithLabelValues(reason).Inc()
@@ -300,7 +322,8 @@ func enumerateHostsForViewer(viewer string, srrs []srrv1alpha1.SharedRouteRegist
 				continue
 			}
 			authSeen[h] = struct{}{}
-			if allowTLS {
+			exactCustom := isExactCustomHost(pattern, domLower)
+			if allowTLSApp || exactCustom {
 				tlsSeen[h] = struct{}{}
 			} else {
 				sharedHostsDropTotal.WithLabelValues(rDropSharedAuthOnly).Inc()
@@ -310,7 +333,15 @@ func enumerateHostsForViewer(viewer string, srrs []srrv1alpha1.SharedRouteRegist
 	return sortedKeys(authSeen), sortedKeys(tlsSeen)
 }
 
-func materializeHost(pattern, viewer, platformDomain string) (string, string) {
+func isExactCustomHost(pattern, platformDomain string) bool {
+	p := strings.ToLower(strings.TrimSpace(pattern))
+	if p == "" || strings.Contains(p, "*") {
+		return false
+	}
+	return !isPlatformHostGo(p, platformDomain)
+}
+
+func materializeHost(pattern, viewer, platformDomain string, owners map[string]string) (string, string) {
 	pattern = strings.TrimSpace(pattern)
 	if pattern == "" {
 		return "", rDropEmptyPatterns
@@ -333,10 +364,19 @@ func materializeHost(pattern, viewer, platformDomain string) (string, string) {
 	if !validDNSChars(p) {
 		return "", rDropInvalidChars
 	}
-	if !isPlatformHostGo(p, domLower) {
-		return "", rDropNonPlatformHost
+	// Owned exact hosts (third_party or per-owner third_level) must match viewer
+	// even when the FQDN is under platformDomain (e.g. api.alice.olares.com).
+	if owner, ok := owners[p]; ok {
+		if owner == viewerLower {
+			return p, ""
+		}
+		return "", rDropCrossViewerHost
 	}
-	return p, ""
+	// Unowned platform hosts (e.g. hash8.shared.<platform>) stay cluster-shared.
+	if isPlatformHostGo(p, domLower) {
+		return p, ""
+	}
+	return "", rDropNonPlatformHost
 }
 
 func isPlatformHostGo(host, platformDomain string) bool {

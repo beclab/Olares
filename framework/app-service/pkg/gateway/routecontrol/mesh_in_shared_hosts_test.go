@@ -7,6 +7,7 @@ import (
 
 	"github.com/beclab/Olares/framework/app-service/pkg/cluster"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
 	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/security"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
@@ -55,13 +56,83 @@ func TestMeshInSharedHostsReconcileCreatesCM(t *testing.T) {
 }
 
 func TestMaterializeHostLogicalPattern(t *testing.T) {
-	h, reason := materializeHost("abcd1234.*.olares.com", "alice", "olares.com")
+	h, reason := materializeHost("abcd1234.*.olares.com", "alice", "olares.com", nil)
 	if reason != "" || h != "abcd1234.alice.olares.com" {
 		t.Fatalf("got host=%q reason=%q", h, reason)
 	}
-	h, reason = materializeHost("x.shared.olares.com", "alice", "olares.com")
+	h, reason = materializeHost("x.shared.olares.com", "alice", "olares.com", nil)
 	if reason != "" || h != "x.shared.olares.com" {
 		t.Fatalf("shared exact host=%q reason=%q, want kept", h, reason)
+	}
+	owners := map[string]string{"chat.example.com": "alice"}
+	h, reason = materializeHost("chat.example.com", "alice", "olares.com", owners)
+	if reason != "" || h != "chat.example.com" {
+		t.Fatalf("owned exact host=%q reason=%q", h, reason)
+	}
+	h, reason = materializeHost("chat.example.com", "bob", "olares.com", owners)
+	if h != "" || reason != rDropCrossViewerHost {
+		t.Fatalf("bob must not get alice host: host=%q reason=%q", h, reason)
+	}
+}
+
+func TestMaterializeHostOwnedPlatformThirdLevel(t *testing.T) {
+	// B-3: per-owner third_level Hosts are under platformDomain but must not
+	// leak across viewers; unowned *.shared.* stays available to all.
+	owners := map[string]string{
+		"api.alice.olares.com": "alice",
+		"chat.bob.olares.com":  "bob",
+	}
+	h, reason := materializeHost("api.alice.olares.com", "alice", "olares.com", owners)
+	if reason != "" || h != "api.alice.olares.com" {
+		t.Fatalf("alice own third_level: host=%q reason=%q", h, reason)
+	}
+	h, reason = materializeHost("api.alice.olares.com", "bob", "olares.com", owners)
+	if h != "" || reason != rDropCrossViewerHost {
+		t.Fatalf("bob must not get alice third_level: host=%q reason=%q", h, reason)
+	}
+	h, reason = materializeHost("deadbeef.shared.olares.com", "bob", "olares.com", owners)
+	if reason != "" || h != "deadbeef.shared.olares.com" {
+		t.Fatalf("unowned shared host must remain for bob: host=%q reason=%q", h, reason)
+	}
+}
+
+func TestEnumerateHostsOwnedPlatformThirdLevel(t *testing.T) {
+	srrs := []srrv1alpha1.SharedRouteRegistry{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{
+					gateway.AnnotationExactHostOwners: `{"api.alice.olares.com":"alice","chat.bob.olares.com":"bob"}`,
+				},
+			},
+			Spec: srrv1alpha1.SharedRouteRegistrySpec{
+				EntranceClass: srrv1alpha1.EntranceClassShared,
+				HostPatterns: []string{
+					"deadbeef.shared.olares.com",
+					"api.alice.olares.com",
+					"chat.bob.olares.com",
+				},
+				RouteMode: srrv1alpha1.RouteModeGateway,
+			},
+		},
+	}
+	aliceAuth, _ := enumerateHostsForViewer("alice", srrs, "olares.com")
+	bobAuth, _ := enumerateHostsForViewer("bob", srrs, "olares.com")
+	aliceSet := map[string]bool{}
+	for _, h := range aliceAuth {
+		aliceSet[h] = true
+	}
+	bobSet := map[string]bool{}
+	for _, h := range bobAuth {
+		bobSet[h] = true
+	}
+	if !aliceSet["api.alice.olares.com"] || aliceSet["chat.bob.olares.com"] {
+		t.Fatalf("alice auth=%v", aliceAuth)
+	}
+	if !bobSet["chat.bob.olares.com"] || bobSet["api.alice.olares.com"] {
+		t.Fatalf("bob auth=%v", bobAuth)
+	}
+	if !aliceSet["deadbeef.shared.olares.com"] || !bobSet["deadbeef.shared.olares.com"] {
+		t.Fatalf("shared host missing alice=%v bob=%v", aliceAuth, bobAuth)
 	}
 }
 
@@ -104,6 +175,149 @@ func TestEnumerateHostsSplitsAuthAndTLSByEntranceClass(t *testing.T) {
 	}
 	if len(tlsHosts) != 1 || tlsHosts[0] != "abcd1234.alice.olares.com" {
 		t.Fatalf("tls=%v, want only application viewer host", tlsHosts)
+	}
+}
+
+func TestEnumerateHostsOwnedExactCustom(t *testing.T) {
+	srrs := []srrv1alpha1.SharedRouteRegistry{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{
+					gateway.AnnotationExactHostOwners: `{"chat.example.com":"alice"}`,
+				},
+			},
+			Spec: srrv1alpha1.SharedRouteRegistrySpec{
+				EntranceClass: srrv1alpha1.EntranceClassShared,
+				HostPatterns:  []string{"deadbeef.shared.olares.com", "chat.example.com"},
+				RouteMode:     srrv1alpha1.RouteModeGateway,
+			},
+		},
+	}
+	auth, tlsHosts := enumerateHostsForViewer("alice", srrs, "olares.com")
+	if len(auth) != 2 {
+		t.Fatalf("alice auth=%v", auth)
+	}
+	bobAuth, _ := enumerateHostsForViewer("bob", srrs, "olares.com")
+	for _, h := range bobAuth {
+		if h == "chat.example.com" {
+			t.Fatalf("bob must not receive alice exact host: %v", bobAuth)
+		}
+	}
+	// Exact custom is a TLS candidate before Secret materialization filter.
+	foundTLS := false
+	for _, h := range tlsHosts {
+		if h == "chat.example.com" {
+			foundTLS = true
+		}
+	}
+	if !foundTLS {
+		t.Fatalf("tls candidates=%v", tlsHosts)
+	}
+}
+
+func TestFilterTLSHostsForCustomMaterialization(t *testing.T) {
+	custom := map[string]struct{}{"chat.example.com": {}}
+	got := filterTLSHostsForCustomMaterialization(
+		[]string{"abcd1234.alice.olares.com", "chat.example.com", "other.example.com"},
+		"olares.com", custom)
+	if len(got) != 2 || got[0] != "abcd1234.alice.olares.com" || got[1] != "chat.example.com" {
+		t.Fatalf("got %v", got)
+	}
+	// Empty custom map (TLS list failure path): platform hosts kept, custom dropped.
+	got = filterTLSHostsForCustomMaterialization(
+		[]string{"abcd1234.alice.olares.com", "chat.example.com"},
+		"olares.com", map[string]struct{}{})
+	if len(got) != 1 || got[0] != "abcd1234.alice.olares.com" {
+		t.Fatalf("fail-closed custom tls on empty map: %v", got)
+	}
+}
+
+func TestIsCustomDomainTLSSecret(t *testing.T) {
+	if !isCustomDomainTLSSecret(&corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+		Name: customDomainTLSPrefix + "shop", Namespace: defaultGatewayNS,
+	}}) {
+		t.Fatal("prefix secret in gateway NS must match")
+	}
+	if !isCustomDomainTLSSecret(&corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+		Name: "other", Namespace: defaultGatewayNS,
+		Labels: map[string]string{labelTLSCustomDomain: "shop.example.com"},
+	}}) {
+		t.Fatal("label secret in gateway NS must match")
+	}
+	if isCustomDomainTLSSecret(&corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+		Name: customDomainTLSPrefix + "shop", Namespace: "user-space-alice",
+	}}) {
+		t.Fatal("same-name secret outside gateway NS must not match")
+	}
+	if isCustomDomainTLSSecret(&corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+		Name: "shared-entrance-tls-alice", Namespace: defaultGatewayNS,
+	}}) {
+		t.Fatal("viewer TLS secret must not match custom-domain watch")
+	}
+}
+
+// TestBuildSharedHostsDemandCustomTLSAfterSecret: exact third-party FQDN stays in
+// auth-hosts before Secret exists, and only enters tls-hosts once CustomDomainTLS
+// Secret is listed (Secret watch re-runs this demand).
+func TestBuildSharedHostsDemandCustomTLSAfterSecret(t *testing.T) {
+	srr := &srrv1alpha1.SharedRouteRegistry{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "shared-chat",
+			Namespace: "chat-shared",
+			Annotations: map[string]string{
+				gateway.AnnotationExactHostOwners: `{"chat.example.com":"alice"}`,
+			},
+		},
+		Spec: srrv1alpha1.SharedRouteRegistrySpec{
+			EntranceClass: srrv1alpha1.EntranceClassApplication,
+			RouteMode:     srrv1alpha1.RouteModeGateway,
+			HostPatterns:  []string{"abcd1234.*.olares.com", "chat.example.com"},
+		},
+	}
+	objs := []client.Object{
+		callerNamespace("caller-alice"),
+		eligibilityCallerApp("desk", "caller-alice", "alice"),
+		sharedServerApp("chat", "chat-shared", "admin"),
+		srr,
+	}
+	c := fake.NewClientBuilder().WithScheme(sharedHostsScheme()).WithObjects(objs...).Build()
+	got, err := BuildSharedHostsDemand(context.Background(), c, "olares.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	alice := demandFor(t, got, "caller-alice", "alice")
+	hasAuthCustom := false
+	for _, h := range alice.Hosts {
+		if h == "chat.example.com" {
+			hasAuthCustom = true
+		}
+	}
+	if !hasAuthCustom {
+		t.Fatalf("auth-hosts missing custom FQDN: %v", alice.Hosts)
+	}
+	for _, h := range alice.TLSHosts {
+		if h == "chat.example.com" {
+			t.Fatalf("tls-hosts must omit custom FQDN before Secret: %v", alice.TLSHosts)
+		}
+	}
+
+	sec := desiredCustomDomainTLSSecret(
+		customDomainTLSPrefix+"chat-example-com", "chat.example.com",
+		"user-space-alice", "CERT", "KEY", "hash")
+	c2 := fake.NewClientBuilder().WithScheme(sharedHostsScheme()).WithObjects(append(objs, sec)...).Build()
+	got2, err := BuildSharedHostsDemand(context.Background(), c2, "olares.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	alice2 := demandFor(t, got2, "caller-alice", "alice")
+	foundTLS := false
+	for _, h := range alice2.TLSHosts {
+		if h == "chat.example.com" {
+			foundTLS = true
+		}
+	}
+	if !foundTLS {
+		t.Fatalf("tls-hosts must include custom FQDN after Secret: %v", alice2.TLSHosts)
 	}
 }
 

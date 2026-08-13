@@ -279,6 +279,13 @@ func BuildSharedHostsDemand(ctx context.Context, c client.Client, platformDomain
 			tlsByKey[k][h] = struct{}{}
 		}
 	}
+	customTLSDomains, err := listMaterializedCustomTLSDomains(ctx, c)
+	if err != nil {
+		// Auth-hosts must still converge (fail-closed on SRR ownership). TLS list
+		// failure only drops custom-domain tls-hosts for this pass.
+		klog.Errorf("mesh-in-shared-hosts: list CustomDomainTLS secrets failed; continuing auth-hosts without custom tls filter: %v", err)
+		customTLSDomains = map[string]struct{}{}
+	}
 	for i := range nsList.Items {
 		callerNS := nsList.Items[i].Name
 		for _, app := range appsByNS[callerNS] {
@@ -315,6 +322,7 @@ func BuildSharedHostsDemand(ctx context.Context, c client.Client, platformDomain
 			tlsList = append(tlsList, h)
 		}
 		sort.Strings(tlsList)
+		tlsList = filterTLSHostsForCustomMaterialization(tlsList, platformDomain, customTLSDomains)
 		out = append(out, SharedHostsTarget{
 			CallerNamespace: k.ns,
 			Viewer:          k.viewer,
@@ -329,6 +337,47 @@ func BuildSharedHostsDemand(ctx context.Context, c client.Client, platformDomain
 		return out[i].CallerNamespace < out[j].CallerNamespace
 	})
 	return out, nil
+}
+
+func listMaterializedCustomTLSDomains(ctx context.Context, c client.Client) (map[string]struct{}, error) {
+	secrets, err := listCustomDomainTLSSecrets(ctx, c)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[string]struct{}, len(secrets))
+	for _, s := range secrets {
+		d := strings.ToLower(strings.TrimSpace(s.Domain))
+		if d == "" {
+			continue
+		}
+		out[d] = struct{}{}
+	}
+	return out, nil
+}
+
+// filterTLSHostsForCustomMaterialization keeps platform hosts and only those
+// exact custom domains that already have a CustomDomainTLS Secret. Settings-only
+// certs (Eligible but CM not synced) must not appear in tls-hosts.
+func filterTLSHostsForCustomMaterialization(tlsHosts []string, platformDomain string, custom map[string]struct{}) []string {
+	if len(tlsHosts) == 0 {
+		return tlsHosts
+	}
+	dom := strings.ToLower(strings.TrimSpace(platformDomain))
+	out := make([]string, 0, len(tlsHosts))
+	for _, h := range tlsHosts {
+		h = strings.ToLower(strings.TrimSpace(h))
+		if h == "" {
+			continue
+		}
+		if isPlatformHostGo(h, dom) {
+			out = append(out, h)
+			continue
+		}
+		if _, ok := custom[h]; ok {
+			out = append(out, h)
+		}
+	}
+	return out
 }
 
 // SetupWithManager registers the reconciler on the shared manager. The shared
@@ -352,6 +401,10 @@ func (r *MeshInSharedHostsReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			builder.WithPredicates(inClusterCallerNamespacePredicate())).
 		Watches(&corev1.Pod{}, handler.EnqueueRequestsFromMapFunc(r.fanOutOnPod),
 			builder.WithPredicates(predicate.NewPredicateFuncs(isSharedEntrancePod))).
+		// CustomDomainTLS Secrets gate tls-hosts; without this watch, Secret create
+		// after SRR/auth converge leaves mesh-in HTTPS unload lagging.
+		Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(r.fanOutOnCustomDomainTLSSecret),
+			builder.WithPredicates(predicate.NewPredicateFuncs(isCustomDomainTLSSecret))).
 		Complete(r)
 }
 
@@ -359,6 +412,9 @@ func (r *MeshInSharedHostsReconciler) fanOutOnSRR(ctx context.Context, _ client.
 	return r.fanOutOptInNamespaces(ctx)
 }
 func (r *MeshInSharedHostsReconciler) fanOutOnPod(ctx context.Context, _ client.Object) []reconcile.Request {
+	return r.fanOutOptInNamespaces(ctx)
+}
+func (r *MeshInSharedHostsReconciler) fanOutOnCustomDomainTLSSecret(ctx context.Context, _ client.Object) []reconcile.Request {
 	return r.fanOutOptInNamespaces(ctx)
 }
 func (r *MeshInSharedHostsReconciler) fanOutOnApplication(ctx context.Context, obj client.Object) []reconcile.Request {
