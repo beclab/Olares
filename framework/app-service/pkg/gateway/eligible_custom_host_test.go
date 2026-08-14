@@ -1,6 +1,7 @@
 package gateway
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -8,6 +9,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/json"
 	"encoding/pem"
+	"fmt"
 	"math/big"
 	"testing"
 	"time"
@@ -16,6 +18,9 @@ import (
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
 )
@@ -269,6 +274,43 @@ func TestEligibleCustomHostUsesMaterializer(t *testing.T) {
 	if ok, reason := EligibleCustomHost(cfg, "olares.com", mat); !ok || reason != "" {
 		t.Fatalf("with materializer: ok=%v reason=%q", ok, reason)
 	}
+}
+
+func TestConfigMapCertMaterializerRetriesAfterListFailure(t *testing.T) {
+	cert, key := mustTestCertPEM(t, "shop.example.com")
+	scheme := runtime.NewScheme()
+	_ = corev1.AddToScheme(scheme)
+	cm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "shop-cert",
+			Namespace: "user-space-alice",
+			Labels:    map[string]string{customDomainCertLabel: customDomainCertLabelValue},
+		},
+		Data: map[string]string{"zone": "shop.example.com", "cert": cert, "key": key},
+	}
+	okClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(cm).Build()
+	fc := &flakyListClient{Client: okClient, failLeft: 1}
+	mat := NewConfigMapCertMaterializer(context.Background(), fc)
+	if _, _, ok := mat("shop.example.com"); ok {
+		t.Fatal("first call should miss while list fails")
+	}
+	gotCert, gotKey, ok := mat("shop.example.com")
+	if !ok || gotCert == "" || gotKey == "" {
+		t.Fatalf("second call should load after list succeeds: ok=%v", ok)
+	}
+}
+
+type flakyListClient struct {
+	client.Client
+	failLeft int
+}
+
+func (c *flakyListClient) List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
+	if c.failLeft > 0 {
+		c.failLeft--
+		return fmt.Errorf("simulated list failure")
+	}
+	return c.Client.List(ctx, list, opts...)
 }
 
 func TestReservedExactHostAllowsAuthOnPublicDomain(t *testing.T) {

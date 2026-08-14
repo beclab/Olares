@@ -451,9 +451,9 @@ func NewConfigMapCertMaterializer(ctx context.Context, c client.Client) CertMate
 		if loaded {
 			return
 		}
-		loaded = true
 		list := &corev1.ConfigMapList{}
 		if err := c.List(ctx, list, client.MatchingLabels{customDomainCertLabel: customDomainCertLabelValue}); err != nil {
+			// Do not set loaded: retry on the next materializer call in this reconcile.
 			klog.Errorf("gateway-tpd: list custom-domain-cert ConfigMaps failed: %v", err)
 			return
 		}
@@ -467,6 +467,7 @@ func NewConfigMapCertMaterializer(ctx context.Context, c client.Client) CertMate
 			}
 			cache[zone] = pair{cert: cert, key: key}
 		}
+		loaded = true
 	}
 	return func(host string) (string, string, bool) {
 		load()
