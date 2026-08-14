@@ -211,6 +211,7 @@ func (wh *Webhook) CreatePatch(
 			pod.Spec.Volumes = append(pod.Spec.Volumes,
 				meshinagent.JWTSecretVolume(),
 				meshinagent.CertsVolumeForViewer(viewer),
+				meshinagent.CustomCertsVolume(),
 				meshinagent.SharedHostsVolume(),
 			)
 			gatewayIPs := wh.lookupMeshInGatewayIPs(ctx)

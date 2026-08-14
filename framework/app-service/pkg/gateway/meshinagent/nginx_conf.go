@@ -20,6 +20,8 @@ const (
 	SharedHostsFileName = "shared-hosts.txt"
 	// TLSHostsFileName is the TLS-offload allowlist ConfigMap key / projected file.
 	TLSHostsFileName = "tls-hosts.txt"
+	// CustomTLSHostsFileName lists third-party FQDNs that require custom certs.
+	CustomTLSHostsFileName = "custom-tls-hosts.txt"
 
 	placeholderJSONBody = `{"error":"mesh_in_tls_placeholder","message":"Platform TLS replica not ready; using pod-local placeholder certificate. Retry or use http:// for in-cluster Shared access.","tlsMode":"placeholder","retryAfterSeconds":5}`
 )
@@ -94,6 +96,7 @@ func RenderNginxConf(in NginxConfInput) string {
 			lb.WriteString("      js_set $mesh_in_tls_mode main.tlsMode;\n")
 			lb.WriteString("      if ($mesh_in_host_ok = \"0\") { return 421; }\n")
 			lb.WriteString("      if ($mesh_in_tls_mode = \"placeholder\") { return 503; }\n")
+			lb.WriteString("      if ($mesh_in_tls_mode = \"reject\") { return 421; }\n")
 		}
 		if in.FailClosed {
 			lb.WriteString("      js_set $mesh_in_auth_deny main.authDeny;\n")

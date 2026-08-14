@@ -22,6 +22,8 @@ const (
 
 	CertsVolumeName   = constants.MeshInCertsVolumeName
 	CertsMountPath    = "/var/run/olares/mesh-in-certs"
+	CustomCertsVolumeName = constants.MeshInCustomCertsVolumeName
+	CustomCertsMountPath  = "/var/run/olares/mesh-in-custom-certs"
 	HostsVolumeName   = constants.MeshInSharedHostsCMName
 	HostsMountPath    = "/var/run/olares/mesh-in-shared-hosts"
 	ConfVolumeName    = "olares-mesh-in-agent-conf"
@@ -66,6 +68,7 @@ func ContainerSpec() corev1.Container {
 		VolumeMounts: []corev1.VolumeMount{
 			{Name: JWTSecretVolumeName, MountPath: JWTSecretMountPath, ReadOnly: true},
 			{Name: CertsVolumeName, MountPath: CertsMountPath, ReadOnly: true},
+			{Name: CustomCertsVolumeName, MountPath: CustomCertsMountPath, ReadOnly: true},
 			{Name: HostsVolumeName, MountPath: HostsMountPath, ReadOnly: true},
 		},
 		SecurityContext: &corev1.SecurityContext{
@@ -261,6 +264,21 @@ func CertsVolumeForViewer(viewer string) corev1.Volume {
 	}
 }
 
+// CustomCertsVolume mounts the aggregate CustomDomainTLS Secret for SNI pickCert.
+// Optional so pods start before the control plane projects any custom domains;
+// kubelet updates files in place when the Secret gains keys (no restart).
+func CustomCertsVolume() corev1.Volume {
+	return corev1.Volume{
+		Name: CustomCertsVolumeName,
+		VolumeSource: corev1.VolumeSource{
+			Secret: &corev1.SecretVolumeSource{
+				SecretName: constants.MeshInCustomTLSSecretName,
+				Optional:   boolPtr(true),
+			},
+		},
+	}
+}
+
 // SharedHostsVolume mounts auth-hosts and tls-hosts allowlists from ConfigMap.
 func SharedHostsVolume() corev1.Volume {
 	return corev1.Volume{
@@ -272,6 +290,7 @@ func SharedHostsVolume() corev1.Volume {
 				Items: []corev1.KeyToPath{
 					{Key: SharedHostsFileName, Path: SharedHostsFileName},
 					{Key: TLSHostsFileName, Path: TLSHostsFileName},
+					{Key: CustomTLSHostsFileName, Path: CustomTLSHostsFileName},
 				},
 			},
 		},
