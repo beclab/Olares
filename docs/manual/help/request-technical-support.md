@@ -17,9 +17,9 @@ To get the fastest resolution, choose the channel that best fits your situation:
 
 | Channel | Best for |
 | --- | --- |
-| **Ticket app** | When your device is accessible. It provides a graphical interface and automatically collects system logs. |
+| **[Ticket app](#submit-a-ticket)** | When your device is accessible. It provides a graphical interface and automatically collects system logs. |
 | **[Olares Space](https://www.olares.com/space/login?redirect=/)** | When your device is inaccessible (crashed/unresponsive), or if you prefer uploading logs via the `olares-cli`. |
-| **GitHub** | Reporting technical issues or requesting features that need ongoing, public technical discussion.<br>• OS issues: [beclab/Olares](https://github.com/beclab/Olares)<br>• App issues: [beclab/apps](https://github.com/beclab/apps) |
+| **[GitHub](#report-issues-on-github)** | Reporting technical issues or requesting features that need ongoing, public technical discussion. |
 | **[Forum](https://www.olares.com/forum/)** | Community discussions, questions, and sharing experiences. |
 | **[Discord](https://discord.gg/olares)** | Real-time chat and quick questions. |
 
@@ -27,7 +27,8 @@ To get the fastest resolution, choose the channel that best fits your situation:
 
 You can submit a support ticket in one of two ways, depending on whether you can currently access your Olares device.
 
-### Submit via the Ticket app
+<Tabs>
+<template #Ticket-app>
 
 Use the Ticket app when you want a graphical interface that automatically collects system information and logs directly from your device.
 
@@ -43,15 +44,12 @@ Use the Ticket app when you want a graphical interface that automatically collec
 4. Review the auto-collected system information. Toggle off **Include in ticket** if you want to exclude it.
 5. Expand **System logs** and click **Collect logs** to attach them to the ticket automatically.
 
-   :::tip Prefer manual log collection?
-   You can manually export system logs by navigating to **Settings > Advanced > Export system logs** in Olares, and then uploading them via the **Attachments** section. For detailed steps, see [Export system logs](/manual/olares/settings/developer.md#export-system-logs).
-   :::
+Once submitted, you can track the ticket's progress, view replies, and communicate with the Olares Support team until your issue is resolved.
 
-Once submitted, you can track the ticket's progress, view replies, and communicate directly with the Olares Support team until your issue is resolved.
+</template>
+<template #Olares-Space>
 
-### Submit via Olares Space
-
-If you cannot access your Olares device (e.g., the system has crashed or is unresponsive), use Olares Space. Any tickets you previously submitted through the Ticket app will also be visible here.
+If you cannot access your Olares device (e.g., the system has crashed or is unresponsive), use [Olares Space](https://www.olares.com/space/login?redirect=/). Any tickets you previously submitted through the Ticket app will also be visible here.
 
 In Olares Space, you can create a ticket in two ways:
 
@@ -60,19 +58,21 @@ In Olares Space, you can create a ticket in two ways:
 
 For detailed instructions, see [Create and manage support tickets in Olares Space](../space/tickets.md).
 
+</template>
+</Tabs>
+
 ## Report issues on GitHub
 
 For Olares OS system issues or feature requests that benefit from public technical discussion, consider opening an issue on GitHub. 
 
-Choose the appropriate repository:
-- **Olares OS issues:** [beclab/Olares](https://github.com/beclab/Olares)
-- **App issues:** [beclab/apps](https://github.com/beclab/apps)
-
-In either repository, you can open a **Discussion** for general questions or create an **Issue** for specific technical problems.
-
 1. [Export your system logs](/manual/olares/settings/developer.md#export-system-logs) from Olares Settings.
-2. Open the appropriate GitHub repository and create a new Issue or Discussion.
+2. Open the appropriate GitHub repository, and create an **Issue** for specific technical problems or open a **Discussion** for general questions.
+
+    - **Olares OS issues:** [beclab/Olares](https://github.com/beclab/Olares)
+    - **App issues:** [beclab/apps](https://github.com/beclab/apps)
+
 3. Describe the issue in detail and attach your exported system log file. Always include:
-   - Exact steps to reproduce the issue
-   - Any error messages or unexpected behaviors
-   - Your environment details (Operating system, Olares version, etc.)
+
+    - Exact steps to reproduce the issue
+    - Any error messages or unexpected behaviors
+    - Your environment details (Operating system, Olares version, etc.)

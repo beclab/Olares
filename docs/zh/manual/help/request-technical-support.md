@@ -16,9 +16,9 @@ head:
 
 | 渠道 | 适用场景 |
 | --- | --- |
-| **Ticket 应用** | 可以访问设备时使用。提供图形界面，并自动收集系统日志。 |
+| **[Ticket 应用](#提交工单)** | 可以访问设备时使用。提供图形界面，并自动收集系统日志。 |
 | **[Olares Space](https://www.olares.com/space/login?redirect=/)** | 无法访问设备（如系统崩溃或无响应）时使用，或希望通过 `olares-cli` 上传日志时使用。 |
-| **GitHub** | 报告技术问题或提出需要公开技术讨论和持续跟进的功能请求。<br>• OS 问题：[beclab/Olares](https://github.com/beclab/Olares)<br>• 应用问题：[beclab/apps](https://github.com/beclab/apps) |
+| **[GitHub](#在-github-上报告问题)** | 报告技术问题或提出需要公开技术讨论和持续跟进的功能请求。 |
 | **[论坛](https://www.olares.com/forum/)** | 社区讨论、提问和交流经验。 |
 | **[Discord](https://discord.gg/olares)** | 实时交流和快速提问。 |
 
@@ -26,7 +26,8 @@ head:
 
 你可以通过以下两种方式之一提交支持工单，具体取决于当前是否可以访问 Olares 设备。
 
-### 通过 Ticket 应用提交
+<Tabs>
+<template #Ticket-app>
 
 如果你希望通过图形界面自动收集设备上的系统信息和日志，请使用 Ticket 应用。
 
@@ -42,15 +43,12 @@ head:
 4. 查看自动收集的系统信息。如果不想包含在工单中，请关闭**随工单提交**。
 5. 展开**系统日志**，点击**采集日志**，即可自动收集并附加到工单中。
 
-   :::tip 希望手动收集日志？
-   你也可以在 Olares 中前往**设置 > 高级 > 导出系统日志**手动导出系统日志，然后通过**附件**上传。详细步骤，参见[导出系统日志](/zh/manual/olares/settings/developer.md#导出系统日志)。
-   :::
+提交后，你可以追踪工单进度、查看回复、与 Olares 支持团队沟通，直到问题解决。
 
-提交后，你可以追踪工单进度、查看回复，并直接与 Olares 支持团队沟通，直到问题解决。
+</template>
+<template #Olares-Space>
 
-### 通过 Olares Space 提交
-
-如果你无法访问 Olares 设备（例如系统崩溃或无响应），请使用 Olares Space。此前通过 Ticket 应用提交的工单也可以在这里查看。
+如果你无法访问 Olares 设备（例如系统崩溃或无响应），请使用 [Olares Space](https://www.olares.com/space/login?redirect=/)。此前通过 Ticket 应用提交的工单也可以在这里查看。
 
 在 Olares Space 中，你可以通过以下两种方式创建工单：
 
@@ -58,20 +56,20 @@ head:
 - **自动创建（CLI）**：直接在 Olares 终端使用 `olares-cli` 上传日志。系统会自动生成一个工单。
 
 详细步骤，参见[在 Olares Space 中创建和管理支持工单](../space/tickets.md)。
+</template>
+</Tabs>
 
 ## 在 GitHub 上报告问题
 
 对于适合公开技术讨论的 Olares OS 系统问题或功能请求，建议前往 GitHub 提交 Issue。
 
-选择对应的仓库：
-- **Olares OS 问题：**[beclab/Olares](https://github.com/beclab/Olares)
-- **应用问题：**[beclab/apps](https://github.com/beclab/apps)
-
-在这两个仓库中，你都可以创建 **Discussion** 进行一般性交流，或创建 **Issue** 报告具体的技术问题。
-
 1. 在 Olares 设置中[导出系统日志](/zh/manual/olares/settings/developer.md#导出系统日志)。
-2. 打开对应的 GitHub 仓库，创建新的 Issue 或 Discussion。
-3. 详细描述问题并附上导出的系统日志文件。请始终包含：
+2. 打开对应的 GitHub 仓库，创建新的 Issue 报告具体的技术问题，或创建 Discussion 进行交流：
+
+   - **Olares 系统问题**：[beclab/Olares](https://github.com/beclab/Olares)
+   - **应用问题**：[beclab/apps](https://github.com/beclab/apps)
+
+3. 详细描述问题并附上导出的系统日志文件：
    - 复现问题的具体步骤
    - 错误信息或异常行为
    - 环境信息（操作系统、Olares 版本等）
