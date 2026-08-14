@@ -74,6 +74,28 @@ func TestMarketDeploymentMountsPreinstallReadOnlyBesideWritableData(t *testing.T
 	}
 }
 
+func TestMarketDeploymentPinsV2SourceAPIPaths(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "framework", "market", ".olares", "config", "cluster", "deploy", "market_deploy.yaml")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment := deploymentDocument(t, string(data), "market-deployment")
+	container := between(t, deployment, "      - name: appstore-backend\n", "      volumes:\n")
+
+	for name, value := range map[string]string{
+		"API_CATALOG_PATH":      "/api/v2/catalog",
+		"API_TAXONOMY_PATH":     "/api/v2/taxonomy",
+		"API_APPLICATIONS_PATH": "/api/v2/applications",
+		"API_BROWSE_PATH":       "/api/v2/browse/applications",
+	} {
+		required := "- name: " + name + "\n            value: " + value
+		if !strings.Contains(container, required) {
+			t.Errorf("appstore-backend container missing contract:\n%s", required)
+		}
+	}
+}
+
 func TestMarketPreinstallDeploymentPublishesManifestsButNotPayloads(t *testing.T) {
 	installerDir, baseDir := writeStaticBundle(t)
 	artifact, _ := addMaterializeArtifactFixture(t, installerDir)

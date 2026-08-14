@@ -68,6 +68,18 @@ When a client connects to another Olares app, it uses that app's endpoint as the
 2. Wait until **Model** shows **READY** and **Engine** shows **RUNNING**.
 
    ![EmbeddingGemma model console](/images/manual/use-cases/embedding-gemma-model-console-openai.png#bordered)
+
+3. Under **Model**, copy the **Model name** exactly as shown.
+4. Under **Engine**:
+
+   a. **Connection source**: Select **Apps in Olares**.
+   
+   b. **API format**: Select **OpenAI-Compatible**.
+   
+   c. Copy the provided **Base URL** exactly as shown.
+
+<!-- #endregion get-embedding-model-connection-details-openai -->
+
 <!-- #region get-model-connection-details-ollama -->
 1. Open the model app from Launchpad. Its Model Console opens automatically.
 2. Wait until **Model** shows **READY** and **Engine** shows **RUNNING**.
@@ -79,11 +91,6 @@ When a client connects to another Olares app, it uses that app's endpoint as the
 
    a. **Connection source**: Select **Apps in Olares**. 
    
-   b. **API format**: Select **OpenAI-Compatible**.
-   
-   c. Copy the provided **Base URL** exactly as shown.
-
-<!-- #endregion get-embedding-model-connection-details-openai -->
    b. **API format**: Select **Ollama**.
    
    c. Copy the provided **Base URL** exactly as shown.

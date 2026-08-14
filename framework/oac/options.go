@@ -237,3 +237,39 @@ func SkipResourceNamespaceCheck() Option {
 func WithResourceNamespaceCheck() Option {
 	return func(c *OAC) { c.skipResourceNamespace = false }
 }
+
+// SkipSubPathExprCheck disables the volumeMounts.subPathExpr ban. The
+// check is on by default: the platform cannot expand subPathExpr at
+// admission time, so it cannot prepare the resulting host directory.
+// Only opt out when a caller knowingly lints a chart that is not
+// installed through the Olares admission path.
+func SkipSubPathExprCheck() Option {
+	return func(c *OAC) { c.skipSubPathExpr = true }
+}
+
+// WithSubPathExprCheck re-enables the volumeMounts.subPathExpr ban after
+// a previous option set disabled it. The check is on by default, so
+// calling this on a fresh Checker is a no-op.
+func WithSubPathExprCheck() Option {
+	return func(c *OAC) { c.skipSubPathExpr = false }
+}
+
+// WithBlindChownCheck enables the blind recursive-chown check, which
+// rejects containers running `chown -R` over a hostPath mount.
+//
+// Unlike every other rule in this package the check is OFF by default,
+// because oac.Lint also guards app install and upgrade: a default-on
+// rule would reject existing charts at the moment a user clicks install,
+// not merely on a pull request. Enable it on the PR gate — same pattern
+// as WithServiceAccountRulesCheck — so new charts must be clean while
+// existing ones keep installing.
+func WithBlindChownCheck() Option {
+	return func(c *OAC) { c.checkBlindChown = true }
+}
+
+// SkipBlindChownCheck disables the blind recursive-chown check. The check
+// is off by default, so calling this on a fresh Checker is a no-op; it
+// exists so composed option sets can opt back out.
+func SkipBlindChownCheck() Option {
+	return func(c *OAC) { c.checkBlindChown = false }
+}

@@ -238,11 +238,11 @@ func workerOn(st clistate.State) ProbeInput {
 }
 
 func TestDetectDeclaresPowerOnAWorkerThatHasTheCommands(t *testing.T) {
-	withCommands(t, "shutdown", "reboot", "olares-cli")
+	withCommands(t, "shutdown", "reboot", "olares-cli", "chpasswd")
 
 	caps := Detect(context.Background(), workerOn(clistate.State{TerminusState: clistate.TerminusRunning}))
 
-	for _, name := range []string{CapPowerShutdown, CapPowerReboot, CapLogsCollect} {
+	for _, name := range []string{CapPowerShutdown, CapPowerReboot, CapLogsCollect, CapSetSSHPassword} {
 		c, ok := caps[name]
 		if !ok {
 			t.Errorf("capability %q not declared", name)
@@ -269,7 +269,7 @@ func TestDetectWithoutTheCollectorDeclaresNoLogCollection(t *testing.T) {
 }
 
 func TestDetectInContainerModeDeclaresNoPower(t *testing.T) {
-	withCommands(t, "shutdown", "reboot", "olares-cli")
+	withCommands(t, "shutdown", "reboot", "olares-cli", "chpasswd")
 	container := "docker"
 
 	caps := Detect(context.Background(), workerOn(clistate.State{
@@ -283,8 +283,21 @@ func TestDetectInContainerModeDeclaresNoPower(t *testing.T) {
 	if _, ok := caps[CapPowerReboot]; ok {
 		t.Error("power.reboot declared while olaresd runs in a container")
 	}
+	if _, ok := caps[CapSetSSHPassword]; ok {
+		t.Error("ssh.setPassword declared while olaresd runs in a container")
+	}
 	if _, ok := caps[CapLogsCollect]; !ok {
 		t.Error("logs.collect works in a container and should stay declared")
+	}
+}
+
+func TestDetectWithoutChpasswdDeclaresNoSSHPassword(t *testing.T) {
+	withCommands(t, "shutdown", "reboot", "olares-cli")
+
+	caps := Detect(context.Background(), workerOn(clistate.State{TerminusState: clistate.TerminusRunning}))
+
+	if _, ok := caps[CapSetSSHPassword]; ok {
+		t.Error("ssh.setPassword declared with no chpasswd on the machine")
 	}
 }
 

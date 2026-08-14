@@ -15,12 +15,11 @@ import (
 )
 
 const (
-	vpnCIDR               = "100.64.0.0/16"
-	autheliaClusterPrefix = "authelia_backend"
-	autheliaHostFormat    = "authelia-backend.user-system-%s.svc.cluster.local"
-	fileserverHostFormat  = "files-%s.user-system-%s.svc.cluster.local"
-	autheliaPort          = uint32(9091)
-	autheliaPathPrefix       = "/api/authz/ext-authz/"
+	vpnCIDR                  = "100.64.0.0/16"
+	autheliaClusterPrefix    = "authelia_backend"
+	autheliaHostFormat       = "authelia-backend.user-system-%s.svc.cluster.local"
+	fileserverHostFormat     = "files-%s.user-system-%s.svc.cluster.local"
+	autheliaPort             = uint32(9091)
 	autheliaVerifyPathPrefix = "/api/verify/"
 
 	// probeUARegex matches webhook.getProbeUA shape: {uuid}/{md5hex}.
@@ -476,7 +475,7 @@ func (t *Translator) buildUserVirtualHosts(user *message.UserInfo, zone string, 
 				"X-BFL-USER": user.Name,
 			},
 			// Zone root is human HTTP (profile); EDGE N/S PEP is l4 Authelia verify.
-			ExtAuth: buildAppExtAuthConfig(user, false),
+			ExtAuth: buildAppExtAuthConfig(user),
 		}},
 		Priority: systemServicePriority,
 	}
@@ -609,9 +608,9 @@ func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.A
 		}
 
 		// Gate private/internal apps behind Authelia. public skips ExtAuth
-		// (EDGE AC-AL-1). Ordinary/system use /api/verify/; Shared keeps ext-authz.
+		// (EDGE AC-AL-1). All non-public routes use Authelia /api/verify/.
 		if !isPublicAuthLevel(entrance.AuthLevel) {
-			defaultRoute.ExtAuth = buildAppExtAuthConfig(user, app.IsShared)
+			defaultRoute.ExtAuth = buildAppExtAuthConfig(user)
 		}
 
 		// F3: Exact probe paths with signed UA bypass ExtAuth (oes parity).
@@ -684,15 +683,11 @@ func sanitizeProbePath(path string) string {
 }
 
 // buildAppExtAuthConfig returns Authelia ext_auth for app routes.
-// shared=true keeps the historic Shared path; otherwise /api/verify/ is used.
-func buildAppExtAuthConfig(user *message.UserInfo, shared bool) *ir.ExtAuthConfigIR {
-	path := autheliaVerifyPathPrefix
-	if shared {
-		path = autheliaPathPrefix
-	}
+// All non-public routes use Legacy /api/verify/ (filter default; no path split).
+func buildAppExtAuthConfig(user *message.UserInfo) *ir.ExtAuthConfigIR {
 	return &ir.ExtAuthConfigIR{
 		Cluster:    fmt.Sprintf("%s_%s", autheliaClusterPrefix, user.Name),
-		PathPrefix: path,
+		PathPrefix: autheliaVerifyPathPrefix,
 		RequestHeaders: []string{
 			"X-Original-URL",
 			"X-Original-Method",
@@ -710,7 +705,7 @@ func (t *Translator) buildFileserverRoutes(user *message.UserInfo, clusterSet ma
 	autheliaClName := fmt.Sprintf("%s_%s", autheliaClusterPrefix, user.Name)
 	extAuthCfg := &ir.ExtAuthConfigIR{
 		Cluster:    autheliaClName,
-		PathPrefix: autheliaPathPrefix,
+		PathPrefix: autheliaVerifyPathPrefix,
 		RequestHeaders: []string{
 			"X-Original-URL",
 			"X-Original-Method",
@@ -829,7 +824,7 @@ func (t *Translator) buildSystemVirtualHost(user *message.UserInfo, def systemSe
 	// wizard is pre-auth activation UI — no ExtAuth (cookie chicken-egg).
 	// auth is the IdP itself — do not attach ExtAuth (loop risk).
 	if def.Name == "desktop" {
-		route.ExtAuth = buildAppExtAuthConfig(user, false)
+		route.ExtAuth = buildAppExtAuthConfig(user)
 	}
 
 	return &ir.VirtualHostIR{
@@ -885,7 +880,7 @@ func (t *Translator) buildCustomDomainVirtualHosts(user *message.UserInfo, app *
 		}
 
 		if !isPublicAuthLevel(entrance.AuthLevel) {
-			customRoute.ExtAuth = buildAppExtAuthConfig(user, app.IsShared)
+			customRoute.ExtAuth = buildAppExtAuthConfig(user)
 		}
 
 		routes := buildProbeBypassRoutes(

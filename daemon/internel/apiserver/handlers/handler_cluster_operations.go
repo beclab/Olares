@@ -46,13 +46,14 @@ const orchestratorUnavailable = "cluster operations are not available on this no
 // rather than something built here so that no test can install one wired to a
 // real cluster and a real power command by accident.
 //
-// What this daemon can be asked to do is settled here too. The module set is
-// closed before the orchestrator is built over it, so what the routes accept,
-// what the owner's signature can be read against, and what the manager can
-// carry out are one set decided once — and a module registering itself after
-// the daemon started serving is refused rather than becoming an operation
-// half of this process knows about. The same set is what main gives the node
-// routes; see InstallNodeOperations.
+// What this daemon can be asked to do is settled here too. The module set and
+// the signature-requirement set are closed before the orchestrator is built
+// over them, so what the routes accept, which types demand an owner signature
+// on create, what the owner's signature can be read against, and what the
+// manager can carry out are decided once — and a module registering itself
+// after the daemon started serving is refused rather than becoming an
+// operation half of this process knows about. The same module set is what
+// main gives the node routes; see InstallNodeOperations.
 func InitClusterOperations(dir string, deps clusterop.Deps) error {
 	// Closed first, and whatever happens next: a daemon that could not open
 	// its records still serves the routes, and the set they answer from must
@@ -60,6 +61,7 @@ func InitClusterOperations(dir string, deps clusterop.Deps) error {
 	// idempotent, so a second call is not a failure.
 	registry := clusterop.DefaultRegistry()
 	registry.Freeze()
+	clusterop.DefaultSignatureRequirementRegistry().Freeze()
 
 	store, err := clusterop.NewStore(dir)
 	if err != nil {
@@ -130,17 +132,21 @@ func (h *Handlers) PostClusterOperation(ctx *fiber.Ctx) error {
 		})
 	}
 
-	// The owner signed this operation, not "anything dangerous for the next
-	// twenty minutes". Without the check, a signature captured from any other
-	// owner-only route would power the cluster off.
-	if _, err := requireBinding(ctx, clusterop.Binding{
-		ClusterID: req.ClusterID,
-		Type:      opType,
-		RequestID: strings.TrimSpace(req.RequestID),
-		Scope:     req.Scope,
-		Target:    req.Target,
-	}); err != nil {
-		return h.errBinding(ctx, err)
+	// Types that require a signature bind it to this exact operation, not
+	// "anything dangerous for the next twenty minutes". Without the check, a
+	// signature captured from any other owner-only route would power the
+	// cluster off. Types that do not require one were already admitted by an
+	// access token on the route.
+	if clusterop.RequiresSignature(opType) {
+		if _, err := requireBinding(ctx, clusterop.Binding{
+			ClusterID: req.ClusterID,
+			Type:      opType,
+			RequestID: strings.TrimSpace(req.RequestID),
+			Scope:     req.Scope,
+			Target:    req.Target,
+		}); err != nil {
+			return h.errBinding(ctx, err)
+		}
 	}
 	localClusterID, err := clusterIDOf(ctx.Context())
 	if err != nil || localClusterID == "" || localClusterID != req.ClusterID {
@@ -163,8 +169,9 @@ func (h *Handlers) PostClusterOperation(ctx *fiber.Ctx) error {
 		Owner:     owner,
 		Params:    req.Params,
 		Creds: clusterop.Credentials{
-			// The token authorizes this request and stays on this node; only
-			// the operation-bound signature is presented to a worker.
+			// The token stays available for types that fan out without a
+			// signature; signature-bound types still present only the JWS to
+			// workers — see clusterop.DispatchNodeOperation.
 			Token:     ctx.Get(AUTH_HEADER),
 			Signature: ctx.Get(SIGNATURE_HEADER),
 		},

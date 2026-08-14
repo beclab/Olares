@@ -21,53 +21,62 @@ The GPU mode is set to **Memory slicing**, and you encounter either of the follo
 
 ## Cause
 
-In Olares 1.12.5, **Memory slicing** mode automatically allocates VRAM to a GPU-dependent app when it is installed or resumed. If most VRAM has already been allocated to other apps, the system cannot provide enough VRAM for the target app to run, so the app cannot initialize and remains in a **Stopped** state.
+In Olares 1.12.5 and 1.12.6, an app in **Memory slicing** mode requires an available VRAM quota when it is installed or resumed. If most VRAM has already been allocated to other apps, the system cannot provide enough VRAM for the target app to run, so the app cannot initialize and remains in a **Stopped** state.
 
 ## Solution: Free up VRAM
 
-### Step 1: Check the app's required VRAM
+Follow the instructions for your Olares version.
 
-1. Go to **Market** > **My Olares**.
-2. Click the card of the target app.
-3. In the app details page, note the app's VRAM requirement.
+### Olares 1.12.5
 
-![Check required VRAM for the target app](/images/manual/help/ts-mem-slice-vram-app-gpu.png#bordered){width=85%}
+1. Go to **Market** > **My Olares** and click the target app's card. On the app details page, note the app's VRAM requirement.
 
-### Step 2: Check current VRAM availability
+   ![Check required VRAM for the target app](/images/manual/help/ts-mem-slice-vram-app-gpu.png#bordered){width=85%}
 
-1. Go to **Settings** > **GPU**.
-2. In the **Allocate VRAM** section, note the total VRAM currently allocated across all apps in the list.
-3. Subtract this from your GPU's total VRAM capacity to get the available VRAM.
+2. Go to **Settings** > **GPU**. In **Allocate VRAM**, add up the VRAM allocated to all apps, then subtract that amount from the GPU's total VRAM to get the available VRAM.
 
-![Check current VRAM allocation](/images/manual/help/ts-mem-slice-vram-gpu-mode.png#bordered){width=90%}
+   ![Check current VRAM allocation](/images/manual/help/ts-mem-slice-vram-gpu-mode.png#bordered){width=90%}
 
-In the example above, 22 GB of VRAM is currently allocated, leaving only 2 GB available, which is less than the 4 GB required by the target app.
+   In the example above, 22 GB of VRAM is allocated, leaving only 2 GB available. The target app requires 4 GB, so it cannot start.
 
-### Step 3: Free up VRAM
+3. Use one or both of the following methods to free enough VRAM:
 
-Use one or both of the following approaches to free up enough VRAM.
+   - In **Allocate VRAM**, click <i class="material-symbols-outlined">edit_square</i> next to an app's VRAM value. Reduce the allocation without going below that app's required VRAM, then click **Confirm**.
 
-#### Reduce the allocation of an active app
+     ![Reduce VRAM allocation](/images/manual/help/ts-mem-slice-vram-reduce-vram.png#bordered){width=90%}
 
-1. In the **Allocate VRAM** section, click <i class="material-symbols-outlined">edit_square</i> next to an app's VRAM value.
-2. Reduce the allocation without going below the VRAM required by that app, then click **Confirm**.
+   - Stop an app that you do not currently need from **Market** > **My Olares** or **Settings** > **Applications**. Return to **Settings** > **GPU**, click <i class="material-symbols-outlined">link_off</i> next to the stopped app, then click **Confirm**.
 
-![Reduce VRAM allocation](/images/manual/help/ts-mem-slice-vram-reduce-vram.png#bordered){width=90%}
+4. Resume the target app from **Market** > **My Olares** or **Settings** > **Applications**.
+5. Wait for the app status to change to **Running**.
 
-#### Stop unused apps and release their VRAM
+   ![Resume the target app after freeing VRAM](/images/manual/help/ts-mem-slice-vram-resume-outcome.png#bordered){width=90%}
 
-1. Stop an app that is not currently needed using one of the following methods:
-   - In **Market** > **My Olares**, click <i class="material-symbols-outlined">keyboard_arrow_down</i> next to the app's operation button and click **Stop**.
-   - Or go to **Settings** > **Applications**, select the app, and click **Stop**.
-2. Return to **Settings** > **GPU**.
-3. In the **Allocate VRAM** section, click <i class="material-symbols-outlined">link_off</i> next to the stopped app, then click **Confirm**.
-4. Repeat until enough VRAM is available.
+### Olares 1.12.6
 
-### Step 4: Resume the target app
+1. Go to **Settings** > **Applications** or **Market** > **My Olares**. Find the target app and click **Resume**.
+2. In the launch dialog, check **VRAM allocation** in the upper-right corner. The value after the slash is the app's required VRAM. In this example, `0 Gi / 4 Gi` means the app requires 4 Gi of VRAM.
 
-1. Resume the target app:
-   - In **Market** > **My Olares**, click <i class="material-symbols-outlined">keyboard_arrow_down</i> next to the app's operation button and click **Resume**.
-   - Or go to **Settings** > **Applications**, select the app, and click **Resume**.
-2. Wait for the app status to change to **Running**.
+   ![Launch diaglog](/images/manual/help/ts-mem-slice-insufficient-vram1.png#bordered){width=80%}
 
-![Resume the target app after freeing VRAM](/images/manual/help/ts-mem-slice-vram-resume-outcome.png#bordered){width=90%}
+3. Under **Select GPUs**, expand a compatible GPU and check:
+   - **Dedicated VRAM**: The GPU's total VRAM.
+   - **Assigned apps**: The apps using the GPU and the VRAM allocated to each app.
+
+   ![Check VRAM usage](/images/manual/help/ts-mem-slice-insufficient-vram2.png#bordered){width=80%}
+
+4. Under **Assigned apps**, find an app that you do not currently need, then click **Remove**. Repeat until enough VRAM is available.
+
+   :::info
+   Removing an assigned app releases its GPU resources and stops it.
+   :::
+
+5. Select the GPU, check the allocation for the target app, then click **Launch**.
+
+   ![Launch the app](/images/manual/help/ts-mem-slice-insufficient-vram3.png#bordered){width=80%}
+
+:::info Reallocate VRAM in Olares 1.12.6
+You cannot change an app's VRAM quota after assignment. To change it later, remove the app from the GPU, resume it, and assign the resource again.
+:::
+
+For details about the Olares 1.12.6 interface and resource assignment, see [Manage accelerator resources](../olares/settings/gpu-resource.md).

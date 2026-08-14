@@ -19,7 +19,10 @@ const observationTimeout = 10 * time.Second
 // node. It is declared here because this module is what answers for it.
 const TypeReboot Type = "reboot"
 
-func init() { registerBuiltInPowerOperation(rebootModule{}) }
+func init() {
+	registerBuiltInPowerOperation(rebootModule{})
+	MustRequireSignature(TypeReboot)
+}
 
 // rebootModule is the cluster reboot: every compute node restarts, is watched
 // back onto a new boot, and only then is the control node told to go.

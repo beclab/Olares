@@ -69,11 +69,17 @@ func init() {
 	cmd.Post("/power-node", handlers.RequireSignature(
 		handlers.RequireOwner(handlers.PostPowerNode)))
 
-	// The same hop for every other cluster operation, guarded identically.
+	// The same hop for every other cluster operation. Types that registered
+	// themselves as needing a signature are admitted the same way power-node
+	// is — signature only, no access token — so the master never forwards a
+	// general-purpose credential. Types that did not register still need the
+	// owner, and are admitted with the access token the master forwards for
+	// that hop alone; see clusterop.DispatchNodeOperation.
+	//
 	// It is a second path rather than a wider power-node because an older
 	// worker serves power-node and nothing else, so that one's request JSON
 	// cannot grow; see clusterop.ClusterOperationPath.
-	cmd.Post("/cluster-operation", handlers.RequireSignature(
+	cmd.Post("/cluster-operation", handlers.RequireSignatureForRegisteredClusterOp(
 		handlers.RequireOwner(handlers.PostClusterOperationNode)))
 
 	cmd.Post("/connect-wifi", handlers.RequireSignature(

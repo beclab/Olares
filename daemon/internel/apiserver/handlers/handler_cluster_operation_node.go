@@ -30,18 +30,19 @@ const nodeExecutionUnavailable = "this node cannot carry out cluster operations 
 // are still dispatched to the power endpoint instead: an older worker has
 // that one and nothing else.
 //
-// It is guarded exactly as the power endpoint is — the owner's signature,
-// bound to this operation and checked here rather than trusted from the
-// master — and it can only act on the machine it reached, so reaching it
-// grants no authority over any other node in the cluster.
+// Types that require an owner signature are guarded exactly as the power
+// endpoint is — the owner's signature, bound to this operation and checked
+// here rather than trusted from the master. Types that do not were admitted
+// with an access token on the route; they still act only on the machine they
+// reached, so reaching them grants no authority over any other node.
 //
 // The request carries the module's params. They are not covered by the
 // owner's signature: what the owner signed is the operation, the request id,
 // the cluster and the scope, and nothing under params is part of that. A
 // module must therefore treat params as input from whoever could reach this
 // route, and Validate is where it says what it will accept — which is why it
-// is asked before anything is carried out, and after the signature that got
-// the request this far has already been spent.
+// is asked before anything is carried out, and after a signature that got
+// the request this far has already been spent when one was required.
 func (h *Handlers) PostClusterOperationNode(ctx *fiber.Ctx) error {
 	var req clusterop.NodeRequest
 	if err := ctx.BodyParser(&req); err != nil {
@@ -72,10 +73,6 @@ func (h *Handlers) PostClusterOperationNode(ctx *fiber.Ctx) error {
 		return h.errPower(ctx, http.StatusConflict,
 			clusterop.CodeNodeIdentityUnknown, "this node's cluster identity is unavailable")
 	}
-	binding, err := bindNodeRequest(ctx, registry, req.PeerRequest, nodeName)
-	if err != nil {
-		return h.errBinding(ctx, err)
-	}
 
 	module, ok := registry.Lookup(opType)
 	if !ok {
@@ -85,33 +82,55 @@ func (h *Handlers) PostClusterOperationNode(ctx *fiber.Ctx) error {
 			"this daemon does not perform that operation")
 	}
 
-	// Spent before the module is asked anything, and not given back if the
-	// module then refuses. Judging a request is work this node performs on
-	// the strength of the signature, and a caller who could present the same
-	// one repeatedly would have an unlimited way to drive somebody else's
-	// code with params nothing signed.
-	claim, spent, unspent := h.spendSignature(ctx, clusterOperationNodeEndpoint, binding)
-	if !spent {
-		return unspent
+	var (
+		signed clusterop.PeerRequest
+		claim  string
+	)
+	if clusterop.RequiresSignature(opType) {
+		binding, err := bindNodeRequest(ctx, registry, req.PeerRequest, nodeName)
+		if err != nil {
+			return h.errBinding(ctx, err)
+		}
+
+		// Spent before the module is asked anything, and not given back if the
+		// module then refuses. Judging a request is work this node performs on
+		// the strength of the signature, and a caller who could present the same
+		// one repeatedly would have an unlimited way to drive somebody else's
+		// code with params nothing signed.
+		var spent bool
+		var unspent error
+		claim, spent, unspent = h.spendSignature(ctx, clusterOperationNodeEndpoint, binding)
+		if !spent {
+			return unspent
+		}
+
+		// Every field the module judges the request by comes from the binding
+		// rather than from the body. The two agree — the binding was checked
+		// against the body to get here — but only one of them the owner signed,
+		// and they are not character for character the same: the request id was
+		// compared after trimming, so a body may still carry a padded one.
+		signed = clusterop.PeerRequest{
+			Type:        binding.Type,
+			RequestID:   binding.RequestID,
+			Scope:       binding.Scope,
+			Target:      binding.Target,
+			ClusterID:   binding.ClusterID,
+			OperationID: req.OperationID,
+		}
+	} else {
+		if err := authorizeNodeRequestScope(ctx, req.PeerRequest, nodeName); err != nil {
+			return h.errBinding(ctx, err)
+		}
+		signed = clusterop.PeerRequest{
+			Type:        opType,
+			RequestID:   strings.TrimSpace(req.RequestID),
+			Scope:       req.Scope,
+			Target:      req.Target,
+			ClusterID:   req.ClusterID,
+			OperationID: req.OperationID,
+		}
 	}
 
-	// Every field the module judges the request by comes from the binding
-	// rather than from the body. The two agree — the binding was checked
-	// against the body to get here — but only one of them the owner signed,
-	// and they are not character for character the same: the request id was
-	// compared after trimming, so a body may still carry a padded one.
-	signed := clusterop.PeerRequest{
-		Type:      binding.Type,
-		RequestID: binding.RequestID,
-		Scope:     binding.Scope,
-		Target:    binding.Target,
-		ClusterID: binding.ClusterID,
-
-		// The master's own id for the run. Nothing signs it and nothing is
-		// decided by it; it is carried so this node's log and the master's
-		// record name the same operation.
-		OperationID: req.OperationID,
-	}
 	// The same boundary the master's own Create asks a module through: a
 	// module that cannot answer is not a module that refused, and neither
 	// end of the operation may decide that differently from the other.
@@ -141,4 +160,25 @@ func (h *Handlers) PostClusterOperationNode(ctx *fiber.Ctx) error {
 	// module was shown can differ from what it is then asked to act on.
 	return h.runNodeOperation(ctx, clusterOperationNodeEndpoint, registry,
 		clusterop.NodeRequest{PeerRequest: signed, Params: req.Params}, claim)
+}
+
+// authorizeNodeRequestScope checks the scope/target and cluster id of a
+// node request that was not admitted by an operation-bound signature. The
+// target is still compared to nodeName from the directory, so this hop
+// cannot be aimed at another machine.
+func authorizeNodeRequestScope(ctx *fiber.Ctx, req clusterop.PeerRequest, nodeName string) error {
+	if req.Scope != clusterop.ScopeCluster && req.Scope != clusterop.ScopeNode ||
+		(req.Scope == clusterop.ScopeCluster && req.Target != "") ||
+		(req.Scope == clusterop.ScopeNode && req.Target != nodeName) {
+		return &clusterop.BindingError{
+			Code: clusterop.CodeSignatureUnbound, Message: "the signature does not authorize this operation",
+		}
+	}
+	localClusterID, err := clusterIDOf(ctx.Context())
+	if err != nil || localClusterID == "" || req.ClusterID != localClusterID {
+		return &clusterop.BindingError{
+			Code: clusterop.CodeSignatureMismatch, Message: "the signature authorizes a different operation",
+		}
+	}
+	return nil
 }

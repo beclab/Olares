@@ -7,6 +7,7 @@ import (
 
 	"helm.sh/helm/v3/pkg/kube"
 	appsv1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 )
@@ -33,9 +34,9 @@ import (
 // "docker.io/beclab/foo", "registry.example.com/beclab/foo") are
 // exempt; everything else is in scope.
 //
-// The check walks the same three workload controllers other resource
-// checks operate on -- Deployment, StatefulSet, DaemonSet -- and
-// aggregates violations into a single returned error.
+// The check walks every workload that carries a PodSpec -- Deployment,
+// StatefulSet, DaemonSet, Job, CronJob, bare Pod -- and aggregates
+// violations into a single returned error.
 func CheckSecurityContextForNonBeclabImage(list kube.ResourceList) error {
 	var errs []error
 	walkPodSpecs(list, func(kind, name string, spec corev1.PodSpec) {
@@ -113,8 +114,9 @@ func isBeclabImage(image string) bool {
 	return strings.HasPrefix(image, "beclab/") || strings.Contains(image, "/beclab/")
 }
 
-// walkPodSpecs iterates over Deployment / StatefulSet / DaemonSet entries
-// in list and yields each workload's full PodSpec. Unlike
+// walkPodSpecs iterates over every workload in list that carries a
+// PodSpec -- Deployment, StatefulSet, DaemonSet, Job, CronJob and bare
+// Pods -- and yields each workload's full PodSpec. Unlike
 // walkPodContainers (which only surfaces containers) this helper hands
 // the caller the entire PodSpec so checks that depend on pod-level
 // fields (securityContext, volumes, nodeSelector, ...) can run without
@@ -141,6 +143,38 @@ func walkPodSpecs(list kube.ResourceList, fn func(kind, name string, spec corev1
 				continue
 			}
 			fn(kind, ds.Name, ds.Spec.Template.Spec)
+		case KindJob:
+			var job batchv1.Job
+			if err := scheme.Scheme.Convert(r.Object, &job, nil); err != nil {
+				continue
+			}
+			fn(kind, job.Name, job.Spec.Template.Spec)
+		case KindCronJob:
+			var cj batchv1.CronJob
+			if err := scheme.Scheme.Convert(r.Object, &cj, nil); err != nil {
+				continue
+			}
+			fn(kind, cj.Name, cj.Spec.JobTemplate.Spec.Template.Spec)
+		case KindPod:
+			var pod corev1.Pod
+			if err := scheme.Scheme.Convert(r.Object, &pod, nil); err != nil {
+				continue
+			}
+			fn(kind, pod.Name, pod.Spec)
 		}
 	}
+}
+
+// allContainers returns the init, main and ephemeral containers of a
+// PodSpec in a single slice. Ephemeral containers share every field this
+// package inspects with a regular container, so they are projected onto
+// corev1.Container rather than handled separately by each caller.
+func allContainers(spec corev1.PodSpec) []corev1.Container {
+	out := make([]corev1.Container, 0, len(spec.InitContainers)+len(spec.Containers)+len(spec.EphemeralContainers))
+	out = append(out, spec.InitContainers...)
+	out = append(out, spec.Containers...)
+	for _, ec := range spec.EphemeralContainers {
+		out = append(out, corev1.Container(ec.EphemeralContainerCommon))
+	}
+	return out
 }

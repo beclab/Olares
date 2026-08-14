@@ -7,6 +7,7 @@ require (
 	github.com/beclab/api v0.0.24
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 	github.com/thoas/go-funk v0.9.3
+	golang.org/x/text v0.37.0
 	helm.sh/helm/v3 v3.19.5
 	k8s.io/api v0.34.2
 	k8s.io/apimachinery v0.34.2
@@ -111,7 +112,6 @@ require (
 	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/sys v0.45.0 // indirect
 	golang.org/x/term v0.43.0 // indirect
-	golang.org/x/text v0.37.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251202230838-ff82c1b0f217 // indirect
 	google.golang.org/grpc v1.79.3 // indirect

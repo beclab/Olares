@@ -86,7 +86,28 @@ func New(config *rest.Config) (*Webhook, error) {
 
 // GetAppConfig get app config by namespace.
 func (wh *Webhook) GetAppConfig(namespace string) (appMgr *v1alpha1.ApplicationManager, appConfig *appcfg.ApplicationConfig, isShared, isSharedApp bool, err error) {
-	list, err := wh.dynamicClient.AppV1alpha1().ApplicationManagers().List(context.TODO(), metav1.ListOptions{})
+	return GetAppConfigForNamespace(context.TODO(), wh.dynamicClient, wh.kubeClient, namespace)
+}
+
+// GetAppConfigForNamespace resolves the application that owns namespace,
+// returning api.ErrApplicationManagerNotFound when the namespace belongs
+// to no application.
+//
+// Both reads go straight to the API server rather than through an
+// informer cache. Admission decides what a pod becomes at the moment it
+// is created, and an app's pods can follow its ApplicationManager or its
+// namespace labels by milliseconds; reading a stale cache would silently
+// treat a just-installed app as belonging to nothing.
+//
+// It is a package-level function taking the clients explicitly so callers
+// that hold clients but not a *Webhook -- notably the runasuser admission
+// path -- resolve namespaces through this exact logic instead of a
+// parallel reimplementation that would drift. The parameters are the
+// client interfaces rather than the concrete clientsets so tests can
+// inject the generated fakes.
+func GetAppConfigForNamespace(ctx context.Context, appClient versioned.Interface, kubeClient kubernetes.Interface, namespace string) (
+	appMgr *v1alpha1.ApplicationManager, appConfig *appcfg.ApplicationConfig, isShared, isSharedApp bool, err error) {
+	list, err := appClient.AppV1alpha1().ApplicationManagers().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, nil, false, false, err
 	}
@@ -95,7 +116,7 @@ func (wh *Webhook) GetAppConfig(namespace string) (appMgr *v1alpha1.ApplicationM
 		return sorted[j].CreationTimestamp.Before(&sorted[i].CreationTimestamp)
 	})
 
-	ns, err := wh.kubeClient.CoreV1().Namespaces().Get(context.TODO(), namespace, metav1.GetOptions{})
+	ns, err := kubeClient.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
 	if err != nil {
 		klog.Error("failed to get namespace, namespace=", namespace, " err=", err)
 		return nil, nil, false, false, err
@@ -106,7 +127,8 @@ func (wh *Webhook) GetAppConfig(namespace string) (appMgr *v1alpha1.ApplicationM
 	installedUser := ns.Labels[constants.ApplicationInstallUserLabel]
 
 	var appconfig appcfg.ApplicationConfig
-	for _, a := range sorted {
+	for i := range sorted {
+		a := sorted[i]
 		switch {
 		case a.Spec.AppNamespace == namespace && (a.Spec.Type == v1alpha1.App || a.Spec.Type == v1alpha1.Middleware),
 			// shared server namespace
@@ -187,6 +209,7 @@ func (wh *Webhook) CreatePatch(
 		// TODO: force mutate
 		klog.Infof("Pod is injected with uuid=%s namespace=%s", prevUUID, req.Namespace)
 		mesh.HardenLinkerdProxyAdminProbes(pod)
+		sidecar.ApplyNestedIfaceBypass(pod)
 		if err := wh.patchProbeHeaders(ctx, pod); err != nil {
 			klog.Errorf("Failed to patch probe headers for already-injected pod=%s/%s err=%v", pod.Namespace, pod.Name, err)
 			return nil, err
@@ -239,6 +262,9 @@ func (wh *Webhook) CreatePatch(
 	if injectMacvlanBypass {
 		sidecar.EnsureMacvlanBypassLast(pod)
 	}
+	if sidecar.ApplyNestedIfaceBypass(pod) {
+		klog.Infof("nested-iface-bypass: inject pod=%s/%s", req.Namespace, pod.Name)
+	}
 
 	if injectSharedPod != nil {
 		if *injectSharedPod {
@@ -276,7 +302,12 @@ func (wh *Webhook) PatchLinkerdAdminProbesOnly(
 	req *admissionv1.AdmissionRequest,
 	pod *corev1.Pod,
 ) (patchBytes []byte, patched bool, err error) {
-	if !mesh.HardenLinkerdProxyAdminProbes(pod) {
+	changed := mesh.HardenLinkerdProxyAdminProbes(pod)
+	if sidecar.ApplyNestedIfaceBypass(pod) {
+		changed = true
+		klog.Infof("nested-iface-bypass: inject (probe-only) pod=%s/%s", req.Namespace, pod.Name)
+	}
+	if !changed {
 		return nil, false, nil
 	}
 	if err := wh.patchProbeHeaders(ctx, pod); err != nil {

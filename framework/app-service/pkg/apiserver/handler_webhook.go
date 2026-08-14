@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"strings"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
@@ -32,7 +33,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/ptr"
@@ -976,69 +976,83 @@ func (h *Handler) handleRunAsUserMutate(ctx context.Context, req *admissionv1.Ad
 	return resp
 }
 
+// runAsUserInject pins a user application's pod to the userspace
+// identity and makes sure the directories it mounts are owned by that
+// identity.
+//
+// The decision is made per namespace rather than per workload. Resolving
+// the pod's owner chain only ever reached the app's main Deployment or
+// StatefulSet -- the two workloads that carry the runasuser label -- so
+// a second Deployment, a Job, a CronJob, a DaemonSet or a bare Pod in
+// the same application silently ran as root. The namespace, by
+// contrast, identifies the application no matter which workload created
+// the pod.
+//
+// Identity and directory preparation are injected together, and never
+// separately: a pod whose process dropped to 1000 while its directories
+// stayed root:root cannot write anything, so giving up on both at once
+// is the only safe way to give up.
+//
+// A namespace that belongs to no application is not a failure: it is
+// most of the cluster, and it skips. An unreadable namespace is, and it
+// denies. Resolution reads the API server directly, so a read that fails
+// leaves us unable to tell whether this pod needed the identity, and
+// admitting it unchanged would start it as root against directories that
+// a later pod of the same app will expect to own.
 func (h *Handler) runAsUserInject(ctx context.Context, pod *corev1.Pod, namespace string) (*corev1.Pod, error) {
-	if len(pod.OwnerReferences) == 0 || pod == nil {
+	if pod == nil {
 		return pod, nil
 	}
-	var err error
-	var kind, name string
-	ownerRef := pod.OwnerReferences[0]
-	switch ownerRef.Kind {
-	case "ReplicaSet":
-		key := types.NamespacedName{Namespace: namespace, Name: ownerRef.Name}
-		var rs appsv1.ReplicaSet
-		err = h.ctrlClient.Get(ctx, key, &rs)
-		if err != nil {
-			klog.Infof("get replicaset err=%v", err)
-			return nil, err
-		}
-		if len(rs.OwnerReferences) > 0 && rs.OwnerReferences[0].Kind == deployment {
-			kind = deployment
-			name = rs.OwnerReferences[0].Name
-		}
-	case statefulSet:
-		kind = statefulSet
-		name = ownerRef.Name
-	}
-	if kind == "" {
-		return pod, nil
-	}
-	labels := make(map[string]string)
-	switch kind {
-	case deployment:
-		var deploy appsv1.Deployment
-		key := types.NamespacedName{Name: name, Namespace: namespace}
-		err = h.ctrlClient.Get(ctx, key, &deploy)
-		if err != nil {
-			return nil, err
-		}
-		labels = deploy.Labels
-
-	case statefulSet:
-		var sts appsv1.StatefulSet
-		key := types.NamespacedName{Name: name, Namespace: namespace}
-		err = h.ctrlClient.Get(ctx, key, &sts)
-		if err != nil {
-			return nil, err
-		}
-		labels = sts.Labels
-	}
-	userID := int64(1000)
-	if appName, ok := labels[applicationNameKey]; ok && !userspace.IsSysApp(appName) &&
-		labels[constants.ApplicationRunAsUserLabel] == "true" {
-		if pod.Spec.SecurityContext == nil {
-			pod.Spec.SecurityContext = &corev1.PodSecurityContext{
-				RunAsUser: &userID,
-			}
-		} else {
-			if pod.Spec.SecurityContext.RunAsUser == nil || *pod.Spec.SecurityContext.RunAsUser != 1000 {
-				pod.Spec.SecurityContext.RunAsUser = &userID
-			}
-		}
+	// The user's own space and the system namespaces host platform
+	// workloads (bfl and friends) that must not be reshaped.
+	if strings.HasPrefix(namespace, constants.OwnerNamespacePrefix+"-") ||
+		strings.HasPrefix(namespace, "user-system-") {
 		return pod, nil
 	}
 
+	_, cfg, _, _, err := h.sidecarWebhook.GetAppConfig(namespace)
+	if err != nil {
+		if errors.Is(err, api.ErrApplicationManagerNotFound) {
+			return pod, nil
+		}
+		klog.Errorf("runasuser: resolve app config for namespace=%s err=%v", namespace, err)
+		return nil, err
+	}
+	if cfg == nil || !cfg.RunAsUser {
+		return pod, nil
+	}
+
+	applyUserspaceIdentity(pod)
+
+	if err := h.injectUserspacePrepare(ctx, pod, cfg); err != nil {
+		klog.Errorf("runasuser: prepare-userspace inject failed ns=%s app=%s err=%v", namespace, cfg.AppName, err)
+		return nil, err
+	}
 	return pod, nil
+}
+
+// applyUserspaceIdentity pins the pod-level identity to 1000:1000.
+//
+// Only pod-level fields are written. Container-level securityContext
+// wins over them in kubernetes, so the fix-permissions init containers
+// that charts declare with runAsUser: 0 keep working untouched, and the
+// platform needs no exemption list to keep them running.
+func applyUserspaceIdentity(pod *corev1.Pod) {
+	uid := constants.UserspaceUID
+	gid := constants.UserspaceGID
+	if pod.Spec.SecurityContext == nil {
+		pod.Spec.SecurityContext = &corev1.PodSecurityContext{}
+	}
+	sc := pod.Spec.SecurityContext
+	sc.RunAsUser = &uid
+	// Without this the process keeps the image's gid, so the files it
+	// creates land as 1000:<image gid> and stop matching the 1000:1000
+	// directories the prepare container just handed it.
+	sc.RunAsGroup = &gid
+	// FSGroup is deliberately left alone. kubelet does not manage
+	// hostPath ownership, so it would not help the directories this is
+	// all about, and setting it would make kubelet walk every PVC in the
+	// pod on each start -- the whole-tree chown this design removes.
 }
 
 func (h *Handler) podArchInject(req *restful.Request, resp *restful.Response) {

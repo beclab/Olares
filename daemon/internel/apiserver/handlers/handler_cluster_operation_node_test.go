@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strings"
@@ -16,12 +17,26 @@ import (
 // operations that happen to be built in.
 const testOperationType = clusterop.Type("bake-cake")
 
+func init() {
+	// Registered before any test freezes the default signature-requirement
+	// set (InitClusterOperations), so the signature-bound node tests below
+	// keep taking that path for bake-cake.
+	if err := clusterop.DefaultSignatureRequirementRegistry().Register(testOperationType); err != nil {
+		panic(err)
+	}
+}
+
 // withTestNodeOperation installs one module of a type this daemon does not
 // have, plus somewhere to record spent signatures, and returns the module.
+// The type must already require an owner signature — bake-cake does via init
+// above; built-in power types do via their own modules.
 func withTestNodeOperation(t *testing.T, module *nodeModuleRecorder) *nodeModuleRecorder {
 	t.Helper()
 	if module.typ == "" {
 		module.typ = testOperationType
+	}
+	if !clusterop.RequiresSignature(module.typ) {
+		t.Fatalf("%q must require a signature for these tests", module.typ)
 	}
 	withNodeOperations(t, module)
 	withReplayGuard(t)
@@ -174,15 +189,17 @@ func TestClusterOperationNodeRejectsAnotherCluster(t *testing.T) {
 }
 
 // A type no module in this node's set holds is refused with the same stable
-// code the power endpoint refuses an unknown operation with.
+// code the power endpoint refuses an unknown operation with. Unknown types
+// are not signature-registered, so the route admits them with an access
+// token and the handler is what refuses them.
 func TestClusterOperationNodeRefusesAnUnknownType(t *testing.T) {
 	module := withTestNodeOperation(t, &nodeModuleRecorder{})
-	asOwnerSignature(t)
+	asAuthorizedUser(t)
 	asWorker(t)
 
 	resp, body := callRegisteredMethod(t, http.MethodPost, "/command/cluster-operation",
 		`{"type":"no-such-operation","operationId":"op-1","requestId":"client-1"}`,
-		signedFor(t, testOperationType, "client-1"))
+		authHeaders())
 
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Fatalf("status = %d, want 400: %s", resp.StatusCode, body)
@@ -542,5 +559,36 @@ func TestClusterOperationNodeAnswersOnTheControlNode(t *testing.T) {
 	}
 	if len(module.ran()) != 1 {
 		t.Errorf("the control node did not carry out the operation: %+v", module.ran())
+	}
+}
+
+// A type that did not register a signature requirement is admitted with the
+// access token the master forwards. Binding and replay spending stay with
+// the signature-bound path.
+func TestClusterOperationNodeAdmitsTokenWhenSignatureNotRequired(t *testing.T) {
+	const typ = clusterop.Type("fold-laundry")
+	if clusterop.RequiresSignature(typ) {
+		t.Fatalf("%q unexpectedly requires a signature", typ)
+	}
+	module := &nodeModuleRecorder{typ: typ}
+	withNodeOperations(t, module)
+	asAuthorizedUser(t)
+	asWorker(t)
+	prev := clusterIDOf
+	clusterIDOf = func(context.Context) (string, error) { return "cluster-test", nil }
+	t.Cleanup(func() { clusterIDOf = prev })
+
+	resp, body := callRegisteredMethod(t, http.MethodPost, "/command/cluster-operation",
+		`{"type":"fold-laundry","operationId":"op-1","requestId":"client-1","params":{}}`,
+		authHeaders())
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d: %s", resp.StatusCode, body)
+	}
+	if len(module.ran()) != 1 {
+		t.Fatalf("the module was asked to act %d times, want once", len(module.ran()))
+	}
+	if module.ran()[0].Type != typ || module.ran()[0].RequestID != "client-1" {
+		t.Errorf("request = %+v", module.ran()[0].PeerRequest)
 	}
 }

@@ -6,6 +6,7 @@ replace (
 	bytetrade.io/web3os/backups-sdk => github.com/Above-Os/backups-sdk v0.1.17
 	bytetrade.io/web3os/bfl => github.com/beclab/bfl v0.3.36
 	github.com/beclab/Olares/cli => ../cli
+	github.com/beclab/Olares/framework/app-service => ../framework/app-service
 	github.com/labstack/echo/v4 => github.com/eball/echo/v4 v4.13.4-patch
 	k8s.io/api => k8s.io/api v0.34.0
 	k8s.io/apimachinery => k8s.io/apimachinery v0.34.0

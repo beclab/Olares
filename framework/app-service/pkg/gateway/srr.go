@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
@@ -95,21 +97,37 @@ func BuildSpecForEntrance(app *appv1alpha1.Application, entrance appv1alpha1.Ent
 		class = srrv1alpha1.EntranceClassShared
 	}
 
-	var pattern string
+	var patterns []string
 	switch class {
 	case srrv1alpha1.EntranceClassApplication:
-		pattern = fmt.Sprintf("%s.*.%s", appv1alpha1.EntranceID(appid, entranceIndex, entranceCount), platformDomain)
+		// Primary = Resolve(defaultThirdLevel|EntranceID); when default
+		// overrides, also keep the hash EntranceID so both friendly and
+		// canonical hosts hit app-gateway (CoreDNS + HTTPRoute).
+		patterns = applicationEntranceHostPatterns(app, entranceIndex, platformDomain)
 	default:
 		var err error
 		isShared := appv1alpha1.IsShared(app)
-		pattern, err = appcfg.LogicalHostPattern(appid, entranceIndex, entranceCount, platformDomain, isShared)
+		pattern, err := appcfg.LogicalHostPattern(appid, entranceIndex, entranceCount, platformDomain, isShared)
 		if err != nil {
 			return srrv1alpha1.SharedRouteRegistrySpec{}, err
 		}
+		patterns = []string{pattern}
 	}
-	norm, err := NormalizeHostOrLogicalPattern(pattern)
-	if err != nil {
-		return srrv1alpha1.SharedRouteRegistrySpec{}, fmt.Errorf("normalize host pattern %q: %w", pattern, err)
+	norms := make([]string, 0, len(patterns))
+	seen := make(map[string]struct{}, len(patterns))
+	for _, pattern := range patterns {
+		norm, err := NormalizeHostOrLogicalPattern(pattern)
+		if err != nil {
+			return srrv1alpha1.SharedRouteRegistrySpec{}, fmt.Errorf("normalize host pattern %q: %w", pattern, err)
+		}
+		if _, dup := seen[norm]; dup {
+			continue
+		}
+		seen[norm] = struct{}{}
+		norms = append(norms, norm)
+	}
+	if len(norms) == 0 {
+		return srrv1alpha1.SharedRouteRegistrySpec{}, errors.New("no usable host patterns")
 	}
 
 	upstream := srrv1alpha1.UpstreamRef{
@@ -125,9 +143,52 @@ func BuildSpecForEntrance(app *appv1alpha1.Application, entrance appv1alpha1.Ent
 	return srrv1alpha1.SharedRouteRegistrySpec{
 		RouteMode:     srrv1alpha1.RouteModeGateway,
 		EntranceClass: class,
-		HostPatterns:  []string{norm},
+		HostPatterns:  norms,
 		Upstream:      upstream,
 	}, nil
+}
+
+// applicationEntranceHostPatterns returns SRR hostPatterns for an application
+// entrance. Order: resolved primary (defaultThirdLevel or EntranceID), then
+// the bare EntranceID when an override is active so hash hosts stay on
+// app-gateway alongside the friendly name.
+func applicationEntranceHostPatterns(app *appv1alpha1.Application, entranceIndex int, platformDomain string) []string {
+	appid := strings.ToLower(strings.TrimSpace(app.Spec.Appid))
+	entrances := app.Spec.Entrances
+	canonical := appv1alpha1.EntranceID(appid, entranceIndex, len(entrances))
+	primary := applicationEntranceHostPrefix(app, entranceIndex)
+
+	out := []string{fmt.Sprintf("%s.*.%s", primary, platformDomain)}
+	if primary != canonical && canonical != "" {
+		out = append(out, fmt.Sprintf("%s.*.%s", canonical, platformDomain))
+	}
+	return out
+}
+
+// applicationEntranceHostPrefix returns the Host label used for an application
+// entrance SRR primary pattern. It mirrors l4 buildAppVirtualHosts: parse
+// defaultThirdLevelDomainConfig and call the shared api helper; on missing or
+// malformed settings it falls back to EntranceID.
+func applicationEntranceHostPrefix(app *appv1alpha1.Application, entranceIndex int) string {
+	appid := strings.ToLower(strings.TrimSpace(app.Spec.Appid))
+	entrances := app.Spec.Entrances
+	if entranceIndex < 0 || entranceIndex >= len(entrances) {
+		return appv1alpha1.EntranceID(appid, entranceIndex, len(entrances))
+	}
+
+	var cfgs []appv1alpha1.DefaultThirdLevelDomainConfig
+	if raw := app.Spec.Settings["defaultThirdLevelDomainConfig"]; raw != "" {
+		if err := json.Unmarshal([]byte(raw), &cfgs); err != nil {
+			klog.Warningf("applicationEntranceHostPrefix: defaultThirdLevelDomainConfig unmarshal error app=%s: %v",
+				app.Spec.Name, err)
+		}
+	}
+
+	ptrs := make([]*appv1alpha1.Entrance, len(entrances))
+	for i := range entrances {
+		ptrs[i] = &entrances[i]
+	}
+	return appv1alpha1.ResolveEntranceIDWithDefaultThirdLevelDomainOverride(ptrs, entranceIndex, appid, cfgs)
 }
 
 // pickHTTPPort prefers the entrance-declared port; otherwise the first TCP port

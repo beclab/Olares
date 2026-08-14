@@ -28,11 +28,7 @@ jobs:
           REPOSITORY_URL: ${{ github.event.repository.html_url }}
 
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
-          PR_AUTHOR_URL: ${{ github.event.pull_request.user.html_url }}
-          PR_AUTHOR_AVATAR: ${{ github.event.pull_request.user.avatar_url }}
-
           MERGED_BY: ${{ github.event.pull_request.merged_by.login }}
-          MERGED_BY_URL: ${{ github.server_url }}/${{ github.event.pull_request.merged_by.login }}
 
           HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
           BASE_BRANCH: ${{ github.event.pull_request.base.ref }}
@@ -40,8 +36,6 @@ jobs:
           ADDITIONS: ${{ github.event.pull_request.additions }}
           DELETIONS: ${{ github.event.pull_request.deletions }}
           CHANGED_FILES: ${{ github.event.pull_request.changed_files }}
-          COMMITS: ${{ github.event.pull_request.commits }}
-          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
           MERGED_AT: ${{ github.event.pull_request.merged_at }}
 
         run: |
@@ -60,52 +54,42 @@ jobs:
             --arg repository "${REPOSITORY}" \
             --arg repository_url "${REPOSITORY_URL}" \
             --arg author "${PR_AUTHOR}" \
-            --arg author_url "${PR_AUTHOR_URL}" \
-            --arg author_avatar "${PR_AUTHOR_AVATAR}" \
             --arg merged_by "${MERGED_BY}" \
-            --arg merged_by_url "${MERGED_BY_URL}" \
             --arg head "${HEAD_BRANCH}" \
             --arg base "${BASE_BRANCH}" \
             --arg additions "${ADDITIONS}" \
             --arg deletions "${DELETIONS}" \
             --arg changed_files "${CHANGED_FILES}" \
-            --arg commits "${COMMITS}" \
-            --arg merge_sha "${MERGE_SHA}" \
             --arg timestamp "${MERGED_AT}" \
             '
+            # The only template section that reliably carries content. Nothing else from the body is
+            # forwarded: most sections are left empty, so rendering them yields a screen of headings.
             (
               $body
               | gsub("\r"; "")
-              # Drop Cursor Bugbot auto-summary (kept on GitHub, noisy on Discord).
-              | gsub("(?s)<!--\\s*CURSOR_SUMMARY\\s-->.*?<!--\\s*/CURSOR_SUMMARY\\s-->"; "")
-              # Drop leftover HTML comments from the PR template.
-              | gsub("(?s)<!--.*?-->"; "")
-              | gsub("\n{3,}"; "\n\n")
-              | gsub("^\\s+|\\s+$"; "")
-            ) as $clean_body |
+              | [scan("Target Version for Merge[*`\\s:]*([^\\n]*)"; "i")]
+              | if length > 0 then (.[0][0] // "") else "" end
+              | gsub("^[\\s*#>`-]+"; "")
+              | gsub("[\\s*`]+$"; "")
+              # An empty section matches the next heading instead, so accept version-shaped values only.
+              | if test("^v?[0-9]") then . else "" end
+            ) as $version |
 
+            (if $version == "" then "" else " · " + $version end) as $target |
+
+            # Authors merge their own work most of the time; name the merger only when it differs.
             (
-              if ($clean_body | length) == 0 then
-                "_No description provided._"
-              elif ($clean_body | length) > 3000 then
-                (
-                  $clean_body[0:3000] +
-                  "\n\n_[Description truncated — view full PR](" +
-                  $url +
-                  ")_"
-                )
-              else
-                $clean_body
+              if $merged_by == "" or $merged_by == $author then ""
+              else " · merged by @" + $merged_by
               end
-            ) as $pr_description |
+            ) as $merger |
+
+            ($changed_files + " file" + (if $changed_files == "1" then "" else "s" end)) as $files |
 
             {
-              username: "GitHub Merge",
+              username: "GitHub",
               avatar_url: "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
-
-              allowed_mentions: {
-                parse: []
-              },
+              allowed_mentions: { parse: [] },
 
               embeds: [{
                 author: {
@@ -113,88 +97,19 @@ jobs:
                   url: $repository_url
                 },
 
-                title: (
-                  "✅ PR #" +
-                  $number +
-                  " merged · " +
-                  ($title[0:210])
-                ),
-
+                # Discord caps an embed title at 256; leave room for the number and separator.
+                title: ("#" + $number + " " + ($title[0:230])),
                 url: $url,
 
                 description: (
-                  "**`" +
-                  $head +
-                  "` → `" +
-                  $base +
-                  "`**" +
-                  "\n\n### Description\n" +
-                  $pr_description
+                  "`" + $head + "` → `" + $base + "`" + $target + "\n"
+                  + "@" + $author + $merger
+                  + " · +" + $additions + " -" + $deletions
+                  + " · " + $files
                 ),
 
-                color: 5763719,
-
-                thumbnail: {
-                  url: $author_avatar
-                },
-
-                fields: [
-                  {
-                    name: "✍️ Author",
-                    value: (
-                      "[@" +
-                      $author +
-                      "](" +
-                      $author_url +
-                      ")"
-                    ),
-                    inline: true
-                  },
-                  {
-                    name: "✅ Merged by",
-                    value: (
-                      "[@" +
-                      $merged_by +
-                      "](" +
-                      $merged_by_url +
-                      ")"
-                    ),
-                    inline: true
-                  },
-                  {
-                    name: "📊 Changes",
-                    value: (
-                      "🟢 **+" +
-                      $additions +
-                      "**  🔴 **-" +
-                      $deletions +
-                      "**  📄 **" +
-                      $changed_files +
-                      "** files"
-                    ),
-                    inline: false
-                  },
-                  {
-                    name: "🔗 Merge commit",
-                    value: (
-                      "[`" +
-                      ($merge_sha[0:7]) +
-                      "`](" +
-                      $repository_url +
-                      "/commit/" +
-                      $merge_sha +
-                      ") · " +
-                      $commits +
-                      " commits"
-                    ),
-                    inline: false
-                  }
-                ],
-
-                footer: {
-                  text: "Merged via GitHub Actions"
-                },
-
+                # GitHub'"'"'s own merged purple (#8250DF), to read apart from the green of an open PR.
+                color: 8540383,
                 timestamp: $timestamp
               }]
             }
