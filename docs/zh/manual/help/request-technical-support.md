@@ -16,8 +16,7 @@ head:
 
 | 渠道 | 适用场景 |
 | --- | --- |
-| **[Ticket 应用](#提交工单)** | 可以访问设备时使用。提供图形界面，并自动收集系统日志。 |
-| **[Olares Space](https://www.olares.com/space/login?redirect=/)** | 无法访问设备（如系统崩溃或无响应）时使用，或希望通过 `olares-cli` 上传日志时使用。 |
+| **[Ticket](#提交工单)** | 私密的一对一技术支持，可安全地与 Olares 支持团队共享系统日志。 |
 | **[GitHub](#在-github-上报告问题)** | 报告技术问题或提出需要公开技术讨论和持续跟进的功能请求。 |
 | **[论坛](https://www.olares.com/forum/)** | 社区讨论、提问和交流经验。 |
 | **[Discord](https://discord.gg/olares)** | 实时交流和快速提问。 |
@@ -31,7 +30,7 @@ head:
 
 如果你希望通过图形界面自动收集设备上的系统信息和日志，请使用 Ticket 应用。
 
-:::warning 前提条件
+:::tip 前提条件
 - **系统版本**：确保 Olares 系统已更新至 1.12.6 或更高版本。
 - **登陆账号一致**：登录 LarePass 的 Olares ID 必须与当前 Olares 设备上登录的账号一致。
 - **工单与账号绑定**：工单与创建时使用的 Olares ID 绑定。Ticket 应用仅显示当前 ID 关联的工单；如果切换了新 ID，必须使用原 ID 登录 Olares Space 才能查看之前的历史工单。
@@ -62,6 +61,10 @@ head:
 ## 在 GitHub 上报告问题
 
 对于适合公开技术讨论的 Olares OS 系统问题或功能请求，建议前往 GitHub 提交 Issue。
+
+:::warning 安全报告
+请遵循我们的[安全策略](https://github.com/beclab/Olares/blob/main/SECURITY.md)。不要通过公开 Issue、Discussion 或社区渠道报告漏洞。
+:::
 
 1. 在 Olares 设置中[导出系统日志](/zh/manual/olares/settings/developer.md#导出系统日志)。
 2. 打开对应的 GitHub 仓库，创建新的 Issue 报告具体的技术问题，或创建 Discussion 进行交流：

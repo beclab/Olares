@@ -17,8 +17,7 @@ To get the fastest resolution, choose the channel that best fits your situation:
 
 | Channel | Best for |
 | --- | --- |
-| **[Ticket app](#submit-a-ticket)** | When your device is accessible. It provides a graphical interface and automatically collects system logs. |
-| **[Olares Space](https://www.olares.com/space/login?redirect=/)** | When your device is inaccessible (crashed/unresponsive), or if you prefer uploading logs via the `olares-cli`. |
+| **[Ticket](#submit-a-ticket)** | Private, one-on-one technical support and securely sharing system logs with the Olares Support team. |
 | **[GitHub](#report-issues-on-github)** | Reporting technical issues or requesting features that need ongoing, public technical discussion. |
 | **[Forum](https://www.olares.com/forum/)** | Community discussions, questions, and sharing experiences. |
 | **[Discord](https://discord.gg/olares)** | Real-time chat and quick questions. |
@@ -32,7 +31,7 @@ You can submit a support ticket in one of two ways, depending on whether you can
 
 Use the Ticket app when you want a graphical interface that automatically collects system information and logs directly from your device.
 
-:::warning Prerequisites
+:::tip Prerequisites
 - **System version:** Ensure your Olares system is upgraded to v1.12.6 or later.
 - **Account match:** The Olares ID used to log in to LarePass must match the account currently logged in on your Olares device.
 - **Ticket access:** Tickets are linked to the Olares ID used at creation. The Ticket app only displays tickets associated with your current ID. If you switch to a new ID, you must log in to Olares Space with your original ID to view past tickets.
@@ -63,7 +62,11 @@ For detailed instructions, see [Create and manage support tickets in Olares Spac
 
 ## Report issues on GitHub
 
-For Olares OS system issues or feature requests that benefit from public technical discussion, consider opening an issue on GitHub. 
+For Olares OS system issues or feature requests that benefit from public technical discussion, consider opening an issue on GitHub.
+
+:::warning Security reporting
+Follow our [Security Policy](https://github.com/beclab/Olares/blob/main/SECURITY.md). Please do not report vulnerabilities through public issues, discussions, or community channels.
+:::
 
 1. [Export your system logs](/manual/olares/settings/developer.md#export-system-logs) from Olares Settings.
 2. Open the appropriate GitHub repository, and create an **Issue** for specific technical problems or open a **Discussion** for general questions.
