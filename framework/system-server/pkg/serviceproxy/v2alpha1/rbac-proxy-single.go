@@ -18,6 +18,8 @@ import (
 	"time"
 
 	permv2alpha1 "bytetrade.io/web3os/system-server/pkg/permission/v2alpha1"
+	appclientset "github.com/beclab/api/pkg/generated/clientset/versioned"
+	apiexternalversions "github.com/beclab/api/pkg/generated/informers/externalversions"
 	"github.com/ghodss/yaml"
 	"github.com/oklog/run"
 	"github.com/spf13/cobra"
@@ -187,6 +189,13 @@ func Complete(o *options.ProxyRunOptions) (*completedProxyRunOptions, error) {
 
 	completed.informerFactory = informers.NewSharedInformerFactory(completed.kubeClient, 0)
 
+	appClient, err := appclientset.NewForConfig(kubeconfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to instantiate Application client: %w", err)
+	}
+	completed.appInformerFactory = apiexternalversions.NewSharedInformerFactory(appClient, 0)
+	completed.appLister = completed.appInformerFactory.App().V1alpha1().Applications().Lister()
+
 	return completed, nil
 }
 
@@ -207,7 +216,7 @@ func Run(cfg *completedProxyRunOptions) error {
 		return err
 	}
 
-	authorizer, err := permv2alpha1.UnionAllAuthorizers(ctx, cfg.auth.Authorization, cfg.kubeClient, cfg.informerFactory)
+	authorizer, err := permv2alpha1.UnionAllAuthorizers(ctx, cfg.auth.Authorization, cfg.kubeClient, cfg.informerFactory, cfg.appLister)
 	if err != nil {
 		klog.Errorf("failed to create authorizer: %v", err)
 		return err
@@ -456,7 +465,13 @@ func Run(cfg *completedProxyRunOptions) error {
 	}
 
 	cfg.informerFactory.Start(ctx.Done())
+	if cfg.appInformerFactory != nil {
+		cfg.appInformerFactory.Start(ctx.Done())
+	}
 	defer cfg.informerFactory.Shutdown()
+	if cfg.appInformerFactory != nil {
+		defer cfg.appInformerFactory.Shutdown()
+	}
 
 	if err := gr.Run(); err != nil {
 		return fmt.Errorf("failed to run groups: %w", err)

@@ -23,6 +23,7 @@ import (
 type nonResourceWithServiceRuleResolver struct {
 	clusterRoleGetter        rbacregistryvalidation.ClusterRoleGetter
 	clusterRoleBindingLister rbacregistryvalidation.ClusterRoleBindingLister
+	appLister                providerv2alpha1.ApplicationLister
 }
 
 var _ Authorizer = &nonResourceWithServiceRBACAuthorizor{}
@@ -31,11 +32,12 @@ type nonResourceWithServiceRBACAuthorizor struct {
 	resolver *nonResourceWithServiceRuleResolver
 }
 
-func newNonResourceWithServiceRBACAuthorizor(informerFactory versionedinformers.SharedInformerFactory) *nonResourceWithServiceRBACAuthorizor {
+func newNonResourceWithServiceRBACAuthorizor(informerFactory versionedinformers.SharedInformerFactory, appLister providerv2alpha1.ApplicationLister) *nonResourceWithServiceRBACAuthorizor {
 	return &nonResourceWithServiceRBACAuthorizor{
 		&nonResourceWithServiceRuleResolver{
-			&rbac.ClusterRoleGetter{Lister: informerFactory.Rbac().V1().ClusterRoles().Lister()},
-			&rbac.ClusterRoleBindingLister{Lister: informerFactory.Rbac().V1().ClusterRoleBindings().Lister()},
+			clusterRoleGetter:        &rbac.ClusterRoleGetter{Lister: informerFactory.Rbac().V1().ClusterRoles().Lister()},
+			clusterRoleBindingLister: &rbac.ClusterRoleBindingLister{Lister: informerFactory.Rbac().V1().ClusterRoleBindings().Lister()},
+			appLister:                appLister,
 		},
 	}
 }
@@ -167,7 +169,7 @@ func (rr *nonResourceWithServiceRuleResolver) GetRoleReferenceRules(ctx context.
 			return nil, nil, err
 		}
 
-		bindingProvider := providerv2alpha1.ProviderRefFromHost(host)
+		bindingProvider := providerv2alpha1.ResolveProviderRefFromHost(host, rr.appLister)
 		if annotation, ok := clusterRole.Annotations[providerv2alpha1.ProviderRefAnnotation]; ok {
 			if annotation == bindingProvider {
 				klog.V(5).Info("it's a cluster role of a provider, annotation: ", annotation)
@@ -189,7 +191,7 @@ func (rr *nonResourceWithServiceRuleResolver) GetRoleReferenceRules(ctx context.
 	}
 }
 
-func UnionAllAuthorizers(ctx context.Context, cfg *authz.Config, kubeClient kubernetes.Interface, informerFactory versionedinformers.SharedInformerFactory) (Authorizer, error) {
+func UnionAllAuthorizers(ctx context.Context, cfg *authz.Config, kubeClient kubernetes.Interface, informerFactory versionedinformers.SharedInformerFactory, appLister providerv2alpha1.ApplicationLister) (Authorizer, error) {
 	// sarClient := kubeClient.AuthorizationV1()
 	// sarAuthorizer, err := authz.NewSarAuthorizer(sarClient)
 	// if err != nil {
@@ -201,7 +203,7 @@ func UnionAllAuthorizers(ctx context.Context, cfg *authz.Config, kubeClient kube
 		return nil, fmt.Errorf("failed to create static authorizer: %w", err)
 	}
 
-	nonResourceWithServiceRBACAuthorizor := newNonResourceWithServiceRBACAuthorizor(informerFactory)
+	nonResourceWithServiceRBACAuthorizor := newNonResourceWithServiceRBACAuthorizor(informerFactory, appLister)
 
 	authorizer := unionAuthzHandler{
 		wrapAuthorizer{staticAuthorizer},

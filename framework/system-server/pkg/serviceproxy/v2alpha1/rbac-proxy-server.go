@@ -10,6 +10,8 @@ import (
 
 	permv2alpha1 "bytetrade.io/web3os/system-server/pkg/permission/v2alpha1"
 	"bytetrade.io/web3os/system-server/pkg/utils"
+	appclientset "github.com/beclab/api/pkg/generated/clientset/versioned"
+	apiexternalversions "github.com/beclab/api/pkg/generated/informers/externalversions"
 	"github.com/brancz/kube-rbac-proxy/cmd/kube-rbac-proxy/app/options"
 	"github.com/brancz/kube-rbac-proxy/pkg/authn"
 	"github.com/brancz/kube-rbac-proxy/pkg/authz"
@@ -101,7 +103,7 @@ func (s *server) Init(cfg *completedProxyRunOptions) error {
 		return err
 	}
 
-	s.authorizer, err = permv2alpha1.UnionAllAuthorizers(s.mainCtx, cfg.auth.Authorization, cfg.kubeClient, cfg.informerFactory)
+	s.authorizer, err = permv2alpha1.UnionAllAuthorizers(s.mainCtx, cfg.auth.Authorization, cfg.kubeClient, cfg.informerFactory, cfg.appLister)
 	if err != nil {
 		klog.Errorf("failed to create authorizer: %v", err)
 		return err
@@ -140,9 +142,15 @@ func (s *server) Init(cfg *completedProxyRunOptions) error {
 	s.proxy.Use(middleware.ProxyWithConfig(websocketConfig))
 
 	cfg.informerFactory.Start(s.mainCtx.Done())
+	if cfg.appInformerFactory != nil {
+		cfg.appInformerFactory.Start(s.mainCtx.Done())
+	}
 	go func() {
 		<-s.mainCtx.Done()
 		cfg.informerFactory.Shutdown()
+		if cfg.appInformerFactory != nil {
+			cfg.appInformerFactory.Shutdown()
+		}
 	}()
 	return nil
 }
@@ -217,6 +225,10 @@ func ServerOptions(listenAddress string) *completedProxyRunOptions {
 	}
 
 	completed.informerFactory = informers.NewSharedInformerFactory(completed.kubeClient, 0)
+
+	appClient := appclientset.NewForConfigOrDie(config)
+	completed.appInformerFactory = apiexternalversions.NewSharedInformerFactory(appClient, 0)
+	completed.appLister = completed.appInformerFactory.App().V1alpha1().Applications().Lister()
 
 	return completed
 }
