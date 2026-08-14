@@ -80,7 +80,7 @@ const side = {
           ],
         },
         {
-          text: "Get technical support",
+          text: "Get support",
           link: "/manual/help/request-technical-support",
         },
       ],

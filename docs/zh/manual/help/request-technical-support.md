@@ -14,6 +14,13 @@ head:
 
 安装并使用 Ticket 应用，你可以在 Olares 设备上直接创建和管理支持工单、追踪工单进度，并与 Olares 支持团队沟通。它还可以自动收集系统信息和日志，无需手动导出。
 
+如果你更喜欢图形界面，并需要自动收集当前 Olares 设备上的日志和系统信息，请选择此方式。
+
+:::info 前提条件
+- 确保 Olares 系统已更新到 1.12.7 或更高版本。
+- 登录 LarePass 的 Olares ID 必须与当前 Olares 设备上登录的 Olares 账号一致。
+:::
+
 ### 安装 Ticket
 
 在 Olares 设备上安装 Ticket 应用，并通过 LarePass 登录，以便提交工单。
@@ -23,8 +30,9 @@ head:
    ![Ticket app in Market](/images/zh/manual/help/ticket.png#bordered)
 
 2. 打开 Ticket 应用，屏幕上会显示登录二维码。
-3. 在你的移动设备上，打开 LarePass 应用，进入**设置**标签页。
-4. 点击右上角的扫描图标，扫描屏幕上的二维码，然后点击**确认**登录。
+3. 在你的移动设备上，打开 LarePass 应用。
+4. 进入**设置**标签页。
+5. 点击右上角的扫描图标，扫描屏幕上的二维码，然后点击**确认**登录。
 
 ### 提交工单
 
@@ -94,7 +102,9 @@ head:
 
 ## 在 Olares Space 中提交工单
 
-你也可以直接通过网页浏览器在 Olares Space 中创建和管理支持工单。这种方式无需安装单独的 Ticket 应用。
+你也可以直接通过网页浏览器在 Olares Space 中创建和管理支持工单。这种方式无需安装单独的 Ticket 应用，即使无法访问 Olares 设备（例如系统崩溃或无响应）也可以使用。通过 Ticket 应用提交的工单也可以在这里查看，方便集中跟踪所有请求。
+
+如果你无法访问 Olares 设备，请选择此方式。你可以手动填写网页表单，也可以使用 `olares-cli` 上传日志并自动创建工单。
 
 在 Olares Space 中，你可以通过以下任一方式创建工单：
 
@@ -105,12 +115,15 @@ head:
 
 ## 在 GitHub 上报告
 
-如果你希望公开报告问题，可以使用 Olares GitHub 仓库。
+对于需要持续技术讨论和跟进的 Olares OS 系统问题或功能请求，建议公开提交到 GitHub。
+
+- **Olares OS** 相关问题，提交到 [beclab/Olares](https://github.com/beclab/Olares)。
+- **Olares Market 中的应用**相关问题，提交到 [beclab/apps](https://github.com/beclab/apps)。
+
+在每个仓库中，你都可以创建 Discussion 进行一般性问题交流，或提交 Issue 报告 Bug 和技术问题。
 
 1. 在 Olares 设置中[导出系统日志](/zh/manual/olares/settings/developer.md#导出系统日志)。
-2. 打开 [Olares GitHub 仓库](https://github.com/beclab/Olares)，选择以下方式之一：
-   - 创建一个新的 **Discussion**（适合一般问题或需求帮助）。
-   - 提交一个 **Issue**（适合报告 Bug 或技术问题）。
+2. 打开对应的 GitHub 仓库，创建新的 Discussion 或 Issue。
 3. 描述问题并附上导出的系统日志文件。视情况提供以下信息：
    - 复现问题的具体步骤
    - 错误信息或异常行为的描述
@@ -131,3 +144,15 @@ head:
 ### 可以删除工单吗？
 
 不可以。已提交的工单无法删除。你可以选择关闭它。
+
+### 什么时候该用哪个支持渠道？
+
+根据你的情况选择最合适的渠道：
+
+- **Ticket 应用**：当你希望使用图形界面，并需要自动收集当前 Olares 设备上的日志和系统信息时使用。
+- **Olares Space**：当你想通过浏览器创建工单，或使用 `olares-cli` 上传日志时使用。
+- **GitHub**：适用于需要公开技术讨论和持续跟进的 Olares OS 系统问题或应用相关问题。
+  - Olares OS 问题：[beclab/Olares](https://github.com/beclab/Olares)
+  - 应用问题：[beclab/apps](https://github.com/beclab/apps)
+- **论坛**：访问 [Olares 论坛](https://www.olares.com/forum/) 参与社区讨论、提问和交流经验。
+- **Discord**：加入 [Olares Discord](https://discord.gg/olares) 社区，进行实时交流和快速提问。
