@@ -2,8 +2,8 @@
   "schemaVersion": "1",
   "apps": [
     {
-      "appId": "ai-router",
-      "appName": "ai-router",
+      "appId": "f3395cd5",
+      "appName": "router",
       "installScope": "shared",
       "installOrder": 20
     }
