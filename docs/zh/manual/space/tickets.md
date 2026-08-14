@@ -133,14 +133,6 @@ head:
 
 Olares Space 的**工单**页面仅展示当前登录的 Olares ID 所创建的工单。要查看某个工单，请使用创建该工单时所用的 Olares ID 登录 Olares Space。
 
-### 提交工单后可以编辑吗？
-
-不可以。提交后无法编辑标题或描述。你可以通过添加回复来补充信息。
-
-### 可以删除工单吗？
-
-不可以。已提交的工单无法删除。你可以选择关闭它们。
-
 ## 了解更多
 
-- [获取技术支持](../../../manual/help/request-technical-support.md)：了解通过 Ticket 应用或 GitHub 获取帮助的更多方式。
+- [获取支持](../../../manual/help/request-technical-support.md)：了解通过 Ticket 应用或 GitHub 获取帮助的更多方式。

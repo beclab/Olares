@@ -126,16 +126,12 @@ You can reopen a **Closed** or **Resolved** ticket if the issue returns or was n
 
 The ticket status changes back to **Open**, and the Olares Support team will continue to handle it.
 
-## FAQs
+## FAQ
 
 ### How are tickets associated with my Olares ID?
 
 The **Tickets** page in Olares Space only shows tickets created with the Olares ID you are currently logged in with. To view a specific ticket, log in to Olares Space using the same Olares ID that was used to create it.
 
-### Can I edit a ticket after submitting it?
-
-No. You cannot edit the title or description after submission. You can only add replies to provide additional information.
-
 ## Learn more
 
-- [Get technical support](../help/request-technical-support.md): Learn more ways to get help through the Ticket app or GitHub.
+- [Get support](../help/request-technical-support.md): Learn more ways to get help through the Ticket app or GitHub.
