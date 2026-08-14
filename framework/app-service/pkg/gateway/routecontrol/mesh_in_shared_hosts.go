@@ -65,6 +65,9 @@ func (r *MeshInSharedHostsReconciler) Reconcile(ctx context.Context, req reconci
 			sharedHostsReconcileTotal.WithLabelValues(rResUpdateFailed).Inc()
 			return reconcile.Result{}, err
 		}
+		if err := deleteMeshInCustomTLSReplica(ctx, r.Client, req.Namespace); err != nil {
+			return reconcile.Result{}, err
+		}
 		return reconcile.Result{}, nil
 	}
 	platformDomain := r.resolvePlatformDomain(ctx)
@@ -91,7 +94,7 @@ func (r *MeshInSharedHostsReconciler) Reconcile(ctx context.Context, req reconci
 	}
 	sharedHostsTargetCount.WithLabelValues(hashCallerNS(req.Namespace)).Set(float64(len(nsTargets)))
 	noteEmptySharedHostsTargets(req.Namespace, nsTargets)
-	return reconcile.Result{}, r.ReconcileNamespace(ctx, req.Namespace, nsTargets)
+	return reconcile.Result{}, r.ReconcileNamespace(ctx, req.Namespace, nsTargets, platformDomain)
 }
 
 // resolvePlatformDomain returns the domain used to materialize viewer hosts.
@@ -110,7 +113,7 @@ func (r *MeshInSharedHostsReconciler) resolvePlatformDomain(ctx context.Context)
 
 // ReconcileNamespace upserts the per-NS olares-mesh-in-shared-hosts ConfigMap.
 // fail-safe: List/Get/Update failures leave the existing ConfigMap intact.
-func (r *MeshInSharedHostsReconciler) ReconcileNamespace(ctx context.Context, callerNS string, targets []SharedHostsTarget) error {
+func (r *MeshInSharedHostsReconciler) ReconcileNamespace(ctx context.Context, callerNS string, targets []SharedHostsTarget, platformDomain string) error {
 	if r == nil || r.Client == nil || callerNS == "" {
 		return nil
 	}
@@ -119,7 +122,7 @@ func (r *MeshInSharedHostsReconciler) ReconcileNamespace(ctx context.Context, ca
 		Namespace: callerNS, Name: constants.MeshInSharedHostsCMName,
 	}, cm)
 	if apierrors.IsNotFound(err) {
-		desiredData := buildSharedHostsConfigMapData(targets)
+		desiredData := buildSharedHostsConfigMapData(targets, platformDomain)
 		desiredHash := sharedHostsContentHash(desiredData)
 		cm = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
@@ -142,7 +145,7 @@ func (r *MeshInSharedHostsReconciler) ReconcileNamespace(ctx context.Context, ca
 		sharedHostsReconcileTotal.WithLabelValues(rResUpdated).Inc()
 		updateSharedHostsHashAge(callerNS, desiredHash, true)
 		sharedHostsCount.WithLabelValues(hashCallerNS(callerNS)).Set(float64(countSharedHostsRows(targets)))
-		return nil
+		return syncMeshInCustomTLSReplica(ctx, r.Client, callerNS, collectTLSHosts(targets))
 	}
 	if err != nil {
 		sharedHostsReconcileTotal.WithLabelValues(rResGetFailed).Inc()
@@ -154,17 +157,20 @@ func (r *MeshInSharedHostsReconciler) ReconcileNamespace(ctx context.Context, ca
 			hashCallerNS(callerNS), cm.Name)
 		return nil
 	}
-	desiredData := buildSharedHostsConfigMapData(targets)
+	desiredData := buildSharedHostsConfigMapData(targets, platformDomain)
 	desiredHash := sharedHostsContentHash(desiredData)
 	desiredHostsCount := countSharedHostsRows(targets)
 	if cm.Annotations != nil && cm.Annotations[sharedHostsContentHashAnnotation] == desiredHash {
 		sharedHostsReconcileTotal.WithLabelValues(rResSkipped).Inc()
 		updateSharedHostsHashAge(callerNS, desiredHash, false)
 		sharedHostsCount.WithLabelValues(hashCallerNS(callerNS)).Set(float64(desiredHostsCount))
-		return nil
+		// CM unchanged still refresh custom TLS: source Secret may have rotated.
+		return syncMeshInCustomTLSReplica(ctx, r.Client, callerNS, collectTLSHosts(targets))
 	}
 	for key := range cm.Data {
-		if key == constants.MeshInSharedHostsFileName || key == constants.MeshInTLSHostsFileName {
+		if key == constants.MeshInSharedHostsFileName ||
+			key == constants.MeshInTLSHostsFileName ||
+			key == constants.MeshInCustomTLSHostsFileName {
 			continue
 		}
 		if _, ok := desiredData[key]; !ok {
@@ -192,7 +198,7 @@ func (r *MeshInSharedHostsReconciler) ReconcileNamespace(ctx context.Context, ca
 	sharedHostsReconcileTotal.WithLabelValues(rResUpdated).Inc()
 	updateSharedHostsHashAge(callerNS, desiredHash, true)
 	sharedHostsCount.WithLabelValues(hashCallerNS(callerNS)).Set(float64(desiredHostsCount))
-	return nil
+	return syncMeshInCustomTLSReplica(ctx, r.Client, callerNS, collectTLSHosts(targets))
 }
 
 func (r *MeshInSharedHostsReconciler) gcSharedHostsConfigMap(ctx context.Context, callerNS, reason string) error {

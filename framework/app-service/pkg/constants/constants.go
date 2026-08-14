@@ -78,10 +78,18 @@ const (
 	MeshInSharedHostsCMName         = "olares-mesh-in-shared-hosts"
 	MeshInSharedHostsFileName       = "shared-hosts.txt"
 	MeshInTLSHostsFileName          = "tls-hosts.txt"
+	// MeshInCustomTLSHostsFileName lists exact third-party FQDNs that must present
+	// CustomDomainTLS material (fail closed — never the viewer platform cert).
+	MeshInCustomTLSHostsFileName = "custom-tls-hosts.txt"
 	MeshInSharedHostsManagedByLabel = "gateway.olares.io/mesh-in-shared-hosts-managed-by"
 	MeshInTLSSecretNamePrefix       = "olares-mesh-in-tls-"
 	MeshInCertsVolumeName           = "olares-mesh-in-certs"
-	MeshInAgentContainerName        = "olares-mesh-in-agent"
+	// MeshInCustomTLSSecretName is the per-caller aggregate of CustomDomainTLS
+	// material (keys <fqdn>.crt / <fqdn>.key) for mesh-in SNI cert selection.
+	MeshInCustomTLSSecretName = "olares-mesh-in-custom-tls"
+	// MeshInCustomCertsVolumeName mounts MeshInCustomTLSSecretName into the agent.
+	MeshInCustomCertsVolumeName = "olares-mesh-in-custom-certs"
+	MeshInAgentContainerName    = "olares-mesh-in-agent"
 	MeshInCertCacheMax              = 16
 	MeshInCertCacheInactive         = "10m"
 	MeshInCertCacheValid            = "1m"

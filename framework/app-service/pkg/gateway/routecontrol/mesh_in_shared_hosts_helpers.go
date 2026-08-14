@@ -401,11 +401,13 @@ func validDNSChars(s string) bool {
 	return true
 }
 
-func buildSharedHostsConfigMapData(targets []SharedHostsTarget) map[string]string {
+func buildSharedHostsConfigMapData(targets []SharedHostsTarget, platformDomain string) map[string]string {
 	data := map[string]string{}
 	perViewer := map[string]map[string]struct{}{}
 	allAuth := map[string]struct{}{}
 	allTLS := map[string]struct{}{}
+	customTLS := map[string]struct{}{}
+	dom := strings.ToLower(strings.TrimSpace(platformDomain))
 	for _, t := range targets {
 		viewer := strings.ToLower(strings.TrimSpace(t.Viewer))
 		if viewer == "" || viewer == constants.MeshInSharedHostsFileName {
@@ -419,11 +421,20 @@ func buildSharedHostsConfigMapData(targets []SharedHostsTarget) map[string]strin
 			perViewer[viewer][h] = struct{}{}
 		}
 		for _, h := range t.TLSHosts {
+			h = strings.ToLower(strings.TrimSpace(h))
+			if h == "" {
+				continue
+			}
 			allTLS[h] = struct{}{}
+			// Exact third-party FQDNs must never present the viewer platform cert.
+			if dom != "" && !isPlatformHostGo(h, dom) {
+				customTLS[h] = struct{}{}
+			}
 		}
 	}
 	data[constants.MeshInSharedHostsFileName] = sharedHostsFileText(sortedKeys(allAuth))
 	data[constants.MeshInTLSHostsFileName] = sharedHostsFileText(sortedKeys(allTLS))
+	data[constants.MeshInCustomTLSHostsFileName] = sharedHostsFileText(sortedKeys(customTLS))
 	for viewer, set := range perViewer {
 		data[viewer] = sharedHostsFileText(sortedKeys(set))
 	}
