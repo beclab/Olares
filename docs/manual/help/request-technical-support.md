@@ -31,13 +31,10 @@ You can submit a support ticket in one of two ways, depending on whether you can
 
 Use the Ticket app when you want a graphical interface that automatically collects system information and logs directly from your device.
 
-:::tip Prerequisites
-- Ensure your Olares system is updated to v1.12.6 or later.
-- The Olares ID used to log in to LarePass must match the account currently logged in on your Olares device.
-:::
-
-:::info Account Linking
-Tickets are linked to the Olares ID used at creation. The Ticket app only displays tickets associated with your current Olares ID. If you switch to a new ID, you must log in to Olares Space with your original ID to view past tickets.
+:::warning Prerequisites
+- **System version:** Ensure your Olares system is upgraded to v1.12.6 or later.
+- **Account match:** The Olares ID used to log in to LarePass must match the account currently logged in on your Olares device.
+- **Ticket access:** Tickets are linked to the Olares ID used at creation. The Ticket app only displays tickets associated with your current ID. If you switch to a new ID, you must log in to Olares Space with your original ID to view past tickets.
 :::
 
 1. Install the Ticket app from Market, and then open it.

@@ -79,7 +79,7 @@ const side = {
           ],
         },
         {
-          text: "获取技术支持",
+          text: "获取支持",
           link: "/zh/manual/help/request-technical-support",
         },
       ],
