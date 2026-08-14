@@ -31,14 +31,17 @@ head:
    验证码有效期有限，倒计时结束后会自动刷新。请在验证码过期前复制命令。
    :::
 
-   ![上传日志对话框](/images/zh/manual/space/upload_logs_window.png#bordered){width=70%}
+   ![上传日志对话框](/images/zh/manual/space/upload_logs_window3.png#bordered)
 
 4. 访问 Olares 设备上的终端。例如，[通过 SSH 访问](/zh/one/access-terminal-ssh.md)。
 5. 在终端中运行复制的命令。它会使用 Olares CLI 自动收集和上传系统日志。
-6. 命令执行完成后，会创建一个附带日志的工单。记下工单编号以便后续跟进，例如 `TKT-10324`。
+6. 命令执行完成后，会创建一个附带日志的工单。记下工单编号以便后续跟进，例如 `TKT-10329`。
+
+   ![Olares CLI 收集上传日期](/images/zh/manual/space/cli-logs-uploaded.png#bordered)
+
 7. 返回**工单**页面，找到你在第 6 步中记下的工单编号对应的工单。该工单名为 **Olares CLI logs {creation-date}**，状态为**待处理**。
 
-   ![Olares CLI 日志工单](/images/zh/manual/space/cli-logs-ticket.png#bordered)
+   ![Olares CLI 日志工单](/images/zh/manual/space/cli-logs-ticket3.png#bordered)
 
 提交后，你可以追踪工单进度、查看回复，并与 Olares 支持团队沟通，直到问题解决。
 
