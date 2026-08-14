@@ -126,11 +126,15 @@ func (u upgraderBase) UpgradeSystemComponents() []task.Interface {
 	// this task updates the version in the CR
 	// so put this at last to make the whole pipeline
 	// reentrant
-	return []task.Interface{
+	tasks := []task.Interface{
 		&task.LocalTask{
 			Name:   "UpgradeGPUPlugin",
 			Action: new(gpu.InstallPlugin),
 		},
+	}
+	// same Intel GPU stack path as install (labels / drivers / NFD / plugin / xpumd)
+	tasks = append(tasks, upgradeIntelGPUPlugin()...)
+	tasks = append(tasks,
 		&task.LocalTask{
 			Name:   "UpgradeSettings",
 			Action: new(upgradeSettings),
@@ -161,7 +165,8 @@ func (u upgraderBase) UpgradeSystemComponents() []task.Interface {
 			Retry:  6,
 			Delay:  15 * time.Second,
 		},
-	}
+	)
+	return tasks
 }
 
 func (u upgraderBase) UpdateOlaresVersion() []task.Interface {
