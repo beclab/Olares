@@ -151,3 +151,56 @@ func HTTPRouteHostHeaderMatches(patterns []string) []map[string]any {
 	}
 	return out
 }
+
+// HTTPRouteExactHostHeaderMatches builds Host Exact header matches for
+// non-logical hostPatterns. Used when logical patterns already force Host
+// regex matches: without these, exact FQDNs in hostnames never match a rule.
+func HTTPRouteExactHostHeaderMatches(patterns []string) []map[string]any {
+	out := make([]map[string]any, 0, len(patterns))
+	seen := make(map[string]struct{}, len(patterns))
+	for _, p := range patterns {
+		if IsLogicalPattern(p) {
+			continue
+		}
+		host := strings.ToLower(strings.TrimSpace(p))
+		if host == "" || strings.Contains(host, "*") {
+			continue
+		}
+		if _, dup := seen[host]; dup {
+			continue
+		}
+		seen[host] = struct{}{}
+		out = append(out, map[string]any{
+			"name":  "Host",
+			"type":  "Exact",
+			"value": host,
+		})
+	}
+	return out
+}
+
+// HTTPRouteMatches builds HTTPRoute rule matches from hostPatterns.
+// - No logical patterns: a single path-only match (exact hosts rely on hostnames).
+// - With logical patterns: one Host RegularExpression match per logical pattern,
+//   plus one Host Exact match per exact FQDN so dual-host SRRs remain reachable.
+func HTTPRouteMatches(patterns []string) []any {
+	path := map[string]any{"type": "PathPrefix", "value": "/"}
+	logical := HTTPRouteHostHeaderMatches(patterns)
+	if len(logical) == 0 {
+		return []any{map[string]any{"path": path}}
+	}
+	out := make([]any, 0, len(logical)+len(patterns))
+	for _, hm := range logical {
+		out = append(out, map[string]any{
+			"path":    path,
+			"headers": []any{hm},
+		})
+	}
+	for _, em := range HTTPRouteExactHostHeaderMatches(patterns) {
+		out = append(out, map[string]any{
+			"path":    path,
+			"headers": []any{em},
+		})
+	}
+	return out
+}

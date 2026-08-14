@@ -239,7 +239,6 @@ func resolveServicePort(svc *corev1.Service, ref srrv1alpha1.UpstreamRef) (int32
 func applyHTTPRoute(ctx context.Context, c client.Client, gw GatewayRef, srr *srrv1alpha1.SharedRouteRegistry, port int32) (string, error) {
 	name := httpRouteName(srr)
 	hosts := HTTPRouteHostnames(srr.Spec.HostPatterns)
-	headerMatches := HTTPRouteHostHeaderMatches(srr.Spec.HostPatterns)
 	if len(hosts) == 0 {
 		return "", fmt.Errorf("hostPatterns produced no usable hostnames: %v", srr.Spec.HostPatterns)
 	}
@@ -274,19 +273,7 @@ func applyHTTPRoute(ctx context.Context, c client.Client, gw GatewayRef, srr *sr
 		backendRef["namespace"] = ns
 	}
 
-	matches := []any{}
-	if len(headerMatches) == 0 {
-		matches = append(matches, map[string]any{
-			"path": map[string]any{"type": "PathPrefix", "value": "/"},
-		})
-	} else {
-		for _, hm := range headerMatches {
-			matches = append(matches, map[string]any{
-				"path":    map[string]any{"type": "PathPrefix", "value": "/"},
-				"headers": []any{hm},
-			})
-		}
-	}
+	matches := HTTPRouteMatches(srr.Spec.HostPatterns)
 	rule := map[string]any{
 		"matches":     matches,
 		"backendRefs": []any{backendRef},

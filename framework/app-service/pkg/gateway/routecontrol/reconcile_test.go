@@ -301,6 +301,51 @@ func TestReconcileSharedRouteGatewayModeApplicationHostContracts(t *testing.T) {
 	}
 }
 
+func TestReconcileSharedRouteGatewayModeLogicalPlusExactHostMatches(t *testing.T) {
+	s := testScheme(t)
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Name: "demo-svc", Namespace: "demo-shared"},
+		Spec:       corev1.ServiceSpec{Ports: []corev1.ServicePort{{Port: 8080, Protocol: corev1.ProtocolTCP}}},
+	}
+	srr := &srrv1alpha1.SharedRouteRegistry{
+		ObjectMeta: metav1.ObjectMeta{Name: "app-dual-host", Namespace: "demo-shared", UID: "uid-dual-host"},
+		Spec: srrv1alpha1.SharedRouteRegistrySpec{
+			RouteMode:     srrv1alpha1.RouteModeGateway,
+			EntranceClass: srrv1alpha1.EntranceClassApplication,
+			HostPatterns:  []string{"4030c2e0.*.olares.com", "app-test.example.com"},
+			Upstream:      srrv1alpha1.UpstreamRef{ServiceName: "demo-svc", Port: 8080},
+		},
+	}
+	c := fake.NewClientBuilder().WithScheme(s).WithObjects(svc, srr).Build()
+	if _, err := ReconcileSharedRoute(context.Background(), c, GatewayRef{}, srr); err != nil {
+		t.Fatalf("ReconcileSharedRoute: %v", err)
+	}
+	route := &unstructured.Unstructured{}
+	route.SetGroupVersionKind(schema.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "HTTPRoute"})
+	if err := c.Get(context.Background(), types.NamespacedName{Namespace: "demo-shared", Name: "app-dual-host"}, route); err != nil {
+		t.Fatalf("HTTPRoute: %v", err)
+	}
+	hostnames, _, err := unstructured.NestedSlice(route.Object, "spec", "hostnames")
+	if err != nil || len(hostnames) != 2 {
+		t.Fatalf("hostnames=%v err=%v", hostnames, err)
+	}
+	rules, _, err := unstructured.NestedSlice(route.Object, "spec", "rules")
+	if err != nil || len(rules) == 0 {
+		t.Fatalf("rules: %v", err)
+	}
+	firstRule, _ := rules[0].(map[string]any)
+	matches, _ := firstRule["matches"].([]any)
+	if len(matches) != 2 {
+		t.Fatalf("matches len=%d want 2 (regex + exact): %v", len(matches), matches)
+	}
+	m1, _ := matches[1].(map[string]any)
+	headers, _ := m1["headers"].([]any)
+	h, _ := headers[0].(map[string]any)
+	if h["type"] != "Exact" || h["value"] != "app-test.example.com" {
+		t.Fatalf("second match = %v, want Exact app-test.example.com", h)
+	}
+}
+
 func TestReconcileSharedRouteGatewayModeApplicationMultiEntranceHostPattern(t *testing.T) {
 	s := testScheme(t)
 	svc := &corev1.Service{

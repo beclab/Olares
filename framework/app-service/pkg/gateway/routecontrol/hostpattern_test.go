@@ -57,4 +57,51 @@ func TestHTTPRouteHostnamesAndHeaderMatches(t *testing.T) {
 	if matches[0]["type"] != "RegularExpression" || matches[0]["name"] != "Host" {
 		t.Errorf("header match = %v", matches[0])
 	}
+	exact := HTTPRouteExactHostHeaderMatches(patterns)
+	if len(exact) != 2 {
+		t.Fatalf("exact host matches = %v, want 2", exact)
+	}
+	if exact[0]["type"] != "Exact" || exact[0]["value"] != "ab12cd34.shared.olares.com" {
+		t.Errorf("exact[0] = %v", exact[0])
+	}
+	if exact[1]["value"] != "exact.example.com" {
+		t.Errorf("exact[1] = %v", exact[1])
+	}
+}
+
+func TestHTTPRouteMatchesLogicalPlusExact(t *testing.T) {
+	patterns := []string{"4030c2e0.*.olares.com", "app-test.example.com"}
+	matches := HTTPRouteMatches(patterns)
+	if len(matches) != 2 {
+		t.Fatalf("matches len=%d want 2: %v", len(matches), matches)
+	}
+	first, ok := matches[0].(map[string]any)
+	if !ok {
+		t.Fatalf("match[0] type %T", matches[0])
+	}
+	headers, _ := first["headers"].([]any)
+	h0, _ := headers[0].(map[string]any)
+	if h0["type"] != "RegularExpression" {
+		t.Fatalf("first match should be logical regex, got %v", h0)
+	}
+	second, ok := matches[1].(map[string]any)
+	if !ok {
+		t.Fatalf("match[1] type %T", matches[1])
+	}
+	headers2, _ := second["headers"].([]any)
+	h1, _ := headers2[0].(map[string]any)
+	if h1["type"] != "Exact" || h1["value"] != "app-test.example.com" {
+		t.Fatalf("second match should Exact app-test.example.com, got %v", h1)
+	}
+}
+
+func TestHTTPRouteMatchesExactOnlyPathOnly(t *testing.T) {
+	matches := HTTPRouteMatches([]string{"a0e84c5c.shared.olares.com"})
+	if len(matches) != 1 {
+		t.Fatalf("matches=%v", matches)
+	}
+	m, _ := matches[0].(map[string]any)
+	if _, hasHeaders := m["headers"]; hasHeaders {
+		t.Fatalf("exact-only should stay path-only, got %v", m)
+	}
 }
