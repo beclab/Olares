@@ -59,3 +59,57 @@ func TestBearerJSDecideOffloadUsesTLSHostsOnly(t *testing.T) {
 		}
 	}
 }
+
+func TestBearerJSPickCertBySNICustomDomain(t *testing.T) {
+	js := BearerJS()
+	for _, want := range []string{
+		"CUSTOM_CERTS_DIR",
+		"CUSTOM_TLS_HOSTS_FILE",
+		CustomCertsMountPath,
+		"function customTLSRequired",
+		"function pickCert",
+		"REJECT_CERT",
+		"ssl_server_name",
+	} {
+		if !strings.Contains(js, want) {
+			t.Fatalf("bearer.js missing %q", want)
+		}
+	}
+	idx := strings.Index(js, "function pickCert")
+	if idx < 0 {
+		t.Fatal("missing pickCert")
+	}
+	fn := js[idx:]
+	end := strings.Index(fn, "\nfunction pickKey")
+	if end > 0 {
+		fn = fn[:end]
+	}
+	if !strings.Contains(fn, "return pair.cert") {
+		t.Fatal("pickCert must return custom cert path when ready")
+	}
+	if !strings.Contains(fn, "customTLSRequired(host)") || !strings.Contains(fn, "return REJECT_CERT") {
+		t.Fatal("pickCert must fail closed for third-party FQDN without material")
+	}
+	if !strings.Contains(fn, "REAL_CERT") {
+		t.Fatal("pickCert must fall back to viewer REAL_CERT for platform hosts")
+	}
+}
+
+func TestBearerJSTlsModeCustomBypassesPlaceholder(t *testing.T) {
+	js := BearerJS()
+	idx := strings.Index(js, "function tlsMode")
+	if idx < 0 {
+		t.Fatal("missing tlsMode")
+	}
+	fn := js[idx:]
+	end := strings.Index(fn, "\nfunction pickCert")
+	if end > 0 {
+		fn = fn[:end]
+	}
+	if !strings.Contains(fn, "customTLSRequired(host)") {
+		t.Fatal("tlsMode must gate third-party hosts separately from viewer replica")
+	}
+	if !strings.Contains(fn, "'reject'") {
+		t.Fatal("tlsMode must expose reject when custom material is missing")
+	}
+}

@@ -37,7 +37,7 @@ func TestMeshInSharedHostsReconcileCreatesCM(t *testing.T) {
 		Viewer:          "alice",
 		Hosts:           []string{"abcd1234.alice.olares.com"},
 	}}
-	if err := r.ReconcileNamespace(context.Background(), "litellm-alice", targets); err != nil {
+	if err := r.ReconcileNamespace(context.Background(), "litellm-alice", targets, "olares.com"); err != nil {
 		t.Fatal(err)
 	}
 	cm := &corev1.ConfigMap{}
@@ -326,10 +326,11 @@ func TestBuildSharedHostsConfigMapDataWritesTLSKey(t *testing.T) {
 		CallerNamespace: "chat-alice",
 		Viewer:          "alice",
 		Hosts:           []string{"abcd1234.alice.olares.com", "deadbeef.shared.olares.com"},
-		TLSHosts:        []string{"abcd1234.alice.olares.com"},
-	}})
+		TLSHosts:        []string{"abcd1234.alice.olares.com", "chat.example.com"},
+	}}, "olares.com")
 	authBody := data[constants.MeshInSharedHostsFileName]
 	tlsBody := data[constants.MeshInTLSHostsFileName]
+	customBody := data[constants.MeshInCustomTLSHostsFileName]
 	if !strings.Contains(authBody, "deadbeef.shared.olares.com") || !strings.Contains(authBody, "abcd1234.alice.olares.com") {
 		t.Fatalf("auth body=%q", authBody)
 	}
@@ -338,6 +339,12 @@ func TestBuildSharedHostsConfigMapDataWritesTLSKey(t *testing.T) {
 	}
 	if strings.Contains(tlsBody, "deadbeef.shared.olares.com") {
 		t.Fatalf("tls body must not include shared host: %q", tlsBody)
+	}
+	if !strings.Contains(customBody, "chat.example.com") {
+		t.Fatalf("custom-tls-hosts missing third-party FQDN: %q", customBody)
+	}
+	if strings.Contains(customBody, "abcd1234.alice.olares.com") {
+		t.Fatalf("custom-tls-hosts must not list platform host: %q", customBody)
 	}
 }
 

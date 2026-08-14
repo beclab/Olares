@@ -40,6 +40,8 @@ func TestRenderNginxConfContainsListenAndJWT(t *testing.T) {
 		"ssl_certificate $tls_cert_path",
 		"js_set $tls_cert_path main.pickCert",
 		"js_set $mesh_in_tls_mode main.tlsMode",
+		`if ($mesh_in_tls_mode = "placeholder")`,
+		`if ($mesh_in_tls_mode = "reject")`,
 		"@mesh_in_placeholder",
 		"X-Olares-Mesh-In-TLS",
 		"mesh_in_tls_placeholder",
@@ -261,15 +263,15 @@ func TestSharedHostsVolumeProjectsAuthAndTLSHosts(t *testing.T) {
 	if v.ConfigMap.Name != constants.MeshInSharedHostsCMName {
 		t.Fatalf("name = %q", v.ConfigMap.Name)
 	}
-	if len(v.ConfigMap.Items) != 2 {
-		t.Fatalf("items = %#v, want 2 keys", v.ConfigMap.Items)
+	if len(v.ConfigMap.Items) != 3 {
+		t.Fatalf("items = %#v, want 3 keys", v.ConfigMap.Items)
 	}
 	keys := map[string]bool{}
 	for _, it := range v.ConfigMap.Items {
 		keys[it.Key] = true
 	}
-	if !keys[SharedHostsFileName] || !keys[TLSHostsFileName] {
-		t.Fatalf("items = %#v, want %s and %s", v.ConfigMap.Items, SharedHostsFileName, TLSHostsFileName)
+	if !keys[SharedHostsFileName] || !keys[TLSHostsFileName] || !keys[CustomTLSHostsFileName] {
+		t.Fatalf("items = %#v, want %s, %s and %s", v.ConfigMap.Items, SharedHostsFileName, TLSHostsFileName, CustomTLSHostsFileName)
 	}
 }
 
@@ -281,5 +283,28 @@ func TestCertsVolumeForViewer(t *testing.T) {
 	v2 := CertsVolumeForViewer("")
 	if v2.Secret == nil || v2.Secret.SecretName != "olares-mesh-in-certs" {
 		t.Fatalf("empty viewer secret = %#v", v2.Secret)
+	}
+}
+
+func TestCustomCertsVolume(t *testing.T) {
+	v := CustomCertsVolume()
+	if v.Name != CustomCertsVolumeName {
+		t.Fatalf("name = %q", v.Name)
+	}
+	if v.Secret == nil || v.Secret.SecretName != constants.MeshInCustomTLSSecretName {
+		t.Fatalf("secret = %#v", v.Secret)
+	}
+	if v.Secret.Optional == nil || !*v.Secret.Optional {
+		t.Fatal("custom certs volume must be optional")
+	}
+	c := ContainerSpec()
+	found := false
+	for _, m := range c.VolumeMounts {
+		if m.Name == CustomCertsVolumeName && m.MountPath == CustomCertsMountPath {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("ContainerSpec missing custom certs mount: %#v", c.VolumeMounts)
 	}
 }
