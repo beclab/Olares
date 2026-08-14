@@ -135,4 +135,4 @@ Olares Space 的**工单**页面仅展示当前登录的 Olares ID 所创建的�
 
 ## 了解更多
 
-- [获取支持](../../../manual/help/request-technical-support.md)：了解通过 Ticket 应用或 GitHub 获取帮助的更多方式。
+- [获取支持](/zh/manual/space/tickets.md)：了解通过 Ticket 应用或 GitHub 获取帮助的更多方式。
