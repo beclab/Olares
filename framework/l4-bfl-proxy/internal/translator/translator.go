@@ -607,11 +607,7 @@ func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.A
 			WebSocketUpgrade: true,
 		}
 
-		// Gate private/internal apps behind Authelia. public skips ExtAuth
-		// (EDGE AC-AL-1). All non-public routes use Authelia /api/verify/.
-		if !isPublicAuthLevel(entrance.AuthLevel) {
-			defaultRoute.ExtAuth = buildAppExtAuthConfig(user)
-		}
+		defaultRoute.ExtAuth = buildAppExtAuthConfig(user)
 
 		// F3: Exact probe paths with signed UA bypass ExtAuth (oes parity).
 		// Emit before the catch-all so Envoy matches them first.
@@ -628,10 +624,6 @@ func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.A
 	}
 
 	return vhosts
-}
-
-func isPublicAuthLevel(level string) bool {
-	return strings.EqualFold(strings.TrimSpace(level), "public")
 }
 
 // buildProbeBypassRoutes emits Exact path routes that skip ExtAuth only when
@@ -879,9 +871,7 @@ func (t *Translator) buildCustomDomainVirtualHosts(user *message.UserInfo, app *
 			WebSocketUpgrade: true,
 		}
 
-		if !isPublicAuthLevel(entrance.AuthLevel) {
-			customRoute.ExtAuth = buildAppExtAuthConfig(user)
-		}
+		customRoute.ExtAuth = buildAppExtAuthConfig(user)
 
 		routes := buildProbeBypassRoutes(
 			fmt.Sprintf("custom_%s_%s_%s", user.Name, app.Name, entrance.Name),

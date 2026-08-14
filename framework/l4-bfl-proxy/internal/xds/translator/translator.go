@@ -1014,6 +1014,8 @@ func buildExtAuthzFilter(autheliaClusterName string, clusterMap map[string]*ir.C
 var (
 	autheliaAllowedUpstreamHeaders = &matcherv3.ListStringMatcher{
 		Patterns: []*matcherv3.StringMatcher{
+			{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "authorization"}},
+			{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "proxy-authorization"}},
 			{MatchPattern: &matcherv3.StringMatcher_Prefix{Prefix: "remote-"}},
 			{MatchPattern: &matcherv3.StringMatcher_Prefix{Prefix: "authelia-"}},
 		},
