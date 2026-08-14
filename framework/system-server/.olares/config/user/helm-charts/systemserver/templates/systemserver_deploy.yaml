@@ -82,7 +82,7 @@ spec:
       priorityClassName: "system-cluster-critical"
       containers:
       - name: system-server
-        image: beclab/system-server:0.1.35
+        image: beclab/system-server:0.1.36
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
@@ -98,7 +98,7 @@ spec:
         - name: OWNER
           value: "{{ .Values.bfl.username }}"
       - name: proxy
-        image: beclab/envoy:v1.25.11.1
+        image: beclab/envoyproxy-envoy:v1.38-latest
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
