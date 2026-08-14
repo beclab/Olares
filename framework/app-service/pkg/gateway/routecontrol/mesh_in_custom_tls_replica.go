@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"sort"
 	"strings"
 
@@ -66,7 +67,17 @@ func syncMeshInCustomTLSReplica(ctx context.Context, c client.Client, callerNS s
 		return customTLSOK(callerNS, "created", len(data)/2)
 	case err != nil:
 		return customTLSErr(callerNS, "get", err)
-	case dst.Annotations != nil && dst.Annotations[annotationTLSContentHash] == aggHash:
+	}
+
+	// Never adopt a pre-existing Secret that we do not manage (private keys).
+	if !isManagedMeshInCustomTLSReplica(dst) {
+		customTLSSyncTotal.WithLabelValues("unmanaged").Inc()
+		klog.Errorf("mesh-in-custom-tls: refuse overwrite unmanaged secret ns=%s name=%s",
+			hashCallerNS(callerNS), constants.MeshInCustomTLSSecretName)
+		return customTLSErr(callerNS, "refuse unmanaged", errUnmanagedCustomTLSReplica)
+	}
+
+	if dst.Annotations != nil && dst.Annotations[annotationTLSContentHash] == aggHash {
 		customTLSSyncTotal.WithLabelValues("noop").Inc()
 		return nil
 	}
@@ -90,6 +101,18 @@ func syncMeshInCustomTLSReplica(ctx context.Context, c client.Client, callerNS s
 	return customTLSOK(callerNS, "updated", len(data)/2)
 }
 
+var errUnmanagedCustomTLSReplica = errors.New("secret exists but is not managed by app-service")
+
+func isManagedMeshInCustomTLSReplica(sec *corev1.Secret) bool {
+	if sec == nil || sec.Labels == nil {
+		return false
+	}
+	if sec.Labels[ManagedByLabel] == ManagedByValue {
+		return true
+	}
+	return sec.Labels[labelTLSCustomReplica] == "true"
+}
+
 func deleteMeshInCustomTLSReplica(ctx context.Context, c client.Client, callerNS string) error {
 	if c == nil || callerNS == "" {
 		return nil
@@ -102,7 +125,7 @@ func deleteMeshInCustomTLSReplica(ctx context.Context, c client.Client, callerNS
 	if err != nil {
 		return customTLSErr(callerNS, "get for delete", err)
 	}
-	if sec.Labels[ManagedByLabel] != ManagedByValue && sec.Labels[labelTLSCustomReplica] != "true" {
+	if !isManagedMeshInCustomTLSReplica(sec) {
 		return nil
 	}
 	if err := c.Delete(ctx, sec); err != nil && !apierrors.IsNotFound(err) {

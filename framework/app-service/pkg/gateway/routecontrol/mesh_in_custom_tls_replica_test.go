@@ -108,3 +108,39 @@ func TestCollectTLSHosts(t *testing.T) {
 		t.Fatalf("got %#v", got)
 	}
 }
+
+func TestSyncMeshInCustomTLSReplica_refusesUnmanagedSecret(t *testing.T) {
+	s := testScheme(t)
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "caller-alice", UID: "ns-uid-1"}}
+	src := desiredCustomDomainTLSSecret(
+		customDomainTLSPrefix+"shop", "shop.example.com",
+		"user-space-alice", "CERT-SHOP", "KEY-SHOP", "hash-shop")
+	preexisting := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      constants.MeshInCustomTLSSecretName,
+			Namespace: "caller-alice",
+			// No managed-by / tls-custom-replica labels.
+		},
+		Data: map[string][]byte{"planted.key": []byte("steal-me")},
+	}
+	c := fake.NewClientBuilder().WithScheme(s).WithObjects(ns, src, preexisting).Build()
+
+	err := syncMeshInCustomTLSReplica(context.Background(), c, "caller-alice",
+		[]string{"shop.example.com"})
+	if err == nil {
+		t.Fatal("expected refuse unmanaged")
+	}
+
+	got := &corev1.Secret{}
+	if err := c.Get(context.Background(), types.NamespacedName{
+		Namespace: "caller-alice", Name: constants.MeshInCustomTLSSecretName,
+	}, got); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := got.Data["shop.example.com.key"]; ok {
+		t.Fatal("must not write private keys into unmanaged secret")
+	}
+	if string(got.Data["planted.key"]) != "steal-me" {
+		t.Fatalf("preexisting data mutated: %#v", got.Data)
+	}
+}

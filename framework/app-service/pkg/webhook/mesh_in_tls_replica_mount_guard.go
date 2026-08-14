@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"strings"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 
@@ -97,6 +98,7 @@ func hashCallerNamespace(ns string) string {
 // mesh-in are mounted only by the platform-injected mesh-in agent:
 //   - tls-replica            → volume olares-mesh-in-certs
 //   - tls-custom-replica     → volume olares-mesh-in-custom-certs
+//   - well-known Secret names (even if missing / unlabeled) use the same rules
 //
 // behavior: fail-closed on Secret label lookup errors. Pods with no protected
 // TLS volume take an allow fast path. Returns (allowed, errorCode).
@@ -158,9 +160,45 @@ func referencedSecretNames(vol corev1.Volume) []string {
 	return names
 }
 
+// wellKnownTLSProtectedKind classifies platform mesh-in TLS Secret names even
+// when the object is missing or unlabeled. Optional mounts must not skip the
+// guard: kubelet can project keys later without re-running admission.
+func wellKnownTLSProtectedKind(name string) tlsProtectedKind {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return tlsProtectedNone
+	}
+	if name == constants.MeshInCustomTLSSecretName {
+		return tlsProtectedCustom
+	}
+	// Empty-viewer fallback Secret name matches the certs volume name.
+	if name == constants.MeshInCertsVolumeName ||
+		strings.HasPrefix(name, constants.MeshInTLSSecretNamePrefix) {
+		return tlsProtectedViewer
+	}
+	return tlsProtectedNone
+}
+
 // secretTLSProtectedKind classifies Secrets that carry mesh-in private-key
-// material. Missing Secret → none (optional mounts at Pod start).
+// material. Well-known names stay protected when missing or unlabeled.
 func (wh *Webhook) secretTLSProtectedKind(ctx context.Context, namespace, name string) (tlsProtectedKind, error) {
+	if k := wellKnownTLSProtectedKind(name); k != tlsProtectedNone {
+		// Prefer live labels when present; name alone is enough to protect.
+		secret, err := wh.kubeClient.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{})
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				return k, nil
+			}
+			return tlsProtectedNone, err
+		}
+		if secret.Labels[labelTLSCustomReplica] == "true" {
+			return tlsProtectedCustom, nil
+		}
+		if secret.Labels[labelTLSReplica] == "true" {
+			return tlsProtectedViewer, nil
+		}
+		return k, nil
+	}
 	secret, err := wh.kubeClient.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {

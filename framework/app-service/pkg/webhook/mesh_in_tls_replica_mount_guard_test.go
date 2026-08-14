@@ -155,3 +155,61 @@ func TestValidateTLSReplicaMount_customSecretWrongVolumeName(t *testing.T) {
 		t.Fatalf("want deny for wrong volume name, got ok=%v code=%s", ok, code)
 	}
 }
+
+func TestValidateTLSReplicaMount_missingCustomSecretDenyAppMount(t *testing.T) {
+	ns := "caller-alice"
+	wh := &Webhook{kubeClient: fake.NewSimpleClientset()}
+	pod := &corev1.Pod{
+		Spec: corev1.PodSpec{
+			Volumes: []corev1.Volume{{
+				Name: "steal",
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName: constants.MeshInCustomTLSSecretName,
+						Optional:   boolPtr(true),
+					},
+				},
+			}},
+			Containers: []corev1.Container{{
+				Name: "app",
+				VolumeMounts: []corev1.VolumeMount{
+					{Name: "steal", MountPath: "/keys"},
+				},
+			}},
+		},
+	}
+	ok, code := wh.ValidateTLSReplicaMount(context.Background(), pod, ns)
+	if ok || code != codeTLSReplicaMountDenied {
+		t.Fatalf("missing well-known custom secret must still deny app mount, got ok=%v code=%s", ok, code)
+	}
+}
+
+func TestValidateTLSReplicaMount_missingCustomSecretAllowMeshIn(t *testing.T) {
+	ns := "caller-alice"
+	wh := &Webhook{kubeClient: fake.NewSimpleClientset()}
+	pod := &corev1.Pod{
+		Spec: corev1.PodSpec{
+			Volumes: []corev1.Volume{{
+				Name: constants.MeshInCustomCertsVolumeName,
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName: constants.MeshInCustomTLSSecretName,
+						Optional:   boolPtr(true),
+					},
+				},
+			}},
+			Containers: []corev1.Container{{
+				Name: constants.MeshInAgentContainerName,
+				VolumeMounts: []corev1.VolumeMount{
+					{Name: constants.MeshInCustomCertsVolumeName, MountPath: "/custom"},
+				},
+			}},
+		},
+	}
+	ok, code := wh.ValidateTLSReplicaMount(context.Background(), pod, ns)
+	if !ok || code != "" {
+		t.Fatalf("mesh-in optional mount of missing custom secret must allow, got ok=%v code=%s", ok, code)
+	}
+}
+
+func boolPtr(v bool) *bool { return &v }
