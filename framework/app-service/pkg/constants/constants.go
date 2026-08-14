@@ -102,6 +102,10 @@ const (
 	// the full body in the 64Mi sidecar.
 	MeshInMaxBodySize               = "100m"
 	LabelTLSReplica                 = "gateway.olares.io/tls-replica"
+	// LabelTLSCustomReplica marks the per-caller aggregate of CustomDomainTLS
+	// material (olares-mesh-in-custom-tls). Mount admission must only allow the
+	// mesh-in agent via MeshInCustomCertsVolumeName.
+	LabelTLSCustomReplica = "gateway.olares.io/tls-custom-replica"
 	DefaultEnvoyLogLevel            = "debug"
 	EnvoyImageVersion               = "beclab/envoy:v1.25.11.1"
 	EnvoyContainerName              = "olares-envoy-sidecar"

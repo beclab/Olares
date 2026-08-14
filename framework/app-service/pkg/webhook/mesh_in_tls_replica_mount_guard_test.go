@@ -1,11 +1,13 @@
 package webhook
 
 import (
+	"context"
 	"testing"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/fake"
 )
 
 func TestIsLegitMeshInReplicaVolume(t *testing.T) {
@@ -36,5 +38,120 @@ func TestIsLegitMeshInReplicaVolume(t *testing.T) {
 	}
 	if isLegitMeshInReplicaVolume(pod, "other-vol") {
 		t.Fatal("wrong volume name must deny")
+	}
+}
+
+func TestIsLegitMeshInProtectedVolumeCustom(t *testing.T) {
+	pod := &corev1.Pod{
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{{
+				Name: constants.MeshInAgentContainerName,
+				VolumeMounts: []corev1.VolumeMount{
+					{Name: constants.MeshInCustomCertsVolumeName, MountPath: "/custom"},
+				},
+			}},
+		},
+	}
+	if !isLegitMeshInProtectedVolume(pod, constants.MeshInCustomCertsVolumeName, constants.MeshInCustomCertsVolumeName) {
+		t.Fatal("mesh-in custom vol must allow")
+	}
+	if isLegitMeshInProtectedVolume(pod, constants.MeshInCertsVolumeName, constants.MeshInCustomCertsVolumeName) {
+		t.Fatal("viewer vol name must not satisfy custom expected name")
+	}
+}
+
+func TestValidateTLSReplicaMount_customSecretDenyAppMount(t *testing.T) {
+	ns := "caller-alice"
+	sec := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      constants.MeshInCustomTLSSecretName,
+			Namespace: ns,
+			Labels:    map[string]string{constants.LabelTLSCustomReplica: "true"},
+		},
+	}
+	wh := &Webhook{kubeClient: fake.NewSimpleClientset(sec)}
+	pod := &corev1.Pod{
+		Spec: corev1.PodSpec{
+			Volumes: []corev1.Volume{{
+				Name: "steal",
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{SecretName: constants.MeshInCustomTLSSecretName},
+				},
+			}},
+			Containers: []corev1.Container{{
+				Name: "app",
+				VolumeMounts: []corev1.VolumeMount{
+					{Name: "steal", MountPath: "/keys"},
+				},
+			}},
+		},
+	}
+	ok, code := wh.ValidateTLSReplicaMount(context.Background(), pod, ns)
+	if ok || code != codeTLSReplicaMountDenied {
+		t.Fatalf("want deny %s, got ok=%v code=%s", codeTLSReplicaMountDenied, ok, code)
+	}
+}
+
+func TestValidateTLSReplicaMount_customSecretAllowMeshIn(t *testing.T) {
+	ns := "caller-alice"
+	sec := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      constants.MeshInCustomTLSSecretName,
+			Namespace: ns,
+			Labels:    map[string]string{constants.LabelTLSCustomReplica: "true"},
+		},
+	}
+	wh := &Webhook{kubeClient: fake.NewSimpleClientset(sec)}
+	pod := &corev1.Pod{
+		Spec: corev1.PodSpec{
+			Volumes: []corev1.Volume{{
+				Name: constants.MeshInCustomCertsVolumeName,
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{SecretName: constants.MeshInCustomTLSSecretName},
+				},
+			}},
+			Containers: []corev1.Container{{
+				Name: constants.MeshInAgentContainerName,
+				VolumeMounts: []corev1.VolumeMount{
+					{Name: constants.MeshInCustomCertsVolumeName, MountPath: "/custom"},
+				},
+			}},
+		},
+	}
+	ok, code := wh.ValidateTLSReplicaMount(context.Background(), pod, ns)
+	if !ok || code != "" {
+		t.Fatalf("want allow, got ok=%v code=%s", ok, code)
+	}
+}
+
+func TestValidateTLSReplicaMount_customSecretWrongVolumeName(t *testing.T) {
+	ns := "caller-alice"
+	sec := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      constants.MeshInCustomTLSSecretName,
+			Namespace: ns,
+			Labels:    map[string]string{constants.LabelTLSCustomReplica: "true"},
+		},
+	}
+	wh := &Webhook{kubeClient: fake.NewSimpleClientset(sec)}
+	pod := &corev1.Pod{
+		Spec: corev1.PodSpec{
+			Volumes: []corev1.Volume{{
+				Name: constants.MeshInCertsVolumeName, // wrong: viewer vol name
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{SecretName: constants.MeshInCustomTLSSecretName},
+				},
+			}},
+			Containers: []corev1.Container{{
+				Name: constants.MeshInAgentContainerName,
+				VolumeMounts: []corev1.VolumeMount{
+					{Name: constants.MeshInCertsVolumeName, MountPath: "/custom"},
+				},
+			}},
+		},
+	}
+	ok, code := wh.ValidateTLSReplicaMount(context.Background(), pod, ns)
+	if ok || code != codeTLSReplicaMountDenied {
+		t.Fatalf("want deny for wrong volume name, got ok=%v code=%s", ok, code)
 	}
 }

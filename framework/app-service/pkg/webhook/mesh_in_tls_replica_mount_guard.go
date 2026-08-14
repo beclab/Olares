@@ -13,11 +13,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// labelTLSReplica mirrors routecontrol's per-viewer TLS replica Secret label
-// key. The owning constant lives in pkg/gateway/routecontrol (unexported, in a
-// guarded file), so the value is restated here as the single string source for
-// the mount guard; the two must stay byte-equal.
-const labelTLSReplica = "gateway.olares.io/tls-replica"
+// labelTLSReplica mirrors constants.LabelTLSReplica (viewer platform TLS replica).
+const labelTLSReplica = constants.LabelTLSReplica
+
+// labelTLSCustomReplica mirrors constants.LabelTLSCustomReplica (third-party
+// aggregate Secret). Must stay byte-equal with routecontrol writers.
+const labelTLSCustomReplica = constants.LabelTLSCustomReplica
 
 // Admission deny error codes surfaced to the user (status message) and runbook.
 const (
@@ -41,6 +42,14 @@ const (
 	tlsReplicaAllowResultNoReplica = "allow_no_replica"
 )
 
+type tlsProtectedKind int
+
+const (
+	tlsProtectedNone tlsProtectedKind = iota
+	tlsProtectedViewer
+	tlsProtectedCustom
+)
+
 var tlsReplicaMountDeniedTotal = prometheus.NewCounterVec(
 	prometheus.CounterOpts{
 		Name: "app_service_d2_tls_replica_mount_denied_total",
@@ -58,8 +67,7 @@ var tlsReplicaMountValidatedTotal = prometheus.NewCounterVec(
 )
 
 func init() {
-	prometheus.MustRegister(tlsReplicaMountDeniedTotal)
-	prometheus.MustRegister(tlsReplicaMountValidatedTotal)
+	prometheus.MustRegister(tlsReplicaMountDeniedTotal, tlsReplicaMountValidatedTotal)
 }
 
 // recordTLSReplicaMountDenied increments the deny counter. The reason switch is
@@ -76,60 +84,58 @@ func recordTLSReplicaMountDenied(ns, reason string) {
 	tlsReplicaMountDeniedTotal.WithLabelValues(hashCallerNamespace(ns), reason).Inc()
 }
 
-// recordTLSReplicaMountValidated increments the allow counter.
 func recordTLSReplicaMountValidated(result string) {
 	tlsReplicaMountValidatedTotal.WithLabelValues(result).Inc()
 }
 
-// hashCallerNamespace returns a non-PII, low-cardinality digest of a caller
-// namespace (which embeds <app>-<user>) for use as a metric label value.
 func hashCallerNamespace(ns string) string {
 	sum := sha256.Sum256([]byte(ns))
 	return hex.EncodeToString(sum[:8])
 }
 
-// ValidateTLSReplicaMount enforces that any volume referencing a tls-replica
-// private-key Secret is mounted only by the platform-injected d2 sidecar.
+// ValidateTLSReplicaMount enforces that private-key TLS Secrets projected for
+// mesh-in are mounted only by the platform-injected mesh-in agent:
+//   - tls-replica            → volume olares-mesh-in-certs
+//   - tls-custom-replica     → volume olares-mesh-in-custom-certs
 //
-// requirement: WI-T1-8 §2.2 — a tls-replica=true Secret may be consumed only by
-// the olares-d2-sidecar container via the olares-d2-certs volume; any reference
-// by another container (raw secret or projected source) is a cross-tenant
-// private-key bypass and is denied.
-//
-// behavior: fail-closed — a Secret label lookup API error denies admission
-// (private-key red line over availability). Pods with no tls-replica volume take
-// an allow fast path. Returns (allowed, errorCode); errorCode is empty on allow.
+// behavior: fail-closed on Secret label lookup errors. Pods with no protected
+// TLS volume take an allow fast path. Returns (allowed, errorCode).
 func (wh *Webhook) ValidateTLSReplicaMount(ctx context.Context, pod *corev1.Pod, namespace string) (bool, string) {
-	hasReplicaVolume := false
+	hasProtectedVolume := false
 
 	for _, vol := range pod.Spec.Volumes {
 		secretNames := referencedSecretNames(vol)
 		if len(secretNames) == 0 {
 			continue
 		}
-		isReplica := false
+		kind := tlsProtectedNone
 		for _, secretName := range secretNames {
-			ok, err := wh.secretIsTLSReplica(ctx, namespace, secretName)
+			k, err := wh.secretTLSProtectedKind(ctx, namespace, secretName)
 			if err != nil {
 				recordTLSReplicaMountDenied(namespace, tlsReplicaDenyReasonLabelLookupFailed)
 				return false, codeTLSReplicaLabelLookupFail
 			}
-			if ok {
-				isReplica = true
+			if k != tlsProtectedNone {
+				kind = k
+				break
 			}
 		}
-		if !isReplica {
+		if kind == tlsProtectedNone {
 			continue
 		}
-		hasReplicaVolume = true
+		hasProtectedVolume = true
 
-		if !isLegitMeshInReplicaVolume(pod, vol.Name) {
+		expectedVol := constants.MeshInCertsVolumeName
+		if kind == tlsProtectedCustom {
+			expectedVol = constants.MeshInCustomCertsVolumeName
+		}
+		if !isLegitMeshInProtectedVolume(pod, vol.Name, expectedVol) {
 			recordTLSReplicaMountDenied(namespace, tlsReplicaDenyReasonNonD2Container)
 			return false, codeTLSReplicaMountDenied
 		}
 	}
 
-	if hasReplicaVolume {
+	if hasProtectedVolume {
 		recordTLSReplicaMountValidated(tlsReplicaAllowResultD2)
 	} else {
 		recordTLSReplicaMountValidated(tlsReplicaAllowResultNoReplica)
@@ -137,8 +143,6 @@ func (wh *Webhook) ValidateTLSReplicaMount(ctx context.Context, pod *corev1.Pod,
 	return true, ""
 }
 
-// referencedSecretNames collects every Secret name a volume references, covering
-// both raw Secret volumes and projected sources.
 func referencedSecretNames(vol corev1.Volume) []string {
 	var names []string
 	if vol.Secret != nil && vol.Secret.SecretName != "" {
@@ -154,25 +158,29 @@ func referencedSecretNames(vol corev1.Volume) []string {
 	return names
 }
 
-// secretIsTLSReplica reports whether the named Secret carries tls-replica=true.
-// A missing Secret is not a replica (skip); any other API error is returned so
-// the caller can fail closed.
-func (wh *Webhook) secretIsTLSReplica(ctx context.Context, namespace, name string) (bool, error) {
+// secretTLSProtectedKind classifies Secrets that carry mesh-in private-key
+// material. Missing Secret → none (optional mounts at Pod start).
+func (wh *Webhook) secretTLSProtectedKind(ctx context.Context, namespace, name string) (tlsProtectedKind, error) {
 	secret, err := wh.kubeClient.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			return false, nil
+			return tlsProtectedNone, nil
 		}
-		return false, err
+		return tlsProtectedNone, err
 	}
-	return secret.Labels[labelTLSReplica] == "true", nil
+	if secret.Labels[labelTLSCustomReplica] == "true" {
+		return tlsProtectedCustom, nil
+	}
+	if secret.Labels[labelTLSReplica] == "true" {
+		return tlsProtectedViewer, nil
+	}
+	return tlsProtectedNone, nil
 }
 
-// isLegitMeshInReplicaVolume reports whether a tls-replica-bearing volume is the
-// platform-injected d2 cert volume mounted exclusively by the d2 sidecar
-// (decision A: source type agnostic; discriminator is volume name + mounters).
-func isLegitMeshInReplicaVolume(pod *corev1.Pod, volumeName string) bool {
-	if volumeName != constants.MeshInCertsVolumeName {
+// isLegitMeshInProtectedVolume requires the volume name to match the platform
+// cert volume for that Secret kind and that only mesh-in-agent mounts it.
+func isLegitMeshInProtectedVolume(pod *corev1.Pod, volumeName, expectedVolumeName string) bool {
+	if volumeName != expectedVolumeName {
 		return false
 	}
 	mounted := false
@@ -188,4 +196,9 @@ func isLegitMeshInReplicaVolume(pod *corev1.Pod, volumeName string) bool {
 		}
 	}
 	return mounted
+}
+
+// isLegitMeshInReplicaVolume is the viewer-cert helper kept for existing tests.
+func isLegitMeshInReplicaVolume(pod *corev1.Pod, volumeName string) bool {
+	return isLegitMeshInProtectedVolume(pod, volumeName, constants.MeshInCertsVolumeName)
 }

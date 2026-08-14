@@ -17,7 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const labelTLSCustomReplica = "gateway.olares.io/tls-custom-replica"
+const labelTLSCustomReplica = constants.LabelTLSCustomReplica
 
 var customTLSSyncTotal = prometheus.NewCounterVec(
 	prometheus.CounterOpts{
