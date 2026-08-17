@@ -17,11 +17,11 @@ To get the fastest resolution, choose the option that best fits your situation:
 
 | Option | Use when |
 | :--- | :--- |
-| [Ticket](#submit-a-ticket) | Private, one-on-one technical support and securely sharing system logs with our team. |
+| [Ticket](#submit-a-ticket) | Private, one-on-one support and securely sharing system logs with our team. |
 | [GitHub Olares repo](https://github.com/beclab/Olares) | Reporting Olares OS system issues or requesting OS features. |
-| [GitHub apps repo](https://github.com/beclab/apps) | Reporting technical issues or requesting features related to apps in Olares Market. |
-| Security reporting | Reporting system vulnerabilities. Please follow our [Security Policy](https://github.com/beclab/Olares/blob/main/SECURITY.md). |
-| [Forum](https://www.olares.com/forum/)| Sharing knowledge, finding or posting tutorials, discussing features, and getting community help. |
+| [GitHub apps repo](https://github.com/beclab/apps) | Reporting technical issues with apps, or requesting new apps and app updates. |
+| [Forum](https://www.olares.com/forum/) | Sharing knowledge, finding or posting tutorials, discussing features, and getting community help. |
+| [Security reporting](https://github.com/beclab/Olares/security/advisories/new) | Reporting system vulnerabilities. |
 
 ## Submit a ticket
 
@@ -34,9 +34,7 @@ You can submit a support ticket via the Ticket app or Olares Space, depending on
 
 ### Submit via the Ticket app
 
-Use the Ticket app when your device is accessible. It provides a graphical interface and automatically collects necessary logs directly from your device.
-
-Tickets are linked to the Olares ID used at creation. The Ticket app only displays tickets associated with your current ID. If you switch to a new ID, you must log in to Olares Space with your original ID to view past tickets.
+Use the Ticket app when your device is accessible.
 
 1. Install the Ticket app from Market, and then open it.
 2. Log in by scanning the QR code using LarePass.
@@ -46,6 +44,10 @@ Tickets are linked to the Olares ID used at creation. The Ticket app only displa
 
 Once submitted, you can track the ticket's progress, view replies, and communicate with the Olares Support team until your issue is resolved.
 
+:::info
+The Ticket app only displays tickets associated with the Olares ID currently logged in on your device. If you switch to a new ID, you can log in to [Olares Space](https://www.olares.com/space/login?redirect=/) with your original ID to view the previous tickets.
+:::
+
 ### Submit via Olares Space
 
 Use [Olares Space](https://www.olares.com/space/login?redirect=/) if your device is inaccessible or if you cannot use the Ticket app. Any tickets you previously submitted through the Ticket app will also be visible here.
@@ -53,8 +55,12 @@ Use [Olares Space](https://www.olares.com/space/login?redirect=/) if your device
 In Olares Space, you can create a ticket in two ways:
 
 - **Manually**: Fill out the web form and upload exported system logs as attachments.
-- **Automatically (CLI)**: Run the command shown in Olares Space on your device terminal. This command uses Olares CLI to collect and upload system logs, and then creates a ticket automatically.
+- **Automatically (CLI)**: Run the command shown in Olares Space on your device terminal. This command uses Olares CLI to collect and upload system logs.
 
    ![Upload logs dialog](/images/how-to/space/upload_logs_window1.png#bordered)
+
+  When the command finishes, it automatically creates a ticket with your logs attached. Note the ticket number, such as `TKT-10324`, and find it on the **Tickets** page to follow up.
+
+   ![Upload logs using olares-cli](/images/how-to/space/cli-upload-log1.png#bordered)   
 
 For more information, see [Create and manage support tickets in Olares Space](../space/tickets.md).
