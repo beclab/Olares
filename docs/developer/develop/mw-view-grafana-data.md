@@ -8,11 +8,19 @@ head:
 ---
 # Use Grafana dashboards
 
-To visualize system metrics in Olares, you can run Grafana and connect it to the built-in Prometheus service. This guide explains how to install Grafana, connect the data source, and import a standard dashboard.
+To visualize system metrics in Olares, you can run Grafana and connect it to the Prometheus service. This guide explains how to install Prometheus and Grafana, connect the data source, and import a standard dashboard.
+
+## Install Prometheus
+
+Before installing Grafana, install Prometheus from Market. Prometheus collects system metrics for Grafana to visualize.
+
+1. Open Market from Launchpad and search for "Prometheus".
+2. Click **Get**, then **Install**.
+3. Wait for the installation to complete.
 
 ## Install Grafana
 
-Before using Grafana, install it from Market.
+After Prometheus is installed, install Grafana from Market.
 
 1. Open Market from Launchpad and search for "Grafana".
 2. Click **Get**, then **Install**.
@@ -34,15 +42,15 @@ After logging in, you will see the Grafana home page.
 
 ## Add Prometheus data source
 
-Olares runs a built-in Prometheus service that collects system metrics. 
+To connect Grafana to Prometheus, first get the Prometheus API endpoint URL, then add it as a data source in Grafana.
 
-To connect Grafana to this internal service:
+### Get the Prometheus API endpoint URL
 
-1. In the Grafana left navigation pane, go to **Connections** > **Data sources**.
-2. Click **Add data source**, then select **Prometheus**.
-3. For the **Prometheus server URL** field, enter:  
+1. Open Olares **Settings**, and then go to **Applications** > **Prometheus**.
+2. Under **Entrances**, find **Prometheus API**, and then click to open it.
+3. Copy the endpoint URL displayed on the page. For example:
     ```text
-    http://dashboard.<olaresid>.olares.com
+    https://4ae9f19e1.<olaresid>.olares.com
     ```
     Replace `<olaresid>` with your Olares ID.
 4. Click **Save & test** at the bottom of the page. If the connection is successful, you will see the prompt below.
@@ -51,6 +59,7 @@ To connect Grafana to this internal service:
 ## Create a dashboard
 
 This approach is suitable when you need custom metrics and visualizations and are familiar with PromQL.
+
 1. In the left navigation pane, click **Dashboards**.
 2. Click **+ Create dashboard**, then select **+ Add visualization**.
 3. Select **prometheus** as the data source.
@@ -68,4 +77,5 @@ If you do not need to build dashboards from scratch, you can import existing das
 5. Click **Import** to complete the import.
 
 Imported dashboards provide predefined panels and queries and can be customized after import.
+
 ![Imported dashboard](/images/developer/develop/middleware/mw-grafana-dashboard.png#bordered){width=90%}

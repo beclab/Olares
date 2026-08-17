@@ -8,11 +8,19 @@ head:
 ---
 # 使用 Grafana 查看数据
 
-在 Olares 中，你可以运行 Grafana，并连接到内置的 Prometheus 服务，从而可视化系统指标。本文将介绍如何安装流程，并说明如何连接数据源，以及导入仪表板。
+在 Olares 中，你可以运行 Grafana，并连接到 Prometheus 服务，从而可视化系统指标。本文将介绍如何安装 Prometheus 和 Grafana，并说明如何连接数据源，以及导入仪表板。
+
+## 安装 Prometheus
+
+在安装 Grafana 之前，需要先通过应用市场安装 Prometheus。Prometheus 负责收集系统指标，供 Grafana 可视化使用。
+
+1. 从启动台打开应用市场，搜索“Prometheus”。
+2. 点击**获取**，然后点击**安装**。
+3. 等待安装完成。
 
 ## 安装 Grafana
 
-在使用 Grafana 之前，需要先通过应用市场安装 Grafana。
+Prometheus 安装完成后，再通过应用市场安装 Grafana。
 
 1. 从启动台打开应用市场，搜索“Grafana”。
 2. 点击**获取**，然后点击**安装**。
@@ -34,17 +42,22 @@ head:
 
 ## 添加 Prometheus 数据源
 
-Olares 内置了 Prometheus 服务，可以收集系统指标。
+要将 Grafana 连接到 Prometheus，请先获取 Prometheus API 的端点 URL，再在 Grafana 中添加数据源。
 
-要将 Grafana 连接到该服务，请按以下步骤操作：
+### 获取 Prometheus API 端点 URL
+
+1. 打开 Olares **设置**，然后前往**应用** > **Prometheus**。
+2. 在**入口**下，找到 **Prometheus API**，点击进入
+3. 复制页面上显示的端点 URL, 如
+    ```text
+    https://4ae9f19e1.<olaresid>.olares.com
+    ```
+    将 `<olaresid>` 替换为你的 Olares ID。
+### 在 Grafana 中配置数据源
 
 1. 在 Grafana 左侧导航栏中，进入**连接** > **数据源**。
 2. 点击**添加数据源**，然后选择 **Prometheus**。
-3. 在 **Prometheus server URL** 字段输入：  
-    ```text
-    http://dashboard.<olaresid>.olares.com
-    ```
-    将 `<olaresid>` 替换为你的 Olares ID。
+3. 在 **Prometheus server URL** 字段中，输入你刚才复制的 Prometheus API 端点 URL。
 4. 点击页面底部的**保存并测试**。如果连接成功，你将看到如下提示。
 
     ![连接成功](/images/zh/manual/developer/mw-grafana-connect.png#bordered){width=90% style="margin-left:0"}
