@@ -84,6 +84,14 @@ type InstallCudaDriver struct {
 }
 
 func (t *InstallCudaDriver) Execute(runtime connector.Runtime) error {
+	// the runfile builds the modules first and only then discovers that it
+	// cannot load them, so bail out before spending minutes on DKMS
+	if driver, devices, err := utils.DetectNovaBoundGPUs(runtime); err != nil {
+		logger.Warnf("failed to check whether the GPU is bound to the nova driver: %v", err)
+	} else if len(devices) > 0 {
+		return fmt.Errorf("GPU %s is bound to the in-tree %s driver, which prevents the NVIDIA driver from taking ownership of the device; please run `sudo olares-cli gpu disable-conflicts`, REBOOT your machine, and try again", strings.Join(devices, ", "), driver)
+	}
+
 	_, _ = runtime.GetRunner().SudoCmd("apt-get update", false, true)
 	// install build deps for dkms
 	if _, err := runtime.GetRunner().SudoCmd("DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends dkms build-essential linux-headers-$(uname -r)", false, true); err != nil {
@@ -813,39 +821,75 @@ func (t *RestartPlugin) Execute(runtime connector.Runtime) error {
 	return nil
 }
 
-type WriteNouveauBlacklist struct {
+// conflictingGPUDriverModules are the in-tree NVIDIA drivers that bind the card
+// on boot and keep the proprietary driver from ever getting a probe. nouveau is
+// the historical one; nova is its Rust successor, which claims every Turing or
+// later card and is shipped as a module by some distro kernels (Ubuntu 26.04's
+// 7.0 kernel among them) even though it is still non-functional. The DRM half
+// is called nova on some kernels and nova_drm on others, so both are listed.
+var ConflictingGPUDriverModules = []string{"nouveau", "lbm-nouveau", "nova", "nova_core", "nova_drm"}
+
+const (
+	modprobeDir = "/usr/lib/modprobe.d"
+	// gpuDriverBlacklistFile holds the blacklist for all of the above.
+	gpuDriverBlacklistFile = modprobeDir + "/olares-disable-conflicting-gpu-drivers.conf"
+	// legacyNouveauBlacklistFile is the nouveau-only drop-in written by earlier
+	// Olares versions, dropped so the blacklist lives in exactly one file.
+	legacyNouveauBlacklistFile = modprobeDir + "/olares-disable-nouveau.conf"
+)
+
+type WriteConflictingGPUDriverBlacklist struct {
 	common.KubeAction
 }
 
-func (t *WriteNouveauBlacklist) Execute(runtime connector.Runtime) error {
+func (t *WriteConflictingGPUDriverBlacklist) Execute(runtime connector.Runtime) error {
 	if !runtime.GetSystemInfo().IsLinux() {
 		return nil
 	}
-	const dir = "/usr/lib/modprobe.d"
-	const dst = "/usr/lib/modprobe.d/olares-disable-nouveau.conf"
-	const content = "blacklist nouveau\nblacklist lbm-nouveau\nalias nouveau off\nalias lbm-nouveau off\n"
 
-	if _, err := runtime.GetRunner().SudoCmd("install -d -m 0755 "+dir, false, true); err != nil {
-		return errors.Wrap(errors.WithStack(err), "failed to ensure /usr/lib/modprobe.d exists")
+	var content strings.Builder
+	for _, m := range ConflictingGPUDriverModules {
+		fmt.Fprintf(&content, "blacklist %s\n", m)
+	}
+	for _, m := range ConflictingGPUDriverModules {
+		fmt.Fprintf(&content, "alias %s off\n", m)
 	}
 
-	tmpPath := path.Join(runtime.GetBaseDir(), cc.PackageCacheDir, "gpu", "olares-disable-nouveau.conf")
+	if _, err := runtime.GetRunner().SudoCmd("install -d -m 0755 "+modprobeDir, false, true); err != nil {
+		return errors.Wrap(errors.WithStack(err), "failed to ensure "+modprobeDir+" exists")
+	}
+
+	tmpPath := path.Join(runtime.GetBaseDir(), cc.PackageCacheDir, "gpu", path.Base(gpuDriverBlacklistFile))
 	if err := os.MkdirAll(path.Dir(tmpPath), 0755); err != nil {
-		return errors.Wrap(errors.WithStack(err), "failed to create temp dir for nouveau blacklist")
+		return errors.Wrap(errors.WithStack(err), "failed to create temp dir for GPU driver blacklist")
 	}
-	if err := util.WriteFile(tmpPath, []byte(content), 0644); err != nil {
-		return errors.Wrap(errors.WithStack(err), "failed to write temp nouveau blacklist file")
+	if err := util.WriteFile(tmpPath, []byte(content.String()), 0644); err != nil {
+		return errors.Wrap(errors.WithStack(err), "failed to write temp GPU driver blacklist file")
 	}
-	if err := runtime.GetRunner().SudoScp(tmpPath, dst); err != nil {
-		return errors.Wrap(errors.WithStack(err), "failed to install nouveau blacklist file")
+	if err := runtime.GetRunner().SudoScp(tmpPath, gpuDriverBlacklistFile); err != nil {
+		return errors.Wrap(errors.WithStack(err), "failed to install GPU driver blacklist file")
+	}
+	if _, err := runtime.GetRunner().SudoCmd("rm -f "+legacyNouveauBlacklistFile, false, false); err != nil {
+		return errors.Wrap(errors.WithStack(err), "failed to remove legacy nouveau blacklist file")
 	}
 
-	if _, err := runtime.GetRunner().SudoCmd("update-initramfs -u", false, false); err != nil {
+	// -k all matters here: a machine that still has an older kernel installed
+	// can boot into it, and only that kernel may be the one shipping nova
+	if _, err := runtime.GetRunner().SudoCmd("update-initramfs -u -k all", false, false); err != nil {
 		return errors.Wrap(errors.WithStack(err), "failed to update initramfs")
 	}
 
-	if out, _ := runtime.GetRunner().SudoCmd("test -d /sys/module/nouveau && echo loaded || true", false, false); strings.TrimSpace(out) == "loaded" {
-		logger.Infof("the disable file for nouveau kernel module has been written, but the nouveau kernel module is currently loaded. Please REBOOT your machine to make the disabling effective.")
+	var loaded []string
+	for _, m := range ConflictingGPUDriverModules {
+		// /sys/module always spells the module name with underscores
+		sysName := strings.ReplaceAll(m, "-", "_")
+		out, _ := runtime.GetRunner().SudoCmd(fmt.Sprintf("test -d /sys/module/%s && echo loaded || true", sysName), false, false)
+		if strings.TrimSpace(out) == "loaded" {
+			loaded = append(loaded, m)
+		}
+	}
+	if len(loaded) > 0 {
+		logger.Infof("the disable file for conflicting GPU kernel modules has been written, but the following module(s) are currently loaded: %s. Please REBOOT your machine to make the disabling effective.", strings.Join(loaded, ", "))
 		os.Exit(0)
 	}
 	return nil
