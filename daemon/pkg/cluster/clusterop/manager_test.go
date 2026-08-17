@@ -259,10 +259,10 @@ func (c *cluster) deps(t *testing.T, dir string) Deps {
 			c.mu.Lock()
 			c.powerN++
 			err := c.powerSelfErr
-			hook := c.onPowerSelf
+			stage := c.onPowerSelf
 			c.mu.Unlock()
-			if hook != nil {
-				hook()
+			if stage != nil {
+				stage()
 			}
 			return err
 		},
@@ -997,6 +997,52 @@ func TestRestoredRequestIDKeepsCreateIdempotentAndUnambiguous(t *testing.T) {
 	var conflict *RequestConflictError
 	if !errors.As(err, &conflict) || conflict.ExistingID != first.ID {
 		t.Fatalf("different intent err = %v, want conflict with %s", err, first.ID)
+	}
+}
+
+// Two records claiming one request id do not stop the daemon starting.
+//
+// A daemon that cannot load its operations does not start at all, and would
+// not start on the next attempt either, because nothing about the records on
+// disk would have changed. That is the whole daemon traded for one ambiguous
+// pair, so the ambiguity is resolved instead: the later record answers, and
+// the earlier one is still readable by its own id.
+func TestDuplicateRequestIDsDoNotStopTheDaemonStarting(t *testing.T) {
+	c := newCluster(master("master-1", "10.0.0.1"))
+	dir := filepath.Join(t.TempDir(), "operations")
+	deps := c.deps(t, dir)
+	now := deps.Now()
+
+	for _, op := range []Operation{
+		{
+			ID: "op-older", Type: TypeReboot, RequestID: "request-twice",
+			Scope: ScopeCluster, ClusterID: "cluster-1", Owner: "alice@olares.com",
+			Status: StatusFailed, CreatedAt: now.Add(-time.Hour), UpdatedAt: now.Add(-time.Hour),
+		},
+		{
+			ID: "op-newer", Type: TypeReboot, RequestID: "request-twice",
+			Scope: ScopeCluster, ClusterID: "cluster-1", Owner: "alice@olares.com",
+			Status: StatusSucceeded, CreatedAt: now, UpdatedAt: now,
+		},
+	} {
+		if err := deps.Store.Save(op); err != nil {
+			t.Fatalf("seed %s: %v", op.ID, err)
+		}
+	}
+
+	m, err := NewManager(deps)
+	if err != nil {
+		t.Fatalf("a daemon with two records for one request could not start: %v", err)
+	}
+	got, ok := m.GetByRequest("request-twice")
+	if !ok {
+		t.Fatal("the request id resolves to nothing")
+	}
+	if got.ID != "op-newer" {
+		t.Errorf("request resolves to %s, want the later record op-newer", got.ID)
+	}
+	if _, ok := m.Get("op-older"); !ok {
+		t.Error("the earlier record was discarded rather than kept")
 	}
 }
 

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 
 	"github.com/beclab/Olares/daemon/pkg/cluster/state"
 
@@ -33,10 +32,7 @@ func (i *downloadCLI) Execute(ctx context.Context, p any) (res any, err error) {
 		return nil, errors.New("invalid param")
 	}
 
-	arch := "amd64"
-	if runtime.GOARCH == "arm" {
-		arch = "arm64"
-	}
+	arch := releaseArch()
 
 	destDir := filepath.Join(commands.TERMINUS_BASE_DIR, "pkg", "components")
 	if err := os.MkdirAll(destDir, 0755); err != nil {

@@ -55,10 +55,23 @@ func TestSignatureRequirementRegistryRejectsRegistrationAfterFreeze(t *testing.T
 	}
 }
 
-func TestDefaultSignatureRequirementsHasBuiltInTypes(t *testing.T) {
-	for _, typ := range []Type{TypeReboot, TypeShutdown, TypeSetSSHPassword} {
+// Every operation this daemon can be asked to start needs the owner's
+// signature.
+//
+// It is asked of the module registry rather than of a list written here,
+// because a list written here is one a new module can be left out of — and
+// being left out is not visible: the type simply becomes creatable on an
+// access token. That is how the upgrade type was admitted without a signature
+// for a while. If some future operation genuinely does not need one, this test
+// is where that decision gets written down and argued for.
+func TestEveryRegisteredModuleRequiresASignature(t *testing.T) {
+	types := DefaultRegistry().Types()
+	if len(types) == 0 {
+		t.Fatal("no modules are registered, so this proves nothing")
+	}
+	for _, typ := range types {
 		if !RequiresSignature(typ) {
-			t.Errorf("RequiresSignature(%q) = false, want true for built-in module", typ)
+			t.Errorf("operation %q can be created without an owner signature", typ)
 		}
 	}
 }

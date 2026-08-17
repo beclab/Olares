@@ -24,6 +24,13 @@ func NewRemoveUpgradeTarget() commands.Interface {
 }
 
 func (i *removeUpgradeTarget) Execute(ctx context.Context, p any) (res any, err error) {
+	// Read before deleting: the target names the version, and the version is
+	// what identifies the orchestrated upgrade to stop. On a single node
+	// there is nothing to stop and this does nothing.
+	if target, terr := state.GetOlaresUpgradeTarget(); terr == nil && target != nil {
+		StopClusterUpgrade(target.Version.Original())
+	}
+
 	err = removeUpgradeTargetFile()
 	if err != nil {
 		return nil, err

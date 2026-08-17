@@ -14,7 +14,10 @@ func (u upgrader_1_12_3_20251112) Version() *semver.Version {
 }
 
 func (u upgrader_1_12_3_20251112) PrepareForUpgrade() []task.Interface {
-	return append(regenerateKubeFiles(), u.upgraderBase.PrepareForUpgrade()...)
+	// An admin-only stage, so both halves belong here; exactly one of them
+	// is non-empty for a given kube type. See regenerateKubeFilesOnNode.
+	tasks := append(regenerateKubeFilesOnNode(), regenerateKubeFilesOnControlNode()...)
+	return append(tasks, u.upgraderBase.PrepareForUpgrade()...)
 }
 
 func init() {

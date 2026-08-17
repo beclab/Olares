@@ -11,16 +11,31 @@ import (
 	"github.com/beclab/Olares/cli/pkg/phase"
 	"github.com/beclab/Olares/cli/pkg/pipelines"
 	"github.com/beclab/Olares/cli/pkg/upgrade"
+	"github.com/beclab/Olares/cli/pkg/utils"
 	"github.com/beclab/Olares/cli/version"
 	"github.com/spf13/cobra"
 )
 
 func NewCmdUpgradeOs() *cobra.Command {
+	var stage string
+
 	cmd := &cobra.Command{
 		Use:   "upgrade",
 		Short: "Upgrade Olares to a newer version",
+		// Without this, a word this command does not recognise is silently
+		// ignored and the whole upgrade runs. That turns a subcommand this
+		// binary is too old to have — `upgrade plan`, which the orchestrator
+		// asks every node for — from a clean failure into an unrequested
+		// upgrade of the machine that was only being asked a question.
+		Args: cobra.NoArgs,
 		Run: func(cmd *cobra.Command, args []string) {
-			if err := pipelines.UpgradeOlaresPipeline(cmd.Context()); err != nil {
+			var err error
+			if stage == "" {
+				err = pipelines.UpgradeOlaresPipeline(cmd.Context())
+			} else {
+				err = pipelines.UpgradeOlaresStagePipeline(cmd.Context(), stage)
+			}
+			if err != nil {
 				log.Fatalf("error: %v", err)
 			}
 		},
@@ -30,9 +45,44 @@ func NewCmdUpgradeOs() *cobra.Command {
 	config.AddBaseDirFlagBy(flagSetter)
 	config.AddVersionFlagBy(flagSetter)
 
+	// This is how a cluster orchestrator drives one node. Left unset, the
+	// command upgrades everything on this machine, which is both the
+	// single-node path and what it did before clusters were scheduled.
+	cmd.Flags().StringVar(&stage, "stage", "",
+		"run only this stage of the upgrade flow on this node (see 'olares-cli upgrade plan')")
+
 	cmd.AddCommand(NewCmdCurrentVersionUpgradeSpec())
 	cmd.AddCommand(NewCmdUpgradeViable())
 	cmd.AddCommand(NewCmdUpgradePrecheck())
+	cmd.AddCommand(NewCmdUpgradePlan())
+	return cmd
+}
+
+// NewCmdUpgradePlan prints the upgrade flow and what this version puts in
+// each stage. The orchestrator reads it rather than holding a plan of its own:
+// which tasks exist, and which stage each belongs to, is decided by the code
+// that implements them, and that code ships in this binary.
+func NewCmdUpgradePlan() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "plan",
+		Short: fmt.Sprintf("Print the upgrade flow and its tasks for this olares-cli version (%s)", version.VERSION),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			target, err := utils.ParseOlaresVersionString(version.VERSION)
+			if err != nil {
+				return fmt.Errorf("invalid olares-cli version '%s': %v", version.VERSION, err)
+			}
+			plan, err := upgrade.BuildPlan(target)
+			if err != nil {
+				return err
+			}
+			out, err := json.MarshalIndent(plan, "", "  ")
+			if err != nil {
+				return err
+			}
+			fmt.Println(string(out))
+			return nil
+		},
+	}
 	return cmd
 }
 
