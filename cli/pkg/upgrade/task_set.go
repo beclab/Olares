@@ -720,6 +720,35 @@ func upgradeKubernetesPrometheusRule() []task.Interface {
 	}
 }
 
+// applyIntelGPUPluginAction applies infrastructure/gpu/.olares/config/gpu/intel/gpu-plugin.yaml
+// (packaged as wizard/config/gpu/intel/gpu-plugin.yaml in the installer).
+type applyIntelGPUPluginAction struct {
+	common.KubeAction
+}
+
+func (a *applyIntelGPUPluginAction) Execute(runtime connector.Runtime) error {
+	kubectlpath, err := util.GetCommand(common.CommandKubectl)
+	if err != nil {
+		return errors.Wrap(errors.WithStack(err), "kubectl not found")
+	}
+	manifest := path.Join(runtime.GetInstallerDir(), "wizard/config/gpu/intel/gpu-plugin.yaml")
+	if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("%s apply -f %s", kubectlpath, manifest), false, true); err != nil {
+		return errors.Wrap(errors.WithStack(err), "apply intel gpu-plugin failed")
+	}
+	return nil
+}
+
+func upgradeIntelGPUPlugin() []task.Interface {
+	return []task.Interface{
+		&task.LocalTask{
+			Name:   "ApplyIntelGPUPlugin",
+			Action: new(applyIntelGPUPluginAction),
+			Retry:  5,
+			Delay:  5 * time.Second,
+		},
+	}
+}
+
 func upgradePrometheusOperator() []task.Interface {
 	return []task.Interface{
 		// prometheus operator
