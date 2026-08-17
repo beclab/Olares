@@ -9,9 +9,9 @@ import (
 	"github.com/beclab/Olares/cli/pkg/gpu"
 )
 
-func DisableNouveau() error {
+func DisableConflictingGPUDrivers() error {
 	arg := common.NewArgument()
-	arg.SetConsoleLog("gpudisable-nouveau.log", true)
+	arg.SetConsoleLog("gpu-disable-conflicts.log", true)
 
 	runtime, err := common.NewKubeRuntime(*arg)
 	if err != nil {
@@ -19,9 +19,9 @@ func DisableNouveau() error {
 	}
 
 	p := &pipeline.Pipeline{
-		Name: "DisableNouveau",
+		Name: "DisableConflictingGPUDrivers",
 		Modules: []module.Module{
-			&gpu.DisableNouveauModule{},
+			&gpu.DisableConflictingGPUDriversModule{},
 		},
 		Runtime: runtime,
 	}
