@@ -57,7 +57,7 @@ func (s Status) Terminal() bool {
 	}
 }
 
-// StepStatus is the state of one stage of an operation.
+// StepStatus is the state of one step of an operation.
 type StepStatus string
 
 const (
@@ -69,12 +69,20 @@ const (
 	StepSkipped       StepStatus = "skipped"
 )
 
-// Step names.
+// Step names. A power operation has a fixed set; an upgrade names its steps
+// after the stages of the plan it is executing, so those are not listed here.
 const (
 	StepPrecheck      = "precheck"
 	StepWorkerCommand = "worker-power-command"
 	StepWorkerRestart = "worker-restart"
 	StepMasterCommand = "master-power-command"
+
+	// StepPlan is where an upgrade reads the plan it is about to run.
+	StepPlan = "plan"
+
+	// StepUpgradeReadiness is where every compute node is asked whether it
+	// holds the version being rolled out, after it has been prepared.
+	StepUpgradeReadiness = "upgrade-readiness"
 )
 
 // NodeStatus is the per-node outcome inside an operation.
@@ -83,12 +91,21 @@ type NodeStatus string
 const (
 	NodePending NodeStatus = "pending"
 
+	// NodeRunning means the node has started the work and has not finished.
+	// Only an upgrade uses it: a power command is accepted, not performed.
+	NodeRunning NodeStatus = "running"
+
 	// NodeCommandIssued means the node accepted the power command. For a
 	// shutdown that is as far as observation goes.
 	NodeCommandIssued NodeStatus = "command_issued"
 
 	// NodeRestarted means the node went away and came back Ready.
 	NodeRestarted NodeStatus = "restarted"
+
+	// NodeSucceeded means the node finished the work it was given and said
+	// so. An upgrade stage can report this because the node is still there
+	// afterwards to be asked.
+	NodeSucceeded NodeStatus = "succeeded"
 
 	NodeFailed  NodeStatus = "failed"
 	NodeSkipped NodeStatus = "skipped"
@@ -148,7 +165,41 @@ const (
 	CodeDaemonRestarted = "daemon_restarted"
 )
 
-// Step is one stage of an operation.
+// Stable codes an upgrade can end on.
+const (
+	// CodePlanUnavailable means the control node could not work out what the
+	// upgrade consists of. Nothing has run at that point.
+	CodePlanUnavailable = "plan_unavailable"
+
+	// CodeStageFailed is the stage-level roll-up of a node that failed.
+	CodeStageFailed = "stage_failed"
+
+	// CodeStageBusy means a node was asked for a stage while it was still
+	// running one for another operation. It is a refusal, not a failure of
+	// the work: the node did not start anything.
+	CodeStageBusy = "stage_busy"
+
+	// CodeStageTimeout means a node was still running its stage when the
+	// stage's deadline passed. It is not a claim that the work stopped.
+	CodeStageTimeout = "stage_timeout"
+
+	// CodeUpgradeUnsupported refuses a node that cannot run upgrade stages:
+	// an olaresd from before staged upgrades, or one in a container that
+	// cannot touch the host.
+	CodeUpgradeUnsupported = "upgrade_unsupported"
+
+	// CodeVersionMismatch means a node is not holding the version this
+	// upgrade is for, so it would derive a different plan.
+	CodeVersionMismatch = "version_mismatch"
+
+	// CodeUpgradeCancelled means the upgrade stopped between two stages
+	// because it was asked to, rather than because anything went wrong. The
+	// stages that had already run stay run: an upgrade cannot be undone, and
+	// the record says how far it got.
+	CodeUpgradeCancelled = "upgrade_cancelled"
+)
+
+// Step is one step of an operation.
 type Step struct {
 	Name       string     `json:"name"`
 	Status     StepStatus `json:"status"`
@@ -156,6 +207,36 @@ type Step struct {
 	FinishedAt *time.Time `json:"finishedAt"`
 	Code       string     `json:"code,omitempty"`
 	Error      string     `json:"error,omitempty"`
+
+	// Placement and MaxParallel describe where and how the step ran. They are
+	// set by an upgrade, whose steps come from a plan and differ from one
+	// another; a power operation's steps are fixed and leave them empty.
+	//
+	// Placement is deliberately not called Scope: Operation.Scope already means
+	// whether an operation covers the cluster or one node, and a field of the
+	// same name meaning which nodes a step ran on would be two answers to two
+	// different questions wearing one word.
+	Placement   string `json:"placement,omitempty"`
+	MaxParallel int    `json:"maxParallel,omitempty"`
+
+	// Nodes is the per-node outcome within this step.
+	//
+	// A power operation leaves it empty and uses Operation.Nodes: each node
+	// takes part in one step, so a flat list says everything. An upgrade runs
+	// every node through many steps, and a flat list would have to overwrite
+	// the previous stage's result to record the next one — turning "node B
+	// failed at the containerd migration" into "node B is running the version
+	// flip" the moment the operation moved on without it.
+	Nodes []NodeResult `json:"nodes,omitempty"`
+}
+
+// Clone returns a copy that shares no slice with the original.
+func (s Step) Clone() Step {
+	out := s
+	if s.Nodes != nil {
+		out.Nodes = append([]NodeResult(nil), s.Nodes...)
+	}
+	return out
 }
 
 // NodeResult is what happened to one node during an operation.
@@ -190,6 +271,28 @@ type Operation struct {
 	// ParamsDigest is the caller intent hash for module params. The raw params
 	// are never written to the operation record.
 	ParamsDigest string `json:"paramsDigest,omitempty"`
+
+	// StopRequested says the operator asked this operation to stop at its
+	// next safe point.
+	//
+	// It is on the record rather than in the manager's memory for the same
+	// reason everything else about an upgrade is: an upgrade restarts olaresd,
+	// so a cancellation held in memory would be forgotten by the process that
+	// comes back and the run would carry on as though nobody had asked. See
+	// Manager.RequestStop.
+	StopRequested bool `json:"stopRequested,omitempty"`
+
+	// SupersededBy names the operation that took this one's request id over,
+	// and is empty on every operation still answering for its own.
+	//
+	// It exists because a request id identifies at most one operation, and
+	// everything reads it that way: the loader refuses two records claiming
+	// one, the pruner removes the mapping when it removes a record, and Create
+	// hands a repeat request whatever the id resolves to. A retry produces a
+	// second record for the same request — see RetryableModule — so the older
+	// one has to stop claiming it, while staying on disk as the history of
+	// what was attempted. This is how it says so.
+	SupersededBy string `json:"supersededBy,omitempty"`
 
 	Status     Status     `json:"status"`
 	Code       string     `json:"code,omitempty"`
@@ -232,6 +335,7 @@ func (o Operation) Clone() Operation {
 	if o.Steps != nil {
 		out.Steps = append([]Step(nil), o.Steps...)
 		for i := range out.Steps {
+			out.Steps[i] = out.Steps[i].Clone()
 			out.Steps[i].StartedAt = cloneTime(out.Steps[i].StartedAt)
 			out.Steps[i].FinishedAt = cloneTime(out.Steps[i].FinishedAt)
 		}

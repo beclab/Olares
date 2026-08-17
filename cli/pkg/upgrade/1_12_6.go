@@ -40,14 +40,23 @@ func (u upgrader_1_12_6) PrepareForUpgrade() []task.Interface {
 	tasks = append(tasks, upgradeKubernetesPrometheusRule()...)
 	tasks = append(tasks, upgradeNodeExporterServiceMonitor()...)
 	tasks = append(tasks, upgradeNodeExporter()...)
-	tasks = append(tasks, upgradeMultus()...)
-	tasks = append(tasks, createAppCommonDir()...)
-	tasks = append(tasks, upgradeNetworkManagerConfig()...)
+	tasks = append(tasks, upgradeMultusCluster()...)
 	tasks = append(tasks, upgradeUserReverseProxy()...)
 	tasks = append(tasks, upgradePrometheusOperator()...)
 
 	tasks = append(tasks, u.upgraderBase.PrepareForUpgrade()...)
 	return tasks
+}
+
+// PreUpgradeNode is the part of 1.12.6 that each machine does to itself: the
+// multus DHCP daemon, the shared app directories, and the NetworkManager
+// drop-in.
+func (u upgrader_1_12_6) PreUpgradeNode() []task.Interface {
+	var tasks []task.Interface
+	tasks = append(tasks, upgradeMultusNode()...)
+	tasks = append(tasks, createAppCommonDir()...)
+	tasks = append(tasks, upgradeNetworkManagerConfig()...)
+	return append(tasks, u.upgraderBase.PreUpgradeNode()...)
 }
 
 func (u upgrader_1_12_6) UpgradeSystemComponents() []task.Interface {

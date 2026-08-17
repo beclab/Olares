@@ -14,13 +14,12 @@ func (u upgrader_1_12_7_20260625) Version() *semver.Version {
 	return semver.MustParse("1.12.7-20260625")
 }
 
-func (u upgrader_1_12_7_20260625) UpgradeSystemComponents() []task.Interface {
-	tasks := u.upgrader_1_12_7_20260624.UpgradeSystemComponents()
-	// backfill the per-mode (multi-mode) node labels for Intel/AMD GPUs so
-	// devices upgraded from before the per-mode labeling scheme advertise
-	// their GPU mode to the scheduler.
-	tasks = append(tasks, labelIntelAMDGPUNode()...)
-	return tasks
+// PostUpgradeNode backfills the per-mode (multi-mode) node labels for
+// Intel/AMD GPUs, so devices upgraded from before the per-mode labeling
+// scheme advertise their GPU mode to the scheduler. Each machine probes its
+// own hardware and labels its own Node, so every node runs it.
+func (u upgrader_1_12_7_20260625) PostUpgradeNode() []task.Interface {
+	return append(labelIntelAMDGPUNode(), u.upgrader_1_12_7_20260624.PostUpgradeNode()...)
 }
 
 func init() {

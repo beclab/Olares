@@ -91,6 +91,9 @@ func (u *upgradeContainerdAction) Execute(runtime connector.Runtime) error {
 	return action.Execute(runtime)
 }
 
+// upgradeContainerd replaces the container runtime binary on the machine and
+// restarts it. Every node runs its own, and one at a time: restarting
+// containerd takes that node's workloads down with it.
 func upgradeContainerd() []task.Interface {
 	return []task.Interface{
 		&task.LocalTask{
@@ -273,6 +276,10 @@ func parseHostsTOMLMirrors(data []byte) []string {
 
 // migrateContainerdConfigV3 regenerates the v3 containerd config (+ nvidia
 // drop-in on GPU nodes) and restarts containerd to load it.
+//
+// The config lives in /etc/containerd on each machine and the nvidia drop-in
+// depends on which GPU that machine has, so every node migrates its own — and
+// one at a time, because the restart interrupts everything running there.
 func migrateContainerdConfigV3() []task.Interface {
 	return []task.Interface{
 		&task.LocalTask{
@@ -637,12 +644,52 @@ type rebootIfNeeded struct {
 	common.KubeAction
 }
 
+// Execute reboots the machine if the driver upgrade decided one was needed.
+//
+// The two tasks do not necessarily share a process. On a cluster they are
+// separate stages, run by separate olares-cli invocations, and the pipeline
+// cache does not survive between them — so the marker file the driver upgrade
+// already writes is the answer that does. The cache is still consulted first:
+// on a single node the two do share a process, and reading what the previous
+// task set is exactly the behavior this task has always had.
 func (r *rebootIfNeeded) Execute(runtime connector.Runtime) error {
-	val, ok := r.PipelineCache.GetMustBool(cacheRebootNeeded)
-	if ok && val {
+	needed, ok := r.PipelineCache.GetMustBool(cacheRebootNeeded)
+	if !ok {
+		if _, err := os.Stat(clistate.UpgradeRebootMarkFile); err == nil {
+			needed = true
+		} else if !os.IsNotExist(err) {
+			return errors.Wrapf(errors.WithStack(err),
+				"failed to read the upgrade reboot marker %s", clistate.UpgradeRebootMarkFile)
+		}
+	}
+	if needed {
 		_, _ = runtime.GetRunner().SudoCmd("reboot now", false, false)
 	}
 	return nil
+}
+
+// upgradeGPUDriver installs the target NVIDIA driver on the machine it runs
+// on. Every node has its own GPU and its own kernel to build against, and the
+// runfile installer is heavy enough that two nodes should not do it at once.
+func upgradeGPUDriver() []task.Interface {
+	return []task.Interface{
+		&task.LocalTask{
+			Name:   "UpgradeGPUDriver",
+			Action: new(upgradeGPUDriverIfNeeded),
+		},
+	}
+}
+
+// rebootAfterGPUDriver restarts the nodes whose driver changed, compute nodes
+// first and the control node last, one at a time. It is the last thing an
+// upgrade does on a machine.
+func rebootAfterGPUDriver() []task.Interface {
+	return []task.Interface{
+		&task.LocalTask{
+			Name:   "RebootIfNeeded",
+			Action: new(rebootIfNeeded),
+		},
+	}
 }
 
 // applyNodeExporterServiceMonitorAction applies embedded prometheus node-exporter ServiceMonitor
@@ -960,7 +1007,16 @@ func (a *backfillAppGPUConfig) Execute(_ connector.Runtime) error {
 	return nil
 }
 
-func upgradeMultus() []task.Interface {
+// upgradeMultusCluster applies multus to the cluster: the DaemonSet and the
+// network definition. Control-node work, so it goes in a control-node stage.
+//
+// This used to be interleaved with the per-machine half below, in the order
+// DaemonSet → host unit → definition. Split across stages the host unit now
+// comes first, because the per-node stage runs before the control-node one.
+// That is the intended order rather than an accident of the split: the DHCP
+// daemon serves IPAM for the pods the DaemonSet starts, so having it already
+// installed when they come up is what the original order was working towards.
+func upgradeMultusCluster() []task.Interface {
 	return []task.Interface{
 		&task.LocalTask{
 			Name: "GenerateMultus",
@@ -978,22 +1034,6 @@ func upgradeMultus() []task.Interface {
 			Retry:  5,
 		},
 		&task.LocalTask{
-			Name: "GenerateMultusDhcpService",
-			Desc: "Generate multus DHCP service",
-			Action: &action.Template{
-				Name:     "GenerateMultusDhcpService",
-				Template: templates.CniDhcpService,
-				Dst:      path.Join("/etc/systemd/system", templates.CniDhcpService.Name()),
-			},
-			Retry: 5,
-		},
-		&task.LocalTask{
-			Name:   "EnableCniDhcpService",
-			Desc:   "Enable multus CNI DHCP service",
-			Action: new(network.EnableCniDhcpService),
-			Retry:  5,
-		},
-		&task.LocalTask{
 			Name: "GenerateMultusDefine",
 			Desc: "Generate multus define",
 			Action: &action.Template{
@@ -1007,6 +1047,30 @@ func upgradeMultus() []task.Interface {
 			Name:   "DeployMultusDefine",
 			Desc:   "Deploy multus define",
 			Action: new(network.DeployMultusDefine),
+			Retry:  5,
+		},
+	}
+}
+
+// upgradeMultusNode installs the CNI DHCP daemon on the machine. Every node
+// needs it: it serves IPAM wherever a pod might land, so a cluster that only
+// installed it on the control node has it missing where it is used.
+func upgradeMultusNode() []task.Interface {
+	return []task.Interface{
+		&task.LocalTask{
+			Name: "GenerateMultusDhcpService",
+			Desc: "Generate multus DHCP service",
+			Action: &action.Template{
+				Name:     "GenerateMultusDhcpService",
+				Template: templates.CniDhcpService,
+				Dst:      path.Join("/etc/systemd/system", templates.CniDhcpService.Name()),
+			},
+			Retry: 5,
+		},
+		&task.LocalTask{
+			Name:   "EnableCniDhcpService",
+			Desc:   "Enable multus CNI DHCP service",
+			Action: new(network.EnableCniDhcpService),
 			Retry:  5,
 		},
 	}
@@ -1032,6 +1096,8 @@ func (a *generateMultusConfigAction) Execute(runtime connector.Runtime) error {
 	return a.Template.Execute(runtime)
 }
 
+// createAppCommonDir makes directories on the machine it runs on, so an app
+// scheduled to any node finds them there.
 func createAppCommonDir() []task.Interface {
 	return []task.Interface{
 		&task.LocalTask{
@@ -1064,6 +1130,8 @@ EOF
 
 }
 
+// upgradeNetworkManagerConfig writes a drop-in under /etc/NetworkManager and
+// reloads it, which is per-machine.
 func upgradeNetworkManagerConfig() []task.Interface {
 	return []task.Interface{
 		&task.LocalTask{
@@ -1143,6 +1211,11 @@ func (u *upgradeUserReverseProxyAgent) Execute(runtime connector.Runtime) error 
 // without a fresh install. Both actions are idempotent and no-op on nodes
 // without the respective GPU (and the AMD one additionally requires ROCm to be
 // present, matching the install behavior).
+//
+// Both actions probe the hardware of the machine they run on and label that
+// machine's Node object, so a cluster only gets fully labelled if every node
+// runs them. Running them only on the control node would advertise the control
+// node's GPU as the whole cluster's.
 func labelIntelAMDGPUNode() []task.Interface {
 	return []task.Interface{
 		&task.LocalTask{

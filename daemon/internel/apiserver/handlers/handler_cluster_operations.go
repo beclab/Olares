@@ -82,6 +82,9 @@ func InitClusterOperations(dir string, deps clusterop.Deps) error {
 		return err
 	}
 	clusterOperations = m
+	// Also published for the upgrade watcher, which reaches the orchestrator
+	// from inside a command rather than from a route. See clusterop.Publish.
+	clusterop.Publish(m)
 	InstallPowerClaims(claims)
 	klog.Info("cluster operations recorded in ", store.Dir())
 	return nil

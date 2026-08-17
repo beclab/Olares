@@ -60,7 +60,7 @@ type DispatchOutcome struct {
 	Err      string
 }
 
-// Timeouts bound the waits a reboot performs.
+// Timeouts bound the waits an operation performs.
 type Timeouts struct {
 	// Poll is how often a restarting node is probed.
 	Poll time.Duration
@@ -69,6 +69,10 @@ type Timeouts struct {
 	Down time.Duration
 	// Ready is how long a node may take to come back and be Ready again.
 	Ready time.Duration
+	// Stage is how long one node may take over one upgrade stage. It is an
+	// order of magnitude larger than the power timeouts because a stage
+	// downloads a release, imports images and upgrades a container runtime.
+	Stage time.Duration
 }
 
 func (t Timeouts) withDefaults() Timeouts {
@@ -80,6 +84,9 @@ func (t Timeouts) withDefaults() Timeouts {
 	}
 	if t.Ready <= 0 {
 		t.Ready = 15 * time.Minute
+	}
+	if t.Stage <= 0 {
+		t.Stage = 60 * time.Minute
 	}
 	return t
 }
@@ -121,6 +128,16 @@ type Deps struct {
 	// PowerSelf powers the machine this daemon runs on. It is the last thing
 	// any cluster power operation does.
 	PowerSelf func(ctx context.Context, t Type) error
+
+	// Upgrade is everything an upgrade needs and a power operation does not.
+	//
+	// It is one pointer rather than six fields because it is one decision: a
+	// daemon either orchestrates upgrades or it does not, and a half-wired
+	// set is not a state anything should have to cope with at each step. nil
+	// is the normal answer on a node that was built without an upgrade
+	// executor; the upgrade module refuses once, up front, rather than every
+	// function on the path checking for itself and quietly carrying on.
+	Upgrade *UpgradeDeps
 
 	// Base is what a run executes on. It is deliberately not derived from the
 	// request that asked for the operation: that context is recycled as soon
@@ -349,13 +366,30 @@ func NewManagerWithRegistry(deps Deps, registry *ModuleRegistry) (*Manager, erro
 	}
 	for i := range stored {
 		op := stored[i]
-		if id, ok := m.byRequest[op.RequestID]; ok && id != op.ID {
-			return nil, fmt.Errorf("load cluster operations: %w", &RequestConflictError{
-				RequestID: op.RequestID, ExistingID: id,
-			})
-		}
 		m.ops[op.ID] = &op
 		m.order = append(m.order, op.ID)
+
+		// A retired record is kept and readable by id, but it no longer
+		// answers for its request: the operation that replaced it does. See
+		// Operation.SupersededBy.
+		if op.SupersededBy != "" {
+			continue
+		}
+		// Two unretired records claiming one request id is a contradiction,
+		// and it is resolved rather than refused. Refusing means returning an
+		// error from here, which means olaresd does not start — and it does
+		// not start next time either, because nothing about the records will
+		// have changed. Trading every function this daemon has for one
+		// ambiguous pair of records is not a trade worth making, and picking
+		// the later one is what the caller asking by that id wants in every
+		// case anybody has been able to describe.
+		if id, ok := m.byRequest[op.RequestID]; ok && id != op.ID {
+			klog.Errorf("clusterop: operations %s and %s both claim request %q; answering with the later one",
+				id, op.ID, op.RequestID)
+			if kept, ok := m.ops[id]; ok && kept.CreatedAt.After(op.CreatedAt) {
+				continue
+			}
+		}
 		m.byRequest[op.RequestID] = op.ID
 	}
 
@@ -428,6 +462,21 @@ func sameIntent(op *Operation, req CreateRequest, opType Type, paramsDigest, emp
 		storedDigest == paramsDigest
 }
 
+// supersedable reports whether an identical request should start a new
+// operation instead of being answered with this one.
+//
+// Only a failure is ever replaced. A run that is still going is what the
+// caller is asking for, and one that succeeded is the answer to the question —
+// repeating the work because someone asked twice is how an upgrade gets run
+// twice. See RetryableModule for why this is the module's decision.
+func supersedable(module OperationModule, op Operation) bool {
+	if !op.Status.Terminal() || op.Status == StatusSucceeded {
+		return false
+	}
+	retryable, ok := module.(RetryableModule)
+	return ok && retryable.RetryAfterFailure(op)
+}
+
 // Create starts a cluster power operation, or returns the one this request
 // already started. It returns as soon as the operation is recorded: the power
 // commands themselves are issued by the run it launches.
@@ -468,15 +517,22 @@ func (m *Manager) Create(_ context.Context, req CreateRequest) (Operation, error
 	}
 
 	m.mu.Lock()
+	supersededID := ""
 	if id, ok := m.byRequest[req.RequestID]; ok {
 		existing := m.ops[id]
 		if !sameIntent(existing, req, opType, paramsDigest, emptyParamsDigest) {
 			m.mu.Unlock()
 			return Operation{}, &RequestConflictError{RequestID: req.RequestID, ExistingID: id}
 		}
-		cloned := existing.Clone()
-		m.mu.Unlock()
-		return cloned, nil
+		if !supersedable(module, *existing) {
+			cloned := existing.Clone()
+			m.mu.Unlock()
+			return cloned, nil
+		}
+		// The module wants another attempt. The old record stays on disk as
+		// history, but it has to stop claiming the request id before a second
+		// record starts claiming it — see Operation.SupersededBy.
+		supersededID = id
 	}
 	if active := m.activeOperationLocked(); active != nil {
 		err := &ConflictError{ActiveID: active.ID, ActiveType: active.Type}
@@ -485,8 +541,26 @@ func (m *Manager) Create(_ context.Context, req CreateRequest) (Operation, error
 	}
 
 	at := m.deps.Now()
+	newID := m.deps.NewID()
+
+	// Written before the record that replaces it, and the order is what keeps
+	// the invariant true on disk as well as in memory. Marked first, then
+	// interrupted: the request id belongs to nobody, and the next request
+	// starts a fresh operation. Written second and interrupted: two records
+	// claim one request id, which is the state the loader refuses to start
+	// from — so the daemon would not come back at all.
+	if supersededID != "" {
+		superseded := m.ops[supersededID]
+		superseded.SupersededBy = newID
+		if err := m.deps.Store.Save(*superseded); err != nil {
+			superseded.SupersededBy = ""
+			m.mu.Unlock()
+			return Operation{}, fmt.Errorf("retire the previous attempt at %s: %w", req.RequestID, err)
+		}
+	}
+
 	op := &Operation{
-		ID:           m.deps.NewID(),
+		ID:           newID,
 		Type:         opType,
 		RequestID:    req.RequestID,
 		Scope:        req.Scope,
@@ -507,6 +581,10 @@ func (m *Manager) Create(_ context.Context, req CreateRequest) (Operation, error
 	if err := m.deps.Store.Save(*op); err != nil {
 		delete(m.ops, op.ID)
 		m.order = m.order[:len(m.order)-1]
+		// The request id is left unclaimed rather than handed back to the
+		// superseded record: that one has been written to disk saying it no
+		// longer answers for it, and an in-memory map that disagreed with the
+		// disk would be undone by the next restart anyway.
 		delete(m.byRequest, req.RequestID)
 		m.activeID = ""
 		m.mu.Unlock()
@@ -859,6 +937,36 @@ func (m *Manager) canContinue(id string) bool {
 	return !m.persistFailed[id]
 }
 
+// RequestStop asks a running operation to stop at its next safe point.
+//
+// It is not an abort. Nothing already dispatched is recalled, because there is
+// no safe way to recall it: a node part way through a helm upgrade or a
+// container runtime replacement has to be allowed to finish, and an upgrade
+// stage cannot be un-run. What stops is the scheduling of further work, at the
+// boundary the design already treats as safe — the barrier between two stages,
+// where every node is between pieces of work rather than inside one.
+//
+// It reports whether there was anything to stop. An operation that has already
+// settled is left exactly as it is.
+func (m *Manager) RequestStop(id string) bool {
+	m.mu.Lock()
+	op, ok := m.ops[id]
+	stoppable := ok && !op.Status.Terminal()
+	m.mu.Unlock()
+	if !stoppable {
+		return false
+	}
+	// Through the recording path, so it reaches disk: a cancellation the
+	// replacement daemon cannot see is a cancellation an upgrade ignores.
+	return m.update(id, func(op *Operation) { op.StopRequested = true })
+}
+
+// StopRequested reports whether someone has asked this operation to stop.
+func (m *Manager) StopRequested(id string) bool {
+	op, ok := m.Get(id)
+	return ok && op.StopRequested
+}
+
 // pruneLocked drops the oldest settled records past the retention limit. An
 // operation still in flight is never pruned.
 func (m *Manager) pruneLocked() {
@@ -880,7 +988,14 @@ func (m *Manager) pruneLocked() {
 			}
 			m.order = append(m.order[:i], m.order[i+1:]...)
 			delete(m.ops, id)
-			delete(m.byRequest, op.RequestID)
+			// Only if it is still the one answering. A retired record shares
+			// its request id with the retry that replaced it, and is older, so
+			// it is pruned first — deleting the mapping unconditionally would
+			// unbind the live operation and leave the caller that asks by
+			// request id unable to find its own run.
+			if current, ok := m.byRequest[op.RequestID]; ok && current == id {
+				delete(m.byRequest, op.RequestID)
+			}
 			removed = true
 			break
 		}

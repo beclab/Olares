@@ -767,8 +767,32 @@ func (m *Manager) skipRemainingNodes(id string, reason string) {
 func (m *Manager) startStep(id, name string) {
 	m.update(id, func(op *Operation) {
 		at := m.deps.Now()
-		op.Steps = append(op.Steps, Step{Name: name, Status: StepRunning, StartedAt: &at})
+		fresh := Step{Name: name, Status: StepRunning, StartedAt: &at}
+		if existing := lastStepNamed(op, name); existing != nil {
+			*existing = fresh
+			return
+		}
+		op.Steps = append(op.Steps, fresh)
 	})
+}
+
+// lastStepNamed is the record of the most recent attempt at a step, or nil if
+// there has not been one.
+//
+// Every writer works on that one record rather than adding another. An
+// operation that restarts in the middle — which an upgrade does on purpose,
+// since it replaces the olaresd running it — walks its steps again, and
+// appending would leave two of each: one abandoned mid-flight and one
+// describing what really happened. That was worse than untidy. The writers
+// searched from opposite ends, so a resumed stage's per-node results landed on
+// the abandoned copy while the live one still said every node was pending.
+func lastStepNamed(op *Operation, name string) *Step {
+	for i := len(op.Steps) - 1; i >= 0; i-- {
+		if op.Steps[i].Name == name {
+			return &op.Steps[i]
+		}
+	}
+	return nil
 }
 
 func (m *Manager) finishStep(id, name string, status StepStatus, code, reason string) {

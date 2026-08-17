@@ -33,10 +33,12 @@ func (i *downloadCLI) Execute(ctx context.Context, p any) (res any, err error) {
 		return nil, errors.New("invalid param")
 	}
 
-	arch := "amd64"
-	if runtime.GOARCH == "arm" {
-		arch = "arm64"
-	}
+	// The release names its binaries by GOARCH, so this is GOARCH. It used to
+	// compare against "arm", which an arm64 build never reports, so every
+	// arm64 machine asked for the amd64 binary and installed something it
+	// could not execute. Nothing noticed while only the control node ran this
+	// path and every control node was amd64.
+	arch := runtime.GOARCH
 
 	destDir := filepath.Join(commands.TERMINUS_BASE_DIR, "pkg", "components")
 	if err := os.MkdirAll(destDir, 0755); err != nil {
