@@ -40,6 +40,15 @@ import (
 // so the two stay in sync.
 const nvidiaContainerdDropIn = "/etc/containerd/conf.d/99-nvidia.toml"
 
+const nvidiaContainerToolkitVersion = "1.19.1-1"
+
+var nvidiaContainerToolkitPackages = []string{
+	"nvidia-container-toolkit",
+	"nvidia-container-toolkit-base",
+	"libnvidia-container-tools",
+	"libnvidia-container1",
+}
+
 type CheckWslGPU struct {
 }
 
@@ -213,7 +222,12 @@ func (t *InstallNvidiaContainerToolkit) Execute(runtime connector.Runtime) error
 		}
 	}
 	logger.Debugf("install nvidia-container-toolkit")
-	if _, err := runtime.GetRunner().SudoCmd("apt-get update && sudo apt-get install -y --allow-downgrades nvidia-container-toolkit=1.19.1-1 nvidia-container-toolkit-base=1.19.1-1 jq", false, true); err != nil {
+	pinned := make([]string, 0, len(nvidiaContainerToolkitPackages))
+	for _, pkg := range nvidiaContainerToolkitPackages {
+		pinned = append(pinned, fmt.Sprintf("%s=%s", pkg, nvidiaContainerToolkitVersion))
+	}
+	cmd := fmt.Sprintf("apt-get update && sudo apt-get install -y --allow-downgrades %s jq", strings.Join(pinned, " "))
+	if _, err := runtime.GetRunner().SudoCmd(cmd, false, true); err != nil {
 		return errors.Wrap(errors.WithStack(err), "failed to apt-get install nvidia-container-toolkit")
 	}
 	return nil
