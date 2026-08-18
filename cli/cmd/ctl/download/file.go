@@ -163,10 +163,6 @@ func runFileRemove(ctx context.Context, f *cmdutil.Factory, path, outputRaw stri
 		return err
 	}
 	q := url.Values{}
-	// user only satisfies the IDL binding (required query field); the real
-	// identity is the gateway-injected X-Bfl-User, so the profile OlaresID
-	// is just a placeholder here.
-	q.Set("user", pc.profile.OlaresID)
 	q.Set("path", path)
 	// /none is a mandatory placeholder suffix in the route; do not drop it.
 	if err := doMutate(ctx, pc.doer, "DELETE", "/api/download/file_remove/none"+encodeQuery(q), nil, nil); err != nil {

@@ -270,16 +270,39 @@ func prepare(ctx context.Context, f *cmdutil.Factory) (*preparedClient, error) {
 // dsEnvelope is download-server's response shape: success code 200 (or 0),
 // single object in data, list+total (or list+has_more) at the top level.
 type dsEnvelope struct {
-	Code    int             `json:"code"`
-	Message string          `json:"message"`
-	Data    json.RawMessage `json:"data"`
-	List    json.RawMessage `json:"list"`
-	Total   *int64          `json:"total"`
-	HasMore *bool           `json:"has_more"`
+	Code      int             `json:"code"`
+	Message   string          `json:"message"`
+	ErrorCode string          `json:"error_code"`
+	Data      json.RawMessage `json:"data"`
+	List      json.RawMessage `json:"list"`
+	Total     *int64          `json:"total"`
+	HasMore   *bool           `json:"has_more"`
 	// Batch lifecycle responses carry succeeded/failed at the top level
 	// (alongside code), not under data — see BatchResult.
 	Succeeded json.RawMessage `json:"succeeded"`
 	Failed    json.RawMessage `json:"failed"`
+}
+
+type errorBody struct {
+	Code      int    `json:"code"`
+	Message   string `json:"message"`
+	ErrorCode string `json:"error_code"`
+}
+
+func parseErrorBody(status int, raw string) (code int, message, errorCode string) {
+	code = status
+	message = strings.TrimSpace(raw)
+	var eb errorBody
+	if err := json.Unmarshal([]byte(raw), &eb); err == nil {
+		if eb.Code != 0 {
+			code = eb.Code
+		}
+		if strings.TrimSpace(eb.Message) != "" {
+			message = strings.TrimSpace(eb.Message)
+		}
+		errorCode = strings.TrimSpace(eb.ErrorCode)
+	}
+	return code, message, errorCode
 }
 
 func doGet(ctx context.Context, d Doer, path string, out interface{}) error {
@@ -291,7 +314,8 @@ func doMutate(ctx context.Context, d Doer, method, path string, body, out interf
 	if err := d.DoJSON(ctx, method, path, body, &env); err != nil {
 		var httpErr *whoami.HTTPError
 		if errors.As(err, &httpErr) {
-			if recovery := taskErrorRecovery(method, path, httpErr.Status, string(httpErr.Body), body); recovery != "" {
+			status, msg, errCode := parseErrorBody(httpErr.Status, string(httpErr.Body))
+			if recovery := taskErrorRecovery(method, path, status, msg, errCode, body); recovery != "" {
 				return fmt.Errorf("%w%s", err, recovery)
 			}
 		}
@@ -301,7 +325,7 @@ func doMutate(ctx context.Context, d Doer, method, path string, body, out interf
 	case 0, 200:
 	default:
 		msg := strings.TrimSpace(env.Message)
-		recovery := taskErrorRecovery(method, path, env.Code, msg, body)
+		recovery := taskErrorRecovery(method, path, env.Code, msg, env.ErrorCode, body)
 		if msg == "" {
 			return fmt.Errorf("%s %s: code %d%s", method, path, env.Code, recovery)
 		}
@@ -359,7 +383,7 @@ func doMutate(ctx context.Context, d Doer, method, path string, body, out interf
 	return nil
 }
 
-func taskErrorRecovery(method, path string, status int, message string, body interface{}) string {
+func taskErrorRecovery(method, path string, status int, message, errorCode string, body interface{}) string {
 	lowerMsg := strings.ToLower(message)
 	taskID := ""
 	if taskPathMatch := taskActionPathRE.FindStringSubmatch(path); len(taskPathMatch) > 0 {
@@ -374,6 +398,37 @@ func taskErrorRecovery(method, path string, status int, message string, body int
 			}
 		}
 	}
+
+	// Prefer stable machine-readable codes from download-server; message
+	// matching remains as a fallback for older servers / unknown codes.
+	switch errorCode {
+	case "task_in_mover_phase":
+		if taskID != "" {
+			return fmt.Sprintf(
+				"; wait for the move to finish, then retry; inspect progress with `olares-cli knowledge download info %s`",
+				taskID,
+			)
+		}
+	case "illegal_pause_status":
+		if taskID != "" {
+			return fmt.Sprintf(
+				"; pause only works while downloading or waiting; inspect status with `olares-cli knowledge download info %s`",
+				taskID,
+			)
+		}
+	case "dependency_unavailable":
+		if shouldHintYTDLPUnavailable(message) || message == "" {
+			return "; " + ytdlpUnavailableHint()
+		}
+		return "; dependency unavailable; retry later or check provider status"
+	case "task_not_found":
+		return "; refresh task IDs with `olares-cli knowledge download list`"
+	case "invalid_path", "invalid_params":
+		if method == "POST" && path == "/api/download" {
+			return "; check --path/--url/--extra (duplicate URL creates a new task; use `olares-cli knowledge download list` to inspect existing ones)"
+		}
+	}
+
 	switch {
 	case method == "POST" && path == "/api/download" && shouldHintYTDLPUnavailable(message):
 		return "; " + ytdlpUnavailableHint()

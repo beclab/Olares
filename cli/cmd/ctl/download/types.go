@@ -30,6 +30,7 @@ type DownloadTask struct {
 	LiveUploadSpeed   int64                  `json:"live_upload_speed,omitempty"`
 	FileMissing       *bool                  `json:"file_missing,omitempty"`
 	IsDir             *bool                  `json:"is_dir,omitempty"`
+	WillAutoRetry     bool                   `json:"will_auto_retry"`
 }
 
 // NewDownloadReq is POST /api/download body. Extra values are strings on
