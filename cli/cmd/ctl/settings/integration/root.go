@@ -26,7 +26,7 @@ Subcommands:
   accounts add awss3   [flags]
   accounts add tencent [flags]
   accounts delete <type> [name]
-  cookie import --domain <d> --file <path>
+  cookie import [--domain <d>] --file <path>
   cookie list
   cookie rm <domain>
   cookie validate <domain>

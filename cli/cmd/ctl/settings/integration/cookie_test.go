@@ -312,9 +312,8 @@ func TestRunCookieImportRejectsMissingFlags(t *testing.T) {
 		opts cookieImportOptions
 		want string
 	}{
-		{"no domain", cookieImportOptions{file: "-"}, "--domain is required"},
 		{"no file", cookieImportOptions{domain: "youtube.com"}, "--file is required"},
-		{"bad format", cookieImportOptions{domain: "d", file: "-", format: "xml"}, "unsupported --format"},
+		{"bad format", cookieImportOptions{file: "-", format: "xml"}, "unsupported --format"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -337,6 +336,74 @@ func TestRunCookieImportRejectsUnusableInput(t *testing.T) {
 	})
 	if err == nil || !strings.Contains(err.Error(), "no usable cookies") {
 		t.Fatalf("err = %v", err)
+	}
+}
+
+func TestCookieDomainsMatchPrimaryHost(t *testing.T) {
+	cases := []struct {
+		a, b string
+		want bool
+	}{
+		{".youtube.com", "youtube.com", true},
+		{"music.youtube.com", "youtube.com", true},
+		{".google.com", "youtube.com", false},
+		{"WWW.YouTube.com", "youtube.com", true},
+	}
+	for _, tc := range cases {
+		if got := cookieDomainsMatch(tc.a, tc.b); got != tc.want {
+			t.Fatalf("cookieDomainsMatch(%q, %q) = %v, want %v", tc.a, tc.b, got, tc.want)
+		}
+	}
+}
+
+func TestParseCookieImportBucketsMultiDomainAndFilter(t *testing.T) {
+	text := strings.Join([]string{
+		"# Netscape HTTP Cookie File",
+		".youtube.com\tTRUE\t/\tTRUE\t0\tSID\tyt-secret",
+		".google.com\tTRUE\t/\tFALSE\t0\tNID\tg-secret",
+		"music.youtube.com\tTRUE\t/\tTRUE\t0\tPREF\tm-secret",
+	}, "\n")
+
+	all, _, err := parseCookieImportBuckets(text, cookieparse.FormatNetscape, "")
+	if err != nil {
+		t.Fatalf("parse all: %v", err)
+	}
+	if len(all) != 3 {
+		t.Fatalf("buckets = %v, want 3 hosts", sortedCookieDomains(all))
+	}
+
+	filtered, _, err := parseCookieImportBuckets(text, cookieparse.FormatNetscape, "youtube.com")
+	if err != nil {
+		t.Fatalf("parse filter: %v", err)
+	}
+	if len(filtered) != 2 {
+		t.Fatalf("filtered = %v, want youtube hosts only", sortedCookieDomains(filtered))
+	}
+	if _, ok := filtered[".google.com"]; ok {
+		t.Fatal("google must not survive a youtube.com filter")
+	}
+	if host := filtered[".youtube.com"][0].Domain; host != ".youtube.com" {
+		t.Fatalf("file domain rewritten to %q", host)
+	}
+
+	_, _, err = parseCookieImportBuckets(text, cookieparse.FormatNetscape, "not-in-file.com")
+	if err == nil || !strings.Contains(err.Error(), "no cookies for domain") {
+		t.Fatalf("err = %v, want no cookies for domain", err)
+	}
+}
+
+func TestParseCookieImportBucketsHeaderNeedsDomain(t *testing.T) {
+	_, _, err := parseCookieImportBuckets("SID=sid-value; HSID=hsid-value", cookieparse.FormatHeader, "")
+	if err == nil || !strings.Contains(err.Error(), "--domain") {
+		t.Fatalf("err = %v, want bare header to require --domain", err)
+	}
+
+	buckets, _, err := parseCookieImportBuckets("SID=sid-value; HSID=hsid-value", cookieparse.FormatHeader, "youtube.com")
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	if len(buckets) != 1 || len(buckets["youtube.com"]) != 2 {
+		t.Fatalf("buckets = %+v", buckets)
 	}
 }
 

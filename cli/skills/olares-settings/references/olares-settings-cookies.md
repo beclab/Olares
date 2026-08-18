@@ -9,7 +9,7 @@ Same store as **Settings → Integration → Cookies** in the SPA, and the one `
 
 | Verb | Floor | Notes |
 |---|---|---|
-| `cookie import --domain <d> --file <path>` | normal | `--file -` reads stdin; **replaces** the domain unless `--merge` |
+| `cookie import [--domain <d>] --file <path>` | normal | `--file -` reads stdin; **replaces** each written domain unless `--merge` |
 | `cookie list` | normal | Domains, record counts, next expiry. Never prints names or values |
 | `cookie rm <domain>` | normal | Deletes every cookie for the domain |
 | `cookie validate <domain>` | normal | Non-zero exit when the domain has no cookies, or all have expired |
@@ -35,9 +35,16 @@ Import when a download or collection fails for a login reason. The CLI already p
 
 A request-style header needs `--domain`. A `Set-Cookie:` line carries its own attributes.
 
+## Domain flag
+
+Omit `--domain` for Netscape / JSON: every host in the file is written to its own store key (same as the SPA paste). Pass `--domain` to **filter** to matching hosts only (e.g. `youtube.com` keeps `.youtube.com`, drops `.google.com`). It never rewrites foreign hosts onto another key.
+
+Download failure hints include `--domain` so a full browser export only updates the site that failed.
+
 ## Importing without leaking the value
 
 ```bash
+olares-cli settings integration cookie import --file cookies.txt
 olares-cli settings integration cookie import --domain youtube.com --file cookies.txt
 pbpaste | olares-cli settings integration cookie import --domain youtube.com --file - --format header
 olares-cli settings integration cookie import --domain youtube.com --file extra.txt --merge
@@ -57,8 +64,8 @@ olares-cli settings integration cookie rm youtube.com
 
 ## Agent best practices
 
-- Import **replaces the whole domain**. Use `--merge` to add without dropping existing records.
-- Store under the bare host (`youtube.com`), not `.youtube.com` and not a full URL.
+- Import **replaces each written domain**. Use `--merge` to add without dropping existing records.
+- Prefer the failure hint's `--domain` when fixing one URL; omit it only when the user wants a full multi-host paste like the SPA.
 - After import, re-run `knowledge download inspect <url>` before `create`.
 - Cookies expire — `cookie validate <domain>` before assuming something else broke.
 
@@ -66,8 +73,9 @@ olares-cli settings integration cookie rm youtube.com
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `no cookies found in the input` | Wrong `--format`, or nothing for `--domain` | Explicit `--format`; confirm export is not empty |
+| `no cookies found in the input` | Wrong `--format`, or empty export | Explicit `--format`; confirm export is not empty |
 | `input looks like JSON, not a Netscape cookies.txt file` | JSON with `--format netscape` | `--format json` or drop `--format` |
-| `--domain is required` on a header import | Request-style `a=b; c=d` has no domain | Pass `--domain <host>` |
+| bare Cookie header needs `--domain` | Request-style `a=b; c=d` has no domain | Pass `--domain <host>` |
+| `no cookies for domain X in the input` | Filter matched no host in the file | Drop `--domain`, or use a host that appears in the export |
 | Import OK but downloads still need login | Export dropped httpOnly cookies | Re-import via the `header` path above |
 | `no cookies stored for <domain>` | Never imported, or different domain string | `cookie list` for exact domains |

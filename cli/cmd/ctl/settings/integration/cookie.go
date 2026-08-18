@@ -40,7 +40,7 @@ content behind a login (YouTube members-only videos, age-restricted
 media, private Hugging Face repos, ...).
 
 Subcommands:
-  import   <--domain> <--file>
+  import   [--domain] <--file>
   list
   rm       <domain>
   validate <domain>
@@ -101,8 +101,8 @@ func newCookieImportCommand(f *cmdutil.Factory) *cobra.Command {
 	)
 	cmd := &cobra.Command{
 		Use:   "import",
-		Short: "import cookies for one domain from a file or stdin",
-		Long: `Import cookies for a domain from a file, or from stdin with --file -.
+		Short: "import cookies from a file or stdin",
+		Long: `Import cookies from a file, or from stdin with --file -.
 
 Formats (--format, default auto-detect):
 
@@ -113,14 +113,21 @@ Formats (--format, default auto-detect):
             "a=b; c=d" (needs --domain, since it carries none) and a
             response-style "Set-Cookie: a=b; Domain=...; HttpOnly".
 
+By default every host found in the file is written to its own store
+key, matching Settings -> Integration -> Cookies. Pass --domain to
+keep only buckets whose primary domain matches (e.g. youtube.com keeps
+.youtube.com and music.youtube.com, not .google.com). --domain never
+rewrites foreign hosts onto a different key.
+
 Prefer the header form when a cookies.txt export is missing your login:
 the browser's request Cookie header includes httpOnly cookies, which is
 where the session actually lives.
 
-Importing REPLACES every cookie stored for that domain. Pass --merge to
-keep the existing records and only add or overwrite the incoming names.
+Importing REPLACES every cookie stored for each written domain. Pass
+--merge to keep existing records and only add or overwrite incoming names.
 
 Examples:
+  olares-cli settings integration cookie import --file cookies.txt
   olares-cli settings integration cookie import --domain youtube.com --file cookies.txt
   pbpaste | olares-cli settings integration cookie import --domain youtube.com --file - --format header
 `,
@@ -134,10 +141,10 @@ Examples:
 			})
 		},
 	}
-	cmd.Flags().StringVar(&domain, "domain", "", "domain the cookies belong to (e.g. youtube.com)")
+	cmd.Flags().StringVar(&domain, "domain", "", "optional: only import hosts matching this domain (required for a bare Cookie header)")
 	cmd.Flags().StringVar(&file, "file", "", "file to read cookies from; \"-\" reads stdin")
 	cmd.Flags().StringVar(&formatFlag, "format", "auto", "input format: netscape, json, header, auto")
-	cmd.Flags().BoolVar(&merge, "merge", false, "merge into the domain's existing cookies instead of replacing them")
+	cmd.Flags().BoolVar(&merge, "merge", false, "merge into each domain's existing cookies instead of replacing them")
 	return cmd
 }
 
@@ -153,9 +160,6 @@ func runCookieImport(ctx context.Context, f *cmdutil.Factory, stdin io.Reader, o
 		ctx = context.Background()
 	}
 	domain := strings.TrimSpace(opts.domain)
-	if domain == "" {
-		return fmt.Errorf("--domain is required")
-	}
 	if strings.TrimSpace(opts.file) == "" {
 		return fmt.Errorf("--file is required (use \"--file -\" to read stdin)")
 	}
@@ -169,26 +173,12 @@ func runCookieImport(ctx context.Context, f *cmdutil.Factory, stdin io.Reader, o
 		return err
 	}
 
-	// The parsed domain is forced to --domain: a cookies.txt commonly
-	// spans several hosts, and importing them all under one key would
-	// write rows download-server never looks up.
-	parsed, detected, err := cookieparse.Parse(text, format, domain)
+	buckets, detected, err := parseCookieImportBuckets(text, format, domain)
 	if err != nil {
 		return err
-	}
-	records := parsed.Cookies[domain]
-	if len(records) == 0 {
-		if len(parsed.InvalidLines) > 0 {
-			return fmt.Errorf("no usable cookies found; first problem: %s", parsed.InvalidLines[0])
-		}
-		return fmt.Errorf("no cookies found in the input")
 	}
 
 	pc, err := prepareSettings(ctx, f)
-	if err != nil {
-		return err
-	}
-	stored, err := storeCookies(ctx, pc, domain, records, opts.merge)
 	if err != nil {
 		return err
 	}
@@ -197,13 +187,111 @@ func runCookieImport(ctx context.Context, f *cmdutil.Factory, stdin io.Reader, o
 	if opts.merge {
 		verb = "Merged into"
 	}
-	fmt.Printf("%s cookies for %s: %d record(s) stored as %s (format: %s).\n",
-		verb, domain, len(stored.Records), stored.storeKey(), detected)
+	total := 0
+	keys := make([]string, 0, len(buckets))
+	for _, host := range sortedCookieDomains(buckets) {
+		stored, err := storeCookies(ctx, pc, host, buckets[host], opts.merge)
+		if err != nil {
+			return err
+		}
+		total += len(stored.Records)
+		keys = append(keys, stored.storeKey())
+		fmt.Printf("%s %s: %d record(s) as %s\n",
+			verb, host, len(stored.Records), stored.storeKey())
+	}
+	fmt.Printf("Imported %d domain(s) (%d record(s), format: %s).\n",
+		len(keys), total, detected)
+	return nil
+}
+
+// parseCookieImportBuckets parses the input like the Settings SPA: keep
+// each file host as its own bucket. --domain only filters; it does not
+// rewrite foreign hosts onto another key. A bare Cookie header has no
+// host of its own, so --domain is passed through to the parser then.
+func parseCookieImportBuckets(
+	text string,
+	format cookieparse.Format,
+	domainFilter string,
+) (map[string][]cookieparse.Record, cookieparse.Format, error) {
+	parsed, detected, err := cookieparse.Parse(text, format, "")
+	if err != nil {
+		return nil, "", err
+	}
+	// Request-style headers carry no Domain; retry with the filter so
+	// the parser can assign the host (SPA addHeaderCookies).
+	if parsed.Count() == 0 && domainFilter != "" {
+		parsed, detected, err = cookieparse.Parse(text, format, domainFilter)
+		if err != nil {
+			return nil, "", err
+		}
+	}
+	if parsed.Count() == 0 {
+		if len(parsed.InvalidLines) > 0 {
+			return nil, detected, fmt.Errorf("no usable cookies found; first problem: %s", parsed.InvalidLines[0])
+		}
+		if domainFilter == "" {
+			return nil, detected, fmt.Errorf("no cookies found in the input (a bare Cookie header needs --domain)")
+		}
+		return nil, detected, fmt.Errorf("no cookies found in the input")
+	}
+
+	buckets := selectCookieImportBuckets(parsed.Cookies, domainFilter)
+	if len(buckets) == 0 {
+		return nil, detected, fmt.Errorf("no cookies for domain %s in the input", domainFilter)
+	}
 	if len(parsed.InvalidLines) > 0 {
 		fmt.Printf("Skipped %d unparsable line(s); first: %s\n",
 			len(parsed.InvalidLines), parsed.InvalidLines[0])
 	}
-	return nil
+	return buckets, detected, nil
+}
+
+// selectCookieImportBuckets returns the domain buckets to write. An empty
+// filter keeps every host (SPA paste). A filter keeps hosts whose primary
+// domain matches (youtube.com ↔ .youtube.com / music.youtube.com).
+func selectCookieImportBuckets(
+	cookies map[string][]cookieparse.Record,
+	filter string,
+) map[string][]cookieparse.Record {
+	out := make(map[string][]cookieparse.Record, len(cookies))
+	filter = strings.TrimSpace(filter)
+	for host, records := range cookies {
+		if len(records) == 0 {
+			continue
+		}
+		if filter != "" && !cookieDomainsMatch(host, filter) {
+			continue
+		}
+		out[host] = records
+	}
+	return out
+}
+
+func sortedCookieDomains(buckets map[string][]cookieparse.Record) []string {
+	out := make([]string, 0, len(buckets))
+	for host := range buckets {
+		out = append(out, host)
+	}
+	sort.Strings(out)
+	return out
+}
+
+// cookiePrimaryDomain is the two-label climb terminator used by
+// download-server / cookieHostFromURL, applied to a bare cookie host.
+func cookiePrimaryDomain(host string) string {
+	host = strings.ToLower(strings.TrimSpace(host))
+	host = strings.TrimPrefix(host, ".")
+	host = strings.TrimPrefix(host, "www.")
+	parts := strings.Split(host, ".")
+	if len(parts) >= 2 {
+		return strings.Join(parts[len(parts)-2:], ".")
+	}
+	return host
+}
+
+func cookieDomainsMatch(a, b string) bool {
+	pa, pb := cookiePrimaryDomain(a), cookiePrimaryDomain(b)
+	return pa != "" && pa == pb
 }
 
 // storeCookies writes one domain's records and returns what was stored.
