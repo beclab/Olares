@@ -32,7 +32,7 @@ Load the shared [platform model](../olares-shared/references/olares-platform.md)
 | `users` | `me`, `list`, `get`, `create`, `delete` | [user lifecycle and password handling](references/olares-settings-users.md) |
 | `apps` | list/get, entrances, env, domain, policy, auth-level, suspend/resume | [post-install app configuration](references/olares-settings-apps.md) |
 | `vpn` | devices, hidden `routes enable/disable`, SSH, subroutes (hidden enable/disable), ACL, public-domain-policy | [VPN and ACL decisions](references/olares-settings-vpn.md) |
-| `integration` | account list/get/add/delete | [integration credentials](references/olares-settings-integration.md) |
+| `integration` | account list/get/add/delete, `cookie import/list/rm/validate` | [integration accounts](references/olares-settings-integration.md); [cookie store](references/olares-settings-cookies.md) |
 | `backup` | plans, snapshots, password | [backup decisions](references/olares-settings-backup.md) |
 | `appearance` | `get`, `language set` | `settings appearance --help` |
 | `network` | reverse-proxy, FRP, hosts-file, overlay gateway/app | `settings network --help` |
@@ -62,4 +62,5 @@ Load the shared [platform model](../olares-shared/references/olares-platform.md)
 - Treat the requested configuration change as task-scope authorisation; do not ask again for each idempotent write in that scope.
 - Confirm destructive or wider consequences separately: user deletion, ACL replacement, accelerator unbind/type changes, app restart/stop, index rebuild, and gateway-wide overlay changes.
 - Treat app lifecycle requests as [`olares-market`](../olares-market/SKILL.md), not settings configuration.
+- A download or collection that fails for a missing login is a cookie import here (`settings integration cookie`), not an [`olares-knowledge`](../olares-knowledge/SKILL.md) problem — see [cookie store](references/olares-settings-cookies.md).
 - Stop when the requested verb is not registered, the role is insufficient, the target user/app/device is ambiguous, or the action requires a JWS/device interaction the CLI cannot perform.
