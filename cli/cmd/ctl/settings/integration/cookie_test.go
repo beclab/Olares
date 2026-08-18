@@ -134,7 +134,11 @@ func TestSummarizeDomainCountsExpiryWithoutLeakingValues(t *testing.T) {
 	if summary.Expired != 1 {
 		t.Fatalf("expired = %d, want 1", summary.Expired)
 	}
-	if summary.NextExpiry == "" || summary.UpdatedAt == "" {
+	wantNext := time.Unix(now.Unix()+3600, 0).UTC().Format(time.RFC3339)
+	if summary.NextExpiry != wantNext {
+		t.Fatalf("nextExpiry = %q, want %q", summary.NextExpiry, wantNext)
+	}
+	if summary.UpdatedAt == "" {
 		t.Fatalf("summary = %+v", summary)
 	}
 
@@ -152,6 +156,26 @@ func TestSummarizeDomainCountsExpiryWithoutLeakingValues(t *testing.T) {
 	}
 	if strings.Contains(table.String(), "secret") || strings.Contains(table.String(), "SID") {
 		t.Fatalf("table leaks cookie data: %s", table.String())
+	}
+}
+
+// A domain whose every dated cookie has expired reports no next expiry.
+func TestSummarizeDomainAllExpired(t *testing.T) {
+	now := time.Unix(1_700_000_000, 0)
+	summary := summarizeDomain(domainCookie{
+		Domain:  "youtube.com",
+		Account: "alice",
+		Records: []cookieparse.Record{
+			{Name: "SID", Expires: float64(now.Unix() - 120)},
+			{Name: "HSID", Expires: float64(now.Unix() - 60)},
+			{Name: "SESSION"},
+		},
+	}, now)
+	if summary.Expired != 2 {
+		t.Fatalf("expired = %d, want 2", summary.Expired)
+	}
+	if summary.NextExpiry != "" {
+		t.Fatalf("nextExpiry = %q, want empty", summary.NextExpiry)
 	}
 }
 
@@ -217,6 +241,32 @@ func TestCookieSummariesSortsByDomain(t *testing.T) {
 	}
 	if doer.lastCall().path != "/api/cookie/all" {
 		t.Fatalf("read from %s", doer.lastCall().path)
+	}
+}
+
+// /api/cookie/all is account-unscoped; list must keep only the current
+// profile's rows, same filter fetchDomainCookies applies on retrieve.
+func TestCookieSummariesFiltersByAccount(t *testing.T) {
+	pc, doer := testClient("alice@olares.com")
+	doer.enqueueEnvelope([]domainCookie{
+		{Domain: "youtube.com", Account: "alice", Records: []cookieparse.Record{{Name: "SID"}}},
+		{Domain: "youtube.com", Account: "bob", Records: []cookieparse.Record{{Name: "BOB"}}},
+		{Domain: "bilibili.com", Account: "bob"},
+		{Domain: "huggingface.co", Account: "alice"},
+	})
+
+	summaries, err := cookieSummaries(context.Background(), pc)
+	if err != nil {
+		t.Fatalf("cookieSummaries: %v", err)
+	}
+	if len(summaries) != 2 {
+		t.Fatalf("summaries = %+v, want 2 (alice only)", summaries)
+	}
+	if summaries[0].Domain != "huggingface.co" || summaries[0].Account != "alice" {
+		t.Fatalf("first = %+v", summaries[0])
+	}
+	if summaries[1].Domain != "youtube.com" || summaries[1].Account != "alice" {
+		t.Fatalf("second = %+v", summaries[1])
 	}
 }
 

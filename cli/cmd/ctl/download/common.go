@@ -335,9 +335,15 @@ func isCookieRecoverable(errorCode int, errorCategory string) bool {
 	return cookieErrorCategories[strings.ToLower(strings.TrimSpace(errorCategory))]
 }
 
-// cookieHostFromURL reduces a URL to the host the cookie store is keyed
-// by. Empty when the URL carries no host (magnet links, bare paths), in
-// which case the caller falls back to a placeholder.
+// cookieHostFromURL reduces a URL to the bare host the cookie store and
+// download-server's lookup walk terminate on. Empty when the URL carries
+// no host (magnet links, bare paths), in which case the caller falls
+// back to a placeholder.
+//
+// Matches download-server GetPrimaryDomain (rightmost two labels) plus
+// the SPA's bare-host convention: lowercased, leading "www." stripped.
+// Deliberately not a Public Suffix List eTLD+1 — same naive heuristic
+// download-server uses as its climb terminator.
 func cookieHostFromURL(rawURL string) string {
 	raw := strings.TrimSpace(rawURL)
 	if raw == "" {
@@ -347,10 +353,13 @@ func cookieHostFromURL(rawURL string) string {
 	if err != nil || parsed.Host == "" {
 		return ""
 	}
-	host := parsed.Hostname()
-	// The store keys on the registrable host the SPA shows, so "www." is
-	// noise that would create a second, never-consulted row.
-	return strings.TrimPrefix(host, "www.")
+	host := strings.ToLower(parsed.Hostname())
+	host = strings.TrimPrefix(host, "www.")
+	parts := strings.Split(host, ".")
+	if len(parts) >= 2 {
+		return strings.Join(parts[len(parts)-2:], ".")
+	}
+	return host
 }
 
 // cookieRequiredHint is the copy-pasteable next step for a failure a

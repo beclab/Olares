@@ -7,6 +7,26 @@ import (
 
 const wantImportPrefix = "olares-cli settings integration cookie import --domain "
 
+func TestCookieHostFromURLNormalizes(t *testing.T) {
+	cases := []struct {
+		raw  string
+		want string
+	}{
+		{"https://WWW.YouTube.com/watch?v=abc", "youtube.com"},
+		{"https://m.youtube.com/watch?v=abc", "youtube.com"},
+		{"https://music.youtube.com/watch?v=abc", "youtube.com"},
+		{"https://www.bilibili.com/video/BV1", "bilibili.com"},
+		{"magnet:?xt=urn:btih:abc", ""},
+		{"", ""},
+		{"not a url", ""},
+	}
+	for _, tc := range cases {
+		if got := cookieHostFromURL(tc.raw); got != tc.want {
+			t.Fatalf("cookieHostFromURL(%q) = %q, want %q", tc.raw, got, tc.want)
+		}
+	}
+}
+
 // Cookies live in another command family, so a hint that only says
 // "upload a cookie" leaves an agent with nowhere to go. Every cookie
 // path has to spell out the whole runnable command.

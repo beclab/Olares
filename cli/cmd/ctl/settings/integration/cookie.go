@@ -315,6 +315,7 @@ func summarizeDomain(dc domainCookie, now time.Time) cookieSummary {
 		Account: dc.Account,
 		Records: len(dc.Records),
 	}
+	nowUnix := now.Unix()
 	var earliest int64
 	for _, rec := range dc.Records {
 		// 0 means a session cookie: no expiry to report, never expired.
@@ -322,8 +323,9 @@ func summarizeDomain(dc domainCookie, now time.Time) cookieSummary {
 		if expiry == 0 {
 			continue
 		}
-		if expiry <= now.Unix() {
+		if expiry <= nowUnix {
 			summary.Expired++
+			continue
 		}
 		if earliest == 0 || expiry < earliest {
 			earliest = expiry
@@ -365,6 +367,10 @@ func runCookieList(ctx context.Context, f *cmdutil.Factory, outputRaw string) er
 }
 
 func cookieSummaries(ctx context.Context, pc *preparedClient) ([]cookieSummary, error) {
+	account, err := cookieAccount(pc.profile.OlaresID)
+	if err != nil {
+		return nil, err
+	}
 	var rows []domainCookie
 	if err := doGetEnvelope(ctx, pc.doer, "/api/cookie/all", &rows); err != nil {
 		return nil, err
@@ -372,6 +378,9 @@ func cookieSummaries(ctx context.Context, pc *preparedClient) ([]cookieSummary, 
 	now := time.Now()
 	summaries := make([]cookieSummary, 0, len(rows))
 	for _, row := range rows {
+		if row.Account != account {
+			continue
+		}
 		summaries = append(summaries, summarizeDomain(row, now))
 	}
 	sort.Slice(summaries, func(i, j int) bool {
@@ -539,8 +548,9 @@ func cookieDomainSummary(ctx context.Context, pc *preparedClient, domain string)
 }
 
 // fetchDomainCookies returns the stored records for one (domain, account).
-// user-service filters /api/cookie/retrieve by domain only, so rows
-// belonging to another account are dropped here.
+// user-service filters /api/cookie/retrieve by domain only; list (/api/cookie/all)
+// is likewise unscoped. Both list and retrieve therefore filter by account
+// on the client — same as the SPA's getAllCookies / fetchDomainCookies.
 func fetchDomainCookies(ctx context.Context, pc *preparedClient, domain, account string) ([]cookieparse.Record, error) {
 	var rows []domainCookie
 	if err := doMutateEnvelope(ctx, pc.doer, "POST", "/api/cookie/retrieve",
