@@ -9,8 +9,8 @@ import (
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
-// runSessionSearch runs a search3 session-based search for the given app
-// partition (files_v2 / google_drive / dropbox / knowledge). It bootstraps
+// runSessionSearch runs a legacy search3 session for the given app partition.
+// It bootstraps
 // /api/search/init, pages via /api/search/more when the requested window
 // extends past the first page, and best-effort cancels the session on exit.
 func runSessionSearch(ctx context.Context, f *cmdutil.Factory, keyword, app, searchType string, o *pagingOptions) ([]resultItem, error) {
@@ -66,9 +66,9 @@ func runSessionSearch(ctx context.Context, f *cmdutil.Factory, keyword, app, sea
 	return decodeResultRows(window)
 }
 
-// requireSessionAppBackendVersion is the fail-closed preflight for the
-// search3 app partitions that only exist on Olares >= 1.12.7 (google_drive,
-// dropbox, knowledge). Older backends would return an opaque empty set or
+// requireSessionAppBackendVersion is the fail-closed preflight for legacy
+// search3 app partitions that only exist on Olares >= 1.12.7 (knowledge).
+// Older backends would return an opaque empty set or
 // an unexpected error code; reject up front with an actionable upgrade
 // message instead. The version is cached per profile at login, so in the
 // common case this adds no network round-trip.

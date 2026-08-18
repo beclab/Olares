@@ -11,7 +11,7 @@ import (
 )
 
 // TestRequireSessionAppBackendVersion pins the 1.12.7 fail-closed gate for
-// search gdrive / dropbox / knowledge. The gate reuses
+// search knowledge. The gate reuses
 // cmdutil.RequireMinVersion, whose version resolution short-circuits on the
 // version override viper key (FlagOlaresVersion) BEFORE any profile /
 // network access — so a zero-value Factory plus a viper override is enough
@@ -26,8 +26,6 @@ func TestRequireSessionAppBackendVersion(t *testing.T) {
 		verb   string
 		reason string
 	}{
-		{"search gdrive", "search3 app=google_drive index"},
-		{"search dropbox", "search3 app=dropbox index"},
 		{"search knowledge", "search3 app=knowledge index"},
 	}
 
