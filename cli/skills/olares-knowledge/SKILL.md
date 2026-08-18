@@ -38,12 +38,12 @@ All verbs require Olares 1.12.7+ because the Settings download edge and provider
 | torrent | `torrent inspect`, `stats`, `peers`, `files`, `seed stop/resume`; torrent create | [torrent selection and seeding](references/olares-knowledge-download-torrent.md) |
 | file tools | `file exists`, `file remove` | [URL vs resource-path decisions](references/olares-knowledge-download-files.md) |
 | settings | `settings get`, `settings set` | [global download-server settings](references/olares-knowledge-download-settings.md) |
-| hidden cookies surface | production retrieval only | [why cookie writes are unavailable](references/olares-knowledge-download-cookies.md) |
 
 ## Task and asynchronous semantics
 
 - Create returns a server-side task; command success does not mean bytes have finished downloading or moving.
-- Pause, resume, cancel, and remove apply to the current task state. A task moving into its destination can temporarily reject lifecycle changes; observe it rather than forcing a conflicting action.
+- Re-submitting the same URL always creates a **new** task (no identity dedup). Landing-name collisions are resolved with a `(n)` suffix; they do not reuse or block an existing row.
+- Pause only applies while `waiting` or `downloading` (otherwise 400). Resume, cancel, and remove return **409** while the task is in the yt-dlp mover phase (`waiting_to_move` / `moving`) — wait and retry; do not treat pause the same way.
 - Task ownership follows the active profile. Do not infer another user's task from an id or try alternate identities.
 - `inspect` is advisory: provider/quality probing may fail while a create still works. Report that uncertainty instead of declaring the URL undownloadable.
 - Sync cursors describe change observation, not task completion. Preserve the cursor when continuing an incremental sync.
@@ -51,7 +51,6 @@ All verbs require Olares 1.12.7+ because the Settings download edge and provider
 ## Safety and escalation
 
 - Confirm create, cancel, remove, seed stop/resume, file remove, preference writes, and global setting writes.
-- Before create, confirm destination/app, provider intent, torrent file selection, and whether an existing equivalent task should be reused. The CLI already identifies duplicate tasks; do not create another without approval.
+- Before create, confirm destination/app, provider intent, torrent file selection, and whether an existing equivalent task should be reused. Use `list` / `info` to check; the CLI does **not** detect or block duplicates.
 - `file remove` takes a download-server resource path, not an arbitrary local filesystem path.
-- Cookie management is read-only through the production integration provider. Do not suggest hidden write verbs.
-- Stop on ambiguous URL/resource path, task owner, duplicate-task intent, torrent selection, or any credential/cookie request outside the supported retrieval path.
+- Stop on ambiguous URL/resource path, task owner, duplicate-task intent, torrent selection, or any credential/cookie request.

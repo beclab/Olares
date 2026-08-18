@@ -43,15 +43,17 @@ to download every file.
 --quality accepts: ` + ytdlpQualityValues + `.
 --format-id selects a specific yt-dlp format.
 --extra accepts additional provider options as a JSON object of strings.
---path must start with drive/Home/ or drive/Data/, e.g.
-  --path drive/Home/Pictures/
-The names "drive", "Home", and "Data" are case-sensitive. Browser URLs and
-bare Home/... paths are not accepted. The default is ` + defaultDownloadPath + `.
+--path is normalized like download-server CreateFileParam:
+  drive/Home/… or drive/Data/…, /api/resources/drive/…, or a full Files
+  API URL. "Home" and "Data" are case-sensitive. Browser Files UI paths
+  and bare Home/… are rejected. The default is ` + defaultDownloadPath + `.
 Pass --path "" when the provider should choose the destination.
 
 For HuggingFace, set _hf_dest in --extra:
   local (default) downloads under <path>/<repoID>/.
-  cache downloads to the shared HuggingFace cache and ignores --path/--name.`,
+  cache downloads to the shared HuggingFace cache and ignores --path/--name.
+
+Re-submitting the same URL always creates a new task (no duplicate 409).`,
 		Example: `  # URL
   olares-cli knowledge download create 'https://host/v?a=1&b=2'
 
@@ -74,7 +76,7 @@ For HuggingFace, set _hf_dest in --extra:
 	}
 	addAppFlag(cmd, &app)
 	addOutputFlag(cmd, &output)
-	cmd.Flags().StringVar(&path, "path", defaultDownloadPath, "destination starting with drive/Home/ or drive/Data/ (e.g. drive/Home/Pictures/); \"\" lets the server decide")
+	cmd.Flags().StringVar(&path, "path", defaultDownloadPath, "destination: drive/Home|Data/…, Files API URL, or \"\" for HF cache")
 	cmd.Flags().StringVar(&name, "name", "", "suggested file_name (ignored for HuggingFace: repo id / cache layout wins)")
 	cmd.Flags().StringVar(&quality, "quality", "", "yt-dlp quality preset (one of: "+ytdlpQualityValues+")")
 	cmd.Flags().StringVar(&formatID, "format-id", "", "yt-dlp format_id override")
@@ -203,10 +205,15 @@ func runCreate(ctx context.Context, f *cmdutil.Factory, rawURL, app, path, name,
 		extra["selected_files"] = csv
 	}
 
+	normalizedPath, err := normalizeDownloadPath(path, true)
+	if err != nil {
+		return err
+	}
+
 	req := NewDownloadReq{
 		URL:      rawURL,
 		App:      app,
-		Path:     strings.TrimSpace(path),
+		Path:     normalizedPath,
 		FileName: strings.TrimSpace(name),
 	}
 	if len(extra) > 0 {

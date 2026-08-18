@@ -12,7 +12,8 @@ olares-cli knowledge download create 'https://…' --format-id 'bv*+ba/b' -o jso
 
 - `--quality` → `extra.ytdlp_quality`; `--format-id` → `extra.format_id`.
 - `--extra` is a JSON object of string values merged into `extra`. `--quality` / `--format-id` are applied after and override matching keys.
-- `--path` **must start with `drive/Home/` or `drive/Data/`** (e.g. `drive/Home/Pictures/`). The first segment is literally `drive`; the second is `Home` or `Data` (case-sensitive). A full API URL also works: `https://files.<user>.olares.cn/api/resources/drive/Home/Pictures/`. **Not** accepted: the browser address (`.../Files/Home/...`) or a bare `Home/...` without the `drive/` prefix — both fail with `unsupported file type`. Defaults to `drive/Home/Downloads/` (aligned with the wise UI). Pass `--path ""` to send an empty path (e.g. HuggingFace cache mode) so the server decides.
+- `--path` is normalized locally to match download-server `CreateFileParam`: bare `drive/Home/...` / `drive/Data/...`, `/api/resources/drive/...`, or a full Files API URL (`https://files.<user>.olares.<tld>/api/resources/drive/Home/...`). `Home` / `Data` are case-sensitive. **Not** accepted: browser Files UI URLs (`.../Files/Home/...`), bare `Home/...`, or other file types (cache/external/…). Defaults to `drive/Home/Downloads/`. Pass `--path ""` for HuggingFace cache mode so the server decides.
+- Re-creating the same URL always inserts a **new** task row (no 409 duplicate). Check `list` / `info` before creating another copy if reuse was intended.
 - Success table line: `Created task <id> status=… provider=… name=…`. Use `-o json` for the full task row.
 
 ### HuggingFace (`--path` / `--name` behaviour)
@@ -58,8 +59,16 @@ olares-cli knowledge download cancel 42
 
 One id uses the single-task route. Two or more ids use
 `PUT /api/download/batch/{pause,resume,cancel}` (max 500). Table prints
-succeeded/failed counts; any failure exits non-zero. 409 on a single-task
-call means the task is in the yt-dlp mover phase — wait and retry.
+succeeded/failed counts; any failure exits non-zero.
+
+Single-task HTTP semantics during the yt-dlp mover phase
+(`waiting_to_move` / `moving`):
+
+- **resume / cancel / remove** → **409** — wait for the move, then retry
+  (`info <id>`).
+- **pause** → **400** (status not pausable) — not a 409.
+
+Batch routes stay HTTP 200; per-id failures land in `failed[]`.
 
 ## remove
 

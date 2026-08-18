@@ -154,8 +154,8 @@ func runFileRemove(ctx context.Context, f *cmdutil.Factory, path, outputRaw stri
 	if err != nil {
 		return err
 	}
-	path = strings.TrimSpace(path)
-	if err := validateDrivePath(path); err != nil {
+	path, err = normalizeDownloadPath(path, false)
+	if err != nil {
 		return err
 	}
 	pc, err := prepare(ctx, f)

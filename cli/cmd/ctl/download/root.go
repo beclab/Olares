@@ -65,7 +65,6 @@ Run "olares-cli knowledge download <verb> --help" for verb-specific flags.
 	cmd.AddCommand(NewSyncCommand(f))
 	cmd.AddCommand(NewTorrentCommand(f))
 	cmd.AddCommand(NewFileCommand(f))
-	cmd.AddCommand(NewCookiesCommand(f))
 	cmd.AddCommand(NewSettingsCommand(f))
 	return cmd
 }

@@ -141,11 +141,3 @@ func formatTime(t time.Time) string {
 	}
 	return t.Local().Format("2006-01-02 15:04")
 }
-
-// formatUnix renders a unix-seconds timestamp (cookies / settings) or "-".
-func formatUnix(sec int64) string {
-	if sec <= 0 {
-		return "-"
-	}
-	return time.Unix(sec, 0).Local().Format("2006-01-02 15:04")
-}

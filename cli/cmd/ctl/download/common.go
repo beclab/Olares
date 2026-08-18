@@ -119,17 +119,77 @@ func validateSinceID(id int64) error {
 	return nil
 }
 
-// validateDrivePath requires drive/Home/ or drive/Data/ (case-sensitive),
-// matching the create --path contract used by download-server.
-func validateDrivePath(raw string) error {
+const resourcesPrefix = "/api/resources/"
+
+// normalizeDownloadPath mirrors download-server CreateFileParam for CLI
+// fail-fast: empty (when allowed), bare drive/Home|Data/..., /api/resources/...
+// , or a full Files API URL. Returns the bare drive/... form to POST.
+func normalizeDownloadPath(raw string, allowEmpty bool) (string, error) {
 	path := strings.TrimSpace(raw)
 	if path == "" {
-		return fmt.Errorf("--path is required")
+		if allowEmpty {
+			return "", nil
+		}
+		return "", fmt.Errorf("--path is required")
 	}
-	if strings.HasPrefix(path, "drive/Home/") || strings.HasPrefix(path, "drive/Data/") {
-		return nil
+	resource, err := extractDriveResourcePath(path)
+	if err != nil {
+		return "", err
 	}
-	return fmt.Errorf("unsupported --path %q (need a path starting with drive/Home/ or drive/Data/)", raw)
+	if !isDriveHomeOrDataPath(resource) {
+		return "", fmt.Errorf("unsupported --path %q (need drive/Home/… or drive/Data/…, a Files API /api/resources/… URL, or \"\" for HF cache)", raw)
+	}
+	return resource, nil
+}
+
+func extractDriveResourcePath(raw string) (string, error) {
+	s := strings.TrimSpace(raw)
+	if strings.Contains(s, "://") {
+		u, err := url.Parse(s)
+		if err != nil {
+			return "", fmt.Errorf("unsupported --path %q (invalid URL): %w", raw, err)
+		}
+		s = u.Path
+	}
+	if idx := strings.Index(s, resourcesPrefix); idx >= 0 {
+		s = s[idx+len(resourcesPrefix):]
+	}
+	s = strings.TrimLeft(s, "/")
+	if s == "" {
+		return "", fmt.Errorf("unsupported --path %q (no resource path)", raw)
+	}
+	for _, seg := range strings.Split(s, "/") {
+		if seg == ".." {
+			return "", fmt.Errorf("unsupported --path %q (path traversal not allowed)", raw)
+		}
+	}
+	parts := strings.Split(s, "/")
+	if len(parts) < 2 {
+		return "", fmt.Errorf("unsupported --path %q (need drive/Home/… or drive/Data/…)", raw)
+	}
+	if strings.ToLower(parts[0]) != "drive" {
+		return "", fmt.Errorf("unsupported --path %q (only drive destinations are accepted)", raw)
+	}
+	if parts[1] != "Home" && parts[1] != "Data" {
+		return "", fmt.Errorf("unsupported --path %q (drive extend must be Home or Data)", raw)
+	}
+	// Keep the case-sensitive wire form the server expects.
+	parts[0] = "drive"
+	return strings.Join(parts, "/"), nil
+}
+
+func isDriveHomeOrDataPath(resource string) bool {
+	return resource == "drive/Home" ||
+		resource == "drive/Data" ||
+		strings.HasPrefix(resource, "drive/Home/") ||
+		strings.HasPrefix(resource, "drive/Data/")
+}
+
+// validateDrivePath requires a non-empty drive/Home or drive/Data destination
+// (used by file remove).
+func validateDrivePath(raw string) error {
+	_, err := normalizeDownloadPath(raw, false)
+	return err
 }
 
 // ytdlpUnavailableHint is printed when inspect reports Available=false
@@ -263,17 +323,6 @@ func doMutate(ctx context.Context, d Doer, method, path string, body, out interf
 		}
 		return nil
 	}
-	if cl, ok := out.(*CookieListResult); ok {
-		if len(env.List) > 0 {
-			if err := json.Unmarshal(env.List, &cl.List); err != nil {
-				return fmt.Errorf("%s %s: decode list: %w", method, path, err)
-			}
-		}
-		if env.Total != nil {
-			cl.Total = *env.Total
-		}
-		return nil
-	}
 	if br, ok := out.(*BatchResult); ok {
 		if len(env.Succeeded) > 0 {
 			if err := json.Unmarshal(env.Succeeded, &br.Succeeded); err != nil {
@@ -326,18 +375,21 @@ func taskErrorRecovery(method, path string, status int, message string, body int
 		}
 	}
 	switch {
-	case method == "POST" && path == "/api/download" && status == 409 &&
-		(strings.Contains(lowerMsg, "already") ||
-			strings.Contains(lowerMsg, "exist") ||
-			strings.Contains(lowerMsg, "registered")):
-		return "; inspect existing tasks with `olares-cli knowledge download list`"
 	case method == "POST" && path == "/api/download" && shouldHintYTDLPUnavailable(message):
 		return "; " + ytdlpUnavailableHint()
+	case method == "POST" && path == "/api/download" && status == 400:
+		return "; check --path/--url/--extra (duplicate URL creates a new task; use `olares-cli knowledge download list` to inspect existing ones)"
 	case strings.Contains(path, "/api/url/inspect") && shouldHintInspectTimeout(message):
 		return "; channel/RSS probes can exceed the server inspect timeout; retry later or create the task directly if the URL is known good"
 	case taskID != "" && status == 409:
+		// resume / cancel / remove during yt-dlp mover phase
 		return fmt.Sprintf(
 			"; wait for the move to finish, then retry; inspect progress with `olares-cli knowledge download info %s`",
+			taskID,
+		)
+	case taskID != "" && strings.Contains(path, "/pause/") && status == 400:
+		return fmt.Sprintf(
+			"; pause only works while downloading or waiting; inspect status with `olares-cli knowledge download info %s`",
 			taskID,
 		)
 	case taskID != "" &&
