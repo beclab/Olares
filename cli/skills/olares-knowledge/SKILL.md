@@ -32,7 +32,7 @@ All verbs require Olares 1.12.7+ because the Settings download edge and provider
 
 | Family | Verbs | Read when triggered |
 |---|---|---|
-| lifecycle | `create`, `list`, `info`, `pause`, `resume`, `cancel`, `remove` | [task lifecycle and state decisions](references/olares-knowledge-download-lifecycle.md) |
+| lifecycle | `create`, `list`, `info`, `wait`, `pause`, `resume`, `cancel`, `remove` | [task lifecycle and state decisions](references/olares-knowledge-download-lifecycle.md) |
 | probe + prefs | `inspect`, `prefs get`, `prefs set` | [provider/quality inspection](references/olares-knowledge-download-inspect.md) |
 | sync | `unfinished`, `sync` | [cursor and drain semantics](references/olares-knowledge-download-sync.md) |
 | torrent | `torrent inspect`, `stats`, `peers`, `files`, `seed stop/resume`; torrent create | [torrent selection and seeding](references/olares-knowledge-download-torrent.md) |
@@ -41,8 +41,8 @@ All verbs require Olares 1.12.7+ because the Settings download edge and provider
 
 ## Task and asynchronous semantics
 
-- Create returns a server-side task; command success does not mean bytes have finished downloading or moving.
-- Re-submitting the same URL always creates a **new** task (no identity dedup). Landing-name collisions are resolved with a `(n)` suffix; they do not reuse or block an existing row.
+- Create returns a server-side task; command success does not mean bytes have finished downloading or moving. Use `wait` / `create --wait` when scripts need a true terminal status (`waiting_to_move` / `moving` are still in progress).
+- Re-submitting the same URL always creates a **new** task (no identity dedup). Landing-name collisions are resolved with a `(n)` suffix; they do not reuse or block an existing row. Create sends `Idempotency-Key` only to collapse transport retries of one attempt — not URL dedup.
 - Pause only applies while `waiting` or `downloading` (otherwise 400). Resume, cancel, and remove return **409** while the task is in the yt-dlp mover phase (`waiting_to_move` / `moving`) — wait and retry; do not treat pause the same way.
 - Task ownership follows the active profile. Do not infer another user's task from an id or try alternate identities.
 - `inspect` is advisory: provider/quality probing may fail while a create still works. Report that uncertainty instead of declaring the URL undownloadable.

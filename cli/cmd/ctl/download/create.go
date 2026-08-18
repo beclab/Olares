@@ -7,10 +7,12 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
+	"github.com/beclab/Olares/cli/pkg/whoami"
 )
 
 func NewCreateCommand(f *cmdutil.Factory) *cobra.Command {
@@ -23,6 +25,8 @@ func NewCreateCommand(f *cmdutil.Factory) *cobra.Command {
 		extraRaw    string
 		torrentFile string
 		selectFiles string
+		waitDone    bool
+		timeout     time.Duration
 		output      string
 	)
 	cmd := &cobra.Command{
@@ -53,7 +57,11 @@ For HuggingFace, set _hf_dest in --extra:
   local (default) downloads under <path>/<repoID>/.
   cache downloads to the shared HuggingFace cache and ignores --path/--name.
 
-Re-submitting the same URL always creates a new task (no duplicate 409).`,
+Re-submitting the same URL always creates a new task (no duplicate 409).
+Each create sends a fresh Idempotency-Key so transport retries of the
+same attempt reuse one key; a second user invoke still inserts a new
+row. Use --wait to poll until a true terminal status (mover phases are
+not success; see "wait --help").`,
 		Example: `  # URL
   olares-cli knowledge download create 'https://host/v?a=1&b=2'
 
@@ -71,7 +79,7 @@ Re-submitting the same URL always creates a new task (no duplicate 409).`,
 			if len(args) > 0 {
 				rawURL = args[0]
 			}
-			return runCreate(c.Context(), f, rawURL, app, path, name, quality, formatID, extraRaw, torrentFile, selectFiles, output)
+			return runCreate(c.Context(), f, rawURL, app, path, name, quality, formatID, extraRaw, torrentFile, selectFiles, waitDone, timeout, output)
 		},
 	}
 	addAppFlag(cmd, &app)
@@ -83,6 +91,8 @@ Re-submitting the same URL always creates a new task (no duplicate 409).`,
 	cmd.Flags().StringVar(&extraRaw, "extra", "", "JSON object merged into extra (string values)")
 	cmd.Flags().StringVar(&torrentFile, "torrent", "", "local .torrent file to upload (base64); the URL argument may be omitted")
 	cmd.Flags().StringVar(&selectFiles, "select-files", "", "comma-separated 1-based file indices for a multi-file torrent (e.g. 1,3,5), or \"all\" (= omit = every file)")
+	cmd.Flags().BoolVar(&waitDone, "wait", false, "after create, poll until a terminal status (same as wait <id>)")
+	cmd.Flags().DurationVar(&timeout, "timeout", 0, "max wait duration when --wait is set (0 = no limit)")
 	return cmd
 }
 
@@ -148,13 +158,19 @@ func readTorrentFile(path, flag string) ([]byte, error) {
 	return raw, nil
 }
 
-func runCreate(ctx context.Context, f *cmdutil.Factory, rawURL, app, path, name, quality, formatID, extraRaw, torrentFile, selectFiles, outputRaw string) error {
+func runCreate(ctx context.Context, f *cmdutil.Factory, rawURL, app, path, name, quality, formatID, extraRaw, torrentFile, selectFiles string, waitDone bool, timeout time.Duration, outputRaw string) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
 	format, err := parseFormat(outputRaw)
 	if err != nil {
 		return err
+	}
+	if timeout < 0 {
+		return fmt.Errorf("unsupported --timeout %s (need >= 0)", timeout)
+	}
+	if timeout > 0 && !waitDone {
+		return fmt.Errorf("--timeout requires --wait")
 	}
 	rawURL = strings.TrimSpace(rawURL)
 	torrentFile = strings.TrimSpace(torrentFile)
@@ -225,9 +241,28 @@ func runCreate(ctx context.Context, f *cmdutil.Factory, rawURL, app, path, name,
 		return err
 	}
 
+	idemKey := newIdempotencyKey()
+	createCtx := whoami.ContextWithRequestHeaders(ctx, map[string]string{headerIdempotencyKey: idemKey})
+
 	var task DownloadTask
-	if err := doMutate(ctx, pc.doer, "POST", "/api/download", req, &task); err != nil {
+	if err := doMutate(createCtx, pc.doer, "POST", "/api/download", req, &task); err != nil {
 		return err
+	}
+
+	if waitDone {
+		waited, err := waitForTerminal(ctx, pc, task.ID, timeout)
+		if err != nil {
+			return err
+		}
+		task = waited
+		if classifyWaitStatus(task.Status) == "failure" {
+			if format == FormatJSON {
+				_ = printJSON(os.Stdout, task)
+			} else {
+				fmt.Printf("Created task %d ended in status=%s\n", task.ID, task.Status)
+			}
+			return fmt.Errorf("task %d ended in status %q", task.ID, task.Status)
+		}
 	}
 
 	switch format {

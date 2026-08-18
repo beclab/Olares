@@ -81,6 +81,8 @@ func TestRunCreateValidatesQualityFromExtra(t *testing.T) {
 		`{"ytdlp_quality":"4k"}`,
 		"",
 		"",
+		false,
+		0,
 		"table",
 	)
 	if err == nil || !strings.Contains(err.Error(), "unsupported --quality") {
@@ -101,6 +103,8 @@ func TestRunCreateValidatesApp(t *testing.T) {
 		"",
 		"",
 		"",
+		false,
+		0,
 		"table",
 	)
 	if err == nil || !strings.Contains(err.Error(), "unsupported --app") {

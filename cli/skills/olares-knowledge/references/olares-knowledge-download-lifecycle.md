@@ -14,6 +14,8 @@ olares-cli knowledge download create 'https://…' --format-id 'bv*+ba/b' -o jso
 - `--extra` is a JSON object of string values merged into `extra`. `--quality` / `--format-id` are applied after and override matching keys.
 - `--path` is normalized locally to match download-server `CreateFileParam`: bare `drive/Home/...` / `drive/Data/...`, `/api/resources/drive/...`, or a full Files API URL (`https://files.<user>.olares.<tld>/api/resources/drive/Home/...`). `Home` / `Data` are case-sensitive. **Not** accepted: browser Files UI URLs (`.../Files/Home/...`), bare `Home/...`, or other file types (cache/external/…). Defaults to `drive/Home/Downloads/`. Pass `--path ""` for HuggingFace cache mode so the server decides.
 - Re-creating the same URL always inserts a **new** task row (no 409 duplicate). Check `list` / `info` before creating another copy if reuse was intended.
+- Each create sends a fresh `Idempotency-Key`. Transport retries of the **same** CLI attempt reuse that key (server returns the same task). A second user invoke gets a new key and still inserts a new row.
+- `--wait [--timeout <duration>]` polls like `wait <id>` after a successful create (mover phases are not success).
 - Success table line: `Created task <id> status=… provider=… name=…`. Use `-o json` for the full task row.
 
 ### HuggingFace (`--path` / `--name` behaviour)
@@ -38,13 +40,23 @@ olares-cli knowledge download create 'https://huggingface.co/org/repo' \
 
 Recognised HF `--extra` keys: `_hf_dest` (`cache`|`local`), `token`, `revision`, `include`, `exclude`, `max-workers`, `repo-type`. Note wise defaults HF to **cache**; this CLI defaults to **local** unless you pass `_hf_dest`.
 
-## list / info
+## list / info / wait
 
 ```bash
 olares-cli knowledge download list --app wise
 olares-cli knowledge download list --status downloading --page 1 --page-size 20 -o json
+olares-cli knowledge download list --all
+olares-cli knowledge download list --all-apps
 olares-cli knowledge download info 42
+olares-cli knowledge download wait 42
+olares-cli knowledge download wait 42 --timeout 10m
+olares-cli knowledge download create 'https://…' --wait --timeout 30m
 ```
+
+- `--all` pages through `/api/download/list` until every matching row is collected (distinct from `sync --all`, which drains the sync cursor).
+- `--all-apps` lists across every app and cannot be combined with an explicit `--app` (default `--app wise` is omitted when `--all-apps` is set).
+- `--status` is validated locally against the server enum; illegal values fail before any request.
+- `wait <id>` / `create --wait` poll `info` every 2s until a terminal status. **Success:** `completed`, `seeding`. **Failure:** `error`, `cancelled`, `removed`. **`waiting_to_move` / `moving` are not success** (still relocating bytes). On `--timeout` expiry: non-zero exit and current status printed. Polling only — no WebSocket watch.
 
 Table columns: `ID`, `STATUS`, `PROVIDER`, `PERCENT`, `NAME`, `SOURCE`, `APP`, `UPDATED`. `SOURCE` is the task URL (magnet / http / …). Footer shows `N of total` when the server returns `total`.
 

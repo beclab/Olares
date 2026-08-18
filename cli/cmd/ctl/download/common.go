@@ -5,6 +5,8 @@ package download
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,6 +15,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -43,7 +46,35 @@ const (
 	ytdlpMarketInstall = "olares-cli market install ytdlpv3"
 	// syncLimitMax matches the download-server sync page-size cap.
 	syncLimitMax = 100
+	// listPageSizeDefault matches download-server TaskRepository
+	// defaultPageSize so list --all chunks align with the server.
+	listPageSizeDefault = 100
+	// headerIdempotencyKey is the create replay key (RFC 9110 style).
+	headerIdempotencyKey = "Idempotency-Key"
 )
+
+// waitPollInterval is how often wait / create --wait re-queries info.
+// Mutable in tests so polling cases finish quickly.
+var waitPollInterval = 2 * time.Second
+
+// validTaskStatuses mirrors download-server models.validTaskStatuses
+// (IsValidTaskStatus). Kept as a CSV for --help and a set for local
+// --status validation so illegal values fail before any HTTP call.
+const validTaskStatusValues = "downloading, paused, cancelled, error, completed, waiting, removed, preparing, waiting_to_move, moving, seeding"
+
+var validTaskStatusSet = map[string]struct{}{
+	"downloading":     {},
+	"paused":          {},
+	"cancelled":       {},
+	"error":           {},
+	"completed":       {},
+	"waiting":         {},
+	"removed":         {},
+	"preparing":       {},
+	"waiting_to_move": {},
+	"moving":          {},
+	"seeding":         {},
+}
 
 var taskActionPathRE = regexp.MustCompile(`^/api/download/(?:pause|resume|cancel|info)/(\d+)(?:/|$)`)
 
@@ -117,6 +148,28 @@ func validateSinceID(id int64) error {
 		return fmt.Errorf("unsupported --since-id %d (need >= 0)", id)
 	}
 	return nil
+}
+
+// validateTaskStatus rejects unknown --status values locally so the
+// CLI fails closed instead of round-tripping to an empty list.
+func validateTaskStatus(raw string) error {
+	s := strings.TrimSpace(raw)
+	if s == "" {
+		return nil
+	}
+	if _, ok := validTaskStatusSet[s]; !ok {
+		return fmt.Errorf("unsupported --status %q (allowed: %s)", raw, validTaskStatusValues)
+	}
+	return nil
+}
+
+// newIdempotencyKey returns a fresh create key for one user invoke.
+func newIdempotencyKey() string {
+	var b [16]byte
+	if _, err := rand.Read(b[:]); err != nil {
+		return fmt.Sprintf("cli-%d", time.Now().UnixNano())
+	}
+	return hex.EncodeToString(b[:])
 }
 
 const resourcesPrefix = "/api/resources/"
