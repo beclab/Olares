@@ -130,9 +130,11 @@ func TestSummarizeDomainCountsExpiryWithoutLeakingValues(t *testing.T) {
 	if summary.Records != 3 {
 		t.Fatalf("records = %d", summary.Records)
 	}
-	// The session cookie has no expiry and must not be counted expired.
 	if summary.Expired != 1 {
 		t.Fatalf("expired = %d, want 1", summary.Expired)
+	}
+	if summary.Session != 1 {
+		t.Fatalf("session = %d, want 1", summary.Session)
 	}
 	wantNext := time.Unix(now.Unix()+3600, 0).UTC().Format(time.RFC3339)
 	if summary.NextExpiry != wantNext {
@@ -174,8 +176,14 @@ func TestSummarizeDomainAllExpired(t *testing.T) {
 	if summary.Expired != 2 {
 		t.Fatalf("expired = %d, want 2", summary.Expired)
 	}
+	if summary.Session != 1 {
+		t.Fatalf("session = %d, want 1", summary.Session)
+	}
 	if summary.NextExpiry != "" {
 		t.Fatalf("nextExpiry = %q, want empty", summary.NextExpiry)
+	}
+	if !cookieValidateFailed(summary) {
+		t.Fatal("all dated cookies expired (plus a session leftover) must fail validate")
 	}
 }
 
@@ -187,8 +195,36 @@ func TestSummarizeDomainSessionOnly(t *testing.T) {
 		Domain:  "example.com",
 		Records: []cookieparse.Record{{Name: "a"}, {Name: "b"}},
 	}, now)
-	if summary.Expired != 0 || summary.NextExpiry != "" {
+	if summary.Expired != 0 || summary.Session != 2 || summary.NextExpiry != "" {
 		t.Fatalf("summary = %+v", summary)
+	}
+	if cookieValidateFailed(summary) {
+		t.Fatal("session-only domains must pass validate")
+	}
+}
+
+func TestCookieValidateFailedAllDatedExpired(t *testing.T) {
+	now := time.Unix(1_700_000_000, 0)
+	allDated := summarizeDomain(domainCookie{
+		Domain: "youtube.com",
+		Records: []cookieparse.Record{
+			{Name: "SID", Expires: float64(now.Unix() - 120)},
+			{Name: "HSID", Expires: float64(now.Unix() - 60)},
+		},
+	}, now)
+	if !cookieValidateFailed(allDated) {
+		t.Fatal("every dated cookie expired must fail validate")
+	}
+
+	stillFresh := summarizeDomain(domainCookie{
+		Domain: "youtube.com",
+		Records: []cookieparse.Record{
+			{Name: "SID", Expires: float64(now.Unix() - 120)},
+			{Name: "HSID", Expires: float64(now.Unix() + 60)},
+		},
+	}, now)
+	if cookieValidateFailed(stillFresh) {
+		t.Fatal("a fresh dated cookie must pass validate")
 	}
 }
 

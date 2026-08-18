@@ -137,11 +137,12 @@ func parseBrowserCookieLine(result *Result, parts []string, domain string) {
 func parseSetCookieLine(result *Result, parts []string, domain string) {
 	name, value, ok := splitPair(parts[0])
 	if !ok {
-		result.reject("not a cookie assignment: %s", parts[0])
+		// Never echo parts[0]: it may be name=value.
+		result.reject("not a cookie assignment")
 		return
 	}
 	if name == "" {
-		result.reject("empty cookie name: %s", parts[0])
+		result.reject("empty cookie name")
 		return
 	}
 

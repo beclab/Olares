@@ -304,6 +304,7 @@ type cookieSummary struct {
 	Domain     string `json:"domain"`
 	Account    string `json:"account"`
 	Records    int    `json:"records"`
+	Session    int    `json:"session"`
 	Expired    int    `json:"expired"`
 	NextExpiry string `json:"nextExpiry,omitempty"`
 	UpdatedAt  string `json:"updatedAt,omitempty"`
@@ -321,6 +322,7 @@ func summarizeDomain(dc domainCookie, now time.Time) cookieSummary {
 		// 0 means a session cookie: no expiry to report, never expired.
 		expiry := rec.ExpiryUnix()
 		if expiry == 0 {
+			summary.Session++
 			continue
 		}
 		if expiry <= nowUnix {
@@ -473,7 +475,8 @@ func newCookieValidateCommand(f *cmdutil.Factory) *cobra.Command {
 
 Exits non-zero when the domain has no cookies at all, or when every
 non-session cookie has expired — so it can gate a script before a
-download that needs a login.
+download that needs a login. A leftover session cookie does not keep
+the domain usable once all dated cookies have expired.
 
 Session cookies (no expiry) are reported but never counted as expired.
 `,
@@ -516,15 +519,25 @@ func runCookieValidate(ctx context.Context, f *cmdutil.Factory, domain, outputRa
 		fmt.Printf("Domain:      %s\n", summary.Domain)
 		fmt.Printf("Account:     %s\n", summary.Account)
 		fmt.Printf("Records:     %d\n", summary.Records)
+		fmt.Printf("Session:     %d\n", summary.Session)
 		fmt.Printf("Expired:     %d\n", summary.Expired)
 		fmt.Printf("Next expiry: %s\n", nonEmpty(summary.NextExpiry))
 	}
 
-	if summary.Expired > 0 && summary.Expired == summary.Records {
-		return fmt.Errorf("every cookie for %s has expired; re-import them with:\n  %s",
+	// Fail when every dated (non-session) cookie has expired. Session
+	// cookies alone do not keep a login-gated download usable.
+	if cookieValidateFailed(summary) {
+		return fmt.Errorf("every non-session cookie for %s has expired; re-import them with:\n  %s",
 			domain, cookieImportHint(domain))
 	}
 	return nil
+}
+
+// cookieValidateFailed is true when every dated cookie has expired.
+// Session cookies are ignored for the gate (they never inflate Expired).
+func cookieValidateFailed(summary cookieSummary) bool {
+	nonSession := summary.Records - summary.Session
+	return summary.Expired > 0 && summary.Expired == nonSession
 }
 
 func cookieDomainSummary(ctx context.Context, pc *preparedClient, domain string) (cookieSummary, error) {

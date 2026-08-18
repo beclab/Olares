@@ -47,9 +47,9 @@ func (jsonParser) Parse(text, domain string) (*Result, error) {
 	}
 
 	result := newResult()
-	for _, item := range items {
+	for i, item := range items {
 		if item.Name == "" {
-			result.reject("cookie object without a name: %s", summarize(item))
+			result.reject("cookie object at index %d has no name", i)
 			continue
 		}
 		recordDomain := strings.TrimSpace(item.Domain)
@@ -140,15 +140,3 @@ func parseExpiry(raw json.RawMessage) (int64, bool) {
 
 // http1123Layout is the Set-Cookie / Expires wire format (GMT, not UTC).
 const http1123Layout = "Mon, 02 Jan 2006 15:04:05 GMT"
-
-func summarize(c jsonCookie) string {
-	b, err := json.Marshal(c)
-	if err != nil {
-		return "<unprintable cookie object>"
-	}
-	const max = 120
-	if len(b) > max {
-		return string(b[:max]) + "..."
-	}
-	return string(b)
-}

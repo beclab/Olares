@@ -322,3 +322,69 @@ func TestParseFormatValidation(t *testing.T) {
 		t.Error("ParseFormat(yaml) should fail")
 	}
 }
+
+// InvalidLines are printed by `cookie import`; they must never carry
+// cookie values (shell history / CI logs / agent chat).
+func TestInvalidLinesNeverEchoSecrets(t *testing.T) {
+	const secret = "super-secret-cookie-value"
+
+	t.Run("netscape short line", func(t *testing.T) {
+		// Six fields only; the dangling secret would previously have been
+		// echoed wholesale in InvalidLines.
+		res, _, err := Parse(".youtube.com\tTRUE\t/\tFALSE\t0\t"+secret, FormatNetscape, "")
+		if err != nil {
+			t.Fatalf("parse: %v", err)
+		}
+		if res.Count() != 0 {
+			t.Fatalf("want reject, got %d records", res.Count())
+		}
+		assertInvalidLinesSafe(t, res.InvalidLines, secret)
+	})
+
+	t.Run("netscape empty domain", func(t *testing.T) {
+		res, _, err := Parse("\tTRUE\t/\tFALSE\t0\tSID\t"+secret, FormatNetscape, "")
+		if err != nil {
+			t.Fatalf("parse: %v", err)
+		}
+		assertInvalidLinesSafe(t, res.InvalidLines, secret)
+	})
+
+	t.Run("netscape bad path", func(t *testing.T) {
+		res, _, err := Parse(".youtube.com\tTRUE\trelative\tFALSE\t0\tSID\t"+secret, FormatNetscape, "")
+		if err != nil {
+			t.Fatalf("parse: %v", err)
+		}
+		assertInvalidLinesSafe(t, res.InvalidLines, secret)
+	})
+
+	t.Run("json nameless object", func(t *testing.T) {
+		res, _, err := Parse(`[{"value":"`+secret+`","domain":".youtube.com"}]`, FormatJSON, "")
+		if err != nil {
+			t.Fatalf("parse: %v", err)
+		}
+		if len(res.InvalidLines) != 1 {
+			t.Fatalf("invalid = %v", res.InvalidLines)
+		}
+		assertInvalidLinesSafe(t, res.InvalidLines, secret)
+	})
+
+	t.Run("header empty name", func(t *testing.T) {
+		res, _, err := Parse("Set-Cookie: ="+secret+"; Domain=.youtube.com", FormatHeader, "")
+		if err != nil {
+			t.Fatalf("parse: %v", err)
+		}
+		assertInvalidLinesSafe(t, res.InvalidLines, secret)
+	})
+}
+
+func assertInvalidLinesSafe(t *testing.T, lines []string, secret string) {
+	t.Helper()
+	if len(lines) == 0 {
+		t.Fatal("want at least one invalid line")
+	}
+	for _, line := range lines {
+		if strings.Contains(line, secret) {
+			t.Fatalf("InvalidLines leak secret: %q", line)
+		}
+	}
+}

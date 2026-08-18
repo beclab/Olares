@@ -90,18 +90,19 @@ func (netscapeParser) Parse(text, domain string) (*Result, error) {
 		line, httpOnly := splitHTTPOnly(trimmed)
 		fields := strings.Split(line, "\t")
 		if len(fields) < 7 {
-			result.reject("need at least 7 tab-separated fields: %s", line)
+			// Never echo the raw line: it carries the cookie value.
+			result.reject("need at least 7 tab-separated fields")
 			continue
 		}
 
 		recordDomain := strings.TrimSpace(fields[0])
 		if recordDomain == "" {
-			result.reject("empty domain: %s", line)
+			result.reject("empty domain")
 			continue
 		}
 		name := strings.TrimSpace(fields[5])
 		if name == "" {
-			result.reject("empty cookie name: %s", line)
+			result.reject("empty cookie name")
 			continue
 		}
 
@@ -113,7 +114,7 @@ func (netscapeParser) Parse(text, domain string) (*Result, error) {
 		if raw := strings.TrimSpace(fields[4]); raw != "" {
 			parsed, err := strconv.ParseInt(raw, 10, 64)
 			if err != nil || parsed < 0 {
-				result.reject("invalid expiration %q: %s", raw, line)
+				result.reject("invalid expiration %q", raw)
 				continue
 			}
 			expires = parsed
@@ -124,7 +125,7 @@ func (netscapeParser) Parse(text, domain string) (*Result, error) {
 			path = "/"
 		}
 		if !strings.HasPrefix(path, "/") {
-			result.reject("invalid path %q: %s", path, line)
+			result.reject("invalid path %q", path)
 			continue
 		}
 
