@@ -16,3 +16,4 @@ head:
 - [扩展 Olares 存储空间](expand-storage-in-olares.md)
 - [安装 Olares 镜像及配置显卡直通](install-olares-gpu-passthrough.md)
 - [本地访问 Olares 服务](local-access.md)
+- [通过 AI Agent 部署网站到 Olares](deploy-website.md)

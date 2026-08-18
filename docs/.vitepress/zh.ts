@@ -571,6 +571,10 @@ const side = {
           text: "连接 AI 应用",
           link: "/zh/manual/best-practices/connect-ai-apps",
         },
+        {
+          text: "部署网站",
+          link: "/zh/manual/best-practices/deploy-website",
+        },
       ],
     },
     { text: "术语表", link: "/zh/manual/glossary" },

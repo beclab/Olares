@@ -575,6 +575,10 @@ const side = {
           text: "Connect AI apps",
           link: "/manual/best-practices/connect-ai-apps",
         },
+        {
+          text: "Deploy a website",
+          link: "/manual/best-practices/deploy-website",
+        },
       ],
     },
     { text: "Glossary", link: "/manual/glossary" },
