@@ -49,6 +49,10 @@ const (
 	// listPageSizeDefault matches download-server TaskRepository
 	// defaultPageSize so list --all chunks align with the server.
 	listPageSizeDefault = 100
+	// listPageSizeMax matches download-server TaskRepository maxPageSize.
+	// The server clamps silently, so --all must page at the real size or
+	// it stops early and under-reports.
+	listPageSizeMax = 1000
 	// headerIdempotencyKey is the create replay key (RFC 9110 style).
 	headerIdempotencyKey = "Idempotency-Key"
 )
@@ -56,6 +60,15 @@ const (
 // waitPollInterval is how often wait / create --wait re-queries info.
 // Mutable in tests so polling cases finish quickly.
 var waitPollInterval = 2 * time.Second
+
+const (
+	// waitDefaultTimeout matches the market / users watch commands so
+	// every long-poll surface in the CLI gives up after the same wait.
+	waitDefaultTimeout = 15 * time.Minute
+	// waitMaxConsecErrors is the transient-error budget before wait
+	// gives up, mirroring market watch.
+	waitMaxConsecErrors = 5
+)
 
 // validTaskStatuses mirrors download-server models.validTaskStatuses
 // (IsValidTaskStatus). Kept as a CSV for --help and a set for local

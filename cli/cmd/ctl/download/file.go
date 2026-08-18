@@ -163,6 +163,10 @@ func runFileRemove(ctx context.Context, f *cmdutil.Factory, path, outputRaw stri
 		return err
 	}
 	q := url.Values{}
+	// A manager still serving file_remove from the generated IDL binder
+	// rejects the request without "user"; newer builds ignore it and take
+	// identity from X-Bfl-User.
+	q.Set("user", pc.profile.OlaresID)
 	q.Set("path", path)
 	// /none is a mandatory placeholder suffix in the route; do not drop it.
 	if err := doMutate(ctx, pc.doer, "DELETE", "/api/download/file_remove/none"+encodeQuery(q), nil, nil); err != nil {

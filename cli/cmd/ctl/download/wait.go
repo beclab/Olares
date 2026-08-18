@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -28,16 +30,19 @@ Failure terminals: error, cancelled, removed.
 waiting_to_move and moving are NOT success — the yt-dlp mover is still
 relocating bytes to the destination, so wait keeps polling.
 
+An error the server will retry on its own (will_auto_retry) is not a
+terminal failure; wait keeps polling until the retry sweep settles it.
+
 Polling interval is 2s. On --timeout expiry the command exits non-zero
-and prints the current status. This command uses HTTP polling only;
-it does not switch to WebSocket watch.`,
+and reports the last observed status. This command uses HTTP polling
+only; it does not switch to WebSocket watch.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			return runWait(c.Context(), f, args[0], timeout, output)
 		},
 	}
 	addOutputFlag(cmd, &output)
-	cmd.Flags().DurationVar(&timeout, "timeout", 0, "max wait duration (0 = no limit)")
+	cmd.Flags().DurationVar(&timeout, "timeout", 0, "max wait duration (0 = "+waitDefaultTimeout.String()+")")
 	return cmd
 }
 
@@ -64,7 +69,7 @@ func runWait(ctx context.Context, f *cmdutil.Factory, idRaw string, timeout time
 	if err != nil {
 		return err
 	}
-	kind := classifyWaitStatus(task.Status)
+	kind := classifyWaitStatus(task)
 	switch format {
 	case FormatJSON:
 		if err := printJSON(os.Stdout, task); err != nil {
@@ -79,51 +84,92 @@ func runWait(ctx context.Context, f *cmdutil.Factory, idRaw string, timeout time
 	return nil
 }
 
-// waitForTerminal polls GET /api/download/info/<id> until a terminal
-// status or timeout. timeout<=0 means wait indefinitely (still
-// cancelled by ctx).
-func waitForTerminal(ctx context.Context, pc *preparedClient, id int64, timeout time.Duration) (DownloadTask, error) {
-	if timeout > 0 {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, timeout)
-		defer cancel()
-	}
+// waitTimeoutError carries the last observed row so callers can still
+// report the task id (and hand it to a JSON consumer) after giving up.
+type waitTimeoutError struct {
+	last DownloadTask
+}
 
-	var last DownloadTask
+func (e *waitTimeoutError) Error() string {
+	if e.last.ID == 0 {
+		return "wait timed out before the first info response"
+	}
+	return fmt.Sprintf("wait timed out: task %d still status=%s", e.last.ID, e.last.Status)
+}
+
+// waitForTerminal polls GET /api/download/info/<id> until the row
+// classifies as terminal, the deadline passes, or the user interrupts.
+// Shaped after cmd/ctl/market/watch.go::waitForTerminal.
+func waitForTerminal(parentCtx context.Context, pc *preparedClient, id int64, timeout time.Duration) (DownloadTask, error) {
+	if timeout <= 0 {
+		timeout = waitDefaultTimeout
+	}
+	deadline := time.Now().Add(timeout)
+
+	ctx, stop := signal.NotifyContext(parentCtx, os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	path := fmt.Sprintf("/api/download/info/%d", id)
+	var (
+		last         DownloadTask
+		consecErrors int
+	)
 	for {
-		var task DownloadTask
-		path := fmt.Sprintf("/api/download/info/%d", id)
-		if err := doGet(ctx, pc.doer, path, &task); err != nil {
-			if ctx.Err() != nil && last.ID != 0 {
-				return last, fmt.Errorf("wait timed out: task %d still status=%s", last.ID, last.Status)
+		if err := ctx.Err(); err != nil {
+			if parentCtx.Err() == nil {
+				return last, fmt.Errorf("wait on task %d canceled by user", id)
 			}
-			if ctx.Err() != nil {
-				return DownloadTask{}, fmt.Errorf("wait timed out before first info response")
-			}
-			return DownloadTask{}, err
+			return last, err
 		}
+		if time.Now().After(deadline) {
+			return last, &waitTimeoutError{last: last}
+		}
+
+		var task DownloadTask
+		if err := doGet(ctx, pc.doer, path, &task); err != nil {
+			if ctx.Err() != nil {
+				continue
+			}
+			consecErrors++
+			if consecErrors >= waitMaxConsecErrors {
+				return last, fmt.Errorf("wait on task %d aborted after %d consecutive errors: %w", id, consecErrors, err)
+			}
+			fmt.Fprintf(os.Stderr, "wait: transient info poll error (%v); retry in %s (consecutive=%d)\n",
+				err, waitPollInterval, consecErrors)
+			sleepOrCancelWait(ctx, waitPollInterval)
+			continue
+		}
+		consecErrors = 0
 		last = task
-		kind := classifyWaitStatus(task.Status)
-		if kind == "success" || kind == "failure" {
+		if kind := classifyWaitStatus(task); kind != "pending" {
 			return task, nil
 		}
-		timer := time.NewTimer(waitPollInterval)
-		select {
-		case <-ctx.Done():
-			timer.Stop()
-			return last, fmt.Errorf("wait timed out: task %d still status=%s", last.ID, last.Status)
-		case <-timer.C:
-		}
+		sleepOrCancelWait(ctx, waitPollInterval)
+	}
+}
+
+func sleepOrCancelWait(ctx context.Context, d time.Duration) {
+	t := time.NewTimer(d)
+	defer t.Stop()
+	select {
+	case <-ctx.Done():
+	case <-t.C:
 	}
 }
 
 // classifyWaitStatus returns "success", "failure", or "pending".
-// Mover phases are pending so scripts wait for bytes on disk.
-func classifyWaitStatus(status string) string {
-	switch status {
+// Mover phases and a will_auto_retry error are pending: the bytes are
+// not on disk yet, and the server's retry sweep still owns that row.
+func classifyWaitStatus(task DownloadTask) string {
+	switch task.Status {
 	case "completed", "seeding":
 		return "success"
-	case "error", "cancelled", "removed":
+	case "error":
+		if task.WillAutoRetry {
+			return "pending"
+		}
+		return "failure"
+	case "cancelled", "removed":
 		return "failure"
 	default:
 		return "pending"

@@ -3,6 +3,7 @@ package download
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -25,25 +26,91 @@ func TestValidateTaskStatus(t *testing.T) {
 
 func TestClassifyWaitStatus(t *testing.T) {
 	cases := []struct {
-		status string
-		want   string
+		status  string
+		autoRet bool
+		want    string
 	}{
-		{"completed", "success"},
-		{"seeding", "success"},
-		{"error", "failure"},
-		{"cancelled", "failure"},
-		{"removed", "failure"},
-		{"waiting_to_move", "pending"},
-		{"moving", "pending"},
-		{"downloading", "pending"},
-		{"paused", "pending"},
-		{"waiting", "pending"},
-		{"preparing", "pending"},
+		{status: "completed", want: "success"},
+		{status: "seeding", want: "success"},
+		{status: "error", want: "failure"},
+		{status: "cancelled", want: "failure"},
+		{status: "removed", want: "failure"},
+		{status: "waiting_to_move", want: "pending"},
+		{status: "moving", want: "pending"},
+		{status: "downloading", want: "pending"},
+		{status: "paused", want: "pending"},
+		{status: "waiting", want: "pending"},
+		{status: "preparing", want: "pending"},
+		// The server's retry sweep still owns this row, so calling it a
+		// failure would make a script tear down a task that recovers.
+		{status: "error", autoRet: true, want: "pending"},
 	}
 	for _, tc := range cases {
-		if got := classifyWaitStatus(tc.status); got != tc.want {
-			t.Fatalf("classifyWaitStatus(%q)=%q want %q", tc.status, got, tc.want)
+		task := DownloadTask{Status: tc.status, WillAutoRetry: tc.autoRet}
+		if got := classifyWaitStatus(task); got != tc.want {
+			t.Fatalf("classifyWaitStatus(%q, auto=%v)=%q want %q", tc.status, tc.autoRet, got, tc.want)
 		}
+	}
+}
+
+// TestWaitKeepsPollingAnAutoRetryingError pins the whole loop, not just
+// the classifier: an error row the server will retry must not end wait.
+func TestWaitKeepsPollingAnAutoRetryingError(t *testing.T) {
+	d := &seqDoer{responses: [][]byte{
+		mustEnvTaskRetry(t, 11, "error", true),
+		mustEnvTaskRetry(t, 11, "downloading", false),
+		mustEnvTask(t, 11, "completed"),
+	}}
+	pc := &preparedClient{doer: d}
+	prev := waitPollInterval
+	waitPollInterval = time.Millisecond
+	t.Cleanup(func() { waitPollInterval = prev })
+
+	task, err := waitForTerminal(context.Background(), pc, 11, 0)
+	if err != nil {
+		t.Fatalf("wait: %v", err)
+	}
+	if task.Status != "completed" {
+		t.Fatalf("status = %q, want completed", task.Status)
+	}
+}
+
+// TestWaitTimeoutCarriesTaskID pins the recovery contract: a caller that
+// times out still learns which row was left behind.
+func TestWaitTimeoutCarriesTaskID(t *testing.T) {
+	d := &seqDoer{responses: [][]byte{mustEnvTask(t, 12, "moving")}}
+	pc := &preparedClient{doer: d}
+	prev := waitPollInterval
+	waitPollInterval = time.Millisecond
+	t.Cleanup(func() { waitPollInterval = prev })
+
+	last, err := waitForTerminal(context.Background(), pc, 12, 50*time.Millisecond)
+	if err == nil {
+		t.Fatal("expected a timeout error")
+	}
+	if last.ID != 12 {
+		t.Fatalf("last.ID = %d, want 12 so create --wait can still print it", last.ID)
+	}
+}
+
+// TestWaitToleratesTransientPollErrors pins the retry budget: one blip
+// must not abandon a download that is still running.
+func TestWaitToleratesTransientPollErrors(t *testing.T) {
+	d := &seqDoer{
+		responses: [][]byte{nil, mustEnvTask(t, 13, "completed")},
+		errs:      []error{errors.New("connection reset"), nil},
+	}
+	pc := &preparedClient{doer: d}
+	prev := waitPollInterval
+	waitPollInterval = time.Millisecond
+	t.Cleanup(func() { waitPollInterval = prev })
+
+	task, err := waitForTerminal(context.Background(), pc, 13, 0)
+	if err != nil {
+		t.Fatalf("wait: %v", err)
+	}
+	if task.Status != "completed" {
+		t.Fatalf("status = %q, want completed", task.Status)
 	}
 }
 
@@ -89,7 +156,7 @@ func TestWaitForTerminalSuccessAndTimeout(t *testing.T) {
 		mustEnvTask(t, 8, "moving"),
 	}}
 	pc2 := &preparedClient{doer: d2}
-	_, err = waitForTerminal(context.Background(), pc2, 8, 5*time.Millisecond)
+	_, err = waitForTerminal(context.Background(), pc2, 8, 50*time.Millisecond)
 	if err == nil || !strings.Contains(err.Error(), "timed out") || !strings.Contains(err.Error(), "moving") {
 		t.Fatalf("expected timeout with status, got %v", err)
 	}
@@ -105,14 +172,14 @@ func TestWaitTerminalFailureSurfacesAsError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("waitForTerminal: %v", err)
 	}
-	if classifyWaitStatus(task.Status) != "failure" {
+	if classifyWaitStatus(task) != "failure" {
 		t.Fatalf("status %q should be failure", task.Status)
 	}
 }
 
 func TestFetchListAllPages(t *testing.T) {
 	page1, _ := json.Marshal(map[string]interface{}{
-		"code": 200,
+		"code":  200,
 		"total": 3,
 		"list": []map[string]interface{}{
 			{"id": 1, "status": "completed", "will_auto_retry": false},
@@ -120,7 +187,7 @@ func TestFetchListAllPages(t *testing.T) {
 		},
 	})
 	page2, _ := json.Marshal(map[string]interface{}{
-		"code": 200,
+		"code":  200,
 		"total": 3,
 		"list": []map[string]interface{}{
 			{"id": 3, "status": "completed", "will_auto_retry": false},
@@ -142,9 +209,12 @@ func TestFetchListAllPages(t *testing.T) {
 
 type seqDoer struct {
 	responses [][]byte
-	paths     []string
-	onCall    func()
-	i         int
+	// errs, when set, is indexed alongside responses; a non-nil entry
+	// fails that call instead of decoding it.
+	errs   []error
+	paths  []string
+	onCall func()
+	i      int
 }
 
 func (s *seqDoer) DoJSON(_ context.Context, method, path string, body, out interface{}) error {
@@ -155,19 +225,27 @@ func (s *seqDoer) DoJSON(_ context.Context, method, path string, body, out inter
 	if s.i >= len(s.responses) {
 		return json.Unmarshal(s.responses[len(s.responses)-1], out)
 	}
-	raw := s.responses[s.i]
+	idx := s.i
 	s.i++
-	return json.Unmarshal(raw, out)
+	if idx < len(s.errs) && s.errs[idx] != nil {
+		return s.errs[idx]
+	}
+	return json.Unmarshal(s.responses[idx], out)
 }
 
 func mustEnvTask(t *testing.T, id int64, status string) []byte {
+	t.Helper()
+	return mustEnvTaskRetry(t, id, status, false)
+}
+
+func mustEnvTaskRetry(t *testing.T, id int64, status string, willAutoRetry bool) []byte {
 	t.Helper()
 	raw, err := json.Marshal(map[string]interface{}{
 		"code": 200,
 		"data": map[string]interface{}{
 			"id":              id,
 			"status":          status,
-			"will_auto_retry": false,
+			"will_auto_retry": willAutoRetry,
 		},
 	})
 	if err != nil {

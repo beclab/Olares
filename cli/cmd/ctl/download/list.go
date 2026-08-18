@@ -131,6 +131,11 @@ func fetchListAll(ctx context.Context, pc *preparedClient, app, status string, p
 	if pageSize <= 0 {
 		pageSize = listPageSizeDefault
 	}
+	// The server clamps a larger request down without saying so, which
+	// would make the short-page guard below stop after one page.
+	if pageSize > listPageSizeMax {
+		pageSize = listPageSizeMax
+	}
 	var acc []DownloadTask
 	var total int64
 	page := 1

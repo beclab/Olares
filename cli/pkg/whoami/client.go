@@ -215,7 +215,6 @@ func truncate(s string, n int) string {
 	return s[:n] + "...(truncated)"
 }
 
-
 type ctxKeyRequestHeaders struct{}
 
 // ContextWithRequestHeaders attaches extra HTTP headers for a single

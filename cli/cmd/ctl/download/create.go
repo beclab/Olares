@@ -92,7 +92,7 @@ not success; see "wait --help").`,
 	cmd.Flags().StringVar(&torrentFile, "torrent", "", "local .torrent file to upload (base64); the URL argument may be omitted")
 	cmd.Flags().StringVar(&selectFiles, "select-files", "", "comma-separated 1-based file indices for a multi-file torrent (e.g. 1,3,5), or \"all\" (= omit = every file)")
 	cmd.Flags().BoolVar(&waitDone, "wait", false, "after create, poll until a terminal status (same as wait <id>)")
-	cmd.Flags().DurationVar(&timeout, "timeout", 0, "max wait duration when --wait is set (0 = no limit)")
+	cmd.Flags().DurationVar(&timeout, "timeout", 0, "max wait duration when --wait is set (0 = "+waitDefaultTimeout.String()+")")
 	return cmd
 }
 
@@ -250,27 +250,31 @@ func runCreate(ctx context.Context, f *cmdutil.Factory, rawURL, app, path, name,
 	}
 
 	if waitDone {
-		waited, err := waitForTerminal(ctx, pc, task.ID, timeout)
-		if err != nil {
-			return err
+		waited, waitErr := waitForTerminal(ctx, pc, task.ID, timeout)
+		if waited.ID != 0 {
+			task = waited
 		}
-		task = waited
-		if classifyWaitStatus(task.Status) == "failure" {
-			if format == FormatJSON {
-				_ = printJSON(os.Stdout, task)
-			} else {
-				fmt.Printf("Created task %d ended in status=%s\n", task.ID, task.Status)
-			}
+		// The row exists on the server whatever the wait outcome, so the
+		// id has to reach stdout or the caller cannot resume or clean up.
+		if waitErr != nil {
+			emitCreated(format, task)
+			return waitErr
+		}
+		if classifyWaitStatus(task) == "failure" {
+			emitCreated(format, task)
 			return fmt.Errorf("task %d ended in status %q", task.ID, task.Status)
 		}
 	}
 
-	switch format {
-	case FormatJSON:
-		return printJSON(os.Stdout, task)
-	default:
-		fmt.Printf("Created task %d  status=%s  provider=%s  name=%s\n",
-			task.ID, task.Status, task.DownloadProvider, displayName(task))
-		return nil
+	emitCreated(format, task)
+	return nil
+}
+
+func emitCreated(format Format, task DownloadTask) {
+	if format == FormatJSON {
+		_ = printJSON(os.Stdout, task)
+		return
 	}
+	fmt.Printf("Created task %d  status=%s  provider=%s  name=%s\n",
+		task.ID, task.Status, task.DownloadProvider, displayName(task))
 }
