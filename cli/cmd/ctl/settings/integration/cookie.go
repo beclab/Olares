@@ -247,8 +247,10 @@ func parseCookieImportBuckets(
 }
 
 // selectCookieImportBuckets returns the domain buckets to write. An empty
-// filter keeps every host (SPA paste). A filter keeps hosts whose primary
-// domain matches (youtube.com ↔ .youtube.com / music.youtube.com).
+// filter keeps every host (SPA paste). A filter keeps the host itself and
+// its subdomains (youtube.com ↔ .youtube.com / music.youtube.com), without
+// collapsing multi-part public suffixes the way a naive two-label climb
+// would (bbc.co.uk must not match amazon.co.uk).
 func selectCookieImportBuckets(
 	cookies map[string][]cookieparse.Record,
 	filter string,
@@ -276,22 +278,25 @@ func sortedCookieDomains(buckets map[string][]cookieparse.Record) []string {
 	return out
 }
 
-// cookiePrimaryDomain is the two-label climb terminator used by
-// download-server / cookieHostFromURL, applied to a bare cookie host.
-func cookiePrimaryDomain(host string) string {
+func cookieDomainHost(host string) string {
 	host = strings.ToLower(strings.TrimSpace(host))
 	host = strings.TrimPrefix(host, ".")
 	host = strings.TrimPrefix(host, "www.")
-	parts := strings.Split(host, ".")
-	if len(parts) >= 2 {
-		return strings.Join(parts[len(parts)-2:], ".")
-	}
 	return host
 }
 
-func cookieDomainsMatch(a, b string) bool {
-	pa, pb := cookiePrimaryDomain(a), cookiePrimaryDomain(b)
-	return pa != "" && pa == pb
+// cookieDomainsMatch reports whether cookieHost is the filter or a
+// subdomain of it. Symmetric primary-domain equality is intentionally
+// avoided: it over-matches compound TLDs (*.co.uk, *.co.jp, …).
+func cookieDomainsMatch(cookieHost, filterHost string) bool {
+	h, f := cookieDomainHost(cookieHost), cookieDomainHost(filterHost)
+	if h == "" || f == "" {
+		return false
+	}
+	if h == f {
+		return true
+	}
+	return strings.HasSuffix(h, "."+f)
 }
 
 // storeCookies writes one domain's records and returns what was stored.

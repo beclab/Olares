@@ -339,19 +339,25 @@ func TestRunCookieImportRejectsUnusableInput(t *testing.T) {
 	}
 }
 
-func TestCookieDomainsMatchPrimaryHost(t *testing.T) {
+func TestCookieDomainsMatchFilterHost(t *testing.T) {
 	cases := []struct {
-		a, b string
-		want bool
+		host, filter string
+		want         bool
 	}{
 		{".youtube.com", "youtube.com", true},
 		{"music.youtube.com", "youtube.com", true},
-		{".google.com", "youtube.com", false},
 		{"WWW.YouTube.com", "youtube.com", true},
+		{".google.com", "youtube.com", false},
+		{"bbc.co.uk", "bbc.co.uk", true},
+		{".bbc.co.uk", "bbc.co.uk", true},
+		{"www.bbc.co.uk", "bbc.co.uk", true},
+		{"amazon.co.uk", "bbc.co.uk", false},
+		{"example.co.jp", "bbc.co.uk", false},
+		{"notyoutube.com", "youtube.com", false},
 	}
 	for _, tc := range cases {
-		if got := cookieDomainsMatch(tc.a, tc.b); got != tc.want {
-			t.Fatalf("cookieDomainsMatch(%q, %q) = %v, want %v", tc.a, tc.b, got, tc.want)
+		if got := cookieDomainsMatch(tc.host, tc.filter); got != tc.want {
+			t.Fatalf("cookieDomainsMatch(%q, %q) = %v, want %v", tc.host, tc.filter, got, tc.want)
 		}
 	}
 }
