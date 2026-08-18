@@ -5,6 +5,8 @@ package download
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,6 +15,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -43,7 +46,48 @@ const (
 	ytdlpMarketInstall = "olares-cli market install ytdlpv3"
 	// syncLimitMax matches the download-server sync page-size cap.
 	syncLimitMax = 100
+	// listPageSizeDefault matches download-server TaskRepository
+	// defaultPageSize so list --all chunks align with the server.
+	listPageSizeDefault = 100
+	// listPageSizeMax matches download-server TaskRepository maxPageSize.
+	// The server clamps silently, so --all must page at the real size or
+	// it stops early and under-reports.
+	listPageSizeMax = 1000
+	// headerIdempotencyKey is the create replay key (RFC 9110 style).
+	headerIdempotencyKey = "Idempotency-Key"
 )
+
+// waitPollInterval is how often wait / create --wait re-queries info.
+// Mutable in tests so polling cases finish quickly.
+var waitPollInterval = 2 * time.Second
+
+const (
+	// waitDefaultTimeout matches the market / users watch commands so
+	// every long-poll surface in the CLI gives up after the same wait.
+	waitDefaultTimeout = 15 * time.Minute
+	// waitMaxConsecErrors is the transient-error budget before wait
+	// gives up, mirroring market watch.
+	waitMaxConsecErrors = 5
+)
+
+// validTaskStatuses mirrors download-server models.validTaskStatuses
+// (IsValidTaskStatus). Kept as a CSV for --help and a set for local
+// --status validation so illegal values fail before any HTTP call.
+const validTaskStatusValues = "downloading, paused, cancelled, error, completed, waiting, removed, preparing, waiting_to_move, moving, seeding"
+
+var validTaskStatusSet = map[string]struct{}{
+	"downloading":     {},
+	"paused":          {},
+	"cancelled":       {},
+	"error":           {},
+	"completed":       {},
+	"waiting":         {},
+	"removed":         {},
+	"preparing":       {},
+	"waiting_to_move": {},
+	"moving":          {},
+	"seeding":         {},
+}
 
 var taskActionPathRE = regexp.MustCompile(`^/api/download/(?:pause|resume|cancel|info)/(\d+)(?:/|$)`)
 
@@ -119,17 +163,101 @@ func validateSinceID(id int64) error {
 	return nil
 }
 
-// validateDrivePath requires drive/Home/ or drive/Data/ (case-sensitive),
-// matching the create --path contract used by download-server.
-func validateDrivePath(raw string) error {
-	path := strings.TrimSpace(raw)
-	if path == "" {
-		return fmt.Errorf("--path is required")
-	}
-	if strings.HasPrefix(path, "drive/Home/") || strings.HasPrefix(path, "drive/Data/") {
+// validateTaskStatus rejects unknown --status values locally so the
+// CLI fails closed instead of round-tripping to an empty list.
+func validateTaskStatus(raw string) error {
+	s := strings.TrimSpace(raw)
+	if s == "" {
 		return nil
 	}
-	return fmt.Errorf("unsupported --path %q (need a path starting with drive/Home/ or drive/Data/)", raw)
+	if _, ok := validTaskStatusSet[s]; !ok {
+		return fmt.Errorf("unsupported --status %q (allowed: %s)", raw, validTaskStatusValues)
+	}
+	return nil
+}
+
+// newIdempotencyKey returns a fresh create key for one user invoke.
+func newIdempotencyKey() string {
+	var b [16]byte
+	if _, err := rand.Read(b[:]); err != nil {
+		return fmt.Sprintf("cli-%d", time.Now().UnixNano())
+	}
+	return hex.EncodeToString(b[:])
+}
+
+const resourcesPrefix = "/api/resources/"
+
+// normalizeDownloadPath mirrors download-server CreateFileParam for CLI
+// fail-fast: empty (when allowed), bare drive/Home|Data/..., /api/resources/...
+// , or a full Files API URL. Returns the bare drive/... form to POST.
+func normalizeDownloadPath(raw string, allowEmpty bool) (string, error) {
+	path := strings.TrimSpace(raw)
+	if path == "" {
+		if allowEmpty {
+			return "", nil
+		}
+		return "", fmt.Errorf("--path is required")
+	}
+	resource, err := extractDriveResourcePath(path)
+	if err != nil {
+		return "", err
+	}
+	if !isDriveHomeOrDataPath(resource) {
+		return "", fmt.Errorf("unsupported --path %q (need drive/Home/… or drive/Data/…, a Files API /api/resources/… URL, or \"\" for HF cache)", raw)
+	}
+	return resource, nil
+}
+
+func extractDriveResourcePath(raw string) (string, error) {
+	s := strings.TrimSpace(raw)
+	if strings.Contains(s, "://") {
+		u, err := url.Parse(s)
+		if err != nil {
+			return "", fmt.Errorf("unsupported --path %q (invalid URL): %w", raw, err)
+		}
+		s = u.Path
+	}
+	// Anchored on purpose: only a leading /api/resources/ is the Files API
+	// prefix. A bare drive/… destination may legitimately contain those
+	// segments (a folder named api), and matching mid-string would truncate
+	// the path and then reject it.
+	s = strings.TrimPrefix(s, resourcesPrefix)
+	s = strings.TrimLeft(s, "/")
+	if s == "" {
+		return "", fmt.Errorf("unsupported --path %q (no resource path)", raw)
+	}
+	for _, seg := range strings.Split(s, "/") {
+		if seg == ".." {
+			return "", fmt.Errorf("unsupported --path %q (path traversal not allowed)", raw)
+		}
+	}
+	parts := strings.Split(s, "/")
+	if len(parts) < 2 {
+		return "", fmt.Errorf("unsupported --path %q (need drive/Home/… or drive/Data/…)", raw)
+	}
+	if strings.ToLower(parts[0]) != "drive" {
+		return "", fmt.Errorf("unsupported --path %q (only drive destinations are accepted)", raw)
+	}
+	if parts[1] != "Home" && parts[1] != "Data" {
+		return "", fmt.Errorf("unsupported --path %q (drive extend must be Home or Data)", raw)
+	}
+	// Keep the case-sensitive wire form the server expects.
+	parts[0] = "drive"
+	return strings.Join(parts, "/"), nil
+}
+
+func isDriveHomeOrDataPath(resource string) bool {
+	return resource == "drive/Home" ||
+		resource == "drive/Data" ||
+		strings.HasPrefix(resource, "drive/Home/") ||
+		strings.HasPrefix(resource, "drive/Data/")
+}
+
+// validateDrivePath requires a non-empty drive/Home or drive/Data destination
+// (used by file remove).
+func validateDrivePath(raw string) error {
+	_, err := normalizeDownloadPath(raw, false)
+	return err
 }
 
 // ytdlpUnavailableHint is printed when inspect reports Available=false
@@ -210,16 +338,39 @@ func prepare(ctx context.Context, f *cmdutil.Factory) (*preparedClient, error) {
 // dsEnvelope is download-server's response shape: success code 200 (or 0),
 // single object in data, list+total (or list+has_more) at the top level.
 type dsEnvelope struct {
-	Code    int             `json:"code"`
-	Message string          `json:"message"`
-	Data    json.RawMessage `json:"data"`
-	List    json.RawMessage `json:"list"`
-	Total   *int64          `json:"total"`
-	HasMore *bool           `json:"has_more"`
+	Code      int             `json:"code"`
+	Message   string          `json:"message"`
+	ErrorCode string          `json:"error_code"`
+	Data      json.RawMessage `json:"data"`
+	List      json.RawMessage `json:"list"`
+	Total     *int64          `json:"total"`
+	HasMore   *bool           `json:"has_more"`
 	// Batch lifecycle responses carry succeeded/failed at the top level
 	// (alongside code), not under data — see BatchResult.
 	Succeeded json.RawMessage `json:"succeeded"`
 	Failed    json.RawMessage `json:"failed"`
+}
+
+type errorBody struct {
+	Code      int    `json:"code"`
+	Message   string `json:"message"`
+	ErrorCode string `json:"error_code"`
+}
+
+func parseErrorBody(status int, raw string) (code int, message, errorCode string) {
+	code = status
+	message = strings.TrimSpace(raw)
+	var eb errorBody
+	if err := json.Unmarshal([]byte(raw), &eb); err == nil {
+		if eb.Code != 0 {
+			code = eb.Code
+		}
+		if strings.TrimSpace(eb.Message) != "" {
+			message = strings.TrimSpace(eb.Message)
+		}
+		errorCode = strings.TrimSpace(eb.ErrorCode)
+	}
+	return code, message, errorCode
 }
 
 func doGet(ctx context.Context, d Doer, path string, out interface{}) error {
@@ -231,7 +382,8 @@ func doMutate(ctx context.Context, d Doer, method, path string, body, out interf
 	if err := d.DoJSON(ctx, method, path, body, &env); err != nil {
 		var httpErr *whoami.HTTPError
 		if errors.As(err, &httpErr) {
-			if recovery := taskErrorRecovery(method, path, httpErr.Status, string(httpErr.Body), body); recovery != "" {
+			status, msg, errCode := parseErrorBody(httpErr.Status, string(httpErr.Body))
+			if recovery := taskErrorRecovery(method, path, status, msg, errCode, body); recovery != "" {
 				return fmt.Errorf("%w%s", err, recovery)
 			}
 		}
@@ -241,7 +393,7 @@ func doMutate(ctx context.Context, d Doer, method, path string, body, out interf
 	case 0, 200:
 	default:
 		msg := strings.TrimSpace(env.Message)
-		recovery := taskErrorRecovery(method, path, env.Code, msg, body)
+		recovery := taskErrorRecovery(method, path, env.Code, msg, env.ErrorCode, body)
 		if msg == "" {
 			return fmt.Errorf("%s %s: code %d%s", method, path, env.Code, recovery)
 		}
@@ -260,17 +412,6 @@ func doMutate(ctx context.Context, d Doer, method, path string, body, out interf
 		}
 		if env.Total != nil {
 			lr.Total = *env.Total
-		}
-		return nil
-	}
-	if cl, ok := out.(*CookieListResult); ok {
-		if len(env.List) > 0 {
-			if err := json.Unmarshal(env.List, &cl.List); err != nil {
-				return fmt.Errorf("%s %s: decode list: %w", method, path, err)
-			}
-		}
-		if env.Total != nil {
-			cl.Total = *env.Total
 		}
 		return nil
 	}
@@ -376,7 +517,7 @@ func cookieRequiredHint(rawURL string) string {
 		" --file cookies.txt`"
 }
 
-func taskErrorRecovery(method, path string, status int, message string, body interface{}) string {
+func taskErrorRecovery(method, path string, status int, message, errorCode string, body interface{}) string {
 	lowerMsg := strings.ToLower(message)
 	taskID := ""
 	if taskPathMatch := taskActionPathRE.FindStringSubmatch(path); len(taskPathMatch) > 0 {
@@ -404,22 +545,55 @@ func taskErrorRecovery(method, path string, status int, message string, body int
 		}
 	}
 
+	// Prefer stable machine-readable codes from download-server; message
+	// matching remains as a fallback for older servers / unknown codes.
+	switch errorCode {
+	case "task_in_mover_phase":
+		if taskID != "" {
+			return fmt.Sprintf(
+				"; wait for the move to finish, then retry; inspect progress with `olares-cli knowledge download info %s`",
+				taskID,
+			)
+		}
+	case "illegal_pause_status":
+		if taskID != "" {
+			return fmt.Sprintf(
+				"; pause only works while downloading or waiting; inspect status with `olares-cli knowledge download info %s`",
+				taskID,
+			)
+		}
+	case "dependency_unavailable":
+		if shouldHintYTDLPUnavailable(message) || message == "" {
+			return "; " + ytdlpUnavailableHint()
+		}
+		return "; dependency unavailable; retry later or check provider status"
+	case "task_not_found":
+		return "; refresh task IDs with `olares-cli knowledge download list`"
+	case "invalid_path", "invalid_params":
+		if method == "POST" && path == "/api/download" {
+			return "; check --path/--url/--extra (duplicate URL creates a new task; use `olares-cli knowledge download list` to inspect existing ones)"
+		}
+	}
+
 	switch {
-	case method == "POST" && path == "/api/download" && status == 409 &&
-		(strings.Contains(lowerMsg, "already") ||
-			strings.Contains(lowerMsg, "exist") ||
-			strings.Contains(lowerMsg, "registered")):
-		return "; inspect existing tasks with `olares-cli knowledge download list`"
 	// 501 is the download-server contract for "this URL needs cookies".
 	case status == cookieRequiredCode:
 		return "; " + cookieRequiredHint(createURL)
 	case method == "POST" && path == "/api/download" && shouldHintYTDLPUnavailable(message):
 		return "; " + ytdlpUnavailableHint()
+	case method == "POST" && path == "/api/download" && status == 400:
+		return "; check --path/--url/--extra (duplicate URL creates a new task; use `olares-cli knowledge download list` to inspect existing ones)"
 	case strings.Contains(path, "/api/url/inspect") && shouldHintInspectTimeout(message):
 		return "; channel/RSS probes can exceed the server inspect timeout; retry later or create the task directly if the URL is known good"
 	case taskID != "" && status == 409:
+		// resume / cancel / remove during yt-dlp mover phase
 		return fmt.Sprintf(
 			"; wait for the move to finish, then retry; inspect progress with `olares-cli knowledge download info %s`",
+			taskID,
+		)
+	case taskID != "" && strings.Contains(path, "/pause/") && status == 400:
+		return fmt.Sprintf(
+			"; pause only works while downloading or waiting; inspect status with `olares-cli knowledge download info %s`",
 			taskID,
 		)
 	case taskID != "" &&

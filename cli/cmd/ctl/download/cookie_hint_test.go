@@ -85,11 +85,11 @@ func TestTaskCookieHintUsesTheTaskURL(t *testing.T) {
 func TestTaskErrorRecoveryHintsCookieImportOnCreate(t *testing.T) {
 	req := NewDownloadReq{URL: "https://www.youtube.com/watch?v=abc"}
 
-	got := taskErrorRecovery("POST", "/api/download", 501, "cookies required", req)
+	got := taskErrorRecovery("POST", "/api/download", 501, "cookies required", "", req)
 	if !strings.Contains(got, wantImportPrefix+"youtube.com") {
 		t.Fatalf("501 status recovery = %q", got)
 	}
-	got = taskErrorRecovery("POST", "/api/download", 501, "cookies required", &req)
+	got = taskErrorRecovery("POST", "/api/download", 501, "cookies required", "", &req)
 	if !strings.Contains(got, wantImportPrefix+"youtube.com") {
 		t.Fatalf("501 status recovery with pointer body = %q", got)
 	}

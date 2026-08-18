@@ -4,13 +4,16 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
+	"github.com/beclab/Olares/cli/pkg/whoami"
 )
 
 func NewCreateCommand(f *cmdutil.Factory) *cobra.Command {
@@ -23,6 +26,8 @@ func NewCreateCommand(f *cmdutil.Factory) *cobra.Command {
 		extraRaw    string
 		torrentFile string
 		selectFiles string
+		waitDone    bool
+		timeout     time.Duration
 		output      string
 	)
 	cmd := &cobra.Command{
@@ -43,15 +48,21 @@ to download every file.
 --quality accepts: ` + ytdlpQualityValues + `.
 --format-id selects a specific yt-dlp format.
 --extra accepts additional provider options as a JSON object of strings.
---path must start with drive/Home/ or drive/Data/, e.g.
-  --path drive/Home/Pictures/
-The names "drive", "Home", and "Data" are case-sensitive. Browser URLs and
-bare Home/... paths are not accepted. The default is ` + defaultDownloadPath + `.
+--path is normalized like download-server CreateFileParam:
+  drive/Home/… or drive/Data/…, /api/resources/drive/…, or a full Files
+  API URL. "Home" and "Data" are case-sensitive. Browser Files UI paths
+  and bare Home/… are rejected. The default is ` + defaultDownloadPath + `.
 Pass --path "" when the provider should choose the destination.
 
 For HuggingFace, set _hf_dest in --extra:
   local (default) downloads under <path>/<repoID>/.
-  cache downloads to the shared HuggingFace cache and ignores --path/--name.`,
+  cache downloads to the shared HuggingFace cache and ignores --path/--name.
+
+Re-submitting the same URL always creates a new task (no duplicate 409).
+Each create sends a fresh Idempotency-Key so transport retries of the
+same attempt reuse one key; a second user invoke still inserts a new
+row. Use --wait to poll until a true terminal status (mover phases are
+not success; see "wait --help").`,
 		Example: `  # URL
   olares-cli knowledge download create 'https://host/v?a=1&b=2'
 
@@ -69,18 +80,20 @@ For HuggingFace, set _hf_dest in --extra:
 			if len(args) > 0 {
 				rawURL = args[0]
 			}
-			return runCreate(c.Context(), f, rawURL, app, path, name, quality, formatID, extraRaw, torrentFile, selectFiles, output)
+			return runCreate(c.Context(), f, rawURL, app, path, name, quality, formatID, extraRaw, torrentFile, selectFiles, waitDone, timeout, output)
 		},
 	}
 	addAppFlag(cmd, &app)
 	addOutputFlag(cmd, &output)
-	cmd.Flags().StringVar(&path, "path", defaultDownloadPath, "destination starting with drive/Home/ or drive/Data/ (e.g. drive/Home/Pictures/); \"\" lets the server decide")
+	cmd.Flags().StringVar(&path, "path", defaultDownloadPath, "destination: drive/Home|Data/…, Files API URL, or \"\" for HF cache")
 	cmd.Flags().StringVar(&name, "name", "", "suggested file_name (ignored for HuggingFace: repo id / cache layout wins)")
 	cmd.Flags().StringVar(&quality, "quality", "", "yt-dlp quality preset (one of: "+ytdlpQualityValues+")")
 	cmd.Flags().StringVar(&formatID, "format-id", "", "yt-dlp format_id override")
 	cmd.Flags().StringVar(&extraRaw, "extra", "", "JSON object merged into extra (string values)")
 	cmd.Flags().StringVar(&torrentFile, "torrent", "", "local .torrent file to upload (base64); the URL argument may be omitted")
 	cmd.Flags().StringVar(&selectFiles, "select-files", "", "comma-separated 1-based file indices for a multi-file torrent (e.g. 1,3,5), or \"all\" (= omit = every file)")
+	cmd.Flags().BoolVar(&waitDone, "wait", false, "after create, poll until a terminal status (same as wait <id>)")
+	cmd.Flags().DurationVar(&timeout, "timeout", 0, "max wait duration when --wait is set (0 = "+waitDefaultTimeout.String()+")")
 	return cmd
 }
 
@@ -146,13 +159,19 @@ func readTorrentFile(path, flag string) ([]byte, error) {
 	return raw, nil
 }
 
-func runCreate(ctx context.Context, f *cmdutil.Factory, rawURL, app, path, name, quality, formatID, extraRaw, torrentFile, selectFiles, outputRaw string) error {
+func runCreate(ctx context.Context, f *cmdutil.Factory, rawURL, app, path, name, quality, formatID, extraRaw, torrentFile, selectFiles string, waitDone bool, timeout time.Duration, outputRaw string) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
 	format, err := parseFormat(outputRaw)
 	if err != nil {
 		return err
+	}
+	if timeout < 0 {
+		return fmt.Errorf("unsupported --timeout %s (need >= 0)", timeout)
+	}
+	if timeout > 0 && !waitDone {
+		return fmt.Errorf("--timeout requires --wait")
 	}
 	rawURL = strings.TrimSpace(rawURL)
 	torrentFile = strings.TrimSpace(torrentFile)
@@ -203,10 +222,15 @@ func runCreate(ctx context.Context, f *cmdutil.Factory, rawURL, app, path, name,
 		extra["selected_files"] = csv
 	}
 
+	normalizedPath, err := normalizeDownloadPath(path, true)
+	if err != nil {
+		return err
+	}
+
 	req := NewDownloadReq{
 		URL:      rawURL,
 		App:      app,
-		Path:     strings.TrimSpace(path),
+		Path:     normalizedPath,
 		FileName: strings.TrimSpace(name),
 	}
 	if len(extra) > 0 {
@@ -218,17 +242,49 @@ func runCreate(ctx context.Context, f *cmdutil.Factory, rawURL, app, path, name,
 		return err
 	}
 
+	idemKey := newIdempotencyKey()
+	createCtx := whoami.ContextWithRequestHeaders(ctx, map[string]string{headerIdempotencyKey: idemKey})
+
 	var task DownloadTask
-	if err := doMutate(ctx, pc.doer, "POST", "/api/download", req, &task); err != nil {
+	if err := doMutate(createCtx, pc.doer, "POST", "/api/download", req, &task); err != nil {
 		return err
 	}
 
-	switch format {
-	case FormatJSON:
-		return printJSON(os.Stdout, task)
-	default:
-		fmt.Printf("Created task %d  status=%s  provider=%s  name=%s\n",
-			task.ID, task.Status, task.DownloadProvider, displayName(task))
-		return nil
+	if waitDone {
+		waited, waitErr := waitForTerminal(ctx, pc, task.ID, timeout)
+		if waited.ID != 0 {
+			task = waited
+		}
+		// The row exists on the server whatever the wait outcome, so the
+		// id has to reach stdout or the caller cannot resume or clean up.
+		if waitErr != nil {
+			return errors.Join(waitErr, emitCreated(format, task))
+		}
+		if classifyWaitStatus(task) == "failure" {
+			return errors.Join(
+				fmt.Errorf("task %d ended in status %q", task.ID, task.Status),
+				emitCreated(format, task),
+			)
+		}
 	}
+
+	return emitCreated(format, task)
+}
+
+// emitCreated writes the created (or settled) row to stdout. The task id
+// is load-bearing — it is the only handle for a later resume or cleanup —
+// so a failed write is reported, with the id kept in the error text so it
+// still reaches the user on stderr.
+func emitCreated(format Format, task DownloadTask) error {
+	var err error
+	if format == FormatJSON {
+		err = printJSON(os.Stdout, task)
+	} else {
+		_, err = fmt.Printf("Created task %d  status=%s  provider=%s  name=%s\n",
+			task.ID, task.Status, task.DownloadProvider, displayName(task))
+	}
+	if err != nil {
+		return fmt.Errorf("write created task %d: %w", task.ID, err)
+	}
+	return nil
 }
