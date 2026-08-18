@@ -399,9 +399,19 @@ func TestParseCookieImportBucketsMultiDomainAndFilter(t *testing.T) {
 }
 
 func TestParseCookieImportBucketsHeaderNeedsDomain(t *testing.T) {
+	const want = "this input is a browser Cookie header, which carries no domain; re-run with --domain <host> (for example --domain youtube.com)"
+
 	_, _, err := parseCookieImportBuckets("SID=sid-value; HSID=hsid-value", cookieparse.FormatHeader, "")
-	if err == nil || !strings.Contains(err.Error(), "--domain") {
-		t.Fatalf("err = %v, want bare header to require --domain", err)
+	if err == nil {
+		t.Fatal("want bare header without --domain to fail")
+	}
+	if err.Error() != want {
+		t.Fatalf("err = %q, want %q", err.Error(), want)
+	}
+	for _, leak := range []string{"SID", "HSID", "sid-value", "hsid-value", "no usable cookies", "first problem"} {
+		if strings.Contains(err.Error(), leak) {
+			t.Fatalf("error must not contain %q: %q", leak, err.Error())
+		}
 	}
 
 	buckets, _, err := parseCookieImportBuckets("SID=sid-value; HSID=hsid-value", cookieparse.FormatHeader, "youtube.com")
@@ -410,6 +420,43 @@ func TestParseCookieImportBucketsHeaderNeedsDomain(t *testing.T) {
 	}
 	if len(buckets) != 1 || len(buckets["youtube.com"]) != 2 {
 		t.Fatalf("buckets = %+v", buckets)
+	}
+}
+
+func TestParseCookieImportBucketsPreservesOtherFailures(t *testing.T) {
+	_, _, err := parseCookieImportBuckets("not-a-cookie-line", cookieparse.FormatHeader, "youtube.com")
+	if err == nil {
+		t.Fatal("want malformed header with --domain to fail")
+	}
+	msg := err.Error()
+	if !strings.Contains(msg, "no usable cookies found; first problem:") {
+		t.Fatalf("err = %q, want first-problem message", msg)
+	}
+	if strings.Contains(msg, "browser Cookie header") {
+		t.Fatalf("must not use the bare-header --domain hint: %q", msg)
+	}
+
+	_, _, err = parseCookieImportBuckets("# Netscape HTTP Cookie File\n# empty\n", cookieparse.FormatNetscape, "")
+	if err == nil {
+		t.Fatal("want empty netscape to fail")
+	}
+	if err.Error() != "no cookies found in the input" {
+		t.Fatalf("err = %q, want no cookies found", err.Error())
+	}
+
+	_, _, err = parseCookieImportBuckets(
+		".youtube.com\tTRUE\trelative\tFALSE\t0\tSID\tsecret\n",
+		cookieparse.FormatNetscape,
+		"",
+	)
+	if err == nil {
+		t.Fatal("want invalid netscape rows to fail")
+	}
+	if !strings.Contains(err.Error(), "no usable cookies found; first problem: invalid path") {
+		t.Fatalf("err = %q, want first problem: invalid path", err.Error())
+	}
+	if strings.Contains(err.Error(), "secret") {
+		t.Fatalf("error must not embed cookie value: %q", err.Error())
 	}
 }
 

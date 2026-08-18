@@ -114,7 +114,7 @@ func (netscapeParser) Parse(text, domain string) (*Result, error) {
 		if raw := strings.TrimSpace(fields[4]); raw != "" {
 			parsed, err := strconv.ParseInt(raw, 10, 64)
 			if err != nil || parsed < 0 {
-				result.reject("invalid expiration %q", raw)
+				result.reject("invalid expiration")
 				continue
 			}
 			expires = parsed
@@ -125,7 +125,7 @@ func (netscapeParser) Parse(text, domain string) (*Result, error) {
 			path = "/"
 		}
 		if !strings.HasPrefix(path, "/") {
-			result.reject("invalid path %q", path)
+			result.reject("invalid path")
 			continue
 		}
 

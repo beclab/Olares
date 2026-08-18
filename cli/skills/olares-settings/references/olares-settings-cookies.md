@@ -33,7 +33,7 @@ Import when a download or collection fails for a login reason. The CLI already p
 
 **Prefer `header` when a `cookies.txt` export is missing the login.** The browser *request* `Cookie:` header carries httpOnly cookies (httpOnly blocks JS, not the browser). YouTube login lives in httpOnly cookies such as `__Secure-3PSID` / `SID` / `HSID`. DevTools → Network → reload → document request → Request Headers → copy the `Cookie:` line.
 
-A request-style header needs `--domain`. A `Set-Cookie:` line carries its own attributes.
+A request-style header needs `--domain`. A `Set-Cookie:` line carries its own attributes. Auto-detect recognises a bare `a=b; c=d` line as `header`; without `--domain` the import still fails asking for one — that is expected.
 
 ## Domain flag
 
@@ -46,9 +46,12 @@ Download failure hints include `--domain` so a full browser export only updates 
 ```bash
 olares-cli settings integration cookie import --file cookies.txt
 olares-cli settings integration cookie import --domain youtube.com --file cookies.txt
+olares-cli settings integration cookie import --domain youtube.com --file www.youtube.com_cookies.txt
 pbpaste | olares-cli settings integration cookie import --domain youtube.com --file - --format header
 olares-cli settings integration cookie import --domain youtube.com --file extra.txt --merge
 ```
+
+`--file www.youtube.com_cookies.txt` works when that file is a single-line request Cookie header (`a=b; c=d`); auto-detect picks `header`, but `--domain` is still required.
 
 No flag takes the cookie value as an argument (`ps` / shell history). Always `--file` or `--file -`.
 
@@ -75,7 +78,8 @@ olares-cli settings integration cookie rm youtube.com
 |---|---|---|
 | `no cookies found in the input` | Wrong `--format`, or empty export | Explicit `--format`; confirm export is not empty |
 | `input looks like JSON, not a Netscape cookies.txt file` | JSON with `--format netscape` | `--format json` or drop `--format` |
-| bare Cookie header needs `--domain` | Request-style `a=b; c=d` has no domain | Pass `--domain <host>` |
+| `could not tell which cookie format this is` | Ambiguous paste | Pass `--format netscape\|json\|header`; a `;`+`=` line that still fails auto is almost always a Cookie header → `--format header --domain <host>` |
+| `this input is a browser Cookie header, which carries no domain; re-run with --domain <host> (for example --domain youtube.com)` | Request-style `a=b; c=d` has no domain | Pass `--domain <host>` |
 | `no cookies for domain X in the input` | Filter matched no host in the file | Drop `--domain`, or use a host that appears in the export |
 | Import OK but downloads still need login | Export dropped httpOnly cookies | Re-import via the `header` path above |
 | `no cookies stored for <domain>` | Never imported, or different domain string | `cookie list` for exact domains |

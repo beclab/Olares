@@ -226,11 +226,13 @@ func parseCookieImportBuckets(
 		}
 	}
 	if parsed.Count() == 0 {
+		// Request-style Cookie headers never carry a Domain attribute.
+		if domainFilter == "" && detected == cookieparse.FormatHeader {
+			return nil, detected, fmt.Errorf(
+				"this input is a browser Cookie header, which carries no domain; re-run with --domain <host> (for example --domain youtube.com)")
+		}
 		if len(parsed.InvalidLines) > 0 {
 			return nil, detected, fmt.Errorf("no usable cookies found; first problem: %s", parsed.InvalidLines[0])
-		}
-		if domainFilter == "" {
-			return nil, detected, fmt.Errorf("no cookies found in the input (a bare Cookie header needs --domain)")
 		}
 		return nil, detected, fmt.Errorf("no cookies found in the input")
 	}

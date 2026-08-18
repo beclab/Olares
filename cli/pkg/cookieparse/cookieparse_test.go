@@ -238,6 +238,68 @@ func TestHeaderSplitsABrowserCookieLine(t *testing.T) {
 	}
 }
 
+func TestHeaderDetectsASingleLineBrowserCookie(t *testing.T) {
+	// YouTube / DevTools style: one long request Cookie line, no tabs,
+	// no Set-Cookie attributes — must clear Detect's threshold of 5.
+	text := "SID=sid-value; HSID=hsid-value; PREF=tz=Asia.Shanghai; __Secure-3PSID=psid"
+
+	p := Detect(text)
+	if p == nil || p.Format() != FormatHeader {
+		t.Fatalf("Detect = %v, want header", p)
+	}
+	if score := (headerParser{}).Detect(text); score < 5 {
+		t.Fatalf("header Detect score = %d, want >= 5", score)
+	}
+	if (netscapeParser{}).Detect(text) >= 5 {
+		t.Fatalf("netscape must not claim a Cookie header")
+	}
+	if (jsonParser{}).Detect(text) != 0 {
+		t.Fatalf("json must not claim a Cookie header")
+	}
+
+	res, format, err := Parse(text, FormatAuto, ".youtube.com")
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	if format != FormatHeader {
+		t.Fatalf("detected format = %q, want header", format)
+	}
+	if got := res.Count(); got != 4 {
+		t.Fatalf("parsed %d records, want 4", got)
+	}
+}
+
+func TestDetectKeepsNetscapeOverHeader(t *testing.T) {
+	text := "# Netscape HTTP Cookie File\n" +
+		".youtube.com\tTRUE\t/\tFALSE\t0\tSID\tsid-value\n" +
+		".youtube.com\tTRUE\t/\tTRUE\t0\tHSID\thsid-value\n"
+
+	p := Detect(text)
+	if p == nil || p.Format() != FormatNetscape {
+		t.Fatalf("Detect = %v, want netscape", p)
+	}
+}
+
+func TestHeaderDetectsCookiePrefixedBrowserLine(t *testing.T) {
+	text := "Cookie: SID=sid-value; HSID=hsid-value"
+
+	p := Detect(text)
+	if p == nil || p.Format() != FormatHeader {
+		t.Fatalf("Detect = %v, want header", p)
+	}
+
+	res, format, err := Parse(text, FormatAuto, "youtube.com")
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	if format != FormatHeader {
+		t.Fatalf("detected format = %q, want header", format)
+	}
+	if got := res.Count(); got != 2 {
+		t.Fatalf("parsed %d records, want 2", got)
+	}
+}
+
 func TestHeaderRequiresADomainForBrowserLines(t *testing.T) {
 	res, _, err := Parse("SID=sid-value; HSID=hsid-value", FormatHeader, "")
 	if err != nil {
@@ -246,8 +308,55 @@ func TestHeaderRequiresADomainForBrowserLines(t *testing.T) {
 	if res.Count() != 0 {
 		t.Fatalf("parsed %d records, want 0 without a domain", res.Count())
 	}
-	if len(res.InvalidLines) != 2 {
-		t.Fatalf("invalid lines = %v, want one per pair", res.InvalidLines)
+	if len(res.InvalidLines) != 1 {
+		t.Fatalf("invalid lines = %v, want one reject for the whole line", res.InvalidLines)
+	}
+	msg := res.InvalidLines[0]
+	if !strings.Contains(msg, "pass --domain") {
+		t.Fatalf("invalid = %q, want pass --domain", msg)
+	}
+	for _, name := range []string{"SID", "HSID", "sid-value", "hsid-value"} {
+		if strings.Contains(msg, name) {
+			t.Fatalf("InvalidLines must not embed cookie name/value %q: %q", name, msg)
+		}
+	}
+}
+
+func TestHeaderSetCookieMissingDomainOmitsName(t *testing.T) {
+	res, _, err := Parse("Set-Cookie: SID=sid-value; Path=/", FormatHeader, "")
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	if res.Count() != 0 {
+		t.Fatalf("parsed %d, want 0", res.Count())
+	}
+	if len(res.InvalidLines) != 1 {
+		t.Fatalf("invalid = %v", res.InvalidLines)
+	}
+	msg := res.InvalidLines[0]
+	if !strings.Contains(msg, "pass --domain") {
+		t.Fatalf("invalid = %q, want pass --domain", msg)
+	}
+	for _, leak := range []string{"SID", "sid-value"} {
+		if strings.Contains(msg, leak) {
+			t.Fatalf("InvalidLines must not embed %q: %q", leak, msg)
+		}
+	}
+}
+
+func TestJSONMissingDomainOmitsName(t *testing.T) {
+	res, _, err := Parse(`[{"name":"SID","value":"secret"}]`, FormatJSON, "")
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	if len(res.InvalidLines) != 1 {
+		t.Fatalf("invalid = %v", res.InvalidLines)
+	}
+	msg := res.InvalidLines[0]
+	for _, leak := range []string{"SID", "secret"} {
+		if strings.Contains(msg, leak) {
+			t.Fatalf("InvalidLines must not embed %q: %q", leak, msg)
+		}
 	}
 }
 
@@ -329,8 +438,7 @@ func TestInvalidLinesNeverEchoSecrets(t *testing.T) {
 	const secret = "super-secret-cookie-value"
 
 	t.Run("netscape short line", func(t *testing.T) {
-		// Six fields only; the dangling secret would previously have been
-		// echoed wholesale in InvalidLines.
+		// Six fields only — the dangling seventh fragment is a secret.
 		res, _, err := Parse(".youtube.com\tTRUE\t/\tFALSE\t0\t"+secret, FormatNetscape, "")
 		if err != nil {
 			t.Fatalf("parse: %v", err)
@@ -357,6 +465,22 @@ func TestInvalidLinesNeverEchoSecrets(t *testing.T) {
 		assertInvalidLinesSafe(t, res.InvalidLines, secret)
 	})
 
+	t.Run("netscape secret in path column", func(t *testing.T) {
+		res, _, err := Parse(".youtube.com\tTRUE\t"+secret+"\tFALSE\t0\tSID\tok", FormatNetscape, "")
+		if err != nil {
+			t.Fatalf("parse: %v", err)
+		}
+		assertInvalidLinesSafe(t, res.InvalidLines, secret)
+	})
+
+	t.Run("netscape secret in expiration column", func(t *testing.T) {
+		res, _, err := Parse(".youtube.com\tTRUE\t/\tFALSE\t"+secret+"\tSID\tok", FormatNetscape, "")
+		if err != nil {
+			t.Fatalf("parse: %v", err)
+		}
+		assertInvalidLinesSafe(t, res.InvalidLines, secret)
+	})
+
 	t.Run("json nameless object", func(t *testing.T) {
 		res, _, err := Parse(`[{"value":"`+secret+`","domain":".youtube.com"}]`, FormatJSON, "")
 		if err != nil {
@@ -370,6 +494,14 @@ func TestInvalidLinesNeverEchoSecrets(t *testing.T) {
 
 	t.Run("header empty name", func(t *testing.T) {
 		res, _, err := Parse("Set-Cookie: ="+secret+"; Domain=.youtube.com", FormatHeader, "")
+		if err != nil {
+			t.Fatalf("parse: %v", err)
+		}
+		assertInvalidLinesSafe(t, res.InvalidLines, secret)
+	})
+
+	t.Run("header secret in expires attribute", func(t *testing.T) {
+		res, _, err := Parse("Set-Cookie: SID=ok; Domain=.youtube.com; Expires="+secret, FormatHeader, "")
 		if err != nil {
 			t.Fatalf("parse: %v", err)
 		}

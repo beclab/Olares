@@ -162,8 +162,11 @@ func Parse(text string, format Format, domain string) (*Result, Format, error) {
 	if format == FormatAuto {
 		p := Detect(text)
 		if p == nil {
-			return nil, "", fmt.Errorf(
-				"could not tell which cookie format this is; pass --format netscape|json|header")
+			msg := "could not tell which cookie format this is; pass --format netscape|json|header"
+			if strings.Contains(text, ";") && strings.Contains(text, "=") {
+				msg += "; a Cookie request header needs --format header --domain <host>"
+			}
+			return nil, "", fmt.Errorf("%s", msg)
 		}
 		res, err := p.Parse(text, domain)
 		return res, p.Format(), err

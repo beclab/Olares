@@ -57,7 +57,7 @@ func (jsonParser) Parse(text, domain string) (*Result, error) {
 			recordDomain = domain
 		}
 		if recordDomain == "" {
-			result.reject("cookie %q has no domain; pass --domain", item.Name)
+			result.reject("cookie has no domain; pass --domain")
 			continue
 		}
 

@@ -23,14 +23,28 @@ func (headerParser) Detect(text string) int {
 		}
 		sampled++
 
-		if strings.HasPrefix(strings.ToLower(trimmed), "set-cookie:") {
+		lower := strings.ToLower(trimmed)
+		if strings.HasPrefix(lower, "set-cookie:") {
 			score += 10
 			continue
 		}
-		if hasCookieAttribute(trimmed) {
+
+		// Strip optional "Cookie:" so a DevTools paste matches a bare line.
+		line := trimmed
+		if strings.HasPrefix(lower, "cookie:") {
+			line = strings.TrimSpace(trimmed[len("cookie:"):])
+		}
+
+		// Request Cookie lines (`a=b; c=d`) must clear Detect's threshold of 5.
+		parts := splitAndTrim(line, ";")
+		if isBrowserCookieLine(parts) {
+			score += 10
+			continue
+		}
+		if hasCookieAttribute(line) {
 			score += 5
 		}
-		if strings.Contains(trimmed, ";") && strings.Contains(trimmed, "=") {
+		if strings.Contains(line, ";") && strings.Contains(line, "=") {
 			score += 2
 		}
 	}
@@ -114,13 +128,14 @@ func isBrowserCookieLine(parts []string) bool {
 // a header carries no metadata, so the domain must come from the caller;
 // path defaults to "/" and the flags stay false, matching the SPA.
 func parseBrowserCookieLine(result *Result, parts []string, domain string) {
+	if domain == "" {
+		// One reject for the whole line — never per pair, never embed names.
+		result.reject("a browser Cookie header carries no domain; pass --domain")
+		return
+	}
 	for _, part := range parts {
 		name, value, ok := splitPair(part)
 		if !ok || name == "" {
-			continue
-		}
-		if domain == "" {
-			result.reject("a browser Cookie header carries no domain; pass --domain (offending pair: %s)", name)
 			continue
 		}
 		rec := Record{
@@ -169,7 +184,7 @@ func parseSetCookieLine(result *Result, parts []string, domain string) {
 			if t, ok := parseHeaderDate(attrValue); ok {
 				expires = t
 			} else {
-				result.reject("invalid expires date %q", attrValue)
+				result.reject("invalid expires date")
 			}
 		case "max-age":
 			if seconds, err := strconv.ParseInt(strings.TrimSpace(attrValue), 10, 64); err == nil {
@@ -182,7 +197,7 @@ func parseSetCookieLine(result *Result, parts []string, domain string) {
 		rec.Domain = domain
 	}
 	if rec.Domain == "" {
-		result.reject("cookie %q has no Domain attribute; pass --domain", name)
+		result.reject("cookie has no Domain attribute; pass --domain")
 		return
 	}
 	if rec.Path == "" {
