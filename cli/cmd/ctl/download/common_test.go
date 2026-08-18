@@ -135,15 +135,24 @@ func TestDoMutateErrorCode(t *testing.T) {
 }
 
 func TestDoMutateAddsRecoveryForKnownTaskErrors(t *testing.T) {
-	d := &fakeDoer{resp: []byte(`{"code":409,"message":"task already exists"}`)}
+	d := &fakeDoer{resp: []byte(`{"code":400,"message":"unsupported file type"}`)}
 	err := doMutate(context.Background(), d, "POST", "/api/download", nil, nil)
 	if err == nil {
 		t.Fatal("expected error")
 	}
-	for _, want := range []string{"task already exists", "olares-cli knowledge download list"} {
+	for _, want := range []string{"unsupported file type", "duplicate URL creates a new task", "olares-cli knowledge download list"} {
 		if !strings.Contains(err.Error(), want) {
-			t.Fatalf("error %q missing %q", err, want)
+			t.Fatalf("create 400 %q missing %q", err, want)
 		}
+	}
+
+	d = &fakeDoer{resp: []byte(`{"code":409,"message":"task already exists"}`)}
+	err = doMutate(context.Background(), d, "POST", "/api/download", nil, nil)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if strings.Contains(err.Error(), "knowledge download list") {
+		t.Fatalf("obsolete create-409 duplicate recovery still present: %q", err)
 	}
 
 	d = &fakeDoer{resp: []byte(`{"code":409,"message":"preference already exists"}`)}
@@ -161,14 +170,14 @@ func TestDoMutateAddsRecoveryForKnownTaskErrors(t *testing.T) {
 		t.Fatalf("task 404 should refresh IDs, got %v", err)
 	}
 
-	d = &fakeDoer{resp: []byte(`{"code":409,"message":"GID xxxx isalready registered"}`)}
-	err = doMutate(context.Background(), d, "POST", "/api/download", nil, nil)
+	d = &fakeDoer{resp: []byte(`{"code":400,"message":"cannot pause in status \"waiting_to_move\""}`)}
+	err = doMutate(context.Background(), d, "PUT", "/api/download/pause/42", nil, nil)
 	if err == nil {
 		t.Fatal("expected error")
 	}
-	for _, want := range []string{"isalready registered", "olares-cli knowledge download list"} {
+	for _, want := range []string{"cannot pause", "pause only works while downloading or waiting", "olares-cli knowledge download info 42"} {
 		if !strings.Contains(err.Error(), want) {
-			t.Fatalf("duplicate torrent %q missing %q", err, want)
+			t.Fatalf("pause 400 %q missing %q", err, want)
 		}
 	}
 
@@ -392,14 +401,64 @@ func TestDoMutateSyncEnvelope(t *testing.T) {
 	}
 }
 
-func TestDoMutateCookieListEnvelope(t *testing.T) {
-	d := &fakeDoer{resp: []byte(`{"code":200,"total":1,"list":[{"domain":"youtube.com","provider":"yt-dlp","has_cookie":true,"updated_at":1700000000}]}`)}
-	var res CookieListResult
-	if err := doGet(context.Background(), d, "/api/integration/cookies", &res); err != nil {
-		t.Fatal(err)
+func TestNormalizeDownloadPath(t *testing.T) {
+	cases := []struct {
+		raw        string
+		allowEmpty bool
+		want       string
+		wantErr    bool
+	}{
+		{raw: "", allowEmpty: true, want: ""},
+		{raw: "", allowEmpty: false, wantErr: true},
+		{raw: "drive/Home/Downloads/", want: "drive/Home/Downloads/"},
+		{raw: "drive/Data/cache/y", want: "drive/Data/cache/y"},
+		{raw: "drive/Home", want: "drive/Home"},
+		{raw: "/api/resources/drive/Home/Pictures/", want: "drive/Home/Pictures/"},
+		{raw: "https://files.alice.olares.cn/api/resources/drive/Home/Pictures/clip.mp4", want: "drive/Home/Pictures/clip.mp4"},
+		// A destination that merely contains the Files API segments (a
+		// folder named api) must survive intact — only a leading prefix
+		// is stripped.
+		{raw: "drive/Home/api/resources/clips/", want: "drive/Home/api/resources/clips/"},
+		{raw: "https://files.alice.olares.cn/api/resources/drive/Home/api/resources/clip.mp4", want: "drive/Home/api/resources/clip.mp4"},
+		{raw: "Home/Downloads/x", wantErr: true},
+		{raw: "drive/home/x", wantErr: true},
+		{raw: "drive/Cache/x", wantErr: true},
+		{raw: "https://files.alice.olares.cn/Files/Home/x", wantErr: true},
+		{raw: "drive/Home/../Data/x", wantErr: true},
 	}
-	if res.Total != 1 || len(res.List) != 1 || res.List[0].Domain != "youtube.com" || !res.List[0].HasCookie {
-		t.Fatalf("unexpected cookie list: %+v", res)
+	for _, tc := range cases {
+		got, err := normalizeDownloadPath(tc.raw, tc.allowEmpty)
+		if tc.wantErr {
+			if err == nil {
+				t.Fatalf("normalizeDownloadPath(%q) should fail", tc.raw)
+			}
+			continue
+		}
+		if err != nil {
+			t.Fatalf("normalizeDownloadPath(%q): %v", tc.raw, err)
+		}
+		if got != tc.want {
+			t.Fatalf("normalizeDownloadPath(%q)=%q want %q", tc.raw, got, tc.want)
+		}
+	}
+}
+
+func TestValidateDrivePath(t *testing.T) {
+	for _, valid := range []string{
+		"drive/Home/Downloads/x",
+		"drive/Data/cache/y",
+		"/api/resources/drive/Home/x",
+		"https://files.alice.olares.com/api/resources/drive/Data/y",
+		"drive/Home/api/resources/x",
+	} {
+		if err := validateDrivePath(valid); err != nil {
+			t.Fatalf("validateDrivePath(%q): %v", valid, err)
+		}
+	}
+	for _, bad := range []string{"", "Home/Downloads/x", "drive/home/x", "/Files/Home/x"} {
+		if err := validateDrivePath(bad); err == nil {
+			t.Fatalf("validateDrivePath(%q) should fail", bad)
+		}
 	}
 }
 
@@ -504,19 +563,6 @@ func TestValidateSinceID(t *testing.T) {
 	}
 	if err := validateSinceID(-1); err == nil || !strings.Contains(err.Error(), "unsupported --since-id") {
 		t.Fatalf("negative since-id should fail, got %v", err)
-	}
-}
-
-func TestValidateDrivePath(t *testing.T) {
-	for _, valid := range []string{"drive/Home/Downloads/x", "drive/Data/cache/y"} {
-		if err := validateDrivePath(valid); err != nil {
-			t.Fatalf("validateDrivePath(%q): %v", valid, err)
-		}
-	}
-	for _, bad := range []string{"", "Home/Downloads/x", "drive/home/x", "/Files/Home/x"} {
-		if err := validateDrivePath(bad); err == nil {
-			t.Fatalf("validateDrivePath(%q) should fail", bad)
-		}
 	}
 }
 
