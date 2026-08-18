@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -257,24 +258,33 @@ func runCreate(ctx context.Context, f *cmdutil.Factory, rawURL, app, path, name,
 		// The row exists on the server whatever the wait outcome, so the
 		// id has to reach stdout or the caller cannot resume or clean up.
 		if waitErr != nil {
-			emitCreated(format, task)
-			return waitErr
+			return errors.Join(waitErr, emitCreated(format, task))
 		}
 		if classifyWaitStatus(task) == "failure" {
-			emitCreated(format, task)
-			return fmt.Errorf("task %d ended in status %q", task.ID, task.Status)
+			return errors.Join(
+				fmt.Errorf("task %d ended in status %q", task.ID, task.Status),
+				emitCreated(format, task),
+			)
 		}
 	}
 
-	emitCreated(format, task)
-	return nil
+	return emitCreated(format, task)
 }
 
-func emitCreated(format Format, task DownloadTask) {
+// emitCreated writes the created (or settled) row to stdout. The task id
+// is load-bearing — it is the only handle for a later resume or cleanup —
+// so a failed write is reported, with the id kept in the error text so it
+// still reaches the user on stderr.
+func emitCreated(format Format, task DownloadTask) error {
+	var err error
 	if format == FormatJSON {
-		_ = printJSON(os.Stdout, task)
-		return
+		err = printJSON(os.Stdout, task)
+	} else {
+		_, err = fmt.Printf("Created task %d  status=%s  provider=%s  name=%s\n",
+			task.ID, task.Status, task.DownloadProvider, displayName(task))
 	}
-	fmt.Printf("Created task %d  status=%s  provider=%s  name=%s\n",
-		task.ID, task.Status, task.DownloadProvider, displayName(task))
+	if err != nil {
+		return fmt.Errorf("write created task %d: %w", task.ID, err)
+	}
+	return nil
 }

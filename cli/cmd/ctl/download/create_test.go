@@ -112,6 +112,30 @@ func TestRunCreateValidatesApp(t *testing.T) {
 	}
 }
 
+// TestEmitCreatedReportsWriteFailure pins the recovery contract: the task
+// id is the only handle a caller has for a resume or cleanup, so a failed
+// stdout write must not look like success.
+func TestEmitCreatedReportsWriteFailure(t *testing.T) {
+	readOnly, err := os.Open(os.DevNull)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { readOnly.Close() })
+	orig := os.Stdout
+	os.Stdout = readOnly
+	t.Cleanup(func() { os.Stdout = orig })
+
+	for _, format := range []Format{FormatTable, FormatJSON} {
+		err := emitCreated(format, DownloadTask{ID: 42, Status: "downloading"})
+		if err == nil {
+			t.Fatalf("%s: failed stdout write should be reported", format)
+		}
+		if !strings.Contains(err.Error(), "42") {
+			t.Fatalf("%s: error must keep the task id: %v", format, err)
+		}
+	}
+}
+
 func TestReadTorrentFile(t *testing.T) {
 	dir := t.TempDir()
 	good := dir + "/ok.torrent"

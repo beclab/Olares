@@ -415,6 +415,11 @@ func TestNormalizeDownloadPath(t *testing.T) {
 		{raw: "drive/Home", want: "drive/Home"},
 		{raw: "/api/resources/drive/Home/Pictures/", want: "drive/Home/Pictures/"},
 		{raw: "https://files.alice.olares.cn/api/resources/drive/Home/Pictures/clip.mp4", want: "drive/Home/Pictures/clip.mp4"},
+		// A destination that merely contains the Files API segments (a
+		// folder named api) must survive intact — only a leading prefix
+		// is stripped.
+		{raw: "drive/Home/api/resources/clips/", want: "drive/Home/api/resources/clips/"},
+		{raw: "https://files.alice.olares.cn/api/resources/drive/Home/api/resources/clip.mp4", want: "drive/Home/api/resources/clip.mp4"},
 		{raw: "Home/Downloads/x", wantErr: true},
 		{raw: "drive/home/x", wantErr: true},
 		{raw: "drive/Cache/x", wantErr: true},
@@ -444,6 +449,7 @@ func TestValidateDrivePath(t *testing.T) {
 		"drive/Data/cache/y",
 		"/api/resources/drive/Home/x",
 		"https://files.alice.olares.com/api/resources/drive/Data/y",
+		"drive/Home/api/resources/x",
 	} {
 		if err := validateDrivePath(valid); err != nil {
 			t.Fatalf("validateDrivePath(%q): %v", valid, err)

@@ -217,9 +217,11 @@ func extractDriveResourcePath(raw string) (string, error) {
 		}
 		s = u.Path
 	}
-	if idx := strings.Index(s, resourcesPrefix); idx >= 0 {
-		s = s[idx+len(resourcesPrefix):]
-	}
+	// Anchored on purpose: only a leading /api/resources/ is the Files API
+	// prefix. A bare drive/… destination may legitimately contain those
+	// segments (a folder named api), and matching mid-string would truncate
+	// the path and then reject it.
+	s = strings.TrimPrefix(s, resourcesPrefix)
 	s = strings.TrimLeft(s, "/")
 	if s == "" {
 		return "", fmt.Errorf("unsupported --path %q (no resource path)", raw)
