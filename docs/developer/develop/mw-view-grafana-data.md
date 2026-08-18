@@ -8,11 +8,19 @@ head:
 ---
 # Use Grafana dashboards
 
-To visualize system metrics in Olares, you can run Grafana and connect it to the built-in Prometheus service. This guide explains how to install Grafana, connect the data source, and import a standard dashboard.
+To visualize system metrics in Olares, you can run Grafana and connect it to the Prometheus service. This guide explains how to install Prometheus and Grafana, connect the data source, and import a standard dashboard.
+
+## Install Prometheus
+
+Before installing Grafana, install Prometheus from Market. Prometheus collects system metrics for Grafana to visualize.
+
+1. Open Market from Launchpad and search for "Prometheus".
+2. Click **Get**, then **Install**.
+3. Wait for the installation to complete.
 
 ## Install Grafana
 
-Before using Grafana, install it from Market.
+After Prometheus is installed, install Grafana from Market.
 
 1. Open Market from Launchpad and search for "Grafana".
 2. Click **Get**, then **Install**.
@@ -34,23 +42,35 @@ After logging in, you will see the Grafana home page.
 
 ## Add Prometheus data source
 
-Olares runs a built-in Prometheus service that collects system metrics. 
+To connect Grafana to Prometheus, first get the Prometheus API endpoint URL, then add it as a data source in Grafana.
 
-To connect Grafana to this internal service:
+### Get the Prometheus API endpoint URL
+
+<!--@include: ../../reusables/ai-service-connections.md#app-endpoint-overview-->
+
+For Prometheus:
+
+1. Go to Olares **Settings** > **Applications** > **Prometheus** > **Entrances**.
+2. Select **Prometheus API**, then copy the **Endpoint** URL. For example:
+    ```text
+    https://4ae9f19e1.<olaresid>.olares.com
+    ```
+    Replace `<olaresid>` with your Olares ID.
+
+Use this Endpoint as the **Prometheus server URL** in Grafana.
+
+### Configure the data source in Grafana
 
 1. In the Grafana left navigation pane, go to **Connections** > **Data sources**.
 2. Click **Add data source**, then select **Prometheus**.
-3. For the **Prometheus server URL** field, enter:  
-    ```text
-    http://dashboard.<olaresid>.olares.com
-    ```
-    Replace `<olaresid>` with your Olares ID.
+3. For the **Prometheus server URL** field, enter the Prometheus API Endpoint you just copied.
 4. Click **Save & test** at the bottom of the page. If the connection is successful, you will see the prompt below.
     ![Successful connection](/images/developer/develop/middleware/mw-grafana-connect.png#bordered){width=90% style="margin-left:0"}
 
 ## Create a dashboard
 
 This approach is suitable when you need custom metrics and visualizations and are familiar with PromQL.
+
 1. In the left navigation pane, click **Dashboards**.
 2. Click **+ Create dashboard**, then select **+ Add visualization**.
 3. Select **prometheus** as the data source.
@@ -68,4 +88,5 @@ If you do not need to build dashboards from scratch, you can import existing das
 5. Click **Import** to complete the import.
 
 Imported dashboards provide predefined panels and queries and can be customized after import.
+
 ![Imported dashboard](/images/developer/develop/middleware/mw-grafana-dashboard.png#bordered){width=90%}
