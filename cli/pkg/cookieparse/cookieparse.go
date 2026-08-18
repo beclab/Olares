@@ -88,6 +88,8 @@ func (r Record) ExpiryUnix() int64 {
 type Result struct {
 	Cookies      map[string][]Record
 	InvalidLines []string
+	// NeedsDomain is true when a request Cookie header was rejected for missing --domain.
+	NeedsDomain bool
 }
 
 func newResult() *Result {

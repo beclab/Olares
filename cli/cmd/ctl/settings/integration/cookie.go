@@ -226,8 +226,7 @@ func parseCookieImportBuckets(
 		}
 	}
 	if parsed.Count() == 0 {
-		// Request-style Cookie headers never carry a Domain attribute.
-		if domainFilter == "" && detected == cookieparse.FormatHeader {
+		if domainFilter == "" && parsed.NeedsDomain {
 			return nil, detected, fmt.Errorf(
 				"this input is a browser Cookie header, which carries no domain; re-run with --domain <host> (for example --domain youtube.com)")
 		}

@@ -130,6 +130,7 @@ func isBrowserCookieLine(parts []string) bool {
 func parseBrowserCookieLine(result *Result, parts []string, domain string) {
 	if domain == "" {
 		// One reject for the whole line — never per pair, never embed names.
+		result.NeedsDomain = true
 		result.reject("a browser Cookie header carries no domain; pass --domain")
 		return
 	}

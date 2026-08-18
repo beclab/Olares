@@ -424,39 +424,85 @@ func TestParseCookieImportBucketsHeaderNeedsDomain(t *testing.T) {
 }
 
 func TestParseCookieImportBucketsPreservesOtherFailures(t *testing.T) {
-	_, _, err := parseCookieImportBuckets("not-a-cookie-line", cookieparse.FormatHeader, "youtube.com")
-	if err == nil {
-		t.Fatal("want malformed header with --domain to fail")
+	const bareHeaderHint = "this input is a browser Cookie header, which carries no domain; re-run with --domain <host> (for example --domain youtube.com)"
+	cases := []struct {
+		name           string
+		text           string
+		format         cookieparse.Format
+		domain         string
+		wantExact      string
+		wantContains   string
+		wantNotContain []string
+	}{
+		{
+			name:           "malformed header with domain",
+			text:           "not-a-cookie-line",
+			format:         cookieparse.FormatHeader,
+			domain:         "youtube.com",
+			wantContains:   "no usable cookies found; first problem:",
+			wantNotContain: []string{"browser Cookie header"},
+		},
+		{
+			name:           "malformed header without domain",
+			text:           "not-a-cookie-line",
+			format:         cookieparse.FormatHeader,
+			wantExact:      "no usable cookies found; first problem: not a cookie assignment",
+			wantNotContain: []string{"browser Cookie header"},
+		},
+		{
+			name:           "set-cookie missing domain",
+			text:           "Set-Cookie: SID=secret-value; Path=/; Secure",
+			format:         cookieparse.FormatHeader,
+			wantExact:      "no usable cookies found; first problem: cookie has no Domain attribute; pass --domain",
+			wantNotContain: []string{"SID", "secret-value", "browser Cookie header"},
+		},
+		{
+			name:           "set-cookie invalid expires without domain",
+			text:           "Set-Cookie: SID=secret-value; Expires=not-a-date",
+			format:         cookieparse.FormatHeader,
+			wantExact:      "no usable cookies found; first problem: invalid expires date",
+			wantNotContain: []string{"SID", "secret-value", "browser Cookie header"},
+		},
+		{
+			name:           "mixed bare header wins over other invalid lines",
+			text:           "a=b; c=d\nnot-a-cookie-line",
+			format:         cookieparse.FormatHeader,
+			wantExact:      bareHeaderHint,
+			wantNotContain: []string{"a=b", "c=d", "no usable cookies", "first problem"},
+		},
+		{
+			name:      "empty netscape",
+			text:      "# Netscape HTTP Cookie File\n# empty\n",
+			format:    cookieparse.FormatNetscape,
+			wantExact: "no cookies found in the input",
+		},
+		{
+			name:           "invalid netscape path",
+			text:           ".youtube.com\tTRUE\trelative\tFALSE\t0\tSID\tsecret\n",
+			format:         cookieparse.FormatNetscape,
+			wantContains:   "no usable cookies found; first problem: invalid path",
+			wantNotContain: []string{"secret"},
+		},
 	}
-	msg := err.Error()
-	if !strings.Contains(msg, "no usable cookies found; first problem:") {
-		t.Fatalf("err = %q, want first-problem message", msg)
-	}
-	if strings.Contains(msg, "browser Cookie header") {
-		t.Fatalf("must not use the bare-header --domain hint: %q", msg)
-	}
-
-	_, _, err = parseCookieImportBuckets("# Netscape HTTP Cookie File\n# empty\n", cookieparse.FormatNetscape, "")
-	if err == nil {
-		t.Fatal("want empty netscape to fail")
-	}
-	if err.Error() != "no cookies found in the input" {
-		t.Fatalf("err = %q, want no cookies found", err.Error())
-	}
-
-	_, _, err = parseCookieImportBuckets(
-		".youtube.com\tTRUE\trelative\tFALSE\t0\tSID\tsecret\n",
-		cookieparse.FormatNetscape,
-		"",
-	)
-	if err == nil {
-		t.Fatal("want invalid netscape rows to fail")
-	}
-	if !strings.Contains(err.Error(), "no usable cookies found; first problem: invalid path") {
-		t.Fatalf("err = %q, want first problem: invalid path", err.Error())
-	}
-	if strings.Contains(err.Error(), "secret") {
-		t.Fatalf("error must not embed cookie value: %q", err.Error())
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, _, err := parseCookieImportBuckets(tc.text, tc.format, tc.domain)
+			if err == nil {
+				t.Fatal("want parse to fail")
+			}
+			msg := err.Error()
+			if tc.wantExact != "" && msg != tc.wantExact {
+				t.Fatalf("err = %q, want %q", msg, tc.wantExact)
+			}
+			if tc.wantContains != "" && !strings.Contains(msg, tc.wantContains) {
+				t.Fatalf("err = %q, want substring %q", msg, tc.wantContains)
+			}
+			for _, leak := range tc.wantNotContain {
+				if strings.Contains(msg, leak) {
+					t.Fatalf("error must not contain %q: %q", leak, msg)
+				}
+			}
+		})
 	}
 }
 

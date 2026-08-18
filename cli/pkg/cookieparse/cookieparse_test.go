@@ -308,6 +308,9 @@ func TestHeaderRequiresADomainForBrowserLines(t *testing.T) {
 	if res.Count() != 0 {
 		t.Fatalf("parsed %d records, want 0 without a domain", res.Count())
 	}
+	if !res.NeedsDomain {
+		t.Fatal("NeedsDomain = false, want true for a domain-less request Cookie header")
+	}
 	if len(res.InvalidLines) != 1 {
 		t.Fatalf("invalid lines = %v, want one reject for the whole line", res.InvalidLines)
 	}
@@ -319,6 +322,77 @@ func TestHeaderRequiresADomainForBrowserLines(t *testing.T) {
 		if strings.Contains(msg, name) {
 			t.Fatalf("InvalidLines must not embed cookie name/value %q: %q", name, msg)
 		}
+	}
+}
+
+func TestNeedsDomainOnlyForBareRequestCookieHeader(t *testing.T) {
+	cases := []struct {
+		name   string
+		text   string
+		format Format
+		domain string
+		want   bool
+	}{
+		{
+			name:   "bare request header",
+			text:   "SID=a; HSID=b",
+			format: FormatHeader,
+			want:   true,
+		},
+		{
+			name:   "request header with domain",
+			text:   "SID=a; HSID=b",
+			format: FormatHeader,
+			domain: ".youtube.com",
+			want:   false,
+		},
+		{
+			name:   "set-cookie missing domain",
+			text:   "Set-Cookie: SID=x; Path=/; Secure",
+			format: FormatHeader,
+			want:   false,
+		},
+		{
+			name:   "set-cookie invalid expires",
+			text:   "Set-Cookie: SID=x; Expires=not-a-date; Domain=.youtube.com",
+			format: FormatHeader,
+			want:   false,
+		},
+		{
+			name:   "empty cookie name",
+			text:   "Set-Cookie: =y; Path=/; Domain=.youtube.com",
+			format: FormatHeader,
+			want:   false,
+		},
+		{
+			name:   "not a cookie assignment",
+			text:   "not-a-cookie-line",
+			format: FormatHeader,
+			want:   false,
+		},
+		{
+			name:   "netscape",
+			text:   "# Netscape HTTP Cookie File\n.youtube.com\tTRUE\t/\tFALSE\t0\tSID\tv\n",
+			format: FormatNetscape,
+			want:   false,
+		},
+		{
+			name:   "json",
+			text:   `[{"domain":".youtube.com","name":"SID","value":"v"}]`,
+			format: FormatJSON,
+			want:   false,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			res, _, err := Parse(tc.text, tc.format, tc.domain)
+			if err != nil {
+				t.Fatalf("parse: %v", err)
+			}
+			if res.NeedsDomain != tc.want {
+				t.Fatalf("NeedsDomain = %v, want %v", res.NeedsDomain, tc.want)
+			}
+		})
 	}
 }
 
