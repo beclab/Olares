@@ -310,6 +310,63 @@ func doMutate(ctx context.Context, d Doer, method, path string, body, out interf
 	return nil
 }
 
+// cookieRequiredCode is download-server's "this URL needs cookies".
+const cookieRequiredCode = 501
+
+// cookieErrorCodes are the error codes a stored login cookie can fix.
+// Besides 501, they are the yt-dlp daemon's private_resource /
+// authorization_failed / bot_detected, which clear once the caller's
+// session cookies are forwarded.
+var cookieErrorCodes = map[int]bool{cookieRequiredCode: true, 507: true, 511: true, 512: true}
+
+// cookieErrorCategories are the symbolic twins of cookieErrorCodes; the
+// daemon may send a category without a recognised numeric code.
+var cookieErrorCategories = map[string]bool{
+	"cookie_required":      true,
+	"private_resource":     true,
+	"authorization_failed": true,
+	"bot_detected":         true,
+}
+
+func isCookieRecoverable(errorCode int, errorCategory string) bool {
+	if cookieErrorCodes[errorCode] {
+		return true
+	}
+	return cookieErrorCategories[strings.ToLower(strings.TrimSpace(errorCategory))]
+}
+
+// cookieHostFromURL reduces a URL to the host the cookie store is keyed
+// by. Empty when the URL carries no host (magnet links, bare paths), in
+// which case the caller falls back to a placeholder.
+func cookieHostFromURL(rawURL string) string {
+	raw := strings.TrimSpace(rawURL)
+	if raw == "" {
+		return ""
+	}
+	parsed, err := url.Parse(raw)
+	if err != nil || parsed.Host == "" {
+		return ""
+	}
+	host := parsed.Hostname()
+	// The store keys on the registrable host the SPA shows, so "www." is
+	// noise that would create a second, never-consulted row.
+	return strings.TrimPrefix(host, "www.")
+}
+
+// cookieRequiredHint is the copy-pasteable next step for a failure a
+// login cookie fixes. Cookies live under `settings integration cookie`,
+// a different command family, so the hint has to spell the whole
+// command out rather than say "upload a cookie first".
+func cookieRequiredHint(rawURL string) string {
+	domain := cookieHostFromURL(rawURL)
+	if domain == "" {
+		domain = "<domain>"
+	}
+	return "this URL needs your login cookies; import them with " +
+		"`olares-cli settings integration cookie import --domain " + domain +
+		" --file cookies.txt`"
+}
+
 func taskErrorRecovery(method, path string, status int, message string, body interface{}) string {
 	lowerMsg := strings.ToLower(message)
 	taskID := ""
@@ -325,12 +382,28 @@ func taskErrorRecovery(method, path string, status int, message string, body int
 			}
 		}
 	}
+
+	createURL := ""
+	if method == "POST" && path == "/api/download" {
+		switch req := body.(type) {
+		case NewDownloadReq:
+			createURL = req.URL
+		case *NewDownloadReq:
+			if req != nil {
+				createURL = req.URL
+			}
+		}
+	}
+
 	switch {
 	case method == "POST" && path == "/api/download" && status == 409 &&
 		(strings.Contains(lowerMsg, "already") ||
 			strings.Contains(lowerMsg, "exist") ||
 			strings.Contains(lowerMsg, "registered")):
 		return "; inspect existing tasks with `olares-cli knowledge download list`"
+	// 501 is the download-server contract for "this URL needs cookies".
+	case status == cookieRequiredCode:
+		return "; " + cookieRequiredHint(createURL)
 	case method == "POST" && path == "/api/download" && shouldHintYTDLPUnavailable(message):
 		return "; " + ytdlpUnavailableHint()
 	case strings.Contains(path, "/api/url/inspect") && shouldHintInspectTimeout(message):
