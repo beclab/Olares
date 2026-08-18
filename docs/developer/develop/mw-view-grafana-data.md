@@ -46,13 +46,24 @@ To connect Grafana to Prometheus, first get the Prometheus API endpoint URL, the
 
 ### Get the Prometheus API endpoint URL
 
-1. Open Olares **Settings**, and then go to **Applications** > **Prometheus**.
-2. Under **Entrances**, find **Prometheus API**, and then click to open it.
-3. Copy the endpoint URL displayed on the page. For example:
+<!--@include: ../../reusables/ai-service-connections.md#app-endpoint-overview-->
+
+For Prometheus:
+
+1. Go to Olares **Settings** > **Applications** > **Prometheus** > **Entrances**.
+2. Select **Prometheus API**, then copy the **Endpoint** URL. For example:
     ```text
     https://4ae9f19e1.<olaresid>.olares.com
     ```
     Replace `<olaresid>` with your Olares ID.
+
+Use this Endpoint as the **Prometheus server URL** in Grafana.
+
+### Configure the data source in Grafana
+
+1. In the Grafana left navigation pane, go to **Connections** > **Data sources**.
+2. Click **Add data source**, then select **Prometheus**.
+3. For the **Prometheus server URL** field, enter the Prometheus API Endpoint you just copied.
 4. Click **Save & test** at the bottom of the page. If the connection is successful, you will see the prompt below.
     ![Successful connection](/images/developer/develop/middleware/mw-grafana-connect.png#bordered){width=90% style="margin-left:0"}
 
