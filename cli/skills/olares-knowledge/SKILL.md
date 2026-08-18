@@ -53,5 +53,5 @@ All verbs require Olares 1.12.7+ because the Settings download edge and provider
 - Confirm create, cancel, remove, seed stop/resume, file remove, preference writes, and global setting writes.
 - Before create, confirm destination/app, provider intent, torrent file selection, and whether an existing equivalent task should be reused. The CLI already identifies duplicate tasks; do not create another without approval.
 - `file remove` takes a download-server resource path, not an arbitrary local filesystem path.
-- Cookie management is read-only through the production integration provider. Do not suggest hidden write verbs.
-- Stop on ambiguous URL/resource path, task owner, duplicate-task intent, torrent selection, or any credential/cookie request outside the supported retrieval path.
+- A URL that fails for a missing login is not a dead end: cookies live in [`olares-settings`](../olares-settings/SKILL.md) under `settings integration cookie`. See [provider/quality inspection](references/olares-knowledge-download-inspect.md) for the signals and the hand-off.
+- Stop on ambiguous URL/resource path, task owner, duplicate-task intent, torrent selection, or any credential request the cookie hand-off does not cover.
