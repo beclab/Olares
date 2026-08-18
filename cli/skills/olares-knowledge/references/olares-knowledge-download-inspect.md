@@ -30,7 +30,7 @@ olares-cli settings integration cookie import --domain youtube.com --file cookie
 olares-cli knowledge download inspect 'https://www.youtube.com/watch?v=…'
 ```
 
-The CLI prints this command for you, with the domain already filled in from the URL. If the user's `cookies.txt` export turns out to be missing the login, read [integration credentials and cookies](../../olares-settings/references/olares-settings-integration.md) — the `header` import path is the fix.
+The CLI prints this command for you, with the domain already filled in from the URL. If the user's `cookies.txt` export turns out to be missing the login, open [`olares-settings`](../../olares-settings/SKILL.md) and use the `header` import path under `settings integration cookie` — that is the fix.
 
 ## prefs get / set
 
