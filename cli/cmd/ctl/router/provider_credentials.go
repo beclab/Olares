@@ -3,7 +3,6 @@ package router
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"os"
 	"sort"
 	"text/tabwriter"
@@ -79,7 +78,7 @@ func runProviderCredentials(ctx context.Context, f *cmdutil.Factory, ref, output
 	var env struct {
 		Credentials map[string]any `json:"credentials"`
 	}
-	path := consoleAPI + "/providers/" + url.PathEscape(found.ID) + "/credentials-form"
+	path := epProviderCredentialsForm(found.ID)
 	if err := pc.router.doJSON(ctx, "GET", path, nil, &env); err != nil {
 		return err
 	}

@@ -243,13 +243,12 @@ func runQuotaList(ctx context.Context, f *cmdutil.Factory, keyRef, userRef, mode
 }
 
 func listQuotas(ctx context.Context, pc *preparedClient, target *quotaTarget) ([]quotaRow, error) {
-	path := consoleAPI + "/quotas"
+	q := url.Values{}
 	if target != nil {
-		q := url.Values{}
 		q.Set("scope_type", target.ScopeType)
 		q.Set("scope_id", target.ScopeID)
-		path += "?" + q.Encode()
 	}
+	path := withQuery(epQuotas, q)
 	var env struct {
 		Items []quotaRow `json:"items"`
 	}
@@ -471,7 +470,7 @@ func runQuotaSet(ctx context.Context, f *cmdutil.Factory, keyRef, userRef, model
 			if warnAt != nil {
 				body["soft_threshold_pct"] = *warnAt
 			}
-			path := consoleAPI + "/quotas/" + strconv.FormatInt(cur.ID, 10)
+			path := epQuota(cur.ID)
 			if err := pc.router.doJSON(ctx, "PUT", path, body, &row); err != nil {
 				return err
 			}
@@ -485,7 +484,7 @@ func runQuotaSet(ctx context.Context, f *cmdutil.Factory, keyRef, userRef, model
 			if warnAt != nil {
 				body["soft_threshold_pct"] = *warnAt
 			}
-			if err := pc.router.doJSON(ctx, "POST", consoleAPI+"/quotas", body, &row); err != nil {
+			if err := pc.router.doJSON(ctx, "POST", epQuotas, body, &row); err != nil {
 				return err
 			}
 		}
@@ -598,7 +597,7 @@ func runQuotaClear(ctx context.Context, f *cmdutil.Factory, keyRef, userRef, mod
 		}
 	}
 	for i := range doomed {
-		path := consoleAPI + "/quotas/" + strconv.FormatInt(doomed[i].ID, 10)
+		path := epQuota(doomed[i].ID)
 		if err := pc.router.doJSON(ctx, "DELETE", path, nil, nil); err != nil {
 			return err
 		}

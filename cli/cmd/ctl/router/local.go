@@ -141,7 +141,7 @@ func openLocal(ctx context.Context, f *cmdutil.Factory, ref string) (*llmInit, e
 // than about how far along it is.
 func confirmConsole(ctx context.Context, li *llmInit) error {
 	var build localBuildInfo
-	err := li.client.doJSON(ctx, "GET", "/api/build-info", nil, &build)
+	err := li.client.doJSON(ctx, "GET", epLocalBuildInfo, nil, &build)
 	switch {
 	case err == nil && strings.TrimSpace(build.Version) != "":
 		li.Console = &build
@@ -234,7 +234,7 @@ func consoleServes(ctx context.Context, li *llmInit, method, path string) *bool 
 			Available bool   `json:"available"`
 		} `json:"endpoints"`
 	}
-	if err := li.client.doJSON(ctx, "GET", "/api/endpoints", nil, &env); err != nil {
+	if err := li.client.doJSON(ctx, "GET", epLocalEndpoints, nil, &env); err != nil {
 		return nil
 	}
 	for _, e := range env.Endpoints {

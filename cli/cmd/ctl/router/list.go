@@ -189,11 +189,7 @@ func runModelList(ctx context.Context, f *cmdutil.Factory, filter modelListFilte
 		Limit  int             `json:"limit"`
 		Offset int             `json:"offset"`
 	}
-	path := consoleAPI + "/provider-models"
-	if len(q) > 0 {
-		path += "?" + q.Encode()
-	}
-	if err := pc.router.doJSON(ctx, "GET", path, nil, &env); err != nil {
+	if err := pc.router.doJSON(ctx, "GET", withQuery(epProviderModels, q), nil, &env); err != nil {
 		return err
 	}
 	if format == FormatJSON {
@@ -289,7 +285,7 @@ func runCapabilities(ctx context.Context, f *cmdutil.Factory, outputRaw string) 
 	var env struct {
 		Supports []string `json:"supports"`
 	}
-	if err := pc.router.doJSON(ctx, "GET", consoleAPI+"/capabilities/supports", nil, &env); err != nil {
+	if err := pc.router.doJSON(ctx, "GET", epCapabilitiesSupports, nil, &env); err != nil {
 		return err
 	}
 	if format == FormatJSON {

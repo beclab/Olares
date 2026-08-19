@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -88,7 +87,7 @@ func runProviderHistory(ctx context.Context, f *cmdutil.Factory, ref, outputRaw 
 		Items []credentialVersion `json:"items"`
 		Total int                 `json:"total"`
 	}
-	path := consoleAPI + "/providers/" + url.PathEscape(found.ID) + "/credential-history"
+	path := epProviderCredentialHistory(found.ID)
 	if err := pc.router.doJSON(ctx, "GET", path, nil, &env); err != nil {
 		return err
 	}
@@ -211,7 +210,7 @@ func runProviderRollback(ctx context.Context, f *cmdutil.Factory, ref, versionRa
 		ToVersion   int         `json:"to_version"`
 		NewVersion  int         `json:"new_version"`
 	}
-	path := consoleAPI + "/providers/" + url.PathEscape(found.ID) + "/rollback/" + strconv.Itoa(version)
+	path := epProviderRollback(found.ID, version)
 	if err := pc.router.doJSON(ctx, "POST", path, body, &res); err != nil {
 		return err
 	}

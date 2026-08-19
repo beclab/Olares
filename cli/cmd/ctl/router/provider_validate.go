@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net/url"
 	"os"
 	"text/tabwriter"
 
@@ -104,7 +103,7 @@ func runProviderValidate(ctx context.Context, f *cmdutil.Factory, ref, outputRaw
 
 func validateProvider(ctx context.Context, pc *preparedClient, id string) (*validateVerdict, error) {
 	var v validateVerdict
-	path := consoleAPI + "/providers/" + url.PathEscape(id) + "/validate"
+	path := epProviderValidate(id)
 	if err := pc.router.doJSON(ctx, "POST", path, nil, &v); err != nil {
 		return nil, err
 	}

@@ -171,11 +171,7 @@ func runTraceList(ctx context.Context, f *cmdutil.Factory, since, until string, 
 		Limit  int            `json:"limit"`
 		Offset int            `json:"offset"`
 	}
-	path := consoleAPI + "/observability/traces"
-	if len(q) > 0 {
-		path += "?" + q.Encode()
-	}
-	if err := pc.router.doJSON(ctx, "GET", path, nil, &env); err != nil {
+	if err := pc.router.doJSON(ctx, "GET", withQuery(epTraces, q), nil, &env); err != nil {
 		return traceRouteErr(err)
 	}
 	if format == FormatJSON {
@@ -271,7 +267,7 @@ func runTraceGet(ctx context.Context, f *cmdutil.Factory, traceID string, withCo
 		TraceID string      `json:"trace_id"`
 		Spans   []traceSpan `json:"spans"`
 	}
-	path := consoleAPI + "/observability/traces/" + url.PathEscape(traceID)
+	path := epTrace(traceID)
 	if err := pc.router.doJSON(ctx, "GET", path, nil, &env); err != nil {
 		return traceRouteErr(err)
 	}
@@ -394,7 +390,7 @@ func runTraceCapture(ctx context.Context, f *cmdutil.Factory, want *bool, output
 		return err
 	}
 	var pref capturePref
-	path := consoleAPI + "/observability/capture-pref"
+	path := epCapturePref
 	if want == nil {
 		if err := pc.router.doJSON(ctx, "GET", path, nil, &pref); err != nil {
 			return traceRouteErr(err)

@@ -93,7 +93,7 @@ func listUsers(ctx context.Context, pc *preparedClient) ([]consoleUser, error) {
 	var env struct {
 		Items []consoleUser `json:"items"`
 	}
-	if err := pc.router.doJSON(ctx, "GET", consoleAPI+"/users", nil, &env); err != nil {
+	if err := pc.router.doJSON(ctx, "GET", epUsers, nil, &env); err != nil {
 		return nil, err
 	}
 	return env.Items, nil

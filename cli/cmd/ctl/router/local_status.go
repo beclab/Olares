@@ -103,9 +103,9 @@ func runLocalStatus(ctx context.Context, f *cmdutil.Factory, ref, outputRaw stri
 		into any
 		keep func()
 	}{
-		{"health", "/healthz", &health, func() { report.Health = &health }},
-		{"progress", "/api/progress", &prog, func() { report.Progress = &prog }},
-		{"the model card", "/api/model-spec", &brief, func() { report.Spec = &brief }},
+		{"health", epHealth, &health, func() { report.Health = &health }},
+		{"progress", epLocalProgress, &prog, func() { report.Progress = &prog }},
+		{"the model card", epLocalModelSpec, &brief, func() { report.Spec = &brief }},
 	}
 	// One failure is a fact about that document; four identical ones are a fact
 	// about the connection, and printing the same sentence four times buries
@@ -270,7 +270,7 @@ func runLocalProgress(ctx context.Context, f *cmdutil.Factory, ref string, watch
 
 	read := func() (*localProgress, error) {
 		var p localProgress
-		if err := li.client.doJSON(ctx, "GET", "/api/progress", nil, &p); err != nil {
+		if err := li.client.doJSON(ctx, "GET", epLocalProgress, nil, &p); err != nil {
 			return nil, err
 		}
 		return &p, nil

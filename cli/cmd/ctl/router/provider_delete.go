@@ -3,7 +3,6 @@ package router
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -97,7 +96,7 @@ func runProviderDelete(ctx context.Context, f *cmdutil.Factory, ref string, assu
 		ID      string `json:"id"`
 		Deleted bool   `json:"deleted"`
 	}
-	path := consoleAPI + "/providers/" + url.PathEscape(found.ID)
+	path := epProvider(found.ID)
 	if err := pc.router.doJSON(ctx, "DELETE", path, nil, &res); err != nil {
 		return err
 	}

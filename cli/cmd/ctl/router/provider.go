@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -282,7 +281,7 @@ func listProviders(ctx context.Context, pc *preparedClient) ([]providerRow, erro
 	var env struct {
 		Items []providerRow `json:"items"`
 	}
-	if err := pc.router.doJSON(ctx, "GET", consoleAPI+"/providers", nil, &env); err != nil {
+	if err := pc.router.doJSON(ctx, "GET", epProviders, nil, &env); err != nil {
 		return nil, err
 	}
 	return env.Items, nil
@@ -290,7 +289,7 @@ func listProviders(ctx context.Context, pc *preparedClient) ([]providerRow, erro
 
 func getProvider(ctx context.Context, pc *preparedClient, id string) (*providerDetail, error) {
 	var detail providerDetail
-	path := consoleAPI + "/providers/" + url.PathEscape(id)
+	path := epProvider(id)
 	if err := pc.router.doJSON(ctx, "GET", path, nil, &detail); err != nil {
 		return nil, err
 	}

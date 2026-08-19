@@ -141,7 +141,7 @@ func runCallEmbed(ctx context.Context, f *cmdutil.Factory, inputs []string, mode
 		Dimensions: dims,
 	}
 	var resp embeddingsResponse
-	if err := dp.doJSON(ctx, "POST", dataPlaneAPI+"/embeddings", req, &resp); err != nil {
+	if err := dp.doJSON(ctx, "POST", epEmbeddings, req, &resp); err != nil {
 		return callErr(err)
 	}
 	if format == FormatJSON {

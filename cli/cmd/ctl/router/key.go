@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net/url"
 	"os"
 	"strings"
 	"text/tabwriter"
@@ -278,7 +277,7 @@ func listKeys(ctx context.Context, pc *preparedClient) ([]apiKeyView, error) {
 	var env struct {
 		Items []apiKeyView `json:"items"`
 	}
-	if err := pc.router.doJSON(ctx, "GET", consoleAPI+"/api-keys", nil, &env); err != nil {
+	if err := pc.router.doJSON(ctx, "GET", epAPIKeys, nil, &env); err != nil {
 		return nil, err
 	}
 	return env.Items, nil
@@ -453,7 +452,7 @@ func runKeyIssue(ctx context.Context, f *cmdutil.Factory, name, forUser, ttl, ex
 	}
 
 	var created createdKey
-	if err := pc.router.doJSON(ctx, "POST", consoleAPI+"/api-keys", req, &created); err != nil {
+	if err := pc.router.doJSON(ctx, "POST", epAPIKeys, req, &created); err != nil {
 		return err
 	}
 	if format == FormatJSON {
@@ -644,7 +643,7 @@ func runKeyUpdate(ctx context.Context, f *cmdutil.Factory, ref string, in keyPat
 	}
 
 	var updated apiKeyView
-	path := consoleAPI + "/api-keys/" + url.PathEscape(found.ID)
+	path := epAPIKey(found.ID)
 	if err := pc.router.doJSON(ctx, "PATCH", path, req, &updated); err != nil {
 		return err
 	}
@@ -725,7 +724,7 @@ func runKeyRevoke(ctx context.Context, f *cmdutil.Factory, ref string, assumeYes
 		}
 	}
 	var revoked apiKeyView
-	path := consoleAPI + "/api-keys/" + url.PathEscape(found.ID)
+	path := epAPIKey(found.ID)
 	if err := pc.router.doJSON(ctx, "DELETE", path, nil, &revoked); err != nil {
 		return err
 	}

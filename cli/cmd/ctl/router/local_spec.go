@@ -106,7 +106,7 @@ func runLocalSpec(ctx context.Context, f *cmdutil.Factory, ref, outputRaw string
 	// edits and sends back with `spec set`, and a re-marshalled copy would drop
 	// whatever this build of the CLI has not been taught about.
 	var raw json.RawMessage
-	if err := li.client.doJSON(ctx, "GET", "/api/model-spec", nil, &raw); err != nil {
+	if err := li.client.doJSON(ctx, "GET", epLocalModelSpec, nil, &raw); err != nil {
 		return err
 	}
 	if format == FormatJSON {
@@ -266,7 +266,7 @@ Examples:
 			if err != nil {
 				return err
 			}
-			resp, err := li.client.do(ctx, "GET", "/api/model-spec/file", nil, "")
+			resp, err := li.client.do(ctx, "GET", epLocalModelSpecFile, nil, "")
 			if err != nil {
 				return err
 			}
@@ -277,7 +277,7 @@ Examples:
 			}
 			if resp.StatusCode/100 != 2 {
 				return specFileErr(ctx, li,
-					li.client.formatErr("GET", "/api/model-spec/file", resp.StatusCode, raw))
+					li.client.formatErr("GET", epLocalModelSpecFile, resp.StatusCode, raw))
 			}
 			_, err = os.Stdout.Write(raw)
 			return err
@@ -294,7 +294,7 @@ func specFileErr(ctx context.Context, li *llmInit, err error) error {
 	if err == nil || !errors.As(err, &re) || re.Status != 404 {
 		return err
 	}
-	if served := consoleServes(ctx, li, "GET", "/api/model-spec/file"); served != nil && !*served {
+	if served := consoleServes(ctx, li, "GET", epLocalModelSpecFile); served != nil && !*served {
 		return fmt.Errorf("this application's Model Console (%s) does not serve the card's file, only "+
 			"the card it parsed from it. `olares-cli router local spec show %s -o json` is that card, and it "+
 			"is what `router local spec set` takes back", consoleVersion(li), li.AppName)
@@ -413,7 +413,7 @@ func runLocalSpecSet(ctx context.Context, f *cmdutil.Factory, ref, from string, 
 	}
 
 	var updated localSpec
-	if err := li.client.doJSON(ctx, "PUT", "/api/model-spec", json.RawMessage(raw), &updated); err != nil {
+	if err := li.client.doJSON(ctx, "PUT", epLocalModelSpec, json.RawMessage(raw), &updated); err != nil {
 		return specSetErr(err)
 	}
 	if format == FormatJSON {
@@ -487,7 +487,7 @@ Examples:
 				return err
 			}
 			var cfg map[string]any
-			if err := li.client.doJSON(ctx, "GET", "/api/config", nil, &cfg); err != nil {
+			if err := li.client.doJSON(ctx, "GET", epLocalConfig, nil, &cfg); err != nil {
 				return err
 			}
 			if format == FormatJSON {
@@ -591,7 +591,7 @@ Examples:
 				EngineKind string          `json:"engine_kind"`
 				Endpoints  []localEndpoint `json:"endpoints"`
 			}
-			if err := li.client.doJSON(ctx, "GET", "/api/endpoints", nil, &env); err != nil {
+			if err := li.client.doJSON(ctx, "GET", epLocalEndpoints, nil, &env); err != nil {
 				return err
 			}
 			rows := env.Endpoints

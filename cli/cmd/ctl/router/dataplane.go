@@ -123,7 +123,7 @@ func platformIdentityWorks(ctx context.Context, pc *preparedClient) bool {
 	var sink struct {
 		Object string `json:"object"`
 	}
-	return pc.router.doJSON(ctx, "GET", dataPlaneAPI+"/models", nil, &sink) == nil
+	return pc.router.doJSON(ctx, "GET", epDataPlaneModels, nil, &sink) == nil
 }
 
 // mintDataPlaneKey issues a key through the management plane. The name carries
@@ -135,7 +135,7 @@ func mintDataPlaneKey(ctx context.Context, pc *preparedClient) (string, error) {
 		name += " on " + strings.TrimSpace(host)
 	}
 	var created createdKey
-	err := pc.router.doJSON(ctx, "POST", consoleAPI+"/api-keys", map[string]any{"name": name}, &created)
+	err := pc.router.doJSON(ctx, "POST", epAPIKeys, map[string]any{"name": name}, &created)
 	if err != nil {
 		var re *RouterError
 		if errors.As(err, &re) && re.Status == 404 {

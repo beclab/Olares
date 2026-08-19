@@ -134,7 +134,7 @@ func runProviderCreate(ctx context.Context, f *cmdutil.Factory, req createProvid
 		return err
 	}
 	var created providerRow
-	if err := pc.router.doJSON(ctx, "POST", consoleAPI+"/providers", req, &created); err != nil {
+	if err := pc.router.doJSON(ctx, "POST", epProviders, req, &created); err != nil {
 		return err
 	}
 
@@ -234,7 +234,7 @@ func runProviderRegister(ctx context.Context, f *cmdutil.Factory, appName, outpu
 	}
 	body := map[string]string{"source": "olares", "app_name": appName}
 	var row providerRow
-	if err := pc.router.doJSON(ctx, "POST", consoleAPI+"/providers", body, &row); err != nil {
+	if err := pc.router.doJSON(ctx, "POST", epProviders, body, &row); err != nil {
 		return err
 	}
 	if format == FormatJSON {

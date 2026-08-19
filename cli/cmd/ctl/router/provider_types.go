@@ -214,7 +214,7 @@ func listProviderCatalog(ctx context.Context, pc *preparedClient) ([]catalogEntr
 	var env struct {
 		Providers []catalogEntry `json:"providers"`
 	}
-	if err := pc.router.doJSON(ctx, "GET", consoleAPI+"/provider-catalog", nil, &env); err != nil {
+	if err := pc.router.doJSON(ctx, "GET", epProviderCatalog, nil, &env); err != nil {
 		return nil, err
 	}
 	return env.Providers, nil
@@ -228,7 +228,7 @@ func listPredefinedModels(ctx context.Context, pc *preparedClient, providerType 
 	var env struct {
 		Items []catalogModel `json:"items"`
 	}
-	path := consoleAPI + "/predefined-catalog?provider_type=" + url.QueryEscape(providerType)
+	path := withQuery(epPredefinedCatalog, url.Values{"provider_type": {providerType}})
 	if err := pc.router.doJSON(ctx, "GET", path, nil, &env); err != nil {
 		return nil, err
 	}

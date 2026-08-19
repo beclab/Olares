@@ -78,7 +78,7 @@ func runStatus(ctx context.Context, f *cmdutil.Factory, outputRaw string) error 
 
 	report := statusReport{Router: pc.found}
 	var health map[string]interface{}
-	if herr := pc.router.doJSON(ctx, "GET", "/healthz", nil, &health); herr != nil {
+	if herr := pc.router.doJSON(ctx, "GET", epHealth, nil, &health); herr != nil {
 		report.HealthError = herr.Error()
 	} else {
 		report.Health = health

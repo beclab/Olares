@@ -278,7 +278,7 @@ func runUsageSummary(ctx context.Context, f *cmdutil.Factory, dim string, fl spe
 	}
 	q.Set("dim", dim)
 	var sum spendSummary
-	if err := pc.router.doJSON(ctx, "GET", consoleAPI+"/spend-logs/summary?"+q.Encode(), nil, &sum); err != nil {
+	if err := pc.router.doJSON(ctx, "GET", withQuery(epSpendSummary, q), nil, &sum); err != nil {
 		return err
 	}
 	if format == FormatJSON {
@@ -394,11 +394,7 @@ func runUsageList(ctx context.Context, f *cmdutil.Factory, fl spendFilter, outpu
 		Limit  int        `json:"limit"`
 		Offset int        `json:"offset"`
 	}
-	path := consoleAPI + "/spend-logs"
-	if len(q) > 0 {
-		path += "?" + q.Encode()
-	}
-	if err := pc.router.doJSON(ctx, "GET", path, nil, &env); err != nil {
+	if err := pc.router.doJSON(ctx, "GET", withQuery(epSpendLogs, q), nil, &env); err != nil {
 		return err
 	}
 	if format == FormatJSON {
@@ -537,11 +533,7 @@ func runUsageExport(ctx context.Context, f *cmdutil.Factory, fl spendFilter, out
 	if err != nil {
 		return err
 	}
-	path := consoleAPI + "/spend-logs/export.csv"
-	if len(q) > 0 {
-		path += "?" + q.Encode()
-	}
-	resp, err := pc.router.doStream(ctx, path)
+	resp, err := pc.router.doStream(ctx, withQuery(epSpendExportCSV, q))
 	if err != nil {
 		return err
 	}

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"net/url"
 	"os"
 	"sort"
 	"strconv"
@@ -159,7 +158,7 @@ func runCallOCR(ctx context.Context, f *cmdutil.Factory, opts ocrOptions) error 
 	}
 
 	if opts.TaskID != "" && opts.Cancel {
-		path := dataPlaneAPI + "/ocr/tasks/" + url.PathEscape(opts.TaskID)
+		path := epOCRTask(opts.TaskID)
 		if err := dp.doJSON(ctx, "DELETE", path, nil, nil); err != nil {
 			return callErr(err)
 		}
@@ -183,7 +182,7 @@ func runCallOCR(ctx context.Context, f *cmdutil.Factory, opts ocrOptions) error 
 		if merr != nil {
 			return merr
 		}
-		resp, derr := dp.do(ctx, "POST", dataPlaneAPI+"/ocr", body, contentType)
+		resp, derr := dp.do(ctx, "POST", epOCR, body, contentType)
 		if derr != nil {
 			return derr
 		}
@@ -193,7 +192,7 @@ func runCallOCR(ctx context.Context, f *cmdutil.Factory, opts ocrOptions) error 
 			return fmt.Errorf("read the submission answer: %w", rerr)
 		}
 		if resp.StatusCode/100 != 2 {
-			return callErr(dp.formatErr("POST", dataPlaneAPI+"/ocr", resp.StatusCode, raw))
+			return callErr(dp.formatErr("POST", epOCR, resp.StatusCode, raw))
 		}
 		if uerr := json.Unmarshal(raw, &task); uerr != nil {
 			return fmt.Errorf("decode the submission answer: %w (body=%s)", uerr, truncate(string(raw), 200))
@@ -220,7 +219,7 @@ func runCallOCR(ctx context.Context, f *cmdutil.Factory, opts ocrOptions) error 
 }
 
 func fetchOCRTask(ctx context.Context, dp *routerClient, id string, out *ocrTask) error {
-	path := dataPlaneAPI + "/ocr/tasks/" + url.PathEscape(id)
+	path := epOCRTask(id)
 	if err := dp.doJSON(ctx, "GET", path, nil, out); err != nil {
 		return callErr(err)
 	}

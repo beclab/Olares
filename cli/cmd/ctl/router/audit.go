@@ -235,11 +235,7 @@ func runAuditList(ctx context.Context, f *cmdutil.Factory, fl auditFilter, outpu
 			Limit  int          `json:"limit"`
 			Offset int          `json:"offset"`
 		}
-		path := consoleAPI + "/audit-logs"
-		if len(page) > 0 {
-			path += "?" + page.Encode()
-		}
-		if err := pc.router.doJSON(ctx, "GET", path, nil, &env); err != nil {
+		if err := pc.router.doJSON(ctx, "GET", withQuery(epAuditLogs, page), nil, &env); err != nil {
 			return err
 		}
 		items = append(items, env.Items...)
@@ -368,7 +364,7 @@ func runAuditGet(ctx context.Context, f *cmdutil.Factory, id, outputRaw string) 
 		return err
 	}
 	var entry auditEntry
-	if err := pc.router.doJSON(ctx, "GET", consoleAPI+"/audit-logs/"+url.PathEscape(id), nil, &entry); err != nil {
+	if err := pc.router.doJSON(ctx, "GET", epAuditLog(id), nil, &entry); err != nil {
 		return err
 	}
 	if format == FormatJSON {

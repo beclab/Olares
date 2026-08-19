@@ -195,7 +195,7 @@ func runCallChat(ctx context.Context, f *cmdutil.Factory, prompt string, opts ch
 	}
 
 	var resp chatResponse
-	if err := dp.doJSON(ctx, "POST", dataPlaneAPI+"/chat/completions", req, &resp); err != nil {
+	if err := dp.doJSON(ctx, "POST", epChatCompletions, req, &resp); err != nil {
 		return callErr(err)
 	}
 	if format == FormatJSON {
@@ -269,14 +269,14 @@ func streamChat(ctx context.Context, dp *routerClient, req chatRequest, quiet bo
 	if err != nil {
 		return fmt.Errorf("marshal request body: %w", err)
 	}
-	resp, err := dp.do(ctx, "POST", dataPlaneAPI+"/chat/completions", bytes.NewReader(buf), "application/json")
+	resp, err := dp.do(ctx, "POST", epChatCompletions, bytes.NewReader(buf), "application/json")
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode/100 != 2 {
 		body, _ := io.ReadAll(resp.Body)
-		return callErr(dp.formatErr("POST", dataPlaneAPI+"/chat/completions", resp.StatusCode, body))
+		return callErr(dp.formatErr("POST", epChatCompletions, resp.StatusCode, body))
 	}
 
 	var (

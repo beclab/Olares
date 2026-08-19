@@ -13,14 +13,6 @@ import (
 	"github.com/beclab/Olares/cli/pkg/credential"
 )
 
-// Route prefixes on the entrance host. The console plane is the management
-// surface every configuration verb uses; the data plane is OpenAI-shaped and
-// takes an `sk-*` key rather than the session this tree carries.
-const (
-	consoleAPI   = "/console/api"
-	dataPlaneAPI = "/v1"
-)
-
 // statusOlaresEdgeAuthFailure is the non-standard code the Olares edge
 // (Authelia ext-authz through l4-bfl-proxy) returns when an otherwise valid
 // request carries a token it no longer accepts. The Factory transport already

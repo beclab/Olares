@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/url"
 	"os"
 	"sort"
 	"strconv"
@@ -141,7 +140,7 @@ func runProviderModelsImport(ctx context.Context, f *cmdutil.Factory, ref string
 		Skipped int `json:"skipped"`
 		Total   int `json:"total"`
 	}
-	path := consoleAPI + "/providers/" + url.PathEscape(found.ID) + "/predefined-models"
+	path := epProviderPredefinedModels(found.ID)
 	body := map[string][]string{"model_names": names}
 	if err := pc.router.doJSON(ctx, "POST", path, body, &res); err != nil {
 		return err
@@ -265,7 +264,7 @@ func runProviderModelsAdd(ctx context.Context, f *cmdutil.Factory, ref string, r
 		return marketOwnedErr(found, "attach models to")
 	}
 	var created providerModelRow
-	path := consoleAPI + "/providers/" + url.PathEscape(found.ID) + "/customizable-models"
+	path := epProviderCustomizableModels(found.ID)
 	if err := pc.router.doJSON(ctx, "POST", path, req, &created); err != nil {
 		return err
 	}
@@ -475,7 +474,7 @@ func runProviderModelsUpdate(ctx context.Context, f *cmdutil.Factory, providerRe
 		req.carryForward(model)
 	}
 	var updated providerModelRow
-	path := consoleAPI + "/providers/" + url.PathEscape(provider.ID) + "/models/" + url.PathEscape(model.ID)
+	path := epProviderModel(provider.ID, model.ID)
 	if err := pc.router.doJSON(ctx, "PATCH", path, req, &updated); err != nil {
 		return err
 	}
@@ -544,7 +543,7 @@ func runProviderModelsDelete(ctx context.Context, f *cmdutil.Factory, providerRe
 		return err
 	}
 	var res map[string]any
-	path := consoleAPI + "/providers/" + url.PathEscape(provider.ID) + "/models/" + url.PathEscape(model.ID)
+	path := epProviderModel(provider.ID, model.ID)
 	if err := pc.router.doJSON(ctx, "DELETE", path, nil, &res); err != nil {
 		return err
 	}

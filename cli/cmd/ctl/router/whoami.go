@@ -84,7 +84,7 @@ func runWhoami(ctx context.Context, f *cmdutil.Factory, outputRaw string) error 
 
 func fetchConsoleUser(ctx context.Context, pc *preparedClient) (*consoleUser, error) {
 	var me consoleUser
-	if err := pc.router.doJSON(ctx, "GET", consoleAPI+"/users/me", nil, &me); err != nil {
+	if err := pc.router.doJSON(ctx, "GET", epMe, nil, &me); err != nil {
 		return nil, err
 	}
 	return &me, nil
@@ -98,7 +98,7 @@ func userLabels(ctx context.Context, pc *preparedClient) map[string]string {
 	var env struct {
 		Items []consoleUser `json:"items"`
 	}
-	if err := pc.router.doJSON(ctx, "GET", consoleAPI+"/users", nil, &env); err != nil {
+	if err := pc.router.doJSON(ctx, "GET", epUsers, nil, &env); err != nil {
 		return map[string]string{}
 	}
 	out := make(map[string]string, len(env.Items))

@@ -162,10 +162,11 @@ func runAppCatalog(ctx context.Context, f *cmdutil.Factory, category, outputRaw 
 	if err != nil {
 		return err
 	}
-	path := consoleAPI + "/providers/market-catalog"
+	q := url.Values{}
 	if c := strings.TrimSpace(category); c != "" {
-		path += "?category=" + url.QueryEscape(c)
+		q.Set("category", c)
 	}
+	path := withQuery(epMarketCatalog, q)
 	var env struct {
 		Items []marketApp `json:"items"`
 	}
@@ -305,7 +306,7 @@ func runAppInstall(ctx context.Context, f *cmdutil.Factory, appName string, watc
 	}
 	var started startedTask
 	body := map[string]string{"app_name": appName}
-	if err := pc.router.doJSON(ctx, "POST", consoleAPI+"/providers/market-install", body, &started); err != nil {
+	if err := pc.router.doJSON(ctx, "POST", epMarketInstall, body, &started); err != nil {
 		return marketRouteErr(err)
 	}
 	return reportStarted(ctx, pc, started, "installing "+appName, watch, format)
@@ -548,7 +549,7 @@ func runAppLifecycle(ctx context.Context, f *cmdutil.Factory, ref, action, gerun
 		}
 	}
 	var started startedTask
-	path := consoleAPI + "/providers/" + url.PathEscape(found.ID) + "/" + action
+	path := epMarketProviderAction(found.ID, action)
 	if err := pc.router.doJSON(ctx, "POST", path, nil, &started); err != nil {
 		return marketRouteErr(err)
 	}
@@ -753,12 +754,8 @@ func fetchInstallTasks(ctx context.Context, pc *preparedClient, providerID strin
 	if offset > 0 {
 		q.Set("offset", strconv.Itoa(offset))
 	}
-	path := consoleAPI + "/providers/" + url.PathEscape(providerID) + "/install-tasks"
-	if len(q) > 0 {
-		path += "?" + q.Encode()
-	}
 	var env installTaskPage
-	if err := pc.router.doJSON(ctx, "GET", path, nil, &env); err != nil {
+	if err := pc.router.doJSON(ctx, "GET", withQuery(epMarketInstallTasks(providerID), q), nil, &env); err != nil {
 		return nil, marketRouteErr(err)
 	}
 	return &env, nil
@@ -846,11 +843,11 @@ type sseEvent struct {
 }
 
 func streamInstallEvents(ctx context.Context, pc *preparedClient, providerID string, taskID, since int64, format Format) error {
-	path := fmt.Sprintf("%s/providers/%s/install-events?task_id=%d", consoleAPI, url.PathEscape(providerID), taskID)
+	q := url.Values{"task_id": {strconv.FormatInt(taskID, 10)}}
 	if since > 0 {
-		path += "&last_event_id=" + strconv.FormatInt(since, 10)
+		q.Set("last_event_id", strconv.FormatInt(since, 10))
 	}
-	resp, err := pc.router.doStream(ctx, path)
+	resp, err := pc.router.doStream(ctx, withQuery(epMarketInstallEvents(providerID), q))
 	if err != nil {
 		return marketRouteErr(err)
 	}

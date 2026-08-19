@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"sort"
 	"strings"
@@ -142,7 +143,8 @@ func runDefaultShow(ctx context.Context, f *cmdutil.Factory, system bool, output
 		var env struct {
 			Items []systemDefault `json:"items"`
 		}
-		if err := pc.router.doJSON(ctx, "GET", consoleAPI+"/default-models?layer=system", nil, &env); err != nil {
+		path := withQuery(epDefaultModels, url.Values{"layer": {"system"}})
+		if err := pc.router.doJSON(ctx, "GET", path, nil, &env); err != nil {
 			return err
 		}
 		if format == FormatJSON {
@@ -154,7 +156,7 @@ func runDefaultShow(ctx context.Context, f *cmdutil.Factory, system bool, output
 	var env struct {
 		Items []resolvedDefault `json:"items"`
 	}
-	if err := pc.router.doJSON(ctx, "GET", consoleAPI+"/default-models", nil, &env); err != nil {
+	if err := pc.router.doJSON(ctx, "GET", epDefaultModels, nil, &env); err != nil {
 		return err
 	}
 	if format == FormatJSON {
@@ -374,7 +376,7 @@ func postDefaults(ctx context.Context, pc *preparedClient, settings []modelSetti
 		var env struct {
 			Items []resolvedDefault `json:"items"`
 		}
-		if err := pc.router.doJSON(ctx, "POST", consoleAPI+"/account/default-models", body, &env); err != nil {
+		if err := pc.router.doJSON(ctx, "POST", epAccountDefaultModels, body, &env); err != nil {
 			return err
 		}
 		if format == FormatJSON {
@@ -389,7 +391,7 @@ func postDefaults(ctx context.Context, pc *preparedClient, settings []modelSetti
 	var env struct {
 		Items []systemDefault `json:"items"`
 	}
-	if err := pc.router.doJSON(ctx, "POST", consoleAPI+"/default-models", body, &env); err != nil {
+	if err := pc.router.doJSON(ctx, "POST", epDefaultModels, body, &env); err != nil {
 		return err
 	}
 	if format == FormatJSON {
@@ -468,7 +470,8 @@ func listAllModels(ctx context.Context, pc *preparedClient) ([]adminModelRow, er
 	var env struct {
 		Items []adminModelRow `json:"items"`
 	}
-	if err := pc.router.doJSON(ctx, "GET", consoleAPI+"/provider-models?limit=1000", nil, &env); err != nil {
+	path := withQuery(epProviderModels, url.Values{"limit": {"1000"}})
+	if err := pc.router.doJSON(ctx, "GET", path, nil, &env); err != nil {
 		return nil, err
 	}
 	return env.Items, nil

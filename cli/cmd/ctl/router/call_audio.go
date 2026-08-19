@@ -124,9 +124,9 @@ func runCallTranscribe(ctx context.Context, f *cmdutil.Factory, path string, opt
 		return err
 	}
 
-	route := dataPlaneAPI + "/audio/transcriptions"
+	route := epAudioTranscriptions
 	if opts.Translate {
-		route = dataPlaneAPI + "/audio/translations"
+		route = epAudioTranslations
 	}
 	resp, err := dp.do(ctx, "POST", route, body, contentType)
 	if err != nil {
@@ -310,7 +310,7 @@ func runCallSpeak(ctx context.Context, f *cmdutil.Factory, text string, opts spe
 		return fmt.Errorf("marshal request body: %w", err)
 	}
 
-	route := dataPlaneAPI + "/audio/speech"
+	route := epAudioSpeech
 	resp, err := dp.do(ctx, "POST", route, bytes.NewReader(buf), "application/json")
 	if err != nil {
 		return err

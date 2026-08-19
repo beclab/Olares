@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net/url"
 	"os"
 	"strings"
 	"text/tabwriter"
@@ -146,7 +145,7 @@ func listCallerApps(ctx context.Context, pc *preparedClient) ([]callerApp, error
 	var env struct {
 		Items []callerApp `json:"items"`
 	}
-	if err := pc.router.doJSON(ctx, "GET", consoleAPI+"/apps", nil, &env); err != nil {
+	if err := pc.router.doJSON(ctx, "GET", epCallerApps, nil, &env); err != nil {
 		return nil, err
 	}
 	return env.Items, nil
@@ -251,7 +250,7 @@ func runCallerArchive(ctx context.Context, f *cmdutil.Factory, ref string, assum
 		}
 	}
 	var archived callerApp
-	path := consoleAPI + "/apps/" + url.PathEscape(found.ID)
+	path := epCallerApp(found.ID)
 	if err := pc.router.doJSON(ctx, "DELETE", path, nil, &archived); err != nil {
 		return err
 	}

@@ -3,7 +3,6 @@ package router
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -101,7 +100,7 @@ func runProviderSyncModels(ctx context.Context, f *cmdutil.Factory, ref, outputR
 		return err
 	}
 	var res syncModelsResult
-	path := consoleAPI + "/providers/" + url.PathEscape(found.ID) + "/sync-models"
+	path := epProviderSyncModels(found.ID)
 	if err := pc.router.doJSON(ctx, "POST", path, nil, &res); err != nil {
 		return err
 	}

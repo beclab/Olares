@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
-	"strings"
 	"text/tabwriter"
 
 	"github.com/spf13/cobra"
@@ -113,10 +113,11 @@ Examples:
 			if err != nil {
 				return err
 			}
-			path := "/api/diag/gpu"
+			q := url.Values{}
 			if native {
-				path += "?include_engine_native=true"
+				q.Set("include_engine_native", "true")
 			}
+			path := withQuery(epLocalDiagGPU, q)
 			if format == FormatJSON {
 				var raw map[string]any
 				if err := li.client.doJSON(ctx, "GET", path, nil, &raw); err != nil {
@@ -280,7 +281,7 @@ Examples:
 
 			var rep perfReport
 			if last {
-				if err := li.client.doJSON(ctx, "GET", "/api/diag/perf/last", nil, &rep); err != nil {
+				if err := li.client.doJSON(ctx, "GET", epLocalDiagPerfLast, nil, &rep); err != nil {
 					return perfLastErr(err)
 				}
 			} else {
@@ -290,7 +291,7 @@ Examples:
 					req.WithoutThink = &no
 					req.WithThink = true
 				}
-				if err := li.client.doJSON(ctx, "POST", "/api/diag/perf", req, &rep); err != nil {
+				if err := li.client.doJSON(ctx, "POST", epLocalDiagPerf, req, &rep); err != nil {
 					return perfRunErr(err)
 				}
 			}
@@ -452,17 +453,14 @@ Examples:
 			if err != nil {
 				return err
 			}
-			path := "/api/retry"
-			var q []string
+			q := url.Values{}
 			if force {
-				q = append(q, "force=true")
+				q.Set("force", "true")
 			}
 			if level != "" {
-				q = append(q, "level="+level)
+				q.Set("level", level)
 			}
-			if len(q) > 0 {
-				path += "?" + strings.Join(q, "&")
-			}
+			path := withQuery(epLocalRetry, q)
 			var accepted struct {
 				Status        string `json:"status"`
 				PreviousPhase string `json:"previous_phase"`
@@ -550,7 +548,7 @@ Examples:
 				OK     bool   `json:"ok"`
 				RunDir string `json:"run_dir"`
 			}
-			if err := li.client.doJSON(ctx, "POST", "/api/engine/restart", nil, &res); err != nil {
+			if err := li.client.doJSON(ctx, "POST", epLocalEngineRestart, nil, &res); err != nil {
 				return restartErr(ctx, li, err)
 			}
 			if format == FormatJSON {
@@ -572,7 +570,7 @@ func restartErr(ctx context.Context, li *llmInit, err error) error {
 		return err
 	}
 	if re.Status == 404 {
-		if served := consoleServes(ctx, li, "POST", "/api/engine/restart"); served != nil && !*served {
+		if served := consoleServes(ctx, li, "POST", epLocalEngineRestart); served != nil && !*served {
 			return fmt.Errorf("this application's Model Console (%s) cannot relaunch its engine on "+
 				"request — the route arrived in a later version. Restarting the application does the "+
 				"same thing from outside: `olares-cli market restart %s`",
