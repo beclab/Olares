@@ -32,7 +32,7 @@ All verbs require Olares 1.12.7+ because Router ships as the `router` Market lis
 
 | Family | Verbs | Read when triggered |
 |---|---|---|
-| where Router is, and who you are | `status`, `whoami` | [architecture and identity](references/olares-router-architecture.md) |
+| where Router is, and who you are | `status` | [architecture and identity](references/olares-router-architecture.md) |
 | cloud vendors and their models | `provider list/get/types/create/update/delete/validate/credentials/history/rollback/sync-models`, `provider models get/import/add/update/delete` | [configuring an external provider](references/olares-router-external.md) |
 | local LLM applications | `app catalog/installed/install/upgrade/uninstall`, `provider register`, `local status/progress/spec/retry/restart` | [local LLM applications](references/olares-router-local-llm.md) |
 | local embedding, audio, OCR, CLIP | the same verbs, different modes | [local multimodal applications](references/olares-router-local-multimodal.md) |

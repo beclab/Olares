@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"sort"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -123,6 +124,12 @@ func renderStatus(w io.Writer, r statusReport) error {
 		t.row("USER", nonEmpty(r.Identity.BflName))
 		t.row("ROLE", nonEmpty(r.Identity.Role))
 		t.row("ADMIN", boolStr(r.Identity.isAdmin()))
+		// An empty list means every model, which is the usual case and worth
+		// no line. A populated one is the difference between a model that is
+		// missing and a model this person may not call.
+		if len(r.Identity.AllowedModels) > 0 {
+			t.row("ALLOWED MODELS", strings.Join(r.Identity.AllowedModels, ", "))
+		}
 	}
 
 	return t.flush()

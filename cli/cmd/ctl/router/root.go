@@ -22,7 +22,6 @@ tree locates it at runtime instead of assuming a hostname — run "router
 status" first if anything here behaves unexpectedly.
 
   status        where Router lives, whether it is healthy, and your role
-  whoami        the identity and role Router sees for the active profile
   list          every model configured, across every provider
   models        every name the model field accepts, as a caller sees it
   capabilities  the capability flags a model row can declare
@@ -52,7 +51,6 @@ Run "olares-cli router <verb> --help" for details.
 	}
 
 	cmd.AddCommand(NewStatusCommand(f))
-	cmd.AddCommand(NewWhoamiCommand(f))
 	cmd.AddCommand(NewListCommand(f))
 	cmd.AddCommand(newModelsCommand(f))
 	cmd.AddCommand(NewCapabilitiesCommand(f))

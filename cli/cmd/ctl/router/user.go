@@ -33,7 +33,7 @@ A record appears the first time somebody's session reaches Router, so this is th
 people who have used it rather than everybody who could. Roles are Olares' to
 decide and are read from there; there is nothing to change here.
 
-Use "olares-cli router whoami" for your own record, which any user can read.
+Use "olares-cli router status" for your own record, which any user can read.
 
 Admin only.
 `,

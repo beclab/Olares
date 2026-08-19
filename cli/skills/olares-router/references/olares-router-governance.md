@@ -100,7 +100,7 @@ olares-cli router user list
 
 A Router user row appears the first time that person's identity reaches Router, so a freshly created Olares account is absent until it does. That is why `key issue --for-user` and `quota set --user` can only name someone who has already arrived. Admin only.
 
-Router's roles are its own: being an Olares admin is what makes you a Router admin, but the user list, the roles and the disabled state live in Router. `router whoami` reports what it decided about you.
+The role is Olares': being an Olares admin is what makes you a Router admin, and Router stores what the edge told it rather than deciding anything. The user list and the disabled state are Router's own. `router status` reports the record it holds for you, including a model allowlist if somebody set one.
 
 ## The applications that call Router
 
