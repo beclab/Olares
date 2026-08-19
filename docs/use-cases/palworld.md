@@ -4,7 +4,7 @@ description: Play Palworld with friends by hosting a dedicated server on Olares 
 head:
   - - meta
     - name: keywords
-      content: Olares, Palworld, game server, self-hosted, Overlay gateway, VPN, Entertainment
+      content: Olares, Palworld, game server, self-hosted, Overlay gateway, VPN, Games
 app_version: "1.0.0"
 doc_version: "1.0"
 doc_updated: "2026-08-19"

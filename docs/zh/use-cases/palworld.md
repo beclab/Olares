@@ -4,7 +4,7 @@ description: 在 Olares 上托管 Palworld 专用服务器，与好友通过局�
 head:
   - - meta
     - name: keywords
-      content: Olares, Palworld, 游戏服务器, 自托管, Overlay gateway, VPN, 娱乐
+      content: Olares, Palworld, 游戏服务器, 自托管, Overlay gateway, VPN, 游戏
 app_version: "1.0.0"
 doc_version: "1.0"
 doc_updated: "2026-08-19"

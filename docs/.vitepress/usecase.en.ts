@@ -341,30 +341,12 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/use-cases/jellyfin",
             },
             {
-              text: "Steam",
-              collapsed: true,
-              items: [
-                {
-                  text: "Play directly on Olares",
-                  link: "/use-cases/steam-direct-play",
-                },
-                {
-                  text: "Stream to other devices",
-                  link: "/use-cases/steam-stream",
-                }
-              ]
-            },
-            {
               text: "Komga",
               link: "/use-cases/komga",
             },
             {
               text: "Navidrome",
               link: "/use-cases/navidrome",
-            },
-            {
-              text: "Palworld",
-              link: "/use-cases/palworld",
             },
             {
               text: "TREK (NOMAD)",
@@ -390,6 +372,30 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   text: "Upgrade download clients",
                   link: "/use-cases/download-clients-upgrade",
                 },
+              ]
+            },
+          ]
+        },
+        {
+          text: "Games",
+          collapsed: false,
+          items: [
+            {
+              text: "Palworld",
+              link: "/use-cases/palworld",
+            },
+            {
+              text: "Steam",
+              collapsed: true,
+              items: [
+                {
+                  text: "Play directly on Olares",
+                  link: "/use-cases/steam-direct-play",
+                },
+                {
+                  text: "Stream to other devices",
+                  link: "/use-cases/steam-stream",
+                }
               ]
             },
           ]
