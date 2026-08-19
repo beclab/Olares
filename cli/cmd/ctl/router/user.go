@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 	"strings"
-	"text/tabwriter"
 
 	"github.com/spf13/cobra"
 
@@ -104,23 +103,17 @@ func renderUserList(w io.Writer, users []consoleUser) error {
 		_, err := fmt.Fprintln(w, "no users. A record appears the first time somebody opens Router.")
 		return err
 	}
-	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	if _, err := fmt.Fprintln(tw, "USER\tROLE\tSTATUS\tSOURCE\tMODELS\tID"); err != nil {
-		return err
-	}
+	t := newTable(w, "USER", "ROLE", "STATUS", "SOURCE", "MODELS", "ID")
 	for i := range users {
 		u := &users[i]
 		models := "all"
 		if len(u.AllowedModels) > 0 {
 			models = strings.Join(u.AllowedModels, ", ")
 		}
-		if _, err := fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\n",
-			nonEmpty(u.BflName), nonEmpty(u.Role), nonEmpty(u.Status),
-			nonEmpty(u.Source), clip(models, 40), nonEmpty(u.ID)); err != nil {
-			return err
-		}
+		t.row(nonEmpty(u.BflName), nonEmpty(u.Role), nonEmpty(u.Status),
+			nonEmpty(u.Source), clip(models, 40), nonEmpty(u.ID))
 	}
-	return tw.Flush()
+	return t.flush()
 }
 
 // resolveUserID turns a name into the id the routes take. Names are what people

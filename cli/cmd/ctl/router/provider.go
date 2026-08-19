@@ -8,7 +8,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"text/tabwriter"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -155,35 +154,28 @@ Admin only.
 // serves, so the reader sees the row as it now stands rather than an echo of
 // what was sent.
 func renderProviderRow(w io.Writer, p *providerRow) error {
-	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	rows := [][2]string{
-		{"NAME", nonEmpty(p.Name)},
-		{"TITLE", nonEmpty(p.title())},
-		{"TYPE", nonEmpty(p.ProviderType)},
-		{"STATUS", nonEmpty(p.Status)},
-		{"SOURCE", nonEmpty(p.Source)},
-		{"BASE URL", nonEmpty(p.BaseURL)},
-		{"CREDENTIALS VERSION", strconv.Itoa(p.CredentialsVersion)},
-		{"ID", nonEmpty(p.ID)},
-	}
+	t := newTable(w)
+	t.row("NAME", nonEmpty(p.Name))
+	t.row("TITLE", nonEmpty(p.title()))
+	t.row("TYPE", nonEmpty(p.ProviderType))
+	t.row("STATUS", nonEmpty(p.Status))
+	t.row("SOURCE", nonEmpty(p.Source))
+	t.row("BASE URL", nonEmpty(p.BaseURL))
+	t.row("CREDENTIALS VERSION", strconv.Itoa(p.CredentialsVersion))
+	t.row("ID", nonEmpty(p.ID))
 	if p.OlaresAppName != nil {
-		rows = append(rows, [2]string{"OLARES APP", nonEmpty(*p.OlaresAppName)})
+		t.row("OLARES APP", nonEmpty(*p.OlaresAppName))
 	}
 	if p.OlaresVersionName != nil {
-		rows = append(rows, [2]string{"OLARES VERSION", nonEmpty(*p.OlaresVersionName)})
+		t.row("OLARES VERSION", nonEmpty(*p.OlaresVersionName))
 	}
 	if p.OlaresStatus != nil {
-		rows = append(rows, [2]string{"OLARES STATUS", nonEmpty(*p.OlaresStatus)})
+		t.row("OLARES STATUS", nonEmpty(*p.OlaresStatus))
 	}
 	if p.EntranceURL != nil {
-		rows = append(rows, [2]string{"ENTRANCE URL", nonEmpty(*p.EntranceURL)})
+		t.row("ENTRANCE URL", nonEmpty(*p.EntranceURL))
 	}
-	for _, r := range rows {
-		if _, err := fmt.Fprintf(tw, "%s\t%s\n", r[0], r[1]); err != nil {
-			return err
-		}
-	}
-	return tw.Flush()
+	return t.flush()
 }
 
 // marketOwnedErr is the refusal every write verb owes a Market-sourced

@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 	"strings"
-	"text/tabwriter"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -173,27 +172,22 @@ func runKeyLocal(ctx context.Context, f *cmdutil.Factory, forget bool, outputRaw
 }
 
 func renderKeyLocal(w io.Writer, state map[string]any) error {
-	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	rows := [][2]string{{"PROFILE", fmt.Sprintf("%v", state["profile"])}}
+	t := newTable(w)
+	t.row("PROFILE", fmt.Sprintf("%v", state["profile"]))
 	saved, _ := state["saved"].(bool)
-	rows = append(rows, [2]string{"SAVED KEY", boolStr(saved)})
+	t.row("SAVED KEY", boolStr(saved))
 	if p, ok := state["key_prefix"].(string); ok {
-		rows = append(rows, [2]string{"PREFIX", p})
+		t.row("PREFIX", p)
 	}
 	if e, ok := state["env_override"].(string); ok {
-		rows = append(rows, [2]string{"OVERRIDDEN BY", e})
+		t.row("OVERRIDDEN BY", e)
 	}
 	if e, ok := state["keychain_error"].(string); ok {
-		rows = append(rows, [2]string{"KEYCHAIN", "unreadable: " + e})
+		t.row("KEYCHAIN", "unreadable: "+e)
 	}
 	inC, _ := state["in_container"].(bool)
-	rows = append(rows, [2]string{"IN CONTAINER", boolStr(inC)})
-	for _, r := range rows {
-		if _, err := fmt.Fprintf(tw, "%s\t%s\n", r[0], r[1]); err != nil {
-			return err
-		}
-	}
-	if err := tw.Flush(); err != nil {
+	t.row("IN CONTAINER", boolStr(inC))
+	if err := t.flush(); err != nil {
 		return err
 	}
 	switch {
@@ -290,10 +284,7 @@ func renderKeyList(ctx context.Context, pc *preparedClient, w io.Writer, keys []
 		return err
 	}
 	users := userLabels(ctx, pc)
-	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	if _, err := fmt.Fprintln(tw, "NAME\tPREFIX\tOWNER\tSTATE\tEXPIRES\tLAST USED\tMODELS"); err != nil {
-		return err
-	}
+	t := newTable(w, "NAME", "PREFIX", "OWNER", "STATE", "EXPIRES", "LAST USED", "MODELS")
 	for i := range keys {
 		k := &keys[i]
 		owner := k.UserID
@@ -304,13 +295,11 @@ func renderKeyList(ctx context.Context, pc *preparedClient, w io.Writer, keys []
 		if len(k.AllowedModels) > 0 {
 			models = strings.Join(k.AllowedModels, ", ")
 		}
-		if _, err := fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
+		t.row(
 			nonEmpty(k.Name), nonEmpty(k.KeyPrefix), nonEmpty(owner), keyState(k),
-			keyExpiry(k), keyLastUsed(k), clip(models, 48)); err != nil {
-			return err
-		}
+			keyExpiry(k), keyLastUsed(k), clip(models, 48))
 	}
-	if err := tw.Flush(); err != nil {
+	if err := t.flush(); err != nil {
 		return err
 	}
 	_, err := fmt.Fprintln(w, "\nPREFIX is the only part of a key Router keeps, and is how a key in a log or a config is identified.")
@@ -465,23 +454,16 @@ func renderCreatedKey(w io.Writer, k *createdKey) error {
 	if _, err := fmt.Fprintf(w, "%s\n\n", k.Key); err != nil {
 		return err
 	}
-	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	rows := [][2]string{
-		{"NAME", nonEmpty(k.Name)},
-		{"PREFIX", nonEmpty(k.KeyPrefix)},
-		{"EXPIRES", keyExpiry(&k.apiKeyView)},
-	}
+	t := newTable(w)
+	t.row("NAME", nonEmpty(k.Name))
+	t.row("PREFIX", nonEmpty(k.KeyPrefix))
+	t.row("EXPIRES", keyExpiry(&k.apiKeyView))
 	models := "all models in this workspace"
 	if len(k.AllowedModels) > 0 {
 		models = strings.Join(k.AllowedModels, ", ")
 	}
-	rows = append(rows, [2]string{"REACHES", models})
-	for _, r := range rows {
-		if _, err := fmt.Fprintf(tw, "%s\t%s\n", r[0], r[1]); err != nil {
-			return err
-		}
-	}
-	if err := tw.Flush(); err != nil {
+	t.row("REACHES", models)
+	if err := t.flush(); err != nil {
 		return err
 	}
 	_, err := fmt.Fprintln(w, "\nThe key above is shown once. Router stores only its hash, so it cannot be read back — "+

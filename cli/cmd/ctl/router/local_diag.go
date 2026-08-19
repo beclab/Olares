@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/url"
 	"os"
-	"text/tabwriter"
 
 	"github.com/spf13/cobra"
 
@@ -139,45 +138,38 @@ Examples:
 }
 
 func renderGPUReport(w io.Writer, li *llmInit, r *gpuReport) error {
-	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	rows := [][2]string{
-		{"APPLICATION", li.AppName},
-		{"ENGINE", nonEmpty(r.EngineKind)},
-		{"MODEL", nonEmpty(r.Model.Name)},
-	}
+	t := newTable(w)
+	t.row("APPLICATION", li.AppName)
+	t.row("ENGINE", nonEmpty(r.EngineKind))
+	t.row("MODEL", nonEmpty(r.Model.Name))
 	if r.Model.Bytes > 0 {
 		size := utils.FormatBytes(r.Model.Bytes)
 		if r.Model.Quantize != "" {
 			size += " (" + r.Model.Quantize + ")"
 		}
-		rows = append(rows, [2]string{"WEIGHTS", size})
+		t.row("WEIGHTS", size)
 	}
-	rows = append(rows, [2]string{"PLACEMENT", r.placement()})
+	t.row("PLACEMENT", r.placement())
 	if r.GPU.VRAMBytes > 0 {
-		rows = append(rows, [2]string{"RESIDENT", utils.FormatBytes(r.GPU.VRAMBytes)})
+		t.row("RESIDENT", utils.FormatBytes(r.GPU.VRAMBytes))
 	}
 	if r.GPU.TotalLayers > 0 {
-		rows = append(rows, [2]string{"LAYERS ON GPU", fmt.Sprintf("%d of %d", r.GPU.GPULayers, r.GPU.TotalLayers)})
+		t.row("LAYERS ON GPU", fmt.Sprintf("%d of %d", r.GPU.GPULayers, r.GPU.TotalLayers))
 	}
 	if r.GPU.CPUOffloadGB > 0 {
-		rows = append(rows, [2]string{"CPU OFFLOAD", fmt.Sprintf("%d GB", r.GPU.CPUOffloadGB)})
+		t.row("CPU OFFLOAD", fmt.Sprintf("%d GB", r.GPU.CPUOffloadGB))
 	}
 	if p := r.GPU.GPUMemoryUtilization; p != nil {
-		rows = append(rows, [2]string{"MEMORY RESERVED", fmt.Sprintf("%.0f%% of the GPU", *p*100)})
+		t.row("MEMORY RESERVED", fmt.Sprintf("%.0f%% of the GPU", *p*100))
 	}
 	if p := r.GPU.KVCacheUsagePerc; p != nil {
-		rows = append(rows, [2]string{"KV CACHE IN USE", fmt.Sprintf("%.1f%% right now", *p*100)})
+		t.row("KV CACHE IN USE", fmt.Sprintf("%.1f%% right now", *p*100))
 	}
-	rows = append(rows, [2]string{"MEASURED BY", nonEmpty(r.GPU.Source)})
+	t.row("MEASURED BY", nonEmpty(r.GPU.Source))
 	if r.GeneratedAt != "" {
-		rows = append(rows, [2]string{"AT", r.GeneratedAt})
+		t.row("AT", r.GeneratedAt)
 	}
-	for _, row := range rows {
-		if _, err := fmt.Fprintf(tw, "%s\t%s\n", row[0], row[1]); err != nil {
-			return err
-		}
-	}
-	if err := tw.Flush(); err != nil {
+	if err := t.flush(); err != nil {
 		return err
 	}
 	for _, warn := range r.Warnings {
@@ -311,43 +303,36 @@ Examples:
 }
 
 func renderPerfReport(w io.Writer, li *llmInit, r *perfReport, cached bool) error {
-	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	rows := [][2]string{
-		{"APPLICATION", li.AppName},
-		{"ENGINE", nonEmpty(r.EngineKind)},
-		{"MODEL", nonEmpty(r.Model.Name)},
-		{"RAN AT", nonEmpty(r.StartedAt)},
-		{"TOOK", fmt.Sprintf("%.1fs", float64(r.DurationMS)/1000)},
-	}
+	t := newTable(w)
+	t.row("APPLICATION", li.AppName)
+	t.row("ENGINE", nonEmpty(r.EngineKind))
+	t.row("MODEL", nonEmpty(r.Model.Name))
+	t.row("RAN AT", nonEmpty(r.StartedAt))
+	t.row("TOOK", fmt.Sprintf("%.1fs", float64(r.DurationMS)/1000))
 	if r.TTFT.NoThinkMS > 0 {
-		rows = append(rows, [2]string{"FIRST TOKEN", fmt.Sprintf("%dms", r.TTFT.NoThinkMS)})
+		t.row("FIRST TOKEN", fmt.Sprintf("%dms", r.TTFT.NoThinkMS))
 	}
 	switch r.TTFT.ThinkMode {
 	case "enabled":
-		rows = append(rows, [2]string{"FIRST TOKEN, THINKING", fmt.Sprintf("%dms", r.TTFT.WithThinkMS)})
+		t.row("FIRST TOKEN, THINKING", fmt.Sprintf("%dms", r.TTFT.WithThinkMS))
 	case "not_supported_by_model":
-		rows = append(rows, [2]string{"THINKING", "the model card does not claim reasoning, so it was not measured"})
+		t.row("THINKING", "the model card does not claim reasoning, so it was not measured")
 	}
 	if p := r.Prefill; p != nil {
-		rows = append(rows, [2]string{"PREFILL", fmt.Sprintf("%.1f tokens/s over %d tokens (%s)",
-			p.TokensPerSec, p.SampleTokens, p.Source)})
+		t.row("PREFILL", fmt.Sprintf("%.1f tokens/s over %d tokens (%s)",
+			p.TokensPerSec, p.SampleTokens, p.Source))
 	}
 	if d := r.Decode; d != nil {
-		rows = append(rows, [2]string{"DECODE", fmt.Sprintf("%.1f tokens/s over %d tokens (%s)",
-			d.TokensPerSec, d.SampleTokens, d.Source)})
+		t.row("DECODE", fmt.Sprintf("%.1f tokens/s over %d tokens (%s)",
+			d.TokensPerSec, d.SampleTokens, d.Source))
 	}
 	if r.ColdStart.EngineColdStartMS > 0 {
-		rows = append(rows, [2]string{"COLD START", fmt.Sprintf("%.1fs to first ready (%s)",
-			float64(r.ColdStart.EngineColdStartMS)/1000, nonEmpty(r.ColdStart.Source))})
+		t.row("COLD START", fmt.Sprintf("%.1fs to first ready (%s)",
+			float64(r.ColdStart.EngineColdStartMS)/1000, nonEmpty(r.ColdStart.Source)))
 	}
 	gpu := gpuReport{GPU: r.GPUAtRunTime}
-	rows = append(rows, [2]string{"PLACEMENT AT RUN", gpu.placement()})
-	for _, row := range rows {
-		if _, err := fmt.Fprintf(tw, "%s\t%s\n", row[0], row[1]); err != nil {
-			return err
-		}
-	}
-	if err := tw.Flush(); err != nil {
+	t.row("PLACEMENT AT RUN", gpu.placement())
+	if err := t.flush(); err != nil {
 		return err
 	}
 	for _, warn := range r.Warnings {

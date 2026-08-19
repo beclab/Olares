@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"text/tabwriter"
 
 	"github.com/spf13/cobra"
 
@@ -79,22 +78,17 @@ func renderProviderList(w io.Writer, rows []providerRow) error {
 			hiddenProviderNote)
 		return err
 	}
-	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	if _, err := fmt.Fprintln(tw, "NAME\tTITLE\tTYPE\tSTATUS\tSOURCE\tBASE URL"); err != nil {
-		return err
-	}
+	t := newTable(w, "NAME", "TITLE", "TYPE", "STATUS", "SOURCE", "BASE URL")
 	for i := range rows {
 		r := &rows[i]
-		if _, err := fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\n",
+		t.row(
 			nonEmpty(r.Name),
 			nonEmpty(r.title()),
 			nonEmpty(r.ProviderType),
 			nonEmpty(r.Status),
 			nonEmpty(r.Source),
 			nonEmpty(r.BaseURL),
-		); err != nil {
-			return err
-		}
+		)
 	}
-	return tw.Flush()
+	return t.flush()
 }

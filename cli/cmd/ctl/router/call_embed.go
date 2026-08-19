@@ -7,8 +7,8 @@ import (
 	"io"
 	"math"
 	"os"
+	"strconv"
 	"strings"
-	"text/tabwriter"
 
 	"github.com/spf13/cobra"
 
@@ -155,23 +155,19 @@ func renderEmbeddings(w io.Writer, resp *embeddingsResponse, inputs []string) er
 		_, err := fmt.Fprintln(w, "the model returned no vectors.")
 		return err
 	}
-	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	if _, err := fmt.Fprintln(tw, "#\tDIMS\tNORM\tFIRST COMPONENTS\tINPUT"); err != nil {
-		return err
-	}
+	t := newTable(w, "#", "DIMS", "NORM", "FIRST COMPONENTS", "INPUT")
 	for i := range resp.Data {
 		d := &resp.Data[i]
 		input := ""
 		if d.Index >= 0 && d.Index < len(inputs) {
 			input = inputs[d.Index]
 		}
-		if _, err := fmt.Fprintf(tw, "%d\t%d\t%.3f\t%s\t%s\n",
-			d.Index, len(d.Embedding), l2Norm(d.Embedding),
-			headComponents(d.Embedding, 3), clip(input, 40)); err != nil {
-			return err
-		}
+		t.row(
+			strconv.Itoa(d.Index), strconv.Itoa(len(d.Embedding)),
+			fmt.Sprintf("%.3f", l2Norm(d.Embedding)),
+			headComponents(d.Embedding, 3), clip(input, 40))
 	}
-	if err := tw.Flush(); err != nil {
+	if err := t.flush(); err != nil {
 		return err
 	}
 	line := "\n" + nonEmpty(resp.Model)

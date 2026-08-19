@@ -9,7 +9,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"text/tabwriter"
 
 	"github.com/spf13/cobra"
 
@@ -204,17 +203,14 @@ func renderModelList(w io.Writer, items []adminModelRow, total, limit, offset in
 			"`olares-cli router provider types` to see what can be added.")
 		return err
 	}
-	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	if _, err := fmt.Fprintln(tw, "MODEL\tPROVIDER\tTYPE\tSOURCE\tMODE\tOFFERED\tSTATUS\tPROVIDER STATUS"); err != nil {
-		return err
-	}
+	t := newTable(w, "MODEL", "PROVIDER", "TYPE", "SOURCE", "MODE", "OFFERED", "STATUS", "PROVIDER STATUS")
 	for i := range items {
 		it := &items[i]
 		name := it.Model.Name
 		if it.Model.Alias != nil && *it.Model.Alias != "" {
 			name = fmt.Sprintf("%s (as %s)", it.Model.Name, *it.Model.Alias)
 		}
-		if _, err := fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
+		t.row(
 			nonEmpty(name),
 			nonEmpty(it.ProviderName),
 			nonEmpty(it.ProviderType),
@@ -223,20 +219,12 @@ func renderModelList(w io.Writer, items []adminModelRow, total, limit, offset in
 			boolStr(it.Model.Enabled),
 			nonEmpty(it.Model.Status),
 			nonEmpty(it.ProviderStatus),
-		); err != nil {
-			return err
-		}
+		)
 	}
-	if err := tw.Flush(); err != nil {
+	if err := t.flush(); err != nil {
 		return err
 	}
-	shown := offset + len(items)
-	if total > shown {
-		_, err := fmt.Fprintf(w, "\nshowing %d-%d of %d; --offset %d for the next page\n",
-			offset+1, shown, total, shown)
-		return err
-	}
-	return nil
+	return pageFooter(w, len(items), total, offset)
 }
 
 // `router capabilities` is the vocabulary for --supports. It is a fixed list

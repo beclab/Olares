@@ -7,8 +7,8 @@ import (
 	"net/url"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
-	"text/tabwriter"
 
 	"github.com/spf13/cobra"
 
@@ -276,25 +276,20 @@ func renderCatalogList(w io.Writer, entries []catalogEntry) error {
 	copy(sorted, entries)
 	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Vendor < sorted[j].Vendor })
 
-	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	if _, err := fmt.Fprintln(tw, "VENDOR\tPROVIDER TYPE\tLABEL\tHOW MODELS ARRIVE\tSERVES\tPREDEFINED\tCREDENTIAL FIELDS"); err != nil {
-		return err
-	}
+	t := newTable(w, "VENDOR", "PROVIDER TYPE", "LABEL", "HOW MODELS ARRIVE", "SERVES", "PREDEFINED", "CREDENTIAL FIELDS")
 	for i := range sorted {
 		e := &sorted[i]
-		if _, err := fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%d\t%s\n",
+		t.row(
 			nonEmpty(e.Vendor),
 			nonEmpty(e.ProviderType),
 			nonEmpty(e.Label.text()),
 			nonEmpty(strings.Join(e.ConfigurateMethods, ",")),
 			nonEmpty(strings.Join(e.SupportedModelTypes, ",")),
-			len(e.PredefinedModels),
+			strconv.Itoa(len(e.PredefinedModels)),
 			nonEmpty(requiredFieldNames(e)),
-		); err != nil {
-			return err
-		}
+		)
 	}
-	if err := tw.Flush(); err != nil {
+	if err := t.flush(); err != nil {
 		return err
 	}
 	_, err := fmt.Fprintln(w, "\nThe credential fields column lists the required ones. "+
@@ -314,26 +309,19 @@ func requiredFieldNames(e *catalogEntry) string {
 }
 
 func renderCatalogEntry(w io.Writer, e *catalogEntry, withModels bool, models []catalogModel) error {
-	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	rows := [][2]string{
-		{"VENDOR", nonEmpty(e.Vendor)},
-		{"PROVIDER TYPE", nonEmpty(e.ProviderType)},
-		{"LABEL", nonEmpty(e.Label.text())},
-		{"HOW MODELS ARRIVE", nonEmpty(strings.Join(e.ConfigurateMethods, ", "))},
-		{"SERVES", nonEmpty(strings.Join(e.SupportedModelTypes, ", "))},
-	}
+	t := newTable(w)
+	t.row("VENDOR", nonEmpty(e.Vendor))
+	t.row("PROVIDER TYPE", nonEmpty(e.ProviderType))
+	t.row("LABEL", nonEmpty(e.Label.text()))
+	t.row("HOW MODELS ARRIVE", nonEmpty(strings.Join(e.ConfigurateMethods, ", ")))
+	t.row("SERVES", nonEmpty(strings.Join(e.SupportedModelTypes, ", ")))
 	if d := e.Description.text(); d != "" {
-		rows = append(rows, [2]string{"DESCRIPTION", clip(d, 120)})
+		t.row("DESCRIPTION", clip(d, 120))
 	}
 	if u := e.Help.URL.text(); u != "" {
-		rows = append(rows, [2]string{"WHERE TO GET A KEY", u})
+		t.row("WHERE TO GET A KEY", u)
 	}
-	for _, r := range rows {
-		if _, err := fmt.Fprintf(tw, "%s\t%s\n", r[0], r[1]); err != nil {
-			return err
-		}
-	}
-	if err := tw.Flush(); err != nil {
+	if err := t.flush(); err != nil {
 		return err
 	}
 
@@ -354,24 +342,19 @@ func renderCatalogEntry(w io.Writer, e *catalogEntry, withModels bool, models []
 		if _, err := fmt.Fprintf(w, "\nCREDENTIAL FIELDS (%d)\n", len(fields)); err != nil {
 			return err
 		}
-		ftw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-		if _, err := fmt.Fprintln(ftw, "FIELD\tKIND\tREQUIRED\tDEFAULT\tONLY WHEN\tDESCRIPTION"); err != nil {
-			return err
-		}
+		ft := newTable(w, "FIELD", "KIND", "REQUIRED", "DEFAULT", "ONLY WHEN", "DESCRIPTION")
 		for i := range fields {
 			fld := &fields[i]
-			if _, err := fmt.Fprintf(ftw, "%s\t%s\t%s\t%s\t%s\t%s\n",
+			ft.row(
 				nonEmpty(fld.Variable),
 				nonEmpty(fld.Type),
 				boolStr(fld.Required),
 				nonEmpty(formatFieldDefault(fld.Default)),
 				nonEmpty(formatShowOn(fld)),
 				nonEmpty(fieldDescription(fld)),
-			); err != nil {
-				return err
-			}
+			)
 		}
-		if err := ftw.Flush(); err != nil {
+		if err := ft.flush(); err != nil {
 			return err
 		}
 	}
@@ -391,18 +374,12 @@ func renderCatalogEntry(w io.Writer, e *catalogEntry, withModels bool, models []
 	if _, err := fmt.Fprintf(w, "\nPREDEFINED MODELS for provider type %s (%d)\n", e.ProviderType, len(models)); err != nil {
 		return err
 	}
-	mtw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	if _, err := fmt.Fprintln(mtw, "NAME\tMODE\tCAPABILITIES"); err != nil {
-		return err
-	}
+	mt := newTable(w, "NAME", "MODE", "CAPABILITIES")
 	for i := range models {
 		m := &models[i]
-		if _, err := fmt.Fprintf(mtw, "%s\t%s\t%s\n",
-			nonEmpty(m.Name), nonEmpty(m.Mode), summarizeSupports(m.Supports)); err != nil {
-			return err
-		}
+		mt.row(nonEmpty(m.Name), nonEmpty(m.Mode), summarizeSupports(m.Supports))
 	}
-	return mtw.Flush()
+	return mt.flush()
 }
 
 func formatFieldDefault(v any) string {

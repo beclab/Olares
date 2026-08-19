@@ -7,7 +7,6 @@ import (
 	"os"
 	"sort"
 	"strings"
-	"text/tabwriter"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -130,60 +129,49 @@ func runLocalStatus(ctx context.Context, f *cmdutil.Factory, ref, outputRaw stri
 }
 
 func renderLocalStatus(w io.Writer, r *localStatusReport) error {
-	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	rows := [][2]string{
-		{"APPLICATION", r.App.AppName},
-		{"TITLE", nonEmpty(r.App.Title)},
-	}
+	t := newTable(w)
+	t.row("APPLICATION", r.App.AppName)
+	t.row("TITLE", nonEmpty(r.App.Title))
 	if r.App.Provider != "" && r.App.Provider != r.App.Title {
-		rows = append(rows, [2]string{"ROUTER PROVIDER", r.App.Provider})
+		t.row("ROUTER PROVIDER", r.App.Provider)
 	}
 	if r.App.State != "" {
-		rows = append(rows, [2]string{"OLARES STATE", r.App.State})
+		t.row("OLARES STATE", r.App.State)
 	}
-	rows = append(rows, [2]string{"MODEL CONSOLE", r.App.BaseURL})
+	t.row("MODEL CONSOLE", r.App.BaseURL)
 	if r.Spec != nil {
-		rows = append(rows, [2]string{"MODEL", nonEmpty(r.Spec.Name)})
-		rows = append(rows, [2]string{"MODE", nonEmpty(r.Spec.Mode)})
+		t.row("MODEL", nonEmpty(r.Spec.Name))
+		t.row("MODE", nonEmpty(r.Spec.Mode))
 	}
 	if h := r.Health; h != nil {
 		phase := h.Phase
 		if note := phaseNote(h.Phase, h); note != "" {
 			phase += " — " + note
 		}
-		rows = append(rows,
-			[2]string{"HEALTH", h.Status},
-			[2]string{"PHASE", phase},
-			[2]string{"READY", boolStr(h.Ready)},
-			[2]string{"ENGINE ALIVE", boolStr(h.EngineAlive)},
-			[2]string{"MODEL ON ENGINE", boolStr(h.ModelExists)},
-			[2]string{"LAST VERIFY", verifyLabel(h.LastVerify, h.LastVerifyOK)},
-		)
+		t.row("HEALTH", h.Status)
+		t.row("PHASE", phase)
+		t.row("READY", boolStr(h.Ready))
+		t.row("ENGINE ALIVE", boolStr(h.EngineAlive))
+		t.row("MODEL ON ENGINE", boolStr(h.ModelExists))
+		t.row("LAST VERIFY", verifyLabel(h.LastVerify, h.LastVerifyOK))
 	}
 	if p := r.Progress; p != nil {
 		if f := p.fraction(); f >= 0 {
-			rows = append(rows, [2]string{"DOWNLOADED", fmt.Sprintf("%.1f%% of %s",
-				f*100, utils.FormatBytes(p.BytesTotal))})
+			t.row("DOWNLOADED", fmt.Sprintf("%.1f%% of %s", f*100, utils.FormatBytes(p.BytesTotal)))
 		} else if p.BytesCompleted > 0 {
-			rows = append(rows, [2]string{"DOWNLOADED", utils.FormatBytes(p.BytesCompleted) + " (total unknown)"})
+			t.row("DOWNLOADED", utils.FormatBytes(p.BytesCompleted)+" (total unknown)")
 		}
 		if p.RetryCount > 0 || p.TransportRetries > 0 {
-			rows = append(rows, [2]string{"RETRIES", fmt.Sprintf("%d lifecycle, %d transport",
-				p.RetryCount, p.TransportRetries)})
+			t.row("RETRIES", fmt.Sprintf("%d lifecycle, %d transport", p.RetryCount, p.TransportRetries))
 		}
 		if e := strings.TrimSpace(p.LastError); e != "" {
-			rows = append(rows, [2]string{"LAST ERROR", e})
+			t.row("LAST ERROR", e)
 		}
 	}
 	if b := r.Build; b != nil {
-		rows = append(rows, [2]string{"CONSOLE VERSION", nonEmpty(b.Version)})
+		t.row("CONSOLE VERSION", nonEmpty(b.Version))
 	}
-	for _, row := range rows {
-		if _, err := fmt.Fprintf(tw, "%s\t%s\n", row[0], row[1]); err != nil {
-			return err
-		}
-	}
-	if err := tw.Flush(); err != nil {
+	if err := t.flush(); err != nil {
 		return err
 	}
 

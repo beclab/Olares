@@ -2,11 +2,9 @@ package router
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"os"
 	"strings"
-	"text/tabwriter"
 
 	"github.com/spf13/cobra"
 
@@ -112,22 +110,15 @@ func userLabels(ctx context.Context, pc *preparedClient) map[string]string {
 }
 
 func renderWhoami(w io.Writer, me *consoleUser) error {
-	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	rows := [][2]string{
-		{"USER", nonEmpty(me.BflName)},
-		{"ROLE", nonEmpty(me.Role)},
-		{"ADMIN", boolStr(me.isAdmin())},
-		{"STATUS", nonEmpty(me.Status)},
-		{"SOURCE", nonEmpty(me.Source)},
-		{"ID", nonEmpty(me.ID)},
-	}
+	t := newTable(w)
+	t.row("USER", nonEmpty(me.BflName))
+	t.row("ROLE", nonEmpty(me.Role))
+	t.row("ADMIN", boolStr(me.isAdmin()))
+	t.row("STATUS", nonEmpty(me.Status))
+	t.row("SOURCE", nonEmpty(me.Source))
+	t.row("ID", nonEmpty(me.ID))
 	if len(me.AllowedModels) > 0 {
-		rows = append(rows, [2]string{"ALLOWED MODELS", strings.Join(me.AllowedModels, ", ")})
+		t.row("ALLOWED MODELS", strings.Join(me.AllowedModels, ", "))
 	}
-	for _, r := range rows {
-		if _, err := fmt.Fprintf(tw, "%s\t%s\n", r[0], r[1]); err != nil {
-			return err
-		}
-	}
-	return tw.Flush()
+	return t.flush()
 }

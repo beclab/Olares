@@ -9,7 +9,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"text/tabwriter"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -268,22 +267,17 @@ func renderQuotaList(ctx context.Context, pc *preparedClient, w io.Writer, rows 
 		return err
 	}
 	labels := scopeLabels(ctx, pc, rows)
-	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	if _, err := fmt.Fprintln(tw, "APPLIES TO\tCAPS\tLIMIT\tWARN AT\tID"); err != nil {
-		return err
-	}
+	t := newTable(w, "APPLIES TO", "CAPS", "LIMIT", "WARN AT", "ID")
 	for i := range rows {
 		r := &rows[i]
 		label := labels[r.ScopeType+":"+r.ScopeID]
 		if label == "" {
 			label = r.ScopeType + " " + r.ScopeID
 		}
-		if _, err := fmt.Fprintf(tw, "%s\t%s\t%s\t%d%%\t%d\n",
-			label, quotaKindLabel(r.QuotaType), quotaLimitLabel(r), r.SoftThresholdPct, r.ID); err != nil {
-			return err
-		}
+		t.row(label, quotaKindLabel(r.QuotaType), quotaLimitLabel(r),
+			fmt.Sprintf("%d%%", r.SoftThresholdPct), strconv.FormatInt(r.ID, 10))
 	}
-	if err := tw.Flush(); err != nil {
+	if err := t.flush(); err != nil {
 		return err
 	}
 	_, err := fmt.Fprintln(w, "\nWARN AT is where Router starts warning; the request is only refused at the limit. "+

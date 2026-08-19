@@ -8,7 +8,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"text/tabwriter"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -293,22 +292,18 @@ func renderUsageSummary(w io.Writer, sum *spendSummary) error {
 			"or the filters exclude everything that has.")
 		return err
 	}
-	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	if _, err := fmt.Fprintf(tw, "%s\tREQUESTS\tCOST\tTOKENS\tIN\tOUT\n", strings.ToUpper(sum.Dim)); err != nil {
-		return err
-	}
+	t := newTable(w, strings.ToUpper(sum.Dim), "REQUESTS", "COST", "TOKENS", "IN", "OUT")
 	for i := range sum.Items {
 		it := &sum.Items[i]
 		label := it.Label
 		if strings.TrimSpace(label) == "" {
 			label = it.Key
 		}
-		if _, err := fmt.Fprintf(tw, "%s\t%d\t%s\t%d\t%d\t%d\n",
-			nonEmpty(label), it.Requests, money(it.CostUSD), it.TotalTokens, it.PromptTokens, it.CompletionTok); err != nil {
-			return err
-		}
+		t.row(nonEmpty(label), strconv.FormatInt(it.Requests, 10), money(it.CostUSD),
+			strconv.FormatInt(it.TotalTokens, 10), strconv.FormatInt(it.PromptTokens, 10),
+			strconv.FormatInt(it.CompletionTok, 10))
 	}
-	if err := tw.Flush(); err != nil {
+	if err := t.flush(); err != nil {
 		return err
 	}
 	failed := sum.TotalRequests - sum.TotalSuccessRequests
@@ -409,33 +404,24 @@ func renderUsageList(ctx context.Context, pc *preparedClient, w io.Writer, items
 		return err
 	}
 	who := spendActorLabels(ctx, pc, items)
-	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	if _, err := fmt.Fprintln(tw, "WHEN\tMODEL\tMODE\tWHO\tSTATUS\tTOKENS\tCOST\tLATENCY"); err != nil {
-		return err
-	}
+	t := newTable(w, "WHEN", "MODEL", "MODE", "WHO", "STATUS", "TOKENS", "COST", "LATENCY")
 	for i := range items {
 		it := &items[i]
 		status := nonEmpty(it.Status)
 		if it.ErrorCode != nil && *it.ErrorCode != "" {
 			status = it.Status + ": " + *it.ErrorCode
 		}
-		if _, err := fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%d\t%s\t%dms\n",
+		t.row(
 			it.CreatedAt.Local().Format("2006-01-02 15:04:05"),
 			clip(nonEmpty(it.ModelName), 28), nonEmpty(it.Mode),
 			clip(spendActor(it, who), 24), clip(status, 30),
-			it.TotalTokens, money(it.CostUSD), it.LatencyMS); err != nil {
-			return err
-		}
+			strconv.FormatInt(it.TotalTokens, 10), money(it.CostUSD),
+			fmt.Sprintf("%dms", it.LatencyMS))
 	}
-	if err := tw.Flush(); err != nil {
+	if err := t.flush(); err != nil {
 		return err
 	}
-	shown := offset + len(items)
-	if total > shown {
-		_, err := fmt.Fprintf(w, "\nshowing %d-%d of %d; --offset %d for the next page\n", offset+1, shown, total, shown)
-		return err
-	}
-	return nil
+	return pageFooter(w, len(items), total, offset)
 }
 
 // spendActor names who a call was billed to. A key is the most specific answer,

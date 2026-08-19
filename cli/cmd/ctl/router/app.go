@@ -11,7 +11,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"text/tabwriter"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -194,10 +193,7 @@ func renderCatalog(w io.Writer, items []marketApp, templates map[string]bool) er
 		return err
 	}
 	anyTemplate, anyUnknown := false, false
-	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	if _, err := fmt.Fprintln(tw, "APP\tTITLE\tVERSION\tTAKES\tWHAT IT SERVES"); err != nil {
-		return err
-	}
+	t := newTable(w, "APP", "TITLE", "VERSION", "TAKES", "WHAT IT SERVES")
 	for i := range items {
 		it := &items[i]
 		takes := "install"
@@ -210,13 +206,11 @@ func renderCatalog(w io.Writer, items []marketApp, templates map[string]bool) er
 		}
 		// State is empty against a real Market, so it is not a column. The
 		// installed ones are known from the provider list instead.
-		if _, err := fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n",
+		t.row(
 			nonEmpty(it.AppName), clip(nonEmpty(it.Title), 30), nonEmpty(it.VersionName),
-			takes, clip(nonEmpty(it.Description), 52)); err != nil {
-			return err
-		}
+			takes, clip(nonEmpty(it.Description), 52))
 	}
-	if err := tw.Flush(); err != nil {
+	if err := t.flush(); err != nil {
 		return err
 	}
 	if _, err := fmt.Fprintln(w, "\nAPP is the name `app install` takes. `olares-cli router provider list` shows which are already installed."); err != nil {
@@ -634,10 +628,7 @@ func renderInstallTasks(ctx context.Context, pc *preparedClient, w io.Writer, p 
 		return err
 	}
 	users := userLabels(ctx, pc)
-	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	if _, err := fmt.Fprintln(tw, "TASK\tACTION\tSTATUS\tSTARTED\tFINISHED\tBY\tERROR"); err != nil {
-		return err
-	}
+	t := newTable(w, "TASK", "ACTION", "STATUS", "STARTED", "FINISHED", "BY", "ERROR")
 	for i := range items {
 		it := &items[i]
 		by := "-"
@@ -655,21 +646,14 @@ func renderInstallTasks(ctx context.Context, pc *preparedClient, w io.Writer, p 
 		if it.ErrorMessage != nil && *it.ErrorMessage != "" {
 			errText = clip(*it.ErrorMessage, 48)
 		}
-		if _, err := fmt.Fprintf(tw, "%d\t%s\t%s\t%s\t%s\t%s\t%s\n",
-			it.ID, nonEmpty(it.Action), nonEmpty(it.Status),
-			it.StartedAt.Local().Format("2006-01-02 15:04:05"), finished, by, errText); err != nil {
-			return err
-		}
+		t.row(
+			strconv.FormatInt(it.ID, 10), nonEmpty(it.Action), nonEmpty(it.Status),
+			it.StartedAt.Local().Format("2006-01-02 15:04:05"), finished, by, errText)
 	}
-	if err := tw.Flush(); err != nil {
+	if err := t.flush(); err != nil {
 		return err
 	}
-	shown := offset + len(items)
-	if total > shown {
-		_, err := fmt.Fprintf(w, "\nshowing %d-%d of %d; --offset %d for the next page\n", offset+1, shown, total, shown)
-		return err
-	}
-	return nil
+	return pageFooter(w, len(items), total, offset)
 }
 
 func newAppWatchCommand(f *cmdutil.Factory) *cobra.Command {

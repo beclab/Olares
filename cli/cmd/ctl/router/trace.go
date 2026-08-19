@@ -10,7 +10,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"text/tabwriter"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -186,31 +185,21 @@ func renderTraceList(w io.Writer, items []traceSummary, total, offset int) error
 			"so software that does not send traces produces none however much it calls.")
 		return err
 	}
-	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	if _, err := fmt.Fprintln(tw, "STARTED\tTOOK\tSPANS\tERROR\tTRACE"); err != nil {
-		return err
-	}
+	t := newTable(w, "STARTED", "TOOK", "SPANS", "ERROR", "TRACE")
 	for i := range items {
 		it := &items[i]
 		took := "-"
 		if it.EndTS != nil {
 			took = fmt.Sprintf("%dms", it.EndTS.Sub(it.StartTS).Milliseconds())
 		}
-		if _, err := fmt.Fprintf(tw, "%s\t%s\t%d\t%s\t%s\n",
-			it.StartTS.Local().Format("2006-01-02 15:04:05"), took, it.SpanCount,
-			boolStr(it.HasError), it.TraceID); err != nil {
-			return err
-		}
+		t.row(
+			it.StartTS.Local().Format("2006-01-02 15:04:05"), took, strconv.Itoa(it.SpanCount),
+			boolStr(it.HasError), it.TraceID)
 	}
-	if err := tw.Flush(); err != nil {
+	if err := t.flush(); err != nil {
 		return err
 	}
-	shown := offset + len(items)
-	if total > shown {
-		_, err := fmt.Fprintf(w, "\nshowing %d-%d of %d; --offset %d for the next page\n", offset+1, shown, total, shown)
-		return err
-	}
-	return nil
+	return pageFooter(w, len(items), total, offset)
 }
 
 func newTraceGetCommand(f *cmdutil.Factory) *cobra.Command {
@@ -429,18 +418,11 @@ func renderCapturePref(w io.Writer, p *capturePref) error {
 	if p.CaptureContent != nil {
 		yours = boolStr(*p.CaptureContent)
 	}
-	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	rows := [][2]string{
-		{"YOUR CHOICE", yours},
-		{"DEPLOYMENT POLICY", nonEmpty(p.Policy)},
-		{"CONTENT STORED", boolStr(p.Effective)},
-	}
-	for _, r := range rows {
-		if _, err := fmt.Fprintf(tw, "%s\t%s\n", r[0], r[1]); err != nil {
-			return err
-		}
-	}
-	if err := tw.Flush(); err != nil {
+	t := newTable(w)
+	t.row("YOUR CHOICE", yours)
+	t.row("DEPLOYMENT POLICY", nonEmpty(p.Policy))
+	t.row("CONTENT STORED", boolStr(p.Effective))
+	if err := t.flush(); err != nil {
 		return err
 	}
 	note := ""

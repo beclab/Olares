@@ -2,10 +2,8 @@ package router
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"os"
-	"text/tabwriter"
 
 	"github.com/spf13/cobra"
 
@@ -111,23 +109,16 @@ func validateProvider(ctx context.Context, pc *preparedClient, id string) (*vali
 }
 
 func renderValidateVerdict(w io.Writer, providerName string, v *validateVerdict) error {
-	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	rows := [][2]string{
-		{"PROVIDER", nonEmpty(providerName)},
-		{"CREDENTIALS WORK", boolStr(v.Valid)},
-		{"VERDICT", nonEmpty(v.Verdict)},
-		{"UPSTREAM STATUS", intOrDash(v.UpstreamStatus)},
-		{"PROBED", nonEmpty(v.ProbeURL)},
-		{"MODELS OFFERED", intOrDash(v.ModelCount)},
-		{"CHECKED AT", nonEmpty(v.CheckedAt)},
-	}
+	t := newTable(w)
+	t.row("PROVIDER", nonEmpty(providerName))
+	t.row("CREDENTIALS WORK", boolStr(v.Valid))
+	t.row("VERDICT", nonEmpty(v.Verdict))
+	t.row("UPSTREAM STATUS", intOrDash(v.UpstreamStatus))
+	t.row("PROBED", nonEmpty(v.ProbeURL))
+	t.row("MODELS OFFERED", intOrDash(v.ModelCount))
+	t.row("CHECKED AT", nonEmpty(v.CheckedAt))
 	if v.UpstreamMessage != "" {
-		rows = append(rows, [2]string{"UPSTREAM SAID", truncate(v.UpstreamMessage, 200)})
+		t.row("UPSTREAM SAID", truncate(v.UpstreamMessage, 200))
 	}
-	for _, r := range rows {
-		if _, err := fmt.Fprintf(tw, "%s\t%s\n", r[0], r[1]); err != nil {
-			return err
-		}
-	}
-	return tw.Flush()
+	return t.flush()
 }

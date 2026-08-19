@@ -8,7 +8,6 @@ import (
 	"os"
 	"sort"
 	"strings"
-	"text/tabwriter"
 
 	"github.com/spf13/cobra"
 
@@ -172,18 +171,12 @@ func renderResolvedDefaults(ctx context.Context, pc *preparedClient, w io.Writer
 		return err
 	}
 	names := modelNames(ctx, pc)
-	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	if _, err := fmt.Fprintln(tw, "MODE\tMODEL\tFROM\tMODEL ID"); err != nil {
-		return err
-	}
+	t := newTable(w, "MODE", "MODEL", "FROM", "MODEL ID")
 	for i := range items {
 		it := &items[i]
-		if _, err := fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n",
-			it.Mode, modelLabel(names, it.ProviderModelID), describeLayer(it.Layer), it.ProviderModelID); err != nil {
-			return err
-		}
+		t.row(it.Mode, modelLabel(names, it.ProviderModelID), describeLayer(it.Layer), it.ProviderModelID)
 	}
-	if err := tw.Flush(); err != nil {
+	if err := t.flush(); err != nil {
 		return err
 	}
 	if missing := missingModes(items); len(missing) > 0 {
@@ -203,22 +196,16 @@ func renderSystemDefaults(ctx context.Context, pc *preparedClient, w io.Writer, 
 	}
 	names := modelNames(ctx, pc)
 	users := userLabels(ctx, pc)
-	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	if _, err := fmt.Fprintln(tw, "MODE\tMODEL\tSET BY\tWHEN\tMODEL ID"); err != nil {
-		return err
-	}
+	t := newTable(w, "MODE", "MODEL", "SET BY", "WHEN", "MODEL ID")
 	for i := range items {
 		it := &items[i]
 		by := it.UpdatedBy
 		if label, ok := users[by]; ok && label != "" {
 			by = label
 		}
-		if _, err := fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n",
-			it.Mode, modelLabel(names, it.ProviderModelID), nonEmpty(by), nonEmpty(it.UpdatedAt), it.ProviderModelID); err != nil {
-			return err
-		}
+		t.row(it.Mode, modelLabel(names, it.ProviderModelID), nonEmpty(by), nonEmpty(it.UpdatedAt), it.ProviderModelID)
 	}
-	return tw.Flush()
+	return t.flush()
 }
 
 func newDefaultSetCommand(f *cmdutil.Factory) *cobra.Command {

@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 	"strings"
-	"text/tabwriter"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -160,21 +159,16 @@ func renderCallerList(w io.Writer, apps []callerApp, archived int, includeGone b
 		_, err := fmt.Fprintln(w, msg)
 		return err
 	}
-	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	if _, err := fmt.Fprintln(tw, "APPLICATION\tSTATUS\tFIRST CALLED\tLAST CALLED\tHAS KEY"); err != nil {
-		return err
-	}
+	t := newTable(w, "APPLICATION", "STATUS", "FIRST CALLED", "LAST CALLED", "HAS KEY")
 	for i := range apps {
 		a := &apps[i]
-		if _, err := fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n",
+		t.row(
 			nonEmpty(callerAppLabel(a)), nonEmpty(a.Status),
 			a.FirstSeenAt.Local().Format("2006-01-02 15:04"),
 			a.LastSeenAt.Local().Format("2006-01-02 15:04"),
-			boolStr(a.DefaultAPIKeyID != "")); err != nil {
-			return err
-		}
+			boolStr(a.DefaultAPIKeyID != ""))
 	}
-	if err := tw.Flush(); err != nil {
+	if err := t.flush(); err != nil {
 		return err
 	}
 	if archived > 0 && !includeGone {

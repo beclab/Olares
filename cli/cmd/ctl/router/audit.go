@@ -9,7 +9,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"text/tabwriter"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -279,10 +278,7 @@ func renderAuditList(w io.Writer, items []auditEntry, total, offset int, merged 
 			"means nothing was changed in this window rather than that recording is off.")
 		return err
 	}
-	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	if _, err := fmt.Fprintln(tw, "WHEN\tWHO\tACTION\tTARGET\tRESULT\tID"); err != nil {
-		return err
-	}
+	t := newTable(w, "WHEN", "WHO", "ACTION", "TARGET", "RESULT", "ID")
 	for i := range items {
 		it := &items[i]
 		target := it.TargetType
@@ -293,14 +289,12 @@ func renderAuditList(w io.Writer, items []auditEntry, total, offset int, merged 
 		if it.ErrorCode != nil && *it.ErrorCode != "" {
 			result += " " + *it.ErrorCode
 		}
-		if _, err := fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\n",
+		t.row(
 			it.CreatedAt.Local().Format("2006-01-02 15:04:05"),
 			nonEmpty(clip(it.ActorBflName, 16)), nonEmpty(it.Action),
-			nonEmpty(clip(target, 26)), clip(result, 34), it.ID); err != nil {
-			return err
-		}
+			nonEmpty(clip(target, 26)), clip(result, 34), it.ID)
 	}
-	if err := tw.Flush(); err != nil {
+	if err := t.flush(); err != nil {
 		return err
 	}
 	if merged {
@@ -311,10 +305,8 @@ func renderAuditList(w io.Writer, items []auditEntry, total, offset int, merged 
 			"--status-class 4xx / 5xx to page through them.\n", total); err != nil {
 			return err
 		}
-	} else if shown := offset + len(items); total > shown {
-		if _, err := fmt.Fprintf(w, "\nshowing %d-%d of %d; --offset %d for the next page\n", offset+1, shown, total, shown); err != nil {
-			return err
-		}
+	} else if err := pageFooter(w, len(items), total, offset); err != nil {
+		return err
 	}
 	_, err := fmt.Fprintln(w, "\n`olares-cli router audit get <id>` carries what the change altered.")
 	return err
@@ -374,30 +366,23 @@ func runAuditGet(ctx context.Context, f *cmdutil.Factory, id, outputRaw string) 
 }
 
 func renderAuditEntry(w io.Writer, e *auditEntry) error {
-	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	rows := [][2]string{
-		{"WHEN", e.CreatedAt.Local().Format("2006-01-02 15:04:05")},
-		{"WHO", nonEmpty(e.ActorBflName)},
-		{"ACTION", nonEmpty(e.Action)},
-		{"TARGET", nonEmpty(strings.TrimSpace(e.TargetType + " " + derefOr(e.TargetID, "")))},
-		{"REQUEST", nonEmpty(e.RequestMethod + " " + e.RequestPath)},
-		{"RESULT", strconv.Itoa(e.StatusCode)},
-	}
+	t := newTable(w)
+	t.row("WHEN", e.CreatedAt.Local().Format("2006-01-02 15:04:05"))
+	t.row("WHO", nonEmpty(e.ActorBflName))
+	t.row("ACTION", nonEmpty(e.Action))
+	t.row("TARGET", nonEmpty(strings.TrimSpace(e.TargetType+" "+derefOr(e.TargetID, ""))))
+	t.row("REQUEST", nonEmpty(e.RequestMethod+" "+e.RequestPath))
+	t.row("RESULT", strconv.Itoa(e.StatusCode))
 	if e.ErrorCode != nil && *e.ErrorCode != "" {
-		rows = append(rows, [2]string{"ERROR", *e.ErrorCode})
+		t.row("ERROR", *e.ErrorCode)
 	}
 	if e.ClientIP != nil && *e.ClientIP != "" {
-		rows = append(rows, [2]string{"FROM", *e.ClientIP})
+		t.row("FROM", *e.ClientIP)
 	}
 	if e.Note != nil && *e.Note != "" {
-		rows = append(rows, [2]string{"NOTE", *e.Note})
+		t.row("NOTE", *e.Note)
 	}
-	for _, r := range rows {
-		if _, err := fmt.Fprintf(tw, "%s\t%s\n", r[0], r[1]); err != nil {
-			return err
-		}
-	}
-	if err := tw.Flush(); err != nil {
+	if err := t.flush(); err != nil {
 		return err
 	}
 	if err := printState(w, "BEFORE", e.BeforeState); err != nil {

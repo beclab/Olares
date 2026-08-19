@@ -10,7 +10,6 @@ import (
 	"os"
 	"sort"
 	"strings"
-	"text/tabwriter"
 
 	"github.com/spf13/cobra"
 
@@ -120,30 +119,23 @@ func runLocalSpec(ctx context.Context, f *cmdutil.Factory, ref, outputRaw string
 }
 
 func renderLocalSpec(w io.Writer, li *llmInit, s *localSpec) error {
-	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	rows := [][2]string{
-		{"APPLICATION", li.AppName},
-		{"MODEL", nonEmpty(s.Name)},
-		{"MODE", nonEmpty(s.Mode)},
-	}
+	t := newTable(w)
+	t.row("APPLICATION", li.AppName)
+	t.row("MODEL", nonEmpty(s.Name))
+	t.row("MODE", nonEmpty(s.Mode))
 	if s.ContextSize > 0 {
-		rows = append(rows, [2]string{"CONTEXT", fmt.Sprintf("%d tokens", s.ContextSize)})
+		t.row("CONTEXT", fmt.Sprintf("%d tokens", s.ContextSize))
 	}
 	if s.MaxOutputTokens > 0 {
-		rows = append(rows, [2]string{"MAX OUTPUT", fmt.Sprintf("%d tokens", s.MaxOutputTokens)})
+		t.row("MAX OUTPUT", fmt.Sprintf("%d tokens", s.MaxOutputTokens))
 	}
 	if len(s.Label) > 0 {
-		rows = append(rows, [2]string{"LABEL", labelOf(s.Label)})
+		t.row("LABEL", labelOf(s.Label))
 	}
 	if args := strings.TrimSpace(s.EngineArgs); args != "" {
-		rows = append(rows, [2]string{"ENGINE ARGS", args})
+		t.row("ENGINE ARGS", args)
 	}
-	for _, r := range rows {
-		if _, err := fmt.Fprintf(tw, "%s\t%s\n", r[0], r[1]); err != nil {
-			return err
-		}
-	}
-	if err := tw.Flush(); err != nil {
+	if err := t.flush(); err != nil {
 		return err
 	}
 
@@ -165,13 +157,11 @@ func renderLocalSpec(w io.Writer, li *llmInit, s *localSpec) error {
 			keys = append(keys, k)
 		}
 		sort.Strings(keys)
-		ptw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
+		pt := newTable(w)
 		for _, k := range keys {
-			if _, err := fmt.Fprintf(ptw, "  %s\t%s\n", k, s.Pricing[k]); err != nil {
-				return err
-			}
+			pt.row("  "+k, s.Pricing[k])
 		}
-		if err := ptw.Flush(); err != nil {
+		if err := pt.flush(); err != nil {
 			return err
 		}
 	}
@@ -505,14 +495,12 @@ Examples:
 // are the Model Console's own and will grow; enumerating them here would mean
 // silently dropping whatever it learns to report next.
 func renderFlatMap(w io.Writer, doc map[string]any) error {
-	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	if err := writeFlat(tw, "", doc); err != nil {
-		return err
-	}
-	return tw.Flush()
+	t := newTable(w)
+	writeFlat(t, "", doc)
+	return t.flush()
 }
 
-func writeFlat(w io.Writer, prefix string, doc map[string]any) error {
+func writeFlat(t *table, prefix string, doc map[string]any) {
 	keys := make([]string, 0, len(doc))
 	for k := range doc {
 		keys = append(keys, k)
@@ -528,18 +516,13 @@ func writeFlat(w io.Writer, prefix string, doc map[string]any) error {
 			if len(v) == 0 {
 				continue
 			}
-			if err := writeFlat(w, name, v); err != nil {
-				return err
-			}
+			writeFlat(t, name, v)
 		case nil:
 			continue
 		default:
-			if _, err := fmt.Fprintf(w, "%s\t%v\n", name, v); err != nil {
-				return err
-			}
+			t.row(name, fmt.Sprintf("%v", v))
 		}
 	}
-	return nil
 }
 
 type localEndpoint struct {
@@ -638,10 +621,7 @@ func renderLocalEndpoints(w io.Writer, engineKind string, rows []localEndpoint, 
 		}
 		return rows[i].Path < rows[j].Path
 	})
-	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	if _, err := fmt.Fprintln(tw, "METHOD\tPATH\tCATEGORY\tSERVED\tWHY NOT"); err != nil {
-		return err
-	}
+	t := newTable(w, "METHOD", "PATH", "CATEGORY", "SERVED", "WHY NOT")
 	for _, r := range rows {
 		why := ""
 		if !r.Available {
@@ -650,10 +630,7 @@ func renderLocalEndpoints(w io.Writer, engineKind string, rows []localEndpoint, 
 				why = "no reason given"
 			}
 		}
-		if _, err := fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n",
-			r.Method, r.Path, r.Category, boolStr(r.Available), why); err != nil {
-			return err
-		}
+		t.row(r.Method, r.Path, r.Category, boolStr(r.Available), why)
 	}
-	return tw.Flush()
+	return t.flush()
 }

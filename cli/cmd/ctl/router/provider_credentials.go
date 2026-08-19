@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"sort"
-	"text/tabwriter"
 
 	"github.com/spf13/cobra"
 
@@ -99,18 +98,13 @@ func runProviderCredentials(ctx context.Context, f *cmdutil.Factory, ref, output
 	if _, err := fmt.Fprintf(os.Stdout, "%s (credential version %d)\n\n", found.Name, found.CredentialsVersion); err != nil {
 		return err
 	}
-	tw := tabwriter.NewWriter(os.Stdout, 0, 4, 2, ' ', 0)
-	if _, err := fmt.Fprintln(tw, "FIELD\tVALUE"); err != nil {
-		return err
-	}
+	t := newTable(os.Stdout, "FIELD", "VALUE")
 	for _, k := range keys {
 		value := maskCredentialValue(env.Credentials[k])
 		if s, ok := env.Credentials[k].(string); ok && s == hiddenSentinel {
 			value = "(stored, not shown)"
 		}
-		if _, err := fmt.Fprintf(tw, "%s\t%s\n", k, value); err != nil {
-			return err
-		}
+		t.row(k, value)
 	}
-	return tw.Flush()
+	return t.flush()
 }

@@ -7,7 +7,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"text/tabwriter"
 
 	"github.com/spf13/cobra"
 
@@ -115,24 +114,19 @@ func renderProviderGet(w io.Writer, d *providerDetail) error {
 	if _, err := fmt.Fprintf(w, "\nMODELS (%d)\n", len(d.Models)); err != nil {
 		return err
 	}
-	mtw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	if _, err := fmt.Fprintln(mtw, "NAME\tMODE\tENABLED\tSTATUS\tCONTEXT\tCAPABILITIES"); err != nil {
-		return err
-	}
+	mt := newTable(w, "NAME", "MODE", "ENABLED", "STATUS", "CONTEXT", "CAPABILITIES")
 	for i := range d.Models {
 		m := &d.Models[i]
-		if _, err := fmt.Fprintf(mtw, "%s\t%s\t%s\t%s\t%s\t%s\n",
+		mt.row(
 			nonEmpty(m.Name),
 			nonEmpty(m.Mode),
 			boolStr(m.Enabled),
 			nonEmpty(m.Status),
 			intOrDash(m.ContextSize),
 			summarizeSupports(m.Supports),
-		); err != nil {
-			return err
-		}
+		)
 	}
-	return mtw.Flush()
+	return mt.flush()
 }
 
 // summarizeSupports names the headline capabilities a model has, and says so

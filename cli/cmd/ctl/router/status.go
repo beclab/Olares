@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 	"sort"
-	"text/tabwriter"
 
 	"github.com/spf13/cobra"
 
@@ -96,18 +95,16 @@ func runStatus(ctx context.Context, f *cmdutil.Factory, outputRaw string) error 
 }
 
 func renderStatus(w io.Writer, r statusReport) error {
-	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	rows := [][2]string{
-		{"APP", nonEmpty(r.Router.AppName)},
-		{"TITLE", nonEmpty(r.Router.Title)},
-		{"STATE", nonEmpty(r.Router.State)},
-		{"ENTRANCE", nonEmpty(r.Router.EntranceName)},
-		{"BASE URL", nonEmpty(r.Router.BaseURL)},
-	}
+	t := newTable(w)
+	t.row("APP", nonEmpty(r.Router.AppName))
+	t.row("TITLE", nonEmpty(r.Router.Title))
+	t.row("STATE", nonEmpty(r.Router.State))
+	t.row("ENTRANCE", nonEmpty(r.Router.EntranceName))
+	t.row("BASE URL", nonEmpty(r.Router.BaseURL))
 
 	switch {
 	case r.HealthError != "":
-		rows = append(rows, [2]string{"HEALTH", "unreachable: " + r.HealthError})
+		t.row("HEALTH", "unreachable: "+r.HealthError)
 	default:
 		keys := make([]string, 0, len(r.Health))
 		for k := range r.Health {
@@ -115,25 +112,18 @@ func renderStatus(w io.Writer, r statusReport) error {
 		}
 		sort.Strings(keys)
 		for _, k := range keys {
-			rows = append(rows, [2]string{"HEALTH " + k, fmt.Sprintf("%v", r.Health[k])})
+			t.row("HEALTH "+k, fmt.Sprintf("%v", r.Health[k]))
 		}
 	}
 
 	switch {
 	case r.IdentityErr != "":
-		rows = append(rows, [2]string{"IDENTITY", "unavailable: " + r.IdentityErr})
+		t.row("IDENTITY", "unavailable: "+r.IdentityErr)
 	case r.Identity != nil:
-		rows = append(rows,
-			[2]string{"USER", nonEmpty(r.Identity.BflName)},
-			[2]string{"ROLE", nonEmpty(r.Identity.Role)},
-			[2]string{"ADMIN", boolStr(r.Identity.isAdmin())},
-		)
+		t.row("USER", nonEmpty(r.Identity.BflName))
+		t.row("ROLE", nonEmpty(r.Identity.Role))
+		t.row("ADMIN", boolStr(r.Identity.isAdmin()))
 	}
 
-	for _, row := range rows {
-		if _, err := fmt.Fprintf(tw, "%s\t%s\n", row[0], row[1]); err != nil {
-			return err
-		}
-	}
-	return tw.Flush()
+	return t.flush()
 }

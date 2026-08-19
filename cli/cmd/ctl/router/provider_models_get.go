@@ -7,7 +7,6 @@ import (
 	"os"
 	"sort"
 	"strings"
-	"text/tabwriter"
 
 	"github.com/spf13/cobra"
 
@@ -78,35 +77,26 @@ func runProviderModelsGet(ctx context.Context, f *cmdutil.Factory, providerRef, 
 }
 
 func renderProviderModel(w io.Writer, p *providerRow, m *providerModelRow) error {
-	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	rows := [][2]string{
-		{"MODEL", nonEmpty(m.Name)},
-		{"MODE", nonEmpty(m.Mode)},
-	}
+	t := newTable(w)
+	t.row("MODEL", nonEmpty(m.Name))
+	t.row("MODE", nonEmpty(m.Mode))
 	if m.Alias != nil && strings.TrimSpace(*m.Alias) != "" {
-		rows = append(rows, [2]string{"ALIAS", *m.Alias})
+		t.row("ALIAS", *m.Alias)
 	}
-	rows = append(rows,
-		[2]string{"ENABLED", boolStr(m.Enabled)},
-		[2]string{"STATUS", nonEmpty(m.Status)},
-		[2]string{"PROVIDER", nonEmpty(p.Name) + " (" + nonEmpty(p.Source) + ")"},
-	)
+	t.row("ENABLED", boolStr(m.Enabled))
+	t.row("STATUS", nonEmpty(m.Status))
+	t.row("PROVIDER", nonEmpty(p.Name)+" ("+nonEmpty(p.Source)+")")
 	if m.ContextSize > 0 {
-		rows = append(rows, [2]string{"CONTEXT", fmt.Sprintf("%d tokens", m.ContextSize)})
+		t.row("CONTEXT", fmt.Sprintf("%d tokens", m.ContextSize))
 	}
 	if m.MaxOutputTokens > 0 {
-		rows = append(rows, [2]string{"MAX OUTPUT", fmt.Sprintf("%d tokens", m.MaxOutputTokens)})
+		t.row("MAX OUTPUT", fmt.Sprintf("%d tokens", m.MaxOutputTokens))
 	}
 	if args := strings.TrimSpace(m.EngineArgs); args != "" {
-		rows = append(rows, [2]string{"ENGINE ARGS", args})
+		t.row("ENGINE ARGS", args)
 	}
-	rows = append(rows, [2]string{"ID", nonEmpty(m.ID)})
-	for _, r := range rows {
-		if _, err := fmt.Fprintf(tw, "%s\t%s\n", r[0], r[1]); err != nil {
-			return err
-		}
-	}
-	if err := tw.Flush(); err != nil {
+	t.row("ID", nonEmpty(m.ID))
+	if err := t.flush(); err != nil {
 		return err
 	}
 
@@ -129,13 +119,11 @@ func renderProviderModel(w io.Writer, p *providerRow, m *providerModelRow) error
 			keys = append(keys, k)
 		}
 		sort.Strings(keys)
-		ptw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
+		pt := newTable(w)
 		for _, k := range keys {
-			if _, err := fmt.Fprintf(ptw, "  %s\t%s\n", k, m.Pricing[k]); err != nil {
-				return err
-			}
+			pt.row("  "+k, m.Pricing[k])
 		}
-		if err := ptw.Flush(); err != nil {
+		if err := pt.flush(); err != nil {
 			return err
 		}
 	}

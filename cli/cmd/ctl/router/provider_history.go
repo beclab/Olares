@@ -7,7 +7,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"text/tabwriter"
 
 	"github.com/spf13/cobra"
 
@@ -105,10 +104,7 @@ func renderCredentialHistory(w io.Writer, p *providerRow, items []credentialVers
 		_, err := fmt.Fprintln(w, "no recorded changes — these are the credentials the provider was created with")
 		return err
 	}
-	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	if _, err := fmt.Fprintln(tw, "VERSION\tRECORDED\tCHANGED BY\tNOTE"); err != nil {
-		return err
-	}
+	t := newTable(w, "VERSION", "RECORDED", "CHANGED BY", "NOTE")
 	for i := range items {
 		it := &items[i]
 		marker := strconv.Itoa(it.Version)
@@ -119,16 +115,14 @@ func renderCredentialHistory(w io.Writer, p *providerRow, items []credentialVers
 		if name := whoBy[changedBy]; name != "" {
 			changedBy = name
 		}
-		if _, err := fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n",
+		t.row(
 			marker,
 			nonEmpty(it.CreatedAt),
 			nonEmpty(changedBy),
 			nonEmpty(clip(derefOr(it.Note, ""), 60)),
-		); err != nil {
-			return err
-		}
+		)
 	}
-	return tw.Flush()
+	return t.flush()
 }
 
 func derefOr(s *string, fallback string) string {

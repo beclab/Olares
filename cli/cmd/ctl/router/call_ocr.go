@@ -9,7 +9,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"text/tabwriter"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -322,11 +321,12 @@ func printOCRText(w io.Writer, raw json.RawMessage) error {
 		}
 		return keys[i] < keys[j]
 	})
-	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
+	// Written straight through: this is the recognised text, and a tab inside it
+	// is part of what the page said rather than a column to align.
 	for _, k := range keys {
-		if _, err := fmt.Fprintf(tw, "--- page %s ---\n%s\n\n", k, strings.TrimRight(pages[k], "\n")); err != nil {
+		if _, err := fmt.Fprintf(w, "--- page %s ---\n%s\n\n", k, strings.TrimRight(pages[k], "\n")); err != nil {
 			return err
 		}
 	}
-	return tw.Flush()
+	return nil
 }
