@@ -33,9 +33,8 @@ status" first if anything here behaves unexpectedly.
   call          send work to a model: chat, embed, transcribe, speak, OCR
   key           API keys for software that calls Router
   quota         ceilings on a key, a person, a model, or an application
-  usage         what has been called, and what it cost
+  usage         what has been called, what it cost, and how long it is kept
   audit         who changed Router, and to what
-  trace         the spans an agent framework reported for a call
   user          the people Router knows
 
 Most of Router's management surface is admin-only. Requires Olares 1.12.7+.
@@ -64,7 +63,6 @@ Run "olares-cli router <verb> --help" for details.
 	cmd.AddCommand(NewQuotaCommand(f))
 	cmd.AddCommand(NewUsageCommand(f))
 	cmd.AddCommand(NewAuditCommand(f))
-	cmd.AddCommand(NewTraceCommand(f))
 	cmd.AddCommand(NewUserCommand(f))
 	return cmd
 }

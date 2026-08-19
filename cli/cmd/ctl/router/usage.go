@@ -112,15 +112,18 @@ Subcommands:
   summary    totals grouped by model, provider, person, app, day or hour
   list       individual calls, newest first
   export     the same rows as CSV
+  retention  how long the individual calls are kept
 
-Every subcommand takes the same filters, so a total and the calls behind it are
-one flag apart.
+The first three take the same filters, so a total and the calls behind it are one
+flag apart. A total outlives the calls it was made of: totals are kept per day
+forever, and the per-call rows are deleted on the window "retention" reports.
 `,
 	}
 	cmd.SilenceUsage = true
 	cmd.AddCommand(newUsageSummaryCommand(f))
 	cmd.AddCommand(newUsageListCommand(f))
 	cmd.AddCommand(newUsageExportCommand(f))
+	cmd.AddCommand(newUsageRetentionCommand(f))
 	return cmd
 }
 

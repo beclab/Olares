@@ -138,11 +138,13 @@ func epModelRouteMember(routeID, modelID string) string {
 // caller_app dimension of the spend summary.
 const epInstalledApps = consoleAPI + "/installed-apps"
 
-// Spend: what was called, what it cost, and the same rows as a download.
+// Spend: what was called, what it cost, the same rows as a download, and how
+// long the per-call rows are kept.
 const (
 	epSpendLogs      = consoleAPI + "/spend-logs"
 	epSpendSummary   = epSpendLogs + "/summary"
 	epSpendExportCSV = epSpendLogs + "/export.csv"
+	epSpendSettings  = consoleAPI + "/spend-settings"
 )
 
 // Who changed Router, and to what.
@@ -155,13 +157,11 @@ const epQuotas = consoleAPI + "/quotas"
 
 func epQuota(id int64) string { return epQuotas + "/" + strconv.FormatInt(id, 10) }
 
-// The spans an agent framework reported for a call.
-const (
-	epTraces      = consoleAPI + "/observability/traces"
-	epCapturePref = consoleAPI + "/observability/capture-pref"
-)
-
-func epTrace(id string) string { return epTraces + "/" + url.PathEscape(id) }
+// There is no trace surface. Router accepted OTLP spans and served them back
+// per person for a while; the tables were dropped and the routes withdrawn,
+// because a spend row already carries the model, tokens, cost, latency, status
+// and failure reason, and keeping request bodies to add to that bought
+// compliance exposure rather than insight.
 
 // Data plane. These take an `sk-*` bearer or a platform-injected caller
 // identity, never the console session.

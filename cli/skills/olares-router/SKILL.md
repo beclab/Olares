@@ -1,7 +1,7 @@
 ---
 name: olares-router
 version: 1.2.0
-description: "Olares models via olares-cli router — Router (the AI gateway) and the Model Console inside a locally installed model application. Configure cloud vendors and their models, install and manage local LLM / embedding / audio / OCR model applications, name models with aliases, groups and default categories, issue API keys and quotas, read usage, audit and traces, and call a model: chat, embed, transcribe, speak, OCR. Requires Olares 1.12.7+. Use for Router, llm-gateway, AI gateway, 模型, 模型网关, 本地模型, add an OpenAI/Anthropic/DeepSeek key, install a Qwen or Gemma model, sk- key, model quota, token spend, model alias, default-chat, which model answers by default, why a model call fails."
+description: "Olares models via olares-cli router — Router (the AI gateway) and the Model Console inside a locally installed model application. Configure cloud vendors and their models, install and manage local LLM / embedding / audio / OCR model applications, name models with aliases, groups and default categories, issue API keys and quotas, read usage and audit, and call a model: chat, embed, transcribe, speak, OCR. Requires Olares 1.12.7+. Use for Router, llm-gateway, AI gateway, 模型, 模型网关, 本地模型, add an OpenAI/Anthropic/DeepSeek key, install a Qwen or Gemma model, sk- key, model quota, token spend, model alias, default-chat, which model answers by default, why a model call fails."
 compatibility: Requires olares-cli on PATH, active Olares profile, Olares >= 1.12.7
 metadata:
   openclaw:
@@ -39,7 +39,7 @@ All verbs require Olares 1.12.7+ because Router ships as the `router` Market lis
 | what is configured | `list`, `capabilities` | [names, defaults and access control](references/olares-router-governance.md) |
 | the names callers may send | `route list/get/create/rename/enable/disable/delete/add/remove`, `default show/enable/disable` | [names, defaults and access control](references/olares-router-governance.md) |
 | access control | `key issue/list/update/revoke/local`, `quota set/list/clear`, `app installed`, `user list` | [names, defaults and access control](references/olares-router-governance.md) |
-| what happened | `usage summary/list/export`, `audit list/get`, `trace list/get/capture` | [usage, audit and traces](references/olares-router-usage.md) |
+| what happened | `usage summary/list/export/retention`, `audit list/get` | [usage and audit](references/olares-router-usage.md) |
 | calling a model | `call chat/embed/transcribe/speak/ocr` | [calling a model](references/olares-router-calling.md) |
 | inside one application | `local status/progress/spec/config/endpoints/gpu/perf/retry/restart` | [the Model Console](references/olares-router-console.md) |
 | a call or a model that does not work | any of the above | [deciding which layer is wrong](references/olares-router-diagnosis.md) |
@@ -50,7 +50,7 @@ Read [architecture and identity](references/olares-router-architecture.md) befor
 
 - **Management** (`provider`, `app`, `key`, `quota`, `route`, `default`, `usage`, `audit`, `local`) travels on the active profile. Olares injects the identity; nothing has to be supplied.
 - **Calling** (`router call`) needs a data-plane credential of its own. The CLI tries the platform's own identity first and mints an `sk-` key only if that is refused, keeping it in the keychain; `router key local` shows or forgets it.
-- Most of the management plane is admin-only, reads included: providers, the vendor catalog's models, `capabilities`, market installs, quotas, users and audit all refuse a non-admin. What a non-admin can do is `router list`, `route list/get`, `default show`, `app installed`, their own keys, their own usage, their own traces, and `router call`. Reading the names and what is installed is deliberately open — a name is what a person types into their client, and an install is not a secret.
+- Most of the management plane is admin-only, reads included: providers, the vendor catalog's models, `capabilities`, market installs, quotas, users, audit and `usage retention` all refuse a non-admin. What a non-admin can do is `router list`, `route list/get`, `default show`, `app installed`, their own keys, their own usage, and `router call`. Reading the names and what is installed is deliberately open — a name is what a person types into their client, and an install is not a secret.
 
 ## Which layer owns the change
 
@@ -77,6 +77,6 @@ A provider whose `source` is `olares` belongs to a Market application. Its addre
 - A named configuration request authorises the loop it implies: creating a provider, importing its models and validating it do not need re-confirmation one by one.
 - Ask again before `provider delete`, `app uninstall`, `key revoke`, `quota clear`, `route delete` or `default disable` on something the user did not name — each one breaks callers that still depend on it. `route disable` and `default disable` are reversible and keep their membership; `route delete` gives the name up.
 - **Never** put a credential in a shell argument where a file or stdin will do; `--credentials-json` reads either. Never print a plaintext `sk-` key into a transcript that will be shared: `key issue` shows it once, on purpose.
-- Traces can contain whole prompts. `trace capture` is the switch; treat what it returns as the user's data even when the profile is an admin's.
+- `usage retention --days` deletes per-call rows outside the new window immediately, and shortening it is not undoable. Daily totals survive, so confirm before shortening one somebody did not ask for.
 - A model that is configured but does not answer is a diagnosis, not a configuration change. Route through [deciding which layer is wrong](references/olares-router-diagnosis.md) before editing anything.
 - Stop for the shared auth gate on a persistent authentication failure, and stop when the target provider, model, application or user is ambiguous.

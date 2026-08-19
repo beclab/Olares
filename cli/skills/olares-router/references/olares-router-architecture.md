@@ -48,7 +48,7 @@ Two planes, two credentials, and they are not interchangeable.
 Router is installed as an admin-only application. Two consequences:
 
 - A non-admin profile cannot see Router's entrance at all, so every verb reports that Router is not installed. `router status` is the check that distinguishes "not installed" from "not visible to you".
-- Within Router, `whoami` reports the role. Most of the management plane requires `admin`, and not only for writes: providers, the vendor catalog's models, market installs, quotas, users, callers and audit all refuse a non-admin read. What is left to a non-admin is the model list, the resolved defaults and their own override, their own keys, their own usage, their own traces, and calling.
+- Within Router, `whoami` reports the role. Most of the management plane requires `admin`, and not only for writes: providers, the vendor catalog's models, market installs, quotas, users, audit and the usage retention window all refuse a non-admin read. What is left to a non-admin is the model list, the routes and default categories, what is installed, their own keys, their own usage, and calling.
 
 A Router user is not an Olares user: the row appears the first time that person's identity reaches Router. `router user list` shows the ones it knows, which is why a freshly created Olares account is absent until it makes a call.
 
@@ -60,4 +60,4 @@ Three different systems can answer, and their envelopes differ:
 - **An upstream's refusal** is passed through unchanged. An `invalid_api_key` with type `authentication_error` is Router refusing your key; the same message without it is usually the *vendor* refusing Router's credential, and `provider validate` settles which.
 - **An empty body** with a 5xx status was written by a proxy in front of Router — normally the model application is stopped or still starting, not Router failing.
 
-A 404 on a whole subtree means a feature is switched off rather than a missing row: observability for `trace`, the Market proxy for `app`, or a route that arrived in a later Model Console version for `local`.
+A 404 on a whole subtree means a feature is switched off rather than a missing row: the Market proxy for `app`, or a route that arrived in a later Model Console version for `local`.

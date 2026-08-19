@@ -63,4 +63,4 @@ If the application is stopped, crash-looping, cannot pull its image, or has no G
 
 **Editing Router when the model application is the problem.** Changing a provider's base URL, re-importing models, or re-registering the provider does nothing for a model that has not finished downloading. Check `local progress` before touching the Router row.
 
-**Treating a whole-subtree 404 as a missing resource.** `trace` answering 404 means observability is off; `app` answering 404 means Router's Market proxy is not configured; a `local` route answering 404 can mean that route arrived in a later Model Console version, which `local endpoints` confirms. None of the three is a row that went missing.
+**Treating a whole-subtree 404 as a missing resource.** `app` answering 404 means Router's Market proxy is not configured; a `local` route answering 404 can mean that route arrived in a later Model Console version, which `local endpoints` confirms. Neither is a row that went missing.
