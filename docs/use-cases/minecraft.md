@@ -46,7 +46,7 @@ Overlay gateway gives Minecraft a dedicated local IP address so players on the s
 3. In the **Applications** list, find **Minecraft**, confirm its status is **Running**, then enable overlay gateway for the app.
 4. To the right of **Minecraft Java**, copy the address shown. For example, `192.168.50.219:25565`.
 
-:::info local IP address is dynamic
+:::info Local IP address is dynamic
 The local IP address is assigned by the Overlay gateway and may change when the app restarts or the network changes. Always use the address currently shown on this page.
 :::
 
