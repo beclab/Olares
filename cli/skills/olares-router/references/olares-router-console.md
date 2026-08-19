@@ -26,6 +26,8 @@ The distinction that matters: `ENGINE ALIVE` says a process is up, `MODEL ON ENG
 
 The card is the source of truth for what this application serves and how the engine is launched. Router mirrors it; it does not own it.
 
+There are two ways to reach it, and `router spec` — through Router, addressed by the model name — is the one to prefer, because it merges the change and writes Router's own copy back. It is written up in [local LLM applications](olares-router-local-llm.md). These verbs go straight at the application, which is what an application Router has no provider row for needs, and what reading the file as written needs.
+
 ```
 olares-cli router local spec show llamacppqwen3627bggufv3
 olares-cli router local spec show llamacppqwen3627bggufv3 -o json > card.json
@@ -33,14 +35,14 @@ olares-cli router local spec set llamacppqwen3627bggufv3 --from card.json
 ```
 
 - `spec show` prints the model, mode, context window, maximum output, label and engine arguments. `-o json` returns the card as stored, including fields this CLI does not know — which is why a round trip starts from the JSON and not from the table.
-- `spec set` replaces the card. Edit a copy of the JSON and send it back; sending a hand-written subset silently drops whatever was left out.
+- `spec set` replaces the card. Edit a copy of the JSON and send it back; sending a hand-written subset silently drops whatever was left out, engine flags included, and an engine relaunched without its flags is a different engine.
 - `spec file` shows the raw bytes on disk when the console serves that route. Older consoles do not, and the CLI says so rather than reporting a missing card.
 
 The advertised context window must not exceed the one the engine was actually launched with. Nothing enforces that, and a card claiming more invites prompts the engine then truncates or rejects.
 
 The values a model application was installed with — its model source and name, its capability groups, its engine arguments — seed the first boot and are not a second authority afterwards. This card is, which is why correcting a running model here beats reinstalling it with different environment values. Building or cloning such an application in the first place is [`olares-chart`](../../olares-chart/SKILL.md)'s, and the install form is [`olares-market`](../../olares-market/SKILL.md)'s.
 
-A card change does not take effect by itself. `local restart` relaunches the engine with the new card; `local retry` re-enters the download and load loop, which is what a changed model source needs. After either, `router provider sync-models <provider>` re-mirrors the rows into Router — otherwise Router still advertises the old capabilities.
+A card written this way does not take effect by itself, and Router does not hear about it. `local restart` relaunches the engine with the new card; `local retry` re-enters the download and load loop, which is what a changed model source needs. After either, `router provider sync-models <provider>` re-mirrors the rows into Router — otherwise Router still advertises the old capabilities. None of those three steps is needed after a `router spec edit`, which is most of the reason to prefer it.
 
 ## Diagnostics
 

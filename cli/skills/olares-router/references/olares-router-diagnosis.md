@@ -29,7 +29,9 @@ olares-cli router default show
 - **A provider missing from `provider list`** is usually not missing. Router hides an `olares`-sourced provider while its application is not running; `router provider get <id>` shows it anyway, and `olares-cli market status <app>` says why.
 - **A provider with no models** means either that nothing was attached — `provider models import` or `sync-models` — or that Router could not read the application's live list just now, which is the model application layer below.
 - **A model that exists but is not offered** is disabled: `router list --disabled` finds it, `provider models update ... --enable` restores it.
-- **A call that says no model was named** means that mode has no default. `default show` names the modes that have none.
+- **A call refused with `no_default_model`** means that category has nothing behind it. `default show` names which do and which do not.
+- **A model Router offers a capability for that it turns out not to have** is the projection trailing the application's own card. `router spec show <model>` says which copy you are reading: `cache` is Router's, and an edit through `router spec edit` corrects both at once.
+- **A call refused for a mode mismatch, or a bare 404 on an audio route**, is the verb and the model disagreeing about what the model does. `router list` prints the mode; for a local model `router spec show` prints what the application declares, which is the copy to trust.
 
 ## Then whether the caller is allowed
 
@@ -51,7 +53,8 @@ olares-cli router local progress <app>
 - **A 5xx with an empty body from a call** is nothing listening behind Router: the application is stopped, or the engine has not come up. That empty body is the signature — Router's own refusals always carry a message.
 - **`READY` false with a download unfinished** is the normal middle of an install. `local progress --watch` is the answer, not a fix.
 - **A download that failed or stalled** — `local retry`.
-- **An engine alive with no model loaded** — the weights or the card are wrong for this engine; `local spec show` then `local restart`.
+- **An engine alive with no model loaded** — the weights or the card are wrong for this engine; `router spec show <model>` reads the card and `router spec edit` corrects it, relaunching the engine when the flags change.
+- **An engine that was answering and stopped** — `router spec restart <model>` relaunches the process on the card it already has, which is the fix when the configuration is right and the process is not.
 - **A model answering, but slowly** — `local gpu` says how much is resident and `local perf` measures it. A model mostly on the CPU is the common answer.
 - **An install that never finished** — `router provider get <app>` reports where the application stalled, and `olares-cli market status <app>` carries the Market's own reason.
 

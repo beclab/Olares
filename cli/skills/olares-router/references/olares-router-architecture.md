@@ -7,7 +7,7 @@ Read this before the first write. It explains what the two systems own, how each
 One AI gateway per Olares, installed from the Market. It holds:
 
 - **providers** — an upstream it can route to: a cloud account, or a model application on this machine.
-- **models** — rows attached to a provider, each declaring a mode (`chat`, `completion`, `embedding`, `rerank`, `moderation`, `audio`, `translate`, `image_generation`, `responses`, `ocr`) and what it supports. The vendor catalog names the same families differently (`llm`, `text-embedding`, `speech2text`, `tts`); the mode on the row is Router's.
+- **models** — rows attached to a provider, each declaring a mode (`chat`, `embedding`, `rerank`, `moderation`, `audio`, `translate`, `image_generation`, `video_generation`, `search`, `scrape`, `responses`, `ocr`) and what it supports. The vendor catalog names the same families differently (`llm`, `text-embedding`, `speech2text`, `tts`); the mode on the row is Router's. For a locally installed model the row is a projection of the application's own model card, which `router spec` reads and edits.
 - **keys, quotas, defaults** — who may call what, up to what ceiling, and which model answers when a request names none.
 - **the record** — one usage row per call, an audit row per management change, and optionally the spans an agent framework reported.
 
