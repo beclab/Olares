@@ -4,7 +4,7 @@ description: Play Minecraft Java Edition with friends by hosting a server on Ola
 head:
   - - meta
     - name: keywords
-      content: Olares, Minecraft, Minecraft Java, game server, self-hosted, Overlay gateway, VPN, Entertainment
+      content: Olares, Minecraft, Minecraft Java, game server, self-hosted, Overlay gateway, VPN, Games
 app_version: "1.0.0"
 doc_version: "1.0"
 doc_updated: "2026-08-19"

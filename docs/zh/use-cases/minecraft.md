@@ -4,17 +4,17 @@ description: 在 Olares 上托管 Minecraft Java 版服务器，与好友通过�
 head:
   - - meta
     - name: keywords
-      content: Olares, Minecraft, Minecraft Java, 游戏服务器, 自托管, Overlay gateway, VPN, 娱乐
+      content: Olares, Minecraft, Minecraft Java, 游戏服务器, 自托管, Overlay gateway, VPN, 游戏
 app_version: "1.0.0"
 doc_version: "1.0"
 doc_updated: "2026-08-19"
 ---
 
-# 在 Olares 上与好友联机游玩 Minecraft Java 版
-
 :::warning
 本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../use-cases/minecraft.md)为准。
 :::
+
+# 在 Olares 上与好友联机游玩 Minecraft Java 版
 
 Olares 上的 Minecraft 运行的是官方原版 Minecraft Java 版专用服务器。你通过控制台终端管理服务器，玩家则使用官方 Minecraft Java 版客户端连接。你可以邀请好友通过 Overlay gateway 在本地网络中联机，也可以通过 LarePass VPN 让他们远程加入。
 
