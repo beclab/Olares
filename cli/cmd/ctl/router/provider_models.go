@@ -210,7 +210,7 @@ Examples:
 	cmd.Flags().StringVar(&mode, "mode", "chat", "endpoint family this model answers on: "+strings.Join(providerModelModes, ", "))
 	cmd.Flags().IntVar(&contextSize, "context-size", 0, "context window in tokens")
 	cmd.Flags().IntVar(&maxOutTokens, "max-output-tokens", 0, "upper bound on generated tokens")
-	cmd.Flags().StringArrayVar(&supports, "supports", nil, "capability as key=true|false; repeatable (see `router capabilities`)")
+	cmd.Flags().StringArrayVar(&supports, "supports", nil, "capability as key=true|false; repeatable (`router provider models get` prints a row's keys)")
 	cmd.Flags().StringArrayVar(&pricing, "pricing", nil, "price as key=value; repeatable")
 	addOutputFlag(cmd, &output)
 	return cmd
@@ -297,7 +297,9 @@ not offered; deleting it discards all of that.
 most worth getting right: Router checks these flags before dispatching, so a
 model whose vision flag is unset will refuse images the upstream would have
 handled, and one whose flag is set wrongly will forward requests the upstream
-rejects. "router capabilities" lists every flag name.
+rejects. Router keeps a key it does not recognise rather than refusing it, so a
+misspelt flag is stored and never honoured; "router provider models get
+<provider> <model>" prints the keys a row actually carries.
 
 Only the fields you name change. Router itself replaces the model's whole
 description whenever any part of it is sent, so this command reads the model

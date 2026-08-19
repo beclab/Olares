@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 	"strconv"
-	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -22,22 +21,6 @@ import (
 // and reports an empty model list when that probe fails rather than the last
 // values it cached. An empty list under a running app therefore means the app
 // is not answering right now, not that it serves nothing.
-
-// headlineSupports are the capability keys worth a column, in the order they
-// change what a caller can send. Router tracks far more (audio, tokenizer
-// details, per-parameter support); `--output json` carries all of them.
-var headlineSupports = []struct {
-	key   string
-	label string
-}{
-	{"supports_vision", "vision"},
-	{"supports_function_calling", "tools"},
-	{"supports_reasoning", "reasoning"},
-	{"supports_native_streaming", "streaming"},
-	{"supports_audio_input", "audio-in"},
-	{"supports_audio_output", "audio-out"},
-	{"supports_web_search", "web-search"},
-}
 
 func newProviderGetCommand(f *cmdutil.Factory) *cobra.Command {
 	var output string
@@ -127,25 +110,6 @@ func renderProviderGet(w io.Writer, d *providerDetail) error {
 		)
 	}
 	return mt.flush()
-}
-
-// summarizeSupports names the headline capabilities a model has, and says so
-// when it has none of them rather than leaving the cell blank — a blank reads
-// as missing data, which is a different thing.
-func summarizeSupports(supports map[string]bool) string {
-	if len(supports) == 0 {
-		return "-"
-	}
-	labels := make([]string, 0, len(headlineSupports))
-	for _, h := range headlineSupports {
-		if supports[h.key] {
-			labels = append(labels, h.label)
-		}
-	}
-	if len(labels) == 0 {
-		return "none of the headline set"
-	}
-	return strings.Join(labels, ",")
 }
 
 func intOrDash(v int) string {

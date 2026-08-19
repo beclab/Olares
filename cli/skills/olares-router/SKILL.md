@@ -37,7 +37,7 @@ All verbs require Olares 1.12.7+ because Router ships as the `router` Market lis
 | local LLM applications | `app catalog/installed/install/upgrade/uninstall`, `provider register`, `local status/progress/spec/retry/restart` | [local LLM applications](references/olares-router-local-llm.md) |
 | local embedding, audio, OCR, CLIP | the same verbs, different modes | [local multimodal applications](references/olares-router-local-multimodal.md) |
 | what a local model declares itself to be | `spec show/edit/restart` | [local LLM applications](references/olares-router-local-llm.md) |
-| what is configured | `list`, `models`, `capabilities` | [names, defaults and access control](references/olares-router-governance.md) |
+| what is configured | `list`, `models` | [names, defaults and access control](references/olares-router-governance.md) |
 | the names callers may send | `route list/get/create/rename/enable/disable/delete/add/remove`, `default show/enable/disable` | [names, defaults and access control](references/olares-router-governance.md) |
 | access control | `key issue/list/update/revoke/local`, `quota set/list/clear`, `app installed`, `user list` | [names, defaults and access control](references/olares-router-governance.md) |
 | what happened | `usage summary/list/export/retention`, `audit list/get` | [usage and audit](references/olares-router-usage.md) |
@@ -51,7 +51,7 @@ Read [architecture and identity](references/olares-router-architecture.md) befor
 
 - **Management** (`provider`, `spec`, `app`, `key`, `quota`, `route`, `default`, `usage`, `audit`, `local`) travels on the active profile. Olares injects the identity; nothing has to be supplied.
 - **Calling** (`router call`, `router models`) needs a data-plane credential of its own. The CLI tries the platform's own identity first and mints an `sk-` key only if that is refused, keeping it in the keychain; `router key local` shows or forgets it.
-- Most of the management plane is admin-only, reads included: providers, the vendor catalog's models, `capabilities`, market installs, quotas, users, audit, `usage retention` and the whole `spec` family all refuse a non-admin. What a non-admin can do is `router list`, `route list/get`, `default show`, `app installed`, their own keys, their own usage, and `router call`. Reading the names and what is installed is deliberately open — a name is what a person types into their client, and an install is not a secret.
+- Most of the management plane is admin-only, reads included: providers, the vendor catalog's models, market installs, quotas, users, audit, `usage retention` and the whole `spec` family all refuse a non-admin. What a non-admin can do is `router list`, `route list/get`, `default show`, `app installed`, their own keys, their own usage, and `router call`. Reading the names and what is installed is deliberately open — a name is what a person types into their client, and an install is not a secret.
 
 ## Which layer owns the change
 

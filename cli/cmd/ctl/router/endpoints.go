@@ -111,10 +111,9 @@ func epForModel(path, model string) string {
 // provider; the other two describe what *could* be configured rather than what
 // is.
 const (
-	epProviderModels       = consoleAPI + "/provider-models"
-	epProviderCatalog      = consoleAPI + "/provider-catalog"
-	epPredefinedCatalog    = consoleAPI + "/predefined-catalog"
-	epCapabilitiesSupports = consoleAPI + "/capabilities/supports"
+	epProviderModels    = consoleAPI + "/provider-models"
+	epProviderCatalog   = consoleAPI + "/provider-catalog"
+	epPredefinedCatalog = consoleAPI + "/predefined-catalog"
 )
 
 // Market: the model applications Router can install on this machine, and the

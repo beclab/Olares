@@ -41,9 +41,9 @@ olares-cli router provider models add my-endpoint llama-3.1-70b \
 - `import` takes the capability flags, context window and prices from Router's catalog. Prefer it whenever the vendor is predefined.
 - `sync-models` mirrors an upstream that publishes `/models` — Ollama, a local model application, most gateways. It is the whole list in one step, so it is also the way to pick up a model added upstream later.
 - `add` is for an endpoint whose catalog Router cannot read. `--mode` defaults to `chat`; get it right, because a default is resolved per mode and a mislabelled row is only discovered at call time.
-- `--supports` takes flags from `router capabilities`. Declaring one the model does not have makes a caller send a request the upstream will reject; omitting one it does have makes callers avoid a feature that works.
+- `--supports` takes `supports_*` flags. Declaring one the model does not have makes a caller send a request the upstream will reject; omitting one it does have makes callers avoid a feature that works. Router stores a key it does not recognise instead of refusing it, so a misspelt flag is kept and never honoured — read a working row with `router provider models get <provider> <model>` and copy its spelling rather than guessing.
 
-`router provider get <provider>` then shows the provider with every model it serves, their modes, sizes and capabilities. `router list` shows every model across every provider.
+`router provider get <provider>` then shows the provider with every model it serves, their modes, sizes and headline capabilities. `router list` shows every model across every provider, with the same capability summary in its SUPPORTS column.
 
 ## 4. Correct it later
 

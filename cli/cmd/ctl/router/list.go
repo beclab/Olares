@@ -6,7 +6,6 @@ import (
 	"io"
 	"net/url"
 	"os"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -16,7 +15,6 @@ import (
 )
 
 // `olares-cli router list` — GET /console/api/provider-models
-// `olares-cli router capabilities` — GET /console/api/capabilities/supports
 //
 // One request answers "what can this Olares call", across every provider. It is
 // the only read in this tree open to a non-admin user, which is deliberate: the
@@ -32,6 +30,73 @@ import (
 // the application is in. So this list carries models of applications that are
 // downloading, stopped or failed, and the STATE column is what separates them
 // from the ones a call would reach.
+
+// capabilityFlags are the supports keys that say what a model can do, in the
+// order Router declares them. The parameter knobs it tracks alongside them —
+// temperature, top_p, seed, stop sequences and a dozen more — are deliberately
+// absent: a chat model sets nearly all of those, and a column carrying them
+// would push vision and tools off the end of it.
+//
+// These literals are copied from Router's vocabulary and nothing here can check
+// them, the same way the default categories in call.go are copied. A key
+// renamed there stops being shown rather than failing loudly; `router provider
+// models get <provider> <model>` prints whatever the row actually declares.
+var capabilityFlags = []string{
+	"supports_vision",
+	"supports_function_calling",
+	"supports_parallel_function_calling",
+	"supports_response_schema",
+	"supports_reasoning",
+	"supports_prompt_caching",
+	"supports_web_search",
+	"supports_audio_input",
+	"supports_audio_output",
+	"supports_video_input",
+	"supports_pdf_input",
+	"supports_computer_use",
+	"supports_url_context",
+	"supports_embedding_image_input",
+	"supports_stt",
+	"supports_stt_stream",
+	"supports_align",
+	"supports_diar",
+	"supports_diar_stream",
+	"supports_speaker_embed",
+	"supports_vad",
+	"supports_enhance",
+	"supports_tts",
+	"supports_tts_clone",
+	"supports_tts_dialogue",
+	"supports_audio_llm",
+	"supports_audio_s2s",
+	"supports_sound_fx",
+}
+
+// supportsShown is how many capabilities a table cell names before counting the
+// rest. Three is what fits beside the other columns on an ordinary terminal.
+const supportsShown = 3
+
+// summarizeSupports names what a row declares it can do. This is the column
+// that separates one `audio` row from the next — the mode says six different
+// jobs and the flags say which of them this model actually serves.
+//
+// A row declaring none of them prints "-" rather than an empty cell, since a
+// blank reads as missing data, which is a different thing.
+func summarizeSupports(supports map[string]bool) string {
+	on := make([]string, 0, len(capabilityFlags))
+	for _, key := range capabilityFlags {
+		if supports[key] {
+			on = append(on, strings.TrimPrefix(key, "supports_"))
+		}
+	}
+	switch {
+	case len(on) == 0:
+		return "-"
+	case len(on) <= supportsShown:
+		return strings.Join(on, ",")
+	}
+	return fmt.Sprintf("%s,+%d", strings.Join(on[:supportsShown], ","), len(on)-supportsShown)
+}
 
 // adminModelRow is one model with its provider lifted alongside it, which is
 // what makes a flat list readable: the same model name can exist on two
@@ -305,7 +370,7 @@ func renderModelList(w io.Writer, items []adminModelRow, total, limit, offset in
 			"`olares-cli router provider types` to see what can be added.")
 		return err
 	}
-	t := newTable(w, "MODEL", "PROVIDER", "SERVED BY", "MODE", "STATE", "ROUTES")
+	t := newTable(w, "MODEL", "PROVIDER", "SERVED BY", "MODE", "SUPPORTS", "STATE", "ROUTES")
 	anyRoute := false
 	for i := range items {
 		it := &items[i]
@@ -323,6 +388,7 @@ func renderModelList(w io.Writer, items []adminModelRow, total, limit, offset in
 			nonEmpty(it.ProviderName),
 			clip(nonEmpty(served), 24),
 			nonEmpty(it.Model.Mode),
+			summarizeSupports(it.Model.Supports),
 			it.state(),
 			clip(it.routeNote(), 30),
 		)
@@ -338,69 +404,6 @@ func renderModelList(w io.Writer, items []adminModelRow, total, limit, offset in
 			"groups and the default categories. Every row is also callable as PROVIDER/MODEL whether or "+
 			"not it has any. `olares-cli router route list` shows them.")
 		return err
-	}
-	return nil
-}
-
-// `router capabilities` is the vocabulary for --supports. It is a fixed list
-// compiled into Router, so it answers "what may I claim" rather than "what does
-// anything support".
-func NewCapabilitiesCommand(f *cmdutil.Factory) *cobra.Command {
-	var output string
-	cmd := &cobra.Command{
-		Use:   "capabilities",
-		Short: "the capability flags a model row can declare",
-		Long: `List every capability flag Router understands.
-
-These are the keys "provider models add --supports" and "provider models update
---supports" accept. The list is fixed in the Router build you are talking to, so
-a flag missing here is not one this Router will honour.
-
-Router checks these flags before dispatching a request, so they are a promise
-rather than a description: a model whose vision flag is unset will have image
-requests refused even if the upstream would have accepted them, and one whose
-flag is set wrongly will forward requests the upstream then rejects.
-
-Example:
-  olares-cli router capabilities
-`,
-		Args: cobra.NoArgs,
-		RunE: func(c *cobra.Command, _ []string) error {
-			return runCapabilities(c.Context(), f, output)
-		},
-	}
-	addOutputFlag(cmd, &output)
-	return cmd
-}
-
-func runCapabilities(ctx context.Context, f *cmdutil.Factory, outputRaw string) error {
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	format, err := parseFormat(outputRaw)
-	if err != nil {
-		return err
-	}
-	pc, err := prepare(ctx, f)
-	if err != nil {
-		return err
-	}
-	var env struct {
-		Supports []string `json:"supports"`
-	}
-	if err := pc.router.doJSON(ctx, "GET", epCapabilitiesSupports, nil, &env); err != nil {
-		return err
-	}
-	if format == FormatJSON {
-		return printJSON(os.Stdout, env)
-	}
-	sorted := make([]string, len(env.Supports))
-	copy(sorted, env.Supports)
-	sort.Strings(sorted)
-	for _, s := range sorted {
-		if _, err := fmt.Fprintln(os.Stdout, s); err != nil {
-			return err
-		}
 	}
 	return nil
 }
