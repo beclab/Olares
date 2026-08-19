@@ -110,21 +110,23 @@ type missing struct {
 
 // resolveModel finds one configured model from what somebody typed.
 //
-// Four forms are accepted, and the reason there are four is that a model has no
+// Five forms are accepted, and the reason there are five is that a model has no
 // single name. `<provider>/<model>` is what the data plane takes and what a
 // key's allowed list holds, so it is the canonical one. A bare model name is
 // accepted when only one row carries it, which is the common case and the one
 // people type. The row's id is accepted because it is the only form that is
-// always unique. And `<title>/<model>` exists for the case the other three
-// cannot express: every locally installed model application is a provider named
-// `Olares`, so `Olares/qwen3-8b` can name two different rows, and the display
-// title is what tells those apart.
+// always unique. The remaining two exist for the case the first three cannot
+// express: every locally installed model application is a provider named
+// `Olares`, so `Olares/qwen3-8b` can name two different rows. Both the
+// application name and its display title tell those apart, and both are
+// accepted because they are what the two places a reader met the application
+// print — `router list` shows the title, `router provider list` the name.
 //
 // Ambiguity is reported with the candidates rather than resolved by taking the
 // first. Two rows with one name can be different deployments of a model with
 // different prices, and every caller of this is about to write something down.
 func resolveModel(ctx context.Context, pc *preparedClient, ref string) (*adminModelRow, error) {
-	ref, err := requireRef(ref, "a model, as <provider>/<model> or an id")
+	ref, err := requireRef(ref, "a model, as <provider>/<model>, <app_name>/<model> or an id")
 	if err != nil {
 		return nil, err
 	}
@@ -139,9 +141,11 @@ func resolveModel(ctx context.Context, pc *preparedClient, ref string) (*adminMo
 			return r, nil
 		}
 		title := strDeref(r.ProviderTitle)
+		app := strDeref(r.OlaresAppName)
 		switch {
 		case strings.EqualFold(r.ProviderName+"/"+r.Model.Name, ref),
 			title != "" && strings.EqualFold(title+"/"+r.Model.Name, ref),
+			app != "" && strings.EqualFold(app+"/"+r.Model.Name, ref),
 			strings.EqualFold(r.Model.Name, ref):
 			matches = append(matches, r)
 		}
@@ -162,19 +166,26 @@ func resolveModel(ctx context.Context, pc *preparedClient, ref string) (*adminMo
 			known: names,
 			have:  "configured are",
 			none:  "no model is configured yet",
-			note: "The form here is <provider>/<model>; `olares-cli router list` shows every row " +
-				"with the id that names one exactly.",
+			note: "The form here is <provider>/<model>, or <app_name>/<model> for a locally " +
+				"installed application; `olares-cli router list` shows every row with the id " +
+				"that names one exactly.",
 		}.err()
 	}
-	// More than one row answers to the word. The title distinguishes local
-	// applications from each other, and the id distinguishes anything.
+	// More than one row answers to the word. Each candidate is offered in a
+	// form that can be pasted back: the application name when there is one,
+	// since a title is written to be read and often carries spaces, and the id
+	// always, since it is the one form nothing else can collide with.
 	lines := make([]string, 0, len(matches))
 	for _, m := range matches {
-		lines = append(lines, m.label()+" ["+m.ProviderModelID+"]")
+		name := m.label()
+		if app := strDeref(m.OlaresAppName); app != "" {
+			name = app + "/" + m.Model.Name
+		}
+		lines = append(lines, name+" ["+m.ProviderModelID+"]")
 	}
 	sort.Strings(lines)
-	return nil, fmt.Errorf("%q names %d models: %s. Name one by its id, or as <provider>/<model> when "+
-		"that is unique", ref, len(matches), strings.Join(lines, "; "))
+	return nil, fmt.Errorf("%q names %d models: %s. Name one by its id, or as <provider>/<model> or "+
+		"<app_name>/<model> when that is unique", ref, len(matches), strings.Join(lines, "; "))
 }
 
 func dedupeStrings(sorted []string) []string {

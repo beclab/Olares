@@ -26,6 +26,12 @@ import (
 // A model appearing here is not the same as a model being callable. The row says
 // what is configured; whether the upstream answers is what `provider validate`
 // and `router call` find out.
+//
+// A locally installed model application owns a row from the moment it is
+// installed, named after the MODEL_NAME its manifest declares, whatever state
+// the application is in. So this list carries models of applications that are
+// downloading, stopped or failed, and the STATE column is what separates them
+// from the ones a call would reach.
 
 // adminModelRow is one model with its provider lifted alongside it, which is
 // what makes a flat list readable: the same model name can exist on two
@@ -43,6 +49,15 @@ type adminModelRow struct {
 	ProviderSource  string           `json:"provider_source"`
 	ProviderStatus  string           `json:"provider_status"`
 	Model           providerModelRow `json:"model"`
+	// OlaresAppName is the Olares application serving this model, absent on a
+	// manual provider. It is the typeable half of the pair the title carries:
+	// a title reads well and an application name is what a reference accepts.
+	OlaresAppName *string `json:"olares_app_name,omitempty"`
+	// ProviderOlaresStatus is the platform's own phase for that application —
+	// downloading, installing, running, stopped, failed. Absent on a manual
+	// provider, and absent from a Router old enough not to send it, which is
+	// why every read of it goes through state().
+	ProviderOlaresStatus *string `json:"provider_olares_status,omitempty"`
 	// CallableRouteNames are the names a caller may send right now to reach
 	// this row; AllRouteNames every name that reaches it, including the ones
 	// currently switched off. Router computes both — the callable half depends
@@ -50,6 +65,44 @@ type adminModelRow struct {
 	// page cannot work it out.
 	CallableRouteNames []string `json:"callable_route_names"`
 	AllRouteNames      []string `json:"all_route_names"`
+}
+
+// callable mirrors Router's own dispatch predicate: three switches, and for a
+// locally installed application the platform phase on top of them. Kept
+// identical to the console's isModelRowCallable so the two never disagree about
+// a row — a CLI that called something offered where the console called it
+// stopped would send its reader looking for the wrong fix.
+func (r *adminModelRow) callable() bool {
+	if r.ProviderStatus != "active" || !r.Model.Enabled || r.Model.Status != "active" {
+		return false
+	}
+	return !(r.ProviderSource == "olares" && strDeref(r.ProviderOlaresStatus) != "running")
+}
+
+// state is the STATE cell: whether a call would reach this row, and when it
+// would not, what is in the way.
+//
+// The phase wins over "disabled" for a local application, because starting an
+// application and asking an admin to re-enable a model are different actions and
+// a reader who is told the wrong one goes looking for a toggle nobody switched
+// off. Where the console stops at one neutral badge this says which switch is
+// off, since a line of text is cheaper than a badge and the two have different
+// fixes: `provider models update --enable` against `provider update --enable`.
+//
+// A row whose application has reported no phase keeps the generic verdict.
+// Silence is not a state to name, and it is also what an older Router sends.
+func (r *adminModelRow) state() string {
+	if r.callable() {
+		return "callable"
+	}
+	if phase := strings.TrimSpace(strDeref(r.ProviderOlaresStatus)); r.ProviderSource == "olares" &&
+		phase != "" && phase != "running" {
+		return phase
+	}
+	if r.ProviderStatus != "active" {
+		return "provider disabled"
+	}
+	return "disabled"
 }
 
 // label is how one row reads in a sentence: the qualified name Router routes
@@ -112,10 +165,13 @@ A model is called as "PROVIDER/MODEL". "ROUTES" lists the other names that
 reach the same row — aliases, groups and the default categories, which
 "router route list" manages.
 
-Two columns are easy to conflate. "OFFERED" is whether the model is handed to
-callers at all; "STATUS" is the row's own state. A model can be present,
-active, and still not offered, which is what "models update --disable" leaves
-behind.
+"STATE" answers whether a call would reach the row. "callable" is yes. Anything
+else names what is in the way, and the two kinds ask for different things: a
+platform phase — "stopped", "downloading", "failed" — belongs to the model
+application and is "olares-cli market" territory, while "disabled" is a switch
+an admin threw and "provider models update --enable" restores. A locally
+installed application has a row from the moment it is installed, so a model
+that has never run is listed here rather than missing.
 
 What a model claims to support, its context window and its prices are not in
 this answer — Router keeps them out of the aggregate list. "router provider get
@@ -249,7 +305,7 @@ func renderModelList(w io.Writer, items []adminModelRow, total, limit, offset in
 			"`olares-cli router provider types` to see what can be added.")
 		return err
 	}
-	t := newTable(w, "MODEL", "PROVIDER", "SERVED BY", "MODE", "OFFERED", "STATUS", "PROVIDER STATUS", "ROUTES")
+	t := newTable(w, "MODEL", "PROVIDER", "SERVED BY", "MODE", "STATE", "ROUTES")
 	anyRoute := false
 	for i := range items {
 		it := &items[i]
@@ -267,9 +323,7 @@ func renderModelList(w io.Writer, items []adminModelRow, total, limit, offset in
 			nonEmpty(it.ProviderName),
 			clip(nonEmpty(served), 24),
 			nonEmpty(it.Model.Mode),
-			boolStr(it.Model.Enabled),
-			nonEmpty(it.Model.Status),
-			nonEmpty(it.ProviderStatus),
+			it.state(),
 			clip(it.routeNote(), 30),
 		)
 	}

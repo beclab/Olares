@@ -70,7 +70,7 @@ A provider whose `source` is `olares` belongs to a Market application. Its addre
 ## Naming
 
 - A model is addressed as `<provider>/<model>` wherever ambiguity is possible — in `--model`, in a quota, in a key's allowed list. `router list` prints both halves. A name without a slash is a **route** — an alias, a group, or a `default-*` category — and has to exist.
-- Every locally installed model application is a provider named `Olares`, so the qualified name is not unique for local models. `router list` shows the application in `SERVED BY`, and the model id is the only handle that always names one row.
+- Every locally installed model application is a provider named `Olares`, so the qualified name is not unique for local models. `<app_name>/<model>` names one of them — `llamacppqwen3v3/qwen3-8b` — and so does the application's display title, which `router list` prints in `SERVED BY`. The model id is the only handle that always names one row, and an ambiguous reference is refused with the candidates rather than resolved to one.
 - A provider is named by its title, its Olares app name, or its id. A model application is named by its Olares app id (`llamacppqwen3627bggufv3`), which is also what `provider register` and every `local` verb accept.
 - An application that *calls* Router has no row here at all: Olares vouches for it at the edge and the call arrives carrying an `appid` — the app name hashed, or the name itself for a system app. So it cannot be registered or revoked; `app installed` says whether it is here, `usage --by caller_app` says what it spent, and `quota set --caller-app` is the only lever over it.
 

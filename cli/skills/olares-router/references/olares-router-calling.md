@@ -2,7 +2,7 @@
 
 `router call` sends work through Router's data plane, the same path an application uses. It is the fastest way to prove a configuration end to end, and the only verb family here that needs a credential of its own.
 
-`router models` is its companion: it lists every name this credential may put in the `model` field, from the data plane's own point of view, which is a narrower list than the `router list` a management-plane read produces.
+`router models` is its companion: it lists every name this credential may put in the `model` field, from the data plane's own point of view, which is a narrower list than the `router list` a management-plane read produces. Two things narrow it. The key's own allowlist is one. The other is that a locally installed model application owns a model row from the moment it is installed, whatever state it is in, so `router list` shows models of applications that are downloading, stopped or failed — the data plane admits only the ones whose application is `running`. A name in `router list` and not in `router models` is usually that, and the `STATE` cell in `router list` says which phase it is stuck in.
 
 ## The credential
 

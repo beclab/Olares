@@ -13,8 +13,9 @@ import (
 // function returned rows, which it did before the memo existed, but how many
 // times Router was asked for them.
 type requestLog struct {
-	paths []string
-	users []consoleUser
+	paths  []string
+	users  []consoleUser
+	models []adminModelRow
 }
 
 func (l *requestLog) serve(w http.ResponseWriter, r *http.Request) {
@@ -22,6 +23,10 @@ func (l *requestLog) serve(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{}`))
+		return
+	}
+	if r.URL.Path == epProviderModels {
+		_ = json.NewEncoder(w).Encode(map[string]any{"items": l.models})
 		return
 	}
 	_ = json.NewEncoder(w).Encode(map[string]any{"items": l.users})
@@ -169,6 +174,106 @@ func TestMissingCapsTheNamesItLists(t *testing.T) {
 	}
 	if strings.Count(msg, ", ") != namesInAMiss-1 {
 		t.Errorf("listed something other than %d names: %s", namesInAMiss, msg)
+	}
+}
+
+// olaresModelRow is one locally installed application's model, which is the
+// only shape where a provider name is not enough to name a row.
+func olaresModelRow(id, app, title, model string) adminModelRow {
+	return adminModelRow{
+		ProviderModelID: id,
+		ProviderID:      "p-" + app,
+		ProviderName:    "Olares",
+		ProviderTitle:   &title,
+		ProviderType:    "openai-compatible",
+		ProviderSource:  "olares",
+		ProviderStatus:  "active",
+		OlaresAppName:   &app,
+		Model:           providerModelRow{ID: id, Name: model, Mode: "chat", Enabled: true, Status: "active"},
+	}
+}
+
+// The application name is what `router provider list` prints and what a person
+// can retype; the title is the one the model list shows. Both name the row.
+func TestAModelIsFoundByItsApplicationName(t *testing.T) {
+	pc, log := newTestClient(t)
+	running := "running"
+	row := olaresModelRow("pm-1", "llamacppqwen3v3", "Qwen3 8B", "qwen3-8b")
+	row.ProviderOlaresStatus = &running
+	log.models = []adminModelRow{row}
+
+	for _, ref := range []string{
+		"llamacppqwen3v3/qwen3-8b",
+		"Qwen3 8B/qwen3-8b",
+		"Olares/qwen3-8b",
+		"qwen3-8b",
+		"pm-1",
+	} {
+		got, err := resolveModel(context.Background(), pc, ref)
+		if err != nil {
+			t.Errorf("%q did not resolve: %v", ref, err)
+			continue
+		}
+		if got.ProviderModelID != "pm-1" {
+			t.Errorf("%q resolved to %s", ref, got.ProviderModelID)
+		}
+	}
+}
+
+// Two applications serving one model name is the case the provider name cannot
+// express, so the refusal has to hand back something that can be pasted.
+func TestAnAmbiguousModelIsOfferedApplicationQualifiedNames(t *testing.T) {
+	pc, log := newTestClient(t)
+	log.models = []adminModelRow{
+		olaresModelRow("pm-1", "llamacppqwen3v3", "Qwen3 8B (llama.cpp)", "qwen3-8b"),
+		olaresModelRow("pm-2", "vllmqwen3v3", "Qwen3 8B (vLLM)", "qwen3-8b"),
+	}
+
+	_, err := resolveModel(context.Background(), pc, "qwen3-8b")
+	if err == nil {
+		t.Fatal("two rows with one name resolved to one of them")
+	}
+	msg := err.Error()
+	for _, want := range []string{
+		"llamacppqwen3v3/qwen3-8b [pm-1]",
+		"vllmqwen3v3/qwen3-8b [pm-2]",
+		"<app_name>/<model>",
+	} {
+		if !strings.Contains(msg, want) {
+			t.Errorf("refusal is missing %q: %s", want, msg)
+		}
+	}
+
+	if got, err := resolveModel(context.Background(), pc, "vllmqwen3v3/qwen3-8b"); err != nil {
+		t.Errorf("the form the refusal offered did not work: %v", err)
+	} else if got.ProviderModelID != "pm-2" {
+		t.Errorf("resolved to %s, want pm-2", got.ProviderModelID)
+	}
+}
+
+// A manual provider has no application name, so the candidate falls back to the
+// label rather than printing a bare model name that names both rows.
+func TestAnAmbiguousModelWithoutAnApplicationKeepsItsLabel(t *testing.T) {
+	pc, log := newTestClient(t)
+	rows := make([]adminModelRow, 2)
+	for i, provider := range []string{"openai", "azure"} {
+		rows[i] = adminModelRow{
+			ProviderModelID: "pm-" + provider,
+			ProviderName:    provider,
+			ProviderSource:  "manual",
+			ProviderStatus:  "active",
+			Model:           providerModelRow{Name: "gpt-4o", Mode: "chat", Enabled: true, Status: "active"},
+		}
+	}
+	log.models = rows
+
+	_, err := resolveModel(context.Background(), pc, "gpt-4o")
+	if err == nil {
+		t.Fatal("two providers offering one model resolved to one of them")
+	}
+	if msg := err.Error(); !strings.Contains(msg, "openai/gpt-4o [pm-openai]") ||
+		!strings.Contains(msg, "azure/gpt-4o [pm-azure]") {
+		t.Errorf("refusal does not name both providers: %s", msg)
 	}
 }
 
