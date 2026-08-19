@@ -312,7 +312,7 @@ data:
       waitBeforeExitSeconds: 0
     proxyInit:
       closeWaitTimeoutSecs: 0
-      ignoreInboundPorts: 4567,4568
+      ignoreInboundPorts: 3389,4567,4568
       ignoreOutboundPorts: 4567,4568
       iptablesMode: nft
       kubeAPIServerPorts: 443,6443
@@ -1199,7 +1199,7 @@ spec:
         - --proxy-uid
         - "2102"
         - --inbound-ports-to-ignore
-        - "4190,4191,4567,4568"
+        - "3389,4190,4191,4567,4568"
         - --outbound-ports-to-ignore
         - "443,6443"
         image: cr.l5d.io/linkerd/proxy:edge-26.5.1
@@ -1544,7 +1544,7 @@ spec:
         - --proxy-uid
         - "2102"
         - --inbound-ports-to-ignore
-        - "4190,4191,4567,4568"
+        - "3389,4190,4191,4567,4568"
         - --outbound-ports-to-ignore
         - "443,6443"
         image: cr.l5d.io/linkerd/proxy:edge-26.5.1
@@ -1892,7 +1892,7 @@ spec:
         - --proxy-uid
         - "2102"
         - --inbound-ports-to-ignore
-        - "4190,4191,4567,4568"
+        - "3389,4190,4191,4567,4568"
         - --outbound-ports-to-ignore
         - "443,6443"
         image: cr.l5d.io/linkerd/proxy:edge-26.5.1
