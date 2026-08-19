@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -191,10 +190,6 @@ func marketOwnedErr(p *providerRow, action string) error {
 		p.Name, app, action)
 }
 
-// providerIDPattern matches Router's provider ids (UUIDs), which is how
-// resolveProvider decides whether it can skip the list.
-var providerIDPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
-
 // resolveProvider turns what a person typed into a provider row. Names are
 // what anyone actually knows — they are unique in Router — so an id is
 // accepted but never required.
@@ -204,11 +199,11 @@ var providerIDPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a
 // the detail route still serves it. That is the one way to inspect a provider
 // belonging to a stopped model app.
 func resolveProvider(ctx context.Context, pc *preparedClient, ref string) (*providerRow, error) {
-	ref = strings.TrimSpace(ref)
-	if ref == "" {
-		return nil, fmt.Errorf("provider name or id is required")
+	ref, err := requireRef(ref, "a provider name or id")
+	if err != nil {
+		return nil, err
 	}
-	if providerIDPattern.MatchString(ref) {
+	if entityID.MatchString(ref) {
 		detail, err := getProvider(ctx, pc, ref)
 		if err != nil {
 			return nil, err
@@ -240,11 +235,14 @@ func resolveProvider(ctx context.Context, pc *preparedClient, ref string) (*prov
 	for i := range rows {
 		known = append(known, rows[i].Name)
 	}
-	if len(known) == 0 {
-		return nil, fmt.Errorf("no provider %q, and no provider is currently listed. %s", ref, hiddenProviderNote)
-	}
-	return nil, fmt.Errorf("no provider %q; listed providers are %s. %s",
-		ref, strings.Join(known, ", "), hiddenProviderNote)
+	return nil, missing{
+		noun:  "provider",
+		ref:   ref,
+		known: known,
+		have:  "the listed ones are",
+		none:  "no provider is currently listed",
+		note:  hiddenProviderNote,
+	}.err()
 }
 
 // providerIDFromModels finds a provider id by name in the aggregate model list.
@@ -270,13 +268,7 @@ const hiddenProviderNote = "A provider belonging to a model application is liste
 	"so check `olares-cli settings apps list` for a stopped model app; you can still inspect it by id."
 
 func listProviders(ctx context.Context, pc *preparedClient) ([]providerRow, error) {
-	var env struct {
-		Items []providerRow `json:"items"`
-	}
-	if err := pc.router.doJSON(ctx, "GET", epProviders, nil, &env); err != nil {
-		return nil, err
-	}
-	return env.Items, nil
+	return collection[providerRow](ctx, pc, epProviders)
 }
 
 func getProvider(ctx context.Context, pc *preparedClient, id string) (*providerDetail, error) {

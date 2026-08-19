@@ -566,10 +566,11 @@ func resolveProviderModel(ctx context.Context, pc *preparedClient, providerRef, 
 	if err != nil {
 		return nil, nil, err
 	}
-	modelRef = strings.TrimSpace(modelRef)
-	if modelRef == "" {
-		return nil, nil, fmt.Errorf("model name or id is required")
+	modelRef, err = requireRef(modelRef, "a model name or id")
+	if err != nil {
+		return nil, nil, err
 	}
+	names := make([]string, 0, len(detail.Models))
 	for i := range detail.Models {
 		m := &detail.Models[i]
 		if m.ID == modelRef || strings.EqualFold(m.Name, modelRef) ||
@@ -577,16 +578,16 @@ func resolveProviderModel(ctx context.Context, pc *preparedClient, providerRef, 
 			row := detail.providerRow
 			return &row, m, nil
 		}
-	}
-	names := make([]string, 0, len(detail.Models))
-	for i := range detail.Models {
-		names = append(names, detail.Models[i].Name)
+		names = append(names, m.Name)
 	}
 	sort.Strings(names)
-	if len(names) == 0 {
-		return nil, nil, fmt.Errorf("%s offers no models, so there is no %q to change", found.Name, modelRef)
-	}
-	return nil, nil, fmt.Errorf("%s offers no model %q; it offers %s", found.Name, modelRef, strings.Join(names, ", "))
+	return nil, nil, missing{
+		noun:  "model on " + found.Name,
+		ref:   modelRef,
+		known: names,
+		have:  "it offers",
+		none:  found.Name + " offers no models at all",
+	}.err()
 }
 
 // parseSupportsFlags reads key=true|false pairs. Router tolerates a few other

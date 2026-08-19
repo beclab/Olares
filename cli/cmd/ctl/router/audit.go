@@ -223,18 +223,13 @@ func runAuditList(ctx context.Context, f *cmdutil.Factory, fl auditFilter, outpu
 		classes = []string{"4xx", "5xx"}
 	}
 	for _, class := range classes {
-		page := q
+		window := q
 		if class != "" {
-			page = cloneValues(q)
-			page.Set("status_class", class)
+			window = cloneValues(q)
+			window.Set("status_class", class)
 		}
-		var env struct {
-			Items  []auditEntry `json:"items"`
-			Total  int          `json:"total"`
-			Limit  int          `json:"limit"`
-			Offset int          `json:"offset"`
-		}
-		if err := pc.router.doJSON(ctx, "GET", withQuery(epAuditLogs, page), nil, &env); err != nil {
+		var env page[auditEntry]
+		if err := pc.router.doJSON(ctx, "GET", withQuery(epAuditLogs, window), nil, &env); err != nil {
 			return err
 		}
 		items = append(items, env.Items...)

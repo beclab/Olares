@@ -93,15 +93,13 @@ func fetchConsoleUser(ctx context.Context, pc *preparedClient) (*consoleUser, er
 // worth failing the caller over — the id is still printed — so this returns an
 // empty map rather than an error.
 func userLabels(ctx context.Context, pc *preparedClient) map[string]string {
-	var env struct {
-		Items []consoleUser `json:"items"`
-	}
-	if err := pc.router.doJSON(ctx, "GET", epUsers, nil, &env); err != nil {
+	users, err := listUsers(ctx, pc)
+	if err != nil {
 		return map[string]string{}
 	}
-	out := make(map[string]string, len(env.Items))
-	for i := range env.Items {
-		u := &env.Items[i]
+	out := make(map[string]string, len(users))
+	for i := range users {
+		u := &users[i]
 		if u.ID != "" && u.BflName != "" {
 			out[u.ID] = u.BflName
 		}

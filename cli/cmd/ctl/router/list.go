@@ -182,12 +182,7 @@ func runModelList(ctx context.Context, f *cmdutil.Factory, filter modelListFilte
 		q.Set("offset", strconv.Itoa(filter.Offset))
 	}
 
-	var env struct {
-		Items  []adminModelRow `json:"items"`
-		Total  int             `json:"total"`
-		Limit  int             `json:"limit"`
-		Offset int             `json:"offset"`
-	}
+	var env page[adminModelRow]
 	if err := pc.router.doJSON(ctx, "GET", withQuery(epProviderModels, q), nil, &env); err != nil {
 		return err
 	}

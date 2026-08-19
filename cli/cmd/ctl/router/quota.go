@@ -247,14 +247,7 @@ func listQuotas(ctx context.Context, pc *preparedClient, target *quotaTarget) ([
 		q.Set("scope_type", target.ScopeType)
 		q.Set("scope_id", target.ScopeID)
 	}
-	path := withQuery(epQuotas, q)
-	var env struct {
-		Items []quotaRow `json:"items"`
-	}
-	if err := pc.router.doJSON(ctx, "GET", path, nil, &env); err != nil {
-		return nil, err
-	}
-	return env.Items, nil
+	return collection[quotaRow](ctx, pc, withQuery(epQuotas, q))
 }
 
 func renderQuotaList(ctx context.Context, pc *preparedClient, w io.Writer, rows []quotaRow, target *quotaTarget) error {

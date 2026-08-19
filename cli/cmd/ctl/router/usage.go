@@ -383,12 +383,7 @@ func runUsageList(ctx context.Context, f *cmdutil.Factory, fl spendFilter, outpu
 	if err != nil {
 		return err
 	}
-	var env struct {
-		Items  []spendLog `json:"items"`
-		Total  int        `json:"total"`
-		Limit  int        `json:"limit"`
-		Offset int        `json:"offset"`
-	}
+	var env page[spendLog]
 	if err := pc.router.doJSON(ctx, "GET", withQuery(epSpendLogs, q), nil, &env); err != nil {
 		return err
 	}

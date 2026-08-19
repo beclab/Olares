@@ -164,12 +164,7 @@ func runTraceList(ctx context.Context, f *cmdutil.Factory, since, until string, 
 	if offset > 0 {
 		q.Set("offset", strconv.Itoa(offset))
 	}
-	var env struct {
-		Items  []traceSummary `json:"items"`
-		Total  int            `json:"total"`
-		Limit  int            `json:"limit"`
-		Offset int            `json:"offset"`
-	}
+	var env page[traceSummary]
 	if err := pc.router.doJSON(ctx, "GET", withQuery(epTraces, q), nil, &env); err != nil {
 		return traceRouteErr(err)
 	}

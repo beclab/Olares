@@ -141,13 +141,7 @@ func runCallerList(ctx context.Context, f *cmdutil.Factory, includeGone bool, ou
 }
 
 func listCallerApps(ctx context.Context, pc *preparedClient) ([]callerApp, error) {
-	var env struct {
-		Items []callerApp `json:"items"`
-	}
-	if err := pc.router.doJSON(ctx, "GET", epCallerApps, nil, &env); err != nil {
-		return nil, err
-	}
-	return env.Items, nil
+	return collection[callerApp](ctx, pc, epCallerApps)
 }
 
 func renderCallerList(w io.Writer, apps []callerApp, archived int, includeGone bool) error {
@@ -260,28 +254,29 @@ func runCallerArchive(ctx context.Context, f *cmdutil.Factory, ref string, assum
 // row id. The application name is what appears in a manifest and in a log, so it
 // is the one anybody has to hand.
 func resolveCallerApp(ctx context.Context, pc *preparedClient, ref string) (*callerApp, error) {
-	ref = strings.TrimSpace(ref)
-	if ref == "" {
-		return nil, fmt.Errorf("an application name or id is required")
+	ref, err := requireRef(ref, "an application name or id")
+	if err != nil {
+		return nil, err
 	}
 	apps, err := listCallerApps(ctx, pc)
 	if err != nil {
 		return nil, err
 	}
+	known := make([]string, 0, len(apps))
 	for i := range apps {
 		a := &apps[i]
 		if a.ID == ref || strings.EqualFold(a.OlaresAppName, ref) || strings.EqualFold(a.DisplayName, ref) {
 			return a, nil
 		}
+		known = append(known, a.OlaresAppName)
 	}
-	known := make([]string, 0, len(apps))
-	for i := range apps {
-		known = append(known, apps[i].OlaresAppName)
-	}
-	if len(known) == 0 {
-		return nil, fmt.Errorf("no application %q; nothing has called Router yet, and a row appears only on the first call", ref)
-	}
-	return nil, fmt.Errorf("no application %q; the ones that have called are %s", ref, strings.Join(known, ", "))
+	return nil, missing{
+		noun:  "application",
+		ref:   ref,
+		known: known,
+		have:  "the ones that have called are",
+		none:  "nothing has called Router yet, and a row appears only on the first call",
+	}.err()
 }
 
 func resolveCallerAppID(ctx context.Context, pc *preparedClient, ref string) (string, error) {

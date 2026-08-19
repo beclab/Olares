@@ -268,13 +268,7 @@ func runKeyList(ctx context.Context, f *cmdutil.Factory, outputRaw string) error
 }
 
 func listKeys(ctx context.Context, pc *preparedClient) ([]apiKeyView, error) {
-	var env struct {
-		Items []apiKeyView `json:"items"`
-	}
-	if err := pc.router.doJSON(ctx, "GET", epAPIKeys, nil, &env); err != nil {
-		return nil, err
-	}
-	return env.Items, nil
+	return collection[apiKeyView](ctx, pc, epAPIKeys)
 }
 
 func renderKeyList(ctx context.Context, pc *preparedClient, w io.Writer, keys []apiKeyView) error {
@@ -726,15 +720,16 @@ func runKeyRevoke(ctx context.Context, f *cmdutil.Factory, ref string, assumeYes
 // A plaintext key is accepted too, by matching its prefix, so pasting the thing
 // you are holding works. It is not sent anywhere.
 func resolveKey(ctx context.Context, pc *preparedClient, ref string) (*apiKeyView, error) {
-	ref = strings.TrimSpace(ref)
-	if ref == "" {
-		return nil, fmt.Errorf("a key name, prefix or id is required")
+	ref, err := requireRef(ref, "a key name, prefix or id")
+	if err != nil {
+		return nil, err
 	}
 	keys, err := listKeys(ctx, pc)
 	if err != nil {
 		return nil, err
 	}
 	var byName []*apiKeyView
+	known := make([]string, 0, len(keys))
 	for i := range keys {
 		k := &keys[i]
 		if k.ID == ref || (k.KeyPrefix != "" && (k.KeyPrefix == ref || strings.HasPrefix(ref, k.KeyPrefix))) {
@@ -743,15 +738,20 @@ func resolveKey(ctx context.Context, pc *preparedClient, ref string) (*apiKeyVie
 		if strings.EqualFold(k.Name, ref) {
 			byName = append(byName, k)
 		}
+		known = append(known, nonEmpty(k.Name))
 	}
 	switch len(byName) {
 	case 1:
 		return byName[0], nil
 	case 0:
-		if len(keys) == 0 {
-			return nil, fmt.Errorf("no key %q, and you have no keys; `olares-cli router key issue <name>` creates one", ref)
-		}
-		return nil, fmt.Errorf("no key %q; `olares-cli router key list` shows the ones you can see", ref)
+		return nil, missing{
+			noun:  "key",
+			ref:   ref,
+			known: known,
+			have:  "the ones you can see are",
+			none:  "you have no keys",
+			note:  "`olares-cli router key issue <name>` creates one",
+		}.err()
 	default:
 		prefixes := make([]string, 0, len(byName))
 		for _, k := range byName {

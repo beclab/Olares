@@ -225,14 +225,8 @@ func listProviderCatalog(ctx context.Context, pc *preparedClient) ([]catalogEntr
 // own type lands together — so this returns the type's models rather than one
 // vendor's.
 func listPredefinedModels(ctx context.Context, pc *preparedClient, providerType string) ([]catalogModel, error) {
-	var env struct {
-		Items []catalogModel `json:"items"`
-	}
-	path := withQuery(epPredefinedCatalog, url.Values{"provider_type": {providerType}})
-	if err := pc.router.doJSON(ctx, "GET", path, nil, &env); err != nil {
-		return nil, err
-	}
-	return env.Items, nil
+	return collection[catalogModel](ctx, pc,
+		withQuery(epPredefinedCatalog, url.Values{"provider_type": {providerType}}))
 }
 
 func pickCatalogEntry(entries []catalogEntry, ref string) (*catalogEntry, error) {

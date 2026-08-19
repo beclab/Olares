@@ -40,6 +40,13 @@ type routerClient struct {
 	baseURL  string
 	olaresID string
 	headers  map[string]string
+
+	// writes counts the requests that could have changed something, so a
+	// memoized read (see collection in resolve.go) can tell whether its
+	// snapshot still describes the deployment. A clone made by withHeader
+	// keeps its own count on purpose: a data-plane completion changes nothing
+	// the console plane has cached.
+	writes int
 }
 
 func newRouterClient(hc *http.Client, baseURL, olaresID string) *routerClient {
@@ -171,6 +178,9 @@ func (c *routerClient) doJSON(ctx context.Context, method, path string, body, ou
 // do issues one request and hands back the live response with its body still
 // open, for the callers that stream (install progress, chat completions).
 func (c *routerClient) do(ctx context.Context, method, path string, body io.Reader, contentType string) (*http.Response, error) {
+	if method != http.MethodGet {
+		c.writes++
+	}
 	url := c.baseURL + path
 	req, err := http.NewRequestWithContext(ctx, method, url, body)
 	if err != nil {

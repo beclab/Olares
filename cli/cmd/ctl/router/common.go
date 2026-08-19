@@ -81,6 +81,10 @@ type preparedClient struct {
 	found   *discoveredRouter
 	desktop *whoami.HTTPClient
 	hc      *http.Client
+
+	// collections holds what has already been read this invocation; see
+	// collection in resolve.go for what invalidates it.
+	collections map[string]memoizedCollection
 }
 
 // prepare resolves the profile, checks the version floor, and locates Router.

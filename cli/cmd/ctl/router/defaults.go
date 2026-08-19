@@ -454,14 +454,7 @@ func modelNames(ctx context.Context, pc *preparedClient) map[string]string {
 }
 
 func listAllModels(ctx context.Context, pc *preparedClient) ([]adminModelRow, error) {
-	var env struct {
-		Items []adminModelRow `json:"items"`
-	}
-	path := withQuery(epProviderModels, url.Values{"limit": {"1000"}})
-	if err := pc.router.doJSON(ctx, "GET", path, nil, &env); err != nil {
-		return nil, err
-	}
-	return env.Items, nil
+	return collection[adminModelRow](ctx, pc, withQuery(epProviderModels, url.Values{"limit": {"1000"}}))
 }
 
 func modelLabel(names map[string]string, id string) string {

@@ -165,21 +165,18 @@ func runAppCatalog(ctx context.Context, f *cmdutil.Factory, category, outputRaw 
 	if c := strings.TrimSpace(category); c != "" {
 		q.Set("category", c)
 	}
-	path := withQuery(epMarketCatalog, q)
-	var env struct {
-		Items []marketApp `json:"items"`
-	}
-	if err := pc.router.doJSON(ctx, "GET", path, nil, &env); err != nil {
+	apps, err := collection[marketApp](ctx, pc, withQuery(epMarketCatalog, q))
+	if err != nil {
 		return marketRouteErr(err)
 	}
 	if format == FormatJSON {
-		return printJSON(os.Stdout, env)
+		return printJSON(os.Stdout, map[string]any{"items": apps})
 	}
-	names := make([]string, 0, len(env.Items))
-	for i := range env.Items {
-		names = append(names, env.Items[i].AppName)
+	names := make([]string, 0, len(apps))
+	for i := range apps {
+		names = append(names, apps[i].AppName)
 	}
-	return renderCatalog(os.Stdout, env.Items, marketTemplateApps(ctx, pc, names))
+	return renderCatalog(os.Stdout, apps, marketTemplateApps(ctx, pc, names))
 }
 
 // renderCatalog prints the catalog with the verb each row actually takes.
@@ -710,27 +707,20 @@ func runAppWatch(ctx context.Context, f *cmdutil.Factory, ref string, taskID, si
 		return err
 	}
 	if taskID <= 0 {
-		page, err := fetchInstallTasks(ctx, pc, found.ID, 1, 0)
+		latest, err := fetchInstallTasks(ctx, pc, found.ID, 1, 0)
 		if err != nil {
 			return err
 		}
-		if len(page.Items) == 0 {
+		if len(latest.Items) == 0 {
 			return fmt.Errorf("%s has no lifecycle tasks to follow; Router registered it from a running "+
 				"application rather than installing it", found.Name)
 		}
-		taskID = page.Items[0].ID
+		taskID = latest.Items[0].ID
 	}
 	return followTask(ctx, pc, found.ID, taskID, since, format)
 }
 
-type installTaskPage struct {
-	Items  []installTask `json:"items"`
-	Total  int           `json:"total"`
-	Limit  int           `json:"limit"`
-	Offset int           `json:"offset"`
-}
-
-func fetchInstallTasks(ctx context.Context, pc *preparedClient, providerID string, limit, offset int) (*installTaskPage, error) {
+func fetchInstallTasks(ctx context.Context, pc *preparedClient, providerID string, limit, offset int) (*page[installTask], error) {
 	q := url.Values{}
 	if limit > 0 {
 		q.Set("limit", strconv.Itoa(limit))
@@ -738,7 +728,7 @@ func fetchInstallTasks(ctx context.Context, pc *preparedClient, providerID strin
 	if offset > 0 {
 		q.Set("offset", strconv.Itoa(offset))
 	}
-	var env installTaskPage
+	var env page[installTask]
 	if err := pc.router.doJSON(ctx, "GET", withQuery(epMarketInstallTasks(providerID), q), nil, &env); err != nil {
 		return nil, marketRouteErr(err)
 	}
@@ -749,13 +739,13 @@ func fetchInstallTasks(ctx context.Context, pc *preparedClient, providerID strin
 // callers treat as "nothing more to say about it" rather than as a failure —
 // this is context around a stream, not the stream itself.
 func findTask(ctx context.Context, pc *preparedClient, providerID string, taskID int64) *installTask {
-	page, err := fetchInstallTasks(ctx, pc, providerID, 200, 0)
+	tasks, err := fetchInstallTasks(ctx, pc, providerID, 200, 0)
 	if err != nil {
 		return nil
 	}
-	for i := range page.Items {
-		if page.Items[i].ID == taskID {
-			return &page.Items[i]
+	for i := range tasks.Items {
+		if tasks.Items[i].ID == taskID {
+			return &tasks.Items[i]
 		}
 	}
 	return nil

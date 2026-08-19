@@ -89,13 +89,7 @@ func runUserList(ctx context.Context, f *cmdutil.Factory, outputRaw string) erro
 }
 
 func listUsers(ctx context.Context, pc *preparedClient) ([]consoleUser, error) {
-	var env struct {
-		Items []consoleUser `json:"items"`
-	}
-	if err := pc.router.doJSON(ctx, "GET", epUsers, nil, &env); err != nil {
-		return nil, err
-	}
-	return env.Items, nil
+	return collection[consoleUser](ctx, pc, epUsers)
 }
 
 func renderUserList(w io.Writer, users []consoleUser) error {
@@ -119,29 +113,30 @@ func renderUserList(w io.Writer, users []consoleUser) error {
 // resolveUserID turns a name into the id the routes take. Names are what people
 // know; the id appears only in Router's own rows.
 func resolveUserID(ctx context.Context, pc *preparedClient, ref string) (string, error) {
-	ref = strings.TrimSpace(ref)
-	if ref == "" {
-		return "", fmt.Errorf("a user name or id is required")
+	ref, err := requireRef(ref, "a user name or id")
+	if err != nil {
+		return "", err
 	}
-	if providerIDPattern.MatchString(ref) {
+	if entityID.MatchString(ref) {
 		return ref, nil
 	}
 	users, err := listUsers(ctx, pc)
 	if err != nil {
 		return "", fmt.Errorf("look up user %q: %w", ref, err)
 	}
+	known := make([]string, 0, len(users))
 	for i := range users {
 		if strings.EqualFold(users[i].BflName, ref) || strings.EqualFold(users[i].OlaresID, ref) {
 			return users[i].ID, nil
 		}
-	}
-	known := make([]string, 0, len(users))
-	for i := range users {
 		known = append(known, users[i].BflName)
 	}
-	if len(known) == 0 {
-		return "", fmt.Errorf("no user %q; Router has no user records yet, which happens before anybody has opened it", ref)
-	}
-	return "", fmt.Errorf("no user %q; Router knows %s. A user appears only after their first visit to Router",
-		ref, strings.Join(known, ", "))
+	return "", missing{
+		noun:  "user",
+		ref:   ref,
+		known: known,
+		have:  "Router knows",
+		none:  "Router has no user records yet, which happens before anybody has opened it",
+		note:  "A user appears only after their first visit to Router",
+	}.err()
 }
