@@ -29,6 +29,7 @@ status" first if anything here behaves unexpectedly.
   route         the names callers may send instead of a provider and model
   default       the categories a caller can ask for instead of a model
   provider      the upstreams Router routes to, and the models they serve
+  spec          what a local model declares itself to be, and changing it
   app           model applications that run models on this machine
   local         the Model Console inside one of those applications
   call          send work to a model: text, embeddings, web, images, audio, OCR
@@ -58,6 +59,7 @@ Run "olares-cli router <verb> --help" for details.
 	cmd.AddCommand(NewRouteCommand(f))
 	cmd.AddCommand(NewDefaultCommand(f))
 	cmd.AddCommand(NewProviderCommand(f))
+	cmd.AddCommand(NewSpecCommand(f))
 	cmd.AddCommand(NewAppCommand(f))
 	cmd.AddCommand(NewLocalCommand(f))
 	cmd.AddCommand(NewCallCommand(f))

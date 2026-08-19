@@ -55,6 +55,12 @@ brings the two back together.
   spec show <app>   the card as served, after parsing
   spec file <app>   the bytes on disk, before parsing
   spec set <app>    replace the card wholesale
+
+"olares-cli router spec" reaches the same document through Router instead, and
+is the one to prefer for anything Router already knows about: it merges the
+change rather than replacing the card, and stores what the application confirms
+so Router's own copy is right immediately. These verbs are for the application
+Router has no provider row for, and for reading the file as written.
 `,
 	}
 	cmd.AddCommand(newLocalSpecShowCommand(f))
@@ -299,7 +305,12 @@ func newLocalSpecSetCommand(f *cmdutil.Factory) *cobra.Command {
 		Long: `Replace a model application's card with the document you supply.
 
 This is a replacement, not a merge: what you send becomes the card, and any
-field you leave out is gone. Start from the current one —
+field you leave out is gone — the engine flags included, and an engine relaunched
+without them is a different engine. "olares-cli router spec edit <model>" is the
+merging equivalent through Router, and is the safer verb whenever Router has this
+application as a provider. Reach for this one when it does not.
+
+Start from the current card —
 
   olares-cli router local spec show <app> -o json > card.json
 

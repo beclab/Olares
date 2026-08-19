@@ -87,6 +87,26 @@ func epProviderModel(providerID, modelID string) string {
 	return epProvider(providerID) + "/models/" + url.PathEscape(modelID)
 }
 
+// The model card of a model application, reached through Router rather than at
+// the application itself.
+//
+// Both routes address the app by the `model` string a caller would send to
+// /v1 — it carries a slash, which is why it rides a query parameter — and both
+// are admin-only. The Model Console's own equivalents are the epLocal* routes
+// below; the difference between the two paths is not the host but the
+// semantics, and `spec.go` is where that is written down.
+const (
+	epModelSpec     = consoleAPI + "/model-spec"
+	epEngineRestart = consoleAPI + "/engine/restart"
+)
+
+// epForModel is the query every model-addressed console route takes.
+func epForModel(path, model string) string {
+	q := url.Values{}
+	q.Set("model", model)
+	return withQuery(path, q)
+}
+
 // Catalogs. epProviderModels is the aggregate model list across every
 // provider; the other two describe what *could* be configured rather than what
 // is.
