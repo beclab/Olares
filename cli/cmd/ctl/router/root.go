@@ -18,10 +18,9 @@ func NewRouterCommand(f *cmdutil.Factory) *cobra.Command {
 
 Router is the gateway every model call goes through, whether the model runs
 on this machine or at a cloud provider. It is a Market application, so this
-tree locates it at runtime instead of assuming a hostname — run "router
-status" first if anything here behaves unexpectedly.
+tree locates it at runtime instead of assuming a hostname; a verb that cannot
+find it says whether it is missing or invisible to this profile.
 
-  status        where Router lives, whether it is healthy, and your role
   list          every model configured, across every provider
   models        every name the model field accepts, as a caller sees it
   route         the names callers may send instead of a provider and model
@@ -50,7 +49,6 @@ Run "olares-cli router <verb> --help" for details.
 		c.SilenceUsage = true
 	}
 
-	cmd.AddCommand(NewStatusCommand(f))
 	cmd.AddCommand(NewListCommand(f))
 	cmd.AddCommand(newModelsCommand(f))
 	cmd.AddCommand(NewRouteCommand(f))

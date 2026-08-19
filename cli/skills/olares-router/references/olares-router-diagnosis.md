@@ -4,7 +4,7 @@ A model that does not answer can be failing in five places, and each has a diffe
 
 | Layer | Check |
 |---|---|
-| The CLI's reach into Router | `router status` |
+| The CLI's reach into Router | any verb's own error; `olares-cli profile whoami`, `olares-cli market status router` |
 | Router's own configuration | `router provider get`, `router list`, `router default show` |
 | Access control | `router key list`, `router quota list`, `router usage list --status failed` |
 | The model application | `router local status`, `router local progress` |
@@ -12,11 +12,14 @@ A model that does not answer can be failing in five places, and each has a diffe
 
 ## Start at the top
 
-`router status` answers the first layer completely: whether Router is installed, which listing and entrance it was reached at, whether it is healthy, and what role it gives you. Three failures look alike and are not:
+There is no verb for the first layer. Every verb resolves Router before doing
+anything else, so the one that just failed has already answered it — and there
+is nothing a separate probe could add that would still be true a moment later.
+Three failures look alike and are not:
 
 - **"Router is not installed"** on an admin profile usually means it really is not, and `olares-cli market list --mine` will not name it either. Install it with `olares-cli market install router`.
-- **The same message on a non-admin profile** means Router is installed and invisible to you: it is an admin-only application, so its entrance is not in your app list. Nothing here works until an admin acts.
-- **An entrance that resolves but does not answer** is Router itself being down, and is `olares-doctor` territory rather than anything in this skill.
+- **The same message on a non-admin profile** means Router is installed and invisible to you: it is an admin-only application, so its entrance is not in your app list. `olares-cli profile whoami` is what tells the two apart, and nothing here works until an admin acts.
+- **An entrance that resolves but does not answer** is Router itself being down. The error names the entrance it reached for; `olares-doctor` is where that goes, not this skill.
 
 ## Then ask what Router thinks it has
 

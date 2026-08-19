@@ -43,17 +43,9 @@ func withQuery(path string, q url.Values) string {
 	return path + "?" + q.Encode()
 }
 
-// Ops. Unauthenticated, and served by Router itself rather than by the console
-// plane, which is why `router status` can report a reachable-but-unauthorized
-// deployment instead of one blanket failure.
-const epHealth = "/healthz"
-
-// Identity. epMe is the one console route any user may read; everything else on
-// this plane is admin-only.
-const (
-	epMe    = consoleAPI + "/users/me"
-	epUsers = consoleAPI + "/users"
-)
+// Identity. Admin-only, and read by no verb of its own: it is how `--user` and
+// `--for-user` turn a name into the id the other routes take.
+const epUsers = consoleAPI + "/users"
 
 // API keys.
 const epAPIKeys = consoleAPI + "/api-keys"
@@ -244,9 +236,11 @@ func epOCRTask(id string) string { return epOCRTasks + "/" + url.PathEscape(id) 
 func epOCRTaskResult(id string) string { return epOCRTask(id) + "/result" }
 
 // The Model Console inside a model application: a different host, addressed
-// through the same session. Its /healthz is epHealth, which both surfaces
-// serve on their own entrance.
+// through the same session. Router serves a /healthz of its own on its own
+// entrance, and no verb here reads it — an unreachable Router is reported by
+// whichever verb was trying to reach it.
 const (
+	epHealth             = "/healthz"
 	epLocalBuildInfo     = "/api/build-info"
 	epLocalProgress      = "/api/progress"
 	epLocalModelSpec     = "/api/model-spec"

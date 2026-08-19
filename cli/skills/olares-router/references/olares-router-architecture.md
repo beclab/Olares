@@ -26,7 +26,7 @@ A locally installed model application does not simply "contain a model". Inside 
 
 ## Addressing
 
-Router is a Market application, not a system service, so it has no fixed subdomain the way `files.<olares-id>` does — app-service gives each install its own host. Every verb resolves the entrance at runtime from the installed-app list, where Router is the `router` application. `router status` prints the entrance it settled on.
+Router is a Market application, not a system service, so it has no fixed subdomain the way `files.<olares-id>` does — app-service gives each install its own host. Every verb resolves the entrance at runtime from the installed-app list, where Router is the `router` application, and names that entrance in any error it reports from the far end.
 
 A model application is reached the same way, by its own entrance, which is why `router local` accepts an Olares app id.
 
@@ -47,8 +47,8 @@ Two planes, two credentials, and they are not interchangeable.
 
 Router is installed as an admin-only application. Two consequences:
 
-- A non-admin profile cannot see Router's entrance at all, so every verb reports that Router is not installed. `router status` is the check that distinguishes "not installed" from "not visible to you".
-- Within Router, the role is the Olares role: Router reads it from the identity the edge injects rather than keeping one of its own, so `olares-cli profile whoami` and the identity block of `router status` agree by construction. Most of the management plane requires `admin`, and not only for writes: providers, the vendor catalog's models, quotas, audit and the usage retention window all refuse a non-admin read. What is left to a non-admin is the model list, the routes and default categories, their own keys, their own usage, and calling.
+- A non-admin profile cannot see Router's entrance at all, so every verb reports that Router is not installed. `olares-cli profile whoami` is what distinguishes "not installed" from "not visible to you": on a non-admin profile the second is the likelier reading of the same message.
+- Within Router, the role is the Olares role: Router reads it from the identity the edge injects rather than keeping one of its own, so `olares-cli profile whoami` answers for both and there is nothing here that could disagree with it. Most of the management plane requires `admin`, and not only for writes: providers, the vendor catalog's models, quotas, audit and the usage retention window all refuse a non-admin read. What is left to a non-admin is the model list, the routes and default categories, their own keys, their own usage, and calling.
 
 A Router user is not an Olares user: the row appears the first time that person's identity reaches Router, which is why a freshly created Olares account is unknown to Router until it makes a call. The people themselves are [`olares-settings`](../../olares-settings/SKILL.md)'s `settings users list`; `key issue --for-user` and `quota set --user` name one of the arrived ones, and refuse anybody else with the names Router does hold.
 

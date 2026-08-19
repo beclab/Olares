@@ -114,7 +114,6 @@ func TestSkillCommandPathsExist(t *testing.T) {
 		"chart lint",
 		"chart package",
 		"router",
-		"router status",
 		"router list",
 		"router models",
 		"router provider",

@@ -103,8 +103,12 @@ What Router adds is a row per person, created the first time that person's
 identity reaches it, so a freshly created Olares account is unknown to Router
 until it does. That is why `key issue --for-user` and `quota set --user` can only
 name someone who has already arrived; naming anyone else is refused with the
-names Router does know. `router status` reports the record Router holds for you,
-including a model allowlist if somebody set one.
+names Router does know.
+
+Restricting what somebody may call is a property of a key, not of a person:
+`key issue --model` and `key update --model` are the allowlist, and a key
+carrying one sees only those models in `router models` and in `GET /v1/models`.
+There is no per-person allowlist to set.
 
 ## The applications that call Router
 
