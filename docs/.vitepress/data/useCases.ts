@@ -77,6 +77,7 @@ export const useCases: UseCase[] = [
   { title: "Steam", link: "/use-cases/steam-direct-play", category: "Entertainment", description: "Play Steam games locally or stream them", descriptionZh: "本地游玩 Steam 游戏或串流到其他设备" },
   { title: "Komga", link: "/use-cases/komga", category: "Entertainment", description: "Self-hosted comic and manga library", descriptionZh: "自托管的漫画书库" },
   { title: "Navidrome", link: "/use-cases/navidrome", category: "Entertainment", description: "Private music streaming server", descriptionZh: "私人音乐流媒体服务器" },
+  { title: "Palworld", link: "/use-cases/palworld", category: "Entertainment", description: "Play Palworld with friends on Olares", descriptionZh: "与好友在 Olares 上联机游玩 Palworld" },
   { title: "TREK (NOMAD)", link: "/use-cases/trek", category: "Entertainment", description: "Plan trips collaboratively", descriptionZh: "协作规划行程" },
   { title: "*Arrs", link: "/use-cases/arrs", category: "Entertainment", description: "Automated media management with Sonarr, Radarr, and more", descriptionZh: "使用 Sonarr、Radarr 等实现媒体自动化管理" },
   { title: "Excalidraw", link: "/use-cases/excalidraw", category: "Productivity", description: "Hand-drawn style diagrams and whiteboarding", descriptionZh: "手绘风格的图表与白板" },

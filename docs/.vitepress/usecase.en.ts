@@ -363,6 +363,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/use-cases/navidrome",
             },
             {
+              text: "Palworld",
+              link: "/use-cases/palworld",
+            },
+            {
               text: "TREK (NOMAD)",
               link: "/use-cases/trek",
               collapsed: true,
