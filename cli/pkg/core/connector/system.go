@@ -588,7 +588,11 @@ func getCpu() *CpuInfo {
 
 	// check if it has an Intel integrated GPU (unified-memory "intel" mode) and
 	// an Intel discrete GPU ("intel-gpu" mode)
-	intelGPUs := IntelGPUsLocal()
+	intelGPUs, err := IntelGPUsLocal()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error checking Intel GPU: %v\n", err)
+		intelGPUs = nil
+	}
 	isIntelGPU := hasIntelIGPU(intelGPUs)
 	isIntelDGPU := hasIntelDGPU(intelGPUs)
 
