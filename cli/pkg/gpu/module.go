@@ -359,16 +359,16 @@ func (l *UninstallCudaModule) Init() {
 
 }
 
-type DisableNouveauModule struct {
+type DisableConflictingGPUDriversModule struct {
 	common.KubeModule
 }
 
-func (m *DisableNouveauModule) Init() {
-	m.Name = "DisableNouveau"
+func (m *DisableConflictingGPUDriversModule) Init() {
+	m.Name = "DisableConflictingGPUDrivers"
 
 	writeBlacklist := &task.LocalTask{
-		Name:   "WriteNouveauBlacklist",
-		Action: new(WriteNouveauBlacklist),
+		Name:   "WriteConflictingGPUDriverBlacklist",
+		Action: new(WriteConflictingGPUDriverBlacklist),
 		Retry:  1,
 	}
 

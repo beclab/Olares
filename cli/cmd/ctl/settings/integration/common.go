@@ -52,7 +52,11 @@ type preparedClient struct {
 	doer    Doer
 }
 
-func prepare(ctx context.Context, f *cmdutil.Factory) (*preparedClient, error) {
+func resolveClient(
+	ctx context.Context,
+	f *cmdutil.Factory,
+	pickBase func(*credential.ResolvedProfile) string,
+) (*preparedClient, error) {
 	if f == nil {
 		return nil, fmt.Errorf("internal error: settings integration not wired with cmdutil.Factory")
 	}
@@ -64,10 +68,29 @@ func prepare(ctx context.Context, f *cmdutil.Factory) (*preparedClient, error) {
 	if err != nil {
 		return nil, err
 	}
+	base := pickBase(rp)
+	if base == "" {
+		return nil, fmt.Errorf("profile %q has no URL for this endpoint; re-run `olares-cli profile login`", rp.Name)
+	}
 	return &preparedClient{
 		profile: rp,
-		doer:    whoami.NewHTTPClient(hc, rp.DesktopURL, rp.OlaresID),
+		doer:    whoami.NewHTTPClient(hc, base, rp.OlaresID),
 	}, nil
+}
+
+func prepare(ctx context.Context, f *cmdutil.Factory) (*preparedClient, error) {
+	return resolveClient(ctx, f, func(rp *credential.ResolvedProfile) string {
+		return rp.DesktopURL
+	})
+}
+
+// prepareSettings targets the settings host. The account routes live on
+// the desktop host, but /api/cookie/* is only exposed here — the same
+// origin the Settings SPA writes cookies through.
+func prepareSettings(ctx context.Context, f *cmdutil.Factory) (*preparedClient, error) {
+	return resolveClient(ctx, f, func(rp *credential.ResolvedProfile) string {
+		return rp.SettingsURL
+	})
 }
 
 type bflEnvelope struct {

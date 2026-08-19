@@ -720,6 +720,14 @@ func upgradeKubernetesPrometheusRule() []task.Interface {
 	}
 }
 
+// upgradeIntelGPUPlugin reuses the install-time Intel GPU stack tasks
+// (labels, optional dGPU drivers, NFD, device plugin, xpumd). Individual
+// tasks are gated by HasAnyIntelGPU / HasQualifyingIntelDGPU so non-Intel
+// nodes skip them during upgrade.
+func upgradeIntelGPUPlugin() []task.Interface {
+	return intelgpu.PluginTasks()
+}
+
 func upgradePrometheusOperator() []task.Interface {
 	return []task.Interface{
 		// prometheus operator

@@ -1,9 +1,10 @@
 # settings integration
 
 > **Prerequisite:** Read [`../../olares-shared/SKILL.md`](../../olares-shared/SKILL.md) and the parent [`../SKILL.md`](../SKILL.md) first.
-> **Flags & examples:** `olares-cli settings integration accounts --help` and `olares-cli settings integration accounts <verb> --help`.
+> **Flags & examples:** `olares-cli settings integration accounts --help` and `olares-cli settings integration <group> <verb> --help`.
+> **Cookies:** the per-domain cookie store lives in the sibling [cookie store](olares-settings-cookies.md) reference.
 
-External integration accounts (S3 / Tencent COS / Google Drive / Dropbox / Olares Space / NFT cloud binding).
+External integration accounts (S3 / Tencent COS / Google Drive / Dropbox / Olares Space / NFT cloud binding). Cookie import/list/rm/validate is documented separately — see the sibling cookie reference above.
 
 ## What's covered by the CLI
 

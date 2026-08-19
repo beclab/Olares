@@ -1,0 +1,141 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ include "xpumd.fullname" . }}
+  labels:
+    {{- include "xpumd.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "xpumd.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+      {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "xpumd.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "xpumd.serviceAccountName" . }}
+      {{- if eq .Values.gpuAccess "dra" }}
+      resourceClaims:
+      - name: {{ include "xpumd.fullname" . }}
+        resourceClaimTemplateName: {{ include "xpumd.fullname" . }}
+      {{- end }}
+      securityContext:
+        {{- if .Values.podSecurityContextOverride }}
+        {{- toYaml .Values.podSecurityContextOverride | nindent 8 }}
+        {{- else }}
+        seccompProfile:
+          type: RuntimeDefault
+        {{- end }}
+      {{- with .Values.initContainers }}
+      initContainers:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: {{ .Chart.Name }}
+        image: beclab/intel-xpumanager-xpumd:v2.1.0-amd64
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        args:
+        - "--config=/etc/xpumd/config-receiver-crashlog.yaml"
+        - "--config=/etc/xpumd/config-processor-xpustatus.yaml"
+        - "--config=/etc/xpumd/config-exporter-xpuinfo.yaml"
+        - "--config=/etc/xpumd/config.yaml"
+        {{- with .Values.extraEnv }}
+        env:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        securityContext:
+          {{- if .Values.securityContextOverride }}
+          {{- toYaml .Values.securityContextOverride | nindent 10 }}
+          {{- else }}
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+          # Required for GPU device access, unless container runtime allows device file owner override:
+          # - https://kubernetes.io/blog/2021/11/09/non-root-containers-and-devices/
+          # Required also for all other metrics than frequency, memory usage, power
+          runAsUser: 0
+          capabilities:
+            drop:
+              - ALL
+            add:
+              # required for engine utilization
+              # (bug in underlying layers, PERFMON should be enough)
+              - SYS_ADMIN
+          {{- end }}
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        resources:
+          {{- if .Values.resourcesOverride }}
+          {{- toYaml .Values.resourcesOverride | nindent 10 }}
+          {{- else }}
+          requests:
+            cpu: 10m
+            memory: 128Mi
+          # map all GPUs to container
+          {{- if eq .Values.gpuAccess "dra" }}
+          claims:
+          - name: {{ include "xpumd.fullname" . }}
+          {{- end }}
+          limits:
+            {{- if eq .Values.gpuAccess "i915" }}
+            gpu.intel.com/i915_monitoring: 1
+            {{- else if eq .Values.gpuAccess "xe" }}
+            gpu.intel.com/xe_monitoring: 1
+            {{- else if eq .Values.gpuAccess "plugin" }}
+            gpu.intel.com/monitoring: 1
+            {{- end }}
+            memory: 2Gi
+          {{- end }}
+        volumeMounts:
+        - name: config
+          mountPath: /etc/xpumd
+          readOnly: true
+        - name: rundir
+          mountPath: /run/xpumd
+        - name: crashlog
+          mountPath: /var/log/crashlog
+          readOnly: true
+        {{- with .Values.extraVolumeMounts }}
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+      - name: config
+        configMap:
+          name: {{ include "xpumd.fullname" . }}-config
+      - name: rundir
+        hostPath:
+          path: /run/xpumd
+          type: DirectoryOrCreate
+      - name: crashlog
+      {{- if .Values.crashlog.directory }}
+        hostPath:
+          path: {{ .Values.crashlog.directory }}
+          type: DirectoryOrCreate
+      {{- else }}
+        emptyDir: {}
+      {{- end }}
+      {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 6 }}
+      {{- end }}

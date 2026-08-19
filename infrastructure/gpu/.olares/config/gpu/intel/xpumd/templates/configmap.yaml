@@ -1,0 +1,118 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "xpumd.fullname" . }}-config
+  labels:
+    {{- include "xpumd.labels" . | nindent 4 }}
+data:
+  # Default configuration for the Intel Crashlog receiver. Can be overridden
+  # in config.yaml (via .Values.config).
+  config-receiver-crashlog.yaml: |-
+    receivers:
+      intel_crashlog:
+        directory: /var/log/crashlog
+        glob: "*.bin"
+        ignore_older_than: 0s
+  # Default configuration for the Intel XPU status processor. Can be overridden
+  # in config.yaml (via .Values.config).
+  config-processor-xpustatus.yaml: |-
+    processors:
+      intel_xpu_status:
+        rules:
+          - name: "Intel GPU core temperature health"
+            source_metric: "hw.temperature"
+            parent_metric: "hw.gpu.info"
+            parent_ref_attribute: "hw.id"
+            parent_filters:
+              - key: "pci.vendor_id"
+                values: ["8086"]
+            component_filters:
+              - key: "hw.sensor_location"
+                values: ["gpu"]
+            copy_attributes: ["hw.id", "hw.name", "pci.bdf", "hw.sensor_location", "com.intel.subdevice_id"]
+            add_attributes:
+              hw.type: "temperature"
+            states:
+              # Default state
+              - state_name: "ok"
+              - state_name: "warning"
+                conditions:
+                  - value: 95.0
+                    parent_filters:
+                      - key: "pci.device_id"
+                        values: ["56c1"]
+                  - value: 100.0
+                    parent_filters:
+                      - key: "pci.device_id"
+                        values: ["56c0", "56c2"]
+                  # Default threshold for other device IDs
+                  - value: 105.0
+          - name: "Intel GPU memory temperature health"
+            source_metric: "hw.temperature"
+            parent_metric: "hw.gpu.info"
+            parent_ref_attribute: "hw.id"
+            parent_filters:
+              - key: "pci.vendor_id"
+                values: ["8086"]
+            component_filters:
+              - key: "hw.sensor_location"
+                values: ["memory"]
+            copy_attributes: ["hw.id", "hw.name", "pci.bdf", "hw.sensor_location", "com.intel.subdevice_id"]
+            add_attributes:
+              hw.type: "temperature"
+            states:
+              # Default state
+              - state_name: "ok"
+              - state_name: "warning"
+                conditions:
+                  - value: 85.0
+  # Default configuration for the Intel XPU info exporter. Can be overridden
+  # in config.yaml (via .Values.config).
+  config-exporter-xpuinfo.yaml: |-
+    exporters:
+      intel_xpu_info:
+        endpoint: "/run/xpumd/intel_xpu_info.sock"
+        hw_status_mappings:
+          - health_domain: "memory"
+            filters:
+              - key: hw.type
+                values: [memory]
+            state_mapping:
+              unknown:
+                severity: unknown
+              ok:
+                severity: ok
+              degraded:
+                severity: warning
+              critical:
+                severity: critical
+              replace:
+                severity: critical
+              "*":
+                severity: warning
+                message: "Unexpected memory health state, mapped to warning"
+          # Filter out (by using empty state_mapping) ECC states that are not indicative of device health
+          - health_domain: "gpu"
+            filters:
+              - key: hw.type
+                values: [gpu]
+              - key: hw.state
+                values: [ecc_disabled, ecc_enabled, ecc_available, ecc_unavailable]
+            state_mapping: {}
+          # Default mapping (empty filters matches any data point not matched above):
+          - health_domain: {{`"{{ .hw_type }}"`}}
+            state_mapping:
+              unknown:
+                severity: unknown
+              ok:
+                severity: ok
+              warning:
+                severity: warning
+              critical:
+                severity: critical
+              failed:
+                severity: failed
+              "*":
+                severity: warning
+  config.yaml: |-
+{{ .Values.config | toYaml | indent 4 }}
