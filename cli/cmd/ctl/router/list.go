@@ -98,6 +98,31 @@ func summarizeSupports(supports map[string]bool) string {
 	return fmt.Sprintf("%s,+%d", strings.Join(on[:supportsShown], ","), len(on)-supportsShown)
 }
 
+// summarizeSupportNames is the same cell for the data plane's spelling of the
+// same fact. GET /v1/models sends the capabilities as a list of names, already
+// narrowed to the ones the card claims and already stripped of the `supports_`
+// prefix, so the work summarizeSupports does has been done upstream.
+//
+// Reusing capabilityFlags to order them would undo that: Router adds a
+// capability, this build has never heard of it, and the cell quietly stops
+// mentioning it — which reads as a model that cannot do the thing. The server's
+// own list and order are kept for exactly that reason.
+func summarizeSupportNames(names []string) string {
+	on := make([]string, 0, len(names))
+	for _, name := range names {
+		if trimmed := strings.TrimSpace(name); trimmed != "" {
+			on = append(on, trimmed)
+		}
+	}
+	switch {
+	case len(on) == 0:
+		return "-"
+	case len(on) <= supportsShown:
+		return strings.Join(on, ",")
+	}
+	return fmt.Sprintf("%s,+%d", strings.Join(on[:supportsShown], ","), len(on)-supportsShown)
+}
+
 // adminModelRow is one model with its provider lifted alongside it, which is
 // what makes a flat list readable: the same model name can exist on two
 // providers, and the provider is what tells them apart.
