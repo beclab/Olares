@@ -48,6 +48,7 @@ func (u upgrader_1_12_7) PrepareForUpgrade() []task.Interface {
 	})
 	tasks = append(tasks, upgradeKubernetesPrometheusRule()...)
 	tasks = append(tasks, upgradeUserReverseProxy()...)
+	tasks = append(tasks, upgradeAmdDeviceMetricsExporter()...)
 
 	tasks = append(tasks, u.upgraderBase.PrepareForUpgrade()...)
 	return tasks

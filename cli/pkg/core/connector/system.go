@@ -263,14 +263,16 @@ func (s *SystemInfo) IsAmdApu() bool {
 	return s.CpuInfo.HasAmdAPU
 }
 
-func (s *SystemInfo) IsAmdGPU() bool {
-	return s.HasAmdGPU
-}
-
 // IsRyzenAIMax reports whether the node carries an AMD "Ryzen AI Max" APU
 // (integrated GPU). It drives ROCm install + the "amd" node mode label.
 func (s *SystemInfo) IsRyzenAIMax() bool {
 	return s.CpuInfo.IsRyzenAIMax
+}
+
+// IsAmdGPU reports whether the node has a discrete AMD GPU (not an APU).
+// It drives ROCm install + the "amd-gpu" node mode label.
+func (s *SystemInfo) IsAmdGPU() bool {
+	return s.HasAmdGPU
 }
 
 // IsIntelGPU reports whether the node exposes an Intel integrated GPU (drives

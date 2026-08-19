@@ -728,6 +728,14 @@ func upgradeIntelGPUPlugin() []task.Interface {
 	return intelgpu.PluginTasks()
 }
 
+// upgradeAmdDeviceMetricsExporter installs/upgrades only the AMD
+// device-metrics-exporter chart. Unlike the Intel stack, the AMD device plugin
+// and ROCm are not touched on upgrade. The tasks are gated by HasAmdDiscreteGPU
+// so nodes without a discrete AMD GPU skip them.
+func upgradeAmdDeviceMetricsExporter() []task.Interface {
+	return amdgpu.MetricsExporterTasks()
+}
+
 func upgradePrometheusOperator() []task.Interface {
 	return []task.Interface{
 		// prometheus operator

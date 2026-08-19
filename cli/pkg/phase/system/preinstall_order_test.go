@@ -72,6 +72,12 @@ func TestDetectPreinstallGPUTypeUsesMostSpecificHardware(t *testing.T) {
 	}
 
 	systemInfo.CpuInfo.IsRyzenAIMax = false
+	systemInfo.HasAmdGPU = true
+	if got := detectPreinstallGPUType(systemInfo, true); got != gpu.AmdGpuType {
+		t.Fatalf("detectPreinstallGPUType() = %q, want %q", got, gpu.AmdGpuType)
+	}
+
+	systemInfo.HasAmdGPU = false
 	if got := detectPreinstallGPUType(systemInfo, true); got != gpu.IntelType {
 		t.Fatalf("detectPreinstallGPUType() = %q, want %q", got, gpu.IntelType)
 	}

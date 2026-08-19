@@ -84,7 +84,8 @@ func (l *linuxPhaseBuilder) build() []module.Module {
 			return []module.Module{
 				&amdgpu.InstallAmdRocmModule{},
 				&amdgpu.InstallAmdContainerToolkitModule{Skip: func() bool {
-					if l.runtime.GetSystemInfo().IsRyzenAIMax() {
+					si := l.runtime.GetSystemInfo()
+					if si.IsRyzenAIMax() || si.IsAmdGPU() {
 						return false
 					}
 					return true
