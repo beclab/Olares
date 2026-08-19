@@ -24,7 +24,7 @@ Use `olares-cli market <verb> --help` for authoritative syntax.
 
 > **Mental model:** `market` is **lifecycle and inventory** at the app-store level (install / upgrade / chart push). For runtime K8s objects, settings, or metrics, route to a sibling.
 
-A **model** application is a special case: [`olares-router`](../olares-router/SKILL.md) installs it and creates the gateway provider that routes to it in one step, and it owns the model's own download and engine state afterwards. Come back here to stop, resume, cancel, or install an engine base that needs its model chosen on the install form.
+A **model** application is installed here like any other — `install` for a pinned model, `clone` for an engine base whose model is chosen on the form. What is different is what happens next: [`olares-router`](../olares-router/SKILL.md) notices the application and creates the gateway provider that routes to it, then owns the model's own download, engine state and card.
 
 ## Verb index
 

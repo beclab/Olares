@@ -149,7 +149,7 @@ func renderDefaults(w io.Writer, routes []modelRoute) error {
 	if anyEmpty {
 		if _, err := fmt.Fprintln(w, "\nA category nothing serves is refused, not approximated. Install or "+
 			"enable a model of that kind and Router points the category at it on its own — "+
-			"`olares-cli router app catalog` is where local models come from, and "+
+			"`olares-cli market install <app>` is where local models come from, and "+
 			"`olares-cli router provider create` is where a cloud vendor does."); err != nil {
 			return err
 		}

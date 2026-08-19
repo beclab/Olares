@@ -140,6 +140,13 @@ func nonEmpty(s string) string {
 	return s
 }
 
+func strDeref(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}
+
 // i18nText picks one string out of a locale map.
 //
 // Three unrelated wire shapes arrive as one of these: a vendor label out of the

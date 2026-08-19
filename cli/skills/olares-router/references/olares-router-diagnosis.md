@@ -14,7 +14,7 @@ A model that does not answer can be failing in five places, and each has a diffe
 
 `router status` answers the first layer completely: whether Router is installed, which listing and entrance it was reached at, whether it is healthy, and what role it gives you. Three failures look alike and are not:
 
-- **"Router is not installed"** on an admin profile usually means it really is not, and `olares-cli router app catalog` will fail too. Install it from the Market.
+- **"Router is not installed"** on an admin profile usually means it really is not, and `olares-cli market list --mine` will not name it either. Install it with `olares-cli market install router`.
 - **The same message on a non-admin profile** means Router is installed and invisible to you: it is an admin-only application, so its entrance is not in your app list. Nothing here works until an admin acts.
 - **An entrance that resolves but does not answer** is Router itself being down, and is `olares-doctor` territory rather than anything in this skill.
 

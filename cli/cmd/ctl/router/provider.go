@@ -334,7 +334,7 @@ func providerIDFromModels(ctx context.Context, pc *preparedClient, name string) 
 // hiddenProviderNote explains the one case where a provider exists but is not
 // listed, which is otherwise indistinguishable from having none.
 const hiddenProviderNote = "A provider belonging to a model application is listed only while that application " +
-	"runs or is being installed, so check `olares-cli router app catalog` for one that is stopped; " +
+	"runs or is being installed, so check `olares-cli market status <app>` for one that is stopped; " +
 	"either way it can still be named by its application name or inspected by id."
 
 func listProviders(ctx context.Context, pc *preparedClient) ([]providerRow, error) {

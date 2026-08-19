@@ -60,7 +60,7 @@ type myApp struct {
 }
 
 // listMyApps reads every application installed for this account. Discovery
-// needs it to find Router; the Market verbs need it because Olares, not Router,
+// needs it to find Router; the `local` verbs need it because Olares, not Router,
 // is the authority on what is installed — Router hides the provider of an
 // application that is not running.
 func listMyApps(ctx context.Context, doer *whoami.HTTPClient) ([]myApp, error) {

@@ -34,7 +34,7 @@ APP is what identifies those rows, and what the verbs here accept.
 
 A Market-sourced provider is listed while its application is installing, running
 or tearing down, and only then. An absent one is stopped or gone — check it with
-"olares-cli router app catalog" or "olares-cli market status".
+"olares-cli market status <app>".
 
 Pass --output json for every field, including the credential version that
 "provider rollback" selects on.

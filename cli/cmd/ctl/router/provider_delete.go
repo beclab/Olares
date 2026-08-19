@@ -42,8 +42,8 @@ If the goal is to stop traffic rather than to forget the upstream, use
 everything else is preserved, so re-enabling restores the previous behaviour.
 
 A provider registered for a model application cannot be deleted here. Its
-lifecycle belongs to the application — uninstall the application and the
-provider goes with it.
+lifecycle belongs to the application — "olares-cli market uninstall <app>"
+removes it, and the provider goes with it.
 
 Confirmation is required. --yes skips the prompt, and is mandatory when stdin
 is not a terminal so an unattended script cannot destroy state by accident.

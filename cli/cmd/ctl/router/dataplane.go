@@ -207,8 +207,8 @@ func callErr(err error) error {
 			"`olares-cli router key local --forget` drops it, and the next call issues a fresh one", err)
 	case ours && (re.Code == "owner_disabled" || re.Code == "app_archived" || re.Code == "app_suspended"):
 		return fmt.Errorf("%w\nThis is about who or what the key belongs to rather than the key itself. "+
-			"For a person, `olares-cli router user list` shows their status; for an application, "+
-			"`router app installed` says whether it is still here", err)
+			"For a person, `olares-cli settings users get <name>` shows their account; for an "+
+			"application, `olares-cli market list --mine` says whether it is still here", err)
 	case re.Status == 401 || re.Status == 403:
 		return fmt.Errorf("%w\nThis came back from the provider, not from Router: the credential Router "+
 			"holds for it was refused. `olares-cli router provider validate <provider>` checks it against "+

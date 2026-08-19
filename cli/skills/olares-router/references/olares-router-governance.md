@@ -94,18 +94,22 @@ A quota on a **model** applies to everybody calling it, a quota on a **user** to
 
 ## The people Router knows
 
-```
-olares-cli router user list
-```
+The people on this Olares are [`olares-settings`](../../olares-settings/SKILL.md)'s
+`settings users list`. Router has no separate list of its own to consult: the role
+is Olares' — being an Olares admin is what makes you a Router admin — and Router
+stores what the edge told it rather than deciding anything.
 
-A Router user row appears the first time that person's identity reaches Router, so a freshly created Olares account is absent until it does. That is why `key issue --for-user` and `quota set --user` can only name someone who has already arrived. Admin only.
-
-The role is Olares': being an Olares admin is what makes you a Router admin, and Router stores what the edge told it rather than deciding anything. The user list and the disabled state are Router's own. `router status` reports the record it holds for you, including a model allowlist if somebody set one.
+What Router adds is a row per person, created the first time that person's
+identity reaches it, so a freshly created Olares account is unknown to Router
+until it does. That is why `key issue --for-user` and `quota set --user` can only
+name someone who has already arrived; naming anyone else is refused with the
+names Router does know. `router status` reports the record Router holds for you,
+including a model allowlist if somebody set one.
 
 ## The applications that call Router
 
 ```
-olares-cli router app installed
+olares-cli market list --mine
 olares-cli router usage summary --by caller_app
 olares-cli router quota set --caller-app wise --max-budget 5
 ```
@@ -114,8 +118,8 @@ olares-cli router quota set --caller-app wise --max-budget 5
 
 That is why there are three different questions here and no single "callers" list:
 
-- **what is installed** — `app installed`, the whole machine, whatever it does. Readable by any console user.
+- **what is installed** — `olares-cli market list --mine`, the whole machine, whatever each application does.
 - **what has called, and what it cost** — `usage summary --by caller_app`. `--caller` filters to one, by title, application name or appid.
 - **what it may spend** — a quota scoped to the appid. Setting it to zero is how an application is stopped.
 
-Do not confuse this with `router app catalog`, which is a *model* application — something that serves models rather than consumes them. One machine has both, and one application can be both.
+Do not confuse an application that *calls* Router with a *model* application, which serves models rather than consuming them. One machine has both, and one application can be both.

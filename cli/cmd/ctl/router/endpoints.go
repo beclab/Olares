@@ -116,22 +116,14 @@ const (
 	epPredefinedCatalog = consoleAPI + "/predefined-catalog"
 )
 
-// Market: the model applications Router can install on this machine, and the
-// lifecycle verbs on one already installed.
+// Market: the model applications this Olares publishes, each row carrying what
+// Router knows about the copy installed here.
 //
-// The two collection routes sit directly under /market and the two that address
-// one row under /market/providers/:id, so a catalog can never occupy the same
-// path position as an id. There is no route for progress: a lifecycle POST
-// answers with the provider row to watch, and the app directory keeps that
-// row's olares_status current.
-const (
-	epMarketCatalog = consoleAPI + "/market/catalog"
-	epMarketInstall = consoleAPI + "/market/install"
-)
-
-func epMarketProviderAction(providerID, action string) string {
-	return consoleAPI + "/market/providers/" + url.PathEscape(providerID) + "/" + action
-}
+// Router mounts lifecycle routes beside this one, and the CLI does not use them:
+// installing, cloning, upgrading and removing an application are `olares-cli
+// market`. This is read for one thing only — the provider id of an application
+// that is still installing, which no other list names yet.
+const epMarketCatalog = consoleAPI + "/market/catalog"
 
 // Named routes: every name a caller may send in `model` that is not a
 // qualified `<provider>/<model>` reference. Aliases, groups and the system's
@@ -145,17 +137,6 @@ func epModelRoute(id string) string { return epModelRoutes + "/" + url.PathEscap
 func epModelRouteMember(routeID, modelID string) string {
 	return epModelRoute(routeID) + "/members/" + url.PathEscape(modelID)
 }
-
-// What is installed on this Olares, from the app directory's cache. Open to any
-// console session, and read-only in both directions: the directory is the only
-// writer, and installing is the Market's decision.
-//
-// There is no route for the applications that call Router, and none for
-// archiving one. An appid is the platform's own identity for an app rather than
-// something Router issues, so there is no row to create and nothing to revoke;
-// what an app may spend is a quota on the appid, and what it has spent is the
-// caller_app dimension of the spend summary.
-const epInstalledApps = consoleAPI + "/installed-apps"
 
 // Spend: what was called, what it cost, the same rows as a download, and how
 // long the per-call rows are kept.

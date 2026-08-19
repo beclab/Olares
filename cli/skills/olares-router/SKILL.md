@@ -1,7 +1,7 @@
 ---
 name: olares-router
 version: 1.3.0
-description: "Olares models via olares-cli router — Router (the AI gateway) and the Model Console inside a locally installed model application. Configure cloud vendors and their models, install and manage local LLM / embedding / audio / OCR model applications, edit a local model's card, name models with aliases, groups and default categories, issue API keys and quotas, read usage and audit, and call a model: chat, embed, rerank, search, scrape, translate, images, video, transcribe, speak, diarize, OCR. Requires Olares 1.12.7+. Use for Router, llm-gateway, AI gateway, 模型, 模型网关, 本地模型, add an OpenAI/Anthropic/DeepSeek key, install a Qwen or Gemma model, sk- key, model quota, token spend, model alias, default-chat, engine_args, which model answers by default, why a model call fails."
+description: "Olares models via olares-cli router — Router (the AI gateway) and the Model Console inside a locally installed model application. Configure cloud vendors and their models, manage local LLM / embedding / audio / OCR model applications, edit a local model's card, name models with aliases, groups and default categories, issue API keys and quotas, read usage and audit, and call a model: chat, embed, rerank, search, scrape, translate, images, video, transcribe, speak, diarize, OCR. Requires Olares 1.12.7+. Use for Router, llm-gateway, AI gateway, 模型, 模型网关, 本地模型, add an OpenAI/Anthropic/DeepSeek key, install a Qwen or Gemma model, sk- key, model quota, token spend, model alias, default-chat, engine_args, which model answers by default, why a model call fails."
 compatibility: Requires olares-cli on PATH, active Olares profile, Olares >= 1.12.7
 metadata:
   openclaw:
@@ -34,12 +34,12 @@ All verbs require Olares 1.12.7+ because Router ships as the `router` Market lis
 |---|---|---|
 | where Router is, and who you are | `status` | [architecture and identity](references/olares-router-architecture.md) |
 | cloud vendors and their models | `provider list/get/types/create/update/delete/validate/credentials/history/rollback/sync-models`, `provider models get/import/add/update/delete` | [configuring an external provider](references/olares-router-external.md) |
-| local LLM applications | `app catalog/installed/install/upgrade/uninstall`, `provider register`, `local status/progress/spec/retry/restart` | [local LLM applications](references/olares-router-local-llm.md) |
+| local LLM applications | `provider register`, `local status/progress/spec/retry/restart`, plus [`olares-market`](../olares-market/SKILL.md)'s `install` / `clone` | [local LLM applications](references/olares-router-local-llm.md) |
 | local embedding, audio, OCR, CLIP | the same verbs, different modes | [local multimodal applications](references/olares-router-local-multimodal.md) |
 | what a local model declares itself to be | `spec show/edit/restart` | [local LLM applications](references/olares-router-local-llm.md) |
 | what is configured | `list`, `models` | [names, defaults and access control](references/olares-router-governance.md) |
 | the names callers may send | `route list/get/create/rename/enable/disable/delete/add/remove`, `default show/enable/disable` | [names, defaults and access control](references/olares-router-governance.md) |
-| access control | `key issue/list/update/revoke/local`, `quota set/list/clear`, `app installed`, `user list` | [names, defaults and access control](references/olares-router-governance.md) |
+| access control | `key issue/list/update/revoke/local`, `quota set/list/clear` | [names, defaults and access control](references/olares-router-governance.md) |
 | what happened | `usage summary/list/export/retention`, `audit list/get` | [usage and audit](references/olares-router-usage.md) |
 | calling a model | `call chat/embed/rerank/search/scrape/translate/image/video/transcribe/speak/vad/diarize/enhance/align/ocr`, `models`, `key local` | [calling a model](references/olares-router-calling.md) |
 | inside one application | `local status/progress/spec/config/endpoints/gpu/perf/retry/restart` | [the Model Console](references/olares-router-console.md) |
@@ -49,35 +49,35 @@ All verbs require Olares 1.12.7+ because Router ships as the `router` Market lis
 
 Read [architecture and identity](references/olares-router-architecture.md) before the first write. In short:
 
-- **Management** (`provider`, `spec`, `app`, `key`, `quota`, `route`, `default`, `usage`, `audit`, `local`) travels on the active profile. Olares injects the identity; nothing has to be supplied.
+- **Management** (`provider`, `spec`, `key`, `quota`, `route`, `default`, `usage`, `audit`, `local`) travels on the active profile. Olares injects the identity; nothing has to be supplied.
 - **Calling** (`router call`, `router models`) needs a data-plane credential of its own. The CLI tries the platform's own identity first and mints an `sk-` key only if that is refused, keeping it in the keychain; `router key local` shows or forgets it.
-- Most of the management plane is admin-only, reads included: providers, the vendor catalog's models, market installs, quotas, users, audit, `usage retention` and the whole `spec` family all refuse a non-admin. What a non-admin can do is `router list`, `route list/get`, `default show`, `app installed`, their own keys, their own usage, and `router call`. Reading the names and what is installed is deliberately open — a name is what a person types into their client, and an install is not a secret.
+- Most of the management plane is admin-only, reads included: providers, the vendor catalog's models, quotas, audit, `usage retention` and the whole `spec` family all refuse a non-admin. What a non-admin can do is `router list`, `route list/get`, `default show`, their own keys, their own usage, and `router call`. Reading the names is deliberately open — a name is what a person types into their client.
 
 ## Which layer owns the change
 
 | Intent | Where it belongs |
 |---|---|
 | Use a vendor's hosted models | `provider create` + `provider models import`, or `provider sync-models` for an endpoint that publishes its own list |
-| Run a model on this machine | `app install`, which installs the application **and** creates its provider |
+| Run a model on this machine | [`olares-market`](../olares-market/SKILL.md)'s `market install` for a pinned model, `market clone` for an engine base; Router creates the provider once the application runs |
 | Change what a local model serves or how it is launched | `spec edit <model>` — the model card, which the application owns; not the Router row |
 | Change the address, credentials, or enabled state Router routes with | `provider update` |
 | Repair an install that failed | `provider get <app>` then `local progress` / `local retry` |
 | Restart an engine that has stopped behaving | `spec restart <model>`, which relaunches the inference process without changing the card |
 | Stop, resume, or bind a model application to a GPU | [`olares-market`](../olares-market/SKILL.md) and [`olares-settings`](../olares-settings/SKILL.md) — Router does not own those |
 
-A provider whose `source` is `olares` belongs to a Market application. Its address and lifecycle are the Market's; `provider delete` refuses it, and `app uninstall` is the way out.
+A provider whose `source` is `olares` belongs to a Market application. Its address and lifecycle are the Market's; `provider delete` refuses it, and `olares-cli market uninstall <app>` is the way out.
 
 ## Naming
 
 - A model is addressed as `<provider>/<model>` wherever ambiguity is possible — in `--model`, in a quota, in a key's allowed list. `router list` prints both halves. A name without a slash is a **route** — an alias, a group, or a `default-*` category — and has to exist.
 - Every locally installed model application is a provider named `Olares`, so the qualified name is not unique for local models. `<app_name>/<model>` names one of them — `llamacppqwen3v3/qwen3-8b` — and so does the application's display title, which `router list` prints in `SERVED BY`. The model id is the only handle that always names one row, and an ambiguous reference is refused with the candidates rather than resolved to one.
 - A provider is named by its title, its Olares app name, or its id. A model application is named by its Olares app id (`llamacppqwen3627bggufv3`), which is also what `provider register` and every `local` verb accept.
-- An application that *calls* Router has no row here at all: Olares vouches for it at the edge and the call arrives carrying an `appid` — the app name hashed, or the name itself for a system app. So it cannot be registered or revoked; `app installed` says whether it is here, `usage --by caller_app` says what it spent, and `quota set --caller-app` is the only lever over it.
+- An application that *calls* Router has no row here at all: Olares vouches for it at the edge and the call arrives carrying an `appid` — the app name hashed, or the name itself for a system app. So it cannot be registered or revoked; `olares-cli market list --mine` says whether it is here, `usage --by caller_app` says what it spent, and `quota set --caller-app` is the only lever over it.
 
 ## Safety and escalation
 
 - A named configuration request authorises the loop it implies: creating a provider, importing its models and validating it do not need re-confirmation one by one.
-- Ask again before `provider delete`, `app uninstall`, `key revoke`, `quota clear`, `route delete` or `default disable` on something the user did not name — each one breaks callers that still depend on it. `route disable` and `default disable` are reversible and keep their membership; `route delete` gives the name up.
+- Ask again before `provider delete`, `key revoke`, `quota clear`, `route delete` or `default disable` on something the user did not name — each one breaks callers that still depend on it. `route disable` and `default disable` are reversible and keep their membership; `route delete` gives the name up.
 - **Never** put a credential in a shell argument where a file or stdin will do; `--credentials-json` reads either. Never print a plaintext `sk-` key into a transcript that will be shared: `key issue` shows it once, on purpose.
 - `usage retention --days` deletes per-call rows outside the new window immediately, and shortening it is not undoable. Daily totals survive, so confirm before shortening one somebody did not ask for.
 - `spec edit --engine-args` and `spec restart` both relaunch the process serving a model, which stops answering until the weights have loaded again — minutes for a large one. Prefer `spec edit` over `local spec set`: the first merges onto the card the application is serving, the second replaces it, and a field omitted from a replacement is gone.

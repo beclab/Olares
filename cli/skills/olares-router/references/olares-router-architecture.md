@@ -48,9 +48,9 @@ Two planes, two credentials, and they are not interchangeable.
 Router is installed as an admin-only application. Two consequences:
 
 - A non-admin profile cannot see Router's entrance at all, so every verb reports that Router is not installed. `router status` is the check that distinguishes "not installed" from "not visible to you".
-- Within Router, the role is the Olares role: Router reads it from the identity the edge injects rather than keeping one of its own, so `olares-cli profile whoami` and the identity block of `router status` agree by construction. Most of the management plane requires `admin`, and not only for writes: providers, the vendor catalog's models, market installs, quotas, users, audit and the usage retention window all refuse a non-admin read. What is left to a non-admin is the model list, the routes and default categories, what is installed, their own keys, their own usage, and calling.
+- Within Router, the role is the Olares role: Router reads it from the identity the edge injects rather than keeping one of its own, so `olares-cli profile whoami` and the identity block of `router status` agree by construction. Most of the management plane requires `admin`, and not only for writes: providers, the vendor catalog's models, quotas, audit and the usage retention window all refuse a non-admin read. What is left to a non-admin is the model list, the routes and default categories, their own keys, their own usage, and calling.
 
-A Router user is not an Olares user: the row appears the first time that person's identity reaches Router. `router user list` shows the ones it knows, which is why a freshly created Olares account is absent until it makes a call.
+A Router user is not an Olares user: the row appears the first time that person's identity reaches Router, which is why a freshly created Olares account is unknown to Router until it makes a call. The people themselves are [`olares-settings`](../../olares-settings/SKILL.md)'s `settings users list`; `key issue --for-user` and `quota set --user` name one of the arrived ones, and refuse anybody else with the names Router does hold.
 
 ## Reading an error
 

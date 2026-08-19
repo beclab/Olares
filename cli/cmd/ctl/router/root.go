@@ -28,14 +28,15 @@ status" first if anything here behaves unexpectedly.
   default       the categories a caller can ask for instead of a model
   provider      the upstreams Router routes to, and the models they serve
   spec          what a local model declares itself to be, and changing it
-  app           model applications that run models on this machine
-  local         the Model Console inside one of those applications
+  local         the Model Console inside a model application on this machine
   call          send work to a model: text, embeddings, web, images, audio, OCR
   key           API keys for software that calls Router
   quota         ceilings on a key, a person, a model, or an application
   usage         what has been called, what it cost, and how long it is kept
   audit         who changed Router, and to what
-  user          the people Router knows
+
+Model applications are installed, cloned, upgraded and removed with
+"olares-cli market"; the people on this Olares are "olares-cli settings users".
 
 Most of Router's management surface is admin-only. Requires Olares 1.12.7+.
 
@@ -56,13 +57,11 @@ Run "olares-cli router <verb> --help" for details.
 	cmd.AddCommand(NewDefaultCommand(f))
 	cmd.AddCommand(NewProviderCommand(f))
 	cmd.AddCommand(NewSpecCommand(f))
-	cmd.AddCommand(NewAppCommand(f))
 	cmd.AddCommand(NewLocalCommand(f))
 	cmd.AddCommand(NewCallCommand(f))
 	cmd.AddCommand(NewKeyCommand(f))
 	cmd.AddCommand(NewQuotaCommand(f))
 	cmd.AddCommand(NewUsageCommand(f))
 	cmd.AddCommand(NewAuditCommand(f))
-	cmd.AddCommand(NewUserCommand(f))
 	return cmd
 }

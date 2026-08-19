@@ -1,6 +1,6 @@
 # Local multimodal applications
 
-Embedding, CLIP, audio and OCR models install and are managed with exactly the verbs in [local LLM applications](olares-router-local-llm.md): `app catalog`, `app install`, `app upgrade`, `app uninstall`, `provider register`, and the `local` family. What differs is the mode their model rows declare, the engine behind them, and how a call reaches them.
+Embedding, CLIP, audio and OCR models install and are managed exactly as in [local LLM applications](olares-router-local-llm.md): [`olares-market`](../../olares-market/SKILL.md)'s `install` / `upgrade` / `uninstall`, then `provider register` and the `local` family here. What differs is the mode their model rows declare, the engine behind them, and how a call reaches them.
 
 ## What runs behind each mode
 
@@ -27,8 +27,8 @@ This is the one place where a mislabelled row is expensive: a speech model that 
 ## Installing
 
 ```
-olares-cli router app catalog
-olares-cli router app install embeddinggemmav3 --watch
+olares-cli market list -c AI
+olares-cli market install embeddinggemmav3 --watch
 olares-cli router local progress embeddinggemmav3
 ```
 
