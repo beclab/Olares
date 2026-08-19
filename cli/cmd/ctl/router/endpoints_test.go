@@ -106,6 +106,37 @@ func TestPathSegmentsAreEscaped(t *testing.T) {
 		{"api key", epAPIKey("k/1"), consoleAPI + "/api-keys/k%2F1"},
 		{"audit log", epAuditLog("x y"), consoleAPI + "/audit-logs/x%20y"},
 		{"ocr task", epOCRTask("t/2"), dataPlaneAPI + "/ocr/tasks/t%2F2"},
+		{"ocr result", epOCRTaskResult("t/2"), dataPlaneAPI + "/ocr/tasks/t%2F2/result"},
+		{"image generation", epImageGeneration("g/1"), dataPlaneAPI + "/images/generations/g%2F1"},
+		{"image content", epImageGenerationContent("g/1"),
+			dataPlaneAPI + "/images/generations/g%2F1/content"},
+		{"video", epVideo("v 1"), dataPlaneAPI + "/videos/v%201"},
+		{"video content", epVideoContent("v 1"), dataPlaneAPI + "/videos/v%201/content"},
+	}
+	for _, c := range cases {
+		if c.got != c.want {
+			t.Errorf("%s: got %q want %q", c.name, c.got, c.want)
+		}
+	}
+}
+
+// A model reference is the one identifier that always contains a slash — it is
+// "<provider>/<model>", which is why these two routes take it in the query
+// rather than in the path. Escaping it wrong does not fail: it addresses
+// /console/api/model-spec with a truncated model and gets an answer about a
+// different application, or none.
+func TestAModelReferenceRidesTheQueryEscaped(t *testing.T) {
+	cases := []struct {
+		name string
+		got  string
+		want string
+	}{
+		{"qualified", epForModel(epModelSpec, "Olares/qwen3-4b"),
+			epModelSpec + "?model=Olares%2Fqwen3-4b"},
+		{"a name with two slashes", epForModel(epModelSpec, "Olares/unsloth/Qwen3-GGUF:Q4"),
+			epModelSpec + "?model=Olares%2Funsloth%2FQwen3-GGUF%3AQ4"},
+		{"engine restart", epForModel(epEngineRestart, "a/b"),
+			epEngineRestart + "?model=a%2Fb"},
 	}
 	for _, c := range cases {
 		if c.got != c.want {

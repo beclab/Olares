@@ -1,6 +1,7 @@
 package router
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -327,8 +328,23 @@ func specPatch(c *cobra.Command, from, mode, engineArgs string) (map[string]any,
 // with no --from is the ordinary shape, so standard input counts — but only when
 // it is not a terminal, since `spec edit --mode chat` at a prompt is not asking
 // to be waited on.
+//
+// Nothing on standard input is "no document" rather than an error, and the
+// caller's own refusal is the one that names this verb. `--from` is different: a
+// file was named, so an unreadable or empty one is a mistake to report.
 func readSpecPatchDocument(c *cobra.Command, from string) ([]byte, bool, error) {
-	if from == "" && isTerminal(os.Stdin) {
+	if from != "" && from != "-" {
+		raw, err := os.ReadFile(from)
+		if err != nil {
+			return nil, false, err
+		}
+		if len(bytes.TrimSpace(raw)) == 0 {
+			return nil, false, fmt.Errorf("%s is empty; it should hold the keys to change, as a JSON "+
+				"object. `olares-cli router spec show <model> -o json` prints the whole card", from)
+		}
+		return raw, true, nil
+	}
+	if isTerminal(os.Stdin) {
 		return nil, false, nil
 	}
 	if from == "" && (c.Flags().Changed("mode") || c.Flags().Changed("engine-args")) {
@@ -337,9 +353,12 @@ func readSpecPatchDocument(c *cobra.Command, from string) ([]byte, bool, error) 
 		// a card patch.
 		return nil, false, nil
 	}
-	raw, err := readSpecSource(from)
+	raw, err := io.ReadAll(os.Stdin)
 	if err != nil {
-		return nil, false, err
+		return nil, false, fmt.Errorf("read the change from standard input: %w", err)
+	}
+	if len(bytes.TrimSpace(raw)) == 0 {
+		return nil, false, nil
 	}
 	return raw, true, nil
 }
