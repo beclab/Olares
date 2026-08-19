@@ -1,7 +1,6 @@
 package router
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"io"
@@ -102,16 +101,9 @@ func embedInputs(args []string, perLine bool) ([]string, error) {
 		}
 		return []string{text}, nil
 	}
-	var out []string
-	sc := bufio.NewScanner(os.Stdin)
-	sc.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
-	for sc.Scan() {
-		if line := strings.TrimSpace(sc.Text()); line != "" {
-			out = append(out, line)
-		}
-	}
-	if err := sc.Err(); err != nil {
-		return nil, fmt.Errorf("read text from stdin: %w", err)
+	out, err := readLines(os.Stdin)
+	if err != nil {
+		return nil, err
 	}
 	if len(out) == 0 {
 		return nil, fmt.Errorf("no non-empty lines on stdin")

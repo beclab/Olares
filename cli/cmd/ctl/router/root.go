@@ -24,13 +24,14 @@ status" first if anything here behaves unexpectedly.
   status        where Router lives, whether it is healthy, and your role
   whoami        the identity and role Router sees for the active profile
   list          every model configured, across every provider
+  models        every name the model field accepts, as a caller sees it
   capabilities  the capability flags a model row can declare
   route         the names callers may send instead of a provider and model
   default       the categories a caller can ask for instead of a model
   provider      the upstreams Router routes to, and the models they serve
   app           model applications that run models on this machine
   local         the Model Console inside one of those applications
-  call          send work to a model: chat, embed, transcribe, speak, OCR
+  call          send work to a model: text, embeddings, web, images, audio, OCR
   key           API keys for software that calls Router
   quota         ceilings on a key, a person, a model, or an application
   usage         what has been called, what it cost, and how long it is kept
@@ -52,6 +53,7 @@ Run "olares-cli router <verb> --help" for details.
 	cmd.AddCommand(NewStatusCommand(f))
 	cmd.AddCommand(NewWhoamiCommand(f))
 	cmd.AddCommand(NewListCommand(f))
+	cmd.AddCommand(newModelsCommand(f))
 	cmd.AddCommand(NewCapabilitiesCommand(f))
 	cmd.AddCommand(NewRouteCommand(f))
 	cmd.AddCommand(NewDefaultCommand(f))

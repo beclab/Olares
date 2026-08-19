@@ -130,8 +130,6 @@ func (e *RouterError) recovery() string {
 		return "; the request reached Router without an Olares identity — re-authenticate with `olares-cli profile login`"
 	case "invalid_api_key", "key_disabled", "key_expired":
 		return "; list and re-issue keys with `olares-cli router key list`"
-	case "observability_content_policy_forbids":
-		return "; this deployment forbids storing prompt content, so the preference cannot be set either way"
 	case "predefined_models_unknown":
 		return "; Router does not say which name it rejected — compare against " +
 			"`olares-cli router provider types <vendor> --models`"

@@ -53,9 +53,23 @@ in the OS keychain, minting it on first use. --api-key overrides both, and
 Subcommands:
   chat [prompt]         a chat completion, streamed by default
   embed <text…>         embedding vectors
+  rerank <query>        order documents by how well they answer a query
+  search <query>        search the web
+  scrape <url>          a page as markdown
+  translate <text>      translate, detect a language, list the pairs
+  image <prompt>        generate an image
+  video <prompt>        generate a video
   transcribe <file>     speech to text
   speak <text>          text to speech
+  vad <file>            where the speech is in a recording
+  diarize <file>        who spoke when
+  enhance <file>        a cleaned-up recording
+  align <file>          line a transcript up with the audio
   ocr <file>            text out of an image or PDF
+
+Three of these do not answer with their result. Image and video generation can
+hand back a receipt to collect from, and OCR always does; each of those verbs
+waits for the work by default and takes --no-wait to hand the id over instead.
 
 Every call is metered: it appears in "router usage", counts against the quota on
 the credential that made it, and may cost money.
@@ -64,8 +78,18 @@ the credential that made it, and may cost money.
 	cmd.SilenceUsage = true
 	cmd.AddCommand(newCallChatCommand(f))
 	cmd.AddCommand(newCallEmbedCommand(f))
+	cmd.AddCommand(newCallRerankCommand(f))
+	cmd.AddCommand(newCallSearchCommand(f))
+	cmd.AddCommand(newCallScrapeCommand(f))
+	cmd.AddCommand(newCallTranslateCommand(f))
+	cmd.AddCommand(newCallImageCommand(f))
+	cmd.AddCommand(newCallVideoCommand(f))
 	cmd.AddCommand(newCallTranscribeCommand(f))
 	cmd.AddCommand(newCallSpeakCommand(f))
+	cmd.AddCommand(newCallVADCommand(f))
+	cmd.AddCommand(newCallDiarizeCommand(f))
+	cmd.AddCommand(newCallEnhanceCommand(f))
+	cmd.AddCommand(newCallAlignCommand(f))
 	cmd.AddCommand(newCallOCRCommand(f))
 	return cmd
 }
@@ -75,16 +99,40 @@ the credential that made it, and may cost money.
 // guessed at — so "no --model" has to become a name here, and the name is the
 // category for that kind of work.
 //
-// Speech is two categories rather than one because one audio mode covers
-// recognition, synthesis and four other things that are separate engines: there
-// is no single model a bare audio default could point at.
+// Audio has no single category, and that is the interesting one. One audio mode
+// covers recognition, synthesis, voice activity, diarization, enhancement and
+// sound effects, and those are six separate engine images: no installed
+// application serves the mode, so a `default-audio` would name a model that
+// cannot answer most audio requests, with no way for the caller to tell which.
+// Each capability is its own category instead.
+//
+// Translate has a category but no --model flag to reach it: those routes carry
+// no model field at all and resolve the default per call.
+//
+// These literals are copied from Router's own registry, and nothing here can
+// check them: a category renamed there turns every `--model`-less call into a
+// route that does not exist. `olares-cli router default show` lists what this
+// deployment actually has, and is the thing to compare against.
 const (
-	categoryChat      = "default-chat"
-	categoryEmbedding = "default-embedding"
-	categorySTT       = "default-stt"
-	categoryTTS       = "default-tts"
-	categoryOCR       = "default-ocr"
+	categoryChat        = "default-chat"
+	categoryEmbedding   = "default-embedding"
+	categoryRerank      = "default-rerank"
+	categorySearch      = "default-search"
+	categoryScrape      = "default-scrape"
+	categoryImage       = "default-image-generation"
+	categoryVideo       = "default-video-generation"
+	categoryOCR         = "default-ocr"
+	categorySTT         = "default-stt"
+	categoryTTS         = "default-tts"
+	categoryVAD         = "default-vad"
+	categoryDiarization = "default-diar"
+	categoryEnhance     = "default-enhance"
 )
+
+// Alignment has no category of its own. It is served by the same engine base as
+// speech recognition rather than by an image of its own, so the recognition
+// default is the one that finds a model able to do it.
+const categoryAlign = categorySTT
 
 // callModel is what goes in the request's `model` field: what was asked for, or
 // the category for this kind of work.
@@ -95,7 +143,7 @@ func callModel(flagValue, category string) string {
 	return category
 }
 
-// modelFlagHelp keeps the five verbs saying the same thing about the same flag.
+// modelFlagHelp keeps every verb saying the same thing about the same flag.
 func modelFlagHelp(category string) string {
 	return "model to use, as <provider>/<model> or a route name; " + category + " when omitted"
 }
@@ -120,6 +168,23 @@ func readPromptArgs(args []string, what string) (string, error) {
 		return "", fmt.Errorf("no %s on stdin", what)
 	}
 	return s, nil
+}
+
+// readLines is the other way a verb takes many inputs: one per line, blanks
+// dropped. The buffer is raised because a line here can be a whole document.
+func readLines(r io.Reader) ([]string, error) {
+	var out []string
+	sc := bufio.NewScanner(r)
+	sc.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
+	for sc.Scan() {
+		if line := strings.TrimSpace(sc.Text()); line != "" {
+			out = append(out, line)
+		}
+	}
+	if err := sc.Err(); err != nil {
+		return nil, fmt.Errorf("read lines from input: %w", err)
+	}
+	return out, nil
 }
 
 func isTerminal(f *os.File) bool {

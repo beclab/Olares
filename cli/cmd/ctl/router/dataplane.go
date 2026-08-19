@@ -206,19 +206,29 @@ func callErr(err error) error {
 		return fmt.Errorf("%w\nThe key this machine saved is no longer usable. "+
 			"`olares-cli router key local --forget` drops it, and the next call issues a fresh one", err)
 	case ours && (re.Code == "owner_disabled" || re.Code == "app_archived" || re.Code == "app_suspended"):
-		return fmt.Errorf("%w\nThis is about who the key belongs to rather than the key itself; "+
-			"an admin restores it with `olares-cli router user list` or `router caller list`", err)
+		return fmt.Errorf("%w\nThis is about who or what the key belongs to rather than the key itself. "+
+			"For a person, `olares-cli router user list` shows their status; for an application, "+
+			"`router app installed` says whether it is still here", err)
 	case re.Status == 401 || re.Status == 403:
 		return fmt.Errorf("%w\nThis came back from the provider, not from Router: the credential Router "+
 			"holds for it was refused. `olares-cli router provider validate <provider>` checks it against "+
 			"the upstream, and `router provider update` replaces it", err)
 	case re.Code == "no_default_model":
-		return fmt.Errorf("%w\nName a model with --model, or have an admin set a default with "+
-			"`olares-cli router default set`", err)
+		return fmt.Errorf("%w\nNothing installed can serve that category. `olares-cli router default show` "+
+			"says where each one stands, and it fills once a model of that kind exists — a category is "+
+			"maintained against what is configured rather than pointed at by hand. --model names one "+
+			"directly in the meantime", err)
+	case re.Code == "model_route_disabled":
+		return fmt.Errorf("%w\nThe name resolves, but the route serving it is switched off. "+
+			"`olares-cli router route get <name>` shows it, and `route enable <name>` puts it back", err)
+	case re.Code == "model_not_allowed":
+		return fmt.Errorf("%w\nThe credential is restricted to a list this model is not on. "+
+			"`olares-cli router models` shows what it may call, and `router key update` changes the list", err)
 	case re.Code == "model_not_found":
-		return fmt.Errorf("%w\n`olares-cli router list` shows the names this Router serves", err)
+		return fmt.Errorf("%w\n`olares-cli router models` shows the names this credential may send", err)
 	case re.Code == "ambiguous_model":
-		return fmt.Errorf("%w\nQualify it as <provider>/<model>; `olares-cli router list` shows both parts", err)
+		return fmt.Errorf("%w\nQualify it as <provider>/<model>; `olares-cli router models` shows the "+
+			"qualified names", err)
 	case re.Type == "quota_exceeded_error":
 		return fmt.Errorf("%w\n`olares-cli router quota list` shows the limits, and `router usage summary` "+
 			"what has been spent against them", err)
@@ -227,9 +237,27 @@ func callErr(err error) error {
 		// claims the model, and complains about streaming from there. The name
 		// is what was actually wrong.
 		return fmt.Errorf("%w\nNo provider serves this model, which is what put the request on Router's "+
-			"fallback path. `olares-cli router list` shows the names it does serve", err)
+			"fallback path. `olares-cli router models` shows the names it does serve", err)
+	case strings.HasSuffix(re.Code, "_mode_mismatch"):
+		return fmt.Errorf("%w\nThe model is configured for a different kind of work than this verb asks "+
+			"for. `olares-cli router list` shows each model's mode, and a route can only serve the mode "+
+			"it was created with", err)
+	case strings.HasSuffix(re.Code, "_unsupported_for_provider") || re.Code == "audio_path_unsupported":
+		return fmt.Errorf("%w\nThis model's provider does not serve that route at all. For a model "+
+			"running on this Olares that usually means a different engine image does this job: "+
+			"`olares-cli router list --mode audio` and `router provider get <provider>` show which "+
+			"capability each one declares", err)
 	case re.Code == "capability_not_supported" || re.Code == "stream_unsupported_for_model":
 		return fmt.Errorf("%w\n`olares-cli router provider get <provider>` lists what the model supports", err)
+	case re.Status == 404 && re.Code == "" && re.Type == "":
+		// A 404 with no envelope on a route Router does mount. Audio, OCR and
+		// translate are forwarded to the engine unchanged, and an engine serves
+		// the capability it was built for and nothing else, so this is usually
+		// the wrong engine rather than a wrong URL.
+		return fmt.Errorf("%w\nRouter forwarded this and the model's own endpoint has no such route. "+
+			"For audio that means the wrong engine: recognition, synthesis, voice activity, "+
+			"diarization, enhancement and alignment are separate images, and each answers 404 for "+
+			"the others. Leaving --model off picks a model that declares the capability", err)
 	case re.Status == 502 || re.Status == 503 || re.Status == 504:
 		return fmt.Errorf("%w\nThe model's own endpoint did not answer. For a model running on this Olares "+
 			"that usually means the application is not serving yet: `olares-cli router provider get <provider>` "+

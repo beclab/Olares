@@ -189,6 +189,23 @@ func truncate(s string, n int) string {
 	return s[:n] + "...(truncated)"
 }
 
+// humanBytes is for confirming a file was written. Powers of two, because that
+// is what a file manager will say about the same file a moment later.
+func humanBytes(n int64) string {
+	const unit = 1024
+	if n < unit {
+		return fmt.Sprintf("%d B", n)
+	}
+	value := float64(n)
+	for _, suffix := range []string{"KiB", "MiB", "GiB", "TiB"} {
+		value /= unit
+		if value < unit {
+			return fmt.Sprintf("%.1f %s", value, suffix)
+		}
+	}
+	return fmt.Sprintf("%.1f PiB", value/unit)
+}
+
 // clip shortens a table cell. Unlike truncate it says so with one character:
 // inside a column, "...(truncated)" is longer than most of the values around it
 // and turns a readable row into a wall of the same word.

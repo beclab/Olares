@@ -165,18 +165,83 @@ func epQuota(id int64) string { return epQuotas + "/" + strconv.FormatInt(id, 10
 
 // Data plane. These take an `sk-*` bearer or a platform-injected caller
 // identity, never the console session.
+//
+// Three shapes live here and behave differently enough to be worth naming. Most
+// routes answer with the result. The two media routes can answer with a receipt
+// instead, and the thing generated is then fetched from a `/content` route
+// afterwards. OCR only ever answers with a receipt.
 const (
-	epChatCompletions     = dataPlaneAPI + "/chat/completions"
-	epEmbeddings          = dataPlaneAPI + "/embeddings"
-	epDataPlaneModels     = dataPlaneAPI + "/models"
+	epChatCompletions = dataPlaneAPI + "/chat/completions"
+	epEmbeddings      = dataPlaneAPI + "/embeddings"
+	epRerank          = dataPlaneAPI + "/rerank"
+	epDataPlaneModels = dataPlaneAPI + "/models"
+	epSearch          = dataPlaneAPI + "/search"
+	epScrape          = dataPlaneAPI + "/scrape"
+)
+
+// Audio is one catch-all upstream, so every suffix here reaches the sibling
+// audio engine unchanged. Which suffixes exist depends on the engine behind the
+// model: recognition, synthesis, voice activity, diarization, enhancement and
+// alignment are separate engine images, and a model that does one answers 404
+// or refuses the mode for the others.
+const (
 	epAudioTranscriptions = dataPlaneAPI + "/audio/transcriptions"
 	epAudioTranslations   = dataPlaneAPI + "/audio/translations"
 	epAudioSpeech         = dataPlaneAPI + "/audio/speech"
-	epOCR                 = dataPlaneAPI + "/ocr"
-	epOCRTasks            = epOCR + "/tasks"
+	epAudioVoices         = dataPlaneAPI + "/audio/voices"
+	epAudioVAD            = dataPlaneAPI + "/audio/vad"
+	// Spelled in full. The engine serves `diarization` over HTTP and reserves
+	// `diarize/stream` for the WebSocket, so the short form is a 404.
+	epAudioDiarization = dataPlaneAPI + "/audio/diarization"
+	epAudioEnhance     = dataPlaneAPI + "/audio/enhance"
+	epAudioAlign       = dataPlaneAPI + "/audio/align"
+)
+
+// Images and video. A generation is a row Router keeps, so it can be asked
+// about after the request that started it has gone, and the bytes come from the
+// `/content` route rather than the record — a video is not something to carry
+// through a JSON field.
+const (
+	epImageGenerations = dataPlaneAPI + "/images/generations"
+	epVideos           = dataPlaneAPI + "/videos"
+)
+
+func epImageGeneration(id string) string {
+	return epImageGenerations + "/" + url.PathEscape(id)
+}
+
+func epImageGenerationContent(id string) string {
+	return epImageGeneration(id) + "/content"
+}
+
+func epVideo(id string) string { return epVideos + "/" + url.PathEscape(id) }
+
+func epVideoContent(id string) string { return epVideo(id) + "/content" }
+
+// Translate mirrors the upstream's own service-root names under /v1. These four
+// carry no model field: each resolves the translate default per call, so there
+// is nothing for a caller to name and nothing to get wrong.
+const (
+	epTranslate      = dataPlaneAPI + "/translate"
+	epTranslateBatch = epTranslate + "/batch"
+	epLanguages      = dataPlaneAPI + "/languages"
+	epDetect         = dataPlaneAPI + "/detect"
+)
+
+// OCR. The prefix is /v1/ocr rather than the upstream's bare /v1 because the
+// engine's list-models route is /v1/models, which already names the catalogue.
+//
+// Router also mounts /v1/ocr/models, and it is deliberately absent here: it
+// answers with the one model the engine behind the request was deployed with,
+// which `router list --mode ocr` says for every OCR model at once.
+const (
+	epOCR      = dataPlaneAPI + "/ocr"
+	epOCRTasks = epOCR + "/tasks"
 )
 
 func epOCRTask(id string) string { return epOCRTasks + "/" + url.PathEscape(id) }
+
+func epOCRTaskResult(id string) string { return epOCRTask(id) + "/result" }
 
 // The Model Console inside a model application: a different host, addressed
 // through the same session. Its /healthz is epHealth, which both surfaces
