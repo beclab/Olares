@@ -2,10 +2,13 @@ package router
 
 import (
 	"context"
+	"crypto/md5" //nolint:gosec // the appid is defined as an MD5 prefix, not chosen here
+	"encoding/hex"
 	"fmt"
 	"io"
 	"net/url"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -56,6 +59,7 @@ type spendLog struct {
 type spendSummaryRow struct {
 	Key           string  `json:"key"`
 	Label         string  `json:"label"`
+	Installed     bool    `json:"installed,omitempty"`
 	Requests      int64   `json:"requests"`
 	CostUSD       float64 `json:"cost_usd"`
 	TotalTokens   int64   `json:"total_tokens"`
@@ -122,7 +126,7 @@ one flag apart.
 
 func addSpendFilterFlags(cmd *cobra.Command, fl *spendFilter) {
 	cmd.Flags().StringVar(&fl.UserRef, "user", "", "only this user's calls, by name or id (admin only)")
-	cmd.Flags().StringVar(&fl.CallerRef, "caller", "", "only this calling application's calls, by app name or id (admin only)")
+	cmd.Flags().StringVar(&fl.CallerRef, "caller", "", "only this application's calls, by title, app name or appid (admin only)")
 	cmd.Flags().StringVar(&fl.KeyRef, "key", "", "only calls made with this key, by name, prefix or id")
 	cmd.Flags().StringVar(&fl.ProviderRef, "provider", "", "only calls to this provider, by name or id")
 	cmd.Flags().StringVar(&fl.ModelRef, "model", "", "only calls to this model, as <provider>/<model>")
@@ -204,6 +208,78 @@ func resolveSpendQuery(ctx context.Context, pc *preparedClient, fl spendFilter) 
 		q.Set("offset", strconv.Itoa(fl.Offset))
 	}
 	return q, nil
+}
+
+// callerAppBuckets is the appid-to-name index, and the only one on the wire.
+//
+// An application does not have a row in Router. The platform vouches for it at
+// the edge and the request arrives carrying an appid, so there is nothing to
+// register and nothing to archive — which is why there is no application list to
+// read and this asks the spend summary instead.
+//
+// include_idle is what makes it an index rather than a report: it widens the
+// dimension into every application the directory says is installed, so an app
+// that has never called still has a name here. The other direction is covered
+// too, and matters more — an uninstalled application keeps its spend, and its
+// bucket then carries the appid as its own label because no name for it exists
+// anywhere.
+//
+// Admin only, like every caller_app read. Nothing here is worth a fallback: a
+// non-admin cannot filter by application at all.
+func callerAppBuckets(ctx context.Context, pc *preparedClient) ([]spendSummaryRow, error) {
+	q := url.Values{}
+	q.Set("dim", "caller_app")
+	q.Set("include_idle", "true")
+	return collection[spendSummaryRow](ctx, pc, withQuery(epSpendSummary, q))
+}
+
+// resolveCallerAppID turns what somebody typed into the appid the filter takes.
+//
+// Three forms, because an appid is not something anybody reads. The title is
+// what the desktop shows. The application name is what a manifest and a log
+// carry, and it maps to an appid by a hash the platform defines — computed here
+// and then *matched against a bucket that exists*, never sent on its own, so a
+// typo produces a refusal rather than a filter that silently matches nothing.
+// And the appid itself is accepted, since it is what a spend row shows.
+func resolveCallerAppID(ctx context.Context, pc *preparedClient, ref string) (string, error) {
+	ref, err := requireRef(ref, "an application name, title or appid")
+	if err != nil {
+		return "", err
+	}
+	rows, err := callerAppBuckets(ctx, pc)
+	if err != nil {
+		return "", err
+	}
+	hashed := appIDFromName(ref)
+	known := make([]string, 0, len(rows))
+	for i := range rows {
+		r := &rows[i]
+		if strings.EqualFold(r.Key, ref) || r.Key == hashed || strings.EqualFold(r.Label, ref) {
+			return r.Key, nil
+		}
+		known = append(known, nonEmpty(r.Label))
+	}
+	sort.Strings(known)
+	return "", missing{
+		noun:  "application",
+		ref:   ref,
+		known: dedupeStrings(known),
+		have:  "installed or having called are",
+		none:  "no application is installed and none has called",
+		note: "An application is named by its title, its Olares application name, or the appid a " +
+			"spend row shows.",
+	}.err()
+}
+
+// appIDFromName is the platform's own derivation: the first eight hex digits of
+// the MD5 of the application name, hashed exactly as written (ADR-23). A system
+// application carries its name instead, which the exact-match branch covers.
+//
+// MD5 is not a security decision here; it is the identifier's definition, and
+// computing anything else would name a different application.
+func appIDFromName(name string) string {
+	sum := md5.Sum([]byte(strings.TrimSpace(name))) //nolint:gosec // the platform defines the appid this way
+	return hex.EncodeToString(sum[:])[:8]
 }
 
 // parseSinceOrInstant accepts an absolute time and also a span, because "the
@@ -458,9 +534,12 @@ func spendActorLabels(ctx context.Context, pc *preparedClient, items []spendLog)
 		}
 	}
 	if wantApp {
-		if apps, err := listCallerApps(ctx, pc); err == nil {
-			for i := range apps {
-				out["app:"+apps[i].ID] = callerAppLabel(&apps[i])
+		// A best effort, and it fails for a reader who is not an admin — who
+		// then sees the appid itself, which is what the row carries. Their own
+		// calls are not an application's, so this is the rare case.
+		if rows, err := callerAppBuckets(ctx, pc); err == nil {
+			for i := range rows {
+				out["app:"+rows[i].Key] = nonEmpty(rows[i].Label)
 			}
 		}
 	}

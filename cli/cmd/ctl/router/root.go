@@ -32,8 +32,7 @@ status" first if anything here behaves unexpectedly.
   local         the Model Console inside one of those applications
   call          send work to a model: chat, embed, transcribe, speak, OCR
   key           API keys for software that calls Router
-  quota         spend and rate ceilings on a key, a person, or a model
-  caller        the applications that call Router
+  quota         ceilings on a key, a person, a model, or an application
   usage         what has been called, and what it cost
   audit         who changed Router, and to what
   trace         the spans an agent framework reported for a call
@@ -63,7 +62,6 @@ Run "olares-cli router <verb> --help" for details.
 	cmd.AddCommand(NewCallCommand(f))
 	cmd.AddCommand(NewKeyCommand(f))
 	cmd.AddCommand(NewQuotaCommand(f))
-	cmd.AddCommand(NewCallerCommand(f))
 	cmd.AddCommand(NewUsageCommand(f))
 	cmd.AddCommand(NewAuditCommand(f))
 	cmd.AddCommand(NewTraceCommand(f))

@@ -123,6 +123,7 @@ status are filled in once the application is running.
 
 Subcommands:
   catalog              the model applications available to install
+  installed            every application installed on this Olares
   install <app>        install one, creating the provider Router will route to
   upgrade <provider>   upgrade the application behind a provider
   uninstall <provider> remove the application, and with it the provider
@@ -137,11 +138,13 @@ These routes exist only on a Router configured with an Olares Market address. If
 they are missing, the model applications on this machine are still usable —
 Router discovers them on its own — and "olares-cli market install" installs them.
 
-Admin only.
+Admin only, apart from "installed": what is on this machine is not a secret, and
+every reader of a capability page needs it.
 `,
 	}
 	cmd.SilenceUsage = true
 	cmd.AddCommand(newAppCatalogCommand(f))
+	cmd.AddCommand(newAppInstalledCommand(f))
 	cmd.AddCommand(newAppInstallCommand(f))
 	cmd.AddCommand(newAppUpgradeCommand(f))
 	cmd.AddCommand(newAppUninstallCommand(f))

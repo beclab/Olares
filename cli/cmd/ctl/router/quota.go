@@ -24,9 +24,15 @@ import (
 // PUT    /console/api/quotas/:id
 // DELETE /console/api/quotas/:id
 //
-// A quota is attached to a scope — one key, one person, or one model — and
-// caps either spend or rate. Router evaluates them on the call path, so a
-// breach is a refused request rather than a report after the fact.
+// A quota is attached to a scope — one key, one person, one model, or one
+// Olares application — and caps either spend or rate. Router evaluates them on
+// the call path, so a breach is a refused request rather than a report after the
+// fact.
+//
+// The application scope is the only control there is over an application. It
+// arrives vouched for by the platform, carrying an appid rather than a
+// credential Router issued, so there is nothing to revoke: a ceiling of zero is
+// how one is stopped and raising it is how it starts again.
 //
 // The routes are per (scope, kind) rows with their own ids, which is a shape
 // nobody wants to hold in their head. This tree presents them as settings on a
@@ -55,13 +61,18 @@ const (
 	scopeKey   = "api_key"
 	scopeUser  = "user"
 	scopeModel = "provider_model"
+	// scopeApp caps an Olares application by the appid its calls carry. It is
+	// the only control there is over one: an application is not registered
+	// with Router and has no key to revoke, so a ceiling of zero is how it is
+	// stopped, and raising it is how it starts again.
+	scopeApp = "app"
 )
 
 func NewQuotaCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "quota",
-		Short: "spend and rate ceilings on a key, a person, or a model",
-		Long: `Cap what a key, a person or a model is allowed to consume.
+		Short: "spend and rate ceilings on a key, a person, a model, or an application",
+		Long: `Cap what a key, a person, a model or an application may consume.
 
 Router checks these on the call path, so a breach is a refused request rather
 than a line in a report. Three kinds:
@@ -100,22 +111,36 @@ type quotaTarget struct {
 	Label     string
 }
 
-func resolveQuotaTarget(ctx context.Context, pc *preparedClient, keyRef, userRef, modelRef string) (*quotaTarget, error) {
-	given := 0
-	for _, s := range []string{keyRef, userRef, modelRef} {
+// quotaRefs is the four ways of naming a scope, as typed. Exactly one is set.
+type quotaRefs struct {
+	Key   string
+	User  string
+	Model string
+	App   string
+}
+
+func (r quotaRefs) given() int {
+	n := 0
+	for _, s := range []string{r.Key, r.User, r.Model, r.App} {
 		if strings.TrimSpace(s) != "" {
-			given++
+			n++
 		}
 	}
-	switch given {
+	return n
+}
+
+const quotaScopeFlags = "--key, --user, --model or --caller-app"
+
+func resolveQuotaTarget(ctx context.Context, pc *preparedClient, refs quotaRefs) (*quotaTarget, error) {
+	switch refs.given() {
 	case 1:
 	case 0:
-		return nil, fmt.Errorf("name what the quota applies to with --key, --user or --model")
+		return nil, fmt.Errorf("name what the quota applies to with %s", quotaScopeFlags)
 	default:
-		return nil, fmt.Errorf("a quota applies to one thing; pass only one of --key, --user or --model")
+		return nil, fmt.Errorf("a quota applies to one thing; pass only one of %s", quotaScopeFlags)
 	}
 
-	if s := strings.TrimSpace(keyRef); s != "" {
+	if s := strings.TrimSpace(refs.Key); s != "" {
 		found, err := resolveKey(ctx, pc, s)
 		if err != nil {
 			return nil, err
@@ -123,14 +148,21 @@ func resolveQuotaTarget(ctx context.Context, pc *preparedClient, keyRef, userRef
 		return &quotaTarget{ScopeType: scopeKey, ScopeID: found.ID,
 			Label: fmt.Sprintf("key %s (%s)", found.Name, found.KeyPrefix)}, nil
 	}
-	if s := strings.TrimSpace(userRef); s != "" {
+	if s := strings.TrimSpace(refs.User); s != "" {
 		id, err := resolveUserID(ctx, pc, s)
 		if err != nil {
 			return nil, err
 		}
 		return &quotaTarget{ScopeType: scopeUser, ScopeID: id, Label: "user " + s}, nil
 	}
-	row, err := resolveModel(ctx, pc, strings.TrimSpace(modelRef))
+	if s := strings.TrimSpace(refs.App); s != "" {
+		id, err := resolveCallerAppID(ctx, pc, s)
+		if err != nil {
+			return nil, err
+		}
+		return &quotaTarget{ScopeType: scopeApp, ScopeID: id, Label: "application " + s}, nil
+	}
+	row, err := resolveModel(ctx, pc, strings.TrimSpace(refs.Model))
 	if err != nil {
 		return nil, err
 	}
@@ -140,20 +172,19 @@ func resolveQuotaTarget(ctx context.Context, pc *preparedClient, keyRef, userRef
 
 func newQuotaListCommand(f *cmdutil.Factory) *cobra.Command {
 	var (
-		output   string
-		keyRef   string
-		userRef  string
-		modelRef string
+		output string
+		refs   quotaRefs
 	)
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "every quota, with what it applies to",
 		Long: `List the quotas in force.
 
-APPLIES TO names the key, person or model each one covers, rather than the id
-Router stores, because an id says nothing about who is about to be refused.
+APPLIES TO names the key, person, model or application each one covers, rather
+than the id Router stores, because an id says nothing about who is about to be
+refused.
 
-Narrow to one scope with --key, --user or --model.
+Narrow to one scope with --key, --user, --model or --caller-app.
 
 Examples:
   olares-cli router quota list
@@ -162,17 +193,25 @@ Examples:
 `,
 		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
-			return runQuotaList(c.Context(), f, keyRef, userRef, modelRef, output)
+			return runQuotaList(c.Context(), f, refs, output)
 		},
 	}
-	cmd.Flags().StringVar(&keyRef, "key", "", "only quotas on this key, by name, prefix or id")
-	cmd.Flags().StringVar(&userRef, "user", "", "only quotas on this user, by name or id")
-	cmd.Flags().StringVar(&modelRef, "model", "", "only quotas on this model, as <provider>/<model>")
+	addQuotaScopeFlags(cmd, &refs, "only quotas on")
 	addOutputFlag(cmd, &output)
 	return cmd
 }
 
-func runQuotaList(ctx context.Context, f *cmdutil.Factory, keyRef, userRef, modelRef, outputRaw string) error {
+// addQuotaScopeFlags names the four scopes the same way in all three verbs.
+// lead is the clause each usage line starts with: "the key to cap", "only
+// quotas on this key".
+func addQuotaScopeFlags(cmd *cobra.Command, refs *quotaRefs, lead string) {
+	cmd.Flags().StringVar(&refs.Key, "key", "", lead+" this key, by name, prefix or id")
+	cmd.Flags().StringVar(&refs.User, "user", "", lead+" this user, by name or id")
+	cmd.Flags().StringVar(&refs.Model, "model", "", lead+" this model, as <provider>/<model>")
+	cmd.Flags().StringVar(&refs.App, "caller-app", "", lead+" this application, by title, app name or appid")
+}
+
+func runQuotaList(ctx context.Context, f *cmdutil.Factory, refs quotaRefs, outputRaw string) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -185,8 +224,8 @@ func runQuotaList(ctx context.Context, f *cmdutil.Factory, keyRef, userRef, mode
 		return err
 	}
 	var target *quotaTarget
-	if strings.TrimSpace(keyRef) != "" || strings.TrimSpace(userRef) != "" || strings.TrimSpace(modelRef) != "" {
-		target, err = resolveQuotaTarget(ctx, pc, keyRef, userRef, modelRef)
+	if refs.given() > 0 {
+		target, err = resolveQuotaTarget(ctx, pc, refs)
 		if err != nil {
 			return err
 		}
@@ -286,28 +325,33 @@ func scopeLabels(ctx context.Context, pc *preparedClient, rows []quotaRow) map[s
 			}
 		}
 	}
+	if need[scopeApp] {
+		if rows, err := callerAppBuckets(ctx, pc); err == nil {
+			for i := range rows {
+				out[scopeApp+":"+rows[i].Key] = "application " + nonEmpty(rows[i].Label)
+			}
+		}
+	}
 	return out
 }
 
 func newQuotaSetCommand(f *cmdutil.Factory) *cobra.Command {
 	var (
-		output   string
-		keyRef   string
-		userRef  string
-		modelRef string
-		budget   float64
-		rpm      float64
-		tpm      float64
-		warnAt   int
+		output string
+		refs   quotaRefs
+		budget float64
+		rpm    float64
+		tpm    float64
+		warnAt int
 	)
 	cmd := &cobra.Command{
 		Use:   "set",
 		Short: "add or change a ceiling",
-		Long: `Set a quota on a key, a person, or a model.
+		Long: `Set a quota on a key, a person, a model, or an application.
 
-Name the scope with exactly one of --key, --user or --model, and what to cap with
-one or more of --budget, --rpm and --tpm. Each kind is a separate ceiling, so
-setting two in one command writes two of them.
+Name the scope with exactly one of --key, --user, --model or --caller-app, and
+what to cap with one or more of --budget, --rpm and --tpm. Each kind is a
+separate ceiling, so setting two in one command writes two of them.
 
 An existing ceiling of the same kind is changed rather than duplicated, which is
 what makes this safe to run twice.
@@ -319,10 +363,15 @@ unless given.
 Raising a budget is how a scope that has stopped working starts again: spend is
 cumulative and nothing resets it.
 
+--caller-app caps an Olares application. It is the only control over one: an
+application is vouched for by the platform rather than registered here, so there
+is no key of its own to revoke, and a ceiling is what stops it.
+
 Examples:
   olares-cli router quota set --user pptest01 --budget 25
   olares-cli router quota set --key ci --rpm 60 --tpm 120000
   olares-cli router quota set --model "openai/gpt-4o" --rpm 10 --warn-at 90
+  olares-cli router quota set --caller-app wise --budget 5
 `,
 		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
@@ -352,12 +401,10 @@ Examples:
 				}
 				pct = &warnAt
 			}
-			return runQuotaSet(c.Context(), f, keyRef, userRef, modelRef, want, pct, output)
+			return runQuotaSet(c.Context(), f, refs, want, pct, output)
 		},
 	}
-	cmd.Flags().StringVar(&keyRef, "key", "", "the key to cap, by name, prefix or id")
-	cmd.Flags().StringVar(&userRef, "user", "", "the user to cap, by name or id")
-	cmd.Flags().StringVar(&modelRef, "model", "", "the model to cap, as <provider>/<model>")
+	addQuotaScopeFlags(cmd, &refs, "cap")
 	cmd.Flags().Float64Var(&budget, "budget", 0, "cap total spend, in US dollars, for all time")
 	cmd.Flags().Float64Var(&rpm, "rpm", 0, "cap requests per minute")
 	cmd.Flags().Float64Var(&tpm, "tpm", 0, "cap tokens per minute")
@@ -377,7 +424,7 @@ func flagForQuotaKind(kind string) string {
 	}
 }
 
-func runQuotaSet(ctx context.Context, f *cmdutil.Factory, keyRef, userRef, modelRef string, want map[string]float64, warnAt *int, outputRaw string) error {
+func runQuotaSet(ctx context.Context, f *cmdutil.Factory, refs quotaRefs, want map[string]float64, warnAt *int, outputRaw string) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -389,7 +436,7 @@ func runQuotaSet(ctx context.Context, f *cmdutil.Factory, keyRef, userRef, model
 	if err != nil {
 		return err
 	}
-	target, err := resolveQuotaTarget(ctx, pc, keyRef, userRef, modelRef)
+	target, err := resolveQuotaTarget(ctx, pc, refs)
 	if err != nil {
 		return err
 	}
@@ -453,9 +500,7 @@ func runQuotaSet(ctx context.Context, f *cmdutil.Factory, keyRef, userRef, model
 
 func newQuotaClearCommand(f *cmdutil.Factory) *cobra.Command {
 	var (
-		keyRef    string
-		userRef   string
-		modelRef  string
+		refs      quotaRefs
 		budget    bool
 		rpm       bool
 		tpm       bool
@@ -464,7 +509,7 @@ func newQuotaClearCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "clear",
 		Short: "remove a ceiling",
-		Long: `Remove quotas from a key, a person, or a model.
+		Long: `Remove quotas from a key, a person, a model, or an application.
 
 Without --budget, --rpm or --tpm every ceiling on the scope goes, which is the
 usual intent and the reason for the prompt. Naming kinds removes only those.
@@ -491,12 +536,10 @@ Examples:
 			if tpm {
 				kinds[quotaTPM] = true
 			}
-			return runQuotaClear(c.Context(), f, keyRef, userRef, modelRef, kinds, assumeYes)
+			return runQuotaClear(c.Context(), f, refs, kinds, assumeYes)
 		},
 	}
-	cmd.Flags().StringVar(&keyRef, "key", "", "the key to uncap, by name, prefix or id")
-	cmd.Flags().StringVar(&userRef, "user", "", "the user to uncap, by name or id")
-	cmd.Flags().StringVar(&modelRef, "model", "", "the model to uncap, as <provider>/<model>")
+	addQuotaScopeFlags(cmd, &refs, "uncap")
 	cmd.Flags().BoolVar(&budget, "budget", false, "remove only the spend ceiling")
 	cmd.Flags().BoolVar(&rpm, "rpm", false, "remove only the requests-per-minute ceiling")
 	cmd.Flags().BoolVar(&tpm, "tpm", false, "remove only the tokens-per-minute ceiling")
@@ -504,7 +547,7 @@ Examples:
 	return cmd
 }
 
-func runQuotaClear(ctx context.Context, f *cmdutil.Factory, keyRef, userRef, modelRef string, kinds map[string]bool, assumeYes bool) error {
+func runQuotaClear(ctx context.Context, f *cmdutil.Factory, refs quotaRefs, kinds map[string]bool, assumeYes bool) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -512,7 +555,7 @@ func runQuotaClear(ctx context.Context, f *cmdutil.Factory, keyRef, userRef, mod
 	if err != nil {
 		return err
 	}
-	target, err := resolveQuotaTarget(ctx, pc, keyRef, userRef, modelRef)
+	target, err := resolveQuotaTarget(ctx, pc, refs)
 	if err != nil {
 		return err
 	}

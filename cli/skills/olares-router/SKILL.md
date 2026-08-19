@@ -34,11 +34,11 @@ All verbs require Olares 1.12.7+ because Router ships as the `router` Market lis
 |---|---|---|
 | where Router is, and who you are | `status`, `whoami` | [architecture and identity](references/olares-router-architecture.md) |
 | cloud vendors and their models | `provider list/get/types/create/update/delete/validate/credentials/history/rollback/sync-models`, `provider models get/import/add/update/delete` | [configuring an external provider](references/olares-router-external.md) |
-| local LLM applications | `app catalog/install/upgrade/uninstall`, `provider register`, `local status/progress/spec/retry/restart` | [local LLM applications](references/olares-router-local-llm.md) |
+| local LLM applications | `app catalog/installed/install/upgrade/uninstall`, `provider register`, `local status/progress/spec/retry/restart` | [local LLM applications](references/olares-router-local-llm.md) |
 | local embedding, audio, OCR, CLIP | the same verbs, different modes | [local multimodal applications](references/olares-router-local-multimodal.md) |
 | what is configured | `list`, `capabilities` | [names, defaults and access control](references/olares-router-governance.md) |
 | the names callers may send | `route list/get/create/rename/enable/disable/delete/add/remove`, `default show/enable/disable` | [names, defaults and access control](references/olares-router-governance.md) |
-| access control | `key issue/list/update/revoke/local`, `quota set/list/clear`, `caller list/archive`, `user list` | [names, defaults and access control](references/olares-router-governance.md) |
+| access control | `key issue/list/update/revoke/local`, `quota set/list/clear`, `app installed`, `user list` | [names, defaults and access control](references/olares-router-governance.md) |
 | what happened | `usage summary/list/export`, `audit list/get`, `trace list/get/capture` | [usage, audit and traces](references/olares-router-usage.md) |
 | calling a model | `call chat/embed/transcribe/speak/ocr` | [calling a model](references/olares-router-calling.md) |
 | inside one application | `local status/progress/spec/config/endpoints/gpu/perf/retry/restart` | [the Model Console](references/olares-router-console.md) |
@@ -50,7 +50,7 @@ Read [architecture and identity](references/olares-router-architecture.md) befor
 
 - **Management** (`provider`, `app`, `key`, `quota`, `route`, `default`, `usage`, `audit`, `local`) travels on the active profile. Olares injects the identity; nothing has to be supplied.
 - **Calling** (`router call`) needs a data-plane credential of its own. The CLI tries the platform's own identity first and mints an `sk-` key only if that is refused, keeping it in the keychain; `router key local` shows or forgets it.
-- Most of the management plane is admin-only, reads included: providers, the vendor catalog's models, `capabilities`, market installs, quotas, users, callers and audit all refuse a non-admin. What a non-admin can do is `router list`, `route list/get`, `default show`, their own keys, their own usage, their own traces, and `router call`. Reading the names is deliberately open — a name is what a person types into their client.
+- Most of the management plane is admin-only, reads included: providers, the vendor catalog's models, `capabilities`, market installs, quotas, users and audit all refuse a non-admin. What a non-admin can do is `router list`, `route list/get`, `default show`, `app installed`, their own keys, their own usage, their own traces, and `router call`. Reading the names and what is installed is deliberately open — a name is what a person types into their client, and an install is not a secret.
 
 ## Which layer owns the change
 
@@ -70,12 +70,12 @@ A provider whose `source` is `olares` belongs to a Market application. Its addre
 - A model is addressed as `<provider>/<model>` wherever ambiguity is possible — in `--model`, in a quota, in a key's allowed list. `router list` prints both halves. A name without a slash is a **route** — an alias, a group, or a `default-*` category — and has to exist.
 - Every locally installed model application is a provider named `Olares`, so the qualified name is not unique for local models. `router list` shows the application in `SERVED BY`, and the model id is the only handle that always names one row.
 - A provider is named by its title, its Olares app name, or its id. A model application is named by its Olares app id (`llamacppqwen3627bggufv3`), which is also what `provider register` and every `local` verb accept.
-- `router app` means a model application from the Market. `router caller` means an application that *calls* Router. They are different registries.
+- An application that *calls* Router has no row here at all: Olares vouches for it at the edge and the call arrives carrying an `appid` — the app name hashed, or the name itself for a system app. So it cannot be registered or revoked; `app installed` says whether it is here, `usage --by caller_app` says what it spent, and `quota set --caller-app` is the only lever over it.
 
 ## Safety and escalation
 
 - A named configuration request authorises the loop it implies: creating a provider, importing its models and validating it do not need re-confirmation one by one.
-- Ask again before `provider delete`, `app uninstall`, `key revoke`, `caller archive`, `quota clear`, `route delete` or `default disable` on something the user did not name — each one breaks callers that still depend on it. `route disable` and `default disable` are reversible and keep their membership; `route delete` gives the name up.
+- Ask again before `provider delete`, `app uninstall`, `key revoke`, `quota clear`, `route delete` or `default disable` on something the user did not name — each one breaks callers that still depend on it. `route disable` and `default disable` are reversible and keep their membership; `route delete` gives the name up.
 - **Never** put a credential in a shell argument where a file or stdin will do; `--credentials-json` reads either. Never print a plaintext `sk-` key into a transcript that will be shared: `key issue` shows it once, on purpose.
 - Traces can contain whole prompts. `trace capture` is the switch; treat what it returns as the user's data even when the profile is an admin's.
 - A model that is configured but does not answer is a diagnosis, not a configuration change. Route through [deciding which layer is wrong](references/olares-router-diagnosis.md) before editing anything.

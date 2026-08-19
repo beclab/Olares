@@ -127,10 +127,16 @@ func epModelRouteMember(routeID, modelID string) string {
 	return epModelRoute(routeID) + "/members/" + url.PathEscape(modelID)
 }
 
-// The applications that call Router.
-const epCallerApps = consoleAPI + "/apps"
-
-func epCallerApp(id string) string { return epCallerApps + "/" + url.PathEscape(id) }
+// What is installed on this Olares, from the app directory's cache. Open to any
+// console session, and read-only in both directions: the directory is the only
+// writer, and installing is the Market's decision.
+//
+// There is no route for the applications that call Router, and none for
+// archiving one. An appid is the platform's own identity for an app rather than
+// something Router issues, so there is no row to create and nothing to revoke;
+// what an app may spend is a quota on the appid, and what it has spent is the
+// caller_app dimension of the spend summary.
+const epInstalledApps = consoleAPI + "/installed-apps"
 
 // Spend: what was called, what it cost, and the same rows as a download.
 const (

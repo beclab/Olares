@@ -20,7 +20,7 @@ olares-cli router usage export --since 30d --out calls.csv
 `summary` adds up; `list` explains a total by showing the individual calls behind it; `export` writes the same rows as CSV for a spreadsheet.
 
 - `--by` groups a summary by `model`, `provider`, `user`, `caller_app`, `day` or `hour`. `day` and `hour` are how a spike gets located; `caller_app` is how it gets attributed.
-- Filters compose across all three verbs: `--model`, `--provider`, `--key`, `--user`, `--caller`, `--status`, `--tag`, `--since`, `--until`. `--since` takes an instant or a span like `24h` or `7d`.
+- Filters compose across all three verbs: `--model`, `--provider`, `--key`, `--user`, `--caller`, `--status`, `--tag`, `--since`, `--until`. `--since` takes an instant or a span like `24h` or `7d`. `--caller` names an application by its title, its Olares application name or the appid a row shows.
 - `--status failed` is the one to reach for after a complaint: a failed call still carries the error code Router returned, so the reason is in the row.
 
 Every accepted call becomes a row, including one the upstream then refused. Cost comes from the prices on the model row, so a model imported without prices records tokens and no money — that is a configuration gap in `provider models`, not missing usage.
