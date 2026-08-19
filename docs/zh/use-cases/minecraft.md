@@ -28,10 +28,10 @@ Olares 上的 Minecraft 运行的是官方原版 Minecraft Java 版专用服务�
 
 ## 准备工作
 
-- Olares 版本为 1.12.6 或更高。
-- Olares 设备运行在原生的 Linux 主机上，并使用有线以太网连接。Overlay gateway 在 Wi-Fi 或 WSL 环境下无法工作。
-- 需要管理员权限，才能在 Olares 上安装 Minecraft 并启用 Overlay gateway 服务。
-- 每位玩家的电脑上已安装 Minecraft Java 版。Bedrock、主机和移动版无法连接。客户端版本必须与 Market 页面上显示的 Minecraft **App version** 一致。
+- **Olares OS**：Olares 版本为 1.12.6 或更高。
+- **硬件与网络**：Olares 设备运行在原生的 Linux 主机上，并使用有线以太网连接。Overlay gateway 在 Wi-Fi 或 WSL 环境下无法工作。
+- **权限**：需要 Super admin 开启系统级的 Overlay gateway 服务；服务开启后，Admin 或 Member 可以为 Minecraft 启用 Overlay gateway。
+- **客户端要求**：每位玩家的电脑上已安装 Minecraft Java 版。Bedrock、主机和移动版无法连接。客户端版本必须与 Market 页面上显示的 Minecraft **App version** 一致。
 
 ## 安装 Minecraft
 
@@ -46,12 +46,12 @@ Olares 上的 Minecraft 运行的是官方原版 Minecraft Java 版专用服务�
 Overlay gateway 会为 Minecraft 分配一个专用的本地 IP 地址，让同一网络中的玩家可以直接连接。
 
 1. 打开 Olares **Settings**，进入 **Network** > **Overlay gateway**。
-2. 打开 **Enable overlay gateway** 开关。
+2. 确认 **Enable overlay gateway** 开关已打开。这是系统级服务开关；如未开启，需由 Super admin 打开。
 3. 在 **Applications** 列表中找到 **Minecraft**，确认其状态为 **Running**，然后为该应用启用 Overlay gateway。
 4. 在 **Minecraft Java** 右侧，复制显示的地址。例如 `192.168.50.219:25565`。
 
-:::info LAN IP 是动态的
-LAN IP 由 Overlay gateway 动态分配，应用重启或网络变化后可能会改变。请始终使用当前页面上显示的地址。
+:::info 本地 IP 地址 是动态的
+本地 IP 地址 由 Overlay gateway 动态分配，应用重启或网络变化后可能会改变。请始终使用当前页面上显示的地址。
 :::
 
 ## 从同一本地网络连接
@@ -102,9 +102,9 @@ Minecraft 应用没有 Web 管理界面。要查看日志或执行服务器命�
 
 ## 常见问题
 
-### 为什么我的 LAN IP 与截图不同？
+### 为什么我的 本地 IP 地址 与截图不同？
 
-Overlay gateway 会动态分配 LAN IP。连接时，请使用 **Settings** > **Network** > **Overlay gateway** > **Minecraft** 中当前显示的地址。
+Overlay gateway 会动态分配 本地 IP 地址。连接时，请使用 **Settings** > **Network** > **Overlay gateway** > **Minecraft** 中当前显示的地址。
 
 ### 为什么客户端提示版本不匹配？
 

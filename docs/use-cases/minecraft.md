@@ -24,10 +24,10 @@ In this guide, you will learn how to:
 
 ## Prerequisites
 
-- Olares version 1.12.6 or later.
-- A native Linux host with a wired Ethernet connection for the Olares device. Overlay gateway does not work on Wi-Fi or WSL.
-- Admin privileges required to install Minecraft on Olares and enable the overlay gateway service for it.
-- Minecraft Java Edition installed on each player's computer. Bedrock, console, and mobile editions cannot connect. The client version must match the **App version** of Minecraft shown on the Market page.
+- **Olares OS**: Olares version 1.12.6 or later.
+- **Hardware and network**: A native Linux host with a wired Ethernet connection for the Olares device. Overlay gateway does not work on Wi-Fi or WSL.
+- **Permissions**: A super admin must toggle on the system-level overlay gateway service. After the service is on, an admin or member can enable overlay gateway for Minecraft.
+- **Client requirements**: Minecraft Java Edition installed on each player's computer. Bedrock, console, and mobile editions cannot connect. The client version must match the **App version** of Minecraft shown on the Market page.
 
 ## Install Minecraft
 
@@ -42,12 +42,12 @@ In this guide, you will learn how to:
 Overlay gateway gives Minecraft a dedicated local IP address so players on the same network can connect directly.
 
 1. Open Olares Settings and go to **Network** > **Overlay gateway**.
-2. Toggle on **Enable overlay gateway**.
+2. Ensure **Enable overlay gateway** is toggled on. This is the system-level service switch. If it is off, a super admin must turn it on.
 3. In the **Applications** list, find **Minecraft**, confirm its status is **Running**, then enable overlay gateway for the app.
 4. To the right of **Minecraft Java**, copy the address shown. For example, `192.168.50.219:25565`.
 
-:::info LAN IP is dynamic
-The LAN IP is assigned by the Overlay gateway and may change when the app restarts or the network changes. Always use the address currently shown on this page.
+:::info local IP address is dynamic
+The local IP address is assigned by the Overlay gateway and may change when the app restarts or the network changes. Always use the address currently shown on this page.
 :::
 
 ## Connect from the same local network
@@ -98,9 +98,9 @@ The Minecraft app does not have a web management interface. To view logs or run 
 
 ## FAQs
 
-### Why does my LAN IP differ from the screenshots?
+### Why does my local IP address differ from the screenshots?
 
-The overlay gateway assigns the LAN IP dynamically. Always use the address shown in **Settings** > **Network** > **Overlay gateway** > **Minecraft** at the time you connect.
+The overlay gateway assigns the local IP address dynamically. Always use the address shown in **Settings** > **Network** > **Overlay gateway** > **Minecraft** at the time you connect.
 
 ### Why does the client report a version mismatch?
 
