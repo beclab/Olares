@@ -1,0 +1,222 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  {{- include "metrics-exporter.nameWithRelease" . | nindent 2 }}
+  labels:
+    {{- include "metrics-exporter.appLabel" . | nindent 4 }}
+    {{- include "helm-charts-exporter.labels" . | nindent 4 }}
+spec:
+  {{- if .Values.upgradePolicy }}
+  updateStrategy:
+    type: {{ .Values.upgradePolicy.upgradeStrategy }}
+    {{- if eq .Values.upgradePolicy.upgradeStrategy "RollingUpdate" }}
+    rollingUpdate:
+      maxUnavailable: {{ .Values.upgradePolicy.maxUnavailable }}
+    {{- end }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "metrics-exporter.appLabelWithReleaseName" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "metrics-exporter.appLabelWithReleaseName" . | nindent 8 }}
+        app.kubernetes.io/name: metrics-exporter
+      {{- if .Values.podAnnotations }}
+      annotations:
+        {{- toYaml .Values.podAnnotations | nindent 8 }}
+      {{- end }}
+    spec:
+      hostNetwork: {{ .Values.hostNetwork }}
+      {{- if .Values.monitor.resources.gpu }}
+      serviceAccountName: amdgpu-metrics-exporter
+      {{- else }}
+      serviceAccountName: amd-device-metrics-exporter
+      {{- end }}
+      {{- if .Values.affinity }}
+      affinity:
+        {{- toYaml .Values.affinity | nindent 8 }}
+      {{- end }}
+      {{- if .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml .Values.nodeSelector | nindent 8 }}
+      {{- end }}
+      {{- if .Values.tolerations }}
+      tolerations:
+        {{- toYaml .Values.tolerations | nindent 8 }}
+      {{- end }}
+      {{- if .Values.priorityClassName }}
+      priorityClassName: {{ .Values.priorityClassName }}
+      {{- end }}
+      initContainers:
+      - command:
+        - sh
+        - -c
+        {{- if and .Values.monitor.resources.gpu .Values.monitor.resources.nic }}
+        - |
+          echo "Checking for both AMD GPU and NIC drivers..."
+          # GPU driver check
+          while [ ! -d /host-sys/class/kfd ] || \
+                [ ! -d /host-sys/module/amdgpu/drivers ]; do
+            echo "amdgpu driver is not loaded"
+            sleep 2
+          done
+
+          # NIC driver check
+          while [ ! -d /host-sys/class/infiniband ] || \
+                [ ! -d /host-sys/class/infiniband_verbs ] || \
+                [ ! -d /host-sys/module/ionic/drivers ]; do
+            echo "amd ionic driver is not loaded"
+            sleep 2
+          done
+        {{- else if .Values.monitor.resources.gpu }}
+        - |
+          echo "Checking for AMD GPU driver..."
+          while [ ! -d /host-sys/class/kfd ] || \
+                [ ! -d /host-sys/module/amdgpu/drivers ]; do
+            echo "amdgpu driver is not loaded"
+            sleep 2
+          done
+        {{- else if .Values.monitor.resources.nic }}
+        - |
+          echo "Checking for AMD NIC driver..."
+          while [ ! -d /host-sys/class/infiniband ] || \
+                [ ! -d /host-sys/class/infiniband_verbs ] || \
+                [ ! -d /host-sys/module/ionic/drivers ]; do
+            echo "amd ionic driver is not loaded"
+            sleep 2
+          done
+        {{- end }}
+        image: {{ .Values.image.initContainerImage }}
+        imagePullPolicy: IfNotPresent
+        name: driver-init
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - mountPath: /host-sys
+          name: sys-volume
+      containers:
+        {{- if .Values.monitor.resources.gpu }}
+        - name: amdgpu-metrics-exporter-container
+        {{- else }}
+        - name: amd-device-metrics-exporter-container
+        {{- end }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - "-monitor-gpu={{ .Values.monitor.resources.gpu }}"
+            - "-monitor-nic={{ .Values.monitor.resources.nic }}"
+            {{- range .Values.args }}
+            - {{ . | quote }}
+            {{- end }}
+          env:
+          - name: NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+          {{- if eq .Values.service.type "NodePort" }}
+          - name: METRICS_EXPORTER_PORT
+            value: "{{ .Values.service.NodePort.port }}"
+          ports:
+            - containerPort: {{ .Values.service.NodePort.port }}
+              protocol: TCP
+          {{- end }}
+          {{- if eq .Values.service.type "ClusterIP" }}
+          - name: METRICS_EXPORTER_PORT
+            value: "{{ .Values.service.ClusterIP.port }}"
+          ports:
+            - containerPort: {{ .Values.service.ClusterIP.port }}
+              protocol: TCP
+          {{- end }}
+          securityContext:
+            privileged: true
+          resources:
+            {{- if .Values.resources }}
+            {{- toYaml .Values.resources | nindent 12 }}
+            {{- else }}
+            limits:
+              cpu: "2"
+              memory: "4Gi"
+            requests:
+              cpu: "500m"
+              memory: "512M"
+            {{- end }}
+          volumeMounts:
+          - mountPath: /dev
+            name: dev-volume
+          - mountPath: /sys
+            name: sys-volume
+          - mountPath: /var/lib/kubelet/pod-resources
+            name: pod-resources
+          - mountPath: /var/lib/amd-metrics-exporter
+            name: exporter-health-grpc-volume
+          - mountPath: /var/run/exporter
+            name: exporter-slurm-job
+          - name: metrics-config-volume
+            mountPath: /etc/metrics/
+          {{- if .Values.monitor.resources.nic }}
+          - mountPath: /lib/modules
+            name: lib-modules
+          - name: host-proc
+            mountPath: /host/proc
+          - name: run-containerd
+            mountPath: /host/run/containerd
+          - name: run-crio
+            mountPath: /host/run/crio
+          {{- end }}
+          workingDir: /root
+      {{- if .Values.image.pullSecrets }}
+      imagePullSecrets:
+      - name: {{ .Values.image.pullSecrets }}
+      {{- end }}
+      volumes:
+      - hostPath:
+          path: /dev
+          type: Directory
+        name: dev-volume
+      - hostPath:
+          path: /sys
+          type: Directory
+        name: sys-volume
+      - hostPath:
+      {{- if .Values.kubelet.podResourceAPISocketPath }}
+          path: {{ .Values.kubelet.podResourceAPISocketPath}}
+      {{- else }}
+          path: /var/lib/kubelet/pod-resources
+      {{- end }}
+          type: Directory
+        name: pod-resources
+      - hostPath:
+          path: /var/lib/amd-metrics-exporter
+          type: DirectoryOrCreate
+        name: exporter-health-grpc-volume
+      - hostPath:
+          path: /var/run/exporter
+          type: DirectoryOrCreate
+        name: exporter-slurm-job
+    {{- if .Values.monitor.resources.nic }}
+      - hostPath:
+          path: /lib/modules
+          type: Directory
+        name: lib-modules
+      - name: host-proc
+        hostPath:
+          path: /proc
+          type: Directory
+      - name: run-containerd
+        hostPath:
+          path: /run/containerd
+          type: DirectoryOrCreate
+      - name: run-crio
+        hostPath:
+          path: /run/crio
+          type: DirectoryOrCreate
+      {{- end }}
+      - name: metrics-config-volume
+        configMap:
+      {{- if .Values.configMap }}
+          name: {{ .Values.configMap }}
+      {{ else }}
+          name: {{ .Release.Name }}-configmap
+      {{- end}}
+

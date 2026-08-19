@@ -39,6 +39,8 @@ func detectPreinstallGPUType(systemInfo connector.Systems, nvidiaEnabled bool) s
 		return gpu.GB10ChipType
 	case systemInfo.IsRyzenAIMax():
 		return gpu.AMDType
+	case systemInfo.IsAmdGPU():
+		return gpu.AmdGpuType
 	case systemInfo.IsIntelGPU():
 		return gpu.IntelType
 	case systemInfo.IsMThreadsM1000():

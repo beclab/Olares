@@ -440,13 +440,8 @@ func (r *RocmChecker) Check(runtime connector.Runtime) error {
 		return nil
 	}
 
-	// detect AMD Ryzen AI Max APU presence
-	ryzenAIMaxExists, err := connector.HasRyzenAIMax(runtime)
-	if err != nil {
-		return err
-	}
-	// no AMD Ryzen AI Max found, no need to check rocm
-	if !ryzenAIMaxExists {
+	// ROCm is required for Ryzen AI Max ("amd") and discrete AMD GPUs ("amd-gpu").
+	if !si.IsRyzenAIMax() && !si.IsAmdGPU() {
 		return nil
 	}
 
