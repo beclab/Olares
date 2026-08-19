@@ -31,27 +31,7 @@ type catalogI18N map[string]string
 
 // text picks the English string, then anything, so a vendor whose YAML has no
 // en_US entry still renders as itself rather than blank.
-func (m catalogI18N) text() string {
-	if m == nil {
-		return ""
-	}
-	for _, k := range []string{"en_US", "en", "zh_Hans"} {
-		if v := strings.TrimSpace(m[k]); v != "" {
-			return v
-		}
-	}
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	for _, k := range keys {
-		if v := strings.TrimSpace(m[k]); v != "" {
-			return v
-		}
-	}
-	return ""
-}
+func (m catalogI18N) text() string { return i18nText(m) }
 
 type catalogFormField struct {
 	Variable    string      `json:"variable"`

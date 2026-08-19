@@ -1,6 +1,6 @@
 # Local multimodal applications
 
-Embedding, CLIP, audio and OCR models install and are managed with exactly the verbs in [local LLM applications](olares-router-local-llm.md): `app catalog`, `app install`, `app tasks`, `app watch`, `provider register`, and the `local` family. What differs is the mode their model rows declare, the engine behind them, and how a call reaches them.
+Embedding, CLIP, audio and OCR models install and are managed with exactly the verbs in [local LLM applications](olares-router-local-llm.md): `app catalog`, `app install`, `app upgrade`, `app uninstall`, `provider register`, and the `local` family. What differs is the mode their model rows declare, the engine behind them, and how a call reaches them.
 
 ## What runs behind each mode
 

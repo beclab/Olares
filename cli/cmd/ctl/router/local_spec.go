@@ -178,22 +178,7 @@ func renderLocalSpec(w io.Writer, li *llmInit, s *localSpec) error {
 	return nil
 }
 
-func labelOf(label map[string]string) string {
-	for _, pref := range []string{"en_US", "en", "zh_Hans", "zh_CN"} {
-		if v := strings.TrimSpace(label[pref]); v != "" {
-			return v
-		}
-	}
-	keys := make([]string, 0, len(label))
-	for k := range label {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	if len(keys) == 0 {
-		return "-"
-	}
-	return label[keys[0]]
-}
+func labelOf(label map[string]string) string { return nonEmpty(i18nText(label)) }
 
 // enabledSupports lists only what is on. A card declares every capability key
 // it knows about, most of them false, and printing forty booleans to say three

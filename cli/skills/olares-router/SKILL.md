@@ -59,7 +59,7 @@ Read [architecture and identity](references/olares-router-architecture.md) befor
 | Run a model on this machine | `app install`, which installs the application **and** creates its provider |
 | Change what a local model serves or how it is launched | `local spec set` — the model card inside the application, not the Router row |
 | Change the address, credentials, or enabled state Router routes with | `provider update` |
-| Repair an install that failed | `app tasks` then `local progress` / `local retry` |
+| Repair an install that failed | `provider get <app>` then `local progress` / `local retry` |
 | Stop, resume, or bind a model application to a GPU | [`olares-market`](../olares-market/SKILL.md) and [`olares-settings`](../olares-settings/SKILL.md) — Router does not own those |
 
 A provider whose `source` is `olares` belongs to a Market application. Its address and lifecycle are the Market's; `provider delete` refuses it, and `app uninstall` is the way out.

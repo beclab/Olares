@@ -31,6 +31,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -137,6 +138,41 @@ func nonEmpty(s string) string {
 		return "-"
 	}
 	return s
+}
+
+// i18nText picks one string out of a locale map.
+//
+// Three unrelated wire shapes arrive as one of these: a vendor label out of the
+// provider catalog and a model card's label, both keyed the Dify way (`en_US`),
+// and a Market application's title and description, keyed the way the
+// application's own i18n bundle is keyed (`en-US`, `zh-CN`). Underscore and
+// hyphen name the same locale, so both spellings are tried.
+//
+// English first, because these are read on a terminal by whoever runs the
+// command and the CLI has no locale of its own to consult. The last resort is
+// the alphabetically first non-empty entry rather than whatever the map happens
+// to yield: Go randomises that, and a column whose text changes between two runs
+// of the same command reads as a machine that changed.
+func i18nText(m map[string]string) string {
+	if len(m) == 0 {
+		return ""
+	}
+	for _, k := range []string{"en_US", "en-US", "en", "zh_Hans", "zh-CN", "zh_CN", "zh"} {
+		if v := strings.TrimSpace(m[k]); v != "" {
+			return v
+		}
+	}
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		if v := strings.TrimSpace(m[k]); v != "" {
+			return v
+		}
+	}
+	return ""
 }
 
 func boolStr(b bool) string {

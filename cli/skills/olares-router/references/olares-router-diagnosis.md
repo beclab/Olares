@@ -53,7 +53,7 @@ olares-cli router local progress <app>
 - **A download that failed or stalled** — `local retry`.
 - **An engine alive with no model loaded** — the weights or the card are wrong for this engine; `local spec show` then `local restart`.
 - **A model answering, but slowly** — `local gpu` says how much is resident and `local perf` measures it. A model mostly on the CPU is the common answer.
-- **An install that never finished** — `router app tasks <provider>` carries the Market's own reason.
+- **An install that never finished** — `router provider get <app>` reports where the application stalled, and `olares-cli market status <app>` carries the Market's own reason.
 
 ## Then below it
 

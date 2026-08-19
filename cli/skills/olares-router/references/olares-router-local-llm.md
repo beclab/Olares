@@ -20,26 +20,26 @@ The catalog is the Market's own list of model applications, so two kinds appear 
 
 Creating an instance from a base is [`olares-market`](../../olares-market/SKILL.md)'s `market clone`, where the model, the engine arguments and the compute mode are chosen; the workflow is in [`olares-chart`](../../olares-chart/SKILL.md). Router discovers the instance on its own once it is running, and `router local spec set` followed by `router local retry` changes what it serves after that.
 
-The same application name can appear twice at different versions when more than one Market source offers it. Install names the application; the Market picks the version.
+The same application name can appear twice when more than one Market source publishes it, usually at different versions, and only one copy can be installed — one app name occupies one namespace. `app install` refuses such a name rather than guessing; `--source` picks the copy. A row whose name is already held by another source says so in the catalog's STATE column and cannot be installed until that copy goes.
 
 The engine also decides the weight format, which is not interchangeable: llama.cpp wants GGUF, vLLM and SGLang want Safetensors, Ollama wants a library model. A model card naming the wrong kind fails during download, not at launch.
 
 ## Following the install
 
-An install of real weights takes minutes to hours. `--watch` follows it to the end; without it the command returns as soon as the task is accepted.
+An install of real weights takes minutes to hours. `--watch` follows it to the end; without it the command returns as soon as the Market accepts the request.
 
 ```
-olares-cli router app tasks "Qwen3.6-27B (llama.cpp)"
-olares-cli router app watch  "Qwen3.6-27B (llama.cpp)" --task 42
+olares-cli router app install llamacppqwen3627bggufv3 --watch
+olares-cli router provider get llamacppqwen3627bggufv3
 ```
 
-`app tasks <provider>` is where a failed install explains itself: the row keeps the error the Market reported. `app watch` replays a task's recorded events and then streams the live ones, so a task that finished long ago still reports what it did; `--since` resumes an interrupted watch.
+There is nothing to catch up on afterwards and no separate watch command, because what `--watch` follows is the provider row's own status: Router's application directory keeps it current whether or not anyone is looking, so `provider get` answers the same question at any later moment. Interrupting a watch stops the watch, not the install.
 
 Two states are not the same thing, and this is the most common confusion:
 
 | Question | Where the answer is |
 |---|---|
-| Did the *application* install? | `app tasks`, or `olares-cli market status <app>` |
+| Did the *application* install? | `router provider get <app>`, or `olares-cli market status <app>` |
 | Is the *model* downloaded and loaded? | `router local progress <app>` |
 
 The Market can report an application running long before the model inside it is usable — the weights download after the container starts. A provider that is `active` with no models usually means exactly that.
@@ -55,7 +55,7 @@ The Market can report an application running long before the model inside it is 
 
 | Symptom | Step |
 |---|---|
-| Install failed | `app tasks <provider>` for the Market's reason; fix it, then `app install` again |
+| Install failed | `olares-cli market status <app>` for the Market's own reason; fix it, then `app uninstall` the failed row and `app install` again |
 | Application installed, no Router provider | `router provider register <app>` creates the row for an application already on the machine |
 | Download stuck or failed | `router local progress <app>`, then `router local retry <app>` |
 | Model card wrong, or engine flags need changing | `router local spec set <app>`, then `router local restart <app>` |
@@ -72,9 +72,11 @@ olares-cli router app uninstall "Qwen3.6-27B (llama.cpp)"
 
 Both address the **provider**, not the application — Router looks up which application backs it. `app uninstall` removes the application and its provider together, which is the only way to remove an `olares`-sourced provider: `provider delete` refuses it.
 
-A provider row survives a failed install on purpose, because it carries the task history that explains the failure. Removing that row means uninstalling the application.
+Every locally installed provider carries the same routing name, `Olares`, so that is not the handle to type. The application name is, and so is the display title an admin gave it; `provider list`'s APP column shows the first. A name that matches several rows is refused rather than resolved to whichever came back first.
 
-Stopping, resuming, and binding an application to a GPU are not Router's: they belong to [`olares-market`](../../olares-market/SKILL.md) and [`olares-settings`](../../olares-settings/SKILL.md). Router only reports the application's state on the provider row, and hides an `olares` provider from `provider list` while its application is not running — `router provider get <id>` still shows it.
+A provider row survives a failed install on purpose: it is what records that an install was attempted and how it ended. Removing that row means uninstalling the application.
+
+Stopping, resuming, and binding an application to a GPU are not Router's: they belong to [`olares-market`](../../olares-market/SKILL.md) and [`olares-settings`](../../olares-settings/SKILL.md). Router only reports the application's state on the provider row, and hides an `olares` provider from `provider list` while its application is not running — `router provider get <app>` still shows it, and so does `app catalog`.
 
 ## Non-text models
 

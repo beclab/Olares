@@ -99,21 +99,19 @@ const (
 
 // Market: the model applications Router can install on this machine, and the
 // lifecycle verbs on one already installed.
+//
+// The two collection routes sit directly under /market and the two that address
+// one row under /market/providers/:id, so a catalog can never occupy the same
+// path position as an id. There is no route for progress: a lifecycle POST
+// answers with the provider row to watch, and the app directory keeps that
+// row's olares_status current.
 const (
-	epMarketCatalog = consoleAPI + "/providers/market-catalog"
-	epMarketInstall = consoleAPI + "/providers/market-install"
+	epMarketCatalog = consoleAPI + "/market/catalog"
+	epMarketInstall = consoleAPI + "/market/install"
 )
 
 func epMarketProviderAction(providerID, action string) string {
-	return epProvider(providerID) + "/" + action
-}
-
-func epMarketInstallTasks(providerID string) string {
-	return epProvider(providerID) + "/install-tasks"
-}
-
-func epMarketInstallEvents(providerID string) string {
-	return epProvider(providerID) + "/install-events"
+	return consoleAPI + "/market/providers/" + url.PathEscape(providerID) + "/" + action
 }
 
 // Which model answers a request that names none.

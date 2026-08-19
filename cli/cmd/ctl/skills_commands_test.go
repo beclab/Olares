@@ -145,8 +145,6 @@ func TestSkillCommandPathsExist(t *testing.T) {
 		"router app install",
 		"router app upgrade",
 		"router app uninstall",
-		"router app tasks",
-		"router app watch",
 		"router call",
 		"router call chat",
 		"router call embed",
