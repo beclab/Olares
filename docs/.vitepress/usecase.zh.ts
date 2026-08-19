@@ -359,6 +359,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/zh/use-cases/komga",
             },
             {
+              text: "Minecraft",
+              link: "/zh/use-cases/minecraft",
+            },
+            {
               text: "Navidrome",
               link: "/zh/use-cases/navidrome",
             },

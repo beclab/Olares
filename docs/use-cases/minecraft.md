@@ -117,3 +117,7 @@ Check the following:
 ### What happens when I upgrade the app?
 
 Upgrading the app restarts the server. Any players currently online will be disconnected.
+
+## Learn more
+
+- [Manage overlay gateway for applications](/manual/olares/settings/overlay-gateway.md): Configure LAN access for supported apps.
