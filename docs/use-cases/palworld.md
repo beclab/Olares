@@ -24,10 +24,10 @@ In this guide, you will learn how to:
 
 ## Prerequisites
 
-- Olares version 1.12.6 or later.
-- A native Linux host with a wired Ethernet connection for the Olares device. Overlay gateway does not work on Wi-Fi or WSL.
-- Admin privileges are required to install Palworld on Olares and enable the overlay gateway service for it.
-- A legitimate Palworld client that supports manual server entry on each player's computer. For example, Steam on Windows, Mac, or Linux (via Steam Proton) works.
+- **Olares OS**: Olares version 1.12.6 or later.
+- **Hardware and network**: A native Linux host with a wired Ethernet connection for the Olares device. Overlay gateway does not work on Wi-Fi or WSL.
+- **Permissions**: A super admin must toggle on the system-level overlay gateway service. After the service is on, an admin or member can enable overlay gateway for Palworld.
+- **Client requirements**: A legitimate Palworld client that supports manual server entry on each player's computer. For example, Steam on Windows, Mac, or Linux (via Steam Proton) works.
     :::info Unsupported clients
     Xbox, PS5, and PC Game Pass editions can only join servers from the in-game community server list and cannot enter an address manually. This server is not in that list, so those editions cannot connect.
     :::
@@ -45,12 +45,12 @@ In this guide, you will learn how to:
 Overlay gateway gives Palworld a dedicated local IP address so players on the same network can connect directly.
 
 1. Open Olares Settings and go to **Network** > **Overlay gateway**.
-2. Toggle on **Enable overlay gateway**.
+2. Ensure **Enable overlay gateway** is toggled on. This is the system-level service switch. If it is off, a super admin must turn it on.
 3. In the **Applications** list, find **Palworld**, confirm its status is **Running**, then enable overlay gateway for the app.
 4. To the right of **Palworld**, copy the address shown. For example, `192.168.50.153:8211`.
 
-:::info LAN IP is dynamic
-The LAN IP is assigned by the overlay gateway and may change when the app restarts or the network changes. Always use the address currently shown on this page.
+:::info Local IP address is dynamic
+The local IP address is assigned by the overlay gateway and may change when the app restarts or the network changes. Always use the address currently shown on this page.
 :::
 
 ## Connect from the same local network
@@ -95,9 +95,9 @@ The Palworld app does not have a web management interface. To view logs or run s
 
 ## FAQs
 
-### Why does my LAN IP differ from the screenshots?
+### Why does my local IP address differ from the screenshots?
 
-The Overlay gateway assigns the LAN IP dynamically. Always use the address shown in **Settings** > **Network** > **Overlay gateway** > **Palworld** at the time you connect.
+The Overlay gateway assigns the local IP address dynamically. Always use the address shown in **Settings** > **Network** > **Overlay gateway** > **Palworld** at the time you connect.
 
 ### Why can I connect over the local network but not over VPN?
 

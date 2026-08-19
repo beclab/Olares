@@ -27,10 +27,10 @@ Olares 上的 Palworld 运行的是专用 Palworld 服务器。你通过控制�
 
 ## 准备工作
 
-- Olares 版本为 1.12.6 或更高。
-- Olares 设备运行在原生的 Linux 主机上，并使用有线以太网连接。Overlay gateway 在 Wi-Fi 或 WSL 环境下无法工作。
-- 需要管理员权限，才能在 Olares 上安装 Palworld 并启用 Overlay gateway 服务。
-- 每位玩家的电脑上需有支持手动输入服务器地址的正版 Palworld 客户端。例如，Windows、Mac 或 Linux（通过 Steam Proton）上的 Steam 客户端均可。
+- **Olares OS**：Olares 版本为 1.12.6 或更高。
+- **硬件与网络**：Olares 设备运行在原生的 Linux 主机上，并使用有线以太网连接。Overlay gateway 在 Wi-Fi 或 WSL 环境下无法工作。
+- **权限**：需要 Super admin 开启系统级的 Overlay gateway 服务；服务开启后，Admin 或 Member 可以为 Palworld 启用 Overlay gateway。
+- **客户端要求**：每位玩家的电脑上需有支持手动输入服务器地址的正版 Palworld 客户端。例如，Windows、Mac 或 Linux（通过 Steam Proton）上的 Steam 客户端均可。
     :::info 不支持的客户端
     Xbox、PS5 和 PC Game Pass 版只能通过游戏内的社区服务器列表加入服务器，且不能手动输入地址。该服务器未注册到社区服务器列表，因此这些版本无法加入。
     :::
@@ -48,12 +48,12 @@ Olares 上的 Palworld 运行的是专用 Palworld 服务器。你通过控制�
 Overlay gateway 会为 Palworld 分配一个专用的本地 IP 地址，让同一网络中的玩家可以直接连接。
 
 1. 打开 Olares **Settings**，进入 **Network** > **Overlay gateway**。
-2. 打开 **Enable overlay gateway** 开关。
+2. 确认 **Enable overlay gateway** 开关已打开。这是系统级服务开关；如未开启，需由 Super admin 打开。
 3. 在 **Applications** 列表中找到 **Palworld**，确认其状态为 **Running**，然后为该应用启用 Overlay gateway。
 4. 在 **Palworld** 右侧，复制显示的地址。例如 `192.168.50.118:8211`。
 
-:::info LAN IP 是动态的
-LAN IP 由 Overlay gateway 动态分配，应用重启或网络变化后可能会改变。请始终使用当前页面上显示的地址。
+:::info 本地 IP 地址 是动态的
+本地 IP 地址 由 Overlay gateway 动态分配，应用重启或网络变化后可能会改变。请始终使用当前页面上显示的地址。
 :::
 
 ## 从同一本地网络连接
@@ -100,9 +100,9 @@ Palworld 应用没有 Web 管理界面。要查看日志或执行服务器命令
 
 ## 常见问题
 
-### 为什么我的 LAN IP 与截图不同？
+### 为什么我的 本地 IP 地址 与截图不同？
 
-Overlay gateway 会动态分配 LAN IP。连接时，请使用 **Settings** > **Network** > **Overlay gateway** > **Palworld** 中当前显示的地址。
+Overlay gateway 会动态分配 本地 IP 地址。连接时，请使用 **Settings** > **Network** > **Overlay gateway** > **Palworld** 中当前显示的地址。
 
 ### 为什么可以通过本地网络连接，但无法通过 VPN 连接？
 
