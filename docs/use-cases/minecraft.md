@@ -7,7 +7,7 @@ head:
       content: Olares, Minecraft, Minecraft Java, game server, self-hosted, Overlay gateway, VPN, Entertainment
 app_version: "1.0.0"
 doc_version: "1.0"
-doc_updated: "2026-08-18"
+doc_updated: "2026-08-19"
 ---
 
 # Play Minecraft Java Edition with friends on Olares
@@ -117,7 +117,3 @@ Check the following:
 ### What happens when I upgrade the app?
 
 Upgrading the app restarts the server. Any players currently online will be disconnected.
-
-## Learn more
-
-- [Manage overlay gateway for applications](../../manual/olares/settings/overlay-gateway.md): Configure LAN access for supported apps.
