@@ -131,7 +131,9 @@ func TestRenderModelsListShowsModeSupportsAndReadiness(t *testing.T) {
 	items := []modelObject{
 		{ID: "Olares/SenseVoiceSmall", Mode: "audio",
 			Supports: []string{"stt", "vad"}, Readiness: "ready", OwnedBy: "Olares"},
-		{ID: "OpenAI/gpt-4o", Mode: "chat", Readiness: "unknown", OwnedBy: "OpenAI"},
+		// An application running its own engine reports no phase, so nothing
+		// can say whether its weights are loaded: `unknown`, and sendable.
+		{ID: "Olares/embeddinggemma", Mode: "embedding", Readiness: "unknown", OwnedBy: "Olares"},
 	}
 	if err := renderModelsList(&buf, items, false); err != nil {
 		t.Fatalf("render: %v", err)
@@ -150,7 +152,7 @@ func TestRenderModelsListShowsModeSupportsAndReadiness(t *testing.T) {
 		t.Errorf("first row lost a field: %s", lines[1])
 	}
 	// A model declaring no capability still needs a cell, and "-" is it.
-	if !strings.Contains(lines[2], "chat") || !strings.Contains(lines[2], "-") ||
+	if !strings.Contains(lines[2], "embedding") || !strings.Contains(lines[2], "-") ||
 		!strings.Contains(lines[2], "unknown") {
 		t.Errorf("second row lost a field: %s", lines[2])
 	}

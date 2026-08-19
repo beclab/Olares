@@ -67,8 +67,9 @@ type modelObject struct {
 	// Readiness is ready, warming, failed or unknown. Without
 	// --include-not-ready only ready and unknown can appear, and both mean
 	// the model is sendable: unknown is an honest "nothing here can tell",
-	// which is what a remote vendor — with no weights to wait for — reports
-	// forever.
+	// which is what an application running its own engine — and so reporting
+	// no phase for Router to read — looks like. A remote vendor has no
+	// weights to wait for and reads ready.
 	Readiness string `json:"readiness"`
 }
 
