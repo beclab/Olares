@@ -114,11 +114,18 @@ func epMarketProviderAction(providerID, action string) string {
 	return consoleAPI + "/market/providers/" + url.PathEscape(providerID) + "/" + action
 }
 
-// Which model answers a request that names none.
-const (
-	epDefaultModels        = consoleAPI + "/default-models"
-	epAccountDefaultModels = consoleAPI + "/account/default-models"
-)
+// Named routes: every name a caller may send in `model` that is not a
+// qualified `<provider>/<model>` reference. Aliases, groups and the system's
+// default categories are rows of one table, so they are one route here too —
+// there is no separate default-models surface, and asking for one gets a 404
+// that reads like the deployment is broken.
+const epModelRoutes = consoleAPI + "/model-routes"
+
+func epModelRoute(id string) string { return epModelRoutes + "/" + url.PathEscape(id) }
+
+func epModelRouteMember(routeID, modelID string) string {
+	return epModelRoute(routeID) + "/members/" + url.PathEscape(modelID)
+}
 
 // The applications that call Router.
 const epCallerApps = consoleAPI + "/apps"

@@ -80,9 +80,6 @@ func renderProviderModel(w io.Writer, p *providerRow, m *providerModelRow) error
 	t := newTable(w)
 	t.row("MODEL", nonEmpty(m.Name))
 	t.row("MODE", nonEmpty(m.Mode))
-	if m.Alias != nil && strings.TrimSpace(*m.Alias) != "" {
-		t.row("ALIAS", *m.Alias)
-	}
 	t.row("ENABLED", boolStr(m.Enabled))
 	t.row("STATUS", nonEmpty(m.Status))
 	t.row("PROVIDER", nonEmpty(p.Name)+" ("+nonEmpty(p.Source)+")")

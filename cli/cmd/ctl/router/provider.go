@@ -77,7 +77,6 @@ type providerModelRow struct {
 	ProviderID      string            `json:"provider_id"`
 	Name            string            `json:"name"`
 	Mode            string            `json:"mode"`
-	Alias           *string           `json:"alias,omitempty"`
 	Enabled         bool              `json:"enabled"`
 	Status          string            `json:"status"`
 	Supports        map[string]bool   `json:"supports,omitempty"`

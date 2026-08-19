@@ -77,10 +77,10 @@ Examples:
 			if c.Flags().Changed("dimensions") {
 				dims = &dimensions
 			}
-			return runCallEmbed(c.Context(), f, inputs, model, dims, apiKey, output)
+			return runCallEmbed(c.Context(), f, inputs, callModel(model, categoryEmbedding), dims, apiKey, output)
 		},
 	}
-	cmd.Flags().StringVar(&model, "model", "", "model to use; the workspace embedding default when omitted")
+	cmd.Flags().StringVar(&model, "model", "", modelFlagHelp(categoryEmbedding))
 	cmd.Flags().IntVar(&dimensions, "dimensions", 0, "ask for a narrower vector, if the model allows it")
 	cmd.Flags().BoolVar(&perLine, "per-line", false, "treat each line of stdin as a separate input")
 	cmd.Flags().StringVar(&apiKey, "api-key", "", dataPlaneKeyFlagUsage)

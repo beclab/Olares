@@ -130,52 +130,12 @@ func resolveQuotaTarget(ctx context.Context, pc *preparedClient, keyRef, userRef
 		}
 		return &quotaTarget{ScopeType: scopeUser, ScopeID: id, Label: "user " + s}, nil
 	}
-	s := strings.TrimSpace(modelRef)
-	row, err := findModelByQualifiedName(ctx, pc, s)
+	row, err := resolveModel(ctx, pc, strings.TrimSpace(modelRef))
 	if err != nil {
 		return nil, err
 	}
-	return &quotaTarget{ScopeType: scopeModel, ScopeID: row.Model.ID,
-		Label: fmt.Sprintf("model %s on %s", row.Model.Name, row.ProviderName)}, nil
-}
-
-// findModelByQualifiedName takes <provider>/<model>, the same spelling a key's
-// allowlist uses, so one form of a model's name works everywhere.
-func findModelByQualifiedName(ctx context.Context, pc *preparedClient, ref string) (*adminModelRow, error) {
-	rows, err := listAllModels(ctx, pc)
-	if err != nil {
-		return nil, err
-	}
-	for i := range rows {
-		r := &rows[i]
-		if strings.EqualFold(r.ProviderName+"/"+r.Model.Name, ref) {
-			return r, nil
-		}
-		if r.Model.Alias != nil && strings.EqualFold(r.ProviderName+"/"+*r.Model.Alias, ref) {
-			return r, nil
-		}
-	}
-	// A bare model name is unambiguous often enough to accept, and rejecting it
-	// with the qualified form spelled out beats a lookup failure.
-	var matches []*adminModelRow
-	for i := range rows {
-		if strings.EqualFold(rows[i].Model.Name, ref) {
-			matches = append(matches, &rows[i])
-		}
-	}
-	if len(matches) == 1 {
-		return matches[0], nil
-	}
-	if len(matches) > 1 {
-		names := make([]string, 0, len(matches))
-		for _, m := range matches {
-			names = append(names, m.ProviderName+"/"+m.Model.Name)
-		}
-		return nil, fmt.Errorf("%d providers serve a model named %q; name one of %s",
-			len(matches), ref, strings.Join(names, ", "))
-	}
-	return nil, fmt.Errorf("no model %q; `olares-cli router list` shows what is configured, "+
-		"and the form here is <provider>/<model>", ref)
+	return &quotaTarget{ScopeType: scopeModel, ScopeID: row.ProviderModelID,
+		Label: "model " + row.label()}, nil
 }
 
 func newQuotaListCommand(f *cmdutil.Factory) *cobra.Command {

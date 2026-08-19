@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -349,8 +350,14 @@ it where it is going before you close the terminal.
 The name is for you: it is what identifies the key in this list and in an audit
 entry, so name it after what will hold it rather than after yourself.
 
---model restricts the key to named models, given as <provider>/<model>. The
-names are checked against what is configured, because Router only checks the
+--model restricts the key to what it names. Two kinds of name may be given, and
+they grant different things. "<provider>/<model>" grants one backend and nothing
+else. A route name — an alias, a group, or a default category — grants the name:
+whatever serves it today, and whatever an admin attaches to it tomorrow. Grant a
+route when the key should follow a decision somebody else is making, and a
+qualified name when it should not.
+
+Names are checked against what is configured, because Router only checks the
 shape: a typo otherwise produces a key that authenticates and then cannot reach
 anything. Without --model the key reaches every model in the workspace.
 
@@ -359,7 +366,8 @@ anything. Without --model the key reaches every model in the workspace.
 
 Examples:
   olares-cli router key issue "wise indexer"
-  olares-cli router key issue ci --ttl 30d --model "Qwen3.6-27B (llama.cpp)/qwen3"
+  olares-cli router key issue ci --ttl 30d --model Olares/qwen3-8b
+  olares-cli router key issue app --model default-chat --model default-embedding
   olares-cli router key issue bot --expires-at 2027-01-01T00:00:00Z -o json
 `,
 		Args: cobra.ExactArgs(1),
@@ -370,7 +378,8 @@ Examples:
 	cmd.Flags().StringVar(&forUser, "for-user", "", "issue for this Olares user instead of yourself (admin only)")
 	cmd.Flags().StringVar(&ttl, "ttl", "", "expire this long from now, e.g. 30d, 12h, 90m")
 	cmd.Flags().StringVar(&expiresAt, "expires-at", "", "expire at this RFC3339 instant, e.g. 2027-01-01T00:00:00Z")
-	cmd.Flags().StringArrayVar(&models, "model", nil, "restrict to this model, as <provider>/<model>; repeatable")
+	cmd.Flags().StringArrayVar(&models, "model", nil,
+		"restrict to this model, as <provider>/<model>, or to a route name; repeatable")
 	addOutputFlag(cmd, &output)
 	return cmd
 }
@@ -491,6 +500,9 @@ Router, and nothing about either is permanent. --no-expiry removes an expiry;
 --clear-models removes an allowlist, and a key with no allowlist reaches
 everything.
 
+--model replaces the allowlist rather than adding to it, and takes either a
+"<provider>/<model>" or a route name, as "key issue" does.
+
 Name the key by its prefix, its name, or its id.
 
 Examples:
@@ -530,7 +542,8 @@ Examples:
 	cmd.Flags().StringVar(&ttl, "ttl", "", "expire this long from now, e.g. 30d")
 	cmd.Flags().StringVar(&expiresAt, "expires-at", "", "expire at this RFC3339 instant")
 	cmd.Flags().BoolVar(&noExpiry, "no-expiry", false, "remove the expiry")
-	cmd.Flags().StringArrayVar(&models, "model", nil, "replace the allowlist with these models, as <provider>/<model>; repeatable")
+	cmd.Flags().StringArrayVar(&models, "model", nil,
+		"replace the allowlist with these, as <provider>/<model> or a route name; repeatable")
 	cmd.Flags().BoolVar(&clearModels, "clear-models", false, "remove the allowlist, letting the key reach every model")
 	addOutputFlag(cmd, &output)
 	return cmd
@@ -762,44 +775,80 @@ func resolveKey(ctx context.Context, pc *preparedClient, ref string) (*apiKeyVie
 	}
 }
 
-// verifyAllowedModels checks each <provider>/<model> against what is actually
-// configured. Router validates only the shape, so an unchecked typo yields a key
-// that authenticates and then reaches nothing — a failure that shows up later, in
+// verifyAllowedModels checks each entry against what is actually configured.
+// Router validates only the shape, so an unchecked typo yields a key that
+// authenticates and then reaches nothing — a failure that shows up later, in
 // something else's logs.
 //
-// The first slash separates the two halves, because a model name can contain
-// slashes of its own ("meta-llama/Llama-3").
+// An entry is either a qualified `<provider>/<model>` or a route name, which is
+// how the data plane reads one, and the two are told apart by the slash: a route
+// name never contains one and a qualified name always does. Both are accepted
+// because they are different grants rather than two spellings of one. Neither is
+// rewritten into the other — expanding a route into its current members would
+// re-close it every time somebody moved it, which is the whole reason a key
+// would name a route.
 func verifyAllowedModels(ctx context.Context, pc *preparedClient, refs []string) ([]string, error) {
 	rows, err := listAllModels(ctx, pc)
 	if err != nil {
 		return nil, fmt.Errorf("check the models named by --model: %w", err)
 	}
-	known := make(map[string]string, len(rows)*2)
+	known := make(map[string]string, len(rows))
 	qualified := make([]string, 0, len(rows))
 	for i := range rows {
 		r := &rows[i]
 		q := r.ProviderName + "/" + r.Model.Name
-		known[strings.ToLower(q)] = q
-		qualified = append(qualified, q)
-		if r.Model.Alias != nil && *r.Model.Alias != "" {
-			a := r.ProviderName + "/" + *r.Model.Alias
-			known[strings.ToLower(a)] = a
-			qualified = append(qualified, a)
+		if _, dup := known[strings.ToLower(q)]; !dup {
+			qualified = append(qualified, q)
 		}
+		known[strings.ToLower(q)] = q
 	}
+
+	// Routes are read only when one is named, so restricting a key to models
+	// costs the same round trips it always did.
+	var routeNames map[string]string
 
 	out := make([]string, 0, len(refs))
 	seen := map[string]struct{}{}
 	for _, raw := range refs {
 		m := strings.TrimSpace(raw)
-		if slash := strings.IndexByte(m, '/'); slash <= 0 || slash >= len(m)-1 {
-			return nil, fmt.Errorf("--model %q must be <provider>/<model>, e.g. %q", raw, exampleQualified(qualified))
-		}
-		canonical, ok := known[strings.ToLower(m)]
-		if !ok {
-			return nil, fmt.Errorf("no model %q is configured; `olares-cli router list` shows what is, "+
-				"and the name to use here is the provider and the model joined by a slash, e.g. %q",
-				m, exampleQualified(qualified))
+		var canonical string
+		if strings.Contains(m, "/") {
+			var ok bool
+			canonical, ok = known[strings.ToLower(m)]
+			if !ok {
+				return nil, fmt.Errorf("no model %q is configured; `olares-cli router list` shows what is, "+
+					"and the name to use here is the provider and the model joined by a slash, e.g. %q",
+					m, exampleQualified(qualified))
+			}
+		} else {
+			if routeNames == nil {
+				routes, rerr := listRoutes(ctx, pc, "")
+				if rerr != nil {
+					return nil, fmt.Errorf("check the route named by --model %q: %w", raw, rerr)
+				}
+				routeNames = make(map[string]string, len(routes))
+				for i := range routes {
+					routeNames[strings.ToLower(routes[i].Name)] = routes[i].Name
+				}
+			}
+			var ok bool
+			canonical, ok = routeNames[strings.ToLower(m)]
+			if !ok {
+				names := make([]string, 0, len(routeNames))
+				for _, n := range routeNames {
+					names = append(names, n)
+				}
+				sort.Strings(names)
+				return nil, missing{
+					noun:  "model or route",
+					ref:   m,
+					known: names,
+					have:  "the routes are",
+					none:  "no route exists",
+					note: fmt.Sprintf("A model is named as <provider>/<model>, e.g. %q; a name without a "+
+						"slash has to be a route.", exampleQualified(qualified)),
+				}.err()
+			}
 		}
 		if _, dup := seen[canonical]; dup {
 			continue

@@ -42,8 +42,9 @@ import (
 // created as chat stays chat, and the fix for a wrong one is to delete and add
 // it again.
 var providerModelModes = []string{
-	"chat", "completion", "embedding", "rerank", "moderation",
+	"chat", "embedding", "rerank", "moderation",
 	"audio", "translate", "image_generation", "responses", "ocr",
+	"search", "scrape", "video_generation",
 }
 
 func newProviderModelsCommand(f *cmdutil.Factory) *cobra.Command {
@@ -157,7 +158,6 @@ func newProviderModelsAddCommand(f *cmdutil.Factory) *cobra.Command {
 	var (
 		output       string
 		mode         string
-		alias        string
 		contextSize  int
 		maxOutTokens int
 		supports     []string
@@ -169,8 +169,9 @@ func newProviderModelsAddCommand(f *cmdutil.Factory) *cobra.Command {
 		Long: `Attach a model by name, for an upstream whose catalog is not published.
 
 The model name is sent to the upstream verbatim, so it has to be what that
-upstream calls the model rather than a label of your choosing. Use --alias for
-the name you would rather callers use.
+upstream calls the model rather than a label of your choosing. A name of your
+own is a route over the top of it: "olares-cli router route create <name>
+--kind alias --model <provider>/<model>".
 
 --mode decides which endpoint family the model answers on and cannot be changed
 afterwards; a row created with the wrong mode has to be deleted and added again.
@@ -197,9 +198,6 @@ Examples:
 				Name: strings.TrimSpace(args[1]),
 				Mode: strings.ToLower(strings.TrimSpace(mode)),
 			}
-			if a := strings.TrimSpace(alias); a != "" {
-				req.Alias = &a
-			}
 			if c.Flags().Changed("context-size") {
 				req.ContextSize = &contextSize
 			}
@@ -210,7 +208,6 @@ Examples:
 		},
 	}
 	cmd.Flags().StringVar(&mode, "mode", "chat", "endpoint family this model answers on: "+strings.Join(providerModelModes, ", "))
-	cmd.Flags().StringVar(&alias, "alias", "", "name callers may use instead of the upstream's")
 	cmd.Flags().IntVar(&contextSize, "context-size", 0, "context window in tokens")
 	cmd.Flags().IntVar(&maxOutTokens, "max-output-tokens", 0, "upper bound on generated tokens")
 	cmd.Flags().StringArrayVar(&supports, "supports", nil, "capability as key=true|false; repeatable (see `router capabilities`)")
@@ -222,7 +219,6 @@ Examples:
 type addModelRequest struct {
 	Name            string            `json:"name"`
 	Mode            string            `json:"mode"`
-	Alias           *string           `json:"alias,omitempty"`
 	Supports        map[string]any    `json:"supports,omitempty"`
 	Pricing         map[string]string `json:"pricing,omitempty"`
 	ContextSize     *int              `json:"context_size,omitempty"`
@@ -282,8 +278,6 @@ func newProviderModelsUpdateCommand(f *cmdutil.Factory) *cobra.Command {
 		enable       bool
 		disable      bool
 		status       string
-		alias        string
-		clearAlias   bool
 		contextSize  int
 		maxOutTokens int
 		supports     []string
@@ -292,7 +286,7 @@ func newProviderModelsUpdateCommand(f *cmdutil.Factory) *cobra.Command {
 	)
 	cmd := &cobra.Command{
 		Use:   "update <provider> <model>",
-		Short: "enable, disable, rename, or correct what a model claims",
+		Short: "enable, disable, or correct what a model claims",
 		Long: `Change a model row on a provider.
 
 --enable and --disable are the reversible way to control availability. A
@@ -316,7 +310,9 @@ To retract a capability, set it to false rather than omitting it. A price or a
 window can only be dropped with --replace-description.
 
 The name and mode cannot change. Both are what the upstream is addressed by, and
-a row that means something different is a different row.
+a row that means something different is a different row. A second name for
+callers to use is a route over the top: "olares-cli router route create <name>
+--kind alias --model <provider>/<model>".
 
 Examples:
   olares-cli router provider models update lmstudio qwen3-8b --disable
@@ -342,14 +338,6 @@ Examples:
 				v := strings.ToLower(strings.TrimSpace(status))
 				req.Status = &v
 			}
-			if flags.Changed("alias") {
-				v := strings.TrimSpace(alias)
-				req.Alias = &v
-			}
-			if clearAlias {
-				empty := ""
-				req.Alias = &empty
-			}
 			if flags.Changed("context-size") {
 				req.ContextSize = &contextSize
 			}
@@ -362,8 +350,6 @@ Examples:
 	cmd.Flags().BoolVar(&enable, "enable", false, "offer this model to callers")
 	cmd.Flags().BoolVar(&disable, "disable", false, "stop offering this model, keeping its configuration")
 	cmd.Flags().StringVar(&status, "status", "", "active or disabled")
-	cmd.Flags().StringVar(&alias, "alias", "", "name callers may use instead of the upstream's")
-	cmd.Flags().BoolVar(&clearAlias, "clear-alias", false, "drop the alias")
 	cmd.Flags().IntVar(&contextSize, "context-size", 0, "context window in tokens")
 	cmd.Flags().IntVar(&maxOutTokens, "max-output-tokens", 0, "upper bound on generated tokens")
 	cmd.Flags().StringArrayVar(&supports, "supports", nil, "capability as key=true|false; repeatable, folded into what is stored")
@@ -377,7 +363,6 @@ Examples:
 type updateModelRequest struct {
 	Enabled         *bool             `json:"enabled,omitempty"`
 	Status          *string           `json:"status,omitempty"`
-	Alias           *string           `json:"alias,omitempty"`
 	Supports        map[string]any    `json:"supports,omitempty"`
 	Pricing         map[string]string `json:"pricing,omitempty"`
 	ParameterRules  json.RawMessage   `json:"parameter_rules,omitempty"`
@@ -434,7 +419,7 @@ func (r *updateModelRequest) carryForward(current *providerModelRow) {
 }
 
 func (r updateModelRequest) isEmpty() bool {
-	return r.Enabled == nil && r.Status == nil && r.Alias == nil &&
+	return r.Enabled == nil && r.Status == nil &&
 		len(r.Supports) == 0 && len(r.Pricing) == 0 &&
 		r.ContextSize == nil && r.MaxOutputTokens == nil
 }
@@ -554,9 +539,9 @@ func runProviderModelsDelete(ctx context.Context, f *cmdutil.Factory, providerRe
 	return err
 }
 
-// resolveProviderModel finds a model on a provider by name, alias or id. The
-// provider detail route is the lookup, because a model id alone does not say
-// which provider it belongs to and the write routes need both.
+// resolveProviderModel finds a model on a provider by name or id. The provider
+// detail route is the lookup, because a model id alone does not say which
+// provider it belongs to and the write routes need both.
 func resolveProviderModel(ctx context.Context, pc *preparedClient, providerRef, modelRef string) (*providerRow, *providerModelRow, error) {
 	found, err := resolveProvider(ctx, pc, providerRef)
 	if err != nil {
@@ -573,8 +558,7 @@ func resolveProviderModel(ctx context.Context, pc *preparedClient, providerRef, 
 	names := make([]string, 0, len(detail.Models))
 	for i := range detail.Models {
 		m := &detail.Models[i]
-		if m.ID == modelRef || strings.EqualFold(m.Name, modelRef) ||
-			(m.Alias != nil && strings.EqualFold(*m.Alias, modelRef)) {
+		if m.ID == modelRef || strings.EqualFold(m.Name, modelRef) {
 			row := detail.providerRow
 			return &row, m, nil
 		}

@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"sort"
 	"strings"
 )
 
@@ -105,6 +106,85 @@ type missing struct {
 	have  string   // the clause introducing known, when there is any
 	none  string   // said instead when nothing of this kind exists at all
 	note  string   // what to do about it, said either way
+}
+
+// resolveModel finds one configured model from what somebody typed.
+//
+// Four forms are accepted, and the reason there are four is that a model has no
+// single name. `<provider>/<model>` is what the data plane takes and what a
+// key's allowed list holds, so it is the canonical one. A bare model name is
+// accepted when only one row carries it, which is the common case and the one
+// people type. The row's id is accepted because it is the only form that is
+// always unique. And `<title>/<model>` exists for the case the other three
+// cannot express: every locally installed model application is a provider named
+// `Olares`, so `Olares/qwen3-8b` can name two different rows, and the display
+// title is what tells those apart.
+//
+// Ambiguity is reported with the candidates rather than resolved by taking the
+// first. Two rows with one name can be different deployments of a model with
+// different prices, and every caller of this is about to write something down.
+func resolveModel(ctx context.Context, pc *preparedClient, ref string) (*adminModelRow, error) {
+	ref, err := requireRef(ref, "a model, as <provider>/<model> or an id")
+	if err != nil {
+		return nil, err
+	}
+	rows, err := listAllModels(ctx, pc)
+	if err != nil {
+		return nil, err
+	}
+	var matches []*adminModelRow
+	for i := range rows {
+		r := &rows[i]
+		if r.ProviderModelID == ref {
+			return r, nil
+		}
+		title := strDeref(r.ProviderTitle)
+		switch {
+		case strings.EqualFold(r.ProviderName+"/"+r.Model.Name, ref),
+			title != "" && strings.EqualFold(title+"/"+r.Model.Name, ref),
+			strings.EqualFold(r.Model.Name, ref):
+			matches = append(matches, r)
+		}
+	}
+	switch len(matches) {
+	case 1:
+		return matches[0], nil
+	case 0:
+		names := make([]string, 0, len(rows))
+		for i := range rows {
+			names = append(names, rows[i].ProviderName+"/"+rows[i].Model.Name)
+		}
+		sort.Strings(names)
+		names = dedupeStrings(names)
+		return nil, missing{
+			noun:  "model",
+			ref:   ref,
+			known: names,
+			have:  "configured are",
+			none:  "no model is configured yet",
+			note: "The form here is <provider>/<model>; `olares-cli router list` shows every row " +
+				"with the id that names one exactly.",
+		}.err()
+	}
+	// More than one row answers to the word. The title distinguishes local
+	// applications from each other, and the id distinguishes anything.
+	lines := make([]string, 0, len(matches))
+	for _, m := range matches {
+		lines = append(lines, m.label()+" ["+m.ProviderModelID+"]")
+	}
+	sort.Strings(lines)
+	return nil, fmt.Errorf("%q names %d models: %s. Name one by its id, or as <provider>/<model> when "+
+		"that is unique", ref, len(matches), strings.Join(lines, "; "))
+}
+
+func dedupeStrings(sorted []string) []string {
+	out := sorted[:0]
+	for i, s := range sorted {
+		if i == 0 || s != sorted[i-1] {
+			out = append(out, s)
+		}
+	}
+	return out
 }
 
 // namesInAMiss caps the list. A deployment with two hundred keys turns one

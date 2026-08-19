@@ -66,7 +66,7 @@ Examples:
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			return runCallTranscribe(c.Context(), f, args[0], transcribeOptions{
-				Model:      model,
+				Model:      callModel(model, categorySTT),
 				Language:   language,
 				Prompt:     prompt,
 				RespFormat: respFmt,
@@ -76,7 +76,7 @@ Examples:
 			})
 		},
 	}
-	cmd.Flags().StringVar(&model, "model", "", "model to use; the workspace audio default when omitted")
+	cmd.Flags().StringVar(&model, "model", "", modelFlagHelp(categorySTT))
 	cmd.Flags().StringVar(&language, "language", "", "language of the audio, as an ISO-639-1 code")
 	cmd.Flags().StringVar(&prompt, "prompt", "", "text that biases spelling and vocabulary")
 	cmd.Flags().StringVar(&respFmt, "response-format", "", "json, text, verbose_json, srt or vtt, as the engine supports")
@@ -249,7 +249,7 @@ Examples:
 				speedPtr = &speed
 			}
 			return runCallSpeak(c.Context(), f, text, speakOptions{
-				Model:      model,
+				Model:      callModel(model, categoryTTS),
 				Voice:      voice,
 				OutPath:    outPath,
 				RespFormat: respFmt,
@@ -258,7 +258,7 @@ Examples:
 			})
 		},
 	}
-	cmd.Flags().StringVar(&model, "model", "", "model to use; the workspace audio default when omitted")
+	cmd.Flags().StringVar(&model, "model", "", modelFlagHelp(categoryTTS))
 	cmd.Flags().StringVar(&voice, "voice", "", "voice name, as the engine names it")
 	cmd.Flags().StringVar(&outPath, "out", "", "write the audio here instead of standard output")
 	cmd.Flags().StringVar(&respFmt, "response-format", "", "container format, e.g. mp3 or wav")

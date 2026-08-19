@@ -110,7 +110,7 @@ Examples:
 				return err
 			}
 			opts := chatOptions{
-				Model:    model,
+				Model:    callModel(model, categoryChat),
 				System:   system,
 				Images:   images,
 				Stream:   !noStream,
@@ -127,7 +127,7 @@ Examples:
 			return runCallChat(c.Context(), f, prompt, opts)
 		},
 	}
-	cmd.Flags().StringVar(&model, "model", "", "model to use; the workspace chat default when omitted")
+	cmd.Flags().StringVar(&model, "model", "", modelFlagHelp(categoryChat))
 	cmd.Flags().StringVar(&system, "system", "", "system instruction sent before the prompt")
 	cmd.Flags().StringArrayVar(&images, "image", nil, "attach a local image file (repeatable)")
 	cmd.Flags().IntVar(&maxTokens, "max-tokens", 0, "cap the answer length in tokens")

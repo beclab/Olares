@@ -30,14 +30,59 @@ import (
 // adminModelRow is one model with its provider lifted alongside it, which is
 // what makes a flat list readable: the same model name can exist on two
 // providers, and the provider is what tells them apart.
+//
+// ProviderTitle is what tells two rows apart when the provider name cannot:
+// every locally installed model application is a provider called `Olares`, so
+// the routing name is shared and the title is the application.
 type adminModelRow struct {
 	ProviderModelID string           `json:"provider_model_id"`
 	ProviderID      string           `json:"provider_id"`
 	ProviderName    string           `json:"provider_name"`
+	ProviderTitle   *string          `json:"provider_title,omitempty"`
 	ProviderType    string           `json:"provider_type"`
 	ProviderSource  string           `json:"provider_source"`
 	ProviderStatus  string           `json:"provider_status"`
 	Model           providerModelRow `json:"model"`
+	// CallableRouteNames are the names a caller may send right now to reach
+	// this row; AllRouteNames every name that reaches it, including the ones
+	// currently switched off. Router computes both — the callable half depends
+	// on liveness and on members outside this page, so a client holding one
+	// page cannot work it out.
+	CallableRouteNames []string `json:"callable_route_names"`
+	AllRouteNames      []string `json:"all_route_names"`
+}
+
+// label is how one row reads in a sentence: the qualified name Router routes
+// on, and the application when that name is shared.
+func (r *adminModelRow) label() string {
+	name := r.ProviderName + "/" + r.Model.Name
+	if title := strDeref(r.ProviderTitle); title != "" && title != r.ProviderName {
+		return name + " (" + title + ")"
+	}
+	return name
+}
+
+// routeNote is the ROUTES cell: the names that reach this model, with the ones
+// currently unreachable marked. A model with none is not unreachable — every
+// row is callable as <provider>/<model> — so the cell is empty rather than
+// alarming.
+func (r *adminModelRow) routeNote() string {
+	if len(r.AllRouteNames) == 0 {
+		return "-"
+	}
+	callable := make(map[string]bool, len(r.CallableRouteNames))
+	for _, n := range r.CallableRouteNames {
+		callable[n] = true
+	}
+	out := make([]string, 0, len(r.AllRouteNames))
+	for _, n := range r.AllRouteNames {
+		if callable[n] {
+			out = append(out, n)
+			continue
+		}
+		out = append(out, n+" (off)")
+	}
+	return strings.Join(out, ", ")
 }
 
 func NewListCommand(f *cmdutil.Factory) *cobra.Command {
@@ -59,7 +104,13 @@ func NewListCommand(f *cmdutil.Factory) *cobra.Command {
 		Long: `List the models Router has configured, across all providers.
 
 The same model name can exist on more than one provider, so the provider column
-is part of the identity rather than decoration.
+is part of the identity rather than decoration. It can also exist twice on the
+same provider name: every locally installed model application is a provider
+called "Olares", and "SERVED BY" is the application that tells those apart.
+
+A model is called as "PROVIDER/MODEL". "ROUTES" lists the other names that
+reach the same row — aliases, groups and the default categories, which
+"router route list" manages.
 
 Two columns are easy to conflate. "OFFERED" is whether the model is handed to
 callers at all; "STATUS" is the row's own state. A model can be present,
@@ -198,28 +249,43 @@ func renderModelList(w io.Writer, items []adminModelRow, total, limit, offset in
 			"`olares-cli router provider types` to see what can be added.")
 		return err
 	}
-	t := newTable(w, "MODEL", "PROVIDER", "TYPE", "SOURCE", "MODE", "OFFERED", "STATUS", "PROVIDER STATUS")
+	t := newTable(w, "MODEL", "PROVIDER", "SERVED BY", "MODE", "OFFERED", "STATUS", "PROVIDER STATUS", "ROUTES")
+	anyRoute := false
 	for i := range items {
 		it := &items[i]
-		name := it.Model.Name
-		if it.Model.Alias != nil && *it.Model.Alias != "" {
-			name = fmt.Sprintf("%s (as %s)", it.Model.Name, *it.Model.Alias)
+		if len(it.AllRouteNames) > 0 {
+			anyRoute = true
+		}
+		// The title is the application for a local model and nothing new for a
+		// cloud vendor, whose type says more.
+		served := strDeref(it.ProviderTitle)
+		if served == "" || served == it.ProviderName {
+			served = it.ProviderType
 		}
 		t.row(
-			nonEmpty(name),
+			nonEmpty(it.Model.Name),
 			nonEmpty(it.ProviderName),
-			nonEmpty(it.ProviderType),
-			nonEmpty(it.ProviderSource),
+			clip(nonEmpty(served), 24),
 			nonEmpty(it.Model.Mode),
 			boolStr(it.Model.Enabled),
 			nonEmpty(it.Model.Status),
 			nonEmpty(it.ProviderStatus),
+			clip(it.routeNote(), 30),
 		)
 	}
 	if err := t.flush(); err != nil {
 		return err
 	}
-	return pageFooter(w, len(items), total, offset)
+	if err := pageFooter(w, len(items), total, offset); err != nil {
+		return err
+	}
+	if anyRoute {
+		_, err := fmt.Fprintln(w, "\nROUTES are the extra names a caller may send to reach a row — aliases, "+
+			"groups and the default categories. Every row is also callable as PROVIDER/MODEL whether or "+
+			"not it has any. `olares-cli router route list` shows them.")
+		return err
+	}
+	return nil
 }
 
 // `router capabilities` is the vocabulary for --supports. It is a fixed list

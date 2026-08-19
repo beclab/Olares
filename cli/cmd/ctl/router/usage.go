@@ -168,11 +168,11 @@ func resolveSpendQuery(ctx context.Context, pc *preparedClient, fl spendFilter) 
 		q.Set("provider_id", found.ID)
 	}
 	if s := strings.TrimSpace(fl.ModelRef); s != "" {
-		row, err := findModelByQualifiedName(ctx, pc, s)
+		row, err := resolveModel(ctx, pc, s)
 		if err != nil {
 			return nil, err
 		}
-		q.Set("provider_model_id", row.Model.ID)
+		q.Set("provider_model_id", row.ProviderModelID)
 	}
 	if s := strings.ToLower(strings.TrimSpace(fl.Status)); s != "" {
 		if s != "success" && s != "failed" && s != "canceled" {

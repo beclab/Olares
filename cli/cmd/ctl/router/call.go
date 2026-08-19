@@ -38,8 +38,12 @@ The routes are OpenAI-shaped, so a call reaches a cloud provider and a model
 application on this machine the same way. Which one answers depends on the model
 name, and nothing else about the request changes.
 
-Leaving --model off uses the workspace default for that kind of work, which
-"olares-cli router default show" reports and an admin sets.
+Leaving --model off names the default category for that kind of work —
+"default-chat", "default-stt", and so on. Router chooses what a category answers
+with, against what is installed; "olares-cli router default show" reports where
+each one currently stands. A category with nothing behind it is refused rather
+than answered by something approximate, so a call with no --model on a fresh
+install fails until a model of that kind exists.
 
 Credentials resolve on their own. Inside the cluster the platform supplies the
 caller identity and no key is needed; anywhere else this machine keeps one key
@@ -64,6 +68,36 @@ the credential that made it, and may cost money.
 	cmd.AddCommand(newCallSpeakCommand(f))
 	cmd.AddCommand(newCallOCRCommand(f))
 	return cmd
+}
+
+// The default category each verb falls back to. Router no longer resolves an
+// empty `model` field — a request that names nothing is refused rather than
+// guessed at — so "no --model" has to become a name here, and the name is the
+// category for that kind of work.
+//
+// Speech is two categories rather than one because one audio mode covers
+// recognition, synthesis and four other things that are separate engines: there
+// is no single model a bare audio default could point at.
+const (
+	categoryChat      = "default-chat"
+	categoryEmbedding = "default-embedding"
+	categorySTT       = "default-stt"
+	categoryTTS       = "default-tts"
+	categoryOCR       = "default-ocr"
+)
+
+// callModel is what goes in the request's `model` field: what was asked for, or
+// the category for this kind of work.
+func callModel(flagValue, category string) string {
+	if v := strings.TrimSpace(flagValue); v != "" {
+		return v
+	}
+	return category
+}
+
+// modelFlagHelp keeps the five verbs saying the same thing about the same flag.
+func modelFlagHelp(category string) string {
+	return "model to use, as <provider>/<model> or a route name; " + category + " when omitted"
 }
 
 // readPromptArgs turns positional arguments, or stdin when there are none, into

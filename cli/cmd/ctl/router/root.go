@@ -25,7 +25,8 @@ status" first if anything here behaves unexpectedly.
   whoami        the identity and role Router sees for the active profile
   list          every model configured, across every provider
   capabilities  the capability flags a model row can declare
-  default       which model answers when a request names none
+  route         the names callers may send instead of a provider and model
+  default       the categories a caller can ask for instead of a model
   provider      the upstreams Router routes to, and the models they serve
   app           model applications that run models on this machine
   local         the Model Console inside one of those applications
@@ -54,6 +55,7 @@ Run "olares-cli router <verb> --help" for details.
 	cmd.AddCommand(NewWhoamiCommand(f))
 	cmd.AddCommand(NewListCommand(f))
 	cmd.AddCommand(NewCapabilitiesCommand(f))
+	cmd.AddCommand(NewRouteCommand(f))
 	cmd.AddCommand(NewDefaultCommand(f))
 	cmd.AddCommand(NewProviderCommand(f))
 	cmd.AddCommand(NewAppCommand(f))

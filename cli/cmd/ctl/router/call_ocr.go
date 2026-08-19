@@ -89,7 +89,7 @@ Examples:
 			task, _ := c.Flags().GetString("task")
 			cancel, _ := c.Flags().GetBool("cancel")
 			opts := ocrOptions{
-				Model:       model,
+				Model:       callModel(model, categoryOCR),
 				Format:      format,
 				Pages:       pages,
 				PDFStrategy: pdfStrategy,
@@ -112,7 +112,7 @@ Examples:
 			return runCallOCR(c.Context(), f, opts)
 		},
 	}
-	cmd.Flags().StringVar(&model, "model", "", "model to use; the workspace OCR default when omitted")
+	cmd.Flags().StringVar(&model, "model", "", modelFlagHelp(categoryOCR))
 	cmd.Flags().StringVar(&format, "format", "", "output format the engine should produce")
 	cmd.Flags().StringVar(&pages, "pages", "", "which PDF pages to read, e.g. 1-10")
 	cmd.Flags().StringVar(&pdfStrategy, "pdf-strategy", "", "how the engine should treat a PDF")
