@@ -77,6 +77,21 @@ type spendSummary struct {
 	AvgTPS               float64           `json:"avg_tps"`
 }
 
+// spendMultiSummary is what several groupings at once answer with: the buckets
+// filed under the dimension they belong to, and one copy of the totals, which
+// are the same calls counted the same way however they are grouped.
+type spendMultiSummary struct {
+	Dims map[string]struct {
+		Items     []spendSummaryRow `json:"items"`
+		Truncated bool              `json:"truncated"`
+	} `json:"dims"`
+	TotalRequests        int64   `json:"total_requests"`
+	TotalSuccessRequests int64   `json:"total_success_requests"`
+	TotalCostUSD         float64 `json:"total_cost_usd"`
+	TotalTokens          int64   `json:"total_tokens"`
+	AvgTPS               float64 `json:"avg_tps"`
+}
+
 // spendFilter is the one filter every usage route shares.
 type spendFilter struct {
 	UserRef     string
@@ -93,6 +108,12 @@ type spendFilter struct {
 }
 
 var spendDims = []string{"model", "provider", "user", "caller_app", "day", "hour"}
+
+// dimHour is the one grouping that cannot share a request with another. Router
+// refuses the combination rather than answering it, and the reason is its own:
+// an hourly series is unbounded where the others are a bounded set of names, so
+// batching it would make the response size depend on the window.
+const dimHour = "hour"
 
 func NewUsageCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
@@ -308,11 +329,20 @@ func newUsageSummaryCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "summary",
 		Short: "totals grouped by model, provider, person, app, day or hour",
-		Long: `Total the calls Router has served, grouped one way.
+		Long: `Total the calls Router has served, grouped one or several ways.
 
---by chooses the grouping: model, provider, user, caller_app, day or hour. The
-answer carries the top 100 buckets by cost, so a workspace with more than that
-many models is showing you the expensive ones rather than all of them.
+--by chooses the grouping: model, provider, user, caller_app, day or hour. Name
+several, comma-separated, and each grouping is reported in turn from a single
+request — the same calls counted the same way, so the totals underneath are one
+figure rather than one per table.
+
+The answer carries the top 100 buckets by cost per grouping, so a workspace with
+more than that many models is showing you the expensive ones rather than all of
+them.
+
+"hour" cannot be combined with anything: an hourly series grows with the window
+where the other groupings are a bounded set of names, so Router answers it on
+its own.
 
 FAILED is worth reading alongside cost: a failed call still took time and may
 still have been charged upstream, and a group that is mostly failures is a
@@ -321,6 +351,7 @@ misconfiguration rather than usage.
 Examples:
   olares-cli router usage summary --by model --since 7d
   olares-cli router usage summary --by day --since 30d
+  olares-cli router usage summary --by model,provider,user --since 7d
   olares-cli router usage summary --by user --status failed
 `,
 		Args: cobra.NoArgs,
@@ -328,7 +359,8 @@ Examples:
 			return runUsageSummary(c.Context(), f, dim, fl, output)
 		},
 	}
-	cmd.Flags().StringVar(&dim, "by", "model", "group by: "+strings.Join(spendDims, ", "))
+	cmd.Flags().StringVar(&dim, "by", "model",
+		"group by: "+strings.Join(spendDims, ", ")+"; several, comma-separated, are reported in one request")
 	addSpendFilterFlags(cmd, &fl)
 	addOutputFlag(cmd, &output)
 	return cmd
@@ -342,9 +374,9 @@ func runUsageSummary(ctx context.Context, f *cmdutil.Factory, dim string, fl spe
 	if err != nil {
 		return err
 	}
-	dim = strings.ToLower(strings.TrimSpace(dim))
-	if !containsString(spendDims, dim) {
-		return fmt.Errorf("--by must be one of %s, not %q", strings.Join(spendDims, ", "), dim)
+	dims, err := parseSpendDims(dim)
+	if err != nil {
+		return err
 	}
 	pc, err := prepare(ctx, f)
 	if err != nil {
@@ -354,7 +386,18 @@ func runUsageSummary(ctx context.Context, f *cmdutil.Factory, dim string, fl spe
 	if err != nil {
 		return err
 	}
-	q.Set("dim", dim)
+	if len(dims) > 1 {
+		q.Set("dims", strings.Join(dims, ","))
+		var multi spendMultiSummary
+		if err := pc.router.doJSON(ctx, "GET", withQuery(epSpendSummary, q), nil, &multi); err != nil {
+			return err
+		}
+		if format == FormatJSON {
+			return printJSON(os.Stdout, multi)
+		}
+		return renderUsageSummaries(os.Stdout, dims, &multi)
+	}
+	q.Set("dim", dims[0])
 	var sum spendSummary
 	if err := pc.router.doJSON(ctx, "GET", withQuery(epSpendSummary, q), nil, &sum); err != nil {
 		return err
@@ -365,15 +408,95 @@ func runUsageSummary(ctx context.Context, f *cmdutil.Factory, dim string, fl spe
 	return renderUsageSummary(os.Stdout, &sum)
 }
 
+// parseSpendDims reads --by. Duplicates collapse rather than producing the same
+// table twice, and the order asked for is the order reported, since a caller
+// listing model before day is describing what they want to read first.
+func parseSpendDims(raw string) ([]string, error) {
+	var dims []string
+	seen := map[string]bool{}
+	for _, part := range strings.Split(raw, ",") {
+		name := strings.ToLower(strings.TrimSpace(part))
+		if name == "" {
+			continue
+		}
+		if !containsString(spendDims, name) {
+			return nil, fmt.Errorf("--by must name groupings from %s, not %q",
+				strings.Join(spendDims, ", "), name)
+		}
+		if seen[name] {
+			continue
+		}
+		seen[name] = true
+		dims = append(dims, name)
+	}
+	if len(dims) == 0 {
+		return nil, fmt.Errorf("--by needs a grouping: one of %s", strings.Join(spendDims, ", "))
+	}
+	if len(dims) > 1 && seen[dimHour] {
+		return nil, fmt.Errorf("--by %s cannot be combined with another grouping: an hourly series grows "+
+			"with the window, so Router answers it on its own. Ask for it separately", dimHour)
+	}
+	return dims, nil
+}
+
 func renderUsageSummary(w io.Writer, sum *spendSummary) error {
 	if len(sum.Items) == 0 {
 		_, err := fmt.Fprintln(w, "no calls match. Nothing has gone through Router in this window, "+
 			"or the filters exclude everything that has.")
 		return err
 	}
-	t := newTable(w, strings.ToUpper(sum.Dim), "REQUESTS", "COST", "TOKENS", "IN", "OUT")
-	for i := range sum.Items {
-		it := &sum.Items[i]
+	if err := renderSummaryBuckets(w, sum.Dim, sum.Items); err != nil {
+		return err
+	}
+	return renderSummaryTotals(w, sum.TotalRequests, sum.TotalSuccessRequests,
+		sum.TotalCostUSD, sum.TotalTokens, sum.AvgTPS)
+}
+
+// renderUsageSummaries prints one table per grouping and one set of totals. The
+// totals are stated once because they are one figure: every grouping counts the
+// same calls, and repeating the same number under each table would read as
+// though the tables were of different things.
+func renderUsageSummaries(w io.Writer, dims []string, multi *spendMultiSummary) error {
+	if multi.TotalRequests == 0 {
+		_, err := fmt.Fprintln(w, "no calls match. Nothing has gone through Router in this window, "+
+			"or the filters exclude everything that has.")
+		return err
+	}
+	for i, dim := range dims {
+		if i > 0 {
+			if _, err := fmt.Fprintln(w); err != nil {
+				return err
+			}
+		}
+		bucket, ok := multi.Dims[dim]
+		if !ok {
+			// Asked for and not answered. Saying so beats an empty table,
+			// which would read as "no calls grouped this way".
+			if _, err := fmt.Fprintf(w, "%s: this Router did not report this grouping.\n",
+				strings.ToUpper(dim)); err != nil {
+				return err
+			}
+			continue
+		}
+		if err := renderSummaryBuckets(w, dim, bucket.Items); err != nil {
+			return err
+		}
+	}
+	if _, err := fmt.Fprintln(w); err != nil {
+		return err
+	}
+	return renderSummaryTotals(w, multi.TotalRequests, multi.TotalSuccessRequests,
+		multi.TotalCostUSD, multi.TotalTokens, multi.AvgTPS)
+}
+
+func renderSummaryBuckets(w io.Writer, dim string, items []spendSummaryRow) error {
+	if len(items) == 0 {
+		_, err := fmt.Fprintf(w, "%s: nothing in this window.\n", strings.ToUpper(dim))
+		return err
+	}
+	t := newTable(w, strings.ToUpper(dim), "REQUESTS", "COST", "TOKENS", "IN", "OUT")
+	for i := range items {
+		it := &items[i]
 		label := it.Label
 		if strings.TrimSpace(label) == "" {
 			label = it.Key
@@ -382,16 +505,17 @@ func renderUsageSummary(w io.Writer, sum *spendSummary) error {
 			strconv.FormatInt(it.TotalTokens, 10), strconv.FormatInt(it.PromptTokens, 10),
 			strconv.FormatInt(it.CompletionTok, 10))
 	}
-	if err := t.flush(); err != nil {
-		return err
-	}
-	failed := sum.TotalRequests - sum.TotalSuccessRequests
+	return t.flush()
+}
+
+func renderSummaryTotals(w io.Writer, requests, succeeded int64, cost float64, tokens int64, tps float64) error {
+	failed := requests - succeeded
 	if _, err := fmt.Fprintf(w, "\n%d requests, %d of them failed, %s, %d tokens",
-		sum.TotalRequests, failed, money(sum.TotalCostUSD), sum.TotalTokens); err != nil {
+		requests, failed, money(cost), tokens); err != nil {
 		return err
 	}
-	if sum.AvgTPS > 0 {
-		if _, err := fmt.Fprintf(w, ", averaging %.1f tokens/s", sum.AvgTPS); err != nil {
+	if tps > 0 {
+		if _, err := fmt.Fprintf(w, ", averaging %.1f tokens/s", tps); err != nil {
 			return err
 		}
 	}

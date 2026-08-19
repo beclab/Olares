@@ -14,6 +14,7 @@ There is no third record. Router accepted OTLP spans from agent frameworks and s
 ```
 olares-cli router usage summary --since 7d
 olares-cli router usage summary --by user --since 30d
+olares-cli router usage summary --by model,provider,caller_app --since 7d
 olares-cli router usage list --status failed --limit 20
 olares-cli router usage export --since 30d --out calls.csv
 olares-cli router usage retention
@@ -22,6 +23,7 @@ olares-cli router usage retention
 `summary` adds up; `list` explains a total by showing the individual calls behind it; `export` writes the same rows as CSV for a spreadsheet.
 
 - `--by` groups a summary by `model`, `provider`, `user`, `caller_app`, `day` or `hour`. `day` and `hour` are how a spike gets located; `caller_app` is how it gets attributed.
+- Several groupings, comma-separated, come back from one request: `--by model,provider,user` prints a table each and one set of totals, because every grouping counts the same calls. `hour` is the exception and is answered on its own — an hourly series grows with the window where the others are a bounded set of names.
 - Filters compose across all three verbs: `--model`, `--provider`, `--key`, `--user`, `--caller`, `--status`, `--tag`, `--since`, `--until`. `--since` takes an instant or a span like `24h` or `7d`. `--caller` names an application by its title, its Olares application name or the appid a row shows.
 - `--status failed` is the one to reach for after a complaint: a failed call still carries the error code Router returned, so the reason is in the row.
 
