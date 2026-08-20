@@ -381,6 +381,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
           collapsed: false,
           items: [
             {
+              text: "Palworld",
+              link: "/zh/use-cases/palworld",
+            },
+            {
               text: "Minecraft",
               link: "/zh/use-cases/minecraft",
             },
