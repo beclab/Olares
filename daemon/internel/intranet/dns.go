@@ -85,7 +85,7 @@ func (s *mDNSServer) StartAll() error {
 		disableWirelessPowerSave(iface)
 
 		klog.Infof("Registering mDNS service on host: %s", primary)
-		server, err := zeroconf.RegisterAll("olares", "_http._tcp", "local.", primary, 80, []string{"txtv=0", "lo=1", "la=0", "path=/"}, []net.Interface{*iface}, true, false, true)
+		server, err := zeroconf.RegisterAll("olares", "_http._tcp", "local.", primary, 80, []string{"txtv=0", "lo=1", "la=0", "path=/"}, []net.Interface{*iface}, true, false, false)
 		if err != nil {
 			klog.Errorf("Failed to register mDNS service for host %s: %v", primary, err)
 			return err
