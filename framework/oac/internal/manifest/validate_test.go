@@ -2450,3 +2450,57 @@ func TestOptions_SharedAppRequirements(t *testing.T) {
 		}
 	})
 }
+
+// spec.chartRepo is optional but, when populated, must be a valid http(s)
+// URL. The rule reuses the same isHTTPURL predicate as metadata.icon /
+// entrance.icon so the shape of the error stays consistent with every
+// other URL field in the schema.
+func TestSpec_ChartRepo_EmptyAllowed(t *testing.T) {
+	c := newValidConfig()
+	c.Spec.ChartRepo = ""
+	if err := ValidateAppConfiguration(c); err != nil {
+		t.Fatalf("empty spec.chartRepo must be accepted, got: %v", err)
+	}
+}
+
+func TestSpec_ChartRepo_ValidURLsAccepted(t *testing.T) {
+	for _, url := range []string{
+		"https://charts.example.com",
+		"https://charts.example.com/repo",
+		"http://charts.example.com:8080/repo",
+		"https://user:pass@charts.example.com/repo",
+	} {
+		url := url
+		t.Run(url, func(t *testing.T) {
+			c := newValidConfig()
+			c.Spec.ChartRepo = url
+			if err := ValidateAppConfiguration(c); err != nil {
+				t.Fatalf("spec.chartRepo=%q must be accepted, got: %v", url, err)
+			}
+		})
+	}
+}
+
+func TestSpec_ChartRepo_MalformedRejected(t *testing.T) {
+	// Cover the three failure modes isHTTPURL screens for: non-URL noise,
+	// a non-http scheme, and an http(s) URL missing a host.
+	cases := map[string]string{
+		"plain string": "not-a-url",
+		"ftp scheme":   "ftp://charts.example.com",
+		"missing host": "https://",
+	}
+	for name, bad := range cases {
+		name, bad := name, bad
+		t.Run(name, func(t *testing.T) {
+			c := newValidConfig()
+			c.Spec.ChartRepo = bad
+			err := ValidateAppConfiguration(c)
+			if err == nil {
+				t.Fatalf("spec.chartRepo=%q must be rejected", bad)
+			}
+			if !strings.Contains(err.Error(), "spec.chartRepo must be a valid http(s) URL") {
+				t.Fatalf("error should mention spec.chartRepo URL rule, got: %v", err)
+			}
+		})
+	}
+}

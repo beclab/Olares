@@ -318,6 +318,9 @@ func validateAppSpec(configVersion, apiVersion string, templateOnly bool, s AppS
 			validation.By(uniqueSupportArches),
 		),
 		validation.Field(&s.SubCharts),
+		validation.Field(&s.ChartRepo,
+			isHTTPURL.Error("spec.chartRepo must be a valid http(s) URL"),
+		),
 	}
 
 	api := normalizeAPIVersion(apiVersion)
