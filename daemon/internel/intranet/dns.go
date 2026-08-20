@@ -62,7 +62,7 @@ func (s *mDNSServer) StartAll() error {
 		klog.Infof("Registering mDNS service for domain: %s", domain)
 		// Register the mDNS service
 		var err error
-		server, err := zeroconf.Register("olares", "_http._tcp", "local.", domain, 80, []string{"txtv=0", "lo=1", "la=0", "path=/"}, []net.Interface{*iface})
+		server, err := zeroconf.RegisterAll("olares", "_http._tcp", "local.", domain, 80, []string{"txtv=0", "lo=1", "la=0", "path=/"}, []net.Interface{*iface}, true, false, true)
 		if err != nil {
 			klog.Errorf("Failed to register mDNS service for domain %s: %v", domain, err)
 			return err
