@@ -63,7 +63,9 @@ func (s *mDNSServer) StartAll() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	// Every name is gone, so stop answering for the ones still registered.
 	if len(s.domains) == 0 {
+		s.shutdown()
 		return nil
 	}
 
