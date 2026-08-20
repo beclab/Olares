@@ -108,14 +108,14 @@ const (
 	epPredefinedCatalog = consoleAPI + "/predefined-catalog"
 )
 
-// Market: the model applications this Olares publishes, each row carrying what
-// Router knows about the copy installed here.
+// The model applications the Market publishes, each row carrying what Router
+// knows about the copy installed here.
 //
-// Router mounts lifecycle routes beside this one, and the CLI does not use them:
-// installing, cloning, upgrading and removing an application are `olares-cli
-// market`. This is read for one thing only — the provider id of an application
-// that is still installing, which no other list names yet.
-const epMarketCatalog = consoleAPI + "/market/catalog"
+// Installing, cloning, upgrading and removing an application are `olares-cli
+// market`, and Router has no route for any of them. This is read for one thing
+// only — the provider id of an application that is still installing, which no
+// other list names yet.
+const epModelApps = consoleAPI + "/model-apps"
 
 // Named routes: every name a caller may send in `model` that is not a
 // qualified `<provider>/<model>` reference. Aliases, groups and the system's

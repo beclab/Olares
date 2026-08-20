@@ -289,10 +289,10 @@ func resolveProvider(ctx context.Context, pc *preparedClient, ref string) (*prov
 		}
 	}
 	// An application still installing is hidden from both of those: it is not
-	// running, and it has never been asked for its models. The Market catalog
+	// running, and it has never been asked for its models. The model-app list
 	// is the one place that names the row anyway, which matters because the
 	// minutes right after an install are when someone is most likely to name it.
-	if id := providerIDFromMarket(ctx, pc, ref); id != "" {
+	if id := providerIDFromModelApps(ctx, pc, ref); id != "" {
 		detail, derr := getProvider(ctx, pc, id)
 		if derr == nil {
 			row := detail.providerRow

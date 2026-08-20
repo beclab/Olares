@@ -55,6 +55,6 @@ An audit row records who changed what, when, the action (`provider.create`, `pro
 
 Audit is admin-only, and it is the record to check first when a configuration is not what someone expected: it distinguishes "nobody changed it" from "it was changed and rejected" from "it was changed successfully by someone else".
 
-Treat the record as complete for writes and partial for reads. A provider that was merely listed leaves no row, while some reads that reach out to the platform on your behalf — browsing the Market catalog through Router, for one — do record `olares.market.catalog_view`. An absent row is therefore evidence that nothing was *changed*, not that nobody looked.
+Treat the record as complete for writes and partial for reads. A provider that was merely listed leaves no row, while some reads that reach out to the platform on your behalf — browsing the Market's model applications through Router, for one — do record `olares.model_apps.view`. An absent row is therefore evidence that nothing was *changed*, not that nobody looked.
 
 Audit rows are not subject to the usage retention window; that setting governs per-call spend rows only.
