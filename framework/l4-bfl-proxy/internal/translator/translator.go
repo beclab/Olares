@@ -21,6 +21,7 @@ const (
 	fileserverHostFormat     = "files-%s.user-system-%s.svc.cluster.local"
 	autheliaPort             = uint32(9091)
 	autheliaVerifyPathPrefix = "/api/verify/"
+	authLevelPublic          = "public"
 
 	// probeUARegex matches webhook.getProbeUA shape: {uuid}/{md5hex}.
 	probeUARegex = `^[0-9a-fA-F-]+/[0-9a-fA-F]+$`
@@ -38,6 +39,24 @@ const (
 	// than one virtual host in the same route config.
 	systemServicePriority = 100
 )
+
+// isPublicAuthLevel reports whether the entrance is public. Public routes still
+// call Authelia (Bypass) but must not overwrite outbound X-BFL-USER with the
+// zone owner — that header would make anonymous callers look like the owner.
+func isPublicAuthLevel(level string) bool {
+	return strings.EqualFold(strings.TrimSpace(level), authLevelPublic)
+}
+
+// outboundIdentityHeaders returns the route RequestHeaders overwrite map for
+// upstream identity. Public entrances omit X-BFL-USER so the upstream sees no
+// zone-owner constant after RDS strips client-spoofed values. ExtAuth inbound
+// pre-injection uses VH UserName independently of this map.
+func outboundIdentityHeaders(userName string, public bool) map[string]string {
+	if public || userName == "" {
+		return nil
+	}
+	return map[string]string{"X-BFL-USER": userName}
+}
 
 var nodeLocationPrefixes = []string{
 	"/api/resources/cache/",
@@ -597,13 +616,12 @@ func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.A
 			routes = append(routes, t.buildFileserverRoutes(user, clusterSet)...)
 		}
 
+		public := isPublicAuthLevel(entrance.AuthLevel)
 		defaultRoute := &ir.HTTPRouteIR{
-			Name:       fmt.Sprintf("default_%s_%s_%s", user.Name, app.Name, entrance.Name),
-			PathPrefix: "/",
-			Cluster:    clusterName,
-			RequestHeaders: map[string]string{
-				"X-BFL-USER": user.Name,
-			},
+			Name:             fmt.Sprintf("default_%s_%s_%s", user.Name, app.Name, entrance.Name),
+			PathPrefix:       "/",
+			Cluster:          clusterName,
+			RequestHeaders:   outboundIdentityHeaders(user.Name, public),
 			WebSocketUpgrade: true,
 		}
 
@@ -615,6 +633,7 @@ func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.A
 			fmt.Sprintf("%s_%s_%s", user.Name, app.Name, entrance.Name),
 			clusterName,
 			user.Name,
+			public,
 			app.EntranceProbePaths[entrance.Name],
 		)...)
 		routes = append(routes, defaultRoute)
@@ -629,7 +648,8 @@ func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.A
 // buildProbeBypassRoutes emits Exact path routes that skip ExtAuth only when
 // User-Agent matches the webhook probe signature format. Requests to the same
 // path without a valid UA fall through to the default authenticated route.
-func buildProbeBypassRoutes(namePrefix, cluster, userName string, paths []string) []*ir.HTTPRouteIR {
+// public mirrors the catch-all: omit outbound X-BFL-USER on public entrances.
+func buildProbeBypassRoutes(namePrefix, cluster, userName string, public bool, paths []string) []*ir.HTTPRouteIR {
 	if len(paths) == 0 {
 		return nil
 	}
@@ -648,12 +668,10 @@ func buildProbeBypassRoutes(namePrefix, cluster, userName string, paths []string
 		}
 		seen[path] = struct{}{}
 		routes = append(routes, &ir.HTTPRouteIR{
-			Name:      fmt.Sprintf("probe_%s_%s", namePrefix, sanitizeProbePath(path)),
-			PathExact: path,
-			Cluster:   cluster,
-			RequestHeaders: map[string]string{
-				"X-BFL-USER": userName,
-			},
+			Name:           fmt.Sprintf("probe_%s_%s", namePrefix, sanitizeProbePath(path)),
+			PathExact:      path,
+			Cluster:        cluster,
+			RequestHeaders: outboundIdentityHeaders(userName, public),
 			HeaderMatches: []ir.HeaderMatchIR{{
 				Name:      "user-agent",
 				SafeRegex: probeUARegex,
@@ -861,13 +879,12 @@ func (t *Translator) buildCustomDomainVirtualHosts(user *message.UserInfo, app *
 			Name: clusterName, Host: upstreamHost, Port: uint32(entrance.Port), UseDNS: true,
 		}
 
+		public := isPublicAuthLevel(entrance.AuthLevel)
 		customRoute := &ir.HTTPRouteIR{
-			Name:       fmt.Sprintf("custom_%s_%s_%s_root", user.Name, app.Name, entrance.Name),
-			PathPrefix: "/",
-			Cluster:    clusterName,
-			RequestHeaders: map[string]string{
-				"X-BFL-USER": user.Name,
-			},
+			Name:             fmt.Sprintf("custom_%s_%s_%s_root", user.Name, app.Name, entrance.Name),
+			PathPrefix:       "/",
+			Cluster:          clusterName,
+			RequestHeaders:   outboundIdentityHeaders(user.Name, public),
 			WebSocketUpgrade: true,
 		}
 
@@ -877,6 +894,7 @@ func (t *Translator) buildCustomDomainVirtualHosts(user *message.UserInfo, app *
 			fmt.Sprintf("custom_%s_%s_%s", user.Name, app.Name, entrance.Name),
 			clusterName,
 			user.Name,
+			public,
 			app.EntranceProbePaths[entrance.Name],
 		)
 		routes = append(routes, customRoute)

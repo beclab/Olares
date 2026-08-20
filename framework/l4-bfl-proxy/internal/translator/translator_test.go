@@ -651,7 +651,7 @@ func TestBuildAppVirtualHosts_NonSharedApp(t *testing.T) {
 	assert.NotEmpty(t, clusterSet)
 }
 
-func TestBuildAppVirtualHosts_PublicSkipsExtAuth(t *testing.T) {
+func TestBuildAppVirtualHosts_PublicOmitsOutboundUserHeader(t *testing.T) {
 	tr := &Translator{cfg: &Config{}}
 	user := &message.UserInfo{Name: "alice", Language: "en"}
 	clusterSet := make(map[string]*ir.ClusterIR)
@@ -660,27 +660,105 @@ func TestBuildAppVirtualHosts_PublicSkipsExtAuth(t *testing.T) {
 		Appid:     "pub",
 		Namespace: "pub-alice",
 		Owner:     "alice",
+		EntranceProbePaths: map[string][]string{
+			"web": {"/healthz"},
+		},
 		Entrances: []*message.EntranceInfo{
 			{Name: "web", Host: "pub-svc", Port: 8080, AuthLevel: "public"},
 		},
 	}
 	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", false, clusterSet)
 	require.Len(t, vhosts, 1)
-	require.Len(t, vhosts[0].Routes, 1)
-	assert.Nil(t, vhosts[0].Routes[0].ExtAuth, "public must skip ExtAuth")
+	require.GreaterOrEqual(t, len(vhosts[0].Routes), 2)
+
+	probe := vhosts[0].Routes[0]
+	assert.Equal(t, "/healthz", probe.PathExact)
+	assert.Nil(t, probe.ExtAuth)
+	assert.Empty(t, probe.RequestHeaders, "public probe must not overwrite outbound X-BFL-USER")
+
+	last := vhosts[0].Routes[len(vhosts[0].Routes)-1]
+	assert.Equal(t, "/", last.PathPrefix)
+	require.NotNil(t, last.ExtAuth, "public must still call Authelia (Bypass), not skip ExtAuth")
+	assert.Equal(t, "authelia_backend_alice", last.ExtAuth.Cluster)
+	assert.Equal(t, autheliaVerifyPathPrefix, last.ExtAuth.PathPrefix)
+	assert.Empty(t, last.RequestHeaders, "public default route must omit outbound X-BFL-USER")
+}
+
+func TestBuildAppVirtualHosts_PrivateAndInternalKeepOutboundUserHeader(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+	user := &message.UserInfo{Name: "alice", Language: "en"}
+
+	for _, level := range []string{"", "private", "internal"} {
+		t.Run(level+"_or_default", func(t *testing.T) {
+			clusterSet := make(map[string]*ir.ClusterIR)
+			app := &message.AppInfo{
+				Name:      "app",
+				Appid:     "app",
+				Namespace: "app-alice",
+				Owner:     "alice",
+				Entrances: []*message.EntranceInfo{
+					{Name: "web", Host: "app-svc", Port: 8080, AuthLevel: level},
+				},
+			}
+			vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", false, clusterSet)
+			require.Len(t, vhosts, 1)
+			require.Len(t, vhosts[0].Routes, 1)
+			r := vhosts[0].Routes[0]
+			require.NotNil(t, r.ExtAuth)
+			require.Equal(t, map[string]string{"X-BFL-USER": "alice"}, r.RequestHeaders)
+		})
+	}
+}
+
+func TestBuildCustomDomainVirtualHosts_PublicOmitsOutboundUserHeader(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+	user := &message.UserInfo{Name: "alice", Language: "en", Zone: "alice.example.com"}
+	clusterSet := make(map[string]*ir.ClusterIR)
+	app := &message.AppInfo{
+		Name:      "pub",
+		Appid:     "pub",
+		Namespace: "pub-alice",
+		Owner:     "alice",
+		Settings: map[string]string{
+			settingsCustomDomain: `{"web":{"third_party_domain":"share.example.org"}}`,
+		},
+		EntranceProbePaths: map[string][]string{
+			"web": {"/healthz"},
+		},
+		Entrances: []*message.EntranceInfo{
+			{Name: "web", Host: "pub-svc", Port: 8080, AuthLevel: "public"},
+		},
+	}
+	vhosts := tr.buildCustomDomainVirtualHosts(user, app, clusterSet)
+	require.Len(t, vhosts, 1)
+	require.GreaterOrEqual(t, len(vhosts[0].Routes), 2)
+	assert.Equal(t, []string{"share.example.org"}, vhosts[0].Domains)
+
+	probe := vhosts[0].Routes[0]
+	assert.Equal(t, "/healthz", probe.PathExact)
+	assert.Empty(t, probe.RequestHeaders)
+
+	last := vhosts[0].Routes[len(vhosts[0].Routes)-1]
+	require.NotNil(t, last.ExtAuth)
+	assert.Empty(t, last.RequestHeaders)
 }
 
 func TestBuildProbeBypassRoutes_ExactPathAndUA(t *testing.T) {
-	routes := buildProbeBypassRoutes("alice_app_web", "cluster", "alice", []string{"/healthz", "/ready", "/", "healthz", "/healthz"})
+	routes := buildProbeBypassRoutes("alice_app_web", "cluster", "alice", false, []string{"/healthz", "/ready", "/", "healthz", "/healthz"})
 	require.Len(t, routes, 2, "dedupe and drop root path")
 	assert.Equal(t, "/healthz", routes[0].PathExact)
 	assert.Equal(t, "/ready", routes[1].PathExact)
 	for _, r := range routes {
 		assert.Nil(t, r.ExtAuth, "probe bypass must not re-enable ExtAuth")
+		require.Equal(t, map[string]string{"X-BFL-USER": "alice"}, r.RequestHeaders)
 		require.Len(t, r.HeaderMatches, 1)
 		assert.Equal(t, "user-agent", r.HeaderMatches[0].Name)
 		assert.Equal(t, probeUARegex, r.HeaderMatches[0].SafeRegex)
 	}
+
+	publicRoutes := buildProbeBypassRoutes("alice_pub_web", "cluster", "alice", true, []string{"/healthz"})
+	require.Len(t, publicRoutes, 1)
+	assert.Empty(t, publicRoutes[0].RequestHeaders)
 }
 
 func TestBuildAppVirtualHosts_ProbeBypassBeforeDefault(t *testing.T) {
