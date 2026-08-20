@@ -45,12 +45,15 @@ type intelPlan struct {
 // requirement or Out-of-tree status. The kernel / Out-of-tree / table-presence
 // checks only emit warnings and decide whether a discrete GPU qualifies for the
 // host driver packages (in-tree and kernel-supported).
-func classifyIntelGPUs(runtime connector.Runtime) intelPlan {
+func classifyIntelGPUs(runtime connector.Runtime) (intelPlan, error) {
 	var plan intelPlan
 
-	gpus := connector.IntelGPUs(runtime)
+	gpus, err := connector.IntelGPUs(runtime)
+	if err != nil {
+		return plan, err
+	}
 	if len(gpus) == 0 {
-		return plan
+		return plan, nil
 	}
 
 	kernelStr := runtime.GetSystemInfo().GetOsKernel()
@@ -94,7 +97,7 @@ func classifyIntelGPUs(runtime connector.Runtime) intelPlan {
 		}
 	}
 
-	return plan
+	return plan, nil
 }
 
 // LabelIntelGPUs labels the node with the "intel" and/or "intel-gpu" modes based
@@ -110,7 +113,10 @@ func (u *LabelIntelGPUs) Execute(runtime connector.Runtime) error {
 		return errors.Wrap(errors.WithStack(err), "kubeclient create error")
 	}
 
-	plan := classifyIntelGPUs(runtime)
+	plan, err := classifyIntelGPUs(runtime)
+	if err != nil {
+		return err
+	}
 	if !plan.labelIntel && !plan.labelIntelGPU {
 		logger.Info("No qualifying Intel GPU to label")
 		return nil
@@ -148,7 +154,11 @@ type HasQualifyingIntelDGPU struct {
 }
 
 func (p *HasQualifyingIntelDGPU) PreCheck(runtime connector.Runtime) (bool, error) {
-	return classifyIntelGPUs(runtime).hasQualifyingDGPU, nil
+	plan, err := classifyIntelGPUs(runtime)
+	if err != nil {
+		return false, err
+	}
+	return plan.hasQualifyingDGPU, nil
 }
 
 // InstallIntelDGPUDrivers installs the Intel discrete-GPU host driver stack on

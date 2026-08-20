@@ -7,6 +7,16 @@ import (
 	"github.com/beclab/Olares/cli/pkg/core/logger"
 )
 
+// HasAmdDiscreteGPU is a task Prepare that runs only when the node has a
+// discrete AMD GPU (amd-gpu mode), not a Ryzen AI Max APU.
+type HasAmdDiscreteGPU struct {
+	common.KubePrepare
+}
+
+func (p *HasAmdDiscreteGPU) PreCheck(runtime connector.Runtime) (bool, error) {
+	return runtime.GetSystemInfo().IsAmdGPU(), nil
+}
+
 // RocmInstalled checks if AMD ROCm is installed on the system.
 type RocmInstalled struct {
 	common.KubePrepare

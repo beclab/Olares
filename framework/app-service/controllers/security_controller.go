@@ -490,33 +490,21 @@ func (r *SecurityReconciler) reconcileNetworkPolicy(ctx context.Context, ns *cor
 		} else if scope, ok := ns.Labels[constants.AppSharedLabel]; ok && scope == constants.AppSharedTrue {
 			// Shared-app namespace.
 			//
-			// Emits exactly 4 NetworkPolicies into <app>-shared:
-			//   - app-np            (main, from NPAppSpace template; npFix
-			//                       below rewrites the owner placeholder for
-			//                       the user-internal peer AND drops the
-			//                       owner constraint on the user-space-bfl
-			//                       peer so ANY user's BFL can dial
-			//                       the shared app — shared apps are open to
-			//                       all users.)
-			//   - shared-np         (from NPSharedSpace; the template has no
-			//                       default Name, so we set it explicitly
-			//                       before handing it to Additional())
-			//   - system-provider-np (fixed name on the template)
-			//   - shared-entrance-np (fixed name on the template)
+			// Emits exactly 4 NetworkPolicies into <app>-shared via
+			// SharedNamespacePolicies: app-np / shared-np exclude
+			// shared-entrance pods so remaining OR policies cannot reopen
+			// ClusterIP bypass; system-provider-np and shared-entrance-np
+			// keep their own selectors. npFix below still rewrites the
+			// owner placeholder on app-np (main only) and drops the owner
+			// constraint on the user-space-bfl peer so any user's BFL can
+			// dial non-entrance pods.
 			//
 			// Putting this branch ABOVE the generic ns-owner branch is
 			// intentional: V3 namespaces also carry ns-owner (so npFix has
 			// an admin to fill in), and without this priority they would
 			// otherwise be served by the v1/v2 app-np branch and miss the
 			// other three policies.
-			sharedSpace := security.NPSharedSpace.DeepCopy()
-			sharedSpace.Name = "shared-np"
-			networkPolicy = security.NetworkPolicies{
-				security.NPAppSpace.DeepCopy(),
-				sharedSpace,
-				security.NPSystemProvider.DeepCopy(),
-				security.NPSharedEntrance.DeepCopy(),
-			}
+			networkPolicy = security.SharedNamespacePolicies()
 			networkPolicy.SetName("app-np")
 			networkPolicy.SetNamespace(ns.Name)
 			npFix = func(np *netv1.NetworkPolicy) {

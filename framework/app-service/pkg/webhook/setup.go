@@ -26,6 +26,8 @@ const (
 	appPodLabelWebhookName                = "app-label-webhook"
 	runAsUserWebhookName                  = "run-as-user-webhook"
 	mutatingWebhookRunAsUserName          = "run-as-user.bytetrade.io"
+	cliCredentialWebhookName              = "olares-cli-credential-webhook"
+	mutatingWebhookCliCredentialName      = "olares-cli-credential.bytetrade.io"
 	mutatingWebhookGpuLimitName           = "gpu-limit-inject-webhook.bytetrade.io"
 	mutatingWebhookAppLabelName           = "app-label-inject-webhook.bytetrade.io"
 	userValidatingWebhookName             = "user-validating-webhook"
@@ -778,6 +780,114 @@ func (wh *Webhook) CreateOrUpdateRunAsUserMutatingWebhook() error {
 		}
 	}
 	klog.Infof("Finished creating MutatingWebhookConfiguration %s", runAsUserWebhookName)
+	return nil
+}
+
+// CreateOrUpdateCliCredentialMutatingWebhook registers the admission webhook
+// that mounts the olares-cli credential Secret into pods of apps that
+// declared permission.loginOlaresCLI. It is a separate configuration from
+// run-as-user so the two mutations can fail and be versioned independently.
+func (wh *Webhook) CreateOrUpdateCliCredentialMutatingWebhook() error {
+	webhookPath := "/app-service/v1/clicredential/inject"
+	port, err := strconv.Atoi(strings.Split(constants.WebhookServerListenAddress, ":")[1])
+	if err != nil {
+		return err
+	}
+	webhookPort := int32(port)
+	failurePolicy := admissionregv1.Ignore
+	matchPolicy := admissionregv1.Exact
+	webhookTimeout := int32(30)
+
+	mwhLabels := map[string]string{"velero.io/exclude-from-backup": "true"}
+	caBundle, err := ioutil.ReadFile(defaultCaPath)
+	if err != nil {
+		return err
+	}
+	mwh := admissionregv1.MutatingWebhookConfiguration{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   cliCredentialWebhookName,
+			Labels: mwhLabels,
+		},
+		Webhooks: []admissionregv1.MutatingWebhook{
+			{
+				Name: mutatingWebhookCliCredentialName,
+				ClientConfig: admissionregv1.WebhookClientConfig{
+					CABundle: caBundle,
+					Service: &admissionregv1.ServiceReference{
+						Namespace: webhookServiceNamespace,
+						Name:      webhookServiceName,
+						Path:      &webhookPath,
+						Port:      &webhookPort,
+					},
+				},
+				FailurePolicy: &failurePolicy,
+				MatchPolicy:   &matchPolicy,
+				NamespaceSelector: &metav1.LabelSelector{
+					MatchExpressions: []metav1.LabelSelectorRequirement{
+						{
+							Key:      "kubernetes.io/metadata.name",
+							Operator: metav1.LabelSelectorOpNotIn,
+							Values:   security.UnderLayerNamespaces,
+						},
+						{
+							Key:      "kubernetes.io/metadata.name",
+							Operator: metav1.LabelSelectorOpNotIn,
+							Values:   security.OSSystemNamespaces,
+						},
+						{
+							Key:      "kubernetes.io/metadata.name",
+							Operator: metav1.LabelSelectorOpNotIn,
+							Values:   security.GPUSystemNamespaces,
+						},
+						{
+							Key:      "kubernetes.io/metadata.name",
+							Operator: metav1.LabelSelectorOpNotIn,
+							Values:   security.OSGatewayNamespaces,
+						},
+						{
+							Key:      "kubernetes.io/metadata.name",
+							Operator: metav1.LabelSelectorOpNotIn,
+							Values:   security.OSMeshNamespaces,
+						},
+					},
+				},
+				Rules: []admissionregv1.RuleWithOperations{
+					{
+						Operations: []admissionregv1.OperationType{admissionregv1.Create},
+						Rule: admissionregv1.Rule{
+							APIGroups:   []string{"*"},
+							APIVersions: []string{"v1"},
+							Resources:   []string{"pods"},
+						},
+					},
+				},
+				SideEffects: func() *admissionregv1.SideEffectClass {
+					sideEffect := admissionregv1.SideEffectClassNoneOnDryRun
+					return &sideEffect
+				}(),
+				TimeoutSeconds:          &webhookTimeout,
+				AdmissionReviewVersions: []string{"v1"}}},
+	}
+	if _, err = wh.kubeClient.AdmissionregistrationV1().MutatingWebhookConfigurations().Create(context.Background(), &mwh, metav1.CreateOptions{}); err != nil {
+		if apierrors.IsAlreadyExists(err) {
+			existing, err := wh.kubeClient.AdmissionregistrationV1().MutatingWebhookConfigurations().Get(context.Background(), mwh.Name, metav1.GetOptions{})
+			if err != nil {
+				klog.Errorf("Failed to get MutatingWebhookConfiguration name=%s err=%v", mwh.Name, err)
+				return err
+			}
+			mwh.ObjectMeta.ResourceVersion = existing.ObjectMeta.ResourceVersion
+			if _, err = wh.kubeClient.AdmissionregistrationV1().MutatingWebhookConfigurations().Update(context.Background(), &mwh, metav1.UpdateOptions{}); err != nil {
+				if !apierrors.IsConflict(err) {
+					klog.Errorf("Failed to update MutatingWebhookConfiguration name=%s err=%v", mwh.Name, err)
+					return err
+				}
+			}
+		} else {
+			klog.Errorf("Failed to create MutatingWebhookConfiguration name=%s err=%v", mwh.Name, err)
+			return err
+		}
+	}
+	klog.Infof("Finished creating MutatingWebhookConfiguration %s", cliCredentialWebhookName)
 	return nil
 }
 

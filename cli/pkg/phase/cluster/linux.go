@@ -64,7 +64,8 @@ func (l *linuxInstallPhaseBuilder) installGpuPlugin() phase {
 		&gpu.RestartK3sServiceModule{Skip: !(l.runtime.Arg.Kubetype == common.K3s)},
 		&gpu.InstallPluginModule{Skip: skipGpuPlugin},
 		&amdgpu.InstallAmdPluginModule{Skip: func() bool {
-			if l.runtime.GetSystemInfo().IsRyzenAIMax() {
+			si := l.runtime.GetSystemInfo()
+			if si.IsRyzenAIMax() || si.IsAmdGPU() {
 				return false
 			}
 			return true

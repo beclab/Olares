@@ -305,6 +305,13 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 		Returns(http.StatusOK, "inject runasuser success", nil)).
 		Consumes(restful.MIME_JSON)
 
+	ws.Route(ws.POST("/clicredential/inject").
+		To(handler.handleCliCredential).
+		Doc("mutating webhook for mounting the olares-cli credential into an app pod").
+		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
+		Returns(http.StatusOK, "inject olares-cli credential success", nil)).
+		Consumes(restful.MIME_JSON)
+
 	ws.Route(ws.POST("/workflow/inject").
 		To(handler.cronWorkflowInject).
 		Doc("mutating webhook for cron workflow").
