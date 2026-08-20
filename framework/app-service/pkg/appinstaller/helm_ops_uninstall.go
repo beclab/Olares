@@ -129,6 +129,11 @@ func (h *HelmOps) Uninstall_(client kubernetes.Interface, actionConfig *action.C
 		klog.Warningf("Failed to unregister app provider err=%v", err)
 	}
 
+	// Also covers the install-failure path, which tears down through the same
+	// call, so a grant minted for an install that never finished is revoked
+	// instead of outliving it.
+	h.ReleaseOlaresCLICredential()
+
 	return nil
 }
 

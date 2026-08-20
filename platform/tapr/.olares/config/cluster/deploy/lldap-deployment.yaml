@@ -203,6 +203,8 @@ spec:
               value: "os.groups"
             - name: LLDAP_HTTP_READONLY_PORT
               value: "17171"
+            - name: LLDAP_MAX_DERIVED_TOKEN_EXPIRY_DAYS
+              value: "3650"
 
           image: beclab/lldap:0.0.20
           imagePullPolicy: IfNotPresent

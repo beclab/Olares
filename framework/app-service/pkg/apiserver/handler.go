@@ -124,6 +124,10 @@ func (b *handlerBuilder) Build() (*Handler, error) {
 	if err != nil {
 		return nil, err
 	}
+	err = wh.CreateOrUpdateCliCredentialMutatingWebhook()
+	if err != nil {
+		return nil, err
+	}
 	err = wh.CreateOrUpdateAppLabelMutatingWebhook()
 	if err != nil {
 		return nil, err

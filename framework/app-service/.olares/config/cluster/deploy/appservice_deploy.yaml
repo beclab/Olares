@@ -128,6 +128,15 @@ data:
     DNS.2 = authz.olares.system
 
 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: login-olares-cli-allow-list
+  namespace: {{ .Release.Namespace }}
+data:
+  LOGIN_OLARES_CLI_ALLOW_LIST: "lares"
+
+---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -182,6 +191,9 @@ spec:
           name: jwks
         securityContext:
           runAsUser: 0
+        envFrom:
+        - configMapRef:
+            name: login-olares-cli-allow-list
         env:
         {{- range $key, $val := .Values.terminusGlobalEnvs }}
         - name: {{ $key }}
