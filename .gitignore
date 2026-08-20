@@ -24,6 +24,8 @@ go.work
 .dist
 .manifest
 .dependencies
+# olares-cli built by the Makefile's dev-* targets
+.build
 install-wizard-*.tar.gz
 olares-cli-*.tar.gz
 !ks-console-*.tgz

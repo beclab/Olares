@@ -81,13 +81,65 @@ func resolveImageScanKinds(kindRaw string) (primary string, batch []string, err 
 	return plural, nil, nil
 }
 
-type workloadImageRef struct {
+// ImageRef is one (workload, container, image) tuple. Exported because
+// pkg/devdeploy resolves `dev deploy` targets through FindImageRefs and
+// needs to name the result type.
+type ImageRef struct {
 	Namespace     string `json:"namespace,omitempty"`
 	Kind          string `json:"kind"`
 	Workload      string `json:"workload"`
 	ContainerType string `json:"containerType"`
 	Container     string `json:"container"`
 	Image         string `json:"image"`
+}
+
+// KindPlural maps the ref's rendered kind ("StatefulSet") back to the
+// path segment the mutating verbs need ("statefulsets"). Returns an
+// error for the batch kinds (Job / CronJob), which the images scan can
+// report on but set-image cannot patch — their pod templates are
+// immutable once created.
+func (r ImageRef) KindPlural() (string, error) {
+	switch strings.ToLower(r.Kind) {
+	case "job", "jobs", "cronjob", "cronjobs":
+		return "", fmt.Errorf("%s %s/%s cannot be repointed: pod templates of %s objects are immutable",
+			r.Kind, r.Namespace, r.Workload, r.Kind)
+	}
+	return NormalizeKind(r.Kind)
+}
+
+// FindImageRefs answers "which workloads reference this image?" for
+// callers outside the cobra layer. It is the same forced-full-scan the
+// `images <IMAGE>` verb runs — a paged subset would miss references on
+// later pages and wrongly report an image as unreferenced, which for
+// `dev deploy` would mean silently repointing only some of the
+// workloads that need it.
+//
+// namespace "" scans every namespace visible to the active profile.
+func FindImageRefs(ctx context.Context, o *clusteropts.ClusterOptions, namespace, image string) ([]ImageRef, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if strings.TrimSpace(image) == "" {
+		return nil, fmt.Errorf("image is required")
+	}
+	p := clusteropts.NewPaginationOptions()
+	p.All = true
+
+	collected, _, err := fetchWorkloads(ctx, o, p, namespace, KindAll, "", true)
+	if err != nil {
+		return nil, err
+	}
+	refs := collectWorkloadImageRefs(collected)
+
+	batchRefs, _, err := fetchBatchImageRefs(ctx, o, p, namespace, "", batchKinds)
+	if err != nil {
+		return nil, err
+	}
+	refs = append(refs, batchRefs...)
+
+	refs = filterRefsByImage(refs, image)
+	sortImageRefs(refs)
+	return refs, nil
 }
 
 type workloadImageScan struct {
@@ -116,7 +168,7 @@ func runImages(ctx context.Context, o *clusteropts.ClusterOptions, p *clusteropt
 	}
 
 	var (
-		refs []workloadImageRef
+		refs []ImageRef
 		scan []workloadImageScan
 	)
 	if primary != "" {
@@ -141,7 +193,7 @@ func runImages(ctx context.Context, o *clusteropts.ClusterOptions, p *clusteropt
 	sortImageRefs(refs)
 	if o.IsJSON() {
 		return o.PrintJSON(struct {
-			Refs  []workloadImageRef  `json:"refs"`
+			Refs  []ImageRef          `json:"refs"`
 			Scan  []workloadImageScan `json:"scan"`
 			Page  int                 `json:"page"`
 			Limit int                 `json:"limit"`
@@ -154,14 +206,14 @@ func runImages(ctx context.Context, o *clusteropts.ClusterOptions, p *clusteropt
 	return renderImagesTable(refs, scan, o.NoHeaders, imageQuery)
 }
 
-func collectWorkloadImageRefs(results []workloadKindResult) []workloadImageRef {
-	var refs []workloadImageRef
+func collectWorkloadImageRefs(results []workloadKindResult) []ImageRef {
+	var refs []ImageRef
 	for _, result := range results {
 		for _, w := range result.Items {
 			if w.Spec.Template == nil {
 				continue
 			}
-			base := workloadImageRef{
+			base := ImageRef{
 				Namespace: w.Metadata.Namespace,
 				Kind:      nonEmpty(w.Kind, SingularKind(result.Kind)),
 				Workload:  w.Metadata.Name,
@@ -195,12 +247,12 @@ func collectWorkloadImageRefs(results []workloadKindResult) []workloadImageRef {
 // query, tag- and digest-normalized via imageMatchKeys (so "nginx"
 // matches "docker.io/library/nginx:latest", and a digest pin matches
 // by digest).
-func filterRefsByImage(refs []workloadImageRef, query string) []workloadImageRef {
+func filterRefsByImage(refs []ImageRef, query string) []ImageRef {
 	want := map[string]struct{}{}
 	for _, key := range imageMatchKeys(query) {
 		want[key] = struct{}{}
 	}
-	var out []workloadImageRef
+	var out []ImageRef
 	for _, ref := range refs {
 		for _, key := range imageMatchKeys(ref.Image) {
 			if _, ok := want[key]; ok {
@@ -214,7 +266,7 @@ func filterRefsByImage(refs []workloadImageRef, query string) []workloadImageRef
 
 // sortImageRefs orders refs deterministically so JSON and table output
 // is stable across runs regardless of per-kind fetch / pagination order.
-func sortImageRefs(refs []workloadImageRef) {
+func sortImageRefs(refs []ImageRef) {
 	sort.SliceStable(refs, func(i, j int) bool {
 		a, b := refs[i], refs[j]
 		if a.Namespace != b.Namespace {
@@ -249,7 +301,7 @@ func summarizeImageScan(results []workloadKindResult, p *clusteropts.PaginationO
 	return out
 }
 
-func renderImagesTable(refs []workloadImageRef, scan []workloadImageScan, noHeaders bool, imageQuery string) error {
+func renderImagesTable(refs []ImageRef, scan []workloadImageScan, noHeaders bool, imageQuery string) error {
 	if len(refs) == 0 {
 		if imageQuery != "" {
 			fmt.Fprintf(os.Stdout, "no workloads reference %q\n", imageQuery)
