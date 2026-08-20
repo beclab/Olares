@@ -5,7 +5,6 @@ import (
 
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/olarescli"
-	"github.com/beclab/Olares/framework/app-service/pkg/users"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 
 	corev1 "k8s.io/api/core/v1"
@@ -43,12 +42,12 @@ func (h *HelmOps) EnsureOlaresCLICredential() error {
 	if err = ensureNamespace(h.ctx, client, h.app.Namespace); err != nil {
 		return err
 	}
-	zone, err := kubesphere.GetUserZone(h.ctx, h.app.OwnerName)
+
+	olaresName, err := kubesphere.GetOlaresName(h.ctx, h.app.OwnerName)
 	if err != nil {
 		return err
 	}
-	olaresID := string(users.NewOlaresName(h.app.OwnerName, zone))
-	_, err = store.EnsureCredential(h.ctx, h.app.AppName, h.app.OwnerName, olaresID, h.app.Namespace)
+	_, err = store.EnsureCredential(h.ctx, h.app.AppName, h.app.OwnerName, olaresName, h.app.Namespace)
 	return err
 }
 
