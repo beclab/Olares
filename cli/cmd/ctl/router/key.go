@@ -65,9 +65,10 @@ A key is what you hand to something that has no Olares session of its own — a
 script, a container, a service elsewhere. Applications installed on this Olares
 are recognised by the platform and do not need one either.
 
-"router call" is the exception, and it looks after itself: the data plane refuses
-a console session, so this machine keeps one key of its own and mints it on
-first use. "key current" is where that copy is inspected or dropped.
+"router call" needs no key either: the platform vouches for you the same way it
+does for the console plane. A key is worth issuing for it when the call has to
+carry a budget or a model allowlist of its own, or comes from somewhere the
+platform cannot vouch for.
 
 The plaintext is shown once, when the key is issued, because Router stores only
 its hash. Nothing can recover it afterwards; a lost key is replaced, not looked
@@ -78,7 +79,7 @@ Subcommands:
   issue <name>     create one and print the plaintext once
   update <key>     rename, enable, disable, re-expire, or change its models
   revoke <key>     stop it working, keeping the row and its usage history
-  current          the key "router call" is using from this machine
+  current          which credential "router call" would present right now
 
 A key can be restricted to named models, which is how a key given to one
 application stops being a key to everything. Without that restriction it reaches
@@ -102,20 +103,22 @@ func newKeyCurrentCommand(f *cmdutil.Factory) *cobra.Command {
 	)
 	cmd := &cobra.Command{
 		Use:   "current",
-		Short: "the key \"router call\" is using from this machine",
-		Long: `Show, or drop, the data-plane key this machine calls with.
+		Short: "which credential \"router call\" would present right now",
+		Long: `Say what the next "router call" will authenticate with.
 
-"router call" needs a credential the console plane cannot give it, so on first use
-it issues one key and saves it in the OS keychain under the active profile. Every
-later call reuses that copy instead of issuing another.
+Usually nothing: Router takes the caller's identity from the platform, the same
+way the console plane does, so a call carries no key at all and is attributed to
+you. A key is presented only when one is named — --api-key, or the
+OLARES_ROUTER_API_KEY environment variable.
 
-Only its prefix is shown. The secret is in the keychain and reading it back out
-here would put it in a shell history for no reason — anything that needs the
-plaintext should be given a key of its own with "router key issue".
+An older olares-cli saved a key of its own here on first use. Calls no longer
+use it, but it is still a working, unrestricted key in Router: "router key list"
+shows it and "router key revoke" is what ends it.
 
---forget deletes the saved copy. The key itself keeps working, because Router
-does not know a copy was discarded: this is how a machine stops calling, and
-"router key revoke" is how a key stops working. The next call issues a new one.
+--forget deletes this machine's copy and nothing else. Router keeps only the
+hash, so once the copy is gone the plaintext is unrecoverable — a key that
+should stop working has to be revoked, and a revoked key cannot be un-revoked.
+This command never revokes anything on its own.
 
 Examples:
   olares-cli router key current
@@ -126,7 +129,7 @@ Examples:
 			return runKeyLocal(c.Context(), f, forget, output)
 		},
 	}
-	cmd.Flags().BoolVar(&forget, "forget", false, "delete the local copy; the key itself stays valid")
+	cmd.Flags().BoolVar(&forget, "forget", false, "delete this machine's saved copy; the key itself stays valid")
 	addOutputFlag(cmd, &output)
 	return cmd
 }
@@ -147,8 +150,10 @@ func runKeyLocal(ctx context.Context, f *cmdutil.Factory, forget bool, outputRaw
 		if err := forgetDataPlaneKey(rp.OlaresID); err != nil {
 			return fmt.Errorf("drop the saved key: %w", err)
 		}
-		fmt.Printf("forgot the saved key for %s. It still works — `olares-cli router key list` "+
-			"shows it and `router key revoke` ends it. The next call will issue a new one.\n", rp.OlaresID)
+		fmt.Printf("forgot the saved key for %s. Calls were not using it anyway, and it still works: "+
+			"`olares-cli router key list` shows it and `router key revoke` is what ends it. "+
+			"This copy was the only plaintext — Router stores a hash — so it cannot be read back.\n",
+			rp.OlaresID)
 		return nil
 	}
 
@@ -156,6 +161,9 @@ func runKeyLocal(ctx context.Context, f *cmdutil.Factory, forget bool, outputRaw
 	state := map[string]any{
 		"profile": rp.OlaresID,
 		"saved":   stored != "",
+		// What the next call actually presents. Reusing the calling path's own
+		// vocabulary keeps this from becoming a second opinion about it.
+		"credential": string(resolveDataPlaneAuth("").Mode),
 	}
 	if stored != "" {
 		state["key_prefix"] = keyPrefixOf(stored)
@@ -173,15 +181,19 @@ func runKeyLocal(ctx context.Context, f *cmdutil.Factory, forget bool, outputRaw
 }
 
 func renderKeyLocal(w io.Writer, state map[string]any) error {
+	env, _ := state["env_override"].(string)
+	keyed := state["credential"] == string(authKey)
 	t := newTable(w)
 	t.row("PROFILE", fmt.Sprintf("%v", state["profile"]))
+	if keyed {
+		t.row("CALLS USE", "the key in "+env)
+	} else {
+		t.row("CALLS USE", "your platform identity, no key")
+	}
 	saved, _ := state["saved"].(bool)
 	t.row("SAVED KEY", boolStr(saved))
 	if p, ok := state["key_prefix"].(string); ok {
 		t.row("PREFIX", p)
-	}
-	if e, ok := state["env_override"].(string); ok {
-		t.row("OVERRIDDEN BY", e)
 	}
 	if e, ok := state["keychain_error"].(string); ok {
 		t.row("KEYCHAIN", "unreadable: "+e)
@@ -190,14 +202,17 @@ func renderKeyLocal(w io.Writer, state map[string]any) error {
 		return err
 	}
 	switch {
-	case state["env_override"] != nil:
-		_, err := fmt.Fprintf(w, "\n%s is set, so calls use that key and ignore the saved one.\n", state["env_override"])
+	case keyed:
+		_, err := fmt.Fprintf(w, "\n%s is set, so calls present that key. Unset it to call as yourself again.\n", env)
 		return err
 	case saved:
-		_, err := fmt.Fprintln(w, "\nCalls use this key. --forget drops the copy; `router key revoke` ends the key.")
+		_, err := fmt.Fprintln(w, "\nThe saved key is left over from an older olares-cli and is no longer used, "+
+			"but it still works in Router: `router key list` shows it, `router key revoke` ends it, "+
+			"and --forget only discards this copy.")
 		return err
 	default:
-		_, err := fmt.Fprintln(w, "\nNo key saved. The first `router call` will issue one and save it here.")
+		_, err := fmt.Fprintln(w, "\nNothing to manage here. --api-key or OLARES_ROUTER_API_KEY is how a call "+
+			"presents a key instead.")
 		return err
 	}
 }

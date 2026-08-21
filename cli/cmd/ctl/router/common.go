@@ -16,11 +16,11 @@
 // Router's console plane trusts, so authentication questions there belong to
 // the profile verbs rather than here.
 //
-// Calling a model is the exception, and the reason this tree keeps a secret of
-// its own. Router's /v1 data plane accepts an `sk-*` key or a
-// platform-injected caller identity and by design never a console session, so
-// `router call` presents whichever of the two it can get and mints a key when
-// it can get neither. See dataplane.go for the order and why. Keys issued with
+// Calling a model runs on the same identity. Router's /v1 accepts an `sk-*`
+// key, and failing that reads the caller the Olares edge names — an
+// application's `x-caller-appid`, or a person's X-BFL-USER. That last one is
+// the header the console plane already runs on, so `router call` presents no
+// credential of its own unless one is named; see dataplane.go. Keys issued with
 // `router key` remain what they were — a credential to hand to other software.
 package router
 

@@ -45,8 +45,9 @@ type responsesRequest struct {
 	MaxOutputTokens *int   `json:"max_output_tokens,omitempty"`
 	// Store is sent false so a one-shot verb leaves nothing behind. Router
 	// stores a response by default and anchors it on the calling credential,
-	// which for a laptop is a key this CLI minted — so the default would
-	// accumulate rows nothing here can list or delete.
+	// so the default would accumulate rows nothing here can list or delete —
+	// and a row stored under a key is not even readable by a later keyless
+	// call, which makes the accumulation invisible as well as permanent.
 	Store bool `json:"store"`
 }
 

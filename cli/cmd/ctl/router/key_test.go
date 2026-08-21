@@ -128,6 +128,46 @@ func TestAnInstantTakesABareDate(t *testing.T) {
 	}
 }
 
+// `key current` answers "what will the next call present", and the three
+// answers lead somewhere different. The saved-key case is the one that turned
+// into a lie when calling went keyless: the key is still there, still works,
+// and is no longer what a call uses — reporting only the first two facts sends
+// somebody looking for spend under a key nothing is spending against.
+func TestKeyCurrentSaysWhichCredentialTheNextCallPresents(t *testing.T) {
+	render := func(state map[string]any) string {
+		var b strings.Builder
+		if err := renderKeyLocal(&b, state); err != nil {
+			t.Fatalf("renderKeyLocal: %v", err)
+		}
+		return b.String()
+	}
+
+	keyless := render(map[string]any{"profile": "me@olares", "saved": false, "credential": "platform"})
+	if !strings.Contains(keyless, "no key") {
+		t.Errorf("a keyless machine is not told it calls without a key:\n%s", keyless)
+	}
+
+	leftover := render(map[string]any{"profile": "me@olares", "saved": true,
+		"credential": "platform", "key_prefix": "sk-abcdefghi…"})
+	for _, want := range []string{"no longer used", "still works", "key revoke"} {
+		if !strings.Contains(leftover, want) {
+			t.Errorf("a leftover key is not described as %q:\n%s", want, leftover)
+		}
+	}
+
+	env := render(map[string]any{"profile": "me@olares", "saved": false,
+		"credential": "key", "env_override": dataPlaneKeyEnv})
+	if !strings.Contains(env, dataPlaneKeyEnv) {
+		t.Errorf("an environment key is not named as the reason:\n%s", env)
+	}
+
+	for _, out := range []string{keyless, leftover, env} {
+		if strings.Contains(out, "will issue") {
+			t.Errorf("still promises a key will be issued:\n%s", out)
+		}
+	}
+}
+
 // The example in an error message has to be a name that could work. Falling
 // back to a plausible one beats printing an empty string into the sentence.
 func TestTheExampleModelPrefersARealOne(t *testing.T) {
