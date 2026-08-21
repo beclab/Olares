@@ -633,9 +633,6 @@ func runRouteCreate(ctx context.Context, f *cmdutil.Factory, name, kind, modelRe
 			return fmt.Errorf("a group needs --mode: every member has to answer the same kind of request, "+
 				"and the group is what fixes which. One of %s", strings.Join(providerModelModes, ", "))
 		}
-		if !containsString(providerModelModes, mode) {
-			return fmt.Errorf("--mode must be one of %s, not %q", strings.Join(providerModelModes, ", "), mode)
-		}
 		body["mode"] = mode
 	}
 

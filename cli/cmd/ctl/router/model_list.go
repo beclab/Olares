@@ -463,9 +463,6 @@ func runModelList(ctx context.Context, f *cmdutil.Factory, filter modelListFilte
 	if err != nil {
 		return err
 	}
-	if filter.Mode != "" && !containsString(providerModelModes, filter.Mode) {
-		return fmt.Errorf("--mode must be one of %s, not %q", strings.Join(providerModelModes, ", "), filter.Mode)
-	}
 	pc, err := prepare(ctx, f)
 	if err != nil {
 		return err

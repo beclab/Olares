@@ -45,14 +45,21 @@ import (
 // them wrong is visible — a model marked as not supporting vision will refuse
 // an image the upstream would have accepted.
 
-// providerModelModes is Router's mode allowlist. The mode decides which
-// endpoint family a model answers on, so it cannot be changed later: a row
-// created as chat stays chat, and the fix for a wrong one is to delete and add
-// it again.
+// providerModelModes is the mode vocabulary this CLI has heard of. The mode
+// decides which endpoint family a model answers on, so it cannot be changed
+// later: a row created as chat stays chat, and the fix for a wrong one is to
+// delete and add it again.
+//
+// It is a hint and never a gate. Router owns the list, it grows — this copy sat
+// two modes behind for a release, and because it was being used to refuse
+// input, `--mode music_generation` was rejected here for a value the database
+// itself accepts. A word not in this slice is now sent anyway: Router's
+// refusal names its own list, which is the one that is right.
 var providerModelModes = []string{
 	"chat", "embedding", "rerank", "moderation",
 	"audio", "translate", "image_generation", "responses", "ocr",
 	"search", "scrape", "video_generation",
+	"music_generation", "model3d_generation",
 }
 
 // NewModelCommand assembles the model noun: one place for every model this
@@ -227,7 +234,8 @@ own is a route over the top of it: "olares-cli router route create <name>
 
 --mode decides which endpoint family the model answers on and cannot be changed
 afterwards; a row created with the wrong mode has to be removed and added again.
-Allowed: ` + strings.Join(providerModelModes, ", ") + `.
+Router keeps the list and refuses anything outside it, naming the whole list
+when it does. The ones known here: ` + strings.Join(providerModelModes, ", ") + `.
 
 Capabilities default to none, which is a claim in itself: Router refuses to
 dispatch an image to a model that does not declare vision, even when the
@@ -291,9 +299,6 @@ func runModelAdd(ctx context.Context, f *cmdutil.Factory, ref string, req addMod
 	}
 	if err := requireProviderFlag(ref, "add"); err != nil {
 		return err
-	}
-	if !containsString(providerModelModes, req.Mode) {
-		return fmt.Errorf("--mode must be one of %s, not %q", strings.Join(providerModelModes, ", "), req.Mode)
 	}
 	req.Supports, err = parseSupportsFlags(supports)
 	if err != nil {

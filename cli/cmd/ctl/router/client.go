@@ -133,6 +133,13 @@ func (e *RouterError) recovery() string {
 	case "predefined_models_unknown":
 		return "; Router does not say which name it rejected — compare against " +
 			"`olares-cli router provider types <vendor> --models`"
+	case "provider_models_invalid_mode":
+		// The two write routes name their own list in the message, which is
+		// the authoritative one. This filter does not, so the copy is worth
+		// offering — hedged, because Router's list is the longer of the two
+		// whenever they disagree.
+		return "; the modes this CLI knows of are " + strings.Join(providerModelModes, ", ") +
+			", and Router may have more"
 	case "market_app_not_found":
 		return "; the Market will not act on this application in its current state — " +
 			"`olares-cli market status <app>` says what that state is, and a stopped app has to be resumed first"

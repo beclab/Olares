@@ -116,6 +116,13 @@ the credential that made it, and may cost money.
 // check them: a category renamed there turns every `--model`-less call into a
 // route that does not exist. `olares-cli router route list --kind default` lists what this
 // deployment actually has, and is the thing to compare against.
+//
+// Router's registry is longer than this list, and the gap is not an oversight
+// in either direction. A category is only useful here if a verb can reach the
+// endpoint behind it: `default-moderation` has no `/v1/moderations` at all, so
+// there is nothing to name it from, and `default-translate` belongs to a verb
+// that sends no model. Adding a constant for either would promise a call this
+// tree cannot make.
 const (
 	categoryChat        = "default-chat"
 	categoryEmbedding   = "default-embedding"
