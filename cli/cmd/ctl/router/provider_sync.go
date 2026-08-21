@@ -47,7 +47,7 @@ func newProviderSyncModelsCommand(f *cmdutil.Factory) *cobra.Command {
 Use this for an upstream whose catalog is its own: Ollama, a generic
 OpenAI-compatible endpoint, or a model application on this Olares. For a vendor
 with a published catalog — OpenAI, Anthropic, Gemini — the models are chosen
-from that catalog instead, with "provider models add".
+from that catalog instead, with "olares-cli router model add".
 
 What a sync does:
 
@@ -68,7 +68,7 @@ row, without the settings the old one carried.
 
 For a model application, a sync does one thing more: it re-reads the model card
 the application serves and refreshes Router's copy of it, engine launch flags
-included. That makes this the verb to run when "provider models get" shows
+included. That makes this the verb to run when "olares-cli router model get" shows
 engine arguments the application no longer starts with.
 
 Example:

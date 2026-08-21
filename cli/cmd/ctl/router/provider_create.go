@@ -58,7 +58,7 @@ asks the upstream. Pass --validate to run that immediately after creating.
 
 No models are attached. That is deliberate: a vendor catalog imported wholesale
 the moment credentials are entered cannot be narrowed afterwards. Choose them
-with "provider models add", or for an endpoint that publishes its own list, run
+with "olares-cli router model add", or for an endpoint that publishes its own list, run
 "provider sync-models".
 
 Credentials given as --credential stay in your shell history and are visible
@@ -150,7 +150,7 @@ func runProviderCreate(ctx context.Context, f *cmdutil.Factory, req createProvid
 	if !andValidate {
 		_, err := fmt.Fprintf(os.Stdout,
 			"\ncreated with no models attached. Next: `olares-cli router provider validate %s`, "+
-				"then choose models with `olares-cli router provider models add %s ...`\n",
+				"then choose models with `olares-cli router model add <model> --provider %s`\n",
 			created.Name, created.Name)
 		return err
 	}

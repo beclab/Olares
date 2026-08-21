@@ -177,7 +177,7 @@ func (r *adminModelRow) callable() bool {
 // a reader who is told the wrong one goes looking for a toggle nobody switched
 // off. Where the console stops at one neutral badge this says which switch is
 // off, since a line of text is cheaper than a badge and the two have different
-// fixes: `provider models update --enable` against `provider update --enable`.
+// fixes: `model update --enable` against `provider update --enable`.
 //
 // A row whose application has reported no phase keeps the generic verdict.
 // Silence is not a state to name, and it is also what an older Router sends.
@@ -259,7 +259,7 @@ reach the same row — aliases, groups and the default categories, which
 else names what is in the way, and the two kinds ask for different things: a
 platform phase — "stopped", "downloading", "failed" — belongs to the model
 application and is "olares-cli market" territory, while "disabled" is a switch
-an admin threw and "provider models update --enable" restores. A locally
+an admin threw and "model update --enable" restores. A locally
 installed application has a row from the moment it is installed, so a model
 that has never run is listed here rather than missing.
 

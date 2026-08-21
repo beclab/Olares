@@ -27,7 +27,7 @@ olares-cli router usage retention
 - Filters compose across all three verbs: `--model`, `--provider`, `--key`, `--user`, `--caller`, `--status`, `--tag`, `--since`, `--until`. `--since` takes an instant or a span like `24h` or `7d`. `--caller` names an application by its title, its Olares application name or the appid a row shows.
 - `--status failed` is the one to reach for after a complaint: a failed call still carries the error code Router returned, so the reason is in the row.
 
-Every accepted call becomes a row, including one the upstream then refused. Cost comes from the prices on the model row, so a model imported without prices records tokens and no money — that is a configuration gap in `provider models`, not missing usage.
+Every accepted call becomes a row, including one the upstream then refused. Cost comes from the prices on the model row, so a model imported without prices records tokens and no money — that is a configuration gap in the model row, not missing usage.
 
 Scope follows the role. A non-admin sees only their own calls; `--user` and `--caller` are admin-only, because they are what makes another person's usage visible.
 

@@ -33,7 +33,7 @@ All verbs require Olares 1.12.7+ because Router ships as the `router` Market lis
 | Family | Verbs | Read when triggered |
 |---|---|---|
 | where Router is, and who you are | no verb of its own — every verb resolves it, and says so when it cannot | [architecture and identity](references/olares-router-architecture.md) |
-| cloud vendors and their models | `provider list/get/types/create/update/delete/validate/credentials/history/rollback/sync-models`, `provider models get/import/add/update/delete` | [configuring an external provider](references/olares-router-external.md) |
+| cloud vendors and their models | `provider list/get/types/create/update/delete/validate/credentials/history/rollback/sync-models`, `model get/import/add/update/remove` | [configuring an external provider](references/olares-router-external.md) |
 | local LLM applications | `provider register`, `local status/progress/spec/retry/restart`, plus [`olares-market`](../olares-market/SKILL.md)'s `install` / `clone` | [local LLM applications](references/olares-router-local-llm.md) |
 | local embedding, audio, OCR, CLIP | the same verbs, different modes | [local multimodal applications](references/olares-router-local-multimodal.md) |
 | what a local model declares itself to be | `spec show/edit/restart` | [local LLM applications](references/olares-router-local-llm.md) |
@@ -57,7 +57,7 @@ Read [architecture and identity](references/olares-router-architecture.md) befor
 
 | Intent | Where it belongs |
 |---|---|
-| Use a vendor's hosted models | `provider create` + `provider models import`, or `provider sync-models` for an endpoint that publishes its own list |
+| Use a vendor's hosted models | `provider create` + `model import`, or `provider sync-models` for an endpoint that publishes its own list |
 | Run a model on this machine | [`olares-market`](../olares-market/SKILL.md)'s `market install` for a pinned model, `market clone` for an engine base; Router creates the provider once the application runs |
 | Change what a local model serves or how it is launched | `spec edit <model>` — the model card, which the application owns; not the Router row |
 | Change the address, credentials, or enabled state Router routes with | `provider update` |

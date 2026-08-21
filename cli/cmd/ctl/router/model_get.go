@@ -13,7 +13,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
-// `olares-cli router provider models get <provider> <model>`
+// `olares-cli router model get <model>`
 //
 // One model, in full. The model table under `provider get` answers "what does
 // this provider offer"; this answers "what exactly does Router believe about
@@ -23,10 +23,13 @@ import (
 // provider detail, so this reads the same response the other model verbs
 // resolve through.
 
-func newProviderModelsGetCommand(f *cmdutil.Factory) *cobra.Command {
-	var output string
+func newModelGetCommand(f *cmdutil.Factory) *cobra.Command {
+	var (
+		output   string
+		provider string
+	)
 	cmd := &cobra.Command{
-		Use:   "get <provider> <model>",
+		Use:   "get <model>",
 		Short: "everything Router records about one model",
 		Long: `Show one model in full.
 
@@ -35,26 +38,29 @@ capabilities and leaves the rest out. This prints the whole record — every
 capability flag that is on, every price, the context window, and the engine
 launch flags when the model is served by a local application.
 
-The model may be named by its upstream name, its alias, or its id.
+The model may be named as "<provider>/<model>", by its own name when only one
+row carries it, or by its id. --provider settles a name two providers share.
 
 Engine arguments only appear for a model application's own models. They are
 the flags the Model Console starts the inference engine with, mirrored into
 Router by "provider sync-models"; the card inside the application is the
 original, and "router local spec <app>" reads it there.
 
-Example:
-  olares-cli router provider models get lmstudio qwen3-8b
+Examples:
+  olares-cli router model get lmstudio/qwen3-8b
+  olares-cli router model get qwen3-8b --provider lmstudio
 `,
-		Args: cobra.ExactArgs(2),
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
-			return runProviderModelsGet(c.Context(), f, args[0], args[1], output)
+			return runModelGet(c.Context(), f, args[0], provider, output)
 		},
 	}
+	cmd.Flags().StringVar(&provider, "provider", "", "which provider's copy, when the name is served by more than one")
 	addOutputFlag(cmd, &output)
 	return cmd
 }
 
-func runProviderModelsGet(ctx context.Context, f *cmdutil.Factory, providerRef, modelRef, outputRaw string) error {
+func runModelGet(ctx context.Context, f *cmdutil.Factory, modelRef, providerRef, outputRaw string) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -66,7 +72,7 @@ func runProviderModelsGet(ctx context.Context, f *cmdutil.Factory, providerRef, 
 	if err != nil {
 		return err
 	}
-	provider, model, err := resolveProviderModel(ctx, pc, providerRef, modelRef)
+	provider, model, err := resolveModelOnProvider(ctx, pc, modelRef, providerRef)
 	if err != nil {
 		return err
 	}

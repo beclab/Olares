@@ -23,9 +23,10 @@ find it says whether it is missing or invisible to this profile.
 
   list          every model configured, across every provider
   models        every name the model field accepts, as a caller sees it
+  model         attach, correct and detach the models Router is configured with
   route         the names callers may send instead of a provider and model,
                 including the default-* categories Router maintains itself
-  provider      the upstreams Router routes to, and the models they serve
+  provider      the upstreams Router routes to: cloud accounts and model apps
   spec          what a local model declares itself to be, and changing it
   local         the Model Console inside a model application on this machine
   call          send work to a model: text, embeddings, web, images, audio, OCR
@@ -51,6 +52,7 @@ Run "olares-cli router <verb> --help" for details.
 
 	cmd.AddCommand(NewListCommand(f))
 	cmd.AddCommand(newModelsCommand(f))
+	cmd.AddCommand(NewModelCommand(f))
 	cmd.AddCommand(NewRouteCommand(f))
 	cmd.AddCommand(NewProviderCommand(f))
 	cmd.AddCommand(NewSpecCommand(f))

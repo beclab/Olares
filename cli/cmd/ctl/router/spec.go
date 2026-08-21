@@ -519,8 +519,8 @@ func specErr(err error, model string) error {
 			"wrong application", err, model)
 	case "model_spec_unsupported_provider":
 		return fmt.Errorf("%w\nOnly a model application on this Olares has a card — a cloud provider's "+
-			"models are described by Router's own catalogue, and `olares-cli router provider models "+
-			"update` is what changes those", err)
+			"models are described by Router's own catalogue, and `olares-cli router model update` "+
+			"is what changes those", err)
 	case "model_spec_app_unavailable":
 		return fmt.Errorf("%w\n`olares-cli router provider get <provider>` shows the application's state, "+
 			"and `olares-cli market resume <app>` starts it. `router spec show` still answers meanwhile, "+

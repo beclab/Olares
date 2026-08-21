@@ -10,8 +10,8 @@ Everything here is admin-only, reads included: even listing providers refuses a 
 
 Two shapes matter more than the vendor's name:
 
-- **`predefined-model`** — Router ships the vendor's catalog, so `provider models import` fills in capabilities and prices for you.
-- **`customizable-model`** — the endpoint's catalog is its own. Either `provider sync-models` mirrors its live list, or `provider models add` names one model and describes it by hand.
+- **`predefined-model`** — Router ships the vendor's catalog, so `model import` fills in capabilities and prices for you.
+- **`customizable-model`** — the endpoint's catalog is its own. Either `provider sync-models` mirrors its live list, or `model add` names one model and describes it by hand.
 
 `openai_api_compatible` is the generic escape hatch for any OpenAI-shaped endpoint. Its credential fields are declared per model upstream while Router stores them on the provider, which is why the summary row repeats a field once per mode; read `provider types openai_api_compatible` and supply the common ones plus `--base-url`.
 
@@ -32,16 +32,16 @@ Credentials are encrypted at rest and never returned. `provider credentials` sho
 ## 3. Attach models
 
 ```
-olares-cli router provider models import openai-main gpt-4o gpt-4o-mini
+olares-cli router model import --provider openai-main gpt-4o gpt-4o-mini
 olares-cli router provider sync-models ollama-box
-olares-cli router provider models add my-endpoint llama-3.1-70b \
+olares-cli router model add llama-3.1-70b --provider my-endpoint \
     --mode chat --context-size 131072 --supports vision=true
 ```
 
 - `import` takes the capability flags, context window and prices from Router's catalog. Prefer it whenever the vendor is predefined.
 - `sync-models` mirrors an upstream that publishes `/models` — Ollama, a local model application, most gateways. It is the whole list in one step, so it is also the way to pick up a model added upstream later.
 - `add` is for an endpoint whose catalog Router cannot read. `--mode` defaults to `chat`; get it right, because a default is resolved per mode and a mislabelled row is only discovered at call time.
-- `--supports` takes `supports_*` flags. Declaring one the model does not have makes a caller send a request the upstream will reject; omitting one it does have makes callers avoid a feature that works. Router stores a key it does not recognise instead of refusing it, so a misspelt flag is kept and never honoured — read a working row with `router provider models get <provider> <model>` and copy its spelling rather than guessing.
+- `--supports` takes `supports_*` flags. Declaring one the model does not have makes a caller send a request the upstream will reject; omitting one it does have makes callers avoid a feature that works. Router stores a key it does not recognise instead of refusing it, so a misspelt flag is kept and never honoured — read a working row with `router model get <model>` and copy its spelling rather than guessing.
 
 `router provider get <provider>` then shows the provider with every model it serves, their modes, sizes and headline capabilities. `router list` shows every model across every provider, with the same capability summary in its SUPPORTS column.
 
@@ -51,12 +51,12 @@ olares-cli router provider models add my-endpoint llama-3.1-70b \
 |---|---|
 | Rename, re-point, disable the whole provider | `provider update --name/--title/--base-url/--status` |
 | Rotate a key | `provider update --credentials-json - --credentials-note "why"` |
-| Fix what one model claims | `provider models update <provider> <model> --supports ... --pricing ...` |
-| Stop offering one model, keeping its row | `provider models update ... --disable` |
-| Detach a model | `provider models delete <provider> <model>` |
+| Fix what one model claims | `model update <model> --supports ... --pricing ...` |
+| Stop offering one model, keeping its row | `model update <model> --disable` |
+| Detach a model | `model remove <model>` |
 | Remove the provider and everything referencing it | `provider delete <provider>` |
 
-`provider update` merges credentials: a field you omit keeps its stored value, so rotating one secret does not require resending the rest. `provider models update` merges the model's description the same way; `--replace-description` sends only what is on the command line and discards the rest.
+`provider update` merges credentials: a field you omit keeps its stored value, so rotating one secret does not require resending the rest. `model update` merges the model's description the same way; `--replace-description` sends only what is on the command line and discards the rest.
 
 Disabling a provider keeps its rows and its history and stops it answering. Deleting it takes the models, the quotas that referenced them and the keys' allowances with it — prefer `--status disabled` when the intent is reversible.
 

@@ -150,7 +150,10 @@ Subcommands:
   history <name>   credential versions, newest first
   rollback         restore an earlier credential version
   register <app>   the provider Router registered for a model application
-  models           which models a provider offers
+
+"provider get" lists the models a provider serves. Attaching, correcting and
+detaching them is "olares-cli router model", which reaches every model on this
+Router rather than one provider's at a time.
 
 Market-sourced providers only appear in the list once their application is
 actually running, so a model app that is still installing is absent here
@@ -172,7 +175,7 @@ Admin only.
 	cmd.AddCommand(newProviderHistoryCommand(f))
 	cmd.AddCommand(newProviderRollbackCommand(f))
 	cmd.AddCommand(newProviderRegisterCommand(f))
-	cmd.AddCommand(newProviderModelsCommand(f))
+	cmd.AddCommand(newDeprecatedProviderModelsCommand(f))
 	return cmd
 }
 
