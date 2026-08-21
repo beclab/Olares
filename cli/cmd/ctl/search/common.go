@@ -22,13 +22,14 @@ const (
 	appFilesV2     = "files_v2"
 	appGoogleDrive = "google_drive"
 	appDropbox     = "dropbox"
+	appSeafile     = "seafile"
 	appKnowledge   = "knowledge"
 
 	// searchSessionAppMinOlaresVersion is the first Olares line on which
-	// search3 serves app=google_drive|dropbox|knowledge.
+	// search3 serves the knowledge partition and federated cloud sources.
 	//
 	// For google_drive and dropbox this mirrors TermiPass's
-	// seachOSVersionLargeThan12_7 gate directly. knowledge has no such
+	// searchOSVersionLargeThan12_7 gate directly. knowledge has no such
 	// gate in the SPA -- it offers the Wise source whenever Wise is
 	// installed -- but it lands on the same floor anyway, because only
 	// the new Wise feeds search3's knowledge partition and it can only be
@@ -183,6 +184,9 @@ type resultItem struct {
 	Path        string          `json:"path,omitempty"`
 	RepoName    string          `json:"repo_name,omitempty"`
 	Highlight   json.RawMessage `json:"highlight,omitempty"`
+	// Left raw because `meta` is source-specific: a shape this CLI does not
+	// model must not fail the whole result set.
+	Meta json.RawMessage `json:"meta,omitempty"`
 
 	Raw json.RawMessage `json:"-"`
 }
@@ -192,6 +196,38 @@ func (it resultItem) location() string {
 		return it.ResourceURI
 	}
 	return it.Path
+}
+
+// libraryName returns the Sync library's display name when the hit carries one.
+// Federated seafile hits report it in `meta.repo_name`; legacy /api/search/sync
+// rows put it at the top level.
+func (it resultItem) libraryName() string {
+	if it.RepoName != "" {
+		return it.RepoName
+	}
+	var meta struct {
+		RepoName string `json:"repo_name"`
+	}
+	if err := json.Unmarshal(it.Meta, &meta); err != nil {
+		return ""
+	}
+	return meta.RepoName
+}
+
+// locationLine renders the result's location, annotated with the Sync library's
+// display name when there is one. A seafile location carries only the repo id,
+// which is unreadable on its own but is also what makes the location a valid
+// files path (`files ls sync/<repo_id>/`) — hence an annotation rather than a
+// substitution.
+func (it resultItem) locationLine() string {
+	location := it.location()
+	if location == "" {
+		return ""
+	}
+	if library := it.libraryName(); library != "" {
+		return fmt.Sprintf("%s (%s)", location, library)
+	}
+	return location
 }
 
 // paginateRaw applies client-side offset/limit windowing to raw result
@@ -272,7 +308,7 @@ func renderResults(w io.Writer, items []resultItem) error {
 		if _, err := fmt.Fprintf(w, "%d. %s\n", i+1, title); err != nil {
 			return err
 		}
-		if loc := it.location(); loc != "" {
+		if loc := it.locationLine(); loc != "" {
 			if _, err := fmt.Fprintf(w, "   %s\n", loc); err != nil {
 				return err
 			}

@@ -2,6 +2,7 @@ package search
 
 import (
 	"context"
+	"os"
 
 	"github.com/spf13/cobra"
 
@@ -11,26 +12,32 @@ import (
 type driveOptions struct {
 	pagingOptions
 	searchType string
+	watch      bool
 }
 
 func newDriveCommand(f *cmdutil.Factory) *cobra.Command {
 	o := &driveOptions{}
 	cmd := &cobra.Command{
-		Use:   "drive <keyword>",
-		Short: "Full-content search of user Drive files",
-		Long: `Search the per-user search3 index for Drive files.
+		Use:     "drive <keyword>",
+		Aliases: []string{"files"},
+		Short:   "Search Drive, Sync, Google Drive, and Dropbox files",
+		Long: `Search indexed files from Drive, Sync, and connected cloud drives.
 
-Drive search is session-based: the CLI bootstraps /api/search/init and, only
-when the requested window runs past the first page, pages deeper via
-/api/search/more using the same session id.
+On Olares 1.12.7 and newer, one asynchronous search covers files_v2,
+google_drive, dropbox, and seafile. Olares 1.12.6 and older keep using the
+legacy /api/search/init + /more + /cancel API for local Drive files only
+(Sync remains available via search sync).
 
-Note: a single search resolves at most ~50 hits server-side, so --limit is
-effectively capped around 50.
+With --watch, Olares 1.12.7+ prints each result as soon as its asynchronous
+batch arrives. JSON output is JSONL (one result object per line). Older
+versions have no result stream and print the completed legacy result instead.
 
 Examples:
   olares-cli search drive report
+  olares-cli search files report
+  olares-cli search drive report --watch
   olares-cli search drive invoice --type file_name --limit 50
-  olares-cli search drive "design doc" --offset 20 -o json
+  olares-cli search drive "design doc" --watch -o json
 `,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
@@ -44,6 +51,8 @@ Examples:
 	cmd.SilenceUsage = true
 	cmd.Flags().StringVarP(&o.searchType, "type", "t", searchTypeAggregate,
 		"search mode: aggregate, file_name")
+	cmd.Flags().BoolVarP(&o.watch, "watch", "w", false,
+		"print results as asynchronous search batches arrive (Olares >= 1.12.7)")
 	registerPagingFlags(cmd, &o.pagingOptions)
 	return cmd
 }
@@ -61,9 +70,19 @@ func runDriveSearch(ctx context.Context, f *cmdutil.Factory, keyword string, o *
 		return err
 	}
 
-	items, err := runSessionSearch(ctx, f, keyword, appFilesV2, searchType, &o.pagingOptions)
+	var watcher *watchResultPrinter
+	var onHit func(asyncIndexedHit) error
+	if o.watch {
+		watcher = newWatchResultPrinter(os.Stdout, format, o.offset, o.limit)
+		onHit = watcher.emit
+	}
+
+	items, async, err := runVersionedFileSearch(ctx, f, keyword, searchType, &o.pagingOptions, onHit)
 	if err != nil {
 		return err
+	}
+	if o.watch && async {
+		return watcher.finish()
 	}
 	return printSearchResults(format, items)
 }

@@ -4,9 +4,8 @@ import (
 	"testing"
 )
 
-// TestSessionAppConstants pins the search3 app partition strings that the
-// new gdrive / dropbox / knowledge subcommands send as the "app" field on
-// /api/search/init. These must stay aligned with TermiPass ServiceType.
+// TestSessionAppConstants pins the search3 source/app wire strings. These must
+// stay aligned with TermiPass ServiceType and the federated search protocol.
 func TestSessionAppConstants(t *testing.T) {
 	t.Parallel()
 
