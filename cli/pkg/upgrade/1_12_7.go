@@ -35,7 +35,6 @@ func (u upgrader_1_12_7) AddedBreakingChange() bool {
 
 func (u upgrader_1_12_7) PrepareForUpgrade() []task.Interface {
 	tasks := publishMarketEnsureApps()
-	tasks = append(tasks, migrateContainerdConfigV3()...)
 	tasks = append(tasks, &task.LocalTask{
 		Name:    "CleanupK3sCertsRenewService",
 		Prepare: new(common.OnlyK3s),
@@ -52,6 +51,13 @@ func (u upgrader_1_12_7) PrepareForUpgrade() []task.Interface {
 
 	tasks = append(tasks, u.upgraderBase.PrepareForUpgrade()...)
 	return tasks
+}
+
+// PreUpgradeNode rewrites the container runtime's configuration and restarts
+// it. Every machine has its own /etc/containerd and its own GPU, so every
+// machine migrates itself.
+func (u upgrader_1_12_7) PreUpgradeNode() []task.Interface {
+	return append(migrateContainerdConfigV3(), u.upgraderBase.PreUpgradeNode()...)
 }
 
 func init() {

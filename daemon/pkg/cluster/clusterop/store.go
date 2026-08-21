@@ -92,29 +92,40 @@ func (s *Store) Save(op Operation) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	tmp, err := os.CreateTemp(s.dir, "."+op.ID+".*.tmp")
+	if err := writeRecord(s.dir, "."+op.ID+".*.tmp", final, data); err != nil {
+		return fmt.Errorf("write operation %s: %w", op.ID, err)
+	}
+	return nil
+}
+
+// writeRecord replaces final with data, atomically and durably.
+//
+// A record is written by creating a complete one beside it and renaming over
+// the top, so a reader either sees the whole previous record or the whole new
+// one and never a half-written file. Both syncs matter and for different
+// reasons: the first puts the contents on the disk before the rename can
+// publish them, and the second puts the rename itself there. Without the
+// second, the record can vanish on a machine that loses power just after
+// writing it — which is exactly what these records describe, since they exist
+// to say what a reboot or an upgrade was in the middle of doing.
+func writeRecord(dir, tmpPattern, final string, data []byte) error {
+	tmp, err := os.CreateTemp(dir, tmpPattern)
 	if err != nil {
-		return fmt.Errorf("stage operation %s: %w", op.ID, err)
+		return err
 	}
 	tmpName := tmp.Name()
 	defer os.Remove(tmpName)
 
 	if err := writeAndSync(tmp, data); err != nil {
-		return fmt.Errorf("write operation %s: %w", op.ID, err)
+		return err
 	}
 	if err := os.Chmod(tmpName, recordMode); err != nil {
-		return fmt.Errorf("secure operation %s: %w", op.ID, err)
+		return err
 	}
 	if err := os.Rename(tmpName, final); err != nil {
-		return fmt.Errorf("commit operation %s: %w", op.ID, err)
+		return err
 	}
-	// The rename itself is what a reader sees; syncing the directory is what
-	// makes it survive losing power a moment later, which is the whole point
-	// of a record describing a power operation.
-	if err := syncDir(s.dir); err != nil {
-		return fmt.Errorf("sync operation directory: %w", err)
-	}
-	return nil
+	return syncDir(dir)
 }
 
 func writeAndSync(f *os.File, data []byte) error {

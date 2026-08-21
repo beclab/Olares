@@ -44,6 +44,16 @@ var reasons = map[string]string{
 
 	CodeModuleFailed: "the operation stopped without reporting what it did",
 
+	// What an upgrade can end on, and what one node can fail a stage with.
+	CodePlanUnavailable:    "the upgrade plan could not be read",
+	CodeStageFailed:        "this node did not complete this stage of the upgrade",
+	CodeStageTimeout:       "this node did not finish this stage in time",
+	CodeStageBusy:          "this node is still running a stage of an earlier attempt",
+	CodeUpgradeUnsupported: "this node cannot run upgrade stages",
+	CodeUpgradeCancelled:   "the upgrade was stopped before this stage",
+	CodeVersionMismatch:    "this node is not holding the version this upgrade is for",
+	CodeDaemonRestarted:    "olaresd restarted while this was in progress",
+
 	CodeUnsupportedTopology:    "this daemon powers a cluster with exactly one control node",
 	CodeSelfUnresolved:         "this daemon could not identify which node it is running on",
 	CodeNodeIdentityUnknown:    "the node directory could not identify this node",

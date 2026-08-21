@@ -170,6 +170,22 @@ type State struct {
 	// UpgradingStep is the name of the current upgrade step.
 	UpgradingStep string `json:"upgradingStep"`
 
+	// UpgradingOperationID names the cluster operation carrying this
+	// upgrade, when there is one. It is empty on a single-node Olares,
+	// where the upgrade is not orchestrated and there is no record
+	// beyond the fields here.
+	//
+	// It is the handle for everything these fields cannot say. They
+	// describe one upgrade as one number, because that is all a
+	// single-node upgrade ever was; on a cluster the interesting part
+	// is which hook is running and how each node is getting on with
+	// it, and that lives in the operation record. Reading it needs an
+	// id, and guessing one from the version would tie a client to how
+	// the daemon happens to name them today.
+	//
+	//	GET /cluster/operations/{upgradingOperationId}
+	UpgradingOperationID string `json:"upgradingOperationId,omitempty"`
+
 	// UpgradingProgress is the free-form progress message for the
 	// current upgrade step.
 	UpgradingProgress string `json:"upgradingProgress"`

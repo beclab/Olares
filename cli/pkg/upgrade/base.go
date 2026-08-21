@@ -48,6 +48,32 @@ func (u upgraderBase) NeedRestart() bool {
 	return false
 }
 
+// ReplaceBinaries and ImportImages are empty in the base: swapping the
+// binaries and loading the images are carried out by olaresd before it hands
+// a stage to olares-cli, so no olares-cli task implements them today. They
+// exist as stages because the flow has those points, and a version that needs
+// to do something extra there now has somewhere to put it.
+func (u upgraderBase) ReplaceBinaries() []task.Interface { return nil }
+
+func (u upgraderBase) ImportImages() []task.Interface { return nil }
+
+// PreUpgradeNode is what every machine does to itself before the cluster is
+// upgraded. /etc/hosts is the machine's own file, and the entries it manages
+// are how this node resolves the others.
+func (u upgraderBase) PreUpgradeNode() []task.Interface {
+	return []task.Interface{
+		&task.LocalTask{
+			Name:   "Update Hosts",
+			Action: new(terminus.UpdateKubeKeyHosts),
+			Retry:  5,
+		},
+	}
+}
+
+func (u upgraderBase) PostUpgradeNode() []task.Interface { return nil }
+
+func (u upgraderBase) RebootNodes() []task.Interface { return nil }
+
 func (u upgraderBase) PrepareForUpgrade() []task.Interface {
 	var tasks []task.Interface
 	tasks = append(tasks, upgradeKSCore()...)
@@ -55,11 +81,6 @@ func (u upgraderBase) PrepareForUpgrade() []task.Interface {
 		&task.LocalTask{
 			Name:   "PrepareUserInfoForUpgrade",
 			Action: new(prepareUserInfoForUpgrade),
-			Retry:  5,
-		},
-		&task.LocalTask{
-			Name:   "Update Hosts",
-			Action: new(terminus.UpdateKubeKeyHosts),
 			Retry:  5,
 		},
 	)
@@ -105,6 +126,11 @@ func (u upgraderBase) UpgradeUserComponents() []task.Interface {
 	}
 }
 
+// UpdateReleaseFile stamps the new version onto each machine. It feeds the
+// post-upgrade-node stage: /etc/olares/release and the .prepared/.installed
+// markers are per-node facts — they are what that node's olaresd reports about
+// itself — so a node the control node stamped on its behalf would claim a
+// version it is not running.
 func (u upgraderBase) UpdateReleaseFile() []task.Interface {
 	return []task.Interface{
 		&task.LocalTask{
@@ -194,31 +220,51 @@ type prepareUserInfoForUpgrade struct {
 }
 
 func (p *prepareUserInfoForUpgrade) Execute(runtime connector.Runtime) error {
+	users, adminUser, err := listUsersToUpgrade()
+	if err != nil {
+		return err
+	}
+	p.PipelineCache.Set(common.CacheUpgradeUsers, users)
+	p.PipelineCache.Set(common.CacheUpgradeAdminUser, adminUser)
+
+	return nil
+}
+
+// listUsersToUpgrade reads the Olares users whose components this upgrade has
+// to touch, and names the owner among them.
+//
+// It is a function rather than only a cached task result because the task that
+// records it and the task that consumes it are not guaranteed to share a
+// process: on a cluster the upgrade is cut into stages, each its own
+// olares-cli run, and the pipeline cache does not cross that boundary. The
+// cache is still written — reading it is cheaper and keeps the early failure
+// on "no admin user" where it was — but the consumer can do without it.
+func listUsersToUpgrade() ([]iamv1alpha2.User, string, error) {
 	config, err := ctrl.GetConfig()
 	if err != nil {
-		return fmt.Errorf("failed to get rest config: %s", err)
+		return nil, "", fmt.Errorf("failed to get rest config: %s", err)
 	}
 	scheme := kruntime.NewScheme()
 	err = iamv1alpha2.AddToScheme(scheme)
 	if err != nil {
-		return fmt.Errorf("failed to add user scheme: %s", err)
+		return nil, "", fmt.Errorf("failed to add user scheme: %s", err)
 	}
 	userClient, err := ctrlclient.New(config, ctrlclient.Options{Scheme: scheme})
 	if err != nil {
-		return fmt.Errorf("failed to create client: %s", err)
+		return nil, "", fmt.Errorf("failed to create client: %s", err)
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 	var userList iamv1alpha2.UserList
 	err = userClient.List(ctx, &userList)
 	if err != nil {
-		return fmt.Errorf("failed to list users: %s", err)
+		return nil, "", fmt.Errorf("failed to list users: %s", err)
 	}
 	var usersToUpgrade []iamv1alpha2.User
 	var adminUser string
 	client, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		return fmt.Errorf("failed to create kubernetes client: %s", err)
+		return nil, "", fmt.Errorf("failed to create kubernetes client: %s", err)
 	}
 	for _, user := range userList.Items {
 		if user.Status.State == "Failed" {
@@ -237,7 +283,7 @@ func (p *prepareUserInfoForUpgrade) Execute(runtime connector.Runtime) error {
 				logger.Infof("ignoring non-olares user: %s", user.Name)
 				continue
 			}
-			return fmt.Errorf("failed to get user-space-%x: %v", user.Name, err)
+			return nil, "", fmt.Errorf("failed to get user-space-%x: %v", user.Name, err)
 		}
 		usersToUpgrade = append(usersToUpgrade, user)
 		if role, ok := user.Annotations["bytetrade.io/owner-role"]; ok && role == "owner" {
@@ -248,16 +294,28 @@ func (p *prepareUserInfoForUpgrade) Execute(runtime connector.Runtime) error {
 		logger.Infof("found %d users to upgrade", len(usersToUpgrade))
 	}
 	if adminUser == "" {
-		return fmt.Errorf("no admin user found")
+		return nil, "", fmt.Errorf("no admin user found")
 	}
-	p.PipelineCache.Set(common.CacheUpgradeUsers, usersToUpgrade)
-	p.PipelineCache.Set(common.CacheUpgradeAdminUser, adminUser)
-
-	return nil
+	return usersToUpgrade, adminUser, nil
 }
 
 type upgradeUserComponents struct {
 	common.KubeAction
+}
+
+// usersToUpgrade prefers what PrepareUserInfoForUpgrade recorded and reads the
+// cluster when that task ran in another process. See listUsersToUpgrade.
+func (u *upgradeUserComponents) usersToUpgrade() ([]iamv1alpha2.User, string, error) {
+	usersCache, usersOK := u.PipelineCache.Get(common.CacheUpgradeUsers)
+	adminCache, adminOK := u.PipelineCache.Get(common.CacheUpgradeAdminUser)
+	if usersOK && adminOK {
+		users, ok := usersCache.([]iamv1alpha2.User)
+		admin, adminIsString := adminCache.(string)
+		if ok && adminIsString && admin != "" {
+			return users, admin, nil
+		}
+	}
+	return listUsersToUpgrade()
 }
 
 func (u *upgradeUserComponents) Execute(runtime connector.Runtime) error {
@@ -270,16 +328,10 @@ func (u *upgradeUserComponents) Execute(runtime connector.Runtime) error {
 		return fmt.Errorf("failed to create kubernetes client: %s", err)
 	}
 
-	usersCache, ok := u.PipelineCache.Get(common.CacheUpgradeUsers)
-	if !ok {
-		return fmt.Errorf("no users to upgrade found in cache")
+	users, adminUser, err := u.usersToUpgrade()
+	if err != nil {
+		return err
 	}
-	users := usersCache.([]iamv1alpha2.User)
-	adminUserCache, ok := u.PipelineCache.Get(common.CacheUpgradeAdminUser)
-	if !ok {
-		return fmt.Errorf("no admin user to upgrade found in cache")
-	}
-	adminUser := adminUserCache.(string)
 
 	bflChartPath := path.Join(runtime.GetInstallerDir(), "wizard/config/launcher")
 

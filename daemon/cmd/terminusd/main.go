@@ -26,6 +26,7 @@ import (
 	"github.com/beclab/Olares/daemon/pkg/cluster/clusterop"
 	"github.com/beclab/Olares/daemon/pkg/cluster/state"
 	"github.com/beclab/Olares/daemon/pkg/commands"
+	upgradecmd "github.com/beclab/Olares/daemon/pkg/commands/upgrade"
 	"github.com/beclab/Olares/daemon/pkg/utils"
 	"github.com/spf13/pflag"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -79,8 +80,38 @@ func main() {
 	// half against these modules, and a node carries that half out against
 	// the same ones.
 	handlers.InstallNodeOperations(clusterop.DefaultRegistry())
-	if err := handlers.InitClusterOperations(commands.CLUSTER_OPERATIONS_DIR, clusterop.NewDeps()); err != nil {
-		klog.Error("cluster operations are unavailable, ", err)
+
+	// The upgrade's node-local half is assembled here for the same reason the
+	// power one is a field of Deps: it acts on this machine, so the only place
+	// it should be built is the one binary that is allowed to. A test never
+	// reaches this file, and so never holds a runner that can execute
+	// olares-cli against the host it is running on.
+	//
+	// Every node builds one, control node or not. A compute node serves the
+	// node-local upgrade routes and never builds a manager at all, and the
+	// control node reaches its own stages through the same runner it reaches
+	// a compute node's through.
+	deps := clusterop.NewDeps()
+	stageRunner, err := clusterop.NewLocalUpgradeStageRunner(
+		commands.CLUSTER_OPERATIONS_DIR, runUpgradeStage)
+	if err != nil {
+		klog.Fatal("upgrades are unavailable, ", err)
+	}
+	handlers.InstallUpgradeStageRunner(stageRunner)
+	deps.Upgrade = clusterop.NewUpgradeDeps(stageRunner)
+
+	if err := handlers.InitClusterOperations(commands.CLUSTER_OPERATIONS_DIR, deps); err != nil {
+		// Fatal rather than logged. This used to carry on with cluster
+		// operations disabled, which was survivable while the only casualty
+		// was a reboot button that refused. It is not survivable now: with no
+		// orchestrator published, an upgrade of a multi-node Olares would
+		// have found nothing to schedule with. That is caught and refused a
+		// layer up — see upgradeOrchestrator — but a daemon that cannot write
+		// the records every cluster operation is built on has a broken base
+		// directory, and everything else it does is built on the same one.
+		// Failing to start says so; carrying on hides it until somebody tries
+		// to upgrade.
+		klog.Fatal("cluster operations are unavailable, ", err)
 	}
 
 	mainCtx, cancel := context.WithCancel(context.Background())
@@ -245,4 +276,18 @@ func main() {
 	if err = apis.Shutdown(); err != nil {
 		klog.Error("shutdown error, ", err)
 	}
+}
+
+// runUpgradeStage is this node's whole ability to be told to upgrade itself.
+//
+// Both kinds of work arrive through the same route and are recorded the same
+// way, so they are dispatched here by stage name rather than by two endpoints
+// with two sets of state. The node prepare stage is the one that cannot go
+// through olares-cli's plan: it is what installs the olares-cli that has the
+// plan.
+func runUpgradeStage(ctx context.Context, req clusterop.UpgradeStageRequest) error {
+	if req.Stage == clusterop.StageNodePrepare {
+		return upgradecmd.PrepareNode(ctx, req.Version)
+	}
+	return clusterop.RunUpgradeStage(ctx, req)
 }

@@ -78,6 +78,7 @@ func (w *upgradeWatcher) Watch(ctx context.Context) {
 		state.TerminusStateMu.Lock()
 		state.CurrentState.UpgradingState = ""
 		state.CurrentState.UpgradingTarget = ""
+		state.CurrentState.UpgradingOperationID = ""
 		state.CurrentState.UpgradingRetryNum = 0
 		state.CurrentState.UpgradingNextRetryAt = nil
 		state.CurrentState.UpgradingStep = ""
@@ -217,21 +218,59 @@ type upgradePhase struct {
 	progressSpan   int
 }
 
-var downloadPhases = []upgradePhase{
-	{upgrade.NewDownloadCLI, 0, 10},
-	{upgrade.NewDownloadWizard, 10, 20},
-	{upgrade.NewDownloadSpaceCheck, 30, 10},
-	{upgrade.NewDownloadComponent, 40, 60},
+// weigh attaches this watcher's progress bar to a shared phase sequence.
+//
+// Which phases there are, and in what order, belongs to the package that
+// implements them, because a compute node runs the same ones; only the
+// percentages are the watcher's, and only the watcher has a bar to fill. The
+// span pairs are positional, so a phase added to the shared list without a
+// weight here stops the daemon at startup rather than silently shifting every
+// number after it.
+func weigh(phases []func() commands.Interface, spans ...int) []upgradePhase {
+	if len(spans) != 2*len(phases) {
+		panic(fmt.Sprintf("upgrade watcher: %d phases need %d progress bounds, got %d",
+			len(phases), 2*len(phases), len(spans)))
+	}
+	weighted := make([]upgradePhase, 0, len(phases))
+	for i, newCMD := range phases {
+		weighted = append(weighted, upgradePhase{newCMD, spans[2*i], spans[2*i+1]})
+	}
+	return weighted
 }
 
-var upgradePhases = []upgradePhase{
-	{upgrade.NewPreCheck, 0, 10},
-	{upgrade.NewInstallCLI, 10, 10},
-	{upgrade.NewInstallOlaresd, 20, 10},
-	{upgrade.NewImportImages, 30, 30},
-	{upgrade.NewUpgrade, 60, 35},
-	{upgrade.NewRemoveTarget, 95, 5},
+func phases(groups ...[]upgradePhase) []upgradePhase {
+	var all []upgradePhase
+	for _, g := range groups {
+		all = append(all, g...)
+	}
+	return all
 }
+
+var downloadPhases = weigh(upgrade.ReleaseDownloadPhases,
+	0, 10,
+	10, 20,
+	30, 10,
+	40, 60,
+)
+
+// upgradePhases is the control node upgrading itself: check, adopt the
+// release, run the upgrade, forget the target.
+//
+// The middle of it is the same sequence, in the same order, that the
+// orchestrator has a compute node run before it may be given a stage. See
+// upgrade.ReleaseAdoptPhases for why that is shared rather than written twice.
+var upgradePhases = phases(
+	[]upgradePhase{{upgrade.NewPreCheck, 0, 10}},
+	weigh(upgrade.ReleaseAdoptPhases,
+		10, 10,
+		20, 10,
+		30, 30,
+	),
+	[]upgradePhase{
+		{upgrade.NewUpgrade, 60, 35},
+		{upgrade.NewRemoveTarget, 95, 5},
+	},
+)
 
 func (w *upgradeWatcher) doUpgrade(ctx context.Context) (err error) {
 	target := w.target
