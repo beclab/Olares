@@ -204,7 +204,7 @@ func callErr(err error) error {
 	switch {
 	case ours && (re.Code == "invalid_api_key" || re.Code == "key_disabled" || re.Code == "key_expired"):
 		return fmt.Errorf("%w\nThe key this machine saved is no longer usable. "+
-			"`olares-cli router key local --forget` drops it, and the next call issues a fresh one", err)
+			"`olares-cli router key current --forget` drops it, and the next call issues a fresh one", err)
 	case ours && (re.Code == "owner_disabled" || re.Code == "app_archived" || re.Code == "app_suspended"):
 		return fmt.Errorf("%w\nThis is about who or what the key belongs to rather than the key itself. "+
 			"For a person, `olares-cli settings users get <name>` shows their account; for an "+
@@ -223,11 +223,11 @@ func callErr(err error) error {
 			"`olares-cli router route get <name>` shows it, and `route enable <name>` puts it back", err)
 	case re.Code == "model_not_allowed":
 		return fmt.Errorf("%w\nThe credential is restricted to a list this model is not on. "+
-			"`olares-cli router models` shows what it may call, and `router key update` changes the list", err)
+			"`olares-cli router call models` shows what it may call, and `router key update` changes the list", err)
 	case re.Code == "model_not_found":
-		return fmt.Errorf("%w\n`olares-cli router models` shows the names this credential may send", err)
+		return fmt.Errorf("%w\n`olares-cli router call models` shows the names this credential may send", err)
 	case re.Code == "ambiguous_model":
-		return fmt.Errorf("%w\nQualify it as <provider>/<model>; `olares-cli router models` shows the "+
+		return fmt.Errorf("%w\nQualify it as <provider>/<model>; `olares-cli router call models` shows the "+
 			"qualified names", err)
 	case re.Type == "quota_exceeded_error":
 		return fmt.Errorf("%w\n`olares-cli router quota list` shows the limits, and `router usage summary` "+
@@ -237,15 +237,15 @@ func callErr(err error) error {
 		// claims the model, and complains about streaming from there. The name
 		// is what was actually wrong.
 		return fmt.Errorf("%w\nNo provider serves this model, which is what put the request on Router's "+
-			"fallback path. `olares-cli router models` shows the names it does serve", err)
+			"fallback path. `olares-cli router call models` shows the names it does serve", err)
 	case strings.HasSuffix(re.Code, "_mode_mismatch"):
 		return fmt.Errorf("%w\nThe model is configured for a different kind of work than this verb asks "+
-			"for. `olares-cli router list` shows each model's mode, and a route can only serve the mode "+
+			"for. `olares-cli router model list` shows each model's mode, and a route can only serve the mode "+
 			"it was created with", err)
 	case strings.HasSuffix(re.Code, "_unsupported_for_provider") || re.Code == "audio_path_unsupported":
 		return fmt.Errorf("%w\nThis model's provider does not serve that route at all. For a model "+
 			"running on this Olares that usually means a different engine image does this job: "+
-			"`olares-cli router list --mode audio` and `router provider get <provider>` show which "+
+			"`olares-cli router model list --mode audio` and `router provider get <provider>` show which "+
 			"capability each one declares", err)
 	case re.Code == "capability_not_supported" || re.Code == "stream_unsupported_for_model":
 		return fmt.Errorf("%w\n`olares-cli router provider get <provider>` lists what the model supports", err)

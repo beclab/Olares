@@ -2,11 +2,11 @@
 
 `router call` sends work through Router's data plane, the same path an application uses. It is the fastest way to prove a configuration end to end, and the only verb family here that needs a credential of its own.
 
-`router models` is its companion: it lists the models this credential may put in the `model` field, from the data plane's own point of view, which is a narrower list than the `router list` a management-plane read produces. Beside each name it prints the mode, the capabilities the model card claims, and a `readiness` of `ready` or `unknown` — both of which mean "send it". `unknown` is an honest "nothing here can tell": it is what an application that runs its own engine, and so reports no phase for Router to read, looks like. A remote vendor has no weights to wait for and reads `ready`.
+`router call models` is its companion: it lists the models this credential may put in the `model` field, from the data plane's own point of view, which is a narrower list than the `router model list` a management-plane read produces. Beside each name it prints the mode, the capabilities the model card claims, and a `readiness` of `ready` or `unknown` — both of which mean "send it". `unknown` is an honest "nothing here can tell": it is what an application that runs its own engine, and so reports no phase for Router to read, looks like. A remote vendor has no weights to wait for and reads `ready`.
 
 Route names are not in that list. An alias, a group or a `default-*` category is callable and describes no single model, so it has nothing to fill those columns with; `router route list` is where those names live.
 
-Three things narrow the list against `router list`. The key's own allowlist is one. The other two are gates a locally installed model application passes separately: its container has to be up, and its weights have to be loaded. It owns a `router list` row from the moment it is installed whatever state it is in, so `router list` carries models of applications that are stopped, downloading or failed and the data plane admits none of them. A name in `router list` and not in `router models` is usually that, and the `STATE` cell says which phase it is stuck in.
+Three things narrow the list against `router model list`. The key's own allowlist is one. The other two are gates a locally installed model application passes separately: its container has to be up, and its weights have to be loaded. It owns a `router model list` row from the moment it is installed whatever state it is in, so `router model list` carries models of applications that are stopped, downloading or failed and the data plane admits none of them. A name in `router model list` and not in `router call models` is usually that, and the `STATE` cell says which phase it is stuck in.
 
 `--include-not-ready` widens the read to the container gate alone, which is what to use while an install is running: a model still fetching or loading its weights appears as `warming` and turns `ready` under it, and one that could not load them appears as `failed` rather than being indistinguishable from a model nobody ever configured. It does not bring back an application that is not running — a stopped app has nothing to ask — so a name still absent under the flag is `olares-cli market` territory rather than a readiness problem.
 
@@ -20,13 +20,13 @@ The management plane travels on the profile; the data plane does not accept it. 
 4. No key at all, when running inside the cluster, where the platform supplies the calling application's identity.
 5. A newly minted key, named after this host, saved to the keychain for next time.
 
-`router key local` reports whether a key was saved and shows its prefix only — the plaintext stays in the keychain. `router key local --forget` drops the local copy, which stops *this machine* calling; the key itself keeps working until `router key revoke` ends it, and the next call mints a replacement.
+`router key current` reports whether a key was saved and shows its prefix only — the plaintext stays in the keychain. `router key current --forget` drops the local copy, which stops *this machine* calling; the key itself keeps working until `router key revoke` ends it, and the next call mints a replacement.
 
 The saved key is an ordinary one: it appears in `router key list`, it can be given a quota, and its calls are attributed to it in `router usage`.
 
 ## Choosing the model
 
-`--model` takes a qualified `<provider>/<model>` as `router list` prints it, or any route name — an alias, a group, or a `default-*` category.
+`--model` takes a qualified `<provider>/<model>` as `router model list` prints it, or any route name — an alias, a group, or a `default-*` category.
 
 Leaving `--model` off names the default category for that kind of work: `default-chat` for chat, `default-stt` for transcription, `default-tts` for speech, and so on for every verb. Router decides what a category answers with by reconciling it against what is installed; nothing is set by hand and nothing falls back per call. `router route list --kind default` prints where each category currently stands, and a category nothing serves is refused rather than approximated.
 
@@ -82,9 +82,9 @@ A `router call` failure comes from one of a few places, and the message says whi
 | `no_default_model` | The category for that kind of work has nothing behind it; `router route list --kind default` says which do |
 | `model_route_disabled` | The name exists but is switched off; `router route enable <name>` |
 | `model_not_allowed` | The key's allowed list does not include this model; `router key update` changes it |
-| A mode mismatch or unsupported-endpoint refusal | The model's mode or capabilities do not match the call — `router list` prints the mode, and for a local model `router model spec show <model>` prints what it declares |
+| A mode mismatch or unsupported-endpoint refusal | The model's mode or capabilities do not match the call — `router model list` prints the mode, and for a local model `router model spec show <model>` prints what it declares |
 | A bare 404 on an audio route | Router mounted the route and the engine behind the model does not serve it |
-| `model_not_ready` with a 503 | The model is real and its weights cannot answer yet; the fix is to wait, and `router models --include-not-ready` shows whether it is `warming` or `failed` |
+| `model_not_ready` with a 503 | The model is real and its weights cannot answer yet; the fix is to wait, and `router call models --include-not-ready` shows whether it is `warming` or `failed` |
 | A 5xx with an empty body | Nothing answered behind Router: the model application is stopped or still loading |
 
 The last one is the common case for a local model, and it is a diagnosis rather than a configuration fix: continue in [deciding which layer is wrong](olares-router-diagnosis.md).

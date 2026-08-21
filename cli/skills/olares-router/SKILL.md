@@ -37,11 +37,11 @@ All verbs require Olares 1.12.7+ because Router ships as the `router` Market lis
 | local LLM applications | `provider register`, `model status/progress/retry/restart`, plus [`olares-market`](../olares-market/SKILL.md)'s `install` / `clone` | [local LLM applications](references/olares-router-local-llm.md) |
 | local embedding, audio, OCR, CLIP | the same verbs, different modes | [local multimodal applications](references/olares-router-local-multimodal.md) |
 | what a local model declares itself to be | `model spec show/edit/file/set`, `model restart` | [local LLM applications](references/olares-router-local-llm.md) |
-| what is configured | `list`, `models` | [names, defaults and access control](references/olares-router-governance.md) |
-| the names callers may send | `route list/get/create/rename/enable/disable/delete/add/remove`, `default show/enable/disable` | [names, defaults and access control](references/olares-router-governance.md) |
-| access control | `key issue/list/update/revoke/local`, `quota set/list/clear` | [names, defaults and access control](references/olares-router-governance.md) |
+| what is configured | `model list`, `model get` | [names, defaults and access control](references/olares-router-governance.md) |
+| the names callers may send | `route list/get/create/rename/enable/disable/delete/add/remove`, including the `default-*` categories via `route list --kind default` | [names, defaults and access control](references/olares-router-governance.md) |
+| access control | `key issue/list/update/revoke/current`, `quota set/list/clear` | [names, defaults and access control](references/olares-router-governance.md) |
 | what happened | `usage summary/list/export/retention`, `audit list/get` | [usage and audit](references/olares-router-usage.md) |
-| calling a model | `call chat/embed/rerank/search/scrape/translate/image/video/transcribe/speak/vad/diarize/enhance/align/ocr`, `models`, `key local` | [calling a model](references/olares-router-calling.md) |
+| calling a model | `call chat/embed/rerank/search/scrape/translate/image/video/transcribe/speak/vad/diarize/enhance/align/ocr`, `call models`, `key current` | [calling a model](references/olares-router-calling.md) |
 | inside one application | `model status/progress/retry/restart`, `model diag gpu/perf/config/endpoints`, all taking `--app` | [the Model Console](references/olares-router-console.md) |
 | a call or a model that does not work | any of the above | [deciding which layer is wrong](references/olares-router-diagnosis.md) |
 
@@ -50,8 +50,8 @@ All verbs require Olares 1.12.7+ because Router ships as the `router` Market lis
 Read [architecture and identity](references/olares-router-architecture.md) before the first write. In short:
 
 - **Management** (`provider`, `model`, `key`, `quota`, `route`, `usage`, `audit`) travels on the active profile. Olares injects the identity; nothing has to be supplied. The `model` verbs that read a Model Console address the application's own entrance instead of Router's, on the same profile.
-- **Calling** (`router call`, `router models`) needs a data-plane credential of its own. The CLI tries the platform's own identity first and mints an `sk-` key only if that is refused, keeping it in the keychain; `router key local` shows or forgets it.
-- Most of the management plane is admin-only, reads included: providers, the vendor catalog's models, quotas, audit, `usage retention` and the whole `spec` family all refuse a non-admin. What a non-admin can do is `router list`, `route list/get`, `default show`, their own keys, their own usage, and `router call`. Reading the names is deliberately open — a name is what a person types into their client.
+- **Calling** (`router call`, `router call models`) needs a data-plane credential of its own. The CLI tries the platform's own identity first and mints an `sk-` key only if that is refused, keeping it in the keychain; `router key current` shows or forgets it.
+- Most of the management plane is admin-only, reads included: providers, the vendor catalog's models, quotas, audit, `usage retention` and the whole `spec` family all refuse a non-admin. What a non-admin can do is `router model list`, `route list/get`, their own keys, their own usage, and `router call`. Reading the names is deliberately open — a name is what a person types into their client.
 
 ## Which layer owns the change
 
@@ -69,8 +69,8 @@ A provider whose `source` is `olares` belongs to a Market application. Its addre
 
 ## Naming
 
-- A model is addressed as `<provider>/<model>` wherever ambiguity is possible — in `--model`, in a quota, in a key's allowed list. `router list` prints both halves. A name without a slash is a **route** — an alias, a group, or a `default-*` category — and has to exist.
-- Every locally installed model application is a provider named `Olares`, so the qualified name is not unique for local models. `<app_name>/<model>` names one of them — `llamacppqwen3v3/qwen3-8b` — and so does the application's display title, which `router list` prints in `SERVED BY`. The model id is the only handle that always names one row, and an ambiguous reference is refused with the candidates rather than resolved to one.
+- A model is addressed as `<provider>/<model>` wherever ambiguity is possible — in `--model`, in a quota, in a key's allowed list. `router model list` prints both halves. A name without a slash is a **route** — an alias, a group, or a `default-*` category — and has to exist.
+- Every locally installed model application is a provider named `Olares`, so the qualified name is not unique for local models. `<app_name>/<model>` names one of them — `llamacppqwen3v3/qwen3-8b` — and so does the application's display title, which `router model list` prints in `SERVED BY`. The model id is the only handle that always names one row, and an ambiguous reference is refused with the candidates rather than resolved to one.
 - A provider is named by its title, its Olares app name, or its id. A model application is named by its Olares app id (`llamacppqwen3627bggufv3`), which is what `provider register` takes and what `--app` takes on the `model` verbs that reach a Model Console. Those verbs otherwise take a model name and ask Router which application serves it; `--app` skips Router, which is what keeps them usable when Router is the thing that is wrong.
 - An application that *calls* Router has no row here at all: Olares vouches for it at the edge and the call arrives carrying an `appid` — the app name hashed, or the name itself for a system app. So it cannot be registered or revoked; `olares-cli market list --mine` says whether it is here, `usage --by caller_app` says what it spent, and `quota set --caller-app` is the only lever over it.
 

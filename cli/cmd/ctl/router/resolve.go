@@ -121,7 +121,7 @@ type missing struct {
 // `Olares`, so `Olares/qwen3-8b` can name two different rows. Both the
 // application name and its display title tell those apart, and both are
 // accepted because they are what the two places a reader met the application
-// print — `router list` shows the title, `router provider list` the name.
+// print — `router model list` shows the title, `router provider list` the name.
 //
 // Ambiguity is reported with the candidates rather than resolved by taking the
 // first. Two rows with one name can be different deployments of a model with
@@ -200,7 +200,7 @@ func resolveModel(ctx context.Context, pc *preparedClient, ref string) (*adminMo
 			have:  "configured are",
 			none:  "no model is configured yet",
 			note: "The form here is <provider>/<model>, or <app_name>/<model> for a locally " +
-				"installed application; `olares-cli router list` shows every row with the id " +
+				"installed application; `olares-cli router model list` shows every row with the id " +
 				"that names one exactly.",
 		}.err()
 	}

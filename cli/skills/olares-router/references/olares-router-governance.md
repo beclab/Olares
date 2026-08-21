@@ -6,7 +6,7 @@ Router decides three things about a call before it forwards it: which model the 
 
 There are two shapes of name and no others.
 
-A name **containing a slash** is a qualified reference, split at the first slash: `openai/gpt-5` is the model `gpt-5` on the provider `openai`, and `openrouter/openai/gpt-5` is the model `openai/gpt-5` on `openrouter`. Every configured model is callable this way with nothing set up — `router list` shows them.
+A name **containing a slash** is a qualified reference, split at the first slash: `openai/gpt-5` is the model `gpt-5` on the provider `openai`, and `openrouter/openai/gpt-5` is the model `openai/gpt-5` on `openrouter`. Every configured model is callable this way with nothing set up — `router model list` shows them.
 
 A name **without a slash** is a route, and has to exist. Three kinds do:
 
@@ -107,7 +107,7 @@ names Router does know.
 
 Restricting what somebody may call is a property of a key, not of a person:
 `key issue --model` and `key update --model` are the allowlist, and a key
-carrying one sees only those models in `router models` and in `GET /v1/models`.
+carrying one sees only those models in `router call models` and in `GET /v1/models`.
 There is no per-person allowlist to set.
 
 ## The applications that call Router

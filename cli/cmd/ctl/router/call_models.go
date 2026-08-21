@@ -13,16 +13,17 @@ import (
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
-// `olares-cli router models` — every name the `model` field accepts.
+// `olares-cli router call models` — every name the `model` field accepts.
 //
 // GET /v1/models
 //
-// This is not `router list` with a different table. `router list` is the
-// management plane's view: one row per configured model, with its provider, its
-// mode, its prices and whether the provider is healthy — everything an admin
-// needs to decide what to change. This is the *caller's* view, on the data
-// plane, and it answers a narrower question: what may I put in the `model`
-// field. Three differences follow from that, and all three are the point.
+// This is a verb on `call` rather than on `model` because it is answered by the
+// data plane, over the same key every other `call` verb uses. `router model
+// list` is the management plane's view: one row per configured model, with its
+// provider, its mode and whether the provider is healthy — everything an admin
+// needs to decide what to change. This is the *caller's* view, and it answers a
+// narrower question: what may I put in the `model` field of the call I am about
+// to make. Three differences follow from that, and all three are the point.
 //
 // Only models are here. A route — an alias, a group, or a default category like
 // `default-chat` — is callable and is not listed: it has no provider to qualify
@@ -31,18 +32,18 @@ import (
 // stop it caring about. `router route list` is where the names live.
 //
 // Everything listed is sendable right now. A locally installed model
-// application owns its `router list` row from the moment it is installed, but it
-// joins this list only once its container is up AND its weights are loaded,
-// which are minutes apart. So a name in `router list` and not here is usually
-// that, and `--include-not-ready` is what says so: it widens the read to the
-// container alone, and the model appears as `warming` while it downloads or as
-// `failed` if it could not load, instead of being indistinguishable from one
-// that was never configured.
+// application owns its `router model list` row from the moment it is installed,
+// but it joins this list only once its container is up AND its weights are
+// loaded, which are minutes apart. So a name in `router model list` and not here
+// is usually that, and `--include-not-ready` is what says so: it widens the read
+// to the container alone, and the model appears as `warming` while it downloads
+// or as `failed` if it could not load, instead of being indistinguishable from
+// one that was never configured.
 //
 // And what appears depends on the credential. A key with an allowed-models list
 // sees only what it may call, so this is the honest answer to "will my client
-// work with this key" — which `router list`, read over the console session,
-// cannot give.
+// work with this key" — which `router model list`, read over the console
+// session, cannot give.
 
 // modelObject is one entry of the OpenAI list envelope, plus the three fields
 // Router adds to it: the endpoint family the model serves, the capabilities its
@@ -78,7 +79,7 @@ type modelsListResponse struct {
 	Data   []modelObject `json:"data"`
 }
 
-func newModelsCommand(f *cmdutil.Factory) *cobra.Command {
+func newCallModelsCommand(f *cmdutil.Factory) *cobra.Command {
 	var (
 		output          string
 		apiKey          string
@@ -86,34 +87,36 @@ func newModelsCommand(f *cmdutil.Factory) *cobra.Command {
 	)
 	cmd := &cobra.Command{
 		Use:   "models",
-		Short: "every name the model field accepts, as a caller sees it",
-		Long: `List the models this Router answers to.
+		Short: "the names the other call verbs accept in --model",
+		Long: `List what this credential may send to "router call".
 
 A name in here is spelled <provider>/<model> and can be sent right now. Routes
 — an alias, a group, or a default category like "default-chat" — are callable
 too and are deliberately not listed, because they describe no single model;
 "olares-cli router route list" is where those names live.
 
-This is the data plane's answer, so it is filtered by the credential making the
-request. A key restricted to a few models sees only those, which makes this the
-check to run when a client reports that a model does not exist: if a name is
-missing here, that key cannot call it, whatever "router list" says.
+This is the data plane's answer, over the same key every other "call" verb uses,
+so it is filtered by the credential making the request. A key restricted to a
+few models sees only those, which makes this the check to run when a client
+reports that a model does not exist: if a name is missing here, that key cannot
+call it, whatever "router model list" says.
 
 A locally installed model application can be missing for a second reason. It
-keeps its "router list" row from the moment it is installed, but it reaches this
-list only once its container is up and its weights are loaded, which are minutes
-apart. --include-not-ready widens the read to the container alone: a model still
-fetching its weights then shows as "warming", and one that could not load them
-shows as "failed", rather than both looking like nothing was ever configured.
+keeps its "router model list" row from the moment it is installed, but it
+reaches this list only once its container is up and its weights are loaded,
+which are minutes apart. --include-not-ready widens the read to the container
+alone: a model still fetching its weights then shows as "warming", and one that
+could not load them shows as "failed", rather than both looking like nothing was
+ever configured.
 
-"olares-cli router list" is the other view — one row per configured model with
-its provider, mode, prices and health, for deciding what to change rather than
-what to send.
+"olares-cli router model list" is the other view — one row per configured model
+with its provider, mode and health, for deciding what to change rather than what
+to send.
 
 Examples:
-  olares-cli router models
-  olares-cli router models --include-not-ready
-  olares-cli router models --api-key sk-… -o json
+  olares-cli router call models
+  olares-cli router call models --include-not-ready
+  olares-cli router call models --api-key sk-… -o json
 `,
 		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
@@ -175,7 +178,7 @@ func modelsPath(includeNotReady bool) string {
 func renderModelsList(w io.Writer, items []modelObject, includeNotReady bool) error {
 	if len(items) == 0 {
 		msg := "this credential can call nothing. Either no model is configured, or the key's " +
-			"allowed list is empty; `olares-cli router list` says which."
+			"allowed list is empty; `olares-cli router model list` says which."
 		if !includeNotReady {
 			msg += " A model whose weights are still loading is not in this list either — " +
 				"`--include-not-ready` shows it."

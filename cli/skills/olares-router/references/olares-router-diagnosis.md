@@ -5,7 +5,7 @@ A model that does not answer can be failing in five places, and each has a diffe
 | Layer | Check |
 |---|---|
 | The CLI's reach into Router | any verb's own error; `olares-cli profile whoami`, `olares-cli market status router` |
-| Router's own configuration | `router provider get`, `router list`, `router route list --kind default` |
+| Router's own configuration | `router provider get`, `router model list`, `router route list --kind default` |
 | Access control | `router key list`, `router quota list`, `router usage list --status failed` |
 | The model application | `router model status`, `router model progress`, `router model diag` |
 | Below the application | [`olares-doctor`](../../olares-doctor/SKILL.md) — pods, events, images, resources |
@@ -24,18 +24,18 @@ Three failures look alike and are not:
 ## Then ask what Router thinks it has
 
 ```
-olares-cli router list
+olares-cli router model list
 olares-cli router provider get <provider>
 olares-cli router route list --kind default
 ```
 
 - **A provider missing from `provider list`** is usually not missing. An `olares`-sourced provider is listed through the install and while it runs, and stays listed once it is stopped, stopping or failed — those are all states somebody installed. What Router hides is a row nobody installed or nothing can reach: `available` (a catalog entry, one per installable application), `pending`, `unreachable`, `archived`. `router provider get <id>` shows the row anyway, and `olares-cli market status <app>` says which of those it is.
 - **A provider with no models** means either that nothing was attached — `model import` or `provider sync-models` — or that Router could not read the application's live list just now, which is the model application layer below.
-- **A model that exists but is not callable** has two different fixes, and the `STATE` cell in `router list` says which. A platform phase — `stopped`, `downloading`, `installing`, `initializing`, `failed` — belongs to the model application and is `olares-cli market` territory; a model application owns its row from the moment it is installed, so a model that never ran is listed rather than absent. `disabled` is a switch somebody threw: `router list --disabled` finds it and `model update <model> --enable` restores it. `provider disabled` is the same switch one level up, on the provider.
-- **A model `router list` calls callable that `router models` does not list** is the weights half, which the platform phase does not cover: the container answers minutes before the model has finished loading, and the data plane hides a model it cannot serve rather than advertising one that would refuse every request. `router models --include-not-ready` prints it with a `readiness` of `warming` — wait — or `failed`, which is the model application layer below. Reaching such a model directly is refused with `model_not_ready` and a 503, which is Router saying the name is real rather than that it is wrong.
+- **A model that exists but is not callable** has two different fixes, and the `STATE` cell in `router model list` says which. A platform phase — `stopped`, `downloading`, `installing`, `initializing`, `failed` — belongs to the model application and is `olares-cli market` territory; a model application owns its row from the moment it is installed, so a model that never ran is listed rather than absent. `disabled` is a switch somebody threw: `router model list --disabled` finds it and `model update <model> --enable` restores it. `provider disabled` is the same switch one level up, on the provider.
+- **A model `router model list` calls callable that `router call models` does not list** is the weights half, which the platform phase does not cover: the container answers minutes before the model has finished loading, and the data plane hides a model it cannot serve rather than advertising one that would refuse every request. `router call models --include-not-ready` prints it with a `readiness` of `warming` — wait — or `failed`, which is the model application layer below. Reaching such a model directly is refused with `model_not_ready` and a 503, which is Router saying the name is real rather than that it is wrong.
 - **A call refused with `no_default_model`** means that category has nothing behind it. `route list --kind default` names which do and which do not.
 - **A model Router offers a capability for that it turns out not to have** is the projection trailing the application's own card. `router model spec show <model>` says which copy you are reading: `cache` is Router's, and an edit through `router model spec edit` corrects both at once.
-- **A call refused for a mode mismatch, or a bare 404 on an audio route**, is the verb and the model disagreeing about what the model does. `router list` prints the mode; for a local model `router model spec show` prints what the application declares, which is the copy to trust.
+- **A call refused for a mode mismatch, or a bare 404 on an audio route**, is the verb and the model disagreeing about what the model does. `router model list` prints the mode; for a local model `router model spec show` prints what the application declares, which is the copy to trust.
 
 ## Then whether the caller is allowed
 

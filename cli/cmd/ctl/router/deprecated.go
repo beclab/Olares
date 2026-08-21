@@ -115,6 +115,43 @@ func newDeprecatedSpecCommand(f *cmdutil.Factory) *cobra.Command {
 	return cmd
 }
 
+// newDeprecatedListCommand is `router list`, which became `router model list`.
+// It stood at the top level as though listing models were a different activity
+// from managing them, so the noun a reader wanted was reached two ways
+// depending on which verb they needed next.
+func newDeprecatedListCommand(f *cmdutil.Factory) *cobra.Command {
+	cmd := newModelListCommand(f)
+	cmd.Hidden = true
+	cmd.Short = "moved to `router model list`"
+	cmd.Deprecated = "use `olares-cli router model list` instead."
+	return cmd
+}
+
+// newDeprecatedModelsCommand is `router models`, which became `router call
+// models`. Sitting beside `router list` it read as a second listing of the same
+// thing, when what it answers is a question about a call: these are the names
+// the credential `router call` uses may put in `--model`. It is served by the
+// data plane, so it belongs with the other verbs that go there.
+func newDeprecatedModelsCommand(f *cmdutil.Factory) *cobra.Command {
+	cmd := newCallModelsCommand(f)
+	cmd.Hidden = true
+	cmd.Short = "moved to `router call models`"
+	cmd.Deprecated = "use `olares-cli router call models` instead."
+	return cmd
+}
+
+// newDeprecatedKeyLocalCommand is `router key local`. Every other Olares tree
+// spells "local" as "on this machine, not the platform", and this one meant
+// "the one in use", which is not the same claim.
+func newDeprecatedKeyLocalCommand(f *cmdutil.Factory) *cobra.Command {
+	cmd := newKeyCurrentCommand(f)
+	cmd.Use = "local"
+	cmd.Hidden = true
+	cmd.Short = "moved to `router key current`"
+	cmd.Deprecated = "use `olares-cli router key current` instead."
+	return cmd
+}
+
 func newDeprecatedDefaultCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:    "default",

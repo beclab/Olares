@@ -7,7 +7,7 @@ import (
 )
 
 // A locally installed application owns a model row from the moment it is
-// installed, so `router list` carries models of applications that are stopped,
+// installed, so `router model list` carries models of applications that are stopped,
 // downloading or failed. It used to print those three switches green — offered,
 // active, provider active — which is every word the reader needed to conclude
 // the opposite of the truth.

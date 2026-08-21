@@ -332,7 +332,7 @@ func renderRoutes(w io.Writer, routes []modelRoute, kind string) error {
 			what = kind
 		}
 		_, err := fmt.Fprintf(w, "no %s exists yet. Every model is still reachable as "+
-			"<provider>/<model>; `olares-cli router list` shows those.\n", what)
+			"<provider>/<model>; `olares-cli router model list` shows those.\n", what)
 		return err
 	}
 	var anyEmptyDefault, anyOff bool
@@ -380,7 +380,7 @@ func renderDefaults(w io.Writer, routes []modelRoute) error {
 	if len(routes) == 0 {
 		_, err := fmt.Fprintln(w, "this Router registers no default categories, which means the deployment "+
 			"is older than the ones this command reads. Every model is still callable as "+
-			"<provider>/<model>; `olares-cli router list` shows them.")
+			"<provider>/<model>; `olares-cli router model list` shows them.")
 		return err
 	}
 	var anyEmpty, anyOff bool
@@ -517,7 +517,7 @@ func renderRoute(w io.Writer, r *modelRoute) error {
 	}
 	if r.live() == 0 {
 		if _, err := fmt.Fprintf(w, "\nNone of these can take traffic now, so %q is answered with a 404 "+
-			"even though it exists. `olares-cli router list` says why each model is out.\n", r.Name); err != nil {
+			"even though it exists. `olares-cli router model list` says why each model is out.\n", r.Name); err != nil {
 			return err
 		}
 	}
@@ -1171,6 +1171,6 @@ func resolveRoute(ctx context.Context, pc *preparedClient, ref string) (*modelRo
 		have:  "the names that exist are",
 		none:  "no route exists yet",
 		note: "A model can also be called as `<provider>/<model>` with no route at all; " +
-			"`olares-cli router list` shows those.",
+			"`olares-cli router model list` shows those.",
 	}.err()
 }

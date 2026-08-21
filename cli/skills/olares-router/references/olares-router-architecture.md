@@ -41,7 +41,7 @@ Two planes, two credentials, and they are not interchangeable.
 | Management | `/console/api/*` — everything except `router call` | The active profile. Olares injects the user identity at its edge; nothing is supplied by hand. |
 | Data | `/v1/*` — `router call` | An `sk-` key, or the platform's own application identity when the caller runs inside the cluster. The profile's session alone is **not** accepted here. |
 
-`router call` resolves that second credential itself, in order: an explicit `--api-key`, the key this machine already saved, a keyless attempt when running inside the cluster, and finally minting a key named after the host and storing it in the keychain. `router key local` shows or forgets it; `router key list` shows it alongside every other key, because it is an ordinary key.
+`router call` resolves that second credential itself, in order: an explicit `--api-key`, the key this machine already saved, a keyless attempt when running inside the cluster, and finally minting a key named after the host and storing it in the keychain. `router key current` shows or forgets it; `router key list` shows it alongside every other key, because it is an ordinary key.
 
 ## Roles
 

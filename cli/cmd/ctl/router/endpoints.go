@@ -225,7 +225,7 @@ const (
 //
 // Router also mounts /v1/ocr/models, and it is deliberately absent here: it
 // answers with the one model the engine behind the request was deployed with,
-// which `router list --mode ocr` says for every OCR model at once.
+// which `router model list --mode ocr` says for every OCR model at once.
 const (
 	epOCR      = dataPlaneAPI + "/ocr"
 	epOCRTasks = epOCR + "/tasks"

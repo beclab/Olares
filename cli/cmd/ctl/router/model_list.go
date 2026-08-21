@@ -14,16 +14,19 @@ import (
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
-// `olares-cli router list` — GET /console/api/provider-models
+// `olares-cli router model list` — GET /console/api/provider-models
 //
-// One request answers "what can this Olares call", across every provider. It is
-// the only read in this tree open to a non-admin user, which is deliberate: the
-// list carries model and provider metadata and never a credential, and choosing
-// which models a key may reach is something a user does for themselves.
+// One request answers "what is configured on this Olares", across every
+// provider. It is the only read in this tree open to a non-admin user, which is
+// deliberate: the list carries model and provider metadata and never a
+// credential, and choosing which models a key may reach is something a user
+// does for themselves.
 //
 // A model appearing here is not the same as a model being callable. The row says
 // what is configured; whether the upstream answers is what `provider validate`
-// and `router call` find out.
+// and `router call` find out. `router call models` is the other question — what
+// a caller's own credential may send — and it is a verb on `call` because it is
+// answered by the data plane, with the key `call` uses.
 //
 // A locally installed model application owns a row from the moment it is
 // installed, named after the MODEL_NAME its manifest declares, whatever state
@@ -39,8 +42,8 @@ import (
 //
 // These literals are copied from Router's vocabulary and nothing here can check
 // them, the same way the default categories in call.go are copied. A key
-// renamed there stops being shown rather than failing loudly; `router provider
-// models get <provider> <model>` prints whatever the row actually declares.
+// renamed there stops being shown rather than failing loudly; `router model get
+// <model>` prints whatever the row actually declares.
 var capabilityFlags = []string{
 	"supports_vision",
 	"supports_function_calling",
@@ -228,7 +231,7 @@ func (r *adminModelRow) routeNote() string {
 	return strings.Join(out, ", ")
 }
 
-func NewListCommand(f *cmdutil.Factory) *cobra.Command {
+func newModelListCommand(f *cmdutil.Factory) *cobra.Command {
 	var (
 		output       string
 		providerRef  string
@@ -264,11 +267,12 @@ installed application has a row from the moment it is installed, so a model
 that has never run is listed here rather than missing.
 
 What a model claims to support, its context window and its prices are not in
-this answer — Router keeps them out of the aggregate list. "router provider get
-<provider>" carries them.
+this answer — Router keeps them out of the aggregate list. "router model get
+<model>" carries them.
 
 Being listed does not mean being reachable. This is the configuration; whether
-the upstream answers right now is what "provider validate" reports.
+the upstream answers right now is what "provider validate" reports, and what a
+particular credential may send is "router call models".
 
 Results are capped, newest first. Narrow with --provider, --mode, --search or
 --enabled rather than raising --limit when you are looking for one model.
@@ -278,10 +282,10 @@ appears in it, and a user needs it to choose which models their own key may
 reach.
 
 Examples:
-  olares-cli router list
-  olares-cli router list --mode embedding
-  olares-cli router list --provider claude --enabled
-  olares-cli router list --search qwen -o json
+  olares-cli router model list
+  olares-cli router model list --mode embedding
+  olares-cli router model list --provider claude --enabled
+  olares-cli router model list --search qwen -o json
 `,
 		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {

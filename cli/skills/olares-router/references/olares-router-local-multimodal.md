@@ -18,9 +18,9 @@ A model application's Model Console launches one engine, chosen by the kind of m
 | Translation | `translate` | a translation engine | `router call translate` |
 | Document OCR | `ocr` | an OCR adapter in front of llama.cpp | `router call ocr` |
 
-The rest of the vocabulary — `moderation`, `responses`, `image_generation`, `video_generation`, `search`, `scrape` — is served by cloud providers rather than by anything installable here today. `router list --mode <mode>` is what says which of them this Olares actually has.
+The rest of the vocabulary — `moderation`, `responses`, `image_generation`, `video_generation`, `search`, `scrape` — is served by cloud providers rather than by anything installable here today. `router model list --mode <mode>` is what says which of them this Olares actually has.
 
-`audio` is one mode covering six different jobs, and which of them a row actually serves is in its capability flags rather than its mode: `supports_stt` and `supports_stt_stream` for transcription, `supports_tts`, `supports_tts_clone` and `supports_tts_dialogue` for speech, and `supports_vad`, `supports_diar`, `supports_enhance`, `supports_speaker_embed` for the surrounding steps. Each of those is a separate engine image, so a model that transcribes genuinely cannot speak. `router list` names them in its SUPPORTS column, `router provider get <provider>` shows which ones each row of a provider declares, `router model get <model>` prints a row's flags in full, and `router model spec show <model>` shows what the application itself says.
+`audio` is one mode covering six different jobs, and which of them a row actually serves is in its capability flags rather than its mode: `supports_stt` and `supports_stt_stream` for transcription, `supports_tts`, `supports_tts_clone` and `supports_tts_dialogue` for speech, and `supports_vad`, `supports_diar`, `supports_enhance`, `supports_speaker_embed` for the surrounding steps. Each of those is a separate engine image, so a model that transcribes genuinely cannot speak. `router model list` names them in its SUPPORTS column, `router provider get <provider>` shows which ones each row of a provider declares, `router model get <model>` prints a row's flags in full, and `router model spec show <model>` shows what the application itself says.
 
 This is the one place where a mislabelled row is expensive: a speech model that ends up answering for transcription makes every transcription request fail with a bare 404 from the engine. Router points each audio category — `default-stt`, `default-tts`, `default-vad`, `default-diar`, `default-enhance`, `default-sound-fx` — at a model whose flags match, so the fix for a mismatch is the card rather than the category.
 
@@ -42,7 +42,7 @@ A local application publishes its own model list, so Router mirrors it rather th
 
 ```
 olares-cli router provider get embeddinggemmav3
-olares-cli router list --mode embedding
+olares-cli router model list --mode embedding
 ```
 
 Check three things on the row before relying on it:

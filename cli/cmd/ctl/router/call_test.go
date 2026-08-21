@@ -24,6 +24,12 @@ func TestEveryCallVerbFallsBackToACategory(t *testing.T) {
 	const noModelFlag = "translate"
 
 	for _, verb := range callVerbs(t) {
+		// `call models` sits here because it is answered by the data plane
+		// over the same credential, but it sends no work and so has nothing
+		// to fall back to.
+		if verb.Name() == "models" {
+			continue
+		}
 		flag := verb.Flags().Lookup("model")
 		if verb.Name() == noModelFlag {
 			if flag != nil {

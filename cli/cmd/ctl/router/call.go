@@ -48,9 +48,11 @@ install fails until a model of that kind exists.
 Credentials resolve on their own. Inside the cluster the platform supplies the
 caller identity and no key is needed; anywhere else this machine keeps one key
 in the OS keychain, minting it on first use. --api-key overrides both, and
-"olares-cli router key local" says which one is in play.
+"olares-cli router key current" says which one is in play.
 
 Subcommands:
+  models                the names these verbs accept in --model, as this
+                        credential sees them
   chat [prompt]         a chat completion, streamed by default
   embed <text…>         embedding vectors
   rerank <query>        order documents by how well they answer a query
@@ -76,6 +78,7 @@ the credential that made it, and may cost money.
 `,
 	}
 	cmd.SilenceUsage = true
+	cmd.AddCommand(newCallModelsCommand(f))
 	cmd.AddCommand(newCallChatCommand(f))
 	cmd.AddCommand(newCallEmbedCommand(f))
 	cmd.AddCommand(newCallRerankCommand(f))

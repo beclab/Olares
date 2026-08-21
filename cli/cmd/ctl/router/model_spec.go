@@ -26,7 +26,7 @@ import (
 //
 // The card is where a model's mode, capabilities, prices and engine flags are
 // declared, and the application that runs the model owns it. Router holds a
-// projection of it — that is what `router list` reports and what billing is
+// projection of it — that is what `router model list` reports and what billing is
 // calculated against — and reads it when the application reaches running, so
 // the two can be a restart apart.
 //
@@ -477,10 +477,10 @@ func specErr(err error, model string) error {
 	}
 	switch re.Code {
 	case "model_spec_model_not_found":
-		return fmt.Errorf("%w\n`olares-cli router list` shows the configured models. A model that is "+
+		return fmt.Errorf("%w\n`olares-cli router model list` shows the configured models. A model that is "+
 			"disabled is not resolvable here either", err)
 	case "model_spec_model_ambiguous":
-		return fmt.Errorf("%w\nQualify it as <provider>/<model>; `olares-cli router list` shows which "+
+		return fmt.Errorf("%w\nQualify it as <provider>/<model>; `olares-cli router model list` shows which "+
 			"providers serve %s. This route refuses to guess, because the wrong guess reconfigures the "+
 			"wrong application", err, model)
 	case "model_spec_unsupported_provider":

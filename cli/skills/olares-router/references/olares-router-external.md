@@ -2,7 +2,7 @@
 
 Giving Olares a cloud vendor's models is two decisions, in this order: which upstream, then which of its models are offered. Credentials alone offer nothing — a provider with no model rows routes nothing, deliberately, so that one key does not silently expose a vendor's entire catalog.
 
-Everything here is admin-only, reads included: even listing providers refuses a non-admin, for whom `router list` is the view of what exists. Only the bare list of vendor kinds is open.
+Everything here is admin-only, reads included: even listing providers refuses a non-admin, for whom `router model list` is the view of what exists. Only the bare list of vendor kinds is open.
 
 ## 1. Choose the upstream kind
 
@@ -43,7 +43,7 @@ olares-cli router model add llama-3.1-70b --provider my-endpoint \
 - `add` is for an endpoint whose catalog Router cannot read. `--mode` defaults to `chat`; get it right, because a default is resolved per mode and a mislabelled row is only discovered at call time.
 - `--supports` takes `supports_*` flags. Declaring one the model does not have makes a caller send a request the upstream will reject; omitting one it does have makes callers avoid a feature that works. Router stores a key it does not recognise instead of refusing it, so a misspelt flag is kept and never honoured — read a working row with `router model get <model>` and copy its spelling rather than guessing.
 
-`router provider get <provider>` then shows the provider with every model it serves, their modes, sizes and headline capabilities. `router list` shows every model across every provider, with the same capability summary in its SUPPORTS column.
+`router provider get <provider>` then shows the provider with every model it serves, their modes, sizes and headline capabilities. `router model list` shows every model across every provider, with the same capability summary in its SUPPORTS column.
 
 ## 4. Correct it later
 

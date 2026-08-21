@@ -119,7 +119,7 @@ func (t *modelTarget) appRef(ctx context.Context, f *cmdutil.Factory, args []str
 
 var errNoModelTarget = errors.New(
 	"name the model to act on, or the application serving it with --app; " +
-		"`olares-cli router list` shows the models and `olares-cli router provider list` the applications")
+		"`olares-cli router model list` shows the models and `olares-cli router provider list` the applications")
 
 // direct reports whether this invocation bypasses Router. It is asked by the
 // two verbs that have a Router road as well as a direct one; everything else

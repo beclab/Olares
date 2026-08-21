@@ -73,7 +73,7 @@ order the documents went in. Scores are the model's own scale — comparable
 within one call and not across models — so what matters is the order.
 
 Reranking needs a model whose mode is rerank. A chat or embedding model refuses
-the route; "olares-cli router list --mode rerank" shows the ones that qualify.
+the route; "olares-cli router model list --mode rerank" shows the ones that qualify.
 
 Examples:
   olares-cli router call rerank "how do I reset my password" \

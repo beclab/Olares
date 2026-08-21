@@ -67,6 +67,7 @@ Credentials alone offer nothing: every model is a row attached on purpose, so
 that a key does not silently expose a vendor's entire catalog.
 
 What Router is configured with:
+  list              every model, across every provider
   get <model>       one model in full: every capability, price, and the
                     engine flags of a local model
   import <model>... attach models from Router's vendor catalog, with their
@@ -102,12 +103,15 @@ For an upstream that publishes its own list — Ollama, a local model applicatio
 — none of the attach verbs is the usual route: "provider sync-models" mirrors
 the whole list in one step.
 
-"olares-cli router list" shows every model across every provider.
+"list" and "get" answer what is configured. What a given credential may
+actually send is a different question, answered by the data plane:
+"olares-cli router call models".
 
 Admin only, except for reading.
 `,
 	}
 	cmd.SilenceUsage = true
+	cmd.AddCommand(newModelListCommand(f))
 	cmd.AddCommand(newModelGetCommand(f))
 	cmd.AddCommand(newModelImportCommand(f))
 	cmd.AddCommand(newModelAddCommand(f))

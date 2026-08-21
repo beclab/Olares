@@ -75,7 +75,7 @@ written against this stays written when the provider behind it changes.
 This is an index lookup, not a fetch: the snippet is what the vendor holds.
 "olares-cli router call scrape <url>" reads the page itself.
 
-Searching needs a model whose mode is search; "olares-cli router list --mode
+Searching needs a model whose mode is search; "olares-cli router model list --mode
 search" shows the ones that qualify.
 
 Examples:
@@ -164,7 +164,7 @@ Only http and https are accepted, and an address on a private network or a cloud
 metadata endpoint is refused. Router does the refusing, because a scraper that
 can be pointed inward is a way to read things the caller has no access to.
 
-Scraping needs a model whose mode is scrape; "olares-cli router list --mode
+Scraping needs a model whose mode is scrape; "olares-cli router model list --mode
 scrape" shows the ones that qualify.
 
 Examples:

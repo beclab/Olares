@@ -57,7 +57,7 @@ instead, which is enough to confirm the model answered and how wide its output
 is. -o json prints the vectors in full, for the caller that wants them.
 
 Embedding needs a model whose mode is embedding; a chat model refuses the route
-rather than guessing. "olares-cli router list --mode embedding" shows the ones
+rather than guessing. "olares-cli router model list --mode embedding" shows the ones
 that qualify.
 
 Examples:

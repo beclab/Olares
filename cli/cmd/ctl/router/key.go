@@ -67,7 +67,7 @@ are recognised by the platform and do not need one either.
 
 "router call" is the exception, and it looks after itself: the data plane refuses
 a console session, so this machine keeps one key of its own and mints it on
-first use. "key local" is where that copy is inspected or dropped.
+first use. "key current" is where that copy is inspected or dropped.
 
 The plaintext is shown once, when the key is issued, because Router stores only
 its hash. Nothing can recover it afterwards; a lost key is replaced, not looked
@@ -78,7 +78,7 @@ Subcommands:
   issue <name>     create one and print the plaintext once
   update <key>     rename, enable, disable, re-expire, or change its models
   revoke <key>     stop it working, keeping the row and its usage history
-  local            the key this machine saved for its own calls
+  current          the key "router call" is using from this machine
 
 A key can be restricted to named models, which is how a key given to one
 application stops being a key to everything. Without that restriction it reaches
@@ -90,19 +90,20 @@ every model in the workspace.
 	cmd.AddCommand(newKeyIssueCommand(f))
 	cmd.AddCommand(newKeyUpdateCommand(f))
 	cmd.AddCommand(newKeyRevokeCommand(f))
-	cmd.AddCommand(newKeyLocalCommand(f))
+	cmd.AddCommand(newKeyCurrentCommand(f))
+	cmd.AddCommand(newDeprecatedKeyLocalCommand(f))
 	return cmd
 }
 
-func newKeyLocalCommand(f *cmdutil.Factory) *cobra.Command {
+func newKeyCurrentCommand(f *cmdutil.Factory) *cobra.Command {
 	var (
 		output string
 		forget bool
 	)
 	cmd := &cobra.Command{
-		Use:   "local",
-		Short: "the key this machine saved for its own calls",
-		Long: `Show, or drop, the data-plane key this machine keeps.
+		Use:   "current",
+		Short: "the key \"router call\" is using from this machine",
+		Long: `Show, or drop, the data-plane key this machine calls with.
 
 "router call" needs a credential the console plane cannot give it, so on first use
 it issues one key and saves it in the OS keychain under the active profile. Every
@@ -112,13 +113,13 @@ Only its prefix is shown. The secret is in the keychain and reading it back out
 here would put it in a shell history for no reason — anything that needs the
 plaintext should be given a key of its own with "router key issue".
 
---forget deletes the local copy. The key itself keeps working, because Router
+--forget deletes the saved copy. The key itself keeps working, because Router
 does not know a copy was discarded: this is how a machine stops calling, and
 "router key revoke" is how a key stops working. The next call issues a new one.
 
 Examples:
-  olares-cli router key local
-  olares-cli router key local --forget
+  olares-cli router key current
+  olares-cli router key current --forget
 `,
 		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
@@ -816,7 +817,7 @@ func verifyAllowedModels(ctx context.Context, pc *preparedClient, refs []string)
 			var ok bool
 			canonical, ok = known[strings.ToLower(m)]
 			if !ok {
-				return nil, fmt.Errorf("no model %q is configured; `olares-cli router list` shows what is, "+
+				return nil, fmt.Errorf("no model %q is configured; `olares-cli router model list` shows what is, "+
 					"and the name to use here is the provider and the model joined by a slash, e.g. %q",
 					m, exampleQualified(qualified))
 			}

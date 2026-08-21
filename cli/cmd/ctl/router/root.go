@@ -21,15 +21,14 @@ on this machine or at a cloud provider. It is a Market application, so this
 tree locates it at runtime instead of assuming a hostname; a verb that cannot
 find it says whether it is missing or invisible to this profile.
 
-  list          every model configured, across every provider
-  models        every name the model field accepts, as a caller sees it
-  model         the models themselves: attach and correct the ones Router is
-                configured with, and read, retry or relaunch the ones that run
-                on this machine
+  model         the models themselves: list, attach and correct the ones Router
+                is configured with, and read, retry or relaunch the ones that
+                run on this machine
   route         the names callers may send instead of a provider and model,
                 including the default-* categories Router maintains itself
   provider      the upstreams Router routes to: cloud accounts and model apps
-  call          send work to a model: text, embeddings, web, images, audio, OCR
+  call          send work to a model: text, embeddings, web, images, audio, OCR,
+                and "call models" for the names a caller may send
   key           API keys for software that calls Router
   quota         ceilings on a key, a person, a model, or an application
   usage         what has been called, what it cost, and how long it is kept
@@ -50,8 +49,6 @@ Run "olares-cli router <verb> --help" for details.
 		c.SilenceUsage = true
 	}
 
-	cmd.AddCommand(NewListCommand(f))
-	cmd.AddCommand(newModelsCommand(f))
 	cmd.AddCommand(NewModelCommand(f))
 	cmd.AddCommand(NewRouteCommand(f))
 	cmd.AddCommand(NewProviderCommand(f))
@@ -60,6 +57,8 @@ Run "olares-cli router <verb> --help" for details.
 	cmd.AddCommand(NewQuotaCommand(f))
 	cmd.AddCommand(NewUsageCommand(f))
 	cmd.AddCommand(NewAuditCommand(f))
+	cmd.AddCommand(newDeprecatedListCommand(f))
+	cmd.AddCommand(newDeprecatedModelsCommand(f))
 	cmd.AddCommand(newDeprecatedDefaultCommand(f))
 	cmd.AddCommand(newDeprecatedSpecCommand(f))
 	cmd.AddCommand(newDeprecatedLocalCommand(f))
