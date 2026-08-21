@@ -57,13 +57,13 @@ Two states are not the same thing, and this is the most common confusion:
 | Question | Where the answer is |
 |---|---|
 | Did the *application* install? | `router provider get <app>`, or `olares-cli market status <app>` |
-| Is the *model* downloaded and loaded? | `router local progress <app>` |
+| Is the *model* downloaded and loaded? | `router model progress <model>`, or `--app <app>` |
 
 The Market can report an application running long before the model inside it is usable — the weights download after the container starts. A provider that is `active` with no models usually means exactly that.
 
 ## After the install
 
-1. `router local progress <app>` until the download and load settle.
+1. `router model progress --app <app>` until the download and load settle. The model name works too once Router has the row; the app id works before it does.
 2. `router provider get <app-or-title>` to confirm Router now sees its models. A local application publishes its own list, so Router mirrors it rather than needing `model import`; `router provider sync-models <provider>` re-mirrors it if the card changed.
 3. `router route list --kind default` to see whether Router has pointed `default-chat` at the new model. It does that itself, against what the model says it can do — there is nothing to set. If the category is still empty, the model is not enabled or has not published a card yet. See [names, defaults and access control](olares-router-governance.md).
 4. `router call chat "hello" --model <provider>/<model>` to prove the whole path.
@@ -86,7 +86,7 @@ olares-cli router model restart Olares/qwen3-4b
 
 Two consequences. Changing `--engine-args` relaunches the inference process, and the model does not answer until the weights have loaded again. And the application has to be running: a card cannot be written into something that is not there, which is when `model spec show` starts saying `cache`.
 
-`router local spec set` reaches the same document at the application instead of through Router. It is a whole-document replace with no merge, so a field left out is gone — engine flags included. Use it for an application Router has no provider row for, and `model spec edit` otherwise.
+`router model spec set` reaches the same document at the application instead of through Router. It is a whole-document replace with no merge, so a field left out is gone — engine flags included. Use it for an application Router has no provider row for, and `model spec edit` otherwise.
 
 An application whose engine is a sidecar — OCR, audio, embedding — takes no engine flags at all. There `--mode` is the field that matters, because it is the gate the data plane routes on, and `model restart` succeeds having changed nothing.
 
@@ -96,7 +96,7 @@ An application whose engine is a sidecar — OCR, audio, embedding — takes no 
 |---|---|
 | Install failed | `olares-cli market status <app>` for the Market's own reason; fix it, then `olares-cli market uninstall <app>` and install again |
 | Application installed, no Router provider | `router provider register <app>` creates the row for an application already on the machine |
-| Download stuck or failed | `router local progress <app>`, then `router local retry <app>` |
+| Download stuck or failed | `router model progress --app <app>`, then `router model retry --app <app>` |
 | Model card wrong, or engine flags need changing | `router model spec edit <model>` |
 | Engine wedged on a card that is right | `router model restart <model>` |
 | Provider exists, application does not answer | [deciding which layer is wrong](olares-router-diagnosis.md) |

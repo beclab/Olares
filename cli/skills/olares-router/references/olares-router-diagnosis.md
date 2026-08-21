@@ -7,7 +7,7 @@ A model that does not answer can be failing in five places, and each has a diffe
 | The CLI's reach into Router | any verb's own error; `olares-cli profile whoami`, `olares-cli market status router` |
 | Router's own configuration | `router provider get`, `router list`, `router route list --kind default` |
 | Access control | `router key list`, `router quota list`, `router usage list --status failed` |
-| The model application | `router local status`, `router local progress` |
+| The model application | `router model status`, `router model progress`, `router model diag` |
 | Below the application | [`olares-doctor`](../../olares-doctor/SKILL.md) — pods, events, images, resources |
 
 ## Start at the top
@@ -50,8 +50,8 @@ A configuration that is right and a caller that is refused look identical from t
 Router sees an unfinished local model as an unreachable provider, and reports it as one. The application's own console has the real state:
 
 ```
-olares-cli router local status <app>
-olares-cli router local progress <app>
+olares-cli router model status <model>
+olares-cli router model progress <model>
 ```
 
 - **A 5xx with an empty body from a call** is nothing listening behind Router: the application is stopped, or the engine has not come up. That empty body is the signature — Router's own refusals always carry a message.

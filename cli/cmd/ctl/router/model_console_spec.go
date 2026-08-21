@@ -17,15 +17,20 @@ import (
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
-// `router local spec` — GET/PUT /api/model-spec, GET /api/model-spec/file
-// `router local config` — GET /api/config
-// `router local endpoints` — GET /api/endpoints
+// The model card read and written at the application rather than through
+// Router — GET/PUT /api/model-spec, GET /api/model-spec/file.
 //
-// The model card is the same document Router stores as a model's spec, served
-// by the application that runs the model. That makes it the answer to a
-// specific confusion: when Router advertises capabilities a model does not
-// have, these two copies have diverged, and this is the side that the
-// application itself believes.
+// The card is the same document Router stores as a model's spec, served by the
+// application that runs the model. That makes it the answer to a specific
+// confusion: when Router advertises capabilities a model does not have, these
+// two copies have diverged, and this is the side the application believes.
+//
+// `model spec show --app` and `model spec set` come through here; `model spec
+// show <model>` and `model spec edit` go through Router, in model_spec.go. The
+// write is the difference that matters and it is not a preference: PUT replaces
+// the whole document, so a field left out of what is sent is gone, engine flags
+// included. Router's PATCH merges. Reach for this side when Router cannot
+// answer for the application at all.
 
 type localSpec struct {
 	Name            string            `json:"name,omitempty"`
@@ -40,69 +45,8 @@ type localSpec struct {
 	Extensions      map[string]any    `json:"extensions,omitempty"`
 }
 
-func newLocalSpecCommand(f *cmdutil.Factory) *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "spec",
-		Short: "the model card this application serves to Router",
-		Long: `Read or replace the model card — the capability document Router reads from
-this application and stores as the model's spec.
-
-Capabilities, prices, context window and parameter rules all come from here.
-When Router offers a capability a model turns out not to have, this is the copy
-the application itself stands behind, and "router provider sync-models" is what
-brings the two back together.
-
-  spec show <app>   the card as served, after parsing
-  spec file <app>   the bytes on disk, before parsing
-  spec set <app>    replace the card wholesale
-
-"olares-cli router spec" reaches the same document through Router instead, and
-is the one to prefer for anything Router already knows about: it merges the
-change rather than replacing the card, and stores what the application confirms
-so Router's own copy is right immediately. These verbs are for the application
-Router has no provider row for, and for reading the file as written.
-`,
-	}
-	cmd.AddCommand(newLocalSpecShowCommand(f))
-	cmd.AddCommand(newLocalSpecFileCommand(f))
-	cmd.AddCommand(newLocalSpecSetCommand(f))
-	return cmd
-}
-
-func newLocalSpecShowCommand(f *cmdutil.Factory) *cobra.Command {
-	var output string
-	cmd := &cobra.Command{
-		Use:     "show <app>",
-		Aliases: []string{"get"},
-		Short:   "the card as this application serves it",
-		Long: `Show the model card this application serves, after parsing.
-
-JSON output is the card itself rather than a summary of it, including any field
-this CLI does not know about, which is what makes it the thing to edit and hand
-back to "spec set".
-
-Examples:
-  olares-cli router local spec show llamacppqwen3627bggufv3
-  olares-cli router local spec show llamacppqwen3627bggufv3 -o json
-`,
-		Args: cobra.ExactArgs(1),
-		RunE: func(c *cobra.Command, args []string) error {
-			return runLocalSpec(c.Context(), f, args[0], output)
-		},
-	}
-	addOutputFlag(cmd, &output)
-	return cmd
-}
-
-func runLocalSpec(ctx context.Context, f *cmdutil.Factory, ref, outputRaw string) error {
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	format, err := parseFormat(outputRaw)
-	if err != nil {
-		return err
-	}
-	li, err := openLocal(ctx, f, ref)
+func runLocalSpec(ctx context.Context, f *cmdutil.Factory, target *modelTarget, args []string, format Format) error {
+	li, err := target.open(ctx, f, args)
 	if err != nil {
 		return err
 	}
@@ -221,29 +165,31 @@ func unknownExtensions(ext map[string]any) []string {
 	return out
 }
 
-func newLocalSpecFileCommand(f *cmdutil.Factory) *cobra.Command {
-	return &cobra.Command{
-		Use:   "file <app>",
+func newModelSpecFileCommand(f *cmdutil.Factory, how localAddressing) *cobra.Command {
+	target := newModelTarget(how)
+	cmd := &cobra.Command{
+		Use:   "file " + target.arg(),
 		Short: "the model card file on disk, verbatim",
 		Long: `Print the model card exactly as it is stored on disk.
 
-"router local spec show" serves the parsed card held in memory; this is the file a
+"model spec show" serves the parsed card held in memory; this is the file a
 previous write actually left behind. They differ in whitespace, in key order,
 and in the record of keys the Model Console did not recognise — so this is the
 copy to compare against something you wrote, and that is the whole reason it
 exists separately.
 
+This reads the application directly, whichever way it is named.
+
 Examples:
-  olares-cli router local spec file llamacppqwen3627bggufv3
-  olares-cli router local spec file llamacppqwen3627bggufv3 > card.json
+  olares-cli router model spec file qwen3-4b
+  olares-cli router model spec file --app llamacppqwen3627bggufv3 > card.json
 `,
-		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			ctx := c.Context()
 			if ctx == nil {
 				ctx = context.Background()
 			}
-			li, err := openLocal(ctx, f, args[0])
+			li, err := target.open(ctx, f, args)
 			if err != nil {
 				return err
 			}
@@ -264,6 +210,8 @@ Examples:
 			return err
 		},
 	}
+	target.bind(cmd)
+	return cmd
 }
 
 // specFileErr separates the two things a 404 can mean here, both of which are
@@ -277,11 +225,12 @@ func specFileErr(ctx context.Context, li *llmInit, err error) error {
 	}
 	if served := consoleServes(ctx, li, "GET", epLocalModelSpecFile); served != nil && !*served {
 		return fmt.Errorf("this application's Model Console (%s) does not serve the card's file, only "+
-			"the card it parsed from it. `olares-cli router local spec show %s -o json` is that card, and it "+
-			"is what `router local spec set` takes back", consoleVersion(li), li.AppName)
+			"the card it parsed from it. `olares-cli router model spec show --app %s -o json` is that "+
+			"card, and it is what `router model spec set` takes back", consoleVersion(li), li.AppName)
 	}
 	return fmt.Errorf("%w\nNothing has written a card to disk, so this application is serving the one "+
-		"built from its configuration at boot. `olares-cli router local spec show %s` shows it", err, li.AppName)
+		"built from its configuration at boot. `olares-cli router model spec show --app %s` shows it",
+		err, li.AppName)
 }
 
 // consoleVersion names the build in a sentence about what it can do. The open
@@ -293,26 +242,30 @@ func consoleVersion(li *llmInit) string {
 	return "version unknown"
 }
 
-func newLocalSpecSetCommand(f *cmdutil.Factory) *cobra.Command {
+func newModelSpecSetCommand(f *cmdutil.Factory, how localAddressing) *cobra.Command {
 	var (
 		from   string
 		output string
 		yes    bool
 	)
+	target := newModelTarget(how)
 	cmd := &cobra.Command{
-		Use:   "set <app>",
-		Short: "replace the model card wholesale",
+		Use:   "set " + target.arg(),
+		Short: "replace the whole model card at the application",
 		Long: `Replace a model application's card with the document you supply.
 
-This is a replacement, not a merge: what you send becomes the card, and any
-field you leave out is gone — the engine flags included, and an engine relaunched
-without them is a different engine. "olares-cli router spec edit <model>" is the
-merging equivalent through Router, and is the safer verb whenever Router has this
-application as a provider. Reach for this one when it does not.
+This is a replacement, not a merge, and that is the whole difference between it
+and "model spec edit". What you send becomes the card; every field you leave out
+is gone, the engine flags included, and an engine relaunched without them is a
+different engine. The card also goes straight to the application rather than
+through Router, so Router keeps its old projection until its next sync.
+
+"model spec edit" is the verb to reach for. This one is for the application
+Router has no provider row for, or cannot currently answer for.
 
 Start from the current card —
 
-  olares-cli router local spec show <app> -o json > card.json
+  olares-cli router model spec show --app <app> -o json > card.json
 
 — edit that, and send it back. The write is atomic and survives restarts,
 because disk wins over the boot-time seed from then on. Until the first write
@@ -325,14 +278,14 @@ on its next sync either way, which is what makes this worth doing at all — a
 card that undersells a model is why a capability appears unavailable.
 
 Examples:
-  olares-cli router local spec set llamacppqwen3627bggufv3 --from card.json
-  cat card.json | olares-cli router local spec set llamacppqwen3627bggufv3
+  olares-cli router model spec set --app llamacppqwen3627bggufv3 --from card.json
+  cat card.json | olares-cli router model spec set qwen3-4b
 `,
-		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
-			return runLocalSpecSet(c.Context(), f, args[0], from, yes, output)
+			return runLocalSpecSet(c.Context(), f, target, args, from, yes, output)
 		},
 	}
+	target.bind(cmd)
 	cmd.Flags().StringVar(&from, "from", "", "read the card from this file; standard input when omitted")
 	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "do not ask for confirmation")
 	addOutputFlag(cmd, &output)
@@ -355,14 +308,15 @@ func readSpecSource(from string) ([]byte, error) {
 		}
 		if len(bytes.TrimSpace(raw)) == 0 {
 			return nil, fmt.Errorf("no card to send: pass --from <file>, or pipe one in. " +
-				"`olares-cli router local spec show <app> -o json` prints the current card to start from")
+				"`olares-cli router model spec show <model> -o json` prints the current card to start from")
 		}
 		return raw, nil
 	}
 	return os.ReadFile(from)
 }
 
-func runLocalSpecSet(ctx context.Context, f *cmdutil.Factory, ref, from string, yes bool, outputRaw string) error {
+func runLocalSpecSet(ctx context.Context, f *cmdutil.Factory, target *modelTarget, args []string,
+	from string, yes bool, outputRaw string) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -380,10 +334,10 @@ func runLocalSpecSet(ctx context.Context, f *cmdutil.Factory, ref, from string, 
 	}
 	if len(candidate) == 0 {
 		return fmt.Errorf("the card is empty; a replacement has to carry the whole document, and " +
-			"`olares-cli router local spec show <app> -o json` prints the current one to start from")
+			"`olares-cli router model spec show <model> -o json` prints the current one to start from")
 	}
 
-	li, err := openLocal(ctx, f, ref)
+	li, err := target.open(ctx, f, args)
 	if err != nil {
 		return err
 	}
@@ -438,195 +392,4 @@ func specSetErr(err error) error {
 			"serving the old one", err)
 	}
 	return err
-}
-
-func newLocalConfigCommand(f *cmdutil.Factory) *cobra.Command {
-	var output string
-	cmd := &cobra.Command{
-		Use:   "config <app>",
-		Short: "the effective configuration, secrets redacted",
-		Long: `Show the configuration a model application is actually running with.
-
-Secrets are masked by the Model Console before they leave it — a token becomes a
-length, a source URL keeps only its scheme and host — so this is safe to paste
-into a bug report.
-
-It is the answer to "why is it downloading from there" and "which engine flags
-are in force", both of which are set at install time and easy to misremember.
-
-Examples:
-  olares-cli router local config llamacppqwen3627bggufv3
-  olares-cli router local config llamacppqwen3627bggufv3 -o json
-`,
-		Args: cobra.ExactArgs(1),
-		RunE: func(c *cobra.Command, args []string) error {
-			ctx := c.Context()
-			if ctx == nil {
-				ctx = context.Background()
-			}
-			format, err := parseFormat(output)
-			if err != nil {
-				return err
-			}
-			li, err := openLocal(ctx, f, args[0])
-			if err != nil {
-				return err
-			}
-			var cfg map[string]any
-			if err := li.client.doJSON(ctx, "GET", epLocalConfig, nil, &cfg); err != nil {
-				return err
-			}
-			if format == FormatJSON {
-				return printJSON(os.Stdout, cfg)
-			}
-			return renderFlatMap(os.Stdout, cfg)
-		},
-	}
-	addOutputFlag(cmd, &output)
-	return cmd
-}
-
-// renderFlatMap prints an unknown-shaped document as sorted key/value lines,
-// descending into nested objects with dotted keys. The configuration's fields
-// are the Model Console's own and will grow; enumerating them here would mean
-// silently dropping whatever it learns to report next.
-func renderFlatMap(w io.Writer, doc map[string]any) error {
-	t := newTable(w)
-	writeFlat(t, "", doc)
-	return t.flush()
-}
-
-func writeFlat(t *table, prefix string, doc map[string]any) {
-	keys := make([]string, 0, len(doc))
-	for k := range doc {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	for _, k := range keys {
-		name := k
-		if prefix != "" {
-			name = prefix + "." + k
-		}
-		switch v := doc[k].(type) {
-		case map[string]any:
-			if len(v) == 0 {
-				continue
-			}
-			writeFlat(t, name, v)
-		case nil:
-			continue
-		default:
-			t.row(name, fmt.Sprintf("%v", v))
-		}
-	}
-}
-
-type localEndpoint struct {
-	Method      string   `json:"method"`
-	Path        string   `json:"path"`
-	Category    string   `json:"category"`
-	Group       string   `json:"group,omitempty"`
-	Description string   `json:"description"`
-	Available   bool     `json:"available"`
-	Reasons     []string `json:"reasons,omitempty"`
-}
-
-func newLocalEndpointsCommand(f *cmdutil.Factory) *cobra.Command {
-	var (
-		output      string
-		unavailable bool
-	)
-	cmd := &cobra.Command{
-		Use:   "endpoints <app>",
-		Short: "which routes this deployment actually serves",
-		Long: `List the routes a model application serves, and which are switched off.
-
-A Model Console mounts different routes depending on what it is running: an
-embedding deployment has no chat completions, a translation one moves its routes
-to the host root, and the engine-native passthrough exists only for the engines
-that have one. So "the endpoint does not exist" and "the endpoint is not mounted
-in this deployment" are different answers, and this is where they are told apart
-— each unavailable route carries the reason it is absent.
-
-Examples:
-  olares-cli router local endpoints llamacppqwen3627bggufv3
-  olares-cli router local endpoints llamacppqwen3627bggufv3 --unavailable
-`,
-		Args: cobra.ExactArgs(1),
-		RunE: func(c *cobra.Command, args []string) error {
-			ctx := c.Context()
-			if ctx == nil {
-				ctx = context.Background()
-			}
-			format, err := parseFormat(output)
-			if err != nil {
-				return err
-			}
-			li, err := openLocal(ctx, f, args[0])
-			if err != nil {
-				return err
-			}
-			var env struct {
-				EngineKind string          `json:"engine_kind"`
-				Endpoints  []localEndpoint `json:"endpoints"`
-			}
-			if err := li.client.doJSON(ctx, "GET", epLocalEndpoints, nil, &env); err != nil {
-				return err
-			}
-			rows := env.Endpoints
-			if unavailable {
-				kept := rows[:0:0]
-				for _, r := range rows {
-					if !r.Available {
-						kept = append(kept, r)
-					}
-				}
-				rows = kept
-			}
-			if format == FormatJSON {
-				return printJSON(os.Stdout, map[string]any{
-					"engine_kind": env.EngineKind,
-					"endpoints":   rows,
-				})
-			}
-			return renderLocalEndpoints(os.Stdout, env.EngineKind, rows, unavailable)
-		},
-	}
-	cmd.Flags().BoolVar(&unavailable, "unavailable", false, "only the routes this deployment does not serve")
-	addOutputFlag(cmd, &output)
-	return cmd
-}
-
-func renderLocalEndpoints(w io.Writer, engineKind string, rows []localEndpoint, onlyUnavailable bool) error {
-	if len(rows) == 0 {
-		if onlyUnavailable {
-			_, err := fmt.Fprintln(w, "every route this Model Console knows about is mounted.")
-			return err
-		}
-		_, err := fmt.Fprintln(w, "this Model Console reported no routes at all, which should not happen.")
-		return err
-	}
-	if engineKind != "" {
-		if _, err := fmt.Fprintf(w, "engine: %s\n\n", engineKind); err != nil {
-			return err
-		}
-	}
-	sort.SliceStable(rows, func(i, j int) bool {
-		if rows[i].Category != rows[j].Category {
-			return rows[i].Category < rows[j].Category
-		}
-		return rows[i].Path < rows[j].Path
-	})
-	t := newTable(w, "METHOD", "PATH", "CATEGORY", "SERVED", "WHY NOT")
-	for _, r := range rows {
-		why := ""
-		if !r.Available {
-			why = clip(strings.Join(r.Reasons, "; "), 60)
-			if why == "" {
-				why = "no reason given"
-			}
-		}
-		t.row(r.Method, r.Path, r.Category, boolStr(r.Available), why)
-	}
-	return t.flush()
 }

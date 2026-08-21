@@ -66,7 +66,7 @@ func NewModelCommand(f *cmdutil.Factory) *cobra.Command {
 Credentials alone offer nothing: every model is a row attached on purpose, so
 that a key does not silently expose a vendor's entire catalog.
 
-Subcommands:
+What Router is configured with:
   get <model>       one model in full: every capability, price, and the
                     engine flags of a local model
   import <model>... attach models from Router's vendor catalog, with their
@@ -75,12 +75,18 @@ Subcommands:
                     catalog is its own
   update <model>    enable, disable, or correct what a model claims to support
   remove <model>    detach a model
-  spec <model>      the card a local model application declares itself by
-  restart <model>   relaunch a local model's engine on the card it has
 
-The last two apply to a model an application on this Olares runs. A cloud
-provider's models have no card and no engine to relaunch: what Router believes
-about those is the row itself, and "model update" is what corrects it.
+A model that runs on this Olares:
+  status <model>    lifecycle phase, engine, and last verification
+  progress <model>  the download and load snapshot, with --watch
+  retry <model>     re-enter the download and load loop now
+  restart <model>   relaunch the engine on the card it already has
+  spec              the card the application declares itself by
+  diag              GPU residency, measured throughput, configuration, routes
+
+The second group reaches the Model Console inside the application serving the
+model. A cloud provider's models have none of it: what Router believes about
+those is the row itself, and "model update" is what corrects it.
 
 A model is named the way a caller names it, "<provider>/<model>", or by its
 own name when only one row carries it, or by its id. --provider settles the
@@ -88,9 +94,13 @@ one case a name cannot: every locally installed model application is a
 provider called "Olares", so two of them can offer the same model name.
 Attaching a model needs --provider outright, since the row does not exist yet.
 
+The verbs in the second group take --app instead, which names the application
+by its Olares app id and skips Router entirely. That is the one to use when a
+model is not answering and Router cannot say why — or cannot be reached at all.
+
 For an upstream that publishes its own list — Ollama, a local model application
-— none of these is the usual route: "provider sync-models" mirrors the whole
-list in one step.
+— none of the attach verbs is the usual route: "provider sync-models" mirrors
+the whole list in one step.
 
 "olares-cli router list" shows every model across every provider.
 
@@ -103,8 +113,12 @@ Admin only, except for reading.
 	cmd.AddCommand(newModelAddCommand(f))
 	cmd.AddCommand(newModelUpdateCommand(f))
 	cmd.AddCommand(newModelRemoveCommand(f))
-	cmd.AddCommand(newModelSpecCommand(f))
-	cmd.AddCommand(newModelRestartCommand(f))
+	cmd.AddCommand(newModelSpecCommand(f, addressByModel))
+	cmd.AddCommand(newModelStatusCommand(f, addressByModel))
+	cmd.AddCommand(newModelProgressCommand(f, addressByModel))
+	cmd.AddCommand(newModelRetryCommand(f, addressByModel))
+	cmd.AddCommand(newModelRestartCommand(f, addressByModel))
+	cmd.AddCommand(newModelDiagCommand(f, addressByModel))
 	return cmd
 }
 

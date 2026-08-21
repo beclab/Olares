@@ -29,12 +29,12 @@ This is the one place where a mislabelled row is expensive: a speech model that 
 ```
 olares-cli market list -c AI
 olares-cli market install embeddinggemmav3 --watch
-olares-cli router local progress embeddinggemmav3
+olares-cli router model progress --app embeddinggemmav3
 ```
 
 Non-text models are usually small — hundreds of megabytes rather than tens of gigabytes — so the install finishes in a fraction of the time an LLM takes, and `--watch` is normally enough on its own.
 
-An embedding or OCR application that is running but answers nothing is nearly always still verifying or converting weights: `router local progress` names the phase, and `router local status` reports the last verification.
+An embedding or OCR application that is running but answers nothing is nearly always still verifying or converting weights: `router model progress` names the phase, and `router model status` reports the last verification.
 
 ## Confirming what arrived
 

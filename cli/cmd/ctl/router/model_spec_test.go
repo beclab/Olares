@@ -52,8 +52,8 @@ func TestAnEmptyPatchIsRefusedBeforeTheRequest(t *testing.T) {
 	}
 	// The refusal has to be this verb's own. Falling through to the one the
 	// application-side card reader raises would send a reader after
-	// `router local spec show <app>`, which is a different command against a
-	// different plane and takes a different kind of name.
+	// `router model spec show --app <app>`, which is a different road to the
+	// document and takes a different kind of name.
 	if !strings.Contains(err.Error(), "router model spec show <model>") {
 		t.Errorf("the refusal does not say where to get the current card: %v", err)
 	}

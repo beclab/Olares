@@ -44,7 +44,7 @@ row carries it, or by its id. --provider settles a name two providers share.
 Engine arguments only appear for a model application's own models. They are
 the flags the Model Console starts the inference engine with, mirrored into
 Router by "provider sync-models"; the card inside the application is the
-original, and "router local spec <app>" reads it there.
+original, and "router model spec show --app <app>" reads it there.
 
 Examples:
   olares-cli router model get lmstudio/qwen3-8b

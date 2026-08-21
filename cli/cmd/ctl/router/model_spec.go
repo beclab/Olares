@@ -30,17 +30,17 @@ import (
 // calculated against — and reads it when the application reaches running, so
 // the two can be a restart apart.
 //
-// There are two ways to reach the card and they are not interchangeable.
-// `router local spec` goes straight at the application's Model Console, which
-// is the only option when Router does not have the application as a provider,
-// and its write is a whole-document replace: a field left out of what you send
-// is gone, engine flags included. This subtree goes through Router, which
-// merges the change onto the card the application currently serves, keeps every
-// key neither side has heard of, and stores what the application confirms — so
-// the projection is right immediately rather than at the next restart.
+// There are two ways to reach the card and they are not interchangeable, which
+// is why one subtree carries both rather than hiding the choice. Router merges
+// a change onto the card the application currently serves, keeps every key
+// neither side has heard of, and stores what the application confirms — so the
+// projection is right immediately rather than at the next restart. Going
+// straight at the application (`--app`, and `spec set`) replaces the whole
+// document, and Router does not hear about it until its next sync.
 //
-// Prefer this one. `router local spec set` exists for the case Router cannot
-// answer for.
+// Prefer Router. The direct road exists for the application Router has no
+// provider row for, or cannot currently answer for; its half lives in
+// model_console_spec.go.
 //
 // Admin only, the read included, because the same route serves the engine
 // flags an inference process is relaunched with.
@@ -68,7 +68,7 @@ type specWriteResult struct {
 	RestartWarning string          `json:"restart_warning,omitempty"`
 }
 
-func newModelSpecCommand(f *cmdutil.Factory) *cobra.Command {
+func newModelSpecCommand(f *cmdutil.Factory, how localAddressing) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "spec",
 		Short: "the model card of a model application",
@@ -81,67 +81,92 @@ edited any other way is a restart away from being what Router believes.
 
   spec show <model>   the card, and whether it came from the app or the cache
   spec edit <model>   change some of it and leave the rest alone
+  spec file <model>   the bytes on disk, before parsing
+  spec set <model>    replace the whole card at the application
+
+"edit" and "set" are not two spellings of one thing. Edit goes through Router,
+merges onto the card the application is serving, and updates Router's own copy
+with what the application confirms. Set goes straight at the application and
+replaces the document, so an omitted field is gone and Router only finds out at
+its next sync. Reach for edit; set is for the application Router has no
+provider row for.
 
 "olares-cli router model restart <model>" relaunches the engine on the card it
 already has, without reading or writing it.
 
 The model is named the way a caller names it: "<provider>/<model>", or the bare
 model name when only one application serves it. A bare name that matches two is
-refused with the qualified candidates rather than guessed at.
+refused with the qualified candidates rather than guessed at. --app names the
+application directly and skips Router, which is also what makes "show" read the
+application rather than Router's projection.
 
 This works on Olares model applications only — a cloud provider has no card and
-no control plane. "olares-cli router local spec" is the other route to the same
-document, straight at the application, and replaces it wholesale; this one
-merges, and is the one to reach for.
+no control plane.
 
 Admin only, reading included.
 `,
 	}
 	cmd.SilenceUsage = true
-	cmd.AddCommand(newSpecShowCommand(f))
+	cmd.AddCommand(newModelSpecShowCommand(f, how))
 	cmd.AddCommand(newSpecEditCommand(f))
+	cmd.AddCommand(newModelSpecFileCommand(f, how))
+	cmd.AddCommand(newModelSpecSetCommand(f, how))
 	return cmd
 }
 
-func newSpecShowCommand(f *cmdutil.Factory) *cobra.Command {
+// newModelSpecShowCommand reads the card by either road, and the roads answer
+// slightly different questions. Router reports what it will route and bill
+// against, and says whether it got that from the application or from its own
+// store; the application reports only what it is serving, and can be asked when
+// Router cannot.
+func newModelSpecShowCommand(f *cmdutil.Factory, how localAddressing) *cobra.Command {
 	var output string
+	target := newModelTarget(how)
 	cmd := &cobra.Command{
-		Use:     "show <model>",
+		Use:     "show " + target.arg(),
 		Aliases: []string{"get"},
 		Short:   "the card, and where the answer came from",
-		Long: `Show a model's card as Router sees it.
+		Long: `Show a model's card.
 
-A running application is asked directly. One that is stopped or still
-installing cannot be, so Router answers with its own projection and marks it
-"cache" — which is the answer to "why does Router advertise something this
+Through Router, a running application is asked directly. One that is stopped or
+still installing cannot be, so Router answers with its own projection and marks
+it "cache" — which is the answer to "why does Router advertise something this
 model cannot do": the projection is what routing and billing use, and it trails
 the card until the application next comes up.
 
+--app asks the application itself and never sees the projection, so there is no
+cache to mark. That is the read to use when Router cannot resolve the model.
+
 JSON output is the card itself rather than a summary, including fields this CLI
 does not know about, which is what makes it the thing to edit and feed back to
-"model spec edit --from".
+"model spec edit --from" or "model spec set".
 
 Examples:
   olares-cli router model spec show Olares/qwen3-4b
   olares-cli router model spec show qwen3-4b -o json > card.json
+  olares-cli router model spec show --app llamacppqwen3627bggufv3
 `,
-		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
-			return runSpecShow(c.Context(), f, args[0], output)
+			ctx := c.Context()
+			if ctx == nil {
+				ctx = context.Background()
+			}
+			format, err := parseFormat(output)
+			if err != nil {
+				return err
+			}
+			if target.direct(args) {
+				return runLocalSpec(ctx, f, target, args, format)
+			}
+			return runSpecShow(ctx, f, target.model(args), format)
 		},
 	}
+	target.bind(cmd)
 	addOutputFlag(cmd, &output)
 	return cmd
 }
 
-func runSpecShow(ctx context.Context, f *cmdutil.Factory, model, outputRaw string) error {
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	format, err := parseFormat(outputRaw)
-	if err != nil {
-		return err
-	}
+func runSpecShow(ctx context.Context, f *cmdutil.Factory, model string, format Format) error {
 	pc, err := prepare(ctx, f)
 	if err != nil {
 		return err
@@ -161,7 +186,7 @@ func runSpecShow(ctx context.Context, f *cmdutil.Factory, model, outputRaw strin
 	return renderSpecCard(os.Stdout, model, env.Source, &card)
 }
 
-// renderSpecCard prints the same fields `router local spec show` does, and says
+// renderSpecCard prints the same fields the direct read does, and says
 // which copy this is. The two verbs deliberately look alike: they are reads of
 // one document, and a reader comparing them should be comparing values rather
 // than layouts.
@@ -434,72 +459,12 @@ func renderSpecWrite(w io.Writer, model string, res *specWriteResult) error {
 		return err
 	case res.Restarted:
 		_, err := fmt.Fprintln(w, "\nWritten, and the engine is relaunching. It answers again once the "+
-			"model has loaded; `olares-cli router local status <app>` reports how far along that is.")
+			"model has loaded; `olares-cli router model status <model>` reports how far along that is.")
 		return err
 	}
 	_, err := fmt.Fprintln(w, "\nWritten. Nothing needed relaunching, so this is in effect now. "+
 		"Router's own copy was updated with what the application confirmed.")
 	return err
-}
-
-func newModelRestartCommand(f *cmdutil.Factory) *cobra.Command {
-	var yes bool
-	cmd := &cobra.Command{
-		Use:   "restart <model>",
-		Short: "relaunch the engine on the card it already has",
-		Long: `Relaunch the inference process without changing anything.
-
-This is for an engine that has stopped behaving rather than one that is
-configured wrongly — wedged, leaking, answering slowly after a long session. The
-card is not read and not written; the process is told to come back on the
-document already on disk.
-
-A success means the relaunch was signalled. The engine then shuts down and
-loads the model again, and the model does not answer while it does, which for a
-large one is minutes. An application whose engine is a sidecar — OCR, audio,
-embedding — has no process to signal here, and the call succeeds having changed
-nothing.
-
-Examples:
-  olares-cli router model restart Olares/qwen3-4b
-  olares-cli router model restart Olares/qwen3-4b -y
-`,
-		Args: cobra.ExactArgs(1),
-		RunE: func(c *cobra.Command, args []string) error {
-			ctx := c.Context()
-			if ctx == nil {
-				ctx = context.Background()
-			}
-			pc, err := prepare(ctx, f)
-			if err != nil {
-				return err
-			}
-			if !yes {
-				if err := cliutil.ConfirmDestructive(os.Stderr, os.Stdin, fmt.Sprintf(
-					"Relaunch the engine serving %s? It stops answering until the model has loaded again.",
-					args[0]), false); err != nil {
-					return err
-				}
-			}
-			var res struct {
-				Restarted bool `json:"restarted"`
-			}
-			if err := pc.router.doJSON(ctx, "POST",
-				epForModel(epEngineRestart, args[0]), nil, &res); err != nil {
-				return specErr(err, args[0])
-			}
-			if !res.Restarted {
-				_, werr := fmt.Println("the application accepted the request and reports no relaunch, " +
-					"which is what an application with a sidecar engine does.")
-				return werr
-			}
-			_, werr := fmt.Println("relaunching. The model answers again once it has loaded; " +
-				"`olares-cli router local status <app>` reports how far along that is.")
-			return werr
-		},
-	}
-	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "do not ask for confirmation")
-	return cmd
 }
 
 // specErr explains the refusals particular to this surface. Every one of them
@@ -528,7 +493,7 @@ func specErr(err error, model string) error {
 			"from Router's stored copy", err)
 	case "model_spec_app_not_ready":
 		return fmt.Errorf("%w\nThe application has an entry but no address yet, which is where it sits "+
-			"while installing. `olares-cli router local status <app>` reports the phase", err)
+			"while installing. `olares-cli router model status <model>` reports the phase", err)
 	case "model_spec_rejected":
 		return fmt.Errorf("%w\nThe application rejected the card and kept the one it had; the message "+
 			"above is its own and names the field", err)
@@ -545,7 +510,7 @@ func specErr(err error, model string) error {
 			"itself is the way: `olares-cli market restart <app>`", err)
 	case "model_spec_upstream_unreachable", "model_spec_upstream_timeout", "model_spec_upstream_error":
 		return fmt.Errorf("%w\nRouter reached the application's entry but not its control plane. "+
-			"`olares-cli router local status <app>` says whether it is up, and a model still loading "+
+			"`olares-cli router model status <model>` says whether it is up, and a model still loading "+
 			"is the usual reason", err)
 	}
 	return err

@@ -8,8 +8,8 @@
 // so it has no fixed subdomain the way files.<terminus> and
 // settings.<terminus> do — app-service gives it a per-install host. Every
 // verb therefore resolves the entrance at runtime; see discovery.go. The
-// `router local` verbs address a second host the same way, because a model
-// application serves its own Model Console on its own entrance.
+// verbs that reach into a model application address a second host the same
+// way, because it serves its own Model Console on its own entrance.
 //
 // Identity. Configuration runs on the active profile's access token, exactly
 // as elsewhere: the Olares edge turns it into the X-BFL-USER header that
@@ -42,7 +42,7 @@ import (
 )
 
 // minOlaresVersion is the oldest line this tree speaks to: the `router`
-// application declares `olares >= 1.12.7-0`. The `router local` verbs share the
+// application declares `olares >= 1.12.7-0`. The Model Console verbs share the
 // floor, because a Model Console with no Router in front of it is not a shape
 // this tree addresses.
 const minOlaresVersion = "1.12.7"

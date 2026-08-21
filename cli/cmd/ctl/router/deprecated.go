@@ -21,6 +21,70 @@ import (
 // same filter and wrote the same PATCH, so it was a `--kind` flag wearing a
 // verb, and the price was a help text on each side explaining it was not the
 // other one.
+// newDeprecatedLocalCommand is `router local`, which became verbs on `router
+// model`. It was named after the plane it reached rather than the thing it
+// reached about, so a user with a question about a model had to know that the
+// answer lived behind an application, and know the application's Olares app id
+// to ask. Both are now the model's own verbs, and the app id survives as
+// `--app` — no longer the only way in, and still the only way in when Router
+// cannot be asked.
+//
+// These keep the old shape, where the positional was always the application.
+func newDeprecatedLocalCommand(f *cmdutil.Factory) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:    "local",
+		Short:  "moved onto `router model`",
+		Hidden: true,
+	}
+	cmd.SilenceUsage = true
+
+	moved := []struct {
+		cmd *cobra.Command
+		to  string
+	}{
+		{newModelStatusCommand(f, addressByApp), "model status <model>"},
+		{newModelProgressCommand(f, addressByApp), "model progress <model>"},
+		{newModelRetryCommand(f, addressByApp), "model retry <model>"},
+		{newModelRestartCommand(f, addressByApp), "model restart <model>"},
+		{newModelGPUCommand(f, addressByApp), "model diag gpu <model>"},
+		{newModelPerfCommand(f, addressByApp), "model diag perf <model>"},
+		{newModelConfigCommand(f, addressByApp), "model diag config <model>"},
+		{newModelEndpointsCommand(f, addressByApp), "model diag endpoints <model>"},
+	}
+	for _, m := range moved {
+		m.cmd.Hidden = true
+		m.cmd.Deprecated = "use `olares-cli router " + m.to + "` instead, or `--app <app_id>` to keep " +
+			"naming the application."
+		cmd.AddCommand(m.cmd)
+	}
+	cmd.AddCommand(newDeprecatedLocalSpecCommand(f))
+	return cmd
+}
+
+func newDeprecatedLocalSpecCommand(f *cmdutil.Factory) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:    "spec",
+		Short:  "moved to `router model spec`",
+		Hidden: true,
+	}
+	cmd.SilenceUsage = true
+	moved := []struct {
+		cmd *cobra.Command
+		to  string
+	}{
+		{newModelSpecShowCommand(f, addressByApp), "model spec show <model>"},
+		{newModelSpecFileCommand(f, addressByApp), "model spec file <model>"},
+		{newModelSpecSetCommand(f, addressByApp), "model spec set <model>"},
+	}
+	for _, m := range moved {
+		m.cmd.Hidden = true
+		m.cmd.Deprecated = "use `olares-cli router " + m.to + "` instead, or `--app <app_id>` to keep " +
+			"naming the application."
+		cmd.AddCommand(m.cmd)
+	}
+	return cmd
+}
+
 // newDeprecatedSpecCommand is `router spec`, which became `router model spec`
 // and `router model restart`. A card is a property of a model rather than a
 // noun beside it, and standing at the top level it read as a third thing to
@@ -33,7 +97,7 @@ func newDeprecatedSpecCommand(f *cmdutil.Factory) *cobra.Command {
 	}
 	cmd.SilenceUsage = true
 
-	show := newSpecShowCommand(f)
+	show := newModelSpecShowCommand(f, addressByModel)
 	show.Hidden = true
 	show.Deprecated = "use `olares-cli router model spec show <model>` instead."
 	cmd.AddCommand(show)
@@ -43,7 +107,7 @@ func newDeprecatedSpecCommand(f *cmdutil.Factory) *cobra.Command {
 	edit.Deprecated = "use `olares-cli router model spec edit <model>` instead."
 	cmd.AddCommand(edit)
 
-	restart := newModelRestartCommand(f)
+	restart := newModelRestartCommand(f, addressByModel)
 	restart.Hidden = true
 	restart.Deprecated = "use `olares-cli router model restart <model>` instead."
 	cmd.AddCommand(restart)

@@ -13,16 +13,16 @@ import (
 	"github.com/beclab/Olares/cli/pkg/whoami"
 )
 
-// `olares-cli router local …` — the Model Console inside one model application.
+// The Model Console inside one model application.
 //
-// Everything else in this tree talks to Router, which is the right level for
-// "which models can this Olares reach". It is the wrong level for "why is this
-// model not answering yet": Router sees an upstream that does or does not
-// reply, while the application itself knows it is 40% through a download, that
-// the weights are on disk but the engine has not loaded them, or that the last
-// verification failed a checksum. Those facts live in the Model Console — the
-// llm-init process every model application ships alongside its engine — and
-// this subtree is the only way to read them.
+// Most of this tree talks to Router, which is the right level for "which models
+// can this Olares reach". It is the wrong level for "why is this model not
+// answering yet": Router sees an upstream that does or does not reply, while
+// the application itself knows it is 40% through a download, that the weights
+// are on disk but the engine has not loaded them, or that the last verification
+// failed a checksum. Those facts live in the Model Console — the llm-init
+// process every model application ships alongside its engine — and the verbs
+// that read them are the only way to reach it.
 //
 // Addressing. A model application publishes its Model Console on its own
 // entrance, so the app is named and its entrance looked up the same way Router
@@ -47,43 +47,130 @@ type llmInit struct {
 	Console  *localBuildInfo `json:"console,omitempty"`
 }
 
-func NewLocalCommand(f *cmdutil.Factory) *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "local <app> <verb>",
-		Short: "the Model Console inside a locally installed model",
-		Long: `Read and steer the Model Console behind a model that runs on this Olares.
+// localAddressing is how a verb that reaches into a model application decides
+// which one, and there are exactly two ways.
+//
+// A model reference is the normal one, because a model is what the user has a
+// question about; the application serving it is an implementation detail they
+// should not have to know. Resolving it costs a read of Router's model list.
+//
+// An app id is the other, and it exists for the moment the first one cannot be
+// paid for. A model that is not answering is precisely when Router may also be
+// unreachable, misconfigured, or answering with a stale row — and being unable
+// to look at the application then would take the diagnostic away exactly when
+// it is needed. So `--app` skips Router entirely: `prepareLocal` builds a
+// client against the application's own entrance whether Router is there or not.
+type localAddressing int
 
-Router answers whether a model replies. This answers why it does not yet: what
-is downloading, whether the engine has the weights, what the model card claims,
-and how the last verification went.
+const (
+	// addressByModel is `<verb> <model>` with `--app` as the escape.
+	addressByModel localAddressing = iota
+	// addressByApp is the retired `router local <verb> <app>` shape, where the
+	// positional was always the application.
+	addressByApp
+)
 
-The application is named first, either by its Olares app id or by the provider
-title Router lists it under — "router provider list" prints both.
+// modelTarget carries the addressing decision and the `--app` flag it may need.
+type modelTarget struct {
+	how localAddressing
+	app string
+}
 
-  status <app>      lifecycle phase, engine, and last verification
-  progress <app>    the download and load snapshot, with --watch
-  spec <app>        the model card this application serves to Router
-  config <app>      the effective configuration, secrets redacted
-  endpoints <app>   which routes this deployment actually serves
-  gpu <app>         how much of the model is resident on the GPU
-  perf <app>        time to first token and throughput, measured
-  retry <app>       re-enter the download and load loop now
-  restart <app>     relaunch the engine with the current card
+func newModelTarget(how localAddressing) *modelTarget { return &modelTarget{how: how} }
 
-These read the application, not Router: a model missing from "router list" is a
-Router configuration matter, and a model listed but silent is one for here.
-`,
+// arg is what the positional is called in a Use line.
+func (t *modelTarget) arg() string {
+	if t.how == addressByApp {
+		return "<app>"
 	}
-	cmd.AddCommand(newLocalStatusCommand(f))
-	cmd.AddCommand(newLocalProgressCommand(f))
-	cmd.AddCommand(newLocalSpecCommand(f))
-	cmd.AddCommand(newLocalConfigCommand(f))
-	cmd.AddCommand(newLocalEndpointsCommand(f))
-	cmd.AddCommand(newLocalGPUCommand(f))
-	cmd.AddCommand(newLocalPerfCommand(f))
-	cmd.AddCommand(newLocalRetryCommand(f))
-	cmd.AddCommand(newLocalRestartCommand(f))
-	return cmd
+	return "<model>"
+}
+
+func (t *modelTarget) bind(cmd *cobra.Command) {
+	if t.how == addressByApp {
+		cmd.Args = cobra.ExactArgs(1)
+		return
+	}
+	cmd.Args = cobra.MaximumNArgs(1)
+	cmd.Flags().StringVar(&t.app, "app", "",
+		"reach the application directly by its Olares app id, without asking Router which one serves the model")
+}
+
+// appRef turns what was typed into the application reference openLocal takes.
+func (t *modelTarget) appRef(ctx context.Context, f *cmdutil.Factory, args []string) (string, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if t.how == addressByApp {
+		return args[0], nil
+	}
+	app := strings.TrimSpace(t.app)
+	switch {
+	case app != "" && len(args) > 0:
+		return "", fmt.Errorf("name a model or pass --app, not both: %q is a model and %q is an "+
+			"application, and if they disagree there is no right answer", args[0], app)
+	case app != "":
+		return app, nil
+	case len(args) == 0:
+		return "", errNoModelTarget
+	}
+	return appServingModel(ctx, f, args[0])
+}
+
+var errNoModelTarget = errors.New(
+	"name the model to act on, or the application serving it with --app; " +
+		"`olares-cli router list` shows the models and `olares-cli router provider list` the applications")
+
+// direct reports whether this invocation bypasses Router. It is asked by the
+// two verbs that have a Router road as well as a direct one; everything else
+// here only has the direct one.
+func (t *modelTarget) direct(args []string) bool {
+	return t.how == addressByApp || strings.TrimSpace(t.app) != "" || len(args) == 0
+}
+
+// model is the reference to hand a Router route, and is only meaningful when
+// direct said no.
+func (t *modelTarget) model(args []string) string {
+	if len(args) == 0 {
+		return ""
+	}
+	return args[0]
+}
+
+// appServingModel asks Router which application serves a model.
+//
+// The failure worth spelling out is a model that resolves to a cloud provider:
+// there is no Model Console at the other end of one, and nothing here applies
+// to it. The other is Router being unavailable, which is why the refusal names
+// `--app` — the whole point of that flag is that this lookup can be skipped.
+func appServingModel(ctx context.Context, f *cmdutil.Factory, modelRef string) (string, error) {
+	pc, err := prepare(ctx, f)
+	if err != nil {
+		return "", fmt.Errorf("%w\nRouter is what says which application serves a model. To look at an "+
+			"application without asking it, name the application: `--app <app_id>`", err)
+	}
+	row, err := resolveModel(ctx, pc, modelRef)
+	if err != nil {
+		return "", err
+	}
+	app := strings.TrimSpace(derefOr(row.OlaresAppName, ""))
+	if app == "" {
+		return "", fmt.Errorf("%s is served by %s, which is a %s upstream rather than an application on "+
+			"this machine. Only a model running here has a Model Console to read; what Router believes "+
+			"about a cloud model is the row itself, and `olares-cli router model get %s` shows it",
+			row.label(), row.ProviderName, row.ProviderType, modelRef)
+	}
+	return app, nil
+}
+
+// open is what every verb here begins with: work out which application, then
+// reach its Model Console.
+func (t *modelTarget) open(ctx context.Context, f *cmdutil.Factory, args []string) (*llmInit, error) {
+	ref, err := t.appRef(ctx, f, args)
+	if err != nil {
+		return nil, err
+	}
+	return openLocal(ctx, f, ref)
 }
 
 // openLocal resolves an application reference to its Model Console.
@@ -167,10 +254,10 @@ func confirmConsole(ctx context.Context, li *llmInit) error {
 // title is one of the two ways an application may be named here.
 func prepareLocal(ctx context.Context, f *cmdutil.Factory) (*preparedClient, error) {
 	if f == nil {
-		return nil, fmt.Errorf("internal error: router local not wired with cmdutil.Factory")
+		return nil, fmt.Errorf("internal error: the Model Console verbs are not wired with cmdutil.Factory")
 	}
 	if err := cmdutil.RequireMinVersion(ctx, f, cmdutil.MinVersionGate{
-		Verb:       "router local",
+		Verb:       "router model status",
 		MinVersion: minOlaresVersion,
 		Reason:     "the Model Console inside model applications",
 	}); err != nil {
@@ -393,9 +480,9 @@ func phaseNote(phase string, h *localHealth) string {
 		}
 		return "serving"
 	case "degraded":
-		return "serving in a reduced state; `router local progress` carries the reason"
+		return "serving in a reduced state; `router model progress` carries the reason"
 	case "failed":
-		return "stopped trying; `router local retry` re-enters the loop"
+		return "stopped trying; `router model retry` re-enters the loop"
 	}
 	return ""
 }

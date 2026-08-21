@@ -22,13 +22,13 @@ A locally installed model application does not simply "contain a model". Inside 
 - serves an OpenAI-compatible endpoint, which is what Router's provider row points at;
 - answers `/api/*` for its own lifecycle: phase, progress, effective configuration, GPU residency, a performance probe, retry, engine restart.
 
-`router local` addresses that console directly. It is the only way to see why a local model is not answering yet, because Router sees a provider that is simply unreachable.
+The `router model` verbs that read a lifecycle — `status`, `progress`, `retry`, `restart`, `spec`, `diag` — address that console directly. They are the only way to see why a local model is not answering yet, because Router sees a provider that is simply unreachable.
 
 ## Addressing
 
 Router is a Market application, not a system service, so it has no fixed subdomain the way `files.<olares-id>` does — app-service gives each install its own host. Every verb resolves the entrance at runtime from the installed-app list, where Router is the `router` application, and names that entrance in any error it reports from the far end.
 
-A model application is reached the same way, by its own entrance, which is why `router local` accepts an Olares app id.
+A model application is reached the same way, by its own entrance, which is why those verbs accept `--app <app_id>` as well as a model name.
 
 Inside the cluster, Router addresses a local model application at its shared entrance rather than its user-facing one, so a provider's base URL is not a URL a browser can open.
 
