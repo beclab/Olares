@@ -21,6 +21,18 @@ Three failures look alike and are not:
 - **The same message on a non-admin profile** means Router is installed and invisible to you: it is an admin-only application, so its entrance is not in your app list. `olares-cli profile whoami` is what tells the two apart, and nothing here works until an admin acts.
 - **An entrance that resolves but does not answer** is Router itself being down. The error names the entrance it reached for; `olares-doctor` is where that goes, not this skill.
 
+## A write that got no answer is not a write that did not happen
+
+A failed read is nothing: run it again. A failed **write** has two histories the CLI cannot tell apart — Router never saw it, or Router applied it and the reply was lost — and only one of them makes "try again" right.
+
+Router has no idempotency key, so a retry is a second request rather than the same one. Nothing the CLI sends changes that, which is why the error carries the consequence instead: it says the outcome is unknown, and what a second identical request would do to that particular route. Read it before acting. Three shapes:
+
+- **Refused on repeat** — providers, routes, quotas, and adding a named model to a provider all have a uniqueness constraint. Retrying is safe and self-checking: a `409` means the first attempt landed, and is not a new problem.
+- **Costly on repeat** — `key issue` mints a second key, `provider rollback` appends another credential version, and any `router call` may already have been billed. Look first: `key list`, `provider history`, `usage list --limit 5`.
+- **Nothing said** — a route the CLI has no verdict for. Re-read the resource before retrying.
+
+An error that does *not* carry that paragraph reached no connection at all, so nothing was applied and a retry is plain.
+
 ## Then ask what Router thinks it has
 
 ```
@@ -69,11 +81,11 @@ olares-cli router model progress <model>
 ```
 
 - **A 5xx with an empty body from a call** is nothing listening behind Router: the application is stopped, or the engine has not come up. That empty body is the signature — Router's own refusals always carry a message.
-- **`READY` false with a download unfinished** is the normal middle of an install. `local progress --watch` is the answer, not a fix.
-- **A download that failed or stalled** — `local retry`.
+- **`READY` false with a download unfinished** is the normal middle of an install. `router model progress <model> --watch` is the answer, not a fix.
+- **A download that failed or stalled** — `router model retry <model>`.
 - **An engine alive with no model loaded** — the weights or the card are wrong for this engine; `router model spec show <model>` reads the card and `router model spec edit` corrects it, relaunching the engine when the flags change.
 - **An engine that was answering and stopped** — `router model restart <model>` relaunches the process on the card it already has, which is the fix when the configuration is right and the process is not.
-- **A model answering, but slowly** — `local gpu` says how much is resident and `local perf` measures it. A model mostly on the CPU is the common answer.
+- **A model answering, but slowly** — `router model diag gpu <model>` says how much is resident and `router model diag perf <model>` measures it. A model mostly on the CPU is the common answer.
 - **An install that never finished** — `router provider get <app>` reports where the application stalled, and `olares-cli market status <app>` carries the Market's own reason.
 
 ## Then below it

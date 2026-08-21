@@ -23,6 +23,7 @@ package router
 import (
 	"net/url"
 	"strconv"
+	"strings"
 )
 
 // Prefixes on the entrance host. The console plane is the management surface
@@ -32,6 +33,14 @@ const (
 	consoleAPI   = "/console/api"
 	dataPlaneAPI = "/v1"
 )
+
+// isDataPlanePath reports whether a path this package already built addresses
+// the data plane. It exists so that code deciding something about a request in
+// hand — which credential paid for it, what a retry would cost — does not have
+// to name the prefix itself, which is how a second spelling of it starts.
+func isDataPlanePath(path string) bool {
+	return strings.HasPrefix(path, dataPlaneAPI+"/")
+}
 
 // withQuery appends a query string when there is one. Called with empty values
 // it returns the path untouched, so a caller assembling optional filters does

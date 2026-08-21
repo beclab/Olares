@@ -204,6 +204,11 @@ func (c *routerClient) do(ctx context.Context, method, path string, body io.Read
 		if errors.As(err, &notLoggedIn) {
 			return nil, notLoggedIn
 		}
+		// A write that got no answer has two histories the client cannot tell
+		// apart, and only one of them makes "try again" the right next step.
+		if method != http.MethodGet && reachedRouter(err) {
+			return nil, &WriteUncertainError{Method: method, Path: path, Err: err}
+		}
 		return nil, fmt.Errorf("%s %s: %w", method, url, err)
 	}
 	return resp, nil
