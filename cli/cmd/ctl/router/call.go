@@ -80,6 +80,7 @@ the credential that made it, and may cost money.
 	cmd.SilenceUsage = true
 	cmd.AddCommand(newCallModelsCommand(f))
 	cmd.AddCommand(newCallChatCommand(f))
+	cmd.AddCommand(newCallResponsesCommand(f))
 	cmd.AddCommand(newCallEmbedCommand(f))
 	cmd.AddCommand(newCallRerankCommand(f))
 	cmd.AddCommand(newCallSearchCommand(f))
@@ -137,12 +138,32 @@ const (
 	categoryVAD         = "default-vad"
 	categoryDiarization = "default-diar"
 	categoryEnhance     = "default-enhance"
+	categorySoundFX     = "default-sound-fx"
 )
 
 // Alignment has no category of its own. It is served by the same engine base as
 // speech recognition rather than by an image of its own, so the recognition
 // default is the one that finds a model able to do it.
 const categoryAlign = categorySTT
+
+// Sound effects have a category but no verb of their own, because they have no
+// endpoint of their own: the engine serving them mounts `/v1/audio/speech`, the
+// same path text-to-speech uses, and which of the two a request is depends
+// entirely on the model behind it. Router says so itself — its
+// audioDefaultCategory maps `/speech` to default-tts and notes that a
+// caption-to-audio request cannot be told from a spoken one by path.
+//
+// So `call speak --sound-fx` is the whole feature: the same request with the
+// other default. A separate verb would have been this one with a different
+// constant and every flag repeated.
+
+// Responses has no category either, and that one is Router's decision rather
+// than a consequence of a shared path: the mode is provider-model-only, and
+// routing/category_test.go asserts the absence deliberately so it "cannot be
+// quietly reversed". `call responses` therefore requires --model. Inventing
+// `default-responses` here would produce exactly the failure the note above
+// describes — a route that does not exist, reported as though the model were
+// missing.
 
 // callModel is what goes in the request's `model` field: what was asked for, or
 // the category for this kind of work.

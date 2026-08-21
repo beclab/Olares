@@ -57,6 +57,12 @@ const (
 	quotaBudget = "max_budget_usd"
 	quotaRPM    = "max_rpm"
 	quotaTPM    = "max_tpm"
+	// quotaConcurrent caps requests in flight at one instant, which is a
+	// different question from the other three. They all measure a window;
+	// this measures now. It is the only one that says anything useful about a
+	// single local GPU, whose price is zero and whose per-minute rate does
+	// not describe how much of it is busy.
+	quotaConcurrent = "max_concurrent"
 
 	scopeKey   = "api_key"
 	scopeUser  = "user"
@@ -285,6 +291,8 @@ func quotaKindLabel(t string) string {
 		return "requests/min"
 	case quotaTPM:
 		return "tokens/min"
+	case quotaConcurrent:
+		return "in flight"
 	default:
 		return t
 	}
@@ -337,12 +345,13 @@ func scopeLabels(ctx context.Context, pc *preparedClient, rows []quotaRow) map[s
 
 func newQuotaSetCommand(f *cmdutil.Factory) *cobra.Command {
 	var (
-		output string
-		refs   quotaRefs
-		budget float64
-		rpm    float64
-		tpm    float64
-		warnAt int
+		output     string
+		refs       quotaRefs
+		budget     float64
+		rpm        float64
+		tpm        float64
+		concurrent float64
+		warnAt     int
 	)
 	cmd := &cobra.Command{
 		Use:   "set",
@@ -350,11 +359,16 @@ func newQuotaSetCommand(f *cmdutil.Factory) *cobra.Command {
 		Long: `Set a quota on a key, a person, a model, or an application.
 
 Name the scope with exactly one of --key, --user, --model or --caller-app, and
-what to cap with one or more of --budget, --rpm and --tpm. Each kind is a
-separate ceiling, so setting two in one command writes two of them.
+what to cap with one or more of --budget, --rpm, --tpm and --concurrent. Each
+kind is a separate ceiling, so setting two in one command writes two of them.
 
 An existing ceiling of the same kind is changed rather than duplicated, which is
 what makes this safe to run twice.
+
+--concurrent caps requests in flight at one instant. The other three measure a
+window; this one measures now, which is the only question that says anything
+about a single local GPU — its price is zero and its per-minute rate does not
+describe how much of it is busy.
 
 --warn-at moves the point where Router starts warning, as a percentage of the
 limit. It defaults to 80 on a new quota and is left alone on an existing one
@@ -362,6 +376,10 @@ unless given.
 
 Raising a budget is how a scope that has stopped working starts again: spend is
 cumulative and nothing resets it.
+
+A ceiling of zero switches the scope off, and is not the same as having none:
+"quota clear" removes the ceiling, which means no limit at all. Zero is how an
+application gets stopped, since it holds no key to revoke.
 
 --caller-app caps an Olares application. It is the only control over one: an
 application is vouched for by the platform rather than registered here, so there
@@ -371,7 +389,8 @@ Examples:
   olares-cli router quota set --user pptest01 --budget 25
   olares-cli router quota set --key ci --rpm 60 --tpm 120000
   olares-cli router quota set --model "openai/gpt-4o" --rpm 10 --warn-at 90
-  olares-cli router quota set --caller-app wise --budget 5
+  olares-cli router quota set --model "Olares/qwen3-8b" --concurrent 2
+  olares-cli router quota set --caller-app wise --budget 0
 `,
 		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
@@ -385,13 +404,21 @@ Examples:
 			if c.Flags().Changed("tpm") {
 				want[quotaTPM] = tpm
 			}
-			if len(want) == 0 {
-				return fmt.Errorf("say what to cap with --budget, --rpm or --tpm")
+			if c.Flags().Changed("concurrent") {
+				want[quotaConcurrent] = concurrent
 			}
+			if len(want) == 0 {
+				return fmt.Errorf("say what to cap with --budget, --rpm, --tpm or --concurrent")
+			}
+			// Zero is allowed and means "refuses everything", which is a
+			// state of its own: an application holds no key to revoke, so a
+			// ceiling of zero is the only way to stop one. Removing the row
+			// means the opposite — no limit at all.
 			for kind, v := range want {
-				if v <= 0 {
-					return fmt.Errorf("--%s must be greater than zero; "+
-						"`olares-cli router quota clear` removes a ceiling instead", flagForQuotaKind(kind))
+				if v < 0 {
+					return fmt.Errorf("--%s cannot be negative; zero switches the scope off and "+
+						"`olares-cli router quota clear` removes the ceiling entirely",
+						flagForQuotaKind(kind))
 				}
 			}
 			var pct *int
@@ -408,6 +435,7 @@ Examples:
 	cmd.Flags().Float64Var(&budget, "budget", 0, "cap total spend, in US dollars, for all time")
 	cmd.Flags().Float64Var(&rpm, "rpm", 0, "cap requests per minute")
 	cmd.Flags().Float64Var(&tpm, "tpm", 0, "cap tokens per minute")
+	cmd.Flags().Float64Var(&concurrent, "concurrent", 0, "cap requests in flight at once")
 	cmd.Flags().IntVar(&warnAt, "warn-at", 80, "warn at this percentage of the limit")
 	addOutputFlag(cmd, &output)
 	return cmd
@@ -419,6 +447,8 @@ func flagForQuotaKind(kind string) string {
 		return "budget"
 	case quotaRPM:
 		return "rpm"
+	case quotaConcurrent:
+		return "concurrent"
 	default:
 		return "tpm"
 	}
@@ -500,23 +530,26 @@ func runQuotaSet(ctx context.Context, f *cmdutil.Factory, refs quotaRefs, want m
 
 func newQuotaClearCommand(f *cmdutil.Factory) *cobra.Command {
 	var (
-		refs      quotaRefs
-		budget    bool
-		rpm       bool
-		tpm       bool
-		assumeYes bool
-		output    string
+		refs       quotaRefs
+		budget     bool
+		rpm        bool
+		tpm        bool
+		concurrent bool
+		assumeYes  bool
+		output     string
 	)
 	cmd := &cobra.Command{
 		Use:   "clear",
 		Short: "remove a ceiling",
 		Long: `Remove quotas from a key, a person, a model, or an application.
 
-Without --budget, --rpm or --tpm every ceiling on the scope goes, which is the
-usual intent and the reason for the prompt. Naming kinds removes only those.
+Without --budget, --rpm, --tpm or --concurrent every ceiling on the scope goes,
+which is the usual intent and the reason for the prompt. Naming kinds removes
+only those.
 
-Removing a ceiling is not the same as raising it: nothing caps the scope
-afterwards.
+Removing a ceiling is not the same as raising it, and not the same as setting it
+to zero: nothing caps the scope afterwards. "quota set --budget 0" is how a
+scope is switched off.
 
 Confirmation is required. --yes skips the prompt and is mandatory when stdin is
 not a terminal.
@@ -537,6 +570,9 @@ Examples:
 			if tpm {
 				kinds[quotaTPM] = true
 			}
+			if concurrent {
+				kinds[quotaConcurrent] = true
+			}
 			return runQuotaClear(c.Context(), f, refs, kinds, assumeYes, output)
 		},
 	}
@@ -544,6 +580,7 @@ Examples:
 	cmd.Flags().BoolVar(&budget, "budget", false, "remove only the spend ceiling")
 	cmd.Flags().BoolVar(&rpm, "rpm", false, "remove only the requests-per-minute ceiling")
 	cmd.Flags().BoolVar(&tpm, "tpm", false, "remove only the tokens-per-minute ceiling")
+	cmd.Flags().BoolVar(&concurrent, "concurrent", false, "remove only the in-flight ceiling")
 	cmd.Flags().BoolVar(&assumeYes, "yes", false, "skip the confirmation prompt (required when stdin is not a terminal)")
 	addOutputFlag(cmd, &output)
 	return cmd

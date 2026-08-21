@@ -83,14 +83,17 @@ olares-cli router quota clear --key ci-runner --budget
 
 - `--budget` is total spend in US dollars, for all time — not per month. It is the ceiling that stops runaway cost; the others shape load.
 - `--rpm` and `--tpm` are requests and tokens per minute.
+- `--concurrent` is how many calls the scope may have in flight at once, which is the one that protects a local model from being asked to do two things on one GPU.
 - `--warn-at` is the percentage at which a warning is recorded, 80 by default.
 - Quotas are always admin-only, including reading them.
+
+A ceiling of `0` is meaningful and is not the same as no ceiling: it refuses everything in that scope, which is how a key or an application is switched off without deleting it. Removing the ceiling is `quota clear`, not `--budget 0`.
 
 A quota on a **model** applies to everybody calling it, a quota on a **user** to everything that person's identity reaches, a quota on a **key** to that key alone, and a quota on a **caller app** to every call carrying that application's appid — which is the only control there is over an application, since it has no key here to revoke. When a call is refused for `quota_exceeded`, `quota list` is what identifies which one bit.
 
 `--caller-app` takes the application's title, its Olares application name or the appid itself. The name is hashed the way the platform hashes it and then matched against an application that exists, so a misspelling is refused rather than becoming a ceiling on nothing.
 
-`quota clear` names the same target and, optionally, which ceiling to lift: `--budget`, `--rpm` or `--tpm` alone removes one and leaves the rest, and naming none removes the quota entirely.
+`quota clear` names the same target and, optionally, which ceiling to lift: `--budget`, `--rpm`, `--tpm` or `--concurrent` alone removes one and leaves the rest, and naming none removes the quota entirely.
 
 ## The people Router knows
 

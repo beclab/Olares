@@ -161,6 +161,7 @@ func TestSkillCommandPathsExist(t *testing.T) {
 		"router call",
 		"router call models",
 		"router call chat",
+		"router call responses",
 		"router call embed",
 		"router call rerank",
 		"router call search",

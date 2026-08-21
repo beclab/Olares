@@ -31,6 +31,23 @@ func TestEveryCallVerbFallsBackToACategory(t *testing.T) {
 			continue
 		}
 		flag := verb.Flags().Lookup("model")
+		// Responses is the other exception, and unlike translate it does take
+		// a --model: Router resolves a default for every mode but this one,
+		// and asserts that absence in its own tests. So the flag has to be
+		// there, has to say it is required, and must not promise a category —
+		// naming one would send callers at a route that does not exist.
+		if verb.Name() == "responses" {
+			switch {
+			case flag == nil:
+				t.Error("call responses: no --model flag, but it cannot fall back to anything")
+			case strings.Contains(flag.Usage, "default-"):
+				t.Errorf("call responses: --model names a category, but Router resolves no "+
+					"default for this mode: %q", flag.Usage)
+			case !strings.Contains(flag.Usage, "required"):
+				t.Errorf("call responses: --model does not say it is required: %q", flag.Usage)
+			}
+			continue
+		}
 		if verb.Name() == noModelFlag {
 			if flag != nil {
 				t.Errorf("call %s: has a --model flag; the translate routes choose their own model",

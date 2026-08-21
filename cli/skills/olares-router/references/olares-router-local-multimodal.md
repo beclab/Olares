@@ -18,7 +18,9 @@ A model application's Model Console launches one engine, chosen by the kind of m
 | Translation | `translate` | a translation engine | `router call translate` |
 | Document OCR | `ocr` | an OCR adapter in front of llama.cpp | `router call ocr` |
 
-The rest of the vocabulary — `moderation`, `responses`, `image_generation`, `video_generation`, `search`, `scrape` — is served by cloud providers rather than by anything installable here today. `router model list --mode <mode>` is what says which of them this Olares actually has.
+The rest of the vocabulary — `responses`, `image_generation`, `video_generation`, `search`, `scrape`, `moderation` — is served by cloud providers rather than by anything installable here today. `router model list --mode <mode>` is what says which of them this Olares actually has.
+
+Two of those cannot be called from this CLI, for different reasons. `moderation` has no data plane endpoint in Router at all: a row can declare the mode and a default category exists for it, but there is no `/v1/moderations` to send anything to, from here or from any other client. `responses` does have an endpoint — `router call responses` — but it is the one mode Router resolves no default for, so that verb requires `--model` and there is no `default-responses` to fall back to.
 
 `audio` is one mode covering six different jobs, and which of them a row actually serves is in its capability flags rather than its mode: `supports_stt` and `supports_stt_stream` for transcription, `supports_tts`, `supports_tts_clone` and `supports_tts_dialogue` for speech, and `supports_vad`, `supports_diar`, `supports_enhance`, `supports_speaker_embed` for the surrounding steps. Each of those is a separate engine image, so a model that transcribes genuinely cannot speak. `router model list` names them in its SUPPORTS column, `router provider get <provider>` shows which ones each row of a provider declares, `router model get <model>` prints a row's flags in full, and `router model spec show <model>` shows what the application itself says.
 

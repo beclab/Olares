@@ -221,7 +221,16 @@ func newCallSpeakCommand(f *cmdutil.Factory) *cobra.Command {
 		voices  bool
 		apiKey  string
 		output  string
+		soundFX bool
 	)
+	// The category is the only thing --sound-fx changes: same path, same body,
+	// a different model when none was named.
+	fallback := func() string {
+		if soundFX {
+			return categorySoundFX
+		}
+		return categoryTTS
+	}
 	cmd := &cobra.Command{
 		Use:   "speak [text]",
 		Short: "text to speech",
@@ -240,12 +249,19 @@ nothing; a model built only for voice cloning has no list and answers 404.
 is the only thing this verb prints rather than plays, and has no effect on a
 synthesis.
 
+--sound-fx generates a sound from a description of it instead of speech from
+words. It is the same request to the same endpoint: engines that make sound
+effects mount /v1/audio/speech like every other audio model, so the model is
+the only thing that decides which you get, and the flag only changes which
+default is resolved. Naming a sound-effect model with --model does the same.
+
 Examples:
   olares-cli router call speak "your build finished" --out done.mp3
   olares-cli router call speak "hello" --voice alloy --out hello.wav --response-format wav
   echo "read this aloud" | olares-cli router call speak --out out.mp3
   olares-cli router call speak "piped" | ffplay -
   olares-cli router call speak --voices
+  olares-cli router call speak --sound-fx "rain on a tin roof" --out rain.mp3
 `,
 		Args: cobra.ArbitraryArgs,
 		RunE: func(c *cobra.Command, args []string) error {
@@ -257,7 +273,7 @@ Examples:
 				if ferr != nil {
 					return ferr
 				}
-				return runListVoices(c.Context(), f, callModel(model, categoryTTS), apiKey, format)
+				return runListVoices(c.Context(), f, callModel(model, fallback()), apiKey, format)
 			}
 			text, err := readPromptArgs(args, "text")
 			if err != nil {
@@ -268,7 +284,7 @@ Examples:
 				speedPtr = &speed
 			}
 			return runCallSpeak(c.Context(), f, text, speakOptions{
-				Model:      callModel(model, categoryTTS),
+				Model:      callModel(model, fallback()),
 				Voice:      voice,
 				OutPath:    outPath,
 				RespFormat: respFmt,
@@ -277,12 +293,16 @@ Examples:
 			})
 		},
 	}
-	cmd.Flags().StringVar(&model, "model", "", modelFlagHelp(categoryTTS))
+	cmd.Flags().StringVar(&model, "model", "",
+		modelFlagHelp(categoryTTS)+", or "+categorySoundFX+" with --sound-fx")
 	cmd.Flags().StringVar(&voice, "voice", "", "voice name, as the engine names it")
 	cmd.Flags().StringVar(&outPath, "out", "", "write the audio here instead of standard output")
 	cmd.Flags().StringVar(&respFmt, "response-format", "", "container format, e.g. mp3 or wav")
 	cmd.Flags().Float64Var(&speed, "speed", 1, "playback rate, if the engine supports it")
 	cmd.Flags().BoolVar(&voices, "voices", false, "list the voices this model offers and synthesise nothing")
+	cmd.Flags().BoolVar(&soundFX, "sound-fx", false,
+		"produce a sound effect from the description rather than speech; "+
+			"resolves "+categorySoundFX+" instead of "+categoryTTS+" when --model is omitted")
 	cmd.Flags().StringVar(&apiKey, "api-key", "", dataPlaneKeyFlagUsage)
 	addOutputFlag(cmd, &output)
 	return cmd

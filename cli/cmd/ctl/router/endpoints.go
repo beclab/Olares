@@ -173,6 +173,7 @@ func epQuota(id int64) string { return epQuotas + "/" + strconv.FormatInt(id, 10
 // afterwards. OCR only ever answers with a receipt.
 const (
 	epChatCompletions = dataPlaneAPI + "/chat/completions"
+	epResponses       = dataPlaneAPI + "/responses"
 	epEmbeddings      = dataPlaneAPI + "/embeddings"
 	epRerank          = dataPlaneAPI + "/rerank"
 	epDataPlaneModels = dataPlaneAPI + "/models"

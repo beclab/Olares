@@ -38,12 +38,15 @@ That refusal is the usual meaning of a failure on a fresh install: `chat`, `embe
 
 `router call translate` has no `--model` flag at all. The translate routes resolve their own default per call, so there is nothing for a caller to name.
 
+`router call responses` is the opposite exception: `--model` is required. Router resolves a default for every mode except this one, deliberately, so there is no `default-responses` to leave the flag off for. `router model list --mode responses` is where the names are.
+
 ## The verbs
 
 ```
 olares-cli router call chat "summarise this" --system "be terse"
 cat notes.md | olares-cli router call chat --no-stream --quiet
 olares-cli router call chat "what is in this picture" --image shot.png
+olares-cli router call responses "summarise this" --model openai/gpt-4o
 olares-cli router call embed "text" --dimensions 512
 olares-cli router call rerank "who wrote it" --document "…" --document "…"
 olares-cli router call search "olares release notes" --limit 5
@@ -61,6 +64,8 @@ olares-cli router call ocr invoice.pdf --pages 1-3
 ```
 
 **Text.** `chat` streams by default and prints a model and token line after the answer; `--quiet` prints only the answer, `--no-stream` waits for the whole thing. A prompt comes from the arguments or from standard input. `--image` attaches a local file, which requires a model whose row declares `supports_vision`. `embed` prints a summary of each vector in table form and the whole vector in JSON, and `--per-line` turns piped text into one input per line rather than a single input. `rerank` takes a query and a repeatable `--document`, or the documents one per line on standard input, and prints them in the order the model put them.
+
+`responses` sends one request to the Responses endpoint and prints the answer the same way `chat` does. It exists so that a model configured with `--mode responses` can be checked at all: that mode is served on a different endpoint, so calling such a model with `chat` fails in a way that says nothing about the model. It is deliberately only that — one request, no streaming, no conversation carried across calls, nothing stored — so it answers "does this model work" and not much else.
 
 **The web.** `search` and `scrape` reach a provider that has one of those two modes; most do not, so both are commonly refused for want of a category rather than for anything wrong with the request.
 
