@@ -172,7 +172,7 @@ func runCallOCR(ctx context.Context, f *cmdutil.Factory, opts ocrOptions) error 
 	if err != nil {
 		return err
 	}
-	dp, _, err := dataPlane(ctx, pc, opts.APIKey)
+	dp, err := dataPlane(ctx, pc, opts.APIKey)
 	if err != nil {
 		return err
 	}
@@ -278,7 +278,7 @@ func runOCRQueue(ctx context.Context, f *cmdutil.Factory, opts ocrQueueOptions) 
 	if err != nil {
 		return err
 	}
-	dp, _, err := dataPlane(ctx, pc, opts.APIKey)
+	dp, err := dataPlane(ctx, pc, opts.APIKey)
 	if err != nil {
 		return err
 	}

@@ -168,7 +168,7 @@ func runCallChat(ctx context.Context, f *cmdutil.Factory, prompt string, opts ch
 	if err != nil {
 		return err
 	}
-	dp, _, err := dataPlane(ctx, pc, opts.APIKey)
+	dp, err := dataPlane(ctx, pc, opts.APIKey)
 	if err != nil {
 		return err
 	}

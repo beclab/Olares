@@ -142,7 +142,7 @@ func runModels(ctx context.Context, f *cmdutil.Factory, apiKey string, includeNo
 	if err != nil {
 		return err
 	}
-	dp, _, err := dataPlane(ctx, pc, apiKey)
+	dp, err := dataPlane(ctx, pc, apiKey)
 	if err != nil {
 		return err
 	}

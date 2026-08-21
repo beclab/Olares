@@ -168,7 +168,7 @@ func runCallTranslate(ctx context.Context, f *cmdutil.Factory, opts translateOpt
 	if err != nil {
 		return err
 	}
-	dp, _, err := dataPlane(ctx, pc, opts.APIKey)
+	dp, err := dataPlane(ctx, pc, opts.APIKey)
 	if err != nil {
 		return err
 	}
@@ -249,7 +249,7 @@ func runLanguages(ctx context.Context, f *cmdutil.Factory, apiKey, outputRaw str
 	if err != nil {
 		return err
 	}
-	dp, _, err := dataPlane(ctx, pc, apiKey)
+	dp, err := dataPlane(ctx, pc, apiKey)
 	if err != nil {
 		return err
 	}
@@ -308,7 +308,7 @@ func runDetect(ctx context.Context, f *cmdutil.Factory, text, apiKey, outputRaw 
 	if err != nil {
 		return err
 	}
-	dp, _, err := dataPlane(ctx, pc, apiKey)
+	dp, err := dataPlane(ctx, pc, apiKey)
 	if err != nil {
 		return err
 	}

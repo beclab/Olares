@@ -325,7 +325,7 @@ func runMedia(ctx context.Context, f *cmdutil.Factory, kind mediaKind, opts medi
 	if err != nil {
 		return err
 	}
-	dp, _, err := dataPlane(ctx, pc, opts.APIKey)
+	dp, err := dataPlane(ctx, pc, opts.APIKey)
 	if err != nil {
 		return err
 	}

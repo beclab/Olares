@@ -34,7 +34,10 @@ import (
 //
 // Step 3 is skipped outside a container. It cannot succeed there — no platform
 // component is injecting anything into a request from a laptop — and spending a
-// round trip to be told so would slow down the common case.
+// round trip to be told so would slow down the common case. Which means step 4
+// is the normal outcome of the first call from a laptop, not a fallback for an
+// unusual one, and the notice it prints is written for somebody who did not
+// expect a credential to appear.
 
 // dataPlaneKeyEnv names a key without storing one. It is read before the
 // keychain so a scripted run can pin a credential with a budget of its own.
@@ -44,8 +47,7 @@ const dataPlaneKeyEnv = "OLARES_ROUTER_API_KEY"
 // access token, which lives under the bare Olares ID in the same service.
 const keychainAccountSuffix = "#router-api-key"
 
-// authMode records which of the two credentials a call ended up using, so the
-// verbs can say so when it matters and stay quiet when it does not.
+// authMode records which of the two credentials a call ended up using.
 type authMode string
 
 const (
@@ -56,22 +58,57 @@ const (
 type dataPlaneAuth struct {
 	Mode authMode
 	Key  string
-	// Minted is true when this run created the key, which is the one time the
-	// user should hear about it: a new credential now exists on the server.
-	Minted bool
+	// Minted is set when this run created the key, and carries what to say
+	// about it. Announcing it is the caller's job rather than the minting
+	// function's: whether a credential was created is a fact about the call,
+	// and burying the print inside "mint a key" is what made it impossible to
+	// change the wording per verb or to leave it out.
+	Minted *createdKey
 }
 
 // dataPlane returns a client for /v1 with whatever credential this machine can
-// present, and a note to show the user when a key was created for them.
-func dataPlane(ctx context.Context, pc *preparedClient, explicitKey string) (*routerClient, *dataPlaneAuth, error) {
+// present, telling the user when that meant creating one.
+func dataPlane(ctx context.Context, pc *preparedClient, explicitKey string) (*routerClient, error) {
 	auth, err := resolveDataPlaneAuth(ctx, pc, explicitKey)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
+	}
+	if auth.Minted != nil {
+		fmt.Fprint(os.Stderr, mintedKeyNotice(auth.Minted))
 	}
 	if auth.Mode == authPlatform {
-		return pc.router, auth, nil
+		return pc.router, nil
 	}
-	return pc.router.withHeader("Authorization", "Bearer "+auth.Key), auth, nil
+	return pc.router.withHeader("Authorization", "Bearer "+auth.Key), nil
+}
+
+// mintedKeyNotice is what somebody reads when a credential appeared that they
+// did not ask for.
+//
+// It says three things, and each is here because leaving it out sent a reader
+// somewhere unhelpful. What was created, because a key list months later has to
+// be matchable against it. That it is unrestricted, because an ordinary key
+// with no expiry, no ceiling and no model list is a bigger thing than "the CLI
+// logged in". And how not to have one, because a caller who only wanted to run
+// one command has two ways to avoid leaving a credential behind, and neither is
+// discoverable from a message that only describes what already happened.
+func mintedKeyNotice(k *createdKey) string {
+	// mintDataPlaneKey fills the name back in when Router does not echo it,
+	// because it is the only thing that knows what was sent. This guard is for
+	// the case it could not: naming a key as "" reads as a bug in the CLI and
+	// sends somebody looking for a key with no name.
+	identity := k.KeyPrefix
+	if name := strings.TrimSpace(k.Name); name != "" {
+		identity = fmt.Sprintf("%q, %s", name, k.KeyPrefix)
+	}
+	return fmt.Sprintf("issued a data-plane key for this machine (%s) and saved it to the keychain. "+
+		"`router call` cannot use the profile session, and this Router is not being reached from "+
+		"inside the cluster, so there was no other credential to use.\n"+
+		"It is an ordinary key with no expiry, no quota and no model restriction: "+
+		"`olares-cli router key list` shows it, `router key revoke` ends it, and "+
+		"`router key current --forget` drops this machine's copy without ending it.\n"+
+		"To call without leaving a key behind, pass --api-key or set %s.\n",
+		identity, dataPlaneKeyEnv)
 }
 
 func resolveDataPlaneAuth(ctx context.Context, pc *preparedClient, explicitKey string) (*dataPlaneAuth, error) {
@@ -87,17 +124,17 @@ func resolveDataPlaneAuth(ctx context.Context, pc *preparedClient, explicitKey s
 	if inContainer() && platformIdentityWorks(ctx, pc) {
 		return &dataPlaneAuth{Mode: authPlatform}, nil
 	}
-	key, err := mintDataPlaneKey(ctx, pc)
+	created, err := mintDataPlaneKey(ctx, pc)
 	if err != nil {
 		return nil, err
 	}
 	// A keychain that will not store is not worth failing the call over: the
 	// key works for this run, and the next run mints another one.
-	if serr := storeDataPlaneKey(pc.profile.OlaresID, key); serr != nil {
+	if serr := storeDataPlaneKey(pc.profile.OlaresID, created.Key); serr != nil {
 		fmt.Fprintf(os.Stderr, "warning: could not save the new key locally (%v); "+
 			"the next call will issue another one\n", serr)
 	}
-	return &dataPlaneAuth{Mode: authKey, Key: key, Minted: true}, nil
+	return &dataPlaneAuth{Mode: authKey, Key: created.Key, Minted: created}, nil
 }
 
 // inContainer decides whether a platform-injected identity is even possible.
@@ -129,7 +166,7 @@ func platformIdentityWorks(ctx context.Context, pc *preparedClient) bool {
 // mintDataPlaneKey issues a key through the management plane. The name carries
 // the machine so a key list read months later says where the credential lives,
 // which is the question that matters when deciding whether to revoke one.
-func mintDataPlaneKey(ctx context.Context, pc *preparedClient) (string, error) {
+func mintDataPlaneKey(ctx context.Context, pc *preparedClient) (*createdKey, error) {
 	name := "olares-cli"
 	if host, err := os.Hostname(); err == nil && strings.TrimSpace(host) != "" {
 		name += " on " + strings.TrimSpace(host)
@@ -139,18 +176,21 @@ func mintDataPlaneKey(ctx context.Context, pc *preparedClient) (string, error) {
 	if err != nil {
 		var re *RouterError
 		if errors.As(err, &re) && re.Status == 404 {
-			return "", fmt.Errorf("this Router serves no API keys, so the data plane cannot be reached with one. " +
+			return nil, fmt.Errorf("this Router serves no API keys, so the data plane cannot be reached with one. " +
 				"A call from inside the cluster still works, where the platform supplies the caller identity")
 		}
-		return "", fmt.Errorf("issue a key for this machine: %w", err)
+		return nil, fmt.Errorf("issue a key for this machine: %w", err)
 	}
 	if strings.TrimSpace(created.Key) == "" {
-		return "", fmt.Errorf("Router created a key but returned no secret; " +
+		return nil, fmt.Errorf("Router created a key but returned no secret; " +
 			"`olares-cli router key list` will show it, and it has to be revoked and re-issued to be usable")
 	}
-	fmt.Fprintf(os.Stderr, "issued a data-plane key for this machine (%q, %s) and saved it locally; "+
-		"`olares-cli router key list` shows it and `router key revoke` ends it\n", name, created.KeyPrefix)
-	return created.Key, nil
+	// Router echoes the name back, but an older one may not, and the notice
+	// reads badly naming a key as "".
+	if strings.TrimSpace(created.Name) == "" {
+		created.Name = name
+	}
+	return &created, nil
 }
 
 func keychainAccount(olaresID string) string {

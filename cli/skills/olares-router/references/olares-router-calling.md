@@ -22,9 +22,11 @@ The management plane travels on the profile; the data plane does not accept it. 
 4. No key at all, when running inside the cluster, where the platform supplies the calling application's identity.
 5. A newly minted key, named after this host, saved to the keychain for next time.
 
-`router key current` reports whether a key was saved and shows its prefix only — the plaintext stays in the keychain. `router key current --forget` drops the local copy, which stops *this machine* calling; the key itself keeps working until `router key revoke` ends it, and the next call mints a replacement.
+**Step 4 is only tried inside the cluster**, so on a laptop step 5 is where the first call lands — including `router call models`, which otherwise looks like a listing. Expect a credential to be created the first time, and treat the notice on stderr as the record of it rather than as a warning about something unusual.
 
-The saved key is an ordinary one: it appears in `router key list`, it can be given a quota, and its calls are attributed to it in `router usage`.
+`router key current` reports whether a key was saved and shows its prefix only — the plaintext stays in the keychain, and `IN CONTAINER` there is what says which of the two branches this machine takes. `router key current --forget` drops the local copy, which stops *this machine* calling; the key itself keeps working until `router key revoke` ends it, and the next call mints a replacement.
+
+The saved key is an ordinary one: it appears in `router key list`, it can be given a quota, and its calls are attributed to it in `router usage`. It is also unrestricted — no expiry, no ceiling, no model allowlist — so on a shared machine it is worth either giving it a quota or supplying a narrower key through `--api-key` instead.
 
 ## Choosing the model
 

@@ -143,7 +143,7 @@ func runCallRerank(ctx context.Context, f *cmdutil.Factory, req rerankRequest, a
 	if err != nil {
 		return err
 	}
-	dp, _, err := dataPlane(ctx, pc, apiKey)
+	dp, err := dataPlane(ctx, pc, apiKey)
 	if err != nil {
 		return err
 	}
