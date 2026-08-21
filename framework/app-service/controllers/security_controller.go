@@ -467,6 +467,12 @@ func (r *SecurityReconciler) reconcileNetworkPolicy(ctx context.Context, ns *cor
 				owner := ns.Labels[security.NamespaceOwnerLabel]
 				logger.Info("update network policy", "name", networkPolicy.Name(), "owner", owner)
 				np.Spec.Ingress[0].From[0].NamespaceSelector.MatchLabels[security.NamespaceOwnerLabel] = owner
+				// hostNetwork l4-bfl-proxy (os-network) sources from the node
+				// tunnel/IP, not a pod IP. Same NodeTunnelRule as user-space-np; pinning
+				// user pods to the gateway node only works on a single node.
+				np.Spec.Ingress = append(np.Spec.Ingress, netv1.NetworkPolicyIngressRule{
+					From: security.NodeTunnelRule(),
+				})
 			}
 		} else if security.IsUserSpaceNamespaces(ns.Name) {
 			networkPolicy = security.NetworkPolicies{security.NPUserSpace.DeepCopy(), security.NPIngress.DeepCopy()}
@@ -970,6 +976,11 @@ func (r *SecurityReconciler) namespacesShouldAllowNodeTunnel(ctx context.Context
 		reqs = append(reqs, reconcile.Request{
 			NamespacedName: types.NamespacedName{
 				Name: "user-space-" + u.GetName(),
+			},
+		})
+		reqs = append(reqs, reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Name: "user-system-" + u.GetName(),
 			},
 		})
 	}
