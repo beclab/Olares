@@ -269,7 +269,7 @@ spec:
           imagePullPolicy: IfNotPresent
           name: check-auth
         - name: olares-app-init
-          image: beclab/system-frontend:v1.11.32
+          image: beclab/system-frontend:v1.11.33
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -365,7 +365,7 @@ spec:
             - name: NATS_SUBJECT_VAULT
               value: os.vault.{{ .Values.bfl.username}}
         - name: user-service
-          image: beclab/user-service:v0.1.15
+          image: beclab/user-service:v0.1.16
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
@@ -770,7 +770,7 @@ spec:
         permission:
           pub: allow
           sub: allow
-      - name: search.{{ .Values.bfl.username }}
+      - name: search.{{ .Values.bfl.username }}.*
         permission:
           pub: allow
           sub: allow
