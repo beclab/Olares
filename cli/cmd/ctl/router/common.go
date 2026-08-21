@@ -69,6 +69,20 @@ func addOutputFlag(cmd *cobra.Command, target *string) {
 	cmd.Flags().StringVarP(target, "output", "o", "table", "output format: table, json")
 }
 
+// confirmFlagHelp is the one wording for --yes across this tree. It had three,
+// and the difference was by author rather than by meaning: "skip confirmation"
+// on the delete verbs, "do not ask" on the spec and restart ones. The
+// parenthetical is the part worth keeping — a caller who does not know that a
+// pipe turns the prompt into a failure finds out from a script that broke.
+const confirmFlagHelp = "skip the confirmation prompt (required when stdin is not a terminal)"
+
+// addConfirmFlag registers --yes/-y. Every verb that can destroy something uses
+// it, so the shorthand exists everywhere rather than on the three that happened
+// to declare it.
+func addConfirmFlag(cmd *cobra.Command, target *bool) {
+	cmd.Flags().BoolVarP(target, "yes", "y", false, confirmFlagHelp)
+}
+
 // preparedClient is what every verb needs: the resolved profile (for Desktop
 // addressing and diagnostics), where Router turned out to live, a client
 // pointed at it, and the Desktop client discovery used — kept because Olares

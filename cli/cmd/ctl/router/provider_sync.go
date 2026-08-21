@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/beclab/Olares/cli/pkg/cliutil"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
@@ -39,6 +40,7 @@ type syncModelsResult struct {
 
 func newProviderSyncModelsCommand(f *cmdutil.Factory) *cobra.Command {
 	var output string
+	var yes bool
 	cmd := &cobra.Command{
 		Use:   "sync-models <name|id>",
 		Short: "mirror an upstream's live model list into Router",
@@ -76,14 +78,15 @@ Example:
 `,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
-			return runProviderSyncModels(c.Context(), f, args[0], output)
+			return runProviderSyncModels(c.Context(), f, args[0], output, yes)
 		},
 	}
 	addOutputFlag(cmd, &output)
+	addConfirmFlag(cmd, &yes)
 	return cmd
 }
 
-func runProviderSyncModels(ctx context.Context, f *cmdutil.Factory, ref, outputRaw string) error {
+func runProviderSyncModels(ctx context.Context, f *cmdutil.Factory, ref, outputRaw string, yes bool) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -97,6 +100,16 @@ func runProviderSyncModels(ctx context.Context, f *cmdutil.Factory, ref, outputR
 	}
 	found, err := resolveProvider(ctx, pc, ref)
 	if err != nil {
+		return err
+	}
+	// What a sync removes is decided by the upstream's answer, which nobody
+	// here has seen yet, so this cannot say how many rows or name them. It can
+	// say that removal happens and that it takes the quotas and defaults with
+	// it, which is the part that is not obvious from the verb.
+	if err := cliutil.ConfirmDestructive(os.Stderr, os.Stdin, fmt.Sprintf(
+		"Sync %s against its upstream? Any model the upstream no longer serves is removed "+
+			"from Router, along with the defaults and quotas pointing at it",
+		found.Name), yes); err != nil {
 		return err
 	}
 	var res syncModelsResult

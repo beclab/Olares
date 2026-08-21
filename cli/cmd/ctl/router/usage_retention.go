@@ -8,6 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/beclab/Olares/cli/pkg/cliutil"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
@@ -43,6 +44,7 @@ func newUsageRetentionCommand(f *cmdutil.Factory) *cobra.Command {
 	var (
 		output string
 		days   int
+		yes    bool
 	)
 	cmd := &cobra.Command{
 		Use:   "retention",
@@ -58,7 +60,8 @@ per-call rows at all: the summary, the quotas and the export by day still work,
 and "usage list" is empty from then on.
 
 A shorter window applies immediately — rows outside it are deleted while you are
-reading the answer, not at the next sweep.
+reading the answer, not at the next sweep — so shortening one asks first.
+Lengthening does not ask, and does not bring back what an earlier window swept.
 
 Admin only, reading included.
 
@@ -73,15 +76,16 @@ Examples:
 			if c.Flags().Changed("days") {
 				want = &days
 			}
-			return runUsageRetention(c.Context(), f, want, output)
+			return runUsageRetention(c.Context(), f, want, output, yes)
 		},
 	}
 	cmd.Flags().IntVar(&days, "days", 0, "keep per-call rows for this many days; 0 keeps none")
+	addConfirmFlag(cmd, &yes)
 	addOutputFlag(cmd, &output)
 	return cmd
 }
 
-func runUsageRetention(ctx context.Context, f *cmdutil.Factory, days *int, outputRaw string) error {
+func runUsageRetention(ctx context.Context, f *cmdutil.Factory, days *int, outputRaw string, yes bool) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -116,6 +120,19 @@ func runUsageRetention(ctx context.Context, f *cmdutil.Factory, days *int, outpu
 		return werr
 	}
 	shorter := *days < cur.RetentionDays
+	// Only a shorter window deletes anything, so only a shorter window asks.
+	// Lengthening one cannot bring back what an earlier sweep took, but it
+	// destroys nothing, and a prompt on it would be noise that teaches people
+	// to pass --yes by reflex.
+	if shorter {
+		if err := cliutil.ConfirmDestructive(os.Stderr, os.Stdin, fmt.Sprintf(
+			"Shorten the window from %s to %s? Per-call rows older than the new window are "+
+				"deleted immediately, and cannot be recovered by lengthening it again. "+
+				"Daily totals are unaffected",
+			retentionPhrase(cur.RetentionDays), retentionPhrase(*days)), yes); err != nil {
+			return err
+		}
+	}
 	var updated spendSettings
 	if err := pc.router.doJSON(ctx, "PUT", epSpendSettings,
 		map[string]any{"retention_days": *days}, &updated); err != nil {

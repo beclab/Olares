@@ -311,7 +311,7 @@ Examples:
 	cmd.Flags().StringVar(&from, "from", "", "read the keys to change from this file, or `-` for standard input")
 	cmd.Flags().StringVar(&mode, "mode", "", "declare the model's mode, e.g. chat, embedding, ocr, audio")
 	cmd.Flags().StringVar(&engineArgs, "engine-args", "", "flags to relaunch the inference engine with")
-	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "do not ask for confirmation")
+	addConfirmFlag(cmd, &yes)
 	addOutputFlag(cmd, &output)
 	return cmd
 }

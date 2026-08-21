@@ -581,7 +581,7 @@ Examples:
 	cmd.Flags().BoolVar(&rpm, "rpm", false, "remove only the requests-per-minute ceiling")
 	cmd.Flags().BoolVar(&tpm, "tpm", false, "remove only the tokens-per-minute ceiling")
 	cmd.Flags().BoolVar(&concurrent, "concurrent", false, "remove only the in-flight ceiling")
-	cmd.Flags().BoolVar(&assumeYes, "yes", false, "skip the confirmation prompt (required when stdin is not a terminal)")
+	addConfirmFlag(cmd, &assumeYes)
 	addOutputFlag(cmd, &output)
 	return cmd
 }

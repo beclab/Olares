@@ -346,7 +346,7 @@ func newDeprecatedProviderModelsDeleteCommand(f *cmdutil.Factory) *cobra.Command
 			return runModelRemove(c.Context(), f, args[1], args[0], assumeYes, output)
 		},
 	}
-	cmd.Flags().BoolVar(&assumeYes, "yes", false, "skip the confirmation prompt")
+	addConfirmFlag(cmd, &assumeYes)
 	addOutputFlag(cmd, &output)
 	return cmd
 }

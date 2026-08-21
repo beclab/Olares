@@ -539,7 +539,7 @@ Examples:
 		},
 	}
 	target.bind(cmd)
-	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "do not ask for confirmation")
+	addConfirmFlag(cmd, &yes)
 	addOutputFlag(cmd, &output)
 	return cmd
 }

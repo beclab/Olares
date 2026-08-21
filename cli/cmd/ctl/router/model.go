@@ -570,7 +570,7 @@ Example:
 		},
 	}
 	cmd.Flags().StringVar(&provider, "provider", "", "which provider's copy, when the name is served by more than one")
-	cmd.Flags().BoolVar(&assumeYes, "yes", false, "skip the confirmation prompt (required when stdin is not a terminal)")
+	addConfirmFlag(cmd, &assumeYes)
 	addOutputFlag(cmd, &output)
 	return cmd
 }

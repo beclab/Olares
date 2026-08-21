@@ -287,7 +287,7 @@ Examples:
 	}
 	target.bind(cmd)
 	cmd.Flags().StringVar(&from, "from", "", "read the card from this file; standard input when omitted")
-	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "do not ask for confirmation")
+	addConfirmFlag(cmd, &yes)
 	addOutputFlag(cmd, &output)
 	return cmd
 }

@@ -150,7 +150,12 @@ forever, and the per-call rows are deleted on the window "retention" reports.
 
 func addSpendFilterFlags(cmd *cobra.Command, fl *spendFilter) {
 	cmd.Flags().StringVar(&fl.UserRef, "user", "", "only this user's calls, by name or id (admin only)")
-	cmd.Flags().StringVar(&fl.CallerRef, "caller", "", "only this application's calls, by title, app name or appid (admin only)")
+	cmd.Flags().StringVar(&fl.CallerRef, "caller-app", "", "only this application's calls, by title, app name or appid (admin only)")
+	// --caller was this flag's name, and `quota` spelled the same concept
+	// --caller-app with help text identical word for word. One name now; the
+	// old one keeps working unannounced rather than breaking a script.
+	cmd.Flags().StringVar(&fl.CallerRef, "caller", "", "")
+	_ = cmd.Flags().MarkHidden("caller")
 	cmd.Flags().StringVar(&fl.KeyRef, "key", "", "only calls made with this key, by name, prefix or id")
 	cmd.Flags().StringVar(&fl.ProviderRef, "provider", "", "only calls to this provider, by name or id")
 	cmd.Flags().StringVar(&fl.ModelRef, "model", "", "only calls to this model, as <provider>/<model>")

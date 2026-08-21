@@ -827,7 +827,7 @@ Example:
 			return runRouteDelete(c.Context(), f, args[0], assumeYes, output)
 		},
 	}
-	cmd.Flags().BoolVar(&assumeYes, "yes", false, "skip the confirmation prompt (required when stdin is not a terminal)")
+	addConfirmFlag(cmd, &assumeYes)
 	addOutputFlag(cmd, &output)
 	return cmd
 }

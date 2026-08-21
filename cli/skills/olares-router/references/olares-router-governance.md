@@ -126,7 +126,7 @@ olares-cli router quota set --caller-app wise --budget 5
 That is why there are three different questions here and no single "callers" list:
 
 - **what is installed** — `olares-cli market list --mine`, the whole machine, whatever each application does.
-- **what has called, and what it cost** — `usage summary --by caller_app`. `--caller` filters to one, by title, application name or appid.
+- **what has called, and what it cost** — `usage summary --by caller_app`. `--caller-app` filters to one, by title, application name or appid.
 - **what it may spend** — a quota scoped to the appid. Setting it to zero is how an application is stopped.
 
 Do not confuse an application that *calls* Router with a *model* application, which serves models rather than consuming them. One machine has both, and one application can be both.
