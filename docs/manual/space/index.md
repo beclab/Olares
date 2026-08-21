@@ -19,3 +19,4 @@ This section walks you through using Olares Space:
 - [Manage domain members](manage-domain.md)
 - [Back up & restore Olares](backup-restore.md)
 - [Billing](billing.md)
+- [Manage support tickets](tickets.md)

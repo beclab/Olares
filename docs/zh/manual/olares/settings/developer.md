@@ -43,13 +43,16 @@ head:
 
 ## 导出系统日志
 
-系统日志记录了各个系统组件的运行状态，为故障排除提供关键的诊断信息。
+系统日志记录了系统组件的运行状态，为故障排除提供关键的诊断信息。
 
-导出系统日志的步骤如下：
+你可以手动导出日志文件，并将其附加到支持工单或 GitHub Issue 中，以帮助 Olares 团队更快地解决你的问题。
+
 <!--@include: ../../../reusables/export-system-logs.md#export-system-logs-steps-->
 
-:::tip
-你可以将此日志文件附加到 GitHub Issue 中，以帮助 Olares 团队更快地定位和解决你的问题。
+:::tip 自动收集日志
+除了手动导出，你也可以自动收集日志：
+- 在 [Ticket 应用](../../help/request-technical-support.md#在-ticket-应用中提交工单)中，展开**系统日志**并选择**采集日志**。
+- 在 [Olares Space](../../space/tickets.md#create-a-ticket-with-olares-cli) 中，使用 `olares-cli` 上传日志。
 :::
 
 ## 设置系统级环境变量
