@@ -535,7 +535,7 @@ Examples:
 			if target.direct(args) {
 				return runConsoleRestart(ctx, f, target, args, yes, format)
 			}
-			return runRouterRestart(ctx, f, target.model(args), yes)
+			return runRouterRestart(ctx, f, target.model(args), yes, format)
 		},
 	}
 	target.bind(cmd)
@@ -544,7 +544,7 @@ Examples:
 	return cmd
 }
 
-func runRouterRestart(ctx context.Context, f *cmdutil.Factory, model string, yes bool) error {
+func runRouterRestart(ctx context.Context, f *cmdutil.Factory, model string, yes bool, format Format) error {
 	pc, err := prepare(ctx, f)
 	if err != nil {
 		return err
@@ -559,6 +559,9 @@ func runRouterRestart(ctx context.Context, f *cmdutil.Factory, model string, yes
 	}
 	if err := pc.router.doJSON(ctx, "POST", epForModel(epEngineRestart, model), nil, &res); err != nil {
 		return specErr(err, model)
+	}
+	if format == FormatJSON {
+		return printJSON(os.Stdout, res)
 	}
 	if !res.Restarted {
 		_, werr := fmt.Println("the application accepted the request and reports no relaunch, " +

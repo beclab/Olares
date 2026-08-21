@@ -220,6 +220,7 @@ func newCallSpeakCommand(f *cmdutil.Factory) *cobra.Command {
 		speed   float64
 		voices  bool
 		apiKey  string
+		output  string
 	)
 	cmd := &cobra.Command{
 		Use:   "speak [text]",
@@ -235,6 +236,10 @@ and which container formats they come in is the engine's business, and Router
 does not translate either. --voices lists what this model offers and synthesises
 nothing; a model built only for voice cloning has no list and answers 404.
 
+--out is where the audio goes. -o names the format of the voice listing, which
+is the only thing this verb prints rather than plays, and has no effect on a
+synthesis.
+
 Examples:
   olares-cli router call speak "your build finished" --out done.mp3
   olares-cli router call speak "hello" --voice alloy --out hello.wav --response-format wav
@@ -248,7 +253,11 @@ Examples:
 				if len(args) > 0 {
 					return fmt.Errorf("--voices lists what the model offers; it takes no text")
 				}
-				return runListVoices(c.Context(), f, callModel(model, categoryTTS), apiKey)
+				format, ferr := parseFormat(output)
+				if ferr != nil {
+					return ferr
+				}
+				return runListVoices(c.Context(), f, callModel(model, categoryTTS), apiKey, format)
 			}
 			text, err := readPromptArgs(args, "text")
 			if err != nil {
@@ -275,6 +284,7 @@ Examples:
 	cmd.Flags().Float64Var(&speed, "speed", 1, "playback rate, if the engine supports it")
 	cmd.Flags().BoolVar(&voices, "voices", false, "list the voices this model offers and synthesise nothing")
 	cmd.Flags().StringVar(&apiKey, "api-key", "", dataPlaneKeyFlagUsage)
+	addOutputFlag(cmd, &output)
 	return cmd
 }
 
@@ -284,7 +294,7 @@ Examples:
 // reference recording, and an engine built for that has nothing to list. So an
 // empty list and a 404 both mean "this model is not chosen from a menu" rather
 // than a misconfiguration.
-func runListVoices(ctx context.Context, f *cmdutil.Factory, model, apiKey string) error {
+func runListVoices(ctx context.Context, f *cmdutil.Factory, model, apiKey string, format Format) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -314,6 +324,9 @@ func runListVoices(ctx context.Context, f *cmdutil.Factory, model, apiKey string
 	}
 	if err := dp.doJSON(ctx, "GET", path, nil, &resp); err != nil {
 		return callErr(err)
+	}
+	if format == FormatJSON {
+		return printJSON(os.Stdout, resp)
 	}
 	if len(resp.Voices) == 0 {
 		_, err := fmt.Println("this model offers no named voices. It is either cloned from a " +

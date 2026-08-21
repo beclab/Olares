@@ -505,6 +505,7 @@ func newQuotaClearCommand(f *cmdutil.Factory) *cobra.Command {
 		rpm       bool
 		tpm       bool
 		assumeYes bool
+		output    string
 	)
 	cmd := &cobra.Command{
 		Use:   "clear",
@@ -536,7 +537,7 @@ Examples:
 			if tpm {
 				kinds[quotaTPM] = true
 			}
-			return runQuotaClear(c.Context(), f, refs, kinds, assumeYes)
+			return runQuotaClear(c.Context(), f, refs, kinds, assumeYes, output)
 		},
 	}
 	addQuotaScopeFlags(cmd, &refs, "uncap")
@@ -544,12 +545,27 @@ Examples:
 	cmd.Flags().BoolVar(&rpm, "rpm", false, "remove only the requests-per-minute ceiling")
 	cmd.Flags().BoolVar(&tpm, "tpm", false, "remove only the tokens-per-minute ceiling")
 	cmd.Flags().BoolVar(&assumeYes, "yes", false, "skip the confirmation prompt (required when stdin is not a terminal)")
+	addOutputFlag(cmd, &output)
 	return cmd
 }
 
-func runQuotaClear(ctx context.Context, f *cmdutil.Factory, refs quotaRefs, kinds map[string]bool, assumeYes bool) error {
+// quotaClearResult is what -o json answers with. Removed carries the rows as
+// they were before the delete, because afterwards there is nothing to describe
+// them with, and a caller reconciling its own state needs to know which kinds
+// went rather than only how many.
+type quotaClearResult struct {
+	Scope   string     `json:"scope"`
+	Removed []quotaRow `json:"removed"`
+}
+
+func runQuotaClear(ctx context.Context, f *cmdutil.Factory, refs quotaRefs, kinds map[string]bool,
+	assumeYes bool, outputRaw string) error {
 	if ctx == nil {
 		ctx = context.Background()
+	}
+	format, err := parseFormat(outputRaw)
+	if err != nil {
+		return err
 	}
 	pc, err := prepare(ctx, f)
 	if err != nil {
@@ -570,6 +586,9 @@ func runQuotaClear(ctx context.Context, f *cmdutil.Factory, refs quotaRefs, kind
 		}
 	}
 	if len(doomed) == 0 {
+		if format == FormatJSON {
+			return printJSON(os.Stdout, quotaClearResult{Scope: target.Label, Removed: []quotaRow{}})
+		}
 		_, werr := fmt.Fprintf(os.Stdout, "nothing to remove: no such quota applies to %s\n", target.Label)
 		return werr
 	}
@@ -591,10 +610,16 @@ func runQuotaClear(ctx context.Context, f *cmdutil.Factory, refs quotaRefs, kind
 		if err := pc.router.doJSON(ctx, "DELETE", path, nil, nil); err != nil {
 			return err
 		}
+		if format == FormatJSON {
+			continue
+		}
 		if _, err := fmt.Fprintf(os.Stdout, "removed the %s ceiling on %s\n",
 			quotaKindLabel(doomed[i].QuotaType), target.Label); err != nil {
 			return err
 		}
+	}
+	if format == FormatJSON {
+		return printJSON(os.Stdout, quotaClearResult{Scope: target.Label, Removed: doomed})
 	}
 	return nil
 }

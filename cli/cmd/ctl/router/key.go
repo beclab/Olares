@@ -228,8 +228,9 @@ func newKeyListCommand(f *cmdutil.Factory) *cobra.Command {
 		Long: `List API keys, newest first.
 
 An admin sees every key a person holds. Anyone else sees their own. Neither sees
-the keys Router issues to applications for itself — those belong to the app rows,
-and "olares-cli router caller list" shows which app has one.
+the keys Router issues to applications for itself — those belong to the app rows
+and are not listed anywhere in this tree. What an application has actually spent
+is still visible: "olares-cli router usage summary --by caller_app".
 
 MODELS says what a key may reach: "all" means every model in the workspace, and
 anything else is the allowlist it was given.

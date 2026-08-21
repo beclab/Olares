@@ -387,8 +387,9 @@ Being listed does not mean being reachable. This is the configuration; whether
 the upstream answers right now is what "provider validate" reports, and what a
 particular credential may send is "router call models".
 
--o json adds two derived fields to each row — "callable" and a "readiness" of
-ready, warming, failed or unknown — beside the two raw columns they come from,
+-o json adds three derived fields to each row — "callable", a "readiness" of
+ready, warming, failed or unknown, and the "callable_note" this table prints in
+its CALLABLE cell — beside the two raw columns they come from,
 "provider_olares_status" for the container and "model_console_status" for the
 weights. The raw pair is never collapsed: they have different owners and
 different fixes.
@@ -535,6 +536,12 @@ type modelListJSONRow struct {
 	// Readiness is what the weights are doing, in the words `router call
 	// models` uses: ready, warming, failed or unknown.
 	Readiness string `json:"readiness"`
+	// CallableNote is the reason, and the table's own cell verbatim. Callable
+	// says a call would fail; this says which of the four things is in the
+	// way, and they have four different fixes — an admin switch, the Market,
+	// waiting, or `model retry`. Leaving it out made the machine-readable
+	// output the one a caller could act on least, which is backwards.
+	CallableNote string `json:"callable_note"`
 }
 
 func modelListJSONRows(items []adminModelRow) []modelListJSONRow {
@@ -544,6 +551,7 @@ func modelListJSONRows(items []adminModelRow) []modelListJSONRow {
 			adminModelRow: items[i],
 			Callable:      items[i].callable(),
 			Readiness:     items[i].readiness(),
+			CallableNote:  items[i].callableNote(),
 		})
 	}
 	return out
