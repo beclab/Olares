@@ -155,10 +155,6 @@ func callErr(err error) error {
 		return fmt.Errorf("%w\nThis is about who or what the key belongs to rather than the key itself. "+
 			"For a person, `olares-cli settings users get <name>` shows their account; for an "+
 			"application, `olares-cli market list --mine` says whether it is still here", err)
-	case re.Status == 401 || re.Status == 403:
-		return fmt.Errorf("%w\nThis came back from the provider, not from Router: the credential Router "+
-			"holds for it was refused. `olares-cli router provider validate <provider>` checks it against "+
-			"the upstream, and `router provider update` replaces it", err)
 	case re.Code == "no_default_model":
 		return fmt.Errorf("%w\nNothing installed can serve that category. `olares-cli router route list --kind default` "+
 			"says where each one stands, and it fills once a model of that kind exists — a category is "+
@@ -209,6 +205,15 @@ func callErr(err error) error {
 			"that usually means the application is not serving yet: `olares-cli router provider get <provider>` "+
 			"shows its Olares status, and a degraded one is a matter for `olares-cli market` rather than "+
 			"anything here", err)
+	case re.Status == 401 || re.Status == 403:
+		// Last resort, and it has to stay last: Router refuses with these two
+		// statuses as well, and every refusal of its own is named above. A
+		// status matched ahead of a code sends someone to rotate an upstream
+		// credential that was working — which is what this said for
+		// model_not_allowed, an allowlist decision Router made by itself.
+		return fmt.Errorf("%w\nThis came back from the provider, not from Router: the credential Router "+
+			"holds for it was refused. `olares-cli router provider validate <provider>` checks it against "+
+			"the upstream, and `router provider update` replaces it", err)
 	}
 	return err
 }

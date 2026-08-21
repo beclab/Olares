@@ -108,3 +108,42 @@ func TestTheCredentialRefusalsSayWhichOneToFix(t *testing.T) {
 		}
 	}
 }
+
+// Router refuses with 401 and 403 too, so the branch that reads those as an
+// upstream's refusal has to be reached only after every code we name. It was
+// not, and a key allowlist rejection — Router's own decision, sent as 403
+// invalid_request_error — told people to go and rotate a provider credential
+// that was working. Found on yaotest004, where the advice was the whole
+// message a user got.
+func TestARefusalRouterMadeItselfIsNotBlamedOnTheUpstream(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		re     *RouterError
+		wants  string
+		avoids string
+	}{
+		{
+			name:   "allowlist rejection is about the key, not the provider",
+			re:     &RouterError{Status: 403, Type: "invalid_request_error", Code: "model_not_allowed"},
+			wants:  "router key update",
+			avoids: "provider validate",
+		},
+		{
+			name:   "an upstream refusal still reaches the fallback",
+			re:     &RouterError{Status: 401, Type: "upstream_error", Code: ""},
+			wants:  "provider validate",
+			avoids: "router key update",
+		},
+	} {
+		err := callErr(tc.re)
+		if err == nil {
+			t.Fatalf("%s: callErr swallowed the error", tc.name)
+		}
+		if !strings.Contains(err.Error(), tc.wants) {
+			t.Errorf("%s: expected advice mentioning %q, got:\n%s", tc.name, tc.wants, err)
+		}
+		if strings.Contains(err.Error(), tc.avoids) {
+			t.Errorf("%s: advice points the wrong way with %q:\n%s", tc.name, tc.avoids, err)
+		}
+	}
+}
