@@ -63,6 +63,22 @@ func TestMaterializeHostLogicalPattern(t *testing.T) {
 	if reason != "" || h != "x.shared.olares.com" {
 		t.Fatalf("shared exact host=%q reason=%q, want kept", h, reason)
 	}
+	h, reason = materializeHost("x.shared.olares.com", "alice", "olares.cn")
+	if reason != "" || h != "x.shared.olares.com" {
+		t.Fatalf("contract host with cn platformDomain host=%q reason=%q, want kept", h, reason)
+	}
+	h, reason = materializeHost("x.shared.olares.com", "alice", "bytetrade.io")
+	if reason != "" || h != "x.shared.olares.com" {
+		t.Fatalf("contract host with custom platformDomain host=%q reason=%q, want kept", h, reason)
+	}
+	h, reason = materializeHost("x.shared.olares.cn", "alice", "olares.cn")
+	if reason != "" || h != "x.shared.olares.cn" {
+		t.Fatalf("legacy platform shared host host=%q reason=%q, want kept via platform suffix", h, reason)
+	}
+	h, reason = materializeHost("evil.olares.com", "alice", "olares.cn")
+	if reason == "" || h != "" {
+		t.Fatalf("arbitrary .olares.com host must drop, got host=%q reason=%q", h, reason)
+	}
 }
 
 func TestEnumerateHostsSplitsAuthAndTLSByEntranceClass(t *testing.T) {
