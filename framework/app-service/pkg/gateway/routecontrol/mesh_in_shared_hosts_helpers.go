@@ -333,10 +333,10 @@ func materializeHost(pattern, viewer, platformDomain string) (string, string) {
 	if !validDNSChars(p) {
 		return "", rDropInvalidChars
 	}
-	if !isPlatformHostGo(p, domLower) {
-		return "", rDropNonPlatformHost
+	if appcfg.IsSharedMeshExactHost(p) || isPlatformHostGo(p, domLower) {
+		return p, ""
 	}
-	return p, ""
+	return "", rDropNonPlatformHost
 }
 
 func isPlatformHostGo(host, platformDomain string) bool {
