@@ -19,6 +19,7 @@ import (
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils/registry"
 	"github.com/beclab/Olares/framework/app-service/pkg/webhook"
+	"github.com/beclab/Olares/framework/app-service/pkg/webhook/clicredential"
 	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	wfv1alpha1 "github.com/argoproj/argo-workflows/v3/pkg/apis/workflow/v1alpha1"
@@ -1028,6 +1029,105 @@ func (h *Handler) runAsUserInject(ctx context.Context, pod *corev1.Pod, namespac
 		klog.Errorf("runasuser: prepare-userspace inject failed ns=%s app=%s err=%v", namespace, cfg.AppName, err)
 		return nil, err
 	}
+	return pod, nil
+}
+
+func (h *Handler) handleCliCredential(req *restful.Request, resp *restful.Response) {
+	klog.Infof("Received olares-cli credential mutate webhook request: Method=%v, URL=%v", req.Request.Method, req.Request.URL)
+	admissionRequestBody, ok := h.sidecarWebhook.GetAdmissionRequestBody(req, resp)
+	if !ok {
+		klog.Errorf("Failed to get admission request body")
+		return
+	}
+	var admissionReq, admissionResp admissionv1.AdmissionReview
+	proxyUUID := uuid.New()
+	if _, _, err := webhook.Deserializer.Decode(admissionRequestBody, nil, &admissionReq); err != nil {
+		klog.Errorf("Failed to decoding admission request body err=%v", err)
+		admissionResp.Response = h.sidecarWebhook.AdmissionError("", err)
+	} else {
+		admissionResp.Response = h.handleCliCredentialMutate(req.Request.Context(), admissionReq.Request, proxyUUID)
+	}
+	admissionResp.TypeMeta = admissionReq.TypeMeta
+	admissionResp.Kind = admissionReq.Kind
+
+	requestForNamespace := "unknown"
+	if admissionReq.Request != nil {
+		requestForNamespace = admissionReq.Request.Namespace
+	}
+
+	err := resp.WriteAsJson(&admissionResp)
+	if err != nil {
+		klog.Infof("handleCliCredentialMutate: write response failed namespace=%s, err=%v", requestForNamespace, err)
+		return
+	}
+	klog.Infof("Done handleCliCredentialMutate admission request with uuid=%s, namespace=%s", proxyUUID, requestForNamespace)
+}
+
+func (h *Handler) handleCliCredentialMutate(ctx context.Context, req *admissionv1.AdmissionRequest, proxyUUID uuid.UUID) *admissionv1.AdmissionResponse {
+	if req == nil {
+		klog.Error("Failed to get admission Request, err =", errNilAdmissionRequest)
+		return h.sidecarWebhook.AdmissionError("", errNilAdmissionRequest)
+	}
+	resp := &admissionv1.AdmissionResponse{
+		Allowed: true,
+		UID:     req.UID,
+	}
+	var pod corev1.Pod
+	err := json.Unmarshal(req.Object.Raw, &pod)
+	if err != nil {
+		klog.Errorf("Failed to unmarshal request object raw with uuid=%s namespace=%s", proxyUUID, req.Namespace)
+		return h.sidecarWebhook.AdmissionError(req.UID, err)
+	}
+	curPod, err := h.cliCredentialInject(&pod, req.Namespace)
+	if err != nil {
+		klog.Infof("run cliCredentialInject err=%v", err)
+		return h.sidecarWebhook.AdmissionError(req.UID, err)
+	}
+	current, err := json.Marshal(curPod)
+	if err != nil {
+		return h.sidecarWebhook.AdmissionError(req.UID, err)
+	}
+	admissionResp := admission.PatchResponseFromRaw(req.Object.Raw, current)
+	patchBytes, err := json.Marshal(admissionResp.Patches)
+	if err != nil {
+		return h.sidecarWebhook.AdmissionError(req.UID, err)
+	}
+	h.sidecarWebhook.PatchAdmissionResponse(resp, patchBytes)
+	return resp
+}
+
+// cliCredentialInject mounts the long-lived Olares credential for apps that
+// declared permission.loginOlaresCLI. It is a separate admission path from
+// runAsUserInject: an app can ask for the credential without running as
+// uid 1000, and the other way around.
+func (h *Handler) cliCredentialInject(pod *corev1.Pod, namespace string) (*corev1.Pod, error) {
+	if pod == nil {
+		return pod, nil
+	}
+	if strings.HasPrefix(namespace, constants.OwnerNamespacePrefix+"-") ||
+		strings.HasPrefix(namespace, "user-system-") {
+		return pod, nil
+	}
+
+	_, cfg, _, _, err := h.sidecarWebhook.GetAppConfig(namespace)
+	if err != nil {
+		if errors.Is(err, api.ErrApplicationManagerNotFound) {
+			return pod, nil
+		}
+		klog.Errorf("clicredential: resolve app config for namespace=%s err=%v", namespace, err)
+		return nil, err
+	}
+	if cfg == nil || !cfg.LoginOlaresCLI {
+		return pod, nil
+	}
+
+	// The Secret is provisioned before the chart is installed, so a pod
+	// reaching admission for an app that asked for the credential should
+	// always find it. Mounting it unconditionally (rather than checking the
+	// Secret first) keeps the pod from silently coming up logged out: without
+	// the Secret kubelet holds the pod in ContainerCreating, which is visible,
+	// instead of starting an app whose login never happened.
+	clicredential.Inject(pod)
 	return pod, nil
 }
 

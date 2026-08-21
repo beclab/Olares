@@ -4,10 +4,9 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net/url"
 	"os"
+	"sort"
 	"strings"
-	"text/tabwriter"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -66,9 +65,10 @@ A key is what you hand to something that has no Olares session of its own — a
 script, a container, a service elsewhere. Applications installed on this Olares
 are recognised by the platform and do not need one either.
 
-"router call" is the exception, and it looks after itself: the data plane refuses
-a console session, so this machine keeps one key of its own and mints it on
-first use. "key local" is where that copy is inspected or dropped.
+"router call" needs no key either: the platform vouches for you the same way it
+does for the console plane. A key is worth issuing for it when the call has to
+carry a budget or a model allowlist of its own, or comes from somewhere the
+platform cannot vouch for.
 
 The plaintext is shown once, when the key is issued, because Router stores only
 its hash. Nothing can recover it afterwards; a lost key is replaced, not looked
@@ -79,7 +79,7 @@ Subcommands:
   issue <name>     create one and print the plaintext once
   update <key>     rename, enable, disable, re-expire, or change its models
   revoke <key>     stop it working, keeping the row and its usage history
-  local            the key this machine saved for its own calls
+  current          which credential "router call" would present right now
 
 A key can be restricted to named models, which is how a key given to one
 application stops being a key to everything. Without that restriction it reaches
@@ -91,42 +91,45 @@ every model in the workspace.
 	cmd.AddCommand(newKeyIssueCommand(f))
 	cmd.AddCommand(newKeyUpdateCommand(f))
 	cmd.AddCommand(newKeyRevokeCommand(f))
-	cmd.AddCommand(newKeyLocalCommand(f))
+	cmd.AddCommand(newKeyCurrentCommand(f))
+	cmd.AddCommand(newDeprecatedKeyLocalCommand(f))
 	return cmd
 }
 
-func newKeyLocalCommand(f *cmdutil.Factory) *cobra.Command {
+func newKeyCurrentCommand(f *cmdutil.Factory) *cobra.Command {
 	var (
 		output string
 		forget bool
 	)
 	cmd := &cobra.Command{
-		Use:   "local",
-		Short: "the key this machine saved for its own calls",
-		Long: `Show, or drop, the data-plane key this machine keeps.
+		Use:   "current",
+		Short: "which credential \"router call\" would present right now",
+		Long: `Say what the next "router call" will authenticate with.
 
-"router call" needs a credential the console plane cannot give it, so on first use
-it issues one key and saves it in the OS keychain under the active profile. Every
-later call reuses that copy instead of issuing another.
+Usually nothing: Router takes the caller's identity from the platform, the same
+way the console plane does, so a call carries no key at all and is attributed to
+you. A key is presented only when one is named — --api-key, or the
+OLARES_ROUTER_API_KEY environment variable.
 
-Only its prefix is shown. The secret is in the keychain and reading it back out
-here would put it in a shell history for no reason — anything that needs the
-plaintext should be given a key of its own with "router key issue".
+An older olares-cli saved a key of its own here on first use. Calls no longer
+use it, but it is still a working, unrestricted key in Router: "router key list"
+shows it and "router key revoke" is what ends it.
 
---forget deletes the local copy. The key itself keeps working, because Router
-does not know a copy was discarded: this is how a machine stops calling, and
-"router key revoke" is how a key stops working. The next call issues a new one.
+--forget deletes this machine's copy and nothing else. Router keeps only the
+hash, so once the copy is gone the plaintext is unrecoverable — a key that
+should stop working has to be revoked, and a revoked key cannot be un-revoked.
+This command never revokes anything on its own.
 
 Examples:
-  olares-cli router key local
-  olares-cli router key local --forget
+  olares-cli router key current
+  olares-cli router key current --forget
 `,
 		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
 			return runKeyLocal(c.Context(), f, forget, output)
 		},
 	}
-	cmd.Flags().BoolVar(&forget, "forget", false, "delete the local copy; the key itself stays valid")
+	cmd.Flags().BoolVar(&forget, "forget", false, "delete this machine's saved copy; the key itself stays valid")
 	addOutputFlag(cmd, &output)
 	return cmd
 }
@@ -147,16 +150,20 @@ func runKeyLocal(ctx context.Context, f *cmdutil.Factory, forget bool, outputRaw
 		if err := forgetDataPlaneKey(rp.OlaresID); err != nil {
 			return fmt.Errorf("drop the saved key: %w", err)
 		}
-		fmt.Printf("forgot the saved key for %s. It still works — `olares-cli router key list` "+
-			"shows it and `router key revoke` ends it. The next call will issue a new one.\n", rp.OlaresID)
+		fmt.Printf("forgot the saved key for %s. Calls were not using it anyway, and it still works: "+
+			"`olares-cli router key list` shows it and `router key revoke` is what ends it. "+
+			"This copy was the only plaintext — Router stores a hash — so it cannot be read back.\n",
+			rp.OlaresID)
 		return nil
 	}
 
 	stored, gerr := cachedDataPlaneKey(rp.OlaresID)
 	state := map[string]any{
-		"profile":      rp.OlaresID,
-		"saved":        stored != "",
-		"in_container": inContainer(),
+		"profile": rp.OlaresID,
+		"saved":   stored != "",
+		// What the next call actually presents. Reusing the calling path's own
+		// vocabulary keeps this from becoming a second opinion about it.
+		"credential": string(resolveDataPlaneAuth("").Mode),
 	}
 	if stored != "" {
 		state["key_prefix"] = keyPrefixOf(stored)
@@ -174,42 +181,38 @@ func runKeyLocal(ctx context.Context, f *cmdutil.Factory, forget bool, outputRaw
 }
 
 func renderKeyLocal(w io.Writer, state map[string]any) error {
-	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	rows := [][2]string{{"PROFILE", fmt.Sprintf("%v", state["profile"])}}
-	saved, _ := state["saved"].(bool)
-	rows = append(rows, [2]string{"SAVED KEY", boolStr(saved)})
-	if p, ok := state["key_prefix"].(string); ok {
-		rows = append(rows, [2]string{"PREFIX", p})
+	env, _ := state["env_override"].(string)
+	keyed := state["credential"] == string(authKey)
+	t := newTable(w)
+	t.row("PROFILE", fmt.Sprintf("%v", state["profile"]))
+	if keyed {
+		t.row("CALLS USE", "the key in "+env)
+	} else {
+		t.row("CALLS USE", "your platform identity, no key")
 	}
-	if e, ok := state["env_override"].(string); ok {
-		rows = append(rows, [2]string{"OVERRIDDEN BY", e})
+	saved, _ := state["saved"].(bool)
+	t.row("SAVED KEY", boolStr(saved))
+	if p, ok := state["key_prefix"].(string); ok {
+		t.row("PREFIX", p)
 	}
 	if e, ok := state["keychain_error"].(string); ok {
-		rows = append(rows, [2]string{"KEYCHAIN", "unreadable: " + e})
+		t.row("KEYCHAIN", "unreadable: "+e)
 	}
-	inC, _ := state["in_container"].(bool)
-	rows = append(rows, [2]string{"IN CONTAINER", boolStr(inC)})
-	for _, r := range rows {
-		if _, err := fmt.Fprintf(tw, "%s\t%s\n", r[0], r[1]); err != nil {
-			return err
-		}
-	}
-	if err := tw.Flush(); err != nil {
+	if err := t.flush(); err != nil {
 		return err
 	}
 	switch {
-	case state["env_override"] != nil:
-		_, err := fmt.Fprintf(w, "\n%s is set, so calls use that key and ignore the saved one.\n", state["env_override"])
+	case keyed:
+		_, err := fmt.Fprintf(w, "\n%s is set, so calls present that key. Unset it to call as yourself again.\n", env)
 		return err
 	case saved:
-		_, err := fmt.Fprintln(w, "\nCalls use this key. --forget drops the copy; `router key revoke` ends the key.")
-		return err
-	case inC:
-		_, err := fmt.Fprintln(w, "\nNo key saved. Inside the cluster the platform supplies the caller identity, "+
-			"so a call tries that first and only issues a key if it is refused.")
+		_, err := fmt.Fprintln(w, "\nThe saved key is left over from an older olares-cli and is no longer used, "+
+			"but it still works in Router: `router key list` shows it, `router key revoke` ends it, "+
+			"and --forget only discards this copy.")
 		return err
 	default:
-		_, err := fmt.Fprintln(w, "\nNo key saved. The first `router call` will issue one and save it here.")
+		_, err := fmt.Fprintln(w, "\nNothing to manage here. --api-key or OLARES_ROUTER_API_KEY is how a call "+
+			"presents a key instead.")
 		return err
 	}
 }
@@ -233,8 +236,9 @@ func newKeyListCommand(f *cmdutil.Factory) *cobra.Command {
 		Long: `List API keys, newest first.
 
 An admin sees every key a person holds. Anyone else sees their own. Neither sees
-the keys Router issues to applications for itself — those belong to the app rows,
-and "olares-cli router caller list" shows which app has one.
+the keys Router issues to applications for itself — those belong to the app rows
+and are not listed anywhere in this tree. What an application has actually spent
+is still visible: "olares-cli router usage summary --by caller_app".
 
 MODELS says what a key may reach: "all" means every model in the workspace, and
 anything else is the allowlist it was given.
@@ -275,13 +279,7 @@ func runKeyList(ctx context.Context, f *cmdutil.Factory, outputRaw string) error
 }
 
 func listKeys(ctx context.Context, pc *preparedClient) ([]apiKeyView, error) {
-	var env struct {
-		Items []apiKeyView `json:"items"`
-	}
-	if err := pc.router.doJSON(ctx, "GET", consoleAPI+"/api-keys", nil, &env); err != nil {
-		return nil, err
-	}
-	return env.Items, nil
+	return collection[apiKeyView](ctx, pc, epAPIKeys)
 }
 
 func renderKeyList(ctx context.Context, pc *preparedClient, w io.Writer, keys []apiKeyView) error {
@@ -291,10 +289,7 @@ func renderKeyList(ctx context.Context, pc *preparedClient, w io.Writer, keys []
 		return err
 	}
 	users := userLabels(ctx, pc)
-	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	if _, err := fmt.Fprintln(tw, "NAME\tPREFIX\tOWNER\tSTATE\tEXPIRES\tLAST USED\tMODELS"); err != nil {
-		return err
-	}
+	t := newTable(w, "NAME", "PREFIX", "OWNER", "STATE", "EXPIRES", "LAST USED", "MODELS")
 	for i := range keys {
 		k := &keys[i]
 		owner := k.UserID
@@ -305,13 +300,11 @@ func renderKeyList(ctx context.Context, pc *preparedClient, w io.Writer, keys []
 		if len(k.AllowedModels) > 0 {
 			models = strings.Join(k.AllowedModels, ", ")
 		}
-		if _, err := fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
+		t.row(
 			nonEmpty(k.Name), nonEmpty(k.KeyPrefix), nonEmpty(owner), keyState(k),
-			keyExpiry(k), keyLastUsed(k), clip(models, 48)); err != nil {
-			return err
-		}
+			keyExpiry(k), keyLastUsed(k), clip(models, 48))
 	}
-	if err := tw.Flush(); err != nil {
+	if err := t.flush(); err != nil {
 		return err
 	}
 	_, err := fmt.Fprintln(w, "\nPREFIX is the only part of a key Router keeps, and is how a key in a log or a config is identified.")
@@ -367,8 +360,14 @@ it where it is going before you close the terminal.
 The name is for you: it is what identifies the key in this list and in an audit
 entry, so name it after what will hold it rather than after yourself.
 
---model restricts the key to named models, given as <provider>/<model>. The
-names are checked against what is configured, because Router only checks the
+--model restricts the key to what it names. Two kinds of name may be given, and
+they grant different things. "<provider>/<model>" grants one backend and nothing
+else. A route name — an alias, a group, or a default category — grants the name:
+whatever serves it today, and whatever an admin attaches to it tomorrow. Grant a
+route when the key should follow a decision somebody else is making, and a
+qualified name when it should not.
+
+Names are checked against what is configured, because Router only checks the
 shape: a typo otherwise produces a key that authenticates and then cannot reach
 anything. Without --model the key reaches every model in the workspace.
 
@@ -377,7 +376,8 @@ anything. Without --model the key reaches every model in the workspace.
 
 Examples:
   olares-cli router key issue "wise indexer"
-  olares-cli router key issue ci --ttl 30d --model "Qwen3.6-27B (llama.cpp)/qwen3"
+  olares-cli router key issue ci --ttl 30d --model Olares/qwen3-8b
+  olares-cli router key issue app --model default-chat --model default-embedding
   olares-cli router key issue bot --expires-at 2027-01-01T00:00:00Z -o json
 `,
 		Args: cobra.ExactArgs(1),
@@ -388,7 +388,8 @@ Examples:
 	cmd.Flags().StringVar(&forUser, "for-user", "", "issue for this Olares user instead of yourself (admin only)")
 	cmd.Flags().StringVar(&ttl, "ttl", "", "expire this long from now, e.g. 30d, 12h, 90m")
 	cmd.Flags().StringVar(&expiresAt, "expires-at", "", "expire at this RFC3339 instant, e.g. 2027-01-01T00:00:00Z")
-	cmd.Flags().StringArrayVar(&models, "model", nil, "restrict to this model, as <provider>/<model>; repeatable")
+	cmd.Flags().StringArrayVar(&models, "model", nil,
+		"restrict to this model, as <provider>/<model>, or to a route name; repeatable")
 	addOutputFlag(cmd, &output)
 	return cmd
 }
@@ -453,7 +454,7 @@ func runKeyIssue(ctx context.Context, f *cmdutil.Factory, name, forUser, ttl, ex
 	}
 
 	var created createdKey
-	if err := pc.router.doJSON(ctx, "POST", consoleAPI+"/api-keys", req, &created); err != nil {
+	if err := pc.router.doJSON(ctx, "POST", epAPIKeys, req, &created); err != nil {
 		return err
 	}
 	if format == FormatJSON {
@@ -466,23 +467,16 @@ func renderCreatedKey(w io.Writer, k *createdKey) error {
 	if _, err := fmt.Fprintf(w, "%s\n\n", k.Key); err != nil {
 		return err
 	}
-	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	rows := [][2]string{
-		{"NAME", nonEmpty(k.Name)},
-		{"PREFIX", nonEmpty(k.KeyPrefix)},
-		{"EXPIRES", keyExpiry(&k.apiKeyView)},
-	}
+	t := newTable(w)
+	t.row("NAME", nonEmpty(k.Name))
+	t.row("PREFIX", nonEmpty(k.KeyPrefix))
+	t.row("EXPIRES", keyExpiry(&k.apiKeyView))
 	models := "all models in this workspace"
 	if len(k.AllowedModels) > 0 {
 		models = strings.Join(k.AllowedModels, ", ")
 	}
-	rows = append(rows, [2]string{"REACHES", models})
-	for _, r := range rows {
-		if _, err := fmt.Fprintf(tw, "%s\t%s\n", r[0], r[1]); err != nil {
-			return err
-		}
-	}
-	if err := tw.Flush(); err != nil {
+	t.row("REACHES", models)
+	if err := t.flush(); err != nil {
 		return err
 	}
 	_, err := fmt.Fprintln(w, "\nThe key above is shown once. Router stores only its hash, so it cannot be read back — "+
@@ -515,6 +509,9 @@ reaches, without redeploying whatever holds it.
 Router, and nothing about either is permanent. --no-expiry removes an expiry;
 --clear-models removes an allowlist, and a key with no allowlist reaches
 everything.
+
+--model replaces the allowlist rather than adding to it, and takes either a
+"<provider>/<model>" or a route name, as "key issue" does.
 
 Name the key by its prefix, its name, or its id.
 
@@ -555,7 +552,8 @@ Examples:
 	cmd.Flags().StringVar(&ttl, "ttl", "", "expire this long from now, e.g. 30d")
 	cmd.Flags().StringVar(&expiresAt, "expires-at", "", "expire at this RFC3339 instant")
 	cmd.Flags().BoolVar(&noExpiry, "no-expiry", false, "remove the expiry")
-	cmd.Flags().StringArrayVar(&models, "model", nil, "replace the allowlist with these models, as <provider>/<model>; repeatable")
+	cmd.Flags().StringArrayVar(&models, "model", nil,
+		"replace the allowlist with these, as <provider>/<model> or a route name; repeatable")
 	cmd.Flags().BoolVar(&clearModels, "clear-models", false, "remove the allowlist, letting the key reach every model")
 	addOutputFlag(cmd, &output)
 	return cmd
@@ -644,7 +642,7 @@ func runKeyUpdate(ctx context.Context, f *cmdutil.Factory, ref string, in keyPat
 	}
 
 	var updated apiKeyView
-	path := consoleAPI + "/api-keys/" + url.PathEscape(found.ID)
+	path := epAPIKey(found.ID)
 	if err := pc.router.doJSON(ctx, "PATCH", path, req, &updated); err != nil {
 		return err
 	}
@@ -691,7 +689,7 @@ Examples:
 			return runKeyRevoke(c.Context(), f, args[0], assumeYes, output)
 		},
 	}
-	cmd.Flags().BoolVar(&assumeYes, "yes", false, "skip the confirmation prompt (required when stdin is not a terminal)")
+	addConfirmFlag(cmd, &assumeYes)
 	addOutputFlag(cmd, &output)
 	return cmd
 }
@@ -725,7 +723,7 @@ func runKeyRevoke(ctx context.Context, f *cmdutil.Factory, ref string, assumeYes
 		}
 	}
 	var revoked apiKeyView
-	path := consoleAPI + "/api-keys/" + url.PathEscape(found.ID)
+	path := epAPIKey(found.ID)
 	if err := pc.router.doJSON(ctx, "DELETE", path, nil, &revoked); err != nil {
 		return err
 	}
@@ -745,15 +743,16 @@ func runKeyRevoke(ctx context.Context, f *cmdutil.Factory, ref string, assumeYes
 // A plaintext key is accepted too, by matching its prefix, so pasting the thing
 // you are holding works. It is not sent anywhere.
 func resolveKey(ctx context.Context, pc *preparedClient, ref string) (*apiKeyView, error) {
-	ref = strings.TrimSpace(ref)
-	if ref == "" {
-		return nil, fmt.Errorf("a key name, prefix or id is required")
+	ref, err := requireRef(ref, "a key name, prefix or id")
+	if err != nil {
+		return nil, err
 	}
 	keys, err := listKeys(ctx, pc)
 	if err != nil {
 		return nil, err
 	}
 	var byName []*apiKeyView
+	known := make([]string, 0, len(keys))
 	for i := range keys {
 		k := &keys[i]
 		if k.ID == ref || (k.KeyPrefix != "" && (k.KeyPrefix == ref || strings.HasPrefix(ref, k.KeyPrefix))) {
@@ -762,15 +761,20 @@ func resolveKey(ctx context.Context, pc *preparedClient, ref string) (*apiKeyVie
 		if strings.EqualFold(k.Name, ref) {
 			byName = append(byName, k)
 		}
+		known = append(known, nonEmpty(k.Name))
 	}
 	switch len(byName) {
 	case 1:
 		return byName[0], nil
 	case 0:
-		if len(keys) == 0 {
-			return nil, fmt.Errorf("no key %q, and you have no keys; `olares-cli router key issue <name>` creates one", ref)
-		}
-		return nil, fmt.Errorf("no key %q; `olares-cli router key list` shows the ones you can see", ref)
+		return nil, missing{
+			noun:  "key",
+			ref:   ref,
+			known: known,
+			have:  "the ones you can see are",
+			none:  "you have no keys",
+			note:  "`olares-cli router key issue <name>` creates one",
+		}.err()
 	default:
 		prefixes := make([]string, 0, len(byName))
 		for _, k := range byName {
@@ -781,44 +785,80 @@ func resolveKey(ctx context.Context, pc *preparedClient, ref string) (*apiKeyVie
 	}
 }
 
-// verifyAllowedModels checks each <provider>/<model> against what is actually
-// configured. Router validates only the shape, so an unchecked typo yields a key
-// that authenticates and then reaches nothing — a failure that shows up later, in
+// verifyAllowedModels checks each entry against what is actually configured.
+// Router validates only the shape, so an unchecked typo yields a key that
+// authenticates and then reaches nothing — a failure that shows up later, in
 // something else's logs.
 //
-// The first slash separates the two halves, because a model name can contain
-// slashes of its own ("meta-llama/Llama-3").
+// An entry is either a qualified `<provider>/<model>` or a route name, which is
+// how the data plane reads one, and the two are told apart by the slash: a route
+// name never contains one and a qualified name always does. Both are accepted
+// because they are different grants rather than two spellings of one. Neither is
+// rewritten into the other — expanding a route into its current members would
+// re-close it every time somebody moved it, which is the whole reason a key
+// would name a route.
 func verifyAllowedModels(ctx context.Context, pc *preparedClient, refs []string) ([]string, error) {
 	rows, err := listAllModels(ctx, pc)
 	if err != nil {
 		return nil, fmt.Errorf("check the models named by --model: %w", err)
 	}
-	known := make(map[string]string, len(rows)*2)
+	known := make(map[string]string, len(rows))
 	qualified := make([]string, 0, len(rows))
 	for i := range rows {
 		r := &rows[i]
 		q := r.ProviderName + "/" + r.Model.Name
-		known[strings.ToLower(q)] = q
-		qualified = append(qualified, q)
-		if r.Model.Alias != nil && *r.Model.Alias != "" {
-			a := r.ProviderName + "/" + *r.Model.Alias
-			known[strings.ToLower(a)] = a
-			qualified = append(qualified, a)
+		if _, dup := known[strings.ToLower(q)]; !dup {
+			qualified = append(qualified, q)
 		}
+		known[strings.ToLower(q)] = q
 	}
+
+	// Routes are read only when one is named, so restricting a key to models
+	// costs the same round trips it always did.
+	var routeNames map[string]string
 
 	out := make([]string, 0, len(refs))
 	seen := map[string]struct{}{}
 	for _, raw := range refs {
 		m := strings.TrimSpace(raw)
-		if slash := strings.IndexByte(m, '/'); slash <= 0 || slash >= len(m)-1 {
-			return nil, fmt.Errorf("--model %q must be <provider>/<model>, e.g. %q", raw, exampleQualified(qualified))
-		}
-		canonical, ok := known[strings.ToLower(m)]
-		if !ok {
-			return nil, fmt.Errorf("no model %q is configured; `olares-cli router list` shows what is, "+
-				"and the name to use here is the provider and the model joined by a slash, e.g. %q",
-				m, exampleQualified(qualified))
+		var canonical string
+		if strings.Contains(m, "/") {
+			var ok bool
+			canonical, ok = known[strings.ToLower(m)]
+			if !ok {
+				return nil, fmt.Errorf("no model %q is configured; `olares-cli router model list` shows what is, "+
+					"and the name to use here is the provider and the model joined by a slash, e.g. %q",
+					m, exampleQualified(qualified))
+			}
+		} else {
+			if routeNames == nil {
+				routes, rerr := listRoutes(ctx, pc, "")
+				if rerr != nil {
+					return nil, fmt.Errorf("check the route named by --model %q: %w", raw, rerr)
+				}
+				routeNames = make(map[string]string, len(routes))
+				for i := range routes {
+					routeNames[strings.ToLower(routes[i].Name)] = routes[i].Name
+				}
+			}
+			var ok bool
+			canonical, ok = routeNames[strings.ToLower(m)]
+			if !ok {
+				names := make([]string, 0, len(routeNames))
+				for _, n := range routeNames {
+					names = append(names, n)
+				}
+				sort.Strings(names)
+				return nil, missing{
+					noun:  "model or route",
+					ref:   m,
+					known: names,
+					have:  "the routes are",
+					none:  "no route exists",
+					note: fmt.Sprintf("A model is named as <provider>/<model>, e.g. %q; a name without a "+
+						"slash has to be a route.", exampleQualified(qualified)),
+				}.err()
+			}
 		}
 		if _, dup := seen[canonical]; dup {
 			continue

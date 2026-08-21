@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"mime/multipart"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -66,7 +67,7 @@ Examples:
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			return runCallTranscribe(c.Context(), f, args[0], transcribeOptions{
-				Model:      model,
+				Model:      callModel(model, categorySTT),
 				Language:   language,
 				Prompt:     prompt,
 				RespFormat: respFmt,
@@ -76,7 +77,7 @@ Examples:
 			})
 		},
 	}
-	cmd.Flags().StringVar(&model, "model", "", "model to use; the workspace audio default when omitted")
+	cmd.Flags().StringVar(&model, "model", "", modelFlagHelp(categorySTT))
 	cmd.Flags().StringVar(&language, "language", "", "language of the audio, as an ISO-639-1 code")
 	cmd.Flags().StringVar(&prompt, "prompt", "", "text that biases spelling and vocabulary")
 	cmd.Flags().StringVar(&respFmt, "response-format", "", "json, text, verbose_json, srt or vtt, as the engine supports")
@@ -108,10 +109,7 @@ func runCallTranscribe(ctx context.Context, f *cmdutil.Factory, path string, opt
 	if err != nil {
 		return err
 	}
-	dp, _, err := dataPlane(ctx, pc, opts.APIKey)
-	if err != nil {
-		return err
-	}
+	dp := dataPlane(pc, opts.APIKey)
 
 	fields := map[string]string{
 		"model":           strings.TrimSpace(opts.Model),
@@ -124,9 +122,9 @@ func runCallTranscribe(ctx context.Context, f *cmdutil.Factory, path string, opt
 		return err
 	}
 
-	route := dataPlaneAPI + "/audio/transcriptions"
+	route := epAudioTranscriptions
 	if opts.Translate {
-		route = dataPlaneAPI + "/audio/translations"
+		route = epAudioTranslations
 	}
 	resp, err := dp.do(ctx, "POST", route, body, contentType)
 	if err != nil {
@@ -217,8 +215,19 @@ func newCallSpeakCommand(f *cmdutil.Factory) *cobra.Command {
 		outPath string
 		respFmt string
 		speed   float64
+		voices  bool
 		apiKey  string
+		output  string
+		soundFX bool
 	)
+	// The category is the only thing --sound-fx changes: same path, same body,
+	// a different model when none was named.
+	fallback := func() string {
+		if soundFX {
+			return categorySoundFX
+		}
+		return categoryTTS
+	}
 	cmd := &cobra.Command{
 		Use:   "speak [text]",
 		Short: "text to speech",
@@ -230,16 +239,39 @@ audio bytes into a terminal is refused rather than done.
 
 --voice and --response-format are passed through untouched: which voices exist
 and which container formats they come in is the engine's business, and Router
-does not translate either.
+does not translate either. --voices lists what this model offers and synthesises
+nothing; a model built only for voice cloning has no list and answers 404.
+
+--out is where the audio goes. -o names the format of the voice listing, which
+is the only thing this verb prints rather than plays, and has no effect on a
+synthesis.
+
+--sound-fx generates a sound from a description of it instead of speech from
+words. It is the same request to the same endpoint: engines that make sound
+effects mount /v1/audio/speech like every other audio model, so the model is
+the only thing that decides which you get, and the flag only changes which
+default is resolved. Naming a sound-effect model with --model does the same.
 
 Examples:
   olares-cli router call speak "your build finished" --out done.mp3
   olares-cli router call speak "hello" --voice alloy --out hello.wav --response-format wav
   echo "read this aloud" | olares-cli router call speak --out out.mp3
   olares-cli router call speak "piped" | ffplay -
+  olares-cli router call speak --voices
+  olares-cli router call speak --sound-fx "rain on a tin roof" --out rain.mp3
 `,
 		Args: cobra.ArbitraryArgs,
 		RunE: func(c *cobra.Command, args []string) error {
+			if voices {
+				if len(args) > 0 {
+					return fmt.Errorf("--voices lists what the model offers; it takes no text")
+				}
+				format, ferr := parseFormat(output)
+				if ferr != nil {
+					return ferr
+				}
+				return runListVoices(c.Context(), f, callModel(model, fallback()), apiKey, format)
+			}
 			text, err := readPromptArgs(args, "text")
 			if err != nil {
 				return err
@@ -249,7 +281,7 @@ Examples:
 				speedPtr = &speed
 			}
 			return runCallSpeak(c.Context(), f, text, speakOptions{
-				Model:      model,
+				Model:      callModel(model, fallback()),
 				Voice:      voice,
 				OutPath:    outPath,
 				RespFormat: respFmt,
@@ -258,13 +290,73 @@ Examples:
 			})
 		},
 	}
-	cmd.Flags().StringVar(&model, "model", "", "model to use; the workspace audio default when omitted")
+	cmd.Flags().StringVar(&model, "model", "",
+		modelFlagHelp(categoryTTS)+", or "+categorySoundFX+" with --sound-fx")
 	cmd.Flags().StringVar(&voice, "voice", "", "voice name, as the engine names it")
 	cmd.Flags().StringVar(&outPath, "out", "", "write the audio here instead of standard output")
 	cmd.Flags().StringVar(&respFmt, "response-format", "", "container format, e.g. mp3 or wav")
 	cmd.Flags().Float64Var(&speed, "speed", 1, "playback rate, if the engine supports it")
+	cmd.Flags().BoolVar(&voices, "voices", false, "list the voices this model offers and synthesise nothing")
+	cmd.Flags().BoolVar(&soundFX, "sound-fx", false,
+		"produce a sound effect from the description rather than speech; "+
+			"resolves "+categorySoundFX+" instead of "+categoryTTS+" when --model is omitted")
 	cmd.Flags().StringVar(&apiKey, "api-key", "", dataPlaneKeyFlagUsage)
+	addOutputFlag(cmd, &output)
 	return cmd
+}
+
+// GET /v1/audio/voices
+//
+// Named voices are one of two ways a TTS engine picks a voice; the other is a
+// reference recording, and an engine built for that has nothing to list. So an
+// empty list and a 404 both mean "this model is not chosen from a menu" rather
+// than a misconfiguration.
+func runListVoices(ctx context.Context, f *cmdutil.Factory, model, apiKey string, format Format) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	pc, err := prepare(ctx, f)
+	if err != nil {
+		return err
+	}
+	dp := dataPlane(pc, apiKey)
+	path := epAudioVoices
+	if m := strings.TrimSpace(model); m != "" {
+		q := url.Values{}
+		q.Set("model", m)
+		path = withQuery(path, q)
+	}
+	var resp struct {
+		Voices []struct {
+			ID          string   `json:"id"`
+			Name        string   `json:"name"`
+			Language    string   `json:"language"`
+			Languages   []string `json:"languages"`
+			Gender      string   `json:"gender"`
+			Description string   `json:"description"`
+		} `json:"voices"`
+	}
+	if err := dp.doJSON(ctx, "GET", path, nil, &resp); err != nil {
+		return callErr(err)
+	}
+	if format == FormatJSON {
+		return printJSON(os.Stdout, resp)
+	}
+	if len(resp.Voices) == 0 {
+		_, err := fmt.Println("this model offers no named voices. It is either cloned from a " +
+			"reference recording or has a single built-in voice; --voice has nothing to name.")
+		return err
+	}
+	t := newTable(os.Stdout, "VOICE", "NAME", "LANGUAGE", "DESCRIPTION")
+	for i := range resp.Voices {
+		v := &resp.Voices[i]
+		lang := strings.TrimSpace(v.Language)
+		if lang == "" {
+			lang = strings.Join(v.Languages, " ")
+		}
+		t.row(v.ID, nonEmpty(v.Name), nonEmpty(lang), clip(v.Description, 48))
+	}
+	return t.flush()
 }
 
 type speakOptions struct {
@@ -287,10 +379,7 @@ func runCallSpeak(ctx context.Context, f *cmdutil.Factory, text string, opts spe
 	if err != nil {
 		return err
 	}
-	dp, _, err := dataPlane(ctx, pc, opts.APIKey)
-	if err != nil {
-		return err
-	}
+	dp := dataPlane(pc, opts.APIKey)
 
 	req := map[string]any{"input": text}
 	if v := strings.TrimSpace(opts.Model); v != "" {
@@ -310,7 +399,7 @@ func runCallSpeak(ctx context.Context, f *cmdutil.Factory, text string, opts spe
 		return fmt.Errorf("marshal request body: %w", err)
 	}
 
-	route := dataPlaneAPI + "/audio/speech"
+	route := epAudioSpeech
 	resp, err := dp.do(ctx, "POST", route, bytes.NewReader(buf), "application/json")
 	if err != nil {
 		return err

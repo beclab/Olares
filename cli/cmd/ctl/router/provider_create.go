@@ -58,7 +58,7 @@ asks the upstream. Pass --validate to run that immediately after creating.
 
 No models are attached. That is deliberate: a vendor catalog imported wholesale
 the moment credentials are entered cannot be narrowed afterwards. Choose them
-with "provider models add", or for an endpoint that publishes its own list, run
+with "olares-cli router model add", or for an endpoint that publishes its own list, run
 "provider sync-models".
 
 Credentials given as --credential stay in your shell history and are visible
@@ -134,7 +134,7 @@ func runProviderCreate(ctx context.Context, f *cmdutil.Factory, req createProvid
 		return err
 	}
 	var created providerRow
-	if err := pc.router.doJSON(ctx, "POST", consoleAPI+"/providers", req, &created); err != nil {
+	if err := pc.router.doJSON(ctx, "POST", epProviders, req, &created); err != nil {
 		return err
 	}
 
@@ -150,7 +150,7 @@ func runProviderCreate(ctx context.Context, f *cmdutil.Factory, req createProvid
 	if !andValidate {
 		_, err := fmt.Fprintf(os.Stdout,
 			"\ncreated with no models attached. Next: `olares-cli router provider validate %s`, "+
-				"then choose models with `olares-cli router provider models add %s ...`\n",
+				"then choose models with `olares-cli router model add <model> --provider %s`\n",
 			created.Name, created.Name)
 		return err
 	}
@@ -234,7 +234,7 @@ func runProviderRegister(ctx context.Context, f *cmdutil.Factory, appName, outpu
 	}
 	body := map[string]string{"source": "olares", "app_name": appName}
 	var row providerRow
-	if err := pc.router.doJSON(ctx, "POST", consoleAPI+"/providers", body, &row); err != nil {
+	if err := pc.router.doJSON(ctx, "POST", epProviders, body, &row); err != nil {
 		return err
 	}
 	if format == FormatJSON {

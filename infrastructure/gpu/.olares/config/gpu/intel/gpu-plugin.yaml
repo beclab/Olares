@@ -86,6 +86,7 @@ spec:
         - -enable-monitoring
         - -shared-dev-num=50
         - -health-management
+        - -sriov-report=pf
         - -v=4
         env:
         - name: NODE_NAME
@@ -96,7 +97,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.hostIP
-        image: beclab/intel-device-plugin:1.1.1
+        image: beclab/intel-device-plugin:1.1.2
         imagePullPolicy: IfNotPresent
         name: intel-gpu-plugin
         resources:

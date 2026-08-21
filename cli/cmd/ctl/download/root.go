@@ -29,7 +29,7 @@ not the top-level "download" command (installer packages) and not
 
 Verb families:
 
-  lifecycle   create, list, info, pause, resume, cancel, remove
+  lifecycle   create, list, info, wait, pause, resume, cancel, remove
   probe       inspect
   prefs       prefs get, prefs set
   sync        unfinished, sync
@@ -55,6 +55,7 @@ Run "olares-cli knowledge download <verb> --help" for verb-specific flags.
 	cmd.AddCommand(NewCreateCommand(f))
 	cmd.AddCommand(NewListCommand(f))
 	cmd.AddCommand(NewInfoCommand(f))
+	cmd.AddCommand(NewWaitCommand(f))
 	cmd.AddCommand(NewPauseCommand(f))
 	cmd.AddCommand(NewResumeCommand(f))
 	cmd.AddCommand(NewCancelCommand(f))
@@ -65,7 +66,6 @@ Run "olares-cli knowledge download <verb> --help" for verb-specific flags.
 	cmd.AddCommand(NewSyncCommand(f))
 	cmd.AddCommand(NewTorrentCommand(f))
 	cmd.AddCommand(NewFileCommand(f))
-	cmd.AddCommand(NewCookiesCommand(f))
 	cmd.AddCommand(NewSettingsCommand(f))
 	return cmd
 }

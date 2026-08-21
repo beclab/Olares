@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/beclab/Olares/cli/pkg/clientset"
 	"github.com/beclab/Olares/cli/pkg/common"
@@ -13,13 +14,21 @@ import (
 	"github.com/beclab/Olares/cli/pkg/core/logger"
 	"github.com/beclab/Olares/cli/pkg/core/util"
 	"github.com/beclab/Olares/cli/pkg/gpu"
+	"github.com/beclab/Olares/cli/pkg/utils"
 
 	"github.com/pkg/errors"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 // intelConfigDir is the installer-relative directory that holds the Intel GPU
 // manifests (mirrors infrastructure/gpu/.olares/config/gpu/intel).
 const intelConfigDir = "wizard/config/gpu/intel"
+
+const (
+	xpumdChartRelDir  = "wizard/config/gpu/intel/xpumd"
+	xpumdReleaseName  = "xpumd"
+	xpumdNamespace    = "kube-system"
+)
 
 // intelPlan is the per-node decision derived from the detected Intel GPUs and
 // the running kernel: which mode labels to apply and whether a discrete GPU
@@ -36,12 +45,15 @@ type intelPlan struct {
 // requirement or Out-of-tree status. The kernel / Out-of-tree / table-presence
 // checks only emit warnings and decide whether a discrete GPU qualifies for the
 // host driver packages (in-tree and kernel-supported).
-func classifyIntelGPUs(runtime connector.Runtime) intelPlan {
+func classifyIntelGPUs(runtime connector.Runtime) (intelPlan, error) {
 	var plan intelPlan
 
-	gpus := connector.IntelGPUs(runtime)
+	gpus, err := connector.IntelGPUs(runtime)
+	if err != nil {
+		return plan, err
+	}
 	if len(gpus) == 0 {
-		return plan
+		return plan, nil
 	}
 
 	kernelStr := runtime.GetSystemInfo().GetOsKernel()
@@ -85,7 +97,7 @@ func classifyIntelGPUs(runtime connector.Runtime) intelPlan {
 		}
 	}
 
-	return plan
+	return plan, nil
 }
 
 // LabelIntelGPUs labels the node with the "intel" and/or "intel-gpu" modes based
@@ -101,7 +113,10 @@ func (u *LabelIntelGPUs) Execute(runtime connector.Runtime) error {
 		return errors.Wrap(errors.WithStack(err), "kubeclient create error")
 	}
 
-	plan := classifyIntelGPUs(runtime)
+	plan, err := classifyIntelGPUs(runtime)
+	if err != nil {
+		return err
+	}
 	if !plan.labelIntel && !plan.labelIntelGPU {
 		logger.Info("No qualifying Intel GPU to label")
 		return nil
@@ -120,6 +135,17 @@ func (u *LabelIntelGPUs) Execute(runtime connector.Runtime) error {
 	return nil
 }
 
+// HasAnyIntelGPU is a task Prepare that runs when the node has an Intel
+// integrated or discrete GPU (matching InstallIntelPluginModule's Skip gate).
+type HasAnyIntelGPU struct {
+	common.KubePrepare
+}
+
+func (p *HasAnyIntelGPU) PreCheck(runtime connector.Runtime) (bool, error) {
+	si := runtime.GetSystemInfo()
+	return si.IsIntelGPU() || si.IsIntelDGPU(), nil
+}
+
 // HasQualifyingIntelDGPU is a task Prepare that only lets the discrete-GPU driver
 // install run when there is a discrete Intel GPU that is in-tree and whose
 // running kernel meets the minimum requirement.
@@ -128,7 +154,11 @@ type HasQualifyingIntelDGPU struct {
 }
 
 func (p *HasQualifyingIntelDGPU) PreCheck(runtime connector.Runtime) (bool, error) {
-	return classifyIntelGPUs(runtime).hasQualifyingDGPU, nil
+	plan, err := classifyIntelGPUs(runtime)
+	if err != nil {
+		return false, err
+	}
+	return plan.hasQualifyingDGPU, nil
 }
 
 // InstallIntelDGPUDrivers installs the Intel discrete-GPU host driver stack on
@@ -319,4 +349,75 @@ func hasRunningPod(phases string) bool {
 		}
 	}
 	return false
+}
+
+// InstallXpumd installs the Intel XPUMD metrics daemon (Helm) for discrete GPUs.
+type InstallXpumd struct {
+	common.KubeAction
+}
+
+func (t *InstallXpumd) Execute(runtime connector.Runtime) error {
+	chartPath := path.Join(runtime.GetInstallerDir(), xpumdChartRelDir)
+	if !util.IsExist(chartPath) {
+		return fmt.Errorf("xpumd chart not found at %s", chartPath)
+	}
+
+	config, err := ctrl.GetConfig()
+	if err != nil {
+		return err
+	}
+	actionConfig, settings, err := utils.InitConfig(config, xpumdNamespace)
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	// Chart values.yaml already contains Olares defaults (gpuAccess=plugin, prometheus, etc).
+	vals := map[string]interface{}{}
+	if err := utils.UpgradeCharts(ctx, actionConfig, settings, xpumdReleaseName, chartPath, "", xpumdNamespace, vals, false); err != nil {
+		return errors.Wrap(err, "install/upgrade xpumd chart")
+	}
+
+	// Helm does not move resources across namespaces on upgrade; remove the old
+	// ServiceMonitor left in kube-system from earlier chart revisions.
+	kubectlpath, err := util.GetCommand(common.CommandKubectl)
+	if err == nil {
+		_, _ = runtime.GetRunner().SudoCmd(
+			fmt.Sprintf("%s delete servicemonitor -n %s %s --ignore-not-found", kubectlpath, xpumdNamespace, xpumdReleaseName),
+			false, false)
+	}
+
+	logger.Info("Intel xpumd chart installed/upgraded")
+	return nil
+}
+
+// CheckXpumd waits until the xpumd pod on this node is Running.
+type CheckXpumd struct {
+	common.KubeAction
+}
+
+func (t *CheckXpumd) Execute(runtime connector.Runtime) error {
+	kubectlpath, err := util.GetCommand(common.CommandKubectl)
+	if err != nil {
+		return fmt.Errorf("kubectl not found")
+	}
+
+	nodeName, err := os.Hostname()
+	if err != nil {
+		return errors.Wrap(errors.WithStack(err), "get hostname error")
+	}
+	nodeName = strings.ToLower(nodeName)
+
+	selector := "app.kubernetes.io/name=xpumd,app.kubernetes.io/instance=xpumd"
+	fieldSelector := fmt.Sprintf("spec.nodeName=%s", nodeName)
+	cmd := fmt.Sprintf("%s get pod -n %s -l '%s' --field-selector '%s' -o jsonpath='{.items[*].status.phase}'",
+		kubectlpath, xpumdNamespace, selector, fieldSelector)
+
+	rphase, _ := runtime.GetRunner().SudoCmd(cmd, false, false)
+	if hasRunningPod(rphase) {
+		return nil
+	}
+	return fmt.Errorf("xpumd pod state is %q (want Running)", rphase)
 }

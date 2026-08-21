@@ -110,7 +110,7 @@ Examples:
 				return err
 			}
 			opts := chatOptions{
-				Model:    model,
+				Model:    callModel(model, categoryChat),
 				System:   system,
 				Images:   images,
 				Stream:   !noStream,
@@ -127,7 +127,7 @@ Examples:
 			return runCallChat(c.Context(), f, prompt, opts)
 		},
 	}
-	cmd.Flags().StringVar(&model, "model", "", "model to use; the workspace chat default when omitted")
+	cmd.Flags().StringVar(&model, "model", "", modelFlagHelp(categoryChat))
 	cmd.Flags().StringVar(&system, "system", "", "system instruction sent before the prompt")
 	cmd.Flags().StringArrayVar(&images, "image", nil, "attach a local image file (repeatable)")
 	cmd.Flags().IntVar(&maxTokens, "max-tokens", 0, "cap the answer length in tokens")
@@ -168,10 +168,7 @@ func runCallChat(ctx context.Context, f *cmdutil.Factory, prompt string, opts ch
 	if err != nil {
 		return err
 	}
-	dp, _, err := dataPlane(ctx, pc, opts.APIKey)
-	if err != nil {
-		return err
-	}
+	dp := dataPlane(pc, opts.APIKey)
 
 	msgs := make([]chatMessage, 0, 2)
 	if s := strings.TrimSpace(opts.System); s != "" {
@@ -195,7 +192,7 @@ func runCallChat(ctx context.Context, f *cmdutil.Factory, prompt string, opts ch
 	}
 
 	var resp chatResponse
-	if err := dp.doJSON(ctx, "POST", dataPlaneAPI+"/chat/completions", req, &resp); err != nil {
+	if err := dp.doJSON(ctx, "POST", epChatCompletions, req, &resp); err != nil {
 		return callErr(err)
 	}
 	if format == FormatJSON {
@@ -269,14 +266,14 @@ func streamChat(ctx context.Context, dp *routerClient, req chatRequest, quiet bo
 	if err != nil {
 		return fmt.Errorf("marshal request body: %w", err)
 	}
-	resp, err := dp.do(ctx, "POST", dataPlaneAPI+"/chat/completions", bytes.NewReader(buf), "application/json")
+	resp, err := dp.do(ctx, "POST", epChatCompletions, bytes.NewReader(buf), "application/json")
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode/100 != 2 {
 		body, _ := io.ReadAll(resp.Body)
-		return callErr(dp.formatErr("POST", dataPlaneAPI+"/chat/completions", resp.StatusCode, body))
+		return callErr(dp.formatErr("POST", epChatCompletions, resp.StatusCode, body))
 	}
 
 	var (

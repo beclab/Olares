@@ -9,7 +9,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"text/tabwriter"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -25,9 +24,15 @@ import (
 // PUT    /console/api/quotas/:id
 // DELETE /console/api/quotas/:id
 //
-// A quota is attached to a scope — one key, one person, or one model — and
-// caps either spend or rate. Router evaluates them on the call path, so a
-// breach is a refused request rather than a report after the fact.
+// A quota is attached to a scope — one key, one person, one model, or one
+// Olares application — and caps either spend or rate. Router evaluates them on
+// the call path, so a breach is a refused request rather than a report after the
+// fact.
+//
+// The application scope is the only control there is over an application. It
+// arrives vouched for by the platform, carrying an appid rather than a
+// credential Router issued, so there is nothing to revoke: a ceiling of zero is
+// how one is stopped and raising it is how it starts again.
 //
 // The routes are per (scope, kind) rows with their own ids, which is a shape
 // nobody wants to hold in their head. This tree presents them as settings on a
@@ -52,17 +57,28 @@ const (
 	quotaBudget = "max_budget_usd"
 	quotaRPM    = "max_rpm"
 	quotaTPM    = "max_tpm"
+	// quotaConcurrent caps requests in flight at one instant, which is a
+	// different question from the other three. They all measure a window;
+	// this measures now. It is the only one that says anything useful about a
+	// single local GPU, whose price is zero and whose per-minute rate does
+	// not describe how much of it is busy.
+	quotaConcurrent = "max_concurrent"
 
 	scopeKey   = "api_key"
 	scopeUser  = "user"
 	scopeModel = "provider_model"
+	// scopeApp caps an Olares application by the appid its calls carry. It is
+	// the only control there is over one: an application is not registered
+	// with Router and has no key to revoke, so a ceiling of zero is how it is
+	// stopped, and raising it is how it starts again.
+	scopeApp = "app"
 )
 
 func NewQuotaCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "quota",
-		Short: "spend and rate ceilings on a key, a person, or a model",
-		Long: `Cap what a key, a person or a model is allowed to consume.
+		Short: "spend and rate ceilings on a key, a person, a model, or an application",
+		Long: `Cap what a key, a person, a model or an application may consume.
 
 Router checks these on the call path, so a breach is a refused request rather
 than a line in a report. Three kinds:
@@ -101,22 +117,36 @@ type quotaTarget struct {
 	Label     string
 }
 
-func resolveQuotaTarget(ctx context.Context, pc *preparedClient, keyRef, userRef, modelRef string) (*quotaTarget, error) {
-	given := 0
-	for _, s := range []string{keyRef, userRef, modelRef} {
+// quotaRefs is the four ways of naming a scope, as typed. Exactly one is set.
+type quotaRefs struct {
+	Key   string
+	User  string
+	Model string
+	App   string
+}
+
+func (r quotaRefs) given() int {
+	n := 0
+	for _, s := range []string{r.Key, r.User, r.Model, r.App} {
 		if strings.TrimSpace(s) != "" {
-			given++
+			n++
 		}
 	}
-	switch given {
+	return n
+}
+
+const quotaScopeFlags = "--key, --user, --model or --caller-app"
+
+func resolveQuotaTarget(ctx context.Context, pc *preparedClient, refs quotaRefs) (*quotaTarget, error) {
+	switch refs.given() {
 	case 1:
 	case 0:
-		return nil, fmt.Errorf("name what the quota applies to with --key, --user or --model")
+		return nil, fmt.Errorf("name what the quota applies to with %s", quotaScopeFlags)
 	default:
-		return nil, fmt.Errorf("a quota applies to one thing; pass only one of --key, --user or --model")
+		return nil, fmt.Errorf("a quota applies to one thing; pass only one of %s", quotaScopeFlags)
 	}
 
-	if s := strings.TrimSpace(keyRef); s != "" {
+	if s := strings.TrimSpace(refs.Key); s != "" {
 		found, err := resolveKey(ctx, pc, s)
 		if err != nil {
 			return nil, err
@@ -124,77 +154,43 @@ func resolveQuotaTarget(ctx context.Context, pc *preparedClient, keyRef, userRef
 		return &quotaTarget{ScopeType: scopeKey, ScopeID: found.ID,
 			Label: fmt.Sprintf("key %s (%s)", found.Name, found.KeyPrefix)}, nil
 	}
-	if s := strings.TrimSpace(userRef); s != "" {
+	if s := strings.TrimSpace(refs.User); s != "" {
 		id, err := resolveUserID(ctx, pc, s)
 		if err != nil {
 			return nil, err
 		}
 		return &quotaTarget{ScopeType: scopeUser, ScopeID: id, Label: "user " + s}, nil
 	}
-	s := strings.TrimSpace(modelRef)
-	row, err := findModelByQualifiedName(ctx, pc, s)
+	if s := strings.TrimSpace(refs.App); s != "" {
+		id, err := resolveCallerAppID(ctx, pc, s)
+		if err != nil {
+			return nil, err
+		}
+		return &quotaTarget{ScopeType: scopeApp, ScopeID: id, Label: "application " + s}, nil
+	}
+	row, err := resolveModel(ctx, pc, strings.TrimSpace(refs.Model))
 	if err != nil {
 		return nil, err
 	}
-	return &quotaTarget{ScopeType: scopeModel, ScopeID: row.Model.ID,
-		Label: fmt.Sprintf("model %s on %s", row.Model.Name, row.ProviderName)}, nil
-}
-
-// findModelByQualifiedName takes <provider>/<model>, the same spelling a key's
-// allowlist uses, so one form of a model's name works everywhere.
-func findModelByQualifiedName(ctx context.Context, pc *preparedClient, ref string) (*adminModelRow, error) {
-	rows, err := listAllModels(ctx, pc)
-	if err != nil {
-		return nil, err
-	}
-	for i := range rows {
-		r := &rows[i]
-		if strings.EqualFold(r.ProviderName+"/"+r.Model.Name, ref) {
-			return r, nil
-		}
-		if r.Model.Alias != nil && strings.EqualFold(r.ProviderName+"/"+*r.Model.Alias, ref) {
-			return r, nil
-		}
-	}
-	// A bare model name is unambiguous often enough to accept, and rejecting it
-	// with the qualified form spelled out beats a lookup failure.
-	var matches []*adminModelRow
-	for i := range rows {
-		if strings.EqualFold(rows[i].Model.Name, ref) {
-			matches = append(matches, &rows[i])
-		}
-	}
-	if len(matches) == 1 {
-		return matches[0], nil
-	}
-	if len(matches) > 1 {
-		names := make([]string, 0, len(matches))
-		for _, m := range matches {
-			names = append(names, m.ProviderName+"/"+m.Model.Name)
-		}
-		return nil, fmt.Errorf("%d providers serve a model named %q; name one of %s",
-			len(matches), ref, strings.Join(names, ", "))
-	}
-	return nil, fmt.Errorf("no model %q; `olares-cli router list` shows what is configured, "+
-		"and the form here is <provider>/<model>", ref)
+	return &quotaTarget{ScopeType: scopeModel, ScopeID: row.ProviderModelID,
+		Label: "model " + row.label()}, nil
 }
 
 func newQuotaListCommand(f *cmdutil.Factory) *cobra.Command {
 	var (
-		output   string
-		keyRef   string
-		userRef  string
-		modelRef string
+		output string
+		refs   quotaRefs
 	)
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "every quota, with what it applies to",
 		Long: `List the quotas in force.
 
-APPLIES TO names the key, person or model each one covers, rather than the id
-Router stores, because an id says nothing about who is about to be refused.
+APPLIES TO names the key, person, model or application each one covers, rather
+than the id Router stores, because an id says nothing about who is about to be
+refused.
 
-Narrow to one scope with --key, --user or --model.
+Narrow to one scope with --key, --user, --model or --caller-app.
 
 Examples:
   olares-cli router quota list
@@ -203,17 +199,25 @@ Examples:
 `,
 		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
-			return runQuotaList(c.Context(), f, keyRef, userRef, modelRef, output)
+			return runQuotaList(c.Context(), f, refs, output)
 		},
 	}
-	cmd.Flags().StringVar(&keyRef, "key", "", "only quotas on this key, by name, prefix or id")
-	cmd.Flags().StringVar(&userRef, "user", "", "only quotas on this user, by name or id")
-	cmd.Flags().StringVar(&modelRef, "model", "", "only quotas on this model, as <provider>/<model>")
+	addQuotaScopeFlags(cmd, &refs, "only quotas on")
 	addOutputFlag(cmd, &output)
 	return cmd
 }
 
-func runQuotaList(ctx context.Context, f *cmdutil.Factory, keyRef, userRef, modelRef, outputRaw string) error {
+// addQuotaScopeFlags names the four scopes the same way in all three verbs.
+// lead is the clause each usage line starts with: "the key to cap", "only
+// quotas on this key".
+func addQuotaScopeFlags(cmd *cobra.Command, refs *quotaRefs, lead string) {
+	cmd.Flags().StringVar(&refs.Key, "key", "", lead+" this key, by name, prefix or id")
+	cmd.Flags().StringVar(&refs.User, "user", "", lead+" this user, by name or id")
+	cmd.Flags().StringVar(&refs.Model, "model", "", lead+" this model, as <provider>/<model>")
+	cmd.Flags().StringVar(&refs.App, "caller-app", "", lead+" this application, by title, app name or appid")
+}
+
+func runQuotaList(ctx context.Context, f *cmdutil.Factory, refs quotaRefs, outputRaw string) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -226,8 +230,8 @@ func runQuotaList(ctx context.Context, f *cmdutil.Factory, keyRef, userRef, mode
 		return err
 	}
 	var target *quotaTarget
-	if strings.TrimSpace(keyRef) != "" || strings.TrimSpace(userRef) != "" || strings.TrimSpace(modelRef) != "" {
-		target, err = resolveQuotaTarget(ctx, pc, keyRef, userRef, modelRef)
+	if refs.given() > 0 {
+		target, err = resolveQuotaTarget(ctx, pc, refs)
 		if err != nil {
 			return err
 		}
@@ -243,20 +247,12 @@ func runQuotaList(ctx context.Context, f *cmdutil.Factory, keyRef, userRef, mode
 }
 
 func listQuotas(ctx context.Context, pc *preparedClient, target *quotaTarget) ([]quotaRow, error) {
-	path := consoleAPI + "/quotas"
+	q := url.Values{}
 	if target != nil {
-		q := url.Values{}
 		q.Set("scope_type", target.ScopeType)
 		q.Set("scope_id", target.ScopeID)
-		path += "?" + q.Encode()
 	}
-	var env struct {
-		Items []quotaRow `json:"items"`
-	}
-	if err := pc.router.doJSON(ctx, "GET", path, nil, &env); err != nil {
-		return nil, err
-	}
-	return env.Items, nil
+	return collection[quotaRow](ctx, pc, withQuery(epQuotas, q))
 }
 
 func renderQuotaList(ctx context.Context, pc *preparedClient, w io.Writer, rows []quotaRow, target *quotaTarget) error {
@@ -269,22 +265,17 @@ func renderQuotaList(ctx context.Context, pc *preparedClient, w io.Writer, rows 
 		return err
 	}
 	labels := scopeLabels(ctx, pc, rows)
-	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	if _, err := fmt.Fprintln(tw, "APPLIES TO\tCAPS\tLIMIT\tWARN AT\tID"); err != nil {
-		return err
-	}
+	t := newTable(w, "APPLIES TO", "CAPS", "LIMIT", "WARN AT", "ID")
 	for i := range rows {
 		r := &rows[i]
 		label := labels[r.ScopeType+":"+r.ScopeID]
 		if label == "" {
 			label = r.ScopeType + " " + r.ScopeID
 		}
-		if _, err := fmt.Fprintf(tw, "%s\t%s\t%s\t%d%%\t%d\n",
-			label, quotaKindLabel(r.QuotaType), quotaLimitLabel(r), r.SoftThresholdPct, r.ID); err != nil {
-			return err
-		}
+		t.row(label, quotaKindLabel(r.QuotaType), quotaLimitLabel(r),
+			fmt.Sprintf("%d%%", r.SoftThresholdPct), strconv.FormatInt(r.ID, 10))
 	}
-	if err := tw.Flush(); err != nil {
+	if err := t.flush(); err != nil {
 		return err
 	}
 	_, err := fmt.Fprintln(w, "\nWARN AT is where Router starts warning; the request is only refused at the limit. "+
@@ -300,6 +291,8 @@ func quotaKindLabel(t string) string {
 		return "requests/min"
 	case quotaTPM:
 		return "tokens/min"
+	case quotaConcurrent:
+		return "in flight"
 	default:
 		return t
 	}
@@ -340,31 +333,42 @@ func scopeLabels(ctx context.Context, pc *preparedClient, rows []quotaRow) map[s
 			}
 		}
 	}
+	if need[scopeApp] {
+		if rows, err := callerAppBuckets(ctx, pc); err == nil {
+			for i := range rows {
+				out[scopeApp+":"+rows[i].Key] = "application " + nonEmpty(rows[i].Label)
+			}
+		}
+	}
 	return out
 }
 
 func newQuotaSetCommand(f *cmdutil.Factory) *cobra.Command {
 	var (
-		output   string
-		keyRef   string
-		userRef  string
-		modelRef string
-		budget   float64
-		rpm      float64
-		tpm      float64
-		warnAt   int
+		output     string
+		refs       quotaRefs
+		budget     float64
+		rpm        float64
+		tpm        float64
+		concurrent float64
+		warnAt     int
 	)
 	cmd := &cobra.Command{
 		Use:   "set",
 		Short: "add or change a ceiling",
-		Long: `Set a quota on a key, a person, or a model.
+		Long: `Set a quota on a key, a person, a model, or an application.
 
-Name the scope with exactly one of --key, --user or --model, and what to cap with
-one or more of --budget, --rpm and --tpm. Each kind is a separate ceiling, so
-setting two in one command writes two of them.
+Name the scope with exactly one of --key, --user, --model or --caller-app, and
+what to cap with one or more of --budget, --rpm, --tpm and --concurrent. Each
+kind is a separate ceiling, so setting two in one command writes two of them.
 
 An existing ceiling of the same kind is changed rather than duplicated, which is
 what makes this safe to run twice.
+
+--concurrent caps requests in flight at one instant. The other three measure a
+window; this one measures now, which is the only question that says anything
+about a single local GPU — its price is zero and its per-minute rate does not
+describe how much of it is busy.
 
 --warn-at moves the point where Router starts warning, as a percentage of the
 limit. It defaults to 80 on a new quota and is left alone on an existing one
@@ -373,10 +377,20 @@ unless given.
 Raising a budget is how a scope that has stopped working starts again: spend is
 cumulative and nothing resets it.
 
+A ceiling of zero switches the scope off, and is not the same as having none:
+"quota clear" removes the ceiling, which means no limit at all. Zero is how an
+application gets stopped, since it holds no key to revoke.
+
+--caller-app caps an Olares application. It is the only control over one: an
+application is vouched for by the platform rather than registered here, so there
+is no key of its own to revoke, and a ceiling is what stops it.
+
 Examples:
   olares-cli router quota set --user pptest01 --budget 25
   olares-cli router quota set --key ci --rpm 60 --tpm 120000
   olares-cli router quota set --model "openai/gpt-4o" --rpm 10 --warn-at 90
+  olares-cli router quota set --model "Olares/qwen3-8b" --concurrent 2
+  olares-cli router quota set --caller-app wise --budget 0
 `,
 		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
@@ -390,13 +404,21 @@ Examples:
 			if c.Flags().Changed("tpm") {
 				want[quotaTPM] = tpm
 			}
-			if len(want) == 0 {
-				return fmt.Errorf("say what to cap with --budget, --rpm or --tpm")
+			if c.Flags().Changed("concurrent") {
+				want[quotaConcurrent] = concurrent
 			}
+			if len(want) == 0 {
+				return fmt.Errorf("say what to cap with --budget, --rpm, --tpm or --concurrent")
+			}
+			// Zero is allowed and means "refuses everything", which is a
+			// state of its own: an application holds no key to revoke, so a
+			// ceiling of zero is the only way to stop one. Removing the row
+			// means the opposite — no limit at all.
 			for kind, v := range want {
-				if v <= 0 {
-					return fmt.Errorf("--%s must be greater than zero; "+
-						"`olares-cli router quota clear` removes a ceiling instead", flagForQuotaKind(kind))
+				if v < 0 {
+					return fmt.Errorf("--%s cannot be negative; zero switches the scope off and "+
+						"`olares-cli router quota clear` removes the ceiling entirely",
+						flagForQuotaKind(kind))
 				}
 			}
 			var pct *int
@@ -406,15 +428,14 @@ Examples:
 				}
 				pct = &warnAt
 			}
-			return runQuotaSet(c.Context(), f, keyRef, userRef, modelRef, want, pct, output)
+			return runQuotaSet(c.Context(), f, refs, want, pct, output)
 		},
 	}
-	cmd.Flags().StringVar(&keyRef, "key", "", "the key to cap, by name, prefix or id")
-	cmd.Flags().StringVar(&userRef, "user", "", "the user to cap, by name or id")
-	cmd.Flags().StringVar(&modelRef, "model", "", "the model to cap, as <provider>/<model>")
+	addQuotaScopeFlags(cmd, &refs, "cap")
 	cmd.Flags().Float64Var(&budget, "budget", 0, "cap total spend, in US dollars, for all time")
 	cmd.Flags().Float64Var(&rpm, "rpm", 0, "cap requests per minute")
 	cmd.Flags().Float64Var(&tpm, "tpm", 0, "cap tokens per minute")
+	cmd.Flags().Float64Var(&concurrent, "concurrent", 0, "cap requests in flight at once")
 	cmd.Flags().IntVar(&warnAt, "warn-at", 80, "warn at this percentage of the limit")
 	addOutputFlag(cmd, &output)
 	return cmd
@@ -426,12 +447,14 @@ func flagForQuotaKind(kind string) string {
 		return "budget"
 	case quotaRPM:
 		return "rpm"
+	case quotaConcurrent:
+		return "concurrent"
 	default:
 		return "tpm"
 	}
 }
 
-func runQuotaSet(ctx context.Context, f *cmdutil.Factory, keyRef, userRef, modelRef string, want map[string]float64, warnAt *int, outputRaw string) error {
+func runQuotaSet(ctx context.Context, f *cmdutil.Factory, refs quotaRefs, want map[string]float64, warnAt *int, outputRaw string) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -443,7 +466,7 @@ func runQuotaSet(ctx context.Context, f *cmdutil.Factory, keyRef, userRef, model
 	if err != nil {
 		return err
 	}
-	target, err := resolveQuotaTarget(ctx, pc, keyRef, userRef, modelRef)
+	target, err := resolveQuotaTarget(ctx, pc, refs)
 	if err != nil {
 		return err
 	}
@@ -471,7 +494,7 @@ func runQuotaSet(ctx context.Context, f *cmdutil.Factory, keyRef, userRef, model
 			if warnAt != nil {
 				body["soft_threshold_pct"] = *warnAt
 			}
-			path := consoleAPI + "/quotas/" + strconv.FormatInt(cur.ID, 10)
+			path := epQuota(cur.ID)
 			if err := pc.router.doJSON(ctx, "PUT", path, body, &row); err != nil {
 				return err
 			}
@@ -485,7 +508,7 @@ func runQuotaSet(ctx context.Context, f *cmdutil.Factory, keyRef, userRef, model
 			if warnAt != nil {
 				body["soft_threshold_pct"] = *warnAt
 			}
-			if err := pc.router.doJSON(ctx, "POST", consoleAPI+"/quotas", body, &row); err != nil {
+			if err := pc.router.doJSON(ctx, "POST", epQuotas, body, &row); err != nil {
 				return err
 			}
 		}
@@ -507,24 +530,26 @@ func runQuotaSet(ctx context.Context, f *cmdutil.Factory, keyRef, userRef, model
 
 func newQuotaClearCommand(f *cmdutil.Factory) *cobra.Command {
 	var (
-		keyRef    string
-		userRef   string
-		modelRef  string
-		budget    bool
-		rpm       bool
-		tpm       bool
-		assumeYes bool
+		refs       quotaRefs
+		budget     bool
+		rpm        bool
+		tpm        bool
+		concurrent bool
+		assumeYes  bool
+		output     string
 	)
 	cmd := &cobra.Command{
 		Use:   "clear",
 		Short: "remove a ceiling",
-		Long: `Remove quotas from a key, a person, or a model.
+		Long: `Remove quotas from a key, a person, a model, or an application.
 
-Without --budget, --rpm or --tpm every ceiling on the scope goes, which is the
-usual intent and the reason for the prompt. Naming kinds removes only those.
+Without --budget, --rpm, --tpm or --concurrent every ceiling on the scope goes,
+which is the usual intent and the reason for the prompt. Naming kinds removes
+only those.
 
-Removing a ceiling is not the same as raising it: nothing caps the scope
-afterwards.
+Removing a ceiling is not the same as raising it, and not the same as setting it
+to zero: nothing caps the scope afterwards. "quota set --budget 0" is how a
+scope is switched off.
 
 Confirmation is required. --yes skips the prompt and is mandatory when stdin is
 not a terminal.
@@ -545,28 +570,45 @@ Examples:
 			if tpm {
 				kinds[quotaTPM] = true
 			}
-			return runQuotaClear(c.Context(), f, keyRef, userRef, modelRef, kinds, assumeYes)
+			if concurrent {
+				kinds[quotaConcurrent] = true
+			}
+			return runQuotaClear(c.Context(), f, refs, kinds, assumeYes, output)
 		},
 	}
-	cmd.Flags().StringVar(&keyRef, "key", "", "the key to uncap, by name, prefix or id")
-	cmd.Flags().StringVar(&userRef, "user", "", "the user to uncap, by name or id")
-	cmd.Flags().StringVar(&modelRef, "model", "", "the model to uncap, as <provider>/<model>")
+	addQuotaScopeFlags(cmd, &refs, "uncap")
 	cmd.Flags().BoolVar(&budget, "budget", false, "remove only the spend ceiling")
 	cmd.Flags().BoolVar(&rpm, "rpm", false, "remove only the requests-per-minute ceiling")
 	cmd.Flags().BoolVar(&tpm, "tpm", false, "remove only the tokens-per-minute ceiling")
-	cmd.Flags().BoolVar(&assumeYes, "yes", false, "skip the confirmation prompt (required when stdin is not a terminal)")
+	cmd.Flags().BoolVar(&concurrent, "concurrent", false, "remove only the in-flight ceiling")
+	addConfirmFlag(cmd, &assumeYes)
+	addOutputFlag(cmd, &output)
 	return cmd
 }
 
-func runQuotaClear(ctx context.Context, f *cmdutil.Factory, keyRef, userRef, modelRef string, kinds map[string]bool, assumeYes bool) error {
+// quotaClearResult is what -o json answers with. Removed carries the rows as
+// they were before the delete, because afterwards there is nothing to describe
+// them with, and a caller reconciling its own state needs to know which kinds
+// went rather than only how many.
+type quotaClearResult struct {
+	Scope   string     `json:"scope"`
+	Removed []quotaRow `json:"removed"`
+}
+
+func runQuotaClear(ctx context.Context, f *cmdutil.Factory, refs quotaRefs, kinds map[string]bool,
+	assumeYes bool, outputRaw string) error {
 	if ctx == nil {
 		ctx = context.Background()
+	}
+	format, err := parseFormat(outputRaw)
+	if err != nil {
+		return err
 	}
 	pc, err := prepare(ctx, f)
 	if err != nil {
 		return err
 	}
-	target, err := resolveQuotaTarget(ctx, pc, keyRef, userRef, modelRef)
+	target, err := resolveQuotaTarget(ctx, pc, refs)
 	if err != nil {
 		return err
 	}
@@ -581,6 +623,9 @@ func runQuotaClear(ctx context.Context, f *cmdutil.Factory, keyRef, userRef, mod
 		}
 	}
 	if len(doomed) == 0 {
+		if format == FormatJSON {
+			return printJSON(os.Stdout, quotaClearResult{Scope: target.Label, Removed: []quotaRow{}})
+		}
 		_, werr := fmt.Fprintf(os.Stdout, "nothing to remove: no such quota applies to %s\n", target.Label)
 		return werr
 	}
@@ -598,14 +643,20 @@ func runQuotaClear(ctx context.Context, f *cmdutil.Factory, keyRef, userRef, mod
 		}
 	}
 	for i := range doomed {
-		path := consoleAPI + "/quotas/" + strconv.FormatInt(doomed[i].ID, 10)
+		path := epQuota(doomed[i].ID)
 		if err := pc.router.doJSON(ctx, "DELETE", path, nil, nil); err != nil {
 			return err
+		}
+		if format == FormatJSON {
+			continue
 		}
 		if _, err := fmt.Fprintf(os.Stdout, "removed the %s ceiling on %s\n",
 			quotaKindLabel(doomed[i].QuotaType), target.Label); err != nil {
 			return err
 		}
+	}
+	if format == FormatJSON {
+		return printJSON(os.Stdout, quotaClearResult{Scope: target.Label, Removed: doomed})
 	}
 	return nil
 }

@@ -523,19 +523,40 @@ var (
 					constants.AppSharedEntrancesLabel: "true",
 				},
 			},
+			PolicyTypes: []netv1.PolicyType{
+				netv1.PolicyTypeIngress,
+			},
 			Ingress: []netv1.NetworkPolicyIngressRule{
-				{},
-				// {
-				// 	From: []netv1.NetworkPolicyPeer{
-				// 		{
-				// 			NamespaceSelector: &metav1.LabelSelector{
-				// 				MatchLabels: map[string]string{
-				// 					NamespaceSharedLabel: "true",
-				// 				},
-				// 			},
-				// 		},
-				// 	},
-				// },
+				{
+					From: []netv1.NetworkPolicyPeer{
+						{
+							PodSelector: &metav1.LabelSelector{},
+						},
+						{
+							NamespaceSelector: &metav1.LabelSelector{
+								MatchExpressions: []metav1.LabelSelectorRequirement{
+									{
+										Key:      "kubernetes.io/metadata.name",
+										Operator: metav1.LabelSelectorOpIn,
+										Values:   SharedEntranceOSNamespaces,
+									},
+								},
+							},
+						},
+						{
+							NamespaceSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									"kubernetes.io/metadata.name": L4ProxyNamespace,
+								},
+							},
+							PodSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									"app": L4ProxyAppLabel,
+								},
+							},
+						},
+					},
+				},
 			},
 		},
 	} // end NPSharedEntrance

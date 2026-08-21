@@ -233,11 +233,9 @@ func (r *TailScaleACLController) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, err
 	}
 
-	// If no ACLs need to be applied there is no need to update.
-	if len(acls) == 0 {
-		return ctrl.Result{}, nil
-	}
-
+	// Always rebuild acl.json from app ACLs + defaults. An empty app ACL
+	// set must still rewrite the ConfigMap so stale entries (e.g. *:22 left
+	// behind after "Allow SSH over VPN" is disabled) are cleared.
 	aclPolicyByte, err := makeACLPolicy(acls)
 	if err != nil {
 		return ctrl.Result{}, err

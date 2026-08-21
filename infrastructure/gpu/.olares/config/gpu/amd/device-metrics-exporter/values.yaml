@@ -1,0 +1,109 @@
+# -- Specify the platform to deploy the metrics exporter, k8s or openshift
+platform: k8s
+# -- Add node affinity for the daemonset of metrics exporter
+affinity: {}
+# -- Add node selector for the daemonset of metrics exporter
+nodeSelector:
+  kubernetes.io/arch: amd64
+# -- Add tolerations for deploying metrics exporter on tainted nodes
+tolerations: []
+# -- Set priorityClassName for the metrics exporter pods (optional)
+priorityClassName: ""
+# -- Add annotations to the pods
+podAnnotations: {}
+# -- DaemonSet upgrade policy configuration
+upgradePolicy:
+  # -- The type of daemonset upgrade: RollingUpdate or OnDelete
+  upgradeStrategy: RollingUpdate
+  # -- The maximum number of Pods that can be unavailable during the update process
+  # Can be an absolute number (e.g., 1, 5) or a percentage (e.g., "25%")
+  # Only applicable when upgradeStrategy is RollingUpdate
+  maxUnavailable: "1"
+# -- kubelet configuration
+kubelet:
+  # -- host path for kubelet pod-resources directory (optional)
+  #    - vanilla k8s kubelet path: /var/lib/kubelet/pod-resources
+  #    - micro k8s kubelet path: /var/snap/microk8s/common/var/lib/kubelet/pod-resources/
+  #    - default to /var/lib/kubelet/pod-resources
+  podResourceAPISocketPath: /var/lib/kubelet/pod-resources
+# -- Additional arguments to pass to the exporter container (for testing only)
+args: []
+# -- monitoring configuration
+monitor:
+  # -- Enable or disable specific resource monitoring components.
+  resources:
+    # Note: GPU and NIC monitoring cannot be enabled simultaneously at this time.
+    # Monitor GPU resources (enable for GPU nodes)
+    gpu: true
+    # Monitor NIC resources (enable for network metrics)
+    nic: false
+# -- Use host network for the metrics exporter pods
+hostNetwork: false
+image:
+  # -- repository URL for the metrics exporter image
+  repository: beclab/rocm-device-metrics-exporter
+  # -- metrics exporter image tag
+  tag: v1.5.1
+  # -- metrics exporter image pullPolicy
+  pullPolicy: IfNotPresent
+  # -- metrics exporter image pullSecret name
+  pullSecrets: ""
+  # -- metrics exporter initContainer image
+  initContainerImage: beclab/aboveos-busybox:1.37.0
+# -- options for the metrics exporter container - default values are set if not specified
+resources:
+  # -- Resource limits and requests for the metrics exporter container
+  limits:
+    # -- CPU limit for the metrics exporter container
+    cpu: "2"
+    # -- Memory limit for the metrics exporter container
+    memory: "4Gi"
+  requests:
+    # -- CPU request for the metrics exporter container
+    cpu: "500m"
+    # -- Memory request for the metrics exporter container
+    memory: "512M"
+service:
+  # -- metrics exporter service type, could be ClusterIP or NodePort
+  type: ClusterIP
+  # -- Add annotations to the service
+  annotations: {}
+  ClusterIP:
+    # -- set port for ClusterIP type service
+    port: 5000
+  NodePort:
+    # -- set port for NodePort type service   
+    port: 5000
+    # -- set nodePort for NodePort type service  
+    nodePort: 32500
+# -- configMap name for the customizing configs and mount into metrics exporter container
+configMap: ""
+# -- ServiceMonitor configuration
+serviceMonitor:
+  # -- Whether to create a ServiceMonitor resource for Prometheus Operator
+  enabled: true
+  # -- Scrape interval for the ServiceMonitor
+  interval: "30s"
+  # -- Honor labels configuration for ServiceMonitor
+  honorLabels: true
+  # -- Honor timestamps configuration for ServiceMonitor
+  honorTimestamps: true
+  # -- Adds node metadata to discovered targets for node-based filtering
+  attachMetadata:
+    node: false
+  # -- Additional labels for the ServiceMonitor
+  labels: {}
+  # -- RelabelConfigs to apply to samples before scraping
+  relabelings:
+    - action: replace
+      sourceLabels:
+      - __meta_kubernetes_pod_node_name
+      targetLabel: node
+  # -- Relabeling rules applied to individual scraped metrics.
+  # Drop AMD iGPU (APU) samples so discrete amd-gpu metrics stay clean.
+  # Matches card_model values such as "Radeon 8060S", "Radeon 890M Graphics",
+  # "Radeon 780M / 760M / 740M", and the generic "Radeon Graphics" APU name.
+  metricRelabelings:
+    - sourceLabels: [card_model]
+      regex: "(.*(?:8060S|8050S|890M|880M|860M|840M|780M|760M|740M).*|^(AMD )?Radeon Graphics$)"
+      action: drop

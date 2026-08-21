@@ -124,6 +124,12 @@ func (c *HTTPClient) DoJSON(ctx context.Context, method, path string, body, out 
 	if c.accessToken != "" {
 		req.Header.Set("X-Authorization", c.accessToken)
 	}
+	for k, v := range requestHeadersFromContext(ctx) {
+		if k == "" || v == "" {
+			continue
+		}
+		req.Header.Set(k, v)
+	}
 
 	resp, err := c.hc.Do(req)
 	if err != nil {
@@ -207,4 +213,26 @@ func truncate(s string, n int) string {
 		return s
 	}
 	return s[:n] + "...(truncated)"
+}
+
+type ctxKeyRequestHeaders struct{}
+
+// ContextWithRequestHeaders attaches extra HTTP headers for a single
+// DoJSON call (e.g. Idempotency-Key on create). Empty maps are ignored.
+func ContextWithRequestHeaders(ctx context.Context, headers map[string]string) context.Context {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if len(headers) == 0 {
+		return ctx
+	}
+	return context.WithValue(ctx, ctxKeyRequestHeaders{}, headers)
+}
+
+func requestHeadersFromContext(ctx context.Context) map[string]string {
+	if ctx == nil {
+		return nil
+	}
+	h, _ := ctx.Value(ctxKeyRequestHeaders{}).(map[string]string)
+	return h
 }

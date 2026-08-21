@@ -8,19 +8,19 @@
 // so it has no fixed subdomain the way files.<terminus> and
 // settings.<terminus> do — app-service gives it a per-install host. Every
 // verb therefore resolves the entrance at runtime; see discovery.go. The
-// `router local` verbs address a second host the same way, because a model
-// application serves its own Model Console on its own entrance.
+// verbs that reach into a model application address a second host the same
+// way, because it serves its own Model Console on its own entrance.
 //
 // Identity. Configuration runs on the active profile's access token, exactly
 // as elsewhere: the Olares edge turns it into the X-BFL-USER header that
 // Router's console plane trusts, so authentication questions there belong to
 // the profile verbs rather than here.
 //
-// Calling a model is the exception, and the reason this tree keeps a secret of
-// its own. Router's /v1 data plane accepts an `sk-*` key or a
-// platform-injected caller identity and by design never a console session, so
-// `router call` presents whichever of the two it can get and mints a key when
-// it can get neither. See dataplane.go for the order and why. Keys issued with
+// Calling a model runs on the same identity. Router's /v1 accepts an `sk-*`
+// key, and failing that reads the caller the Olares edge names — an
+// application's `x-caller-appid`, or a person's X-BFL-USER. That last one is
+// the header the console plane already runs on, so `router call` presents no
+// credential of its own unless one is named; see dataplane.go. Keys issued with
 // `router key` remain what they were — a credential to hand to other software.
 package router
 
@@ -31,6 +31,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -41,7 +42,7 @@ import (
 )
 
 // minOlaresVersion is the oldest line this tree speaks to: the `router`
-// application declares `olares >= 1.12.7-0`. The `router local` verbs share the
+// application declares `olares >= 1.12.7-0`. The Model Console verbs share the
 // floor, because a Model Console with no Router in front of it is not a shape
 // this tree addresses.
 const minOlaresVersion = "1.12.7"
@@ -68,6 +69,20 @@ func addOutputFlag(cmd *cobra.Command, target *string) {
 	cmd.Flags().StringVarP(target, "output", "o", "table", "output format: table, json")
 }
 
+// confirmFlagHelp is the one wording for --yes across this tree. It had three,
+// and the difference was by author rather than by meaning: "skip confirmation"
+// on the delete verbs, "do not ask" on the spec and restart ones. The
+// parenthetical is the part worth keeping — a caller who does not know that a
+// pipe turns the prompt into a failure finds out from a script that broke.
+const confirmFlagHelp = "skip the confirmation prompt (required when stdin is not a terminal)"
+
+// addConfirmFlag registers --yes/-y. Every verb that can destroy something uses
+// it, so the shorthand exists everywhere rather than on the three that happened
+// to declare it.
+func addConfirmFlag(cmd *cobra.Command, target *bool) {
+	cmd.Flags().BoolVarP(target, "yes", "y", false, confirmFlagHelp)
+}
+
 // preparedClient is what every verb needs: the resolved profile (for Desktop
 // addressing and diagnostics), where Router turned out to live, a client
 // pointed at it, and the Desktop client discovery used — kept because Olares
@@ -81,6 +96,10 @@ type preparedClient struct {
 	found   *discoveredRouter
 	desktop *whoami.HTTPClient
 	hc      *http.Client
+
+	// collections holds what has already been read this invocation; see
+	// collection in resolve.go for what invalidates it.
+	collections map[string]memoizedCollection
 }
 
 // prepare resolves the profile, checks the version floor, and locates Router.
@@ -135,6 +154,48 @@ func nonEmpty(s string) string {
 	return s
 }
 
+func strDeref(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}
+
+// i18nText picks one string out of a locale map.
+//
+// Three unrelated wire shapes arrive as one of these: a vendor label out of the
+// provider catalog and a model card's label, both keyed the Dify way (`en_US`),
+// and a Market application's title and description, keyed the way the
+// application's own i18n bundle is keyed (`en-US`, `zh-CN`). Underscore and
+// hyphen name the same locale, so both spellings are tried.
+//
+// English first, because these are read on a terminal by whoever runs the
+// command and the CLI has no locale of its own to consult. The last resort is
+// the alphabetically first non-empty entry rather than whatever the map happens
+// to yield: Go randomises that, and a column whose text changes between two runs
+// of the same command reads as a machine that changed.
+func i18nText(m map[string]string) string {
+	if len(m) == 0 {
+		return ""
+	}
+	for _, k := range []string{"en_US", "en-US", "en", "zh_Hans", "zh-CN", "zh_CN", "zh"} {
+		if v := strings.TrimSpace(m[k]); v != "" {
+			return v
+		}
+	}
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		if v := strings.TrimSpace(m[k]); v != "" {
+			return v
+		}
+	}
+	return ""
+}
+
 func boolStr(b bool) string {
 	if b {
 		return "yes"
@@ -147,6 +208,23 @@ func truncate(s string, n int) string {
 		return s
 	}
 	return s[:n] + "...(truncated)"
+}
+
+// humanBytes is for confirming a file was written. Powers of two, because that
+// is what a file manager will say about the same file a moment later.
+func humanBytes(n int64) string {
+	const unit = 1024
+	if n < unit {
+		return fmt.Sprintf("%d B", n)
+	}
+	value := float64(n)
+	for _, suffix := range []string{"KiB", "MiB", "GiB", "TiB"} {
+		value /= unit
+		if value < unit {
+			return fmt.Sprintf("%.1f %s", value, suffix)
+		}
+	}
+	return fmt.Sprintf("%.1f PiB", value/unit)
 }
 
 // clip shortens a table cell. Unlike truncate it says so with one character:

@@ -9,9 +9,9 @@ import (
 	"github.com/beclab/Olares/cli/pkg/gpu"
 )
 
-// LabelNodeModule only (re-)applies the AMD mode label, without touching the
-// device plugin or ROCm. `gpu enable` uses it to restore the label that
-// `gpu disable` wiped; the action is a no-op without a Ryzen AI Max APU or ROCm.
+// LabelNodeModule only (re-)applies the AMD mode label(s), without touching the
+// device plugin or ROCm. `gpu enable` uses it to restore labels that
+// `gpu disable` wiped; the action is a no-op without a supported AMD GPU or ROCm.
 type LabelNodeModule struct {
 	common.KubeModule
 }
@@ -88,6 +88,7 @@ func (m *InstallAmdContainerToolkitModule) Init() {
 }
 
 // InstallAmdPluginModule installs AMD GPU device plugin on Kubernetes.
+// On discrete AMD GPUs (amd-gpu) it also installs the device-metrics-exporter chart.
 type InstallAmdPluginModule struct {
 	common.KubeModule
 	Skip bool // conditional execution based on GPU enablement
@@ -123,9 +124,35 @@ func (m *InstallAmdPluginModule) Init() {
 		Delay:  10 * time.Second,
 	}
 
-	m.Tasks = []task.Interface{
+	m.Tasks = append([]task.Interface{
 		updateNode,
 		installPlugin,
 		checkGpuState,
+	}, MetricsExporterTasks()...)
+}
+
+// MetricsExporterTasks installs/upgrades the device-metrics-exporter chart. It
+// is gated by HasAmdDiscreteGPU so it only runs on discrete AMD GPU (amd-gpu)
+// nodes, and is safe to run standalone from the upgrade path.
+func MetricsExporterTasks() []task.Interface {
+	installMetricsExporter := &task.LocalTask{
+		Name:    "InstallDeviceMetricsExporter",
+		Prepare: new(HasAmdDiscreteGPU),
+		Action:  new(InstallDeviceMetricsExporter),
+		Retry:   3,
+		Delay:   5 * time.Second,
+	}
+
+	checkMetricsExporter := &task.LocalTask{
+		Name:    "CheckDeviceMetricsExporter",
+		Prepare: new(HasAmdDiscreteGPU),
+		Action:  new(CheckDeviceMetricsExporter),
+		Retry:   30,
+		Delay:   10 * time.Second,
+	}
+
+	return []task.Interface{
+		installMetricsExporter,
+		checkMetricsExporter,
 	}
 }
