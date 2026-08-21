@@ -217,8 +217,10 @@ const (
 // The engine's own canonical path is /v1/tasks, with /v1/audio/tasks kept as an
 // alias — but /v1/tasks is not a route Router mounts, and the audio prefix is
 // what reaches the catch-all. So the alias is the only one addressable through
-// the gateway, and the shape of a task's own `poll` field is not something to
-// follow blindly.
+// the gateway, which is why Router rewrites a receipt's `poll` and `result_url`
+// onto it before handing the document back. These constants build the same paths
+// from the id, which is what a caller that kept the id rather than the document
+// has to work from.
 const epAudioTasks = dataPlaneAPI + "/audio/tasks"
 
 func epAudioTask(id string) string { return epAudioTasks + "/" + url.PathEscape(id) }

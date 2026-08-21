@@ -89,7 +89,7 @@ Details, including how each call resolves a model when `--model` is omitted, are
 
 - **Every audio verb and OCR upload a file**, so they fail on a path before any model is reached — that error is the CLI's, not Router's.
 - **OCR is asynchronous.** Router accepts a task and the CLI polls it; `--no-wait` returns the task id instead, which is what to use for a long PDF, and `--queue` lists what is outstanding.
-- **Audio is synchronous unless asked otherwise.** `--async` on any audio verb hands back a task id, and `router call task get|result|cancel|list` follows it. An hour-long recording will time out without it. A task lives on the one backend that accepted it, so every `task` subcommand needs the same `--model` the submission resolved — the receipt prints the command with it filled in.
+- **Audio is synchronous unless asked otherwise.** `--async` on any audio verb hands back a task id, and `router call task get|result|cancel|list` follows it. An hour-long recording will time out without it. A task lives on the one backend that accepted it, and Router remembers which, so an id is enough; `--model` is only needed when that memory is gone (a restart, or another gateway) and `task list` needs it always, since a board has no id to be remembered by. The receipt prints the follow-up command either way.
 - **The two streaming verbs send PCM, not a container.** `router call listen` and `diarize --stream` read 16-bit mono PCM at 16 kHz from a file or standard input; they open a WebSocket rather than uploading, so a `.wav` header would arrive as audio and be heard as a click.
 
 ## Changing what one serves

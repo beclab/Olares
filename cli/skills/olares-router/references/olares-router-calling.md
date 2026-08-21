@@ -69,7 +69,7 @@ olares-cli router call align meeting.m4a --text "what was said"
 olares-cli router call clone me.wav "your build finished" --out done.wav
 olares-cli router call dialogue scene.json --out scene.wav
 olares-cli router call listen mic.pcm
-olares-cli router call task get <task-id> --model <provider>/<model>
+olares-cli router call task get <task-id>
 olares-cli router call ocr invoice.pdf --pages 1-3
 ```
 
@@ -85,7 +85,7 @@ olares-cli router call ocr invoice.pdf --pages 1-3
 
 **Audio.** Ten verbs over one upstream, and which of them a model serves depends on the engine behind it rather than on the mode: recognition, streaming recognition, alignment, synthesis, cloning, dialogue, voice activity, diarization, streaming diarization, speaker embeddings and enhancement are all separate engine images, one Market application each. A model that transcribes does not necessarily speak, and a model that aligns does not transcribe; every verb resolves its own default category for that reason. A bare 404 from one of these routes usually means the category behind it resolved a model that does something else. `speak`, `clone`, `dialogue` and `enhance` refuse to write audio to a terminal, before making the call, so pass `--out` or redirect. `speak --voices` lists what the chosen model can sound like, and returns nothing on a cloning model — a recording is the voice there. `align` takes the transcript from `--text` or standard input. `dialogue` reads a JSON script of speakers and turns, and turns a local path in a speaker's `ref_audio` into a data URL so the script can name files on this machine.
 
-`--async` on any audio verb hands back a task id instead of waiting, which is the difference between transcribing an hour-long recording and timing out. `router call task get|result|cancel|list` follows one, and each of those needs the same `--model` the submission resolved: a task only exists on the backend that accepted it, so a bare id is not enough to find it. The receipt printed at submission time spells out the follow-up command with the model filled in.
+`--async` on any audio verb hands back a task id instead of waiting, which is the difference between transcribing an hour-long recording and timing out. `router call task get|result|cancel` follows one by id alone: a task exists only on the backend that accepted it, and Router remembers which that was. `--model` is the fallback for when it cannot — a gateway that restarted, or work submitted through a different one — and it has to be the model the submission resolved, since a task read against another engine is a 404 for a job that is running. `task list` always needs `--model`: a board has no id to remember it by, and each application runs its own queue. The receipt printed at submission time spells out the follow-up command either way.
 
 `listen` and `diarize --stream` are the two verbs that open a WebSocket rather than uploading. They read 16-bit mono PCM at 16 kHz from a file or standard input, print partial results as they arrive, and need models declaring `supports_stt_stream` and `supports_diar_stream` — which, again, are separate applications from their batch counterparts.
 

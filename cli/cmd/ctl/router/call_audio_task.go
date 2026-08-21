@@ -31,8 +31,12 @@ import (
 // long answer they thought they had escaped.
 //
 // A task lives on the engine that created it and nowhere else, so reading one
-// means reaching the same provider. Naming the model is how that happens: these
-// verbs pass it as `?model=`, exactly as the submitting call did.
+// means reaching the same provider. Router remembers which backend answered each
+// `--async` submission and routes a bare lookup back to it, so an id is usually
+// enough. `--model` is what covers the cases that memory cannot: a gateway that
+// has restarted, a task minted through a different one, or a result old enough
+// that the id has aged out. When it is given it is sent as `?model=`, exactly as
+// the submitting call did.
 
 type audioTask struct {
 	ID            string          `json:"id"`
@@ -92,16 +96,20 @@ Any audio verb takes --async and answers with a task id. These read it: "get"
 says how it is going, "result" collects it, "cancel" drops it, and "list" shows
 the engine's whole board.
 
-Every one of them needs --model, and it has to be the model the work was
-submitted to. A task exists only inside the engine that is running it, and the
-model name is what puts the request back on that engine — the id alone does not
-say where it lives, so a task read against another model is a 404 for a job that
-is running perfectly well.
+A task exists only inside the engine that is running it, and Router remembers
+which one that was: an id is enough for "get", "result" and "cancel". Pass
+--model when it is not — after a Router restart, or for work submitted through
+another gateway — and it has to be the model the work was submitted to, because
+a task read against a different engine is a 404 for a job that is running
+perfectly well.
+
+"list" is the exception: a board has no id to remember, so it always needs
+--model to say whose queue to show.
 
 Examples:
   olares-cli router call transcribe meeting.m4a --async
-  olares-cli router call task get tsk_1f3c --model default-stt
-  olares-cli router call task result tsk_1f3c --model default-stt > meeting.txt
+  olares-cli router call task get tsk_1f3c
+  olares-cli router call task result tsk_1f3c > meeting.txt
   olares-cli router call task list --model default-stt --status running
   olares-cli router call task cancel tsk_1f3c --model default-stt
 `,
@@ -134,8 +142,9 @@ collects that.
 --wait polls until it settles rather than answering once.
 
 Examples:
+  olares-cli router call task get tsk_1f3c
+  olares-cli router call task get tsk_1f3c --wait
   olares-cli router call task get tsk_1f3c --model default-stt
-  olares-cli router call task get tsk_1f3c --model default-stt --wait
 `,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
@@ -179,8 +188,8 @@ A task that has not succeeded has no result, and this says so rather than
 waiting. "task get --wait" is what waits.
 
 Examples:
-  olares-cli router call task result tsk_1f3c --model default-stt
-  olares-cli router call task result tsk_9a02 --model default-tts --out speech.mp3
+  olares-cli router call task result tsk_1f3c
+  olares-cli router call task result tsk_9a02 --out speech.mp3
 `,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
@@ -215,7 +224,7 @@ A running task is asked to stop at its next checkpoint; a finished one is
 dropped along with whatever it produced. Either way the id stops answering.
 
 Examples:
-  olares-cli router call task cancel tsk_1f3c --model default-stt
+  olares-cli router call task cancel tsk_1f3c
 `,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
@@ -274,7 +283,8 @@ Examples:
 }
 
 const audioTaskModelFlagUsage = "the model the task was submitted to, as <provider>/<model>, " +
-	"a route name or the default category the verb used"
+	"a route name or the default category the verb used; only needed when Router " +
+	"no longer remembers the task"
 
 type audioTaskOptions struct {
 	ID      string
@@ -294,9 +304,10 @@ type audioTaskListOptions struct {
 	Format Format
 }
 
-// audioTaskPath adds the model every task route needs to reach the right
-// engine. An empty one is left out rather than sent blank, so the refusal names
-// the missing model instead of an empty one.
+// audioTaskPath adds the model, when there is one, so the lookup reaches the
+// engine holding the task. An empty one is left out rather than sent blank:
+// Router routes a bare lookup by the id it remembers, and if it does not
+// remember it the refusal then names the missing model instead of an empty one.
 func audioTaskPath(path, model string) string {
 	q := url.Values{}
 	if m := strings.TrimSpace(model); m != "" {
@@ -306,16 +317,17 @@ func audioTaskPath(path, model string) string {
 }
 
 // audioTaskErr explains the one refusal that is about the shape of the request
-// rather than about the task: a lookup with no model, which Router cannot route
-// because a task id says nothing about where the task lives.
+// rather than about the task: a lookup Router could not place, because it no
+// longer remembers this id and a task id says nothing about where it lives.
 func audioTaskErr(err error, id string) error {
 	if err == nil {
 		return nil
 	}
 	if re := routerErrorOf(err); re != nil && re.Code == "model_required" {
-		return fmt.Errorf("%w\nA task id does not say which engine is running it, so this call "+
-			"has to name the model the work was submitted to: --model <name>. The verb that "+
-			"submitted it printed the whole command", err)
+		return fmt.Errorf("%w\nRouter does not remember task %s — it restarted, or the work was "+
+			"submitted through another gateway — and an id alone does not say which engine is "+
+			"running it. Name the model the work was submitted to: --model <name>. The verb "+
+			"that submitted it printed the whole command", err, id)
 	}
 	if re := routerErrorOf(err); re != nil && re.Status == 404 {
 		return fmt.Errorf("%w\nEither the engine has forgotten task %s — a finished result is kept "+
