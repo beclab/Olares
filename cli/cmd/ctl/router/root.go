@@ -18,25 +18,24 @@ func NewRouterCommand(f *cmdutil.Factory) *cobra.Command {
 
 Router is the gateway every model call goes through, whether the model runs
 on this machine or at a cloud provider. It is a Market application, so this
-tree locates it at runtime instead of assuming a hostname — run "router
-status" first if anything here behaves unexpectedly.
+tree locates it at runtime instead of assuming a hostname; a verb that cannot
+find it says whether it is missing or invisible to this profile.
 
-  status        where Router lives, whether it is healthy, and your role
-  whoami        the identity and role Router sees for the active profile
-  list          every model configured, across every provider
-  capabilities  the capability flags a model row can declare
-  default       which model answers when a request names none
-  provider      the upstreams Router routes to, and the models they serve
-  app           model applications that run models on this machine
-  local         the Model Console inside one of those applications
-  call          send work to a model: chat, embed, transcribe, speak, OCR
+  model         the models themselves: list, attach and correct the ones Router
+                is configured with, and read, retry or relaunch the ones that
+                run on this machine
+  route         the names callers may send instead of a provider and model,
+                including the default-* categories Router maintains itself
+  provider      the upstreams Router routes to: cloud accounts and model apps
+  call          send work to a model: text, embeddings, web, images, audio, OCR,
+                and "call models" for the names a caller may send
   key           API keys for software that calls Router
-  quota         spend and rate ceilings on a key, a person, or a model
-  caller        the applications that call Router
-  usage         what has been called, and what it cost
+  quota         ceilings on a key, a person, a model, or an application
+  usage         what has been called, what it cost, and how long it is kept
   audit         who changed Router, and to what
-  trace         the spans an agent framework reported for a call
-  user          the people Router knows
+
+Model applications are installed, cloned, upgraded and removed with
+"olares-cli market"; the people on this Olares are "olares-cli settings users".
 
 Most of Router's management surface is admin-only. Requires Olares 1.12.7+.
 
@@ -50,21 +49,18 @@ Run "olares-cli router <verb> --help" for details.
 		c.SilenceUsage = true
 	}
 
-	cmd.AddCommand(NewStatusCommand(f))
-	cmd.AddCommand(NewWhoamiCommand(f))
-	cmd.AddCommand(NewListCommand(f))
-	cmd.AddCommand(NewCapabilitiesCommand(f))
-	cmd.AddCommand(NewDefaultCommand(f))
+	cmd.AddCommand(NewModelCommand(f))
+	cmd.AddCommand(NewRouteCommand(f))
 	cmd.AddCommand(NewProviderCommand(f))
-	cmd.AddCommand(NewAppCommand(f))
-	cmd.AddCommand(NewLocalCommand(f))
 	cmd.AddCommand(NewCallCommand(f))
 	cmd.AddCommand(NewKeyCommand(f))
 	cmd.AddCommand(NewQuotaCommand(f))
-	cmd.AddCommand(NewCallerCommand(f))
 	cmd.AddCommand(NewUsageCommand(f))
 	cmd.AddCommand(NewAuditCommand(f))
-	cmd.AddCommand(NewTraceCommand(f))
-	cmd.AddCommand(NewUserCommand(f))
+	cmd.AddCommand(newDeprecatedListCommand(f))
+	cmd.AddCommand(newDeprecatedModelsCommand(f))
+	cmd.AddCommand(newDeprecatedDefaultCommand(f))
+	cmd.AddCommand(newDeprecatedSpecCommand(f))
+	cmd.AddCommand(newDeprecatedLocalCommand(f))
 	return cmd
 }

@@ -3,8 +3,8 @@ package router
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"net/url"
 	"os"
 	"sort"
 	"strconv"
@@ -16,7 +16,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
-// `olares-cli router provider models …` — which models a provider offers.
+// `olares-cli router model …` — the models this Router is configured with.
 //
 // POST   /console/api/providers/:id/predefined-models
 // POST   /console/api/providers/:id/customizable-models
@@ -24,8 +24,15 @@ import (
 // DELETE /console/api/providers/:id/models/:model_id
 //
 // Reads have no route of their own: Router serves a provider's models inline on
-// the provider detail, so `models get` and every verb that resolves a model by
+// the provider detail, so `model get` and every verb that resolves a model by
 // name go through GET /console/api/providers/:id.
+//
+// Every write route is scoped to a provider, and the verbs here are not. That
+// is deliberate: a provider is where a model is *served from*, and naming it is
+// only unavoidable when the model does not exist yet. For a model that does,
+// the name identifies it and `--provider` is a tiebreak for the one case it
+// cannot — every locally installed model application is a provider called
+// `Olares`, so two of them can carry the same model name.
 //
 // A provider having credentials does not make its models available: each one is
 // a row you attach on purpose. Where that row comes from depends on the vendor —
@@ -34,61 +41,105 @@ import (
 //
 // What a model row carries beyond its name is a description of what it can do:
 // the capability flags Router checks before dispatching a request, its context
-// window, and its prices. Those are what `models update` edits, and getting
+// window, and its prices. Those are what `model update` edits, and getting
 // them wrong is visible — a model marked as not supporting vision will refuse
 // an image the upstream would have accepted.
 
-// providerModelModes is Router's mode allowlist. The mode decides which
-// endpoint family a model answers on, so it cannot be changed later: a row
-// created as chat stays chat, and the fix for a wrong one is to delete and add
-// it again.
+// providerModelModes is the mode vocabulary this CLI has heard of. The mode
+// decides which endpoint family a model answers on, so it cannot be changed
+// later: a row created as chat stays chat, and the fix for a wrong one is to
+// delete and add it again.
+//
+// It is a hint and never a gate. Router owns the list, it grows — this copy sat
+// two modes behind for a release, and because it was being used to refuse
+// input, `--mode music_generation` was rejected here for a value the database
+// itself accepts. A word not in this slice is now sent anyway: Router's
+// refusal names its own list, which is the one that is right.
 var providerModelModes = []string{
-	"chat", "completion", "embedding", "rerank", "moderation",
+	"chat", "embedding", "rerank", "moderation",
 	"audio", "translate", "image_generation", "responses", "ocr",
+	"search", "scrape", "video_generation",
+	"music_generation", "model3d_generation",
 }
 
-func newProviderModelsCommand(f *cmdutil.Factory) *cobra.Command {
+// NewModelCommand assembles the model noun: one place for every model this
+// Router knows about, whichever provider serves it.
+func NewModelCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "models",
-		Short: "the models a provider offers",
-		Long: `Manage which models a provider offers.
+		Use:   "model",
+		Short: "the models this Router is configured with",
+		Long: `Manage the models this Router can reach.
 
 Credentials alone offer nothing: every model is a row attached on purpose, so
 that a key does not silently expose a vendor's entire catalog.
 
-Subcommands:
-  get <provider> <model>        one model in full: every capability, price,
-                                and the engine flags of a local model
-  import <provider> <model>...  attach models from Router's vendor catalog,
-                                with their capabilities and prices filled in
-  add <provider> <model>        attach a model you name yourself, for an
-                                endpoint whose catalog is its own
-  update <provider> <model>     enable, disable, rename, or correct what a
-                                model claims to support
-  delete <provider> <model>     detach a model
+What Router is configured with:
+  list              every model, across every provider
+  get <model>       one model in full: every capability, price, and the
+                    engine flags of a local model
+  import <model>... attach models from Router's vendor catalog, with their
+                    capabilities and prices filled in
+  add <model>       attach a model you name yourself, for an endpoint whose
+                    catalog is its own
+  update <model>    enable, disable, or correct what a model claims to support
+  remove <model>    detach a model
+
+A model that runs on this Olares:
+  status <model>    lifecycle phase, engine, and last verification
+  progress <model>  the download and load snapshot, with --watch
+  retry <model>     re-enter the download and load loop now
+  restart <model>   relaunch the engine on the card it already has
+  spec              the card the application declares itself by
+  diag              GPU residency, measured throughput, configuration, routes
+
+The second group reaches the Model Console inside the application serving the
+model. A cloud provider's models have none of it: what Router believes about
+those is the row itself, and "model update" is what corrects it.
+
+A model is named the way a caller names it, "<provider>/<model>", or by its
+own name when only one row carries it, or by its id. --provider settles the
+one case a name cannot: every locally installed model application is a
+provider called "Olares", so two of them can offer the same model name.
+Attaching a model needs --provider outright, since the row does not exist yet.
+
+The verbs in the second group take --app instead, which names the application
+by its Olares app id and skips Router entirely. That is the one to use when a
+model is not answering and Router cannot say why — or cannot be reached at all.
 
 For an upstream that publishes its own list — Ollama, a local model application
-— none of these is the usual route: "provider sync-models" mirrors the whole
-list in one step.
+— none of the attach verbs is the usual route: "provider sync-models" mirrors
+the whole list in one step.
 
-"olares-cli router list" shows every model across every provider.
+"list" and "get" answer what is configured. What a given credential may
+actually send is a different question, answered by the data plane:
+"olares-cli router call models".
 
 Admin only, except for reading.
 `,
 	}
 	cmd.SilenceUsage = true
-	cmd.AddCommand(newProviderModelsGetCommand(f))
-	cmd.AddCommand(newProviderModelsImportCommand(f))
-	cmd.AddCommand(newProviderModelsAddCommand(f))
-	cmd.AddCommand(newProviderModelsUpdateCommand(f))
-	cmd.AddCommand(newProviderModelsDeleteCommand(f))
+	cmd.AddCommand(newModelListCommand(f))
+	cmd.AddCommand(newModelGetCommand(f))
+	cmd.AddCommand(newModelImportCommand(f))
+	cmd.AddCommand(newModelAddCommand(f))
+	cmd.AddCommand(newModelUpdateCommand(f))
+	cmd.AddCommand(newModelRemoveCommand(f))
+	cmd.AddCommand(newModelSpecCommand(f, addressByModel))
+	cmd.AddCommand(newModelStatusCommand(f, addressByModel))
+	cmd.AddCommand(newModelProgressCommand(f, addressByModel))
+	cmd.AddCommand(newModelRetryCommand(f, addressByModel))
+	cmd.AddCommand(newModelRestartCommand(f, addressByModel))
+	cmd.AddCommand(newModelDiagCommand(f, addressByModel))
 	return cmd
 }
 
-func newProviderModelsImportCommand(f *cmdutil.Factory) *cobra.Command {
-	var output string
+func newModelImportCommand(f *cmdutil.Factory) *cobra.Command {
+	var (
+		output   string
+		provider string
+	)
 	cmd := &cobra.Command{
-		Use:   "import <provider> <model>...",
+		Use:   "import --provider <provider> <model>...",
 		Short: "attach models from Router's vendor catalog",
 		Long: `Attach one or more of a vendor's catalog models to a provider.
 
@@ -105,24 +156,28 @@ A model already attached is skipped rather than reset, so re-running an import
 never discards an edit you made to what it claims to support.
 
 Example:
-  olares-cli router provider models import claude \
+  olares-cli router model import --provider claude \
     claude-sonnet-4-5 claude-haiku-4-5
 `,
-		Args: cobra.MinimumNArgs(2),
+		Args: cobra.MinimumNArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
-			return runProviderModelsImport(c.Context(), f, args[0], args[1:], output)
+			return runModelImport(c.Context(), f, provider, args, output)
 		},
 	}
+	cmd.Flags().StringVar(&provider, "provider", "", "the provider to attach them to (required)")
 	addOutputFlag(cmd, &output)
 	return cmd
 }
 
-func runProviderModelsImport(ctx context.Context, f *cmdutil.Factory, ref string, names []string, outputRaw string) error {
+func runModelImport(ctx context.Context, f *cmdutil.Factory, ref string, names []string, outputRaw string) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
 	format, err := parseFormat(outputRaw)
 	if err != nil {
+		return err
+	}
+	if err := requireProviderFlag(ref, "import"); err != nil {
 		return err
 	}
 	pc, err := prepare(ctx, f)
@@ -141,7 +196,7 @@ func runProviderModelsImport(ctx context.Context, f *cmdutil.Factory, ref string
 		Skipped int `json:"skipped"`
 		Total   int `json:"total"`
 	}
-	path := consoleAPI + "/providers/" + url.PathEscape(found.ID) + "/predefined-models"
+	path := epProviderPredefinedModels(found.ID)
 	body := map[string][]string{"model_names": names}
 	if err := pc.router.doJSON(ctx, "POST", path, body, &res); err != nil {
 		return err
@@ -154,52 +209,54 @@ func runProviderModelsImport(ctx context.Context, f *cmdutil.Factory, ref string
 	return err
 }
 
-func newProviderModelsAddCommand(f *cmdutil.Factory) *cobra.Command {
+func newModelAddCommand(f *cmdutil.Factory) *cobra.Command {
 	var (
 		output       string
+		provider     string
 		mode         string
-		alias        string
 		contextSize  int
 		maxOutTokens int
 		supports     []string
 		pricing      []string
 	)
 	cmd := &cobra.Command{
-		Use:   "add <provider> <model-name>",
+		Use:   "add <model-name> --provider <provider>",
 		Short: "attach a model you name yourself",
 		Long: `Attach a model by name, for an upstream whose catalog is not published.
 
+--provider is required: the row does not exist yet, so there is nothing for a
+name to identify.
+
 The model name is sent to the upstream verbatim, so it has to be what that
-upstream calls the model rather than a label of your choosing. Use --alias for
-the name you would rather callers use.
+upstream calls the model rather than a label of your choosing. A name of your
+own is a route over the top of it: "olares-cli router route create <name>
+--kind alias --model <provider>/<model>".
 
 --mode decides which endpoint family the model answers on and cannot be changed
-afterwards; a row created with the wrong mode has to be deleted and added again.
-Allowed: ` + strings.Join(providerModelModes, ", ") + `.
+afterwards; a row created with the wrong mode has to be removed and added again.
+Router keeps the list and refuses anything outside it, naming the whole list
+when it does. The ones known here: ` + strings.Join(providerModelModes, ", ") + `.
 
 Capabilities default to none, which is a claim in itself: Router refuses to
 dispatch an image to a model that does not declare vision, even when the
 upstream would have accepted it. Declare what the model really does with
---supports, and correct it later with "models update".
+--supports, and correct it later with "model update".
 
 Prices are per million tokens as the vendor states them, and are what usage
 reporting multiplies. A model with none recorded still works; its spend is
 simply reported as zero.
 
 Examples:
-  olares-cli router provider models add lmstudio qwen3-8b --mode chat \
+  olares-cli router model add qwen3-8b --provider lmstudio --mode chat \
     --context-size 32768 --supports supports_function_calling=true
 
-  olares-cli router provider models add lmstudio bge-m3 --mode embedding
+  olares-cli router model add bge-m3 --provider lmstudio --mode embedding
 `,
-		Args: cobra.ExactArgs(2),
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			req := addModelRequest{
-				Name: strings.TrimSpace(args[1]),
+				Name: strings.TrimSpace(args[0]),
 				Mode: strings.ToLower(strings.TrimSpace(mode)),
-			}
-			if a := strings.TrimSpace(alias); a != "" {
-				req.Alias = &a
 			}
 			if c.Flags().Changed("context-size") {
 				req.ContextSize = &contextSize
@@ -207,14 +264,14 @@ Examples:
 			if c.Flags().Changed("max-output-tokens") {
 				req.MaxOutputTokens = &maxOutTokens
 			}
-			return runProviderModelsAdd(c.Context(), f, args[0], req, supports, pricing, output)
+			return runModelAdd(c.Context(), f, provider, req, supports, pricing, output)
 		},
 	}
+	cmd.Flags().StringVar(&provider, "provider", "", "the provider that will serve it (required)")
 	cmd.Flags().StringVar(&mode, "mode", "chat", "endpoint family this model answers on: "+strings.Join(providerModelModes, ", "))
-	cmd.Flags().StringVar(&alias, "alias", "", "name callers may use instead of the upstream's")
 	cmd.Flags().IntVar(&contextSize, "context-size", 0, "context window in tokens")
 	cmd.Flags().IntVar(&maxOutTokens, "max-output-tokens", 0, "upper bound on generated tokens")
-	cmd.Flags().StringArrayVar(&supports, "supports", nil, "capability as key=true|false; repeatable (see `router capabilities`)")
+	cmd.Flags().StringArrayVar(&supports, "supports", nil, "capability as key=true|false; repeatable (`router model get` prints a row's keys)")
 	cmd.Flags().StringArrayVar(&pricing, "pricing", nil, "price as key=value; repeatable")
 	addOutputFlag(cmd, &output)
 	return cmd
@@ -223,14 +280,13 @@ Examples:
 type addModelRequest struct {
 	Name            string            `json:"name"`
 	Mode            string            `json:"mode"`
-	Alias           *string           `json:"alias,omitempty"`
 	Supports        map[string]any    `json:"supports,omitempty"`
 	Pricing         map[string]string `json:"pricing,omitempty"`
 	ContextSize     *int              `json:"context_size,omitempty"`
 	MaxOutputTokens *int              `json:"max_output_tokens,omitempty"`
 }
 
-func runProviderModelsAdd(ctx context.Context, f *cmdutil.Factory, ref string, req addModelRequest, supports, pricing []string, outputRaw string) error {
+func runModelAdd(ctx context.Context, f *cmdutil.Factory, ref string, req addModelRequest, supports, pricing []string, outputRaw string) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -241,8 +297,8 @@ func runProviderModelsAdd(ctx context.Context, f *cmdutil.Factory, ref string, r
 	if req.Name == "" {
 		return fmt.Errorf("model name is required")
 	}
-	if !containsString(providerModelModes, req.Mode) {
-		return fmt.Errorf("--mode must be one of %s, not %q", strings.Join(providerModelModes, ", "), req.Mode)
+	if err := requireProviderFlag(ref, "add"); err != nil {
+		return err
 	}
 	req.Supports, err = parseSupportsFlags(supports)
 	if err != nil {
@@ -265,7 +321,7 @@ func runProviderModelsAdd(ctx context.Context, f *cmdutil.Factory, ref string, r
 		return marketOwnedErr(found, "attach models to")
 	}
 	var created providerModelRow
-	path := consoleAPI + "/providers/" + url.PathEscape(found.ID) + "/customizable-models"
+	path := epProviderCustomizableModels(found.ID)
 	if err := pc.router.doJSON(ctx, "POST", path, req, &created); err != nil {
 		return err
 	}
@@ -277,14 +333,13 @@ func runProviderModelsAdd(ctx context.Context, f *cmdutil.Factory, ref string, r
 	return err
 }
 
-func newProviderModelsUpdateCommand(f *cmdutil.Factory) *cobra.Command {
+func newModelUpdateCommand(f *cmdutil.Factory) *cobra.Command {
 	var (
 		output       string
+		provider     string
 		enable       bool
 		disable      bool
 		status       string
-		alias        string
-		clearAlias   bool
 		contextSize  int
 		maxOutTokens int
 		supports     []string
@@ -292,9 +347,9 @@ func newProviderModelsUpdateCommand(f *cmdutil.Factory) *cobra.Command {
 		replaceDesc  bool
 	)
 	cmd := &cobra.Command{
-		Use:   "update <provider> <model>",
-		Short: "enable, disable, rename, or correct what a model claims",
-		Long: `Change a model row on a provider.
+		Use:   "update <model>",
+		Short: "enable, disable, or correct what a model claims",
+		Long: `Change a model row.
 
 --enable and --disable are the reversible way to control availability. A
 disabled model stays configured, keeps its settings and quotas, and is simply
@@ -304,7 +359,9 @@ not offered; deleting it discards all of that.
 most worth getting right: Router checks these flags before dispatching, so a
 model whose vision flag is unset will refuse images the upstream would have
 handled, and one whose flag is set wrongly will forward requests the upstream
-rejects. "router capabilities" lists every flag name.
+rejects. Router keeps a key it does not recognise rather than refusing it, so a
+misspelt flag is stored and never honoured; "router model get <model>" prints
+the keys a row actually carries.
 
 Only the fields you name change. Router itself replaces the model's whole
 description whenever any part of it is sent, so this command reads the model
@@ -317,17 +374,19 @@ To retract a capability, set it to false rather than omitting it. A price or a
 window can only be dropped with --replace-description.
 
 The name and mode cannot change. Both are what the upstream is addressed by, and
-a row that means something different is a different row.
+a row that means something different is a different row. A second name for
+callers to use is a route over the top: "olares-cli router route create <name>
+--kind alias --model <provider>/<model>".
 
 Examples:
-  olares-cli router provider models update lmstudio qwen3-8b --disable
-  olares-cli router provider models update lmstudio qwen3-8b \
+  olares-cli router model update lmstudio/qwen3-8b --disable
+  olares-cli router model update qwen3-8b --provider lmstudio \
     --supports supports_vision=true --context-size 65536
 `,
-		Args: cobra.ExactArgs(2),
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			if enable && disable {
-				return fmt.Errorf("pass either --enable or --disable, not both")
+				return errEnableAndDisable
 			}
 			req := updateModelRequest{}
 			flags := c.Flags()
@@ -343,28 +402,19 @@ Examples:
 				v := strings.ToLower(strings.TrimSpace(status))
 				req.Status = &v
 			}
-			if flags.Changed("alias") {
-				v := strings.TrimSpace(alias)
-				req.Alias = &v
-			}
-			if clearAlias {
-				empty := ""
-				req.Alias = &empty
-			}
 			if flags.Changed("context-size") {
 				req.ContextSize = &contextSize
 			}
 			if flags.Changed("max-output-tokens") {
 				req.MaxOutputTokens = &maxOutTokens
 			}
-			return runProviderModelsUpdate(c.Context(), f, args[0], args[1], req, supports, pricing, replaceDesc, output)
+			return runModelUpdate(c.Context(), f, args[0], provider, req, supports, pricing, replaceDesc, output)
 		},
 	}
+	cmd.Flags().StringVar(&provider, "provider", "", "which provider's copy, when the name is served by more than one")
 	cmd.Flags().BoolVar(&enable, "enable", false, "offer this model to callers")
 	cmd.Flags().BoolVar(&disable, "disable", false, "stop offering this model, keeping its configuration")
 	cmd.Flags().StringVar(&status, "status", "", "active or disabled")
-	cmd.Flags().StringVar(&alias, "alias", "", "name callers may use instead of the upstream's")
-	cmd.Flags().BoolVar(&clearAlias, "clear-alias", false, "drop the alias")
 	cmd.Flags().IntVar(&contextSize, "context-size", 0, "context window in tokens")
 	cmd.Flags().IntVar(&maxOutTokens, "max-output-tokens", 0, "upper bound on generated tokens")
 	cmd.Flags().StringArrayVar(&supports, "supports", nil, "capability as key=true|false; repeatable, folded into what is stored")
@@ -375,10 +425,11 @@ Examples:
 	return cmd
 }
 
+var errEnableAndDisable = errors.New("pass either --enable or --disable, not both")
+
 type updateModelRequest struct {
 	Enabled         *bool             `json:"enabled,omitempty"`
 	Status          *string           `json:"status,omitempty"`
-	Alias           *string           `json:"alias,omitempty"`
 	Supports        map[string]any    `json:"supports,omitempty"`
 	Pricing         map[string]string `json:"pricing,omitempty"`
 	ParameterRules  json.RawMessage   `json:"parameter_rules,omitempty"`
@@ -435,12 +486,12 @@ func (r *updateModelRequest) carryForward(current *providerModelRow) {
 }
 
 func (r updateModelRequest) isEmpty() bool {
-	return r.Enabled == nil && r.Status == nil && r.Alias == nil &&
+	return r.Enabled == nil && r.Status == nil &&
 		len(r.Supports) == 0 && len(r.Pricing) == 0 &&
 		r.ContextSize == nil && r.MaxOutputTokens == nil
 }
 
-func runProviderModelsUpdate(ctx context.Context, f *cmdutil.Factory, providerRef, modelRef string, req updateModelRequest, supports, pricing []string, replaceDesc bool, outputRaw string) error {
+func runModelUpdate(ctx context.Context, f *cmdutil.Factory, modelRef, providerRef string, req updateModelRequest, supports, pricing []string, replaceDesc bool, outputRaw string) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -467,7 +518,7 @@ func runProviderModelsUpdate(ctx context.Context, f *cmdutil.Factory, providerRe
 	if err != nil {
 		return err
 	}
-	provider, model, err := resolveProviderModel(ctx, pc, providerRef, modelRef)
+	provider, model, err := resolveModelOnProvider(ctx, pc, modelRef, providerRef)
 	if err != nil {
 		return err
 	}
@@ -475,7 +526,7 @@ func runProviderModelsUpdate(ctx context.Context, f *cmdutil.Factory, providerRe
 		req.carryForward(model)
 	}
 	var updated providerModelRow
-	path := consoleAPI + "/providers/" + url.PathEscape(provider.ID) + "/models/" + url.PathEscape(model.ID)
+	path := epProviderModel(provider.ID, model.ID)
 	if err := pc.router.doJSON(ctx, "PATCH", path, req, &updated); err != nil {
 		return err
 	}
@@ -488,40 +539,43 @@ func runProviderModelsUpdate(ctx context.Context, f *cmdutil.Factory, providerRe
 	return err
 }
 
-func newProviderModelsDeleteCommand(f *cmdutil.Factory) *cobra.Command {
+func newModelRemoveCommand(f *cmdutil.Factory) *cobra.Command {
 	var (
 		output    string
+		provider  string
 		assumeYes bool
 	)
 	cmd := &cobra.Command{
-		Use:   "delete <provider> <model>",
-		Short: "detach a model from a provider",
-		Long: `Detach a model from a provider.
+		Use:     "remove <model>",
+		Aliases: []string{"delete"},
+		Short:   "detach a model from its provider",
+		Long: `Detach a model from the provider serving it.
 
 The row goes, and with it the default-model choices pointing at this model, its
 per-model settings, and any quota scoped to it. A model re-attached afterwards
 starts from an empty state.
 
-To stop offering a model while keeping all of that, use "models update
+To stop offering a model while keeping all of that, use "model update
 --disable" instead.
 
 Confirmation is required. --yes skips the prompt and is mandatory when stdin is
 not a terminal.
 
 Example:
-  olares-cli router provider models delete lmstudio qwen3-8b --yes
+  olares-cli router model remove lmstudio/qwen3-8b --yes
 `,
-		Args: cobra.ExactArgs(2),
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
-			return runProviderModelsDelete(c.Context(), f, args[0], args[1], assumeYes, output)
+			return runModelRemove(c.Context(), f, args[0], provider, assumeYes, output)
 		},
 	}
-	cmd.Flags().BoolVar(&assumeYes, "yes", false, "skip the confirmation prompt (required when stdin is not a terminal)")
+	cmd.Flags().StringVar(&provider, "provider", "", "which provider's copy, when the name is served by more than one")
+	addConfirmFlag(cmd, &assumeYes)
 	addOutputFlag(cmd, &output)
 	return cmd
 }
 
-func runProviderModelsDelete(ctx context.Context, f *cmdutil.Factory, providerRef, modelRef string, assumeYes bool, outputRaw string) error {
+func runModelRemove(ctx context.Context, f *cmdutil.Factory, modelRef, providerRef string, assumeYes bool, outputRaw string) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -533,7 +587,7 @@ func runProviderModelsDelete(ctx context.Context, f *cmdutil.Factory, providerRe
 	if err != nil {
 		return err
 	}
-	provider, model, err := resolveProviderModel(ctx, pc, providerRef, modelRef)
+	provider, model, err := resolveModelOnProvider(ctx, pc, modelRef, providerRef)
 	if err != nil {
 		return err
 	}
@@ -544,7 +598,7 @@ func runProviderModelsDelete(ctx context.Context, f *cmdutil.Factory, providerRe
 		return err
 	}
 	var res map[string]any
-	path := consoleAPI + "/providers/" + url.PathEscape(provider.ID) + "/models/" + url.PathEscape(model.ID)
+	path := epProviderModel(provider.ID, model.ID)
 	if err := pc.router.doJSON(ctx, "DELETE", path, nil, &res); err != nil {
 		return err
 	}
@@ -555,9 +609,44 @@ func runProviderModelsDelete(ctx context.Context, f *cmdutil.Factory, providerRe
 	return err
 }
 
-// resolveProviderModel finds a model on a provider by name, alias or id. The
-// provider detail route is the lookup, because a model id alone does not say
-// which provider it belongs to and the write routes need both.
+// requireProviderFlag refuses the two verbs that create a row without being
+// told where. Every other verb finds the provider from the model, but a model
+// that does not exist yet has nothing to find it by.
+func requireProviderFlag(ref, verb string) error {
+	if strings.TrimSpace(ref) != "" {
+		return nil
+	}
+	return fmt.Errorf("--provider is required to %s a model: the row does not exist yet, so there is no "+
+		"name to find the provider by. `olares-cli router provider list` names them", verb)
+}
+
+// resolveModelOnProvider finds a model and the provider serving it, from a
+// model reference alone when that is enough and from an explicit provider when
+// it is not.
+//
+// The write routes are all scoped to a provider, so both halves are needed
+// either way; what differs is who supplies the first one. A model reference is
+// unique often enough to be the normal way in, and resolveModel reports the
+// candidates rather than picking one when it is not — which is the case worth
+// designing for, since every locally installed model application is a provider
+// called `Olares` and two of them can carry the same model name.
+func resolveModelOnProvider(ctx context.Context, pc *preparedClient, modelRef, providerRef string) (*providerRow, *providerModelRow, error) {
+	if strings.TrimSpace(providerRef) != "" {
+		return resolveProviderModel(ctx, pc, providerRef, modelRef)
+	}
+	row, err := resolveModel(ctx, pc, modelRef)
+	if err != nil {
+		return nil, nil, err
+	}
+	// By id on both halves: the reference has already been resolved to exactly
+	// one row, and re-matching it by name here would reopen the ambiguity that
+	// was just settled.
+	return resolveProviderModel(ctx, pc, row.ProviderID, row.ProviderModelID)
+}
+
+// resolveProviderModel finds a model on a provider by name or id. The provider
+// detail route is the lookup, because a model id alone does not say which
+// provider it belongs to and the write routes need both.
 func resolveProviderModel(ctx context.Context, pc *preparedClient, providerRef, modelRef string) (*providerRow, *providerModelRow, error) {
 	found, err := resolveProvider(ctx, pc, providerRef)
 	if err != nil {
@@ -567,27 +656,27 @@ func resolveProviderModel(ctx context.Context, pc *preparedClient, providerRef, 
 	if err != nil {
 		return nil, nil, err
 	}
-	modelRef = strings.TrimSpace(modelRef)
-	if modelRef == "" {
-		return nil, nil, fmt.Errorf("model name or id is required")
-	}
-	for i := range detail.Models {
-		m := &detail.Models[i]
-		if m.ID == modelRef || strings.EqualFold(m.Name, modelRef) ||
-			(m.Alias != nil && strings.EqualFold(*m.Alias, modelRef)) {
-			row := detail.providerRow
-			return &row, m, nil
-		}
+	modelRef, err = requireRef(modelRef, "a model name or id")
+	if err != nil {
+		return nil, nil, err
 	}
 	names := make([]string, 0, len(detail.Models))
 	for i := range detail.Models {
-		names = append(names, detail.Models[i].Name)
+		m := &detail.Models[i]
+		if m.ID == modelRef || strings.EqualFold(m.Name, modelRef) {
+			row := detail.providerRow
+			return &row, m, nil
+		}
+		names = append(names, m.Name)
 	}
 	sort.Strings(names)
-	if len(names) == 0 {
-		return nil, nil, fmt.Errorf("%s offers no models, so there is no %q to change", found.Name, modelRef)
-	}
-	return nil, nil, fmt.Errorf("%s offers no model %q; it offers %s", found.Name, modelRef, strings.Join(names, ", "))
+	return nil, nil, missing{
+		noun:  "model on " + found.Name,
+		ref:   modelRef,
+		known: names,
+		have:  "it offers",
+		none:  found.Name + " offers no models at all",
+	}.err()
 }
 
 // parseSupportsFlags reads key=true|false pairs. Router tolerates a few other

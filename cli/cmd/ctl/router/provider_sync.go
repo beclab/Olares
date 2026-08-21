@@ -3,11 +3,11 @@ package router
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"os"
 
 	"github.com/spf13/cobra"
 
+	"github.com/beclab/Olares/cli/pkg/cliutil"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
@@ -40,6 +40,7 @@ type syncModelsResult struct {
 
 func newProviderSyncModelsCommand(f *cmdutil.Factory) *cobra.Command {
 	var output string
+	var yes bool
 	cmd := &cobra.Command{
 		Use:   "sync-models <name|id>",
 		Short: "mirror an upstream's live model list into Router",
@@ -48,7 +49,7 @@ func newProviderSyncModelsCommand(f *cmdutil.Factory) *cobra.Command {
 Use this for an upstream whose catalog is its own: Ollama, a generic
 OpenAI-compatible endpoint, or a model application on this Olares. For a vendor
 with a published catalog — OpenAI, Anthropic, Gemini — the models are chosen
-from that catalog instead, with "provider models add".
+from that catalog instead, with "olares-cli router model add".
 
 What a sync does:
 
@@ -69,7 +70,7 @@ row, without the settings the old one carried.
 
 For a model application, a sync does one thing more: it re-reads the model card
 the application serves and refreshes Router's copy of it, engine launch flags
-included. That makes this the verb to run when "provider models get" shows
+included. That makes this the verb to run when "olares-cli router model get" shows
 engine arguments the application no longer starts with.
 
 Example:
@@ -77,14 +78,15 @@ Example:
 `,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
-			return runProviderSyncModels(c.Context(), f, args[0], output)
+			return runProviderSyncModels(c.Context(), f, args[0], output, yes)
 		},
 	}
 	addOutputFlag(cmd, &output)
+	addConfirmFlag(cmd, &yes)
 	return cmd
 }
 
-func runProviderSyncModels(ctx context.Context, f *cmdutil.Factory, ref, outputRaw string) error {
+func runProviderSyncModels(ctx context.Context, f *cmdutil.Factory, ref, outputRaw string, yes bool) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -100,8 +102,18 @@ func runProviderSyncModels(ctx context.Context, f *cmdutil.Factory, ref, outputR
 	if err != nil {
 		return err
 	}
+	// What a sync removes is decided by the upstream's answer, which nobody
+	// here has seen yet, so this cannot say how many rows or name them. It can
+	// say that removal happens and that it takes the quotas and defaults with
+	// it, which is the part that is not obvious from the verb.
+	if err := cliutil.ConfirmDestructive(os.Stderr, os.Stdin, fmt.Sprintf(
+		"Sync %s against its upstream? Any model the upstream no longer serves is removed "+
+			"from Router, along with the defaults and quotas pointing at it",
+		found.Name), yes); err != nil {
+		return err
+	}
 	var res syncModelsResult
-	path := consoleAPI + "/providers/" + url.PathEscape(found.ID) + "/sync-models"
+	path := epProviderSyncModels(found.ID)
 	if err := pc.router.doJSON(ctx, "POST", path, nil, &res); err != nil {
 		return err
 	}

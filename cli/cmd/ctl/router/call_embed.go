@@ -1,14 +1,13 @@
 package router
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"io"
 	"math"
 	"os"
+	"strconv"
 	"strings"
-	"text/tabwriter"
 
 	"github.com/spf13/cobra"
 
@@ -58,7 +57,7 @@ instead, which is enough to confirm the model answered and how wide its output
 is. -o json prints the vectors in full, for the caller that wants them.
 
 Embedding needs a model whose mode is embedding; a chat model refuses the route
-rather than guessing. "olares-cli router list --mode embedding" shows the ones
+rather than guessing. "olares-cli router model list --mode embedding" shows the ones
 that qualify.
 
 Examples:
@@ -77,10 +76,10 @@ Examples:
 			if c.Flags().Changed("dimensions") {
 				dims = &dimensions
 			}
-			return runCallEmbed(c.Context(), f, inputs, model, dims, apiKey, output)
+			return runCallEmbed(c.Context(), f, inputs, callModel(model, categoryEmbedding), dims, apiKey, output)
 		},
 	}
-	cmd.Flags().StringVar(&model, "model", "", "model to use; the workspace embedding default when omitted")
+	cmd.Flags().StringVar(&model, "model", "", modelFlagHelp(categoryEmbedding))
 	cmd.Flags().IntVar(&dimensions, "dimensions", 0, "ask for a narrower vector, if the model allows it")
 	cmd.Flags().BoolVar(&perLine, "per-line", false, "treat each line of stdin as a separate input")
 	cmd.Flags().StringVar(&apiKey, "api-key", "", dataPlaneKeyFlagUsage)
@@ -102,16 +101,9 @@ func embedInputs(args []string, perLine bool) ([]string, error) {
 		}
 		return []string{text}, nil
 	}
-	var out []string
-	sc := bufio.NewScanner(os.Stdin)
-	sc.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
-	for sc.Scan() {
-		if line := strings.TrimSpace(sc.Text()); line != "" {
-			out = append(out, line)
-		}
-	}
-	if err := sc.Err(); err != nil {
-		return nil, fmt.Errorf("read text from stdin: %w", err)
+	out, err := readLines(os.Stdin)
+	if err != nil {
+		return nil, err
 	}
 	if len(out) == 0 {
 		return nil, fmt.Errorf("no non-empty lines on stdin")
@@ -131,17 +123,14 @@ func runCallEmbed(ctx context.Context, f *cmdutil.Factory, inputs []string, mode
 	if err != nil {
 		return err
 	}
-	dp, _, err := dataPlane(ctx, pc, apiKey)
-	if err != nil {
-		return err
-	}
+	dp := dataPlane(pc, apiKey)
 	req := embeddingsRequest{
 		Model:      strings.TrimSpace(model),
 		Input:      inputs,
 		Dimensions: dims,
 	}
 	var resp embeddingsResponse
-	if err := dp.doJSON(ctx, "POST", dataPlaneAPI+"/embeddings", req, &resp); err != nil {
+	if err := dp.doJSON(ctx, "POST", epEmbeddings, req, &resp); err != nil {
 		return callErr(err)
 	}
 	if format == FormatJSON {
@@ -155,23 +144,19 @@ func renderEmbeddings(w io.Writer, resp *embeddingsResponse, inputs []string) er
 		_, err := fmt.Fprintln(w, "the model returned no vectors.")
 		return err
 	}
-	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	if _, err := fmt.Fprintln(tw, "#\tDIMS\tNORM\tFIRST COMPONENTS\tINPUT"); err != nil {
-		return err
-	}
+	t := newTable(w, "#", "DIMS", "NORM", "FIRST COMPONENTS", "INPUT")
 	for i := range resp.Data {
 		d := &resp.Data[i]
 		input := ""
 		if d.Index >= 0 && d.Index < len(inputs) {
 			input = inputs[d.Index]
 		}
-		if _, err := fmt.Fprintf(tw, "%d\t%d\t%.3f\t%s\t%s\n",
-			d.Index, len(d.Embedding), l2Norm(d.Embedding),
-			headComponents(d.Embedding, 3), clip(input, 40)); err != nil {
-			return err
-		}
+		t.row(
+			strconv.Itoa(d.Index), strconv.Itoa(len(d.Embedding)),
+			fmt.Sprintf("%.3f", l2Norm(d.Embedding)),
+			headComponents(d.Embedding, 3), clip(input, 40))
 	}
-	if err := tw.Flush(); err != nil {
+	if err := t.flush(); err != nil {
 		return err
 	}
 	line := "\n" + nonEmpty(resp.Model)

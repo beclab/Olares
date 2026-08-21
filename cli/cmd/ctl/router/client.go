@@ -13,14 +13,6 @@ import (
 	"github.com/beclab/Olares/cli/pkg/credential"
 )
 
-// Route prefixes on the entrance host. The console plane is the management
-// surface every configuration verb uses; the data plane is OpenAI-shaped and
-// takes an `sk-*` key rather than the session this tree carries.
-const (
-	consoleAPI   = "/console/api"
-	dataPlaneAPI = "/v1"
-)
-
 // statusOlaresEdgeAuthFailure is the non-standard code the Olares edge
 // (Authelia ext-authz through l4-bfl-proxy) returns when an otherwise valid
 // request carries a token it no longer accepts. The Factory transport already
@@ -48,6 +40,13 @@ type routerClient struct {
 	baseURL  string
 	olaresID string
 	headers  map[string]string
+
+	// writes counts the requests that could have changed something, so a
+	// memoized read (see collection in resolve.go) can tell whether its
+	// snapshot still describes the deployment. A clone made by withHeader
+	// keeps its own count on purpose: a data-plane completion changes nothing
+	// the console plane has cached.
+	writes int
 }
 
 func newRouterClient(hc *http.Client, baseURL, olaresID string) *routerClient {
@@ -131,11 +130,16 @@ func (e *RouterError) recovery() string {
 		return "; the request reached Router without an Olares identity — re-authenticate with `olares-cli profile login`"
 	case "invalid_api_key", "key_disabled", "key_expired":
 		return "; list and re-issue keys with `olares-cli router key list`"
-	case "observability_content_policy_forbids":
-		return "; this deployment forbids storing prompt content, so the preference cannot be set either way"
 	case "predefined_models_unknown":
 		return "; Router does not say which name it rejected — compare against " +
 			"`olares-cli router provider types <vendor> --models`"
+	case "provider_models_invalid_mode":
+		// The two write routes name their own list in the message, which is
+		// the authoritative one. This filter does not, so the copy is worth
+		// offering — hedged, because Router's list is the longer of the two
+		// whenever they disagree.
+		return "; the modes this CLI knows of are " + strings.Join(providerModelModes, ", ") +
+			", and Router may have more"
 	case "market_app_not_found":
 		return "; the Market will not act on this application in its current state — " +
 			"`olares-cli market status <app>` says what that state is, and a stopped app has to be resumed first"
@@ -179,6 +183,9 @@ func (c *routerClient) doJSON(ctx context.Context, method, path string, body, ou
 // do issues one request and hands back the live response with its body still
 // open, for the callers that stream (install progress, chat completions).
 func (c *routerClient) do(ctx context.Context, method, path string, body io.Reader, contentType string) (*http.Response, error) {
+	if method != http.MethodGet {
+		c.writes++
+	}
 	url := c.baseURL + path
 	req, err := http.NewRequestWithContext(ctx, method, url, body)
 	if err != nil {
@@ -203,6 +210,11 @@ func (c *routerClient) do(ctx context.Context, method, path string, body io.Read
 		var notLoggedIn *credential.ErrNotLoggedIn
 		if errors.As(err, &notLoggedIn) {
 			return nil, notLoggedIn
+		}
+		// A write that got no answer has two histories the client cannot tell
+		// apart, and only one of them makes "try again" the right next step.
+		if method != http.MethodGet && reachedRouter(err) {
+			return nil, &WriteUncertainError{Method: method, Path: path, Err: err}
 		}
 		return nil, fmt.Errorf("%s %s: %w", method, url, err)
 	}

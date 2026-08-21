@@ -28,8 +28,9 @@ import (
 // routerAppName is the Market id Router ships under.
 const routerAppName = "router"
 
-// discoveredRouter is the addressing decision, kept whole so `router status`
-// can report how it was reached rather than just the URL it settled on.
+// discoveredRouter is the addressing decision, kept whole rather than reduced
+// to the URL it settled on: a verb that fails at the far end reports which
+// application and entrance it was talking to.
 type discoveredRouter struct {
 	AppName      string `json:"app_name"`
 	Title        string `json:"title"`
@@ -60,7 +61,7 @@ type myApp struct {
 }
 
 // listMyApps reads every application installed for this account. Discovery
-// needs it to find Router; the Market verbs need it because Olares, not Router,
+// needs it to find Router; the `local` verbs need it because Olares, not Router,
 // is the authority on what is installed — Router hides the provider of an
 // application that is not running.
 func listMyApps(ctx context.Context, doer *whoami.HTTPClient) ([]myApp, error) {
