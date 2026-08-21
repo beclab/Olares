@@ -126,28 +126,12 @@ func summarizeSupportNames(names []string) string {
 	return fmt.Sprintf("%s,+%d", strings.Join(on[:supportsShown], ","), len(on)-supportsShown)
 }
 
-// modelConsoleUnservablePhases are the Model Console phases the data plane
-// refuses to dispatch to. Copied from Router's own constant of the same name,
-// and it is a deny-list in both places for a reason that has to survive being
-// copied: the phase column only has a value while the loop that writes it is
-// running, so an allow-list would hide every model of every application that
-// has no Model Console to report one — which is the permanent state of an
-// application running its own engine, and the state of every application
-// before its first observation.
-//
-// A phase this build has never heard of is servable for the same reason. The
-// vocabulary belongs to the application, and not recognising a word is not
-// evidence against the model behind it.
-//
-// `degraded` is deliberately absent: llm-init's health loop moves a model
-// between ready and degraded while the engine usually still answers, and an
-// engine that genuinely cannot answer refuses with its own 503.
-var modelConsoleUnservablePhases = map[string]bool{
-	"init":     true,
-	"download": true,
-	"loading":  true,
-	"failed":   true,
-}
+// The phases the data plane refuses to dispatch to are phaseBlocksCalls in
+// model_phase.go, which is also where the reason for treating an unknown phase
+// as servable is written down. It is a deny-list here and in Router for the
+// same reason: the phase column only has a value while the loop that writes it
+// is running, so an allow-list would hide every model of every application
+// that has no Model Console to report one.
 
 // adminModelRow is one model with its provider lifted alongside it, which is
 // what makes a flat list readable: the same model name can exist on two
@@ -219,7 +203,7 @@ func (r *adminModelRow) callable() bool {
 	if strings.TrimSpace(strDeref(r.ProviderOlaresStatus)) != "running" {
 		return false
 	}
-	return !modelConsoleUnservablePhases[strings.TrimSpace(strDeref(r.ModelConsoleStatus))]
+	return !phaseBlocksCalls(strDeref(r.ModelConsoleStatus))
 }
 
 // readiness is what the weights alone are doing, in the vocabulary
@@ -237,16 +221,15 @@ func (r *adminModelRow) readiness() string {
 	if strings.TrimSpace(strDeref(r.ProviderOlaresStatus)) != "running" {
 		return "unknown"
 	}
-	switch phase := strings.TrimSpace(strDeref(r.ModelConsoleStatus)); phase {
-	case "":
+	if strings.TrimSpace(strDeref(r.ModelConsoleStatus)) == "" {
 		return "unknown"
-	case "failed":
-		return "failed"
-	case "init", "download", "loading":
-		return "warming"
-	default:
-		return "ready"
 	}
+	if p, ok := lookupPhase(strDeref(r.ModelConsoleStatus)); ok {
+		return p.readiness
+	}
+	// A phase this build does not know is not evidence against the weights;
+	// see modelPhases.
+	return "ready"
 }
 
 // callableNote is the CALLABLE cell: the verdict first, and when it is no, the
@@ -283,15 +266,8 @@ func (r *adminModelRow) callableNote() string {
 		}
 		return "no · app " + app
 	}
-	switch strings.TrimSpace(strDeref(r.ModelConsoleStatus)) {
-	case "init":
-		return "no · model service starting"
-	case "download":
-		return "no · fetching weights"
-	case "loading":
-		return "no · engine loading"
-	case "failed":
-		return "no · model load failed"
+	if p, ok := lookupPhase(strDeref(r.ModelConsoleStatus)); ok && !p.servable {
+		return "no · " + p.cell
 	}
 	return "no"
 }

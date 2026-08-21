@@ -463,30 +463,6 @@ func (p localProgress) fraction() float64 {
 	return f
 }
 
-// phaseNote translates the lifecycle phase into what it means for a caller
-// waiting on the model. The phase names are the Model Console's; the
-// consequence is what a reader actually wants.
-func phaseNote(phase string, h *localHealth) string {
-	switch strings.ToLower(strings.TrimSpace(phase)) {
-	case "init":
-		return "starting up; nothing has been fetched yet"
-	case "download":
-		return "fetching the weights; calls are refused until this finishes"
-	case "loading":
-		return "the engine is starting on weights that are already on disk"
-	case "ready":
-		if h != nil && !h.ModelExists {
-			return "serving, but the engine no longer reports the configured model"
-		}
-		return "serving"
-	case "degraded":
-		return "serving in a reduced state; `router model progress` carries the reason"
-	case "failed":
-		return "stopped trying; `router model retry` re-enters the loop"
-	}
-	return ""
-}
-
 func fmtDuration(seconds int64) string {
 	if seconds <= 0 {
 		return "—"
