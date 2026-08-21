@@ -126,6 +126,29 @@ func summarizeSupportNames(names []string) string {
 	return fmt.Sprintf("%s,+%d", strings.Join(on[:supportsShown], ","), len(on)-supportsShown)
 }
 
+// modelConsoleUnservablePhases are the Model Console phases the data plane
+// refuses to dispatch to. Copied from Router's own constant of the same name,
+// and it is a deny-list in both places for a reason that has to survive being
+// copied: the phase column only has a value while the loop that writes it is
+// running, so an allow-list would hide every model of every application that
+// has no Model Console to report one — which is the permanent state of an
+// application running its own engine, and the state of every application
+// before its first observation.
+//
+// A phase this build has never heard of is servable for the same reason. The
+// vocabulary belongs to the application, and not recognising a word is not
+// evidence against the model behind it.
+//
+// `degraded` is deliberately absent: llm-init's health loop moves a model
+// between ready and degraded while the engine usually still answers, and an
+// engine that genuinely cannot answer refuses with its own 503.
+var modelConsoleUnservablePhases = map[string]bool{
+	"init":     true,
+	"download": true,
+	"loading":  true,
+	"failed":   true,
+}
+
 // adminModelRow is one model with its provider lifted alongside it, which is
 // what makes a flat list readable: the same model name can exist on two
 // providers, and the provider is what tells them apart.
@@ -149,8 +172,20 @@ type adminModelRow struct {
 	// ProviderOlaresStatus is the platform's own phase for that application —
 	// downloading, installing, running, stopped, failed. Absent on a manual
 	// provider, and absent from a Router old enough not to send it, which is
-	// why every read of it goes through state().
+	// why every read of it goes through callableNote().
 	ProviderOlaresStatus *string `json:"provider_olares_status,omitempty"`
+	// ModelConsoleStatus is what the application's own Model Console says its
+	// weights and engine are doing — init, download, loading, ready,
+	// degraded, failed. Absent on a manual provider, which has no Model
+	// Console, and cleared by Router whenever the application leaves running,
+	// since a container that is gone does not get to report a phase.
+	//
+	// This is a second axis and not a widening of the first. A container is
+	// up minutes before the weights it serves can answer, and the two facts
+	// have different owners and different fixes: the platform owns one and
+	// `olares-cli market` acts on it, the application owns the other and
+	// `router model retry` acts on it.
+	ModelConsoleStatus *string `json:"model_console_status,omitempty"`
 	// CallableRouteNames are the names a caller may send right now to reach
 	// this row; AllRouteNames every name that reaches it, including the ones
 	// currently switched off. Router computes both — the callable half depends
@@ -160,42 +195,105 @@ type adminModelRow struct {
 	AllRouteNames      []string `json:"all_route_names"`
 }
 
-// callable mirrors Router's own dispatch predicate: three switches, and for a
-// locally installed application the platform phase on top of them. Kept
-// identical to the console's isModelRowCallable so the two never disagree about
-// a row — a CLI that called something offered where the console called it
-// stopped would send its reader looking for the wrong fix.
+// callable mirrors Router's own dispatch predicate: two admin switches, and
+// for a locally installed application two more gates on top of them — the
+// container has to be up and the weights it serves have to be able to answer.
+//
+// The weights half is easy to leave out and expensive to leave out. A
+// container reports running minutes before the model behind it has finished
+// loading, and a list that called those minutes "callable" would be offering a
+// name that answers every request with `model_not_ready`.
+//
+// Kept identical to the console's isModelRowCallable and to Router's
+// OlaresModelServableSQL. Nothing here can check that: this is a hand copy of a
+// predicate that lives in three places, and a fourth reader disagreeing with
+// the data plane is worse than not answering, because it sends a reader after
+// the wrong fix.
 func (r *adminModelRow) callable() bool {
 	if r.ProviderStatus != "active" || !r.Model.Enabled || r.Model.Status != "active" {
 		return false
 	}
-	return !(r.ProviderSource == "olares" && strDeref(r.ProviderOlaresStatus) != "running")
+	if r.ProviderSource != "olares" {
+		return true
+	}
+	if strings.TrimSpace(strDeref(r.ProviderOlaresStatus)) != "running" {
+		return false
+	}
+	return !modelConsoleUnservablePhases[strings.TrimSpace(strDeref(r.ModelConsoleStatus))]
 }
 
-// state is the STATE cell: whether a call would reach this row, and when it
-// would not, what is in the way.
+// readiness is what the weights alone are doing, in the vocabulary
+// `router call models` prints. It answers a narrower question than callable():
+// an admin switch being off is not a readiness problem, and a remote vendor has
+// no weights to wait for.
 //
-// The phase wins over "disabled" for a local application, because starting an
-// application and asking an admin to re-enable a model are different actions and
-// a reader who is told the wrong one goes looking for a toggle nobody switched
-// off. Where the console stops at one neutral badge this says which switch is
-// off, since a line of text is cheaper than a badge and the two have different
-// fixes: `model update --enable` against `provider update --enable`.
+// It is here so that a reader who saw `warming` on one list can find the same
+// word on the other, and so that the JSON does not make a script re-derive it
+// from two nullable columns and a deny-list.
+func (r *adminModelRow) readiness() string {
+	if r.ProviderSource != "olares" {
+		return "ready"
+	}
+	if strings.TrimSpace(strDeref(r.ProviderOlaresStatus)) != "running" {
+		return "unknown"
+	}
+	switch phase := strings.TrimSpace(strDeref(r.ModelConsoleStatus)); phase {
+	case "":
+		return "unknown"
+	case "failed":
+		return "failed"
+	case "init", "download", "loading":
+		return "warming"
+	default:
+		return "ready"
+	}
+}
+
+// callableNote is the CALLABLE cell: the verdict first, and when it is no, the
+// one thing standing in the way.
 //
-// A row whose application has reported no phase keeps the generic verdict.
-// Silence is not a state to name, and it is also what an older Router sends.
-func (r *adminModelRow) state() string {
+// Leading with the verdict is what makes a hundred rows scannable, and naming
+// only one obstacle is what makes the answer actionable. They are ordered by
+// what the reader would do about them: the two admin switches first, because
+// they are the only ones changeable from here and reporting the platform
+// instead would send somebody to Market to fix an application that is fine;
+// then the container; then the weights.
+//
+// The two axes are spelled apart on purpose. "app downloading" is the platform
+// fetching an image and "fetching weights" is the model fetching itself, and a
+// reader told the wrong one checks the wrong thing — a model stuck loading is
+// an engine that will not start, and no amount of looking at disk or network
+// explains it.
+func (r *adminModelRow) callableNote() string {
 	if r.callable() {
-		return "callable"
+		return "yes"
 	}
-	if phase := strings.TrimSpace(strDeref(r.ProviderOlaresStatus)); r.ProviderSource == "olares" &&
-		phase != "" && phase != "running" {
-		return phase
+	switch {
+	case r.ProviderStatus != "active":
+		return "no · provider disabled"
+	case !r.Model.Enabled || r.Model.Status != "active":
+		return "no · model disabled"
 	}
-	if r.ProviderStatus != "active" {
-		return "provider disabled"
+	if r.ProviderSource != "olares" {
+		return "no"
 	}
-	return "disabled"
+	if app := strings.TrimSpace(strDeref(r.ProviderOlaresStatus)); app != "running" {
+		if app == "" {
+			return "no · app state unknown"
+		}
+		return "no · app " + app
+	}
+	switch strings.TrimSpace(strDeref(r.ModelConsoleStatus)) {
+	case "init":
+		return "no · model service starting"
+	case "download":
+		return "no · fetching weights"
+	case "loading":
+		return "no · engine loading"
+	case "failed":
+		return "no · model load failed"
+	}
+	return "no"
 }
 
 // label is how one row reads in a sentence: the qualified name Router routes
@@ -258,13 +356,28 @@ A model is called as "PROVIDER/MODEL". "ROUTES" lists the other names that
 reach the same row — aliases, groups and the default categories, which
 "router route list" manages.
 
-"STATE" answers whether a call would reach the row. "callable" is yes. Anything
-else names what is in the way, and the two kinds ask for different things: a
-platform phase — "stopped", "downloading", "failed" — belongs to the model
-application and is "olares-cli market" territory, while "disabled" is a switch
-an admin threw and "model update --enable" restores. A locally
-installed application has a row from the moment it is installed, so a model
-that has never run is listed here rather than missing.
+"CALLABLE" answers whether a call would reach the row, and when the answer is
+no it names the one thing in the way. There are four, and each asks for
+something different:
+
+  no · provider disabled     "provider update <provider> --enable"
+  no · model disabled        "model update <model> --enable"
+  no · app <phase>           the application is not running — "olares-cli
+                             market" territory, and the phase says where it got
+                             to: stopped, downloading, installing, failed
+  no · fetching weights      the application is running and the model it serves
+     · engine loading        is not ready yet — "model progress <model>" follows
+     · model load failed     it, "model retry <model>" restarts a failed one
+
+The last two groups are separate facts with separate owners, which is why they
+are spelled apart. "app downloading" is the platform fetching an image;
+"fetching weights" is the model fetching itself, minutes later, with the
+container already up. A model stuck on "engine loading" is an engine that will
+not start, so checking disk and network — the right move for a download — finds
+nothing.
+
+A locally installed application has a row from the moment it is installed, so a
+model that has never run is listed here rather than missing.
 
 What a model claims to support, its context window and its prices are not in
 this answer — Router keeps them out of the aggregate list. "router model get
@@ -273,6 +386,12 @@ this answer — Router keeps them out of the aggregate list. "router model get
 Being listed does not mean being reachable. This is the configuration; whether
 the upstream answers right now is what "provider validate" reports, and what a
 particular credential may send is "router call models".
+
+-o json adds two derived fields to each row — "callable" and a "readiness" of
+ready, warming, failed or unknown — beside the two raw columns they come from,
+"provider_olares_status" for the container and "model_console_status" for the
+weights. The raw pair is never collapsed: they have different owners and
+different fixes.
 
 Results are capped, newest first. Narrow with --provider, --mode, --search or
 --enabled rather than raising --limit when you are looking for one model.
@@ -388,9 +507,49 @@ func runModelList(ctx context.Context, f *cmdutil.Factory, filter modelListFilte
 		return err
 	}
 	if format == FormatJSON {
-		return printJSON(os.Stdout, env)
+		return printJSON(os.Stdout, page[modelListJSONRow]{
+			Items:  modelListJSONRows(env.Items),
+			Total:  env.Total,
+			Limit:  env.Limit,
+			Offset: env.Offset,
+		})
 	}
 	return renderModelList(os.Stdout, env.Items, env.Total, env.Limit, env.Offset)
+}
+
+// modelListJSONRow is the row plus the two things every reader of it works out
+// for itself. Both raw columns stay exactly where Router put them: the derived
+// values are a third field beside them, never a replacement, because collapsing
+// two facts with two owners into one is a mistake Router has already had to
+// undo once and a client is no better placed to make it.
+//
+// The derivation is worth carrying because it is not obvious. Callable is four
+// gates, Readiness is a deny-list over a vocabulary that belongs to somebody
+// else, and both treat a missing value as permissive — a script writing its
+// own version of that gets the empty cases backwards and hides working models.
+type modelListJSONRow struct {
+	adminModelRow
+	// Callable is whether a call would reach this row right now. Router
+	// itself can be more permissive: the weights half of its gate is only
+	// armed while the loop that writes the phase column is running, so a row
+	// reported here as warming may still dispatch. It is never the other way
+	// round, and `router call models` is the answer with no derivation in it.
+	Callable bool `json:"callable"`
+	// Readiness is what the weights are doing, in the words `router call
+	// models` uses: ready, warming, failed or unknown.
+	Readiness string `json:"readiness"`
+}
+
+func modelListJSONRows(items []adminModelRow) []modelListJSONRow {
+	out := make([]modelListJSONRow, 0, len(items))
+	for i := range items {
+		out = append(out, modelListJSONRow{
+			adminModelRow: items[i],
+			Callable:      items[i].callable(),
+			Readiness:     items[i].readiness(),
+		})
+	}
+	return out
 }
 
 func renderModelList(w io.Writer, items []adminModelRow, total, limit, offset int) error {
@@ -399,12 +558,16 @@ func renderModelList(w io.Writer, items []adminModelRow, total, limit, offset in
 			"`olares-cli router provider types` to see what can be added.")
 		return err
 	}
-	t := newTable(w, "MODEL", "PROVIDER", "SERVED BY", "MODE", "SUPPORTS", "STATE", "ROUTES")
+	t := newTable(w, "MODEL", "PROVIDER", "SERVED BY", "MODE", "SUPPORTS", "CALLABLE", "ROUTES")
 	anyRoute := false
+	anyWarming := false
 	for i := range items {
 		it := &items[i]
 		if len(it.AllRouteNames) > 0 {
 			anyRoute = true
+		}
+		if it.readiness() == "warming" {
+			anyWarming = true
 		}
 		// The title is the application for a local model and nothing new for a
 		// cloud vendor, whose type says more.
@@ -418,7 +581,7 @@ func renderModelList(w io.Writer, items []adminModelRow, total, limit, offset in
 			clip(nonEmpty(served), 24),
 			nonEmpty(it.Model.Mode),
 			summarizeSupports(it.Model.Supports),
-			it.state(),
+			it.callableNote(),
 			clip(it.routeNote(), 30),
 		)
 	}
@@ -427,6 +590,13 @@ func renderModelList(w io.Writer, items []adminModelRow, total, limit, offset in
 	}
 	if err := pageFooter(w, len(items), total, offset); err != nil {
 		return err
+	}
+	if anyWarming {
+		if _, err := fmt.Fprintln(w, "\nA model fetching weights or loading an engine gets there on its "+
+			"own; `olares-cli router model progress <model> --watch` follows it. One that says it failed "+
+			"will not, and `router model retry <model>` is what re-enters the loop."); err != nil {
+			return err
+		}
 	}
 	if anyRoute {
 		_, err := fmt.Fprintln(w, "\nROUTES are the extra names a caller may send to reach a row — aliases, "+

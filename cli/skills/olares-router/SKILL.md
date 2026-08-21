@@ -25,6 +25,8 @@ Use `olares-cli router <verb> --help` for authoritative syntax.
 - Send work to a model from the command line: chat, embeddings, reranking, web search and scraping, translation, images, video, speech in either direction, and OCR.
 
 > **Mental model:** every call goes through **Router**, one AI gateway per Olares. Router holds providers, models, keys, quotas and the usage record; it runs no model itself. A local model runs inside a **model application**, whose own **Model Console** downloads the weights, launches the engine and serves the OpenAI-compatible endpoint Router forwards to. Router is the plane where access is decided; the Model Console is the plane where one model lives.
+>
+> One consequence is worth holding onto, because it produces most of the confusing reports: **a local model has two states, not one**. The platform says whether the application's container is up; the application says whether the model it serves can answer. A container reports `running` minutes before the weights have finished loading, so "the app is running" and "the model works" are different claims with different owners and different fixes. Never collapse them, and never read one as evidence for the other.
 
 All verbs require Olares 1.12.7+ because Router ships as the `router` Market listing, which asks for that line. Router is an admin-only application: a non-admin profile cannot see its entrance, so every verb here reports it is not installed. Check `olares-cli profile whoami` for the role and `olares-cli market list --mine` for the application before concluding anything is missing.
 
@@ -77,7 +79,7 @@ A provider whose `source` is `olares` belongs to a Market application. Its addre
 ## Safety and escalation
 
 - A named configuration request authorises the loop it implies: creating a provider, importing its models and validating it do not need re-confirmation one by one.
-- Ask again before `provider delete`, `key revoke`, `quota clear`, `route delete` or `default disable` on something the user did not name — each one breaks callers that still depend on it. `route disable` and `default disable` are reversible and keep their membership; `route delete` gives the name up.
+- Ask again before `provider delete`, `key revoke`, `quota clear` or `route delete` on something the user did not name — each one breaks callers that still depend on it. `route disable` is reversible and keeps its membership; `route delete` gives the name up.
 - **Never** put a credential in a shell argument where a file or stdin will do; `--credentials-json` reads either. Never print a plaintext `sk-` key into a transcript that will be shared: `key issue` shows it once, on purpose.
 - `usage retention --days` deletes per-call rows outside the new window immediately, and shortening it is not undoable. Daily totals survive, so confirm before shortening one somebody did not ask for.
 - `model spec edit --engine-args` and `model restart` both relaunch the process serving a model, which stops answering until the weights have loaded again — minutes for a large one. Prefer `model spec edit` over `model spec set`: the first merges onto the card the application is serving and updates Router's copy, the second replaces the document at the application, and a field omitted from a replacement is gone.

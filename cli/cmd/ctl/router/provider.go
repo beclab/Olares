@@ -202,6 +202,11 @@ func renderProviderRow(w io.Writer, p *providerRow) error {
 	if p.OlaresStatus != nil {
 		t.row("OLARES STATUS", nonEmpty(*p.OlaresStatus))
 	}
+	// The second axis, and the one a reader is usually missing: a container
+	// reports running minutes before the model it serves can answer.
+	if p.ModelConsoleStatus != nil {
+		t.row("MODEL PHASE", nonEmpty(*p.ModelConsoleStatus))
+	}
 	if p.EntranceURL != nil {
 		t.row("ENTRANCE URL", nonEmpty(*p.EntranceURL))
 	}
