@@ -206,9 +206,16 @@ func (h *upgradeHandlerHelper) setAndEncodingAppCofnig(prevCfg *appcfg.Applicati
 	return string(encoding), nil
 }
 
+// applyAppEnv mirrors the install-path helper: envs[] go to the AppEnv CR and
+// secrets[] are (re)materialized as Kubernetes Secrets, so an upgrade picks up
+// changed SystemEnv/UserEnv values before the chart is upgraded.
 func (h *upgradeHandlerHelper) applyAppEnv(ctx context.Context) (err error) {
 	_, err = apputils.ApplyAppEnv(ctx, h.h.ctrlClient, h.appConfig)
 	if err != nil {
+		api.HandleError(h.resp, h.req, err)
+		return
+	}
+	if err = apputils.ApplySecrets(ctx, h.h.ctrlClient, h.appConfig); err != nil {
 		api.HandleError(h.resp, h.req, err)
 	}
 	return
