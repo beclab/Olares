@@ -76,6 +76,9 @@ spec:
             - name: auth-provider-nginx-config
               mountPath: /etc/nginx/conf.d/auth.conf
               subPath: auth.conf
+            - name: files-provider-nginx-config
+              mountPath: /etc/nginx/conf.d/files.conf
+              subPath: files.conf
       volumes:
         - name: system-app-nginx-config
           configMap:
@@ -113,6 +116,12 @@ spec:
             items:
               - key: auth.conf
                 path: auth.conf
+        - name: files-provider-nginx-config
+          configMap:
+            name: files-provider-nginx-config
+            items:
+              - key: files.conf
+                path: files.conf
 
       dnsPolicy: ClusterFirst
       priorityClassName: system-cluster-critical
