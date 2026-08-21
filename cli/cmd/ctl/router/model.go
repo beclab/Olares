@@ -75,6 +75,12 @@ Subcommands:
                     catalog is its own
   update <model>    enable, disable, or correct what a model claims to support
   remove <model>    detach a model
+  spec <model>      the card a local model application declares itself by
+  restart <model>   relaunch a local model's engine on the card it has
+
+The last two apply to a model an application on this Olares runs. A cloud
+provider's models have no card and no engine to relaunch: what Router believes
+about those is the row itself, and "model update" is what corrects it.
 
 A model is named the way a caller names it, "<provider>/<model>", or by its
 own name when only one row carries it, or by its id. --provider settles the
@@ -97,6 +103,8 @@ Admin only, except for reading.
 	cmd.AddCommand(newModelAddCommand(f))
 	cmd.AddCommand(newModelUpdateCommand(f))
 	cmd.AddCommand(newModelRemoveCommand(f))
+	cmd.AddCommand(newModelSpecCommand(f))
+	cmd.AddCommand(newModelRestartCommand(f))
 	return cmd
 }
 

@@ -21,6 +21,36 @@ import (
 // same filter and wrote the same PATCH, so it was a `--kind` flag wearing a
 // verb, and the price was a help text on each side explaining it was not the
 // other one.
+// newDeprecatedSpecCommand is `router spec`, which became `router model spec`
+// and `router model restart`. A card is a property of a model rather than a
+// noun beside it, and standing at the top level it read as a third thing to
+// know about alongside `list` and `local`.
+func newDeprecatedSpecCommand(f *cmdutil.Factory) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:    "spec",
+		Short:  "moved to `router model spec`",
+		Hidden: true,
+	}
+	cmd.SilenceUsage = true
+
+	show := newSpecShowCommand(f)
+	show.Hidden = true
+	show.Deprecated = "use `olares-cli router model spec show <model>` instead."
+	cmd.AddCommand(show)
+
+	edit := newSpecEditCommand(f)
+	edit.Hidden = true
+	edit.Deprecated = "use `olares-cli router model spec edit <model>` instead."
+	cmd.AddCommand(edit)
+
+	restart := newModelRestartCommand(f)
+	restart.Hidden = true
+	restart.Deprecated = "use `olares-cli router model restart <model>` instead."
+	cmd.AddCommand(restart)
+
+	return cmd
+}
+
 func newDeprecatedDefaultCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:    "default",

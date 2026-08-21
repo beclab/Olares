@@ -17,8 +17,8 @@ import (
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
-// `olares-cli router spec` — the model card of a model application, through
-// Router.
+// `olares-cli router model spec` — the model card of a model application,
+// through Router.
 //
 // GET   /console/api/model-spec?model=<ref>
 // PATCH /console/api/model-spec?model=<ref>
@@ -68,10 +68,10 @@ type specWriteResult struct {
 	RestartWarning string          `json:"restart_warning,omitempty"`
 }
 
-func NewSpecCommand(f *cmdutil.Factory) *cobra.Command {
+func newModelSpecCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "spec",
-		Short: "the model card of a model application, through Router",
+		Short: "the model card of a model application",
 		Long: `Read and change the card that declares what a local model is.
 
 Mode, capabilities, prices and engine flags all live in the card, and the
@@ -79,9 +79,11 @@ application running the model owns it. Router keeps a projection to route and
 bill against, and refreshes it when the application reaches running — so a card
 edited any other way is a restart away from being what Router believes.
 
-  spec show <model>      the card, and whether it came from the app or the cache
-  spec edit <model>      change some of it and leave the rest alone
-  spec restart <model>   relaunch the engine on the card already on disk
+  spec show <model>   the card, and whether it came from the app or the cache
+  spec edit <model>   change some of it and leave the rest alone
+
+"olares-cli router model restart <model>" relaunches the engine on the card it
+already has, without reading or writing it.
 
 The model is named the way a caller names it: "<provider>/<model>", or the bare
 model name when only one application serves it. A bare name that matches two is
@@ -98,7 +100,6 @@ Admin only, reading included.
 	cmd.SilenceUsage = true
 	cmd.AddCommand(newSpecShowCommand(f))
 	cmd.AddCommand(newSpecEditCommand(f))
-	cmd.AddCommand(newSpecRestartCommand(f))
 	return cmd
 }
 
@@ -118,11 +119,11 @@ the card until the application next comes up.
 
 JSON output is the card itself rather than a summary, including fields this CLI
 does not know about, which is what makes it the thing to edit and feed back to
-"spec edit --from".
+"model spec edit --from".
 
 Examples:
-  olares-cli router spec show Olares/qwen3-4b
-  olares-cli router spec show qwen3-4b -o json > card.json
+  olares-cli router model spec show Olares/qwen3-4b
+  olares-cli router model spec show qwen3-4b -o json > card.json
 `,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
@@ -260,7 +261,7 @@ Two things follow from the application owning the document. Changing
 --engine-args relaunches the inference process, which takes as long as loading
 the model takes; the reply says whether the relaunch was signalled, not whether
 it has finished. And the application has to be running: a card cannot be
-written to something that is not there, and "spec show" will say "cache" when
+written to something that is not there, and "model spec show" will say "cache" when
 that is the case.
 
 An application whose engine is a sidecar — OCR, audio, embedding — takes no
@@ -268,10 +269,10 @@ engine flags at all, and there --mode is the field that matters, because it is
 the gate the data plane routes on.
 
 Examples:
-  olares-cli router spec edit Olares/qwen3-4b --mode chat
-  olares-cli router spec edit Olares/qwen3-4b --engine-args "--ctx-size 8192 --n-gpu-layers 99"
-  olares-cli router spec edit Olares/qwen3-4b --from patch.json
-  echo '{"supports":{"supports_vision":true}}' | olares-cli router spec edit Olares/qwen3-4b
+  olares-cli router model spec edit Olares/qwen3-4b --mode chat
+  olares-cli router model spec edit Olares/qwen3-4b --engine-args "--ctx-size 8192 --n-gpu-layers 99"
+  olares-cli router model spec edit Olares/qwen3-4b --from patch.json
+  echo '{"supports":{"supports_vision":true}}' | olares-cli router model spec edit Olares/qwen3-4b
 `,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
@@ -303,7 +304,7 @@ func specPatch(c *cobra.Command, from, mode, engineArgs string) (map[string]any,
 		}
 		if len(patch) == 0 {
 			return nil, fmt.Errorf("the document names no keys to change; " +
-				"`olares-cli router spec show <model> -o json` prints the whole card to start from")
+				"`olares-cli router model spec show <model> -o json` prints the whole card to start from")
 		}
 	}
 	if c.Flags().Changed("mode") {
@@ -319,7 +320,7 @@ func specPatch(c *cobra.Command, from, mode, engineArgs string) (map[string]any,
 	}
 	if len(patch) == 0 {
 		return nil, fmt.Errorf("nothing to change: pass --mode, --engine-args, or a document with " +
-			"--from. `olares-cli router spec show <model> -o json` prints the current card")
+			"--from. `olares-cli router model spec show <model> -o json` prints the current card")
 	}
 	return patch, nil
 }
@@ -340,7 +341,7 @@ func readSpecPatchDocument(c *cobra.Command, from string) ([]byte, bool, error) 
 		}
 		if len(bytes.TrimSpace(raw)) == 0 {
 			return nil, false, fmt.Errorf("%s is empty; it should hold the keys to change, as a JSON "+
-				"object. `olares-cli router spec show <model> -o json` prints the whole card", from)
+				"object. `olares-cli router model spec show <model> -o json` prints the whole card", from)
 		}
 		return raw, true, nil
 	}
@@ -441,7 +442,7 @@ func renderSpecWrite(w io.Writer, model string, res *specWriteResult) error {
 	return err
 }
 
-func newSpecRestartCommand(f *cmdutil.Factory) *cobra.Command {
+func newModelRestartCommand(f *cmdutil.Factory) *cobra.Command {
 	var yes bool
 	cmd := &cobra.Command{
 		Use:   "restart <model>",
@@ -460,8 +461,8 @@ embedding — has no process to signal here, and the call succeeds having change
 nothing.
 
 Examples:
-  olares-cli router spec restart Olares/qwen3-4b
-  olares-cli router spec restart Olares/qwen3-4b -y
+  olares-cli router model restart Olares/qwen3-4b
+  olares-cli router model restart Olares/qwen3-4b -y
 `,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
@@ -523,7 +524,7 @@ func specErr(err error, model string) error {
 			"is what changes those", err)
 	case "model_spec_app_unavailable":
 		return fmt.Errorf("%w\n`olares-cli router provider get <provider>` shows the application's state, "+
-			"and `olares-cli market resume <app>` starts it. `router spec show` still answers meanwhile, "+
+			"and `olares-cli market resume <app>` starts it. `router model spec show` still answers meanwhile, "+
 			"from Router's stored copy", err)
 	case "model_spec_app_not_ready":
 		return fmt.Errorf("%w\nThe application has an entry but no address yet, which is where it sits "+
@@ -536,7 +537,7 @@ func specErr(err error, model string) error {
 			"Market is what adds the route", err)
 	case "invalid_model_spec_body":
 		return fmt.Errorf("%w\nThe change has to be a JSON object of top-level keys. "+
-			"`olares-cli router spec show %s -o json` prints the card its keys come from", err, model)
+			"`olares-cli router model spec show %s -o json` prints the card its keys come from", err, model)
 	case "model_spec_too_large":
 		return fmt.Errorf("%w\nThe merged card is larger than the application accepts", err)
 	case "engine_restart_unavailable":

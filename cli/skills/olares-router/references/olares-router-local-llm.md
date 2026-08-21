@@ -73,22 +73,22 @@ The Market can report an application running long before the model inside it is 
 The card is where a local model's mode, capabilities, prices, context window and engine flags are declared. The application that runs the model owns it; Router keeps a projection to route and bill against, and refreshes that projection when the application reaches running. So the two can be a restart apart, and that gap is the answer to "why does Router offer something this model cannot do".
 
 ```
-olares-cli router spec show Olares/qwen3-4b
-olares-cli router spec edit Olares/qwen3-4b --mode chat
-olares-cli router spec edit Olares/qwen3-4b --engine-args "--ctx-size 8192 --n-gpu-layers 99"
-olares-cli router spec edit Olares/qwen3-4b --from card.json
-olares-cli router spec restart Olares/qwen3-4b
+olares-cli router model spec show Olares/qwen3-4b
+olares-cli router model spec edit Olares/qwen3-4b --mode chat
+olares-cli router model spec edit Olares/qwen3-4b --engine-args "--ctx-size 8192 --n-gpu-layers 99"
+olares-cli router model spec edit Olares/qwen3-4b --from card.json
+olares-cli router model restart Olares/qwen3-4b
 ```
 
-`spec show` says where its answer came from: `live` means the application was asked, `cache` means it could not be and this is Router's stored copy — which is still the copy that routes and bills. `-o json` prints the card whole, including fields this CLI does not know about, which is what makes it the thing to edit and hand back to `--from`.
+`model spec show` says where its answer came from: `live` means the application was asked, `cache` means it could not be and this is Router's stored copy — which is still the copy that routes and bills. `-o json` prints the card whole, including fields this CLI does not know about, which is what makes it the thing to edit and hand back to `--from`.
 
-`spec edit` merges. Keys you do not mention survive, one level deep: `pricing`, `supports` and `parameter_rules` are each replaced as a unit, so changing one price means sending the pricing object you want. Router writes the merged card to the application, then stores what the application confirms — which is not always what was sent, since the Model Console adds the flags a mode requires and files capability keys it does not know under `extensions`. That write-back is why the projection is right immediately instead of at the next restart.
+`model spec edit` merges. Keys you do not mention survive, one level deep: `pricing`, `supports` and `parameter_rules` are each replaced as a unit, so changing one price means sending the pricing object you want. Router writes the merged card to the application, then stores what the application confirms — which is not always what was sent, since the Model Console adds the flags a mode requires and files capability keys it does not know under `extensions`. That write-back is why the projection is right immediately instead of at the next restart.
 
-Two consequences. Changing `--engine-args` relaunches the inference process, and the model does not answer until the weights have loaded again. And the application has to be running: a card cannot be written into something that is not there, which is when `spec show` starts saying `cache`.
+Two consequences. Changing `--engine-args` relaunches the inference process, and the model does not answer until the weights have loaded again. And the application has to be running: a card cannot be written into something that is not there, which is when `model spec show` starts saying `cache`.
 
-`router local spec set` reaches the same document at the application instead of through Router. It is a whole-document replace with no merge, so a field left out is gone — engine flags included. Use it for an application Router has no provider row for, and `spec edit` otherwise.
+`router local spec set` reaches the same document at the application instead of through Router. It is a whole-document replace with no merge, so a field left out is gone — engine flags included. Use it for an application Router has no provider row for, and `model spec edit` otherwise.
 
-An application whose engine is a sidecar — OCR, audio, embedding — takes no engine flags at all. There `--mode` is the field that matters, because it is the gate the data plane routes on, and `spec restart` succeeds having changed nothing.
+An application whose engine is a sidecar — OCR, audio, embedding — takes no engine flags at all. There `--mode` is the field that matters, because it is the gate the data plane routes on, and `model restart` succeeds having changed nothing.
 
 ## Repairing
 
@@ -97,8 +97,8 @@ An application whose engine is a sidecar — OCR, audio, embedding — takes no 
 | Install failed | `olares-cli market status <app>` for the Market's own reason; fix it, then `olares-cli market uninstall <app>` and install again |
 | Application installed, no Router provider | `router provider register <app>` creates the row for an application already on the machine |
 | Download stuck or failed | `router local progress <app>`, then `router local retry <app>` |
-| Model card wrong, or engine flags need changing | `router spec edit <model>` |
-| Engine wedged on a card that is right | `router spec restart <model>` |
+| Model card wrong, or engine flags need changing | `router model spec edit <model>` |
+| Engine wedged on a card that is right | `router model restart <model>` |
 | Provider exists, application does not answer | [deciding which layer is wrong](olares-router-diagnosis.md) |
 
 An application that is already installed is refused by the Market rather than

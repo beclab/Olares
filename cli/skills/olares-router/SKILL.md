@@ -36,7 +36,7 @@ All verbs require Olares 1.12.7+ because Router ships as the `router` Market lis
 | cloud vendors and their models | `provider list/get/types/create/update/delete/validate/credentials/history/rollback/sync-models`, `model get/import/add/update/remove` | [configuring an external provider](references/olares-router-external.md) |
 | local LLM applications | `provider register`, `local status/progress/spec/retry/restart`, plus [`olares-market`](../olares-market/SKILL.md)'s `install` / `clone` | [local LLM applications](references/olares-router-local-llm.md) |
 | local embedding, audio, OCR, CLIP | the same verbs, different modes | [local multimodal applications](references/olares-router-local-multimodal.md) |
-| what a local model declares itself to be | `spec show/edit/restart` | [local LLM applications](references/olares-router-local-llm.md) |
+| what a local model declares itself to be | `model spec show/edit`, `model restart` | [local LLM applications](references/olares-router-local-llm.md) |
 | what is configured | `list`, `models` | [names, defaults and access control](references/olares-router-governance.md) |
 | the names callers may send | `route list/get/create/rename/enable/disable/delete/add/remove`, `default show/enable/disable` | [names, defaults and access control](references/olares-router-governance.md) |
 | access control | `key issue/list/update/revoke/local`, `quota set/list/clear` | [names, defaults and access control](references/olares-router-governance.md) |
@@ -59,10 +59,10 @@ Read [architecture and identity](references/olares-router-architecture.md) befor
 |---|---|
 | Use a vendor's hosted models | `provider create` + `model import`, or `provider sync-models` for an endpoint that publishes its own list |
 | Run a model on this machine | [`olares-market`](../olares-market/SKILL.md)'s `market install` for a pinned model, `market clone` for an engine base; Router creates the provider once the application runs |
-| Change what a local model serves or how it is launched | `spec edit <model>` — the model card, which the application owns; not the Router row |
+| Change what a local model serves or how it is launched | `model spec edit <model>` — the model card, which the application owns; not the Router row |
 | Change the address, credentials, or enabled state Router routes with | `provider update` |
 | Repair an install that failed | `provider get <app>` then `local progress` / `local retry` |
-| Restart an engine that has stopped behaving | `spec restart <model>`, which relaunches the inference process without changing the card |
+| Restart an engine that has stopped behaving | `model restart <model>`, which relaunches the inference process without changing the card |
 | Stop, resume, or bind a model application to a GPU | [`olares-market`](../olares-market/SKILL.md) and [`olares-settings`](../olares-settings/SKILL.md) — Router does not own those |
 
 A provider whose `source` is `olares` belongs to a Market application. Its address and lifecycle are the Market's; `provider delete` refuses it, and `olares-cli market uninstall <app>` is the way out.
@@ -80,6 +80,6 @@ A provider whose `source` is `olares` belongs to a Market application. Its addre
 - Ask again before `provider delete`, `key revoke`, `quota clear`, `route delete` or `default disable` on something the user did not name — each one breaks callers that still depend on it. `route disable` and `default disable` are reversible and keep their membership; `route delete` gives the name up.
 - **Never** put a credential in a shell argument where a file or stdin will do; `--credentials-json` reads either. Never print a plaintext `sk-` key into a transcript that will be shared: `key issue` shows it once, on purpose.
 - `usage retention --days` deletes per-call rows outside the new window immediately, and shortening it is not undoable. Daily totals survive, so confirm before shortening one somebody did not ask for.
-- `spec edit --engine-args` and `spec restart` both relaunch the process serving a model, which stops answering until the weights have loaded again — minutes for a large one. Prefer `spec edit` over `local spec set`: the first merges onto the card the application is serving, the second replaces it, and a field omitted from a replacement is gone.
+- `model spec edit --engine-args` and `model restart` both relaunch the process serving a model, which stops answering until the weights have loaded again — minutes for a large one. Prefer `model spec edit` over `local spec set`: the first merges onto the card the application is serving, the second replaces it, and a field omitted from a replacement is gone.
 - A model that is configured but does not answer is a diagnosis, not a configuration change. Route through [deciding which layer is wrong](references/olares-router-diagnosis.md) before editing anything.
 - Stop for the shared auth gate on a persistent authentication failure, and stop when the target provider, model, application or user is ambiguous.

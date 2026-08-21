@@ -82,7 +82,7 @@ A `router call` failure comes from one of a few places, and the message says whi
 | `no_default_model` | The category for that kind of work has nothing behind it; `router route list --kind default` says which do |
 | `model_route_disabled` | The name exists but is switched off; `router route enable <name>` |
 | `model_not_allowed` | The key's allowed list does not include this model; `router key update` changes it |
-| A mode mismatch or unsupported-endpoint refusal | The model's mode or capabilities do not match the call — `router list` prints the mode, and for a local model `router spec show <model>` prints what it declares |
+| A mode mismatch or unsupported-endpoint refusal | The model's mode or capabilities do not match the call — `router list` prints the mode, and for a local model `router model spec show <model>` prints what it declares |
 | A bare 404 on an audio route | Router mounted the route and the engine behind the model does not serve it |
 | `model_not_ready` with a 503 | The model is real and its weights cannot answer yet; the fix is to wait, and `router models --include-not-ready` shows whether it is `warming` or `failed` |
 | A 5xx with an empty body | Nothing answered behind Router: the model application is stopped or still loading |

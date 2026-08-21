@@ -27,7 +27,6 @@ find it says whether it is missing or invisible to this profile.
   route         the names callers may send instead of a provider and model,
                 including the default-* categories Router maintains itself
   provider      the upstreams Router routes to: cloud accounts and model apps
-  spec          what a local model declares itself to be, and changing it
   local         the Model Console inside a model application on this machine
   call          send work to a model: text, embeddings, web, images, audio, OCR
   key           API keys for software that calls Router
@@ -55,7 +54,6 @@ Run "olares-cli router <verb> --help" for details.
 	cmd.AddCommand(NewModelCommand(f))
 	cmd.AddCommand(NewRouteCommand(f))
 	cmd.AddCommand(NewProviderCommand(f))
-	cmd.AddCommand(NewSpecCommand(f))
 	cmd.AddCommand(NewLocalCommand(f))
 	cmd.AddCommand(NewCallCommand(f))
 	cmd.AddCommand(NewKeyCommand(f))
@@ -63,5 +61,6 @@ Run "olares-cli router <verb> --help" for details.
 	cmd.AddCommand(NewUsageCommand(f))
 	cmd.AddCommand(NewAuditCommand(f))
 	cmd.AddCommand(newDeprecatedDefaultCommand(f))
+	cmd.AddCommand(newDeprecatedSpecCommand(f))
 	return cmd
 }

@@ -20,7 +20,7 @@ A model application's Model Console launches one engine, chosen by the kind of m
 
 The rest of the vocabulary — `moderation`, `responses`, `image_generation`, `video_generation`, `search`, `scrape` — is served by cloud providers rather than by anything installable here today. `router list --mode <mode>` is what says which of them this Olares actually has.
 
-`audio` is one mode covering six different jobs, and which of them a row actually serves is in its capability flags rather than its mode: `supports_stt` and `supports_stt_stream` for transcription, `supports_tts`, `supports_tts_clone` and `supports_tts_dialogue` for speech, and `supports_vad`, `supports_diar`, `supports_enhance`, `supports_speaker_embed` for the surrounding steps. Each of those is a separate engine image, so a model that transcribes genuinely cannot speak. `router list` names them in its SUPPORTS column, `router provider get <provider>` shows which ones each row of a provider declares, `router model get <model>` prints a row's flags in full, and `router spec show <model>` shows what the application itself says.
+`audio` is one mode covering six different jobs, and which of them a row actually serves is in its capability flags rather than its mode: `supports_stt` and `supports_stt_stream` for transcription, `supports_tts`, `supports_tts_clone` and `supports_tts_dialogue` for speech, and `supports_vad`, `supports_diar`, `supports_enhance`, `supports_speaker_embed` for the surrounding steps. Each of those is a separate engine image, so a model that transcribes genuinely cannot speak. `router list` names them in its SUPPORTS column, `router provider get <provider>` shows which ones each row of a provider declares, `router model get <model>` prints a row's flags in full, and `router model spec show <model>` shows what the application itself says.
 
 This is the one place where a mislabelled row is expensive: a speech model that ends up answering for transcription makes every transcription request fail with a bare 404 from the engine. Router points each audio category — `default-stt`, `default-tts`, `default-vad`, `default-diar`, `default-enhance`, `default-sound-fx` — at a model whose flags match, so the fix for a mismatch is the card rather than the category.
 
@@ -73,10 +73,10 @@ Details, including how each call resolves a model when `--model` is omitted, are
 The model card inside the application decides the weights, the engine flags, and the capabilities it advertises to Router:
 
 ```
-olares-cli router spec show Olares/embeddinggemma-300m
-olares-cli router spec edit Olares/embeddinggemma-300m --mode embedding
+olares-cli router model spec show Olares/embeddinggemma-300m
+olares-cli router model spec edit Olares/embeddinggemma-300m --mode embedding
 ```
 
-`spec edit` merges the change onto the card the application is serving and stores what the application confirms, so Router's own copy is corrected in the same step. That matters more here than for an LLM: a change of dimension, or of which job an audio model does, is what Router routes on.
+`model spec edit` merges the change onto the card the application is serving and stores what the application confirms, so Router's own copy is corrected in the same step. That matters more here than for an LLM: a change of dimension, or of which job an audio model does, is what Router routes on.
 
-These applications' engines are sidecars, so they take no engine flags — `spec edit --engine-args` is refused and `spec restart` changes nothing. `--mode` is the field that matters. See [local LLM applications](olares-router-local-llm.md) for the card in full and [the Model Console](olares-router-console.md) for reaching it at the application instead.
+These applications' engines are sidecars, so they take no engine flags — `model spec edit --engine-args` is refused and `model restart` changes nothing. `--mode` is the field that matters. See [local LLM applications](olares-router-local-llm.md) for the card in full and [the Model Console](olares-router-console.md) for reaching it at the application instead.
