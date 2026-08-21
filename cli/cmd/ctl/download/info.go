@@ -89,6 +89,7 @@ func renderInfo(w io.Writer, t DownloadTask) error {
 		{"URL", orDash(t.URL)},
 		{"Error", orDash(t.ErrMsg)},
 		{"ErrCategory", orDash(t.ErrCategory)},
+		{"WillAutoRetry", strconv.FormatBool(t.WillAutoRetry)},
 		{"Created", formatTime(t.CreatedAt)},
 		{"Updated", formatTime(t.UpdatedAt)},
 	}

@@ -61,6 +61,10 @@ const (
 // Mutable in tests so polling cases finish quickly.
 var waitPollInterval = 2 * time.Second
 
+// waitProgressHeartbeat reprints the current tick when status/percent
+// have not moved, so a stalled download does not look hung. Mutable in tests.
+var waitProgressHeartbeat = 10 * time.Second
+
 const (
 	// waitDefaultTimeout matches the market / users watch commands so
 	// every long-poll surface in the CLI gives up after the same wait.
@@ -68,6 +72,9 @@ const (
 	// waitMaxConsecErrors is the transient-error budget before wait
 	// gives up, mirroring market watch.
 	waitMaxConsecErrors = 5
+	// waitProgressPercentStep is the minimum percent jump that reprints
+	// a tick when status is unchanged. Status changes always print.
+	waitProgressPercentStep float32 = 5
 )
 
 // validTaskStatuses mirrors download-server models.validTaskStatuses

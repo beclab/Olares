@@ -16,10 +16,12 @@ Same store as **Settings → Integration → Cookies** in the SPA, and the one `
 
 ## When to import
 
-Import when a download or collection fails for a login reason. The CLI already prints the exact command; signals include:
+Import when a download or collection fails for a login reason. The CLI prints the exact command for these signals:
 
 - `knowledge download inspect` → `error_code` 501 / 507 / 511 / 512, or `error_category` `authorization_failed` / `private_resource` / `bot_detected`
 - `knowledge download create` fails with 501, or a waited task fails with one of those categories
+
+Also import (no CTA printed) when inspect shows `Available: true` plus `daemon returned code 505 (network)`, or create / wait fails with HTTP 412 / `err_category` `network_error` on a site that needs a session. Those are coarse network buckets, not proof the URL is public.
 
 ## Choosing a format
 
@@ -27,11 +29,11 @@ Import when a download or collection fails for a login reason. The CLI already p
 
 | Format | Source | Prefer when |
 |---|---|---|
-| `netscape` | `cookies.txt` (extensions, yt-dlp, curl) | User has a file |
+| `netscape` | `cookies.txt` (extensions, yt-dlp, curl) | **Default for yt-dlp** — user has a file |
 | `json` | Cookie-Editor / EditThisCookie | User has a JSON array |
-| `header` | One header line, copied by hand | **Rescue path** when a `cookies.txt` export is missing the login |
+| `header` | One header line, copied by hand | **Rescue path** when a Netscape export is missing the login |
 
-**Prefer `header` when a `cookies.txt` export is missing the login.** The browser *request* `Cookie:` header carries httpOnly cookies (httpOnly blocks JS, not the browser). YouTube login lives in httpOnly cookies such as `__Secure-3PSID` / `SID` / `HSID`. DevTools → Network → reload → document request → Request Headers → copy the `Cookie:` line.
+**Prefer Netscape `cookies.txt` for downloads.** A header-only import can land cookies in the store and still 412 on create. **Prefer `header` when a `cookies.txt` export is missing the login** (typical YouTube httpOnly cookies such as `__Secure-3PSID` / `SID` / `HSID`). The browser *request* `Cookie:` header carries httpOnly cookies (httpOnly blocks JS, not the browser). DevTools → Network → reload → document request → Request Headers → copy the `Cookie:` line.
 
 A request-style header needs `--domain`. A `Set-Cookie:` line carries its own attributes. Auto-detect recognises a bare `a=b; c=d` line as `header`; without `--domain` the import still fails asking for one — that is expected.
 
@@ -81,5 +83,5 @@ olares-cli settings integration cookie rm youtube.com
 | `could not tell which cookie format this is` | Ambiguous paste | Pass `--format netscape\|json\|header`; a `;`+`=` line that still fails auto is almost always a Cookie header → `--format header --domain <host>` |
 | `this input is a browser Cookie header, which carries no domain; re-run with --domain <host> (for example --domain youtube.com)` | Request-style `a=b; c=d` has no domain | Pass `--domain <host>` |
 | `no cookies for domain X in the input` | Filter matched no host in the file | Drop `--domain`, or use a host that appears in the export |
-| Import OK but downloads still need login | Export dropped httpOnly cookies | Re-import via the `header` path above |
+| Import OK but downloads still 412 / inspect 505 | Header-only paste missed host-scoped session cookies, or Netscape export dropped httpOnly | Re-import a Netscape `cookies.txt` from a cookie exporter; if that export is missing YouTube login cookies, use the `header` path above |
 | `no cookies stored for <domain>` | Never imported, or different domain string | `cookie list` for exact domains |

@@ -170,23 +170,27 @@ func renderListTable(w io.Writer, result ListResult) error {
 	return nil
 }
 
-// renderTasksTable prints the shared task table (list / sync / unfinished).
+// renderTasksTable prints the shared task table (list / sync / unfinished / wait progress).
 func renderTasksTable(w io.Writer, tasks []DownloadTask) error {
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
 	fmt.Fprintln(tw, "ID\tSTATUS\tPROVIDER\tPERCENT\tNAME\tSOURCE\tAPP\tUPDATED")
 	for _, t := range tasks {
-		fmt.Fprintf(tw, "%d\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
-			t.ID,
-			orDash(t.Status),
-			orDash(t.DownloadProvider),
-			fmt.Sprintf("%.1f%%", t.Percent),
-			truncate(displayName(t), 40),
-			truncate(orDash(t.URL), 48),
-			orDash(t.App),
-			formatTime(t.UpdatedAt),
-		)
+		fmt.Fprintln(tw, formatTaskRow(t))
 	}
 	return tw.Flush()
+}
+
+func formatTaskRow(t DownloadTask) string {
+	return fmt.Sprintf("%d\t%s\t%s\t%s\t%s\t%s\t%s\t%s",
+		t.ID,
+		orDash(t.Status),
+		orDash(t.DownloadProvider),
+		fmt.Sprintf("%.1f%%", t.Percent),
+		truncate(displayName(t), 40),
+		truncate(orDash(t.URL), 48),
+		orDash(t.App),
+		formatTime(t.UpdatedAt),
+	)
 }
 
 func orDash(s string) string {

@@ -41,9 +41,8 @@ func TestClassifyWaitStatus(t *testing.T) {
 		{status: "paused", want: "pending"},
 		{status: "waiting", want: "pending"},
 		{status: "preparing", want: "pending"},
-		// The server's retry sweep still owns this row, so calling it a
-		// failure would make a script tear down a task that recovers.
-		{status: "error", autoRet: true, want: "pending"},
+		// will_auto_retry is copy only; error is terminal from status.
+		{status: "error", autoRet: true, want: "failure"},
 	}
 	for _, tc := range cases {
 		task := DownloadTask{Status: tc.status, WillAutoRetry: tc.autoRet}
@@ -53,25 +52,27 @@ func TestClassifyWaitStatus(t *testing.T) {
 	}
 }
 
-// TestWaitKeepsPollingAnAutoRetryingError pins the whole loop, not just
-// the classifier: an error row the server will retry must not end wait.
-func TestWaitKeepsPollingAnAutoRetryingError(t *testing.T) {
+// TestWaitEndsOnAutoRetryingError pins that error is terminal even when
+// the server will retry; wait must not keep polling toward completed.
+func TestWaitEndsOnAutoRetryingError(t *testing.T) {
 	d := &seqDoer{responses: [][]byte{
 		mustEnvTaskRetry(t, 11, "error", true),
-		mustEnvTaskRetry(t, 11, "downloading", false),
 		mustEnvTask(t, 11, "completed"),
 	}}
 	pc := &preparedClient{doer: d}
-	prev := waitPollInterval
-	waitPollInterval = time.Millisecond
-	t.Cleanup(func() { waitPollInterval = prev })
 
-	task, err := waitForTerminal(context.Background(), pc, 11, 0)
+	task, err := waitForTerminal(context.Background(), pc, 11, 0, nil)
 	if err != nil {
 		t.Fatalf("wait: %v", err)
 	}
-	if task.Status != "completed" {
-		t.Fatalf("status = %q, want completed", task.Status)
+	if task.Status != "error" {
+		t.Fatalf("status = %q, want error (must not wait for retry)", task.Status)
+	}
+	if classifyWaitStatus(task) != "failure" {
+		t.Fatalf("auto-retry error should be failure, got %q", classifyWaitStatus(task))
+	}
+	if len(d.paths) != 1 {
+		t.Fatalf("polls = %d, want 1 (stop on first error)", len(d.paths))
 	}
 }
 
@@ -84,7 +85,7 @@ func TestWaitTimeoutCarriesTaskID(t *testing.T) {
 	waitPollInterval = time.Millisecond
 	t.Cleanup(func() { waitPollInterval = prev })
 
-	last, err := waitForTerminal(context.Background(), pc, 12, 50*time.Millisecond)
+	last, err := waitForTerminal(context.Background(), pc, 12, 50*time.Millisecond, nil)
 	if err == nil {
 		t.Fatal("expected a timeout error")
 	}
@@ -105,7 +106,7 @@ func TestWaitToleratesTransientPollErrors(t *testing.T) {
 	waitPollInterval = time.Millisecond
 	t.Cleanup(func() { waitPollInterval = prev })
 
-	task, err := waitForTerminal(context.Background(), pc, 13, 0)
+	task, err := waitForTerminal(context.Background(), pc, 13, 0, nil)
 	if err != nil {
 		t.Fatalf("wait: %v", err)
 	}
@@ -141,7 +142,7 @@ func TestWaitForTerminalSuccessAndTimeout(t *testing.T) {
 	waitPollInterval = time.Millisecond
 	t.Cleanup(func() { waitPollInterval = prev })
 
-	task, err := waitForTerminal(context.Background(), pc, 7, 0)
+	task, err := waitForTerminal(context.Background(), pc, 7, 0, nil)
 	if err != nil {
 		t.Fatalf("wait: %v", err)
 	}
@@ -156,7 +157,7 @@ func TestWaitForTerminalSuccessAndTimeout(t *testing.T) {
 		mustEnvTask(t, 8, "moving"),
 	}}
 	pc2 := &preparedClient{doer: d2}
-	_, err = waitForTerminal(context.Background(), pc2, 8, 50*time.Millisecond)
+	_, err = waitForTerminal(context.Background(), pc2, 8, 50*time.Millisecond, nil)
 	if err == nil || !strings.Contains(err.Error(), "timed out") || !strings.Contains(err.Error(), "moving") {
 		t.Fatalf("expected timeout with status, got %v", err)
 	}
@@ -168,12 +169,183 @@ func TestWaitForTerminalSuccessAndTimeout(t *testing.T) {
 func TestWaitTerminalFailureSurfacesAsError(t *testing.T) {
 	d := &seqDoer{responses: [][]byte{mustEnvTask(t, 9, "cancelled")}}
 	pc := &preparedClient{doer: d}
-	task, err := waitForTerminal(context.Background(), pc, 9, 0)
+	task, err := waitForTerminal(context.Background(), pc, 9, 0, nil)
 	if err != nil {
 		t.Fatalf("waitForTerminal: %v", err)
 	}
 	if classifyWaitStatus(task) != "failure" {
 		t.Fatalf("status %q should be failure", task.Status)
+	}
+}
+
+func TestWaitRetryHint(t *testing.T) {
+	auto := waitRetryHint(DownloadTask{ID: 42, Status: "error", WillAutoRetry: true})
+	if !strings.Contains(auto, "server will auto-retry") || !strings.Contains(auto, "info 42") {
+		t.Fatalf("auto-retry hint = %q", auto)
+	}
+	final := waitRetryHint(DownloadTask{ID: 42, Status: "error", WillAutoRetry: false})
+	if !strings.Contains(final, "will_auto_retry=false") {
+		t.Fatalf("final-error hint = %q", final)
+	}
+	if got := waitRetryHint(DownloadTask{ID: 42, Status: "cancelled"}); got != "" {
+		t.Fatalf("cancelled should not get a retry hint, got %q", got)
+	}
+}
+
+func TestWaitFailureErrorIncludesErrMsg(t *testing.T) {
+	err := waitFailureError(DownloadTask{ID: 9, Status: "error", ErrMsg: "connection refused"})
+	if err == nil || !strings.Contains(err.Error(), `status "error"`) || !strings.Contains(err.Error(), "connection refused") {
+		t.Fatalf("got %v", err)
+	}
+	plain := waitFailureError(DownloadTask{ID: 9, Status: "cancelled"})
+	if plain == nil || !strings.Contains(plain.Error(), `status "cancelled"`) || strings.Contains(plain.Error(), ":") {
+		t.Fatalf("cancelled without err_msg should stay a short error, got %v", plain)
+	}
+}
+
+func TestEmitWaitFailureDetailsJSONOnly(t *testing.T) {
+	task := DownloadTask{
+		ID:            9,
+		Status:        "error",
+		ErrMsg:        "403 Forbidden",
+		ErrCategory:   "authorization_failed",
+		WillAutoRetry: true,
+	}
+	var table strings.Builder
+	emitWaitFailureDetails(&table, task, FormatTable)
+	if table.Len() != 0 {
+		t.Fatalf("table mode must not use the JSON hint helper: %q", table.String())
+	}
+
+	var js strings.Builder
+	emitWaitFailureDetails(&js, task, FormatJSON)
+	jsonOut := js.String()
+	if strings.Contains(jsonOut, "Error:") {
+		t.Fatalf("json mode must not reprint err_msg on stderr: %q", jsonOut)
+	}
+	if !strings.Contains(jsonOut, "server will auto-retry") {
+		t.Fatalf("json mode still needs the retry hint: %q", jsonOut)
+	}
+}
+
+func TestEmitWaitOutcomeSuccessAndFailure(t *testing.T) {
+	ok := DownloadTask{ID: 6, Status: "completed", DownloadProvider: "yt-dlp", FileName: "clip.mp4", Path: "Home/Downloads"}
+	var success strings.Builder
+	emitWaitOutcome(&success, ok, "success")
+	got := success.String()
+	for _, want := range []string{"download '6': completed (status=completed)", "provider: yt-dlp", "name: clip.mp4", "path: Home/Downloads"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("success outcome missing %q in %q", want, got)
+		}
+	}
+
+	fail := DownloadTask{ID: 6, Status: "error", ErrMsg: "http error 412", ErrCategory: "network_error", WillAutoRetry: true, FileName: "clip.mp4"}
+	var failed strings.Builder
+	emitWaitOutcome(&failed, fail, "failure")
+	out := failed.String()
+	for _, want := range []string{"download '6' failed: http error 412", "err_category: network_error", "server will auto-retry"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("failure outcome missing %q in %q", want, out)
+		}
+	}
+}
+
+func TestWaitProgressPrintsOnChangeNotEveryPoll(t *testing.T) {
+	d := &seqDoer{responses: [][]byte{
+		mustEnvTaskFields(t, map[string]interface{}{"id": 7, "status": "downloading", "percent": 10.0, "download_provider": "yt-dlp", "file_name": "clip.mp4", "will_auto_retry": false}),
+		mustEnvTaskFields(t, map[string]interface{}{"id": 7, "status": "downloading", "percent": 10.2, "download_provider": "yt-dlp", "file_name": "clip.mp4", "will_auto_retry": false}),
+		mustEnvTaskFields(t, map[string]interface{}{"id": 7, "status": "downloading", "percent": 16.0, "download_provider": "yt-dlp", "file_name": "clip.mp4", "will_auto_retry": false}),
+		mustEnvTaskFields(t, map[string]interface{}{"id": 7, "status": "completed", "percent": 100.0, "download_provider": "yt-dlp", "file_name": "clip.mp4", "will_auto_retry": false}),
+	}}
+	pc := &preparedClient{doer: d}
+	prev := waitPollInterval
+	waitPollInterval = time.Millisecond
+	t.Cleanup(func() { waitPollInterval = prev })
+
+	var buf strings.Builder
+	task, err := waitForTerminal(context.Background(), pc, 7, 0, &buf)
+	if err != nil {
+		t.Fatalf("wait: %v", err)
+	}
+	if task.Status != "completed" {
+		t.Fatalf("status = %q", task.Status)
+	}
+	out := buf.String()
+	if strings.Contains(out, "provider=") || strings.Contains(out, "name=") || strings.Contains(out, "status=") {
+		t.Fatalf("ticks must stay compact, got %q", out)
+	}
+	if !strings.Contains(out, "[7] downloading 10.0%") {
+		t.Fatalf("first tick missing: %q", out)
+	}
+	if strings.Contains(out, "10.2%") {
+		t.Fatalf("sub-5%% change must not reprint: %q", out)
+	}
+	if !strings.Contains(out, "[7] downloading 16.0%") {
+		t.Fatalf("5%% jump should reprint: %q", out)
+	}
+	if strings.Contains(out, "completed") {
+		t.Fatalf("terminal status belongs in the summary, not ticks: %q", out)
+	}
+}
+
+func TestWaitProgressSkipsInitialWaitingZero(t *testing.T) {
+	d := &seqDoer{responses: [][]byte{
+		mustEnvTaskFields(t, map[string]interface{}{"id": 8, "status": "waiting", "percent": 0.0, "will_auto_retry": false}),
+		mustEnvTaskFields(t, map[string]interface{}{"id": 8, "status": "preparing", "percent": 0.0, "will_auto_retry": false}),
+		mustEnvTaskFields(t, map[string]interface{}{"id": 8, "status": "completed", "percent": 100.0, "file_name": "clip.mp4", "will_auto_retry": false}),
+	}}
+	pc := &preparedClient{doer: d}
+	prev := waitPollInterval
+	waitPollInterval = time.Millisecond
+	t.Cleanup(func() { waitPollInterval = prev })
+
+	var buf strings.Builder
+	if _, err := waitForTerminal(context.Background(), pc, 8, 0, &buf); err != nil {
+		t.Fatalf("wait: %v", err)
+	}
+	out := buf.String()
+	if strings.Contains(out, "waiting") {
+		t.Fatalf("initial waiting 0%% is covered by the header, got %q", out)
+	}
+	if !strings.Contains(out, "[8] preparing 0.0%") {
+		t.Fatalf("preparing should still print: %q", out)
+	}
+}
+
+func TestWaitProgressHeartbeatWhenStalled(t *testing.T) {
+	d := &seqDoer{responses: [][]byte{
+		mustEnvTaskFields(t, map[string]interface{}{"id": 9, "status": "downloading", "percent": 50.5, "will_auto_retry": false}),
+		mustEnvTaskFields(t, map[string]interface{}{"id": 9, "status": "downloading", "percent": 50.5, "will_auto_retry": false}),
+		mustEnvTaskFields(t, map[string]interface{}{"id": 9, "status": "downloading", "percent": 50.5, "will_auto_retry": false}),
+		mustEnvTaskFields(t, map[string]interface{}{"id": 9, "status": "completed", "percent": 100.0, "will_auto_retry": false}),
+	}}
+	pc := &preparedClient{doer: d}
+	prevInterval := waitPollInterval
+	prevBeat := waitProgressHeartbeat
+	waitPollInterval = time.Millisecond
+	waitProgressHeartbeat = time.Millisecond
+	t.Cleanup(func() {
+		waitPollInterval = prevInterval
+		waitProgressHeartbeat = prevBeat
+	})
+
+	var buf strings.Builder
+	if _, err := waitForTerminal(context.Background(), pc, 9, 0, &buf); err != nil {
+		t.Fatalf("wait: %v", err)
+	}
+	if strings.Count(buf.String(), "[9] downloading 50.5%") < 2 {
+		t.Fatalf("stalled polls should heartbeat, got %q", buf.String())
+	}
+}
+
+func TestRenderInfoIncludesWillAutoRetry(t *testing.T) {
+	var buf strings.Builder
+	if err := renderInfo(&buf, DownloadTask{ID: 1, Status: "error", WillAutoRetry: true}); err != nil {
+		t.Fatal(err)
+	}
+	got := buf.String()
+	if !strings.Contains(got, "WillAutoRetry") || !strings.Contains(got, "true") {
+		t.Fatalf("info table should show WillAutoRetry, got %q", got)
 	}
 }
 
@@ -240,13 +412,18 @@ func mustEnvTask(t *testing.T, id int64, status string) []byte {
 
 func mustEnvTaskRetry(t *testing.T, id int64, status string, willAutoRetry bool) []byte {
 	t.Helper()
+	return mustEnvTaskFields(t, map[string]interface{}{
+		"id":              id,
+		"status":          status,
+		"will_auto_retry": willAutoRetry,
+	})
+}
+
+func mustEnvTaskFields(t *testing.T, fields map[string]interface{}) []byte {
+	t.Helper()
 	raw, err := json.Marshal(map[string]interface{}{
 		"code": 200,
-		"data": map[string]interface{}{
-			"id":              id,
-			"status":          status,
-			"will_auto_retry": willAutoRetry,
-		},
+		"data": fields,
 	})
 	if err != nil {
 		t.Fatal(err)

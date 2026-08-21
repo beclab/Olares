@@ -9,9 +9,12 @@ olares-cli knowledge download inspect 'https://www.youtube.com/watch?v=…'
 olares-cli knowledge download inspect 'https://example.com/file.zip' -o json
 ```
 
-Returns provider (`yt-dlp` / `aria2` / `huggingface` / …), title, and (for yt-dlp) `available_qualities`. Probe failures often still return HTTP 200 with `Error` / `error_category` set — treat as a hint, not a gate before `create`.
+Returns provider (`yt-dlp` / `aria2` / `huggingface` / …), title, and (for yt-dlp) `available_qualities`. Probe failures often still return HTTP 200 with `Error` / `error_category` set — treat as a hint, not a gate before `create`. Inspect itself still exits 0.
 
-If `Available: false` for yt-dlp, the yt-dlp daemon is unreachable (often not installed). Create for yt-dlp URLs will fail until it is available; aria2 / huggingface URLs are unaffected.
+Read `Available` and `Error` separately:
+
+- `Available: false` (or an error mentioning yt-dlp unreachable / not installed) means the yt-dlp daemon is down. Create for yt-dlp URLs will fail until it is available (the CLI prints the market install command); aria2 / huggingface URLs are unaffected.
+- `Available: true` with `Error: daemon returned code 505 (network)` means the daemon is up and the probe failed. 505 is a coarse bucket (it can wrap a site 4xx such as HTTP 412). That is **not** “daemon crashed”, and it is **not** a stop before `create`. Login walls often land here as `network` instead of `authorization_failed`, so the cookie CTA below may be absent — still import a Netscape `cookies.txt` and retry inspect.
 
 ## When the URL needs a login
 
@@ -30,7 +33,7 @@ olares-cli settings integration cookie import --domain youtube.com --file cookie
 olares-cli knowledge download inspect 'https://www.youtube.com/watch?v=…'
 ```
 
-The CLI prints this command for you, with the domain already filled in from the URL. If the user's `cookies.txt` export turns out to be missing the login, open [`olares-settings`](../../olares-settings/SKILL.md) and use the `header` import path under `settings integration cookie` — that is the fix.
+The CLI prints this command only for those codes. Inspect 505 / create HTTP 412 / a waited `err_category` of `network_error` do **not** print it — still try cookies when the URL is a logged-in site. Prefer a Netscape `cookies.txt` from a cookie exporter. A `Cookie:` header import can succeed in the store and still 412 on create if the site's session is not in that line. Use the [`olares-settings`](../../olares-settings/SKILL.md) `header` path only when a Netscape export is missing the login (typical for YouTube httpOnly cookies).
 
 ## prefs get / set
 

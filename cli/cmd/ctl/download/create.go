@@ -251,23 +251,69 @@ func runCreate(ctx context.Context, f *cmdutil.Factory, rawURL, app, path, name,
 	}
 
 	if waitDone {
-		waited, waitErr := waitForTerminal(ctx, pc, task.ID, timeout)
-		if waited.ID != 0 {
-			task = waited
+		return runCreateWait(ctx, pc, format, task, timeout)
+	}
+
+	return emitCreated(format, task)
+}
+
+// runCreateWait prints a watching header in table mode so the id is
+// visible while polling, then waits. JSON emits once at the end so
+// stdout stays a single task object. Table prints a market-style
+// success/failure summary when the wait ends.
+func runCreateWait(ctx context.Context, pc *preparedClient, format Format, task DownloadTask, timeout time.Duration) error {
+	printed := false
+	if format != FormatJSON {
+		if err := emitWatchingStart(os.Stdout, task, timeout); err != nil {
+			return err
 		}
-		// The row exists on the server whatever the wait outcome, so the
-		// id has to reach stdout or the caller cannot resume or clean up.
-		if waitErr != nil {
-			return errors.Join(waitErr, emitCreated(format, task))
-		}
-		if classifyWaitStatus(task) == "failure" {
-			return errors.Join(
-				fmt.Errorf("task %d ended in status %q", task.ID, task.Status),
-				emitCreated(format, task),
-			)
+		printed = true
+	}
+
+	waited, waitErr := waitForTerminal(ctx, pc, task.ID, timeout, waitProgressWriter(format))
+	if waited.ID != 0 {
+		task = waited
+	}
+
+	if format != FormatJSON && task.ID != 0 {
+		kind := classifyWaitStatus(task)
+		switch {
+		case waitErr != nil:
+			var timeoutErr *waitTimeoutError
+			if errors.As(waitErr, &timeoutErr) {
+				emitWaitOutcome(os.Stderr, task, "timeout")
+			} else if kind == "failure" {
+				emitWaitOutcome(os.Stderr, task, "failure")
+			}
+		case kind == "failure":
+			emitWaitOutcome(os.Stderr, task, "failure")
+		default:
+			emitWaitOutcome(os.Stdout, task, "success")
 		}
 	}
 
+	if waitErr != nil {
+		if format == FormatJSON && classifyWaitStatus(task) == "failure" {
+			emitWaitFailureDetails(os.Stderr, task, format)
+		}
+		if printed {
+			return waitErr
+		}
+		return errors.Join(waitErr, emitCreated(format, task))
+	}
+	if classifyWaitStatus(task) == "failure" {
+		failErr := waitFailureError(task)
+		if format == FormatJSON {
+			emitWaitFailureDetails(os.Stderr, task, format)
+		}
+		if printed {
+			return failErr
+		}
+		return errors.Join(failErr, emitCreated(format, task))
+	}
+	if printed {
+		return nil
+	}
 	return emitCreated(format, task)
 }
 

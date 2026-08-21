@@ -1,7 +1,7 @@
 ---
 name: olares-knowledge
 version: 1.1.0
-description: "Olares Knowledge via olares-cli knowledge — manage download-server URL, yt-dlp, aria2, torrent, HuggingFace, and Wise download tasks: create/list/inspect/pause/resume/cancel/remove, prefs, sync, and file probes. Requires Olares 1.12.7+. Not for installer download or copying a Drive file with files download."
+description: "Olares Knowledge via olares-cli knowledge — manage download-server URL, yt-dlp, aria2, torrent, HuggingFace, and Wise download tasks: create/list/inspect/wait/pause/resume/cancel/remove, prefs, sync, and file probes. Requires Olares 1.12.7+. Not for installer download or copying a Drive file with files download."
 compatibility: Requires olares-cli on PATH, active Olares profile, Olares >= 1.12.7
 metadata:
   openclaw:
@@ -41,11 +41,11 @@ All verbs require Olares 1.12.7+ because the Settings download edge and provider
 
 ## Task and asynchronous semantics
 
-- Create returns a server-side task; command success does not mean bytes have finished downloading or moving. Use `wait` / `create --wait` when scripts need a true terminal status (`waiting_to_move` / `moving` are still in progress, and an `error` row with `will_auto_retry` is still the server's to resolve).
+- Create returns a server-side task; command success does not mean bytes have finished downloading or moving. Use `wait` / `create --wait` when scripts need a true terminal status (`waiting_to_move` / `moving` are still in progress). `error` is a failure terminal from status alone; `will_auto_retry` only changes the printed hint (server may still retry after the command exits). Table `--wait` prints a watching header, compact ticks, then a `completed` / `failed` summary — silence between ticks is not a hang (5% jumps, plus a 10s heartbeat with `elapsed=`).
 - Re-submitting the same URL always creates a **new** task (no identity dedup). Landing-name collisions are resolved with a `(n)` suffix; they do not reuse or block an existing row. Create sends `Idempotency-Key` only to collapse transport retries of one attempt — not URL dedup.
 - Pause only applies while `waiting` or `downloading` (otherwise 400). Resume, cancel, and remove return **409** while the task is in the yt-dlp mover phase (`waiting_to_move` / `moving`) — wait and retry; do not treat pause the same way.
 - Task ownership follows the active profile. Do not infer another user's task from an id or try alternate identities.
-- `inspect` is advisory: provider/quality probing may fail while a create still works. Report that uncertainty instead of declaring the URL undownloadable.
+- `inspect` is advisory: `Available: true` only means the yt-dlp daemon is up. A probe `Error` of `daemon returned code 505 (network)` is a coarse bucket (including HTTP 412) and is **not** a stop before `create`. Login walls often surface here as `network`, not `authorization_failed`, so the cookie CTA may be absent — still import Netscape `cookies.txt` and retry. See [provider/quality inspection](references/olares-knowledge-download-inspect.md).
 - Sync cursors describe change observation, not task completion. Preserve the cursor when continuing an incremental sync.
 
 ## Safety and escalation
