@@ -18,13 +18,15 @@ type driveOptions struct {
 func newDriveCommand(f *cmdutil.Factory) *cobra.Command {
 	o := &driveOptions{}
 	cmd := &cobra.Command{
-		Use:   "drive <keyword>",
-		Short: "Search Drive, Google Drive, and Dropbox files",
-		Long: `Search indexed files from Drive and connected cloud drives.
+		Use:     "drive <keyword>",
+		Aliases: []string{"files"},
+		Short:   "Search Drive, Sync, Google Drive, and Dropbox files",
+		Long: `Search indexed files from Drive, Sync, and connected cloud drives.
 
 On Olares 1.12.7 and newer, one asynchronous search covers files_v2,
-google_drive, and dropbox. Olares 1.12.6 and older keep using the legacy
-/api/search/init + /more + /cancel API for local Drive files only.
+google_drive, dropbox, and seafile. Olares 1.12.6 and older keep using the
+legacy /api/search/init + /more + /cancel API for local Drive files only
+(Sync remains available via search sync).
 
 With --watch, Olares 1.12.7+ prints each result as soon as its asynchronous
 batch arrives. JSON output is JSONL (one result object per line). Older
@@ -32,6 +34,7 @@ versions have no result stream and print the completed legacy result instead.
 
 Examples:
   olares-cli search drive report
+  olares-cli search files report
   olares-cli search drive report --watch
   olares-cli search drive invoice --type file_name --limit 50
   olares-cli search drive "design doc" --watch -o json

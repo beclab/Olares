@@ -28,12 +28,10 @@ REQUIRED_ENTRYPOINT_FACTS = {
     ],
     "olares-search/SKILL.md": [
         (
-            "gdrive requires Olares 1.12.7+",
-            r"^\| `gdrive` \(`google-drive`, `google`\) \| Google Drive search \| requires Olares 1\.12\.7\+ and a bound integration \|$",
-        ),
-        (
-            "dropbox requires Olares 1.12.7+",
-            r"^\| `dropbox` \| Dropbox search \| requires Olares 1\.12\.7\+ and a bound integration \|$",
+            # Google Drive and Dropbox lost their own verbs to the federated
+            # drive search, so the requirement is stated in prose now.
+            "cloud sources require Olares 1.12.7+ and a bound integration",
+            r"^Google Drive and Dropbox results require Olares 1\.12\.7\+ and a bound integration: ",
         ),
         (
             "knowledge search requires Olares 1.12.7+",

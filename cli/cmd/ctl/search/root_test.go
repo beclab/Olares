@@ -29,3 +29,19 @@ func TestSearchCommandExposesFederatedDriveOnly(t *testing.T) {
 		}
 	}
 }
+
+// The Desktop dialog labels the single federated entry "Files", so that name
+// has to reach the same command as `drive` rather than 404 into usage output.
+func TestSearchFilesAliasResolvesToDrive(t *testing.T) {
+	cmd := NewSearchCommand(&cmdutil.Factory{})
+	resolved, args, err := cmd.Find([]string{"files"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(args) != 0 {
+		t.Fatalf("unresolved command tokens: %v", args)
+	}
+	if resolved.Name() != "drive" {
+		t.Fatalf("search files resolved to %q, want drive", resolved.Name())
+	}
+}

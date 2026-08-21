@@ -16,13 +16,19 @@ func NewSearchCommand(f *cmdutil.Factory) *cobra.Command {
 		Long: `Run the same searches the Olares Desktop global search dialog uses.
 
 Subcommands:
-  drive       Search Drive, Google Drive, and Dropbox files
-  sync        Search Seafile/Sync libraries
+  drive       Search Drive, Sync, Google Drive, and Dropbox (alias: files)
+  sync        Search Seafile/Sync libraries only
   knowledge   Search Wise / Knowledge content (Olares >= 1.12.7; alias: wise)
   app         Search installed applications by title
 
+On Olares 1.12.7+, drive and sync both use the asynchronous federated search
+channel (search3). drive covers files_v2, google_drive, dropbox, and seafile
+in one request; sync restricts the same channel to seafile. Older Olares
+versions keep the legacy /api/search/init and /api/search/sync APIs.
+
 Examples:
   olares-cli search drive report
+  olares-cli search files report
   olares-cli search drive "design doc" --type file_name
   olares-cli search sync notes --offset 20 -o json
   olares-cli search knowledge design

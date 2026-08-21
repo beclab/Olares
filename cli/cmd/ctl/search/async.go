@@ -29,7 +29,7 @@ const (
 	asyncSearchJobTimeout = 10*time.Minute + 30*time.Second
 )
 
-var federatedFileSources = []string{appFilesV2, appGoogleDrive, appDropbox}
+var federatedFileSources = []string{appFilesV2, appGoogleDrive, appDropbox, appSeafile}
 
 type asyncSearchMessage struct {
 	MessageKind   string                        `json:"message_kind"`

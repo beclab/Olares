@@ -108,9 +108,31 @@ func TestAsyncSearchVersionBoundary(t *testing.T) {
 
 func TestFederatedFileSources(t *testing.T) {
 	t.Parallel()
-	want := []string{appFilesV2, appGoogleDrive, appDropbox}
+	want := []string{appFilesV2, appGoogleDrive, appDropbox, appSeafile}
 	if !reflect.DeepEqual(federatedFileSources, want) {
 		t.Fatalf("federatedFileSources = %#v, want %#v", federatedFileSources, want)
+	}
+}
+
+// `search sync` must stay a narrowed view of what `search drive` already
+// covers; a source here that drive does not request would mean the two
+// commands report different libraries for the same keyword.
+func TestSyncSearchSourcesAreCoveredByDrive(t *testing.T) {
+	t.Parallel()
+	if want := []string{appSeafile}; !reflect.DeepEqual(syncSearchSources, want) {
+		t.Fatalf("syncSearchSources = %#v, want %#v", syncSearchSources, want)
+	}
+	for _, source := range syncSearchSources {
+		found := false
+		for _, federated := range federatedFileSources {
+			if federated == source {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Fatalf("source %q is not part of federatedFileSources %#v", source, federatedFileSources)
+		}
 	}
 }
 

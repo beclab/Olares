@@ -91,6 +91,58 @@ func TestNeedsMorePage(t *testing.T) {
 	}
 }
 
+func TestResultItemLocationLine(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name string
+		row  string
+		want string
+	}{
+		{
+			"federated seafile hit names its library",
+			`{"resource_uri":"/sync/2c768a94/asd/","meta":{"repo_name":"My Library"}}`,
+			"/sync/2c768a94/asd/ (My Library)",
+		},
+		{
+			"legacy sync row carries repo_name at the top level",
+			`{"path":"/asd/","repo_name":"My Library"}`,
+			"/asd/ (My Library)",
+		},
+		{
+			"drive hit has no library to name",
+			`{"resource_uri":"drive/Home/report.pdf"}`,
+			"drive/Home/report.pdf",
+		},
+		{
+			"seafile hit without a library name stays usable",
+			`{"resource_uri":"/sync/2c768a94/asd/","meta":{}}`,
+			"/sync/2c768a94/asd/",
+		},
+		{
+			// `meta` is source-specific, so an unmodelled shape must degrade to
+			// "no library name" instead of failing the row.
+			"unexpected meta shape is ignored",
+			`{"resource_uri":"drive/Home/report.pdf","meta":[]}`,
+			"drive/Home/report.pdf",
+		},
+		{"row without a location prints nothing", `{"title":"asd"}`, ""},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			items, err := decodeResultRows([]json.RawMessage{json.RawMessage(tc.row)})
+			if err != nil {
+				t.Fatalf("decodeResultRows(%s): %v", tc.row, err)
+			}
+			if got := items[0].locationLine(); got != tc.want {
+				t.Fatalf("locationLine() = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestClampMoreLimit(t *testing.T) {
 	t.Parallel()
 

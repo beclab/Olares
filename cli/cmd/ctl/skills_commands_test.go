@@ -54,8 +54,6 @@ func TestSkillCommandPathsExist(t *testing.T) {
 		"search",
 		"search drive",
 		"search sync",
-		"search gdrive",
-		"search dropbox",
 		"search knowledge",
 		"search app",
 		"market",

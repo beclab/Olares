@@ -46,7 +46,7 @@ func (p *watchResultPrinter) emit(hit asyncIndexedHit) error {
 	if _, err := fmt.Fprintf(p.w, "%d. [%s] %s\n", p.printed, hit.Source, title); err != nil {
 		return err
 	}
-	if loc := item.location(); loc != "" {
+	if loc := item.locationLine(); loc != "" {
 		if _, err := fmt.Fprintf(p.w, "   %s\n", loc); err != nil {
 			return err
 		}
