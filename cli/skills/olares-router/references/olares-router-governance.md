@@ -36,16 +36,16 @@ Reading routes is open to every console user, since the name is what a person ty
 ## The categories a caller can ask for instead of a model
 
 ```
-olares-cli router default show
-olares-cli router default disable chat
-olares-cli router default enable chat
+olares-cli router route list --kind default
+olares-cli router route disable chat
+olares-cli router route enable chat
 ```
 
-A caller that does not want to choose names a category: `default-chat`, `default-tts`, one per kind of request. **What a category answers with is not configured.** Router keeps the list of categories in its own code and points each one at an installed model that can serve it, so the answer moves as models are installed, enabled and disabled — that is the design, and `default show` reports where it currently stands.
+A caller that does not want to choose names a category: `default-chat`, `default-tts`, one per kind of request. **What a category answers with is not configured.** Router keeps the list of categories in its own code and points each one at an installed model that can serve it, so the answer moves as models are installed, enabled and disabled — that is the design, and `route list --kind default` reports where it currently stands.
 
 A category with nothing behind it is refused rather than approximated. Installing or enabling a model of that kind is what fills it in; there is no setting to point it by hand, and no per-user override.
 
-`default disable` refuses that kind of request without uninstalling anything — the models keep running and stay callable by name. It is a different thing from disabling the model, which takes it away from every caller. A category cannot be renamed or deleted: Router owns the list and would create it again.
+`route disable <category>` refuses that kind of request without uninstalling anything — the models keep running and stay callable by name. It is a different thing from disabling the model, which takes it away from every caller. A category cannot be renamed or deleted: Router owns the list and would create it again.
 
 ## Keys
 

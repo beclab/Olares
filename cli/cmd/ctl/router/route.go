@@ -38,8 +38,9 @@ import (
 // The kinds differ in who owns them: an admin creates and points an alias or a
 // group, while a default category is created by Router from a registry in its
 // own code and pointed by reconciliation at whatever installed model can serve
-// it. So a default takes no target from here, and `router default` is the verb
-// for the one thing an admin does decide about one.
+// it. So a default takes no target from anyone, and the one thing an admin
+// decides about a category is whether it is answered at all — which is the same
+// enable and disable the other two kinds take.
 
 // Route kinds, spelled as the wire spells them.
 const (
@@ -53,8 +54,8 @@ var routeKinds = []string{routeKindAlias, routeKindGroup, routeKindDefault}
 
 // defaultNamePrefix marks a default category, and only a default category:
 // Router refuses an alias or group that carries it and a default that does not.
-// The CLI knows it so `router default` can take the category a person thinks in
-// ("chat") as readily as the name a caller sends ("default-chat").
+// The CLI knows it so a verb can take the category a person thinks in ("chat")
+// as readily as the name a caller sends ("default-chat").
 const defaultNamePrefix = "default-"
 
 // modelRoute is one row: the name, what kind of name it is, and what it
@@ -188,13 +189,21 @@ and this is where routes are made.
   alias    a second name for exactly one model
   group    one name served by several models, in priority order with weights
   default  a category Router maintains itself: default-chat, default-tts, and
-           one per kind of request. What it points at is chosen by Router
-           against what is installed, so an admin does not set it — see
-           "olares-cli router default".
+           one per kind of request
 
 A route name is lowercase letters, digits, '-' and '_', up to 64 characters,
 and never contains a slash. That is what keeps the two kinds of name from
 overlapping. Names beginning "default-" belong to Router.
+
+The three kinds differ in who owns them. An alias and a group are yours: you
+make them, point them and name them. A category is Router's — it comes from a
+registry in Router's own code and is pointed at an installed model by
+reconciliation, against what that model says it can do. So a category is not
+created, renamed, deleted, or given members here, and installing, enabling and
+disabling models is what moves it. What an admin does decide about a category
+is whether it is answered at all, which is the same enable and disable the
+other kinds take. A category may be named in full ("default-chat") or by the
+part that varies ("chat").
 
 Subcommands:
   list                    every route, with what it answers with
@@ -242,11 +251,16 @@ working name until somebody calls it.
 BACKENDS counts the live ones against the total. ANSWERS WITH names the first
 candidate, which for a group is the one traffic goes to first.
 
+--kind default asks the narrower question of what the categories currently
+stand at, and answers it in the terms categories are in: what each one answers
+with, and the route it goes through when several models share one.
+
 Unpaginated: a deployment has as many routes as it has publicly callable names.
 
 Examples:
   olares-cli router route list
   olares-cli router route list --kind group
+  olares-cli router route list --kind default
 `,
 		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
@@ -280,6 +294,12 @@ func runRouteList(ctx context.Context, f *cmdutil.Factory, kind, outputRaw strin
 	}
 	if format == FormatJSON {
 		return printJSON(os.Stdout, map[string]any{"items": routes})
+	}
+	// Asking for the categories alone is a different question from asking for
+	// the routes, and it wants different columns: the kind is known, and what
+	// a category points through matters more than how many backends it has.
+	if kind == routeKindDefault {
+		return renderDefaults(os.Stdout, routes)
 	}
 	return renderRoutes(os.Stdout, routes, kind)
 }
@@ -344,7 +364,52 @@ func renderRoutes(w io.Writer, routes []modelRoute, kind string) error {
 	if anyEmptyDefault {
 		if _, err := fmt.Fprintln(w, "\nA default with no backends is a kind of request nothing installed can "+
 			"answer. Router fills it in on its own once a model of that kind exists — `olares-cli router "+
-			"default show` says which categories are waiting."); err != nil {
+			"route list --kind default` says which categories are waiting."); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// renderDefaults prints the categories in the terms categories are in. The
+// kind column is dropped because it is the question, VIA is added because a
+// category pointing through a route of its own is how several models come to
+// share one, and BACKENDS goes because what a category answers with matters
+// more than how many things could.
+func renderDefaults(w io.Writer, routes []modelRoute) error {
+	if len(routes) == 0 {
+		_, err := fmt.Fprintln(w, "this Router registers no default categories, which means the deployment "+
+			"is older than the ones this command reads. Every model is still callable as "+
+			"<provider>/<model>; `olares-cli router list` shows them.")
+		return err
+	}
+	var anyEmpty, anyOff bool
+	t := newTable(w, "CATEGORY", "MODE", "CALLABLE", "ANSWERS WITH", "VIA")
+	for i := range routes {
+		r := &routes[i]
+		if !r.Enabled {
+			anyOff = true
+		}
+		if len(r.Members) == 0 {
+			anyEmpty = true
+		}
+		t.row(r.Name, nonEmpty(r.Mode), boolStr(r.callable()),
+			clip(r.answersWith(), 44), nonEmpty(r.via()))
+	}
+	if err := t.flush(); err != nil {
+		return err
+	}
+	if anyEmpty {
+		if _, err := fmt.Fprintln(w, "\nA category nothing serves is refused, not approximated. Install or "+
+			"enable a model of that kind and Router points the category at it on its own — "+
+			"`olares-cli market install <app>` is where local models come from, and "+
+			"`olares-cli router provider create` is where a cloud vendor does."); err != nil {
+			return err
+		}
+	}
+	if anyOff {
+		if _, err := fmt.Fprintln(w, "\nA category switched off is refused even when something could serve it. "+
+			"`olares-cli router route enable <category>` answers it again."); err != nil {
 			return err
 		}
 	}
@@ -527,9 +592,9 @@ func runRouteCreate(ctx context.Context, f *cmdutil.Factory, name, kind, modelRe
 	case routeKindAlias, routeKindGroup:
 	case routeKindDefault:
 		return fmt.Errorf("a default category is not created here: Router keeps the list of them in its own "+
-			"code and points each one at an installed model itself. `olares-cli router default show` lists "+
-			"the categories that exist, and `olares-cli router route create %s --kind alias --model <model>` "+
-			"is how a name of your own is made", name)
+			"code and points each one at an installed model itself. `olares-cli router route list --kind "+
+			"default` lists the categories that exist, and `olares-cli router route create %s --kind alias "+
+			"--model <model>` is how a name of your own is made", name)
 	case "":
 		return fmt.Errorf("--kind is required: an alias names one model, a group is served by several")
 	default:
@@ -623,20 +688,28 @@ The name stays taken and its members stay attached; callers sending it are
 refused until it is switched back on. That is the reversible way to stop
 traffic to a name — "route delete" is not.
 
-A default category can be switched off too, which is how a kind of request is
-refused rather than answered by whatever Router picked.
+A default category is switched off the same way, and that is the one decision
+an admin makes about a category: whether that kind of request is answered at
+all. Nothing is uninstalled and nothing is reconfigured — the models serving it
+keep running and stay callable as "<provider>/<model>", and Router goes on
+maintaining what the category would point at. Disabling the model takes it away
+from every caller; disabling the category takes away the convenience of not
+naming one. A category may be named in full or by the part that varies.
 
-Example:
+Examples:
   olares-cli router route disable fast
+  olares-cli router route disable chat
 `
 	if on {
 		verb, short, long = "enable", "let callers reach a route again", `Switch a route on.
 
 Whether it then answers is a second question: a route with no live backend is
-enabled and still refused. "route get" says which of the two you are looking at.
+enabled and still refused. "route get" says which of the two you are looking
+at, and for a category "route list --kind default" does.
 
-Example:
+Examples:
   olares-cli router route enable fast
+  olares-cli router route enable chat
 `
 	}
 	cmd := &cobra.Command{
@@ -695,10 +768,20 @@ func runRoutePatch(ctx context.Context, f *cmdutil.Factory, ref, newName string,
 	if format == FormatJSON {
 		return printJSON(os.Stdout, updated)
 	}
+	// A category and a name of your own read differently when switched: a
+	// category is never emptied by being refused, because Router goes on
+	// maintaining what it would point at.
 	switch {
 	case newName != "":
 		_, err = fmt.Fprintf(os.Stdout, "%s is now called %s; callers sending %q are refused from now on\n",
 			found.Name, updated.Name, found.Name)
+	case *enabled && updated.isDefault():
+		if updated.callable() {
+			_, err = fmt.Fprintf(os.Stdout, "%s answers again, with %s\n", updated.Name, updated.answersWith())
+		} else {
+			_, err = fmt.Fprintf(os.Stdout, "%s is switched on, but %s, so calls naming it are still refused\n",
+				updated.Name, updated.answersWith())
+		}
 	case *enabled:
 		if updated.callable() {
 			_, err = fmt.Fprintf(os.Stdout, "%s is callable again\n", updated.Name)
@@ -707,6 +790,9 @@ func runRoutePatch(ctx context.Context, f *cmdutil.Factory, ref, newName string,
 				"so calls naming it are still refused. `olares-cli router route get %s` says what it holds\n",
 				updated.Name, updated.Name)
 		}
+	case updated.isDefault():
+		_, err = fmt.Fprintf(os.Stdout, "%s is refused from now on; the models that were serving it keep "+
+			"running and stay callable by name\n", updated.Name)
 	default:
 		_, err = fmt.Fprintf(os.Stdout, "%s is switched off; its name and its backends are kept\n", updated.Name)
 	}
@@ -1010,7 +1096,8 @@ func checkRouteName(name string) error {
 	}
 	if strings.HasPrefix(name, defaultNamePrefix) {
 		return fmt.Errorf("names beginning %q belong to the categories Router maintains, so %q would "+
-			"impersonate one; `olares-cli router default show` lists them", defaultNamePrefix, name)
+			"impersonate one; `olares-cli router route list --kind default` lists them",
+			defaultNamePrefix, name)
 	}
 	for _, r := range name {
 		switch {
@@ -1048,6 +1135,17 @@ func resolveRoute(ctx context.Context, pc *preparedClient, ref string) (*modelRo
 	for i := range routes {
 		if strings.EqualFold(routes[i].Name, ref) {
 			return &routes[i], nil
+		}
+	}
+	// A category is also findable by the part of it that varies. People think
+	// in "chat" and clients send "default-chat", and only Router mints these
+	// names, so the expansion cannot collide with an alias or a group.
+	if !strings.HasPrefix(strings.ToLower(ref), defaultNamePrefix) {
+		want := defaultNamePrefix + strings.ToLower(ref)
+		for i := range routes {
+			if routes[i].isDefault() && strings.EqualFold(routes[i].Name, want) {
+				return &routes[i], nil
+			}
 		}
 	}
 	if entityID.MatchString(ref) {

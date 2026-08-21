@@ -23,8 +23,8 @@ find it says whether it is missing or invisible to this profile.
 
   list          every model configured, across every provider
   models        every name the model field accepts, as a caller sees it
-  route         the names callers may send instead of a provider and model
-  default       the categories a caller can ask for instead of a model
+  route         the names callers may send instead of a provider and model,
+                including the default-* categories Router maintains itself
   provider      the upstreams Router routes to, and the models they serve
   spec          what a local model declares itself to be, and changing it
   local         the Model Console inside a model application on this machine
@@ -52,7 +52,6 @@ Run "olares-cli router <verb> --help" for details.
 	cmd.AddCommand(NewListCommand(f))
 	cmd.AddCommand(newModelsCommand(f))
 	cmd.AddCommand(NewRouteCommand(f))
-	cmd.AddCommand(NewDefaultCommand(f))
 	cmd.AddCommand(NewProviderCommand(f))
 	cmd.AddCommand(NewSpecCommand(f))
 	cmd.AddCommand(NewLocalCommand(f))
@@ -61,5 +60,6 @@ Run "olares-cli router <verb> --help" for details.
 	cmd.AddCommand(NewQuotaCommand(f))
 	cmd.AddCommand(NewUsageCommand(f))
 	cmd.AddCommand(NewAuditCommand(f))
+	cmd.AddCommand(newDeprecatedDefaultCommand(f))
 	return cmd
 }

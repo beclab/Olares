@@ -28,7 +28,7 @@ The saved key is an ordinary one: it appears in `router key list`, it can be giv
 
 `--model` takes a qualified `<provider>/<model>` as `router list` prints it, or any route name — an alias, a group, or a `default-*` category.
 
-Leaving `--model` off names the default category for that kind of work: `default-chat` for chat, `default-stt` for transcription, `default-tts` for speech, and so on for every verb. Router decides what a category answers with by reconciling it against what is installed; nothing is set by hand and nothing falls back per call. `router default show` prints where each category currently stands, and a category nothing serves is refused rather than approximated.
+Leaving `--model` off names the default category for that kind of work: `default-chat` for chat, `default-stt` for transcription, `default-tts` for speech, and so on for every verb. Router decides what a category answers with by reconciling it against what is installed; nothing is set by hand and nothing falls back per call. `router route list --kind default` prints where each category currently stands, and a category nothing serves is refused rather than approximated.
 
 That refusal is the usual meaning of a failure on a fresh install: `chat`, `embedding` and whatever the configured vendor happens to publish have categories behind them, and the rest do not until a model of that kind exists.
 
@@ -79,7 +79,7 @@ A `router call` failure comes from one of a few places, and the message says whi
 | `invalid_api_key` with type `authentication_error` | Router is refusing *your* key — revoked, expired, or not allowed this model |
 | An authentication error without that type | The **vendor** is refusing Router's stored credential; `router provider validate <provider>` confirms it |
 | `quota_exceeded` | A ceiling on the key, the user, the model or the calling application; `router quota list` shows which |
-| `no_default_model` | The category for that kind of work has nothing behind it; `router default show` says which do |
+| `no_default_model` | The category for that kind of work has nothing behind it; `router route list --kind default` says which do |
 | `model_route_disabled` | The name exists but is switched off; `router route enable <name>` |
 | `model_not_allowed` | The key's allowed list does not include this model; `router key update` changes it |
 | A mode mismatch or unsupported-endpoint refusal | The model's mode or capabilities do not match the call — `router list` prints the mode, and for a local model `router spec show <model>` prints what it declares |

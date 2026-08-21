@@ -40,7 +40,7 @@ name, and nothing else about the request changes.
 
 Leaving --model off names the default category for that kind of work —
 "default-chat", "default-stt", and so on. Router chooses what a category answers
-with, against what is installed; "olares-cli router default show" reports where
+with, against what is installed; "olares-cli router route list --kind default" reports where
 each one currently stands. A category with nothing behind it is refused rather
 than answered by something approximate, so a call with no --model on a fresh
 install fails until a model of that kind exists.
@@ -111,7 +111,7 @@ the credential that made it, and may cost money.
 //
 // These literals are copied from Router's own registry, and nothing here can
 // check them: a category renamed there turns every `--model`-less call into a
-// route that does not exist. `olares-cli router default show` lists what this
+// route that does not exist. `olares-cli router route list --kind default` lists what this
 // deployment actually has, and is the thing to compare against.
 const (
 	categoryChat        = "default-chat"

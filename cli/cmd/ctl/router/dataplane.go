@@ -214,7 +214,7 @@ func callErr(err error) error {
 			"holds for it was refused. `olares-cli router provider validate <provider>` checks it against "+
 			"the upstream, and `router provider update` replaces it", err)
 	case re.Code == "no_default_model":
-		return fmt.Errorf("%w\nNothing installed can serve that category. `olares-cli router default show` "+
+		return fmt.Errorf("%w\nNothing installed can serve that category. `olares-cli router route list --kind default` "+
 			"says where each one stands, and it fills once a model of that kind exists — a category is "+
 			"maintained against what is configured rather than pointed at by hand. --model names one "+
 			"directly in the meantime", err)

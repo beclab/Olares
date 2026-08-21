@@ -98,7 +98,7 @@ text is in, and also translates nothing.
 
 There is no --model here. These routes carry no model field: Router resolves the
 translate default per call, so the model is a deployment's choice rather than a
-caller's. "olares-cli router default show" says which one it is.
+caller's. "olares-cli router route list --kind default" says which one it is.
 
 Examples:
   olares-cli router call translate --to zh "the quick brown fox"

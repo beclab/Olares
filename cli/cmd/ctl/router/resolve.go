@@ -25,6 +25,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 	"regexp"
 	"sort"
 	"strings"
@@ -125,6 +126,38 @@ type missing struct {
 // Ambiguity is reported with the candidates rather than resolved by taking the
 // first. Two rows with one name can be different deployments of a model with
 // different prices, and every caller of this is about to write something down.
+// listAllModels reads every configured model in one page. The limit is a
+// ceiling rather than a window: a deployment has as many rows as somebody
+// configured, and every caller here wants all of them.
+func listAllModels(ctx context.Context, pc *preparedClient) ([]adminModelRow, error) {
+	return collection[adminModelRow](ctx, pc, withQuery(epProviderModels, url.Values{"limit": {"1000"}}))
+}
+
+// modelNames maps model ids to a readable label, for the routes and settings
+// that carry an id where a person expects a name. A failed lookup is not worth
+// failing a command over, so the id is shown bare instead.
+func modelNames(ctx context.Context, pc *preparedClient) map[string]string {
+	rows, err := listAllModels(ctx, pc)
+	if err != nil {
+		return nil
+	}
+	out := make(map[string]string, len(rows))
+	for i := range rows {
+		out[rows[i].ProviderModelID] = rows[i].label()
+	}
+	return out
+}
+
+func modelLabel(names map[string]string, id string) string {
+	if id == "" {
+		return "-"
+	}
+	if label, ok := names[id]; ok && label != "" {
+		return label
+	}
+	return "(unknown)"
+}
+
 func resolveModel(ctx context.Context, pc *preparedClient, ref string) (*adminModelRow, error) {
 	ref, err := requireRef(ref, "a model, as <provider>/<model>, <app_name>/<model> or an id")
 	if err != nil {

@@ -65,7 +65,7 @@ The Market can report an application running long before the model inside it is 
 
 1. `router local progress <app>` until the download and load settle.
 2. `router provider get <app-or-title>` to confirm Router now sees its models. A local application publishes its own list, so Router mirrors it rather than needing `provider models import`; `router provider sync-models <provider>` re-mirrors it if the card changed.
-3. `router default show` to see whether Router has pointed `default-chat` at the new model. It does that itself, against what the model says it can do — there is nothing to set. If the category is still empty, the model is not enabled or has not published a card yet. See [names, defaults and access control](olares-router-governance.md).
+3. `router route list --kind default` to see whether Router has pointed `default-chat` at the new model. It does that itself, against what the model says it can do — there is nothing to set. If the category is still empty, the model is not enabled or has not published a card yet. See [names, defaults and access control](olares-router-governance.md).
 4. `router call chat "hello" --model <provider>/<model>` to prove the whole path.
 
 ## The model card
