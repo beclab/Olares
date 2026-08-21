@@ -168,10 +168,7 @@ func runCallTranslate(ctx context.Context, f *cmdutil.Factory, opts translateOpt
 	if err != nil {
 		return err
 	}
-	dp, err := dataPlane(ctx, pc, opts.APIKey)
-	if err != nil {
-		return err
-	}
+	dp := dataPlane(pc, opts.APIKey)
 
 	if !opts.PerLine {
 		text, terr := readPromptArgs(opts.Args, "text")
@@ -249,10 +246,7 @@ func runLanguages(ctx context.Context, f *cmdutil.Factory, apiKey, outputRaw str
 	if err != nil {
 		return err
 	}
-	dp, err := dataPlane(ctx, pc, apiKey)
-	if err != nil {
-		return err
-	}
+	dp := dataPlane(pc, apiKey)
 	var resp languagesResponse
 	if err := dp.doJSON(ctx, "GET", epLanguages, nil, &resp); err != nil {
 		return callErr(err)
@@ -308,10 +302,7 @@ func runDetect(ctx context.Context, f *cmdutil.Factory, text, apiKey, outputRaw 
 	if err != nil {
 		return err
 	}
-	dp, err := dataPlane(ctx, pc, apiKey)
-	if err != nil {
-		return err
-	}
+	dp := dataPlane(pc, apiKey)
 	var resp detectResponse
 	if err := dp.doJSON(ctx, "POST", epDetect, map[string]any{"text": text}, &resp); err != nil {
 		return callErr(err)

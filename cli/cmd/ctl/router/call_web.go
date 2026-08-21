@@ -114,10 +114,7 @@ func runCallSearch(ctx context.Context, f *cmdutil.Factory, req searchRequest, a
 	if err != nil {
 		return err
 	}
-	dp, err := dataPlane(ctx, pc, apiKey)
-	if err != nil {
-		return err
-	}
+	dp := dataPlane(pc, apiKey)
 	var resp searchResponse
 	if err := dp.doJSON(ctx, "POST", epSearch, req, &resp); err != nil {
 		return callErr(err)
@@ -220,10 +217,7 @@ func runCallScrape(ctx context.Context, f *cmdutil.Factory, req scrapeRequest, a
 	if err != nil {
 		return err
 	}
-	dp, err := dataPlane(ctx, pc, apiKey)
-	if err != nil {
-		return err
-	}
+	dp := dataPlane(pc, apiKey)
 	var doc scrapeDocument
 	if err := dp.doJSON(ctx, "POST", epScrape, req, &doc); err != nil {
 		return callErr(err)

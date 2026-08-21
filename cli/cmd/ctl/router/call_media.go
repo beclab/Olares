@@ -325,10 +325,7 @@ func runMedia(ctx context.Context, f *cmdutil.Factory, kind mediaKind, opts medi
 	if err != nil {
 		return err
 	}
-	dp, err := dataPlane(ctx, pc, opts.APIKey)
-	if err != nil {
-		return err
-	}
+	dp := dataPlane(pc, opts.APIKey)
 
 	var gen generationView
 	switch {

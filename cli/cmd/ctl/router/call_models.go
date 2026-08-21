@@ -142,10 +142,7 @@ func runModels(ctx context.Context, f *cmdutil.Factory, apiKey string, includeNo
 	if err != nil {
 		return err
 	}
-	dp, err := dataPlane(ctx, pc, apiKey)
-	if err != nil {
-		return err
-	}
+	dp := dataPlane(pc, apiKey)
 	var resp modelsListResponse
 	if err := dp.doJSON(ctx, "GET", modelsPath(includeNotReady), nil, &resp); err != nil {
 		return callErr(err)

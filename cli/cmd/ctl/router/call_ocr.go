@@ -172,10 +172,7 @@ func runCallOCR(ctx context.Context, f *cmdutil.Factory, opts ocrOptions) error 
 	if err != nil {
 		return err
 	}
-	dp, err := dataPlane(ctx, pc, opts.APIKey)
-	if err != nil {
-		return err
-	}
+	dp := dataPlane(pc, opts.APIKey)
 
 	if opts.TaskID != "" && opts.Cancel {
 		path := epOCRTask(opts.TaskID)
@@ -278,10 +275,7 @@ func runOCRQueue(ctx context.Context, f *cmdutil.Factory, opts ocrQueueOptions) 
 	if err != nil {
 		return err
 	}
-	dp, err := dataPlane(ctx, pc, opts.APIKey)
-	if err != nil {
-		return err
-	}
+	dp := dataPlane(pc, opts.APIKey)
 	q := url.Values{}
 	if opts.Status != "" {
 		q.Set("status", opts.Status)

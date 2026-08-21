@@ -299,10 +299,7 @@ func runAudioAnalysis(ctx context.Context, f *cmdutil.Factory, a audioAnalysis) 
 	if err != nil {
 		return err
 	}
-	dp, err := dataPlane(ctx, pc, a.APIKey)
-	if err != nil {
-		return err
-	}
+	dp := dataPlane(pc, a.APIKey)
 	body, contentType, err := multipartFile(a.Path, "file", a.Fields)
 	if err != nil {
 		return err
@@ -431,10 +428,7 @@ func runCallEnhance(ctx context.Context, f *cmdutil.Factory, path string, opts e
 	if err != nil {
 		return err
 	}
-	dp, err := dataPlane(ctx, pc, opts.APIKey)
-	if err != nil {
-		return err
-	}
+	dp := dataPlane(pc, opts.APIKey)
 	body, contentType, err := multipartFile(path, "file", map[string]string{
 		"model":  strings.TrimSpace(opts.Model),
 		"format": strings.TrimSpace(opts.Format),

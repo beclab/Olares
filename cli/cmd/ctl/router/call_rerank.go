@@ -143,10 +143,7 @@ func runCallRerank(ctx context.Context, f *cmdutil.Factory, req rerankRequest, a
 	if err != nil {
 		return err
 	}
-	dp, err := dataPlane(ctx, pc, apiKey)
-	if err != nil {
-		return err
-	}
+	dp := dataPlane(pc, apiKey)
 	var resp rerankResponse
 	if err := dp.doJSON(ctx, "POST", epRerank, req, &resp); err != nil {
 		return callErr(err)

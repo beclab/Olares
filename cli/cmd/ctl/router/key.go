@@ -154,9 +154,8 @@ func runKeyLocal(ctx context.Context, f *cmdutil.Factory, forget bool, outputRaw
 
 	stored, gerr := cachedDataPlaneKey(rp.OlaresID)
 	state := map[string]any{
-		"profile":      rp.OlaresID,
-		"saved":        stored != "",
-		"in_container": inContainer(),
+		"profile": rp.OlaresID,
+		"saved":   stored != "",
 	}
 	if stored != "" {
 		state["key_prefix"] = keyPrefixOf(stored)
@@ -187,8 +186,6 @@ func renderKeyLocal(w io.Writer, state map[string]any) error {
 	if e, ok := state["keychain_error"].(string); ok {
 		t.row("KEYCHAIN", "unreadable: "+e)
 	}
-	inC, _ := state["in_container"].(bool)
-	t.row("IN CONTAINER", boolStr(inC))
 	if err := t.flush(); err != nil {
 		return err
 	}
@@ -198,10 +195,6 @@ func renderKeyLocal(w io.Writer, state map[string]any) error {
 		return err
 	case saved:
 		_, err := fmt.Fprintln(w, "\nCalls use this key. --forget drops the copy; `router key revoke` ends the key.")
-		return err
-	case inC:
-		_, err := fmt.Fprintln(w, "\nNo key saved. Inside the cluster the platform supplies the caller identity, "+
-			"so a call tries that first and only issues a key if it is refused.")
 		return err
 	default:
 		_, err := fmt.Fprintln(w, "\nNo key saved. The first `router call` will issue one and save it here.")

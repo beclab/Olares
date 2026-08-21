@@ -123,10 +123,7 @@ func runCallEmbed(ctx context.Context, f *cmdutil.Factory, inputs []string, mode
 	if err != nil {
 		return err
 	}
-	dp, err := dataPlane(ctx, pc, apiKey)
-	if err != nil {
-		return err
-	}
+	dp := dataPlane(pc, apiKey)
 	req := embeddingsRequest{
 		Model:      strings.TrimSpace(model),
 		Input:      inputs,

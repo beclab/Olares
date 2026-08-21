@@ -168,10 +168,7 @@ func runCallChat(ctx context.Context, f *cmdutil.Factory, prompt string, opts ch
 	if err != nil {
 		return err
 	}
-	dp, err := dataPlane(ctx, pc, opts.APIKey)
-	if err != nil {
-		return err
-	}
+	dp := dataPlane(pc, opts.APIKey)
 
 	msgs := make([]chatMessage, 0, 2)
 	if s := strings.TrimSpace(opts.System); s != "" {

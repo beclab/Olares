@@ -1,7 +1,6 @@
 package router
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -12,42 +11,49 @@ import (
 
 // Reaching the data plane.
 //
-// The management plane runs on the Olares session this whole tree carries: the
-// edge injects X-BFL-USER and Router trusts it. The data plane does not accept
-// that header. It takes an `sk-*` key, or a platform-injected caller identity
-// when the request came from inside the cluster — and nothing else, on purpose:
-// a browser session that could also spend budget would make every open Router
-// tab a spending credential.
+// Router's /v1 accepts three identities and tries them in this order: an `sk-*`
+// Bearer, the platform-injected `x-caller-appid` of a calling application, and
+// the platform-injected `X-BFL-USER` of a person. The third arrived in Router
+// v2.2.1 (ADR-49), and it is what makes this file short.
 //
-// So a call has to answer "which of the two do I have" before it can be made.
-// The order below is capability-first rather than configuration-first, because
-// the same binary runs in both places and asking the user which one they are in
-// is a question the process can answer itself:
+// Both injected headers are stamped by the Olares edge on the way in — the same
+// edge, the same host and the same profile session that every management verb
+// in this tree already travels on, since the console plane works precisely
+// because that session becomes X-BFL-USER. So a /v1 request sent from here
+// carrying no credential of its own is not anonymous: it arrives as whoever the
+// platform says is calling. In a pod that is the application; from a laptop it
+// is the person holding the profile.
 //
-//  1. A key given explicitly — flag or environment — wins. Someone naming a
-//     credential is not asking to be second-guessed.
-//  2. A key this machine minted before, from the OS keychain. Reusing it keeps
-//     one key per machine instead of one per invocation.
-//  3. Inside a container: try with no credential at all. If the platform is
-//     injecting a caller identity, that succeeds and no key needs to exist.
-//  4. Otherwise mint one through the management plane and keep it.
+// Hence two steps rather than five:
 //
-// Step 3 is skipped outside a container. It cannot succeed there — no platform
-// component is injecting anything into a request from a laptop — and spending a
-// round trip to be told so would slow down the common case. Which means step 4
-// is the normal outcome of the first call from a laptop, not a fallback for an
-// unusual one, and the notice it prints is written for somebody who did not
-// expect a credential to appear.
+//  1. A key named explicitly — flag, then environment — wins. Someone naming a
+//     credential is not asking to be second-guessed, and a key remains the way
+//     to call with a model allowlist, a budget of its own, or from outside
+//     Olares entirely.
+//  2. Otherwise send nothing, and let the platform say who this is.
+//
+// What stood here before was a keychain lookup, a probe gated on running inside
+// a container, and — for every laptop, on the first call of any kind — minting
+// a key through the management plane and saving it. That key had no expiry, no
+// quota and no model restriction, and `router call models` was enough to create
+// one. Nothing in this tree issues a credential as a side effect of using one
+// any more, which is also why a key saved by an older build is now ignored
+// rather than preferred: it still works in Router, and `key current` says so.
+//
+// A Router older than v2.2.1 refuses the keyless request with
+// `missing_credentials`. That is a message to answer rather than a case to mint
+// around, and callErr answers it by naming the upgrade and --api-key.
 
-// dataPlaneKeyEnv names a key without storing one. It is read before the
-// keychain so a scripted run can pin a credential with a budget of its own.
+// dataPlaneKeyEnv names a key for one run without saving it anywhere.
 const dataPlaneKeyEnv = "OLARES_ROUTER_API_KEY"
 
-// keychainAccountSuffix separates the data-plane key from the profile's own
-// access token, which lives under the bare Olares ID in the same service.
+// keychainAccountSuffix separates a data-plane key saved by an older build from
+// the profile's own access token, which lives under the bare Olares ID in the
+// same keychain service. Nothing writes this entry now; `key current` reads it
+// so a key left behind can still be found and dealt with.
 const keychainAccountSuffix = "#router-api-key"
 
-// authMode records which of the two credentials a call ended up using.
+// authMode records which identity a call ended up presenting.
 type authMode string
 
 const (
@@ -58,139 +64,28 @@ const (
 type dataPlaneAuth struct {
 	Mode authMode
 	Key  string
-	// Minted is set when this run created the key, and carries what to say
-	// about it. Announcing it is the caller's job rather than the minting
-	// function's: whether a credential was created is a fact about the call,
-	// and burying the print inside "mint a key" is what made it impossible to
-	// change the wording per verb or to leave it out.
-	Minted *createdKey
 }
 
-// dataPlane returns a client for /v1 with whatever credential this machine can
-// present, telling the user when that meant creating one.
-func dataPlane(ctx context.Context, pc *preparedClient, explicitKey string) (*routerClient, error) {
-	auth, err := resolveDataPlaneAuth(ctx, pc, explicitKey)
-	if err != nil {
-		return nil, err
-	}
-	if auth.Minted != nil {
-		fmt.Fprint(os.Stderr, mintedKeyNotice(auth.Minted))
-	}
+// dataPlane returns a client for /v1. Choosing the credential reads a flag and
+// an environment variable and speaks to nothing, so there is no context to pass
+// and no failure to report: without a key the request carries no Authorization
+// at all and the platform vouches for the caller.
+func dataPlane(pc *preparedClient, explicitKey string) *routerClient {
+	auth := resolveDataPlaneAuth(explicitKey)
 	if auth.Mode == authPlatform {
-		return pc.router, nil
+		return pc.router
 	}
-	return pc.router.withHeader("Authorization", "Bearer "+auth.Key), nil
+	return pc.router.withHeader("Authorization", "Bearer "+auth.Key)
 }
 
-// mintedKeyNotice is what somebody reads when a credential appeared that they
-// did not ask for.
-//
-// It says three things, and each is here because leaving it out sent a reader
-// somewhere unhelpful. What was created, because a key list months later has to
-// be matchable against it. That it is unrestricted, because an ordinary key
-// with no expiry, no ceiling and no model list is a bigger thing than "the CLI
-// logged in". And how not to have one, because a caller who only wanted to run
-// one command has two ways to avoid leaving a credential behind, and neither is
-// discoverable from a message that only describes what already happened.
-func mintedKeyNotice(k *createdKey) string {
-	// mintDataPlaneKey fills the name back in when Router does not echo it,
-	// because it is the only thing that knows what was sent. This guard is for
-	// the case it could not: naming a key as "" reads as a bug in the CLI and
-	// sends somebody looking for a key with no name.
-	identity := k.KeyPrefix
-	if name := strings.TrimSpace(k.Name); name != "" {
-		identity = fmt.Sprintf("%q, %s", name, k.KeyPrefix)
-	}
-	return fmt.Sprintf("issued a data-plane key for this machine (%s) and saved it to the keychain. "+
-		"`router call` cannot use the profile session, and this Router is not being reached from "+
-		"inside the cluster, so there was no other credential to use.\n"+
-		"It is an ordinary key with no expiry, no quota and no model restriction: "+
-		"`olares-cli router key list` shows it, `router key revoke` ends it, and "+
-		"`router key current --forget` drops this machine's copy without ending it.\n"+
-		"To call without leaving a key behind, pass --api-key or set %s.\n",
-		identity, dataPlaneKeyEnv)
-}
-
-func resolveDataPlaneAuth(ctx context.Context, pc *preparedClient, explicitKey string) (*dataPlaneAuth, error) {
+func resolveDataPlaneAuth(explicitKey string) *dataPlaneAuth {
 	if k := strings.TrimSpace(explicitKey); k != "" {
-		return &dataPlaneAuth{Mode: authKey, Key: k}, nil
+		return &dataPlaneAuth{Mode: authKey, Key: k}
 	}
 	if k := strings.TrimSpace(os.Getenv(dataPlaneKeyEnv)); k != "" {
-		return &dataPlaneAuth{Mode: authKey, Key: k}, nil
+		return &dataPlaneAuth{Mode: authKey, Key: k}
 	}
-	if k, err := cachedDataPlaneKey(pc.profile.OlaresID); err == nil && k != "" {
-		return &dataPlaneAuth{Mode: authKey, Key: k}, nil
-	}
-	if inContainer() && platformIdentityWorks(ctx, pc) {
-		return &dataPlaneAuth{Mode: authPlatform}, nil
-	}
-	created, err := mintDataPlaneKey(ctx, pc)
-	if err != nil {
-		return nil, err
-	}
-	// A keychain that will not store is not worth failing the call over: the
-	// key works for this run, and the next run mints another one.
-	if serr := storeDataPlaneKey(pc.profile.OlaresID, created.Key); serr != nil {
-		fmt.Fprintf(os.Stderr, "warning: could not save the new key locally (%v); "+
-			"the next call will issue another one\n", serr)
-	}
-	return &dataPlaneAuth{Mode: authKey, Key: created.Key, Minted: created}, nil
-}
-
-// inContainer decides whether a platform-injected identity is even possible.
-// The Kubernetes service-account mount is the reliable signal; the environment
-// variables are set for pods in a cluster and absent from a laptop.
-func inContainer() bool {
-	if _, err := os.Stat("/var/run/secrets/kubernetes.io/serviceaccount/token"); err == nil {
-		return true
-	}
-	if os.Getenv("KUBERNETES_SERVICE_HOST") != "" {
-		return true
-	}
-	if _, err := os.Stat("/.dockerenv"); err == nil {
-		return true
-	}
-	return false
-}
-
-// platformIdentityWorks asks the cheapest data-plane route whether this request
-// arrives with an identity Router accepts. /v1/models reads a projection of the
-// catalogue, so a probe costs no upstream call and no spend.
-func platformIdentityWorks(ctx context.Context, pc *preparedClient) bool {
-	var sink struct {
-		Object string `json:"object"`
-	}
-	return pc.router.doJSON(ctx, "GET", epDataPlaneModels, nil, &sink) == nil
-}
-
-// mintDataPlaneKey issues a key through the management plane. The name carries
-// the machine so a key list read months later says where the credential lives,
-// which is the question that matters when deciding whether to revoke one.
-func mintDataPlaneKey(ctx context.Context, pc *preparedClient) (*createdKey, error) {
-	name := "olares-cli"
-	if host, err := os.Hostname(); err == nil && strings.TrimSpace(host) != "" {
-		name += " on " + strings.TrimSpace(host)
-	}
-	var created createdKey
-	err := pc.router.doJSON(ctx, "POST", epAPIKeys, map[string]any{"name": name}, &created)
-	if err != nil {
-		var re *RouterError
-		if errors.As(err, &re) && re.Status == 404 {
-			return nil, fmt.Errorf("this Router serves no API keys, so the data plane cannot be reached with one. " +
-				"A call from inside the cluster still works, where the platform supplies the caller identity")
-		}
-		return nil, fmt.Errorf("issue a key for this machine: %w", err)
-	}
-	if strings.TrimSpace(created.Key) == "" {
-		return nil, fmt.Errorf("Router created a key but returned no secret; " +
-			"`olares-cli router key list` will show it, and it has to be revoked and re-issued to be usable")
-	}
-	// Router echoes the name back, but an older one may not, and the notice
-	// reads badly naming a key as "".
-	if strings.TrimSpace(created.Name) == "" {
-		created.Name = name
-	}
-	return &created, nil
+	return &dataPlaneAuth{Mode: authPlatform}
 }
 
 func keychainAccount(olaresID string) string {
@@ -202,13 +97,6 @@ func cachedDataPlaneKey(olaresID string) (string, error) {
 		return "", nil
 	}
 	return keychain.Get(keychain.OlaresCliService, keychainAccount(olaresID))
-}
-
-func storeDataPlaneKey(olaresID, key string) error {
-	if strings.TrimSpace(olaresID) == "" {
-		return fmt.Errorf("no Olares ID to file the key under")
-	}
-	return keychain.Set(keychain.OlaresCliService, keychainAccount(olaresID), key)
 }
 
 func forgetDataPlaneKey(olaresID string) error {
@@ -242,9 +130,27 @@ func callErr(err error) error {
 	}
 	ours := re.Type == "authentication_error"
 	switch {
+	case ours && re.Code == "missing_credentials":
+		// Router saw no Bearer, no app header and no X-BFL-USER. From here the
+		// third one is always sent by the edge, so the Router that says this is
+		// one that predates reading it.
+		return fmt.Errorf("%w\nThis Router does not yet accept a call without a key: taking the caller's "+
+			"identity from the platform arrived in Router v2.2.1, and `olares-cli market upgrade` on the "+
+			"Router application is what closes the gap. Until then pass --api-key or set %s; "+
+			"`olares-cli router key list` shows the keys that exist and `router key issue <name>` "+
+			"creates one", err, dataPlaneKeyEnv)
+	case ours && re.Code == "unknown_bfl_user":
+		// The platform vouched for a person Router has no row for. Router
+		// deliberately does not create one from the data plane, and neither
+		// does this: the console plane is where a person comes into existence.
+		return fmt.Errorf("%w\nThe platform knows you, Router does not have you yet. It records a person "+
+			"the first time they use the console plane, so any management verb — `olares-cli router model "+
+			"list` will do — creates the row, and the call then works", err)
 	case ours && (re.Code == "invalid_api_key" || re.Code == "key_disabled" || re.Code == "key_expired"):
-		return fmt.Errorf("%w\nThe key this machine saved is no longer usable. "+
-			"`olares-cli router key current --forget` drops it, and the next call issues a fresh one", err)
+		return fmt.Errorf("%w\nThe key this call presented is no longer usable. Dropping it is enough to "+
+			"keep working: without a key the call goes as you, vouched for by the platform. Unset %s "+
+			"if that is where it came from, leave --api-key off, and `olares-cli router key current "+
+			"--forget` discards a copy saved by an older build", err, dataPlaneKeyEnv)
 	case ours && (re.Code == "owner_disabled" || re.Code == "app_archived" || re.Code == "app_suspended"):
 		return fmt.Errorf("%w\nThis is about who or what the key belongs to rather than the key itself. "+
 			"For a person, `olares-cli settings users get <name>` shows their account; for an "+

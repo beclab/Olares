@@ -180,10 +180,7 @@ func runCallResponses(ctx context.Context, f *cmdutil.Factory, input string, opt
 	if err != nil {
 		return err
 	}
-	dp, err := dataPlane(ctx, pc, opts.APIKey)
-	if err != nil {
-		return err
-	}
+	dp := dataPlane(pc, opts.APIKey)
 
 	req := responsesRequest{
 		Model:           strings.TrimSpace(opts.Model),
