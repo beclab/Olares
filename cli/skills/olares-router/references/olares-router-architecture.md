@@ -34,14 +34,16 @@ Inside the cluster, Router addresses a local model application at its shared ent
 
 ## Identity
 
-Two planes, two credentials, and they are not interchangeable.
+Two planes, and since Router v2.2.1 the same identity reaches both.
 
 | Plane | Routes | Credential |
 |---|---|---|
 | Management | `/console/api/*` — everything except `router call` | The active profile. Olares injects the user identity at its edge; nothing is supplied by hand. |
-| Data | `/v1/*` — `router call` | An `sk-` key, or the platform's own application identity when the caller runs inside the cluster. The profile's session alone is **not** accepted here. |
+| Data | `/v1/*` — `router call` | Three, tried in order: an `sk-` Bearer, the calling application's identity inside the cluster, then the same profile identity the edge injects. A key is optional. |
 
-`router call` resolves that second credential itself, in order: an explicit `--api-key`, the key this machine already saved, a keyless attempt when running inside the cluster, and finally minting a key named after the host and storing it in the keychain. `router key current` shows or forgets it; `router key list` shows it alongside every other key, because it is an ordinary key.
+`router call` sends the key named by `--api-key` or `OLARES_ROUTER_API_KEY`, and otherwise no `Authorization` at all, letting the edge speak for the caller. `router key current` says which of the two it would be. Nothing issues a key on its own — a machine that used an older olares-cli has one saved in its keychain that calls no longer present, and it stays valid in Router until `router key revoke` ends it.
+
+The identity a call arrives with is also the anchor Router files a stored response or media generation under, so a job created with a key is a 404 to a later keyless call. `--no-wait` and the `--id` that collects the result belong under the same one.
 
 ## Roles
 

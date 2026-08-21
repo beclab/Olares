@@ -1,32 +1,38 @@
 # Calling a model
 
-`router call` sends work through Router's data plane, the same path an application uses. It is the fastest way to prove a configuration end to end, and the only verb family here that needs a credential of its own.
+`router call` sends work through Router's data plane, the same path an application uses. It is the fastest way to prove a configuration end to end, and since Router v2.2.1 it needs no credential beyond the profile every other verb here already runs on.
 
 `router call models` is its companion: it lists the models this credential may put in the `model` field, from the data plane's own point of view, which is a narrower list than the `router model list` a management-plane read produces. Beside each name it prints the mode, the capabilities the model card claims, and a `readiness` of `ready` or `unknown` — both of which mean "send it". `unknown` is an honest "nothing here can tell": it is what an application that runs its own engine, and so reports no phase for Router to read, looks like. A remote vendor has no weights to wait for and reads `ready`.
 
 Route names are not in that list. An alias, a group or a `default-*` category is callable and describes no single model, so it has nothing to fill those columns with; `router route list` is where those names live.
 
-Three things narrow the list against `router model list`. The key's own allowlist is one, and it is the only one `router model list` cannot see: that list is read over the console session, which has no allowlist. The other two are gates a locally installed model application passes separately — its container has to be up, and its weights have to be loaded — and `router model list` reports both, in the `CALLABLE` cell and in the `readiness` field of its JSON. It owns a row from the moment it is installed whatever state it is in, so that list carries models of applications that are stopped, downloading or failed and the data plane admits none of them.
+Two gates narrow the list against `router model list`, and a third applies only when a key is presented. The two are passed separately by a locally installed model application — its container has to be up, and its weights have to be loaded — and `router model list` reports both, in the `CALLABLE` cell and in the `readiness` field of its JSON. It owns a row from the moment it is installed whatever state it is in, so that list carries models of applications that are stopped, downloading or failed and the data plane admits none of them. The third is a key's own allowlist, which is the one `router model list` cannot see: that list is read over the console session, which has no allowlist. A keyless call has none either.
 
-So a name in `router model list` and not here is either the credential or the weights, and the `CALLABLE` cell separates them: anything but `yes` is the weights or the application, and `yes` with the name still missing here is the key.
+So a name in `router model list` and not here is the weights, the application, or an allowlist — and the `CALLABLE` cell separates them: anything but `yes` is the weights or the application, while `yes` with the name still missing means the key being presented does not reach it. Drop `--api-key` and it should appear.
 
 `--include-not-ready` widens the read to the container gate alone, which is what to use while an install is running: a model still fetching or loading its weights appears as `warming` and turns `ready` under it, and one that could not load them appears as `failed` rather than being indistinguishable from a model nobody ever configured. It does not bring back an application that is not running — a stopped app has nothing to ask — so a name still absent under the flag is `olares-cli market` territory rather than a readiness problem.
 
 ## The credential
 
-The management plane travels on the profile; the data plane does not accept it. `router call` resolves a data-plane credential in this order, without asking:
+**Calling needs no key.** Router's `/v1` reads three identities in order — an `sk-*` Bearer, a calling application's `x-caller-appid`, then a person's `X-BFL-USER` — and the last two are stamped by the Olares edge, which is the same edge, host and profile session the management verbs already travel on. A call sent with no `Authorization` is therefore not anonymous: it arrives as the profile.
 
-1. `--api-key sk-...`, when one is supplied.
-2. `OLARES_ROUTER_API_KEY`, which is the way to supply one in a script without putting it in a process listing.
-3. The key this machine already saved in the keychain.
-4. No key at all, when running inside the cluster, where the platform supplies the calling application's identity.
-5. A newly minted key, named after this host, saved to the keychain for next time.
+So there are two steps, not five:
 
-**Step 4 is only tried inside the cluster**, so on a laptop step 5 is where the first call lands — including `router call models`, which otherwise looks like a listing. Expect a credential to be created the first time, and treat the notice on stderr as the record of it rather than as a warning about something unusual.
+1. `--api-key sk-...`, or `OLARES_ROUTER_API_KEY` for a script that should keep the key out of a process listing.
+2. Otherwise no credential at all, and the platform says who is calling.
 
-`router key current` reports whether a key was saved and shows its prefix only — the plaintext stays in the keychain, and `IN CONTAINER` there is what says which of the two branches this machine takes. `router key current --forget` drops the local copy, which stops *this machine* calling; the key itself keeps working until `router key revoke` ends it, and the next call mints a replacement.
+Reach for a key when the call needs something the identity cannot carry: a model allowlist, a budget of its own, or an origin the platform cannot vouch for — anything outside Olares, which is where the header is added.
 
-The saved key is an ordinary one: it appears in `router key list`, it can be given a quota, and its calls are attributed to it in `router usage`. It is also unrestricted — no expiry, no ceiling, no model allowlist — so on a shared machine it is worth either giving it a quota or supplying a narrower key through `--api-key` instead.
+Two refusals are specific to this and mean different things:
+
+- `missing_credentials` — the Router being called predates v2.2.1 and does not read `X-BFL-USER` on `/v1`. Upgrade the Router application, or pass a key.
+- `unknown_bfl_user` — the platform knows this person, Router has no row for them. Router records a person the first time they use the console plane, so any management verb (`router model list` will do) creates it. Nothing creates it from the data plane, by design.
+
+`router key current` says which of the two a call would present right now. **A machine that used an older olares-cli still has a key saved in its keychain**: calls no longer use it, and it is still a live unrestricted key in Router — `router key list` shows it and `router key revoke` is what ends it. `--forget` drops only the local copy, and since Router keeps just a hash the plaintext is gone for good afterwards, so revoke before forgetting rather than after.
+
+### The identity is also the anchor
+
+Router anchors a stored response and a media generation on `(user, key)`, so a job started with a key is not visible to a later keyless call — the answer is a 404, not a permission error. Whenever a job is created in one command and collected in another, **`--no-wait` and the follow-up `--id` have to run under the same credential**: both keyless, or both with the same key. OCR is unaffected; Router stores no task of its own for it.
 
 ## Choosing the model
 

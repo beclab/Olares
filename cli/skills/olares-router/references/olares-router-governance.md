@@ -49,7 +49,7 @@ A category with nothing behind it is refused rather than approximated. Installin
 
 ## Keys
 
-An `sk-` key is how software that is not an Olares application calls Router.
+An `sk-` key is how software calls Router when the platform cannot vouch for it: something running outside Olares, or a call that needs a model allowlist or a budget of its own. An Olares application, a browser and `olares-cli` all reach the data plane on the identity the edge injects, and need none.
 
 ```
 olares-cli router key issue "ci-runner" --ttl 30d --model openai-main/gpt-4o
@@ -66,7 +66,7 @@ olares-cli router key revoke ci-runner
 - `key update` renames, enables, disables, re-expires, or replaces the allowlist; `--clear-models` removes the restriction.
 - Disabling and revoking are the same reversible state in Router: both stop the key working and keep its history, and `--enable` brings either back. Nothing is deleted, so past usage stays attributable.
 
-A non-admin sees and manages their own keys. The key `router call` keeps for this machine is an ordinary key in this list — see [calling a model](olares-router-calling.md).
+A non-admin sees and manages their own keys. A machine that used an older olares-cli has one in this list that it issued for itself; calls no longer present it, and revoking it is what ends it — see [calling a model](olares-router-calling.md).
 
 ## Quotas
 
@@ -90,6 +90,8 @@ olares-cli router quota clear --key ci-runner --budget
 A ceiling of `0` is meaningful and is not the same as no ceiling: it refuses everything in that scope, which is how a key or an application is switched off without deleting it. Removing the ceiling is `quota clear`, not `--budget 0`.
 
 A quota on a **model** applies to everybody calling it, a quota on a **user** to everything that person's identity reaches, a quota on a **key** to that key alone, and a quota on a **caller app** to every call carrying that application's appid — which is the only control there is over an application, since it has no key here to revoke. When a call is refused for `quota_exceeded`, `quota list` is what identifies which one bit.
+
+A key scope only binds calls that present that key. `router call` presents none unless one is named, so a `--key` ceiling does not constrain it: **`--user` is the scope that holds a person's `olares-cli` calls**, and the same is true of anyone calling from a browser.
 
 `--caller-app` takes the application's title, its Olares application name or the appid itself. The name is hashed the way the platform hashes it and then matched against an application that exists, so a misspelling is refused rather than becoming a ceiling on nothing.
 

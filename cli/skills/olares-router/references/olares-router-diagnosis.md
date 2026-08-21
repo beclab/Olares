@@ -57,7 +57,7 @@ The last two rows are the axis that is easy to miss: a container reports `runnin
 
 A model application owns its row from the moment it is installed, so a model that never ran is listed rather than absent.
 
-- **A model `router model list` calls callable that `router call models` does not list** is now down to the credential: a key restricted to named models sees only those. `router key list` shows the allowlist. Reaching a model the key may not call is a 404 on the name, which reads like a configuration problem and is not one.
+- **A model `router model list` calls callable that `router call models` does not list** is down to the credential, and only when one is being presented: a key restricted to named models sees only those, and `router key list` shows the allowlist. Reaching a model the key may not call is a 404 on the name, which reads like a configuration problem and is not one. A keyless call has no allowlist, so dropping `--api-key` and `OLARES_ROUTER_API_KEY` is the quickest way to rule this out.
 - **The reverse — `router call models` serving something `model list` says is not callable** is possible and narrow. Router only asks about weights while the loop that writes the phase is running; when it is not, its gate falls back to asking whether the container is up, and dispatch is more permissive than this list. The data plane is the authority in that disagreement.
 - **A call refused with `no_default_model`** means that category has nothing behind it. `route list --kind default` names which do and which do not.
 - **A model Router offers a capability for that it turns out not to have** is the projection trailing the application's own card. `router model spec show <model>` says which copy you are reading: `cache` is Router's, and an edit through `router model spec edit` corrects both at once.
@@ -67,7 +67,9 @@ A model application owns its row from the moment it is installed, so a model tha
 
 A configuration that is right and a caller that is refused look identical from the outside. `router usage list --status failed --limit 20` separates them: a refused call that Router recorded has its error code in the row, and a call that produced no row at all never got past authentication.
 
-- `invalid_api_key` with type `authentication_error` — Router refusing this key. Check `router key list` for revoked, expired, or an allowlist that excludes the model.
+- `invalid_api_key` with type `authentication_error` — Router refusing this key. Check `router key list` for revoked, expired, or an allowlist that excludes the model. Since a key is optional, not presenting one is also a fix.
+- `missing_credentials` — the Router being called is older than v2.2.1 and does not read the platform's identity on `/v1`. Upgrade it, or pass `--api-key`.
+- `unknown_bfl_user` — the platform vouched for somebody Router has no row for. Any console verb records them; `router model list` is the cheapest.
 - An authentication error **without** that type — the vendor refusing Router's credential. `router provider validate <provider>` confirms it, and `provider history` shows what was last rotated.
 - `quota_exceeded` — `router quota list` names which of the three ceilings bit.
 

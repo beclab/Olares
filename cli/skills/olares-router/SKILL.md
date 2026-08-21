@@ -47,12 +47,12 @@ All verbs require Olares 1.12.7+ because Router ships as the `router` Market lis
 | inside one application | `model status/progress/retry/restart`, `model diag gpu/perf/config/endpoints`, all taking `--app` | [the Model Console](references/olares-router-console.md) |
 | a call or a model that does not work | any of the above | [deciding which layer is wrong](references/olares-router-diagnosis.md) |
 
-## Two planes, two credentials
+## Two planes, one identity
 
 Read [architecture and identity](references/olares-router-architecture.md) before the first write. In short:
 
 - **Management** (`provider`, `model`, `key`, `quota`, `route`, `usage`, `audit`) travels on the active profile. Olares injects the identity; nothing has to be supplied. The `model` verbs that read a Model Console address the application's own entrance instead of Router's, on the same profile.
-- **Calling** (`router call`, `router call models`) needs a data-plane credential of its own, because the data plane refuses a console session. Inside the cluster the platform supplies one and no key is needed. **Everywhere else — including any laptop — the first call issues an `sk-` key and keeps it in the keychain**, so the first `router call` of any kind, `call models` included, leaves a credential behind that has no expiry, no quota and no model restriction. That is normal rather than a fallback, and the call says so when it happens. `--api-key` or `OLARES_ROUTER_API_KEY` avoids it; `router key current` shows or drops the saved copy, and `router key revoke` ends the key itself.
+- **Calling** (`router call`, `router call models`) **needs no key.** Router v2.2.1 reads the caller from the platform on `/v1` as well, so a call sent with no `Authorization` is attributed to the profile. Pass `--api-key` or set `OLARES_ROUTER_API_KEY` only when the call needs a model allowlist, a budget of its own, or an origin outside Olares. Two refusals are specific to this: `missing_credentials` is a Router older than v2.2.1, and `unknown_bfl_user` is a person Router has not recorded yet, which any management verb creates. `router key current` says which credential the next call would present, and a machine that used an older olares-cli still has an unrestricted key saved there that calls no longer use — `router key revoke` is what ends it.
 - Most of the management plane is admin-only, reads included: providers, the vendor catalog's models, quotas, audit, `usage retention` and the whole `spec` family all refuse a non-admin. What a non-admin can do is `router model list`, `route list/get`, their own keys, their own usage, and `router call`. Reading the names is deliberately open — a name is what a person types into their client.
 
 ## Which layer owns the change

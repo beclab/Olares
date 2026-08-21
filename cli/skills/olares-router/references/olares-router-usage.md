@@ -29,6 +29,8 @@ olares-cli router usage retention
 
 Every accepted call becomes a row, including one the upstream then refused. Cost comes from the prices on the model row, so a model imported without prices records tokens and no money — that is a configuration gap in the model row, not missing usage.
 
+A row carries a key only when the call presented one. `router call` presents none by default, so its rows have an empty key and are attributed to the person: **`--key` will not find them, and `--user` is how they are read.** A row with no key is the normal shape for a call made from `olares-cli` or from a browser, not a record that lost its attribution.
+
 Scope follows the role. A non-admin sees only their own calls; `--user` and `--caller-app` are admin-only, because they are what makes another person's usage visible.
 
 ### Retention
