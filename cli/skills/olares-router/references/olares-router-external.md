@@ -19,11 +19,12 @@ Two shapes matter more than the vendor's name:
 
 ```
 olares-cli router provider create --type openai --name openai-main \
+    --base-url https://api.openai.com/v1 \
     --credentials-json ~/secrets/openai.json --validate
 ```
 
 - `--credentials-json` accepts a file or `-` for stdin, and is preferred over repeated `--credential key=value`, which leaves the secret in shell history.
-- `--base-url` is required for a self-hosted or compatible endpoint, and unnecessary for a vendor Router already knows.
+- `--base-url` is required for every provider, including a vendor Router already has a catalog for. The catalog supplies the models, not the address.
 - `--validate` probes the upstream once the row exists. Without it the provider is created unverified, and a wrong key is not discovered until the first call.
 - A vendor that genuinely needs no credentials still needs the intent stated: pass `--credentials-json` with `{}`.
 
@@ -35,7 +36,7 @@ Credentials are encrypted at rest and never returned. `provider credentials` sho
 olares-cli router model import --provider openai-main gpt-4o gpt-4o-mini
 olares-cli router provider sync-models ollama-box
 olares-cli router model add llama-3.1-70b --provider my-endpoint \
-    --mode chat --context-size 131072 --supports vision=true
+    --mode chat --context-size 131072 --supports supports_vision=true
 ```
 
 - `import` takes the capability flags, context window and prices from Router's catalog. Prefer it whenever the vendor is predefined.

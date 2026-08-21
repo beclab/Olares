@@ -115,7 +115,7 @@ There is no per-person allowlist to set.
 ```
 olares-cli market list --mine
 olares-cli router usage summary --by caller_app
-olares-cli router quota set --caller-app wise --max-budget 5
+olares-cli router quota set --caller-app wise --budget 5
 ```
 
 **An application is not registered with Router and cannot be.** Olares vouches for it at its own edge, so the request arrives already carrying the application's identity — an `appid`, which is the application name hashed, or the name itself for a system application. There is no row to create, nothing to hand over, and correspondingly nothing to revoke: an application that may not call is one that is not installed, or one whose ceiling is zero.
