@@ -117,8 +117,11 @@ func repeatNote(method, path string) string {
 			"first attempt landed. `olares-cli router route list` says so directly"
 
 	case path == epQuotas:
-		return "Router allows one quota per scope, so a retry is safe: a 409 means the first " +
-			"attempt landed. `olares-cli router quota list` says so directly"
+		// One row per (scope, kind, period), not one per scope: a key
+		// legitimately carries a budget and an rpm and a tpm ceiling at once.
+		// What makes the retry safe is that the repeat names the same kind.
+		return "Router allows one ceiling of each kind per scope, so sending the same one again " +
+			"is safe: a 409 means the first attempt landed. `olares-cli router quota list` says so directly"
 
 	case strings.HasSuffix(path, "/predefined-models"):
 		return "Adding models skips the ones already attached, so a retry is safe"

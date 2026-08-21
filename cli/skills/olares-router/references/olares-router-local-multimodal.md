@@ -1,6 +1,6 @@
 # Local multimodal applications
 
-Embedding, CLIP, audio and OCR models install and are managed exactly as in [local LLM applications](olares-router-local-llm.md): [`olares-market`](../../olares-market/SKILL.md)'s `install` / `upgrade` / `uninstall`, then `provider register` and the `local` family here. What differs is the mode their model rows declare, the engine behind them, and how a call reaches them.
+Embedding, CLIP, audio and OCR models install and are managed exactly as in [local LLM applications](olares-router-local-llm.md): [`olares-market`](../../olares-market/SKILL.md)'s `install` / `upgrade` / `uninstall`, then `provider register` and the `model status` / `progress` / `retry` / `restart` / `diag` / `spec` verbs here. What differs is the mode their model rows declare, the engine behind them, and how a call reaches them.
 
 ## What runs behind each mode
 
@@ -79,4 +79,4 @@ olares-cli router model spec edit Olares/embeddinggemma-300m --mode embedding
 
 `model spec edit` merges the change onto the card the application is serving and stores what the application confirms, so Router's own copy is corrected in the same step. That matters more here than for an LLM: a change of dimension, or of which job an audio model does, is what Router routes on.
 
-These applications' engines are sidecars, so they take no engine flags — `model spec edit --engine-args` is refused and `model restart` changes nothing. `--mode` is the field that matters. See [local LLM applications](olares-router-local-llm.md) for the card in full and [the Model Console](olares-router-console.md) for reaching it at the application instead.
+These applications' engines are sidecars, so they take no engine flags. The CLI does not know that and does not check: `model spec edit --engine-args` sends the value and the application decides what to do with it, which for a sidecar is nothing useful. `--mode` is the field that matters. See [local LLM applications](olares-router-local-llm.md) for the card in full and [the Model Console](olares-router-console.md) for reaching it at the application instead.

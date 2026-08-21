@@ -28,6 +28,7 @@ import (
 	"net/url"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -85,6 +86,70 @@ type memoizedCollection struct {
 	writes int
 }
 
+// pageCeiling is the largest window the console plane's paged routes accept;
+// Router refuses anything above it (parseLimitOffset in its pagination.go).
+// Asking for exactly the ceiling is the fewest round trips that stays inside
+// what it will answer.
+const pageCeiling = 1000
+
+// collectionPaged reads every row of a paged route rather than the first
+// window of one, and memoizes the whole thing the way collection does.
+//
+// This exists because the truncation it prevents is not a degraded answer, it
+// is a confident wrong one. resolveModel compares what somebody typed against
+// the slice it gets back, so a slice that stops at the ceiling reports "no
+// model named X" for a model that is configured — and helpfully lists the
+// names it did see, none of which is the one being asked about. One
+// `provider sync-models` against a large vendor catalogue is enough to cross
+// it. Nothing about that failure suggests paging: it looks like the model is
+// gone.
+//
+// Total is what makes stopping safe, and the loop trusts it for everything
+// except termination. A page that comes back empty ends the read whatever
+// total claimed, since the alternative is spinning forever on a route that
+// disagrees with itself, and falling short of total after that is reported
+// rather than returned quietly — an incomplete list here is exactly the thing
+// the caller must not be handed without knowing.
+func collectionPaged[T any](ctx context.Context, pc *preparedClient, path string, extra url.Values) ([]T, error) {
+	memoKey := "paged:" + path + "?" + extra.Encode()
+	if memo, ok := pc.collections[memoKey]; ok && memo.writes == pc.router.writes {
+		if items, ok := memo.items.([]T); ok {
+			return items, nil
+		}
+	}
+
+	var all []T
+	total := 0
+	for offset := 0; ; offset += pageCeiling {
+		q := url.Values{}
+		for k, vs := range extra {
+			q[k] = vs
+		}
+		q.Set("limit", strconv.Itoa(pageCeiling))
+		q.Set("offset", strconv.Itoa(offset))
+
+		var env page[T]
+		if err := pc.router.doJSON(ctx, http.MethodGet, withQuery(path, q), nil, &env); err != nil {
+			return nil, err
+		}
+		all = append(all, env.Items...)
+		total = env.Total
+		if len(env.Items) == 0 || len(all) >= total {
+			break
+		}
+	}
+	if len(all) < total {
+		return nil, fmt.Errorf("read %d of %d rows from %s and the next page came back empty; "+
+			"a partial list here would report configured models as missing", len(all), total, path)
+	}
+
+	if pc.collections == nil {
+		pc.collections = map[string]memoizedCollection{}
+	}
+	pc.collections[memoKey] = memoizedCollection{items: all, writes: pc.router.writes}
+	return all, nil
+}
+
 // requireRef trims what was typed and refuses an empty argument, naming the
 // handles that would have worked. what is spelled as it appears in the
 // sentence: "a provider name or id".
@@ -109,28 +174,12 @@ type missing struct {
 	note  string   // what to do about it, said either way
 }
 
-// resolveModel finds one configured model from what somebody typed.
-//
-// Five forms are accepted, and the reason there are five is that a model has no
-// single name. `<provider>/<model>` is what the data plane takes and what a
-// key's allowed list holds, so it is the canonical one. A bare model name is
-// accepted when only one row carries it, which is the common case and the one
-// people type. The row's id is accepted because it is the only form that is
-// always unique. The remaining two exist for the case the first three cannot
-// express: every locally installed model application is a provider named
-// `Olares`, so `Olares/qwen3-8b` can name two different rows. Both the
-// application name and its display title tell those apart, and both are
-// accepted because they are what the two places a reader met the application
-// print — `router model list` shows the title, `router provider list` the name.
-//
-// Ambiguity is reported with the candidates rather than resolved by taking the
-// first. Two rows with one name can be different deployments of a model with
-// different prices, and every caller of this is about to write something down.
-// listAllModels reads every configured model in one page. The limit is a
-// ceiling rather than a window: a deployment has as many rows as somebody
-// configured, and every caller here wants all of them.
+// listAllModels reads every configured model, following the pages to the end.
+// A deployment has as many rows as somebody configured, and every caller here
+// wants all of them: these are lookups, and a lookup over part of the list
+// answers questions about the part it happened to read.
 func listAllModels(ctx context.Context, pc *preparedClient) ([]adminModelRow, error) {
-	return collection[adminModelRow](ctx, pc, withQuery(epProviderModels, url.Values{"limit": {"1000"}}))
+	return collectionPaged[adminModelRow](ctx, pc, epProviderModels, nil)
 }
 
 // modelNames maps model ids to a readable label, for the routes and settings
@@ -158,6 +207,23 @@ func modelLabel(names map[string]string, id string) string {
 	return "(unknown)"
 }
 
+// resolveModel finds one configured model from what somebody typed.
+//
+// Five forms are accepted, and the reason there are five is that a model has no
+// single name. `<provider>/<model>` is what the data plane takes and what a
+// key's allowed list holds, so it is the canonical one. A bare model name is
+// accepted when only one row carries it, which is the common case and the one
+// people type. The row's id is accepted because it is the only form that is
+// always unique. The remaining two exist for the case the first three cannot
+// express: every locally installed model application is a provider named
+// `Olares`, so `Olares/qwen3-8b` can name two different rows. Both the
+// application name and its display title tell those apart, and both are
+// accepted because they are what the two places a reader met the application
+// print — `router model list` shows the title, `router provider list` the name.
+//
+// Ambiguity is reported with the candidates rather than resolved by taking the
+// first. Two rows with one name can be different deployments of a model with
+// different prices, and every caller of this is about to write something down.
 func resolveModel(ctx context.Context, pc *preparedClient, ref string) (*adminModelRow, error) {
 	ref, err := requireRef(ref, "a model, as <provider>/<model>, <app_name>/<model> or an id")
 	if err != nil {
