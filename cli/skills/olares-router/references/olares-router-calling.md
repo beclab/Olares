@@ -66,6 +66,10 @@ olares-cli router call vad meeting.m4a
 olares-cli router call diarize meeting.m4a
 olares-cli router call enhance noisy.wav --out clean.wav
 olares-cli router call align meeting.m4a --text "what was said"
+olares-cli router call clone me.wav "your build finished" --out done.wav
+olares-cli router call dialogue scene.json --out scene.wav
+olares-cli router call listen mic.pcm
+olares-cli router call task get <task-id> --model <provider>/<model>
 olares-cli router call ocr invoice.pdf --pages 1-3
 ```
 
@@ -79,7 +83,11 @@ olares-cli router call ocr invoice.pdf --pages 1-3
 
 **Images and video.** These are the two verbs whose work can outlive the request. Both submit, wait, and write the result to `--out`; `--no-wait` prints the generation id instead, and `--id <id>` collects that generation later. Video defaults to waiting twenty minutes and images five, and a `--timeout` only stops the waiting — the provider carries on, and the id is still collectable. An image provider with no persistent generations API answers inline instead, and the verb handles both without the caller choosing.
 
-**Audio.** Six verbs over one upstream, and which of them a model serves depends on the engine behind it rather than on the mode: recognition, synthesis, voice activity, diarization, enhancement and alignment are separate engine images. A model that transcribes does not necessarily speak, and a bare 404 from one of these routes usually means the model does the other thing. `speak` and `enhance` refuse to write audio to a terminal, before making the call, so pass `--out` or redirect. `speak --voices` lists what the chosen model can sound like. `align` takes the transcript from `--text` or standard input, and defaults to the transcription category rather than one of its own.
+**Audio.** Ten verbs over one upstream, and which of them a model serves depends on the engine behind it rather than on the mode: recognition, streaming recognition, alignment, synthesis, cloning, dialogue, voice activity, diarization, streaming diarization, speaker embeddings and enhancement are all separate engine images, one Market application each. A model that transcribes does not necessarily speak, and a model that aligns does not transcribe; every verb resolves its own default category for that reason. A bare 404 from one of these routes usually means the category behind it resolved a model that does something else. `speak`, `clone`, `dialogue` and `enhance` refuse to write audio to a terminal, before making the call, so pass `--out` or redirect. `speak --voices` lists what the chosen model can sound like, and returns nothing on a cloning model — a recording is the voice there. `align` takes the transcript from `--text` or standard input. `dialogue` reads a JSON script of speakers and turns, and turns a local path in a speaker's `ref_audio` into a data URL so the script can name files on this machine.
+
+`--async` on any audio verb hands back a task id instead of waiting, which is the difference between transcribing an hour-long recording and timing out. `router call task get|result|cancel|list` follows one, and each of those needs the same `--model` the submission resolved: a task only exists on the backend that accepted it, so a bare id is not enough to find it. The receipt printed at submission time spells out the follow-up command with the model filled in.
+
+`listen` and `diarize --stream` are the two verbs that open a WebSocket rather than uploading. They read 16-bit mono PCM at 16 kHz from a file or standard input, print partial results as they arrive, and need models declaring `supports_stt_stream` and `supports_diar_stream` — which, again, are separate applications from their batch counterparts.
 
 **OCR.** Always asynchronous. The verb submits and polls; `--no-wait` prints the task id, `--task <id>` picks it up later, `--cancel` with `--task` drops it, `--timeout` stops waiting without stopping the task, and `--queue` lists what is outstanding.
 
@@ -98,7 +106,7 @@ A `router call` failure comes from one of a few places, and the message says whi
 | `model_route_disabled` | The name exists but is switched off; `router route enable <name>` |
 | `model_not_allowed` | The key's allowed list does not include this model; `router key update` changes it |
 | A mode mismatch or unsupported-endpoint refusal | The model's mode or capabilities do not match the call — `router model list` prints the mode, and for a local model `router model spec show <model>` prints what it declares |
-| A bare 404 on an audio route | Router mounted the route and the engine behind the model does not serve it |
+| A bare 404 on an audio route | Router mounted the route and the engine behind the model does not serve it; `router route get default-<capability>` says which model the verb resolved |
 | `model_not_ready` with a 503 | The model is real and its weights cannot answer yet; the fix is to wait, and `router call models --include-not-ready` shows whether it is `warming` or `failed` |
 | A 5xx with an empty body | Nothing answered behind Router: the model application is stopped or still loading |
 

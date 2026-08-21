@@ -183,13 +183,15 @@ const (
 
 // Audio is one catch-all upstream, so every suffix here reaches the sibling
 // audio engine unchanged. Which suffixes exist depends on the engine behind the
-// model: recognition, synthesis, voice activity, diarization, enhancement and
-// alignment are separate engine images, and a model that does one answers 404
-// or refuses the mode for the others.
+// model: recognition, streaming recognition, synthesis, voice cloning,
+// dialogue, sound effects, voice activity, diarization, streaming diarization,
+// speaker embedding, enhancement and alignment are separate engine images, and
+// a model that does one answers 404 or refuses the mode for the others.
 const (
 	epAudioTranscriptions = dataPlaneAPI + "/audio/transcriptions"
 	epAudioTranslations   = dataPlaneAPI + "/audio/translations"
 	epAudioSpeech         = dataPlaneAPI + "/audio/speech"
+	epAudioSpeechClone    = epAudioSpeech + "/clone"
 	epAudioVoices         = dataPlaneAPI + "/audio/voices"
 	epAudioVAD            = dataPlaneAPI + "/audio/vad"
 	// Spelled in full. The engine serves `diarization` over HTTP and reserves
@@ -198,6 +200,30 @@ const (
 	epAudioEnhance     = dataPlaneAPI + "/audio/enhance"
 	epAudioAlign       = dataPlaneAPI + "/audio/align"
 )
+
+// The audio WebSocket routes. Router recognises exactly these three by path and
+// proxies them frame for frame; every other audio suffix is HTTP. They are
+// separate constants rather than a suffix on the HTTP ones because a socket
+// opens with a different scheme, and a typo here would silently arrive as a
+// POST.
+const (
+	epAudioStreamWS        = dataPlaneAPI + "/audio/stream"
+	epAudioDiarizeStreamWS = dataPlaneAPI + "/audio/diarize/stream"
+)
+
+// Audio tasks. `--async` on any audio verb answers with a receipt instead of a
+// result, and these read it.
+//
+// The engine's own canonical path is /v1/tasks, with /v1/audio/tasks kept as an
+// alias — but /v1/tasks is not a route Router mounts, and the audio prefix is
+// what reaches the catch-all. So the alias is the only one addressable through
+// the gateway, and the shape of a task's own `poll` field is not something to
+// follow blindly.
+const epAudioTasks = dataPlaneAPI + "/audio/tasks"
+
+func epAudioTask(id string) string { return epAudioTasks + "/" + url.PathEscape(id) }
+
+func epAudioTaskResult(id string) string { return epAudioTask(id) + "/result" }
 
 // Images and video. A generation is a row Router keeps, so it can be asked
 // about after the request that started it has gone, and the bytes come from the

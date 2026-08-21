@@ -30,6 +30,16 @@ func TestEveryCallVerbFallsBackToACategory(t *testing.T) {
 		if verb.Name() == "models" {
 			continue
 		}
+		// `call task` submits nothing either: it follows work another verb
+		// already submitted, and a task exists only on the backend that
+		// accepted it. Its subcommands need the model the submission
+		// resolved, so falling back to a category would send them at
+		// whichever backend the category happens to name today — a different
+		// one is the ordinary case, and it answers 404 for an id it never saw.
+		if verb.Name() == "task" {
+			assertTaskSubcommandsRequireAModel(t, verb)
+			continue
+		}
 		flag := verb.Flags().Lookup("model")
 		// Responses is the other exception, and unlike translate it does take
 		// a --model: Router resolves a default for every mode but this one,
@@ -66,6 +76,26 @@ func TestEveryCallVerbFallsBackToACategory(t *testing.T) {
 	}
 }
 
+func assertTaskSubcommandsRequireAModel(t *testing.T, task *cobra.Command) {
+	t.Helper()
+	subs := task.Commands()
+	if len(subs) == 0 {
+		t.Fatal("call task: no subcommands")
+	}
+	for _, sub := range subs {
+		flag := sub.Flags().Lookup("model")
+		if flag == nil {
+			t.Errorf("call task %s: no --model flag, but a task id alone does not "+
+				"say which backend holds it", sub.Name())
+			continue
+		}
+		if strings.Contains(flag.Usage, "default-") {
+			t.Errorf("call task %s: --model names a category, which would resolve a "+
+				"backend that never saw this task: %q", sub.Name(), flag.Usage)
+		}
+	}
+}
+
 // The categories are hand-copied from Router's own registry, which this tree
 // cannot read. Nothing here can confirm a name exists upstream; what it can
 // confirm is that every one of them is spelled like a default route and like a
@@ -88,11 +118,15 @@ func TestEveryCategoryIsSpelledLikeADefaultRoute(t *testing.T) {
 		"video":       categoryVideo,
 		"ocr":         categoryOCR,
 		"stt":         categorySTT,
+		"stt_stream":  categorySTTStream,
+		"align":       categoryAlign,
 		"tts":         categoryTTS,
+		"tts_clone":   categoryTTSClone,
+		"dialogue":    categoryTTSDialogue,
 		"vad":         categoryVAD,
 		"diarization": categoryDiarization,
+		"diar_stream": categoryDiarStream,
 		"enhance":     categoryEnhance,
-		"align":       categoryAlign,
 	}
 	for name, value := range categories {
 		if !strings.HasPrefix(value, defaultNamePrefix) {

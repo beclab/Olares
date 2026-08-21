@@ -10,7 +10,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -27,9 +26,9 @@ import (
 // field this CLI does not know about still reaches the engine, and the engine's
 // own answer — including its errors — is what comes back.
 //
-// The live audio routes (/v1/audio/stream and /v1/audio/diarize/stream) are
-// WebSocket and have no verb here. A command that opened a socket to relay
-// microphone frames would be a different program.
+// The live audio routes are WebSocket rather than HTTP and live in
+// call_audio_stream.go; the voice-cloning and dialogue shapes of /v1/audio/speech
+// live in call_audio_voice.go.
 
 func newCallTranscribeCommand(f *cmdutil.Factory) *cobra.Command {
 	var (
@@ -39,6 +38,7 @@ func newCallTranscribeCommand(f *cmdutil.Factory) *cobra.Command {
 		prompt    string
 		respFmt   string
 		translate bool
+		async     bool
 		apiKey    string
 	)
 	cmd := &cobra.Command{
@@ -52,7 +52,13 @@ both accuracy and speed when you know the answer, and --prompt biases spelling,
 which is how proper nouns and jargon are kept intact.
 
 --translate sends the file to the translation route instead, which returns
-English regardless of what was spoken.
+English regardless of what was spoken. Only the faster-whisper engines serve
+that route, so it is one of the few audio calls worth naming a --model for.
+
+--async hands back a task id rather than waiting, and for anything longer than a
+few minutes it is the only thing that works: a synchronous request for an hour
+of audio is held open for as long as the engine takes, and something on the way
+will cut it first. "router call task" reads the result.
 
 Plain text goes to standard output, so this pipes. --response-format asks the
 engine for something structured — "verbose_json" carries timings, "srt" and
@@ -63,6 +69,7 @@ Examples:
   olares-cli router call transcribe clip.wav --language zh
   olares-cli router call transcribe talk.mp3 --response-format srt > talk.srt
   olares-cli router call transcribe interview.mp3 --translate
+  olares-cli router call transcribe all-hands.m4a --async
 `,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
@@ -72,6 +79,7 @@ Examples:
 				Prompt:     prompt,
 				RespFormat: respFmt,
 				Translate:  translate,
+				Async:      async,
 				APIKey:     apiKey,
 				OutputIn:   output,
 			})
@@ -82,6 +90,7 @@ Examples:
 	cmd.Flags().StringVar(&prompt, "prompt", "", "text that biases spelling and vocabulary")
 	cmd.Flags().StringVar(&respFmt, "response-format", "", "json, text, verbose_json, srt or vtt, as the engine supports")
 	cmd.Flags().BoolVar(&translate, "translate", false, "translate to English instead of transcribing verbatim")
+	cmd.Flags().BoolVar(&async, "async", false, audioAsyncFlagUsage)
 	cmd.Flags().StringVar(&apiKey, "api-key", "", dataPlaneKeyFlagUsage)
 	addOutputFlag(cmd, &output)
 	return cmd
@@ -93,6 +102,7 @@ type transcribeOptions struct {
 	Prompt     string
 	RespFormat string
 	Translate  bool
+	Async      bool
 	APIKey     string
 	OutputIn   string
 }
@@ -117,6 +127,9 @@ func runCallTranscribe(ctx context.Context, f *cmdutil.Factory, path string, opt
 		"prompt":          strings.TrimSpace(opts.Prompt),
 		"response_format": strings.TrimSpace(opts.RespFormat),
 	}
+	if opts.Async {
+		fields[audioAsyncFormField] = "1"
+	}
 	body, contentType, err := multipartFile(path, "file", fields)
 	if err != nil {
 		return err
@@ -137,6 +150,9 @@ func runCallTranscribe(ctx context.Context, f *cmdutil.Factory, path string, opt
 	}
 	if resp.StatusCode/100 != 2 {
 		return callErr(dp.formatErr("POST", route, resp.StatusCode, raw))
+	}
+	if task, ok := receiptFrom(resp.StatusCode, raw); ok {
+		return printReceipt(os.Stdout, task, opts.Model, format)
 	}
 	if format == FormatJSON {
 		return printRawJSON(os.Stdout, raw)
@@ -219,6 +235,7 @@ func newCallSpeakCommand(f *cmdutil.Factory) *cobra.Command {
 		apiKey  string
 		output  string
 		soundFX bool
+		async   bool
 	)
 	// The category is the only thing --sound-fx changes: same path, same body,
 	// a different model when none was named.
@@ -252,6 +269,13 @@ effects mount /v1/audio/speech like every other audio model, so the model is
 the only thing that decides which you get, and the flag only changes which
 default is resolved. Naming a sound-effect model with --model does the same.
 
+A voice cloned from a recording, and a conversation between several of them, are
+"router call clone" and "router call dialogue". They are the same endpoint again,
+and again separate applications, which is why they are separate verbs.
+
+--async hands back a task id instead of the audio; "router call task" collects
+it.
+
 Examples:
   olares-cli router call speak "your build finished" --out done.mp3
   olares-cli router call speak "hello" --voice alloy --out hello.wav --response-format wav
@@ -259,6 +283,7 @@ Examples:
   olares-cli router call speak "piped" | ffplay -
   olares-cli router call speak --voices
   olares-cli router call speak --sound-fx "rain on a tin roof" --out rain.mp3
+  olares-cli router call speak "$(cat chapter.txt)" --async
 `,
 		Args: cobra.ArbitraryArgs,
 		RunE: func(c *cobra.Command, args []string) error {
@@ -280,13 +305,19 @@ Examples:
 			if c.Flags().Changed("speed") {
 				speedPtr = &speed
 			}
+			format, ferr := parseFormat(output)
+			if ferr != nil {
+				return ferr
+			}
 			return runCallSpeak(c.Context(), f, text, speakOptions{
 				Model:      callModel(model, fallback()),
 				Voice:      voice,
 				OutPath:    outPath,
 				RespFormat: respFmt,
 				Speed:      speedPtr,
+				Async:      async,
 				APIKey:     apiKey,
+				Format:     format,
 			})
 		},
 	}
@@ -300,6 +331,7 @@ Examples:
 	cmd.Flags().BoolVar(&soundFX, "sound-fx", false,
 		"produce a sound effect from the description rather than speech; "+
 			"resolves "+categorySoundFX+" instead of "+categoryTTS+" when --model is omitted")
+	cmd.Flags().BoolVar(&async, "async", false, audioAsyncFlagUsage)
 	cmd.Flags().StringVar(&apiKey, "api-key", "", dataPlaneKeyFlagUsage)
 	addOutputFlag(cmd, &output)
 	return cmd
@@ -365,15 +397,18 @@ type speakOptions struct {
 	OutPath    string
 	RespFormat string
 	Speed      *float64
+	Async      bool
 	APIKey     string
+	Format     Format
 }
 
 func runCallSpeak(ctx context.Context, f *cmdutil.Factory, text string, opts speakOptions) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	if strings.TrimSpace(opts.OutPath) == "" && isTerminal(os.Stdout) {
-		return fmt.Errorf("audio would be written to the terminal; name a file with --out, or pipe the output")
+	if !opts.Async && strings.TrimSpace(opts.OutPath) == "" && isTerminal(os.Stdout) {
+		return fmt.Errorf("audio would be written to the terminal; name a file with --out, " +
+			"pipe the output, or submit it with --async")
 	}
 	pc, err := prepare(ctx, f)
 	if err != nil {
@@ -398,33 +433,9 @@ func runCallSpeak(ctx context.Context, f *cmdutil.Factory, text string, opts spe
 	if err != nil {
 		return fmt.Errorf("marshal request body: %w", err)
 	}
-
-	route := epAudioSpeech
-	resp, err := dp.do(ctx, "POST", route, bytes.NewReader(buf), "application/json")
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode/100 != 2 {
-		raw, _ := io.ReadAll(resp.Body)
-		return callErr(dp.formatErr("POST", route, resp.StatusCode, raw))
-	}
-
-	dst := io.Writer(os.Stdout)
-	if p := strings.TrimSpace(opts.OutPath); p != "" {
-		fh, ferr := os.Create(p)
-		if ferr != nil {
-			return ferr
-		}
-		defer fh.Close()
-		dst = fh
-	}
-	n, err := io.Copy(dst, resp.Body)
-	if err != nil {
-		return fmt.Errorf("write the audio: %w", err)
-	}
-	if p := strings.TrimSpace(opts.OutPath); p != "" {
-		fmt.Fprintf(os.Stderr, "wrote %s (%s bytes)\n", p, strconv.FormatInt(n, 10))
-	}
-	return nil
+	return streamAudioAnswer(ctx, dp, audioAnswer{
+		Method: "POST", Route: asyncQuery(epAudioSpeech, opts.Async),
+		Body: bytes.NewReader(buf), ContentType: "application/json",
+		Model: opts.Model, Out: opts.OutPath, Async: opts.Async, Format: opts.Format,
+	})
 }

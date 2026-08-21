@@ -62,16 +62,24 @@ Subcommands:
   image <prompt>        generate an image
   video <prompt>        generate a video
   transcribe <file>     speech to text
+  listen [file]         speech to text as it arrives, over a socket
   speak <text>          text to speech
+  clone <ref> <text>    text to speech in a voice from a recording
+  dialogue <script>     a multi-speaker conversation from a script
   vad <file>            where the speech is in a recording
   diarize <file>        who spoke when
   enhance <file>        a cleaned-up recording
   align <file>          line a transcript up with the audio
   ocr <file>            text out of an image or PDF
+  task <id>             pick up an audio job submitted with --async
 
 Three of these do not answer with their result. Image and video generation can
 hand back a receipt to collect from, and OCR always does; each of those verbs
 waits for the work by default and takes --no-wait to hand the id over instead.
+
+The audio verbs answer directly, and take --async to be handed a task id
+instead — which is the only way to send an hour of audio, since a synchronous
+request for that is a request that gets cut. "router call task" reads them.
 
 Every call is metered: it appears in "router usage", counts against the quota on
 the credential that made it, and may cost money.
@@ -89,12 +97,16 @@ the credential that made it, and may cost money.
 	cmd.AddCommand(newCallImageCommand(f))
 	cmd.AddCommand(newCallVideoCommand(f))
 	cmd.AddCommand(newCallTranscribeCommand(f))
+	cmd.AddCommand(newCallListenCommand(f))
 	cmd.AddCommand(newCallSpeakCommand(f))
+	cmd.AddCommand(newCallCloneCommand(f))
+	cmd.AddCommand(newCallDialogueCommand(f))
 	cmd.AddCommand(newCallVADCommand(f))
 	cmd.AddCommand(newCallDiarizeCommand(f))
 	cmd.AddCommand(newCallEnhanceCommand(f))
 	cmd.AddCommand(newCallAlignCommand(f))
 	cmd.AddCommand(newCallOCRCommand(f))
+	cmd.AddCommand(newCallTaskCommand(f))
 	return cmd
 }
 
@@ -104,11 +116,11 @@ the credential that made it, and may cost money.
 // category for that kind of work.
 //
 // Audio has no single category, and that is the interesting one. One audio mode
-// covers recognition, synthesis, voice activity, diarization, enhancement and
-// sound effects, and those are six separate engine images: no installed
-// application serves the mode, so a `default-audio` would name a model that
-// cannot answer most audio requests, with no way for the caller to tell which.
-// Each capability is its own category instead.
+// covers a dozen different jobs, and each is a separate engine image with a
+// Market application of its own: no installed application serves the mode, so a
+// `default-audio` would name a model that cannot answer most audio requests,
+// with no way for the caller to tell which. Each capability is its own category
+// instead, which is why the audio names below outnumber the verbs.
 //
 // Translate has a category but no --model flag to reach it: those routes carry
 // no model field at all and resolve the default per call.
@@ -134,17 +146,29 @@ const (
 	categoryVideo       = "default-video-generation"
 	categoryOCR         = "default-ocr"
 	categorySTT         = "default-stt"
+	categorySTTStream   = "default-stt-stream"
+	categoryAlign       = "default-align"
 	categoryTTS         = "default-tts"
+	categoryTTSClone    = "default-tts-clone"
+	categoryTTSDialogue = "default-tts-dialogue"
 	categoryVAD         = "default-vad"
 	categoryDiarization = "default-diar"
+	categoryDiarStream  = "default-diar-stream"
 	categoryEnhance     = "default-enhance"
 	categorySoundFX     = "default-sound-fx"
 )
 
-// Alignment has no category of its own. It is served by the same engine base as
-// speech recognition rather than by an image of its own, so the recognition
-// default is the one that finds a model able to do it.
-const categoryAlign = categorySTT
+// Alignment, streaming recognition, streaming diarization, voice cloning and
+// dialogue each have a category of their own because each is a separate
+// application. Alignment used to fall back to the recognition default here on
+// the belief that it was served by the same engine base; the aligner ships as
+// `audioqwenalignerv3`, declares `align` and nothing else, and the recognition
+// applications declare `stt` and nothing else — so that fallback resolved a
+// model whose engine answers 404 for /v1/audio/align.
+//
+// `default-speaker-embed` is the one audio category with no constant here:
+// /v1/audio/embeddings has no verb in this tree, and naming a category no verb
+// can reach is the mistake the note above warns about.
 
 // Sound effects have a category but no verb of their own, because they have no
 // endpoint of their own: the engine serving them mounts `/v1/audio/speech`, the

@@ -120,12 +120,22 @@ const dataPlaneKeyFlagUsage = "call with this `sk-*` key instead of the one this
 // that separates them — Router's own refusals are `authentication_error`, an
 // upstream's carry whatever the upstream calls it — and pointing at the wrong
 // key sends someone to re-issue a credential that was never the problem.
+// routerErrorOf unwraps to Router's own envelope, or nil when the failure
+// happened before anything answered.
+func routerErrorOf(err error) *RouterError {
+	var re *RouterError
+	if err != nil && errors.As(err, &re) {
+		return re
+	}
+	return nil
+}
+
 func callErr(err error) error {
 	if err == nil {
 		return nil
 	}
-	var re *RouterError
-	if !errors.As(err, &re) {
+	re := routerErrorOf(err)
+	if re == nil {
 		return err
 	}
 	ours := re.Type == "authentication_error"
