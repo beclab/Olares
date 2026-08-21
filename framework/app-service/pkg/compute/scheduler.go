@@ -293,7 +293,7 @@ func pickSingleSelection(req Requirement, nodes []NodeOption, pressure PressureS
 					if option.SupportType != supportType || !option.Operable {
 						continue
 					}
-					if fits, _ := deviceOptionFits(req, option, pressure, level, false, 0, opts); !fits {
+					if fits, _ := deviceOptionFits(req, option, pressure, level, false, opts); !fits {
 						continue
 					}
 					candidates = append(candidates, selectDevice(option, requiredTargetForMode(req)))
@@ -338,23 +338,16 @@ func collectDevicesForTarget(req Requirement, nodes []NodeOption, pressure Press
 	fitRemaining := target
 	allocationRemaining := allocationTarget
 	var out []BindingSelection
-	timeSliceMemoryByNode := make(map[string]int64)
 	for _, supportType := range supportTypeOrder(req.Mode) {
 		for _, node := range nodes {
 			for _, option := range node.Devices {
 				if option.SupportType != supportType || !option.Operable {
 					continue
 				}
-				fits, amount := deviceOptionFits(req, option, pressure, level, true, timeSliceMemoryByNode[node.NodeName], opts)
+				fits, amount := deviceOptionFits(req, option, pressure, level, true, opts)
 				if !fits || amount <= 0 {
 					continue
 				}
-				_, device := option.asNodeDevice(req.Mode)
-				nextMemory, ok := checkedAdd(timeSliceMemoryByNode[node.NodeName], timeSliceAddedMemory(device))
-				if !ok {
-					continue
-				}
-				timeSliceMemoryByNode[node.NodeName] = nextMemory
 				if allocationRemaining > 0 {
 					assigned := minInt64(amount, allocationRemaining)
 					out = append(out, selectDevice(option, assigned))
@@ -382,12 +375,12 @@ func selectDevice(option DeviceOption, assigned int64) BindingSelection {
 	return BindingSelection{NodeName: option.NodeName, DeviceID: option.DeviceID, Memory: assigned}
 }
 
-func deviceOptionFits(req Requirement, option DeviceOption, pressure PressureSnapshot, level string, allowPartial bool, priorTimeSliceMemory int64, opts allocationOptions) (bool, int64) {
+func deviceOptionFits(req Requirement, option DeviceOption, pressure PressureSnapshot, level string, allowPartial bool, opts allocationOptions) (bool, int64) {
 	node, device := option.asNodeDevice(req.Mode)
-	return deviceFitsLevelWithPressure(req, node, device, pressure, level, allowPartial, priorTimeSliceMemory, opts)
+	return deviceFitsLevelWithPressure(req, node, device, pressure, level, allowPartial, opts)
 }
 
-func deviceFitsLevelWithPressure(req Requirement, node Node, device Device, pressure PressureSnapshot, level string, allowPartial bool, priorTimeSliceMemory int64, pressureOptions allocationOptions) (bool, int64) {
+func deviceFitsLevelWithPressure(req Requirement, node Node, device Device, pressure PressureSnapshot, level string, allowPartial bool, pressureOptions allocationOptions) (bool, int64) {
 	if device.Health != "" && device.Health != deviceHealthYes {
 		return false, 0
 	}
@@ -405,26 +398,22 @@ func deviceFitsLevelWithPressure(req Requirement, node Node, device Device, pres
 	if available < required && !(allowPartial && req.Mode == utils.NvidiaCardType) {
 		return false, available
 	}
-	if allocationWouldPressure(req, node, device, pressure, level, priorTimeSliceMemory, pressureOptions) {
+	if allocationWouldPressure(req, node, pressure, level, pressureOptions) {
 		return false, available
 	}
 	return true, available
 }
 
-func allocationWouldPressure(req Requirement, node Node, device Device, pressure PressureSnapshot, level string, priorTimeSliceMemory int64, options allocationOptions) bool {
+// allocationWouldPressure reports whether placing the app on this node would
+// push it past the pressure threshold. It deliberately does not look at the
+// candidate device: an app's declared memory already covers the VRAM that a
+// unified-memory card swaps into host memory, so the projection is the same
+// whichever card is picked.
+func allocationWouldPressure(req Requirement, node Node, pressure PressureSnapshot, level string, options allocationOptions) bool {
 	if !options.checkPressure {
 		return false
 	}
-	added := levelAddedResources(req, level, options)
-	timeSliceMemory, ok := checkedAdd(priorTimeSliceMemory, timeSliceAddedMemory(device))
-	if !ok {
-		return true
-	}
-	added.Memory, ok = checkedAdd(added.Memory, timeSliceMemory)
-	if !ok {
-		return true
-	}
-	return pressure.WouldPressure(node, added)
+	return pressure.WouldPressure(node, levelAddedResources(req, level, options))
 }
 
 func levelAddedResources(req Requirement, level string, options allocationOptions) AddedResources {
@@ -436,15 +425,6 @@ func levelAddedResources(req Requirement, level string, options allocationOption
 		Memory: levelMemory(req, level),
 		Disk:   req.RequiredDisk,
 	}
-}
-
-// A time-slice GPU with a positive target needs host-memory headroom equal to
-// the card's physical memory. Zero-target fit checks preserve legacy behavior.
-func timeSliceAddedMemory(device Device) int64 {
-	if device.SupportType != SupportTypeTimeSlice {
-		return 0
-	}
-	return device.Memory
 }
 
 func targetForMode(req Requirement, level string) int64 {

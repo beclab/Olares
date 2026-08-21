@@ -7,7 +7,12 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 )
 
-func TestDeviceFitsLevelTimeSliceMemoryForZeroRequirement(t *testing.T) {
+// An app's declared memory already covers the VRAM that a unified-memory card
+// swaps into host memory, so a time-slice card's own physical memory must not
+// be added on top. Charging the app for the whole card made a small-VRAM app on
+// a big card look as expensive as one that needs the entire card, and blocked
+// apps the node could comfortably host.
+func TestDeviceFitsLevelIgnoresTimeSliceCardMemory(t *testing.T) {
 	const gib = int64(1 << 30)
 	node := Node{NodeName: "gpu-node"}
 	device := Device{
@@ -16,6 +21,7 @@ func TestDeviceFitsLevelTimeSliceMemoryForZeroRequirement(t *testing.T) {
 		Health:      deviceHealthYes,
 		SupportType: SupportTypeTimeSlice,
 	}
+	// 80Gi of 100Gi is in use, so the 0.9 threshold leaves 10Gi of headroom.
 	pressure := PressureSnapshot{
 		Threshold: 0.9,
 		UsageByNode: map[string]prometheus.NodeResourceUsage{
@@ -29,20 +35,23 @@ func TestDeviceFitsLevelTimeSliceMemoryForZeroRequirement(t *testing.T) {
 			},
 		},
 	}
+	opts := allocationOptions{checkPressure: true}
+
+	// 5Gi of declared memory fits in the 10Gi of headroom. Under the old
+	// accounting the card's 10Gi was added and this was rejected.
 	req := Requirement{
 		Mode:           utils.NvidiaCardType,
 		RequiredMemory: 5 * gib,
+		RequiredGPU:    gib,
+	}
+	if fits, _ := deviceFitsLevelWithPressure(req, node, device, pressure, FitLevelRequired, false, opts); !fits {
+		t.Fatal("a time-slice card must not be charged its own physical memory on top of the app's request")
 	}
 
-	opts := allocationOptions{checkPressure: true}
-	fits, _ := deviceFitsLevelWithPressure(req, node, device, pressure, FitLevelRequired, false, 0, opts)
-	if !fits {
-		t.Fatal("zero GPU requirement should preserve the legacy fit decision without time-slice host memory")
-	}
-
-	req.RequiredGPU = gib
-	fits, _ = deviceFitsLevelWithPressure(req, node, device, pressure, FitLevelRequired, false, 0, opts)
-	if fits {
-		t.Fatal("positive GPU requirement must include time-slice host memory")
+	// The app's own declared memory is now the only thing that can exhaust
+	// the node's headroom.
+	req.RequiredMemory = 11 * gib
+	if fits, _ := deviceFitsLevelWithPressure(req, node, device, pressure, FitLevelRequired, false, opts); fits {
+		t.Fatal("a request larger than the node's headroom must still be rejected")
 	}
 }

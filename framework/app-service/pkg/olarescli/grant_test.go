@@ -118,6 +118,9 @@ func TestEnsureCredentialMintsOnce(t *testing.T) {
 	if got.OlaresID != testOlaresID {
 		t.Errorf("olaresId = %q, want %q", got.OlaresID, testOlaresID)
 	}
+	if got.AppName != testApp {
+		t.Errorf("appName = %q, want %q", got.AppName, testApp)
+	}
 	if len(secret.Data) != 1 {
 		t.Errorf("secret keys = %v, want only %s", keys(secret.Data), KeyCredentialFile)
 	}
@@ -151,7 +154,7 @@ func TestEnsureCredentialKeepsCompleteSecret(t *testing.T) {
 	store, client := newStore(t, lldap, &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: CredentialSecretName, Namespace: testNS},
 		Data: map[string][]byte{
-			KeyCredentialFile: []byte(`{"refreshToken":"kept-token","olaresId":"alice@olares.cn"}`),
+			KeyCredentialFile: []byte(`{"refreshToken":"kept-token","olaresId":"alice@olares.cn","appName":"lares"}`),
 		},
 	})
 
@@ -171,6 +174,9 @@ func TestEnsureCredentialKeepsCompleteSecret(t *testing.T) {
 	}
 	if got.OlaresID != testOlaresID {
 		t.Errorf("olaresId = %q", got.OlaresID)
+	}
+	if got.AppName != testApp {
+		t.Errorf("appName = %q", got.AppName)
 	}
 }
 
@@ -221,6 +227,31 @@ func TestEnsureCredentialSurfacesDeriveFailure(t *testing.T) {
 		Get(context.Background(), CredentialSecretName, metav1.GetOptions{})
 	if !apierrors.IsNotFound(err) {
 		t.Errorf("a secret was written despite the failed derive: %v", err)
+	}
+}
+
+func TestEnsureCredentialFillsMissingAppName(t *testing.T) {
+	lldap := newFakeLLDAP(t)
+	store, client := newStore(t, lldap, &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: CredentialSecretName, Namespace: testNS},
+		Data: map[string][]byte{
+			KeyCredentialFile: []byte(`{"refreshToken":"kept-token","olaresId":"alice@olares.cn"}`),
+		},
+	})
+
+	grant, err := store.EnsureCredential(context.Background(), testApp, testOwner, testOlaresID, testNS)
+	if err != nil {
+		t.Fatalf("EnsureCredential: %v", err)
+	}
+	if lldap.minted != 0 {
+		t.Errorf("minted %d grants while filling appName", lldap.minted)
+	}
+	if grant.RefreshToken != "kept-token" || grant.AppName != testApp {
+		t.Errorf("grant = %+v", grant)
+	}
+	got := decodeCredentialFile(t, credentialSecret(t, client))
+	if got.RefreshToken != "kept-token" || got.OlaresID != testOlaresID || got.AppName != testApp {
+		t.Errorf("credential.json = %+v", got)
 	}
 }
 
@@ -276,11 +307,13 @@ func TestEnsureCredentialIgnoresLegacyTokenKey(t *testing.T) {
 func decodeCredentialFile(t *testing.T, secret *corev1.Secret) struct {
 	RefreshToken string `json:"refreshToken"`
 	OlaresID     string `json:"olaresId"`
+	AppName      string `json:"appName"`
 } {
 	t.Helper()
 	var file struct {
 		RefreshToken string `json:"refreshToken"`
 		OlaresID     string `json:"olaresId"`
+		AppName      string `json:"appName"`
 	}
 	raw := secret.Data[KeyCredentialFile]
 	if err := json.Unmarshal(raw, &file); err != nil {

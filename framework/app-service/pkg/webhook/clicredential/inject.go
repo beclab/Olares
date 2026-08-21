@@ -5,9 +5,10 @@
 // The contract with the container is two directories and the environment
 // variables that point at them:
 //
-//	/olares/credentials  read-only: credential.json with refreshToken and
-//	                     olaresId. Backed by the olares-cli-credential Secret
-//	                     that pkg/olarescli writes into the namespace.
+//	/olares/credentials  read-only: credential.json with refreshToken,
+//	                     olaresId, and appName. Backed by the
+//	                     olares-cli-credential Secret that pkg/olarescli
+//	                     writes into the namespace.
 //	/olares/cache        writable scratch for whatever the CLI derives from
 //	                     the credential (access tokens, mostly). An emptyDir,
 //	                     so it is per-pod and disappears with it.

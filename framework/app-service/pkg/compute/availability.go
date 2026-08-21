@@ -197,7 +197,7 @@ func makeDeviceOption(req Requirement, node Node, device Device, pressure Pressu
 		option.Health = deviceHealthYes
 	}
 	for _, level := range []string{FitLevelLimit, FitLevelRequired} {
-		fits, _ := deviceFitsLevelWithPressure(req, node, device, pressure, level, req.SupportMultiCards || req.SupportMultiNodes, 0, opts)
+		fits, _ := deviceFitsLevelWithPressure(req, node, device, pressure, level, req.SupportMultiCards || req.SupportMultiNodes, opts)
 		if fits {
 			option.FitLevel = level
 			break
@@ -220,12 +220,11 @@ func makeDeviceOption(req Requirement, node Node, device Device, pressure Pressu
 // therefore has to stay Device-shaped, and the view side adapts.
 //
 // The round trip is exact for everything the fit checks read — Health, plus
-// SupportType/Memory/Bindings, which are what deviceAvailableMemory and
-// timeSliceAddedMemory consume, plus the node name that pressure lookups are
-// keyed by. Recomputing deviceAvailableMemory on the result therefore
-// reproduces DeviceOption.Available. The identity fields (ID, Mode, CardModel)
-// are along for the ride so the value is a well-formed Device; no fit check
-// reads them.
+// SupportType/Memory/Bindings, which are what deviceAvailableMemory consumes,
+// plus the node name that pressure lookups are keyed by. Recomputing
+// deviceAvailableMemory on the result therefore reproduces
+// DeviceOption.Available. The identity fields (ID, Mode, CardModel) are along
+// for the ride so the value is a well-formed Device; no fit check reads them.
 func (o DeviceOption) asNodeDevice(mode string) (Node, Device) {
 	return Node{NodeName: o.NodeName}, Device{
 		ID:          o.DeviceID,
@@ -565,10 +564,9 @@ func validateResolvedBindingSelection(req Requirement, resolved []resolvedSelect
 	}
 	for nodeName := range selectedNodes {
 		node := findResolvedNode(nodeName, resolved)
-		addedGPU := nodeTimeSliceAddedMemory(req, nodeName, resolved)
 		if dims := pressure.PressuredDimensions(node, AddedResources{
 			CPU:    req.RequiredCPU,
-			Memory: req.RequiredMemory + addedGPU,
+			Memory: req.RequiredMemory,
 		}); len(dims) > 0 {
 			result := invalidBinding("node-pressure:" + nodeName)
 			result.NodePressure = &NodePressureDetail{NodeName: nodeName, Dimensions: dims}
@@ -576,23 +574,6 @@ func validateResolvedBindingSelection(req Requirement, resolved []resolvedSelect
 		}
 	}
 	return &BindingValidationResult{OK: true, Code: BindingValidationReasonValid}
-}
-
-// nodeTimeSliceAddedMemory sums the full physical memory of every time-slice
-// card selected on a single node. It deliberately ignores the app's GPU
-// request and limit, matching the install scheduler's pressure accounting.
-func nodeTimeSliceAddedMemory(req Requirement, nodeName string, resolved []resolvedSelection) int64 {
-	if req.Mode != utils.NvidiaCardType {
-		return 0
-	}
-	var total int64
-	for _, item := range resolved {
-		if item.node.NodeName != nodeName {
-			continue
-		}
-		total += timeSliceAddedMemory(item.device)
-	}
-	return total
 }
 
 type resolvedSelection struct {

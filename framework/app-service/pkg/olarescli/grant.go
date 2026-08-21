@@ -27,7 +27,7 @@ const (
 	CacheMountPath = "/olares/cache"
 
 	// KeyCredentialFile is the only file under the mount: a JSON document
-	// with refreshToken and olaresId.
+	// with refreshToken, olaresId, and appName.
 	KeyCredentialFile = "credential.json"
 
 	// managedByLabel marks the Secret so an operator can tell at a glance
@@ -55,7 +55,11 @@ func NewStore(client kubernetes.Interface, cli *Client) *Store {
 // token on every attempt would leave the earlier ones valid for a decade with
 // nothing left pointing at them.
 func (s *Store) EnsureCredential(ctx context.Context, app, owner, olaresID, appNamespace string) (*Grant, error) {
+	app = strings.TrimSpace(app)
 	olaresID = strings.TrimSpace(olaresID)
+	if app == "" {
+		return nil, fmt.Errorf("olares-cli credential: empty appName")
+	}
 	if olaresID == "" {
 		return nil, fmt.Errorf("olares-cli credential: empty olaresId for user %s", owner)
 	}
@@ -80,6 +84,7 @@ func (s *Store) EnsureCredential(ctx context.Context, app, owner, olaresID, appN
 		return nil, err
 	}
 	grant.OlaresID = olaresID
+	grant.AppName = app
 
 	if err = s.writeSecret(ctx, existing, app, appNamespace, grant, replaceIncomplete); err != nil {
 		s.revokeQuietly(ctx, grant.RefreshToken)
@@ -183,9 +188,11 @@ func encodeCredentialFile(grant *Grant) ([]byte, error) {
 	return json.Marshal(struct {
 		RefreshToken string `json:"refreshToken"`
 		OlaresID     string `json:"olaresId"`
+		AppName      string `json:"appName"`
 	}{
 		RefreshToken: grant.RefreshToken,
 		OlaresID:     grant.OlaresID,
+		AppName:      grant.AppName,
 	})
 }
 
@@ -197,6 +204,7 @@ func grantFromSecret(secret *corev1.Secret) (*Grant, bool) {
 	var file struct {
 		RefreshToken string `json:"refreshToken"`
 		OlaresID     string `json:"olaresId"`
+		AppName      string `json:"appName"`
 	}
 	if err := json.Unmarshal(raw, &file); err != nil {
 		return nil, false
@@ -208,8 +216,12 @@ func grantFromSecret(secret *corev1.Secret) (*Grant, bool) {
 	if file.OlaresID == "" {
 		return nil, false
 	}
+	if file.AppName == "" {
+		return nil, false
+	}
 	return &Grant{
 		RefreshToken: token,
 		OlaresID:     file.OlaresID,
+		AppName:      strings.TrimSpace(file.AppName),
 	}, true
 }
