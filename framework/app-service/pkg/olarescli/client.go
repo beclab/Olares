@@ -31,12 +31,13 @@ const (
 )
 
 // Grant is one derived credential. RefreshToken is the revocation handle
-// and, together with OlaresID, the JSON file mounted into the app.
+// and, together with OlaresID and AppName, the JSON file mounted into the app.
 type Grant struct {
 	RefreshToken string `json:"refresh_token"`
 	Username     string `json:"username"`
 	ExpiresAt    string `json:"expires_at"`
 	OlaresID     string `json:"olaresId,omitempty"`
+	AppName      string `json:"appName,omitempty"`
 }
 
 // Client talks to lldap's /auth/token/derive endpoints. Authentication is
