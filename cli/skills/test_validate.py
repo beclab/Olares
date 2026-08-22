@@ -10,6 +10,12 @@ validate = importlib.util.module_from_spec(SPEC)
 assert SPEC.loader is not None
 SPEC.loader.exec_module(validate)
 
+STAMP_PATH = Path(__file__).with_name("stamp.py")
+STAMP_SPEC = importlib.util.spec_from_file_location("skill_stamp", STAMP_PATH)
+stamp = importlib.util.module_from_spec(STAMP_SPEC)
+assert STAMP_SPEC.loader is not None
+STAMP_SPEC.loader.exec_module(stamp)
+
 
 VALID_FRONTMATTER = """---
 name: olares-test
@@ -162,6 +168,95 @@ class ValidatorTests(unittest.TestCase):
             joined = "\n".join(errors)
             self.assertIn("olares-chart/SKILL.md: deep-links olares-market/references", joined)
             self.assertIn("olares-chart-deploy.md: deep-links olares-shared/references", joined)
+
+
+class StampTests(unittest.TestCase):
+    """The stamp runs once per release, in a job nobody watches closely.
+
+    Its failure modes are quiet ones -- a version left as the placeholder, a
+    body example rewritten, a file it never opened -- so they are stated here
+    rather than discovered in a published binary.
+    """
+
+    def write_suite(self, root: Path, names: list[str]) -> None:
+        for name in names:
+            skill_dir = root / name
+            skill_dir.mkdir()
+            (skill_dir / "SKILL.md").write_text(
+                VALID_FRONTMATTER.replace("name: olares-test", f"name: {name}")
+                + "\n## Example\n\nversion: 9.9.9-not-ours.1\n",
+                encoding="utf-8",
+            )
+
+    def test_every_skill_is_stamped(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.write_suite(root, ["olares-a", "olares-b", "olares-c"])
+            stamped = stamp.stamp(root, "1.13.0-cli.1")
+            self.assertEqual(len(stamped), 3)
+            for skill in stamped:
+                self.assertEqual(
+                    validate.read_frontmatter_version(skill), "1.13.0-cli.1"
+                )
+
+    def test_the_body_is_left_alone(self):
+        """A reference that shows an agent a YAML example is prose, not the
+        frontmatter, and rewriting it would corrupt what the agent copies."""
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.write_suite(root, ["olares-a"])
+            stamp.stamp(root, "1.13.0-cli.1")
+            text = (root / "olares-a" / "SKILL.md").read_text(encoding="utf-8")
+            self.assertIn("version: 9.9.9-not-ours.1", text)
+            self.assertEqual(text.count("1.13.0-cli.1"), 1)
+
+    def test_a_release_that_is_not_one_is_refused(self):
+        # Both halves matter: a bare x.y.z is the OS line's spelling, and an
+        # empty stamp is what a workflow passes when its own version lookup
+        # came back empty.
+        for version in ["1.13.0", "", "latest", "v1.13.0-cli.1", "1.13.0-cli"]:
+            with tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                self.write_suite(root, ["olares-a"])
+                with self.assertRaises(stamp.StampError, msg=version):
+                    stamp.stamp(root, version)
+                self.assertEqual(
+                    validate.read_frontmatter_version(root / "olares-a" / "SKILL.md"),
+                    "1.12.7-cli.4",
+                    f"{version!r} was refused but the file was written anyway",
+                )
+
+    def test_an_empty_tree_is_an_error_not_a_success(self):
+        """Stamping nothing and reporting success is how a moved directory
+        ships a suite still naming the placeholder."""
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaises(stamp.StampError):
+                stamp.stamp(Path(directory), "1.13.0-cli.1")
+
+    def test_a_skill_with_no_version_line_is_an_error(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            skill_dir = root / "olares-a"
+            skill_dir.mkdir()
+            (skill_dir / "SKILL.md").write_text(
+                "---\nname: olares-a\n---\n\nbody\n", encoding="utf-8"
+            )
+            with self.assertRaises(stamp.StampError):
+                stamp.stamp(root, "1.13.0-cli.1")
+
+    def test_the_committed_suite_declares_the_placeholder(self):
+        """What is in git is what a local build embeds, and it is not a release.
+
+        A plausible-looking number here is the failure this replaced: a reader
+        cannot tell whether it is authoritative, and the release that would
+        have corrected it is the one that stamps over it anyway.
+        """
+        for skill in sorted(MODULE_PATH.parent.glob("olares-*/SKILL.md")):
+            self.assertEqual(
+                validate.read_frontmatter_version(skill),
+                stamp.PLACEHOLDER_VERSION,
+                f"{skill.parent.name} carries a hand-written version",
+            )
 
 
 if __name__ == "__main__":

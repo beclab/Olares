@@ -90,6 +90,8 @@ Two version numbers are tracked:
 | **npm version** | `1.12.6-cli.5` | `package.json`, npm registry, CDN/GitHub tar names |
 | **binary version** (`version.VERSION`) | `1.12.6` | Olares OS upgrade line; shown by `olares-cli --version` |
 
+The embedded agent skills carry the npm version too, and nobody types it in: the release job stamps it into their frontmatter before compiling (`cli/skills/stamp.py`), and the build fails if it did not take. So the version a skill declares is the release whose command tree it documents, and `olares-cli` can tell a user when the copy installed on their machine came from a different build.
+
 `postinstall` downloads `olares-cli-v{npm_version}_{platform}.tar.gz` using the npm package version, so each `-cli.N` bump is a distinct artifact and does not overwrite prior builds.
 
 **npm dist-tags**

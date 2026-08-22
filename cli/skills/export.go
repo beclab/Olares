@@ -36,6 +36,9 @@ const stagingPrefix = ".olares-cli-export-"
 // readable here too. Each skill is staged and then swapped into place, so a
 // reader either sees the previous copy or the new one, never half of either.
 //
+// It also leaves a SuiteMarker naming what it wrote, which is how a later
+// run tells a copy of this suite from a copy of another one.
+//
 // A skill that already exists as a symlink is refused rather than followed.
 // Writing through it would edit wherever it points — for the local
 // development layout documented in cli/README.md, that is the git checkout
@@ -75,6 +78,10 @@ func Export(dir string) ([]string, error) {
 			return nil, fmt.Errorf("move %s into place: %w", name, err)
 		}
 	}
+	// Last, and not fatal: the skills an agent reads are all in place by
+	// now, and a missing marker costs a staleness notice that fires once too
+	// often. Failing here would undo an install over a bookkeeping file.
+	_ = writeIdentity(dir)
 	return names, nil
 }
 

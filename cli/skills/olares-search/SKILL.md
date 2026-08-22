@@ -1,6 +1,6 @@
 ---
 name: olares-search
-version: 1.12.7-cli.4
+version: 0.0.0-cli.0
 description: "Olares search via olares-cli search — the Desktop global search over Drive files, Sync (Seafile) libraries, Google Drive, Dropbox, Wise/Knowledge, and installed applications, with paging and JSON output. On Olares 1.12.7+ one `search drive` (alias `search files`) covers all four file sources. Use for Olares search, full-text search, find a file by content, Text Search, global search, search apps, search google drive, search dropbox, search sync, search wise."
 compatibility: Requires olares-cli on PATH and active Olares profile
 metadata:

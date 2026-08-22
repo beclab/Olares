@@ -99,6 +99,32 @@ func TestTheSuiteShipsOneVersion(t *testing.T) {
 // number the suite is allowed to carry.
 var releaseVersion = regexp.MustCompile(`^\d+\.\d+\.\d+-cli\.\d+$`)
 
+// What is committed is not a version, and saying so is the point: the release
+// job stamps the release it is building over it (skills/stamp.py), so a
+// number left in git would be a number nobody maintains and every reader has
+// to decide whether to trust. A build from a checkout carries this, which is
+// correct — it is not a release.
+//
+// This runs nowhere near the release job, which builds and does not test, so
+// pinning the committed value here cannot fail a release that stamped
+// properly. What it catches is somebody typing a version back in.
+func TestTheCommittedSuiteCarriesThePlaceholder(t *testing.T) {
+	metas, err := List()
+	if err != nil {
+		t.Fatalf("list skills: %v", err)
+	}
+	for _, meta := range metas {
+		if meta.Version != placeholderVersion {
+			t.Errorf("%s declares %s; the committed value is %s and the release stamps over it",
+				meta.Name, meta.Version, placeholderVersion)
+		}
+	}
+}
+
+// Kept in step with PLACEHOLDER_VERSION in skills/stamp.py, which writes it,
+// and with the check in publish.sh, which refuses it.
+const placeholderVersion = "0.0.0-cli.0"
+
 func TestReadDefaultsToTheEntryDocument(t *testing.T) {
 	implicit, err := Read("olares-shared", "")
 	if err != nil {
@@ -130,7 +156,7 @@ func TestReadRefusesToEscapeTheSuite(t *testing.T) {
 }
 
 // suiteOnDisk walks the olares-* directories beside this file. Scoping to
-// that prefix is the point: the same directory holds validate.py,
+// that prefix is the point: the same directory holds validate.py, stamp.py,
 // publish.sh, requirements.txt, the suite README and this test, none of
 // which belongs in the binary.
 func suiteOnDisk(t *testing.T) []string {

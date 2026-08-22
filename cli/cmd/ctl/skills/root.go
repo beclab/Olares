@@ -134,17 +134,23 @@ func runList(opts *outputOptions) error {
 	if opts.Quiet {
 		return nil
 	}
-	width := 0
+	// Both columns are measured. A version is x.y.z-cli.n, which is eleven
+	// or twelve characters, so a fixed width narrow enough to look tidy in
+	// the source pushes every description out of line instead.
+	names, versions := 0, 0
 	for _, item := range items {
-		if len(item.Name) > width {
-			width = len(item.Name)
+		if len(item.Name) > names {
+			names = len(item.Name)
+		}
+		if len(item.Version) > versions {
+			versions = len(item.Version)
 		}
 	}
 	for _, item := range items {
 		// The description is a paragraph written for matching a request
 		// against, not for a column. One line of it is enough to choose
 		// between twelve skills; `read` is where the whole thing lives.
-		fmt.Printf("%-*s  %-8s  %s\n", width, item.Name, item.Version, summarize(item.Description))
+		fmt.Printf("%-*s  %-*s  %s\n", names, item.Name, versions, item.Version, summarize(item.Description))
 	}
 	return nil
 }

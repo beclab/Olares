@@ -1,6 +1,6 @@
 ---
 name: olares-shared
-version: 1.12.7-cli.4
+version: 0.0.0-cli.0
 description: "Foundation for the olares-cli skill suite: choose the right domain skill, understand the Olares platform model each task depends on, and decide whether the active profile can proceed or needs login recovery. Use first for runtime skills, and directly for Olares ID, profile, login, 2FA/TOTP, refresh token, keychain, auth errors, or uncertainty about which Olares skill owns a task."
 compatibility: Requires olares-cli on PATH
 metadata:

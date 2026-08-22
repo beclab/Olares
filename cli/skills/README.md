@@ -172,9 +172,15 @@ Note: `clawhub sync` defaults to bumping the patch version on updates. For deter
 ./cli/skills/publish.sh olares-files olares-market # publish a subset
 ```
 
-Versions come from each skill's frontmatter `version:` field, and all 12 carry the same one: the `olares-cli` release they ship in, spelled the way npm spells it (`1.12.7-cli.4`). The suite is compiled into that binary, so what a skill documents is that release's command tree; a number of its own would be a second thing to bump and a second thing to get wrong. `validate.py` rejects any other shape and rejects the 12 disagreeing, and `olares-cli` says so on startup when the skills installed on a machine came from a different release.
+Versions come from each skill's frontmatter `version:` field, and all 12 carry the same one: the `olares-cli` release they ship in, spelled the way npm spells it (`1.12.7-cli.4`). The suite is compiled into that binary, so what a skill documents is that release's command tree; a number of its own would be a second thing to bump and a second thing to get wrong. `validate.py` rejects any other shape and rejects the 12 disagreeing — but it is not what puts the number there.
 
-Bump all 12 in the release PR, to the version that PR's release will publish. Slugs and display names are baked into [`publish.sh`](publish.sh).
+**Do not edit `version:` by hand.** What is committed is the placeholder `0.0.0-cli.0`, and the release job writes the real one with [`stamp.py`](stamp.py) immediately before compiling — `1.12.7-cli.4` on the npm channel, `1.12.7-cli.0` for an OS-line build. It was a hand edit in the release PR until the failure mode became clear: forgetting it shipped new instructions under the label a user already had installed, so nothing anywhere said their copy was behind. `publish.sh` refuses the placeholder, so publishing to ClawHub means stamping first:
+
+```bash
+python3 cli/skills/stamp.py 1.12.7-cli.4   # then publish, then discard the edit
+```
+
+Slugs and display names are baked into [`publish.sh`](publish.sh).
 
 ## Slug policy
 

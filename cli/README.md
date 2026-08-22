@@ -119,7 +119,13 @@ olares-cli skills export ./skills
 
 ### Keep them current
 
-Run `skills install` again after every CLI upgrade. Until you do, each command prints a line on stderr saying the installed skills name a different release; `OLARES_CLI_NO_SKILL_NOTICE=1` silences it where the extra output cannot be tolerated.
+Run `skills install` again after every CLI upgrade. Until you do, each command prints a line on stderr saying the installed copy came from a different build; `OLARES_CLI_NO_SKILL_NOTICE=1` silences it where the extra output cannot be tolerated.
+
+That line is decided by content, not by the version the skills declare. `skills install` and `skills export` leave a `.olares-cli-suite` file recording a hash of what they wrote, and the notice compares it against what the running binary carries. Comparing the declared versions instead would be silent in the case that matters most: on the daily channel the version moves every few weeks while the skills move every day, so two copies a month apart carry one label. When that happens the notice says so in as many words — same version, different copy — rather than printing one version twice.
+
+The hash is provenance, not a checksum of the tree: it says which build wrote this copy, so editing an installed skill for your own machine is not reported as drift. Agent directories hold no marker of their own; they are links (or copies) of the store, and the store is what the notice reads.
+
+One store, though, and possibly two binaries: an Olares host that also has the npm copy installed has two `olares-cli` builds sharing `~/.agents/skills`, and they are never the same release. Whichever ran `skills install` last owns the store, and the other one says so on every command — correctly, since the skills there do document the other build. If that is the setup you want, silence the one you drive less: `export OLARES_CLI_NO_SKILL_NOTICE=1` in the shell where it is noise, or re-run `skills install` from whichever binary your agents should be reading.
 
 If `olares-cli` is not on the machine at all, install it first ([For users](#for-users)) and then run `skills install`. Skill discovery never installs the CLI for you — `metadata.requires.bins` is advisory, so an agent can warn instead of guessing.
 
@@ -130,12 +136,14 @@ If `olares-cli` is not on the machine at all, install it first ([For users](#for
 | `olares-cli skills install` | `~/.agents/skills` + existing agent directories | exactly the binary's | yes |
 | `olares-cli skills export <dir>` | wherever you say | exactly the binary's | no |
 | `olares-cli skills read <skill>` | nothing | exactly the binary's | n/a |
-| `npx skills add beclab/Olares` | the `skills` CLI decides | this repository's `main`, whatever it is today | no |
+| `npx skills add beclab/Olares` | the `skills` CLI decides | this repository's `main`, whose skills declare `0.0.0-cli.0` | no |
 | [ClawHub](https://clawhub.ai) (search "olares") | the ClawHub CLI decides | whatever was last accepted there — see below | no |
 
-The first three are the same bytes, so they cannot disagree with the verbs the binary has. The last two can, and silently: a skill declares `requires.bins: [olares-cli]`, which any build satisfies, so an agent reading `main`'s instructions against a six-month-old binary gets told to run flags that do not exist. That is what "notice sees it" means — the [drift notice](#keep-them-current) compares the store against the binary, so it catches a stale `skills install` and nothing else.
+The first three are the same bytes, so they cannot disagree with the verbs the binary has. The last two can, and silently: a skill declares `requires.bins: [olares-cli]`, which any build satisfies, so an agent reading `main`'s instructions against a six-month-old binary gets told to run flags that do not exist. "Notice sees it" means the [notice](#keep-them-current) reads the marker `skills install` leaves in the store — a copy written by anything else is a copy it has nothing to compare.
 
-**ClawHub is not being updated.** A skill's version now names the release it ships in (`1.12.7-cli.4`), which is numerically below the per-skill numbering the registry already holds (`olares-chart` reached `4.18.0`), so a push is refused by a registry that requires increasing versions. `publish.sh` still works if that is ever resolved; until then, treat what is there as a copy from before the suite moved into the binary.
+Fetching from `main` has a second cost now: the version in git is a placeholder. A release stamps the version it is building into the frontmatter just before compiling, so `0.0.0-cli.0` is what a copy taken from the repository says about itself, forever.
+
+**ClawHub is not being updated.** A skill's version names the release it ships in (`1.12.7-cli.4`), which is numerically below the per-skill numbering the registry already holds (`olares-chart` reached `4.18.0`), so a push is refused by a registry that requires increasing versions. `publish.sh` still works if that is ever resolved — it refuses a placeholder, so it has to be run against a stamped tree — but until then, treat what is there as a copy from before the suite moved into the binary.
 
 There is also no Claude Code plugin marketplace here, deliberately. A marketplace entry points at a git ref, which puts it in the bottom half of that table: a version nobody can check against the binary in front of it.
 
@@ -203,12 +211,12 @@ ln -s "$(pwd)/skills/olares-shared" ~/.agents/skills/olares-shared   # repeat pe
 ### Test
 
 ```bash
-go test ./skills/... ./cmd/ctl/skills/...   # embedding, export, install, the drift notice
+go test ./skills/... ./cmd/ctl/skills/...   # embedding, export, install, the staleness notice
 go test ./cmd/ctl -run TestEveryCommandTheSkillsDocumentResolves
 python3 -m pip install -r skills/requirements.txt
-python3 -m unittest skills/test_validate.py
+python3 -m unittest skills/test_validate.py # the validator and the release stamp
 python3 skills/validate.py                  # frontmatter, and one version across the suite
-bash skills/publish.sh --dry-run
+bash skills/publish.sh --dry-run            # frontmatter as the registry would read it
 ```
 
 That is what [skills-ci.yml](../.github/workflows/skills-ci.yml) runs on a pull request.
@@ -221,7 +229,9 @@ That is what [skills-ci.yml](../.github/workflows/skills-ci.yml) runs on a pull 
 | plain `go build` | `0.0.0-development`, the default in [version/version.go](version/version.go) |
 | a release | the release version, stamped through ldflags in CI |
 
-Both dev forms matter beyond your own shell: the setup wizard reads `--version` on `/usr/local/bin/olares-cli` and replaces anything that is not release-grade, so a `make install` build parked there is removed rather than preserved. The embedded skills carry the npm release version (`1.12.7-cli.4`) either way, and CI asserts that a published binary's skills name the release it shipped with.
+Both dev forms matter beyond your own shell: the setup wizard reads `--version` on `/usr/local/bin/olares-cli` and replaces anything that is not release-grade, so a `make install` build parked there is removed rather than preserved.
+
+The skills have a version of their own, and it is not this one. In git it is the placeholder `0.0.0-cli.0`; the release job runs [skills/stamp.py](skills/stamp.py) over the frontmatter before compiling, so a released binary's skills name the release that built them — `1.12.7-cli.4` on the npm channel, `1.12.7-cli.0` for an OS-line build — and CI fails the release if the stamp did not reach the binary. A local build therefore reports `0.0.0-cli.0` for its skills, which is why the staleness notice stays quiet on a development build: it has nothing to compare that would mean anything.
 
 ## Three-layer command system
 

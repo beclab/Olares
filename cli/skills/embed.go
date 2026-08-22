@@ -29,8 +29,8 @@ import (
 // (olares-publish/references/olares-publish-icon.md invokes
 // ../scripts/generate_icon.py, so leaving scripts/ out would ship an
 // instruction that cannot be followed). Everything else in this directory
-// — validate.py, publish.sh, requirements.txt, the suite README — is
-// maintainer tooling and stays out of the binary.
+// — validate.py, stamp.py, publish.sh, requirements.txt, the suite README —
+// is maintainer tooling and stays out of the binary.
 //
 // TestEmbedCoversTheWholeSuite asserts this set equals the olares-* subtree
 // on disk, so a skill that grows a new kind of subdirectory fails a test

@@ -12,9 +12,18 @@ import (
 )
 
 type installEnvelope struct {
-	Skills  []string      `json:"skills"`
-	Count   int           `json:"count"`
-	Store   string        `json:"store"`
+	Skills []string `json:"skills"`
+	Count  int      `json:"count"`
+	Store  string   `json:"store"`
+	// Digest identifies the content that was written, which is what the
+	// staleness notice compares and therefore what a caller managing this
+	// machine some other way needs in order to answer the same question.
+	Digest string `json:"digest"`
+	// Marked says whether the store also carries that digest on disk. Export
+	// treats the marker as bookkeeping and does not fail an install over it,
+	// so the two can disagree — and when they do, the notice has nothing to
+	// compare and will ask for another install on every command.
+	Marked  bool          `json:"marked"`
 	Linked  []string      `json:"linked"`
 	Copied  []string      `json:"copied"`
 	Skipped []skippedPath `json:"skipped"`
@@ -94,6 +103,17 @@ func runInstall(opts *outputOptions, force bool) error {
 	}
 
 	result := installEnvelope{Skills: written, Count: len(written), Store: store}
+	// The digest is this binary's, not the marker's: it describes the bytes
+	// that just went in, which is true whether or not the marker recording
+	// them survived. Reading it back instead reported nothing at all in that
+	// case, leaving a caller unable to tell a failed install from a
+	// successful one that lost its bookkeeping.
+	if digest, err := skillsuite.Digest(); err == nil {
+		result.Digest = digest
+	}
+	if identity, ok := skillsuite.ReadIdentity(store); ok {
+		result.Marked = identity.Digest == result.Digest
+	}
 	for _, dir := range agentSkillDirs() {
 		if filepath.Clean(dir) == filepath.Clean(store) {
 			continue
@@ -255,6 +275,13 @@ func classify(path, store string) (entryKind, string) {
 
 func report(result installEnvelope) {
 	fmt.Printf("wrote %d skills to %s\n", result.Count, result.Store)
+	if !result.Marked {
+		// Worth a line: the skills are correct and every later command will
+		// still say they came from somewhere else, which reads as this
+		// install not having happened.
+		fmt.Printf("  note    could not record what wrote them in %s, so this will be asked for again\n",
+			result.Store)
+	}
 	for _, dir := range result.Linked {
 		fmt.Printf("  linked  %s\n", dir)
 	}

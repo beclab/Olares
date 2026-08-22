@@ -41,7 +41,8 @@ func TestExportWritesTheWholeSuite(t *testing.T) {
 }
 
 // The staging directory is an implementation detail of the swap, and one
-// left behind is a directory an agent would try to read as a skill.
+// left behind is a directory an agent would try to read as a skill. The
+// marker is the one exception, and it is dotted for the same reason.
 func TestExportLeavesNothingBehind(t *testing.T) {
 	dir := t.TempDir()
 	if _, err := Export(dir); err != nil {
@@ -52,9 +53,33 @@ func TestExportLeavesNothingBehind(t *testing.T) {
 		t.Fatalf("read export directory: %v", err)
 	}
 	for _, entry := range entries {
+		if entry.Name() == SuiteMarker {
+			continue
+		}
 		if !strings.HasPrefix(entry.Name(), "olares-") {
 			t.Errorf("export left %q beside the skills", entry.Name())
 		}
+	}
+}
+
+// An export is a tree that can be identified later, which is what lets the
+// staleness notice ask about content instead of about a label somebody
+// remembered to change.
+func TestExportSaysWhatItWrote(t *testing.T) {
+	dir := t.TempDir()
+	if _, err := Export(dir); err != nil {
+		t.Fatalf("export: %v", err)
+	}
+	identity, ok := ReadIdentity(dir)
+	if !ok {
+		t.Fatal("the export left no marker")
+	}
+	digest, err := Digest()
+	if err != nil {
+		t.Fatalf("digest: %v", err)
+	}
+	if identity.Digest != digest {
+		t.Errorf("the marker says %s; this binary carries %s", identity.Digest, digest)
 	}
 }
 
