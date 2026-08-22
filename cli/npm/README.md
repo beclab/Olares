@@ -8,12 +8,12 @@ This package downloads the platform-specific Go binary on `postinstall` and expo
 
 ```bash
 # First-run wizard (recommended): does `npm install -g @olares/cli` and
-# `npx skills add beclab/Olares -y -g` for you, in that order.
+# `olares-cli skills install` for you, in that order.
 npx @olares/cli@latest install
 
 # Or do it yourself, step by step:
-npm install -g @olares/cli@latest                # persistent global install
-npx skills add beclab/Olares -y -g               # six olares-* agent skills
+npm install -g @olares/cli@latest   # persistent global install
+olares-cli skills install           # write the agent skills the binary carries
 
 # One-off — no install:
 npx @olares/cli@latest <verb>
@@ -28,7 +28,7 @@ olares-cli profile current      # verify
 
 > This package distributes the `olares-cli` binary as a **client** only. The Node wrapper auto-sets `OLARES_CLI_REMOTE_ONLY=1`, which hides the Go binary's host-side verbs (`uninstall`, `upgrade`, `node`, `os`, `gpu`, `disk`, `wizard`, `user`, `osinfo`, `amdgpu`); these are reachable only on an Olares host through `/usr/local/bin/olares-cli`. The `install` verb is intercepted by the Node shim itself and routed to the first-run wizard (it never reaches the Go binary). Installing Olares OS itself is out of scope for this package — on a Linux host run `curl -fsSL https://olares.sh | bash`.
 
-> **Permission errors on Linux** (`EACCES` while npm writes to `/usr/lib/node_modules` or `/usr/local/lib/node_modules`): typical for distro-packaged Node (`apt install nodejs`) where the global prefix is root-owned. The wizard surfaces the offending npm `stderr` plus a one-time fix that switches npm to a user-owned prefix (`npm config set prefix ~/.npm-global` + `PATH`) so global installs no longer need `sudo` and `npx skills add -g` writes under your user (not `/root`).
+> **Permission errors on Linux** (`EACCES` while npm writes to `/usr/lib/node_modules` or `/usr/local/lib/node_modules`): typical for distro-packaged Node (`apt install nodejs`) where the global prefix is root-owned. The wizard surfaces the offending npm `stderr` plus a one-time fix that switches npm to a user-owned prefix (`npm config set prefix ~/.npm-global` + `PATH`) so global installs no longer need `sudo`.
 
 ## Where the binary lives
 
@@ -68,7 +68,7 @@ Don't use `npm install -g --force` on an Olares host — it would clobber the OS
 
 Before running `npm install -g`, the wizard reads `--version` on the existing `/usr/local/bin/olares-cli` (or `/usr/bin/olares-cli`):
 
-- **Release-grade** (stable `1.12.7`, or pre-releases `-rc1` / `-beta.1` / `-alpha2`) → left alone; if `npm config get prefix` points at the same `bin` directory (typical Olares host: `/usr/local`), the wizard short-circuits the `npm install -g` attempt (no full install timeout) and exits with a side-by-side install block (`npm install -g ... --prefix=$HOME/.olares-cli-npm` + `PATH` export + `npx skills add beclab/Olares -y -g`) you can copy verbatim.
+- **Release-grade** (stable `1.12.7`, or pre-releases `-rc1` / `-beta.1` / `-alpha2`) → left alone; if `npm config get prefix` points at the same `bin` directory (typical Olares host: `/usr/local`), the wizard short-circuits the `npm install -g` attempt (no full install timeout) and exits with a side-by-side install block (`npm install -g ... --prefix=$HOME/.olares-cli-npm` + `PATH` export + `olares-cli skills install`) you can copy verbatim.
 - **Dev / test / dirty** (`0.0.0-development` placeholder, `git describe` outputs like `1.12.7-3-gabc1234-dirty`, check.yaml's `1.12.7-12345678` PR builds, unparseable output) → removed so the npm copy can install over the same path. If `unlink` fails for permission reasons, the wizard exits with a one-line hint to re-run with `sudo` rather than silently failing.
 
 ## Environment
