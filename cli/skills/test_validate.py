@@ -91,6 +91,22 @@ class ValidatorTests(unittest.TestCase):
             self.assertIn("ships as one artifact", errors[0])
             self.assertIn("1.12.7-cli.3: olares-b", errors[0])
 
+    def test_publish_script_lists_every_skill(self):
+        """publish.sh names its slugs by hand, so a new skill is invisible to it.
+
+        Nothing fails when that happens: the script publishes the eleven it
+        knows about and reports success, and the twelfth is missing from the
+        registry until somebody notices. The binary is unaffected -- it embeds
+        by pattern -- which is exactly why this needs a test rather than a
+        reader.
+        """
+        script = (MODULE_PATH.parent / "publish.sh").read_text(encoding="utf-8")
+        # Closed on a line of its own; the display names contain parentheses.
+        block = script.split("SKILLS=(\n", 1)[1].split("\n)", 1)[0]
+        listed = {line.strip().strip('"').split("|", 1)[0] for line in block.splitlines() if "|" in line}
+        on_disk = {path.parent.name for path in MODULE_PATH.parent.glob("olares-*/SKILL.md")}
+        self.assertEqual(listed, on_disk)
+
     def test_cluster_requires_exec_gate_on_both_rows(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
