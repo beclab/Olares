@@ -1,6 +1,6 @@
 ---
 name: olares-knowledge
-version: 1.1.0
+version: 0.0.0-cli.0
 description: "Olares Knowledge via olares-cli knowledge — manage download-server URL, yt-dlp, aria2, torrent, HuggingFace, and Wise download tasks: create/list/inspect/pause/resume/cancel/remove, prefs, sync, and file probes. Requires Olares 1.12.7+. Not for installer download or copying a Drive file with files download."
 compatibility: Requires olares-cli on PATH, active Olares profile, Olares >= 1.12.7
 metadata:

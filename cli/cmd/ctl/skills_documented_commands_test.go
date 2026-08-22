@@ -1,13 +1,15 @@
 package ctl
 
 import (
-	"os"
+	"io/fs"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/spf13/cobra"
+
+	"github.com/beclab/Olares/cli/skills"
 )
 
 // The skills are the instructions an agent follows, so a command spelled
@@ -60,18 +62,22 @@ func (d documentedInvocation) path() string { return strings.Join(d.tokens, " ")
 // invocations written on one line stay two invocations.
 var invocationPattern = regexp.MustCompile(`olares-cli((?:\s+[a-z][a-z0-9-]*)+)`)
 
+// The documents are harvested from the embedded suite rather than from the
+// working tree, because the embedded copy is the one that reaches an agent.
+// Reading ../../skills would check files that a release does not ship — and
+// would keep passing if the embed patterns stopped matching some of them.
 func documentedInvocations(t *testing.T) []documentedInvocation {
 	t.Helper()
 
-	root := filepath.Join("..", "..", "skills")
+	suite := skills.FS()
 	seen := map[string]bool{}
 	var found []documentedInvocation
 
-	err := filepath.WalkDir(root, func(path string, entry os.DirEntry, err error) error {
+	err := fs.WalkDir(suite, ".", func(path string, entry fs.DirEntry, err error) error {
 		if err != nil || entry.IsDir() || filepath.Ext(path) != ".md" {
 			return err
 		}
-		source, err := os.ReadFile(path)
+		source, err := fs.ReadFile(suite, path)
 		if err != nil {
 			return err
 		}
@@ -88,10 +94,9 @@ func documentedInvocations(t *testing.T) []documentedInvocation {
 			if !inFence {
 				continue
 			}
-			// A fenced block is not always shell: the suite README shows a
-			// skill's YAML frontmatter, whose prose mentions the binary
-			// ("Requires olares-cli on PATH"). A command to be typed starts
-			// its line.
+			// A fenced block is not always shell — it also holds YAML, JSON
+			// and output samples, any of which can mention the binary in
+			// prose. A command to be typed starts its line.
 			if !strings.HasPrefix(strings.TrimPrefix(strings.TrimSpace(line), "$ "), "olares-cli") {
 				continue
 			}
@@ -120,7 +125,7 @@ func documentedInvocations(t *testing.T) []documentedInvocation {
 		return nil
 	})
 	if err != nil {
-		t.Fatalf("walk skills: %v", err)
+		t.Fatalf("walk the embedded suite: %v", err)
 	}
 	if len(found) < 100 {
 		t.Fatalf("harvested only %d invocations; the docs or the pattern moved", len(found))

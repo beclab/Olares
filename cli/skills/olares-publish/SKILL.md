@@ -1,6 +1,6 @@
 ---
 name: olares-publish
-version: 4.7.0
+version: 0.0.0-cli.0
 description: "Publish an Olares app that already runs locally to a public Olares Market listing — release targets, market-ready metadata/architectures, producing the listing assets (256x256 icon, 1440x900 featured/promote images), the beclab/apps PR and GitBot lifecycle, and paid listings. Use for submitting, distributing, 上架, opening a beclab/apps PR, generating an app icon or Market screenshots, or selling an app; not for browsing `market list` or managing installed apps."
 compatibility: Requires olares-cli on PATH; PR submission needs a GitHub account
 metadata:

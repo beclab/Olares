@@ -1,6 +1,6 @@
 ---
 name: olares-shared
-version: 4.6.0
+version: 0.0.0-cli.0
 description: "Foundation for the olares-cli skill suite: choose the right domain skill, understand the Olares platform model each task depends on, and decide whether the active profile can proceed or needs login recovery. Use first for runtime skills, and directly for Olares ID, profile, login, 2FA/TOTP, refresh token, keychain, auth errors, or uncertainty about which Olares skill owns a task."
 compatibility: Requires olares-cli on PATH
 metadata:
@@ -13,6 +13,17 @@ metadata:
 # olares-cli shared rules
 
 Read this thin front door before a runtime skill. It supplies suite routing, the active-profile model, platform entry points and the auth proceed/stop rule. Load detailed references only when the current task triggers them.
+
+## If olares-cli is not on PATH
+
+Every command in this suite needs it, and the binary carries this suite, so a machine with the skills but no binary got them from a registry rather than from a release. Install it, then have it write the skills that match itself:
+
+```bash
+npm install -g @olares/cli@latest
+olares-cli skills install
+```
+
+This installs a client, not Olares itself: it operates an existing Olares instance over the network and does not create one. An Olares host already has the binary at `/usr/local/bin/olares-cli` with the host-side `node` / `os` / `gpu` trees this suite does not use.
 
 ## Platform entry points
 

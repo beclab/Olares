@@ -1,6 +1,6 @@
 ---
 name: olares-router
-version: 1.3.0
+version: 0.0.0-cli.0
 description: "Olares models via olares-cli router — Router (the AI gateway) and the Model Console inside a locally installed model application. Configure cloud vendors and their models, manage local LLM / embedding / audio / OCR model applications, edit a local model's card, name models with aliases, groups and default categories, issue API keys and quotas, read usage and audit, and call a model: chat, embed, rerank, search, scrape, translate, images, video, transcribe, speak, diarize, OCR. Requires Olares 1.12.7+. Use for Router, llm-gateway, AI gateway, 模型, 模型网关, 本地模型, add an OpenAI/Anthropic/DeepSeek key, install a Qwen or Gemma model, sk- key, model quota, token spend, model alias, default-chat, engine_args, which model answers by default, why a model call fails."
 compatibility: Requires olares-cli on PATH, active Olares profile, Olares >= 1.12.7
 metadata:
