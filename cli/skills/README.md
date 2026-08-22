@@ -141,7 +141,7 @@ ClawHub does **not** install the `olares-cli` binary for you — it is part of e
 
 ### Local validation (no network)
 
-`clawhub skill publish` does not have a `--dry-run` flag. The `--dry-run` mode here is a **local-only** sanity check: parses each `SKILL.md` frontmatter, verifies that `name` matches the folder slug, that `version` is valid semver, that `description` is ≤ 1024 characters, and that `metadata.openclaw.requires.bins` includes `olares-cli`. It then prints the `clawhub skill publish` command that would actually run.
+`clawhub skill publish` does not have a `--dry-run` flag. The `--dry-run` mode here is a **local-only** sanity check: parses each `SKILL.md` frontmatter, verifies that `name` matches the folder slug, that `version` names an `olares-cli` release (`x.y.z-cli.n`), that `description` is ≤ 1024 characters, and that `metadata.openclaw.requires.bins` includes `olares-cli`. It then prints the `clawhub skill publish` command that would actually run.
 
 ```bash
 python3 -m unittest cli/skills/test_validate.py
@@ -172,7 +172,9 @@ Note: `clawhub sync` defaults to bumping the patch version on updates. For deter
 ./cli/skills/publish.sh olares-files olares-market # publish a subset
 ```
 
-Versions come from each skill's frontmatter `version:` field — bump the field before publishing a new release. Slugs and display names are baked into [`publish.sh`](publish.sh).
+Versions come from each skill's frontmatter `version:` field, and all 12 carry the same one: the `olares-cli` release they ship in, spelled the way npm spells it (`1.12.7-cli.4`). The suite is compiled into that binary, so what a skill documents is that release's command tree; a number of its own would be a second thing to bump and a second thing to get wrong. `validate.py` rejects any other shape and rejects the 12 disagreeing, and `olares-cli` says so on startup when the skills installed on a machine came from a different release.
+
+Bump all 12 in the release PR, to the version that PR's release will publish. Slugs and display names are baked into [`publish.sh`](publish.sh).
 
 ## Slug policy
 

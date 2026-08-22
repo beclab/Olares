@@ -4,6 +4,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -60,6 +61,43 @@ func TestEverySkillDeclaresItself(t *testing.T) {
 		}
 	}
 }
+
+// The suite is one artifact — compiled into one binary, written by one
+// command — so it carries one version, and that version is the olares-cli
+// release it ships in. Twelve independent numbers made "which release is this
+// skill from" a question with twelve answers, and made the startup notice
+// about mismatched skills impossible to phrase.
+//
+// This is stated in Go as well as in validate.py because this is the copy
+// that ships: the Python validator runs in CI over the working tree, and a
+// pattern that stopped matching a skill would take it out of the binary
+// without taking it out of the validator's sight.
+func TestTheSuiteShipsOneVersion(t *testing.T) {
+	metas, err := List()
+	if err != nil {
+		t.Fatalf("list skills: %v", err)
+	}
+	declared := map[string][]string{}
+	for _, meta := range metas {
+		declared[meta.Version] = append(declared[meta.Version], meta.Name)
+	}
+	if len(declared) != 1 {
+		for version, skills := range declared {
+			t.Errorf("%s: %s", version, strings.Join(skills, ", "))
+		}
+		t.Fatalf("the suite declares %d versions", len(declared))
+	}
+	for version := range declared {
+		if !releaseVersion.MatchString(version) {
+			t.Errorf("version %q is not an olares-cli release (x.y.z-cli.n); "+
+				"a number of the suite's own is a second thing to bump", version)
+		}
+	}
+}
+
+// The shape release-cli.yaml requires of an npm version, which is the only
+// number the suite is allowed to carry.
+var releaseVersion = regexp.MustCompile(`^\d+\.\d+\.\d+-cli\.\d+$`)
 
 func TestReadDefaultsToTheEntryDocument(t *testing.T) {
 	implicit, err := Read("olares-shared", "")

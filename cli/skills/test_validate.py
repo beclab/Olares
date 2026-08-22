@@ -13,7 +13,7 @@ SPEC.loader.exec_module(validate)
 
 VALID_FRONTMATTER = """---
 name: olares-test
-version: 1.2.3
+version: 1.12.7-cli.4
 description: "Test skill"
 compatibility: Requires olares-cli
 metadata:
@@ -53,6 +53,43 @@ class ValidatorTests(unittest.TestCase):
             finally:
                 validate.ROOT = original_root
             self.assertTrue(errors)
+
+    def test_version_must_name_the_cli_release(self):
+        # A bare x.y.z is a number of the skill's own, which is what the suite
+        # stopped having: it ships inside one binary, so it carries that
+        # binary's release or nothing anybody can act on.
+        for version, valid in [("1.12.7-cli.4", True), ("1.12.7", False), ("4.18.0", False)]:
+            with tempfile.TemporaryDirectory() as directory:
+                skill = Path(directory) / "olares-test" / "SKILL.md"
+                skill.parent.mkdir()
+                skill.write_text(
+                    VALID_FRONTMATTER.replace("version: 1.12.7-cli.4", f"version: {version}"),
+                    encoding="utf-8",
+                )
+                original_root = validate.ROOT
+                validate.ROOT = Path(directory)
+                try:
+                    errors = []
+                    validate.validate_frontmatter(skill, errors)
+                finally:
+                    validate.ROOT = original_root
+                self.assertEqual(not errors, valid, f"{version}: {errors}")
+
+    def test_the_suite_declares_one_version(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for name, version in [("olares-a", "1.12.7-cli.4"), ("olares-b", "1.12.7-cli.3")]:
+                skill_dir = root / name
+                skill_dir.mkdir()
+                (skill_dir / "SKILL.md").write_text(
+                    VALID_FRONTMATTER.replace("version: 1.12.7-cli.4", f"version: {version}"),
+                    encoding="utf-8",
+                )
+            errors = []
+            validate.validate_one_version(sorted(root.iterdir()), errors)
+            self.assertEqual(len(errors), 1, errors)
+            self.assertIn("ships as one artifact", errors[0])
+            self.assertIn("1.12.7-cli.3: olares-b", errors[0])
 
     def test_cluster_requires_exec_gate_on_both_rows(self):
         with tempfile.TemporaryDirectory() as directory:

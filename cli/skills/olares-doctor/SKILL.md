@@ -1,6 +1,6 @@
 ---
 name: olares-doctor
-version: 1.3.0
+version: 1.12.7-cli.4
 description: "Runtime diagnosis for Olares apps and the system via olares-cli — find the root cause when an app won't install or start, crashes, cannot pull an image, is `running` but unreachable, or is slow; includes doctor images and thirdleveldomain. Use for diagnosing catalog and dev app failures, not for authoring or editing charts."
 compatibility: Requires olares-cli on PATH and active Olares profile
 metadata:

@@ -1,6 +1,6 @@
 ---
 name: olares-settings
-version: 4.7.0
+version: 1.12.7-cli.4
 description: "Olares Settings via olares-cli settings — mirror the Settings SPA: users, apps, VPN, network, backup, integrations, GPU/compute, search-index directories/rebuild, and me/whoami. Use for system or post-install app configuration; not for querying file contents with olares-search."
 compatibility: Requires olares-cli on PATH and active Olares profile
 metadata:

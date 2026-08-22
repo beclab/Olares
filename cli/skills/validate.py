@@ -16,6 +16,12 @@ HEADING_RE = re.compile(r"^#{1,6}\s+(.+?)\s*$", re.MULTILINE)
 HTML_ANCHOR_RE = re.compile(r'<a\s+(?:name|id)=["\']([^"\']+)["\']', re.IGNORECASE)
 SKILL_MAX_LINES = 250
 REFERENCE_MAX_LINES = 150
+# A skill's version is the olares-cli release it ships in, spelled the way npm
+# spells it (see .github/workflows/release-cli.yaml, which rejects any other
+# shape). The skills are compiled into the binary, so what they document is
+# whatever that release's command tree is -- a number of their own would be a
+# second thing to bump and a second thing to get wrong.
+RELEASE_VERSION_RE = re.compile(r"\d+\.\d+\.\d+-cli\.\d+")
 # The one skill whose references every front door is expected to link directly:
 # it hosts the platform and app-state models the runtime skills read once.
 SHARED_SKILL = "olares-shared"
@@ -199,8 +205,11 @@ def validate_frontmatter(skill: Path, errors: list[str]) -> None:
     expected_name = skill.parent.name
     if root.get("name") != expected_name:
         errors.append(f"{skill.relative_to(ROOT)}: frontmatter name must be {expected_name!r}")
-    if not isinstance(root.get("version"), str) or not re.fullmatch(r"\d+\.\d+\.\d+", root["version"]):
-        errors.append(f"{skill.relative_to(ROOT)}: frontmatter version must be semantic x.y.z")
+    if not isinstance(root.get("version"), str) or not RELEASE_VERSION_RE.fullmatch(root["version"]):
+        errors.append(
+            f"{skill.relative_to(ROOT)}: frontmatter version must be the CLI release "
+            "it ships in, x.y.z-cli.n"
+        )
     for key in ("description", "compatibility"):
         if not isinstance(root.get(key), str) or not root[key].strip():
             errors.append(f"{skill.relative_to(ROOT)}: frontmatter {key!r} is required")
@@ -258,6 +267,38 @@ def validate_structure(skill_dir: Path, errors: list[str]) -> None:
             )
 
 
+def validate_one_version(skill_dirs: list[Path], errors: list[str]) -> None:
+    """The suite ships as one artifact, so it carries one version.
+
+    Every skill is compiled into the same binary and installed by the same
+    command, and `olares-cli` says so on startup when what is installed came
+    from a different release. Twelve numbers moving independently made that
+    sentence unsayable, and made "which release is this skill from" a question
+    with twelve answers.
+    """
+    declared: dict[str, list[str]] = {}
+    for skill_dir in skill_dirs:
+        version = read_frontmatter_version(skill_dir / "SKILL.md")
+        if version is not None:
+            declared.setdefault(version, []).append(skill_dir.name)
+    if len(declared) > 1:
+        spelled = "; ".join(
+            f"{version}: {', '.join(sorted(skills))}" for version, skills in sorted(declared.items())
+        )
+        errors.append(
+            f"the suite declares {len(declared)} versions but ships as one artifact — {spelled}"
+        )
+
+
+def read_frontmatter_version(skill: Path) -> str | None:
+    for line in skill.read_text(encoding="utf-8").splitlines()[1:]:
+        if line == "---":
+            return None
+        if line.startswith("version:"):
+            return line.split(":", 1)[1].strip().strip('"')
+    return None
+
+
 def main() -> int:
     errors: list[str] = []
     skill_dirs = sorted(path.parent for path in ROOT.glob("olares-*/SKILL.md"))
@@ -267,6 +308,7 @@ def main() -> int:
         validate_frontmatter(skill_dir / "SKILL.md", errors)
         validate_skill_entrypoint(skill_dir, errors)
         validate_structure(skill_dir, errors)
+    validate_one_version(skill_dirs, errors)
 
     if errors:
         print("Skill validation failed:", file=sys.stderr)
