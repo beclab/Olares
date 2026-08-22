@@ -2,6 +2,9 @@ package router
 
 import (
 	"encoding/json"
+	"io"
+	"mime"
+	"mime/multipart"
 	"os"
 	"path/filepath"
 	"strings"
@@ -115,6 +118,98 @@ func TestADialogueScriptSendsItsRecordingsInline(t *testing.T) {
 	// wrap a data URL in another one.
 	if ref, _ := speakers[1]["ref_audio"].(string); ref != "data:audio/wav;base64,AAAA" {
 		t.Errorf("speakers[1].ref_audio was rewritten: %q", ref)
+	}
+}
+
+// The four ways a task lookup fails read the same from the status line, and
+// three of them are about a task that exists: it is not ready, it is not
+// reachable from here, or what it produced has been thrown away. Only one means
+// the task is gone.
+func TestATaskRefusalSaysWhichOfTheFourItIs(t *testing.T) {
+	cases := []struct {
+		name string
+		err  *RouterError
+		want string
+	}{
+		{"unplaceable", &RouterError{Status: 400, Code: "model_required"}, "--model"},
+		{"unknown", &RouterError{Status: 404}, "forgotten task"},
+		{"unfinished", &RouterError{Status: 409}, "no result yet"},
+		{"dropped", &RouterError{Status: 410}, "Submit the work again"},
+	}
+	for _, c := range cases {
+		got := audioTaskErr(c.err, "tsk_1f3c")
+		if got == nil {
+			t.Errorf("%s: no error", c.name)
+			continue
+		}
+		if !strings.Contains(got.Error(), c.want) {
+			t.Errorf("%s: %q does not explain itself with %q", c.name, got, c.want)
+		}
+		if !strings.Contains(got.Error(), "tsk_1f3c") {
+			t.Errorf("%s: %q does not name the task", c.name, got)
+		}
+	}
+	if audioTaskErr(nil, "tsk_1f3c") != nil {
+		t.Error("a lookup that worked was reported as a failure")
+	}
+}
+
+// An upload is encoded as it is sent. A recording long enough to be worth
+// --async is one nobody should have to hold in memory, and a buffer bought
+// nothing but a Content-Length neither Router nor the engines read.
+func TestAnUploadIsStreamedRatherThanBuffered(t *testing.T) {
+	dir := t.TempDir()
+	clip := filepath.Join(dir, "meeting.wav")
+	audio := strings.Repeat("A", 1<<16)
+	if err := os.WriteFile(clip, []byte(audio), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	body, contentType, err := multipartFile(clip, "file", map[string]string{
+		"model": categorySTT, "language": "", "async": "1",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, params, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Nothing has read the body yet, and the file is already open on the other
+	// end of the pipe. Reading it here is what a request does.
+	mr := multipart.NewReader(body, params["boundary"])
+	fields := map[string]string{}
+	var file string
+	for {
+		part, err := mr.NextPart()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		content, err := io.ReadAll(part)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if part.FileName() != "" {
+			file = string(content)
+			continue
+		}
+		fields[part.FormName()] = string(content)
+	}
+	if file != audio {
+		t.Errorf("the file arrived %d bytes long, want %d", len(file), len(audio))
+	}
+	if fields["model"] != categorySTT || fields["async"] != "1" {
+		t.Errorf("fields: %#v", fields)
+	}
+	// A field nobody filled in is not a field. Sending it empty is how a
+	// language the engine was meant to detect becomes one it was told.
+	if _, ok := fields["language"]; ok {
+		t.Error("an empty field was sent")
+	}
+	if _, _, err := multipartFile(filepath.Join(dir, "absent.wav"), "file", nil); err == nil {
+		t.Error("a file that does not exist was accepted; the request would fail mid-send")
 	}
 }
 

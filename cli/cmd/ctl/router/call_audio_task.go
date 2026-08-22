@@ -185,7 +185,9 @@ Audio goes to --out, or to standard output when that is a pipe; writing it into
 a terminal is refused rather than done.
 
 A task that has not succeeded has no result, and this says so rather than
-waiting. "task get --wait" is what waits.
+waiting — for one still running as well as for one that failed. "task get
+--wait" is what waits. A result the engine has already dropped is reported as
+gone rather than as missing: it is kept for a while after the work finishes.
 
 Examples:
   olares-cli router call task result tsk_1f3c
@@ -316,23 +318,39 @@ func audioTaskPath(path, model string) string {
 	return withQuery(path, q)
 }
 
-// audioTaskErr explains the one refusal that is about the shape of the request
-// rather than about the task: a lookup Router could not place, because it no
-// longer remembers this id and a task id says nothing about where it lives.
+// audioTaskErr says which of the four ways a task lookup fails happened, since
+// the status alone reads the same for a job that is running well and one that
+// is gone: a request Router could not place, a task nothing has, a task with no
+// result yet, and a result that has been dropped.
 func audioTaskErr(err error, id string) error {
 	if err == nil {
 		return nil
 	}
-	if re := routerErrorOf(err); re != nil && re.Code == "model_required" {
+	re := routerErrorOf(err)
+	if re == nil {
+		return callErr(err)
+	}
+	switch {
+	case re.Code == "model_required":
 		return fmt.Errorf("%w\nRouter does not remember task %s — it restarted, or the work was "+
 			"submitted through another gateway — and an id alone does not say which engine is "+
 			"running it. Name the model the work was submitted to: --model <name>. The verb "+
 			"that submitted it printed the whole command", err, id)
-	}
-	if re := routerErrorOf(err); re != nil && re.Status == 404 {
+	case re.Status == 404:
 		return fmt.Errorf("%w\nEither the engine has forgotten task %s — a finished result is kept "+
 			"for a while and then dropped — or --model names a different engine from the one "+
 			"the work was submitted to", err, id)
+	case re.Status == 409:
+		// The engine has the task and no result to give: it is still working,
+		// or it stopped without producing one. Which of the two is in the
+		// status, so that is where this points.
+		return fmt.Errorf("%w\nTask %s has no result yet. `olares-cli router call task get %s "+
+			"--wait` waits for it and says why if the work failed or was canceled instead",
+			err, id, id)
+	case re.Status == 410:
+		return fmt.Errorf("%w\nTask %s finished, and the engine has since dropped what it "+
+			"produced — a result is kept for a while, not forever. Submit the work again",
+			err, id)
 	}
 	return callErr(err)
 }

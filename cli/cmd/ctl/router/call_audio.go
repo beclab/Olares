@@ -193,35 +193,61 @@ func printRawJSON(w io.Writer, raw []byte) error {
 // value. The file part comes last on purpose: Router reads the model field by
 // scanning the upload, and a model named after the audio makes it hold the whole
 // file in memory to find it.
+//
+// The body is encoded as it is sent rather than into a buffer first. A
+// recording long enough to be worth --async is one nobody should have to hold
+// in memory, and all a buffer bought was a Content-Length neither Router nor
+// the engines need. Only opening the file fails here; anything that goes wrong
+// while reading it travels down the pipe, so a file truncated or removed
+// mid-upload fails the request instead of quietly sending less than was on
+// disk.
+//
+// A streamed body cannot be replayed, which puts this upload on the same
+// footing as `files upload`: an access token close to expiry is rotated before
+// the body is handed over rather than after a 401 (see cmdutil's
+// preflightSkew).
 func multipartFile(path, fieldName string, fields map[string]string) (io.Reader, string, error) {
 	fh, err := os.Open(path)
 	if err != nil {
 		// os.Open's own error already names the operation and the path.
 		return nil, "", err
 	}
-	defer fh.Close()
+	pr, pw := io.Pipe()
+	mw := multipart.NewWriter(pw)
+	go func() {
+		defer fh.Close()
+		// A request the transport abandons closes pr, which turns the next
+		// write into an error and ends this goroutine.
+		_ = pw.CloseWithError(writeMultipartFile(mw, fh, path, fieldName, fields))
+	}()
+	return pr, mw.FormDataContentType(), nil
+}
 
-	var buf bytes.Buffer
-	mw := multipart.NewWriter(&buf)
+func writeMultipartFile(
+	mw *multipart.Writer,
+	file io.Reader,
+	path, fieldName string,
+	fields map[string]string,
+) error {
 	for k, v := range fields {
 		if strings.TrimSpace(v) == "" {
 			continue
 		}
 		if err := mw.WriteField(k, v); err != nil {
-			return nil, "", fmt.Errorf("write field %s: %w", k, err)
+			return fmt.Errorf("write field %s: %w", k, err)
 		}
 	}
 	part, err := mw.CreateFormFile(fieldName, filepath.Base(path))
 	if err != nil {
-		return nil, "", fmt.Errorf("create the file part: %w", err)
+		return fmt.Errorf("create the file part: %w", err)
 	}
-	if _, err := io.Copy(part, fh); err != nil {
-		return nil, "", fmt.Errorf("read %s: %w", path, err)
+	if _, err := io.Copy(part, file); err != nil {
+		return fmt.Errorf("read %s: %w", path, err)
 	}
 	if err := mw.Close(); err != nil {
-		return nil, "", fmt.Errorf("finish the upload: %w", err)
+		return fmt.Errorf("finish the upload: %w", err)
 	}
-	return &buf, mw.FormDataContentType(), nil
+	return nil
 }
 
 func newCallSpeakCommand(f *cmdutil.Factory) *cobra.Command {

@@ -107,6 +107,11 @@ func assertTaskSubcommandsRequireAModel(t *testing.T, task *cobra.Command) {
 // checkRouteName is not the test, because it refuses the prefix on purpose —
 // that is the rule for a name a person may create. Here the prefix is the point,
 // so what is borrowed is the rest of the rule.
+//
+// Every category constant is listed. A constant left out is the one nobody
+// checks, and sound effects were exactly that: reachable only through
+// --sound-fx, so a typo in it would have surfaced as a 404 from a flag rather
+// than as a missing route.
 func TestEveryCategoryIsSpelledLikeADefaultRoute(t *testing.T) {
 	categories := map[string]string{
 		"chat":        categoryChat,
@@ -127,6 +132,7 @@ func TestEveryCategoryIsSpelledLikeADefaultRoute(t *testing.T) {
 		"diarization": categoryDiarization,
 		"diar_stream": categoryDiarStream,
 		"enhance":     categoryEnhance,
+		"sound_fx":    categorySoundFX,
 	}
 	for name, value := range categories {
 		if !strings.HasPrefix(value, defaultNamePrefix) {
