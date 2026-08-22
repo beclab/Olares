@@ -225,7 +225,38 @@ jobs:
       # non-optional: without it, forgetting produces a release whose skills
       # name the previous one, which is exactly the state the startup notice
       # tells users to fix by installing this one.
-      - name: Assert the embedded skills name this release
+      #
+      # This one runs on every path, because the notice compares one skill
+      # version against another and cannot see a label that is merely stale.
+      # An OS-line release built with publish-npm false — which is how most
+      # users get this binary — would otherwise ship new skill content under
+      # the previous release's label, match what the user already installed,
+      # and say nothing while an agent reads instructions for verbs that moved.
+      # Only the X.Y.Z prefixes are compared: the two lines number differently
+      # past that (1.12.7 and 1.12.7-cli.4 are the same release).
+      - name: Assert the embedded skills name the release being built
+        working-directory: cli
+        env:
+          BINARY_VERSION: ${{ needs.resolve-versions.outputs.binary_version }}
+        run: |
+          set -euo pipefail
+          release=$(echo "${BINARY_VERSION#v}" | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+' || true)
+          if [ -z "$release" ]; then
+            echo "::notice::binary version '${BINARY_VERSION}' names no X.Y.Z release; nothing to compare the skills against"
+            exit 0
+          fi
+          binary=$(find ./output -type f -name 'olares-cli' -path '*linux_amd64*' | head -n1)
+          declared=$("$binary" skills list -o json | jq -r '.skills[0].version')
+          prefix=$(echo "$declared" | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+' || true)
+          if [ "$prefix" != "$release" ]; then
+            echo "::error::the embedded skills declare ${declared}, but this build releases ${release}."
+            echo "Bump version: in every cli/skills/olares-*/SKILL.md to ${release}-cli.<n> and re-run."
+            exit 1
+          fi
+          echo "embedded skills name this release: $declared"
+
+      # The publish path can be exact: the npm version is the skill version.
+      - name: Assert the embedded skills name this npm release
         if: ${{ inputs.publish-npm }}
         working-directory: cli
         env:

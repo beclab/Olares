@@ -123,6 +123,22 @@ Run `skills install` again after every CLI upgrade. Until you do, each command p
 
 If `olares-cli` is not on the machine at all, install it first ([For users](#for-users)) and then run `skills install`. Skill discovery never installs the CLI for you — `metadata.requires.bins` is advisory, so an agent can warn instead of guessing.
 
+### Where a copy can come from, and what each costs
+
+| Route | Writes | Version you get | Notice sees it |
+| --- | --- | --- | --- |
+| `olares-cli skills install` | `~/.agents/skills` + existing agent directories | exactly the binary's | yes |
+| `olares-cli skills export <dir>` | wherever you say | exactly the binary's | no |
+| `olares-cli skills read <skill>` | nothing | exactly the binary's | n/a |
+| `npx skills add beclab/Olares` | the `skills` CLI decides | this repository's `main`, whatever it is today | no |
+| [ClawHub](https://clawhub.ai) (search "olares") | the ClawHub CLI decides | whatever was last accepted there — see below | no |
+
+The first three are the same bytes, so they cannot disagree with the verbs the binary has. The last two can, and silently: a skill declares `requires.bins: [olares-cli]`, which any build satisfies, so an agent reading `main`'s instructions against a six-month-old binary gets told to run flags that do not exist. That is what "notice sees it" means — the [drift notice](#keep-them-current) compares the store against the binary, so it catches a stale `skills install` and nothing else.
+
+**ClawHub is not being updated.** A skill's version now names the release it ships in (`1.12.7-cli.4`), which is numerically below the per-skill numbering the registry already holds (`olares-chart` reached `4.18.0`), so a push is refused by a registry that requires increasing versions. `publish.sh` still works if that is ever resolved; until then, treat what is there as a copy from before the suite moved into the binary.
+
+There is also no Claude Code plugin marketplace here, deliberately. A marketplace entry points at a git ref, which puts it in the bottom half of that table: a version nobody can check against the binary in front of it.
+
 > Logging in is the human's job: `olares-cli profile login --olares-id <id>` opens a browser. Verify with `olares-cli profile current`, then `olares-cli dashboard overview`.
 
 ### The suite
@@ -142,7 +158,7 @@ If `olares-cli` is not on the machine at all, install it first ([For users](#for
 | [`olares-chart`](skills/olares-chart/SKILL.md) | `olares-cli chart` — author, validate and deploy an app chart | port an app, docker-compose, Helm chart, OlaresManifest, storage / entrance / GPU wiring |
 | [`olares-publish`](skills/olares-publish/SKILL.md) | Public Olares Market submission | publish an app, Market listing, icon and screenshots, release targets |
 
-Each is one `SKILL.md` plus a `references/` folder, loaded on demand. They are also on [ClawHub](https://clawhub.io) (search "olares"), which is where an agent can find them on a machine with no `olares-cli`. That copy is whatever was last pushed there; `skills install` writes the copy that matches the binary running it.
+Each is one `SKILL.md` plus a `references/` folder, loaded on demand.
 
 ## For developers
 

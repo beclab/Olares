@@ -20,6 +20,12 @@ type installEnvelope struct {
 	Skipped []skippedPath `json:"skipped"`
 }
 
+// copyStagingPrefix names the directory copyInto exports into before moving
+// the skills in. Dotted, like the one Export uses internally, so whatever
+// reads an agent's skills directory mid-copy does not find a half-written
+// skill sitting beside the finished ones.
+const copyStagingPrefix = ".olares-cli-copy-"
+
 type skippedPath struct {
 	Path   string `json:"path"`
 	Reason string `json:"reason"`
@@ -165,6 +171,10 @@ func link(dir, store string, names []string, force bool) outcome {
 		if err := os.RemoveAll(path); err != nil {
 			return outcome{kind: skipped, reason: fmt.Sprintf("cannot replace %s: %v", path, err)}
 		}
+		// Rel fails when the two paths share no root — on Windows, a store
+		// and an agent directory on different drives. The absolute target
+		// works today and gives up only the property above: move the home
+		// directory and this one link stops resolving.
 		target, err := filepath.Rel(dir, filepath.Join(store, name))
 		if err != nil {
 			target = filepath.Join(store, name)
@@ -181,14 +191,34 @@ func link(dir, store string, names []string, force bool) outcome {
 	return outcome{kind: linked}
 }
 
+// copyInto writes the suite into an agent's own directory, for the machine
+// that cannot make a symbolic link.
+//
+// It exports to a staging directory first and moves each skill in afterwards,
+// rather than exporting straight into dir. Two reasons, and the second is the
+// one that matters: Export refuses to write where a symlink is, and by the
+// time this is reached some of dir's entries are the links link() just made;
+// and clearing them to make room would leave the directory empty for as long
+// as the export took, or forever if the export failed. Nothing is removed
+// here until the bytes that replace it are already on this filesystem.
 func copyInto(dir string, names []string, linkErr error) outcome {
-	for _, name := range names {
-		if err := os.RemoveAll(filepath.Join(dir, name)); err != nil {
-			return outcome{kind: skipped, reason: fmt.Sprintf("cannot link (%v) and cannot clear %s (%v)", linkErr, name, err)}
-		}
+	staging, err := os.MkdirTemp(dir, copyStagingPrefix+"*")
+	if err != nil {
+		return outcome{kind: skipped, reason: fmt.Sprintf("cannot link (%v) and cannot stage a copy (%v)", linkErr, err)}
 	}
-	if _, err := skillsuite.Export(dir); err != nil {
+	defer os.RemoveAll(staging)
+
+	if _, err := skillsuite.Export(staging); err != nil {
 		return outcome{kind: skipped, reason: fmt.Sprintf("cannot link (%v) and cannot copy (%v)", linkErr, err)}
+	}
+	for _, name := range names {
+		target := filepath.Join(dir, name)
+		if err := os.RemoveAll(target); err != nil {
+			return outcome{kind: skipped, reason: fmt.Sprintf("cannot link (%v) and cannot replace %s (%v)", linkErr, target, err)}
+		}
+		if err := os.Rename(filepath.Join(staging, name), target); err != nil {
+			return outcome{kind: skipped, reason: fmt.Sprintf("cannot link (%v) and cannot move %s into place (%v)", linkErr, name, err)}
+		}
 	}
 	return outcome{kind: copied}
 }

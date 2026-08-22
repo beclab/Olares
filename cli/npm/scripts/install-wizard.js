@@ -87,8 +87,21 @@ const msg = {
     '  olares-cli profile login --olares-id <your-olares-id>   # authenticate (browser/password + optional TOTP)\n' +
     '  olares-cli profile current                              # verify\n\n' +
     'Then tell your AI agent: "Load the olares-shared skill, then use olares-cli to ..."',
+  // Saying "all set" after skipping the skills would contradict the step that
+  // just said it skipped them, and the reader believes the last line.
+  doneWithoutSkills:
+    'Setup is incomplete: the skills were not installed.\n\n' +
+    'Next:\n' +
+    '  olares-cli skills install                               # the step that was skipped above\n' +
+    '  olares-cli profile login --olares-id <your-olares-id>   # authenticate (browser/password + optional TOTP)\n' +
+    '  olares-cli profile current                              # verify',
   nonTtyHint:
     'To finish setup, run:\n' +
+    '  olares-cli profile login --olares-id <your-olares-id>\n' +
+    '  olares-cli profile current',
+  nonTtyHintWithoutSkills:
+    'To finish setup, run:\n' +
+    '  olares-cli skills install\n' +
     '  olares-cli profile login --olares-id <your-olares-id>\n' +
     '  olares-cli profile current',
 };
@@ -445,6 +458,9 @@ function vendoredCli() {
 // longer a check for skills already being present -- that check made the
 // wizard skip the step forever, so upgrading olares-cli left an agent reading
 // the instructions it was first given.
+//
+// Returns whether the skills reached disk, which decides what the wizard says
+// as it closes.
 async function stepInstallSkills(interactive) {
   const s = interactive ? p.spinner() : null;
   if (s) s.start(msg.step2Spinner); else console.log(msg.step2Spinner);
@@ -455,7 +471,7 @@ async function stepInstallSkills(interactive) {
     // so. Repeating that here as a skill failure would send the user looking
     // in the wrong place.
     if (s) s.stop(msg.step2NoBinary); else console.error(msg.step2NoBinary);
-    return;
+    return false;
   }
 
   try {
@@ -466,6 +482,7 @@ async function stepInstallSkills(interactive) {
       done = fmt(msg.step2DoneAt, String(result.count), result.store);
     } catch (_) { /* the write succeeded; the summary is a nicety */ }
     if (s) s.stop(done); else console.log(done);
+    return true;
   } catch (err) {
     if (s) s.stop(msg.step2Fail); else console.error(msg.step2Fail);
 
@@ -501,13 +518,13 @@ async function main() {
   if (interactive) {
     p.intro(msg.setup);
     await stepInstallGlobally(true);
-    await stepInstallSkills(true);
-    p.outro(msg.done);
+    const installed = await stepInstallSkills(true);
+    p.outro(installed ? msg.done : msg.doneWithoutSkills);
   } else {
     console.log(msg.setup);
     await stepInstallGlobally(false);
-    await stepInstallSkills(false);
-    console.log(msg.nonTtyHint);
+    const installed = await stepInstallSkills(false);
+    console.log(installed ? msg.nonTtyHint : msg.nonTtyHintWithoutSkills);
   }
 }
 

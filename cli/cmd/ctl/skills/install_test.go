@@ -1,11 +1,14 @@
 package skills
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 	"testing"
+
+	skillsuite "github.com/beclab/Olares/cli/skills"
 )
 
 // sandboxHome points home-directory lookups at a temporary tree. Both names
@@ -316,6 +319,69 @@ func TestNestedAgentDirectoriesAreFound(t *testing.T) {
 		}
 	}
 }
+
+// Windows refuses symlinks to an unprivileged process, so on a real share of
+// the machines this command runs on the copy is the install rather than a
+// fallback nobody reaches.
+func TestTheCopyFallbackReplacesWhatWasThere(t *testing.T) {
+	dir := t.TempDir()
+	stale := mkdirAll(t, filepath.Join(dir, "olares-shared"))
+	gone := filepath.Join(stale, "reference-that-was-deleted-upstream.md")
+	if err := os.WriteFile(gone, []byte("stale\n"), 0o644); err != nil {
+		t.Fatalf("write %s: %v", gone, err)
+	}
+	names, err := skillsuite.Names()
+	if err != nil {
+		t.Fatalf("names: %v", err)
+	}
+
+	if result := copyInto(dir, names, errNoSymlinks); result.kind != copied {
+		t.Fatalf("got kind %v (%s); want a copy", result.kind, result.reason)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "olares-shared", "SKILL.md")); err != nil {
+		t.Errorf("the copy is not readable: %v", err)
+	}
+	if _, err := os.Stat(gone); !os.IsNotExist(err) {
+		t.Error("the stale file survived; each skill is replaced whole")
+	}
+	if entries, err := os.ReadDir(dir); err == nil && len(entries) != len(names) {
+		t.Errorf("%d entries were left in %s; the suite has %d and staging should be gone",
+			len(entries), dir, len(names))
+	}
+}
+
+// The copy used to clear the directory before writing to it, so an export
+// that failed for want of permission or space left that agent with no skills
+// at all while the store still had them. Nothing is removed until the bytes
+// that replace it are already on disk.
+func TestTheCopyFallbackRemovesNothingWhenItCannotStart(t *testing.T) {
+	dir := t.TempDir()
+	existing := mkdirAll(t, filepath.Join(dir, "olares-shared"))
+	marker := filepath.Join(existing, "SKILL.md")
+	if err := os.WriteFile(marker, []byte("the previous install\n"), 0o644); err != nil {
+		t.Fatalf("write %s: %v", marker, err)
+	}
+	if err := os.Chmod(dir, 0o555); err != nil {
+		t.Skipf("cannot make %s read-only: %v", dir, err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(dir, 0o755) })
+	if probe, err := os.MkdirTemp(dir, ".probe-*"); err == nil {
+		_ = os.RemoveAll(probe)
+		t.Skip("this filesystem does not enforce directory permissions")
+	}
+
+	result := copyInto(dir, []string{"olares-shared"}, errNoSymlinks)
+	if result.kind != skipped {
+		t.Fatalf("got kind %v; want the directory skipped", result.kind)
+	}
+	source, err := os.ReadFile(marker)
+	if err != nil || !strings.Contains(string(source), "the previous install") {
+		t.Errorf("the skills that were already installed are gone: %v", err)
+	}
+}
+
+// errNoSymlinks stands in for the error link() would pass on.
+var errNoSymlinks = errors.New("symlink: operation not permitted")
 
 func listing(t *testing.T, dir string) string {
 	t.Helper()
