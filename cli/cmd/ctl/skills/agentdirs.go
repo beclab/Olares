@@ -89,38 +89,41 @@ type handMadeLink struct {
 	Target string `json:"target"`
 }
 
-// handMadeLinks finds those links.
+// handMadeLinksIn finds those links in one directory.
 //
 // An install replaces them with the standard store-and-link shape, so the
 // checkout stops being what the agent reads and edits to it stop showing up.
 // Nothing about that is visible while it happens, which is why it is worth
-// looking for beforehand rather than mentioning in documentation.
-func handMadeLinks() []handMadeLink {
+// looking for rather than mentioning in documentation.
+//
+// The caller is `skills install` looking at the store, which is the one copy
+// every agent directory links to and so decides the whole install. An agent
+// directory is examined by classify as that directory is installed to, which
+// is what keeps one agent's development link from blocking the others.
+func handMadeLinksIn(dir string) []handMadeLink {
 	store := StorePath()
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil
+	}
 	var found []handMadeLink
-	for _, dir := range agentSkillDirs() {
-		entries, err := os.ReadDir(dir)
+	for _, entry := range entries {
+		if !strings.HasPrefix(entry.Name(), skillPrefix) {
+			continue
+		}
+		path := filepath.Join(dir, entry.Name())
+		info, err := os.Lstat(path)
+		if err != nil || info.Mode()&os.ModeSymlink == 0 {
+			continue
+		}
+		target, err := os.Readlink(path)
 		if err != nil {
 			continue
 		}
-		for _, entry := range entries {
-			if !strings.HasPrefix(entry.Name(), skillPrefix) {
-				continue
-			}
-			path := filepath.Join(dir, entry.Name())
-			info, err := os.Lstat(path)
-			if err != nil || info.Mode()&os.ModeSymlink == 0 {
-				continue
-			}
-			target, err := os.Readlink(path)
-			if err != nil {
-				continue
-			}
-			if pointsInto(path, target, store) {
-				continue
-			}
-			found = append(found, handMadeLink{Path: path, Target: target})
+		if pointsInto(path, target, store) {
+			continue
 		}
+		found = append(found, handMadeLink{Path: path, Target: target})
 	}
 	return found
 }

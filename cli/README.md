@@ -182,7 +182,7 @@ Point the agents at your checkout, so a saved `SKILL.md` is what they read on th
 ln -s "$(pwd)/skills/olares-shared" ~/.agents/skills/olares-shared   # repeat per skill
 ```
 
-`skills install` refuses to write over links like these and names them, because repointing them at the store would end the live-editing loop without saying so. Remove them, or pass `--force`, when you want the installed copies back.
+`skills install` never writes over links like these, because repointing them at the installed copies would end the live-editing loop without saying so. Where it stops depends on where the link is: one in `~/.agents/skills`, as above, is the copy every agent reads, so the whole install refuses and names it; one in a single agent's directory only skips that agent, and the rest of the machine still gets the update. Remove the link, or pass `--force`, when you want the installed copies back.
 
 ### Test
 

@@ -23,6 +23,9 @@ type installEnvelope struct {
 type skippedPath struct {
 	Path   string `json:"path"`
 	Reason string `json:"reason"`
+	// HandMade separates the skips --force would take over from the ones it
+	// would not: somebody else's copy is not ours to replace at any flag.
+	HandMade bool `json:"hand_made"`
 }
 
 func newInstallCommand() *cobra.Command {
@@ -51,7 +54,7 @@ Run it again after upgrading olares-cli to bring the skills along with it.`,
 	}
 	addOutputFlags(cmd, opts)
 	cmd.Flags().BoolVar(&force, "force", false,
-		"install over olares-* entries that were put there by hand (see the refusal message)")
+		"install over olares-* links that were made by hand, in the store or in an agent's directory")
 	return cmd
 }
 
@@ -61,9 +64,21 @@ func runInstall(opts *outputOptions, force bool) error {
 		return fmt.Errorf("cannot find your home directory, so there is nowhere to install; " +
 			"name a directory instead: olares-cli skills export <dir>")
 	}
-	if !force {
-		if links := handMadeLinks(); len(links) > 0 {
+	// The store holds the one copy every agent directory links to, so a
+	// hand-made link here decides the whole install rather than one agent's
+	// worth of it. Export refuses to write where a link is, which is what
+	// keeps an export nobody asked for away from a checkout; --force is that
+	// ask, so clear them here rather than teaching Export an exception.
+	if links := handMadeLinksIn(store); len(links) > 0 {
+		if !force {
 			return refuseHandMadeLinks(links)
+		}
+		for _, link := range links {
+			// Remove, not RemoveAll: this unlinks the link and never
+			// descends into the checkout it points at.
+			if err := os.Remove(link.Path); err != nil {
+				return fmt.Errorf("remove %s: %w", link.Path, err)
+			}
 		}
 	}
 
@@ -83,7 +98,11 @@ func runInstall(opts *outputOptions, force bool) error {
 		case copied:
 			result.Copied = append(result.Copied, dir)
 		default:
-			result.Skipped = append(result.Skipped, skippedPath{Path: dir, Reason: outcome.reason})
+			result.Skipped = append(result.Skipped, skippedPath{
+				Path:     dir,
+				Reason:   outcome.reason,
+				HandMade: outcome.handMade,
+			})
 		}
 	}
 
@@ -106,8 +125,9 @@ const (
 )
 
 type outcome struct {
-	kind   outcomeKind
-	reason string
+	kind     outcomeKind
+	reason   string
+	handMade bool
 }
 
 // link points one agent's skills directory at the store.
@@ -125,17 +145,25 @@ type outcome struct {
 // it would be the silent overwrite this command refuses to do elsewhere.
 // Every entry is examined before any is touched, so a directory this cannot
 // finish is a directory it never started on.
+//
+// The skip is one directory's, not the install's. An agent pointed at a
+// checkout by hand is a decision about that agent, and failing the whole
+// command over it would leave every other agent on the machine without the
+// update — which is the same silence, arrived at from the other side.
 func link(dir, store string, names []string, force bool) outcome {
 	for _, name := range names {
 		kind, reason := classify(filepath.Join(dir, name), store)
-		if kind == entryForeign || (kind == entryHandMade && !force) {
-			return outcome{skipped, reason}
+		if kind == entryForeign {
+			return outcome{kind: skipped, reason: reason}
+		}
+		if kind == entryHandMade && !force {
+			return outcome{kind: skipped, reason: reason, handMade: true}
 		}
 	}
 	for _, name := range names {
 		path := filepath.Join(dir, name)
 		if err := os.RemoveAll(path); err != nil {
-			return outcome{skipped, fmt.Sprintf("cannot replace %s: %v", path, err)}
+			return outcome{kind: skipped, reason: fmt.Sprintf("cannot replace %s: %v", path, err)}
 		}
 		target, err := filepath.Rel(dir, filepath.Join(store, name))
 		if err != nil {
@@ -150,19 +178,19 @@ func link(dir, store string, names []string, force bool) outcome {
 			return copyInto(dir, names, err)
 		}
 	}
-	return outcome{linked, ""}
+	return outcome{kind: linked}
 }
 
 func copyInto(dir string, names []string, linkErr error) outcome {
 	for _, name := range names {
 		if err := os.RemoveAll(filepath.Join(dir, name)); err != nil {
-			return outcome{skipped, fmt.Sprintf("cannot link (%v) and cannot clear %s (%v)", linkErr, name, err)}
+			return outcome{kind: skipped, reason: fmt.Sprintf("cannot link (%v) and cannot clear %s (%v)", linkErr, name, err)}
 		}
 	}
 	if _, err := skillsuite.Export(dir); err != nil {
-		return outcome{skipped, fmt.Sprintf("cannot link (%v) and cannot copy (%v)", linkErr, err)}
+		return outcome{kind: skipped, reason: fmt.Sprintf("cannot link (%v) and cannot copy (%v)", linkErr, err)}
 	}
-	return outcome{copied, ""}
+	return outcome{kind: copied}
 }
 
 type entryKind int
@@ -203,8 +231,19 @@ func report(result installEnvelope) {
 	for _, dir := range result.Copied {
 		fmt.Printf("  copied  %s\n", dir)
 	}
+	handMade := false
 	for _, skip := range result.Skipped {
 		fmt.Printf("  skipped %s: %s\n", skip.Path, skip.Reason)
+		handMade = handMade || skip.HandMade
+	}
+	if handMade {
+		// The link is how a checkout gets read live, so it is left where it
+		// is. Saying why matters more here than in the store's refusal: this
+		// one is a line in the middle of a report that otherwise succeeded.
+		fmt.Println("\nThe directories linked by hand were left alone. An agent reading one sees")
+		fmt.Println("the directory the link names — a git checkout, for the local development")
+		fmt.Println("setup in cli/README.md — and installing over it would end that without")
+		fmt.Println("saying so. Remove the link, or pass --force, to get the installed copies.")
 	}
 	if len(result.Linked) == 0 && len(result.Copied) == 0 {
 		// Not a failure: several agents read the shared directory directly,
@@ -216,16 +255,20 @@ func report(result installEnvelope) {
 	}
 }
 
+// refuseHandMadeLinks reports links in the store, which is the one place a
+// hand-made link stops the whole install: every agent directory links into
+// it, so until these are dealt with there is nothing to link to.
 func refuseHandMadeLinks(links []handMadeLink) error {
 	var message strings.Builder
-	message.WriteString("refusing to install over skills that were linked by hand:\n")
+	message.WriteString("refusing to install over skills in the store that were linked by hand:\n")
 	for _, link := range links {
 		fmt.Fprintf(&message, "  %s -> %s\n", link.Path, link.Target)
 	}
-	fmt.Fprintf(&message, "\nInstalling would repoint these at %s, so what the agent reads stops being\n"+
-		"the directory they name and edits made there stop taking effect — without saying\n"+
-		"so. That layout is the local development setup in cli/README.md.\n\n"+
-		"To keep editing in place, leave them: an agent reading them already sees your\n"+
-		"working tree. To install anyway, remove them, or pass --force.", StorePath())
+	message.WriteString("\nEvery agent directory links into the store, so installing would replace these\n" +
+		"with the copies from this binary and what agents read would stop being the\n" +
+		"directories they name — without saying so. That layout is the local\n" +
+		"development setup in cli/README.md.\n\n" +
+		"To keep editing in place, leave them: an agent reading them already sees your\n" +
+		"working tree. To install anyway, remove them, or pass --force.")
 	return fmt.Errorf("%s", message.String())
 }

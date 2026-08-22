@@ -97,33 +97,136 @@ func TestInstallOnACleanMachineWritesOnlyTheStore(t *testing.T) {
 	}
 }
 
-// The local development layout links an agent directory straight at the
-// checkout. An install that repointed it would end live editing silently,
-// which is the one outcome worth stopping for.
-func TestInstallRefusesLinksMadeByHand(t *testing.T) {
+// The local development layout links straight at the checkout, and an install
+// that repointed it would end live editing silently. In an agent's own
+// directory that is one agent's arrangement: leave it, install for everyone
+// else. Failing the whole command would leave every other agent without the
+// update, which is the same silence arrived at from the other side.
+func TestInstallSkipsOnlyTheAgentLinkedByHand(t *testing.T) {
 	home := sandboxHome(t)
 	claude := mkdirAll(t, filepath.Join(home, ".claude", "skills"))
+	cursor := mkdirAll(t, filepath.Join(home, ".cursor", "skills"))
+	checkout := t.TempDir()
+	byHand := filepath.Join(claude, "olares-shared")
+	if err := os.Symlink(checkout, byHand); err != nil {
+		t.Skipf("cannot create symlinks here: %v", err)
+	}
+
+	if err := runInstall(quiet(), false); err != nil {
+		t.Fatalf("install: %v", err)
+	}
+
+	if target, err := os.Readlink(byHand); err != nil || target != checkout {
+		t.Errorf("the hand-made link was disturbed: %v -> %v", err, target)
+	}
+	// That directory is skipped whole, not partially converted.
+	if _, err := os.Lstat(filepath.Join(claude, "olares-market")); !os.IsNotExist(err) {
+		t.Error("install linked some skills into the directory it had to skip")
+	}
+	if _, err := os.Stat(filepath.Join(home, ".agents", "skills", "olares-shared", "SKILL.md")); err != nil {
+		t.Errorf("the store is not populated: %v", err)
+	}
+	if _, err := os.Lstat(filepath.Join(cursor, "olares-shared")); err != nil {
+		t.Errorf("a clean agent directory was held back by another agent's link: %v", err)
+	}
+}
+
+// The skip is the only sign that agent did not get the update, so it carries
+// both the reason and which flag would take it over.
+func TestTheSkippedAgentIsReportedAsLinkedByHand(t *testing.T) {
+	home := sandboxHome(t)
+	claude := mkdirAll(t, filepath.Join(home, ".claude", "skills"))
+	store := mkdirAll(t, filepath.Join(home, ".agents", "skills"))
 	checkout := t.TempDir()
 	if err := os.Symlink(checkout, filepath.Join(claude, "olares-shared")); err != nil {
 		t.Skipf("cannot create symlinks here: %v", err)
 	}
 
+	result := link(claude, store, []string{"olares-shared"}, false)
+	if result.kind != skipped || !result.handMade {
+		t.Fatalf("got kind %v, handMade %v; want a hand-made skip", result.kind, result.handMade)
+	}
+	for _, expected := range []string{"olares-shared", checkout} {
+		if !strings.Contains(result.reason, expected) {
+			t.Errorf("the reason does not mention %q: %s", expected, result.reason)
+		}
+	}
+}
+
+// The store is the one copy every agent directory links to, so a hand-made
+// link there decides the whole install: there is nothing to link to until it
+// is dealt with.
+func TestInstallRefusesAHandMadeLinkInTheStore(t *testing.T) {
+	home := sandboxHome(t)
+	mkdirAll(t, filepath.Join(home, ".claude", "skills"))
+	store := mkdirAll(t, filepath.Join(home, ".agents", "skills"))
+	checkout, marker := fakeCheckout(t)
+	if err := os.Symlink(checkout, filepath.Join(store, "olares-shared")); err != nil {
+		t.Skipf("cannot create symlinks here: %v", err)
+	}
+
 	err := runInstall(quiet(), false)
 	if err == nil {
-		t.Fatal("install proceeded over a hand-made link")
+		t.Fatal("install proceeded over a hand-made link in the store")
 	}
 	for _, expected := range []string{"olares-shared", checkout, "--force"} {
 		if !strings.Contains(err.Error(), expected) {
 			t.Errorf("the refusal does not mention %q:\n%s", expected, err)
 		}
 	}
-	// A refusal is a precondition, so the store is not half-written either.
-	if _, err := os.Stat(filepath.Join(home, ".agents", "skills")); !os.IsNotExist(err) {
-		t.Error("install wrote the store before refusing")
-	}
-	target, err := os.Readlink(filepath.Join(claude, "olares-shared"))
+	target, err := os.Readlink(filepath.Join(store, "olares-shared"))
 	if err != nil || target != checkout {
 		t.Errorf("the hand-made link was disturbed: %v -> %v", err, target)
+	}
+	assertUntouched(t, marker)
+}
+
+// --force is what that refusal names, so it has to reach the store: skipping
+// the check and then failing inside Export — whose own refusal says nothing
+// about --force — is what this covers.
+func TestForceTakesOverAHandMadeLinkInTheStore(t *testing.T) {
+	home := sandboxHome(t)
+	store := mkdirAll(t, filepath.Join(home, ".agents", "skills"))
+	checkout, marker := fakeCheckout(t)
+	installed := filepath.Join(store, "olares-shared")
+	if err := os.Symlink(checkout, installed); err != nil {
+		t.Skipf("cannot create symlinks here: %v", err)
+	}
+
+	if err := runInstall(quiet(), true); err != nil {
+		t.Fatalf("forced install: %v", err)
+	}
+	info, err := os.Lstat(installed)
+	if err != nil {
+		t.Fatalf("stat %s: %v", installed, err)
+	}
+	if info.Mode()&os.ModeSymlink != 0 {
+		t.Error("--force left the hand-made link in place")
+	}
+	if !info.IsDir() {
+		t.Errorf("%s is not the installed copy", installed)
+	}
+	// The link was unlinked rather than written through.
+	assertUntouched(t, marker)
+}
+
+// fakeCheckout stands in for a git checkout of this repository's skills, and
+// returns the directory a link would name plus a file that must survive.
+func fakeCheckout(t *testing.T) (string, string) {
+	t.Helper()
+	dir := mkdirAll(t, filepath.Join(t.TempDir(), "olares-shared"))
+	marker := filepath.Join(dir, "SKILL.md")
+	if err := os.WriteFile(marker, []byte("the working tree\n"), 0o644); err != nil {
+		t.Fatalf("write %s: %v", marker, err)
+	}
+	return dir, marker
+}
+
+func assertUntouched(t *testing.T, marker string) {
+	t.Helper()
+	source, err := os.ReadFile(marker)
+	if err != nil || !strings.Contains(string(source), "the working tree") {
+		t.Errorf("the checkout was written into: %v", err)
 	}
 }
 
