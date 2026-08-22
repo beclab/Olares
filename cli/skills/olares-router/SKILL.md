@@ -43,7 +43,7 @@ All verbs require Olares 1.12.7+ because Router ships as the `router` Market lis
 | the names callers may send | `route list/get/create/rename/enable/disable/delete/add/remove`, including the `default-*` categories via `route list --kind default` | [names, defaults and access control](references/olares-router-governance.md) |
 | access control | `key issue/list/update/revoke/current`, `quota set/list/clear` | [names, defaults and access control](references/olares-router-governance.md) |
 | what happened | `usage summary/list/export/retention`, `audit list/get` | [usage and audit](references/olares-router-usage.md) |
-| calling a model | `call chat/embed/rerank/search/scrape/translate/image/video/transcribe/speak/vad/diarize/enhance/align/ocr`, `call models`, `key current` | [calling a model](references/olares-router-calling.md) |
+| calling a model | `call chat/embed/rerank/search/scrape/translate/image/video/transcribe/listen/speak/clone/dialogue/vad/diarize/enhance/align/task/ocr`, `call models`, `key current` | [calling a model](references/olares-router-calling.md) |
 | inside one application | `model status/progress/retry/restart`, `model diag gpu/perf/config/endpoints`, all taking `--app` | [the Model Console](references/olares-router-console.md) |
 | a call or a model that does not work | any of the above | [deciding which layer is wrong](references/olares-router-diagnosis.md) |
 

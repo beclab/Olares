@@ -23,13 +23,16 @@ import (
 // speech cannot tell you who was speaking, and the one that can does not
 // transcribe.
 //
-// That is also why each has its own default category. Sending an audio file to
-// the recognition default and asking for diarization would reach a model that
-// answers 404 for the route, so `--model` is left alone and the category picks a
-// model that declares the capability.
+// That is also why each has its own default category, alignment included.
+// Sending an audio file to the recognition default and asking for diarization
+// would reach a model that answers 404 for the route, so `--model` is left alone
+// and the category picks a model that declares the capability.
 //
-// Alignment is the exception: it is served by the same engine base as
-// recognition, so it shares that default.
+// Alignment looked like an exception for a while and is not one: the aligner is
+// `audioqwenalignerv3`, an application declaring `align` and nothing else, so
+// falling back to the recognition default reached an engine with no /align at
+// all. There is one category per capability here because there is one
+// application per capability in the Market.
 
 // vadResponse is where the speech is. The engine also reports the parameters it
 // used, which matter when a threshold is being tuned, and which -o json carries.
@@ -74,6 +77,7 @@ func newCallVADCommand(f *cmdutil.Factory) *cobra.Command {
 		output    string
 		model     string
 		threshold float64
+		async     bool
 		apiKey    string
 	)
 	cmd := &cobra.Command{
@@ -102,13 +106,14 @@ Examples:
 				fields["threshold"] = strconv.FormatFloat(threshold, 'f', -1, 64)
 			}
 			return runAudioAnalysis(c.Context(), f, audioAnalysis{
-				Path: args[0], Route: epAudioVAD, Fields: fields,
-				APIKey: apiKey, OutputIn: output, Render: renderVAD,
+				Path: args[0], Route: epAudioVAD, Fields: fields, Async: async,
+				Model: fields["model"], APIKey: apiKey, OutputIn: output, Render: renderVAD,
 			})
 		},
 	}
 	cmd.Flags().StringVar(&model, "model", "", modelFlagHelp(categoryVAD))
 	cmd.Flags().Float64Var(&threshold, "threshold", 0, "how confident the engine must be to call something speech")
+	cmd.Flags().BoolVar(&async, "async", false, audioAsyncFlagUsage)
 	cmd.Flags().StringVar(&apiKey, "api-key", "", dataPlaneKeyFlagUsage)
 	addOutputFlag(cmd, &output)
 	return cmd
@@ -121,10 +126,13 @@ func newCallDiarizeCommand(f *cmdutil.Factory) *cobra.Command {
 		numSpeakers int
 		minSpeakers int
 		maxSpeakers int
+		stream      bool
+		sampleRate  int
+		async       bool
 		apiKey      string
 	)
 	cmd := &cobra.Command{
-		Use:   "diarize <audio-file>",
+		Use:   "diarize [audio-file]",
 		Short: "work out who spoke when",
 		Long: `Split a recording by speaker.
 
@@ -140,13 +148,39 @@ This needs a model that declares diarization, which is a different engine from
 the one that transcribes. Leaving --model off finds one. Combining the two is a
 matter of transcribing separately and lining the intervals up.
 
+--stream does the same job over a socket, against a model that declares
+streaming diarization — a separate application again, and one that had no way to
+be called from here at all before this flag. It takes raw 16-bit PCM from the
+file or standard input rather than a container, and reports the segmentation as
+it goes; the speaker-count flags do not apply, since the engine discovers them
+as it listens.
+
 Examples:
   olares-cli router call diarize meeting.wav
   olares-cli router call diarize call.m4a --num-speakers 2
   olares-cli router call diarize panel.wav --min-speakers 3 --max-speakers 6
+  olares-cli router call diarize long-panel.wav --async
+  ffmpeg -i meeting.m4a -f s16le -ar 16000 -ac 1 - | olares-cli router call diarize --stream
 `,
-		Args: cobra.ExactArgs(1),
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
+			if stream {
+				for _, name := range []string{"num-speakers", "min-speakers", "max-speakers", "async"} {
+					if c.Flags().Changed(name) {
+						return fmt.Errorf("--%s does not apply to --stream: the streaming engine "+
+							"discovers speakers as it listens, and a socket is already the "+
+							"asynchronous shape", name)
+					}
+				}
+				path := ""
+				if len(args) > 0 {
+					path = args[0]
+				}
+				return runDiarizeStream(c.Context(), f, path, model, sampleRate, apiKey)
+			}
+			if len(args) == 0 {
+				return fmt.Errorf("name a recording to split, or read PCM from a pipe with --stream")
+			}
 			fields := map[string]string{"model": callModel(model, categoryDiarization)}
 			if c.Flags().Changed("num-speakers") {
 				fields["num_speakers"] = strconv.Itoa(numSpeakers)
@@ -158,15 +192,22 @@ Examples:
 				fields["max_speakers"] = strconv.Itoa(maxSpeakers)
 			}
 			return runAudioAnalysis(c.Context(), f, audioAnalysis{
-				Path: args[0], Route: epAudioDiarization, Fields: fields,
-				APIKey: apiKey, OutputIn: output, Render: renderDiarization,
+				Path: args[0], Route: epAudioDiarization, Fields: fields, Async: async,
+				Model: fields["model"], APIKey: apiKey, OutputIn: output,
+				Render: renderDiarization,
 			})
 		},
 	}
-	cmd.Flags().StringVar(&model, "model", "", modelFlagHelp(categoryDiarization))
+	cmd.Flags().StringVar(&model, "model", "",
+		modelFlagHelp(categoryDiarization)+", or "+categoryDiarStream+" with --stream")
 	cmd.Flags().IntVar(&numSpeakers, "num-speakers", 0, "how many people are speaking, when it is known")
 	cmd.Flags().IntVar(&minSpeakers, "min-speakers", 0, "the fewest people the engine should consider")
 	cmd.Flags().IntVar(&maxSpeakers, "max-speakers", 0, "the most people the engine should consider")
+	cmd.Flags().BoolVar(&stream, "stream", false,
+		"send PCM over a socket and report the segmentation as it arrives; "+
+			"resolves "+categoryDiarStream+" instead of "+categoryDiarization+" when --model is omitted")
+	cmd.Flags().IntVar(&sampleRate, "sample-rate", 16000, "with --stream, the sample rate of the PCM being sent")
+	cmd.Flags().BoolVar(&async, "async", false, audioAsyncFlagUsage)
 	cmd.Flags().StringVar(&apiKey, "api-key", "", dataPlaneKeyFlagUsage)
 	addOutputFlag(cmd, &output)
 	return cmd
@@ -178,6 +219,7 @@ func newCallAlignCommand(f *cmdutil.Factory) *cobra.Command {
 		model    string
 		text     string
 		language string
+		async    bool
 		apiKey   string
 	)
 	cmd := &cobra.Command{
@@ -192,8 +234,9 @@ what lets a recording be searched by text.
 The transcript comes from --text or from standard input, so the output of
 "router call transcribe" can be piped straight in.
 
-Alignment is served by the same engine as speech recognition, so it shares that
-default; a recognition model that does not offer the route refuses it.
+This needs a model that declares alignment, which is a different application
+from the one that transcribes even though the two jobs look related. Leaving
+--model off finds one.
 
 Examples:
   olares-cli router call align talk.wav --text "the words that were spoken"
@@ -217,6 +260,7 @@ Examples:
 					"text":     transcript,
 					"language": strings.TrimSpace(language),
 				},
+				Async: async, Model: callModel(model, categoryAlign),
 				APIKey: apiKey, OutputIn: output, Render: renderAlign,
 			})
 		},
@@ -224,6 +268,7 @@ Examples:
 	cmd.Flags().StringVar(&model, "model", "", modelFlagHelp(categoryAlign))
 	cmd.Flags().StringVar(&text, "text", "", "the transcript to line up; read from standard input when omitted")
 	cmd.Flags().StringVar(&language, "language", "", "language of the audio; detected when omitted")
+	cmd.Flags().BoolVar(&async, "async", false, audioAsyncFlagUsage)
 	cmd.Flags().StringVar(&apiKey, "api-key", "", dataPlaneKeyFlagUsage)
 	addOutputFlag(cmd, &output)
 	return cmd
@@ -237,7 +282,9 @@ func newCallEnhanceCommand(f *cmdutil.Factory) *cobra.Command {
 		model   string
 		outPath string
 		respFmt string
+		async   bool
 		apiKey  string
+		output  string
 	)
 	cmd := &cobra.Command{
 		Use:   "enhance <audio-file>",
@@ -262,17 +309,21 @@ Examples:
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			return runCallEnhance(c.Context(), f, args[0], enhanceOptions{
-				Model:  callModel(model, categoryEnhance),
-				Out:    outPath,
-				Format: respFmt,
-				APIKey: apiKey,
+				Model:    callModel(model, categoryEnhance),
+				Out:      outPath,
+				Format:   respFmt,
+				Async:    async,
+				APIKey:   apiKey,
+				OutputIn: output,
 			})
 		},
 	}
 	cmd.Flags().StringVar(&model, "model", "", modelFlagHelp(categoryEnhance))
 	cmd.Flags().StringVar(&outPath, "out", "", "write the audio here instead of standard output")
 	cmd.Flags().StringVar(&respFmt, "format", "", "container format, e.g. wav, flac or ogg")
+	cmd.Flags().BoolVar(&async, "async", false, audioAsyncFlagUsage)
 	cmd.Flags().StringVar(&apiKey, "api-key", "", dataPlaneKeyFlagUsage)
+	addOutputFlag(cmd, &output)
 	return cmd
 }
 
@@ -282,6 +333,8 @@ type audioAnalysis struct {
 	Path     string
 	Route    string
 	Fields   map[string]string
+	Async    bool
+	Model    string
 	APIKey   string
 	OutputIn string
 	Render   func(io.Writer, []byte) error
@@ -300,7 +353,18 @@ func runAudioAnalysis(ctx context.Context, f *cmdutil.Factory, a audioAnalysis) 
 		return err
 	}
 	dp := dataPlane(pc, a.APIKey)
-	body, contentType, err := multipartFile(a.Path, "file", a.Fields)
+	fields := a.Fields
+	if a.Async {
+		// These are multipart routes, so the flag is a field. As a query
+		// parameter it would be read by nothing and the call would simply
+		// wait — see the note at the top of call_audio_task.go.
+		fields = make(map[string]string, len(a.Fields)+1)
+		for k, v := range a.Fields {
+			fields[k] = v
+		}
+		fields[audioAsyncFormField] = "1"
+	}
+	body, contentType, err := multipartFile(a.Path, "file", fields)
 	if err != nil {
 		return err
 	}
@@ -315,6 +379,9 @@ func runAudioAnalysis(ctx context.Context, f *cmdutil.Factory, a audioAnalysis) 
 	}
 	if resp.StatusCode/100 != 2 {
 		return callErr(dp.formatErr("POST", a.Route, resp.StatusCode, raw))
+	}
+	if task, ok := receiptFrom(resp.StatusCode, raw); ok {
+		return printReceipt(os.Stdout, task, a.Model, format)
 	}
 	if format == FormatJSON {
 		return printRawJSON(os.Stdout, raw)
@@ -411,17 +478,23 @@ func seconds(v float64) string {
 }
 
 type enhanceOptions struct {
-	Model  string
-	Out    string
-	Format string
-	APIKey string
+	Model    string
+	Out      string
+	Format   string
+	Async    bool
+	APIKey   string
+	OutputIn string
 }
 
 func runCallEnhance(ctx context.Context, f *cmdutil.Factory, path string, opts enhanceOptions) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	if strings.TrimSpace(opts.Out) == "" && isTerminal(os.Stdout) {
+	format, err := parseFormat(opts.OutputIn)
+	if err != nil {
+		return err
+	}
+	if strings.TrimSpace(opts.Out) == "" && !opts.Async && isTerminal(os.Stdout) {
 		return fmt.Errorf("audio would be written to the terminal; name a file with --out, or pipe the output")
 	}
 	pc, err := prepare(ctx, f)
@@ -429,37 +502,20 @@ func runCallEnhance(ctx context.Context, f *cmdutil.Factory, path string, opts e
 		return err
 	}
 	dp := dataPlane(pc, opts.APIKey)
-	body, contentType, err := multipartFile(path, "file", map[string]string{
+	fields := map[string]string{
 		"model":  strings.TrimSpace(opts.Model),
 		"format": strings.TrimSpace(opts.Format),
+	}
+	if opts.Async {
+		fields[audioAsyncFormField] = "1"
+	}
+	body, contentType, err := multipartFile(path, "file", fields)
+	if err != nil {
+		return err
+	}
+	return streamAudioAnswer(ctx, dp, audioAnswer{
+		Method: "POST", Route: epAudioEnhance,
+		Body: body, ContentType: contentType,
+		Model: opts.Model, Out: opts.Out, Async: opts.Async, Format: format,
 	})
-	if err != nil {
-		return err
-	}
-	resp, err := dp.do(ctx, "POST", epAudioEnhance, body, contentType)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode/100 != 2 {
-		raw, _ := io.ReadAll(resp.Body)
-		return callErr(dp.formatErr("POST", epAudioEnhance, resp.StatusCode, raw))
-	}
-	dst := io.Writer(os.Stdout)
-	if p := strings.TrimSpace(opts.Out); p != "" {
-		fh, ferr := os.Create(p)
-		if ferr != nil {
-			return ferr
-		}
-		defer fh.Close()
-		dst = fh
-	}
-	n, err := io.Copy(dst, resp.Body)
-	if err != nil {
-		return fmt.Errorf("write the audio: %w", err)
-	}
-	if p := strings.TrimSpace(opts.Out); p != "" {
-		fmt.Fprintf(os.Stderr, "wrote %s (%s)\n", p, humanBytes(n))
-	}
-	return nil
 }
