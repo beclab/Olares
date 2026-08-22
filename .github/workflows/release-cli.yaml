@@ -190,6 +190,57 @@ jobs:
           echo "binary version OK:"
           echo "$actual"
 
+      # The suite is compiled in, so a release can ship a binary that builds,
+      # runs, reports the right version — and carries eleven skills because an
+      # embed pattern stopped matching one. Nothing else in this job would
+      # notice: the missing skill is a file an agent is told to read and
+      # cannot. Counting against the checkout rather than against 12 is the
+      # point; the number is whatever the tree holds.
+      - name: Assert the skills are embedded
+        working-directory: cli
+        run: |
+          set -euo pipefail
+          binary=$(find ./output -type f -name 'olares-cli' -path '*linux_amd64*' | head -n1)
+          expected=$(find skills -mindepth 2 -maxdepth 2 -name SKILL.md -path 'skills/olares-*' | wc -l | tr -d ' ')
+          if [ "$expected" -lt 2 ]; then
+            echo "::error::found $expected skills in the checkout; this assertion is not looking where the suite lives"
+            exit 1
+          fi
+          listed=$("$binary" skills list -o json | jq '.skills | length')
+          if [ "$listed" != "$expected" ]; then
+            echo "::error::the binary carries $listed skills; the checkout has $expected"
+            "$binary" skills list -o json | jq -r '.skills[].name' | sed 's/^/  carried: /'
+            exit 1
+          fi
+          versions=$("$binary" skills list -o json | jq -r '[.skills[].version] | unique | .[]')
+          if [ "$(echo "$versions" | wc -l | tr -d ' ')" != "1" ]; then
+            echo "::error::the embedded suite declares more than one version:"
+            echo "$versions" | sed 's/^/  /'
+            exit 1
+          fi
+          echo "embedded skills OK: $listed at $versions"
+
+      # A skill's version is the release it ships in, and the bump is a human
+      # edit in the release PR. Asserting it here is what makes that edit
+      # non-optional: without it, forgetting produces a release whose skills
+      # name the previous one, which is exactly the state the startup notice
+      # tells users to fix by installing this one.
+      - name: Assert the embedded skills name this release
+        if: ${{ inputs.publish-npm }}
+        working-directory: cli
+        env:
+          NPM_VERSION: ${{ needs.resolve-versions.outputs.npm_version }}
+        run: |
+          set -euo pipefail
+          binary=$(find ./output -type f -name 'olares-cli' -path '*linux_amd64*' | head -n1)
+          declared=$("$binary" skills list -o json | jq -r '.skills[0].version')
+          if [ "$declared" != "$NPM_VERSION" ]; then
+            echo "::error::the embedded skills declare ${declared}, but this release publishes ${NPM_VERSION}."
+            echo "Bump version: in every cli/skills/olares-*/SKILL.md to ${NPM_VERSION} and re-run."
+            exit 1
+          fi
+          echo "embedded skills name this release: $declared"
+
       - name: Install coscmd
         run: pip install coscmd
 
