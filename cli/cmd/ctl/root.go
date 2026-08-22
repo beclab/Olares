@@ -23,6 +23,7 @@ import (
 	"github.com/beclab/Olares/cli/cmd/ctl/router"
 	"github.com/beclab/Olares/cli/cmd/ctl/search"
 	"github.com/beclab/Olares/cli/cmd/ctl/settings"
+	"github.com/beclab/Olares/cli/cmd/ctl/skills"
 	"github.com/beclab/Olares/cli/cmd/ctl/user"
 	"github.com/beclab/Olares/cli/cmd/ctl/wizard"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
@@ -110,6 +111,10 @@ func NewDefaultCommand() *cobra.Command {
 	// that go through control-hub.<terminus> via the active profile's token.
 	cmds.AddCommand(chart.NewChartCommand())
 	cmds.AddCommand(preinstall.NewPreinstallCommand())
+	// The skill suite is compiled in, so these verbs read and write local
+	// files only — nothing about them is host-side, and the npm distribution
+	// is exactly where an agent needs them.
+	cmds.AddCommand(skills.NewSkillsCommand())
 	cmds.AddCommand(market.NewMarketCommand(factory))
 	cmds.AddCommand(profile.NewProfileCommand(factory))
 	cmds.AddCommand(knowledge.NewKnowledgeCommand(factory))
