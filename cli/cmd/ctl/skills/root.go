@@ -42,7 +42,7 @@ build was made from.
 		c.SilenceErrors = true
 		c.SilenceUsage = true
 	}
-	cmd.AddCommand(newListCommand(), newReadCommand())
+	cmd.AddCommand(newListCommand(), newReadCommand(), newExportCommand(), newInstallCommand())
 	return cmd
 }
 
