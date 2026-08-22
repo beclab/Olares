@@ -90,19 +90,29 @@ func List() ([]Meta, error) {
 	return metas, nil
 }
 
-// Describe parses one skill's frontmatter.
+// Describe parses one embedded skill's frontmatter.
 func Describe(skill string) (Meta, error) {
 	source, err := Read(skill, EntryFile)
 	if err != nil {
 		return Meta{}, err
 	}
-	block, err := frontmatter(source)
+	meta, err := ParseMeta(source)
 	if err != nil {
 		return Meta{}, fmt.Errorf("%s/%s: %w", skill, EntryFile, err)
 	}
+	return meta, nil
+}
+
+// ParseMeta reads the frontmatter of a SKILL.md from anywhere, which is how a
+// copy already on disk gets compared against the copy in here.
+func ParseMeta(source []byte) (Meta, error) {
+	block, err := frontmatter(source)
+	if err != nil {
+		return Meta{}, err
+	}
 	var meta Meta
 	if err := yaml.Unmarshal(block, &meta); err != nil {
-		return Meta{}, fmt.Errorf("%s/%s: parse frontmatter: %w", skill, EntryFile, err)
+		return Meta{}, fmt.Errorf("parse frontmatter: %w", err)
 	}
 	return meta, nil
 }
