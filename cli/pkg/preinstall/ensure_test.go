@@ -35,7 +35,7 @@ func TestPublishEnsureAppsIsIdempotent(t *testing.T) {
 	if contract.SchemaVersion != SupportedSchemaVersion || len(contract.Apps) != 1 {
 		t.Fatalf("unexpected ensure apps contract: %+v", contract)
 	}
-	if app := contract.Apps[0]; app.AppID != "ai-router" || app.AppName != "ai-router" ||
+	if app := contract.Apps[0]; app.AppID != "f3395cd5" || app.AppName != "router" ||
 		app.InstallScope != InstallScopeShared || app.InstallOrder != 20 {
 		t.Fatalf("unexpected ensured app: %+v", app)
 	}
