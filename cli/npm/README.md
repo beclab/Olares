@@ -7,8 +7,8 @@ This package downloads the platform-specific Go binary on `postinstall` and expo
 ## Quick start
 
 ```bash
-# First-run wizard (recommended): does `npm install -g @olares/cli` and
-# `olares-cli skills install` for you, in that order.
+# First-run wizard (recommended): installs this same version globally, then
+# runs `olares-cli skills install`, in that order.
 npx @olares/cli@latest install
 
 # Or do it yourself, step by step:
@@ -18,6 +18,11 @@ olares-cli skills install           # write the agent skills the binary carries
 # One-off — no install:
 npx @olares/cli@latest <verb>
 ```
+
+The tag you name decides everything the wizard installs: `@latest` is the
+promoted stable release, and `@next` is every release as CI publishes it, so
+`npx @olares/cli@next install` is how you get the newest one. See
+[npm dist-tags](#versioning-and-release-maintainers) below.
 
 After any of those, authenticate (interactive, prompts for password + optional TOTP):
 
@@ -64,7 +69,7 @@ npx @olares/cli@latest profile current
 
 Don't use `npm install -g --force` on an Olares host — it would clobber the OS-managed binary.
 
-### What the `npx @olares/cli@latest install` wizard does on this path
+### What the `npx @olares/cli install` wizard does on this path
 
 Before running `npm install -g`, the wizard reads `--version` on the existing `/usr/local/bin/olares-cli` (or `/usr/bin/olares-cli`):
 
@@ -91,9 +96,16 @@ Two version numbers are tracked:
 
 | Tag | Meaning |
 | --- | --- |
-| `latest` | Production default (`npx @olares/cli@latest`, install wizard). Set manually via **Tag npm CLI** workflow. |
+| `latest` | Production default (`npx @olares/cli@latest`). Set manually via **Tag npm CLI** workflow, so it can sit several releases behind `next`. |
 | `next` | Fresh CI publish from **Release CLI** (`npx @olares/cli@next`). Does not move `latest`. |
 | `daily` | Optional tag for daily builds (manual promote). |
+
+The install wizard resolves no tag of its own: it installs the version it was
+published as, because its second step exports skills from the binary vendored
+beside it, and a global install from a different tag would leave the machine
+with skills from one release and a CLI from another. Run from a checkout, where
+`package.json` still reads `0.0.0-placeholder`, it falls back to whatever `npm
+view` resolves.
 
 **Release CLI** (`release-cli.yaml`, manual dispatch): builds with GoReleaser, uploads tars to CDN, publishes `@olares/cli` with `--tag next`. Inputs: `branch` (default `main`), `version` (npm), optional `binary-version` (defaults from `version` — strips `-cli.N` suffix).
 

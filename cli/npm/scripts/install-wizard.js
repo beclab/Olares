@@ -7,6 +7,18 @@ const { execFileSync, execFile } = require('node:child_process');
 const p = require('@clack/prompts');
 
 const PKG = '@olares/cli';
+
+// The version this wizard was published as. Step 2 exports skills from the
+// binary vendored next to this file, so installing any other version globally
+// would leave the machine with skills from one release and a CLI from another
+// -- the exact drift `olares-cli skills` exists to remove. It is a real risk
+// rather than a theoretical one: `latest` is promoted by hand (the Tag npm CLI
+// workflow) while every release publishes to `next`, so the two tags are
+// routinely several releases apart. A checkout has no published version to
+// name and falls back to whatever the tag resolves to.
+const SELF_VERSION = require('../package.json').version;
+const IS_PLACEHOLDER = SELF_VERSION === '0.0.0-placeholder';
+
 const isWindows = process.platform === 'win32';
 const isLinux = process.platform === 'linux';
 
@@ -24,10 +36,12 @@ const SYSTEM_OLARES_CLI_PATHS = [
 const msg = {
   setup:           'Setting up Olares CLI...',
   step1:           'Installing %s globally...',
-  step1Upgrade:    'Upgrading %s (v%s -> v%s)...',
+  // Not always an upgrade: running the wizard from a tag older than what is
+  // installed asks for that older version on purpose.
+  step1Upgrade:    'Installing %s v%s (replacing v%s)...',
   step1Skip:       'Already installed (v%s). Skipped',
   step1Done:       'Installed globally',
-  step1Upgraded:   'Upgraded to v%s',
+  step1Upgraded:   'Now at v%s',
   step1Fail:       'Failed to install globally. Run manually: npm install -g %s',
   step1EexistStop: 'Skipped global install: existing olares-cli left in place at /usr/local/bin/olares-cli',
   step1Eexist:
@@ -46,7 +60,7 @@ const msg = {
     '  npm config set prefix ~/.npm-global\n' +
     '  echo \'export PATH="$HOME/.npm-global/bin:$PATH"\' >> ~/.bashrc\n' +
     '  export PATH="$HOME/.npm-global/bin:$PATH"\n' +
-    'then re-run:  npx -y @olares/cli@latest install',
+    'then re-run:  npx -y %s install',
   step1TimeoutHint:
     'Timed out after 10 min. Likely cause: slow / proxied connection while downloading the Go binary from github.com.\n' +
     'Retry outside the wizard so you can watch progress: npm install -g %s',
@@ -57,10 +71,10 @@ const msg = {
   preflightNoPermission:
     'Cannot remove %s (%s).\n' +
     'Re-run the wizard with sudo so it can replace the dev build:\n' +
-    '  sudo $(command -v npx) -y %s@latest install\n' +
+    '  sudo $(command -v npx) -y %s install\n' +
     'Or remove it yourself:\n' +
     '  sudo rm %s\n' +
-    'then re-run `npx %s@latest install`.',
+    'then re-run `npx %s install`.',
   step2Spinner:    'Installing AI skills...',
   step2Done:       'Skills installed',
   step2DoneAt:     'Installed %s skills to %s',
@@ -129,6 +143,12 @@ function getLatestVersion() {
   } catch (_) {
     return null;
   }
+}
+
+// targetVersion is what `npm install -g` should ask for: this wizard's own
+// version, or the registry's answer when running from a checkout.
+function targetVersion() {
+  return IS_PLACEHOLDER ? getLatestVersion() : SELF_VERSION;
 }
 
 function getGloballyInstalledVersion() {
@@ -293,6 +313,12 @@ function npmGlobalBinCollidesWith(sysCli) {
 // ---------------------------------------------------------------------------
 
 async function stepInstallGlobally(interactive) {
+  const wantedVer = targetVersion();
+  // Every command printed for the user to run by hand names the same version
+  // this would have installed, so a copy-pasted line cannot land somewhere
+  // else than the wizard was heading.
+  const spec = wantedVer ? `${PKG}@${wantedVer}` : PKG;
+
   // Preflight: if a system-path olares-cli is present (OS bundle or
   // `make install` artifact), decide keep-vs-replace based on its version.
   // Release-grade versions (stable/rc/beta/alpha) are left alone -- the
@@ -313,7 +339,7 @@ async function stepInstallGlobally(interactive) {
         // just race to EEXIST after the full install timeout. Skip the
         // attempt and jump straight to the EEXIST workaround.
         if (interactive) p.log.info(msg.step1EexistStop); else console.log(msg.step1EexistStop);
-        const hint = fmt(msg.step1Eexist, PKG);
+        const hint = fmt(msg.step1Eexist, spec);
         if (interactive) p.log.warn(hint); else console.error(hint);
         process.exit(1);
       }
@@ -323,7 +349,7 @@ async function stepInstallGlobally(interactive) {
       const rm = tryUnlink(sysCli);
       if (!rm.ok) {
         const reason = rm.err.code || rm.err.message || 'unknown error';
-        const hint = fmt(msg.preflightNoPermission, sysCli, reason, PKG, sysCli, PKG);
+        const hint = fmt(msg.preflightNoPermission, sysCli, reason, spec, sysCli, spec);
         if (interactive) p.log.error(hint); else console.error(hint);
         process.exit(1);
       }
@@ -331,39 +357,38 @@ async function stepInstallGlobally(interactive) {
   }
 
   const installedVer = getGloballyInstalledVersion();
-  const latestVer = getLatestVersion();
   // Exact-inequality only -- we never had to *compare* versions, just decide
-  // whether to call `npm install -g` again. This matters for npm's `latest`
-  // dist-tag: `1.12.5-cli.2` and `1.12.5-cli.4` share the same MAJOR.MINOR.PATCH
-  // so a semver core compare wrongly reported "already at latest".
-  const needsUpgrade = installedVer && latestVer && installedVer !== latestVer;
+  // whether to call `npm install -g` again. This matters for the `-cli.N`
+  // suffix: `1.12.5-cli.2` and `1.12.5-cli.4` share the same MAJOR.MINOR.PATCH
+  // so a semver core compare wrongly reported "already up to date".
+  const needsChange = installedVer && wantedVer && installedVer !== wantedVer;
 
-  if (installedVer && !needsUpgrade) {
+  if (installedVer && !needsChange) {
     const line = fmt(msg.step1Skip, installedVer);
     if (interactive) p.log.info(line); else console.log(line);
     return;
   }
 
-  const startLine = needsUpgrade
-    ? fmt(msg.step1Upgrade, PKG, installedVer, latestVer)
+  const startLine = needsChange
+    ? fmt(msg.step1Upgrade, PKG, wantedVer, installedVer)
     : fmt(msg.step1, PKG);
-  const doneLine = needsUpgrade
-    ? fmt(msg.step1Upgraded, latestVer)
+  const doneLine = needsChange
+    ? fmt(msg.step1Upgraded, wantedVer)
     : msg.step1Done;
 
   const s = interactive ? p.spinner() : null;
   if (s) s.start(startLine); else console.log(startLine);
 
   try {
-    await runSilentAsync('npm', ['install', '-g', PKG], { timeout: 600000 });
+    await runSilentAsync('npm', ['install', '-g', spec], { timeout: 600000 });
     if (s) s.stop(doneLine); else console.log(doneLine);
   } catch (err) {
     if (looksLikeEexistConflict(err)) {
       if (s) s.stop(msg.step1EexistStop); else console.error(msg.step1EexistStop);
-      const hint = fmt(msg.step1Eexist, PKG);
+      const hint = fmt(msg.step1Eexist, spec);
       if (interactive) p.log.warn(hint); else console.error(hint);
     } else {
-      const line = fmt(msg.step1Fail, PKG);
+      const line = fmt(msg.step1Fail, spec);
       if (s) s.stop(line); else console.error(line);
 
       // npm exits non-zero with a numeric `err.code`; the syscall-level
@@ -389,10 +414,10 @@ async function stepInstallGlobally(interactive) {
       }
 
       if (isEacces) {
-        const hint = msg.step1EaccesHint;
+        const hint = fmt(msg.step1EaccesHint, spec);
         if (interactive) p.log.warn(hint); else console.error(hint);
       } else if (isTimeout) {
-        const hint = fmt(msg.step1TimeoutHint, PKG);
+        const hint = fmt(msg.step1TimeoutHint, spec);
         if (interactive) p.log.warn(hint); else console.error(hint);
       }
     }
