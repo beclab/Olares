@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/beclab/Olares/cli/internal/keychain"
 )
@@ -130,6 +131,16 @@ func routerErrorOf(err error) *RouterError {
 	return nil
 }
 
+// retryAdvice turns the Retry-After header into a sentence, or into nothing
+// when the server did not send one. "Try again later" without a number is
+// advice the reader already had.
+func retryAdvice(after time.Duration) string {
+	if after <= 0 {
+		return ""
+	}
+	return fmt.Sprintf(" Router asks for %s before trying again.", after.Round(time.Second))
+}
+
 func callErr(err error) error {
 	if err == nil {
 		return nil
@@ -181,6 +192,19 @@ func callErr(err error) error {
 	case re.Code == "ambiguous_model":
 		return fmt.Errorf("%w\nQualify it as <provider>/<model>; `olares-cli router call models` shows the "+
 			"qualified names", err)
+	case re.Code == "model_at_capacity":
+		// Not a quota: nobody set this number and no admin can raise it. The
+		// engine was launched to serve so many requests at once and is serving
+		// them, so the answer is to wait rather than to change a setting —
+		// which is why it comes back 503 with a Retry-After and not the 429 a
+		// budget produces.
+		return fmt.Errorf("%w\nThe model is already serving every request it was launched to handle, so "+
+			"this one was refused rather than queued behind them.%s `olares-cli router provider get "+
+			"<provider>` shows how wide the engine is and how deep its queue was when Router last "+
+			"looked", err, retryAdvice(re.RetryAfter))
+	case re.Code == "model_not_ready":
+		return fmt.Errorf("%w\nThe model is still coming up.%s `olares-cli router model status <model>` "+
+			"follows the phase it is in", err, retryAdvice(re.RetryAfter))
 	case re.Type == "quota_exceeded_error":
 		return fmt.Errorf("%w\n`olares-cli router quota list` shows the limits, and `router usage summary` "+
 			"what has been spent against them", err)

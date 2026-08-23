@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/beclab/Olares/cli/pkg/credential"
 )
@@ -92,6 +94,12 @@ type RouterError struct {
 	Message string
 	Phase   string
 	Body    []byte
+
+	// RetryAfter is what the `Retry-After` header said, zero when it said
+	// nothing. It is a header rather than a field of either envelope, so
+	// nothing below formatErr can see it and the caller that renders the
+	// refusal has to be handed it separately.
+	RetryAfter time.Duration
 }
 
 func (e *RouterError) Error() string {
@@ -168,7 +176,7 @@ func (c *routerClient) doJSON(ctx context.Context, method, path string, body, ou
 		return fmt.Errorf("read %s %s response: %w", method, path, err)
 	}
 	if resp.StatusCode/100 != 2 {
-		return c.formatErr(method, path, resp.StatusCode, respBody)
+		return withRetryAfter(c.formatErr(method, path, resp.StatusCode, respBody), resp.Header)
 	}
 	if out == nil || len(respBody) == 0 {
 		return nil
@@ -250,9 +258,40 @@ func (c *routerClient) doStream(ctx context.Context, path string) (*http.Respons
 	if resp.StatusCode/100 != 2 {
 		body, _ := io.ReadAll(resp.Body)
 		_ = resp.Body.Close()
-		return nil, c.formatErr("GET", path, resp.StatusCode, body)
+		return nil, withRetryAfter(c.formatErr("GET", path, resp.StatusCode, body), resp.Header)
 	}
 	return resp, nil
+}
+
+// withRetryAfter attaches how long the server asked the caller to wait.
+//
+// Router says "wait a second" two ways that mean different things: a model
+// still loading (`model_not_ready`) and one already serving every request it
+// was launched to serve (`model_at_capacity`). Both are worth repeating to the
+// person waiting, and neither is in the response body.
+//
+// RFC 9110 allows a date as well as a count of seconds. Router writes seconds;
+// a date is parsed anyway because a proxy between here and there may rewrite
+// it, and a header nobody can read is the same as no header.
+func withRetryAfter(err error, h http.Header) error {
+	re := routerErrorOf(err)
+	if re == nil {
+		return err
+	}
+	raw := strings.TrimSpace(h.Get("Retry-After"))
+	if raw == "" {
+		return err
+	}
+	if secs, cerr := strconv.Atoi(raw); cerr == nil && secs > 0 {
+		re.RetryAfter = time.Duration(secs) * time.Second
+		return err
+	}
+	if when, terr := http.ParseTime(raw); terr == nil {
+		if d := time.Until(when); d > 0 {
+			re.RetryAfter = d.Round(time.Second)
+		}
+	}
+	return err
 }
 
 func (c *routerClient) formatErr(method, path string, status int, body []byte) error {
