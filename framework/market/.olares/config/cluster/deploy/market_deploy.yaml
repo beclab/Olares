@@ -36,11 +36,15 @@ rules:
       - get
       - list
       - watch
-  # Access to systemenvs resources
+  # systemenvs carries the device's settings; terminus carries the Olares
+  # version, which the upgrade pipeline writes near its end. Market reads that
+  # version to tell an upgrade that is still running from one that has finished,
+  # and holds preinstalled apps until it has.
   - apiGroups:
       - sys.bytetrade.io
     resources:
       - systemenvs
+      - terminus
     verbs:
       - get
       - list
