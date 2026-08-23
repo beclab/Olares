@@ -103,6 +103,9 @@ another gateway — and it has to be the model the work was submitted to, becaus
 a task read against a different engine is a 404 for a job that is running
 perfectly well.
 
+The model shown in a submission receipt is the routing reference needed to find
+that engine again, not the engine's canonical model id.
+
 "list" is the exception: a board has no id to remember, so it always needs
 --model to say whose queue to show.
 
@@ -188,6 +191,8 @@ A task that has not succeeded has no result, and this says so rather than
 waiting — for one still running as well as for one that failed. "task get
 --wait" is what waits. A result the engine has already dropped is reported as
 gone rather than as missing: it is kept for a while after the work finishes.
+If this fetch fails, check the task status before retrying: another successful
+fetch can bill the same result again.
 
 Examples:
   olares-cli router call task result tsk_1f3c
@@ -394,34 +399,94 @@ func fetchAudioTask(ctx context.Context, dp *routerClient, id, model string, out
 // work already done is worth collecting later.
 func waitForAudioTask(ctx context.Context, dp *routerClient, task *audioTask,
 	model string, timeout time.Duration, verbose bool) error {
-	deadline := time.Now().Add(timeout)
+	return waitForAudioTaskWith(ctx, task, model, timeout, verbose, audioTaskWaitOps{
+		now: time.Now,
+		sleep: func(ctx context.Context, delay time.Duration) error {
+			timer := time.NewTimer(delay)
+			defer timer.Stop()
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-timer.C:
+				return nil
+			}
+		},
+		fetch: func(ctx context.Context, id, model string, out *audioTask) error {
+			return fetchAudioTask(ctx, dp, id, model, out)
+		},
+	})
+}
+
+type audioTaskWaitOps struct {
+	now   func() time.Time
+	sleep func(context.Context, time.Duration) error
+	fetch func(context.Context, string, string, *audioTask) error
+}
+
+func waitForAudioTaskWith(ctx context.Context, task *audioTask, model string,
+	timeout time.Duration, verbose bool, ops audioTaskWaitOps) error {
+	deadline := ops.now().Add(timeout)
 	lastNote := ""
+	delay := time.Second
+	timeoutErr := func() error {
+		return fmt.Errorf("task %s is still %s after %s; it keeps running — "+
+			"`olares-cli router call task get %s --model %s` picks it up",
+			task.ID, nonEmpty(task.Status), timeout, task.ID, nonEmpty(model))
+	}
 	for {
+		note := audioTaskNote(task)
 		if verbose {
-			if note := audioTaskNote(task); note != lastNote {
+			if note != lastNote {
 				fmt.Fprintln(os.Stderr, note)
-				lastNote = note
 			}
 		}
-		if time.Now().After(deadline) {
-			return fmt.Errorf("task %s is still %s after %s; it keeps running — "+
-				"`olares-cli router call task get %s --model %s` picks it up",
-				task.ID, nonEmpty(task.Status), timeout, task.ID, nonEmpty(model))
+		lastNote = note
+		remaining := deadline.Sub(ops.now())
+		if remaining <= 0 {
+			return timeoutErr()
 		}
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(time.Second):
+		if remaining <= delay {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+			var final audioTask
+			if err := ops.fetch(ctx, task.ID, model, &final); err != nil {
+				return err
+			}
+			*task = final
+			if task.settled() {
+				return nil
+			}
+			return timeoutErr()
 		}
-		var next audioTask
-		if err := fetchAudioTask(ctx, dp, task.ID, model, &next); err != nil {
+		if err := ops.sleep(ctx, delay); err != nil {
 			return err
 		}
+		if !ops.now().Before(deadline) {
+			return timeoutErr()
+		}
+		var next audioTask
+		if err := ops.fetch(ctx, task.ID, model, &next); err != nil {
+			return err
+		}
+		progressed := audioTaskNote(&next) != note
 		*task = next
 		if task.settled() {
 			return nil
 		}
+		delay = nextAudioPollDelay(delay, progressed)
 	}
+}
+
+func nextAudioPollDelay(current time.Duration, progressed bool) time.Duration {
+	if progressed {
+		return time.Second
+	}
+	current += time.Second
+	if current > 5*time.Second {
+		return 5 * time.Second
+	}
+	return current
 }
 
 func audioTaskNote(task *audioTask) string {
@@ -490,7 +555,7 @@ func runAudioTaskResult(ctx context.Context, f *cmdutil.Factory, opts audioTaskO
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	pc, err := prepare(ctx, f)
+	pc, err := prepareLongRequest(ctx, f)
 	if err != nil {
 		return err
 	}
@@ -652,22 +717,23 @@ func audioTaskAge(task *audioTask) string {
 	return time.Since(time.Unix(int64(task.Created), 0)).Round(time.Second).String() + " ago"
 }
 
-// audioAsyncFormField and audioAsyncQuery are the two places an engine reads
-// the flag, and which one applies is decided by the route's content type
-// rather than by preference. See the note at the top of this file.
 const (
 	audioAsyncFormField = "async"
 	audioAsyncQueryKey  = "async"
 )
 
-// asyncQuery appends `async=1` to a JSON audio route.
-func asyncQuery(path string, async bool) string {
-	if !async {
-		return path
+// Engines read async from multipart form data; its query copy only helps Router route the request.
+func audioMultipartFields(model string, async bool, fields map[string]string) map[string]string {
+	if fields == nil {
+		fields = make(map[string]string)
 	}
-	q := url.Values{}
-	q.Set(audioAsyncQueryKey, "1")
-	return withQuery(path, q)
+	fields["model"] = strings.TrimSpace(model)
+	if async {
+		fields[audioAsyncFormField] = "1"
+	} else {
+		delete(fields, audioAsyncFormField)
+	}
+	return fields
 }
 
 // receiptFrom decodes the 202 an --async submission answers with. A non-202 is
@@ -689,12 +755,14 @@ func receiptFrom(status int, raw []byte) (*audioTask, bool) {
 // reports: the engine names its own weights, and what the task verbs need is
 // the reference that routes back to it.
 func printReceipt(w io.Writer, task *audioTask, model string, format Format) error {
-	if format == FormatJSON {
-		return printJSON(w, task)
-	}
 	ref := strings.TrimSpace(model)
 	if ref == "" {
 		ref = task.Model
+	}
+	if format == FormatJSON {
+		receipt := *task
+		receipt.Model = ref
+		return printJSON(w, &receipt)
 	}
 	if _, err := fmt.Fprintf(w, "submitted as task %s (%s)\n", task.ID, nonEmpty(task.Status)); err != nil {
 		return err

@@ -211,8 +211,8 @@ func (f *Factory) ValidAccessToken(ctx context.Context) (string, error) {
 //   - returns the original error / 401 if refresh itself fails or the body
 //     can't be replayed.
 //
-// The 30s overall timeout matches the previous behavior. For streaming
-// uploads (large multipart bodies) use HTTPClientWithoutTimeout.
+// The 30s overall timeout matches the previous behavior. For streaming or
+// otherwise long-running requests use HTTPClientWithoutTimeout.
 func (f *Factory) HTTPClient(ctx context.Context) (*http.Client, error) {
 	rp, err := f.ResolveProfile(ctx)
 	if err != nil {
@@ -227,10 +227,10 @@ func (f *Factory) HTTPClient(ctx context.Context) (*http.Client, error) {
 	return f.client, nil
 }
 
-// HTTPClientWithoutTimeout returns an http.Client with no overall timeout,
-// suitable for streaming uploads / long-running multipart requests. It
-// shares the same access_token cell as HTTPClient so a refresh triggered
-// through either client is immediately visible to the other.
+// HTTPClientWithoutTimeout returns an http.Client with no overall timeout.
+// Request contexts remain the cancellation boundary. It shares the same
+// access_token cell as HTTPClient so a refresh triggered through either client
+// is immediately visible to the other.
 func (f *Factory) HTTPClientWithoutTimeout(ctx context.Context) (*http.Client, error) {
 	rp, err := f.ResolveProfile(ctx)
 	if err != nil {

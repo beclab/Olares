@@ -22,28 +22,34 @@ The rest of the vocabulary — `responses`, `image_generation`, `video_generatio
 
 Two of those cannot be called from this CLI, for different reasons. `moderation` has no data plane endpoint in Router at all: a row can declare the mode and a default category exists for it, but there is no `/v1/moderations` to send anything to, from here or from any other client. `responses` does have an endpoint — `router call responses` — but it is the one mode Router resolves no default for, so that verb requires `--model` and there is no `default-responses` to fall back to.
 
-`audio` is one mode covering a dozen different jobs, and which of them a row actually serves is in its capability flags rather than its mode. The Market ships one application per capability, and an application declares only the one it does — `audioqwenalignerv3` declares `align` and not `stt`, `audiosoulxdialogv3` declares `tts_dialogue` and not `tts` — so a model that transcribes genuinely cannot speak, and one that aligns cannot transcribe either:
+`audio` is one mode covering different jobs, and which one a row serves is in its capability flags rather than its mode. The 13 entries below are the current `terminus-apps` staging directories, not a claim that all 13 are formally released. An application declares only its listed capability or pair, so a model that transcribes genuinely cannot speak, and one that aligns cannot transcribe:
 
-| Flag | Verb |
-|---|---|
-| `supports_stt` | `router call transcribe` |
-| `supports_stt_stream` | `router call listen` |
-| `supports_align` | `router call align` |
-| `supports_tts` | `router call speak` |
-| `supports_tts_clone` | `router call clone` |
-| `supports_tts_dialogue` | `router call dialogue` |
-| `supports_vad` | `router call vad` |
-| `supports_diar` | `router call diarize` |
-| `supports_diar_stream` | `router call diarize --stream` |
-| `supports_speaker_embed` | `router call embed` against an audio model |
-| `supports_enhance` | `router call enhance` |
-| `supports_sound_fx` | `router call speak` on a sound-effects model |
+| Application | Flag | Verb |
+|---|---|---|
+| `audioqwen3asrv3`, `audiofwwhispersttv3`, `audiofwsystransttv3` | `supports_stt` | `router call transcribe` |
+| `audioqwen3asrv3` | `supports_stt_stream` | `router call listen` |
+| `audioqwenalignerv3` | `supports_align` | `router call align` |
+| `audioqwen3ttsv3` | `supports_tts` | `router call speak` |
+| `audioqwen3ttsclonev3` | `supports_tts_clone` | `router call clone` |
+| `audiosoulxdialogv3` | `supports_tts_dialogue` | `router call dialogue` |
+| `audiosilerovadv3` | `supports_vad` | `router call vad` |
+| `audiopyannotediarv3` | `supports_diar` | `router call diarize` |
+| `audiosortformerdiarsv3` | `supports_diar_stream` | `router call diarize --stream` |
+| `audiopyannoteembedv3` | `supports_speaker_embed` | `router call speaker-embed` |
+| `audiospeechbrainenhv3` | `supports_enhance` | `router call enhance` |
+| `audiodashengsfxv3` | `supports_sound_fx` | `router call speak --sound-fx` |
 
 `supports_audio_llm` and `supports_audio_s2s` are the two flags with no engine behind them yet; a row can declare either and nothing will answer. `router model list` names the flags in its SUPPORTS column, `router provider get <provider>` shows which ones each row of a provider declares, `router model get <model>` prints a row's flags in full, and `router model spec show <model>` shows what the application itself says.
 
 Router keeps one default category per capability — `default-stt`, `default-stt-stream`, `default-align`, `default-tts`, `default-tts-clone`, `default-tts-dialogue`, `default-vad`, `default-diar`, `default-diar-stream`, `default-speaker-embed`, `default-enhance`, `default-sound-fx` — because one category per mode would have to pick a single engine for twelve jobs it cannot all do. **A bare 404 from an audio verb is most often a category pointing at another engine**, not a route Router failed to mount: the request reached a running model that has no such endpoint. `router route get default-align` says which model a category resolved, and the fix is the card that mislabelled the row rather than the category.
 
-Two capabilities cannot be reached without `--model`. `tts_dialogue` and `sound_fx` share `/v1/audio/speech` with plain synthesis, and nothing in the path distinguishes them — `router call dialogue` names `default-tts-dialogue` for you, and a sound-effects model has to be named outright.
+`tts_dialogue` and `sound_fx` share `/v1/audio/speech` with plain synthesis, so the verb supplies the distinction: `router call dialogue` resolves `default-tts-dialogue`, while `router call speak --sound-fx` resolves `default-sound-fx`. `--model` is optional for both.
+
+`router model diag endpoints` reads the Model Console's `/api/endpoints`. For audio, Model Console internally fetches the engine's `/api/engine-spec` and merges those rows; `/api/engine-spec` is not an application route. Do not infer routes from the staging table above. Audio rows include `ASYNC` when the engine declares it:
+
+```
+olares-cli router model diag endpoints --app audioqwen3asrv3
+```
 
 ## Installing
 
@@ -87,9 +93,9 @@ olares-cli router call ocr invoice.pdf --pages 1-3
 
 Details, including how each call resolves a model when `--model` is omitted, are in [calling a model](olares-router-calling.md). Four properties are specific to these modes:
 
-- **Every audio verb and OCR upload a file**, so they fail on a path before any model is reached — that error is the CLI's, not Router's.
+- **File-taking audio verbs and OCR read local paths before reaching a model.** A missing path is the CLI's error, not Router's. `dialogue` also reads local `ref_audio` paths, while `listen` and `diarize --stream` read a local path or standard input into a WebSocket; none of those three is a multipart upload. Plain JSON synthesis reads no local path.
 - **OCR is asynchronous.** Router accepts a task and the CLI polls it; `--no-wait` returns the task id instead, which is what to use for a long PDF, and `--queue` lists what is outstanding.
-- **Audio is synchronous unless asked otherwise.** `--async` on any audio verb hands back a task id, and `router call task get|result|cancel|list` follows it. An hour-long recording will time out without it. A task lives on the one backend that accepted it, and Router remembers which, so an id is enough; `--model` is only needed when that memory is gone (a restart, or another gateway) and `task list` needs it always, since a board has no id to be remembered by. The receipt prints the follow-up command either way.
+- **Audio uploads need a duration and byte-budget decision before the call.** Follow the executable [long audio decision tree](olares-router-calling.md#long-audio-decision-tree); unknown or long input, offline diarization and enhancement default to `--async`.
 - **The two streaming verbs send PCM, not a container.** `router call listen` and `diarize --stream` read 16-bit mono PCM at 16 kHz from a file or standard input; they open a WebSocket rather than uploading, so a `.wav` header would arrive as audio and be heard as a click.
 
 ## Changing what one serves

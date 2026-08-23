@@ -48,6 +48,233 @@ func TestEveryCommandTheSkillsDocumentResolves(t *testing.T) {
 	}
 }
 
+// This scans only the inline verb index in olares-router/SKILL.md. Reference
+// prose contains backquoted error text and field names that are not commands;
+// fenced executable examples across all embedded skills are covered above.
+func TestEveryInlineRouterSkillCommandPathResolves(t *testing.T) {
+	root := NewDefaultCommand()
+	for _, invocation := range inlineRouterCommandPaths(t, root) {
+		t.Run(invocation.path(), func(t *testing.T) {
+			cmd := root
+			for _, token := range invocation.tokens {
+				next := childNamed(cmd, token)
+				if next == nil {
+					if !hasSubcommands(cmd) {
+						return
+					}
+					t.Fatalf("%s:%d documents %q, but %q is not a subcommand of %q",
+						invocation.file, invocation.line, invocation.path(), token, cmd.CommandPath())
+				}
+				cmd = next
+			}
+		})
+	}
+}
+
+func TestEveryInlineRouterCLICommandPathResolves(t *testing.T) {
+	root := NewDefaultCommand()
+	for _, invocation := range inlineRouterCLICommandPaths(t) {
+		t.Run(invocation.path(), func(t *testing.T) {
+			cmd := root
+			for _, token := range invocation.tokens {
+				next := childNamed(cmd, token)
+				if next == nil {
+					if !hasSubcommands(cmd) {
+						return
+					}
+					t.Fatalf("%s:%d documents %q, but %q is not a subcommand of %q",
+						invocation.file, invocation.line, invocation.path(), token, cmd.CommandPath())
+				}
+				cmd = next
+			}
+		})
+	}
+}
+
+func TestRouterSkillHasNoObsoleteCommandContracts(t *testing.T) {
+	suite := skills.FS()
+	oldSpeakerEmbed := regexp.MustCompile(`(?i)speaker[_-]embed[^\n]{0,80}router call embed`)
+	retiredContracts := []string{
+		"max_input_seconds",
+		"MAX INPUT",
+		"540-second input ceiling",
+		"540-second limit",
+		"exceeds its engine limit",
+		"status read and a later `task result` can each carry the same measured duration",
+	}
+	var documented strings.Builder
+	err := fs.WalkDir(suite, "olares-router", func(path string, entry fs.DirEntry, err error) error {
+		if err != nil || entry.IsDir() || filepath.Ext(path) != ".md" {
+			return err
+		}
+		source, err := fs.ReadFile(suite, path)
+		if err != nil {
+			return err
+		}
+		documented.Write(source)
+		documented.WriteByte('\n')
+		if strings.Contains(string(source), "diag perf") {
+			t.Errorf("%s still documents removed `model diag perf`", path)
+		}
+		if oldSpeakerEmbed.Match(source) {
+			t.Errorf("%s still maps speaker embedding to `router call embed`", path)
+		}
+		for _, contract := range retiredContracts {
+			if strings.Contains(string(source), contract) {
+				t.Errorf("%s still documents retired contract %q", path, contract)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("walk embedded router skill: %v", err)
+	}
+	for _, contract := range []string{
+		"Model Console's `/api/endpoints`",
+		"may write a spend row, but it carries no duration",
+		"`speak --sound-fx` resolves `default-sound-fx`",
+		"Qwen accepts longer requests and internally splits",
+		"`return_time_stamps=false`",
+		"`terminus-apps` staging directories",
+		"AAC, Opus",
+		"task get <task-id> --model default-stt --wait -o json",
+		"submit slices sequentially",
+		"Router circuit open",
+		"routing reference, not the engine's canonical model id",
+		"`task result` is the exception",
+	} {
+		if !strings.Contains(documented.String(), contract) {
+			t.Errorf("router skill lost required audio contract %q", contract)
+		}
+	}
+}
+
+var inlineCodePattern = regexp.MustCompile("`([^`\\n]+)`")
+
+func inlineRouterCLICommandPaths(t *testing.T) []documentedInvocation {
+	t.Helper()
+	suite := skills.FS()
+	var found []documentedInvocation
+	err := fs.WalkDir(suite, "olares-router", func(path string, entry fs.DirEntry, err error) error {
+		if err != nil || entry.IsDir() || filepath.Ext(path) != ".md" {
+			return err
+		}
+		source, err := fs.ReadFile(suite, path)
+		if err != nil {
+			return err
+		}
+		for lineNumber, line := range strings.Split(string(source), "\n") {
+			for _, match := range inlineCodePattern.FindAllStringSubmatch(line, -1) {
+				fields := strings.Fields(strings.TrimSpace(match[1]))
+				if len(fields) < 2 || fields[0] != "olares-cli" {
+					continue
+				}
+				fields = commandLikePrefix(fields[1:])
+				if len(fields) == 0 {
+					continue
+				}
+				for _, tokens := range expandCommandAlternatives(fields) {
+					found = append(found, documentedInvocation{
+						tokens: tokens,
+						file:   path,
+						line:   lineNumber + 1,
+					})
+				}
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("walk embedded router skill: %v", err)
+	}
+	if len(found) < 10 {
+		t.Fatalf("harvested only %d inline router CLI commands; the docs or scanner moved", len(found))
+	}
+	return found
+}
+
+func inlineRouterCommandPaths(t *testing.T, root *cobra.Command) []documentedInvocation {
+	t.Helper()
+	suite := skills.FS()
+	var found []documentedInvocation
+	err := fs.WalkDir(suite, ".", func(path string, entry fs.DirEntry, err error) error {
+		if err != nil || entry.IsDir() || filepath.Ext(path) != ".md" {
+			return err
+		}
+		if path != "olares-router/SKILL.md" {
+			return nil
+		}
+		source, err := fs.ReadFile(suite, path)
+		if err != nil {
+			return err
+		}
+		family := strings.TrimPrefix(strings.Split(path, "/")[0], "olares-")
+		familyCommand := childNamed(root, family)
+		for lineNumber, line := range strings.Split(string(source), "\n") {
+			for _, match := range inlineCodePattern.FindAllStringSubmatch(line, -1) {
+				fields := strings.Fields(strings.TrimSpace(match[1]))
+				if len(fields) < 2 {
+					continue
+				}
+				if fields[0] == "olares-cli" {
+					fields = fields[1:]
+				} else if childNamed(root, fields[0]) == nil {
+					if familyCommand == nil || childNamed(familyCommand, fields[0]) == nil {
+						continue
+					}
+					fields = append([]string{family}, fields...)
+				}
+				fields = commandLikePrefix(fields)
+				if len(fields) == 0 {
+					continue
+				}
+				for _, tokens := range expandCommandAlternatives(fields) {
+					found = append(found, documentedInvocation{
+						tokens: tokens,
+						file:   path,
+						line:   lineNumber + 1,
+					})
+				}
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("walk the embedded suite: %v", err)
+	}
+	if len(found) < 40 {
+		t.Fatalf("harvested only %d inline router commands; the index or scanner moved", len(found))
+	}
+	return found
+}
+
+func commandLikePrefix(fields []string) []string {
+	for i, field := range fields {
+		if strings.HasPrefix(field, "-") || strings.ContainsAny(field, "<>[]") ||
+			field == "..." || field == "→" || field == "." {
+			return fields[:i]
+		}
+	}
+	return fields
+}
+
+func expandCommandAlternatives(fields []string) [][]string {
+	for i, field := range fields {
+		parts := strings.FieldsFunc(field, func(r rune) bool { return r == '/' || r == '|' })
+		if len(parts) < 2 {
+			continue
+		}
+		var expanded [][]string
+		for _, part := range parts {
+			tokens := append([]string(nil), fields...)
+			tokens[i] = part
+			expanded = append(expanded, tokens[:i+1])
+		}
+		return expanded
+	}
+	return [][]string{fields}
+}
+
 type documentedInvocation struct {
 	tokens []string
 	file   string

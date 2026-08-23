@@ -20,7 +20,7 @@ A locally installed model application does not simply "contain a model". Inside 
 - resolves the model source and downloads the weights, with progress and a verification step;
 - launches the engine — llama.cpp, vLLM, SGLang, Ollama, an embedding server, an audio engine, an OCR adapter — with flags taken from a **model card** it stores;
 - serves an OpenAI-compatible endpoint, which is what Router's provider row points at;
-- answers `/api/*` for its own lifecycle: phase, progress, effective configuration, GPU residency, a performance probe, retry, engine restart.
+- answers `/api/*` for its own lifecycle: phase, progress, effective configuration, GPU residency, retry, engine restart.
 
 The `router model` verbs that read a lifecycle — `status`, `progress`, `retry`, `restart`, `spec`, `diag` — address that console directly. They are the only way to see why a local model is not answering yet, because Router sees a provider that is simply unreachable.
 

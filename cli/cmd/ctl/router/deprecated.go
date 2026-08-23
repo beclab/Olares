@@ -47,7 +47,6 @@ func newDeprecatedLocalCommand(f *cmdutil.Factory) *cobra.Command {
 		{newModelRetryCommand(f, addressByApp), "model retry <model>"},
 		{newModelRestartCommand(f, addressByApp), "model restart <model>"},
 		{newModelGPUCommand(f, addressByApp), "model diag gpu <model>"},
-		{newModelPerfCommand(f, addressByApp), "model diag perf <model>"},
 		{newModelConfigCommand(f, addressByApp), "model diag config <model>"},
 		{newModelEndpointsCommand(f, addressByApp), "model diag endpoints <model>"},
 	}

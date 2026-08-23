@@ -83,9 +83,44 @@ olares-cli router call ocr invoice.pdf --pages 1-3
 
 **Images and video.** These are the two verbs whose work can outlive the request. Both submit, wait, and write the result to `--out`; `--no-wait` prints the generation id instead, and `--id <id>` collects that generation later. Video defaults to waiting twenty minutes and images five, and a `--timeout` only stops the waiting — the provider carries on, and the id is still collectable. An image provider with no persistent generations API answers inline instead, and the verb handles both without the caller choosing.
 
-**Audio.** Ten verbs over one upstream, and which of them a model serves depends on the engine behind it rather than on the mode: recognition, streaming recognition, alignment, synthesis, cloning, dialogue, voice activity, diarization, streaming diarization, speaker embeddings and enhancement are all separate engine images, one Market application each. A model that transcribes does not necessarily speak, and a model that aligns does not transcribe; every verb resolves its own default category for that reason. A bare 404 from one of these routes usually means the category behind it resolved a model that does something else. `speak`, `clone`, `dialogue` and `enhance` refuse to write audio to a terminal, before making the call, so pass `--out` or redirect. `speak --voices` lists what the chosen model can sound like, and returns nothing on a cloning model — a recording is the voice there. `align` takes the transcript from `--text` or standard input. `dialogue` reads a JSON script of speakers and turns, and turns a local path in a speaker's `ref_audio` into a data URL so the script can name files on this machine.
+**Audio.** The current audio-engine applications each serve one declared capability set; legacy audio applications are outside this contract. A model that transcribes does not necessarily speak, and one that aligns cannot transcribe. Every verb therefore resolves its own default category. A bare 404 usually means that category reached an engine which does not mount the requested capability. `speaker-embed` is the speaker-vector command; do not substitute `call embed`. `speak --sound-fx` resolves `default-sound-fx`; `--model` is optional. `speak`, `clone`, `dialogue` and `enhance` refuse to write audio to a terminal, so pass `--out` or redirect. `speak --voices` lists preset voices. `align` takes a transcript from `--text` or standard input. `dialogue` reads a JSON script and turns local `ref_audio` paths into data URLs.
 
-`--async` on any audio verb hands back a task id instead of waiting, which is the difference between transcribing an hour-long recording and timing out. `router call task get|result|cancel` follows one by id alone: a task exists only on the backend that accepted it, and Router remembers which that was. `--model` is the fallback for when it cannot — a gateway that restarted, or work submitted through a different one — and it has to be the model the submission resolved, since a task read against another engine is a 404 for a job that is running. `task list` always needs `--model`: a board has no id to remember it by, and each application runs its own queue. The receipt printed at submission time spells out the follow-up command either way.
+### Long audio decision tree
+
+Use this sequence before uploading a recording:
+
+1. If `ffprobe` is already installed, read duration, codec, channel count and sample rate. File size is not duration; never infer one from the other. If `ffprobe` is absent, do not install it or guess: tell the user duration is unknown and offer to submit the original asynchronously, provide a known duration, or use their preferred inspection tool.
+2. Use a synchronous call only when the input is known to be short and the operation is expected to finish in about 30 seconds. Use `--async` by default for unknown duration, long audio, offline diarization and enhancement. Async removes inference waiting from the submission connection; it does not bypass upload size or upload time.
+3. Check bytes separately. The CLI warns above 90 MiB. Router admits at most 96 MiB for the complete request body, including multipart fields and boundaries; the CLI therefore reserves 64 KiB and refuses an audio file above `96 MiB - 64 KiB`. The frontend admits `100m` only so Router can own the exact 96 MiB error.
+4. If the upload is too large and `ffmpeg` is already installed, consider 16 kHz mono FLAC for WAV, high-sample-rate, multichannel or otherwise uncompressed/high-bitrate input, then re-check bytes. AAC, Opus and other already-compressed sources may become larger when transcoded to FLAC, so inspect and re-check rather than converting blindly. If `ffmpeg` is absent, do not install it silently: offer the original when it fits, ask the user for a converted file, or ask whether they want to use another tool.
+5. Split offline STT only when compression still cannot meet the request byte budget, or when the business already has useful VAD or chapter boundaries. Pieces at or below 480 seconds are a product recommendation, not an engine limit. Qwen accepts longer requests and internally splits them at low-energy boundaries; this wrapper requests `return_time_stamps=false`. Prefer speech/silence boundaries; fixed pieces with a short overlap are the fallback. Submit each piece independently and merge its text while removing duplicated overlap. Offset timestamps only when the selected engine and response format actually return time fields; plain Qwen text has none.
+6. Do not automatically split offline or streaming diarization, because speaker identity is not stable across independent pieces; do not split speaker embedding, because one whole clip produces one vector; and do not split voice cloning or dialogue. Split alignment only when a transcript is already divided into matching segments. Enhancement already windows and overlap-adds internally, so prefer one whole-file async task.
+
+The inspection and whole-file conversion commands below are optional external tools, not prerequisites. Never add an installation command:
+
+```
+ffprobe -v error -show_entries format=duration:stream=codec_name,channels,sample_rate -of json meeting.m4a
+ffmpeg -i meeting.m4a -vn -ar 16000 -ac 1 -c:a flac meeting-16k-mono.flac
+```
+
+Submit asynchronously and preserve both the task id and the exact model reference:
+
+```
+olares-cli router call transcribe meeting-16k-mono.flac --model default-stt --async
+olares-cli router call task get <task-id> --model default-stt --wait -o json > transcript.json
+```
+
+Use `task result` to collect a binary audio result:
+
+```
+olares-cli router call speak "read this" --model default-tts --async
+olares-cli router call task result <task-id> --model default-tts --out speech.wav
+```
+
+Each piece is a separate task and a separate billable call. One engine has one worker and a queue of 32 waiting tasks; a full queue refuses new work. Results expire after 1800 seconds, and tasks live only in memory, so a pod restart loses them. On a timeout, keep the id and model and use `task get` or `task list` before considering a resubmission — blindly submitting again can run and bill the work twice. Polls consume Router RPM quota; use `task get --wait` rather than a tight manual loop. A task `get` or status read may write a spend row, but it carries no duration and incurs no duration-based charge. Only `task result` can carry measured duration and be charged by duration; fetching the same result repeatedly may therefore charge it repeatedly. JSON task results are already present in `task get`; fetch `task result` only when the result must be collected separately, especially binary audio.
+When split STT input hits a queue-full 503, submit slices sequentially. Back off, then use `task get` or `task list` to check the accepted work before submitting the next slice; do not fan out requests or blindly resubmit the rejected slice. Consecutive 503 responses may temporarily trigger Router circuit open, so wait for the circuit and queue to recover instead of increasing concurrency.
+
+`router call task get|result|cancel` follows one task by id. Router normally remembers its backend; after a Router restart or when using another gateway, pass the model saved with the id. `task list` always needs `--model`, because every audio application owns a separate queue. The `model` printed in a task receipt, including JSON output, is a routing reference, not the engine's canonical model id. Preserve it with the task id so recovery after Router forgets the backend still reaches the engine that owns the task.
 
 `listen` and `diarize --stream` are the two verbs that open a WebSocket rather than uploading. They read 16-bit mono PCM at 16 kHz from a file or standard input, print partial results as they arrive, and need models declaring `supports_stt_stream` and `supports_diar_stream` — which, again, are separate applications from their batch counterparts.
 
