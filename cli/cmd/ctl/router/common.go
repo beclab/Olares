@@ -102,6 +102,29 @@ type preparedClient struct {
 	collections map[string]memoizedCollection
 }
 
+type requestDuration uint8
+
+const (
+	shortRequest requestDuration = iota
+	longRequest
+)
+
+type authenticatedClientFactory interface {
+	HTTPClient(context.Context) (*http.Client, error)
+	HTTPClientWithoutTimeout(context.Context) (*http.Client, error)
+}
+
+func authenticatedHTTPClient(
+	ctx context.Context,
+	f authenticatedClientFactory,
+	duration requestDuration,
+) (*http.Client, error) {
+	if duration == longRequest {
+		return f.HTTPClientWithoutTimeout(ctx)
+	}
+	return f.HTTPClient(ctx)
+}
+
 // prepare resolves the profile, checks the version floor, and locates Router.
 // The discovery round-trip is paid once per command invocation — a single
 // process runs a single verb, so there is nothing to memoize across calls.
@@ -120,7 +143,7 @@ func prepare(ctx context.Context, f *cmdutil.Factory) (*preparedClient, error) {
 	if err != nil {
 		return nil, err
 	}
-	hc, err := f.HTTPClient(ctx)
+	hc, err := authenticatedHTTPClient(ctx, f, shortRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -136,6 +159,20 @@ func prepare(ctx context.Context, f *cmdutil.Factory) (*preparedClient, error) {
 		desktop: desktop,
 		hc:      hc,
 	}, nil
+}
+
+func prepareLongRequest(ctx context.Context, f *cmdutil.Factory) (*preparedClient, error) {
+	pc, err := prepare(ctx, f)
+	if err != nil {
+		return nil, err
+	}
+	hc, err := authenticatedHTTPClient(ctx, f, longRequest)
+	if err != nil {
+		return nil, err
+	}
+	pc.hc = hc
+	pc.router = newRouterClient(hc, pc.found.BaseURL, pc.profile.OlaresID)
+	return pc, nil
 }
 
 func printJSON(w io.Writer, v interface{}) error {

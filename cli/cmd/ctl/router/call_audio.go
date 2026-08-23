@@ -115,21 +115,20 @@ func runCallTranscribe(ctx context.Context, f *cmdutil.Factory, path string, opt
 	if err != nil {
 		return err
 	}
-	pc, err := prepare(ctx, f)
+	if err := checkAudioUploadSize(path, os.Stderr); err != nil {
+		return err
+	}
+	pc, err := prepareLongRequest(ctx, f)
 	if err != nil {
 		return err
 	}
 	dp := dataPlane(pc, opts.APIKey)
 
-	fields := map[string]string{
-		"model":           strings.TrimSpace(opts.Model),
+	fields := audioMultipartFields(opts.Model, opts.Async, map[string]string{
 		"language":        strings.TrimSpace(opts.Language),
 		"prompt":          strings.TrimSpace(opts.Prompt),
 		"response_format": strings.TrimSpace(opts.RespFormat),
-	}
-	if opts.Async {
-		fields[audioAsyncFormField] = "1"
-	}
+	})
 	body, contentType, err := multipartFile(path, "file", fields)
 	if err != nil {
 		return err
@@ -139,6 +138,7 @@ func runCallTranscribe(ctx context.Context, f *cmdutil.Factory, path string, opt
 	if opts.Translate {
 		route = epAudioTranslations
 	}
+	route = audioRequestPath(route, opts.Model, opts.Async)
 	resp, err := dp.do(ctx, "POST", route, body, contentType)
 	if err != nil {
 		return err
@@ -158,6 +158,60 @@ func runCallTranscribe(ctx context.Context, f *cmdutil.Factory, path string, opt
 		return printRawJSON(os.Stdout, raw)
 	}
 	return printTranscript(os.Stdout, raw)
+}
+
+const (
+	audioUploadWarnBytes    = 90 * 1024 * 1024
+	audioRequestBudgetBytes = 96 * 1024 * 1024
+	audioMultipartAllowance = 64 * 1024
+	audioFileMaxBytes       = audioRequestBudgetBytes - audioMultipartAllowance
+)
+
+func checkAudioUploadSize(path string, stderr io.Writer) error {
+	info, err := os.Stat(path)
+	if err != nil {
+		return err
+	}
+	if info.Size() > audioFileMaxBytes {
+		return fmt.Errorf("%s is %s (%d bytes); audio files cannot exceed %s (%d bytes) "+
+			"(Router limits the total request body to %s (%d bytes), with %s (%d bytes) reserved "+
+			"for multipart metadata)",
+			path, humanBytes(info.Size()), info.Size(),
+			humanBytes(audioFileMaxBytes), audioFileMaxBytes,
+			humanBytes(audioRequestBudgetBytes), audioRequestBudgetBytes,
+			humanBytes(audioMultipartAllowance), audioMultipartAllowance)
+	}
+	if info.Size() > audioUploadWarnBytes {
+		_, err = fmt.Fprintf(stderr, "warning: audio input is %s (%d bytes); convert it to "+
+			"16 kHz mono FLAC, or split long STT input into smaller files before uploading\n",
+			humanBytes(info.Size()), info.Size())
+	}
+	return err
+}
+
+func checkDialogueRequestSize(size int64, stderr io.Writer) error {
+	if size > audioRequestBudgetBytes {
+		return fmt.Errorf("dialogue JSON is %s (%d bytes); Router limits the total request body "+
+			"to %s (%d bytes)", humanBytes(size), size,
+			humanBytes(audioRequestBudgetBytes), audioRequestBudgetBytes)
+	}
+	if size > audioUploadWarnBytes {
+		_, err := fmt.Fprintf(stderr, "warning: dialogue JSON is %s (%d bytes); shorten or "+
+			"compress the reference clips, or submit with --async\n", humanBytes(size), size)
+		return err
+	}
+	return nil
+}
+
+func audioRequestPath(route, model string, async bool) string {
+	q := url.Values{}
+	if m := strings.TrimSpace(model); m != "" {
+		q.Set("model", m)
+	}
+	if async {
+		q.Set(audioAsyncQueryKey, "1")
+	}
+	return withQuery(route, q)
 }
 
 // printTranscript prefers the text out of a JSON answer and falls back to the
@@ -189,10 +243,9 @@ func printRawJSON(w io.Writer, raw []byte) error {
 	return printJSON(w, v)
 }
 
-// multipartFile builds an upload with the file plus whatever text fields have a
-// value. The file part comes last on purpose: Router reads the model field by
-// scanning the upload, and a model named after the audio makes it hold the whole
-// file in memory to find it.
+// multipartFile streams a file plus non-empty text fields without buffering the
+// complete request. The file part comes last so metadata reaches the receiver
+// before the file bytes.
 //
 // The body is encoded as it is sent rather than into a buffer first. A
 // recording long enough to be worth --async is one nobody should have to hold
@@ -436,12 +489,25 @@ func runCallSpeak(ctx context.Context, f *cmdutil.Factory, text string, opts spe
 		return fmt.Errorf("audio would be written to the terminal; name a file with --out, " +
 			"pipe the output, or submit it with --async")
 	}
-	pc, err := prepare(ctx, f)
+	pc, err := prepareLongRequest(ctx, f)
 	if err != nil {
 		return err
 	}
 	dp := dataPlane(pc, opts.APIKey)
 
+	req := buildSpeakRequest(text, opts)
+	buf, err := json.Marshal(req)
+	if err != nil {
+		return fmt.Errorf("marshal request body: %w", err)
+	}
+	return streamAudioAnswer(ctx, dp, audioAnswer{
+		Method: "POST", Route: audioRequestPath(epAudioSpeech, opts.Model, opts.Async),
+		Body: bytes.NewReader(buf), ContentType: "application/json",
+		Model: opts.Model, Out: opts.OutPath, Async: opts.Async, Format: opts.Format,
+	})
+}
+
+func buildSpeakRequest(text string, opts speakOptions) map[string]any {
 	req := map[string]any{"input": text}
 	if v := strings.TrimSpace(opts.Model); v != "" {
 		req["model"] = v
@@ -455,13 +521,5 @@ func runCallSpeak(ctx context.Context, f *cmdutil.Factory, text string, opts spe
 	if opts.Speed != nil {
 		req["speed"] = *opts.Speed
 	}
-	buf, err := json.Marshal(req)
-	if err != nil {
-		return fmt.Errorf("marshal request body: %w", err)
-	}
-	return streamAudioAnswer(ctx, dp, audioAnswer{
-		Method: "POST", Route: asyncQuery(epAudioSpeech, opts.Async),
-		Body: bytes.NewReader(buf), ContentType: "application/json",
-		Model: opts.Model, Out: opts.OutPath, Async: opts.Async, Format: opts.Format,
-	})
+	return req
 }

@@ -188,12 +188,13 @@ const (
 // speaker embedding, enhancement and alignment are separate engine images, and
 // a model that does one answers 404 or refuses the mode for the others.
 const (
-	epAudioTranscriptions = dataPlaneAPI + "/audio/transcriptions"
-	epAudioTranslations   = dataPlaneAPI + "/audio/translations"
-	epAudioSpeech         = dataPlaneAPI + "/audio/speech"
-	epAudioSpeechClone    = epAudioSpeech + "/clone"
-	epAudioVoices         = dataPlaneAPI + "/audio/voices"
-	epAudioVAD            = dataPlaneAPI + "/audio/vad"
+	epAudioTranscriptions    = dataPlaneAPI + "/audio/transcriptions"
+	epAudioTranslations      = dataPlaneAPI + "/audio/translations"
+	epAudioSpeech            = dataPlaneAPI + "/audio/speech"
+	epAudioSpeechClone       = epAudioSpeech + "/clone"
+	epAudioVoices            = dataPlaneAPI + "/audio/voices"
+	epAudioVAD               = dataPlaneAPI + "/audio/vad"
+	epAudioSpeakerEmbeddings = dataPlaneAPI + "/audio/embeddings"
 	// Spelled in full. The engine serves `diarization` over HTTP and reserves
 	// `diarize/stream` for the WebSocket, so the short form is a 404.
 	epAudioDiarization = dataPlaneAPI + "/audio/diarization"
@@ -286,8 +287,6 @@ const (
 	epLocalConfig        = "/api/config"
 	epLocalEndpoints     = "/api/endpoints"
 	epLocalDiagGPU       = "/api/diag/gpu"
-	epLocalDiagPerf      = "/api/diag/perf"
-	epLocalDiagPerfLast  = epLocalDiagPerf + "/last"
 	epLocalRetry         = "/api/retry"
 	epLocalEngineRestart = "/api/engine/restart"
 )

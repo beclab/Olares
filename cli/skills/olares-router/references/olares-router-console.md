@@ -61,15 +61,12 @@ A card written with `spec set` does not take effect by itself, and Router does n
 | `model diag config` | the effective configuration, secrets redacted — the resolved model source, engine kind and paths |
 | `model diag endpoints` | which routes this deployment actually serves, and why a missing one is missing |
 | `model diag gpu` | how much of the model is resident: layers on GPU, VRAM in use, CPU offload, KV cache, and what measured it |
-| `model diag perf` | a real probe — time to first token and prefill/decode throughput, with the thinking variant when the card claims reasoning |
 
 These are for a model that works but behaves oddly. Whether it works at all is `model status`.
 
-`model diag endpoints` is the check to run before believing a 404 from anything in this family: consoles differ by version, and a route that never existed on this one is a different problem from a resource that is absent.
+`model diag endpoints` is the check to run before believing a 404 from anything in this family: it reads the Model Console's `/api/endpoints`, so a route that is absent is different from a resource missing behind one. For audio, Model Console internally merges rows fetched from the engine's `/api/engine-spec`; that engine endpoint is not an application route. Audio rows show `ASYNC` when the engine declares it.
 
 `model diag gpu` reports placement rather than a single number, because the engines disagree about what to report. For llama.cpp the layer count is the fact; some engines report no residency at all, and the report says so instead of implying zero.
-
-`model diag perf` runs a real generation, so it costs GPU time and takes a few seconds. It is the honest answer to "is this model slow", where `model diag gpu` is the answer to "why".
 
 ## Retry and restart
 

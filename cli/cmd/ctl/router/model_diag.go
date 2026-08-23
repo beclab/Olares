@@ -16,17 +16,16 @@ import (
 	"github.com/beclab/Olares/cli/pkg/utils"
 )
 
-// `router model diag …` — the four questions about a local model that are not
+// `router model diag …` — the three questions about a local model that are not
 // about whether it works.
 //
 // gpu       GET  /api/diag/gpu
-// perf      POST /api/diag/perf, GET /api/diag/perf/last
 // config    GET  /api/config
 // endpoints GET  /api/endpoints
 //
-// gpu and perf both answer "the model replies, but slowly", which Router cannot
-// see: from the gateway a model on the CPU and a model on the GPU differ only in
-// latency. The figures come from the engine's own introspection rather than from
+// gpu answers "the model replies, but slowly", which Router cannot see: from
+// the gateway a model on the CPU and a model on the GPU differ only in latency.
+// The figures come from the engine's own introspection rather than from
 // nvidia-smi, so what is reported varies by engine and an absent field means
 // "this engine does not say" rather than zero.
 //
@@ -46,7 +45,6 @@ func newModelDiagCommand(f *cmdutil.Factory, how localAddressing) *cobra.Command
 		Long: `Look inside a model application that is running.
 
   diag gpu <model>        how much of the model is resident on the GPU
-  diag perf <model>       time to first token and throughput, measured
   diag config <model>     the effective configuration, secrets redacted
   diag endpoints <model>  which routes this deployment actually serves
 
@@ -59,7 +57,6 @@ asking Router which one serves it.
 	}
 	cmd.SilenceUsage = true
 	cmd.AddCommand(newModelGPUCommand(f, how))
-	cmd.AddCommand(newModelPerfCommand(f, how))
 	cmd.AddCommand(newModelConfigCommand(f, how))
 	cmd.AddCommand(newModelEndpointsCommand(f, how))
 	return cmd
@@ -228,168 +225,6 @@ func renderGPUReport(w io.Writer, li *llmInit, r *gpuReport) error {
 	return nil
 }
 
-type ratePoint struct {
-	TokensPerSec float64 `json:"tokens_per_sec"`
-	SampleTokens int     `json:"sample_tokens"`
-	Source       string  `json:"source"`
-}
-
-type perfReport struct {
-	StartedAt  string    `json:"started_at"`
-	DurationMS int64     `json:"duration_ms"`
-	EngineKind string    `json:"engine_kind"`
-	Model      diagModel `json:"model"`
-	ColdStart  struct {
-		EngineColdStartMS  int64  `json:"engine_cold_start_ms"`
-		ObservedColdLoadMS int64  `json:"observed_cold_load_ms,omitempty"`
-		Source             string `json:"source"`
-	} `json:"cold_start"`
-	Prefill *ratePoint `json:"prefill,omitempty"`
-	Decode  *ratePoint `json:"decode,omitempty"`
-	TTFT    struct {
-		NoThinkMS   int64  `json:"no_think_ms,omitempty"`
-		WithThinkMS int64  `json:"with_think_ms,omitempty"`
-		ThinkMode   string `json:"think_mode"`
-	} `json:"ttft"`
-	GPUAtRunTime gpuResidency `json:"gpu_at_run_time"`
-	Warnings     []string     `json:"warnings,omitempty"`
-}
-
-type perfRunRequest struct {
-	DecodeTokens int    `json:"decode_tokens,omitempty"`
-	PrefillPromt string `json:"prefill_prompt,omitempty"`
-	WithThink    bool   `json:"with_think,omitempty"`
-	WithoutThink *bool  `json:"without_think,omitempty"`
-}
-
-func newModelPerfCommand(f *cmdutil.Factory, how localAddressing) *cobra.Command {
-	var (
-		output       string
-		last         bool
-		decodeTokens int
-		prompt       string
-		withThink    bool
-		onlyThink    bool
-	)
-	target := newModelTarget(how)
-	cmd := &cobra.Command{
-		Use:   "perf " + target.arg(),
-		Short: "time to first token and throughput, measured",
-		Long: `Measure a model by using it.
-
-This sends one or two real completions at the engine and reports time to first
-token and tokens per second, with a GPU snapshot taken at the start so a slow
-result can be read against where the weights were.
-
-It costs something. The run occupies a slot in the engine for five to sixty
-seconds, only one runs at a time across the application, and the model has to be
-ready — an engine still loading refuses rather than recording a meaningless
-number. The first run after a load pays the cold-load cost and reads high; the
-second is the steady state.
-
---last reads the previous run instead of starting one, which is free. That cache
-is in memory, so a restarted application has none.
-
-Examples:
-  olares-cli router model diag perf qwen3-4b
-  olares-cli router model diag perf qwen3-4b --last
-  olares-cli router model diag perf --app llamacppqwen3627bggufv3 --decode-tokens 128 --with-think
-`,
-		RunE: func(c *cobra.Command, args []string) error {
-			ctx := c.Context()
-			if ctx == nil {
-				ctx = context.Background()
-			}
-			format, err := parseFormat(output)
-			if err != nil {
-				return err
-			}
-			if last && (decodeTokens > 0 || prompt != "" || withThink || onlyThink) {
-				return fmt.Errorf("--last reads the run that already happened, so the knobs that shape a " +
-					"new one cannot apply to it; drop --last to measure again")
-			}
-			li, err := target.open(ctx, f, args)
-			if err != nil {
-				return err
-			}
-
-			var rep perfReport
-			if last {
-				if err := li.client.doJSON(ctx, "GET", epLocalDiagPerfLast, nil, &rep); err != nil {
-					return perfLastErr(err)
-				}
-			} else {
-				req := perfRunRequest{DecodeTokens: decodeTokens, PrefillPromt: prompt, WithThink: withThink}
-				if onlyThink {
-					no := false
-					req.WithoutThink = &no
-					req.WithThink = true
-				}
-				if err := li.client.doJSON(ctx, "POST", epLocalDiagPerf, req, &rep); err != nil {
-					return perfRunErr(err)
-				}
-			}
-			if format == FormatJSON {
-				return printJSON(os.Stdout, rep)
-			}
-			return renderPerfReport(os.Stdout, li, &rep, last)
-		},
-	}
-	target.bind(cmd)
-	cmd.Flags().BoolVar(&last, "last", false, "read the previous run instead of starting one")
-	cmd.Flags().IntVar(&decodeTokens, "decode-tokens", 0, "tokens to sample while measuring decode (default 64, max 256)")
-	cmd.Flags().StringVar(&prompt, "prompt", "", "use this prompt for the prefill pass instead of the built-in one")
-	cmd.Flags().BoolVar(&withThink, "with-think", false, "add a pass with reasoning enabled")
-	cmd.Flags().BoolVar(&onlyThink, "only-think", false, "measure only the reasoning pass")
-	addOutputFlag(cmd, &output)
-	return cmd
-}
-
-func renderPerfReport(w io.Writer, li *llmInit, r *perfReport, cached bool) error {
-	t := newTable(w)
-	t.row("APPLICATION", li.AppName)
-	t.row("ENGINE", nonEmpty(r.EngineKind))
-	t.row("MODEL", nonEmpty(r.Model.Name))
-	t.row("RAN AT", nonEmpty(r.StartedAt))
-	t.row("TOOK", fmt.Sprintf("%.1fs", float64(r.DurationMS)/1000))
-	if r.TTFT.NoThinkMS > 0 {
-		t.row("FIRST TOKEN", fmt.Sprintf("%dms", r.TTFT.NoThinkMS))
-	}
-	switch r.TTFT.ThinkMode {
-	case "enabled":
-		t.row("FIRST TOKEN, THINKING", fmt.Sprintf("%dms", r.TTFT.WithThinkMS))
-	case "not_supported_by_model":
-		t.row("THINKING", "the model card does not claim reasoning, so it was not measured")
-	}
-	if p := r.Prefill; p != nil {
-		t.row("PREFILL", fmt.Sprintf("%.1f tokens/s over %d tokens (%s)",
-			p.TokensPerSec, p.SampleTokens, p.Source))
-	}
-	if d := r.Decode; d != nil {
-		t.row("DECODE", fmt.Sprintf("%.1f tokens/s over %d tokens (%s)",
-			d.TokensPerSec, d.SampleTokens, d.Source))
-	}
-	if r.ColdStart.EngineColdStartMS > 0 {
-		t.row("COLD START", fmt.Sprintf("%.1fs to first ready (%s)",
-			float64(r.ColdStart.EngineColdStartMS)/1000, nonEmpty(r.ColdStart.Source)))
-	}
-	gpu := gpuReport{GPU: r.GPUAtRunTime}
-	t.row("PLACEMENT AT RUN", gpu.placement())
-	if err := t.flush(); err != nil {
-		return err
-	}
-	for _, warn := range r.Warnings {
-		if _, err := fmt.Fprintln(w, "\nwarning: "+warn); err != nil {
-			return err
-		}
-	}
-	if cached {
-		_, err := fmt.Fprintln(w, "\nThis is the stored result of an earlier run, not a fresh measurement.")
-		return err
-	}
-	return nil
-}
-
 func diagErr(err error) error {
 	var re *RouterError
 	if err == nil || !errors.As(err, &re) {
@@ -404,31 +239,6 @@ func diagErr(err error) error {
 			"it is not up yet; `olares-cli router model status <model>` says which phase it is in", err)
 	}
 	return err
-}
-
-func perfRunErr(err error) error {
-	var re *RouterError
-	if err == nil || !errors.As(err, &re) {
-		return diagErr(err)
-	}
-	switch re.Code {
-	case "engine_not_ready":
-		return fmt.Errorf("%w\nMeasuring an engine that is still starting would record timings for work it "+
-			"is not doing yet; `olares-cli router model progress <model> --watch` follows it to ready", err)
-	case "perf_run_in_progress":
-		return fmt.Errorf("%w\nOne run at a time per application. Wait for the other to finish, or read it "+
-			"with --last once it has", err)
-	}
-	return diagErr(err)
-}
-
-func perfLastErr(err error) error {
-	var re *RouterError
-	if err != nil && errors.As(err, &re) && (re.Code == "no_perf_run_yet" || re.Status == 404) {
-		return fmt.Errorf("%w\nNothing has been measured in this process yet, and the cache does not survive "+
-			"a restart. Drop --last to measure now", err)
-	}
-	return diagErr(err)
 }
 
 func newModelConfigCommand(f *cmdutil.Factory, how localAddressing) *cobra.Command {
@@ -514,13 +324,14 @@ func writeFlat(t *table, prefix string, doc map[string]any) {
 }
 
 type localEndpoint struct {
-	Method      string   `json:"method"`
-	Path        string   `json:"path"`
-	Category    string   `json:"category"`
-	Group       string   `json:"group,omitempty"`
-	Description string   `json:"description"`
-	Available   bool     `json:"available"`
-	Reasons     []string `json:"reasons,omitempty"`
+	Method         string   `json:"method"`
+	Path           string   `json:"path"`
+	Category       string   `json:"category"`
+	Group          string   `json:"group,omitempty"`
+	Description    string   `json:"description"`
+	Available      bool     `json:"available"`
+	AsyncSupported *bool    `json:"async_supported,omitempty"`
+	Reasons        []string `json:"reasons,omitempty"`
 }
 
 func newModelEndpointsCommand(f *cmdutil.Factory, how localAddressing) *cobra.Command {
@@ -610,7 +421,19 @@ func renderLocalEndpoints(w io.Writer, engineKind string, rows []localEndpoint, 
 		}
 		return rows[i].Path < rows[j].Path
 	})
-	t := newTable(w, "METHOD", "PATH", "CATEGORY", "SERVED", "WHY NOT")
+	hasAsyncMetadata := false
+	for _, r := range rows {
+		if r.AsyncSupported != nil {
+			hasAsyncMetadata = true
+			break
+		}
+	}
+	headers := []string{"METHOD", "PATH", "CATEGORY", "SERVED"}
+	if hasAsyncMetadata {
+		headers = append(headers, "ASYNC")
+	}
+	headers = append(headers, "WHY NOT")
+	t := newTable(w, headers...)
 	for _, r := range rows {
 		why := ""
 		if !r.Available {
@@ -619,7 +442,16 @@ func renderLocalEndpoints(w io.Writer, engineKind string, rows []localEndpoint, 
 				why = "no reason given"
 			}
 		}
-		t.row(r.Method, r.Path, r.Category, boolStr(r.Available), why)
+		values := []string{r.Method, r.Path, r.Category, boolStr(r.Available)}
+		if hasAsyncMetadata {
+			async := "-"
+			if r.AsyncSupported != nil {
+				async = boolStr(*r.AsyncSupported)
+			}
+			values = append(values, async)
+		}
+		values = append(values, why)
+		t.row(values...)
 	}
 	return t.flush()
 }

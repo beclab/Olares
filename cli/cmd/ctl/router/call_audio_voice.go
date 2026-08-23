@@ -123,28 +123,28 @@ func runCallClone(ctx context.Context, f *cmdutil.Factory, refAudio string, opts
 		return fmt.Errorf("audio would be written to the terminal; name a file with --out, " +
 			"pipe the output, or submit it with --async")
 	}
-	pc, err := prepare(ctx, f)
+	if err := checkAudioUploadSize(refAudio, os.Stderr); err != nil {
+		return err
+	}
+	pc, err := prepareLongRequest(ctx, f)
 	if err != nil {
 		return err
 	}
 	dp := dataPlane(pc, opts.APIKey)
 
-	fields := map[string]string{
-		"model":           strings.TrimSpace(opts.Model),
+	fields := audioMultipartFields(opts.Model, opts.Async, map[string]string{
 		"input":           opts.Text,
 		"ref_text":        strings.TrimSpace(opts.RefText),
 		"language":        strings.TrimSpace(opts.Language),
 		"response_format": strings.TrimSpace(opts.RespFormat),
-	}
-	if opts.Async {
-		fields[audioAsyncFormField] = "1"
-	}
+	})
 	body, contentType, err := multipartFile(refAudio, "file", fields)
 	if err != nil {
 		return err
 	}
 	return streamAudioAnswer(ctx, dp, audioAnswer{
-		Method: "POST", Route: epAudioSpeechClone, Body: body, ContentType: contentType,
+		Method: "POST", Route: audioRequestPath(epAudioSpeechClone, opts.Model, opts.Async),
+		Body: body, ContentType: contentType,
 		Model: opts.Model, Out: opts.Out, Async: opts.Async, Format: opts.Format,
 	})
 }
@@ -268,18 +268,30 @@ func runCallDialogue(ctx context.Context, f *cmdutil.Factory, scriptPath string,
 	if err != nil {
 		return err
 	}
-	pc, err := prepare(ctx, f)
-	if err != nil {
-		return err
-	}
-	dp := dataPlane(pc, opts.APIKey)
 	buf, err := json.Marshal(req)
 	if err != nil {
 		return fmt.Errorf("marshal request body: %w", err)
 	}
+	return submitDialogue(ctx, f, opts, buf)
+}
+
+func submitDialogue(ctx context.Context, f *cmdutil.Factory, opts dialogueOptions, body []byte) error {
+	return submitDialogueBody(ctx, f, opts, bytes.NewReader(body), int64(len(body)))
+}
+
+func submitDialogueBody(ctx context.Context, f *cmdutil.Factory, opts dialogueOptions,
+	body io.Reader, size int64) error {
+	if err := checkDialogueRequestSize(size, os.Stderr); err != nil {
+		return err
+	}
+	pc, err := prepareLongRequest(ctx, f)
+	if err != nil {
+		return err
+	}
+	dp := dataPlane(pc, opts.APIKey)
 	return streamAudioAnswer(ctx, dp, audioAnswer{
-		Method: "POST", Route: asyncQuery(epAudioSpeech, opts.Async),
-		Body: bytes.NewReader(buf), ContentType: "application/json",
+		Method: "POST", Route: audioRequestPath(epAudioSpeech, opts.Model, opts.Async),
+		Body: body, ContentType: "application/json",
 		Model: opts.Model, Out: opts.Out, Async: opts.Async, Format: opts.Format,
 		// --per-turn is JSON on a route that usually answers audio, so the
 		// answer is read rather than streamed to a file.

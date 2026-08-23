@@ -87,7 +87,7 @@ olares-cli router model progress <model>
 - **A download that failed or stalled** — `router model retry <model>`.
 - **An engine alive with no model loaded** — the weights or the card are wrong for this engine; `router model spec show <model>` reads the card and `router model spec edit` corrects it, relaunching the engine when the flags change.
 - **An engine that was answering and stopped** — `router model restart <model>` relaunches the process on the card it already has, which is the fix when the configuration is right and the process is not.
-- **A model answering, but slowly** — `router model diag gpu <model>` says how much is resident and `router model diag perf <model>` measures it. A model mostly on the CPU is the common answer.
+- **A model answering, but slowly** — `router model diag gpu <model>` says how much is resident. A model mostly on the CPU is the common answer.
 - **An install that never finished** — `router provider get <app>` reports where the application stalled, and `olares-cli market status <app>` carries the Market's own reason.
 
 ## Then below it

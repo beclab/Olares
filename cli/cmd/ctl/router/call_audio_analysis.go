@@ -72,6 +72,16 @@ type alignResponse struct {
 	} `json:"units"`
 }
 
+type speakerEmbeddingData struct {
+	Embedding []float64 `json:"embedding"`
+}
+
+type speakerEmbeddingResponse struct {
+	Model     string                 `json:"model"`
+	Embedding []float64              `json:"embedding,omitempty"`
+	Data      []speakerEmbeddingData `json:"data,omitempty"`
+}
+
 func newCallVADCommand(f *cmdutil.Factory) *cobra.Command {
 	var (
 		output    string
@@ -213,6 +223,43 @@ Examples:
 	return cmd
 }
 
+func newCallSpeakerEmbedCommand(f *cmdutil.Factory) *cobra.Command {
+	var (
+		output string
+		model  string
+		async  bool
+		apiKey string
+	)
+	cmd := &cobra.Command{
+		Use:   "speaker-embed <audio-file>",
+		Short: "turn a voice recording into an embedding vector",
+		Long: `Create a speaker embedding from a voice recording.
+
+The vector identifies voice characteristics for engines that compare or reuse
+speaker representations. Leaving --model off resolves default-speaker-embed.
+
+Examples:
+  olares-cli router call speaker-embed voice.wav
+  olares-cli router call speaker-embed voice.flac --async -o json
+`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(c *cobra.Command, args []string) error {
+			resolved := callModel(model, categorySpeakerEmbed)
+			return runAudioAnalysis(c.Context(), f, audioAnalysis{
+				Path: args[0], Route: epAudioSpeakerEmbeddings,
+				Fields: map[string]string{"model": resolved},
+				Async:  async, Model: resolved, APIKey: apiKey, OutputIn: output,
+				Render: renderSpeakerEmbedding,
+			})
+		},
+	}
+	cmd.Flags().StringVar(&model, "model", "", modelFlagHelp(categorySpeakerEmbed))
+	cmd.Flags().BoolVar(&async, "async", false, audioAsyncFlagUsage)
+	cmd.Flags().StringVar(&apiKey, "api-key", "", dataPlaneKeyFlagUsage)
+	addOutputFlag(cmd, &output)
+	return cmd
+}
+
 func newCallAlignCommand(f *cmdutil.Factory) *cobra.Command {
 	var (
 		output   string
@@ -348,27 +395,21 @@ func runAudioAnalysis(ctx context.Context, f *cmdutil.Factory, a audioAnalysis) 
 	if err != nil {
 		return err
 	}
-	pc, err := prepare(ctx, f)
+	if err := checkAudioUploadSize(a.Path, os.Stderr); err != nil {
+		return err
+	}
+	pc, err := prepareLongRequest(ctx, f)
 	if err != nil {
 		return err
 	}
 	dp := dataPlane(pc, a.APIKey)
-	fields := a.Fields
-	if a.Async {
-		// These are multipart routes, so the flag is a field. As a query
-		// parameter it would be read by nothing and the call would simply
-		// wait — see the note at the top of call_audio_task.go.
-		fields = make(map[string]string, len(a.Fields)+1)
-		for k, v := range a.Fields {
-			fields[k] = v
-		}
-		fields[audioAsyncFormField] = "1"
-	}
+	fields := audioMultipartFields(a.Model, a.Async, a.Fields)
 	body, contentType, err := multipartFile(a.Path, "file", fields)
 	if err != nil {
 		return err
 	}
-	resp, err := dp.do(ctx, "POST", a.Route, body, contentType)
+	route := audioRequestPath(a.Route, a.Model, a.Async)
+	resp, err := dp.do(ctx, "POST", route, body, contentType)
 	if err != nil {
 		return err
 	}
@@ -378,15 +419,40 @@ func runAudioAnalysis(ctx context.Context, f *cmdutil.Factory, a audioAnalysis) 
 		return fmt.Errorf("read the answer: %w", err)
 	}
 	if resp.StatusCode/100 != 2 {
-		return callErr(dp.formatErr("POST", a.Route, resp.StatusCode, raw))
+		return callErr(dp.formatErr("POST", route, resp.StatusCode, raw))
 	}
 	if task, ok := receiptFrom(resp.StatusCode, raw); ok {
 		return printReceipt(os.Stdout, task, a.Model, format)
 	}
+	return renderAudioAnalysisAnswer(os.Stdout, format, raw, a.Render)
+}
+
+func renderAudioAnalysisAnswer(w io.Writer, format Format, raw []byte,
+	render func(io.Writer, []byte) error) error {
 	if format == FormatJSON {
-		return printRawJSON(os.Stdout, raw)
+		return printRawJSON(w, raw)
 	}
-	return a.Render(os.Stdout, raw)
+	return render(w, raw)
+}
+
+func renderSpeakerEmbedding(w io.Writer, raw []byte) error {
+	var resp speakerEmbeddingResponse
+	if err := decodeAudioAnalysis(raw, &resp); err != nil {
+		return err
+	}
+	vector := resp.Embedding
+	if len(vector) == 0 && len(resp.Data) > 0 {
+		vector = resp.Data[0].Embedding
+	}
+	if len(vector) == 0 {
+		return fmt.Errorf("the engine returned no speaker embedding")
+	}
+	t := newTable(w)
+	t.row("MODEL", nonEmpty(resp.Model))
+	t.row("DIMENSIONS", strconv.Itoa(len(vector)))
+	t.row("L2 NORM", fmt.Sprintf("%.3f", l2Norm(vector)))
+	t.row("FIRST COMPONENTS", headComponents(vector, 3))
+	return t.flush()
 }
 
 func renderVAD(w io.Writer, raw []byte) error {
@@ -497,24 +563,23 @@ func runCallEnhance(ctx context.Context, f *cmdutil.Factory, path string, opts e
 	if strings.TrimSpace(opts.Out) == "" && !opts.Async && isTerminal(os.Stdout) {
 		return fmt.Errorf("audio would be written to the terminal; name a file with --out, or pipe the output")
 	}
-	pc, err := prepare(ctx, f)
+	if err := checkAudioUploadSize(path, os.Stderr); err != nil {
+		return err
+	}
+	pc, err := prepareLongRequest(ctx, f)
 	if err != nil {
 		return err
 	}
 	dp := dataPlane(pc, opts.APIKey)
-	fields := map[string]string{
-		"model":  strings.TrimSpace(opts.Model),
+	fields := audioMultipartFields(opts.Model, opts.Async, map[string]string{
 		"format": strings.TrimSpace(opts.Format),
-	}
-	if opts.Async {
-		fields[audioAsyncFormField] = "1"
-	}
+	})
 	body, contentType, err := multipartFile(path, "file", fields)
 	if err != nil {
 		return err
 	}
 	return streamAudioAnswer(ctx, dp, audioAnswer{
-		Method: "POST", Route: epAudioEnhance,
+		Method: "POST", Route: audioRequestPath(epAudioEnhance, opts.Model, opts.Async),
 		Body: body, ContentType: contentType,
 		Model: opts.Model, Out: opts.Out, Async: opts.Async, Format: format,
 	})
