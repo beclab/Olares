@@ -355,6 +355,15 @@ func (m *InstallOsSystemModule) Init() {
 		Action: &storage.CreateAppCommonDir{},
 	}
 
+	// InstallOsSystem reads whether the declaration is published to decide the
+	// ensureApps Helm value, so publishing has to happen before it. A fresh
+	// install that skipped this reached Market without the declaration, and
+	// Market cannot know an app the OS requires until an upgrade publishes it.
+	publishMarketEnsureApps := &task.LocalTask{
+		Name:   "PublishMarketEnsureApps",
+		Action: new(preinstall.PublishEnsureAppsAction),
+	}
+
 	installOsSystem := &task.LocalTask{
 		Name:   "InstallOsSystem",
 		Action: &InstallOsSystem{},
@@ -394,6 +403,7 @@ func (m *InstallOsSystemModule) Init() {
 		createUserEnvConfigMap,
 		createSharedLibDir,
 		createAppCommonDir,
+		publishMarketEnsureApps,
 		installOsSystem,
 		createBackupConfigMap,
 		checkSystemService,
