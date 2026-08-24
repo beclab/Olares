@@ -817,7 +817,16 @@
                     "upgradeType": "tailscale-control-protocol"
                   }
                 ]
-              }
+              },
+              "requestHeadersToAdd": [
+                {
+                  "header": {
+                    "key": "X-BFL-USER",
+                    "value": "bob"
+                  },
+                  "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+                }
+              ]
             }
           ],
           "typedPerFilterConfig": {
@@ -949,7 +958,16 @@
                     "upgradeType": "tailscale-control-protocol"
                   }
                 ]
-              }
+              },
+              "requestHeadersToAdd": [
+                {
+                  "header": {
+                    "key": "X-BFL-USER",
+                    "value": "bob"
+                  },
+                  "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+                }
+              ]
             }
           ],
           "typedPerFilterConfig": {
@@ -1190,7 +1208,16 @@
                     "upgradeType": "tailscale-control-protocol"
                   }
                 ]
-              }
+              },
+              "requestHeadersToAdd": [
+                {
+                  "header": {
+                    "key": "X-BFL-USER",
+                    "value": "bob"
+                  },
+                  "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+                }
+              ]
             }
           ],
           "typedPerFilterConfig": {
@@ -1322,7 +1349,16 @@
                     "upgradeType": "tailscale-control-protocol"
                   }
                 ]
-              }
+              },
+              "requestHeadersToAdd": [
+                {
+                  "header": {
+                    "key": "X-BFL-USER",
+                    "value": "bob"
+                  },
+                  "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
+                }
+              ]
             }
           ],
           "typedPerFilterConfig": {

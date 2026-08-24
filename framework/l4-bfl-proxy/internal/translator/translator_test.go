@@ -920,11 +920,15 @@ func TestBuildSystemVirtualHost_DesktopWizardVerify_AuthSkipped(t *testing.T) {
 
 	wizard := tr.buildSystemVirtualHost(user, systemServiceDef{Name: "wizard", SvcFormat: "wizard.%s.svc.cluster.local"}, "alice.example.com", false, user.Namespace, clusterSet)
 	assert.Nil(t, wizard.Routes[0].ExtAuth, "wizard must not attach ExtAuth (pre-auth activation)")
-	assert.Nil(t, wizard.Routes[0].RequestHeaders, "wizard must not stamp outbound X-BFL-USER")
+	require.NotNil(t, wizard.Routes[0].RequestHeaders)
+	assert.Equal(t, "alice", wizard.Routes[0].RequestHeaders["X-BFL-USER"],
+		"wizard must stamp zone-owner X-BFL-USER for Authelia Bridge (no ExtAuth)")
 
 	auth := tr.buildSystemVirtualHost(user, systemServiceDef{Name: "auth", SvcFormat: "authelia-svc.%s.svc.cluster.local"}, "alice.example.com", false, user.Namespace, clusterSet)
 	assert.Nil(t, auth.Routes[0].ExtAuth, "auth IdP must not attach ExtAuth")
-	assert.Nil(t, auth.Routes[0].RequestHeaders, "auth must not stamp outbound X-BFL-USER")
+	require.NotNil(t, auth.Routes[0].RequestHeaders)
+	assert.Equal(t, "alice", auth.Routes[0].RequestHeaders["X-BFL-USER"],
+		"auth must stamp zone-owner X-BFL-USER for Authelia Bridge (no ExtAuth)")
 }
 
 func TestBuildUserVirtualHosts_ProfileRootVerify(t *testing.T) {
