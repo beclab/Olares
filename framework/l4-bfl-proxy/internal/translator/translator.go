@@ -801,6 +801,18 @@ func (t *Translator) buildSystemVirtualHost(user *message.UserInfo, def systemSe
 	// desktop is system human HTTP and must use Authelia /api/verify/.
 	// wizard is pre-auth activation UI — no ExtAuth (cookie chicken-egg).
 	// auth is the IdP itself — do not attach ExtAuth (loop risk).
+	//
+	// auth/wizard have no ExtAuth, so Authelia Bridge never receives the
+	// ExtAuth HeadersToAdd owner stamp. Stamp zone-owner X-BFL-USER on those
+	// routes only (after early client-header strip) so /api/firstfactor and
+	// similar IdP APIs can resolve the user. desktop keeps no IR stamp:
+	// ExtAuth supplies the bridge header; outbound session identity comes
+	// from Authelia on allow.
+	if def.Name == "auth" || def.Name == "wizard" {
+		route.RequestHeaders = map[string]string{
+			"X-BFL-USER": user.Name,
+		}
+	}
 	if def.Name == "desktop" {
 		route.ExtAuth = buildAppExtAuthConfig(user)
 	}
