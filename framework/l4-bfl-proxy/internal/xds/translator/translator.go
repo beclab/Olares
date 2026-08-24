@@ -15,8 +15,10 @@ import (
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	rbac_configv3 "github.com/envoyproxy/go-control-plane/envoy/config/rbac/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	mutationrulesv3 "github.com/envoyproxy/go-control-plane/envoy/config/common/mutation_rules/v3"
 	accesslogfilev3 "github.com/envoyproxy/go-control-plane/envoy/extensions/access_loggers/file/v3"
 	extauthzv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/ext_authz/v3"
+	headermutationv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/header_mutation/v3"
 	luav3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/lua/v3"
 	rbac_filterv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/rbac/v3"
 	routerv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/router/v3"
@@ -25,6 +27,7 @@ import (
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	tcpproxyv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/tcp_proxy/v3"
 	udpproxyv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/udp/udp_proxy/v3"
+	earlyheadermutationv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/early_header_mutation/header_mutation/v3"
 	ppupstreamv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/proxy_protocol/v3"
 	rawtransportv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/raw_buffer/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
@@ -188,17 +191,65 @@ func SetTimeouts(tcpIdle, httpStream, connect, route, clusterIdle time.Duration)
 	clusterIdleTimeout = clusterIdle
 }
 
-// spoofableAppIdentityHeadersToRemove lists north-south client headers that
-// must not reach entrance Services as client-supplied values. Envoy matches
-// these case-insensitively.
-//
-// x-bfl-user is force-removed here, then re-injected from the trusted viewer
-// on each route via RequestHeadersToAdd (OVERWRITE_IF_EXISTS_OR_ADD).
-// x-caller-appid is removed and never rewritten on this L4 path.
-func spoofableAppIdentityHeadersToRemove() []string {
+// clientSpoofableIdentityHeaders are stripped at HCM early mutation (before
+// any HTTP filter, including ExtAuth) so forged client values never enter the
+// filter chain or reach Authelia/upstream. Envoy matches case-insensitively.
+func clientSpoofableIdentityHeaders() []string {
 	return []string{
 		"x-bfl-user",
 		"x-caller-appid",
+	}
+}
+
+// spoofableAppIdentityHeadersToRemove is the RDS RequestHeadersToRemove list.
+// x-bfl-user is intentionally absent: Authelia may set it via
+// AllowedUpstreamHeaders after ExtAuth allow; an RDS remove would strip that
+// session identity. x-caller-appid stays here as a second strip (never
+// reinjected on this path).
+func spoofableAppIdentityHeadersToRemove() []string {
+	return []string{
+		"x-caller-appid",
+	}
+}
+
+const earlyHeaderMutationExtensionName = "envoy.http.early_header_mutation.header_mutation"
+
+// buildEarlyClientIdentityStripExtensions strips forged north-south identity
+// headers before the HTTP filter chain runs.
+func buildEarlyClientIdentityStripExtensions() []*corev3.TypedExtensionConfig {
+	mutations := make([]*mutationrulesv3.HeaderMutation, 0, len(clientSpoofableIdentityHeaders()))
+	for _, h := range clientSpoofableIdentityHeaders() {
+		mutations = append(mutations, &mutationrulesv3.HeaderMutation{
+			Action: &mutationrulesv3.HeaderMutation_Remove{Remove: h},
+		})
+	}
+	return []*corev3.TypedExtensionConfig{{
+		Name: earlyHeaderMutationExtensionName,
+		TypedConfig: mustAny(&earlyheadermutationv3.HeaderMutation{
+			Mutations: mutations,
+		}),
+	}}
+}
+
+// buildClientIdentityStripFilter strips the same forged headers again as the
+// first HTTP filter (before ExtAuth) so any path that skipped early mutation
+// still cannot carry client-supplied identity into ExtAuth or upstream.
+func buildClientIdentityStripFilter() *hcmv3.HttpFilter {
+	mutations := make([]*mutationrulesv3.HeaderMutation, 0, len(clientSpoofableIdentityHeaders()))
+	for _, h := range clientSpoofableIdentityHeaders() {
+		mutations = append(mutations, &mutationrulesv3.HeaderMutation{
+			Action: &mutationrulesv3.HeaderMutation_Remove{Remove: h},
+		})
+	}
+	return &hcmv3.HttpFilter{
+		Name: "envoy.filters.http.header_mutation",
+		ConfigType: &hcmv3.HttpFilter_TypedConfig{
+			TypedConfig: mustAny(&headermutationv3.HeaderMutation{
+				Mutations: &headermutationv3.Mutations{
+					RequestMutations: mutations,
+				},
+			}),
+		},
 	}
 }
 
@@ -584,11 +635,11 @@ func buildMultiUserHTTPSListener(port uint32, proxyProtocol bool, httpListeners 
 				{Header: &corev3.HeaderValue{Key: "X-Real-IP", Value: "%DOWNSTREAM_REMOTE_ADDRESS_WITHOUT_PORT%"}, AppendAction: corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD},
 				{Header: &corev3.HeaderValue{Key: "X-Original-Forwarded-For", Value: "%REQ(X-FORWARDED-FOR)%"}, AppendAction: corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD},
 			},
-			// Force-delete client identity headers at RDS, then re-inject
-			// X-BFL-USER on each route (see translateRoute). Default Envoy
-			// order is most→least specific (route add before RDS remove),
-			// which would strip the reinjected header; reverse so RDS remove
-			// runs first and route add wins (envoy#5858).
+			// Client identity forgeries are stripped in HCM early mutation + a
+			// HeaderMutation filter before ExtAuth. RDS must not remove
+			// x-bfl-user here: Authelia sets session identity via
+			// AllowedUpstreamHeaders after allow, and a late RDS remove would
+			// drop it. x-caller-appid stays (never reinjected on this path).
 			MostSpecificHeaderMutationsWins: true,
 			RequestHeadersToRemove:          spoofableAppIdentityHeadersToRemove(),
 		}
@@ -608,7 +659,7 @@ func buildMultiUserHTTPSListener(port uint32, proxyProtocol bool, httpListeners 
 		// toggles deny_all, only the per-VH RBAC overrides in the RDS route
 		// config change — the filter chain itself is byte-identical → no
 		// Envoy listener drain on deny_all policy switch.
-		httpFilters := []*hcmv3.HttpFilter{}
+		httpFilters := []*hcmv3.HttpFilter{buildClientIdentityStripFilter()}
 		extAuthzFilter := buildExtAuthzFilter(autheliaClusterName, clusterMap, httpIR.UserName)
 		if extAuthzFilter != nil {
 			httpFilters = append(httpFilters, extAuthzFilter)
@@ -648,7 +699,8 @@ func buildMultiUserHTTPSListener(port uint32, proxyProtocol bool, httpListeners 
 					},
 				},
 			},
-			HttpFilters: httpFilters,
+			HttpFilters:                    httpFilters,
+			EarlyHeaderMutationExtensions:  buildEarlyClientIdentityStripExtensions(),
 			UpgradeConfigs: []*hcmv3.HttpConnectionManager_UpgradeConfig{
 				{UpgradeType: "websocket"},
 				{UpgradeType: "tailscale-control-protocol"},
@@ -1016,6 +1068,7 @@ var (
 		Patterns: []*matcherv3.StringMatcher{
 			{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "authorization"}},
 			{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "proxy-authorization"}},
+			{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "x-bfl-user"}},
 			{MatchPattern: &matcherv3.StringMatcher_Prefix{Prefix: "remote-"}},
 			{MatchPattern: &matcherv3.StringMatcher_Prefix{Prefix: "authelia-"}},
 		},
