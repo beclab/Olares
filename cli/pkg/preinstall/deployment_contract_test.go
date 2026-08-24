@@ -18,32 +18,25 @@ func TestMarketDeploymentMountsPreinstallReadOnlyBesideWritableData(t *testing.T
 	container := between(t, deployment, "      - name: appstore-backend\n", "      volumes:\n")
 	volumes := after(t, deployment, "      volumes:\n")
 
-	// The two preinstall variables are rendered only for an installer that
-	// published a bundle, so an ordinary install does not have Market open an
-	// empty mount on every boot. They are asserted as one block for that
-	// reason: an enabled flag without a directory turns the importer on with
-	// nothing to read.
-	preinstallEnv := "{{ if .Values.preinstall }}\n" +
-		"          - name: PREINSTALL_ENABLED\n            value: 'true'\n" +
-		"          - name: PREINSTALL_BUNDLE_DIR\n            value: /opt/app/preinstall\n" +
-		"{{ end }}"
-	ensureEnv := "{{ if .Values.ensureApps }}\n" +
-		"          - name: ENSURE_APPS_FILE\n            value: /opt/app/ensure/ensure-apps.json\n" +
-		"{{ end }}"
+	// The directory is rendered unconditionally. Whether this device has a
+	// declaration for the version it runs is Market's question to answer from
+	// the directory itself, and a Helm gate could only answer it as of the last
+	// time the chart was rendered -- which is before the upgrade that publishes
+	// the next one.
 	for _, required := range []string{
-		preinstallEnv,
-		ensureEnv,
+		"- name: PREINSTALL_DIR\n            value: /opt/app/preinstall",
 		"- name: OLARES_VERSION\n            value: \"1.12.7\"",
 		"- name: opt-data\n            mountPath: /opt/app/data",
 		"- name: market-preinstall\n            mountPath: /opt/app/preinstall\n            readOnly: true",
-		"- name: market-ensure\n            mountPath: /opt/app/ensure\n            readOnly: true",
 	} {
 		if !strings.Contains(container, required) {
 			t.Errorf("appstore-backend container missing contract:\n%s", required)
 		}
 	}
-	if strings.Count(container, "PREINSTALL_ENABLED") != 1 {
-		t.Errorf("PREINSTALL_ENABLED must be rendered from one gated block")
+	for _, forbidden := range []string{"PREINSTALL_ENABLED", "PREINSTALL_BUNDLE_DIR", "ENSURE_APPS_FILE", "market-ensure"} {
+		if strings.Contains(deployment, forbidden) {
+			t.Errorf("market deployment still carries the retired %q", forbidden)
+		}
 	}
 	// The mount is derived from RuntimeRelativeDir so that moving the publish
 	// target in the CLI cannot silently diverge from what the pod mounts.
@@ -51,14 +44,9 @@ func TestMarketDeploymentMountsPreinstallReadOnlyBesideWritableData(t *testing.T
 		"- name: market-preinstall\n        hostPath:\n          path: '{{ .Values.rootPath }}/%s'\n          type: DirectoryOrCreate",
 		RuntimeRelativeDir,
 	)
-	ensureVolume := fmt.Sprintf(
-		"- name: market-ensure\n        hostPath:\n          path: '{{ .Values.rootPath }}/%s'\n          type: DirectoryOrCreate",
-		EnsureRuntimeRelativeDir,
-	)
 	for _, required := range []string{
 		"- name: opt-data\n        hostPath:\n          path: '{{ .Values.rootPath }}/userdata/Cache/chartrepo'\n          type: DirectoryOrCreate",
 		preinstallVolume,
-		ensureVolume,
 	} {
 		if !strings.Contains(volumes, required) {
 			t.Errorf("market deployment volumes missing contract:\n%s", required)
@@ -67,10 +55,6 @@ func TestMarketDeploymentMountsPreinstallReadOnlyBesideWritableData(t *testing.T
 	if strings.Count(container, "- name: market-preinstall\n") != 1 ||
 		strings.Count(volumes, "- name: market-preinstall\n") != 1 {
 		t.Errorf("market-preinstall must have one backend mount and one deployment volume")
-	}
-	if strings.Count(container, "- name: market-ensure\n") != 1 ||
-		strings.Count(volumes, "- name: market-ensure\n") != 1 {
-		t.Errorf("market-ensure must have one backend mount and one deployment volume")
 	}
 }
 
@@ -98,18 +82,17 @@ func TestMarketDeploymentPinsV2SourceAPIPaths(t *testing.T) {
 
 func TestMarketPreinstallDeploymentPublishesManifestsButNotPayloads(t *testing.T) {
 	installerDir, baseDir := writeStaticBundle(t)
-	artifact, _ := addMaterializeArtifactFixture(t, installerDir)
-	if err := Materialize(installerDir, baseDir, ProfileSelections{}); err != nil {
-		t.Fatalf("Materialize() error = %v", err)
+	artifact, _ := addPublishArtifactFixture(t, installerDir)
+	if err := Publish(installerDir, baseDir, testOSVersion, ProfileSelections{}); err != nil {
+		t.Fatalf("Publish() error = %v", err)
 	}
 	target := filepath.Join(baseDir, RuntimeRelativeDir)
 	t.Cleanup(func() { _ = makeWritable(target) })
 
 	allowed := map[string]bool{
-		BundleFileName:  true,
-		ProfileFileName: true,
-		"charts":        true,
-		"manifests":     true,
+		DeclarationFileName(testOSVersion): true,
+		"charts":                           true,
+		"manifests":                        true,
 	}
 	entries, err := os.ReadDir(target)
 	if err != nil {

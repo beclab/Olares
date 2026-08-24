@@ -30,12 +30,11 @@ func CheckStaticBundle(dir string, opts CheckOptions) error {
 	}
 	defer root.Close()
 
-	_, bundle, err := decodeBundleRoot(root)
+	bundle, err := decodeBundleRoot(root)
 	if err != nil {
 		return err
 	}
-	profile := buildProfile(bundle, ProfileSelections{})
-	if err := Validate(bundle, profile); err != nil {
+	if err := Validate(bundle); err != nil {
 		return err
 	}
 	if err := preflightCharts(root, bundle); err != nil {
@@ -70,7 +69,7 @@ func CheckStaticBundle(dir string, opts CheckOptions) error {
 }
 
 func verifyChartDigest(root *os.Root, app BundleAppV1, totalRemaining int64) (int64, error) {
-	spec, err := chartVerifiedCopy(root, app, totalRemaining)
+	spec, err := chartVerifiedCopy(root, app.Chart, app.ChartSHA256, totalRemaining)
 	if err != nil {
 		return 0, err
 	}

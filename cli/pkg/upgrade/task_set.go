@@ -43,6 +43,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/storage"
 	"github.com/beclab/Olares/cli/pkg/terminus"
 	"github.com/beclab/Olares/cli/pkg/utils"
+	"github.com/beclab/Olares/cli/version"
 	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
@@ -64,11 +65,23 @@ import (
 
 const cacheRebootNeeded = "reboot.needed"
 
-func publishMarketEnsureApps() []task.Interface {
+// publishMarketPreinstallDeclaration declares what this version expects, and
+// runs on every upgrade rather than on the one that introduced the mechanism.
+// Each release has a declaration of its own, so a release that publishes none
+// leaves Market with nothing to maintain after the upgrade.
+//
+// No installer directory is given: an upgrade brings no medium, so the
+// declaration names the catalog apps of the version being upgraded to and
+// nothing local. That version is this binary's, which is what performs the
+// upgrade.
+func publishMarketPreinstallDeclaration() []task.Interface {
 	return []task.Interface{
 		&task.LocalTask{
-			Name:   "PublishMarketEnsureApps",
-			Action: new(preinstall.PublishEnsureAppsAction),
+			Name: "PublishMarketPreinstallDeclaration",
+			Action: &preinstall.PublishDeclarationAction{
+				RootDir:   storage.OlaresRootDir,
+				OSVersion: version.VERSION,
+			},
 		},
 	}
 }

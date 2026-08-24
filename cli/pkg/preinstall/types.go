@@ -3,20 +3,20 @@ package preinstall
 import "encoding/json"
 
 const (
+	// SupportedSchemaVersion is the schema of the static bundle on the medium.
+	// It is not the schema of what this program publishes: the bundle is an
+	// input written by the image build, the declaration is the output Market
+	// reads, and the two version independently.
 	SupportedSchemaVersion = "1"
 	OfficialSourceID       = "market.olares"
 	BundleFileName         = "bundle.json"
-	ProfileFileName        = "install-profile.json"
 	StaticRelativeDir      = "preinstall/market"
 	// RuntimeRelativeDir is relative to the Olares root directory
 	// (storage.OlaresRootDir), which is what the market chart renders as
 	// .Values.rootPath for its read-only hostPath mount. It is not relative to
 	// the installer base directory.
 	RuntimeRelativeDir             = "userdata/Cache/market-preinstall"
-	EnsureRuntimeRelativeDir       = "userdata/Cache/market-ensure"
-	EnsureAppsFileName             = "ensure-apps.json"
 	MaxBundleJSONBytes             = 8 << 20
-	MaxProfileJSONBytes            = 8 << 20
 	MaxBundleApps                  = 256
 	MaxChartBytes            int64 = 256 << 20
 	MaxTotalChartBytes             = 1 << 30
@@ -82,23 +82,10 @@ type ArtifactManifestEntryV1 struct {
 	Target string `json:"target,omitempty"`
 }
 
-type InstallProfileV1 struct {
-	SchemaVersion   string                `json:"schemaVersion"`
-	HardwareProfile string                `json:"hardwareProfile,omitempty"`
-	Apps            []InstallProfileAppV1 `json:"apps"`
-}
-
-type InstallProfileAppV1 struct {
-	AppID           string            `json:"appId"`
-	SelectedGPUType string            `json:"selectedGpuType,omitempty"`
-	Envs            map[string]string `json:"envs,omitempty"`
-}
-
-type ContractV1 struct {
-	Bundle  BundleV1
-	Profile InstallProfileV1
-}
-
+// ProfileSelections is what the installer decided while running: the hardware it
+// found and anything the operator chose per app. It is folded into the published
+// declaration rather than written beside it, because Market has no use for the
+// choices that were available and not taken.
 type ProfileSelections struct {
 	HardwareProfile string
 	DetectedGPUType string

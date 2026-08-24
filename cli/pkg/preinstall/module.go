@@ -8,54 +8,48 @@ import (
 	"github.com/beclab/Olares/cli/pkg/storage"
 )
 
-type MaterializeModule struct {
+type PublishDeclarationModule struct {
 	common.KubeModule
 	InstallerDir      string
 	RootDir           string
+	OSVersion         string
 	ProfileSelections ProfileSelections
 }
 
-func (m *MaterializeModule) Init() {
-	m.Name = "MaterializeMarketPreinstall"
+func (m *PublishDeclarationModule) Init() {
+	m.Name = "PublishMarketPreinstallDeclaration"
 	m.Tasks = []task.Interface{
 		&task.LocalTask{
-			Name: "MaterializeMarketPreinstall",
-			Action: &MaterializeAction{
+			Name: "PublishMarketPreinstallDeclaration",
+			Action: &PublishDeclarationAction{
 				InstallerDir:      m.InstallerDir,
 				RootDir:           m.RootDir,
+				OSVersion:         m.OSVersion,
 				ProfileSelections: m.ProfileSelections,
 			},
 		},
 	}
 }
 
-type MaterializeAction struct {
+// PublishDeclarationAction declares what this version expects a device to have.
+//
+// InstallerDir is the one field whose emptiness means something: no medium was
+// brought, which is the ordinary shape of an upgrade, and the catalog apps of the
+// release being installed are declared all the same. The other two are required
+// -- Publish refuses an empty version, and an empty root would write the
+// declaration where nothing mounts it -- so every caller states them rather than
+// falling through to a default here, where the caller's reason for the value is
+// no longer visible.
+type PublishDeclarationAction struct {
 	action.BaseAction
 	InstallerDir      string
 	RootDir           string
+	OSVersion         string
 	ProfileSelections ProfileSelections
 }
 
-func (a *MaterializeAction) Execute(_ connector.Runtime) error {
-	rootDir := a.RootDir
-	if rootDir == "" {
-		rootDir = storage.OlaresRootDir
-	}
-	return Materialize(a.InstallerDir, rootDir, a.ProfileSelections)
-}
-
-// PublishEnsureAppsAction publishes the official apps required after an OS upgrade.
-type PublishEnsureAppsAction struct {
-	action.BaseAction
-	RootDir string
-}
-
-func (a *PublishEnsureAppsAction) Execute(_ connector.Runtime) error {
-	rootDir := a.RootDir
-	if rootDir == "" {
-		rootDir = storage.OlaresRootDir
-	}
-	return PublishEnsureApps(rootDir)
+func (a *PublishDeclarationAction) Execute(_ connector.Runtime) error {
+	return Publish(a.InstallerDir, a.RootDir, a.OSVersion, a.ProfileSelections)
 }
 
 type HFCacheMaterializeModule struct {
