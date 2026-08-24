@@ -58,7 +58,7 @@ head:
 1. 预检、下载、准备三个阶段照常。
 2. `PreloadImagesModule` 把 `installation.manifest` 里的镜像全部导入并 pin 在
    containerd 的 `k8s.io` 命名空间——这是气隙设备能装上应用的前提。
-3. `MaterializeModule` 读介质上的 `<installerDir>/preinstall/market/bundle.json`，
+3. `PublishDeclarationModule` 读介质上的 `<installerDir>/preinstall/market/bundle.json`，
    校验它，把安装期的硬件与环境选择折进去，再把 CLI 内嵌的 catalog 条目并进来，
    生成 `preinstall-<主干版本>.json` 并发布：
    - chart 与 artifact manifest 先写进 staging，再逐个原子改名到目标位置；
@@ -74,9 +74,10 @@ macOS / minikube 安装整条预装流水线都跳过。
 
 ### 3.2 olares-cli：升级
 
-1. `PrepareForUpgrade` 里发布一份 catalog 声明：把 CLI 内嵌的
-   `catalog-apps.json` 写成目标版本的 `preinstall-<主干版本>.json`。没有 chart、
-   没有 payload，只有应用名和安装顺序——升级机器上的 chart 由官方目录提供。
+1. `PrepareForUpgrade` 里跑同一个 `PublishDeclarationAction`，只是不给
+   `InstallerDir`——这次升级没有介质。于是声明里只有 CLI 内嵌的
+   `catalog-apps.json`：没有 chart、没有 payload，只有应用名和安装顺序，
+   升级机器上的 chart 由官方目录提供。
 2. 这一步对**每一条**升级路径都执行，不是某个版本的一次性动作。
 3. 升级流水线在最后才把新版本写进 Terminus CR 的 `spec.version`。这个次序是有意的：
    Market 在升级过程中已经是新版镜像，但它读到的仍是旧版本对应的声明，等版本真的
@@ -385,7 +386,7 @@ bundle 与声明的差别正是"可选项"与"已选项"的差别：`allowedEnvs
 
 | 用例 | 期望 |
 | --- | --- |
-| 目标主干已有声明 | 整步跳过，原文件逐字节不变（`TestMaterializeLeavesThisTrunksDeclarationAloneOnceItExists`） |
+| 目标主干已有声明 | 整步跳过，原文件逐字节不变（`TestPublishLeavesThisTrunksDeclarationAloneOnceItExists`） |
 | 升级到不同主干 | 旁边多一份，旧那份不动 |
 | 每条升级路径 | 都发布声明（`TestEveryUpgradePublishesThePreinstallDeclaration`） |
 | 介质没有 `preinstall/market` | no-op，安装照常完成 |

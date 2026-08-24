@@ -16,7 +16,7 @@ func marketPreinstallModules(
 	selections preinstall.ProfileSelections,
 ) []module.Module {
 	return []module.Module{
-		&preinstall.MaterializeModule{
+		&preinstall.PublishDeclarationModule{
 			InstallerDir:      installerDir,
 			RootDir:           storage.OlaresRootDir,
 			OSVersion:         osVersion,

@@ -31,20 +31,3 @@ func init() {
 func catalogDeclarationApps() []DeclarationAppV2 {
 	return append([]DeclarationAppV2(nil), catalogApps...)
 }
-
-// PublishCatalogDeclaration declares this version's catalog apps and nothing
-// else, which is what an upgrade has to say: the charts are on the network
-// rather than on the medium, and whatever the device already installed for an
-// earlier release keeps its own declaration.
-func PublishCatalogDeclaration(rootDir, osVersion string) error {
-	declaration := DeclarationV2{
-		SchemaVersion: DeclarationSchemaVersion,
-		OSVersion:     osVersion,
-		Apps:          catalogDeclarationApps(),
-	}
-	declaration.GeneratedAt = generatedNow()
-	if err := ValidateDeclaration(&declaration); err != nil {
-		return err
-	}
-	return publishDeclaration(nil, rootDir, declaration)
-}

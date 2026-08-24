@@ -30,7 +30,7 @@ func CheckStaticBundle(dir string, opts CheckOptions) error {
 	}
 	defer root.Close()
 
-	_, bundle, err := decodeBundleRoot(root)
+	bundle, err := decodeBundleRoot(root)
 	if err != nil {
 		return err
 	}

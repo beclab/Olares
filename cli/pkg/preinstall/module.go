@@ -9,7 +9,7 @@ import (
 	"github.com/beclab/Olares/cli/version"
 )
 
-type MaterializeModule struct {
+type PublishDeclarationModule struct {
 	common.KubeModule
 	InstallerDir      string
 	RootDir           string
@@ -17,12 +17,12 @@ type MaterializeModule struct {
 	ProfileSelections ProfileSelections
 }
 
-func (m *MaterializeModule) Init() {
-	m.Name = "MaterializeMarketPreinstall"
+func (m *PublishDeclarationModule) Init() {
+	m.Name = "PublishMarketPreinstallDeclaration"
 	m.Tasks = []task.Interface{
 		&task.LocalTask{
-			Name: "MaterializeMarketPreinstall",
-			Action: &MaterializeAction{
+			Name: "PublishMarketPreinstallDeclaration",
+			Action: &PublishDeclarationAction{
 				InstallerDir:      m.InstallerDir,
 				RootDir:           m.RootDir,
 				OSVersion:         m.OSVersion,
@@ -32,7 +32,10 @@ func (m *MaterializeModule) Init() {
 	}
 }
 
-type MaterializeAction struct {
+// PublishDeclarationAction declares what this version expects a device to have.
+// An upgrade leaves InstallerDir empty: it brought no medium, and the catalog
+// apps of the release being installed are declared all the same.
+type PublishDeclarationAction struct {
 	action.BaseAction
 	InstallerDir      string
 	RootDir           string
@@ -40,20 +43,8 @@ type MaterializeAction struct {
 	ProfileSelections ProfileSelections
 }
 
-func (a *MaterializeAction) Execute(_ connector.Runtime) error {
-	return Materialize(a.InstallerDir, publishRootDir(a.RootDir), publishVersion(a.OSVersion), a.ProfileSelections)
-}
-
-// PublishCatalogDeclarationAction declares what an upgrade brings: the apps this
-// version expects, taken from the catalog rather than from any medium.
-type PublishCatalogDeclarationAction struct {
-	action.BaseAction
-	RootDir   string
-	OSVersion string
-}
-
-func (a *PublishCatalogDeclarationAction) Execute(_ connector.Runtime) error {
-	return PublishCatalogDeclaration(publishRootDir(a.RootDir), publishVersion(a.OSVersion))
+func (a *PublishDeclarationAction) Execute(_ connector.Runtime) error {
+	return Publish(a.InstallerDir, publishRootDir(a.RootDir), publishVersion(a.OSVersion), a.ProfileSelections)
 }
 
 func publishRootDir(rootDir string) string {

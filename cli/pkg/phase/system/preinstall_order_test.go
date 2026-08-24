@@ -20,8 +20,8 @@ func TestMacosPhaseBuilderSkipsOfflinePreinstallWiring(t *testing.T) {
 		switch module.(type) {
 		case *images.PreloadImagesModule:
 			t.Fatalf("macOS phase must not include PreloadImagesModule: offline preinstall only supports Linux/WSL")
-		case *preinstall.MaterializeModule:
-			t.Fatalf("macOS phase must not include MaterializeModule: offline preinstall only supports Linux/WSL")
+		case *preinstall.PublishDeclarationModule:
+			t.Fatalf("macOS phase must not include PublishDeclarationModule: offline preinstall only supports Linux/WSL")
 		}
 	}
 }
@@ -35,7 +35,7 @@ func TestMarketPreinstallModulesCarryWhatThePublishNeeds(t *testing.T) {
 	if len(modules) != 1 {
 		t.Fatalf("module count = %d", len(modules))
 	}
-	materialize, ok := modules[0].(*preinstall.MaterializeModule)
+	materialize, ok := modules[0].(*preinstall.PublishDeclarationModule)
 	if !ok {
 		t.Fatalf("module = %T", modules[0])
 	}

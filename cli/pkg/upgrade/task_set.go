@@ -72,7 +72,7 @@ func publishMarketPreinstallDeclaration() []task.Interface {
 	return []task.Interface{
 		&task.LocalTask{
 			Name:   "PublishMarketPreinstallDeclaration",
-			Action: new(preinstall.PublishCatalogDeclarationAction),
+			Action: new(preinstall.PublishDeclarationAction),
 		},
 	}
 }

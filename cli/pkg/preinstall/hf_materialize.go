@@ -74,15 +74,16 @@ func materializeHFArtifactsWithHooks(installerDir, targetRootPath string, owners
 	if err := healHFCacheRootMode(targetRootPath); err != nil {
 		return err
 	}
-	staticRoot, _, bundle, found, err := openStaticBundle(installerDir)
+	source, err := openStaticBundle(installerDir)
 	if err != nil {
 		return err
 	}
-	if !found {
+	if !source.carriesCharts() {
 		return nil
 	}
-	defer staticRoot.Close()
-	artifacts := bundleHFArtifacts(bundle)
+	defer source.close()
+	staticRoot := source.root
+	artifacts := bundleHFArtifacts(source.bundle)
 	if len(artifacts) == 0 {
 		return nil
 	}

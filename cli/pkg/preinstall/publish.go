@@ -13,35 +13,34 @@ import (
 	"strings"
 )
 
-// Materialize publishes this version's declaration, and the charts and artifact
+// Publish writes this version's declaration, and the charts and artifact
 // manifests it names, under rootDir/RuntimeRelativeDir. rootDir must be the
 // Olares root directory the market chart mounts from, not the installer base
 // directory.
 //
-// A medium that carries no bundle still publishes: the catalog apps this version
-// expects are declared either way, and an installer with nothing of its own is
-// the ordinary case rather than a reason to leave Market with no declaration.
-func Materialize(installerDir, rootDir, osVersion string, selections ProfileSelections) error {
-	sourceRoot, _, bundle, found, err := openStaticBundle(installerDir)
+// An empty installerDir, or one carrying no bundle, still publishes: the catalog
+// apps this version expects are declared either way, and an upgrade that brought
+// no medium is the ordinary case rather than a reason to leave Market with no
+// declaration for the release it is now running.
+func Publish(installerDir, rootDir, osVersion string, selections ProfileSelections) error {
+	source, err := openStaticBundle(installerDir)
 	if err != nil {
 		return err
 	}
-	if found {
-		defer sourceRoot.Close()
-		if err := Validate(bundle); err != nil {
+	defer source.close()
+	if source.carriesCharts() {
+		if err := Validate(source.bundle); err != nil {
 			return err
 		}
-		if err := preflightCharts(sourceRoot, bundle); err != nil {
+		if err := preflightCharts(source.root, source.bundle); err != nil {
 			return err
 		}
-	} else {
-		sourceRoot = nil
 	}
-	declaration, err := BuildDeclaration(osVersion, bundle, selections, catalogDeclarationApps())
+	declaration, err := BuildDeclaration(osVersion, source.bundle, selections, catalogDeclarationApps())
 	if err != nil {
 		return err
 	}
-	return publishDeclaration(sourceRoot, rootDir, declaration)
+	return publishDeclaration(source, rootDir, declaration)
 }
 
 // publishDeclaration writes one trunk's declaration and does nothing if that
@@ -49,7 +48,7 @@ func Materialize(installerDir, rootDir, osVersion string, selections ProfileSele
 // presence is what says the payload beside it is complete; a publish interrupted
 // halfway leaves verified files and no declaration, and the next attempt
 // finishes the job.
-func publishDeclaration(sourceRoot *os.Root, rootDir string, declaration DeclarationV2) error {
+func publishDeclaration(source medium, rootDir string, declaration DeclarationV2) error {
 	trunk := TrunkVersion(declaration.OSVersion)
 	if trunk == "" {
 		return fmt.Errorf("publish declaration: no Olares version")
@@ -94,7 +93,7 @@ func publishDeclaration(sourceRoot *os.Root, rootDir string, declaration Declara
 		}
 		_ = removeRootTree(runtimeRoot, stagingName)
 	}()
-	payload, err := stagePayload(sourceRoot, stagingRoot, declaration)
+	payload, err := stagePayload(source, stagingRoot, declaration)
 	if err != nil {
 		return err
 	}
@@ -159,7 +158,7 @@ func regularFileExists(root *os.Root, name string) (bool, error) {
 // stagePayload copies every file the declaration names into staging, verifying
 // each digest on the way, and returns their paths in the order they should be
 // promoted. A declaration with no local entry stages nothing.
-func stagePayload(sourceRoot, stagingRoot *os.Root, declaration DeclarationV2) ([]string, error) {
+func stagePayload(source medium, stagingRoot *os.Root, declaration DeclarationV2) ([]string, error) {
 	var (
 		files []string
 		total int64
@@ -168,13 +167,13 @@ func stagePayload(sourceRoot, stagingRoot *os.Root, declaration DeclarationV2) (
 		if !app.local() {
 			continue
 		}
-		if sourceRoot == nil {
+		if !source.carriesCharts() {
 			return nil, fmt.Errorf("declared app %q needs a chart no medium carries", app.AppID)
 		}
 		if err := stagingRoot.MkdirAll(path.Dir(app.Chart), 0o755); err != nil {
 			return nil, fmt.Errorf("create chart staging directory: %w", err)
 		}
-		copied, err := copyChart(sourceRoot, stagingRoot, app, MaxTotalChartBytes-total)
+		copied, err := copyChart(source.root, stagingRoot, app, MaxTotalChartBytes-total)
 		if err != nil {
 			return nil, err
 		}
@@ -184,7 +183,7 @@ func stagePayload(sourceRoot, stagingRoot *os.Root, declaration DeclarationV2) (
 			if err := stagingRoot.MkdirAll(path.Dir(artifact.Manifest), 0o755); err != nil {
 				return nil, fmt.Errorf("create artifact manifest staging directory: %w", err)
 			}
-			if err := copyArtifactManifest(sourceRoot, stagingRoot, artifact); err != nil {
+			if err := copyArtifactManifest(source.root, stagingRoot, artifact); err != nil {
 				return nil, err
 			}
 			files = append(files, artifact.Manifest)

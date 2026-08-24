@@ -82,9 +82,9 @@ func TestMarketDeploymentPinsV2SourceAPIPaths(t *testing.T) {
 
 func TestMarketPreinstallDeploymentPublishesManifestsButNotPayloads(t *testing.T) {
 	installerDir, baseDir := writeStaticBundle(t)
-	artifact, _ := addMaterializeArtifactFixture(t, installerDir)
-	if err := Materialize(installerDir, baseDir, testOSVersion, ProfileSelections{}); err != nil {
-		t.Fatalf("Materialize() error = %v", err)
+	artifact, _ := addPublishArtifactFixture(t, installerDir)
+	if err := Publish(installerDir, baseDir, testOSVersion, ProfileSelections{}); err != nil {
+		t.Fatalf("Publish() error = %v", err)
 	}
 	target := filepath.Join(baseDir, RuntimeRelativeDir)
 	t.Cleanup(func() { _ = makeWritable(target) })

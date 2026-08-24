@@ -12,18 +12,18 @@ import (
 // The published tree is what Market reads, so it is asserted whole and
 // byte-for-byte rather than field by field: a change to the declaration's shape
 // has to be visible in a diff of this fixture before it reaches a device.
-func TestMaterializeMatchesGoldenRuntimeDeclaration(t *testing.T) {
+func TestPublishMatchesGoldenRuntimeDeclaration(t *testing.T) {
 	source := filepath.Join("testdata", "materialized-declaration", "source")
 	golden := filepath.Join("testdata", "materialized-declaration", "golden")
 	baseDir := canonicalTempDir(t)
 	freezeGeneratedAt(t)
 
-	err := Materialize(source, baseDir, testOSVersion, ProfileSelections{
+	err := Publish(source, baseDir, testOSVersion, ProfileSelections{
 		HardwareProfile: "nvidia-cuda",
 		DetectedGPUType: "nvidia",
 	})
 	if err != nil {
-		t.Fatalf("Materialize() error = %v", err)
+		t.Fatalf("Publish() error = %v", err)
 	}
 
 	actual := filepath.Join(baseDir, RuntimeRelativeDir)
