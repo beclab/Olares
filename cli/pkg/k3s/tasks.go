@@ -187,8 +187,8 @@ func (g *GenerateK3sService) Execute(runtime connector.Runtime) error {
 	}
 
 	defaultKubeletArs := map[string]string{
-		"kube-reserved":           "cpu=200m,memory=250Mi,ephemeral-storage=1Gi",
-		"system-reserved":         "cpu=200m,memory=250Mi,ephemeral-storage=1Gi",
+		"kube-reserved":           fmt.Sprintf("cpu=200m,memory=%s,ephemeral-storage=1Gi", utils.KubeReservedMemory),
+		"system-reserved":         fmt.Sprintf("cpu=200m,memory=%s,ephemeral-storage=1Gi", utils.SystemReservedMemory(runtime, g.KubeConf.Arg.EnablePodSwap)),
 		"eviction-hard":           "memory.available<5%,nodefs.available<5%,imagefs.available<5%",
 		"config":                  "/etc/rancher/k3s/kubelet.config",
 		"containerd":              container.DefaultContainerdCRISocket,
