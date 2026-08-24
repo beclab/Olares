@@ -395,7 +395,7 @@ export default defineVersionedConfig2(withMermaid({
   // runs generateSitemap immediately before buildEnd) instead of rebuilding the
   // entries, so it inherits transformItems' filtering, the git-derived lastmod
   // values, and the xhtml:link alternates VitePress computes from `locales`.
-  buildEnd: async ({ outDir }) => {
+  buildEnd: async ({ outDir, site }) => {
     // Archived builds disable the sitemap entirely, so there is nothing to
     // split and waiting below would time out.
     if (isArchivedVersionBuild) return;
@@ -410,11 +410,22 @@ export default defineVersionedConfig2(withMermaid({
     if (!openTag) throw new Error('sitemap.xml has no <urlset> element');
     if (entries.length === 0) throw new Error('sitemap.xml has no <url> entries');
 
-    const buckets: Record<string, string[]> = { en: [], zh: [] };
+    // Derive one bucket per declared locale instead of hardcoding en/zh, so
+    // adding a locale has no silent failure mode here: its URLs get their own
+    // file rather than being lumped in with English. VitePress calls the
+    // unprefixed locale "root", which for this site is English; every other
+    // locale key doubles as its URL prefix (zh -> /docs/zh/...).
+    const localeDirs = Object.keys(site.locales ?? {}).filter((l) => l !== 'root');
+    if (localeDirs.length === 0) {
+      throw new Error('no non-root locales found — cannot split the sitemap per locale');
+    }
+    const buckets: Record<string, string[]> = { en: [] };
+    for (const dir of localeDirs) buckets[dir] = [];
+
     for (const entry of entries) {
       // Mirror the x-default alternate injected into each page's <head> so both
-      // annotation channels agree. Pages with no counterpart in the other
-      // locale carry no alternates at all, so there is nothing to mirror.
+      // annotation channels agree; English is x-default in both. Pages with no
+      // counterpart in another locale carry no alternates, so nothing to mirror.
       const annotated = entry.replace(/<xhtml:link[^>]*hreflang="en"[^>]*\/>/, (link) => {
         const href = link.match(/href="([^"]*)"/)?.[1];
         return href
@@ -422,10 +433,16 @@ export default defineVersionedConfig2(withMermaid({
           : link;
       });
       const loc = entry.match(/<loc>([^<]*)<\/loc>/)?.[1] ?? '';
-      buckets[loc.startsWith(`${SITEMAP_HOSTNAME}zh/`) ? 'zh' : 'en'].push(annotated);
+      const dir = localeDirs.find((d) => loc.startsWith(`${SITEMAP_HOSTNAME}${d}/`));
+      buckets[dir ?? 'en'].push(annotated);
     }
 
     for (const [lang, urls] of Object.entries(buckets)) {
+      // An empty file would quietly drop a whole locale out of Search Console,
+      // which looks identical to "that language just isn't indexed yet".
+      if (urls.length === 0) {
+        throw new Error(`sitemap-${lang}.xml would be empty — no URLs matched locale "${lang}"`);
+      }
       fs.writeFileSync(
         path.join(outDir, `sitemap-${lang}.xml`),
         `${prolog}${openTag}${urls.join('')}</urlset>`
