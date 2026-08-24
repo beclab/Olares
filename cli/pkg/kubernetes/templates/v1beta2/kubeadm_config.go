@@ -289,11 +289,11 @@ func GetKubeletConfiguration(runtime connector.Runtime, kubeConf *common.KubeCon
 		"failSwapOn":                      false,
 		"kubeReserved": map[string]string{
 			"cpu":    "200m",
-			"memory": "250Mi",
+			"memory": utils.KubeReservedMemory,
 		},
 		"systemReserved": map[string]string{
 			"cpu":    "200m",
-			"memory": "250Mi",
+			"memory": utils.SystemReservedMemory(runtime, kubeConf.Arg.EnablePodSwap),
 		},
 		"evictionHard": map[string]string{
 			"memory.available":  "5%",
