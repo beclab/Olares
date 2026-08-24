@@ -157,38 +157,33 @@ The container runtime is a critical component for running containerized applicat
 ...
 ```
 :::
-### Publish the Market preinstall declaration
+### Materialize the Market preinstall bundle
 
-Offline preinstall currently supports Linux and WSL only. On macOS/minikube installs, the whole pipeline described in this section is skipped: no declaration is published to the host, no Hugging Face cache is copied, and the production preinstall apps are never triggered; the macOS install otherwise proceeds normally through minikube.
+Offline preinstall currently supports Linux and WSL only. On macOS/minikube installs, the whole pipeline described in this section is skipped: no bundle is published to the host, no Hugging Face cache is copied, and the three production preinstall apps are never triggered; the macOS install otherwise proceeds normally through minikube.
 
-What the OS tells Market is one file: `preinstall-<trunk>.json`, written into `/olares/userdata/Cache/market-preinstall` and named for the trunk of the Olares version this install produces — `1.12.7`, `1.12.7-rc.1` and `1.12.7-20260731` all publish `preinstall-1.12.7.json`. One file per trunk, written once and never rewritten: a device moving between builds of the same release is not a device that should preinstall anything again, and an upgrade to a new release writes a new file beside the old one rather than over it. Market reads only the file naming the trunk of the version the device records, and rereads when that changes. The design behind the file, including the failure endgame and the opt-out on uninstall, is in [预装设计](../../zh/developer/install/market-preinstall-design.md).
+Official offline Market bootstrap data may be included in the installation package at `<installerDir>/preinstall/market`. If that directory is absent, preparation is a no-op: an ordinary release continues normally and preserves any existing managed overlay. With preinstall enabled, Market's runtime bootstrap state reports an importer-confirmed missing bundle as `overall_status="no_bundle"` and a fresh malformed importer failure as `overall_status="preinstall_degraded"`, including before any database row exists. After a successful import, persisted bundle revision and managed app rows are authoritative. `enabled=false` separately means the feature is disabled. The initial production target is a three-app chain: a model app with an inference engine and `llm-init` sidecar, `llm-gateway`, and an agent WebUI. The installer and Market read app IDs and install scopes from the bundle; they do not hard-code those production IDs.
 
-Both media publish the same file through the same code. An install declares entries whose chart travels with it (`chartSource: local`); an upgrade declares entries the official catalog serves (`chartSource: catalog`). Everything downstream of the file is one path, and the declaration is published before the charts it names are installed, so an app the system requires carries that guarantee from first boot rather than from the first upgrade.
+Every bundle app must declare `installScope`, which is `shared` or `per-user`, and the CLI rejects a bundle that omits it or declares anything else. The scope decides who the app belongs to, and a mixed bundle is normal:
 
-Official offline Market bootstrap data may be included in the installation package at `<installerDir>/preinstall/market`. If that directory is absent, preparation publishes only the catalog entries the CLI embeds, and a device with no declaration at all is normal rather than broken: Market starts, preinstalls nothing, and reports `overall_status="no_bundle"`. A declaration that exists but is malformed reports `overall_status="preinstall_degraded"`, including before any database row exists. After a successful import, the persisted declaration revision and managed app rows are authoritative. There is no enable flag; whether a device preinstalls anything is decided by whether a declaration for its version exists. The initial production target is a three-app chain: a model app with an inference engine and `llm-init` sidecar, `llm-gateway`, and an agent WebUI. The installer and Market read app IDs and install scopes from the declaration; they do not hard-code those production IDs.
+- `shared` is one device-wide instance. The installer publishes one chart for it, Market installs it once for the cluster owner, and Market refuses to uninstall it. This is the only scope earlier revisions of this document described, and its behavior is unchanged.
+- `per-user` is one instance per eligible account, installed from the same published chart. The cluster owner installs it while the device is bootstrapping; every account created later installs its own copy when it becomes eligible, which for a non-owner account means `status.state=Created` plus a non-empty zone rather than the owner-only `wizard-status` signal. Accounts are isolated from one another: one account's failure degrades only that account.
 
-Every declared app carries `installScope`, which is `shared` or `per-user`, and a mixed declaration is normal:
+The install version differs by account. The owner's first install is pinned to the bundle's `version`, served from the definition snapshot Market freezes before any remote catalog merge is released. An account created later prefers the current official definition, and falls back to that frozen bundled snapshot when the official definition is missing or has not rendered successfully, so a device that is still offline keeps installing the audited bundled version.
 
-- `shared` is one device-wide instance, installed once for the cluster owner.
-- `per-user` is one instance per eligible account. The cluster owner installs it while the device is bootstrapping; every account created later installs its own copy when it becomes eligible. Accounts are isolated from one another: one account's failure degrades only that account.
+An account may uninstall its own copy of a per-user app, which records that account as opted out; nothing reinstalls it afterwards. The decision is bound to the account's User CR uid rather than its name, so deleting an account and creating a new one with the same name gives the new account a fresh install rather than the previous holder's opt-out. `installOrder` is still a barrier, but a per-user app releases the apps ordered behind it once its bundled snapshot is frozen and the owner has answered — installed or opted out — which Market reports as `bootstrap_settled`. Accounts that join later continue installing behind that release, and Market's preinstall status reports both the per-app rollout counts and, to an administrator only, the per-account detail.
 
-An account is eligible when it has a non-empty zone and its own `wizard-status` has reached `wait_reset_password` or `completed`. The owner and every later account are judged the same way, and until the first account gets there the whole preinstall is skipped without spending any retry budget.
+After `PreloadImagesModule` imports and pins every image from `installation.manifest`, the prepare phase validates the V1 bundle and atomically publishes the Market JSON files, including `bundle.json`, the generated `install-profile.json`, and artifact manifests, plus selected files under `charts/` to `/olares/userdata/Cache/market-preinstall`. Market mounts that lightweight directory read-only at `/opt/app/preinstall`. A large model payload, for example approximately 20 GB, remains under `<installerDir>/preinstall/market/artifacts`; it is not copied into the Market mount.
 
-A per-user install prefers the version the official catalog currently serves, and falls back to the frozen snapshot from the medium when the catalog holds no usable definition, so a device that is still offline keeps installing the audited bundled version. This is not a downgrade path: a failed install at the catalog version does not retry at the bundled one.
-
-Any declared app may be uninstalled like any other app. Market records that the device (`shared`) or that account (`per-user`) has opted out before calling app-service, and nothing reinstalls it afterwards. The per-user decision is bound to the account's User CR uid rather than its name, so deleting an account and creating a new one with the same name gives the new account a fresh install. `installOrder` is still a barrier, but a per-user app releases the apps ordered behind it once its snapshot is frozen and the owner has answered — installed or opted out — which Market reports as `bootstrap_settled`. Market's preinstall status reports both the per-app rollout counts and, to an administrator only, the per-account detail.
-
-After `PreloadImagesModule` imports and pins every image from `installation.manifest`, the prepare phase validates the V1 bundle on the medium, folds in the hardware and environment choices this install made, merges the catalog entries the CLI embeds, and publishes the result. Charts and artifact manifests are staged and then atomically renamed into place one file at a time; the declaration is published last and is the commit point of the publish. A declaration that already exists for this trunk is left exactly as it is. The large model payload, for example approximately 20 GB, remains under `<installerDir>/preinstall/market/artifacts` and is not copied into the Market mount.
-
-Each declared app may carry one optional artifact. The implemented artifact kind is `hf-cache`, with `source`, `repo`, a fixed 40-hex `revision`, `manifest`, `manifestSha256`, and `totalSize`. The manifest lists every entry as `directory`, `file`, or `symlink`; files carry `size` and SHA-256, while symlinks carry a safe relative `target`.
+Each bundle app may declare one optional artifact. The implemented artifact kind is `hf-cache`, with `source`, `repo`, a fixed 40-hex `revision`, `manifest`, `manifestSha256`, and `totalSize`. The manifest lists every entry as `directory`, `file`, or `symlink`; files carry `size` and SHA-256, while symlinks carry a safe relative `target`.
 
 Installer media contains both the small manifest and the model Source payload:
 
 ```text
 preinstall/market/
   bundle.json
-  chart/
+  charts/
     model-app-1.2.3.tgz
+    llm-gateway-2.0.0.tgz
     agent-webui-3.0.0.tgz
   artifacts/
     model/
@@ -200,16 +195,16 @@ preinstall/market/
     owner--repo.json
 ```
 
-Prepare copies the manifest's original bytes. The Market mount contains no
-`artifacts/model/...` Source payload, and accumulates one declaration per trunk
-the device has run:
+Prepare copies the manifest's original bytes and generates the profile. The
+Market mount contains no `artifacts/model/...` Source payload:
 
 ```text
 /olares/userdata/Cache/market-preinstall/
-  preinstall-1.12.7.json
-  preinstall-1.13.0.json
-  chart/
+  bundle.json
+  install-profile.json
+  charts/
     model-app-1.2.3.tgz
+    llm-gateway-2.0.0.tgz
     agent-webui-3.0.0.tgz
   manifests/
     owner--repo.json
@@ -218,20 +213,19 @@ the device has run:
 The artifact payload is read from installer media during the install phase. Its
 small manifest is available in the Market mount for contract validation.
 
-The publish root is the Olares root directory (`storage.OlaresRootDir`, `/olares`), which is also what the market chart renders as `.Values.rootPath` for its hostPath mount; it is not the installer base directory. On Linux and WSL every published file is mode `0444`, while the directories stay writable because each upgrade adds one more declaration to them. Market's `readOnly: true` mount is the runtime write boundary; its existing `/opt/app/data` volume remains writable. If the hostPath is empty, the Market importer fails open and normal Market startup continues. This whole step is Linux/WSL only; macOS/minikube installs skip it entirely and never create this directory.
+The publish root is the Olares root directory (`storage.OlaresRootDir`, `/olares`), which is also what the market chart renders as `.Values.rootPath` for its hostPath mount; it is not the installer base directory. On Linux and WSL, all staged Market directories use mode `0555`, every file remains `0444`, and every child directory remains `0555`. Market's `readOnly: true` mount is the runtime write boundary; its existing `/opt/app/data` volume remains writable. If the hostPath is empty, the Market importer fails open and normal Market startup continues. This whole materialization step is Linux/WSL only; macOS/minikube installs skip it entirely and never create this directory (see "Materialize the Market preinstall bundle" above).
 
-Each bundle app may declare `defaultEnvs` and an `allowedEnvs` allowlist. For an
-air-gapped model app, these defaults include `HF_HUB_OFFLINE=1` and llm-init
-source syntax such as
+Each bundle app may declare `defaultEnvs`. For an air-gapped model app, these
+defaults include `HF_HUB_OFFLINE=1` and llm-init source syntax such as
 `MODEL_SOURCE="hf://owner/repo --revision 0123456789abcdef0123456789abcdef01234567"`.
 `MODEL_SOURCE_LOCAL` is only the local destination path for an `http://` or
-`https://` source; it is unused for `hf://` and `ollama://` sources. The
-declaration carries the final values after allowlisted per-app runtime
-overrides, and a choice the bundle never offered fails the publish rather than
-reaching Market. `productionPreinstallSelections` detects the production
-hardware and sets `hardwareProfile` plus `DetectedGPUType`; publishing sets
-`selectedGpuType` only when that type appears in the app's `allowedGpuTypes`.
-The remaining release work is the production declaration, official three-app
+`https://` source; it is unused for `hf://` and `ollama://` sources. The CLI
+writes the defaults into `install-profile.json`, then applies only allowlisted
+per-app runtime overrides. `productionPreinstallSelections` detects the
+production hardware and sets `hardwareProfile` plus `DetectedGPUType`;
+materialization sets `selectedGpuType` only when that type appears in the app's
+`allowedGpuTypes`.
+The remaining release work is the production bundle, official three-app
 fixture, and air-gap end-to-end acceptance.
 
 ### Install system daemon
@@ -409,45 +403,32 @@ existing cache.
 The model OAC mounts Common at `/cache/hf/hub`. The bundle declares
 `HF_HUB_OFFLINE=1` and a pinned llm-init source such as
 `hf://owner/repo --revision 0123456789abcdef0123456789abcdef01234567` under
-`defaultEnvs`; the published declaration carries the final values after
+`defaultEnvs`; the generated profile contains the final values after
 allowlisted overrides.
 
-### Import and install declared apps
+### Import and install official shared apps
 
 At startup, Market completes the local preinstall import barrier before
-starting appinfo. The barrier writes the official `market.olares` definitions
-the declaration carries, plus the managed rows. Appinfo then runs its first
-remote source sync immediately when networking is available and continues every
-30 seconds; offline installation retries on later cycles. Online installation
-may therefore sync during the install phase rather than after activation.
+starting appinfo. The barrier writes the bundled official `market.olares`
+definitions and managed rows. Appinfo then runs its first remote source sync
+immediately when networking is available and continues every 30 seconds;
+offline installation retries on later cycles. Online installation may therefore
+sync during the install phase rather than after activation.
 
-The declaration decides the version of the first install and nothing after it.
-A `local` entry's first install is pinned to the declared version and does not
-wait for the catalog, which an air-gapped device never reaches; a `catalog`
-entry has no version of its own and installs whatever the catalog currently
-serves. Once an app is installed, the catalog is the source of every version
-after that: a later source sync may expose a newer official version as a manual
-upgrade, a repair after the app disappears installs the catalog version, and an
-app the user upgraded by hand is never rolled back to the declared version. An
-app that is already installed when the declaration is imported is left alone
-entirely.
+The local definition remains fully frozen while a managed app is not installed.
+First install always dispatches `bundledVersion`, including after automatic
+retry exhaustion and manual retry. After installation, the next source sync may
+expose a newer official version as a manual upgrade. Managed apps remain
+non-uninstallable in Market.
 
-Installation waits until at least the first account has a non-empty zone and a
-`wizard-status` of `wait_reset_password` or `completed`. Every later account is
-judged by the same two conditions on its own record.
+Actual shared-app installation uses a dedicated readiness gate: exactly
+one `Exists=true` admin owner must have a non-empty zone, and its
+`wizard-status` must be `wait_reset_password` or `completed`. The ordinary
+active-user gate remains `completed`.
 
 This allows app installation and password reset to proceed in parallel.
 Activation does not wait for preinstall, and a failed app does not roll back
 activation.
-
-Each declared app carries one retry budget: three attempts, backing off from
-three minutes and doubling. Waiting for an external condition spends the same
-budget as failing. When it runs out the device stops and releases three things
-at once — the apps ordered behind it stop waiting, uninstall protection is
-lifted, and the official catalog may write its definition again — and reports
-`waiting_reason=awaiting_manual_install`. A manual retry grants a fresh budget
-and installs whatever the catalog now holds; it does not take those releases
-back.
 
 `installOrder` is a dependency barrier rather than a display sort:
 
@@ -461,11 +442,8 @@ agent WebUI `30`. A failed model intentionally blocks the gateway and WebUI,
 while unrelated apps at the same order continue. The preinstall status response
 reports `waiting_reason=waiting_for_dependencies` and `blocked_by_app_ids`.
 
-Runtime changes, task updates, definition hydration, User events, and a change
-to the Olares version the device records all trigger reconciliation immediately;
-the last of those is what makes an upgrade read its new declaration, and it is
-why the upgrade pipeline writes the version only at the end. A 30-second tick is
-the fallback. Official source
+Runtime changes, task updates, definition hydration, and User events trigger
+reconciliation immediately. A 30-second tick is the fallback. Official source
 sync starts only after the local import barrier. Model materialization completes
 before this activation gate can dispatch application installation; the safety
 guarantee is not that model copying precedes Market startup. Version freezing
