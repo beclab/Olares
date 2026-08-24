@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/md5"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"math"
 	"net"
@@ -188,41 +187,39 @@ func RegenerateCorefile(ctx context.Context, kubeClient kubernetes.Interface, dy
 		return err
 	}
 
-	for _, u := range userList.Items {
-		userzone := u.GetAnnotations()[UserAnnotationZoneKey]
-		if userzone == "" {
-			klog.Info("user ", u.GetName(), " has no zone annotation, skip corefile update")
-			continue
-		}
+	if ingressIp != "" {
+		for _, u := range userList.Items {
 
-		ip, err := getUserLocalIp(&u)
-		if err != nil {
-			klog.Error("get user local ip error, ", err)
-			return err
-		}
-		if ip == nil || ip.String() == "" {
-			klog.Info("user ", u.GetName(), " has no valid local ip, skip corefile update")
-			continue
-		}
+			userzone := u.GetAnnotations()[UserAnnotationZoneKey]
+			if userzone == "" {
+				klog.Info("user ", u.GetName(), " has no zone annotation, skip corefile update")
+				continue
+			}
 
-		if ingressIp == "" {
-			klog.Info("user ", u.GetName(), " has no valid ingress ip, skip corefile update")
-			continue
-		}
+			ip, err := getUserLocalIp(&u)
+			if err != nil {
+				klog.Error("get user local ip error, ", err)
+				return err
+			}
+			if ip == nil || ip.String() == "" {
+				klog.Info("user ", u.GetName(), " has no valid local ip, skip corefile update")
+				continue
+			}
 
-		templatesPlugins = addUserTemplates(userzone, ip.String(), templatesPlugins)
-		inclusterTemplatesPlugins = addUserTemplates(userzone, ingressIp, inclusterTemplatesPlugins)
+			templatesPlugins = addUserTemplates(userzone, ip.String(), templatesPlugins)
+			inclusterTemplatesPlugins = addUserTemplates(userzone, ingressIp, inclusterTemplatesPlugins)
 
-		if masterNodeIp == "" {
-			klog.Info("no master node ip found, skip adding local domain dns record")
-			continue
-		}
+			if masterNodeIp == "" {
+				klog.Info("no master node ip found, skip adding local domain dns record")
+				continue
+			}
 
-		username := u.GetName()
-		userLocalZone := fmt.Sprintf("%s.olares.local", username)
-		localTemplatesPlugins = addUserTemplates(userzone, masterNodeIp, localTemplatesPlugins)
-		localDomainTemplatesPlugins = addUserTemplates(userLocalZone, masterNodeIp, localDomainTemplatesPlugins)
-	}
+			username := u.GetName()
+			userLocalZone := fmt.Sprintf("%s.olares.local", username)
+			localTemplatesPlugins = addUserTemplates(userzone, masterNodeIp, localTemplatesPlugins)
+			localDomainTemplatesPlugins = addUserTemplates(userLocalZone, masterNodeIp, localDomainTemplatesPlugins)
+		} // end of for loop
+	} // end of if ingressIp != ""
 
 	// Degrade on failure: without the app-gateway-data ClusterIP the shared
 	// in-cluster templates are skipped, while the rest of the Corefile still
@@ -350,6 +347,10 @@ func RegenerateCorefile(ctx context.Context, kubeClient kubernetes.Interface, dy
 			corefileSizeWarnBytes,
 			corefileSizeRejectBytes,
 		)
+	}
+	if newCorefileData == corefileData {
+		klog.Info("coredns corefile unchanged, skip configmap update")
+		return nil
 	}
 	corefileConfigMap.Data["Corefile"] = newCorefileData
 
@@ -557,7 +558,8 @@ func getUserIngressIP(ctx context.Context, kubeClient kubernetes.Interface) (str
 		return "", err
 	}
 	if len(pods.Items) == 0 {
-		return "", errors.New("no l4 proxy pod found")
+		klog.Info("no l4 proxy pod found, users are not initialized yet")
+		return "", nil
 	}
 	pod := pods.Items[0]
 
