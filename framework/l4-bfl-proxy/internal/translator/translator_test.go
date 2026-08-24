@@ -651,7 +651,7 @@ func TestBuildAppVirtualHosts_NonSharedApp(t *testing.T) {
 	assert.NotEmpty(t, clusterSet)
 }
 
-func TestBuildAppVirtualHosts_PublicSkipsExtAuth(t *testing.T) {
+func TestBuildAppVirtualHosts_PublicKeepsExtAuthOmitsOutboundXBFLUser(t *testing.T) {
 	tr := &Translator{cfg: &Config{}}
 	user := &message.UserInfo{Name: "alice", Language: "en"}
 	clusterSet := make(map[string]*ir.ClusterIR)
@@ -667,16 +667,20 @@ func TestBuildAppVirtualHosts_PublicSkipsExtAuth(t *testing.T) {
 	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", false, clusterSet)
 	require.Len(t, vhosts, 1)
 	require.Len(t, vhosts[0].Routes, 1)
-	assert.Nil(t, vhosts[0].Routes[0].ExtAuth, "public must skip ExtAuth")
+	r := vhosts[0].Routes[0]
+	require.NotNil(t, r.ExtAuth, "public must still mount ExtAuth (Bypass at Authelia)")
+	assert.Equal(t, "authelia_backend_alice", r.ExtAuth.Cluster)
+	assert.Nil(t, r.RequestHeaders, "outbound zone-owner X-BFL-USER stamp must be omitted")
 }
 
 func TestBuildProbeBypassRoutes_ExactPathAndUA(t *testing.T) {
-	routes := buildProbeBypassRoutes("alice_app_web", "cluster", "alice", []string{"/healthz", "/ready", "/", "healthz", "/healthz"})
+	routes := buildProbeBypassRoutes("alice_app_web", "cluster", []string{"/healthz", "/ready", "/", "healthz", "/healthz"})
 	require.Len(t, routes, 2, "dedupe and drop root path")
 	assert.Equal(t, "/healthz", routes[0].PathExact)
 	assert.Equal(t, "/ready", routes[1].PathExact)
 	for _, r := range routes {
 		assert.Nil(t, r.ExtAuth, "probe bypass must not re-enable ExtAuth")
+		assert.Nil(t, r.RequestHeaders, "probe must not stamp outbound X-BFL-USER")
 		require.Len(t, r.HeaderMatches, 1)
 		assert.Equal(t, "user-agent", r.HeaderMatches[0].Name)
 		assert.Equal(t, probeUARegex, r.HeaderMatches[0].SafeRegex)
@@ -876,10 +880,14 @@ func TestBuildFileserverRoutes_NodeScopedBeforeMasterGeneric(t *testing.T) {
 	assert.Equal(t, "files_testip162_olares-work", routes[nodeExternal].Cluster)
 	assert.Equal(t, "files_testip162_olares", routes[masterExternal].Cluster)
 	assert.Equal(t, "olares-work", routes[nodeExternal].RequestHeaders["X-Terminus-Node"])
+	_, hasOutboundBFL := routes[nodeExternal].RequestHeaders["X-BFL-USER"]
+	assert.False(t, hasOutboundBFL, "fileserver must not stamp outbound zone-owner X-BFL-USER")
 	require.NotNil(t, routes[nodeExternal].ExtAuth)
 	assert.Equal(t, autheliaVerifyPathPrefix, routes[nodeExternal].ExtAuth.PathPrefix)
 	require.NotNil(t, routes[masterExternal].ExtAuth)
 	assert.Equal(t, autheliaVerifyPathPrefix, routes[masterExternal].ExtAuth.PathPrefix)
+	_, hasMasterBFL := routes[masterExternal].RequestHeaders["X-BFL-USER"]
+	assert.False(t, hasMasterBFL, "fileserver master route must not stamp outbound X-BFL-USER")
 
 	// Every node-scoped prefix that overlaps a master prefix must precede ALL
 	// master generic routes. Compute the first master-route index and assert
@@ -908,12 +916,15 @@ func TestBuildSystemVirtualHost_DesktopWizardVerify_AuthSkipped(t *testing.T) {
 	require.Len(t, desktop.Routes, 1)
 	require.NotNil(t, desktop.Routes[0].ExtAuth)
 	assert.Equal(t, autheliaVerifyPathPrefix, desktop.Routes[0].ExtAuth.PathPrefix)
+	assert.Nil(t, desktop.Routes[0].RequestHeaders, "desktop must not stamp outbound zone-owner X-BFL-USER")
 
 	wizard := tr.buildSystemVirtualHost(user, systemServiceDef{Name: "wizard", SvcFormat: "wizard.%s.svc.cluster.local"}, "alice.example.com", false, user.Namespace, clusterSet)
 	assert.Nil(t, wizard.Routes[0].ExtAuth, "wizard must not attach ExtAuth (pre-auth activation)")
+	assert.Nil(t, wizard.Routes[0].RequestHeaders, "wizard must not stamp outbound X-BFL-USER")
 
 	auth := tr.buildSystemVirtualHost(user, systemServiceDef{Name: "auth", SvcFormat: "authelia-svc.%s.svc.cluster.local"}, "alice.example.com", false, user.Namespace, clusterSet)
 	assert.Nil(t, auth.Routes[0].ExtAuth, "auth IdP must not attach ExtAuth")
+	assert.Nil(t, auth.Routes[0].RequestHeaders, "auth must not stamp outbound X-BFL-USER")
 }
 
 func TestBuildUserVirtualHosts_ProfileRootVerify(t *testing.T) {
@@ -938,4 +949,5 @@ func TestBuildUserVirtualHosts_ProfileRootVerify(t *testing.T) {
 	require.Len(t, profile.Routes, 1)
 	require.NotNil(t, profile.Routes[0].ExtAuth, "zone root profile must attach ExtAuth")
 	assert.Equal(t, autheliaVerifyPathPrefix, profile.Routes[0].ExtAuth.PathPrefix)
+	assert.Nil(t, profile.Routes[0].RequestHeaders, "profile must not stamp outbound zone-owner X-BFL-USER")
 }
