@@ -25,7 +25,6 @@ func TestMarketDeploymentMountsPreinstallReadOnlyBesideWritableData(t *testing.T
 	// the next one.
 	for _, required := range []string{
 		"- name: PREINSTALL_DIR\n            value: /opt/app/preinstall",
-		"- name: OLARES_VERSION\n            value: \"1.12.7\"",
 		"- name: opt-data\n            mountPath: /opt/app/data",
 		"- name: market-preinstall\n            mountPath: /opt/app/preinstall\n            readOnly: true",
 	} {
@@ -33,7 +32,16 @@ func TestMarketDeploymentMountsPreinstallReadOnlyBesideWritableData(t *testing.T
 			t.Errorf("appstore-backend container missing contract:\n%s", required)
 		}
 	}
-	for _, forbidden := range []string{"PREINSTALL_ENABLED", "PREINSTALL_BUNDLE_DIR", "ENSURE_APPS_FILE", "market-ensure"} {
+	// OLARES_VERSION is forbidden rather than pinned. Which version this device
+	// runs is written by the OS into the terminus record at the end of an
+	// install or an upgrade, and Market reads it from there -- both to choose a
+	// declaration and to query the catalog. A literal in this chart is a second
+	// answer to the same question, rendered before the upgrade that changes it,
+	// so it was wrong exactly while an upgrade was running.
+	for _, forbidden := range []string{
+		"OLARES_VERSION",
+		"PREINSTALL_ENABLED", "PREINSTALL_BUNDLE_DIR", "ENSURE_APPS_FILE", "market-ensure",
+	} {
 		if strings.Contains(deployment, forbidden) {
 			t.Errorf("market deployment still carries the retired %q", forbidden)
 		}
