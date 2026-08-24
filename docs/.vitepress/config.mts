@@ -41,6 +41,30 @@ const noindexRoutePattern =
 // never match the latest deploy, whose base is "/docs/" or "/" (no version).
 const isArchivedVersionBuild = /\/\d+\.\d+/.test(process.env.BASE_URL || "");
 
+// Shared by the sitemap generator and the buildEnd hook that splits its output
+// per locale — the hook keys ZH entries off the `<loc>` prefix.
+const SITEMAP_HOSTNAME = "https://www.olares.com/docs/";
+
+// VitePress generates the sitemap by piping into a write stream and never awaits
+// it, so when buildEnd starts the file may be absent or truncated. Wait for the
+// closing tag rather than racing it.
+//
+// This assumes outDir was emptied for this build: a leftover sitemap.xml from a
+// previous run would already end in </urlset> and be returned as-is. Vite empties
+// outDir by default, and the release-docs pipeline re-clones per build, so that
+// case does not arise — but do not reuse a dirty outDir here.
+async function waitForSitemap(file: string, timeoutMs = 5000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (fs.existsSync(file)) {
+      const xml = fs.readFileSync(file, 'utf-8');
+      if (xml.trimEnd().endsWith('</urlset>')) return xml;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  throw new Error(`timed out waiting for ${file} to be fully written`);
+}
+
 // Build a map of routable EN route -> ZH route so we can inject hreflang
 // alternate links for pages that exist in both locales. Scanned once at
 // config load time; srcExclude fragments are ignored because they are not
@@ -344,7 +368,7 @@ export default defineVersionedConfig2(withMermaid({
   // release-docs pipeline silently skip that version. Since we explicitly do
   // not want archived versions in the sitemap anyway, disable it for them.
   sitemap: isArchivedVersionBuild ? undefined : {
-    hostname: "https://www.olares.com/docs/",
+    hostname: SITEMAP_HOSTNAME,
     transformItems: (items) =>
       // Drop noindex pages from sitemap.xml so crawlers don't even discover
       // them via the sitemap. The meta tag above is what ultimately removes
@@ -362,6 +386,57 @@ export default defineVersionedConfig2(withMermaid({
         return !noindexPaths.has(p);
       }),
   },
+
+  // Split the generated sitemap by locale. Search Console's Page indexing
+  // report can only be sliced per submitted sitemap, so a single file mixing
+  // EN and ZH makes per-language index coverage unreadable.
+  //
+  // This post-processes the file the built-in generator already wrote (VitePress
+  // runs generateSitemap immediately before buildEnd) instead of rebuilding the
+  // entries, so it inherits transformItems' filtering, the git-derived lastmod
+  // values, and the xhtml:link alternates VitePress computes from `locales`.
+  buildEnd: async ({ outDir }) => {
+    // Archived builds disable the sitemap entirely, so there is nothing to
+    // split and waiting below would time out.
+    if (isArchivedVersionBuild) return;
+
+    const combined = path.join(outDir, 'sitemap.xml');
+    const xml = await waitForSitemap(combined);
+    const prolog = xml.match(/^<\?xml[^>]*\?>/)?.[0] ?? '<?xml version="1.0" encoding="UTF-8"?>';
+    const openTag = xml.match(/<urlset[^>]*>/)?.[0];
+    const entries = xml.match(/<url>[\s\S]*?<\/url>/g) ?? [];
+    // Fail loud: silently writing empty per-locale sitemaps would ship a site
+    // with no discoverable URLs at all.
+    if (!openTag) throw new Error('sitemap.xml has no <urlset> element');
+    if (entries.length === 0) throw new Error('sitemap.xml has no <url> entries');
+
+    const buckets: Record<string, string[]> = { en: [], zh: [] };
+    for (const entry of entries) {
+      // Mirror the x-default alternate injected into each page's <head> so both
+      // annotation channels agree. Pages with no counterpart in the other
+      // locale carry no alternates at all, so there is nothing to mirror.
+      const annotated = entry.replace(/<xhtml:link[^>]*hreflang="en"[^>]*\/>/, (link) => {
+        const href = link.match(/href="([^"]*)"/)?.[1];
+        return href
+          ? `${link}<xhtml:link rel="alternate" hreflang="x-default" href="${href}"/>`
+          : link;
+      });
+      const loc = entry.match(/<loc>([^<]*)<\/loc>/)?.[1] ?? '';
+      buckets[loc.startsWith(`${SITEMAP_HOSTNAME}zh/`) ? 'zh' : 'en'].push(annotated);
+    }
+
+    for (const [lang, urls] of Object.entries(buckets)) {
+      fs.writeFileSync(
+        path.join(outDir, `sitemap-${lang}.xml`),
+        `${prolog}${openTag}${urls.join('')}</urlset>`
+      );
+    }
+    // Leaving the combined file behind would double-attribute every URL in
+    // Search Console, which is the mixed reporting this split exists to remove.
+    // The site-wide index and robots.txt reference the per-locale files instead.
+    fs.rmSync(combined);
+  },
+
   lastUpdated: true,
   cleanUrls: true,
   // Snippet-only fragments and repo READMEs are pulled into real pages via
