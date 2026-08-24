@@ -5,6 +5,8 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/beclab/Olares/cli/pkg/core/task"
+	"github.com/beclab/Olares/cli/pkg/preinstall"
+	"github.com/beclab/Olares/cli/pkg/storage"
 	olversion "github.com/beclab/Olares/cli/version"
 )
 
@@ -29,6 +31,38 @@ func TestEveryUpgradePublishesThePreinstallDeclaration(t *testing.T) {
 			}
 			t.Fatal("no upgrade task publishes the preinstall declaration")
 		})
+	}
+}
+
+// An upgrade brings no medium, and that is the only thing about it the action
+// may leave to a default: the version it declares and the root it writes under
+// are stated here, because an upgrade that published under the wrong trunk, or
+// somewhere Market does not mount, fails silently -- the task succeeds and the
+// device is left with the previous release's list.
+func TestTheUpgradePublishBringsNoMediumAndSaysWhichVersionItDeclares(t *testing.T) {
+	var published *preinstall.PublishDeclarationAction
+	for _, candidate := range (upgraderBase{}).PrepareForUpgrade() {
+		local, ok := candidate.(*task.LocalTask)
+		if !ok || local.GetName() != "PublishMarketPreinstallDeclaration" {
+			continue
+		}
+		published, ok = local.Action.(*preinstall.PublishDeclarationAction)
+		if !ok {
+			t.Fatalf("the publish task runs %T, not a declaration publish", local.Action)
+		}
+	}
+	if published == nil {
+		t.Fatal("no upgrade task publishes the preinstall declaration")
+	}
+	if published.InstallerDir != "" {
+		t.Errorf("an upgrade brought a medium at %q", published.InstallerDir)
+	}
+	if published.OSVersion != olversion.VERSION {
+		t.Errorf("declares version %q, want this binary's %q",
+			published.OSVersion, olversion.VERSION)
+	}
+	if published.RootDir != storage.OlaresRootDir {
+		t.Errorf("writes under %q, want %q", published.RootDir, storage.OlaresRootDir)
 	}
 }
 

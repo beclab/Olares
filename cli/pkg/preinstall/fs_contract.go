@@ -271,8 +271,10 @@ type medium struct {
 	bundle BundleV1
 }
 
-// carriesCharts reports whether there is anything to copy out of this medium.
-func (m medium) carriesCharts() bool {
+// present reports that the installer brought a medium at all. What it carries is
+// whatever its bundle names; an absent medium carries nothing, which is why the
+// two questions collapse into this one.
+func (m medium) present() bool {
 	return m.root != nil
 }
 

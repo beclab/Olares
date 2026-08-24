@@ -6,7 +6,6 @@ import (
 	"github.com/beclab/Olares/cli/pkg/core/connector"
 	"github.com/beclab/Olares/cli/pkg/core/task"
 	"github.com/beclab/Olares/cli/pkg/storage"
-	"github.com/beclab/Olares/cli/version"
 )
 
 type PublishDeclarationModule struct {
@@ -33,8 +32,14 @@ func (m *PublishDeclarationModule) Init() {
 }
 
 // PublishDeclarationAction declares what this version expects a device to have.
-// An upgrade leaves InstallerDir empty: it brought no medium, and the catalog
-// apps of the release being installed are declared all the same.
+//
+// InstallerDir is the one field whose emptiness means something: no medium was
+// brought, which is the ordinary shape of an upgrade, and the catalog apps of the
+// release being installed are declared all the same. The other two are required
+// -- Publish refuses an empty version, and an empty root would write the
+// declaration where nothing mounts it -- so every caller states them rather than
+// falling through to a default here, where the caller's reason for the value is
+// no longer visible.
 type PublishDeclarationAction struct {
 	action.BaseAction
 	InstallerDir      string
@@ -44,23 +49,7 @@ type PublishDeclarationAction struct {
 }
 
 func (a *PublishDeclarationAction) Execute(_ connector.Runtime) error {
-	return Publish(a.InstallerDir, publishRootDir(a.RootDir), publishVersion(a.OSVersion), a.ProfileSelections)
-}
-
-func publishRootDir(rootDir string) string {
-	if rootDir == "" {
-		return storage.OlaresRootDir
-	}
-	return rootDir
-}
-
-// publishVersion falls back to the version of this binary, which is the version
-// it is installing or upgrading to.
-func publishVersion(osVersion string) string {
-	if osVersion == "" {
-		return version.VERSION
-	}
-	return osVersion
+	return Publish(a.InstallerDir, a.RootDir, a.OSVersion, a.ProfileSelections)
 }
 
 type HFCacheMaterializeModule struct {

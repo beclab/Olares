@@ -78,7 +78,7 @@ func materializeHFArtifactsWithHooks(installerDir, targetRootPath string, owners
 	if err != nil {
 		return err
 	}
-	if !source.carriesCharts() {
+	if !source.present() {
 		return nil
 	}
 	defer source.close()

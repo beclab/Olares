@@ -28,7 +28,7 @@ func Publish(installerDir, rootDir, osVersion string, selections ProfileSelectio
 		return err
 	}
 	defer source.close()
-	if source.carriesCharts() {
+	if source.present() {
 		if err := Validate(source.bundle); err != nil {
 			return err
 		}
@@ -167,7 +167,7 @@ func stagePayload(source medium, stagingRoot *os.Root, declaration DeclarationV2
 		if !app.local() {
 			continue
 		}
-		if !source.carriesCharts() {
+		if !source.present() {
 			return nil, fmt.Errorf("declared app %q needs a chart no medium carries", app.AppID)
 		}
 		if err := stagingRoot.MkdirAll(path.Dir(app.Chart), 0o755); err != nil {

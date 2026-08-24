@@ -77,7 +77,9 @@ macOS / minikube 安装整条预装流水线都跳过。
 1. `PrepareForUpgrade` 里跑同一个 `PublishDeclarationAction`，只是不给
    `InstallerDir`——这次升级没有介质。于是声明里只有 CLI 内嵌的
    `catalog-apps.json`：没有 chart、没有 payload，只有应用名和安装顺序，
-   升级机器上的 chart 由官方目录提供。
+   升级机器上的 chart 由官方目录提供。空的 `InstallerDir` 是这个 action
+   里唯一有含义的空值；声明的版本（本二进制的 `version.VERSION`）和写入的
+   根目录都由调用方显式给出，不靠默认值。
 2. 这一步对**每一条**升级路径都执行，不是某个版本的一次性动作。
 3. 升级流水线在最后才把新版本写进 Terminus CR 的 `spec.version`。这个次序是有意的：
    Market 在升级过程中已经是新版镜像，但它读到的仍是旧版本对应的声明，等版本真的
