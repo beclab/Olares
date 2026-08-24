@@ -222,7 +222,7 @@ per-user 的退出决定绑在账号的 User CR uid 上而不是名字上，所�
 | `installScope` | `shared` 是设备一份，`per-user` 是每个 eligible 账号一份。 |
 | `installOrder` | 依赖屏障而不是展示排序：同序号的应用各自推进，更高序号要等所有更低序号 `installed`。 |
 | `chartSource` | `local` = chart 随介质来、首装钉住 `version` 且不等目录；`catalog` = 只给应用名，版本由目录决定、必须等目录同步干净。 |
-| `version` / `chart` / `chartSha256` | 只有 `local` 条目有。Market 记 `catalog` 条目的版本为 `catalog-latest`。 |
+| `version` / `chart` / `chartSha256` | 只有 `local` 条目有。`catalog` 条目三个都不带，Market 侧那一行的版本与 chart digest 也都是空的，判断来源看 `chart_source` 而不是看这两个值。 |
 | `envs` | 已经是"默认值 + 被允许的运行期覆盖"之后的最终结果，敏感键名被拒。 |
 | `artifacts` | 至多一条，当前只有 `hf-cache`。声明里只放 manifest，权重 payload 留在介质上。 |
 

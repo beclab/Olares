@@ -24,11 +24,10 @@ type contractConstantsFixture struct {
 		MaxArtifactEntries       int   `json:"maxArtifactEntries"`
 		MaxArtifactTotalSize     int64 `json:"maxArtifactTotalSize"`
 	} `json:"limits"`
-	ArtifactKindHFCache  string   `json:"artifactKindHFCache"`
-	CatalogLatestVersion string   `json:"catalogLatestVersion"`
-	EnvsJSONKey          string   `json:"envsJSONKey"`
-	ChartSources         []string `json:"chartSources"`
-	InstallScopes        []string `json:"installScopes"`
+	ArtifactKindHFCache string   `json:"artifactKindHFCache"`
+	EnvsJSONKey         string   `json:"envsJSONKey"`
+	ChartSources        []string `json:"chartSources"`
+	InstallScopes       []string `json:"installScopes"`
 }
 
 func readContractConstants(t *testing.T) contractConstantsFixture {
@@ -53,7 +52,6 @@ func TestContractConstantsMatchCrossRepositoryFixture(t *testing.T) {
 		{"declarationFilePrefix", declarationFilePrefix, fixture.DeclarationFilePrefix},
 		{"declarationFileSuffix", declarationFileSuffix, fixture.DeclarationFileSuffix},
 		{"artifactKindHFCache", ArtifactKindHFCache, fixture.ArtifactKindHFCache},
-		{"catalogLatestVersion", CatalogLatestVersion, fixture.CatalogLatestVersion},
 	} {
 		if test.got != test.want {
 			t.Errorf("%s = %q, fixture has %q", test.name, test.got, test.want)

@@ -12,7 +12,6 @@
     "maxArtifactTotalSize": 1099511627776
   },
   "artifactKindHFCache": "hf-cache",
-  "catalogLatestVersion": "catalog-latest",
   "envsJSONKey": "envs",
   "chartSources": [
     "catalog",

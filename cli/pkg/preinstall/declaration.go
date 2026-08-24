@@ -35,11 +35,6 @@ const (
 	// ChartSourceLocal takes the chart from the payload beside the declaration,
 	// which is what an air-gapped first install has.
 	ChartSourceLocal = ChartSource("local")
-
-	// CatalogLatestVersion is what Market records for an entry that pins no
-	// version. It is stated here because the fixture the two repositories share
-	// carries it, not because this program writes it into a declaration.
-	CatalogLatestVersion = "catalog-latest"
 )
 
 // generatedNow is provenance rather than behaviour: Market branches on nothing
