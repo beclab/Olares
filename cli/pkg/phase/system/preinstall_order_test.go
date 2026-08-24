@@ -26,31 +26,34 @@ func TestMacosPhaseBuilderSkipsOfflinePreinstallWiring(t *testing.T) {
 	}
 }
 
-func TestMarketPreinstallModulesFollowImagePreload(t *testing.T) {
+func TestMarketPreinstallModulesCarryWhatThePublishNeeds(t *testing.T) {
 	selections := preinstall.ProfileSelections{
 		HardwareProfile: gpu.IntelType,
 		DetectedGPUType: gpu.IntelType,
 	}
-	modules := marketPreinstallModules(manifest.InstallationManifest{}, "/installer", "/base", selections)
-	if len(modules) != 2 {
+	modules := marketPreinstallModules(manifest.InstallationManifest{}, "/installer", "/base", "1.12.7-rc.1", selections)
+	if len(modules) != 1 {
 		t.Fatalf("module count = %d", len(modules))
 	}
-	if _, ok := modules[0].(*images.PreloadImagesModule); !ok {
-		t.Fatalf("first module = %T", modules[0])
-	}
-	materialize, ok := modules[1].(*preinstall.MaterializeModule)
+	materialize, ok := modules[0].(*preinstall.MaterializeModule)
 	if !ok {
-		t.Fatalf("second module = %T", modules[1])
+		t.Fatalf("module = %T", modules[0])
 	}
+	// The declaration is published under the Olares root the market chart
+	// mounts, not under the installer's base directory.
 	if materialize.InstallerDir != "/installer" || materialize.RootDir != storage.OlaresRootDir {
 		t.Fatalf("materialize paths = %#v", materialize)
+	}
+	// The declaration is named after the version being installed, so that
+	// version has to reach the module that writes it.
+	if materialize.OSVersion != "1.12.7-rc.1" {
+		t.Fatalf("materialize osVersion = %q", materialize.OSVersion)
 	}
 	if materialize.ProfileSelections.HardwareProfile != gpu.IntelType ||
 		materialize.ProfileSelections.DetectedGPUType != gpu.IntelType {
 		t.Fatalf("production selections = %#v", materialize.ProfileSelections)
 	}
 }
-
 func TestDetectPreinstallGPUTypeUsesMostSpecificHardware(t *testing.T) {
 	systemInfo := &connector.SystemInfo{
 		HostInfo: &connector.HostInfo{OsType: common.Darwin, OsArch: "arm64"},

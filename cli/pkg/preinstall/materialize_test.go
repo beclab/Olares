@@ -6,40 +6,92 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 )
 
-func TestMaterializeNoOpsWhenStaticInputIsMissing(t *testing.T) {
+const (
+	testOSVersion    = "1.12.7"
+	testGeneratedAt  = "2026-07-25T00:00:00Z"
+	testNextOSTrunk  = "1.13.0"
+	testBundledAppID = "app-a"
+)
+
+// A medium with no bundle of its own still has something to say: every device
+// running this version is expected to have the catalog apps, and a declaration
+// is the only place that is written down.
+func TestMaterializeWithoutAStaticBundlePublishesTheCatalogApps(t *testing.T) {
 	root := t.TempDir()
-	err := Materialize(filepath.Join(root, "installer"), filepath.Join(root, "base"), ProfileSelections{})
-	if err != nil {
+	baseDir := filepath.Join(root, "base")
+
+	if err := Materialize(filepath.Join(root, "installer"), baseDir, testOSVersion, ProfileSelections{}); err != nil {
 		t.Fatalf("Materialize() error = %v", err)
 	}
-	if _, err := os.Stat(filepath.Join(root, "base", RuntimeRelativeDir)); !os.IsNotExist(err) {
-		t.Fatalf("runtime directory stat error = %v", err)
+
+	target := filepath.Join(baseDir, RuntimeRelativeDir)
+	t.Cleanup(func() { _ = makeWritable(target) })
+	declaration := readPublishedDeclaration(t, target, testOSVersion)
+	if len(declaration.Apps) != len(catalogApps) {
+		t.Fatalf("declared apps = %#v, want the catalog apps alone", declaration.Apps)
+	}
+	if _, err := os.Stat(filepath.Join(target, "chart")); !os.IsNotExist(err) {
+		t.Fatalf("a declaration with no local entry staged a chart directory: %v", err)
 	}
 }
 
-func TestMaterializeMissingInputPreservesExistingOverlay(t *testing.T) {
-	root := t.TempDir()
-	target := filepath.Join(root, "base", RuntimeRelativeDir)
+// One file per trunk, so publishing one release's declaration must leave every
+// other release's alone -- including a device that upgraded and now has two.
+func TestMaterializeAddsThisReleaseBesideTheOnesAlreadyThere(t *testing.T) {
+	installerDir, baseDir := writeStaticBundle(t)
+	target := filepath.Join(baseDir, RuntimeRelativeDir)
 	if err := os.MkdirAll(target, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	marker := filepath.Join(target, "managed")
-	if err := os.WriteFile(marker, []byte("preserved"), 0o444); err != nil {
+	previous := filepath.Join(target, DeclarationFileName(testNextOSTrunk))
+	if err := os.WriteFile(previous, []byte("another release"), 0o444); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = makeWritable(target) })
+
+	if err := Materialize(installerDir, baseDir, testOSVersion, ProfileSelections{}); err != nil {
+		t.Fatalf("Materialize() error = %v", err)
+	}
+
+	if got, err := os.ReadFile(previous); err != nil || string(got) != "another release" {
+		t.Fatalf("another release's declaration changed: content=%q error=%v", got, err)
+	}
+	readPublishedDeclaration(t, target, testOSVersion)
+}
+
+// Every build of a release shares one declaration, and a device that has already
+// acted on it must not be handed a second answer.
+func TestMaterializeLeavesThisTrunksDeclarationAloneOnceItExists(t *testing.T) {
+	installerDir, baseDir := writeStaticBundle(t)
+	if err := Materialize(installerDir, baseDir, testOSVersion, ProfileSelections{}); err != nil {
+		t.Fatalf("first Materialize() error = %v", err)
+	}
+	target := filepath.Join(baseDir, RuntimeRelativeDir)
+	t.Cleanup(func() { _ = makeWritable(target) })
+	published := filepath.Join(target, DeclarationFileName(testOSVersion))
+	first, err := os.ReadFile(published)
+	if err != nil {
 		t.Fatal(err)
 	}
 
-	if err := Materialize(filepath.Join(root, "installer"), filepath.Join(root, "base"), ProfileSelections{}); err != nil {
-		t.Fatalf("Materialize() error = %v", err)
+	err = Materialize(installerDir, baseDir, testOSVersion+"-rc.2", ProfileSelections{
+		Apps: map[string]AppSelection{testBundledAppID: {Envs: map[string]string{"WORKER_COUNT": "9"}}},
+	})
+
+	if err != nil {
+		t.Fatalf("second Materialize() error = %v", err)
 	}
-	if got, err := os.ReadFile(marker); err != nil || string(got) != "preserved" {
-		t.Fatalf("existing overlay changed: content=%q error=%v", got, err)
+	second, err := os.ReadFile(published)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(second) != string(first) {
+		t.Fatalf("declaration was rewritten:\ngot:\n%s\nwant:\n%s", second, first)
 	}
 }
 
@@ -50,7 +102,7 @@ func TestMaterializeRejectsOversizedBundle(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := Materialize(installerDir, baseDir, ProfileSelections{}); err == nil ||
+	if err := Materialize(installerDir, baseDir, testOSVersion, ProfileSelections{}); err == nil ||
 		!strings.Contains(err.Error(), "bundle.json exceeds") {
 		t.Fatalf("Materialize() error = %v", err)
 	}
@@ -65,7 +117,7 @@ func TestMaterializeRejectsOversizedChartTotal(t *testing.T) {
 	chartSize := int64(MaxTotalChartBytes/chartCount + 1)
 	for i := 0; i < chartCount; i++ {
 		name := fmt.Sprintf("charts/app-%d.tgz", i)
-		app := BundleAppV1{
+		bundle.Apps = append(bundle.Apps, BundleAppV1{
 			AppID:        fmt.Sprintf("app-%d", i),
 			AppName:      fmt.Sprintf("app-%d", i),
 			Version:      "1.0.0",
@@ -73,8 +125,7 @@ func TestMaterializeRejectsOversizedChartTotal(t *testing.T) {
 			Chart:        name,
 			ChartSHA256:  strings.Repeat("0", 64),
 			AppEntry:     json.RawMessage(`{}`),
-		}
-		bundle.Apps = append(bundle.Apps, app)
+		})
 		chart := filepath.Join(staticDir, filepath.FromSlash(name))
 		if err := os.WriteFile(chart, nil, 0o644); err != nil {
 			t.Fatal(err)
@@ -91,172 +142,51 @@ func TestMaterializeRejectsOversizedChartTotal(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := Materialize(installerDir, baseDir, ProfileSelections{}); err == nil ||
+	if err := Materialize(installerDir, baseDir, testOSVersion, ProfileSelections{}); err == nil ||
 		!strings.Contains(err.Error(), "total chart size exceeds") {
 		t.Fatalf("Materialize() error = %v", err)
 	}
 }
 
-func TestMaterializeCopiesValidatedBundleAndBuildsReadOnlyProfile(t *testing.T) {
+func TestMaterializeFoldsSelectionsIntoTheDeclaration(t *testing.T) {
 	installerDir, baseDir := writeStaticBundle(t)
 	selections := ProfileSelections{
 		HardwareProfile: "nvidia-cuda",
 		Apps: map[string]AppSelection{
-			"app-a": {
+			testBundledAppID: {
 				SelectedGPUType: "nvidia",
 				Envs:            map[string]string{"WORKER_COUNT": "2"},
 			},
 		},
 	}
 
-	if err := Materialize(installerDir, baseDir, selections); err != nil {
+	if err := Materialize(installerDir, baseDir, testOSVersion, selections); err != nil {
 		t.Fatalf("Materialize() error = %v", err)
 	}
 
 	target := filepath.Join(baseDir, RuntimeRelativeDir)
 	t.Cleanup(func() { _ = makeWritable(target) })
-	contract, err := LoadDirectory(target)
-	if err != nil {
-		t.Fatalf("LoadDirectory() error = %v", err)
+	app := declarationApp(t, readPublishedDeclaration(t, target, testOSVersion), testBundledAppID)
+	if app.SelectedGPUType != "nvidia" || app.Envs["WORKER_COUNT"] != "2" {
+		t.Fatalf("declared app = %#v", app)
 	}
-	if contract.Profile.HardwareProfile != "nvidia-cuda" ||
-		contract.Profile.Apps[0].SelectedGPUType != "nvidia" ||
-		contract.Profile.Apps[0].Envs["WORKER_COUNT"] != "2" {
-		t.Fatalf("profile = %#v", contract.Profile)
-	}
-	assertMode(t, target, expectedRootMode())
-	assertMode(t, filepath.Join(target, "charts"), 0o555)
-	assertMode(t, filepath.Join(target, BundleFileName), 0o444)
-	assertMode(t, filepath.Join(target, ProfileFileName), 0o444)
+	assertMode(t, target, 0o755)
+	assertMode(t, filepath.Join(target, "charts"), 0o755)
+	assertMode(t, filepath.Join(target, DeclarationFileName(testOSVersion)), 0o444)
 	assertMode(t, filepath.Join(target, "charts", "app-a-1.0.0.tgz"), 0o444)
-}
-
-func TestBuildProfileMergesDefaultsWithoutMutatingInputs(t *testing.T) {
-	bundle := decodeBundle(t, validBundleJSON)
-	bundle.Apps[0].AllowedEnvs = []string{"DEFAULT_ONLY", "MODEL_PATH", "WORKER_COUNT"}
-	bundle.Apps[0].DefaultEnvs = map[string]string{
-		"DEFAULT_ONLY": "enabled",
-		"MODEL_PATH":   "/models/default",
-	}
-	defaultsBefore := map[string]string{
-		"DEFAULT_ONLY": "enabled",
-		"MODEL_PATH":   "/models/default",
-	}
-	runtimeEnvs := map[string]string{
-		"MODEL_PATH":   "/models/runtime",
-		"WORKER_COUNT": "2",
-	}
-	runtimeBefore := map[string]string{
-		"MODEL_PATH":   "/models/runtime",
-		"WORKER_COUNT": "2",
-	}
-	selections := ProfileSelections{Apps: map[string]AppSelection{
-		"app-a": {SelectedGPUType: "nvidia", Envs: runtimeEnvs},
-	}}
-
-	profile := buildProfile(bundle, selections)
-
-	if len(profile.Apps) != 1 || profile.Apps[0].AppID != "app-a" {
-		t.Fatalf("buildProfile() apps = %#v", profile.Apps)
-	}
-	if got := profile.Apps[0].Envs; got["DEFAULT_ONLY"] != "enabled" || got["MODEL_PATH"] != "/models/runtime" || got["WORKER_COUNT"] != "2" {
-		t.Fatalf("buildProfile() envs = %#v", got)
-	}
-	if profile.Apps[0].SelectedGPUType != "nvidia" {
-		t.Fatalf("buildProfile() selectedGpuType = %q", profile.Apps[0].SelectedGPUType)
-	}
-	if !mapsEqual(bundle.Apps[0].DefaultEnvs, defaultsBefore) {
-		t.Fatalf("bundle defaults mutated: got %#v want %#v", bundle.Apps[0].DefaultEnvs, defaultsBefore)
-	}
-	if !mapsEqual(runtimeEnvs, runtimeBefore) {
-		t.Fatalf("runtime envs mutated: got %#v want %#v", runtimeEnvs, runtimeBefore)
-	}
-	profile.Apps[0].Envs["MODEL_PATH"] = "changed"
-	if bundle.Apps[0].DefaultEnvs["MODEL_PATH"] != "/models/default" || runtimeEnvs["MODEL_PATH"] != "/models/runtime" {
-		t.Fatalf("profile envs alias input maps")
-	}
-}
-
-func TestBuildProfileIncludesDefaultsOnlyAppsInDeterministicOrder(t *testing.T) {
-	bundle := decodeBundle(t, validBundleJSON)
-	bundle.Apps[0].AppID = "app-b"
-	bundle.Apps[0].DefaultEnvs = map[string]string{"WORKER_COUNT": "1"}
-	first := bundle.Apps[0]
-	first.AppID = "app-a"
-	first.AppName = "app-a"
-	first.Chart = "charts/app-first.tgz"
-	first.DefaultEnvs = map[string]string{"WORKER_COUNT": ""}
-	bundle.Apps = append(bundle.Apps, first)
-
-	profile := buildProfile(bundle, ProfileSelections{})
-
-	if len(profile.Apps) != 2 || profile.Apps[0].AppID != "app-a" || profile.Apps[1].AppID != "app-b" {
-		t.Fatalf("buildProfile() apps = %#v", profile.Apps)
-	}
-	if got := profile.Apps[0].Envs["WORKER_COUNT"]; got != "" {
-		t.Fatalf("buildProfile() empty default = %q", got)
-	}
-}
-
-func TestBuildProfileAppliesDetectedGPUOnlyToAllowedApps(t *testing.T) {
-	bundle := decodeBundle(t, validBundleJSON)
-	bundle.Apps[0].AllowedGPUTypes = []string{"nvidia", "cpu"}
-	unsupported := bundle.Apps[0]
-	unsupported.AppID = "app-b"
-	unsupported.AppName = "app-b"
-	unsupported.AllowedGPUTypes = []string{"cpu"}
-	unsupported.DefaultEnvs = map[string]string{"WORKER_COUNT": "1"}
-	bundle.Apps = append(bundle.Apps, unsupported)
-
-	profile := buildProfile(bundle, ProfileSelections{
-		HardwareProfile: "nvidia",
-		DetectedGPUType: "nvidia",
-	})
-
-	if profile.HardwareProfile != "nvidia" {
-		t.Fatalf("buildProfile() hardwareProfile = %q", profile.HardwareProfile)
-	}
-	if len(profile.Apps) != 2 {
-		t.Fatalf("buildProfile() apps = %#v", profile.Apps)
-	}
-	if profile.Apps[0].AppID != "app-a" || profile.Apps[0].SelectedGPUType != "nvidia" {
-		t.Fatalf("buildProfile() allowed app = %#v", profile.Apps[0])
-	}
-	if profile.Apps[1].AppID != "app-b" || profile.Apps[1].SelectedGPUType != "" ||
-		profile.Apps[1].Envs["WORKER_COUNT"] != "1" {
-		t.Fatalf("buildProfile() unsupported app = %#v", profile.Apps[1])
-	}
-}
-
-func TestBuildProfileExplicitGPUOverridesDetectedGPU(t *testing.T) {
-	bundle := decodeBundle(t, validBundleJSON)
-	bundle.Apps[0].AllowedGPUTypes = []string{"nvidia", "cpu"}
-
-	profile := buildProfile(bundle, ProfileSelections{
-		DetectedGPUType: "nvidia",
-		Apps: map[string]AppSelection{
-			"app-a": {SelectedGPUType: "cpu"},
-		},
-	})
-
-	if len(profile.Apps) != 1 || profile.Apps[0].SelectedGPUType != "cpu" {
-		t.Fatalf("buildProfile() apps = %#v", profile.Apps)
-	}
 }
 
 func TestMaterializePublishesArtifactManifestWithoutPayload(t *testing.T) {
 	installerDir, baseDir := writeStaticBundle(t)
 	artifact, manifestData := addMaterializeArtifactFixture(t, installerDir)
 
-	if err := Materialize(installerDir, baseDir, ProfileSelections{}); err != nil {
+	if err := Materialize(installerDir, baseDir, testOSVersion, ProfileSelections{}); err != nil {
 		t.Fatalf("Materialize() error = %v", err)
 	}
 
 	target := filepath.Join(baseDir, RuntimeRelativeDir)
 	t.Cleanup(func() { _ = makeWritable(target) })
-	if _, err := LoadDirectory(target); err != nil {
-		t.Fatalf("LoadDirectory() error = %v", err)
-	}
+	readPublishedDeclaration(t, target, testOSVersion)
 	published, err := os.ReadFile(filepath.Join(target, filepath.FromSlash(artifact.Manifest)))
 	if err != nil {
 		t.Fatal(err)
@@ -271,7 +201,7 @@ func TestMaterializePublishesArtifactManifestWithoutPayload(t *testing.T) {
 	if _, err := os.Lstat(filepath.Join(target, filepath.FromSlash(artifact.Source))); !os.IsNotExist(err) {
 		t.Fatalf("artifact payload was published: %v", err)
 	}
-	assertMode(t, filepath.Join(target, "manifests"), 0o555)
+	assertMode(t, filepath.Join(target, "manifests"), 0o755)
 	assertMode(t, filepath.Join(target, filepath.FromSlash(artifact.Manifest)), 0o444)
 }
 
@@ -320,7 +250,7 @@ func TestMaterializeRejectsArtifactManifestSymlinks(t *testing.T) {
 			artifact, _ := addMaterializeArtifactFixture(t, installerDir)
 			tt.replace(t, filepath.Join(installerDir, StaticRelativeDir), artifact)
 
-			err := Materialize(installerDir, baseDir, ProfileSelections{})
+			err := Materialize(installerDir, baseDir, testOSVersion, ProfileSelections{})
 
 			if err == nil || !strings.Contains(err.Error(), "symlink") {
 				t.Fatalf("Materialize() error = %v, want symlink rejection", err)
@@ -329,7 +259,9 @@ func TestMaterializeRejectsArtifactManifestSymlinks(t *testing.T) {
 	}
 }
 
-func TestMaterializeRejectsSymlinkWithoutReplacingExistingTarget(t *testing.T) {
+// A publish that fails writes no declaration, so whatever the device was already
+// told stays the answer.
+func TestMaterializeRejectsSymlinkWithoutPublishingADeclaration(t *testing.T) {
 	installerDir, baseDir := writeStaticBundle(t)
 	staticDir := filepath.Join(installerDir, StaticRelativeDir)
 	if err := os.Remove(filepath.Join(staticDir, "charts", "app-a-1.0.0.tgz")); err != nil {
@@ -347,11 +279,14 @@ func TestMaterializeRejectsSymlinkWithoutReplacingExistingTarget(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := Materialize(installerDir, baseDir, ProfileSelections{}); err == nil {
+	if err := Materialize(installerDir, baseDir, testOSVersion, ProfileSelections{}); err == nil {
 		t.Fatal("Materialize() error = nil, want symlink rejection")
 	}
 	if got, err := os.ReadFile(marker); err != nil || string(got) != "existing" {
 		t.Fatalf("existing target changed: content=%q error=%v", got, err)
+	}
+	if _, err := os.Lstat(filepath.Join(target, DeclarationFileName(testOSVersion))); !os.IsNotExist(err) {
+		t.Fatalf("a failed publish left a declaration: %v", err)
 	}
 }
 
@@ -368,7 +303,7 @@ func TestMaterializeRejectsSymlinkedStaticInputParent(t *testing.T) {
 	target := filepath.Join(baseDir, RuntimeRelativeDir)
 	t.Cleanup(func() { _ = makeWritable(target) })
 
-	if err := Materialize(installerDir, baseDir, ProfileSelections{}); err == nil {
+	if err := Materialize(installerDir, baseDir, testOSVersion, ProfileSelections{}); err == nil {
 		t.Fatal("Materialize() error = nil, want symlinked parent rejection")
 	}
 }
@@ -380,7 +315,7 @@ func TestMaterializeRejectsSymlinkedInstallerAndBasePaths(t *testing.T) {
 		if err := os.Symlink(realInstaller, link); err != nil {
 			t.Fatal(err)
 		}
-		if err := Materialize(link, baseDir, ProfileSelections{}); err == nil {
+		if err := Materialize(link, baseDir, testOSVersion, ProfileSelections{}); err == nil {
 			t.Fatal("Materialize() error = nil, want installer symlink rejection")
 		}
 	})
@@ -391,7 +326,7 @@ func TestMaterializeRejectsSymlinkedInstallerAndBasePaths(t *testing.T) {
 		if err := os.Symlink(realBase, link); err != nil {
 			t.Fatal(err)
 		}
-		if err := Materialize(installerDir, link, ProfileSelections{}); err == nil {
+		if err := Materialize(installerDir, link, testOSVersion, ProfileSelections{}); err == nil {
 			t.Fatal("Materialize() error = nil, want base symlink rejection")
 		}
 	})
@@ -408,12 +343,10 @@ func TestMaterializeAllowsSymlinkedAncestorDirectories(t *testing.T) {
 		installerDir := filepath.Join(link, filepath.Base(realInstaller))
 		t.Cleanup(func() { _ = makeWritable(baseDir) })
 
-		if err := Materialize(installerDir, baseDir, ProfileSelections{}); err != nil {
+		if err := Materialize(installerDir, baseDir, testOSVersion, ProfileSelections{}); err != nil {
 			t.Fatalf("Materialize() through symlinked installer ancestor error = %v", err)
 		}
-		if _, err := os.Stat(filepath.Join(baseDir, RuntimeRelativeDir, BundleFileName)); err != nil {
-			t.Fatalf("materialized bundle missing: %v", err)
-		}
+		readPublishedDeclaration(t, filepath.Join(baseDir, RuntimeRelativeDir), testOSVersion)
 	})
 
 	t.Run("base ancestor", func(t *testing.T) {
@@ -427,12 +360,10 @@ func TestMaterializeAllowsSymlinkedAncestorDirectories(t *testing.T) {
 		baseDir := filepath.Join(link, "base")
 		t.Cleanup(func() { _ = makeWritable(realParent) })
 
-		if err := Materialize(installerDir, baseDir, ProfileSelections{}); err != nil {
+		if err := Materialize(installerDir, baseDir, testOSVersion, ProfileSelections{}); err != nil {
 			t.Fatalf("Materialize() through symlinked base ancestor error = %v", err)
 		}
-		if _, err := os.Stat(filepath.Join(realParent, "base", RuntimeRelativeDir, BundleFileName)); err != nil {
-			t.Fatalf("materialized bundle missing under real base: %v", err)
-		}
+		readPublishedDeclaration(t, filepath.Join(realParent, "base", RuntimeRelativeDir), testOSVersion)
 	})
 }
 
@@ -445,52 +376,18 @@ func TestMaterializeRejectsSymlinkedRuntimeParent(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := Materialize(installerDir, baseDir, ProfileSelections{}); err == nil {
+	if err := Materialize(installerDir, baseDir, testOSVersion, ProfileSelections{}); err == nil {
 		t.Fatal("Materialize() error = nil, want runtime parent symlink rejection")
 	}
 }
 
-func TestMaterializeReplacesExistingReadOnlyTarget(t *testing.T) {
+func TestMaterializeRefusesAPublishWithNoVersionToNameItAfter(t *testing.T) {
 	installerDir, baseDir := writeStaticBundle(t)
-	if err := Materialize(installerDir, baseDir, ProfileSelections{}); err != nil {
-		t.Fatalf("first Materialize() error = %v", err)
-	}
-	target := filepath.Join(baseDir, RuntimeRelativeDir)
-	t.Cleanup(func() { _ = makeWritable(target) })
 
-	if err := Materialize(installerDir, baseDir, ProfileSelections{}); err != nil {
-		t.Fatalf("second Materialize() error = %v", err)
-	}
-	if _, err := LoadDirectory(target); err != nil {
-		t.Fatalf("LoadDirectory() error = %v", err)
-	}
-}
+	err := Materialize(installerDir, baseDir, "  ", ProfileSelections{})
 
-// Published is what turns the market deployment's importer on, so it must
-// answer for the tree Materialize leaves behind and for nothing else.
-func TestPublishedFollowsWhatMaterializeLeavesBehind(t *testing.T) {
-	installerDir, baseDir := writeStaticBundle(t)
-	if Published(baseDir) {
-		t.Fatal("Published() is true before anything was published")
-	}
-
-	if err := Materialize(installerDir, baseDir, ProfileSelections{}); err != nil {
-		t.Fatalf("Materialize() error = %v", err)
-	}
-	target := filepath.Join(baseDir, RuntimeRelativeDir)
-	t.Cleanup(func() { _ = makeWritable(target) })
-
-	if !Published(baseDir) {
-		t.Fatal("Published() is false for a bundle this run published")
-	}
-	if err := makeWritable(target); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Remove(filepath.Join(target, BundleFileName)); err != nil {
-		t.Fatal(err)
-	}
-	if Published(baseDir) {
-		t.Fatal("Published() is true for a directory with no bundle in it")
+	if err == nil || !strings.Contains(err.Error(), "osVersion") {
+		t.Fatalf("Materialize() error = %v, want a missing version rejection", err)
 	}
 }
 
@@ -505,9 +402,6 @@ func TestCleanupStagingRootsRemovesSealedStaging(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := stage.WriteFile("payload", []byte("sealed"), 0o444); err != nil {
-		t.Fatal(err)
-	}
-	if err := sealRootDirectories(stage); err != nil {
 		t.Fatal(err)
 	}
 	if err := stage.Chmod(".", 0o555); err != nil {
@@ -525,27 +419,27 @@ func TestCleanupStagingRootsRemovesSealedStaging(t *testing.T) {
 	}
 }
 
-// Every interrupted run leaves a staging directory holding a full copy of the
-// bundle. Nothing else writes that name, so the next run clears them; a
+// Every interrupted run leaves a staging directory holding a copy of the
+// payload. Nothing else writes that name, so the next run clears them; a
 // directory that only looks similar is left where it is.
 func TestMaterializeRemovesStagingLeftBehindByAnInterruptedRun(t *testing.T) {
 	installerDir, baseDir := writeStaticBundle(t)
-	parent := filepath.Join(baseDir, filepath.FromSlash(path.Dir(RuntimeRelativeDir)))
-	if err := os.MkdirAll(parent, 0o755); err != nil {
+	target := filepath.Join(baseDir, RuntimeRelativeDir)
+	if err := os.MkdirAll(target, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	stale := filepath.Join(parent, stagingPrefix+strings.Repeat("a", 16))
-	unrelated := filepath.Join(parent, stagingPrefix+"not-a-staging-token")
+	stale := filepath.Join(target, stagingPrefix+strings.Repeat("a", 16))
+	unrelated := filepath.Join(target, stagingPrefix+"not-a-staging-token")
 	for _, dir := range []string{stale, unrelated} {
 		if err := os.MkdirAll(filepath.Join(dir, "charts"), 0o755); err != nil {
 			t.Fatal(err)
 		}
 	}
 
-	if err := Materialize(installerDir, baseDir, ProfileSelections{}); err != nil {
+	if err := Materialize(installerDir, baseDir, testOSVersion, ProfileSelections{}); err != nil {
 		t.Fatalf("Materialize() error = %v", err)
 	}
-	t.Cleanup(func() { _ = makeWritable(filepath.Join(baseDir, RuntimeRelativeDir)) })
+	t.Cleanup(func() { _ = makeWritable(target) })
 
 	if _, err := os.Lstat(stale); !os.IsNotExist(err) {
 		t.Fatalf("stale staging survived: %v", err)
@@ -584,137 +478,41 @@ func TestMaterializeSupportsNestedChartPaths(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := Materialize(installerDir, baseDir, ProfileSelections{}); err != nil {
+	if err := Materialize(installerDir, baseDir, testOSVersion, ProfileSelections{}); err != nil {
 		t.Fatalf("Materialize() error = %v", err)
 	}
 	target := filepath.Join(baseDir, RuntimeRelativeDir)
 	t.Cleanup(func() { _ = makeWritable(target) })
 	assertMode(t, filepath.Join(target, filepath.FromSlash(bundle.Apps[0].Chart)), 0o444)
-	assertMode(t, filepath.Join(target, "charts", "nested"), 0o555)
+	assertMode(t, filepath.Join(target, "charts", "nested"), 0o755)
 }
 
-func TestPopulateStagingSealsTreeBeforePublish(t *testing.T) {
-	installerDir, _ := writeStaticBundle(t)
-	staticDir := filepath.Join(installerDir, StaticRelativeDir)
-	sourceRoot, err := os.OpenRoot(staticDir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer sourceRoot.Close()
-	bundleData, err := os.ReadFile(filepath.Join(staticDir, BundleFileName))
-	if err != nil {
-		t.Fatal(err)
-	}
-	bundle, err := DecodeBundle(bundleData)
-	if err != nil {
-		t.Fatal(err)
-	}
-	staging := filepath.Join(t.TempDir(), "staging")
-	if err := os.Mkdir(staging, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	stagingRoot, err := os.OpenRoot(staging)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer stagingRoot.Close()
+// An upgrade declares the catalog apps for the release it brings, and carries no
+// payload at all: the charts are on the network.
+func TestPublishCatalogDeclarationDeclaresTheCatalogAppsAlone(t *testing.T) {
+	baseDir := canonicalTempDir(t)
 
-	if err := populateStaging(sourceRoot, stagingRoot, bundleData, bundle, buildProfile(bundle, ProfileSelections{})); err != nil {
-		t.Fatalf("populateStaging() error = %v", err)
+	if err := PublishCatalogDeclaration(baseDir, testNextOSTrunk+"-20260731"); err != nil {
+		t.Fatalf("PublishCatalogDeclaration() error = %v", err)
 	}
 
-	t.Cleanup(func() { _ = makeWritable(staging) })
-	assertMode(t, staging, expectedRootMode())
-	assertMode(t, filepath.Join(staging, "charts"), 0o555)
-	assertMode(t, filepath.Join(staging, BundleFileName), 0o444)
-}
-
-func TestMaterializedRootModeByPlatform(t *testing.T) {
-	tests := map[string]os.FileMode{
-		"darwin":  0o755,
-		"linux":   0o555,
-		"windows": 0o555,
-	}
-	for goos, want := range tests {
-		if got := materializedRootModeFor(goos); got != want {
-			t.Errorf("materializedRootModeFor(%q) = %o, want %o", goos, got, want)
-		}
-	}
-}
-
-func TestRecoverPreviousRestoresMissingTarget(t *testing.T) {
-	parent := canonicalTempDir(t)
-	target := filepath.Join(parent, "market-preinstall")
-	backup := target + ".previous"
-	if err := os.Mkdir(backup, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(backup, "marker"), []byte("old"), 0o444); err != nil {
-		t.Fatal(err)
-	}
-	if err := recoverPrevious(target); err != nil {
-		t.Fatalf("recoverPrevious() error = %v", err)
-	}
-
+	target := filepath.Join(baseDir, RuntimeRelativeDir)
 	t.Cleanup(func() { _ = makeWritable(target) })
-	if got, err := os.ReadFile(filepath.Join(target, "marker")); err != nil || string(got) != "old" {
-		t.Fatalf("recovered marker = %q, error = %v", got, err)
+	declaration := readPublishedDeclaration(t, target, testNextOSTrunk)
+	if len(declaration.Apps) != len(catalogApps) {
+		t.Fatalf("declared apps = %#v", declaration.Apps)
 	}
-	if _, err := os.Lstat(backup); !os.IsNotExist(err) {
-		t.Fatalf("backup still exists: %v", err)
-	}
-}
-
-func TestRecoverPreviousRemovesStaleBackupBesideTarget(t *testing.T) {
-	parent := canonicalTempDir(t)
-	target := filepath.Join(parent, "market-preinstall")
-	backup := target + ".previous"
-	for _, directory := range []string{target, backup} {
-		if err := os.Mkdir(directory, 0o755); err != nil {
-			t.Fatal(err)
+	for _, app := range declaration.Apps {
+		if app.ChartSource != ChartSourceCatalog {
+			t.Fatalf("declared app %q chartSource = %q", app.AppID, app.ChartSource)
 		}
 	}
-	if err := os.WriteFile(filepath.Join(target, "marker"), []byte("current"), 0o444); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := recoverPrevious(target); err != nil {
-		t.Fatalf("recoverPrevious() error = %v", err)
-	}
-
-	if got, err := os.ReadFile(filepath.Join(target, "marker")); err != nil || string(got) != "current" {
-		t.Fatalf("current marker = %q, error = %v", got, err)
-	}
-	if _, err := os.Lstat(backup); !os.IsNotExist(err) {
-		t.Fatalf("stale backup still exists: %v", err)
-	}
-}
-
-func TestReplaceDirectoryRollsBackWhenStagingIsMissing(t *testing.T) {
-	parentPath := t.TempDir()
-	target := filepath.Join(parentPath, "market-preinstall")
-	if err := os.Mkdir(target, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(target, "marker"), []byte("old"), 0o444); err != nil {
-		t.Fatal(err)
-	}
-	parent, err := os.OpenRoot(parentPath)
+	entries, err := os.ReadDir(target)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer parent.Close()
-
-	err = replaceDirectoryRoot(parent, "market-preinstall", "missing-staging")
-
-	if err == nil || !strings.Contains(err.Error(), "activate preinstall directory") {
-		t.Fatalf("replaceDirectoryRoot() error = %v", err)
-	}
-	if got, readErr := os.ReadFile(filepath.Join(target, "marker")); readErr != nil || string(got) != "old" {
-		t.Fatalf("rolled back marker = %q, error = %v", got, readErr)
-	}
-	if _, statErr := os.Lstat(target + ".previous"); !os.IsNotExist(statErr) {
-		t.Fatalf("backup still exists: %v", statErr)
+	if len(entries) != 1 || entries[0].Name() != DeclarationFileName(testNextOSTrunk) {
+		t.Fatalf("published entries = %#v, want the declaration alone", entries)
 	}
 }
 
@@ -742,6 +540,43 @@ func writeStaticBundle(t *testing.T) (string, string) {
 		t.Fatal(err)
 	}
 	return installerDir, baseDir
+}
+
+func readPublishedDeclaration(t *testing.T, target, osVersion string) DeclarationV2 {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join(target, DeclarationFileName(osVersion)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var declaration DeclarationV2
+	if err := strictDecode(data, &declaration); err != nil {
+		t.Fatalf("decode published declaration: %v", err)
+	}
+	if err := ValidateDeclaration(&declaration); err != nil {
+		t.Fatalf("published declaration is not one Market would read: %v", err)
+	}
+	if TrunkVersion(declaration.OSVersion) != TrunkVersion(osVersion) {
+		t.Fatalf("declaration osVersion = %q, want trunk %q", declaration.OSVersion, TrunkVersion(osVersion))
+	}
+	return declaration
+}
+
+func declarationApp(t *testing.T, declaration DeclarationV2, appID string) DeclarationAppV2 {
+	t.Helper()
+	for _, app := range declaration.Apps {
+		if app.AppID == appID {
+			return app
+		}
+	}
+	t.Fatalf("declaration has no app %q: %#v", appID, declaration.Apps)
+	return DeclarationAppV2{}
+}
+
+func freezeGeneratedAt(t *testing.T) {
+	t.Helper()
+	original := generatedNow
+	generatedNow = func() string { return testGeneratedAt }
+	t.Cleanup(func() { generatedNow = original })
 }
 
 func mapsEqual(left, right map[string]string) bool {
@@ -838,11 +673,4 @@ func assertMode(t *testing.T, path string, want os.FileMode) {
 	if got := info.Mode().Perm(); got != want {
 		t.Fatalf("%s mode = %o, want %o", path, got, want)
 	}
-}
-
-func expectedRootMode() os.FileMode {
-	if runtime.GOOS == "darwin" {
-		return 0o755
-	}
-	return 0o555
 }

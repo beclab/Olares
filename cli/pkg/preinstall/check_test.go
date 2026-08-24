@@ -9,7 +9,7 @@ import (
 )
 
 func TestCheckStaticBundleGoldenFixture(t *testing.T) {
-	dir := filepath.Join("testdata", "materialized-bundle", "source", "preinstall", "market")
+	dir := filepath.Join("testdata", "materialized-declaration", "source", "preinstall", "market")
 	if err := CheckStaticBundle(dir, CheckOptions{}); err != nil {
 		t.Fatalf("CheckStaticBundle() error = %v", err)
 	}
@@ -141,7 +141,7 @@ func TestCheckStaticBundleFullIgnoresUndeclaredArtifactPathLikeInstaller(t *test
 
 func copyStaticMarket(t *testing.T) string {
 	t.Helper()
-	src := filepath.Join("testdata", "materialized-bundle", "source", "preinstall", "market")
+	src := filepath.Join("testdata", "materialized-declaration", "source", "preinstall", "market")
 	dst := filepath.Join(canonicalTempDir(t), "market")
 	if err := os.CopyFS(dst, os.DirFS(src)); err != nil {
 		t.Fatal(err)

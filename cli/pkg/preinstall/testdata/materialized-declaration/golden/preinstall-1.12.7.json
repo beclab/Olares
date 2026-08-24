@@ -1,26 +1,21 @@
 {
-  "schemaVersion": "1",
-  "sourceId": "market.olares",
-  "catalogHash": "golden-catalog",
+  "schemaVersion": "2",
+  "osVersion": "1.12.7",
   "generatedAt": "2026-07-25T00:00:00Z",
   "apps": [
     {
       "appId": "47ca2f42",
       "appName": "shared-model",
-      "version": "1.0.0",
       "installScope": "shared",
+      "installOrder": 10,
+      "chartSource": "local",
+      "version": "1.0.0",
       "chart": "chart/shared-model-1.0.0.tgz",
       "chartSha256": "f294e0262193f1eb209bcdf21734ef55c0e66bb5871e21facf6bfa957e6d80a9",
-      "installOrder": 10,
-      "allowedEnvs": [
-        "HF_HUB_OFFLINE"
-      ],
-      "defaultEnvs": {
+      "selectedGpuType": "nvidia",
+      "envs": {
         "HF_HUB_OFFLINE": "1"
       },
-      "allowedGpuTypes": [
-        "nvidia"
-      ],
       "artifacts": [
         {
           "kind": "hf-cache",
@@ -39,6 +34,13 @@
         "version": "1.0.0",
         "cfgType": "app"
       }
+    },
+    {
+      "appId": "f3395cd5",
+      "appName": "router",
+      "installScope": "shared",
+      "installOrder": 20,
+      "chartSource": "catalog"
     }
   ]
 }

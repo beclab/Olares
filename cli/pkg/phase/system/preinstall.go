@@ -12,13 +12,14 @@ import (
 
 func marketPreinstallModules(
 	manifestMap manifest.InstallationManifest,
-	installerDir, baseDir string,
+	installerDir, baseDir, osVersion string,
 	selections preinstall.ProfileSelections,
 ) []module.Module {
 	return []module.Module{
 		&preinstall.MaterializeModule{
 			InstallerDir:      installerDir,
 			RootDir:           storage.OlaresRootDir,
+			OSVersion:         osVersion,
 			ProfileSelections: selections,
 		},
 	}

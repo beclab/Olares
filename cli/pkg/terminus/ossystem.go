@@ -15,7 +15,6 @@ import (
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils"
 
 	"github.com/beclab/Olares/cli/pkg/core/logger"
-	"github.com/beclab/Olares/cli/pkg/preinstall"
 	"github.com/beclab/Olares/cli/pkg/storage"
 
 	"github.com/beclab/Olares/cli/pkg/common"
@@ -65,11 +64,6 @@ func (t *InstallOsSystem) Execute(runtime connector.Runtime) error {
 		"fs_type":                            storage.GetRootFSType(),
 		common.HelmValuesKeyOlaresRootFSPath: storage.OlaresRootDir,
 		"sharedlib":                          storage.OlaresSharedLibDir,
-		"ensureApps":                         preinstall.EnsureAppsPublished(storage.OlaresRootDir),
-		// Market only reads the preinstall mount when this says a bundle was
-		// published; an installer that ships none leaves the feature off
-		// instead of having Market look into an empty directory every boot.
-		common.HelmValuesKeyPreinstall: preinstall.Published(storage.OlaresRootDir),
 	}
 
 	var platformPath = path.Join(runtime.GetInstallerDir(), "wizard", "config", "os-platform")
@@ -355,15 +349,6 @@ func (m *InstallOsSystemModule) Init() {
 		Action: &storage.CreateAppCommonDir{},
 	}
 
-	// InstallOsSystem reads whether the declaration is published to decide the
-	// ensureApps Helm value, so publishing has to happen before it. A fresh
-	// install that skipped this reached Market without the declaration, and
-	// Market cannot know an app the OS requires until an upgrade publishes it.
-	publishMarketEnsureApps := &task.LocalTask{
-		Name:   "PublishMarketEnsureApps",
-		Action: new(preinstall.PublishEnsureAppsAction),
-	}
-
 	installOsSystem := &task.LocalTask{
 		Name:   "InstallOsSystem",
 		Action: &InstallOsSystem{},
@@ -403,7 +388,6 @@ func (m *InstallOsSystemModule) Init() {
 		createUserEnvConfigMap,
 		createSharedLibDir,
 		createAppCommonDir,
-		publishMarketEnsureApps,
 		installOsSystem,
 		createBackupConfigMap,
 		checkSystemService,

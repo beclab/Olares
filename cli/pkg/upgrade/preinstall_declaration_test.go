@@ -8,27 +8,26 @@ import (
 	olversion "github.com/beclab/Olares/cli/version"
 )
 
-func TestEnsureAppsTaskIsVersionSpecific(t *testing.T) {
+// Each release declares the apps it expects, so the publish belongs to every
+// upgrade rather than to the one that introduced the mechanism: a later release
+// that skipped it would leave Market maintaining the previous release's list.
+func TestEveryUpgradePublishesThePreinstallDeclaration(t *testing.T) {
 	for _, test := range []struct {
-		name    string
-		tasks   []task.Interface
-		present bool
+		name  string
+		tasks []task.Interface
 	}{
 		{name: "base", tasks: upgraderBase{}.PrepareForUpgrade()},
-		{name: "mainline", tasks: getUpgraderByVersion(upgrader_1_12_7{}.Version()).PrepareForUpgrade(), present: true},
-		{name: "daily", tasks: getUpgraderByVersion(semver.MustParse("1.12.7-20260731")).PrepareForUpgrade(), present: true},
+		{name: "mainline", tasks: getUpgraderByVersion(upgrader_1_12_7{}.Version()).PrepareForUpgrade()},
+		{name: "daily", tasks: getUpgraderByVersion(semver.MustParse("1.12.7-20260731")).PrepareForUpgrade()},
 		{name: "successor", tasks: getUpgraderByVersion(semver.MustParse("1.12.8")).PrepareForUpgrade()},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			found := false
 			for _, candidate := range test.tasks {
-				if candidate.GetName() == "PublishMarketEnsureApps" {
-					found = true
+				if candidate.GetName() == "PublishMarketPreinstallDeclaration" {
+					return
 				}
 			}
-			if found != test.present {
-				t.Fatalf("PublishMarketEnsureApps present=%t, want %t", found, test.present)
-			}
+			t.Fatal("no upgrade task publishes the preinstall declaration")
 		})
 	}
 }

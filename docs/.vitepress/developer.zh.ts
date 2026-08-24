@@ -63,6 +63,10 @@ export const developerSidebar: DefaultTheme.Sidebar = {
               link: "/zh/developer/install/installation-process",
             },
             {
+              text: "预装设计",
+              link: "/zh/developer/install/market-preinstall-design",
+            },
+            {
               text: "Olares Home",
               link: "/zh/developer/install/olares-home",
             },

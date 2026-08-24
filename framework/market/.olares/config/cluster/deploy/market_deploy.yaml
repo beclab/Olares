@@ -37,9 +37,12 @@ rules:
       - list
       - watch
   # systemenvs carries the device's settings; terminus carries the Olares
-  # version, which the upgrade pipeline writes near its end. Market reads that
-  # version to tell an upgrade that is still running from one that has finished,
-  # and holds preinstalled apps until it has.
+  # version, which the upgrade pipeline writes near its end. That version names
+  # which preinstall declaration applies, and a change to it is what has Market
+  # read the next one. Reading it is also what keeps an upgrade from installing
+  # into itself: the record still says the old version while the cluster rolls,
+  # so Market reads the old declaration, finds everything in it installed, and
+  # does nothing until the pipeline writes the new one.
   - apiGroups:
       - sys.bytetrade.io
     resources:
@@ -163,16 +166,8 @@ spec:
             value: /opt/app/data/v3/images-info
           - name: MODULE_ENABLE_STATUS_CORRECTION_CHECKER
             value: 'true'
-{{ if .Values.preinstall }}
-          - name: PREINSTALL_ENABLED
-            value: 'true'
-          - name: PREINSTALL_BUNDLE_DIR
+          - name: PREINSTALL_DIR
             value: /opt/app/preinstall
-{{ end }}
-{{ if .Values.ensureApps }}
-          - name: ENSURE_APPS_FILE
-            value: /opt/app/ensure/ensure-apps.json
-{{ end }}
           - name: APP_SERVICE_SERVICE_PORT
             value: "6755"
           - name: REPO_URL_PORT
@@ -241,9 +236,6 @@ spec:
           - name: market-preinstall
             mountPath: /opt/app/preinstall
             readOnly: true
-          - name: market-ensure
-            mountPath: /opt/app/ensure
-            readOnly: true
       volumes:
       - name: opt-data
         hostPath:
@@ -252,10 +244,6 @@ spec:
       - name: market-preinstall
         hostPath:
           path: '{{ .Values.rootPath }}/userdata/Cache/market-preinstall'
-          type: DirectoryOrCreate
-      - name: market-ensure
-        hostPath:
-          path: '{{ .Values.rootPath }}/userdata/Cache/market-ensure'
           type: DirectoryOrCreate
 ---
 apiVersion: v1

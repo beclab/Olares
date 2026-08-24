@@ -111,6 +111,7 @@ func (l *wslPhaseBuilder) build() []module.Module {
 			l.manifestMap,
 			l.runtime.GetInstallerDir(),
 			l.baseDir,
+			l.runtime.Arg.OlaresVersion,
 			productionPreinstallSelections(l.runtime),
 		)...).
 		addModule(terminusBoxModuleBuilder(func() []module.Module {

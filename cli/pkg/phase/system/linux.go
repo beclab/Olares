@@ -119,6 +119,7 @@ func (l *linuxPhaseBuilder) build() []module.Module {
 			l.manifestMap,
 			l.runtime.GetInstallerDir(),
 			l.runtime.GetBaseDir(),
+			l.runtime.Arg.OlaresVersion,
 			productionPreinstallSelections(l.runtime),
 		)...).
 		addModule(terminusBoxModuleBuilder(func() []module.Module {

@@ -64,11 +64,15 @@ import (
 
 const cacheRebootNeeded = "reboot.needed"
 
-func publishMarketEnsureApps() []task.Interface {
+// publishMarketPreinstallDeclaration declares what this version expects, and
+// runs on every upgrade rather than on the one that introduced the mechanism.
+// Each release has a declaration of its own, so a release that publishes none
+// leaves Market with nothing to maintain after the upgrade.
+func publishMarketPreinstallDeclaration() []task.Interface {
 	return []task.Interface{
 		&task.LocalTask{
-			Name:   "PublishMarketEnsureApps",
-			Action: new(preinstall.PublishEnsureAppsAction),
+			Name:   "PublishMarketPreinstallDeclaration",
+			Action: new(preinstall.PublishCatalogDeclarationAction),
 		},
 	}
 }

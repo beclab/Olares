@@ -6,12 +6,14 @@ import (
 	"github.com/beclab/Olares/cli/pkg/core/connector"
 	"github.com/beclab/Olares/cli/pkg/core/task"
 	"github.com/beclab/Olares/cli/pkg/storage"
+	"github.com/beclab/Olares/cli/version"
 )
 
 type MaterializeModule struct {
 	common.KubeModule
 	InstallerDir      string
 	RootDir           string
+	OSVersion         string
 	ProfileSelections ProfileSelections
 }
 
@@ -23,6 +25,7 @@ func (m *MaterializeModule) Init() {
 			Action: &MaterializeAction{
 				InstallerDir:      m.InstallerDir,
 				RootDir:           m.RootDir,
+				OSVersion:         m.OSVersion,
 				ProfileSelections: m.ProfileSelections,
 			},
 		},
@@ -33,29 +36,40 @@ type MaterializeAction struct {
 	action.BaseAction
 	InstallerDir      string
 	RootDir           string
+	OSVersion         string
 	ProfileSelections ProfileSelections
 }
 
 func (a *MaterializeAction) Execute(_ connector.Runtime) error {
-	rootDir := a.RootDir
-	if rootDir == "" {
-		rootDir = storage.OlaresRootDir
-	}
-	return Materialize(a.InstallerDir, rootDir, a.ProfileSelections)
+	return Materialize(a.InstallerDir, publishRootDir(a.RootDir), publishVersion(a.OSVersion), a.ProfileSelections)
 }
 
-// PublishEnsureAppsAction publishes the official apps required after an OS upgrade.
-type PublishEnsureAppsAction struct {
+// PublishCatalogDeclarationAction declares what an upgrade brings: the apps this
+// version expects, taken from the catalog rather than from any medium.
+type PublishCatalogDeclarationAction struct {
 	action.BaseAction
-	RootDir string
+	RootDir   string
+	OSVersion string
 }
 
-func (a *PublishEnsureAppsAction) Execute(_ connector.Runtime) error {
-	rootDir := a.RootDir
+func (a *PublishCatalogDeclarationAction) Execute(_ connector.Runtime) error {
+	return PublishCatalogDeclaration(publishRootDir(a.RootDir), publishVersion(a.OSVersion))
+}
+
+func publishRootDir(rootDir string) string {
 	if rootDir == "" {
-		rootDir = storage.OlaresRootDir
+		return storage.OlaresRootDir
 	}
-	return PublishEnsureApps(rootDir)
+	return rootDir
+}
+
+// publishVersion falls back to the version of this binary, which is the version
+// it is installing or upgrading to.
+func publishVersion(osVersion string) string {
+	if osVersion == "" {
+		return version.VERSION
+	}
+	return osVersion
 }
 
 type HFCacheMaterializeModule struct {

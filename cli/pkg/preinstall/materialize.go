@@ -9,62 +9,82 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"runtime"
 	"sort"
 	"strings"
 )
 
-// Materialize publishes the bundle under rootDir/RuntimeRelativeDir. rootDir
-// must be the Olares root directory the market chart mounts from, not the
-// installer base directory.
-func Materialize(installerDir, rootDir string, selections ProfileSelections) error {
-	sourceRoot, bundleData, bundle, found, err := openStaticBundle(installerDir)
+// Materialize publishes this version's declaration, and the charts and artifact
+// manifests it names, under rootDir/RuntimeRelativeDir. rootDir must be the
+// Olares root directory the market chart mounts from, not the installer base
+// directory.
+//
+// A medium that carries no bundle still publishes: the catalog apps this version
+// expects are declared either way, and an installer with nothing of its own is
+// the ordinary case rather than a reason to leave Market with no declaration.
+func Materialize(installerDir, rootDir, osVersion string, selections ProfileSelections) error {
+	sourceRoot, _, bundle, found, err := openStaticBundle(installerDir)
 	if err != nil {
 		return err
 	}
-	if !found {
+	if found {
+		defer sourceRoot.Close()
+		if err := Validate(bundle); err != nil {
+			return err
+		}
+		if err := preflightCharts(sourceRoot, bundle); err != nil {
+			return err
+		}
+	} else {
+		sourceRoot = nil
+	}
+	declaration, err := BuildDeclaration(osVersion, bundle, selections, catalogDeclarationApps())
+	if err != nil {
+		return err
+	}
+	return publishDeclaration(sourceRoot, rootDir, declaration)
+}
+
+// publishDeclaration writes one trunk's declaration and does nothing if that
+// trunk already has one. The declaration is renamed into place last, so its
+// presence is what says the payload beside it is complete; a publish interrupted
+// halfway leaves verified files and no declaration, and the next attempt
+// finishes the job.
+func publishDeclaration(sourceRoot *os.Root, rootDir string, declaration DeclarationV2) error {
+	trunk := TrunkVersion(declaration.OSVersion)
+	if trunk == "" {
+		return fmt.Errorf("publish declaration: no Olares version")
+	}
+	declarationData, err := json.MarshalIndent(declaration, "", "  ")
+	if err != nil {
+		return fmt.Errorf("encode declaration: %w", err)
+	}
+	declarationData = append(declarationData, '\n')
+	if len(declarationData) > MaxDeclarationBytes {
+		return fmt.Errorf("declaration exceeds %d bytes", MaxDeclarationBytes)
+	}
+
+	runtimeRoot, err := openRuntimeDirectory(rootDir)
+	if err != nil {
+		return err
+	}
+	defer runtimeRoot.Close()
+
+	name := DeclarationFileName(trunk)
+	published, err := regularFileExists(runtimeRoot, name)
+	if err != nil {
+		return err
+	}
+	if published {
+		// Rewriting it would put a second answer in front of a device that has
+		// already acted on the first one, and every build of a release shares
+		// this file.
 		return nil
 	}
-	defer sourceRoot.Close()
-	profile := buildProfile(bundle, selections)
-	if err := Validate(bundle, profile); err != nil {
-		return err
-	}
-	if err := preflightCharts(sourceRoot, bundle); err != nil {
-		return err
-	}
 
-	olaresRoot, err := openOrCreateDirectoryNoSymlink(rootDir)
-	if err != nil {
-		return fmt.Errorf("open olares root: %w", err)
-	}
-	defer olaresRoot.Close()
-	parentRelative := path.Dir(RuntimeRelativeDir)
-	targetName := path.Base(RuntimeRelativeDir)
-	if err := olaresRoot.MkdirAll(parentRelative, 0o755); err != nil {
-		return fmt.Errorf("create preinstall parent: %w", err)
-	}
-	if err := rejectRootSymlinkComponents(olaresRoot, parentRelative); err != nil {
+	if err := cleanupStagingRoots(runtimeRoot); err != nil {
 		return err
 	}
-	parentPath := filepath.Join(rootDir, filepath.FromSlash(parentRelative))
-	parentRoot, err := openDirectoryNoSymlink(parentPath)
-	if err != nil {
-		return fmt.Errorf("open preinstall parent: %w", err)
-	}
-	defer parentRoot.Close()
-	if err := rejectRootSymlinkComponents(parentRoot, "."); err != nil {
-		return err
-	}
-	if _, err := directoryStateRoot(parentRoot, targetName); err != nil {
-		return err
-	}
-
-	if err := cleanupStagingRoots(parentRoot); err != nil {
-		return err
-	}
-
-	stagingName, stagingRoot, err := createStagingRoot(parentRoot)
+	stagingName, stagingRoot, err := createStagingRoot(runtimeRoot)
 	if err != nil {
 		return err
 	}
@@ -72,78 +92,128 @@ func Materialize(installerDir, rootDir string, selections ProfileSelections) err
 		if stagingRoot != nil {
 			_ = stagingRoot.Close()
 		}
-		_ = removeRootTree(parentRoot, stagingName)
+		_ = removeRootTree(runtimeRoot, stagingName)
 	}()
-	if err := populateStaging(sourceRoot, stagingRoot, bundleData, bundle, profile); err != nil {
+	payload, err := stagePayload(sourceRoot, stagingRoot, declaration)
+	if err != nil {
+		return err
+	}
+	if err := writeSealedRootFile(stagingRoot, name, declarationData); err != nil {
 		return err
 	}
 	if err := stagingRoot.Close(); err != nil {
 		return fmt.Errorf("close preinstall staging root: %w", err)
 	}
 	stagingRoot = nil
-	return replaceDirectoryRoot(parentRoot, targetName, stagingName)
+
+	for _, relative := range payload {
+		if err := promoteStagedFile(runtimeRoot, stagingName, relative); err != nil {
+			return err
+		}
+	}
+	return promoteStagedFile(runtimeRoot, stagingName, name)
 }
 
-// Published reports whether rootDir carries a published bundle, which is what
-// decides whether the market deployment is rendered with preinstall turned on.
-// It answers on the presence of the bundle file rather than on a full load:
-// telling Market a bundle is there and letting it report what is wrong with it
-// is more useful than turning the feature off over a detail this program did
-// not manage to parse.
-func Published(rootDir string) bool {
-	info, err := os.Lstat(filepath.Join(rootDir, filepath.FromSlash(RuntimeRelativeDir), BundleFileName))
-	return err == nil && info.Mode().IsRegular()
+// openRuntimeDirectory opens the published directory, creating it if this is the
+// first publish. It stays writable: a device accumulates one declaration per
+// release it has run, so the directory has to be added to again. The pod mounts
+// it read-only, and every published file is sealed 0o444.
+func openRuntimeDirectory(rootDir string) (*os.Root, error) {
+	olaresRoot, err := openOrCreateDirectoryNoSymlink(rootDir)
+	if err != nil {
+		return nil, fmt.Errorf("open olares root: %w", err)
+	}
+	defer olaresRoot.Close()
+	if err := olaresRoot.MkdirAll(RuntimeRelativeDir, 0o755); err != nil {
+		return nil, fmt.Errorf("create preinstall directory: %w", err)
+	}
+	if err := rejectRootSymlinkComponents(olaresRoot, RuntimeRelativeDir); err != nil {
+		return nil, err
+	}
+	runtimePath := filepath.Join(rootDir, filepath.FromSlash(RuntimeRelativeDir))
+	runtimeRoot, err := openDirectoryNoSymlink(runtimePath)
+	if err != nil {
+		return nil, fmt.Errorf("open preinstall directory: %w", err)
+	}
+	if err := rejectRootSymlinkComponents(runtimeRoot, "."); err != nil {
+		_ = runtimeRoot.Close()
+		return nil, err
+	}
+	return runtimeRoot, nil
 }
 
-func buildProfile(bundle BundleV1, selections ProfileSelections) InstallProfileV1 {
-	defaultsByApp := make(map[string]map[string]string, len(bundle.Apps))
-	allowedGPUByApp := make(map[string][]string, len(bundle.Apps))
-	appIDSet := make(map[string]struct{}, len(bundle.Apps)+len(selections.Apps))
-	for _, app := range bundle.Apps {
-		allowedGPUByApp[app.AppID] = app.AllowedGPUTypes
-		if len(app.DefaultEnvs) > 0 {
-			defaultsByApp[app.AppID] = app.DefaultEnvs
-			appIDSet[app.AppID] = struct{}{}
-		}
-		if selections.DetectedGPUType != "" && containsString(app.AllowedGPUTypes, selections.DetectedGPUType) {
-			appIDSet[app.AppID] = struct{}{}
-		}
+func regularFileExists(root *os.Root, name string) (bool, error) {
+	info, err := root.Lstat(name)
+	if os.IsNotExist(err) {
+		return false, nil
 	}
-	for appID, selection := range selections.Apps {
-		if selection.SelectedGPUType != "" || len(selection.Envs) > 0 {
-			appIDSet[appID] = struct{}{}
-		}
+	if err != nil {
+		return false, fmt.Errorf("inspect %q: %w", name, err)
 	}
-	appIDs := make([]string, 0, len(appIDSet))
-	for appID := range appIDSet {
-		appIDs = append(appIDs, appID)
+	if !info.Mode().IsRegular() {
+		return false, fmt.Errorf("%q must be a regular file", name)
 	}
-	sort.Strings(appIDs)
-	apps := make([]InstallProfileAppV1, 0, len(appIDs))
-	for _, appID := range appIDs {
-		selection := selections.Apps[appID]
-		selectedGPUType := selection.SelectedGPUType
-		if selectedGPUType == "" && containsString(allowedGPUByApp[appID], selections.DetectedGPUType) {
-			selectedGPUType = selections.DetectedGPUType
+	return true, nil
+}
+
+// stagePayload copies every file the declaration names into staging, verifying
+// each digest on the way, and returns their paths in the order they should be
+// promoted. A declaration with no local entry stages nothing.
+func stagePayload(sourceRoot, stagingRoot *os.Root, declaration DeclarationV2) ([]string, error) {
+	var (
+		files []string
+		total int64
+	)
+	for _, app := range declaration.Apps {
+		if !app.local() {
+			continue
 		}
-		envs := cloneStringMap(defaultsByApp[appID])
-		for key, value := range selection.Envs {
-			if envs == nil {
-				envs = make(map[string]string, len(selection.Envs))
+		if sourceRoot == nil {
+			return nil, fmt.Errorf("declared app %q needs a chart no medium carries", app.AppID)
+		}
+		if err := stagingRoot.MkdirAll(path.Dir(app.Chart), 0o755); err != nil {
+			return nil, fmt.Errorf("create chart staging directory: %w", err)
+		}
+		copied, err := copyChart(sourceRoot, stagingRoot, app, MaxTotalChartBytes-total)
+		if err != nil {
+			return nil, err
+		}
+		total += copied
+		files = append(files, app.Chart)
+		for _, artifact := range app.Artifacts {
+			if err := stagingRoot.MkdirAll(path.Dir(artifact.Manifest), 0o755); err != nil {
+				return nil, fmt.Errorf("create artifact manifest staging directory: %w", err)
 			}
-			envs[key] = value
+			if err := copyArtifactManifest(sourceRoot, stagingRoot, artifact); err != nil {
+				return nil, err
+			}
+			files = append(files, artifact.Manifest)
 		}
-		apps = append(apps, InstallProfileAppV1{
-			AppID:           appID,
-			SelectedGPUType: selectedGPUType,
-			Envs:            envs,
-		})
 	}
-	return InstallProfileV1{
-		SchemaVersion:   SupportedSchemaVersion,
-		HardwareProfile: selections.HardwareProfile,
-		Apps:            apps,
+	sort.Strings(files)
+	return files, nil
+}
+
+// promoteStagedFile moves one staged file to where Market reads it. Rename over
+// an existing name is what makes a republish of the same payload safe: readers
+// see either the old file or the new one, and never a half-written one.
+func promoteStagedFile(runtimeRoot *os.Root, stagingName, relative string) error {
+	directory := path.Dir(relative)
+	if directory != "." {
+		if err := runtimeRoot.MkdirAll(directory, 0o755); err != nil {
+			return fmt.Errorf("create %q: %w", directory, err)
+		}
 	}
+	if err := runtimeRoot.Rename(path.Join(stagingName, relative), relative); err != nil {
+		return fmt.Errorf("publish %q: %w", relative, err)
+	}
+	if err := syncRootDirectory(runtimeRoot, directory); err != nil {
+		return err
+	}
+	if directory == "." {
+		return nil
+	}
+	return syncRootDirectory(runtimeRoot, ".")
 }
 
 func containsString(values []string, target string) bool {
@@ -193,49 +263,9 @@ func preflightCharts(root *os.Root, bundle BundleV1) error {
 	return nil
 }
 
-func populateStaging(sourceRoot, stagingRoot *os.Root, bundleData []byte, bundle BundleV1, profile InstallProfileV1) error {
-	if err := writeSealedRootFile(stagingRoot, BundleFileName, bundleData); err != nil {
-		return err
-	}
-	profileData, err := json.MarshalIndent(profile, "", "  ")
-	if err != nil {
-		return fmt.Errorf("encode install profile: %w", err)
-	}
-	if err := writeSealedRootFile(stagingRoot, ProfileFileName, append(profileData, '\n')); err != nil {
-		return err
-	}
-	var total int64
-	for _, app := range bundle.Apps {
-		if err := stagingRoot.MkdirAll(path.Dir(app.Chart), 0o755); err != nil {
-			return fmt.Errorf("create chart staging directory: %w", err)
-		}
-		copied, err := copyChart(sourceRoot, stagingRoot, app, MaxTotalChartBytes-total)
-		if err != nil {
-			return err
-		}
-		total += copied
-	}
-	manifests := make(map[string]struct{})
-	for _, app := range bundle.Apps {
-		for _, artifact := range app.Artifacts {
-			if _, exists := manifests[artifact.Manifest]; exists {
-				return fmt.Errorf("duplicate artifact manifest path %q", artifact.Manifest)
-			}
-			manifests[artifact.Manifest] = struct{}{}
-			if err := stagingRoot.MkdirAll(path.Dir(artifact.Manifest), 0o755); err != nil {
-				return fmt.Errorf("create artifact manifest staging directory: %w", err)
-			}
-			if err := copyArtifactManifest(sourceRoot, stagingRoot, artifact); err != nil {
-				return err
-			}
-		}
-	}
-	return sealRootDirectories(stagingRoot)
-}
-
 func copyArtifactManifest(
 	sourceRoot, stagingRoot *os.Root,
-	artifact BundleArtifactV1,
+	artifact DeclarationArtifact,
 ) error {
 	if err := rejectRootSymlinkComponents(sourceRoot, artifact.Manifest); err != nil {
 		return err
@@ -258,202 +288,34 @@ func copyArtifactManifest(
 	return err
 }
 
-func copyChart(sourceRoot, stagingRoot *os.Root, app BundleAppV1, totalRemaining int64) (int64, error) {
-	spec, err := chartVerifiedCopy(sourceRoot, app, totalRemaining)
+func copyChart(sourceRoot, stagingRoot *os.Root, app DeclarationAppV2, totalRemaining int64) (int64, error) {
+	spec, err := chartVerifiedCopy(sourceRoot, app.Chart, app.ChartSHA256, totalRemaining)
 	if err != nil {
 		return 0, err
 	}
 	return copyVerifiedRegularFile(sourceRoot, stagingRoot, spec)
 }
 
-func chartVerifiedCopy(sourceRoot *os.Root, app BundleAppV1, totalRemaining int64) (verifiedCopy, error) {
-	info, err := sourceRoot.Lstat(app.Chart)
+func chartVerifiedCopy(sourceRoot *os.Root, chart, sha256 string, totalRemaining int64) (verifiedCopy, error) {
+	info, err := sourceRoot.Lstat(chart)
 	if err != nil {
-		return verifiedCopy{}, fmt.Errorf("inspect chart %q: %w", app.Chart, err)
+		return verifiedCopy{}, fmt.Errorf("inspect chart %q: %w", chart, err)
 	}
 	if info.Size() > totalRemaining {
 		return verifiedCopy{}, fmt.Errorf("total chart size exceeds %d bytes", MaxTotalChartBytes)
 	}
 	return verifiedCopy{
-		Source:     app.Chart,
-		Target:     app.Chart,
+		Source:     chart,
+		Target:     chart,
 		Size:       info.Size(),
 		MaxSize:    min(MaxChartBytes, totalRemaining),
-		SHA256:     app.ChartSHA256,
+		SHA256:     sha256,
 		OutputMode: 0o444,
 	}, nil
 }
 
 func writeSealedRootFile(root *os.Root, name string, data []byte) error {
 	return writeRootFile(root, name, data, rootFileWrite{Mode: 0o444})
-}
-
-func sealRootDirectories(root *os.Root) error {
-	var directories []string
-	if err := fs.WalkDir(root.FS(), ".", func(name string, entry fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if entry.Type()&os.ModeSymlink != 0 {
-			return fmt.Errorf("staging contains symlink %q", name)
-		}
-		if entry.IsDir() {
-			directories = append(directories, name)
-		}
-		return nil
-	}); err != nil {
-		return fmt.Errorf("walk staging directories: %w", err)
-	}
-	for i := len(directories) - 1; i >= 0; i-- {
-		mode := os.FileMode(0o555)
-		if directories[i] == "." {
-			mode = materializedRootMode()
-		}
-		if err := root.Chmod(directories[i], mode); err != nil {
-			return fmt.Errorf("make staging directory read-only: %w", err)
-		}
-		if err := syncRootDirectory(root, directories[i]); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// Darwin requires owner write permission to rename a directory; the pod's
-// read-only mount remains the runtime write boundary.
-func materializedRootMode() os.FileMode {
-	return materializedRootModeFor(runtime.GOOS)
-}
-
-func materializedRootModeFor(goos string) os.FileMode {
-	if goos == "darwin" {
-		return 0o755
-	}
-	return 0o555
-}
-
-func renameRootEntry(parent *os.Root, oldName, newName string) error {
-	for _, name := range []string{oldName, newName} {
-		if err := validateSingleEntry(name); err != nil {
-			return fmt.Errorf("rename %w", err)
-		}
-	}
-	return parent.Rename(oldName, newName)
-}
-
-func replaceDirectoryRoot(parent *os.Root, target, staging string) error {
-	if err := recoverPreviousRoot(parent, target); err != nil {
-		return err
-	}
-	backup := target + ".previous"
-	targetExists, err := directoryStateRoot(parent, target)
-	if err != nil {
-		return err
-	}
-	if targetExists {
-		if err := renameRootEntry(parent, target, backup); err != nil {
-			return fmt.Errorf("backup current preinstall directory: %w", err)
-		}
-		if err := syncRootDirectory(parent, "."); err != nil {
-			rollbackErr := renameRootEntry(parent, backup, target)
-			rollbackErr = errors.Join(rollbackErr, syncRootDirectory(parent, "."))
-			return errors.Join(err, wrapRollback("restore target after backup sync failure", rollbackErr))
-		}
-	}
-	if err := renameRootEntry(parent, staging, target); err != nil {
-		var rollbackErr error
-		if targetExists {
-			rollbackErr = renameRootEntry(parent, backup, target)
-			rollbackErr = errors.Join(rollbackErr, syncRootDirectory(parent, "."))
-		}
-		return errors.Join(
-			fmt.Errorf("activate preinstall directory: %w", err),
-			wrapRollback("restore previous target", rollbackErr),
-		)
-	}
-	if err := syncRootDirectory(parent, "."); err != nil {
-		rollbackErr := rollbackPublishedTarget(parent, target, staging, backup, targetExists)
-		return errors.Join(err, rollbackErr)
-	}
-	if targetExists {
-		if err := removeRootTree(parent, backup); err != nil {
-			return fmt.Errorf("remove preinstall backup: %w", err)
-		}
-		if err := syncRootDirectory(parent, "."); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func recoverPrevious(target string) error {
-	parentPath := filepath.Dir(target)
-	parent, err := openDirectoryNoSymlink(parentPath)
-	if err != nil {
-		return fmt.Errorf("open recovery parent: %w", err)
-	}
-	defer parent.Close()
-	return recoverPreviousRoot(parent, filepath.Base(target))
-}
-
-func recoverPreviousRoot(parent *os.Root, target string) error {
-	backup := target + ".previous"
-	targetExists, err := directoryStateRoot(parent, target)
-	if err != nil {
-		return err
-	}
-	backupExists, err := directoryStateRoot(parent, backup)
-	if err != nil {
-		return err
-	}
-	switch {
-	case targetExists && backupExists:
-		if err := removeRootTree(parent, backup); err != nil {
-			return fmt.Errorf("remove stale preinstall backup: %w", err)
-		}
-		return syncRootDirectory(parent, ".")
-	case !targetExists && backupExists:
-		if err := renameRootEntry(parent, backup, target); err != nil {
-			return fmt.Errorf("restore interrupted preinstall backup: %w", err)
-		}
-		return syncRootDirectory(parent, ".")
-	default:
-		return nil
-	}
-}
-
-func rollbackPublishedTarget(parent *os.Root, target, staging, backup string, hadTarget bool) error {
-	moveNewErr := renameRootEntry(parent, target, staging)
-	if moveNewErr != nil {
-		return wrapRollback("move failed published target back to staging", moveNewErr)
-	}
-	var restoreErr error
-	if hadTarget {
-		restoreErr = renameRootEntry(parent, backup, target)
-	}
-	syncErr := syncRootDirectory(parent, ".")
-	return wrapRollback("restore target after publish sync failure", errors.Join(restoreErr, syncErr))
-}
-
-func wrapRollback(operation string, err error) error {
-	if err == nil {
-		return nil
-	}
-	return fmt.Errorf("rollback %s: %w", operation, err)
-}
-
-func directoryStateRoot(root *os.Root, name string) (bool, error) {
-	info, err := root.Lstat(name)
-	if os.IsNotExist(err) {
-		return false, nil
-	}
-	if err != nil {
-		return false, fmt.Errorf("inspect %q: %w", name, err)
-	}
-	if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
-		return false, fmt.Errorf("%q must be a directory", name)
-	}
-	return true, nil
 }
 
 func openOrCreateDirectoryNoSymlink(name string) (*os.Root, error) {
@@ -466,7 +328,7 @@ const stagingPrefix = ".market-preinstall-stage-"
 func cleanupStagingRoots(parent *os.Root) error {
 	entries, err := fs.ReadDir(parent.FS(), ".")
 	if err != nil {
-		return fmt.Errorf("list preinstall parent: %w", err)
+		return fmt.Errorf("list preinstall directory: %w", err)
 	}
 	for _, entry := range entries {
 		name := entry.Name()

@@ -1,19 +1,23 @@
 {
-  "supportedSchemaVersion": "1",
+  "supportedSchemaVersion": "2",
   "officialSourceId": "market.olares",
-  "bundleFileName": "bundle.json",
-  "profileFileName": "install-profile.json",
+  "declarationFilePrefix": "preinstall-",
+  "declarationFileSuffix": ".json",
   "limits": {
-    "maxBundleJSONBytes": 8388608,
-    "maxProfileJSONBytes": 8388608,
-    "maxBundleApps": 256,
+    "maxDeclarationBytes": 8388608,
+    "maxDeclarationApps": 256,
     "maxChartBytes": 268435456,
     "maxArtifactManifestBytes": 67108864,
     "maxArtifactEntries": 1000000,
     "maxArtifactTotalSize": 1099511627776
   },
   "artifactKindHFCache": "hf-cache",
-  "defaultEnvsJSONKey": "defaultEnvs",
+  "catalogLatestVersion": "catalog-latest",
+  "envsJSONKey": "envs",
+  "chartSources": [
+    "catalog",
+    "local"
+  ],
   "installScopes": [
     "shared",
     "per-user"
