@@ -148,7 +148,7 @@ spec:
           name: check-appservice
       containers:
       - name: appstore-backend
-        image: beclab/market-backend:v0.6.101
+        image: beclab/market-backend:v0.6.104
         imagePullPolicy: IfNotPresent
         ports:
           - containerPort: 81
@@ -156,8 +156,6 @@ spec:
           - configMapRef:
               name: login-olares-cli-allow-list
         env:
-          - name: OLARES_VERSION
-            value: "1.12.7"
           - name: APP_SOTRE_SERVICE_SERVICE_PORT
             value: "443"
           - name: APP_SERVICE_SERVICE_HOST

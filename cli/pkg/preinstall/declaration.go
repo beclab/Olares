@@ -50,7 +50,6 @@ func (s ChartSource) Valid() bool {
 
 type DeclarationV2 struct {
 	SchemaVersion string             `json:"schemaVersion"`
-	OSVersion     string             `json:"osVersion"`
 	GeneratedAt   string             `json:"generatedAt,omitempty"`
 	Apps          []DeclarationAppV2 `json:"apps"`
 }
@@ -101,7 +100,8 @@ func TrunkVersion(version string) string {
 }
 
 // DeclarationFileName is the contract with Market: one file per trunk, named for
-// it, and looked for under that name and no other.
+// it, and looked for under that name and no other. The name is also the only
+// place the trunk is written down -- the declaration does not restate it.
 func DeclarationFileName(trunk string) string {
 	return declarationFilePrefix + TrunkVersion(trunk) + declarationFileSuffix
 }
@@ -111,11 +111,10 @@ func DeclarationFileName(trunk string) string {
 // allows here rather than published beside it: a choice the bundle never offered
 // is a mistake in this program, and the device it would break is this one.
 func BuildDeclaration(
-	osVersion string, bundle BundleV1, selections ProfileSelections, catalog []DeclarationAppV2,
+	bundle BundleV1, selections ProfileSelections, catalog []DeclarationAppV2,
 ) (DeclarationV2, error) {
 	declaration := DeclarationV2{
 		SchemaVersion: DeclarationSchemaVersion,
-		OSVersion:     strings.TrimSpace(osVersion),
 		GeneratedAt:   generatedNow(),
 	}
 	for _, app := range bundle.Apps {
@@ -208,9 +207,6 @@ func localDeclarationApp(app BundleAppV1, selections ProfileSelections) (Declara
 func ValidateDeclaration(declaration *DeclarationV2) error {
 	if declaration.SchemaVersion != DeclarationSchemaVersion {
 		return fmt.Errorf("declaration schemaVersion %q is not supported", declaration.SchemaVersion)
-	}
-	if strings.TrimSpace(declaration.OSVersion) == "" {
-		return fmt.Errorf("declaration osVersion is required")
 	}
 	if generated := strings.TrimSpace(declaration.GeneratedAt); generated != "" {
 		if _, err := time.Parse(time.RFC3339, generated); err != nil {
