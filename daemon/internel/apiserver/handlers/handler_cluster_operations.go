@@ -172,8 +172,14 @@ func (h *Handlers) PostClusterOperation(ctx *fiber.Ctx) error {
 			// The token stays available for types that fan out without a
 			// signature; signature-bound types still present only the JWS to
 			// workers — see clusterop.DispatchNodeOperation.
-			Token:     ctx.Get(AUTH_HEADER),
-			Signature: ctx.Get(SIGNATURE_HEADER),
+			//
+			// Both are copied because Create hands them to a run that outlives
+			// this request. ctx.Get returns a string aliasing the fasthttp
+			// header buffer, and that buffer is reused by the next request on
+			// this connection the moment the handler returns: what the run
+			// would otherwise present to a worker is whatever arrived after it.
+			Token:     strings.Clone(ctx.Get(AUTH_HEADER)),
+			Signature: strings.Clone(ctx.Get(SIGNATURE_HEADER)),
 		},
 	})
 	if err != nil {
