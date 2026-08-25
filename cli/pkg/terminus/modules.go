@@ -325,8 +325,18 @@ func (m *StopOlaresModule) Init() {
 		minIOServiceName,
 		cniDhcpServiceName,
 	} {
-		if serviceExists(service) {
-			m.Tasks = append(m.Tasks, newStopServiceTask(service))
+		if !serviceExists(service) {
+			continue
+		}
+		m.Tasks = append(m.Tasks, newStopServiceTask(service))
+		// The juicefs client force-exits when its own umount does not finish in
+		// 30s, leaving a dead mount behind that systemd reports as a clean stop.
+		// Detach it here so the node is not left with a poisoned mount point.
+		if service == juiceFSServiceName {
+			m.Tasks = append(m.Tasks, &task.LocalTask{
+				Name:   "CleanupStaleJuiceFSMount",
+				Action: new(storage.CleanupStaleJuiceFSMount),
+			})
 		}
 	}
 	if len(m.Tasks) == 0 {
@@ -370,9 +380,19 @@ func (m *StartOlaresModule) Init() {
 		// backupETCDServiceName,
 		containerdServiceName,
 	} {
-		if serviceExists(service) {
-			m.Tasks = append(m.Tasks, newStartServiceTask(service))
+		if !serviceExists(service) {
+			continue
 		}
+		// A previous shutdown (or a crash) can leave a dead fuse.juicefs mount
+		// on the rootfs, which makes every subsequent mount fail. Detach it
+		// first, otherwise juicefs.service crash-loops and k3s never starts.
+		if service == juiceFSServiceName {
+			m.Tasks = append(m.Tasks, &task.LocalTask{
+				Name:   "CleanupStaleJuiceFSMount",
+				Action: new(storage.CleanupStaleJuiceFSMount),
+			})
+		}
+		m.Tasks = append(m.Tasks, newStartServiceTask(service))
 	}
 	k3sServiceExists := serviceExists(k3sServiceName)
 	kubeletServiceExists := serviceExists(kubeletServiceName)
