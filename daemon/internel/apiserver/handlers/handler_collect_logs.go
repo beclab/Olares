@@ -3,6 +3,7 @@ package handlers
 import (
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/beclab/Olares/daemon/internel/client"
 	"github.com/beclab/Olares/daemon/pkg/commands"
@@ -40,8 +41,10 @@ func (h *Handlers) PostCollectLogs(ctx *fiber.Ctx, cmd commands.Interface) error
 	param.CallerUsername = userData.Username
 	param.CallerRole = roleOf(userData)
 	// Forward the verified access token so the orchestrator can authenticate to
-	// each node's node-local endpoint as the same caller.
-	param.CallerToken = ctx.Get(AUTH_HEADER)
+	// each node's node-local endpoint as the same caller. Copied because the
+	// collection runs on after this handler returns, and ctx.Get aliases the
+	// fasthttp header buffer that the next request overwrites.
+	param.CallerToken = strings.Clone(ctx.Get(AUTH_HEADER))
 
 	res, err := cmd.Execute(ctx.Context(), &param)
 	if err != nil {
