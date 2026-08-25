@@ -471,10 +471,8 @@ func (t *Translator) buildUserVirtualHosts(user *message.UserInfo, zone string, 
 			Name:       fmt.Sprintf("profile_root_%s", user.Name),
 			PathPrefix: "/",
 			Cluster:    profileCluster,
-			RequestHeaders: map[string]string{
-				"X-BFL-USER": user.Name,
-			},
-			// Zone root is human HTTP (profile); EDGE N/S PEP is l4 Authelia verify.
+			// Outbound X-BFL-USER is set by Authelia on ExtAuth allow (session user);
+			// do not stamp zone owner here.
 			ExtAuth: buildAppExtAuthConfig(user),
 		}},
 		Priority: systemServicePriority,
@@ -598,12 +596,9 @@ func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.A
 		}
 
 		defaultRoute := &ir.HTTPRouteIR{
-			Name:       fmt.Sprintf("default_%s_%s_%s", user.Name, app.Name, entrance.Name),
-			PathPrefix: "/",
-			Cluster:    clusterName,
-			RequestHeaders: map[string]string{
-				"X-BFL-USER": user.Name,
-			},
+			Name:             fmt.Sprintf("default_%s_%s_%s", user.Name, app.Name, entrance.Name),
+			PathPrefix:       "/",
+			Cluster:          clusterName,
 			WebSocketUpgrade: true,
 		}
 
@@ -614,7 +609,6 @@ func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.A
 		routes = append(routes, buildProbeBypassRoutes(
 			fmt.Sprintf("%s_%s_%s", user.Name, app.Name, entrance.Name),
 			clusterName,
-			user.Name,
 			app.EntranceProbePaths[entrance.Name],
 		)...)
 		routes = append(routes, defaultRoute)
@@ -629,7 +623,7 @@ func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.A
 // buildProbeBypassRoutes emits Exact path routes that skip ExtAuth only when
 // User-Agent matches the webhook probe signature format. Requests to the same
 // path without a valid UA fall through to the default authenticated route.
-func buildProbeBypassRoutes(namePrefix, cluster, userName string, paths []string) []*ir.HTTPRouteIR {
+func buildProbeBypassRoutes(namePrefix, cluster string, paths []string) []*ir.HTTPRouteIR {
 	if len(paths) == 0 {
 		return nil
 	}
@@ -651,14 +645,12 @@ func buildProbeBypassRoutes(namePrefix, cluster, userName string, paths []string
 			Name:      fmt.Sprintf("probe_%s_%s", namePrefix, sanitizeProbePath(path)),
 			PathExact: path,
 			Cluster:   cluster,
-			RequestHeaders: map[string]string{
-				"X-BFL-USER": userName,
-			},
 			HeaderMatches: []ir.HeaderMatchIR{{
 				Name:      "user-agent",
 				SafeRegex: probeUARegex,
 			}},
 			// ExtAuth nil → keep VH-level ext_authz Disabled (auth bypass).
+			// No outbound zone-owner X-BFL-USER stamp (Authelia owns identity headers).
 		})
 	}
 	return routes
@@ -734,7 +726,6 @@ func (t *Translator) buildFileserverRoutes(user *message.UserInfo, clusterSet ma
 				PathPrefix: fmt.Sprintf("%s%s/", pfx, node.NodeName),
 				Cluster:    proxyCluster,
 				RequestHeaders: map[string]string{
-					"X-BFL-USER":       user.Name,
 					"X-Terminus-Node":  node.NodeName,
 					"X-Provider-Proxy": proxyHost,
 				},
@@ -749,7 +740,6 @@ func (t *Translator) buildFileserverRoutes(user *message.UserInfo, clusterSet ma
 				PathRegex: fmt.Sprintf("^%s%s_.*", pfx, node.NodeName),
 				Cluster:   proxyCluster,
 				RequestHeaders: map[string]string{
-					"X-BFL-USER":       user.Name,
 					"X-Terminus-Node":  node.NodeName,
 					"X-Provider-Proxy": proxyHost,
 				},
@@ -773,7 +763,6 @@ func (t *Translator) buildFileserverRoutes(user *message.UserInfo, clusterSet ma
 				PathPrefix: pfx,
 				Cluster:    proxyCluster,
 				RequestHeaders: map[string]string{
-					"X-BFL-USER":       user.Name,
 					"X-Terminus-Node":  node.NodeName,
 					"X-Provider-Proxy": proxyHost,
 				},
@@ -804,17 +793,26 @@ func (t *Translator) buildSystemVirtualHost(user *message.UserInfo, def systemSe
 	}
 
 	route := &ir.HTTPRouteIR{
-		Name:       fmt.Sprintf("nonapp_%s_root_%s", def.Name, user.Name),
-		PathPrefix: "/",
-		Cluster:    clusterName,
-		RequestHeaders: map[string]string{
-			"X-BFL-USER": user.Name,
-		},
+		Name:             fmt.Sprintf("nonapp_%s_root_%s", def.Name, user.Name),
+		PathPrefix:       "/",
+		Cluster:          clusterName,
 		WebSocketUpgrade: true,
 	}
 	// desktop is system human HTTP and must use Authelia /api/verify/.
 	// wizard is pre-auth activation UI — no ExtAuth (cookie chicken-egg).
 	// auth is the IdP itself — do not attach ExtAuth (loop risk).
+	//
+	// auth/wizard have no ExtAuth, so Authelia Bridge never receives the
+	// ExtAuth HeadersToAdd owner stamp. Stamp zone-owner X-BFL-USER on those
+	// routes only (after early client-header strip) so /api/firstfactor and
+	// similar IdP APIs can resolve the user. desktop keeps no IR stamp:
+	// ExtAuth supplies the bridge header; outbound session identity comes
+	// from Authelia on allow.
+	if def.Name == "auth" || def.Name == "wizard" {
+		route.RequestHeaders = map[string]string{
+			"X-BFL-USER": user.Name,
+		}
+	}
 	if def.Name == "desktop" {
 		route.ExtAuth = buildAppExtAuthConfig(user)
 	}
@@ -862,12 +860,9 @@ func (t *Translator) buildCustomDomainVirtualHosts(user *message.UserInfo, app *
 		}
 
 		customRoute := &ir.HTTPRouteIR{
-			Name:       fmt.Sprintf("custom_%s_%s_%s_root", user.Name, app.Name, entrance.Name),
-			PathPrefix: "/",
-			Cluster:    clusterName,
-			RequestHeaders: map[string]string{
-				"X-BFL-USER": user.Name,
-			},
+			Name:             fmt.Sprintf("custom_%s_%s_%s_root", user.Name, app.Name, entrance.Name),
+			PathPrefix:       "/",
+			Cluster:          clusterName,
 			WebSocketUpgrade: true,
 		}
 
@@ -876,7 +871,6 @@ func (t *Translator) buildCustomDomainVirtualHosts(user *message.UserInfo, app *
 		routes := buildProbeBypassRoutes(
 			fmt.Sprintf("custom_%s_%s_%s", user.Name, app.Name, entrance.Name),
 			clusterName,
-			user.Name,
 			app.EntranceProbePaths[entrance.Name],
 		)
 		routes = append(routes, customRoute)

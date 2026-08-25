@@ -6,11 +6,14 @@ import (
 	"time"
 
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
+	mutationrulesv3 "github.com/envoyproxy/go-control-plane/envoy/config/common/mutation_rules/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	extauthzv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/ext_authz/v3"
+	headermutationv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/header_mutation/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
+	earlyheadermutationv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/early_header_mutation/header_mutation/v3"
 	ppupstreamv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/proxy_protocol/v3"
 	cachetypes "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	"github.com/stretchr/testify/assert"
@@ -42,6 +45,25 @@ func asRouteConfig(t *testing.T, r interface{}) *routev3.RouteConfiguration {
 	rc, ok := r.(*routev3.RouteConfiguration)
 	require.True(t, ok, "expected *routev3.RouteConfiguration")
 	return rc
+}
+
+func hcmFromListener(t *testing.T, l *listenerv3.Listener) *hcmv3.HttpConnectionManager {
+	t.Helper()
+	require.NotEmpty(t, l.FilterChains)
+	require.NotEmpty(t, l.FilterChains[0].Filters)
+	hcm := &hcmv3.HttpConnectionManager{}
+	require.NoError(t, l.FilterChains[0].Filters[0].GetTypedConfig().UnmarshalTo(hcm))
+	return hcm
+}
+
+func headerMutationRemoves(t *testing.T, mutations []*mutationrulesv3.HeaderMutation) []string {
+	t.Helper()
+	out := make([]string, 0, len(mutations))
+	for _, m := range mutations {
+		require.NotEmpty(t, m.GetRemove())
+		out = append(out, m.GetRemove())
+	}
+	return out
 }
 
 func socketAddr(l *listenerv3.Listener) *corev3.SocketAddress {
@@ -879,9 +901,6 @@ func TestTranslate_HTTPSListeners(t *testing.T) {
 							Name:       "profile_root",
 							PathPrefix: "/",
 							Cluster:    "profile_service_alice",
-							RequestHeaders: map[string]string{
-								"X-BFL-USER": "alice",
-							},
 						}},
 					},
 				},
@@ -891,6 +910,7 @@ func TestTranslate_HTTPSListeners(t *testing.T) {
 		},
 		Clusters: []*ir.ClusterIR{
 			{Name: "profile_service_alice", Host: "profile-service.user-space-alice.svc.cluster.local", Port: 3000, UseDNS: true},
+			{Name: "authelia_backend_alice", Host: "authelia-backend.user-system-alice.svc.cluster.local", Port: 9091, UseDNS: true},
 		},
 	}
 
@@ -903,16 +923,32 @@ func TestTranslate_HTTPSListeners(t *testing.T) {
 	assert.Equal(t, "https_443", l.Name)
 	require.Len(t, l.FilterChains, 1)
 
+	hcm := hcmFromListener(t, l)
+	require.Len(t, hcm.GetEarlyHeaderMutationExtensions(), 1)
+	early := &earlyheadermutationv3.HeaderMutation{}
+	require.NoError(t, hcm.GetEarlyHeaderMutationExtensions()[0].GetTypedConfig().UnmarshalTo(early))
+	assert.Equal(t, []string{"x-bfl-user", "x-caller-appid"}, headerMutationRemoves(t, early.GetMutations()),
+		"early mutation must strip forged client identity before any HTTP filter")
+
+	require.GreaterOrEqual(t, len(hcm.GetHttpFilters()), 2)
+	assert.Equal(t, "envoy.filters.http.header_mutation", hcm.GetHttpFilters()[0].GetName(),
+		"HeaderMutation must be the first HTTP filter (before ExtAuth)")
+	stripFilter := &headermutationv3.HeaderMutation{}
+	require.NoError(t, hcm.GetHttpFilters()[0].GetTypedConfig().UnmarshalTo(stripFilter))
+	assert.Equal(t, []string{"x-bfl-user", "x-caller-appid"},
+		headerMutationRemoves(t, stripFilter.GetMutations().GetRequestMutations()))
+	assert.Equal(t, "envoy.filters.http.ext_authz", hcm.GetHttpFilters()[1].GetName(),
+		"ExtAuth must run after client identity strip")
+
 	// 1 route config
 	require.Len(t, snap.Routes, 1)
 	rc := asRouteConfig(t, snap.Routes[0])
 	assert.Equal(t, "https_443_alice_routes", rc.Name)
-	assert.Equal(t, []string{"x-bfl-user", "x-caller-appid"}, rc.GetRequestHeadersToRemove(),
-		"north-south RDS must force-delete client identity headers before upstream")
-	assert.True(t, rc.GetMostSpecificHeaderMutationsWins(),
-		"RDS must apply remove before route reinject (most_specific_header_mutations_wins)")
+	assert.Equal(t, []string{"x-caller-appid"}, rc.GetRequestHeadersToRemove(),
+		"RDS must not remove x-bfl-user (would strip Authelia session identity)")
+	assert.True(t, rc.GetMostSpecificHeaderMutationsWins())
 
-	// Trusted X-BFL-USER must be re-injected on the app route after the RDS remove.
+	// R1: IR no longer stamps zone-owner X-BFL-USER on outbound routes.
 	var sawBFL bool
 	for _, vh := range rc.GetVirtualHosts() {
 		for _, route := range vh.GetRoutes() {
@@ -922,23 +958,32 @@ func TestTranslate_HTTPSListeners(t *testing.T) {
 			for _, h := range route.GetRequestHeadersToAdd() {
 				if strings.EqualFold(h.GetHeader().GetKey(), "X-BFL-USER") {
 					sawBFL = true
-					assert.Equal(t, "alice", h.GetHeader().GetValue())
-					assert.Equal(t, corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD, h.GetAppendAction())
 				}
 			}
 		}
 	}
-	require.True(t, sawBFL, "route must re-inject X-BFL-USER after force-delete")
+	require.False(t, sawBFL, "outbound zone-owner X-BFL-USER stamp must be absent; Authelia ExtAuth supplies session identity")
 
-	// 1 cluster
-	require.Len(t, snap.Clusters, 1)
+	// profile + authelia clusters
+	require.Len(t, snap.Clusters, 2)
 }
 
 func TestSpoofableAppIdentityHeadersToRemove(t *testing.T) {
 	got := spoofableAppIdentityHeadersToRemove()
-	require.Equal(t, []string{"x-bfl-user", "x-caller-appid"}, got)
-	// Stable order for xDS determinism / snapshot diffs.
+	require.Equal(t, []string{"x-caller-appid"}, got)
 	require.Equal(t, got, spoofableAppIdentityHeadersToRemove())
+	require.Equal(t, []string{"x-bfl-user", "x-caller-appid"}, clientSpoofableIdentityHeaders())
+}
+
+func TestAutheliaAllowedUpstreamHeadersIncludesXBFLUser(t *testing.T) {
+	var foundExact bool
+	for _, p := range autheliaAllowedUpstreamHeaders.GetPatterns() {
+		if p.GetExact() == "x-bfl-user" {
+			foundExact = true
+			break
+		}
+	}
+	require.True(t, foundExact, "ExtAuth must allow Authelia response X-BFL-USER through to upstream")
 }
 
 // applyEnvoyRequestHeaderMutations models Envoy request-header mutation order
@@ -1003,7 +1048,10 @@ func findNamedRoute(t *testing.T, rc *routev3.RouteConfiguration, name string) *
 	return nil
 }
 
-func TestNorthSouthXBFLUserForceDeleteThenReinject_EnvoyOrder(t *testing.T) {
+// TestNorthSouthClientIdentityStripBeforeExtAuth models the R1 path:
+// early/filter strip removes forged client x-bfl-user; Authelia then sets
+// session identity; RDS must not remove x-bfl-user again.
+func TestNorthSouthClientIdentityStripBeforeExtAuth(t *testing.T) {
 	xdsIR := &ir.Xds{
 		HTTPListeners: []*ir.HTTPListenerIR{{
 			Name:       "https_443_alice",
@@ -1020,46 +1068,54 @@ func TestNorthSouthXBFLUserForceDeleteThenReinject_EnvoyOrder(t *testing.T) {
 					Name:       "profile_root",
 					PathPrefix: "/",
 					Cluster:    "profile_service_alice",
-					RequestHeaders: map[string]string{
-						"X-BFL-USER": "alice",
-					},
 				}},
 			}},
 			DefaultResponse: &ir.DirectResponseIR{Status: 421, Body: "err"},
 		}},
 		Clusters: []*ir.ClusterIR{
 			{Name: "profile_service_alice", Host: "profile-service.user-space-alice.svc.cluster.local", Port: 3000, UseDNS: true},
+			{Name: "authelia_backend_alice", Host: "authelia-backend.user-system-alice.svc.cluster.local", Port: 9091, UseDNS: true},
 		},
 	}
-	rc := asRouteConfig(t, (&XdsTranslator{}).Translate(xdsIR).Routes[0])
+	snap := (&XdsTranslator{}).Translate(xdsIR)
+	hcm := hcmFromListener(t, asListener(t, snap.Listeners[0]))
+	rc := asRouteConfig(t, snap.Routes[0])
 	route := findNamedRoute(t, rc, "profile_root")
-	require.True(t, rc.GetMostSpecificHeaderMutationsWins())
 
-	client := map[string]string{
-		"x-bfl-user":     "attacker",
+	require.Equal(t, []string{"x-caller-appid"}, rc.GetRequestHeadersToRemove())
+	require.Equal(t, "envoy.filters.http.header_mutation", hcm.GetHttpFilters()[0].GetName())
+	require.Equal(t, "envoy.filters.http.ext_authz", hcm.GetHttpFilters()[1].GetName())
+
+	// Simulate: client forge present → early/filter strip → Authelia allow sets session user.
+	afterStrip := map[string]string{
 		"x-caller-appid": "spoofed-app",
 		"host":           "alice.example.com",
 	}
-	got := applyEnvoyRequestHeaderMutations(client, rc, route)
-	assert.Equal(t, "alice", got["x-bfl-user"],
-		"with most_specific_header_mutations_wins, RDS remove then route add must yield trusted viewer")
+	for _, h := range clientSpoofableIdentityHeaders() {
+		delete(afterStrip, h)
+	}
+	// ExtAuth AllowedUpstreamHeaders injects session identity after strip.
+	afterStrip["x-bfl-user"] = "bob"
+
+	got := applyEnvoyRequestHeaderMutations(afterStrip, rc, route)
+	assert.Equal(t, "bob", got["x-bfl-user"],
+		"Authelia session X-BFL-USER must survive RDS mutations")
 	_, hasAppid := got["x-caller-appid"]
-	assert.False(t, hasAppid, "spoofed x-caller-appid must stay removed")
+	assert.False(t, hasAppid, "spoofed x-caller-appid must stay removed at RDS")
 	assert.Equal(t, "alice.example.com", got["host"])
 
-	// Characterization: without the flag, RDS remove runs after route add and
-	// strips the reinjected viewer — the bug this flag closes.
-	rcNoFlag := protoCloneRouteConfig(t, rc)
-	rcNoFlag.MostSpecificHeaderMutationsWins = false
-	broken := applyEnvoyRequestHeaderMutations(client, rcNoFlag, route)
+	// Characterization: if x-bfl-user were still on RDS remove, session identity would be lost.
+	rcLegacy := protoCloneRouteConfig(t, rc)
+	rcLegacy.RequestHeadersToRemove = []string{"x-bfl-user", "x-caller-appid"}
+	broken := applyEnvoyRequestHeaderMutations(afterStrip, rcLegacy, route)
 	_, hasBFL := broken["x-bfl-user"]
 	assert.False(t, hasBFL,
-		"default Envoy order must drop reinjected X-BFL-USER (documents why the flag is required)")
+		"RDS remove of x-bfl-user after ExtAuth would drop Authelia session identity")
 }
 
 func protoCloneRouteConfig(t *testing.T, rc *routev3.RouteConfiguration) *routev3.RouteConfiguration {
 	t.Helper()
-	// Shallow field copy is enough: test only toggles MostSpecificHeaderMutationsWins.
+	// Shallow field copy is enough: test only toggles RequestHeadersToRemove.
 	out := *rc
 	return &out
 }
