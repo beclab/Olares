@@ -44,7 +44,7 @@ func TestBuildDeclarationMergesDefaultsWithoutMutatingInputs(t *testing.T) {
 		testBundledAppID: {SelectedGPUType: "nvidia", Envs: runtimeEnvs},
 	}}
 
-	declaration, err := BuildDeclaration(testOSVersion, bundle, selections, nil)
+	declaration, err := BuildDeclaration(bundle, selections, nil)
 	if err != nil {
 		t.Fatalf("BuildDeclaration() error = %v", err)
 	}
@@ -79,7 +79,7 @@ func TestBuildDeclarationAppliesDetectedGPUOnlyToAllowedApps(t *testing.T) {
 	unsupported.AllowedGPUTypes = []string{"cpu"}
 	bundle.Apps = append(bundle.Apps, unsupported)
 
-	declaration, err := BuildDeclaration(testOSVersion, bundle, ProfileSelections{
+	declaration, err := BuildDeclaration(bundle, ProfileSelections{
 		HardwareProfile: "nvidia",
 		DetectedGPUType: "nvidia",
 	}, nil)
@@ -99,7 +99,7 @@ func TestBuildDeclarationExplicitGPUOverridesDetectedGPU(t *testing.T) {
 	bundle := decodeBundle(t, validBundleJSON)
 	bundle.Apps[0].AllowedGPUTypes = []string{"nvidia", "cpu"}
 
-	declaration, err := BuildDeclaration(testOSVersion, bundle, ProfileSelections{
+	declaration, err := BuildDeclaration(bundle, ProfileSelections{
 		DetectedGPUType: "nvidia",
 		Apps:            map[string]AppSelection{testBundledAppID: {SelectedGPUType: "cpu"}},
 	}, nil)
@@ -131,7 +131,7 @@ func TestBuildDeclarationRefusesSelectionsTheBundleDoesNotAllow(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			bundle := decodeBundle(t, validBundleJSON)
 
-			_, err := BuildDeclaration(testOSVersion, bundle, ProfileSelections{
+			_, err := BuildDeclaration(bundle, ProfileSelections{
 				Apps: map[string]AppSelection{testBundledAppID: test.selection},
 			}, nil)
 
@@ -148,7 +148,7 @@ func TestBuildDeclarationRefusesSensitiveEnvs(t *testing.T) {
 	bundle := decodeBundle(t, validBundleJSON)
 	bundle.Apps[0].AllowedEnvs = append(bundle.Apps[0].AllowedEnvs, "API_TOKEN")
 
-	_, err := BuildDeclaration(testOSVersion, bundle, ProfileSelections{
+	_, err := BuildDeclaration(bundle, ProfileSelections{
 		Apps: map[string]AppSelection{testBundledAppID: {Envs: map[string]string{"API_TOKEN": "x"}}},
 	}, nil)
 
@@ -172,7 +172,7 @@ func TestBuildDeclarationPrefersABundledAppOverTheCatalogEntryForIt(t *testing.T
 		},
 	}
 
-	declaration, err := BuildDeclaration(testOSVersion, bundle, ProfileSelections{}, catalog)
+	declaration, err := BuildDeclaration(bundle, ProfileSelections{}, catalog)
 	if err != nil {
 		t.Fatalf("BuildDeclaration() error = %v", err)
 	}
@@ -197,7 +197,7 @@ func TestBuildDeclarationTreatsANameCollisionAsTheSameApp(t *testing.T) {
 		InstallScope: InstallScopeShared, InstallOrder: 20,
 	}}
 
-	declaration, err := BuildDeclaration(testOSVersion, bundle, ProfileSelections{}, catalog)
+	declaration, err := BuildDeclaration(bundle, ProfileSelections{}, catalog)
 	if err != nil {
 		t.Fatalf("BuildDeclaration() error = %v", err)
 	}
@@ -213,7 +213,6 @@ func TestValidateDeclarationRefusesWhatMarketRefuses(t *testing.T) {
 	valid := func() DeclarationV2 {
 		return DeclarationV2{
 			SchemaVersion: DeclarationSchemaVersion,
-			OSVersion:     testOSVersion,
 			Apps: []DeclarationAppV2{{
 				AppID: "f3395cd5", AppName: "router", InstallScope: InstallScopeShared,
 				InstallOrder: 20, ChartSource: ChartSourceCatalog,
@@ -221,7 +220,7 @@ func TestValidateDeclarationRefusesWhatMarketRefuses(t *testing.T) {
 		}
 	}
 	if err := ValidateDeclaration(&DeclarationV2{
-		SchemaVersion: DeclarationSchemaVersion, OSVersion: testOSVersion,
+		SchemaVersion: DeclarationSchemaVersion,
 	}); err != nil {
 		t.Fatalf("ValidateDeclaration() on an empty declaration = %v", err)
 	}
@@ -232,9 +231,6 @@ func TestValidateDeclarationRefusesWhatMarketRefuses(t *testing.T) {
 	}{
 		"no schema": {
 			func(d *DeclarationV2) { d.SchemaVersion = "1" }, "schemaVersion",
-		},
-		"no version": {
-			func(d *DeclarationV2) { d.OSVersion = " " }, "osVersion",
 		},
 		"unparsable timestamp": {
 			func(d *DeclarationV2) { d.GeneratedAt = "yesterday" }, "RFC3339",
@@ -288,7 +284,7 @@ func TestValidateDeclarationRefusesOverlappingPayloadPaths(t *testing.T) {
 		}
 	}
 	declaration := DeclarationV2{
-		SchemaVersion: DeclarationSchemaVersion, OSVersion: testOSVersion,
+		SchemaVersion: DeclarationSchemaVersion,
 		Apps: []DeclarationAppV2{
 			local("app-a", "app-a", "chart/app.tgz"),
 			local("app-b", "app-b", "chart/app.tgz/nested.tgz"),
@@ -307,7 +303,6 @@ func TestValidateDeclarationRefusesOverlappingPayloadPaths(t *testing.T) {
 func TestEmbeddedCatalogAppsAreDeclarable(t *testing.T) {
 	declaration := DeclarationV2{
 		SchemaVersion: DeclarationSchemaVersion,
-		OSVersion:     testOSVersion,
 		Apps:          catalogDeclarationApps(),
 	}
 

@@ -386,7 +386,7 @@ func TestPublishRefusesAPublishWithNoVersionToNameItAfter(t *testing.T) {
 
 	err := Publish(installerDir, baseDir, "  ", ProfileSelections{})
 
-	if err == nil || !strings.Contains(err.Error(), "osVersion") {
+	if err == nil || !strings.Contains(err.Error(), "no Olares version") {
 		t.Fatalf("Publish() error = %v, want a missing version rejection", err)
 	}
 }
@@ -577,9 +577,6 @@ func readPublishedDeclaration(t *testing.T, target, osVersion string) Declaratio
 	}
 	if err := ValidateDeclaration(&declaration); err != nil {
 		t.Fatalf("published declaration is not one Market would read: %v", err)
-	}
-	if TrunkVersion(declaration.OSVersion) != TrunkVersion(osVersion) {
-		t.Fatalf("declaration osVersion = %q, want trunk %q", declaration.OSVersion, TrunkVersion(osVersion))
 	}
 	return declaration
 }

@@ -23,6 +23,10 @@ import (
 // no medium is the ordinary case rather than a reason to leave Market with no
 // declaration for the release it is now running.
 func Publish(installerDir, rootDir, osVersion string, selections ProfileSelections) error {
+	trunk := TrunkVersion(osVersion)
+	if trunk == "" {
+		return fmt.Errorf("publish declaration: no Olares version to name it after")
+	}
 	source, err := openStaticBundle(installerDir)
 	if err != nil {
 		return err
@@ -36,11 +40,11 @@ func Publish(installerDir, rootDir, osVersion string, selections ProfileSelectio
 			return err
 		}
 	}
-	declaration, err := BuildDeclaration(osVersion, source.bundle, selections, catalogDeclarationApps())
+	declaration, err := BuildDeclaration(source.bundle, selections, catalogDeclarationApps())
 	if err != nil {
 		return err
 	}
-	return publishDeclaration(source, rootDir, declaration)
+	return publishDeclaration(source, rootDir, trunk, declaration)
 }
 
 // publishDeclaration writes one trunk's declaration and does nothing if that
@@ -48,11 +52,7 @@ func Publish(installerDir, rootDir, osVersion string, selections ProfileSelectio
 // presence is what says the payload beside it is complete; a publish interrupted
 // halfway leaves verified files and no declaration, and the next attempt
 // finishes the job.
-func publishDeclaration(source medium, rootDir string, declaration DeclarationV2) error {
-	trunk := TrunkVersion(declaration.OSVersion)
-	if trunk == "" {
-		return fmt.Errorf("publish declaration: no Olares version")
-	}
+func publishDeclaration(source medium, rootDir, trunk string, declaration DeclarationV2) error {
 	declarationData, err := json.MarshalIndent(declaration, "", "  ")
 	if err != nil {
 		return fmt.Errorf("encode declaration: %w", err)
