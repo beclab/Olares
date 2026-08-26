@@ -54,8 +54,8 @@ Use [Olares Space](https://www.olares.com/space/login?redirect=/) if your device
 
 In Olares Space, you can create a ticket in two ways:
 
-- **Manually**: Fill out the web form and upload exported system logs as attachments.
-- **Automatically (CLI)**: Run the command shown in Olares Space on your device terminal. This command uses Olares CLI to collect and upload system logs.
+- **Manually**: Fill out the web form and attach [manually exported system logs](/manual/olares/settings/developer.md#export-system-logs).
+- **Automatically (CLI)**: Select <i class="material-symbols-outlined">terminal</i>, and then run the command shown in Olares Space on your device terminal. This command uses Olares CLI to collect and upload system logs.
 
    ![Upload logs dialog](/images/how-to/space/upload_logs_window1.png#bordered)
 

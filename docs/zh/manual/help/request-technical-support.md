@@ -53,8 +53,8 @@ Ticket 应用仅显示当前登录在 Olares 设备上的 Olares ID 所关联的
 
 在 Olares Space 中，你可以通过以下两种方式创建工单：
 
-- **手动创建**：填写网页表单，并上传导出的系统日志作为附件。
-- **自动创建（CLI）**：在设备终端运行 Olares Space 中显示的命令。该命令使用 Olares CLI 收集和上传系统日志。
+- **手动创建**：填写网页表单，并附上[手动导出的系统日志](/zh/manual/olares/settings/developer.md#导出系统日志)。
+- **自动创建（CLI）**：选择 <i class="material-symbols-outlined">terminal</i>，然后在设备终端运行 Olares Space 中显示的命令。该命令使用 Olares CLI 收集和上传系统日志。
 
    ![上传日志对话框](/images/zh/manual/space/upload_logs_window3.png#bordered)
 
