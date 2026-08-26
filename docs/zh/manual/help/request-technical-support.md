@@ -16,11 +16,11 @@ head:
 
 | 方式 | 适用场景 |
 | --- | --- |
-| **[Ticket](#提交工单)** | 私密的一对一支持，可安全地与 Olares 支持团队共享系统日志。 |
-| **[GitHub Olares 仓库](https://github.com/beclab/Olares)** | 报告 Olares OS 系统问题或提出 OS 功能请求。 |
-| **[GitHub apps 仓库](https://github.com/beclab/apps)** | 报告应用问题，或提出新应用和应用更新的需求。 |
-| **[论坛](https://www.olares.com/forum/)** | 分享知识、查找或发布教程、讨论功能以及获取社区帮助。 |
-| **[安全报告](https://github.com/beclab/Olares/security/advisories/new)** | 报告系统漏洞。 |
+| <nobr>[Ticket](#提交工单)</nobr> | 私密的一对一支持，可安全地与 Olares 支持团队共享系统日志。 |
+| <nobr>[GitHub Olares 仓库](https://github.com/beclab/Olares)</nobr> | 报告 Olares OS 系统问题或提出 OS 功能请求。 |
+| <nobr>[GitHub apps 仓库](https://github.com/beclab/apps)</nobr> | 报告应用问题，或提出新应用和应用更新的需求。 |
+| <nobr>[论坛](https://www.olares.com/forum/)</nobr> | 分享知识、查找或发布教程、讨论功能以及获取社区帮助。 |
+| <nobr>[安全报告](https://github.com/beclab/Olares/security/advisories/new)</nobr> | 报告系统漏洞。 |
 
 ## 提交工单
 
