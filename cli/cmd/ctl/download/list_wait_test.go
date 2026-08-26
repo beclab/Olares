@@ -41,9 +41,9 @@ func TestClassifyWaitStatus(t *testing.T) {
 		{status: "paused", want: "pending"},
 		{status: "waiting", want: "pending"},
 		{status: "preparing", want: "pending"},
-		// The server's retry sweep still owns this row, so calling it a
-		// failure would make a script tear down a task that recovers.
-		{status: "error", autoRet: true, want: "pending"},
+		// will_auto_retry says the sweep may pick the row up again; it
+		// does not make the row any less failed right now.
+		{status: "error", autoRet: true, want: "failure"},
 	}
 	for _, tc := range cases {
 		task := DownloadTask{Status: tc.status, WillAutoRetry: tc.autoRet}
@@ -53,9 +53,11 @@ func TestClassifyWaitStatus(t *testing.T) {
 	}
 }
 
-// TestWaitKeepsPollingAnAutoRetryingError pins the whole loop, not just
-// the classifier: an error row the server will retry must not end wait.
-func TestWaitKeepsPollingAnAutoRetryingError(t *testing.T) {
+// TestWaitStopsOnAnAutoRetryingError pins the whole loop, not just the
+// classifier: an error row ends wait on the first poll even when the
+// server says it will retry. The later responses are there to fail the
+// test loudly if the loop ever starts waiting the sweep out again.
+func TestWaitStopsOnAnAutoRetryingError(t *testing.T) {
 	d := &seqDoer{responses: [][]byte{
 		mustEnvTaskRetry(t, 11, "error", true),
 		mustEnvTaskRetry(t, 11, "downloading", false),
@@ -70,8 +72,11 @@ func TestWaitKeepsPollingAnAutoRetryingError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("wait: %v", err)
 	}
-	if task.Status != "completed" {
-		t.Fatalf("status = %q, want completed", task.Status)
+	if task.Status != "error" {
+		t.Fatalf("status = %q, want error", task.Status)
+	}
+	if len(d.paths) != 1 {
+		t.Fatalf("polled %d times, want 1", len(d.paths))
 	}
 }
 

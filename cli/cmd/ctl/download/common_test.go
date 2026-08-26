@@ -502,20 +502,25 @@ func TestParseTaskID(t *testing.T) {
 }
 
 func TestValidateApp(t *testing.T) {
-	for _, valid := range []string{"", "wise", " larepass ", "larepass"} {
-		got, err := validateApp(valid)
+	// The default app decides which namespace an unqualified create
+	// lands in and which rows an unqualified list returns, so pin the
+	// value itself rather than only "empty resolves to the default".
+	if defaultApp != "larepass" {
+		t.Fatalf("defaultApp = %q, want larepass", defaultApp)
+	}
+	for _, tc := range []struct{ in, want string }{
+		{"", defaultApp},
+		{"   ", defaultApp},
+		{"wise", "wise"},
+		{"larepass", "larepass"},
+		{" larepass ", "larepass"},
+	} {
+		got, err := validateApp(tc.in)
 		if err != nil {
-			t.Fatalf("validateApp(%q) unexpected error: %v", valid, err)
+			t.Fatalf("validateApp(%q) unexpected error: %v", tc.in, err)
 		}
-		switch strings.TrimSpace(valid) {
-		case "", "wise":
-			if got != "wise" {
-				t.Fatalf("validateApp(%q)=%q want wise", valid, got)
-			}
-		default:
-			if got != "larepass" {
-				t.Fatalf("validateApp(%q)=%q want larepass", valid, got)
-			}
+		if got != tc.want {
+			t.Fatalf("validateApp(%q)=%q want %q", tc.in, got, tc.want)
 		}
 	}
 	_, err := validateApp("namespace")
