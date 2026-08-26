@@ -21,12 +21,22 @@ import (
 // avoids accidental clashes with lark-cli on machines that have both.
 const dataDirEnv = "OLARES_CLI_DATA_DIR"
 
+// cacheDirEnv is set by app-service's cli-credential webhook and points at a
+// writable emptyDir. An application container's HOME is frequently read-only
+// or belongs to a different uid than the process, so without this the very
+// first Set would fail to create the master key. The literal is duplicated
+// from credential.EnvCacheDir rather than imported, matching how this package
+// already keeps dataDirEnv to itself.
+const cacheDirEnv = "OLARES_CLI_CACHE_DIR"
+
 // StorageDir returns the absolute directory for service-scoped encrypted
 // blobs on Linux. The lookup chain is:
 //
 //  1. $OLARES_CLI_DATA_DIR if it's an absolute, cleanly-resolved path,
-//  2. XDG-style ~/.local/share/<service>,
-//  3. an absolute fallback under os.TempDir() when HOME is unresolvable.
+//  2. $OLARES_CLI_CACHE_DIR/keychain, same absolute-path rule, which only
+//     exists inside a container the platform injected a credential into,
+//  3. XDG-style ~/.local/share/<service>,
+//  4. an absolute fallback under os.TempDir() when HOME is unresolvable.
 //     Earlier versions returned ".local/share/<service>" relative to CWD,
 //     which silently writes to wherever the user happened to invoke the
 //     CLI from (worst case: cwd=/). Anchoring to TempDir() guarantees the
@@ -35,6 +45,11 @@ func StorageDir(service string) string {
 	if dir := os.Getenv(dataDirEnv); dir != "" {
 		if safeDir, ok := safeAbsoluteDir(dir); ok {
 			return filepath.Join(safeDir, service)
+		}
+	}
+	if dir := os.Getenv(cacheDirEnv); dir != "" {
+		if safeDir, ok := safeAbsoluteDir(dir); ok {
+			return filepath.Join(safeDir, "keychain", service)
 		}
 	}
 	home, err := os.UserHomeDir()
