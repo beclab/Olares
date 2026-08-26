@@ -137,7 +137,7 @@ const side = {
 
               ],
             },
-            {
+            /* {
               text: "macOS",
               collapsed: true,
               items: [
@@ -150,8 +150,8 @@ const side = {
                   link: "/manual/get-started/install-mac-docker",
                 },
               ],
-            },
-            {
+            }, */
+            /* {
               text: "Windows (WSL 2)",
               collapsed: true,
               items: [
@@ -159,13 +159,13 @@ const side = {
                   text: "Using script",
                   link: "/manual/get-started/install-windows-script",
                 },
-                /* {
+                {
                   text: "Using Docker image",
                   link: "/manual/get-started/install-windows-docker",
-                },*/
+                },
               ],
-            },
-            {
+            }, */
+            /* {
               text: "PVE",
               collapsed: true,
               items: [
@@ -179,11 +179,11 @@ const side = {
                 },
                 { text: "LXC on PVE", link: "/manual/get-started/install-lxc" },
               ],
-            },
-            {
+            }, */
+            /* {
               text: "Raspberry Pi",
               link: "/manual/get-started/install-raspberry-pi",
-            },
+            }, */
           ],
         },
         {

@@ -135,7 +135,7 @@ const side = {
                 },
               ],
             },
-            {
+            /* {
               text: "macOS",
               collapsed: true,
               items: [
@@ -148,8 +148,8 @@ const side = {
                   link: "/zh/manual/get-started/install-mac-docker",
                 },
               ],
-            },
-            {
+            }, */
+            /* {
               text: "Windows (WSL 2)",
               collapsed: true,
               items: [
@@ -157,13 +157,13 @@ const side = {
                   text: "使用脚本",
                   link: "/zh/manual/get-started/install-windows-script",
                 },
-                /*{
+                {
                   text: "使用 Docker 镜像",
                   link: "/zh/manual/get-started/install-windows-docker",
-                },*/
+                },
               ],
-            },
-            {
+            }, */
+            /* {
               text: "PVE",
               collapsed: true,
               items: [
@@ -177,11 +177,11 @@ const side = {
                 },
                 { text: "LXC", link: "/zh/manual/get-started/install-lxc" },
               ],
-            },
-            {
+            }, */
+            /* {
               text: "树莓派",
               link: "/zh/manual/get-started/install-raspberry-pi",
-            },
+            }, */
           ],
         },
         {
