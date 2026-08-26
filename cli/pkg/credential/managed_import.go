@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"time"
 
 	"github.com/beclab/Olares/cli/pkg/auth"
 	"github.com/beclab/Olares/cli/pkg/cliconfig"
@@ -115,6 +116,11 @@ func (m *managedImporter) firstImport(ctx context.Context, cfg *cliconfig.MultiP
 	}
 
 	_, refreshErr := m.refresh(ctx, cred.OlaresID, authURL, currentAccessToken, cred.RefreshToken, target.InsecureSkipVerify)
+	var invalidated *ErrTokenInvalidated
+	deadAt := time.Time{}
+	if errors.As(refreshErr, &invalidated) {
+		deadAt = invalidated.InvalidatedAt
+	}
 
 	var notSecondFactor *ErrManagedNotSecondFactor
 	if errors.As(refreshErr, &notSecondFactor) {
@@ -132,36 +138,45 @@ func (m *managedImporter) firstImport(ctx context.Context, cfg *cliconfig.MultiP
 		debugManaged("initial refresh for %s failed: %v", cred.OlaresID, refreshErr)
 	}
 
-	m.sealUserToken(cred.OlaresID)
+	m.adoptTokenEntry(cred.OlaresID, deadAt)
 	cfg.Upsert(target)
 	m.save(cfg)
 }
 
-// sealUserToken removes a keychain record that a manual login left behind for
-// an olaresId that is now managed.
+// adoptTokenEntry leaves the keychain holding what a managed profile is
+// allowed to hold, and nothing else.
 //
-// A managed entry holds no refresh token — the mount is the platform's only
-// copy and the only one it can revoke — so the user's would sit there
-// unreadable by any code path and unremovable by `profile remove`, which
-// refuses to touch a managed profile. The invalidation marker is the one thing
-// worth carrying across, because it is what `profile list` reports.
-func (m *managedImporter) sealUserToken(olaresID string) {
-	stored, err := m.store.Get(olaresID)
-	if err != nil || stored.Managed {
-		return
-	}
-	if err := m.store.Delete(olaresID); err != nil {
-		debugManaged("cannot remove the superseded token for %s: %v", olaresID, err)
-		return
-	}
-	if stored.InvalidatedAt > 0 {
-		if err := m.store.Set(auth.StoredToken{
-			OlaresID:      olaresID,
-			Managed:       true,
-			InvalidatedAt: stored.InvalidatedAt,
-		}); err != nil {
-			debugManaged("cannot record the invalidated managed grant for %s: %v", olaresID, err)
+// A record a manual login left behind for this olaresId is removed. A managed
+// entry holds no refresh token — the mount is the platform's only copy and the
+// only one it can revoke — so the user's would sit there unreadable by any
+// code path and unremovable by `profile remove`, which refuses to touch a
+// managed profile. Its invalidation marker is not carried across either: that
+// marker says a server refused the user's refresh token, which is a different
+// credential from the one just mounted.
+//
+// deadAt is set only when the platform's own grant was refused, and is written
+// as a managed shell. Without it a refused grant leaves nothing behind on a
+// fresh container — the refresher's stamp needs an entry to land on — so
+// `profile list` would read `pending` and every command would go out and
+// collect the same 401.
+func (m *managedImporter) adoptTokenEntry(olaresID string, deadAt time.Time) {
+	if stored, err := m.store.Get(olaresID); err == nil && !stored.Managed {
+		if err := m.store.Delete(olaresID); err != nil {
+			debugManaged("cannot remove the superseded token for %s: %v", olaresID, err)
+			return
 		}
+	}
+	if deadAt.IsZero() {
+		return
+	}
+	// Set clears InvalidatedAt by design — a successful write is what
+	// revives a grant — so the marker is stamped in a second step.
+	if err := m.store.Set(auth.StoredToken{OlaresID: olaresID, Managed: true}); err != nil {
+		debugManaged("cannot record the refused grant for %s: %v", olaresID, err)
+		return
+	}
+	if err := m.store.MarkInvalidated(olaresID, deadAt); err != nil {
+		debugManaged("cannot mark the refused grant for %s: %v", olaresID, err)
 	}
 }
 

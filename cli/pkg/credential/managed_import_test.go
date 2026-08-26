@@ -246,6 +246,39 @@ func TestImport_DeadGrantKeepsTheInvalidationMarker(t *testing.T) {
 	}
 }
 
+// The same on a fresh container, where the refresher's own stamp has no entry
+// to land on. Without a shell to carry it, the refusal would be invisible and
+// every command would go out and collect the same 401.
+func TestImport_RefusedGrantIsRecordedOnAFreshContainer(t *testing.T) {
+	h := newImportHarness(t, testCredential())
+	invalidatedAt := time.Now()
+	h.refreshErr = &ErrTokenInvalidated{OlaresID: managedID, InvalidatedAt: invalidatedAt}
+
+	h.run(context.Background())
+
+	stored, err := h.store.Get(managedID)
+	if err != nil {
+		t.Fatalf("nothing recorded the refusal: %v", err)
+	}
+	if stored.InvalidatedAt != invalidatedAt.UnixMilli() || !stored.Managed {
+		t.Errorf("stored = %+v, want a managed shell marked at %d", stored, invalidatedAt.UnixMilli())
+	}
+}
+
+// A transient failure records nothing, which is what keeps the next command
+// retrying rather than reporting a grant nothing has proven dead.
+func TestImport_TransientFailureLeavesNoMarker(t *testing.T) {
+	h := newImportHarness(t, testCredential())
+	h.refreshErr = errors.New("dial tcp: connection refused")
+	_ = h.store.Set(auth.StoredToken{OlaresID: managedID, AccessToken: "user-AT", RefreshToken: "user-RT"})
+
+	h.run(context.Background())
+
+	if _, err := h.store.Get(managedID); !errors.Is(err, auth.ErrTokenNotFound) {
+		t.Errorf("store holds %v, want the superseded entry gone and no marker in its place", err)
+	}
+}
+
 // A first-factor grant creates nothing at all, and says so out loud: an entry
 // that 401s on every command is worse than no entry.
 func TestImport_FirstFactorGrantCreatesNothing(t *testing.T) {

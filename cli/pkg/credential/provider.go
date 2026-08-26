@@ -92,11 +92,43 @@ func configFileForError() string {
 	return p
 }
 
-// RequireBuiltinCredentialProvider is a hook for Phase 3: when an env-driven
-// (or other "external") provider is in play, mutating commands like
-// `profile login` should refuse to run because there's nothing local to
-// mutate. Phase 1 always returns nil; the call sites are wired now so future
-// activation is mechanical.
-func RequireBuiltinCredentialProvider(_ *CredentialProvider) error {
-	return nil
+// ErrManagedProfile is returned by RequireNotManaged. It names the
+// application so a user who never created this account can tell where it came
+// from, and states what actually revokes it, which is not anything the CLI
+// can do: the platform holds the only copy of the refresh token.
+type ErrManagedProfile struct {
+	OlaresID string
+	AppName  string
+	Verb     string
+}
+
+func (e *ErrManagedProfile) Error() string {
+	app := e.AppName
+	if app == "" {
+		app = "an installed application"
+	} else {
+		app = fmt.Sprintf("application %q", app)
+	}
+	return fmt.Sprintf("cannot %s %s: its credential is issued by the platform for %s and is not stored locally; uninstall that application to revoke it",
+		e.Verb, e.OlaresID, app)
+}
+
+// RequireNotManaged refuses a command that would overwrite or delete a
+// platform-issued profile. Nothing local backs such a profile — the refresh
+// token lives in a mount the platform owns — so a login would write a second
+// grant the next startup discards, and a remove would delete an entry the
+// next startup recreates. Both read as the command having failed silently.
+//
+// A nil profile, or one the user logged into by hand, passes: logging into a
+// different identity inside the same container is nobody's business but the
+// user's.
+func RequireNotManaged(profile *cliconfig.ProfileConfig, verb string) error {
+	if profile == nil || !profile.Managed {
+		return nil
+	}
+	return &ErrManagedProfile{
+		OlaresID: profile.OlaresID,
+		AppName:  profile.AppName,
+		Verb:     verb,
+	}
 }

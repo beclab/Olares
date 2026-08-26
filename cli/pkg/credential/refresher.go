@@ -238,8 +238,10 @@ func (r *Refresher) refresh(ctx context.Context, in refreshInput) (string, error
 	if refreshToken == "" {
 		// We have an access_token but no refresh_token to rotate it
 		// with. Treat as "needs login" — same UX as if the entry was
-		// missing, since we can't recover from this client-side.
-		return "", &ErrNotLoggedIn{OlaresID: olaresID}
+		// missing, since we can't recover from this client-side. For a
+		// managed entry this means the mount went away under a running
+		// container, which is not something a login would fix either.
+		return "", &ErrNotLoggedIn{OlaresID: olaresID, Managed: in.managed}
 	}
 
 	tok, err := auth.Refresh(ctx, auth.RefreshRequest{
@@ -268,7 +270,7 @@ func (r *Refresher) refresh(ctx context.Context, in refreshInput) (string, error
 					"warning: failed to persist invalidated marker for %s: %v (refresh attempt will repeat next run)\n",
 					olaresID, mErr)
 			}
-			return "", &ErrTokenInvalidated{OlaresID: olaresID, InvalidatedAt: at}
+			return "", &ErrTokenInvalidated{OlaresID: olaresID, InvalidatedAt: at, Managed: in.managed}
 		}
 		return "", err
 	}

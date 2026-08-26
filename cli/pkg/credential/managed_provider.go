@@ -57,6 +57,8 @@ func (p *ManagedProvider) Resolve(ctx context.Context, profile *cliconfig.Profil
 		return nil, &ErrTokenInvalidated{
 			OlaresID:      profile.OlaresID,
 			InvalidatedAt: time.UnixMilli(stored.InvalidatedAt),
+			Managed:       true,
+			AppName:       profile.AppName,
 		}
 	case err == nil && stored.AccessToken != "":
 		exp, expErr := auth.ExpiresAt(stored.AccessToken)
@@ -77,7 +79,11 @@ func (p *ManagedProvider) Resolve(ctx context.Context, profile *cliconfig.Profil
 		// The profile says the platform vouches for this identity but the
 		// mount is gone or names somebody else, so there is no token to
 		// be had and no local action that would produce one.
-		return nil, &ErrNotLoggedIn{OlaresID: profile.OlaresID}
+		return nil, &ErrNotLoggedIn{
+			OlaresID: profile.OlaresID,
+			Managed:  true,
+			AppName:  profile.AppName,
+		}
 	}
 	authURL, err := profile.ResolvedAuthURL()
 	if err != nil {
@@ -85,11 +91,29 @@ func (p *ManagedProvider) Resolve(ctx context.Context, profile *cliconfig.Profil
 	}
 	accessToken, err := p.refresh(ctx, profile.OlaresID, authURL, "", cred.RefreshToken, profile.InsecureSkipVerify)
 	if err != nil {
-		return nil, err
+		return nil, nameApp(err, profile.AppName)
 	}
 	exp, expErr := auth.ExpiresAt(accessToken)
 	if expErr != nil && !errors.Is(expErr, auth.ErrNoExpClaim) {
 		return nil, fmt.Errorf("decode access token: %w", expErr)
 	}
 	return buildResolved(profile, accessToken, exp)
+}
+
+// nameApp fills in the application on a failure the refresher raised. The
+// refresher is given a token and an olaresID and has no way to know which
+// install the grant belongs to, which is the one thing the remedy needs.
+func nameApp(err error, appName string) error {
+	if appName == "" {
+		return err
+	}
+	var notLoggedIn *ErrNotLoggedIn
+	if errors.As(err, &notLoggedIn) && notLoggedIn.AppName == "" {
+		notLoggedIn.AppName = appName
+	}
+	var invalidated *ErrTokenInvalidated
+	if errors.As(err, &invalidated) && invalidated.AppName == "" {
+		invalidated.AppName = appName
+	}
+	return err
 }

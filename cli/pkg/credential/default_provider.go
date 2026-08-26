@@ -47,10 +47,30 @@ func (d *DefaultProvider) Name() string { return "default" }
 // ErrNotLoggedIn is returned when a profile exists but has no stored token.
 type ErrNotLoggedIn struct {
 	OlaresID string
+
+	// Managed and AppName redirect the call to action. `profile login` is
+	// the wrong instruction for a platform-issued credential: it is
+	// refused, and following it would not help if it were not, because
+	// nothing local can mint the grant.
+	Managed bool
+	AppName string
 }
 
 func (e *ErrNotLoggedIn) Error() string {
+	if e.Managed {
+		return fmt.Sprintf("no access token for %s: %s", e.OlaresID, managedRemedy(e.AppName))
+	}
 	return fmt.Sprintf("no access token for %s; run: olares-cli profile login --olares-id %s  (or profile import --refresh-token <tok>)", e.OlaresID, e.OlaresID)
+}
+
+// managedRemedy is the tail shared by every managed-credential failure. The
+// application is named when we know it, because a user who finds an account
+// they never logged into has no other way to tell which install to repair.
+func managedRemedy(appName string) string {
+	if appName == "" {
+		return "this credential is issued by the platform; reinstall or repair the application that requested it to have it re-issued"
+	}
+	return fmt.Sprintf("this credential is issued by the platform for application %q; reinstall or repair that application to have it re-issued", appName)
 }
 
 // ErrTokenExpired is retained for backward compatibility but is no longer
@@ -77,9 +97,17 @@ func (e *ErrTokenExpired) Error() string {
 type ErrTokenInvalidated struct {
 	OlaresID      string
 	InvalidatedAt time.Time
+
+	// Managed and AppName redirect the call to action; see ErrNotLoggedIn.
+	Managed bool
+	AppName string
 }
 
 func (e *ErrTokenInvalidated) Error() string {
+	if e.Managed {
+		return fmt.Sprintf("the credential for %s was rejected at %s: %s",
+			e.OlaresID, e.InvalidatedAt.Format(time.RFC3339), managedRemedy(e.AppName))
+	}
 	return fmt.Sprintf("refresh token for %s became invalid at %s; please run: olares-cli profile login --olares-id %s  (or profile import --olares-id %s --refresh-token <tok>)",
 		e.OlaresID, e.InvalidatedAt.Format(time.RFC3339), e.OlaresID, e.OlaresID)
 }
