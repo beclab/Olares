@@ -50,6 +50,12 @@ type ResolvedProfile struct {
 	// InsecureSkipVerify is forwarded from the underlying ProfileConfig so
 	// HTTP clients constructed against this profile honor the dev override.
 	InsecureSkipVerify bool
+
+	// Managed and AppName mirror the same fields on ProfileConfig, so error
+	// formatters can tell a user whose grant came from an application
+	// install that logging in is not the way out of a failure.
+	Managed bool
+	AppName string
 }
 
 // Provider is implemented by anything that can turn a ProfileConfig (which

@@ -142,6 +142,8 @@ func buildResolved(profile *cliconfig.ProfileConfig, accessToken string, exp tim
 		ControlHubURL:      id.ControlHubURL(profile.LocalURLPrefix),
 		AccessToken:        accessToken,
 		InsecureSkipVerify: profile.InsecureSkipVerify,
+		Managed:            profile.Managed,
+		AppName:            profile.AppName,
 	}
 	if !exp.IsZero() {
 		rp.ExpiresAt = exp.Unix()
