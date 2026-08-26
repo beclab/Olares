@@ -42,13 +42,13 @@ func TestDecideSharedOptOutBlocksDefault(t *testing.T) {
 	}
 }
 
-func TestDecideSharedPlatformRuleLLMGateway(t *testing.T) {
+func TestDecideSharedLLMGatewayUsesSharedDefault(t *testing.T) {
 	r := Decide("llmgatewayv3", map[string]string{}, DefaultRules(), true)
-	if !r.Inject || r.Source != DecideSourceRule || r.RuleID != RuleAllowSharedLLMGateway {
-		t.Fatalf("Shared llmgateway* must match platform allow: %+v", r)
+	if !r.Inject || r.Source != DecideSourceSharedDefault || r.RuleID != "" {
+		t.Fatalf("Shared llmgateway* must use shared-default (no name allow rule): %+v", r)
 	}
 	if len(r.Callees) != 0 {
-		t.Fatalf("platform Shared caller edges must be empty (OPEN-01): %+v", r)
+		t.Fatalf("shared-default edges must be empty (OPEN-01): %+v", r)
 	}
 }
 
@@ -69,26 +69,25 @@ func TestDecideRuleAllowEmptyCallees(t *testing.T) {
 }
 
 func TestDecideRuleDeny(t *testing.T) {
-	r := Decide("middleware-x", map[string]string{SettingSharedAppDeps: "x"}, DefaultRules(), false)
+	rules := RuleSet{{ID: "R-DENY-demo", Match: "middleware*", Deny: true}}
+	r := Decide("middleware-x", map[string]string{SettingSharedAppDeps: "x"}, rules, false)
 	if r.Inject {
 		t.Fatalf("deny must win over explicit callees: %+v", r)
 	}
-	r2 := Decide("middleware-x", map[string]string{}, DefaultRules(), false)
+	r2 := Decide("middleware-x", map[string]string{}, rules, false)
 	if r2.Inject {
 		t.Fatalf("deny must block: %+v", r2)
 	}
 }
 
 func TestDecidePlatformShellDeny(t *testing.T) {
-	for _, name := range []string{"olares-app", "bfl"} {
-		r := Decide(name, map[string]string{}, DefaultRules(), false)
-		if r.Inject {
-			t.Fatalf("%s must be denied: %+v", name, r)
-		}
-		r2 := Decide(name, map[string]string{SettingAppRef: "ollama"}, DefaultRules(), false)
-		if r2.Inject {
-			t.Fatalf("%s deny must win over appRef: %+v", name, r2)
-		}
+	r := Decide("olares-app", map[string]string{}, DefaultRules(), false)
+	if r.Inject {
+		t.Fatalf("olares-app must be denied: %+v", r)
+	}
+	r2 := Decide("olares-app", map[string]string{SettingAppRef: "ollama"}, DefaultRules(), false)
+	if r2.Inject {
+		t.Fatalf("olares-app deny must win over appRef: %+v", r2)
 	}
 	r3 := Decide("olares-application", map[string]string{}, DefaultRules(), false)
 	if !r3.Inject {
@@ -122,7 +121,7 @@ func TestApplyDecidePreservesExplicit(t *testing.T) {
 		AnnotDecideSource: DecideSourceExplicit,
 		AnnotDecideEdges:  "",
 	}
-	r := ApplyDecide("middleware-x", s, DefaultRules(), true)
+	r := ApplyDecide("middleware-x", s, RuleSet{{ID: "R-DENY-demo", Match: "middleware*", Deny: true}}, true)
 	if !r.Inject || r.Source != DecideSourceExplicit {
 		t.Fatalf("explicit must be preserved even under deny rule: %+v", r)
 	}
@@ -134,14 +133,17 @@ func TestApplyDecidePreservesExplicit(t *testing.T) {
 	}
 }
 
-func TestApplyDecideSharedPlatformRule(t *testing.T) {
+func TestApplyDecideSharedLLMGatewaySharedDefault(t *testing.T) {
 	s := map[string]string{}
 	r := ApplyDecide("llmgatewayv3", s, DefaultRules(), true)
-	if !r.Inject || r.Source != DecideSourceRule || s[AnnotDecide] != "true" {
+	if !r.Inject || r.Source != DecideSourceSharedDefault || s[AnnotDecide] != "true" {
 		t.Fatalf("got %+v settings=%v", r, s)
 	}
-	if s[AnnotDecideRuleID] != RuleAllowSharedLLMGateway {
-		t.Fatalf("rule id: %v", s)
+	if s[AnnotDecideSource] != DecideSourceSharedDefault {
+		t.Fatalf("source: %v", s)
+	}
+	if s[AnnotDecideRuleID] != "" {
+		t.Fatalf("rule id must be empty: %v", s)
 	}
 	if s[AnnotDecideEdges] != "" {
 		t.Fatalf("edges must stay empty: %v", s)
