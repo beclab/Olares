@@ -260,6 +260,61 @@ func TestSubmitCreateSanitisesTitleBeforeSending(t *testing.T) {
 	}
 }
 
+// A "%(" in the inspect title used to be spliced into yt-dlp's outtmpl
+// as a field reference (task 30 failed with err_msg "'백퍼센트'").
+func TestSubmitCreateDefusesOuttmplFieldInTitle(t *testing.T) {
+	d := &recordingDoer{
+		inspect: inspectEnvelope(t, "[MV] 100%(백퍼센트) _ Sketch U(어디 있니)"),
+		create:  []byte(`{"code":200,"data":{"id":1,"status":"waiting"}}`),
+	}
+	if _, err := submitCreate(
+		context.Background(),
+		&preparedClient{doer: d},
+		NewDownloadReq{URL: "https://www.youtube.com/watch?v=iPY_CGYDVAs", App: "larepass"},
+		nameProbe{url: "https://www.youtube.com/watch?v=iPY_CGYDVAs", enabled: true},
+	); err != nil {
+		t.Fatalf("submitCreate: %v", err)
+	}
+	got := d.createReq(t).FileName
+	if strings.Contains(got, "%(") {
+		t.Fatalf("file_name = %q still opens an outtmpl field", got)
+	}
+	if got != "[MV] 100_(백퍼센트) _ Sketch U(어디 있니)" {
+		t.Fatalf("file_name = %q, want the field open defused", got)
+	}
+}
+
+// A caller-chosen name is rejected rather than rewritten, so the caller
+// is told it cannot stick instead of finding the task named something
+// else — the same contract --name already has for a magnet.
+func TestRunCreateRejectsOuttmplFieldInName(t *testing.T) {
+	err := runCreate(
+		context.Background(),
+		nil,
+		"https://example.com/video",
+		"", "", "clip %(title)s", "", "", "", "", "",
+		false, 0, false, 0, "table",
+	)
+	if err == nil || !strings.Contains(err.Error(), "unsupported --name") {
+		t.Fatalf("a --name opening an outtmpl field must be rejected, got %v", err)
+	}
+}
+
+// A lone "%" is a literal to yt-dlp, so a name carrying one must still
+// be accepted — rejecting it would block a name that downloads fine.
+func TestRunCreateAllowsLonePercentInName(t *testing.T) {
+	err := runCreate(
+		context.Background(),
+		nil,
+		"https://example.com/video",
+		"", "", "100% Real", "", "", "", "", "",
+		false, 0, false, 0, "table",
+	)
+	if err != nil && strings.Contains(err.Error(), "unsupported --name") {
+		t.Fatalf("a lone percent must not be rejected, got %v", err)
+	}
+}
+
 // awaitDeadline blocks until ctx expires, standing in for a probe the
 // server is slow to answer. It gives up on its own after a second so a
 // missing cap fails the assertion instead of hanging the suite until the

@@ -320,6 +320,9 @@ func runCreate(ctx context.Context, f *cmdutil.Factory, rawURL, app, path, name,
 			lockedBy,
 		)
 	}
+	if err := validateOuttmplSafeName(fileName); err != nil {
+		return err
+	}
 
 	if err := validateYTDLPQuality(quality, false); err != nil {
 		return err

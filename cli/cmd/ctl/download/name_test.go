@@ -20,6 +20,18 @@ func TestTitleToFileName(t *testing.T) {
 		// title and nest the file inside it.
 		{name: "path separators become underscores", title: `Foo / Bar \ Baz`, want: "Foo _ Bar _ Baz"},
 		{name: "nul dropped", title: "a\x00b", want: "ab"},
+		// Task 30: this inspect title was sent as file_name and yt-dlp
+		// read %(백퍼센트) as a field, failing with err_msg "'백퍼센트'".
+		{name: "outtmpl field open is defused", title: "[MV] 100%(백퍼센트) _ Sketch U(어디 있니)", want: "[MV] 100_(백퍼센트) _ Sketch U(어디 있니)"},
+		{name: "a known field would silently expand, so it is defused too", title: "clip %(title)s", want: "clip _(title)s"},
+		// An unterminated key is the "incomplete format key" failure.
+		{name: "unterminated field open is defused", title: "clip %(title", want: "clip _(title"},
+		// A lone % is a literal to yt-dlp; rewriting it would mangle a
+		// name that works.
+		{name: "lone percent is kept", title: "100% Real", want: "100% Real"},
+		{name: "lone percent before an extension is kept", title: "100%.mp4", want: "100%.mp4"},
+		{name: "percent conversion chars are literals too", title: "100%s off 100%d", want: "100%s off 100%d"},
+		{name: "the daemon ext template is held back", title: "100%(x) clip.%(ext)s", want: "100_(x) clip.%(ext)s"},
 		{name: "empty stays empty", title: "   ", want: ""},
 		{name: "traversal segment refused", title: "..", want: ""},
 		{name: "single dot refused", title: ".", want: ""},

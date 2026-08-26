@@ -10,6 +10,7 @@ package download
 // frontend fallbackName / LarePass downloadDisplayName.
 
 import (
+	"fmt"
 	"net/url"
 	"regexp"
 	"strings"
@@ -37,11 +38,20 @@ const (
 // Path separators become "_" because the daemon splices file_name into
 // the outtmpl and both os.path.join and yt-dlp's template engine read a
 // slash as a directory boundary — a YouTube title like "Foo / Bar" then
-// lands as a nested Foo_/Bar.webm tree on the user's volume. Everything
-// else, including ":" and non-ASCII, is legal on Linux and kept as is.
-// A bare "." / ".." is dropped: the daemon rejects those as traversal
-// and falls back to its own template, so sending one would only pin a
-// name to the task row that never appears on disk.
+// lands as a nested Foo_/Bar.webm tree on the user's volume.
+// "%(" becomes "_(" for the same reason: it opens an outtmpl field, so
+// a title like "100%(백퍼센트)" made yt-dlp look up a field of that name
+// and fail the task with err_msg "'백퍼센트'" before a byte was written.
+// Only that two-character sequence is neutralised — a lone "%" is a
+// literal to yt-dlp ("100% Real" lands verbatim) and rewriting it would
+// mangle a name that works. Doubling to "%%(" would also parse, but the
+// row would then read "%%(" where the disk reads "%(", so replacing is
+// what keeps the two in step. A trailing ".%(ext)s" is held back, since
+// that one IS the daemon's own extension template.
+// Everything else, including ":" and non-ASCII, is legal on Linux and
+// kept as is. A bare "." / ".." is dropped: the daemon rejects those as
+// traversal and falls back to its own template, so sending one would
+// only pin a name to the task row that never appears on disk.
 func titleToFileName(title string) string {
 	sanitised := strings.Map(func(r rune) rune {
 		switch r {
@@ -52,10 +62,42 @@ func titleToFileName(title string) string {
 		}
 		return r
 	}, strings.TrimSpace(title))
+	sanitised = defuseOuttmplFields(sanitised)
 	if sanitised == "." || sanitised == ".." {
 		return ""
 	}
 	return truncateFileNameToBudget(sanitised)
+}
+
+// outtmplFieldOpen is the only percent form yt-dlp reads as syntax: it
+// starts a "%(field)s" reference, whose lookup either fails the task
+// (unknown field, unterminated key) or silently expands to something
+// other than the name the row advertises.
+const outtmplFieldOpen = "%("
+
+// defuseOuttmplFields neutralises field references in the stem, leaving
+// the extension — literal or the daemon's ".%(ext)s" template — alone.
+// Doing this before truncation also means a clipped stem can never end
+// mid-"%(field)s", which yt-dlp rejects as an incomplete format key.
+func defuseOuttmplFields(name string) string {
+	stem, ext := splitOuttmplExt(name)
+	return strings.ReplaceAll(stem, outtmplFieldOpen, "_(") + ext
+}
+
+// validateOuttmplSafeName refuses a --name that yt-dlp would read as a
+// template. A probed title is rewritten silently (the user did not type
+// it), but a name the caller chose is rejected the same way --name is
+// for a magnet: being told the name cannot stick beats having it
+// changed, or having the task fail with a bare field name for an error.
+func validateOuttmplSafeName(name string) error {
+	stem, _ := splitOuttmplExt(name)
+	if !strings.Contains(stem, outtmplFieldOpen) {
+		return nil
+	}
+	return fmt.Errorf(
+		"unsupported --name %q: %q opens a yt-dlp output-template field, so the download fails with the field name as its error (or silently lands under a different name); use a literal name without %q",
+		name, outtmplFieldOpen, outtmplFieldOpen,
+	)
 }
 
 // truncateFileNameToBudget clips a name to both caps at once. When an
