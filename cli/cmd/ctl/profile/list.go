@@ -27,8 +27,12 @@ import (
 //	                      (Phase 2 sets this when /api/refresh returns 401/403);
 //	                      takes precedence over `expired`
 //	never               — no stored token for this profile
+//	pending             — the same, for a platform-issued profile, which is
+//	                      never in a "hasn't logged in yet" state
 //	logged-in           — token present but JWT has no exp claim (we can't
 //	                      tell client-side; trust until the server says no)
+//
+// A SOURCE column is added when any profile is platform-issued.
 //
 // Per §7.5 of the design doc, we deliberately do NOT print any other JWT
 // claims (username / groups / mfa / jid). The OlaresID column is the local
@@ -78,8 +82,23 @@ func runList(ctx context.Context, f *cmdutil.Factory, refresh bool, out *os.File
 	current := cfg.Current()
 	now := time.Now()
 
+	// The SOURCE column appears only when there is something to say in it.
+	// Every profile on a host install is local, and a column that always
+	// reads "local" is a wider table teaching nobody anything.
+	showSource := false
+	for i := range cfg.Profiles {
+		if cfg.Profiles[i].Managed {
+			showSource = true
+			break
+		}
+	}
+
 	w := tabwriter.NewWriter(out, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "  \tNAME\tOLARES-ID\tSTATUS\tVERSION")
+	header := "  \tNAME\tOLARES-ID\tSTATUS\tVERSION"
+	if showSource {
+		header += "\tSOURCE"
+	}
+	fmt.Fprintln(w, header)
 	for i := range cfg.Profiles {
 		p := &cfg.Profiles[i]
 		marker := " "
@@ -87,9 +106,26 @@ func runList(ctx context.Context, f *cmdutil.Factory, refresh bool, out *os.File
 			marker = "*"
 		}
 		status := profileStatus(store, p, now)
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", marker, p.DisplayName(), p.OlaresID, status, backendVersionCell(p))
+		row := fmt.Sprintf("%s\t%s\t%s\t%s\t%s", marker, p.DisplayName(), p.OlaresID, status, backendVersionCell(p))
+		if showSource {
+			row += "\t" + sourceCell(p)
+		}
+		fmt.Fprintln(w, row)
 	}
 	return w.Flush()
+}
+
+// sourceCell says where a profile came from: a login on this machine, or a
+// credential the platform mounted into this container on behalf of an
+// application.
+func sourceCell(p *cliconfig.ProfileConfig) string {
+	if !p.Managed {
+		return "local"
+	}
+	if p.AppName == "" {
+		return "platform"
+	}
+	return fmt.Sprintf("platform(%s)", p.AppName)
 }
 
 // backendVersionCell renders the VERSION column for a profile: the cached
@@ -109,9 +145,20 @@ func profileStatus(store auth.TokenStore, p *cliconfig.ProfileConfig, now time.T
 	tok, err := store.Get(p.OlaresID)
 	if err != nil {
 		if errors.Is(err, auth.ErrTokenNotFound) {
+			if p.Managed {
+				// "never" means "go and log in", which is the one
+				// thing this account cannot do. The credential is
+				// already here; the exchange for an access token
+				// just hasn't succeeded yet, and the next command
+				// retries it.
+				return "pending"
+			}
 			return "never"
 		}
 		return "unknown"
+	}
+	if p.Managed && tok.AccessToken == "" && tok.InvalidatedAt == 0 {
+		return "pending"
 	}
 	// Explicit invalidation wins over JWT-exp inspection: a server-side
 	// rejection of the refresh leg means the entire grant is dead, even if

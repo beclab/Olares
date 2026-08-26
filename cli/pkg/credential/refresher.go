@@ -45,6 +45,11 @@ type Refresher struct {
 	mu    sync.Mutex
 	now   func() time.Time
 
+	// loadManaged supplies the platform's mounted credential. Refresh
+	// consults it when the stored entry is managed, because such an entry
+	// holds no refresh token of its own — see refresh().
+	loadManaged func() (*ManagedCredential, bool)
+
 	// timeout bounds a single Refresh call's flock-acquire window so a
 	// stuck peer process can't hang the CLI forever. A misbehaving peer
 	// stuck inside /api/refresh longer than this gets bypassed and we'll
@@ -59,13 +64,19 @@ func NewRefresher() *Refresher {
 	return &Refresher{
 		store:        auth.NewTokenStore(),
 		now:          time.Now,
+		loadManaged:  LoadManagedCredential,
 		flockTimeout: 30 * time.Second,
 	}
 }
 
 // NewRefresherWith is the test seam — pass any TokenStore + clock.
 func NewRefresherWith(store auth.TokenStore, now func() time.Time) *Refresher {
-	return &Refresher{store: store, now: now, flockTimeout: 30 * time.Second}
+	return &Refresher{
+		store:        store,
+		now:          now,
+		loadManaged:  LoadManagedCredential,
+		flockTimeout: 30 * time.Second,
+	}
 }
 
 // Refresh exchanges the stored refresh_token for a fresh access_token.
@@ -89,10 +100,67 @@ func (r *Refresher) Refresh(
 	olaresID, authURL, currentAccessToken string,
 	insecureSkipVerify bool,
 ) (string, error) {
+	return r.refresh(ctx, refreshInput{
+		olaresID:           olaresID,
+		authURL:            authURL,
+		currentAccessToken: currentAccessToken,
+		insecureSkipVerify: insecureSkipVerify,
+	})
+}
+
+// RefreshWith is the managed-credential variant: the refresh token comes from
+// the caller (who read it out of the platform's mount) rather than from the
+// keychain, and it is never written back.
+//
+// Three things differ from Refresh, all of them consequences of the mount
+// being the only copy of the grant:
+//
+//   - A missing keychain entry is normal, not ErrNotLoggedIn. On the first
+//     run in a fresh container there is nothing stored yet; the mount alone
+//     is enough to obtain an access token.
+//   - A stored InvalidatedAt does not short-circuit. The platform can revoke
+//     and re-issue a grant without the container noticing, so refusing to try
+//     again would wedge a container whose credential has already been fixed.
+//   - fa2=true in the response is fatal. The platform issues second-factor
+//     grants; a first-factor token cannot reach any per-service host, so
+//     creating a profile around one would only turn every later command into
+//     a 401 with no explanation.
+func (r *Refresher) RefreshWith(
+	ctx context.Context,
+	olaresID, authURL, currentAccessToken, refreshToken string,
+	insecureSkipVerify bool,
+) (string, error) {
+	if refreshToken == "" {
+		return "", errors.New("refreshToken is required")
+	}
+	return r.refresh(ctx, refreshInput{
+		olaresID:           olaresID,
+		authURL:            authURL,
+		currentAccessToken: currentAccessToken,
+		insecureSkipVerify: insecureSkipVerify,
+		managed:            true,
+		refreshToken:       refreshToken,
+	})
+}
+
+// refreshInput carries the arguments shared by Refresh and RefreshWith.
+// `managed` selects where the refresh token comes from and how a missing or
+// invalidated keychain entry is read; see RefreshWith.
+type refreshInput struct {
+	olaresID           string
+	authURL            string
+	currentAccessToken string
+	insecureSkipVerify bool
+	managed            bool
+	refreshToken       string
+}
+
+func (r *Refresher) refresh(ctx context.Context, in refreshInput) (string, error) {
+	olaresID := in.olaresID
 	if olaresID == "" {
 		return "", errors.New("olaresID is required")
 	}
-	if authURL == "" {
+	if in.authURL == "" {
 		return "", errors.New("authURL is required")
 	}
 
@@ -101,7 +169,7 @@ func (r *Refresher) Refresh(
 
 	// In-process double-check. If another goroutine already rotated the
 	// token while we were waiting on r.mu, we're done — no flock, no POST.
-	if newAT, ok, err := r.alreadyFresh(olaresID, currentAccessToken); err != nil || ok {
+	if newAT, ok, err := r.alreadyFresh(olaresID, in.currentAccessToken, in.managed); err != nil || ok {
 		return newAT, err
 	}
 
@@ -128,30 +196,59 @@ func (r *Refresher) Refresh(
 	// Cross-process double-check: another olares-cli may have refreshed
 	// between our two reads. Re-read the store while holding flock so the
 	// next read sees a stable answer.
-	if newAT, ok, err := r.alreadyFresh(olaresID, currentAccessToken); err != nil || ok {
+	if newAT, ok, err := r.alreadyFresh(olaresID, in.currentAccessToken, in.managed); err != nil || ok {
 		return newAT, err
 	}
 
 	// Still stale → actually call /api/refresh.
+	refreshToken := in.refreshToken
+	storedAccessToken := ""
 	stored, err := r.store.Get(olaresID)
-	if err != nil {
-		if errors.Is(err, auth.ErrTokenNotFound) {
-			return "", &ErrNotLoggedIn{OlaresID: olaresID}
+	switch {
+	case err == nil:
+		storedAccessToken = stored.AccessToken
+		if !in.managed {
+			refreshToken = stored.RefreshToken
+			if stored.Managed {
+				// A managed entry stores no refresh token, so an
+				// ordinary Refresh — which is what the HTTP
+				// transport calls when a token expires mid-command
+				// — has to go back to the mount. Without this,
+				// every managed container works exactly until its
+				// first access token expires and then reports
+				// "not logged in" for an account that cannot be
+				// logged into.
+				in.managed = true
+				refreshToken = ""
+				if r.loadManaged != nil {
+					if cred, ok := r.loadManaged(); ok && cred.OlaresID == olaresID {
+						refreshToken = cred.RefreshToken
+					}
+				}
+			}
 		}
+	case errors.Is(err, auth.ErrTokenNotFound) && in.managed:
+		// First run in this container: nothing stored yet, and the
+		// mount is all we need.
+	case errors.Is(err, auth.ErrTokenNotFound):
+		return "", &ErrNotLoggedIn{OlaresID: olaresID}
+	default:
 		return "", fmt.Errorf("read token store: %w", err)
 	}
-	if stored.RefreshToken == "" {
+	if refreshToken == "" {
 		// We have an access_token but no refresh_token to rotate it
 		// with. Treat as "needs login" — same UX as if the entry was
-		// missing, since we can't recover from this client-side.
-		return "", &ErrNotLoggedIn{OlaresID: olaresID}
+		// missing, since we can't recover from this client-side. For a
+		// managed entry this means the mount went away under a running
+		// container, which is not something a login would fix either.
+		return "", &ErrNotLoggedIn{OlaresID: olaresID, Managed: in.managed}
 	}
 
 	tok, err := auth.Refresh(ctx, auth.RefreshRequest{
-		AuthURL:            authURL,
-		RefreshToken:       stored.RefreshToken,
-		AccessToken:        stored.AccessToken,
-		InsecureSkipVerify: insecureSkipVerify,
+		AuthURL:            in.authURL,
+		RefreshToken:       refreshToken,
+		AccessToken:        storedAccessToken,
+		InsecureSkipVerify: in.insecureSkipVerify,
 		Timeout:            15 * time.Second,
 	})
 	if err != nil {
@@ -173,22 +270,46 @@ func (r *Refresher) Refresh(
 					"warning: failed to persist invalidated marker for %s: %v (refresh attempt will repeat next run)\n",
 					olaresID, mErr)
 			}
-			return "", &ErrTokenInvalidated{OlaresID: olaresID, InvalidatedAt: at}
+			return "", &ErrTokenInvalidated{OlaresID: olaresID, InvalidatedAt: at, Managed: in.managed}
 		}
 		return "", err
 	}
 
-	newStored := auth.StoredToken{
-		OlaresID:     olaresID,
-		AccessToken:  tok.AccessToken,
-		RefreshToken: tok.RefreshToken,
-		SessionID:    tok.SessionID,
-		GrantedAt:    r.now().UnixMilli(),
+	if in.managed && tok.FA2 {
+		// fa2=true means Authelia has not seen a second factor for this
+		// grant. Persisting the token would produce a profile that looks
+		// healthy and 401s on every host it is used against.
+		return "", &ErrManagedNotSecondFactor{OlaresID: olaresID}
 	}
+
+	newStored := auth.StoredToken{
+		OlaresID:    olaresID,
+		AccessToken: tok.AccessToken,
+		SessionID:   tok.SessionID,
+		GrantedAt:   r.now().UnixMilli(),
+		Managed:     in.managed,
+	}
+	if !in.managed {
+		newStored.RefreshToken = tok.RefreshToken
+	}
+	// A managed entry deliberately drops whatever refresh token came back:
+	// the mount is the platform's copy and the only one it can revoke, and a
+	// second copy in the keychain would outlive the grant it came from.
 	if err := r.store.Set(newStored); err != nil {
 		return "", fmt.Errorf("persist refreshed token: %w", err)
 	}
 	return tok.AccessToken, nil
+}
+
+// ErrManagedNotSecondFactor is returned when a platform-issued grant refreshes
+// into a first-factor token. The CLI cannot fix this locally — the grant has
+// to be re-issued, which means reinstalling or repairing the application.
+type ErrManagedNotSecondFactor struct {
+	OlaresID string
+}
+
+func (e *ErrManagedNotSecondFactor) Error() string {
+	return fmt.Sprintf("the platform-issued credential for %s refreshed into a first-factor token, which cannot be used; reinstall or repair the application that requested it", e.OlaresID)
 }
 
 // alreadyFresh returns (newAT, true, nil) if the keychain holds an
@@ -196,15 +317,25 @@ func (r *Refresher) Refresh(
 // refreshed) and the entry is not invalidated. Returns (_, false, nil) when
 // the caller should proceed to the next step. Returns a typed error for
 // permanent conditions (not-logged-in, invalidated).
-func (r *Refresher) alreadyFresh(olaresID, currentAccessToken string) (string, bool, error) {
+//
+// Neither of those conditions is permanent for a managed grant: the mount
+// supplies the refresh token regardless of what the keychain holds, so both
+// are reported as "proceed" instead. See RefreshWith.
+func (r *Refresher) alreadyFresh(olaresID, currentAccessToken string, managed bool) (string, bool, error) {
 	stored, err := r.store.Get(olaresID)
 	if err != nil {
 		if errors.Is(err, auth.ErrTokenNotFound) {
+			if managed {
+				return "", false, nil
+			}
 			return "", false, &ErrNotLoggedIn{OlaresID: olaresID}
 		}
 		return "", false, fmt.Errorf("read token store: %w", err)
 	}
 	if stored.InvalidatedAt > 0 {
+		if managed {
+			return "", false, nil
+		}
 		return "", false, &ErrTokenInvalidated{
 			OlaresID:      olaresID,
 			InvalidatedAt: time.UnixMilli(stored.InvalidatedAt),

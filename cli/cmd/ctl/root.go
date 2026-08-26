@@ -27,6 +27,7 @@ import (
 	"github.com/beclab/Olares/cli/cmd/ctl/user"
 	"github.com/beclab/Olares/cli/cmd/ctl/wizard"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
+	"github.com/beclab/Olares/cli/pkg/credential"
 	"github.com/beclab/Olares/cli/version"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -54,6 +55,12 @@ func NewDefaultCommand() *cobra.Command {
 			viper.BindPFlags(cmd.InheritedFlags())
 			viper.BindPFlags(cmd.PersistentFlags())
 			viper.BindPFlags(cmd.Flags())
+			// Not on the Factory's lazy chain: `profile list` reads
+			// config.json and the keychain directly and only touches the
+			// Factory for --refresh-version, so a managed profile imported
+			// there would be invisible in the one command most likely to
+			// go looking for it.
+			credential.ImportManagedCredential(cmd.Context())
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			if showVendor {

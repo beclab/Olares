@@ -39,6 +39,49 @@ func TestStorageDir_InvalidDataDirFallsBackToDefault(t *testing.T) {
 	}
 }
 
+// TestStorageDir_UsesCacheDirEnv covers the managed-container branch: the
+// platform mounts a writable emptyDir and exports $OLARES_CLI_CACHE_DIR, and
+// the keychain has to land inside it rather than under a HOME the container
+// may not be able to write.
+func TestStorageDir_UsesCacheDirEnv(t *testing.T) {
+	base := t.TempDir()
+	base, _ = filepath.EvalSymlinks(base)
+	t.Setenv("OLARES_CLI_DATA_DIR", "")
+	t.Setenv("OLARES_CLI_CACHE_DIR", base)
+
+	got := StorageDir("svc")
+	want := filepath.Join(base, "keychain", "svc")
+	if got != want {
+		t.Fatalf("StorageDir() = %q, want %q", got, want)
+	}
+}
+
+// The explicit override still wins over the injected cache dir.
+func TestStorageDir_DataDirBeatsCacheDir(t *testing.T) {
+	data := t.TempDir()
+	data, _ = filepath.EvalSymlinks(data)
+	cache := t.TempDir()
+	t.Setenv("OLARES_CLI_DATA_DIR", data)
+	t.Setenv("OLARES_CLI_CACHE_DIR", cache)
+
+	if got, want := StorageDir("svc"), filepath.Join(data, "svc"); got != want {
+		t.Fatalf("StorageDir() = %q, want %q", got, want)
+	}
+}
+
+// A host install sees no cache dir, so nothing about its layout changes.
+func TestStorageDir_NoCacheDirKeepsXDGDefault(t *testing.T) {
+	home := t.TempDir()
+	home, _ = filepath.EvalSymlinks(home)
+	t.Setenv("OLARES_CLI_DATA_DIR", "")
+	t.Setenv("OLARES_CLI_CACHE_DIR", "")
+	t.Setenv("HOME", home)
+
+	if got, want := StorageDir("svc"), filepath.Join(home, ".local", "share", "svc"); got != want {
+		t.Fatalf("StorageDir() = %q, want %q", got, want)
+	}
+}
+
 // TestPlatformRoundTrip exercises the full Get/Set/Remove cycle on the file
 // backend (which is what's actually shipped on Linux). This is the closest
 // we can get to a smoke test without mocking keychain bits.
