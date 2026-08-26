@@ -17,11 +17,11 @@ To get the fastest resolution, choose the option that best fits your situation:
 
 | Option | Use when |
 | :--- | :--- |
-| [Ticket](#submit-a-ticket) | Private, one-on-one support and securely sharing system logs with our team. |
-| [GitHub Olares repo](https://github.com/beclab/Olares) | Reporting Olares OS system issues or requesting OS features. |
-| [GitHub apps repo](https://github.com/beclab/apps) | Reporting technical issues with apps, or requesting new apps and app updates. |
-| [Forum](https://www.olares.com/forum/) | Sharing knowledge, finding or posting tutorials, discussing features, and getting community help. |
-| [Security reporting](https://github.com/beclab/Olares/security/advisories/new) | Reporting system vulnerabilities. |
+| <nobr>[Ticket](#submit-a-ticket)</nobr> | Private, one-on-one support and securely sharing system logs with our team. |
+| <nobr>[GitHub Olares repo](https://github.com/beclab/Olares)</nobr> | Reporting Olares OS system issues or requesting OS features. |
+| <nobr>[GitHub apps repo](https://github.com/beclab/apps)</nobr> | Reporting technical issues with apps, or requesting new apps and app updates. |
+| <nobr>[Forum](https://www.olares.com/forum/)</nobr> | Sharing knowledge, finding or posting tutorials, discussing features, and getting community help. |
+| <nobr>[Security reporting](https://github.com/beclab/Olares/security/advisories/new)</nobr> | Reporting system vulnerabilities. |
 
 ## Submit a ticket
 
