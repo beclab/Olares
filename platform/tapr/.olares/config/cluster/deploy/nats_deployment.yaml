@@ -52,48 +52,35 @@ data:
   nats_password: {{ $nats_password }}
 
 ---
-# Source: nats/templates/config-map.yaml
 apiVersion: v1
-data:
-  nats.conf: |
-    {
-     "http_port": 8222,
-     "jetstream": {
-       "max_file_store": 10102410241024,
-       "max_memory_store": 0,
-       "store_dir": "/data"
-     },
-     "accounts": {
-       "terminus": {
-         "jetstream": enabled,
-         "users": [
-           {
-             "user": "admin",
-             "password": $ADMIN_PASSWORD,
-             "permissions": {
-               "publish": {
-                 "allow": [">"]
-               },
-               "subscribe": {
-                 "allow": [">"]
-               }
-             }
-           }
-         ]
-       }
-     },
-     "port": 4222,
-     "pid_file": "/var/run/nats/nats.pid",
-     "server_name": "nats-0"
-     }
-kind: ConfigMap
+kind: ServiceAccount
 metadata:
-  labels:
-    app.kubernetes.io/name: nats
-    app.kubernetes.io/instance: nats
-    app.kubernetes.io/component: nats
-  name: nats-config
+  name: nats
   namespace: {{ $namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: nats-cm-sidecar
+  namespace: {{ $namespace }}
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: nats-cm-sidecar
+  namespace: {{ $namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: nats-cm-sidecar
+subjects:
+  - kind: ServiceAccount
+    name: nats
+    namespace: {{ $namespace }}
 ---
 # Source: nats/templates/headless-service.yaml
 apiVersion: v1
@@ -174,28 +161,31 @@ spec:
         app.bytetrade.io/middleware: "true"
     spec:
       priorityClassName: "system-cluster-critical"
+      serviceAccountName: nats
+      serviceAccount: nats
       initContainers:
-        - name: generate-config
-          image: busybox:1.28
-          command:
-            - sh
-            - -c
-            - |
-              if [ ! -f /data/config/nats.conf ]; then
-                cat /etc/nats-config/nats.conf > /data/config/nats.conf
-              else
-                echo "nats config file already exists"
-              fi
-          volumeMounts:
-            - mountPath: /etc/nats-config
-              name: config
-              readOnly: false
-            - mountPath: /data
-              name: nats-data
+      - name: cm-sidecar
+        image: beclab/cm-sidecar:0.0.1
+        imagePullPolicy: IfNotPresent
+        restartPolicy: Always
+        env:
+        - name: CONFIGMAP_TARGET_DIR
+          value: /data/config
+        startupProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 1
+          failureThreshold: 60
+        volumeMounts:
+        - mountPath: /data/config
+          name: nats-cfg
       containers:
-        - args:
-            - --config
-            - /data/config/nats.conf
+        - name: nats
+          args:
+          - --config
+          - /data/config/nats.conf
           env:
             - name: POD_NAME
               valueFrom:
@@ -224,7 +214,6 @@ spec:
             periodSeconds: 30
             successThreshold: 1
             timeoutSeconds: 5
-          name: nats
           ports:
             - containerPort: 4222
               name: nats
@@ -251,11 +240,10 @@ spec:
           volumeMounts:
             - mountPath: /var/run/nats
               name: pid
-            - mountPath: /etc/nats-config
-              name: config
-              readOnly: false
             - mountPath: /data
               name: nats-data
+            - mountPath: /data/config
+              name: nats-cfg
         - args:
             - -pid
             - /var/run/nats/nats.pid
@@ -277,17 +265,15 @@ spec:
           volumeMounts:
             - mountPath: /var/run/nats
               name: pid
-            - mountPath: /etc/nats-config
-              name: config
-              readOnly: false
             - mountPath: /data
               name: nats-data
+            - mountPath: /data/config
+              name: nats-cfg
       enableServiceLinks: false
       shareProcessNamespace: true
       volumes:
-        - configMap:
-            name: nats-config
-          name: config
+        - emptyDir: {}
+          name: nats-cfg
         - emptyDir: {}
           name: pid
         - name: nats-data
