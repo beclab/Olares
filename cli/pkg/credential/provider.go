@@ -8,21 +8,26 @@ import (
 	"github.com/beclab/Olares/cli/pkg/cliconfig"
 )
 
-// CredentialProvider chains zero or more Providers in priority order: the
-// first one that returns a non-nil ResolvedProfile wins. Phase 1 wires
-// (EnvProvider, DefaultProvider) — env first so the in-cluster scenario can
-// pre-empt the on-disk config when shipped.
+// CredentialProvider selects the Provider that owns the active profile.
 //
-// This is the Phase-1 analogue of lark-cli's credential.CredentialProvider,
-// minus the multi-app / token-cache plumbing (Phase 2).
+// The selection is by profile, not by trial. An earlier version asked each
+// provider in turn and took the first non-nil answer, which reads the wrong
+// question: the managed provider's claim would rest on a credential file
+// being present in the container rather than on the selected profile being
+// the platform's. Somebody who ran `profile use` to switch to an account they
+// logged into by hand would still have been served the platform's identity.
+//
+// This is the olares-cli analogue of lark-cli's credential.CredentialProvider,
+// minus the multi-app / token-cache plumbing.
 type CredentialProvider struct {
-	providers []Provider
+	managed Provider
+	local   Provider
 }
 
-// NewCredentialProvider returns a chain that consults each Provider in order.
-// Pass them most-specific first.
-func NewCredentialProvider(providers ...Provider) *CredentialProvider {
-	return &CredentialProvider{providers: providers}
+// NewCredentialProvider pairs the provider for platform-issued profiles with
+// the one for profiles the user logged into on this machine.
+func NewCredentialProvider(managed, local Provider) *CredentialProvider {
+	return &CredentialProvider{managed: managed, local: local}
 }
 
 // ErrNoProfile is returned when no Provider could resolve a profile (typically
@@ -30,11 +35,9 @@ func NewCredentialProvider(providers ...Provider) *CredentialProvider {
 // are present).
 var ErrNoProfile = errors.New("no Olares profile is configured: run `olares-cli profile login --olares-id <id>` or `olares-cli profile import --olares-id <id> --refresh-token <tok>`")
 
-// Resolve walks the provider chain. It is responsible for loading the on-disk
-// profile (if any) once and feeding it to each provider. The first
-// non-nil ResolvedProfile from the chain is returned. If every provider
-// declines, ErrNoProfile is returned (or the most informative error from a
-// declining provider, if all returned errors).
+// Resolve loads the on-disk profile and hands it to whichever provider owns
+// that kind of profile. ErrNoProfile is returned when there is no profile to
+// resolve, or when the provider declines one.
 //
 // `profileKey` is an optional override (e.g. the `--olares-id` flag on
 // `profile login` / `profile import`). When empty, the currently-selected
@@ -55,25 +58,28 @@ func (c *CredentialProvider) Resolve(ctx context.Context, profileKey string) (*R
 	} else {
 		profile = cfg.Current()
 	}
+	if profile == nil {
+		return nil, ErrNoProfile
+	}
 
-	var lastErr error
-	for _, p := range c.providers {
-		resolved, err := p.Resolve(ctx, profile)
-		if err != nil {
-			lastErr = fmt.Errorf("provider %s: %w", p.Name(), err)
-			continue
-		}
-		if resolved != nil {
-			if resolved.Source == "" {
-				resolved.Source = p.Name()
-			}
-			return resolved, nil
-		}
+	p := c.local
+	if profile.Managed {
+		p = c.managed
 	}
-	if lastErr != nil {
-		return nil, lastErr
+	resolved, err := p.Resolve(ctx, profile)
+	if err != nil {
+		// The typed errors (ErrNotLoggedIn, ErrTokenInvalidated) carry the
+		// CTA a caller renders, so they are returned as they are rather
+		// than wrapped in the provider's name.
+		return nil, err
 	}
-	return nil, ErrNoProfile
+	if resolved == nil {
+		return nil, ErrNoProfile
+	}
+	if resolved.Source == "" {
+		resolved.Source = p.Name()
+	}
+	return resolved, nil
 }
 
 // configFileForError best-effort-resolves the config path for inclusion in

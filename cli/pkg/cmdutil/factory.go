@@ -134,7 +134,7 @@ func (f *Factory) Credential() (*credential.CredentialProvider, error) {
 			return
 		}
 		f.credential = credential.NewCredentialProvider(
-			credential.NewEnvProvider(),
+			credential.NewManagedProvider(),
 			def,
 		)
 	})

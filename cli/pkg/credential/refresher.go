@@ -45,6 +45,11 @@ type Refresher struct {
 	mu    sync.Mutex
 	now   func() time.Time
 
+	// loadManaged supplies the platform's mounted credential. Refresh
+	// consults it when the stored entry is managed, because such an entry
+	// holds no refresh token of its own — see refresh().
+	loadManaged func() (*ManagedCredential, bool)
+
 	// timeout bounds a single Refresh call's flock-acquire window so a
 	// stuck peer process can't hang the CLI forever. A misbehaving peer
 	// stuck inside /api/refresh longer than this gets bypassed and we'll
@@ -59,13 +64,19 @@ func NewRefresher() *Refresher {
 	return &Refresher{
 		store:        auth.NewTokenStore(),
 		now:          time.Now,
+		loadManaged:  LoadManagedCredential,
 		flockTimeout: 30 * time.Second,
 	}
 }
 
 // NewRefresherWith is the test seam — pass any TokenStore + clock.
 func NewRefresherWith(store auth.TokenStore, now func() time.Time) *Refresher {
-	return &Refresher{store: store, now: now, flockTimeout: 30 * time.Second}
+	return &Refresher{
+		store:        store,
+		now:          now,
+		loadManaged:  LoadManagedCredential,
+		flockTimeout: 30 * time.Second,
+	}
 }
 
 // Refresh exchanges the stored refresh_token for a fresh access_token.
@@ -198,6 +209,23 @@ func (r *Refresher) refresh(ctx context.Context, in refreshInput) (string, error
 		storedAccessToken = stored.AccessToken
 		if !in.managed {
 			refreshToken = stored.RefreshToken
+			if stored.Managed {
+				// A managed entry stores no refresh token, so an
+				// ordinary Refresh — which is what the HTTP
+				// transport calls when a token expires mid-command
+				// — has to go back to the mount. Without this,
+				// every managed container works exactly until its
+				// first access token expires and then reports
+				// "not logged in" for an account that cannot be
+				// logged into.
+				in.managed = true
+				refreshToken = ""
+				if r.loadManaged != nil {
+					if cred, ok := r.loadManaged(); ok && cred.OlaresID == olaresID {
+						refreshToken = cred.RefreshToken
+					}
+				}
+			}
 		}
 	case errors.Is(err, auth.ErrTokenNotFound) && in.managed:
 		// First run in this container: nothing stored yet, and the

@@ -183,6 +183,71 @@ func TestRefreshWith_RequiresRefreshToken(t *testing.T) {
 	}
 }
 
+// The HTTP transport calls the ordinary Refresh when a token expires
+// mid-command. For a managed entry there is no stored refresh token to rotate
+// with, so it has to go back to the mount — otherwise a container works
+// exactly until its first access token expires and then reports "not logged
+// in" for an account that cannot be logged into.
+func TestRefresh_ManagedEntryFallsBackToTheMount(t *testing.T) {
+	setupRefresherEnv(t)
+	store := newFakeStore()
+	_ = store.Set(auth.StoredToken{OlaresID: managedID, AccessToken: "old-AT", Managed: true})
+
+	var seen string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		var body struct {
+			RefreshToken string `json:"refreshToken"`
+		}
+		if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+			t.Errorf("decode request: %v", err)
+		}
+		seen = body.RefreshToken
+		fmt.Fprint(w, `{"status":"OK","data":{"access_token":"AT1","refresh_token":"RT1"}}`)
+	}))
+	t.Cleanup(srv.Close)
+
+	r := NewRefresherWith(store, time.Now)
+	r.loadManaged = func() (*ManagedCredential, bool) {
+		return &ManagedCredential{RefreshToken: "mounted-RT", OlaresID: managedID, AppName: "lares"}, true
+	}
+
+	got, err := r.Refresh(context.Background(), managedID, srv.URL, "old-AT", false)
+	if err != nil {
+		t.Fatalf("Refresh: %v", err)
+	}
+	if got != "AT1" {
+		t.Errorf("got = %q, want AT1", got)
+	}
+	if seen != "mounted-RT" {
+		t.Errorf("server saw refresh token %q, want the mounted one", seen)
+	}
+	stored, _ := store.Get(managedID)
+	if stored.RefreshToken != "" || !stored.Managed {
+		t.Errorf("stored = %+v, want it to stay a managed shell", stored)
+	}
+}
+
+// With the mount gone there is nothing to rotate with, and saying so is more
+// use than sending a request that will 401.
+func TestRefresh_ManagedEntryWithoutAMount(t *testing.T) {
+	setupRefresherEnv(t)
+	store := newFakeStore()
+	_ = store.Set(auth.StoredToken{OlaresID: managedID, AccessToken: "old-AT", Managed: true})
+	srv := newRefreshServer(t)
+
+	r := NewRefresherWith(store, time.Now)
+	r.loadManaged = func() (*ManagedCredential, bool) { return nil, false }
+
+	_, err := r.Refresh(context.Background(), managedID, srv.URL, "old-AT", false)
+	var notLoggedIn *ErrNotLoggedIn
+	if !errors.As(err, &notLoggedIn) {
+		t.Fatalf("err = %v, want ErrNotLoggedIn", err)
+	}
+	if srv.hits.Load() != 0 {
+		t.Errorf("server hits = %d, want 0", srv.hits.Load())
+	}
+}
+
 // The non-managed path keeps rotating and storing the refresh token it is
 // given; nothing about the extraction changed it.
 func TestRefresh_StillRotatesRefreshTokenAndIsNotManaged(t *testing.T) {
