@@ -5,12 +5,47 @@ import (
 	"testing"
 )
 
-func TestParseFile(t *testing.T) {
-	c, err := ParseFile("/Users/hys/code/beclab/tapr/pkg/workload/nats/nats.conf")
+func TestParse(t *testing.T) {
+	raw := `{
+  "http_port": 8222,
+  "jetstream": {
+    "max_file_store": 10102410241024,
+    "max_memory_store": 0,
+    "store_dir": "/data"
+  },
+  "accounts": {
+    "terminus": {
+      "jetstream": enabled,
+      "users": [
+        {
+          "user": "admin",
+          "password": "secret",
+          "permissions": {
+            "publish": {
+              "allow": [">"]
+            },
+            "subscribe": {
+              "allow": [">"]
+            }
+          }
+        }
+      ]
+    }
+  },
+  "port": 4222,
+  "pid_file": "/var/run/nats/nats.pid",
+  "server_name": "nats-0"
+}`
+	c, err := Parse(raw)
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Println(c)
+	if c.HTTPPort != 8222 {
+		t.Fatalf("http_port: got %d", c.HTTPPort)
+	}
+	if len(c.Accounts.Terminus.Users) != 1 || c.Accounts.Terminus.Users[0].Username != "admin" {
+		t.Fatalf("users: %#v", c.Accounts.Terminus.Users)
+	}
 }
 
 func TestRenderConfigFile(t *testing.T) {
