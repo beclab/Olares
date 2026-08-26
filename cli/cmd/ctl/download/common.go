@@ -26,9 +26,10 @@ import (
 
 const (
 	minOlaresVersion = "1.12.7"
-	defaultApp       = "wise"
+	defaultApp       = "larepass"
 	// allowedApps is the --app whitelist (kept in sync with validateApp).
-	// Default remains wise; larepass is the TermiPass / LarePass namespace.
+	// larepass is the TermiPass / LarePass namespace and the default;
+	// wise is the Wise app's own namespace.
 	allowedApps = "wise, larepass"
 	// ytdlpQualityValues is the server-accepted --quality enum
 	// (download-server services.IsValidYtdlpQuality). Kept here so the
@@ -68,6 +69,18 @@ const (
 	// waitMaxConsecErrors is the transient-error budget before wait
 	// gives up, mirroring market watch.
 	waitMaxConsecErrors = 5
+	// inspectProbeTimeout bounds create's name probe, which is otherwise
+	// free to decide how long a create takes: an ordinary round trip is
+	// ~0.2s but a yt-dlp inspect measures ~8s, and the manager waits up
+	// to 30s on its yt-dlp daemon before giving up.
+	//
+	// The cap guards the pathological probe (a channel / RSS listing),
+	// not the normal slow one — set below the observed yt-dlp latency it
+	// would throw away the title on every video URL and defeat the whole
+	// point of probing. So it sits above that with headroom and well
+	// under the manager's own ceiling. Callers who would rather have a
+	// fast create than an early name pass --no-inspect.
+	inspectProbeTimeout = 15 * time.Second
 )
 
 // validTaskStatuses mirrors download-server models.validTaskStatuses
@@ -115,11 +128,11 @@ func addOutputFlag(cmd *cobra.Command, target *string) {
 }
 
 func addAppFlag(cmd *cobra.Command, target *string) {
-	cmd.Flags().StringVar(target, "app", defaultApp, "app namespace for the download task (one of: "+allowedApps+"; default: wise)")
+	cmd.Flags().StringVar(target, "app", defaultApp, "app namespace for the download task (one of: "+allowedApps+")")
 }
 
-// validateApp trims --app, defaults empty to wise, and rejects values
-// outside the whitelist. Returns the normalised app name.
+// validateApp trims --app, defaults empty to defaultApp, and rejects
+// values outside the whitelist. Returns the normalised app name.
 func validateApp(raw string) (string, error) {
 	app := strings.TrimSpace(raw)
 	if app == "" {
@@ -617,14 +630,4 @@ func encodeQuery(values url.Values) string {
 		return ""
 	}
 	return "?" + values.Encode()
-}
-
-func displayName(t DownloadTask) string {
-	if strings.TrimSpace(t.FileName) != "" {
-		return t.FileName
-	}
-	if strings.TrimSpace(t.URL) != "" {
-		return t.URL
-	}
-	return "-"
 }

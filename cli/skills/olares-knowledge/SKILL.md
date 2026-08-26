@@ -41,7 +41,8 @@ All verbs require Olares 1.12.7+ because the Settings download edge and provider
 
 ## Task and asynchronous semantics
 
-- Create returns a server-side task; command success does not mean bytes have finished downloading or moving. Use `wait` / `create --wait` when scripts need a true terminal status (`waiting_to_move` / `moving` are still in progress, and an `error` row with `will_auto_retry` is still the server's to resolve).
+- Create returns a server-side task id; command success does not mean bytes have finished downloading or moving. Take the id and poll `info <id>` every few seconds rather than blocking a turn on `create --wait`, which is there for scripts that want one call. Either way the status is the only terminality input: `waiting_to_move` / `moving` are still in progress, and `error` is a failure even when `will_auto_retry` says a server sweep may pick the row up again.
+- Create names the task itself, from the URL's inspect title. Leave `--name` off unless the user asked for a specific filename, and never build one out of a URL path — a name sent on create is pinned to the row for good. Magnet links, `--torrent` uploads and HuggingFace repos reject the flag outright: those names come from torrent metadata or the repo id.
 - Re-submitting the same URL always creates a **new** task (no identity dedup). Landing-name collisions are resolved with a `(n)` suffix; they do not reuse or block an existing row. Create sends `Idempotency-Key` only to collapse transport retries of one attempt — not URL dedup.
 - Pause only applies while `waiting` or `downloading` (otherwise 400). Resume, cancel, and remove return **409** while the task is in the yt-dlp mover phase (`waiting_to_move` / `moving`) — wait and retry; do not treat pause the same way.
 - Task ownership follows the active profile. Do not infer another user's task from an id or try alternate identities.
@@ -53,5 +54,5 @@ All verbs require Olares 1.12.7+ because the Settings download edge and provider
 - Confirm create, cancel, remove, seed stop/resume, file remove, preference writes, and global setting writes.
 - Before create, confirm destination/app, provider intent, torrent file selection, and whether an existing equivalent task should be reused. Use `list` / `info` to check; the CLI does **not** detect or block duplicates.
 - `file remove` takes a download-server resource path, not an arbitrary local filesystem path.
-- A URL that fails for a missing login is not a dead end: cookies live in [`olares-settings`](../olares-settings/SKILL.md) under `settings integration cookie`. See [provider/quality inspection](references/olares-knowledge-download-inspect.md) for the signals and the hand-off.
+- A URL that fails for a missing login is not a dead end: cookies live in [`olares-settings`](../olares-settings/SKILL.md) under `settings integration cookie`. The hand-off does need the user, though — the `cookies.txt` is their own browser export, so ask for it rather than hunting for a file. See [provider/quality inspection](references/olares-knowledge-download-inspect.md) for the signals and the full flow.
 - Stop on ambiguous URL/resource path, task owner, duplicate-task intent, torrent selection, or any credential request the cookie hand-off does not cover.

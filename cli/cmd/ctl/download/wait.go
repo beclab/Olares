@@ -30,8 +30,9 @@ Failure terminals: error, cancelled, removed.
 waiting_to_move and moving are NOT success — the yt-dlp mover is still
 relocating bytes to the destination, so wait keeps polling.
 
-An error the server will retry on its own (will_auto_retry) is not a
-terminal failure; wait keeps polling until the retry sweep settles it.
+Terminality is the status alone. will_auto_retry only reports whether
+the server's sweep may pick a failed row up again; an error row ends
+the wait either way. Poll info afterwards to see if a retry lands.
 
 Polling interval is 2s. On --timeout expiry the command exits non-zero
 and reports the last observed status. This command uses HTTP polling
@@ -158,18 +159,16 @@ func sleepOrCancelWait(ctx context.Context, d time.Duration) {
 }
 
 // classifyWaitStatus returns "success", "failure", or "pending".
-// Mover phases and a will_auto_retry error are pending: the bytes are
-// not on disk yet, and the server's retry sweep still owns that row.
+// Terminality is the status and nothing else: will_auto_retry is a
+// derived presentation flag saying whether the server's sweep may pick
+// a failed row up again, not a state the row is in. Only the mover
+// phases are pending despite reading as done, because the bytes have
+// not reached the destination yet.
 func classifyWaitStatus(task DownloadTask) string {
 	switch task.Status {
 	case "completed", "seeding":
 		return "success"
-	case "error":
-		if task.WillAutoRetry {
-			return "pending"
-		}
-		return "failure"
-	case "cancelled", "removed":
+	case "error", "cancelled", "removed":
 		return "failure"
 	default:
 		return "pending"

@@ -8,9 +8,9 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"text/tabwriter"
 	"time"
 
+	"github.com/mattn/go-runewidth"
 	"github.com/spf13/cobra"
 
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
@@ -35,7 +35,7 @@ func NewListCommand(f *cmdutil.Factory) *cobra.Command {
 --all pages through /api/download/list until every matching row is
 collected (distinct from sync --all, which drains the sync cursor).
 --all-apps lists across every app; it cannot be combined with an
-explicit --app. Without --all-apps, --app defaults to wise.
+explicit --app. Without --all-apps, --app defaults to larepass.
 
 --status is validated locally against the server task-status enum;
 illegal values fail before any request.`,
@@ -170,23 +170,82 @@ func renderListTable(w io.Writer, result ListResult) error {
 	return nil
 }
 
+const (
+	taskTableColPad    = 2
+	taskTableNameWidth = 40
+	taskTableURLWidth  = 48
+)
+
 // renderTasksTable prints the shared task table (list / sync / unfinished).
+// Columns are padded by terminal display width, not rune count: a CJK
+// title is two columns per character, and tabwriter treating it as one
+// shoved SOURCE to the right of every ASCII row.
 func renderTasksTable(w io.Writer, tasks []DownloadTask) error {
-	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(tw, "ID\tSTATUS\tPROVIDER\tPERCENT\tNAME\tSOURCE\tAPP\tUPDATED")
+	headers := []string{"ID", "STATUS", "PROVIDER", "PERCENT", "NAME", "SOURCE", "APP", "UPDATED"}
+	rows := make([][]string, 0, len(tasks))
 	for _, t := range tasks {
-		fmt.Fprintf(tw, "%d\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
-			t.ID,
+		rows = append(rows, []string{
+			strconv.FormatInt(t.ID, 10),
 			orDash(t.Status),
 			orDash(t.DownloadProvider),
 			fmt.Sprintf("%.1f%%", t.Percent),
-			truncate(displayName(t), 40),
-			truncate(orDash(t.URL), 48),
+			clipDisplay(displayName(t), taskTableNameWidth),
+			clipDisplay(orDash(t.URL), taskTableURLWidth),
 			orDash(t.App),
 			formatTime(t.UpdatedAt),
-		)
+		})
 	}
-	return tw.Flush()
+	widths := make([]int, len(headers))
+	for i, h := range headers {
+		widths[i] = runewidth.StringWidth(h)
+	}
+	for _, row := range rows {
+		for i, cell := range row {
+			if n := runewidth.StringWidth(cell); n > widths[i] {
+				widths[i] = n
+			}
+		}
+	}
+	if err := writeDisplayRow(w, headers, widths); err != nil {
+		return err
+	}
+	for _, row := range rows {
+		if err := writeDisplayRow(w, row, widths); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func writeDisplayRow(w io.Writer, cells []string, widths []int) error {
+	var b strings.Builder
+	for i, cell := range cells {
+		if i > 0 {
+			b.WriteString(strings.Repeat(" ", taskTableColPad))
+		}
+		b.WriteString(padDisplay(cell, widths[i]))
+	}
+	b.WriteByte('\n')
+	_, err := io.WriteString(w, b.String())
+	return err
+}
+
+func padDisplay(s string, n int) string {
+	w := runewidth.StringWidth(s)
+	if w >= n {
+		return s
+	}
+	return s + strings.Repeat(" ", n-w)
+}
+
+// clipDisplay clips s to n terminal columns. CJK titles are two
+// columns wide; cutting on runes left NAME visually overflowing the
+// budget and broke the SOURCE column for every other row.
+func clipDisplay(s string, n int) string {
+	if n <= 0 || runewidth.StringWidth(s) <= n {
+		return s
+	}
+	return runewidth.Truncate(s, n, "...")
 }
 
 func orDash(s string) string {
@@ -194,16 +253,6 @@ func orDash(s string) string {
 		return "-"
 	}
 	return s
-}
-
-func truncate(s string, n int) string {
-	if n <= 0 || len(s) <= n {
-		return s
-	}
-	if n <= 3 {
-		return s[:n]
-	}
-	return s[:n-3] + "..."
 }
 
 func formatTime(t time.Time) string {

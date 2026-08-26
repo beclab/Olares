@@ -40,7 +40,7 @@ Verb families:
 Universal flags:
 
   -o, --output {table,json}
-      --app <name>     one of: wise, larepass (default wise; create / list / prefs / sync)
+      --app <name>     one of: wise, larepass (default larepass; create / list / prefs / sync)
 
 Run "olares-cli knowledge download <verb> --help" for verb-specific flags.
 `,
