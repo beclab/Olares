@@ -53,6 +53,10 @@ func (u upgrader_1_12_7) PrepareForUpgrade() []task.Interface {
 	return tasks
 }
 
+func (u upgrader_1_12_7) PostUpgrade() []task.Interface {
+	return append(regenerateKubeFiles(), u.upgraderBase.PostUpgrade()...)
+}
+
 func init() {
 	registerMainUpgrader(upgrader_1_12_7{})
 }
