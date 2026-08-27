@@ -4,7 +4,7 @@ description: Submit support tickets, upload logs with olares-cli, and manage you
 head:
   - - meta
     - name: keywords
-      content: Olares, Olares Space, tickets, support, Olares CLI, logs
+      content: Olares support, Olares Space tickets, Olares system logs, Olares CLI logs
 ---
 # Create and manage support tickets in Olares Space
 

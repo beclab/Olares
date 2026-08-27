@@ -4,7 +4,7 @@ description: 在 Olares Space 提交支持工单、使用 olares-cli 上传日�
 head:
   - - meta
     - name: keywords
-      content: Olares, Olares Space, tickets, 工单, 支持, Olares CLI, 日志
+      content: Olares 支持, Olares Space 工单, Olares 系统日志， Olares CLI 日志
 ---
 # 在 Olares Space 中创建和管理支持工单
 
