@@ -18,8 +18,13 @@ import (
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
-// POST /v1/images/generations, POST /v1/videos, and the two routes each of them
-// leaves behind: GET …/{id} and GET …/{id}/content.
+// The media create routes, and the two routes each of them leaves behind:
+// GET …/{id} and GET …/{id}/content.
+//
+// Three routes create: /v1/images/generations, /v1/videos and /v1/generations.
+// They write the same record and answer with the same shape, so everything past
+// the submission is shared — the wait, the download, the file name. Which route
+// a verb uses, and why, is in call_media_canonical.go.
 //
 // These are the only calls in this tree that outlive the request that made them.
 // An image takes seconds and a video takes minutes, so Router records the work
@@ -131,8 +136,6 @@ func (g *generationView) reason() string {
 }
 
 type mediaOptions struct {
-	Prompt   string
-	Model    string
 	Out      string
 	OutputID string
 	Wait     bool
@@ -140,10 +143,11 @@ type mediaOptions struct {
 	APIKey   string
 	OutputIn string
 	ID       string
-	// Extra carries the fields this verb does not interpret. They reach the
-	// provider unchanged, which is what lets a size or an aspect ratio be
-	// passed without this CLI knowing the vendor's vocabulary.
-	Extra map[string]any
+	// Body is the request, built by the verb. Which shape it is follows from
+	// the route: the released routes take their own flat keys, and
+	// /v1/generations takes the canonical body. Neither is assembled here,
+	// because a verb knows which fields its family admits and this does not.
+	Body any
 }
 
 func newCallImageCommand(f *cmdutil.Factory) *cobra.Command {
@@ -188,12 +192,8 @@ Examples:
 		Args: cobra.ArbitraryArgs,
 		RunE: func(c *cobra.Command, args []string) error {
 			opts := mediaOptions{
-				Model: callModel(model, categoryImage), Out: out, OutputID: outputID,
-				Wait: !noWait, Timeout: timeout, APIKey: apiKey, OutputIn: output,
-				ID: strings.TrimSpace(id), Extra: map[string]any{},
-			}
-			if s := strings.TrimSpace(size); s != "" {
-				opts.Extra["size"] = s
+				Out: out, OutputID: outputID, Wait: !noWait, Timeout: timeout,
+				APIKey: apiKey, OutputIn: output, ID: strings.TrimSpace(id),
 			}
 			if opts.ID != "" {
 				if len(args) > 0 {
@@ -204,7 +204,11 @@ Examples:
 				if err != nil {
 					return err
 				}
-				opts.Prompt = prompt
+				body := map[string]any{"model": callModel(model, categoryImage), "prompt": prompt}
+				if s := strings.TrimSpace(size); s != "" {
+					body["size"] = s
+				}
+				opts.Body = body
 			}
 			return runCallImage(c.Context(), f, opts)
 		},
@@ -261,12 +265,8 @@ Examples:
 		Args: cobra.ArbitraryArgs,
 		RunE: func(c *cobra.Command, args []string) error {
 			opts := mediaOptions{
-				Model: callModel(model, categoryVideo), Out: out, OutputID: outputID,
-				Wait: !noWait, Timeout: timeout, APIKey: apiKey, OutputIn: output,
-				ID: strings.TrimSpace(id), Extra: map[string]any{},
-			}
-			if s := strings.TrimSpace(operation); s != "" {
-				opts.Extra["operation"] = s
+				Out: out, OutputID: outputID, Wait: !noWait, Timeout: timeout,
+				APIKey: apiKey, OutputIn: output, ID: strings.TrimSpace(id),
 			}
 			if opts.ID != "" {
 				if len(args) > 0 {
@@ -277,7 +277,11 @@ Examples:
 				if err != nil {
 					return err
 				}
-				opts.Prompt = prompt
+				body := map[string]any{"model": callModel(model, categoryVideo), "prompt": prompt}
+				if s := strings.TrimSpace(operation); s != "" {
+					body["operation"] = s
+				}
+				opts.Body = body
 			}
 			return runCallVideo(c.Context(), f, opts)
 		},
@@ -314,6 +318,21 @@ var videoKind = mediaKind{
 	noun: "video", verb: "video", submitPath: epVideos,
 	get: epVideo, content: epVideoContent, defaultExt: ".mp4",
 }
+
+// The two families with no released route of their own. They create, poll and
+// download exactly like the other two — the record is the same and so is the
+// content proxy — which is why they are two more rows here rather than a
+// surface of their own.
+var (
+	musicKind = mediaKind{
+		noun: "track", verb: "music", submitPath: epGenerations,
+		get: epGeneration, content: epGenerationContent, defaultExt: ".mp3",
+	}
+	model3DKind = mediaKind{
+		noun: "model", verb: "3d", submitPath: epGenerations,
+		get: epGeneration, content: epGenerationContent, defaultExt: ".glb",
+	}
+)
 
 func runCallImage(ctx context.Context, f *cmdutil.Factory, opts mediaOptions) error {
 	return runMedia(ctx, f, imageKind, opts)
@@ -390,22 +409,18 @@ func runMedia(ctx context.Context, f *cmdutil.Factory, kind mediaKind, opts medi
 // submitMedia posts the request. A non-nil first result is the picture arriving
 // inline, which only happens for an image on a Router that keeps no generations.
 func submitMedia(ctx context.Context, dp *routerClient, kind mediaKind, opts mediaOptions, gen *generationView) ([]byte, error) {
-	body := map[string]any{"model": opts.Model, "prompt": opts.Prompt}
-	for k, v := range opts.Extra {
-		body[k] = v
-	}
 	// Router persists a generation only when the caller asks it to. For video
 	// the header is redundant and harmless; for an image it is the difference
 	// between a record to come back to and a one-shot answer.
 	async := dp.withHeader("Prefer", "respond-async")
-	err := async.doJSON(ctx, "POST", kind.submitPath, body, gen)
+	err := async.doJSON(ctx, "POST", kind.submitPath, opts.Body, gen)
 	if err == nil {
 		return nil, nil
 	}
 	var re *RouterError
 	if kind.noun == "image" && errors.As(err, &re) && re.Code == "image_generation_async_reserved" {
 		var sync imageSyncResponse
-		if serr := dp.doJSON(ctx, "POST", kind.submitPath, body, &sync); serr != nil {
+		if serr := dp.doJSON(ctx, "POST", kind.submitPath, opts.Body, &sync); serr != nil {
 			return nil, callErr(serr)
 		}
 		raw, derr := sync.bytes()
@@ -568,6 +583,26 @@ func extForContentType(contentType, fallback string) string {
 		return ".mov"
 	case "video/x-matroska":
 		return ".mkv"
+	case "audio/mpeg":
+		return ".mp3"
+	case "audio/wav", "audio/x-wav":
+		return ".wav"
+	case "audio/flac":
+		return ".flac"
+	case "audio/ogg":
+		return ".ogg"
+	case "model/gltf-binary":
+		return ".glb"
+	case "model/gltf+json":
+		return ".gltf"
+	case "model/obj":
+		return ".obj"
+	case "model/stl":
+		return ".stl"
+	case "application/zip":
+		// Several 3D workflows answer with a bundle: the mesh, its textures
+		// and a material file are one download.
+		return ".zip"
 	}
 	if exts, eerr := mime.ExtensionsByType(ct); eerr == nil && len(exts) > 0 {
 		return exts[0]
