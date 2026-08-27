@@ -97,19 +97,44 @@ func renderProviderGet(w io.Writer, d *providerDetail) error {
 	if _, err := fmt.Fprintf(w, "\nMODELS (%d)\n", len(d.Models)); err != nil {
 		return err
 	}
-	mt := newTable(w, "NAME", "MODE", "ENABLED", "STATUS", "CONTEXT", "CAPABILITIES")
+	// AT ONCE only when something declared it. A cloud model has no engine of
+	// ours behind it, so the column would be a dash on every row of most
+	// providers and read as a missing figure rather than an inapplicable one.
+	wide := false
+	for i := range d.Models {
+		wide = wide || d.Models[i].MaxConcurrency > 0
+	}
+	headers := []string{"NAME", "MODE", "ENABLED", "STATUS", "CONTEXT"}
+	if wide {
+		headers = append(headers, "AT ONCE")
+	}
+	headers = append(headers, "CAPABILITIES")
+	mt := newTable(w, headers...)
 	for i := range d.Models {
 		m := &d.Models[i]
-		mt.row(
+		cells := []string{
 			nonEmpty(m.Name),
 			nonEmpty(m.Mode),
 			boolStr(m.Enabled),
 			nonEmpty(m.Status),
 			intOrDash(m.ContextSize),
-			summarizeSupports(m.Supports),
-		)
+		}
+		if wide {
+			cells = append(cells, intOrDash(m.MaxConcurrency))
+		}
+		cells = append(cells, summarizeSupports(m.Supports))
+		mt.row(cells...)
 	}
-	return mt.flush()
+	if err := mt.flush(); err != nil {
+		return err
+	}
+	if wide {
+		_, err := fmt.Fprintln(w, "\nAT ONCE is how many requests the engine was launched to work on at "+
+			"the same time. A request beyond that waits its turn, which looks like a slow model rather "+
+			"than a queue — ENGINE LOAD above is what tells the two apart.")
+		return err
+	}
+	return nil
 }
 
 func intOrDash(v int) string {

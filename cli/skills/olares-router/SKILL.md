@@ -1,7 +1,7 @@
 ---
 name: olares-router
 version: 0.0.0-cli.0
-description: "Olares models via olares-cli router — Router (the AI gateway) and the Model Console inside a locally installed model application. Configure cloud vendors and their models, manage local LLM / embedding / audio / OCR model applications, edit a local model's card, name models with aliases, groups and default categories, issue API keys and quotas, read usage and audit, and call a model: chat, embed, rerank, search, scrape, translate, images, video, transcribe, speak, diarize, OCR. Requires Olares 1.12.7+. Use for Router, llm-gateway, AI gateway, 模型, 模型网关, 本地模型, add an OpenAI/Anthropic/DeepSeek key, install a Qwen or Gemma model, sk- key, model quota, token spend, model alias, default-chat, engine_args, which model answers by default, why a model call fails."
+description: "Olares models via olares-cli router — Router (the AI gateway) and the Model Console inside a locally installed model application. Configure cloud vendors and their models, manage local LLM / embedding / audio / OCR model applications, edit a local model's card, name models with aliases, groups and default categories, issue API keys and quotas, read usage and audit, and call a model: chat, embed, rerank, search, scrape, translate, images, video, music, 3D, transcribe, speak, diarize, OCR. Requires Olares 1.12.7+. Use for Router, llm-gateway, AI gateway, 模型, 模型网关, 本地模型, add an OpenAI/Anthropic/DeepSeek key, install a Qwen or Gemma model, sk- key, model quota, token spend, model alias, default-chat, engine_args, which model answers by default, why a model call fails."
 compatibility: Requires olares-cli on PATH, active Olares profile, Olares >= 1.12.7
 metadata:
   openclaw:
@@ -43,7 +43,8 @@ All verbs require Olares 1.12.7+ because Router ships as the `router` Market lis
 | the names callers may send | `route list/get/create/rename/enable/disable/delete/add/remove`, including the `default-*` categories via `route list --kind default` | [names, defaults and access control](references/olares-router-governance.md) |
 | access control | `key issue/list/update/revoke/current`, `quota set/list/clear` | [names, defaults and access control](references/olares-router-governance.md) |
 | what happened | `usage summary/list/export/retention`, `audit list/get` | [usage and audit](references/olares-router-usage.md) |
-| calling a model | `call chat/embed/rerank/search/scrape/translate/image/video/transcribe/listen/speak/clone/dialogue/vad/diarize/speaker-embed/enhance/align/task/ocr`, `call models`, `key current` | [calling a model](references/olares-router-calling.md) |
+| calling a model | `call chat/responses/embed/rerank/search/scrape/translate/transcribe/listen/speak/clone/dialogue/vad/diarize/speaker-embed/enhance/align/ocr`, `call task get/result/list/cancel`, `call models`, `key current` | [calling a model](references/olares-router-calling.md) |
+| generating a picture, a clip, a track or a mesh | `call image/video/music/3d` — the four whose work outlives the request; `music` and `3d` require `--model` | [calling a model](references/olares-router-calling.md) |
 | inside one application | `model status/progress/retry/restart`, `model diag gpu/config/endpoints`, all taking `--app` | [the Model Console](references/olares-router-console.md) |
 | a call or a model that does not work | any of the above | [deciding which layer is wrong](references/olares-router-diagnosis.md) |
 

@@ -18,8 +18,13 @@ import (
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
-// POST /v1/images/generations, POST /v1/videos, and the two routes each of them
-// leaves behind: GET …/{id} and GET …/{id}/content.
+// The media create routes, and the two routes each of them leaves behind:
+// GET …/{id} and GET …/{id}/content.
+//
+// Three routes create: /v1/images/generations, /v1/videos and /v1/generations.
+// They write the same record and answer with the same shape, so everything past
+// the submission is shared — the wait, the download, the file name. Which route
+// a verb uses, and why, is in call_media_canonical.go.
 //
 // These are the only calls in this tree that outlive the request that made them.
 // An image takes seconds and a video takes minutes, so Router records the work
@@ -44,21 +49,47 @@ import (
 // surface of its own rather than another flag on this one, and an edit is
 // something people reach for in a picture editor. Left to a direct call.
 
-// generationView is Router's record of one piece of work. Response is the
-// provider's own snapshot with its identifiers stripped: it carries the outputs
-// and, depending on the provider, a progress percentage.
+// generationView is Router's record of one piece of work, and every media
+// family answers with it on all three routes.
+//
+// What a generation produced is stated in outputs rather than left inside the
+// provider's own JSON, and progress and usage are Router's fields rather than
+// the vendor's. provider_response is whatever the upstream said that Router has
+// no field for: a whitelist, optional, and not needed to use a generation.
 type generationView struct {
-	ID        string          `json:"id"`
-	Object    string          `json:"object"`
-	MediaType string          `json:"media_type"`
-	Operation string          `json:"operation"`
-	Status    string          `json:"status"`
-	Model     string          `json:"model"`
-	Response  json.RawMessage `json:"response,omitempty"`
-	ErrorCode *string         `json:"error_code,omitempty"`
-	Error     *string         `json:"error,omitempty"`
-	CreatedAt time.Time       `json:"created_at"`
-	ExpiresAt time.Time       `json:"expires_at"`
+	ID        string             `json:"id"`
+	Object    string             `json:"object"`
+	MediaType string             `json:"media_type"`
+	Operation string             `json:"operation"`
+	Status    string             `json:"status"`
+	Progress  *float64           `json:"progress,omitempty"`
+	Model     string             `json:"model"`
+	Outputs   []generationOutput `json:"outputs,omitempty"`
+	Usage     *generationUsage   `json:"usage,omitempty"`
+	Response  json.RawMessage    `json:"provider_response,omitempty"`
+	ErrorCode *string            `json:"error_code,omitempty"`
+	Error     *string            `json:"error,omitempty"`
+	CreatedAt time.Time          `json:"created_at"`
+	ExpiresAt time.Time          `json:"expires_at"`
+}
+
+// generationOutput is one artifact. A zero measurement means the provider did
+// not report it, never that it is zero, and content_url addresses this Router
+// rather than anything upstream.
+type generationOutput struct {
+	ID              string  `json:"id"`
+	ContentType     string  `json:"content_type,omitempty"`
+	Width           int     `json:"width,omitempty"`
+	Height          int     `json:"height,omitempty"`
+	DurationSeconds float64 `json:"duration_seconds,omitempty"`
+	ContentURL      string  `json:"content_url"`
+}
+
+// generationUsage is what the provider said it produced, and it is absent
+// unless the provider said something.
+type generationUsage struct {
+	Count   int     `json:"count,omitempty"`
+	Seconds float64 `json:"seconds,omitempty"`
 }
 
 func (g *generationView) done() bool {
@@ -71,38 +102,22 @@ func (g *generationView) done() bool {
 
 func (g *generationView) failed() bool { return strings.EqualFold(g.Status, "failed") }
 
-// progressNote reads the one field of the snapshot worth showing while waiting.
-// Not every provider reports it, and its absence is not worth a word.
+// progressNote is the one thing worth showing while waiting. Not every provider
+// reports it, and its absence is not worth a word.
 func (g *generationView) progressNote() string {
-	if len(g.Response) == 0 {
+	if g.Progress == nil {
 		return ""
 	}
-	var snap struct {
-		Progress *float64 `json:"progress"`
-	}
-	if json.Unmarshal(g.Response, &snap) != nil || snap.Progress == nil {
-		return ""
-	}
-	return fmt.Sprintf(", %.0f%%", *snap.Progress)
+	return fmt.Sprintf(", %.0f%%", *g.Progress)
 }
 
-// outputIDs are the pieces this generation produced. A provider that made one
-// image names it anyway, and asking for a named output is how a caller avoids
-// depending on which one happens to be first.
+// outputIDs are the pieces this generation produced, named. Asking for a named
+// output is how a caller avoids depending on which one happens to be first —
+// and a provider that settled without naming anything is reported as one
+// unnamed output, which is nothing to choose between and so nothing to list.
 func (g *generationView) outputIDs() []string {
-	if len(g.Response) == 0 {
-		return nil
-	}
-	var snap struct {
-		Outputs []struct {
-			ID string `json:"id"`
-		} `json:"outputs"`
-	}
-	if json.Unmarshal(g.Response, &snap) != nil {
-		return nil
-	}
-	out := make([]string, 0, len(snap.Outputs))
-	for _, o := range snap.Outputs {
+	out := make([]string, 0, len(g.Outputs))
+	for _, o := range g.Outputs {
 		if s := strings.TrimSpace(o.ID); s != "" {
 			out = append(out, s)
 		}
@@ -121,8 +136,6 @@ func (g *generationView) reason() string {
 }
 
 type mediaOptions struct {
-	Prompt   string
-	Model    string
 	Out      string
 	OutputID string
 	Wait     bool
@@ -130,10 +143,11 @@ type mediaOptions struct {
 	APIKey   string
 	OutputIn string
 	ID       string
-	// Extra carries the fields this verb does not interpret. They reach the
-	// provider unchanged, which is what lets a size or an aspect ratio be
-	// passed without this CLI knowing the vendor's vocabulary.
-	Extra map[string]any
+	// Body is the request, built by the verb. Which shape it is follows from
+	// the route: the released routes take their own flat keys, and
+	// /v1/generations takes the canonical body. Neither is assembled here,
+	// because a verb knows which fields its family admits and this does not.
+	Body any
 }
 
 func newCallImageCommand(f *cmdutil.Factory) *cobra.Command {
@@ -142,11 +156,11 @@ func newCallImageCommand(f *cmdutil.Factory) *cobra.Command {
 		model    string
 		out      string
 		outputID string
-		size     string
 		noWait   bool
 		id       string
 		timeout  time.Duration
 		apiKey   string
+		flags    mediaFlags
 	)
 	cmd := &cobra.Command{
 		Use:   "image [prompt…]",
@@ -157,9 +171,10 @@ The image is written to --out, or to a file named after the generation in the
 current directory. What comes back is a file rather than a URL: Router holds the
 bytes, so the picture does not depend on a provider's link staying alive.
 
---size is passed to the provider untouched, because the accepted values are the
-provider's own — "1024x1024" for one, "2K" for another. A rejected value is
-reported by whoever rejected it.
+--size asks for pixels and --aspect-ratio for a shape; they describe the same
+thing two ways, so give one. Values are checked against the resolved model's own
+parameters before anything is billed, and a field it has no parameter for is
+refused rather than dropped.
 
 --no-wait prints the generation id and stops; "--id <id>" collects it later, and
 also reports one that is still running. A generation expires, and --no-wait says
@@ -172,56 +187,42 @@ Examples:
   olares-cli router call image "a red bicycle in the rain"
   olares-cli router call image "a logo for a coffee shop" --out logo.png
   olares-cli router call image "a wide landscape" --size 1792x1024
+  olares-cli router call image "a portrait" --aspect-ratio 2:3 --quality high --seed 7
   olares-cli router call image "slow one" --no-wait
   olares-cli router call image --id gen_01H…
 `,
 		Args: cobra.ArbitraryArgs,
 		RunE: func(c *cobra.Command, args []string) error {
-			opts := mediaOptions{
-				Model: callModel(model, categoryImage), Out: out, OutputID: outputID,
-				Wait: !noWait, Timeout: timeout, APIKey: apiKey, OutputIn: output,
-				ID: strings.TrimSpace(id), Extra: map[string]any{},
-			}
-			if s := strings.TrimSpace(size); s != "" {
-				opts.Extra["size"] = s
-			}
-			if opts.ID != "" {
-				if len(args) > 0 {
-					return fmt.Errorf("--id collects a generation that already exists; it takes no prompt")
-				}
-			} else {
-				prompt, err := readPromptArgs(args, "prompt")
-				if err != nil {
-					return err
-				}
-				opts.Prompt = prompt
-			}
-			return runCallImage(c.Context(), f, opts)
+			return runLegacyMedia(c, f, imageKind, legacyVerb{
+				model: callModel(model, categoryImage), id: id, out: out, outputID: outputID,
+				wait: !noWait, timeout: timeout, apiKey: apiKey, format: output,
+				flags: &flags, args: args,
+			})
 		},
 	}
 	cmd.Flags().StringVar(&model, "model", "", modelFlagHelp(categoryImage))
 	cmd.Flags().StringVar(&out, "out", "", "write the image here instead of a name derived from the generation")
 	cmd.Flags().StringVar(&outputID, "output-id", "", "which of the generation's outputs to write; the first when omitted")
-	cmd.Flags().StringVar(&size, "size", "", "the size to ask the provider for, in its own vocabulary")
 	cmd.Flags().BoolVar(&noWait, "no-wait", false, "print the generation id instead of waiting for the image")
 	cmd.Flags().StringVar(&id, "id", "", "collect a generation submitted earlier")
 	cmd.Flags().DurationVar(&timeout, "timeout", 5*time.Minute, "give up waiting after this long; the work continues")
 	cmd.Flags().StringVar(&apiKey, "api-key", "", dataPlaneKeyFlagUsage)
+	flags.register(cmd, imageFields...)
 	addOutputFlag(cmd, &output)
 	return cmd
 }
 
 func newCallVideoCommand(f *cmdutil.Factory) *cobra.Command {
 	var (
-		output    string
-		model     string
-		out       string
-		outputID  string
-		operation string
-		noWait    bool
-		id        string
-		timeout   time.Duration
-		apiKey    string
+		output   string
+		model    string
+		out      string
+		outputID string
+		noWait   bool
+		id       string
+		timeout  time.Duration
+		apiKey   string
+		flags    mediaFlags
 	)
 	cmd := &cobra.Command{
 		Use:   "video [prompt…]",
@@ -236,8 +237,14 @@ Waiting costs nothing and stopping the wait cancels nothing: the work continues
 at the provider either way, and it is billed either way. The generation expires,
 and the id stops working when it does.
 
---operation names something other than generating from text, for the providers
-that offer it. What each accepts is the provider's own; leaving it off generates.
+--operation asks for something other than generating from text: edit, extend,
+lip_sync, first_last_frame and the rest. Which inputs an operation reads follows
+from the operation — a lip sync needs --audio, an extend needs
+--source-generation — and a model that does not declare the one you named is
+refused before anything is billed.
+
+--size and --aspect-ratio and --resolution overlap: give --size or one of the
+other two, not both.
 
 Video generation needs a model whose mode is video_generation; "olares-cli router
 list --mode video_generation" shows the ones that qualify.
@@ -245,43 +252,85 @@ list --mode video_generation" shows the ones that qualify.
 Examples:
   olares-cli router call video "a paper plane over a city at dusk"
   olares-cli router call video "waves on a beach" --out waves.mp4 --timeout 20m
+  olares-cli router call video "a slow pan" --resolution 1080p --duration 8 --fps 24
+  olares-cli router call video --operation lip_sync --image face.png --audio line.wav
   olares-cli router call video "long one" --no-wait
   olares-cli router call video --id gen_01H…
 `,
 		Args: cobra.ArbitraryArgs,
 		RunE: func(c *cobra.Command, args []string) error {
-			opts := mediaOptions{
-				Model: callModel(model, categoryVideo), Out: out, OutputID: outputID,
-				Wait: !noWait, Timeout: timeout, APIKey: apiKey, OutputIn: output,
-				ID: strings.TrimSpace(id), Extra: map[string]any{},
-			}
-			if s := strings.TrimSpace(operation); s != "" {
-				opts.Extra["operation"] = s
-			}
-			if opts.ID != "" {
-				if len(args) > 0 {
-					return fmt.Errorf("--id collects a generation that already exists; it takes no prompt")
-				}
-			} else {
-				prompt, err := readPromptArgs(args, "prompt")
-				if err != nil {
-					return err
-				}
-				opts.Prompt = prompt
-			}
-			return runCallVideo(c.Context(), f, opts)
+			return runLegacyMedia(c, f, videoKind, legacyVerb{
+				model: callModel(model, categoryVideo), id: id, out: out, outputID: outputID,
+				wait: !noWait, timeout: timeout, apiKey: apiKey, format: output,
+				flags: &flags, args: args,
+				// An operation names what to do with the inputs, and several of
+				// them describe the whole request: extending a clip or syncing
+				// a mouth to a recording needs no words.
+				inputHint: "name what to work from with --" + flagImage +
+					", --" + flagAudioIn + " or --" + flagSource,
+			})
 		},
 	}
 	cmd.Flags().StringVar(&model, "model", "", modelFlagHelp(categoryVideo))
 	cmd.Flags().StringVar(&out, "out", "", "write the video here instead of a name derived from the generation")
 	cmd.Flags().StringVar(&outputID, "output-id", "", "which of the generation's outputs to write; the first when omitted")
-	cmd.Flags().StringVar(&operation, "operation", "", "what to ask the provider for, in its own vocabulary")
 	cmd.Flags().BoolVar(&noWait, "no-wait", false, "print the generation id instead of waiting for the video")
 	cmd.Flags().StringVar(&id, "id", "", "collect a generation submitted earlier")
 	cmd.Flags().DurationVar(&timeout, "timeout", 20*time.Minute, "give up waiting after this long; the work continues")
 	cmd.Flags().StringVar(&apiKey, "api-key", "", dataPlaneKeyFlagUsage)
+	flags.register(cmd, videoFields...)
 	addOutputFlag(cmd, &output)
 	return cmd
+}
+
+// legacyVerb is what image and video differ in, which past the field list is
+// only how long a caller is expected to wait.
+type legacyVerb struct {
+	model     string
+	id        string
+	out       string
+	outputID  string
+	wait      bool
+	timeout   time.Duration
+	apiKey    string
+	format    string
+	flags     *mediaFlags
+	args      []string
+	inputHint string
+}
+
+// runLegacyMedia submits on the route the family was released on.
+//
+// The body is the released spelling rather than the canonical one, and that is
+// not a compatibility shim: Router lifts every one of those keys onto the
+// canonical field it means before anything is gated or billed, so the same
+// request is described either way. What the released image route has that the
+// unified one cannot is a synchronous answer for a provider that keeps no
+// generations, and moving off it would refuse the most widely installed
+// provider there is.
+func runLegacyMedia(
+	c *cobra.Command, f *cmdutil.Factory, kind mediaKind, verb legacyVerb,
+) error {
+	opts := mediaOptions{
+		Out: verb.out, OutputID: verb.outputID, Wait: verb.wait, Timeout: verb.timeout,
+		APIKey: verb.apiKey, OutputIn: verb.format, ID: strings.TrimSpace(verb.id),
+	}
+	if opts.ID != "" {
+		if len(verb.args) > 0 {
+			return fmt.Errorf("--id collects a generation that already exists; it takes no prompt")
+		}
+		return runMedia(c.Context(), f, kind, opts)
+	}
+	prompt, err := resolvePrompt(c, verb.flags, verb.args, verb.inputHint)
+	if err != nil {
+		return err
+	}
+	body, err := verb.flags.legacyBody(c, verb.model, prompt)
+	if err != nil {
+		return err
+	}
+	opts.Body = body
+	return runMedia(c.Context(), f, kind, opts)
 }
 
 // mediaKind is the little that differs between the two verbs: where to submit,
@@ -304,6 +353,21 @@ var videoKind = mediaKind{
 	noun: "video", verb: "video", submitPath: epVideos,
 	get: epVideo, content: epVideoContent, defaultExt: ".mp4",
 }
+
+// The two families with no released route of their own. They create, poll and
+// download exactly like the other two — the record is the same and so is the
+// content proxy — which is why they are two more rows here rather than a
+// surface of their own.
+var (
+	musicKind = mediaKind{
+		noun: "track", verb: "music", submitPath: epGenerations,
+		get: epGeneration, content: epGenerationContent, defaultExt: ".mp3",
+	}
+	model3DKind = mediaKind{
+		noun: "model", verb: "3d", submitPath: epGenerations,
+		get: epGeneration, content: epGenerationContent, defaultExt: ".glb",
+	}
+)
 
 func runCallImage(ctx context.Context, f *cmdutil.Factory, opts mediaOptions) error {
 	return runMedia(ctx, f, imageKind, opts)
@@ -380,22 +444,18 @@ func runMedia(ctx context.Context, f *cmdutil.Factory, kind mediaKind, opts medi
 // submitMedia posts the request. A non-nil first result is the picture arriving
 // inline, which only happens for an image on a Router that keeps no generations.
 func submitMedia(ctx context.Context, dp *routerClient, kind mediaKind, opts mediaOptions, gen *generationView) ([]byte, error) {
-	body := map[string]any{"model": opts.Model, "prompt": opts.Prompt}
-	for k, v := range opts.Extra {
-		body[k] = v
-	}
 	// Router persists a generation only when the caller asks it to. For video
 	// the header is redundant and harmless; for an image it is the difference
 	// between a record to come back to and a one-shot answer.
 	async := dp.withHeader("Prefer", "respond-async")
-	err := async.doJSON(ctx, "POST", kind.submitPath, body, gen)
+	err := async.doJSON(ctx, "POST", kind.submitPath, opts.Body, gen)
 	if err == nil {
 		return nil, nil
 	}
 	var re *RouterError
 	if kind.noun == "image" && errors.As(err, &re) && re.Code == "image_generation_async_reserved" {
 		var sync imageSyncResponse
-		if serr := dp.doJSON(ctx, "POST", kind.submitPath, body, &sync); serr != nil {
+		if serr := dp.doJSON(ctx, "POST", kind.submitPath, opts.Body, &sync); serr != nil {
 			return nil, callErr(serr)
 		}
 		raw, derr := sync.bytes()
@@ -558,6 +618,26 @@ func extForContentType(contentType, fallback string) string {
 		return ".mov"
 	case "video/x-matroska":
 		return ".mkv"
+	case "audio/mpeg":
+		return ".mp3"
+	case "audio/wav", "audio/x-wav":
+		return ".wav"
+	case "audio/flac":
+		return ".flac"
+	case "audio/ogg":
+		return ".ogg"
+	case "model/gltf-binary":
+		return ".glb"
+	case "model/gltf+json":
+		return ".gltf"
+	case "model/obj":
+		return ".obj"
+	case "model/stl":
+		return ".stl"
+	case "application/zip":
+		// Several 3D workflows answer with a bundle: the mesh, its textures
+		// and a material file are one download.
+		return ".zip"
 	}
 	if exts, eerr := mime.ExtensionsByType(ct); eerr == nil && len(exts) > 0 {
 		return exts[0]

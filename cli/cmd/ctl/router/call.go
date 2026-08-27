@@ -45,6 +45,10 @@ each one currently stands. A category with nothing behind it is refused rather
 than answered by something approximate, so a call with no --model on a fresh
 install fails until a model of that kind exists.
 
+Music, 3D and "call responses" require --model. Router resolves no default for
+those three, and inventing one here would send callers at a route that does not
+exist — reported as a missing model rather than as the absence it is.
+
 Credentials resolve on their own. Inside the cluster the platform supplies the
 caller identity and no key is needed; anywhere else this machine keeps one key
 in the OS keychain, minting it on first use. --api-key overrides both, and
@@ -61,6 +65,8 @@ Subcommands:
   translate <text>      translate, detect a language, list the pairs
   image <prompt>        generate an image
   video <prompt>        generate a video
+  music <prompt>        generate a track
+  3d [prompt]           generate a 3D model
   transcribe <file>     speech to text
   listen [file]         speech to text as it arrives, over a socket
   speak <text>          text to speech
@@ -74,9 +80,10 @@ Subcommands:
   ocr <file>            text out of an image or PDF
   task <id>             pick up an audio job submitted with --async
 
-Three of these do not answer with their result. Image and video generation can
-hand back a receipt to collect from, and OCR always does; each of those verbs
-waits for the work by default and takes --no-wait to hand the id over instead.
+Five of these do not answer with their result. Image, video, music and 3D
+generation hand back a receipt to collect from, and OCR always does; each of
+those verbs waits for the work by default and takes --no-wait to hand the id
+over instead.
 
 The audio verbs answer directly, and take --async to be handed a task id
 instead — which is the only way to send an hour of audio, since a synchronous
@@ -97,6 +104,8 @@ the credential that made it, and may cost money.
 	cmd.AddCommand(newCallTranslateCommand(f))
 	cmd.AddCommand(newCallImageCommand(f))
 	cmd.AddCommand(newCallVideoCommand(f))
+	cmd.AddCommand(newCallMusicCommand(f))
+	cmd.AddCommand(newCall3DCommand(f))
 	cmd.AddCommand(newCallTranscribeCommand(f))
 	cmd.AddCommand(newCallListenCommand(f))
 	cmd.AddCommand(newCallSpeakCommand(f))

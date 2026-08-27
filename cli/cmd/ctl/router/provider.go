@@ -55,13 +55,55 @@ type providerRow struct {
 	// reports for the model it serves, alongside olares_status: that is the
 	// container's lifecycle, this is the model's. Present on every locally
 	// installed application, absent on one an admin entered.
-	ModelConsoleStatus *string   `json:"model_console_status,omitempty"`
-	OlaresLatestTaskID *string   `json:"olares_latest_task_id,omitempty"`
-	CredentialsVersion int       `json:"credentials_version"`
-	IconURL            *string   `json:"icon_url,omitempty"`
-	EntranceURL        *string   `json:"entrance_url,omitempty"`
-	CreatedAt          time.Time `json:"created_at"`
-	UpdatedAt          time.Time `json:"updated_at"`
+	ModelConsoleStatus *string `json:"model_console_status,omitempty"`
+	OlaresLatestTaskID *string `json:"olares_latest_task_id,omitempty"`
+	// EngineLoad is the last queue reading taken from the application's
+	// inference engine. Absent for every provider whose engine does not
+	// publish one, which is every cloud account.
+	EngineLoad         *engineLoad `json:"engine_load,omitempty"`
+	CredentialsVersion int         `json:"credentials_version"`
+	IconURL            *string     `json:"icon_url,omitempty"`
+	EntranceURL        *string     `json:"entrance_url,omitempty"`
+	CreatedAt          time.Time   `json:"created_at"`
+	UpdatedAt          time.Time   `json:"updated_at"`
+}
+
+// engineLoad is how much work the engine behind a model application is holding.
+//
+// It exists because a queued request and a slow one look the same from outside
+// and have opposite remedies: an engine launched with one slot accepts every
+// request and serves them one at a time, so a caller waiting two minutes cannot
+// tell whether the model is that slow or whether it is nineteenth in line.
+//
+// Nothing is admitted or refused on these numbers. Router decides that on its
+// own in-flight count, which is current by construction, where this is one poll
+// old at best — which is why ObservedAt is printed with it rather than beside it.
+type engineLoad struct {
+	EngineKind string `json:"engine_kind,omitempty"`
+	Processing int    `json:"processing"`
+	Deferred   int    `json:"deferred"`
+	// Slots is what the engine was launched to serve at once. Absent when the
+	// launch flags left it to the engine's own default, which is not readable
+	// from out here, and where a zero would read as "serves nobody".
+	Slots      int       `json:"slots,omitempty"`
+	ObservedAt time.Time `json:"observed_at"`
+}
+
+// describe is one line, because these numbers only mean something together.
+func (l *engineLoad) describe() string {
+	parts := []string{fmt.Sprintf("%d processing", l.Processing)}
+	if l.Slots > 0 {
+		parts[0] = fmt.Sprintf("%d of %d slots busy", l.Processing, l.Slots)
+	}
+	parts = append(parts, fmt.Sprintf("%d queued behind", l.Deferred))
+	if l.EngineKind != "" {
+		parts = append(parts, l.EngineKind)
+	}
+	line := strings.Join(parts, ", ")
+	if l.ObservedAt.IsZero() {
+		return line + " (the reading carries no timestamp)"
+	}
+	return fmt.Sprintf("%s, read %s ago", line, time.Since(l.ObservedAt).Round(time.Second))
 }
 
 // providerModelRow is one model a provider serves. The capability fields are
@@ -84,9 +126,14 @@ type providerModelRow struct {
 	ParameterRules  json.RawMessage   `json:"parameter_rules,omitempty"`
 	ContextSize     int               `json:"context_size,omitempty"`
 	MaxOutputTokens int               `json:"max_output_tokens,omitempty"`
-	EngineArgs      string            `json:"engine_args,omitempty"`
-	CreatedAt       time.Time         `json:"created_at"`
-	UpdatedAt       time.Time         `json:"updated_at"`
+	// MaxConcurrency is how many requests the engine behind this model works
+	// on at once, read out of its launch flags. Nobody can set it here: a
+	// number an admin typed would be a width the engine never agreed to.
+	// Absent on a cloud model, which has no engine of ours to be launched.
+	MaxConcurrency int       `json:"max_concurrency,omitempty"`
+	EngineArgs     string    `json:"engine_args,omitempty"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
 }
 
 type providerDetail struct {
@@ -206,6 +253,11 @@ func renderProviderRow(w io.Writer, p *providerRow) error {
 	// reports running minutes before the model it serves can answer.
 	if p.ModelConsoleStatus != nil {
 		t.row("MODEL PHASE", nonEmpty(*p.ModelConsoleStatus))
+	}
+	// The engine's own account of its queue, and it is only that: Router
+	// admits on its in-flight count, not on this.
+	if p.EngineLoad != nil {
+		t.row("ENGINE LOAD", p.EngineLoad.describe())
 	}
 	if p.EntranceURL != nil {
 		t.row("ENTRANCE URL", nonEmpty(*p.EntranceURL))

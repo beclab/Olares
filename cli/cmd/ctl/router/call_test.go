@@ -22,6 +22,10 @@ func TestEveryCallVerbFallsBackToACategory(t *testing.T) {
 	// default themselves, per call, so there is no model for a caller to name
 	// and no flag to give one.
 	const noModelFlag = "translate"
+	// The verbs Router resolves no default for. Each is listed with its reason
+	// at the check below, because "it needs a model" is a claim about Router's
+	// registry rather than a choice made here.
+	requiresAModel := map[string]bool{"responses": true, "music": true, "3d": true}
 
 	for _, verb := range callVerbs(t) {
 		// `call models` sits here because it is answered by the data plane
@@ -41,20 +45,28 @@ func TestEveryCallVerbFallsBackToACategory(t *testing.T) {
 			continue
 		}
 		flag := verb.Flags().Lookup("model")
-		// Responses is the other exception, and unlike translate it does take
-		// a --model: Router resolves a default for every mode but this one,
-		// and asserts that absence in its own tests. So the flag has to be
-		// there, has to say it is required, and must not promise a category —
-		// naming one would send callers at a route that does not exist.
-		if verb.Name() == "responses" {
+		// The other exceptions do take a --model, and Router resolves no
+		// default for any of them. So the flag has to be there, has to say it
+		// is required, and must not promise a category — naming one would send
+		// callers at a route that does not exist, which arrives as "no such
+		// model" rather than as the absence it is.
+		//
+		// Responses is provider-model-only, and routing/category_test.go
+		// asserts that absence deliberately so it cannot be quietly reversed.
+		// Music and 3D are the newer pair: Router's registry says a category
+		// waits for a second implementation, since with one apiece a default
+		// would name that one thing while reading like a choice.
+		if requiresAModel[verb.Name()] {
 			switch {
 			case flag == nil:
-				t.Error("call responses: no --model flag, but it cannot fall back to anything")
+				t.Errorf("call %s: no --model flag, but it cannot fall back to anything",
+					verb.Name())
 			case strings.Contains(flag.Usage, "default-"):
-				t.Errorf("call responses: --model names a category, but Router resolves no "+
-					"default for this mode: %q", flag.Usage)
+				t.Errorf("call %s: --model names a category, but Router resolves no "+
+					"default for this mode: %q", verb.Name(), flag.Usage)
 			case !strings.Contains(flag.Usage, "required"):
-				t.Errorf("call responses: --model does not say it is required: %q", flag.Usage)
+				t.Errorf("call %s: --model does not say it is required: %q",
+					verb.Name(), flag.Usage)
 			}
 			continue
 		}

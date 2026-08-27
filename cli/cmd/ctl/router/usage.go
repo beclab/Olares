@@ -33,48 +33,117 @@ import (
 // priced wrongly, or not at all, produces a total that is wrong in exactly that
 // way: this is an accounting of what Router believes, not an invoice.
 
+// spendLog mirrors one row of Router's spend table, whole.
+//
+// Whole rather than the columns the table below prints, because -o json prints
+// this struct: a column left out here is a column that vanishes from the JSON,
+// which is the one output somebody scripts against.
+//
+// The quantity columns are pointers and their absence carries meaning. A call
+// is priced by whichever unit family its mode belongs to — tokens, seconds,
+// images, videos, queries — and nil means no number arrived, which is not a
+// measured zero. A VAD pass over silence stores 0.0 seconds and costs nothing;
+// an engine that reported no duration stores nil and also costs nothing, and
+// only this difference says which.
 type spendLog struct {
-	ID              int64     `json:"id"`
-	RequestID       *string   `json:"request_id,omitempty"`
-	APIKeyID        *string   `json:"api_key_id,omitempty"`
-	UserID          *string   `json:"user_id,omitempty"`
-	CallerAppID     *string   `json:"caller_app_id,omitempty"`
-	ProviderID      *string   `json:"provider_id,omitempty"`
-	ProviderModelID *string   `json:"provider_model_id,omitempty"`
-	ModelName       string    `json:"model_name"`
-	Mode            string    `json:"mode"`
-	PromptTokens    int64     `json:"prompt_tokens"`
-	CompletionTok   int64     `json:"completion_tokens"`
-	TotalTokens     int64     `json:"total_tokens"`
-	ReasoningTokens *int64    `json:"reasoning_tokens,omitempty"`
-	CostUSD         float64   `json:"cost_usd"`
-	Status          string    `json:"status"`
-	HTTPStatus      int       `json:"http_status"`
-	ErrorCode       *string   `json:"error_code,omitempty"`
-	LatencyMS       int64     `json:"latency_ms"`
-	Tags            []string  `json:"tags,omitempty"`
-	CreatedAt       time.Time `json:"created_at"`
-}
-
-type spendSummaryRow struct {
-	Key           string  `json:"key"`
-	Label         string  `json:"label"`
-	Installed     bool    `json:"installed,omitempty"`
-	Requests      int64   `json:"requests"`
-	CostUSD       float64 `json:"cost_usd"`
-	TotalTokens   int64   `json:"total_tokens"`
+	ID              int64   `json:"id"`
+	AttemptID       *string `json:"attempt_id,omitempty"`
+	RequestID       *string `json:"request_id,omitempty"`
+	APIKeyID        *string `json:"api_key_id,omitempty"`
+	UserID          *string `json:"user_id,omitempty"`
+	CallerAppID     *string `json:"caller_app_id,omitempty"`
+	ProviderID      *string `json:"provider_id,omitempty"`
+	ProviderModelID *string `json:"provider_model_id,omitempty"`
+	ModelName       string  `json:"model_name"`
+	Mode            string  `json:"mode"`
+	// Op is the operation within the mode: which media operation, which
+	// audio route. A mode alone does not say what was asked for.
+	Op            *string `json:"op,omitempty"`
 	PromptTokens  int64   `json:"prompt_tokens"`
 	CompletionTok int64   `json:"completion_tokens"`
+	TotalTokens   int64   `json:"total_tokens"`
+	CacheCreation *int64  `json:"cache_creation_input_tokens,omitempty"`
+	CacheRead     *int64  `json:"cache_read_input_tokens,omitempty"`
+	ReasoningTok  *int64  `json:"reasoning_tokens,omitempty"`
+	CostUSD       float64 `json:"cost_usd"`
+	Status        string  `json:"status"`
+	HTTPStatus    int     `json:"http_status"`
+	ErrorCode     *string `json:"error_code,omitempty"`
+	LatencyMS     int64   `json:"latency_ms"`
+	// TTFTMS is how long the caller waited for the first token, and exists
+	// only for a stream. QueueMS is the part of the latency the engine did
+	// not spend working, and only a local engine reports the timings it is
+	// derived from.
+	TTFTMS   *int64 `json:"ttft_ms,omitempty"`
+	QueueMS  *int64 `json:"queue_ms,omitempty"`
+	Streamed bool   `json:"streamed"`
+
+	AudioInputSeconds  *float64 `json:"audio_input_seconds,omitempty"`
+	AudioOutputSeconds *float64 `json:"audio_output_seconds,omitempty"`
+	Images             *int64   `json:"images,omitempty"`
+	ImageSize          *string  `json:"image_size,omitempty"`
+	ImageQuality       *string  `json:"image_quality,omitempty"`
+	Videos             *int64   `json:"videos,omitempty"`
+	VideoSeconds       *float64 `json:"video_seconds,omitempty"`
+	Queries            *int64   `json:"queries,omitempty"`
+
+	// SessionID groups the calls one task made. It is the caller's own id or
+	// nothing: Router cannot invent a task boundary.
+	SessionID *string   `json:"session_id,omitempty"`
+	IP        *string   `json:"ip,omitempty"`
+	UserAgent *string   `json:"user_agent,omitempty"`
+	Tags      []string  `json:"tags,omitempty"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// spendSummaryRow is one bucket. A bucket that mixes modes carries several
+// quantities at once, which is not a contradiction: cost is the sum across unit
+// families, so the quantities behind it are too.
+type spendSummaryRow struct {
+	Key       string   `json:"key"`
+	Label     string   `json:"label"`
+	IconURL   string   `json:"icon_url,omitempty"`
+	Owners    []string `json:"owners,omitempty"`
+	Installed bool     `json:"installed,omitempty"`
+	// Shared is what makes Owners readable: a shared application is one
+	// deployment serving the cluster, so its owners are whoever installed it
+	// rather than everyone who may call it.
+	Shared             bool    `json:"shared,omitempty"`
+	Requests           int64   `json:"requests"`
+	CostUSD            float64 `json:"cost_usd"`
+	TotalTokens        int64   `json:"total_tokens"`
+	PromptTokens       int64   `json:"prompt_tokens"`
+	CompletionTok      int64   `json:"completion_tokens"`
+	AudioInputSeconds  float64 `json:"audio_input_seconds"`
+	AudioOutputSeconds float64 `json:"audio_output_seconds"`
+	Images             int64   `json:"images"`
+	Videos             int64   `json:"videos"`
+	VideoSeconds       float64 `json:"video_seconds"`
+	Queries            int64   `json:"queries"`
+}
+
+// spendTotals are the same figures however the calls are grouped, so both
+// summary shapes embed one copy.
+type spendTotals struct {
+	TotalRequests        int64   `json:"total_requests"`
+	TotalSuccessRequests int64   `json:"total_success_requests"`
+	TotalCostUSD         float64 `json:"total_cost_usd"`
+	TotalTokens          int64   `json:"total_tokens"`
+	// The counters for everything not priced by the token. Tokens alone
+	// report a window of image and audio work as having done nothing.
+	TotalAudioSeconds float64 `json:"total_audio_seconds"`
+	TotalImages       int64   `json:"total_images"`
+	TotalVideos       int64   `json:"total_videos"`
+	TotalVideoSeconds float64 `json:"total_video_seconds"`
+	TotalQueries      int64   `json:"total_queries"`
+	AvgTPS            float64 `json:"avg_tps"`
 }
 
 type spendSummary struct {
-	Dim                  string            `json:"dim"`
-	Items                []spendSummaryRow `json:"items"`
-	TotalRequests        int64             `json:"total_requests"`
-	TotalSuccessRequests int64             `json:"total_success_requests"`
-	TotalCostUSD         float64           `json:"total_cost_usd"`
-	TotalTokens          int64             `json:"total_tokens"`
-	AvgTPS               float64           `json:"avg_tps"`
+	Dim       string            `json:"dim"`
+	Items     []spendSummaryRow `json:"items"`
+	Truncated bool              `json:"truncated"`
+	spendTotals
 }
 
 // spendMultiSummary is what several groupings at once answer with: the buckets
@@ -85,11 +154,7 @@ type spendMultiSummary struct {
 		Items     []spendSummaryRow `json:"items"`
 		Truncated bool              `json:"truncated"`
 	} `json:"dims"`
-	TotalRequests        int64   `json:"total_requests"`
-	TotalSuccessRequests int64   `json:"total_success_requests"`
-	TotalCostUSD         float64 `json:"total_cost_usd"`
-	TotalTokens          int64   `json:"total_tokens"`
-	AvgTPS               float64 `json:"avg_tps"`
+	spendTotals
 }
 
 // spendFilter is the one filter every usage route shares.
@@ -100,12 +165,37 @@ type spendFilter struct {
 	ProviderRef string
 	ModelRef    string
 	Status      string
+	Mode        string
+	SessionID   string
 	Since       string
 	Until       string
 	Tag         string
+	SortBy      string
+	SortOrder   string
 	Limit       int
 	Offset      int
 }
+
+// The vocabularies Router validates against, copied because there is nothing
+// to read them from. A value outside either is refused here rather than sent:
+// Router answers a 400, and one round trip earlier the message can name the
+// whole set.
+var (
+	spendStatuses = []string{"success", "failed", "canceled", "in_progress"}
+	spendModes    = []string{
+		"chat", "responses", "embedding", "rerank",
+		"image_generation", "video_generation", "music_generation", "model3d_generation",
+		"translate", "ocr", "search", "scrape", "audio", "passthrough",
+	}
+	spendSortable = []string{
+		"created_at", "cost_usd", "total_tokens", "latency_ms", "ttft_ms", "model_name",
+	}
+)
+
+// statusInProgress is the one non-terminal status, and the reason cost needs a
+// third rendering. A running call has been admitted and has not been priced, so
+// its zero is not a price.
+const statusInProgress = "in_progress"
 
 var spendDims = []string{"model", "provider", "user", "caller_app", "day", "hour"}
 
@@ -159,7 +249,9 @@ func addSpendFilterFlags(cmd *cobra.Command, fl *spendFilter) {
 	cmd.Flags().StringVar(&fl.KeyRef, "key", "", "only calls made with this key, by name, prefix or id")
 	cmd.Flags().StringVar(&fl.ProviderRef, "provider", "", "only calls to this provider, by name or id")
 	cmd.Flags().StringVar(&fl.ModelRef, "model", "", "only calls to this model, as <provider>/<model>")
-	cmd.Flags().StringVar(&fl.Status, "status", "", "success, failed or canceled")
+	cmd.Flags().StringVar(&fl.Status, "status", "", "success, failed, canceled or in_progress (still running)")
+	cmd.Flags().StringVar(&fl.Mode, "mode", "", "only calls in this mode: "+strings.Join(spendModes, ", "))
+	cmd.Flags().StringVar(&fl.SessionID, "session", "", "only the calls one task made, by the session id it sent")
 	cmd.Flags().StringVar(&fl.Since, "since", "", "calls at or after this time, or a span like 24h or 7d")
 	cmd.Flags().StringVar(&fl.Until, "until", "", "calls before this time")
 	cmd.Flags().StringVar(&fl.Tag, "tag", "", "only calls carrying this tag")
@@ -208,10 +300,34 @@ func resolveSpendQuery(ctx context.Context, pc *preparedClient, fl spendFilter) 
 		q.Set("provider_model_id", row.ProviderModelID)
 	}
 	if s := strings.ToLower(strings.TrimSpace(fl.Status)); s != "" {
-		if s != "success" && s != "failed" && s != "canceled" {
-			return nil, fmt.Errorf("--status must be success, failed or canceled, not %q", fl.Status)
+		if !containsString(spendStatuses, s) {
+			return nil, fmt.Errorf("--status must be one of %s, not %q",
+				strings.Join(spendStatuses, ", "), fl.Status)
 		}
 		q.Set("status", s)
+	}
+	if s := strings.ToLower(strings.TrimSpace(fl.Mode)); s != "" {
+		if !containsString(spendModes, s) {
+			return nil, fmt.Errorf("--mode must be one of %s, not %q",
+				strings.Join(spendModes, ", "), fl.Mode)
+		}
+		q.Set("mode", s)
+	}
+	if s := strings.TrimSpace(fl.SessionID); s != "" {
+		q.Set("session_id", s)
+	}
+	if s := strings.ToLower(strings.TrimSpace(fl.SortBy)); s != "" {
+		if !containsString(spendSortable, s) {
+			return nil, fmt.Errorf("--sort-by must be one of %s, not %q",
+				strings.Join(spendSortable, ", "), fl.SortBy)
+		}
+		q.Set("sort_by", s)
+	}
+	if s := strings.ToLower(strings.TrimSpace(fl.SortOrder)); s != "" {
+		if s != "asc" && s != "desc" {
+			return nil, fmt.Errorf("--sort-order must be asc or desc, not %q", fl.SortOrder)
+		}
+		q.Set("sort_order", s)
 	}
 	if s := strings.TrimSpace(fl.Since); s != "" {
 		when, err := parseSinceOrInstant(s)
@@ -453,8 +569,13 @@ func renderUsageSummary(w io.Writer, sum *spendSummary) error {
 	if err := renderSummaryBuckets(w, sum.Dim, sum.Items); err != nil {
 		return err
 	}
-	return renderSummaryTotals(w, sum.TotalRequests, sum.TotalSuccessRequests,
-		sum.TotalCostUSD, sum.TotalTokens, sum.AvgTPS)
+	if sum.Truncated {
+		if _, err := fmt.Fprintf(w, "\nOnly the first %d buckets are shown; this is not the whole set.\n",
+			len(sum.Items)); err != nil {
+			return err
+		}
+	}
+	return renderSummaryTotals(w, &sum.spendTotals)
 }
 
 // renderUsageSummaries prints one table per grouping and one set of totals. The
@@ -490,37 +611,120 @@ func renderUsageSummaries(w io.Writer, dims []string, multi *spendMultiSummary) 
 	if _, err := fmt.Fprintln(w); err != nil {
 		return err
 	}
-	return renderSummaryTotals(w, multi.TotalRequests, multi.TotalSuccessRequests,
-		multi.TotalCostUSD, multi.TotalTokens, multi.AvgTPS)
+	return renderSummaryTotals(w, &multi.spendTotals)
 }
 
+// renderSummaryBuckets prints the quantity columns the buckets actually carry.
+//
+// Fixed token columns would report a window of image and audio work as three
+// zeros beside a real cost, which reads as an arithmetic error rather than as a
+// different unit family. A bucket mixing modes carries several quantities at
+// once, so several columns can appear together.
 func renderSummaryBuckets(w io.Writer, dim string, items []spendSummaryRow) error {
 	if len(items) == 0 {
 		_, err := fmt.Fprintf(w, "%s: nothing in this window.\n", strings.ToUpper(dim))
 		return err
 	}
-	t := newTable(w, strings.ToUpper(dim), "REQUESTS", "COST", "TOKENS", "IN", "OUT")
+	var tokens, images, videos, audio, queries bool
+	for i := range items {
+		it := &items[i]
+		tokens = tokens || it.TotalTokens > 0
+		images = images || it.Images > 0
+		videos = videos || it.Videos > 0 || it.VideoSeconds > 0
+		audio = audio || it.AudioInputSeconds > 0 || it.AudioOutputSeconds > 0
+		queries = queries || it.Queries > 0
+	}
+	// Nothing measurable in any bucket: keep the token columns rather than a
+	// table of two columns, so the shape of the report does not depend on
+	// whether the calls in it happened to report a quantity.
+	if !tokens && !images && !videos && !audio && !queries {
+		tokens = true
+	}
+	headers := []string{strings.ToUpper(dim), "REQUESTS", "COST"}
+	if tokens {
+		headers = append(headers, "TOKENS", "IN", "OUT")
+	}
+	if images {
+		headers = append(headers, "IMAGES")
+	}
+	if videos {
+		headers = append(headers, "VIDEOS", "VIDEO S")
+	}
+	if audio {
+		headers = append(headers, "AUDIO IN S", "AUDIO OUT S")
+	}
+	if queries {
+		headers = append(headers, "QUERIES")
+	}
+	t := newTable(w, headers...)
 	for i := range items {
 		it := &items[i]
 		label := it.Label
 		if strings.TrimSpace(label) == "" {
 			label = it.Key
 		}
-		t.row(nonEmpty(label), strconv.FormatInt(it.Requests, 10), money(it.CostUSD),
-			strconv.FormatInt(it.TotalTokens, 10), strconv.FormatInt(it.PromptTokens, 10),
-			strconv.FormatInt(it.CompletionTok, 10))
+		cells := []string{nonEmpty(label), strconv.FormatInt(it.Requests, 10), money(it.CostUSD)}
+		if tokens {
+			cells = append(cells,
+				strconv.FormatInt(it.TotalTokens, 10),
+				strconv.FormatInt(it.PromptTokens, 10),
+				strconv.FormatInt(it.CompletionTok, 10))
+		}
+		if images {
+			cells = append(cells, strconv.FormatInt(it.Images, 10))
+		}
+		if videos {
+			cells = append(cells, strconv.FormatInt(it.Videos, 10), shortSeconds(it.VideoSeconds))
+		}
+		if audio {
+			cells = append(cells, shortSeconds(it.AudioInputSeconds), shortSeconds(it.AudioOutputSeconds))
+		}
+		if queries {
+			cells = append(cells, strconv.FormatInt(it.Queries, 10))
+		}
+		t.row(cells...)
 	}
 	return t.flush()
 }
 
-func renderSummaryTotals(w io.Writer, requests, succeeded int64, cost float64, tokens int64, tps float64) error {
-	failed := requests - succeeded
-	if _, err := fmt.Fprintf(w, "\n%d requests, %d of them failed, %s, %d tokens",
-		requests, failed, money(cost), tokens); err != nil {
+func renderSummaryTotals(w io.Writer, tot *spendTotals) error {
+	failed := tot.TotalRequests - tot.TotalSuccessRequests
+	if _, err := fmt.Fprintf(w, "\n%d requests, %d of them failed, %s",
+		tot.TotalRequests, failed, money(tot.TotalCostUSD)); err != nil {
 		return err
 	}
-	if tps > 0 {
-		if _, err := fmt.Fprintf(w, ", averaging %.1f tokens/s", tps); err != nil {
+	// Every quantity family that carried anything, so a report of audio or
+	// image work is not summarized by the one number that is zero on it.
+	quantities := make([]string, 0, 5)
+	if tot.TotalTokens > 0 {
+		quantities = append(quantities, fmt.Sprintf("%d tokens", tot.TotalTokens))
+	}
+	if tot.TotalAudioSeconds > 0 {
+		quantities = append(quantities, shortSeconds(tot.TotalAudioSeconds)+"s of audio")
+	}
+	if tot.TotalImages > 0 {
+		quantities = append(quantities,
+			fmt.Sprintf("%d %s", tot.TotalImages, plural(int(tot.TotalImages), "image", "images")))
+	}
+	if tot.TotalVideos > 0 {
+		quantities = append(quantities,
+			fmt.Sprintf("%d %s", tot.TotalVideos, plural(int(tot.TotalVideos), "video", "videos")))
+	}
+	if tot.TotalVideoSeconds > 0 {
+		quantities = append(quantities, shortSeconds(tot.TotalVideoSeconds)+"s of video")
+	}
+	if tot.TotalQueries > 0 {
+		quantities = append(quantities,
+			fmt.Sprintf("%d %s", tot.TotalQueries, plural(int(tot.TotalQueries), "query", "queries")))
+	}
+	if len(quantities) == 0 {
+		quantities = append(quantities, fmt.Sprintf("%d tokens", tot.TotalTokens))
+	}
+	if _, err := fmt.Fprintf(w, ", %s", strings.Join(quantities, ", ")); err != nil {
+		return err
+	}
+	if tot.AvgTPS > 0 {
+		if _, err := fmt.Fprintf(w, ", averaging %.1f tokens/s", tot.AvgTPS); err != nil {
 			return err
 		}
 	}
@@ -529,6 +733,13 @@ func renderSummaryTotals(w io.Writer, requests, succeeded int64, cost float64, t
 	}
 	_, err := fmt.Fprintln(w, "Cost is computed from the prices on each model row; a model with no price adds nothing to it.")
 	return err
+}
+
+// shortSeconds prints a duration the way it arrived, without padding: a
+// measured 0.5 and a measured 12 both read as themselves, where the fixed three
+// decimals a subtitle boundary needs would make a billed minute look rounded.
+func shortSeconds(v float64) string {
+	return strconv.FormatFloat(v, 'f', -1, 64)
 }
 
 func money(v float64) string {
@@ -555,12 +766,28 @@ func newUsageListCommand(f *cmdutil.Factory) *cobra.Command {
 One row per call. WHO is the key, person or application Router billed it to;
 STATUS is the outcome, and a failed call carries the error code Router returned.
 
+USAGE is the quantity the call was priced by, which is not tokens for most of
+what Router serves: audio is priced by the second, images by the picture, video
+by both, and search and OCR by the query. The column shows whichever quantity
+arrived, so a dash means nothing measurable came back.
+
+--status in_progress lists the calls being served right now. Their cost reads
+"pending" rather than $0: the row is written when the call starts and priced when
+it ends, and a zero there would be read as free.
+
+--sort-by ranks the whole matching set rather than the page you were handed, so
+"the most expensive call this week" is one flag rather than an export.
+
 Use this to explain a total rather than to compute one: "usage summary" is what
 adds up.
 
 Examples:
   olares-cli router usage list --since 1h
   olares-cli router usage list --status failed --limit 20
+  olares-cli router usage list --status in_progress
+  olares-cli router usage list --mode image_generation --since 7d
+  olares-cli router usage list --sort-by cost_usd --limit 10
+  olares-cli router usage list --session task-4711
   olares-cli router usage list --key ci -o json
 `,
 		Args: cobra.NoArgs,
@@ -569,6 +796,12 @@ Examples:
 		},
 	}
 	addSpendFilterFlags(cmd, &fl)
+	// Sorting is only offered here. The summary orders its buckets by cost and
+	// the export streams every match, so on those two the flag would be a
+	// setting Router ignores.
+	cmd.Flags().StringVar(&fl.SortBy, "sort-by", "",
+		"rank the whole matching set by: "+strings.Join(spendSortable, ", ")+" (default created_at)")
+	cmd.Flags().StringVar(&fl.SortOrder, "sort-order", "", "asc or desc (default desc)")
 	cmd.Flags().IntVar(&fl.Limit, "limit", 50, "how many calls to return (1-1000)")
 	cmd.Flags().IntVar(&fl.Offset, "offset", 0, "how many calls to skip")
 	addOutputFlag(cmd, &output)
@@ -607,7 +840,7 @@ func renderUsageList(ctx context.Context, pc *preparedClient, w io.Writer, items
 		return err
 	}
 	who := spendActorLabels(ctx, pc, items)
-	t := newTable(w, "WHEN", "MODEL", "MODE", "WHO", "STATUS", "TOKENS", "COST", "LATENCY")
+	t := newTable(w, "WHEN", "MODEL", "MODE", "WHO", "STATUS", "USAGE", "COST", "LATENCY")
 	for i := range items {
 		it := &items[i]
 		status := nonEmpty(it.Status)
@@ -616,15 +849,127 @@ func renderUsageList(ctx context.Context, pc *preparedClient, w io.Writer, items
 		}
 		t.row(
 			it.CreatedAt.Local().Format("2006-01-02 15:04:05"),
-			clip(nonEmpty(it.ModelName), 28), nonEmpty(it.Mode),
+			clip(nonEmpty(it.ModelName), 28), nonEmpty(spendOp(it)),
 			clip(spendActor(it, who), 24), clip(status, 30),
-			strconv.FormatInt(it.TotalTokens, 10), money(it.CostUSD),
+			spendQuantity(it), spendCost(it),
 			fmt.Sprintf("%dms", it.LatencyMS))
 	}
 	if err := t.flush(); err != nil {
 		return err
 	}
+	if err := spendZeroNotes(w, items); err != nil {
+		return err
+	}
 	return pageFooter(w, len(items), total, offset)
+}
+
+// spendOp is the MODE column: the mode, and the operation within it when Router
+// recorded one. "image_generation" alone does not say whether a picture was made
+// or edited, and the two are priced the same but are not the same call.
+func spendOp(it *spendLog) string {
+	if it.Op != nil && strings.TrimSpace(*it.Op) != "" && *it.Op != it.Mode {
+		return it.Mode + "/" + *it.Op
+	}
+	return it.Mode
+}
+
+// spendQuantity is what the call was priced by, read off whichever columns
+// carried a number rather than switched on the mode.
+//
+// Reading the columns is what keeps this honest as Router grows modes: a row
+// states its own unit family by which quantity it filled in, so a mode this
+// build has never heard of still reports the right figure. Tokens are the
+// fallback rather than the first choice, because they are the one quantity that
+// is present and zero on calls priced by something else.
+func spendQuantity(it *spendLog) string {
+	var parts []string
+	if it.Images != nil {
+		parts = append(parts, fmt.Sprintf("%d img", *it.Images))
+	}
+	if it.Videos != nil {
+		parts = append(parts, fmt.Sprintf("%d vid", *it.Videos))
+	}
+	if it.VideoSeconds != nil {
+		parts = append(parts, shortSeconds(*it.VideoSeconds)+"s")
+	}
+	if it.AudioInputSeconds != nil {
+		parts = append(parts, shortSeconds(*it.AudioInputSeconds)+"s in")
+	}
+	if it.AudioOutputSeconds != nil {
+		parts = append(parts, shortSeconds(*it.AudioOutputSeconds)+"s out")
+	}
+	if it.Queries != nil {
+		parts = append(parts, fmt.Sprintf("%d q", *it.Queries))
+	}
+	if len(parts) == 0 && it.TotalTokens > 0 {
+		parts = append(parts, fmt.Sprintf("%d tok", it.TotalTokens))
+	}
+	if len(parts) == 0 {
+		return "-"
+	}
+	return strings.Join(parts, " ")
+}
+
+// spendCost keeps a running call's cost out of the money column. Router writes
+// the row when it admits the call and prices it when the call ends, so the zero
+// in between is an absence rather than an amount.
+func spendCost(it *spendLog) string {
+	if it.Status == statusInProgress {
+		return "pending"
+	}
+	return money(it.CostUSD)
+}
+
+// spendZeroNotes explains the zeros on the page, because a zero cost has four
+// readings and the column shows one glyph for all of them: still running, priced
+// at nothing, measured with no rate to apply, or moved audio nobody measured.
+func spendZeroNotes(w io.Writer, items []spendLog) error {
+	var running, unpriced, unmetered int
+	for i := range items {
+		it := &items[i]
+		if it.Status == statusInProgress {
+			running++
+		}
+		for _, tag := range it.Tags {
+			switch tag {
+			case "unpriced":
+				unpriced++
+			case "audio_unmetered":
+				unmetered++
+			}
+		}
+	}
+	notes := make([]string, 0, 3)
+	if running > 0 {
+		notes = append(notes, fmt.Sprintf(
+			"%d %s still running. Cost is settled when the call ends, so it is pending rather than zero.",
+			running, plural(running, "call is", "calls are")))
+	}
+	if unpriced > 0 {
+		notes = append(notes, fmt.Sprintf(
+			"%d %s tagged unpriced: the quantity was measured and the model row has no rate for it, "+
+				"so the $0 is a missing price rather than free traffic. Music and 3D generation are "+
+				"there permanently today.", unpriced, plural(unpriced, "call is", "calls are")))
+	}
+	if unmetered > 0 {
+		notes = append(notes, fmt.Sprintf(
+			"%d audio %s tagged audio_unmetered: the engine reported no duration, and audio is priced "+
+				"by the second, so nothing could be charged.",
+			unmetered, plural(unmetered, "call is", "calls are")))
+	}
+	for _, note := range notes {
+		if _, err := fmt.Fprintln(w, note); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func plural(n int, one, many string) string {
+	if n == 1 {
+		return one
+	}
+	return many
 }
 
 // spendActor names who a call was billed to. A key is the most specific answer,
