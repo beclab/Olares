@@ -4,8 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 
 	"helm.sh/helm/v3/pkg/kube"
+	appsv1 "k8s.io/api/apps/v1"
+	"k8s.io/client-go/kubernetes/scheme"
 )
 
 // CollectWorkloadNames returns the set of Deployment and StatefulSet names
@@ -64,6 +67,75 @@ func CheckWorkloadReplicas(list kube.ResourceList, replicas map[string]int32) er
 		))
 	}
 
+	return errors.Join(errs...)
+}
+
+// CheckWorkloadReplicasRendered asserts that every rendered Deployment and
+// StatefulSet in list carries spec.replicas == want. list must be a helm render
+// performed with `.Values.workloads.<name>.replicaCount` set to want for every
+// declared workload.
+//
+// This is how the platform starts and stops an app: app-service does not patch
+// workloads, it re-runs helm with that value overridden (HelmOps.Scale). A chart
+// whose spec.replicas does not track the value therefore cannot be stopped at
+// all -- the upgrade produces an identical manifest, nothing is written, the pods
+// stay up, and the stop sits in Stopping until its 30-minute TTL turns into
+// StopFailed. The same override drives the replicas=0 first phase of a two-phase
+// install, so a chart that ignores it also runs its pods before the resource and
+// GPU admission checks have passed.
+//
+// Static inspection of the template cannot decide this. `| default 1` neutralises
+// a correct-looking reference because helm's default treats 0 as empty; a
+// template that omits spec.replicas entirely takes the Kubernetes default of 1
+// while naming no value at all; and a count reached through _helpers.tpl, an if
+// block or a subchart is not visible on the replicas line. Comparing two real
+// renders is immune to all of them.
+//
+// A workload with spec.replicas unset counts as 1, matching Kubernetes' own
+// default rather than being skipped: "no value" is precisely the failure this
+// check exists to catch.
+func CheckWorkloadReplicasRendered(list kube.ResourceList, want int32) error {
+	var errs []error
+	for _, r := range list {
+		kind := r.Object.GetObjectKind().GroupVersionKind().Kind
+		var (
+			name string
+			got  *int32
+		)
+		switch kind {
+		case KindDeployment:
+			var dep appsv1.Deployment
+			if err := scheme.Scheme.Convert(r.Object, &dep, nil); err != nil {
+				return err
+			}
+			name, got = dep.Name, dep.Spec.Replicas
+		case KindStatefulSet:
+			var sts appsv1.StatefulSet
+			if err := scheme.Scheme.Convert(r.Object, &sts, nil); err != nil {
+				return err
+			}
+			name, got = sts.Name, sts.Spec.Replicas
+		default:
+			continue
+		}
+		effective := int32(1)
+		if got != nil {
+			effective = *got
+		}
+		if effective == want {
+			continue
+		}
+		detail := fmt.Sprintf("%d", effective)
+		if got == nil {
+			detail = "unset (Kubernetes defaults it to 1)"
+		}
+		errs = append(errs, fmt.Errorf(
+			"%s %q: spec.replicas rendered as %s while workloads.%s.replicaCount was %d; "+
+				"the platform starts and stops an app by overriding that value, so spec.replicas must "+
+				"reference it directly, without `default` or any other filter that discards a zero",
+			strings.ToLower(kind), name, detail, name, want,
+		))
+	}
 	return errors.Join(errs...)
 }
 

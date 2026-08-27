@@ -1,0 +1,6 @@
+apiVersion: v2
+name: wlrnoreplicas
+description: fixture whose Deployment omits spec.replicas entirely
+type: application
+version: 1.0.0
+appVersion: "1"
