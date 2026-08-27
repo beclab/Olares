@@ -96,6 +96,6 @@ If the application is stopped, crash-looping, cannot pull its image, or has no G
 
 ## Two mistakes worth naming
 
-**Editing Router when the model application is the problem.** Changing a provider's base URL, re-importing models, or re-registering the provider does nothing for a model that has not finished downloading. Check `local progress` before touching the Router row.
+**Editing Router when the model application is the problem.** Changing a provider's base URL, re-importing models, or re-registering the provider does nothing for a model that has not finished downloading. Check `model progress <model>` before touching the Router row.
 
-**Treating a whole-subtree 404 as a missing resource.** `app` answering 404 means Router's Market proxy is not configured; a `local` route answering 404 can mean that route arrived in a later Model Console version, which `local endpoints` confirms. Neither is a row that went missing.
+**Treating a whole-subtree 404 as a missing resource.** A Market-proxy route answering 404 means Router's Market proxy is not configured; a Model Console route answering 404 can mean it arrived in a later Model Console version than the one installed, which `model diag endpoints --app <app>` confirms by listing what this application actually mounts. Neither is a row that went missing.

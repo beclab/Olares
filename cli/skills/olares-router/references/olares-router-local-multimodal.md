@@ -18,9 +18,22 @@ A model application's Model Console launches one engine, chosen by the kind of m
 | Translation | `translate` | a translation engine | `router call translate` |
 | Document OCR | `ocr` | an OCR adapter in front of llama.cpp | `router call ocr` |
 
-The rest of the vocabulary — `responses`, `image_generation`, `video_generation`, `search`, `scrape`, `moderation` — is served by cloud providers rather than by anything installable here today. `router model list --mode <mode>` is what says which of them this Olares actually has.
+The four creative modes are the exception to "cloud or nothing". `image_generation`, `video_generation`, `music_generation` and `model3d_generation` are served locally by **FlowStudio**, a Market application that runs ComfyUI workflows and starts a GPU engine per project; a cloud vendor serves the first two as well. It is not managed like the applications above — it brings its own model and engine management rather than a Model Console, so the `model spec` and `model progress` verbs are not its interface, and Router reaches it as an ordinary provider whose models are named `FlowStudio/<workflow>`:
 
-Two of those cannot be called from this CLI, for different reasons. `moderation` has no data plane endpoint in Router at all: a row can declare the mode and a default category exists for it, but there is no `/v1/moderations` to send anything to, from here or from any other client. `responses` does have an endpoint — `router call responses` — but it is the one mode Router resolves no default for, so that verb requires `--model` and there is no `default-responses` to fall back to.
+| Kind | Router mode | Called with | Default category |
+|---|---|---|---|
+| Pictures | `image_generation` | `router call image` | `default-image-generation` |
+| Clips | `video_generation` | `router call video` | `default-video-generation` |
+| Tracks | `music_generation` | `router call music` | none — `--model` required |
+| Meshes | `model3d_generation` | `router call 3d` | none — `--model` required |
+
+The two without a category are deliberate: Router adds one when a second implementation exists, because with one workflow apiece a `default-music-generation` would name that workflow while reading like a choice. So those two verbs refuse a request with no `--model` rather than resolving one. Neither is priced today either, which is why their usage rows carry `unpriced` — real traffic, no money.
+
+A FlowStudio model **is** a workflow somebody published, so the names are that installation's rather than a catalogue's, and Router re-reads them on a timer because publishing one raises no event. `router model list --mode music_generation` is the only authority on what can be sent; a name copied from anywhere else is a guess.
+
+The rest of the vocabulary — `responses`, `search`, `scrape`, `moderation` — is served by cloud providers rather than by anything installable here today. `router model list --mode <mode>` is what says which of them this Olares actually has.
+
+Two of those cannot be called from this CLI, for different reasons. `moderation` has no data plane endpoint in Router at all: a row can declare the mode and a default category exists for it, but there is no `/v1/moderations` to send anything to, from here or from any other client. `responses` does have an endpoint — `router call responses` — but it is the one text mode Router resolves no default for, so that verb requires `--model` and there is no `default-responses` to fall back to.
 
 `audio` is one mode covering different jobs, and which one a row serves is in its capability flags rather than its mode. The 13 entries below are the current `terminus-apps` staging directories, not a claim that all 13 are formally released. An application declares only its listed capability or pair, so a model that transcribes genuinely cannot speak, and one that aligns cannot transcribe:
 

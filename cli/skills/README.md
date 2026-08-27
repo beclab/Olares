@@ -36,7 +36,7 @@ cli/skills/
 ├── olares-router/     # olares-cli router (Router gateway + the Model Console inside a model app; Olares >= 1.12.7)
 │   ├── SKILL.md
 │   └── references/    # architecture / external providers / local LLM / multimodal /
-│                      # console / defaults+access / usage+audit+trace / calling / diagnosis
+│                      # console / defaults+access / usage+audit / calling / diagnosis
 ├── olares-chart/      # olares-cli chart (chart authoring + deploy to your Olares)
 │   ├── SKILL.md
 │   └── references/    # one file per refinement area / capability

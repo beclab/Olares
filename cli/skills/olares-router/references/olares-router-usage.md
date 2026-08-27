@@ -7,7 +7,7 @@ Two separate records, answering two different questions. Reaching for the wrong 
 | What was called, by whom, and what did it cost? | `router usage` — one row per model call |
 | Who changed Router, and to what? | `router audit` — one row per management write |
 
-There is no third record. Router accepted OTLP spans from agent frameworks and served them back for a while; the tables were dropped and the routes withdrawn, because a usage row already carries the model, tokens, cost, latency, status and failure reason, and keeping request bodies to add to that bought compliance exposure rather than insight. A `router trace` in an older transcript or script no longer exists.
+There is no third record. Router accepted OTLP spans from agent frameworks and served them back for a while; the tables were dropped and the routes withdrawn, because a usage row already carries the model, tokens, cost, latency, status and failure reason, and keeping request bodies to add to that bought compliance exposure rather than insight. A router `trace` verb in an older transcript or script no longer exists.
 
 ## Usage
 
@@ -16,6 +16,9 @@ olares-cli router usage summary --since 7d
 olares-cli router usage summary --by user --since 30d
 olares-cli router usage summary --by model,provider,caller_app --since 7d
 olares-cli router usage list --status failed --limit 20
+olares-cli router usage list --status in_progress
+olares-cli router usage list --mode video_generation --sort-by cost_usd --limit 10
+olares-cli router usage list --session task-4711
 olares-cli router usage export --since 30d --out calls.csv
 olares-cli router usage retention
 ```
@@ -24,10 +27,25 @@ olares-cli router usage retention
 
 - `--by` groups a summary by `model`, `provider`, `user`, `caller_app`, `day` or `hour`. `day` and `hour` are how a spike gets located; `caller_app` is how it gets attributed.
 - Several groupings, comma-separated, come back from one request: `--by model,provider,user` prints a table each and one set of totals, because every grouping counts the same calls. `hour` is the exception and is answered on its own — an hourly series grows with the window where the others are a bounded set of names.
-- Filters compose across all three verbs: `--model`, `--provider`, `--key`, `--user`, `--caller-app`, `--status`, `--tag`, `--since`, `--until`. `--since` takes an instant or a span like `24h` or `7d`. `--caller-app` names an application by its title, its Olares application name or the appid a row shows — the same spelling `quota set --caller-app` takes.
+- Filters compose across all three verbs: `--model`, `--provider`, `--key`, `--user`, `--caller-app`, `--status`, `--mode`, `--session`, `--tag`, `--since`, `--until`. `--since` takes an instant or a span like `24h` or `7d`. `--caller-app` names an application by its title, its Olares application name or the appid a row shows — the same spelling `quota set --caller-app` takes.
 - `--status failed` is the one to reach for after a complaint: a failed call still carries the error code Router returned, so the reason is in the row.
+- `--sort-by` is on `list` alone, and it ranks the whole matching set rather than the page: `--sort-by cost_usd` answers "the most expensive call this week" without exporting anything. It takes `created_at`, `cost_usd`, `total_tokens`, `latency_ms`, `ttft_ms` or `model_name`, with `--sort-order asc|desc`.
 
 Every accepted call becomes a row, including one the upstream then refused. Cost comes from the prices on the model row, so a model imported without prices records tokens and no money — that is a configuration gap in the model row, not missing usage.
+
+### A row is not a token count
+
+`--status in_progress` is the fourth status, and it is the same call as the row that follows it rather than a different kind of event: Router writes the row when it admits a call and prices it when the call ends. So a running row's cost reads `pending`, not `$0` — a video generation sits there for minutes, and a zero would be read as free. A call that stayed in that state long after the work should have finished is a call whose completion never arrived, which is a Router-side question rather than a billing one.
+
+What a call is priced by depends on the mode, so the quantity column is whichever one the row filled in: tokens for text, seconds for audio and video, pictures for images, tracks and meshes for the two newest families, queries for search and OCR. Reading the row rather than the mode is deliberate — a mode this CLI has never heard of still reports the right figure. A dash means nothing measurable came back.
+
+Three zeros mean three different things and `list` says which under the table:
+
+- **still running** — priced when it ends, as above.
+- **`unpriced`** — the quantity was measured and the model row carries no rate for it. Music and 3D generation are permanently here today: Router has no price list for either, so the traffic is real and the money is not. Fixing it means putting prices on the model row.
+- **`audio_unmetered`** — the engine reported no duration, and audio is charged by the second, so there was nothing to multiply.
+
+`--session` follows one piece of work across the calls it took. An agent or a split audio job sends a session id, so the six calls that transcribed one recording are one filter apart instead of six rows to spot by timestamp.
 
 A row carries a key only when the call presented one. `router call` presents none by default, so its rows have an empty key and are attributed to the person: **`--key` will not find them, and `--user` is how they are read.** A row with no key is the normal shape for a call made from `olares-cli` or from a browser, not a record that lost its attribution.
 
