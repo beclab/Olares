@@ -15,7 +15,7 @@ The **post-install** surface for an Olares app. Inspect the app, list its entran
 | `get <app>` | normal | VERIFIED | Detail view (filtered client-side; no per-app endpoint) |
 | `entrances list <app>` | normal | VERIFIED | Entrance names, auth levels, visibility. Its `STATE` and `URL` columns read `-`; for the app's host use `list` / `get` |
 | `env get <app>` | normal | VERIFIED | Current per-app env vector |
-| `env set <app> KEY=VALUE [KEY=VALUE...]` | normal | UNVERIFIED | Replace the env vector |
+| `env set <app> --var KEY=VALUE [--var ...]` | normal | VERIFIED | Patch the named variables only |
 | `domain get <app> <entrance>` | normal | VERIFIED | Per-entrance custom-domain setup |
 | `domain list <app>` | normal | VERIFIED | Every entrance's domain setup |
 | `domain set <app> <entrance> [flags]` | normal | UNVERIFIED | RMW update |
@@ -115,10 +115,14 @@ olares-cli settings apps auth-level set firefox www --level public
 
 ```bash
 olares-cli settings apps env get gitea
-olares-cli settings apps env set gitea GITEA_TOKEN=abc DB_PASS=xyz
+olares-cli settings apps env set gitea --var GITEA_TOKEN=abc --var DB_PASS=xyz
 ```
 
-- `env set` REPLACES the full env vector. Read current env first if you only want to add a single var.
+- **Values go through `--var KEY=VALUE`, repeated per variable** — positional `KEY=VALUE` pairs are not accepted.
+- `env set` sends only the variables you name; the upstream patches those entries and leaves the rest of the vector alone, so there is no need to read the current env first.
+- **An app's variables come from its chart and cannot be created here.** A name the app does not declare is dropped by the upstream, so `env set` checks the response and fails naming the keys that were ignored.
+- **Naming a read-only variable fails the whole request** with `app env '<name>' is not editable` — `env get` shows which are editable under `--output json`.
+- Only the first `=` splits, so a value may contain `=`: `--var "GREETING=hi=there"`.
 - For secrets, pipe via env var or stdin redirection. Don't paste the value into chat.
 
 ## `list` filters
@@ -136,7 +140,7 @@ olares-cli settings apps list --all            # also include uninstalled / pend
 - **Always run `entrances list <app>` before any per-entrance edit.** User-facing names (e.g. `www`) often differ from the chart-defined service names.
 - **For `policy set`**, surface `policy get` output to the user BEFORE applying — the replacement semantics are easy to misuse.
 - **For `domain set --third-party`**, run `domain get` first and act on that one stage only (table above). Hand over the CNAME name/value split verbatim, wait for them to confirm the record, then `finish` — a full command list given up front reliably ends with `finish` run against a record nobody added yet.
-- **For UNVERIFIED verbs** (`env set`, `domain set/finish`, `policy set`, `auth-level set`), the result is provisional — confirm the outcome after running.
+- **For UNVERIFIED verbs** (`domain set/finish`, `policy set`, `auth-level set`), the result is provisional — confirm the outcome after running.
 
 ## Common errors
 

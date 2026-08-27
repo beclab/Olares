@@ -14,6 +14,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/beclab/Olares/cli/pkg/bflenvelope"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 	"github.com/beclab/Olares/cli/pkg/whoami"
 )
@@ -130,14 +131,6 @@ func newDoer(ctx context.Context, f *cmdutil.Factory) (*whoami.HTTPClient, error
 	return whoami.NewHTTPClient(hc, rp.DesktopURL, rp.OlaresID), nil
 }
 
-// bflEnvelope is search3's (and BFL's) shared response shape. code 0/200
-// mean success; data carries the typed payload.
-type bflEnvelope struct {
-	Code    int             `json:"code"`
-	Message string          `json:"message"`
-	Data    json.RawMessage `json:"data"`
-}
-
 // doEnvelope issues an authenticated request and unwraps the {code,
 // message, data} envelope into out. out may be nil for fire-and-forget
 // calls (e.g. cancel).
@@ -149,31 +142,11 @@ func doEnvelope(ctx context.Context, d *whoami.HTTPClient, method, path string, 
 // soft codes as success, decoding whatever data they carry. This lets callers
 // tolerate non-fatal upstream codes (e.g. /search/more's "no more results").
 func doEnvelopeAllowing(ctx context.Context, d *whoami.HTTPClient, method, path string, body, out interface{}, softCodes ...int) error {
-	var env bflEnvelope
+	var env bflenvelope.Envelope
 	if err := d.DoJSON(ctx, method, path, body, &env); err != nil {
 		return err
 	}
-	ok := env.Code == 0 || env.Code == 200
-	for _, c := range softCodes {
-		if env.Code == c {
-			ok = true
-			break
-		}
-	}
-	if !ok {
-		msg := strings.TrimSpace(env.Message)
-		if msg == "" {
-			return fmt.Errorf("%s %s: upstream returned code %d", method, path, env.Code)
-		}
-		return fmt.Errorf("%s %s: upstream returned code %d: %s", method, path, env.Code, msg)
-	}
-	if out == nil || len(env.Data) == 0 {
-		return nil
-	}
-	if err := json.Unmarshal(env.Data, out); err != nil {
-		return fmt.Errorf("%s %s: decode data: %w", method, path, err)
-	}
-	return nil
+	return bflenvelope.Data(method, path, env, out, softCodes...)
 }
 
 // resultItem captures the fields the desktop SPA reads off each result

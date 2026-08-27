@@ -18,6 +18,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/beclab/Olares/cli/pkg/bflenvelope"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 	"github.com/beclab/Olares/cli/pkg/credential"
 	"github.com/beclab/Olares/cli/pkg/whoami"
@@ -73,33 +74,12 @@ func prepare(ctx context.Context, f *cmdutil.Factory) (*preparedClient, error) {
 	}, nil
 }
 
-type bflEnvelope struct {
-	Code    int             `json:"code"`
-	Message string          `json:"message"`
-	Data    json.RawMessage `json:"data"`
-}
-
 func doGetEnvelope(ctx context.Context, d Doer, path string, out interface{}) error {
-	var env bflEnvelope
+	var env bflenvelope.Envelope
 	if err := d.DoJSON(ctx, "GET", path, nil, &env); err != nil {
 		return err
 	}
-	switch env.Code {
-	case 0, 200:
-	default:
-		msg := strings.TrimSpace(env.Message)
-		if msg == "" {
-			return fmt.Errorf("GET %s: upstream returned code %d", path, env.Code)
-		}
-		return fmt.Errorf("GET %s: upstream returned code %d: %s", path, env.Code, msg)
-	}
-	if out == nil || len(env.Data) == 0 {
-		return nil
-	}
-	if err := json.Unmarshal(env.Data, out); err != nil {
-		return fmt.Errorf("GET %s: decode data: %w", path, err)
-	}
-	return nil
+	return bflenvelope.Data("GET", path, env, out)
 }
 
 func printJSON(w io.Writer, v interface{}) error {
