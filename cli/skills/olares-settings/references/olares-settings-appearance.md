@@ -104,7 +104,7 @@ When an uploaded image is active, the built-in line drops `currently` and that U
 
 Ranges (mirroring the SPA's `picturesCount`, the only place they exist): desktop `0-27`, login `0-28` — `28` is valid for login and invalid for desktop. `set` also takes an uploaded `https://` URL, and the stored `/bg/<n>.jpg` spelling so a value read from `get -o json` can be fed back in.
 
-The value is stored verbatim and **not validated upstream** — a bad one is accepted and leaves a broken background with no error. The CLI therefore validates first; `--force` stores the value as given, for one a newer release adds. Uploaded URLs are judged by shape, not looked up, so `set` stays a single request.
+The value is stored verbatim and **not validated upstream** — a bad one is accepted and leaves a broken background with no error. The CLI therefore validates first; `--force` drops the range check for a built-in a newer release adds, still storing a number as `/bg/<n>.jpg`. Uploaded URLs are judged by shape, not looked up, so `set` stays a single request.
 
 **Never offer `/login/<n>.jpg`.** Both surfaces store `/bg/<n>.jpg`: the greeter resolves the stored value under its own asset root (`LoginPage.vue` renders `"auth/" + value`), and the Settings page swaps the prefix to `/login/` only to preview the login variant. A stored `/login/<n>.jpg` resolves nowhere.
 

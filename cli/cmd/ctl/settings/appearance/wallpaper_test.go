@@ -67,7 +67,7 @@ func TestResolveWallpaperValue(t *testing.T) {
 			"https://files.example/a.png":  "https://files.example/a.png",
 			"http://files.example/a.png":   "http://files.example/a.png",
 		} {
-			got, err := resolveWallpaperValue(s, raw)
+			got, err := resolveWallpaperValue(s, raw, false)
 			if err != nil {
 				t.Errorf("%s rejected valid %q: %v", s.name, raw, err)
 				continue
@@ -88,7 +88,7 @@ func TestResolveWallpaperValue(t *testing.T) {
 			"bg/3.jpg",
 			"",
 		} {
-			if _, err := resolveWallpaperValue(s, bad); err == nil {
+			if _, err := resolveWallpaperValue(s, bad, false); err == nil {
 				t.Errorf("%s accepted invalid %q", s.name, bad)
 			}
 		}
@@ -100,24 +100,80 @@ func TestResolveWallpaperValue(t *testing.T) {
 		t.Fatal("test assumes the two surfaces differ in built-in count")
 	}
 	edge := fmt.Sprint(desktop.builtinCount)
-	if _, err := resolveWallpaperValue(desktop, edge); err == nil {
+	if _, err := resolveWallpaperValue(desktop, edge, false); err == nil {
 		t.Errorf("desktop accepted %q, which is past its own range", edge)
 	}
-	if _, err := resolveWallpaperValue(login, edge); err != nil {
+	if _, err := resolveWallpaperValue(login, edge, false); err != nil {
 		t.Errorf("login rejected %q, which is inside its range: %v", edge, err)
 	}
 
 	// An out-of-range number is a near miss, so the message only needs
 	// the range; an unparseable value needs the whole how-to.
-	_, err := resolveWallpaperValue(desktop, "999")
+	_, err := resolveWallpaperValue(desktop, "999", false)
 	if want := builtinWallpaperRange(desktop); !strings.Contains(err.Error(), want) {
 		t.Errorf("error %q missing the range %q", err, want)
 	}
-	_, err = resolveWallpaperValue(desktop, "/bg/3.png")
+	_, err = resolveWallpaperValue(desktop, "/bg/3.png", false)
 	for _, want := range []string{"wallpaper list desktop", "--force", builtinWallpaperRange(desktop)} {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("error %q missing %q", err, want)
 		}
+	}
+}
+
+// --force relaxes the checks, not the vocabulary. The bare number is not
+// a value the backend can resolve, so forcing one has to store
+// /bg/<n>.jpg -- otherwise the escape hatch offered by the out-of-range
+// message silently writes a broken background.
+func TestResolveWallpaperValueForceKeepsTheNumberVocabulary(t *testing.T) {
+	s := surfaces["desktop"]
+
+	// The exact path the out-of-range error invites: a built-in a newer
+	// release added, past the count this CLI was built with.
+	beyond := s.builtinCount
+	got, err := resolveWallpaperValue(s, fmt.Sprint(beyond), true)
+	if err != nil {
+		t.Fatalf("force rejected %d: %v", beyond, err)
+	}
+	if want := builtinWallpaperValue(beyond); got != want {
+		t.Errorf("force resolveWallpaperValue(%d) = %q; want %q", beyond, got, want)
+	}
+
+	// In-range numbers resolve the same with or without the flag.
+	for _, raw := range []string{"0", "3"} {
+		forced, err := resolveWallpaperValue(s, raw, true)
+		if err != nil {
+			t.Fatalf("force rejected %q: %v", raw, err)
+		}
+		plain, err := resolveWallpaperValue(s, raw, false)
+		if err != nil {
+			t.Fatalf("%q rejected without force: %v", raw, err)
+		}
+		if forced != plain {
+			t.Errorf("--force changed %q from %q to %q", raw, plain, forced)
+		}
+	}
+
+	// A shape this CLI cannot read is the one case force sends verbatim,
+	// since there is nothing to resolve it to.
+	for _, raw := range []string{"/bg/3.png", "/login/5.jpg"} {
+		got, err := resolveWallpaperValue(s, raw, true)
+		if err != nil {
+			t.Fatalf("force rejected %q: %v", raw, err)
+		}
+		if got != raw {
+			t.Errorf("force resolveWallpaperValue(%q) = %q; want it verbatim", raw, got)
+		}
+	}
+
+	// Whatever force stores, `get` and the confirmation line must be able
+	// to name it the way the user selected it.
+	forced, err := resolveWallpaperValue(s, fmt.Sprint(beyond), true)
+	if err != nil {
+		t.Fatalf("force rejected %d: %v", beyond, err)
+	}
+	if want := fmt.Sprintf("built-in %d", beyond); describeWallpaperValue(forced) != want {
+		t.Errorf("describeWallpaperValue(%q) = %q; want %q", forced, describeWallpaperValue(forced), want)
 	}
 }
 
@@ -187,7 +243,7 @@ func TestBuiltinWallpapersEnumeratesTheWholeRange(t *testing.T) {
 	// Every generated value must be accepted by set, or `list` would be
 	// advertising values `set` refuses.
 	for _, v := range got {
-		if _, err := resolveWallpaperValue(s, v); err != nil {
+		if _, err := resolveWallpaperValue(s, v, false); err != nil {
 			t.Fatalf("listed value %q is rejected by set: %v", v, err)
 		}
 	}

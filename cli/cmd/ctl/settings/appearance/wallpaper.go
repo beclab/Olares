@@ -143,24 +143,36 @@ func (s surface) builtinWallpapers() []string {
 // verbatim and never checks it: an out-of-range number would leave a
 // broken background behind with no error. Uploaded URLs are judged on
 // their shape rather than looked up, to keep this offline.
-func resolveWallpaperValue(s surface, raw string) (string, error) {
+//
+// force drops the range and shape checks, never the number vocabulary:
+// a built-in a newer release adds still has to be stored as /bg/<n>.jpg,
+// since the bare number is not a value the backend can resolve.
+func resolveWallpaperValue(s surface, raw string, force bool) (string, error) {
 	if isUploadedWallpaperURL(raw) {
 		return raw, nil
 	}
+	n, ok := builtinWallpaperNumber(raw)
+	if !ok {
+		if force {
+			return raw, nil
+		}
+		return "", fmt.Errorf("%q is not a %s wallpaper: pass a built-in number (%s) or an https:// URL from `wallpaper upload`; run `olares-cli settings appearance wallpaper list %s` to see the choices (--force sends it anyway)",
+			raw, s.name, builtinWallpaperRange(s), s.name)
+	}
+	if n >= s.builtinCount && !force {
+		return "", fmt.Errorf("%s has no built-in wallpaper %d: %s", s.name, n, builtinWallpaperRange(s))
+	}
+	return builtinWallpaperValue(n), nil
+}
+
+// builtinWallpaperNumber reads a built-in's number from either spelling a
+// user may type: the bare number the Settings grid shows, or the
+// /bg/<n>.jpg value `get -o json` reports.
+func builtinWallpaperNumber(raw string) (int, bool) {
 	if n, err := strconv.Atoi(raw); err == nil && n >= 0 {
-		if n >= s.builtinCount {
-			return "", fmt.Errorf("%s has no built-in wallpaper %d: %s", s.name, n, builtinWallpaperRange(s))
-		}
-		return builtinWallpaperValue(n), nil
+		return n, true
 	}
-	if n, ok := builtinWallpaperIndex(raw); ok {
-		if n >= s.builtinCount {
-			return "", fmt.Errorf("%s has no built-in wallpaper %d: %s", s.name, n, builtinWallpaperRange(s))
-		}
-		return raw, nil
-	}
-	return "", fmt.Errorf("%q is not a %s wallpaper: pass a built-in number (%s) or an https:// URL from `wallpaper upload`; run `olares-cli settings appearance wallpaper list %s` to see the choices (--force sends it anyway)",
-		raw, s.name, builtinWallpaperRange(s), s.name)
+	return builtinWallpaperIndex(raw)
 }
 
 func isUploadedWallpaperURL(raw string) bool {
@@ -374,8 +386,8 @@ Two kinds of value work:
 
 The upstream stores the value verbatim and never checks it, so an
 out-of-range number would leave a broken background behind with no error.
-This command therefore validates first; --force skips that for a value a
-newer release adds.
+This command therefore validates first; --force skips that for a built-in
+a newer release adds, and still stores a number as /bg/<n>.jpg.
 
 Examples:
   olares-cli settings appearance wallpaper set desktop 3
@@ -391,16 +403,14 @@ Examples:
 			if raw == "" {
 				return fmt.Errorf("set requires a built-in number or an uploaded URL")
 			}
-			bg := raw
-			if !force {
-				if bg, err = resolveWallpaperValue(s, raw); err != nil {
-					return err
-				}
+			bg, err := resolveWallpaperValue(s, raw, force)
+			if err != nil {
+				return err
 			}
 			return runWallpaperSet(c.Context(), f, s, bg)
 		},
 	}
-	cmd.Flags().BoolVar(&force, "force", false, "store the value as given, skipping validation (forward compatibility)")
+	cmd.Flags().BoolVar(&force, "force", false, "skip the range and shape checks, still resolving a number to /bg/<n>.jpg (forward compatibility)")
 	return cmd
 }
 
