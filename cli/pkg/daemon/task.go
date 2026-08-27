@@ -37,7 +37,9 @@ func (g *InstallTerminusdBinary) Execute(runtime connector.Runtime) error {
 		return errors.Wrap(errors.WithStack(err), "sync olaresd tar.gz failed")
 	}
 
-	installCmd := fmt.Sprintf("tar -zxf %s && cp -f olaresd /usr/local/bin/ && chmod +x /usr/local/bin/olaresd && rm -rf olaresd*", dst)
+	extracted := filepath.Join(common.TmpDir, "olaresd")
+	installCmd := fmt.Sprintf("tar -zxf %s -C %s && install -m 0755 %s /usr/local/bin/olaresd && rm -f %s",
+		dst, common.TmpDir, extracted, extracted)
 	if _, err := runtime.GetRunner().SudoCmd(installCmd, false, false); err != nil {
 		return errors.Wrap(errors.WithStack(err), "install olaresd binaries failed")
 	}
