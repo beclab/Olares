@@ -59,8 +59,7 @@ olares-cli settings apps domain set firefox www \
   --key-file /etc/letsencrypt/live/firefox.example.com/privkey.pem
 
 # Explicitly drop a domain dimension (RMW would otherwise preserve it).
-olares-cli settings apps domain set firefox www --clear-third-party
-olares-cli settings apps domain set firefox www --clear-third-level
+olares-cli settings apps domain set firefox www --clear-third-party   # or --clear-third-level
 ```
 
 - **Unspecified flags survive** — RMW under the hood. Pass `--clear-*` to drop a dimension.
@@ -89,13 +88,10 @@ Adding or changing the third-party domain resets both status fields to empty / `
 olares-cli settings apps policy set firefox www \
   --sub-policy "uri=/admin,policy=two_factor" \
   --sub-policy "uri=/api,policy=public"
-
-# Drop the set without adding new entries.
-olares-cli settings apps policy set firefox www --clear-sub-policies
 ```
 
 - `--default-policy` values: `system` | `one_factor` | `two_factor` | `public`. That flag, `--one-time` and `--valid-duration` follow RMW semantics.
-- **Sub-policy entries are REPLACED in full whenever any sub-policy flag is passed** — partial sub-policy edits don't compose safely, so this is intentional.
+- **Sub-policy entries are REPLACED in full whenever any sub-policy flag is passed** — partial sub-policy edits don't compose safely, so this is intentional. `--clear-sub-policies` drops the set without adding new entries.
 
 ## `auth-level set` — no GET endpoint upstream
 
@@ -118,11 +114,9 @@ olares-cli settings apps env get gitea
 olares-cli settings apps env set gitea --var GITEA_TOKEN=abc --var DB_PASS=xyz
 ```
 
-- **Values go through `--var KEY=VALUE`, repeated per variable** — positional `KEY=VALUE` pairs are not accepted.
+- **Values go through `--var KEY=VALUE`, repeated per variable** — positional pairs are not accepted. Only the first `=` splits, so a value may contain one: `--var "GREETING=hi=there"`.
 - `env set` sends only the variables you name; the upstream patches those entries and leaves the rest of the vector alone, so there is no need to read the current env first.
-- **An app's variables come from its chart and cannot be created here.** A name the app does not declare is dropped by the upstream, so `env set` checks the response and fails naming the keys that were ignored.
-- **Naming a read-only variable fails the whole request** with `app env '<name>' is not editable` — `env get` shows which are editable under `--output json`.
-- Only the first `=` splits, so a value may contain `=`: `--var "GREETING=hi=there"`.
+- **Only the variables the app's chart declares can be set, and only the editable ones** — `env get --output json` shows both. An undeclared name is dropped by the upstream, so `env set` checks the response and fails naming the ignored keys; a read-only one fails the whole request with `app env '<name>' is not editable`.
 - For secrets, pipe via env var or stdin redirection. Don't paste the value into chat.
 
 ## `list` filters
