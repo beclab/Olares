@@ -95,6 +95,12 @@ func renderProviderModel(w io.Writer, p *providerRow, m *providerModelRow) error
 	if m.MaxOutputTokens > 0 {
 		t.row("MAX OUTPUT", fmt.Sprintf("%d tokens", m.MaxOutputTokens))
 	}
+	// How wide the engine was launched, which is what a caller queueing behind
+	// somebody else is up against. Absent rather than 1 when nothing declared
+	// it: an engine's own default is not readable from here.
+	if m.MaxConcurrency > 0 {
+		t.row("AT ONCE", fmt.Sprintf("%d requests", m.MaxConcurrency))
+	}
 	if args := strings.TrimSpace(m.EngineArgs); args != "" {
 		t.row("ENGINE ARGS", args)
 	}

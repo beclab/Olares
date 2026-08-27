@@ -539,7 +539,20 @@ func renderModelList(w io.Writer, items []adminModelRow, total, limit, offset in
 			"`olares-cli router provider types` to see what can be added.")
 		return err
 	}
-	t := newTable(w, "MODEL", "PROVIDER", "SERVED BY", "MODE", "SUPPORTS", "CALLABLE", "ROUTES")
+	// AT ONCE appears only when a row carries it, which is only ever a local
+	// model: the figure comes from an engine's launch flags and a cloud vendor
+	// has none. A permanent column of dashes would read as a figure nobody
+	// filled in rather than one that does not apply.
+	wide := false
+	for i := range items {
+		wide = wide || items[i].Model.MaxConcurrency > 0
+	}
+	headers := []string{"MODEL", "PROVIDER", "SERVED BY", "MODE", "SUPPORTS"}
+	if wide {
+		headers = append(headers, "AT ONCE")
+	}
+	headers = append(headers, "CALLABLE", "ROUTES")
+	t := newTable(w, headers...)
 	anyRoute := false
 	anyWarming := false
 	for i := range items {
@@ -556,21 +569,31 @@ func renderModelList(w io.Writer, items []adminModelRow, total, limit, offset in
 		if served == "" || served == it.ProviderName {
 			served = it.ProviderType
 		}
-		t.row(
+		cells := []string{
 			nonEmpty(it.Model.Name),
 			nonEmpty(it.ProviderName),
 			clip(nonEmpty(served), 24),
 			nonEmpty(it.Model.Mode),
 			summarizeSupports(it.Model.Supports),
-			it.callableNote(),
-			clip(it.routeNote(), 30),
-		)
+		}
+		if wide {
+			cells = append(cells, intOrDash(it.Model.MaxConcurrency))
+		}
+		cells = append(cells, it.callableNote(), clip(it.routeNote(), 30))
+		t.row(cells...)
 	}
 	if err := t.flush(); err != nil {
 		return err
 	}
 	if err := pageFooter(w, len(items), total, offset); err != nil {
 		return err
+	}
+	if wide {
+		if _, err := fmt.Fprintln(w, "\nAT ONCE is how many requests that model's engine was launched to "+
+			"work on at the same time. It is only known for a local engine whose launch flags said so; "+
+			"`router provider get <app>` reads the engine's current queue beside it."); err != nil {
+			return err
+		}
 	}
 	if anyWarming {
 		if _, err := fmt.Fprintln(w, "\nA model fetching weights or loading an engine gets there on its "+

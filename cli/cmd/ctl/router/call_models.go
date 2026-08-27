@@ -72,6 +72,14 @@ type modelObject struct {
 	// no phase for Router to read — looks like. A remote vendor has no
 	// weights to wait for and reads ready.
 	Readiness string `json:"readiness"`
+	// The card's own figures, carried so that -o json here says as much as
+	// Router did. ContextSize is the per-request window, MaxOutputTokens the
+	// longest reply, and MaxConcurrency how many requests the engine behind
+	// the model works on at once — the last one only for a local engine whose
+	// launch flags said, since a cloud vendor never tells us.
+	ContextSize     int `json:"context_size,omitempty"`
+	MaxOutputTokens int `json:"max_output_tokens,omitempty"`
+	MaxConcurrency  int `json:"max_concurrency,omitempty"`
 }
 
 type modelsListResponse struct {
@@ -183,16 +191,41 @@ func renderModelsList(w io.Writer, items []modelObject, includeNotReady bool) er
 		_, err := fmt.Fprintln(w, msg)
 		return err
 	}
-	t := newTable(w, "NAME", "MODE", "SUPPORTS", "READINESS", "SERVED BY")
+	// AT ONCE only where something declared it, which is only ever a local
+	// engine. A column of dashes on a list of cloud models would read as a
+	// figure nobody filled in.
+	wide := false
+	for i := range items {
+		wide = wide || items[i].MaxConcurrency > 0
+	}
+	headers := []string{"NAME", "MODE", "SUPPORTS", "READINESS"}
+	if wide {
+		headers = append(headers, "AT ONCE")
+	}
+	headers = append(headers, "SERVED BY")
+	t := newTable(w, headers...)
 	for i := range items {
 		m := &items[i]
-		t.row(
+		cells := []string{
 			m.ID,
 			nonEmpty(m.Mode),
 			summarizeSupportNames(m.Supports),
 			nonEmpty(m.Readiness),
-			clip(nonEmpty(m.OwnedBy), 24),
-		)
+		}
+		if wide {
+			cells = append(cells, intOrDash(m.MaxConcurrency))
+		}
+		cells = append(cells, clip(nonEmpty(m.OwnedBy), 24))
+		t.row(cells...)
 	}
-	return t.flush()
+	if err := t.flush(); err != nil {
+		return err
+	}
+	if wide {
+		_, err := fmt.Fprintln(w, "\nAT ONCE is how many requests that model's engine works on at the "+
+			"same time. Sending more does not fail: Router waits for a slot, and a call that waited "+
+			"looks like a slow model unless you know the width.")
+		return err
+	}
+	return nil
 }
