@@ -5,10 +5,14 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/spf13/cobra"
 )
 
-func TestSkillCommandPathsExist(t *testing.T) {
-	paths := []string{
+// skillCommandPaths is every command path the skill docs spell out, so
+// renaming or removing one fails here rather than in a user's session.
+func skillCommandPaths() []string {
+	return []string{
 		"profile",
 		"profile login",
 		"profile import",
@@ -82,6 +86,15 @@ func TestSkillCommandPathsExist(t *testing.T) {
 		"settings backup",
 		"settings integration",
 		"settings appearance",
+		"settings appearance get",
+		"settings appearance language set",
+		"settings appearance widget set",
+		"settings appearance wallpaper list",
+		"settings appearance wallpaper set",
+		"settings appearance wallpaper style set",
+		"settings appearance wallpaper upload",
+		"settings appearance wallpaper delete",
+		"settings appearance layout reset",
 		"settings network",
 		"settings gpu",
 		"settings compute",
@@ -201,9 +214,11 @@ func TestSkillCommandPathsExist(t *testing.T) {
 		"router audit list",
 		"router audit get",
 	}
+}
 
+func TestSkillCommandPathsExist(t *testing.T) {
 	root := NewDefaultCommand()
-	for _, path := range paths {
+	for _, path := range skillCommandPaths() {
 		t.Run(path, func(t *testing.T) {
 			cmd, args, err := root.Find(strings.Fields(path))
 			if err != nil {
@@ -216,6 +231,45 @@ func TestSkillCommandPathsExist(t *testing.T) {
 				t.Fatalf("resolved %q to %q", path, got)
 			}
 		})
+	}
+}
+
+// TestSkillCommandPathsExist only proves the listed paths resolve, so a
+// newly added verb can ship unlisted. This is the reverse check for the
+// area under active change: every runnable verb under `settings
+// appearance` must be listed above, and therefore documented.
+func TestEveryAppearanceVerbIsListed(t *testing.T) {
+	listed := map[string]bool{}
+	for _, path := range skillCommandPaths() {
+		listed[path] = true
+	}
+
+	root := NewDefaultCommand()
+	appearance, _, err := root.Find(strings.Fields("settings appearance"))
+	if err != nil {
+		t.Fatalf("find settings appearance: %v", err)
+	}
+
+	var found int
+	var walk func(cmd *cobra.Command)
+	walk = func(cmd *cobra.Command) {
+		if cmd.Runnable() {
+			found++
+			path := strings.TrimPrefix(cmd.CommandPath(), "olares-cli ")
+			if !listed[path] {
+				t.Errorf("verb %q is not in skillCommandPaths; add it there and document it in the skill reference", path)
+			}
+		}
+		for _, child := range cmd.Commands() {
+			walk(child)
+		}
+	}
+	walk(appearance)
+
+	// Guard against the walk silently finding nothing, which would make
+	// the check above vacuous.
+	if found < 9 {
+		t.Fatalf("walked only %d runnable appearance verbs; the subtree has at least 9", found)
 	}
 }
 

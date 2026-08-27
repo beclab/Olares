@@ -11,17 +11,18 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/beclab/Olares/cli/pkg/bflenvelope"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 	"github.com/beclab/Olares/cli/pkg/whoami"
 )
 
 var uninstalledAppStates = map[string]struct{}{
-	"pendingCanceled":      {},
-	"downloadingCanceled":  {},
-	"downloadFailed":       {},
-	"installingCanceled":   {},
-	"installFailed":        {},
-	"uninstalled":          {},
+	"pendingCanceled":     {},
+	"downloadingCanceled": {},
+	"downloadFailed":      {},
+	"installingCanceled":  {},
+	"installFailed":       {},
+	"uninstalled":         {},
 }
 
 type appOptions struct {
@@ -143,25 +144,13 @@ func decodeMyAppsResponse(method, path string, raw json.RawMessage) ([]appRaw, e
 		return apps, nil
 	}
 
-	var env bflEnvelope
+	var env bflenvelope.Envelope
 	if err := json.Unmarshal(trimmed, &env); err != nil {
 		return nil, fmt.Errorf("%s %s: decode response: %w", method, path, err)
 	}
-	switch env.Code {
-	case 0, 200:
-	default:
-		msg := strings.TrimSpace(env.Message)
-		if msg == "" {
-			return nil, fmt.Errorf("%s %s: upstream returned code %d", method, path, env.Code)
-		}
-		return nil, fmt.Errorf("%s %s: upstream returned code %d: %s", method, path, env.Code, msg)
-	}
-	if len(env.Data) == 0 {
-		return nil, nil
-	}
 	var apps []appRaw
-	if err := json.Unmarshal(env.Data, &apps); err != nil {
-		return nil, fmt.Errorf("%s %s: decode data: %w", method, path, err)
+	if err := bflenvelope.Data(method, path, env, &apps); err != nil {
+		return nil, err
 	}
 	return apps, nil
 }
