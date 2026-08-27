@@ -4,7 +4,7 @@ description: Learn how to get support for Olares through the Ticket app, Olares 
 head:
   - - meta
     - name: keywords
-      content: Olares, support, help, Ticket, Olares Space Tickets, system logs, GitHub issue
+      content: Olares support, contact Olares support, Ticket app, Olares support ticket, Olares Space tickets, Olares system logs, olares-cli ticket
 ---
 
 # Get support

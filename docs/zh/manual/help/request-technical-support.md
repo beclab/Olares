@@ -4,7 +4,7 @@ description: 了解如何通过 Ticket 应用、Olares Space 或 GitHub 获取 O
 head:
   - - meta
     - name: keywords
-      content: Olares, 支持, 帮助, Ticket 工单, Olares Space 工单, 系统日志, GitHub Issue
+      content: Olares 支持, Ticket 应用, Olares Space 工单, Olares 系统日志 
 ---
 # 获取支持
 
