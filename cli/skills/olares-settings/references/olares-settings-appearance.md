@@ -3,7 +3,9 @@
 > **Prerequisite:** Read [`../../olares-shared/SKILL.md`](../../olares-shared/SKILL.md) and the parent [`../SKILL.md`](../SKILL.md) first.
 > **Flags & examples:** `olares-cli settings appearance --help` and `olares-cli settings appearance <noun> <verb> --help`.
 
-Mirror the Settings → Appearance page: locale, theme, desktop widget preferences, wallpaper, and the desktop layout reset. Every verb is per-user; none of them require admin or owner.
+Mirror the Settings → Appearance page: locale, desktop widget preferences, wallpaper, and the desktop layout reset. Every verb is per-user; none of them require admin or owner.
+
+**There is no theme verb.** A desktop's light/dark state is a browser cookie the SPA never sends upstream, so no CLI can change it. Say that plainly instead of reaching for `settings advanced env user set --var OLARES_USER_THEME=...`, which writes a variable no Olares interface reads.
 
 ## Sub-tree
 
@@ -11,7 +13,6 @@ Mirror the Settings → Appearance page: locale, theme, desktop widget preferenc
 |---|---|---|---|---|
 | `get` | normal | any | VERIFIED | Read the whole page: locale + widget + wallpaper |
 | `language set <locale>` | normal | any | VERIFIED | Set the system language |
-| `theme set <light\|dark>` | normal | >= 1.12.6 | VERIFIED | Set the theme preference |
 | `widget set [flags]` | normal | >= 1.12.6 | VERIFIED | Set desktop widget preferences |
 | `wallpaper list <surface>` | normal | any | VERIFIED | Show the built-in range and uploaded images |
 | `wallpaper set <surface> <number\|url>` | normal | any | VERIFIED | Select a wallpaper |
@@ -24,9 +25,9 @@ Mirror the Settings → Appearance page: locale, theme, desktop widget preferenc
 
 ## Version gate (Olares >= 1.12.6)
 
-Three verbs need Olares 1.12.6+, where their upstream arrived: `theme set` (the `OLARES_USER_THEME` user env), `widget set` (the widget preferences API) and `layout reset` (the desktop layout reset route). `get`, `language set` and every `wallpaper` verb work on any supported backend.
+Two verbs need Olares 1.12.6+, where their upstream arrived: `widget set` (the widget preferences API) and `layout reset` (the desktop layout reset route). `get`, `language set` and every `wallpaper` verb work on any supported backend.
 
-On an older backend the three fail up front with the shared message naming the verb and the detected version (see [Common errors](#common-errors)); nothing is sent. `layout reset` is gated **before** its confirmation prompt, so an older backend never asks the user to confirm a reset it cannot perform. Treat daily builds by their `major.minor.patch` base (`1.12.6-20260203` is the 1.12.6 line). Follow the shared auth/version gate when the version cannot be established.
+On an older backend the two fail up front with the shared message naming the verb and the detected version (see [Common errors](#common-errors)); nothing is sent. `layout reset` is gated **before** its confirmation prompt, so an older backend never asks the user to confirm a reset it cannot perform. Treat daily builds by their `major.minor.patch` base (`1.12.6-20260203` is the 1.12.6 line). Follow the shared auth/version gate when the version cannot be established.
 
 `get` is the one verb that degrades instead of failing: below 1.12.6 it reads locale and wallpaper — which exist everywhere — and renders the widget section as `requires Olares >= 1.12.6`. With `-o json` that section is `null`, the key still present so a caller can tell a gated section from one this CLI does not know about. On 1.12.5 the locale section also returns an empty `timezone`, which renders as `-`.
 
@@ -45,7 +46,7 @@ A section that fails for any other reason — auth, 500, a malformed body — fa
 
 ```json
 {
-  "locale":    { "language": "en-US", "location": "", "timezone": "UTC", "theme": "light" },
+  "locale":    { "language": "en-US", "location": "", "timezone": "UTC" },
   "widget":    { "showWeight": true, "is24HourFormat": true, "dateFormat": "YYYY/MM/DD", "showDashboard": true },
   "wallpaper": { "desktop": "/bg/0.jpg", "desktopStyle": "fill", "login": "/bg/0.jpg", "loginStyle": "fill",
                  "upload_desktop_backgrounds": [], "upload_login_backgrounds": [] }
@@ -55,18 +56,6 @@ A section that fails for any other reason — auth, 500, a malformed body — fa
 Read the language from `.locale.language`, not `.language`. `showWeight` is the upstream name of the widget master switch despite what it reads like.
 
 **JSON carries the stored values; the table renames them for the reader** — `"desktop": "/bg/3.jpg"` prints as `built-in 3` and `"desktopStyle": "cover"` as `Stretch`, matching how `wallpaper set` and Settings name them. Script against `-o json`.
-
-## `theme set` writes a different place than the SPA toggle
-
-```bash
-olares-cli settings appearance theme set dark
-```
-
-The theme lives in the `OLARES_USER_THEME` user env, which the platform declares the source of truth: apps receive it and the login flow honors it. This verb writes it through `/api/env/userenvs`, so `settings advanced env user list` shows the same value. The variable itself arrived in 1.12.6 — see the [version gate](#version-gate-olares--1126).
-
-**An Olares desktop already open in a browser will not change appearance.** The SPA's own light/dark toggle only sets a local cookie and never calls the backend, so the two are not connected. Tell the user this rather than letting them conclude the command did nothing.
-
-Only `light` and `dark` are accepted, and **there is no bypass**: app-service validates the value against the same declaration and answers `value not in options`. Going around the CLI with `settings advanced env user set --var OLARES_USER_THEME=auto` is rejected too (verified). A value a newer release adds needs a newer CLI.
 
 ## `widget set` changes only the flags you pass
 
@@ -125,9 +114,9 @@ Drops the launchpad ordering, folders and dock arrangement for the current user 
 
 ## Agent best practices
 
-- **For "switch to dark mode"** → `theme set dark`, then state that an open browser desktop keeps its cookie-driven appearance. Do not retry or look for another verb when the browser does not change.
+- **For "switch to dark mode"** → report that it can only be changed in Settings → Appearance in the browser, because the value is a local cookie. Do not hunt for a verb or write the user env instead.
 - **For "change my wallpaper"** → ask which surface, since `desktop` and `login` are separate settings and users rarely mean both, then run `wallpaper list <surface>` rather than guessing a number. Refer to built-ins by number, never as `/login/<n>.jpg`.
-- **Confirm separately for `layout reset` and `wallpaper delete`.** Both are irreversible for the user's arrangement or gallery, and neither is implied by a request to change the wallpaper or theme.
+- **Confirm separately for `layout reset` and `wallpaper delete`.** Both are irreversible for the user's arrangement or gallery, and neither is implied by a request to change the wallpaper.
 - **Do not use this subtree for per-app icons or entrance titles** — those are [post-install app configuration](olares-settings-apps.md).
 
 ## Common errors
@@ -138,11 +127,10 @@ Drops the launchpad ordering, folders and dock arrangement for the current user 
 | `<surface> has no built-in wallpaper <n>` | Number past this surface's range | Run `wallpaper list <surface>`; desktop stops at 27, login at 28 |
 | `"..." is not a <surface> wallpaper` | Neither a number, an `http(s)://` URL, nor a `/bg/<n>.jpg` value — e.g. a `/login/<n>.jpg` path | Pass a number from `wallpaper list <surface>`; `--force` only for a value a newer release adds |
 | `unsupported fill mode "..."` | Mode outside `Fill` / `Stretch` / `Tile` | Use one of the three, as spelled in Settings |
-| `unsupported theme "..."` | Value outside `light` / `dark` | Use one of the two; the backend rejects anything else as well |
 | `unsupported --date-format "..."` | Format not in the SPA's list | Pick from the list above |
 | `widget set requires at least one of ...` | Called with no flags | Name the preference to change |
 | `read locale: ...` / `read wallpaper: ...` | One section of `get` failed | Retry, then check `settings advanced status` |
-| `requires Olares >= 1.12.6 ...` on `theme set` / `widget set` / `layout reset` | Backend predates the verb's upstream | Upgrade Olares; nothing was sent, and no layout was reset |
+| `requires Olares >= 1.12.6 ...` on `widget set` / `layout reset` | Backend predates the verb's upstream | Upgrade Olares; nothing was sent, and no layout was reset |
 | `requires Olares >= 1.12.6 ..., but the backend version could not be determined` | Version undetectable | Log in, then `olares-cli profile list --refresh-version` |
 | `upload succeeded but the image service returned no imageUrl` | Image service accepted the file but returned an unexpected body | Retry; if it persists the image service is misconfigured |
 | `stdin is not a terminal — pass --yes to confirm` | Destructive verb in a script | Pass `--yes` after confirming with the user |

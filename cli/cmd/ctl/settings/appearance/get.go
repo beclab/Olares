@@ -28,10 +28,13 @@ func NewGetCommand(f *cmdutil.Factory) *cobra.Command {
 	var output string
 	cmd := &cobra.Command{
 		Use:   "get",
-		Short: "show locale, theme, widget preferences and wallpaper",
-		Long: `Show every value the Settings -> Appearance page reads: the
-localization fields (language, location, timezone, theme), the desktop
-widget preferences, and the wallpaper selection.
+		Short: "show locale, widget preferences and wallpaper",
+		Long: `Show the values the Settings -> Appearance page reads: the
+localization fields (language, location, timezone), the desktop widget
+preferences, and the wallpaper selection.
+
+The theme is left out: it is a browser cookie the SPA never sends
+upstream, so the value this backend holds is not what anything displays.
 
 This is the only read verb in the subtree — there is no separate
 "widget get" or "wallpaper get".
@@ -48,14 +51,14 @@ With --output json the sections arrive as the top-level keys "locale",
 	return cmd
 }
 
-// localeConfig mirrors BFL's PostLocale. Theme and timezone are read from
-// the per-user UserEnv CRs by BFL's HandleGetSysConfig; location still
-// lives on a user annotation.
+// localeConfig mirrors the part of BFL's PostLocale this page shows.
+// Timezone is read from the per-user UserEnv CRs by BFL's
+// HandleGetSysConfig; location still lives on a user annotation. The
+// upstream also carries a theme, left out for the reason in theme.go.
 type localeConfig struct {
 	Language string `json:"language"`
 	Location string `json:"location"`
 	Timezone string `json:"timezone"`
-	Theme    string `json:"theme"`
 }
 
 // appearanceView holds a nil section for one this backend is too old to
@@ -134,7 +137,6 @@ func renderAppearance(w io.Writer, v appearanceView) error {
 			{"Language", nonEmpty(v.Locale.Language)},
 			{"Location", nonEmpty(v.Locale.Location)},
 			{"Timezone", nonEmpty(v.Locale.Timezone)},
-			{"Theme", nonEmpty(v.Locale.Theme)},
 		}
 	}
 	if v.Widget != nil {

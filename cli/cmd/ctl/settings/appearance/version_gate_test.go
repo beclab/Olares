@@ -10,9 +10,9 @@ import (
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
-// The three verbs whose upstream landed in 1.12.6 share one gate; each
-// passes its own verb name and reason so the message names the command
-// the user actually typed.
+// The verbs whose upstream landed in 1.12.6 share one gate; each passes
+// its own verb name and reason so the message names the command the user
+// actually typed.
 func TestRequireAppearanceBackendVersion(t *testing.T) {
 	previous := viper.GetString(cmdutil.FlagOlaresVersion)
 	t.Cleanup(func() { viper.Set(cmdutil.FlagOlaresVersion, previous) })
@@ -21,7 +21,6 @@ func TestRequireAppearanceBackendVersion(t *testing.T) {
 		verb   string
 		reason string
 	}{
-		{"settings appearance theme set", "the OLARES_USER_THEME user env"},
 		{"settings appearance widget set", "the widget preferences API"},
 		{"settings appearance layout reset", "the desktop layout reset route"},
 	}
@@ -51,7 +50,7 @@ func TestRequireAppearanceBackendVersion(t *testing.T) {
 	// refresh hint rather than letting the call 404.
 	viper.Set(cmdutil.FlagOlaresVersion, "not-a-version")
 	err := requireAppearanceBackendVersion(context.Background(), cmdutil.NewFactory(),
-		"settings appearance theme set", "the theme user env")
+		"settings appearance widget set", "the widget preferences API")
 	if err == nil || !strings.Contains(err.Error(), "profile list --refresh-version") {
 		t.Fatalf("expected fail-closed refresh hint, got %v", err)
 	}

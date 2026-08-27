@@ -13,18 +13,17 @@ import (
 
 // `olares-cli settings appearance theme set ...`
 //
-// The theme is stored in the OLARES_USER_THEME UserEnv, which
-// build/user-env.yaml declares the single source of truth: BFL's
-// config-system endpoint and the env settings page both read and write
-// it, and app-service injects it into apps. We write it through
-// /api/env/userenvs — the same vector `settings advanced env user`
-// drives — because that is the only route to it that does not need a
-// JWS-signed activation payload.
+// NOT REGISTERED in root.go, and deliberately kept: the live theme is a
+// browser cookie (theme_name, written and read only by the SPA, never
+// sent upstream), which a CLI cannot set. The OLARES_USER_THEME UserEnv
+// this writes has no shipped reader — nothing under apps/ references it,
+// the greeter reads only the login wallpaper, and no app manifest binds
+// it through valueFrom — so exposing the verb would report success on a
+// write nobody observes. Re-register it once that UserEnv drives the UI.
 //
-// The Settings SPA's own light/dark toggle only writes a browser cookie
-// and never calls the backend, so a value set here is what apps and the
-// login flow observe, not what an already-open browser session looks
-// like. That asymmetry is a frontend gap, not a CLI limitation.
+// The write itself goes through /api/env/userenvs — the same vector
+// `settings advanced env user` drives — because that is the only route
+// to it that does not need a JWS-signed activation payload.
 //
 // Role: Appearance is in the normal-user menu (admin.ts:101-103), and
 // a UserEnv is per-user. No PreflightRole check.
@@ -59,13 +58,11 @@ func newThemeSetCommand(f *cmdutil.Factory) *cobra.Command {
 		Short: "update the system theme preference",
 		Long: `Update the system theme preference.
 
-The value is written to the OLARES_USER_THEME user environment variable,
-which the platform treats as the source of truth for the theme: apps
-receive it, and the login flow honors it.
+The value is written to the OLARES_USER_THEME user environment variable.
 
-An Olares desktop already open in a browser will not change appearance:
-its light/dark state comes from a cookie the SPA sets locally and never
-sends to the backend.
+No Olares interface reads it yet: a desktop's light/dark state comes from
+a cookie the SPA sets locally and never sends to the backend, so this
+does not change how anything looks.
 
 Allowed values:
   light

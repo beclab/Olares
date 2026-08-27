@@ -88,7 +88,6 @@ func skillCommandPaths() []string {
 		"settings appearance",
 		"settings appearance get",
 		"settings appearance language set",
-		"settings appearance theme set",
 		"settings appearance widget set",
 		"settings appearance wallpaper list",
 		"settings appearance wallpaper set",
@@ -269,8 +268,8 @@ func TestEveryAppearanceVerbIsListed(t *testing.T) {
 
 	// Guard against the walk silently finding nothing, which would make
 	// the check above vacuous.
-	if found < 10 {
-		t.Fatalf("walked only %d runnable appearance verbs; the subtree has at least 10", found)
+	if found < 9 {
+		t.Fatalf("walked only %d runnable appearance verbs; the subtree has at least 9", found)
 	}
 }
 

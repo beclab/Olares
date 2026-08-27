@@ -12,7 +12,6 @@ func sampleView() appearanceView {
 		Locale: &localeConfig{
 			Language: "zh-CN",
 			Timezone: "Asia/Shanghai",
-			Theme:    "dark",
 		},
 		Widget: &widgetPreferences{
 			ShowWidgets:    true,
@@ -38,7 +37,7 @@ func TestRenderAppearanceCoversAllThreeSections(t *testing.T) {
 	out := buf.String()
 
 	for _, want := range []string{
-		"Locale", "Language:", "zh-CN", "Asia/Shanghai", "Theme:", "dark",
+		"Locale", "Language:", "zh-CN", "Asia/Shanghai",
 		"Widget", "Show widgets:", "24-hour format:", "Date format:", "M/D/YY",
 		// The wallpaper rows are named as `wallpaper set` and Settings
 		// name them: a built-in by number, a fill mode by its label.
@@ -152,6 +151,17 @@ func TestAppearanceViewJSONShape(t *testing.T) {
 		if _, ok := decoded[key]; !ok {
 			t.Errorf("missing top-level key %q: %s", key, raw)
 		}
+	}
+
+	// The upstream locale payload carries a theme this page leaves out
+	// (see theme.go); emitting it would advertise a setting no interface
+	// reads.
+	var locale map[string]interface{}
+	if err := json.Unmarshal(decoded["locale"], &locale); err != nil {
+		t.Fatalf("unmarshal locale: %v", err)
+	}
+	if _, ok := locale["theme"]; ok {
+		t.Errorf("locale still carries a theme key: %s", raw)
 	}
 
 	var widget map[string]interface{}
