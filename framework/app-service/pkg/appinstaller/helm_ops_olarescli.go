@@ -18,13 +18,16 @@ import (
 // credential for an app that declares permission.loginOlaresCLI, and writes
 // it into the app's namespace for the pod webhook to pick up.
 //
-// It runs before the chart is installed so the Secret exists by the time the
-// first pod is admitted; a pod that starts without it would come up logged
-// out and stay that way until it restarted.
+// It runs before the chart is installed or upgraded so the Secret exists by
+// the time the first (or newly rolled) pod is admitted. An upgrade that newly
+// sets the permission updates ApplicationManager config, which is what the
+// mutating webhook reads; without a Secret the webhook still mounts
+// olares-cli-credential and kubelet holds the pod in ContainerCreating.
 //
-// Failures are fatal to the install: an app that asked for a credential and
-// silently came up without one is worse than an install that says why it
-// stopped.
+// Failures are fatal: an app that asked for a credential and silently came
+// up without one is worse than an install or upgrade that says why it
+// stopped. EnsureCredential itself is idempotent, so an upgrade of an app
+// that already had the grant is a no-op.
 func (h *HelmOps) EnsureOlaresCLICredential() error {
 	if !h.app.LoginOlaresCLI {
 		return nil
