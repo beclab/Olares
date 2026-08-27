@@ -3,6 +3,7 @@ package router
 import (
 	"encoding/json"
 	"io"
+	"os"
 	"strings"
 	"testing"
 
@@ -25,8 +26,21 @@ func mediaVerb(t *testing.T, name string) *cobra.Command {
 // runVerb executes a verb on its own, away from the tree. A command with a
 // parent takes its arguments from the process rather than from SetArgs, which in
 // a test binary means the test runner's own flags.
+//
+// Stdin is emptied for the duration, because a prompt can be piped in: left
+// alone, a verb reading it would take whatever the runner was started with, and
+// the answer would depend on whose terminal the suite is running under.
 func runVerb(t *testing.T, cmd *cobra.Command, args ...string) error {
 	t.Helper()
+	empty, err := os.Open(os.DevNull)
+	if err != nil {
+		t.Fatalf("open %s: %v", os.DevNull, err)
+	}
+	defer func() { _ = empty.Close() }()
+	saved := os.Stdin
+	os.Stdin = empty
+	defer func() { os.Stdin = saved }()
+
 	cmd.SetArgs(args)
 	cmd.SetOut(io.Discard)
 	cmd.SetErr(io.Discard)

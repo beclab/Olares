@@ -83,10 +83,7 @@ Examples:
 	cmd.Flags().StringVar(&id, "id", "", "collect a generation submitted earlier")
 	cmd.Flags().DurationVar(&timeout, "timeout", 10*time.Minute, "give up waiting after this long; the work continues")
 	cmd.Flags().StringVar(&apiKey, "api-key", "", dataPlaneKeyFlagUsage)
-	// A track's own row of Router's field table: no size, no aspect ratio, and
-	// no inputs — music is asked for in words and produced from nothing else.
-	flags.register(cmd, flagNegative, flagN, flagSeed, flagFormat, flagDuration,
-		flagLyrics, flagInstrumental, flagProviderOption)
+	flags.register(cmd, musicFields...)
 	addOutputFlag(cmd, &output)
 	return cmd
 }
@@ -138,8 +135,8 @@ Examples:
 				wait: !noWait, timeout: timeout, apiKey: apiKey, format: output,
 				flags: &flags, args: args, mode: "model3d_generation",
 				// A picture is a subject, so a mesh can be asked for with no
-				// words at all. Every other verb here needs a prompt.
-				promptOptional: true,
+				// words at all. Every other family is asked in words.
+				inputHint: "give an --" + flagImage + " to work from",
 			})
 		},
 	}
@@ -150,10 +147,7 @@ Examples:
 	cmd.Flags().StringVar(&id, "id", "", "collect a generation submitted earlier")
 	cmd.Flags().DurationVar(&timeout, "timeout", 15*time.Minute, "give up waiting after this long; the work continues")
 	cmd.Flags().StringVar(&apiKey, "api-key", "", dataPlaneKeyFlagUsage)
-	// A mesh's row: formats rather than a format, a polygon budget rather than
-	// a size, and an image on generate.
-	flags.register(cmd, flagNegative, flagN, flagSeed, flagFormats, flagTexture,
-		flagPBR, flagPolycount, flagImage, flagProviderOption)
+	flags.register(cmd, model3DFields...)
 	addOutputFlag(cmd, &output)
 	return cmd
 }
@@ -168,18 +162,18 @@ func modelRequiredHelp(mode string) string {
 
 // canonicalVerb is what the two verbs above differ in, which is almost nothing.
 type canonicalVerb struct {
-	model          string
-	id             string
-	out            string
-	outputID       string
-	wait           bool
-	timeout        time.Duration
-	apiKey         string
-	format         string
-	flags          *mediaFlags
-	args           []string
-	mode           string
-	promptOptional bool
+	model     string
+	id        string
+	out       string
+	outputID  string
+	wait      bool
+	timeout   time.Duration
+	apiKey    string
+	format    string
+	flags     *mediaFlags
+	args      []string
+	mode      string
+	inputHint string
 }
 
 func runCanonicalMedia(
@@ -201,20 +195,13 @@ func runCanonicalMedia(
 		}
 		return runMedia(c.Context(), f, kind, opts)
 	}
-	prompt := strings.TrimSpace(strings.Join(verb.args, " "))
-	if prompt == "" && !verb.promptOptional {
-		read, err := readPromptArgs(verb.args, "prompt")
-		if err != nil {
-			return err
-		}
-		prompt = read
+	prompt, err := resolvePrompt(c, verb.flags, verb.args, verb.inputHint)
+	if err != nil {
+		return err
 	}
 	body, err := verb.flags.canonical(c, model, prompt)
 	if err != nil {
 		return err
-	}
-	if body.Prompt == "" && (body.Inputs == nil || len(body.Inputs.Images) == 0) {
-		return fmt.Errorf("nothing to work from; give a prompt, an --%s, or both", flagImage)
 	}
 	opts.Body = body
 	return runMedia(c.Context(), f, kind, opts)

@@ -114,6 +114,41 @@ const (
 	flagProviderOption = "provider-option"
 )
 
+// What each family may ask for, which is Router's own field table read one row
+// at a time. A verb registers its row and nothing else: a flag that could only
+// ever be refused reads as a promise, and the caller finds out it was not one
+// after paying for the round trip.
+//
+// Three absences are decisions rather than gaps. An image has no operation,
+// because both routes run an image as generate and nothing else — and therefore
+// no inputs either, since there is no operation for a reference or a mask to
+// belong to. An image also has no count: one generation is one file with one
+// content route, which is why Router refuses more than one output on a
+// persisted image.
+var (
+	imageFields = []string{
+		flagNegative, flagSeed, flagFormat, flagSize, flagAspectRatio,
+		flagQuality, flagProviderOption,
+	}
+	videoFields = []string{
+		flagNegative, flagN, flagSeed, flagOperation, flagFormat, flagSize,
+		flagAspectRatio, flagResolution, flagDuration, flagFPS, flagQuality,
+		flagImage, flagMask, flagAudioIn, flagSource, flagProviderOption,
+	}
+	// No size, no aspect ratio and no inputs: music is asked for in words and
+	// produced from nothing else.
+	musicFields = []string{
+		flagNegative, flagN, flagSeed, flagFormat, flagDuration,
+		flagLyrics, flagInstrumental, flagProviderOption,
+	}
+	// Formats rather than a format, a polygon budget rather than a size, and an
+	// image on a plain generate — the one family where that is admitted.
+	model3DFields = []string{
+		flagNegative, flagN, flagSeed, flagFormats, flagTexture, flagPBR,
+		flagPolycount, flagImage, flagProviderOption,
+	}
+)
+
 // mediaFlags holds what the caller asked for. Whether a field was given at all
 // is read from the flag set rather than from these values, because for most of
 // them the zero value is a legitimate thing to ask for.
@@ -207,6 +242,45 @@ func (m *mediaFlags) register(cmd *cobra.Command, names ...string) {
 			panic("router: no media flag named " + name)
 		}
 	}
+}
+
+// namesAnInput reports whether the caller gave something to work from other
+// than words. A request with neither is a request with no subject, and the
+// verbs that can be asked without a prompt are exactly the ones that read one
+// of these.
+func (m *mediaFlags) namesAnInput(cmd *cobra.Command) bool {
+	for _, name := range []string{flagImage, flagMask, flagAudioIn, flagSource} {
+		if flag := cmd.Flags().Lookup(name); flag != nil && flag.Changed {
+			return true
+		}
+	}
+	return false
+}
+
+// resolvePrompt reads the description, from the arguments or from stdin.
+//
+// Two families can be asked without one: a mesh from a picture, a video
+// operation from the clip it works on. That does not make stdin optional for
+// them. A long description arrives piped, and skipping the read because the
+// family could have been asked another way would take away the only way to
+// send one — so the read is skipped only when an input was actually named.
+//
+// hint is what to suggest when there is neither. `no prompt given` is the wrong
+// thing to say to someone whose request never needed one.
+func resolvePrompt(cmd *cobra.Command, flags *mediaFlags, args []string, hint string) (string, error) {
+	if joined := strings.TrimSpace(strings.Join(args, " ")); joined != "" {
+		return joined, nil
+	}
+	if hint != "" && flags.namesAnInput(cmd) {
+		return "", nil
+	}
+	prompt, err := readPromptArgs(args, "prompt")
+	if err != nil && hint != "" {
+		// There is no prompt to be had and no input either. Which of the two
+		// ways stdin came up empty is not the caller's problem.
+		return "", fmt.Errorf("nothing to work from; give a prompt, pipe one in, or %s", hint)
+	}
+	return prompt, err
 }
 
 // canonical builds the unified body.

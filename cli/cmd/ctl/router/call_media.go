@@ -156,11 +156,11 @@ func newCallImageCommand(f *cmdutil.Factory) *cobra.Command {
 		model    string
 		out      string
 		outputID string
-		size     string
 		noWait   bool
 		id       string
 		timeout  time.Duration
 		apiKey   string
+		flags    mediaFlags
 	)
 	cmd := &cobra.Command{
 		Use:   "image [prompt…]",
@@ -171,9 +171,10 @@ The image is written to --out, or to a file named after the generation in the
 current directory. What comes back is a file rather than a URL: Router holds the
 bytes, so the picture does not depend on a provider's link staying alive.
 
---size is passed to the provider untouched, because the accepted values are the
-provider's own — "1024x1024" for one, "2K" for another. A rejected value is
-reported by whoever rejected it.
+--size asks for pixels and --aspect-ratio for a shape; they describe the same
+thing two ways, so give one. Values are checked against the resolved model's own
+parameters before anything is billed, and a field it has no parameter for is
+refused rather than dropped.
 
 --no-wait prints the generation id and stops; "--id <id>" collects it later, and
 also reports one that is still running. A generation expires, and --no-wait says
@@ -186,56 +187,42 @@ Examples:
   olares-cli router call image "a red bicycle in the rain"
   olares-cli router call image "a logo for a coffee shop" --out logo.png
   olares-cli router call image "a wide landscape" --size 1792x1024
+  olares-cli router call image "a portrait" --aspect-ratio 2:3 --quality high --seed 7
   olares-cli router call image "slow one" --no-wait
   olares-cli router call image --id gen_01H…
 `,
 		Args: cobra.ArbitraryArgs,
 		RunE: func(c *cobra.Command, args []string) error {
-			opts := mediaOptions{
-				Out: out, OutputID: outputID, Wait: !noWait, Timeout: timeout,
-				APIKey: apiKey, OutputIn: output, ID: strings.TrimSpace(id),
-			}
-			if opts.ID != "" {
-				if len(args) > 0 {
-					return fmt.Errorf("--id collects a generation that already exists; it takes no prompt")
-				}
-			} else {
-				prompt, err := readPromptArgs(args, "prompt")
-				if err != nil {
-					return err
-				}
-				body := map[string]any{"model": callModel(model, categoryImage), "prompt": prompt}
-				if s := strings.TrimSpace(size); s != "" {
-					body["size"] = s
-				}
-				opts.Body = body
-			}
-			return runCallImage(c.Context(), f, opts)
+			return runLegacyMedia(c, f, imageKind, legacyVerb{
+				model: callModel(model, categoryImage), id: id, out: out, outputID: outputID,
+				wait: !noWait, timeout: timeout, apiKey: apiKey, format: output,
+				flags: &flags, args: args,
+			})
 		},
 	}
 	cmd.Flags().StringVar(&model, "model", "", modelFlagHelp(categoryImage))
 	cmd.Flags().StringVar(&out, "out", "", "write the image here instead of a name derived from the generation")
 	cmd.Flags().StringVar(&outputID, "output-id", "", "which of the generation's outputs to write; the first when omitted")
-	cmd.Flags().StringVar(&size, "size", "", "the size to ask the provider for, in its own vocabulary")
 	cmd.Flags().BoolVar(&noWait, "no-wait", false, "print the generation id instead of waiting for the image")
 	cmd.Flags().StringVar(&id, "id", "", "collect a generation submitted earlier")
 	cmd.Flags().DurationVar(&timeout, "timeout", 5*time.Minute, "give up waiting after this long; the work continues")
 	cmd.Flags().StringVar(&apiKey, "api-key", "", dataPlaneKeyFlagUsage)
+	flags.register(cmd, imageFields...)
 	addOutputFlag(cmd, &output)
 	return cmd
 }
 
 func newCallVideoCommand(f *cmdutil.Factory) *cobra.Command {
 	var (
-		output    string
-		model     string
-		out       string
-		outputID  string
-		operation string
-		noWait    bool
-		id        string
-		timeout   time.Duration
-		apiKey    string
+		output   string
+		model    string
+		out      string
+		outputID string
+		noWait   bool
+		id       string
+		timeout  time.Duration
+		apiKey   string
+		flags    mediaFlags
 	)
 	cmd := &cobra.Command{
 		Use:   "video [prompt…]",
@@ -250,8 +237,14 @@ Waiting costs nothing and stopping the wait cancels nothing: the work continues
 at the provider either way, and it is billed either way. The generation expires,
 and the id stops working when it does.
 
---operation names something other than generating from text, for the providers
-that offer it. What each accepts is the provider's own; leaving it off generates.
+--operation asks for something other than generating from text: edit, extend,
+lip_sync, first_last_frame and the rest. Which inputs an operation reads follows
+from the operation — a lip sync needs --audio, an extend needs
+--source-generation — and a model that does not declare the one you named is
+refused before anything is billed.
+
+--size and --aspect-ratio and --resolution overlap: give --size or one of the
+other two, not both.
 
 Video generation needs a model whose mode is video_generation; "olares-cli router
 list --mode video_generation" shows the ones that qualify.
@@ -259,43 +252,85 @@ list --mode video_generation" shows the ones that qualify.
 Examples:
   olares-cli router call video "a paper plane over a city at dusk"
   olares-cli router call video "waves on a beach" --out waves.mp4 --timeout 20m
+  olares-cli router call video "a slow pan" --resolution 1080p --duration 8 --fps 24
+  olares-cli router call video --operation lip_sync --image face.png --audio line.wav
   olares-cli router call video "long one" --no-wait
   olares-cli router call video --id gen_01H…
 `,
 		Args: cobra.ArbitraryArgs,
 		RunE: func(c *cobra.Command, args []string) error {
-			opts := mediaOptions{
-				Out: out, OutputID: outputID, Wait: !noWait, Timeout: timeout,
-				APIKey: apiKey, OutputIn: output, ID: strings.TrimSpace(id),
-			}
-			if opts.ID != "" {
-				if len(args) > 0 {
-					return fmt.Errorf("--id collects a generation that already exists; it takes no prompt")
-				}
-			} else {
-				prompt, err := readPromptArgs(args, "prompt")
-				if err != nil {
-					return err
-				}
-				body := map[string]any{"model": callModel(model, categoryVideo), "prompt": prompt}
-				if s := strings.TrimSpace(operation); s != "" {
-					body["operation"] = s
-				}
-				opts.Body = body
-			}
-			return runCallVideo(c.Context(), f, opts)
+			return runLegacyMedia(c, f, videoKind, legacyVerb{
+				model: callModel(model, categoryVideo), id: id, out: out, outputID: outputID,
+				wait: !noWait, timeout: timeout, apiKey: apiKey, format: output,
+				flags: &flags, args: args,
+				// An operation names what to do with the inputs, and several of
+				// them describe the whole request: extending a clip or syncing
+				// a mouth to a recording needs no words.
+				inputHint: "name what to work from with --" + flagImage +
+					", --" + flagAudioIn + " or --" + flagSource,
+			})
 		},
 	}
 	cmd.Flags().StringVar(&model, "model", "", modelFlagHelp(categoryVideo))
 	cmd.Flags().StringVar(&out, "out", "", "write the video here instead of a name derived from the generation")
 	cmd.Flags().StringVar(&outputID, "output-id", "", "which of the generation's outputs to write; the first when omitted")
-	cmd.Flags().StringVar(&operation, "operation", "", "what to ask the provider for, in its own vocabulary")
 	cmd.Flags().BoolVar(&noWait, "no-wait", false, "print the generation id instead of waiting for the video")
 	cmd.Flags().StringVar(&id, "id", "", "collect a generation submitted earlier")
 	cmd.Flags().DurationVar(&timeout, "timeout", 20*time.Minute, "give up waiting after this long; the work continues")
 	cmd.Flags().StringVar(&apiKey, "api-key", "", dataPlaneKeyFlagUsage)
+	flags.register(cmd, videoFields...)
 	addOutputFlag(cmd, &output)
 	return cmd
+}
+
+// legacyVerb is what image and video differ in, which past the field list is
+// only how long a caller is expected to wait.
+type legacyVerb struct {
+	model     string
+	id        string
+	out       string
+	outputID  string
+	wait      bool
+	timeout   time.Duration
+	apiKey    string
+	format    string
+	flags     *mediaFlags
+	args      []string
+	inputHint string
+}
+
+// runLegacyMedia submits on the route the family was released on.
+//
+// The body is the released spelling rather than the canonical one, and that is
+// not a compatibility shim: Router lifts every one of those keys onto the
+// canonical field it means before anything is gated or billed, so the same
+// request is described either way. What the released image route has that the
+// unified one cannot is a synchronous answer for a provider that keeps no
+// generations, and moving off it would refuse the most widely installed
+// provider there is.
+func runLegacyMedia(
+	c *cobra.Command, f *cmdutil.Factory, kind mediaKind, verb legacyVerb,
+) error {
+	opts := mediaOptions{
+		Out: verb.out, OutputID: verb.outputID, Wait: verb.wait, Timeout: verb.timeout,
+		APIKey: verb.apiKey, OutputIn: verb.format, ID: strings.TrimSpace(verb.id),
+	}
+	if opts.ID != "" {
+		if len(verb.args) > 0 {
+			return fmt.Errorf("--id collects a generation that already exists; it takes no prompt")
+		}
+		return runMedia(c.Context(), f, kind, opts)
+	}
+	prompt, err := resolvePrompt(c, verb.flags, verb.args, verb.inputHint)
+	if err != nil {
+		return err
+	}
+	body, err := verb.flags.legacyBody(c, verb.model, prompt)
+	if err != nil {
+		return err
+	}
+	opts.Body = body
+	return runMedia(c.Context(), f, kind, opts)
 }
 
 // mediaKind is the little that differs between the two verbs: where to submit,

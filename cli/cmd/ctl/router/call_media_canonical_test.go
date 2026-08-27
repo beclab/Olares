@@ -25,26 +25,6 @@ func mediaCommand(t *testing.T, names []string, line ...string) (*cobra.Command,
 	return cmd, flags
 }
 
-var (
-	imageFields = []string{
-		flagNegative, flagN, flagSeed, flagFormat, flagSize, flagAspectRatio,
-		flagQuality, flagImage, flagMask, flagSource, flagOperation, flagProviderOption,
-	}
-	videoFields = []string{
-		flagNegative, flagN, flagSeed, flagFormat, flagSize, flagAspectRatio,
-		flagResolution, flagDuration, flagFPS, flagQuality, flagImage, flagMask,
-		flagAudioIn, flagSource, flagOperation, flagProviderOption,
-	}
-	musicFields = []string{
-		flagNegative, flagN, flagSeed, flagFormat, flagDuration, flagLyrics,
-		flagInstrumental, flagProviderOption,
-	}
-	model3DFields = []string{
-		flagNegative, flagN, flagSeed, flagFormats, flagTexture, flagPBR,
-		flagPolycount, flagImage, flagProviderOption,
-	}
-)
-
 // The whole point of building the body from the flag set rather than from the
 // values: /v1/generations refuses a field the resolved provider has no
 // parameter for, so a field nobody asked for must not appear. Sending
@@ -187,7 +167,7 @@ func TestALocalFileBecomesADataURLAndAnythingElseIsLeftAlone(t *testing.T) {
 	if err := os.WriteFile(path, []byte("\x89PNG\r\n\x1a\n"), 0o600); err != nil {
 		t.Fatalf("write: %v", err)
 	}
-	cmd, flags := mediaCommand(t, imageFields, "--image", path, "--operation", "edit")
+	cmd, flags := mediaCommand(t, videoFields, "--image", path, "--operation", "edit")
 	request, err := flags.canonical(cmd, "FlowStudio/image", "brighten it")
 	if err != nil {
 		t.Fatalf("build: %v", err)
@@ -200,7 +180,7 @@ func TestALocalFileBecomesADataURLAndAnythingElseIsLeftAlone(t *testing.T) {
 	}
 
 	for _, passed := range []string{"data:image/png;base64,AA==", "https://example.test/a.png"} {
-		cmd, flags := mediaCommand(t, imageFields, "--image", passed, "--operation", "edit")
+		cmd, flags := mediaCommand(t, videoFields, "--image", passed, "--operation", "edit")
 		request, err := flags.canonical(cmd, "m", "p")
 		if err != nil {
 			t.Fatalf("%s: %v", passed, err)
@@ -210,7 +190,7 @@ func TestALocalFileBecomesADataURLAndAnythingElseIsLeftAlone(t *testing.T) {
 		}
 	}
 
-	cmd, flags = mediaCommand(t, imageFields, "--image", "/nonexistent/file.png", "--operation", "edit")
+	cmd, flags = mediaCommand(t, videoFields, "--image", "/nonexistent/file.png", "--operation", "edit")
 	if _, err := flags.canonical(cmd, "m", "p"); err == nil {
 		t.Error("a path that does not exist was accepted")
 	}
