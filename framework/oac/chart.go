@@ -28,9 +28,10 @@ import (
 //  4. Custom validators registered via WithCustomValidator (none by default)
 //  5. Helm dry-run and mandatory workload-integrity checks (upload mount
 //     path, `type=app` workload naming, workloadReplicas <-> rendered
-//     workload exact match plus values.yaml replicaCount coverage, and
-//     overlayGateway entrance workload existence) - ALWAYS run; not
-//     governed by any Skip* option
+//     workload exact match plus values.yaml replicaCount coverage,
+//     rendered spec.replicas actually tracking workloads.<name>.replicaCount
+//     so the platform can scale the app to zero, and overlayGateway entrance
+//     workload existence) - ALWAYS run; not governed by any Skip* option
 //  6. HostPath + rolling-update incompatibility check - ON by default,
 //     turn off with SkipHostPathCheck()
 //  7. Rendered-resource namespace check (workloads in app-namespace;
@@ -153,6 +154,10 @@ func (c *OAC) lintRenderedScenario(oacPath string, m Manifest, sc ownerScenario)
 	}
 
 	if err := c.checkManifestWorkloadRefs(oacPath, m, list); err != nil {
+		return err
+	}
+
+	if err := c.checkWorkloadScaleToZero(oacPath, m, sc); err != nil {
 		return err
 	}
 
@@ -537,6 +542,54 @@ func (c *OAC) checkManifestWorkloadRefs(oacPath string, m Manifest, list kube.Re
 			workloads[i] = e.Workload
 		}
 		if err := resources.CheckOverlayGatewayWorkloads(list, workloads); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return errors.Join(errs...)
+}
+
+// checkWorkloadScaleToZero renders the chart twice with every declared
+// workloads.<name>.replicaCount forced to 0 and then to 1, and requires the
+// rendered spec.replicas to follow. It reproduces exactly what app-service does
+// to stop and start an app (HelmOps.Scale), so a chart that passes here is one
+// the platform can actually control.
+//
+// The zero render is the one that matters. Stopping an app is a helm upgrade with
+// that value set to 0; if spec.replicas does not move, the upgrade is a no-op, no
+// pod terminates, and the operation sits in Stopping until a 30-minute TTL turns
+// it into StopFailed -- with no error anywhere to say why. The one render guards
+// the opposite mistake, a chart pinned at 0 that can never come up.
+//
+// This complements the static scan in checkWorkloadReplicaTemplates rather than
+// replacing it: that one names the offending line, which is the more useful
+// message when it fires, while this one cannot be talked around.
+//
+// v2 is out of scope on both ends -- the manifest validator does not require
+// workloadReplicas for it and HelmOpsV2.Scale is a no-op -- and a chart that
+// declares nothing has nothing to check.
+func (c *OAC) checkWorkloadScaleToZero(oacPath string, m Manifest, sc ownerScenario) error {
+	if isV2Manifest(m) {
+		return nil
+	}
+	cfg, ok := m.Raw().(*manifest.AppConfiguration)
+	if !ok || cfg.WorkloadReplicas == nil || len(*cfg.WorkloadReplicas) == 0 {
+		return nil
+	}
+	names := make([]string, 0, len(*cfg.WorkloadReplicas))
+	for name := range *cfg.WorkloadReplicas {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	var errs []error
+	for _, want := range []int32{0, 1} {
+		values := c.buildRenderValues(m, sc)
+		helmrender.SetWorkloadReplicas(values, names, want)
+		list, err := helmrender.Render(oacPath, values, m.AppName(), "")
+		if err != nil {
+			return fmt.Errorf("helm render (replicaCount=%d probe): %w", want, err)
+		}
+		if err := resources.CheckWorkloadReplicasRendered(list, want); err != nil {
 			errs = append(errs, err)
 		}
 	}

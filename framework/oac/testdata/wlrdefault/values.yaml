@@ -1,0 +1,3 @@
+workloads:
+  wlrdefault:
+    replicaCount: 1
