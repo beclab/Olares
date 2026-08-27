@@ -45,12 +45,12 @@ Use the Ticket app when your device is accessible.
 Once submitted, you can track the ticket's progress, view replies, and communicate with the Olares Support team until your issue is resolved.
 
 :::info
-The Ticket app only displays tickets associated with the Olares ID currently logged in on your device. If you switch to a new ID, you can log in to [Olares Space](https://www.olares.com/space/login?redirect=/) with your original ID to view the previous tickets.
+The Ticket app only displays tickets associated with the Olares ID currently logged in on your device. If you switch to a new ID, you can log in to [Olares Space](https://space.olares.com/) with your original ID to view the previous tickets.
 :::
 
 ### Submit via Olares Space
 
-Use [Olares Space](https://www.olares.com/space/login?redirect=/) if your device is inaccessible or if you cannot use the Ticket app. Any tickets you previously submitted through the Ticket app will also be visible here.
+Use [Olares Space](https://space.olares.com/) if your device is inaccessible or if you cannot use the Ticket app. Any tickets you previously submitted through the Ticket app will also be visible here.
 
 In Olares Space, you can create a ticket in two ways:
 

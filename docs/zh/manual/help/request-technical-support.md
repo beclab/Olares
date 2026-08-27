@@ -44,12 +44,12 @@ head:
 提交后，你可以追踪工单进度、查看回复，并与 Olares 支持团队沟通，直到问题解决。
 
 :::info
-Ticket 应用仅显示当前登录在 Olares 设备上的 Olares ID 所关联的工单。如果切换了新 ID，可以使用原 ID 登录 [Olares Space](https://www.olares.com/space/login?redirect=/) 查看历史工单。
+Ticket 应用仅显示当前登录在 Olares 设备上的 Olares ID 所关联的工单。如果切换了新 ID，可以使用原 ID 登录 [Olares Space](https://space.olares.com/) 查看历史工单。
 :::
 
 ### 通过 Olares Space 提交
 
-如果设备无法访问，或者你无法使用 Ticket 应用，请使用 [Olares Space](https://www.olares.com/space/login?redirect=/)。此前通过 Ticket 应用提交的工单也可以在这里查看。
+如果设备无法访问，或者你无法使用 Ticket 应用，请使用 [Olares Space](https://space.olares.com/)。此前通过 Ticket 应用提交的工单也可以在这里查看。
 
 在 Olares Space 中，你可以通过以下两种方式创建工单：
 
