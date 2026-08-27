@@ -12,7 +12,7 @@ Mirror the Settings → Appearance page: locale, desktop widget preferences, wal
 | Verb | Floor | Needs | Status | Purpose |
 |---|---|---|---|---|
 | `get` | normal | any | VERIFIED | Read the whole page: locale + widget + wallpaper |
-| `language set <locale>` | normal | any | VERIFIED | Set the system language |
+| `language set <locale>` | normal | any (5 of 7 locales >= 1.12.7) | VERIFIED | Set the system language |
 | `widget set [flags]` | normal | >= 1.12.6 | VERIFIED | Set desktop widget preferences |
 | `wallpaper list <surface>` | normal | any | VERIFIED | Show the built-in range and uploaded images |
 | `wallpaper set <surface> <number\|url>` | normal | any | VERIFIED | Select a wallpaper |
@@ -21,13 +21,15 @@ Mirror the Settings → Appearance page: locale, desktop widget preferences, wal
 | `wallpaper delete <surface> <url>` | normal | any | VERIFIED | Remove an uploaded image |
 | `layout reset` | normal | >= 1.12.6 | VERIFIED | Restore the default desktop layout |
 
-`<surface>` is always `desktop` or `login`.
+`<surface>` is always `desktop` or `login`. Every fixed value in this sub-tree — surfaces, fill modes, date patterns, locales — is matched without regard to case and stored in its canonical spelling, so `Desktop`, `stretch`, `yy.m.d` and `en-us` all work. `language set` keeps a `--force` for a locale shipped ahead of this CLI, and a forced value is passed through as typed.
 
-## Version gate (Olares >= 1.12.6)
+## Version gates
 
-Two verbs need Olares 1.12.6+, where their upstream arrived: `widget set` (the widget preferences API) and `layout reset` (the desktop layout reset route). `get`, `language set` and every `wallpaper` verb work on any supported backend.
+Two verbs need Olares 1.12.6+, where their upstream arrived: `widget set` (the widget preferences API) and `layout reset` (the desktop layout reset route). Every `wallpaper` verb works on any supported backend, and so does `get`.
 
-On an older backend the two fail up front with the shared message naming the verb and the detected version (see [Common errors](#common-errors)); nothing is sent. `layout reset` is gated **before** its confirmation prompt, so an older backend never asks the user to confirm a reset it cannot perform. Treat daily builds by their `major.minor.patch` base (`1.12.6-20260203` is the 1.12.6 line). Follow the shared auth/version gate when the version cannot be established.
+`language set` has a gate of its own on the value rather than the verb: `en-US` and `zh-CN` work everywhere, while `de-DE`, `es-ES`, `it-IT`, `fr-FR` and `ja-JP` need Olares >= 1.12.7, which is where their translations shipped. The version is only resolved when one of those five is asked for, so the two universal locales still work on a backend whose version cannot be established. Warn the user that those five change LarePass only: the browser desktop still ships `en-US` and `zh-CN` bundles alone and falls back to English for the others, and both read this one field.
+
+On an older backend the gated verbs and locales fail up front with a message naming the requirement and the detected version (see [Common errors](#common-errors)); nothing is sent. `layout reset` is gated **before** its confirmation prompt, so an older backend never asks the user to confirm a reset it cannot perform. Treat daily builds by their `major.minor.patch` base (`1.12.6-20260203` is the 1.12.6 line). Follow the shared auth/version gate when the version cannot be established.
 
 `get` is the one verb that degrades instead of failing: below 1.12.6 it reads locale and wallpaper — which exist everywhere — and renders the widget section as `requires Olares >= 1.12.6`. With `-o json` that section is `null`, the key still present so a caller can tell a gated section from one this CLI does not know about. On 1.12.5 the locale section also returns an empty `timezone`, which renders as `-`.
 
@@ -38,7 +40,7 @@ olares-cli settings appearance get
 olares-cli settings appearance get -o json
 ```
 
-There is no `widget get` or `wallpaper get`. One `get` reads all three upstream endpoints (`/api/wallpaper/config/system`, `/api/widget`, `/api/wallpaper`) — the widget one only on 1.12.6+, see the [version gate](#version-gate-olares--1126).
+There is no `widget get` or `wallpaper get`. One `get` reads all three upstream endpoints (`/api/wallpaper/config/system`, `/api/widget`, `/api/wallpaper`) — the widget one only on 1.12.6+, see the [version gates](#version-gates).
 
 A section that fails for any other reason — auth, 500, a malformed body — fails the whole command, because a zeroed section would be read as real configuration.
 
@@ -55,7 +57,7 @@ A section that fails for any other reason — auth, 500, a malformed body — fa
 
 Read the language from `.locale.language`, not `.language`. `showWeight` is the upstream name of the widget master switch despite what it reads like.
 
-**JSON carries the stored values; the table renames them for the reader** — `"desktop": "/bg/3.jpg"` prints as `built-in 3` and `"desktopStyle": "cover"` as `Stretch`, matching how `wallpaper set` and Settings name them. Script against `-o json`.
+**JSON carries the stored values; the table renames them for the reader** — `"desktop": "/bg/3.jpg"` prints as `built-in 3`, `"desktopStyle": "cover"` as `Stretch`, `"dateFormat": "M/D/YY"` as `M/D/YY (8/27/26)`, and `"language": "zh-CN"` as `zh-CN (简体中文)`, matching how the verbs and Settings name them. Script against `-o json`.
 
 ## `widget set` changes only the flags you pass
 
@@ -67,7 +69,11 @@ olares-cli settings appearance widget set --show-dashboard=true
 
 The upstream POST replaces the whole preferences object, so the CLI reads the current values first and sends the unnamed ones back untouched. Passing no flag at all is an error rather than a no-op write.
 
-`--date-format` is checked against the SPA's list (`YYYY/MM/DD`, `D/M/YY`, `M/D/YY`, `DD/MM/YYYY`, `DD.MM.YYYY`, `DD-MM-YYYY`, `YYYY.MM.DD`, `YYYY-MM-DD`, `YY/MM/DD`, `YY-M-D`, `YY.M.D`) because the upstream stores any string it is handed and an unlisted one silently fails to render in the desktop clock.
+The four preferences are the whole Widget section of the page: `--show-widgets` is the master switch, and `--24-hour` / `--date-format` / `--show-dashboard` are the ones the desktop displays only while it is on (their values are still stored while it is off). Boolean flags need the equals sign — `--24-hour false` sets it to true and then rejects the leftover word, naming the correct form.
+
+What the user sees: the widget is the clock block on the desktop — time, date, and CPU/memory rings beneath them. `--show-widgets=false` hides the whole block; `--show-dashboard=false` hides only the rings and keeps the clock. So a request to hide resource or usage readings is `--show-dashboard`, not the master switch.
+
+`--date-format` is checked against the SPA's list (`YYYY/MM/DD`, `D/M/YY`, `M/D/YY`, `DD/MM/YYYY`, `DD.MM.YYYY`, `DD-MM-YYYY`, `YYYY.MM.DD`, `YYYY-MM-DD`, `YY/MM/DD`, `YY-M-D`, `YY.M.D`) because the upstream stores any string it is handed and an unlisted one silently fails to render in the desktop clock. Case does not matter and the canonical spelling is what gets stored, so `--date-format yy.m.d` sets `YY.M.D`. Rejections print the whole list with each pattern rendered as today's date, which is how Settings shows it — `YY-M-D` and `YY.M.D` are otherwise indistinguishable. There is no `--force`: a pattern a newer Settings adds needs a newer CLI to render it.
 
 ## `wallpaper`
 
@@ -127,7 +133,9 @@ Drops the launchpad ordering, folders and dock arrangement for the current user 
 | `<surface> has no built-in wallpaper <n>` | Number past this surface's range | Run `wallpaper list <surface>`; desktop stops at 27, login at 28 |
 | `"..." is not a <surface> wallpaper` | Neither a number, an `http(s)://` URL, nor a `/bg/<n>.jpg` value — e.g. a `/login/<n>.jpg` path | Pass a number from `wallpaper list <surface>`; `--force` only for a value a newer release adds |
 | `unsupported fill mode "..."` | Mode outside `Fill` / `Stretch` / `Tile` | Use one of the three, as spelled in Settings |
-| `unsupported --date-format "..."` | Format not in the SPA's list | Pick from the list above |
+| `unsupported locale "..."` | Not one of the seven the SPA carries | Pick from the list the error prints; `--force` only for a locale a newer release adds |
+| `locale de-DE (Deutsch) needs Olares >= 1.12.7` | One of the five 1.12.7 locales on an older backend | Upgrade Olares, or stay on `en-US` / `zh-CN`; nothing was sent |
+| `unsupported --date-format "..."` | Pattern not in the SPA's list | Pick from the list the error prints, each shown as today's date |
 | `widget set requires at least one of ...` | Called with no flags | Name the preference to change |
 | `read locale: ...` / `read wallpaper: ...` | One section of `get` failed | Retry, then check `settings advanced status` |
 | `requires Olares >= 1.12.6 ...` on `widget set` / `layout reset` | Backend predates the verb's upstream | Upgrade Olares; nothing was sent, and no layout was reset |

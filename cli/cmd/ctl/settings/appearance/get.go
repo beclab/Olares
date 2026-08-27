@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"text/tabwriter"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -134,7 +135,7 @@ func renderAppearance(w io.Writer, v appearanceView) error {
 	}
 	if v.Locale != nil {
 		sections[0].rows = [][2]string{
-			{"Language", nonEmpty(v.Locale.Language)},
+			{"Language", describeLocale(v.Locale.Language)},
 			{"Location", nonEmpty(v.Locale.Location)},
 			{"Timezone", nonEmpty(v.Locale.Timezone)},
 		}
@@ -143,7 +144,7 @@ func renderAppearance(w io.Writer, v appearanceView) error {
 		sections[1].rows = [][2]string{
 			{"Show widgets", boolStr(v.Widget.ShowWidgets)},
 			{"24-hour format", boolStr(v.Widget.Is24HourFormat)},
-			{"Date format", nonEmpty(v.Widget.DateFormat)},
+			{"Date format", describeDateFormat(v.Widget.DateFormat, time.Now())},
 			{"Show dashboard", boolStr(v.Widget.ShowDashboard)},
 		}
 	}

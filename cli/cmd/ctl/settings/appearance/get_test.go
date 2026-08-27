@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 )
 
 func sampleView() appearanceView {
@@ -37,8 +38,13 @@ func TestRenderAppearanceCoversAllThreeSections(t *testing.T) {
 	out := buf.String()
 
 	for _, want := range []string{
-		"Locale", "Language:", "zh-CN", "Asia/Shanghai",
+		// The code plus the name the picker shows for it, so an unfamiliar
+		// locale does not have to be looked up elsewhere.
+		"Locale", "Language:", "zh-CN (简体中文)", "Asia/Shanghai",
 		"Widget", "Show widgets:", "24-hour format:", "Date format:", "M/D/YY",
+		// The pattern alone does not say what the clock reads, which is
+		// how Settings shows it: picker plus a live preview.
+		"(" + renderDateFormat("M/D/YY", time.Now()) + ")",
 		// The wallpaper rows are named as `wallpaper set` and Settings
 		// name them: a built-in by number, a fill mode by its label.
 		"Wallpaper", "Desktop:", "built-in 3", "Desktop style:", "Stretch",
@@ -163,6 +169,10 @@ func TestAppearanceViewJSONShape(t *testing.T) {
 	if _, ok := locale["theme"]; ok {
 		t.Errorf("locale still carries a theme key: %s", raw)
 	}
+	// The picker's name for the locale belongs to the table only.
+	if got := locale["language"]; got != "zh-CN" {
+		t.Errorf("locale.language = %v; want the stored zh-CN", got)
+	}
 
 	var widget map[string]interface{}
 	if err := json.Unmarshal(decoded["widget"], &widget); err != nil {
@@ -171,6 +181,11 @@ func TestAppearanceViewJSONShape(t *testing.T) {
 	// showWeight is the upstream name of the widget master switch.
 	if got, ok := widget["showWeight"]; !ok || got != true {
 		t.Errorf("widget.showWeight = %v (present=%v); want true", got, ok)
+	}
+	// The preview belongs to the table only: a script reading this back
+	// has to get the pattern the upstream stores.
+	if got := widget["dateFormat"]; got != "M/D/YY" {
+		t.Errorf("widget.dateFormat = %v; want the stored M/D/YY", got)
 	}
 
 	// The table renames values for the reader; JSON must keep the stored
