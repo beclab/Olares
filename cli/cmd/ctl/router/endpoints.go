@@ -249,6 +249,20 @@ func epVideo(id string) string { return epVideos + "/" + url.PathEscape(id) }
 
 func epVideoContent(id string) string { return epVideo(id) + "/content" }
 
+// The unified media route. It creates into the same table the two routes above
+// do and answers with the same record, so the difference is the request rather
+// than the resource: this one takes the canonical body as written, and it is the
+// only route music and 3D have.
+//
+// It is always a receipt. There is no synchronous branch, which is why an image
+// stays on the released route -- a provider that keeps no generations answers
+// there with the picture itself, and here it cannot be served at all.
+const epGenerations = dataPlaneAPI + "/generations"
+
+func epGeneration(id string) string { return epGenerations + "/" + url.PathEscape(id) }
+
+func epGenerationContent(id string) string { return epGeneration(id) + "/content" }
+
 // Translate mirrors the upstream's own service-root names under /v1. These four
 // carry no model field: each resolves the translate default per call, so there
 // is nothing for a caller to name and nothing to get wrong.

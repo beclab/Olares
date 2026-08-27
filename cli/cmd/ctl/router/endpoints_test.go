@@ -115,6 +115,9 @@ func TestPathSegmentsAreEscaped(t *testing.T) {
 			dataPlaneAPI + "/images/generations/g%2F1/content"},
 		{"video", epVideo("v 1"), dataPlaneAPI + "/videos/v%201"},
 		{"video content", epVideoContent("v 1"), dataPlaneAPI + "/videos/v%201/content"},
+		{"generation", epGeneration("g/1"), dataPlaneAPI + "/generations/g%2F1"},
+		{"generation content", epGenerationContent("g/1"),
+			dataPlaneAPI + "/generations/g%2F1/content"},
 	}
 	for _, c := range cases {
 		if c.got != c.want {
