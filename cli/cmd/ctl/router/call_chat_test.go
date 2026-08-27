@@ -152,6 +152,10 @@ func TestRetryAfterIsCarriedOffTheHeader(t *testing.T) {
 // opposite remedies: one is waited out, the other is a number somebody raises.
 // Router separates them by status and code; this is where that separation
 // becomes something a person reads.
+//
+// Router now holds the caller in a soft queue before answering this, so the
+// sentence has to say the wait already happened. Told it was "refused rather
+// than queued", someone waits and retries into the same wall.
 func TestAFullEngineReadsAsAWaitRatherThanALimit(t *testing.T) {
 	err := callErr(&RouterError{
 		Status: 503, Type: "upstream_error", Code: "model_at_capacity",
@@ -159,7 +163,7 @@ func TestAFullEngineReadsAsAWaitRatherThanALimit(t *testing.T) {
 		RetryAfter: time.Second,
 	})
 	msg := err.Error()
-	for _, want := range []string{"refused rather than queued", "1s", "provider get"} {
+	for _, want := range []string{"Router waited for a slot", "1s", "provider get"} {
 		if !strings.Contains(msg, want) {
 			t.Errorf("%q does not contain %q", msg, want)
 		}
