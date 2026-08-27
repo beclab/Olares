@@ -52,6 +52,7 @@ Load the shared [platform model](../olares-shared/references/olares-platform.md)
 
 - Olares 1.12.5 uses legacy `gpu list`; 1.12.6+ uses `compute`.
 - Overlay gateway and per-app overlay operations require 1.12.6+.
+- `appearance widget set` and `appearance layout reset` require 1.12.6+; `appearance get` degrades instead, reporting the widget section as gated. Five of the seven locales `appearance language set` accepts require 1.12.7+.
 - Overlay writes are asynchronous. `--watch` observes the gateway/app state settling; per-app overlay changes may restart a running app through Market.
 - Search indexing and rebuild are asynchronous. A successful request does not mean newly indexed content is immediately searchable.
 

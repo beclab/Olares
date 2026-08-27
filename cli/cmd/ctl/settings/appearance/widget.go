@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
@@ -50,17 +52,63 @@ var dateFormats = []string{
 	"YY.M.D",
 }
 
+// dateFormatLayout translates the SPA's pattern vocabulary into a Go
+// layout. The replacer is single-pass and tries these in order, so YYYY
+// is never read as two YY and no substitution rewrites another's output.
+var dateFormatLayout = strings.NewReplacer(
+	"YYYY", "2006", "YY", "06", "MM", "01", "DD", "02", "M", "1", "D", "2",
+)
+
+// renderDateFormat shows what a pattern produces. Settings pairs its
+// picker with a live preview of the current date, and without one
+// YY-M-D and YY.M.D can only be told apart by setting both.
+func renderDateFormat(pattern string, at time.Time) string {
+	return at.Format(dateFormatLayout.Replace(pattern))
+}
+
+// describeDateFormat is how a stored pattern reads in the table: the
+// pattern the page shows, plus what the clock currently makes of it.
+func describeDateFormat(pattern string, at time.Time) string {
+	pattern = strings.TrimSpace(pattern)
+	if pattern == "" {
+		return nonEmpty(pattern)
+	}
+	return fmt.Sprintf("%s (%s)", pattern, renderDateFormat(pattern, at))
+}
+
+// dateFormatChoices lists every pattern beside that preview, two per
+// line to keep the help short enough to read.
+func dateFormatChoices(at time.Time) string {
+	var b strings.Builder
+	for i := 0; i < len(dateFormats); i += 2 {
+		b.WriteString(fmt.Sprintf("  %-11s %-11s", dateFormats[i], renderDateFormat(dateFormats[i], at)))
+		if i+1 < len(dateFormats) {
+			b.WriteString(fmt.Sprintf("  %-11s %s", dateFormats[i+1], renderDateFormat(dateFormats[i+1], at)))
+		}
+		b.WriteString("\n")
+	}
+	return strings.TrimRight(b.String(), " \n")
+}
+
 func NewWidgetCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "widget",
 		Short: "desktop widget preferences",
 		Long: `Update the desktop widget preferences (Settings -> Appearance >
-Widgets and Date & Time).
+Widget and Date & Time).
 
 Current values are shown by "settings appearance get".
 
 Subcommands:
-  set [flags]           update one or more preferences
+  set --show-widgets=<true|false>    show the desktop widgets
+  set --24-hour=<true|false>         24-hour time in the clock widget
+  set --date-format YYYY/MM/DD       date format in the clock widget,
+                                     one of 11 patterns ("set --help")
+  set --show-dashboard=<true|false>  show the dashboard widget
+
+One "set" takes any combination of these, and a preference you leave
+out keeps its current value. The desktop shows the last three only
+while --show-widgets is true.
 `,
 	}
 	cmd.SilenceUsage = true
@@ -113,15 +161,25 @@ func newWidgetSetCommand(f *cmdutil.Factory) *cobra.Command {
 pass are changed; the rest are read from the upstream and sent back
 unchanged, because the endpoint replaces the whole object.
 
-Allowed --date-format values:
-  %s
+The boolean flags need the equals sign: "--24-hour=false" turns the
+setting off, while "--24-hour false" turns it on and then fails on the
+leftover word.
+
+--date-format patterns, each shown as today's date:
+%s
+
+Case does not matter: "yyyy/mm/dd" sets YYYY/MM/DD.
+
+The desktop shows the clock and the dashboard only while
+--show-widgets is true, though the other preferences are still stored
+while it is false.
 
 Examples:
   olares-cli settings appearance widget set --show-widgets=false
   olares-cli settings appearance widget set --24-hour=false --date-format M/D/YY
   olares-cli settings appearance widget set --show-dashboard=true
-`, strings.Join(dateFormats, "\n  ")),
-		Args: cobra.NoArgs,
+`, dateFormatChoices(time.Now())),
+		Args: rejectBooleanAsArgument,
 		RunE: func(c *cobra.Command, _ []string) error {
 			patch := widgetPatch{}
 			if c.Flags().Changed("show-widgets") {
@@ -143,24 +201,61 @@ Examples:
 			return runWidgetSet(c.Context(), f, patch)
 		},
 	}
-	cmd.Flags().BoolVar(&showWidgets, "show-widgets", true, "show the desktop widgets")
-	cmd.Flags().BoolVar(&is24HourFormat, "24-hour", true, "use 24-hour time in the clock widget")
-	cmd.Flags().StringVar(&dateFormat, "date-format", "", "date format used by the clock widget")
-	cmd.Flags().BoolVar(&showDashboard, "show-dashboard", true, "show the dashboard widget")
+	// Declared false so the help does not print "(default true)": omitting
+	// a flag keeps the current value rather than setting it to anything.
+	cmd.Flags().BoolVar(&showWidgets, "show-widgets", false, "show the desktop widgets (unchanged if omitted)")
+	cmd.Flags().BoolVar(&is24HourFormat, "24-hour", false, "use 24-hour time in the clock widget (unchanged if omitted)")
+	cmd.Flags().StringVar(&dateFormat, "date-format", "",
+		"one of the 11 `YYYY/MM/DD`-style patterns listed above (unchanged if omitted)")
+	cmd.Flags().BoolVar(&showDashboard, "show-dashboard", false, "show the dashboard widget (unchanged if omitted)")
 	return cmd
 }
 
+// A boolean flag consumes no following word, so "--24-hour false" sets the
+// preference to true and leaves "false" as a positional, which NoArgs alone
+// would report as an unknown command.
+func rejectBooleanAsArgument(cmd *cobra.Command, args []string) error {
+	if len(args) > 0 {
+		if value := strings.ToLower(args[0]); value == "true" || value == "false" {
+			return fmt.Errorf("%q was read as an argument, not as a flag value: a boolean flag needs the equals sign, as in --%s=%s",
+				args[0], exampleBooleanFlag(cmd), value)
+		}
+	}
+	return cobra.NoArgs(cmd, args)
+}
+
+// The flag to put in that example: the boolean the caller just passed, when
+// there is only one, so the suggestion is the line they meant to type.
+func exampleBooleanFlag(cmd *cobra.Command) string {
+	var passed []string
+	cmd.Flags().Visit(func(f *pflag.Flag) {
+		if f.Value.Type() == "bool" {
+			passed = append(passed, f.Name)
+		}
+	})
+	if len(passed) == 1 {
+		return passed[0]
+	}
+	return "show-widgets"
+}
+
+// resolveDateFormat accepts a pattern in any case and returns the spelling
+// the desktop clock renders, matching how this subtree reads surfaces and
+// fill modes. A pattern a newer Settings adds needs a newer CLI to preview
+// it, so there is no flag to bypass the list.
 func resolveDateFormat(raw string) (string, error) {
-	value := strings.TrimSpace(raw)
+	value := strings.ToUpper(strings.TrimSpace(raw))
 	if value == "" {
-		return "", fmt.Errorf("--date-format requires a value (allowed: %s)", strings.Join(dateFormats, ", "))
+		return "", fmt.Errorf("--date-format requires one of these patterns (shown as today's date):\n%s",
+			dateFormatChoices(time.Now()))
 	}
 	for _, f := range dateFormats {
 		if value == f {
-			return value, nil
+			return f, nil
 		}
 	}
-	return "", fmt.Errorf("unsupported --date-format %q (allowed: %s)", raw, strings.Join(dateFormats, ", "))
+	return "", fmt.Errorf("unsupported --date-format %q; allowed patterns (shown as today's date):\n%s",
+		raw, dateFormatChoices(time.Now()))
 }
 
 func runWidgetSet(ctx context.Context, f *cmdutil.Factory, patch widgetPatch) error {
