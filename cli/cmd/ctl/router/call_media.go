@@ -44,21 +44,47 @@ import (
 // surface of its own rather than another flag on this one, and an edit is
 // something people reach for in a picture editor. Left to a direct call.
 
-// generationView is Router's record of one piece of work. Response is the
-// provider's own snapshot with its identifiers stripped: it carries the outputs
-// and, depending on the provider, a progress percentage.
+// generationView is Router's record of one piece of work, and every media
+// family answers with it on all three routes.
+//
+// What a generation produced is stated in outputs rather than left inside the
+// provider's own JSON, and progress and usage are Router's fields rather than
+// the vendor's. provider_response is whatever the upstream said that Router has
+// no field for: a whitelist, optional, and not needed to use a generation.
 type generationView struct {
-	ID        string          `json:"id"`
-	Object    string          `json:"object"`
-	MediaType string          `json:"media_type"`
-	Operation string          `json:"operation"`
-	Status    string          `json:"status"`
-	Model     string          `json:"model"`
-	Response  json.RawMessage `json:"response,omitempty"`
-	ErrorCode *string         `json:"error_code,omitempty"`
-	Error     *string         `json:"error,omitempty"`
-	CreatedAt time.Time       `json:"created_at"`
-	ExpiresAt time.Time       `json:"expires_at"`
+	ID        string             `json:"id"`
+	Object    string             `json:"object"`
+	MediaType string             `json:"media_type"`
+	Operation string             `json:"operation"`
+	Status    string             `json:"status"`
+	Progress  *float64           `json:"progress,omitempty"`
+	Model     string             `json:"model"`
+	Outputs   []generationOutput `json:"outputs,omitempty"`
+	Usage     *generationUsage   `json:"usage,omitempty"`
+	Response  json.RawMessage    `json:"provider_response,omitempty"`
+	ErrorCode *string            `json:"error_code,omitempty"`
+	Error     *string            `json:"error,omitempty"`
+	CreatedAt time.Time          `json:"created_at"`
+	ExpiresAt time.Time          `json:"expires_at"`
+}
+
+// generationOutput is one artifact. A zero measurement means the provider did
+// not report it, never that it is zero, and content_url addresses this Router
+// rather than anything upstream.
+type generationOutput struct {
+	ID              string  `json:"id"`
+	ContentType     string  `json:"content_type,omitempty"`
+	Width           int     `json:"width,omitempty"`
+	Height          int     `json:"height,omitempty"`
+	DurationSeconds float64 `json:"duration_seconds,omitempty"`
+	ContentURL      string  `json:"content_url"`
+}
+
+// generationUsage is what the provider said it produced, and it is absent
+// unless the provider said something.
+type generationUsage struct {
+	Count   int     `json:"count,omitempty"`
+	Seconds float64 `json:"seconds,omitempty"`
 }
 
 func (g *generationView) done() bool {
@@ -71,38 +97,22 @@ func (g *generationView) done() bool {
 
 func (g *generationView) failed() bool { return strings.EqualFold(g.Status, "failed") }
 
-// progressNote reads the one field of the snapshot worth showing while waiting.
-// Not every provider reports it, and its absence is not worth a word.
+// progressNote is the one thing worth showing while waiting. Not every provider
+// reports it, and its absence is not worth a word.
 func (g *generationView) progressNote() string {
-	if len(g.Response) == 0 {
+	if g.Progress == nil {
 		return ""
 	}
-	var snap struct {
-		Progress *float64 `json:"progress"`
-	}
-	if json.Unmarshal(g.Response, &snap) != nil || snap.Progress == nil {
-		return ""
-	}
-	return fmt.Sprintf(", %.0f%%", *snap.Progress)
+	return fmt.Sprintf(", %.0f%%", *g.Progress)
 }
 
-// outputIDs are the pieces this generation produced. A provider that made one
-// image names it anyway, and asking for a named output is how a caller avoids
-// depending on which one happens to be first.
+// outputIDs are the pieces this generation produced, named. Asking for a named
+// output is how a caller avoids depending on which one happens to be first —
+// and a provider that settled without naming anything is reported as one
+// unnamed output, which is nothing to choose between and so nothing to list.
 func (g *generationView) outputIDs() []string {
-	if len(g.Response) == 0 {
-		return nil
-	}
-	var snap struct {
-		Outputs []struct {
-			ID string `json:"id"`
-		} `json:"outputs"`
-	}
-	if json.Unmarshal(g.Response, &snap) != nil {
-		return nil
-	}
-	out := make([]string, 0, len(snap.Outputs))
-	for _, o := range snap.Outputs {
+	out := make([]string, 0, len(g.Outputs))
+	for _, o := range g.Outputs {
 		if s := strings.TrimSpace(o.ID); s != "" {
 			out = append(out, s)
 		}
