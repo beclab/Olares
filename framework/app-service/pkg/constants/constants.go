@@ -219,6 +219,11 @@ const (
 	ArchLabelKey                       = "kubernetes.io/arch"
 	CudaVersionLabelKey                = "gpu.bytetrade.io/cuda"
 	NodeNvidiaRegistryKey              = "hami.io/node-nvidia-register"
+	// NodeHandshakeKey is the liveness half of the pair HAMi's device plugin
+	// patches onto a node alongside NodeNvidiaRegistryKey. The register
+	// annotation is never cleared once written, so the handshake is the only
+	// thing that says whether the cards it lists are still there.
+	NodeHandshakeKey = "hami.io/node-handshake"
 )
 
 var (
