@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
@@ -19,6 +20,16 @@ import (
 )
 
 const mib = int64(1024 * 1024)
+
+const (
+	// hamiHandshake* mirror the values HAMi writes into its handshake
+	// annotation and the window it lets a request go unanswered before
+	// declaring the node's devices gone (HAMi pkg/util.CheckHealth). They have
+	// to stay in step with HAMi for the two to agree about a node.
+	hamiHandshakeRequesting = "Requesting"
+	hamiHandshakeDeleted    = "Deleted"
+	hamiHandshakeTimeout    = 60 * time.Second
+)
 
 type allocationMutation func(nodes []Node, allocations []Allocation) ([]Allocation, *Allocation, error)
 
@@ -358,6 +369,9 @@ func decodeHAMINvidiaDevices(node *corev1.Node, mode string) []Device {
 	if !strings.Contains(raw, constants.OneContainerMultiDeviceSplitSymbol) {
 		return nil
 	}
+	// A card's own health bit is only as fresh as the annotation carrying it,
+	// so it has to be read together with the node-level signals.
+	nodeUsable := hamiNodeHealth(node) == deviceHealthYes
 
 	var devices []Device
 	for _, encoded := range strings.Split(raw, constants.OneContainerMultiDeviceSplitSymbol) {
@@ -376,7 +390,7 @@ func decodeHAMINvidiaDevices(node *corev1.Node, mode string) []Device {
 			Mode:                  mode,
 			CardModel:             items[4],
 			Memory:                devmem * mib,
-			Health:                boolHealth(healthy),
+			Health:                boolHealth(healthy && nodeUsable),
 			SupportType:           shareModeToSupportType(mode, node.Annotations[shareModeAnnotationKey(items[0])]),
 			AvailableSupportTypes: AvailableSupportTypes(mode),
 		})
@@ -391,6 +405,62 @@ func nodeHealth(node *corev1.Node) string {
 		}
 	}
 	return deviceHealthNo
+}
+
+// hamiNodeHealth reports whether the cards HAMi registered on a node can still
+// be trusted. decodeHAMINvidiaDevices folds it into every card's own health
+// bit, because that bit cannot express the node being gone: it is parsed out of
+// the register annotation, which the device plugin writes while the node is up
+// and which nothing ever clears — not even HAMi's own cleanup path, which marks
+// the handshake Deleted and leaves the stale card list in place (NodeCleanUp ->
+// MarkAnnotationsToDelete). Read on its own, a powered-off node therefore keeps
+// offering healthy cards indefinitely, and an app bound to one is placed on a
+// node HAMi has already dropped from its scheduler, leaving the pod Pending.
+//
+// The two signals combined here cover different failures and neither subsumes
+// the other: NodeReady catches a node that is gone, the handshake catches a
+// node that is up but whose GPU stack has died.
+func hamiNodeHealth(node *corev1.Node) string {
+	if nodeHealth(node) != deviceHealthYes {
+		return deviceHealthNo
+	}
+	return hamiHandshakeHealth(node.Annotations[constants.NodeHandshakeKey])
+}
+
+// hamiHandshakeHealth interprets HAMi's handshake annotation. The exchange it
+// records: the device plugin republishes "Reported <time>" every 30s, HAMi's
+// scheduler answers by stamping "Requesting_<time>" and then waits WITHOUT
+// refreshing that stamp, so a request still unanswered after
+// hamiHandshakeTimeout means no plugin is left to answer it. HAMi reacts by
+// rewriting the value to "Deleted_<time>" and dropping the node.
+//
+// This mirrors HAMi's own util.CheckHealth so the two components cannot
+// disagree about a node, with one deliberate difference: HAMi reports Deleted
+// as healthy because there the branch exists only to stop it re-adding a node
+// it already removed. Read as a statement about the cards, it means the exact
+// opposite, so here it is unhealthy.
+//
+// An empty or unrecognized value is healthy, matching HAMi's own fallback, so a
+// node registered by a plugin that predates the handshake is not taken out of
+// service. Timestamps are compared in UTC, which is what both sides produce as
+// long as neither container sets TZ.
+func hamiHandshakeHealth(handshake string) string {
+	switch {
+	case strings.Contains(handshake, hamiHandshakeDeleted):
+		return deviceHealthNo
+	case strings.Contains(handshake, hamiHandshakeRequesting):
+		_, stamp, ok := strings.Cut(handshake, "_")
+		if !ok {
+			return deviceHealthNo
+		}
+		requestedAt, err := time.Parse(time.DateTime, stamp)
+		if err != nil {
+			return deviceHealthNo
+		}
+		return boolHealth(time.Now().Before(requestedAt.Add(hamiHandshakeTimeout)))
+	default:
+		return deviceHealthYes
+	}
 }
 
 func boolHealth(healthy bool) string {
