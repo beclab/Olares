@@ -42,7 +42,7 @@ Examples:
 		},
 	}
 	cmd.SilenceUsage = true
-	registerPagingFlags(cmd, &o.pagingOptions)
+	registerPagingFlags(cmd, &o.pagingOptions, initPageSize)
 	return cmd
 }
 
@@ -58,9 +58,10 @@ func runKnowledgeSearch(ctx context.Context, f *cmdutil.Factory, keyword string,
 		return err
 	}
 
-	items, err := runSessionSearch(ctx, f, keyword, appKnowledge, searchTypeAggregate, &o.pagingOptions)
+	paging := o.sessionPaging()
+	items, err := runSessionSearch(ctx, f, keyword, appKnowledge, searchTypeAggregate, &paging)
 	if err != nil {
 		return err
 	}
-	return printSearchResults(format, items)
+	return printSearchResults(format, searchPage{items: items, offset: paging.offset, windowed: paging.windowed()})
 }
