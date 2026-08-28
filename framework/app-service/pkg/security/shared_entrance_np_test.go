@@ -45,6 +45,37 @@ func TestExcludeSharedEntrancePodsIdempotent(t *testing.T) {
 	}
 }
 
+func TestAppendNodeTunnelIngressRuleIdempotent(t *testing.T) {
+	np := NPSharedEntrance.DeepCopy()
+	peers := []netv1.NetworkPolicyPeer{
+		{IPBlock: &netv1.IPBlock{CIDR: "10.233.98.1/32"}},
+		{IPBlock: &netv1.IPBlock{CIDR: "10.233.87.0/32"}},
+		{IPBlock: &netv1.IPBlock{CIDR: "10.233.110.0/32"}},
+	}
+
+	AppendNodeTunnelIngressRule(np, peers)
+	AppendNodeTunnelIngressRule(np, peers)
+
+	if len(np.Spec.Ingress) != 2 {
+		t.Fatalf("ingress rules=%d, want 2", len(np.Spec.Ingress))
+	}
+	if !reflect.DeepEqual(np.Spec.Ingress[1].From, peers) {
+		t.Fatalf("node tunnel peers=%v, want %v", np.Spec.Ingress[1].From, peers)
+	}
+}
+
+func TestAppendNodeTunnelIngressRuleNilAndEmpty(t *testing.T) {
+	AppendNodeTunnelIngressRule(nil, []netv1.NetworkPolicyPeer{
+		{IPBlock: &netv1.IPBlock{CIDR: "10.233.98.1/32"}},
+	})
+
+	np := NPSharedEntrance.DeepCopy()
+	AppendNodeTunnelIngressRule(np, nil)
+	if len(np.Spec.Ingress) != 1 {
+		t.Fatalf("ingress rules=%d, want 1", len(np.Spec.Ingress))
+	}
+}
+
 func TestNPAppSpaceTemplateUnchanged(t *testing.T) {
 	if hasSharedEntranceNotIn(&NPAppSpace.Spec.PodSelector) {
 		t.Fatal("NPAppSpace package template must stay empty (regular app NS)")
