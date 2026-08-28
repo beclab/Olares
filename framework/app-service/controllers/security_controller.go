@@ -705,10 +705,16 @@ func (r *SecurityReconciler) reconcileNetworkPolicy(ctx context.Context, ns *cor
 		}
 
 		for _, np := range networkPolicy.Additional() {
+			var additionalNPFix func(np *netv1.NetworkPolicy)
+			if np.Name == security.SharedEntranceNetworkPolicyName {
+				additionalNPFix = func(np *netv1.NetworkPolicy) {
+					security.AppendNodeTunnelIngressRule(np, security.NodeTunnelRule())
+				}
+			}
 			if err := r.createOrUpdateNetworkPolicy(
 				ctx,
 				np,
-				nil,
+				additionalNPFix,
 				&networkPolicy,
 			); err != nil {
 				return err

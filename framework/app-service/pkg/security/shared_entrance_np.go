@@ -1,12 +1,18 @@
 package security
 
 import (
+	"reflect"
+
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 
+	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
+	// SharedEntranceNetworkPolicyName identifies the ingress policy for Shared
+	// entrance workloads.
+	SharedEntranceNetworkPolicyName = "shared-entrance-np"
 	// L4ProxyNamespace hosts the single l4-bfl-proxy replica.
 	L4ProxyNamespace = "os-network"
 	// L4ProxyAppLabel is the app= label on l4-bfl-proxy pods.
@@ -51,6 +57,23 @@ func hasSharedEntranceNotIn(sel *metav1.LabelSelector) bool {
 		}
 	}
 	return false
+}
+
+// AppendNodeTunnelIngressRule adds the current node tunnel peers as one
+// ingress rule. The caller supplies the peers so generation remains separate
+// from policy mutation and can be tested without a Kubernetes client.
+func AppendNodeTunnelIngressRule(np *netv1.NetworkPolicy, peers []netv1.NetworkPolicyPeer) {
+	if np == nil || len(peers) == 0 {
+		return
+	}
+	for _, rule := range np.Spec.Ingress {
+		if reflect.DeepEqual(rule.From, peers) {
+			return
+		}
+	}
+	np.Spec.Ingress = append(np.Spec.Ingress, netv1.NetworkPolicyIngressRule{
+		From: peers,
+	})
 }
 
 // SharedNamespacePolicies returns the four NetworkPolicies emitted into a

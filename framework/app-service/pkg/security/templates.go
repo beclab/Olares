@@ -515,7 +515,7 @@ var (
 
 	NPSharedEntrance = netv1.NetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "shared-entrance-np",
+			Name: SharedEntranceNetworkPolicyName,
 		},
 		Spec: netv1.NetworkPolicySpec{
 			PodSelector: metav1.LabelSelector{
