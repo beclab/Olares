@@ -6,10 +6,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"sort"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/google/uuid"
@@ -22,8 +26,18 @@ import (
 
 const (
 	asyncSearchMinOlaresVersion = "1.12.7"
+	// The Desktop WebSocket is normally reached over the public internet
+	// through the Olares reverse proxy, where TCP connect plus TLS can take
+	// noticeably longer than the login round trip that follows it. The two
+	// therefore get separate budgets, and the handshake matches the 30s the
+	// CLI's other WebSocket dials allow.
+	asyncSearchHandshakeTimeout = 30 * time.Second
 	asyncSearchLoginTimeout     = 15 * time.Second
-	asyncSearchHeartbeat        = 25 * time.Second
+	// A dropped or timed-out dial against that relay is common enough that a
+	// single attempt makes the command flaky rather than the network.
+	asyncSearchDialAttempts = 3
+	asyncSearchDialBackoff  = time.Second
+	asyncSearchHeartbeat    = 25 * time.Second
 	// user-service publishes its own timeout job_finished at ten minutes.
 	// Leave enough time for that terminal frame to cross the WebSocket.
 	asyncSearchJobTimeout = 10*time.Minute + 30*time.Second
@@ -126,50 +140,47 @@ func (c *asyncHitCollector) rows(sources []string) []json.RawMessage {
 	return rows
 }
 
-func runVersionedFileSearch(ctx context.Context, f *cmdutil.Factory, keyword, searchType string, o *pagingOptions, onHit func(asyncIndexedHit) error) ([]resultItem, bool, error) {
+func runVersionedFileSearch(ctx context.Context, f *cmdutil.Factory, keyword, searchType string, o *pagingOptions, onHit func(asyncIndexedHit) error) (searchPage, bool, error) {
 	useAsync, err := f.OlaresBackendAtLeast(ctx, asyncSearchMinOlaresVersion)
 	if err != nil {
-		return nil, false, err
+		return searchPage{}, false, err
 	}
 	if !useAsync {
-		items, err := runSessionSearch(ctx, f, keyword, appFilesV2, searchType, o)
-		return items, false, err
+		paging := o.sessionPaging()
+		items, err := runSessionSearch(ctx, f, keyword, appFilesV2, searchType, &paging)
+		return searchPage{items: items, offset: paging.offset, windowed: paging.windowed()}, false, err
 	}
-	items, err := runAsyncSearch(ctx, f, keyword, federatedFileSources, searchType, o, onHit)
-	return items, true, err
+	page, err := runAsyncSearch(ctx, f, keyword, federatedFileSources, searchType, o, onHit)
+	return page, true, err
 }
 
-func runAsyncSearch(ctx context.Context, f *cmdutil.Factory, keyword string, sources []string, searchType string, o *pagingOptions, onHit func(asyncIndexedHit) error) ([]resultItem, error) {
+func runAsyncSearch(ctx context.Context, f *cmdutil.Factory, keyword string, sources []string, searchType string, o *pagingOptions, onHit func(asyncIndexedHit) error) (searchPage, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
 	if f == nil {
-		return nil, fmt.Errorf("internal error: search not wired with cmdutil.Factory")
+		return searchPage{}, fmt.Errorf("internal error: search not wired with cmdutil.Factory")
 	}
 
 	rp, err := f.ResolveProfile(ctx)
 	if err != nil {
-		return nil, err
+		return searchPage{}, err
 	}
 	token, err := f.ValidAccessToken(ctx)
 	if err != nil {
-		return nil, err
+		return searchPage{}, err
 	}
 	hc, err := f.HTTPClient(ctx)
 	if err != nil {
-		return nil, err
+		return searchPage{}, err
 	}
 	doer := whoami.NewHTTPClient(hc, rp.DesktopURL, rp.OlaresID)
 
-	conn, err := dialSearchWebSocket(ctx, rp, token)
+	conn, err := openSearchWebSocket(ctx, rp, token)
 	if err != nil {
-		return nil, err
+		return searchPage{}, err
 	}
 	defer conn.Close()
-
-	if err := loginSearchWebSocket(conn); err != nil {
-		return nil, err
-	}
 
 	reqid := uuid.NewString()
 	defer cancelAsyncSearch(doer, reqid)
@@ -181,23 +192,46 @@ func runAsyncSearch(ctx context.Context, f *cmdutil.Factory, keyword string, sou
 		"sources": sources,
 	}
 	if err := doEnvelope(ctx, doer, "POST", "/api/search/nats/init", initBody, nil); err != nil {
-		return nil, err
+		return searchPage{}, err
 	}
 
 	collector := newAsyncHitCollector()
 	finished, err := collectAsyncMessages(ctx, conn, reqid, collector, onHit)
 	if err != nil {
-		return nil, err
+		return searchPage{}, err
 	}
 	if err := asyncSearchTerminalError(finished); err != nil {
-		return nil, err
+		return searchPage{}, err
 	}
 	if err := recoverMissingAsyncHits(ctx, doer, reqid, sources, finished.SourceSummary, collector, onHit); err != nil {
-		return nil, err
+		return searchPage{}, err
 	}
 
-	window := paginateRaw(collector.rows(sources), o.offset, o.limit)
-	return decodeResultRows(window)
+	rows := collector.rows(sources)
+	items, err := decodeResultRows(paginateRaw(rows, o.offset, o.limit))
+	if err != nil {
+		return searchPage{}, err
+	}
+	return searchPage{
+		items:    items,
+		offset:   o.offset,
+		total:    asyncTotalHits(sources, finished.SourceSummary, len(rows)),
+		windowed: o.windowed(),
+	}, nil
+}
+
+// asyncTotalHits is the size of the whole federated result set: what the job
+// reported per source, but never less than what actually arrived, so a backend
+// that omits the summary still yields an honest count.
+func asyncTotalHits(sources []string, summaries map[string]asyncSourceSummary, collected int) int {
+	total := 0
+	for _, source := range sources {
+		total += summaries[source].HitCount
+	}
+	if total < collected {
+		return collected
+	}
+	return total
 }
 
 func asyncSearchTerminalError(message asyncSearchMessage) error {
@@ -213,12 +247,106 @@ func asyncSearchTerminalError(message asyncSearchMessage) error {
 	}
 }
 
+// openSearchWebSocket returns a connection that has already completed the
+// login round trip, retrying dial and login together while the failure looks
+// transient: a socket that never acknowledges the login is as unusable as one
+// that never opened, and both fail the same way when the relay is congested.
+func openSearchWebSocket(ctx context.Context, rp *credential.ResolvedProfile, token string) (*websocket.Conn, error) {
+	var lastErr error
+	for attempt := 0; attempt < asyncSearchDialAttempts; attempt++ {
+		if attempt > 0 {
+			if err := waitBeforeSearchDialRetry(ctx, attempt); err != nil {
+				return nil, lastErr
+			}
+		}
+		conn, err := dialSearchWebSocket(ctx, rp, token)
+		if err == nil {
+			if err = loginSearchWebSocket(conn); err == nil {
+				return conn, nil
+			}
+			conn.Close()
+		}
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		if !isTransientSearchDialError(err) {
+			return nil, err
+		}
+		lastErr = err
+		if attempt+1 < asyncSearchDialAttempts {
+			fmt.Fprintf(os.Stderr, "search: connection attempt %d/%d failed (%v); retrying\n",
+				attempt+1, asyncSearchDialAttempts, err)
+		}
+	}
+	return nil, fmt.Errorf("%w (after %d attempts)", lastErr, asyncSearchDialAttempts)
+}
+
+func waitBeforeSearchDialRetry(ctx context.Context, attempt int) error {
+	timer := time.NewTimer(time.Duration(attempt) * asyncSearchDialBackoff)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return nil
+	}
+}
+
+// isTransientSearchDialError reports whether retrying the connection has a
+// chance of succeeding. Anything the server answered deliberately — a rejected
+// session, a missing route — is final; a stalled or severed connection, and
+// the gateway statuses that mean "no backend right now", are not.
+func isTransientSearchDialError(err error) bool {
+	var handshake *searchHandshakeError
+	if errors.As(err, &handshake) && handshake.status > 0 {
+		switch handshake.status {
+		case http.StatusRequestTimeout, http.StatusTooManyRequests,
+			http.StatusInternalServerError, http.StatusBadGateway,
+			http.StatusServiceUnavailable, http.StatusGatewayTimeout:
+			return true
+		default:
+			return false
+		}
+	}
+	// The dialer enforces HandshakeTimeout with a context deadline, so an
+	// expired handshake surfaces as context.DeadlineExceeded rather than a
+	// net.Error. The caller has already ruled out its own context.
+	if errors.Is(err, context.DeadlineExceeded) ||
+		errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
+		return true
+	}
+	var netErr net.Error
+	if errors.As(err, &netErr) && netErr.Timeout() {
+		return true
+	}
+	return errors.Is(err, syscall.ECONNRESET) || errors.Is(err, syscall.ECONNREFUSED) ||
+		errors.Is(err, syscall.ECONNABORTED) || errors.Is(err, syscall.EPIPE) ||
+		errors.Is(err, syscall.ETIMEDOUT) || errors.Is(err, syscall.EHOSTUNREACH) ||
+		errors.Is(err, syscall.ENETUNREACH) || errors.Is(err, syscall.ENETDOWN)
+}
+
+// searchHandshakeError keeps the status the upgrade was refused with, so retry
+// classification can tell a gateway hiccup from a rejected request.
+type searchHandshakeError struct {
+	status int
+	err    error
+}
+
+func (e *searchHandshakeError) Error() string {
+	if e.status > 0 {
+		return fmt.Sprintf("search WebSocket handshake failed (HTTP %d)", e.status)
+	}
+	return fmt.Sprintf("search WebSocket handshake failed: %v", e.err)
+}
+
+func (e *searchHandshakeError) Unwrap() error { return e.err }
+
 func dialSearchWebSocket(ctx context.Context, rp *credential.ResolvedProfile, token string) (*websocket.Conn, error) {
 	wsURL, err := searchWebSocketURL(rp.DesktopURL)
 	if err != nil {
 		return nil, err
 	}
-	dialer := websocket.Dialer{HandshakeTimeout: asyncSearchLoginTimeout}
+	dialer := websocket.Dialer{HandshakeTimeout: asyncSearchHandshakeTimeout}
 	if rp.InsecureSkipVerify {
 		dialer.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} // #nosec G402 -- explicit profile opt-in
 	}
@@ -235,9 +363,9 @@ func dialSearchWebSocket(ctx context.Context, rp *credential.ResolvedProfile, to
 		if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden || resp.StatusCode == 459 {
 			return nil, fmt.Errorf("search WebSocket authentication failed (HTTP %d); please run: olares-cli profile login", resp.StatusCode)
 		}
-		return nil, fmt.Errorf("search WebSocket handshake failed (HTTP %d)", resp.StatusCode)
+		return nil, &searchHandshakeError{status: resp.StatusCode, err: err}
 	}
-	return nil, fmt.Errorf("search WebSocket handshake failed: %w", err)
+	return nil, &searchHandshakeError{err: err}
 }
 
 func searchWebSocketURL(desktopURL string) (string, error) {
