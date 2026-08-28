@@ -2,9 +2,12 @@ package compute
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"testing"
+	"time"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -141,6 +144,123 @@ func TestBuildNodeResourceDiscreteGPULabel(t *testing.T) {
 	}
 	if len(n.Devices) != 1 || n.Devices[0].Mode != utils.AMDGPUType {
 		t.Fatalf("expected a single amd-gpu device, got %+v", n.Devices)
+	}
+}
+
+// hamiRegisterAnnotation encodes one card the way HAMi's device plugin does
+// (util.EncodeNodeDevices): ID,Count,Devmem,Devcore,Type,Numa,Health,Index,
+// Mode,Architecture followed by the device separator.
+func hamiRegisterAnnotation(uuid string, memMiB int, healthy bool) string {
+	return fmt.Sprintf("%s,10,%d,100,NVIDIA GeForce RTX 5090,0,%t,0,hami-core,0%s",
+		uuid, memMiB, healthy, constants.OneContainerMultiDeviceSplitSymbol)
+}
+
+func hamiNode(name string, handshake string, healthyCard bool) *corev1.Node {
+	node := k8sNode(name, "32Gi", map[string]string{
+		utils.NodeGPUTypeLabelPrefix + utils.NvidiaCardType: "true",
+	})
+	node.Annotations = map[string]string{
+		constants.NodeNvidiaRegistryKey: hamiRegisterAnnotation("GPU-"+name, 24576, healthyCard),
+	}
+	if handshake != "" {
+		node.Annotations[constants.NodeHandshakeKey] = handshake
+	}
+	return node
+}
+
+func hamiStamp(age time.Duration) string {
+	return time.Now().UTC().Add(-age).Format(time.DateTime)
+}
+
+// TestDecodeHAMINvidiaDevicesNodeLiveness covers the gap that let a powered-off
+// node keep offering GPUs: the health bit inside the register annotation is
+// written by the device plugin while the node is up and is never cleared, so it
+// has to be read together with the node's own liveness signals.
+func TestDecodeHAMINvidiaDevicesNodeLiveness(t *testing.T) {
+	tests := []struct {
+		name       string
+		handshake  string
+		healthyBit bool
+		poweredOff bool
+		want       string
+	}{
+		{name: "plugin reported recently", handshake: "Reported " + time.Now().String(), healthyBit: true, want: deviceHealthYes},
+		{name: "no handshake annotation at all", handshake: "", healthyBit: true, want: deviceHealthYes},
+		{name: "handshake request still within the window", handshake: "Requesting_" + hamiStamp(10*time.Second), healthyBit: true, want: deviceHealthYes},
+		{name: "handshake request went unanswered", handshake: "Requesting_" + hamiStamp(2*time.Minute), healthyBit: true, want: deviceHealthNo},
+		{name: "handshake unparseable", handshake: "Requesting_not-a-timestamp", healthyBit: true, want: deviceHealthNo},
+		{name: "hami already cleaned the node up", handshake: "Deleted_" + hamiStamp(time.Minute), healthyBit: true, want: deviceHealthNo},
+		// The regression: the node is gone but its register annotation, and so
+		// the card's own health bit, still says the card is fine.
+		{name: "node powered off with a stale healthy register", handshake: "Reported " + time.Now().String(), healthyBit: true, poweredOff: true, want: deviceHealthNo},
+		{name: "card reported unhealthy by the plugin", handshake: "Reported " + time.Now().String(), healthyBit: false, want: deviceHealthNo},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			node := hamiNode("gpu-a", tt.handshake, tt.healthyBit)
+			if tt.poweredOff {
+				// What the node controller records once kubelet stops
+				// heartbeating.
+				node.Status.Conditions[0].Status = corev1.ConditionUnknown
+			}
+			devices := decodeHAMINvidiaDevices(node, utils.NvidiaCardType)
+			if len(devices) != 1 {
+				t.Fatalf("expected exactly one decoded card, got %+v", devices)
+			}
+			if devices[0].Health != tt.want {
+				t.Fatalf("card health = %q, want %q", devices[0].Health, tt.want)
+			}
+		})
+	}
+}
+
+// TestPoweredOffNvidiaNodeIsNotPicked drives the whole selection path rather
+// than the decoder alone: install and resume both choose out of
+// listAvailableForLaunch, so a node that is gone must neither be offered to the
+// user nor picked automatically.
+func TestPoweredOffNvidiaNodeIsNotPicked(t *testing.T) {
+	// Both nodes carry an identical, healthy-looking register annotation —
+	// that is the whole point: nothing about the powered-off node's GPU
+	// advertisement changes when it goes down.
+	deadNode := hamiNode("gpu-dead", "Reported "+time.Now().String(), true)
+	deadNode.Status.Conditions[0].Status = corev1.ConditionUnknown
+
+	live := buildNodeResource(hamiNode("gpu-live", "Reported "+time.Now().String(), true))
+	dead := buildNodeResource(deadNode)
+
+	req := Requirement{Mode: utils.NvidiaCardType, RequiredGPU: 8 * gi, LimitedGPU: 8 * gi}
+	availability := listAvailableForLaunch(req, []Node{live, dead}, PressureSnapshot{})
+
+	for _, node := range availability.Nodes {
+		for _, device := range node.Devices {
+			if node.NodeName == "gpu-dead" && device.Operable {
+				t.Fatalf("a powered-off node's card must not be offered: %+v", device)
+			}
+			if node.NodeName == "gpu-live" && !device.Operable {
+				t.Fatalf("the live node's card should still be offered: %+v", device)
+			}
+		}
+	}
+
+	// Repeated because the picker breaks ties at random: a single run could
+	// pass on the live node by luck even if the dead one were still a
+	// candidate.
+	for i := 0; i < 50; i++ {
+		selections, ok := pickLaunchSelection(req, availability, PressureSnapshot{}, allocationOptions{checkPressure: true})
+		if !ok || len(selections) != 1 {
+			t.Fatalf("expected the live node to be picked, got %+v (ok=%t)", selections, ok)
+		}
+		if selections[0].NodeName != "gpu-live" {
+			t.Fatalf("picked a powered-off node: %+v", selections[0])
+		}
+	}
+
+	// With only the dead node left there must be no placement at all, rather
+	// than a fallback onto its stale cards.
+	deadOnly := listAvailableForLaunch(req, []Node{dead}, PressureSnapshot{})
+	if _, ok := pickLaunchSelection(req, deadOnly, PressureSnapshot{}, allocationOptions{checkPressure: true}); ok {
+		t.Fatal("a cluster whose only GPU node is powered off must not yield a placement")
 	}
 }
 
