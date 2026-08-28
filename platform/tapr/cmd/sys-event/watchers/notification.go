@@ -23,14 +23,11 @@ type Notification struct {
 }
 
 func (n *Notification) Send(ctx context.Context, user, msg string, data interface{}) error {
-	appKey, appSecret, err := n.getUserAppKey(ctx, user)
-	if err != nil {
-		return err
-	}
-
-	client := NewEventClient(appKey, appSecret, "system-server.user-system-"+user)
-
-	return client.CreateEvent("notification", msg, data)
+	// Skip sending for now. A missing bfl ApplicationPermission made Send fail,
+	// the workqueue requeued the item, and HTTP callbacks (e.g. /metrics/highload)
+	// were invoked again even after the original condition had recovered.
+	// TODO: remove unused notification send path (getUserAppKey and related code).
+	return nil
 }
 
 func (n *Notification) getUserAppKey(ctx context.Context, user string) (appKey, appSecret string, err error) {
