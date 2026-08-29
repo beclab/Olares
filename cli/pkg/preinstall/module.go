@@ -54,6 +54,11 @@ func (a *PublishDeclarationAction) Execute(_ connector.Runtime) error {
 
 type HFCacheMaterializeModule struct {
 	common.KubeModule
+	Skip bool
+}
+
+func (m *HFCacheMaterializeModule) IsSkip() bool {
+	return m.Skip
 }
 
 func (m *HFCacheMaterializeModule) Init() {
