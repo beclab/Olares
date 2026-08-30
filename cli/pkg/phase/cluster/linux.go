@@ -92,7 +92,10 @@ func (l *linuxInstallPhaseBuilder) installTerminus() phase {
 		&terminus.InstallAccountModule{},
 		&terminus.InstallSettingsModule{},
 		&terminus.InstallOsSystemModule{},
-		&preinstall.HFCacheMaterializeModule{},
+		// WSL shares this builder but is not a preinstall target: its system
+		// phase publishes no declaration, so a materialized cache would have
+		// nothing to serve.
+		&preinstall.HFCacheMaterializeModule{Skip: l.runtime.Arg.SystemInfo.IsWsl()},
 		&terminus.InstallLauncherModule{},
 		&terminus.InstallAppsModule{},
 	}

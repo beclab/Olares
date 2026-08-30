@@ -101,19 +101,15 @@ func (l *wslPhaseBuilder) build() []module.Module {
 			}
 
 		}).withGPU(l.runtime)...).
+		// Images are preloaded on WSL as on any offline install; the market
+		// preinstall declaration is not published, so nothing is preinstalled
+		// here. See linux.go for the wiring WSL deliberately omits.
 		addModule(&images.PreloadImagesModule{
 			ManifestModule: manifest.ManifestModule{
 				Manifest: l.manifestMap,
 				BaseDir:  l.baseDir,
 			},
 		}).
-		addModule(marketPreinstallModules(
-			l.manifestMap,
-			l.runtime.GetInstallerDir(),
-			l.baseDir,
-			l.runtime.Arg.OlaresVersion,
-			productionPreinstallSelections(l.runtime),
-		)...).
 		addModule(terminusBoxModuleBuilder(func() []module.Module {
 			return []module.Module{
 				&daemon.InstallTerminusdBinaryModule{

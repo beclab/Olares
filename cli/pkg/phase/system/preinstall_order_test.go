@@ -1,6 +1,8 @@
 package system
 
 import (
+	"os"
+	"strings"
 	"testing"
 
 	olarescommon "github.com/beclab/Olares/cli/pkg/common"
@@ -19,11 +21,54 @@ func TestMacosPhaseBuilderSkipsOfflinePreinstallWiring(t *testing.T) {
 	for _, module := range modules {
 		switch module.(type) {
 		case *images.PreloadImagesModule:
-			t.Fatalf("macOS phase must not include PreloadImagesModule: offline preinstall only supports Linux/WSL")
+			t.Fatalf("macOS phase must not include PreloadImagesModule: minikube installs load no images locally")
 		case *preinstall.PublishDeclarationModule:
-			t.Fatalf("macOS phase must not include PublishDeclarationModule: offline preinstall only supports Linux/WSL")
+			t.Fatalf("macOS phase must not include PublishDeclarationModule: market preinstall only supports Linux")
 		}
 	}
+}
+
+// The two phase builders below are asserted against their source rather than
+// their module lists. Neither can be built here: linuxPhaseBuilder.build()
+// reads the platform through BaseRuntime.GetSystemInfo(), whose backing field
+// is private and reachable only via NewBaseRuntime -- which creates
+// directories and a log file -- and wslPhaseBuilder.build() probes the real
+// GPU on its first line.
+
+func TestLinuxPhasePreloadsImagesBeforePublishingTheDeclaration(t *testing.T) {
+	source := phaseSource(t, "linux.go")
+	preload := strings.Index(source, "&images.PreloadImagesModule{")
+	publish := strings.Index(source, "addModule(marketPreinstallModules(")
+	if preload < 0 || publish < 0 {
+		t.Fatalf("build markers: preload=%d publish=%d", preload, publish)
+	}
+	// Market reads the declaration as soon as it is published, and installing
+	// a local chart needs the images already in containerd.
+	if preload >= publish {
+		t.Fatalf("declaration is published before images are preloaded: preload=%d publish=%d", preload, publish)
+	}
+}
+
+func TestWslPhasePublishesNoDeclarationButStillPreloadsImages(t *testing.T) {
+	source := phaseSource(t, "wsl.go")
+	if strings.Contains(source, "marketPreinstallModules(") {
+		t.Fatalf("WSL phase must not publish a preinstall declaration: market preinstall only supports Linux")
+	}
+	// Preloading is not part of preinstall: an offline WSL install needs the
+	// system's own images in containerd whether or not anything is
+	// preinstalled.
+	if !strings.Contains(source, "&images.PreloadImagesModule{") {
+		t.Fatalf("WSL phase must still preload images: offline installs have no registry to pull from")
+	}
+}
+
+func phaseSource(t *testing.T, name string) string {
+	t.Helper()
+	data, err := os.ReadFile(name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(data)
 }
 
 func TestMarketPreinstallModulesCarryWhatThePublishNeeds(t *testing.T) {
