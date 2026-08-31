@@ -44,6 +44,7 @@ func TestOverlayMACLifecycleWaitsForPodsBeforeReleasingFinalizer(t *testing.T) {
 				constants.ApplicationOwnerLabel:       "",
 				constants.ApplicationMacvlanInitLabel: "true",
 			},
+			Finalizers: []string{"test/pod-finalizer"},
 		},
 	}
 	kubeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(app, pod).Build()
@@ -59,7 +60,23 @@ func TestOverlayMACLifecycleWaitsForPodsBeforeReleasingFinalizer(t *testing.T) {
 	}
 
 	if err := kubeClient.Delete(t.Context(), pod); err != nil {
-		t.Fatalf("delete pod: %v", err)
+		t.Fatalf("mark pod terminating: %v", err)
+	}
+	result, err = reconciler.Reconcile(t.Context(), req)
+	if err != nil {
+		t.Fatalf("reconcile with terminating pod: %v", err)
+	}
+	if result.RequeueAfter == 0 {
+		t.Fatal("expected finalizer reconciliation to wait for terminating pod")
+	}
+
+	terminating := &corev1.Pod{}
+	if err := kubeClient.Get(t.Context(), types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, terminating); err != nil {
+		t.Fatalf("get terminating pod: %v", err)
+	}
+	terminating.Finalizers = nil
+	if err := kubeClient.Update(t.Context(), terminating); err != nil {
+		t.Fatalf("remove pod finalizer: %v", err)
 	}
 	if _, err := reconciler.Reconcile(t.Context(), req); err != nil {
 		t.Fatalf("reconcile after pod deletion: %v", err)
