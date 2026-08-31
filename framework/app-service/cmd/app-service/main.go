@@ -146,6 +146,14 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err = (&controllers.OverlayMACLifecycleReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "Unable to create controller", "controller", "OverlayMACLifecycle")
+		os.Exit(1)
+	}
+
 	if err = (&controllers.MeshInjectRolloutReconciler{
 		Client: mgr.GetClient(),
 		Kube:   kubeClient,
