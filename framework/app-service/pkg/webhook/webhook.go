@@ -63,8 +63,9 @@ var (
 
 // Webhook used to implement a webhook.
 type Webhook struct {
-	kubeClient    kubernetes.Interface
-	dynamicClient *versioned.Clientset
+	kubeClient       kubernetes.Interface
+	dynamicClient    versioned.Interface
+	allocationClient dynamic.Interface
 }
 
 // New create a webhook client.
@@ -77,10 +78,15 @@ func New(config *rest.Config) (*Webhook, error) {
 	if err != nil {
 		return nil, err
 	}
+	allocationClient, err := dynamic.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
 
 	return &Webhook{
-		kubeClient:    client,
-		dynamicClient: dynamicClient,
+		kubeClient:       client,
+		dynamicClient:    dynamicClient,
+		allocationClient: allocationClient,
 	}, nil
 }
 
@@ -1062,15 +1068,34 @@ func (wh *Webhook) ShouldInjectMacvlanInit(ctx context.Context, pod *corev1.Pod,
 	return enabled, nil
 }
 
-// CreateMacvlanInitPatch appends the macvlan init container to the pod's
-// init containers (idempotent — does nothing if the container is already
-// present) and returns the JSON merge patch to send back in the admission
-// response.
+// CreateMacvlanInitPatch appends the macvlan init container and injects a
+// collision-free, persisted MAC into the Multus network selection.
 func (wh *Webhook) CreateMacvlanInitPatch(req *admissionv1.AdmissionRequest, pod *corev1.Pod) ([]byte, error) {
+	return wh.CreateMacvlanInitPatchWithContext(context.Background(), req, pod)
+}
+
+func (wh *Webhook) CreateMacvlanInitPatchWithContext(ctx context.Context, req *admissionv1.AdmissionRequest, pod *corev1.Pod) ([]byte, error) {
+	if req == nil {
+		return nil, errEmptyAdmissionRequestBody
+	}
+	if pod == nil {
+		return nil, errors.New("nil pod")
+	}
+	if err := wh.ensureMasterPlacement(ctx, pod); err != nil {
+		return nil, err
+	}
+	mac, err := wh.ensureOverlayMAC(ctx, pod, req.DryRun != nil && *req.DryRun)
+	if err != nil {
+		return nil, err
+	}
 	if pod.Annotations == nil {
 		pod.Annotations = make(map[string]string)
 	}
-	pod.Annotations["k8s.v1.cni.cncf.io/networks"] = "kube-system/underlay-macvlan"
+	networkAnnotation, err := macvlanNetworkAnnotation(pod.Annotations["k8s.v1.cni.cncf.io/networks"], mac)
+	if err != nil {
+		return nil, err
+	}
+	pod.Annotations["k8s.v1.cni.cncf.io/networks"] = networkAnnotation
 
 	hasReplyInit := false
 	for _, c := range pod.Spec.InitContainers {
