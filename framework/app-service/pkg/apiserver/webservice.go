@@ -347,6 +347,13 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 		Returns(http.StatusOK, "Success to inject", nil)).
 		Consumes(restful.MIME_JSON)
 
+	ws.Route(ws.POST("/macvlan-init/validate").
+		To(handler.macvlanAnnotationValidate).
+		Doc("validating webhook to prevent direct underlay macvlan annotations").
+		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
+		Returns(http.StatusOK, "Success to validate", nil)).
+		Consumes(restful.MIME_JSON)
+
 	ws.Route(ws.POST("/podarch/inject").
 		To(handler.podArchInject).
 		Doc("mutating webhook to inject kubernetes.io/arch nodeSelector for single-arch apps").

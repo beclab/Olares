@@ -1623,6 +1623,46 @@ func (h *Handler) macvlanInitInject(req *restful.Request, resp *restful.Response
 	klog.Infof("Done[macvlan-init inject] with uuid=%s in namespace=%s", proxyUUID, requestForNamespace)
 }
 
+// macvlanAnnotationValidate is the validating entrypoint for direct
+// underlay-macvlan annotations. It is invoked only when the admission
+// configuration's CEL match condition sees the underlay selection.
+func (h *Handler) macvlanAnnotationValidate(req *restful.Request, resp *restful.Response) {
+	klog.Infof("Received validating webhook[macvlan annotation] request: Method=%v, URL=%v", req.Request.Method, req.Request.URL)
+	admissionRequestBody, ok := h.sidecarWebhook.GetAdmissionRequestBody(req, resp)
+	if !ok {
+		return
+	}
+	var admissionReq, admissionResp admissionv1.AdmissionReview
+	proxyUUID := uuid.New()
+	if _, _, err := webhook.Deserializer.Decode(admissionRequestBody, nil, &admissionReq); err != nil {
+		klog.Errorf("Failed to decode macvlan annotation admission request err=%v", err)
+		admissionResp.Response = h.sidecarWebhook.AdmissionError("", err)
+	} else {
+		admissionResp.Response = h.macvlanAnnotationValidateMutate(admissionReq.Request, proxyUUID)
+	}
+	admissionResp.TypeMeta = admissionReq.TypeMeta
+	admissionResp.Kind = admissionReq.Kind
+	if err := resp.WriteAsJson(&admissionResp); err != nil {
+		klog.Errorf("Failed to write macvlan annotation admission response err=%v", err)
+	}
+}
+
+func (h *Handler) macvlanAnnotationValidateMutate(req *admissionv1.AdmissionRequest, proxyUUID uuid.UUID) *admissionv1.AdmissionResponse {
+	if req == nil {
+		return h.sidecarWebhook.AdmissionError("", errNilAdmissionRequest)
+	}
+	var pod corev1.Pod
+	if err := json.Unmarshal(req.Object.Raw, &pod); err != nil {
+		klog.Errorf("Failed to unmarshal macvlan annotation pod uuid=%s err=%v", proxyUUID, err)
+		return h.sidecarWebhook.AdmissionError(req.UID, err)
+	}
+	if err := webhook.ValidateMacvlanAnnotation(&pod); err != nil {
+		klog.Errorf("Rejected direct macvlan annotation pod=%s/%s err=%v", req.Namespace, pod.Name, err)
+		return h.sidecarWebhook.AdmissionError(req.UID, err)
+	}
+	return &admissionv1.AdmissionResponse{Allowed: true, UID: req.UID}
+}
+
 // macvlanInitMutate is the core mutation logic for the macvlan-init webhook.
 // It is a no-op for pods without the macvlan-init label or whose owning
 // Application does not opt into enableOverlayGateway.
