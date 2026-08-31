@@ -52,3 +52,16 @@ func TestValidateMacvlanAnnotationRejectsMalformedSelection(t *testing.T) {
 		t.Fatal("expected malformed macvlan selection to be rejected")
 	}
 }
+
+func TestValidateMacvlanAnnotationRejectsUnicodeEscapedMacvlanSelection(t *testing.T) {
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: map[string]string{
+				multusNetworksAnnotation: `[{"name":"underlay\u002dmacvlan","namespace":"kube-system"}]`,
+			},
+		},
+	}
+	if err := ValidateMacvlanAnnotation(pod); err == nil {
+		t.Fatal("expected unicode-escaped direct macvlan selection to be rejected")
+	}
+}

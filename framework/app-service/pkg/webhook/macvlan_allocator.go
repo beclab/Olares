@@ -24,13 +24,15 @@ import (
 )
 
 const (
-	overlayMACSetting            = "overlayMacvlanMac"
-	overlayMACByOrdinalSetting   = "overlayMacvlanMacByOrdinal"
-	overlayMACFinalizer          = "app.bytetrade.io/overlay-mac-claim"
-	overlayMACAllocationPlural   = "overlaymacallocations"
-	overlayMACMasterNodeLabel    = "node-role.kubernetes.io/control-plane"
-	overlayMACAllocationPhase    = "Bound"
-	overlayMACAllocationAttempts = 10
+	overlayMACSetting             = "overlayMacvlanMac"
+	overlayMACByOrdinalSetting    = "overlayMacvlanMacByOrdinal"
+	overlayMACFinalizer           = "app.bytetrade.io/overlay-mac-claim"
+	overlayMACAllocationPlural    = "overlaymacallocations"
+	overlayMACMasterNodeLabel     = "node-role.kubernetes.io/control-plane"
+	overlayMACPendingPhase        = "Pending"
+	overlayMACAllocationPhase     = "Bound"
+	overlayMACAllocationAttempts  = 10
+	overlayMACApplicationUIDLabel = "app.bytetrade.io/overlay-mac-application-uid"
 )
 
 var overlayMACAllocationGVR = schema.GroupVersionResource{
@@ -116,6 +118,9 @@ func (wh *Webhook) ensureOverlayMAC(ctx context.Context, pod *corev1.Pod, dryRun
 	if dryRun {
 		return generateOverlayMAC()
 	}
+	if err := wh.ensureOverlayMACFinalizer(ctx, app.Name, app.UID); err != nil {
+		return "", err
+	}
 	for attempt := 0; attempt < overlayMACAllocationAttempts; attempt++ {
 		candidate, err := generateOverlayMAC()
 		if err != nil {
@@ -135,6 +140,9 @@ func (wh *Webhook) ensureOverlayMAC(ctx context.Context, pod *corev1.Pod, dryRun
 			if cleanupErr := wh.cleanupOverlayMACAllocation(ctx, app, instanceKey, ordinal, hasOrdinal, candidate); cleanupErr != nil {
 				klog.Errorf("overlay-mac: failed to clean up unpersisted allocation mac=%s app=%s err=%v", candidate, app.Name, cleanupErr)
 			}
+			return "", err
+		}
+		if err := wh.markOverlayMACAllocationPhase(ctx, candidate, overlayMACAllocationPhase); err != nil {
 			return "", err
 		}
 		return candidate, nil
@@ -181,6 +189,9 @@ func (wh *Webhook) createOverlayMACAllocation(ctx context.Context, app *appv1alp
 		"kind":       "OverlayMACAllocation",
 		"metadata": map[string]interface{}{
 			"name": key,
+			"labels": map[string]interface{}{
+				overlayMACApplicationUIDLabel: string(app.UID),
+			},
 			"ownerReferences": []interface{}{map[string]interface{}{
 				"apiVersion":         "app.bytetrade.io/v1alpha1",
 				"kind":               "Application",
@@ -194,7 +205,7 @@ func (wh *Webhook) createOverlayMACAllocation(ctx context.Context, app *appv1alp
 			"instanceKey":    instanceKey,
 			"applicationUID": string(app.UID),
 			"applicationRef": app.Name,
-			"phase":          overlayMACAllocationPhase,
+			"phase":          overlayMACPendingPhase,
 		},
 	}}
 	_, err := wh.allocationClient.Resource(overlayMACAllocationGVR).Create(ctx, allocation, metav1.CreateOptions{})
@@ -208,21 +219,35 @@ func (wh *Webhook) createOverlayMACAllocation(ctx context.Context, app *appv1alp
 func (wh *Webhook) ensureOverlayMACAllocation(ctx context.Context, app *appv1alpha1.Application, instanceKey, mac string) error {
 	allocation, err := wh.allocationClient.Resource(overlayMACAllocationGVR).Get(ctx, overlayMACKey(mac), metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
-		_, err = wh.createOverlayMACAllocation(ctx, app, instanceKey, mac)
+		created, createErr := wh.createOverlayMACAllocation(ctx, app, instanceKey, mac)
+		err = createErr
 		if apierrors.IsAlreadyExists(err) {
 			allocation, err = wh.allocationClient.Resource(overlayMACAllocationGVR).Get(ctx, overlayMACKey(mac), metav1.GetOptions{})
 			if err != nil {
 				return err
 			}
-			return validateOverlayMACAllocation(allocation, app, instanceKey, mac)
+			if err := validateOverlayMACAllocation(allocation, app, instanceKey, mac); err != nil {
+				return err
+			}
+			return wh.markOverlayMACAllocationPhase(ctx, mac, overlayMACAllocationPhase)
 		}
-		return err
+		if err != nil {
+			return err
+		}
+		if created {
+			return wh.markOverlayMACAllocationPhase(ctx, mac, overlayMACAllocationPhase)
+		}
+		return nil
 	}
 	if err != nil {
 		return fmt.Errorf("get overlay MAC allocation %s: %w", overlayMACKey(mac), err)
 	}
 	if err := validateOverlayMACAllocation(allocation, app, instanceKey, mac); err != nil {
 		return err
+	}
+	phase, _, _ := unstructured.NestedString(allocation.Object, "spec", "phase")
+	if phase == overlayMACPendingPhase {
+		return wh.markOverlayMACAllocationPhase(ctx, mac, overlayMACAllocationPhase)
 	}
 	klog.Infof("overlay-mac: action=reuse app=%s instance=%s mac=%s", app.Name, instanceKey, mac)
 	return nil
@@ -239,7 +264,7 @@ func validateOverlayMACAllocation(allocation *unstructured.Unstructured, app *ap
 		claimedInstance != instanceKey ||
 		claimedUID != string(app.UID) ||
 		claimedRef != app.Name ||
-		phase != overlayMACAllocationPhase ||
+		(phase != overlayMACAllocationPhase && phase != overlayMACPendingPhase) ||
 		!hasOverlayMACOwnerReference(allocation, app) {
 		return fmt.Errorf("overlay MAC allocation %s is owned by another instance", allocation.GetName())
 	}
@@ -293,6 +318,25 @@ func (wh *Webhook) cleanupOverlayMACAllocation(
 	uid := allocation.GetUID()
 	return wh.allocationClient.Resource(overlayMACAllocationGVR).Delete(ctx, allocation.GetName(), metav1.DeleteOptions{
 		Preconditions: &metav1.Preconditions{UID: &uid},
+	})
+}
+
+func (wh *Webhook) markOverlayMACAllocationPhase(ctx context.Context, mac, phase string) error {
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		allocation, err := wh.allocationClient.Resource(overlayMACAllocationGVR).Get(ctx, overlayMACKey(mac), metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		current, _, _ := unstructured.NestedString(allocation.Object, "spec", "phase")
+		if current == phase {
+			return nil
+		}
+		copy := allocation.DeepCopy()
+		if err := unstructured.SetNestedField(copy.Object, phase, "spec", "phase"); err != nil {
+			return err
+		}
+		_, err = wh.allocationClient.Resource(overlayMACAllocationGVR).Update(ctx, copy, metav1.UpdateOptions{})
+		return err
 	})
 }
 
