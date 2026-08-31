@@ -147,8 +147,9 @@ func main() {
 	}
 
 	if err = (&controllers.OverlayMACLifecycleReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:        mgr.GetClient(),
+		Scheme:        mgr.GetScheme(),
+		DynamicClient: dynamic.NewForConfigOrDie(config),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "Unable to create controller", "controller", "OverlayMACLifecycle")
 		os.Exit(1)

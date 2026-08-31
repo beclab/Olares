@@ -1469,7 +1469,7 @@ func (wh *Webhook) CreateOrUpdateMacvlanAnnotationValidatingWebhook() error {
 				MatchConditions: []admissionregv1.MatchCondition{
 					{
 						Name:       "has-underlay-macvlan-selection",
-						Expression: "has(object.metadata.annotations) && object.metadata.annotations.exists(k, k == 'k8s.v1.cni.cncf.io/networks') && object.metadata.annotations['k8s.v1.cni.cncf.io/networks'].contains('underlay-macvlan')",
+						Expression: "has(object.metadata.annotations) && object.metadata.annotations.exists(k, k == 'k8s.v1.cni.cncf.io/networks')",
 					},
 				},
 				SideEffects: func() *admissionregv1.SideEffectClass {
