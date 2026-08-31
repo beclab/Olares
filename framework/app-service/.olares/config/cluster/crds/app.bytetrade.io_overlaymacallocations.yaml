@@ -24,8 +24,14 @@ spec:
           spec:
             type: object
             x-kubernetes-validations:
-            - message: MAC allocation ownership is immutable
-              rule: self == oldSelf
+            - message: MAC allocation address is immutable
+              rule: self.mac == oldSelf.mac
+            - message: MAC allocation instance identity is immutable
+              rule: self.instanceKey == oldSelf.instanceKey
+            - message: MAC allocation application UID is immutable
+              rule: self.applicationUID == oldSelf.applicationUID
+            - message: MAC allocation application reference is immutable
+              rule: self.applicationRef == oldSelf.applicationRef
             required:
             - mac
             - instanceKey
@@ -48,6 +54,7 @@ spec:
               phase:
                 type: string
                 enum:
+                - Pending
                 - Bound
                 - Releasing
     subresources:
