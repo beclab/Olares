@@ -157,10 +157,10 @@ const side = {
                   text: "使用脚本",
                   link: "/zh/manual/get-started/install-windows-script",
                 },
-                {
-                  text: "使用 Docker 镜像",
-                  link: "/zh/manual/get-started/install-windows-docker",
-                },
+                // {
+                //   text: "使用 Docker 镜像",
+                //   link: "/zh/manual/get-started/install-windows-docker",
+                // },
               ],
             }, */
             /* {
