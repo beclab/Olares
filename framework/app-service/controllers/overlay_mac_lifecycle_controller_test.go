@@ -10,6 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	dynamicfake "k8s.io/client-go/dynamic/fake"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -48,7 +49,11 @@ func TestOverlayMACLifecycleWaitsForPodsBeforeReleasingFinalizer(t *testing.T) {
 		},
 	}
 	kubeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(app, pod).Build()
-	reconciler := &OverlayMACLifecycleReconciler{Client: kubeClient, Scheme: scheme}
+	reconciler := &OverlayMACLifecycleReconciler{
+		Client:        kubeClient,
+		Scheme:        scheme,
+		DynamicClient: dynamicfake.NewSimpleDynamicClient(runtime.NewScheme()),
+	}
 	req := ctrlRequest("app-space-jellyfin")
 
 	result, err := reconciler.Reconcile(t.Context(), req)
@@ -95,4 +100,24 @@ func TestOverlayMACLifecycleWaitsForPodsBeforeReleasingFinalizer(t *testing.T) {
 
 func ctrlRequest(name string) ctrl.Request {
 	return ctrl.Request{NamespacedName: types.NamespacedName{Name: name}}
+}
+
+func TestApplicationReferencesOverlayMAC(t *testing.T) {
+	app := &appv1alpha1.Application{
+		Spec: appv1alpha1.ApplicationSpec{
+			Settings: map[string]string{
+				"overlayMacvlanMac":          "02:00:00:00:00:01",
+				"overlayMacvlanMacByOrdinal": `{"0":"02:00:00:00:00:02"}`,
+			},
+		},
+	}
+	if !applicationReferencesMAC(app, "app-space/jellyfin", "02:00:00:00:00:01") {
+		t.Fatal("expected singleton MAC to be recognized")
+	}
+	if !applicationReferencesMAC(app, "app-space/jellyfin/0", "02:00:00:00:00:02") {
+		t.Fatal("expected ordinal MAC to be recognized")
+	}
+	if applicationReferencesMAC(app, "app-space/jellyfin/1", "02:00:00:00:00:02") {
+		t.Fatal("did not expect another ordinal to be recognized")
+	}
 }
