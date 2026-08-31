@@ -39,12 +39,6 @@ var overlayMACAllocationGVR = schema.GroupVersionResource{
 	Resource: overlayMACAllocationPlural,
 }
 
-type networkSelectionElement struct {
-	Name      string `json:"name"`
-	Namespace string `json:"namespace,omitempty"`
-	Mac       string `json:"mac,omitempty"`
-}
-
 func generateOverlayMAC() (string, error) {
 	var suffix [5]byte
 	if _, err := rand.Read(suffix[:]); err != nil {
@@ -428,13 +422,13 @@ func (wh *Webhook) ensureMasterPlacement(ctx context.Context, pod *corev1.Pod) e
 }
 
 func macvlanNetworkAnnotation(existing, mac string) (string, error) {
-	selection := []networkSelectionElement{}
+	selection := []map[string]interface{}{}
 	switch strings.TrimSpace(existing) {
 	case "", "kube-system/underlay-macvlan":
-		selection = append(selection, networkSelectionElement{
-			Name:      "underlay-macvlan",
-			Namespace: "kube-system",
-			Mac:       mac,
+		selection = append(selection, map[string]interface{}{
+			"name":      "underlay-macvlan",
+			"namespace": "kube-system",
+			"mac":       mac,
 		})
 	default:
 		if err := json.Unmarshal([]byte(existing), &selection); err != nil {
@@ -442,17 +436,19 @@ func macvlanNetworkAnnotation(existing, mac string) (string, error) {
 		}
 		found := false
 		for i := range selection {
-			if selection[i].Name == "underlay-macvlan" && (selection[i].Namespace == "" || selection[i].Namespace == "kube-system") {
-				selection[i].Namespace = "kube-system"
-				selection[i].Mac = mac
+			name, _, _ := unstructured.NestedString(selection[i], "name")
+			namespace, _, _ := unstructured.NestedString(selection[i], "namespace")
+			if name == "underlay-macvlan" && (namespace == "" || namespace == "kube-system") {
+				selection[i]["namespace"] = "kube-system"
+				selection[i]["mac"] = mac
 				found = true
 			}
 		}
 		if !found {
-			selection = append(selection, networkSelectionElement{
-				Name:      "underlay-macvlan",
-				Namespace: "kube-system",
-				Mac:       mac,
+			selection = append(selection, map[string]interface{}{
+				"name":      "underlay-macvlan",
+				"namespace": "kube-system",
+				"mac":       mac,
 			})
 		}
 	}

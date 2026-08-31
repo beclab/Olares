@@ -23,6 +23,9 @@ spec:
         properties:
           spec:
             type: object
+            x-kubernetes-validations:
+            - message: MAC allocation ownership is immutable
+              rule: self == oldSelf
             required:
             - mac
             - instanceKey
