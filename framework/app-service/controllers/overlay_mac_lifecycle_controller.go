@@ -50,10 +50,10 @@ func (r *OverlayMACLifecycleReconciler) Reconcile(ctx context.Context, req ctrl.
 	); err != nil {
 		return ctrl.Result{}, err
 	}
-	for _, pod := range pods.Items {
-		if pod.DeletionTimestamp.IsZero() {
-			return ctrl.Result{RequeueAfter: 2 * time.Second}, nil
-		}
+	if len(pods.Items) != 0 {
+		// A terminating Pod can still own a macvlan link and DHCP lease. Wait
+		// for it to disappear from the API before allowing owner GC.
+		return ctrl.Result{RequeueAfter: 2 * time.Second}, nil
 	}
 
 	copy := app.DeepCopy()
