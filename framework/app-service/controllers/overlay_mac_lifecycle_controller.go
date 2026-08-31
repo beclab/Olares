@@ -162,6 +162,7 @@ func applicationReferencesMAC(app *appv1alpha1.Application, instanceKey, mac str
 
 func (r *OverlayMACLifecycleReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
+		Named("overlay-mac-lifecycle").
 		For(&appv1alpha1.Application{}).
 		Complete(r)
 }
