@@ -152,6 +152,10 @@ func (b *handlerBuilder) Build() (*Handler, error) {
 	if err != nil {
 		return nil, err
 	}
+	err = wh.CreateOrUpdateMacvlanAnnotationValidatingWebhook()
+	if err != nil {
+		return nil, err
+	}
 	err = wh.CreateOrUpdatePodArchNodeSelectorMutatingWebhook()
 	if err != nil {
 		return nil, err
