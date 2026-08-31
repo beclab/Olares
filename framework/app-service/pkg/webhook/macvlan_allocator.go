@@ -80,6 +80,9 @@ func (wh *Webhook) ensureOverlayMAC(ctx context.Context, pod *corev1.Pod, dryRun
 	if err != nil {
 		return "", fmt.Errorf("get application %q: %w", applicationName, err)
 	}
+	if !dryRun && app.UID == "" {
+		return "", fmt.Errorf("application %q has no UID; refusing to allocate overlay MAC", app.Name)
+	}
 	instanceKey, err := wh.overlayMACInstanceKey(ctx, pod, appName)
 	if err != nil {
 		return "", err
@@ -110,10 +113,6 @@ func (wh *Webhook) ensureOverlayMAC(ctx context.Context, pod *corev1.Pod, dryRun
 	if dryRun {
 		return generateOverlayMAC()
 	}
-	if app.UID == "" {
-		return "", fmt.Errorf("application %q has no UID; refusing to allocate overlay MAC", app.Name)
-	}
-
 	for attempt := 0; attempt < overlayMACAllocationAttempts; attempt++ {
 		candidate, err := generateOverlayMAC()
 		if err != nil {
