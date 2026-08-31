@@ -56,6 +56,9 @@ func validateOverlayMAC(value string) error {
 	if mac[0] != 0x02 || mac[0]&0x01 != 0 {
 		return fmt.Errorf("overlay MAC %q must be a locally administered unicast 02: address", value)
 	}
+	if mac.String() != value {
+		return fmt.Errorf("overlay MAC %q must use lowercase colon notation", value)
+	}
 	return nil
 }
 
@@ -129,6 +132,9 @@ func (wh *Webhook) ensureOverlayMAC(ctx context.Context, pod *corev1.Pod, dryRun
 			continue
 		}
 		if err := wh.persistOverlayMAC(ctx, app.Name, app.UID, ordinal, hasOrdinal, candidate); err != nil {
+			if cleanupErr := wh.cleanupOverlayMACAllocation(ctx, app, instanceKey, ordinal, hasOrdinal, candidate); cleanupErr != nil {
+				klog.Errorf("overlay-mac: failed to clean up unpersisted allocation mac=%s app=%s err=%v", candidate, app.Name, cleanupErr)
+			}
 			return "", err
 		}
 		return candidate, nil
@@ -226,10 +232,68 @@ func validateOverlayMACAllocation(allocation *unstructured.Unstructured, app *ap
 	claimedMAC, _, _ := unstructured.NestedString(allocation.Object, "spec", "mac")
 	claimedInstance, _, _ := unstructured.NestedString(allocation.Object, "spec", "instanceKey")
 	claimedUID, _, _ := unstructured.NestedString(allocation.Object, "spec", "applicationUID")
-	if claimedMAC != mac || claimedInstance != instanceKey || claimedUID != string(app.UID) {
+	claimedRef, _, _ := unstructured.NestedString(allocation.Object, "spec", "applicationRef")
+	phase, _, _ := unstructured.NestedString(allocation.Object, "spec", "phase")
+	if allocation.GetName() != overlayMACKey(mac) ||
+		claimedMAC != mac ||
+		claimedInstance != instanceKey ||
+		claimedUID != string(app.UID) ||
+		claimedRef != app.Name ||
+		phase != overlayMACAllocationPhase ||
+		!hasOverlayMACOwnerReference(allocation, app) {
 		return fmt.Errorf("overlay MAC allocation %s is owned by another instance", allocation.GetName())
 	}
 	return nil
+}
+
+func hasOverlayMACOwnerReference(allocation *unstructured.Unstructured, app *appv1alpha1.Application) bool {
+	for _, owner := range allocation.GetOwnerReferences() {
+		if owner.APIVersion == "app.bytetrade.io/v1alpha1" &&
+			owner.Kind == "Application" &&
+			owner.Name == app.Name &&
+			owner.UID == app.UID &&
+			owner.BlockOwnerDeletion != nil &&
+			*owner.BlockOwnerDeletion {
+			return true
+		}
+	}
+	return false
+}
+
+func (wh *Webhook) cleanupOverlayMACAllocation(
+	ctx context.Context,
+	app *appv1alpha1.Application,
+	instanceKey, ordinal string,
+	hasOrdinal bool,
+	mac string,
+) error {
+	current, err := wh.dynamicClient.AppV1alpha1().Applications().Get(ctx, app.Name, metav1.GetOptions{})
+	if err == nil && current.UID == app.UID {
+		persisted, persistedErr := persistedOverlayMAC(current, ordinal, hasOrdinal)
+		if persistedErr != nil {
+			return persistedErr
+		}
+		if persisted == mac {
+			return nil
+		}
+	} else if err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+
+	allocation, err := wh.allocationClient.Resource(overlayMACAllocationGVR).Get(ctx, overlayMACKey(mac), metav1.GetOptions{})
+	if apierrors.IsNotFound(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if err := validateOverlayMACAllocation(allocation, app, instanceKey, mac); err != nil {
+		return nil
+	}
+	uid := allocation.GetUID()
+	return wh.allocationClient.Resource(overlayMACAllocationGVR).Delete(ctx, allocation.GetName(), metav1.DeleteOptions{
+		Preconditions: &metav1.Preconditions{UID: &uid},
+	})
 }
 
 func (wh *Webhook) persistOverlayMAC(ctx context.Context, applicationName string, uid types.UID, ordinal string, hasOrdinal bool, mac string) error {

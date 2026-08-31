@@ -12,6 +12,7 @@ import (
 	admissionregv1 "k8s.io/api/admissionregistration/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/util/retry"
 	"k8s.io/klog/v2"
 )
 
@@ -1361,12 +1362,20 @@ func (wh *Webhook) CreateOrUpdateMacvlanInitMutatingWebhook() error {
 				klog.Errorf("Failed to get MutatingWebhookConfiguration name=%s err=%v", mwh.Name, err)
 				return err
 			}
-			mwh.ObjectMeta.ResourceVersion = existing.ObjectMeta.ResourceVersion
-			if _, err = wh.kubeClient.AdmissionregistrationV1().MutatingWebhookConfigurations().Update(context.Background(), &mwh, metav1.UpdateOptions{}); err != nil {
-				if !apierrors.IsConflict(err) {
-					klog.Errorf("Failed to update MutatingWebhookConfiguration name=%s err=%v", mwh.Name, err)
-					return err
+			err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+				mwh.ObjectMeta.ResourceVersion = existing.ObjectMeta.ResourceVersion
+				_, updateErr := wh.kubeClient.AdmissionregistrationV1().MutatingWebhookConfigurations().Update(context.Background(), &mwh, metav1.UpdateOptions{})
+				if apierrors.IsConflict(updateErr) {
+					existing, updateErr = wh.kubeClient.AdmissionregistrationV1().MutatingWebhookConfigurations().Get(context.Background(), mwh.Name, metav1.GetOptions{})
+					if updateErr == nil {
+						mwh.ObjectMeta.ResourceVersion = existing.ObjectMeta.ResourceVersion
+					}
 				}
+				return updateErr
+			})
+			if err != nil {
+				klog.Errorf("Failed to update MutatingWebhookConfiguration name=%s err=%v", mwh.Name, err)
+				return err
 			}
 		} else {
 			klog.Errorf("Failed to create MutatingWebhookConfiguration name=%s err=%v", mwh.Name, err)

@@ -8,6 +8,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
@@ -238,6 +239,69 @@ func TestOverlayMACRejectsApplicationWithoutUID(t *testing.T) {
 	_, err = wh.CreateMacvlanInitPatch(macvlanBypassAdmissionRequest(t, macvlanPod()), macvlanPod())
 	if err == nil || !strings.Contains(err.Error(), "has no UID") {
 		t.Fatalf("expected missing UID rejection, got %v", err)
+	}
+}
+
+func TestCleanupOverlayMACAllocationDeletesOnlyUnpersistedOwnedClaim(t *testing.T) {
+	wh := testMacvlanWebhook()
+	app, err := wh.dynamicClient.AppV1alpha1().Applications().Get(t.Context(), "app-space-jellyfin", metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("get application: %v", err)
+	}
+	mac := "02:00:00:00:00:02"
+	if _, err := wh.createOverlayMACAllocation(t.Context(), app, "app-space/jellyfin", mac); err != nil {
+		t.Fatalf("create allocation: %v", err)
+	}
+	if err := wh.cleanupOverlayMACAllocation(t.Context(), app, "app-space/jellyfin", "", false, mac); err != nil {
+		t.Fatalf("cleanup allocation: %v", err)
+	}
+	if _, err := wh.allocationClient.Resource(overlayMACAllocationGVR).Get(t.Context(), overlayMACKey(mac), metav1.GetOptions{}); !apierrors.IsNotFound(err) {
+		t.Fatalf("allocation still exists or unexpected error: %v", err)
+	}
+}
+
+func TestOverlayMACRejectsNonBoundAllocation(t *testing.T) {
+	wh := testMacvlanWebhook()
+	app, err := wh.dynamicClient.AppV1alpha1().Applications().Get(t.Context(), "app-space-jellyfin", metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("get application: %v", err)
+	}
+	mac := "02:00:00:00:00:03"
+	controller := true
+	blockOwnerDeletion := true
+	_, err = wh.allocationClient.Resource(overlayMACAllocationGVR).Create(t.Context(), &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "app.bytetrade.io/v1alpha1",
+			"kind":       "OverlayMACAllocation",
+			"metadata": map[string]interface{}{
+				"name": "020000000003",
+				"ownerReferences": []interface{}{map[string]interface{}{
+					"apiVersion":         "app.bytetrade.io/v1alpha1",
+					"kind":               "Application",
+					"name":               app.Name,
+					"uid":                string(app.UID),
+					"controller":         controller,
+					"blockOwnerDeletion": blockOwnerDeletion,
+				}},
+			},
+			"spec": map[string]interface{}{
+				"mac":            mac,
+				"instanceKey":    "app-space/jellyfin",
+				"applicationUID": string(app.UID),
+				"applicationRef": app.Name,
+				"phase":          "Releasing",
+			},
+		},
+	}, metav1.CreateOptions{})
+	if err != nil {
+		t.Fatalf("create releasing allocation: %v", err)
+	}
+	allocation, err := wh.allocationClient.Resource(overlayMACAllocationGVR).Get(t.Context(), "020000000003", metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("get allocation: %v", err)
+	}
+	if err := validateOverlayMACAllocation(allocation, app, "app-space/jellyfin", mac); err == nil {
+		t.Fatal("expected Releasing allocation to be rejected")
 	}
 }
 
