@@ -20,6 +20,11 @@
 
 # Go workspace file
 go.work
+go.work.sum
+
+# Local checkouts of upstream Go deps worked on alongside this repo
+# (e.g. github.com/beclab/api), wired in via go.work.
+.deps/
 
 .dist
 .manifest
