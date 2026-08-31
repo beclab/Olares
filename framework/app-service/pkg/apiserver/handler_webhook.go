@@ -1652,16 +1652,13 @@ func (h *Handler) macvlanInitMutate(ctx context.Context, req *admissionv1.Admiss
 	shouldInject, err := h.sidecarWebhook.ShouldInjectMacvlanInit(ctx, &pod, ns)
 	if err != nil {
 		klog.Errorf("Failed to evaluate macvlan-init injection for pod=%s/%s err=%v", req.Namespace, pod.Name, err)
-		// FailurePolicy is Ignore at the webhook-config level; here we
-		// still report an error so the API server records it, but the
-		// pod will be allowed.
 		return h.sidecarWebhook.AdmissionError(req.UID, err)
 	}
 	if !shouldInject {
 		return resp
 	}
 
-	patchBytes, err := h.sidecarWebhook.CreateMacvlanInitPatch(req, &pod)
+	patchBytes, err := h.sidecarWebhook.CreateMacvlanInitPatchWithContext(ctx, req, &pod)
 	if err != nil {
 		klog.Errorf("Failed to create macvlan-init patch for pod=%s/%s err=%v", req.Namespace, pod.Name, err)
 		return h.sidecarWebhook.AdmissionError(req.UID, err)

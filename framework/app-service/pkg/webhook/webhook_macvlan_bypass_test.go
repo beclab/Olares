@@ -4,13 +4,18 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway/meshinagent"
 	"github.com/beclab/Olares/framework/app-service/pkg/sandbox/sidecar"
+	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
+	appfake "github.com/beclab/api/pkg/generated/clientset/versioned/fake"
 
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	dynamicfake "k8s.io/client-go/dynamic/fake"
+	k8sfake "k8s.io/client-go/kubernetes/fake"
 )
 
 func macvlanBypassAdmissionRequest(t *testing.T, pod *corev1.Pod) *admissionv1.AdmissionRequest {
@@ -42,10 +47,34 @@ func indexOfInit(pod *corev1.Pod, name string) int {
 	return -1
 }
 
+func testMacvlanWebhook() *Webhook {
+	appClient := appfake.NewSimpleClientset(&appv1alpha1.Application{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "app-space-jellyfin",
+			UID:  "application-uid",
+		},
+		Spec: appv1alpha1.ApplicationSpec{
+			Name:      "jellyfin",
+			Namespace: "app-space",
+			Settings:  map[string]string{"enableOverlayGateway": "true"},
+		},
+	})
+	return &Webhook{
+		kubeClient:       k8sfake.NewSimpleClientset(),
+		dynamicClient:    appClient,
+		allocationClient: dynamicfake.NewSimpleDynamicClient(runtime.NewScheme()),
+	}
+}
+
 func TestCreateMacvlanInitPatchPutsBypassAfterReplyInit(t *testing.T) {
-	wh := &Webhook{}
 	pod := &corev1.Pod{
-		ObjectMeta: metav1.ObjectMeta{Name: "jellyfin-0", Namespace: "app-space"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "jellyfin-0",
+			Namespace: "app-space",
+			Labels: map[string]string{
+				constants.ApplicationNameLabel: "jellyfin",
+			},
+		},
 		Spec: corev1.PodSpec{
 			InitContainers: []corev1.Container{{Name: "linkerd-init"}},
 			Containers:     []corev1.Container{{Name: "jellyfin"}},
@@ -53,7 +82,7 @@ func TestCreateMacvlanInitPatchPutsBypassAfterReplyInit(t *testing.T) {
 	}
 	req := macvlanBypassAdmissionRequest(t, pod)
 
-	if _, err := wh.CreateMacvlanInitPatch(req, pod); err != nil {
+	if _, err := testMacvlanWebhook().CreateMacvlanInitPatch(req, pod); err != nil {
 		t.Fatalf("CreateMacvlanInitPatch: %v", err)
 	}
 
@@ -70,10 +99,16 @@ func TestCreateMacvlanInitPatchPutsBypassAfterReplyInit(t *testing.T) {
 }
 
 func TestCreateMacvlanInitPatchIsIdempotent(t *testing.T) {
-	wh := &Webhook{}
+	wh := testMacvlanWebhook()
 	pod := &corev1.Pod{
-		ObjectMeta: metav1.ObjectMeta{Name: "jellyfin-0", Namespace: "app-space"},
-		Spec:       corev1.PodSpec{Containers: []corev1.Container{{Name: "jellyfin"}}},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "jellyfin-0",
+			Namespace: "app-space",
+			Labels: map[string]string{
+				constants.ApplicationNameLabel: "jellyfin",
+			},
+		},
+		Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "jellyfin"}}},
 	}
 	req := macvlanBypassAdmissionRequest(t, pod)
 

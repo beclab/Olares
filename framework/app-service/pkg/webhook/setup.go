@@ -1264,8 +1264,8 @@ func (wh *Webhook) CreateOrUpdateArgoResourceValidatingWebhook() error {
 
 // CreateOrUpdateMacvlanInitMutatingWebhook creates or updates the macvlan init container mutating webhook.
 // It only fires for pods labeled applications.app.bytetrade.io/macvlan-init=true on Create.
-// FailurePolicy is Ignore so that a transient webhook outage never blocks pod creation,
-// because the macvlan-init container is an additive networking concern.
+// FailurePolicy is Fail because the webhook owns the fixed-MAC and placement
+// invariants for macvlan pods.
 func (wh *Webhook) CreateOrUpdateMacvlanInitMutatingWebhook() error {
 	webhookPath := "/app-service/v1/macvlan-init/inject"
 	port, err := strconv.Atoi(strings.Split(constants.WebhookServerListenAddress, ":")[1])
@@ -1273,7 +1273,7 @@ func (wh *Webhook) CreateOrUpdateMacvlanInitMutatingWebhook() error {
 		return err
 	}
 	webhookPort := int32(port)
-	failurePolicy := admissionregv1.Ignore
+	failurePolicy := admissionregv1.Fail
 	matchPolicy := admissionregv1.Exact
 	webhookTimeout := int32(30)
 

@@ -59,6 +59,18 @@ rules:
   verbs:
   - update
 - apiGroups:
+  - app.bytetrade.io
+  resources:
+  - overlaymacallocations
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
   - apps
   resources:
   - deployments
