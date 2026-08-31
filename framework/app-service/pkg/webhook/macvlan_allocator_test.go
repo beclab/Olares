@@ -225,6 +225,22 @@ func TestOverlayMACRejectsInvalidPersistedValue(t *testing.T) {
 	}
 }
 
+func TestOverlayMACRejectsApplicationWithoutUID(t *testing.T) {
+	wh := testMacvlanWebhook()
+	app, err := wh.dynamicClient.AppV1alpha1().Applications().Get(t.Context(), "app-space-jellyfin", metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("get application: %v", err)
+	}
+	app.UID = ""
+	if _, err := wh.dynamicClient.AppV1alpha1().Applications().Update(t.Context(), app, metav1.UpdateOptions{}); err != nil {
+		t.Fatalf("update application: %v", err)
+	}
+	_, err = wh.CreateMacvlanInitPatch(macvlanBypassAdmissionRequest(t, macvlanPod()), macvlanPod())
+	if err == nil || !strings.Contains(err.Error(), "has no UID") {
+		t.Fatalf("expected missing UID rejection, got %v", err)
+	}
+}
+
 func fakeKubeClient(objects ...k8sruntime.Object) kubernetes.Interface {
 	return k8sfake.NewSimpleClientset(objects...)
 }
