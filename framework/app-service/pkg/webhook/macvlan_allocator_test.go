@@ -46,12 +46,16 @@ func TestCreateMacvlanInitPatchPersistsAndReusesMAC(t *testing.T) {
 		t.Fatalf("first patch: %v", err)
 	}
 
-	var firstNetworks []networkSelectionElement
+	var firstNetworks []map[string]interface{}
 	if err := json.Unmarshal([]byte(first.Annotations["k8s.v1.cni.cncf.io/networks"]), &firstNetworks); err != nil {
 		t.Fatalf("decode first networks annotation: %v", err)
 	}
-	if len(firstNetworks) != 1 || !strings.HasPrefix(firstNetworks[0].Mac, "02:") {
+	if len(firstNetworks) != 1 {
 		t.Fatalf("unexpected first network selection: %#v", firstNetworks)
+	}
+	firstMAC, _ := firstNetworks[0]["mac"].(string)
+	if !strings.HasPrefix(firstMAC, "02:") {
+		t.Fatalf("unexpected first network MAC: %#v", firstNetworks[0])
 	}
 
 	second := macvlanPod()
@@ -59,11 +63,15 @@ func TestCreateMacvlanInitPatchPersistsAndReusesMAC(t *testing.T) {
 	if _, err := wh.CreateMacvlanInitPatch(macvlanBypassAdmissionRequest(t, second), second); err != nil {
 		t.Fatalf("second patch: %v", err)
 	}
-	var secondNetworks []networkSelectionElement
+	var secondNetworks []map[string]interface{}
 	if err := json.Unmarshal([]byte(second.Annotations["k8s.v1.cni.cncf.io/networks"]), &secondNetworks); err != nil {
 		t.Fatalf("decode second networks annotation: %v", err)
 	}
-	if got, want := secondNetworks[0].Mac, firstNetworks[0].Mac; got != want {
+	if len(secondNetworks) != 1 {
+		t.Fatalf("unexpected second network selection: %#v", secondNetworks)
+	}
+	secondMAC, _ := secondNetworks[0]["mac"].(string)
+	if got, want := secondMAC, firstMAC; got != want {
 		t.Fatalf("recreated pod MAC = %q, want %q", got, want)
 	}
 }
@@ -87,6 +95,27 @@ func TestCreateMacvlanInitPatchDryRunHasNoAllocationSideEffect(t *testing.T) {
 	}
 	if _, err := wh.allocationClient.Resource(overlayMACAllocationGVR).Get(t.Context(), "does-not-exist", metav1.GetOptions{}); err == nil {
 		t.Fatal("dry-run unexpectedly created an allocation")
+	}
+}
+
+func TestMacvlanNetworkAnnotationPreservesExistingSelections(t *testing.T) {
+	existing := `[{"name":"other-net","interface":"net2","cni-args":{"foo":"bar"}},{"name":"underlay-macvlan","interface":"net1"}]`
+	raw, err := macvlanNetworkAnnotation(existing, "02:00:00:00:00:01")
+	if err != nil {
+		t.Fatalf("macvlanNetworkAnnotation: %v", err)
+	}
+	var selections []map[string]interface{}
+	if err := json.Unmarshal([]byte(raw), &selections); err != nil {
+		t.Fatalf("decode network selections: %v", err)
+	}
+	if got := selections[0]["interface"]; got != "net2" {
+		t.Fatalf("existing interface = %v, want net2", got)
+	}
+	if got := selections[0]["cni-args"].(map[string]interface{})["foo"]; got != "bar" {
+		t.Fatalf("existing cni-args = %v, want bar", got)
+	}
+	if got := selections[1]["mac"]; got != "02:00:00:00:00:01" {
+		t.Fatalf("underlay MAC = %v", got)
 	}
 }
 
