@@ -36,17 +36,17 @@ func fixtureFlags(t *testing.T) *pkgdashboard.CommonFlags {
 
 // adminEnsureUser is the canonical EnsureUser body used by every
 // non-empty test: alice is a platform-admin, so GPUAdvisory's
-// non-admin branch never trips. The CUDA-supported node check is
-// covered by adminEnsureCudaNode.
+// non-admin branch never trips. The GPU node check is covered by
+// adminEnsureGPUNode.
 const adminEnsureUser = `{"clusterRole":"workspaces-manager","user":{"username":"alice","globalrole":"platform-admin","email":"alice@olares.com"}}`
 
-// adminEnsureCudaNode advertises a CUDA-supported node so
-// GPUAdvisory's no-CUDA branch never trips either.
-const adminEnsureCudaNode = `{"items":[{"metadata":{"name":"node-1","labels":{"gpu.bytetrade.io/cuda-supported":"true"}}}]}`
+// adminEnsureGPUNode advertises an NVIDIA node so GPUAdvisory's
+// no-GPU branch never trips either.
+const adminEnsureGPUNode = `{"items":[{"metadata":{"name":"node-1","labels":{"gpu.bytetrade.io/nvidia":"true"}}}]}`
 
 // gpuStubMux dispatches the endpoints gpu business logic touches.
 // Each handler is opt-in. Setting any of them turns "advisory
-// admin & CUDA" on by default (so we don't repeat the boilerplate
+// admin & GPU node" on by default (so we don't repeat the boilerplate
 // in every test); subtests can override by setting the matching
 // field explicitly.
 type gpuStubMux struct {
@@ -69,7 +69,7 @@ func (m gpuStubMux) server(t *testing.T) *httptest.Server {
 	}
 	if m.ensureNodes == nil {
 		m.ensureNodes = func(w http.ResponseWriter, _ *http.Request) {
-			_, _ = w.Write([]byte(adminEnsureCudaNode))
+			_, _ = w.Write([]byte(adminEnsureGPUNode))
 		}
 	}
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

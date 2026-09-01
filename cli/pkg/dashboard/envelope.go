@@ -161,10 +161,11 @@ type Meta struct {
 	//   "not_olares_one"        — fan / cooling features need Olares One hardware
 	//   "no_fan_integration"    — capi /system/fan absent on this BFF
 	//
-	// GPU subtree NEVER hard-blocks on admin role or CUDA labels — those
-	// surface as advisory `Note` instead, mirroring the SPA which only
-	// hides the sidebar card. Reasons "requires_admin" / "no_cuda_node"
-	// are reserved for soft hints; current code path emits them via Note.
+	// GPU subtree NEVER hard-blocks on admin role or GPU node labels —
+	// those surface as advisory `Note` instead, mirroring the SPA which
+	// only hides the sidebar card. Reasons "requires_admin" /
+	// "no_gpu_node" are reserved for soft hints; current code path emits
+	// them via Note.
 	EmptyReason string `json:"empty_reason,omitempty"`
 
 	// Note is a free-form, single-sentence explanation that complements
