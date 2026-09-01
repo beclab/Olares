@@ -123,6 +123,13 @@ spec:
     spec:
       priorityClassName: "system-cluster-critical"
       serviceAccountName: os-internal
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-role.kubernetes.io/control-plane
+                    operator: Exists
       initContainers:
         - name: init-container-check-citus
           image: 'postgres:16.0-alpine3.18'

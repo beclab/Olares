@@ -226,6 +226,13 @@ spec:
         tier: seafile
     spec:
       priorityClassName: "system-cluster-critical"
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-role.kubernetes.io/control-plane
+                    operator: Exists
       initContainers:
       - name: seahub-init
         image: beclab/seahub-init:v0.0.8
