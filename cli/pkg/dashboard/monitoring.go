@@ -44,13 +44,25 @@ func DefaultDetailWindow() MonitoringWindow {
 	}
 }
 
+// AnchorMetricsFilter builds the `metrics_filter` regex for a set of metric
+// names. The group matters: `a|b$` anchors only the last alternative and
+// nothing at the front, so a requested name also answers for every metric
+// that merely contains it. The CPU / memory names got away with that because
+// none of them is a prefix of another, but the GPU exporters publish families
+// that are (`hw_frequency_hertz` beside `hw_frequency_limit_hertz`,
+// `amd_gpu_clock` beside longer siblings), and a stray series would be
+// silently averaged into the reading rather than rejected.
+func AnchorMetricsFilter(metrics []string) string {
+	return "^(" + strings.Join(metrics, "|") + ")$"
+}
+
 // MonitoringQuery composes the URL query for a /cluster or /nodes monitoring
 // fetch. Caller passes `cf` so the helper honours --since / --start / --end
 // without reaching into a global; everything else (step, times, instant)
 // defaults to the SPA contract.
 func MonitoringQuery(cf *CommonFlags, metricsFilter []string, w MonitoringWindow, now time.Time, instant bool) url.Values {
 	v := url.Values{}
-	v.Set("metrics_filter", strings.Join(metricsFilter, "|")+"$")
+	v.Set("metrics_filter", AnchorMetricsFilter(metricsFilter))
 	if instant {
 		// "step=0s" is the SPA's `step: '0s'` shorthand for "give me the
 		// instantaneous reading" (used by Disk detail). The BFF treats

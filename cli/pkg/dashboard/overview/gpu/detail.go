@@ -66,6 +66,17 @@ func BuildDetailFullEnvelope(ctx context.Context, c *pkgdashboard.Client, cf *pk
 		End:   pkgdashboard.GPUTrendTimestampISO(end, cf.Timezone.Time()),
 		Step:  pkgdashboard.GPUTrendStep(start, end),
 	}
+
+	// An Intel or AMD uuid is unknown to HAMI, so resolve the card against
+	// the KubeSphere vendors first. Only a uuid none of them claims belongs
+	// on the HAMI path below.
+	if target, ok := resolveKsDevice(ctx, c, uuid); ok {
+		ks := BuildKsDetailFullEnvelope(ctx, c, cf, target, uuid, start, end, since)
+		if env.Meta.Note != "" {
+			ks.Meta.Note = env.Meta.Note
+		}
+		return ks, nil
+	}
 	// Wire window: ALWAYS rendered in the HAMI backend's TZ
 	// (default Asia/Shanghai, OLARES_HAMI_BACKEND_TZ override).
 	// Decoupled from meta.window above on purpose — meta.window

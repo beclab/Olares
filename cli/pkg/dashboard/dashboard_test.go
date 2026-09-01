@@ -1048,11 +1048,13 @@ func TestGPUAdvisory_NonAdminEmitsHint(t *testing.T) {
 	}
 }
 
-// TestGPUAdvisory_AdminWithoutCUDA: admin path reaches the nodes
+// TestGPUAdvisory_AdminWithoutGPUNode: admin path reaches the nodes
 // lookup, and a label-less node set produces the
-// "gpu_sidebar_hidden_no_cuda_node" advisory. Data fetch is the
+// "gpu_sidebar_hidden_no_gpu_node" advisory. The gate asks whether ANY
+// vendor is present, not whether NVIDIA is — gating on `cuda-supported`
+// alone reported "no GPU" on every Intel and AMD machine. Data fetch is the
 // caller's job — we just emit the hint.
-func TestGPUAdvisory_AdminWithoutCUDA(t *testing.T) {
+func TestGPUAdvisory_AdminWithoutGPUNode(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/capi/app/detail":
@@ -1077,11 +1079,11 @@ func TestGPUAdvisory_AdminWithoutCUDA(t *testing.T) {
 	_ = common.Validate()
 
 	note, reason := gpuAdvisory(context.Background(), c)
-	if reason != "gpu_sidebar_hidden_no_cuda_node" {
-		t.Errorf("reason = %q, want gpu_sidebar_hidden_no_cuda_node", reason)
+	if reason != "gpu_sidebar_hidden_no_gpu_node" {
+		t.Errorf("reason = %q, want gpu_sidebar_hidden_no_gpu_node", reason)
 	}
-	if !strings.Contains(note, "cuda-supported") {
-		t.Errorf("note should mention the CUDA label, got %q", note)
+	if !strings.Contains(note, "gpu.bytetrade.io/") {
+		t.Errorf("note should name the label family it looked for, got %q", note)
 	}
 }
 

@@ -28,6 +28,64 @@ import (
 // envelope (with EmptyReason / Note / DeviceName) instead of a
 // "silently zero" payload from the BFF.
 
+// GPUVendor names the exporter a card's numbers come from. The three
+// vendors publish unrelated metric families, so nothing downstream can stay
+// vendor-blind.
+type GPUVendor string
+
+const (
+	VendorNVIDIA GPUVendor = "nvidia"
+	VendorIntel  GPUVendor = "intel"
+	VendorAMD    GPUVendor = "amd"
+)
+
+// vendorByModeLabel maps the per-mode node label to the vendor whose
+// exporter it turns on. Mirrors VENDOR_BY_MODE_LABEL in the SPA's
+// utils/gpuVendor.ts; the two lists have to agree or the CLI and the page
+// disagree about which cards exist.
+//
+// The integrated-GPU modes (`gpu.bytetrade.io/intel`, `gpu.bytetrade.io/amd`)
+// are left out on purpose: xpumd drops `hw_gpu_type=integrated` and the AMD
+// exporter is only installed for discrete cards, so an iGPU-only node has no
+// series to render at all.
+var vendorByModeLabel = []struct {
+	Label  string
+	Vendor GPUVendor
+}{
+	{"gpu.bytetrade.io/nvidia", VendorNVIDIA},
+	{"gpu.bytetrade.io/nvidia-gb10", VendorNVIDIA},
+	{"gpu.bytetrade.io/intel-gpu", VendorIntel},
+	{"gpu.bytetrade.io/amd-gpu", VendorAMD},
+}
+
+// VendorsOfNodeLabels returns every vendor a single node's labels turn on.
+// A node can carry a discrete AMD card next to an Intel one, so this reports
+// all matches rather than stopping at the first.
+//
+// `cuda-supported` counts as NVIDIA alongside the per-mode labels. It is the
+// older marker and the only one the GPU gate used to read; honouring both
+// means a node labelled by an earlier Olares still resolves to a vendor
+// instead of silently dropping out of the inventory.
+func VendorsOfNodeLabels(labels map[string]string) []GPUVendor {
+	var out []GPUVendor
+	seen := map[GPUVendor]bool{}
+	add := func(v GPUVendor) {
+		if !seen[v] {
+			seen[v] = true
+			out = append(out, v)
+		}
+	}
+	for _, m := range vendorByModeLabel {
+		if labels[m.Label] == "true" {
+			add(m.Vendor)
+		}
+	}
+	if labels["gpu.bytetrade.io/cuda-supported"] == "true" {
+		add(VendorNVIDIA)
+	}
+	return out
+}
+
 // cudaNodeMu / cudaNodeCache cache the result of HasCUDANode for the
 // duration of the *Client. We attach the cache to a per-Client map keyed
 // by the client pointer so tests with multiple fixtures don't share state,
@@ -49,8 +107,48 @@ func ResetCUDANodeCache(c *Client) {
 
 type cudaNodeResult struct {
 	present bool
-	err     error
-	done    bool
+	// nodesByVendor records which nodes turned each vendor on, so a detail
+	// view can scope its query to the one node holding the card instead of
+	// asking every node in the cluster.
+	nodesByVendor map[GPUVendor][]string
+	err           error
+	done          bool
+}
+
+// GPUInventory is what a single node-label scan can tell us: which vendors
+// are present and, for each, the nodes carrying them.
+type GPUInventory struct {
+	Vendors       []GPUVendor
+	NodesByVendor map[GPUVendor][]string
+}
+
+// Has reports whether the cluster carries any card from `v`.
+func (inv GPUInventory) Has(v GPUVendor) bool {
+	for _, got := range inv.Vendors {
+		if got == v {
+			return true
+		}
+	}
+	return false
+}
+
+// DetectGPUVendors scans node labels once and reports every GPU vendor the
+// cluster carries, in the fixed nvidia/intel/amd order so output is stable
+// across invocations. Shares the per-Client cache with HasCUDANode: one
+// label scan answers both the NVIDIA-only question the old gate asked and
+// the multi-vendor question the rest of the subtree now asks.
+func DetectGPUVendors(ctx context.Context, c *Client) (GPUInventory, error) {
+	r, err := scanGPUNodes(ctx, c)
+	if err != nil {
+		return GPUInventory{}, err
+	}
+	inv := GPUInventory{NodesByVendor: r.nodesByVendor}
+	for _, m := range vendorByModeLabel {
+		if len(r.nodesByVendor[m.Vendor]) > 0 && !inv.Has(m.Vendor) {
+			inv.Vendors = append(inv.Vendors, m.Vendor)
+		}
+	}
+	return inv, nil
 }
 
 // HasCUDANode reports whether the cluster has at least one node with
@@ -62,35 +160,47 @@ type cudaNodeResult struct {
 // free. The label-only fast path keeps payloads small even on large
 // clusters since we just need a presence check.
 func HasCUDANode(ctx context.Context, c *Client) (bool, error) {
+	r, err := scanGPUNodes(ctx, c)
+	return r.present, err
+}
+
+// scanGPUNodes performs the one label scan both GPU gates read from, and
+// caches it per-Client. It answers two questions from the same payload: the
+// legacy `cuda-supported` presence check, and which vendors each node's
+// per-mode labels turn on.
+func scanGPUNodes(ctx context.Context, c *Client) (cudaNodeResult, error) {
 	cudaNodeMu.Lock()
 	if r, ok := cudaNodeCache[c]; ok && r.done {
 		cudaNodeMu.Unlock()
-		return r.present, r.err
+		return r, r.err
 	}
 	cudaNodeMu.Unlock()
 
 	var raw struct {
 		Items []struct {
 			Metadata struct {
+				Name   string            `json:"name"`
 				Labels map[string]string `json:"labels"`
 			} `json:"metadata"`
 		} `json:"items"`
 	}
 	q := url.Values{"sortBy": []string{"createTime"}}
 	err := c.DoJSON(ctx, http.MethodGet, "/kapis/resources.kubesphere.io/v1alpha3/nodes", q, nil, &raw)
-	present := false
+	res := cudaNodeResult{nodesByVendor: map[GPUVendor][]string{}, err: err, done: true}
 	if err == nil {
 		for _, it := range raw.Items {
 			if it.Metadata.Labels["gpu.bytetrade.io/cuda-supported"] == "true" {
-				present = true
-				break
+				res.present = true
+			}
+			for _, v := range VendorsOfNodeLabels(it.Metadata.Labels) {
+				res.nodesByVendor[v] = append(res.nodesByVendor[v], it.Metadata.Name)
 			}
 		}
 	}
 	cudaNodeMu.Lock()
-	cudaNodeCache[c] = cudaNodeResult{present: present, err: err, done: true}
+	cudaNodeCache[c] = res
 	cudaNodeMu.Unlock()
-	return present, err
+	return res, err
 }
 
 // metaTimeAt returns `now` projected into cf.Timezone (defaulting to
@@ -188,16 +298,19 @@ func GPUAdvisory(ctx context.Context, c *Client, cf *CommonFlags, stderr io.Writ
 		}
 		return "GPU sidebar entry is hidden for non-admin profiles in the SPA; HAMI was queried directly", "gpu_sidebar_hidden_non_admin"
 	}
-	present, err := HasCUDANode(ctx, c)
+	// The card is hidden when NO vendor is present, not when NVIDIA
+	// specifically is absent. Gating on `cuda-supported` made every Intel and
+	// AMD machine report "no GPU" while the page listed its cards.
+	inv, err := DetectGPUVendors(ctx, c)
 	if err != nil {
 		return "", ""
 	}
-	if !present {
+	if len(inv.Vendors) == 0 {
 		if cf != nil && cf.Output != OutputJSON {
 			fmt.Fprintln(stderrOr(stderr),
-				"(advisory) no node carries gpu.bytetrade.io/cuda-supported=true; SPA hides the GPU card. HAMI was queried directly")
+				"(advisory) no node carries a gpu.bytetrade.io/* mode label; SPA hides the GPU card")
 		}
-		return "no node carries gpu.bytetrade.io/cuda-supported=true; SPA hides the GPU card. HAMI was queried directly", "gpu_sidebar_hidden_no_cuda_node"
+		return "no node carries a gpu.bytetrade.io/* mode label; SPA hides the GPU card", "gpu_sidebar_hidden_no_gpu_node"
 	}
 	return "", ""
 }
