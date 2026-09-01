@@ -87,7 +87,7 @@ spec:
             sleep 2
           done
         {{- end }}
-        image: {{ .Values.image.initContainerImage }}
+        image: beclab/aboveos-busybox:1.37.0
         imagePullPolicy: IfNotPresent
         name: driver-init
         securityContext:
@@ -101,7 +101,7 @@ spec:
         {{- else }}
         - name: amd-device-metrics-exporter-container
         {{- end }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          image: beclab/rocm-device-metrics-exporter:v1.5.1
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
             - "-monitor-gpu={{ .Values.monitor.resources.gpu }}"
