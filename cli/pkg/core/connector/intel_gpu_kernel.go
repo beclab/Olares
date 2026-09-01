@@ -71,7 +71,7 @@ type intelGPUSupportRow struct {
 var intelGPUSupportRows = []intelGPUSupportRow{
 	// i915 KMD driver GPUs
 	{ids: []string{"7D51"}, name: "Intel® Graphics", architecture: "Xe-LPG", codename: "Arrow Lake-H", initial: "Unavailable", full: "Ubuntu 24.04+ (6.9)"},
-	{ids: []string{"7D67"}, name: "Intel® Graphics", architecture: "Xe-LPG", codename: "Arrow Lake-S", initial: "Unavailable", full: "Ubuntu 24.04+ (6.7)"},
+	{ids: []string{"7D67"}, name: "Intel® Graphics", architecture: "Xe-LPG", codename: "Arrow Lake-S", initial: "Unavailable", full: "Ubuntu 24.04+ (6.14)"},
 	{ids: []string{"7D41"}, name: "Intel® Graphics", architecture: "Xe-LPG", codename: "Arrow Lake-U", initial: "Unavailable", full: "Ubuntu 24.04+ (6.9)"},
 	{ids: []string{"7DD5"}, name: "Intel® Graphics", architecture: "Xe-LPG", codename: "Meteor Lake", initial: "Kernel 6.0", full: "Ubuntu 24.04+ (6.7)"},
 	{ids: []string{"7D45"}, name: "Intel® Graphics", architecture: "Xe-LPG", codename: "Meteor Lake", initial: "Kernel 6.0", full: "Ubuntu 24.04+ (6.7)"},
