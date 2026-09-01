@@ -233,10 +233,10 @@ func TestPoweredOffNvidiaNodeIsNotPicked(t *testing.T) {
 	availability := listAvailableForLaunch(req, []Node{live, dead}, PressureSnapshot{})
 
 	for _, node := range availability.Nodes {
+		if node.NodeName == "gpu-dead" {
+			t.Fatalf("a powered-off node must not appear in the resume picker: %+v", node)
+		}
 		for _, device := range node.Devices {
-			if node.NodeName == "gpu-dead" && device.Operable {
-				t.Fatalf("a powered-off node's card must not be offered: %+v", device)
-			}
 			if node.NodeName == "gpu-live" && !device.Operable {
 				t.Fatalf("the live node's card should still be offered: %+v", device)
 			}
@@ -259,8 +259,48 @@ func TestPoweredOffNvidiaNodeIsNotPicked(t *testing.T) {
 	// With only the dead node left there must be no placement at all, rather
 	// than a fallback onto its stale cards.
 	deadOnly := listAvailableForLaunch(req, []Node{dead}, PressureSnapshot{})
+	if len(deadOnly.Nodes) != 0 {
+		t.Fatalf("a powered-off-only cluster must not list the dead node, got %#v", deadOnly.Nodes)
+	}
 	if _, ok := pickLaunchSelection(req, deadOnly, PressureSnapshot{}, allocationOptions{checkPressure: true}); ok {
 		t.Fatal("a cluster whose only GPU node is powered off must not yield a placement")
+	}
+}
+
+// TestNotReadyNodeIsHiddenFromResumePicker pins the rule on node readiness
+// alone: kubelet has stopped heartbeating, so the node is dropped from both
+// flows no matter what its cards claim. The dead node's card is deliberately
+// left healthy — a shape the cluster cannot actually produce, since
+// decodeHAMINvidiaDevices folds node liveness into every card — so that the
+// test fails if the decision ever starts depending on the devices again.
+func TestNotReadyNodeIsHiddenFromResumePicker(t *testing.T) {
+	req := Requirement{Mode: utils.NvidiaCardType, RequiredGPU: 8 * gi, LimitedGPU: 8 * gi}
+	dead := nvidiaNode("zero0", Device{ID: "gpu-4060", Memory: 16 * gi, Health: deviceHealthYes, SupportType: SupportTypeTimeSlice})
+	dead.Health = deviceHealthNo
+	live := nvidiaNode("olares-26", Device{ID: "gpu-5090", Memory: 24 * gi, Health: deviceHealthYes, SupportType: SupportTypeTimeSlice})
+	live.Health = deviceHealthYes
+
+	result := listAvailableForLaunch(req, []Node{dead, live}, PressureSnapshot{})
+	if len(result.Nodes) != 1 || result.Nodes[0].NodeName != "olares-26" {
+		t.Fatalf("NotReady node must be dropped from resume options, got %#v", result.Nodes)
+	}
+
+	// Install auto-picks out of the very same view, so it must not reach the
+	// dead node either. This is the assertion the previous fix was missing:
+	// it only checked the pick and the Operable bit, both of which pass while
+	// the node is still listed. Repeated because ties are broken at random.
+	for i := 0; i < 50; i++ {
+		selections, ok := pickLaunchSelection(req, result, PressureSnapshot{}, allocationOptions{checkPressure: true})
+		if !ok || len(selections) != 1 || selections[0].NodeName != "olares-26" {
+			t.Fatalf("install must pick the live node, got %+v (ok=%t)", selections, ok)
+		}
+	}
+
+	// With the NotReady node alone there is nothing left to offer, and no
+	// devices are reported for it at all.
+	only := listAvailableForLaunch(req, []Node{dead}, PressureSnapshot{})
+	if len(only.Nodes) != 0 || only.Schedulable {
+		t.Fatalf("a NotReady-only cluster must offer nothing, got %#v", only)
 	}
 }
 

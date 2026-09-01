@@ -8,6 +8,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -57,6 +58,11 @@ func AllocateForInstall(ctx context.Context, c client.Client, appConfig *appcfg.
 		return nil, err
 	}
 	if !manage {
+		// Not a failure: the app shares another user's server, which owns the
+		// card. Logged because from the outside it looks the same as an app
+		// that was supposed to get a card and silently didn't.
+		klog.Infof("compute: app %s/%s gets no card of its own, its compute lives on the shared server it consumes",
+			appConfig.OwnerName, appConfig.AppName)
 		return nil, DeleteAllocationsForApp(ctx, c, appConfig.AppName, appConfig.OwnerName)
 	}
 	appConfig = targetConfig
@@ -65,6 +71,8 @@ func AllocateForInstall(ctx context.Context, c client.Client, appConfig *appcfg.
 		return nil, fmt.Errorf("compute type %s not found in application resources", appConfig.SelectedGpuType)
 	}
 	if req.Mode == utils.CPUType {
+		klog.Infof("compute: app %s/%s runs in cpu mode, so no card is bound",
+			appConfig.OwnerName, appConfig.AppName)
 		return nil, DeleteAllocationsForApp(ctx, c, appConfig.AppName, appConfig.OwnerName)
 	}
 	pressure, err := FetchPressureSnapshot(ctx)
@@ -82,10 +90,21 @@ func AllocateForInstall(ctx context.Context, c client.Client, appConfig *appcfg.
 		availability := listAvailableForLaunch(req, nodes, pressure)
 		selections, ok := pickLaunchSelection(req, availability, pressure, allocationOptions{checkPressure: true})
 		if !ok {
+			// The install is about to fail with a one-line error, so spell out
+			// the whole candidate set here: this is the only record of which
+			// cards existed and what disqualified each one.
+			klog.Infof("compute: no card could be picked for app %s/%s, %s: %s",
+				appConfig.OwnerName, appConfig.AppName, describeRequirement(req),
+				explainPlacement(req, availability, pressure))
 			return nil, nil, fmt.Errorf("no available compute resource for type %s", req.Mode)
 		}
 		picked, validation := bindAllocations(appConfig, req, selections, nodes, pressure)
 		if !validation.OK {
+			// The picker and this validation read the same view, so a rejection
+			// here means the two disagree — worth the full dump.
+			klog.Infof("compute: the card picked for app %s/%s was refused by validation (%s), picked=%s: %s",
+				appConfig.OwnerName, appConfig.AppName, validation.Code,
+				describeSelections(selections), explainPlacement(req, availability, pressure))
 			return nil, nil, fmt.Errorf("no available compute resource for type %s: %s", req.Mode, validation.Code)
 		}
 		pickedAllocations = picked
@@ -95,6 +114,11 @@ func AllocateForInstall(ctx context.Context, c client.Client, appConfig *appcfg.
 	if err != nil {
 		return nil, err
 	}
+	// Logged out here, not inside the mutation: that closure is replayed on a
+	// write conflict, so a line printed there could announce a placement that
+	// was then rolled back and re-picked.
+	klog.Infof("compute: app %s/%s placed on %s, %s",
+		appConfig.OwnerName, appConfig.AppName, describeAllocations(pickedAllocations), describeRequirement(req))
 	if err := syncHAMIBindings(ctx, c, appConfig.AppName, appConfig.OwnerName, pickedAllocations); err != nil {
 		return nil, err
 	}
@@ -211,6 +235,23 @@ func pickLaunchSelection(req Requirement, availability *AvailabilityResult, pres
 	if availability == nil || req.Mode == utils.CPUType {
 		return nil, false
 	}
+	selections, ok := pickWithinScope(req, availability, pressure, opts)
+	if !ok {
+		// Deliberately terse: listAvailableForLaunchWithOptions has just logged
+		// the full candidate set at the same verbosity, so repeating it here
+		// would only double the volume. What it cannot say is that the pick
+		// then failed — which happens even when the view reports schedulable,
+		// because node status ignores pressure for nvidia while the fit check
+		// applies it. V(2) rather than Info because preflight runs this against
+		// a simulated cluster and treats a failed pick as a normal answer; the
+		// callers for which it really is a failure log it themselves.
+		klog.V(2).Infof("compute: no card picked for %s out of %d candidate node(s)",
+			describeRequirement(req), len(availability.Nodes))
+	}
+	return selections, ok
+}
+
+func pickWithinScope(req Requirement, availability *AvailabilityResult, pressure PressureSnapshot, opts allocationOptions) ([]BindingSelection, bool) {
 	switch availability.Scope {
 	case AvailabilityScopeCrossNode:
 		return pickAggregateSelection(req, availability.Nodes, pressure, opts, true)

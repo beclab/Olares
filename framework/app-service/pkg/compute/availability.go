@@ -8,6 +8,7 @@ import (
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -43,17 +44,41 @@ func listAvailableForLaunchWithOptions(req Requirement, nodes []Node, pressure P
 	if len(result.Nodes) == 0 {
 		result.Schedulable = false
 		result.Reason = "no-matching-node"
-		return result
+	} else {
+		markOperable(result)
+		result.Schedulable, result.Reason = availabilitySummary(req, result.Nodes)
 	}
-	markOperable(result)
-	result.Schedulable, result.Reason = availabilitySummary(req, result.Nodes)
+	// Both flows are built on this view — install picks from it, resume renders
+	// it — so one line here explains either one after the fact.
+	klog.V(2).Infof("compute: placement options for %s: %s",
+		describeRequirement(req), explainPlacement(req, result, pressure))
 	return result
 }
 
+// classifyLaunchNodes classifies the nodes that can still be placed on. A node
+// whose kubelet has stopped heartbeating is dropped outright and is absent from
+// the returned slice; every other node gets an entry, including the ones that
+// end up NodeStatusNotMatch.
 func classifyLaunchNodes(req Requirement, nodes []Node, pressure PressureSnapshot, opts allocationOptions) []NodeOption {
 	out := make([]NodeOption, 0, len(nodes))
 	for _, node := range nodes {
+		// Readiness is a node-level fact and it decides the node on its own:
+		// the devices are not consulted at all. They cannot answer the
+		// question anyway — the register annotation listing them is written
+		// while the node is up and never cleared, so a powered-off node keeps
+		// advertising its last known cards indefinitely. Dropping the node
+		// here covers both flows at once, since install picks out of this list
+		// and resume renders it.
+		if !node.isReady() {
+			klog.Infof("compute: skipping node %s for %s placement: node is not ready", node.NodeName, req.Mode)
+			continue
+		}
 		if !node.SupportsMode(req.Mode) {
+			// NotMatch is filtered out downstream, so this is the only trace of
+			// a node that vanished from the picker for advertising the wrong
+			// accelerator — the "my GPU node isn't even listed" case.
+			klog.V(2).Infof("compute: skipping node %s for %s placement: it advertises %v",
+				node.NodeName, req.Mode, node.GPUTypes)
 			out = append(out, NodeOption{
 				NodeName: node.NodeName,
 				GPUType:  node.primaryGPUType(),
@@ -362,6 +387,12 @@ func ApplyBindingSelection(ctx context.Context, c client.Client, appConfig *appc
 		attachBindings(nodes, withoutAppAllocations(existing, appConfig.AppName, appConfig.OwnerName))
 		bound, validation := bindAllocations(appConfig, req, selections, nodes, pressure)
 		if !validation.OK {
+			// The user picked these cards by hand and got an error back; record
+			// what they picked and which rule refused it, so a support report
+			// does not depend on the user relaying the code.
+			klog.Infof("compute: resume binding for app %s/%s refused (%s), submitted=%s, %s",
+				appConfig.OwnerName, appConfig.AppName, validation.Code,
+				describeSelections(selections), describeRequirement(req))
 			unavailable = unavailableBindingApplyResult(req, nodes, pressure, validation)
 			return nil, nil, errBindingUnavailable
 		}
@@ -374,6 +405,9 @@ func ApplyBindingSelection(ctx context.Context, c client.Client, appConfig *appc
 		}
 		return nil, err
 	}
+	// Outside the mutation, which is replayed on a write conflict.
+	klog.Infof("compute: app %s/%s bound to %s on resume, %s",
+		appConfig.OwnerName, appConfig.AppName, describeAllocations(allocations), describeRequirement(req))
 	if err := syncHAMIBindings(ctx, c, appConfig.AppName, appConfig.OwnerName, allocations); err != nil {
 		return nil, err
 	}
@@ -473,6 +507,14 @@ func ValidateBindingForResume(ctx context.Context, c client.Client, appConfig *a
 	}
 	allocations, validation := bindAllocations(appConfig, req, selections, nodes, pressure)
 	if !validation.OK {
+		// This is the dry run the frontend makes before offering the resume
+		// button, so it can be asked many times for one user action and stays
+		// quiet by default. It is still the only record of why the button came
+		// back disabled, which is a question the real-resume log cannot answer
+		// because that resume never happened.
+		klog.V(2).Infof("compute: resume pre-check for app %s/%s says the selection is unusable (%s), submitted=%s, %s",
+			appConfig.OwnerName, appConfig.AppName, validation.Code,
+			describeSelections(selections), describeRequirement(req))
 		return unavailableBindingApplyResult(req, nodes, pressure, validation), nil
 	}
 	// Even when the selection is valid we still hand back the full list of
@@ -672,6 +714,12 @@ func allocationsFromResolvedSelection(appConfig *appcfg.ApplicationConfig, req R
 			amount = item.memory
 		}
 		if amount <= 0 {
+			// Dropping every selection this way is what surfaces later as
+			// "empty-compute-binding", a code that says nothing about which
+			// card went missing or why.
+			klog.Warningf("compute: dropping card %s on node %s from the binding for app %s/%s: nothing left to allocate (card free=%s, requested=%s, remaining budget=%s)",
+				item.device.ID, item.node.NodeName, appConfig.OwnerName, appConfig.AppName,
+				humanBytes(deviceAvailableMemory(item.device)), humanBytes(item.memory), humanBytes(remaining))
 			continue
 		}
 		out = append(out, buildAllocation(appConfig, req, item.node, item.device, amount))
