@@ -10,12 +10,12 @@ const side = {
       items: [
         // { text: "比较 Olares 和 NAS", link: "/zh/manual/olares-vs-nas" },
         {
-          text: "升级指南",
+          text: "更新说明",
           collapsed: true,
           items: [
             {
-              text: "Olares 1.12.6",
-              link: "/zh/manual/upgrade-guides/1.12.6",
+              text: "Olares 1.12.6 更新说明",
+              link: "/zh/manual/update-guides/1.12.6",
             },
           ],
         },
