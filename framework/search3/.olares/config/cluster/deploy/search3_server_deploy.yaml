@@ -199,6 +199,13 @@ spec:
     spec:
       serviceAccountName: os-internal
       priorityClassName: "system-cluster-critical"
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-role.kubernetes.io/control-plane
+                    operator: Exists
       volumes:
         - name: userspace-dir
           hostPath:

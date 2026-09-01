@@ -90,6 +90,13 @@ spec:
       serviceAccountName: tapr-sysevent
       serviceAccount: tapr-sysevent
       priorityClassName: "system-cluster-critical"
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-role.kubernetes.io/control-plane
+                    operator: Exists
       securityContext:
         runAsUser: 0
       containers:

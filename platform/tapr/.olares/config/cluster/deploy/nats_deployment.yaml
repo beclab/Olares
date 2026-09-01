@@ -163,6 +163,13 @@ spec:
       priorityClassName: "system-cluster-critical"
       serviceAccountName: nats
       serviceAccount: nats
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-role.kubernetes.io/control-plane
+                    operator: Exists
       initContainers:
       - name: cm-sidecar
         image: beclab/cm-sidecar:0.0.1
