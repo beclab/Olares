@@ -881,30 +881,45 @@ func TestClient_IsOlaresOne_FalseOnGenericBox(t *testing.T) {
 	}
 }
 
-// TestHasCUDANode_LabelMatch covers both directions of the label scan:
-// any node carrying gpu.bytetrade.io/cuda-supported=true wins; otherwise
-// the cluster reports false. We also assert the per-Client cache so a
-// repeated call does not re-fetch.
-func TestHasCUDANode_LabelMatch(t *testing.T) {
+// TestDetectGPUVendors_LabelMatch covers the one label scan the whole GPU
+// subtree reads from: the per-mode labels (plus the legacy cuda-supported
+// marker) name the vendors, anything else on a node is ignored, and a
+// repeated call inside one Client is served from the cache.
+func TestDetectGPUVendors_LabelMatch(t *testing.T) {
 	cases := []struct {
 		name string
 		body string
-		want bool
+		want []GPUVendor
 	}{
 		{
-			name: "any node with cuda-supported=true wins",
-			body: `{"items":[{"metadata":{"labels":{"node-role.kubernetes.io/master":"true"}}},{"metadata":{"labels":{"gpu.bytetrade.io/cuda-supported":"true"}}}]}`,
-			want: true,
+			name: "a node's mode label names its vendor",
+			body: `{"items":[{"metadata":{"name":"master","labels":{"node-role.kubernetes.io/master":"true"}}},{"metadata":{"name":"gpu-1","labels":{"gpu.bytetrade.io/nvidia":"true"}}}]}`,
+			want: []GPUVendor{VendorNVIDIA},
 		},
 		{
-			name: "no nodes with cuda-supported",
-			body: `{"items":[{"metadata":{"labels":{"node-role.kubernetes.io/master":"true"}}}]}`,
-			want: false,
+			// Vendors come back in a fixed order regardless of which node
+			// carried them, so repeated invocations print the same thing.
+			name: "vendors spread over two nodes",
+			body: `{"items":[{"metadata":{"name":"a","labels":{"gpu.bytetrade.io/amd-gpu":"true"}}},{"metadata":{"name":"b","labels":{"gpu.bytetrade.io/intel-gpu":"true"}}}]}`,
+			want: []GPUVendor{VendorIntel, VendorAMD},
+		},
+		{
+			// A cluster installed before the per-mode labels existed still has
+			// to resolve to a vendor: this binary is upgraded independently of
+			// the cluster it is pointed at.
+			name: "a legacy node carrying only cuda-supported still resolves",
+			body: `{"items":[{"metadata":{"name":"old","labels":{"gpu.bytetrade.io/cuda-supported":"true"}}}]}`,
+			want: []GPUVendor{VendorNVIDIA},
+		},
+		{
+			name: "no GPU label means no GPU",
+			body: `{"items":[{"metadata":{"name":"master","labels":{"node-role.kubernetes.io/master":"true"}}}]}`,
+			want: nil,
 		},
 		{
 			name: "label present but not 'true' does not count",
-			body: `{"items":[{"metadata":{"labels":{"gpu.bytetrade.io/cuda-supported":"false"}}}]}`,
-			want: false,
+			body: `{"items":[{"metadata":{"name":"a","labels":{"gpu.bytetrade.io/nvidia":"false"}}}]}`,
+			want: nil,
 		},
 	}
 	for _, tc := range cases {
@@ -916,22 +931,23 @@ func TestHasCUDANode_LabelMatch(t *testing.T) {
 			}))
 			defer srv.Close()
 			c := newTestClient(srv)
-			defer func() {
-				cudaNodeMu.Lock()
-				delete(cudaNodeCache, c)
-				cudaNodeMu.Unlock()
-			}()
-			got, err := hasCUDANode(context.Background(), c)
+			defer ResetGPUNodeCache(c)
+			inv, err := DetectGPUVendors(context.Background(), c)
 			if err != nil {
-				t.Fatalf("hasCUDANode: %v", err)
+				t.Fatalf("DetectGPUVendors: %v", err)
 			}
-			if got != tc.want {
-				t.Errorf("hasCUDANode = %v, want %v", got, tc.want)
+			if len(inv.Vendors) != len(tc.want) {
+				t.Fatalf("vendors = %v, want %v", inv.Vendors, tc.want)
+			}
+			for i := range inv.Vendors {
+				if inv.Vendors[i] != tc.want[i] {
+					t.Fatalf("vendors = %v, want %v", inv.Vendors, tc.want)
+				}
 			}
 			// Second call must hit the cache.
-			_, _ = hasCUDANode(context.Background(), c)
+			_, _ = DetectGPUVendors(context.Background(), c)
 			if hits != 1 {
-				t.Errorf("hasCUDANode hit upstream %d times, want 1 (per-Client cache)", hits)
+				t.Errorf("DetectGPUVendors hit upstream %d times, want 1 (per-Client cache)", hits)
 			}
 		})
 	}
@@ -1051,8 +1067,8 @@ func TestGPUAdvisory_NonAdminEmitsHint(t *testing.T) {
 // TestGPUAdvisory_AdminWithoutGPUNode: admin path reaches the nodes
 // lookup, and a label-less node set produces the
 // "gpu_sidebar_hidden_no_gpu_node" advisory. The gate asks whether ANY
-// vendor is present, not whether NVIDIA is — gating on `cuda-supported`
-// alone reported "no GPU" on every Intel and AMD machine. Data fetch is the
+// vendor is present, not whether NVIDIA is — the older NVIDIA-only gate
+// reported "no GPU" on every Intel and AMD machine. Data fetch is the
 // caller's job — we just emit the hint.
 func TestGPUAdvisory_AdminWithoutGPUNode(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -1068,11 +1084,7 @@ func TestGPUAdvisory_AdminWithoutGPUNode(t *testing.T) {
 	defer srv.Close()
 
 	c := newTestClient(srv)
-	defer func() {
-		cudaNodeMu.Lock()
-		delete(cudaNodeCache, c)
-		cudaNodeMu.Unlock()
-	}()
+	defer ResetGPUNodeCache(c)
 	prev := common
 	t.Cleanup(func() { common = prev })
 	common = &CommonFlags{Output: OutputJSON, Timezone: prev.Timezone} // suppress stderr
@@ -1087,26 +1099,22 @@ func TestGPUAdvisory_AdminWithoutGPUNode(t *testing.T) {
 	}
 }
 
-// TestGPUAdvisory_AdminWithCUDA_AllClear: admin + at least one CUDA-
-// capable node returns empty strings for both note and reason —
+// TestGPUAdvisory_AdminWithGPU_AllClear: admin + at least one node with a
+// GPU mode label returns empty strings for both note and reason —
 // nothing to surface, callers proceed unmodified.
-func TestGPUAdvisory_AdminWithCUDA_AllClear(t *testing.T) {
+func TestGPUAdvisory_AdminWithGPU_AllClear(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/capi/app/detail":
 			_, _ = w.Write([]byte(`{"user":{"username":"alice","globalrole":"platform-admin"}}`))
 		case "/kapis/resources.kubesphere.io/v1alpha3/nodes":
-			_, _ = w.Write([]byte(`{"items":[{"metadata":{"labels":{"gpu.bytetrade.io/cuda-supported":"true"}}}]}`))
+			_, _ = w.Write([]byte(`{"items":[{"metadata":{"labels":{"gpu.bytetrade.io/nvidia":"true"}}}]}`))
 		}
 	}))
 	defer srv.Close()
 
 	c := newTestClient(srv)
-	defer func() {
-		cudaNodeMu.Lock()
-		delete(cudaNodeCache, c)
-		cudaNodeMu.Unlock()
-	}()
+	defer ResetGPUNodeCache(c)
 	prev := common
 	t.Cleanup(func() { common = prev })
 	common = &CommonFlags{Output: OutputJSON, Timezone: prev.Timezone}
@@ -1114,7 +1122,7 @@ func TestGPUAdvisory_AdminWithCUDA_AllClear(t *testing.T) {
 
 	note, reason := gpuAdvisory(context.Background(), c)
 	if note != "" || reason != "" {
-		t.Errorf("admin + CUDA should be all-clear, got note=%q reason=%q", note, reason)
+		t.Errorf("admin + GPU node should be all-clear, got note=%q reason=%q", note, reason)
 	}
 }
 

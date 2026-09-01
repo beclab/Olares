@@ -60,6 +60,15 @@ type KsIdentity struct {
 	Fields map[string]string
 }
 
+// KsOverviewCard is the cluster-overview VRAM card's two reads for one
+// vendor. Both land in bytes, because the card adds every vendor in the
+// cluster together before it picks a unit, and the exporters disagree about
+// theirs (Intel reports bytes, AMD megabytes, HAMI megabytes).
+type KsOverviewCard struct {
+	Used  MetricRead
+	Total MetricRead
+}
+
 // KsVendorSpec is everything the CLI needs to render one KubeSphere-sourced
 // vendor.
 type KsVendorSpec struct {
@@ -71,6 +80,8 @@ type KsVendorSpec struct {
 		Node string
 	}
 	Identity KsIdentity
+	// OverviewCard feeds the cluster-overview VRAM row.
+	OverviewCard KsOverviewCard
 	// DeviceMetrics is one read per column, so every card comes back in the
 	// same response.
 	DeviceMetrics []KsDeviceColumn
@@ -122,6 +133,11 @@ func intelKsSpec() KsVendorSpec {
 				"pciBdf":    "pci_bdf",
 				"memoryEcc": "hw_memory_ecc",
 			},
+		},
+		OverviewCard: KsOverviewCard{
+			// xpumd already reports bytes.
+			Used:  MetricRead{Metric: "intel_hw_memory_usage_bytes", Agg: AggSum},
+			Total: MetricRead{Metric: "intel_hw_memory_size_bytes", Agg: AggSum},
 		},
 		DeviceMetrics: []KsDeviceColumn{
 			{
@@ -225,6 +241,11 @@ func amdKsSpec() KsVendorSpec {
 				"driver_version": "driver_version",
 				"vbiosVersion":   "vbios_version",
 			},
+		},
+		OverviewCard: KsOverviewCard{
+			// The exporter reports megabytes; the card wants bytes.
+			Used:  MetricRead{Metric: "amd_gpu_used_vram", Agg: AggSum, Scale: mib},
+			Total: MetricRead{Metric: "amd_gpu_total_vram", Agg: AggSum, Scale: mib},
 		},
 		DeviceMetrics: []KsDeviceColumn{
 			{Field: "memoryTotal", Value: MetricRead{Metric: "amd_gpu_total_vram", Agg: AggSum}},

@@ -272,7 +272,8 @@ func TestJoinDeviceRows_IntelHealthyUntilResetRequested(t *testing.T) {
 }
 
 // The vendor inventory drives which exporters get queried, so it has to
-// recognise both the per-mode labels and the older cuda-supported marker.
+// recognise both the per-mode labels and the older cuda-supported marker —
+// this binary outlives the cluster it is pointed at.
 func TestVendorsOfNodeLabels(t *testing.T) {
 	cases := []struct {
 		name   string
@@ -282,7 +283,14 @@ func TestVendorsOfNodeLabels(t *testing.T) {
 		{"no labels", map[string]string{}, nil},
 		{"intel discrete", map[string]string{"gpu.bytetrade.io/intel-gpu": "true"}, []GPUVendor{VendorIntel}},
 		{"amd discrete", map[string]string{"gpu.bytetrade.io/amd-gpu": "true"}, []GPUVendor{VendorAMD}},
-		{"legacy cuda marker", map[string]string{"gpu.bytetrade.io/cuda-supported": "true"}, []GPUVendor{VendorNVIDIA}},
+		{"nvidia", map[string]string{"gpu.bytetrade.io/nvidia": "true"}, []GPUVendor{VendorNVIDIA}},
+		{
+			// A node labelled by an Olares older than the per-mode labels
+			// carries nothing else, and this binary still has to see its card.
+			"legacy cuda marker",
+			map[string]string{"gpu.bytetrade.io/cuda-supported": "true"},
+			[]GPUVendor{VendorNVIDIA},
+		},
 		{
 			"nvidia labelled both ways is still one vendor",
 			map[string]string{"gpu.bytetrade.io/nvidia": "true", "gpu.bytetrade.io/cuda-supported": "true"},
