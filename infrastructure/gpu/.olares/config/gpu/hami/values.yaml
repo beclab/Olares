@@ -342,8 +342,11 @@ dcgmExporter:
       #   replacement: $1
     #   action: replace
 
-  nodeSelector: {}
-  # node: gpu
+  # Same gate as the NVIDIA device plugin. An empty selector used to land a
+  # DCGM pod on every node, including Intel-only workers that have no NVML
+  # (they start, log ERROR_LIBRARY_NOT_FOUND, and export nothing).
+  nodeSelector:
+    gpu.bytetrade.io/cuda-supported: "true"
 
   tolerations: []
   # - operator: Exists

@@ -55,6 +55,15 @@ type Device struct {
 	Bindings              []Allocation `json:"bindings,omitempty"`
 }
 
+// isReady reports whether the node's kubelet was still heartbeating when this
+// view was built. buildNodeResource always fills Health in from the NodeReady
+// condition, so in production the answer comes straight from the cluster; an
+// empty Health only occurs in the in-memory node fixtures the tests build, and
+// is read as ready so those fixtures do not all have to spell it out.
+func (n Node) isReady() bool {
+	return n.Health == "" || n.Health == deviceHealthYes
+}
+
 // SupportsMode reports whether the node can host a pod of the given mode. cpu
 // is universal — every node can run cpu workloads — while non-cpu modes must be
 // advertised in GPUTypes.

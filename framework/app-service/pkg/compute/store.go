@@ -367,11 +367,21 @@ func nonHAMISupportType(mode, shareMode string) string {
 func decodeHAMINvidiaDevices(node *corev1.Node, mode string) []Device {
 	raw := node.Annotations[constants.NodeNvidiaRegistryKey]
 	if !strings.Contains(raw, constants.OneContainerMultiDeviceSplitSymbol) {
+		// The node carries the GPU label but the device plugin has not
+		// registered anything usable, so it will appear with zero cards. Common
+		// and transient while the plugin starts; persistent means the plugin is
+		// not running there.
+		klog.Warningf("compute: node %s advertises %s but its %s annotation is missing or unusable, so it exposes no card",
+			node.Name, mode, constants.NodeNvidiaRegistryKey)
 		return nil
 	}
 	// A card's own health bit is only as fresh as the annotation carrying it,
 	// so it has to be read together with the node-level signals.
 	nodeUsable := hamiNodeHealth(node) == deviceHealthYes
+	if !nodeUsable {
+		klog.V(2).Infof("compute: every card on node %s is marked unhealthy by node-level signals: nodeReady=%s %s=%q",
+			node.Name, nodeHealth(node), constants.NodeHandshakeKey, node.Annotations[constants.NodeHandshakeKey])
+	}
 
 	var devices []Device
 	for _, encoded := range strings.Split(raw, constants.OneContainerMultiDeviceSplitSymbol) {
@@ -380,6 +390,8 @@ func decodeHAMINvidiaDevices(node *corev1.Node, mode string) []Device {
 		}
 		items := strings.Split(encoded, ",")
 		if len(items) != 7 && len(items) != 9 && len(items) != 10 {
+			klog.Warningf("compute: skipping a card on node %s: its %s entry has %d fields, expected 7, 9 or 10",
+				node.Name, constants.NodeNvidiaRegistryKey, len(items))
 			continue
 		}
 		devmem, _ := strconv.ParseInt(items[2], 10, 64)
