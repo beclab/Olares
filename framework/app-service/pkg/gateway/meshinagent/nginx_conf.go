@@ -110,6 +110,12 @@ func RenderNginxConf(in NginxConfInput) string {
 		lb.WriteString("      proxy_set_header Host $host;\n")
 		lb.WriteString("      proxy_set_header X-Forwarded-Proto $scheme;\n")
 		lb.WriteString("      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n")
+		// Connection/Upgrade are hop-by-hop: nginx drops them unless a location
+		// forwards them explicitly, which silently downgrades every WebSocket
+		// handshake routed through this hop (e.g. cross-instance Shared audio
+		// streams) into a plain request the callee answers with a non-101 status.
+		lb.WriteString("      proxy_set_header Upgrade $http_upgrade;\n")
+		lb.WriteString("      proxy_set_header Connection $connection_upgrade;\n")
 		lb.WriteString(fmt.Sprintf("      proxy_set_header %s $mesh_in_caller_jwt;\n", callerjwt.CallerJWTHeaderName))
 		lb.WriteString("      proxy_pass_request_headers on;\n")
 		lb.WriteString(fmt.Sprintf("      proxy_pass http://%s:%d;\n", in.GatewayHost, in.GatewayHTTPPort))
@@ -141,6 +147,13 @@ func RenderNginxConf(in NginxConfInput) string {
 	b.WriteString(fmt.Sprintf("  # tls-hosts: %s\n", in.TLSHostsFile))
 	b.WriteString("  js_set $tls_cert_path main.pickCert;\n")
 	b.WriteString("  js_set $tls_key_path main.pickKey;\n")
+	// Echoing $http_upgrade back as Connection is not enough: a plain request
+	// would then carry "Connection: upgrade" too, so map it -- "upgrade" only
+	// when the client actually asked for a handshake, "close" otherwise.
+	b.WriteString("  map $http_upgrade $connection_upgrade {\n")
+	b.WriteString("    default upgrade;\n")
+	b.WriteString("    ''      close;\n")
+	b.WriteString("  }\n")
 	b.WriteString("  server {\n")
 	b.WriteString(fmt.Sprintf("    listen %d;\n", in.HTTPListenPort))
 	b.WriteString("    server_name _;\n")

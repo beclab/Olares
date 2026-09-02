@@ -300,22 +300,13 @@ func installCapacityFits(req Requirement, nodes []Node) bool {
 		}
 		return false
 	}
-	if req.Mode == utils.NvidiaCardType {
-		for _, node := range nodes {
-			for _, device := range node.Devices {
-				if device.Memory >= req.RequiredGPU {
-					return true
-				}
-			}
-		}
-		return false
-	}
-	// Non-nvidia modes are scheduled one device at a time, but a node can still
-	// expose several of them (nvidia-gb10 cards, discrete Intel GPUs), so every
-	// device gets a look rather than just the first.
+	// Every remaining mode is scheduled one device at a time, but a node can
+	// still expose several of them (nvidia cards, nvidia-gb10 cards, discrete
+	// Intel GPUs), so every device gets a look rather than just the first.
+	target := requiredTargetForMode(req)
 	for _, node := range nodes {
 		for _, device := range node.Devices {
-			if device.Memory >= req.RequiredMemory {
+			if device.Memory >= target {
 				return true
 			}
 		}
@@ -468,15 +459,29 @@ func levelAddedResources(req Requirement, level string, options allocationOption
 	}
 }
 
+// targetForMode is the amount of device memory the app needs from a single
+// device at the given fit level. Dedicated-VRAM modes (nvidia / amd-gpu /
+// intel-gpu) are sized by the manifest's GPU-memory quota, which is the only
+// quantity that describes their separate memory pool; the unified-memory modes
+// have no such quota and are sized by the pod memory request, which for them
+// covers the VRAM too because it is the same RAM.
+//
+// A dedicated-VRAM app may still land here with a zero target: the quota is
+// only mandatory for manifests that declare the mode under spec.resources, and
+// an auto-resource sentinel resolves to zero whenever the chart carries no
+// nvidia.com/gpumem. A zero target means "no declared demand" and lets the app
+// take whatever the device has free, so it must not be read as "needs nothing
+// and fits anywhere" — see the Exclusive guard in
+// validateResolvedBindingSelection.
 func targetForMode(req Requirement, level string) int64 {
-	if req.Mode == utils.NvidiaCardType {
+	if utils.HasDedicatedGPUMemory(req.Mode) {
 		return targetGPU(req, level)
 	}
 	return levelMemory(req, level)
 }
 
 func requiredTargetForMode(req Requirement) int64 {
-	if req.Mode == utils.NvidiaCardType {
+	if utils.HasDedicatedGPUMemory(req.Mode) {
 		return req.RequiredGPU
 	}
 	return req.RequiredMemory
