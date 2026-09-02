@@ -49,6 +49,7 @@ func (u upgrader_1_12_7) PrepareForUpgrade() []task.Interface {
 	tasks = append(tasks, upgradeUserReverseProxy()...)
 	tasks = append(tasks, upgradeAmdDeviceMetricsExporter()...)
 	tasks = append(tasks, upgradePrometheusOperator()...)
+	tasks = append(tasks, upgradeAmdDevicePlugin()...)
 
 	tasks = append(tasks, u.upgraderBase.PrepareForUpgrade()...)
 	return tasks

@@ -269,13 +269,13 @@ func buildNodeResource(node *corev1.Node) Node {
 		switch {
 		case IsHAMIMode(mode):
 			n.Devices = append(n.Devices, decodeHAMINvidiaDevices(node, mode)...)
-		case mode == utils.IntelGPUType:
-			// Discrete Intel GPUs are one Exclusive card each, with their own
-			// VRAM read from the node register annotation. Fall back to the
-			// legacy single system-memory device when the annotation carries no
-			// usable discrete entry, so a node that advertises intel-gpu still
-			// has a schedulable device.
-			if devices := decodeIntelDiscreteDevices(node, mode, totalMemory); len(devices) > 0 {
+		case mode == utils.IntelGPUType, mode == utils.AMDGPUType:
+			// Discrete Intel and AMD GPUs are one Exclusive card each, with
+			// their own VRAM read from the vendor register annotation. Fall
+			// back to the legacy single system-memory device when the
+			// annotation carries no usable discrete entry, so a node that
+			// advertises intel-gpu / amd-gpu still has a schedulable device.
+			if devices := decodeIntelOrAmdDiscreteDevices(node, mode, totalMemory); len(devices) > 0 {
 				n.Devices = append(n.Devices, devices...)
 			} else {
 				n.Devices = append(n.Devices, nonHAMIDevice(node, mode, totalMemory))
@@ -288,19 +288,21 @@ func buildNodeResource(node *corev1.Node) Node {
 	return n
 }
 
-// decodeIntelDiscreteDevices builds one Exclusive device per discrete Intel GPU
-// (dgpu) advertised in the node's bytetrade.io/node-intel-register annotation,
-// using each card's real VRAM (the entry's mem field, in bytes) as its Memory
-// instead of the node's system RAM. Integrated Intel GPUs (igpu) are unified
-// memory and stay on the nonHAMIDevice path, so they are skipped here. When a
-// discrete entry's VRAM is unknown (mem=0, e.g. the xe driver doesn't expose it
-// via sysfs yet) it falls back to the node's usable system memory so the card
-// remains schedulable. Returns nil when the annotation is missing, malformed,
-// or advertises no discrete card, letting the caller use the legacy device.
-func decodeIntelDiscreteDevices(node *corev1.Node, mode string, totalMemory int64) []Device {
-	entries, err := utils.IntelRegisterFromNode(node)
+// decodeIntelOrAmdDiscreteDevices builds one Exclusive device per discrete GPU
+// (dgpu) advertised in the node's vendor register annotation (Intel:
+// bytetrade.io/node-intel-register, AMD: bytetrade.io/node-amd-register). Both
+// vendors share the same tuple layout and parser. Each card's real VRAM (the
+// entry's mem field, in bytes) is used as Memory instead of the node's system
+// RAM. Integrated GPUs (igpu) are unified memory and stay on the nonHAMIDevice
+// path, so they are skipped here. When a discrete entry's VRAM is unknown
+// (mem=0) it falls back to the node's usable system memory so the card remains
+// schedulable. Returns nil when the annotation is missing, malformed, or
+// advertises no discrete card, letting the caller use the legacy device.
+func decodeIntelOrAmdDiscreteDevices(node *corev1.Node, mode string, totalMemory int64) []Device {
+	annotKey := discreteRegisterAnnotationKey(mode)
+	entries, err := utils.GPURegisterFromNode(node, annotKey)
 	if err != nil {
-		klog.Warningf("compute: node %s has malformed %s annotation: %v", node.Name, constants.NodeIntelRegisterKey, err)
+		klog.Warningf("compute: node %s has malformed %s annotation: %v", node.Name, annotKey, err)
 		return nil
 	}
 
@@ -326,6 +328,13 @@ func decodeIntelDiscreteDevices(node *corev1.Node, mode string, totalMemory int6
 		})
 	}
 	return devices
+}
+
+func discreteRegisterAnnotationKey(mode string) string {
+	if mode == utils.AMDGPUType {
+		return constants.NodeAmdRegisterKey
+	}
+	return constants.NodeIntelRegisterKey
 }
 
 // nonHAMIDevice builds the single synthetic device used for unified-memory

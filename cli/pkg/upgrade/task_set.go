@@ -1183,3 +1183,7 @@ func upgradeUserReverseProxy() []task.Interface {
 		},
 	}
 }
+
+func upgradeAmdDevicePlugin() []task.Interface {
+	return amdgpu.UpgradeAmdDevicePluginTasks()
+}

@@ -18,6 +18,7 @@ func (u upgrader_1_12_7_20260902) Version() *semver.Version {
 func (u upgrader_1_12_7_20260902) UpgradeSystemComponents() []task.Interface {
 	tasks := make([]task.Interface, 0)
 	tasks = append(tasks, upgradeAmdDeviceMetricsExporter()...)
+	tasks = append(tasks, upgradeAmdDevicePlugin()...)
 	tasks = append(tasks, u.upgraderBase.UpgradeSystemComponents()...)
 	return tasks
 }
