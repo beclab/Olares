@@ -18,26 +18,44 @@ const (
 	testBundledAppID = "app-a"
 )
 
-// A medium with no bundle of its own still has something to say: every device
-// running this version is expected to have the catalog apps, and a declaration
-// is the only place that is written down.
-func TestPublishWithoutAStaticBundlePublishesTheCatalogApps(t *testing.T) {
+// An install with no bundle expects nothing of the device, and an empty list
+// says that no better than an absent file does. The apps this release expects
+// from the catalog are declared by the first upgrade instead.
+func TestPublishOnAnInstallWithoutABundleWritesNoDeclaration(t *testing.T) {
 	root := t.TempDir()
 	baseDir := filepath.Join(root, "base")
 
-	if err := Publish(filepath.Join(root, "installer"), baseDir, testOSVersion, ProfileSelections{}); err != nil {
+	if err := Publish(filepath.Join(root, "installer"), baseDir, testOSVersion, ProfileSelections{}, OmitCatalogApps); err != nil {
+		t.Fatalf("Publish() error = %v", err)
+	}
+
+	target := filepath.Join(baseDir, RuntimeRelativeDir)
+	t.Cleanup(func() { _ = makeWritable(target) })
+	if _, err := os.Lstat(filepath.Join(target, DeclarationFileName(testOSVersion))); !os.IsNotExist(err) {
+		t.Fatalf("a publish with nothing to declare wrote a declaration: %v", err)
+	}
+}
+
+// An install declares what its medium carries. A machine being installed cannot
+// be assumed to reach the catalog, so the release's catalog apps wait for the
+// upgrade, which runs on a device that is already up.
+func TestPublishOnAnInstallDeclaresTheMediumAloneWithoutTheCatalogApps(t *testing.T) {
+	installerDir, baseDir := writeStaticBundle(t)
+
+	if err := Publish(installerDir, baseDir, testOSVersion, ProfileSelections{}, OmitCatalogApps); err != nil {
 		t.Fatalf("Publish() error = %v", err)
 	}
 
 	target := filepath.Join(baseDir, RuntimeRelativeDir)
 	t.Cleanup(func() { _ = makeWritable(target) })
 	declaration := readPublishedDeclaration(t, target, testOSVersion)
-	if len(declaration.Apps) != len(catalogApps) {
-		t.Fatalf("declared apps = %#v, want the catalog apps alone", declaration.Apps)
+	for _, app := range declaration.Apps {
+		if app.ChartSource != ChartSourceLocal {
+			t.Fatalf("declared app %q chartSource = %q, want the medium's entries alone",
+				app.AppID, app.ChartSource)
+		}
 	}
-	if _, err := os.Stat(filepath.Join(target, "chart")); !os.IsNotExist(err) {
-		t.Fatalf("a declaration with no local entry staged a chart directory: %v", err)
-	}
+	declarationApp(t, declaration, testBundledAppID)
 }
 
 // One file per trunk, so publishing one release's declaration must leave every
@@ -54,7 +72,7 @@ func TestPublishAddsThisReleaseBesideTheOnesAlreadyThere(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = makeWritable(target) })
 
-	if err := Publish(installerDir, baseDir, testOSVersion, ProfileSelections{}); err != nil {
+	if err := Publish(installerDir, baseDir, testOSVersion, ProfileSelections{}, OmitCatalogApps); err != nil {
 		t.Fatalf("Publish() error = %v", err)
 	}
 
@@ -68,7 +86,7 @@ func TestPublishAddsThisReleaseBesideTheOnesAlreadyThere(t *testing.T) {
 // acted on it must not be handed a second answer.
 func TestPublishLeavesThisTrunksDeclarationAloneOnceItExists(t *testing.T) {
 	installerDir, baseDir := writeStaticBundle(t)
-	if err := Publish(installerDir, baseDir, testOSVersion, ProfileSelections{}); err != nil {
+	if err := Publish(installerDir, baseDir, testOSVersion, ProfileSelections{}, OmitCatalogApps); err != nil {
 		t.Fatalf("first Publish() error = %v", err)
 	}
 	target := filepath.Join(baseDir, RuntimeRelativeDir)
@@ -81,7 +99,7 @@ func TestPublishLeavesThisTrunksDeclarationAloneOnceItExists(t *testing.T) {
 
 	err = Publish(installerDir, baseDir, testOSVersion+"-rc.2", ProfileSelections{
 		Apps: map[string]AppSelection{testBundledAppID: {Envs: map[string]string{"WORKER_COUNT": "9"}}},
-	})
+	}, OmitCatalogApps)
 
 	if err != nil {
 		t.Fatalf("second Publish() error = %v", err)
@@ -102,7 +120,7 @@ func TestPublishRejectsOversizedBundle(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := Publish(installerDir, baseDir, testOSVersion, ProfileSelections{}); err == nil ||
+	if err := Publish(installerDir, baseDir, testOSVersion, ProfileSelections{}, OmitCatalogApps); err == nil ||
 		!strings.Contains(err.Error(), "bundle.json exceeds") {
 		t.Fatalf("Publish() error = %v", err)
 	}
@@ -142,7 +160,7 @@ func TestPublishRejectsOversizedChartTotal(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := Publish(installerDir, baseDir, testOSVersion, ProfileSelections{}); err == nil ||
+	if err := Publish(installerDir, baseDir, testOSVersion, ProfileSelections{}, OmitCatalogApps); err == nil ||
 		!strings.Contains(err.Error(), "total chart size exceeds") {
 		t.Fatalf("Publish() error = %v", err)
 	}
@@ -160,7 +178,7 @@ func TestPublishFoldsSelectionsIntoTheDeclaration(t *testing.T) {
 		},
 	}
 
-	if err := Publish(installerDir, baseDir, testOSVersion, selections); err != nil {
+	if err := Publish(installerDir, baseDir, testOSVersion, selections, OmitCatalogApps); err != nil {
 		t.Fatalf("Publish() error = %v", err)
 	}
 
@@ -180,7 +198,7 @@ func TestPublishPublishesArtifactManifestWithoutPayload(t *testing.T) {
 	installerDir, baseDir := writeStaticBundle(t)
 	artifact, manifestData := addPublishArtifactFixture(t, installerDir)
 
-	if err := Publish(installerDir, baseDir, testOSVersion, ProfileSelections{}); err != nil {
+	if err := Publish(installerDir, baseDir, testOSVersion, ProfileSelections{}, OmitCatalogApps); err != nil {
 		t.Fatalf("Publish() error = %v", err)
 	}
 
@@ -250,7 +268,7 @@ func TestPublishRejectsArtifactManifestSymlinks(t *testing.T) {
 			artifact, _ := addPublishArtifactFixture(t, installerDir)
 			tt.replace(t, filepath.Join(installerDir, StaticRelativeDir), artifact)
 
-			err := Publish(installerDir, baseDir, testOSVersion, ProfileSelections{})
+			err := Publish(installerDir, baseDir, testOSVersion, ProfileSelections{}, OmitCatalogApps)
 
 			if err == nil || !strings.Contains(err.Error(), "symlink") {
 				t.Fatalf("Publish() error = %v, want symlink rejection", err)
@@ -279,7 +297,7 @@ func TestPublishRejectsSymlinkWithoutPublishingADeclaration(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := Publish(installerDir, baseDir, testOSVersion, ProfileSelections{}); err == nil {
+	if err := Publish(installerDir, baseDir, testOSVersion, ProfileSelections{}, OmitCatalogApps); err == nil {
 		t.Fatal("Publish() error = nil, want symlink rejection")
 	}
 	if got, err := os.ReadFile(marker); err != nil || string(got) != "existing" {
@@ -303,7 +321,7 @@ func TestPublishRejectsSymlinkedStaticInputParent(t *testing.T) {
 	target := filepath.Join(baseDir, RuntimeRelativeDir)
 	t.Cleanup(func() { _ = makeWritable(target) })
 
-	if err := Publish(installerDir, baseDir, testOSVersion, ProfileSelections{}); err == nil {
+	if err := Publish(installerDir, baseDir, testOSVersion, ProfileSelections{}, OmitCatalogApps); err == nil {
 		t.Fatal("Publish() error = nil, want symlinked parent rejection")
 	}
 }
@@ -315,7 +333,7 @@ func TestPublishRejectsSymlinkedInstallerAndBasePaths(t *testing.T) {
 		if err := os.Symlink(realInstaller, link); err != nil {
 			t.Fatal(err)
 		}
-		if err := Publish(link, baseDir, testOSVersion, ProfileSelections{}); err == nil {
+		if err := Publish(link, baseDir, testOSVersion, ProfileSelections{}, OmitCatalogApps); err == nil {
 			t.Fatal("Publish() error = nil, want installer symlink rejection")
 		}
 	})
@@ -326,7 +344,7 @@ func TestPublishRejectsSymlinkedInstallerAndBasePaths(t *testing.T) {
 		if err := os.Symlink(realBase, link); err != nil {
 			t.Fatal(err)
 		}
-		if err := Publish(installerDir, link, testOSVersion, ProfileSelections{}); err == nil {
+		if err := Publish(installerDir, link, testOSVersion, ProfileSelections{}, OmitCatalogApps); err == nil {
 			t.Fatal("Publish() error = nil, want base symlink rejection")
 		}
 	})
@@ -343,7 +361,7 @@ func TestPublishAllowsSymlinkedAncestorDirectories(t *testing.T) {
 		installerDir := filepath.Join(link, filepath.Base(realInstaller))
 		t.Cleanup(func() { _ = makeWritable(baseDir) })
 
-		if err := Publish(installerDir, baseDir, testOSVersion, ProfileSelections{}); err != nil {
+		if err := Publish(installerDir, baseDir, testOSVersion, ProfileSelections{}, OmitCatalogApps); err != nil {
 			t.Fatalf("Publish() through symlinked installer ancestor error = %v", err)
 		}
 		readPublishedDeclaration(t, filepath.Join(baseDir, RuntimeRelativeDir), testOSVersion)
@@ -360,7 +378,7 @@ func TestPublishAllowsSymlinkedAncestorDirectories(t *testing.T) {
 		baseDir := filepath.Join(link, "base")
 		t.Cleanup(func() { _ = makeWritable(realParent) })
 
-		if err := Publish(installerDir, baseDir, testOSVersion, ProfileSelections{}); err != nil {
+		if err := Publish(installerDir, baseDir, testOSVersion, ProfileSelections{}, OmitCatalogApps); err != nil {
 			t.Fatalf("Publish() through symlinked base ancestor error = %v", err)
 		}
 		readPublishedDeclaration(t, filepath.Join(realParent, "base", RuntimeRelativeDir), testOSVersion)
@@ -376,7 +394,7 @@ func TestPublishRejectsSymlinkedRuntimeParent(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := Publish(installerDir, baseDir, testOSVersion, ProfileSelections{}); err == nil {
+	if err := Publish(installerDir, baseDir, testOSVersion, ProfileSelections{}, OmitCatalogApps); err == nil {
 		t.Fatal("Publish() error = nil, want runtime parent symlink rejection")
 	}
 }
@@ -384,10 +402,25 @@ func TestPublishRejectsSymlinkedRuntimeParent(t *testing.T) {
 func TestPublishRefusesAPublishWithNoVersionToNameItAfter(t *testing.T) {
 	installerDir, baseDir := writeStaticBundle(t)
 
-	err := Publish(installerDir, baseDir, "  ", ProfileSelections{})
+	err := Publish(installerDir, baseDir, "  ", ProfileSelections{}, OmitCatalogApps)
 
 	if err == nil || !strings.Contains(err.Error(), "no Olares version") {
 		t.Fatalf("Publish() error = %v, want a missing version rejection", err)
+	}
+}
+
+// Whether the release's catalog apps belong in the declaration is the caller's
+// to say, and the two callers say different things. A run that left it out would
+// otherwise publish a list nobody chose.
+func TestPublishRefusesAnUnstatedCatalogPolicy(t *testing.T) {
+	installerDir, baseDir := writeStaticBundle(t)
+
+	for _, policy := range []CatalogPolicy{"", "maybe"} {
+		err := Publish(installerDir, baseDir, testOSVersion, ProfileSelections{}, policy)
+
+		if err == nil || !strings.Contains(err.Error(), "catalog policy") {
+			t.Fatalf("Publish() with policy %q error = %v, want a catalog policy rejection", policy, err)
+		}
 	}
 }
 
@@ -436,7 +469,7 @@ func TestPublishRemovesStagingLeftBehindByAnInterruptedRun(t *testing.T) {
 		}
 	}
 
-	if err := Publish(installerDir, baseDir, testOSVersion, ProfileSelections{}); err != nil {
+	if err := Publish(installerDir, baseDir, testOSVersion, ProfileSelections{}, OmitCatalogApps); err != nil {
 		t.Fatalf("Publish() error = %v", err)
 	}
 	t.Cleanup(func() { _ = makeWritable(target) })
@@ -478,7 +511,7 @@ func TestPublishSupportsNestedChartPaths(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := Publish(installerDir, baseDir, testOSVersion, ProfileSelections{}); err != nil {
+	if err := Publish(installerDir, baseDir, testOSVersion, ProfileSelections{}, OmitCatalogApps); err != nil {
 		t.Fatalf("Publish() error = %v", err)
 	}
 	target := filepath.Join(baseDir, RuntimeRelativeDir)
@@ -493,7 +526,7 @@ func TestPublishSupportsNestedChartPaths(t *testing.T) {
 func TestPublishWithNoMediumDeclaresTheCatalogAppsAlone(t *testing.T) {
 	baseDir := canonicalTempDir(t)
 
-	if err := Publish("", baseDir, testNextOSTrunk+"-20260731", ProfileSelections{}); err != nil {
+	if err := Publish("", baseDir, testNextOSTrunk+"-20260731", ProfileSelections{}, DeclareCatalogApps); err != nil {
 		t.Fatalf("Publish() error = %v", err)
 	}
 
@@ -525,7 +558,7 @@ func TestPublishWithNoMediumIgnoresABundleInTheWorkingDirectory(t *testing.T) {
 	installerDir, baseDir := writeStaticBundle(t)
 	t.Chdir(installerDir)
 
-	if err := Publish("", baseDir, testNextOSTrunk+"-20260731", ProfileSelections{}); err != nil {
+	if err := Publish("", baseDir, testNextOSTrunk+"-20260731", ProfileSelections{}, DeclareCatalogApps); err != nil {
 		t.Fatalf("Publish() error = %v", err)
 	}
 

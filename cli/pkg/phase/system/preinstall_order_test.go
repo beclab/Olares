@@ -98,6 +98,13 @@ func TestMarketPreinstallModulesCarryWhatThePublishNeeds(t *testing.T) {
 		materialize.ProfileSelections.DetectedGPUType != gpu.IntelType {
 		t.Fatalf("production selections = %#v", materialize.ProfileSelections)
 	}
+	// An install declares what its medium carries. Declaring the release's
+	// catalog apps here would have a machine that may have no network at all
+	// expected to fetch them.
+	if materialize.CatalogPolicy != preinstall.OmitCatalogApps {
+		t.Fatalf("install catalog policy = %q, want %q",
+			materialize.CatalogPolicy, preinstall.OmitCatalogApps)
+	}
 }
 func TestDetectPreinstallGPUTypeUsesMostSpecificHardware(t *testing.T) {
 	systemInfo := &connector.SystemInfo{

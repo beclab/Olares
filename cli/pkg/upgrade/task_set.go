@@ -73,14 +73,16 @@ const cacheRebootNeeded = "reboot.needed"
 // No installer directory is given: an upgrade brings no medium, so the
 // declaration names the catalog apps of the version being upgraded to and
 // nothing local. That version is this binary's, which is what performs the
-// upgrade.
+// upgrade. Those catalog apps are the whole of what an upgrade declares, which
+// is why it is the upgrade rather than the install that asks for them.
 func publishMarketPreinstallDeclaration() []task.Interface {
 	return []task.Interface{
 		&task.LocalTask{
 			Name: "PublishMarketPreinstallDeclaration",
 			Action: &preinstall.PublishDeclarationAction{
-				RootDir:   storage.OlaresRootDir,
-				OSVersion: version.VERSION,
+				RootDir:       storage.OlaresRootDir,
+				OSVersion:     version.VERSION,
+				CatalogPolicy: preinstall.DeclareCatalogApps,
 			},
 		},
 	}

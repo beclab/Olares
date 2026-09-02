@@ -91,7 +91,7 @@ func TestMarketDeploymentPinsV2SourceAPIPaths(t *testing.T) {
 func TestMarketPreinstallDeploymentPublishesManifestsButNotPayloads(t *testing.T) {
 	installerDir, baseDir := writeStaticBundle(t)
 	artifact, _ := addPublishArtifactFixture(t, installerDir)
-	if err := Publish(installerDir, baseDir, testOSVersion, ProfileSelections{}); err != nil {
+	if err := Publish(installerDir, baseDir, testOSVersion, ProfileSelections{}, OmitCatalogApps); err != nil {
 		t.Fatalf("Publish() error = %v", err)
 	}
 	target := filepath.Join(baseDir, RuntimeRelativeDir)

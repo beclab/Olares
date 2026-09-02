@@ -14,6 +14,7 @@ type PublishDeclarationModule struct {
 	RootDir           string
 	OSVersion         string
 	ProfileSelections ProfileSelections
+	CatalogPolicy     CatalogPolicy
 }
 
 func (m *PublishDeclarationModule) Init() {
@@ -26,6 +27,7 @@ func (m *PublishDeclarationModule) Init() {
 				RootDir:           m.RootDir,
 				OSVersion:         m.OSVersion,
 				ProfileSelections: m.ProfileSelections,
+				CatalogPolicy:     m.CatalogPolicy,
 			},
 		},
 	}
@@ -34,22 +36,25 @@ func (m *PublishDeclarationModule) Init() {
 // PublishDeclarationAction declares what this version expects a device to have.
 //
 // InstallerDir is the one field whose emptiness means something: no medium was
-// brought, which is the ordinary shape of an upgrade, and the catalog apps of the
-// release being installed are declared all the same. The other two are required
-// -- Publish refuses an empty version, and an empty root would write the
-// declaration where nothing mounts it -- so every caller states them rather than
-// falling through to a default here, where the caller's reason for the value is
-// no longer visible.
+// brought, which is the ordinary shape of an upgrade. The others are required --
+// Publish refuses an empty version and an unstated catalog policy, and an empty
+// root would write the declaration where nothing mounts it -- so every caller
+// states them rather than falling through to a default here, where the caller's
+// reason for the value is no longer visible.
+//
+// Both an install and an upgrade run this same action; the catalog policy is
+// what tells the two apart.
 type PublishDeclarationAction struct {
 	action.BaseAction
 	InstallerDir      string
 	RootDir           string
 	OSVersion         string
 	ProfileSelections ProfileSelections
+	CatalogPolicy     CatalogPolicy
 }
 
 func (a *PublishDeclarationAction) Execute(_ connector.Runtime) error {
-	return Publish(a.InstallerDir, a.RootDir, a.OSVersion, a.ProfileSelections)
+	return Publish(a.InstallerDir, a.RootDir, a.OSVersion, a.ProfileSelections, a.CatalogPolicy)
 }
 
 type HFCacheMaterializeModule struct {
