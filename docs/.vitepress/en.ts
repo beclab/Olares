@@ -480,10 +480,10 @@ const side = {
         },
         { text: "Use VPN", link: "/manual/larepass/private-network" },
         {
-          text: "Manage files",
+          text: "Files and resources",
           collapsed: true,
           items: [
-            { text: "Common file operations", link: "/manual/larepass/manage-files" },
+            { text: "Manage files", link: "/manual/larepass/manage-files" },
             { text: "Save resources to Olares", link: "/manual/larepass/save-resources-to-olares" },
           ],
         },
