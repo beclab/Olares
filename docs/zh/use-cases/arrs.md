@@ -37,7 +37,7 @@ doc_updated: "2026-07-03"
 
 ## 升级说明
 
-从 Olares V1.12.6 开始，*Arr 应用使用内部入口 URL 而不是提供商 URL。如果你是从更早版本升级的，请查看 [*Arrs 升级说明](arrs-upgrade.md) 并更新受影响的设置。
+从 Olares V1.12.6 开始，*Arr 应用使用内部入口 URL，而不再使用提供商 URL。如果你是从更早版本更新的，请查看 [*Arr 应用更新说明](arrs-upgrade.md)，并修改受影响的设置。
 
 ## 安装 *Arrs 应用
 
