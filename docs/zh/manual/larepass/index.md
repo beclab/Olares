@@ -40,3 +40,5 @@ LarePass 是用于创建和管理 Olares ID、激活 Olares，以及在手机和
 
 - 在移动设备上，你可以使用 LarePass 直接[创建 Olares ID](/zh/manual/get-started/create-olares-id.md)。如需使用自定义域名，请参阅[使用自定义域名创建 Olares ID](create-org-account.md)。
 - 在桌面客户端上，请[导入已有账户](manage-accounts.md#导入账户)。
+
+在桌面客户端上，你还可以[将网络资源直接转存到 Olares](save-resources-to-olares.md)。
