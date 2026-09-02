@@ -101,7 +101,7 @@ spec:
         {{- else }}
         - name: amd-device-metrics-exporter-container
         {{- end }}
-          image: beclab/rocm-device-metrics-exporter:v1.5.1
+          image: beclab/device-metric-exporter:v1.5.1-1
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
             - "-monitor-gpu={{ .Values.monitor.resources.gpu }}"

@@ -12,6 +12,7 @@ spec:
       labels:
         name: amdgpu-dp-ds
     spec:
+      serviceAccountName: amd-gpu-plugin
       restartPolicy: Always
       nodeSelector:
         kubernetes.io/arch: amd64
@@ -20,7 +21,7 @@ spec:
         - key: CriticalAddonsOnly
           operator: Exists
       containers:
-        - image: beclab/amd-device-plugin:1.1
+        - image: beclab/amd-device-plugin:1.2
           name: amdgpu-dp-cntr
           securityContext:
             privileged: true
@@ -38,3 +39,38 @@ spec:
         - name: sys
           hostPath:
             path: /sys
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app: amd-gpu-plugin
+  name: amd-gpu-plugin
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app: amd-gpu-plugin
+  name: amd-gpu-plugin-node-register
+rules:
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app: amd-gpu-plugin
+  name: amd-gpu-plugin-node-register
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: amd-gpu-plugin-node-register
+subjects:
+  - kind: ServiceAccount
+    name: amd-gpu-plugin
+    namespace: kube-system

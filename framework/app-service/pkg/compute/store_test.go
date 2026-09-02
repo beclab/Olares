@@ -147,6 +147,36 @@ func TestBuildNodeResourceDiscreteGPULabel(t *testing.T) {
 	}
 }
 
+func TestBuildNodeResourceDiscreteRegisterAnnotation(t *testing.T) {
+	intel := k8sNode("intel-dgpu", "32Gi", map[string]string{
+		utils.NodeGPUTypeLabelPrefix + utils.IntelGPUType: "true",
+	})
+	intel.Annotations = map[string]string{
+		constants.NodeIntelRegisterKey: "dgpu,card0,xe,Intel® Arc™ A770 Graphics,Xe-HPG,Alchemist,17179869184",
+	}
+	in := buildNodeResource(intel)
+	if len(in.Devices) != 1 {
+		t.Fatalf("expected one intel discrete device, got %+v", in.Devices)
+	}
+	if in.Devices[0].ID != "intel-dgpu-intel-gpu-card0" || in.Devices[0].CardModel != "Intel® Arc™ A770 Graphics" || in.Devices[0].Memory != 17179869184 {
+		t.Fatalf("unexpected intel discrete device %+v", in.Devices[0])
+	}
+
+	amd := k8sNode("amd-dgpu", "64Gi", map[string]string{
+		utils.NodeGPUTypeLabelPrefix + utils.AMDGPUType: "true",
+	})
+	amd.Annotations = map[string]string{
+		constants.NodeAmdRegisterKey: "dgpu,card1,amdgpu,AMD Radeon AI PRO R9700,GC_12_0_0,7551,34208743424",
+	}
+	an := buildNodeResource(amd)
+	if len(an.Devices) != 1 {
+		t.Fatalf("expected one amd discrete device, got %+v", an.Devices)
+	}
+	if an.Devices[0].ID != "amd-dgpu-amd-gpu-card1" || an.Devices[0].CardModel != "AMD Radeon AI PRO R9700" || an.Devices[0].Memory != 34208743424 {
+		t.Fatalf("unexpected amd discrete device %+v", an.Devices[0])
+	}
+}
+
 // hamiRegisterAnnotation encodes one card the way HAMi's device plugin does
 // (util.EncodeNodeDevices): ID,Count,Devmem,Devcore,Type,Numa,Health,Index,
 // Mode,Architecture followed by the device separator.

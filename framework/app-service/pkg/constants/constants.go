@@ -146,6 +146,10 @@ const (
 	// lets the gpu-limit webhook pick gpu.intel.com/i915 vs gpu.intel.com/xe
 	// from the real bound driver instead of guessing from integrated/discrete.
 	NodeIntelRegisterKey = "bytetrade.io/node-intel-register"
+	// NodeAmdRegisterKey is the node annotation written by the AMD GPU device
+	// plugin. The value uses the same tuple format as NodeIntelRegisterKey,
+	// with driver amdgpu (e.g. "dgpu,card1,amdgpu,<name>,<arch>,<codename>,<mem>").
+	NodeAmdRegisterKey = "bytetrade.io/node-amd-register"
 
 	AuthorizationLevelOfPublic   = "public"
 	AuthorizationLevelOfPrivate  = "private"
