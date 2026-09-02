@@ -119,6 +119,10 @@ func classifyNvidiaNode(req Requirement, node Node, pressure PressureSnapshot, o
 // one node, so the node's status is taken from its best card the way
 // classifyNvidiaNode does — listing only the first one would hide the rest from
 // both the resume picker and install's auto-pick.
+//
+// The capacity a card is judged against comes from requiredTargetForMode, so a
+// discrete Intel/AMD card is compared with the app's GPU-memory quota while the
+// unified-memory modes keep being compared with the pod memory request.
 func classifyNonNvidiaNode(req Requirement, node Node, pressure PressureSnapshot, opts allocationOptions) NodeOption {
 	option := NodeOption{NodeName: node.NodeName, GPUType: req.Mode}
 	if len(node.Devices) == 0 {
@@ -146,7 +150,7 @@ func classifyNonNvidiaNode(req Requirement, node Node, pressure PressureSnapshot
 		option.Status = NodeStatusNotAvailable
 		return option
 	}
-	option.Status = nodeStatusFromCapacity(req.RequiredMemory, maxCapacity, maxAvailable)
+	option.Status = nodeStatusFromCapacity(requiredTargetForMode(req), maxCapacity, maxAvailable)
 	if option.Status == NodeStatusAvailable && nodeWouldPressure(req, node, pressure, opts) {
 		option.Status = NodeStatusNotAvailable
 	}
@@ -574,22 +578,23 @@ func validateResolvedBindingSelection(req Requirement, resolved []resolvedSelect
 			return invalidBinding("gpu-type-mismatch")
 		}
 		available := deviceAvailableMemory(item.device)
-		if req.Mode == utils.NvidiaCardType {
-			switch item.device.SupportType {
-			case SupportTypeExclusive:
-				if len(item.device.Bindings) > 0 {
-					return invalidBinding("exclusive-already-bound:" + item.device.ID)
-				}
-			case SupportTypeMemorySlice:
-				if item.memory <= 0 {
-					return invalidBinding("memory-required:" + item.device.ID)
-				}
-				if item.memory > available {
-					return invalidBinding("device-vram-insufficient:" + item.device.ID)
-				}
-				totalAssignable += item.memory
-				continue
+		// An Exclusive device hands the whole card to one pod, so a second
+		// binding has to be rejected whatever the mode. The capacity check
+		// below cannot stand in for this: it passes an already-bound card
+		// (available 0) whenever the app's target is also 0, which a
+		// dedicated-VRAM app reaches legitimately (see targetForMode).
+		if item.device.SupportType == SupportTypeExclusive && len(item.device.Bindings) > 0 {
+			return invalidBinding("exclusive-already-bound:" + item.device.ID)
+		}
+		if req.Mode == utils.NvidiaCardType && item.device.SupportType == SupportTypeMemorySlice {
+			if item.memory <= 0 {
+				return invalidBinding("memory-required:" + item.device.ID)
 			}
+			if item.memory > available {
+				return invalidBinding("device-vram-insufficient:" + item.device.ID)
+			}
+			totalAssignable += item.memory
+			continue
 		}
 		totalAssignable += available
 	}
@@ -597,7 +602,7 @@ func validateResolvedBindingSelection(req Requirement, resolved []resolvedSelect
 		if totalAssignable < req.RequiredGPU {
 			return invalidBinding("aggregate-vram-insufficient")
 		}
-	} else if req.Mode == utils.NvidiaCardType {
+	} else if utils.HasDedicatedGPUMemory(req.Mode) {
 		if totalAssignable < req.RequiredGPU {
 			return invalidBinding("device-vram-insufficient")
 		}
@@ -680,10 +685,7 @@ func allocationsFromResolvedSelection(appConfig *appcfg.ApplicationConfig, req R
 		}
 		return resolved[i].node.NodeName < resolved[j].node.NodeName
 	})
-	target := req.RequiredMemory
-	if req.Mode == utils.NvidiaCardType {
-		target = req.RequiredGPU
-	}
+	target := requiredTargetForMode(req)
 	out := make([]Allocation, 0, len(resolved))
 	remaining := target
 	for _, item := range resolved {
