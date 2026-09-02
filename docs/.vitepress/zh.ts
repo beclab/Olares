@@ -14,7 +14,7 @@ const side = {
           collapsed: true,
           items: [
             {
-              text: "Olares 1.12.6 更新说明",
+              text: "Olares 1.12.6",
               link: "/zh/manual/update-guides/1.12.6",
             },
           ],
