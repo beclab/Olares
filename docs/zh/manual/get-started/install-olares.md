@@ -35,13 +35,13 @@ NVIDIA DGX Spark 是一款紧凑型 AI 开发平台，配备高性能 GPU。Olar
 - [**一行命令**](install-spark-script.md)（推荐）：通过命令行在 DGX Spark 上快速安装。
 - [**ISO 镜像**](install-spark-iso.md)：使用官方 ISO 镜像在 DGX Spark 上安装 Olares。
 
-### 其他安装方式
+<!-- ### 其他安装方式
 
 以下方式适用于开发、测试或轻量级环境。
 
 #### Windows
 - [**一行命令**](install-windows-script.md)：在 WSL2 虚拟化环境中安装 Olares。
-<!-- [**Docker 镜像**](install-windows-docker.md) — 在 WSL2 的 Docker 容器中运行 Olares。 -->
+[**Docker 镜像**](install-windows-docker.md) — 在 WSL2 的 Docker 容器中运行 Olares。
 
 #### macOS
 - [**一行命令**](install-mac-script.md)：使用 MiniKube 在容器化环境中安装 Olares。
@@ -53,4 +53,4 @@ NVIDIA DGX Spark 是一款紧凑型 AI 开发平台，配备高性能 GPU。Olar
 - [**LXC 容器**](install-lxc.md)：在 PVE 中使用 Linux 容器（LXC）部署 Olares。
 
 #### Raspberry Pi（ARM）
-- [**一行命令**](install-raspberry-pi.md)：在基于 ARM 架构的 Raspberry Pi 设备上安装 Olares。
+- [**一行命令**](install-raspberry-pi.md)：在基于 ARM 架构的 Raspberry Pi 设备上安装 Olares。 -->
