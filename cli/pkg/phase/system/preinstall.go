@@ -21,6 +21,10 @@ func marketPreinstallModules(
 			RootDir:           storage.OlaresRootDir,
 			OSVersion:         osVersion,
 			ProfileSelections: selections,
+			// An install declares what its medium carries. The catalog apps of
+			// the release are left to the first upgrade, which runs on a device
+			// that can already reach the catalog.
+			CatalogPolicy: preinstall.OmitCatalogApps,
 		},
 	}
 }

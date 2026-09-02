@@ -18,14 +18,25 @@ import (
 // Olares root directory the market chart mounts from, not the installer base
 // directory.
 //
-// An empty installerDir, or one carrying no bundle, still publishes: the catalog
-// apps this version expects are declared either way, and an upgrade that brought
-// no medium is the ordinary case rather than a reason to leave Market with no
-// declaration for the release it is now running.
-func Publish(installerDir, rootDir, osVersion string, selections ProfileSelections) error {
+// An empty installerDir means no medium was brought, which is the ordinary shape
+// of an upgrade: what that publishes is then the catalog apps of the release
+// being installed, and nothing local.
+//
+// The catalog policy decides whether those catalog apps are declared at all. A
+// run that ends up with nothing to declare writes no file, so the runtime
+// directory holds a declaration only for a release that expects something.
+func Publish(
+	installerDir, rootDir, osVersion string,
+	selections ProfileSelections,
+	catalog CatalogPolicy,
+) error {
 	trunk := TrunkVersion(osVersion)
 	if trunk == "" {
 		return fmt.Errorf("publish declaration: no Olares version to name it after")
+	}
+	if !catalog.Valid() {
+		return fmt.Errorf("publish declaration: catalog policy must be %q or %q",
+			DeclareCatalogApps, OmitCatalogApps)
 	}
 	source, err := openStaticBundle(installerDir)
 	if err != nil {
@@ -40,9 +51,20 @@ func Publish(installerDir, rootDir, osVersion string, selections ProfileSelectio
 			return err
 		}
 	}
-	declaration, err := BuildDeclaration(source.bundle, selections, catalogDeclarationApps())
+	var catalogEntries []DeclarationAppV2
+	if catalog == DeclareCatalogApps {
+		catalogEntries = catalogDeclarationApps()
+	}
+	declaration, err := BuildDeclaration(source.bundle, selections, catalogEntries)
 	if err != nil {
 		return err
+	}
+	if len(declaration.Apps) == 0 {
+		// Nothing is expected of this device, and an empty list says that no
+		// better than an absent file does. Declarations are one per trunk, so
+		// writing none here leaves the next release -- and a later publish for
+		// this one -- free to write its own.
+		return nil
 	}
 	return publishDeclaration(source, rootDir, trunk, declaration)
 }

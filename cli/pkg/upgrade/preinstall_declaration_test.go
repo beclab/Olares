@@ -64,6 +64,12 @@ func TestTheUpgradePublishBringsNoMediumAndSaysWhichVersionItDeclares(t *testing
 	if published.RootDir != storage.OlaresRootDir {
 		t.Errorf("writes under %q, want %q", published.RootDir, storage.OlaresRootDir)
 	}
+	// The catalog apps are the whole of what an upgrade declares: it brought no
+	// medium, so leaving them out would publish nothing at all.
+	if published.CatalogPolicy != preinstall.DeclareCatalogApps {
+		t.Errorf("declares catalog apps as %q, want %q",
+			published.CatalogPolicy, preinstall.DeclareCatalogApps)
+	}
 }
 
 func TestOneTwelveSevenIsBreakingBoundaryForSuccessor(t *testing.T) {
