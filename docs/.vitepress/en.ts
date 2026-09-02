@@ -479,13 +479,14 @@ const side = {
           ],
         },
         { text: "Use VPN", link: "/manual/larepass/private-network" },
-        { text: "Manage files", link: "/manual/larepass/manage-files" },
-        // collapsed: true,
-        //items: [
-        //  {text: "Common file operations", link:"/manual/larepass/manage-files"},
-        // {text: "Sync and share", link:"/manual/larepass/sync-share"}
-        // ]
-        // },
+        {
+          text: "Manage files",
+          collapsed: true,
+          items: [
+            { text: "Common file operations", link: "/manual/larepass/manage-files" },
+            { text: "Save resources to Olares", link: "/manual/larepass/save-resources-to-olares" },
+          ],
+        },
         {
           text: "Manage passwords",
           collapsed: true,

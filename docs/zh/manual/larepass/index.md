@@ -17,6 +17,7 @@ head:
 
 - 账户与身份管理
 - 安全文件访问与同步
+- 将网络资源直接转存到 Olares
 - 设备与网络管理
 - 密码与密钥管理
 - 知识收藏
@@ -149,9 +150,9 @@ head:
       <!-- <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td> -->
     </tr>
     <tr style="background-color: #f9f9f9;">
-      <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">下载视频/播客/PDF/电子书至文件</td>
+      <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">将网络资源转存到 Olares</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">❌</td>
-      <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">❌</td>
+      <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td>
       <!-- <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td> -->
     </tr>
     <tr>

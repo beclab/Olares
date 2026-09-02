@@ -16,6 +16,7 @@ LarePass is the official cross-platform client software for Olares. It acts as a
 ## Key features
 - Account and identity management
 - Secure file access and sync
+- Save remote resources directly to Olares
 - Device and network management
 - Password and secret management
 - Knowledge collection
@@ -146,9 +147,9 @@ After installation, click the puzzle icon in your browser toolbar and pin the La
       <!-- <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td> -->
     </tr>
     <tr style="background-color: #f9f9f9;">
-      <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">Download video/podcast/PDF/eBook to Files</td>
+      <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">Save remote resources to Olares</td>
       <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">❌</td>
-      <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">❌</td>
+      <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td>
       <!-- <td style="border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;">✅</td> -->
     </tr>
     <tr>
