@@ -37,24 +37,24 @@ const (
 	// UserspaceUID / UserspaceGID are the ownership and access identity
 	// Olares fixes for everything under a user's space. Both the
 	// directories on disk and the app processes converge on this pair.
-	UserspaceUID                int64 = 1000
-	UserspaceGID                int64 = 1000
-	ApplicationVersionLabel           = "applications.app.bytetrade.io/version"
-	ApplicationSourceLabel            = "applications.app.bytetrade.io/source"
-	ApplicationTailScaleKey           = "applications.app.bytetrade.io/tailscale"
-	ApplicationRequiredGPU            = "applications.app.bytetrade.io/required_gpu"
-	AppPodGPUConsumePolicy            = "gpu.bytetrade.io/app-pod-consume-policy"
-	ApplicationPolicies               = "applications.app.bytetrade.io/policies"
-	ApplicationMobileSupported        = "applications.app.bytetrade.io/mobile_supported"
-	ApplicationClusterDep             = "applications.app.bytetrade.io/need_cluster_scoped_app"
-	ApplicationGroupClusterDep        = "applications.app.bytetrade.io/need_cluster_scoped_group"
-	UserContextAttribute              = "username"
-	KubeSphereClientAttribute         = "ksclient"
-	MarketSource                      = "X-Market-Source"
-	MarketUser                        = "X-Market-User"
-	StudioSource                      = "devbox"
-	ApplicationInstallUserLabel       = "applications.app.bytetrade.io/install_user"
-	BflUserKey                        = "X-Bfl-User"
+	UserspaceUID int64 = 1000
+	UserspaceGID int64 = 1000
+	ApplicationVersionLabel       = "applications.app.bytetrade.io/version"
+	ApplicationSourceLabel        = "applications.app.bytetrade.io/source"
+	ApplicationTailScaleKey       = "applications.app.bytetrade.io/tailscale"
+	ApplicationRequiredGPU        = "applications.app.bytetrade.io/required_gpu"
+	AppPodGPUConsumePolicy        = "gpu.bytetrade.io/app-pod-consume-policy"
+	ApplicationPolicies           = "applications.app.bytetrade.io/policies"
+	ApplicationMobileSupported    = "applications.app.bytetrade.io/mobile_supported"
+	ApplicationClusterDep         = "applications.app.bytetrade.io/need_cluster_scoped_app"
+	ApplicationGroupClusterDep    = "applications.app.bytetrade.io/need_cluster_scoped_group"
+	UserContextAttribute          = "username"
+	KubeSphereClientAttribute     = "ksclient"
+	MarketSource                  = "X-Market-Source"
+	MarketUser                    = "X-Market-User"
+	StudioSource                  = "devbox"
+	ApplicationInstallUserLabel   = "applications.app.bytetrade.io/install_user"
+	BflUserKey                    = "X-Bfl-User"
 
 	InstanceIDLabel         = "workflows.argoproj.io/controller-instanceid"
 	WorkflowOwnerLabel      = "workflows.app.bytetrade.io/owner"
