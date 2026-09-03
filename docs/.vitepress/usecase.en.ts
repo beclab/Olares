@@ -399,6 +399,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                 {
                   text: "Stream to other devices",
                   link: "/use-cases/steam-stream",
+                },
+                {
+                  text: "Common issues",
+                  link: "/use-cases/steam-common-issues",
                 }
               ]
             },
