@@ -9,7 +9,6 @@ import (
 
 	"github.com/pkg/errors"
 	"helm.sh/helm/v3/pkg/action"
-	"helm.sh/helm/v3/pkg/chart"
 	helmLoader "helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/cli"
 	"helm.sh/helm/v3/pkg/downloader"
@@ -121,36 +120,6 @@ func UpgradeCharts(ctx context.Context, actionConfig *action.Configuration, sett
 		client.RepoURL = repoURL
 	}
 	r, err := runUpgrade(ctx, []string{appName, chartName}, client, settings, vals)
-	if err != nil {
-		return err
-	}
-	logReleaseUpgrade(r)
-	return nil
-}
-
-// UpgradeReleaseCharts upgrades a release with an already-loaded chart,
-// which is expected to be the chart stored on the release being
-// upgraded. Unlike UpgradeCharts it never calls LocateChart, so no
-// chart is read from disk or from a repo and the release keeps its
-// current templates and chart defaults; vals is merged over the
-// previous release's values.
-//
-// Used by Scale (replica retarget) and ApplyEnv (env-only overrides).
-// Picking up a newer chart package would be a bug rather than an upgrade.
-func UpgradeReleaseCharts(ctx context.Context, actionConfig *action.Configuration,
-	appName, namespace string, chrt *chart.Chart, vals map[string]interface{}) error {
-	if chrt == nil {
-		return errors.Errorf("no chart on current release of %s", appName)
-	}
-	ctrl.Log.Info("helm action config", "reachable", actionConfig.KubeClient.IsReachable())
-	client := action.NewUpgrade(actionConfig)
-	client.Namespace = namespace
-	client.Timeout = 300 * time.Second
-	client.MaxHistory = 10
-	client.Recreate = false
-	client.ReuseValues = true
-
-	r, err := client.RunWithContext(ctx, appName, chrt, vals)
 	if err != nil {
 		return err
 	}
