@@ -696,7 +696,7 @@ func allocationsFromResolvedSelection(appConfig *appcfg.ApplicationConfig, req R
 			// frontend always sends a positive Memory for them (enforced by
 			// validateResolvedBindingSelection).
 			amount = item.memory
-		case isWholeCardMode(req.Mode, item.device.SupportType):
+		case isWholeCardSupportType(item.device.SupportType):
 			// Exclusive / TimeSlice hand the pod the whole card and
 			// buildAllocation records Memory=0, so every selected card must
 			// produce its own binding. These must never be gated on the

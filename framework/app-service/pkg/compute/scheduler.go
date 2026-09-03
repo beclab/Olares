@@ -502,15 +502,21 @@ func levelMemory(req Requirement, level string) int64 {
 }
 
 func buildAllocation(appConfig *appcfg.ApplicationConfig, req Requirement, node Node, device Device, memory int64) Allocation {
-	// In Exclusive / TimeSlice modes the pod has access to the entire
+	// On an Exclusive / TimeSlice device the pod has access to the entire
 	// card (Exclusive: solo binding; TimeSlice: full memory during the
 	// pod's time slice). Recording a per-pod memory amount here would
 	// cap the pod via the HAMI binding's spec.memory annotation, even
 	// though no slicing is happening. Persist 0 so createHAMIBinding
 	// omits spec.memory and HAMI treats the pod as unrestricted. The
 	// scheduler's accounting (deviceAvailableMemory / remainingMemory)
-	// never reads Allocation.Memory for these modes, so this is safe.
-	if isWholeCardMode(req.Mode, device.SupportType) {
+	// never reads Allocation.Memory for these devices, so this is safe.
+	//
+	// The discrete AMD/Intel cards are Exclusive-only and build no HAMI
+	// binding at all, so for them the 0 is purely the allocation ledger
+	// saying "this app holds the whole card" — which is the only thing it
+	// could truthfully say, since exclusive-already-bound refuses every
+	// further binding whatever the app's quota.
+	if isWholeCardSupportType(device.SupportType) {
 		memory = 0
 	}
 	return Allocation{
@@ -524,15 +530,23 @@ func buildAllocation(appConfig *appcfg.ApplicationConfig, req Requirement, node 
 	}
 }
 
-// isWholeCardMode reports whether binding a pod to a device with this NVIDIA
-// support type grants it the entire card: Exclusive (solo binding) or
-// TimeSlice (full memory during the pod's slice). buildAllocation records
-// Memory=0 for these, and they are always one-binding-per-card, so allocation
-// distribution must emit a separate binding for every selected card instead of
-// folding several of them into a single shared VRAM budget.
-func isWholeCardMode(mode, supportType string) bool {
-	return mode == utils.NvidiaCardType &&
-		(supportType == SupportTypeExclusive || supportType == SupportTypeTimeSlice)
+// isWholeCardSupportType reports whether binding a pod to a device with this
+// support type grants it the entire card: Exclusive (solo binding) or TimeSlice
+// (full memory during the pod's slice). buildAllocation records Memory=0 for
+// these, and they are always one-binding-per-card, so allocation distribution
+// must emit a separate binding for every selected card instead of folding
+// several of them into a single shared VRAM budget.
+//
+// The support type answers this on its own, for every mode — which is why the
+// mode is no longer a parameter. Gating it on nvidia left the discrete
+// AMD/Intel cards in a state no branch of allocationsFromResolvedSelection
+// covered: AvailableSupportTypes makes them Exclusive-only, requiredTargetForMode
+// judges them against a GPU-memory quota, and an app that declares no quota
+// therefore has a zero target with the whole-card branch closed to it. Its card
+// was dropped from its own binding as "nothing left to allocate", which reached
+// the user as empty-compute-binding on resume.
+func isWholeCardSupportType(supportType string) bool {
+	return supportType == SupportTypeExclusive || supportType == SupportTypeTimeSlice
 }
 
 func supportTypeOrder(mode string) []string {
