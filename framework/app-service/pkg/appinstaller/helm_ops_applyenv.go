@@ -9,7 +9,7 @@ import (
 )
 
 func (h *HelmOps) ApplyEnv() error {
-	_, err := h.status()
+	rel, err := h.status()
 	if err != nil {
 		klog.Errorf("get release status failed %v", err)
 		return err
@@ -21,10 +21,11 @@ func (h *HelmOps) ApplyEnv() error {
 		return err
 	}
 
-	// ReuseValues: only env-related overrides change; do not absorb new chart defaults.
-	err = helm.UpgradeCharts(h.ctx, h.actionConfig, h.settings, h.app.AppName, h.app.ChartsName, h.app.RepoURL, h.app.Namespace, values, helm.ReuseValues)
+	// UpgradeReleaseCharts: only env-related overrides change; keep the
+	// current release chart (no LocateChart) and merge over previous values.
+	err = helm.UpgradeReleaseCharts(h.ctx, h.actionConfig, h.app.AppName, h.app.Namespace, rel.Chart, values)
 	if err != nil {
-		klog.Errorf("Failed to upgrade chart name=%s err=%v", h.app.AppName, err)
+		klog.Errorf("Failed to apply env to chart name=%s err=%v", h.app.AppName, err)
 		return err
 	}
 
