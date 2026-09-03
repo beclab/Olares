@@ -4,17 +4,25 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/beclab/Olares/daemon/cmd/terminusd/version"
-	"github.com/dustin/go-humanize"
 	"io"
 	"net/http"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 	"syscall"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/beclab/Olares/daemon/cmd/terminusd/version"
+	"github.com/dustin/go-humanize"
 )
+
+// releaseArch is the architecture a release uses in its file names. It is
+// GOARCH: comparing against "arm" never matches an arm64 build, which is how
+// every arm64 machine used to be handed the amd64 CLI and image manifest.
+func releaseArch() string {
+	return runtime.GOARCH
+}
 
 func getCurrentCliVersion() (*semver.Version, error) {
 	cmd := exec.Command("olares-cli", "-v")

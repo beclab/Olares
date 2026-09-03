@@ -40,14 +40,29 @@ func (u upgrader_1_12_6) PrepareForUpgrade() []task.Interface {
 	tasks = append(tasks, upgradeKubernetesPrometheusRule()...)
 	tasks = append(tasks, upgradeNodeExporterServiceMonitor()...)
 	tasks = append(tasks, upgradeNodeExporter()...)
-	tasks = append(tasks, upgradeMultus()...)
-	tasks = append(tasks, createAppCommonDir()...)
-	tasks = append(tasks, upgradeNetworkManagerConfig()...)
+	tasks = append(tasks, upgradeMultusCluster()...)
 	tasks = append(tasks, upgradeUserReverseProxy()...)
 	tasks = append(tasks, upgradePrometheusOperator()...)
 
 	tasks = append(tasks, u.upgraderBase.PrepareForUpgrade()...)
 	return tasks
+}
+
+// PreUpgradeNode is the part of 1.12.6 that each machine does to itself: the
+// multus DHCP daemon, the shared app directories, and the NetworkManager
+// drop-in.
+func (u upgrader_1_12_6) PreUpgradeNode() []task.Interface {
+	var tasks []task.Interface
+	tasks = append(tasks, upgradeMultusNode()...)
+	tasks = append(tasks, createAppCommonDir()...)
+	tasks = append(tasks, upgradeNetworkManagerConfig()...)
+	// Both of these act on the machine they run on: one retags an image in
+	// this host's containerd, the other probes this host's GPUs and labels
+	// this host's Node. Left on the control node they would describe the
+	// control node's hardware as the whole cluster's.
+	tasks = append(tasks, retagLegacyAMDGPUImage()...)
+	tasks = append(tasks, labelIntelAMDGPUNode()...)
+	return append(tasks, u.upgraderBase.PreUpgradeNode()...)
 }
 
 func (u upgrader_1_12_6) UpgradeSystemComponents() []task.Interface {
@@ -82,11 +97,6 @@ func (u upgrader_1_12_6) UpgradeSystemComponents() []task.Interface {
 			Delay:  5 * time.Second,
 		},
 	}
-	pre = append(pre, retagLegacyAMDGPUImage()...)
-	// backfill the per-mode (multi-mode) node labels for Intel/AMD GPUs so
-	// devices upgraded from before the per-mode labeling scheme advertise
-	// their GPU mode to the scheduler.
-	pre = append(pre, labelIntelAMDGPUNode()...)
 	pre = append(pre, u.upgraderBase.UpgradeSystemComponents()...)
 	pre = append(pre, &task.LocalTask{
 		Name:   "PatchL4BFLProxyProbePort",

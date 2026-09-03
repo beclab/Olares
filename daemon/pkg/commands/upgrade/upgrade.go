@@ -42,7 +42,7 @@ func NewUpgrade() commands.Interface {
 			{"UpgradeUserComponents success", 50},
 			{"UpdateReleaseFile success", 55},
 			{"UpdateOlaresVersion success", 60},
-			{"EnsurePodsUpAndRunningAgain", 70},
+			{"EnsureSystemComponentsUpAndRunningAgain", 70},
 			{"[Job] UpgradeOlares execute successfully", commands.ProgressNumFinished},
 		},
 	}
@@ -52,6 +52,22 @@ func (i *upgrade) Execute(ctx context.Context, p any) (res any, err error) {
 	target, ok := p.(state.UpgradeTarget)
 	if !ok {
 		return nil, errors.New("invalid param")
+	}
+
+	// On a control node with compute nodes, the upgrade is not something this
+	// machine performs; it is something it schedules. The two paths meet again
+	// at the ExecutionRes below: the watcher above does not care which one ran.
+	//
+	// The error is not a reason to fall back to upgrading this node alone. It
+	// means the cluster's shape is unknown or unreachable, and upgrading one
+	// machine on that basis is how a cluster ends up split across two
+	// versions. The watcher retries.
+	m, acrossCluster, err := upgradeOrchestrator(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if acrossCluster {
+		return i.upgradeAcrossCluster(ctx, m, target)
 	}
 
 	i.logFile = filepath.Join(commands.TERMINUS_BASE_DIR, "versions", "v"+target.Version.Original(), "logs", "upgrade.log")

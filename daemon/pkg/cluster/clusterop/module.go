@@ -132,6 +132,57 @@ type RecoverableModule interface {
 	Recover(context.Context, Runtime, Operation)
 }
 
+// ResumableModule is a module whose interrupted run should be continued
+// rather than settled as failed.
+//
+// The default for a record that was still moving when olaresd stopped is
+// MarkInterrupted: nothing observed how it ended, so nothing is claimed about
+// it. That is right for an operation this daemon watched something else
+// perform. It is wrong for one that restarts olaresd as part of its own work —
+// an upgrade installs the new daemon — because then the interruption is the
+// operation proceeding normally, and failing it would fail nearly every run at
+// the point where it was working.
+//
+// Declaring this moves the record onto the same path a command_issued record
+// takes: Recover runs after startup, unbounded and without the interrupted
+// fallback, and is expected to carry the operation to a real conclusion. A
+// module may only declare it if its Recover can tell what was already done —
+// for an upgrade, the per-stage record is what makes that possible.
+type ResumableModule interface {
+	RecoverableModule
+
+	// ResumeInterrupted reports whether op should be continued. It is asked
+	// per record rather than per module so a module can still let the
+	// framework settle a run it cannot make sense of.
+	ResumeInterrupted(op Operation) bool
+}
+
+// RetryableModule is implemented by an operation type whose failed run may be
+// superseded by an identical request.
+//
+// Without it, a request id is answered by the same record forever: Create is
+// idempotent per request id, so once an operation has failed, every later
+// request carrying that id is handed the failure again. For an operation whose
+// id is generated per request that is right — the caller asked once, and
+// asking again means something new. For one whose id is derived from what is
+// being asked for, it is a dead end: an upgrade's id comes from the target
+// version, precisely so that the watcher's own retries rejoin the run they
+// started, and the same property then makes a failed upgrade unretryable
+// without deleting its record by hand.
+//
+// A superseded record is kept. What moves to the new operation is the request
+// id, so the newest run is what asking by request id finds, and the failure
+// that preceded it is still on disk.
+type RetryableModule interface {
+	OperationModule
+
+	// RetryAfterFailure reports whether an identical request should start a
+	// new operation rather than be answered with this failed one. It is asked
+	// per record so a module can distinguish failures worth another attempt
+	// from ones that would fail the same way.
+	RetryAfterFailure(op Operation) bool
+}
+
 type NodeOperationModule interface {
 	ExecuteNode(context.Context, NodeRequest) error
 }

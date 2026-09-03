@@ -127,6 +127,16 @@ func (m *Manager) recoverLoadedOperations() (unfinished []string) {
 			// still confirm. Retained exactly as it is.
 			continue
 		}
+		if resumable, ok := module.(ResumableModule); ok && resumable.ResumeInterrupted(op) {
+			// The module says this run should be continued rather than
+			// settled. It takes the same path a command_issued record takes:
+			// after startup, unbounded, and without the interrupted fallback
+			// below — continuing an upgrade means running the rest of it, and
+			// neither a ten-second budget nor a fallback that fails whatever
+			// it did not finish in that time can be applied to that.
+			unfinished = append(unfinished, id)
+			continue
+		}
 		// The module gets to look at a run that stopped mid-flight before
 		// this daemon assumes the worst about it, but only for as long as
 		// a daemon that has not started serving yet can afford to wait.

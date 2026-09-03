@@ -18,7 +18,8 @@ func (u upgrader_1_12_3_20251126) PrepareForUpgrade() []task.Interface {
 	tasks = append(tasks, upgradeKsConfig()...)
 	tasks = append(tasks, upgradePrometheusServiceMonitorKubelet()...)
 	tasks = append(tasks, upgradeKSCore()...)
-	tasks = append(tasks, regenerateKubeFiles()...)
+	tasks = append(tasks, regenerateKubeFilesOnNode()...)
+	tasks = append(tasks, regenerateKubeFilesOnControlNode()...)
 
 	tasks = append(tasks, u.upgraderBase.PrepareForUpgrade()...)
 	return tasks
