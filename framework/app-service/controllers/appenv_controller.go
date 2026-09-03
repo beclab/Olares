@@ -128,8 +128,7 @@ func (r *AppEnvController) reconcileAppEnv(ctx context.Context, appEnv *sysv1alp
 			return ctrl.Result{}, err
 		}
 
-		// An applyEnv runs UpgradeReleaseCharts (helm upgrade of the current
-		// release chart) that re-renders the workload. When the
+		// An applyEnv runs a helm upgrade that re-renders the workload. When the
 		// app is stopped, the outcome depends on how its replicas are controlled:
 		//   - No workloadReplicas (replicas hardcoded in the chart): stop only
 		//     patched the live workload to replicas=0, so the upgrade re-renders

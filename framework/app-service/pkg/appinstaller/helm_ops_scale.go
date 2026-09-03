@@ -13,11 +13,11 @@ import (
 // workloads to their final size.
 //
 // The implementation only sends the .workloads sub-tree and relies on
-// helm UpgradeReleaseCharts to merge it over the previous release's values —
-// every other input (admin / userspace / domain / service) is
-// preserved. The chart comes from the current Helm release, not
-// ChartsName on disk, so Scale cannot pick up template or chart default
-// changes from a newer local package. Behavior by argument:
+// helm UpgradeCharts(ReuseValues) to merge it over the previous release's
+// values — every other input (admin / userspace / domain / service) is
+// preserved. ReuseValues (not ResetThenReuseValues) is intentional: Scale
+// must not pick up new chart defaults (e.g. image) just because the chart
+// on disk changed. Behavior by argument:
 //
 //   - replicas >= 0: every workload is forced to this exact value. Used
 //     by suspending_app to scale to 0, and by upgrading_app to land an
@@ -35,23 +35,19 @@ import (
 // error so the upgrade-from-Stopped tail in upgrading_app stays
 // version-agnostic.
 //
-// HelmOpsV2 leaves Scale as a no-op; callers should branch on
-// appcfg.IsV2() first.
+// Scale is unsupported for v2 apps; HelmOpsV2 overrides this to return
+// an explicit error and callers should branch on appcfg.IsV2() first.
 func (h *HelmOps) Scale(replicas int32) error {
 	if !h.app.HasWorkloadReplicas() {
 		klog.V(4).Infof("Scale no-op for app=%s (no workloadReplicas declared)", h.app.AppName)
 		return nil
 	}
-	rel, err := h.status()
-	if err != nil {
-		return err
-	}
-
 	values := make(map[string]interface{})
 	values["workloads"] = buildWorkloadsValues(h.app.WorkloadReplicas, replicas)
 
-	if err := helm.UpgradeReleaseCharts(h.ctx, h.actionConfig,
-		h.app.AppName, h.app.Namespace, rel.Chart, values); err != nil {
+	if err := helm.UpgradeCharts(h.ctx, h.actionConfig, h.settings,
+		h.app.AppName, h.app.ChartsName, h.app.RepoURL, h.app.Namespace,
+		values, helm.ReuseValues); err != nil {
 		klog.Errorf("Failed to scale chart appName=%s replicas=%d err=%v", h.app.AppName, replicas, err)
 		return err
 	}
