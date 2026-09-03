@@ -29,7 +29,6 @@ import (
 	"github.com/emicklei/go-restful/v3"
 	"helm.sh/helm/v3/pkg/time"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	apiresource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
@@ -995,13 +994,13 @@ func (h *installHandlerHelper) resolveAutoResources(ctx context.Context) (err er
 func backfillAutoResourceMode(appConfig *appcfg.ApplicationConfig, totals utils.WorkloadResourceTotals) {
 	// GPU memory is conventionally declared only as a limit; fall back across
 	// requests/limits so a sentinel on either side resolves to a usable value.
-	gpuReq := totals.RequestsGPUMem
+	gpuReq := totals.RequestsGPUMemBytes
 	if gpuReq.IsZero() {
-		gpuReq = totals.LimitsGPUMem
+		gpuReq = totals.LimitsGPUMemBytes
 	}
-	gpuLim := totals.LimitsGPUMem
+	gpuLim := totals.LimitsGPUMemBytes
 	if gpuLim.IsZero() {
-		gpuLim = totals.RequestsGPUMem
+		gpuLim = totals.RequestsGPUMemBytes
 	}
 
 	for i := range appConfig.Accelerator {
@@ -1022,25 +1021,15 @@ func backfillAutoResourceMode(appConfig *appcfg.ApplicationConfig, totals utils.
 		if appcfg.IsAutoResource(rr.LimitedMemory) {
 			rr.LimitedMemory = totals.LimitsMemory.String()
 		}
+		// Already in bytes, the unit requiredGPUMemory / limitedGPUMemory are
+		// parsed as, so the total goes in as-is.
 		if appcfg.IsAutoResource(rr.RequiredGPU) {
-			rr.RequiredGPU = gpuMemMiBToByteString(gpuReq)
+			rr.RequiredGPU = gpuReq.String()
 		}
 		if appcfg.IsAutoResource(rr.LimitedGPU) {
-			rr.LimitedGPU = gpuMemMiBToByteString(gpuLim)
+			rr.LimitedGPU = gpuLim.String()
 		}
 	}
-}
-
-// gpuMemMiBToByteString converts a summed pod nvidia.com/gpumem quantity (a
-// plain integer count in MiB, the HAMi convention for the extended resource)
-// into a byte-quantity string suitable for the resource mode's
-// requiredGPUMemory/limitedGPUMemory fields, which the compute scheduler and
-// the gpu-inject webhook interpret as bytes. e.g. 8000 (MiB) -> "8000Mi".
-func gpuMemMiBToByteString(mib apiresource.Quantity) string {
-	if mib.IsZero() {
-		return mib.String()
-	}
-	return apiresource.NewQuantity(mib.Value()*1024*1024, apiresource.BinarySI).String()
 }
 
 func (h *installHandlerHelperV2) setAppConfig(req *api.InstallRequest, appName string) {
