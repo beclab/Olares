@@ -70,7 +70,8 @@ type HelmOpsInterface interface {
 	Install() error
 	// Upgrade is the action for upgrade a release.
 	Upgrade() error
-	// ApplyEnv upgrades only environment variables, reusing existing values.
+	// ApplyEnv upgrades only environment variables against the current
+	// release chart (UpgradeReleaseCharts), reusing existing values.
 	ApplyEnv() error
 	// RollBack is the action for rollback a release.
 	RollBack() error

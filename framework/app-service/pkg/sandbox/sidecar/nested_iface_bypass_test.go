@@ -24,14 +24,14 @@ func hostPathVol(name, path string) corev1.Volume {
 
 func TestResolveNestedIfaceBypass(t *testing.T) {
 	cases := []struct {
-		name    string
-		pod     *corev1.Pod
-		wantOK  bool
-		wantIF  []string
+		name   string
+		pod    *corev1.Pod
+		wantOK bool
+		wantIF []string
 	}{
 		{
-			name: "annot CSV",
-			pod: linkerdPod(map[string]string{AnnotMeshBypassInterfaces: "docker, br0"}, corev1.PodSpec{}),
+			name:   "annot CSV",
+			pod:    linkerdPod(map[string]string{AnnotMeshBypassInterfaces: "docker, br0"}, corev1.PodSpec{}),
 			wantOK: true, wantIF: []string{"docker", "br0"},
 		},
 		{
