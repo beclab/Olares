@@ -1,10 +1,10 @@
 ---
 outline: deep
-description: 升级到 Olares 1.12.6 后，*Arr 媒体管理器的升级说明。
+description: 更新到 Olares 1.12.6 后，调整 *Arr 应用连接和路径的方法。
 head:
   - - meta
     - name: keywords
-      content: Olares, *Arrs, Sonarr, Radarr, Prowlarr, 升级, 1.12.6
+      content: Olares, *Arr 应用, Sonarr, Radarr, Prowlarr, 更新, 1.12.6
 app_version: "1.0.x"
 doc_version: "1.0"
 doc_updated: "2026-07-06"
@@ -14,15 +14,15 @@ doc_updated: "2026-07-06"
 本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../use-cases/arrs-upgrade.md)为准。
 :::
 
-# *Arrs 升级说明
+# *Arr 应用更新说明
 
-本文介绍在将 Olares 升级到 V1.12.6 后，需要对 *Arr 应用进行的配置更改。
+本文介绍更新到 Olares V1.12.6 后，需要对 *Arr 应用进行的配置更改。
 
 ## 更新 *Arr 应用连接
 
 从 Olares V1.12.6 开始，*Arr 应用之间通过内部入口 URL 进行通信，而不是提供商 URL。这一更改简化了网络模型，并使媒体栈更加一致。
 
-升级到 V1.12.6 后，现有的连接可能会停止工作，直到你将其更新为使用内部入口 URL。
+更新到 V1.12.6 后，现有连接可能会失效。你需要将其改为使用内部入口 URL。
 
 1. 在 Olares 中，将每个 *Arr 应用更新到 V1.12.6 可用的最新版本。
 2. 打开**设置**，然后进入**应用** > **[Arr 应用名称]** > **入口**。
@@ -72,6 +72,6 @@ Olares V1.12.6 使用统一的目录挂载结构。请更新 *Arr 应用和下�
 
 ## （可选）更新下载客户端
 
-如果你将 qBittorrent、NZBGet、Transmission 或 Deluge 与 *Arr 应用配合使用，在升级到 Olares V1.12.6 后，可能还需要更新它们的默认下载路径。新的统一目录挂载结构意味着 *Arr 应用和下载客户端可以看到相同的路径。
+如果你将 qBittorrent、NZBGet、Transmission 或 Deluge 与 *Arr 应用配合使用，更新到 Olares V1.12.6 后，可能还需要修改它们的默认下载路径。新的统一目录挂载结构让 *Arr 应用和下载客户端使用相同的路径。
 
-详细步骤请参阅[下载客户端升级说明](./download-clients-upgrade.md)。
+详细步骤请参阅[下载客户端更新说明](./download-clients-upgrade.md)。

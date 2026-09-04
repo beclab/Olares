@@ -365,11 +365,11 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               collapsed: true,
               items: [
                 {
-                  text: "升级 *Arrs",
+                  text: "*Arr 应用更新说明",
                   link: "/zh/use-cases/arrs-upgrade",
                 },
                 {
-                  text: "升级下载客户端",
+                  text: "下载客户端更新说明",
                   link: "/zh/use-cases/download-clients-upgrade",
                 },
               ]

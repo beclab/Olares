@@ -1,20 +1,20 @@
 ---
 outline: deep
-description: Upgrade notes for the qBittorrent, NZBGet, Transmission, and Deluge download clients when moving to Olares 1.12.6.
+description: Update notes for qBittorrent, NZBGet, Transmission, and Deluge when moving to Olares 1.12.6.
 head:
   - - meta
     - name: keywords
-      content: Olares, download clients, qBittorrent, NZBGet, Transmission, Deluge, upgrade, 1.12.6
+      content: Olares, download clients, qBittorrent, NZBGet, Transmission, Deluge, update, 1.12.6
 app_version: "1.0.x"
 doc_version: "1.0"
 doc_updated: "2026-07-02"
 ---
 
-# Upgrade notes for download clients
+# Update notes for download clients
 
 This page describes how to update the default download paths in your download clients after upgrading Olares to V1.12.6. The new unified directory mount structure means the same paths are visible to both *Arr apps and download clients, so you might need to update your existing download locations.
 
-If you also use *Arr apps such as Sonarr or Radarr, see [Upgrade notes for *Arrs](./arrs-upgrade.md) for the app connection and root folder changes.
+If you also use *Arr apps such as Sonarr or Radarr, see [Update notes for *Arr apps](./arrs-upgrade.md) for the app connection and root folder changes.
 
 ## qBittorrent
 
@@ -27,7 +27,7 @@ If you also use *Arr apps such as Sonarr or Radarr, see [Upgrade notes for *Arrs
    
 5. Scroll down and click **Save**.
 
-### qBittorrent asks me to log in after the upgrade
+### qBittorrent asks me to log in after the update
 
 If qBittorrent previously allowed you to access the WebUI without logging in, but now prompts for credentials, the migration script might not have preserved the authentication settings.
 

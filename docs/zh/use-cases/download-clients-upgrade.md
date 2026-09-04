@@ -1,10 +1,10 @@
 ---
 outline: deep
-description: 升级到 Olares 1.12.6 后，qBittorrent、NZBGet、Transmission 和 Deluge 下载客户端的升级说明。
+description: 更新到 Olares 1.12.6 后，修改 qBittorrent、NZBGet、Transmission 和 Deluge 下载路径的方法。
 head:
   - - meta
     - name: keywords
-      content: Olares, 下载客户端, qBittorrent, NZBGet, Transmission, Deluge, 升级, 1.12.6
+      content: Olares, 下载客户端, qBittorrent, NZBGet, Transmission, Deluge, 更新, 1.12.6
 app_version: "1.0.x"
 doc_version: "1.0"
 doc_updated: "2026-07-06"
@@ -14,11 +14,11 @@ doc_updated: "2026-07-06"
 本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../use-cases/download-clients-upgrade.md)为准。
 :::
 
-# 下载客户端升级说明
+# 下载客户端更新说明
 
-本文介绍在将 Olares 升级到 V1.12.6 后，如何更新下载客户端中的默认下载路径。新的统一目录挂载结构意味着 *Arr 应用和下载客户端可以看到相同的路径，因此你可能需要更新现有的下载位置。
+本文介绍更新到 Olares V1.12.6 后，如何修改下载客户端的默认下载路径。新的统一目录挂载结构让 *Arr 应用和下载客户端使用相同的路径，因此你可能需要修改原有的下载位置。
 
-如果你还使用 Sonarr 或 Radarr 等 *Arr 应用，请参阅 [*Arrs 升级说明](./arrs-upgrade.md)，了解应用连接和根文件夹的更改。
+如果你还使用 Sonarr 或 Radarr 等 *Arr 应用，请参阅 [*Arr 应用更新说明](./arrs-upgrade.md)，了解应用连接和根文件夹的变化。
 
 ## qBittorrent
 
@@ -31,7 +31,7 @@ doc_updated: "2026-07-06"
    
 5. 向下滚动并点击**保存**。
 
-### 升级后 qBittorrent 要求登录
+### 更新后 qBittorrent 要求登录
 
 如果 qBittorrent 之前允许你无需登录即可访问 WebUI，但现在提示输入凭据，可能是迁移脚本没有保留认证设置。
 

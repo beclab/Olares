@@ -1,16 +1,16 @@
 ---
 outline: deep
-description: Upgrade notes for the *Arr media managers when moving to Olares 1.12.6.
+description: Update notes for *Arr media managers when moving to Olares 1.12.6.
 head:
   - - meta
     - name: keywords
-      content: Olares, *Arrs, Sonarr, Radarr, Prowlarr, upgrade, 1.12.6
+      content: Olares, *Arr apps, Sonarr, Radarr, Prowlarr, update, 1.12.6
 app_version: "1.0.x"
 doc_version: "1.0"
 doc_updated: "2026-07-02"
 ---
 
-# Upgrade notes for *Arrs
+# Update notes for *Arr apps
 
 This page describes the configuration changes to make to the *Arr apps after upgrading Olares to V1.12.6.
 
@@ -70,4 +70,4 @@ If you previously configured **Remote Path Mappings** between *Arr apps and down
 
 If you use qBittorrent, NZBGet, Transmission, or Deluge with your *Arr apps, you may also need to update their default download paths after upgrading to Olares V1.12.6. The new unified directory mount structure means the same paths are visible to both *Arr apps and download clients.
 
-See [Upgrade notes for download clients](./download-clients-upgrade.md) for the detailed steps.
+See [Update notes for download clients](./download-clients-upgrade.md) for the detailed steps.
