@@ -2,15 +2,11 @@ package upgrade
 
 import (
 	"fmt"
-	"path/filepath"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/connector"
-	"github.com/beclab/Olares/cli/pkg/core/logger"
 	"github.com/beclab/Olares/cli/pkg/core/task"
-	"github.com/beclab/Olares/cli/pkg/manifest"
-	"github.com/pkg/errors"
 )
 
 type upgrader_1_12_7_20260604 struct {
@@ -45,25 +41,15 @@ type upgradeCniPluginsBinary struct {
 }
 
 func (u *upgradeCniPluginsBinary) Execute(runtime connector.Runtime) error {
-	m, err := manifest.ReadAll(u.KubeConf.Arg.Manifest)
-
-	binary, err := m.Get("cni-plugins")
+	dst, err := syncCniPluginsArchive(runtime, u.KubeConf.Arg.Manifest)
 	if err != nil {
-		return fmt.Errorf("get cni-plugins binary info failed: %w", err)
-	}
-
-	path := binary.FilePath(runtime.GetBaseDir())
-
-	fileName := binary.Filename
-	dst := filepath.Join(common.TmpDir, fileName)
-	logger.Debugf("SyncKubeBinary cp cni-plugins from %s to %s", path, dst)
-	if err := runtime.GetRunner().Scp(path, dst); err != nil {
-		return errors.Wrap(errors.WithStack(err), fmt.Sprintf("sync kube binaries failed"))
-	}
-	if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("tar -zxf %s -C /opt/cni/bin", dst), false, false); err != nil {
 		return err
 	}
-
+	// this upgrader deliberately replaces every plugin in the archive: it
+	// shipped as a fix for broken cni-plugins binaries on the node
+	if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("tar -zxf %s -C %s", dst, cniBinDir), false, false); err != nil {
+		return err
+	}
 	if _, err := runtime.GetRunner().SudoCmd("systemctl restart cni-dhcp", false, false); err != nil {
 		return err
 	}
