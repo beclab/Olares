@@ -76,9 +76,9 @@ You can use the built-in configuration wizard to install default or officially s
 
     | Settings | Option |
     |:---------|:-------|
-    | Where will the Gateway run | Local (this machine) |
-    | What do you want to configure | Skills | 
-    | Install missing skill dependencies | Select as needed |
+    | <nobr>Where will the Gateway run</nobr> | Local (this machine) |
+    | <nobr>What do you want to configure</nobr> | Skills | 
+    | <nobr>Install missing skill dependencies</nobr> | Select as needed |
 
 4. Wait for the installation to finish and review the installed summary.
 5. When prompted **What do you want to configure**, select **Done**.

@@ -62,10 +62,10 @@ OpenClaw 需要使用 SearXNG Endpoint 连接其搜索服务。
 
    | 设置 | 选项 |
    |:---------|:-------|
-   | Enable the web_search tool | 是 |
-   | Search provider | SearXNG Search |
-   | SearXNG Base URL | 粘贴步骤 2 中复制的 SearXNG Endpoint URL。 |
-   | Install SearXNG plugin | 从 npm 下载（@openclaw/searxng-plugin） |
+   | <nobr>Enable the web_search tool</nobr> | 是 |
+   | <nobr>Search provider</nobr> | SearXNG Search |
+   | <nobr>SearXNG Base URL</nobr> | 粘贴步骤 2 中复制的 SearXNG Endpoint URL。 |
+   | <nobr>Install SearXNG plugin</nobr> | 从 npm 下载（@openclaw/searxng-plugin） |
    | Enable the web_fetch tool (keyless HTTP fetch) | 是 |
 
 ## 步骤 4：验证网页搜索

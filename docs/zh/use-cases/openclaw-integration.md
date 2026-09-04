@@ -79,16 +79,16 @@ doc_updated: "2026-08-03"
 
    | 设置 | 选项 |
    |:---------|:-------|
-   | Discord account | Default (primary) |
+   | <nobr>Discord account</nobr> | Default (primary) |
    | How do you want to provide this Discord bot token | Enter Discord bot token |
-   | Enter Discord bot token | 粘贴[步骤 1](#步骤-1-创建-discord-机器人) 中复制的机器人 token |
-   | Configure Discord channels access | Yes |
-   | Discord channels access | Open (allow all channels) |
+   | <nobr>Enter Discord bot token</nobr> | 粘贴[步骤 1](#步骤-1-创建-discord-机器人) 中复制的机器人 token |
+   | <nobr>Configure Discord channels access</nobr> | Yes |
+   | <nobr>Discord channels access</nobr> | Open (allow all channels) |
    | Configure DM access policies now?<br>(default: pairing) | Yes |
-   | Discord DM access | 查看说明，然后点击 **Continue** |
-   | Discord DM policy | Pairing (recommended) |
-   | Done. Channels updated | **Continue** |
-   | Channel configured | **Finish** |
+   | <nobr>Discord DM access</nobr> | 查看说明，然后点击 **Continue** |
+   | <nobr>Discord DM policy</nobr> | Pairing (recommended) |
+   | <nobr>Done. Channels updated</nobr> | **Continue** |
+   | <nobr>Channel configured</nobr> | **Finish** |
 
 ## 步骤 4：授权你的账户
 

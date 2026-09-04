@@ -80,9 +80,9 @@ OpenClaw 可以通过技能和插件进行扩展：
 
     | 设置 | 选项 |
     |:---------|:-------|
-    | Where will the Gateway run | Local (this machine) |
-    | What do you want to configure | Skills |
-    | Install missing skill dependencies | 按需选择 |
+    | <nobr>Where will the Gateway run</nobr> | Local (this machine) |
+    | <nobr>What do you want to configure</nobr> | Skills |
+    | <nobr>Install missing skill dependencies</nobr> | 按需选择 |
 
 4. 等待安装完成，并查看已安装摘要。
 5. 当提示 **What do you want to configure** 时，选择 **Done**。出现 `Configuration updated` 消息时，表示设置已完成。

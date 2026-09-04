@@ -58,10 +58,10 @@ Connect OpenClaw to SearXNG.
 
    | Setting | Option |
    |:---------|:-------|
-   | Enable the web_search tool | Yes |
-   | Search provider | SearXNG Search |
-   | SearXNG Base URL | Paste the SearXNG Endpoint URL copied in Step 2. |
-   | Install SearXNG plugin | Download from npm (@openclaw/searxng-plugin) |
+   | <nobr>Enable the web_search tool</nobr> | Yes |
+   | <nobr>Search provider</nobr> | SearXNG Search |
+   | <nobr>SearXNG Base URL</nobr> | Paste the SearXNG Endpoint URL copied in Step 2. |
+   | <nobr>Install SearXNG plugin</nobr> | Download from npm (@openclaw/searxng-plugin) |
    | Enable the web_fetch tool (keyless HTTP fetch) | Yes |
 
 ## Step 4: Verify web search
