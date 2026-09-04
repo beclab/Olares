@@ -105,7 +105,7 @@ SHARE_ID=$(olares-cli files share public drive/Home/Photos/ --expire-days 7 --pa
 echo "Share link: https://share.${USER_HOST}/sharable-link/${SHARE_ID}/"
 ```
 
-The Public-link host is `share.<user-hostname>`, **not** `files.<hostname>` (the files-backend API host) and **not** `larepass.<hostname>` (the LarePass app itself). For Olares ID `alice@olares.com` the share host is `share.alice.olares.com`.
+The Public-link host is `share.<user-hostname>` with a public authentication level. For Olares ID `alice@olares.com` the share host is `share.alice.olares.com`.
 
 ### Add a member to an existing Internal share without dropping existing ones
 
