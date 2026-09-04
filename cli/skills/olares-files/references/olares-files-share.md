@@ -10,7 +10,7 @@ Create and manage shares for directories. **All three flavors are directory-only
 | Flavor | Audience | Recipient model | Update verb |
 |---|---|---|---|
 | `internal` | Other Olares users on the same node | Olares user names → per-user permission | `set-members` |
-| `public` | Anyone with the link + password | Opaque link, recipients open it at `<host>/sharable-link/<id>/` | `set-password` |
+| `public` | Anyone with the link + password | Opaque link, recipients open it at `share.<user-hostname>/sharable-link/<id>/` | `set-password` |
 | `smb` | Local network (Finder / Explorer / etc.) | SMB-account IDs (managed via `smb-users`), or `--public` for "anyone on the LAN" | `set-smb` |
 
 ## Per-flavor namespace allow-list
@@ -38,7 +38,7 @@ POST /api/share/share_path/<fileType>/<extend><subPath>/
 body: {name, share_type, permission, password, ...}
 ```
 
-Response carries the new `share id`, plus per-flavor extras (`smb_link` / `smb_user` / `smb_password` for SMB; the Public-link URL is constructed by the LarePass app's `shareBaseUrl + /sharable-link/<id>/` pattern).
+Response carries the new `share id`, plus per-flavor extras (`smb_link` / `smb_user` / `smb_password` for SMB; the Public-link URL is constructed as `shareBaseUrl + /sharable-link/<id>/`, where `shareBaseUrl = https://share.<user-hostname>`).
 
 Management verbs (`list` / `get` / `rm`) take the share id and are share-type-agnostic.
 
@@ -99,11 +99,13 @@ olares-cli files share rm <share-id>
 ### Create a Public share and reply with the URL
 
 ```bash
+# Derive the share host from the active profile's Olares ID (everything after '@').
+USER_HOST=$(olares-cli profile list | awk '/^\*/{print $2}' | sed 's/.*@//')
 SHARE_ID=$(olares-cli files share public drive/Home/Photos/ --expire-days 7 --password "$PW" --json | jq -r '.id')
-echo "Share link: https://<your-host>/sharable-link/$SHARE_ID/"
+echo "Share link: https://share.${USER_HOST}/sharable-link/${SHARE_ID}/"
 ```
 
-The `<your-host>` part is read from the LarePass app's `shareBaseUrl`; if the user doesn't already know it, point them at LarePass settings.
+The Public-link host is `share.<user-hostname>` with a public authentication level. For Olares ID `alice@olares.com` the share host is `share.alice.olares.com`.
 
 ### Add a member to an existing Internal share without dropping existing ones
 
