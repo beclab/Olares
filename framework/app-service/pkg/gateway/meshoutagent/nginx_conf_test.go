@@ -50,8 +50,8 @@ func TestShouldInject(t *testing.T) {
 	if ShouldInject(false, nil) {
 		t.Fatal("no provider must not inject")
 	}
-	if !ShouldInject(false, []appcfg.ProviderPermission{{AppName: "x"}}) {
-		t.Fatal("provider must inject")
+	if ShouldInject(false, []appcfg.ProviderPermission{{AppName: "x"}}) {
+		t.Fatal("provider must not inject while mesh-out injection is disabled")
 	}
 }
 
