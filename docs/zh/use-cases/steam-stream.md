@@ -185,6 +185,13 @@ Steam Headless 集成了开源串流服务器 Sunshine。要串流游戏，你�
 此时，Steam 将进入大屏幕模式，你可以开始畅玩游戏了。
 
 ## 常见问题
+
+### 为什么 Steam 串流会出现卡顿或延迟？
+
+网络状况、GPU 分配、电源设置、Proton 兼容性以及 CPU 或内存限制都可能导致串流卡顿或延迟。
+
+按照[排查 Steam 串流卡顿或延迟](../manual/help/ts-steam-stream-lag.md)中的步骤定位并解决问题。
+
 ### 为什么使用 `.local` 地址无法打开 Sunshine Web UI？
 
 Olares 下大多数服务支持通过 HTTP 协议访问 `.local` 地址，但 Sunshine Web UI 需使用 HTTPS 以保证本地通信安全。若在 `.local` 的 URL 中使用 `http://`，Sunshine 页面将无法加载。

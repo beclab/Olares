@@ -189,11 +189,18 @@ The following steps demonstrate local streaming.
 
 ## FAQs
 
+### Why is Steam streaming slow or delayed?
+
+Streaming lag can be caused by network conditions, GPU allocation, power settings, Proton compatibility, or CPU and memory limits.
+
+Follow [Troubleshoot slow or delayed Steam streaming](../manual/help/ts-steam-stream-lag.md) to identify and resolve the cause.
+
 ### Why can't I access the Sunshine Web UI using the `.local` address?
 
 Olares supports `.local` addresses with the HTTP protocol for most services. The Sunshine Web UI is different because it requires HTTPS to secure local communication. If you use `http://` with your `.local` URL, the Sunshine page will not load.
 
 To fix this, use `https://` instead of `http://` in your browser's address bar (for example, `https://139ebc4f0.<your Olares ID>.olares.local:47990`).
+
 ### Why isn't the game displaying in full screen?
 
 This may be caused by resolution settings. Try adjusting the resolution:
