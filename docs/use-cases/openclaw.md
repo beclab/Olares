@@ -106,12 +106,12 @@ Set up OpenClaw using the step-by-step interactive wizard.
     |:-----------|:---------|
     | Personal-by-default acknowledgment | Select **Yes**.  |
     | Help make OpenClaw better   | Select as needed.   |
-    | Setup mode   | Select **QuickStart**.   |
-    | Model/auth provider  | Select **More**, and then select **Ollama**.<br>For non-Ollama local models, select **Custom Provider**. |
-    | Ollama auth method | Select **Ollama**. |
-    | Ollama mode | Select **Local only**. |
-    | Ollama base URL  | Remove the default placeholder text, and then enter the **Base URL** copied in [Step 1](#step-1-get-model-connection-details). |
-    | Default model | Select **Browse all models**, and then select the installed model `ollama/gemma4:26b`. |
+    | <nobr>Setup mode</nobr>   | Select **QuickStart**.   |
+    | <nobr>Model/auth provider</nobr>  | Select **More**, and then select **Ollama**.<br>For non-Ollama local models, select **Custom Provider**. |
+    | <nobr>Ollama auth method</nobr> | Select **Ollama**. |
+    | <nobr>Ollama mode</nobr> | Select **Local only**. |
+    | <nobr>Ollama base URL</nobr>  | Remove the default placeholder text, and then enter the **Base URL** copied in [Step 1](#step-1-get-model-connection-details). |
+    | <nobr>Default model</nobr> | Select **Browse all models**, and then select the installed model `ollama/gemma4:26b`. |
     | Test AI access now with a live completion | Select **Yes**.<br>The message `AI access works` indicates that OpenClaw can successfully connect to the model. |
     | Remaining settings (channels, search provider,<br>and skill dependencies) | Select **Skip for now**.<br>You can configure them later. |
 
