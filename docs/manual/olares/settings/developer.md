@@ -43,13 +43,17 @@ The **Image management** page provides a comprehensive view of all downloaded an
 
 ## Export system logs
 
-System logs record the operational status of various system components and provide crucial diagnostic information for troubleshooting. 
+System logs record the operational status of system components and provide crucial diagnostic information.
 
-To export system logs:
+You can manually export the log file and attach it to a support ticket or GitHub issue to help the Olares team resolve your problem faster.
+
 <!--@include: ../../../reusables/export-system-logs.md#export-system-logs-steps-->
 
-:::tip
-You can attach this log file to a GitHub issue to help the Olares team locate and resolve your problem faster.
+:::tip Automatic log collection
+Instead of exporting logs manually, you can collect them automatically:
+
+- In the [Ticket app](../../help/request-technical-support.md#submit-a-ticket-in-the-ticket-app), expand **System logs** and click **Collect logs**.
+- In [Olares Space](../../space/tickets.md#create-a-ticket-with-olares-cli), use `olares-cli` to upload logs.
 :::
 
 ## Set system environment variables

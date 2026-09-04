@@ -79,7 +79,7 @@ const side = {
           ],
         },
         {
-          text: "获取技术支持",
+          text: "获取支持",
           link: "/zh/manual/help/request-technical-support",
         },
         {
@@ -528,6 +528,7 @@ const side = {
             link: "/zh/manual/space/backup-restore",
           },
           { text: "计费", link: "/zh/manual/space/billing" },
+          { text: "创建与管理支持工单", link: "/zh/manual/space/tickets" },
         ],
       },
     {
