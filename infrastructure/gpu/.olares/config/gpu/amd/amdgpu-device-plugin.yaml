@@ -32,6 +32,12 @@ spec:
               mountPath: /var/lib/kubelet/device-plugins
             - name: sys
               mountPath: /sys
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+                  apiVersion: v1
       volumes:
         - name: dp
           hostPath:
