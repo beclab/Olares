@@ -102,18 +102,12 @@ Set up OpenClaw using the step-by-step interactive wizard.
     To get you started quickly, this tutorial skips several advanced settings in the wizard. You can configure or modify them later.
     :::
 
-    :::tip Custom Provider: Base URL and API key
-    If you selected **Custom Provider** for a non-Ollama local model, configure the connection as follows:
-    - **Through the Router**: Enter the Router's **API Base URL**. For example, `https://router.laresprime.olares.com/v1`. In the Router console, create an API key for OpenClaw, and paste it into the **API Key** field.
-    - **Direct connection**: Enter the **Base URL** shown in the Model Console, and enter any text as the API key.
-    :::
-
     | Settings   | Option   |
     |:-----------|:---------|
     | Personal-by-default acknowledgment | Select **Yes**.  |
     | Help make OpenClaw better   | Select as needed.   |
     | Setup mode   | Select **QuickStart**.   |
-    | Model/auth provider  | Select **More**, and then select **Ollama**.<br>For other local models, select **Custom Provider**. |
+    | Model/auth provider  | Select **More**, and then select **Ollama**.<br>For non-Ollama local models, select **Custom Provider**. |
     | Ollama auth method | Select **Ollama**. |
     | Ollama mode | Select **Local only**. |
     | Ollama base URL  | Remove the default placeholder text, and then enter the **Base URL** copied in [Step 1](#step-1-get-model-connection-details). |

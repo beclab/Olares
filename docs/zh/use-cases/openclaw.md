@@ -106,21 +106,15 @@ OpenClaw 需要较大的"上下文窗口"（即 AI 的短期记忆）来处理�
     为便于快速上手，本教程会跳过向导中的部分高级设置。你可以稍后配置或修改它们。
     :::
 
-    :::tip Custom Provider：Base URL 和 API key
-    如果为其他非 Ollama 本地模型选择了 **Custom Provider**，请按以下方式配置连接：
-    - **通过 Router**：输入 Router 的 **API Base URL**。例如，`https://<your-olares-id>.laresprime.olares.com/v1`。在 Router 控制台中为 OpenClaw 创建一个 API key，并将其粘贴到 **API Key** 字段中。
-    - **直连模型**：输入 Model Console 中显示的 **Base URL**，API key 可填写任意文本。
-    :::
-
     | 配置   | 选项   |
     |:-----------|:---------|
     | Personal-by-default acknowledgment | 选择 **Yes**。  |
     | Help make OpenClaw better | 按需选择。  |
     | Setup mode   | 选择 **QuickStart**。   |
-    | Model/auth provider  | 选择 **More**，然后选择 **Ollama**。<br>对于其他本地模型，选择 **Custom Provider**。 |
+    | Model/auth provider  | 选择 **More**，然后选择 **Ollama**。<br>对于非 Ollama 本地模型，选择 **Custom Provider**。 |
     | Ollama auth method | 选择 **Ollama**。 |
     | Ollama mode | 选择 **Local only**。 |
-    | Ollama base URL  | 删除默认占位文本，然后输入[步骤 1](#步骤-1获取模型连接信息)中复制的 **Base URL**。 |
+    | Ollama base URL  | 移除默认占位文本，然后输入[步骤 1](#步骤-1获取模型连接信息)中复制的 **Base URL**。 |
     | Default model | 选择 **Browse all models**，然后选择已安装的模型 `ollama/gemma4:26b`。 |
     | Test AI access now with a live completion | 选择 **Yes**。<br>出现 `AI access works` 消息表示 OpenClaw 已成功连接到模型。 |
     | Remaining settings (channels, search provider,<br>and skill dependencies) | 选择 **Skip for now**。<br>你可以稍后配置它们。 |
@@ -214,7 +208,7 @@ OpenClaw 需要较大的"上下文窗口"（即 AI 的短期记忆）来处理�
     openclaw devices approve {RequestID}
     ```
 
-8. 当终端显示批准消息时，返回 Control UI。系统将自动登录并跳转到 **Home** 页面。
+8. 当终端显示批准消息时，返回 Control UI。系统将自动登录，并默认跳转到 **Home** 页面。
 
     ![Health OK](/images/manual/use-cases/openclaw-connected5.png#bordered)
 </template>
@@ -241,7 +235,7 @@ OpenClaw 需要较大的"上下文窗口"（即 AI 的短期记忆）来处理�
     ```text
     Wake up please!
     ```
-4. 助手会响应并开始与你对话。你可以在此过程中建立规则、个性特征和偏好。例如：
+4. 助手会做出回应，并开始通过提问了解你。你可以在此过程中建立规则、个性特征和偏好。例如：
 
     ```text
     - Call me Bella. I like simple language without technical jargon and 
@@ -251,7 +245,7 @@ OpenClaw 需要较大的"上下文窗口"（即 AI 的短期记忆）来处理�
     financial operations.
     ```
 
-5. 与助手对话时，你可以看到它正在将你的偏好写入核心人设文件，例如 `IDENTITY.md`、`USER.md` 和 `SOUL.md`。
+5. 与助手对话时，助手会将你的偏好写入核心人设文件，例如 `IDENTITY.md`、`USER.md` 和 `SOUL.md`。
 6. （可选）如果助手未能更新人设文件，请在聊天中明确要求它执行。
 
     如果问题仍然存在，请使用以下方法之一解决：
