@@ -5,21 +5,16 @@ import (
 	"github.com/beclab/Olares/cli/pkg/core/task"
 )
 
-// upgrader_1_12_7_20260908 regenerates the kubelet configuration and the systemd
-// memory protection drop-ins, so that an existing node picks up the reserve and
-// the memory.min values from pkg/utils/kubelet_reserved.go. Both are derived from
-// the host at generation time, so regenerating the files is all it takes.
-//
-// The two have to be refreshed together: system.slice is asked to protect
-// exactly what the reserve holds back, and a node carrying one without the other
-// would either protect memory already promised to pods or leave the control
-// plane reclaimable. GenerateK3sService writes both, which is why it is the task
-// that does this.
-//
-// getUpgraderByVersion matches the target version exactly, so this only runs for
-// a release cut as 1.12.7-20260908. If the release carrying this change ends up
-// stamped with another date, rename this file and the version below to match, or
-// existing clusters silently keep the old reserve.
+// upgrader_1_12_7_20260908 ships the Olares cni-plugins release with the
+// stable DHCP client identifier and the ipam.sendRelease switch
+// (beclab/plugins v1.6.2-olares2). The three steps run back to back inside
+// UpgradeSystemComponents so the window in which running Pods have no daemon
+// renewing their lease is as short as possible:
+//  1. install the cni-plugins archive from the manifest and restart cni-dhcp
+//     (the generic task set never swaps CNI binaries);
+//  2. re-render the underlay-macvlan NAD so it carries ipam.sendRelease=false;
+//  3. recreate Overlay Gateway Pods so their leases are owned by the new
+//     daemon and created against the new NAD.
 type upgrader_1_12_7_20260908 struct {
 	breakingUpgraderBase
 }
@@ -28,13 +23,13 @@ func (u upgrader_1_12_7_20260908) Version() *semver.Version {
 	return semver.MustParse("1.12.7-20260908")
 }
 
-// PostUpgrade, rather than PrepareForUpgrade, is where the regeneration goes:
-// it restarts k3s, and the phases before this one run tasks that exec into pods,
-// which then race the kubelet's re-sync and fail with "pod does not exist". Here
-// the only thing that follows is the base's wait for the system components to
-// come back, which is exactly the guard a restart wants.
-func (u upgrader_1_12_7_20260908) PostUpgrade() []task.Interface {
-	return append(regenerateKubeFiles(), u.upgraderBase.PostUpgrade()...)
+func (u upgrader_1_12_7_20260908) UpgradeSystemComponents() []task.Interface {
+	tasks := make([]task.Interface, 0)
+	tasks = append(tasks, upgradeMultus()...)
+	tasks = append(tasks, cniDhcpBinaryUpgradeTasks()...)
+	tasks = append(tasks, overlayGatewayRecreateTasks()...)
+	tasks = append(tasks, u.upgraderBase.UpgradeSystemComponents()...)
+	return tasks
 }
 
 func init() {
