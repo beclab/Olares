@@ -142,6 +142,18 @@ func (h *Handler) install(req *restful.Request, resp *restful.Response) {
 			return
 		}
 	}
+
+	// Gate concurrent same-user / same-app-name installs before any chart
+	// download. GetAppConfigVersion → GetIndexAndDownloadChart removes
+	// ./charts/{rawAppName} and unpacks into that directory, so a second
+	// in-flight install of the same name would clobber the first request's
+	// chart. This must stay above GetAppConfigVersion.
+	err = checkSameAppInstallAllowed(req.Request.Context(), app, owner)
+	if err != nil {
+		api.HandleBadRequest(resp, req, err)
+		return
+	}
+
 	// For uploaded (non-market) apps record the uploading user as the chart
 	// owner so the chart source path survives even when the app owner is
 	// normalized to the cluster owner (shared apps). Market apps keep
@@ -1221,4 +1233,43 @@ func (h *Handler) isDeployAllowed(req *restful.Request, resp *restful.Response) 
 			CanOp: canOp,
 		},
 	})
+}
+
+// checkSameAppInstallAllowed rejects a second install of the same Spec.AppName
+// for this owner (or a shared AM of that name) when the existing AM is not in
+// an InstallOp-allowed state.
+//
+// Why it exists: chart download is not per-request. GetIndexAndDownloadChart
+// always RemoveAll + unpacks into ./charts/{rawAppName}, which is shared by
+// every install of that chart name on this node. If two requests for the same
+// user+app overlap — especially while the first is already Pending /
+// Downloading / Installing — the later download would overwrite the earlier
+// chart mid-lint / helm render.
+func checkSameAppInstallAllowed(ctx context.Context, app, owner string) error {
+	clientset, err := getAppClient()
+	if err != nil {
+		klog.Errorf("checkSameAppInstallAllowed: failed to get clientset %v", err)
+		return err
+	}
+	ams, err := clientset.AppV1alpha1().ApplicationManagers().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+	for _, am := range ams.Items {
+		if am.Spec.AppName != app {
+			continue
+		}
+		// Shared AMs keep a cluster-wide chart path keyed by app name, so a
+		// non-owner colliding with an in-progress shared install is also
+		// treated as a chart-overwrite risk.
+		isShared := appcfg.IsShared(&am)
+		if am.Spec.AppOwner != owner && !isShared {
+			continue
+		}
+		if !appstate.IsOperationAllowed(am.Status.State, v1alpha1.InstallOp) {
+			err = appstate.ExplainOperationNotAllowed(am.Status.State, v1alpha1.InstallOp)
+			return err
+		}
+	}
+	return nil
 }
