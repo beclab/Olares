@@ -5,7 +5,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/core/task"
 )
 
-// upgrader_1_12_7_20260907 ships the Olares cni-plugins release with the
+// upgrader_1_12_7_20260909 ships the Olares cni-plugins release with the
 // stable DHCP client identifier and the ipam.sendRelease switch
 // (beclab/plugins v1.6.2-olares2). The three steps run back to back inside
 // UpgradeSystemComponents so the window in which running Pods have no daemon
@@ -15,15 +15,15 @@ import (
 //  2. re-render the underlay-macvlan NAD so it carries ipam.sendRelease=false;
 //  3. recreate Overlay Gateway Pods so their leases are owned by the new
 //     daemon and created against the new NAD.
-type upgrader_1_12_7_20260907 struct {
+type upgrader_1_12_7_20260909 struct {
 	breakingUpgraderBase
 }
 
-func (u upgrader_1_12_7_20260907) Version() *semver.Version {
-	return semver.MustParse("1.12.7-20260907")
+func (u upgrader_1_12_7_20260909) Version() *semver.Version {
+	return semver.MustParse("1.12.7-20260909")
 }
 
-func (u upgrader_1_12_7_20260907) UpgradeSystemComponents() []task.Interface {
+func (u upgrader_1_12_7_20260909) UpgradeSystemComponents() []task.Interface {
 	tasks := make([]task.Interface, 0)
 	tasks = append(tasks, upgradeMultus()...)
 	tasks = append(tasks, cniDhcpBinaryUpgradeTasks()...)
@@ -33,5 +33,5 @@ func (u upgrader_1_12_7_20260907) UpgradeSystemComponents() []task.Interface {
 }
 
 func init() {
-	registerDailyUpgrader(upgrader_1_12_7_20260907{})
+	registerDailyUpgrader(upgrader_1_12_7_20260909{})
 }

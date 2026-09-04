@@ -249,9 +249,9 @@ func TestCniDhcpInstallCommandsTouchOnlyTheDhcpPlugin(t *testing.T) {
 	}
 }
 
-func TestUpgrader20260907PhaseOrder(t *testing.T) {
-	u := upgrader_1_12_7_20260907{}
-	if u.Version().String() != "1.12.7-20260907" {
+func TestUpgrader20260909PhaseOrder(t *testing.T) {
+	u := upgrader_1_12_7_20260909{}
+	if u.Version().String() != "1.12.7-20260909" {
 		t.Fatalf("version = %s", u.Version())
 	}
 	if !u.AddedBreakingChange() {
