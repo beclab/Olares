@@ -5,9 +5,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, OpenClaw, OpenClaw tutorial, OpenClaw learning, channel integration, Discord integration
-app_version: "1.0.17"
-doc_version: "2.1"
-doc_updated: "2026-08-03"
+app_version: "1.0.36"
+doc_version: "2.2"
+doc_updated: "2026-09-04"
 ---
 
 # Integrate OpenClaw with Discord
@@ -71,90 +71,23 @@ In this guide, you will learn how to:
 
 ## Step 3: Configure the channel
 
-Run the OpenClaw configuration wizard to connect your Discord bot.
-
-1. Open the OpenClaw CLI.
-2. Run the following command to start the configuration wizard:
-
-    ```bash
-    openclaw configure --section channels
-    ```
-
-3. Configure the settings as follows:
+1. Open the Control UI, click the user account in the lower left, and then select **Settings**.
+2. Select **Channels** from the left sidebar, locate **Discord**, and then click **Set up**.
+3. In the **Set up Discord** window, review **How channels work**, scroll down, and then click **Continue**.
+4. Configure the settings as follows:
 
    | Settings | Option |
    |:---------|:-------|
-   | Channel setup | Add or update channels |
-   | Select a channel | Discord (Bot API) |
+   | Discord account | Default (primary) |
    | How do you want to provide this Discord bot token | Enter Discord bot token |
    | Enter Discord bot token | Paste the bot token from [Step 1](#step-1-create-a-discord-bot) |
    | Configure Discord channels access | Yes |
    | Discord channels access | Open (allow all channels) |
-   | Select a channel | Finished |
    | Configure DM access policies now?<br>(default: pairing) | Yes |
+   | Discord DM access | Review and continue |
    | Discord DM policy | Pairing (recommended) |
-
-<!--0527
-1. Open the Files app, and then go to **Data** > **clawdbot** > **config**.
-2. Double-click the `openclaw.json` file to open it.
-3. Click <i class="material-symbols-outlined">edit_square</i> in the upper-right corner to enter the edit mode.
-4. Add the following `channels` section to the configuration file. 
-
-    This configuration enables Discord Direct Messages (DMs) and sets the DM policy to `pairing` for security.
-
-    ```json
-    "channels": {
-        "discord": {
-        "enabled": true,
-        "token": "{YOUR_BOT_TOKEN}",
-        "allowBots": true,
-        "dm": {
-            "enabled": true,
-            "policy": "pairing"
-        }
-        }
-    },
-    ```
-5. Replace `{YOUR_BOT_TOKEN}` with your Discord bot token.
-6. Click <i class="material-symbols-outlined">save</i> in the upper-right corner to save the changes.
-7. Return to the Control UI, and then select **Channels** from the left sidebar. On the Discord card, a **Probe ok** status indicates the connection is successful.
--->   
-
-<!--
-Connect OpenClaw to your Discord bot by adding its configuration in the Control UI.
-
-:::info About channel configuration
-This tutorial provides the basic setup to get your bot running in Discord quickly. For more detailed configurations, see the official [OpenClaw documentation](https://docs.openclaw.ai/channels).
-:::
-
-1. Open the Control UI, select **Config** from the left sidebar, and then switch to the **Raw** tab.
-2. Click <i class="material-symbols-outlined">visibility_off</i> to reveal the configuration fields.
-
-    ![Reveal configuration blocks](/images/manual/use-cases/click-hide-icon.png#bordered)
-3. Add the following `channels` section to the configuration file. 
-
-    This configuration enables Discord Direct Messages (DMs) and sets the DM policy to pairing for security.
-
-    ```json
-    "channels": {
-        "discord": {
-        "enabled": true,
-        "token": "{YOUR_BOT_TOKEN}",
-        "allowBots": true,
-        "dm": {
-            "enabled": true,
-            "policy": "pairing"
-        }
-        }
-    },
-    ```
-
-    ![Discord channel added](/images/manual/use-cases/channels1.png#bordered)
-
-3. Replace `{YOUR_BOT_TOKEN}` with your Discord bot token.
-4. Click **Save**.
-5. From the left sidebar, select **Channels**. On the Discord card, **Probe ok** indicates successful connection.
--->
+   | Done. Channels updated. | Continue |
+   | Channel configured | Finish |
 
 ## Step 4: Authorize your account
 

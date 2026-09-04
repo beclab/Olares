@@ -114,7 +114,7 @@ OpenClaw 需要较大的"上下文窗口"（即 AI 的短期记忆）来处理�
     | Model/auth provider  | 选择 **More**，然后选择 **Ollama**。<br>对于非 Ollama 本地模型，选择 **Custom Provider**。 |
     | Ollama auth method | 选择 **Ollama**。 |
     | Ollama mode | 选择 **Local only**。 |
-    | Ollama base URL  | 移除默认占位文本，然后输入[步骤 1](#步骤-1获取模型连接信息)中复制的 **Base URL**。 |
+    | Ollama base URL  | 移除默认占位文本，然后输入[步骤 1](#步骤-1-获取模型连接信息) 中复制的 **Base URL**。 |
     | Default model | 选择 **Browse all models**，然后选择已安装的模型 `ollama/gemma4:26b`。 |
     | Test AI access now with a live completion | 选择 **Yes**。<br>出现 `AI access works` 消息表示 OpenClaw 已成功连接到模型。 |
     | Remaining settings (channels, search provider,<br>and skill dependencies) | 选择 **Skip for now**。<br>你可以稍后配置它们。 |

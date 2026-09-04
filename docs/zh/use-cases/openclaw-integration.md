@@ -72,28 +72,23 @@ doc_updated: "2026-08-03"
 
 ## 步骤 3：配置频道
 
-运行 OpenClaw 配置向导，连接你的 Discord 机器人。
+1. 打开 **Control UI**，点击左下角的用户账户，然后选择 **Settings**。
+2. 从左侧边栏选择 **Channels**，找到 **Discord**，然后点击 **Set up**。
+3. 在 **Set up Discord** 窗口中，查看 **How channels work**，向下滚动，然后点击 **Continue**。
+4. 按如下方式配置：
 
-1. 打开 OpenClaw CLI。
-2. 运行以下命令启动配置向导：
-
-    ```bash
-    openclaw configure --section channels
-    ```
-
-3. 按如下方式进行配置：
-
-    | 配置 | 选项 |
-    |:---------|:-------|
-    | Channel setup | Add or update channels |
-    | Select a channel | Discord (Bot API) |
-    | How do you want to provide this Discord bot token | Enter Discord bot token |
-    | Enter Discord bot token | 填入[步骤 1](#步骤-1-创建-discord-机器人)中获取的机器人 token |
-    | Configure Discord channels access | Yes |
-    | Discord channels access | Open (allow all channels) |
-    | Select a channel | Finished |
-    | Configure DM access policies now?<br>(default: pairing) | Yes |
-    | Discord DM policy | Pairing (recommended) |
+   | 设置 | 选项 |
+   |:---------|:-------|
+   | Discord account | Default (primary) |
+   | How do you want to provide this Discord bot token | Enter Discord bot token |
+   | Enter Discord bot token | 粘贴[步骤 1](#步骤-1-创建-discord-机器人) 中复制的机器人 token |
+   | Configure Discord channels access | Yes |
+   | Discord channels access | Open (allow all channels) |
+   | Configure DM access policies now?<br>(default: pairing) | Yes |
+   | Discord DM access | 查看说明，然后点击 **Continue** |
+   | Discord DM policy | Pairing (recommended) |
+   | Done. Channels updated | **Continue** |
+   | Channel configured | **Finish** |
 
 ## 步骤 4：授权你的账户
 
