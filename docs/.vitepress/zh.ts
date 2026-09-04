@@ -506,7 +506,7 @@ const side = {
             link: "/zh/manual/space/manage-accounts",
           },
           {
-            text: "监控 Olares",
+            text: "监控 Olares 状态与流量",
             link: "/zh/manual/space/manage-olares",
           },
           {
@@ -524,10 +524,10 @@ const side = {
             ],
           },
           {
-            text: "备份与恢复",
+            text: "从 Olares Space 备份中恢复数据",
             link: "/zh/manual/space/backup-restore",
           },
-          { text: "计费", link: "/zh/manual/space/billing" },
+          { text: "计费与支付", link: "/zh/manual/space/billing" },
         ],
       },
     {
