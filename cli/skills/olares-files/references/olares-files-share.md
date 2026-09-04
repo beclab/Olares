@@ -38,7 +38,7 @@ POST /api/share/share_path/<fileType>/<extend><subPath>/
 body: {name, share_type, permission, password, ...}
 ```
 
-Response carries the new `share id`, plus per-flavor extras (`smb_link` / `smb_user` / `smb_password` for SMB; the Public-link URL is constructed as `shareBaseUrl + /sharable-link/<id>/`, where `shareBaseUrl = https://share.<user-hostname>` — for an Olares ID `alice@olares.com`, the resulting share URL is `https://share.alice.olares.com/sharable-link/<id>/`).
+Response carries the new `share id`, plus per-flavor extras (`smb_link` / `smb_user` / `smb_password` for SMB; the Public-link URL is constructed as `shareBaseUrl + /sharable-link/<id>/`, where `shareBaseUrl = https://share.<user-hostname>`).
 
 Management verbs (`list` / `get` / `rm`) take the share id and are share-type-agnostic.
 
