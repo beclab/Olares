@@ -6,10 +6,13 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 )
 
-func TestShouldInjectMeshOutAgentProviderPod(t *testing.T) {
+func TestShouldInjectDisabledForProviderPod(t *testing.T) {
 	perms := []appcfg.ProviderPermission{{AppName: "system-server", ProviderName: "api"}}
-	if !ShouldInject(false, perms) {
-		t.Fatal("T-EGR-1: provider pod should receive mesh-out agent")
+	if !HasProviderPermission(perms) {
+		t.Fatal("provider permission should still be detected")
+	}
+	if ShouldInject(false, perms) {
+		t.Fatal("provider pod must not receive mesh-out agent while injection is disabled")
 	}
 }
 
