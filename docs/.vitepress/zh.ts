@@ -475,13 +475,14 @@ const side = {
           ],
         },
         { text: "使用专用网络", link: "/zh/manual/larepass/private-network" },
-        { text: "管理文件", link: "/zh/manual/larepass/manage-files" },
-        //    collapsed: true,
-        //    items: [
-        //    {text: "常用文件操作", link:"/zh/manual/larepass/manage-files"},
-        //    {text: "同步与共享", link:"/zh/manual/larepass/sync-share"}
-        //  ]
-        // },
+        {
+          text: "文件与资源",
+          collapsed: true,
+          items: [
+            { text: "管理文件", link: "/zh/manual/larepass/manage-files" },
+            { text: "将资源转存到 Olares", link: "/zh/manual/larepass/save-resources-to-olares" },
+          ],
+        },
         {
           text: "管理密码",
           collapsed: true,
