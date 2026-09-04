@@ -36,6 +36,10 @@ const (
 	// never pins it; at install time the cluster falls back to pulling from a
 	// registry, which an offline device cannot do.
 	ImageGapUnlisted ImageGapKind = "missing from installation.manifest"
+	// ImageGapUnlistedOlaresYAML means the source-tree Olares.yaml never names
+	// the image in output.containers, so packing would omit it from
+	// installation.manifest and the same registry fallback would happen.
+	ImageGapUnlistedOlaresYAML ImageGapKind = "missing from olares.yaml"
 	// ImageGapNoPayload means the manifest names the image but the medium
 	// carries no tarball for it. Prepare aborts in LoadImages with
 	// "image %s not found in %s".
@@ -74,14 +78,19 @@ func imageGapError(gaps []ImageGap) error {
 	return fmt.Errorf("%s", strings.Join(lines, "\n"))
 }
 
-// checkBundleImages reports every image the bundled charts need that the medium
-// will not preload. An empty manifest disables the whole check, which is what
-// keeps CheckStaticBundle's contract-only mode working unchanged.
+// checkBundleImages reports every image the bundled charts need that the listed
+// source will not cover. Neither an empty InstallationManifest nor a nil
+// OlaresImages enables the check, which is what keeps CheckStaticBundle's
+// contract-only mode working unchanged. A non-nil OlaresImages, even empty,
+// does enable it: the caller asked for the source-tree gate.
 func checkBundleImages(root *os.Root, bundle BundleV1, opts CheckOptions) error {
-	if len(opts.InstallationManifest) == 0 {
+	listed, unlistedKind, imagesDir, enabled, err := listedFromOptions(opts)
+	if err != nil {
+		return err
+	}
+	if !enabled {
 		return nil
 	}
-	listed := listedImages(opts.InstallationManifest)
 	var (
 		gaps  []ImageGap
 		total int64
@@ -93,7 +102,7 @@ func checkBundleImages(root *os.Root, bundle BundleV1, opts CheckOptions) error 
 		}
 		total += consumed
 		for _, image := range images {
-			gap, ok := imageGapFor(app, image, listed, opts.ImagesDir)
+			gap, ok := imageGapFor(app, image, listed, unlistedKind, imagesDir)
 			if ok {
 				gaps = append(gaps, gap)
 			}
@@ -102,18 +111,33 @@ func checkBundleImages(root *os.Root, bundle BundleV1, opts CheckOptions) error 
 	return imageGapError(gaps)
 }
 
-// imageGapFor answers, for one image of one app, whether the medium will
-// preload it. The image arrives normalized; `listed` maps normalized refs back
-// to the manifest's own spelling, which is both what names the payload file and
-// what a fix has to be written as.
-func imageGapFor(app BundleAppV1, image string, listed map[string]string, imagesDir string) (ImageGap, bool) {
+func listedFromOptions(opts CheckOptions) (map[string]string, ImageGapKind, string, bool, error) {
+	hasManifest := len(opts.InstallationManifest) > 0
+	hasYAML := opts.OlaresImages != nil
+	if hasManifest && hasYAML {
+		return nil, "", "", false, fmt.Errorf("installation manifest and olares.yaml image lists are mutually exclusive")
+	}
+	if hasManifest {
+		return listedImages(opts.InstallationManifest), ImageGapUnlisted, opts.ImagesDir, true, nil
+	}
+	if hasYAML {
+		return listedFromRefs(opts.OlaresImages), ImageGapUnlistedOlaresYAML, "", true, nil
+	}
+	return nil, "", "", false, nil
+}
+
+// imageGapFor answers, for one image of one app, whether the listed source will
+// cover it. The image arrives normalized; `listed` maps normalized refs back
+// to the source's own spelling, which is both what names a packed payload file
+// and what a fix has to be written as.
+func imageGapFor(app BundleAppV1, image string, listed map[string]string, unlistedKind ImageGapKind, imagesDir string) (ImageGap, bool) {
 	raw, ok := listed[image]
 	if !ok {
 		return ImageGap{
 			AppID:   app.AppID,
 			AppName: app.AppName,
 			Image:   familiarImageRef(image),
-			Kind:    ImageGapUnlisted,
+			Kind:    unlistedKind,
 		}, true
 	}
 	if imagesDir == "" || imagePayloadExists(imagesDir, raw) {
@@ -133,6 +157,14 @@ func imageGapFor(app BundleAppV1, image string, listed map[string]string, images
 // filename.
 func listedImages(installation manifest.InstallationManifest) map[string]string {
 	_, refs := installation.GetImageList()
+	return listedFromRefs(refs)
+}
+
+// listedFromRefs indexes image references by normalized form so a chart's
+// docker.io/beclab/x:1 matches a list's beclab/x:1. The value keeps the
+// original spelling so a reported gap can be pasted back into images.mf or
+// Olares.yaml as-is.
+func listedFromRefs(refs []string) map[string]string {
 	listed := make(map[string]string, len(refs))
 	for _, ref := range refs {
 		normalized, err := normalizeImageRef(ref)

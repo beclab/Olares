@@ -18,8 +18,16 @@ type CheckOptions struct {
 	// InstallationManifest enables the image gate. When set, every image the
 	// bundled charts render must appear in it, because LoadImages and
 	// PinImages both iterate the manifest and ignore anything absent from it.
-	// Leaving it empty keeps the contract-only behaviour.
+	// Leaving it empty keeps the contract-only behaviour. Mutually exclusive
+	// with a non-nil OlaresImages.
 	InstallationManifest manifest.InstallationManifest
+
+	// OlaresImages is output.containers[].name from a source-tree Olares.yaml.
+	// A non-nil slice (including empty) enables the same chart-image gate
+	// against that list, so a developer can check before packing
+	// installation.manifest. Nil leaves the gate off. Mutually exclusive
+	// with InstallationManifest.
+	OlaresImages []string
 
 	// ImagesDir is the directory holding the preloaded image payloads,
 	// normally <baseDir>/images. When set, an image the manifest lists must
@@ -42,8 +50,9 @@ type CheckOptions struct {
 // By default it checks the V1 JSON contract, chart presence/size/SHA-256,
 // and artifact manifests. With opts.Full it also verifies each artifact
 // source tree entries declared by its manifest (entry types and digests).
-// With opts.InstallationManifest it additionally renders every bundled chart
-// and requires the medium to preload each image they need.
+// With opts.InstallationManifest or a non-nil opts.OlaresImages it
+// additionally renders every bundled chart and requires each image they
+// need to appear in that list.
 func CheckStaticBundle(dir string, opts CheckOptions) error {
 	dir = filepath.Clean(dir)
 	root, err := openDirectoryNoSymlink(dir)

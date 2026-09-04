@@ -23,6 +23,90 @@ func TestCheckStaticBundleWithoutInstallationManifestSkipsImageGate(t *testing.T
 	}
 }
 
+func TestCheckStaticBundleOlaresYAMLAcceptsListedImage(t *testing.T) {
+	dir := buildImageBundle(t, imageApp{name: "gateway", image: "docker.io/beclab/router:v2.5.0"})
+	opts := CheckOptions{OlaresImages: []string{"beclab/router:v2.5.0"}}
+
+	if err := CheckStaticBundle(dir, opts); err != nil {
+		t.Fatalf("CheckStaticBundle() error = %v", err)
+	}
+}
+
+func TestCheckStaticBundleOlaresYAMLIgnoresExtraDeclaredImages(t *testing.T) {
+	dir := buildImageBundle(t, imageApp{name: "gateway", image: "docker.io/beclab/router:v2.5.0"})
+	opts := CheckOptions{OlaresImages: []string{"beclab/router:v2.5.0", "beclab/unrelated:v1"}}
+
+	if err := CheckStaticBundle(dir, opts); err != nil {
+		t.Fatalf("CheckStaticBundle() error = %v", err)
+	}
+}
+
+func TestCheckStaticBundleOlaresYAMLReportsUnlistedImage(t *testing.T) {
+	dir := buildImageBundle(t, imageApp{name: "model", image: "docker.io/beclab/llama.cpp:b10548"})
+	opts := CheckOptions{OlaresImages: []string{"beclab/router:v2.5.0"}}
+
+	err := CheckStaticBundle(dir, opts)
+	if err == nil {
+		t.Fatal("CheckStaticBundle() error = nil, want an unlisted image")
+	}
+	if !strings.Contains(err.Error(), "beclab/llama.cpp:b10548") {
+		t.Fatalf("CheckStaticBundle() error = %v, want the image named", err)
+	}
+	if strings.Contains(err.Error(), "docker.io/beclab/llama.cpp") {
+		t.Fatalf("CheckStaticBundle() error = %v, want the familiar spelling", err)
+	}
+	if !strings.Contains(err.Error(), string(ImageGapUnlistedOlaresYAML)) {
+		t.Fatalf("CheckStaticBundle() error = %v, want kind %q", err, ImageGapUnlistedOlaresYAML)
+	}
+	if strings.Contains(err.Error(), string(ImageGapUnlisted)) {
+		t.Fatalf("CheckStaticBundle() error = %v, want the olares.yaml kind, not the manifest kind", err)
+	}
+}
+
+func TestCheckStaticBundleOlaresYAMLNormalizesRegistryPrefix(t *testing.T) {
+	tests := []struct {
+		name       string
+		chartImage string
+		yamlImage  string
+	}{
+		{"long chart, short yaml", "docker.io/beclab/router:v2.5.0", "beclab/router:v2.5.0"},
+		{"short chart, long yaml", "beclab/router:v2.5.0", "docker.io/beclab/router:v2.5.0"},
+		{"non-docker registry", "ghcr.io/beclab/router:v2.5.0", "ghcr.io/beclab/router:v2.5.0"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := buildImageBundle(t, imageApp{name: "gateway", image: tt.chartImage})
+			opts := CheckOptions{OlaresImages: []string{tt.yamlImage}}
+			if err := CheckStaticBundle(dir, opts); err != nil {
+				t.Fatalf("CheckStaticBundle() error = %v", err)
+			}
+		})
+	}
+}
+
+func TestCheckStaticBundleOlaresYAMLEmptyListReportsEveryChartImage(t *testing.T) {
+	dir := buildImageBundle(t, imageApp{name: "gateway", image: "docker.io/beclab/router:v2.5.0"})
+	opts := CheckOptions{OlaresImages: []string{}}
+
+	err := CheckStaticBundle(dir, opts)
+	if err == nil || !strings.Contains(err.Error(), "beclab/router:v2.5.0") {
+		t.Fatalf("CheckStaticBundle() error = %v, want the chart image reported", err)
+	}
+}
+
+func TestCheckStaticBundleRejectsBothImageListSources(t *testing.T) {
+	dir := buildImageBundle(t, imageApp{name: "gateway", image: "docker.io/beclab/router:v2.5.0"})
+	opts := CheckOptions{
+		InstallationManifest: buildInstallationManifest(t, "beclab/router:v2.5.0"),
+		OlaresImages:         []string{"beclab/router:v2.5.0"},
+	}
+
+	err := CheckStaticBundle(dir, opts)
+	if err == nil || !strings.Contains(err.Error(), "mutually exclusive") {
+		t.Fatalf("CheckStaticBundle() error = %v, want mutually exclusive sources", err)
+	}
+}
+
 func TestCheckStaticBundleImageGateAcceptsListedImage(t *testing.T) {
 	dir := buildImageBundle(t, imageApp{name: "gateway", image: "docker.io/beclab/router:v2.5.0"})
 	opts := CheckOptions{InstallationManifest: buildInstallationManifest(t, "beclab/router:v2.5.0")}
