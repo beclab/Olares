@@ -4,9 +4,11 @@
 
 ## Source and locale set
 
-Translate from the approved English Manifest, not from another translation. Do not research new product facts during localization or repair a source defect differently in each language. When the root Manifest and English locale Manifest both contain copy, compare them first; unresolved drift blocks repository writes.
+Translate from the approved English Manifest, never from another translation. Do not add product facts or fix the same English problem differently in each language.
 
-In a repository, discover the app boundary, instructions, generators, locale directory convention, manifest filename, root-to-English relationship, `spec.locale`, and existing locale directories before choosing paths. Follow the established mapping. Do not create an undeclared locale unless the user explicitly requests it, and report any mismatch between `spec.locale` and actual locale files.
+Before choosing files, inspect the repository's instructions, `spec.locale`, locale directories, filenames, generators, and the relationship between the root and English Manifests. Follow the existing layout. Do not create an undeclared locale unless the user asks for it. Report missing or extra locale files.
+
+If the root and English copy differ, resolve the source of truth before writing translations.
 
 `metadata.title`, `metadata.description`, and `spec.fullDescription` must be present and non-empty. `spec.upgradeDescription` is conditional:
 
@@ -17,7 +19,11 @@ In a repository, discover the app boundary, instructions, generators, locale dir
 
 ## Translation contract
 
-Translate meaning rather than English sentence shape. Preserve facts, scope, conditions, warnings, modality, section count, order, emphasis, links, lists, and blank-line grouping. Do not add marketing language, cultural examples, warnings, or product facts.
+Write natural text in each target language. Preserve the source's facts, limits, warnings, required actions, section order, links, lists, and emphasis. Do not copy English sentence structure when it sounds awkward. Do not add marketing language, examples, warnings, or product facts.
+
+Before translating, check that the approved English is understandable without specialist background and unambiguous about the subject, input, action, result, limits, and scope. Undefined task labels, compressed noun stacks, slash-separated fragments, vague pronouns, or modifiers with more than one possible attachment are source defects, not translation choices. Pause and revise or clarify the English source first; do not invent a different interpretation in each locale.
+
+Technical accuracy alone is not enough. Each translation must preserve the plain-language explanation of what the app does. Keep a specialist term when it is useful for recognition, but do not let it replace that explanation. For example, translate both the term “speaker diarization” and the accompanying meaning that the app separates a recording by speaker and marks when each person speaks.
 
 Keep these exact unless the publisher or repository defines an approved localized form:
 
@@ -32,22 +38,24 @@ Localize visible Olares built-in app names when the approved locale terminology 
 
 `metadata.description` remains concise and has no final punctuation in every locale.
 
+For `upgradeDescription`, keep the most important summary within the first three lines in every locale. Do not let translated headings, links, or background detail push the key change below the collapsed release-history preview.
+
 ## Locale guidance
 
 ### `zh-CN`
 
-Use concise Simplified Chinese. Avoid mechanical pronouns when the subject is clear. Add half-width spaces between Chinese and adjacent Latin product or technical terms, while leaving code, paths, versions, and URLs unchanged.
+Use concise Simplified Chinese. Drop unnecessary pronouns when the subject is clear. Add half-width spaces between Chinese and adjacent Latin product or technical terms. Do not alter code, paths, versions, or URLs.
 
 ### `ja-JP`
 
-Use natural neutral Japanese and avoid literal syntax. Do not insert spaces between Japanese text and adjacent Latin letters, product names, acronyms, or numbers: `Olaresで実行`, `GPUを使用`, `v1.2に更新`. Keep a space only when it is part of an official name or required inside code, commands, paths, URLs, or other protected syntax. Kanji, hiragana, and katakana do not require word spaces merely because the scripts differ.
+Use natural, neutral Japanese. Do not insert spaces between Japanese and adjacent Latin text or numbers: `Olaresで実行`, `GPUを使用`, `v1.2に更新`. Keep spaces that belong to an official name or protected syntax such as code, commands, paths, and URLs.
 
 ### `fr-FR`, `de-DE`, `it-IT`, and `es-ES`
 
-Use standard regional software terminology and neutral documentation prose. Restructure sentences naturally when needed, but do not drop or strengthen facts. Apply visible punctuation and spacing conventions without changing protected content.
+Use standard regional software terms and a neutral tone. Rewrite sentence structure when needed, but do not remove or strengthen facts. Follow local punctuation and spacing without changing protected content.
 
 ## Review and handoff
 
-Compare every locale directly with English. Check field presence, factual scope, numbers, versions, warnings, required actions, Markdown structure, protected tokens, terminology, punctuation, and natural language. Pay particular attention to punctuation touching bare URLs and to spaces around Latin content in Chinese and Japanese.
+Compare every locale directly with English. Check the facts, numbers, versions, warnings, actions, Markdown, protected text, terminology, punctuation, and fluency. Confirm that a non-specialist target-language reader can still understand the app's input and result without knowing the English technical term. Pay extra attention to punctuation next to bare URLs and spaces around Latin text in Chinese and Japanese.
 
-Before writing, report the discovered source and locale-to-path mapping when it is not already explicit. After writing, report files changed, validation performed, unresolved source or terminology questions, and any rendering-sensitive table, HTML, fenced code, or unusually long field that still needs manual review.
+Before writing, show the source and locale-to-path mapping when they are not obvious. After writing, list the files changed, checks run, open questions, and any table, HTML, code block, or unusually long field that still needs a human review.
