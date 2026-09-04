@@ -271,6 +271,7 @@ spec:
       "ipam": {
         "type": "dhcp",
         "omitDefaultGateway": true,
+        "sendRelease": false,
         "request": [
           { "skipDefault": true, "option": "subnet-mask" }
         ]
