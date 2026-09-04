@@ -1,16 +1,16 @@
 ---
 outline: [2, 3]
-description: Learn how to manage, install, and troubleshoot skills and plug-ins for OpenClaw.
+description: Learn how to manage, install, and troubleshoot skills and plugins for OpenClaw.
 head:
   - - meta
     - name: keywords
-      content: Olares, OpenClaw, OpenClaw tutorial, OpenClaw learning, install skills, install plug-ins
-app_version: "1.0.17"
-doc_version: "1.2"
-doc_updated: "2026-08-03"      
+      content: Olares, OpenClaw, OpenClaw tutorial, OpenClaw learning, install skills, install plugins
+app_version: "1.0.36"
+doc_version: "1.3"
+doc_updated: "2026-09-04"
 ---
 
-# Manage OpenClaw skills and plug-ins
+# Manage OpenClaw skills and plugins
 
 OpenClaw can be extended using skills and plugins:
 - Skills add new capabilities to the AI. For example, managing Model Context Protocol servers.
@@ -58,7 +58,7 @@ A skill might be blocked for the following reasons:
 ## Install skills
 
 There are three ways to add new skills to your OpenClaw:
-- Install skills via the `openclaw config` wizard. 
+- Install skills via the `openclaw config` wizard.
 - Install skills from ClawHub, the package manager for OpenClaw.
 - Install skills manually via local upload.
 
@@ -76,13 +76,14 @@ You can use the built-in configuration wizard to install default or officially s
 
     | Settings | Option |
     |:---------|:-------|
-    | Where will the Gateway run | Local (this machine) |
-    | What do you want to configure | Skills | 
-
-    The wizard automatically checks your skills and displays a status summary. Then it automatically starts to install missing skill dependencies.
+    | <nobr>Where will the Gateway run</nobr> | Local (this machine) |
+    | <nobr>What do you want to configure</nobr> | Skills | 
+    | <nobr>Install missing skill dependencies</nobr> | Select as needed |
 
 4. Wait for the installation to finish and review the installed summary.
-5. When prompted **What do you want to configure**, select **Done**. The message `Configuration updated` appears, indicating the setup is finished.
+5. When prompted **What do you want to configure**, select **Done**.
+
+    The message `Configuration updated` appears, indicating the setup is finished.
 
 ### Install from ClawHub
 
@@ -108,10 +109,6 @@ Ensure that the [clawhub skill is installed](#install-via-openclaw-config). This
     The terminal returns the search results, displaying the skill ID at the beginning, followed by its description. In this case, the skill ID is `caldav-calendar`.
 
     ![Skill ID in clawhub](/images/manual/use-cases/openclaw-skill-id.png#bordered)
-    
-    :::warning Security recommendation
-    It is highly recommended that you search for and read the details of a skill on the official ClawHub website before installing it. This ensures you are getting the correct skill and protects you from installing malicious packages.
-    :::
 
 4. Install the target skill using its skill ID.
     
@@ -121,7 +118,10 @@ Ensure that the [clawhub skill is installed](#install-via-openclaw-config). This
     openclaw skills install caldav-calendar
     ```
 
-5. Wait for the terminal to indicate that the skill is installed, and then verify by running the following command:
+    The terminal displays a security audit report for the skill.
+
+5. Review the security audit results, and then type `y` and press **Enter** to proceed.
+6. Wait for the terminal to indicate that the skill is installed, and then verify by running the following command:
 
     ```bash
     openclaw skills list
@@ -129,56 +129,13 @@ Ensure that the [clawhub skill is installed](#install-via-openclaw-config). This
 
     The status of **caldav-calendar** is **ready**, indicating the installation is successful.
 
-6. Open the **Control UI**, select **Skills** from the left sidebar, and then click the **Ready** tab. You will see the newly installed skill is enabled.
-
-    ![Newly installed skill is enabled](/images/manual/use-cases/skill-enabled.png#bordered)
-
-<!--2. Enter the following command:
-
-    ```bash
-    npx clawhub
-    ```
-
-3. When prompted to proceed, press Y.
-4. Check the list of available skills by entering the following command:
-
-    ```bash
-    openclaw skills
-    ```
-    ![View skills](/images/manual/use-cases/available-skills.png#bordered)
-
-5. Find the target skill name in the **Skill** column, and then install by entering the following command:
-
-    ```bash
-    npx clawhub install {skill_name}
-    ```
-
-    For example, to install mcporter, enter the following command:
-
-    ```bash
-    npx clawhub install mcporter
-    ```
-
-6. If prompted to **Install anyway**, select **Yes**.
-7. When the installation is completed, verify by entering the following command:
-
-    ```bash
-    openclaw skills
-    ```
-    The status of **mcporter** is **ready**, indicating the installation is successful.
-
-    ![Skill installed](/images/manual/use-cases/skill-installed.png#bordered)
-
-8. Open the Control UI, go to the **Skills** page, click **BUILT-IN SKILLS** to expand the list, and then find **mcporter**:
-
-    - If it is enabled, click **Disable**, and then click **Enable** again to force the system to save the configuration.
-    - If it is disabled, click **Enable**.
-
-    ![Enable skill](/images/manual/use-cases/enable-skill1.png#bordered)-->
+7. Open the **Control UI**, click the user account in the lower left, and then select **Settings**.
+8. Select **Agents** from the left sidebar, and then click the **Skills** tab.
+9. Search the skill you just installed, and you will see it is enabled.
 
 ### Upload skills
 
-1. Open the Files app from the Launchpad, and then go to **Application** > **Data** > **clawdbot** > **config**.
+1. Open the Files app from the Launchpad, and then go to **Data** > **clawdbot** > **config**.
 2. Create a new folder named `skills`.
 3. Upload your skill package, such as an extracted zip file, into this `skills` folder.
 4. Install required package dependencies if any are missing.
@@ -186,29 +143,6 @@ Ensure that the [clawhub skill is installed](#install-via-openclaw-config). This
 ## Install missing dependencies
 
 If a skill is blocked or unusable, you need to identify and install its missing dependencies.
-
-<!--Fix-via-Control-UI
-
-1. Go to the **Skills** page in the Control UI, and then expand **BUILT-IN SKILLS** to see why the skill is unavailable and what dependency is missing.
-
-    ![Identify missing dependency from Control UI](/images/manual/use-cases/identify-missing-dependency1.png#bordered)
-
-2. Some missing dependencies can be installed directly from the Control UI by clicking the install prompt on the right.
-
-    ![Install missing dependency from Control UI](/images/manual/use-cases/install-missing-package-ui1.png#bordered)
-3. When the installation of missing components is completed, restart the OpenClaw container for the changes to take effect:
-
-    a. Open Control Hub from Desktop.
-    
-    b. Click **clawdbot** under **Deployments**, and then click **Restart**.
-
-4. Verify the installation:
-
-    a. Open the Control UI.
-    
-    b. Go to the **Skills** page. The skill should now be tagged with **eligible**. 
-    
-    c. Configure required API keys if there is any, and then the agent will be able to use the skill.-->
 
 1. Open the OpenClaw CLI and run the following command:
 
@@ -218,9 +152,7 @@ If a skill is blocked or unusable, you need to identify and install its missing 
     
     The terminal lists all unavailable skills and shows their missing requirements in parentheses.
 
-    ![Install missing dependency from CLI](/images/manual/use-cases/missing-dependency-cli1.png#bordered){width=70%}
-
-2. Use `npm` or `brew` to install the dependency manually. For detailed information about the installation requirements, see the `skills.md` file. 
+2. Use `npm` or `brew` to install the dependency manually. For detailed information about the installation requirements, see the `skills.md` file.
 
     - Example: The `gh-issues` skill requires `gh` to be installed. 
     - Run the following command to install it:
@@ -229,27 +161,29 @@ If a skill is blocked or unusable, you need to identify and install its missing 
         ```
 3. When the installation of missing components is completed, restart the OpenClaw container for the changes to take effect:
 
-    a. Open Control Hub from Desktop.
+    a. Open Control Hub from the Launchpad.
     
     b. Click **clawdbot** under **Deployments**, and then click **Restart**.
 
 4. Verify the installation:
 
-    a. Open the Control UI.
+    a. Open the Control UI, click the user account in the lower left, and then select **Settings**.
     
-    b. Go to the **Skills** page. The skill should now be tagged with **eligible**. 
+    b. Select **Agents** from the left sidebar, and then click the **Skills** tab. 
     
-    c. Configure required API keys if there is any, and then the agent will be able to use the skill.
+    c. Search the skill. It should now be tagged with **eligible**. 
+    
+    d. Configure required API keys if any are required, and then the agent will be able to use the skill.
 
-## Install plug-ins
+## Install plugins
 
-1. In the OpenClaw CLI, check the list of compatible plug-ins by entering the following command:
+1. In the OpenClaw CLI, check the list of compatible plugins by entering the following command:
 
     ```bash
     openclaw plugins list
     ```
 
-2. Find the target plug-in name in the **Name** column, and then install it by entering the following command:
+2. Find the target plugin name in the **Name** column, and then install it by entering the following command:
 
     ```bash
     openclaw plugins install {Name}
@@ -269,31 +203,28 @@ If a skill is blocked or unusable, you need to identify and install its missing 
     ```
     :::
 
-3. When the installation is completed, close OpenClaw CLI and open it again to load the new plug-in.
-
+3. When the installation is completed, restart the gateway to load the new plugin.
 4. Verify by checking the plugin status:
 
     ```bash
     openclaw plugins list
     ```
 
-    Now the status of the plug-in is **enabled**.
+    Now the status of the plugin is **enabled**.
 
-5. Open the Control UI, click <i class="material-symbols-outlined">settings</i> from the left sidebar, and then go to **Automation** > **Plugins**.
-6. Find **@openclaw/llm-task** and click it to expand its panel:
+5. Open the Control UI, click the user account in the lower left, and then select **Settings**.
+6. Select **Automation** from the left sidebar, and then click the **Plugins** tab.
+7. Find **LLM Task** and click it to expand its panel:
 
     - If it is enabled, turn off the toggle switch, and then turn it on again to force the system to explicitly save the configuration.
     - If it is disabled, turn on the toggle switch.
 
-    ![Toggle on plugin](/images/manual/use-cases/toggle-plugin3.png#bordered)
-
-7. Click **Save** in the upper-right corner. The system validates the config and applies the change automatically.
+    The system validates the config and applies the change automatically.
 
     :::tip Manual restart
     If you need to restart OpenClaw manually, do not use the OpenClaw CLI. Use one of the following methods:
-    - **Restart the app from Settings or Market**: 
+    - **Restart the app from Settings or Market**:
         - Open **Settings**, go to **Applications** > **OpenClaw**, click **Stop**, and then click **Resume**.
         - Open **Market**, go to **My Olares**, find **OpenClaw**, click <i class="material-symbols-outlined">keyboard_arrow_down</i> next to the operation button, select **Stop**, and then select **Resume**.
     - **Restart the container**: Open **Control Hub**, click `clawdbot` under **Deployments**, and then click **Restart**.
     :::
-    

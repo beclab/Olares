@@ -5,9 +5,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, OpenClaw, OpenClaw 教程, OpenClaw 使用指南, 安装技能, 安装插件
-app_version: "1.0.17"
-doc_version: "1.2"
-doc_updated: "2026-08-03"
+app_version: "1.0.36"
+doc_version: "1.3"
+doc_updated: "2026-09-04"
 ---
 
 :::warning
@@ -80,10 +80,9 @@ OpenClaw 可以通过技能和插件进行扩展：
 
     | 设置 | 选项 |
     |:---------|:-------|
-    | Where will the Gateway run | Local (this machine) |
-    | What do you want to configure | Skills |
-
-    向导会自动检查技能状态并显示摘要，然后自动开始安装缺失的技能依赖。
+    | <nobr>Where will the Gateway run</nobr> | Local (this machine) |
+    | <nobr>What do you want to configure</nobr> | Skills |
+    | <nobr>Install missing skill dependencies</nobr> | 按需选择 |
 
 4. 等待安装完成，并查看已安装摘要。
 5. 当提示 **What do you want to configure** 时，选择 **Done**。出现 `Configuration updated` 消息时，表示设置已完成。
@@ -113,10 +112,6 @@ OpenClaw 可以通过技能和插件进行扩展：
 
     ![ClawHub 中的技能 ID](/images/manual/use-cases/openclaw-skill-id.png#bordered)
     
-    :::warning 安全建议
-    强烈建议在安装技能之前，先在官方 ClawHub 网站上搜索并阅读该技能的详细信息。这可以确保你安装的是正确的技能，并防止安装恶意包。
-    :::
-
 4. 使用技能 ID 安装目标技能。
     
     例如，要安装此日历技能，应运行以下命令：
@@ -125,7 +120,10 @@ OpenClaw 可以通过技能和插件进行扩展：
     openclaw skills install caldav-calendar
     ```
 
-5. 等待终端指示技能已安装，然后通过运行以下命令验证：
+    终端会显示该技能的安全审计报告。
+
+5. 查看审计结果，然后输入 `y` 并按 **Enter** 继续。
+6. 等待终端指示技能已安装，然后通过运行以下命令验证：
 
     ```bash
     openclaw skills list
@@ -133,13 +131,13 @@ OpenClaw 可以通过技能和插件进行扩展：
 
     **caldav-calendar** 的状态为 **ready**，表示安装成功。
 
-6. 打开 **Control UI**，从左侧边栏选择 **Skills**，然后点击 **Ready** 标签页。你会看到新安装的技能已启用。
-
-    ![新安装的技能已启用](/images/manual/use-cases/skill-enabled.png#bordered)
+7. 打开 **Control UI**，点击左下角的用户账户，然后选择 **Settings**。
+8. 从左侧边栏选择 **Agents**，然后点击 **Skills** 标签页。
+9. 搜索你刚安装的技能，你会看到它已启用。
 
 ### 上传技能
 
-1. 从启动台打开文件管理器，然后进入**应用** > **数据** > **clawdbot** > **config**。
+1. 从启动台打开文件管理器，然后进入 **Data** > **clawdbot** > **config**。
 2. 创建一个名为 `skills` 的新文件夹。
 3. 将你的技能包（例如解压后的 `.zip` 文件）上传到此 `skills` 文件夹中。
 4. 如有缺失，安装所需的包依赖。
@@ -156,8 +154,6 @@ OpenClaw 可以通过技能和插件进行扩展：
     
     终端列出所有不可用的技能，并在括号中显示其缺失的要求。
 
-    ![从 CLI 安装缺失的依赖项](/images/manual/use-cases/missing-dependency-cli1.png#bordered){width=70%}
-
 2. 使用 `npm` 或 `brew` 手动安装依赖项。有关安装要求的详细信息，请参阅 `skills.md` 文件。
 
     - 示例：`gh-issues` 技能需要安装 `gh`。
@@ -167,17 +163,19 @@ OpenClaw 可以通过技能和插件进行扩展：
         ```
 3. 缺失组件安装完成后，重启 OpenClaw 容器使更改生效：
 
-    a. 从桌面打开控制面板。
+    a. 从启动台打开控制面板。
     
     b. 点击**部署**下的 **clawdbot**，然后点击**重启**。
 
 4. 验证安装：
 
-    a. 打开 Control UI。
+    a. 打开 Control UI，点击左下角的用户账户，然后选择 **Settings**。
     
-    b. 进入 **Skills** 页面。该技能现在应标记为 **eligible**。
+    b. 从左侧边栏选择 **Agents**，然后点击 **Skills** 标签页。
     
-    c. 如有需要，配置必需的 API 密钥，然后智能体将能够使用该技能。
+    c. 搜索该技能。它现在应标记为 **eligible**。
+    
+    d. 如有需要，配置必需的 API 密钥，然后智能体将能够使用该技能。
 
 ## 安装插件
 
@@ -207,7 +205,7 @@ OpenClaw 可以通过技能和插件进行扩展：
     ```
     :::
 
-3. 安装完成后，关闭 OpenClaw CLI 并重新打开它以加载新插件。
+3. 安装完成后，重启 gateway 以加载新插件。
 4. 通过检查插件状态进行验证：
 
     ```bash
@@ -216,15 +214,14 @@ OpenClaw 可以通过技能和插件进行扩展：
 
     现在插件的状态为 **enabled**。
 
-5. 打开 Control UI，点击左侧边栏的 <i class="material-symbols-outlined">settings</i>，然后进入 **Automation** > **Plugins**。
-6. 找到 **@openclaw/llm-task** 并点击它以展开面板：
+5. 打开 Control UI，点击左下角的用户账户，然后选择 **Settings**。
+6. 从左侧边栏选择 **Automation**，然后点击 **Plugins** 标签页。
+7. 找到 **LLM Task** 并点击它以展开面板：
 
     - 如果已启用，关闭切换开关，然后再打开，以强制系统显式保存配置。
     - 如果已禁用，打开切换开关。
 
-    ![开启插件](/images/manual/use-cases/toggle-plugin3.png#bordered)
-
-7. 点击右上角的 **Save**。系统验证配置并自动应用更改。
+    系统验证配置并自动应用更改。
 
     :::tip 手动重启
     如果你需要手动重启 OpenClaw，请不要使用 OpenClaw CLI。请使用以下方法之一：
