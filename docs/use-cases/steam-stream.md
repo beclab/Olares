@@ -13,7 +13,6 @@ Want to enjoy gaming powered by Olares? You're all set. With the Steam Headless 
 
 This guide walks you through installing Steam Headless on Olares, configuring the Steam client, pairing the streaming service, and connecting with the Moonlight client to play.
 
-
 ## Learning objectives
 
 By the end of this tutorial, you will learn how to:
@@ -75,51 +74,88 @@ Steam Headless uses Sunshine to stream video. You must pair it with the Moonligh
 
 ### Access the Sunshine console
 
-Access the Sunshine console to pair your Moonlight client with Olares.
+First, open the Sunshine Web UI to prepare for pairing. The address depends on your network setup.
 
-1. Copy the URL of your current Steam Headless browser tab.
-2. Open a new browser tab and modify the URL to access port `47990`. The address varies depending on your network.
-
-    - **Same network**: Use HTTPS with your `.local` address. Either format works (dots or hyphens in the hostname):
-
-   :::info Access Sunshine with HTTPS
-   Most Olares services can be accessed through `.local` addresses over HTTP.  
-   However, the Sunshine Web UI requires HTTPS for secure local communication.
+   :::info Sunshine requires HTTPS
+   Always add `https://` when opening the Sunshine Web UI. Do not use `http://`, even when connecting through a local IP or `.local` domain.
    :::
 
-   ```plain
-   https://139ebc4f0.<your Olares ID>.olares.local:47990
-   https://139ebc4f0-<your Olares ID>-olares.local:47990
-   ```
+1. Open the Sunshine Web UI using one of these methods:
 
-    - **Different network (via VPN)**: Enable LarePass VPN on your device, then append `:47990`. For example:
+   - **Overlay gateway (recommended for local networks)**
 
-   ```plain
-   https://139ebc4f0.<your Olares ID>.olares.com:47990
-   ```
-3. Press **Enter** to open the Sunshine console page.
-4. Sign in using the `SUNSHINE_USER` and `SUNSHINE_PASS` credentials you created earlier.
+     :::info Overlay gateway requirements
+     Use this method only when Olares runs on a native Linux host connected through wired Ethernet. If your setup does not meet these requirements, use the `.local` method below.
+
+     If you cannot turn on the system-level service, ask the Super admin to enable it. For details, see [Manage overlay gateway for applications](../manual/olares/settings/overlay-gateway.md).
+     :::
+
+     Overlay gateway gives Steam Headless a local IP, allowing video, audio, and control streams to travel directly over the LAN instead of through `.local` resolution, internal proxies, and cluster network forwarding.
+
+     a. Open **Settings** > **Network** > **Overlay gateway**.
+
+     b. Ensure the system-level service is on, then enable overlay gateway for Steam Headless.
+
+     c. Wait for Steam Headless to return to **Running**. The local addresses assigned to the app appears below it.
+
+        ![View Steam Headless overlay gateway addresses](/images/manual/use-cases/steam-enable-overlay-gateway.png#bordered)
+
+     d. Copy the **Sunshine Web UI** address, add `https://`, and open it in your browser. For example:
+
+        ```plain
+        https://192.168.50.117:47990
+        ```
+
+   - **Same network (`.local` domain)**
+
+     Copy the URL of your current Steam Headless browser tab, change the hostname to its `.local` form, append port `47990`, and open it in a browser. Either local hostname format works:
+
+     ```plain
+     https://139ebc4f0.<your Olares ID>.olares.local:47990
+     https://139ebc4f0-<your Olares ID>-olares.local:47990
+     ```
+
+     On Windows, import Olares hosts with the LarePass desktop app or use the single-level hostname with hyphens. For details, see [Access Olares services locally](../manual/best-practices/local-access.md).
+
+   - **Different network (LarePass VPN)**: [Enable LarePass VPN](../manual/larepass/private-network.md#enable-vpn-on-larepass), then copy your Steam Headless `.com` URL, append port `47990`, and open it in a browser. For example:
+
+     ```plain
+     https://139ebc4f0.<your Olares ID>.olares.com:47990
+     ```
+
+2. Once the page loads, sign in using the `SUNSHINE_USER` and `SUNSHINE_PASS` credentials you created earlier.
    ![Sign in to Sunshine](/images/manual/use-cases/steam-sign-in-to-sunshine.png#bordered)
-5. Click the **PIN** tab. The page will now wait for a pairing PIN.
+3. Click the **PIN** tab. The page will now wait for a pairing PIN.
    ![PIN on Sunshine](/images/manual/use-cases/steam-pin-on-sunshine.png#bordered)
 
 ### Add the host in Moonlight
 
-Moonlight usually detects your Olares host automatically when it is on the same local network as your Olares device.
+Next, add Olares as a host in Moonlight. The steps below use the macOS client as an example.
 
-If it doesn't appear, or if you are connecting over different networks, follow these steps to add the host manually. The process shown below uses the macOS Moonlight client.
-
-:::info Connecting from a different network? 
-If your Moonlight client and Olares device are on different networks, you must first [enable LarePass VPN](../manual/larepass/private-network.md#enable-vpn-on-larepass) on the device running Moonlight. 
-:::
+On the same local network, Moonlight might detect Steam Headless automatically. If it does not appear, or if you are connecting remotely, add it manually:
 
 1. Open Moonlight on your streaming device.
-2. Click the **Add Host** button, which looks like a computer with a plus icon.
-3. Enter your Olares domain without the `https://` prefix. For example:
+2. Click **Add Host**, which looks like a computer with a plus icon.
+3. Enter the host address for your network setup. Do not add `http://` or `https://`:
 
-   ```plain
-   139ebc4f0.<your Olares ID>.olares.com
-   ```
+   - **Overlay gateway**: Enter the address shown under **Moonlight HTTP** in the screenshot above, including its port. Do not add a protocol. For example:
+
+     ```plain
+     192.168.50.117:47989
+     ```
+
+   - **Same network (`.local` domain)**: Enter your `.local` hostname without a port. For example:
+
+     ```plain
+     139ebc4f0.<your Olares ID>.olares.local
+     ```
+
+   - **Different network (LarePass VPN)**: Enter your `.com` hostname without a port. For example:
+
+     ```plain
+     139ebc4f0.<your Olares ID>.olares.com
+     ```
+
 4. Click **OK**. A new locked host icon appears.
 5. Click the locked icon. Moonlight will display a 4-digit pairing PIN.
    ![Get pairing PIN](/images/manual/use-cases/steam-get-pairing-pin.png#bordered)
@@ -153,11 +189,18 @@ The following steps demonstrate local streaming.
 
 ## FAQs
 
+### Why is Steam streaming slow or delayed?
+
+Streaming lag can be caused by network conditions, GPU allocation, power settings, Proton compatibility, or CPU and memory limits.
+
+Follow [Troubleshoot slow or delayed Steam streaming](../manual/help/ts-steam-stream-lag.md) to identify and resolve the cause.
+
 ### Why can't I access the Sunshine Web UI using the `.local` address?
 
 Olares supports `.local` addresses with the HTTP protocol for most services. The Sunshine Web UI is different because it requires HTTPS to secure local communication. If you use `http://` with your `.local` URL, the Sunshine page will not load.
 
 To fix this, use `https://` instead of `http://` in your browser's address bar (for example, `https://139ebc4f0.<your Olares ID>.olares.local:47990`).
+
 ### Why isn't the game displaying in full screen?
 
 This may be caused by resolution settings. Try adjusting the resolution:
