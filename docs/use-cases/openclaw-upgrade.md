@@ -5,14 +5,74 @@ head:
   - - meta
     - name: keywords
       content: Olares, OpenClaw, OpenClaw tutorial, OpenClaw learning, OpenClaw upgrade, upgrade troubleshooting
-app_version: "1.0.17"
-doc_version: "1.3"
-doc_updated: "2026-07-31"
+app_version: "1.0.36"
+doc_version: "1.4"
+doc_updated: "2026-09-04"
 ---
 
 # Upgrade OpenClaw
 
 Before upgrading an existing OpenClaw installation, review the version-specific changes and troubleshooting steps on this page to ensure a smooth transition.
+
+## Upgrade to v2026.9.1
+
+The OpenClaw 2026.09.01 update might cause some plugins to become incompatible, preventing the gateway from starting (the app shows a startup failure). The update also introduces stricter proxy attribution checks that can block the Control UI after the upgrade.
+
+### Gateway fails to start after upgrade
+
+Follow these steps to resolve the issue.
+
+1. Open Control Hub on the Launchpad, find the **clawdbot** container, and then click the terminal icon next to its name.
+
+    ![Open OpenClaw container terminal](/images/manual/use-cases/openclaw-container-terminal.png#bordered)
+
+2. In the container terminal, run the repair command and follow the on-screen prompts:
+
+    ```bash
+    openclaw update repair
+    ```
+
+3. If the gateway still fails to start after the repair, update the incompatible plugins to their latest versions one by one:
+
+    ```bash
+    openclaw plugins update <plugin-name>
+    ```
+
+    Once all incompatible plugins are updated, the gateway should start normally.
+
+### Control UI shows a proxy attribution error
+
+After the upgrade, the Control UI might display the following error:
+
+```text
+Proxy client attribution is required. Configure gateway.trustedProxies narrowly and make the proxy overwrite or safely rebuild forwarded client headers.
+```
+Follow these steps to resolve the issue.
+
+1. Open the Files app, go to **Data** > **clawdbot** > **config**, and then open the `openclaw.json` file.
+2. Click the edit icon in the upper-right corner to enter the edit mode.
+3. Find the `gateway` section, and then add a `trustedProxies` array:
+
+    ```json
+    "trustedProxies": [
+    "10.233.0.0/16",
+    "10.244.0.0/16",
+    "10.42.0.0/16",
+    "127.0.0.1",
+    "::1"
+    ],
+    ```
+
+    ![Add OpenClaw settings](/images/manual/use-cases/openclaw-config-file.png#bordered)    
+
+4. Save the changes.
+5. Return to Control Hub, click **clawdbot** under **Deployments**, and then click **Restart** in the upper-right corner.
+
+     ![Restart OpenClaw](/images/manual/use-cases/restart-openclaw.png#bordered)
+     
+6. Reopen the Control UI and verify it loads normally.
+
+For more information, see the [OpenClaw release notes](https://github.com/openclaw/openclaw/releases/tag/v2026.9.1).
 
 ## Upgrade to v2026.6.5
 
@@ -85,7 +145,7 @@ If you find that a previously working plugin is unavailable after upgrading to t
 
 The OpenClaw 2026.02.25 update introduced a security enhancement that requires existing users to explicitly declare the allowed Control UI access address. Therefore, if your Control UI fails to start after the upgrade, follow these steps to resolve the issue.
 
-1. Open Control Hub on your desktop to check the container logs for **clawdbot**. 
+1. Open Control Hub on the Launchpad to check the container logs for **clawdbot**. 
 
     ![Check container logs](/images/manual/use-cases/check-container-logs.png#bordered)
 
