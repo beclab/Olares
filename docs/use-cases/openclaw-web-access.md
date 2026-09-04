@@ -5,9 +5,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, OpenClaw, OpenClaw tutorial, OpenClaw learning, OpenClaw web search
-app_version: "1.0.17"
-doc_version: "2.3"
-doc_updated: "2026-07-31"
+app_version: "1.0.36"
+doc_version: "2.4"
+doc_updated: "2026-09-04"
 ---
 
 # Optional: Enable web search in OpenClaw
@@ -58,21 +58,24 @@ Connect OpenClaw to SearXNG.
 
    | Setting | Option |
    |:---------|:-------|
-   | Enable web_search | Yes |
+   | Enable the web_search tool | Yes |
    | Search provider | SearXNG Search |
    | SearXNG Base URL | Paste the SearXNG Endpoint URL copied in Step 2. |
    | Install SearXNG plugin | Download from npm (@openclaw/searxng-plugin) |
-   | Enable web_fetch (keyless HTTP fetch) | Yes |
+   | Enable the web_fetch tool (keyless HTTP fetch) | Yes |
 
 ## Step 4: Verify web search
 
 Test that your agent can retrieve real-time information from the internet.
 
 1. Open the Control UI and start a chat with your agent.
-2. Ask a question that requires current information.
-3. Check the response. If the agent returns up-to-date information, the web search integration is working.
+2. Ask a question that requires current information. For example:
 
-   ![Web search results using SearXNG](/images/manual/use-cases/openclaw-web-search-results2.png#bordered)
+   ```text
+   Tell me the latest top 3 news on this web page
+   https://news.ycombinator.com/newest using your web search tool
+   ```
+3. Check the response. If the agent returns up-to-date information, the web search integration is working. 
 
 :::tip Full-text retrieval
 SearXNG returns only titles, URLs, and snippets, not full page content. Fetching the full text might be blocked by anti-scraping measures. If you need the agent to read the full contents of web pages, use an online web service. We recommend Firecrawl and Tavily. They return full text or answer snippets and offer free quotas for web search.
