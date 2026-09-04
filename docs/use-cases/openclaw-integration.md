@@ -78,16 +78,16 @@ In this guide, you will learn how to:
 
    | Settings | Option |
    |:---------|:-------|
-   | Discord account | Default (primary) |
+   | <nobr>Discord account</nobr> | Default (primary) |
    | How do you want to provide this Discord bot token | Enter Discord bot token |
-   | Enter Discord bot token | Paste the bot token from [Step 1](#step-1-create-a-discord-bot) |
-   | Configure Discord channels access | Yes |
-   | Discord channels access | Open (allow all channels) |
+   | <nobr>Enter Discord bot token</nobr> | Paste the bot token from [Step 1](#step-1-create-a-discord-bot) |
+   | <nobr>Configure Discord channels access</nobr> | Yes |
+   | <nobr>Discord channels access</nobr> | Open (allow all channels) |
    | Configure DM access policies now?<br>(default: pairing) | Yes |
-   | Discord DM access | Review and continue |
-   | Discord DM policy | Pairing (recommended) |
-   | Done. Channels updated. | Continue |
-   | Channel configured | Finish |
+   | <nobr>Discord DM access</nobr> | Review and continue |
+   | <nobr>Discord DM policy</nobr> | Pairing (recommended) |
+   | <nobr>Done. Channels updated.</nobr> | Continue |
+   | <nobr>Channel configured</nobr> | Finish |
 
 ## Step 4: Authorize your account
 
