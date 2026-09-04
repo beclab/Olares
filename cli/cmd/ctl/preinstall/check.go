@@ -12,6 +12,7 @@ func NewCmdPreinstallCheck() *cobra.Command {
 	var (
 		full           bool
 		installationMF string
+		olaresYAML     string
 		imagesDir      string
 		gpuModes       []string
 	)
@@ -40,15 +41,30 @@ and require the medium to preload the images they need. This catches the
 case where a bundled chart was updated but the image list was not, which
 on an offline device means the app cannot start at all. Add --images-dir
 to also require the image payload to be present, which is what prepare
-reads. Both checks are offline; neither contacts a registry or a CDN.
+reads.
+
+Pass --olares-yaml instead of --installation-manifest to run the same
+chart-image check against output.containers in a source-tree Olares.yaml,
+without packing an installer first. The two flags are mutually exclusive.
+--images-dir is a packed-medium check and requires --installation-manifest.
+
+All image checks are offline; none contact a registry or a CDN.
 
 Examples:
   olares-cli preinstall check ./preinstall/market
   olares-cli preinstall check ./preinstall/market --full
   olares-cli preinstall check ./preinstall/market \
+    --olares-yaml ./path/to/Olares.yaml
+  olares-cli preinstall check ./preinstall/market \
     --installation-manifest ./installation.manifest --images-dir ./images`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if installationMF != "" && olaresYAML != "" {
+				return fmt.Errorf("--installation-manifest and --olares-yaml are mutually exclusive")
+			}
+			if imagesDir != "" && installationMF == "" {
+				return fmt.Errorf("--images-dir requires --installation-manifest")
+			}
 			opts := pkgpreinstall.CheckOptions{
 				Full:      full,
 				ImagesDir: imagesDir,
@@ -60,8 +76,13 @@ Examples:
 					return fmt.Errorf("read installation manifest %q: %w", installationMF, err)
 				}
 				opts.InstallationManifest = installation
-			} else if imagesDir != "" {
-				return fmt.Errorf("--images-dir requires --installation-manifest")
+			}
+			if olaresYAML != "" {
+				images, err := pkgpreinstall.ReadOlaresYAMLContainers(olaresYAML)
+				if err != nil {
+					return fmt.Errorf("read olares.yaml %q: %w", olaresYAML, err)
+				}
+				opts.OlaresImages = images
 			}
 			if err := pkgpreinstall.CheckStaticBundle(args[0], opts); err != nil {
 				return err
@@ -72,7 +93,8 @@ Examples:
 	}
 	fs := cmd.Flags()
 	fs.BoolVar(&full, "full", false, "also verify artifact payload trees against manifests")
-	fs.StringVar(&installationMF, "installation-manifest", "", "path to installation.manifest; enables the bundled-chart image check")
+	fs.StringVar(&installationMF, "installation-manifest", "", "path to installation.manifest; enables the bundled-chart image check against the packed medium")
+	fs.StringVar(&olaresYAML, "olares-yaml", "", "path to a source-tree Olares.yaml; enables the bundled-chart image check against output.containers")
 	fs.StringVar(&imagesDir, "images-dir", "", "directory holding preloaded image payloads (normally <baseDir>/images); requires --installation-manifest")
 	fs.StringSliceVar(&gpuModes, "gpu-modes", nil, "GPU families to render charts under (default: no-override plus all known families)")
 	return cmd
