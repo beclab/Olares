@@ -54,7 +54,7 @@ GitBot checks mechanical policy; it does not validate product quality, screensho
 - Build images for the architectures declared by `spec.supportArch`; a local single-node success does not prove public multi-arch availability.
 - Assets must come from the upstream project, its site, or the user's running instance. Do not invent logos, screenshots, testimonials, or capabilities.
 - Market copy must be factual, neutral, and written for app users. Do not turn chart implementation details into features or upgrade notes.
-- `upgradeDescription` is conditional: omit it for a first listing or update with no reliable user-facing upgrade information; when approved English contains it, keep every declared locale in sync.
+- `upgradeDescription` is conditional: omit it for a first listing or update with no reliable user-facing upgrade information; never add `Initial release` merely to fill the field. When approved English contains a meaningful upgrade notice, keep every declared locale in sync.
 - Public chart credentials must come from install-time inputs, middleware, or chart generation; never commit live secrets.
 - Paid distribution adds `price.yaml` and application-side `VERIFIABLE_CREDENTIAL` enforcement; it does not replace the normal public-listing requirements.
 

@@ -73,7 +73,7 @@ When revising a family of related apps, review the proposed copy side by side be
 
 ### `spec.upgradeDescription`
 
-This field is optional and normally absent for an `ADD`. For an `UPDATE`, omit it when there is no reliable user-facing change. Never guess from a version number.
+This field is optional and normally absent for an `ADD`. For an `UPDATE`, omit it when there is no reliable user-facing change. Never guess from a version number, add `Initial release` as a placeholder, or describe a Market copy edit as an application upgrade.
 
 The first three lines appear in release history before users expand the entry. Use them for a plain-language summary of the most important change. Put a breaking change or required action first. Do not spend these lines on a heading, a release link, or a minor implementation detail.
 

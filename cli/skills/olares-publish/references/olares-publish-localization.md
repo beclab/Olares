@@ -17,6 +17,8 @@ If the root and English copy differ, resolve the source of truth before writing 
 - English non-empty: every declared target must contain a non-empty equivalent translation.
 - Target non-empty while English is absent: report source drift; do not treat the target as an independent factual source.
 
+Do not add `upgradeDescription`, `Initial release`, or a copy-only version entry merely to complete the Manifest shape. A Market copy edit is not an application upgrade.
+
 ## Translation contract
 
 Write natural text in each target language. Preserve the source's facts, limits, warnings, required actions, section order, links, lists, and emphasis. Do not copy English sentence structure when it sounds awkward. Do not add marketing language, examples, warnings, or product facts.
