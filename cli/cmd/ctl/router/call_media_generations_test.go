@@ -1,9 +1,14 @@
 package router
 
 import (
+	"bytes"
+	"encoding/binary"
 	"encoding/json"
+	"fmt"
 	"io"
+	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -11,6 +16,73 @@ import (
 
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
+
+func testWAV(payload []byte) []byte {
+	result := make([]byte, 12+len(payload))
+	copy(result[:4], "RIFF")
+	binary.LittleEndian.PutUint32(result[4:8], uint32(len(result)-8))
+	copy(result[8:12], "WAVE")
+	copy(result[12:], payload)
+	return result
+}
+
+func TestGenerationDownloadResumesAndAtomicallyPublishesWAV(t *testing.T) {
+	raw := testWAV([]byte("generated-audio"))
+	directory := t.TempDir()
+	target := filepath.Join(directory, "song.wav")
+	first := &http.Response{
+		StatusCode:    http.StatusOK,
+		ContentLength: int64(len(raw)),
+		Header:        http.Header{"Content-Type": []string{"audio/wav"}},
+		Body:          io.NopCloser(bytes.NewReader(raw[:10])),
+	}
+	resumes := 0
+	written, err := saveGenerationContent(target, first, func(offset int64) (*http.Response, error) {
+		resumes++
+		if offset != 10 {
+			t.Fatalf("resume offset=%d", offset)
+		}
+		return &http.Response{
+			StatusCode:    http.StatusPartialContent,
+			ContentLength: int64(len(raw)) - offset,
+			Header:        http.Header{"Content-Range": []string{"bytes 10-" + fmt.Sprint(len(raw)-1) + "/" + fmt.Sprint(len(raw))}},
+			Body:          io.NopCloser(bytes.NewReader(raw[offset:])),
+		}, nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := os.ReadFile(target)
+	if err != nil || !bytes.Equal(got, raw) || written != int64(len(raw)) || resumes != 1 {
+		t.Fatalf("written=%d resumes=%d err=%v body=%q", written, resumes, err, got)
+	}
+	matches, err := filepath.Glob(filepath.Join(directory, "*.partial"))
+	if err != nil || len(matches) != 0 {
+		t.Fatalf("partial downloads remain: %v err=%v", matches, err)
+	}
+}
+
+func TestGenerationDownloadRejectsTruncatedWAVWithoutReplacingTarget(t *testing.T) {
+	raw := testWAV([]byte("generated-audio"))
+	directory := t.TempDir()
+	target := filepath.Join(directory, "song.wav")
+	if err := os.WriteFile(target, []byte("previous"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	first := &http.Response{
+		StatusCode:    http.StatusOK,
+		ContentLength: int64(len(raw)),
+		Header:        http.Header{"Content-Type": []string{"audio/wav"}},
+		Body:          io.NopCloser(bytes.NewReader(raw[:10])),
+	}
+	if _, err := saveGenerationContent(target, first, nil); err == nil || !strings.Contains(err.Error(), "truncated") {
+		t.Fatalf("expected truncation error, got %v", err)
+	}
+	got, err := os.ReadFile(target)
+	if err != nil || string(got) != "previous" {
+		t.Fatalf("target was replaced: %q err=%v", got, err)
+	}
+}
 
 func mediaVerb(t *testing.T, name string) *cobra.Command {
 	t.Helper()

@@ -3,13 +3,17 @@ package router
 import (
 	"context"
 	"encoding/base64"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"mime"
+	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -385,7 +389,12 @@ func runMedia(ctx context.Context, f *cmdutil.Factory, kind mediaKind, opts medi
 	if err != nil {
 		return err
 	}
-	pc, err := prepare(ctx, f)
+	// Polling can run for minutes, and generated audio/video artifacts are often
+	// tens or hundreds of MiB.  The standard authenticated client has a 30s
+	// whole-request deadline, which can truncate an otherwise healthy content
+	// download.  Keep authentication and refresh handling, but use the streaming
+	// client whose lifetime is governed by the command context and --timeout.
+	pc, err := prepareLongRequest(ctx, f)
 	if err != nil {
 		return err
 	}
@@ -557,8 +566,8 @@ func fetchGenerationContent(ctx context.Context, dp *routerClient, kind mediaKin
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
 	if resp.StatusCode/100 != 2 {
+		defer resp.Body.Close()
 		raw, _ := io.ReadAll(resp.Body)
 		return callErr(dp.formatErr("GET", path, resp.StatusCode, raw))
 	}
@@ -567,17 +576,11 @@ func fetchGenerationContent(ctx context.Context, dp *routerClient, kind mediaKin
 	if target == "" {
 		target = gen.ID + extForContentType(resp.Header.Get("Content-Type"), kind.defaultExt)
 	}
-	file, err := os.OpenFile(target, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
+	written, err := saveGenerationContent(target, resp, func(offset int64) (*http.Response, error) {
+		return dp.withHeader("Range", fmt.Sprintf("bytes=%d-", offset)).do(ctx, "GET", path, nil, "")
+	})
 	if err != nil {
-		return fmt.Errorf("create %s: %w", target, err)
-	}
-	written, copyErr := io.Copy(file, resp.Body)
-	closeErr := file.Close()
-	if copyErr != nil {
-		return fmt.Errorf("write %s: %w", target, copyErr)
-	}
-	if closeErr != nil {
-		return fmt.Errorf("close %s: %w", target, closeErr)
+		return err
 	}
 	if _, err := fmt.Printf("wrote %s (%s)\n", target, humanBytes(written)); err != nil {
 		return err
@@ -586,6 +589,143 @@ func fetchGenerationContent(ctx context.Context, dp *routerClient, kind mediaKin
 		_, err := fmt.Fprintf(os.Stderr, "this generation has %d outputs (%s); --output-id names one\n",
 			len(others), strings.Join(others, " "))
 		return err
+	}
+	return nil
+}
+
+// saveGenerationContent keeps an incomplete transfer away from the requested
+// path. A short read is resumed when the content endpoint supports Range; a
+// server that ignores Range restarts the same temporary file from byte zero.
+// Only a byte-complete payload is atomically renamed into place.
+func saveGenerationContent(target string, first *http.Response, resume func(int64) (*http.Response, error)) (int64, error) {
+	directory := filepath.Dir(target)
+	temporary, err := os.CreateTemp(directory, "."+filepath.Base(target)+"-*.partial")
+	if err != nil {
+		_ = first.Body.Close()
+		return 0, fmt.Errorf("create temporary download for %s: %w", target, err)
+	}
+	temporaryPath := temporary.Name()
+	defer func() { _ = os.Remove(temporaryPath) }()
+	if err := temporary.Chmod(0o600); err != nil {
+		_ = first.Body.Close()
+		_ = temporary.Close()
+		return 0, fmt.Errorf("secure temporary download for %s: %w", target, err)
+	}
+
+	response := first
+	expected := response.ContentLength
+	contentType := response.Header.Get("Content-Type")
+	written := int64(0)
+	for attempt := 0; attempt < 3; attempt++ {
+		copied, copyErr := io.Copy(temporary, response.Body)
+		closeErr := response.Body.Close()
+		written += copied
+		complete := copyErr == nil && (expected < 0 || written == expected)
+		if complete {
+			if closeErr != nil {
+				_ = temporary.Close()
+				return 0, fmt.Errorf("close response for %s: %w", target, closeErr)
+			}
+			break
+		}
+		if written > expected && expected >= 0 {
+			_ = temporary.Close()
+			return 0, fmt.Errorf("download %s exceeded Content-Length: got %d bytes, expected %d", target, written, expected)
+		}
+		if attempt == 2 || resume == nil {
+			_ = temporary.Close()
+			if copyErr != nil {
+				return 0, fmt.Errorf("write %s: %w", target, copyErr)
+			}
+			return 0, fmt.Errorf("download %s was truncated: got %d bytes, expected %d", target, written, expected)
+		}
+
+		next, resumeErr := resume(written)
+		if resumeErr != nil {
+			_ = temporary.Close()
+			return 0, fmt.Errorf("resume %s at byte %d: %w", target, written, resumeErr)
+		}
+		response = next
+		switch response.StatusCode {
+		case http.StatusPartialContent:
+			start, total, ok := parseContentRange(response.Header.Get("Content-Range"))
+			if !ok || start != written {
+				_ = response.Body.Close()
+				_ = temporary.Close()
+				return 0, fmt.Errorf("resume %s returned an invalid Content-Range", target)
+			}
+			expected = total
+		case http.StatusOK:
+			if err := temporary.Truncate(0); err != nil {
+				_ = response.Body.Close()
+				_ = temporary.Close()
+				return 0, fmt.Errorf("restart download %s: %w", target, err)
+			}
+			if _, err := temporary.Seek(0, io.SeekStart); err != nil {
+				_ = response.Body.Close()
+				_ = temporary.Close()
+				return 0, fmt.Errorf("restart download %s: %w", target, err)
+			}
+			written = 0
+			expected = response.ContentLength
+		default:
+			_ = response.Body.Close()
+			_ = temporary.Close()
+			return 0, fmt.Errorf("resume %s returned HTTP %d", target, response.StatusCode)
+		}
+	}
+
+	if err := temporary.Sync(); err != nil {
+		_ = temporary.Close()
+		return 0, fmt.Errorf("sync %s: %w", target, err)
+	}
+	if err := validateDownloadedContent(temporary, written, contentType, target); err != nil {
+		_ = temporary.Close()
+		return 0, fmt.Errorf("validate %s: %w", target, err)
+	}
+	if err := temporary.Close(); err != nil {
+		return 0, fmt.Errorf("close %s: %w", target, err)
+	}
+	if err := os.Rename(temporaryPath, target); err != nil {
+		return 0, fmt.Errorf("finish %s: %w", target, err)
+	}
+	return written, nil
+}
+
+func parseContentRange(value string) (start, total int64, ok bool) {
+	value = strings.TrimSpace(value)
+	if !strings.HasPrefix(value, "bytes ") {
+		return 0, 0, false
+	}
+	rangeAndTotal := strings.Split(strings.TrimPrefix(value, "bytes "), "/")
+	if len(rangeAndTotal) != 2 || rangeAndTotal[1] == "*" {
+		return 0, 0, false
+	}
+	bounds := strings.Split(rangeAndTotal[0], "-")
+	if len(bounds) != 2 {
+		return 0, 0, false
+	}
+	start, errStart := strconv.ParseInt(bounds[0], 10, 64)
+	end, errEnd := strconv.ParseInt(bounds[1], 10, 64)
+	total, errTotal := strconv.ParseInt(rangeAndTotal[1], 10, 64)
+	return start, total, errStart == nil && errEnd == nil && errTotal == nil && start >= 0 && end >= start && total > end
+}
+
+func validateDownloadedContent(file *os.File, size int64, contentType, target string) error {
+	mediaType, _, _ := mime.ParseMediaType(contentType)
+	if mediaType != "audio/wav" && mediaType != "audio/x-wav" && !strings.EqualFold(filepath.Ext(target), ".wav") {
+		return nil
+	}
+	header := make([]byte, 12)
+	if _, err := file.ReadAt(header, 0); err != nil {
+		return fmt.Errorf("read WAV header: %w", err)
+	}
+	if string(header[:4]) != "RIFF" || string(header[8:12]) != "WAVE" {
+		return fmt.Errorf("response is not a RIFF/WAVE file")
+	}
+	declared := int64(binary.LittleEndian.Uint32(header[4:8])) + 8
+	if declared != size {
+		return fmt.Errorf("WAV header declares %d bytes but received %d", declared, size)
 	}
 	return nil
 }
