@@ -45,7 +45,7 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           link: "/zh/one/access-olares-via-vpn",
         },
         {
-          text: "通过 .local 域名访问 Olares",
+          text: "在局域网内访问 Olares",
           link: "/zh/one/access-olares-via-local-domain",
         },
       ]
