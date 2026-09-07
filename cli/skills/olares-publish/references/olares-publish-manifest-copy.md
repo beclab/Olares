@@ -34,13 +34,13 @@ When the root Manifest and the English locale Manifest both contain copy, compar
 
 ## Related product metadata
 
-Copy review often exposes incorrect attribution or provenance in adjacent structured fields. Verify these fields from the same upstream evidence instead of copying values from a deployment repository:
+Copy review should also verify attribution and provenance in adjacent structured fields from the same upstream evidence:
 
-- `developer`: use the maintainer's public organization or legal name. Distinguish the product brand, product developer, deployment packager, and inference or runtime engine; do not infer the developer from a GitHub handle or repository owner.
-- `website`: prefer the official product page, then the developer's main site, then the official source repository. Do not use a blog post, launch announcement, or documentation for a different product as the homepage.
-- `sourceCode`: link the official repository, package, or model page that matches the product shipped by the app. A download mirror or packaging repository does not become the upstream source.
-- `license`: use the upstream license and its specific official license page. Normalize `text` to the SPDX identifier when one exists; do not substitute the deployment repository's license.
-- `doc`: add it only when the documentation applies to this exact product or model. Open the final URL to verify that it resolves and does not redirect to a missing or related-product page. The official model or package page may serve as documentation when no separate documentation site exists.
+- `developer`: use the maintainer's public organization or legal name. Confirm the roles of the product brand, product developer, deployment packager, and inference or runtime engine.
+- `website`: prefer the official product page, then the developer's main site, then the official source repository.
+- `sourceCode`: link the official repository, package, or model page that matches the product shipped by the app. Trace a mirrored download back to its upstream source.
+- `license`: use the upstream license and its specific official license page. Normalize `text` to the SPDX identifier when one exists.
+- `doc`: use documentation for the exact product or model and verify that the final URL resolves. The official model or package page may serve as documentation when there is no separate documentation site.
 
 Keep attribution in these structured fields and the PR context by default. Mention it in `fullDescription` only when it changes what users can do, configure, or expect.
 

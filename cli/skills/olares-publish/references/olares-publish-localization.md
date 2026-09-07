@@ -10,7 +10,7 @@ Before choosing files, inspect the repository's instructions, `spec.locale`, loc
 
 If the root and English copy differ, resolve the source of truth before writing translations.
 
-A localized Manifest is a copy-only projection, not a duplicate of the root Manifest. It must start with `metadata` and contain only the supported localized copy fields listed below. Remove functional or deployment fields such as `onlyAdmin` and `entrances`, and remove any command output or other non-YAML text accidentally written into the file. Do not leave empty optional fields.
+A localized Manifest currently supports only these four copy fields: `metadata.title`, `metadata.description`, `spec.fullDescription`, and conditional `spec.upgradeDescription`. Remove all other fields.
 
 `metadata.title`, `metadata.description`, and `spec.fullDescription` must be present and non-empty. `spec.upgradeDescription` is conditional:
 
