@@ -81,12 +81,7 @@ func (r *SystemEnvController) reconcileSystemEnv(ctx context.Context, systemEnv 
 }
 
 func (r *SystemEnvController) isReferenced(appEnv *sysv1alpha1.AppEnv, systemEnvName string) bool {
-	for _, envVar := range appEnv.Envs {
-		if envVar.ValueFrom != nil && envVar.ValueFrom.EnvName == systemEnvName {
-			return true
-		}
-	}
-	return false
+	return appEnvReferences(appEnv, systemEnvName)
 }
 
 func (r *SystemEnvController) annotateAppEnvForSync(ctx context.Context, appEnv *sysv1alpha1.AppEnv, systemEnv *sysv1alpha1.SystemEnv) (bool, error) {

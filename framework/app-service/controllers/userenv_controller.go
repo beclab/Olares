@@ -83,12 +83,7 @@ func (r *UserEnvController) reconcileUserEnv(ctx context.Context, userEnv *sysv1
 }
 
 func (r *UserEnvController) isReferenced(appEnv *sysv1alpha1.AppEnv, userEnvName string) bool {
-	for _, envVar := range appEnv.Envs {
-		if envVar.ValueFrom != nil && envVar.ValueFrom.EnvName == userEnvName {
-			return true
-		}
-	}
-	return false
+	return appEnvReferences(appEnv, userEnvName)
 }
 
 func (r *UserEnvController) annotateAppEnvForSync(ctx context.Context, appEnv *sysv1alpha1.AppEnv, userEnv *sysv1alpha1.UserEnv) (bool, error) {
