@@ -28,7 +28,7 @@ To get the fastest resolution, choose the option that best fits your situation:
 You can submit a support ticket via the Ticket app or Olares Space, depending on whether you can currently access your Olares device.
 
 :::tip Prerequisites
-- **System version:** Ensure your Olares system is upgraded to v1.12.6 or later.
+- **System version:** Ensure your Olares system is upgraded to v1.12.7 or later.
 - **Account match:** The Olares ID used to log in to LarePass must match the account currently logged in on your Olares device.
 :::
 

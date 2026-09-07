@@ -13,7 +13,7 @@ Use the Tickets page in Olares Space to report issues, ask for help, and track t
 The Tickets page only shows tickets created with the Olares ID you are currently logged in with. To view a specific ticket, log in to Olares Space using the same Olares ID that was used to create it.
 
 :::tip Prerequisites
-Olares OS v1.12.6 or later is required.
+Olares OS v1.12.7 or later is required.
 :::
 
 ## Create a ticket automatically via Olares CLI

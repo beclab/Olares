@@ -13,7 +13,7 @@ head:
 **工单**页面仅展示当前登录的 Olares ID 所创建的工单。要查看某个工单，请使用创建该工单时所用的 Olares ID 登录 Olares Space。
 
 :::tip 前提条件
-需要 Olares OS v1.12.6 或更高版本。
+需要 Olares OS v1.12.7 或更高版本。
 :::
 
 ## 通过 Olares CLI 自动创建工单
