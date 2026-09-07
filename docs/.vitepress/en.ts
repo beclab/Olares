@@ -520,7 +520,7 @@ const side = {
           link: "/manual/space/manage-accounts",
         },
         {
-          text: "Monitor Olares",
+          text: "Monitor Olares status and traffic",
           link: "/manual/space/manage-olares",
         },
         {
@@ -538,10 +538,10 @@ const side = {
           ],
         },
         {
-          text: "Back up and restore",
+          text: "Restore data from Olares Space backups",
           link: "/manual/space/backup-restore",
         },
-        { text: "Billing", link: "/manual/space/billing" },
+        { text: "Billing and payments", link: "/manual/space/billing" },
       ],
     },
     {
