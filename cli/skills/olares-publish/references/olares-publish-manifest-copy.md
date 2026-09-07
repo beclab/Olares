@@ -34,15 +34,13 @@ When the root Manifest and the English locale Manifest both contain copy, compar
 
 ## Related product metadata
 
-Copy review should also verify attribution and provenance in adjacent structured fields from the same upstream evidence:
+Verify related product metadata from upstream sources:
 
-- `developer`: use the maintainer's public organization or legal name. Confirm the roles of the product brand, product developer, deployment packager, and inference or runtime engine.
-- `website`: prefer the official product page, then the developer's main site, then the official source repository.
-- `sourceCode`: link the official repository, package, or model page that matches the product shipped by the app. Trace a mirrored download back to its upstream source.
-- `license`: use the upstream license and its specific official license page. Normalize `text` to the SPDX identifier when one exists.
-- `doc`: use documentation for the exact product or model and verify that the final URL resolves. The official model or package page may serve as documentation when there is no separate documentation site.
-
-Keep attribution in these structured fields and the PR context by default. Mention it in `fullDescription` only when it changes what users can do, configure, or expect.
+- `developer`: use the official organization or legal name, distinguishing the developer from the product brand, packager, and runtime engine.
+- `website`: prefer the official product page, then the developer's site, then the official source repository.
+- `sourceCode`: link the official repository, package, or model page that matches the shipped product; trace mirrors to their upstream source.
+- `license`: use the SPDX identifier when available and link the official upstream license.
+- `doc`: link working documentation for the exact product or model; its official model or package page is acceptable.
 
 ## Field contract
 
