@@ -90,7 +90,7 @@ const side = {
           ],
         },
         {
-          text: "Get technical support",
+          text: "Get support",
           link: "/manual/help/request-technical-support",
         },
         {
@@ -542,6 +542,7 @@ const side = {
           link: "/manual/space/backup-restore",
         },
         { text: "Billing", link: "/manual/space/billing" },
+        { text: "Create and manage support tickets", link: "/manual/space/tickets" },
       ],
     },
     {
