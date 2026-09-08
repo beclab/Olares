@@ -69,6 +69,8 @@ var capabilityFlags = []string{
 	"supports_enhance",
 	"supports_tts",
 	"supports_tts_clone",
+	"supports_tts_design",
+	"supports_tts_custom",
 	"supports_tts_dialogue",
 	"supports_audio_llm",
 	"supports_audio_s2s",
