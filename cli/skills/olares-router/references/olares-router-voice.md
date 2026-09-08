@@ -22,11 +22,11 @@ olares-cli router call history delete <reading> --model <tts-model> --yes
 
 ## Synthesis is spelled two ways, and an engine answers one of them
 
-`/v1/audio/speech` is the OpenAI spelling, which reads the voice from the body. `/v1/text-to-speech/<voice>` is the ElevenLabs spelling, which addresses it in the path. Router mounts both and forwards each unchanged; it translates between them only for the ElevenLabs vendor itself, so a model application answers whichever its image was built for. `call speak` and `speak --voices` try both, so the flags behave the same either way.
+`/v1/audio/speech` is the OpenAI spelling, which reads the voice from the body. `/v1/text-to-speech/<voice>` is the ElevenLabs spelling, which addresses it in the path. Router mounts both and forwards each unchanged; it translates between them only for the ElevenLabs vendor itself, so a model application answers whichever its image was built for. `call speak` and `speak --voices` pick the likely one from the catalogue and fall back to the other, so the flags behave the same either way.
 
-The one case the CLI cannot bridge is `speak` with no `--voice` against a path-addressing engine: there is nothing to put in the path, and the refusal says so. **Name a voice from `speak --voices` rather than treating that 404 as a broken model.**
+The guess comes from `supports_tts_design`: designing a voice from a description is an ElevenLabs operation, so an engine declaring it implements that surface. That is a correlation rather than a rule Router enforces, which is why it only sets the order — an engine that breaks it costs one wasted request and still works. A wasted attempt is a real request, so it leaves a `failed: audio_upstream_error` at a few milliseconds and $0 beside the call that worked. **Such a pair is a mispredicted shape, not an unstable model**, and `--status success` excludes them.
 
-The first attempt is a real request, so a successful `speak` against an engine of the other shape leaves two rows in the record: a `failed: audio_upstream_error` at a few milliseconds and $0, immediately followed by the `tts/text-to-speech/{id}` that worked. **Those pairs are not an unstable model.** Reading `usage list --mode tts` on a machine with such an engine means expecting them; `--status success` excludes them.
+The one case that cannot be bridged is `speak` with no `--voice` against a path-addressing engine: there is nothing to put in the path, and the refusal says so. **Name a voice from `speak --voices` rather than treating that 404 as a broken model.**
 
 `call clone` has no second spelling to try. An engine of that shape has no one-shot clone at all — it keeps the voice instead — so its 404 points at `voice add`, and speaking with the resulting id is the two-step version of the same thing.
 

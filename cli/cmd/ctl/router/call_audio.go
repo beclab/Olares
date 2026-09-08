@@ -418,22 +418,18 @@ Examples:
 	return cmd
 }
 
-// GET /v1/audio/voices, then GET /v1/voices
+// GET /v1/audio/voices or GET /v1/voices
 //
 // Router folds both spellings into one operation because they are the OpenAI
 // and ElevenLabs names for the same question, but it forwards the path it was
-// given, and an engine implements one of them. Asking twice is what makes the
-// flag answer the question rather than the URL: the engines here answer the
-// second, and a 404 from the first said "no named voices" about a model with
-// four of them.
+// given, and an engine implements one of them. Asking the right one is what
+// makes the flag answer the question rather than the URL: a 404 from the OpenAI
+// spelling said "no named voices" about a model with four of them.
 //
 // Named voices are one of two ways a TTS engine picks a voice; the other is a
 // reference recording, and an engine built for that has nothing to list. So an
 // empty list and a 404 from both spellings mean "this model is not chosen from
 // a menu" rather than a misconfiguration.
-// voicesSpellings is tried in order. The OpenAI-shaped path goes first so an
-// engine that serves both keeps answering the one it always answered.
-var voicesSpellings = []string{epAudioVoices, epVoices}
 
 // noVoiceToAddressErr replaces the generic audio 404 rather than adding to it.
 // That hint blames the wrong engine — recognition answering for synthesis —
@@ -483,7 +479,7 @@ func runListVoices(ctx context.Context, f *cmdutil.Factory, model, apiKey string
 		} `json:"voices"`
 	}
 	err = nil
-	for _, route := range voicesSpellings {
+	for _, route := range voicesRoutes(ttsDialectOf(ctx, dp, model)) {
 		path := route
 		if m := strings.TrimSpace(model); m != "" {
 			q := url.Values{}
@@ -557,26 +553,25 @@ func runCallSpeak(ctx context.Context, f *cmdutil.Factory, text string, opts spe
 	if err != nil {
 		return fmt.Errorf("marshal request body: %w", err)
 	}
+	// Both spellings read the same body — the fields this verb sends are the
+	// ones each shape looks for — so only the path differs between attempts,
+	// and a 404 arrives before anything is written to --out.
 	answer := audioAnswer{
-		Method: "POST", Route: audioRequestPath(epAudioSpeech, opts.Model, opts.Async),
-		Body: bytes.NewReader(buf), ContentType: "application/json",
+		Method: "POST", ContentType: "application/json",
 		Model: opts.Model, Out: opts.OutPath, Async: opts.Async, Format: opts.Format,
 	}
-	err = streamAudioAnswer(ctx, dp, answer)
-	if !routeAbsent(err) {
-		return err
+	routes := speakRoutes(ttsDialectOf(ctx, dp, opts.Model), opts.Voice)
+	for _, route := range routes {
+		answer.Body = bytes.NewReader(buf)
+		answer.Route = audioRequestPath(route, opts.Model, opts.Async)
+		if err = streamAudioAnswer(ctx, dp, answer); !routeAbsent(err) {
+			return err
+		}
 	}
-	// The engine speaks the other dialect. It takes the same body — the fields
-	// this verb sends are the ones both shapes read — and puts the voice in the
-	// path, so the only thing to change is where it is sent. A 404 arrives
-	// before anything is written, so nothing is half-done at this point.
-	voice := strings.TrimSpace(opts.Voice)
-	if voice == "" {
+	if strings.TrimSpace(opts.Voice) == "" {
 		return noVoiceToAddressErr(err)
 	}
-	answer.Body = bytes.NewReader(buf)
-	answer.Route = audioRequestPath(epSpeakAs(voice), opts.Model, opts.Async)
-	return streamAudioAnswer(ctx, dp, answer)
+	return err
 }
 
 func buildSpeakRequest(text string, opts speakOptions) map[string]any {
