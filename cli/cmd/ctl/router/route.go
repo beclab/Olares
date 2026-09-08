@@ -27,6 +27,8 @@ import (
 // PUT    /console/api/model-routes/:id/members/:model_id  admin
 // DELETE /console/api/model-routes/:id/members/:model_id  admin
 //
+// The three routes that point a default category are in route_pin.go.
+//
 // There are two shapes of name and no others. One containing a slash is a
 // qualified reference, split at the first slash, so `openrouter/openai/gpt-5`
 // names the model `openai/gpt-5`. One without a slash is a route, and is looked
@@ -38,9 +40,11 @@ import (
 // The kinds differ in who owns them: an admin creates and points an alias or a
 // group, while a default category is created by Router from a registry in its
 // own code and pointed by reconciliation at whatever installed model can serve
-// it. So a default takes no target from anyone, and the one thing an admin
-// decides about a category is whether it is answered at all — which is the same
-// enable and disable the other two kinds take.
+// it. So a default is not created, renamed, deleted or given members here. What
+// an admin does decide is whether the category is answered at all — the same
+// enable and disable the other two kinds take — and, since the target routes
+// arrived, which model answers it: a pin stops reconciliation maintaining the
+// category, which is what makes the choice survive the next pass.
 
 // Route kinds, spelled as the wire spells them.
 const (
@@ -77,6 +81,11 @@ type modelRoute struct {
 	// something for it. Absent means the category is empty — a state to
 	// report rather than an error, since nothing installed can serve it.
 	Target *routeTarget `json:"target,omitempty"`
+	// TargetPinned says an administrator chose that target, so reconciliation
+	// leaves it alone. It is the difference between a category that happens to
+	// answer with this model today and one that will keep answering with it
+	// after something better is installed — or after this one is stopped.
+	TargetPinned bool `json:"target_pinned"`
 }
 
 // routeMember is one backend behind a name.
@@ -139,6 +148,19 @@ func (r *modelRoute) answersWith() string {
 	return fmt.Sprintf("%s and %d more", first, len(r.Members)-1)
 }
 
+// chosenBy says who decided what a category answers with. The two are not the
+// same promise: Router's own pick moves when what is installed changes, and an
+// admin's does not.
+func (r *modelRoute) chosenBy() string {
+	if !r.isDefault() {
+		return "-"
+	}
+	if r.TargetPinned {
+		return "admin"
+	}
+	return "Router"
+}
+
 // via names the hop between a default and its models, which is a route of its
 // own when an admin has built one. Empty for the direct case, where the
 // category points at a model and the member row already says which.
@@ -154,6 +176,19 @@ func (r *modelRoute) via() string {
 		return "a route that no longer exists (" + r.Target.RouteID + ")"
 	}
 	return ""
+}
+
+// routeMemberServedBy names what is behind a member, in the terms somebody
+// would go and act on: the application for a local model, the provider's title
+// or name for a cloud one.
+func routeMemberServedBy(m *routeMember) string {
+	if app := strDeref(m.OlaresAppName); app != "" {
+		return app
+	}
+	if title := strDeref(m.ProviderTitle); title != "" {
+		return title
+	}
+	return m.ProviderName
 }
 
 // label is how a member reads in one cell.
@@ -200,10 +235,11 @@ make them, point them and name them. A category is Router's — it comes from a
 registry in Router's own code and is pointed at an installed model by
 reconciliation, against what that model says it can do. So a category is not
 created, renamed, deleted, or given members here, and installing, enabling and
-disabling models is what moves it. What an admin does decide about a category
-is whether it is answered at all, which is the same enable and disable the
-other kinds take. A category may be named in full ("default-chat") or by the
-part that varies ("chat").
+disabling models is what moves it. Two things an admin does decide: whether the
+category is answered at all, which is the same enable and disable the other
+kinds take, and which of the models that qualify answers it — "route pin" makes
+that choice and stops reconciliation revisiting it. A category may be named in
+full ("default-chat") or by the part that varies ("chat").
 
 Subcommands:
   list                    every route, with what it answers with
@@ -215,6 +251,9 @@ Subcommands:
   delete <route>          remove it
   add <route> <model>     put a model behind a group
   remove <route> <model>  take one out
+  candidates <category>   the models a category would accept
+  pin <category> <model>  make one of them its answer
+  unpin <category>        hand the category back to Router
 
 Reading is open to everyone: the name is what a user types into their client.
 Every change is admin-only.
@@ -230,6 +269,9 @@ Every change is admin-only.
 	cmd.AddCommand(newRouteDeleteCommand(f))
 	cmd.AddCommand(newRouteAddCommand(f))
 	cmd.AddCommand(newRouteRemoveCommand(f))
+	cmd.AddCommand(newRouteCandidatesCommand(f))
+	cmd.AddCommand(newRoutePinCommand(f))
+	cmd.AddCommand(newRouteUnpinCommand(f))
 	return cmd
 }
 
@@ -383,8 +425,8 @@ func renderDefaults(w io.Writer, routes []modelRoute) error {
 			"<provider>/<model>; `olares-cli router model list` shows them.")
 		return err
 	}
-	var anyEmpty, anyOff bool
-	t := newTable(w, "CATEGORY", "MODE", "CALLABLE", "ANSWERS WITH", "VIA")
+	var anyEmpty, anyOff, anyPinned bool
+	t := newTable(w, "CATEGORY", "MODE", "CALLABLE", "ANSWERS WITH", "CHOSEN BY", "VIA")
 	for i := range routes {
 		r := &routes[i]
 		if !r.Enabled {
@@ -393,11 +435,21 @@ func renderDefaults(w io.Writer, routes []modelRoute) error {
 		if len(r.Members) == 0 {
 			anyEmpty = true
 		}
+		if r.TargetPinned {
+			anyPinned = true
+		}
 		t.row(r.Name, nonEmpty(r.Mode), boolStr(r.callable()),
-			clip(r.answersWith(), 44), nonEmpty(r.via()))
+			clip(r.answersWith(), 44), r.chosenBy(), nonEmpty(r.via()))
 	}
 	if err := t.flush(); err != nil {
 		return err
+	}
+	if anyPinned {
+		if _, err := fmt.Fprintln(w, "\nA category chosen by an admin is left alone by Router: it keeps "+
+			"pointing where it points after another model is installed, and after the one it names is "+
+			"stopped. `olares-cli router route unpin <category>` hands it back."); err != nil {
+			return err
+		}
 	}
 	if anyEmpty {
 		if _, err := fmt.Fprintln(w, "\nA category nothing serves is refused, not approximated. Install or "+
@@ -472,6 +524,9 @@ func renderRoute(w io.Writer, r *modelRoute) error {
 	t.row("MODE", nonEmpty(r.Mode))
 	t.row("SWITCHED ON", boolStr(r.Enabled))
 	t.row("CALLABLE NOW", boolStr(r.callable()))
+	if r.isDefault() {
+		t.row("CHOSEN BY", r.chosenBy())
+	}
 	if v := r.via(); v != "" {
 		t.row("VIA", v)
 	}
@@ -479,9 +534,26 @@ func renderRoute(w io.Writer, r *modelRoute) error {
 	if err := t.flush(); err != nil {
 		return err
 	}
+	if r.TargetPinned {
+		if _, err := fmt.Fprintf(w, "\nThis category was chosen by an admin, so Router leaves it alone: "+
+			"installing a model that would otherwise be picked does not move it, and neither does this "+
+			"one being stopped — the call is refused rather than answered by something else. "+
+			"`olares-cli router route unpin %s` hands it back.\n", r.Name); err != nil {
+			return err
+		}
+	}
 
 	if len(r.Members) == 0 {
 		if r.isDefault() {
+			if r.TargetPinned {
+				// The pinned model is gone from Router entirely, which a
+				// stopped application does not do. Nothing will refill this
+				// while the pin stands.
+				_, err := fmt.Fprintf(w, "\nThe model this category was pinned to no longer exists, so it "+
+					"answers nothing and the pin keeps it that way. `olares-cli router route unpin %s` "+
+					"lets Router pick again.\n", r.Name)
+				return err
+			}
 			_, err := fmt.Fprintf(w, "\nNothing installed answers %s requests, so this category is empty. "+
 				"Router points it at a model on its own as soon as one exists.\n", nonEmpty(r.Mode))
 			return err
@@ -501,14 +573,7 @@ func renderRoute(w io.Writer, r *modelRoute) error {
 	mt := newTable(w, "MODEL", "SERVED BY", "PRIORITY", "WEIGHT", "LIVE", "MODEL ID")
 	for i := range r.Members {
 		m := &r.Members[i]
-		served := strDeref(m.OlaresAppName)
-		if served == "" {
-			served = strDeref(m.ProviderTitle)
-		}
-		if served == "" {
-			served = m.ProviderName
-		}
-		mt.row(nonEmpty(m.QualifiedName), served,
+		mt.row(nonEmpty(m.QualifiedName), routeMemberServedBy(m),
 			fmt.Sprintf("%d", m.Priority), fmt.Sprintf("%d", m.Weight),
 			boolStr(m.Servable), m.ProviderModelID)
 	}

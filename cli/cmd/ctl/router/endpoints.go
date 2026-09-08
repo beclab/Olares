@@ -139,6 +139,18 @@ func epModelRouteMember(routeID, modelID string) string {
 	return epModelRoute(routeID) + "/members/" + url.PathEscape(modelID)
 }
 
+// What a default category answers with, when an administrator rather than
+// reconciliation decides it.
+//
+// A subresource rather than a field on the route itself, and the same on this
+// side as on Router's: pinning a category stops reconciliation maintaining it,
+// which is not something a rename-and-enable patch has anything to say about.
+// The candidates read is the other half — the categories select on capability,
+// so which models one would accept is a question only Router can answer.
+func epModelRouteTarget(routeID string) string { return epModelRoute(routeID) + "/target" }
+
+func epModelRouteCandidates(routeID string) string { return epModelRoute(routeID) + "/candidates" }
+
 // Spend: what was called, what it cost, the same rows as a download, and how
 // long the per-call rows are kept.
 const (
