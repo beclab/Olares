@@ -20,6 +20,14 @@ olares-cli router call history download <reading> --model <tts-model> --out agai
 olares-cli router call history delete <reading> --model <tts-model> --yes
 ```
 
+## Synthesis is spelled two ways, and an engine answers one of them
+
+`/v1/audio/speech` is the OpenAI spelling, which reads the voice from the body. `/v1/text-to-speech/<voice>` is the ElevenLabs spelling, which addresses it in the path. Router mounts both and forwards each unchanged; it translates between them only for the ElevenLabs vendor itself, so a model application answers whichever its image was built for. `call speak` and `speak --voices` try both, so the flags behave the same either way.
+
+The one case the CLI cannot bridge is `speak` with no `--voice` against a path-addressing engine: there is nothing to put in the path, and the refusal says so. **Name a voice from `speak --voices` rather than treating that 404 as a broken model.**
+
+`call clone` has no second spelling to try. An engine of that shape has no one-shot clone at all — it keeps the voice instead — so its 404 points at `voice add`, and speaking with the resulting id is the two-step version of the same thing.
+
 ## Two ways to make a voice, and they are different capabilities
 
 `voice add` needs a recording of somebody. `voice design` needs only a description. They are not two spellings of one thing: a model that clones may not design, and the categories they resolve are different for exactly that reason.

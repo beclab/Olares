@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -142,11 +143,26 @@ func runCallClone(ctx context.Context, f *cmdutil.Factory, refAudio string, opts
 	if err != nil {
 		return err
 	}
-	return streamAudioAnswer(ctx, dp, audioAnswer{
+	err = streamAudioAnswer(ctx, dp, audioAnswer{
 		Method: "POST", Route: audioRequestPath(epAudioSpeechClone, opts.Model, opts.Async),
 		Body: body, ContentType: contentType,
 		Model: opts.Model, Out: opts.Out, Async: opts.Async, Format: opts.Format,
 	})
+	// Unlike synthesis, there is no second path to try: an engine of the other
+	// shape has no one-shot clone at all. It keeps the voice instead, which is
+	// a different operation and a different verb, so the answer is to say so
+	// rather than to quietly create something durable nobody asked for.
+	if routeAbsent(err) {
+		var re *RouterError
+		if !errors.As(err, &re) {
+			return err
+		}
+		return fmt.Errorf("%w\nThis engine does not speak from a recording without keeping it. "+
+			"`olares-cli router call voice add <name> --sample %s --ref-text ...` makes the voice "+
+			"once, and `router call speak --voice <id>` then speaks with it as often as you like",
+			re, refAudio)
+	}
+	return err
 }
 
 // dialogueScript is what a script file holds. It is the engine's own body
