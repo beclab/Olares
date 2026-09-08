@@ -121,7 +121,7 @@ Examples:
 `,
 		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
-			return runVoiceList(c.Context(), f, model, apiKey, output)
+			return runVoiceList(c.Context(), f, callModel(model, categoryTTS), apiKey, output)
 		},
 	}
 	addVoiceModelFlag(cmd, &model, categoryTTS)
@@ -180,7 +180,7 @@ Example:
 `,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
-			return runVoiceGet(c.Context(), f, args[0], model, apiKey, output)
+			return runVoiceGet(c.Context(), f, args[0], callModel(model, categoryTTS), apiKey, output)
 		},
 	}
 	addVoiceModelFlag(cmd, &model, categoryTTS)
@@ -258,7 +258,8 @@ Example:
 			if strings.TrimSpace(sample) == "" {
 				return fmt.Errorf("--sample is required: a voice made from a recording needs the recording")
 			}
-			return runVoiceAdd(c.Context(), f, args[0], sample, description, refText, model, apiKey, output)
+			return runVoiceAdd(c.Context(), f, args[0], sample, description, refText,
+				callModel(model, categoryTTSClone), apiKey, output)
 		},
 	}
 	addVoiceModelFlag(cmd, &model, categoryTTSClone)
@@ -354,7 +355,8 @@ Examples:
 			if err != nil {
 				return err
 			}
-			return runVoiceDesign(c.Context(), f, description, text, save, outPath, model, apiKey, output)
+			return runVoiceDesign(c.Context(), f, description, text, save, outPath,
+				callModel(model, categoryTTSDesign), apiKey, output)
 		},
 	}
 	addVoiceModelFlag(cmd, &model, categoryTTSDesign)
@@ -467,7 +469,7 @@ Example:
 `,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
-			return runVoiceDelete(c.Context(), f, args[0], model, apiKey, yes)
+			return runVoiceDelete(c.Context(), f, args[0], callModel(model, categoryTTS), apiKey, yes)
 		},
 	}
 	addVoiceModelFlag(cmd, &model, categoryTTS)
@@ -526,7 +528,7 @@ Examples:
 			if len(args) == 1 {
 				id = args[0]
 			}
-			return runVoiceSettings(c.Context(), f, id, model, apiKey, output)
+			return runVoiceSettings(c.Context(), f, id, callModel(model, categoryTTS), apiKey, output)
 		},
 	}
 	addVoiceModelFlag(cmd, &model, categoryTTS)
@@ -561,6 +563,12 @@ func addVoiceModelFlag(cmd *cobra.Command, model *string, category string) {
 
 // voicePath puts the model on the query, which is where the audio passthrough
 // reads it. A body would not do: several of these routes have no body at all.
+//
+// The category is always sent rather than left for Router to imply. Its gate
+// table covers most of these suffixes and not all — `/v1/voices/settings/default`
+// is one it does not — and a request that arrives with nothing to resolve is
+// refused for a missing model field, which reads as a CLI that forgot rather
+// than as a route with no default.
 func voicePath(route, model string) string {
 	if m := strings.TrimSpace(model); m != "" {
 		q := url.Values{}
