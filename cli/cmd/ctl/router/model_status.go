@@ -24,7 +24,7 @@ import (
 // `router model status`   — GET  /healthz, /api/progress, /api/build-info
 // `router model progress` — GET  /api/progress
 // `router model retry`    — POST /api/retry
-// `router model restart`  — POST /console/api/engine/restart, or the
+// `router model restart`  — POST then GET /console/api/engine/restart, or the
 //                           application's own /api/engine/restart with --app
 //
 // Status and progress overlap on purpose. Status answers "can this model be
@@ -496,6 +496,7 @@ func newModelRestartCommand(f *cmdutil.Factory, how localAddressing) *cobra.Comm
 	var (
 		output string
 		yes    bool
+		noWait bool
 	)
 	target := newModelTarget(how)
 	cmd := &cobra.Command{
@@ -508,11 +509,19 @@ configured wrongly — wedged, leaking, answering slowly after a long session. T
 card is not read and not written; the process is told to come back on the
 document already on disk.
 
-A success means the relaunch was signalled. The engine then shuts down and
-loads the model again, and the model does not answer while it does, which for a
-large one is minutes. In-flight requests end. An application whose engine is a
-sidecar — OCR, audio, embedding — has no process to signal, and the call
-succeeds having changed nothing.
+Signalling the relaunch and the relaunch happening are separated by more than
+any one request can wait out: the wrapper notices its restart file on an
+interval and then lets the engine drain, so the engine can still be answering
+seconds after a successful call. The application keeps watching after that, and
+this waits up to a minute for what it saw. There are three answers and only one
+of them is the relaunch working — an application whose chart predates the
+supervise loop writes the request and never acts on it, which is worth being
+told rather than discovering later. --no-wait hands back the signal instead.
+
+The engine then shuts down and loads the model again, and the model does not
+answer while it does, which for a large one is minutes. In-flight requests end.
+An application whose engine is a sidecar — OCR, audio, embedding — has no
+process to signal, and the call succeeds having changed nothing.
 
 Naming the model goes through Router, which is the road to prefer. --app goes
 straight at the application, for when Router cannot resolve the model or cannot
@@ -521,6 +530,7 @@ be reached.
 Examples:
   olares-cli router model restart Olares/qwen3-4b
   olares-cli router model restart Olares/qwen3-4b -y
+  olares-cli router model restart Olares/qwen3-4b --no-wait
   olares-cli router model restart --app llamacppqwen3627bggufv3
 `,
 		RunE: func(c *cobra.Command, args []string) error {
@@ -533,18 +543,151 @@ Examples:
 				return err
 			}
 			if target.direct(args) {
-				return runConsoleRestart(ctx, f, target, args, yes, format)
+				return runConsoleRestart(ctx, f, target, args, yes, !noWait, format)
 			}
-			return runRouterRestart(ctx, f, target.model(args), yes, format)
+			return runRouterRestart(ctx, f, target.model(args), yes, !noWait, format)
 		},
 	}
 	target.bind(cmd)
 	addConfirmFlag(cmd, &yes)
+	cmd.Flags().BoolVar(&noWait, "no-wait", false,
+		"hand back the signal without waiting for the application's verdict on it")
 	addOutputFlag(cmd, &output)
 	return cmd
 }
 
-func runRouterRestart(ctx context.Context, f *cmdutil.Factory, model string, yes bool, format Format) error {
+// engineRestartStatus is what the application made of its own relaunch, which
+// is not something the request that asked for it can report.
+//
+// The wrapper polls its restart file on an interval and then lets the engine
+// drain, so the engine can still be answering seventeen seconds after the
+// signal — long past any sensible deadline on the POST. The application keeps
+// watching after that request is over, and this is where it says what it saw.
+type engineRestartStatus struct {
+	State          string     `json:"state"`
+	Supervision    string     `json:"supervision"`
+	Generation     string     `json:"generation,omitempty"`
+	RequestedAt    *time.Time `json:"requested_at,omitempty"`
+	ObservedDownAt *time.Time `json:"observed_down_at,omitempty"`
+	ObservedBackAt *time.Time `json:"observed_back_at,omitempty"`
+}
+
+// The four states an observation settles into, and the two it has not.
+const (
+	restartStateIdle         = "idle"
+	restartStateWatching     = "watching"
+	restartStateConfirmed    = "confirmed"
+	restartStateNoSupervisor = "no-supervisor"
+	restartStateUnverified   = "unverified"
+)
+
+// settled reports whether the application has finished looking. A watching app
+// has not, so a caller waiting for the outcome keeps waiting.
+func (s *engineRestartStatus) settled() bool {
+	switch s.State {
+	case "", restartStateIdle, restartStateWatching:
+		return false
+	default:
+		return true
+	}
+}
+
+// How long to wait for that verdict, and how often to ask.
+//
+// Sixty seconds is the application's own observation window, so waiting longer
+// asks a question nothing is still answering; three seconds is what the gateway
+// polls the same application's phase at while a relaunch is in flight, and
+// asking faster than the party being asked learns anything buys nothing.
+const (
+	engineRestartWindow = 60 * time.Second
+	engineRestartPoll   = 3 * time.Second
+)
+
+// restartOutcome is the whole answer: what the signal did, and what the
+// application then saw. -o json prints this, so a script gets both halves.
+type restartOutcome struct {
+	Restarted   bool                 `json:"restarted"`
+	Supervision string               `json:"restart_supervision,omitempty"`
+	Status      *engineRestartStatus `json:"status,omitempty"`
+}
+
+// awaitEngineRestart polls the outcome route until the application has made up
+// its mind or the window closes.
+//
+// A read that fails is not fatal and not retried away silently: the relaunch
+// was signalled either way, and a caller who cannot be told the outcome is
+// better off hearing that than watching the command hang. Older applications
+// have no such route, and the 404 lands here as exactly that case.
+func awaitEngineRestart(ctx context.Context, read func(context.Context) (*engineRestartStatus, error)) *engineRestartStatus {
+	deadline := time.Now().Add(engineRestartWindow)
+	var last *engineRestartStatus
+	for {
+		status, err := read(ctx)
+		if err != nil {
+			return last
+		}
+		last = status
+		if status.settled() || time.Now().After(deadline) {
+			return status
+		}
+		select {
+		case <-ctx.Done():
+			return status
+		case <-time.After(engineRestartPoll):
+		}
+	}
+}
+
+// reportEngineRestart says what the application saw, in the terms the reader
+// has to act on. The three settled states are three different situations and
+// only one of them is the relaunch working, so a boolean here would hide the
+// two cases somebody has to do something about.
+//
+// app is empty on the road through Router, which knows the model reference and
+// not the application behind it — for a local model the provider half of that
+// reference is `Olares` for every one of them. The one message that needs the
+// application says how to find it rather than naming the wrong thing.
+func reportEngineRestart(w io.Writer, status *engineRestartStatus, model, app string) error {
+	if status == nil {
+		_, err := fmt.Fprintf(w, "relaunching. This Router cannot report the outcome, so "+
+			"`olares-cli router model status %s` is what says when the model answers again.\n", model)
+		return err
+	}
+	switch status.State {
+	case restartStateConfirmed:
+		if status.ObservedBackAt != nil {
+			_, err := fmt.Fprintf(w, "relaunched. The engine went away and is answering again; "+
+				"`olares-cli router model status %s` confirms what it is serving.\n", model)
+			return err
+		}
+		_, err := fmt.Fprintf(w, "relaunched. The engine went away and is loading the weights, which for "+
+			"a large model is minutes — `olares-cli router model status %s` reports how far along it is.\n", model)
+		return err
+	case restartStateNoSupervisor:
+		route := "`olares-cli market restart " + app + "`"
+		if app == "" {
+			route = "`olares-cli market restart <app>`, and `olares-cli router model get " + model +
+				"` names the application"
+		}
+		_, err := fmt.Fprintf(w, "the request was written and nothing acted on it: the engine answered "+
+			"throughout, so no supervisor in this application is watching its restart file. That is the "+
+			"application's own packaging rather than a fault here, and no retry changes it. Restarting the "+
+			"application itself does relaunch the engine: %s.\n", route)
+		return err
+	case restartStateUnverified:
+		_, err := fmt.Fprintf(w, "the request was written and the application could not tell whether it "+
+			"took — most often its engine was already down before the request and had not come back. "+
+			"`olares-cli router model status %s` says whether the model answers now.\n", model)
+		return err
+	default:
+		_, err := fmt.Fprintf(w, "relaunching. The application is still watching its engine after %s, so "+
+			"the outcome is not in yet — `olares-cli router model status %s` reports where it got to.\n",
+			engineRestartWindow, model)
+		return err
+	}
+}
+
+func runRouterRestart(ctx context.Context, f *cmdutil.Factory, model string, yes, wait bool, format Format) error {
 	pc, err := prepare(ctx, f)
 	if err != nil {
 		return err
@@ -555,26 +698,40 @@ func runRouterRestart(ctx context.Context, f *cmdutil.Factory, model string, yes
 		return err
 	}
 	var res struct {
-		Restarted bool `json:"restarted"`
+		Restarted   bool   `json:"restarted"`
+		Supervision string `json:"restart_supervision"`
 	}
 	if err := pc.router.doJSON(ctx, "POST", epForModel(epEngineRestart, model), nil, &res); err != nil {
 		return specErr(err, model)
 	}
+	out := restartOutcome{Restarted: res.Restarted, Supervision: res.Supervision}
+	if res.Restarted && wait {
+		out.Status = awaitEngineRestart(ctx, func(c context.Context) (*engineRestartStatus, error) {
+			var status engineRestartStatus
+			if err := pc.router.doJSON(c, "GET", epForModel(epEngineRestart, model), nil, &status); err != nil {
+				return nil, err
+			}
+			return &status, nil
+		})
+	}
 	if format == FormatJSON {
-		return printJSON(os.Stdout, res)
+		return printJSON(os.Stdout, out)
 	}
 	if !res.Restarted {
 		_, werr := fmt.Println("the application accepted the request and reports no relaunch, " +
 			"which is what an application with a sidecar engine does.")
 		return werr
 	}
-	_, werr := fmt.Printf("relaunching. The model answers again once it has loaded; "+
-		"`olares-cli router model status %s` reports how far along that is.\n", model)
-	return werr
+	if !wait {
+		_, werr := fmt.Printf("relaunching. The model answers again once it has loaded; "+
+			"`olares-cli router model status %s` reports how far along that is.\n", model)
+		return werr
+	}
+	return reportEngineRestart(os.Stdout, out.Status, model, "")
 }
 
 func runConsoleRestart(ctx context.Context, f *cmdutil.Factory, target *modelTarget, args []string,
-	yes bool, format Format) error {
+	yes, wait bool, format Format) error {
 	li, err := target.open(ctx, f, args)
 	if err != nil {
 		return err
@@ -591,12 +748,28 @@ func runConsoleRestart(ctx context.Context, f *cmdutil.Factory, target *modelTar
 	if err := li.client.doJSON(ctx, "POST", epLocalEngineRestart, nil, &res); err != nil {
 		return consoleRestartErr(ctx, li, err)
 	}
-	if format == FormatJSON {
-		return printJSON(os.Stdout, res)
+	out := restartOutcome{Restarted: true}
+	if wait {
+		out.Status = awaitEngineRestart(ctx, func(c context.Context) (*engineRestartStatus, error) {
+			var status engineRestartStatus
+			if err := li.client.doJSON(c, "GET", epLocalEngineRestart, nil, &status); err != nil {
+				return nil, err
+			}
+			return &status, nil
+		})
 	}
-	_, err = fmt.Printf("%s: the engine was told to relaunch. It is unavailable until the weights "+
-		"are loaded again — `olares-cli router model status --app %s` says when.\n", li.AppName, li.AppName)
-	return err
+	if format == FormatJSON {
+		return printJSON(os.Stdout, out)
+	}
+	if !wait {
+		_, err = fmt.Printf("%s: the engine was told to relaunch. It is unavailable until the weights "+
+			"are loaded again — `olares-cli router model status --app %s` says when.\n", li.AppName, li.AppName)
+		return err
+	}
+	if _, err := fmt.Printf("%s: ", li.AppName); err != nil {
+		return err
+	}
+	return reportEngineRestart(os.Stdout, out.Status, "--app "+li.AppName, li.AppName)
 }
 
 func consoleRestartErr(ctx context.Context, li *llmInit, err error) error {
