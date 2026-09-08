@@ -28,6 +28,12 @@ olares-cli market upload ./mychart.tgz -q              # exit code only
 - **Exit code is the OR of per-file results** — any single failure flips the overall exit non-zero.
 - Multipart upload through a dedicated `uploadClient` with no timeout (chart pushes can be slow over large WAN links). The same `refreshingTransport` is shared with the JSON client, so a token refresh on one is immediately visible on the other.
 
+### What is finished when upload returns
+
+The response covers rendering and the catalog write — once `upload` succeeds the chart is installable. **Image analysis is the one part that continues in the background**, filling in each image's size and platform on the catalog entry.
+
+Treat that field as decoration, not as a gate. An image the registry cannot answer for leaves the placeholder sitting in `analyzing` past the backend's own refine deadline, and a failed refine pushes no notification, so polling for a terminal image status can wait forever on a chart that is already perfectly usable. If you need to block on something after upload, block on the install.
+
 ### After upload
 
 Match the chart with an install / delete:
@@ -63,14 +69,14 @@ olares-cli market download mychart -o json             # {app, source, version, 
 ## `delete`
 
 ```bash
-olares-cli market delete mychart                       # every uploaded version
-olares-cli market delete mychart --version 1.0.0       # one version
+olares-cli market delete mychart                       # remove the app and every uploaded version
+olares-cli market delete mychart --version 1.0.0       # same result: all versions go
 olares-cli market delete mychart -o json
 olares-cli market delete mychart -q
 ```
 
 - **Does NOT uninstall the app if it is running.** Use `market uninstall <app>` first, then `market delete` to also remove the chart from local sources.
-- `--version` omitted → every uploaded version of the chart in the `upload` bucket is removed.
+- **`--version` does not narrow the delete.** The backend takes the app name and drops every version and every stored artifact; the version only names the request. There is no single-version delete today, so read this verb as "unpublish the app", and expect `market download mychart --version <any>` to stop working for all versions afterwards, not just the one named.
 
 > The "delete the chart" and "uninstall the running app" are deliberately separate verbs. A chart can be uploaded without ever being installed; an installed app can keep running after the source chart is deleted from the bucket.
 
@@ -82,7 +88,7 @@ olares-cli market upload ./mychart-1.0.0.tgz                       # land it in 
 olares-cli market install mychart -s upload --version 1.0.0 --watch
 # ... use the app ...
 olares-cli market uninstall mychart --watch                        # tear down the deployment
-olares-cli market delete mychart --version 1.0.0                   # remove the chart from local sources
+olares-cli market delete mychart                                   # unpublish the chart (all versions)
 ```
 
 ```bash
@@ -110,7 +116,9 @@ olares-cli market list -s upload                                   # confirm
 ## Safety constraints
 
 - **`delete` is destructive** — it removes the chart from the bucket. If the app is still running, the deployment continues to work but you can no longer reinstall from the local bucket.
-- **`upload` overwrites by `(name, version)`** — uploading `mychart-1.0.0.tgz` twice replaces the previous bytes. The uploaded version must be **>= the stored** version (equal overwrites; a *lower* version is rejected). To bump, change the version inside `Chart.yaml` and re-upload.
+- **A published version's bytes are immutable.** `upload` requires a **strictly higher** version than the stored one; re-uploading a version that already exists is refused with HTTP 409 `version <v> already exists for app <name> in source upload; bump the version to publish changes`, and a lower version is refused too. To ship a change, bump the version inside `Chart.yaml` and upload that.
+
+  Most of what is confusing about versions here follows from that one rule. A same-version `upgrade` is legal, but since the stored bytes cannot have changed it re-applies the *same* chart — it is a retry, not a way to deploy an edit. Recovering an `upgradeFailed` app with a *fixed* chart therefore needs a new version, not a re-upload of the old one. And `delete` frees the version only by removing the entire app (see above), so it is not a way to republish one release.
 
 ## Common errors
 
