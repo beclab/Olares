@@ -177,10 +177,15 @@ func callErr(err error) error {
 			"For a person, `olares-cli settings users get <name>` shows their account; for an "+
 			"application, `olares-cli market list --mine` says whether it is still here", err)
 	case re.Code == "no_default_model":
-		return fmt.Errorf("%w\nNothing installed can serve that category. `olares-cli router route list --kind default` "+
-			"says where each one stands, and it fills once a model of that kind exists — a category is "+
-			"maintained against what is configured rather than pointed at by hand. --model names one "+
-			"directly in the meantime", err)
+		// A category is normally reconciled rather than chosen, so the fix is
+		// usually to install something rather than to point it anywhere. The
+		// exception is worth naming: `route pin` is a standing choice, and a
+		// category pinned to a model that was deleted refuses with this same
+		// code while `route list` shows a model beside it.
+		return fmt.Errorf("%w\nNothing installed can serve that category. `olares-cli router route list "+
+			"--kind default` says where each one stands, and it fills once a model of that kind exists. "+
+			"On a verb that takes --model, naming one goes directly in the meantime; if the category was "+
+			"pinned, `router route unpin <category>` hands it back to Router", err)
 	case re.Code == "model_route_disabled":
 		return fmt.Errorf("%w\nThe name resolves, but the route serving it is switched off. "+
 			"`olares-cli router route get <name>` shows it, and `route enable <name>` puts it back", err)

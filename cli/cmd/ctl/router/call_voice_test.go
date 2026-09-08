@@ -99,6 +99,29 @@ func TestHistoryRefusesToGuessAModel(t *testing.T) {
 	}
 }
 
+// Naming the category in the help text is not the same as sending it. Router's
+// audio gate table gives most of these suffixes a default and does not give one
+// to `/v1/voices/settings/default`, so a verb that leaves the model out because
+// "Router knows" is refused for a missing model on exactly one of its routes.
+// Sending the category always makes the two the same request.
+func TestAVerbSendsTheCategoryItsHelpPromises(t *testing.T) {
+	for _, tc := range []struct{ route, category string }{
+		{epVoices, categoryTTS},
+		{epVoiceSettings, categoryTTS},
+		{epVoicesAdd, categoryTTSClone},
+		{epTextToVoiceDesign, categoryTTSDesign},
+	} {
+		got := voicePath(tc.route, callModel("", tc.category))
+		if !strings.Contains(got, "model="+tc.category) {
+			t.Errorf("%s went out without %s: %q", tc.route, tc.category, got)
+		}
+	}
+	// A named model still wins: the category is the fallback, not an override.
+	if got := voicePath(epVoices, callModel("Olares/x", categoryTTS)); strings.Contains(got, categoryTTS) {
+		t.Errorf("the category displaced the model the caller named: %q", got)
+	}
+}
+
 // The model travels on the query. Several of these routes carry no body at
 // all, so a body is not a place the reference could go.
 func TestTheModelTravelsOnTheQueryForEveryVoiceRoute(t *testing.T) {
