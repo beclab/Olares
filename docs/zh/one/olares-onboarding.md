@@ -32,7 +32,7 @@ Lares 是推荐入口，但不是使用 Olares CLI Agent Skills 的唯一方式�
 ## 前提条件
 
 - **系统**：Olares OS v1.12.7 或更高版本。
-- **AI 组件**：Lares、Router 和可用模型。模型可以来自本地模型应用，或 Router 中配置的提供商。
+- **AI 组件**：Router、Lares 和模型。模型可以来自本地模型应用，或 Router 中配置的提供商。
 - **用户权限**：管理员权限，用于从 Market 安装共享应用。
 
 ## 步骤 1：准备环境

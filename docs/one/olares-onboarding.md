@@ -28,7 +28,7 @@ By the end of this tutorial, you will learn how to:
 ## Prerequisites
 
 - **System**: Olares OS v1.12.7 or later.
-- **AI components**: Lares, Router, and a usable model. The model can come from a local model app or from a provider configured in Router.
+- **AI components**: Router, Lares, and a model. The model can come from a local model app or from a provider configured in Router.
 - **User permissions**: Admin privileges to install shared apps from Market.
 
 ## Step 1: Prepare your environment
@@ -38,7 +38,7 @@ Preparation depends on your starting point. Find yours in the following table.
 | Starting point | <nobr>What's preinstalled</nobr> | Next step |
 | --- | --- | --- |
 | Olares One v1.12.7 factory image<br>(new device) | <ul><li>Lares</li><li>Router</li><li>Qwen3.8-27B</li></ul> | Open Lares and start. |
-| <ul><li>Self-hosted Olares v1.12.7<br>(fresh install or upgrade)</li> <li><nobr>Olares One upgraded to v1.12.7</nobr></li></ul> | None. | Install Router and Lares, then install a model app or add a provider in Router. |
+| <ul><li>Self-hosted Olares v1.12.7<br>(fresh install or upgrade)</li> <li><nobr>Olares One upgraded to v1.12.7</nobr></li></ul> | None | Install Router and Lares, then install a model app or add a provider in Router. |
 
 ## Step 2: Start your first Lares conversation
 
