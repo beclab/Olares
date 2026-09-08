@@ -276,6 +276,33 @@ func epGeneration(id string) string { return epGenerations + "/" + url.PathEscap
 
 func epGenerationContent(id string) string { return epGeneration(id) + "/content" }
 
+// Music. The same table and the same record as the unified route above, on a
+// surface of its own, because a track is asked for in a shape the canonical
+// body has no room for: a flat request with a title and words, and two things
+// that happen before any audio is generated at all.
+//
+// A format pass runs a model's own language model over a caption and lyrics and
+// hands back what it would actually sing, so the words can be confirmed before
+// the minutes of compute; a draft writes both from one sentence. Neither is a
+// generation to download, and both are asynchronous, which is why they are
+// resources rather than fields.
+//
+// Cancel is here and nowhere else in this tree: a track is the one family whose
+// upstream can be stopped mid-run and settled at what it used.
+const (
+	epMusicGenerations = dataPlaneAPI + "/music/generations"
+	epMusicFormats     = dataPlaneAPI + "/music/formats"
+	epMusicDrafts      = dataPlaneAPI + "/music/drafts"
+)
+
+func epMusicGeneration(id string) string { return epMusicGenerations + "/" + url.PathEscape(id) }
+
+func epMusicGenerationContent(id string) string { return epMusicGeneration(id) + "/content" }
+
+func epMusicFormat(id string) string { return epMusicFormats + "/" + url.PathEscape(id) }
+
+func epMusicDraft(id string) string { return epMusicDrafts + "/" + url.PathEscape(id) }
+
 // Translate mirrors the upstream's own service-root names under /v1. These four
 // carry no model field: each resolves the translate default per call, so there
 // is nothing for a caller to name and nothing to get wrong.
