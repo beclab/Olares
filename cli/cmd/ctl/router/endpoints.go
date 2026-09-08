@@ -286,10 +286,17 @@ const (
 	epVoiceSettings     = epVoices + "/settings/default"
 	epTextToVoice       = dataPlaneAPI + "/text-to-voice"
 	epTextToVoiceDesign = epTextToVoice + "/design"
+	epTextToSpeech      = dataPlaneAPI + "/text-to-speech"
 	epHistory           = dataPlaneAPI + "/history"
 )
 
 func epVoice(id string) string { return epVoices + "/" + url.PathEscape(id) }
+
+// epSpeakAs is /v1/audio/speech in the other dialect, where the voice is the
+// address rather than a field. Router forwards both without translating
+// between them for a locally installed engine, so which one answers is a
+// property of the image the model application was built from.
+func epSpeakAs(voice string) string { return epTextToSpeech + "/" + url.PathEscape(voice) }
 
 func epVoiceOwnSettings(id string) string { return epVoice(id) + "/settings" }
 
