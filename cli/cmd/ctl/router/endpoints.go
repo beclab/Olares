@@ -215,13 +215,14 @@ const (
 // Audio tasks. `--async` on any audio verb answers with a receipt instead of a
 // result, and these read it.
 //
-// The engine's own canonical path is /v1/tasks, with /v1/audio/tasks kept as an
-// alias — but /v1/tasks is not a route Router mounts, and the audio prefix is
-// what reaches the catch-all. So the alias is the only one addressable through
-// the gateway, which is why Router rewrites a receipt's `poll` and `result_url`
-// onto it before handing the document back. These constants build the same paths
-// from the id, which is what a caller that kept the id rather than the document
-// has to work from.
+// The engine's own canonical path is /v1/tasks, and Router mounts both: the
+// canonical prefix arrived with the ElevenLabs-shaped surface below, and
+// /v1/audio/tasks remains the alias every existing receipt names. Router
+// rewrites a receipt's `poll` and `result_url` onto the alias before handing
+// the document back, so this tree stays on it — one spelling for a task
+// submitted through either route. These constants build the same paths from the
+// id, which is what a caller that kept the id rather than the document has to
+// work from.
 const epAudioTasks = dataPlaneAPI + "/audio/tasks"
 
 func epAudioTask(id string) string { return epAudioTasks + "/" + url.PathEscape(id) }
