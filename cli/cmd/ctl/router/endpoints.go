@@ -185,6 +185,9 @@ func epQuota(id int64) string { return epQuotas + "/" + strconv.FormatInt(id, 10
 // afterwards. OCR only ever answers with a receipt.
 const (
 	epChatCompletions = dataPlaneAPI + "/chat/completions"
+	// One path, two protocols: POST is the whole answer, and a GET carrying an
+	// Upgrade is the same call with the answer arriving as it is written. A
+	// GET without the upgrade is refused with 426 rather than answered.
 	epResponses       = dataPlaneAPI + "/responses"
 	epEmbeddings      = dataPlaneAPI + "/embeddings"
 	epRerank          = dataPlaneAPI + "/rerank"
@@ -192,6 +195,15 @@ const (
 	epSearch          = dataPlaneAPI + "/search"
 	epScrape          = dataPlaneAPI + "/scrape"
 )
+
+// The Anthropic-shaped ingress. Router mounts it beside the OpenAI one so a
+// client built for Claude reaches the same models over the same key, and both
+// shapes share one dispatch and one spend path.
+//
+// Counting is the half worth having a verb for, and it is mounted apart from
+// everything else: it sits above the quota line and records no spend, because
+// it asks how large a turn would be rather than sending one.
+const epMessagesCountTokens = dataPlaneAPI + "/messages/count_tokens"
 
 // Audio is one catch-all upstream, so every suffix here reaches the sibling
 // audio engine unchanged. Which suffixes exist depends on the engine behind the
@@ -333,14 +345,20 @@ func epMusicFormat(id string) string { return epMusicFormats + "/" + url.PathEsc
 
 func epMusicDraft(id string) string { return epMusicDrafts + "/" + url.PathEscape(id) }
 
-// Translate mirrors the upstream's own service-root names under /v1. These four
+// Translate mirrors the upstream's own service-root names under /v1. These five
 // carry no model field: each resolves the translate default per call, so there
 // is nothing for a caller to name and nothing to get wrong.
+//
+// The transcript route is the one that is not MTran-compatible. The other four
+// translate a text at a time; this one takes a stretch of dialogue, lets the
+// model read the turns around each line, and answers one result per turn under
+// the ids it was given.
 const (
-	epTranslate      = dataPlaneAPI + "/translate"
-	epTranslateBatch = epTranslate + "/batch"
-	epLanguages      = dataPlaneAPI + "/languages"
-	epDetect         = dataPlaneAPI + "/detect"
+	epTranslate           = dataPlaneAPI + "/translate"
+	epTranslateBatch      = epTranslate + "/batch"
+	epTranslateTranscript = epTranslate + "/transcript"
+	epLanguages           = dataPlaneAPI + "/languages"
+	epDetect              = dataPlaneAPI + "/detect"
 )
 
 // OCR. The prefix is /v1/ocr rather than the upstream's bare /v1 because the

@@ -166,7 +166,7 @@ func runAudioStream(ctx context.Context, f *cmdutil.Factory, opts audioStreamOpt
 	if err != nil {
 		return err
 	}
-	conn, err := dialAudioStream(ctx, pc, token, opts)
+	conn, err := dialRouterSocket(ctx, pc, token, opts.Route, opts.Model, opts.APIKey)
 	if err != nil {
 		return err
 	}
@@ -214,13 +214,17 @@ func openPCMSource(path string) (io.Reader, func(), error) {
 	return os.Stdin, func() {}, nil
 }
 
-// dialAudioStream opens the socket to Router. The handshake carries the
+// dialRouterSocket opens a socket to Router. The handshake carries the
 // profile's session in the same header the HTTP client's transport uses, since
 // a WebSocket dial does not go through that transport, plus the data-plane key
 // when one was named.
-func dialAudioStream(ctx context.Context, pc *preparedClient, token string,
-	opts audioStreamOptions) (*websocket.Conn, error) {
-	target, err := audioStreamURL(pc.found.BaseURL, opts)
+//
+// Every WebSocket route Router mounts is reached this way — the streaming
+// audio ones and the Responses one — because the difference between them is
+// what travels over the socket, not how it is opened.
+func dialRouterSocket(ctx context.Context, pc *preparedClient, token, route, model,
+	apiKey string) (*websocket.Conn, error) {
+	target, err := routerSocketURL(pc.found.BaseURL, route, model)
 	if err != nil {
 		return nil, err
 	}
@@ -232,18 +236,18 @@ func dialAudioStream(ctx context.Context, pc *preparedClient, token string,
 	h.Set("X-Authorization", token)
 	h.Set("X-Unauth-Error", "Non-Redirect")
 	h.Set("Cookie", "auth_token="+token)
-	if named := resolveDataPlaneAuth(opts.APIKey); named.Mode == authKey {
+	if named := resolveDataPlaneAuth(apiKey); named.Mode == authKey {
 		h.Set("Authorization", "Bearer "+named.Key)
 	}
 	conn, resp, err := d.DialContext(ctx, target, h)
 	if err != nil {
-		return nil, audioStreamHandshakeError(err, resp, opts.Route)
+		return nil, socketHandshakeError(err, resp, route)
 	}
 	return conn, nil
 }
 
-func audioStreamURL(baseURL string, opts audioStreamOptions) (string, error) {
-	u, err := url.Parse(strings.TrimRight(baseURL, "/") + opts.Route)
+func routerSocketURL(baseURL, route, model string) (string, error) {
+	u, err := url.Parse(strings.TrimRight(baseURL, "/") + route)
 	if err != nil {
 		return "", fmt.Errorf("build the stream URL: %w", err)
 	}
@@ -254,17 +258,17 @@ func audioStreamURL(baseURL string, opts audioStreamOptions) (string, error) {
 		u.Scheme = "ws"
 	}
 	q := u.Query()
-	if m := strings.TrimSpace(opts.Model); m != "" {
+	if m := strings.TrimSpace(model); m != "" {
 		q.Set("model", m)
 	}
 	u.RawQuery = q.Encode()
 	return u.String(), nil
 }
 
-// audioStreamHandshakeError turns a refused upgrade into something actionable.
+// socketHandshakeError turns a refused upgrade into something actionable.
 // A failed handshake is an HTTP response, so Router's own envelope is in it and
 // callErr can say what every other verb would have said.
-func audioStreamHandshakeError(err error, resp *http.Response, route string) error {
+func socketHandshakeError(err error, resp *http.Response, route string) error {
 	if resp == nil {
 		return fmt.Errorf("open %s: %w", route, err)
 	}
