@@ -54,6 +54,9 @@ olares-cli router call translate "hello" --to zh
 olares-cli router call image "a red bicycle" --out bike.png
 olares-cli router call video "a bicycle rolling downhill" --out clip.mp4
 olares-cli router call music "a slow waltz" --model FlowStudio/<workflow> --out waltz.mp3
+olares-cli router call music format "a slow waltz" --model FlowStudio/<workflow> --lyrics "…" --vocal-language en
+olares-cli router call music draft "a defiant closing credits song" --model FlowStudio/<workflow>
+olares-cli router call music cancel <generation-id>
 olares-cli router call 3d --model FlowStudio/<workflow> --image lantern.png --out lantern.glb
 olares-cli router call transcribe meeting.m4a --language en
 olares-cli router call speak "hello" --out hello.mp3
@@ -78,7 +81,9 @@ olares-cli router call ocr invoice.pdf --pages 1-3
 
 **Creative work.** `image`, `video`, `music` and `3d` are the four verbs whose work outlives the request. All four submit, wait, and write the result to `--out`; `--no-wait` prints the generation id instead, `--id <id>` collects that generation later, and `--output-id` picks one when a generation produced several. The wait defaults follow how long the work takes — five minutes for an image, twenty for a video, ten for a track, fifteen for a mesh — and a `--timeout` only stops the waiting: the provider carries on and the id stays collectable. Router holds the bytes itself, so a result does not depend on a vendor link staying alive.
 
-One contract, four shapes. Each verb offers only the fields its own family can express — an image has no `--fps`, a mesh has no `--lyrics` — so a field that could only be refused is not a flag there at all; all four share `--negative`, `--seed` and `--provider-option k=v`, the last carrying a vendor knob this contract has no field for. `--size` and `--aspect-ratio` describe the same shape, so giving both is refused before the request. `3d` is the one family that needs no words at all: most 3D workflows work from a picture, so `--image lantern.png` is a complete request, and a local file becomes a data URL while a data URL or a link is sent as written. Underneath, image and video ride the OpenAI-shaped routes they shipped with and the other two ride Router's unified one, which is not a distinction to reason about — the fields mean the same thing on both. It shows in one place only: an image provider that keeps no generations to poll answers inline, and `image` handles that as well as the polled kind, which is why it was not moved onto the unified route.
+One contract, four shapes. Each verb offers only the fields its own family can express — an image has no `--fps`, a mesh has no `--lyrics` — so a field that could only be refused is not a flag there at all; all four share `--negative`, `--seed` and `--provider-option k=v`, the last carrying a vendor knob this contract has no field for. `--size` and `--aspect-ratio` describe the same shape, so giving both is refused before the request. `3d` is the one family that needs no words at all: most 3D workflows work from a picture, so `--image lantern.png` is a complete request, and a local file becomes a data URL while a data URL or a link is sent as written. Underneath, image and video ride the OpenAI-shaped routes they shipped with, `3d` rides Router's unified one, and music has a surface of its own; the fields mean the same thing on all three. It shows in one place only: an image provider that keeps no generations to poll answers inline, and `image` handles that as well as the polled kind, which is why it was not moved onto the unified route.
+
+**Music has three verbs the other families do not.** A music model does not sing the caption and lyrics it is given: a language model in front of the audio one rewrites them first, and until these routes existed the only way to see that rewrite was to wait for the track and listen. `music format` runs that pass alone and reports both versions — what was sent, and what would be performed — with warnings naming what it had to change. `music draft` runs it from one sentence and writes the caption, the lyrics and a tempo. Both are text-speed and priced as text; neither produces audio. `music cancel <id>` stops a running track and settles what it used, which is a bound on the cost rather than a refund — music is the only family whose upstream can be stopped mid-run. `music` itself also takes `--title`, and `--repaint` with `--audio` regenerates part of a recording you already have. A prompt whose first word is `format`, `draft` or `cancel` needs quoting.
 
 **Audio.** The current audio-engine applications each serve one declared capability set; legacy audio applications are outside this contract. A model that transcribes does not necessarily speak, and one that aligns cannot transcribe. Every verb therefore resolves its own default category. A bare 404 usually means that category reached an engine which does not mount the requested capability. `speaker-embed` is the speaker-vector command; do not substitute `call embed`. `speak --sound-fx` resolves `default-sound-fx`; `--model` is optional. `speak`, `clone`, `dialogue` and `enhance` refuse to write audio to a terminal, so pass `--out` or redirect. `speak --voices` lists preset voices. `align` takes a transcript from `--text` or standard input. `dialogue` reads a JSON script and turns local `ref_audio` paths into data URLs.
 
@@ -100,16 +105,11 @@ ffprobe -v error -show_entries format=duration:stream=codec_name,channels,sample
 ffmpeg -i meeting.m4a -vn -ar 16000 -ac 1 -c:a flac meeting-16k-mono.flac
 ```
 
-Submit asynchronously and preserve both the task id and the exact model reference:
+Submit asynchronously and preserve both the task id and the exact model reference. `task get` collects a text result; `task result` collects a binary one:
 
 ```
 olares-cli router call transcribe meeting-16k-mono.flac --model default-stt --async
 olares-cli router call task get <task-id> --model default-stt --wait -o json > transcript.json
-```
-
-Use `task result` to collect a binary audio result:
-
-```
 olares-cli router call speak "read this" --model default-tts --async
 olares-cli router call task result <task-id> --model default-tts --out speech.wav
 ```
