@@ -100,6 +100,10 @@ func runInstall(opts *MarketOptions, appName string) error {
 
 	ctx := context.Background()
 
+	if err := preflightInstall(ctx, opts, mc, appName); err != nil {
+		return opts.failOp("install", appName, err)
+	}
+
 	// Compute-mode selection is a 1.12.6+ feature. Detect the backend
 	// version so we never touch the (untouched) 1.12.5 install path: on
 	// 1.12.5 we send no selectedGpuType and never interpret a

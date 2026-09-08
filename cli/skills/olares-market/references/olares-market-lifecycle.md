@@ -58,12 +58,12 @@ Mirrors the SPA's `canUpgrade()`. Bails locally with a self-contained error (for
 
 1. **Row exists** — state row found via `Name` or `RawName` (clones included)
 2. **State is upgradable** — `running` / `stopped` / `stopFailed` / `upgradeFailed` / `applyEnvFailed`
-3. **Newer chart available** — `targetVersion > installedVersion` (semver compare). **Exception for `-s upload`:** `targetVersion == installedVersion` is allowed — re-uploading the same version overwrites the stored chart, and app-service permits a same-version upgrade (it gates on `>= deployed`). This is the sanctioned way to re-apply an edited upload chart or recover an `upgradeFailed` upload app **without** bumping the version. A true downgrade (`target < installed`) is still rejected for every source.
+3. **Newer chart available** — `targetVersion > installedVersion` (semver compare). **Exception for `-s upload`:** `targetVersion == installedVersion` is allowed, because app-service gates on `>= deployed`. It re-applies the **stored** chart at that version, so use it to retry an upgrade that failed for a transient reason. It cannot deploy an edited chart: a published version's bytes are immutable and re-uploading one is refused (see [olares-market-charts.md](olares-market-charts.md#safety-constraints)), so recovering an `upgradeFailed` app with a *fixed* chart means bumping the version. A true downgrade (`target < installed`) is still rejected for every source.
 4. **Catalog row not withdrawn** — `app_simple_info.app_labels` must not contain `suspend` or `remove` (the only two labels `isAppSuspended` checks; mirrors the SPA hiding the Upgrade button). On a transient catalog-probe error this gate soft-fails (warns, lets the upgrade proceed)
 
 ### Where an upgrade lands
 
-Two outcomes settle on `stopped` rather than `running`, and `reason` is what tells them apart (see [olares-market-watch.md](olares-market-watch.md#--watch-interaction-with-each-verb)). **Upgrading an already-`stopped` app** re-renders the chart at `replicas=0` and returns to `stopped` — a normal success with nothing to launch. **A cancelled upgrade** also settles at `stopped`, but carries `reason=upgradeCancelByUser` (or `upgradeCancelBySystem` when the backend TTL fired), stays on its **previous** version, and is reported by `--watch` as failure.
+Two outcomes settle on `stopped` rather than `running`. **Upgrading an already-`stopped` app** re-renders the chart at `replicas=0` and returns to `stopped` — a normal success with nothing to launch. **A cancelled upgrade** also settles at `stopped`, and `--watch` reports it as failure. What separates them is `status.reason` matching `upgradeCancelByUser` or `upgradeCancelBySystem` — not whether `reason` is set, which it always is. *Non-obvious terminal behaviors* in the shared **application state machine** has the reasoning, and why the row's version field cannot discriminate either.
 
 ## `uninstall`
 
