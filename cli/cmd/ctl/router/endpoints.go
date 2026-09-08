@@ -72,6 +72,20 @@ func epProviderSyncModels(id string) string { return epProvider(id) + "/sync-mod
 
 func epProviderValidate(id string) string { return epProvider(id) + "/validate" }
 
+// The same probe for a provider that does not exist yet. A hyphen rather than
+// /providers/validate because a static segment cannot sit beside the
+// /providers/:id wildcard — the same reason the two catalog routes are spelled
+// that way.
+const epProviderValidateDraft = consoleAPI + "/provider-validate"
+
+// The app directory's cache. It answers whether an application is on this
+// Olares at all, which no other route does: the model-app list says what may be
+// installed, the provider list says what Router can call, and the caller_app
+// dimension of the spend summary only knows an application that has already
+// billed something. Readable by any authenticated console user, unlike almost
+// everything else under /console/api.
+const epInstalledApps = consoleAPI + "/installed-apps"
+
 func epProviderCredentialHistory(id string) string { return epProvider(id) + "/credential-history" }
 
 func epProviderRollback(id string, version int) string {

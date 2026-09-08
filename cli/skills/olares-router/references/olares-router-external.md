@@ -26,6 +26,7 @@ olares-cli router provider create --type openai --name openai-main \
 - `--credentials-json` accepts a file or `-` for stdin, and is preferred over repeated `--credential key=value`, which leaves the secret in shell history.
 - `--base-url` is required for every provider, including a vendor Router already has a catalog for. The catalog supplies the models, not the address.
 - `--validate` probes the upstream once the row exists. Without it the provider is created unverified, and a wrong key is not discovered until the first call.
+- `provider validate --draft --type <type> --base-url <url> --credentials-json -` runs the same probe *before* there is a row. Nothing is written, so a key that turns out to be wrong leaves no provider to delete and no version in the credential history. Prefer it when the credentials are uncertain; prefer `create --validate` when they are not, since it is one step rather than two. Some vendors resolve their own endpoint and need no `--base-url`, and the refusal says so when one is needed.
 - A vendor that genuinely needs no credentials still needs the intent stated: pass `--credentials-json` with `{}`.
 
 Credentials are encrypted at rest and never returned. `provider credentials` shows which fields are stored, with values masked.

@@ -247,6 +247,7 @@ Subcommands:
   list       individual calls, newest first
   export     the same rows as CSV
   retention  how long the individual calls are kept
+  apps       what is installed here, which is who could have called
 
 The first three take the same filters, so a total and the calls behind it are one
 flag apart. A total outlives the calls it was made of: totals are kept per day
@@ -258,6 +259,7 @@ forever, and the per-call rows are deleted on the window "retention" reports.
 	cmd.AddCommand(newUsageListCommand(f))
 	cmd.AddCommand(newUsageExportCommand(f))
 	cmd.AddCommand(newUsageRetentionCommand(f))
+	cmd.AddCommand(newUsageAppsCommand(f))
 	return cmd
 }
 
