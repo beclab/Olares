@@ -87,6 +87,9 @@ export const useAdminStore = defineStore('admin', {
 						useMenuItem(MENU_TYPE.VPN),
 						useMenuItem(MENU_TYPE.Network),
 						useMenuItem(MENU_TYPE.GPU),
+						...(this.olaresd
+							? [useMenuItem(MENU_TYPE.Hardware)]
+							: []),
 						useMenuItem(MENU_TYPE.Video),
 						useMenuItem(MENU_TYPE.Search)
 					],
@@ -104,6 +107,7 @@ export const useAdminStore = defineStore('admin', {
 						useMenuItem(MENU_TYPE.Integration)
 					],
 					[useMenuItem(MENU_TYPE.VPN)],
+					...(this.olaresd ? [[useMenuItem(MENU_TYPE.Hardware)]] : []),
 					[useMenuItem(MENU_TYPE.Video)],
 					[useMenuItem(MENU_TYPE.Search)],
 					[
