@@ -39,11 +39,18 @@ Reading routes is open to every console user, since the name is what a person ty
 olares-cli router route list --kind default
 olares-cli router route disable chat
 olares-cli router route enable chat
+olares-cli router route candidates chat
+olares-cli router route pin chat Olares/qwen3-4b
+olares-cli router route unpin chat
 ```
 
-A caller that does not want to choose names a category: `default-chat`, `default-tts`, one per kind of request. **What a category answers with is not configured.** Router keeps the list of categories in its own code and points each one at an installed model that can serve it, so the answer moves as models are installed, enabled and disabled — that is the design, and `route list --kind default` reports where it currently stands.
+A caller that does not want to choose names a category: `default-chat`, `default-tts`, one per kind of request. Router keeps the list of categories in its own code and points each one at an installed model that can serve it, so by default the answer moves as models are installed, enabled and disabled — `route list --kind default` reports where it currently stands, and `CHOSEN BY` says whether that is still Router's pick.
 
-A category with nothing behind it is refused rather than approximated. Installing or enabling a model of that kind is what fills it in; there is no setting to point it by hand, and no per-user override.
+A category with nothing behind it is refused rather than approximated. Installing or enabling a model of that kind is what fills it in.
+
+`route pin` is how somebody with three chat models says which one `default-chat` means. It is a standing decision rather than a nudge: reconciliation stops maintaining the category, so the choice survives the next pass — and survives the pinned model being stopped, where the category answers 404 rather than falling back to another model. That refusal is the point of pinning. `route unpin` hands the category back and runs a pass before answering, so what it prints is already Router's own pick.
+
+Only a default takes a pin, and only a model the category accepts: the right mode, and the capabilities that category selects on. `route candidates <category>` asks Router which models qualify, and lists a stopped one rather than hiding it — pinning before starting the application is a legitimate order to do things in.
 
 `route disable <category>` refuses that kind of request without uninstalling anything — the models keep running and stay callable by name. It is a different thing from disabling the model, which takes it away from every caller. A category cannot be renamed or deleted: Router owns the list and would create it again.
 
