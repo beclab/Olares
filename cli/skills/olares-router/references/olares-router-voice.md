@@ -26,6 +26,8 @@ olares-cli router call history delete <reading> --model <tts-model> --yes
 
 The one case the CLI cannot bridge is `speak` with no `--voice` against a path-addressing engine: there is nothing to put in the path, and the refusal says so. **Name a voice from `speak --voices` rather than treating that 404 as a broken model.**
 
+The first attempt is a real request, so a successful `speak` against an engine of the other shape leaves two rows in the record: a `failed: audio_upstream_error` at a few milliseconds and $0, immediately followed by the `tts/text-to-speech/{id}` that worked. **Those pairs are not an unstable model.** Reading `usage list --mode tts` on a machine with such an engine means expecting them; `--status success` excludes them.
+
 `call clone` has no second spelling to try. An engine of that shape has no one-shot clone at all — it keeps the voice instead — so its 404 points at `voice add`, and speaking with the resulting id is the two-step version of the same thing.
 
 ## Two ways to make a voice, and they are different capabilities
