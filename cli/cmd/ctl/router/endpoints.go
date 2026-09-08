@@ -241,6 +241,36 @@ func epAudioTask(id string) string { return epAudioTasks + "/" + url.PathEscape(
 
 func epAudioTaskResult(id string) string { return epAudioTask(id) + "/result" }
 
+// The voice library and the log of what has been read out.
+//
+// These sit at the root of /v1 rather than under /audio because they are the
+// ElevenLabs shape, which a synthesis engine serves alongside the OpenAI one.
+// It is not a second way to say the same thing: /v1/audio/speech synthesizes
+// and forgets, and these are the durable half — a voice that persists under a
+// name, and a recording of every reading with the audio still attached.
+//
+// Which default each reaches is Router's decision and it is not uniform:
+// reading or editing the voice table is default-tts, creating a voice from a
+// recording is default-tts-clone, and creating one from a description is
+// default-tts-design. History reaches no default at all, so a history verb has
+// to name a model.
+const (
+	epVoices            = dataPlaneAPI + "/voices"
+	epVoicesAdd         = epVoices + "/add"
+	epVoiceSettings     = epVoices + "/settings/default"
+	epTextToVoice       = dataPlaneAPI + "/text-to-voice"
+	epTextToVoiceDesign = epTextToVoice + "/design"
+	epHistory           = dataPlaneAPI + "/history"
+)
+
+func epVoice(id string) string { return epVoices + "/" + url.PathEscape(id) }
+
+func epVoiceOwnSettings(id string) string { return epVoice(id) + "/settings" }
+
+func epHistoryItem(id string) string { return epHistory + "/" + url.PathEscape(id) }
+
+func epHistoryAudio(id string) string { return epHistoryItem(id) + "/audio" }
+
 // Images and video. A generation is a row Router keeps, so it can be asked
 // about after the request that started it has gone, and the bytes come from the
 // `/content` route rather than the record — a video is not something to carry

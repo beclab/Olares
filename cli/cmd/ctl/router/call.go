@@ -110,6 +110,8 @@ the credential that made it, and may cost money.
 	cmd.AddCommand(newCallListenCommand(f))
 	cmd.AddCommand(newCallSpeakCommand(f))
 	cmd.AddCommand(newCallCloneCommand(f))
+	cmd.AddCommand(newCallVoiceCommand(f))
+	cmd.AddCommand(newCallHistoryCommand(f))
 	cmd.AddCommand(newCallDialogueCommand(f))
 	cmd.AddCommand(newCallVADCommand(f))
 	cmd.AddCommand(newCallDiarizeCommand(f))
@@ -161,6 +163,7 @@ const (
 	categoryAlign        = "default-align"
 	categoryTTS          = "default-tts"
 	categoryTTSClone     = "default-tts-clone"
+	categoryTTSDesign    = "default-tts-design"
 	categoryTTSDialogue  = "default-tts-dialogue"
 	categoryVAD          = "default-vad"
 	categoryDiarization  = "default-diar"
