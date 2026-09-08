@@ -96,6 +96,7 @@ the credential that made it, and may cost money.
 	cmd.SilenceUsage = true
 	cmd.AddCommand(newCallModelsCommand(f))
 	cmd.AddCommand(newCallChatCommand(f))
+	cmd.AddCommand(newCallCountTokensCommand(f))
 	cmd.AddCommand(newCallResponsesCommand(f))
 	cmd.AddCommand(newCallEmbedCommand(f))
 	cmd.AddCommand(newCallRerankCommand(f))

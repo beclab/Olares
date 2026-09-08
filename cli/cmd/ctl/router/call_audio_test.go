@@ -495,10 +495,7 @@ func TestAStreamURLSwitchesScheme(t *testing.T) {
 		{"http://127.0.0.1:8080/", "ws://127.0.0.1:8080" + epAudioStreamWS + "?model=m"},
 	}
 	for _, c := range cases {
-		got, err := audioStreamURL(c.base, audioStreamOptions{
-			Route: epAudioStreamWS,
-			Model: "m",
-		})
+		got, err := routerSocketURL(c.base, epAudioStreamWS, "m")
 		if err != nil {
 			t.Fatalf("%s: %v", c.base, err)
 		}
