@@ -4,7 +4,7 @@ description: Learn how to access Olares One directly from a computer on the same
 head:
   - - meta
     - name: keywords
-      content: Olares One, local access, local service domain, .local domain, LAN
+      content: Olares One, local access, host mappings, .local domain, LAN
 ---
 
 # Access Olares One on your local network
@@ -14,7 +14,7 @@ When your computer is on the same local network as Olares One, you can keep traf
 ## Before you begin
 
 - Make sure Olares One and your computer are on the same local network.
-- To use LarePass local service domains, install LarePass Desktop on Windows or macOS and import your Olares ID.
+- To use LarePass host mappings, install LarePass Desktop on Windows or macOS and import your Olares ID.
 
 ## Find the right method
 

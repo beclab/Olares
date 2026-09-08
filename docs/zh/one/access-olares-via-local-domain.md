@@ -4,7 +4,7 @@ description: 了解如何从同一局域网内的电脑直连 Olares One。
 head:
   - - meta
     - name: keywords
-      content: Olares One, 本地访问, 本地服务域名, .local 域名, 局域网
+      content: Olares One, 本地访问, hosts 映射, .local 域名, 局域网
 ---
 
 # 在局域网内访问 Olares One
@@ -14,7 +14,7 @@ head:
 ## 开始前准备
 
 - 确保 Olares One 与电脑位于同一局域网。
-- 如需使用 LarePass 本地服务域名，请在 Windows 或 macOS 上安装 LarePass 桌面端，并导入 Olares ID。
+- 如需使用 LarePass hosts 映射，请在 Windows 或 macOS 上安装 LarePass 桌面端，并导入 Olares ID。
 
 ## 选择合适的方式
 

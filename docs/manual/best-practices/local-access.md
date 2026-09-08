@@ -4,7 +4,7 @@ description: Compare the methods for accessing Olares directly over your local n
 head:
   - - meta
     - name: keywords
-      content: Olares, local access, LarePass VPN, local service domain, local DNS, hosts file, .local domain
+      content: Olares, local access, LarePass VPN, host mappings, local DNS, hosts file, .local domain
 ---
 # Access Olares services locally
 
@@ -17,7 +17,7 @@ Keeping traffic on the LAN can reduce latency, improve transfer speeds, and pres
 | Requirement | Recommended method | URL | Applies to |
 |:------------|:-------------------|:----|:-----------|
 | Move between local and remote networks | [LarePass VPN](#use-larepass-vpn) | Standard `olares.com` URL | Current device |
-| Use direct LAN access on Windows or macOS | [LarePass local service domains](#configure-local-service-domains-with-larepass) | `olares.com` or `olares.local` | Current computer |
+| Use direct LAN access on Windows or macOS | [LarePass host mappings](#configure-host-mappings-with-larepass) | `olares.com` or `olares.local` | Current computer |
 | Use local access without LarePass Desktop | [A `.local` URL](#use-a-local-url-without-larepass) | `olares.local` | Current device |
 | Configure local resolution for multiple devices | [Local DNS](#configure-local-dns) | Standard `olares.com` URL | Local network |
 | Give a supported app a dedicated LAN IP | [Overlay gateway](#access-an-app-through-overlay-gateway) | App-specific IP address | Local network |
@@ -36,7 +36,7 @@ Use this option if you frequently move between networks. LarePass automatically 
 
 <!--@include: ../../reusables/larepass-vpn.md#check-vpn-status-->
 
-## Configure local service domains with LarePass
+## Configure host mappings with LarePass
 
 Use this option for direct LAN access from a Windows or macOS computer without running the LarePass VPN.
 
@@ -52,7 +52,7 @@ Use this option when the client device and Olares are on the same LAN and you do
 
 <!--@include: ../../reusables/local-domain.md#local-domain-url-format-->
 
-On macOS and iOS, local service discovery can resolve multi-level `.local` hostnames without additional configuration. On Windows, use [LarePass local service domains](#configure-local-service-domains-with-larepass).
+On macOS and iOS, local service discovery can resolve multi-level `.local` hostnames without additional configuration. On Windows, use [LarePass host mappings](#configure-host-mappings-with-larepass).
 
 ### Single-level domain
 
@@ -133,7 +133,7 @@ You can install AdGuard Home from the Olares Market to monitor traffic and manag
 :::
 
 :::info Verify hostname resolution
-After configuring LarePass local service domains or local DNS, resolve a standard service hostname from the client computer:
+After configuring LarePass host mappings or local DNS, resolve a standard service hostname from the client computer:
 
 ```bash
 ping desktop.<username>.olares.com
@@ -146,7 +146,7 @@ The returned address should match the LAN IP of your Olares. Private LAN address
 
 Some apps need to appear as independent devices on your LAN for device discovery, casting, multiplayer connections, or other protocols that do not use an Olares web URL. For supported apps, overlay gateway assigns the app a dedicated LAN IP through a virtual network interface.
 
-This method is separate from LarePass VPN, local service domains, and local DNS. Use the IP address shown for the app rather than an `olares.com` or `olares.local` URL.
+This method is separate from LarePass VPN, host mappings, and local DNS. Use the IP address shown for the app rather than an `olares.com` or `olares.local` URL.
 
 Overlay gateway requires Olares to run on a native Linux host with a wired Ethernet connection. For availability, permissions, and setup steps, see [Manage overlay gateway for applications](../olares/settings/overlay-gateway.md).
 
@@ -158,7 +158,7 @@ The LAN IP of Olares may have changed. Make sure the computer and Olares are on 
 
 ### LarePass cannot add or update the hosts entries
 
-Make sure LarePass has permission to update the system hosts file. Do not edit LarePass-managed entries manually unless instructed by Olares Support.
+Make sure LarePass has permission to update the system hosts file. If you need to adjust the entries, edit them in **Update host mappings** in LarePass and leave the management markers beginning with `#` unchanged.
 
 ## FAQs
 

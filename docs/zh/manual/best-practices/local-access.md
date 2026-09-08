@@ -4,7 +4,7 @@ description: 比较通过局域网直连 Olares 的不同方式。
 head:
   - - meta
     - name: keywords
-      content: Olares, 本地访问, LarePass 专用网络, 本地服务域名, 本地 DNS, hosts 文件, .local 域名
+      content: Olares, 本地访问, LarePass 专用网络, hosts 映射, 本地 DNS, hosts 文件, .local 域名
 ---
 # 在局域网内访问 Olares 服务
 
@@ -17,7 +17,7 @@ Olares 服务通常使用标准 `olares.com` 地址，可从本地或远程网�
 | 使用需求 | 推荐方式 | 地址 | 生效范围 |
 |:---------|:---------|:-----|:---------|
 | 经常在本地和远程网络之间切换 | [LarePass 专用网络](#使用-larepass-专用网络) | 标准 `olares.com` 地址 | 当前设备 |
-| 在 Windows 或 macOS 上通过局域网直连 | [LarePass 本地服务域名](#使用-larepass-配置本地服务域名) | `olares.com` 或 `olares.local` | 当前电脑 |
+| 在 Windows 或 macOS 上通过局域网直连 | [LarePass hosts 映射](#使用-larepass-配置-hosts-映射) | `olares.com` 或 `olares.local` | 当前电脑 |
 | 不使用 LarePass 桌面端进行本地访问 | [`.local` 地址](#不使用-larepass-时使用-local-地址) | `olares.local` | 当前设备 |
 | 为多台设备配置本地解析 | [本地 DNS](#配置本地-dns) | 标准 `olares.com` 地址 | 整个局域网 |
 | 为支持的应用分配独立局域网 IP | [Overlay gateway](#通过-overlay-gateway-访问应用) | 应用专用 IP 地址 | 整个局域网 |
@@ -36,7 +36,7 @@ Olares 服务通常使用标准 `olares.com` 地址，可从本地或远程网�
 
 <!--@include: ../../reusables/larepass-vpn.md#check-vpn-status-->
 
-## 使用 LarePass 配置本地服务域名
+## 使用 LarePass 配置 hosts 映射
 
 如果需要从 Windows 或 macOS 电脑通过局域网直连，同时不运行 LarePass 专用网络，请使用此方式。
 
@@ -52,7 +52,7 @@ Olares 服务通常使用标准 `olares.com` 地址，可从本地或远程网�
 
 <!--@include: ../../reusables/local-domain.md#local-domain-url-format-->
 
-在 macOS 和 iOS 上，本地服务发现功能无需额外配置即可解析多级 `.local` 主机名。在 Windows 上，请使用 [LarePass 本地服务域名](#使用-larepass-配置本地服务域名)。
+在 macOS 和 iOS 上，本地服务发现功能无需额外配置即可解析多级 `.local` 主机名。在 Windows 上，请使用 [LarePass hosts 映射](#使用-larepass-配置-hosts-映射)。
 
 ### 单级域名
 
@@ -133,7 +133,7 @@ http://<entrance_id>-<username>-olares.local
 :::
 
 :::info 检查主机名解析
-通过 LarePass 配置本地服务域名或配置本地 DNS 后，在客户端电脑上解析一个标准服务主机名：
+通过 LarePass 配置 hosts 映射或配置本地 DNS 后，在客户端电脑上解析一个标准服务主机名：
 
 ```bash
 ping desktop.<username>.olares.com
@@ -146,7 +146,7 @@ ping desktop.<username>.olares.com
 
 某些应用需要在局域网中显示为独立设备，以支持设备发现、投屏、多人游戏连接或其他不使用 Olares 网页地址的协议。对于支持的应用，Overlay gateway 会通过虚拟网络接口为应用分配独立的局域网 IP。
 
-此方式与 LarePass 专用网络、本地服务域名和本地 DNS 相互独立。访问时请使用应用显示的 IP 地址，而不是 `olares.com` 或 `olares.local` 地址。
+此方式与 LarePass 专用网络、hosts 映射和本地 DNS 相互独立。访问时请使用应用显示的 IP 地址，而不是 `olares.com` 或 `olares.local` 地址。
 
 Overlay gateway 要求 Olares 运行在使用有线网络连接的原生 Linux 主机上。有关可用性、权限和设置步骤，请参阅[管理应用的 Overlay gateway](../olares/settings/overlay-gateway.md)。
 
@@ -154,11 +154,11 @@ Overlay gateway 要求 Olares 运行在使用有线网络连接的原生 Linux �
 
 ### LarePass 管理的地址无法再通过本地网络打开
 
-Olares 的局域网 IP 可能已经变化。请确保电脑与 Olares 位于同一局域网，关闭 **VPN connection**，然后执行 LarePass 提供的 hosts 更新。
+Olares 的局域网 IP 可能已经变化。请确保电脑与 Olares 位于同一局域网，关闭 **专用网络连接**，然后执行 LarePass 提供的 hosts 更新。
 
 ### LarePass 无法添加或更新 hosts 条目
 
-请确保 LarePass 有权更新系统 hosts 文件。除非 Olares 支持人员要求，否则不要手动修改由 LarePass 管理的条目。
+请确保 LarePass 有权更新系统 hosts 文件。如需调整条目，请在 LarePass 的**更新 hosts 映射**弹窗中编辑，并保留以 `#` 开头的管理标记。
 
 ## 常见问题
 

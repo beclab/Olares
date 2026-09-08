@@ -3,7 +3,7 @@ search: false
 head:
   - - meta
     - name: keywords
-      content: Olares, 本地服务域名, .local 域名, 局域网访问, hosts 文件
+      content: Olares, hosts 映射, .local 域名, 局域网访问, hosts 文件
 ---
 <!-- 可复用的本地域名内容。请通过命名 region 引用。 -->
 
@@ -34,21 +34,18 @@ http://<entrance_id>.<username>.olares.local
 1. 确保电脑与 Olares 位于同一局域网。
 2. 在 LarePass 桌面端关闭**专用网络连接**。
 3. 通过以下任一入口开始更新：
-   - 点击左下角的**启用本地主机访问**。
-   - 点击头像，前往**设置** > **启用本地服务域名**，然后点击**启用**。
-4. 在**编辑本地服务域名**中检查条目，然后点击**更新**。
-
-   ![编辑本地 hosts](/images/manual/tutorials/larepass-edit-local-hosts.png#bordered)
-
+   - 点击左下角的**配置 hosts**。
+   - 点击头像，前往**设置** > **hosts 映射**，然后点击**启用**。
+4. 在**更新 hosts 映射**弹窗中检查条目，并按需编辑。请勿修改以 `#` 开头的行，LarePass 使用这些标记管理条目。完成后点击**更新**。
 5. 输入电脑的管理员密码并确认更改。
 6. 等待**成功**提示出现。
 
 之后，可以使用标准 `https://<entrance_id>.<username>.olares.com` 地址，或对应的 `http://<entrance_id>.<username>.olares.local` 地址。
 
-:::info 关闭本地主机访问
+:::info 停用 hosts 映射
 1. 在 LarePass 桌面端点击头像，然后进入**设置**。
-2. 在**启用本地服务域名** 下点击 **关闭**。
-3. 在**关闭本地服务域名**确认窗口中再次点击**关闭**。
+2. 在**hosts 映射**下点击**关闭**。
+3. 在**停用 hosts 映射**确认窗口中再次点击**关闭**。
 
 LarePass 会删除此前由它添加到这台电脑的全部 hosts 条目。
 :::
@@ -60,30 +57,27 @@ LarePass 会删除此前由它添加到这台电脑的全部 hosts 条目。
 1. 确保电脑与 Olares 位于同一局域网。
 2. 在 LarePass 桌面端关闭**专用网络连接**。
 3. 通过以下任一入口开始更新：
-   - 点击左下角的**启用本地主机访问**。
-   - 点击头像，前往**设置** > **启用本地服务域名**，然后点击**启用**。
-4. 在**编辑本地服务域名**中检查条目，然后点击**更新**。
+   - 点击左下角的**配置 hosts**。
+   - 点击头像，前往**设置** > **hosts 映射**，然后点击**启用**。
+4. 在**更新 hosts 映射**弹窗中检查条目，并按需编辑。请勿修改以 `#` 开头的行，LarePass 使用这些标记管理条目。完成后点击**更新**。
 5. 输入电脑的管理员密码并确认更改。
 <!-- #endregion windows-local-domain -->
 
 <!-- #region larepass-local-domains -->
-使用 LarePass 桌面端的 **Local service domain** 管理 Olares 的 hosts 条目。LarePass 会将 `olares.com` 和 `olares.local` 主机名映射到 Olares 的局域网 IP，使这台电脑发出的请求留在局域网内。
+使用 LarePass 桌面端的**hosts 映射**管理 Olares 的 hosts 条目。LarePass 会将 `olares.com` 和 `olares.local` 主机名映射到 Olares 的局域网 IP，使这台电脑发出的请求留在局域网内。
 
 此模式仅对当前电脑生效，并且只会在电脑与 Olares 位于同一局域网时显示。
 
 :::warning 请先关闭专用网络
-LarePass 专用网络与本地服务域名不能同时启用。添加或更新 hosts 条目前，请先关闭 **VPN connection**。
+LarePass 专用网络与 hosts 映射不能同时启用。添加或更新 hosts 条目前，请先关闭 **专用网络连接**。
 :::
 
 1. 确保电脑与 Olares 位于同一局域网。
-2. 在 LarePass 桌面端关闭 **VPN connection**。
+2. 在 LarePass 桌面端关闭 **专用网络连接**。
 3. 通过以下任一入口开始更新：
-   - 点击左下角的**启用本地主机访问**。
-   - 点击头像，前往**设置** > **启用本地服务域名**，然后点击**启用**。
-4. 在**编辑本地服务域名**中检查条目，然后点击**更新**。
-
-   ![编辑本地 hosts](/images/zh/manual/tutorials/larepass-edit-local-hosts.png#bordered)
-
+   - 点击左下角的**配置 hosts**。
+   - 点击头像，前往**设置** > **hosts 映射**，然后点击**启用**。
+4. 在**更新 hosts 映射**弹窗中检查条目，并按需编辑。请勿修改以 `#` 开头的行，LarePass 使用这些标记管理条目。完成后点击**更新**。
 5. 出现密码提示后，输入电脑的管理员密码并确认更改。
 6. 等待**成功**提示出现。
 
@@ -95,33 +89,37 @@ LarePass 专用网络与本地服务域名不能同时启用。添加或更新 h
 无需手动编辑 hosts 文件。LarePass 会在 Windows 和 macOS 上管理这些条目。
 :::
 
-:::info 关闭本地主机访问
+:::info 停用 hosts 映射
 1. 点击头像并进入**设置**。
-2. 找到**启用本地服务域名**，然后点击**关闭**。
-3. 在**关闭本地服务域名**确认窗口中再次点击**关闭**。
+2. 找到**hosts 映射**，然后点击**关闭**。
+3. 在**停用 hosts 映射**确认窗口中再次点击**关闭**。
 
 LarePass 会删除此前由它添加到这台电脑的全部 hosts 条目。标准 `olares.com` 地址随后恢复使用常规网络路径；在不支持原生解析的系统上，多级 `.local` 地址可能不再能够解析。
 :::
 <!-- #endregion larepass-local-domains -->
 
 <!-- #region larepass-local-domain-faq -->
-### 本地服务域名
+### hosts 映射
 
-#### 为什么在 LarePass 中找不到 启用本地服务域名？
+#### 为什么在 LarePass 中找不到 hosts 映射？
 
 此选项只会在电脑与 Olares 位于同一局域网时显示。请检查两台设备的网络连接，然后重新打开 LarePass。
 
 #### 为什么无法启用 LarePass 专用网络？
 
-本地服务域名与 LarePass 专用网络不能同时启用。前往 **设置** > **启用本地服务域名**，先关闭本地服务域名。
+hosts 映射与 LarePass 专用网络不能同时启用。前往 **设置** > **hosts 映射**，先停用 hosts 映射。
 
 #### 为什么 LarePass 再次提示更新 hosts 文件？
 
-当 Olares 的局域网 IP 发生变化，或安装、卸载应用时，所需条目可能随之变化。检查条目并点击 **Update**，确保所有由 LarePass 管理的主机名都指向当前局域网 IP。
+当 Olares 的局域网 IP 发生变化，或安装、卸载应用时，所需条目可能随之变化。检查条目并点击 **更新**，确保所有由 LarePass 管理的主机名都指向当前局域网 IP。
 
-#### 关闭本地服务域名后会发生什么？
+#### 停用 hosts 映射后会发生什么？
 
 LarePass 会删除由它管理的 hosts 条目。标准 `olares.com` 地址随后恢复使用常规网络路径；在不支持原生解析的系统上，多级 `.local` 地址可能不再能够解析。
+
+#### 如何查看 hosts 文件或恢复备份？
+
+在**更新 hosts 映射**弹窗中点击**在文件夹中显示**，可打开 hosts 文件所在文件夹。如果 hosts 文件自上次更新后发生变化，LarePass 会在更新前创建备份。你可以手动恢复备份。
 <!-- #endregion larepass-local-domain-faq -->
 
 <!-- #region local-domain-faq -->
