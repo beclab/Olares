@@ -34,6 +34,72 @@ func TestOnlyAMissingRouteIsWorthAskingTheOtherWay(t *testing.T) {
 	}
 }
 
+// The catalogue picks the order. Naming the model is the direct case; naming a
+// category is the ordinary one, because `speak` is usually called with no
+// --model at all and a category is deliberately absent from /v1/models.
+func TestTheCatalogueSaysWhichSpellingToTryFirst(t *testing.T) {
+	el := modelObject{ID: "Olares/Breeze", Mode: "tts", Supports: []string{"tts", "tts_clone", "tts_design"}}
+	openai := modelObject{ID: "Olares/Qwen3-TTS", Mode: "tts", Supports: []string{"tts", "tts_clone"}}
+	chat := modelObject{ID: "Olares/Qwen", Mode: "chat", Supports: []string{"reasoning"}}
+
+	cases := []struct {
+		name  string
+		items []modelObject
+		model string
+		want  ttsDialect
+	}{
+		{"named model declares design", []modelObject{chat, el, openai}, "Olares/Breeze", dialectElevenLabs},
+		{"named model does not", []modelObject{chat, el, openai}, "Olares/Qwen3-TTS", dialectOpenAI},
+		{"a category, and the installed models agree", []modelObject{chat, el}, "default-tts", dialectElevenLabs},
+		{"a category, and they disagree", []modelObject{el, openai}, "default-tts", dialectUnknown},
+		{"a category with no synthesis installed", []modelObject{chat}, "default-tts", dialectUnknown},
+		{"nothing in the catalogue at all", nil, "", dialectUnknown},
+	}
+	for _, c := range cases {
+		if got := dialectFromCatalogue(c.items, c.model); got != c.want {
+			t.Errorf("%s: got %v want %v", c.name, got, c.want)
+		}
+	}
+	// A chat model is not consulted about synthesis even when it is the only
+	// thing that matches nothing else.
+	if got := dialectFromCatalogue([]modelObject{chat, openai}, "default-tts"); got != dialectOpenAI {
+		t.Errorf("a non-tts row was allowed to disagree: got %v", got)
+	}
+}
+
+// The hint decides the order and never the outcome. Both paths stay reachable
+// whichever way it points, so an engine that breaks the correlation still works
+// through the retry rather than becoming uncallable.
+func TestAHintReordersTheAttemptsWithoutRemovingAny(t *testing.T) {
+	for _, d := range []ttsDialect{dialectUnknown, dialectOpenAI, dialectElevenLabs} {
+		got := speakRoutes(d, "en-f")
+		if len(got) != 2 {
+			t.Errorf("%v: %d routes, want both", d, len(got))
+			continue
+		}
+		if got[0] == got[1] {
+			t.Errorf("%v: the same route twice: %q", d, got[0])
+		}
+	}
+	if got := speakRoutes(dialectElevenLabs, "en-f"); got[0] != epSpeakAs("en-f") {
+		t.Errorf("the native spelling was not tried first: %q", got[0])
+	}
+	if got := speakRoutes(dialectUnknown, "en-f"); got[0] != epAudioSpeech {
+		t.Errorf("with no hint the established order changed: %q", got[0])
+	}
+	// No voice means the path-addressing spelling has nowhere to put one, so
+	// it is not an attempt worth making.
+	if got := speakRoutes(dialectElevenLabs, "  "); len(got) != 1 || got[0] != epAudioSpeech {
+		t.Errorf("a voiceless call tried to address a voice: %v", got)
+	}
+	if got := voicesRoutes(dialectElevenLabs); got[0] != epVoices {
+		t.Errorf("the voice list did not follow the hint: %q", got[0])
+	}
+	if got := voicesRoutes(dialectUnknown); got[0] != epAudioVoices {
+		t.Errorf("with no hint the established order changed: %q", got[0])
+	}
+}
+
 // The second spelling addresses the voice in the path. An id that needs
 // escaping is the ordinary case for a cloned voice, whose name comes from
 // whatever the caller typed.
