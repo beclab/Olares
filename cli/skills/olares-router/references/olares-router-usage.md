@@ -19,8 +19,11 @@ olares-cli router usage list --status failed --limit 20
 olares-cli router usage list --status in_progress
 olares-cli router usage list --mode video_generation --sort-by cost_usd --limit 10
 olares-cli router usage list --session task-4711
+olares-cli router usage summary --by model --rank-by tokens --since 7d
+olares-cli router usage list --mode audio,tts --limit 20
 olares-cli router usage export --since 30d --out calls.csv
 olares-cli router usage retention
+olares-cli router usage apps
 ```
 
 `summary` adds up; `list` explains a total by showing the individual calls behind it; `export` writes the same rows as CSV for a spreadsheet.
@@ -30,6 +33,8 @@ olares-cli router usage retention
 - Filters compose across all three verbs: `--model`, `--provider`, `--key`, `--user`, `--caller-app`, `--status`, `--mode`, `--session`, `--tag`, `--since`, `--until`. `--since` takes an instant or a span like `24h` or `7d`. `--caller-app` names an application by its title, its Olares application name or the appid a row shows — the same spelling `quota set --caller-app` takes.
 - `--status failed` is the one to reach for after a complaint: a failed call still carries the error code Router returned, so the reason is in the row.
 - `--sort-by` is on `list` alone, and it ranks the whole matching set rather than the page: `--sort-by cost_usd` answers "the most expensive call this week" without exporting anything. It takes `created_at`, `cost_usd`, `total_tokens`, `latency_ms`, `ttft_ms` or `model_name`, with `--sort-order asc|desc`.
+- `--rank-by` is the summary's counterpart and orders the buckets rather than the rows behind them: `--by model --rank-by tokens` is "which model ate the context window", which cost order does not answer when the expensive model is the one called twice. They are separate flags because they sort different things.
+- `--mode` takes several, comma-separated. `--mode audio,tts` is one request over both halves of speech, which matters because synthesis is its own mode now and no longer counted with recognition.
 
 Every accepted call becomes a row, including one the upstream then refused. Cost comes from the prices on the model row, so a model imported without prices records tokens and no money — that is a configuration gap in the model row, not missing usage.
 
@@ -37,7 +42,9 @@ Every accepted call becomes a row, including one the upstream then refused. Cost
 
 `--status in_progress` is the fourth status, and it is the same call as the row that follows it rather than a different kind of event: Router writes the row when it admits a call and prices it when the call ends. So a running row's cost reads `pending`, not `$0` — a video generation sits there for minutes, and a zero would be read as free. A call that stayed in that state long after the work should have finished is a call whose completion never arrived, which is a Router-side question rather than a billing one.
 
-What a call is priced by depends on the mode, so the quantity column is whichever one the row filled in: tokens for text, seconds for audio and video, pictures for images, tracks and meshes for the two newest families, queries for search and OCR. Reading the row rather than the mode is deliberate — a mode this CLI has never heard of still reports the right figure. A dash means nothing measurable came back.
+What a call is priced by depends on the mode, so the quantity column is whichever one the row filled in: tokens for text, seconds for audio and video, pictures for images, tracks and meshes for the two newest families, pages for OCR, objects for 3D, queries for search. Reading the row rather than the mode is deliberate — a mode this CLI has never heard of still reports the right figure. A dash means nothing measurable came back.
+
+**`TOOK` is not how long the request was open.** An asynchronous call — a diarization, a video, a long synthesis — is accepted, worked on, and collected later, so the request that returns the result is a JSON forward measured in milliseconds while the work took minutes. The row therefore carries both: `latency_ms` is the request and `job_ms` is the work, and `TOOK` shows the work when there is one. A row with no `job_ms` was synchronous and its request time is the whole story. This matters when reading a slow report: a 273-second diarization used to appear as five milliseconds, which made the engine look idle.
 
 Three zeros mean three different things and `list` says which under the table:
 
@@ -50,6 +57,10 @@ Three zeros mean three different things and `list` says which under the table:
 A row carries a key only when the call presented one. `router call` presents none by default, so its rows have an empty key and are attributed to the person: **`--key` will not find them, and `--user` is how they are read.** A row with no key is the normal shape for a call made from `olares-cli` or from a browser, not a record that lost its attribution.
 
 Scope follows the role. A non-admin sees only their own calls; `--user` and `--caller-app` are admin-only, because they are what makes another person's usage visible.
+
+### What could have called
+
+`usage apps` lists the applications installed on this Olares. It is what makes an empty `caller_app` bucket readable: an application that spent nothing is stopped, or idle, or was uninstalled and left its spend behind, and the summary cannot tell those apart. `APPLICATION` is the name `--caller-app` and `quota set --caller-app` take. `STATE` is a snapshot from the last directory sync rather than a live reading — an application can stop between two of them, so `olares-cli market list --mine` is the current answer. Unlike the rest of `usage`, any console user can read it: an install is not a secret and what it spent is.
 
 ### Retention
 
