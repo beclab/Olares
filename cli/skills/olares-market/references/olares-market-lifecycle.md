@@ -63,9 +63,7 @@ Mirrors the SPA's `canUpgrade()`. Bails locally with a self-contained error (for
 
 ### Where an upgrade lands
 
-Two outcomes settle on `stopped` rather than `running`. **Upgrading an already-`stopped` app** re-renders the chart at `replicas=0` and returns to `stopped` — a normal success with nothing to launch. **A cancelled upgrade** also settles at `stopped`, and `--watch` reports it as failure.
-
-What separates them is `status.reason` matching `upgradeCancelByUser` or `upgradeCancelBySystem` — not whether `reason` is set, which it always is. See [the state machine](../../olares-shared/references/olares-platform-appstate.md#non-obvious-terminal-behaviors) for why, and for why the row's version field cannot be used as the discriminator either.
+Two outcomes settle on `stopped` rather than `running`. **Upgrading an already-`stopped` app** re-renders the chart at `replicas=0` and returns to `stopped` — a normal success with nothing to launch. **A cancelled upgrade** also settles at `stopped`, and `--watch` reports it as failure. What separates them is `status.reason` matching `upgradeCancelByUser` or `upgradeCancelBySystem` — not whether `reason` is set, which it always is. *Non-obvious terminal behaviors* in the shared **application state machine** has the reasoning, and why the row's version field cannot discriminate either.
 
 ## `uninstall`
 

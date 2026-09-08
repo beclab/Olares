@@ -23,7 +23,7 @@ An upgrade does not always end on `running`. Upgrading an already-`stopped` app 
 2. A `stopped` row newer than that baseline is terminal.
 3. `reason` picks the verdict, by **matching the two cancel values** `upgradeCancelByUser` / `upgradeCancelBySystem` (the backend TTL fired), which report failure. Anything else is a normal upgrade-from-stopped success.
 
-Step 3 is a whitelist, not an emptiness check: `reason` is set on healthy transitions too. Neither can `version` substitute for it. The reasoning for both, and what the version field actually reports after a cancel, is in [the state machine](../../olares-shared/references/olares-platform-appstate.md#non-obvious-terminal-behaviors).
+Step 3 is a whitelist, not an emptiness check: `reason` is set on healthy transitions too. Neither can `version` substitute for it. The reasoning for both, and what the version field actually reports after a cancel, is under *Non-obvious terminal behaviors* in the shared **application state machine**.
 
 ### Per-op foreground watch windows
 
