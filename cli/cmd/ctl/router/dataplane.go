@@ -243,6 +243,17 @@ func callErr(err error) error {
 		return fmt.Errorf("%w\nThe model is configured for a different kind of work than this verb asks "+
 			"for. `olares-cli router model list` shows each model's mode, and a route can only serve the mode "+
 			"it was created with", err)
+	case re.Code == "audio_operation_not_supported":
+		// The model's application declared the routes it serves and this is
+		// not one of them, so Router refused rather than forwarding. That is
+		// the useful half: an engine that was merely forwarded to answers a
+		// bare 404, which reads the same whether the route is absent, the URL
+		// is wrong or the engine is the wrong one. Here the catalogue is the
+		// record, and it can be read.
+		return fmt.Errorf("%w\nThis model declares the routes it serves and this operation is not among "+
+			"them, so nothing was sent to the engine. `olares-cli router call models --operations` "+
+			"prints what each model does declare; another model of the same mode may serve it, and "+
+			"leaving --model off lets Router pick one that does", err)
 	case strings.HasSuffix(re.Code, "_unsupported_for_provider") || re.Code == "audio_path_unsupported":
 		return fmt.Errorf("%w\nThis model's provider does not serve that route at all. For a model "+
 			"running on this Olares that usually means a different engine image does this job: "+

@@ -182,11 +182,25 @@ func TestEmptyModelsListNamesTheReadinessGateOnlyWhenItIsInPlay(t *testing.T) {
 // Off by default: this verb answers "what can I send", and a list padded with
 // models that refuse every request would stop answering it.
 func TestModelsPathAsksForTheWiderReadOnlyWhenRequested(t *testing.T) {
-	if got := modelsPath(false); got != epDataPlaneModels {
+	if got := modelsPath(false, false); got != epDataPlaneModels {
 		t.Errorf("default: got %q want %q", got, epDataPlaneModels)
 	}
 	want := epDataPlaneModels + "?include_not_ready=true"
-	if got := modelsPath(true); got != want {
+	if got := modelsPath(true, false); got != want {
 		t.Errorf("--include-not-ready: got %q want %q", got, want)
+	}
+}
+
+// The catalogue is a per-model join, so the plain list — which every other verb
+// in this tree reads — must not start paying for it.
+func TestTheOperationCatalogueIsAskedForSeparately(t *testing.T) {
+	if got := modelsPath(false, true); got != epDataPlaneModels+"?detail=capabilities" {
+		t.Errorf("--operations: got %q", got)
+	}
+	got := modelsPath(true, true)
+	for _, want := range []string{"detail=capabilities", "include_not_ready=true"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("both flags: %q is missing from %q", want, got)
+		}
 	}
 }

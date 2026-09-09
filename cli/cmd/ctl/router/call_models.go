@@ -6,7 +6,9 @@ import (
 	"io"
 	"net/url"
 	"os"
+	"path"
 	"sort"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -87,6 +89,116 @@ type modelObject struct {
 	// refused, so a caller sizing a request needs the pool as well as the
 	// pair.
 	KVPoolTokens int `json:"kv_pool_tokens,omitempty"`
+
+	// The rest arrive only with --operations, and describe the routes the
+	// model actually serves rather than the capabilities it claims. Supports
+	// answers "can this engine synthesise speech"; these answer "which URL
+	// does it answer, with which method, and what may the body contain" —
+	// which is the question a caller has to get right before sending, and
+	// until this existed the only way to answer it was to try.
+	CapabilitySchemaVersion int                `json:"capability_schema_version,omitempty"`
+	ExecutionLocation       string             `json:"execution_location,omitempty"`
+	Availability            *modelAvailability `json:"availability,omitempty"`
+	Operations              []modelOperation   `json:"operations,omitempty"`
+	// Authoritative is a pointer because absent and false are different
+	// things here: absent is a Router that does not publish the catalogue at
+	// all, false is one that does and is describing a model whose application
+	// never declared it. Both mean "do not trust this list", and only the
+	// first also means "do not expect one".
+	Authoritative   *bool `json:"authoritative,omitempty"`
+	CapabilityStale bool  `json:"capability_stale,omitempty"`
+}
+
+// modelAvailability is why a model cannot be called, when it cannot. Readiness
+// above says the same thing in one word; this says it in a code a script can
+// branch on and a flag saying whether waiting is the answer.
+type modelAvailability struct {
+	State      string `json:"state"`
+	ReasonCode string `json:"reason_code,omitempty"`
+	Retryable  bool   `json:"retryable"`
+}
+
+// modelOperation is one route the model's application declared, mirrored from
+// its Model Console `/api/endpoints`. The shape is Router's, and the fields
+// this CLI does not render are decoded anyway so that -o json says as much as
+// Router did.
+type modelOperation struct {
+	ID       string `json:"id"`
+	Protocol string `json:"protocol"`
+	Method   string `json:"method"`
+	// PathTemplate is Router-prefixed and may carry `{placeholder}` segments,
+	// as in /v1/text-to-speech/{voice_id}. It is matched a segment at a time.
+	PathTemplate string `json:"path_template"`
+	// Transport is http or websocket. A method of WS goes with the latter.
+	Transport        string               `json:"transport"`
+	SyncSupported    bool                 `json:"sync_supported"`
+	Streaming        bool                 `json:"streaming,omitempty"`
+	AsyncSupported   bool                 `json:"async_supported"`
+	RequiredSupports []string             `json:"required_supports,omitempty"`
+	InputModalities  []string             `json:"input_modalities,omitempty"`
+	OutputModalities []string             `json:"output_modalities,omitempty"`
+	OutputFormats    []string             `json:"output_formats,omitempty"`
+	SampleRates      []int                `json:"sample_rates,omitempty"`
+	Parameters       []operationParameter `json:"parameters,omitempty"`
+	Limits           map[string]any       `json:"limits,omitempty"`
+	ResourceScope    string               `json:"resource_scope,omitempty"`
+	Extensions       map[string]any       `json:"extensions,omitempty"`
+}
+
+type operationParameter struct {
+	Name     string   `json:"name"`
+	Type     string   `json:"type"`
+	Required bool     `json:"required,omitempty"`
+	Default  any      `json:"default,omitempty"`
+	Minimum  *float64 `json:"minimum,omitempty"`
+	Maximum  *float64 `json:"maximum,omitempty"`
+	Enum     []string `json:"enum,omitempty"`
+	Unit     string   `json:"unit,omitempty"`
+}
+
+// declaresOperation answers the question Router's own gate asks: does this
+// model name this route. The matching is Router's — a segment at a time, with
+// `{placeholder}` accepting any one non-empty segment — because a CLI that
+// matched more loosely than the gate would choose a path the gate then refuses.
+func (m *modelObject) declaresOperation(method, requestPath, transport string) (*modelOperation, bool) {
+	for i := range m.Operations {
+		op := &m.Operations[i]
+		if !strings.EqualFold(op.Method, method) || !strings.EqualFold(op.Transport, transport) {
+			continue
+		}
+		if operationPathMatches(op.PathTemplate, requestPath) {
+			return op, true
+		}
+	}
+	return nil, false
+}
+
+func operationPathMatches(pattern, target string) bool {
+	p := strings.Split(path.Clean(pattern), "/")
+	t := strings.Split(path.Clean(target), "/")
+	if len(p) != len(t) {
+		return false
+	}
+	for i := range p {
+		if strings.HasPrefix(p[i], "{") && strings.HasSuffix(p[i], "}") {
+			if t[i] == "" {
+				return false
+			}
+			continue
+		}
+		if p[i] != t[i] {
+			return false
+		}
+	}
+	return true
+}
+
+// trustworthyCatalogue is whether this list may be used to choose a route
+// instead of guessing one. Stale disqualifies it as firmly as unauthoritative:
+// the catalogue is refreshed when an engine reaches ready, so an old one
+// describes an engine that may since have been relaunched onto other flags.
+func (m *modelObject) trustworthyCatalogue() bool {
+	return m.Authoritative != nil && *m.Authoritative && !m.CapabilityStale && len(m.Operations) > 0
 }
 
 type modelsListResponse struct {
@@ -99,6 +211,7 @@ func newCallModelsCommand(f *cmdutil.Factory) *cobra.Command {
 		output          string
 		apiKey          string
 		includeNotReady bool
+		operations      bool
 	)
 	cmd := &cobra.Command{
 		Use:   "models",
@@ -128,24 +241,41 @@ ever configured.
 with its provider, mode and health, for deciding what to change rather than what
 to send.
 
+--operations asks a different question. The capabilities above are what a model
+says it can do; the operations are the routes it actually answers — the method,
+the path, whether the work can be submitted asynchronously, and what the body
+may contain. For audio that is the difference between knowing an engine
+synthesises speech and knowing whether it answers "/v1/audio/speech" or
+"/v1/text-to-speech/<voice>", which are two spellings of the same job that no
+engine serves both of.
+
+A catalogue is marked authoritative when the application declared it. One that
+is not is Router's reconstruction from the capability flags, and a stale one
+describes an engine that may since have been relaunched; both are printed and
+both are labelled, because a reconstruction is still better than nothing and
+knowing which you have is the point.
+
 Examples:
   olares-cli router call models
   olares-cli router call models --include-not-ready
-  olares-cli router call models --api-key sk-… -o json
+  olares-cli router call models --operations --api-key sk-…
+  olares-cli router call models --operations -o json
 `,
 		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
-			return runModels(c.Context(), f, apiKey, includeNotReady, output)
+			return runModels(c.Context(), f, apiKey, includeNotReady, operations, output)
 		},
 	}
 	cmd.Flags().BoolVar(&includeNotReady, "include-not-ready", false,
 		"also list models whose weights are still loading or failed to load")
+	cmd.Flags().BoolVar(&operations, "operations", false,
+		"print the routes each model declares — method, path, async — instead of the summary table")
 	cmd.Flags().StringVar(&apiKey, "api-key", "", "list what this `sk-*` key may call, rather than the credential this machine uses")
 	addOutputFlag(cmd, &output)
 	return cmd
 }
 
-func runModels(ctx context.Context, f *cmdutil.Factory, apiKey string, includeNotReady bool, outputRaw string) error {
+func runModels(ctx context.Context, f *cmdutil.Factory, apiKey string, includeNotReady, operations bool, outputRaw string) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -159,13 +289,16 @@ func runModels(ctx context.Context, f *cmdutil.Factory, apiKey string, includeNo
 	}
 	dp := dataPlane(pc, apiKey)
 	var resp modelsListResponse
-	if err := dp.doJSON(ctx, "GET", modelsPath(includeNotReady), nil, &resp); err != nil {
+	if err := dp.doJSON(ctx, "GET", modelsPath(includeNotReady, operations), nil, &resp); err != nil {
 		return callErr(err)
 	}
 	items := resp.Data
 	sortModels(items)
 	if format == FormatJSON {
 		return printJSON(os.Stdout, modelsListResponse{Object: nonEmpty(resp.Object), Data: items})
+	}
+	if operations {
+		return renderModelOperations(os.Stdout, items)
 	}
 	return renderModelsList(os.Stdout, items, includeNotReady)
 }
@@ -180,11 +313,20 @@ func sortModels(items []modelObject) {
 // modelsPath asks for the wider read only when it was asked for. Left on by
 // default this verb would stop meaning "what can I send", which is the question
 // it exists to answer.
-func modelsPath(includeNotReady bool) string {
-	if !includeNotReady {
+func modelsPath(includeNotReady, operations bool) string {
+	q := url.Values{}
+	if includeNotReady {
+		q.Set("include_not_ready", "true")
+	}
+	// The catalogue is a per-model join Router does not pay for on the plain
+	// list, and the plain list is what every other verb in this tree reads.
+	if operations {
+		q.Set("detail", "capabilities")
+	}
+	if len(q) == 0 {
 		return epDataPlaneModels
 	}
-	return withQuery(epDataPlaneModels, url.Values{"include_not_ready": {"true"}})
+	return withQuery(epDataPlaneModels, q)
 }
 
 func renderModelsList(w io.Writer, items []modelObject, includeNotReady bool) error {
@@ -236,4 +378,82 @@ func renderModelsList(w io.Writer, items []modelObject, includeNotReady bool) er
 		return err
 	}
 	return nil
+}
+
+// renderModelOperations prints one block per model rather than one table for
+// all of them: the columns that matter differ by transport, and a websocket
+// route has nothing to say about async while an HTTP one says little else.
+func renderModelOperations(w io.Writer, items []modelObject) error {
+	printed := 0
+	for i := range items {
+		m := &items[i]
+		if len(m.Operations) == 0 {
+			continue
+		}
+		printed++
+		if printed > 1 {
+			if _, err := fmt.Fprintln(w); err != nil {
+				return err
+			}
+		}
+		if _, err := fmt.Fprintf(w, "%s  (%s, %s)\n", m.ID, nonEmpty(m.Mode), catalogueStanding(m)); err != nil {
+			return err
+		}
+		t := newTable(w, "  OPERATION", "METHOD", "PATH", "SYNC", "ASYNC", "NEEDS")
+		for j := range m.Operations {
+			op := &m.Operations[j]
+			t.row(
+				"  "+nonEmpty(op.ID),
+				nonEmpty(op.Method),
+				nonEmpty(op.PathTemplate),
+				yesNo(op.SyncSupported),
+				yesNo(op.AsyncSupported),
+				dashJoin(op.RequiredSupports),
+			)
+		}
+		if err := t.flush(); err != nil {
+			return err
+		}
+	}
+	if printed == 0 {
+		_, err := fmt.Fprintln(w, "No model here publishes an operation catalogue. Router builds one from "+
+			"the capability flags for an application that does not declare its own, so an empty result "+
+			"usually means this Router predates the catalogue rather than that the models serve nothing.")
+		return err
+	}
+	_, err := fmt.Fprintf(w, "\nPATH is Router's, and a braced segment accepts one value: a path ending "+
+		"in {voice_id} is addressed as %s. Where the catalogue is declared, Router refuses an operation "+
+		"it does not list with `audio_operation_not_supported` rather than forwarding it; where it is "+
+		"reconstructed, an undeclared route is forwarded and the engine's own 404 comes back.\n",
+		epSpeakAs("en-f"))
+	return err
+}
+
+// catalogueStanding says how much the list below it is worth. Router publishes
+// the two facts separately, and they fail differently: an unauthoritative
+// catalogue was never declared, a stale one was and has since aged out of the
+// fifteen minutes Router trusts it for.
+func catalogueStanding(m *modelObject) string {
+	switch {
+	case m.Authoritative == nil || !*m.Authoritative:
+		return "reconstructed from capabilities"
+	case m.CapabilityStale:
+		return "declared, last seen over 15 minutes ago"
+	default:
+		return "declared by the application"
+	}
+}
+
+func yesNo(v bool) string {
+	if v {
+		return "yes"
+	}
+	return "no"
+}
+
+func dashJoin(v []string) string {
+	if len(v) == 0 {
+		return "-"
+	}
+	return strings.Join(v, ",")
 }

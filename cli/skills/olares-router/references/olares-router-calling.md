@@ -10,6 +10,16 @@ Two gates narrow the list against `router model list`, and a third applies only 
 
 `--include-not-ready` widens the read to the container gate alone, which is what to use while an install is running: a model still fetching or loading its weights appears as `warming` and turns `ready` under it, and one that could not load them appears as `failed` rather than being indistinguishable from a model nobody ever configured. It does not bring back an application that is not running — a stopped app has nothing to ask — so a name still absent under the flag is `olares-cli market` territory rather than a readiness problem.
 
+`--operations` asks a different question. The capability flags say what a model can do; the operation catalogue says which routes it answers — the method, the path, whether the work can be submitted asynchronously, and which capabilities each route needs. For audio those are not the same question: knowing an engine synthesises speech does not say whether it answers `/v1/audio/speech` or `/v1/text-to-speech/<voice>`, and no engine serves both.
+
+Each block is labelled with how much it is worth:
+
+- **declared by the application** — the application published it, and Router enforces it: an operation the catalogue does not list is refused with `audio_operation_not_supported` and never reaches the engine.
+- **declared, last seen over 15 minutes ago** — the catalogue is refreshed when an engine reaches ready, so an old one may describe an engine that has since been relaunched onto other flags.
+- **reconstructed from capabilities** — the application declared nothing and Router inferred a list from the flags. Nothing is enforced against it: an undeclared route is forwarded and the engine's own bare 404 comes back.
+
+`speak` and `voices` use this. Where a model's catalogue is declared and current they send only the spelling it names; where it is not, they keep the older behaviour of trying the likelier spelling and retrying the other on a 404. With no `--model` the verb is answered by a category, which matches no row, so the catalogue only decides when every installed synthesis model agrees — Router chooses which of them serves the category.
+
 ## The credential
 
 **Calling needs no key.** Router's `/v1` reads three identities in order — an `sk-*` Bearer, a calling application's `x-caller-appid`, then a person's `X-BFL-USER` — and the last two are stamped by the Olares edge, which is the same edge, host and profile session the management verbs already travel on. A call sent with no `Authorization` is therefore not anonymous: it arrives as the profile.
@@ -138,7 +148,7 @@ A `router call` failure comes from one of a few places, and the message says whi
 | `model_route_disabled` | The name exists but is switched off; `router route enable <name>` |
 | `model_not_allowed` | The key's allowed list does not include this model; `router key update` changes it |
 | A mode mismatch or unsupported-endpoint refusal | The model's mode or capabilities do not match the call — `router model list` prints the mode, and for a local model `router model spec show <model>` prints what it declares |
-| `audio_operation_not_supported` | An authoritative operation catalogue says this model does not serve the requested audio operation; choose a matching model or route |
+| `audio_operation_not_supported` | The model's application declared the routes it serves and this is not one of them, so Router refused and the engine was never reached. `router call models --operations` prints what each model does declare; another model of the same mode may serve it, and leaving `--model` off lets Router pick one that does |
 | A bare 404 on an audio route | A legacy or non-authoritative model was forwarded permissively and its engine does not serve the route; `router route get default-<capability>` says which model the verb resolved |
 | `model_not_ready` with a 503 | The model is real and its weights cannot answer yet; the fix is to wait, and `router call models --include-not-ready` shows whether it is `warming` or `failed` |
 | `model_at_capacity` with a 503 | The engine is serving every request it was launched for and Router already waited for a slot — ten seconds for an interactive mode, sixty for a generation — before giving up. So this is a queue that stayed full, not a refusal to queue. Wait for the `Retry-After` the message names and retry the one request; more concurrency makes it worse. `router provider get <app>` shows what the engine is holding and `router model list` shows how wide it was launched |
