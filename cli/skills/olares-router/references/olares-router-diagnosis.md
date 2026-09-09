@@ -88,6 +88,7 @@ olares-cli router model progress <model>
 - **An engine alive with no model loaded** — the weights or the card are wrong for this engine; `router model spec show <model>` reads the card and `router model spec edit` corrects it, relaunching the engine when the flags change.
 - **An engine that was answering and stopped** — `router model restart <model>` relaunches the process on the card it already has, which is the fix when the configuration is right and the process is not.
 - **A model answering, but slowly** — `router model diag gpu <model>` says how much is resident. A model mostly on the CPU is the common answer.
+- **A model answering some calls and refusing others with `kv_budget_exhausted`** — the engine is full rather than wrong, and nothing here is broken. Its slots share one KV pool that cannot hold a full window each, so the calls being refused are the long ones. `router model get <model>` prints the pool beside the window and the width; `router model diag gpu <model>` shows how much of the cache is in use. Widening the pool is an `--engine-args` change and a relaunch, not a Router setting.
 - **An install that never finished** — `router provider get <app>` reports where the application stalled, and `olares-cli market status <app>` carries the Market's own reason.
 
 ## Then below it

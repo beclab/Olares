@@ -198,3 +198,74 @@ func TestEachSubmitMintsItsOwnIdempotencyKey(t *testing.T) {
 		}
 	}
 }
+
+// A lyric timeline is read in the order it is sung, and the position of a line
+// is what a player seeks to. Seconds alone are too coarse to seek by, and a
+// duration string reads as how long a line lasts rather than when it starts.
+func TestALyricTimelineIsPrintedAsPositions(t *testing.T) {
+	const raw = `{"segments":[
+	  {"text":"the first line","start_seconds":0,"end_seconds":3.5},
+	  {"text":"the second line","start_seconds":3.5,"end_seconds":7.25},
+	  {"text":"the last line","start_seconds":124.5,"end_seconds":131}
+	]}`
+	var alignment musicAlignment
+	if err := json.Unmarshal([]byte(raw), &alignment); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	var buf bytes.Buffer
+	if err := renderMusicAlignment(&buf, &alignment); err != nil {
+		t.Fatalf("renderMusicAlignment: %v", err)
+	}
+	out := buf.String()
+	for _, want := range []string{"00:00.0  the first line", "00:03.5  the second line", "02:04.5  the last line"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("expected %q in:\n%s", want, out)
+		}
+	}
+	// The end of the last line bounds the timeline, and the ends are in the
+	// json rather than in every row: a reader following words does not want
+	// two timestamps per line.
+	if !strings.Contains(out, "3 lines, through 02:11.0") {
+		t.Errorf("the timeline was not bounded:\n%s", out)
+	}
+}
+
+// A completed instrumental has no words to place and an older model
+// application serves no timeline at all. Both are an empty answer, and
+// printing nothing would read as a command that failed silently.
+func TestATrackWithNoTimelineSaysSo(t *testing.T) {
+	var buf bytes.Buffer
+	if err := renderMusicAlignment(&buf, &musicAlignment{}); err != nil {
+		t.Fatalf("renderMusicAlignment: %v", err)
+	}
+	if !strings.Contains(buf.String(), "no lyric timeline") {
+		t.Errorf("an empty timeline said nothing:\n%s", buf.String())
+	}
+}
+
+// The words to read and the words to sing are two fields on purpose. Dropping
+// the second on the way through makes the first look like the whole answer.
+func TestBothSpellingsOfTheLyricsSurviveAFormatPass(t *testing.T) {
+	const raw = `{"id":"fmt_1","status":"succeeded","model":"FlowStudio/ace-step",
+	"effective_lyrics":"we ride at dawn","conditioning_lyrics":"[verse] we ride at dawn [chorus]"}`
+	var view musicFormatView
+	if err := json.Unmarshal([]byte(raw), &view); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if view.ConditioningLyrics == "" {
+		t.Fatalf("the model's own spelling was dropped: %+v", view)
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(raw), &fields); err != nil {
+		t.Fatalf("decode raw: %v", err)
+	}
+	var buf bytes.Buffer
+	if err := renderMusicText(&buf, "format", fields); err != nil {
+		t.Fatalf("renderMusicText: %v", err)
+	}
+	for _, want := range []string{"EFFECTIVE LYRICS", "CONDITIONING LYRICS"} {
+		if !strings.Contains(buf.String(), want) {
+			t.Errorf("expected %q in:\n%s", want, buf.String())
+		}
+	}
+}

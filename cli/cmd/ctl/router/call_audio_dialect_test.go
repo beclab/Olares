@@ -100,6 +100,122 @@ func TestAHintReordersTheAttemptsWithoutRemovingAny(t *testing.T) {
 	}
 }
 
+// Where a model declares its routes there is nothing to correlate: the guess
+// narrows to what the card names, and the spelling it does not name is not
+// tried at all. Router refuses that one anyway, so the second attempt could
+// only ever buy a second refusal and a second $0 row.
+func TestADeclaredCatalogueLeavesOnlyTheRouteTheModelNames(t *testing.T) {
+	yes := true
+	el := modelObject{
+		ID: "Olares/Breeze", Mode: "tts", Supports: []string{"tts", "tts_design"},
+		Authoritative: &yes,
+		Operations: []modelOperation{
+			{ID: "speech.synthesize", Method: "POST", PathTemplate: epTextToSpeech + "/{voice_id}", Transport: "http"},
+			{ID: "voice.list", Method: "GET", PathTemplate: epVoices, Transport: "http"},
+		},
+	}
+	got := declaredFirst([]modelObject{el}, "Olares/Breeze", "POST", speakRoutes(dialectElevenLabs, "en-f"))
+	if len(got) != 1 || got[0] != epSpeakAs("en-f") {
+		t.Fatalf("expected only the declared spelling, got %v", got)
+	}
+	// The escaped voice has to survive the match: the template is matched a
+	// segment at a time, and a voice id is one segment whatever is in it.
+	odd := declaredFirst([]modelObject{el}, "Olares/Breeze", "POST", speakRoutes(dialectElevenLabs, "my voice/2"))
+	if len(odd) != 1 {
+		t.Fatalf("an escaped voice id stopped matching its own template: %v", odd)
+	}
+	if list := declaredFirst([]modelObject{el}, "Olares/Breeze", "GET", voicesRoutes(dialectElevenLabs)); len(list) != 1 || list[0] != epVoices {
+		t.Fatalf("expected only the declared voice list, got %v", list)
+	}
+}
+
+// A declared catalogue that names neither spelling is a model that does not do
+// this job. One request gets Router's own `audio_operation_not_supported`,
+// which says so; two get it twice.
+func TestAModelThatDeclaresNeitherSpellingIsAskedOnce(t *testing.T) {
+	yes := true
+	m := modelObject{
+		ID: "Olares/ASR", Mode: "tts", Authoritative: &yes,
+		Operations: []modelOperation{{ID: "audio.transcribe", Method: "POST", PathTemplate: epAudioTranscriptions, Transport: "http"}},
+	}
+	candidates := speakRoutes(dialectUnknown, "en-f")
+	got := declaredFirst([]modelObject{m}, "Olares/ASR", "POST", candidates)
+	if len(got) != 1 || got[0] != candidates[0] {
+		t.Fatalf("expected one attempt, got %v", got)
+	}
+}
+
+// Nothing trustworthy narrows anything. An application whose chart predates the
+// catalogue is exactly the case the correlation was written for, and a stale
+// one describes an engine that may since have been relaunched onto other flags.
+func TestOnlyATrustworthyCatalogueIsAllowedToNarrow(t *testing.T) {
+	yes, no := true, false
+	op := []modelOperation{{ID: "speech.synthesize", Method: "POST", PathTemplate: epTextToSpeech + "/{voice_id}", Transport: "http"}}
+	both := speakRoutes(dialectUnknown, "en-f")
+
+	cases := []struct {
+		name string
+		m    modelObject
+	}{
+		{"reconstructed from capabilities", modelObject{ID: "m", Mode: "tts", Authoritative: &no, Operations: op}},
+		{"a Router that publishes none", modelObject{ID: "m", Mode: "tts", Operations: op}},
+		{"declared and empty", modelObject{ID: "m", Mode: "tts", Authoritative: &yes}},
+	}
+	for _, c := range cases {
+		if got := declaredFirst([]modelObject{c.m}, "m", "POST", both); len(got) != 2 {
+			t.Errorf("%s: narrowed to %v, and both spellings should stay reachable", c.name, got)
+		}
+	}
+}
+
+// Stale is the exception, and it goes the other way from how it reads. Router
+// enforces a catalogue on `authoritative` alone and never looks at staleness,
+// so an aged catalogue still decides what Router accepts. Treating it as
+// untrustworthy would make the CLI guess a path Router is about to refuse
+// outright, which is worse than the 404 the guess used to cost.
+func TestAnAgedCatalogueStillDecidesBecauseRouterStillEnforcesIt(t *testing.T) {
+	yes := true
+	m := modelObject{
+		ID: "Olares/Breeze", Mode: "tts", Authoritative: &yes, CapabilityStale: true,
+		Operations: []modelOperation{
+			{ID: "speech.synthesize", Method: "POST", PathTemplate: epTextToSpeech + "/{voice_id}", Transport: "http"},
+		},
+	}
+	got := declaredFirst([]modelObject{m}, "Olares/Breeze", "POST", speakRoutes(dialectUnknown, "en-f"))
+	if len(got) != 1 || got[0] != epSpeakAs("en-f") {
+		t.Fatalf("an aged catalogue was ignored and the guess survived: %v", got)
+	}
+}
+
+// `speak` is normally called with no --model, and a category matches no row.
+// It is answered the way the dialect is — by what the installed models agree
+// on — because Router picks which of them serves the category.
+func TestACategoryIsAnsweredOnlyWhenTheModelsAgree(t *testing.T) {
+	yes := true
+	native := func(id string) modelObject {
+		return modelObject{ID: id, Mode: "tts", Authoritative: &yes,
+			Operations: []modelOperation{{ID: "speech.synthesize", Method: "POST", PathTemplate: epTextToSpeech + "/{voice_id}", Transport: "http"}}}
+	}
+	openai := modelObject{ID: "Olares/Qwen3-TTS", Mode: "tts", Authoritative: &yes,
+		Operations: []modelOperation{{ID: "speech.synthesize", Method: "POST", PathTemplate: epAudioSpeech, Transport: "http"}}}
+	chat := modelObject{ID: "Olares/Qwen", Mode: "chat"}
+
+	agree := []modelObject{chat, native("Olares/Breeze"), native("Olares/Breeze2")}
+	if got := declaredFirst(agree, "", "POST", speakRoutes(dialectUnknown, "en-f")); len(got) != 1 || got[0] != epSpeakAs("en-f") {
+		t.Fatalf("agreeing models did not answer the category: %v", got)
+	}
+	disagree := []modelObject{native("Olares/Breeze"), openai}
+	if got := declaredFirst(disagree, "", "POST", speakRoutes(dialectUnknown, "en-f")); len(got) != 2 {
+		t.Fatalf("a category served by either shape must stay open to both: %v", got)
+	}
+	// One model without a trustworthy catalogue is enough to stop the whole
+	// consensus: it may be the one Router routes the category to.
+	mixed := []modelObject{native("Olares/Breeze"), {ID: "Olares/Old", Mode: "tts"}}
+	if got := declaredFirst(mixed, "", "POST", speakRoutes(dialectUnknown, "en-f")); len(got) != 2 {
+		t.Fatalf("an undeclared model was not allowed to withhold consensus: %v", got)
+	}
+}
+
 // The second spelling addresses the voice in the path. An id that needs
 // escaping is the ordinary case for a cloned voice, whose name comes from
 // whatever the caller typed.

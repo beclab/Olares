@@ -254,18 +254,26 @@ const (
 // support can answer `--async` with a receipt instead of a result; WebSocket
 // and HTTP chunked streams cannot. These commands read the receipt.
 //
-// The engine's own canonical path is /v1/tasks, and Router mounts both: the
-// canonical prefix arrived with the ElevenLabs-shaped surface below, and
-// /v1/audio/tasks remains the compatibility alias existing CLI releases use.
-// New Router receipts name the canonical prefix; this tree deliberately stays
-// on the alias until that compatibility surface is retired. These constants
-// build its paths from an id for callers that retained the id rather than the
-// full receipt.
-const epAudioTasks = dataPlaneAPI + "/audio/tasks"
+// /v1/tasks is the canonical prefix and /v1/audio/tasks is the alias Router
+// retains for the clients that were written before it. This tree stayed on the
+// alias while the canonical side was still settling; it no longer is, and the
+// receipt Router writes now names the canonical one in its own `poll` and
+// `result_url`. Following a receipt to a path it does not name is how a client
+// ends up being the reason an alias cannot be retired.
+//
+// A receipt is not always in hand — an id can be pasted from a terminal a day
+// later — so these build the same paths from an id alone.
+const epTasks = dataPlaneAPI + "/tasks"
 
-func epAudioTask(id string) string { return epAudioTasks + "/" + url.PathEscape(id) }
+func epTask(id string) string { return epTasks + "/" + url.PathEscape(id) }
 
-func epAudioTaskResult(id string) string { return epAudioTask(id) + "/result" }
+func epTaskResult(id string) string { return epTask(id) + "/result" }
+
+// onDataPlane reports whether a path handed back in a response addresses the
+// data plane. A receipt names its own follow-up routes and Router writes them
+// relative, so anything else is not Router redirecting a client — it is a
+// response steering one, and the id alone already reaches the task.
+func onDataPlane(p string) bool { return strings.HasPrefix(p, dataPlaneAPI+"/") }
 
 // The voice library and the log of what has been read out.
 //
@@ -361,6 +369,8 @@ const (
 func epMusicGeneration(id string) string { return epMusicGenerations + "/" + url.PathEscape(id) }
 
 func epMusicGenerationContent(id string) string { return epMusicGeneration(id) + "/content" }
+
+func epMusicLyricsAlignment(id string) string { return epMusicGeneration(id) + "/lyrics-alignment" }
 
 func epMusicFormat(id string) string { return epMusicFormats + "/" + url.PathEscape(id) }
 

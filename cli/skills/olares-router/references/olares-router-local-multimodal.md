@@ -98,6 +98,14 @@ Check three things on the row before relying on it:
 2. **The capability flags** cover the direction you need, per the table above.
 3. **The dimension**, for embeddings, matches whatever already holds vectors. Changing the embedding model changes the vector space: existing vectors do not become wrong, they become incomparable. `router call embed --model <provider>/<model>` prints the dimension it got.
 
+For audio there is a fourth, and it answers a question the flags cannot:
+
+```
+olares-cli router call models --operations
+```
+
+The flags say a model synthesises speech; the operation catalogue says which route it answers to do it. Those come apart in audio because the same job is spelled two ways — `/v1/audio/speech` and `/v1/text-to-speech/<voice>` — and an engine image serves one and 404s the other. A catalogue marked *declared by the application* is enforced: Router refuses an operation it does not list rather than forwarding it. One marked *reconstructed from capabilities* is Router's inference from the flags, and nothing is enforced against it, so an undeclared route reaches the engine and comes back as a bare 404.
+
 ## Calling them
 
 ```

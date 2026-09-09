@@ -22,9 +22,17 @@ olares-cli router call history delete <reading> --model <tts-model> --yes
 
 ## Synthesis is spelled two ways, and an engine answers one of them
 
-`/v1/audio/speech` is the OpenAI spelling, which reads the voice from the body. `/v1/text-to-speech/<voice>` is the ElevenLabs spelling, which addresses it in the path. Router mounts both and forwards each unchanged; it translates between them only for the ElevenLabs vendor itself, so a model application answers whichever its image was built for. `call speak` and `speak --voices` use the operation catalogue first and fall back to the other spelling only when the catalogue is absent, ambiguous, stale or incorrect.
+`/v1/audio/speech` is the OpenAI spelling, which reads the voice from the body. `/v1/text-to-speech/<voice>` is the ElevenLabs spelling, which addresses it in the path. Router mounts both and forwards each unchanged; it translates between them only for the ElevenLabs vendor itself, so a model application answers whichever its image was built for. `call speak` and `speak --voices` read the operation catalogue and send only the spelling it names, falling back to the guess below when there is no catalogue to read.
 
-When no authoritative catalogue is available, the legacy guess uses `supports_tts_design`: designing a voice from a description correlates with the ElevenLabs surface. An absent or incorrect declaration can therefore cost one wasted request before fallback succeeds. That request is real, so it may leave `failed: audio_upstream_error` at a few milliseconds and $0 beside the successful call. **Such a pair is a protocol fallback, not an unstable model**, and `--status success` excludes it.
+`router call models --operations` prints that catalogue — the routes each model declares, with the method, the path and whether the work can be submitted asynchronously. Each model is labelled with how much its list is worth:
+
+- **declared by the application** — the application published it, and Router enforces it: an operation the catalogue does not list is refused with `audio_operation_not_supported` and never reaches the engine.
+- **declared, last seen over 15 minutes ago** — the same thing, with a note of its age. A catalogue is refreshed when an engine reaches ready, so an old one may describe an engine that has since been relaunched. Router enforces it regardless, so this is a reason to go and look at the engine, not a reason to distrust what is printed — and not a reason to guess around it, since guessing earns a refusal rather than a 404.
+- **reconstructed from capabilities** — the application declared nothing and Router inferred a list from the flags. Nothing is enforced against it, so an undeclared route is forwarded and the engine's own bare 404 comes back.
+
+Only the third case guesses. The guess uses `supports_tts_design`: designing a voice from a description correlates with the ElevenLabs surface. An absent or incorrect declaration can therefore cost one wasted request before fallback succeeds. That request is real, so it may leave `failed: audio_upstream_error` at a few milliseconds and $0 beside the successful call. **Such a pair is a protocol fallback, not an unstable model**, and `--status success` excludes it.
+
+With no `--model` the verb resolves a category, which matches no row in the catalogue, so the declared routes decide only when every installed synthesis model agrees — Router picks which of them serves the category.
 
 The one case that cannot be bridged is `speak` with no `--voice` against a path-addressing engine: there is nothing to put in the path, and the refusal says so. **Name a voice from `speak --voices` rather than treating that 404 as a broken model.**
 

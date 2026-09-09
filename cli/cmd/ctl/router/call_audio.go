@@ -479,7 +479,7 @@ func runListVoices(ctx context.Context, f *cmdutil.Factory, model, apiKey string
 		} `json:"voices"`
 	}
 	err = nil
-	for _, route := range voicesRoutes(ttsDialectOf(ctx, dp, model)) {
+	for _, route := range voiceListRoutes(ctx, dp, model) {
 		path := route
 		if m := strings.TrimSpace(model); m != "" {
 			q := url.Values{}
@@ -560,7 +560,7 @@ func runCallSpeak(ctx context.Context, f *cmdutil.Factory, text string, opts spe
 		Method: "POST", ContentType: "application/json",
 		Model: opts.Model, Out: opts.OutPath, Async: opts.Async, Format: opts.Format,
 	}
-	routes := speakRoutes(ttsDialectOf(ctx, dp, opts.Model), opts.Voice)
+	routes := synthesisRoutes(ctx, dp, opts.Model, opts.Voice)
 	for _, route := range routes {
 		answer.Body = bytes.NewReader(buf)
 		answer.Route = audioRequestPath(route, opts.Model, opts.Async)

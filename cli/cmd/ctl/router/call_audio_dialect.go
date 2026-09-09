@@ -35,15 +35,134 @@ const (
 // enforces, which is exactly why it only chooses the order.
 const capTTSDesign = "tts_design"
 
-// ttsDialectOf reads the catalogue the caller's own credential sees. Failure of
-// any kind is dialectUnknown rather than an error: the worst a missing hint
-// does is restore the behaviour of asking twice.
-func ttsDialectOf(ctx context.Context, dp *routerClient, model string) ttsDialect {
+// The operation catalogue answers the same question outright.
+//
+// Everything above is a correlation: an engine that designs voices is probably
+// an engine that addresses them in the path. Since ADR-68 a model application
+// can declare the routes it serves, and Router publishes that declaration on
+// /v1/models. Where it exists there is nothing to infer — the model names the
+// path — and Router enforces it, refusing an operation the catalogue does not
+// list with `audio_operation_not_supported` rather than forwarding it. Trying
+// the other spelling after that refusal is not a recovery, it is a second
+// refusal.
+//
+// So the catalogue decides where it is trustworthy, and the correlation decides
+// where it is not. Both remain: an application whose chart predates the
+// catalogue publishes nothing, Router reconstructs an unauthoritative list from
+// the capability flags, and that is exactly the case the guess was written for.
+//
+// An aged catalogue is not that case, however much it reads like one. Router
+// enforces on `authoritative` alone and never consults staleness, so an old
+// declaration still decides what Router accepts — and guessing around it buys
+// a hard refusal instead of the 404 the guess used to cost.
+
+// synthesisRoutes is every path `speak` should try, best first.
+func synthesisRoutes(ctx context.Context, dp *routerClient, model, voice string) []string {
+	catalogue := audioCatalogue(ctx, dp)
+	guess := speakRoutes(dialectFromCatalogue(catalogue, model), voice)
+	return declaredFirst(catalogue, model, "POST", guess)
+}
+
+// voiceListRoutes is the same decision for reading a model's voices.
+func voiceListRoutes(ctx context.Context, dp *routerClient, model string) []string {
+	catalogue := audioCatalogue(ctx, dp)
+	guess := voicesRoutes(dialectFromCatalogue(catalogue, model))
+	return declaredFirst(catalogue, model, "GET", guess)
+}
+
+// audioCatalogue reads the list the caller's own credential sees, asking for
+// the per-model operations along with it. Failure of any kind is an empty list
+// rather than an error: the worst a missing catalogue does is restore the
+// behaviour of guessing and asking twice.
+func audioCatalogue(ctx context.Context, dp *routerClient) []modelObject {
 	var resp modelsListResponse
-	if err := dp.doJSON(ctx, "GET", epDataPlaneModels, nil, &resp); err != nil {
-		return dialectUnknown
+	if err := dp.doJSON(ctx, "GET", modelsPath(false, true), nil, &resp); err != nil {
+		return nil
 	}
-	return dialectFromCatalogue(resp.Data, model)
+	return resp.Data
+}
+
+// declaredFirst narrows the guessed candidates to the ones the model declares.
+//
+// Only a trustworthy catalogue may narrow anything, and narrowing to nothing is
+// not the same as having no opinion: a model with a declared catalogue that
+// lists neither spelling does not serve this operation, and the useful outcome
+// is Router saying so once rather than the engine 404ing twice. So the first
+// candidate is kept and the request goes, which is what makes the refusal
+// arrive with `audio_operation_not_supported` on it.
+func declaredFirst(catalogue []modelObject, model, method string, candidates []string) []string {
+	m := trustedEntry(catalogue, model)
+	if m == nil || len(candidates) == 0 {
+		return candidates
+	}
+	kept := make([]string, 0, len(candidates))
+	for _, route := range candidates {
+		if _, ok := m.declaresOperation(method, route, "http"); ok {
+			kept = append(kept, route)
+		}
+	}
+	if len(kept) == 0 {
+		return candidates[:1]
+	}
+	return kept
+}
+
+// trustedEntry finds the row whose catalogue may be believed, or nil.
+//
+// A category — `default-tts`, or no --model at all — matches no row, because a
+// category describes no single model and is deliberately absent from
+// /v1/models. It is answered the way the dialect is: by what the installed
+// synthesis models agree on, and only when they all agree, since Router picks
+// which of them serves the category and disagreement means the answer depends
+// on a choice not made yet.
+func trustedEntry(catalogue []modelObject, model string) *modelObject {
+	ref := strings.TrimSpace(model)
+	for i := range catalogue {
+		m := &catalogue[i]
+		if ref != "" && (m.ID == ref || m.QualifiedID == ref) {
+			if m.trustworthyCatalogue() {
+				return m
+			}
+			return nil
+		}
+	}
+	var agreed *modelObject
+	for i := range catalogue {
+		m := &catalogue[i]
+		if m.Mode != "tts" {
+			continue
+		}
+		if !m.trustworthyCatalogue() {
+			return nil
+		}
+		if agreed == nil {
+			agreed = m
+			continue
+		}
+		if !sameDeclaredPaths(agreed, m) {
+			return nil
+		}
+	}
+	return agreed
+}
+
+func sameDeclaredPaths(a, b *modelObject) bool {
+	if len(a.Operations) != len(b.Operations) {
+		return false
+	}
+	seen := make(map[string]int, len(a.Operations))
+	for i := range a.Operations {
+		seen[a.Operations[i].Method+" "+a.Operations[i].PathTemplate]++
+	}
+	for i := range b.Operations {
+		seen[b.Operations[i].Method+" "+b.Operations[i].PathTemplate]--
+	}
+	for _, n := range seen {
+		if n != 0 {
+			return false
+		}
+	}
+	return true
 }
 
 // dialectFromCatalogue matches the reference against the list, and falls back

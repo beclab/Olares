@@ -210,6 +210,19 @@ func callErr(err error) error {
 			"it was launched to handle, so this one was refused rather than held any longer.%s "+
 			"`olares-cli router provider get <provider>` shows how wide the engine is and how deep "+
 			"its queue was when Router last looked", err, retryAdvice(re.RetryAfter))
+	case re.Code == "kv_budget_exhausted":
+		// The engine's own door, not Router's. A slot was free — otherwise
+		// this would have been model_at_capacity — and the KV cache behind all
+		// the slots was not: in unified mode they share one pool that cannot
+		// hold a full window each, so a long prompt is refused while the
+		// engine is answering short ones. It has to stay ahead of the 5xx
+		// branch below, which would read this as an application that is not
+		// serving, and it is the one refusal here that a shorter prompt fixes.
+		return fmt.Errorf("%w\nThe model's KV cache is fully reserved. The engine is serving, not "+
+			"broken: its slots share one pool, and this prompt did not fit in what was left of it.%s "+
+			"Router already tried the other members of the route, so a shorter prompt, fewer "+
+			"concurrent calls, or waiting is what gets through. `olares-cli router model get <model>` "+
+			"shows the pool against the window and the width", err, retryAdvice(re.RetryAfter))
 	case re.Code == "model_not_ready":
 		return fmt.Errorf("%w\nThe model is still coming up.%s `olares-cli router model status <model>` "+
 			"follows the phase it is in", err, retryAdvice(re.RetryAfter))
@@ -230,6 +243,17 @@ func callErr(err error) error {
 		return fmt.Errorf("%w\nThe model is configured for a different kind of work than this verb asks "+
 			"for. `olares-cli router model list` shows each model's mode, and a route can only serve the mode "+
 			"it was created with", err)
+	case re.Code == "audio_operation_not_supported":
+		// The model's application declared the routes it serves and this is
+		// not one of them, so Router refused rather than forwarding. That is
+		// the useful half: an engine that was merely forwarded to answers a
+		// bare 404, which reads the same whether the route is absent, the URL
+		// is wrong or the engine is the wrong one. Here the catalogue is the
+		// record, and it can be read.
+		return fmt.Errorf("%w\nThis model declares the routes it serves and this operation is not among "+
+			"them, so nothing was sent to the engine. `olares-cli router call models --operations` "+
+			"prints what each model does declare; another model of the same mode may serve it, and "+
+			"leaving --model off lets Router pick one that does", err)
 	case strings.HasSuffix(re.Code, "_unsupported_for_provider") || re.Code == "audio_path_unsupported":
 		return fmt.Errorf("%w\nThis model's provider does not serve that route at all. For a model "+
 			"running on this Olares that usually means a different engine image does this job: "+
@@ -353,6 +377,19 @@ func mediaAdvice(re *RouterError) string {
 	case "image_generation_async_multiple_unsupported":
 		return "A generation is one file behind one content route, so a persisted image is exactly one " +
 			"output. Several pictures are several calls."
+	case "lyrics_alignment_unavailable":
+		return "There is no timeline for this track. Either the generation has not completed — a " +
+			"timeline describes finished audio, so there is nothing to place until then — or the " +
+			"model application that made it does not serve one. Router asks the model that made " +
+			"this track and no other, so retrying against a different model is not an option here."
+	case "lyrics_alignment_invalid":
+		return "The model application answered with something that is not a timeline: out of order, " +
+			"outside the track, or not the shape at all. Router refuses it rather than passing on " +
+			"timings a player would seek to the wrong place with."
+	case "lyrics_alignment_upstream_error":
+		return "The model application that made this track did not answer. It is the only one that " +
+			"can, since the timeline comes from the generation's own provider; `olares-cli router " +
+			"provider get <provider>` says whether the application is still serving."
 	case "image_generation_async_required":
 		return "This provider serves image generation only as a generation to come back for, which is " +
 			"what this verb asks for. Seeing it here means the request reached Router without that " +
