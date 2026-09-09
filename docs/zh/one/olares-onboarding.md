@@ -17,10 +17,6 @@ Lares 是 Olares 内置的 AI 助手。借助 Router 和已连接的模型，它
 
 本指南将带你完成第一次 Lares 会话。你将检查环境是否就绪、开始对话，并尝试几个常见任务。
 
-:::info
-Lares 是推荐入口，但不是使用 Olares CLI Agent Skills 的唯一方式。你也可以在 Olares 上的其他智能体应用中使用同样的技能，或通过 Codex、Cursor 等本地智能体，用自然语言管理你的 Olares 设备。
-:::
-
 ## 学习目标
 
 完成本教程后，你将学会：
@@ -41,8 +37,12 @@ Lares 是推荐入口，但不是使用 Olares CLI Agent Skills 的唯一方式�
 
 | 起点 | 预装应用 | 下一步 |
 | --- | --- | --- |
-| Olares One v1.12.7 出厂镜像<br>（新设备） | <ul><li>Lares</li><li>Router</li><li><nobr>Qwen3.8-27B</nobr></li></ul> | 打开 Lares 即可开始 |
+| Olares One v1.12.7 出厂镜像<br>（新设备） | <ul><li>Lares</li><li>Router</li><li><nobr>Qwen3.8-27B (llama.cpp)</nobr></li></ul> | 打开 Lares 即可开始 |
 | <ul><li>自托管 Olares v1.12.7<br>（全新安装或升级）</li><li><nobr>Olares One 升级至 v1.12.7</nobr></li></ul> | 无 | 安装 Router 和 Lares，然后安装模型应用或在 Router 中添加提供商 |
+
+:::warning 同时只能进行一个会话
+Qwen3.8-27B (llama.cpp) 模型以 GPU 时间分片模式运行，同时只能服务一个会话。如果要让其他智能体应用与 Lares 并行使用，请确保它们使用另一个模型。
+:::
 
 ## 步骤 2：开始第一次 Lares 对话
 
@@ -97,6 +97,10 @@ Lares 会检查源应用、准备 Olares 应用 chart 并更新所需的清单�
 然后，你就可以在启动台和 **My Olares** 中找到该应用。
 
 ![部署完成的应用](/images/one/onboard-scenario-ported1.png#bordered)
+
+## 不止 Lares
+
+Lares 是推荐入口，但不是使用 Olares CLI Agent Skills 的唯一方式。你也可以在 Olares 上的其他智能体应用中使用同样的技能，或通过 Codex、Cursor 等本地智能体，用自然语言管理你的 Olares 设备。
 
 ## 资源
 

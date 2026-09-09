@@ -13,10 +13,6 @@ Lares is Olares' built-in AI assistant. With Router and a connected model, it ca
 
 This guide walks you through your first Lares session. You will check whether your environment is ready, start a conversation, and try a few common tasks.
 
-:::info
-Lares is the recommended entry point, but it is not the only way to use Olares CLI Agent Skills. You can also use the same skills from other agent apps on Olares, or from a local agent such as Codex or Cursor, to manage your Olares device through natural language.
-:::
-
 ## Learning objectives
 
 By the end of this tutorial, you will learn how to:
@@ -37,8 +33,12 @@ Preparation depends on your starting point. Find yours in the following table.
 
 | Starting point | <nobr>What's preinstalled</nobr> | Next step |
 | --- | --- | --- |
-| Olares One v1.12.7 factory image<br>(new device) | <ul><li>Lares</li><li>Router</li><li>Qwen3.8-27B</li></ul> | Open Lares and start. |
+| Olares One v1.12.7 factory image<br>(new device) | <ul><li>Lares</li><li>Router</li><li><nobr>Qwen3.8-27B (llama.cpp)</nobr></li></ul> | Open Lares and start. |
 | <ul><li>Self-hosted Olares v1.12.7<br>(fresh install or upgrade)</li> <li><nobr>Olares One upgraded to v1.12.7</nobr></li></ul> | None | Install Router and Lares, then install a model app or add a provider in Router. |
+
+:::warning One conversation at a time
+The Qwen3.8-27B (llama.cpp) model runs in GPU time-slicing mode and serves one conversation at a time. If you run other agent apps alongside Lares, make sure they use a different model.
+:::
 
 ## Step 2: Start your first Lares conversation
 
@@ -93,6 +93,10 @@ Lares will inspect the source app, prepare the Olares app chart, and update the 
 You can then find the app on the Launchpad and in My Olares.
 
 ![Deployed app in Lares](/images/one/onboard-scenario-ported1.png#bordered)
+
+## Beyond Lares
+
+Lares is the recommended entry point, but it is not the only way to use Olares CLI Agent Skills. You can also use the same skills from other agent apps on Olares, or from a local agent such as Codex or Cursor, to manage your Olares device through natural language.
 
 ## Resources
 
