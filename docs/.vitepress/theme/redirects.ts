@@ -48,7 +48,7 @@ export const redirects = {
     '/space/billing': '/manual/space/billing',
     '/space/manage-domain': '/manual/space/manage-domain',
     '/space/manage-accounts': '/manual/space/manage-accounts',
-    '/space/backup-restore': '/manual/space/backup-restore',
+    '/space/backup-restore': '/manual/olares/settings/backup',
     '/space/create-olares': '/manual/space/create-olares',
     '/space/manage-olares': '/manual/space/manage-olares',
     '/space/host-domain': '/manual/space/host-domain',
@@ -58,7 +58,7 @@ export const redirects = {
     '/zh/space/billing': '/zh/manual/space/billing',
     '/zh/space/manage-domain': '/zh/manual/space/manage-domain',
     '/zh/space/manage-accounts': '/zh/manual/space/manage-accounts',
-    '/zh/space/backup-restore': '/zh/manual/space/backup-restore',
+    '/zh/space/backup-restore': '/zh/manual/olares/settings/backup',
     '/zh/space/create-olares': '/zh/manual/space/create-olares',
     '/zh/space/manage-olares': '/zh/manual/space/manage-olares',
     '/zh/space/host-domain': '/zh/manual/space/host-domain',
@@ -236,6 +236,35 @@ export const redirects = {
     '/zh/one/ace-step': '/zh/use-cases/ace-step-1.5',
     '/zh/one/create-users': '/zh/manual/olares/settings/manage-team',
     '/zh/one/config-app-access': '/zh/manual/olares/settings/manage-entrance',
+
+    // Refactor: terminal/SSH how-to moved from developer reference to Olares OS manual
+    '/developer/reference/access-olares-terminal': '/manual/access-olares-terminal',
+    '/zh/developer/reference/access-olares-terminal': '/zh/manual/access-olares-terminal',
+
+    // Merge: create-account -> create-olares-id (single onboarding topic for first-time identity creation)
+    '/manual/larepass/create-account': '/manual/get-started/create-olares-id',
+    '/zh/manual/larepass/create-account': '/zh/manual/get-started/create-olares-id',
+
+    // Merge: roles-permissions -> manage-team (roles concept absorbed into team management page)
+    '/manual/olares/settings/roles-permissions': '/manual/olares/settings/manage-team',
+    '/zh/manual/olares/settings/roles-permissions': '/zh/manual/olares/settings/manage-team',
+    // Merge: settings/integrations dissolved (content redistributed: cloud storage -> mount-cloud-storage, SMB -> mount-SMB, cookies -> wise/manage-cookies, Space -> space/)
+    '/manual/olares/settings/integrations': '/manual/olares/files/mount-cloud-storage',
+    '/zh/manual/olares/settings/integrations': '/zh/manual/olares/files/mount-cloud-storage',
+    // Split: settings/my-olares dissolved (hardware -> one/hardware-settings, password/devices -> manual/password-and-devices)
+    '/manual/olares/settings/my-olares': '/manual/password-and-devices',
+    '/zh/manual/olares/settings/my-olares': '/zh/manual/password-and-devices',
+    // Merge: settings/restore and space/backup-restore absorbed into settings/backup (single back up and restore page)
+    '/manual/olares/settings/restore': '/manual/olares/settings/backup',
+    '/zh/manual/olares/settings/restore': '/zh/manual/olares/settings/backup',
+    '/manual/space/backup-restore': '/manual/olares/settings/backup',
+    '/zh/manual/space/backup-restore': '/zh/manual/olares/settings/backup',
+    // Merge: larepass/integrations -> settings/integrations (single integrations hub; cloud storage tasks live in mount-cloud-storage)
+    '/manual/larepass/integrations': '/manual/olares/files/mount-cloud-storage',
+    '/zh/manual/larepass/integrations': '/zh/manual/olares/files/mount-cloud-storage',
+    // Merge: controlhub/configure-env-var -> settings/manage-app-env (Control Hub advanced editing absorbed)
+    '/manual/olares/controlhub/configure-env-var': '/manual/olares/settings/manage-app-env',
+    '/zh/manual/olares/controlhub/configure-env-var': '/zh/manual/olares/settings/manage-app-env',
 }
 
 // Temporary redirects (302): content is offline but the URL may be reused later.

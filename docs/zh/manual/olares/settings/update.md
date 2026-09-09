@@ -1,6 +1,5 @@
 ---
-noindex: true
-description: 了解如何升级 Olares 版本，保持系统功能和安全性。
+description: 了解如何从 LarePass 或设置中升级 Olares 版本，保持系统功能和安全性。
 ---
 # 更新 Olares
 
@@ -14,6 +13,40 @@ Olares 定期发布新版本，带来功能改进和用户体验优化。本文�
 有关 Olares 的版本控制实践及当前跨次版本升级（比如从 `1.10.5` 升到 `1.11.0`）的限制，请参阅 [Olares 版本说明](../../../developer/install/versioning.md)。
 :::
 
+## 检查并安装更新
+:::tip 提示
+更新前请阅读发布说明，了解新功能和重要变更。
+:::
+
+你可以从 LarePass 应用或 Olares 设置中更新 Olares。
+
+<Tabs>
+<template #在-LarePass-中>
+
+1. 在手机上打开 LarePass，进入**设置**。
+2. 在**我的 Olares** 卡片里，点击**系统**，进入 **Olares 管理**页面。
+3. 点击**系统更新**。
+4. 确认**新版本**字段中的可更新版本信息，然后点击**升级**。
+   ![检查可用更新](/images/zh/manual/larepass/check-version1.png#bordered)
+5. 在弹出的对话框中，选择升级方式：
+   - **仅下载**：Olares 只下载更新包，你可以照常使用 Olares。
+   - **下载并升级**：Olares 会下载更新包，并在你确认重启后开始安装。
+   ![升级方法](/images/zh/manual/larepass/olares-upgrade2.png#bordered)
+6. 如果你选择了**仅下载**，在**系统更新**页面点击**升级**，开始更新流程。如果你选择了**下载并升级**，在出现提示时确认重新启动，即可开始安装。
+7. 等待更新和重启完成。出现成功消息表示升级已完成。
+   ![升级成功提示](/images/zh/manual/larepass/olares-upgrade-success.png#bordered)
+8. 刷新你的 Olares 桌面以同步最新的系统更改。
+
+</template>
+<template #在-Olares-设置中>
+
+1. 打开**设置**，进入 **System** > **我的 Olares** > 当前版本。
+2. 有可用新版本时，点击**立即升级**。
+
+更新完成后你会看到确认消息。
+
+</template>
+</Tabs>
 
 ## 手动升级 `olaresd`
 

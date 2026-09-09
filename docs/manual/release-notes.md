@@ -56,7 +56,7 @@ For the highlights and walk-through of Olares v1.12.6, see the [Olares 1.12.6 bl
 
 - Rewrote [Connect AI apps](/manual/best-practices/connect-ai-apps) to align with the v1.12.6+ architecture.
 - Consolidated Olares One software documentation into the main manual and versioned the ISO download links.
-- Updated [My Olares](/manual/olares/settings/my-olares), adding the **Limit CPU frequency** and **Automatic startup** toggles under **My Hardware**.
+- Updated [My Olares](/one/hardware-settings), adding the **Limit CPU frequency** and **Automatic startup** toggles under **My Hardware**.
 - Updated [Basic file operations](/manual/olares/files/add-edit-download) with new sorting options, Markdown editing, preview, and additional supported formats.
 - Updated [Managing accelerator resources](/manual/olares/settings/gpu-resource) to cover GPU and other accelerator resources.
 - Updated [Manage BIOS and EC](/one/update-firmware) with EC 1.03 and BIOS 1.05 changelogs, including the note that **Automatic startup** requires Olares OS 1.12.6 or later.

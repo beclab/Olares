@@ -213,5 +213,5 @@ Pods 面板提供了应用程序部署状态的动态视图。Pod 数量实时�
 ## 资源
 
 - [管理加速资源](settings/gpu-resource.md)：查看 GPU 使用情况并切换 GPU 模式。
-- [我的硬件](settings/my-olares.md#硬件)：查看设备型号和硬件状态。
+- [管理硬件设置](../../one/hardware-settings.md)：查看设备型号和硬件状态。
 - [在应用市场管理应用](market/market.md#卸载应用)：通过停止或卸载应用来释放资源。

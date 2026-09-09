@@ -37,4 +37,4 @@ Once your Olares ID is ready, use the wizard URL and one-time password shared by
 
 ## Resources
 
-- [Roles and permissions](/manual/olares/settings/roles-permissions.md): Learn more about what you can do as a member.
+- [Roles and permissions](/manual/olares/settings/manage-team.md#user-roles-and-permissions): Learn more about what you can do as a member.

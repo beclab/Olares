@@ -216,5 +216,5 @@ For applications supporting multiple entrances (such as Wordpress), you can clic
 ## Resources
 
 - [Manage accelerator resources](settings/gpu-resource.md): Check GPU usage and switch GPU modes.
-- [My hardware](settings/my-olares.md#my-hardware): View your device model and hardware status.
+- [Manage hardware settings](../../one/hardware-settings.md): View your device model and hardware status.
 - [Manage applications in Market](market/market.md#uninstall-applications): Free up resources by stopping or uninstalling apps.

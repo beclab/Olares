@@ -71,6 +71,19 @@ grep password $HOME/.olares/versions/v1.12.2/logs/install.log
 
 ## 激活
 
+### 通过蓝牙激活
+
+如果 LarePass 找不到你的 Olares 设备，可以使用蓝牙激活。这通常发生在 Olares 没有连接有线网络，或者你的手机和 Olares 处于不同网络的情况下。
+通过蓝牙，你可以将 Olares 直接连接到你手机当前的 Wi-Fi 网络，以便继续操作。
+![蓝牙配网](/images/zh/manual/larepass/bluetooth-network.png#bordered)
+
+1. 在**未发现 Olares** 提示页面底部，点击**蓝牙配网**选项。LarePass 将使用手机蓝牙扫描附近的 Olares 设备。
+2. 设备显示后，点击**配置网络**。
+3. 选择手机当前连接的 Wi-Fi 网络。如果该网络有密码保护，请输入密码并点击**确认**。
+4. Olares 将开始切换网络。完成后你会看到成功消息。此时，如返回到**蓝牙配网**页面，你将看到 Olares 的 IP 地址已更改为与你手机 Wi-Fi 相同的网络。
+5. 返回到设备扫描页面，点击**发现附近的 Olares**，找到你的设备并继续激活。
+
+
 ### 能否在非本地网络下激活 Olares？
 
 标准激活要求 Olares 设备与客户端设备（如手机）连接到同一个本地网络。无论你是通过浏览器访问本地 IP 地址来进入激活向导，还是在 ISO 安装后使用 LarePass 应用中的“发现附近的 Olares”功能，都适用这个要求。
@@ -85,7 +98,7 @@ grep password $HOME/.olares/versions/v1.12.2/logs/install.log
 
 如果无法通过 Wi-Fi 连接，可使用 LarePass 应用中的蓝牙配网功能，将 Olares 连接到与手机相同的网络中。
 
-详细步骤参见[通过蓝牙激活 Olares](../larepass/activate-olares.md#通过蓝牙激活)。
+详细步骤参见[通过蓝牙激活 Olares](#通过蓝牙激活)。
 
 ### 创建账户时，收到错误提示 MFA 绑定失败，怎么解决？
 

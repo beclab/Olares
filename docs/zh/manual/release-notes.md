@@ -60,7 +60,7 @@ Olares v1.12.6 的亮点和详细介绍请参见 [Olares 1.12.6 发布博客](ht
 
 - [连接 AI 应用](/zh/manual/best-practices/connect-ai-apps)已针对 v1.12.6+ 架构重写。
 - Olares One 软件文档已整合到主手册中，ISO 下载链接也添加了版本号。
-- [我的 Olares](/zh/manual/olares/settings/my-olares) 已更新，在 **我的硬件** 下新增了 **限制 CPU 频率** 和 **自动开机** 两个开关。
+- [我的 Olares](/zh/one/hardware-settings) 已更新，在 **我的硬件** 下新增了 **限制 CPU 频率** 和 **自动开机** 两个开关。
 - [基础文件操作](/zh/manual/olares/files/add-edit-download)已更新，新增排序方式、Markdown 编辑、预览以及更多支持格式。
 - [管理加速器资源](/zh/manual/olares/settings/gpu-resource)已更新，涵盖 GPU 和其他加速器资源。
 - [管理 BIOS 和 EC](/zh/one/update-firmware) 已更新，新增 EC 1.03 和 BIOS 1.05 的变更日志，并说明 **自动开机** 功能需要 Olares OS 1.12.6 或更高版本。

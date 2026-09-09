@@ -1,5 +1,4 @@
 ---
-noindex: true
 outline: [2, 3]
 description: Access the Olares host terminal via Control Hub or SSH.
 ---

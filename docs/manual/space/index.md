@@ -15,5 +15,5 @@ This section walks you through using Olares Space:
 - [Monitor Olares status and traffic](manage-olares.md)
 - [Set up a custom domain](host-domain.md)
 - [Manage domain members](manage-domain.md)
-- [Restore data from Olares Space backups](backup-restore.md)
+- [Restore data from Olares Space backups](../olares/settings/backup.md)
 - [Billing and payments](billing.md)

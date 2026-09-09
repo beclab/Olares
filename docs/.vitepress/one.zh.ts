@@ -195,6 +195,10 @@ export const oneSidebar: DefaultTheme.Sidebar = {
         {
           text: "管理 BIOS 和 EC",
           link: "/zh/one/update-firmware",
+        },
+        {
+          text: "管理硬件设置",
+          link: "/zh/one/hardware-settings",
         },         
       ]
     },

@@ -72,6 +72,20 @@ An installation timeout often indicates some services failed to start correctly.
 
 ## Activation
 
+### Activate Olares using Bluetooth
+
+Use this method if LarePass cannot find your Olares device. This can happen if Olares is not on a wired network or if your phone is on a different network.
+
+By using Bluetooth, you can connect Olares directly to your phone's current Wi-Fi network and continue the activation process.
+![Bluetooth network](/images/manual/larepass/bluetooth-network.png#bordered)
+
+1. On the **Olares not found** page, tap **Bluetooth network setup**. LarePass will use your phone's Bluetooth to scan for the nearby Olares device.
+2. When your device appears in the list, tap **Network setup**.
+3. Select the Wi-Fi network your phone is currently connected to. If the network is password-protected, enter the password and tap **Confirm**.
+4. Olares will begin connecting to the Wi-Fi network. Once the process is complete, a success message will appear. If you return to the Bluetooth network setup page, you'll see that Olares' IP address has changed to your phone's Wi-Fi subnet.
+5. Go back to the device scan page and tap **Discover nearby Olares** to find your device and proceed with activation.
+
+
 ### Is it possible to activate Olares with a non-local network?
 
 Yes. Standard activation requires the Olares device and your client device, such as your phone, to connect to the same local network. This requirement applies whether you access the activation wizard via a local IP address in a web browser, or use the **Discover nearby Olares** feature in the LarePass app after an ISO installation.
@@ -86,7 +100,7 @@ Ensure your phone and Olares device are on the same network. If they are not, La
 
 If you cannot connect via Wi-Fi, use the Bluetooth network setup in the LarePass app to connect Olares to the same network as your phone.
 
-For detailed instructions, refer to [Activate Olares using Bluetooth](../../manual/larepass/activate-olares.md#activate-olares-using-bluetooth).
+For detailed instructions, see [Activate Olares using Bluetooth](#activate-olares-using-bluetooth).
 
 ### I received the MFA binding error. How to resolve it?
 

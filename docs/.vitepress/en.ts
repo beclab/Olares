@@ -3,12 +3,11 @@ import { oneSidebar } from './one.en.ts';
 import { useCaseSidebar } from './usecase.en.ts';
 import { developerSidebar } from './developer.en.ts';
 const side = {
-"/manual/": [
+  "/manual/": [
     {
-      text: "What is Olares",
+      text: "Overview",
       link: "/manual/overview",
       items: [
-        // { text: "Compare Olares and NAS", link: "/manual/olares-vs-nas" },
         {
           text: "Update notes",
           collapsed: true,
@@ -20,82 +19,31 @@ const side = {
           ],
         },
         {
+          text: "What's new in docs",
+          link: "/manual/release-notes",
+        },
+        {
           text: "FAQs",
-          //           link: "/manual/help/faqs",
+          link: "/manual/help/faqs",
           collapsed: true,
           items: [
             {
-              text: "Olares FAQs",
+              text: "About Olares",
               link: "/manual/help/olares",
             },
             {
-              text: "Setup & access FAQs",
+              text: "Installation and activation",
               link: "/manual/help/installation",
             },
             {
-              text: "Usage FAQs",
+              text: "Using Olares",
               link: "/manual/help/usage",
             },
-
           ],
         },
         {
-          text: "Troubleshooting",
-          collapsed: true,
-          items: [
-            {
-              text: "Known issues",
-              link: "/manual/help/known-issues",
-            },
-            {
-              text: "Insufficient memory or memory not freed",
-              link: "/manual/help/ts-free-memory",
-            },
-            {
-              text: "Missing apps in Market",
-              link: "/manual/help/ts-missing-apps",
-            },
-            {
-              text: "System error in LarePass",
-              link: "/manual/help/ts-system-error",
-            },
-            {
-              text: "LarePass VPN not working",
-              link: "/manual/help/ts-larepass-vpn-not-working",
-            },
-            {
-              text: "Network not ready or olares connection error",
-              link: "/manual/help/ts-network-not-ready",
-            },
-            {
-              text: "Slow or delayed Steam streaming",
-              link: "/manual/help/ts-steam-stream-lag",
-            },
-            {
-              text: "Forgotten desktop login password",
-              link: "/manual/help/ts-forget-login-password",
-            },
-            {            
-              text: "GPU app remains stopped after installation or resume",
-              link: "/manual/help/ts-vram-shortage",
-            },
-            {
-              text: "Cannot remove a stopped app in App exclusive mode",
-              link: "/manual/help/ts-cs-app-reappears",
-            },
-            {
-              text: "App status differs after Control Hub start or stop",
-              link: "/manual/help/ts-inconsistent-app-status",
-            },
-          ],
-        },
-        {
-          text: "Get technical support",
+          text: "Request support",
           link: "/manual/help/request-technical-support",
-        },
-        {
-          text: "What's new in docs",
-          link: "/manual/release-notes",
         },
       ],
     },
@@ -104,7 +52,6 @@ const side = {
       collapsed: false,
       link: "/manual/get-started/",
       items: [
-        // { text: "Quick start", link: "/manual/get-started/quick-start" },
         {
           text: "Create an Olares ID",
           link: "/manual/get-started/create-olares-id",
@@ -144,7 +91,6 @@ const side = {
                   text: "Using ISO image",
                   link: "/manual/get-started/install-spark-iso",
                 },
-
               ],
             },
             /* {
@@ -169,10 +115,6 @@ const side = {
                   text: "Using script",
                   link: "/manual/get-started/install-windows-script",
                 },
-                // {
-                //   text: "Using Docker image",
-                //   link: "/manual/get-started/install-windows-docker",
-                // },
               ],
             }, */
             /* {
@@ -197,16 +139,12 @@ const side = {
           ],
         },
         {
-          text: "Join an Olares",
+          text: "Join an existing Olares as a member",
           link: "/manual/get-started/join-olares",
         },
         {
-          text: "Back up mnemonics",
-          link: "/manual/larepass/back-up-mnemonics"
-        },
-        {
-          text: "Access Olares securely",
-          link: "/manual/get-started/local-access",
+          text: "Get familiar with Desktop",
+          link: "/manual/olares/desktop",
         },
         {
           text: "What's next",
@@ -215,151 +153,281 @@ const side = {
       ],
     },
     {
-      text: "Olares applications",
-      link: "/manual/olares/",
+      text: "Tutorials",
+      link: "/manual/best-practices/",
+      collapsed: false,
       items: [
-        { text: "Desktop", link: "/manual/olares/desktop", },
         {
-          text: "Market",
+          text: "Activate a device using Olares CLI",
+          link: "/manual/best-practices/activate-olares-using-cli",
+        },
+        {
+          text: "Install a multi-node Olares cluster",
+          link: "/manual/best-practices/install-olares-multi-node",
+        },
+        // Hidden per content map: /manual/best-practices/install-olares-gpu-passthrough
+        {
+          text: "Install a specific CUDA version",
+          link: "/manual/best-practices/install-specific-cuda-version",
+        },
+      ],
+    },
+    {
+      text: "Accounts and access",
+      collapsed: false,
+      items: [
+        {
+          text: "Olares ID",
           collapsed: true,
           items: [
             {
-              text: "Basic operations",
-              link: "/manual/olares/market/market",
+              text: "Manage Olares IDs in LarePass",
+              link: "/manual/larepass/manage-accounts",
             },
             {
-              text: "Clone applications",
-              link: "/manual/olares/market/clone-apps",
+              text: "Set up a custom-domain Olares ID",
+              link: "/manual/best-practices/set-custom-domain",
             },
-            /*{
-              text: "Manage paid applications",
-              link: "/manual/olares/market/purchase-paid-apps",
-            },*/
             {
-              text: "Shared applications",
-              link: "/manual/olares/market/shared-apps",
+              text: "Manage your Olares Space account and billing",
+              link: "/manual/space/manage-accounts",
+            },
+            {
+              text: "Back up your mnemonic phrase",
+              link: "/manual/larepass/back-up-mnemonics",
             },
           ],
         },
         {
-          text: "Files",
+          text: "Access Olares",
           collapsed: true,
-          link: "/manual/olares/files/",
           items: [
             {
-              text: "Basic file operations",
+              text: "Access Olares on your local network",
+              link: "/manual/best-practices/local-access",
+            },
+            {
+              text: "Access Olares remotely with LarePass VPN",
+              link: "/manual/larepass/private-network",
+            },
+            {
+              text: "Connect to Olares via SSH",
+              link: "/manual/access-olares-terminal",
+            },
+            {
+              text: "Create and manage team members",
+              link: "/manual/olares/settings/manage-team",
+            },
+            {
+              text: "Change your password and manage signed-in devices",
+              link: "/manual/password-and-devices",
+            },
+          ],
+        },
+        {
+          text: "Passwords",
+          collapsed: true,
+          items: [
+            {
+              text: "Create and manage Vault items",
+              link: "/manual/olares/vault/vault-items",
+            },
+            {
+              text: "Share Vault items securely",
+              link: "/manual/olares/vault/share-vault-items",
+            },
+            {
+              text: "Autofill passwords with LarePass",
+              link: "/manual/larepass/autofill",
+            },
+            {
+              text: "Generate two-factor authentication codes",
+              link: "/manual/larepass/two-factor-verification",
+            },
+          ],
+        },
+      ],
+    },
+    {
+      text: "Apps",
+      collapsed: false,
+      items: [
+        {
+          text: "Install, update, and remove apps",
+          link: "/manual/olares/market/market",
+        },
+        {
+          text: "Clone an app",
+          link: "/manual/olares/market/clone-apps",
+        },
+        {
+          text: "Configure environment variables for an app",
+          link: "/manual/olares/settings/manage-app-env",
+        },
+        {
+          text: "Set system environment variables",
+          link: "/manual/manage-system-env",
+        },
+        {
+          text: "Allocate accelerator resources to an app",
+          link: "/manual/olares/settings/gpu-resource",
+        },
+        {
+          text: "Change an app's web address",
+          link: "/manual/olares/settings/custom-app-domain",
+        },
+        {
+          text: "Make an app available on the local network",
+          link: "/manual/olares/settings/overlay-gateway",
+        },
+        {
+          text: "Control who can access an app",
+          link: "/manual/olares/settings/manage-entrance",
+        },
+        {
+          text: "Connect an AI app to a model service",
+          link: "/manual/best-practices/connect-ai-apps",
+        },
+        {
+          text: "About shared applications",
+          link: "/manual/olares/market/shared-apps",
+        },
+      ],
+    },
+    {
+      text: "Files and data",
+      link: "/manual/olares/files/",
+      collapsed: false,
+      items: [
+        {
+          text: "Work with files",
+          collapsed: true,
+          items: [
+            {
+              text: "Upload, edit, and download files",
               link: "/manual/olares/files/add-edit-download",
             },
             {
               text: "Compress and extract files",
               link: "/manual/olares/files/compress-extract-files",
             },
-            //   {
-            //      text: "Sync and share",
-            //     link: "/manual/larepass/sync-share",
-            //   },
             {
               text: "Share files",
               link: "/manual/olares/files/share-files",
             },
             {
-              text: "Sync files to local",
+              text: "Sync files with a computer",
               link: "/manual/olares/files/sync-files",
             },
             {
-              text: "Mount SMB",
-              link: "/manual/olares/files/mount-SMB",
+              text: "Configure file search",
+              link: "/manual/olares/settings/search",
             },
             {
-              text: "Mount NFS",
-              link: "/manual/olares/files/mount-nfs",
-            },
-            {
-              text: "Mount cloud storage",
-              link: "/manual/olares/files/mount-cloud-storage",
-            },
-            {
-              text: "Manage shared AI models with the Common directory",
+              text: "Manage shared AI model files",
               link: "/manual/olares/files/files-common",
             },
           ],
         },
         {
-          text: "Vault",
+          text: "Connect external storage",
           collapsed: true,
-          link: "/manual/olares/vault/",
           items: [
             {
-              text: "Manage vault items",
-              link: "/manual/olares/vault/vault-items",
+              text: "Use a USB drive",
+              link: "/manual/use-usb-drive",
             },
             {
-              text: "Manage shared vault",
-              link: "/manual/olares/vault/share-vault-items",
+              text: "Mount a local disk",
+              link: "/manual/mount-local-disk",
             },
             {
-              text: "Autofill",
-              link: "/manual/larepass/autofill",
+              text: "Connect an SMB share",
+              link: "/manual/olares/files/mount-SMB",
             },
             {
-              text: "Generate 2FA codes",
-              link: "/manual/larepass/two-factor-verification",
+              text: "Connect an NFS share",
+              link: "/manual/olares/files/mount-nfs",
+            },
+            {
+              text: "Connect cloud storage",
+              link: "/manual/olares/files/mount-cloud-storage",
             },
           ],
         },
-        /*{
-          text: "Wise",
+      ],
+    },
+    {
+      text: "Personalize Olares",
+      collapsed: false,
+      items: [
+        {
+          text: "Change language and appearance",
+          link: "/manual/olares/settings/language-appearance",
+        },
+        {
+          text: "Create an Olares profile",
+          link: "/manual/olares/profile",
+        },
+      ],
+    },
+    {
+      text: "System",
+      collapsed: false,
+      items: [
+        {
+          text: "Check system and app resource usage",
+          link: "/manual/olares/resources-usage",
+        },
+        {
+          text: "Monitor Olares status and traffic in Olares Space",
+          link: "/manual/space/manage-olares",
+        },
+        {
+          text: "Update Olares",
+          link: "/manual/olares/settings/update",
+        },
+        {
+          text: "Reactivate Olares",
+          link: "/manual/larepass/activate-olares",
+        },
+        {
+          text: "Manage your Olares device",
+          link: "/manual/larepass/manage-olares",
+        },
+        {
+          text: "Back up and restore Olares",
+          link: "/manual/olares/settings/backup",
+        },
+        {
+          text: "Storage",
           collapsed: true,
-          link: "/manual/olares/wise/",
           items: [
             {
-              text: "Basic operations",
-              link: "/manual/olares/wise/basics",
+              text: "Free up disk space",
+              link: "/manual/free-up-disk-space",
             },
             {
-              text: "Get recommendation engine",
-              link: "/manual/olares/wise/recommend",
-            },
-            {
-              text: "Manage your feeds",
-              link: "/manual/olares/wise/subscribe",
-            },
-            {
-              text: "Manage cookies",
-              link: "/manual/olares/wise/manage-cookies",
-            },
-            {
-              text: "Organize with filters",
-              link: "/manual/olares/wise/filter",
-              collapsed: true,
-              items: [
-                {
-                  text: "Filter syntax",
-                  link: "/manual/olares/wise/filter-syntax-guide",
-                },
-                {
-                  text: "Filter example",
-                  link: "/manual/olares/wise/filter-examples",
-                },
-              ],
+              text: "Expand Olares system storage",
+              link: "/manual/best-practices/expand-storage-in-olares",
             },
           ],
-        },*/
+        },
         {
-          text: "Control Hub",
-          collapsed: true,
+          text: "Advanced administration",
           link: "/manual/olares/controlhub/",
+          collapsed: true,
           items: [
             {
               text: "Manage workloads",
               link: "/manual/olares/controlhub/manage-workload",
             },
             {
-              text: "Manage containers",
+              text: "Inspect and manage containers",
               link: "/manual/olares/controlhub/manage-container",
             },
             {
-              text: "Manage resource config",
+              text: "Manage resource configurations",
               link: "/manual/olares/controlhub/manage-resource",
             },
             {
@@ -367,223 +435,88 @@ const side = {
               link: "/manual/olares/controlhub/manage-middleware",
             },
             {
-              text: "Access Terminal",
+              text: "Run commands in the Control Hub terminal",
               link: "/manual/olares/controlhub/terminal",
             },
             {
-              text: "Configure environment variables",
-              link: "/manual/olares/controlhub/configure-env-var",
-            },            
+              text: "Configure host name resolution in Olares",
+              link: "/manual/olares/settings/set-up-hosts",
+            },
+            {
+              text: "Change the reverse proxy",
+              link: "/manual/olares/settings/change-frp",
+            },
+            {
+              text: "Configure video playback",
+              link: "/manual/olares/settings/video",
+            },
+            {
+              text: "Advanced settings",
+              link: "/manual/olares/settings/developer",
+            },
           ],
         },
-        {
-          text: "Settings",
-          collapsed: true,
-          link: "/manual/olares/settings/",
-          items: [
-            {
-              text: "My Olares",
-              link: "/manual/olares/settings/my-olares"
-            },
-            {
-              text: "Manage users",
-              collapsed: true,
-              items: [
-                {
-                  text: "Roles and permissions",
-                  link: "/manual/olares/settings/roles-permissions",
-                },
-                {
-                  text: "Create and manage users",
-                  link: "/manual/olares/settings/manage-team",
-                }
-              ],
-            },
-            {
-              text: "Manage applications",
-              collapsed: true,
-              items: [
-                {
-                  text: "Manage app entrance",
-                  link: "/manual/olares/settings/manage-entrance",
-                },
-                {
-                  text: "Customize app domains",
-                  link: "/manual/olares/settings/custom-app-domain",
-                },
-                {
-                  text: "Manage app variables",
-                  link: "/manual/olares/settings/manage-app-env",
-                },
-              ],
-            },
-            {
-              text: "Manage integrations",
-              link: "/manual/olares/settings/integrations",
-            },
-            {
-              text: "Customize appearance",
-              link: "/manual/olares/settings/language-appearance",
-            },
-            { text: "Manage VPN", link: "/manual/olares/settings/remote-access", },
-            {
-              text: "Configure network",
-              collapsed: true,
-              items: [
-                {
-                  text: "Change reverse proxy",
-                  link: "/manual/olares/settings/change-frp",
-                },
-                {
-                  text: "Set up hosts file",
-                  link: "/manual/olares/settings/set-up-hosts",
-                },
-                {
-                  text: "Manage Overlay Gateway",
-                  link: "/manual/olares/settings/overlay-gateway",
-                },
-              ],
-            },
-            {
-              text: "Manage accelerator resources",
-              link: "/manual/olares/settings/gpu-resource",
-            },
-            { text: "Set video playback", link: "/manual/olares/settings/video" },
-            { text: "Manage search rules", link: "/manual/olares/settings/search" },
-            {
-              text: "Backup and restore",
-              collapsed: true,
-              items: [
-                { text: "Backup", link: "/manual/olares/settings/backup" },
-                { text: "Restore", link: "/manual/olares/settings/restore" },
-              ],
-            },
-            { text: "Advanced settings", link: "/manual/olares/settings/developer" },
-          ]
-        },
-        { text: "Dashboard", link: "/manual/olares/resources-usage" },
-        { text: "Profile", link: "/manual/olares/profile" },
       ],
     },
     {
-      text: "LarePass",
-      link: "/manual/larepass/",
-      collapsed: true,
+      text: "Help and troubleshooting",
+      link: "/manual/help/",
+      collapsed: false,
       items: [
         {
-          text: "Create and manage accounts",
-          collapsed: true,
-          items: [
-            { text: "Create an account", link: "/manual/larepass/create-account" },
-            { text: "Create with a custom domain", link: "/manual/larepass/create-org-account" },
-            { text: "Manage existing accounts", link: "/manual/larepass/manage-accounts" },
-            { text: "Back up mnemonics", link: "/manual/larepass/back-up-mnemonics" },
-          ],
-        },
-        { text: "Manage integrations", link: "/manual/larepass/integrations" },        {
-          text: "Manage device",
-          collapsed: true,
-          items: [
-            { text: "Activate Olares", link: "/manual/larepass/activate-olares" },
-            { text: "Manage Olares", link: "/manual/larepass/manage-olares" },
-          ],
-        },
-        { text: "Use VPN", link: "/manual/larepass/private-network" },
-        { text: "Manage files", link: "/manual/larepass/manage-files" },
-        // collapsed: true,
-        //items: [
-        //  {text: "Common file operations", link:"/manual/larepass/manage-files"},
-        // {text: "Sync and share", link:"/manual/larepass/sync-share"}
-        // ]
-        // },
-        {
-          text: "Manage passwords",
-          collapsed: true,
-          items: [
-            { text: "Autofill passwords", link: "/manual/larepass/autofill" },
-            { text: "Generate 2FA codes", link: "/manual/larepass/two-factor-verification" },
-          ],
-        },
-        /*{
-          text: "Manage knowledge",
-          link: "/manual/larepass/manage-knowledge",
-        },*/
-      ],
-    },
-    {
-      text: "Olares Space",
-      link: "/manual/space/",
-      collapsed: true,
-      items: [
-        {
-          text: "Log in and manage accounts",
-          link: "/manual/space/manage-accounts",
-        },
-        {
-          text: "Monitor Olares status and traffic",
-          link: "/manual/space/manage-olares",
-        },
-        {
-          text: "Add custom domain",
+          text: "Troubleshooting",
+          link: "/manual/help/troubleshooting-guide",
           collapsed: true,
           items: [
             {
-              text: "Set up a custom domain",
-              link: "/manual/space/host-domain",
+              text: "Missing apps in Market",
+              link: "/manual/help/ts-missing-apps",
             },
             {
-              text: "Manage domain members",
-              link: "/manual/space/manage-domain",
+              text: "Cannot remove a stopped app in App exclusive mode",
+              link: "/manual/help/ts-cs-app-reappears",
+            },
+            {
+              text: "Application status differs after Control Hub actions",
+              link: "/manual/help/ts-inconsistent-app-status",
+            },
+            {
+              text: "Memory is insufficient or not freed",
+              link: "/manual/help/ts-free-memory",
+            },
+            {
+              text: "GPU application remains stopped after installation or resume",
+              link: "/manual/help/ts-vram-shortage",
+            },
+            {
+              text: "LarePass VPN is not working",
+              link: "/manual/help/ts-larepass-vpn-not-working",
+            },
+            {
+              text: "Network not ready or Olares connection error",
+              link: "/manual/help/ts-network-not-ready",
+            },
+            {
+              text: "Slow or delayed Steam streaming",
+              link: "/manual/help/ts-steam-stream-lag",
+            },
+            {
+              text: "Disk space is full",
+              link: "/manual/free-up-disk-space",
+            },
+            {
+              text: "Forgotten desktop login password",
+              link: "/manual/help/ts-forget-login-password",
+            },
+            {
+              text: "System error in LarePass",
+              link: "/manual/help/ts-system-error",
             },
           ],
         },
         {
-          text: "Restore data from Olares Space backups",
-          link: "/manual/space/backup-restore",
-        },
-        { text: "Billing and payments", link: "/manual/space/billing" },
-      ],
-    },
-    {
-      text: "Tutorials",
-      link: "/manual/best-practices/",
-      collapsed: true,
-      items: [
-        {
-          text: "Activate Olares device using Olares CLI",
-          link: "/manual/best-practices/activate-olares-using-cli",
-        },        
-        {
-          text: "Set up custom domain",
-          link: "/manual/best-practices/set-custom-domain",
-        },
-        // {
-        //   text: "Manage knowledge with Wise",
-        //   link: "/manual/best-practices/organize-content",
-        // },
-        {
-          text: "Install a multi-node Olares cluster",
-          link: "/manual/best-practices/install-olares-multi-node",
-        },
-        {
-          text: "Install Olares on PVE with GPU Passthrough",
-          link: "/manual/best-practices/install-olares-gpu-passthrough",
-        },
-        {
-          text: "Install a specific CUDA version",
-          link: "/manual/best-practices/install-specific-cuda-version",
-        },
-        {
-          text: "Expand storage in Olares",
-          link: "/manual/best-practices/expand-storage-in-olares",
-        },
-        {
-          text: "Access Olares locally",
-          link: "/manual/best-practices/local-access",
-        },
-        {
-          text: "Connect AI apps",
-          link: "/manual/best-practices/connect-ai-apps",
+          text: "Known issues",
+          link: "/manual/help/known-issues",
         },
       ],
     },

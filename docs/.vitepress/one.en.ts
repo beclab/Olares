@@ -195,6 +195,10 @@ export const oneSidebar: DefaultTheme.Sidebar = {
         {
           text: "Manage BIOS and EC",
           link: "/one/update-firmware",
+        },
+        {
+          text: "Manage hardware settings",
+          link: "/one/hardware-settings",
         },        
       ]
     },

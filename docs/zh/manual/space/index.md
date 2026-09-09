@@ -15,5 +15,5 @@ Olares Space 通过基础设施服务扩展 Olares 环境，例如数据备份�
 - [监控 Olares 状态与流量](manage-olares.md)
 - [设置自定义域名](host-domain.md)
 - [管理域名成员](manage-domain.md)
-- [从 Olares Space 备份中恢复数据](backup-restore.md)
+- [从 Olares Space 备份中恢复数据](../olares/settings/backup.md)
 - [计费与支付](billing.md)

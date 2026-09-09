@@ -8,13 +8,9 @@ head:
 # Manage your team
 As an administrator, you can create and manage users in your team while ensuring system security and resource efficiency.
 
-:::tip Note on role permissions
-As an administrator, Super Admin and Admin share most system management permissions, but only the **Super Admin** can create or remove Admin accounts. Admins can only create and manage Member accounts. See [Roles and permissions](roles-permissions.md) for more information.
-:::
-
 ![Manage users](/images/manual/olares/manage-users.png#bordered)
 
-## Before you begin
+## Prerequisites
 Ensure that:
 
 * You have Super Admin or Admin privileges
@@ -24,6 +20,39 @@ Ensure that:
 :::info
 When creating a new user in Olares, make sure the domain part of their Olares ID matches yours.
 :::
+## User roles and permissions
+
+Olares supports multi-user operations, allowing multiple users to access the system simultaneously. Each user can securely access resources based on their assigned role and permissions.
+
+### Role types
+
+Olares has three user roles:
+
+- **Super Admin**: The first user to activate and log into Olares. Has full, unrestricted control of the system and can create other Admin and Member accounts.
+- **Admin**: Created by the Super Admin. Has nearly the same system management permissions as the Super Admin. **Can only create and manage Members**, not other Admin accounts.
+- **Member**: Standard users created by Super Admin or Admin, with limited system resources and access permissions.
+
+This structure ensures organizations can scale Olares management securely, with multiple Admins sharing responsibility while the Super Admin retains ultimate authority.
+
+### Role permissions
+
+| Permission Area | Member | Admin | Super Admin |
+|-----------------|--------|-------|-------------|
+| Use system apps (Files, Vault, Wise, Profile, Dashboard, Control Hub) | ✅ | ✅ | ✅ |
+| Enable VPN for private entrances | ✅ | ✅ | ✅ |
+| Connect to Olares Space | ✅ | ✅ | ✅ |
+| Customize app entrances | ✅ | ✅ | ✅ |
+| Install regular apps from Market | ✅ | ✅ | ✅ |
+| Access shared vaults with assigned permissions | ✅ | ✅ | ✅ |
+| View basic system status in Control Hub | ✅ | ✅ | ✅ |
+| Manage Vault teams & shared vaults | ❌ | ✅ | ✅ |
+| Install and manage shared apps | ❌ | ✅ | ✅ |
+| Monitor and manage system resources | ❌ | ✅ | ✅ |
+| Set GPU usage modes | ❌ | ✅ | ✅ |
+| Update Olares versions | ❌ | ✅ | ✅ |
+| Create, edit, and delete Members | ❌ | ✅ | ✅ |
+| Create, edit, and delete Admins | ❌ |❌| ✅ |
+
 ## Create a new user
 
 1. Navigate to the page **Settings** > **Users**.
