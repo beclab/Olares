@@ -159,13 +159,31 @@ func TestOnlyATrustworthyCatalogueIsAllowedToNarrow(t *testing.T) {
 	}{
 		{"reconstructed from capabilities", modelObject{ID: "m", Mode: "tts", Authoritative: &no, Operations: op}},
 		{"a Router that publishes none", modelObject{ID: "m", Mode: "tts", Operations: op}},
-		{"declared but aged out", modelObject{ID: "m", Mode: "tts", Authoritative: &yes, CapabilityStale: true, Operations: op}},
 		{"declared and empty", modelObject{ID: "m", Mode: "tts", Authoritative: &yes}},
 	}
 	for _, c := range cases {
 		if got := declaredFirst([]modelObject{c.m}, "m", "POST", both); len(got) != 2 {
 			t.Errorf("%s: narrowed to %v, and both spellings should stay reachable", c.name, got)
 		}
+	}
+}
+
+// Stale is the exception, and it goes the other way from how it reads. Router
+// enforces a catalogue on `authoritative` alone and never looks at staleness,
+// so an aged catalogue still decides what Router accepts. Treating it as
+// untrustworthy would make the CLI guess a path Router is about to refuse
+// outright, which is worse than the 404 the guess used to cost.
+func TestAnAgedCatalogueStillDecidesBecauseRouterStillEnforcesIt(t *testing.T) {
+	yes := true
+	m := modelObject{
+		ID: "Olares/Breeze", Mode: "tts", Authoritative: &yes, CapabilityStale: true,
+		Operations: []modelOperation{
+			{ID: "speech.synthesize", Method: "POST", PathTemplate: epTextToSpeech + "/{voice_id}", Transport: "http"},
+		},
+	}
+	got := declaredFirst([]modelObject{m}, "Olares/Breeze", "POST", speakRoutes(dialectUnknown, "en-f"))
+	if len(got) != 1 || got[0] != epSpeakAs("en-f") {
+		t.Fatalf("an aged catalogue was ignored and the guess survived: %v", got)
 	}
 }
 

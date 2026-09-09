@@ -15,10 +15,10 @@ Two gates narrow the list against `router model list`, and a third applies only 
 Each block is labelled with how much it is worth:
 
 - **declared by the application** — the application published it, and Router enforces it: an operation the catalogue does not list is refused with `audio_operation_not_supported` and never reaches the engine.
-- **declared, last seen over 15 minutes ago** — the catalogue is refreshed when an engine reaches ready, so an old one may describe an engine that has since been relaunched onto other flags.
+- **declared, last seen over 15 minutes ago** — the same thing, with a note of its age. A catalogue is refreshed when an engine reaches ready, so an old one may describe an engine that has since been relaunched. Router enforces it regardless: staleness is a reason to go and check the engine, not a reason to distrust what is printed.
 - **reconstructed from capabilities** — the application declared nothing and Router inferred a list from the flags. Nothing is enforced against it: an undeclared route is forwarded and the engine's own bare 404 comes back.
 
-`speak` and `voices` use this. Where a model's catalogue is declared and current they send only the spelling it names; where it is not, they keep the older behaviour of trying the likelier spelling and retrying the other on a 404. With no `--model` the verb is answered by a category, which matches no row, so the catalogue only decides when every installed synthesis model agrees — Router chooses which of them serves the category.
+`speak` and `voices` use this. Where a model's catalogue is declared they send only the spelling it names; where it is reconstructed, they keep the older behaviour of trying the likelier spelling and retrying the other on a 404. With no `--model` the verb is answered by a category, which matches no row, so the catalogue only decides when every installed synthesis model agrees — Router chooses which of them serves the category.
 
 ## The credential
 

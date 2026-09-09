@@ -50,6 +50,11 @@ const capTTSDesign = "tts_design"
 // where it is not. Both remain: an application whose chart predates the
 // catalogue publishes nothing, Router reconstructs an unauthoritative list from
 // the capability flags, and that is exactly the case the guess was written for.
+//
+// An aged catalogue is not that case, however much it reads like one. Router
+// enforces on `authoritative` alone and never consults staleness, so an old
+// declaration still decides what Router accepts — and guessing around it buys
+// a hard refusal instead of the 404 the guess used to cost.
 
 // synthesisRoutes is every path `speak` should try, best first.
 func synthesisRoutes(ctx context.Context, dp *routerClient, model, voice string) []string {

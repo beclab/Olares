@@ -194,11 +194,21 @@ func operationPathMatches(pattern, target string) bool {
 }
 
 // trustworthyCatalogue is whether this list may be used to choose a route
-// instead of guessing one. Stale disqualifies it as firmly as unauthoritative:
-// the catalogue is refreshed when an engine reaches ready, so an old one
-// describes an engine that may since have been relaunched onto other flags.
+// instead of guessing one.
+//
+// Authoritative alone decides, and CapabilityStale deliberately does not.
+// Router's own gate reads only the first: a catalogue last observed hours ago
+// is enforced exactly as a fresh one is, and an operation it does not list is
+// refused before the engine sees it. So declining to read a stale catalogue
+// would not make the CLI cautious, it would make it guess a path Router is
+// about to refuse — a worse outcome than the 404 the guess used to cost,
+// because a refusal is final and the guess at least had a second chance.
+//
+// Stale is worth printing for the reader, who can go and look at the engine.
+// It is not worth acting on, because acting on it changes nothing Router will
+// accept.
 func (m *modelObject) trustworthyCatalogue() bool {
-	return m.Authoritative != nil && *m.Authoritative && !m.CapabilityStale && len(m.Operations) > 0
+	return m.Authoritative != nil && *m.Authoritative && len(m.Operations) > 0
 }
 
 type modelsListResponse struct {
@@ -249,11 +259,14 @@ synthesises speech and knowing whether it answers "/v1/audio/speech" or
 "/v1/text-to-speech/<voice>", which are two spellings of the same job that no
 engine serves both of.
 
-A catalogue is marked authoritative when the application declared it. One that
-is not is Router's reconstruction from the capability flags, and a stale one
-describes an engine that may since have been relaunched; both are printed and
-both are labelled, because a reconstruction is still better than nothing and
-knowing which you have is the point.
+A catalogue is marked as declared when the application published it, and
+Router then enforces it: an operation it does not list is refused before the
+engine sees it. Otherwise it is Router's own reconstruction from the capability
+flags, which nothing is enforced against.
+
+A declared catalogue is also stamped with when it was last observed. Router
+enforces an old one exactly as it enforces a fresh one, so the age is something
+to go and check on the engine rather than a reason to distrust what is here.
 
 Examples:
   olares-cli router call models
