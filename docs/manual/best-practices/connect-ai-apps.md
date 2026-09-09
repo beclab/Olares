@@ -9,12 +9,14 @@ head:
 
 # Connect an AI app to a model service <Badge type="tip" text="^ 1.12.6" />
 
-On Olares, an AI service app provides AI capabilities over an API, and an AI client app (such as LobeHub) provides the chat interface you use. To make them work together, gather the connection details from the service app and enter them in the client app.
+On Olares, an AI service app provides AI capabilities over an API, while a client app provides the interface or workflow you use. Connecting them follows the same pattern across apps: choose how the client reaches the service, match the API format, and copy the service address and model name.
+
+This page covers that common pattern. For the exact fields and buttons in a specific client app, use the app-specific tutorial linked at the end of this page.
 
 ## Before you begin
 
 - Install both the AI service app and the AI client app.
-- For an LLM service app, open it from the Launchpad and make sure the model shows **READY** and the engine shows **RUNNING**.
+- For an LLM service app, open it from the Launchpad and make sure **Model** shows **Ready** and **Engine** shows **Running**.
 
 ## Choose the connection source and API format
 
@@ -43,13 +45,22 @@ The Base URL is the network address where the service app receives and processes
 - **Model name**: Copy the **Model name** from the Model Console exactly as displayed. Do not abbreviate it or remove repository prefixes (such as `unsloth/`) or quantization tags (such as `UD-Q4_K_XL`), otherwise the client might return an error like "Model not found".
 - **API key**: AI service apps deployed locally on Olares trust requests from other apps in the same cluster, so a real API key is usually not required. If the client app still requires a value in this field, enter any placeholder text such as `olares` or `local`.
 
+## Add the service to the client app
+
+Open the client app's model, provider, or integration settings, then enter the values collected from the service app:
+
+| Client setting | Value to use |
+|---|---|
+| Provider or API format | The format selected in Model Console, such as **OpenAI-Compatible** or **Ollama** |
+| Base URL or endpoint | The complete URL copied from Model Console or the app entrance |
+| Model name or model ID | The complete model name shown in Model Console |
+| API key | The real key required by the service, or a placeholder if the local client requires a non-empty value |
+
+The labels vary by client. If a client asks for additional fields or changes where requests are sent from, follow that client's tutorial instead of guessing.
+
 ## Verify the connection
 
-In the client app, save the provider settings and run its connectivity check. For example, in LobeHub, click **Fetch models** next to **Model List** to load the model, enable it, and then select it next to **Connectivity Check** and click **Check**. When the check passes, the connection is established.
-
-:::warning Disable Client Request Mode in LobeHub
-Do not enable **Use Client Request Mode** in LobeHub. Enabling this forces the application to make frontend browser calls, which can trigger cross-origin (CORS) blocks or Olares security authentication prompts. Keeping it disabled ensures secure, direct backend-to-backend communication.
-:::
+Save the provider settings and use the client app's connection test or model-list refresh. If the client has neither option, start a new session, select the configured model, and send a short request. A response confirms that the client can reach the service and use the selected model.
 
 ## Fix common connection errors
 
@@ -57,18 +68,16 @@ Do not enable **Use Client Request Mode** in LobeHub. Enabling this forces the a
 |---|---|
 | The client reports "Model not found" | The model name was abbreviated or missing prefixes. Copy the full model name from the Model Console. |
 | The connectivity check fails or the Base URL is unreachable | The connection source does not match where the client runs. Reopen the Model Console, select the matching **Connection source**, and copy the Base URL again. |
-| CORS errors or authentication prompts appear in the client | For LobeHub, disable **Use Client Request Mode** so requests go directly between the apps. |
+| A browser reports a CORS error or Olares authentication page | The client may be sending requests from the browser instead of its server. Check the client tutorial for the correct request mode and service entrance. |
 
-## FAQ
+## App-specific tutorials
 
-### How do I connect non-AI apps?
-
-The same internal-entrance pattern applies when connecting non-AI apps to each other. For example:
-- The *Arrs media stack uses internal entrance URLs to connect Sonarr, Radarr, Prowlarr, Bazarr, and qBittorrent. See [Manage your media library with the *Arrs ecosystem](/use-cases/arrs.md).
-- SearXNG itself is not an AI model, but it can be connected to an AI client such as Vane for private, enhanced search. See [Connect SearXNG to Vane](/use-cases/perplexica.md).
+- [Build your local AI agent with LobeHub](/use-cases/lobechat.md)
+- [Set up Open WebUI for local AI chat](/use-cases/openwebui.md)
+- [Customize your local AI assistant using Dify](/use-cases/dify.md)
 
 ## Learn more
 
 - [How do AI apps connect on Olares?](../help/usage.md#how-do-ai-apps-connect-on-olares)
-- [Host local large language models with Engine Base apps](../../use-cases/llm-base-apps.md)
+- [Run local LLMs with Ollama, vLLM, llama.cpp, and SGLang](../../use-cases/llm-base-apps.md)
 - [Manage application entrances](../olares/settings/manage-entrance.md)

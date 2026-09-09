@@ -151,6 +151,8 @@ If you can't install an application, it might be due to:
 * **Incompatible system version**: Try upgrading Olares to the latest version.
 * **Shared service dependency** (for Olares members): The application requires a shared service to be running in the cluster. Contact your admin to install the shared application first before you can install it.
 
+For a symptom-based checklist and the operation logs to collect, see [App fails during or after installation or update](../../help/ts-app-fails-after-update.md).
+
 ### Why was my application stopped?
 
 An application is usually stopped due to one of the following reasons:

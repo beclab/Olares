@@ -486,6 +486,14 @@ const side = {
               link: "/zh/manual/help/ts-inconsistent-app-status",
             },
             {
+              text: "应用安装、更新期间或之后失败",
+              link: "/zh/manual/help/ts-app-fails-after-update",
+            },
+            {
+              text: "模型或引擎未就绪",
+              link: "/zh/manual/help/ts-model-engine-not-ready",
+            },
+            {
               text: "内存不足或没有释放",
               link: "/zh/manual/help/ts-free-memory",
             },
@@ -502,6 +510,10 @@ const side = {
               link: "/zh/manual/help/ts-network-not-ready",
             },
             {
+              text: "自定义路由 ID 导致应用无法访问",
+              link: "/zh/manual/help/ts-custom-route-domain",
+            },
+            {
               text: "Steam 串流卡顿或延迟",
               link: "/zh/manual/help/ts-steam-stream-lag",
             },
@@ -516,6 +528,10 @@ const side = {
             {
               text: "LarePass 显示系统错误",
               link: "/zh/manual/help/ts-system-error",
+            },
+            {
+              text: "Olares One 无法开机或没有画面",
+              link: "/zh/one/ts-no-power-or-display",
             },
           ],
         },

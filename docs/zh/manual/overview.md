@@ -14,6 +14,10 @@ Olares 是一款可以用自然语言操作的开源个人云操作系统，让�
 
 你可以通过本文档完成 Olares 的安装与激活，管理应用、文件、身份和访问方式，并借助 CLI、Agent Skills 和真实场景示例进一步扩展 Olares。
 
+## Olares OS、LarePass 与 Olares Space
+
+**Olares OS** 运行在你的设备上，用于托管应用、文件和 AI 服务。**LarePass** 是用于创建和保护 Olares ID、激活 Olares，以及从不同设备安全访问 Olares 的客户端。**Olares Space** 是用于管理 Olares 设备，以及自定义域名、云端备份空间和账单等可选云端服务的网页端服务。
+
 ## 开始使用 Olares
 
 在自己的设备上安装 Olares，或使用 Olares One 专用设备。

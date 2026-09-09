@@ -489,6 +489,14 @@ const side = {
               link: "/manual/help/ts-inconsistent-app-status",
             },
             {
+              text: "App fails during or after installation or update",
+              link: "/manual/help/ts-app-fails-after-update",
+            },
+            {
+              text: "Model or engine is not ready",
+              link: "/manual/help/ts-model-engine-not-ready",
+            },
+            {
               text: "Memory is insufficient or not freed",
               link: "/manual/help/ts-free-memory",
             },
@@ -505,6 +513,10 @@ const side = {
               link: "/manual/help/ts-network-not-ready",
             },
             {
+              text: "Custom route ID prevents app access",
+              link: "/manual/help/ts-custom-route-domain",
+            },
+            {
               text: "Slow or delayed Steam streaming",
               link: "/manual/help/ts-steam-stream-lag",
             },
@@ -519,6 +531,10 @@ const side = {
             {
               text: "System error in LarePass",
               link: "/manual/help/ts-system-error",
+            },
+            {
+              text: "Olares One has no power or display",
+              link: "/one/ts-no-power-or-display",
             },
           ],
         },

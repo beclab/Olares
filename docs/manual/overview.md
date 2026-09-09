@@ -14,6 +14,10 @@ Olares is an open-source personal cloud OS you operate in plain language, built 
 
 Use this documentation to install and activate Olares, manage apps, files, identity, and access, and extend your setup with the CLI, Agent Skills, and real-world workflows.
 
+## Olares OS, LarePass, and Olares Space
+
+**Olares OS** runs on your device and hosts your apps, files, and AI services. **LarePass** is the client you use to create and protect your Olares ID, activate Olares, and access it securely from your devices. **Olares Space** is the web service for managing your Olares devices and optional cloud-assisted features such as custom domains, backup storage, and billing.
+
 ## Set up Olares
 
 Get Olares running, whether you install the OS yourself or use a dedicated device.
