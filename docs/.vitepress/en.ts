@@ -461,8 +461,12 @@ const side = {
     {
       text: "Help and troubleshooting",
       link: "/manual/help/",
-      collapsed: false,
+      collapsed: true,
       items: [
+        {
+          text: "Collect diagnostic information",
+          link: "/manual/collect-diagnostic-information",
+        },
         {
           text: "Troubleshooting",
           link: "/manual/help/troubleshooting-guide",

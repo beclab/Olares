@@ -112,7 +112,7 @@
 | │ ├ Configure video playback | `/manual/olares/settings/video` | P2 微调 |
 | │ └ Run commands in the Control Hub terminal | `/manual/olares/controlhub/terminal` | 不变 |
 | **Help and troubleshooting** | `/manual/help/` | 复用现有 index.md |
-| ├ Collect diagnostic information | `/manual/help/request-technical-support` | P0 合并（anchor 级，Phase 2-10） |
+| ├ Collect diagnostic information | `/manual/collect-diagnostic-information` | ✅ 新建 CLI 收集/下载/安全共享文档（2026-09-09），导航置于 Troubleshooting 之上 |
 | ├ **Troubleshooting** | `/manual/help/troubleshooting-guide` | P0 重写为分类 landing（页内分类，不进导航） |
 | └ Known issues | `/manual/help/known-issues` | 不变 |
 | **Glossary** | `/manual/glossary` | 不变 |

@@ -462,7 +462,7 @@ const side = {
       items: [
         {
           text: "收集诊断信息",
-          link: "/zh/manual/help/request-technical-support",
+          link: "/zh/manual/collect-diagnostic-information",
         },
         {
           text: "故障排查",
