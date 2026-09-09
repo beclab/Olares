@@ -80,6 +80,13 @@ type modelObject struct {
 	ContextSize     int `json:"context_size,omitempty"`
 	MaxOutputTokens int `json:"max_output_tokens,omitempty"`
 	MaxConcurrency  int `json:"max_concurrency,omitempty"`
+	// KVPoolTokens is the whole KV cache the engine serves with, and it is
+	// not ContextSize × MaxConcurrency: llama.cpp in unified mode lets every
+	// slot promise the full window out of one pool that cannot cover them
+	// all. Whoever reaches the model second is then the one whose prompt is
+	// refused, so a caller sizing a request needs the pool as well as the
+	// pair.
+	KVPoolTokens int `json:"kv_pool_tokens,omitempty"`
 }
 
 type modelsListResponse struct {
@@ -213,7 +220,7 @@ func renderModelsList(w io.Writer, items []modelObject, includeNotReady bool) er
 			nonEmpty(m.Readiness),
 		}
 		if wide {
-			cells = append(cells, intOrDash(m.MaxConcurrency))
+			cells = append(cells, atOnceLabelOf(m.ContextSize, m.MaxConcurrency, m.KVPoolTokens))
 		}
 		cells = append(cells, clip(nonEmpty(m.OwnedBy), 24))
 		t.row(cells...)
@@ -224,7 +231,8 @@ func renderModelsList(w io.Writer, items []modelObject, includeNotReady bool) er
 	if wide {
 		_, err := fmt.Fprintln(w, "\nAT ONCE is how many requests that model's engine works on at the "+
 			"same time. Sending more does not fail: Router waits for a slot, and a call that waited "+
-			"looks like a slow model unless you know the width.")
+			"looks like a slow model unless you know the width. shared means those slots share one KV "+
+			"pool smaller than (window × width), so a long prompt can be refused while a slot is free.")
 		return err
 	}
 	return nil

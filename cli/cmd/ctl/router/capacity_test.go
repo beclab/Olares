@@ -216,3 +216,98 @@ func TestTheCallableListKeepsTheCardsFigures(t *testing.T) {
 		t.Fatalf("expected the width column, got:\n%s", buf.String())
 	}
 }
+
+// Router projects the pool on every entry of /v1/models, and the caller's list
+// is where somebody decides how long a prompt to send. Dropping it here left
+// the one reading that explains a refusal with a slot free out of the one view
+// written for the person about to be refused.
+func TestTheCallableListCarriesTheKVPool(t *testing.T) {
+	const raw = `{"id":"Olares/qwen3","object":"model","mode":"chat","supports":["chat"],
+	"readiness":"ready","owned_by":"llamacppqwen3","context_size":102400,
+	"max_concurrency":2,"kv_pool_tokens":102400}`
+	var m modelObject
+	if err := json.Unmarshal([]byte(raw), &m); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if m.KVPoolTokens != 102400 {
+		t.Fatalf("the pool did not decode: %+v", m)
+	}
+	var buf bytes.Buffer
+	if err := renderModelsList(&buf, []modelObject{m}, false); err != nil {
+		t.Fatalf("renderModelsList: %v", err)
+	}
+	if !strings.Contains(buf.String(), "2 shared") {
+		t.Fatalf("expected a shared width on the callable list, got:\n%s", buf.String())
+	}
+
+	// Re-serialization has to keep it too: -o json is what a script reads.
+	out, err := json.Marshal(m)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	if !strings.Contains(string(out), `"kv_pool_tokens":102400`) {
+		t.Fatalf("the pool was dropped on the way out: %s", out)
+	}
+}
+
+// One model in full is where the three figures can be shown against each other,
+// and the pair alone cannot say whether a window is a reservation or a ceiling.
+func TestOneModelReportsThePoolItsSlotsShare(t *testing.T) {
+	var buf bytes.Buffer
+	err := renderProviderModel(&buf,
+		&providerRow{Name: "Olares", Source: "olares"},
+		&providerModelRow{
+			Name: "qwen3", Mode: "chat", Enabled: true, Status: "active",
+			ContextSize: 102400, MaxConcurrency: 2, KVPoolTokens: 102400,
+		})
+	if err != nil {
+		t.Fatalf("renderProviderModel: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "KV POOL") || !strings.Contains(out, "102400 tokens") {
+		t.Fatalf("expected the pool, got:\n%s", out)
+	}
+	if !strings.Contains(out, "shared across all 2") {
+		t.Fatalf("a pool this size cannot cover the width and should say so, got:\n%s", out)
+	}
+}
+
+// A pool that covers window × width is the ordinary case and needs no warning:
+// each slot really does hold what the window promises.
+func TestASplitPoolIsReportedWithoutTheWarning(t *testing.T) {
+	var buf bytes.Buffer
+	err := renderProviderModel(&buf,
+		&providerRow{Name: "Olares", Source: "olares"},
+		&providerModelRow{
+			Name: "qwen3", Mode: "chat", Enabled: true, Status: "active",
+			ContextSize: 51200, MaxConcurrency: 2, KVPoolTokens: 102400,
+		})
+	if err != nil {
+		t.Fatalf("renderProviderModel: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "KV POOL") {
+		t.Fatalf("expected the pool, got:\n%s", out)
+	}
+	if strings.Contains(out, "shared") {
+		t.Fatalf("this pool covers the width, got:\n%s", out)
+	}
+}
+
+// A full engine and a broken one both answer 5xx, and the generic branch below
+// this one says the application is not serving — the opposite of what happened.
+func TestAFullKVCacheIsNotReportedAsADeadApplication(t *testing.T) {
+	err := callErr(&RouterError{
+		Status: 503, Code: "kv_budget_exhausted", Type: "upstream_error",
+		Message: "the model's KV cache is fully reserved", RetryAfter: time.Second,
+	})
+	got := err.Error()
+	for _, want := range []string{"serving, not", "shorter prompt", "router model get"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("expected %q in:\n%s", want, got)
+		}
+	}
+	if strings.Contains(got, "not serving yet") {
+		t.Fatalf("this engine is answering; it read as a stopped application:\n%s", got)
+	}
+}

@@ -210,6 +210,19 @@ func callErr(err error) error {
 			"it was launched to handle, so this one was refused rather than held any longer.%s "+
 			"`olares-cli router provider get <provider>` shows how wide the engine is and how deep "+
 			"its queue was when Router last looked", err, retryAdvice(re.RetryAfter))
+	case re.Code == "kv_budget_exhausted":
+		// The engine's own door, not Router's. A slot was free — otherwise
+		// this would have been model_at_capacity — and the KV cache behind all
+		// the slots was not: in unified mode they share one pool that cannot
+		// hold a full window each, so a long prompt is refused while the
+		// engine is answering short ones. It has to stay ahead of the 5xx
+		// branch below, which would read this as an application that is not
+		// serving, and it is the one refusal here that a shorter prompt fixes.
+		return fmt.Errorf("%w\nThe model's KV cache is fully reserved. The engine is serving, not "+
+			"broken: its slots share one pool, and this prompt did not fit in what was left of it.%s "+
+			"Router already tried the other members of the route, so a shorter prompt, fewer "+
+			"concurrent calls, or waiting is what gets through. `olares-cli router model get <model>` "+
+			"shows the pool against the window and the width", err, retryAdvice(re.RetryAfter))
 	case re.Code == "model_not_ready":
 		return fmt.Errorf("%w\nThe model is still coming up.%s `olares-cli router model status <model>` "+
 			"follows the phase it is in", err, retryAdvice(re.RetryAfter))

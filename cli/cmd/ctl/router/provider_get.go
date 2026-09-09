@@ -146,9 +146,16 @@ func intOrDash(v int) string {
 }
 
 func atOnceLabel(m providerModelRow) string {
-	if m.ContextSize > 0 && m.MaxConcurrency > 1 && m.KVPoolTokens > 0 &&
-		int64(m.ContextSize)*int64(m.MaxConcurrency) > int64(m.KVPoolTokens) {
-		return strconv.Itoa(m.MaxConcurrency) + " shared"
+	return atOnceLabelOf(m.ContextSize, m.MaxConcurrency, m.KVPoolTokens)
+}
+
+// atOnceLabelOf marks a width whose slots cannot each hold a full window. The
+// three figures reach this tree through two different rows — the console's and
+// the data plane's — and the reading is the same one either way.
+func atOnceLabelOf(contextSize, maxConcurrency, kvPoolTokens int) string {
+	if contextSize > 0 && maxConcurrency > 1 && kvPoolTokens > 0 &&
+		int64(contextSize)*int64(maxConcurrency) > int64(kvPoolTokens) {
+		return strconv.Itoa(maxConcurrency) + " shared"
 	}
-	return intOrDash(m.MaxConcurrency)
+	return intOrDash(maxConcurrency)
 }
