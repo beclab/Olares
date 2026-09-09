@@ -66,41 +66,49 @@ type musicRequest struct {
 // The two text passes. Both are asynchronous and neither produces audio, so
 // they are polled like a generation and rendered like a document.
 type musicFormatView struct {
-	ID              string         `json:"id"`
-	Object          string         `json:"object"`
-	Status          string         `json:"status"`
-	Model           string         `json:"model"`
-	DraftPrompt     string         `json:"draft_prompt,omitempty"`
-	DraftLyrics     string         `json:"draft_lyrics,omitempty"`
-	EffectivePrompt string         `json:"effective_prompt,omitempty"`
-	EffectiveLyrics string         `json:"effective_lyrics,omitempty"`
-	VocalLanguage   string         `json:"vocal_language,omitempty"`
-	Warnings        []string       `json:"warnings"`
-	Metrics         map[string]any `json:"metrics"`
-	ErrorCode       *string        `json:"error_code,omitempty"`
-	Error           *string        `json:"error,omitempty"`
-	CreatedAt       time.Time      `json:"created_at"`
-	ExpiresAt       time.Time      `json:"expires_at"`
+	ID              string `json:"id"`
+	Object          string `json:"object"`
+	Status          string `json:"status"`
+	Model           string `json:"model"`
+	DraftPrompt     string `json:"draft_prompt,omitempty"`
+	DraftLyrics     string `json:"draft_lyrics,omitempty"`
+	EffectivePrompt string `json:"effective_prompt,omitempty"`
+	EffectiveLyrics string `json:"effective_lyrics,omitempty"`
+	// ConditioningLyrics is the same words spelled for the model rather than
+	// for a reader: phoneme hints, section markers, whatever the engine needs
+	// to pronounce them. It is separate from the effective lyrics because a
+	// player has to show one and sing the other, and a single field made the
+	// caller choose which of those to get wrong.
+	ConditioningLyrics string         `json:"conditioning_lyrics,omitempty"`
+	VocalLanguage      string         `json:"vocal_language,omitempty"`
+	Warnings           []string       `json:"warnings"`
+	Metrics            map[string]any `json:"metrics"`
+	ErrorCode          *string        `json:"error_code,omitempty"`
+	Error              *string        `json:"error,omitempty"`
+	CreatedAt          time.Time      `json:"created_at"`
+	ExpiresAt          time.Time      `json:"expires_at"`
 }
 
 type musicDraftView struct {
-	ID              string         `json:"id"`
-	Object          string         `json:"object"`
-	Status          string         `json:"status"`
-	Model           string         `json:"model"`
-	Brief           string         `json:"brief,omitempty"`
-	Prompt          string         `json:"prompt,omitempty"`
-	Lyrics          string         `json:"lyrics,omitempty"`
-	Instrumental    bool           `json:"instrumental"`
-	VocalLanguage   string         `json:"vocal_language,omitempty"`
-	DurationSeconds float64        `json:"duration_seconds,omitempty"`
-	StylePlan       map[string]any `json:"style_plan,omitempty"`
-	Warnings        []string       `json:"warnings"`
-	Metrics         map[string]any `json:"metrics"`
-	ErrorCode       *string        `json:"error_code,omitempty"`
-	Error           *string        `json:"error,omitempty"`
-	CreatedAt       time.Time      `json:"created_at"`
-	ExpiresAt       time.Time      `json:"expires_at"`
+	ID     string `json:"id"`
+	Object string `json:"object"`
+	Status string `json:"status"`
+	Model  string `json:"model"`
+	Brief  string `json:"brief,omitempty"`
+	Prompt string `json:"prompt,omitempty"`
+	Lyrics string `json:"lyrics,omitempty"`
+	// See musicFormatView: the words to show and the words to sing.
+	ConditioningLyrics string         `json:"conditioning_lyrics,omitempty"`
+	Instrumental       bool           `json:"instrumental"`
+	VocalLanguage      string         `json:"vocal_language,omitempty"`
+	DurationSeconds    float64        `json:"duration_seconds,omitempty"`
+	StylePlan          map[string]any `json:"style_plan,omitempty"`
+	Warnings           []string       `json:"warnings"`
+	Metrics            map[string]any `json:"metrics"`
+	ErrorCode          *string        `json:"error_code,omitempty"`
+	Error              *string        `json:"error,omitempty"`
+	CreatedAt          time.Time      `json:"created_at"`
+	ExpiresAt          time.Time      `json:"expires_at"`
 }
 
 func newCallMusicCommand(f *cmdutil.Factory) *cobra.Command {
@@ -179,8 +187,111 @@ Examples:
 	addOutputFlag(cmd, &output)
 	cmd.AddCommand(newCallMusicFormatCommand(f))
 	cmd.AddCommand(newCallMusicDraftCommand(f))
+	cmd.AddCommand(newCallMusicAlignmentCommand(f))
 	cmd.AddCommand(newCallMusicCancelCommand(f))
 	return cmd
+}
+
+// musicAlignment is where each line lands in the finished track.
+type musicAlignment struct {
+	Segments []musicLyricSegment `json:"segments"`
+}
+
+type musicLyricSegment struct {
+	Text         string  `json:"text"`
+	StartSeconds float64 `json:"start_seconds"`
+	EndSeconds   float64 `json:"end_seconds"`
+}
+
+func newCallMusicAlignmentCommand(f *cmdutil.Factory) *cobra.Command {
+	var (
+		output string
+		apiKey string
+	)
+	cmd := &cobra.Command{
+		Use:   "alignment <id>",
+		Short: "where each line lands in a finished track",
+		Long: `Read the lyric timeline of a track that has already been generated.
+
+A player needs to know when each line is sung — to highlight the current one,
+and to seek by tapping one. That is not something a caller can work out from
+the lyrics and the duration, because the model decides how the words are laid
+over the sections, and it is not in the track either.
+
+Router answers this from the provider and upstream id already sealed onto the
+generation, so it goes back to the model that made this track rather than
+resolving a model again. Nothing is regenerated and no audio model runs.
+
+Not every track has one. The generation has to have completed, and the
+application that made it has to serve the timeline at all — an older one does
+not, and says so rather than inventing timings. --lyrics on the generation is
+unaffected either way: the words are always there, only their placement is not.
+
+Examples:
+  olares-cli router call music alignment gen_01H…
+  olares-cli router call music alignment gen_01H… -o json
+`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(c *cobra.Command, args []string) error {
+			return runCallMusicAlignment(c.Context(), f, args[0], apiKey, output)
+		},
+	}
+	cmd.Flags().StringVar(&apiKey, "api-key", "", dataPlaneKeyFlagUsage)
+	addOutputFlag(cmd, &output)
+	return cmd
+}
+
+func runCallMusicAlignment(ctx context.Context, f *cmdutil.Factory, id, apiKey, outputRaw string) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	format, err := parseFormat(outputRaw)
+	if err != nil {
+		return err
+	}
+	pc, err := prepare(ctx, f)
+	if err != nil {
+		return err
+	}
+	var alignment musicAlignment
+	if err := dataPlane(pc, apiKey).doJSON(ctx, http.MethodGet,
+		epMusicLyricsAlignment(strings.TrimSpace(id)), nil, &alignment); err != nil {
+		return callErr(err)
+	}
+	if format == FormatJSON {
+		return printJSON(os.Stdout, alignment)
+	}
+	return renderMusicAlignment(os.Stdout, &alignment)
+}
+
+func renderMusicAlignment(w io.Writer, alignment *musicAlignment) error {
+	if len(alignment.Segments) == 0 {
+		_, err := fmt.Fprintln(w, "This track has no lyric timeline. A completed instrumental has "+
+			"nothing to place, and a model application that does not serve timelines returns none.")
+		return err
+	}
+	// Timestamps rather than a table: the point is to read the words in the
+	// order they are sung, and a line of lyrics does not fit a cell.
+	for i := range alignment.Segments {
+		s := &alignment.Segments[i]
+		if _, err := fmt.Fprintf(w, "%s  %s\n", musicTimecode(s.StartSeconds), s.Text); err != nil {
+			return err
+		}
+	}
+	last := alignment.Segments[len(alignment.Segments)-1]
+	_, err := fmt.Fprintf(w, "\n%d lines, through %s. -o json carries the end of each one too.\n",
+		len(alignment.Segments), musicTimecode(last.EndSeconds))
+	return err
+}
+
+// musicTimecode is mm:ss.s — a track is minutes long and a line lands on a
+// beat, so seconds alone are too coarse to seek by and a duration string reads
+// as an interval rather than a position.
+func musicTimecode(seconds float64) string {
+	if seconds < 0 {
+		seconds = 0
+	}
+	return fmt.Sprintf("%02d:%04.1f", int(seconds)/60, seconds-float64(int(seconds)/60*60))
 }
 
 type musicVerb struct {
@@ -660,7 +771,7 @@ func waitForMusicText(ctx context.Context, dp *routerClient, verb musicTextVerb,
 func renderMusicText(w io.Writer, noun string, raw map[string]json.RawMessage) error {
 	short := []string{"id", "status", "model", "vocal_language", "instrumental", "duration_seconds"}
 	long := []string{"brief", "prompt", "draft_prompt", "effective_prompt",
-		"lyrics", "draft_lyrics", "effective_lyrics"}
+		"lyrics", "draft_lyrics", "effective_lyrics", "conditioning_lyrics"}
 
 	t := newTable(w)
 	for _, name := range short {

@@ -370,6 +370,8 @@ func epMusicGeneration(id string) string { return epMusicGenerations + "/" + url
 
 func epMusicGenerationContent(id string) string { return epMusicGeneration(id) + "/content" }
 
+func epMusicLyricsAlignment(id string) string { return epMusicGeneration(id) + "/lyrics-alignment" }
+
 func epMusicFormat(id string) string { return epMusicFormats + "/" + url.PathEscape(id) }
 
 func epMusicDraft(id string) string { return epMusicDrafts + "/" + url.PathEscape(id) }

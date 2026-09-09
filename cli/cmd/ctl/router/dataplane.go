@@ -377,6 +377,19 @@ func mediaAdvice(re *RouterError) string {
 	case "image_generation_async_multiple_unsupported":
 		return "A generation is one file behind one content route, so a persisted image is exactly one " +
 			"output. Several pictures are several calls."
+	case "lyrics_alignment_unavailable":
+		return "There is no timeline for this track. Either the generation has not completed — a " +
+			"timeline describes finished audio, so there is nothing to place until then — or the " +
+			"model application that made it does not serve one. Router asks the model that made " +
+			"this track and no other, so retrying against a different model is not an option here."
+	case "lyrics_alignment_invalid":
+		return "The model application answered with something that is not a timeline: out of order, " +
+			"outside the track, or not the shape at all. Router refuses it rather than passing on " +
+			"timings a player would seek to the wrong place with."
+	case "lyrics_alignment_upstream_error":
+		return "The model application that made this track did not answer. It is the only one that " +
+			"can, since the timeline comes from the generation's own provider; `olares-cli router " +
+			"provider get <provider>` says whether the application is still serving."
 	case "image_generation_async_required":
 		return "This provider serves image generation only as a generation to come back for, which is " +
 			"what this verb asks for. Seeing it here means the request reached Router without that " +
