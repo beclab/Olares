@@ -15,6 +15,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/spf13/pflag"
 )
 
 type recordingHTTPClientFactory struct {
@@ -232,6 +234,37 @@ func TestTaskResultHelpWarnsAgainstBlindRetry(t *testing.T) {
 	for _, want := range []string{"check the task status before retrying", "bill the same result again"} {
 		if !strings.Contains(help, want) {
 			t.Errorf("task result help is missing %q", want)
+		}
+	}
+}
+
+func TestAudioTaskHelpScopesAsyncAndRestartPersistence(t *testing.T) {
+	help := newCallTaskCommand(nil).Long
+	for _, want := range []string{
+		"operation catalogue declares support",
+		"WebSocket and HTTP chunked streams cannot be async",
+		"across a Router restart",
+		"expire after 1800 seconds",
+	} {
+		if !strings.Contains(help, want) {
+			t.Errorf("task help is missing %q", want)
+		}
+	}
+	if strings.Contains(help, "Any audio verb takes --async") {
+		t.Error("task help still claims every audio verb supports async")
+	}
+}
+
+func TestStreamingSampleRateHelpNamesDefaultAndCatalogueConstraint(t *testing.T) {
+	listen := newCallListenCommand(nil).Flag("sample-rate")
+	diarize := newCallDiarizeCommand(nil).Flag("sample-rate")
+	for name, flag := range map[string]*pflag.Flag{"listen": listen, "diarize": diarize} {
+		if flag == nil {
+			t.Fatalf("%s has no --sample-rate flag", name)
+		}
+		if flag.DefValue != "16000" || !strings.Contains(flag.Usage, "must match") ||
+			!strings.Contains(flag.Usage, "model catalogue") {
+			t.Errorf("%s --sample-rate: default=%q usage=%q", name, flag.DefValue, flag.Usage)
 		}
 	}
 }
@@ -495,10 +528,7 @@ func TestAStreamURLSwitchesScheme(t *testing.T) {
 		{"http://127.0.0.1:8080/", "ws://127.0.0.1:8080" + epAudioStreamWS + "?model=m"},
 	}
 	for _, c := range cases {
-		got, err := audioStreamURL(c.base, audioStreamOptions{
-			Route: epAudioStreamWS,
-			Model: "m",
-		})
+		got, err := routerSocketURL(c.base, epAudioStreamWS, "m")
 		if err != nil {
 			t.Fatalf("%s: %v", c.base, err)
 		}

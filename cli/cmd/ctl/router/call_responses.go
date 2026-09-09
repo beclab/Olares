@@ -92,6 +92,7 @@ func newCallResponsesCommand(f *cmdutil.Factory) *cobra.Command {
 		instructions string
 		maxTokens    int
 		quiet        bool
+		stream       bool
 		apiKey       string
 	)
 	cmd := &cobra.Command{
@@ -116,14 +117,18 @@ of the previous answer, and Router keeps the stored ones so it can — but a
 conversation spread across separate command invocations is a session, and this
 verb does not open one. Each call sends store=false and leaves nothing behind.
 
-Answers stream on this API as they do on chat, and this verb does not stream:
-the answer is printed when it is complete. For watching a long answer arrive,
-"call chat" against a chat-mode model is the verb that does that today.
+--stream watches the answer arrive instead of waiting for it. Router serves the
+Responses stream over a WebSocket rather than as chunked HTTP, so this opens a
+socket, sends the one request, prints the text as it is written and closes.
+Reasoning goes to stderr and the text to stdout, so a pipe still receives only
+the answer. Under -o json nothing is printed until the end: the document
+assembled from deltas is not the one Router sends, and the last frame carries
+the real one.
 
 Examples:
   olares-cli router call responses "summarise the CAP theorem in three lines"
   git diff | olares-cli router call responses --instructions "write a commit message"
-  olares-cli router call responses "hello" --model gpt-5 -o json
+  olares-cli router call responses "explain consensus" --model gpt-5 --stream
 `,
 		Args: cobra.ArbitraryArgs,
 		RunE: func(c *cobra.Command, args []string) error {
@@ -146,6 +151,9 @@ Examples:
 			if c.Flags().Changed("max-tokens") {
 				opts.MaxTokens = &maxTokens
 			}
+			if stream {
+				return runResponsesStream(c.Context(), f, input, opts)
+			}
 			return runCallResponses(c.Context(), f, input, opts)
 		},
 	}
@@ -154,6 +162,7 @@ Examples:
 	cmd.Flags().StringVar(&instructions, "instructions", "", "instruction sent ahead of the input")
 	cmd.Flags().IntVar(&maxTokens, "max-tokens", 0, "cap the answer length in tokens")
 	cmd.Flags().BoolVar(&quiet, "quiet", false, "print only the answer, without the model and token line")
+	cmd.Flags().BoolVar(&stream, "stream", false, "print the answer as it is written, over a WebSocket")
 	cmd.Flags().StringVar(&apiKey, "api-key", "", dataPlaneKeyFlagUsage)
 	addOutputFlag(cmd, &output)
 	return cmd
