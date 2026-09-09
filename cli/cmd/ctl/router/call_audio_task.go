@@ -16,7 +16,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
-// GET /v1/audio/tasks, GET /v1/audio/tasks/:id[/result], DELETE /v1/audio/tasks/:id
+// GET /v1/tasks, GET /v1/tasks/:id[/result], DELETE /v1/tasks/:id
 //
 // Batch HTTP audio operations normally answer with their result and may take
 // --async when their operation catalogue declares support. That is not a
@@ -35,13 +35,26 @@ import (
 // means reaching the same provider. Router persists the binding from each new
 // opaque `atask_*` id to its backend and owner, so Router restart does not make
 // the model mandatory. `--model` remains useful for legacy upstream ids or a
-// task minted through another gateway. The engine-owned task still expires
-// after 1800 seconds and is lost when that engine restarts.
+// task minted through another gateway.
+//
+// What the binding cannot repair is the engine losing the task, because only
+// the id was ever Router's: the work and the result are engine memory, they
+// expire 1800 seconds after the work finishes, and a pod restart takes them.
+// Router says so with `audio_task_lost` rather than resubmitting, which is the
+// right call — re-running an hour of audio is not a decision to make for
+// somebody.
 
 type audioTask struct {
-	ID            string          `json:"id"`
-	Kind          string          `json:"kind"`
-	Cap           string          `json:"cap"`
+	ID   string `json:"id"`
+	Kind string `json:"kind"`
+	Cap  string `json:"cap"`
+	// Poll and ResultURL are where this task says to come back to. Router
+	// rewrites both onto its own prefix and its own opaque id before handing
+	// the receipt over, so they are addresses in Router's namespace rather
+	// than the engine's, and following them is what keeps this tree off a
+	// path Router has to keep alive for it.
+	Poll          string          `json:"poll,omitempty"`
+	ResultURL     string          `json:"result_url,omitempty"`
 	Model         string          `json:"model"`
 	Status        string          `json:"status"`
 	Created       float64         `json:"created"`
@@ -84,6 +97,18 @@ func (t *audioTask) settled() bool {
 // whether `task result` can print it or has to be told where to put it.
 func (t *audioTask) binary() bool {
 	return t.ResultKind != nil && strings.EqualFold(*t.ResultKind, "binary")
+}
+
+// pollPath is where this task said to come back to, or the canonical path
+// built from its id when it said nothing — an id pasted into a terminal a day
+// later has no receipt behind it.
+//
+// Only a data-plane path is followed; onDataPlane says why.
+func (t *audioTask) pollPath(id string) string {
+	if p := strings.TrimSpace(t.Poll); onDataPlane(p) {
+		return p
+	}
+	return epTask(id)
 }
 
 func newCallTaskCommand(f *cmdutil.Factory) *cobra.Command {
@@ -352,6 +377,18 @@ func audioTaskErr(err error, id string) error {
 		return fmt.Errorf("%w\nTask %s has no result yet. `olares-cli router call task get %s "+
 			"--wait` waits for it and says why if the work failed or was canceled instead",
 			err, id, id)
+	case re.Code == "audio_task_lost":
+		// Router still has the binding — that is how it knew which engine to
+		// ask — and the engine no longer has the task. Only the id survives a
+		// Router restart; the work and the result live in engine memory and
+		// go with it. So this is not the expiry below, which is a finished
+		// result ageing out, and Router deliberately does not resubmit:
+		// re-running an hour of audio is not something to do on a caller's
+		// behalf without being asked.
+		return fmt.Errorf("%w\nThe engine no longer has task %s. Router remembers where it was sent, "+
+			"but the task and its result live in the engine's memory: a pod or engine restart loses "+
+			"them, and they expire 1800 seconds after the work finishes. Nothing was resubmitted — "+
+			"send the operation again", err, id)
 	case re.Status == 410:
 		return fmt.Errorf("%w\nTask %s finished, and the engine has since dropped what it "+
 			"produced — a result is kept for a while, not forever. Submit the work again",
@@ -387,7 +424,10 @@ func runAudioTaskGet(ctx context.Context, f *cmdutil.Factory, opts audioTaskOpti
 }
 
 func fetchAudioTask(ctx context.Context, dp *routerClient, id, model string, out *audioTask) error {
-	path := audioTaskPath(epAudioTask(id), model)
+	// `out` carries the previous reading while polling, so a task that named
+	// its own follow-up route is read at the route it named after the first
+	// lookup has found it.
+	path := audioTaskPath(out.pollPath(id), model)
 	if err := dp.doJSON(ctx, "GET", path, nil, out); err != nil {
 		return audioTaskErr(err, id)
 	}
@@ -449,7 +489,7 @@ func waitForAudioTaskWith(ctx context.Context, task *audioTask, model string,
 			if err := ctx.Err(); err != nil {
 				return err
 			}
-			var final audioTask
+			final := audioTask{Poll: task.Poll}
 			if err := ops.fetch(ctx, task.ID, model, &final); err != nil {
 				return err
 			}
@@ -465,7 +505,7 @@ func waitForAudioTaskWith(ctx context.Context, task *audioTask, model string,
 		if !ops.now().Before(deadline) {
 			return timeoutErr()
 		}
-		var next audioTask
+		next := audioTask{Poll: task.Poll}
 		if err := ops.fetch(ctx, task.ID, model, &next); err != nil {
 			return err
 		}
@@ -561,7 +601,7 @@ func runAudioTaskResult(ctx context.Context, f *cmdutil.Factory, opts audioTaskO
 	}
 	dp := dataPlane(pc, opts.APIKey)
 
-	path := audioTaskPath(epAudioTaskResult(opts.ID), opts.Model)
+	path := audioTaskPath(epTaskResult(opts.ID), opts.Model)
 	resp, err := dp.do(ctx, "GET", path, nil, "")
 	if err != nil {
 		return err
@@ -621,7 +661,7 @@ func runAudioTaskCancel(ctx context.Context, f *cmdutil.Factory, opts audioTaskO
 		Dropped   bool   `json:"dropped"`
 		Canceling bool   `json:"canceling"`
 	}
-	path := audioTaskPath(epAudioTask(opts.ID), opts.Model)
+	path := audioTaskPath(epTask(opts.ID), opts.Model)
 	if err := dp.doJSON(ctx, "DELETE", path, nil, &out); err != nil {
 		return audioTaskErr(err, opts.ID)
 	}
@@ -667,7 +707,7 @@ func runAudioTaskList(ctx context.Context, f *cmdutil.Factory, opts audioTaskLis
 		q.Set("limit", strconv.Itoa(opts.Limit))
 	}
 	var board audioTaskBoard
-	if err := dp.doJSON(ctx, "GET", withQuery(epAudioTasks, q), nil, &board); err != nil {
+	if err := dp.doJSON(ctx, "GET", withQuery(epTasks, q), nil, &board); err != nil {
 		return audioTaskErr(err, "")
 	}
 	if opts.Format == FormatJSON {

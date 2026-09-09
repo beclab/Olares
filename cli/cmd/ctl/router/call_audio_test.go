@@ -65,13 +65,65 @@ func TestAuthenticatedClientSelectionKeepsShortRequestsTimed(t *testing.T) {
 // routes back to it. A lookup that dropped it reaches whatever the category
 // resolves today and is answered 404 for a task that is running fine.
 func TestATaskLookupCarriesTheModel(t *testing.T) {
-	got := audioTaskPath(epAudioTask("tsk_1"), "Olares/qwen3-asr")
-	want := epAudioTask("tsk_1") + "?model=Olares%2Fqwen3-asr"
+	got := audioTaskPath(epTask("tsk_1"), "Olares/qwen3-asr")
+	want := epTask("tsk_1") + "?model=Olares%2Fqwen3-asr"
 	if got != want {
 		t.Errorf("got %q want %q", got, want)
 	}
-	if got := audioTaskPath(epAudioTask("tsk_1"), "  "); got != epAudioTask("tsk_1") {
+	if got := audioTaskPath(epTask("tsk_1"), "  "); got != epTask("tsk_1") {
 		t.Errorf("blank model: got %q, want the bare path", got)
+	}
+}
+
+// A receipt names where to come back to, and Router writes those fields onto
+// its own prefix and its own opaque id. Following them is what keeps this tree
+// off a path Router has to keep alive for it.
+func TestATaskIsPolledWhereItSaidToComeBack(t *testing.T) {
+	task := audioTask{ID: "atask_9f", Poll: epTasks + "/atask_9f"}
+	if got := task.pollPath("atask_9f"); got != epTasks+"/atask_9f" {
+		t.Errorf("the receipt's own route was not followed: %q", got)
+	}
+	// An id pasted a day later has no receipt behind it, and the canonical
+	// path built from the id reaches the same task.
+	var bare audioTask
+	if got := bare.pollPath("atask_9f"); got != epTask("atask_9f") {
+		t.Errorf("without a receipt: got %q want %q", got, epTask("atask_9f"))
+	}
+	// Router writes these relative. Anything else is a response steering the
+	// client rather than Router routing it, and the id already suffices.
+	for _, hostile := range []string{
+		"https://elsewhere.example/v1/tasks/atask_9f",
+		"/console/api/providers",
+		"../../etc",
+	} {
+		off := audioTask{Poll: hostile}
+		if got := off.pollPath("atask_9f"); got != epTask("atask_9f") {
+			t.Errorf("%q was followed: %q", hostile, got)
+		}
+	}
+}
+
+// Two different 410s. One is a finished result ageing out, which is ordinary;
+// the other is the engine losing the task itself, which Router can detect only
+// because it still holds the binding. Reporting both as an expired result
+// tells somebody to collect a result that no longer has any work behind it.
+func TestALostTaskIsNotAnExpiredResult(t *testing.T) {
+	lost := audioTaskErr(&RouterError{
+		Status: 410, Code: "audio_task_lost", Type: "upstream_error",
+		Message: "the upstream audio task was lost",
+	}, "atask_9f").Error()
+	for _, want := range []string{"no longer has task atask_9f", "Nothing was resubmitted", "1800"} {
+		if !strings.Contains(lost, want) {
+			t.Errorf("expected %q in:\n%s", want, lost)
+		}
+	}
+
+	expired := audioTaskErr(&RouterError{Status: 410}, "atask_9f").Error()
+	if !strings.Contains(expired, "dropped what it") {
+		t.Errorf("the plain expiry lost its own wording:\n%s", expired)
+	}
+	if strings.Contains(expired, "Nothing was resubmitted") {
+		t.Errorf("the two 410s read the same:\n%s", expired)
 	}
 }
 
