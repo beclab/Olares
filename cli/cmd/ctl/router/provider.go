@@ -131,6 +131,7 @@ type providerModelRow struct {
 	// number an admin typed would be a width the engine never agreed to.
 	// Absent on a cloud model, which has no engine of ours to be launched.
 	MaxConcurrency int       `json:"max_concurrency,omitempty"`
+	KVPoolTokens   int       `json:"kv_pool_tokens,omitempty"`
 	EngineArgs     string    `json:"engine_args,omitempty"`
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
