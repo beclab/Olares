@@ -1,14 +1,14 @@
 ---
 outline: [2, 3]
-description: 查找有关 Olares 安装、激活、登录过程中的常见问题解答。
+description: 查找 Olares 安装与激活问题的答案，以及常见登录和身份验证错误信息的说明。
 head:
   - - meta
     - name: keywords
       content: Olares, 安装问题, 激活问题, 登录问题, 常见问题, 故障排查, 系统要求
 ---
-# Olares 安装、激活与登录常见问题
+# 安装、激活与登录
 
-本文汇总了关于在硬件上安装、配置、激活、登录 Olares 的常见问题。
+前两部分用于查找安装和激活的一般问题。登录出现明确报错时，可直接查看[登录与认证错误信息](#登录与认证错误信息)。
 
 ## 安装
 
@@ -116,7 +116,7 @@ grep password $HOME/.olares/versions/v1.12.2/logs/install.log
 
 该报错（`Resolve name error`）表明 Olares 设备无法连接到 Olares 身份服务，通常由网络问题引起。请检查网络连接，并确保 Olares 设备具备正常的网络访问权限。
 
-## 登录与认证
+## 登录与认证错误信息
 
 ### 提示“登录失败，密码错误”怎么办？
 
@@ -137,6 +137,8 @@ grep password $HOME/.olares/versions/v1.12.2/logs/install.log
 ### 提示“登录失败，磁盘空间已满”，怎么解决？
 
 这表示你的 Olares 设备存储已满，导致认证服务无法正常运行。请清理设备磁盘空间以解决这个问题。
+
+请参考[释放 Olares 磁盘空间](../free-up-disk-space.md)，检查空间占用，并安全删除不用的 AI 模型或容器镜像。
 
 ### “登录失败，lldap服务异常”，如何解决？
 

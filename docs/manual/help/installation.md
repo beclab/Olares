@@ -1,14 +1,14 @@
 ---
 outline: [2, 3]
-description: Find answers to common questions during the installation and activation of Olares.
+description: Find installation and activation answers, plus reference explanations for common sign-in and authentication errors.
 head:
   - - meta
     - name: keywords
       content: Olares, installation FAQ, activation, login, hardware requirements, troubleshooting
 ---
-# Olares installation, activation & login FAQs
+# Installation, activation, and sign-in
 
-This page lists the FAQs about installing, configuring, activating, and logging into Olares on your hardware.
+Use the first two sections for general installation and activation questions. If sign-in fails with a specific message, go directly to [Login and authentication error messages](#login-and-authentication-error-messages).
 
 ## Installation
 
@@ -118,7 +118,7 @@ This occurs when the time difference between the device running LarePass and the
 
 This error indicates your Olares device cannot connect to the Olares identity service, which is usually caused by the network issue. Check your internet connection and ensure your Olares device has proper network access.
 
-## Login and authentication
+## Login and authentication error messages
 
 ### What should I do when I see "Authentication failed, incorrect password"?
 
@@ -139,6 +139,8 @@ For security reasons, the system temporarily locks logins after multiple incorre
 ### Why am I getting "Authentication failed, disk space is full"?
 
 Your Olares device storage is completely full, which prevents the authentication service from running correctly. Free up disk space on the device to resolve this issue.
+
+Follow [Free up disk space](../free-up-disk-space.md) to identify storage use and safely remove unused AI models or container images.
 
 ### What does this error message mean: "Authentication failed, lldap service is unavailable"?
 
