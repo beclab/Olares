@@ -51,10 +51,11 @@ Nothing enforces any of this. It is what makes the difference between a listing 
 
 | Field | Why it matters |
 |---|---|
-| `spec.fullDescription` | The Market body text — the only place to explain what the app is for |
+| `metadata.description` / `spec.fullDescription` | Concise, factual Market copy — write and review it with the [Manifest copy reference](olares-publish-manifest-copy.md) |
+| `spec.upgradeDescription` | Optional, user-facing current-update notes; omit when reliable upgrade information is unavailable |
 | `spec.developer` / `website` / `sourceCode` / `submitter` | Credibility; a listing with no visible author reads as abandonware |
 | `spec.featuredImage` / `promoteImage[]` | JPEG/PNG/WEBP 1440x900, <=8 MB each; one featured, up to 8 promote (>=2 recommended). Producing them: the listing-images reference from the parent SKILL |
-| `spec.locale` | `[en]` at minimum; add more only if actually translated |
+| `spec.locale` | `[en]` at minimum; declare only locales with complete maintained copy and follow the [localization reference](olares-publish-localization.md) |
 | `entrances[].icon` | Optional per-entrance icon; reuse `metadata.icon` unless entrances genuinely differ |
 
 Since none of this is enforced, it is also the safest thing to defer. Ship, then improve.
@@ -66,6 +67,8 @@ Since none of this is enforced, it is also the safest thing to defer. Ship, then
 - [ ] **Tier 3 as far as you care to go** — none of it blocks you
 - [ ] **`owners` file** in the chart root with the submitter's GitHub username
 - [ ] **Versions:** `metadata.version` = `Chart.yaml` `version`; bump both together for updates
+- [ ] **Copy:** English source is factual and user-facing; `upgradeDescription` is present only when supported and contains no chart-maintenance log
+- [ ] **Locales:** root/English drift is resolved; `spec.locale` matches complete locale files; protected tokens and Markdown structure remain intact
 - [ ] **Re-lint** after every edit, and confirm the app still installs to `running` on a real Olares
 
 Then proceed to the submit flow from the parent SKILL.
@@ -75,7 +78,7 @@ Then proceed to the submit flow from the parent SKILL.
 1. Confirm the local install already reached `running` (via the [`../../olares-chart/SKILL.md`](../../olares-chart/SKILL.md) deploy flow).
 2. Fix Tier 1 — this is the short list, and the only one that can reject you.
 3. Rebuild multi-arch if currently single-arch, then set `spec.supportArch` to match.
-4. Add as much of Tier 3 as you have material for.
+4. Finalize factual English Manifest copy, then localize only the declared targets. Add the remaining Tier 3 material you have evidence and assets for.
 5. Re-run `lint` -> `package`.
 6. Open the PR. Do **not** skip re-validation: a chart that ran locally can still carry stub categories that GitBot rejects.
 

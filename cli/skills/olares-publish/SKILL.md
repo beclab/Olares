@@ -1,7 +1,7 @@
 ---
 name: olares-publish
 version: 0.0.0-cli.0
-description: "Publish an Olares app that already runs locally to a public Olares Market listing — release targets, market-ready metadata/architectures, producing the listing assets (256x256 icon, 1440x900 featured/promote images), the beclab/apps PR and GitBot lifecycle, and paid listings. Use for submitting, distributing, 上架, opening a beclab/apps PR, generating an app icon or Market screenshots, or selling an app; not for browsing `market list` or managing installed apps."
+description: "Publish an Olares app that already runs locally to a public Olares Market listing — release targets, factual Manifest copy and localization, market-ready metadata/architectures, listing assets, the beclab/apps PR and GitBot lifecycle, and paid listings. Use for submitting, distributing, 上架, writing or translating Market app descriptions, opening a beclab/apps PR, generating an app icon or screenshots, or selling an app; not for browsing `market list` or managing installed apps."
 compatibility: Requires olares-cli on PATH; PR submission needs a GitHub account
 metadata:
   openclaw:
@@ -24,13 +24,14 @@ Use `olares-cli chart lint --help` and [`olares-chart`](../olares-chart/SKILL.md
 - Open or fix a PR to [`beclab/apps`](https://github.com/beclab/apps)
 - Sell an app (pay-to-download / paid listing)
 - Produce the listing assets themselves — app icon, Market screenshots / 宣传图
-- Keywords: publish to Market, submit to beclab/apps, app store listing, app icon, `metadata.icon`, `featuredImage` / `promoteImage`, `spec.supportArch`, multi-arch, GitBot, `owners` file, `price.yaml`, paid app
+- Write, revise, translate, or review the public Market copy in `OlaresManifest.yaml` and localized manifests
+- Keywords: publish to Market, submit to beclab/apps, app store listing, app description, `fullDescription`, `upgradeDescription`, i18n, locale, app icon, `metadata.icon`, `featuredImage` / `promoteImage`, `spec.supportArch`, multi-arch, GitBot, `owners` file, `price.yaml`, paid app
 
 > **Prerequisite — the app must already run on your Olares.** Public submission without a working local install wastes GitBot cycles and reviewer time. Do the deploy loop in the [`olares-chart`](../olares-chart/SKILL.md) skill (its Deploy step) first.
 
 ## Mental model
 
-Publishing is a one-way contribution to `beclab/apps`, not an `olares-cli publish` lifecycle. Start from a locally proven chart, add public-listing metadata/assets and matching multi-arch support, re-lint, then submit through GitHub and GitBot.
+Publishing is a one-way contribution to `beclab/apps`, not an `olares-cli publish` lifecycle. Start from a locally proven chart, establish accurate English listing copy, localize only the declared and maintained locales, add public-listing assets and matching multi-arch support, re-lint, then submit through GitHub and GitBot.
 
 GitBot checks mechanical policy; it does not validate product quality, screenshot truthfulness, or security claims. The submitter owns those claims.
 
@@ -39,9 +40,11 @@ GitBot checks mechanical policy; it does not validate product quality, screensho
 | Current intent / state | Read |
 |---|---|
 | Decide what blocks submission, what can be deferred, metadata depth, architectures | [release targets](references/olares-publish-targets.md) |
+| Research, draft, or review English Manifest listing copy | [Manifest copy](references/olares-publish-manifest-copy.md) |
+| Translate or review localized Manifest copy | [Manifest localization](references/olares-publish-localization.md) |
 | Produce the required 256×256 icon from upstream material | [icon workflow](references/olares-publish-icon.md) |
 | Capture/source 1440×900 Market images | [listing images](references/olares-publish-listing-images.md) |
-| Compose listing copy and image layout | [listing layout](references/olares-publish-listing-layout.md) |
+| Compose listing-image headlines and image layout | [listing layout](references/olares-publish-listing-layout.md) |
 | Prepare folder, owners, PR title, and respond to GitBot state | [submission workflow](references/olares-publish-submit.md) |
 | Add pay-to-download | [paid apps](references/olares-publish-paid-apps.md) |
 
@@ -50,12 +53,15 @@ GitBot checks mechanical policy; it does not validate product quality, screensho
 - The icon is on the critical path because `metadata.icon` is lint-required. Hero/screenshots are optional and may follow in an `UPDATE`.
 - Build images for the architectures declared by `spec.supportArch`; a local single-node success does not prove public multi-arch availability.
 - Assets must come from the upstream project, its site, or the user's running instance. Do not invent logos, screenshots, testimonials, or capabilities.
+- Market copy must be factual, neutral, and written for app users. Do not turn chart implementation details into features or upgrade notes.
+- `upgradeDescription` is conditional: omit it for a first listing or update with no reliable user-facing upgrade information; never add `Initial release` merely to fill the field. When approved English contains a meaningful upgrade notice, keep every declared locale in sync.
 - Public chart credentials must come from install-time inputs, middleware, or chart generation; never commit live secrets.
 - Paid distribution adds `price.yaml` and application-side `VERIFIABLE_CREDENTIAL` enforcement; it does not replace the normal public-listing requirements.
 
 ## Validation and asynchronous semantics
 
 - Re-run chart lint after every manifest or asset-path change.
+- Before localization or submission, resolve any copy drift between the root Manifest and the English locale Manifest; do not silently select or combine them.
 - Local install and `running` validation belong to Chart/Market and can be asynchronous; do not infer that a successful upload ACK proves installability.
 - GitBot processing is asynchronous. Interpret its current label/check state using the submission reference; do not repeatedly open duplicate PRs.
 
