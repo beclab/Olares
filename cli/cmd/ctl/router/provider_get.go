@@ -120,7 +120,7 @@ func renderProviderGet(w io.Writer, d *providerDetail) error {
 			intOrDash(m.ContextSize),
 		}
 		if wide {
-			cells = append(cells, intOrDash(m.MaxConcurrency))
+			cells = append(cells, atOnceLabel(*m))
 		}
 		cells = append(cells, summarizeSupports(m.Supports))
 		mt.row(cells...)
@@ -131,7 +131,8 @@ func renderProviderGet(w io.Writer, d *providerDetail) error {
 	if wide {
 		_, err := fmt.Fprintln(w, "\nAT ONCE is how many requests the engine was launched to work on at "+
 			"the same time. A request beyond that waits its turn, which looks like a slow model rather "+
-			"than a queue — ENGINE LOAD above is what tells the two apart.")
+			"than a queue — ENGINE LOAD above is what tells the two apart. shared means those slots "+
+			"share one KV pool smaller than (window × width).")
 		return err
 	}
 	return nil
@@ -142,4 +143,12 @@ func intOrDash(v int) string {
 		return "-"
 	}
 	return strconv.Itoa(v)
+}
+
+func atOnceLabel(m providerModelRow) string {
+	if m.ContextSize > 0 && m.MaxConcurrency > 1 && m.KVPoolTokens > 0 &&
+		int64(m.ContextSize)*int64(m.MaxConcurrency) > int64(m.KVPoolTokens) {
+		return strconv.Itoa(m.MaxConcurrency) + " shared"
+	}
+	return intOrDash(m.MaxConcurrency)
 }

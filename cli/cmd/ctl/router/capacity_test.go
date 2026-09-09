@@ -113,6 +113,74 @@ func TestTheWidthColumnAppearsOnlyWhereItIsKnown(t *testing.T) {
 	}
 }
 
+// A pool smaller than window × width is one cache the slots share, not a
+// private window for each, so the width is marked rather than looking exclusive.
+func TestASharedKVPoolIsMarkedOnTheWidth(t *testing.T) {
+	model := providerModelRow{
+		Name: "qwen3", Mode: "chat", Enabled: true, Status: "active",
+		MaxConcurrency: 2, ContextSize: 102400, KVPoolTokens: 102400,
+	}
+	local := []adminModelRow{{
+		ProviderName: "Olares", ProviderType: "openai-compatible", ProviderSource: "olares",
+		ProviderStatus: "active",
+		Model:          model,
+	}}
+	var list bytes.Buffer
+	if err := renderModelList(&list, local, 1, 100, 0); err != nil {
+		t.Fatalf("renderModelList: %v", err)
+	}
+	if !strings.Contains(list.String(), "2 shared") {
+		t.Fatalf("expected a shared width, got:\n%s", list.String())
+	}
+
+	var detail bytes.Buffer
+	if err := renderProviderGet(&detail, &providerDetail{
+		providerRow: providerRow{Name: "Olares", Source: "olares", Status: "active"},
+		Models:      []providerModelRow{model},
+	}); err != nil {
+		t.Fatalf("renderProviderGet: %v", err)
+	}
+	if !strings.Contains(detail.String(), "2 shared") {
+		t.Fatalf("expected a shared width on the provider table, got:\n%s", detail.String())
+	}
+}
+
+// Window × width that fits in the pool is a split cache, even when the numbers
+// look like they were copied from one field to another.
+func TestASplitKVPoolIsNotMarkedShared(t *testing.T) {
+	model := providerModelRow{
+		Name: "qwen3", Mode: "chat", Enabled: true, Status: "active",
+		MaxConcurrency: 2, ContextSize: 51200, KVPoolTokens: 102400,
+	}
+	local := []adminModelRow{{
+		ProviderName: "Olares", ProviderType: "openai-compatible", ProviderSource: "olares",
+		ProviderStatus: "active",
+		Model:          model,
+	}}
+	var list bytes.Buffer
+	if err := renderModelList(&list, local, 1, 100, 0); err != nil {
+		t.Fatalf("renderModelList: %v", err)
+	}
+	out := list.String()
+	if strings.Contains(out, "2 shared") {
+		t.Fatalf("a pool that covers the width is not shared, got:\n%s", out)
+	}
+	if !strings.Contains(out, "2") {
+		t.Fatalf("expected the width, got:\n%s", out)
+	}
+
+	var detail bytes.Buffer
+	if err := renderProviderGet(&detail, &providerDetail{
+		providerRow: providerRow{Name: "Olares", Source: "olares", Status: "active"},
+		Models:      []providerModelRow{model},
+	}); err != nil {
+		t.Fatalf("renderProviderGet: %v", err)
+	}
+	if strings.Contains(detail.String(), "2 shared") {
+		t.Fatalf("a pool that covers the width is not shared on the provider table, got:\n%s", detail.String())
+	}
+}
+
 func TestOneModelReportsItsWidth(t *testing.T) {
 	var buf bytes.Buffer
 	err := renderProviderModel(&buf,
