@@ -55,8 +55,8 @@
 | │ ├ Access on your local network | `/manual/best-practices/local-access` | P0 合并 canonical（Phase 2-2） |
 | │ ├ Access remotely with LarePass VPN | `/manual/larepass/private-network` | P0 合并 canonical（Phase 2-3） |
 | │ ├ Connect to Olares via SSH | `/developer/reference/access-olares-terminal` | 跨站链到 developer 页，**不改路由** |
-| │ ├ Create and manage team members | `/manual/olares/settings/manage-team` | 页内链接到 Roles and permissions |
-| │ └ Change password and manage signed-in devices | `/manual/olares/settings/my-olares` | P1 拆分（Phase 3-6） |
+| ├ Create and manage team members | `/manual/olares/settings/manage-team` | 页内链接到 Roles and permissions；**2026-09-09 起为 Accounts and access 直属项**（非访问类任务，移出 Access Olares 子组） |
+| └ Change your password and manage signed-in devices | `/manual/password-and-devices` | ✅ 3-6 已拆分；**2026-09-09 起为 Accounts and access 直属项**（移出 Access Olares 子组） |
 | └ **Passwords**（分组） | | |
 | │ ├ Create and manage Vault items | `/manual/olares/vault/vault-items` | 不变 |
 | │ ├ Share Vault items securely | `/manual/olares/vault/share-vault-items` | 不变 |
@@ -70,7 +70,7 @@
 | ├ Change an app's web address | `/manual/olares/settings/custom-app-domain` | 不变 |
 | ├ Make an app available on the local network | `/manual/olares/settings/overlay-gateway` | P1 重写（Phase 3-7） |
 | ├ Control who can access an app | `/manual/olares/settings/manage-entrance` | 不变（微调） |
-| ├ Connect an AI app to a model service | `/manual/best-practices/connect-ai-apps` | 不变（微调） |
+| ├ Connect an AI app to a model service | `/manual/best-practices/connect-ai-apps` | **2026-09-09 收窄为纯 How-to**：连接来源/API 格式/Base URL/模型名称与 key/验证/常见错误表；概念解释（service vs client、provider、API 格式）迁入 `help/usage.md` 新 Q「How do AI apps connect on Olares」；完整 LobeHub 案例压缩进验证步骤。镜像手动更新/回滚高风险流程从 usage FAQ 拆出为新建 `manual/update-app-image.md`（+zh，Apps 组导航），FAQ 保留简答+链接 |
 | ├ About shared applications | `/manual/olares/market/shared-apps` | P1 拆分（Phase 3-4） |
 | └ Migrate legacy shared applications | 待新增（Phase 3-5） | P1 |
 | **Files and data** | `/manual/olares/files/` | 复用现有 index.md |

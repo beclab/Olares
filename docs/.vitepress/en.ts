@@ -177,6 +177,14 @@ const side = {
       collapsed: false,
       items: [
         {
+          text: "Create and manage team members",
+          link: "/manual/olares/settings/manage-team",
+        },
+        {
+          text: "Change your password and manage signed-in devices",
+          link: "/manual/password-and-devices",
+        },
+        {
           text: "Olares ID",
           collapsed: true,
           items: [
@@ -214,14 +222,6 @@ const side = {
               text: "Connect to Olares via SSH",
               link: "/manual/access-olares-terminal",
             },
-            {
-              text: "Create and manage team members",
-              link: "/manual/olares/settings/manage-team",
-            },
-            {
-              text: "Change your password and manage signed-in devices",
-              link: "/manual/password-and-devices",
-            },
           ],
         },
         {
@@ -255,6 +255,10 @@ const side = {
         {
           text: "Install, update, and remove apps",
           link: "/manual/olares/market/market",
+        },
+        {
+          text: "Manually update an app image",
+          link: "/manual/update-app-image",
         },
         {
           text: "Clone an app",

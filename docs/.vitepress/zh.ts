@@ -173,6 +173,14 @@ const side = {
       collapsed: false,
       items: [
         {
+          text: "创建并管理成员",
+          link: "/zh/manual/olares/settings/manage-team",
+        },
+        {
+          text: "修改密码并管理已登录设备",
+          link: "/zh/manual/password-and-devices",
+        },
+        {
           text: "Olares ID",
           collapsed: true,
           items: [
@@ -210,14 +218,6 @@ const side = {
               text: "通过 SSH 连接",
               link: "/zh/manual/access-olares-terminal",
             },
-            {
-              text: "创建并管理成员",
-              link: "/zh/manual/olares/settings/manage-team",
-            },
-                        {
-              text: "修改密码并管理已登录设备",
-              link: "/zh/manual/password-and-devices",
-            },
           ],
         },
         {
@@ -252,6 +252,10 @@ const side = {
         {
           text: "安装、更新和移除应用",
           link: "/zh/manual/olares/market/market",
+        },
+        {
+          text: "手动更新应用镜像",
+          link: "/zh/manual/update-app-image",
         },
         {
           text: "克隆应用",
