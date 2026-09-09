@@ -1,6 +1,6 @@
 # The voice library and the reading history
 
-`call speak` and `call clone` produce audio and keep nothing. A reference recording is used for one reading and is not a voice afterwards, and the bytes exist only where `--out` put them. This surface is the durable half: a voice that persists under a name, and a log of every reading with its audio still attached.
+`call speak` and `call clone` do not create a reusable voice resource. A reference recording passed to `clone` is used for one reading and is not a voice afterwards. Whether synthesized bytes also appear in history is an engine-protocol property: OpenAI-shaped engines need the caller to keep `--out`, while ElevenLabs-shaped engines retain a reading and its audio. This surface exposes the durable objects: reusable voices and, where the engine supports it, synthesis history.
 
 Read this when a user wants a voice they can reuse, wants a voice invented rather than recorded, or wants back a file a synthesis call produced and they no longer have. For the synthesis verbs themselves, and for the async task machinery all audio shares, read [calling a model](olares-router-calling.md).
 
@@ -22,9 +22,9 @@ olares-cli router call history delete <reading> --model <tts-model> --yes
 
 ## Synthesis is spelled two ways, and an engine answers one of them
 
-`/v1/audio/speech` is the OpenAI spelling, which reads the voice from the body. `/v1/text-to-speech/<voice>` is the ElevenLabs spelling, which addresses it in the path. Router mounts both and forwards each unchanged; it translates between them only for the ElevenLabs vendor itself, so a model application answers whichever its image was built for. `call speak` and `speak --voices` pick the likely one from the catalogue and fall back to the other, so the flags behave the same either way.
+`/v1/audio/speech` is the OpenAI spelling, which reads the voice from the body. `/v1/text-to-speech/<voice>` is the ElevenLabs spelling, which addresses it in the path. Router mounts both and forwards each unchanged; it translates between them only for the ElevenLabs vendor itself, so a model application answers whichever its image was built for. `call speak` and `speak --voices` use the operation catalogue first and fall back to the other spelling only when the catalogue is absent, ambiguous, stale or incorrect.
 
-The guess comes from `supports_tts_design`: designing a voice from a description is an ElevenLabs operation, so an engine declaring it implements that surface. That is a correlation rather than a rule Router enforces, which is why it only sets the order — an engine that breaks it costs one wasted request and still works. A wasted attempt is a real request, so it leaves a `failed: audio_upstream_error` at a few milliseconds and $0 beside the call that worked. **Such a pair is a mispredicted shape, not an unstable model**, and `--status success` excludes them.
+When no authoritative catalogue is available, the legacy guess uses `supports_tts_design`: designing a voice from a description correlates with the ElevenLabs surface. An absent or incorrect declaration can therefore cost one wasted request before fallback succeeds. That request is real, so it may leave `failed: audio_upstream_error` at a few milliseconds and $0 beside the successful call. **Such a pair is a protocol fallback, not an unstable model**, and `--status success` excludes it.
 
 The one case that cannot be bridged is `speak` with no `--voice` against a path-addressing engine: there is nothing to put in the path, and the refusal says so. **Name a voice from `speak --voices` rather than treating that 404 as a broken model.**
 

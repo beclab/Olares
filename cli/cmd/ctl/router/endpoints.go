@@ -240,27 +240,27 @@ const (
 	epAudioAlign       = dataPlaneAPI + "/audio/align"
 )
 
-// The audio WebSocket routes. Router recognises exactly these three by path and
-// proxies them frame for frame; every other audio suffix is HTTP. They are
-// separate constants rather than a suffix on the HTTP ones because a socket
-// opens with a different scheme, and a typo here would silently arrive as a
-// POST.
+// The audio WebSocket routes wrapped by CLI commands. Router's full protocol
+// surface has three: these two input streams plus /v1/audio/speech/stream for
+// streaming TTS. `call speak` uses the HTTP synthesis dialects, so it does not
+// need a third socket constant here. These are separate constants rather than
+// suffixes on the HTTP routes because a typo would silently arrive as a POST.
 const (
 	epAudioStreamWS        = dataPlaneAPI + "/audio/stream"
 	epAudioDiarizeStreamWS = dataPlaneAPI + "/audio/diarize/stream"
 )
 
-// Audio tasks. `--async` on any audio verb answers with a receipt instead of a
-// result, and these read it.
+// Audio tasks. Batch HTTP operations whose operation catalogue declares async
+// support can answer `--async` with a receipt instead of a result; WebSocket
+// and HTTP chunked streams cannot. These commands read the receipt.
 //
 // The engine's own canonical path is /v1/tasks, and Router mounts both: the
 // canonical prefix arrived with the ElevenLabs-shaped surface below, and
-// /v1/audio/tasks remains the alias every existing receipt names. Router
-// rewrites a receipt's `poll` and `result_url` onto the alias before handing
-// the document back, so this tree stays on it — one spelling for a task
-// submitted through either route. These constants build the same paths from the
-// id, which is what a caller that kept the id rather than the document has to
-// work from.
+// /v1/audio/tasks remains the compatibility alias existing CLI releases use.
+// New Router receipts name the canonical prefix; this tree deliberately stays
+// on the alias until that compatibility surface is retired. These constants
+// build its paths from an id for callers that retained the id rather than the
+// full receipt.
 const epAudioTasks = dataPlaneAPI + "/audio/tasks"
 
 func epAudioTask(id string) string { return epAudioTasks + "/" + url.PathEscape(id) }
@@ -271,9 +271,9 @@ func epAudioTaskResult(id string) string { return epAudioTask(id) + "/result" }
 //
 // These sit at the root of /v1 rather than under /audio because they are the
 // ElevenLabs shape, which a synthesis engine serves alongside the OpenAI one.
-// It is not a second way to say the same thing: /v1/audio/speech synthesizes
-// and forgets, and these are the durable half — a voice that persists under a
-// name, and a recording of every reading with the audio still attached.
+// It is not merely a second spelling: these routes expose durable voices and,
+// on ElevenLabs-shaped engines, synthesis history with retained audio. The
+// OpenAI-shaped /v1/audio/speech contract does not itself promise history.
 //
 // Which default each reaches is Router's decision and it is not uniform:
 // reading or editing the voice table is default-tts, creating a voice from a

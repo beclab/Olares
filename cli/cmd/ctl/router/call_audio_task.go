@@ -18,11 +18,12 @@ import (
 
 // GET /v1/audio/tasks, GET /v1/audio/tasks/:id[/result], DELETE /v1/audio/tasks/:id
 //
-// Every audio verb answers with its result, and takes --async to answer with a
-// receipt instead. That is not a convenience: an engine transcribing an hour of
-// audio holds the connection for as long as the work takes, and a request held
-// open that long is one an edge, a proxy or a laptop lid will cut. The task
-// survives the connection; the sync request does not.
+// Batch HTTP audio operations normally answer with their result and may take
+// --async when their operation catalogue declares support. That is not a
+// convenience: an engine transcribing an hour of audio holds the connection
+// for as long as the work takes, and a request held open that long is one an
+// edge, a proxy or a laptop lid will cut. The task survives the connection;
+// the sync request does not.
 //
 // Where `--async` goes in the request is the engine's choice rather than this
 // tree's, and it differs by route: the multipart routes read an `async` form
@@ -31,12 +32,11 @@ import (
 // long answer they thought they had escaped.
 //
 // A task lives on the engine that created it and nowhere else, so reading one
-// means reaching the same provider. Router remembers which backend answered each
-// `--async` submission and routes a bare lookup back to it, so an id is usually
-// enough. `--model` is what covers the cases that memory cannot: a gateway that
-// has restarted, a task minted through a different one, or a result old enough
-// that the id has aged out. When it is given it is sent as `?model=`, exactly as
-// the submitting call did.
+// means reaching the same provider. Router persists the binding from each new
+// opaque `atask_*` id to its backend and owner, so Router restart does not make
+// the model mandatory. `--model` remains useful for legacy upstream ids or a
+// task minted through another gateway. The engine-owned task still expires
+// after 1800 seconds and is lost when that engine restarts.
 
 type audioTask struct {
 	ID            string          `json:"id"`
@@ -92,16 +92,16 @@ func newCallTaskCommand(f *cmdutil.Factory) *cobra.Command {
 		Short: "read an audio job submitted with --async",
 		Long: `Pick up work an audio verb handed back instead of finishing.
 
-Any audio verb takes --async and answers with a task id. These read it: "get"
-says how it is going, "result" collects it, "cancel" drops it, and "list" shows
-the engine's whole board.
+An HTTP audio operation can take --async only when the selected model's
+operation catalogue declares support. These read an accepted task: "get" says
+how it is going, "result" collects it, "cancel" drops it, and "list" shows the
+engine's whole board. WebSocket and HTTP chunked streams cannot be async.
 
-A task exists only inside the engine that is running it, and Router remembers
-which one that was: an id is enough for "get", "result" and "cancel". Pass
---model when it is not — after a Router restart, or for work submitted through
-another gateway — and it has to be the model the work was submitted to, because
-a task read against a different engine is a 404 for a job that is running
-perfectly well.
+A task exists only inside the engine that is running it. Router persists the
+backend and owner for its opaque atask_* ids, so an id remains enough for
+"get", "result" and "cancel" across a Router restart. Pass --model for a legacy
+upstream id or work submitted through another gateway. An engine restart loses
+the task, and retained results expire after 1800 seconds.
 
 The model shown in a submission receipt is the routing reference needed to find
 that engine again, not the engine's canonical model id.

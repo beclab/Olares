@@ -216,7 +216,7 @@ Examples:
 	cmd.Flags().BoolVar(&stream, "stream", false,
 		"send PCM over a socket and report the segmentation as it arrives; "+
 			"resolves "+categoryDiarStream+" instead of "+categoryDiarization+" when --model is omitted")
-	cmd.Flags().IntVar(&sampleRate, "sample-rate", 16000, "with --stream, the sample rate of the PCM being sent")
+	cmd.Flags().IntVar(&sampleRate, "sample-rate", 16000, "with --stream, the PCM sample rate; defaults to 16000 and must match the input and model catalogue")
 	cmd.Flags().BoolVar(&async, "async", false, audioAsyncFlagUsage)
 	cmd.Flags().StringVar(&apiKey, "api-key", "", dataPlaneKeyFlagUsage)
 	addOutputFlag(cmd, &output)

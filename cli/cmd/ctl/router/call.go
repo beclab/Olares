@@ -85,9 +85,10 @@ generation hand back a receipt to collect from, and OCR always does; each of
 those verbs waits for the work by default and takes --no-wait to hand the id
 over instead.
 
-The audio verbs answer directly, and take --async to be handed a task id
-instead — which is the only way to send an hour of audio, since a synchronous
-request for that is a request that gets cut. "router call task" reads them.
+Batch HTTP audio operations answer directly. When the selected model's operation
+catalogue declares async support, --async asks for a task id instead — which is
+the safe way to submit long-running audio work. WebSocket and HTTP chunked
+streams cannot be asynchronous. "router call task" reads accepted jobs.
 
 Every call is metered: it appears in "router usage", counts against the quota on
 the credential that made it, and may cost money.

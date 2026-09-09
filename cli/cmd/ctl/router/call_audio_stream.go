@@ -126,7 +126,7 @@ Examples:
 	}
 	cmd.Flags().StringVar(&model, "model", "", modelFlagHelp(categorySTTStream))
 	cmd.Flags().StringVar(&language, "language", "", "language of the audio, as an ISO-639-1 code")
-	cmd.Flags().IntVar(&sampleRate, "sample-rate", 16000, "sample rate of the PCM being sent")
+	cmd.Flags().IntVar(&sampleRate, "sample-rate", 16000, "sample rate of the PCM being sent; defaults to 16000 and must match the input and model catalogue")
 	cmd.Flags().IntVar(&stepMillis, "step-ms", 0, "how much audio the engine decodes at a time; its own default when 0")
 	cmd.Flags().BoolVar(&partials, "partials", true, "report the running transcript on stderr while it decodes")
 	cmd.Flags().StringVar(&apiKey, "api-key", "", dataPlaneKeyFlagUsage)
