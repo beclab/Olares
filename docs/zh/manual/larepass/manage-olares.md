@@ -20,7 +20,7 @@ LarePass 应用可以让你轻松管理你的 Olares 设备。你可以通过手
 
 ## 访问 Olares 管理页面
 
-打开 LarePass，进入**设置**，在**我的 Olares** 卡片里点击**系统**，即可进入 **Olares 管理**页面。在此页面上，你可以查看设备信息、重启或关闭 Olares、修改网络设置，以及将 Olares 恢复出厂设置。
+打开 LarePass，进入**设置**，在**我的 Olares**卡片里点击**系统**，即可进入 **Olares 管理**页面。在此页面上，可以查看设备信息、更新 Olares、重启或关闭 Olares、修改网络设置，以及将 Olares 恢复出厂设置。
 
 ![Olares 管理](/images/zh/manual/larepass/olares-management1.png#bordered)
 
@@ -32,6 +32,8 @@ LarePass 应用可以让你轻松管理你的 Olares 设备。你可以通过手
 - 当前的网络连接状态，包括内网和外网 IP 地址
 
 ![查看设备信息](/images/zh/manual/larepass/view-device-information.png#bordered)
+
+检查并安装系统更新的方法，参见[查看并更新 Olares](../olares/settings/update.md)。
 
 ## 重启或关闭 Olares
 

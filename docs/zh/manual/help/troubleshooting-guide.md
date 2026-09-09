@@ -57,7 +57,7 @@ AI 应用或模型无法获得所需内存或显存资源时，请查看此分�
 |---|---|
 | 忘记桌面登录密码 | [忘记桌面登录密码](./ts-forget-login-password.md) |
 | LarePass 显示**系统错误** | [LarePass 显示“系统错误”](./ts-system-error.md) |
-| 登录或身份验证出现其他明确错误 | [登录与认证错误信息](./installation.md#登录与认证错误信息) |
+| 登录或激活出现明确错误信息 | [登录与激活错误信息](../login-and-activation-errors.md) |
 
 ## Olares One 硬件
 

@@ -219,10 +219,11 @@ In Olares 1.12.4 and earlier versions, to fully release resources, you must use 
 
 Olares 1.12.6 introduces a new V3 shared application architecture. Legacy V2 shared applications can still be started, stopped, paused, and resumed, but they cannot be upgraded directly to V3. To use the V3 version, uninstall the V2 app first, then install the V3 version. Existing data must be migrated manually.
 
-For a full explanation of the architecture change and the migration workflow, see [Shared applications](shared-apps.md).
+For background, see [About shared applications](shared-apps.md). Before uninstalling a legacy app, follow [Migrate legacy shared applications](../../migrate-shared-apps.md).
 
 ## Resources
 
 - [Clone applications](clone-apps.md): Run multiple instances of the same app.
-- [Shared applications](shared-apps.md): Understand and manage cluster-wide shared apps.
+- [About shared applications](shared-apps.md): Understand how cluster-wide shared apps work.
+- [Migrate legacy shared applications](../../migrate-shared-apps.md): Choose the correct migration path before removing a v2 app.
 - [Application concepts](../../../developer/concepts/application.md): Learn how system, community, and shared apps work.

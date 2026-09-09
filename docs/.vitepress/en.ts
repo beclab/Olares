@@ -42,7 +42,7 @@ const side = {
           ],
         },
         {
-          text: "Request support",
+          text: "Get support",
           link: "/manual/help/request-technical-support",
         },
       ],
@@ -52,6 +52,10 @@ const side = {
       collapsed: false,
       link: "/manual/get-started/",
       items: [
+        {
+          text: "Download LarePass",
+          link: "/manual/larepass/",
+        },
         {
           text: "Create an Olares ID",
           link: "/manual/get-started/create-olares-id",
@@ -153,37 +157,9 @@ const side = {
       ],
     },
     {
-      text: "Tutorials",
-      link: "/manual/best-practices/",
-      collapsed: false,
-      items: [
-        {
-          text: "Activate a device using Olares CLI",
-          link: "/manual/best-practices/activate-olares-using-cli",
-        },
-        {
-          text: "Install a multi-node Olares cluster",
-          link: "/manual/best-practices/install-olares-multi-node",
-        },
-        // Hidden per content map: /manual/best-practices/install-olares-gpu-passthrough
-        {
-          text: "Install a specific CUDA version",
-          link: "/manual/best-practices/install-specific-cuda-version",
-        },
-      ],
-    },
-    {
       text: "Accounts and access",
       collapsed: false,
       items: [
-        {
-          text: "Create and manage team members",
-          link: "/manual/olares/settings/manage-team",
-        },
-        {
-          text: "Change your password and manage signed-in devices",
-          link: "/manual/password-and-devices",
-        },
         {
           text: "Olares ID",
           collapsed: true,
@@ -191,6 +167,10 @@ const side = {
             {
               text: "Manage Olares IDs in LarePass",
               link: "/manual/larepass/manage-accounts",
+            },
+            {
+              text: "Change your password and manage signed-in devices",
+              link: "/manual/password-and-devices",
             },
             {
               text: "Set up a custom-domain Olares ID",
@@ -203,6 +183,20 @@ const side = {
             {
               text: "Back up your mnemonic phrase",
               link: "/manual/larepass/back-up-mnemonics",
+            },
+          ],
+        },
+        {
+          text: "Team",
+          collapsed: true,
+          items: [
+            {
+              text: "Create and manage team members",
+              link: "/manual/olares/settings/manage-team",
+            },
+            {
+              text: "Roles and permissions",
+              link: "/manual/olares/settings/roles-permissions",
             },
           ],
         },
@@ -291,6 +285,10 @@ const side = {
         {
           text: "Connect an AI app to a model service",
           link: "/manual/best-practices/connect-ai-apps",
+        },
+        {
+          text: "Migrate legacy shared applications",
+          link: "/manual/migrate-shared-apps",
         },
         {
           text: "About shared applications",
@@ -384,7 +382,7 @@ const side = {
           link: "/manual/olares/resources-usage",
         },
         {
-          text: "Monitor Olares status and traffic in Olares Space",
+          text: "Check Olares status and Olares Space usage",
           link: "/manual/space/manage-olares",
         },
         {
@@ -402,6 +400,16 @@ const side = {
         {
           text: "Back up and restore Olares",
           link: "/manual/olares/settings/backup",
+        },
+        {
+          text: "Cluster",
+          collapsed: true,
+          items: [
+            {
+              text: "Install a multi-node Olares cluster",
+              link: "/manual/best-practices/install-olares-multi-node",
+            },
+          ],
         },
         {
           text: "Storage",
@@ -455,10 +463,25 @@ const side = {
               link: "/manual/olares/settings/video",
             },
             {
-              text: "Advanced settings",
+              text: "Manage repositories and images",
               link: "/manual/olares/settings/developer",
             },
           ],
+        },
+      ],
+    },
+    {
+      text: "Advanced setup guides",
+      link: "/manual/best-practices/",
+      collapsed: true,
+      items: [
+        {
+          text: "Install and activate Olares from the command line",
+          link: "/manual/best-practices/activate-olares-using-cli",
+        },
+        {
+          text: "Install a specific NVIDIA driver version",
+          link: "/manual/best-practices/install-specific-cuda-version",
         },
       ],
     },
@@ -527,6 +550,10 @@ const side = {
             {
               text: "Forgotten desktop login password",
               link: "/manual/help/ts-forget-login-password",
+            },
+            {
+              text: "Login and activation error messages",
+              link: "/manual/login-and-activation-errors",
             },
             {
               text: "System error in LarePass",

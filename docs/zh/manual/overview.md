@@ -28,10 +28,20 @@ Olares 是一款可以用自然语言操作的开源个人云操作系统，让�
     <span class="doc-map-title">快速开始</span>
     <span class="doc-map-desc">创建 Olares ID，在你自己的硬件上安装 Olares</span>
   </a>
+  <a class="doc-map-card" href="./larepass/">
+    <span class="doc-map-icon"><span class="material-symbols-outlined">smartphone</span></span>
+    <span class="doc-map-title">下载 LarePass</span>
+    <span class="doc-map-desc">获取用于设置和访问 Olares 的移动端或桌面端客户端</span>
+  </a>
   <a class="doc-map-card" href="../one/">
     <span class="doc-map-icon"><span class="material-symbols-outlined">memory</span></span>
     <span class="doc-map-title">Olares One</span>
     <span class="doc-map-desc">获取开箱即用的个人 AI 云专属硬件设备</span>
+  </a>
+  <a class="doc-map-card" href="./best-practices/">
+    <span class="doc-map-icon"><span class="material-symbols-outlined">menu_book</span></span>
+    <span class="doc-map-title">高级设置指南</span>
+    <span class="doc-map-desc">完成命令行安装、集群、存储扩展和主机硬件等高级设置任务</span>
   </a>
 </div>
 
@@ -50,20 +60,10 @@ Olares 是一款可以用自然语言操作的开源个人云操作系统，让�
     <span class="doc-map-title">Olares 应用</span>
     <span class="doc-map-desc">桌面、应用市场、文件、Vault、Control Hub、设置等系统应用的日常使用指南</span>
   </a>
-  <a class="doc-map-card" href="./larepass/">
-    <span class="doc-map-icon"><span class="material-symbols-outlined">smartphone</span></span>
-    <span class="doc-map-title">LarePass</span>
-    <span class="doc-map-desc">通过 LarePass 客户端，在手机、电脑或浏览器上访问 Olares、VPN、文件与密码</span>
-  </a>
   <a class="doc-map-card" href="./space/">
     <span class="doc-map-icon"><span class="material-symbols-outlined">cloud</span></span>
     <span class="doc-map-title">Olares Space</span>
     <span class="doc-map-desc">管理 Olares、自定义域名、备份与账单</span>
-  </a>
-  <a class="doc-map-card" href="./best-practices/">
-    <span class="doc-map-icon"><span class="material-symbols-outlined">menu_book</span></span>
-    <span class="doc-map-title">教程</span>
-    <span class="doc-map-desc">自定义域名、多节点集群、存储扩展等进阶分步指南</span>
   </a>
 </div>
 
@@ -94,7 +94,7 @@ Olares 是一款可以用自然语言操作的开源个人云操作系统，让�
     <span class="doc-map-title">文档更新动态</span>
     <span class="doc-map-desc">跟踪每次 Olares 发版后的新增指南、更新内容与下架说明</span>
   </a>
-  <a class="doc-map-card" href="./help/olares">
+  <a class="doc-map-card" href="./help/">
     <span class="doc-map-icon"><span class="material-symbols-outlined">help</span></span>
     <span class="doc-map-title">帮助与故障排查</span>
     <span class="doc-map-desc">查阅常见问题、已知问题与技术支持</span>

@@ -28,10 +28,20 @@ Get Olares running, whether you install the OS yourself or use a dedicated devic
     <span class="doc-map-title">Get started</span>
     <span class="doc-map-desc">Create your Olares ID and install Olares on your own hardware</span>
   </a>
+  <a class="doc-map-card" href="./larepass/">
+    <span class="doc-map-icon"><span class="material-symbols-outlined">smartphone</span></span>
+    <span class="doc-map-title">Download LarePass</span>
+    <span class="doc-map-desc">Get the mobile or desktop client used to set up and access Olares</span>
+  </a>
   <a class="doc-map-card" href="../one/">
     <span class="doc-map-icon"><span class="material-symbols-outlined">memory</span></span>
     <span class="doc-map-title">Olares One</span>
     <span class="doc-map-desc">Get the dedicated hardware device that runs your personal AI cloud out of the box</span>
+  </a>
+  <a class="doc-map-card" href="./best-practices/">
+    <span class="doc-map-icon"><span class="material-symbols-outlined">menu_book</span></span>
+    <span class="doc-map-title">Advanced setup guides</span>
+    <span class="doc-map-desc">Complete advanced setup tasks for command-line installation, clusters, storage, and host hardware</span>
   </a>
 </div>
 
@@ -50,20 +60,10 @@ Manage your cloud, applications, files, identity, and access from day to day.
     <span class="doc-map-title">Olares applications</span>
     <span class="doc-map-desc">Daily guides for Desktop, Market, Files, Vault, Control Hub, Settings, and other system apps</span>
   </a>
-  <a class="doc-map-card" href="./larepass/">
-    <span class="doc-map-icon"><span class="material-symbols-outlined">smartphone</span></span>
-    <span class="doc-map-title">LarePass</span>
-    <span class="doc-map-desc">Access your Olares, VPN, files, and passwords from any device with the LarePass client</span>
-  </a>
   <a class="doc-map-card" href="./space/">
     <span class="doc-map-icon"><span class="material-symbols-outlined">cloud</span></span>
     <span class="doc-map-title">Olares Space</span>
     <span class="doc-map-desc">Manage Olares, custom domains, backups, and billing</span>
-  </a>
-  <a class="doc-map-card" href="./best-practices/">
-    <span class="doc-map-icon"><span class="material-symbols-outlined">menu_book</span></span>
-    <span class="doc-map-title">Tutorials</span>
-    <span class="doc-map-desc">Advanced, step-by-step guides for custom domains, clusters, storage, and more</span>
   </a>
 </div>
 
@@ -94,7 +94,7 @@ Find answers when you're stuck, and join the community to share setups and stay 
     <span class="doc-map-title">What's new in docs</span>
     <span class="doc-map-desc">Track new guides, updates, and deprecations after each Olares release</span>
   </a>
-  <a class="doc-map-card" href="./help/olares">
+  <a class="doc-map-card" href="./help/">
     <span class="doc-map-icon"><span class="material-symbols-outlined">help</span></span>
     <span class="doc-map-title">Help &amp; troubleshooting</span>
     <span class="doc-map-desc">Find answers in FAQs, known issues, and technical support</span>

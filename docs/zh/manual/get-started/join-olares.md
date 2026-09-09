@@ -35,4 +35,4 @@ Olares ID 是你在 Olares 生态中的身份标识。激活账号前需要先�
 
 ## 了解更多
 
-- [用户角色与权限](/zh/manual/olares/settings/manage-team.md#用户角色与权限)：了解成员角色在系统中的权限和可执行的操作。
+- [角色与权限](/zh/manual/olares/settings/roles-permissions.md)：了解成员角色在系统中的权限和可执行的操作。

@@ -37,11 +37,11 @@ Olares v1.12.6 的亮点和详细介绍请参见 [Olares 1.12.6 发布博客](ht
   - 新增[安装 olares-cli](/zh/developer/cli-install)，说明如何在本地或 Agent 应用内安装 `olares-cli`。
   - 新增[登录 Olares](/zh/developer/cli-log-in)，说明如何使用 Olares ID 认证 `olares-cli`。
   - 新增[安装与使用 Agent Skills](/zh/developer/cli-agent-skills)，介绍集群管理、应用、设置等内置技能的使用方法。
-- 新增[使用 Olares CLI 激活 Olares 设备](/zh/manual/best-practices/activate-olares-using-cli)，介绍如何通过命令行激活设备。
+- 新增[通过命令行安装并激活 Olares](/zh/manual/best-practices/activate-olares-using-cli)，介绍如何使用 Olares CLI 设置设备。
 - 新增[使用公共目录管理共享 AI 模型](/zh/manual/olares/files/files-common)，说明如何使用 Common 目录在应用间共享模型。
 - 新增[压缩与解压缩文件](/zh/manual/olares/files/compress-extract-files)，涵盖 Olares Files 中 ZIP、7z、TAR 和加密压缩包的操作。
 - 新增[挂载 NFS 共享](/zh/manual/olares/files/mount-nfs)，说明如何从 Olares 访问 NFS 共享目录。
-- 新增[共享应用](/zh/manual/olares/market/shared-apps)，介绍新的共享应用架构以及旧版 v2 共享应用的迁移方式。
+- 新增[关于共享应用](/zh/manual/olares/market/shared-apps)，介绍新的共享应用架构；新增[迁移旧版共享应用](/zh/manual/migrate-shared-apps)，说明 v2 应用的迁移方式。
   - [Ollama](/zh/use-cases/ollama)
   - [ComfyUI](/zh/use-cases/comfyui-common-issues)
   - [Dify](/zh/use-cases/dify-upgrade)

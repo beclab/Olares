@@ -1,25 +1,49 @@
 ---
 outline: [2, 3]
-description: 在 Olares Space 中监控 Olares 的系统状态和流量使用情况。
+description: 通过 Olares 设置或 Olares Space 网页查看系统状态、主机、云服务配额和流量用量。
 head:
   - - meta
     - name: keywords
-      content: Olares, Olares Space, 监控 Olares, 系统状态, 资源使用, 流量使用
+      content: Olares, Olares Space, 系统状态, 活跃主机, 备份空间, 流量用量, 仪表板
 ---
-# 在 Olares Space 中监控 Olares 状态与流量
+# 查看 Olares 状态与 Olares Space 用量
 
-本页介绍如何在 Olares Space 中监控 Olares 的系统状态和流量使用情况。
+需要远程查看 Olares 状态，或检查备份空间、反向代理流量等云服务用量时，可以使用 Olares Space。如需排查 CPU、内存、磁盘、网络、Pod、GPU 或应用的实时资源使用，请改用 Olares [仪表板](../olares/resources-usage.md)。
 
-## 开始之前
+不同入口提供的信息不同：
 
-要在 Olares Space 中监控 Olares，你必须先授权 Olares Space 访问你的系统数据。在 LarePass 中将 Olares Space 账号与 Olares 设备关联：
+| 入口 | 适合查看 |
+|---|---|
+| Olares **设置** > 左上角头像 > **Olares Space** | 推荐的登录入口，以及已关联账户、套餐、备份空间和流量用量摘要 |
+| [Olares Space](https://space.olares.com/) | 远程系统状态、活跃主机、近期流量和计费周期用量 |
+| Olares **仪表板** | 本机资源和应用的详细诊断信息 |
 
-1. 在移动设备上打开 LarePass 应用，进入**设置** > **集成**。
-2. 点击右上角的 <i class="material-symbols-outlined">add</i>，然后选择 **Olares Space**。
+## 在设置中连接 Olares Space
 
-## 监控资源用量
+请从 Olares 设置中的专属页面连接 Olares Space。连接成功后，可以在该页面查看用量，Olares Space 也会自动出现在**设置** > **集成**中。
 
-检查 CPU、内存和磁盘用量，确保 Olares 有足够资源。
+:::warning 从 Olares Space 页面连接
+不要从**设置** > **集成** > **添加账户** > **Olares Space** 开始操作。该入口暂不支持绑定账户。
+:::
+
+1. 打开 Olares **设置**。
+2. 点击左上角的头像。
+3. 点击 **Olares Space** 卡片。
+4. 页面显示二维码后，使用移动设备上的 LarePass 扫码。
+5. 等待页面显示 Olares Space 账户和用量信息。
+
+## 在设置中查看摘要
+
+1. 打开 Olares **设置**。
+2. 点击左上角的头像。
+3. 点击 **Olares Space** 卡片。
+4. 查看已关联的账户、订阅套餐、备份空间、反向代理服务和流量用量。
+
+该入口适合快速确认配额。如需查看状态详情、指定时间段或计费周期历史，请打开 Olares Space 网页。
+
+## 在 Olares Space 中查看资源用量
+
+Olares Space 的概览页提供 CPU、内存和磁盘用量摘要。无法在本地访问 Olares 时，可以通过这里远程确认系统是否在线、资源是否接近上限。
 
 1. 在 **Olares** 页面，选择 **Overview** 标签页。
 
@@ -40,7 +64,7 @@ head:
 1. 在 **Olares** 页面，选择 **Overview** 标签页。
 2. 找到 **Active hosts** 区域。它展示当前 Olares 集群中运行的主机。
 
-## 查看流量使用
+## 查看近期流量
 
 检查近期流量使用情况，发现突增并避免超出套餐限制。
 
@@ -56,7 +80,7 @@ head:
 3. 要更改时间范围，从 **Last 12 hours** 下拉菜单中选择一个。
 4. 要查看特定用户的流量，从 **All Users** 下拉菜单中选择该账号。
 
-## 查看账单周期流量
+## 查看计费周期流量
 
 查看月度流量使用情况，了解当前计费周期内已消耗多少数据。
 

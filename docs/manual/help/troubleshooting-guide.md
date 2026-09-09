@@ -57,7 +57,7 @@ Use this category for sign-in, password, activation, and authentication failures
 |---|---|
 | You forgot the desktop login password | [Forgotten desktop login password](./ts-forget-login-password.md) |
 | LarePass shows **System error** | ["System error" in LarePass](./ts-system-error.md) |
-| Sign-in or authentication shows another specific error | [Login and authentication error messages](./installation.md#login-and-authentication-error-messages) |
+| Sign-in or activation shows a specific error message | [Login and activation error messages](../login-and-activation-errors.md) |
 
 ## Olares One hardware
 

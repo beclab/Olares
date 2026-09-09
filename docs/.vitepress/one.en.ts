@@ -110,7 +110,11 @@ export const oneSidebar: DefaultTheme.Sidebar = {
         {
           text: "Set up with eGPU",
           link: "/one/egpu",
-        },        
+        },
+        {
+          text: "Manage hardware settings",
+          link: "/one/hardware-settings",
+        },
         {
           text: "Dual-boot Olares OS with Windows",
           collapsed: true,
@@ -196,10 +200,6 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           text: "Manage BIOS and EC",
           link: "/one/update-firmware",
         },
-        {
-          text: "Manage hardware settings",
-          link: "/one/hardware-settings",
-        },        
       ]
     },
   ],

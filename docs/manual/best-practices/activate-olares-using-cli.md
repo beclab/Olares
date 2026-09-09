@@ -1,23 +1,19 @@
 ---
 outline: [2, 3]
-description: Technical guide for installing and activating an Olares device using Olares CLI.
+description: Install and activate a new or uninitialized Olares device from the host terminal with Olares CLI.
 head:
   - - meta
     - name: keywords
       content: Olares, Olares CLI, activate device, Olares One, FRP, wizard activate, LarePass
 ---
 
-# Activate an Olares device using the Olares CLI
+# Install and activate Olares from the command line
 
-Activate a new or uninitialized Olares device, such as Olares One, using the Olares CLI tool.
+Use this advanced setup guide to install and activate a new or uninitialized Olares device, such as Olares One, from the host terminal.
 
-## Learning objectives
-
-In this tutorial, you will learn how to:
-- Install Olares on a new device.
-- Obtain and run the correct Olares CLI tool for your system version.
-- Retrieve a Fast Reverse Proxy (FRP) host for remote access.
-- Run the activation command to configure your device.
+:::warning Use the standard setup unless you need command-line activation
+This workflow requires host administrator access and your 12-word mnemonic phrase. Do not share the command, terminal output, screenshots, or shell history because they can expose the phrase and account credentials.
+:::
 
 ## Prerequisites
 

@@ -245,9 +245,6 @@ export const redirects = {
     '/manual/larepass/create-account': '/manual/get-started/create-olares-id',
     '/zh/manual/larepass/create-account': '/zh/manual/get-started/create-olares-id',
 
-    // Merge: roles-permissions -> manage-team (roles concept absorbed into team management page)
-    '/manual/olares/settings/roles-permissions': '/manual/olares/settings/manage-team',
-    '/zh/manual/olares/settings/roles-permissions': '/zh/manual/olares/settings/manage-team',
     // Merge: settings/integrations dissolved (content redistributed: cloud storage -> mount-cloud-storage, SMB -> mount-SMB, cookies -> wise/manage-cookies, Space -> space/)
     '/manual/olares/settings/integrations': '/manual/olares/files/mount-cloud-storage',
     '/zh/manual/olares/settings/integrations': '/zh/manual/olares/files/mount-cloud-storage',
@@ -265,6 +262,10 @@ export const redirects = {
     // Merge: controlhub/configure-env-var -> settings/manage-app-env (Control Hub advanced editing absorbed)
     '/manual/olares/controlhub/configure-env-var': '/manual/olares/settings/manage-app-env',
     '/zh/manual/olares/controlhub/configure-env-var': '/zh/manual/olares/settings/manage-app-env',
+
+    // Removed: the generic database-status guide is superseded by per-service middleware guides.
+    '/manual/olares/controlhub/view-database-status': '/developer/develop/mw-overview',
+    '/zh/manual/olares/controlhub/view-database-status': '/zh/developer/develop/mw-overview',
 }
 
 // Temporary redirects (302): content is offline but the URL may be reused later.

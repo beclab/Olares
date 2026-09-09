@@ -33,11 +33,11 @@ For the highlights and walk-through of Olares v1.12.6, see the [Olares 1.12.6 bl
   - Added [Install Olares CLI](/developer/cli-install), covering how to install `olares-cli` locally or inside an agent app.
   - Added [Log in with Olares CLI](/developer/cli-log-in), explaining how to authenticate `olares-cli` with your Olares ID.
   - Added [Olares CLI agent skills](/developer/cli-agent-skills), describing how to use built-in skills for cluster management, apps, settings, and more.
-- Added [Activate an Olares device using the Olares CLI](/manual/best-practices/activate-olares-using-cli), for activating a device from the command line.
+- Added [Install and activate Olares from the command line](/manual/best-practices/activate-olares-using-cli), for setting up a device with Olares CLI.
 - Added [Manage shared AI models with the Common directory](/manual/olares/files/files-common), explaining how to use the Common directory for models shared across apps.
 - Added [Compress and extract files](/manual/olares/files/compress-extract-files), covering ZIP, 7z, TAR, and password-protected archives in Olares Files.
 - Added [Mount NFS shares](/manual/olares/files/mount-nfs), for accessing NFS shared directories from Olares.
-- Added [Shared applications](/manual/olares/market/shared-apps), explaining the new shared app architecture and migration options for legacy v2 shared apps.
+- Added [About shared applications](/manual/olares/market/shared-apps), explaining the new shared app architecture, and [Migrate legacy shared applications](/manual/migrate-shared-apps), covering migration options for v2 apps.
   - [Ollama](/use-cases/ollama)
   - [ComfyUI](/use-cases/comfyui-common-issues)
   - [Dify](/use-cases/dify-upgrade)

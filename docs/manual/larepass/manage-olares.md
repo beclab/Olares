@@ -20,7 +20,7 @@ Before you begin, ensure the following:
 
 ## Access Olares management
 
-Open LarePass and go to **Settings**. In the **My Olares** card, tap **System** to enter the **Olares management** page. From this page, you can view device information, restart or shut down Olares, modify network settings, and restore Olares to factory settings.
+Open LarePass and go to **Settings**. In the **My Olares** card, tap **System** to enter the **Olares management** page. From this page, you can view device information, update Olares, restart or shut down Olares, modify network settings, and restore Olares to factory settings.
 
 ![Olares management](/images/manual/larepass/olares-management1.png#bordered)
 
@@ -32,6 +32,8 @@ Tap the Device information area at the top to view detailed information, includi
 - Current network connection status, including internal and external IP addresses
 
 ![View device information](/images/manual/larepass/view-device-information.png#bordered)
+
+To check for and install a system update, see [Check and update Olares](../olares/settings/update.md).
 
 ### Restart or shut down Olares
 

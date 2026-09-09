@@ -1,15 +1,15 @@
 ---
 outline: [2, 3]
-description: Learn how to manage source repositories and view downloaded images on the Advanced page in Settings.
+description: Manage repository mirrors and inspect downloaded application and system images in Olares Settings.
 head:
   - - meta
     - name: keywords
-      content: Olares OS, advanced settings, repo management, image management
+      content: Olares OS, repository mirrors, repository management, image management
 ---
 
-# Advanced settings
+# Manage repositories and images
 
-The **Advanced** page in **Settings** is designed for developers and advanced users to manage core system resources. To export system logs for troubleshooting, see [Get technical support](../../help/request-technical-support.md). To configure system-level environment variables, see [Set system environment variables](../../manage-system-env.md).
+Use the **Advanced** page in **Settings** to manage software repository mirrors and inspect downloaded application and system images. To export system logs, see [Collect diagnostic information](../../collect-diagnostic-information.md). To configure system-level environment variables, see [Set system environment variables](../../manage-system-env.md).
 
 ## Manage repositories
 
@@ -40,4 +40,3 @@ Manage mirror endpoints for repositories to improve access speed and stability.
 The **Image management** page provides a comprehensive view of all downloaded and cached application and software package images on your Olares system. You can filter or search to quickly find specific images.
 
 ![Image management](/images/manual/olares/image-management1.png#bordered){width=65%}
-

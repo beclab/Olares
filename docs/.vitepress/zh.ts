@@ -22,24 +22,28 @@ const side = {
           text: "文档更新动态",
           link: "/zh/manual/release-notes",
         },
-      ],
-    },
-    {
-      text: "常见问题",
-      link: "/zh/manual/help/faqs",
-      collapsed: true,
-      items: [
         {
-          text: "产品",
-          link: "/zh/manual/help/olares",
+          text: "常见问题",
+          link: "/zh/manual/help/faqs",
+          collapsed: true,
+          items: [
+            {
+              text: "关于 Olares",
+              link: "/zh/manual/help/olares",
+            },
+            {
+              text: "安装与激活",
+              link: "/zh/manual/help/installation",
+            },
+            {
+              text: "使用 Olares",
+              link: "/zh/manual/help/usage",
+            },
+          ],
         },
         {
-          text: "安装配置与访问",
-          link: "/zh/manual/help/installation",
-        },
-        {
-          text: "使用",
-          link: "/zh/manual/help/usage",
+          text: "获取支持",
+          link: "/zh/manual/help/request-technical-support",
         },
       ],
     },
@@ -48,6 +52,10 @@ const side = {
       collapsed: false,
       link: "/zh/manual/get-started/",
       items: [
+        {
+          text: "下载 LarePass",
+          link: "/zh/manual/larepass/",
+        },
         {
           text: "创建 Olares ID",
           link: "/zh/manual/get-started/create-olares-id",
@@ -149,37 +157,9 @@ const side = {
       ],
     },
     {
-      text: "教程",
-      link: "/zh/manual/best-practices/",
-      collapsed: false,
-      items: [
-        {
-          text: "使用 Olares CLI 激活设备",
-          link: "/zh/manual/best-practices/activate-olares-using-cli",
-        },
-        {
-          text: "安装多节点集群",
-          link: "/zh/manual/best-practices/install-olares-multi-node",
-        },
-        // Content map 标注隐藏：/zh/manual/best-practices/install-olares-gpu-passthrough
-        {
-          text: "安装特定版本的 CUDA",
-          link: "/zh/manual/best-practices/install-specific-cuda-version",
-        },
-      ],
-    },
-    {
       text: "账户与访问",
       collapsed: false,
       items: [
-        {
-          text: "创建并管理成员",
-          link: "/zh/manual/olares/settings/manage-team",
-        },
-        {
-          text: "修改密码并管理已登录设备",
-          link: "/zh/manual/password-and-devices",
-        },
         {
           text: "Olares ID",
           collapsed: true,
@@ -187,6 +167,10 @@ const side = {
             {
               text: "在 LarePass 中管理 Olares ID",
               link: "/zh/manual/larepass/manage-accounts",
+            },
+            {
+              text: "修改密码并管理已登录设备",
+              link: "/zh/manual/password-and-devices",
             },
             {
               text: "设置自定义域名 Olares ID",
@@ -199,6 +183,20 @@ const side = {
             {
               text: "备份助记词",
               link: "/zh/manual/larepass/back-up-mnemonics",
+            },
+          ],
+        },
+        {
+          text: "团队",
+          collapsed: true,
+          items: [
+            {
+              text: "创建并管理成员",
+              link: "/zh/manual/olares/settings/manage-team",
+            },
+            {
+              text: "角色与权限",
+              link: "/zh/manual/olares/settings/roles-permissions",
             },
           ],
         },
@@ -288,6 +286,10 @@ const side = {
         {
           text: "连接 AI 应用与模型服务",
           link: "/zh/manual/best-practices/connect-ai-apps",
+        },
+        {
+          text: "迁移旧版共享应用",
+          link: "/zh/manual/migrate-shared-apps",
         },
         {
           text: "关于共享应用",
@@ -381,7 +383,7 @@ const side = {
           link: "/zh/manual/olares/resources-usage",
         },
         {
-          text: "查看 Olares Space 用量与系统状态",
+          text: "查看 Olares 状态与 Olares Space 用量",
           link: "/zh/manual/space/manage-olares",
         },
         {
@@ -399,6 +401,16 @@ const side = {
         {
           text: "备份与恢复 Olares",
           link: "/zh/manual/olares/settings/backup",
+        },
+        {
+          text: "集群",
+          collapsed: true,
+          items: [
+            {
+              text: "安装多节点 Olares 集群",
+              link: "/zh/manual/best-practices/install-olares-multi-node",
+            },
+          ],
         },
         {
           text: "存储",
@@ -452,10 +464,25 @@ const side = {
               link: "/zh/manual/olares/settings/video",
             },
             {
-              text: "高级设置",
+              text: "管理仓库和镜像",
               link: "/zh/manual/olares/settings/developer",
             },
           ],
+        },
+      ],
+    },
+    {
+      text: "高级设置指南",
+      link: "/zh/manual/best-practices/",
+      collapsed: true,
+      items: [
+        {
+          text: "通过命令行安装并激活 Olares",
+          link: "/zh/manual/best-practices/activate-olares-using-cli",
+        },
+        {
+          text: "安装特定版本的 NVIDIA 驱动",
+          link: "/zh/manual/best-practices/install-specific-cuda-version",
         },
       ],
     },
@@ -524,6 +551,10 @@ const side = {
             {
               text: "忘记桌面登录密码",
               link: "/zh/manual/help/ts-forget-login-password",
+            },
+            {
+              text: "登录与激活错误信息",
+              link: "/zh/manual/login-and-activation-errors",
             },
             {
               text: "LarePass 显示系统错误",

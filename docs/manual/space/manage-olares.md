@@ -1,25 +1,49 @@
 ---
 outline: [2, 3]
-description: Monitor your Olares system status and traffic usage in Olares Space.
+description: Check Olares status, hosts, cloud-service quotas, and traffic usage from Settings or the Olares Space website.
 head:
   - - meta
     - name: keywords
-      content: Olares, Olares Space, monitor Olares, system status, resource usage, traffic usage
+      content: Olares, Olares Space, system status, active hosts, backup storage, traffic usage, Dashboard
 ---
-# Monitor Olares status and traffic in Olares Space
+# Check Olares status and Olares Space usage
 
-This page covers how to monitor your Olares system status and traffic usage in Olares Space.
+Use Olares Space when you need a remote view of your Olares status or want to check usage for cloud-assisted services such as backup storage and reverse-proxy traffic. For detailed, real-time CPU, memory, disk, network, pod, GPU, and app metrics, use [Dashboard](../olares/resources-usage.md) instead.
 
-## Before you begin
+The information available depends on where you open it:
 
-Before you can monitor your Olares in Olares Space, you must authorize Olares Space to access your system data. To do this, link your Olares Space account to the Olares device in LarePass:
+| Location | Use it for |
+|---|---|
+| **Settings** > your avatar > **Olares Space** | The recommended sign-in entry and a quick summary of the linked account, plan, backup storage, and traffic usage |
+| [Olares Space](https://space.olares.com/) | Remote Olares status, active hosts, recent traffic, and billing-cycle usage |
+| **Dashboard** in Olares | Detailed local resource and application diagnostics |
 
-1. In the LarePass app on your mobile device, go to **Settings** > **Integrations**.
-2. Tap <i class="material-symbols-outlined">add</i> in the upper-right corner, and then select **Olares Space**.
+## Connect Olares Space in Settings
 
-## Monitor resource usage
+Connect Olares Space from its dedicated page in Olares Settings. After the connection succeeds, you can view usage on this page, and Olares Space also appears under **Settings** > **Integrations**.
 
-Check CPU, memory, and disk usage to make sure your Olares has enough resources.
+:::warning Use the Olares Space page to connect
+Do not start from **Settings** > **Integrations** > **Add account** > **Olares Space**. Account binding is not supported from that entry yet.
+:::
+
+1. Open **Settings** in Olares.
+2. Click your avatar in the upper-left corner.
+3. Select the **Olares Space** card.
+4. When the QR code appears, scan it with the LarePass app on your mobile device.
+5. Wait for the page to show your Olares Space account and usage information.
+
+## Check the summary in Settings
+
+1. Open **Settings** in Olares.
+2. Click your avatar in the upper-left corner.
+3. Select the **Olares Space** card.
+4. Review the linked account, subscribed plan, backup storage, reverse-proxy service, and traffic usage shown on the page.
+
+Use this view for a quick quota check. Open the Olares Space website when you need status details, a time range, or billing-cycle history.
+
+## Check resource usage in Olares Space
+
+The Olares Space overview provides a remote summary of CPU, memory, and disk usage. Use it to check whether a system that you cannot access locally is online and nearing a resource limit.
 
 1. On the **Olares** page, select the **Overview** tab.
 
@@ -33,14 +57,14 @@ Check CPU, memory, and disk usage to make sure your Olares has enough resources.
    | **Memory (GB)** | Current memory usage in GB and the total available memory. |
    | **Disk (GB)** | Current disk usage in GB and the total available disk space. |
 
-## View active hosts
+## Check active hosts
 
 Check which hosts are currently running in your Olares cluster and their status.
 
 1. On the **Olares** page, select the **Overview** tab.
 2. Locate the **Active hosts** section. It displays the hosts currently running in the Olares cluster.
 
-## Check traffic usage
+## Check recent traffic usage
 
 Check recent traffic usage to spot sudden increases and avoid exceeding your plan's limit.
 
@@ -56,7 +80,7 @@ For self-hosted Olares users, monitor traffic statistics for the reverse proxy s
 3. To change the time range, select one from the **Last 12 hours** drop-down list.
 4. To view traffic for a specific user, select the account from the **All Users** drop-down list.
 
-## View billing-cycle traffic usage
+## Check billing-cycle traffic usage
 
 Review your monthly traffic usage to see how much data you have consumed in the current billing cycle.
 

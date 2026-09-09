@@ -1,15 +1,15 @@
 ---
 outline: [2, 3]
-description: 了解如何在设置的高级页面管理源仓库并查看已下载的镜像。
+description: 在 Olares 设置中管理软件仓库镜像源，并查看已下载的应用和系统镜像。
 head:
   - - meta
     - name: keywords
-      content: Olares OS, 高级设置, 仓库管理, 镜像管理
+      content: Olares OS, 仓库镜像源, 仓库管理, 镜像管理
 ---
 
-# 高级设置
+# 管理仓库和镜像
 
-**设置**中的**高级**页面专为开发者和高级用户设计，用于管理核心系统资源。导出系统日志排查故障，请参阅[获取技术支持](../../help/request-technical-support.md)。配置系统级环境变量，请参阅[设置系统级环境变量](../../manage-system-env.md)。
+在**设置**的**高级**页面中，可以管理软件仓库镜像源，并查看已下载的应用和系统镜像。导出系统日志请参阅[收集诊断信息](../../collect-diagnostic-information.md)。配置系统级环境变量请参阅[设置系统级环境变量](../../manage-system-env.md)。
 
 ## 管理仓库
 
@@ -40,4 +40,3 @@ head:
 **镜像管理**页面提供了 Olares 系统上下载和缓存的所有应用及软件包镜像的全面视图。你可以通过筛选或搜索快速找到特定镜像。
 
 ![镜像管理](/images/zh/manual/olares/image-management1.png#bordered){width=65%}
-
