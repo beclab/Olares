@@ -170,7 +170,7 @@ const side = {
     },
     {
       text: "账户与访问",
-      collapsed: true,
+      collapsed: false,
       items: [
         {
           text: "Olares ID",
@@ -247,7 +247,7 @@ const side = {
     {
       text: "应用",
       link: "/zh/manual/olares/",
-      collapsed: true,
+      collapsed: false,
       items: [
         {
           text: "安装、更新和移除应用",
@@ -294,7 +294,7 @@ const side = {
     {
       text: "文件与数据",
       link: "/zh/manual/olares/files/",
-      collapsed: true,
+      collapsed: false,
       items: [
         {
           text: "文件操作",
@@ -356,7 +356,7 @@ const side = {
     },
     {
       text: "个性化",
-      collapsed: true,
+      collapsed: false,
       items: [
         {
           text: "更改语言与外观",
@@ -370,7 +370,7 @@ const side = {
     },
     {
       text: "系统",
-      collapsed: true,
+      collapsed: false,
       items: [
         {
           text: "查看系统和应用资源使用",
