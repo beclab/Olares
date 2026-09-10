@@ -25,7 +25,7 @@ func NewDiskCommand(f *cmdutil.Factory, cf *pkgdashboard.CommonFlags) *cobra.Com
 		SilenceUsage:  true,
 		RunE: func(c *cobra.Command, args []string) error {
 			if len(args) > 0 {
-				return unknownSubcommandRunE(c, args)
+				return cmdutil.RefuseUnknownVerb(c, args)
 			}
 			if err := common.Validate(); err != nil {
 				return err

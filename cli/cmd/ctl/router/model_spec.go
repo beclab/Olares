@@ -73,7 +73,6 @@ type specWriteResult struct {
 func newModelSpecCommand(f *cmdutil.Factory, how localAddressing) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "spec",
-		RunE:  refuseUnknownVerb,
 		Short: "the model card of a model application",
 		Long: `Read and change the card that declares what a local model is.
 

@@ -42,7 +42,7 @@ func NewApplicationsCommand(f *cmdutil.Factory, cf *pkgdashboard.CommonFlags) *c
 		SilenceUsage:  true,
 		RunE: func(c *cobra.Command, args []string) error {
 			if len(args) > 0 {
-				return unknownSubcommandRunE(c, args)
+				return cmdutil.RefuseUnknownVerb(c, args)
 			}
 			if err := common.Validate(); err != nil {
 				return err

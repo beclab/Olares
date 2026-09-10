@@ -33,6 +33,8 @@ import (
 	"github.com/spf13/viper"
 )
 
+const unknownVerbGroupAnnotation = "olares-cli/unknown-verb-group"
+
 func NewDefaultCommand() *cobra.Command {
 	var showVendor bool
 	// One Factory per process. Subcommands that need an authenticated HTTP
@@ -133,5 +135,20 @@ func NewDefaultCommand() *cobra.Command {
 	cmds.AddCommand(router.NewRouterCommand(factory))
 	cmds.AddCommand(cluster.NewClusterCommand(factory))
 
+	wireUnknownVerbRefusals(cmds)
 	return cmds
+}
+
+func wireUnknownVerbRefusals(cmd *cobra.Command) {
+	children := cmd.Commands()
+	if len(children) > 0 && !cmd.Runnable() {
+		cmd.RunE = cmdutil.RefuseUnknownVerb
+		if cmd.Annotations == nil {
+			cmd.Annotations = make(map[string]string)
+		}
+		cmd.Annotations[unknownVerbGroupAnnotation] = "true"
+	}
+	for _, child := range children {
+		wireUnknownVerbRefusals(child)
+	}
 }

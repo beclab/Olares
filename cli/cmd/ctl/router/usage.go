@@ -231,7 +231,6 @@ const dimHour = "hour"
 func NewUsageCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "usage",
-		RunE:  refuseUnknownVerb,
 		Short: "what has been called, and what it cost",
 		Long: `Report the model calls Router has served.
 

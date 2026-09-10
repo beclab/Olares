@@ -179,7 +179,6 @@ func (p *providerRow) isMarketSourced() bool {
 func NewProviderCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "provider",
-		RunE:  refuseUnknownVerb,
 		Short: "the upstreams Router routes to (cloud accounts and local model apps)",
 		Long: `Inspect the providers Router can route to.
 

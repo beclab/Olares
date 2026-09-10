@@ -53,7 +53,6 @@ type auditEntry struct {
 func NewAuditCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "audit",
-		RunE:  refuseUnknownVerb,
 		Short: "who changed Router, and to what",
 		Long: `Read the management plane's history.
 

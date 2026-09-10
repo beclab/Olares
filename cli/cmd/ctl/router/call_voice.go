@@ -52,7 +52,6 @@ import (
 func newCallVoiceCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "voice",
-		RunE:  refuseUnknownVerb,
 		Short: "the voices a synthesis model can speak with",
 		Long: `Manage the voice library of a speech model.
 

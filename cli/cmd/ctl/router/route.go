@@ -255,7 +255,6 @@ func resumeHint(stopped []routeMember) string {
 func NewRouteCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "route",
-		RunE:  refuseUnknownVerb,
 		Short: "the names callers may send instead of a provider and model",
 		Long: `Manage the names a caller may put in the "model" field.
 

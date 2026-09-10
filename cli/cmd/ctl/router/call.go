@@ -31,7 +31,6 @@ import (
 func NewCallCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "call",
-		RunE:  refuseUnknownVerb,
 		Short: "call a model through Router",
 		Long: `Send work to a model.
 

@@ -54,46 +54,6 @@ const (
 	FormatJSON  Format = "json"
 )
 
-// refuseUnknownVerb is the RunE every grouping command in this tree carries.
-//
-// A group needs a Run of its own to be able to refuse anything. Cobra reaches
-// `Args` only on a runnable command; a group without a Run returns
-// flag.ErrHelp for a word it cannot resolve, and ExecuteC turns that into a
-// help page and a zero exit status. `router call diar` was reported that way —
-// the agent meant `diarize`, was handed the help for `call`, and read the exit
-// status as the work having been done.
-//
-// With no argument this is still the help page, which is what a bare group
-// should print. With one, the message carries suggestions, because the
-// misspellings worth catching are the near misses.
-func refuseUnknownVerb(c *cobra.Command, args []string) error {
-	if len(args) == 0 {
-		return c.Help()
-	}
-	// `help` reaches here rather than cobra's help command, which is mounted on
-	// the binary's root and not on a subtree. Answer it the way a reader expects
-	// instead of calling it a misspelling.
-	if args[0] == "help" {
-		if len(args) > 1 {
-			if child, _, err := c.Find(args[1:]); err == nil && child != c {
-				return child.Help()
-			}
-		}
-		return c.Help()
-	}
-	// SuggestionsFor compares against SuggestionsMinimumDistance, which cobra
-	// leaves at zero until its own findSuggestions runs — unreached from here,
-	// so without this only a prefix of a real verb would ever be suggested.
-	if c.SuggestionsMinimumDistance <= 0 {
-		c.SuggestionsMinimumDistance = 2
-	}
-	msg := fmt.Sprintf("unknown verb %q for %q", args[0], c.CommandPath())
-	if suggestions := c.SuggestionsFor(args[0]); len(suggestions) > 0 {
-		msg += "\nDid you mean: " + strings.Join(suggestions, ", ")
-	}
-	return fmt.Errorf("%s\n`%s --help` lists the verbs it has", msg, c.CommandPath())
-}
-
 func parseFormat(s string) (Format, error) {
 	switch strings.ToLower(strings.TrimSpace(s)) {
 	case "", string(FormatTable):

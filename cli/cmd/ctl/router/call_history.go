@@ -46,7 +46,6 @@ import (
 func newCallHistoryCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "history",
-		RunE:  refuseUnknownVerb,
 		Short: "what a synthesis model has read out",
 		Long: `Read back what a speech model has spoken.
 

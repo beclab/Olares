@@ -13,7 +13,6 @@ import (
 func NewRouterCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "router",
-		RunE:  refuseUnknownVerb,
 		Short: "AI models through Router and the Model Console",
 		Long: `Configure and operate the AI models this Olares can reach.
 

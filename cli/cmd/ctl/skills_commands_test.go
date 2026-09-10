@@ -253,7 +253,7 @@ func TestEveryAppearanceVerbIsListed(t *testing.T) {
 	var found int
 	var walk func(cmd *cobra.Command)
 	walk = func(cmd *cobra.Command) {
-		if cmd.Runnable() {
+		if cmd.Runnable() && cmd.Annotations[unknownVerbGroupAnnotation] != "true" {
 			found++
 			path := strings.TrimPrefix(cmd.CommandPath(), "olares-cli ")
 			if !listed[path] {
