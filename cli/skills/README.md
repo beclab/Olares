@@ -93,7 +93,7 @@ What to leave out of SKILL.md (and references):
 
 - Per-flag descriptions (in `--help`)
 - Error strings or recovery steps already printed by the CLI
-- Source-path citations like `cli/cmd/ctl/files/path.go` — agents don't review Go source
+- Source-path citations like `cli/cmd/ctl/files/path.go` — agents don't review Go source. Ground the claim in the implementation, then leave the path in the commit message; `validate.py` refuses any Go path in any file of the suite, whatever tree it names
 - Internal package walkthroughs / "Source layout" sections
 - "What's NOT here yet" / future-work sections — keep skills focused on current capability
 

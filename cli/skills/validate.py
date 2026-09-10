@@ -33,6 +33,12 @@ FAST_PATHS_HEADINGS = ("Fast paths", "Symptom routing")
 # no rename. Two of the three this suite had were naming headings that no
 # longer existed.
 PROSE_SECTION_RE = re.compile(r'\b(?:especially|see(?:\s+also)?|section)\s+"([^"\n]{2,80})"')
+# Any Go file, cited any way. The first version of this wanted a `cli/`
+# prefix and so read past both citations in the app-state reference, which
+# name a file inside app-service and a package path with no repository root
+# on it. What makes a citation useless to an agent is that it points at
+# source, not which tree the source is in.
+SOURCE_CITATION_RE = re.compile(r"[\w.-]*(?:/[\w.-]+)*\w\.go(?::\d+)?")
 TABLE_ROW_RE = re.compile(r"^\s*\|(?P<cells>.*)\|\s*$")
 BACKTICKED_RE = re.compile(r"`[^`]+`")
 # A skill's version is the olares-cli release it ships in, spelled the way npm
@@ -166,6 +172,26 @@ def validate_prose_section_refs(path: Path, errors: list[str]) -> None:
         errors.append(
             f"{path.relative_to(ROOT)}: names a section in prose ({name!r}); "
             "link it with an anchor so a rename fails the build"
+        )
+
+
+def validate_no_source_citations(path: Path, errors: list[str]) -> None:
+    """Keep Go source paths out of what ships.
+
+    Grounding a claim in the implementation is required; citing where you
+    grounded it is not, because an agent driving the CLI has no way to
+    open a Go file and no reason to want one.
+
+    Checked over every markdown file, not just the front doors. While it
+    ran on SKILL.md alone, the canonical app-state reference carried two
+    of these -- including a paragraph whose entire subject was which of
+    two Go maps to believe.
+    """
+    citation = re.search(SOURCE_CITATION_RE, path.read_text(encoding="utf-8"))
+    if citation:
+        errors.append(
+            f"{path.relative_to(ROOT)}: Go source citation {citation.group(0)!r} belongs in "
+            "verification, not the shipped skill"
         )
 
 
@@ -305,11 +331,6 @@ def validate_skill_entrypoint(skill_dir: Path, errors: list[str]) -> None:
         if phrase in text:
             errors.append(f"{skill.relative_to(ROOT)}: forbidden phrase {phrase!r}; {guidance}")
 
-    source_citation = re.search(r"`?cli/(?:cmd|pkg|internal)/[^`\s]+\.go(?::\d+)?`?", text)
-    if source_citation:
-        errors.append(
-            f"{skill.relative_to(ROOT)}: Go source citation {source_citation.group(0)!r} belongs in verification, not the shipped skill"
-        )
 
 
 def validate_frontmatter(skill: Path, errors: list[str]) -> None:
@@ -461,6 +482,7 @@ def main() -> int:
     for path in sorted(ROOT.glob("olares-*/**/*.md")):
         validate_links(path, errors)
         validate_prose_section_refs(path, errors)
+        validate_no_source_citations(path, errors)
     for skill_dir in skill_dirs:
         validate_frontmatter(skill_dir / "SKILL.md", errors)
         validate_skill_entrypoint(skill_dir, errors)

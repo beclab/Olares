@@ -307,6 +307,43 @@ class ValidatorTests(unittest.TestCase):
                 validate.ROOT = original_root
             return errors
 
+    def test_a_reference_may_not_cite_go_source_either(self):
+        """The check used to run on front doors only, and on `cli/` paths only.
+
+        Both citations it missed were in a reference, and neither named
+        the repository root -- one pointed inside app-service, the other
+        at a package path.
+        """
+        for citation in (
+            "the loader (`controllers/load.go`, `LoadStatefulApp`) passes it",
+            "do not read it off `pkg/appstate/state_transition.go`",
+            "see cli/cmd/ctl/files/path.go:42",
+        ):
+            with self.subTest(citation=citation):
+                errors = self.citation_errors_for(citation)
+                self.assertEqual(len(errors), 1, errors)
+                self.assertIn("belongs in verification", errors[0])
+
+    def test_prose_that_merely_mentions_a_state_handler_is_left_alone(self):
+        self.assertEqual(
+            self.citation_errors_for("app-service's reconciler is what actually runs."), []
+        )
+
+    def citation_errors_for(self, body):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            path = root / "olares-test" / "references" / "model.md"
+            path.parent.mkdir(parents=True)
+            path.write_text(body + "\n", encoding="utf-8")
+            original_root = validate.ROOT
+            validate.ROOT = root
+            try:
+                errors = []
+                validate.validate_no_source_citations(path, errors)
+            finally:
+                validate.ROOT = original_root
+            return errors
+
     def test_front_door_may_link_the_shared_models_but_no_other_peer_reference(self):
         with tempfile.TemporaryDirectory() as directory:
             # Resolved because the validator resolves every link target before
