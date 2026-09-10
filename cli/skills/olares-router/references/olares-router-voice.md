@@ -8,7 +8,7 @@ Read this when a user wants a voice they can reuse, wants a voice invented rathe
 olares-cli router call voice list
 olares-cli router call voice get <voice>
 olares-cli router call voice add "Night Host" --sample me.wav --ref-text "the words in the clip"
-olares-cli router call voice design "a tired night-shift radio host" --out preview.wav
+olares-cli router call voice design "a tired night-shift radio host" --out preview.mp3
 olares-cli router call voice design "a bright children's narrator" --save "Narrator"
 olares-cli router call voice settings
 olares-cli router call voice delete <voice> --yes
@@ -16,7 +16,7 @@ olares-cli router call speak "hello" --voice <voice> --out hello.mp3
 
 olares-cli router call history list --model <tts-model>
 olares-cli router call history get <reading> --model <tts-model>
-olares-cli router call history download <reading> --model <tts-model> --out again.wav
+olares-cli router call history download <reading> --model <tts-model> --out again.mp3
 olares-cli router call history delete <reading> --model <tts-model> --yes
 ```
 
@@ -82,7 +82,9 @@ Every `history` verb requires `--model`. This is not an oversight to route aroun
 
 A reading is visible to the caller that made it. Another key's readings are not missing, they are not yours to read — so history under `--api-key` and history under the profile are different lists, and a user who cannot find a reading may simply have made it with the other credential.
 
-**Fetching a reading again is free.** The engine kept the bytes when it spoke them, so `history download` copies a file: no model runs, nothing is billed, and no spend row appears. This is the answer to "I lost the audio" and to "I forgot `--out`", and it is worth offering before re-synthesising anything.
+**Fetching a reading again is free.** The engine kept the bytes when it spoke them, so `history download` copies a file: no model runs, nothing is billed, and no spend row appears. This is the answer to "I lost the audio" and to "I forgot `--out`", and it is worth offering before re-synthesising anything. `--out` names the file and cannot change the format — the bytes are whatever was spoken, usually mp3 — so name it accordingly; a mismatch is reported on stderr rather than left to be found later.
+
+**`call history` needs `--model` where `call voice list` does not**, and that is deliberate rather than an oversight. A voice library belongs to whichever engine would speak, so leaving `--model` off there resolves `default-tts`. A past reading may belong to an engine that is no longer the default, and resolving one would report an empty history for work another engine did — so history refuses and names the engines to choose from. Pass `--model default-tts` when that is genuinely what was meant.
 
 `state` is `processing` while the engine is still speaking a long piece of text. Such a reading can already be downloaded — the audio arrives as it is produced.
 
