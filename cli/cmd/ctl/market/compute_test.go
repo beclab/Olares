@@ -17,6 +17,83 @@ func failedCheckResp(checkType, dataJSON string) *APIResponse {
 	return &APIResponse{Data: json.RawMessage(inner)}
 }
 
+// The backend only asks for a compute mode when the app declares more than
+// one, so a mode aimed at an app that declares one -- or none -- was accepted,
+// dropped, and never mentioned again: the app came up on the CPU with no GPU
+// anywhere near the pod and no warning that the flag did nothing.
+func TestCheckDeclaredComputeMode(t *testing.T) {
+	entry := func(modes ...string) map[string]interface{} {
+		accelerator := make([]interface{}, 0, len(modes))
+		for _, mode := range modes {
+			accelerator = append(accelerator, map[string]interface{}{"mode": mode})
+		}
+		return map[string]interface{}{
+			"app_info": map[string]interface{}{
+				"app_entry": map[string]interface{}{"accelerator": accelerator},
+			},
+		}
+	}
+	// An app that declares nothing has no accelerator key at all, which is what
+	// the chart that found this looked like.
+	noAccelerator := map[string]interface{}{
+		"app_info": map[string]interface{}{"app_entry": map[string]interface{}{}},
+	}
+	// A pre-0.12.0 manifest asks for a GPU through the flattened cap instead of
+	// an accelerator matrix, and app-service synthesizes an nvidia mode for it.
+	legacyGPU := func(requiredGPU string) map[string]interface{} {
+		return map[string]interface{}{
+			"app_info": map[string]interface{}{
+				"app_entry": map[string]interface{}{"requiredGPU": requiredGPU},
+			},
+		}
+	}
+
+	cases := []struct {
+		name      string
+		appInfo   map[string]interface{}
+		requested string
+		wantErr   string
+	}{
+		{"no mode requested passes anything", noAccelerator, "", ""},
+		{"cpu is never something an app must declare", noAccelerator, "cpu", ""},
+		{"gpu mode on a cpu-only app is refused", noAccelerator, "nvidia", "declares no accelerator modes"},
+		{"declared mode passes", entry("nvidia"), "nvidia", ""},
+		{"underscore spelling of a declared mode passes", entry("nvidia-gb10"), "nvidia_gb10", ""},
+		{"undeclared mode names the declared ones", entry("nvidia", "apple-m"), "intel", "declared: nvidia, apple-m"},
+		{"legacy flattened gpu cap is left to the backend", legacyGPU("3Gi"), "nvidia", ""},
+		{"legacy zero gpu cap is still cpu-only", legacyGPU("0"), "nvidia", "declares no accelerator modes"},
+		{"legacy empty gpu cap is still cpu-only", legacyGPU(""), "nvidia", "declares no accelerator modes"},
+		// An accelerator matrix is authoritative even next to a stale
+		// flattened cap, so an undeclared mode is still refused.
+		{"accelerator matrix wins over a flattened cap", map[string]interface{}{
+			"app_info": map[string]interface{}{
+				"app_entry": map[string]interface{}{
+					"accelerator": []interface{}{map[string]interface{}{"mode": "apple-m"}},
+					"requiredGPU": "3Gi",
+				},
+			},
+		}, "nvidia", "declared: apple-m"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := checkDeclaredComputeMode(tc.appInfo, "clitest", tc.requested)
+			if tc.wantErr == "" {
+				if err != nil {
+					t.Fatalf("error = %v, want nil", err)
+				}
+				return
+			}
+			if err == nil {
+				t.Fatal("error = nil, want a refusal")
+			}
+			if !strings.Contains(err.Error(), tc.wantErr) {
+				t.Fatalf("error %q does not contain %q", err.Error(), tc.wantErr)
+			}
+		})
+	}
+}
+
 func TestInstallRequestWireFormat(t *testing.T) {
 	// Without a compute mode the field is omitted entirely (1.12.5 wire
 	// stays byte-identical to before SelectedGpuType existed).

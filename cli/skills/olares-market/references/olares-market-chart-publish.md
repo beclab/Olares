@@ -23,7 +23,7 @@ olares-cli market upload ./mychart.tgz -q              # exit code only
 - Takes **exactly one path argument** — a single `.tgz` / `.tar.gz` file, or one directory. To upload several charts at once, point it at a directory; it does not accept multiple file arguments.
 - Directory mode uploads every `.tgz` / `.tar.gz` directly under the directory. **Subdirectories are NOT recursed.**
 - **Per-file results are summarized at the end.** `-o json` emits a structured report with one entry per file (`status` / `message`).
-- **Exit code is the OR of per-file results** — any single failure flips the overall exit non-zero.
+- **Exit code is the OR of per-file results** — any single failure flips the overall exit non-zero, in every output mode. `-o json` still prints the full report on the way out, so a script reads the exit code and the report, not one or the other.
 - Multipart upload through a dedicated `uploadClient` with no timeout (chart pushes can be slow over large WAN links). The same `refreshingTransport` is shared with the JSON client, so a token refresh on one is immediately visible on the other.
 
 ### What is finished when upload returns
@@ -56,10 +56,11 @@ olares-cli market delete mychart -o json
 olares-cli market delete mychart -q
 ```
 
-- **Does NOT uninstall the app if it is running.** Use `market uninstall <app>` first, then `market delete` to also remove the chart from local sources.
+- **Refused while the app is installed.** The backend rejects the delete with `app (or its clone <name>) is still installing/running; please uninstall it first` rather than unpublishing a chart something is running from. Run `market uninstall <app>` first, then `market delete`.
 - **`--version` does not narrow the delete.** The backend takes the app name and drops every version and every stored artifact; the version only names the request. There is no single-version delete today, so read this verb as "unpublish the app", and expect `market download mychart --version <any>` to stop working for all versions afterwards, not just the one named.
+- **Deleting an app the bucket never held returns success.** The backend treats it as already done and answers HTTP 200; `deleted_rows` in the response is what distinguishes the two, and the CLI does not read it. Without `--version` the CLI's own version lookup fails first and you get a correct non-zero exit — so do **not** add `--version` to get past that failure, which converts it into a false success.
 
-> The "delete the chart" and "uninstall the running app" are deliberately separate verbs. A chart can be uploaded without ever being installed; an installed app can keep running after the source chart is deleted from the bucket.
+> The "delete the chart" and "uninstall the running app" are deliberately separate verbs, in that order: a chart can be uploaded without ever being installed, but it cannot be unpublished out from under a running app.
 
 ## Agent workflows
 
@@ -78,27 +79,26 @@ olares-cli market upload ./dist/ -o json | jq '.[] | select(.status != "success"
 # JSON exit code is the OR of all per-file results; the jq filter surfaces the failures
 ```
 
-```bash
-# Spring cleaning: remove every version of a chart from the upload bucket.
-olares-cli market delete mychart                                   # all versions
-olares-cli market list -s upload                                   # confirm
-```
-
 ## Safety constraints
 
-- **`delete` is destructive** — it removes the chart from the bucket. If the app is still running, the deployment continues to work but you can no longer reinstall from the local bucket.
-- **A published version's bytes are immutable.** `upload` requires a **strictly higher** version than the stored one; re-uploading a version that already exists is refused with HTTP 409 `version <v> already exists for app <name> in source upload; bump the version to publish changes`, and a lower version is refused too. To ship a change, bump the version inside `Chart.yaml` and upload that.
+- **`delete` is destructive** — it unpublishes every version of the app from the bucket, so nothing can be installed or downloaded from it afterwards. It is refused while the app is installed, so it cannot strand a running deployment.
+- **A published version's bytes are immutable.** `upload` requires a **strictly higher** version than the stored one. Re-uploading the stored version is refused with HTTP 409 `version <v> already exists for app <name> in source upload; bump the version to publish changes`; a **lower** version is refused with `version <v> does not supersede version <stored> already published for app <name> in source upload; upload a version higher than <stored>`. The two messages are worth telling apart, because the second one names a version you did not send. To ship a change, bump the version inside `Chart.yaml` and upload that.
 
-  Most of what is confusing about versions here follows from that one rule. A same-version `upgrade` is legal, but since the stored bytes cannot have changed it re-applies the *same* chart — it is a retry, not a way to deploy an edit. Recovering an `upgradeFailed` app with a *fixed* chart therefore needs a new version, not a re-upload of the old one. And `delete` frees the version only by removing the entire app (see above), so it is not a way to republish one release.
+  Most of what is confusing about versions here follows from that one rule. A same-version `upgrade` is legal — but see [which chart a version actually deploys](olares-market-lifecycle-add.md#which-chart-a-version-actually-deploys), which is not always the version you named. Recovering an `upgradeFailed` app with a *fixed* chart needs a new version, not a re-upload of the old one. And `delete` frees the version only by removing the entire app (see above), so it is not a way to republish one release.
 
 ## Common errors
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `unsupported file extension: must be .tgz or .tar.gz` | Wrong file type | Repackage with `helm package` |
+| `unsupported file format: expected .tgz or .tar.gz` | Wrong file type; refused locally before any request | Repackage with `helm package` |
 | `failed to upload: HTTP 413 (Payload Too Large)` | Chart exceeds the server's upload size limit | Slim the chart's contents; ask the operator about the limit |
+| `HTTP 400: Uploaded package could not be read as a chart archive` | The bytes are not a readable gzipped tar (truncated or partial transfer) | Repackage and re-upload; retrying the same bytes cannot help |
+| `HTTP 400: Uploaded package contains no chart directory with an OlaresManifest.yaml` | The archive holds the chart's *contents* rather than the chart directory | Repackage from the parent directory (`helm package ./mychart`) |
+| `HTTP 400: Invalid OlaresManifest.yaml: <field / rule>` | The manifest was found and rejected; the detail is the same verdict `olares-cli chart lint` prints | Fix the named field and repackage. Run `chart lint` first to see it without an upload |
+| `HTTP 400: Failed to process uploaded package` | The catch-all: the failure was **not** in the uploaded bytes, so nothing about it is safe to report to the caller | Ask the operator for the market log line; do not repackage on a guess |
 | `upload rejected: manifest supports [...] cluster provides [...]` | `spec.supportArch` has no intersection with the current cluster nodes | Check `olares-cli cluster node list`, fix `supportArch` and image platforms, then repackage; do not bump or retry the unchanged package |
 | `upload blocked: cluster node discovery is unavailable` | Market cannot yet establish an authoritative node architecture set | Keep the package and version unchanged; retry after node discovery recovers |
-| `chart not found in source 'upload'` (delete) | The chart was never uploaded, or was uploaded to a different bucket | `market list -s upload` to confirm |
-| `delete` removed the chart but the app keeps running | `delete` only removes the chart from the `upload` bucket; it never uninstalls | Expected — run `market uninstall X` separately to stop/remove the app |
+| `app 'X' not found in source 'upload'` (delete) | The chart was never uploaded, or was uploaded to a different bucket | `market list -s upload` to confirm. Do **not** add `--version` — that skips the lookup and returns a false success |
+| `app (or its clone X) is still installing/running; please uninstall it first` (delete) | The app is installed, so the chart cannot be unpublished | `market uninstall X --watch`, then `market delete X` |
+| `unknown market source 'X': this cluster has ...` | Typo in `-s`, or a source this cluster is not subscribed to | Use one of the listed ids; `market list -a` enumerates them |
 | Exit non-zero on directory upload despite some files succeeding | Partial failure | Inspect the per-file JSON report for which files failed |

@@ -48,7 +48,11 @@ Universal flags:
   -q, --quiet                 every verb. Suppress output; exit code wins.
   -s, --source <id>           source-aware verbs (catalog + install /
                               upgrade / clone / download).
-                              Valid ids: market.olares, cli, upload, studio.
+                              Which ids exist is per cluster, so read them
+                              off "market list -a" rather than from here.
+                              Common ones: market.olares (public catalog),
+                              market.test (staging catalog), and the local
+                              chart buckets upload / cli / studio.
   -a, --all-sources           list, categories, status.
       --no-headers            list, categories (row-oriented browse only;
                               "get" prints a key:value detail view that

@@ -67,9 +67,12 @@ func runDelete(opts *MarketOptions, appName string) error {
 		}
 		opts.info("note: --version names the request but does not narrow the delete; every uploaded version of '%s' will be removed", appName)
 	} else {
-		v, err := resolveVersionInSource(mc, appName, source)
+		// --version does not narrow a delete, so a failure here must not
+		// suggest it: the backend answers a delete of an app it does not hold
+		// with success, which turns this correct failure into a false one.
+		v, err := resolveVersionInSource(mc, appName, source, false)
 		if err != nil {
-			return opts.failOp("delete", appName, fmt.Errorf("cannot determine version in source '%s': %w (use --version to specify)", source, err))
+			return opts.failOp("delete", appName, err)
 		}
 		version = v
 		opts.info("Using version: %s", version)

@@ -33,12 +33,25 @@ Mirrors the SPA's `canUpgrade()`. Bails locally with a self-contained error (for
 
 1. **Row exists** — state row found via `Name` or `RawName` (clones included)
 2. **State is upgradable** — `running` / `stopped` / `stopFailed` / `upgradeFailed` / `applyEnvFailed`
-3. **Newer chart available** — `targetVersion > installedVersion` (semver compare). **Exception for `-s upload`:** `targetVersion == installedVersion` is allowed, because app-service gates on `>= deployed`. It re-applies the **stored** chart at that version, so use it to retry an upgrade that failed for a transient reason. It cannot deploy an edited chart: a published version's bytes are immutable and re-uploading one is refused (see [the immutability rule](olares-market-chart-publish.md#safety-constraints)), so recovering an `upgradeFailed` app with a *fixed* chart means bumping the version. A true downgrade (`target < installed`) is still rejected for every source.
+3. **Newer chart available** — `targetVersion > installedVersion` (semver compare). **Exception for `-s upload`:** `targetVersion == installedVersion` is allowed, because app-service gates on `>= deployed`. Use it to retry an upgrade that failed for a transient reason — but read [which chart a version actually deploys](#which-chart-a-version-actually-deploys) before relying on which bytes land. It cannot deploy an edited chart either way: a published version's bytes are immutable and re-uploading one is refused (see [the immutability rule](olares-market-chart-publish.md#safety-constraints)), so recovering an `upgradeFailed` app with a *fixed* chart means bumping the version. A true downgrade (`target < installed`) is still rejected for every source.
 4. **Catalog row not withdrawn** — `app_simple_info.app_labels` must not contain `suspend` or `remove` (the only two labels `isAppSuspended` checks; mirrors the SPA hiding the Upgrade button). On a transient catalog-probe error this gate soft-fails (warns, lets the upgrade proceed)
+
+### Which chart a version actually deploys
+
+Known app-service defect, present through 1.12.7. **`upgrade` deploys the newest chart in the source, not the version the request named.** The install path pins the version when it fetches the chart; the upgrade path omits it, so the fetch resolves the index's latest and unpacks it over the version-less chart cache. The response and the state row both report the version you asked for, which is what makes this hard to catch.
+
+Two consequences for a local bucket holding several versions:
+
+- A same-version `upgrade` (gate 3's exception) re-applies **whatever is newest in the bucket**, not the stored chart at that version. It is still a usable retry when the version you named *is* the newest, which is the ordinary case right after an upload.
+- Upgrading to a stored version that is **not** the newest fails or silently lands the newest instead. Neither is what was asked for. Do not use `upgrade` to move between two stored versions; uninstall and install the one you want.
+
+A cancelled upgrade compounds it: cancel does no helm rollback, so the release keeps the new chart's templates merged with the old values. After A1 is fixed those templates are at least the version that was requested.
 
 ### Where an upgrade lands
 
 Two outcomes settle on `stopped` rather than `running`. **Upgrading an already-`stopped` app** re-renders the chart at `replicas=0` and returns to `stopped` — a normal success with nothing to launch. **A cancelled upgrade** also settles at `stopped`, and `--watch` reports it as failure. What separates them is `status.reason` matching `upgradeCancelByUser` or `upgradeCancelBySystem` — not whether `reason` is set, which it always is. *Non-obvious terminal behaviors* in the shared **application state machine** has the reasoning, and why the row's version field cannot discriminate either.
+
+That version field is the one `market status` and `market list --mine` both report, and it is **the version last requested, not the one running**. After a failed or cancelled upgrade the row names the target that did not land, so a script that reads it as "what is deployed" is wrong exactly when it matters. The deployed version is on the workload: `olares-cli cluster deployment get <app> -n <user-ns>`, annotation `applications.app.bytetrade.io/version`.
 
 ## `clone`
 

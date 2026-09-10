@@ -156,7 +156,16 @@ func uploadDir(opts *MarketOptions, mc *MarketClient, dir, source string) error 
 	}
 
 	if opts.isJSON() {
-		return opts.printJSON(results)
+		// The per-file report is the output either way; what a caller in a
+		// pipeline reads is the exit code, so it has to agree with the quiet
+		// and table branches rather than reporting the encode alone.
+		if err := opts.printJSON(results); err != nil {
+			return err
+		}
+		if failed > 0 {
+			return errReported
+		}
+		return nil
 	}
 
 	if failed > 0 {
