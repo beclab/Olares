@@ -40,7 +40,7 @@ Load the shared [platform model](../olares-shared/references/olares-platform.md)
 | `video` | `config get` | Read-only. There is nothing here to set |
 | `search` | `status`, `rebuild`, `dirs list/add/rm` | [`olares-search`](../olares-search/SKILL.md) for index coverage |
 | `restore` | `plans list/check-url/create-from-snapshot/create-from-url/cancel` | Restores start here, but the snapshots they restore from are listed under `backup` |
-| `advanced` | status, registries, images, system/user env | Admin-only; `env update` takes `--var KEY=VALUE` and refuses a positional `KEY=VALUE`. Its image list is what [`olares-doctor`](../olares-doctor/SKILL.md) annotates with workload references |
+| `advanced` | status, registries, images, system/user env | Admin-only; the env write verbs are `env system set` and `env user set` (there is no "env update"), and each takes `--var KEY=VALUE` and refuses a positional `KEY=VALUE`. Its image list is what [`olares-doctor`](../olares-doctor/SKILL.md) annotates with workload references |
 
 ## Role caching + admin/normal floor
 

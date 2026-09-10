@@ -86,6 +86,38 @@ func TestEveryFlagTheSkillsDocumentExists(t *testing.T) {
 	}
 }
 
+// The check above is only as good as what the scanner hands it, and the
+// scanner used to read physical lines. A long invocation is written
+// across several with a trailing backslash — which is where the flags an
+// author was least sure about sit — so everything past the first break
+// was invisible. This says the scanner sees a whole command.
+func TestAFlagOnAContinuationLineIsStillRead(t *testing.T) {
+	const source = "```bash\n" +
+		"olares-cli router call chat \\\n" +
+		"  --model default-chat \\\n" +
+		"  --prompt \"hello\" \\\n" +
+		"  --invented-flag\n" +
+		"```\n"
+
+	usages := flagUsagesIn("synthetic.md", source)
+	if len(usages) != 1 {
+		t.Fatalf("a four-line invocation harvested as %d commands", len(usages))
+	}
+	usage := usages[0]
+	if got := strings.Join(usage.tokens, " "); got != "router call chat" {
+		t.Fatalf("command path = %q", got)
+	}
+	// The number is the line the reader has to go to, not the line the
+	// offending flag happens to sit on.
+	if usage.line != 2 {
+		t.Fatalf("reported line %d, want the line the command starts on", usage.line)
+	}
+	want := []string{"model", "prompt", "invented-flag"}
+	if got := strings.Join(usage.flags, ","); got != strings.Join(want, ",") {
+		t.Fatalf("flags = %q, want %q", got, strings.Join(want, ","))
+	}
+}
+
 // Quoted text is a prompt, a JSON body or a message, and a `--` inside one is
 // not a flag. Everything after a pipe or a chained command belongs to another
 // program entirely.
@@ -116,49 +148,7 @@ func documentedFlagUsages(t *testing.T) []documentedFlagUsage {
 		if err != nil {
 			return err
 		}
-		inFence := false
-		for lineNumber, line := range strings.Split(string(source), "\n") {
-			if strings.HasPrefix(strings.TrimSpace(line), "```") {
-				inFence = !inFence
-				continue
-			}
-			if !inFence {
-				continue
-			}
-			line = strings.TrimPrefix(strings.TrimSpace(line), "$ ")
-			// An invocation whose output is being captured --
-			// `SHARE_ID=$(olares-cli files share public … --json)` --
-			// is still a command a reader will run, and it was
-			// exactly where a flag that did not exist survived.
-			line = captureAssignmentPattern.ReplaceAllString(line, "")
-			if !strings.HasPrefix(line, "olares-cli ") {
-				continue
-			}
-			line = quotedSpanPattern.ReplaceAllString(line, " ")
-			if cut := shellBreakPattern.FindStringIndex(line); cut != nil {
-				line = line[:cut[0]]
-			}
-			var flags []string
-			for _, match := range longFlagPattern.FindAllStringSubmatch(line, -1) {
-				flags = append(flags, match[1])
-			}
-			if len(flags) == 0 {
-				continue
-			}
-			var tokens []string
-			for _, field := range strings.Fields(strings.TrimPrefix(line, "olares-cli ")) {
-				if strings.HasPrefix(field, "-") {
-					break
-				}
-				tokens = append(tokens, field)
-			}
-			found = append(found, documentedFlagUsage{
-				tokens: tokens,
-				flags:  flags,
-				file:   path,
-				line:   lineNumber + 1,
-			})
-		}
+		found = append(found, flagUsagesIn(path, string(source))...)
 		return nil
 	})
 	if err != nil {
@@ -168,6 +158,236 @@ func documentedFlagUsages(t *testing.T) []documentedFlagUsage {
 		t.Fatalf("harvested only %d flagged examples; the docs or the scanner moved", len(found))
 	}
 	return found
+}
+
+func flagUsagesIn(path, source string) []documentedFlagUsage {
+	var found []documentedFlagUsage
+	for _, shell := range fencedShellLines(source) {
+		// An invocation whose output is being captured --
+		// `SHARE_ID=$(olares-cli files share public … --json)` --
+		// is still a command a reader will run, and it was
+		// exactly where a flag that did not exist survived.
+		line := captureAssignmentPattern.ReplaceAllString(shell.text, "")
+		if !strings.HasPrefix(line, "olares-cli ") {
+			continue
+		}
+		line = quotedSpanPattern.ReplaceAllString(line, " ")
+		if cut := shellBreakPattern.FindStringIndex(line); cut != nil {
+			line = line[:cut[0]]
+		}
+		var flags []string
+		for _, match := range longFlagPattern.FindAllStringSubmatch(line, -1) {
+			flags = append(flags, match[1])
+		}
+		if len(flags) == 0 {
+			continue
+		}
+		var tokens []string
+		for _, field := range strings.Fields(strings.TrimPrefix(line, "olares-cli ")) {
+			if strings.HasPrefix(field, "-") {
+				break
+			}
+			tokens = append(tokens, field)
+		}
+		found = append(found, documentedFlagUsage{
+			tokens: tokens,
+			flags:  flags,
+			file:   path,
+			line:   shell.number,
+		})
+	}
+	return found
+}
+
+// fencedShellLines is every command a fenced block tells a reader to run,
+// as one string per command.
+//
+// The joining is the point. A long invocation is written across several
+// physical lines with a trailing backslash, which is exactly where the
+// flags an author was least sure about end up; scanners that read
+// physical lines see a first line starting with `olares-cli` and a
+// second line starting with `--something`, and check only the first.
+// Every flag past the first break went unchecked, in the examples most
+// likely to be copied whole.
+//
+// The reported number is the line the command starts on, because that is
+// where a reader sent to fix it should land.
+type fencedLine struct {
+	text   string
+	number int
+}
+
+func fencedShellLines(source string) []fencedLine {
+	var (
+		lines   []fencedLine
+		inFence bool
+		pending string
+		start   int
+	)
+	flush := func() {
+		if start != 0 {
+			lines = append(lines, fencedLine{text: pending, number: start})
+			pending, start = "", 0
+		}
+	}
+	for index, raw := range strings.Split(source, "\n") {
+		trimmed := strings.TrimSpace(raw)
+		if strings.HasPrefix(trimmed, "```") {
+			// A block that ends mid-continuation is malformed shell;
+			// keep what there is rather than dropping the command.
+			flush()
+			inFence = !inFence
+			continue
+		}
+		if !inFence {
+			continue
+		}
+		text := strings.TrimPrefix(trimmed, "$ ")
+		continues := strings.HasSuffix(text, `\`)
+		if continues {
+			text = strings.TrimSpace(strings.TrimSuffix(text, `\`))
+		}
+		if start == 0 {
+			pending, start = text, index+1
+		} else {
+			pending = strings.TrimSpace(pending + " " + text)
+		}
+		if !continues {
+			flush()
+		}
+	}
+	flush()
+	return lines
+}
+
+// The two tests below scan olares-router alone, which is where the
+// inline verb index was first written. This one scans the other eleven
+// skills' SKILL.md the same way.
+//
+// documentedCommandPaths walks these same spans to decide what counts as
+// documented and drops the ones it cannot resolve without a word. So an
+// inline command naming a verb that does not exist was not merely
+// unchecked — it was quietly excluded from coverage, which is the
+// arrangement where the docs and the CLI disagree and every test passes.
+//
+// Three things keep this from reporting prose as a broken command.
+//
+// It stops at the front door of each skill, as the router version does.
+// References quote the CLI's own error text, and a backticked `cluster
+// pod has multiple containers; please specify` opens with two real
+// command names. Every one of those is in a reference; a SKILL.md is an
+// index, and a backticked phrase in one is a command by construction.
+//
+// A phrase is only followed while it resolves. Once a token has matched
+// a group command the next word has to be one of that group's
+// subcommands — a group takes no positional arguments, so there is
+// nothing else the word could be — while a phrase that resolves nothing
+// at all is prose and is ignored.
+//
+// And a verb index is read relative to whatever tree its skill is about,
+// which is not always that skill's own command: olares-knowledge indexes
+// `settings get` under `knowledge download`, and names the unrelated
+// top-level `download component` two paragraphs above it. So a phrase is
+// tried against the root, the family, and the family's children, and is
+// only reported when it resolves under none of them. That is looser than
+// naming one base per skill, and it still answers the question worth
+// asking, which is whether the verb exists anywhere.
+func TestEveryInlineSkillCommandPathResolves(t *testing.T) {
+	root := NewDefaultCommand()
+	invocations := inlineSkillCommandPaths(t, root)
+	if len(invocations) < 60 {
+		t.Fatalf("harvested only %d inline commands outside olares-router; the docs or the scanner moved", len(invocations))
+	}
+	for _, invocation := range invocations {
+		t.Run(invocation.file+":"+invocation.path(), func(t *testing.T) {
+			var tried []string
+			for _, base := range invocation.bases {
+				if resolves(base, invocation.tokens) {
+					return
+				}
+				tried = append(tried, base.CommandPath())
+			}
+			t.Errorf("%s:%d documents %q, which is not a command under any of %s",
+				invocation.file, invocation.line, invocation.path(), strings.Join(tried, ", "))
+		})
+	}
+}
+
+// resolves reports whether tokens name a command under base. A walk that
+// reaches a leaf stops there: a leaf's arguments are not commands.
+func resolves(base *cobra.Command, tokens []string) bool {
+	cmd := base
+	for _, token := range tokens {
+		next := childNamed(cmd, token)
+		if next == nil {
+			return !hasSubcommands(cmd)
+		}
+		cmd = next
+	}
+	return true
+}
+
+func inlineSkillCommandPaths(t *testing.T, root *cobra.Command) []documentedInvocation {
+	t.Helper()
+	suite := skills.FS()
+	var found []documentedInvocation
+	err := fs.WalkDir(suite, ".", func(path string, entry fs.DirEntry, err error) error {
+		if err != nil || entry.IsDir() || filepath.Base(path) != "SKILL.md" {
+			return err
+		}
+		if strings.HasPrefix(path, "olares-router/") {
+			return nil
+		}
+		source, err := fs.ReadFile(suite, path)
+		if err != nil {
+			return err
+		}
+		family := childNamed(root, strings.TrimPrefix(strings.Split(path, "/")[0], "olares-"))
+		bases := []*cobra.Command{root}
+		if family != nil {
+			bases = append(bases, family)
+			bases = append(bases, family.Commands()...)
+		}
+		for lineNumber, line := range strings.Split(string(source), "\n") {
+			for _, match := range inlineCodePattern.FindAllStringSubmatch(line, -1) {
+				fields := commandNameFields(strings.Fields(strings.TrimSpace(match[1])))
+				if len(fields) > 0 && fields[0] == "olares-cli" {
+					fields = fields[1:]
+				}
+				fields = commandLikePrefix(fields)
+				if len(fields) < 2 || !namesACommand(bases, fields[0]) {
+					// Prose. Nothing here claims to be a command.
+					continue
+				}
+				for _, tokens := range expandCommandAlternatives(fields) {
+					found = append(found, documentedInvocation{
+						tokens: tokens,
+						bases:  bases,
+						file:   path,
+						line:   lineNumber + 1,
+					})
+				}
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("walk the embedded suite: %v", err)
+	}
+	return found
+}
+
+// namesACommand is what admits a phrase to the check at all. A first
+// word that is a command somewhere is the weakest claim that can still
+// be a claim; everything else in backticks is a field, a state or a
+// quoted message.
+func namesACommand(bases []*cobra.Command, token string) bool {
+	for _, base := range bases {
+		if childNamed(base, token) != nil {
+			return true
+		}
+	}
+	return false
 }
 
 // This scans only the inline verb index in olares-router/SKILL.md. Reference
@@ -452,6 +672,25 @@ func documentedCommandPaths(t *testing.T, root *cobra.Command) map[string]bool {
 	return documented
 }
 
+// commandNameFields truncates at the first word that cannot be a cobra
+// command name. `commandLikePrefix` stops at the placeholder syntax an
+// author writes deliberately; this stops at what a quoted sentence looks
+// like — capitals, punctuation, quotes — which is what separates
+// `job.Get` and `source 'upload'` from a command path.
+var commandNamePattern = regexp.MustCompile(`^[a-z][a-z0-9-]*$`)
+
+func commandNameFields(fields []string) []string {
+	for i, field := range fields {
+		if i == 0 && field == "olares-cli" {
+			continue
+		}
+		if !commandNamePattern.MatchString(field) {
+			return fields[:i]
+		}
+	}
+	return fields
+}
+
 func commandLikePrefix(fields []string) []string {
 	for i, field := range fields {
 		if strings.HasPrefix(field, "-") || strings.ContainsAny(field, "<>[]") ||
@@ -481,8 +720,12 @@ func expandCommandAlternatives(fields []string) [][]string {
 
 type documentedInvocation struct {
 	tokens []string
-	file   string
-	line   int
+	// bases are the commands the tokens may be relative to, for the
+	// scanners that read an index whose rows drop the tree's own name.
+	// Empty means the root.
+	bases []*cobra.Command
+	file  string
+	line  int
 }
 
 func (d documentedInvocation) path() string { return strings.Join(d.tokens, " ") }
@@ -512,23 +755,16 @@ func documentedInvocations(t *testing.T) []documentedInvocation {
 		if err != nil {
 			return err
 		}
-		inFence := false
-		for lineNumber, line := range strings.Split(string(source), "\n") {
-			if strings.HasPrefix(strings.TrimSpace(line), "```") {
-				inFence = !inFence
-				continue
-			}
-			// Prose names commands it is telling the reader *not* to reach
-			// for ("not an `olares-cli publish` lifecycle"), and English
-			// sentences put ordinary words after the binary's name. A fenced
-			// block is the one place every word is meant to be typed.
-			if !inFence {
-				continue
-			}
+		// Prose names commands it is telling the reader *not* to reach
+		// for ("not an `olares-cli publish` lifecycle"), and English
+		// sentences put ordinary words after the binary's name. A fenced
+		// block is the one place every word is meant to be typed.
+		for _, shell := range fencedShellLines(string(source)) {
+			line, lineNumber := shell.text, shell.number
 			// A fenced block is not always shell — it also holds YAML, JSON
 			// and output samples, any of which can mention the binary in
 			// prose. A command to be typed starts its line.
-			if !strings.HasPrefix(strings.TrimPrefix(strings.TrimSpace(line), "$ "), "olares-cli") {
+			if !strings.HasPrefix(line, "olares-cli") {
 				continue
 			}
 			for _, match := range invocationPattern.FindAllStringSubmatch(line, -1) {
@@ -549,7 +785,7 @@ func documentedInvocations(t *testing.T) []documentedInvocation {
 				found = append(found, documentedInvocation{
 					tokens: tokens,
 					file:   path,
-					line:   lineNumber + 1,
+					line:   lineNumber,
 				})
 			}
 		}
