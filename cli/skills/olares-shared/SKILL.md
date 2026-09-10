@@ -16,6 +16,10 @@ Read this thin front door before a runtime skill. It supplies the active-profile
 
 - [Suite map](references/olares-suite-map.md): which skill owns which task, and how to install `olares-cli` when it is not on PATH. Read it when the task has not been routed to a skill yet; a task that has been does not need it again.
 
+## Reading the answer
+
+Every profile-backed tree spells machine-readable output the same way: `-o json`. A verb that fails under it answers on **stderr** with `{"error":{"code","message","retryable","action"}}`, so branch on `.error.code` rather than matching the message. `retryable` and `action` are present only when the failure knows them — their absence means unknown, not "no". Some trees also carry their own result document (Market's lifecycle verbs report `.finalState` and their own failure shape); where they do, that is the one to read.
+
 ## Platform entry points
 
 - [Olares platform model](references/olares-platform.md): userspace storage, uid/gid 1000, protected Home directories, app/namespace networking, system middleware and Olares version semantics. Read it for files, chart, cluster or settings tasks that touch those concepts.

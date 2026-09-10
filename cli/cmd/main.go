@@ -8,6 +8,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/spf13/cobra"
+
 	"github.com/beclab/Olares/cli/cmd/ctl"
 	"github.com/beclab/Olares/cli/cmd/ctl/skills"
 	"github.com/beclab/Olares/cli/pkg/clierr"
@@ -35,7 +37,10 @@ func main() {
 	}()
 
 	cmd := ctl.NewDefaultCommand()
-	err := cmd.ExecuteContext(ctx)
+	// ExecuteContextC hands back the command that actually ran, which is
+	// how the failure below can tell whether this invocation asked to be
+	// read by a program.
+	executed, err := cmd.ExecuteContextC(ctx)
 
 	// Skills installed on this machine outlive the binary that wrote them, so
 	// upgrading olares-cli leaves an agent reading instructions for a version
@@ -51,7 +56,24 @@ func main() {
 		if errors.Is(err, clierr.ErrAlreadyReported) {
 			os.Exit(1)
 		}
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		if !askedForJSON(executed) || !clierr.WriteEnvelope(os.Stderr, err) {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		}
 		os.Exit(1)
 	}
+}
+
+// askedForJSON reports whether the invocation that failed had asked for
+// machine-readable output. Every tree spells that the same way, so one
+// lookup covers all of them; a command without the flag is a human one
+// and keeps the plain line.
+func askedForJSON(cmd *cobra.Command) bool {
+	if cmd == nil {
+		return false
+	}
+	flag := cmd.Flags().Lookup("output")
+	if flag == nil {
+		return false
+	}
+	return flag.Value.String() == "json"
 }
