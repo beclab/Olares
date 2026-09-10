@@ -310,17 +310,29 @@ Examples:
 			})
 		},
 	}
-	cmd.Flags().StringVar(&model, "model", "", audioTaskModelFlagUsage)
+	cmd.Flags().StringVar(&model, "model", "", audioTaskListModelFlagUsage)
 	cmd.Flags().StringVar(&status, "status", "", "only queued, running, succeeded, failed or canceled")
 	cmd.Flags().IntVar(&limit, "limit", 0, "how many tasks to list")
 	cmd.Flags().StringVar(&apiKey, "api-key", "", dataPlaneKeyFlagUsage)
 	addOutputFlag(cmd, &output)
+	// A queue belongs to one engine and there is no view across them, so this
+	// one is required rather than a recovery aid. Cobra refuses it before the
+	// request, which is what the flag help used to contradict.
+	if err := cmd.MarkFlagRequired("model"); err != nil {
+		panic(err)
+	}
 	return cmd
 }
 
 const audioTaskModelFlagUsage = "the model the task was submitted to, as <provider>/<model>, " +
 	"a route name or the default category the verb used; only needed when Router " +
 	"no longer remembers the task"
+
+// Not the same flag as on the verbs that follow one task by id. There, Router
+// usually remembers which engine holds it; here the queue is the thing being
+// asked about and naming its engine is the whole request.
+const audioTaskListModelFlagUsage = "the engine whose queue to list, as <provider>/<model>, a route " +
+	"name or a default category; required, because each audio application runs a queue of its own"
 
 type audioTaskOptions struct {
 	ID      string
@@ -366,6 +378,12 @@ func audioTaskErr(err error, id string) error {
 		return callErr(err)
 	}
 	switch {
+	case re.Code == "model_required" && id == "":
+		// `task list` follows no task, so the sentence below had nothing to put
+		// where the id goes and read "does not remember task  —".
+		return fmt.Errorf("%w\nA queue belongs to one engine and there is no view across them, so "+
+			"listing needs the engine named: --model <name>. `olares-cli router model list --mode "+
+			"audio` and `--mode tts` name the candidates", err)
 	case re.Code == "model_required":
 		return fmt.Errorf("%w\nRouter does not remember task %s — it restarted, or the work was "+
 			"submitted through another gateway — and an id alone does not say which engine is "+
