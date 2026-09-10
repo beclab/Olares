@@ -182,10 +182,17 @@ func callErr(err error) error {
 		// exception is worth naming: `route pin` is a standing choice, and a
 		// category pinned to a model that was deleted refuses with this same
 		// code while `route list` shows a model beside it.
-		return fmt.Errorf("%w\nNothing installed can serve that category. `olares-cli router route list "+
-			"--kind default` says where each one stands, and it fills once a model of that kind exists. "+
-			"On a verb that takes --model, naming one goes directly in the meantime; if the category was "+
-			"pinned, `router route unpin <category>` hands it back to Router", err)
+		// Router's own message for this says nothing is installed, and that is
+		// not a claim the data plane can make: a model whose application is
+		// stopped is invisible from here and installed all the same. Only the
+		// console plane knows, so this points at the verb that asks it rather
+		// than repeating the absence.
+		return fmt.Errorf("%w\nNothing is answering that category. Whether anything is installed for it is "+
+			"a separate question — `olares-cli router route candidates <category>` names the models that "+
+			"could and says whether one is merely stopped, which `olares-cli market resume <app>` starts. "+
+			"`router route list --kind default` shows where every category stands. On a verb that takes "+
+			"--model, naming one goes directly in the meantime; if the category was pinned, "+
+			"`router route unpin <category>` hands it back to Router", err)
 	case re.Code == "model_route_disabled":
 		return fmt.Errorf("%w\nThe name resolves, but the route serving it is switched off. "+
 			"`olares-cli router route get <name>` shows it, and `route enable <name>` puts it back", err)

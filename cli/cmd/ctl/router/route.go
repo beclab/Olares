@@ -137,7 +137,11 @@ func (r *modelRoute) callable() bool { return r.Enabled && r.live() > 0 }
 func (r *modelRoute) answersWith() string {
 	if len(r.Members) == 0 {
 		if r.isDefault() {
-			return "nothing installed serves it"
+			// Not "nothing installed": a model whose application is stopped is
+			// installed and absent from Members all the same, and this cell
+			// cannot tell the two apart without asking for the candidates of
+			// every empty category. `route get` and `route candidates` do.
+			return "nothing is answering it"
 		}
 		return "nothing"
 	}
@@ -209,6 +213,43 @@ func (m *routeMember) label() string {
 		return name + " (" + title + ")"
 	}
 	return name
+}
+
+// describeStopped names the models that could answer a category and do not.
+func describeStopped(stopped []routeMember) string {
+	if len(stopped) == 1 {
+		return stopped[0].label() + " can answer it and is not running"
+	}
+	names := make([]string, 0, len(stopped))
+	for i := range stopped {
+		names = append(names, stopped[i].label())
+	}
+	return fmt.Sprintf("%d installed models can answer it and none is running: %s",
+		len(stopped), strings.Join(names, ", "))
+}
+
+// resumeHint is the command that starts the applications behind them. A model
+// that is not running because Router never saw its application has no app name,
+// and there the honest answer is the one that lists the candidates.
+func resumeHint(stopped []routeMember) string {
+	var apps []string
+	seen := map[string]bool{}
+	for i := range stopped {
+		app := strDeref(stopped[i].OlaresAppName)
+		if app == "" || seen[app] {
+			continue
+		}
+		seen[app] = true
+		apps = append(apps, app)
+	}
+	if len(apps) == 0 {
+		return "`olares-cli router route candidates <category>` lists them with the application each " +
+			"belongs to."
+	}
+	if len(apps) == 1 {
+		return fmt.Sprintf("`olares-cli market resume %s` starts it.", apps[0])
+	}
+	return fmt.Sprintf("`olares-cli market resume <app>` starts one of %s.", strings.Join(apps, ", "))
 }
 
 func NewRouteCommand(f *cmdutil.Factory) *cobra.Command {
@@ -405,9 +446,11 @@ func renderRoutes(w io.Writer, routes []modelRoute, kind string) error {
 		}
 	}
 	if anyEmptyDefault {
-		if _, err := fmt.Fprintln(w, "\nA default with no backends is a kind of request nothing installed can "+
-			"answer. Router fills it in on its own once a model of that kind exists — `olares-cli router "+
-			"route list --kind default` says which categories are waiting."); err != nil {
+		if _, err := fmt.Fprintln(w, "\nA default with no backends answers nothing, which is not the same as "+
+			"nothing being installed for it: a model whose application is stopped is installed and "+
+			"answers nothing at the same time. `olares-cli router route candidates <category>` says "+
+			"which of the two it is, and Router fills the category in on its own once a model of that "+
+			"kind is running."); err != nil {
 			return err
 		}
 	}
@@ -453,10 +496,12 @@ func renderDefaults(w io.Writer, routes []modelRoute) error {
 		}
 	}
 	if anyEmpty {
-		if _, err := fmt.Fprintln(w, "\nA category nothing serves is refused, not approximated. Install or "+
-			"enable a model of that kind and Router points the category at it on its own — "+
-			"`olares-cli market install <app>` is where local models come from, and "+
-			"`olares-cli router provider create` is where a cloud vendor does."); err != nil {
+		if _, err := fmt.Fprintln(w, "\nA category nothing serves is refused, not approximated. Whether "+
+			"anything is installed is a separate question — a stopped application answers nothing and is "+
+			"still installed — and `olares-cli router route candidates <category>` is what answers it. "+
+			"Router points a category at a running model on its own; `olares-cli market resume <app>` "+
+			"starts one that is stopped, `olares-cli market install <app>` is where local models come "+
+			"from, and `olares-cli router provider create` is where a cloud vendor does."); err != nil {
 			return err
 		}
 	}
@@ -515,10 +560,42 @@ func runRouteGet(ctx context.Context, f *cmdutil.Factory, ref, outputRaw string)
 	if format == FormatJSON {
 		return printJSON(os.Stdout, found)
 	}
-	return renderRoute(os.Stdout, found)
+	return renderRouteWithCandidates(os.Stdout, found, stoppedCandidates(ctx, pc, found))
+}
+
+// stoppedCandidates asks Router which models could answer an empty category and
+// keeps the ones that are not taking traffic. A category with one of these is
+// not the absence the wording used to claim: the model is installed and its
+// application is stopped, which is a different problem with a different fix.
+//
+// Best-effort on purpose. The candidates endpoint is admin-only while a route
+// may be read by anyone, and a probe that fails leaves the wording that claims
+// nothing — which is all Router is willing to tell that caller anyway.
+func stoppedCandidates(ctx context.Context, pc *preparedClient, r *modelRoute) []routeMember {
+	if !r.isDefault() || len(r.Members) > 0 || r.TargetPinned {
+		return nil
+	}
+	items, err := routeCandidates(ctx, pc, r.ID)
+	if err != nil {
+		return nil
+	}
+	var stopped []routeMember
+	for i := range items {
+		if !items[i].Servable {
+			stopped = append(stopped, items[i])
+		}
+	}
+	return stopped
 }
 
 func renderRoute(w io.Writer, r *modelRoute) error {
+	return renderRouteWithCandidates(w, r, nil)
+}
+
+// renderRouteWithCandidates prints one route. The candidates are the models that
+// could answer an empty category and currently do not; only `route get` probes
+// for them, because every other caller here is rendering a route it just wrote.
+func renderRouteWithCandidates(w io.Writer, r *modelRoute, stopped []routeMember) error {
 	t := newTable(w)
 	t.row("NAME", r.Name)
 	t.row("KIND", r.Kind)
@@ -553,6 +630,15 @@ func renderRoute(w io.Writer, r *modelRoute) error {
 				_, err := fmt.Fprintf(w, "\nThe model this category was pinned to no longer exists, so it "+
 					"answers nothing and the pin keeps it that way. `olares-cli router route unpin %s` "+
 					"lets Router pick again.\n", r.Name)
+				return err
+			}
+			if len(stopped) > 0 {
+				// The category is empty and something can fill it. Saying
+				// "nothing installed" here sent people to install a second
+				// copy of a model they already had.
+				_, err := fmt.Fprintf(w, "\nThis category answers nothing, and not because nothing is "+
+					"installed: %s. Router adopts it on its own once it is answering.\n%s\n",
+					describeStopped(stopped), resumeHint(stopped))
 				return err
 			}
 			_, err := fmt.Fprintf(w, "\nNothing installed answers %s requests, so this category is empty. "+
