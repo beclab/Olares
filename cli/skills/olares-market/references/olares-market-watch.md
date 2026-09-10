@@ -2,6 +2,8 @@
 
 > **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) first. Verb details are in the parent lifecycle row; state-machine facts (states, transitions, fail TTLs, `running` semantics) live in the shared **application state machine**.
 
+A one-shot mutation returns as soon as the server acknowledges it, and the server usually carries on afterwards, so the state a mutation returns is rarely the state it ends at. `--watch` is how a command follows the rest, and it does so by polling — `--help` carries the timeout and interval defaults. What follows is what to set them to, and what the answer means.
+
 ## `--watch` interaction with each verb
 
 | Verb | Terminal-success buckets | Idempotent shortcut |

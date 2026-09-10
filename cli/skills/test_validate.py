@@ -263,7 +263,7 @@ class ValidatorTests(unittest.TestCase):
                 "[platform model](../olares-shared/references/olares-platform.md)\n"
                 "[own reference](references/olares-chart-deploy.md)\n"
                 "[market front door](../olares-market/SKILL.md)\n"
-                "[market charts](../olares-market/references/olares-market-charts.md#download)\n",
+                "[market charts](../olares-market/references/olares-market-chart-publish.md#upload)\n",
                 encoding="utf-8",
             )
             # The carve-out is the front door's alone: a reference reaches the
