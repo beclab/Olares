@@ -59,6 +59,7 @@ One profile selects one Olares instance and one Olares identity. Every profile-b
 | Command | Purpose |
 |---|---|
 | `olares-cli profile list` | Show profiles, current selection, auth status and cached Olares version |
+| `olares-cli profile whoami` | Identity and role of the selected profile; the admin/normal answer other skills gate on |
 | `olares-cli profile use <name\|->` | Switch selection; `-` returns to the previous profile |
 | `olares-cli profile login` | Authenticate with password and optional TOTP |
 | `olares-cli profile import` | Bootstrap from a refresh token |

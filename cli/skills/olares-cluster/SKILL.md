@@ -37,13 +37,13 @@ Load the shared [platform model](../olares-shared/references/olares-platform.md)
 
 | Noun | Verbs | Read when triggered |
 |---|---|---|
-| `context` | (single verb) | `olares-cli cluster context --help` |
+| `context` | (single verb) | The ControlHub-side identity and scope of the active profile — what this tree can see at all, before any noun below returns empty |
 | `pod` | `list`, `get`, `yaml`, `events`, `logs`, `delete`, `restart`, `exec` | `exec` requires Olares 1.12.7+; [pod operations](references/olares-cluster-pod.md); [exec safety](references/olares-cluster-exec.md) |
 | `container` | `list`, `env`, `logs`, `exec` | `exec` requires Olares 1.12.7+; [exec safety](references/olares-cluster-exec.md) |
 | `workload` (`wl`) | `list`, `images`, `get`, `yaml`, `rollout-status`, `scale`, `restart`, `stop`, `start`, `delete` | [workload operations](references/olares-cluster-workload.md) |
 | `application` (`app`) | `list`, `get`, `workloads`, `pods`, `status` | [application aggregation](references/olares-cluster-application.md) |
-| `namespace` (alias `ns`) | `list`, `get` | `olares-cli cluster namespace --help` |
-| `node` (alias `nodes`) | `list`, `get` | `olares-cli cluster node --help` |
+| `namespace` (alias `ns`) | `list`, `get` | Scoped to the active profile, so this is the user's namespaces rather than the cluster's |
+| `node` (alias `nodes`) | `list`, `get` | The node names other trees ask for: `files` addresses `cache/<node>/` and `external/<node>/` by them, and a file task is retained per node |
 | `job` (`jobs`) | `list`, `get`, `yaml`, `pods`, `events`, `rerun` | [job operations](references/olares-cluster-job.md) |
 | `cronjob` (`cronjobs`, `cj`) | `list`, `get`, `yaml`, `jobs`, `suspend`, `resume` | [cronjob operations](references/olares-cluster-cronjob.md) |
 | `middleware` (`mw`) | `list` | [middleware model](references/olares-cluster-middleware.md) |

@@ -1,6 +1,6 @@
 # settings users
 
-> **Prerequisite:** Read [`../../olares-shared/SKILL.md`](../../olares-shared/SKILL.md) and the parent [`../SKILL.md`](../SKILL.md) (especially "Role caching + admin/normal floor") first.
+> **Prerequisite:** Read [`../../olares-shared/SKILL.md`](../../olares-shared/SKILL.md) and the parent [`../SKILL.md`](../SKILL.md), especially [Role caching + admin/normal floor](../SKILL.md#role-caching--adminnormal-floor), first.
 > **Flags & examples:** `olares-cli settings users --help` and `olares-cli settings users <verb> --help`.
 
 Instance roster — list / get / create / delete users on the active Olares. **Admin floor** (`owner` / `admin` only).

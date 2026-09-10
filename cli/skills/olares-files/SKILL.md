@@ -52,7 +52,7 @@ Archives, NFS, and `drive/Common` require Olares 1.12.6+. Treat daily builds by 
 | Verb | Read when triggered |
 |---|---|
 | `ls` | [listing and cloud shapes](references/olares-files-ls.md) |
-| `cat` | `files cat --help` |
+| `cat` | Raw bytes to stdout, and the supported way to read one: a direct GET of the file resource answers 500 |
 | `download` | [resume, overwrite, directory downloads](references/olares-files-download.md) |
 | `upload` | [collision decisions and cloud transfer](references/olares-files-upload.md) |
 | `edit` | [text/size guards and writeback](references/olares-files-edit.md) |
@@ -68,7 +68,7 @@ Archives, NFS, and `drive/Common` require Olares 1.12.6+. Treat daily builds by 
 | `share` | [internal/public/SMB sharing](references/olares-files-share.md) |
 | `smb` | [discovery, mount, history](references/olares-files-smb.md) |
 | `nfs` | [export discovery and mount](references/olares-files-nfs.md) |
-| `repos` | `files repos --help` |
+| `repos` | Sync (Seafile) libraries by id; the repo id is what a `sync/` path is built from |
 
 ## Safety contract
 

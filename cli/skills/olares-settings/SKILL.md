@@ -28,19 +28,19 @@ Load the shared [platform model](../olares-shared/references/olares-platform.md)
 
 | Area | Verbs / resources | Read when triggered |
 |---|---|---|
-| `me` | `whoami`, `version`, `check-update`, `sso list` | `settings me --help` |
+| `me` | `whoami`, `version`, `check-update`, `sso list` | `me version` is how the version gates other skills carry get answered |
 | `users` | `me`, `list`, `get`, `create`, `delete` | [user lifecycle and password handling](references/olares-settings-users.md) |
 | `apps` | list/get, entrances, env, domain, policy, auth-level, suspend/resume | [post-install app configuration](references/olares-settings-apps.md) |
 | `vpn` | devices, hidden `routes enable/disable`, SSH, subroutes (hidden enable/disable), ACL, public-domain-policy | [VPN and ACL decisions](references/olares-settings-vpn.md) |
 | `integration` | account list/get/add/delete, `cookie import/list/rm/validate` | [integration accounts](references/olares-settings-integration.md); [cookie store](references/olares-settings-cookies.md) |
 | `backup` | plans, snapshots, password | [backup decisions](references/olares-settings-backup.md) |
 | `appearance` | `get` (whole page), `language set`, `widget set`, `wallpaper list/set/style/upload/delete`, `layout reset` | [appearance and wallpaper](references/olares-settings-appearance.md) |
-| `network` | reverse-proxy, FRP, hosts-file, overlay gateway/app | `settings network --help` |
-| `gpu` / `compute` | legacy GPU list / accelerator list, unbind, set-type | `settings gpu --help`; `settings compute --help` |
-| `video` | `config get` | `settings video --help` |
+| `network` | reverse-proxy, FRP, hosts-file, overlay gateway/app | Overlay writes are asynchronous and a per-app one can restart the app; gateway master and reverse-proxy set are owner-only |
+| `gpu` / `compute` | legacy GPU list / accelerator list, unbind, set-type | Which one exists depends on the version: `gpu` on 1.12.5, `compute` on 1.12.6+ |
+| `video` | `config get` | Read-only. There is nothing here to set |
 | `search` | `status`, `rebuild`, `dirs list/add/rm` | [`olares-search`](../olares-search/SKILL.md) for index coverage |
-| `restore` | `plans list` | `settings restore --help` |
-| `advanced` | status, registries, images, system/user env | `settings advanced --help` |
+| `restore` | `plans list/check-url/create-from-snapshot/create-from-url/cancel` | Restores start here, but the snapshots they restore from are listed under `backup` |
+| `advanced` | status, registries, images, system/user env | Admin-only; `env update` takes `--var KEY=VALUE` and refuses a positional `KEY=VALUE`. Its image list is what [`olares-doctor`](../olares-doctor/SKILL.md) annotates with workload references |
 
 ## Role caching + admin/normal floor
 

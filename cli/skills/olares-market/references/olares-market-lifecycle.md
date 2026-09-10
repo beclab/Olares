@@ -1,6 +1,6 @@
 # market lifecycle verbs (install / upgrade / uninstall / clone / stop / resume / cancel)
 
-> **Prerequisite:** Read [`../../olares-shared/SKILL.md`](../../olares-shared/SKILL.md) and the parent [`../SKILL.md`](../SKILL.md) (especially "App lifecycle / state machine", "OpType vs State", and "`--watch` semantics") first. **Flags & examples:** `olares-cli market <verb> --help` for each verb.
+> **Prerequisite:** Read [`../../olares-shared/SKILL.md`](../../olares-shared/SKILL.md) and the parent [`../SKILL.md`](../SKILL.md), especially [App lifecycle / state machine](../SKILL.md#app-lifecycle--state-machine), first. **Flags & examples:** `olares-cli market <verb> --help` for each verb.
 
 The mutating verb family. Every verb here returns an `OperationResult` JSON shape on `-o json`:
 

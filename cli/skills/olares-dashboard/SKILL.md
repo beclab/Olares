@@ -28,10 +28,10 @@ Use `olares-cli dashboard <verb> --help` for syntax.
 
 | Verb | Purpose | Read when triggered |
 |---|---|---|
-| `applications` (`apps`) | Workload-grain resource table | `dashboard applications --help` |
+| `applications` (`apps`) | Workload-grain resource table | Rows are workloads, not apps, so one app can occupy several; joins `overview ranking` on `(app, namespace)` |
 | `overview` | Physical, user, and ranking sections | [overview section meanings](references/olares-dashboard-overview.md); [envelope and empty states](references/olares-dashboard-envelope.md) |
 | `overview cpu|memory|disk|pods|network|fan|gpu|physical|user|ranking` | One section | [overview section meanings](references/olares-dashboard-overview.md); [envelope and capability gates](references/olares-dashboard-envelope.md) |
-| `schema` | Served JSON schemas | `dashboard schema --help` |
+| `schema` | Served JSON schemas | The one place the CLI describes an output shape without being run; read it instead of sampling a live response |
 | any metric with watch/window intent | Repeated snapshots / historical window | [watch, windows, NDJSON](references/olares-dashboard-watch.md) |
 
 ## Envelope and capability semantics
