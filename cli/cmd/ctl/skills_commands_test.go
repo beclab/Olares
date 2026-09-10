@@ -235,41 +235,64 @@ func TestSkillCommandPathsExist(t *testing.T) {
 }
 
 // TestSkillCommandPathsExist only proves the listed paths resolve, so a
-// newly added verb can ship unlisted. This is the reverse check for the
-// area under active change: every runnable verb under `settings
-// appearance` must be listed above, and therefore documented.
-func TestEveryAppearanceVerbIsListed(t *testing.T) {
-	listed := map[string]bool{}
-	for _, path := range skillCommandPaths() {
-		listed[path] = true
+// newly added verb can ship unlisted — the docs stay true and go silently
+// incomplete, which an agent experiences as a capability that is not there.
+// These are the reverse check, and they are per-subtree on purpose: running
+// it over the whole binary would demand skill coverage of the host-side
+// `node` / `os` / `gpu` trees this suite does not drive. The three listed
+// here are the ones under active change.
+func TestEveryVerbUnderADocumentedSubtreeIsListed(t *testing.T) {
+	subtrees := []struct {
+		path      string
+		atLeast   int
+		rationale string
+	}{
+		{path: "settings appearance", atLeast: 9, rationale: "wallpaper and layout verbs move often"},
+		{path: "market", atLeast: 12, rationale: "app lifecycle is the suite's most-driven tree"},
+		{path: "router", atLeast: 30, rationale: "tracks Router releases, so verbs arrive between CLI releases"},
 	}
 
 	root := NewDefaultCommand()
-	appearance, _, err := root.Find(strings.Fields("settings appearance"))
-	if err != nil {
-		t.Fatalf("find settings appearance: %v", err)
-	}
+	listed := documentedCommandPaths(t, root)
 
-	var found int
-	var walk func(cmd *cobra.Command)
-	walk = func(cmd *cobra.Command) {
-		if cmd.Runnable() && cmd.Annotations[unknownVerbGroupAnnotation] != "true" {
-			found++
-			path := strings.TrimPrefix(cmd.CommandPath(), "olares-cli ")
-			if !listed[path] {
-				t.Errorf("verb %q is not in skillCommandPaths; add it there and document it in the skill reference", path)
+	for _, subtree := range subtrees {
+		t.Run(subtree.path, func(t *testing.T) {
+			parent, _, err := root.Find(strings.Fields(subtree.path))
+			if err != nil {
+				t.Fatalf("find %s: %v", subtree.path, err)
 			}
-		}
-		for _, child := range cmd.Commands() {
-			walk(child)
-		}
-	}
-	walk(appearance)
 
-	// Guard against the walk silently finding nothing, which would make
-	// the check above vacuous.
-	if found < 9 {
-		t.Fatalf("walked only %d runnable appearance verbs; the subtree has at least 9", found)
+			var found int
+			var walk func(cmd *cobra.Command)
+			walk = func(cmd *cobra.Command) {
+				// A deprecated or hidden verb is one the CLI still answers
+				// and the skills deliberately do not name -- `router local
+				// status` is kept so an old script survives, while the docs
+				// carry `router model status`. Documenting both would teach
+				// an agent the spelling being retired.
+				if cmd.Deprecated != "" || cmd.Hidden {
+					return
+				}
+				if cmd.Runnable() && cmd.Annotations[unknownVerbGroupAnnotation] != "true" {
+					found++
+					path := strings.TrimPrefix(cmd.CommandPath(), "olares-cli ")
+					if !listed[path] {
+						t.Errorf("verb %q is not named anywhere in the embedded skills; an agent cannot reach what nothing documents", path)
+					}
+				}
+				for _, child := range cmd.Commands() {
+					walk(child)
+				}
+			}
+			walk(parent)
+
+			// Guard against the walk silently finding nothing, which would
+			// make the check above vacuous.
+			if found < subtree.atLeast {
+				t.Fatalf("walked only %d runnable verbs under %s; it has at least %d (%s)",
+					found, subtree.path, subtree.atLeast, subtree.rationale)
+			}
+		})
 	}
 }
 

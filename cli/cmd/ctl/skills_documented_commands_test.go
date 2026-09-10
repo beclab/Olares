@@ -48,6 +48,122 @@ func TestEveryCommandTheSkillsDocumentResolves(t *testing.T) {
 	}
 }
 
+// The walk above stops at a leaf and calls that command's arguments none of
+// its business, which leaves the half of an example an agent is most likely
+// to copy wrong unchecked: the flags. A misspelled or renamed flag fails the
+// same way an invented verb does, except later — the command exists, the
+// agent runs it, and the CLI refuses an argument the docs promised.
+func TestEveryFlagTheSkillsDocumentExists(t *testing.T) {
+	root := NewDefaultCommand()
+	var checked int
+	for _, example := range documentedFlagUsages(t) {
+		cmd := root
+		for _, token := range example.tokens {
+			next := childNamed(cmd, token)
+			if next == nil {
+				break
+			}
+			cmd = next
+		}
+		// A line that never left a group names flags belonging to a
+		// subcommand this walk could not identify; guessing an owner would
+		// report a spelling as wrong because the wrong command was asked.
+		if cmd == root || hasSubcommands(cmd) {
+			continue
+		}
+		for _, flag := range example.flags {
+			checked++
+			if cmd.Flags().Lookup(flag) != nil || cmd.InheritedFlags().Lookup(flag) != nil ||
+				root.PersistentFlags().Lookup(flag) != nil || flag == "help" {
+				continue
+			}
+			t.Errorf("%s:%d documents `--%s` on %q, which has no such flag",
+				example.file, example.line, flag, cmd.CommandPath())
+		}
+	}
+	if checked < 100 {
+		t.Fatalf("checked only %d documented flags; the docs or the scanner moved", checked)
+	}
+}
+
+// Quoted text is a prompt, a JSON body or a message, and a `--` inside one is
+// not a flag. Everything after a pipe or a chained command belongs to another
+// program entirely.
+var (
+	quotedSpanPattern = regexp.MustCompile(`'[^']*'|"[^"]*"`)
+	shellBreakPattern = regexp.MustCompile(`\s(\||\|\||&&|;|>{1,2}|#)\s`)
+	longFlagPattern   = regexp.MustCompile(`(?:^|\s)--([a-z][a-z0-9-]*)`)
+)
+
+type documentedFlagUsage struct {
+	tokens []string
+	flags  []string
+	file   string
+	line   int
+}
+
+func documentedFlagUsages(t *testing.T) []documentedFlagUsage {
+	t.Helper()
+	suite := skills.FS()
+	var found []documentedFlagUsage
+
+	err := fs.WalkDir(suite, ".", func(path string, entry fs.DirEntry, err error) error {
+		if err != nil || entry.IsDir() || filepath.Ext(path) != ".md" {
+			return err
+		}
+		source, err := fs.ReadFile(suite, path)
+		if err != nil {
+			return err
+		}
+		inFence := false
+		for lineNumber, line := range strings.Split(string(source), "\n") {
+			if strings.HasPrefix(strings.TrimSpace(line), "```") {
+				inFence = !inFence
+				continue
+			}
+			if !inFence {
+				continue
+			}
+			line = strings.TrimPrefix(strings.TrimSpace(line), "$ ")
+			if !strings.HasPrefix(line, "olares-cli ") {
+				continue
+			}
+			line = quotedSpanPattern.ReplaceAllString(line, " ")
+			if cut := shellBreakPattern.FindStringIndex(line); cut != nil {
+				line = line[:cut[0]]
+			}
+			var flags []string
+			for _, match := range longFlagPattern.FindAllStringSubmatch(line, -1) {
+				flags = append(flags, match[1])
+			}
+			if len(flags) == 0 {
+				continue
+			}
+			var tokens []string
+			for _, field := range strings.Fields(strings.TrimPrefix(line, "olares-cli ")) {
+				if strings.HasPrefix(field, "-") {
+					break
+				}
+				tokens = append(tokens, field)
+			}
+			found = append(found, documentedFlagUsage{
+				tokens: tokens,
+				flags:  flags,
+				file:   path,
+				line:   lineNumber + 1,
+			})
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("walk the embedded suite: %v", err)
+	}
+	if len(found) < 50 {
+		t.Fatalf("harvested only %d flagged examples; the docs or the scanner moved", len(found))
+	}
+	return found
+}
+
 // This scans only the inline verb index in olares-router/SKILL.md. Reference
 // prose contains backquoted error text and field names that are not commands;
 // fenced executable examples across all embedded skills are covered above.
@@ -261,6 +377,73 @@ func inlineRouterCommandPaths(t *testing.T, root *cobra.Command) []documentedInv
 		t.Fatalf("harvested only %d inline router commands; the index or scanner moved", len(found))
 	}
 	return found
+}
+
+// documentedCommandPaths is every command path the embedded suite names, in
+// any of the three forms it uses: a fenced example, an inline backticked
+// invocation, and a verb-index row that drops the tree's own name because
+// the heading already carried it. Every prefix counts, so documenting
+// `router local status` documents `router local` as well.
+//
+// The reverse coverage check reads this rather than the hand-maintained
+// skillCommandPaths, because a list maintained by hand answers "was this
+// remembered", and what the check needs to ask is "was this documented".
+func documentedCommandPaths(t *testing.T, root *cobra.Command) map[string]bool {
+	t.Helper()
+	documented := map[string]bool{}
+	record := func(cmd *cobra.Command, tokens []string) {
+		for _, token := range tokens {
+			next := childNamed(cmd, token)
+			if next == nil {
+				return
+			}
+			cmd = next
+			documented[strings.TrimPrefix(cmd.CommandPath(), "olares-cli ")] = true
+		}
+	}
+
+	for _, invocation := range documentedInvocations(t) {
+		record(root, invocation.tokens)
+	}
+
+	suite := skills.FS()
+	err := fs.WalkDir(suite, ".", func(path string, entry fs.DirEntry, err error) error {
+		if err != nil || entry.IsDir() || filepath.Ext(path) != ".md" {
+			return err
+		}
+		source, err := fs.ReadFile(suite, path)
+		if err != nil {
+			return err
+		}
+		family := childNamed(root, strings.TrimPrefix(strings.Split(path, "/")[0], "olares-"))
+		for _, line := range strings.Split(string(source), "\n") {
+			for _, match := range inlineCodePattern.FindAllStringSubmatch(line, -1) {
+				fields := strings.Fields(strings.TrimSpace(match[1]))
+				if len(fields) == 0 {
+					continue
+				}
+				base := root
+				if fields[0] == "olares-cli" {
+					fields = fields[1:]
+				} else if childNamed(root, fields[0]) == nil {
+					// A verb index under `## olares-router` writes `local
+					// status`, not the tree it is already inside.
+					base = family
+				}
+				if base == nil {
+					continue
+				}
+				for _, tokens := range expandCommandAlternatives(commandLikePrefix(fields)) {
+					record(base, tokens)
+				}
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("walk the embedded suite: %v", err)
+	}
+	return documented
 }
 
 func commandLikePrefix(fields []string) []string {
