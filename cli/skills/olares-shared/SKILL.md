@@ -18,7 +18,11 @@ Read this thin front door before a runtime skill. It supplies the active-profile
 
 ## Reading the answer
 
-Every profile-backed tree spells machine-readable output the same way: `-o json`. A verb that fails under it answers on **stderr** with `{"error":{"code","message","retryable","action"}}`, so branch on `.error.code` rather than matching the message. `retryable` and `action` are present only when the failure knows them — their absence means unknown, not "no". Some trees also carry their own result document (Market's lifecycle verbs report `.finalState` and their own failure shape); where they do, that is the one to read.
+Every profile-backed tree spells machine-readable output the same way: `-o json` (`--json` is the same request, kept for older scripts). A verb that fails under it answers on **stderr** with `{"error":{"code","message","retryable","action"}}`, and stderr carries nothing else, so it parses whole.
+
+`.error.code` is worth branching on where it is set, and today that is the failures whose recovery differs from every other failure's: `auth_no_profile`, `auth_not_logged_in`, `auth_token_expired`, `auth_token_invalidated` and `timeout`, plus whatever Router reports from upstream. Everything else arrives as `unclassified` with the whole story in `.message`. So read the code first, and fall back to the message rather than assuming a code you did not get means something. `retryable` and `action` are present only when the failure knows them — their absence means unknown, not "no".
+
+Some trees also carry their own result document (Market's lifecycle verbs report `.status` and `.finalState`); where they do, that is the one to read.
 
 ## Platform entry points
 

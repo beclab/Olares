@@ -2,6 +2,7 @@ package clierr
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -92,6 +93,37 @@ func TestWrappingDoesNotLoseTheClassification(t *testing.T) {
 	}
 	if body["message"] != "send the chat request: the call was refused" {
 		t.Fatalf("the wrapping context was dropped: %v", body["message"])
+	}
+}
+
+// A deadline is the stdlib's error and belongs to no producer, so it is
+// classified here or nowhere. The wrapped case is the realistic one: by
+// the time a deadline reaches the entrypoint it has been through the
+// layer that was waiting when it fired.
+func TestADeadlineIsClassifiedEvenThoughNobodyOwnsIt(t *testing.T) {
+	for _, err := range []error{
+		context.DeadlineExceeded,
+		fmt.Errorf("poll the install: %w", context.DeadlineExceeded),
+	} {
+		var out bytes.Buffer
+		WriteEnvelope(&out, err)
+		body := decode(t, out.Bytes())
+		if body["code"] != CodeTimeout {
+			t.Fatalf("%v: code = %v, want %q", err, body["code"], CodeTimeout)
+		}
+		if body["retryable"] != true {
+			t.Fatalf("%v: a deadline is the one failure worth retrying, got retryable = %v", err, body["retryable"])
+		}
+	}
+}
+
+// An error that classifies itself wins over the deadline check, so a
+// tree that gives a timeout a better name than "timeout" keeps it.
+func TestAProducersOwnClassificationOutranksTheDeadlineFallback(t *testing.T) {
+	var out bytes.Buffer
+	WriteEnvelope(&out, fmt.Errorf("%w: %w", classified{code: "model_not_ready"}, context.DeadlineExceeded))
+	if body := decode(t, out.Bytes()); body["code"] != "model_not_ready" {
+		t.Fatalf("code = %v", body["code"])
 	}
 }
 

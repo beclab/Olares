@@ -1,10 +1,16 @@
 package clierr
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 )
+
+// yes is addressable so it can be handed to envelope.Retryable, which is
+// a pointer precisely so that "we do not know" stays distinct from "no".
+var yes = true
 
 // A caller that asked for `-o json` asked to be read by a program, and
 // then a failure hands it `Error: POST /v1/chat/completions: HTTP 503
@@ -56,12 +62,22 @@ func WriteEnvelope(w io.Writer, err error) bool {
 		return false
 	}
 	body := envelope{Code: UnclassifiedCode, Message: err.Error()}
-	if structured, ok := AsStructured(err); ok {
+	switch structured, ok := AsStructured(err); {
+	case ok:
 		if code := structured.ErrorCode(); code != "" {
 			body.Code = code
 		}
 		body.Retryable = structured.Retryable()
 		body.Action = structured.RecoveryAction()
+	case errors.Is(err, context.DeadlineExceeded):
+		// Handled here rather than by each producer because there is no
+		// producer to fix: this is the stdlib's error, returned from
+		// wherever the context happened to be checked, and any tree that
+		// passes a context can surface it. It is also the one failure a
+		// caller most often wants to distinguish, since a timeout says
+		// nothing about whether the request was refused or merely slow.
+		body.Code = CodeTimeout
+		body.Retryable = &yes
 	}
 	encoded, marshalErr := json.MarshalIndent(map[string]envelope{"error": body}, "", "  ")
 	if marshalErr != nil {
@@ -73,19 +89,19 @@ func WriteEnvelope(w io.Writer, err error) bool {
 	return true
 }
 
-// AsStructured unwraps to the first error in the chain that classifies
+// AsStructured unwraps to the first error in the tree that classifies
 // itself, so wrapping a classified error with context does not lose the
 // classification.
+//
+// errors.As rather than a hand-rolled loop over Unwrap() error: an
+// error joined from several — which `fmt.Errorf("%w: %w", ...)` and
+// errors.Join both produce — unwraps to a slice, and a loop that only
+// knows the single-error form walks straight past the classification it
+// was looking for.
 func AsStructured(err error) (Structured, bool) {
-	for err != nil {
-		if structured, ok := err.(Structured); ok {
-			return structured, true
-		}
-		unwrapped, ok := err.(interface{ Unwrap() error })
-		if !ok {
-			return nil, false
-		}
-		err = unwrapped.Unwrap()
+	var structured Structured
+	if errors.As(err, &structured) {
+		return structured, true
 	}
 	return nil, false
 }
