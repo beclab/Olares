@@ -25,6 +25,13 @@ olares-cli skills install
 
 This installs a client, not Olares itself: it operates an existing Olares instance over the network and does not create one. An Olares host already has the binary at `/usr/local/bin/olares-cli` with the host-side `node` / `os` / `gpu` trees this suite does not use.
 
+## A misspelled verb may print help and exit 0
+
+Some subtrees of this CLI let a grouping command accept a word it has no subcommand for: it prints its own help and exits 0. `router` refuses one as of the build that ships this file, and the other trees have not been swept yet, so a typo there still looks like success. Two consequences worth carrying:
+
+- **Do not read exit 0 alone as the work having been done.** Check that the output is the shape the verb produces. A page beginning `Usage:` and `Available Commands:` is a refusal wearing a success code.
+- **Do not conclude a verb is missing from a help page you were handed by accident.** Re-read the help you actually asked for before deciding a capability does not exist.
+
 ## Platform entry points
 
 - [Olares platform model](references/olares-platform.md): userspace storage, uid/gid 1000, protected Home directories, app/namespace networking, system middleware and Olares version semantics. Read it for files, chart, cluster or settings tasks that touch those concepts.
