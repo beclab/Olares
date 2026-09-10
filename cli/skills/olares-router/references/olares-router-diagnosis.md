@@ -100,3 +100,12 @@ If the application is stopped, crash-looping, cannot pull its image, or has no G
 **Editing Router when the model application is the problem.** Changing a provider's base URL, re-importing models, or re-registering the provider does nothing for a model that has not finished downloading. Check `model progress <model>` before touching the Router row.
 
 **Treating a whole-subtree 404 as a missing resource.** A Market-proxy route answering 404 means Router's Market proxy is not configured; a Model Console route answering 404 can mean it arrived in a later Model Console version than the one installed, which `model diag endpoints --app <app>` confirms by listing what this application actually mounts. Neither is a row that went missing.
+
+**Giving `listen` a container instead of samples.** There is no decoder on the other end, so wav, mp3 or m4a bytes are transcribed as noise and can produce an empty transcript at exit 0. Produce headerless 16-bit mono PCM and make `--sample-rate` match it:
+
+```
+ffmpeg -i talk.m4a -f s16le -ar 16000 -ac 1 talk.pcm
+ffmpeg -i talk.m4a -f s16le -ar 16000 -ac 1 - | olares-cli router call listen --sample-rate 16000
+```
+
+**Reading an empty result as evidence the model heard nothing.** `call vad <file>` says whether there is speech, `call transcribe <file>` whether it is intelligible, and `xxd <file> | head -1` whether the bytes have the expected format. Empty diarization often means one speaker rather than silence: a real 16 kHz single-speaker recording produced no turns while `vad` found two speech segments in the same file.
