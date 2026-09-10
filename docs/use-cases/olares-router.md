@@ -14,13 +14,12 @@ Olares Router is the AI gateway built into Olares, shipping with v1.12.7. It exp
 
 ## Why Olares Router
 
-Many users run a dedicated LLM proxy such as LiteLLM, or are considering one, to deal with the multi-vendor problem. Once Router is available, that extra layer is no longer needed.
+Many users add a standalone LLM proxy such as LiteLLM when they need to connect applications to multiple AI service providers. With Router, that extra layer is no longer needed. Router solves the same core problem from inside Olares and goes further: 
 
-Router covers the same ground and goes further in the following ways:
-- **Built in, not an add-on**: A LiteLLM-style proxy is one more component to deploy, configure, and maintain. Router arrives with Olares itself, and is simply there when you need it.
-- **Local models, zero registration**: With a proxy, every model has to be registered before it can be used. With Router, the models and utility apps on your Olares are already there, ready to call.
-- **Identity, not just keys**: Apps inside Olares call without ever handling a key, because the platform already knows who they are. Every other caller carries one key that works from anywhere, and every call, keyless or not, lands on a real user's record.
-- **Ready for what's next**: Whatever Olares adds next, a new modality or a new tool, appears behind the same endpoint, and no client has to change. A proxy can grow too, but every addition is another round of configuration.
+- **Built in, not an add-on**: Router arrives with Olares itself. It brings AI access and management into the same system that already runs your applications and local AI workloads. A LiteLLM-style proxy is one more component to deploy, configure, and maintain. 
+- **Native visibility into local AI**: Router discovers and synchronizes installed model and utility apps automatically. A proxy requires every model to be registered before it can be used.
+- **Olares-aware access**: Apps running inside Olares can use their platform identity instead of storing an API key. Clients outside Olares use Router-issued API keys, while cloud-provider credentials remain stored inside Router.
+- **New AI capabilities, same endpoint**: New models, modalities, and AI utilities supported by Olares can be exposed through Router with nothing new to deploy. Clients use the same access layer, while Router handles the platform-side integration. A proxy can grow too, but every addition is another round of configuration.
 
 ## One gateway for every AI capability
 
