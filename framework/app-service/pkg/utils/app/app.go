@@ -11,9 +11,11 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"time"
 
+	"dario.cat/mergo"
 	corev1 "k8s.io/api/core/v1"
 
 	sysv1alpha1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
@@ -231,7 +233,8 @@ func UpdateAppMgrStatus(name string, status v1alpha1.ApplicationManagerStatus, m
 
 // ApplyAppEnv applies the environment variable configuration of the app:
 // if no existing AppEnv is found for the app, the AppEnv is created
-// if existing AppEnv is found for the app, any new configured env is added to the AppEnv
+// if existing AppEnv is found, new envs are added and existing envs have empty
+// fields filled from the configuration. Defaults always follow the configuration.
 func ApplyAppEnv(ctx context.Context, c client.Client, appConfig *appcfg.ApplicationConfig) (*sysv1alpha1.AppEnv, error) {
 	if appConfig == nil {
 		return nil, fmt.Errorf("app config is nil")
@@ -295,13 +298,27 @@ func ApplyAppEnv(ctx context.Context, c client.Client, appConfig *appcfg.Applica
 	updated := false
 
 	if len(desiredAppEnvs) > 0 {
-		existingEnvs := make(map[string]struct{}, len(appEnv.Envs))
-		for _, e := range appEnv.Envs {
-			existingEnvs[e.EnvName] = struct{}{}
+		existingEnvs := make(map[string]int, len(appEnv.Envs))
+		for i, e := range appEnv.Envs {
+			existingEnvs[e.EnvName] = i
 		}
 		for _, e := range desiredAppEnvs {
-			if _, ok := existingEnvs[e.EnvName]; !ok {
+			i, ok := existingEnvs[e.EnvName]
+			if !ok {
+				existingEnvs[e.EnvName] = len(appEnv.Envs)
 				appEnv.Envs = append(appEnv.Envs, e)
+				updated = true
+				continue
+			}
+			existing := &appEnv.Envs[i]
+			previous := existing.DeepCopy()
+			// set previously unset and now non-empty fields from the new configuration
+			if err := mergo.Merge(existing, e); err != nil {
+				return nil, fmt.Errorf("merge app env %s: %w", e.EnvName, err)
+			}
+			// override default value with the new configuration, whether empty previously or not
+			existing.Default = e.Default
+			if !reflect.DeepEqual(previous, existing) {
 				updated = true
 			}
 		}
