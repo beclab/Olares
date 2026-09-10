@@ -1,34 +1,28 @@
 package app
 
 import (
+	"fmt"
+
 	"github.com/Masterminds/semver/v3"
-	"k8s.io/klog/v2"
 )
 
 // IsDowngrade reports whether target is an older release than deployed.
-//
-// It refuses to guess. An uploaded or DevBox chart carries whatever version
-// string its author wrote, so a version that is not semver on either side is
-// not treated as a downgrade; neither is an empty target, which means "the
-// newest the repo has". utils.MatchVersion cannot be used for this: it reports
-// a match for an empty version and a mismatch for anything unparseable, so
-// both of its defaults point towards inventing a refusal.
-func IsDowngrade(target, deployed string) bool {
-	if target == "" || deployed == "" {
-		return false
+// An empty target requests the newest available release and skips comparison.
+// Otherwise, both versions must be parseable as semver.
+func IsDowngrade(target, deployed string) (bool, error) {
+	if target == "" {
+		return false, nil
 	}
 
 	targetVersion, err := semver.NewVersion(target)
 	if err != nil {
-		klog.Infof("skipping the downgrade check, target version %q is not semver: %v", target, err)
-		return false
+		return false, fmt.Errorf("parse target version %q: %w", target, err)
 	}
 
 	deployedVersion, err := semver.NewVersion(deployed)
 	if err != nil {
-		klog.Infof("skipping the downgrade check, deployed version %q is not semver: %v", deployed, err)
-		return false
+		return false, fmt.Errorf("parse deployed version %q: %w", deployed, err)
 	}
 
-	return targetVersion.LessThan(deployedVersion)
+	return targetVersion.LessThan(deployedVersion), nil
 }

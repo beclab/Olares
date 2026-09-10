@@ -1,13 +1,17 @@
 package app
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestIsDowngrade(t *testing.T) {
 	tests := []struct {
-		name     string
-		target   string
-		deployed string
-		expected bool
+		name        string
+		target      string
+		deployed    string
+		expected    bool
+		errContains string
 	}{
 		{
 			name:     "newer target upgrades",
@@ -40,22 +44,22 @@ func TestIsDowngrade(t *testing.T) {
 			expected: false,
 		},
 		{
-			name:     "an unknown deployed version cannot be compared against",
-			target:   "0.1.2",
-			deployed: "",
-			expected: false,
+			name:        "an empty deployed version returns an error",
+			target:      "0.1.2",
+			deployed:    "",
+			errContains: "parse deployed version",
 		},
 		{
-			name:     "a target that is not semver is left alone",
-			target:   "latest",
-			deployed: "0.1.2",
-			expected: false,
+			name:        "an invalid target version returns an error",
+			target:      "latest",
+			deployed:    "0.1.2",
+			errContains: "parse target version",
 		},
 		{
-			name:     "a deployed version that is not semver is left alone",
-			target:   "0.1.2",
-			deployed: "nightly",
-			expected: false,
+			name:        "an invalid deployed version returns an error",
+			target:      "0.1.2",
+			deployed:    "nightly",
+			errContains: "parse deployed version",
 		},
 		{
 			name:     "a two-part version is semver enough to compare",
@@ -79,7 +83,15 @@ func TestIsDowngrade(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			if got := IsDowngrade(test.target, test.deployed); got != test.expected {
+			got, err := IsDowngrade(test.target, test.deployed)
+			if test.errContains != "" {
+				if err == nil || !strings.Contains(err.Error(), test.errContains) {
+					t.Fatalf("IsDowngrade(%q, %q) error = %v, want %q", test.target, test.deployed, err, test.errContains)
+				}
+			} else if err != nil {
+				t.Fatalf("IsDowngrade(%q, %q) unexpected error: %v", test.target, test.deployed, err)
+			}
+			if got != test.expected {
 				t.Errorf("IsDowngrade(%q, %q) = %v, want %v", test.target, test.deployed, got, test.expected)
 			}
 		})

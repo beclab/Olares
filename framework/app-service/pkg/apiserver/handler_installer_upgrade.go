@@ -346,31 +346,29 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	// Refuse a downgrade here, before the chart is downloaded. The controller
-	// is the wrong place for it: a refusal during the operation lands the app
-	// in UpgradeFailed with a failed op record, which is what a broken upgrade
-	// looks like, not an invalid request. Failing to read the deployed version
-	// does not block the upgrade — a guard should not be easier to break than
-	// the operation it protects.
-	//
-	// UpgradeFailed is exempt. An upgrade that rendered but never came up
-	// leaves the release on the version that failed, so asking for the one
-	// that was working reads as a downgrade here while being the only way
-	// back.
+	// Check before downloading the chart so a rejected request does not leave
+	// the app in UpgradeFailed. Allow recovery from UpgradeFailed because the
+	// release may report the version of the failed upgrade.
 	if request.Version != "" && appMgr.Status.State != appv1alpha1.UpgradeFailed {
-		actionConfig, _, cfgErr := helm.InitConfig(h.kubeConfig, appMgr.Spec.AppNamespace)
-		if cfgErr != nil {
-			klog.Warningf("Skipping the downgrade check for %s, helm init failed: %v", app, cfgErr)
-		} else {
-			deployedVersion, _, verErr := apputils.GetDeployedReleaseVersion(actionConfig, appMgr.Spec.AppName)
-			switch {
-			case verErr != nil:
-				klog.Warningf("Skipping the downgrade check for %s, cannot read the deployed release version: %v", app, verErr)
-			case apputils.IsDowngrade(request.Version, deployedVersion):
-				err = fmt.Errorf("cannot upgrade %s to version %s, version %s is already deployed", app, request.Version, deployedVersion)
-				api.HandleBadRequest(resp, req, err)
-				return
-			}
+		actionConfig, _, err := helm.InitConfig(h.kubeConfig, appMgr.Spec.AppNamespace)
+		if err != nil {
+			api.HandleError(resp, req, fmt.Errorf("initialize helm for %s: %w", app, err))
+			return
+		}
+		deployedVersion, _, err := apputils.GetDeployedReleaseVersion(actionConfig, appMgr.Spec.AppName)
+		if err != nil {
+			api.HandleError(resp, req, fmt.Errorf("get deployed release version for %s: %w", app, err))
+			return
+		}
+		isDowngrade, err := apputils.IsDowngrade(request.Version, deployedVersion)
+		if err != nil {
+			api.HandleBadRequest(resp, req, err)
+			return
+		}
+		if isDowngrade {
+			err = fmt.Errorf("cannot upgrade %s to version %s, version %s is already deployed", app, request.Version, deployedVersion)
+			api.HandleBadRequest(resp, req, err)
+			return
 		}
 	}
 
