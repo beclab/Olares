@@ -146,7 +146,8 @@ func runCallClone(ctx context.Context, f *cmdutil.Factory, refAudio string, opts
 	err = streamAudioAnswer(ctx, dp, audioAnswer{
 		Method: "POST", Route: audioRequestPath(epAudioSpeechClone, opts.Model, opts.Async),
 		Body: body, ContentType: contentType,
-		Model: opts.Model, Out: opts.Out, Async: opts.Async, Format: opts.Format,
+		Model: opts.Model, Out: opts.Out, RespFormat: opts.RespFormat,
+		Async: opts.Async, Format: opts.Format,
 	})
 	// Unlike synthesis, there is no second path to try: an engine of the other
 	// shape has no one-shot clone at all. It keeps the voice instead, which is
@@ -308,7 +309,8 @@ func submitDialogueBody(ctx context.Context, f *cmdutil.Factory, opts dialogueOp
 	return streamAudioAnswer(ctx, dp, audioAnswer{
 		Method: "POST", Route: audioRequestPath(epAudioSpeech, opts.Model, opts.Async),
 		Body: body, ContentType: "application/json",
-		Model: opts.Model, Out: opts.Out, Async: opts.Async, Format: opts.Format,
+		Model: opts.Model, Out: opts.Out, RespFormat: opts.RespFormat,
+		Async: opts.Async, Format: opts.Format,
 		// --per-turn is JSON on a route that usually answers audio, so the
 		// answer is read rather than streamed to a file.
 		ExpectJSON: opts.PerTurn,
@@ -400,12 +402,16 @@ type audioAnswer struct {
 	ContentType string
 	Model       string
 	Out         string
+	RespFormat  string
 	Async       bool
 	ExpectJSON  bool
 	Format      Format
 }
 
 func streamAudioAnswer(ctx context.Context, dp *routerClient, a audioAnswer) error {
+	if err := refuseContradictedOutName(a.Out, a.RespFormat); err != nil {
+		return err
+	}
 	resp, err := dp.do(ctx, a.Method, a.Route, a.Body, a.ContentType)
 	if err != nil {
 		return err
@@ -447,12 +453,18 @@ func streamAudioAnswer(ctx context.Context, dp *routerClient, a audioAnswer) err
 		defer fh.Close()
 		dst = fh
 	}
-	n, err := io.Copy(dst, resp.Body)
+	// The first bytes decide what was actually written, and the copy has to see
+	// them too, so they are held here rather than read off the stream twice.
+	head := make([]byte, audioHeaderBytes)
+	read, _ := io.ReadFull(resp.Body, head)
+	head = head[:read]
+	n, err := io.Copy(dst, io.MultiReader(bytes.NewReader(head), resp.Body))
 	if err != nil {
 		return fmt.Errorf("write the audio: %w", err)
 	}
 	if p := strings.TrimSpace(a.Out); p != "" {
 		fmt.Fprintf(os.Stderr, "wrote %s (%s)\n", p, humanBytes(n))
+		reportOutNameMismatch(os.Stderr, p, head)
 	}
 	return nil
 }
@@ -468,6 +480,7 @@ func writeAudioResult(resp *http.Response, raw []byte, a audioAnswer) error {
 			return err
 		}
 		fmt.Fprintf(os.Stderr, "wrote %s (%s)\n", p, humanBytes(int64(len(raw))))
+		reportOutNameMismatch(os.Stderr, p, raw)
 		return nil
 	}
 	if isTerminal(os.Stdout) {

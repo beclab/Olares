@@ -558,7 +558,8 @@ func runCallSpeak(ctx context.Context, f *cmdutil.Factory, text string, opts spe
 	// and a 404 arrives before anything is written to --out.
 	answer := audioAnswer{
 		Method: "POST", ContentType: "application/json",
-		Model: opts.Model, Out: opts.OutPath, Async: opts.Async, Format: opts.Format,
+		Model: opts.Model, Out: opts.OutPath, RespFormat: opts.RespFormat,
+		Async: opts.Async, Format: opts.Format,
 	}
 	routes := synthesisRoutes(ctx, dp, opts.Model, opts.Voice)
 	for _, route := range routes {

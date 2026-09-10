@@ -1,6 +1,7 @@
 package router
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -679,12 +680,18 @@ func runAudioTaskResult(ctx context.Context, f *cmdutil.Factory, opts audioTaskO
 		return fmt.Errorf("task %s produced %s; name a file with --out, or pipe the output",
 			opts.ID, nonEmpty(resp.Header.Get("Content-Type")))
 	}
-	n, err := io.Copy(dst, resp.Body)
+	// A collection never asked for a container, so the name is the only claim
+	// being made about the bytes and the only one that can be wrong.
+	head := make([]byte, audioHeaderBytes)
+	read, _ := io.ReadFull(resp.Body, head)
+	head = head[:read]
+	n, err := io.Copy(dst, io.MultiReader(bytes.NewReader(head), resp.Body))
 	if err != nil {
 		return fmt.Errorf("write the result: %w", err)
 	}
 	if p := strings.TrimSpace(opts.Out); p != "" {
 		fmt.Fprintf(os.Stderr, "wrote %s (%s)\n", p, humanBytes(n))
+		reportOutNameMismatch(os.Stderr, p, head)
 	}
 	return nil
 }

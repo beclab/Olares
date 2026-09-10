@@ -582,5 +582,7 @@ func runCallEnhance(ctx context.Context, f *cmdutil.Factory, path string, opts e
 		Method: "POST", Route: audioRequestPath(epAudioEnhance, opts.Model, opts.Async),
 		Body: body, ContentType: contentType,
 		Model: opts.Model, Out: opts.Out, Async: opts.Async, Format: format,
+		// `enhance` returns the container it was given rather than one it was
+		// asked for, so there is no --response-format here to contradict.
 	})
 }
