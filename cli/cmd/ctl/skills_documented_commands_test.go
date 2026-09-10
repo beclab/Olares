@@ -101,6 +101,18 @@ func TestRouterSkillHasNoObsoleteCommandContracts(t *testing.T) {
 		"540-second limit",
 		"exceeds its engine limit",
 		"status read and a later `task result` can each carry the same measured duration",
+		// Settlement moved onto a compare-and-swap on the task binding, and a
+		// poll of a finished task closes the row. Both of these read the other
+		// way round: a status read that costs nothing, and a collection that
+		// must not be repeated.
+		"may write a spend row, but it carries no duration",
+		"`task result` is the exception",
+		// Router waives the audio operation gate fifteen minutes after it last
+		// observed the catalogue. Enforcing an aged one is the rule this skill
+		// was written against before that.
+		"Router enforces it regardless",
+		// The three music submissions carry an idempotency key.
+		"Router has no idempotency key",
 	}
 	var documented strings.Builder
 	err := fs.WalkDir(suite, "olares-router", func(path string, entry fs.DirEntry, err error) error {
@@ -131,7 +143,11 @@ func TestRouterSkillHasNoObsoleteCommandContracts(t *testing.T) {
 	}
 	for _, contract := range []string{
 		"Model Console's `/api/endpoints`",
-		"may write a spend row, but it carries no duration",
+		"A poll now settles the call",
+		"Fetching the same result twice is charged once",
+		"audio_task_owner_unavailable",
+		"no longer a reason to refuse",
+		"supports_embedding_image_input",
 		"`speak --sound-fx` resolves `default-sound-fx`",
 		"Qwen accepts longer requests and internally splits",
 		"`return_time_stamps=false`",
@@ -141,7 +157,6 @@ func TestRouterSkillHasNoObsoleteCommandContracts(t *testing.T) {
 		"submit slices sequentially",
 		"Router circuit open",
 		"routing reference, not the engine's canonical model id",
-		"`task result` is the exception",
 	} {
 		if !strings.Contains(documented.String(), contract) {
 			t.Errorf("router skill lost required audio contract %q", contract)
