@@ -101,20 +101,23 @@ olares-cli files share rm <share-id>
 ```bash
 # Derive the share host from the active profile's Olares ID (everything after '@').
 USER_HOST=$(olares-cli profile list | awk '/^\*/{print $2}' | sed 's/.*@//')
-SHARE_ID=$(olares-cli files share public drive/Home/Photos/ --expire-days 7 --password "$PW" --json | jq -r '.id')
+SHARE_ID=$(olares-cli files share public drive/Home/Photos/ --expire-days 7 --password "$PW" -o json | jq -r '.id')
 echo "Share link: https://share.${USER_HOST}/sharable-link/${SHARE_ID}/"
 ```
 
 The Public-link host is `share.<user-hostname>` with a public authentication level. For Olares ID `alice@olares.com` the share host is `share.alice.olares.com`.
 
-### Add a member to an existing Internal share without dropping existing ones
+### Adding a member to an existing Internal share
+
+**`set-members` replaces the list, and nothing here can read the list it is replacing.** `files share get -o json` returns the share record — id, path, owner, permission, expiry — and no member roster; the CLI has no verb that does. So an agent cannot compose "the current members plus one" from anything it can observe.
+
+Ask the user who should be on the share, and send the whole set:
 
 ```bash
-# First fetch the current members.
-CURRENT=$(olares-cli files share get <share-id> --json | jq -r '.share_members | map(.share_member + ":" + .permission_label) | join(",")')
-# Then re-list them PLUS the new member.
-olares-cli files share set-members <share-id> --users "$CURRENT,carol:view"
+olares-cli files share set-members <share-id> --users "alice:edit,bob:view,carol:view"
 ```
+
+Anyone omitted loses access. Treat a `set-members` on a share whose roster you were not given as the ACL replacement it is, and confirm before running it.
 
 ## Common errors
 

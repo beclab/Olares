@@ -63,7 +63,7 @@ Examples:
 			return runLs(cmd.Context(), f, cmd.OutOrStdout(), args[0], o)
 		},
 	}
-	cmd.Flags().BoolVar(&o.asJSON, "json", false, "print the raw JSON response (pretty-printed) instead of a table")
+	addOutputFormatFlag(cmd, &o.asJSON, "print the raw JSON response (pretty-printed) instead of a table")
 	return cmd
 }
 

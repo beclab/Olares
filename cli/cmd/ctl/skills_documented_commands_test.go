@@ -90,9 +90,10 @@ func TestEveryFlagTheSkillsDocumentExists(t *testing.T) {
 // not a flag. Everything after a pipe or a chained command belongs to another
 // program entirely.
 var (
-	quotedSpanPattern = regexp.MustCompile(`'[^']*'|"[^"]*"`)
-	shellBreakPattern = regexp.MustCompile(`\s(\||\|\||&&|;|>{1,2}|#)\s`)
-	longFlagPattern   = regexp.MustCompile(`(?:^|\s)--([a-z][a-z0-9-]*)`)
+	captureAssignmentPattern = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*=\$?"?\$\(`)
+	quotedSpanPattern        = regexp.MustCompile(`'[^']*'|"[^"]*"`)
+	shellBreakPattern        = regexp.MustCompile(`\s(\||\|\||&&|;|>{1,2}|#)\s`)
+	longFlagPattern          = regexp.MustCompile(`(?:^|\s)--([a-z][a-z0-9-]*)`)
 )
 
 type documentedFlagUsage struct {
@@ -125,6 +126,11 @@ func documentedFlagUsages(t *testing.T) []documentedFlagUsage {
 				continue
 			}
 			line = strings.TrimPrefix(strings.TrimSpace(line), "$ ")
+			// An invocation whose output is being captured --
+			// `SHARE_ID=$(olares-cli files share public … --json)` --
+			// is still a command a reader will run, and it was
+			// exactly where a flag that did not exist survived.
+			line = captureAssignmentPattern.ReplaceAllString(line, "")
 			if !strings.HasPrefix(line, "olares-cli ") {
 				continue
 			}

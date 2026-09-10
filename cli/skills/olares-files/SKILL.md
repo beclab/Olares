@@ -29,7 +29,7 @@ Load the shared [platform model](../olares-shared/references/olares-platform.md)
 | Task | Read | First command |
 |---|---|---|
 | Put a local file in the user's Drive | [collision decisions and cloud transfer](references/olares-files-upload.md) | `olares-cli files upload ./report.pdf drive/Home/Documents/` |
-| See what is in a directory | this file | `olares-cli files ls drive/Home/ --json` |
+| See what is in a directory | this file | `olares-cli files ls drive/Home/ -o json` |
 | Read one file's bytes | this file | `olares-cli files cat drive/Home/Documents/report.pdf` |
 | Address anything outside `drive/Home` | [path grammar and namespace rules](references/olares-files-paths.md) | `olares-cli files ls sync/<repo_id>/` |
 

@@ -2,6 +2,7 @@ package files
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -155,6 +156,7 @@ func newShareListCommand(f *cmdutil.Factory) *cobra.Command {
 		sharedToMe bool
 		shareType  string
 		owner      string
+		asJSON     bool
 	)
 	cmd := &cobra.Command{
 		Use:   "list",
@@ -178,13 +180,14 @@ Examples:
 			return runShareList(cmd.Context(), f, cmd.OutOrStdout(),
 				cmd.Flags().Changed("shared-by-me"), sharedByMe,
 				cmd.Flags().Changed("shared-to-me"), sharedToMe,
-				shareType, owner)
+				shareType, owner, asJSON)
 		},
 	}
 	cmd.Flags().BoolVar(&sharedByMe, "shared-by-me", true, "include shares created by you (default true; pass --shared-by-me=false to exclude)")
 	cmd.Flags().BoolVar(&sharedToMe, "shared-to-me", true, "include shares created by other users that you can access (default true)")
 	cmd.Flags().StringVar(&shareType, "type", "", "comma-joined share types: internal,external,smb")
 	cmd.Flags().StringVar(&owner, "owner", "", "comma-joined owner names")
+	addOutputFormatFlag(cmd, &asJSON, "print the raw share records instead of a table")
 	return cmd
 }
 
@@ -192,6 +195,7 @@ Examples:
 // lookup against /api/share/share_path/?path_id=<id>. Returns nothing
 // (with a hint) if the id is unknown — handy for scripting.
 func newShareGetCommand(f *cmdutil.Factory) *cobra.Command {
+	var asJSON bool
 	cmd := &cobra.Command{
 		Use:   "get <share-id>",
 		Short: "fetch one share by id",
@@ -205,9 +209,10 @@ without parsing list output.
 `,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runShareGet(cmd.Context(), f, cmd.OutOrStdout(), args[0])
+			return runShareGet(cmd.Context(), f, cmd.OutOrStdout(), args[0], asJSON)
 		},
 	}
+	addOutputFormatFlag(cmd, &asJSON, "print the raw share record instead of a key:value layout")
 	return cmd
 }
 
@@ -279,6 +284,7 @@ func runShareList(
 	byMeChanged bool, byMe bool,
 	toMeChanged bool, toMe bool,
 	shareType, owner string,
+	asJSON bool,
 ) error {
 	if ctx == nil {
 		ctx = context.Background()
@@ -305,7 +311,7 @@ func runShareList(
 	if err != nil {
 		return reformatShareHTTPErr(err, rp.OlaresID, "list shares")
 	}
-	if len(rows) == 0 {
+	if len(rows) == 0 && !asJSON {
 		fmt.Fprintln(out, "no shares found")
 		return nil
 	}
@@ -317,6 +323,15 @@ func runShareList(
 		}
 		return rows[i].ID < rows[j].ID
 	})
+
+	// An empty list is `[]`, not `null`: a caller piping this into jq
+	// should be iterating zero rows, not handling a null.
+	if asJSON {
+		if rows == nil {
+			rows = []share.Result{}
+		}
+		return writeShareJSON(out, rows)
+	}
 
 	w := tabwriter.NewWriter(out, 0, 0, 2, ' ', 0)
 	fmt.Fprintln(w, "ID\tTYPE\tNAME\tOWNER\tPATH\tPERMISSION\tEXPIRE")
@@ -342,7 +357,7 @@ func runShareList(
 // the formatting hand-rolled (rather than leaning on encoding/json) so
 // SMB shares' link / user / password fields stand out — that's the
 // information the user usually needs from this verb.
-func runShareGet(ctx context.Context, f *cmdutil.Factory, out io.Writer, shareID string) error {
+func runShareGet(ctx context.Context, f *cmdutil.Factory, out io.Writer, shareID string, asJSON bool) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -356,6 +371,9 @@ func runShareGet(ctx context.Context, f *cmdutil.Factory, out io.Writer, shareID
 	}
 	if r == nil {
 		return fmt.Errorf("share %s: not found on the server", shareID)
+	}
+	if asJSON {
+		return writeShareJSON(out, r)
 	}
 
 	w := tabwriter.NewWriter(out, 0, 0, 2, ' ', 0)
@@ -1024,4 +1042,17 @@ func requireShareType(actual *share.Result, want share.Type, verb, shareID strin
 			"use the matching update verb instead — `share set-password` for public shares, "+
 			"`share set-members` for internal shares, `share set-smb` for SMB shares",
 		verb, shareID, gotFriendly, string(actual.ShareType), wantFriendly)
+}
+
+// writeShareJSON prints a share record the way the server describes it.
+// `permission` is the wire integer rather than the "view" / "edit" label
+// the tables print: the label is a rendering, and a caller reading JSON
+// is going to feed the value back to a flag that takes the number.
+func writeShareJSON(out io.Writer, v any) error {
+	encoded, err := json.MarshalIndent(v, "", "  ")
+	if err != nil {
+		return fmt.Errorf("render share record as JSON: %w", err)
+	}
+	_, err = fmt.Fprintln(out, string(encoded))
+	return err
 }

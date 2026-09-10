@@ -14,16 +14,16 @@ olares-cli files ls sync/<repo_id>/
 olares-cli files ls awss3/<account>/<bucket>
 olares-cli files ls cache/<node>/
 olares-cli files ls external/<node>/           # virtual volume-listing layer (see SKILL.md quirk #3)
-olares-cli files ls drive/Home/Documents --json  # raw envelope, pretty-printed
+olares-cli files ls drive/Home/Documents -o json  # raw envelope, pretty-printed
 ```
 
 ## Output shape
 
 Default table: `MODE  SIZE  TYPE  MODIFIED  NAME`. Directories sort before files; directory names get a trailing `/`. Empty directories print `(empty)`.
 
-`--json` prints the raw JSON envelope, useful for scripting.
+`-o json` prints the raw JSON envelope, useful for scripting.
 
-## Envelope shapes (transparent to the user, matters when reading `--json`)
+## Envelope shapes (transparent to the user, matters when reading `-o json`)
 
 | Namespace | Children field | Per-item size | `mode` / `modified` |
 |---|---|---|---|
