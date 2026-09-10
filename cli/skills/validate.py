@@ -109,7 +109,7 @@ REQUIRED_ENTRYPOINT_FACTS = {
     "olares-market/SKILL.md": [
         (
             "canceling resuming/upgrading apps requires Olares 1.12.7+",
-            r"^\| lifecycle \| `install`, `upgrade`, `uninstall`, `clone`, `stop`, `resume`, `cancel` \| Canceling `resuming` / `upgrading` requires Olares 1\.12\.7\+; \[lifecycle decisions\]\(references/olares-market-lifecycle\.md\) \|$",
+            r"^\| lifecycle — taking one off or pausing it \|.*cancelling `resuming` / `upgrading` needs Olares 1\.12\.7\+ .*\|$",
         ),
     ],
 }
