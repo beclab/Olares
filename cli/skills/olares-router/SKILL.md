@@ -67,7 +67,8 @@ A provider whose `source` is `olares` belongs to a Market application. Its addre
 | access control | `key issue/list/update/revoke/current`, `quota set/list/clear` | [names, defaults and access control](references/olares-router-governance.md) |
 | what happened | `usage summary/list/export/retention/apps`, `audit list/get` | [usage and audit](references/olares-router-usage.md) |
 | what any call needs, and why one failed | `call models`, `key current`, `call ocr` | [the calling contract](references/olares-router-calling.md) |
-| asking a model in words | `call chat/responses/count-tokens/embed/rerank/search/scrape/translate` | [text and the web](references/olares-router-call-text.md) |
+| asking a model in words | `call chat/responses/count-tokens/embed/rerank/search/scrape` | [text and the web](references/olares-router-call-text.md) |
+| translating, including a whole transcript | `call translate`, with `--detect`, `--languages` or `--transcript` | [translation](references/olares-router-call-translate.md) |
 | generating a picture, a clip, a track or a mesh | `call image/video/music/3d` — the four whose work outlives the request; `music` and `3d` require `--model`, and `call music format/draft/alignment/cancel` are music's own | [pictures, clips, tracks and meshes](references/olares-router-call-media.md) |
 | speech in either direction | `call transcribe/listen/speak/clone/dialogue/vad/diarize/speaker-embed/enhance/align`, `call task get/result/list/cancel` | [audio](references/olares-router-call-audio.md) |
 | a voice that outlives the call, and what was read out | `call voice list/get/add/design/settings/delete`, `call history list/get/download/delete` | [the voice library and the reading history](references/olares-router-voice.md) |

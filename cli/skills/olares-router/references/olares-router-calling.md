@@ -2,7 +2,7 @@
 
 `router call` sends work through Router's data plane, the same path an application uses. It is the fastest way to prove a configuration end to end, and since Router v2.2.1 it needs no credential beyond the profile every other verb here already runs on.
 
-What each family of verbs can express is its own read: [text and the web](olares-router-call-text.md), [pictures, clips, tracks and meshes](olares-router-call-media.md), [audio](olares-router-call-audio.md). This file is what holds for all of them — who the call is from, what may go in `--model`, and how to read a refusal.
+What each family of verbs can express is its own read: [text and the web](olares-router-call-text.md), [translation](olares-router-call-translate.md), [pictures, clips, tracks and meshes](olares-router-call-media.md), [audio](olares-router-call-audio.md). This file is what holds for all of them — who the call is from, what may go in `--model`, and how to read a refusal.
 
 ## What this credential may call
 
