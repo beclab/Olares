@@ -440,7 +440,7 @@ func renderDiarizationStream(frame *audioStreamFrame, final bool) error {
 	}
 	fmt.Fprint(os.Stderr, "\r\033[K")
 	if len(frame.Segments) == 0 {
-		_, err := fmt.Fprintln(os.Stdout, "the engine found nobody speaking.")
+		_, err := fmt.Fprintln(os.Stdout, emptyDiarizationNote)
 		return err
 	}
 	t := newTable(os.Stdout, "SPEAKER", "START", "END", "LENGTH")

@@ -481,13 +481,24 @@ func renderVAD(w io.Writer, raw []byte) error {
 	return err
 }
 
+// emptyDiarizationNote reports what came back rather than what is in the
+// recording. A diarization model returned no turns for a real 16 kHz recording
+// of one person talking, while `call vad` found two speech segments in the same
+// file and `call transcribe` transcribed it — so "found nobody speaking" was
+// the one reading the evidence ruled out, and it sent the listener to check
+// their microphone instead of their recording's speaker count.
+const emptyDiarizationNote = "the engine returned no speaker turns. That is not the same as silence: " +
+	"a single-speaker recording is a common empty answer here. `olares-cli router call vad <file>` " +
+	"says whether there is speech at all, and `router call transcribe <file>` whether it is " +
+	"intelligible."
+
 func renderDiarization(w io.Writer, raw []byte) error {
 	var resp diarizationResponse
 	if err := decodeAudioAnalysis(raw, &resp); err != nil {
 		return err
 	}
 	if len(resp.Segments) == 0 {
-		_, err := fmt.Fprintln(w, "the engine found nobody speaking.")
+		_, err := fmt.Fprintln(w, emptyDiarizationNote)
 		return err
 	}
 	t := newTable(w, "SPEAKER", "START", "END", "LENGTH")
