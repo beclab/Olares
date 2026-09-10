@@ -13,6 +13,7 @@ cli/skills/
 ├── olares-shared/
 │   ├── SKILL.md       # foundation: profile model, login, token refresh
 │   └── references/
+│       ├── olares-suite-map.md  # which skill owns a task; installing the binary
 │       ├── olares-auth.md       # login flows, status details, token storage and refresh
 │       ├── olares-platform.md   # storage, uid 1000, namespaces, middleware, versions
 │       └── olares-platform-appstate.md # app lifecycle and state semantics
@@ -125,7 +126,7 @@ Facts used by **≥2 skills** are defined **once** and linked, never copied. Thi
 - **Anything that needs a *peer* skill links that skill's `SKILL.md` and names the section — references and `SKILL.md`s alike.** The rule above says how to reach the shared platform model — name it, because every runtime `SKILL.md` already loads it. A sibling skill is nobody's prerequisite, so naming alone leaves it unfindable; link one hop up instead (`](../../olares-settings/SKILL.md)`, then "under `apps` → **`domain set` — RMW semantics + cert/key handling**") and let that skill's verb index make the last hop. Deep-linking its reference lands the agent on a file whose own first line demands two files it has not read, and skips the auth gate and verb floors its front door carries. `olares-shared`'s references are the single exception, and only from a `SKILL.md`: the rule above requires that link.
 - **Self-containment is traded for a suite contract.** Strictly, Skills are self-contained and "cannot reference files in other skill folders". We deliberately cross-link because these skills **ship and install as one suite** (stated under Layout). A standalone install leaves cross-skill links dangling — that is the documented trade-off, not an accident.
 - **When a fact is genuinely two skills' own angle, let each keep its own framing.** `files` describes the storage areas as *addressing* (`drive/Home`), `chart` as *mounting* (`.Values.userspace.appData`). That is not duplication to dedupe — only the underlying platform facts (backends, durability, uid, version gates) are centralized in `olares-platform.md`.
-- **Routing has one source of truth too: the Skill suite map** in [`olares-shared/SKILL.md`](olares-shared/SKILL.md). The canonical intent->skill scope for the whole suite lives there once. The target state after the suite-wide cleanup is that runtime skills no longer repeat an “anything outside this scope” pointer: the thin shared front door is already in context. Their `## When to use` only names the closest ambiguous boundaries.
+- **Routing has one source of truth too: the Skill suite map** in [`olares-shared/references/olares-suite-map.md`](olares-shared/references/olares-suite-map.md). The canonical intent->skill scope for the whole suite lives there once. It sits one hop off the front door rather than inside it because routing and running are different moments: by the time a domain skill loads the shared prerequisite, the routing decision has already been made, and the map is thirty lines the task will not use again. The target state after the suite-wide cleanup is that runtime skills no longer repeat an “anything outside this scope” pointer: the thin shared front door is already in context. Their `## When to use` only names the closest ambiguous boundaries.
 
 ## Runtime requirement
 

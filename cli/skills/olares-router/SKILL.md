@@ -24,38 +24,20 @@ Use `olares-cli router <verb> --help` for authoritative syntax.
 - Issue keys and quotas for software that calls models, and read what it spent.
 - Send work to a model from the command line: chat, embeddings, reranking, web search and scraping, translation, images, video, speech in either direction, and OCR.
 
-> **Mental model:** every call goes through **Router**, one AI gateway per Olares. Router holds providers, models, keys, quotas and the usage record; it runs no model itself. A local model runs inside a **model application**, whose own **Model Console** downloads the weights, launches the engine and serves the OpenAI-compatible endpoint Router forwards to. Router is the plane where access is decided; the Model Console is the plane where one model lives.
->
-> One consequence is worth holding onto, because it produces most of the confusing reports: **a local model has two states, not one**. The platform says whether the application's container is up; the application says whether the model it serves can answer. A container reports `running` minutes before the weights have finished loading, so "the app is running" and "the model works" are different claims with different owners and different fixes. Never collapse them, and never read one as evidence for the other.
+> **Mental model:** every call goes through **Router**, one AI gateway per Olares. Router holds providers, models, keys, quotas and the usage record; it runs no model itself. A local model runs inside a **model application**, whose own **Model Console** downloads the weights, launches the engine and serves the OpenAI-compatible endpoint Router forwards to. So **a local model has two states, not one**: the platform says whether the container is up, the application says whether the model can answer, and a container reports `running` minutes before the weights have loaded. Never read one as evidence for the other. [Architecture and identity](references/olares-router-architecture.md) is the long form, and is worth reading before the first write.
 
 All verbs require Olares 1.12.7+ because Router ships as the `router` Market listing, which asks for that line. Router is an admin-only application: a non-admin profile cannot see its entrance, so every verb here reports it is not installed. Check `olares-cli profile whoami` for the role and `olares-cli market list --mine` for the application before concluding anything is missing.
 
-## Verb index
+## Fast paths
 
-| Family | Verbs | Read when triggered |
+| Task | Read | First command |
 |---|---|---|
-| where Router is, and who you are | no verb of its own — every verb resolves it, and says so when it cannot | [architecture and identity](references/olares-router-architecture.md) |
-| cloud vendors and their models | `provider list/get/types/create/update/delete/validate/credentials/history/rollback/sync-models`, `provider validate --draft` before a row exists, `model get/import/add/update/remove` | [configuring an external provider](references/olares-router-external.md) |
-| local LLM applications | `provider register`, `model status/progress/retry/restart`, plus [`olares-market`](../olares-market/SKILL.md)'s `install` / `clone` | [local LLM applications](references/olares-router-local-llm.md) |
-| local embedding, audio, OCR, CLIP | the same verbs, different modes | [local multimodal applications](references/olares-router-local-multimodal.md) |
-| what a local model declares itself to be | `model spec show/edit/file/set`, `model restart` | [local LLM applications](references/olares-router-local-llm.md) |
-| what is configured | `model list`, `model get` | [names, defaults and access control](references/olares-router-governance.md) |
-| the names callers may send | `route list/get/create/rename/enable/disable/delete/add/remove`, the `default-*` categories via `route list --kind default`, and `route candidates/pin/unpin` to say which model one of them means | [names, defaults and access control](references/olares-router-governance.md) |
-| access control | `key issue/list/update/revoke/current`, `quota set/list/clear` | [names, defaults and access control](references/olares-router-governance.md) |
-| what happened | `usage summary/list/export/retention/apps`, `audit list/get` | [usage and audit](references/olares-router-usage.md) |
-| calling a model | `call chat/responses/count-tokens/embed/rerank/search/scrape/translate/transcribe/listen/speak/clone/dialogue/vad/diarize/speaker-embed/enhance/align/ocr`, `call task get/result/list/cancel`, `call models`, `key current` | [calling a model](references/olares-router-calling.md) |
-| generating a picture, a clip, a track or a mesh | `call image/video/music/3d` — the four whose work outlives the request; `music` and `3d` require `--model`, and `call music format/draft/alignment/cancel` are music's own | [calling a model](references/olares-router-calling.md) |
-| a voice that outlives the call, and what was read out | `call voice list/get/add/design/settings/delete`, `call history list/get/download/delete` | [the voice library and the reading history](references/olares-router-voice.md) |
-| inside one application | `model status/progress/retry/restart`, `model diag gpu/config/endpoints`, all taking `--app` | [the Model Console](references/olares-router-console.md) |
-| a call or a model that does not work | any of the above | [deciding which layer is wrong](references/olares-router-diagnosis.md) |
+| Prove a model answers | this file | `olares-cli router call chat "hello"` |
+| See what this profile may call | this file | `olares-cli router call models` |
+| Give Olares a cloud vendor's models | [configuring an external provider](references/olares-router-external.md) | `olares-cli router provider create --type openai --credentials-json @openai.json --validate` |
+| Find out what a failed call recorded | this file | `olares-cli router usage list --limit 5` |
 
-## Two planes, one identity
-
-Read [architecture and identity](references/olares-router-architecture.md) before the first write. In short:
-
-- **Management** (`provider`, `model`, `key`, `quota`, `route`, `usage`, `audit`) travels on the active profile. Olares injects the identity; nothing has to be supplied. The `model` verbs that read a Model Console address the application's own entrance instead of Router's, on the same profile.
-- **Calling** (`router call`, `router call models`) **needs no key.** Router v2.2.1 reads the caller from the platform on `/v1` as well, so a call sent with no `Authorization` is attributed to the profile. Pass `--api-key` or set `OLARES_ROUTER_API_KEY` only when the call needs a model allowlist, a budget of its own, or an origin outside Olares. Two refusals are specific to this: `missing_credentials` is a Router older than v2.2.1, and `unknown_bfl_user` is a person Router has not recorded yet, which any management verb creates. `router key current` says which credential the next call would present, and a machine that used an older olares-cli still has an unrestricted key saved there that calls no longer use — `router key revoke` is what ends it.
-- Most of the management plane is admin-only, reads included: providers, the vendor catalog's models, quotas, audit, `usage retention` and the whole `spec` family all refuse a non-admin. What a non-admin can do is `router model list`, `route list/get`, their own keys, their own usage, and `router call`. Reading the names is deliberately open — a name is what a person types into their client.
+Calling needs no key: Router reads the caller from the platform, so `router call` arrives as the active profile. Adding a vendor is two writes, not one — `provider create` stores the credential, `model import` is what makes a model callable, and neither is optional.
 
 ## Which layer owns the change
 
@@ -70,6 +52,27 @@ Read [architecture and identity](references/olares-router-architecture.md) befor
 | Stop, resume, or bind a model application to a GPU | [`olares-market`](../olares-market/SKILL.md) and [`olares-settings`](../olares-settings/SKILL.md) — Router does not own those |
 
 A provider whose `source` is `olares` belongs to a Market application. Its address and lifecycle are the Market's; `provider delete` refuses it, and `olares-cli market uninstall <app>` is the way out.
+
+## Verb index
+
+| Family | Verbs | Read when triggered |
+|---|---|---|
+| where Router is, and who you are | no verb of its own — every verb resolves it, and says so when it cannot | [architecture and identity](references/olares-router-architecture.md) |
+| cloud vendors and their models | `provider list/get/types/create/update/delete/validate/credentials/history/rollback/sync-models`, `provider validate --draft` before a row exists, `model get/import/add/update/remove` | [configuring an external provider](references/olares-router-external.md) |
+| local LLM applications | `provider register`, `model status/progress/retry/restart`, plus [`olares-market`](../olares-market/SKILL.md)'s `install` / `clone` | [local LLM applications](references/olares-router-local-llm.md) |
+| local embedding, audio, OCR, CLIP | the same verbs, different modes | [local multimodal applications](references/olares-router-local-multimodal.md) |
+| what a local model declares itself to be | `model spec show/edit/file/set`, `model restart` | [local LLM applications](references/olares-router-local-llm.md) |
+| what is configured | `model list`, `model get` | [names, defaults and access control](references/olares-router-governance.md) |
+| the names callers may send | `route list/get/create/rename/enable/disable/delete/add/remove`, the `default-*` categories via `route list --kind default`, and `route candidates/pin/unpin` to say which model one of them means | [names, defaults and access control](references/olares-router-governance.md) |
+| access control | `key issue/list/update/revoke/current`, `quota set/list/clear` | [names, defaults and access control](references/olares-router-governance.md) |
+| what happened | `usage summary/list/export/retention/apps`, `audit list/get` | [usage and audit](references/olares-router-usage.md) |
+| what any call needs, and why one failed | `call models`, `key current`, `call ocr` | [the calling contract](references/olares-router-calling.md) |
+| asking a model in words | `call chat/responses/count-tokens/embed/rerank/search/scrape/translate` | [text and the web](references/olares-router-call-text.md) |
+| generating a picture, a clip, a track or a mesh | `call image/video/music/3d` — the four whose work outlives the request; `music` and `3d` require `--model`, and `call music format/draft/alignment/cancel` are music's own | [pictures, clips, tracks and meshes](references/olares-router-call-media.md) |
+| speech in either direction | `call transcribe/listen/speak/clone/dialogue/vad/diarize/speaker-embed/enhance/align`, `call task get/result/list/cancel` | [audio](references/olares-router-call-audio.md) |
+| a voice that outlives the call, and what was read out | `call voice list/get/add/design/settings/delete`, `call history list/get/download/delete` | [the voice library and the reading history](references/olares-router-voice.md) |
+| inside one application | `model status/progress/retry/restart`, `model diag gpu/config/endpoints`, all taking `--app` | [the Model Console](references/olares-router-console.md) |
+| a call or a model that does not work | any of the above | [deciding which layer is wrong](references/olares-router-diagnosis.md) |
 
 ## Naming
 
