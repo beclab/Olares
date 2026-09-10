@@ -10,7 +10,7 @@ A model application's Model Console launches one engine, chosen by the kind of m
 |---|---|---|---|
 | Text generation | `chat` | llama.cpp, vLLM, SGLang, Ollama | `router call chat` |
 | Text embeddings | `embedding` | the embedding server | `router call embed` |
-| Image + text embeddings (CLIP) | `embedding` | the embedding server, two towers | `router call embed`; image input goes through the same endpoint |
+| Image + text embeddings (CLIP) | `embedding` | the embedding server, two towers | `router call embed`, and `router call embed --image` for the other tower |
 | Reordering candidates | `rerank` | the embedding server | `router call rerank` |
 | Speech to text | `audio` | an audio engine | `router call transcribe`, `listen` for a live stream, `align` against a transcript |
 | Text to speech | `tts` | an audio engine | `router call speak`, `clone` from a recording, `dialogue` for several speakers, `voice` for the library |
@@ -110,6 +110,7 @@ The flags say a model synthesises speech; the operation catalogue says which rou
 
 ```
 olares-cli router call embed "some text" --model embeddinggemmav3/embeddinggemma-300m
+olares-cli router call embed --image shot.png --model <clip-app>/<clip-model>
 olares-cli router call rerank "who wrote it" --document "…" --document "…"
 olares-cli router call transcribe meeting.m4a --language en
 olares-cli router call speak "hello" --voice alloy --out hello.mp3
@@ -120,8 +121,9 @@ olares-cli router call transcribe keynote.m4a --async
 olares-cli router call ocr invoice.pdf --pages 1-3
 ```
 
-Details, including how each call resolves a model when `--model` is omitted, are in [calling a model](olares-router-calling.md). Four properties are specific to these modes:
+Details, including how each call resolves a model when `--model` is omitted, are in [calling a model](olares-router-calling.md). Five properties are specific to these modes:
 
+- **A picture is a different input, not a different verb.** `router call embed --image` sends the input object Router extends the embeddings body with instead of a string, so it needs a row declaring `supports_embedding_image_input` and a text-only embedding model refuses it. One call carries the picture or the text, never both — the vector is worth having because it can be compared with the text vectors already stored. The application admits 16 MiB for the whole request, and base64 reaches that at about three quarters of it in file bytes, which is where the CLI refuses.
 - **File-taking audio verbs and OCR read local paths before reaching a model.** A missing path is the CLI's error, not Router's. `dialogue` also reads local `ref_audio` paths, while `listen` and `diarize --stream` read a local path or standard input into a WebSocket; none of those three is a multipart upload. Plain JSON synthesis reads no local path.
 - **OCR is asynchronous.** Router accepts a task and the CLI polls it; `--no-wait` returns the task id instead, which is what to use for a long PDF, and `--queue` lists what is outstanding.
 - **Audio uploads need a duration and byte-budget decision before the call.** Follow the executable [long audio decision tree](olares-router-calling.md#long-audio-decision-tree); unknown or long input, offline diarization and enhancement default to `--async`.
