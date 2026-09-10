@@ -105,7 +105,9 @@ Every rule above constrains one file, and every one of them is satisfiable while
 
 **First-command budget: ≤ 250 lines on the read path.** Measured from the shared front door to the first command the agent can correctly issue, for the skill's most common tasks. When adding a skill or reworking one, list two or three of its common tasks and their path line counts, and put those numbers in the PR description. A skill can pass every per-file check and still cost 500 lines to enter; only the path number says so.
 
-Give the common paths a name in the skill, so the agent does not have to reconstruct one by reading everything: a short `## Fast paths` block naming a task, the files it needs, and the command it ends at. `validate.py` totals those files and holds the block to the budget.
+Give the common paths a name in the skill, so the agent does not have to reconstruct one by reading everything: a short `## Fast paths` block naming a task, the files it needs, and the command it ends at. `validate.py` requires the block, totals what each row links, and holds every row to the budget.
+
+A diagnosis skill writes `## Symptom routing` instead, and `validate.py` accepts either name — but only one of them per skill. The two are the same table under different first columns: a symptom is what the user reported, a task is what the agent means to do next, and for `olares-doctor` those are the same list. Writing both is how it ended up routing five symptoms twice, with the second table a symptom short.
 
 **Split on triggers, not on line count.** A reference serves one trigger. If a file answers two questions an agent would never ask on the same task — `call chat` and `call transcribe`, `install` and `uninstall` — split it, even at 40 lines. The 150-line ceiling is the point past which a file is certainly too big; it was never the point at which a file *becomes* worth splitting, and treating it that way produces the failure it was meant to prevent: an author at 150 lines compresses five triggers into one file instead of writing five files, and every agent then reads all five triggers to serve one.
 
@@ -157,7 +159,7 @@ ClawHub does **not** install the `olares-cli` binary for you — it is part of e
 
 ### Local validation (no network)
 
-`clawhub skill publish` does not have a `--dry-run` flag. The `--dry-run` mode here is a **local-only** sanity check: parses each `SKILL.md` frontmatter, verifies that `name` matches the folder slug, that `version` names an `olares-cli` release (`x.y.z-cli.n`), that `description` is ≤ 1024 characters, and that `metadata.openclaw.requires.bins` includes `olares-cli`. It also enforces the writing rules that can be checked mechanically: link and anchor targets resolve, per-file ceilings hold, no reference deep-links a peer skill, no section is named in prose instead of linked, no verb-index row points only at `--help`, and any declared `## Fast paths` stays inside the first-command budget. It then prints the `clawhub skill publish` command that would actually run.
+`clawhub skill publish` does not have a `--dry-run` flag. The `--dry-run` mode here is a **local-only** sanity check: parses each `SKILL.md` frontmatter, verifies that `name` matches the folder slug, that `version` names an `olares-cli` release (`x.y.z-cli.n`), that `description` is ≤ 1024 characters, and that `metadata.openclaw.requires.bins` includes `olares-cli`. It also enforces the writing rules that can be checked mechanically: link and anchor targets resolve, per-file ceilings hold, no reference deep-links a peer skill, no section is named in prose instead of linked, no verb-index row points only at `--help`, and every skill declares its read paths in one `## Fast paths` (or `## Symptom routing`) block that stays inside the first-command budget. It then prints the `clawhub skill publish` command that would actually run.
 
 ```bash
 python3 -m unittest cli/skills/test_validate.py

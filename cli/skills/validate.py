@@ -19,10 +19,16 @@ REFERENCE_MAX_LINES = 150
 # The per-file ceilings above are satisfiable while the thing an agent pays
 # for gets worse: what it reads before its first command is a path across
 # files -- the shared front door, the domain SKILL.md, and the references
-# this task triggers. A skill states its own common paths in a `## Fast
-# paths` table; this is what one may total.
+# this task triggers. A skill states its own common paths in a table; this
+# is what one row of it may total.
 READ_PATH_MAX_LINES = 250
-FAST_PATHS_HEADING = "Fast paths"
+# The heading that table sits under. Two spellings, because a skill whose
+# whole job is diagnosis indexes by what the user reported rather than by
+# what the agent means to do, and `## Symptom routing` is the shape the
+# README names to copy. Requiring the other name there produced two tables
+# routing the same symptoms to the same references, and the shorter one
+# was missing a symptom.
+FAST_PATHS_HEADINGS = ("Fast paths", "Symptom routing")
 # Pointing at a section by quoting its name resolves for nobody and survives
 # no rename. Two of the three this suite had were naming headings that no
 # longer existed.
@@ -222,11 +228,13 @@ def validate_fast_paths(skill_dir: Path, errors: list[str]) -> None:
     """
     skill = skill_dir / "SKILL.md"
     text = without_fenced_code(skill.read_text(encoding="utf-8"))
-    section = re.split(rf"^#{{1,6}}\s+{re.escape(FAST_PATHS_HEADING)}\s*$", text, flags=re.MULTILINE)
+    heading = "|".join(re.escape(name) for name in FAST_PATHS_HEADINGS)
+    spellings = " or ".join(f"'## {name}'" for name in FAST_PATHS_HEADINGS)
+    section = re.split(rf"^#{{1,6}}\s+(?:{heading})\s*$", text, flags=re.MULTILINE)
     if len(section) < 2:
         if skill_dir.name not in NO_FAST_PATH:
             errors.append(
-                f"{skill.relative_to(ROOT)}: no '## {FAST_PATHS_HEADING}' block — name the tasks an "
+                f"{skill.relative_to(ROOT)}: no {spellings} block — name the tasks an "
                 f"agent can act on after one read, so the {READ_PATH_MAX_LINES}-line budget has "
                 "something to measure"
             )
@@ -236,9 +244,16 @@ def validate_fast_paths(skill_dir: Path, errors: list[str]) -> None:
             f"{skill.relative_to(ROOT)}: declares fast paths but is listed in NO_FAST_PATH; "
             "remove it from that list"
         )
+    if len(section) > 2:
+        # Both spellings in one file is how doctor ended up routing the same
+        # symptoms twice, so it is refused rather than measured.
+        errors.append(
+            f"{skill.relative_to(ROOT)}: has more than one of {spellings}; one table routes the "
+            "agent, a second one competes with it"
+        )
     body = re.split(r"^#{1,6}\s+", section[1], flags=re.MULTILINE)[0]
     if not table_rows(body):
-        errors.append(f"{skill.relative_to(ROOT)}: '## {FAST_PATHS_HEADING}' has no rows")
+        errors.append(f"{skill.relative_to(ROOT)}: its {spellings} block has no rows")
         return
 
     front_door = ROOT / SHARED_SKILL / "SKILL.md"

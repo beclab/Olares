@@ -244,7 +244,32 @@ class ValidatorTests(unittest.TestCase):
         """
         errors = self.fast_path_errors_for("olares-test", "## Verb index\n")
         self.assertEqual(len(errors), 1, errors)
-        self.assertIn("no '## Fast paths' block", errors[0])
+        self.assertIn("'## Fast paths'", errors[0])
+
+    def test_a_symptom_table_counts_as_the_declaration(self):
+        """A diagnosis skill indexes by what the user reported.
+
+        Requiring the other spelling of the heading is what produced two
+        tables in olares-doctor routing the same symptoms to the same
+        references, one of them written a symptom short.
+        """
+        errors = self.fast_path_errors_for(
+            "olares-test",
+            "## Symptom routing\n\n| Symptom | Reference |\n|---|---|\n"
+            "| an app will not start | [stuck](references/stuck.md) |\n",
+        )
+        self.assertEqual(errors, [])
+
+    def test_declaring_both_spellings_is_refused(self):
+        errors = self.fast_path_errors_for(
+            "olares-test",
+            "## Fast paths\n\n| Task | Read | First command |\n|---|---|---|\n"
+            "| start it | this file | `olares-cli market install` |\n\n"
+            "## Symptom routing\n\n| Symptom | Reference |\n|---|---|\n"
+            "| it will not start | [stuck](references/stuck.md) |\n",
+        )
+        self.assertEqual(len(errors), 1, errors)
+        self.assertIn("more than one", errors[0])
 
     def test_the_skills_with_no_first_command_are_exempt(self):
         for name in sorted(validate.NO_FAST_PATH):
