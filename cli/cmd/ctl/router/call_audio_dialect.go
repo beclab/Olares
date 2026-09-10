@@ -51,10 +51,13 @@ const capTTSDesign = "tts_design"
 // catalogue publishes nothing, Router reconstructs an unauthoritative list from
 // the capability flags, and that is exactly the case the guess was written for.
 //
-// An aged catalogue is not that case, however much it reads like one. Router
-// enforces on `authoritative` alone and never consults staleness, so an old
-// declaration still decides what Router accepts — and guessing around it buys
-// a hard refusal instead of the 404 the guess used to cost.
+// An aged catalogue is a third case, between the two. Router waives the gate
+// fifteen minutes after it last observed one, so past that window a declaration
+// no longer decides what Router accepts and an undeclared spelling reaches the
+// engine again. It is still the best reading of the engine available, so it
+// still says which spelling to try first — it just cannot make the other one
+// unreachable, and being wrong about a relaunched engine costs the 404 it
+// always cost rather than a refusal there is no second attempt after.
 
 // synthesisRoutes is every path `speak` should try, best first.
 func synthesisRoutes(ctx context.Context, dp *routerClient, model, voice string) []string {
@@ -82,32 +85,49 @@ func audioCatalogue(ctx context.Context, dp *routerClient) []modelObject {
 	return resp.Data
 }
 
-// declaredFirst narrows the guessed candidates to the ones the model declares.
+// declaredFirst puts the declared candidates ahead of the rest, and drops the
+// rest where Router would refuse them anyway.
 //
-// Only a trustworthy catalogue may narrow anything, and narrowing to nothing is
-// not the same as having no opinion: a model with a declared catalogue that
-// lists neither spelling does not serve this operation, and the useful outcome
-// is Router saying so once rather than the engine 404ing twice. So the first
-// candidate is kept and the request goes, which is what makes the refusal
-// arrive with `audio_operation_not_supported` on it.
+// An enforced catalogue narrows, and narrowing to nothing is not the same as
+// having no opinion: a model with a current declaration that lists neither
+// spelling does not serve this operation, and the useful outcome is Router
+// saying so once rather than the engine 404ing twice. So the first candidate is
+// kept and the request goes, which is what makes the refusal arrive with
+// `audio_operation_not_supported` on it.
+//
+// An advisory one only orders. Router forwards what it does not name, so
+// dropping a candidate here would decide against the engine on the strength of
+// a reading Router itself has stopped acting on.
 func declaredFirst(catalogue []modelObject, model, method string, candidates []string) []string {
-	m := trustedEntry(catalogue, model)
+	m, trust := trustedEntry(catalogue, model)
 	if m == nil || len(candidates) == 0 {
 		return candidates
 	}
-	kept := make([]string, 0, len(candidates))
+	declared := make([]string, 0, len(candidates))
+	undeclared := make([]string, 0, len(candidates))
 	for _, route := range candidates {
 		if _, ok := m.declaresOperation(method, route, "http"); ok {
-			kept = append(kept, route)
+			declared = append(declared, route)
+			continue
 		}
+		undeclared = append(undeclared, route)
 	}
-	if len(kept) == 0 {
+	if trust == catalogueAdvisory {
+		return append(declared, undeclared...)
+	}
+	if len(declared) == 0 {
 		return candidates[:1]
 	}
-	return kept
+	return declared
 }
 
-// trustedEntry finds the row whose catalogue may be believed, or nil.
+// trustedEntry finds the row whose catalogue may be believed, with how far it
+// may be believed, or nil.
+//
+// A category answered by several models is believed only as far as its weakest
+// member: one aged declaration among them is enough to make the whole answer
+// advisory, because Router is the one that picks which of them serves the
+// category and it may pick that one.
 //
 // A category — `default-tts`, or no --model at all — matches no row, because a
 // category describes no single model and is deliberately absent from
@@ -115,35 +135,43 @@ func declaredFirst(catalogue []modelObject, model, method string, candidates []s
 // synthesis models agree on, and only when they all agree, since Router picks
 // which of them serves the category and disagreement means the answer depends
 // on a choice not made yet.
-func trustedEntry(catalogue []modelObject, model string) *modelObject {
+func trustedEntry(catalogue []modelObject, model string) (*modelObject, catalogueTrust) {
 	ref := strings.TrimSpace(model)
 	for i := range catalogue {
 		m := &catalogue[i]
 		if ref != "" && (m.ID == ref || m.QualifiedID == ref) {
-			if m.trustworthyCatalogue() {
-				return m
+			if trust := m.catalogueTrust(); trust != catalogueGuess {
+				return m, trust
 			}
-			return nil
+			return nil, catalogueGuess
 		}
 	}
 	var agreed *modelObject
+	weakest := catalogueEnforced
 	for i := range catalogue {
 		m := &catalogue[i]
 		if m.Mode != "tts" {
 			continue
 		}
-		if !m.trustworthyCatalogue() {
-			return nil
+		trust := m.catalogueTrust()
+		if trust == catalogueGuess {
+			return nil, catalogueGuess
+		}
+		if trust < weakest {
+			weakest = trust
 		}
 		if agreed == nil {
 			agreed = m
 			continue
 		}
 		if !sameDeclaredPaths(agreed, m) {
-			return nil
+			return nil, catalogueGuess
 		}
 	}
-	return agreed
+	if agreed == nil {
+		return nil, catalogueGuess
+	}
+	return agreed, weakest
 }
 
 func sameDeclaredPaths(a, b *modelObject) bool {

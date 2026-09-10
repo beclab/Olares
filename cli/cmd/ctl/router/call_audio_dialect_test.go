@@ -146,8 +146,8 @@ func TestAModelThatDeclaresNeitherSpellingIsAskedOnce(t *testing.T) {
 }
 
 // Nothing trustworthy narrows anything. An application whose chart predates the
-// catalogue is exactly the case the correlation was written for, and a stale
-// one describes an engine that may since have been relaunched onto other flags.
+// catalogue is exactly the case the correlation was written for, and so is one
+// whose every declared endpoint Router had to refuse.
 func TestOnlyATrustworthyCatalogueIsAllowedToNarrow(t *testing.T) {
 	yes, no := true, false
 	op := []modelOperation{{ID: "speech.synthesize", Method: "POST", PathTemplate: epTextToSpeech + "/{voice_id}", Transport: "http"}}
@@ -168,12 +168,12 @@ func TestOnlyATrustworthyCatalogueIsAllowedToNarrow(t *testing.T) {
 	}
 }
 
-// Stale is the exception, and it goes the other way from how it reads. Router
-// enforces a catalogue on `authoritative` alone and never looks at staleness,
-// so an aged catalogue still decides what Router accepts. Treating it as
-// untrustworthy would make the CLI guess a path Router is about to refuse
-// outright, which is worse than the 404 the guess used to cost.
-func TestAnAgedCatalogueStillDecidesBecauseRouterStillEnforcesIt(t *testing.T) {
+// Stale is the third case, and it neither narrows nor is ignored. Router waives
+// the gate fifteen minutes after it last saw the catalogue, so a spelling the
+// declaration omits reaches the engine again: the declaration still says which
+// to try first, and the retry that makes a wrong reading harmless is worth
+// having back.
+func TestAnAgedCatalogueOrdersTheGuessWithoutReplacingIt(t *testing.T) {
 	yes := true
 	m := modelObject{
 		ID: "Olares/Breeze", Mode: "tts", Authoritative: &yes, CapabilityStale: true,
@@ -182,8 +182,38 @@ func TestAnAgedCatalogueStillDecidesBecauseRouterStillEnforcesIt(t *testing.T) {
 		},
 	}
 	got := declaredFirst([]modelObject{m}, "Olares/Breeze", "POST", speakRoutes(dialectUnknown, "en-f"))
-	if len(got) != 1 || got[0] != epSpeakAs("en-f") {
-		t.Fatalf("an aged catalogue was ignored and the guess survived: %v", got)
+	if len(got) != 2 || got[0] != epSpeakAs("en-f") {
+		t.Fatalf("an aged catalogue did not order the guess: %v", got)
+	}
+	// An aged declaration that names neither spelling drops nothing either.
+	// Router has no gate left to refuse it with, so the engine answers, and
+	// keeping one candidate would be acting on a reading Router has stopped
+	// acting on itself.
+	elsewhere := m
+	elsewhere.Operations = []modelOperation{
+		{ID: "audio.transcribe", Method: "POST", PathTemplate: epAudioTranscriptions, Transport: "http"},
+	}
+	both := speakRoutes(dialectUnknown, "en-f")
+	if got := declaredFirst([]modelObject{elsewhere}, "Olares/Breeze", "POST", both); len(got) != 2 || got[0] != both[0] {
+		t.Fatalf("an aged catalogue narrowed to nothing and dropped a candidate: %v", got)
+	}
+}
+
+// A category is believed as far as its weakest member. Router picks which of
+// the models serves it, so one aged declaration among them is enough: the
+// order still comes from what they agree on, the other spelling stays reachable.
+func TestOneAgedMemberLoosensTheWholeCategory(t *testing.T) {
+	yes := true
+	native := func(id string, stale bool) modelObject {
+		return modelObject{ID: id, Mode: "tts", Authoritative: &yes, CapabilityStale: stale,
+			Operations: []modelOperation{
+				{ID: "speech.synthesize", Method: "POST", PathTemplate: epTextToSpeech + "/{voice_id}", Transport: "http"},
+			}}
+	}
+	models := []modelObject{native("Olares/Breeze", false), native("Olares/Breeze2", true)}
+	got := declaredFirst(models, "", "POST", speakRoutes(dialectUnknown, "en-f"))
+	if len(got) != 2 || got[0] != epSpeakAs("en-f") {
+		t.Fatalf("an aged member did not loosen the category: %v", got)
 	}
 }
 
