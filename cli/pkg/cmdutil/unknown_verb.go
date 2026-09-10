@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 type unknownVerbError struct {
@@ -19,6 +20,23 @@ func (e *unknownVerbError) Error() string {
 func IsUnknownVerb(err error) bool {
 	var target *unknownVerbError
 	return errors.As(err, &target)
+}
+
+func RefuseUnknownVerbArgs(c *cobra.Command, args []string) error {
+	if len(args) == 0 {
+		return nil
+	}
+	if args[0] == "help" {
+		return nil
+	}
+	return unknownVerb(c, args[0])
+}
+
+func RefuseUnknownVerbGroupArgs(c *cobra.Command, args []string) error {
+	if len(args) == 0 {
+		return pflag.ErrHelp
+	}
+	return RefuseUnknownVerbArgs(c, args)
 }
 
 // RefuseUnknownVerb makes a command group runnable so Cobra cannot turn an
@@ -35,11 +53,15 @@ func RefuseUnknownVerb(c *cobra.Command, args []string) error {
 		}
 		return c.Help()
 	}
+	return unknownVerb(c, args[0])
+}
+
+func unknownVerb(c *cobra.Command, verb string) error {
 	if c.SuggestionsMinimumDistance <= 0 {
 		c.SuggestionsMinimumDistance = 2
 	}
-	msg := fmt.Sprintf("unknown verb %q for %q", args[0], c.CommandPath())
-	if suggestions := c.SuggestionsFor(args[0]); len(suggestions) > 0 {
+	msg := fmt.Sprintf("unknown verb %q for %q", verb, c.CommandPath())
+	if suggestions := c.SuggestionsFor(verb); len(suggestions) > 0 {
 		msg += "\nDid you mean: " + strings.Join(suggestions, ", ")
 	}
 	return &unknownVerbError{

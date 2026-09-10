@@ -64,6 +64,7 @@ func NewOverviewCommand(f *cmdutil.Factory, cf *pkgdashboard.CommonFlags) *cobra
   olares-cli dashboard overview ranking --sort desc`,
 		SilenceErrors: true,
 		SilenceUsage:  true,
+		Args:          cmdutil.RefuseUnknownVerbArgs,
 		RunE: func(c *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				return cmdutil.RefuseUnknownVerb(c, args)

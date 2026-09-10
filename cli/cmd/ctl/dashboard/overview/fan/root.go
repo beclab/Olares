@@ -20,6 +20,7 @@ func NewFanCommand(f *cmdutil.Factory, cf *pkgdashboard.CommonFlags) *cobra.Comm
 		Short:         "Sections envelope: live = real-time fan/temperature/power; curve = hardcoded fan-curve spec",
 		SilenceErrors: true,
 		SilenceUsage:  true,
+		Args:          cmdutil.RefuseUnknownVerbArgs,
 		RunE: func(c *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				return cmdutil.RefuseUnknownVerb(c, args)
