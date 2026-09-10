@@ -336,13 +336,17 @@ the file named by --out, or to standard output when that is a pipe. Writing
 audio bytes into a terminal is refused rather than done.
 
 --voice and --response-format are passed through untouched: which voices exist
-and which container formats they come in is the engine's business, and Router
-does not translate either. --voices lists what this model offers and synthesises
-nothing; a model built only for voice cloning has no list and answers 404.
+and which formats they come in is the engine's business, and Router does not
+translate either. Its format names carry a sample rate — "wav_16000",
+"mp3_44100_128" — so a bare "wav" is refused with the list it does take.
+--voices lists what this model offers and synthesises nothing; a model built
+only for voice cloning has no list and answers 404.
 
---out is where the audio goes. -o names the format of the voice listing, which
-is the only thing this verb prints rather than plays, and has no effect on a
-synthesis.
+--out is where the audio goes and not what format it is in: name a file .wav
+without asking for wav and the bytes are still whatever the engine defaults to,
+which is reported rather than left to be discovered later. -o names the format
+of the voice listing, which is the only thing this verb prints rather than
+plays, and has no effect on a synthesis.
 
 --sound-fx generates a sound from a description of it instead of speech from
 words. It is the same request to the same endpoint: engines that make sound
@@ -359,7 +363,7 @@ it.
 
 Examples:
   olares-cli router call speak "your build finished" --out done.mp3
-  olares-cli router call speak "hello" --voice alloy --out hello.wav --response-format wav
+  olares-cli router call speak "hello" --voice alloy --out hello.wav --response-format wav_16000
   echo "read this aloud" | olares-cli router call speak --out out.mp3
   olares-cli router call speak "piped" | ffplay -
   olares-cli router call speak --voices
@@ -406,7 +410,7 @@ Examples:
 		modelFlagHelp(categoryTTS)+", or "+categorySoundFX+" with --sound-fx")
 	cmd.Flags().StringVar(&voice, "voice", "", "voice name, as the engine names it")
 	cmd.Flags().StringVar(&outPath, "out", "", "write the audio here instead of standard output")
-	cmd.Flags().StringVar(&respFmt, "response-format", "", "container format, e.g. mp3 or wav")
+	cmd.Flags().StringVar(&respFmt, "response-format", "", audioRespFormatFlagUsage)
 	cmd.Flags().Float64Var(&speed, "speed", 1, "playback rate, if the engine supports it")
 	cmd.Flags().BoolVar(&voices, "voices", false, "list the voices this model offers and synthesise nothing")
 	cmd.Flags().BoolVar(&soundFX, "sound-fx", false,

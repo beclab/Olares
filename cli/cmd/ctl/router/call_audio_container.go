@@ -31,6 +31,34 @@ import (
 // is the longest at twelve.
 const audioHeaderBytes = 12
 
+// audioRespFormatFlagUsage used to read "container format, e.g. mp3 or wav",
+// which named two values every engine here refuses: they take a sample rate in
+// the same string. The help now says the shape and leaves the list to the
+// engine, which sends its own on a wrong value.
+const audioRespFormatFlagUsage = "output format as the engine names it, e.g. wav_16000 or " +
+	"mp3_44100_128; a bare wav is refused, and --out does not set this"
+
+// namesFormatChoices reads a body Router passed through unchanged and reports
+// whether it is an engine refusing the format it was asked for, listing the ones
+// it takes. Router adds no envelope to an upstream refusal, so this is the body
+// itself rather than a code to switch on — which is why the refusal arrived
+// unexplained for as long as it did.
+func namesFormatChoices(body []byte) bool {
+	s := string(body)
+	if !strings.Contains(s, "output_format") && !strings.Contains(s, "response_format") {
+		return false
+	}
+	return strings.Contains(s, "must be one of")
+}
+
+// hintFormatRefusal explains the shape of the values rather than repeating them:
+// the engine already sent its list, and it is printed directly above this line.
+func hintFormatRefusal(err error) error {
+	return fmt.Errorf("%w\nThese engines name a format by container and sample rate together, so a bare "+
+		"`wav` or `mp3` is not one of them — pass one of the values listed above. `--out` does not "+
+		"choose the format either; it only names the file the bytes go into", err)
+}
+
 // containerOf names the container a body is in, or "" when it is headerless or
 // unrecognised. Raw PCM is the headerless case and is not detectable by design.
 func containerOf(head []byte) string {

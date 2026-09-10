@@ -97,7 +97,7 @@ Examples:
 	cmd.Flags().StringVar(&refText, "ref-text", "", "the verbatim transcript of the reference recording")
 	cmd.Flags().StringVar(&language, "language", "", "language of the text, if the engine takes one")
 	cmd.Flags().StringVar(&outPath, "out", "", "write the audio here instead of standard output")
-	cmd.Flags().StringVar(&respFmt, "response-format", "", "container format, e.g. wav or mp3")
+	cmd.Flags().StringVar(&respFmt, "response-format", "", audioRespFormatFlagUsage)
 	cmd.Flags().BoolVar(&async, "async", false, audioAsyncFlagUsage)
 	cmd.Flags().StringVar(&apiKey, "api-key", "", dataPlaneKeyFlagUsage)
 	addOutputFlag(cmd, &output)
@@ -251,7 +251,7 @@ Examples:
 	}
 	cmd.Flags().StringVar(&model, "model", "", modelFlagHelp(categoryTTSDialogue))
 	cmd.Flags().StringVar(&outPath, "out", "", "write the audio here instead of standard output")
-	cmd.Flags().StringVar(&respFmt, "response-format", "", "container format, e.g. wav, mp3 or flac")
+	cmd.Flags().StringVar(&respFmt, "response-format", "", audioRespFormatFlagUsage)
 	cmd.Flags().BoolVar(&perTurn, "per-turn", false, "answer with one clip per turn as JSON rather than one recording")
 	cmd.Flags().IntVar(&seed, "seed", 0, "make the sampling reproducible")
 	cmd.Flags().BoolVar(&async, "async", false, audioAsyncFlagUsage)

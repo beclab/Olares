@@ -266,6 +266,11 @@ func callErr(err error) error {
 			"running on this Olares that usually means a different engine image does this job: "+
 			"`olares-cli router model list --mode audio` and `router provider get <provider>` show which "+
 			"capability each one declares", err)
+	case re.Code == "" && re.Type == "" && namesFormatChoices(re.Body):
+		// An engine refusing --response-format, forwarded with no envelope of
+		// Router's own. The flag help invited this for as long as it named bare
+		// containers, and the refusal arrived with nothing added to it.
+		return hintFormatRefusal(err)
 	case re.Code == "capability_not_supported" || re.Code == "stream_unsupported_for_model":
 		return fmt.Errorf("%w\n`olares-cli router provider get <provider>` lists what the model supports", err)
 	case re.Status == 404 && re.Code == "" && re.Type == "":

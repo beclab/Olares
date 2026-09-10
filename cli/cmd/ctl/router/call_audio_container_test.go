@@ -69,6 +69,35 @@ func TestContradictingOutAndResponseFormatIsRefusedUpFront(t *testing.T) {
 	}
 }
 
+// A refusal Router passed straight through from an engine carries no Router
+// code, so it used to arrive with no hint at all — and the format list was the
+// one that needed one, because the flag help invited the mistake.
+func TestAPassedThroughFormatRefusalGetsAHint(t *testing.T) {
+	// Router adds no envelope to an upstream refusal, so the Code and Type are
+	// empty and the body is the engine's own. That is the shape callErr had
+	// nothing to match on.
+	upstream := &RouterError{
+		Method: "POST", Path: "/v1/text-to-speech/en-m", Status: 400,
+		Body: []byte(`{"detail":"output_format must be one of mp3_44100_128, wav_16000, pcm_24000"}`),
+	}
+	got := callErr(upstream)
+	if got.Error() == upstream.Error() {
+		t.Fatalf("the refusal arrived unexplained: %v", got)
+	}
+	if !strings.Contains(got.Error(), "sample rate") {
+		t.Errorf("the hint does not say why `wav` was refused: %v", got)
+	}
+
+	// Another passed-through 400 is left as the engine wrote it.
+	other := &RouterError{
+		Method: "POST", Path: "/v1/audio/speech", Status: 400,
+		Body: []byte(`{"detail":"voice not found"}`),
+	}
+	if callErr(other).Error() != other.Error() {
+		t.Errorf("an unrelated refusal was decorated: %v", callErr(other))
+	}
+}
+
 // `pcm` is its own answer rather than a kind of wav: the engines offer
 // pcm_24000 beside wav_24000, and the two differ by exactly the header this
 // checks for.
