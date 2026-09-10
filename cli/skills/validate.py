@@ -16,6 +16,19 @@ HEADING_RE = re.compile(r"^#{1,6}\s+(.+?)\s*$", re.MULTILINE)
 HTML_ANCHOR_RE = re.compile(r'<a\s+(?:name|id)=["\']([^"\']+)["\']', re.IGNORECASE)
 SKILL_MAX_LINES = 250
 REFERENCE_MAX_LINES = 150
+# The per-file ceilings above are satisfiable while the thing an agent pays
+# for gets worse: what it reads before its first command is a path across
+# files -- the shared front door, the domain SKILL.md, and the references
+# this task triggers. A skill states its own common paths in a `## Fast
+# paths` table; this is what one may total.
+READ_PATH_MAX_LINES = 250
+FAST_PATHS_HEADING = "Fast paths"
+# Pointing at a section by quoting its name resolves for nobody and survives
+# no rename. Two of the three this suite had were naming headings that no
+# longer existed.
+PROSE_SECTION_RE = re.compile(r'\b(?:especially|see(?:\s+also)?|section)\s+"([^"\n]{2,80})"')
+TABLE_ROW_RE = re.compile(r"^\s*\|(?P<cells>.*)\|\s*$")
+BACKTICKED_RE = re.compile(r"`[^`]+`")
 # A skill's version is the olares-cli release it ships in, spelled the way npm
 # spells it (see .github/workflows/release-cli.yaml, which rejects any other
 # shape). The skills are compiled into the binary, so what they document is
@@ -122,6 +135,100 @@ def validate_links(path: Path, errors: list[str]) -> None:
         if separator and fragment and target_path.suffix.lower() == ".md":
             if unquote(fragment) not in anchors(target_path):
                 errors.append(f"{path.relative_to(ROOT)}: missing anchor {target}")
+
+
+def validate_prose_section_refs(path: Path, errors: list[str]) -> None:
+    """Refuse `(especially "Some Heading")` in favour of an anchor link.
+
+    A quoted heading is a link the anchor validator cannot follow and a
+    rename cannot update, and it fails silently in the direction that
+    matters: the agent goes looking for a section that is not there.
+    """
+    text = without_fenced_code(path.read_text(encoding="utf-8"))
+    for name in PROSE_SECTION_RE.findall(text):
+        errors.append(
+            f"{path.relative_to(ROOT)}: names a section in prose ({name!r}); "
+            "link it with an anchor so a rename fails the build"
+        )
+
+
+def table_rows(text: str) -> list[list[str]]:
+    rows: list[list[str]] = []
+    for line in text.splitlines():
+        match = TABLE_ROW_RE.match(line)
+        if not match:
+            continue
+        cells = [cell.strip() for cell in match.group("cells").split("|")]
+        if all(set(cell) <= set("-: ") for cell in cells):
+            continue
+        rows.append(cells)
+    return rows
+
+
+def validate_verb_index_rows(skill: Path, errors: list[str]) -> None:
+    """A row that only points at `--help` spends a line to say nothing.
+
+    The agent already knows `--help` exists; what a verb index owes it is
+    the thing `--help` will not say. A row with nothing else to give is
+    better collapsed into a single catch-all row than listed on its own.
+    """
+    text = without_fenced_code(skill.read_text(encoding="utf-8"))
+    for cells in table_rows(text):
+        cell = cells[-1]
+        if "](" in cell or "--help" not in cell:
+            continue
+        spans = BACKTICKED_RE.findall(cell)
+        if not spans or not all(span.rstrip("`").endswith("--help") for span in spans):
+            continue
+        residue = BACKTICKED_RE.sub("", cell)
+        if set(residue) <= set(";,. \t/"):
+            errors.append(
+                f"{skill.relative_to(ROOT)}: verb-index row {cells[0]} points only at "
+                f"{cell} — give the caller what --help will not say, or collapse the row"
+            )
+
+
+def line_count(path: Path) -> int:
+    return len(path.read_text(encoding="utf-8").splitlines())
+
+
+def validate_fast_paths(skill_dir: Path, errors: list[str]) -> None:
+    """Hold a skill's own declared read paths to the first-command budget.
+
+    The block is optional; what is not optional is that a path a skill
+    advertises as fast actually is. Each row totals the shared front door,
+    this SKILL.md, and every file the row links -- which is what the agent
+    reads before it can issue the command in that row.
+    """
+    skill = skill_dir / "SKILL.md"
+    text = without_fenced_code(skill.read_text(encoding="utf-8"))
+    section = re.split(rf"^#{{1,6}}\s+{re.escape(FAST_PATHS_HEADING)}\s*$", text, flags=re.MULTILINE)
+    if len(section) < 2:
+        return
+    body = re.split(r"^#{1,6}\s+", section[1], flags=re.MULTILINE)[0]
+
+    front_door = ROOT / SHARED_SKILL / "SKILL.md"
+    base = line_count(skill)
+    if skill_dir.name != SHARED_SKILL:
+        base += line_count(front_door)
+
+    for cells in table_rows(body):
+        total = base
+        seen: set[Path] = set()
+        for target in LINK_RE.findall(" ".join(cells)):
+            link = unquote(target.strip().strip("<>").partition("#")[0])
+            if not link or "://" in link:
+                continue
+            resolved = (skill.parent / link).resolve()
+            if not resolved.exists() or resolved in seen or resolved == skill or resolved == front_door:
+                continue
+            seen.add(resolved)
+            total += line_count(resolved)
+        if total > READ_PATH_MAX_LINES:
+            errors.append(
+                f"{skill.relative_to(ROOT)}: fast path {cells[0]} reads {total} lines, over the "
+                f"{READ_PATH_MAX_LINES}-line first-command budget — split what it links, or stop calling it fast"
+            )
 
 
 def validate_skill_entrypoint(skill_dir: Path, errors: list[str]) -> None:
@@ -304,10 +411,13 @@ def main() -> int:
     skill_dirs = sorted(path.parent for path in ROOT.glob("olares-*/SKILL.md"))
     for path in sorted(ROOT.glob("olares-*/**/*.md")):
         validate_links(path, errors)
+        validate_prose_section_refs(path, errors)
     for skill_dir in skill_dirs:
         validate_frontmatter(skill_dir / "SKILL.md", errors)
         validate_skill_entrypoint(skill_dir, errors)
         validate_structure(skill_dir, errors)
+        validate_verb_index_rows(skill_dir / "SKILL.md", errors)
+        validate_fast_paths(skill_dir, errors)
     validate_one_version(skill_dirs, errors)
 
     if errors:

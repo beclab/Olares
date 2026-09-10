@@ -135,6 +135,121 @@ class ValidatorTests(unittest.TestCase):
                 validate.ROOT = original_root
             self.assertTrue(any("container exec" in error for error in errors), errors)
 
+    def test_a_section_named_in_prose_is_refused(self):
+        """The form the anchor validator cannot follow is the form that rots.
+
+        Both of the ones this suite shipped were naming headings that had
+        been renamed out from under them, and nothing said so.
+        """
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            reference = root / "olares-test" / "references" / "r.md"
+            reference.parent.mkdir(parents=True)
+            reference.write_text(
+                'Read the parent (especially "OpType vs State") first.\n',
+                encoding="utf-8",
+            )
+            original_root = validate.ROOT
+            validate.ROOT = root
+            try:
+                errors = []
+                validate.validate_prose_section_refs(reference, errors)
+            finally:
+                validate.ROOT = original_root
+            self.assertEqual(len(errors), 1, errors)
+            self.assertIn("OpType vs State", errors[0])
+
+    def test_an_anchor_link_to_the_same_section_is_accepted(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            reference = root / "olares-test" / "references" / "r.md"
+            reference.parent.mkdir(parents=True)
+            reference.write_text(
+                "Read [OpType vs State](../SKILL.md#optype-vs-state) first.\n",
+                encoding="utf-8",
+            )
+            original_root = validate.ROOT
+            validate.ROOT = root
+            try:
+                errors = []
+                validate.validate_prose_section_refs(reference, errors)
+            finally:
+                validate.ROOT = original_root
+            self.assertEqual(errors, [])
+
+    def test_a_verb_row_that_only_points_at_help_is_refused(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            skill = root / "olares-test" / "SKILL.md"
+            skill.parent.mkdir(parents=True)
+            skill.write_text(
+                "| Area | Verbs | Read when triggered |\n"
+                "|---|---|---|\n"
+                "| `video` | `config get` | `settings video --help` |\n"
+                "| `gpu` | list | `settings gpu --help`; `settings compute --help` |\n"
+                "| `users` | list | [user lifecycle](references/u.md) |\n"
+                "| `pod` | `exec` | `exec` needs 1.12.7+; `cluster pod --help` |\n",
+                encoding="utf-8",
+            )
+            original_root = validate.ROOT
+            validate.ROOT = root
+            try:
+                errors = []
+                validate.validate_verb_index_rows(skill, errors)
+            finally:
+                validate.ROOT = original_root
+            # The linked row and the one carrying a version gate both earn
+            # their line; only the two bare pointers do not.
+            self.assertEqual(len(errors), 2, errors)
+            self.assertIn("`video`", errors[0])
+            self.assertIn("`gpu`", errors[1])
+
+    def test_a_fast_path_over_the_budget_is_refused(self):
+        """Per-file ceilings pass while the path an agent reads does not."""
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            (root / validate.SHARED_SKILL).mkdir(parents=True)
+            (root / validate.SHARED_SKILL / "SKILL.md").write_text(
+                "front door\n" * 100, encoding="utf-8"
+            )
+            skill_dir = root / "olares-test"
+            (skill_dir / "references").mkdir(parents=True)
+            (skill_dir / "references" / "big.md").write_text("x\n" * 149, encoding="utf-8")
+            (skill_dir / "references" / "small.md").write_text("x\n" * 40, encoding="utf-8")
+            (skill_dir / "SKILL.md").write_text(
+                "## Fast paths\n\n"
+                "| Task | Read | First command |\n"
+                "|---|---|---|\n"
+                "| install | [big](references/big.md) | `olares-cli market install` |\n"
+                "| list | [small](references/small.md) | `olares-cli market list` |\n",
+                encoding="utf-8",
+            )
+            original_root = validate.ROOT
+            validate.ROOT = root
+            try:
+                errors = []
+                validate.validate_fast_paths(skill_dir, errors)
+            finally:
+                validate.ROOT = original_root
+            self.assertEqual(len(errors), 1, errors)
+            self.assertIn("fast path install", errors[0])
+            self.assertIn("first-command budget", errors[0])
+
+    def test_a_skill_without_fast_paths_is_not_forced_to_have_them(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            skill_dir = root / "olares-test"
+            skill_dir.mkdir(parents=True)
+            (skill_dir / "SKILL.md").write_text("## Verb index\n", encoding="utf-8")
+            original_root = validate.ROOT
+            validate.ROOT = root
+            try:
+                errors = []
+                validate.validate_fast_paths(skill_dir, errors)
+            finally:
+                validate.ROOT = original_root
+            self.assertEqual(errors, [])
+
     def test_front_door_may_link_the_shared_models_but_no_other_peer_reference(self):
         with tempfile.TemporaryDirectory() as directory:
             # Resolved because the validator resolves every link target before
