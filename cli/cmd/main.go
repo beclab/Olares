@@ -8,11 +8,10 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/spf13/cobra"
-
 	"github.com/beclab/Olares/cli/cmd/ctl"
 	"github.com/beclab/Olares/cli/cmd/ctl/skills"
 	"github.com/beclab/Olares/cli/pkg/clierr"
+	"github.com/beclab/Olares/cli/pkg/cmdutil"
 	"github.com/beclab/Olares/cli/version"
 )
 
@@ -42,13 +41,9 @@ func main() {
 	// read by a program.
 	executed, err := cmd.ExecuteContextC(ctx)
 
-	// Skills installed on this machine outlive the binary that wrote them, so
-	// upgrading olares-cli leaves an agent reading instructions for a version
-	// it is not running. Said here because this is the one place every
-	// invocation passes through: a PersistentPreRun on the root command is
-	// skipped by any subtree that declares one of its own. Not said for the
-	// `skills` tree itself, which is where the fix is.
-	if len(os.Args) < 2 || os.Args[1] != "skills" {
+	machineReadable := cmdutil.AskedForJSON(executed)
+
+	if shouldAnnounceSkillDrift(machineReadable, os.Args) {
 		skills.Notice(os.Stderr, version.VERSION)
 	}
 
@@ -56,24 +51,31 @@ func main() {
 		if errors.Is(err, clierr.ErrAlreadyReported) {
 			os.Exit(1)
 		}
-		if !askedForJSON(executed) || !clierr.WriteEnvelope(os.Stderr, err) {
+		if !machineReadable || !clierr.WriteEnvelope(os.Stderr, err) {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		}
 		os.Exit(1)
 	}
 }
 
-// askedForJSON reports whether the invocation that failed had asked for
-// machine-readable output. Every tree spells that the same way, so one
-// lookup covers all of them; a command without the flag is a human one
-// and keeps the plain line.
-func askedForJSON(cmd *cobra.Command) bool {
-	if cmd == nil {
+// shouldAnnounceSkillDrift decides whether this invocation is one the
+// staleness notice belongs on.
+//
+// Skills installed on this machine outlive the binary that wrote them, so
+// upgrading olares-cli leaves an agent reading instructions for a version it
+// is not running. The check runs from main because this is the one place
+// every invocation passes through: a PersistentPreRun on the root command is
+// skipped by any subtree that declares one of its own.
+//
+// Two invocations are exempt. The `skills` tree is where the fix lives, and
+// telling somebody running `skills install` that their skills are stale is
+// noise. And anything that asked for JSON gets nothing: this is advisory
+// prose, and it lands on the stream a failing `-o json` answers on, so a
+// caller feeding stderr to a parser would get the notice and the error
+// envelope concatenated, which parses as neither.
+func shouldAnnounceSkillDrift(machineReadable bool, args []string) bool {
+	if machineReadable {
 		return false
 	}
-	flag := cmd.Flags().Lookup("output")
-	if flag == nil {
-		return false
-	}
-	return flag.Value.String() == "json"
+	return len(args) < 2 || args[1] != "skills"
 }

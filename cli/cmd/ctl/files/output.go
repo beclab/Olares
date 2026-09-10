@@ -2,8 +2,11 @@ package files
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/spf13/cobra"
+
+	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
 // Every other tree in this CLI spells the output format `-o/--output
@@ -16,12 +19,6 @@ import (
 // to keep working. So both are registered and resolved into the single
 // bool each command already reads, and `--json` is hidden from help so
 // that what an agent reads there names one spelling.
-//
-// Hidden rather than pflag-deprecated, which would otherwise be the
-// obvious choice: pflag prints its own deprecation line to the flag
-// set's writer, and that writer is the command's stdout — the stream
-// the caller just asked to be JSON. The notice is written here instead,
-// to stderr.
 const outputFormatUsage = "output format: table, json"
 
 func addOutputFormatFlag(cmd *cobra.Command, asJSON *bool, legacyUsage string) {
@@ -38,9 +35,12 @@ func addOutputFormatFlagLongOnly(cmd *cobra.Command, asJSON *bool, legacyUsage s
 }
 
 func registerOutputFormatFlag(cmd *cobra.Command, asJSON *bool, legacyUsage, shorthand string) {
-	var format string
+	var (
+		format string
+		legacy bool
+	)
 	cmd.Flags().StringVarP(&format, "output", shorthand, "table", outputFormatUsage)
-	cmd.Flags().BoolVar(asJSON, "json", false, legacyUsage)
+	cmd.Flags().BoolVar(&legacy, "json", false, legacyUsage)
 	if err := cmd.Flags().MarkHidden("json"); err != nil {
 		panic(err)
 	}
@@ -52,16 +52,47 @@ func registerOutputFormatFlag(cmd *cobra.Command, asJSON *bool, legacyUsage, sho
 				return err
 			}
 		}
-		if c.Flags().Changed("json") {
-			fmt.Fprintf(c.ErrOrStderr(), "--json is deprecated; use -o json\n")
+		wantJSON, err := resolveOutputFormat(c, format, legacy)
+		if err != nil {
+			return err
 		}
-		switch format {
-		case "table":
-		case "json":
-			*asJSON = true
-		default:
-			return fmt.Errorf("unknown output format %q for %q: use table or json", format, c.CommandPath())
-		}
+		*asJSON = wantJSON
 		return nil
 	}
+}
+
+// resolveOutputFormat folds the two spellings into the one answer the
+// command runs on.
+//
+// Both being present is the case worth handling deliberately. The first
+// version let `--json` set the bool directly, so `--json -o table`
+// rendered JSON while everything downstream that consulted `--output` —
+// the entrypoint's error envelope among them — believed it was a table.
+// Two flags naming the same setting must either agree or stop the
+// command; silently picking one is how a caller ends up debugging output
+// it never asked for.
+//
+// Nothing is printed about the legacy spelling. It fires precisely when
+// the caller asked for JSON, so any nudge would land in the stream they
+// asked to be machine-readable, and `--help` already advertises the one
+// spelling worth learning.
+func resolveOutputFormat(cmd *cobra.Command, format string, legacy bool) (bool, error) {
+	var wantJSON bool
+	switch {
+	case cmdutil.OutputIsJSON(format):
+		wantJSON = true
+	case strings.EqualFold(strings.TrimSpace(format), "table"):
+		wantJSON = false
+	default:
+		return false, fmt.Errorf("unknown output format %q for %q: use table or json", format, cmd.CommandPath())
+	}
+
+	if !cmd.Flags().Changed("json") {
+		return wantJSON, nil
+	}
+	if cmd.Flags().Changed("output") && wantJSON != legacy {
+		return false, fmt.Errorf("%q got --json=%t and --output %q, which disagree: pass one of them",
+			cmd.CommandPath(), legacy, format)
+	}
+	return legacy, nil
 }
