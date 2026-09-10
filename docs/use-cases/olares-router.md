@@ -24,9 +24,9 @@ Many users add a standalone LLM proxy such as LiteLLM when they need to connect 
 
 ## One gateway for every AI capability
 
-LLM service apps and AI utility apps installed on your Olares appear in Router automatically. Cloud vendors appear once added, and are managed in the same place.
+Modern AI work is rarely one model doing everything. A chat model drafts text, a translation model localizes it, a TTS model voices it, a video model illustrates it, and a search tool grounds it in fresh sources. A workload like this needs one access layer that reaches every model and tool it uses conveniently. Router is exactly that access layer. It treats AI as a set of system capabilities, grouped the way real workloads use them, and exposes each one as a model with its own name. Connect once, and the name is all a caller needs to reach any capability.
 
-Router groups all of these AI capabilities into four categories:
+These capabilities fall into four categories:
 
 | Category | What lives here | Examples |
 | --- | --- | --- |
