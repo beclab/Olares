@@ -91,9 +91,11 @@ long answer is that it started. --no-stream waits for the whole response
 instead, which is what a script wants when it is going to parse the text rather
 than watch it. -o json implies it: a partial JSON object is not JSON.
 
--o json prints the gateway's OpenAI-shaped response verbatim: id, model,
-choices[] and usage{prompt_tokens, completion_tokens, total_tokens}. The answer
-is .choices[0].message.content. Read .choices[0].finish_reason before using it —
+-o json prints the OpenAI-shaped fields of the response — id, model, choices[]
+and usage{prompt_tokens, completion_tokens, total_tokens} — and only those: the
+answer is decoded and re-encoded here, so anything an upstream adds beyond them
+does not survive. The answer is .choices[0].message.content. Read
+.choices[0].finish_reason before using it —
 "length" means --max-tokens cut the answer off mid-thought, and the text still
 looks complete. A reasoning model puts its chain in
 .choices[0].message.reasoning_content, which is separate from the answer and

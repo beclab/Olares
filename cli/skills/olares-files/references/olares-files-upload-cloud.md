@@ -28,9 +28,17 @@ The per-file errgroup slot stays held during stage 2 so `--parallel N` remains h
 
 That second stage can take meaningfully longer than the first, so a long delay after the last chunk POST is the transfer running, not a hang.
 
+## Re-running does not retry stage 2
+
+The `taskId` only ever rides on the **last chunk's** response, and the resume probe is what decides whether a chunk gets sent. Once stage 1 has completed, that probe reports the whole file, so a re-run sends nothing, never sees a `taskId`, and prints `done:` — a success line for a file that is still sitting in Olares-internal staging and is not in the bucket. The web app has the same hole.
+
+So a cloud upload is only finished if its output carried a `cloud transfer queued (task=…)` line followed by `cloud transfer completed`. A run that goes straight from `✓` to `done:` on an `awss3` / `google` / `dropbox` destination did not run stage 2 at all.
+
+To actually retry, give the pipeline something it has not staged: upload to a **different remote name or directory**, which makes the probe report zero and runs both stages. Then confirm with `olares-cli files ls <cloud-dir> -o json` that the object is really there — the staging copy is invisible from the cloud namespace, so this listing is the only honest check.
+
 ## Common errors
 
 | Symptom | Cause | Fix |
 |---|---|---|
 | `tencent upload is not supported` | Protocol divergence | Use the LarePass web app for tencent uploads |
-| Stage-2 `failed` with `failed_reason` | Cloud-side rejection (account scopes, bucket policy, quota) | Read `failed_reason`, fix the cloud-side configuration; re-run `upload` (resumes from 0 since stage-1 already completed) |
+| Stage-2 `failed` with `failed_reason` | Cloud-side rejection (account scopes, bucket policy, quota) | Read `failed_reason` and fix the cloud-side configuration, then re-upload under a different name — see above, the same name is a no-op that reports success |

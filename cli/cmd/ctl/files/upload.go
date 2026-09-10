@@ -147,6 +147,13 @@ the run stopped, so the files not yet named on stdout were never
 attempted. To read back what actually landed, run
 ` + "`olares-cli files ls <remote-dir> -o json`" + ` afterwards.
 
+On a cloud destination "reached the server" is not "reached the bucket":
+those uploads have a second stage, and it is only queued by the last
+chunk of a fresh upload. Re-running a file whose chunks all landed
+before sends nothing, so it prints success without retrying the
+transfer. Look for the ` + "`cloud transfer completed`" + ` line, and retry
+under a different remote name.
+
 Examples:
 
     # Upload one file into a directory.

@@ -80,7 +80,7 @@ Keep CLI and Skill responsibilities separate:
 - CLI errors carry facts known at the failing request: what failed, the cause, relevant context and a concrete next action.
 - Skills carry multi-command orchestration, asynchronous semantics, platform/product models and safety or authorisation decisions.
 - A CLI error and its corresponding Skill cleanup ship together. Do not delete guidance until the released CLI output carries it.
-- **`-o json`'s top-level fields belong to `--help`, the same as flags do.** A skill that transcribes an output shape is a second copy that drifts on the next field. What the skill owns is which field decides the next step — "judge the install by `.finalState`, not by `.status`" — because `--help` describes the payload without knowing what the agent is trying to conclude from it.
+- **`-o json`'s top-level fields belong to `--help`, the same as flags do.** A skill that transcribes an output shape is a second copy that drifts on the next field. What the skill owns is which field decides the next step — "an install is up when `.finalState` reads `running`" — because `--help` describes the payload without knowing what the agent is trying to conclude from it.
 
 For all behavioural claims:
 

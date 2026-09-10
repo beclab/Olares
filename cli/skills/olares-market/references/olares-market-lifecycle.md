@@ -4,7 +4,7 @@
 
 The mutating verb family. Every verb here prints one `OperationResult` document on `-o json`; `olares-cli market <verb> --help` lists its fields.
 
-> **Judge a `--watch` run by `.finalState`, not by `.status`.** `.status` says the request was accepted and carried out; `.finalState` says where the app ended up, and it is the only one that distinguishes `running` from `installFailed`. Without `--watch` there is no `.finalState` at all, and `.status` is `accepted` — meaning the server took the request, not that the app is up. On `clone`, the new instance's name is `.targetApp`, not `.app`.
+> **`.status` judges the command, `.finalState` names the app's landing state, and only the first is verb-independent.** Under `--watch`, `.status` is `success` once the row settles the way *this* verb intended, so that plus the exit code is what a script tests. `.finalState` is worth reading when the state itself matters — but `running` is the settling state only for `install`, `upgrade` and `restart`; a successful `stop` lands on `stopped` and a successful `uninstall` on `uninstalled`, so a `running` check copied from an install example reports both as failures. Without `--watch` there is no `.finalState` and `.status` is `accepted`, meaning the server took the request, not that the app is up. On `clone`, the new instance's name is `.targetApp`, not `.app`.
 
 ## Source-aware vs source-implicit verbs
 

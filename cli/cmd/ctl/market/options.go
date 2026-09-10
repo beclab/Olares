@@ -138,8 +138,8 @@ func (o *MarketOptions) addCommonFlags(cmd *cobra.Command) {
 //
 // The last paragraph is the part that is not derivable from the struct.
 // `status` and `finalState` are both present and answer different
-// questions, and reading the first as the verdict is the mistake this
-// document has produced most often.
+// questions: one is about the command, the other about the app, and
+// which state counts as a good one is not the same for every verb.
 const lifecycleJSONShape = `-o json prints one OperationResult document:
 
   app          the app acted on; targetApp on a clone
@@ -155,10 +155,17 @@ const lifecycleJSONShape = `-o json prints one OperationResult document:
   finalState   --watch only: the state the row settled at
   finalOpType  --watch only: the operation that state belongs to
 
-Judge a --watch run by .finalState, not by .status: status says the
-request was accepted and carried out, finalState says where the app
-ended up. Without --watch neither final* field is present at all,
-because the server has not finished.`
+.status is the verdict on the command and .finalState is where the app
+landed; they are not interchangeable. A --watch run reports success once
+the row settles the way this verb intended, so that is what a script
+should test, along with the exit code. Read .finalState when you need
+the state itself — but what a good one looks like differs by verb, and
+"running" is only it for install, upgrade and restart. A successful stop
+settles at stopped and a successful uninstall at uninstalled, so a check
+written against "running" calls both of them failures.
+
+Without --watch, neither final* field is present and .status is
+accepted, meaning the server took the request — not that the app is up.`
 
 // describeLifecycleJSON appends the shape above to a verb's help, before
 // its examples if it has any -- a reader looking for the field list

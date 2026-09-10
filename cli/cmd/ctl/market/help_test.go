@@ -43,9 +43,12 @@ func TestMarketUninstallHelpScopesDeleteData(t *testing.T) {
 
 // A caller that parses `-o json` reads the field list here and nowhere
 // else, so a field added to OperationResult without a line in the help
-// is invisible to every one of them. Anchor the two the shape is most
-// often misread through: status looks like the verdict and is not, and
-// the final* pair exists only under --watch.
+// is invisible to every one of them.
+//
+// The anchored sentence is about the trap that survives knowing the
+// field list: `running` is the settling state for three of these eight
+// verbs and a failure report for the rest, so a check copied from the
+// install example calls a successful stop a failure.
 func TestEveryLifecycleVerbDocumentsItsJSONShape(t *testing.T) {
 	f := &cmdutil.Factory{}
 	verbs := map[string]*cobra.Command{
@@ -59,10 +62,16 @@ func TestEveryLifecycleVerbDocumentsItsJSONShape(t *testing.T) {
 		"cancel":    NewCmdMarketCancel(f),
 	}
 	for name, cmd := range verbs {
-		for _, required := range []string{"-o json", "finalState", "status", ".finalState, not by .status"} {
+		for _, required := range []string{"-o json", "finalState", "status",
+			`"running" is only it for install`} {
 			if !strings.Contains(cmd.Long, required) {
 				t.Errorf("%s help must describe %q", name, required)
 			}
+		}
+		// The claim these replaced read the two fields the other way
+		// round, and it shipped. Refuse it by name so a revert is loud.
+		if strings.Contains(cmd.Long, ".finalState, not by .status") {
+			t.Errorf("%s help is back to treating .finalState as the command's verdict", name)
 		}
 		if strings.Contains(cmd.Long, lifecycleJSONShape+"\n\nExamples:") {
 			continue
