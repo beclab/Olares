@@ -155,7 +155,7 @@ spec:
           name: check-appservice
       containers:
       - name: appstore-backend
-        image: beclab/market-backend:v0.6.114
+        image: beclab/market-backend:v0.6.121
         imagePullPolicy: IfNotPresent
         ports:
           - containerPort: 81
