@@ -586,7 +586,7 @@ const side = {
           link: "/manual/best-practices/connect-ai-apps",
         },
         {
-          text: "Deploy a website",
+          text: "Publish a website",
           link: "/manual/best-practices/deploy-website",
         },
       ],

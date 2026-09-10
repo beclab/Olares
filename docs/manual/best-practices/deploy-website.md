@@ -1,46 +1,47 @@
 ---
 outline: [2, 3]
-description: Deploy a website you have already built to Olares from an AI agent such as OpenCode, using the Portfolio Landing Page project as an example.
+description: Publish a website you have already built with a custom domain through an AI agent such as Lares, using the Portfolio Landing Page project as an example.
 head:
   - - meta
     - name: keywords
-      content: Olares, OpenCode, Claude Code, deploy website, custom domain, image registry, preview, portfolio
+      content: Olares, Lares, Router, deploy website, custom domain, image registry, preview, portfolio
 ---
 
-# Deploy a website to Olares from an AI agent
+# Publish a website with a custom domain
 
-Olares lets you deploy a website you have already built directly from an AI coding agent. You point the agent at your project, and it packages the site as an Olares app, pushes the image, installs it on your Olares device, and binds a custom domain so other people can reach the site over HTTPS.
+Olares lets you deploy a website you have already built through an AI agent. Powered by the Olares CLI, the agent packages the site, pushes the image, installs it on your device, and binds a custom domain so other people can reach the site over HTTPS.
 
-This tutorial uses **OpenCode** and the **Portfolio Landing Page** project as running examples. You can follow the same steps with Claude Code or your own website project.
-
-## Learning objectives
-
-By the end of this tutorial, you will learn how to:
-
-- Prepare project source code for deployment.
-- Preview the website through a temporary preview link before deployment.
-- Build and deploy the website to Olares as an app.
-- Configure a custom domain with an RSA certificate.
+This tutorial walks through the whole flow with Lares, using a website project on GitHub. You can follow the same steps with other AI agent, or adapt them to your own website project.
 
 ## Prerequisites
 
 Before you begin, ensure you have:
-- OpenCode installed on Olares with a local model connected, such as Qwen3.6-27B (llama.cpp).
-- Olares CLI (v1.12.6 or later) and Agent Skills installed and logged in on your computer.
+
+**Olares environment**
+
+- An Olares device running v1.12.7 or later.
+- Lares and Router installed, with a connected local model.
+- Olares CLI (v1.12.7 or later) and Agent Skills. These come preinstalled with Lares. You only need to install and log in them yourself if you use an AI agent on your computer.
+
+**Your project**
+
 - A working website project with source code available.
+
+**Accounts and access**
+
 - One of the following image registry options:
   - A Docker Hub account.
-  - Access to the local Olares image registry.
-- A custom domain and an RSA SSL certificate if you want to share the site publicly.
+  - A GitHub account with permission to create a personal access token with the `write:packages` scope.
+- A custom domain you own, with access to its DNS management console.
 
 ## Understand the deployment flow
 
 The agent handles most of the packaging work, but the overall flow follows these stages:
 
 1. **Source code**: The agent reads your project from your computer, Olares Files, or GitHub.
-2. **Preview**: You run the site in OpenCode and open a preview URL to confirm it works.
+2. **Preview**: You run the site in Lares and open a preview URL to confirm it works.
 3. **Build and deploy**: The agent creates a production build, Dockerfile, container image, and Olares chart, then installs the app.
-4. **Share**: You bind a custom domain, upload an RSA certificate, and set the entrance to public.
+4. **Bind and share**: The agent issues an RSA certificate and binds your custom domain. You add two DNS records, and the site is reachable over HTTPS.
 
 ## Step 1: Prepare your project source code
 
@@ -54,273 +55,112 @@ This tutorial uses the Portfolio Landing Page public repository at `https://gith
 
 Tell the agent the repository URL.
 - For a public repository, paste the link and ask it to clone.
-- For a private repository, give the agent a GitHub personal access token or an SSH key for authentication first as prompted.
+- For a private repository, give the agent a GitHub personal access token or an SSH key for authentication as prompted.
 
 Example:
 
 ```text
-Clone the Portfolio Landing Page repository from `https://github.com/arnobt78/Portfolio-Landing-Page-7-React-Frontend` into my OpenCode workspace.
+Clone the repository from https://github.com/arnobt78/Portfolio-Landing-Page-7-React-Frontend
 ```
 
-The agent clones the project and starts working in that folder.
+Lares clones the project into its default workspace at `Data/lares/data/workspace/` in Olares Files and starts working in that folder. It then gives a brief overview of the project and asks how to proceed. For example:
+
+```text
+Cloned successfully to Portfolio-Landing-Page-7-React-Frontend in the workspace. Quick overview: ...
+
+Want me to install dependencies and run it locally, or explore the source code?
+```
+
+Reply that you want to run it, and the agent moves on to preview the website.
 
 ### Source code is in Olares Files
 
-OpenCode can open the project folder as a workspace directly. The agent runs build, package, and deploy commands from inside that workspace.
+Lares can open the project folder as a workspace directly. The agent runs build, package, and deploy commands from inside that workspace.
 
 ### Source code is on your computer
 
-If the source code is on your computer, you need to make it available to OpenCode on Olares. You can do this yourself or ask the agent to do it:
+If the source code is on your computer, you need to make it available to Lares on Olares. You can do this yourself or ask the agent to do it:
 
 - **Push it to GitHub** yourself, or ask the agent to create a repo and push it. Then give the repository URL to the agent.
-- **Upload it to Olares Files** under `Home/Code` yourself, or ask the agent to copy it there. Then open that folder as a workspace in OpenCode.
+- **Upload it to Olares Files** under `Home/Code` yourself, or ask the agent to copy it there. Then open that folder as a workspace in Lares.
 
 ## Step 2: Preview the website
 
-After the project is ready, ask the agent for a preview. If the agent offers to install dependencies and start a dev server first, just confirm. Otherwise, tell it directly.
+Once the project is in place, tell Lares to run the site. Lares installs the project's dependencies if needed, starts a dev server, and returns a temporary preview URL. Open the URL in your browser and make sure the site works as expected.
 
-The agent will run the appropriate commands and return a temporary preview URL. Open the URL in your browser and ensure it works as expected.
-
-Example:
+For example, Lares reports the dev server is up and gives the preview link:
 
 ```text
-https://1f47cd9b0.laresprime.olares.com/__preview/5173/
+The app is up and running 🎉
+
+Dev server — Vite v7.3.1:
+Local: http://localhost:5173/
+Verified: HTTP 200, page serves correctly
 ```
 
-## Step 3: Build and deploy to Olares
+## Step 3: Build, deploy, and publish
 
-After you confirm the preview, ask the agent to deploy:
+After you confirm the preview, tell the agent to publish the site to your custom domain:
 
 ```text
-The preview looks good, deploy to Olares
+The preview looks good. Publish it to `website.bellame.online`.
 ```
 
-The agent handles the rest: production build, Dockerfile, image build and push, Olares chart, and installation. When it finishes, the app appears on the Launchpad.
+The agent takes it from there. It checks your environment (Olares version, node architecture, Docker setup), builds the production site, and packages it as a container image right on your Olares device, matched to the node's architecture.
+
+### Provide an image registry
+
+The agent needs a registry to store the image and will ask which one to use.
+
+- **Docker Hub (recommended)**: Give the agent your Docker Hub username. When it asks for credentials:
+
+  1. In Docker Hub, go to **Account Settings → Personal Access Tokens → Generate new token** and create a token.
+  2. Paste the token to the agent. It logs in, pushes the image, and verifies the image can be pulled anonymously, which is how the Olares node downloads it.
+  3. Delete the token in Docker Hub afterwards. It is only needed for this one push.
+
+- **GitHub Container Registry**: The agent can push the image to `ghcr.io` under your GitHub account. When it asks for credentials, create a personal access token with the `write:packages` scope and paste it. The package must be set to public so the Olares node can pull it anonymously.
+
+Once the image is pushed, the agent creates an Olares chart with the entrance auth level set to `public` (a custom domain requires this), uploads the chart, and installs the app. When it finishes, the app appears on the Launchpad.
 
 If the installation gets stuck, see [Common issues](#common-issues).
 
-### Choose an image registry
-
-The agent needs a registry to store the image. If you do not tell it which registry to use, it may pick a default and not ask you. State your preference before the build starts.
-
-- **Docker Hub**: Tell the agent your Docker Hub username. For example:
-
-  ```text
-  Push the image to Docker Hub under my username `{my-username}`.
-  ```
-
-  If Docker credentials already exist in `~/.docker/config.json`, the agent may default to Docker Hub and use that username without asking.
-
-- **Local Olares registry**: If you are working in Olares, ask the agent to use the local registry:
-
-  ```text
-  Use the local Olares image registry
-  ```
-
-  The agent can often push to `mirrors.olares.com` without extra credentials.
-
-### Avoid architecture mismatch
-
-:::warning Check CPU architecture
-If you build the image on an Apple Silicon Mac but your Olares device uses an AMD64 CPU, the container will crash with an `exec format error`.
+:::tip Update the site later
+When you want to change the site, just send the agent your changes. It rebuilds the site with a new image tag, bumps the chart version, and re-uploads and reinstalls the app.
 :::
 
-Make sure the image matches your Olares node architecture:
+## Step 4: Bind the custom domain
 
-```text
-Build the image for `linux/amd64` because my Olares node is AMD64
-```
+Once the app is running, the agent starts binding your custom domain. It issues an RSA certificate for the domain and attaches it to the app's entrance. You only need to add two DNS records in your provider's console, and the agent gives you the exact values. The app restarts once during the binding, which is normal.
 
-If you want the image to run on both ARM and AMD64 devices, ask for a multi-architecture build:
+Olares only accepts RSA certificates. The ECDSA certificates that some tools default to can break the BFL service, so the agent always requests RSA.
 
-```text
-Build a multi-architecture image for both ARM64 and AMD64
-```
+### 1. Add a TXT record for certificate issuance
 
-:::tip Change the image tag every time you rebuild
-If you rebuild the image after a fix, use a new tag such as `0.1.0`, `0.1.1`, `0.1.2`. Olares may cache the old layer and keep running the broken image if you reuse a tag.
-:::
+To prove you own the domain, the agent asks you to add one TXT record:
 
-:::tip Change the chart version every time you upload
-If you change the chart and upload again, increase the version in `Chart.yaml` and `OlaresManifest.yaml`. Olares may reject or behave unexpectedly with a duplicate chart version.
-:::
+- Type: `TXT`
+- Name: `_acme-challenge.website` (must include the full subdomain)
+- Value: the exact value the agent gives you
 
-## Step 4: Configure a custom domain
+The agent polls public DNS and completes the certificate automatically once the record propagates. The temporary TXT record is no longer needed after issuance and can be deleted.
 
-If you want to use a domain you own, tell the agent the real subdomain.
+### 2. Add a CNAME record
 
-Example:
+Add a CNAME record that points your domain to Olares:
 
-```text
-Set the entrance URL for this app to `website.bellame.online`
-```
-
-The agent first sets the entrance auth level to public, then asks for the TLS certificate and private key. If you do not have them yet, it gives you a certbot command that uses `--key-type rsa`:
-
-Example:
-
-```text
-To register website.bellame.online, I need the TLS certificate and private key for this domain. Do you have these files available? I need:
-
-1. Certificate file (full chain PEM, e.g., cert.pem)
-2. Private key file (RSA PEM, e.g., key.pem)
-
-If you don't have them yet, you can generate one with certbot:
-
-certbot certonly -d website.bellame.online --key-type rsa
-
-Note: RSA key type is required (certbot defaults to ECDSA, which won't work).
-```
-
-Follow the agent prompts to complete the remaining steps: add the CNAME record, generate the certificate, copy the certificate files to a location the agent or `olares-cli` can read, and upload them.
-
-### Add a CNAME record
-
-In your DNS provider, add a CNAME record that points your domain to Olares. For example:
-- Name: Your subdomain, such as `website`
 - Type: `CNAME`
+- Name: `website`
 - Value: `laresprime.olares.com`
 
-### Get an RSA certificate
+If the same name already has other records (for example an old A record), delete them first. A CNAME cannot coexist with other records on the same name.
 
-Olares requires an RSA certificate. The default certbot command requests an ECDSA certificate, which can break the BFL service.
+### 3. Verify
 
-1. Run certbot yourself on your computer:
+The agent verifies the certificate chain, binds the domain, and polls until the platform marks the CNAME as active, then checks the site end to end over HTTPS. When it reports the domain is live, open `https://website.bellame.online` in your browser to confirm, and send the URL to the people you want to share it with.
 
-   ```bash
-   sudo certbot certonly --manual --preferred-challenges dns --key-type rsa -d <your-domain>
-   ```
-
-   Example:
-
-   ```bash
-   sudo certbot certonly \
-   --manual \
-   --preferred-challenges dns \
-   --key-type rsa \
-   -d website.bellame.online
-   ```
-
-2. Enter your computer password as prompted.
-
-   Example output:
-
-   ```txt
-   Saving debug log to /var/log/letsencrypt/letsencrypt.log
-   Requesting a certificate for website.bellame.online
-   - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-   Please deploy a DNS TXT record under the name:
-
-   _acme-challenge.website.bellame.online.
-
-   with the following value:
-
-   ZqY6WOHPEBpXKwFmIf0LuhYo2jpVhuCmFv9VYSUotfw
-
-   Before continuing, verify the TXT record has been deployed. Depending on the DNS
-   provider, this may take some time, from a few seconds to multiple minutes. You can
-   check if it has finished deploying with aid of online tools, such as the Google
-   Admin Toolbox: https://toolbox.googleapps.com/apps/dig/#TXT/_acme-challenge.website.bellame.online.
-   Look for one or more bolded line(s) below the line ';ANSWER'. It should show the
-   value(s) you've just added.
-   - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-   Press Enter to Continue
-   ```
-
-3. Add the provided DNS TXT record in your DNS managemetn console as prompted.
-   - Name: `_acme-challenge.website`
-   - Type: `TXT`
-   - Value: `ZqY6WOHPEBpXKwFmIf0LuhYo2jpVhuCmFv9VYSUotfw`
-
-4. Return to the terminal and press **Enter**.
-
-   Example output:
-
-   ```txt
-   Successfully received certificate.
-   Certificate is saved at: /etc/letsencrypt/live/website.bellame.online/fullchain.pem
-   Key is saved at:         /etc/letsencrypt/live/website.bellame.online/privkey.pem
-   This certificate expires on 2026-11-16.
-   These files will be updated when the certificate renews.
-   ```
-
-### Upload the certificate
-
-On a local computer, certbot saves certificates under `/etc/letsencrypt/live/<your-domain>/`. `olares-cli` cannot read them without root permissions.
-
-1. Copy them to a location your user account can read:
-
-   ```bash
-   sudo cp /etc/letsencrypt/live/<your-domain>/fullchain.pem ~/cert.pem
-   sudo cp /etc/letsencrypt/live/<your-domain>/privkey.pem ~/key.pem
-   sudo chown $(whoami) ~/cert.pem ~/key.pem
-   ```
-
-   Example:
-   
-   ```bash
-   olares-cli settings apps domain set portfolio7 portfolio7 \
-   --third-party website.bellame.online \
-   --cert-file ~/cert.pem \
-   --key-file ~/key.pem
-   ```
-
-2. Run the domain binding command on your local machine:
-
-   ```bash
-   olares-cli settings apps domain set <app-name> <entrance-name> \
-     --third-party <your-domain> \
-     --cert-file ~/cert.pem \
-     --key-file ~/key.pem
-   ```
-
-   Example:
-
-   ```bash
-   olares-cli settings apps domain set portfolio7 portfolio7 \
-     --third-party website.bellame.online \
-     --cert-file ~/cert.pem \
-     --key-file ~/key.pem
-   ```
-
-   Example output:
-
-   ```txt
-   updated domain setup for portfolio7/portfolio7
-   third-level: -
-   third-party: website.bellame.online
-   cert:        (set)
-   key:         (set)
-   laresprime@laresprimedeMacBook-Pro ~ % olares-cli settings apps domain get portfolio7 portfolio7
-   App:                   portfolio7
-   Entrance:              portfolio7
-   Third-level domain:    -
-   Third-party domain:    website.bellame.online
-   CNAME status:          unset
-   CNAME target:          laresprime.olares.com
-   CNAME target status:   unset
-   Cert configured:       yes
-   Key configured:        yes
-   ```
-
-### Verify the entrance
-
-Ask the agent to verify the domain is reachable:
-
-```txt
-The custom domain has been bound. Please verify that `website.bellame.online`
-is reachable over HTTPS.
-```
-
-The agent should report output similar to:
-
-```text
-The domain is now bound and reachable. You can visit https://website.bellame.online in your browser to view your portfolio site.
-```
-
-## Step 5: Share the website
-
-Open your custom domain in a browser and confirm the site works as expected. Then send the URL to the people you want to share it with.
+:::tip Certificate renewal
+Let's Encrypt certificates are valid for 90 days. When you renew, ask the agent to re-bind the domain with the new certificate. The app restarts briefly during the re-bind.
+:::
 
 ## Common issues
 
@@ -341,6 +181,10 @@ olares-cli market upload <new-chart>
 olares-cli market install <app-name> -s upload --watch
 ```
 
+### Image architecture does not match the node
+
+The agent detects your node's architecture and builds the image on the Olares device itself, so a mismatch rarely happens. If an image built for the wrong architecture ever gets installed (for example `linux/arm64` on an AMD64 node), the container crashes with an `exec format error`. Tell the agent to rebuild the image for the node's architecture and reinstall the app.
+
 ### nginx permission errors
 
 If the container runs as a non-root user, nginx may fail to write its PID file. Make the Dockerfile update the PID path and give the nginx user ownership of required directories:
@@ -359,10 +203,4 @@ This usually means the certificate is ECDSA instead of RSA. Re-request the certi
 
 When adding the TXT record in your DNS provider, the record name must include the full subdomain. For example, if your domain is `n1.monster` and the certificate is for `portfolio.n1.monster`, the TXT name should be `_acme-challenge.portfolio`, not just `_acme-challenge`.
 
-### Auth level reverts to private after resuming the app
-
-If you resume the app after changing the authentication level, the chart's `authLevel` setting may overwrite your change. Edit `OlaresManifest.yaml` in the chart source to set `authLevel` to `public`, bump the version, and redeploy.
-
-### Agent cannot read certbot certificates
-
-Certbot stores certificates under `/etc/letsencrypt` with root-only access. Copy the files to your project directory and change ownership before the agent reads them.
+If the record is correct but validation still fails, a public resolver cache may be serving an old TXT value from a previous attempt. Wait for the cache to expire, or check the value against your domain's authoritative name servers.
