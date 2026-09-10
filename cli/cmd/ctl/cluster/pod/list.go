@@ -74,6 +74,16 @@ empty result.
 Pagination: --limit sets the page size (default 100). --page picks one
 1-indexed page (default 1). --all drains every page until exhausted
 and is mutually exclusive with --page > 1.
+
+-o json prints {items, totalItems, page, limit, all}. Each item is the
+pod as the cluster reports it: .metadata.name / .metadata.namespace,
+.spec.nodeName, .status.phase, and .status.containerStatuses[] with a
+restartCount and a state of {running|waiting|terminated}. Read the
+phase for "is it up" and the container states for "why is it not":
+a pod stuck at Pending has no container states worth reading, while a
+Running pod whose container waits on CrashLoopBackOff is the case the
+phase alone hides. Compare .totalItems with len(.items) to tell a
+truncated page from a complete answer.
 `,
 		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {

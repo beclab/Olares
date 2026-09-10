@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/spf13/cobra"
+
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
@@ -35,6 +37,39 @@ func TestMarketUninstallHelpScopesDeleteData(t *testing.T) {
 	for _, required := range []string{"drive/Data", "cache/<node>", "drive/Home", "permission.userData", "deleteData"} {
 		if !strings.Contains(long, required) {
 			t.Errorf("uninstall help must describe %q", required)
+		}
+	}
+}
+
+// A caller that parses `-o json` reads the field list here and nowhere
+// else, so a field added to OperationResult without a line in the help
+// is invisible to every one of them. Anchor the two the shape is most
+// often misread through: status looks like the verdict and is not, and
+// the final* pair exists only under --watch.
+func TestEveryLifecycleVerbDocumentsItsJSONShape(t *testing.T) {
+	f := &cmdutil.Factory{}
+	verbs := map[string]*cobra.Command{
+		"install":   NewCmdMarketInstall(f),
+		"upgrade":   NewCmdMarketUpgrade(f),
+		"uninstall": NewCmdMarketUninstall(f),
+		"clone":     NewCmdMarketClone(f),
+		"stop":      NewCmdMarketStop(f),
+		"resume":    NewCmdMarketResume(f),
+		"restart":   NewCmdMarketRestart(f),
+		"cancel":    NewCmdMarketCancel(f),
+	}
+	for name, cmd := range verbs {
+		for _, required := range []string{"-o json", "finalState", "status", ".finalState, not by .status"} {
+			if !strings.Contains(cmd.Long, required) {
+				t.Errorf("%s help must describe %q", name, required)
+			}
+		}
+		if strings.Contains(cmd.Long, lifecycleJSONShape+"\n\nExamples:") {
+			continue
+		}
+		if index := strings.Index(cmd.Long, "\nExamples:"); index >= 0 &&
+			strings.Index(cmd.Long, lifecycleJSONShape) > index {
+			t.Errorf("%s help buries the JSON shape below its examples", name)
 		}
 	}
 }

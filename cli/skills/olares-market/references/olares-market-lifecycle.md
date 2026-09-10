@@ -2,24 +2,9 @@
 
 > **Prerequisite:** Read [`../../olares-shared/SKILL.md`](../../olares-shared/SKILL.md) and the parent [`../SKILL.md`](../SKILL.md), especially [App lifecycle / state machine](../SKILL.md#app-lifecycle--state-machine), first. **Flags & examples:** `olares-cli market <verb> --help` for each verb.
 
-The mutating verb family. Every verb here returns an `OperationResult` JSON shape on `-o json`:
+The mutating verb family. Every verb here prints one `OperationResult` document on `-o json`; `olares-cli market <verb> --help` lists its fields.
 
-```json
-{
-  "app": "firefox",
-  "operation": "install",
-  "status": "accepted",       // "accepted" (no --watch) | "success" | "failed" (--watch verdict)
-  "message": "",
-  "source": "market.olares",  // omitempty
-  "version": "1.2.3",         // omitempty
-  "state": "running",         // omitempty; latest observed row state
-  "finalState": "running",    // omitempty; set only by --watch once terminal
-  "finalOpType": "",          // omitempty; set only by --watch once terminal
-  "targetApp": "firefoxe992"  // omitempty; only set for `clone` (the new instance name)
-}
-```
-
-> Field keys are exactly `app` / `operation` / `status` / `targetApp` / `finalState` / `finalOpType` (not `name` / `op` / `accepted` / `watched` / `cloneTarget`). Scripts parse the watch verdict from `.status` (`"success"`/`"failed"`) and the landing state from `.finalState`.
+> **Judge a `--watch` run by `.finalState`, not by `.status`.** `.status` says the request was accepted and carried out; `.finalState` says where the app ended up, and it is the only one that distinguishes `running` from `installFailed`. Without `--watch` there is no `.finalState` at all, and `.status` is `accepted` — meaning the server took the request, not that the app is up. On `clone`, the new instance's name is `.targetApp`, not `.app`.
 
 ## Source-aware vs source-implicit verbs
 
