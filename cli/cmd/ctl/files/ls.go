@@ -49,6 +49,21 @@ The path is the full 3-segment front-end path used by the backend
 (<fileType>/<extend>[/<subPath>]); see ` + "`olares-cli files --help`" + ` for
 the schema.
 
+-o json is the backend's own response, pretty-printed and not
+normalized. Each child carries name, path, isDir, size, modified, mode
+and type.
+
+The envelope around them differs by namespace, and the table hides the
+difference while JSON does not. On drive/, sync/, cache/, external/ and
+share/ the children are .items[] and the directory itself is described
+at the top level (name, path, numDirs, numFiles, modified). Cloud
+drives — awss3/, google/, dropbox/, tencent/ — put the children in
+.data[] instead, drop the parent summary entirely, report the byte
+count as fileSize rather than size, and send modified and mode as the
+empty string. So read .items[] with a fallback to .data[], size with a
+fallback to fileSize, and treat an empty modified as unknown rather
+than as an epoch.
+
 Examples:
 
     olares-cli files ls drive/Home/
@@ -63,7 +78,7 @@ Examples:
 			return runLs(cmd.Context(), f, cmd.OutOrStdout(), args[0], o)
 		},
 	}
-	cmd.Flags().BoolVar(&o.asJSON, "json", false, "print the raw JSON response (pretty-printed) instead of a table")
+	addOutputFormatFlag(cmd, &o.asJSON, "print the raw JSON response (pretty-printed) instead of a table")
 	return cmd
 }
 

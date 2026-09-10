@@ -1,6 +1,6 @@
 # settings users
 
-> **Prerequisite:** Read [`../../olares-shared/SKILL.md`](../../olares-shared/SKILL.md) and the parent [`../SKILL.md`](../SKILL.md) (especially "Role caching + admin/normal floor") first.
+> **Prerequisite:** Read [`../../olares-shared/SKILL.md`](../../olares-shared/SKILL.md) and the parent [`../SKILL.md`](../SKILL.md), especially [Role caching + admin/normal floor](../SKILL.md#role-caching--adminnormal-floor), first.
 > **Flags & examples:** `olares-cli settings users --help` and `olares-cli settings users <verb> --help`.
 
 Instance roster — list / get / create / delete users on the active Olares. **Admin floor** (`owner` / `admin` only).
@@ -48,7 +48,7 @@ olares-cli settings users delete bob --yes --watch         # block until Deleted
 
 ## `--watch` (block until terminal state)
 
-Same shape as [`olares-cli market --watch`](../../olares-market/SKILL.md): opt-in `-w/--watch`, companion `--watch-timeout` (default 15m), `--watch-interval` (default 2s). Polls user-service's `/status` endpoint. Gives up after 5 consecutive transport errors. SIGINT-graceful.
+Same shape as [`olares-cli market --watch`](../../olares-market/SKILL.md) — see its verb index under `watching / stuck operations` for what a timeout means and how long to wait: opt-in `-w/--watch`, with `--watch-timeout` and `--watch-interval` carrying the same defaults `--help` states there. Polls user-service's `/status` endpoint. Gives up after 5 consecutive transport errors. SIGINT-graceful.
 
 | Op | Terminal-success | Terminal-failure | absentMeansSuccess |
 |---|---|---|---|

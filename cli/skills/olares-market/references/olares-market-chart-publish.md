@@ -1,17 +1,15 @@
-# market upload / download / delete (local chart management)
+# market upload / delete (publishing a chart to Local Sources)
 
 > **Prerequisite:** Read [`../../olares-shared/SKILL.md`](../../olares-shared/SKILL.md) and the parent [`../SKILL.md`](../SKILL.md) first.
-> **Flags & examples:** `olares-cli market upload --help`, `olares-cli market download --help`, `olares-cli market delete --help`.
+> **Flags & examples:** `olares-cli market upload --help`, `olares-cli market delete --help`. Pulling a stored chart back out is [market download](olares-market-chart-download.md).
 
-Manage helm chart packages in the SPA's "Local Sources → Upload" bucket: push one in (`upload`), pull one back out (`download`), remove one (`delete`).
+Push a helm chart package into the SPA's "Local Sources → Upload" bucket, and take it back off.
 
-## Hard-coded source (`upload`)
+## Hard-coded source
 
 `upload` and `delete` **hard-code the target source to `upload`** — the same bucket the SPA's "Local Sources → Upload" tab writes to. **`-s / --source` is intentionally NOT exposed on those two.**
 
 The history: an earlier revision exposed `-s` on these verbs, and users pushed charts to `cli` or `studio` that were then invisible to the SPA's Local Sources tab (different buckets, same backend). Pinning the source eliminates that footgun. To install/delete from a different bucket, use `market install -s <id>` separately.
-
-`download` is the exception: it only reads, so pointing it at another source cannot desynchronize anything. It **defaults** to `upload` and accepts `-s <id>`.
 
 ## `upload`
 
@@ -49,23 +47,6 @@ olares-cli market list -s upload
 olares-cli market get mychart -s upload -o json
 ```
 
-## `download`
-
-```bash
-olares-cli market download mychart                     # ./mychart-1.0.0.tgz
-olares-cli market download mychart ./charts/           # into a directory, server-chosen name
-olares-cli market download mychart ./mychart.tgz        # exact local filename
-olares-cli market download mychart --version 1.0.0     # a specific stored version
-olares-cli market download mychart -s market.olares    # read another source
-olares-cli market download mychart -o json             # {app, source, version, path, bytes}
-```
-
-- **The read side of `upload`.** It serves the exact `.tgz` the market hands the installer, so a chart whose only remaining copy is on the Olares — local working copy deleted, or the upload happened from another machine — can be recovered, edited, re-packaged and re-uploaded.
-- **`--version` omitted → whatever version the market currently holds.** Resolution happens server-side against the stored artifact, so it does **not** depend on the app being installed, or on the install having succeeded: a chart behind an `installFailed` / `installingCanceled` row is still downloadable.
-- **Local path rules mirror `files download`:** omitted → `./<chart>-<version>.tgz` (the name the server suggests); an existing directory (or a path ending in `/`) → that directory with the server-chosen name; anything else → the exact target path.
-- **An existing local file is never silently replaced.** Without `--overwrite` the command fails and leaves the file alone. The write goes to `<path>.tmp` and renames on success, so an interrupted transfer cannot truncate a chart you still needed.
-- Streams through the no-timeout HTTP client, like `upload`.
-
 ## `delete`
 
 ```bash
@@ -98,16 +79,6 @@ olares-cli market upload ./dist/ -o json | jq '.[] | select(.status != "success"
 ```
 
 ```bash
-# Recover a chart that only exists on the Olares, then iterate on it.
-olares-cli market download mychart ./recovered/                     # pull the stored .tgz back
-tar -xzf ./recovered/mychart-1.0.0.tgz -C ./recovered/              # unpack to edit
-# ... edit the chart, bump metadata.version == Chart.yaml version ...
-olares-cli chart package ./recovered/mychart                        # repackage
-olares-cli market upload ./mychart-1.0.1.tgz                        # push the new version
-olares-cli market upgrade mychart -s upload --version 1.0.1 --watch
-```
-
-```bash
 # Spring cleaning: remove every version of a chart from the upload bucket.
 olares-cli market delete mychart                                   # all versions
 olares-cli market list -s upload                                   # confirm
@@ -129,10 +100,5 @@ olares-cli market list -s upload                                   # confirm
 | `upload rejected: manifest supports [...] cluster provides [...]` | `spec.supportArch` has no intersection with the current cluster nodes | Check `olares-cli cluster node list`, fix `supportArch` and image platforms, then repackage; do not bump or retry the unchanged package |
 | `upload blocked: cluster node discovery is unavailable` | Market cannot yet establish an authoritative node architecture set | Keep the package and version unchanged; retry after node discovery recovers |
 | `chart not found in source 'upload'` (delete) | The chart was never uploaded, or was uploaded to a different bucket | `market list -s upload` to confirm |
-| `API error (HTTP 404): Chart not found` (download) | No stored chart for that app in that source | `market list -s upload` to confirm the bucket; pass `-s <id>` for another source |
-| `API error (HTTP 501)` (download) | The Olares predates the chart-package endpoint | Upgrade the Olares; there is no client-side fallback |
-| `unexpected EOF` partway through a download | The transfer outlived the market's write timeout — an Olares that predates the longer deadline on this route | Retry on a faster link, or upgrade the Olares; no partial file is left behind |
-| `<path> already exists (pass --overwrite to replace it)` | A local file is already at the destination | Pass `--overwrite`, or give a different local path |
-| `expected chart bytes but got a JSON response` (download) | The request reached something other than the package route (proxy or version mismatch) | Verify the profile's market URL and the Olares version |
 | `delete` removed the chart but the app keeps running | `delete` only removes the chart from the `upload` bucket; it never uninstalls | Expected — run `market uninstall X` separately to stop/remove the app |
 | Exit non-zero on directory upload despite some files succeeding | Partial failure | Inspect the per-file JSON report for which files failed |

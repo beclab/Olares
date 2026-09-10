@@ -24,14 +24,25 @@ Use `olares-cli dashboard <verb> --help` for syntax.
 
 > **Mental model:** dashboard answers *"what's the resource usage and health"*. For inventory and lifecycle, route elsewhere. When the metrics reveal a problem (resource pressure, an app that's `running` but slow/unreachable), hand off to [`../olares-doctor/SKILL.md`](../olares-doctor/SKILL.md) for root-cause diagnosis.
 
+## Fast paths
+
+| Task | Read | First command |
+|---|---|---|
+| See the machine's current load | this file | `olares-cli dashboard overview -o json` |
+| Find which app is using the resources | this file | `olares-cli dashboard applications -o json` |
+| Read one metric and know what it means | [overview section meanings](references/olares-dashboard-overview.md) | `olares-cli dashboard overview memory -o json` |
+| Decide whether an empty answer is a failure | [envelope and empty states](references/olares-dashboard-envelope.md) | `olares-cli dashboard overview gpu -o json`, then read `meta.empty_reason` |
+
+Watching over time is not a fast path — [watch, windows, NDJSON](references/olares-dashboard-watch.md) is a read of its own, and observing a metric is never the first thing to do with it.
+
 ## Verb index
 
 | Verb | Purpose | Read when triggered |
 |---|---|---|
-| `applications` (`apps`) | Workload-grain resource table | `dashboard applications --help` |
+| `applications` (`apps`) | Workload-grain resource table | Rows are workloads, not apps, so one app can occupy several; joins `overview ranking` on `(app, namespace)` |
 | `overview` | Physical, user, and ranking sections | [overview section meanings](references/olares-dashboard-overview.md); [envelope and empty states](references/olares-dashboard-envelope.md) |
 | `overview cpu|memory|disk|pods|network|fan|gpu|physical|user|ranking` | One section | [overview section meanings](references/olares-dashboard-overview.md); [envelope and capability gates](references/olares-dashboard-envelope.md) |
-| `schema` | Served JSON schemas | `dashboard schema --help` |
+| `schema` | Served JSON schemas | The one place the CLI describes an output shape without being run; read it instead of sampling a live response |
 | any metric with watch/window intent | Repeated snapshots / historical window | [watch, windows, NDJSON](references/olares-dashboard-watch.md) |
 
 ## Envelope and capability semantics

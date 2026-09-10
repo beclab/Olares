@@ -12,45 +12,23 @@ metadata:
 
 # olares-cli shared rules
 
-Read this thin front door before a runtime skill. It supplies suite routing, the active-profile model, platform entry points and the auth proceed/stop rule. Load detailed references only when the current task triggers them.
+Read this thin front door before a runtime skill. It supplies the active-profile model, platform entry points and the auth proceed/stop rule — what a task needs once it knows which skill it belongs to. Load detailed references only when the current task triggers them.
 
-## If olares-cli is not on PATH
+- [Suite map](references/olares-suite-map.md): which skill owns which task, and how to install `olares-cli` when it is not on PATH. Read it when the task has not been routed to a skill yet; a task that has been does not need it again.
 
-Every command in this suite needs it, and the binary carries this suite, so a machine with the skills but no binary got them from a registry rather than from a release. Install it, then have it write the skills that match itself:
+## Reading the answer
 
-```bash
-npm install -g @olares/cli@latest
-olares-cli skills install
-```
+Every profile-backed tree spells machine-readable output the same way: `-o json` (`--json` is the same request, kept for older scripts). A verb that fails under it answers on **stderr** with `{"error":{"code","message","retryable","action"}}`, and stderr carries nothing else, so it parses whole.
 
-This installs a client, not Olares itself: it operates an existing Olares instance over the network and does not create one. An Olares host already has the binary at `/usr/local/bin/olares-cli` with the host-side `node` / `os` / `gpu` trees this suite does not use.
+`.error.code` is worth branching on where it is set, and today that is the failures whose recovery differs from every other failure's: `auth_no_profile`, `auth_not_logged_in`, `auth_token_expired`, `auth_token_invalidated` and `timeout`, plus whatever Router reports from upstream. Everything else arrives as `unclassified` with the whole story in `.message`. So read the code first, and fall back to the message rather than assuming a code you did not get means something. `retryable` and `action` are present only when the failure knows them — their absence means unknown, not "no".
+
+Some trees also carry their own result document (Market's lifecycle verbs report `.status` and `.finalState`); where they do, that is the one to read.
 
 ## Platform entry points
 
 - [Olares platform model](references/olares-platform.md): userspace storage, uid/gid 1000, protected Home directories, app/namespace networking, system middleware and Olares version semantics. Read it for files, chart, cluster or settings tasks that touch those concepts.
 - [Application state machine](references/olares-platform-appstate.md): lifecycle transitions, allowed operations, backend timeouts, serialized downloads, `running` semantics and unreliable progress. Read it for market operations or runtime diagnosis.
 - [Profile and authentication](references/olares-auth.md): login/import flows, profile statuses, token storage and refresh behavior. Read it only for profile work or auth recovery.
-
-## Skill suite map
-
-| Skill | Use it for |
-|---|---|
-| [`olares-shared`](SKILL.md) | Suite routing, platform entry points, profile/auth decisions |
-| [`olares-market`](../olares-market/SKILL.md) | Install and manage catalog/uploaded apps; lifecycle and chart transfer |
-| [`olares-settings`](../olares-settings/SKILL.md) | Post-install app/system configuration, users, VPN, backup and integrations |
-| [`olares-cluster`](../olares-cluster/SKILL.md) | Runtime objects, logs, jobs, namespaces, nodes and middleware |
-| [`olares-dashboard`](../olares-dashboard/SKILL.md) | CPU, memory, disk, network, pod, GPU and fan metrics |
-| [`olares-files`](../olares-files/SKILL.md) | Browse and modify Drive, Sync, cache, external and cloud files |
-| [`olares-knowledge`](../olares-knowledge/SKILL.md) | URL, yt-dlp, aria2, torrent and Hugging Face download tasks |
-| [`olares-search`](../olares-search/SKILL.md) | Full-content file search and installed-app title search |
-| [`olares-router`](../olares-router/SKILL.md) | Configure, install, call and diagnose models through Router |
-| [`olares-chart`](../olares-chart/SKILL.md) | Author, validate and deploy an app's Olares chart |
-| [`olares-publish`](../olares-publish/SKILL.md) | Prepare and submit a public Olares Market listing |
-| [`olares-doctor`](../olares-doctor/SKILL.md) | Diagnose an app/system runtime failure and route the fix |
-
-Porting and debugging an app commonly combines `chart` (author/fix), `market` (lifecycle), this skill's platform model and `doctor` (root-cause diagnosis).
-
-Host installation, node joining, OS upgrades and GPU drivers use the kubeconfig-backed `olares-cli node` / `os` / `gpu` trees, not this profile-backed skill suite.
 
 ## Active profile
 
@@ -59,6 +37,7 @@ One profile selects one Olares instance and one Olares identity. Every profile-b
 | Command | Purpose |
 |---|---|
 | `olares-cli profile list` | Show profiles, current selection, auth status and cached Olares version |
+| `olares-cli profile whoami` | Identity and role of the selected profile; the admin/normal answer other skills gate on |
 | `olares-cli profile use <name\|->` | Switch selection; `-` returns to the previous profile |
 | `olares-cli profile login` | Authenticate with password and optional TOTP |
 | `olares-cli profile import` | Bootstrap from a refresh token |
@@ -76,7 +55,7 @@ Proceed by default:
 
 Do not preflight every command. The CLI refreshes and retries an authentication rejection once. Stop for login when the CLI explicitly says the credential is absent/invalidated or prints a login action after a persistent 401/459. A 403 permission denial, network error or 5xx is not a login signal. Never build a retry loop around auth errors.
 
-## Security and task scope
+## Safety and escalation
 
 - **Never** place a password in command arguments. Use the interactive prompt or `--password-stdin`.
 - **Never** print access or refresh tokens. Source imports from a secret environment variable or secret manager.

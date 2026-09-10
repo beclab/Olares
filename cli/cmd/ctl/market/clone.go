@@ -61,6 +61,7 @@ Examples:
 	}
 	opts.addCommonFlags(cmd)
 	opts.addOutputFlags(cmd)
+	describeLifecycleJSON(cmd)
 	opts.addTitleFlag(cmd)
 	opts.addEnvFlag(cmd)
 	opts.addEntranceTitleFlag(cmd)
