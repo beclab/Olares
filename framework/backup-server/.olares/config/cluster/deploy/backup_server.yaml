@@ -1,6 +1,6 @@
 
 
-{{ $backupVersion := "0.3.70" }}
+{{ $backupVersion := "0.3.71" }}
 {{ $backup_server_rootpath := printf "%s%s" .Values.rootPath "/rootfs/backup-server" }}
 
 {{- $backup_nats_secret := (lookup "v1" "Secret" .Release.Namespace "backup-nats-secret") -}}
@@ -168,6 +168,8 @@ spec:
             cpu: 500m
             memory: 512Mi
         env:
+        - name: BACKUP_WISE_HOST
+          value: rss-svc.wisev3-shared:3010
         - name: TERMINUS_IS_CLOUD_VERSION
           value: {{ default "false" .Values.backup.is_cloud_version | quote }}
         - name: ENABLE_MIDDLEWARE_BACKUP
@@ -219,6 +221,8 @@ spec:
             cpu: 2
             memory: 1500Mi
         env:
+        - name: BACKUP_WISE_HOST
+          value: rss-svc.wisev3-shared:3010
         - name: NATS_HOST
           value: nats.os-platform
         - name: NATS_PORT

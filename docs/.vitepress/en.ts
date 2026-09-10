@@ -10,6 +10,16 @@ const side = {
       items: [
         // { text: "Compare Olares and NAS", link: "/manual/olares-vs-nas" },
         {
+          text: "Update notes",
+          collapsed: true,
+          items: [
+            {
+              text: "Olares 1.12.6",
+              link: "/manual/update-guides/1.12.6",
+            },
+          ],
+        },
+        {
           text: "FAQs",
           //           link: "/manual/help/faqs",
           collapsed: true,
@@ -137,7 +147,7 @@ const side = {
 
               ],
             },
-            {
+            /* {
               text: "macOS",
               collapsed: true,
               items: [
@@ -150,8 +160,8 @@ const side = {
                   link: "/manual/get-started/install-mac-docker",
                 },
               ],
-            },
-            {
+            }, */
+            /* {
               text: "Windows (WSL 2)",
               collapsed: true,
               items: [
@@ -159,13 +169,13 @@ const side = {
                   text: "Using script",
                   link: "/manual/get-started/install-windows-script",
                 },
-                /* {
-                  text: "Using Docker image",
-                  link: "/manual/get-started/install-windows-docker",
-                },*/
+                // {
+                //   text: "Using Docker image",
+                //   link: "/manual/get-started/install-windows-docker",
+                // },
               ],
-            },
-            {
+            }, */
+            /* {
               text: "PVE",
               collapsed: true,
               items: [
@@ -179,11 +189,11 @@ const side = {
                 },
                 { text: "LXC on PVE", link: "/manual/get-started/install-lxc" },
               ],
-            },
-            {
+            }, */
+            /* {
               text: "Raspberry Pi",
               link: "/manual/get-started/install-raspberry-pi",
-            },
+            }, */
           ],
         },
         {
@@ -510,7 +520,7 @@ const side = {
           link: "/manual/space/manage-accounts",
         },
         {
-          text: "Monitor Olares",
+          text: "Monitor Olares status and traffic",
           link: "/manual/space/manage-olares",
         },
         {
@@ -528,10 +538,10 @@ const side = {
           ],
         },
         {
-          text: "Back up and restore",
+          text: "Restore data from Olares Space backups",
           link: "/manual/space/backup-restore",
         },
-        { text: "Billing", link: "/manual/space/billing" },
+        { text: "Billing and payments", link: "/manual/space/billing" },
       ],
     },
     {

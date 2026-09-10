@@ -15,14 +15,20 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"golang.org/x/crypto/bcrypt"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/util/retry"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-const ConfPath = "/dbdata/nats_data/config/nats.conf"
-const Allow = "allow"
+const (
+	ConfigMapName = "nats-cfg"
+	ConfigMapKey  = "nats.conf"
+	Allow         = "allow"
+)
 
 var (
 	defaultPubPerm = []string{"$JS.API.INFO", "$JS.API.STREAM.NAMES", "$JS.API.CONSUMER.CREATE.>",
@@ -77,12 +83,18 @@ func createOrUpdateUser(request *aprv1.MiddlewareRequest, namespace, password st
 	return config, nil
 }
 func CreateOrUpdateUser(request *aprv1.MiddlewareRequest, namespace, password string) (*Config, error) {
-	config, err := createOrUpdateUser(request, namespace, password, loadConf)
+	clientSet, err := newClientSet()
+	if err != nil {
+		return nil, err
+	}
+	config, err := createOrUpdateUser(request, namespace, password, func() (*Config, error) {
+		return loadConf(clientSet)
+	})
 	if err != nil {
 		klog.Infof("createOrUpdateUser err=%v", err)
 		return nil, err
 	}
-	err = RenderConfigFile(config)
+	err = persistConfig(clientSet, config)
 	if err != nil {
 		klog.Infof("renderConfigFile err=%v", err)
 		return nil, err
@@ -191,7 +203,11 @@ func DeleteStream(appNamespace, app string) error {
 }
 
 func DeleteUser(username string) error {
-	config, err := loadConf()
+	clientSet, err := newClientSet()
+	if err != nil {
+		return err
+	}
+	config, err := loadConf(clientSet)
 	if err != nil {
 		return err
 	}
@@ -201,11 +217,7 @@ func DeleteUser(username string) error {
 				config.Accounts.Terminus.Users[i+1:]...)
 		}
 	}
-	err = RenderConfigFile(config)
-	if err != nil {
-		return err
-	}
-	return nil
+	return persistConfig(clientSet, config)
 }
 
 func encryptPassword(password string) (string, error) {
@@ -216,7 +228,42 @@ func encryptPassword(password string) (string, error) {
 	return string(encryptedPass), nil
 }
 
-func loadConf() (*Config, error) {
+func EnsureConfigMap(ctx context.Context, clientSet kubernetes.Interface) error {
+	cms := clientSet.CoreV1().ConfigMaps(constants.PlatformNamespace)
+	_, err := cms.Get(ctx, ConfigMapName, metav1.GetOptions{})
+	if err == nil {
+		return nil
+	}
+	if !apierrors.IsNotFound(err) {
+		klog.Infof("get %s configmap err=%v", ConfigMapName, err)
+		return err
+	}
+
+	cm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      ConfigMapName,
+			Namespace: constants.PlatformNamespace,
+			Labels: map[string]string{
+				"app.kubernetes.io/name":      "nats",
+				"app.kubernetes.io/instance":  "nats",
+				"app.kubernetes.io/component": "nats",
+				"bytetrade.io/cm-sidecar":     "true",
+			},
+		},
+		Data: map[string]string{
+			ConfigMapKey: DefaultNatsConf,
+		},
+	}
+	_, err = cms.Create(ctx, cm, metav1.CreateOptions{})
+	if err != nil && !apierrors.IsAlreadyExists(err) {
+		klog.Infof("create %s configmap err=%v", ConfigMapName, err)
+		return err
+	}
+	klog.Infof("created configmap %s/%s", constants.PlatformNamespace, ConfigMapName)
+	return nil
+}
+
+func loadConf(clientSet kubernetes.Interface) (*Config, error) {
 	password, err := getAdminPassword()
 	if err != nil {
 		return nil, err
@@ -226,7 +273,56 @@ func loadConf() (*Config, error) {
 		klog.Infof("set env error=%v", err)
 		return nil, err
 	}
-	return ParseFile(ConfPath)
+
+	if err := EnsureConfigMap(context.TODO(), clientSet); err != nil {
+		return nil, err
+	}
+
+	cm, err := clientSet.CoreV1().ConfigMaps(constants.PlatformNamespace).Get(context.TODO(), ConfigMapName, metav1.GetOptions{})
+	if err != nil {
+		klog.Infof("get %s configmap err=%v", ConfigMapName, err)
+		return nil, err
+	}
+	raw, ok := cm.Data[ConfigMapKey]
+	if !ok {
+		return nil, fmt.Errorf("%s not found in configmap %s", ConfigMapKey, ConfigMapName)
+	}
+	config, err := Parse(raw)
+	if err != nil {
+		klog.Infof("parse nats configmap err=%v", err)
+		return nil, err
+	}
+	return config, nil
+}
+
+func persistConfig(clientSet kubernetes.Interface, config *Config) error {
+	if err := EnsureConfigMap(context.TODO(), clientSet); err != nil {
+		return err
+	}
+	data, err := renderConfigFile(config)
+	if err != nil {
+		return err
+	}
+	return updateNatsConfigMap(clientSet, data)
+}
+
+func updateNatsConfigMap(clientSet kubernetes.Interface, data []byte) error {
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		cm, err := clientSet.CoreV1().ConfigMaps(constants.PlatformNamespace).Get(context.TODO(), ConfigMapName, metav1.GetOptions{})
+		if err != nil {
+			klog.Infof("get %s configmap err=%v", ConfigMapName, err)
+			return err
+		}
+		if cm.Data == nil {
+			cm.Data = map[string]string{}
+		}
+		cm.Data[ConfigMapKey] = string(data)
+		_, err = clientSet.CoreV1().ConfigMaps(constants.PlatformNamespace).Update(context.TODO(), cm, metav1.UpdateOptions{})
+		if err != nil {
+			klog.Infof("update %s configmap err=%v", ConfigMapName, err)
+		}
+		return err
+	})
 }
 
 var ch = []byte("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@$#%^&*()")

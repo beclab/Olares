@@ -34,6 +34,16 @@ func fixtureFlags(t *testing.T) *pkgdashboard.CommonFlags {
 	return cf
 }
 
+// nodesPath is the node label scan the GPU row starts from — it decides
+// which exporters get asked at all, so every fixture that expects (or
+// refuses) a GPU row has to answer it.
+const nodesPath = "/kapis/resources.kubesphere.io/v1alpha3/nodes"
+
+const (
+	nodesNoGPU  = `{"items":[{"metadata":{"name":"olares","labels":{}}}]}`
+	nodesNVIDIA = `{"items":[{"metadata":{"name":"olares","labels":{"gpu.bytetrade.io/nvidia":"true"}}}]}`
+)
+
 // noUnexpectedPath is the canonical fallback handler. Tests register
 // their expected paths in a switch above this; any other path lights
 // up the per-test stderr so a wire-shape regression surfaces in a

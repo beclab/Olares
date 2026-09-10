@@ -3,7 +3,6 @@ package router
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -43,8 +42,8 @@ If the goal is to stop traffic rather than to forget the upstream, use
 everything else is preserved, so re-enabling restores the previous behaviour.
 
 A provider registered for a model application cannot be deleted here. Its
-lifecycle belongs to the application — uninstall the application and the
-provider goes with it.
+lifecycle belongs to the application — "olares-cli market uninstall <app>"
+removes it, and the provider goes with it.
 
 Confirmation is required. --yes skips the prompt, and is mandatory when stdin
 is not a terminal so an unattended script cannot destroy state by accident.
@@ -57,7 +56,7 @@ Example:
 			return runProviderDelete(c.Context(), f, args[0], assumeYes, output)
 		},
 	}
-	cmd.Flags().BoolVar(&assumeYes, "yes", false, "skip the confirmation prompt (required when stdin is not a terminal)")
+	addConfirmFlag(cmd, &assumeYes)
 	addOutputFlag(cmd, &output)
 	return cmd
 }
@@ -97,7 +96,7 @@ func runProviderDelete(ctx context.Context, f *cmdutil.Factory, ref string, assu
 		ID      string `json:"id"`
 		Deleted bool   `json:"deleted"`
 	}
-	path := consoleAPI + "/providers/" + url.PathEscape(found.ID)
+	path := epProvider(found.ID)
 	if err := pc.router.doJSON(ctx, "DELETE", path, nil, &res); err != nil {
 		return err
 	}

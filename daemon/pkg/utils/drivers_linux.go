@@ -476,6 +476,10 @@ func IsBrokenMount(path string) bool {
 	return slices.Contains(brokenMounts, path)
 }
 
+func IsManagedMount(mountPath string) bool {
+	return strings.HasPrefix(mountPath, commands.MOUNT_BASE_DIR) && !strings.HasPrefix(mountPath, path.Join(commands.MOUNT_BASE_DIR, "ai")+"/")
+}
+
 // apt install cifs-utils
 func MountSambaDriver(ctx context.Context, mountBaseDir string, smbPath string, user, pwd string) error {
 	mounter := mountutils.New("")
@@ -619,7 +623,7 @@ func MountedSambaPath(ctx context.Context) ([]mountedPath, error) {
 	var paths []mountedPath
 	for _, m := range list {
 		if m.Type == "cifs" {
-			paths = append(paths, mountedPath{m.Path, SMB, IsBrokenMount(m.Path), "", "", "", m.Device, isReadOnly(&m)})
+			paths = append(paths, mountedPath{m.Path, SMB, IsBrokenMount(m.Path), "", "", "", m.Device, isReadOnly(&m), IsManagedMount(m.Path)})
 		}
 	}
 
@@ -653,16 +657,16 @@ func MountedPath(ctx context.Context) ([]mountedPath, error) {
 			idx = slices.IndexFunc(usbs, func(u storageDevice) bool { return u.DevPath == m.Device })
 			return idx >= 0
 		}():
-			paths = append(paths, mountedPath{m.Path, USB, false, usbs[idx].IDSerial, usbs[idx].IDSerialShort, usbs[idx].PartitionUUID, "", false})
+			paths = append(paths, mountedPath{m.Path, USB, false, usbs[idx].IDSerial, usbs[idx].IDSerialShort, usbs[idx].PartitionUUID, "", false, IsManagedMount(m.Path)})
 		case func() bool {
 			idx = slices.IndexFunc(hdds, func(u storageDevice) bool { return u.DevPath == m.Device })
 			return idx >= 0
 		}():
-			paths = append(paths, mountedPath{m.Path, HDD, false, hdds[idx].IDSerial, hdds[idx].IDSerialShort, hdds[idx].PartitionUUID, "", false})
+			paths = append(paths, mountedPath{m.Path, HDD, false, hdds[idx].IDSerial, hdds[idx].IDSerialShort, hdds[idx].PartitionUUID, "", false, IsManagedMount(m.Path)})
 		case m.Type == "cifs":
-			paths = append(paths, mountedPath{m.Path, SMB, IsBrokenMount(m.Path), "", "", "", m.Device, isReadOnly(&m)})
+			paths = append(paths, mountedPath{m.Path, SMB, IsBrokenMount(m.Path), "", "", "", m.Device, isReadOnly(&m), IsManagedMount(m.Path)})
 		case m.Type == "nfs":
-			paths = append(paths, mountedPath{m.Path, NFS, IsBrokenMount(m.Path), "", "", "", m.Device, isReadOnly(&m)})
+			paths = append(paths, mountedPath{m.Path, NFS, IsBrokenMount(m.Path), "", "", "", m.Device, isReadOnly(&m), IsManagedMount(m.Path)})
 		}
 
 	}

@@ -54,7 +54,7 @@ Olares v1.12.6 的亮点和详细介绍请参见 [Olares 1.12.6 发布博客](ht
 - 新增[使用 Engine Base 运行本地大模型](/zh/use-cases/llm-base-apps)，介绍如何在 Olares 上部署和运行本地 AI 模型。
 - 新增[通过 Overlay Gateway 使用 Home Assistant](/zh/use-cases/home-assistant#enable-the-overlay-gateway)，说明如何通过局域网访问 Home Assistant。
 - 新增[通过 Overlay Gateway 使用 Jellyfin](/zh/use-cases/jellyfin#enable-overlay-gateway-for-jellyfin)，说明如何通过 Overlay Gateway 访问 Jellyfin。
-- 新增 [*Arr 应用升级指南](/zh/use-cases/arrs-upgrade)，在 Olares v1.12.6 内部入口变更后升级 *Arr 应用的指南。
+- 新增 [*Arr 应用更新说明](/zh/use-cases/arrs-upgrade)，介绍 Olares v1.12.6 内部入口变化后需要调整的配置。
 
 ### 更新文档
 

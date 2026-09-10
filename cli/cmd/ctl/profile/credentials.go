@@ -8,6 +8,7 @@ import (
 	"github.com/beclab/Olares/cli/internal/keychain"
 	"github.com/beclab/Olares/cli/pkg/auth"
 	"github.com/beclab/Olares/cli/pkg/cliconfig"
+	"github.com/beclab/Olares/cli/pkg/credential"
 	"github.com/beclab/Olares/cli/pkg/olares"
 )
 
@@ -57,8 +58,17 @@ func ensureProfileWritable(
 	cfg *cliconfig.MultiProfileConfig,
 	store auth.TokenStore,
 	flags commonCredFlags,
+	verb string,
 	now time.Time,
 ) (cliconfig.ProfileConfig, error) {
+	// 0. Reject outright if the platform owns this identity. Checked before
+	// the token inspection below because a managed entry can legitimately
+	// be sitting at `pending` with nothing stored, which would otherwise
+	// fall through and let a login overwrite it.
+	if err := credential.RequireNotManaged(cfg.FindByOlaresID(flags.olaresID), verb); err != nil {
+		return cliconfig.ProfileConfig{}, err
+	}
+
 	// 1. Reject if a still-valid token exists for this olaresId. An
 	// explicitly invalidated token (Phase 2 marks this on /api/refresh
 	// failure) is always treated as "needs re-login" and falls through —

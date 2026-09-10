@@ -126,11 +126,11 @@ func TestShouldInjectMeshInAgent(t *testing.T) {
 	if ShouldInject(nil, false) {
 		t.Fatal("nil app must not inject")
 	}
-	denied := &appv1alpha1.Application{
-		Spec: appv1alpha1.ApplicationSpec{Name: "middleware-x", Settings: map[string]string{}},
+	noDecide := &appv1alpha1.Application{
+		Spec: appv1alpha1.ApplicationSpec{Name: "plain", Settings: map[string]string{}},
 	}
-	if ShouldInject(denied, false) {
-		t.Fatal("R-DENY middleware must not inject")
+	if ShouldInject(noDecide, false) {
+		t.Fatal("empty settings without decide must not inject")
 	}
 }
 

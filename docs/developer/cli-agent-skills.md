@@ -30,7 +30,9 @@ The bundles are located in [`cli/skills/`](https://github.com/beclab/Olares/tree
 | `olares-cluster` | Inspect K8s runtime state including pods, containers, workloads, jobs, cronjobs, nodes, and middleware. Read logs, exec, scale, restart, and suspend/resume cronjobs. |
 | `olares-doctor` | Find out why an app is broken, such as stuck installs, crashes, image pull failures, running-but-unreachable apps, or slowdowns. Pulls evidence from cluster, dashboard, and market. |
 | `olares-router` | Configure and use AI models: add a cloud vendor's models, install a local model app, pick the defaults, issue keys and quotas, read usage, and call a model for chat, embeddings, transcription, speech, or OCR. |
+| `olares-knowledge` | Download to Olares: create, inspect, pause, and cancel URL, yt-dlp, aria2, torrent, and Hugging Face tasks, including the ones Wise starts. |
 | `olares-search` | Search files and apps. Full-content search across Drive files and Sync libraries, plus search installed apps by title. |
+| `olares-publish` | Publish an app that already runs locally to the public Olares Market: release targets, listing metadata, icon and screenshots. |
 
 :::warning Always install `olares-shared` first
 All other bundles assume `olares-shared` is already loaded. It owns the profile model, the token refresh logic, and the auth-error recovery hints that the other skills rely on. An agent that loads only `olares-files`, for example, encounters auth errors with no recovery path.
@@ -40,16 +42,18 @@ All other bundles assume `olares-shared` is already loaded. It owns the profile 
 
 If you set up the CLI with `npx @olares/cli@latest install`, the skills are already installed and you can skip this step.
 
-Otherwise, install the bundles into your active agent with the following command:
+Otherwise, have the CLI write them out:
 
 ```bash
-npx skills add beclab/Olares -y -g
+olares-cli skills install
 ```
 
-This installs the skills into the agent you are using, such as Cursor or Claude Code. The agent then loads the matching skill when you mention an Olares task. Because `olares-shared` is part of the same bundle, the shared-first requirement is satisfied automatically.
+The bundles are compiled into the binary, so this reads no network and fetches no version: what lands on disk is what the `olares-cli` you just ran was built from. One copy goes to `~/.agents/skills`, and every agent skills directory that already exists on the machine — Cursor, Claude Code, Codex, OpenClaw — is linked to it. Directories are never created for an agent you don't have. The agent then loads the matching skill when you mention an Olares task, and because `olares-shared` is written along with the rest, the shared-first requirement is satisfied automatically.
+
+If `olares-cli` is not on the machine yet, [install it first](./cli-install.md) — the skills come with it.
 
 :::tip
-The skills are also published on ClawHub. Both channels read the same `SKILL.md` files, so you only need to install from one. If your agent integrates with ClawHub, you can add them from there instead.
+The skills are also listed on ClawHub, but that copy predates the move into the binary and is no longer updated. Install from the CLI instead; a registry copy has no way to tell you it disagrees with the verbs your binary actually has.
 :::
 
 Some AI agent apps on Olares bundle these skills, so the agent can manage Olares out of the box. To use the skills from such an app, see [Manage Olares with your Hermes Agent](../use-cases/hermes.md#manage-olares-with-your-hermes-agent) or [Manage Olares with your OpenClaw agent](../use-cases/openclaw-olares-skills.md).
@@ -64,13 +68,13 @@ AI agent apps on Olares, such as OpenCode and Hermes Agent, ship with the Olares
 
 ### Update locally installed skills
 
-Before updating the skills, make sure `olares-cli` is [up to date](./cli-install.md#update-olares-cli). Then re-run the install command to overwrite your installed skills with the latest version.
+Update `olares-cli` first ([how](./cli-install.md#update-olares-cli)), then run the install command again:
 
 ```bash
-npx skills add beclab/Olares -y -g
+olares-cli skills install
 ```
 
-This pulls the latest `SKILL.md` files from the repository and overwrites your installed copies.
+The skills come from the binary, so this order matters: the new CLI writes the skills that document it, replacing each bundle whole. Updating the CLI on its own leaves the previous skills in place, which is why every command other than `skills` prints one line on standard error while the two disagree. Set `OLARES_CLI_NO_SKILL_NOTICE=1` to silence that line where extra output can't be tolerated.
 
 :::tip
 You can also ask your AI agent to run these commands for you.

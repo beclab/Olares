@@ -122,6 +122,13 @@ spec:
         app: notifications-server
     spec:
       priorityClassName: "system-cluster-critical"
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-role.kubernetes.io/control-plane
+                    operator: Exists
       initContainers:
       - name: init-container
         image: 'postgres:16.0-alpine3.18'
@@ -146,7 +153,7 @@ spec:
             value: os_framework_notifications
       containers:
       - name: notifications-api
-        image: beclab/notifications-api:v1.12.45
+        image: beclab/notifications-api:v1.12.46
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3010

@@ -1,0 +1,275 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Helm Values Schema",
+    "description": "Schema for Helm values",
+    "type": "object",
+    "properties": {
+        "affinity": {
+            "description": "[Affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity) for the pods",
+            "$ref": "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.34.2/_definitions.json#/definitions/io.k8s.api.core.v1.Affinity",
+            "type": "object"
+        },
+        "config": {
+            "type": "object",
+            "properties": {
+                "exporters": {
+                    "description": "[Configuration for exporters](https://opentelemetry.io/docs/collector/configuration/#exporters)",
+                    "type": "object",
+                    "properties": {
+                        "intel_xpu_info": {
+                            "description": "Override configuration for the Intel XPU info exporter. Should only be used for advanced use cases. See `intel_xpu_info` README for details.",
+                            "type": "object"
+                        }
+                    }
+                },
+                "extensions": {
+                    "description": "[Configuration for extensions](https://opentelemetry.io/docs/collector/configuration/#extensions)",
+                    "type": "object"
+                },
+                "processors": {
+                    "description": "[Configuration for processors](https://opentelemetry.io/docs/collector/configuration/#processors)",
+                    "type": "object",
+                    "properties": {
+                        "intel_xpu_status": {
+                            "description": "Override configuration for the Intel XPU processor. Should only be used for advanced use cases. See `intel_xpu_status` README for details.",
+                            "type": "object"
+                        }
+                    }
+                },
+                "receivers": {
+                    "description": "[Configuration for receivers](https://opentelemetry.io/docs/collector/configuration/#receivers)",
+                    "type": "object",
+                    "properties": {
+                        "intel_crashlog": {
+                            "description": "Override configuration for the Intel Crashlog receiver. Should only be used for advanced use cases. See `intel_crashlog` README for details.",
+                            "type": "object"
+                        },
+                        "intel_xpu": {
+                            "description": "Configuration for the Intel XPU receiver.",
+                            "type": "object",
+                            "properties": {
+                                "collection_interval": {
+                                    "description": "Metrics data collection interval. Must be at least twice the sampling_interval.",
+                                    "type": "string"
+                                },
+                                "fail_on_sysman_init_error": {
+                                    "description": "Whether to fail collector startup if the L0 Sysman API cannot be initialized (e.g. no GPU driver or device access).",
+                                    "type": "boolean"
+                                },
+                                "initial_delay": {
+                                    "description": "Initial start delay for metrics collection, any non positive value is assumed to be immediately.",
+                                    "type": "string"
+                                },
+                                "metrics": {
+                                    "description": "Configuration for enabling/disabling individual metrics.",
+                                    "type": "object"
+                                },
+                                "sampling_interval": {
+                                    "description": "Sampling interval for the high-frequency metrics.",
+                                    "type": "string"
+                                },
+                                "timeout": {
+                                    "description": "Metrics collection timeout.",
+                                    "type": "integer"
+                                }
+                            },
+                            "additionalProperties": false
+                        }
+                    }
+                },
+                "service": {
+                    "description": "[Configuration for service](https://opentelemetry.io/docs/collector/configuration/#service)",
+                    "type": "object"
+                }
+            },
+            "additionalProperties": false
+        },
+        "crashlog": {
+            "type": "object",
+            "properties": {
+                "directory": {
+                    "description": "Host directory to watch for collecting GPU crash logs. Use `*` to match all files.",
+                    "type": "string"
+                }
+            },
+            "additionalProperties": false
+        },
+        "extraEnv": {
+            "description": "Extra environment variables for the xpumd container",
+            "$ref": "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.34.2/_definitions.json#/definitions/io.k8s.api.core.v1.Container/properties/env",
+            "type": "array"
+        },
+        "extraVolumeMounts": {
+            "description": "Additional volume mounts for the xpumd container",
+            "$ref": "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.34.2/_definitions.json#/definitions/io.k8s.api.core.v1.Container/properties/volumeMounts",
+            "type": "array"
+        },
+        "extraVolumes": {
+            "description": "Additional volumes for the xpumd pod",
+            "$ref": "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.34.2/_definitions.json#/definitions/io.k8s.api.core.v1.PodSpec/properties/volumes",
+            "type": "array"
+        },
+        "fullnameOverride": {
+            "description": "Override the fully qualified app name",
+            "type": "string"
+        },
+        "global": {
+            "description": "Global values shared between all subcharts",
+            "$comment": "Added automatically by 'helm schema' to allow this chart to be used as a Helm dependency, as the `additionalProperties` setting would otherwise collide with Helm's special 'global' values key.",
+            "type": [
+                "object",
+                "null"
+            ]
+        },
+        "gpuAccess": {
+            "description": "method for requesting monitoring access to Intel GPUs: `dra` (K8s DRA GPU driver), `plugin` (K8s GPU plugin), `i915` / `xe` (old K8s GPU plugin KMD-based resource names), `none` (no GPU resource request, useful for stub-driver testing)",
+            "type": "string",
+            "enum": [
+                "dra",
+                "plugin",
+                "i915",
+                "xe",
+                "none"
+            ]
+        },
+        "grafana": {
+            "type": "object",
+            "properties": {
+                "dashboards": {
+                    "description": "Install XPUMD dashboard(s) for Grafana",
+                    "type": "boolean"
+                },
+                "namespace": {
+                    "description": "Namespace for Grafana install. Needed when Grafana dashboard auto-loader sidecar `searchNamespace: ALL` option is not used",
+                    "type": "string"
+                }
+            },
+            "additionalProperties": false
+        },
+        "image": {
+            "type": "object",
+            "properties": {
+                "pullPolicy": {
+                    "description": "Image pull policy",
+                    "type": "string",
+                    "enum": [
+                        "Always",
+                        "IfNotPresent",
+                        "Never"
+                    ]
+                },
+                "repository": {
+                    "description": "Image repository",
+                    "type": "string"
+                },
+                "tag": {
+                    "description": "Image tag, defaults to Chart.AppVersion",
+                    "type": "string"
+                }
+            },
+            "additionalProperties": false
+        },
+        "imagePullSecrets": {
+            "description": "[Image pull secrets](https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod)",
+            "$ref": "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.34.2/_definitions.json#/definitions/io.k8s.api.core.v1.PodSpec/properties/imagePullSecrets",
+            "type": "array"
+        },
+        "initContainers": {
+            "description": "Init containers to run",
+            "$ref": "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.34.2/_definitions.json#/definitions/io.k8s.api.core.v1.PodSpec/properties/initContainers",
+            "type": "array"
+        },
+        "nameOverride": {
+            "description": "Override the chart name",
+            "type": "string"
+        },
+        "nodeSelector": {
+            "description": "Node selector for pod placement",
+            "$ref": "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.34.2/_definitions.json#/definitions/io.k8s.api.core.v1.PodSpec/properties/nodeSelector",
+            "type": "object"
+        },
+        "podAnnotations": {
+            "description": "Annotations to add to the pod",
+            "$ref": "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.34.2/_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations",
+            "type": "object"
+        },
+        "podSecurityContextOverride": {
+            "description": "[Pod security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod). NOTE: security settings control to what GPU metrics container has access to",
+            "$ref": "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.34.2/_definitions.json#/definitions/io.k8s.api.core.v1.PodSecurityContext",
+            "type": "object"
+        },
+        "prometheus": {
+            "type": "object",
+            "properties": {
+                "monitor": {
+                    "description": "Add Prometheus service monitor for XPUMD, requires Prometheus to be installed. overrides `service.create`",
+                    "type": "boolean"
+                },
+                "release": {
+                    "description": "Helm release name for Helm ('kube-prometheus') chart that installed Prometheus. (May be) needed for Prometheus to detect daemon serviceMonitor",
+                    "type": "string"
+                }
+            },
+            "additionalProperties": false
+        },
+        "resourcesOverride": {
+            "description": "[Resource requests and limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/) of the container. NOTE: overrides `gpuAccess` setting",
+            "$ref": "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.34.2/_definitions.json#/definitions/io.k8s.api.core.v1.ResourceRequirements",
+            "type": "object"
+        },
+        "securityContextOverride": {
+            "description": "[Container security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container). NOTE: security settings control to what GPU metrics container has access to",
+            "$ref": "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.34.2/_definitions.json#/definitions/io.k8s.api.core.v1.SecurityContext",
+            "type": "object"
+        },
+        "service": {
+            "type": "object",
+            "properties": {
+                "create": {
+                    "description": "Create service",
+                    "type": "boolean"
+                },
+                "port": {
+                    "description": "Service port",
+                    "type": "integer"
+                },
+                "type": {
+                    "description": "Service type",
+                    "type": "string",
+                    "enum": [
+                        "ClusterIP",
+                        "NodePort",
+                        "LoadBalancer",
+                        "ExternalName"
+                    ]
+                }
+            },
+            "additionalProperties": false
+        },
+        "serviceAccount": {
+            "type": "object",
+            "properties": {
+                "annotations": {
+                    "description": "Annotations to add to the service account",
+                    "$ref": "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.34.2/_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations",
+                    "type": "object"
+                },
+                "create": {
+                    "description": "Create service account",
+                    "type": "boolean"
+                },
+                "name": {
+                    "description": "The name of the service account to use. If not specified and create is true, a name is generated using the fully qualified app name.",
+                    "type": "string"
+                }
+            },
+            "additionalProperties": false
+        },
+        "tolerations": {
+            "description": "[Tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) for the pods",
+            "$ref": "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.34.2/_definitions.json#/definitions/io.k8s.api.core.v1.PodSpec/properties/tolerations",
+            "type": "array"
+        }
+    },
+    "additionalProperties": false
+}

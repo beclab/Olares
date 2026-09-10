@@ -34,7 +34,7 @@ Useful engine-specific controls include llama.cpp flash attention and quantized 
 
 Use the Market lifecycle in [`../../olares-market/SKILL.md`](../../olares-market/SKILL.md) to update `MODEL_SOURCE`, `MODEL_NAME`, `MODEL_SUPPORTS`, `ENGINE_ARGS`, or related published environment values. Keep the engine aligned with the artifact format when switching models.
 
-Those values seed the first boot only. Once the clone is running, the model card inside it is what it serves from, and editing that card belongs to [`olares-router`](../../olares-router/SKILL.md) — `router local spec` reads and replaces it, and Router has to be told to re-mirror it afterwards. Reinstalling with different environment values is the long way round to a change that reference makes directly.
+Those values seed the first boot only. Once the clone is running, the model card inside it is what it serves from, and editing that card belongs to [`olares-router`](../../olares-router/SKILL.md) — `router model spec show/set --app` reads and replaces it, and Router has to be told to re-mirror it afterwards. Reinstalling with different environment values is the long way round to a change that reference makes directly.
 
 ## Errors and routing
 

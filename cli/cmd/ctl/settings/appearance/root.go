@@ -1,7 +1,10 @@
-// Package appearance implements the `olares-cli settings appearance` subtree
-// (Settings -> Appearance). Backed by user-service's wallpaper.controller.ts
-// — only the language/theme JSON read + language set fall in CLI scope; the
-// wallpaper image picker is intentionally browser-bound and out of scope.
+// Package appearance implements the `olares-cli settings appearance`
+// subtree (Settings -> Appearance): locale, desktop widget preferences,
+// wallpaper, and the desktop layout reset.
+//
+// Theme is absent on purpose: see theme.go.
+//
+// See common.go for how the three backing services are reached.
 package appearance
 
 import (
@@ -10,25 +13,32 @@ import (
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
-// NewAppearanceCommand returns the `settings appearance` parent: read
-// the language / locale and update the system language. Wallpaper +
-// theme picker stay in the SPA (browser blob/picker flows).
+// NewAppearanceCommand returns the `settings appearance` parent.
 func NewAppearanceCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "appearance",
-		Short: "Appearance settings (language, locale)",
+		Short: "Appearance settings (locale, widgets, wallpaper, layout)",
 		Long: `Read and update appearance preferences (Settings -> Appearance).
 
 Subcommands:
-  get                              show language + locale
-  language set --value <code>      update the system language
+  get                                   show the whole page in one read
+  language set <locale>                 update the system language
+  widget set [flags]                    update the desktop widget preferences
+  wallpaper set <surface> <bg>          select a wallpaper
+  wallpaper style set <surface> <mode>  set the wallpaper fill mode
+  wallpaper upload <surface> --file     upload a local image and select it
+  wallpaper delete <surface> <bg>       remove an uploaded image
+  layout reset                          restore the default desktop layout
 
-Wallpaper image upload + theme picker stay in the SPA — they are browser
-blob/picker flows with no useful CLI surface.
+"get" is the only read verb: the write subtrees have no "get" of their
+own, because reading Appearance means reading the page.
 `,
 	}
 	cmd.SilenceUsage = true
 	cmd.AddCommand(NewGetCommand(f))
 	cmd.AddCommand(NewLanguageCommand(f))
+	cmd.AddCommand(NewWidgetCommand(f))
+	cmd.AddCommand(NewWallpaperCommand(f))
+	cmd.AddCommand(NewLayoutCommand(f))
 	return cmd
 }

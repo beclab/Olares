@@ -328,6 +328,11 @@ func (i DiskModifingValidator) ValidateOp(op commands.Interface) error {
 type RestartingValidator struct{}
 
 func (i RestartingValidator) ValidateOp(op commands.Interface) error {
+	switch op.OperationName() {
+	case commands.Reboot, commands.Shutdown:
+		return nil
+	}
+
 	return errors.New("olares is restaring, cannot perform the operation")
 }
 

@@ -1103,6 +1103,7 @@ func toApplicationConfig(opt *ConfigOptions, chart string, cfg *appcfg.AppConfig
 		OIDC:                 cfg.Options.OIDC,
 		ApiTimeout:           cfg.Options.ApiTimeout,
 		RunAsUser:            cfg.Spec.RunAsUser,
+		LoginOlaresCLI:       cfg.Permission.LoginOlaresCLI,
 		AllowedOutboundPorts: cfg.Options.AllowedOutboundPorts,
 		RequiredGPU:          cfg.Spec.RequiredGPU,
 		PodGPUConsumePolicy:  cfg.Spec.PodGPUConsumePolicy,

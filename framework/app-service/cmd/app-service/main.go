@@ -42,6 +42,7 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
+	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -86,6 +87,11 @@ func main() {
 		TimeEncoder: zapcore.RFC3339TimeEncoder,
 	}
 	opts.BindFlags(flag.CommandLine)
+	// Most of this codebase logs through klog, and a good part of its
+	// diagnostics sit behind klog.V(2)/V(4). Without registering klog's flags
+	// the verbosity is pinned at 0 and there is no way to reach them at all, so
+	// those lines could never be turned on in a running cluster.
+	klog.InitFlags(flag.CommandLine)
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))

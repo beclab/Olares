@@ -467,6 +467,12 @@ func (r *SecurityReconciler) reconcileNetworkPolicy(ctx context.Context, ns *cor
 				owner := ns.Labels[security.NamespaceOwnerLabel]
 				logger.Info("update network policy", "name", networkPolicy.Name(), "owner", owner)
 				np.Spec.Ingress[0].From[0].NamespaceSelector.MatchLabels[security.NamespaceOwnerLabel] = owner
+				// hostNetwork l4-bfl-proxy (os-network) sources from the node
+				// tunnel/IP, not a pod IP. Same NodeTunnelRule as user-space-np; pinning
+				// user pods to the gateway node only works on a single node.
+				np.Spec.Ingress = append(np.Spec.Ingress, netv1.NetworkPolicyIngressRule{
+					From: security.NodeTunnelRule(),
+				})
 			}
 		} else if security.IsUserSpaceNamespaces(ns.Name) {
 			networkPolicy = security.NetworkPolicies{security.NPUserSpace.DeepCopy(), security.NPIngress.DeepCopy()}
@@ -490,33 +496,21 @@ func (r *SecurityReconciler) reconcileNetworkPolicy(ctx context.Context, ns *cor
 		} else if scope, ok := ns.Labels[constants.AppSharedLabel]; ok && scope == constants.AppSharedTrue {
 			// Shared-app namespace.
 			//
-			// Emits exactly 4 NetworkPolicies into <app>-shared:
-			//   - app-np            (main, from NPAppSpace template; npFix
-			//                       below rewrites the owner placeholder for
-			//                       the user-internal peer AND drops the
-			//                       owner constraint on the user-space-bfl
-			//                       peer so ANY user's BFL can dial
-			//                       the shared app — shared apps are open to
-			//                       all users.)
-			//   - shared-np         (from NPSharedSpace; the template has no
-			//                       default Name, so we set it explicitly
-			//                       before handing it to Additional())
-			//   - system-provider-np (fixed name on the template)
-			//   - shared-entrance-np (fixed name on the template)
+			// Emits exactly 4 NetworkPolicies into <app>-shared via
+			// SharedNamespacePolicies: app-np / shared-np exclude
+			// shared-entrance pods so remaining OR policies cannot reopen
+			// ClusterIP bypass; system-provider-np and shared-entrance-np
+			// keep their own selectors. npFix below still rewrites the
+			// owner placeholder on app-np (main only) and drops the owner
+			// constraint on the user-space-bfl peer so any user's BFL can
+			// dial non-entrance pods.
 			//
 			// Putting this branch ABOVE the generic ns-owner branch is
 			// intentional: V3 namespaces also carry ns-owner (so npFix has
 			// an admin to fill in), and without this priority they would
 			// otherwise be served by the v1/v2 app-np branch and miss the
 			// other three policies.
-			sharedSpace := security.NPSharedSpace.DeepCopy()
-			sharedSpace.Name = "shared-np"
-			networkPolicy = security.NetworkPolicies{
-				security.NPAppSpace.DeepCopy(),
-				sharedSpace,
-				security.NPSystemProvider.DeepCopy(),
-				security.NPSharedEntrance.DeepCopy(),
-			}
+			networkPolicy = security.SharedNamespacePolicies()
 			networkPolicy.SetName("app-np")
 			networkPolicy.SetNamespace(ns.Name)
 			npFix = func(np *netv1.NetworkPolicy) {
@@ -711,10 +705,16 @@ func (r *SecurityReconciler) reconcileNetworkPolicy(ctx context.Context, ns *cor
 		}
 
 		for _, np := range networkPolicy.Additional() {
+			var additionalNPFix func(np *netv1.NetworkPolicy)
+			if np.Name == security.SharedEntranceNetworkPolicyName {
+				additionalNPFix = func(np *netv1.NetworkPolicy) {
+					security.AppendNodeTunnelIngressRule(np, security.NodeTunnelRule())
+				}
+			}
 			if err := r.createOrUpdateNetworkPolicy(
 				ctx,
 				np,
-				nil,
+				additionalNPFix,
 				&networkPolicy,
 			); err != nil {
 				return err
@@ -982,6 +982,11 @@ func (r *SecurityReconciler) namespacesShouldAllowNodeTunnel(ctx context.Context
 		reqs = append(reqs, reconcile.Request{
 			NamespacedName: types.NamespacedName{
 				Name: "user-space-" + u.GetName(),
+			},
+		})
+		reqs = append(reqs, reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Name: "user-system-" + u.GetName(),
 			},
 		})
 	}

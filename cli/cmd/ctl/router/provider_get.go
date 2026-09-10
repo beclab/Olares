@@ -6,8 +6,6 @@ import (
 	"io"
 	"os"
 	"strconv"
-	"strings"
-	"text/tabwriter"
 
 	"github.com/spf13/cobra"
 
@@ -23,22 +21,6 @@ import (
 // and reports an empty model list when that probe fails rather than the last
 // values it cached. An empty list under a running app therefore means the app
 // is not answering right now, not that it serves nothing.
-
-// headlineSupports are the capability keys worth a column, in the order they
-// change what a caller can send. Router tracks far more (audio, tokenizer
-// details, per-parameter support); `--output json` carries all of them.
-var headlineSupports = []struct {
-	key   string
-	label string
-}{
-	{"supports_vision", "vision"},
-	{"supports_function_calling", "tools"},
-	{"supports_reasoning", "reasoning"},
-	{"supports_native_streaming", "streaming"},
-	{"supports_audio_input", "audio-in"},
-	{"supports_audio_output", "audio-out"},
-	{"supports_web_search", "web-search"},
-}
 
 func newProviderGetCommand(f *cmdutil.Factory) *cobra.Command {
 	var output string
@@ -115,43 +97,45 @@ func renderProviderGet(w io.Writer, d *providerDetail) error {
 	if _, err := fmt.Fprintf(w, "\nMODELS (%d)\n", len(d.Models)); err != nil {
 		return err
 	}
-	mtw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	if _, err := fmt.Fprintln(mtw, "NAME\tMODE\tENABLED\tSTATUS\tCONTEXT\tCAPABILITIES"); err != nil {
-		return err
+	// AT ONCE only when something declared it. A cloud model has no engine of
+	// ours behind it, so the column would be a dash on every row of most
+	// providers and read as a missing figure rather than an inapplicable one.
+	wide := false
+	for i := range d.Models {
+		wide = wide || d.Models[i].MaxConcurrency > 0
 	}
+	headers := []string{"NAME", "MODE", "ENABLED", "STATUS", "CONTEXT"}
+	if wide {
+		headers = append(headers, "AT ONCE")
+	}
+	headers = append(headers, "CAPABILITIES")
+	mt := newTable(w, headers...)
 	for i := range d.Models {
 		m := &d.Models[i]
-		if _, err := fmt.Fprintf(mtw, "%s\t%s\t%s\t%s\t%s\t%s\n",
+		cells := []string{
 			nonEmpty(m.Name),
 			nonEmpty(m.Mode),
 			boolStr(m.Enabled),
 			nonEmpty(m.Status),
 			intOrDash(m.ContextSize),
-			summarizeSupports(m.Supports),
-		); err != nil {
-			return err
 		}
-	}
-	return mtw.Flush()
-}
-
-// summarizeSupports names the headline capabilities a model has, and says so
-// when it has none of them rather than leaving the cell blank — a blank reads
-// as missing data, which is a different thing.
-func summarizeSupports(supports map[string]bool) string {
-	if len(supports) == 0 {
-		return "-"
-	}
-	labels := make([]string, 0, len(headlineSupports))
-	for _, h := range headlineSupports {
-		if supports[h.key] {
-			labels = append(labels, h.label)
+		if wide {
+			cells = append(cells, atOnceLabel(*m))
 		}
+		cells = append(cells, summarizeSupports(m.Supports))
+		mt.row(cells...)
 	}
-	if len(labels) == 0 {
-		return "none of the headline set"
+	if err := mt.flush(); err != nil {
+		return err
 	}
-	return strings.Join(labels, ",")
+	if wide {
+		_, err := fmt.Fprintln(w, "\nAT ONCE is how many requests the engine was launched to work on at "+
+			"the same time. A request beyond that waits its turn, which looks like a slow model rather "+
+			"than a queue — ENGINE LOAD above is what tells the two apart. shared means those slots "+
+			"share one KV pool smaller than (window × width).")
+		return err
+	}
+	return nil
 }
 
 func intOrDash(v int) string {
@@ -159,4 +143,19 @@ func intOrDash(v int) string {
 		return "-"
 	}
 	return strconv.Itoa(v)
+}
+
+func atOnceLabel(m providerModelRow) string {
+	return atOnceLabelOf(m.ContextSize, m.MaxConcurrency, m.KVPoolTokens)
+}
+
+// atOnceLabelOf marks a width whose slots cannot each hold a full window. The
+// three figures reach this tree through two different rows — the console's and
+// the data plane's — and the reading is the same one either way.
+func atOnceLabelOf(contextSize, maxConcurrency, kvPoolTokens int) string {
+	if contextSize > 0 && maxConcurrency > 1 && kvPoolTokens > 0 &&
+		int64(contextSize)*int64(maxConcurrency) > int64(kvPoolTokens) {
+		return strconv.Itoa(maxConcurrency) + " shared"
+	}
+	return intOrDash(maxConcurrency)
 }

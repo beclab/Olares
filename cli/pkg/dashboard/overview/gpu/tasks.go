@@ -33,6 +33,8 @@ func RunTasks(ctx context.Context, c *pkgdashboard.Client, cf *pkgdashboard.Comm
 		switch env.Meta.EmptyReason {
 		case "no_vgpu_integration", "no_gpu_detected":
 			fmt.Fprintln(os.Stdout, "(no vGPU tasks)")
+		case "tasks_unsupported_by_vendor":
+			fmt.Fprintln(os.Stdout, "(task attribution is NVIDIA-only; this cluster's GPUs do not report per-container usage)")
 		case "vgpu_unavailable":
 			// stderr advisory already printed by VgpuUnavailableFromError.
 		}
@@ -55,6 +57,24 @@ func RunTasks(ctx context.Context, c *pkgdashboard.Client, cf *pkgdashboard.Comm
 // RunDefault as the `tasks` section (Shape B parent).
 func BuildTasksEnvelope(ctx context.Context, c *pkgdashboard.Client, cf *pkgdashboard.CommonFlags, now time.Time) pkgdashboard.Envelope {
 	advisoryNote, _ := pkgdashboard.GPUAdvisory(ctx, c, cf, os.Stderr)
+
+	// Per-container attribution is a HAMI capability. The Intel and AMD
+	// exporters stamp no pod / namespace / container label on any metric, so
+	// on a cluster carrying only those cards there is no workload dimension
+	// to build a task view on — the SPA hides the tab outright. Say so,
+	// rather than reporting the empty HAMI list as "no tasks running", which
+	// would suggest tasks could appear later.
+	if inv, err := pkgdashboard.DetectGPUVendors(ctx, c); err == nil && len(inv.Vendors) > 0 && !vendorsSupportTasks(inv) {
+		env := pkgdashboard.Envelope{
+			Kind: pkgdashboard.KindOverviewGPUTasks,
+			Meta: pkgdashboard.NewMeta(now.In(cf.Timezone.Time()), c.OlaresID(), cf.User),
+		}
+		env.Meta.Empty = true
+		env.Meta.EmptyReason = "tasks_unsupported_by_vendor"
+		env.Meta.Note = "no GPU in this cluster reports per-container usage; task attribution is NVIDIA-only"
+		return env
+	}
+
 	list, err := pkgdashboard.FetchTaskList(ctx, c, nil)
 
 	env := pkgdashboard.Envelope{

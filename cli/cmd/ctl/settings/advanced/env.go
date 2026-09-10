@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/beclab/Olares/cli/cmd/ctl/settings/internal/preflight"
+	"github.com/beclab/Olares/cli/cmd/ctl/settings/internal/userenv"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 	"github.com/beclab/Olares/cli/pkg/whoami"
 )
@@ -24,12 +25,12 @@ import (
 //	system  /api/env/systemenvs
 //	user    /api/env/userenvs
 //
-// Both are GET (list) + PUT (replace-with-merged-vector). Per the SPA's
-// SystemEnvironmentPage.vue rules, system entries that the upstream has
-// flagged with editable: false are read-only; the upstream rejects PUTs
-// that try to change them. We don't pre-validate that locally because
-// the editable flag isn't always populated and we'd rather surface the
-// upstream error than block a legitimate write.
+// Both are GET (list) + PUT (upsert of the entries in the body). Per the
+// SPA's SystemEnvironmentPage.vue rules, system entries that the upstream
+// has flagged with editable: false are read-only; the upstream rejects
+// PUTs that try to change them. We don't pre-validate that locally
+// because the editable flag isn't always populated and we'd rather
+// surface the upstream error than block a legitimate write.
 //
 // Per-app env is at `settings apps env get|set <name>` — this command
 // is the *system-wide* surface, not the per-app one.
@@ -48,8 +49,8 @@ Subcommands:
 `,
 	}
 	cmd.SilenceUsage = true
-	cmd.AddCommand(newEnvScopeCommand(f, "system", "/api/env/systemenvs"))
-	cmd.AddCommand(newEnvScopeCommand(f, "user", "/api/env/userenvs"))
+	cmd.AddCommand(newEnvScopeCommand(f, "system", userenv.SystemEnvsPath))
+	cmd.AddCommand(newEnvScopeCommand(f, "user", userenv.UserEnvsPath))
 	return cmd
 }
 
@@ -61,20 +62,6 @@ func newEnvScopeCommand(f *cmdutil.Factory, scope, basePath string) *cobra.Comma
 	cmd.AddCommand(newEnvListCommand(f, scope, basePath))
 	cmd.AddCommand(newEnvSetCommand(f, scope, basePath))
 	return cmd
-}
-
-// baseEnv mirrors apps/.../constant/index.ts:1028 BaseEnv. We share
-// only the subset we render in the table; --output json marshalls the
-// full BFL inner shape verbatim via the json.RawMessage path in
-// runEnvList.
-type baseEnv struct {
-	EnvName     string `json:"envName"`
-	Value       string `json:"value,omitempty"`
-	Default     string `json:"default,omitempty"`
-	Editable    *bool  `json:"editable,omitempty"`
-	Type        string `json:"type,omitempty"`
-	Required    *bool  `json:"required,omitempty"`
-	Description string `json:"description,omitempty"`
 }
 
 // newEnvListCommand returns the read verb for either scope. The SPA's
@@ -110,7 +97,7 @@ func runEnvList(ctx context.Context, f *cmdutil.Factory, path, outputRaw string)
 	if err != nil {
 		return err
 	}
-	envs, err := fetchEnv(ctx, pc.doer, path)
+	envs, err := userenv.List(ctx, pc.doer, path)
 	if err != nil {
 		return err
 	}
@@ -120,15 +107,7 @@ func runEnvList(ctx context.Context, f *cmdutil.Factory, path, outputRaw string)
 	return renderEnvTable(os.Stdout, envs)
 }
 
-func fetchEnv(ctx context.Context, d Doer, path string) ([]baseEnv, error) {
-	var envs []baseEnv
-	if err := doGetEnvelope(ctx, d, path, &envs); err != nil {
-		return nil, err
-	}
-	return envs, nil
-}
-
-func renderEnvTable(w io.Writer, envs []baseEnv) error {
+func renderEnvTable(w io.Writer, envs []userenv.Entry) error {
 	if len(envs) == 0 {
 		fmt.Fprintln(w, "no environment variables defined")
 		return nil
@@ -161,10 +140,10 @@ Argument shape: pass each variable as --var KEY=VALUE (repeatable);
 the bare form "set KEY=VALUE" is NOT accepted — Cobra would treat the
 first positional token as a sub-verb and reject it as "unknown command".
 
-The CLI does a read-modify-write to avoid clobbering values it doesn't
-know about: it fetches the current vector, overlays the --var pairs
-you pass, and PUTs the merged result back. The upstream rejects writes
-to system fields the SPA flags as editable: false.
+Only the variables you name are sent; the upstream leaves every other
+one untouched. It rejects the whole batch if any named variable is one
+the SPA flags as editable: false, or if it does not exist yet — this
+verb updates existing variables and does not create them.
 
 Examples:
   olares-cli settings advanced env user   set --var FOO=bar
@@ -212,16 +191,7 @@ func runEnvSet(ctx context.Context, f *cmdutil.Factory, path, scope string, vars
 	if err != nil {
 		return err
 	}
-	current, err := fetchEnv(ctx, pc.doer, path)
-	if err != nil {
-		return err
-	}
-	merged := mergeEnvUpdates(current, updates)
-	body := make([]map[string]string, 0, len(merged))
-	for _, e := range merged {
-		body = append(body, map[string]string{"envName": e.envName, "value": e.value})
-	}
-	if err := doMutateEnvelope(ctx, pc.doer, "PUT", path, body, nil); err != nil {
+	if err := userenv.SetValues(ctx, pc.doer, path, updates); err != nil {
 		return err
 	}
 	keys := make([]string, 0, len(updates))
@@ -230,11 +200,6 @@ func runEnvSet(ctx context.Context, f *cmdutil.Factory, path, scope string, vars
 	}
 	fmt.Printf("Updated %d %s environment variable(s): %s\n", len(updates), scope, strings.Join(keys, ", "))
 	return nil
-}
-
-type envPair struct {
-	envName string
-	value   string
 }
 
 func parseVarFlags(raw []string) (map[string]string, error) {
@@ -252,23 +217,4 @@ func parseVarFlags(raw []string) (map[string]string, error) {
 		out[key] = val
 	}
 	return out, nil
-}
-
-func mergeEnvUpdates(current []baseEnv, updates map[string]string) []envPair {
-	out := make([]envPair, 0, len(current)+len(updates))
-	seen := make(map[string]bool, len(current))
-	for _, e := range current {
-		v := e.Value
-		if up, ok := updates[e.EnvName]; ok {
-			v = up
-		}
-		out = append(out, envPair{envName: e.EnvName, value: v})
-		seen[e.EnvName] = true
-	}
-	for k, v := range updates {
-		if !seen[k] {
-			out = append(out, envPair{envName: k, value: v})
-		}
-	}
-	return out
 }

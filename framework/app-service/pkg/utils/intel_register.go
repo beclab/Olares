@@ -9,30 +9,33 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-// Intel GPU kinds and drivers as published in the node register annotation.
+// GPU kinds and drivers as published in the Intel/AMD node register annotations.
 const (
 	IntelGPUKindIntegrated = "igpu"
 	IntelGPUKindDiscrete   = "dgpu"
 
 	IntelDriverI915 = "i915"
 	IntelDriverXe   = "xe"
+	AmdDriverAmdgpu = "amdgpu"
 )
 
-// IntelGPUEntry is a single Intel GPU card as advertised by the device plugin
-// in the bytetrade.io/node-intel-register node annotation.
+// IntelGPUEntry is a single Intel or AMD GPU card as advertised by the device
+// plugin in the bytetrade.io/node-intel-register or
+// bytetrade.io/node-amd-register node annotation. Both vendors share the same
+// tuple layout.
 type IntelGPUEntry struct {
 	Kind         string // igpu | dgpu
 	Card         string // e.g. card0
-	Driver       string // i915 | xe
+	Driver       string // i915 | xe | amdgpu
 	Name         string // product name, may be empty for unknown PCI ids
-	Architecture string // e.g. Xe-HPG, may be empty
+	Architecture string // e.g. Xe-HPG / GC_12_0_0, may be empty
 	Codename     string // e.g. Alchemist, may be empty
 	Mem          uint64 // discrete VRAM in bytes; 0 for integrated
 }
 
-// ParseNodeIntelRegister parses the bytetrade.io/node-intel-register annotation
-// value. The format is a ':'-separated list of entries, each a ','-separated
-// tuple "<igpu|dgpu>,<cardN>,<i915|xe>,<name>,<architecture>,<codename>,<mem>".
+// ParseNodeIntelRegister parses an Intel or AMD GPU register annotation value.
+// The format is a ':'-separated list of entries, each a ','-separated tuple
+// "<igpu|dgpu>,<cardN>,<i915|xe|amdgpu>,<name>,<architecture>,<codename>,<mem>".
 // name/architecture/codename may be empty (unknown PCI id); mem is a byte count
 // (0 for integrated). Empty input yields an empty slice with no error. A
 // malformed entry (wrong field count, unknown kind/driver, non-numeric mem) is
@@ -52,12 +55,12 @@ func ParseNodeIntelRegister(s string) ([]IntelGPUEntry, error) {
 
 		fields := strings.Split(raw, ",")
 		if len(fields) != 7 {
-			return nil, fmt.Errorf("invalid intel register entry %q: expected 7 fields, got %d", raw, len(fields))
+			return nil, fmt.Errorf("invalid gpu register entry %q: expected 7 fields, got %d", raw, len(fields))
 		}
 
 		mem, err := strconv.ParseUint(strings.TrimSpace(fields[6]), 10, 64)
 		if err != nil {
-			return nil, fmt.Errorf("invalid intel register entry %q: bad mem %q: %w", raw, fields[6], err)
+			return nil, fmt.Errorf("invalid gpu register entry %q: bad mem %q: %w", raw, fields[6], err)
 		}
 
 		entry := IntelGPUEntry{
@@ -73,13 +76,13 @@ func ParseNodeIntelRegister(s string) ([]IntelGPUEntry, error) {
 		switch entry.Kind {
 		case IntelGPUKindIntegrated, IntelGPUKindDiscrete:
 		default:
-			return nil, fmt.Errorf("invalid intel register entry %q: unknown kind %q", raw, entry.Kind)
+			return nil, fmt.Errorf("invalid gpu register entry %q: unknown kind %q", raw, entry.Kind)
 		}
 
 		switch entry.Driver {
-		case IntelDriverI915, IntelDriverXe:
+		case IntelDriverI915, IntelDriverXe, AmdDriverAmdgpu:
 		default:
-			return nil, fmt.Errorf("invalid intel register entry %q: unknown driver %q", raw, entry.Driver)
+			return nil, fmt.Errorf("invalid gpu register entry %q: unknown driver %q", raw, entry.Driver)
 		}
 
 		entries = append(entries, entry)
@@ -88,12 +91,24 @@ func ParseNodeIntelRegister(s string) ([]IntelGPUEntry, error) {
 	return entries, nil
 }
 
-// IntelRegisterFromNode parses the register annotation off a node, returning an
+// GPURegisterFromNode parses a GPU register annotation off a node, returning an
 // empty slice when the annotation is absent.
-func IntelRegisterFromNode(node *corev1.Node) ([]IntelGPUEntry, error) {
+func GPURegisterFromNode(node *corev1.Node, annotationKey string) ([]IntelGPUEntry, error) {
 	if node == nil {
 		return nil, nil
 	}
 
-	return ParseNodeIntelRegister(node.Annotations[constants.NodeIntelRegisterKey])
+	return ParseNodeIntelRegister(node.Annotations[annotationKey])
+}
+
+// IntelRegisterFromNode parses the Intel register annotation off a node,
+// returning an empty slice when the annotation is absent.
+func IntelRegisterFromNode(node *corev1.Node) ([]IntelGPUEntry, error) {
+	return GPURegisterFromNode(node, constants.NodeIntelRegisterKey)
+}
+
+// AmdRegisterFromNode parses the AMD register annotation off a node, returning
+// an empty slice when the annotation is absent.
+func AmdRegisterFromNode(node *corev1.Node) ([]IntelGPUEntry, error) {
+	return GPURegisterFromNode(node, constants.NodeAmdRegisterKey)
 }

@@ -8,6 +8,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/beclab/Olares/cli/pkg/clientset"
 	"github.com/beclab/Olares/cli/pkg/common"
@@ -17,9 +18,19 @@ import (
 	"github.com/beclab/Olares/cli/pkg/core/task"
 	"github.com/beclab/Olares/cli/pkg/core/util"
 	"github.com/beclab/Olares/cli/pkg/gpu"
+	"github.com/beclab/Olares/cli/pkg/utils"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/pkg/errors"
+	ctrl "sigs.k8s.io/controller-runtime"
+)
+
+const (
+	amdConfigDir = "wizard/config/gpu/amd"
+
+	metricsExporterChartRelDir  = "wizard/config/gpu/amd/device-metrics-exporter"
+	metricsExporterReleaseName  = "device-metrics-exporter"
+	metricsExporterNamespace    = "kube-system"
 )
 
 // InstallAmdRocmModule installs AMD ROCm stack on supported Ubuntu if AMD GPU is present.
@@ -56,12 +67,8 @@ func (t *InstallAmdRocm) Execute(runtime connector.Runtime) error {
 		return nil
 	}
 
-	ryzenAIMaxExists, err := connector.HasRyzenAIMax(runtime)
-	if err != nil {
-		return err
-	}
-	// skip rocm install
-	if !ryzenAIMaxExists {
+	// ROCm for Ryzen AI Max (integrated "amd") and discrete AMD GPUs ("amd-gpu").
+	if !si.IsRyzenAIMax() && !si.IsAmdGPU() {
 		return nil
 	}
 	rocmV, _ := connector.RocmVersion()
@@ -218,8 +225,8 @@ func (t *GenerateAndValidateAmdCDI) Execute(runtime connector.Runtime) error {
 	return nil
 }
 
-// UpdateNodeAMDInfo labels the node as supporting the "amd" mode (AMD
-// integrated GPU / Ryzen AI Max) once ROCm is present.
+// UpdateNodeAMDInfo labels the node once ROCm is present:
+// "amd" for Ryzen AI Max integrated GPU, "amd-gpu" for a discrete AMD GPU.
 type UpdateNodeAMDInfo struct {
 	common.KubeAction
 }
@@ -230,17 +237,18 @@ func (u *UpdateNodeAMDInfo) Execute(runtime connector.Runtime) error {
 		return errors.Wrap(errors.WithStack(err), "kubeclient create error")
 	}
 
-	// Check if an AMD Ryzen AI Max APU is present
-	ryzenAIMaxExists, err := connector.HasRyzenAIMax(runtime)
-	if err != nil {
-		return err
-	}
-	if !ryzenAIMaxExists {
-		logger.Info("AMD Ryzen AI Max APU is not detected")
+	si := runtime.GetSystemInfo()
+	var mode string
+	switch {
+	case si.IsRyzenAIMax():
+		mode = gpu.AMDType
+	case si.IsAmdGPU():
+		mode = gpu.AmdGpuType
+	default:
+		logger.Info("No supported AMD GPU detected")
 		return nil
 	}
 
-	// Get ROCm version
 	rocmV, err := connector.RocmVersion()
 	if err != nil || rocmV == nil {
 		logger.Info("ROCm is not installed")
@@ -249,8 +257,8 @@ func (u *UpdateNodeAMDInfo) Execute(runtime connector.Runtime) error {
 
 	rocmVersion := rocmV.Original()
 
-	// Use the ROCm version as the driver label for the "amd" mode.
-	return gpu.SetNodeGpuModeLabel(context.Background(), client.CtrlRuntime(), gpu.AMDType, &rocmVersion, nil, nil)
+	// Use the ROCm version as the driver label for the selected AMD mode.
+	return gpu.SetNodeGpuModeLabel(context.Background(), client.CtrlRuntime(), mode, &rocmVersion, nil, nil)
 }
 
 // InstallAmdPlugin installs the AMD GPU device plugin DaemonSet.
@@ -259,7 +267,7 @@ type InstallAmdPlugin struct {
 }
 
 func (t *InstallAmdPlugin) Execute(runtime connector.Runtime) error {
-	amdPluginPath := path.Join(runtime.GetInstallerDir(), "wizard/config/gpu/nvidia/amdgpu-device-plugin.yaml")
+	amdPluginPath := path.Join(runtime.GetInstallerDir(), amdConfigDir, "amdgpu-device-plugin.yaml")
 	_, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("kubectl apply -f %s", amdPluginPath), false, true)
 	if err != nil {
 		return errors.Wrap(errors.WithStack(err), "failed to apply AMD GPU device plugin")
@@ -294,9 +302,93 @@ func (t *CheckAmdGpuStatus) Execute(runtime connector.Runtime) error {
 	cmd := fmt.Sprintf("%s get pod -n kube-system -l '%s' --field-selector '%s' -o jsonpath='{.items[*].status.phase}'", kubectlpath, selector, fieldSelector)
 
 	rphase, _ := runtime.GetRunner().SudoCmd(cmd, false, false)
-	if rphase == "Running" {
+	if hasRunningPod(rphase) {
 		logger.Infof("AMD GPU device plugin is running")
 		return nil
 	}
 	return fmt.Errorf("AMD GPU device plugin state is not Running (current: %s)", rphase)
+}
+
+// InstallDeviceMetricsExporter installs the AMD device-metrics-exporter Helm chart
+// for discrete AMD GPUs ("amd-gpu").
+type InstallDeviceMetricsExporter struct {
+	common.KubeAction
+}
+
+func (t *InstallDeviceMetricsExporter) Execute(runtime connector.Runtime) error {
+	chartPath := path.Join(runtime.GetInstallerDir(), metricsExporterChartRelDir)
+	if !util.IsExist(chartPath) {
+		return fmt.Errorf("device-metrics-exporter chart not found at %s", chartPath)
+	}
+
+	config, err := ctrl.GetConfig()
+	if err != nil {
+		return err
+	}
+	actionConfig, settings, err := utils.InitConfig(config, metricsExporterNamespace)
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	// Match amdgpu-device-plugin: only schedule on amd64 nodes.
+	vals := map[string]interface{}{
+		"nodeSelector": map[string]interface{}{
+			"kubernetes.io/arch": "amd64",
+		},
+	}
+	if err := utils.UpgradeCharts(ctx, actionConfig, settings, metricsExporterReleaseName, chartPath, "", metricsExporterNamespace, vals, false); err != nil {
+		return errors.Wrap(err, "install/upgrade device-metrics-exporter chart")
+	}
+
+	logger.Info("AMD device-metrics-exporter chart installed/upgraded")
+	return nil
+}
+
+// CheckDeviceMetricsExporter waits until the metrics exporter pod on this node is Running.
+type CheckDeviceMetricsExporter struct {
+	common.KubeAction
+}
+
+func (t *CheckDeviceMetricsExporter) Execute(runtime connector.Runtime) error {
+	// DaemonSet is constrained to kubernetes.io/arch=amd64; skip on other arches.
+	if runtime.GetSystemInfo().GetOsArch() != "amd64" {
+		logger.Info("skip device-metrics-exporter check: node arch is not amd64")
+		return nil
+	}
+
+	kubectlpath, err := util.GetCommand(common.CommandKubectl)
+	if err != nil {
+		return fmt.Errorf("kubectl not found")
+	}
+
+	nodeName, err := os.Hostname()
+	if err != nil {
+		return errors.Wrap(errors.WithStack(err), "get hostname error")
+	}
+	nodeName = strings.ToLower(nodeName)
+
+	// With monitor.resources.gpu=true (chart default), the DaemonSet pod label is
+	// app=<release>-amdgpu-metrics-exporter.
+	selector := fmt.Sprintf("app=%s-amdgpu-metrics-exporter", metricsExporterReleaseName)
+	fieldSelector := fmt.Sprintf("spec.nodeName=%s", nodeName)
+	cmd := fmt.Sprintf("%s get pod -n %s -l '%s' --field-selector '%s' -o jsonpath='{.items[*].status.phase}'",
+		kubectlpath, metricsExporterNamespace, selector, fieldSelector)
+
+	rphase, _ := runtime.GetRunner().SudoCmd(cmd, false, false)
+	if hasRunningPod(rphase) {
+		return nil
+	}
+	return fmt.Errorf("device-metrics-exporter pod state is %q (want Running)", rphase)
+}
+
+func hasRunningPod(phases string) bool {
+	for _, phase := range strings.Fields(phases) {
+		if phase == "Running" {
+			return true
+		}
+	}
+	return false
 }

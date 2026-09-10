@@ -93,6 +93,27 @@ func SetGPUType(values map[string]interface{}, mode string) {
 	gpu["Type"] = mode
 }
 
+// SetWorkloadReplicas mutates values so that `.Values.workloads.<name>.replicaCount`
+// renders as replicas for every name in names, replacing whatever the chart's own
+// values.yaml declares.
+//
+// The emitted shape mirrors app-service's buildWorkloadsValues
+// (pkg/appinstaller/helm_utils.go), which is what the platform actually passes to
+// helm when it scales an app: a map of workload name to a single-key map holding
+// replicaCount. Keeping the two identical is the point -- a lint render that
+// disagreed with the production render would prove nothing.
+//
+// Names come from the manifest's workloadReplicas keys. BuildValues deliberately
+// leaves `workloads` unset so charts render against their own defaults, so a
+// caller that wants to drive the replica count has to inject it here.
+func SetWorkloadReplicas(values map[string]interface{}, names []string, replicas int32) {
+	workloads := make(map[string]interface{}, len(names))
+	for _, name := range names {
+		workloads[name] = map[string]interface{}{"replicaCount": replicas}
+	}
+	values["workloads"] = workloads
+}
+
 // MergeValues recursively deep-merges src into dst in place. On conflicts
 // src wins -- when both dst[k] and src[k] are themselves maps the merge
 // recurses, otherwise dst[k] is replaced wholesale by src[k]. Map values

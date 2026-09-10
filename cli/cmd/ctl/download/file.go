@@ -154,8 +154,8 @@ func runFileRemove(ctx context.Context, f *cmdutil.Factory, path, outputRaw stri
 	if err != nil {
 		return err
 	}
-	path = strings.TrimSpace(path)
-	if err := validateDrivePath(path); err != nil {
+	path, err = normalizeDownloadPath(path, false)
+	if err != nil {
 		return err
 	}
 	pc, err := prepare(ctx, f)
@@ -163,9 +163,9 @@ func runFileRemove(ctx context.Context, f *cmdutil.Factory, path, outputRaw stri
 		return err
 	}
 	q := url.Values{}
-	// user only satisfies the IDL binding (required query field); the real
-	// identity is the gateway-injected X-Bfl-User, so the profile OlaresID
-	// is just a placeholder here.
+	// A manager still serving file_remove from the generated IDL binder
+	// rejects the request without "user"; newer builds ignore it and take
+	// identity from X-Bfl-User.
 	q.Set("user", pc.profile.OlaresID)
 	q.Set("path", path)
 	// /none is a mandatory placeholder suffix in the route; do not drop it.

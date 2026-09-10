@@ -46,6 +46,65 @@ func CheckTailScaleACLs(acls []appv1.ACL) error {
 	return nil
 }
 
+const sshACLDst = "*:22"
+
+// hasTCPSSHACL reports whether acls already contain the SSH allow rule
+// (tcp *:22) that Settings -> VPN -> Allow SSH manages.
+func hasTCPSSHACL(acls []appv1.ACL) bool {
+	for _, acl := range acls {
+		if strings.ToLower(acl.Proto) != "tcp" {
+			continue
+		}
+		for _, dst := range acl.Dst {
+			if dst == sshACLDst {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// enableTCPSSHACL appends tcp *:22 when missing. Idempotent — repeated
+// enables do not create duplicate entries (duplicates break the ACL
+// editor via isPortDuplicate).
+func enableTCPSSHACL(acls []appv1.ACL) []appv1.ACL {
+	if hasTCPSSHACL(acls) {
+		out := make([]appv1.ACL, len(acls))
+		copy(out, acls)
+		return out
+	}
+	out := make([]appv1.ACL, 0, len(acls)+1)
+	out = append(out, acls...)
+	return append(out, appv1.ACL{Proto: "tcp", Dst: []string{sshACLDst}})
+}
+
+// disableTCPSSHACL removes *:22 from tcp ACL entries. Entries whose dst
+// list empties out are dropped. Non-tcp rules (including udp *:22) and
+// other destinations on the same entry are preserved. Safe when Dst is
+// empty (unlike the previous Dst[0] index).
+func disableTCPSSHACL(acls []appv1.ACL) []appv1.ACL {
+	out := make([]appv1.ACL, 0, len(acls))
+	for _, acl := range acls {
+		if strings.ToLower(acl.Proto) != "tcp" {
+			out = append(out, acl)
+			continue
+		}
+		kept := make([]string, 0, len(acl.Dst))
+		for _, dst := range acl.Dst {
+			if dst == sshACLDst {
+				continue
+			}
+			kept = append(kept, dst)
+		}
+		if len(kept) == 0 {
+			continue
+		}
+		acl.Dst = kept
+		out = append(out, acl)
+	}
+	return out
+}
+
 func parseProtocol(protocol string) error {
 	if ACLProto.Has(protocol) {
 		return nil

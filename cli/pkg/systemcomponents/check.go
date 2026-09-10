@@ -151,6 +151,10 @@ type workload struct {
 	name      string
 	selector  *metav1.LabelSelector
 	assert    func() error
+	// ready is how many replicas the workload's status claims are serving. It is
+	// the claim a node scoped check weighs against the pods that actually exist,
+	// to catch a status that has not caught up with a restart.
+	ready func() int32
 }
 
 type clusterIndex struct {
@@ -283,9 +287,54 @@ func (c *Checker) assertPodsOnNode(ctx context.Context, w workload) error {
 	}
 
 	if live == 0 {
+		if err := c.assertStatusNotStale(ctx, w); err != nil {
+			return fmt.Errorf("no pod running on node %s: %w", c.node, err)
+		}
 		if err := w.assert(); err != nil {
 			return fmt.Errorf("no pod running on node %s: %w", c.node, err)
 		}
+	}
+	return nil
+}
+
+// assertStatusNotStale reports why a workload's status cannot stand in for the
+// pod this node is missing, or nil when the status is consistent with the pods
+// that exist and may be read.
+//
+// The fallback above leans on the status to tell "the replicas run on another
+// node" apart from "the replicas are gone", which only holds while the status
+// describes the present. Callers that restart a node delete its pods in bulk,
+// and until the controllers observe that, the status still counts the pods that
+// were just removed. Reading it then would report a whole node as ready on the
+// strength of a status written before its workloads were taken down.
+//
+// A pod is only counted as backing the claim once it is scheduled and not on its
+// way out: one that is terminating or still unplaced is running nowhere, and a
+// finished one is an execution record. Counting rather than rejecting outright
+// keeps a replica that cannot be placed from blocking a workload that is
+// genuinely serving from somewhere else.
+func (c *Checker) assertStatusNotStale(ctx context.Context, w workload) error {
+	pods, err := c.podsOf(ctx, w, "")
+	if err != nil {
+		// with the pods unreadable the status is the only evidence there is
+		return nil
+	}
+
+	scheduled := int32(0)
+	for _, pod := range pods {
+		switch {
+		case pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodFailed:
+		case pod.DeletionTimestamp != nil:
+		case pod.Spec.NodeName == "":
+		default:
+			scheduled++
+		}
+	}
+
+	if claimed := w.ready(); scheduled < claimed {
+		return fmt.Errorf(
+			"its status still counts %d ready replica(s) while only %d pod(s) are scheduled, so it predates the restart",
+			claimed, scheduled)
 	}
 	return nil
 }
@@ -404,6 +453,7 @@ func deploymentWorkload(d *appsv1.Deployment) workload {
 		name:      d.Name,
 		selector:  d.Spec.Selector,
 		assert:    func() error { return AssertDeploymentReady(d) },
+		ready:     func() int32 { return d.Status.ReadyReplicas },
 	}
 }
 
@@ -413,6 +463,7 @@ func statefulSetWorkload(s *appsv1.StatefulSet) workload {
 		name:      s.Name,
 		selector:  s.Spec.Selector,
 		assert:    func() error { return AssertStatefulSetReady(s) },
+		ready:     func() int32 { return s.Status.ReadyReplicas },
 	}
 }
 
@@ -422,5 +473,6 @@ func daemonSetWorkload(d *appsv1.DaemonSet) workload {
 		name:      d.Name,
 		selector:  d.Spec.Selector,
 		assert:    func() error { return AssertDaemonSetReady(d) },
+		ready:     func() int32 { return d.Status.NumberReady },
 	}
 }

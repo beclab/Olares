@@ -16,8 +16,8 @@ import (
 //   - leave responses empty and let the doer return nil for every call
 //     (the body assertion path),
 //
-//   - queue typed responses with `enqueueRespond([]byte)` to drive
-//     reads back through bflEnvelope unwrapping, or
+//   - queue typed responses with `enqueueEnvelope` to drive reads back
+//     through envelope unwrapping, or
 //
 //   - set wantErr to fail the next call.
 type fakeDoer struct {

@@ -24,6 +24,16 @@
 # The CLI binary `olares-cli` itself is NOT published here — it ships with
 # Olares. Each skill declares it as a host requirement via
 # metadata.openclaw.requires.bins: ["olares-cli"].
+#
+# Every skill now publishes at the olares-cli release it ships in
+# (x.y.z-cli.n), because the suite is compiled into that binary. That version
+# is not in git: the release job stamps it in before compiling (stamp.py), so
+# publishing means stamping the same value here first. The first publish
+# under that scheme is numerically *below* what ClawHub already holds
+# from the old per-skill numbering (olares-chart was at 4.18.0), so expect a
+# registry that enforces increasing versions to refuse it. ClawHub is the
+# secondary channel — the binary carries the skills, and `olares-cli skills
+# install` writes them — so a refusal here is not a blocked release.
 
 set -euo pipefail
 
@@ -45,6 +55,11 @@ SKILLS=(
   "olares-chart|Olares Chart (olares-cli chart)"
   "olares-publish|Olares Publish (Olares Market distribution)"
 )
+
+# What every SKILL.md in git declares. The release job stamps the release it
+# is building over it before compiling (skills/stamp.py), so a tree carrying
+# this has been built by nobody and is not a version to publish.
+PLACEHOLDER_VERSION="0.0.0-cli.0"
 
 DRY_RUN=""
 TARGETS=()
@@ -108,8 +123,8 @@ validate_skill() {
   [[ -n "$fm_name" ]] || errs+=("missing name: in frontmatter")
   [[ "$fm_name" == "$slug" ]] || errs+=("frontmatter name '$fm_name' != folder slug '$slug'")
   [[ -n "$fm_version" ]] || errs+=("missing version: in frontmatter")
-  [[ "$fm_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([+-][0-9A-Za-z.-]+)?$ ]] \
-    || errs+=("version '$fm_version' is not valid semver")
+  [[ "$fm_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+-cli\.[0-9]+$ ]] \
+    || errs+=("version '$fm_version' is not an olares-cli release (x.y.z-cli.n)")
   grep -qE '^description:' "$file" || errs+=("missing description: in frontmatter")
   if [[ -z "$desc_len" ]]; then
     errs+=("description must be a single quoted line in frontmatter")
@@ -162,6 +177,18 @@ for entry in "${SKILLS[@]}"; do
     FAILED+=("$slug")
     continue
   fi
+  # A publish, not a dry run: the placeholder is what every checkout carries,
+  # so refusing it in --dry-run would refuse the local content check this
+  # repository runs on every pull request. Refusing it here is the one that
+  # matters — a 0.0.0 the registry accepts becomes the top of that slug's
+  # version history and cannot be taken back.
+  if [[ -z "$DRY_RUN" && "$version" == "$PLACEHOLDER_VERSION" ]]; then
+    echo "ERROR: $slug still declares the placeholder $PLACEHOLDER_VERSION." >&2
+    echo "       The release stamps the real version in before it compiles; do the same" >&2
+    echo "       here (python3 stamp.py <x.y.z-cli.n>) rather than publishing from git." >&2
+    FAILED+=("$slug")
+    continue
+  fi
 
   echo
   echo "=================================================="
@@ -175,6 +202,10 @@ for entry in "${SKILLS[@]}"; do
   if [[ -n "$DRY_RUN" ]]; then
     if validate_skill "$dir" "$slug"; then
       echo "  local validation OK"
+      if [[ "$version" == "$PLACEHOLDER_VERSION" ]]; then
+        echo "  note: $PLACEHOLDER_VERSION is the committed placeholder; a real publish is"
+        echo "        refused until stamp.py has written the release version in"
+      fi
       echo "  would run: clawhub skill publish $dir \\"
       echo "               --slug $slug --name \"$name\" --version $version \\"
       echo "               --tags \"$TAGS\" --changelog \"$CHANGELOG\""

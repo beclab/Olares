@@ -11,7 +11,28 @@ olares-cli knowledge download inspect 'https://example.com/file.zip' -o json
 
 Returns provider (`yt-dlp` / `aria2` / `huggingface` / …), title, and (for yt-dlp) `available_qualities`. Probe failures often still return HTTP 200 with `Error` / `error_category` set — treat as a hint, not a gate before `create`.
 
+Run it to pick a quality or to show the user what a URL resolves to. You do **not** need it to name a task: `create` runs the same probe and sends the title as `file_name` on its own, so there is no reason to inspect first and pass the title back through `--name`. See [task lifecycle](olares-knowledge-download-lifecycle.md) for the naming rules.
+
 If `Available: false` for yt-dlp, the yt-dlp daemon is unreachable (often not installed). Create for yt-dlp URLs will fail until it is available; aria2 / huggingface URLs are unaffected.
+
+## When the URL needs a login
+
+These signals mean the URL is downloadable but the server has no session for it — not that the URL is bad:
+
+| Signal | Where it shows up |
+|---|---|
+| `error_code` 501 | inspect data, or the create response |
+| `error_code` 507 / 511 / 512 | inspect data |
+| `error_category` `authorization_failed` / `private_resource` / `bot_detected` | inspect data, or `info` on a failed task |
+
+This is not a dead end, but it is also **not something you can finish on your own**: `cookies.txt` is a Netscape-format export taken from the user's own logged-in browser. No command generates it, and there is no conventional path to guess at — do not go looking for one on disk. Stop and ask the user to export it and tell you where it is. Then import and retry:
+
+```bash
+olares-cli settings integration cookie import --domain youtube.com --file cookies.txt
+olares-cli knowledge download inspect 'https://www.youtube.com/watch?v=…'
+```
+
+The CLI prints this command for you, with the domain already filled in from the URL — quote it when you ask, so the user knows exactly what the file is for. If their `cookies.txt` export turns out to be missing the login, open [`olares-settings`](../../olares-settings/SKILL.md) and use the `header` import path under `settings integration cookie` — that is the fix.
 
 ## prefs get / set
 

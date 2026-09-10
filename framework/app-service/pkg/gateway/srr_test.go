@@ -83,6 +83,39 @@ func TestBuildSpecForEntrance(t *testing.T) {
 	}
 }
 
+func TestBuildSpecForEntranceSharedIgnoresPlatformDomain(t *testing.T) {
+	app := &appv1alpha1.Application{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "demo",
+			Labels: map[string]string{
+				constants.AppApiVersionLabel: "v3",
+				constants.AppSharedLabel:     constants.AppSharedTrue,
+			},
+		},
+		Spec: appv1alpha1.ApplicationSpec{
+			Appid:     "demo1234",
+			Name:      "demo",
+			Namespace: "demo-shared",
+			SharedEntrances: []appv1alpha1.Entrance{
+				{Name: "web", Host: "demo-svc", Port: 8080},
+			},
+		},
+	}
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Name: "demo-svc", Namespace: "demo-shared"},
+		Spec:       corev1.ServiceSpec{Ports: []corev1.ServicePort{{Port: 8080, Protocol: corev1.ProtocolTCP}}},
+	}
+	spec, err := BuildSpecForEntrance(app, app.Spec.SharedEntrances[0], 0, len(app.Spec.SharedEntrances), svc, "bytetrade.io",
+		srrv1alpha1.EntranceClassShared)
+	if err != nil {
+		t.Fatalf("BuildSpecForEntrance: %v", err)
+	}
+	wantHost := appv1alpha1.SharedEntranceID(app.Spec.Appid, 0, len(app.Spec.SharedEntrances)) + ".shared.olares.com"
+	if len(spec.HostPatterns) != 1 || spec.HostPatterns[0] != wantHost {
+		t.Errorf("hostPatterns = %v, want %q", spec.HostPatterns, wantHost)
+	}
+}
+
 func TestBuildSpecForEntranceRequiresAppID(t *testing.T) {
 	app := &appv1alpha1.Application{
 		Spec: appv1alpha1.ApplicationSpec{

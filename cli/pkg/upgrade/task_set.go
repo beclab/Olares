@@ -43,6 +43,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/storage"
 	"github.com/beclab/Olares/cli/pkg/terminus"
 	"github.com/beclab/Olares/cli/pkg/utils"
+	"github.com/beclab/Olares/cli/version"
 	appv1alpha1 "github.com/beclab/Olares/framework/app-service/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
@@ -64,11 +65,25 @@ import (
 
 const cacheRebootNeeded = "reboot.needed"
 
-func publishMarketEnsureApps() []task.Interface {
+// publishMarketPreinstallDeclaration declares what this version expects, and
+// runs on every upgrade rather than on the one that introduced the mechanism.
+// Each release has a declaration of its own, so a release that publishes none
+// leaves Market with nothing to maintain after the upgrade.
+//
+// No installer directory is given: an upgrade brings no medium, so the
+// declaration names the catalog apps of the version being upgraded to and
+// nothing local. That version is this binary's, which is what performs the
+// upgrade. Those catalog apps are the whole of what an upgrade declares, which
+// is why it is the upgrade rather than the install that asks for them.
+func publishMarketPreinstallDeclaration() []task.Interface {
 	return []task.Interface{
 		&task.LocalTask{
-			Name:   "PublishMarketEnsureApps",
-			Action: new(preinstall.PublishEnsureAppsAction),
+			Name: "PublishMarketPreinstallDeclaration",
+			Action: &preinstall.PublishDeclarationAction{
+				RootDir:       storage.OlaresRootDir,
+				OSVersion:     version.VERSION,
+				CatalogPolicy: preinstall.DeclareCatalogApps,
+			},
 		},
 	}
 }
@@ -720,6 +735,22 @@ func upgradeKubernetesPrometheusRule() []task.Interface {
 	}
 }
 
+// upgradeIntelGPUPlugin reuses the install-time Intel GPU stack tasks
+// (labels, optional dGPU drivers, NFD, device plugin, xpumd). Individual
+// tasks are gated by HasAnyIntelGPU / HasQualifyingIntelDGPU so non-Intel
+// nodes skip them during upgrade.
+func upgradeIntelGPUPlugin() []task.Interface {
+	return intelgpu.PluginTasks()
+}
+
+// upgradeAmdDeviceMetricsExporter installs/upgrades only the AMD
+// device-metrics-exporter chart. Unlike the Intel stack, the AMD device plugin
+// and ROCm are not touched on upgrade. The tasks are gated by HasAmdDiscreteGPU
+// so nodes without a discrete AMD GPU skip them.
+func upgradeAmdDeviceMetricsExporter() []task.Interface {
+	return amdgpu.MetricsExporterTasks()
+}
+
 func upgradePrometheusOperator() []task.Interface {
 	return []task.Interface{
 		// prometheus operator
@@ -1153,4 +1184,8 @@ func upgradeUserReverseProxy() []task.Interface {
 			Delay:  5 * time.Second,
 		},
 	}
+}
+
+func upgradeAmdDevicePlugin() []task.Interface {
+	return amdgpu.UpgradeAmdDevicePluginTasks()
 }

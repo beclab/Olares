@@ -17,6 +17,13 @@ import (
 // lark-cli's $LARK_CLI_HOME convention.
 const homeEnv = "OLARES_CLI_HOME"
 
+// cacheDirEnv is set by app-service's cli-credential webhook and points at a
+// writable emptyDir mounted into an application container. It sits between
+// the explicit override and $HOME so a managed container gets a config dir it
+// can actually write to, without changing anything on a host install where
+// the variable is unset.
+const cacheDirEnv = "OLARES_CLI_CACHE_DIR"
+
 // defaultDir is the directory name used under $HOME when $OLARES_CLI_HOME is
 // unset.
 const defaultDir = ".olares-cli"
@@ -35,13 +42,16 @@ const (
 	filePerm os.FileMode = 0o600
 )
 
-// Home returns the resolved olares-cli config directory. It honors the
-// $OLARES_CLI_HOME override and falls back to $HOME/.olares-cli. The directory
-// is NOT created here — callers that intend to write should call EnsureHome
+// Home returns the resolved olares-cli config directory: $OLARES_CLI_HOME,
+// then $OLARES_CLI_CACHE_DIR/config, then $HOME/.olares-cli. The directory is
+// NOT created here — callers that intend to write should call EnsureHome
 // instead.
 func Home() (string, error) {
 	if v := os.Getenv(homeEnv); v != "" {
 		return v, nil
+	}
+	if v := os.Getenv(cacheDirEnv); v != "" {
+		return filepath.Join(v, "config"), nil
 	}
 	home, err := os.UserHomeDir()
 	if err != nil {

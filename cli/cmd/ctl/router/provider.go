@@ -5,11 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"net/url"
-	"regexp"
+	"sort"
 	"strconv"
 	"strings"
-	"text/tabwriter"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -34,22 +32,78 @@ import (
 // on the wire, by three separate guards in Router; there is nothing to
 // redact here.
 type providerRow struct {
-	ID                   string    `json:"id"`
-	Name                 string    `json:"name"`
-	ProviderDisplayTitle *string   `json:"provider_display_title,omitempty"`
-	ProviderType         string    `json:"provider_type"`
-	BaseURL              string    `json:"base_url"`
-	Status               string    `json:"status"`
-	Source               string    `json:"source"`
-	OlaresAppName        *string   `json:"olares_app_name,omitempty"`
-	OlaresVersionName    *string   `json:"olares_version_name,omitempty"`
-	OlaresStatus         *string   `json:"olares_status,omitempty"`
-	OlaresLatestTaskID   *string   `json:"olares_latest_task_id,omitempty"`
-	CredentialsVersion   int       `json:"credentials_version"`
-	IconURL              *string   `json:"icon_url,omitempty"`
-	EntranceURL          *string   `json:"entrance_url,omitempty"`
-	CreatedAt            time.Time `json:"created_at"`
-	UpdatedAt            time.Time `json:"updated_at"`
+	ID string `json:"id"`
+	// Name is what a caller writes in front of a model name, and it is not
+	// unique: every locally installed model application carries the one name
+	// `Olares`, so that a caller writes `Olares/<model>` without having to
+	// know which application serves it. Which application a row is stays in
+	// OlaresAppName, and what an operator called it in ProviderDisplayTitle.
+	Name                 string  `json:"name"`
+	ProviderDisplayTitle *string `json:"provider_display_title,omitempty"`
+	ProviderType         string  `json:"provider_type"`
+	BaseURL              string  `json:"base_url"`
+	Status               string  `json:"status"`
+	Source               string  `json:"source"`
+	OlaresAppName        *string `json:"olares_app_name,omitempty"`
+	OlaresVersionName    *string `json:"olares_version_name,omitempty"`
+	OlaresStatus         *string `json:"olares_status,omitempty"`
+	// OlaresMarketSource is the Market source the installed copy came from.
+	// Absent means the copy predates Router recording it, which reads as
+	// "cannot tell" rather than as a mismatch.
+	OlaresMarketSource *string `json:"olares_market_source,omitempty"`
+	// ModelConsoleStatus is the phase the application's own control plane
+	// reports for the model it serves, alongside olares_status: that is the
+	// container's lifecycle, this is the model's. Present on every locally
+	// installed application, absent on one an admin entered.
+	ModelConsoleStatus *string `json:"model_console_status,omitempty"`
+	OlaresLatestTaskID *string `json:"olares_latest_task_id,omitempty"`
+	// EngineLoad is the last queue reading taken from the application's
+	// inference engine. Absent for every provider whose engine does not
+	// publish one, which is every cloud account.
+	EngineLoad         *engineLoad `json:"engine_load,omitempty"`
+	CredentialsVersion int         `json:"credentials_version"`
+	IconURL            *string     `json:"icon_url,omitempty"`
+	EntranceURL        *string     `json:"entrance_url,omitempty"`
+	CreatedAt          time.Time   `json:"created_at"`
+	UpdatedAt          time.Time   `json:"updated_at"`
+}
+
+// engineLoad is how much work the engine behind a model application is holding.
+//
+// It exists because a queued request and a slow one look the same from outside
+// and have opposite remedies: an engine launched with one slot accepts every
+// request and serves them one at a time, so a caller waiting two minutes cannot
+// tell whether the model is that slow or whether it is nineteenth in line.
+//
+// Nothing is admitted or refused on these numbers. Router decides that on its
+// own in-flight count, which is current by construction, where this is one poll
+// old at best — which is why ObservedAt is printed with it rather than beside it.
+type engineLoad struct {
+	EngineKind string `json:"engine_kind,omitempty"`
+	Processing int    `json:"processing"`
+	Deferred   int    `json:"deferred"`
+	// Slots is what the engine was launched to serve at once. Absent when the
+	// launch flags left it to the engine's own default, which is not readable
+	// from out here, and where a zero would read as "serves nobody".
+	Slots      int       `json:"slots,omitempty"`
+	ObservedAt time.Time `json:"observed_at"`
+}
+
+// describe is one line, because these numbers only mean something together.
+func (l *engineLoad) describe() string {
+	parts := []string{fmt.Sprintf("%d processing", l.Processing)}
+	if l.Slots > 0 {
+		parts[0] = fmt.Sprintf("%d of %d slots busy", l.Processing, l.Slots)
+	}
+	parts = append(parts, fmt.Sprintf("%d queued behind", l.Deferred))
+	if l.EngineKind != "" {
+		parts = append(parts, l.EngineKind)
+	}
+	line := strings.Join(parts, ", ")
+	if l.ObservedAt.IsZero() {
+		return line + " (the reading carries no timestamp)"
+	}
+	return fmt.Sprintf("%s, read %s ago", line, time.Since(l.ObservedAt).Round(time.Second))
 }
 
 // providerModelRow is one model a provider serves. The capability fields are
@@ -65,7 +119,6 @@ type providerModelRow struct {
 	ProviderID      string            `json:"provider_id"`
 	Name            string            `json:"name"`
 	Mode            string            `json:"mode"`
-	Alias           *string           `json:"alias,omitempty"`
 	Enabled         bool              `json:"enabled"`
 	Status          string            `json:"status"`
 	Supports        map[string]bool   `json:"supports,omitempty"`
@@ -73,9 +126,15 @@ type providerModelRow struct {
 	ParameterRules  json.RawMessage   `json:"parameter_rules,omitempty"`
 	ContextSize     int               `json:"context_size,omitempty"`
 	MaxOutputTokens int               `json:"max_output_tokens,omitempty"`
-	EngineArgs      string            `json:"engine_args,omitempty"`
-	CreatedAt       time.Time         `json:"created_at"`
-	UpdatedAt       time.Time         `json:"updated_at"`
+	// MaxConcurrency is how many requests the engine behind this model works
+	// on at once, read out of its launch flags. Nobody can set it here: a
+	// number an admin typed would be a width the engine never agreed to.
+	// Absent on a cloud model, which has no engine of ours to be launched.
+	MaxConcurrency int       `json:"max_concurrency,omitempty"`
+	KVPoolTokens   int       `json:"kv_pool_tokens,omitempty"`
+	EngineArgs     string    `json:"engine_args,omitempty"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
 }
 
 type providerDetail struct {
@@ -83,9 +142,29 @@ type providerDetail struct {
 	Models []providerModelRow `json:"models"`
 }
 
+// title falls back to the application id for a local model provider, because
+// Router often sends no display title for one: `provider get bgererankerv2m3`
+// reports TITLE `bgererankerv2m3` while `usage apps` has the readable name for
+// the same application. The right name exists and this endpoint does not carry
+// it, so the fallback stays here and the fix belongs in Router rather than in a
+// second lookup from every verb that prints a provider.
 func (p *providerRow) title() string {
 	if p.ProviderDisplayTitle != nil && *p.ProviderDisplayTitle != "" {
 		return *p.ProviderDisplayTitle
+	}
+	if p.OlaresAppName != nil && *p.OlaresAppName != "" {
+		return *p.OlaresAppName
+	}
+	return p.Name
+}
+
+// handle is what to print when a message asks someone to name this provider
+// again. For a hand-entered one that is its name; for a model application it is
+// the application's, because `Olares` names all of them at once and would send
+// the reader back with an ambiguous argument.
+func (p *providerRow) handle() string {
+	if p.OlaresAppName != nil && *p.OlaresAppName != "" {
+		return *p.OlaresAppName
 	}
 	return p.Name
 }
@@ -125,7 +204,10 @@ Subcommands:
   history <name>   credential versions, newest first
   rollback         restore an earlier credential version
   register <app>   the provider Router registered for a model application
-  models           which models a provider offers
+
+"provider get" lists the models a provider serves. Attaching, correcting and
+detaching them is "olares-cli router model", which reaches every model on this
+Router rather than one provider's at a time.
 
 Market-sourced providers only appear in the list once their application is
 actually running, so a model app that is still installing is absent here
@@ -147,7 +229,7 @@ Admin only.
 	cmd.AddCommand(newProviderHistoryCommand(f))
 	cmd.AddCommand(newProviderRollbackCommand(f))
 	cmd.AddCommand(newProviderRegisterCommand(f))
-	cmd.AddCommand(newProviderModelsCommand(f))
+	cmd.AddCommand(newDeprecatedProviderModelsCommand(f))
 	return cmd
 }
 
@@ -156,35 +238,38 @@ Admin only.
 // serves, so the reader sees the row as it now stands rather than an echo of
 // what was sent.
 func renderProviderRow(w io.Writer, p *providerRow) error {
-	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	rows := [][2]string{
-		{"NAME", nonEmpty(p.Name)},
-		{"TITLE", nonEmpty(p.title())},
-		{"TYPE", nonEmpty(p.ProviderType)},
-		{"STATUS", nonEmpty(p.Status)},
-		{"SOURCE", nonEmpty(p.Source)},
-		{"BASE URL", nonEmpty(p.BaseURL)},
-		{"CREDENTIALS VERSION", strconv.Itoa(p.CredentialsVersion)},
-		{"ID", nonEmpty(p.ID)},
-	}
+	t := newTable(w)
+	t.row("NAME", nonEmpty(p.Name))
+	t.row("TITLE", nonEmpty(p.title()))
+	t.row("TYPE", nonEmpty(p.ProviderType))
+	t.row("STATUS", nonEmpty(p.Status))
+	t.row("SOURCE", nonEmpty(p.Source))
+	t.row("BASE URL", nonEmpty(p.BaseURL))
+	t.row("CREDENTIALS VERSION", strconv.Itoa(p.CredentialsVersion))
+	t.row("ID", nonEmpty(p.ID))
 	if p.OlaresAppName != nil {
-		rows = append(rows, [2]string{"OLARES APP", nonEmpty(*p.OlaresAppName)})
+		t.row("OLARES APP", nonEmpty(*p.OlaresAppName))
 	}
 	if p.OlaresVersionName != nil {
-		rows = append(rows, [2]string{"OLARES VERSION", nonEmpty(*p.OlaresVersionName)})
+		t.row("OLARES VERSION", nonEmpty(*p.OlaresVersionName))
 	}
 	if p.OlaresStatus != nil {
-		rows = append(rows, [2]string{"OLARES STATUS", nonEmpty(*p.OlaresStatus)})
+		t.row("OLARES STATUS", nonEmpty(*p.OlaresStatus))
+	}
+	// The second axis, and the one a reader is usually missing: a container
+	// reports running minutes before the model it serves can answer.
+	if p.ModelConsoleStatus != nil {
+		t.row("MODEL PHASE", nonEmpty(*p.ModelConsoleStatus))
+	}
+	// The engine's own account of its queue, and it is only that: Router
+	// admits on its in-flight count, not on this.
+	if p.EngineLoad != nil {
+		t.row("ENGINE LOAD", p.EngineLoad.describe())
 	}
 	if p.EntranceURL != nil {
-		rows = append(rows, [2]string{"ENTRANCE URL", nonEmpty(*p.EntranceURL)})
+		t.row("ENTRANCE URL", nonEmpty(*p.EntranceURL))
 	}
-	for _, r := range rows {
-		if _, err := fmt.Fprintf(tw, "%s\t%s\n", r[0], r[1]); err != nil {
-			return err
-		}
-	}
-	return tw.Flush()
+	return t.flush()
 }
 
 // marketOwnedErr is the refusal every write verb owes a Market-sourced
@@ -200,24 +285,25 @@ func marketOwnedErr(p *providerRow, action string) error {
 		p.Name, app, action)
 }
 
-// providerIDPattern matches Router's provider ids (UUIDs), which is how
-// resolveProvider decides whether it can skip the list.
-var providerIDPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
-
-// resolveProvider turns what a person typed into a provider row. Names are
-// what anyone actually knows — they are unique in Router — so an id is
-// accepted but never required.
+// resolveProvider turns what a person typed into a provider row.
+//
+// Three handles reach a row, because Router's own name for one is not always
+// something a person can name it by: the routing name, the application name for
+// a locally installed model application, and the display title an operator gave
+// it. The routing name is not unique — every model application carries `Olares`
+// — so it is matched last and an ambiguous match is refused with the names that
+// would separate the rows rather than resolved to whichever came back first.
 //
 // An id is fetched directly rather than looked up in the list, because the
 // list omits a Market-sourced provider whose application is not running while
 // the detail route still serves it. That is the one way to inspect a provider
 // belonging to a stopped model app.
 func resolveProvider(ctx context.Context, pc *preparedClient, ref string) (*providerRow, error) {
-	ref = strings.TrimSpace(ref)
-	if ref == "" {
-		return nil, fmt.Errorf("provider name or id is required")
+	ref, err := requireRef(ref, "a provider name, application name or id")
+	if err != nil {
+		return nil, err
 	}
-	if providerIDPattern.MatchString(ref) {
+	if entityID.MatchString(ref) {
 		detail, err := getProvider(ctx, pc, ref)
 		if err != nil {
 			return nil, err
@@ -230,9 +316,33 @@ func resolveProvider(ctx context.Context, pc *preparedClient, ref string) (*prov
 		return nil, err
 	}
 	for i := range rows {
-		if strings.EqualFold(rows[i].Name, ref) {
+		if strDeref(rows[i].OlaresAppName) != "" && strings.EqualFold(strDeref(rows[i].OlaresAppName), ref) {
 			return &rows[i], nil
 		}
+	}
+	for i := range rows {
+		if title := strDeref(rows[i].ProviderDisplayTitle); title != "" && strings.EqualFold(title, ref) {
+			return &rows[i], nil
+		}
+	}
+	byName := make([]*providerRow, 0, 2)
+	for i := range rows {
+		if strings.EqualFold(rows[i].Name, ref) {
+			byName = append(byName, &rows[i])
+		}
+	}
+	if len(byName) == 1 {
+		return byName[0], nil
+	}
+	if len(byName) > 1 {
+		handles := make([]string, 0, len(byName))
+		for _, row := range byName {
+			handles = append(handles, row.handle())
+		}
+		sort.Strings(handles)
+		return nil, fmt.Errorf("%q names %d providers, because every locally installed model application "+
+			"answers to it; name one of them instead: %s",
+			ref, len(byName), strings.Join(handles, ", "))
 	}
 	// The provider list drops a Market-sourced provider whose application is
 	// not running, while the aggregate model list keeps it. Asking there
@@ -245,15 +355,30 @@ func resolveProvider(ctx context.Context, pc *preparedClient, ref string) (*prov
 			return &row, nil
 		}
 	}
+	// An application still installing is hidden from both of those: it is not
+	// running, and it has never been asked for its models. The model-app list
+	// is the one place that names the row anyway, which matters because the
+	// minutes right after an install are when someone is most likely to name it.
+	if id := providerIDFromModelApps(ctx, pc, ref); id != "" {
+		detail, derr := getProvider(ctx, pc, id)
+		if derr == nil {
+			row := detail.providerRow
+			return &row, nil
+		}
+	}
 	known := make([]string, 0, len(rows))
 	for i := range rows {
-		known = append(known, rows[i].Name)
+		known = append(known, rows[i].handle())
 	}
-	if len(known) == 0 {
-		return nil, fmt.Errorf("no provider %q, and no provider is currently listed. %s", ref, hiddenProviderNote)
-	}
-	return nil, fmt.Errorf("no provider %q; listed providers are %s. %s",
-		ref, strings.Join(known, ", "), hiddenProviderNote)
+	sort.Strings(known)
+	return nil, missing{
+		noun:  "provider",
+		ref:   ref,
+		known: known,
+		have:  "the listed ones are",
+		none:  "no provider is currently listed",
+		note:  hiddenProviderNote,
+	}.err()
 }
 
 // providerIDFromModels finds a provider id by name in the aggregate model list.
@@ -275,22 +400,17 @@ func providerIDFromModels(ctx context.Context, pc *preparedClient, name string) 
 
 // hiddenProviderNote explains the one case where a provider exists but is not
 // listed, which is otherwise indistinguishable from having none.
-const hiddenProviderNote = "A provider belonging to a model application is listed only while that application runs, " +
-	"so check `olares-cli settings apps list` for a stopped model app; you can still inspect it by id."
+const hiddenProviderNote = "A provider belonging to a model application is listed only while that application " +
+	"runs or is being installed, so check `olares-cli market status <app>` for one that is stopped; " +
+	"either way it can still be named by its application name or inspected by id."
 
 func listProviders(ctx context.Context, pc *preparedClient) ([]providerRow, error) {
-	var env struct {
-		Items []providerRow `json:"items"`
-	}
-	if err := pc.router.doJSON(ctx, "GET", consoleAPI+"/providers", nil, &env); err != nil {
-		return nil, err
-	}
-	return env.Items, nil
+	return collection[providerRow](ctx, pc, epProviders)
 }
 
 func getProvider(ctx context.Context, pc *preparedClient, id string) (*providerDetail, error) {
 	var detail providerDetail
-	path := consoleAPI + "/providers/" + url.PathEscape(id)
+	path := epProvider(id)
 	if err := pc.router.doJSON(ctx, "GET", path, nil, &detail); err != nil {
 		return nil, err
 	}

@@ -7,17 +7,22 @@ This package downloads the platform-specific Go binary on `postinstall` and expo
 ## Quick start
 
 ```bash
-# First-run wizard (recommended): does `npm install -g @olares/cli` and
-# `npx skills add beclab/Olares -y -g` for you, in that order.
+# First-run wizard (recommended): installs this same version globally, then
+# runs `olares-cli skills install`, in that order.
 npx @olares/cli@latest install
 
 # Or do it yourself, step by step:
-npm install -g @olares/cli@latest                # persistent global install
-npx skills add beclab/Olares -y -g               # six olares-* agent skills
+npm install -g @olares/cli@latest   # persistent global install
+olares-cli skills install           # write the agent skills the binary carries
 
 # One-off — no install:
 npx @olares/cli@latest <verb>
 ```
+
+The tag you name decides everything the wizard installs: `@latest` is the
+promoted stable release, and `@next` is every release as CI publishes it, so
+`npx @olares/cli@next install` is how you get the newest one. See
+[npm dist-tags](#versioning-and-release-maintainers) below.
 
 After any of those, authenticate (interactive, prompts for password + optional TOTP):
 
@@ -28,7 +33,7 @@ olares-cli profile current      # verify
 
 > This package distributes the `olares-cli` binary as a **client** only. The Node wrapper auto-sets `OLARES_CLI_REMOTE_ONLY=1`, which hides the Go binary's host-side verbs (`uninstall`, `upgrade`, `node`, `os`, `gpu`, `disk`, `wizard`, `user`, `osinfo`, `amdgpu`); these are reachable only on an Olares host through `/usr/local/bin/olares-cli`. The `install` verb is intercepted by the Node shim itself and routed to the first-run wizard (it never reaches the Go binary). Installing Olares OS itself is out of scope for this package — on a Linux host run `curl -fsSL https://olares.sh | bash`.
 
-> **Permission errors on Linux** (`EACCES` while npm writes to `/usr/lib/node_modules` or `/usr/local/lib/node_modules`): typical for distro-packaged Node (`apt install nodejs`) where the global prefix is root-owned. The wizard surfaces the offending npm `stderr` plus a one-time fix that switches npm to a user-owned prefix (`npm config set prefix ~/.npm-global` + `PATH`) so global installs no longer need `sudo` and `npx skills add -g` writes under your user (not `/root`).
+> **Permission errors on Linux** (`EACCES` while npm writes to `/usr/lib/node_modules` or `/usr/local/lib/node_modules`): typical for distro-packaged Node (`apt install nodejs`) where the global prefix is root-owned. The wizard surfaces the offending npm `stderr` plus a one-time fix that switches npm to a user-owned prefix (`npm config set prefix ~/.npm-global` + `PATH`) so global installs no longer need `sudo`.
 
 ## Where the binary lives
 
@@ -64,11 +69,11 @@ npx @olares/cli@latest profile current
 
 Don't use `npm install -g --force` on an Olares host — it would clobber the OS-managed binary.
 
-### What the `npx @olares/cli@latest install` wizard does on this path
+### What the `npx @olares/cli install` wizard does on this path
 
 Before running `npm install -g`, the wizard reads `--version` on the existing `/usr/local/bin/olares-cli` (or `/usr/bin/olares-cli`):
 
-- **Release-grade** (stable `1.12.7`, or pre-releases `-rc1` / `-beta.1` / `-alpha2`) → left alone; if `npm config get prefix` points at the same `bin` directory (typical Olares host: `/usr/local`), the wizard short-circuits the `npm install -g` attempt (no full install timeout) and exits with a side-by-side install block (`npm install -g ... --prefix=$HOME/.olares-cli-npm` + `PATH` export + `npx skills add beclab/Olares -y -g`) you can copy verbatim.
+- **Release-grade** (stable `1.12.7`, or pre-releases `-rc1` / `-beta.1` / `-alpha2`) → left alone; if `npm config get prefix` points at the same `bin` directory (typical Olares host: `/usr/local`), the wizard short-circuits the `npm install -g` attempt (no full install timeout) and exits with a side-by-side install block (`npm install -g ... --prefix=$HOME/.olares-cli-npm` + `PATH` export + `olares-cli skills install`) you can copy verbatim.
 - **Dev / test / dirty** (`0.0.0-development` placeholder, `git describe` outputs like `1.12.7-3-gabc1234-dirty`, check.yaml's `1.12.7-12345678` PR builds, unparseable output) → removed so the npm copy can install over the same path. If `unlink` fails for permission reasons, the wizard exits with a one-line hint to re-run with `sudo` rather than silently failing.
 
 ## Environment
@@ -85,15 +90,24 @@ Two version numbers are tracked:
 | **npm version** | `1.12.6-cli.5` | `package.json`, npm registry, CDN/GitHub tar names |
 | **binary version** (`version.VERSION`) | `1.12.6` | Olares OS upgrade line; shown by `olares-cli --version` |
 
+The embedded agent skills carry the npm version too, and nobody types it in: the release job stamps it into their frontmatter before compiling (`cli/skills/stamp.py`), and the build fails if it did not take. So the version a skill declares is the release whose command tree it documents, and `olares-cli` can tell a user when the copy installed on their machine came from a different build.
+
 `postinstall` downloads `olares-cli-v{npm_version}_{platform}.tar.gz` using the npm package version, so each `-cli.N` bump is a distinct artifact and does not overwrite prior builds.
 
 **npm dist-tags**
 
 | Tag | Meaning |
 | --- | --- |
-| `latest` | Production default (`npx @olares/cli@latest`, install wizard). Set manually via **Tag npm CLI** workflow. |
+| `latest` | Production default (`npx @olares/cli@latest`). Set manually via **Tag npm CLI** workflow, so it can sit several releases behind `next`. |
 | `next` | Fresh CI publish from **Release CLI** (`npx @olares/cli@next`). Does not move `latest`. |
 | `daily` | Optional tag for daily builds (manual promote). |
+
+The install wizard resolves no tag of its own: it installs the version it was
+published as, because its second step exports skills from the binary vendored
+beside it, and a global install from a different tag would leave the machine
+with skills from one release and a CLI from another. Run from a checkout, where
+`package.json` still reads `0.0.0-placeholder`, it falls back to whatever `npm
+view` resolves.
 
 **Release CLI** (`release-cli.yaml`, manual dispatch): builds with GoReleaser, uploads tars to CDN, publishes `@olares/cli` with `--tag next`. Inputs: `branch` (default `main`), `version` (npm), optional `binary-version` (defaults from `version` — strips `-cli.N` suffix).
 

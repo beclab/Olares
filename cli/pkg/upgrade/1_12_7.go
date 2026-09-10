@@ -34,8 +34,7 @@ func (u upgrader_1_12_7) AddedBreakingChange() bool {
 }
 
 func (u upgrader_1_12_7) PrepareForUpgrade() []task.Interface {
-	tasks := publishMarketEnsureApps()
-	tasks = append(tasks, migrateContainerdConfigV3()...)
+	tasks := migrateContainerdConfigV3()
 	tasks = append(tasks, &task.LocalTask{
 		Name:    "CleanupK3sCertsRenewService",
 		Prepare: new(common.OnlyK3s),
@@ -48,9 +47,16 @@ func (u upgrader_1_12_7) PrepareForUpgrade() []task.Interface {
 	})
 	tasks = append(tasks, upgradeKubernetesPrometheusRule()...)
 	tasks = append(tasks, upgradeUserReverseProxy()...)
+	tasks = append(tasks, upgradeAmdDeviceMetricsExporter()...)
+	tasks = append(tasks, upgradePrometheusOperator()...)
+	tasks = append(tasks, upgradeAmdDevicePlugin()...)
 
 	tasks = append(tasks, u.upgraderBase.PrepareForUpgrade()...)
 	return tasks
+}
+
+func (u upgrader_1_12_7) PostUpgrade() []task.Interface {
+	return append(regenerateKubeFiles(), u.upgraderBase.PostUpgrade()...)
 }
 
 func init() {

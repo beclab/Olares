@@ -9,7 +9,9 @@ import (
 	"syscall"
 
 	"github.com/beclab/Olares/cli/cmd/ctl"
+	"github.com/beclab/Olares/cli/cmd/ctl/skills"
 	"github.com/beclab/Olares/cli/pkg/clierr"
+	"github.com/beclab/Olares/cli/version"
 )
 
 func main() {
@@ -33,8 +35,19 @@ func main() {
 	}()
 
 	cmd := ctl.NewDefaultCommand()
+	err := cmd.ExecuteContext(ctx)
 
-	if err := cmd.ExecuteContext(ctx); err != nil {
+	// Skills installed on this machine outlive the binary that wrote them, so
+	// upgrading olares-cli leaves an agent reading instructions for a version
+	// it is not running. Said here because this is the one place every
+	// invocation passes through: a PersistentPreRun on the root command is
+	// skipped by any subtree that declares one of its own. Not said for the
+	// `skills` tree itself, which is where the fix is.
+	if len(os.Args) < 2 || os.Args[1] != "skills" {
+		skills.Notice(os.Stderr, version.VERSION)
+	}
+
+	if err != nil {
 		if errors.Is(err, clierr.ErrAlreadyReported) {
 			os.Exit(1)
 		}

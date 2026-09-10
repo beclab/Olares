@@ -134,5 +134,5 @@ Basic 会员严格绑定到用于购买订单的特定邮箱地址。如果你�
 
 ## 资源
 
-- [在 Olares Space 中监控流量](../manual/space/manage-olares.md#检查流量使用情况)
+- [在 Olares Space 中查看流量](../manual/space/manage-olares.md#查看流量使用)
 - [Olares Space 介绍](../manual/space/index.md)

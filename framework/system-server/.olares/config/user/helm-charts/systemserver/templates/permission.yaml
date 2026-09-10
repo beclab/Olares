@@ -19,3 +19,44 @@ subjects:
 - kind: ServiceAccount
   name: user-backend
   namespace: user-system-{{ .Values.bfl.username }}
+
+---
+# Grant every user's user-backend SA access to the os-framework download
+# provider. Shared apps (e.g. wisev3) that serve many users cannot present a
+# per-user identity through their own shared-namespace SA (the provider gateway
+# collapses it to the install owner). Instead they mint this user-backend token
+# so UserFromServiceAccount resolves the real end user (user-system-<user> is a
+# user namespace). The ClusterRole `backend:download-provider` is defined by the
+# download-server framework component (download_provider.yaml).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: backend:{{ .Values.bfl.username }}:user-backend:download-provider
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: backend:download-provider
+subjects:
+- kind: ServiceAccount
+  name: user-backend
+  namespace: user-system-{{ .Values.bfl.username }}
+
+---
+# Same rationale as the download binding above, for the (new) os-framework
+# files system provider. The wisev3 frontend's provider-inject sidecar mints
+# this user-backend token per request (from the gateway-stamped X-Bfl-User) so
+# file uploads / browsing are attributed to the real end user instead of the
+# shared install owner. ClusterRole `backend:files-provider` is defined by the
+# Olares files framework component (files_provider.yaml).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: backend:{{ .Values.bfl.username }}:user-backend:files-provider
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: backend:files-provider
+subjects:
+- kind: ServiceAccount
+  name: user-backend
+  namespace: user-system-{{ .Values.bfl.username }}

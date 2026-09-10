@@ -1,55 +1,90 @@
 ---
-description: 介绍 Olares Space 的数据备份工具，支持查看备份记录、管理系统快照、恢复云端数据。
+outline: [2, 3]
+description: 从 Olares Space 云端备份中恢复文件，包括查看备份用量和快照。
 head:
   - - meta
     - name: keywords
       content: Olares, Olares Space, 备份恢复, 系统快照, 数据恢复, 云端备份
 ---
-:::warning 文档与当前体验不完全一致
-我们正在更新本页面内容以匹配 Olares Space 最新的实际体验。如果存在差异，以平台的实际操作界面为准。
-:::
-# 备份与恢复
+# 从 Olares Space 备份中恢复数据
 
-Olares Space 是为 Olares 实例提供快照备份的官方解决方案。你可以随时将 Olares 恢复到最近的状态。本节介绍如何在 Olares Space 中管理备份和恢复操作。
+使用 Olares Space 查看云端备份并将文件恢复到 Olares。如果你还没有创建备份任务，可参阅[备份 Olares 数据](../olares/settings/backup.md)。
 
-## 查看备份列表
+## 查看备份存储用量
 
-备份任务列表显示每个备份任务的信息，包括：
-
-- 初始创建时间
-- 最近快照时间
-- 总体存储用量
-
-![Olares Space 中的任务列表](/images/how-to/space/backup_list.jpg#bordered)
-
-点击任务的**查看详情**可以进入详情页面。详情页面展示了该任务创建以来的存储用量变化，以及所有成功的快照记录。
+检查备份用量与配额的对比情况。
 
 :::info
-目前仅支持从最近一次快照恢复。
+对于自托管 Olares 用户，请重点关注备份服务的**存储用量**。这些服务可能会根据使用情况产生费用。更多详情，请见[计费说明](billing.md)。
 :::
 
-## 将备份恢复至 Olares Space
+1. 点击左侧导航栏的 **Backup**。
 
-![Olares Space 中的快照列表](/images/how-to/space/restore_backup_to_the_olares_space.jpg#bordered)
+  ![Olares Space 备份列表](/images/how-to/space/backup_list.png#bordered)
 
-将快照恢复到云端的操作流程与新建云端 Olares 类似。
+2. 找到 **Backup Usage** 区域。它展示所有备份占用的总存储空间及配额。
 
-1. 设置相关信息。
+## 查看备份详情
 
-   a. 选择云服务商和数据中心位置。
+查看备份任务的快照，了解已备份的内容。
 
-   b. 选择实例的硬件配置。
+1. 点击左侧导航栏的 **Backup**。
+2. 找到 **Backup List** 区域。你可以在表格中看到所有备份任务。
+3. 要查看某个备份任务的快照：
 
-   c. 确认快照信息并输入备份密码。
+    a. 点击该备份任务的 **View Details**。
 
-2. 了解存储和带宽费用。<br>每个实例都包含一定额度的免费流量。超出配额部分将产生费用。更多详情，请见[计费说明](billing.md)。
+    b. 查看备份信息和快照。
 
-3. 确认订单并完成支付。之后 Olares 开始安装。
+    ![Olares Space 快照列表](/images/how-to/space/snapshots_list.png#bordered)
+
+## 从备份恢复
+
+将备份文件恢复到 Olares。
 
 :::info
-在安装过程中，Olares 会验证备份密码。如果密码不正确，系统会要求重新输入正确的密码。如果忘记了备份密码，将无法继续恢复流程。此时请销毁实例，重新进行恢复。
+使用备份和恢复服务前，请了解存储和带宽费用。每个实例包含一定量的免费流量，超出配额部分将产生费用。更多详情，请见[计费说明](billing.md)。
 :::
 
-:::info
-为避免冲突或其他意外问题，在恢复到云端 Olares 之前，必须先销毁使用相同名称的现有 Olares。
-:::
+1. 选择要恢复的快照：
+
+   - 要恢复最新快照，点击备份详情页右上角的 **Restore**。
+   - 要恢复特定日期的快照，在 **Snapshots** 表格中找到该快照，然后点击该行右侧的 **Restore**。
+
+2. 在 **Restore** 对话框中：
+
+    a. 复制 **Backup Url**。
+
+      ![Olares Space 恢复对话框](/images/how-to/space/backup_restore_dialog.png#bordered){width=70%}
+
+    b. 点击 **Settings > Restore** 链接。这会在新的浏览器标签页中打开 Restore 页面。你也可以直接在 Olares 中导航到 **Settings > Restore**。
+
+3. 在 **Restore** 页面，添加一个恢复任务：
+
+   - 如果页面为空，点击 **Add restore task**，然后选择 **From Olares Space**。
+   - 如果页面已有恢复任务，点击右上角的 <i class="material-symbols-outlined">add</i>，然后选择 **From Olares Space**。 
+ 
+  ![添加恢复任务选项](/images/how-to/space/restore_add_task.png#bordered){width=70%}
+
+4. 填写恢复信息：
+
+    a. **Backup URL**：粘贴复制的 **Backup Url**。
+
+    b. **Restore password**：输入创建备份任务时设置的密码。
+
+    c. **Restore location**：选择要恢复到的目录。
+
+    d. **New folder name**：输入存放恢复文件的新文件夹名称。
+
+    ![从 Olares Space 恢复表单](/images/how-to/space/restore_from_olares_space.png#bordered){width=70%}
+
+5. 点击 **Start restore**。
+6. 恢复完成后，查看并访问恢复的文件：
+
+    a. 在 **Restore** 页面，点击恢复任务卡片进入恢复详情。
+
+      ![恢复任务完成](/images/how-to/space/restore_complete.png#bordered){width=70%}
+
+    b. 在 **Restore details** 页面，点击 **Open in Files**。文件管理器会打开包含恢复文件的文件夹。
+
+      ![恢复详情页面](/images/how-to/space/restore_details.png#bordered){width=70%}

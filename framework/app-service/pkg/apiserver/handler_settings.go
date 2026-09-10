@@ -712,6 +712,11 @@ func (h *Handler) setupAppAuthLevel(req *restful.Request, resp *restful.Response
 		return
 	}
 
+	if app.Spec.Name == constants.OLARES_APP_NAME {
+		api.HandleBadRequest(resp, req, fmt.Errorf("auth level cannot be set for system app %s", constants.OLARES_APP_NAME))
+		return
+	}
+
 	entranceName := req.PathParameter(ParamEntranceName)
 
 	bodyData, err := ioutil.ReadAll(req.Request.Body)

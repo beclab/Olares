@@ -50,7 +50,7 @@ For the highlights and walk-through of Olares v1.12.6, see the [Olares 1.12.6 bl
 - Added [Run local AI models with Engine Base apps](/use-cases/llm-base-apps), for deploying and running local AI models on Olares.
 - Added [Home Assistant with Overlay Gateway](/use-cases/home-assistant#enable-the-overlay-gateway), for accessing Home Assistant over the local network.
 - Added [Jellyfin with Overlay Gateway](/use-cases/jellyfin#enable-overlay-gateway-for-jellyfin), for accessing Jellyfin over the Overlay Gateway.
-- Added [*Arr apps upgrade guide](/use-cases/arrs-upgrade), a guide to updating *Arr apps after the Olares v1.12.6 internal entrance changes.
+- Added [Update notes for *Arr apps](/use-cases/arrs-upgrade), covering the configuration changes required after the Olares v1.12.6 internal entrance update.
 
 ### Updated docs
 

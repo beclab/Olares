@@ -7,7 +7,18 @@ const { execFileSync, execFile } = require('node:child_process');
 const p = require('@clack/prompts');
 
 const PKG = '@olares/cli';
-const SKILLS_REPO = 'beclab/Olares';
+
+// The version this wizard was published as. Step 2 exports skills from the
+// binary vendored next to this file, so installing any other version globally
+// would leave the machine with skills from one release and a CLI from another
+// -- the exact drift `olares-cli skills` exists to remove. It is a real risk
+// rather than a theoretical one: `latest` is promoted by hand (the Tag npm CLI
+// workflow) while every release publishes to `next`, so the two tags are
+// routinely several releases apart. A checkout has no published version to
+// name and falls back to whatever the tag resolves to.
+const SELF_VERSION = require('../package.json').version;
+const IS_PLACEHOLDER = SELF_VERSION === '0.0.0-placeholder';
+
 const isWindows = process.platform === 'win32';
 const isLinux = process.platform === 'linux';
 
@@ -25,10 +36,12 @@ const SYSTEM_OLARES_CLI_PATHS = [
 const msg = {
   setup:           'Setting up Olares CLI...',
   step1:           'Installing %s globally...',
-  step1Upgrade:    'Upgrading %s (v%s -> v%s)...',
+  // Not always an upgrade: running the wizard from a tag older than what is
+  // installed asks for that older version on purpose.
+  step1Upgrade:    'Installing %s v%s (replacing v%s)...',
   step1Skip:       'Already installed (v%s). Skipped',
   step1Done:       'Installed globally',
-  step1Upgraded:   'Upgraded to v%s',
+  step1Upgraded:   'Now at v%s',
   step1Fail:       'Failed to install globally. Run manually: npm install -g %s',
   step1EexistStop: 'Skipped global install: existing olares-cli left in place at /usr/local/bin/olares-cli',
   step1Eexist:
@@ -36,18 +49,18 @@ const msg = {
     'The wizard exited before installing skills -- finish the side-by-side install yourself (keeps the OS bundle for system-layer verbs):\n' +
     '  npm install -g %s --prefix=$HOME/.olares-cli-npm\n' +
     '  export PATH="$HOME/.olares-cli-npm/bin:$PATH"   # before /usr/local/bin\n' +
-    '  npx skills add %s -y -g\n' +
+    '  olares-cli skills install\n' +
     'See cli/README.md "On a Linux Olares host" for details.',
   step1EaccesHint:
     'npm install -g hit EACCES while writing to its global prefix.\n' +
     'On distro-packaged Node (apt/dnf, e.g. Ubuntu / Debian) the prefix is typically /usr or /usr/local and needs root.\n' +
     'Recommended one-time fix: switch npm to a user-owned prefix so global installs do not need sudo,\n' +
-    'and `npx skills add -g` ends up writing under your user (not /root):\n' +
+    'so the wrapper lands somewhere you own:\n' +
     '  mkdir -p ~/.npm-global\n' +
     '  npm config set prefix ~/.npm-global\n' +
     '  echo \'export PATH="$HOME/.npm-global/bin:$PATH"\' >> ~/.bashrc\n' +
     '  export PATH="$HOME/.npm-global/bin:$PATH"\n' +
-    'then re-run:  npx -y @olares/cli@latest install',
+    'then re-run:  npx -y %s install',
   step1TimeoutHint:
     'Timed out after 10 min. Likely cause: slow / proxied connection while downloading the Go binary from github.com.\n' +
     'Retry outside the wizard so you can watch progress: npm install -g %s',
@@ -58,22 +71,37 @@ const msg = {
   preflightNoPermission:
     'Cannot remove %s (%s).\n' +
     'Re-run the wizard with sudo so it can replace the dev build:\n' +
-    '  sudo $(command -v npx) -y %s@latest install\n' +
+    '  sudo $(command -v npx) -y %s install\n' +
     'Or remove it yourself:\n' +
     '  sudo rm %s\n' +
-    'then re-run `npx %s@latest install`.',
+    'then re-run `npx %s install`.',
   step2Spinner:    'Installing AI skills...',
-  step2Skip:       'Skills already installed. Skipped',
   step2Done:       'Skills installed',
-  step2Fail:       'Failed to install skills. Run manually: npx skills add %s -y -g',
+  step2DoneAt:     'Installed %s skills to %s',
+  step2NoBinary:   'Skipped skills: the olares-cli binary is not present, so there is nothing to install them from.\n' +
+                   'Once it downloads, run: olares-cli skills install',
+  step2Fail:       'Failed to install skills. Run manually: olares-cli skills install',
   done:
     'You are all set!\n\n' +
     'Next:\n' +
     '  olares-cli profile login --olares-id <your-olares-id>   # authenticate (browser/password + optional TOTP)\n' +
     '  olares-cli profile current                              # verify\n\n' +
     'Then tell your AI agent: "Load the olares-shared skill, then use olares-cli to ..."',
+  // Saying "all set" after skipping the skills would contradict the step that
+  // just said it skipped them, and the reader believes the last line.
+  doneWithoutSkills:
+    'Setup is incomplete: the skills were not installed.\n\n' +
+    'Next:\n' +
+    '  olares-cli skills install                               # the step that was skipped above\n' +
+    '  olares-cli profile login --olares-id <your-olares-id>   # authenticate (browser/password + optional TOTP)\n' +
+    '  olares-cli profile current                              # verify',
   nonTtyHint:
     'To finish setup, run:\n' +
+    '  olares-cli profile login --olares-id <your-olares-id>\n' +
+    '  olares-cli profile current',
+  nonTtyHintWithoutSkills:
+    'To finish setup, run:\n' +
+    '  olares-cli skills install\n' +
     '  olares-cli profile login --olares-id <your-olares-id>\n' +
     '  olares-cli profile current',
 };
@@ -128,6 +156,12 @@ function getLatestVersion() {
   } catch (_) {
     return null;
   }
+}
+
+// targetVersion is what `npm install -g` should ask for: this wizard's own
+// version, or the registry's answer when running from a checkout.
+function targetVersion() {
+  return IS_PLACEHOLDER ? getLatestVersion() : SELF_VERSION;
 }
 
 function getGloballyInstalledVersion() {
@@ -292,6 +326,12 @@ function npmGlobalBinCollidesWith(sysCli) {
 // ---------------------------------------------------------------------------
 
 async function stepInstallGlobally(interactive) {
+  const wantedVer = targetVersion();
+  // Every command printed for the user to run by hand names the same version
+  // this would have installed, so a copy-pasted line cannot land somewhere
+  // else than the wizard was heading.
+  const spec = wantedVer ? `${PKG}@${wantedVer}` : PKG;
+
   // Preflight: if a system-path olares-cli is present (OS bundle or
   // `make install` artifact), decide keep-vs-replace based on its version.
   // Release-grade versions (stable/rc/beta/alpha) are left alone -- the
@@ -312,7 +352,7 @@ async function stepInstallGlobally(interactive) {
         // just race to EEXIST after the full install timeout. Skip the
         // attempt and jump straight to the EEXIST workaround.
         if (interactive) p.log.info(msg.step1EexistStop); else console.log(msg.step1EexistStop);
-        const hint = fmt(msg.step1Eexist, PKG, SKILLS_REPO);
+        const hint = fmt(msg.step1Eexist, spec);
         if (interactive) p.log.warn(hint); else console.error(hint);
         process.exit(1);
       }
@@ -322,7 +362,7 @@ async function stepInstallGlobally(interactive) {
       const rm = tryUnlink(sysCli);
       if (!rm.ok) {
         const reason = rm.err.code || rm.err.message || 'unknown error';
-        const hint = fmt(msg.preflightNoPermission, sysCli, reason, PKG, sysCli, PKG);
+        const hint = fmt(msg.preflightNoPermission, sysCli, reason, spec, sysCli, spec);
         if (interactive) p.log.error(hint); else console.error(hint);
         process.exit(1);
       }
@@ -330,39 +370,38 @@ async function stepInstallGlobally(interactive) {
   }
 
   const installedVer = getGloballyInstalledVersion();
-  const latestVer = getLatestVersion();
   // Exact-inequality only -- we never had to *compare* versions, just decide
-  // whether to call `npm install -g` again. This matters for npm's `latest`
-  // dist-tag: `1.12.5-cli.2` and `1.12.5-cli.4` share the same MAJOR.MINOR.PATCH
-  // so a semver core compare wrongly reported "already at latest".
-  const needsUpgrade = installedVer && latestVer && installedVer !== latestVer;
+  // whether to call `npm install -g` again. This matters for the `-cli.N`
+  // suffix: `1.12.5-cli.2` and `1.12.5-cli.4` share the same MAJOR.MINOR.PATCH
+  // so a semver core compare wrongly reported "already up to date".
+  const needsChange = installedVer && wantedVer && installedVer !== wantedVer;
 
-  if (installedVer && !needsUpgrade) {
+  if (installedVer && !needsChange) {
     const line = fmt(msg.step1Skip, installedVer);
     if (interactive) p.log.info(line); else console.log(line);
     return;
   }
 
-  const startLine = needsUpgrade
-    ? fmt(msg.step1Upgrade, PKG, installedVer, latestVer)
+  const startLine = needsChange
+    ? fmt(msg.step1Upgrade, PKG, wantedVer, installedVer)
     : fmt(msg.step1, PKG);
-  const doneLine = needsUpgrade
-    ? fmt(msg.step1Upgraded, latestVer)
+  const doneLine = needsChange
+    ? fmt(msg.step1Upgraded, wantedVer)
     : msg.step1Done;
 
   const s = interactive ? p.spinner() : null;
   if (s) s.start(startLine); else console.log(startLine);
 
   try {
-    await runSilentAsync('npm', ['install', '-g', PKG], { timeout: 600000 });
+    await runSilentAsync('npm', ['install', '-g', spec], { timeout: 600000 });
     if (s) s.stop(doneLine); else console.log(doneLine);
   } catch (err) {
     if (looksLikeEexistConflict(err)) {
       if (s) s.stop(msg.step1EexistStop); else console.error(msg.step1EexistStop);
-      const hint = fmt(msg.step1Eexist, PKG, SKILLS_REPO);
+      const hint = fmt(msg.step1Eexist, spec);
       if (interactive) p.log.warn(hint); else console.error(hint);
     } else {
-      const line = fmt(msg.step1Fail, PKG);
+      const line = fmt(msg.step1Fail, spec);
       if (s) s.stop(line); else console.error(line);
 
       // npm exits non-zero with a numeric `err.code`; the syscall-level
@@ -388,10 +427,10 @@ async function stepInstallGlobally(interactive) {
       }
 
       if (isEacces) {
-        const hint = msg.step1EaccesHint;
+        const hint = fmt(msg.step1EaccesHint, spec);
         if (interactive) p.log.warn(hint); else console.error(hint);
       } else if (isTimeout) {
-        const hint = fmt(msg.step1TimeoutHint, PKG);
+        const hint = fmt(msg.step1TimeoutHint, spec);
         if (interactive) p.log.warn(hint); else console.error(hint);
       }
     }
@@ -399,49 +438,70 @@ async function stepInstallGlobally(interactive) {
   }
 }
 
-async function skillsAlreadyInstalled() {
+// The binary this package vendors, which carries the skills it was released
+// with. Preferring it over whatever `olares-cli` resolves to on PATH keeps the
+// wizard installing its own release: the global bin directory may not even be
+// on this process's PATH (see step1EaccesHint), and a stale copy there would
+// write skills for a version the user is about to stop running.
+function vendoredCli() {
+  const binName = isWindows ? 'olares-cli.exe' : 'olares-cli';
+  const vendored = path.join(__dirname, '..', 'vendor', binName);
   try {
-    const out = await runSilentAsync('npx', ['-y', 'skills', 'ls', '-g'], { timeout: 600000 });
-    return /^olares-/m.test(out.toString());
-  } catch (_) {
-    return false;
-  }
+    if (fs.existsSync(vendored)) return vendored;
+  } catch (_) { /* fall through */ }
+  return null;
 }
 
+// The skills are compiled into the binary, so installing them is a local file
+// write: no git clone of the Olares monorepo, no `npx skills`, no network, and
+// nothing that can time out. It is also idempotent, which is why there is no
+// longer a check for skills already being present -- that check made the
+// wizard skip the step forever, so upgrading olares-cli left an agent reading
+// the instructions it was first given.
+//
+// Returns whether the skills reached disk, which decides what the wizard says
+// as it closes.
 async function stepInstallSkills(interactive) {
   const s = interactive ? p.spinner() : null;
   if (s) s.start(msg.step2Spinner); else console.log(msg.step2Spinner);
 
-  try {
-    if (await skillsAlreadyInstalled()) {
-      if (s) s.stop(msg.step2Skip); else console.log(msg.step2Skip);
-      return;
-    }
-    await runSilentAsync('npx', ['-y', 'skills', 'add', SKILLS_REPO, '-y', '-g'], { timeout: 600000 });
-    if (s) s.stop(msg.step2Done); else console.log(msg.step2Done);
-  } catch (err) {
-    const line = fmt(msg.step2Fail, SKILLS_REPO);
-    if (s) s.stop(line); else console.error(line);
+  const cli = vendoredCli();
+  if (!cli) {
+    // install.js tolerates a failed or skipped download, and it already said
+    // so. Repeating that here as a skill failure would send the user looking
+    // in the wrong place.
+    if (s) s.stop(msg.step2NoBinary); else console.error(msg.step2NoBinary);
+    return false;
+  }
 
-    const isTimeout = !!(err && (err.code === 'ETIMEDOUT' || err.killed));
+  try {
+    const out = await runSilentAsync(cli, ['skills', 'install', '-o', 'json'], { timeout: 60000 });
+    let done = msg.step2Done;
+    try {
+      const result = JSON.parse(out.toString());
+      done = fmt(msg.step2DoneAt, String(result.count), result.store);
+    } catch (_) { /* the write succeeded; the summary is a nicety */ }
+    if (s) s.stop(done); else console.log(done);
+    return true;
+  } catch (err) {
+    if (s) s.stop(msg.step2Fail); else console.error(msg.step2Fail);
+
     const details = [];
     if (err && err.code) {
       details.push(`  code: ${err.code}`);
     } else if (err && err.signal) {
       details.push(`  signal: ${err.signal}${err.killed ? ' (killed)' : ''}`);
     }
+    // `skills install` refuses to overwrite skills that were linked by hand
+    // and explains why on stderr. That message is the whole diagnosis, so it
+    // is shown rather than summarized.
     const stderrTail = err && err.stderr ? err.stderr.toString().trim().slice(-2048) : '';
     const stdoutTail = err && err.stdout ? err.stdout.toString().trim().slice(-2048) : '';
-    if (stderrTail) details.push(`  stderr (tail):\n${stderrTail}`);
-    if (stdoutTail) details.push(`  stdout (tail):\n${stdoutTail}`);
+    if (stderrTail) details.push(stderrTail);
+    if (stdoutTail) details.push(stdoutTail);
     if (details.length) {
       const blob = details.join('\n');
       if (interactive) p.log.error(blob); else console.error(blob);
-    }
-
-    if (isTimeout) {
-      const hint = `Timed out after 10 min. Likely cause: slow / proxied connection to github.com during git clone.\nRetry outside the wizard: npx skills add ${SKILLS_REPO} -y -g`;
-      if (interactive) p.log.warn(hint); else console.error(hint);
     }
 
     process.exit(1);
@@ -458,13 +518,13 @@ async function main() {
   if (interactive) {
     p.intro(msg.setup);
     await stepInstallGlobally(true);
-    await stepInstallSkills(true);
-    p.outro(msg.done);
+    const installed = await stepInstallSkills(true);
+    p.outro(installed ? msg.done : msg.doneWithoutSkills);
   } else {
     console.log(msg.setup);
     await stepInstallGlobally(false);
-    await stepInstallSkills(false);
-    console.log(msg.nonTtyHint);
+    const installed = await stepInstallSkills(false);
+    console.log(installed ? msg.nonTtyHint : msg.nonTtyHintWithoutSkills);
   }
 }
 

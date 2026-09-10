@@ -159,6 +159,13 @@ spec:
       serviceAccountName: argo-server
       serviceAccount: argo-server
       priorityClassName: "system-cluster-critical"
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-role.kubernetes.io/control-plane
+                    operator: Exists
       volumes:
         - emptyDir: {}
           name: tmp
@@ -263,6 +270,13 @@ spec:
         runAsNonRoot: true
       serviceAccountName: argo
       serviceAccount: argo
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-role.kubernetes.io/control-plane
+                    operator: Exists
 ---
 apiVersion: v1
 kind: Service

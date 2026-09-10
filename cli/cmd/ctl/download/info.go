@@ -52,10 +52,27 @@ func runInfo(ctx context.Context, f *cmdutil.Factory, idRaw, outputRaw string) e
 
 	switch format {
 	case FormatJSON:
-		return printJSON(os.Stdout, task)
+		if err := printJSON(os.Stdout, task); err != nil {
+			return err
+		}
 	default:
-		return renderInfo(os.Stdout, task)
+		if err := renderInfo(os.Stdout, task); err != nil {
+			return err
+		}
 	}
+	if hint := taskCookieHint(task); hint != "" {
+		fmt.Fprintln(os.Stderr, hint)
+	}
+	return nil
+}
+
+// taskCookieHint returns the cookie-import CTA for a task that failed
+// for a reason a login cookie fixes.
+func taskCookieHint(t DownloadTask) string {
+	if !isCookieRecoverable(0, t.ErrCategory) {
+		return ""
+	}
+	return cookieRequiredHint(t.URL)
 }
 
 func renderInfo(w io.Writer, t DownloadTask) error {

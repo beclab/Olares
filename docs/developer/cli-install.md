@@ -61,7 +61,7 @@ Open your terminal and run the following command:
 npm install -g @olares/cli
 ```
 
-To add the Agent Skills using `npx skills`, see [Install and use Agent Skills](./cli-agent-skills.md).
+To add the Agent Skills afterwards, run `olares-cli skills install` — see [Install and use Agent Skills](./cli-agent-skills.md).
 
 ### Run without installing
 
@@ -100,7 +100,7 @@ olares-cli --version
 The output shows the installed version. The exact version depends on the release you have installed.
 
 :::info
-Updating the CLI does not update the Agent Skills. To update the skills after updating the CLI, see [Update the skills](./cli-agent-skills.md#update-the-skills).
+Updating the CLI does not update the Agent Skills. Run `olares-cli skills install` afterwards to bring them along — see [Update the skills](./cli-agent-skills.md#update-the-skills).
 :::
 
 ## Special case: a Linux host running Olares OS

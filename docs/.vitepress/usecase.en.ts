@@ -341,20 +341,6 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/use-cases/jellyfin",
             },
             {
-              text: "Steam",
-              collapsed: true,
-              items: [
-                {
-                  text: "Play directly on Olares",
-                  link: "/use-cases/steam-direct-play",
-                },
-                {
-                  text: "Stream to other devices",
-                  link: "/use-cases/steam-stream",
-                }
-              ]
-            },
-            {
               text: "Komga",
               link: "/use-cases/komga",
             },
@@ -379,13 +365,45 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               collapsed: true,
               items: [
                 {
-                  text: "Upgrade *Arrs",
+                  text: "*Arr app update notes",
                   link: "/use-cases/arrs-upgrade",
                 },
                 {
-                  text: "Upgrade download clients",
+                  text: "Download client update notes",
                   link: "/use-cases/download-clients-upgrade",
                 },
+              ]
+            },
+          ]
+        },
+        {
+          text: "Games",
+          collapsed: false,
+          items: [
+            {
+              text: "Palworld",
+              link: "/use-cases/palworld",
+            },
+            {
+              text: "Minecraft",
+              link: "/use-cases/minecraft",
+            },
+            {
+              text: "Steam",
+              collapsed: true,
+              items: [
+                {
+                  text: "Play directly on Olares",
+                  link: "/use-cases/steam-direct-play",
+                },
+                {
+                  text: "Stream to other devices",
+                  link: "/use-cases/steam-stream",
+                },
+                {
+                  text: "Common issues",
+                  link: "/use-cases/steam-common-issues",
+                }
               ]
             },
           ]

@@ -30,6 +30,7 @@ type DownloadTask struct {
 	LiveUploadSpeed   int64                  `json:"live_upload_speed,omitempty"`
 	FileMissing       *bool                  `json:"file_missing,omitempty"`
 	IsDir             *bool                  `json:"is_dir,omitempty"`
+	WillAutoRetry     bool                   `json:"will_auto_retry"`
 }
 
 // NewDownloadReq is POST /api/download body. Extra values are strings on
@@ -176,14 +177,12 @@ type BatchResult struct {
 }
 
 // RemoveActionResult is the -o json body for mutating verbs whose server
-// response carries no payload (file remove, cookies delete). It mirrors, in
-// machine-readable form, the plain-text acknowledgement printed in table mode
-// so `--output json` is honoured consistently with the other verbs. Exactly one
-// of Path / Domain is set, depending on the verb.
+// response carries no payload (file remove). It mirrors, in machine-readable
+// form, the plain-text acknowledgement printed in table mode so `--output json`
+// is honoured consistently with the other verbs.
 type RemoveActionResult struct {
 	Removed bool   `json:"removed"`
 	Path    string `json:"path,omitempty"`
-	Domain  string `json:"domain,omitempty"`
 }
 
 // SyncResult holds GET /api/download/sync's success body, whose wire shape is
@@ -209,51 +208,6 @@ func (r SyncResult) NextCursor() (time.Time, int64) {
 	}
 	last := r.Items[len(r.Items)-1]
 	return last.UpdatedAt, last.ID
-}
-
-// CookieSummary is a row of GET /api/integration/cookies. It never carries the
-// plaintext cookie (only whether one is stored).
-type CookieSummary struct {
-	Domain    string `json:"domain"`
-	Provider  string `json:"provider"`
-	HasCookie bool   `json:"has_cookie"`
-	UpdatedAt int64  `json:"updated_at"` // unix seconds
-}
-
-// CookieListResult is the GET /api/integration/cookies success body
-// (top-level {code, total, list} of CookieSummary).
-type CookieListResult struct {
-	List  []CookieSummary `json:"list"`
-	Total int64           `json:"total"`
-}
-
-// UpsertCookieReq is PUT /api/integration/cookies body. Cookie is the full
-// Netscape cookies.txt text.
-type UpsertCookieReq struct {
-	Domain   string `json:"domain"`
-	Provider string `json:"provider,omitempty"`
-	Cookie   string `json:"cookie"`
-}
-
-// RetrieveCookieReq is POST /api/integration/cookies/retrieve body.
-type RetrieveCookieReq struct {
-	Domain   string `json:"domain"`
-	Provider string `json:"provider,omitempty"`
-}
-
-// RetrieveCookieResult is the retrieve response data; Cookie (Netscape text)
-// is only populated when Found is true.
-type RetrieveCookieResult struct {
-	Domain    string `json:"domain"`
-	Found     bool   `json:"found"`
-	Cookie    string `json:"cookie,omitempty"`
-	UpdatedAt int64  `json:"updated_at,omitempty"`
-}
-
-// IntegrationHealth is GET /api/integration/healthz data.
-type IntegrationHealth struct {
-	Healthy   bool              `json:"healthy"`
-	Providers map[string]string `json:"providers"` // provider -> "ok" | "error: ..."
 }
 
 // systemSettingAria2MaxConcurrent is the only download-server system

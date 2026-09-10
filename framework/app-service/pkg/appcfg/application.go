@@ -149,6 +149,14 @@ type ApplicationConfig struct {
 	// for market installs (push events then fall back to the installing
 	// user); otherwise the uploading user.
 	ChartOwner string
+
+	// LoginOlaresCLI mirrors permission.loginOlaresCLI in
+	// OlaresManifest.yaml: the app asks for a long-lived Olares credential
+	// belonging to its owner, mounted read-only into every container so
+	// olares-cli inside the pod starts out logged in. oac restricts the
+	// field to an allowlist, so by the time it reaches here the app has
+	// already been vetted.
+	LoginOlaresCLI bool
 }
 
 func (c *ApplicationConfig) IsMiddleware() bool {

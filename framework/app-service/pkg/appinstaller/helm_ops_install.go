@@ -928,6 +928,11 @@ func (h *HelmOps) Install() error {
 		return err
 	}
 
+	if err = h.EnsureOlaresCLICredential(); err != nil {
+		klog.Errorf("Failed to provision olares-cli credential err=%v", err)
+		return err
+	}
+
 	err = h.install(values)
 	if err != nil && !errors.Is(err, driver.ErrReleaseExists) {
 		klog.Errorf("Failed to install chart err=%v", err)

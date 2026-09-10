@@ -10,6 +10,16 @@ const side = {
       items: [
         // { text: "比较 Olares 和 NAS", link: "/zh/manual/olares-vs-nas" },
         {
+          text: "更新说明",
+          collapsed: true,
+          items: [
+            {
+              text: "Olares 1.12.6",
+              link: "/zh/manual/update-guides/1.12.6",
+            },
+          ],
+        },
+        {
           text: "常见问题",
           //              link: "/zh/manual/help/faqs",
           collapsed: true,
@@ -135,7 +145,7 @@ const side = {
                 },
               ],
             },
-            {
+            /* {
               text: "macOS",
               collapsed: true,
               items: [
@@ -148,8 +158,8 @@ const side = {
                   link: "/zh/manual/get-started/install-mac-docker",
                 },
               ],
-            },
-            {
+            }, */
+            /* {
               text: "Windows (WSL 2)",
               collapsed: true,
               items: [
@@ -157,13 +167,13 @@ const side = {
                   text: "使用脚本",
                   link: "/zh/manual/get-started/install-windows-script",
                 },
-                /*{
-                  text: "使用 Docker 镜像",
-                  link: "/zh/manual/get-started/install-windows-docker",
-                },*/
+                // {
+                //   text: "使用 Docker 镜像",
+                //   link: "/zh/manual/get-started/install-windows-docker",
+                // },
               ],
-            },
-            {
+            }, */
+            /* {
               text: "PVE",
               collapsed: true,
               items: [
@@ -177,11 +187,11 @@ const side = {
                 },
                 { text: "LXC", link: "/zh/manual/get-started/install-lxc" },
               ],
-            },
-            {
+            }, */
+            /* {
               text: "树莓派",
               link: "/zh/manual/get-started/install-raspberry-pi",
-            },
+            }, */
           ],
         },
         {
@@ -506,7 +516,7 @@ const side = {
             link: "/zh/manual/space/manage-accounts",
           },
           {
-            text: "监控 Olares",
+            text: "监控 Olares 状态与流量",
             link: "/zh/manual/space/manage-olares",
           },
           {
@@ -524,10 +534,10 @@ const side = {
             ],
           },
           {
-            text: "备份与恢复",
+            text: "从 Olares Space 备份中恢复数据",
             link: "/zh/manual/space/backup-restore",
           },
-          { text: "计费", link: "/zh/manual/space/billing" },
+          { text: "计费与支付", link: "/zh/manual/space/billing" },
         ],
       },
     {

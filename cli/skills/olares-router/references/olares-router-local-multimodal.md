@@ -1,6 +1,6 @@
 # Local multimodal applications
 
-Embedding, CLIP, audio and OCR models install and are managed with exactly the verbs in [local LLM applications](olares-router-local-llm.md): `app catalog`, `app install`, `app tasks`, `app watch`, `provider register`, and the `local` family. What differs is the mode their model rows declare, the engine behind them, and how a call reaches them.
+Embedding, CLIP, audio and OCR models install and are managed exactly as in [local LLM applications](olares-router-local-llm.md): [`olares-market`](../../olares-market/SKILL.md)'s `install` / `upgrade` / `uninstall`, then `provider register` and the `model status` / `progress` / `retry` / `restart` / `diag` / `spec` verbs here. What differs is the mode their model rows declare, the engine behind them, and how a call reaches them.
 
 ## What runs behind each mode
 
@@ -8,36 +8,88 @@ A model application's Model Console launches one engine, chosen by the kind of m
 
 | Kind | Router mode | Engine inside the application | Called with |
 |---|---|---|---|
-| Text generation | `chat`, `completion` | llama.cpp, vLLM, SGLang, Ollama | `router call chat` |
+| Text generation | `chat` | llama.cpp, vLLM, SGLang, Ollama | `router call chat` |
 | Text embeddings | `embedding` | the embedding server | `router call embed` |
-| Image + text embeddings (CLIP) | `embedding` | the embedding server, two towers | `router call embed`; image input goes through the same endpoint |
-| Speech to text | `audio` | an audio engine | `router call transcribe` |
-| Text to speech | `audio` | an audio engine | `router call speak` |
+| Image + text embeddings (CLIP) | `embedding` | the embedding server, two towers | `router call embed`, and `router call embed --image` for the other tower |
+| Reordering candidates | `rerank` | the embedding server | `router call rerank` |
+| Speech to text | `audio` | an audio engine | `router call transcribe`, `listen` for a live stream, `align` against a transcript |
+| Text to speech | `tts` | an audio engine | `router call speak`, `clone` from a recording, `dialogue` for several speakers, `voice` for the library |
+| Analysing a recording | `audio` | an audio engine | `router call vad`, `diarize`, `diarize --stream`, `enhance` |
+| Translation | `translate` | a translation engine | `router call translate` |
 | Document OCR | `ocr` | an OCR adapter in front of llama.cpp | `router call ocr` |
 
-`audio` is one mode covering both directions. Which direction a row actually supports is in its capability flags, not its mode: `supports_stt` and `supports_stt_stream` for transcription, `supports_tts`, `supports_tts_clone` and `supports_tts_dialogue` for speech, and `supports_vad`, `supports_diar`, `supports_enhance`, `supports_speaker_embed` for the surrounding steps. `router capabilities` lists every flag; `router provider get <provider>` shows which ones a row declares.
+The four creative modes are the exception to "cloud or nothing". `image_generation`, `video_generation`, `music_generation` and `model3d_generation` are served locally by **FlowStudio**, a Market application that runs ComfyUI workflows and starts a GPU engine per project; a cloud vendor serves the first two as well. It is not managed like the applications above — it brings its own model and engine management rather than a Model Console, so the `model spec` and `model progress` verbs are not its interface, and Router reaches it as an ordinary provider whose models are named `FlowStudio/<workflow>`:
 
-This is the one place where a mislabelled row is expensive: a `tts` model set as the `audio` default makes every transcription request fail with the upstream refusing the endpoint. Set defaults per direction only when the row's flags match, and name the model explicitly otherwise.
+| Kind | Router mode | Called with | Default category |
+|---|---|---|---|
+| Pictures | `image_generation` | `router call image` | `default-image-generation` |
+| Clips | `video_generation` | `router call video` | `default-video-generation` |
+| Tracks | `music_generation` | `router call music` | none — `--model` required |
+| Meshes | `model3d_generation` | `router call 3d` | none — `--model` required |
+
+The two without a category are deliberate: Router adds one when a second implementation exists, because with one workflow apiece a `default-music-generation` would name that workflow while reading like a choice. So those two verbs refuse a request with no `--model` rather than resolving one. Neither is priced today either, which is why their usage rows carry `unpriced` — real traffic, no money.
+
+A FlowStudio model **is** a workflow somebody published, so the names are that installation's rather than a catalogue's, and Router re-reads them on a timer because publishing one raises no event. `router model list --mode music_generation` is the only authority on what can be sent; a name copied from anywhere else is a guess.
+
+The rest of the vocabulary — `responses`, `search`, `scrape`, `moderation` — is served by cloud providers rather than by anything installable here today. `router model list --mode <mode>` is what says which of them this Olares actually has.
+
+Two of those cannot be called from this CLI, for different reasons. `moderation` has no data plane endpoint in Router at all: a row can declare the mode and a default category exists for it, but there is no `/v1/moderations` to send anything to, from here or from any other client. `responses` does have an endpoint — `router call responses` — but it is the one text mode Router resolves no default for, so that verb requires `--model` and there is no `default-responses` to fall back to.
+
+**Speech is two modes now, not one.** Synthesis moved to its own `tts` mode; `audio` covers recognition and everything that analyses a recording. A row written before the split may still say `audio` while declaring a synthesis flag, and Router reads the flag — but `router usage list --mode audio` no longer includes speaking, so `--mode audio,tts` is what covers both halves.
+
+Which job an audio or tts row serves is in its capability flags rather than its mode. The entries below are the current `terminus-apps` staging directories, not a claim that all of them are formally released. An application declares only its listed capability or pair, so a model that transcribes genuinely cannot speak, and one that aligns cannot transcribe:
+
+| Application | Flag | Verb |
+|---|---|---|
+| `audioqwen3asrv3`, `audiofwwhispersttv3`, `audiofwsystransttv3` | `supports_stt` | `router call transcribe` |
+| `audioqwen3asrv3` | `supports_stt_stream` | `router call listen` |
+| `audioqwenalignerv3` | `supports_align` | `router call align` |
+| `audioqwen3ttsv3`, `audiobreezettsv3`, `audiofireredttsv3` | `supports_tts` | `router call speak` |
+| `audioqwen3ttsclonev3`, `audiobreezettsv3`, `audiofireredttsv3` | `supports_tts_clone` | `router call clone`, `router call voice add` |
+| `audiobreezettsv3`, `audiofireredttsv3` | `supports_tts_design` | `router call voice design` |
+| `audiosoulxdialogv3` | `supports_tts_dialogue` | `router call dialogue` |
+| `audiosilerovadv3` | `supports_vad` | `router call vad` |
+| `audiopyannotediarv3` | `supports_diar` | `router call diarize` |
+| `audiosortformerdiarsv3` | `supports_diar_stream` | `router call diarize --stream` |
+| `audiopyannoteembedv3` | `supports_speaker_embed` | `router call speaker-embed` |
+| `audiospeechbrainenhv3` | `supports_enhance` | `router call enhance` |
+| `audiodashengsfxv3` | `supports_sound_fx` | `router call speak --sound-fx` |
+
+Three flags have no *local* engine behind them. `supports_audio_llm` and `supports_audio_s2s` are what the open models do that are research-licensed or too heavy to share a card with the rest — though ElevenLabs declares `supports_audio_s2s`, so `default-audio-s2s` resolves on a machine with that vendor configured and resolves nothing on one without it. `supports_tts_custom` marks a listable set of voices shipped with the weights, and the engines here build their library from clones and designs instead. `router model list` names the flags in its SUPPORTS column, `router provider get <provider>` shows which ones each row of a provider declares, `router model get <model>` prints a row's flags in full, and `router model spec show <model>` shows what the application itself says.
+
+Router registers a default category per capability rather than per mode, because one category for `audio` would have to pick a single engine for ten jobs it cannot all do. Ten cover `audio` — `default-stt`, `default-stt-stream`, `default-align`, `default-vad`, `default-diar`, `default-diar-stream`, `default-speaker-embed`, `default-enhance`, `default-sound-fx`, `default-audio-s2s` — and five cover `tts`: `default-tts`, `default-tts-clone`, `default-tts-design`, `default-tts-custom`, `default-tts-dialogue`. Which of the 25 resolve anything is a property of this machine, and `route list --kind default` prints `nothing is answering it` for the rest rather than leaving a name that fails at call time. That cell deliberately claims nothing about what is installed: a model whose application is stopped is installed and absent from the category at the same time, and telling the two apart takes `route candidates <category>`, which lists the qualifying models including the stopped ones. `route get <category>` probes them and names the application to `market resume`. **A bare 404 from an audio verb is most often a category pointing at another engine**, not a route Router failed to mount: the request reached a running model that has no such endpoint. `router route get default-align` says which model a category resolved, and the fix is the card that mislabelled the row rather than the category.
+
+`route pin` overrides one when several models qualify — see [names, defaults and access control](olares-router-governance.md).
+
+`tts_dialogue` and `sound_fx` share `/v1/audio/speech` with plain synthesis, so the verb supplies the distinction: `router call dialogue` resolves `default-tts-dialogue`, while `router call speak --sound-fx` resolves `default-sound-fx`. `--model` is optional for both.
+
+A synthesis engine also serves an ElevenLabs-shaped surface beside the OpenAI one: a voice library that outlives the request, and a log of every reading whose audio can be fetched again for free. That is [the voice library and the reading history](olares-router-voice.md), and it is where `voice add` and `voice design` differ from `call clone`.
+
+`router model diag endpoints` reads the Model Console's `/api/endpoints`. For audio, Model Console internally fetches the engine's `/api/engine-spec` and merges those rows; `/api/engine-spec` is not an application route. Do not infer routes from the staging table above. Audio rows include `ASYNC` when the engine declares it:
+
+```
+olares-cli router model diag endpoints --app audioqwen3asrv3
+```
 
 ## Installing
 
 ```
-olares-cli router app catalog
-olares-cli router app install embeddinggemmav3 --watch
-olares-cli router local progress embeddinggemmav3
+olares-cli market list -c AI
+olares-cli market install embeddinggemmav3 --watch
+olares-cli router model progress --app embeddinggemmav3
 ```
 
 Non-text models are usually small — hundreds of megabytes rather than tens of gigabytes — so the install finishes in a fraction of the time an LLM takes, and `--watch` is normally enough on its own.
 
-An embedding or OCR application that is running but answers nothing is nearly always still verifying or converting weights: `router local progress` names the phase, and `router local status` reports the last verification.
+An embedding or OCR application that is running but answers nothing is nearly always still verifying or converting weights: `router model progress` names the phase, and `router model status` reports the last verification.
 
 ## Confirming what arrived
 
-A local application publishes its own model list, so Router mirrors it rather than needing `provider models import`:
+A local application publishes its own model list, so Router mirrors it rather than needing `model import`:
 
 ```
 olares-cli router provider get embeddinggemmav3
-olares-cli router list --mode embedding
+olares-cli router model list --mode embedding
 ```
 
 Check three things on the row before relying on it:
@@ -46,30 +98,46 @@ Check three things on the row before relying on it:
 2. **The capability flags** cover the direction you need, per the table above.
 3. **The dimension**, for embeddings, matches whatever already holds vectors. Changing the embedding model changes the vector space: existing vectors do not become wrong, they become incomparable. `router call embed --model <provider>/<model>` prints the dimension it got.
 
+For audio there is a fourth, and it answers a question the flags cannot:
+
+```
+olares-cli router call models --operations
+```
+
+The flags say a model synthesises speech; the operation catalogue says which route it answers to do it. Those come apart in audio because the same job is spelled two ways — `/v1/audio/speech` and `/v1/text-to-speech/<voice>` — and an engine image serves one and 404s the other. A catalogue marked *declared by the application* is enforced: Router refuses an operation it does not list rather than forwarding it. The other two standings are not enforced, for different reasons — one *reconstructed from capabilities* was never declared, and one *last seen over 15 minutes ago* was declared and has since aged out of the window Router holds requests to it for — so under either of them an undeclared route reaches the engine and comes back as a bare 404. [The voice library and the reading history](olares-router-voice.md) reads the three labels in full.
+
 ## Calling them
 
 ```
 olares-cli router call embed "some text" --model embeddinggemmav3/embeddinggemma-300m
+olares-cli router call embed --image shot.png --model <clip-app>/<clip-model>
+olares-cli router call rerank "who wrote it" --document "…" --document "…"
 olares-cli router call transcribe meeting.m4a --language en
 olares-cli router call speak "hello" --voice alloy --out hello.mp3
+olares-cli router call diarize meeting.m4a
+olares-cli router call clone me.wav "your build finished" --out done.wav
+olares-cli router call voice list
+olares-cli router call transcribe keynote.m4a --async
 olares-cli router call ocr invoice.pdf --pages 1-3
 ```
 
-Details, including how each call resolves a model when `--model` is omitted, are in [calling a model](olares-router-calling.md). Two properties are specific to these modes:
+Details, including how each call resolves a model when `--model` is omitted, are in [calling a model](olares-router-calling.md). Five properties are specific to these modes:
 
-- **Transcription and OCR upload a file**, so they fail on a path before any model is reached — that error is the CLI's, not Router's.
-- **OCR is asynchronous.** Router accepts a task and the CLI polls it; `--no-wait` returns the task id instead, which is what to use for a long PDF.
+- **A picture is a different input, not a different verb.** `router call embed --image` sends the input object Router extends the embeddings body with instead of a string, so it needs a row declaring `supports_embedding_image_input` and a text-only embedding model refuses it. One call carries the picture or the text, never both — the vector is worth having because it can be compared with the text vectors already stored. The application admits 16 MiB for the whole request, and base64 reaches that at about three quarters of it in file bytes, which is where the CLI refuses.
+- **File-taking audio verbs and OCR read local paths before reaching a model.** A missing path is the CLI's error, not Router's. `dialogue` also reads local `ref_audio` paths, while `listen` and `diarize --stream` read a local path or standard input into a WebSocket; none of those three is a multipart upload. Plain JSON synthesis reads no local path.
+- **OCR is asynchronous.** Router accepts a task and the CLI polls it; `--no-wait` returns the task id instead, which is what to use for a long PDF, and `--queue` lists what is outstanding.
+- **Audio uploads need a duration and byte-budget decision before the call.** Follow the executable [long audio decision tree](olares-router-calling.md#long-audio-decision-tree); unknown or long input, offline diarization and enhancement default to `--async`.
+- **The two streaming verbs send PCM, not a container.** `router call listen` and `diarize --stream` read 16-bit mono PCM at 16 kHz from a file or standard input; they open a WebSocket rather than uploading, so a `.wav` header would arrive as audio and be heard as a click.
 
 ## Changing what one serves
 
 The model card inside the application decides the weights, the engine flags, and the capabilities it advertises to Router:
 
 ```
-olares-cli router local spec show embeddinggemmav3 -o json > card.json
-# edit
-olares-cli router local spec set embeddinggemmav3 --from card.json
-olares-cli router local restart embeddinggemmav3
-olares-cli router provider sync-models embeddinggemmav3
+olares-cli router model spec show Olares/embeddinggemma-300m
+olares-cli router model spec edit Olares/embeddinggemma-300m --mode embedding
 ```
 
-The last step matters more here than for an LLM: a change of dimension, or of which direction an audio model serves, is invisible to Router until its rows are re-mirrored. See [the Model Console](olares-router-console.md) for what the card contains and which fields are safe to change.
+`model spec edit` merges the change onto the card the application is serving and stores what the application confirms, so Router's own copy is corrected in the same step. That matters more here than for an LLM: a change of dimension, or of which job an audio model does, is what Router routes on.
+
+These applications' engines are sidecars, so they take no engine flags. The CLI does not know that and does not check: `model spec edit --engine-args` sends the value and the application decides what to do with it, which for a sidecar is nothing useful. `--mode` is the field that matters. See [local LLM applications](olares-router-local-llm.md) for the card in full and [the Model Console](olares-router-console.md) for reaching it at the application instead.

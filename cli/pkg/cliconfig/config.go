@@ -128,6 +128,19 @@ type ProfileConfig struct {
 	// successful /api/olares-info read that wrote BackendVersion. Surfaced
 	// for diagnostics ("last refreshed" hints); it does NOT drive any TTL.
 	BackendVersionRefreshedAt int64 `json:"backendVersionRefreshedAt,omitempty"`
+
+	// Managed marks a profile the platform created for us by mounting a
+	// credential into this container, rather than one the user logged into.
+	// Its refresh token lives only in that mount, so `profile login`,
+	// `profile import` and `profile remove` refuse to touch it: there is no
+	// local secret to rewrite and deleting the entry would only make the
+	// next startup recreate it.
+	Managed bool `json:"managed,omitempty"`
+
+	// AppName is the application the managed grant was issued to. Empty for
+	// every non-managed profile. Rendered by `profile list` so a user who
+	// finds an account they never logged into can tell where it came from.
+	AppName string `json:"appName,omitempty"`
 }
 
 // ClusterContextCache is the per-profile snapshot of /capi/app/detail

@@ -10,28 +10,29 @@ import (
 	"github.com/beclab/Olares/cli/pkg/storage"
 )
 
-func TestMaterializeModuleUsesProvidedPathsAndSelections(t *testing.T) {
+func TestPublishDeclarationModuleUsesProvidedPathsAndSelections(t *testing.T) {
 	selections := ProfileSelections{HardwareProfile: "fixture"}
-	module := &MaterializeModule{
+	module := &PublishDeclarationModule{
 		InstallerDir:      "/installer",
 		RootDir:           "/olares",
 		ProfileSelections: selections,
+		CatalogPolicy:     OmitCatalogApps,
 	}
 
 	module.Init()
 
-	if module.GetName() != "MaterializeMarketPreinstall" {
+	if module.GetName() != "PublishMarketPreinstallDeclaration" {
 		t.Fatalf("module name = %q", module.GetName())
 	}
 	tasks := module.GetTasks()
-	if len(tasks) != 1 || tasks[0].GetName() != "MaterializeMarketPreinstall" {
+	if len(tasks) != 1 || tasks[0].GetName() != "PublishMarketPreinstallDeclaration" {
 		t.Fatalf("tasks = %#v", tasks)
 	}
 	localTask, ok := tasks[0].(*task.LocalTask)
 	if !ok {
 		t.Fatalf("task type = %T", tasks[0])
 	}
-	action, ok := localTask.Action.(*MaterializeAction)
+	action, ok := localTask.Action.(*PublishDeclarationAction)
 	if !ok {
 		t.Fatalf("action type = %T", localTask.Action)
 	}
@@ -39,9 +40,14 @@ func TestMaterializeModuleUsesProvidedPathsAndSelections(t *testing.T) {
 		action.ProfileSelections.HardwareProfile != "fixture" {
 		t.Fatalf("action = %#v", action)
 	}
+	// Publish refuses a policy it was not given, so a module that dropped this
+	// one would fail the install rather than declare the wrong list.
+	if action.CatalogPolicy != OmitCatalogApps {
+		t.Fatalf("action catalog policy = %q", action.CatalogPolicy)
+	}
 }
 
-func TestMaterializeRuntimeDirIsRelativeToOlaresRoot(t *testing.T) {
+func TestPublishRuntimeDirIsRelativeToOlaresRoot(t *testing.T) {
 	// The market chart mounts {{ .Values.rootPath }}/RuntimeRelativeDir, and
 	// rootPath is rendered from storage.OlaresRootDir. Publishing anywhere else
 	// (notably under the installer base directory) makes the pod mount an empty

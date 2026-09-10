@@ -1,51 +1,60 @@
 package router
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/beclab/Olares/cli/internal/keychain"
 )
 
 // Reaching the data plane.
 //
-// The management plane runs on the Olares session this whole tree carries: the
-// edge injects X-BFL-USER and Router trusts it. The data plane does not accept
-// that header. It takes an `sk-*` key, or a platform-injected caller identity
-// when the request came from inside the cluster — and nothing else, on purpose:
-// a browser session that could also spend budget would make every open Router
-// tab a spending credential.
+// Router's /v1 accepts three identities and tries them in this order: an `sk-*`
+// Bearer, the platform-injected `x-caller-appid` of a calling application, and
+// the platform-injected `X-BFL-USER` of a person. The third arrived in Router
+// v2.2.1 (ADR-49), and it is what makes this file short.
 //
-// So a call has to answer "which of the two do I have" before it can be made.
-// The order below is capability-first rather than configuration-first, because
-// the same binary runs in both places and asking the user which one they are in
-// is a question the process can answer itself:
+// Both injected headers are stamped by the Olares edge on the way in — the same
+// edge, the same host and the same profile session that every management verb
+// in this tree already travels on, since the console plane works precisely
+// because that session becomes X-BFL-USER. So a /v1 request sent from here
+// carrying no credential of its own is not anonymous: it arrives as whoever the
+// platform says is calling. In a pod that is the application; from a laptop it
+// is the person holding the profile.
 //
-//  1. A key given explicitly — flag or environment — wins. Someone naming a
-//     credential is not asking to be second-guessed.
-//  2. A key this machine minted before, from the OS keychain. Reusing it keeps
-//     one key per machine instead of one per invocation.
-//  3. Inside a container: try with no credential at all. If the platform is
-//     injecting a caller identity, that succeeds and no key needs to exist.
-//  4. Otherwise mint one through the management plane and keep it.
+// Hence two steps rather than five:
 //
-// Step 3 is skipped outside a container. It cannot succeed there — no platform
-// component is injecting anything into a request from a laptop — and spending a
-// round trip to be told so would slow down the common case.
+//  1. A key named explicitly — flag, then environment — wins. Someone naming a
+//     credential is not asking to be second-guessed, and a key remains the way
+//     to call with a model allowlist, a budget of its own, or from outside
+//     Olares entirely.
+//  2. Otherwise send nothing, and let the platform say who this is.
+//
+// What stood here before was a keychain lookup, a probe gated on running inside
+// a container, and — for every laptop, on the first call of any kind — minting
+// a key through the management plane and saving it. That key had no expiry, no
+// quota and no model restriction, and `router call models` was enough to create
+// one. Nothing in this tree issues a credential as a side effect of using one
+// any more, which is also why a key saved by an older build is now ignored
+// rather than preferred: it still works in Router, and `key current` says so.
+//
+// A Router older than v2.2.1 refuses the keyless request with
+// `missing_credentials`. That is a message to answer rather than a case to mint
+// around, and callErr answers it by naming the upgrade and --api-key.
 
-// dataPlaneKeyEnv names a key without storing one. It is read before the
-// keychain so a scripted run can pin a credential with a budget of its own.
+// dataPlaneKeyEnv names a key for one run without saving it anywhere.
 const dataPlaneKeyEnv = "OLARES_ROUTER_API_KEY"
 
-// keychainAccountSuffix separates the data-plane key from the profile's own
-// access token, which lives under the bare Olares ID in the same service.
+// keychainAccountSuffix separates a data-plane key saved by an older build from
+// the profile's own access token, which lives under the bare Olares ID in the
+// same keychain service. Nothing writes this entry now; `key current` reads it
+// so a key left behind can still be found and dealt with.
 const keychainAccountSuffix = "#router-api-key"
 
-// authMode records which of the two credentials a call ended up using, so the
-// verbs can say so when it matters and stay quiet when it does not.
+// authMode records which identity a call ended up presenting.
 type authMode string
 
 const (
@@ -56,101 +65,28 @@ const (
 type dataPlaneAuth struct {
 	Mode authMode
 	Key  string
-	// Minted is true when this run created the key, which is the one time the
-	// user should hear about it: a new credential now exists on the server.
-	Minted bool
 }
 
-// dataPlane returns a client for /v1 with whatever credential this machine can
-// present, and a note to show the user when a key was created for them.
-func dataPlane(ctx context.Context, pc *preparedClient, explicitKey string) (*routerClient, *dataPlaneAuth, error) {
-	auth, err := resolveDataPlaneAuth(ctx, pc, explicitKey)
-	if err != nil {
-		return nil, nil, err
-	}
+// dataPlane returns a client for /v1. Choosing the credential reads a flag and
+// an environment variable and speaks to nothing, so there is no context to pass
+// and no failure to report: without a key the request carries no Authorization
+// at all and the platform vouches for the caller.
+func dataPlane(pc *preparedClient, explicitKey string) *routerClient {
+	auth := resolveDataPlaneAuth(explicitKey)
 	if auth.Mode == authPlatform {
-		return pc.router, auth, nil
+		return pc.router
 	}
-	return pc.router.withHeader("Authorization", "Bearer "+auth.Key), auth, nil
+	return pc.router.withHeader("Authorization", "Bearer "+auth.Key)
 }
 
-func resolveDataPlaneAuth(ctx context.Context, pc *preparedClient, explicitKey string) (*dataPlaneAuth, error) {
+func resolveDataPlaneAuth(explicitKey string) *dataPlaneAuth {
 	if k := strings.TrimSpace(explicitKey); k != "" {
-		return &dataPlaneAuth{Mode: authKey, Key: k}, nil
+		return &dataPlaneAuth{Mode: authKey, Key: k}
 	}
 	if k := strings.TrimSpace(os.Getenv(dataPlaneKeyEnv)); k != "" {
-		return &dataPlaneAuth{Mode: authKey, Key: k}, nil
+		return &dataPlaneAuth{Mode: authKey, Key: k}
 	}
-	if k, err := cachedDataPlaneKey(pc.profile.OlaresID); err == nil && k != "" {
-		return &dataPlaneAuth{Mode: authKey, Key: k}, nil
-	}
-	if inContainer() && platformIdentityWorks(ctx, pc) {
-		return &dataPlaneAuth{Mode: authPlatform}, nil
-	}
-	key, err := mintDataPlaneKey(ctx, pc)
-	if err != nil {
-		return nil, err
-	}
-	// A keychain that will not store is not worth failing the call over: the
-	// key works for this run, and the next run mints another one.
-	if serr := storeDataPlaneKey(pc.profile.OlaresID, key); serr != nil {
-		fmt.Fprintf(os.Stderr, "warning: could not save the new key locally (%v); "+
-			"the next call will issue another one\n", serr)
-	}
-	return &dataPlaneAuth{Mode: authKey, Key: key, Minted: true}, nil
-}
-
-// inContainer decides whether a platform-injected identity is even possible.
-// The Kubernetes service-account mount is the reliable signal; the environment
-// variables are set for pods in a cluster and absent from a laptop.
-func inContainer() bool {
-	if _, err := os.Stat("/var/run/secrets/kubernetes.io/serviceaccount/token"); err == nil {
-		return true
-	}
-	if os.Getenv("KUBERNETES_SERVICE_HOST") != "" {
-		return true
-	}
-	if _, err := os.Stat("/.dockerenv"); err == nil {
-		return true
-	}
-	return false
-}
-
-// platformIdentityWorks asks the cheapest data-plane route whether this request
-// arrives with an identity Router accepts. /v1/models reads a projection of the
-// catalogue, so a probe costs no upstream call and no spend.
-func platformIdentityWorks(ctx context.Context, pc *preparedClient) bool {
-	var sink struct {
-		Object string `json:"object"`
-	}
-	return pc.router.doJSON(ctx, "GET", dataPlaneAPI+"/models", nil, &sink) == nil
-}
-
-// mintDataPlaneKey issues a key through the management plane. The name carries
-// the machine so a key list read months later says where the credential lives,
-// which is the question that matters when deciding whether to revoke one.
-func mintDataPlaneKey(ctx context.Context, pc *preparedClient) (string, error) {
-	name := "olares-cli"
-	if host, err := os.Hostname(); err == nil && strings.TrimSpace(host) != "" {
-		name += " on " + strings.TrimSpace(host)
-	}
-	var created createdKey
-	err := pc.router.doJSON(ctx, "POST", consoleAPI+"/api-keys", map[string]any{"name": name}, &created)
-	if err != nil {
-		var re *RouterError
-		if errors.As(err, &re) && re.Status == 404 {
-			return "", fmt.Errorf("this Router serves no API keys, so the data plane cannot be reached with one. " +
-				"A call from inside the cluster still works, where the platform supplies the caller identity")
-		}
-		return "", fmt.Errorf("issue a key for this machine: %w", err)
-	}
-	if strings.TrimSpace(created.Key) == "" {
-		return "", fmt.Errorf("Router created a key but returned no secret; " +
-			"`olares-cli router key list` will show it, and it has to be revoked and re-issued to be usable")
-	}
-	fmt.Fprintf(os.Stderr, "issued a data-plane key for this machine (%q, %s) and saved it locally; "+
-		"`olares-cli router key list` shows it and `router key revoke` ends it\n", name, created.KeyPrefix)
-	return created.Key, nil
+	return &dataPlaneAuth{Mode: authPlatform}
 }
 
 func keychainAccount(olaresID string) string {
@@ -162,13 +98,6 @@ func cachedDataPlaneKey(olaresID string) (string, error) {
 		return "", nil
 	}
 	return keychain.Get(keychain.OlaresCliService, keychainAccount(olaresID))
-}
-
-func storeDataPlaneKey(olaresID, key string) error {
-	if strings.TrimSpace(olaresID) == "" {
-		return fmt.Errorf("no Olares ID to file the key under")
-	}
-	return keychain.Set(keychain.OlaresCliService, keychainAccount(olaresID), key)
 }
 
 func forgetDataPlaneKey(olaresID string) error {
@@ -192,33 +121,122 @@ const dataPlaneKeyFlagUsage = "call with this `sk-*` key instead of the one this
 // that separates them — Router's own refusals are `authentication_error`, an
 // upstream's carry whatever the upstream calls it — and pointing at the wrong
 // key sends someone to re-issue a credential that was never the problem.
+// routerErrorOf unwraps to Router's own envelope, or nil when the failure
+// happened before anything answered.
+func routerErrorOf(err error) *RouterError {
+	var re *RouterError
+	if err != nil && errors.As(err, &re) {
+		return re
+	}
+	return nil
+}
+
+// retryAdvice turns the Retry-After header into a sentence, or into nothing
+// when the server did not send one. "Try again later" without a number is
+// advice the reader already had.
+func retryAdvice(after time.Duration) string {
+	if after <= 0 {
+		return ""
+	}
+	return fmt.Sprintf(" Router asks for %s before trying again.", after.Round(time.Second))
+}
+
 func callErr(err error) error {
 	if err == nil {
 		return nil
 	}
-	var re *RouterError
-	if !errors.As(err, &re) {
+	re := routerErrorOf(err)
+	if re == nil {
 		return err
 	}
 	ours := re.Type == "authentication_error"
 	switch {
+	case ours && re.Code == "missing_credentials":
+		// Router saw no Bearer, no app header and no X-BFL-USER. From here the
+		// third one is always sent by the edge, so the Router that says this is
+		// one that predates reading it.
+		return fmt.Errorf("%w\nThis Router does not yet accept a call without a key: taking the caller's "+
+			"identity from the platform arrived in Router v2.2.1, and `olares-cli market upgrade` on the "+
+			"Router application is what closes the gap. Until then pass --api-key or set %s; "+
+			"`olares-cli router key list` shows the keys that exist and `router key issue <name>` "+
+			"creates one", err, dataPlaneKeyEnv)
+	case ours && re.Code == "unknown_bfl_user":
+		// The platform vouched for a person Router has no row for. Router
+		// deliberately does not create one from the data plane, and neither
+		// does this: the console plane is where a person comes into existence.
+		return fmt.Errorf("%w\nThe platform knows you, Router does not have you yet. It records a person "+
+			"the first time they use the console plane, so any management verb — `olares-cli router model "+
+			"list` will do — creates the row, and the call then works", err)
 	case ours && (re.Code == "invalid_api_key" || re.Code == "key_disabled" || re.Code == "key_expired"):
-		return fmt.Errorf("%w\nThe key this machine saved is no longer usable. "+
-			"`olares-cli router key local --forget` drops it, and the next call issues a fresh one", err)
+		return fmt.Errorf("%w\nThe key this call presented is no longer usable. Dropping it is enough to "+
+			"keep working: without a key the call goes as you, vouched for by the platform. Unset %s "+
+			"if that is where it came from, leave --api-key off, and `olares-cli router key current "+
+			"--forget` discards a copy saved by an older build", err, dataPlaneKeyEnv)
 	case ours && (re.Code == "owner_disabled" || re.Code == "app_archived" || re.Code == "app_suspended"):
-		return fmt.Errorf("%w\nThis is about who the key belongs to rather than the key itself; "+
-			"an admin restores it with `olares-cli router user list` or `router caller list`", err)
-	case re.Status == 401 || re.Status == 403:
-		return fmt.Errorf("%w\nThis came back from the provider, not from Router: the credential Router "+
-			"holds for it was refused. `olares-cli router provider validate <provider>` checks it against "+
-			"the upstream, and `router provider update` replaces it", err)
+		return fmt.Errorf("%w\nThis is about who or what the key belongs to rather than the key itself. "+
+			"For a person, `olares-cli settings users get <name>` shows their account; for an "+
+			"application, `olares-cli market list --mine` says whether it is still here", err)
 	case re.Code == "no_default_model":
-		return fmt.Errorf("%w\nName a model with --model, or have an admin set a default with "+
-			"`olares-cli router default set`", err)
+		// A category is normally reconciled rather than chosen, so the fix is
+		// usually to install something rather than to point it anywhere. The
+		// exception is worth naming: `route pin` is a standing choice, and a
+		// category pinned to a model that was deleted refuses with this same
+		// code while `route list` shows a model beside it.
+		// Router's own message for this says nothing is installed, and that is
+		// not a claim the data plane can make: a model whose application is
+		// stopped is invisible from here and installed all the same. Only the
+		// console plane knows, so this points at the verb that asks it rather
+		// than repeating the absence.
+		return fmt.Errorf("%w\nNothing is answering that category. Whether anything is installed for it is "+
+			"a separate question — `olares-cli router route candidates <category>` names the models that "+
+			"could and says whether one is merely stopped, which `olares-cli market resume <app>` starts. "+
+			"`router route list --kind default` shows where every category stands. On a verb that takes "+
+			"--model, naming one goes directly in the meantime; if the category was pinned, "+
+			"`router route unpin <category>` hands it back to Router", err)
+	case re.Code == "model_route_disabled":
+		return fmt.Errorf("%w\nThe name resolves, but the route serving it is switched off. "+
+			"`olares-cli router route get <name>` shows it, and `route enable <name>` puts it back", err)
+	case re.Code == "model_not_allowed":
+		return fmt.Errorf("%w\nThe credential is restricted to a list this model is not on. "+
+			"`olares-cli router call models` shows what it may call, and `router key update` changes the list", err)
 	case re.Code == "model_not_found":
-		return fmt.Errorf("%w\n`olares-cli router list` shows the names this Router serves", err)
+		return fmt.Errorf("%w\n`olares-cli router call models` shows the names this credential may send", err)
 	case re.Code == "ambiguous_model":
-		return fmt.Errorf("%w\nQualify it as <provider>/<model>; `olares-cli router list` shows both parts", err)
+		return fmt.Errorf("%w\nQualify it as <provider>/<model>; `olares-cli router call models` shows the "+
+			"qualified names", err)
+	case re.Code == "model_at_capacity":
+		// Not a quota: nobody set this number and no admin can raise it. The
+		// engine was launched to serve so many requests at once, and Router
+		// now holds a caller in a soft queue while they are all busy — ten
+		// seconds for an interactive call, a minute for a generation. So this
+		// code no longer means "full", it means "still full after the wait",
+		// which is why the answer is to try again rather than to change a
+		// setting, and why it is a 503 with a Retry-After and not the 429 a
+		// budget produces.
+		return fmt.Errorf("%w\nRouter waited for a slot and the model was still serving every request "+
+			"it was launched to handle, so this one was refused rather than held any longer.%s "+
+			"`olares-cli router provider get <provider>` shows how wide the engine is and how deep "+
+			"its queue was when Router last looked", err, retryAdvice(re.RetryAfter))
+	case re.Code == "kv_budget_exhausted":
+		// The engine's own door, not Router's. A slot was free — otherwise
+		// this would have been model_at_capacity — and the KV cache behind all
+		// the slots was not: in unified mode they share one pool that cannot
+		// hold a full window each, so a long prompt is refused while the
+		// engine is answering short ones. It has to stay ahead of the 5xx
+		// branch below, which would read this as an application that is not
+		// serving, and it is the one refusal here that a shorter prompt fixes.
+		return fmt.Errorf("%w\nThe model's KV cache is fully reserved. The engine is serving, not "+
+			"broken: its slots share one pool, and this prompt did not fit in what was left of it.%s "+
+			"Router already tried the other members of the route, so a shorter prompt, fewer "+
+			"concurrent calls, or waiting is what gets through. `olares-cli router model get <model>` "+
+			"shows the pool against the window and the width", err, retryAdvice(re.RetryAfter))
+	case re.Code == "model_not_ready":
+		return fmt.Errorf("%w\nThe model is still coming up.%s `olares-cli router model status <model>` "+
+			"follows the phase it is in", err, retryAdvice(re.RetryAfter))
+	case mediaAdvice(re) != "":
+		// Before the two suffix matches below, which would otherwise answer a
+		// media family's "unsupported for provider" with audio's advice.
+		return fmt.Errorf("%w\n%s", err, mediaAdvice(re))
 	case re.Type == "quota_exceeded_error":
 		return fmt.Errorf("%w\n`olares-cli router quota list` shows the limits, and `router usage summary` "+
 			"what has been spent against them", err)
@@ -227,14 +245,167 @@ func callErr(err error) error {
 		// claims the model, and complains about streaming from there. The name
 		// is what was actually wrong.
 		return fmt.Errorf("%w\nNo provider serves this model, which is what put the request on Router's "+
-			"fallback path. `olares-cli router list` shows the names it does serve", err)
+			"fallback path. `olares-cli router call models` shows the names it does serve", err)
+	case strings.HasSuffix(re.Code, "_mode_mismatch"):
+		return fmt.Errorf("%w\nThe model is configured for a different kind of work than this verb asks "+
+			"for. `olares-cli router model list` shows each model's mode, and a route can only serve the mode "+
+			"it was created with", err)
+	case re.Code == "audio_operation_not_supported":
+		// The model's application declared the routes it serves and this is
+		// not one of them, so Router refused rather than forwarding. That is
+		// the useful half: an engine that was merely forwarded to answers a
+		// bare 404, which reads the same whether the route is absent, the URL
+		// is wrong or the engine is the wrong one. Here the catalogue is the
+		// record, and it can be read.
+		return fmt.Errorf("%w\nThis model declares the routes it serves and this operation is not among "+
+			"them, so nothing was sent to the engine. `olares-cli router call models --operations` "+
+			"prints what each model does declare; another model of the same mode may serve it, and "+
+			"leaving --model off lets Router pick one that does", err)
+	case strings.HasSuffix(re.Code, "_unsupported_for_provider") || re.Code == "audio_path_unsupported":
+		return fmt.Errorf("%w\nThis model's provider does not serve that route at all. For a model "+
+			"running on this Olares that usually means a different engine image does this job: "+
+			"`olares-cli router model list --mode audio` and `router provider get <provider>` show which "+
+			"capability each one declares", err)
+	case re.Code == "" && re.Type == "" && namesFormatChoices(re.Body):
+		// An engine refusing --response-format, forwarded with no envelope of
+		// Router's own. The flag help invited this for as long as it named bare
+		// containers, and the refusal arrived with nothing added to it.
+		return hintFormatRefusal(err)
 	case re.Code == "capability_not_supported" || re.Code == "stream_unsupported_for_model":
 		return fmt.Errorf("%w\n`olares-cli router provider get <provider>` lists what the model supports", err)
+	case re.Status == 404 && re.Code == "" && re.Type == "":
+		// A 404 with no envelope on a route Router does mount. Audio, OCR and
+		// translate are forwarded to the engine unchanged, and an engine serves
+		// the capability it was built for and nothing else, so this is usually
+		// the wrong engine rather than a wrong URL.
+		return fmt.Errorf("%w\nRouter forwarded this and the model's own endpoint has no such route. "+
+			"For audio that means the wrong engine: recognition, synthesis, voice activity, "+
+			"diarization, enhancement and alignment are separate images, and each answers 404 for "+
+			"the others. Leaving --model off picks a model that declares the capability", err)
 	case re.Status == 502 || re.Status == 503 || re.Status == 504:
 		return fmt.Errorf("%w\nThe model's own endpoint did not answer. For a model running on this Olares "+
 			"that usually means the application is not serving yet: `olares-cli router provider get <provider>` "+
 			"shows its Olares status, and a degraded one is a matter for `olares-cli market` rather than "+
 			"anything here", err)
+	case strings.HasPrefix(re.Code, "media_") || strings.HasPrefix(re.Code, "image_generation_async_"):
+		// A media code this build has no sentence for. Naming it as one is
+		// better than the two status branches above claiming the provider
+		// never answered, which for a refusal made before dispatch is untrue.
+		return fmt.Errorf("%w\nRouter refused this before it reached the provider. `olares-cli router "+
+			"model get <model>` shows what the model declares", err)
+	case re.Status == 401 || re.Status == 403:
+		// Last resort, and it has to stay last: Router refuses with these two
+		// statuses as well, and every refusal of its own is named above. A
+		// status matched ahead of a code sends someone to rotate an upstream
+		// credential that was working — which is what this said for
+		// model_not_allowed, an allowlist decision Router made by itself.
+		return fmt.Errorf("%w\nThis came back from the provider, not from Router: the credential Router "+
+			"holds for it was refused. `olares-cli router provider validate <provider>` checks it against "+
+			"the upstream, and `router provider update` replaces it", err)
 	}
 	return err
+}
+
+// mediaAdvice is what a refused creative request needs next, or "" for a code
+// that is not one of theirs.
+//
+// The four field codes are the whole point of the canonical contract, and they
+// are worth keeping apart. A field Router has no name for, a field that belongs
+// to another family, two fields describing the same thing, and a value outside
+// its domain are four different things to change; before the contract they were
+// one thing — forwarded to a provider that ignored them, and billed.
+//
+// Nothing here restates which field was refused. Router words these in the
+// caller's own spelling — a request on a released route is told
+// `reference_images` rather than `inputs.images` — and repeating it in
+// canonical names would take that back.
+func mediaAdvice(re *RouterError) string {
+	switch re.Code {
+	case "media_field_unknown":
+		return "Router parses a creative body strictly, so a field it has no name for is refused " +
+			"rather than passed on and charged for. A vendor's own parameter belongs in " +
+			"`--provider-option key=value`, which is forwarded untouched; anything else is a misspelling."
+	case "media_field_not_allowed":
+		return "The field is real and belongs to another family: a duration describes a video or a " +
+			"track, a polygon budget a mesh. Each verb offers only its own family's fields, so this " +
+			"usually means one arrived through --provider-option."
+	case "media_field_conflict":
+		return "Two fields describe the same thing and Router will not guess which was meant. " +
+			"--size against --aspect-ratio or --resolution is the usual pair: ask in pixels or in a shape."
+	case "media_field_invalid":
+		return "The field is right and the value is outside what it accepts. --size is <width>x<height> " +
+			"and --aspect-ratio is <w>:<h>; a provider's own vocabulary, \"2K\" or \"auto\", goes through " +
+			"--provider-option."
+	case "media_input_unsupported":
+		return "The request is well formed and this model has no parameter for what it names. Router " +
+			"refuses instead of dropping the field and billing for the rest, which is what used to " +
+			"happen. `olares-cli router model get <model>` lists what it declares; without that field " +
+			"the request runs as it stands."
+	case "media_input_required":
+		return "The operation works from something, and nothing was given. --image, --audio and " +
+			"--source-generation are the three ways to name it, and which one applies follows from " +
+			"the operation."
+	case "media_prompt_required":
+		return "This family is asked in words. Only a mesh can be asked for with a picture alone."
+	case "media_input_invalid":
+		return "The input reached Router and could not be read as an image or a recording. A file on " +
+			"this machine is encoded before it is sent, so this is usually a link that answers with " +
+			"something other than the media it names."
+	case "media_input_too_large":
+		return "One of the inputs is over the cap on a single reference. A file on this machine is " +
+			"encoded into the request, which makes it about a third larger than on disk; a link the " +
+			"provider can fetch is passed through as written and costs nothing here."
+	case "media_payload_too_large":
+		return "The request as a whole is over the cap, which is usually several encoded inputs rather " +
+			"than one large one. Passing them as links instead leaves the body small."
+	case "media_operation_invalid":
+		return "That is not an operation this family has. Video is the only one with more than " +
+			"generate, which is why --operation is video's alone."
+	case "media_operation_not_declared", "video_operation_not_declared", "image_operation_not_declared":
+		return "The operation exists and this model does not offer it. `olares-cli router model get " +
+			"<model>` lists the ones it declares, and another model of the same mode may serve it."
+	case "media_generation_unsupported_for_provider", "image_generation_unsupported_for_provider",
+		"video_generation_unsupported_for_provider":
+		return "This model's provider does not serve this kind of generation at all. `olares-cli router " +
+			"model list --mode <mode>` shows which models do, and for a model running on this Olares " +
+			"the mode follows from the application that was installed."
+	case "media_mode_unsupported":
+		return "The model resolves and is not a creative model: this verb creates a generation, and " +
+			"only image, video, music and 3D models produce one. `olares-cli router model list` shows " +
+			"each model's mode."
+	case "media_model_required":
+		return "This route resolves no default, so the model has to be named. `olares-cli router model " +
+			"list --mode <mode>` shows the names this credential can send."
+	case "media_output_not_found":
+		return "--output-id names an output that is not this generation's. The ids are printed once a " +
+			"generation has more than one, and leaving the flag off writes the first."
+	case "media_generation_not_found":
+		return "A generation belongs to the credential that created it and expires on its own, so an id " +
+			"that used to work is either past its expiry or being collected with another key. " +
+			"--no-wait prints the expiry when the work is submitted."
+	case "media_content_unavailable":
+		return "The generation exists and its bytes do not: it has not finished, or the provider " +
+			"binding it was created against has moved. Collecting it again with --id reports which."
+	case "image_generation_async_multiple_unsupported":
+		return "A generation is one file behind one content route, so a persisted image is exactly one " +
+			"output. Several pictures are several calls."
+	case "lyrics_alignment_unavailable":
+		return "There is no timeline for this track. Either the generation has not completed — a " +
+			"timeline describes finished audio, so there is nothing to place until then — or the " +
+			"model application that made it does not serve one. Router asks the model that made " +
+			"this track and no other, so retrying against a different model is not an option here."
+	case "lyrics_alignment_invalid":
+		return "The model application answered with something that is not a timeline: out of order, " +
+			"outside the track, or not the shape at all. Router refuses it rather than passing on " +
+			"timings a player would seek to the wrong place with."
+	case "lyrics_alignment_upstream_error":
+		return "The model application that made this track did not answer. It is the only one that " +
+			"can, since the timeline comes from the generation's own provider; `olares-cli router " +
+			"provider get <provider>` says whether the application is still serving."
+	case "image_generation_async_required":
+		return "This provider serves image generation only as a generation to come back for, which is " +
+			"what this verb asks for. Seeing it here means the request reached Router without that " +
+			"preference — an older build of this CLI, or another client."
+	}
+	return ""
 }

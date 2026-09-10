@@ -80,7 +80,19 @@ func runInspect(ctx context.Context, f *cmdutil.Factory, rawURL, outputRaw strin
 	if hint := inspectHFTokenHint(data); hint != "" {
 		fmt.Fprintln(os.Stderr, hint)
 	}
+	if hint := inspectCookieHint(data, rawURL); hint != "" {
+		fmt.Fprintln(os.Stderr, hint)
+	}
 	return nil
+}
+
+// inspectCookieHint returns the cookie-import CTA when the probe failed
+// for a reason a login cookie fixes. Empty string means no hint.
+func inspectCookieHint(d InspectData, rawURL string) string {
+	if !isCookieRecoverable(d.ErrorCode, d.ErrorCategory) {
+		return ""
+	}
+	return cookieRequiredHint(rawURL)
 }
 
 // inspectYTDLPHint returns the install CTA when inspect reports the yt-dlp

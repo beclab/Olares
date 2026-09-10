@@ -115,7 +115,7 @@ func GetMountedPathDetail(ctx context.Context, mutate func(*disk.UsageStat) *dis
 	for _, p := range paths {
 		mountedMountPoints = append(mountedMountPoints, p.Path)
 		u := &disk.UsageStat{Path: p.Path}
-		if !p.Invalid {
+		if !p.Invalid && p.Managed {
 			u, err = disk.UsageWithContext(ctx, p.Path)
 			if err != nil {
 				klog.Error("get path usage error, ", err, ", ", p)

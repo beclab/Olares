@@ -2,13 +2,15 @@ package router
 
 import (
 	"context"
+	"crypto/md5" //nolint:gosec // the appid is defined as an MD5 prefix, not chosen here
+	"encoding/hex"
 	"fmt"
 	"io"
 	"net/url"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
-	"text/tabwriter"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -31,47 +33,143 @@ import (
 // priced wrongly, or not at all, produces a total that is wrong in exactly that
 // way: this is an accounting of what Router believes, not an invoice.
 
+// spendLog mirrors one row of Router's spend table, whole.
+//
+// Whole rather than the columns the table below prints, because -o json prints
+// this struct: a column left out here is a column that vanishes from the JSON,
+// which is the one output somebody scripts against.
+//
+// The quantity columns are pointers and their absence carries meaning. A call
+// is priced by whichever unit family its mode belongs to — tokens, seconds,
+// images, videos, queries — and nil means no number arrived, which is not a
+// measured zero. A VAD pass over silence stores 0.0 seconds and costs nothing;
+// an engine that reported no duration stores nil and also costs nothing, and
+// only this difference says which.
 type spendLog struct {
-	ID              int64     `json:"id"`
-	RequestID       *string   `json:"request_id,omitempty"`
-	APIKeyID        *string   `json:"api_key_id,omitempty"`
-	UserID          *string   `json:"user_id,omitempty"`
-	CallerAppID     *string   `json:"caller_app_id,omitempty"`
-	ProviderID      *string   `json:"provider_id,omitempty"`
-	ProviderModelID *string   `json:"provider_model_id,omitempty"`
-	ModelName       string    `json:"model_name"`
-	Mode            string    `json:"mode"`
-	PromptTokens    int64     `json:"prompt_tokens"`
-	CompletionTok   int64     `json:"completion_tokens"`
-	TotalTokens     int64     `json:"total_tokens"`
-	ReasoningTokens *int64    `json:"reasoning_tokens,omitempty"`
-	CostUSD         float64   `json:"cost_usd"`
-	Status          string    `json:"status"`
-	HTTPStatus      int       `json:"http_status"`
-	ErrorCode       *string   `json:"error_code,omitempty"`
-	LatencyMS       int64     `json:"latency_ms"`
-	Tags            []string  `json:"tags,omitempty"`
-	CreatedAt       time.Time `json:"created_at"`
-}
-
-type spendSummaryRow struct {
-	Key           string  `json:"key"`
-	Label         string  `json:"label"`
-	Requests      int64   `json:"requests"`
-	CostUSD       float64 `json:"cost_usd"`
-	TotalTokens   int64   `json:"total_tokens"`
+	ID              int64   `json:"id"`
+	AttemptID       *string `json:"attempt_id,omitempty"`
+	RequestID       *string `json:"request_id,omitempty"`
+	APIKeyID        *string `json:"api_key_id,omitempty"`
+	UserID          *string `json:"user_id,omitempty"`
+	CallerAppID     *string `json:"caller_app_id,omitempty"`
+	ProviderID      *string `json:"provider_id,omitempty"`
+	ProviderModelID *string `json:"provider_model_id,omitempty"`
+	ModelName       string  `json:"model_name"`
+	Mode            string  `json:"mode"`
+	// Op is the operation within the mode: which media operation, which
+	// audio route. A mode alone does not say what was asked for.
+	Op            *string `json:"op,omitempty"`
 	PromptTokens  int64   `json:"prompt_tokens"`
 	CompletionTok int64   `json:"completion_tokens"`
+	TotalTokens   int64   `json:"total_tokens"`
+	CacheCreation *int64  `json:"cache_creation_input_tokens,omitempty"`
+	CacheRead     *int64  `json:"cache_read_input_tokens,omitempty"`
+	ReasoningTok  *int64  `json:"reasoning_tokens,omitempty"`
+	CostUSD       float64 `json:"cost_usd"`
+	Status        string  `json:"status"`
+	HTTPStatus    int     `json:"http_status"`
+	ErrorCode     *string `json:"error_code,omitempty"`
+	LatencyMS     int64   `json:"latency_ms"`
+	// JobMS is how long the work took, where LatencyMS is how long the
+	// request took. They differ only for a call whose work outlived the
+	// request that started it: an async task is opened by the submission
+	// and settled by the collection, and the settling request measures
+	// itself forwarding a result the engine finished minutes earlier. A
+	// nil JobMS is a synchronous call, where LatencyMS is the whole of it.
+	JobMS *int64 `json:"job_ms,omitempty"`
+	// TTFTMS is how long the caller waited for the first token, and exists
+	// only for a stream. QueueMS is the part of the latency the engine did
+	// not spend working, and only a local engine reports the timings it is
+	// derived from.
+	TTFTMS   *int64 `json:"ttft_ms,omitempty"`
+	QueueMS  *int64 `json:"queue_ms,omitempty"`
+	Streamed bool   `json:"streamed"`
+
+	AudioInputSeconds  *float64 `json:"audio_input_seconds,omitempty"`
+	AudioOutputSeconds *float64 `json:"audio_output_seconds,omitempty"`
+	Images             *int64   `json:"images,omitempty"`
+	ImageSize          *string  `json:"image_size,omitempty"`
+	ImageQuality       *string  `json:"image_quality,omitempty"`
+	Videos             *int64   `json:"videos,omitempty"`
+	VideoSeconds       *float64 `json:"video_seconds,omitempty"`
+	Queries            *int64   `json:"queries,omitempty"`
+	// Pages is the OCR work-set that succeeded; Objects is how many meshes
+	// a 3D generation produced. Neither is a token and neither is a second.
+	Pages   *int64 `json:"pages,omitempty"`
+	Objects *int64 `json:"objects,omitempty"`
+
+	// SessionID groups the calls one task made. It is the caller's own id or
+	// nothing: Router cannot invent a task boundary.
+	SessionID *string   `json:"session_id,omitempty"`
+	IP        *string   `json:"ip,omitempty"`
+	UserAgent *string   `json:"user_agent,omitempty"`
+	Tags      []string  `json:"tags,omitempty"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// spendSummaryRow is one bucket. A bucket that mixes modes carries several
+// quantities at once, which is not a contradiction: cost is the sum across unit
+// families, so the quantities behind it are too.
+type spendSummaryRow struct {
+	Key       string   `json:"key"`
+	Label     string   `json:"label"`
+	IconURL   string   `json:"icon_url,omitempty"`
+	Owners    []string `json:"owners,omitempty"`
+	Installed bool     `json:"installed,omitempty"`
+	// Shared is what makes Owners readable: a shared application is one
+	// deployment serving the cluster, so its owners are whoever installed it
+	// rather than everyone who may call it.
+	Shared             bool    `json:"shared,omitempty"`
+	Requests           int64   `json:"requests"`
+	CostUSD            float64 `json:"cost_usd"`
+	TotalTokens        int64   `json:"total_tokens"`
+	PromptTokens       int64   `json:"prompt_tokens"`
+	CompletionTok      int64   `json:"completion_tokens"`
+	AudioInputSeconds  float64 `json:"audio_input_seconds"`
+	AudioOutputSeconds float64 `json:"audio_output_seconds"`
+	Images             int64   `json:"images"`
+	Videos             int64   `json:"videos"`
+	VideoSeconds       float64 `json:"video_seconds"`
+	Queries            int64   `json:"queries"`
+	Pages              int64   `json:"pages"`
+	Objects            int64   `json:"objects"`
+}
+
+// spendTotals are the same figures however the calls are grouped, so both
+// summary shapes embed one copy.
+type spendTotals struct {
+	TotalRequests        int64   `json:"total_requests"`
+	TotalSuccessRequests int64   `json:"total_success_requests"`
+	TotalCostUSD         float64 `json:"total_cost_usd"`
+	TotalTokens          int64   `json:"total_tokens"`
+	// The counters for everything not priced by the token. Tokens alone
+	// report a window of image and audio work as having done nothing.
+	TotalAudioSeconds float64 `json:"total_audio_seconds"`
+	TotalImages       int64   `json:"total_images"`
+	TotalVideos       int64   `json:"total_videos"`
+	TotalVideoSeconds float64 `json:"total_video_seconds"`
+	TotalQueries      int64   `json:"total_queries"`
+	TotalPages        int64   `json:"total_pages"`
+	TotalObjects      int64   `json:"total_objects"`
+	AvgTPS            float64 `json:"avg_tps"`
 }
 
 type spendSummary struct {
-	Dim                  string            `json:"dim"`
-	Items                []spendSummaryRow `json:"items"`
-	TotalRequests        int64             `json:"total_requests"`
-	TotalSuccessRequests int64             `json:"total_success_requests"`
-	TotalCostUSD         float64           `json:"total_cost_usd"`
-	TotalTokens          int64             `json:"total_tokens"`
-	AvgTPS               float64           `json:"avg_tps"`
+	Dim       string            `json:"dim"`
+	Items     []spendSummaryRow `json:"items"`
+	Truncated bool              `json:"truncated"`
+	spendTotals
+}
+
+// spendMultiSummary is what several groupings at once answer with: the buckets
+// filed under the dimension they belong to, and one copy of the totals, which
+// are the same calls counted the same way however they are grouped.
+type spendMultiSummary struct {
+	Dims map[string]struct {
+		Items     []spendSummaryRow `json:"items"`
+		Truncated bool              `json:"truncated"`
+	} `json:"dims"`
+	spendTotals
 }
 
 // spendFilter is the one filter every usage route shares.
@@ -82,14 +180,53 @@ type spendFilter struct {
 	ProviderRef string
 	ModelRef    string
 	Status      string
+	Mode        string
+	SessionID   string
 	Since       string
 	Until       string
 	Tag         string
+	SortBy      string
+	SortOrder   string
+	RankBy      string
 	Limit       int
 	Offset      int
 }
 
+// The vocabularies Router validates against, copied because there is nothing
+// to read them from. A value outside either is refused here rather than sent:
+// Router answers a 400, and one round trip earlier the message can name the
+// whole set.
+var (
+	spendStatuses = []string{"success", "failed", "canceled", "in_progress"}
+	spendModes    = []string{
+		"chat", "responses", "embedding", "rerank",
+		"image_generation", "video_generation", "music_generation", "model3d_generation",
+		"translate", "ocr", "search", "scrape", "audio", "tts", "passthrough",
+	}
+	spendSortable = []string{
+		"created_at", "cost_usd", "total_tokens", "latency_ms", "ttft_ms", "model_name",
+	}
+	// What a summary orders its buckets by, which is not what a list orders
+	// its rows by: spendSortable names columns of one call, and these name
+	// the sums a bucket carries. Cost is the default.
+	spendRankable = []string{
+		"cost", "requests", "tokens", "audio_seconds",
+		"images", "video_seconds", "queries", "pages", "objects",
+	}
+)
+
+// statusInProgress is the one non-terminal status, and the reason cost needs a
+// third rendering. A running call has been admitted and has not been priced, so
+// its zero is not a price.
+const statusInProgress = "in_progress"
+
 var spendDims = []string{"model", "provider", "user", "caller_app", "day", "hour"}
+
+// dimHour is the one grouping that cannot share a request with another. Router
+// refuses the combination rather than answering it, and the reason is its own:
+// an hourly series is unbounded where the others are a bounded set of names, so
+// batching it would make the response size depend on the window.
+const dimHour = "hour"
 
 func NewUsageCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
@@ -109,25 +246,38 @@ Subcommands:
   summary    totals grouped by model, provider, person, app, day or hour
   list       individual calls, newest first
   export     the same rows as CSV
+  retention  how long the individual calls are kept
+  apps       what is installed here, which is who could have called
 
-Every subcommand takes the same filters, so a total and the calls behind it are
-one flag apart.
+The first three take the same filters, so a total and the calls behind it are one
+flag apart. A total outlives the calls it was made of: totals are kept per day
+forever, and the per-call rows are deleted on the window "retention" reports.
 `,
 	}
 	cmd.SilenceUsage = true
 	cmd.AddCommand(newUsageSummaryCommand(f))
 	cmd.AddCommand(newUsageListCommand(f))
 	cmd.AddCommand(newUsageExportCommand(f))
+	cmd.AddCommand(newUsageRetentionCommand(f))
+	cmd.AddCommand(newUsageAppsCommand(f))
 	return cmd
 }
 
 func addSpendFilterFlags(cmd *cobra.Command, fl *spendFilter) {
 	cmd.Flags().StringVar(&fl.UserRef, "user", "", "only this user's calls, by name or id (admin only)")
-	cmd.Flags().StringVar(&fl.CallerRef, "caller", "", "only this calling application's calls, by app name or id (admin only)")
+	cmd.Flags().StringVar(&fl.CallerRef, "caller-app", "", "only this application's calls, by title, app name or appid (admin only)")
+	// --caller was this flag's name, and `quota` spelled the same concept
+	// --caller-app with help text identical word for word. One name now; the
+	// old one keeps working unannounced rather than breaking a script.
+	cmd.Flags().StringVar(&fl.CallerRef, "caller", "", "")
+	_ = cmd.Flags().MarkHidden("caller")
 	cmd.Flags().StringVar(&fl.KeyRef, "key", "", "only calls made with this key, by name, prefix or id")
 	cmd.Flags().StringVar(&fl.ProviderRef, "provider", "", "only calls to this provider, by name or id")
 	cmd.Flags().StringVar(&fl.ModelRef, "model", "", "only calls to this model, as <provider>/<model>")
-	cmd.Flags().StringVar(&fl.Status, "status", "", "success, failed or canceled")
+	cmd.Flags().StringVar(&fl.Status, "status", "", "success, failed, canceled or in_progress (still running)")
+	cmd.Flags().StringVar(&fl.Mode, "mode", "",
+		"only calls in these modes, comma-separated: "+strings.Join(spendModes, ", "))
+	cmd.Flags().StringVar(&fl.SessionID, "session", "", "only the calls one task made, by the session id it sent")
 	cmd.Flags().StringVar(&fl.Since, "since", "", "calls at or after this time, or a span like 24h or 7d")
 	cmd.Flags().StringVar(&fl.Until, "until", "", "calls before this time")
 	cmd.Flags().StringVar(&fl.Tag, "tag", "", "only calls carrying this tag")
@@ -169,17 +319,48 @@ func resolveSpendQuery(ctx context.Context, pc *preparedClient, fl spendFilter) 
 		q.Set("provider_id", found.ID)
 	}
 	if s := strings.TrimSpace(fl.ModelRef); s != "" {
-		row, err := findModelByQualifiedName(ctx, pc, s)
+		row, err := resolveModel(ctx, pc, s)
 		if err != nil {
 			return nil, err
 		}
-		q.Set("provider_model_id", row.Model.ID)
+		q.Set("provider_model_id", row.ProviderModelID)
 	}
 	if s := strings.ToLower(strings.TrimSpace(fl.Status)); s != "" {
-		if s != "success" && s != "failed" && s != "canceled" {
-			return nil, fmt.Errorf("--status must be success, failed or canceled, not %q", fl.Status)
+		if !containsString(spendStatuses, s) {
+			return nil, fmt.Errorf("--status must be one of %s, not %q",
+				strings.Join(spendStatuses, ", "), fl.Status)
 		}
 		q.Set("status", s)
+	}
+	if s := strings.TrimSpace(fl.Mode); s != "" {
+		modes, err := parseSpendModes(s)
+		if err != nil {
+			return nil, err
+		}
+		q.Set("mode", strings.Join(modes, ","))
+	}
+	if s := strings.TrimSpace(fl.SessionID); s != "" {
+		q.Set("session_id", s)
+	}
+	if s := strings.ToLower(strings.TrimSpace(fl.SortBy)); s != "" {
+		if !containsString(spendSortable, s) {
+			return nil, fmt.Errorf("--sort-by must be one of %s, not %q",
+				strings.Join(spendSortable, ", "), fl.SortBy)
+		}
+		q.Set("sort_by", s)
+	}
+	if s := strings.ToLower(strings.TrimSpace(fl.SortOrder)); s != "" {
+		if s != "asc" && s != "desc" {
+			return nil, fmt.Errorf("--sort-order must be asc or desc, not %q", fl.SortOrder)
+		}
+		q.Set("sort_order", s)
+	}
+	if s := strings.ToLower(strings.TrimSpace(fl.RankBy)); s != "" {
+		if !containsString(spendRankable, s) {
+			return nil, fmt.Errorf("--rank-by must be one of %s, not %q",
+				strings.Join(spendRankable, ", "), fl.RankBy)
+		}
+		q.Set("rank_by", s)
 	}
 	if s := strings.TrimSpace(fl.Since); s != "" {
 		when, err := parseSinceOrInstant(s)
@@ -207,6 +388,112 @@ func resolveSpendQuery(ctx context.Context, pc *preparedClient, fl spendFilter) 
 	return q, nil
 }
 
+// parseSpendModes reads --mode, which takes several.
+//
+// Several because one capability is not always one mode. Speech synthesis is
+// its own mode since Router grew the ElevenLabs-shaped routes, while the rest
+// of the audio work stayed under `audio` — so "what did audio cost me" is
+// `--mode audio,tts` and asking for either alone answers half of it.
+//
+// A word outside the list is refused here rather than sent. Router answers a
+// 400 for the same value, and one round trip earlier the message can name the
+// whole set.
+func parseSpendModes(raw string) ([]string, error) {
+	var modes []string
+	seen := map[string]bool{}
+	for _, part := range strings.Split(raw, ",") {
+		name := strings.ToLower(strings.TrimSpace(part))
+		if name == "" {
+			continue
+		}
+		if !containsString(spendModes, name) {
+			return nil, fmt.Errorf("--mode must name modes from %s, not %q",
+				strings.Join(spendModes, ", "), name)
+		}
+		if seen[name] {
+			continue
+		}
+		seen[name] = true
+		modes = append(modes, name)
+	}
+	if len(modes) == 0 {
+		return nil, fmt.Errorf("--mode needs a mode: one of %s", strings.Join(spendModes, ", "))
+	}
+	return modes, nil
+}
+
+// callerAppBuckets is the appid-to-name index, and the only one on the wire.
+//
+// An application does not have a row in Router. The platform vouches for it at
+// the edge and the request arrives carrying an appid, so there is nothing to
+// register and nothing to archive — which is why there is no application list to
+// read and this asks the spend summary instead.
+//
+// include_idle is what makes it an index rather than a report: it widens the
+// dimension into every application the directory says is installed, so an app
+// that has never called still has a name here. The other direction is covered
+// too, and matters more — an uninstalled application keeps its spend, and its
+// bucket then carries the appid as its own label because no name for it exists
+// anywhere.
+//
+// Admin only, like every caller_app read. Nothing here is worth a fallback: a
+// non-admin cannot filter by application at all.
+func callerAppBuckets(ctx context.Context, pc *preparedClient) ([]spendSummaryRow, error) {
+	q := url.Values{}
+	q.Set("dim", "caller_app")
+	q.Set("include_idle", "true")
+	return collection[spendSummaryRow](ctx, pc, withQuery(epSpendSummary, q))
+}
+
+// resolveCallerAppID turns what somebody typed into the appid the filter takes.
+//
+// Three forms, because an appid is not something anybody reads. The title is
+// what the desktop shows. The application name is what a manifest and a log
+// carry, and it maps to an appid by a hash the platform defines — computed here
+// and then *matched against a bucket that exists*, never sent on its own, so a
+// typo produces a refusal rather than a filter that silently matches nothing.
+// And the appid itself is accepted, since it is what a spend row shows.
+func resolveCallerAppID(ctx context.Context, pc *preparedClient, ref string) (string, error) {
+	ref, err := requireRef(ref, "an application name, title or appid")
+	if err != nil {
+		return "", err
+	}
+	rows, err := callerAppBuckets(ctx, pc)
+	if err != nil {
+		return "", err
+	}
+	hashed := appIDFromName(ref)
+	known := make([]string, 0, len(rows))
+	for i := range rows {
+		r := &rows[i]
+		if strings.EqualFold(r.Key, ref) || r.Key == hashed || strings.EqualFold(r.Label, ref) {
+			return r.Key, nil
+		}
+		known = append(known, nonEmpty(r.Label))
+	}
+	sort.Strings(known)
+	return "", missing{
+		noun:  "application",
+		ref:   ref,
+		known: dedupeStrings(known),
+		have:  "installed or having called are",
+		none:  "no application is installed and none has called",
+		note: "An application is named by its title, its Olares application name, or the appid a " +
+			"spend row shows.",
+	}.err()
+}
+
+// appIDFromName is the platform's own derivation: the first eight hex digits of
+// the MD5 of the application name, hashed exactly as written (ADR-23). A system
+// application carries its name instead, which the exact-match branch covers.
+//
+// MD5 is not a security decision here; it is the identifier's definition, and
+// computing anything else would name a different application.
+func appIDFromName(name string) string {
+	sum := md5.Sum([]byte(strings.TrimSpace(name))) //nolint:gosec // the platform defines the appid this way
+	return hex.EncodeToString(sum[:])[:8]
+}
+
 // parseSinceOrInstant accepts an absolute time and also a span, because "the
 // last day" is how anybody actually asks and computing the instant by hand is
 // the sort of arithmetic a tool should do.
@@ -230,11 +517,23 @@ func newUsageSummaryCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "summary",
 		Short: "totals grouped by model, provider, person, app, day or hour",
-		Long: `Total the calls Router has served, grouped one way.
+		Long: `Total the calls Router has served, grouped one or several ways.
 
---by chooses the grouping: model, provider, user, caller_app, day or hour. The
-answer carries the top 100 buckets by cost, so a workspace with more than that
-many models is showing you the expensive ones rather than all of them.
+--by chooses the grouping: model, provider, user, caller_app, day or hour. Name
+several, comma-separated, and each grouping is reported in turn from a single
+request — the same calls counted the same way, so the totals underneath are one
+figure rather than one per table.
+
+The answer carries the top 100 buckets per grouping, so a workspace with more
+than that many models is showing you the top of the list rather than all of it.
+--rank-by decides which top that is: cost by default, and one of the quantity
+families when cost is the wrong question — a workspace whose local models are
+unpriced ranks every one of them at $0, and --rank-by requests or tokens is what
+sorts them.
+
+"hour" cannot be combined with anything: an hourly series grows with the window
+where the other groupings are a bounded set of names, so Router answers it on
+its own.
 
 FAILED is worth reading alongside cost: a failed call still took time and may
 still have been charged upstream, and a group that is mostly failures is a
@@ -243,6 +542,8 @@ misconfiguration rather than usage.
 Examples:
   olares-cli router usage summary --by model --since 7d
   olares-cli router usage summary --by day --since 30d
+  olares-cli router usage summary --by model,provider,user --since 7d
+  olares-cli router usage summary --by model --rank-by requests --since 7d
   olares-cli router usage summary --by user --status failed
 `,
 		Args: cobra.NoArgs,
@@ -250,8 +551,14 @@ Examples:
 			return runUsageSummary(c.Context(), f, dim, fl, output)
 		},
 	}
-	cmd.Flags().StringVar(&dim, "by", "model", "group by: "+strings.Join(spendDims, ", "))
+	cmd.Flags().StringVar(&dim, "by", "model",
+		"group by: "+strings.Join(spendDims, ", ")+"; several, comma-separated, are reported in one request")
 	addSpendFilterFlags(cmd, &fl)
+	// Only offered here. A list ranks its rows with --sort-by and the export
+	// streams every match, so on those two this would be a setting Router
+	// ignores.
+	cmd.Flags().StringVar(&fl.RankBy, "rank-by", "",
+		"rank the buckets by: "+strings.Join(spendRankable, ", ")+" (default cost)")
 	addOutputFlag(cmd, &output)
 	return cmd
 }
@@ -264,9 +571,9 @@ func runUsageSummary(ctx context.Context, f *cmdutil.Factory, dim string, fl spe
 	if err != nil {
 		return err
 	}
-	dim = strings.ToLower(strings.TrimSpace(dim))
-	if !containsString(spendDims, dim) {
-		return fmt.Errorf("--by must be one of %s, not %q", strings.Join(spendDims, ", "), dim)
+	dims, err := parseSpendDims(dim)
+	if err != nil {
+		return err
 	}
 	pc, err := prepare(ctx, f)
 	if err != nil {
@@ -276,9 +583,20 @@ func runUsageSummary(ctx context.Context, f *cmdutil.Factory, dim string, fl spe
 	if err != nil {
 		return err
 	}
-	q.Set("dim", dim)
+	if len(dims) > 1 {
+		q.Set("dims", strings.Join(dims, ","))
+		var multi spendMultiSummary
+		if err := pc.router.doJSON(ctx, "GET", withQuery(epSpendSummary, q), nil, &multi); err != nil {
+			return err
+		}
+		if format == FormatJSON {
+			return printJSON(os.Stdout, multi)
+		}
+		return renderUsageSummaries(os.Stdout, dims, &multi)
+	}
+	q.Set("dim", dims[0])
 	var sum spendSummary
-	if err := pc.router.doJSON(ctx, "GET", consoleAPI+"/spend-logs/summary?"+q.Encode(), nil, &sum); err != nil {
+	if err := pc.router.doJSON(ctx, "GET", withQuery(epSpendSummary, q), nil, &sum); err != nil {
 		return err
 	}
 	if format == FormatJSON {
@@ -287,37 +605,267 @@ func runUsageSummary(ctx context.Context, f *cmdutil.Factory, dim string, fl spe
 	return renderUsageSummary(os.Stdout, &sum)
 }
 
+// parseSpendDims reads --by. Duplicates collapse rather than producing the same
+// table twice, and the order asked for is the order reported, since a caller
+// listing model before day is describing what they want to read first.
+func parseSpendDims(raw string) ([]string, error) {
+	var dims []string
+	seen := map[string]bool{}
+	for _, part := range strings.Split(raw, ",") {
+		name := strings.ToLower(strings.TrimSpace(part))
+		if name == "" {
+			continue
+		}
+		if !containsString(spendDims, name) {
+			return nil, fmt.Errorf("--by must name groupings from %s, not %q",
+				strings.Join(spendDims, ", "), name)
+		}
+		if seen[name] {
+			continue
+		}
+		seen[name] = true
+		dims = append(dims, name)
+	}
+	if len(dims) == 0 {
+		return nil, fmt.Errorf("--by needs a grouping: one of %s", strings.Join(spendDims, ", "))
+	}
+	if len(dims) > 1 && seen[dimHour] {
+		return nil, fmt.Errorf("--by %s cannot be combined with another grouping: an hourly series grows "+
+			"with the window, so Router answers it on its own. Ask for it separately", dimHour)
+	}
+	return dims, nil
+}
+
 func renderUsageSummary(w io.Writer, sum *spendSummary) error {
 	if len(sum.Items) == 0 {
 		_, err := fmt.Fprintln(w, "no calls match. Nothing has gone through Router in this window, "+
 			"or the filters exclude everything that has.")
 		return err
 	}
-	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	if _, err := fmt.Fprintf(tw, "%s\tREQUESTS\tCOST\tTOKENS\tIN\tOUT\n", strings.ToUpper(sum.Dim)); err != nil {
+	if err := renderSummaryBuckets(w, sum.Dim, sum.Items); err != nil {
 		return err
 	}
-	for i := range sum.Items {
-		it := &sum.Items[i]
-		label := it.Label
-		if strings.TrimSpace(label) == "" {
-			label = it.Key
-		}
-		if _, err := fmt.Fprintf(tw, "%s\t%d\t%s\t%d\t%d\t%d\n",
-			nonEmpty(label), it.Requests, money(it.CostUSD), it.TotalTokens, it.PromptTokens, it.CompletionTok); err != nil {
+	if sum.Truncated {
+		if _, err := fmt.Fprintf(w, "\nOnly the first %d buckets are shown; this is not the whole set.\n",
+			len(sum.Items)); err != nil {
 			return err
 		}
 	}
-	if err := tw.Flush(); err != nil {
+	return renderSummaryTotals(w, &sum.spendTotals)
+}
+
+// renderUsageSummaries prints one table per grouping and one set of totals. The
+// totals are stated once because they are one figure: every grouping counts the
+// same calls, and repeating the same number under each table would read as
+// though the tables were of different things.
+func renderUsageSummaries(w io.Writer, dims []string, multi *spendMultiSummary) error {
+	if multi.TotalRequests == 0 {
+		_, err := fmt.Fprintln(w, "no calls match. Nothing has gone through Router in this window, "+
+			"or the filters exclude everything that has.")
 		return err
 	}
-	failed := sum.TotalRequests - sum.TotalSuccessRequests
-	if _, err := fmt.Fprintf(w, "\n%d requests, %d of them failed, %s, %d tokens",
-		sum.TotalRequests, failed, money(sum.TotalCostUSD), sum.TotalTokens); err != nil {
+	for i, dim := range dims {
+		if i > 0 {
+			if _, err := fmt.Fprintln(w); err != nil {
+				return err
+			}
+		}
+		bucket, ok := multi.Dims[dim]
+		if !ok {
+			// Asked for and not answered. Saying so beats an empty table,
+			// which would read as "no calls grouped this way".
+			if _, err := fmt.Fprintf(w, "%s: this Router did not report this grouping.\n",
+				strings.ToUpper(dim)); err != nil {
+				return err
+			}
+			continue
+		}
+		if err := renderSummaryBuckets(w, dim, bucket.Items); err != nil {
+			return err
+		}
+	}
+	if _, err := fmt.Fprintln(w); err != nil {
 		return err
 	}
-	if sum.AvgTPS > 0 {
-		if _, err := fmt.Fprintf(w, ", averaging %.1f tokens/s", sum.AvgTPS); err != nil {
+	return renderSummaryTotals(w, &multi.spendTotals)
+}
+
+// renderSummaryBuckets prints the quantity columns the buckets actually carry.
+//
+// Fixed token columns would report a window of image and audio work as three
+// zeros beside a real cost, which reads as an arithmetic error rather than as a
+// different unit family. A bucket mixing modes carries several quantities at
+// once, so several columns can appear together.
+func renderSummaryBuckets(w io.Writer, dim string, items []spendSummaryRow) error {
+	if len(items) == 0 {
+		_, err := fmt.Fprintf(w, "%s: nothing in this window.\n", strings.ToUpper(dim))
+		return err
+	}
+	var tokens, images, videos, audio, queries, pages, objects bool
+	for i := range items {
+		it := &items[i]
+		tokens = tokens || it.TotalTokens > 0
+		images = images || it.Images > 0
+		videos = videos || it.Videos > 0 || it.VideoSeconds > 0
+		audio = audio || it.AudioInputSeconds > 0 || it.AudioOutputSeconds > 0
+		queries = queries || it.Queries > 0
+		pages = pages || it.Pages > 0
+		objects = objects || it.Objects > 0
+	}
+	// Nothing measurable in any bucket: keep the token columns rather than a
+	// table of two columns, so the shape of the report does not depend on
+	// whether the calls in it happened to report a quantity.
+	if !tokens && !images && !videos && !audio && !queries && !pages && !objects {
+		tokens = true
+	}
+	headers := []string{strings.ToUpper(dim), "REQUESTS", "COST"}
+	if tokens {
+		headers = append(headers, "TOKENS", "IN", "OUT")
+	}
+	if images {
+		headers = append(headers, "IMAGES")
+	}
+	if videos {
+		headers = append(headers, "VIDEOS", "VIDEO S")
+	}
+	if audio {
+		headers = append(headers, "AUDIO IN S", "AUDIO OUT S")
+	}
+	if queries {
+		headers = append(headers, "QUERIES")
+	}
+	if pages {
+		headers = append(headers, "PAGES")
+	}
+	if objects {
+		headers = append(headers, "OBJECTS")
+	}
+	t := newTable(w, headers...)
+	for i := range items {
+		it := &items[i]
+		cells := []string{nonEmpty(bucketLabel(it)), strconv.FormatInt(it.Requests, 10), money(it.CostUSD)}
+		if tokens {
+			cells = append(cells,
+				strconv.FormatInt(it.TotalTokens, 10),
+				strconv.FormatInt(it.PromptTokens, 10),
+				strconv.FormatInt(it.CompletionTok, 10))
+		}
+		if images {
+			cells = append(cells, strconv.FormatInt(it.Images, 10))
+		}
+		if videos {
+			cells = append(cells, strconv.FormatInt(it.Videos, 10), shortSeconds(it.VideoSeconds))
+		}
+		if audio {
+			cells = append(cells, shortSeconds(it.AudioInputSeconds), shortSeconds(it.AudioOutputSeconds))
+		}
+		if queries {
+			cells = append(cells, strconv.FormatInt(it.Queries, 10))
+		}
+		if pages {
+			cells = append(cells, strconv.FormatInt(it.Pages, 10))
+		}
+		if objects {
+			cells = append(cells, strconv.FormatInt(it.Objects, 10))
+		}
+		t.row(cells...)
+	}
+	if err := t.flush(); err != nil {
+		return err
+	}
+	return noteSplitModelBuckets(w, dim, items)
+}
+
+// noteSplitModelBuckets says so when one model occupies two rows: once as
+// <provider>/<model> and once as the bare name. Router counts them separately
+// and the bare bucket is the calls it never bound to a provider — the ones that
+// failed before it got that far — so the two rows are two different facts, and
+// reading the qualified one as the model's whole traffic undercounts it.
+//
+// Annotated rather than merged: the split is Router's aggregation and adding the
+// rows together here would report a number no Router endpoint agrees with.
+func noteSplitModelBuckets(w io.Writer, dim string, items []spendSummaryRow) error {
+	if !strings.EqualFold(dim, "model") {
+		return nil
+	}
+	present := make(map[string]bool, len(items))
+	for i := range items {
+		present[bucketLabel(&items[i])] = true
+	}
+	var split []string
+	for i := range items {
+		name := bucketLabel(&items[i])
+		slash := strings.Index(name, "/")
+		if slash <= 0 {
+			continue
+		}
+		if bare := name[slash+1:]; present[bare] {
+			split = append(split, bare)
+		}
+	}
+	if len(split) == 0 {
+		return nil
+	}
+	_, err := fmt.Fprintf(w, "\n%s appears twice, once qualified by its provider and once not. Router "+
+		"records a call it never bound to a provider under the bare name, which is where a call that "+
+		"failed early lands, so neither row is the model's whole traffic — add them. `olares-cli "+
+		"router usage list --model <name>` shows the calls behind either.\n", strings.Join(split, ", "))
+	return err
+}
+
+func bucketLabel(it *spendSummaryRow) string {
+	if label := strings.TrimSpace(it.Label); label != "" {
+		return label
+	}
+	return strings.TrimSpace(it.Key)
+}
+
+func renderSummaryTotals(w io.Writer, tot *spendTotals) error {
+	failed := tot.TotalRequests - tot.TotalSuccessRequests
+	if _, err := fmt.Fprintf(w, "\n%d requests, %d of them failed, %s",
+		tot.TotalRequests, failed, money(tot.TotalCostUSD)); err != nil {
+		return err
+	}
+	// Every quantity family that carried anything, so a report of audio or
+	// image work is not summarized by the one number that is zero on it.
+	quantities := make([]string, 0, 7)
+	if tot.TotalTokens > 0 {
+		quantities = append(quantities, fmt.Sprintf("%d tokens", tot.TotalTokens))
+	}
+	if tot.TotalAudioSeconds > 0 {
+		quantities = append(quantities, shortSeconds(tot.TotalAudioSeconds)+"s of audio")
+	}
+	if tot.TotalImages > 0 {
+		quantities = append(quantities,
+			fmt.Sprintf("%d %s", tot.TotalImages, plural(int(tot.TotalImages), "image", "images")))
+	}
+	if tot.TotalVideos > 0 {
+		quantities = append(quantities,
+			fmt.Sprintf("%d %s", tot.TotalVideos, plural(int(tot.TotalVideos), "video", "videos")))
+	}
+	if tot.TotalVideoSeconds > 0 {
+		quantities = append(quantities, shortSeconds(tot.TotalVideoSeconds)+"s of video")
+	}
+	if tot.TotalQueries > 0 {
+		quantities = append(quantities,
+			fmt.Sprintf("%d %s", tot.TotalQueries, plural(int(tot.TotalQueries), "query", "queries")))
+	}
+	if tot.TotalPages > 0 {
+		quantities = append(quantities,
+			fmt.Sprintf("%d %s", tot.TotalPages, plural(int(tot.TotalPages), "page", "pages")))
+	}
+	if tot.TotalObjects > 0 {
+		quantities = append(quantities,
+			fmt.Sprintf("%d 3D %s", tot.TotalObjects, plural(int(tot.TotalObjects), "object", "objects")))
+	}
+	if len(quantities) == 0 {
+		quantities = append(quantities, fmt.Sprintf("%d tokens", tot.TotalTokens))
+	}
+	if _, err := fmt.Fprintf(w, ", %s", strings.Join(quantities, ", ")); err != nil {
+		return err
+	}
+	if tot.AvgTPS > 0 {
+		if _, err := fmt.Fprintf(w, ", averaging %.1f tokens/s", tot.AvgTPS); err != nil {
 			return err
 		}
 	}
@@ -326,6 +874,13 @@ func renderUsageSummary(w io.Writer, sum *spendSummary) error {
 	}
 	_, err := fmt.Fprintln(w, "Cost is computed from the prices on each model row; a model with no price adds nothing to it.")
 	return err
+}
+
+// shortSeconds prints a duration the way it arrived, without padding: a
+// measured 0.5 and a measured 12 both read as themselves, where the fixed three
+// decimals a subtitle boundary needs would make a billed minute look rounded.
+func shortSeconds(v float64) string {
+	return strconv.FormatFloat(v, 'f', -1, 64)
 }
 
 func money(v float64) string {
@@ -352,12 +907,34 @@ func newUsageListCommand(f *cmdutil.Factory) *cobra.Command {
 One row per call. WHO is the key, person or application Router billed it to;
 STATUS is the outcome, and a failed call carries the error code Router returned.
 
+USAGE is the quantity the call was priced by, which is not tokens for most of
+what Router serves: audio is priced by the second, images by the picture, video
+by both, search by the query, OCR by the page and 3D by the object. The column
+shows whichever quantity arrived, so a dash means nothing measurable came back.
+
+TOOK is how long the work took, which for an asynchronous call is not how long
+any one request took: a task is opened by the submission and settled by the
+collection, and that last request spends a few milliseconds handing over a
+result the engine finished minutes ago. Router records the span from admission
+to settlement, and that is what this column shows when there is one.
+
+--status in_progress lists the calls being served right now. Their cost reads
+"pending" rather than $0: the row is written when the call starts and priced when
+it ends, and a zero there would be read as free.
+
+--sort-by ranks the whole matching set rather than the page you were handed, so
+"the most expensive call this week" is one flag rather than an export.
+
 Use this to explain a total rather than to compute one: "usage summary" is what
 adds up.
 
 Examples:
   olares-cli router usage list --since 1h
   olares-cli router usage list --status failed --limit 20
+  olares-cli router usage list --status in_progress
+  olares-cli router usage list --mode image_generation --since 7d
+  olares-cli router usage list --sort-by cost_usd --limit 10
+  olares-cli router usage list --session task-4711
   olares-cli router usage list --key ci -o json
 `,
 		Args: cobra.NoArgs,
@@ -366,6 +943,12 @@ Examples:
 		},
 	}
 	addSpendFilterFlags(cmd, &fl)
+	// Sorting is only offered here. The summary orders its buckets by cost and
+	// the export streams every match, so on those two the flag would be a
+	// setting Router ignores.
+	cmd.Flags().StringVar(&fl.SortBy, "sort-by", "",
+		"rank the whole matching set by: "+strings.Join(spendSortable, ", ")+" (default created_at)")
+	cmd.Flags().StringVar(&fl.SortOrder, "sort-order", "", "asc or desc (default desc)")
 	cmd.Flags().IntVar(&fl.Limit, "limit", 50, "how many calls to return (1-1000)")
 	cmd.Flags().IntVar(&fl.Offset, "offset", 0, "how many calls to skip")
 	addOutputFlag(cmd, &output)
@@ -388,17 +971,8 @@ func runUsageList(ctx context.Context, f *cmdutil.Factory, fl spendFilter, outpu
 	if err != nil {
 		return err
 	}
-	var env struct {
-		Items  []spendLog `json:"items"`
-		Total  int        `json:"total"`
-		Limit  int        `json:"limit"`
-		Offset int        `json:"offset"`
-	}
-	path := consoleAPI + "/spend-logs"
-	if len(q) > 0 {
-		path += "?" + q.Encode()
-	}
-	if err := pc.router.doJSON(ctx, "GET", path, nil, &env); err != nil {
+	var env page[spendLog]
+	if err := pc.router.doJSON(ctx, "GET", withQuery(epSpendLogs, q), nil, &env); err != nil {
 		return err
 	}
 	if format == FormatJSON {
@@ -413,33 +987,176 @@ func renderUsageList(ctx context.Context, pc *preparedClient, w io.Writer, items
 		return err
 	}
 	who := spendActorLabels(ctx, pc, items)
-	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	if _, err := fmt.Fprintln(tw, "WHEN\tMODEL\tMODE\tWHO\tSTATUS\tTOKENS\tCOST\tLATENCY"); err != nil {
-		return err
-	}
+	t := newTable(w, "WHEN", "MODEL", "MODE", "WHO", "STATUS", "USAGE", "COST", "TOOK")
 	for i := range items {
 		it := &items[i]
 		status := nonEmpty(it.Status)
 		if it.ErrorCode != nil && *it.ErrorCode != "" {
 			status = it.Status + ": " + *it.ErrorCode
 		}
-		if _, err := fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%d\t%s\t%dms\n",
+		t.row(
 			it.CreatedAt.Local().Format("2006-01-02 15:04:05"),
-			clip(nonEmpty(it.ModelName), 28), nonEmpty(it.Mode),
+			clip(nonEmpty(it.ModelName), 28), nonEmpty(spendOp(it)),
 			clip(spendActor(it, who), 24), clip(status, 30),
-			it.TotalTokens, money(it.CostUSD), it.LatencyMS); err != nil {
+			spendQuantity(it), spendCost(it),
+			spendDuration(it))
+	}
+	if err := t.flush(); err != nil {
+		return err
+	}
+	if err := spendZeroNotes(w, items); err != nil {
+		return err
+	}
+	return pageFooter(w, len(items), total, offset)
+}
+
+// spendOp is the MODE column: the mode, and the operation within it when Router
+// recorded one. "image_generation" alone does not say whether a picture was made
+// or edited, and the two are priced the same but are not the same call.
+func spendOp(it *spendLog) string {
+	if it.Op != nil && strings.TrimSpace(*it.Op) != "" && *it.Op != it.Mode {
+		return it.Mode + "/" + *it.Op
+	}
+	return it.Mode
+}
+
+// spendQuantity is what the call was priced by, read off whichever columns
+// carried a number rather than switched on the mode.
+//
+// Reading the columns is what keeps this honest as Router grows modes: a row
+// states its own unit family by which quantity it filled in, so a mode this
+// build has never heard of still reports the right figure. Tokens are the
+// fallback rather than the first choice, because they are the one quantity that
+// is present and zero on calls priced by something else.
+func spendQuantity(it *spendLog) string {
+	var parts []string
+	if it.Images != nil {
+		parts = append(parts, fmt.Sprintf("%d img", *it.Images))
+	}
+	if it.Videos != nil {
+		parts = append(parts, fmt.Sprintf("%d vid", *it.Videos))
+	}
+	if it.VideoSeconds != nil {
+		parts = append(parts, shortSeconds(*it.VideoSeconds)+"s")
+	}
+	if it.AudioInputSeconds != nil {
+		parts = append(parts, shortSeconds(*it.AudioInputSeconds)+"s in")
+	}
+	if it.AudioOutputSeconds != nil {
+		parts = append(parts, shortSeconds(*it.AudioOutputSeconds)+"s out")
+	}
+	if it.Queries != nil {
+		parts = append(parts, fmt.Sprintf("%d q", *it.Queries))
+	}
+	if it.Pages != nil {
+		parts = append(parts, fmt.Sprintf("%d pg", *it.Pages))
+	}
+	if it.Objects != nil {
+		parts = append(parts, fmt.Sprintf("%d obj", *it.Objects))
+	}
+	if len(parts) == 0 && it.TotalTokens > 0 {
+		parts = append(parts, fmt.Sprintf("%d tok", it.TotalTokens))
+	}
+	if len(parts) == 0 {
+		return "-"
+	}
+	return strings.Join(parts, " ")
+}
+
+// spendDuration is the TOOK column: how long the work took, which for an async
+// call is not how long any one request took.
+//
+// A task is opened by the submission and settled by the collection, and the
+// settling request measures itself handing over a result the engine finished
+// minutes earlier — a four-minute diarization whose latency reads 5ms. Router
+// records the span from admission to settlement separately, and that is the
+// number somebody asking "how long did this take" wants. A synchronous call has
+// no second number because there is nothing to distinguish: the request is the
+// work, and the latency is the whole of it.
+func spendDuration(it *spendLog) string {
+	if it.JobMS != nil {
+		return shortDuration(*it.JobMS)
+	}
+	return shortDuration(it.LatencyMS)
+}
+
+// shortDuration keeps a long job readable. Milliseconds are right for a chat
+// completion and wrong for a transcription: 273000ms is a number nobody reads
+// as four and a half minutes.
+func shortDuration(ms int64) string {
+	switch {
+	case ms < 0:
+		return "-"
+	case ms < 1000:
+		return fmt.Sprintf("%dms", ms)
+	case ms < 60000:
+		return strconv.FormatFloat(float64(ms)/1000, 'f', 1, 64) + "s"
+	default:
+		total := ms / 1000
+		return fmt.Sprintf("%dm%02ds", total/60, total%60)
+	}
+}
+
+// spendCost keeps a running call's cost out of the money column. Router writes
+// the row when it admits the call and prices it when the call ends, so the zero
+// in between is an absence rather than an amount.
+func spendCost(it *spendLog) string {
+	if it.Status == statusInProgress {
+		return "pending"
+	}
+	return money(it.CostUSD)
+}
+
+// spendZeroNotes explains the zeros on the page, because a zero cost has four
+// readings and the column shows one glyph for all of them: still running, priced
+// at nothing, measured with no rate to apply, or moved audio nobody measured.
+func spendZeroNotes(w io.Writer, items []spendLog) error {
+	var running, unpriced, unmetered int
+	for i := range items {
+		it := &items[i]
+		if it.Status == statusInProgress {
+			running++
+		}
+		for _, tag := range it.Tags {
+			switch tag {
+			case "unpriced":
+				unpriced++
+			case "audio_unmetered":
+				unmetered++
+			}
+		}
+	}
+	notes := make([]string, 0, 3)
+	if running > 0 {
+		notes = append(notes, fmt.Sprintf(
+			"%d %s still running. Cost is settled when the call ends, so it is pending rather than zero.",
+			running, plural(running, "call is", "calls are")))
+	}
+	if unpriced > 0 {
+		notes = append(notes, fmt.Sprintf(
+			"%d %s tagged unpriced: the quantity was measured and the model row has no rate for it, "+
+				"so the $0 is a missing price rather than free traffic. Music and 3D generation are "+
+				"there permanently today.", unpriced, plural(unpriced, "call is", "calls are")))
+	}
+	if unmetered > 0 {
+		notes = append(notes, fmt.Sprintf(
+			"%d audio %s tagged audio_unmetered: the engine reported no duration, and audio is priced "+
+				"by the second, so nothing could be charged.",
+			unmetered, plural(unmetered, "call is", "calls are")))
+	}
+	for _, note := range notes {
+		if _, err := fmt.Fprintln(w, note); err != nil {
 			return err
 		}
 	}
-	if err := tw.Flush(); err != nil {
-		return err
-	}
-	shown := offset + len(items)
-	if total > shown {
-		_, err := fmt.Fprintf(w, "\nshowing %d-%d of %d; --offset %d for the next page\n", offset+1, shown, total, shown)
-		return err
-	}
 	return nil
+}
+
+func plural(n int, one, many string) string {
+	if n == 1 {
+		return one
+	}
+	return many
 }
 
 // spendActor names who a call was billed to. A key is the most specific answer,
@@ -481,9 +1198,12 @@ func spendActorLabels(ctx context.Context, pc *preparedClient, items []spendLog)
 		}
 	}
 	if wantApp {
-		if apps, err := listCallerApps(ctx, pc); err == nil {
-			for i := range apps {
-				out["app:"+apps[i].ID] = callerAppLabel(&apps[i])
+		// A best effort, and it fails for a reader who is not an admin — who
+		// then sees the appid itself, which is what the row carries. Their own
+		// calls are not an application's, so this is the rare case.
+		if rows, err := callerAppBuckets(ctx, pc); err == nil {
+			for i := range rows {
+				out["app:"+rows[i].Key] = nonEmpty(rows[i].Label)
 			}
 		}
 	}
@@ -537,11 +1257,7 @@ func runUsageExport(ctx context.Context, f *cmdutil.Factory, fl spendFilter, out
 	if err != nil {
 		return err
 	}
-	path := consoleAPI + "/spend-logs/export.csv"
-	if len(q) > 0 {
-		path += "?" + q.Encode()
-	}
-	resp, err := pc.router.doStream(ctx, path)
+	resp, err := pc.router.doStream(ctx, withQuery(epSpendExportCSV, q))
 	if err != nil {
 		return err
 	}

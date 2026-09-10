@@ -101,6 +101,37 @@ func assertRolloutObserved(generation, observed int64) error {
 	return nil
 }
 
+// isSidecar reports whether an init container is one Kubernetes runs alongside
+// the main containers for the life of the pod, rather than to completion.
+func isSidecar(c corev1.Container) bool {
+	return c.RestartPolicy != nil && *c.RestartPolicy == corev1.ContainerRestartPolicyAlways
+}
+
+// assertSidecarReady reports why a sidecar is not serving, or nil when it is
+// running and ready. A restart is not held against it: unlike a plain init
+// container it is expected to be restarted, and only its current state decides.
+func assertSidecarReady(s corev1.ContainerStatus, podKey string) error {
+	if w := s.State.Waiting; w != nil {
+		return fmt.Errorf(
+			"sidecar %s in pod %s is waiting (reason=%s, message=%s)",
+			s.Name, podKey, w.Reason, w.Message,
+		)
+	}
+	if t := s.State.Terminated; t != nil {
+		return fmt.Errorf(
+			"sidecar %s in pod %s terminated (exitCode=%d, reason=%s, message=%s)",
+			s.Name, podKey, t.ExitCode, t.Reason, t.Message,
+		)
+	}
+	if s.Started == nil || !*s.Started {
+		return fmt.Errorf("sidecar %s in pod %s has not started", s.Name, podKey)
+	}
+	if !s.Ready {
+		return fmt.Errorf("sidecar %s in pod %s is not ready", s.Name, podKey)
+	}
+	return nil
+}
+
 // AssertPodReady reports why a pod is not serving, or nil when it is running
 // with every container ready.
 //
@@ -133,6 +164,16 @@ func AssertPodReady(pod *corev1.Pod) error {
 			s, ok := initStatusByName[ic.Name]
 			if !ok {
 				return fmt.Errorf("pod %s has not started init container %s yet", podKey, ic.Name)
+			}
+			// A sidecar keeps running for as long as the pod does, so waiting
+			// for it to terminate would never end. Kubelet does not start the
+			// main containers until it is ready, so asserting that much is both
+			// all that is available and all that is needed.
+			if isSidecar(ic) {
+				if err := assertSidecarReady(s, podKey); err != nil {
+					return err
+				}
+				continue
 			}
 			if t := s.State.Terminated; t != nil {
 				if t.ExitCode != 0 {

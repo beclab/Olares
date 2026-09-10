@@ -64,9 +64,9 @@ func IsOptedIn(app *appv1alpha1.Application) bool {
 	return app.Annotations[AnnotationRouteMode] == AnnotationRouteModeGateway
 }
 
-// BuildSpecForEntrance projects one sharedEntrance into a SharedRouteRegistrySpec
-// carrying the shared hostPattern (<hash8>.shared.<platformDomain>). The caller
-// resolves the backing Service so this helper stays I/O-free.
+// BuildSpecForEntrance projects one entrance into a SharedRouteRegistrySpec.
+// Shared class hostPatterns use <hash>.shared.olares.com (SharedMeshDomain);
+// application class patterns keep <prefix>.*.<platformDomain>.
 func BuildSpecForEntrance(app *appv1alpha1.Application, entrance appv1alpha1.Entrance,
 	entranceIndex, entranceCount int, svc *corev1.Service, platformDomain string,
 	entranceClass srrv1alpha1.EntranceClass) (srrv1alpha1.SharedRouteRegistrySpec, error) {

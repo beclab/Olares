@@ -21,9 +21,9 @@ An upgrade does not always end on `running`. Upgrading an already-`stopped` app 
 
 1. It captures the row's `statusTime` during the upgrade pre-flight, so the pre-request row cannot short-circuit the watch at tick zero.
 2. A `stopped` row newer than that baseline is terminal.
-3. `reason` picks the verdict: `upgradeCancelByUser` / `upgradeCancelBySystem` (the backend TTL fired) report **failure** — the app is still on its previous version; anything else is a normal upgrade-from-stopped **success**.
+3. `reason` picks the verdict, by **matching the two cancel values** `upgradeCancelByUser` / `upgradeCancelBySystem` (the backend TTL fired), which report failure. Anything else is a normal upgrade-from-stopped success.
 
-`version` cannot substitute for `reason` here: the state row's version is the upgrade *target*, and it does not roll back when the upgrade is cancelled.
+Step 3 is a whitelist, not an emptiness check: `reason` is set on healthy transitions too. Neither can `version` substitute for it. The reasoning for both, and what the version field actually reports after a cancel, is under *Non-obvious terminal behaviors* in the shared **application state machine**.
 
 ### Per-op foreground watch windows
 
@@ -49,7 +49,7 @@ When STATE is `downloading`, the app is pulling images and may legitimately stay
 
 - **For "install X and tell me when it's running"** → `market install X --watch -o json`, then parse `.finalState`.
 - **For "upgrade X if there's a newer version"** → `market get X -o json` to check version, then `market upgrade X --watch`. The pre-flight will short-circuit if there's no newer chart.
-- **For "re-apply an upload chart I just re-uploaded"** → `market upgrade X -s upload --version <same-version> --watch`. The same-version upgrade is allowed for `-s upload` (gate 3 exception) and is the right verb once the app already exists (`running` / `upgradeFailed` / ...) — `install` would be rejected by app-service in those states.
+- **For "retry an upgrade that failed for a transient reason"** → `market upgrade X -s upload --version <same-version> --watch`. The same-version upgrade is allowed for `-s upload` (gate 3 exception) and is the right verb once the app already exists (`running` / `upgradeFailed` / ...) — `install` would be rejected in those states. It re-applies the **stored** chart, so if the chart itself was the problem, fix it and upload under a **new** version instead: a published version cannot be overwritten.
 - **For "stop everything for this user"** → `market list --mine -o json | jq -r '.[].name'` + a shell loop calling `market stop`. The cluster doesn't expose a bulk-stop verb.
 - **For "install a custom chart"** → `market upload ./mychart.tgz` (always lands in source `upload`), then `market install <name> -s upload`.
 - **For ambiguous source rows on uninstall/stop/resume**: the verb already resolves automatically. Don't pass `-s` even when the SPA shows it under multiple sources.
@@ -68,7 +68,7 @@ A long `installing` / `initializing` is NOT a failure — app-service polls a lo
 |---|---|---|
 | `missing required env var(s): KEY1, KEY2 ...` (install) | App declares required envs | Re-run with `--env KEY=VALUE` per missing var |
 | `app 'X' is not in an upgradable state (current: Y)` | Pre-flight gate 2 | Wait for terminal state, or run `cancel` first |
-| `target version '1.2.3' is already installed — nothing to do` | Pre-flight gate 3 | Nothing to upgrade. **Does NOT fire for `-s upload`** — same-version upgrade is allowed there to re-apply an overwritten chart |
+| `target version '1.2.3' is already installed — nothing to do` | Pre-flight gate 3 | Nothing to upgrade. **Does NOT fire for `-s upload`** — a same-version upgrade is allowed there as a retry of the stored chart |
 | `chart is marked 'suspend' or 'remove' in source 'X' ...` | Pre-flight gate 4 (`app_simple_info.app_labels` contains `suspend` or `remove`) | Upstream withdrew the app; the SPA hides its Upgrade button too. Contact the app maintainer |
 | `app 'X' is not cloneable` | `clone` against an app that is neither multi-instance nor a template | Check `market get X -o json` for `allowMultipleInstall` / `templateOnly` |
 | `--title is required` | `clone` without `--title` | Add `--title "..."` |

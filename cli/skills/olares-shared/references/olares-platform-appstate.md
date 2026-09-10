@@ -6,12 +6,13 @@
 
 ## Lifecycle state machine
 
-A normal install advances through a fixed pipeline; each arrow is the only legal forward edge:
+A normal install advances through this pipeline. It is the **longest path**, not a fixed one — states are skipped, and a poller sees a sample of the row rather than every edge it crossed:
 
 ```
 pending -> downloading -> installing -> initializing -> running
 ```
 
+- **`pending` and `downloading` can be entirely unobservable.** When every image is already on the node there is nothing to queue for and nothing to pull, so the first state a watcher ever sees may be `installing`. An install that never showed `downloading` is a cache hit, not a skipped step to investigate.
 - **`installing` may skip `initializing`** straight to `running` (system-middleware fast-path).
 - **`upgrade` of a stopped app** re-renders the chart at `replicas=0` and lands **back in `stopped`** (nothing to launch), not `running`.
 - The state enum groups into four buckets (the CLI mirrors these):
@@ -107,10 +108,12 @@ The `PROGRESS` field on the state row cannot be trusted for fine-grained trackin
 
 Used by: `market` (don't poll on progress), `doctor` (where real pull progress actually lives).
 
-## Two non-obvious terminal behaviors
+## Non-obvious terminal behaviors
 
 - **A scheduling failure does not become `installFailed`.** When a pod can't be scheduled (stays `Pending`), app-service tears the install down through `Stopping -> stopped`, not `installFailed`. A watcher that only looks for `*Failed` will miss it — a fresh install that ends in `stopped` is a red flag, not a success.
+- **Admission and scheduling fail in different places, and only one of them reaches this state machine.** A request the API server refuses outright — a resource request over a quota or a `LimitRange`, a validating webhook denial, a malformed spec — never produces a pod, so no row ever enters the teardown path above; the operation is refused up front and the app keeps whatever state it had. Scheduling failure is the later case: the pod exists, no node can host it, and the row takes `Stopping -> stopped`. When diagnosing "my install went nowhere", first establish whether a pod was ever created; the two look identical from the state row alone.
 - **`cancel` is teardown-vs-stop depending on phase.** Canceling `pending` / `downloading` / `installing` **tears the partial install down (namespace deleted)** — functionally equivalent to uninstalled. Canceling `initializing` / `upgrading` / `applyingEnv` / `resuming` only **stops** the app (it lands in `stopped`, still installed). `market uninstall` relies on this split when it auto-orchestrates an in-flight uninstall.
-- **`stopped` alone cannot tell a cancelled upgrade from a finished one** — `status.reason` can. A cancelled upgrade carries `upgradeCancelByUser` (or `upgradeCancelBySystem` when the backend TTL fired) and leaves the app on its **previous** version, while an upgrade of an already-`stopped` app legitimately re-renders at `replicas=0` and returns to a reason-less `stopped`. The row's version is the upgrade *target* in both cases and does not roll back on cancel, so it is not a usable discriminator.
+- **`stopped` alone cannot tell a cancelled upgrade from a finished one** — `status.reason` can, but only through two specific values. `reason` is populated on every transition and mostly mirrors `state`, so its presence carries no information and testing it for emptiness is wrong. The two values that say something `state` cannot are `upgradeCancelByUser` and `upgradeCancelBySystem` (the backend TTL fired); match those, not `reason != ""`. An upgrade of an already-`stopped` app legitimately re-renders at `replicas=0` and returns to `stopped` carrying an ordinary reason.
+- **A cancelled upgrade leaves the running app and the row's version disagreeing, and both readings are correct.** What is deployed is still the previous version — the upgrade never completed. What the row reports is the *target* version, which is written when the upgrade starts and is not rolled back on cancel. So "the app is on its previous version" and "the version field shows the new one" are both true; they are different facts, and the version field is not a discriminator for cancellation.
 
 Used by: `market` (uninstall auto-orchestration, cancel outcome), `doctor` (a just-installed app sitting in `stopped` is the scheduling-failure trap).

@@ -84,7 +84,8 @@ func (l *linuxPhaseBuilder) build() []module.Module {
 			return []module.Module{
 				&amdgpu.InstallAmdRocmModule{},
 				&amdgpu.InstallAmdContainerToolkitModule{Skip: func() bool {
-					if l.runtime.GetSystemInfo().IsRyzenAIMax() {
+					si := l.runtime.GetSystemInfo()
+					if si.IsRyzenAIMax() || si.IsAmdGPU() {
 						return false
 					}
 					return true
@@ -118,6 +119,7 @@ func (l *linuxPhaseBuilder) build() []module.Module {
 			l.manifestMap,
 			l.runtime.GetInstallerDir(),
 			l.runtime.GetBaseDir(),
+			l.runtime.Arg.OlaresVersion,
 			productionPreinstallSelections(l.runtime),
 		)...).
 		addModule(terminusBoxModuleBuilder(func() []module.Module {

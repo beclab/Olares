@@ -261,11 +261,23 @@ func (m *RegenerateRuntimeServiceModule) Init() {
 			Name:   "RegenerateK3sService",
 			Action: new(k3s.GenerateK3sService),
 		},
-		// EnableK3sService does `systemctl daemon-reload && systemctl enable --now k3s`,
-		// which picks up the regenerated unit (with the JuiceFS pre-check).
+		// daemon-reload picks up the regenerated unit (with the JuiceFS
+		// pre-check); `enable` (idempotent, no --now) keeps it enabled at boot.
+		//
+		// Deliberately NOT k3s.EnableK3sService: that runs `enable --now`, which
+		// starts k3s here. This module runs while Olares is stopped (the
+		// migration requires it), so etcd and containerd are both down and k3s
+		// cannot come up - it either dies with "Failed to validate datastore
+		// connection" or hangs forever in "Waiting for CRI startup" while
+		// systemd blocks on the unit becoming active. StartOlaresModule, which
+		// runs right after this one, starts the whole stack in dependency order.
 		&task.LocalTask{
-			Name:   "EnableK3sService",
-			Action: new(k3s.EnableK3sService),
+			Name: "ReloadSystemdUnits",
+			Action: &terminus.SystemctlCommand{
+				DaemonReloadPreExec: true,
+				Command:             "enable",
+				UnitNames:           []string{"k3s"},
+			},
 		},
 	}
 }

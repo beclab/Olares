@@ -2,7 +2,6 @@ package nats
 
 import (
 	"bytes"
-	"io/ioutil"
 	"strings"
 	"text/template"
 
@@ -10,6 +9,38 @@ import (
 	load "github.com/nats-io/nats-server/v2/conf"
 	"k8s.io/klog/v2"
 )
+
+const DefaultNatsConf = `{
+  "http_port": 8222,
+  "jetstream": {
+    "max_file_store": 10102410241024,
+    "max_memory_store": 0,
+    "store_dir": "/data"
+  },
+  "accounts": {
+    "terminus": {
+      "jetstream": enabled,
+      "users": [
+        {
+          "user": "admin",
+          "password": $ADMIN_PASSWORD,
+          "permissions": {
+            "publish": {
+              "allow": [">"]
+            },
+            "subscribe": {
+              "allow": [">"]
+            }
+          }
+        }
+      ]
+    }
+  },
+  "port": 4222,
+  "pid_file": "/var/run/nats/nats.pid",
+  "server_name": "nats-0"
+}
+`
 
 const tmpl = `{
   "http_port": {{.HTTPPort}},
@@ -26,11 +57,7 @@ const tmpl = `{
         {{- if $index}},{{ end }}
         {
           "user": "{{ $user.Username }}",
-          {{ if eq $user.Username "admin" }}
-          "password": $ADMIN_PASSWORD,
-          {{ else }}
-          "password": {{ $user.Password | quoteOrNot}},
-          {{ end }}
+          "password": {{ if eq $user.Username "admin" }}$ADMIN_PASSWORD{{ else }}{{ $user.Password | quoteOrNot }}{{ end }},
           "permissions": {
             "publish": {
               "allow": [{{ range $i, $allow := $user.Permissions.Publish.Allow }}{{ if $i }}, {{ end }}"{{ $allow }}"{{ end }}]
@@ -45,9 +72,10 @@ const tmpl = `{
     }
   },
   "port": {{ .Port }},
-  "pid_file": "{{ .PidFile }}"
+  "pid_file": "{{ .PidFile }}",
   "server_name": "{{ .ServerName }}"
-}`
+}
+`
 
 func quoteOrNot(s string) string {
 	if strings.HasPrefix(s, "$2a") {
@@ -73,16 +101,12 @@ func renderConfigFile(config *Config) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func RenderConfigFile(config *Config) error {
-	data, err := renderConfigFile(config)
+func Parse(data string) (*Config, error) {
+	m, err := load.Parse(data)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	err = ioutil.WriteFile(ConfPath, data, 0644)
-	if err != nil {
-		return err
-	}
-	return nil
+	return decodeConfig(m)
 }
 
 func ParseFile(fp string) (*Config, error) {
@@ -90,8 +114,12 @@ func ParseFile(fp string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	return decodeConfig(m)
+}
+
+func decodeConfig(m map[string]interface{}) (*Config, error) {
 	var config Config
-	err = mapstructure.Decode(m, &config)
+	err := mapstructure.Decode(m, &config)
 	if err != nil {
 		klog.Infof("mapstructure decode: err=%v", err)
 		return nil, err

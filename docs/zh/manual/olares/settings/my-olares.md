@@ -52,7 +52,7 @@ head:
 
 ## Olares Space
 在 Olares Space 中查看你的订阅计划详情和使用情况，包括反向代理方案、
-备份、流量消耗等。首次使用时需按提示登录 Olares Space。详情参见[查看系统状态](../../space/manage-olares.md#查看系统状态)。
+备份、流量消耗等。首次使用时需按提示登录 Olares Space。详情参见[监控 Olares 状态与流量](../../space/manage-olares.md#查看-olares-概览)。
 
 ## 更改密码
 

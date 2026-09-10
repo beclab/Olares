@@ -3,8 +3,11 @@ package intranet
 import (
 	"errors"
 	"net"
-	"slices"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/beclab/Olares/daemon/pkg/nets"
 	"github.com/eball/zeroconf"
@@ -15,109 +18,185 @@ type DNSConfig struct {
 	Domain string
 }
 
-type instanceServer struct {
-	queryServer *zeroconf.Server
-	host        *DNSConfig
-	aliases     []string
-}
-
 type mDNSServer struct {
-	servers map[string]*instanceServer
+	mu sync.Mutex
+
+	// domains holds the names to answer for, in the dotted form SetHosts is
+	// given, e.g. "settings.alice.olares".
+	domains map[string]bool
+
+	// A single zeroconf instance serves every domain through host aliases.
+	// One instance per domain would mean one socket pair and one stream of
+	// multicast announcements per domain, and a deployment easily has a dozen.
+	server  *zeroconf.Server
+	primary string
+	aliases map[string]bool
 }
 
 func NewMDNSServer() (*mDNSServer, error) {
 	s := &mDNSServer{
-		servers: make(map[string]*instanceServer),
+		domains: make(map[string]bool),
 	}
 	return s, nil
 }
 
 func (s *mDNSServer) Close() {
-	if s.servers != nil {
-		for host, server := range s.servers {
-			if server == nil {
-				continue
-			}
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-			// Shutdown the mDNS server
-			server.queryServer.Shutdown()
-			s.servers[host] = nil
-			klog.Info("Intranet mDNS server closed, ", host)
-		}
+	s.shutdown()
+}
+
+func (s *mDNSServer) shutdown() {
+	if s.server == nil {
+		return
 	}
+
+	s.server.Shutdown()
+	s.server = nil
+	s.primary = ""
+	s.aliases = nil
+	klog.Info("Intranet mDNS server closed")
 }
 
 func (s *mDNSServer) StartAll() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Every name is gone, so stop answering for the ones still registered.
+	if len(s.domains) == 0 {
+		s.shutdown()
+		return nil
+	}
+
 	iface, err := s.findIntranetInterface()
 	if err != nil {
 		klog.Error("find intranet interface error, ", err)
 		return err
 	}
 
-	for domain := range s.servers {
-		if s.servers[domain] != nil {
-			continue
-		}
+	// The service entry fixes its hostname when it is registered, so a change
+	// of primary is the one case that forces a rebuild.
+	primary := pickPrimaryDomain(s.domains)
+	if s.server != nil && s.primary != primary {
+		klog.Infof("mDNS primary host changed from %s to %s, restarting", s.primary, primary)
+		s.shutdown()
+	}
 
-		klog.Infof("Registering mDNS service for domain: %s", domain)
-		// Register the mDNS service
-		var err error
-		server, err := zeroconf.Register("olares", "_http._tcp", "local.", domain, 80, []string{"txtv=0", "lo=1", "la=0", "path=/"}, []net.Interface{*iface})
+	if s.server == nil {
+		disableWirelessPowerSave(iface)
+
+		klog.Infof("Registering mDNS service on host: %s", primary)
+		server, err := zeroconf.RegisterAll("olares", "_http._tcp", "local.", primary, 80, []string{"txtv=0", "lo=1", "la=0", "path=/"}, []net.Interface{*iface}, true, false, false)
 		if err != nil {
-			klog.Errorf("Failed to register mDNS service for domain %s: %v", domain, err)
+			klog.Errorf("Failed to register mDNS service for host %s: %v", primary, err)
 			return err
 		}
 
-		// add host alias
-		domainTokens := strings.Split(domain, ".")
-		alias := []string{strings.Join(domainTokens, "-") + ".local."}
-
-		// TODO: add more alias if needed
-		klog.Info("add host alias, ", alias[0])
-		server.AddHostAlias(alias[0])
-
-		s.servers[domain] = &instanceServer{
-			queryServer: server,
-			host:        &DNSConfig{Domain: domain},
-		}
+		s.server = server
+		s.primary = primary
+		s.aliases = make(map[string]bool)
 	}
+
+	s.syncAliases()
 	klog.V(8).Info("Intranet mDNS server started")
 	return nil
 }
 
+// syncAliases makes the running server answer for exactly the current domains.
+func (s *mDNSServer) syncAliases() {
+	want := make(map[string]bool)
+	for domain := range s.domains {
+		for _, name := range hostNamesFor(domain) {
+			want[name] = true
+		}
+	}
+
+	for name := range want {
+		if s.aliases[name] {
+			continue
+		}
+		if err := s.server.AddHostAlias(name); err != nil {
+			klog.Errorf("add host alias %s error, %v", name, err)
+			continue
+		}
+		s.aliases[name] = true
+		klog.Info("add host alias, ", name)
+	}
+
+	for name := range s.aliases {
+		if want[name] {
+			continue
+		}
+		s.server.RemoveHostAlias(name)
+		delete(s.aliases, name)
+		klog.Info("remove host alias, ", name)
+	}
+}
+
+// hostNamesFor returns the mDNS names a domain answers to: the dotted form and
+// the hyphenated one, for clients that only accept a single label under .local.
+func hostNamesFor(domain string) []string {
+	return []string{
+		domain + ".local.",
+		strings.ReplaceAll(domain, ".", "-") + ".local.",
+	}
+}
+
+// pickPrimaryDomain returns the name to register the service under. The domain
+// with the fewest labels is the root one, which outlives the per-app
+// subdomains, so choosing it keeps apps coming and going from restarting the
+// server.
+func pickPrimaryDomain(domains map[string]bool) string {
+	var primary string
+	for domain := range domains {
+		if primary == "" {
+			primary = domain
+			continue
+		}
+		labels, best := strings.Count(domain, "."), strings.Count(primary, ".")
+		if labels < best || (labels == best && domain < primary) {
+			primary = domain
+		}
+	}
+	return primary
+}
+
+// disableWirelessPowerSave keeps the radio awake between beacons. With power
+// save on, frames are held back until the next DTIM beacon, which delays mDNS
+// queries and makes the access point more likely to drop them: multicast is
+// never acknowledged and never retransmitted.
+func disableWirelessPowerSave(iface *net.Interface) {
+	if _, err := os.Stat(filepath.Join("/sys/class/net", iface.Name, "wireless")); err != nil {
+		return
+	}
+
+	out, err := exec.Command("iw", "dev", iface.Name, "set", "power_save", "off").CombinedOutput()
+	if err != nil {
+		klog.Warningf("cannot disable wireless power save on %s, %v, %s", iface.Name, err, strings.TrimSpace(string(out)))
+		return
+	}
+
+	klog.Info("wireless power save disabled on ", iface.Name)
+}
+
 // SetHosts sets the hosts for the mDNS server
-// if reset is true, it will remove all existing hosts before adding new ones
+// if reset is true, it will restart the server before serving them
 func (s *mDNSServer) SetHosts(hosts []DNSConfig, reset bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	domains := make(map[string]bool, len(hosts))
 	for _, host := range hosts {
 		if host.Domain == "" {
 			continue
 		}
-
-		if server, exists := s.servers[host.Domain]; !exists {
-			s.servers[host.Domain] = nil
-		} else {
-
-			if reset {
-				// reset existing host, shutdown the server and remove it from the map
-				if server != nil && server.queryServer != nil {
-					server.queryServer.Shutdown()
-				}
-				s.servers[host.Domain] = nil
-			}
-		}
+		domains[host.Domain] = true
 	}
+	s.domains = domains
 
-	// remove not exist hosts
-	for domain := range s.servers {
-		if slices.ContainsFunc(hosts, func(a DNSConfig) bool {
-			return a.Domain == domain
-		}) {
-			continue
-		}
-
-		klog.Info("removing domain ", domain)
-		s.servers[domain].queryServer.Shutdown()
-		delete(s.servers, domain)
+	if reset {
+		s.shutdown()
 	}
 }
 

@@ -5,12 +5,12 @@ const { spawnSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 
-// `npx @olares/cli install` is a first-run wizard implemented purely in JS:
-// it promotes the npx invocation to a global `npm install -g @olares/cli`
-// and then installs the agent skills via `npx skills add beclab/Olares`. It
-// does NOT install Olares OS (use `curl -fsSL https://olares.sh | bash` for
-// that on a Linux host) and does NOT touch the Go binary. Intercept the verb
-// here so it works even when the vendor binary failed to download.
+// `npx @olares/cli install` is a first-run wizard: it promotes the npx
+// invocation to a global `npm install -g @olares/cli` and then has the
+// vendored binary write out the agent skills it carries. It does NOT install
+// Olares OS (use `curl -fsSL https://olares.sh | bash` for that on a Linux
+// host). Intercept the verb here so the first half still works when the
+// vendor binary failed to download.
 const args = process.argv.slice(2);
 if (args[0] === 'install') {
   require('../scripts/install-wizard.js');

@@ -24,8 +24,8 @@ const (
 	AppleMChipType = "apple-m"     // Apple M-series SoC
 	IntelType      = "intel"       // Intel integrated GPU (unified memory)
 	AMDType        = "amd"         // AMD integrated GPU (Ryzen AI Max)
-	IntelGpuType   = "intel-gpu"   // Intel discrete GPU (not handled yet)
-	AmdGpuType     = "amd-gpu"     // AMD discrete GPU (not handled yet)
+	IntelGpuType   = "intel-gpu"   // Intel discrete GPU
+	AmdGpuType     = "amd-gpu"     // AMD discrete GPU (ROCm + device plugin)
 	MooreSocType   = "moore-soc"   // Moore Threads SoC
 )
 

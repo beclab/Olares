@@ -46,13 +46,15 @@ func defaultFixtureServer(t *testing.T) *httptest.Server {
                 {"metric":{"namespace":"jellyfin"},"value":[1714600000,"1.5"]}
               ]}}
             ]}`))
+		// A label-less node set keeps the GPU row out of the
+		// smoke baseline without stubbing any exporter.
+		case r.URL.Path == nodesPath:
+			_, _ = w.Write([]byte(nodesNoGPU))
 		// Optional endpoints exercised by BuildPhysicalEnvelope's
-		// fan-out (GPU summary + fan readings — see Bug 1/2 fix).
-		// 404 keeps both rows skipped which is the right
-		// "no GPU, generic device" baseline for the smoke test.
-		case r.URL.Path == "/hami/api/vgpu/v1/monitor/query/instant-vector",
-			r.URL.Path == "/hami/api/vgpu/v1/gpus",
-			r.URL.Path == "/user-service/api/system/status",
+		// fan-out (fan readings — see Bug 1/2 fix). 404 keeps the
+		// rows skipped, the right "generic device" baseline for
+		// the smoke test.
+		case r.URL.Path == "/user-service/api/system/status",
 			r.URL.Path == "/user-service/api/mdns/olares-one/cpu-gpu":
 			w.WriteHeader(http.StatusNotFound)
 		default:

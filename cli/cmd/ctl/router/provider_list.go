@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"text/tabwriter"
 
 	"github.com/spf13/cobra"
 
@@ -24,13 +23,18 @@ func newProviderListCommand(f *cmdutil.Factory) *cobra.Command {
 		Short: "list every provider Router can route to",
 		Long: `List the configured providers, newest first.
 
-Columns: the provider's name and display title, its type, whether it is
-active or disabled, whether it came from an admin ("manual") or from an
-installed model application ("olares"), and its base URL.
+Columns: the provider's routing name, its display title, the application behind
+it, its type, whether it is active or disabled, whether it came from an admin
+("manual") or from an installed model application ("olares"), and its base URL.
 
-A Market-sourced provider is listed only while its application is running.
-An absent model app is therefore installing, stopped, or unreachable — check
-it with "olares-cli router market tasks" or "olares-cli market status".
+NAME is what a caller writes in front of a model name, and it does not identify
+a row: every locally installed model application answers to "Olares", so that a
+caller can write "Olares/<model>" without knowing which application serves it.
+APP is what identifies those rows, and what the verbs here accept.
+
+A Market-sourced provider is listed while its application is installing, running
+or tearing down, and only then. An absent one is stopped or gone — check it with
+"olares-cli market status <app>".
 
 Pass --output json for every field, including the credential version that
 "provider rollback" selects on.
@@ -79,22 +83,22 @@ func renderProviderList(w io.Writer, rows []providerRow) error {
 			hiddenProviderNote)
 		return err
 	}
-	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
-	if _, err := fmt.Fprintln(tw, "NAME\tTITLE\tTYPE\tSTATUS\tSOURCE\tBASE URL"); err != nil {
-		return err
-	}
+	t := newTable(w, "NAME", "TITLE", "APP", "TYPE", "STATUS", "SOURCE", "BASE URL")
 	for i := range rows {
 		r := &rows[i]
-		if _, err := fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\n",
+		app := nonEmpty(strDeref(r.OlaresAppName))
+		if s := strDeref(r.OlaresStatus); s != "" {
+			app += " (" + s + ")"
+		}
+		t.row(
 			nonEmpty(r.Name),
-			nonEmpty(r.title()),
+			clip(r.title(), 28),
+			app,
 			nonEmpty(r.ProviderType),
 			nonEmpty(r.Status),
 			nonEmpty(r.Source),
-			nonEmpty(r.BaseURL),
-		); err != nil {
-			return err
-		}
+			clip(r.BaseURL, 44),
+		)
 	}
-	return tw.Flush()
+	return t.flush()
 }

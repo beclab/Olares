@@ -62,3 +62,9 @@ omitted. `--select-files` takes 1-based indices, normalised into
 `all` (or omitting the flag) downloads every file, and bad tokens (`0`,
 negatives, non-integers) are rejected locally rather than round-tripping to a
 server 400.
+
+`--name` is rejected for both. aria2 skips its `out` option for magnet and
+torrent downloads, so the file on disk always takes the torrent's own metadata
+name — a custom name would only be pinned to the task row. The row shows the
+magnet's `dn=` (or a short info-hash) until aria2 parses the metadata and the
+real name lands.

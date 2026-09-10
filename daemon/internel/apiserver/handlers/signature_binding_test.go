@@ -73,6 +73,47 @@ func TestCreateClusterOperationAcceptsASignatureBoundToIt(t *testing.T) {
 	}
 }
 
+// The run outlives the request that started it, so the credential handed to it
+// has to own its bytes. ctx.Get returns a string pointing into the fasthttp
+// header buffer, and that buffer belongs to the next request the moment this
+// handler returns — on a master whose caller is already polling the record it
+// was just given, milliseconds later. A run left holding the alias presents
+// whatever arrived after it, which every worker refuses as a malformed JWS.
+func TestCreateClusterOperationHandsTheRunASignatureItKeeps(t *testing.T) {
+	f := withClusterOperations(t, &fakeOperations{op: sampleOperation()})
+	asAuthorizedUser(t)
+	asOwnerSignature(t)
+	asMaster(t)
+
+	headers := signedFor(t, clusterop.TypeReboot, "client-1")
+	signature := headers[SIGNATURE_HEADER]
+	resp, body := callRegisteredMethod(t, http.MethodPost, "/cluster/operations",
+		`{"type":"reboot","requestId":"client-1"}`, headers)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d: %s", resp.StatusCode, body)
+	}
+
+	// The next request through the same app. It carries the same header names,
+	// so its signature lands in the slot the first one used, and one of the
+	// same length, so it overwrites those bytes rather than reallocating.
+	later := signedFor(t, clusterop.TypeReboot, "client-2")
+	if len(later[SIGNATURE_HEADER]) != len(signature) {
+		t.Fatalf("this test overwrites in place, so the follow-up signature has to be "+
+			"the same length: %d vs %d", len(later[SIGNATURE_HEADER]), len(signature))
+	}
+	callRegisteredMethod(t, http.MethodPost, "/cluster/operations",
+		`{"type":"reboot","requestId":"client-2"}`, later)
+
+	reqs := f.requests()
+	if len(reqs) == 0 {
+		t.Fatal("the orchestrator was never called")
+	}
+	if reqs[0].Creds.Signature != signature {
+		t.Errorf("the run's signature became %q, want the one it was started with %q",
+			reqs[0].Creds.Signature, signature)
+	}
+}
+
 // The worker hop presents the same operation-bound signature. It is not the
 // access token: forwarding that would hand every node a credential good for
 // every route the user can reach.

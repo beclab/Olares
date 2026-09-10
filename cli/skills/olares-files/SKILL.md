@@ -1,6 +1,6 @@
 ---
 name: olares-files
-version: 4.4.0
+version: 0.0.0-cli.0
 description: "Olares Files via olares-cli files — browse known paths; upload or download file bytes; edit, share, mount SMB/NFS, compress/extract archives, and manage Seafile sync across Drive/cache/external/cloud. Use for Olares Files and LarePass Files operations, not URL/yt-dlp/torrent download tasks (olares-knowledge)."
 compatibility: Requires olares-cli on PATH and active Olares profile
 metadata:

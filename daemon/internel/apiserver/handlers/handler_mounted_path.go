@@ -17,7 +17,9 @@ func (h *Handlers) getMountedPath(ctx *fiber.Ctx, mutate func(*disk.UsageStat) *
 }
 
 func (h *Handlers) GetMountedPath(ctx *fiber.Ctx) error {
-	return h.getMountedPath(ctx, nil)
+	// deprecated, use GetMountedPathInCluster instead
+	// return h.getMountedPath(ctx, nil)
+	return h.GetMountedPathInCluster(ctx)
 }
 
 func (h *Handlers) GetMountedPathInCluster(ctx *fiber.Ctx) error {

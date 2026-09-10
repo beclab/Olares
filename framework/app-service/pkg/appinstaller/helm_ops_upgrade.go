@@ -35,6 +35,11 @@ func (h *HelmOps) upgrade() error {
 		return err
 	}
 
+	if err = h.EnsureOlaresCLICredential(); err != nil {
+		klog.Errorf("Failed to provision olares-cli credential err=%v", err)
+		return err
+	}
+
 	// ResetThenReuseValues: absorb new chart defaults (image/template) while
 	// keeping prior user overrides that SetValues does not re-emit.
 	err = helm.UpgradeCharts(h.ctx, h.actionConfig, h.settings, h.app.AppName, h.app.ChartsName, h.app.RepoURL, h.app.Namespace, values, helm.ResetThenReuseValues)

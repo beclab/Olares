@@ -53,9 +53,13 @@ jobs:
           python3 cli/skills/validate.py
           bash cli/skills/publish.sh --dry-run
 
-      - name: Probe skill-owned command paths
+      # ./skills/... is the embedded suite itself: that it matches the checkout,
+      # that it exports whole, that a script arrives executable, that a symlink
+      # is refused. It sits beside ./cmd, so `./cmd/ctl/...` never reached it
+      # and those assertions ran nowhere.
+      - name: Probe skill-owned command paths and the embedded suite
         working-directory: cli
         run: |
           go build -o /tmp/olares-cli ./cmd
           go test ./cmd/ctl -run '^TestSkillCommandPathsExist$|^TestEveryCommandTheSkillsDocumentResolves$'
-          go test ./cmd/ctl/... ./pkg/clusterclient ./pkg/clusterctx ./pkg/credential ./pkg/dashboard ./pkg/whoami
+          go test ./skills/... ./cmd/ctl/... ./pkg/clusterclient ./pkg/clusterctx ./pkg/credential ./pkg/dashboard ./pkg/whoami

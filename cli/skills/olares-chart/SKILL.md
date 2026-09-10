@@ -1,6 +1,6 @@
 ---
 name: olares-chart
-version: 4.18.0
+version: 0.0.0-cli.0
 description: "Olares app packaging and chart authoring via olares-cli chart — port a repo, docker-compose, or generic Helm chart; build/push the image; author, lint, package, and deploy an OlaresManifest; wire storage, middleware, entrances, env, and GPU; edit the chart after diagnosis. Runtime failure diagnosis is olares-doctor; public Market submission is olares-publish."
 compatibility: Requires olares-cli on PATH; chart authoring is local-only, building an image for a specific Olares and deploying both need login
 metadata:
@@ -145,7 +145,7 @@ Skip references that would mislead:
 
 `lint` validates structure, not Olares correctness. Beyond the concerns table above, these blind spots bite and are entirely on you:
 
-- **`metadata.name` must match the chart folder and `Chart.yaml` `name`**, and be `^[a-z][a-z0-9]{0,29}$`. Keep `metadata.appid` equal to `metadata.name` (`from-compose` sets it). Rename all four together. **`lint` does NOT require `metadata.appid`** — a chart lints without it, but **`market upload` rejects a missing `appid`**, so set it explicitly or a lint-clean chart still fails to upload. It does not decide the entrance host: the platform derives that from the app name, so read the real value from the `URL` column of `settings apps list` rather than computing it.
+- **`metadata.name` must match the chart folder and `Chart.yaml` `name`**, and be `^[a-z][a-z0-9]{0,29}$`. Keep `metadata.appid` equal to `metadata.name` (`from-compose` sets it). Rename all four together. **Neither `lint` nor `market upload` requires `metadata.appid`** — a chart without it lints clean and uploads successfully, and the platform fills the value in deterministically. Set it anyway: an absent field that something else decides for you is a field you will misread later, and a mismatched one is worse than a missing one. It does not decide the entrance host: the platform derives that from the app name, so read the real value from the `URL` column of `settings apps list` rather than computing it.
 - **Cluster upload requires `spec.supportArch` to intersect at least one current node architecture.** Query `olares-cli cluster node list`; ensure the referenced images support the same target architecture. If upload reports `architecture_incompatible`, fix and repackage before retrying. If it reports `cluster_arch_unavailable`, keep the package/version unchanged and wait for node discovery to recover.
 - **Declared `.Values.userspace.appData`/`appCache`/`userData` mounts MUST have the matching `permission` field**, or the app-data cross-check fails.
 - **`hostPath` volumes + rolling updates are incompatible** — replace host mounts with the userspace volumes above.

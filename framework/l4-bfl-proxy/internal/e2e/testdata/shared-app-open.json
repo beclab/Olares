@@ -572,6 +572,22 @@
                 },
                 "httpFilters": [
                   {
+                    "name": "envoy.filters.http.header_mutation",
+                    "typedConfig": {
+                      "@type": "type.googleapis.com/envoy.extensions.filters.http.header_mutation.v3.HeaderMutation",
+                      "mutations": {
+                        "requestMutations": [
+                          {
+                            "remove": "x-bfl-user"
+                          },
+                          {
+                            "remove": "x-caller-appid"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  {
                     "name": "envoy.filters.http.ext_authz",
                     "typedConfig": {
                       "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz",
@@ -617,6 +633,15 @@
                         "authorizationResponse": {
                           "allowedUpstreamHeaders": {
                             "patterns": [
+                              {
+                                "exact": "authorization"
+                              },
+                              {
+                                "exact": "proxy-authorization"
+                              },
+                              {
+                                "exact": "x-bfl-user"
+                              },
                               {
                                 "prefix": "remote-"
                               },
@@ -720,6 +745,22 @@
                 ],
                 "useRemoteAddress": true,
                 "xffNumTrustedHops": 1,
+                "earlyHeaderMutationExtensions": [
+                  {
+                    "name": "envoy.http.early_header_mutation.header_mutation",
+                    "typedConfig": {
+                      "@type": "type.googleapis.com/envoy.extensions.http.early_header_mutation.header_mutation.v3.HeaderMutation",
+                      "mutations": [
+                        {
+                          "remove": "x-bfl-user"
+                        },
+                        {
+                          "remove": "x-caller-appid"
+                        }
+                      ]
+                    }
+                  }
+                ],
                 "upgradeConfigs": [
                   {
                     "upgradeType": "websocket"
@@ -777,6 +818,22 @@
                 },
                 "httpFilters": [
                   {
+                    "name": "envoy.filters.http.header_mutation",
+                    "typedConfig": {
+                      "@type": "type.googleapis.com/envoy.extensions.filters.http.header_mutation.v3.HeaderMutation",
+                      "mutations": {
+                        "requestMutations": [
+                          {
+                            "remove": "x-bfl-user"
+                          },
+                          {
+                            "remove": "x-caller-appid"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  {
                     "name": "envoy.filters.http.ext_authz",
                     "typedConfig": {
                       "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz",
@@ -822,6 +879,15 @@
                         "authorizationResponse": {
                           "allowedUpstreamHeaders": {
                             "patterns": [
+                              {
+                                "exact": "authorization"
+                              },
+                              {
+                                "exact": "proxy-authorization"
+                              },
+                              {
+                                "exact": "x-bfl-user"
+                              },
                               {
                                 "prefix": "remote-"
                               },
@@ -925,6 +991,22 @@
                 ],
                 "useRemoteAddress": true,
                 "xffNumTrustedHops": 1,
+                "earlyHeaderMutationExtensions": [
+                  {
+                    "name": "envoy.http.early_header_mutation.header_mutation",
+                    "typedConfig": {
+                      "@type": "type.googleapis.com/envoy.extensions.http.early_header_mutation.header_mutation.v3.HeaderMutation",
+                      "mutations": [
+                        {
+                          "remove": "x-bfl-user"
+                        },
+                        {
+                          "remove": "x-caller-appid"
+                        }
+                      ]
+                    }
+                  }
+                ],
                 "upgradeConfigs": [
                   {
                     "upgradeType": "websocket"
@@ -982,6 +1064,22 @@
                 },
                 "httpFilters": [
                   {
+                    "name": "envoy.filters.http.header_mutation",
+                    "typedConfig": {
+                      "@type": "type.googleapis.com/envoy.extensions.filters.http.header_mutation.v3.HeaderMutation",
+                      "mutations": {
+                        "requestMutations": [
+                          {
+                            "remove": "x-bfl-user"
+                          },
+                          {
+                            "remove": "x-caller-appid"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  {
                     "name": "envoy.filters.http.ext_authz",
                     "typedConfig": {
                       "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz",
@@ -1027,6 +1125,15 @@
                         "authorizationResponse": {
                           "allowedUpstreamHeaders": {
                             "patterns": [
+                              {
+                                "exact": "authorization"
+                              },
+                              {
+                                "exact": "proxy-authorization"
+                              },
+                              {
+                                "exact": "x-bfl-user"
+                              },
                               {
                                 "prefix": "remote-"
                               },
@@ -1130,6 +1237,22 @@
                 ],
                 "useRemoteAddress": true,
                 "xffNumTrustedHops": 1,
+                "earlyHeaderMutationExtensions": [
+                  {
+                    "name": "envoy.http.early_header_mutation.header_mutation",
+                    "typedConfig": {
+                      "@type": "type.googleapis.com/envoy.extensions.http.early_header_mutation.header_mutation.v3.HeaderMutation",
+                      "mutations": [
+                        {
+                          "remove": "x-bfl-user"
+                        },
+                        {
+                          "remove": "x-caller-appid"
+                        }
+                      ]
+                    }
+                  }
+                ],
                 "upgradeConfigs": [
                   {
                     "upgradeType": "websocket"
@@ -1207,6 +1330,22 @@
                 },
                 "httpFilters": [
                   {
+                    "name": "envoy.filters.http.header_mutation",
+                    "typedConfig": {
+                      "@type": "type.googleapis.com/envoy.extensions.filters.http.header_mutation.v3.HeaderMutation",
+                      "mutations": {
+                        "requestMutations": [
+                          {
+                            "remove": "x-bfl-user"
+                          },
+                          {
+                            "remove": "x-caller-appid"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  {
                     "name": "envoy.filters.http.ext_authz",
                     "typedConfig": {
                       "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz",
@@ -1252,6 +1391,15 @@
                         "authorizationResponse": {
                           "allowedUpstreamHeaders": {
                             "patterns": [
+                              {
+                                "exact": "authorization"
+                              },
+                              {
+                                "exact": "proxy-authorization"
+                              },
+                              {
+                                "exact": "x-bfl-user"
+                              },
                               {
                                 "prefix": "remote-"
                               },
@@ -1355,6 +1503,22 @@
                 ],
                 "useRemoteAddress": true,
                 "xffNumTrustedHops": 1,
+                "earlyHeaderMutationExtensions": [
+                  {
+                    "name": "envoy.http.early_header_mutation.header_mutation",
+                    "typedConfig": {
+                      "@type": "type.googleapis.com/envoy.extensions.http.early_header_mutation.header_mutation.v3.HeaderMutation",
+                      "mutations": [
+                        {
+                          "remove": "x-bfl-user"
+                        },
+                        {
+                          "remove": "x-caller-appid"
+                        }
+                      ]
+                    }
+                  }
+                ],
                 "upgradeConfigs": [
                   {
                     "upgradeType": "websocket"
@@ -1412,6 +1576,22 @@
                 },
                 "httpFilters": [
                   {
+                    "name": "envoy.filters.http.header_mutation",
+                    "typedConfig": {
+                      "@type": "type.googleapis.com/envoy.extensions.filters.http.header_mutation.v3.HeaderMutation",
+                      "mutations": {
+                        "requestMutations": [
+                          {
+                            "remove": "x-bfl-user"
+                          },
+                          {
+                            "remove": "x-caller-appid"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  {
                     "name": "envoy.filters.http.ext_authz",
                     "typedConfig": {
                       "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz",
@@ -1457,6 +1637,15 @@
                         "authorizationResponse": {
                           "allowedUpstreamHeaders": {
                             "patterns": [
+                              {
+                                "exact": "authorization"
+                              },
+                              {
+                                "exact": "proxy-authorization"
+                              },
+                              {
+                                "exact": "x-bfl-user"
+                              },
                               {
                                 "prefix": "remote-"
                               },
@@ -1560,6 +1749,22 @@
                 ],
                 "useRemoteAddress": true,
                 "xffNumTrustedHops": 1,
+                "earlyHeaderMutationExtensions": [
+                  {
+                    "name": "envoy.http.early_header_mutation.header_mutation",
+                    "typedConfig": {
+                      "@type": "type.googleapis.com/envoy.extensions.http.early_header_mutation.header_mutation.v3.HeaderMutation",
+                      "mutations": [
+                        {
+                          "remove": "x-bfl-user"
+                        },
+                        {
+                          "remove": "x-caller-appid"
+                        }
+                      ]
+                    }
+                  }
+                ],
                 "upgradeConfigs": [
                   {
                     "upgradeType": "websocket"
@@ -1617,6 +1822,22 @@
                 },
                 "httpFilters": [
                   {
+                    "name": "envoy.filters.http.header_mutation",
+                    "typedConfig": {
+                      "@type": "type.googleapis.com/envoy.extensions.filters.http.header_mutation.v3.HeaderMutation",
+                      "mutations": {
+                        "requestMutations": [
+                          {
+                            "remove": "x-bfl-user"
+                          },
+                          {
+                            "remove": "x-caller-appid"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  {
                     "name": "envoy.filters.http.ext_authz",
                     "typedConfig": {
                       "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz",
@@ -1662,6 +1883,15 @@
                         "authorizationResponse": {
                           "allowedUpstreamHeaders": {
                             "patterns": [
+                              {
+                                "exact": "authorization"
+                              },
+                              {
+                                "exact": "proxy-authorization"
+                              },
+                              {
+                                "exact": "x-bfl-user"
+                              },
                               {
                                 "prefix": "remote-"
                               },
@@ -1765,6 +1995,22 @@
                 ],
                 "useRemoteAddress": true,
                 "xffNumTrustedHops": 1,
+                "earlyHeaderMutationExtensions": [
+                  {
+                    "name": "envoy.http.early_header_mutation.header_mutation",
+                    "typedConfig": {
+                      "@type": "type.googleapis.com/envoy.extensions.http.early_header_mutation.header_mutation.v3.HeaderMutation",
+                      "mutations": [
+                        {
+                          "remove": "x-bfl-user"
+                        },
+                        {
+                          "remove": "x-caller-appid"
+                        }
+                      ]
+                    }
+                  }
+                ],
                 "upgradeConfigs": [
                   {
                     "upgradeType": "websocket"
@@ -1843,16 +2089,7 @@
                   "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
                   "checkSettings": {}
                 }
-              },
-              "requestHeadersToAdd": [
-                {
-                  "header": {
-                    "key": "X-BFL-USER",
-                    "value": "admin"
-                  },
-                  "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-                }
-              ]
+              }
             }
           ],
           "typedPerFilterConfig": {
@@ -1891,16 +2128,7 @@
                   "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
                   "checkSettings": {}
                 }
-              },
-              "requestHeadersToAdd": [
-                {
-                  "header": {
-                    "key": "X-BFL-USER",
-                    "value": "admin"
-                  },
-                  "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-                }
-              ]
+              }
             }
           ],
           "typedPerFilterConfig": {
@@ -1981,16 +2209,7 @@
                   "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
                   "checkSettings": {}
                 }
-              },
-              "requestHeadersToAdd": [
-                {
-                  "header": {
-                    "key": "X-BFL-USER",
-                    "value": "admin"
-                  },
-                  "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-                }
-              ]
+              }
             }
           ],
           "typedPerFilterConfig": {
@@ -2150,7 +2369,11 @@
           },
           "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
         }
-      ]
+      ],
+      "requestHeadersToRemove": [
+        "x-caller-appid"
+      ],
+      "mostSpecificHeaderMutationsWins": true
     },
     {
       "name": "https_443_alice_alice_snowinning_com_routes",
@@ -2176,16 +2399,7 @@
                   "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
                   "checkSettings": {}
                 }
-              },
-              "requestHeadersToAdd": [
-                {
-                  "header": {
-                    "key": "X-BFL-USER",
-                    "value": "alice"
-                  },
-                  "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-                }
-              ]
+              }
             }
           ],
           "typedPerFilterConfig": {
@@ -2224,16 +2438,7 @@
                   "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
                   "checkSettings": {}
                 }
-              },
-              "requestHeadersToAdd": [
-                {
-                  "header": {
-                    "key": "X-BFL-USER",
-                    "value": "alice"
-                  },
-                  "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-                }
-              ]
+              }
             }
           ],
           "typedPerFilterConfig": {
@@ -2314,16 +2519,7 @@
                   "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
                   "checkSettings": {}
                 }
-              },
-              "requestHeadersToAdd": [
-                {
-                  "header": {
-                    "key": "X-BFL-USER",
-                    "value": "alice"
-                  },
-                  "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-                }
-              ]
+              }
             }
           ],
           "typedPerFilterConfig": {
@@ -2483,7 +2679,11 @@
           },
           "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
         }
-      ]
+      ],
+      "requestHeadersToRemove": [
+        "x-caller-appid"
+      ],
+      "mostSpecificHeaderMutationsWins": true
     },
     {
       "name": "https_443_bob_bob_snowinning_com_routes",
@@ -2509,16 +2709,7 @@
                   "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
                   "checkSettings": {}
                 }
-              },
-              "requestHeadersToAdd": [
-                {
-                  "header": {
-                    "key": "X-BFL-USER",
-                    "value": "bob"
-                  },
-                  "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-                }
-              ]
+              }
             }
           ],
           "typedPerFilterConfig": {
@@ -2557,16 +2748,7 @@
                   "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
                   "checkSettings": {}
                 }
-              },
-              "requestHeadersToAdd": [
-                {
-                  "header": {
-                    "key": "X-BFL-USER",
-                    "value": "bob"
-                  },
-                  "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-                }
-              ]
+              }
             }
           ],
           "typedPerFilterConfig": {
@@ -2647,16 +2829,7 @@
                   "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
                   "checkSettings": {}
                 }
-              },
-              "requestHeadersToAdd": [
-                {
-                  "header": {
-                    "key": "X-BFL-USER",
-                    "value": "bob"
-                  },
-                  "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-                }
-              ]
+              }
             }
           ],
           "typedPerFilterConfig": {
@@ -2816,7 +2989,11 @@
           },
           "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
         }
-      ]
+      ],
+      "requestHeadersToRemove": [
+        "x-caller-appid"
+      ],
+      "mostSpecificHeaderMutationsWins": true
     },
     {
       "name": "https_444_admin_admin_snowinning_com_routes",
@@ -2842,16 +3019,7 @@
                   "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
                   "checkSettings": {}
                 }
-              },
-              "requestHeadersToAdd": [
-                {
-                  "header": {
-                    "key": "X-BFL-USER",
-                    "value": "admin"
-                  },
-                  "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-                }
-              ]
+              }
             }
           ],
           "typedPerFilterConfig": {
@@ -2890,16 +3058,7 @@
                   "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
                   "checkSettings": {}
                 }
-              },
-              "requestHeadersToAdd": [
-                {
-                  "header": {
-                    "key": "X-BFL-USER",
-                    "value": "admin"
-                  },
-                  "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-                }
-              ]
+              }
             }
           ],
           "typedPerFilterConfig": {
@@ -2980,16 +3139,7 @@
                   "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
                   "checkSettings": {}
                 }
-              },
-              "requestHeadersToAdd": [
-                {
-                  "header": {
-                    "key": "X-BFL-USER",
-                    "value": "admin"
-                  },
-                  "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-                }
-              ]
+              }
             }
           ],
           "typedPerFilterConfig": {
@@ -3149,7 +3299,11 @@
           },
           "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
         }
-      ]
+      ],
+      "requestHeadersToRemove": [
+        "x-caller-appid"
+      ],
+      "mostSpecificHeaderMutationsWins": true
     },
     {
       "name": "https_444_alice_alice_snowinning_com_routes",
@@ -3175,16 +3329,7 @@
                   "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
                   "checkSettings": {}
                 }
-              },
-              "requestHeadersToAdd": [
-                {
-                  "header": {
-                    "key": "X-BFL-USER",
-                    "value": "alice"
-                  },
-                  "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-                }
-              ]
+              }
             }
           ],
           "typedPerFilterConfig": {
@@ -3223,16 +3368,7 @@
                   "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
                   "checkSettings": {}
                 }
-              },
-              "requestHeadersToAdd": [
-                {
-                  "header": {
-                    "key": "X-BFL-USER",
-                    "value": "alice"
-                  },
-                  "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-                }
-              ]
+              }
             }
           ],
           "typedPerFilterConfig": {
@@ -3313,16 +3449,7 @@
                   "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
                   "checkSettings": {}
                 }
-              },
-              "requestHeadersToAdd": [
-                {
-                  "header": {
-                    "key": "X-BFL-USER",
-                    "value": "alice"
-                  },
-                  "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-                }
-              ]
+              }
             }
           ],
           "typedPerFilterConfig": {
@@ -3482,7 +3609,11 @@
           },
           "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
         }
-      ]
+      ],
+      "requestHeadersToRemove": [
+        "x-caller-appid"
+      ],
+      "mostSpecificHeaderMutationsWins": true
     },
     {
       "name": "https_444_bob_bob_snowinning_com_routes",
@@ -3508,16 +3639,7 @@
                   "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
                   "checkSettings": {}
                 }
-              },
-              "requestHeadersToAdd": [
-                {
-                  "header": {
-                    "key": "X-BFL-USER",
-                    "value": "bob"
-                  },
-                  "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-                }
-              ]
+              }
             }
           ],
           "typedPerFilterConfig": {
@@ -3556,16 +3678,7 @@
                   "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
                   "checkSettings": {}
                 }
-              },
-              "requestHeadersToAdd": [
-                {
-                  "header": {
-                    "key": "X-BFL-USER",
-                    "value": "bob"
-                  },
-                  "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-                }
-              ]
+              }
             }
           ],
           "typedPerFilterConfig": {
@@ -3646,16 +3759,7 @@
                   "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
                   "checkSettings": {}
                 }
-              },
-              "requestHeadersToAdd": [
-                {
-                  "header": {
-                    "key": "X-BFL-USER",
-                    "value": "bob"
-                  },
-                  "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-                }
-              ]
+              }
             }
           ],
           "typedPerFilterConfig": {
@@ -3815,7 +3919,11 @@
           },
           "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
         }
-      ]
+      ],
+      "requestHeadersToRemove": [
+        "x-caller-appid"
+      ],
+      "mostSpecificHeaderMutationsWins": true
     }
   ]
 }

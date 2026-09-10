@@ -17,10 +17,6 @@ const (
 	DecideSourceEligibility   = "eligibility"
 	DecideSourceSharedDefault = "shared-default"
 	DecideSourceNone          = "none"
-
-	// RuleAllowSharedLLMGateway keeps name-based Shared AI Router Decide for
-	// compatibility. All Shared apps also default to caller via shared-default.
-	RuleAllowSharedLLMGateway = "R-ALLOW-shared-llmgateway"
 )
 
 // Rule maps an application name (or prefix*) to named Shared callees.
@@ -35,15 +31,12 @@ type Rule struct {
 // RuleSet is the phase-1 decide rule table.
 type RuleSet []Rule
 
-// DefaultRules denies platform shells and allow-lists known Shared callers.
+// DefaultRules denies the userspace shell Application (olares-app).
+// Shared callers use shared-default (OPEN-01). Workloads like STS bfl are not
+// matched by name here — admission keys off Application.spec.settings, not Pod name.
 func DefaultRules() RuleSet {
 	return RuleSet{
-		{ID: "R-DENY-middleware", Match: "middleware*", Deny: true},
-		{ID: "R-DENY-os-", Match: "os-", Deny: true},
 		{ID: "R-DENY-olares-app", Match: "olares-app", Deny: true},
-		{ID: "R-DENY-bfl", Match: "bfl", Deny: true},
-		// Shared composite callers (opt-in by platform name). Empty Callees = OPEN-01.
-		{ID: RuleAllowSharedLLMGateway, Match: "llmgateway*", Callees: nil},
 	}
 }
 

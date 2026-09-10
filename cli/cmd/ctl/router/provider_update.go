@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/url"
 	"os"
 	"strings"
 
@@ -166,7 +165,7 @@ func runProviderUpdate(ctx context.Context, f *cmdutil.Factory, ref string, req 
 	}
 
 	var updated providerRow
-	path := consoleAPI + "/providers/" + url.PathEscape(found.ID)
+	path := epProvider(found.ID)
 	if err := pc.router.doJSON(ctx, "PATCH", path, req, &updated); err != nil {
 		return err
 	}

@@ -38,9 +38,9 @@ func physicalClusterMetricsHandler(w http.ResponseWriter) {
 
 // TestBuildPhysicalEnvelope_SixRowsAndUnitInference pins the 6-row
 // baseline shape (cpu / memory / disk / pods / net_in / net_out)
-// and the SPA-aligned unit-inference behaviour. The GPU + fan
-// optional rows are explicitly stubbed as 404 so the test exercises
-// the "no GPU, not Olares One" baseline (every row is from cluster
+// and the SPA-aligned unit-inference behaviour. No node carries a GPU
+// mode label and the fan endpoints 404, so the test exercises the
+// "no GPU, not Olares One" baseline (every row is from cluster
 // monitoring).
 //
 // Wire shape: GET /kapis/monitoring.kubesphere.io/v1alpha3/cluster
@@ -51,12 +51,12 @@ func TestBuildPhysicalEnvelope_SixRowsAndUnitInference(t *testing.T) {
 		switch r.URL.Path {
 		case "/kapis/monitoring.kubesphere.io/v1alpha3/cluster":
 			physicalClusterMetricsHandler(w)
-		// Optional GPU/fan endpoints — return 404 so the rows
-		// are skipped (matches "HAMI not installed, not Olares
-		// One" production wire shape).
-		case "/hami/api/vgpu/v1/monitor/query/instant-vector",
-			"/hami/api/vgpu/v1/gpus",
-			"/user-service/api/system/status",
+		// No mode label anywhere, so no exporter is even asked.
+		case nodesPath:
+			_, _ = w.Write([]byte(nodesNoGPU))
+		// Optional fan endpoints — 404 so the rows are skipped
+		// (matches the "not Olares One" production wire shape).
+		case "/user-service/api/system/status",
 			"/user-service/api/mdns/olares-one/cpu-gpu":
 			w.WriteHeader(http.StatusNotFound)
 		default:
@@ -139,14 +139,16 @@ func gpuInstantVectorHandler(w http.ResponseWriter, body string, usedMiB, totalM
 // even though the SPA showed those panels.
 //
 // The GPU `used` value comes from the SPA-aligned
-// `avg(sum(hami_memory_used) by (instance))` instant query (NOT
-// the /v1/gpus list aggregation, which only counts vGPU-allocated
-// VRAM — see physical.go:buildGPUSummaryRow for the rationale).
+// `sum(hami_memory_used)` instant query (NOT the /v1/gpus list
+// aggregation, which only counts vGPU-allocated VRAM — see
+// physical.go:fetchHamiGPUSummary for the rationale).
 func TestBuildPhysicalEnvelope_AugmentsWithGPUAndFanRows(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/kapis/monitoring.kubesphere.io/v1alpha3/cluster":
 			physicalClusterMetricsHandler(w)
+		case nodesPath:
+			_, _ = w.Write([]byte(nodesNVIDIA))
 		case "/hami/api/vgpu/v1/monitor/query/instant-vector":
 			// 270 MiB used / 24576 MiB (24 GiB) total —
 			// matches what the SPA cluster card shows for
@@ -234,6 +236,8 @@ func TestBuildPhysicalEnvelope_GPUFallsBackToListWhenPromEmpty(t *testing.T) {
 		switch r.URL.Path {
 		case "/kapis/monitoring.kubesphere.io/v1alpha3/cluster":
 			physicalClusterMetricsHandler(w)
+		case nodesPath:
+			_, _ = w.Write([]byte(nodesNVIDIA))
 		case "/hami/api/vgpu/v1/monitor/query/instant-vector":
 			// Prom up, no series — caller should fall back.
 			_, _ = w.Write([]byte(`{"data":[]}`))
@@ -269,6 +273,70 @@ func TestBuildPhysicalEnvelope_GPUFallsBackToListWhenPromEmpty(t *testing.T) {
 	gpuValue, _ := gpuRow.Display["value"].(string)
 	if !strings.Contains(gpuValue, "Gi") {
 		t.Errorf("gpu value = %q, want 'Gi' suffix from list-fallback aggregation", gpuValue)
+	}
+}
+
+// TestBuildPhysicalEnvelope_GPURowSumsVendors pins the multi-vendor
+// arithmetic of the overview card: a machine carrying an Intel card
+// beside an NVIDIA one reports the two VRAM pools added together,
+// mirroring the SPA's `GpuStore.fetchOverviewCard`. Reporting
+// whichever exporter answered first would hide half the machine's
+// memory — the failure mode the NVIDIA-only card had.
+func TestBuildPhysicalEnvelope_GPURowSumsVendors(t *testing.T) {
+	const (
+		nvidiaUsedMiB   = 1024.0
+		nvidiaTotalMiB  = 24576.0
+		intelUsedBytes  = 512 * 1024 * 1024
+		intelTotalBytes = 16384 * 1024 * 1024
+	)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case nodesPath:
+			_, _ = w.Write([]byte(`{"items":[{"metadata":{"name":"olares","labels":{
+              "gpu.bytetrade.io/nvidia":"true","gpu.bytetrade.io/intel-gpu":"true"
+            }}}]}`))
+		case "/kapis/monitoring.kubesphere.io/v1alpha3/cluster":
+			// One path serves both the baseline rows and Intel's
+			// VRAM; the metrics filter is what tells them apart.
+			if !strings.Contains(r.URL.Query().Get("metrics_filter"), "intel_hw_memory") {
+				physicalClusterMetricsHandler(w)
+				return
+			}
+			_, _ = w.Write([]byte(`{"results":[
+              {"metric_name":"cluster_intel_hw_memory_usage_bytes","data":{"result":[{"metric":{},"value":[1714600000,"` +
+				strconv.Itoa(intelUsedBytes) + `"]}]}},
+              {"metric_name":"cluster_intel_hw_memory_size_bytes","data":{"result":[{"metric":{},"value":[1714600000,"` +
+				strconv.Itoa(intelTotalBytes) + `"]}]}}
+            ]}`))
+		case "/hami/api/vgpu/v1/monitor/query/instant-vector":
+			body, _ := io.ReadAll(r.Body)
+			gpuInstantVectorHandler(w, string(body), nvidiaUsedMiB, nvidiaTotalMiB)
+		case "/user-service/api/system/status",
+			"/user-service/api/mdns/olares-one/cpu-gpu":
+			w.WriteHeader(http.StatusNotFound)
+		default:
+			noUnexpectedPath(t, w, r.URL.Path)
+		}
+	}))
+	defer srv.Close()
+	c := newTestClient(srv)
+	cf := fixtureFlags(t)
+
+	env, err := BuildPhysicalEnvelope(context.Background(), c, cf, time.Now())
+	if err != nil {
+		t.Fatalf("BuildPhysicalEnvelope: %v", err)
+	}
+	if len(env.Items) != 7 {
+		t.Fatalf("Items len = %d, want 7 (6 baseline + gpu)", len(env.Items))
+	}
+	gpuRow := env.Items[6]
+	wantUsed := nvidiaUsedMiB*1024*1024 + float64(intelUsedBytes)
+	wantTotal := nvidiaTotalMiB*1024*1024 + float64(intelTotalBytes)
+	if got, _ := gpuRow.Raw["value"].(float64); got != wantUsed {
+		t.Errorf("gpu used = %v, want %v (NVIDIA + Intel)", got, wantUsed)
+	}
+	if got, _ := gpuRow.Raw["total"].(float64); got != wantTotal {
+		t.Errorf("gpu total = %v, want %v (NVIDIA + Intel)", got, wantTotal)
 	}
 }
 

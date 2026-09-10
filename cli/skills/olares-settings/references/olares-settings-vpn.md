@@ -57,7 +57,7 @@ olares-cli settings vpn subroutes enable
 olares-cli settings vpn subroutes disable
 ```
 
-`status` returns the `allow_subroutes` flag plus the current sub-route list. `-o json` emits the unwrapped `[]string` the SPA reads. The enable/disable verbs are hidden for compatibility and toggle sub-domain access across the mesh.
+`status` returns the `allow_subroutes` flag plus the current sub-route list. `-o json` emits the unwrapped `[]string` the SPA reads. The enable/disable verbs are hidden for compatibility and toggle Settings → VPN → "Subnet routes": whether VPN clients may reach other devices on the local network, such as printers and file servers.
 
 ## `acl` — per-app ACL (RMW under the hood)
 

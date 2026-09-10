@@ -341,20 +341,6 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/zh/use-cases/jellyfin",
             },
             {
-              text: "Steam",
-              collapsed: true,
-              items: [
-                {
-                  text: "在 Olares 本机游玩",
-                  link: "/zh/use-cases/steam-direct-play",
-                },
-                {
-                  text: "串流到其他设备",
-                  link: "/zh/use-cases/steam-stream",
-                }
-              ]
-            },
-            {
               text: "Komga",
               link: "/zh/use-cases/komga",
             },
@@ -379,13 +365,45 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               collapsed: true,
               items: [
                 {
-                  text: "升级 *Arrs",
+                  text: "*Arr 应用更新说明",
                   link: "/zh/use-cases/arrs-upgrade",
                 },
                 {
-                  text: "升级下载客户端",
+                  text: "下载客户端更新说明",
                   link: "/zh/use-cases/download-clients-upgrade",
                 },
+              ]
+            },
+          ]
+        },
+        {
+          text: "游戏",
+          collapsed: false,
+          items: [
+            {
+              text: "Palworld",
+              link: "/zh/use-cases/palworld",
+            },
+            {
+              text: "Minecraft",
+              link: "/zh/use-cases/minecraft",
+            },
+            {
+              text: "Steam",
+              collapsed: true,
+              items: [
+                {
+                  text: "在 Olares 本机游玩",
+                  link: "/zh/use-cases/steam-direct-play",
+                },
+                {
+                  text: "串流到其他设备",
+                  link: "/zh/use-cases/steam-stream",
+                },
+                {
+                  text: "常见问题",
+                  link: "/zh/use-cases/steam-common-issues",
+                }
               ]
             },
           ]

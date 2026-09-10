@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/beclab/Olares/cli/cmd/ctl/settings/internal/preflight"
+	"github.com/beclab/Olares/cli/pkg/bflenvelope"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 	"github.com/beclab/Olares/cli/pkg/whoami"
 )
@@ -143,12 +144,12 @@ func decodeSSHStatus(raw json.RawMessage) (sshStatus, error) {
 	if len(trimmed) == 0 || string(trimmed) == "null" {
 		return out, nil
 	}
-	var env bflEnvelope
+	var env bflenvelope.Envelope
 	if err := json.Unmarshal(trimmed, &env); err == nil && envelopeLooksWrapped(trimmed, env) {
 		switch env.Code {
 		case 0, 200:
 		default:
-			msg := strings.TrimSpace(env.Message)
+			msg := strings.TrimSpace(env.Message.Text)
 			if msg == "" {
 				msg = fmt.Sprintf("server returned code=%d", env.Code)
 			}
@@ -192,15 +193,15 @@ func decodeFlatSSHStatus(body []byte) (sshStatus, bool, error) {
 
 // envelopeLooksWrapped reports whether `body` matches the BFL envelope
 // shape `{code, message, data}` rather than the inner sshStatus shape
-// `{state, allow_ssh}`. Both targets json.Unmarshal cleanly into a
-// bflEnvelope (extra keys are ignored, missing keys default to zero),
+// `{state, allow_ssh}`. Both targets json.Unmarshal cleanly into an
+// envelope (extra keys are ignored, missing keys default to zero),
 // so we look at the body itself: the envelope always carries a
 // top-level `code` key (response.Success / response.HandleError both
 // emit it unconditionally), while the inner shape never does. Treat
 // the presence of either `code` or `data` as proof of an envelope so
 // we still surface non-success codes on error responses where the
 // upstream omits `data`.
-func envelopeLooksWrapped(body []byte, env bflEnvelope) bool {
+func envelopeLooksWrapped(body []byte, env bflenvelope.Envelope) bool {
 	if len(env.Data) > 0 {
 		return true
 	}

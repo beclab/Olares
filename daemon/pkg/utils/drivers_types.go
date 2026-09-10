@@ -21,6 +21,7 @@ type mountedPath struct {
 	PartitionUUID string
 	Device        string
 	ReadOnly      bool
+	Managed       bool
 }
 
 type nfsSharedPath struct {

@@ -5,10 +5,14 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/spf13/cobra"
 )
 
-func TestSkillCommandPathsExist(t *testing.T) {
-	paths := []string{
+// skillCommandPaths is every command path the skill docs spell out, so
+// renaming or removing one fails here rather than in a user's session.
+func skillCommandPaths() []string {
+	return []string{
 		"profile",
 		"profile login",
 		"profile import",
@@ -54,8 +58,6 @@ func TestSkillCommandPathsExist(t *testing.T) {
 		"search",
 		"search drive",
 		"search sync",
-		"search gdrive",
-		"search dropbox",
 		"search knowledge",
 		"search app",
 		"market",
@@ -84,6 +86,15 @@ func TestSkillCommandPathsExist(t *testing.T) {
 		"settings backup",
 		"settings integration",
 		"settings appearance",
+		"settings appearance get",
+		"settings appearance language set",
+		"settings appearance widget set",
+		"settings appearance wallpaper list",
+		"settings appearance wallpaper set",
+		"settings appearance wallpaper style set",
+		"settings appearance wallpaper upload",
+		"settings appearance wallpaper delete",
+		"settings appearance layout reset",
 		"settings network",
 		"settings gpu",
 		"settings compute",
@@ -114,10 +125,6 @@ func TestSkillCommandPathsExist(t *testing.T) {
 		"chart lint",
 		"chart package",
 		"router",
-		"router status",
-		"router whoami",
-		"router list",
-		"router capabilities",
 		"router provider",
 		"router provider list",
 		"router provider get",
@@ -131,71 +138,87 @@ func TestSkillCommandPathsExist(t *testing.T) {
 		"router provider credentials",
 		"router provider history",
 		"router provider rollback",
-		"router provider models",
-		"router provider models import",
-		"router provider models add",
-		"router provider models update",
-		"router provider models delete",
-		"router default",
-		"router default show",
-		"router default set",
-		"router default clear",
-		"router app",
-		"router app catalog",
-		"router app install",
-		"router app upgrade",
-		"router app uninstall",
-		"router app tasks",
-		"router app watch",
+		"router model",
+		"router model list",
+		"router model get",
+		"router model import",
+		"router model add",
+		"router model update",
+		"router model remove",
+		"router model status",
+		"router model progress",
+		"router model retry",
+		"router model restart",
+		"router model diag",
+		"router model diag gpu",
+		"router model diag config",
+		"router model diag endpoints",
+		"router route",
+		"router route list",
+		"router route get",
+		"router route create",
+		"router route rename",
+		"router route enable",
+		"router route disable",
+		"router route delete",
+		"router route add",
+		"router route remove",
+		"router model spec",
+		"router model spec show",
+		"router model spec edit",
+		"router model spec file",
+		"router model spec set",
 		"router call",
+		"router call models",
 		"router call chat",
+		"router call responses",
 		"router call embed",
+		"router call rerank",
+		"router call search",
+		"router call scrape",
+		"router call translate",
+		"router call image",
+		"router call video",
 		"router call transcribe",
 		"router call speak",
+		"router call clone",
+		"router call dialogue",
+		"router call listen",
+		"router call vad",
+		"router call diarize",
+		"router call speaker-embed",
+		"router call enhance",
+		"router call align",
+		"router call task",
+		"router call task get",
+		"router call task result",
+		"router call task cancel",
+		"router call task list",
 		"router call ocr",
 		"router key",
 		"router key list",
 		"router key issue",
 		"router key update",
 		"router key revoke",
-		"router key local",
+		"router key current",
 		"router quota",
 		"router quota list",
 		"router quota set",
 		"router quota clear",
-		"router caller",
-		"router caller list",
-		"router caller archive",
 		"router usage",
 		"router usage summary",
 		"router usage list",
 		"router usage export",
+		"router usage retention",
 		"router audit",
 		"router audit list",
 		"router audit get",
-		"router trace",
-		"router trace list",
-		"router trace get",
-		"router trace capture",
-		"router user",
-		"router user list",
-		"router local",
-		"router local status",
-		"router local progress",
-		"router local spec",
-		"router local spec show",
-		"router local spec file",
-		"router local spec set",
-		"router local config",
-		"router local endpoints",
-		"router local gpu",
-		"router local perf",
-		"router local retry",
-		"router local restart",
 	}
+}
 
+func TestSkillCommandPathsExist(t *testing.T) {
 	root := NewDefaultCommand()
-	for _, path := range paths {
+	for _, path := range skillCommandPaths() {
 		t.Run(path, func(t *testing.T) {
 			cmd, args, err := root.Find(strings.Fields(path))
 			if err != nil {
@@ -208,6 +231,45 @@ func TestSkillCommandPathsExist(t *testing.T) {
 				t.Fatalf("resolved %q to %q", path, got)
 			}
 		})
+	}
+}
+
+// TestSkillCommandPathsExist only proves the listed paths resolve, so a
+// newly added verb can ship unlisted. This is the reverse check for the
+// area under active change: every runnable verb under `settings
+// appearance` must be listed above, and therefore documented.
+func TestEveryAppearanceVerbIsListed(t *testing.T) {
+	listed := map[string]bool{}
+	for _, path := range skillCommandPaths() {
+		listed[path] = true
+	}
+
+	root := NewDefaultCommand()
+	appearance, _, err := root.Find(strings.Fields("settings appearance"))
+	if err != nil {
+		t.Fatalf("find settings appearance: %v", err)
+	}
+
+	var found int
+	var walk func(cmd *cobra.Command)
+	walk = func(cmd *cobra.Command) {
+		if cmd.Runnable() && cmd.Annotations[unknownVerbGroupAnnotation] != "true" {
+			found++
+			path := strings.TrimPrefix(cmd.CommandPath(), "olares-cli ")
+			if !listed[path] {
+				t.Errorf("verb %q is not in skillCommandPaths; add it there and document it in the skill reference", path)
+			}
+		}
+		for _, child := range cmd.Commands() {
+			walk(child)
+		}
+	}
+	walk(appearance)
+
+	// Guard against the walk silently finding nothing, which would make
+	// the check above vacuous.
+	if found < 9 {
+		t.Fatalf("walked only %d runnable appearance verbs; the subtree has at least 9", found)
 	}
 }
 

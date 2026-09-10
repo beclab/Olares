@@ -15,7 +15,6 @@ import (
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils"
 
 	"github.com/beclab/Olares/cli/pkg/core/logger"
-	"github.com/beclab/Olares/cli/pkg/preinstall"
 	"github.com/beclab/Olares/cli/pkg/storage"
 
 	"github.com/beclab/Olares/cli/pkg/common"
@@ -65,11 +64,6 @@ func (t *InstallOsSystem) Execute(runtime connector.Runtime) error {
 		"fs_type":                            storage.GetRootFSType(),
 		common.HelmValuesKeyOlaresRootFSPath: storage.OlaresRootDir,
 		"sharedlib":                          storage.OlaresSharedLibDir,
-		"ensureApps":                         preinstall.EnsureAppsPublished(storage.OlaresRootDir),
-		// Market only reads the preinstall mount when this says a bundle was
-		// published; an installer that ships none leaves the feature off
-		// instead of having Market look into an empty directory every boot.
-		common.HelmValuesKeyPreinstall: preinstall.Published(storage.OlaresRootDir),
 	}
 
 	var platformPath = path.Join(runtime.GetInstallerDir(), "wizard", "config", "os-platform")

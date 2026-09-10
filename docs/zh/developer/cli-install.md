@@ -61,7 +61,7 @@ Then tell your AI agent: "Load the olares-shared skill, then use olares-cli to .
 npm install -g @olares/cli
 ```
 
-之后如需用 `npx skills` 安装 Agent Skills，参见[安装与使用 Agent Skills](./cli-agent-skills.md)。
+之后如需安装 Agent Skills，运行 `olares-cli skills install`，参见[安装与使用 Agent Skills](./cli-agent-skills.md)。
 
 ### 免安装运行
 
@@ -100,7 +100,7 @@ olares-cli --version
 输出会显示已安装的版本号，具体数字取决于你当前安装的发行版本。
 
 :::info
-更新 CLI 不会同时更新 Agent Skills。CLI 更新完成后如需更新技能，参见[更新技能](./cli-agent-skills.md#更新技能)。
+更新 CLI 不会同时更新 Agent Skills。CLI 更新完成后再运行一次 `olares-cli skills install` 把技能带上，参见[更新技能](./cli-agent-skills.md#更新技能)。
 :::
 
 ## 特殊情况：在运行 Olares OS 的 Linux 主机上安装 CLI

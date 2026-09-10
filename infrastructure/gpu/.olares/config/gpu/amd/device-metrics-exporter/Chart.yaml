@@ -1,0 +1,22 @@
+apiVersion: v2
+appVersion: v1.5.1
+description: A Helm chart for AMD Device Metric Exporter
+keywords:
+- kubernetes
+- cluster
+- hardware
+- amd
+- gpu
+- monitoring
+- prometheus
+kubeVersion: '>= 1.29.0-0'
+maintainers:
+- email: prshanmug@amd.com
+  name: Praveen Kumar Shanmugam
+- email: yan.sun3@amd.com
+  name: Yan Sun
+- email: shrey.ajmera@amd.com
+  name: Shrey Ajmera
+name: device-metrics-exporter-charts
+type: application
+version: v1.5.1
