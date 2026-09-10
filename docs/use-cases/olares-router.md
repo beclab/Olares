@@ -114,6 +114,10 @@ With the connection details ready, the examples below show you how to configure 
 
 ### Remote clients
 
+:::tip
+In this setup, ensure that the Router entrance's **Authentication level** is set to **Public** in Olares Settings.
+:::
+
 **Configurations**: A client outside your local network, for example a laptop on a public Wi-Fi. Use the public base URL `https://router.<your-olares-id>.olares.com/v1` with an API key created in Router. The same key works from anywhere.
 
 ## Skip the client: Call with Olares CLI

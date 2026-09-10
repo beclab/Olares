@@ -118,6 +118,10 @@ Router 如何验证调用方，调用方需要提供什么凭证，取决于请�
 
 ### 远程客户端
 
+:::tip
+这种场景下，要确保在 Olares Settings 中将 Router 入口的 **Authentication level** 设置为 **Public**。
+:::
+
 **配置**：本地网络之外的客户端，比如连接公共 Wi-Fi 的笔记本电脑。使用公网 base URL `https://router.<your-olares-id>.olares.com/v1`，搭配在 Router 中创建的 API 密钥。同一个密钥在任何地方都通用。
 
 ## 跳过客户端：使用 Olares CLI 调用
