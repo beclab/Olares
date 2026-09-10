@@ -104,7 +104,7 @@ For audio there is a fourth, and it answers a question the flags cannot:
 olares-cli router call models --operations
 ```
 
-The flags say a model synthesises speech; the operation catalogue says which route it answers to do it. Those come apart in audio because the same job is spelled two ways — `/v1/audio/speech` and `/v1/text-to-speech/<voice>` — and an engine image serves one and 404s the other. A catalogue marked *declared by the application* is enforced: Router refuses an operation it does not list rather than forwarding it. One marked *reconstructed from capabilities* is Router's inference from the flags, and nothing is enforced against it, so an undeclared route reaches the engine and comes back as a bare 404.
+The flags say a model synthesises speech; the operation catalogue says which route it answers to do it. Those come apart in audio because the same job is spelled two ways — `/v1/audio/speech` and `/v1/text-to-speech/<voice>` — and an engine image serves one and 404s the other. A catalogue marked *declared by the application* is enforced: Router refuses an operation it does not list rather than forwarding it. The other two standings are not enforced, for different reasons — one *reconstructed from capabilities* was never declared, and one *last seen over 15 minutes ago* was declared and has since aged out of the window Router holds requests to it for — so under either of them an undeclared route reaches the engine and comes back as a bare 404. [The voice library and the reading history](olares-router-voice.md) reads the three labels in full.
 
 ## Calling them
 
