@@ -24,9 +24,20 @@ Load the shared [platform model](../olares-shared/references/olares-platform.md)
 
 > **Finding files by name/content** (and what the index covers — filenames everywhere vs. full-text only in `/Documents/`) lives in [`olares-search`](../olares-search/SKILL.md); configure which directories get full-text indexing via `settings search dirs` in [`olares-settings`](../olares-settings/SKILL.md).
 
+## Fast paths
+
+| Task | Read | First command |
+|---|---|---|
+| Put a local file in the user's Drive | [collision decisions and cloud transfer](references/olares-files-upload.md) | `olares-cli files upload ./report.pdf drive/Home/Documents/` |
+| See what is in a directory | this file | `olares-cli files ls drive/Home/ --json` |
+| Read one file's bytes | this file | `olares-cli files cat drive/Home/Documents/report.pdf` |
+| Address anything outside `drive/Home` | [path grammar and namespace rules](references/olares-files-paths.md) | `olares-cli files ls sync/<repo_id>/` |
+
 ## Paths and namespace support
 
-Every resource uses `fileType/extend[/subPath]`. Before invoking a verb, confirm its namespace support and whether the target is a file or directory. Load [path grammar and namespace rules](references/olares-files-paths.md) whenever constructing or interpreting a path.
+Every resource is `fileType/extend[/subPath]`, where `fileType` is one of `drive`, `cache`, `sync`, `external`, `awss3`, `dropbox`, `google`, `tencent`, `share`, `internal`, and `extend` is the volume, repo or account inside it — `drive/Home`, `drive/Data`, `drive/Common`, a node name, a Seafile repo id, a cloud account key. That much covers an ordinary Drive path.
+
+Load [path grammar and namespace rules](references/olares-files-paths.md) when the target is outside `drive/`, or when you need to know whether the verb you are about to run supports that namespace at all — support is per verb, and several verbs refuse namespaces their neighbours accept.
 
 ## Backend quirks that change decisions
 
@@ -54,7 +65,7 @@ Archives, NFS, and `drive/Common` require Olares 1.12.6+. Treat daily builds by 
 | `ls` | [listing and cloud shapes](references/olares-files-ls.md) |
 | `cat` | Raw bytes to stdout, and the supported way to read one: a direct GET of the file resource answers 500 |
 | `download` | [resume, overwrite, directory downloads](references/olares-files-download.md) |
-| `upload` | [collision decisions and cloud transfer](references/olares-files-upload.md) |
+| `upload` | [collision decisions, resume, concurrency](references/olares-files-upload.md); [the second stage a cloud destination adds](references/olares-files-upload-cloud.md) |
 | `edit` | [text/size guards and writeback](references/olares-files-edit.md) |
 | `mkdir` | [parents, auto-rename, external depth](references/olares-files-mkdir.md) |
 | `rm` | [existence, directory intent, protected paths](references/olares-files-rm.md) |
