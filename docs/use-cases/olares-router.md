@@ -39,45 +39,46 @@ Router groups all of these AI capabilities into four categories:
 
 ## How authentication works
 
-The credential a caller needs depends on where the request comes from.
+How Router verifies a caller, and what credential the caller needs to provide, depends on where the request comes from.
 
-Every request to Router passes through the Olares platform. When the caller runs inside Olares, the platform verifies it and stamps an identity header onto the request that only the platform can add:
+| Caller location | How it works | <nobr>Credential needed</nobr> |
+| --- | --- | --- |
+| <nobr>**Apps in Olares**</nobr> | Every request inside Olares passes through the platform first, which verifies the caller and stamps an identity header onto the request: `X-Olares-App-ID` for apps running in Olares, or `X-BFL-USER` for signed-in users. Only the platform can add this header, so it cannot be forged. Router therefore always knows who is calling, and the caller needs to provide nothing else. | None |
+| <nobr>**Devices in LAN**</nobr> | The request arrives over the LAN with no platform-stamped identity. The caller presents an API key (`Authorization: Bearer <api-key>`), and Router validates the key and attributes the call to the key's owner. | Router-issued<br>API key |
+| **Remote** | The same is true over the internet. The caller presents an API key, and Router validates the key and attributes the call to the key's owner. | Router-issued<br>API key |
 
-- `X-Olares-App-ID` for applications running in Olares.
-- `X-BFL-USER` for signed-in users calling through Olares CLI.
-
-Because the header cannot be forged, these callers need no API key. A request from a device on the local network or from the internet carries no such stamp, so it must also present an API key issued in Router.
-
-This gives three authentication scenarios:
-
-| Caller | Base URL | Credential |
-| :--- | :--- | :--- |
-| **Apps in Olares** | `https://router.<your-olares-id>.olares.com/v1` | None. The platform stamps `X-Olares-App-ID`. |
-| **Devices on the local network** | macOS: `http://router.<cluster-name>.olares.local/v1`<br>Windows and Linux: `http://router-<cluster-name>-olares.local/v1` | API key |
-| **Remote clients** | `https://router.<your-olares-id>.olares.com/v1` (same URL as apps) | API key |
-
-The pattern is simple: the closer the caller is to the cluster, the simpler the credential. Apps in Olares need nothing. Every other caller needs an API key.
+:::info Two kinds of API keys
+The key you add for a cloud vendor stays inside Router and never reaches a caller. A caller only presents the key Router issues, and Router uses its stored credentials when it talks to the vendor.
+:::
 
 ## Get connection details from Router
 
-Connecting a client generally takes three parameters, and Router has a source for each.
+Connecting to Router generally takes three parameters, and Router has a source for each.
 
-- **Base URL**: Open a capability page such as **LLM**, find the model, and click the **View connection example** icon on the right. In the **How to call this model** dialog, each of the three caller locations has its own tab with the matching base URL, ready to copy into your client.
+- **Base URL**: Open a capability page such as **LLM**, find the model, and click the **View connection example** icon on the right.
 
   ![The View connection example icon on a model row](/images/manual/use-cases/router-view-connection-examp.png#bordered)
 
-  ![The How to call this model dialog](/images/manual/use-cases/router-how-to-call-model.png#bordered)
+  In the **How to call this model** window, each of the three caller locations has its own tab with the matching base URL, ready to be copied into your client.
 
-- **Model name**: Copy the model name from the **How to call this model** dialog. Or set a default model for each capability on the **Default models** page, and use the system name like `default-chat` instead of a specific model name.
+  | Caller location | Base URL |
+  | --- | --- |
+  | Apps in Olares | `https://router.<your-olares-id>.olares.com/v1` |
+  | Devices in LAN | <ul><li>Windows, Linux: `http://router-<your-olares-id>-olares.local/v1`</li><li>macOS: `http://router.<your-olares-id>.olares.local/v1`</li></ul> |
+  | Remote | `https://router.<your-olares-id>.olares.com/v1` |  
+
+  ![The How to call this model window](/images/manual/use-cases/router-how-to-call-model.png#bordered)
+
+- **Model name**: Copy the model name from the **How to call this model** window. Or set a default model for each capability on the **Default models** page, and use the system name like `default-chat` instead of a specific model name.
 - **API key**: Created on the **API Keys** page. Required only for callers from the LAN or the internet. Apps in Olares can use any placeholder.
 
 ## Set up a client
 
-With the connection details ready, the examples below show how to configure a client in each caller location.
+With the connection details ready, the examples below show you how to configure a client in each caller location.
 
 ### Apps in Olares
 
-**Configurations**: OpenClaw, an app running on Olares. In its provider settings, point the model at Router, with no API key required:
+**Configurations**: OpenClaw, an app running on Olares. In the custom provider settings, point the model at Router, with no API key required:
 
 - **API Base URL**: `https://router.<your-olares-id>.olares.com/v1`
 - **Model ID**: `default-chat`
@@ -88,7 +89,7 @@ With the connection details ready, the examples below show how to configure a cl
 
 ### Devices on the local network
 
-**Configurations**: OpenCode running on a Mac connected to the same network as your Olares. Point it at the `.local` address and provide an API key created in Router. The provider entry looks like this:
+**Configurations**: OpenCode running on a Mac connected to the same network as your Olares. In the configuration file `opencode.jsonc`, add a provider entry that points at the `.local` address with an API key created in Router:
 
 ```jsonc
 {
@@ -97,7 +98,7 @@ With the connection details ready, the examples below show how to configure a cl
       "npm": "@ai-sdk/openai-compatible",
       "name": "Router",
       "options": {
-        "baseURL": "http://router.<cluster-name>.olares.local/v1",
+        "baseURL": "http://router.<your-olares-id>.olares.local/v1",
         "apiKey": "<your-api-key>"
       },
       "models": {
@@ -108,13 +109,13 @@ With the connection details ready, the examples below show how to configure a cl
 }
 ```
 
-**Result**: OpenCode on the Mac talks to Router at the `.local` address, and each build is labeled with the display name `Router-chat` from the config. These calls also appear on the **Usage** page in Router, attributed to the caller.
+**Result**: OpenCode on the Mac talks to Router at the `.local` address, and each build is labeled with the display name `Router-chat` from the config. These calls also appear on the **Usage** page in Router, attributed to you.
 
 ![OpenCode chatting through Router default-chat](/images/manual/use-cases/router-client-connect-opencode.png#bordered)
 
 ### Remote clients
 
-For a laptop on the go, any OpenAI-compatible client works the same way: use the public base URL `https://router.<your-olares-id>.olares.com/v1` with a real API key. The same key works from anywhere.
+**Configurations**: A client outside your local network, for example a laptop on a public Wi-Fi. Use the public base URL `https://router.<your-olares-id>.olares.com/v1` with an API key created in Router. The same key works from anywhere.
 
 ## Skip the client: Call with Olares CLI
 
@@ -150,7 +151,7 @@ Sometimes all you want is to check what is callable or try a model right now, no
     mytavily/search-advanced                    search  -                                                        ready      mytavily
     ```
 
-3. Send a chat message. The last output line names the model that answered.
+3. Send a chat message.
 
    ```bash
    olares-cli router call chat "explain what is AI gateway in one sentence"
