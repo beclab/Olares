@@ -18,7 +18,7 @@ Many users add a standalone LLM proxy such as LiteLLM when they need to connect 
 
 - **Built in, not an add-on**: Router arrives with Olares itself. It brings AI access and management into the same system that already runs your applications and local AI workloads. A LiteLLM-style proxy is one more component to deploy, configure, and maintain. 
 - **Native visibility into local AI**: Router discovers and synchronizes installed model and utility apps automatically. A proxy requires every model to be registered before it can be used.
-- **Olares-aware access**: Apps running inside Olares can use their platform identity instead of storing an API key. Clients outside Olares use Router-issued API keys, while cloud-provider credentials remain stored inside Router.
+- **Olares-aware access**: Apps running inside Olares can use their platform identity instead of storing an API key. Clients outside Olares use Router-issued API keys, while cloud-provider credentials remain stored inside Router. With a proxy, every caller is another key to issue, store, and rotate.
 - **New AI capabilities, same endpoint**: New models, modalities, and AI utilities supported by Olares can be exposed through Router with nothing new to deploy. Clients use the same access layer, while Router handles the platform-side integration. A proxy can grow too, but every addition is another round of configuration.
 
 ## One gateway for every AI capability
