@@ -1,7 +1,10 @@
 package market
 
 import (
+	"bufio"
 	"encoding/json"
+	"os"
+	"strings"
 	"testing"
 )
 
@@ -47,4 +50,60 @@ func TestParseStatusRowsCarriesTheRowVersion(t *testing.T) {
 	if got := byName["noversion"].Version; got != "" {
 		t.Fatalf("noversion version = %q, want empty", got)
 	}
+}
+
+// `market status <app>` renders a detail block rather than the table, so the
+// version has to be printed there too or the single-app reader — the one who
+// asked about exactly this app — is the only one who still cannot see it.
+func TestRenderStatusMatchesPrintsTheVersion(t *testing.T) {
+	withVersion := captureStdout(t, func() {
+		if err := renderStatusMatches(&MarketOptions{}, []statusRow{{
+			Name: "clitest", Source: "upload", Version: "0.1.8", State: "running",
+		}}); err != nil {
+			t.Fatalf("renderStatusMatches: %v", err)
+		}
+	})
+	if !strings.Contains(withVersion, "Version:    0.1.8") {
+		t.Fatalf("detail block does not report the version:\n%s", withVersion)
+	}
+
+	// A synthesized watch row can carry no version; an empty label is worse
+	// than no label, so the line is dropped entirely.
+	withoutVersion := captureStdout(t, func() {
+		if err := renderStatusMatches(&MarketOptions{}, []statusRow{{
+			Name: "clitest", Source: "upload", State: "running",
+		}}); err != nil {
+			t.Fatalf("renderStatusMatches: %v", err)
+		}
+	})
+	if strings.Contains(withoutVersion, "Version:") {
+		t.Fatalf("detail block prints an empty version line:\n%s", withoutVersion)
+	}
+}
+
+// captureStdout collects what a renderer wrote, for the paths that print with
+// fmt.Printf straight to os.Stdout.
+func captureStdout(t *testing.T, run func()) string {
+	t.Helper()
+	saved := os.Stdout
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	os.Stdout = w
+	run()
+	os.Stdout = saved
+	w.Close()
+	defer r.Close()
+
+	var sb strings.Builder
+	scanner := bufio.NewScanner(r)
+	for scanner.Scan() {
+		sb.WriteString(scanner.Text())
+		sb.WriteByte('\n')
+	}
+	if err := scanner.Err(); err != nil {
+		t.Fatal(err)
+	}
+	return sb.String()
 }

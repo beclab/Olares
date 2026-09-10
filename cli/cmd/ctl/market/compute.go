@@ -92,8 +92,7 @@ func (e *computeModeSelectError) Error() string {
 }
 
 // declaredComputeModes returns the compute modes an app's manifest declares,
-// read from spec.accelerator on the catalog entry. An app with no accelerator
-// block declares none: it runs on the CPU and there is no mode to pick.
+// read from spec.accelerator on the catalog entry.
 func declaredComputeModes(appInfo map[string]interface{}) []string {
 	entries, ok := getNestedValue(appInfo, "app_info", "app_entry", "accelerator").([]interface{})
 	if !ok {
@@ -112,6 +111,43 @@ func declaredComputeModes(appInfo map[string]interface{}) []string {
 	return modes
 }
 
+// declaresLegacyGPU reports whether a manifest with no accelerator matrix still
+// asks for a GPU through the flattened requiredGPU cap that pre-0.12.0
+// manifests carry. app-service synthesizes a single nvidia mode for these
+// (appcfg legacyComputeMode: a non-zero Requirement.GPU becomes nvidia, and an
+// explicit SelectedGpuType is taken verbatim), so a GPU mode aimed at one of
+// them is not the no-op that an accelerator-less CPU app would make it.
+func declaresLegacyGPU(appInfo map[string]interface{}) bool {
+	entry, ok := getNestedValue(appInfo, "app_info", "app_entry").(map[string]interface{})
+	if !ok {
+		return false
+	}
+	return isNonZeroQuantity(getStringValue(entry, "requiredGPU"))
+}
+
+// isNonZeroQuantity reports whether a k8s quantity string ("3Gi", "0", "")
+// asks for something. Only the numeric prefix matters here: the unit cannot
+// turn a zero into a non-zero, and an unparseable value is treated as a
+// request so an odd manifest never produces a wrong refusal.
+func isNonZeroQuantity(raw string) bool {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return false
+	}
+	digits := strings.IndexFunc(raw, func(r rune) bool {
+		return (r < '0' || r > '9') && r != '.' && r != '-' && r != '+'
+	})
+	num := raw
+	if digits >= 0 {
+		num = raw[:digits]
+	}
+	v, err := strconv.ParseFloat(strings.TrimSpace(num), 64)
+	if err != nil {
+		return true
+	}
+	return v > 0
+}
+
 // checkDeclaredComputeMode rejects a --compute-mode the app cannot honor.
 //
 // The backend only asks for a mode when an app declares more than one, so a
@@ -119,6 +155,11 @@ func declaredComputeModes(appInfo map[string]interface{}) []string {
 // -- is accepted and then dropped. The install lands on the mode the app
 // declares, no GPU appears anywhere near the pod, and nothing says the flag did
 // nothing. Deciding this locally is what makes it reportable at all.
+//
+// The accelerator matrix is the only basis for a refusal. A legacy manifest
+// without one has no mode list to check against, so the only thing decidable
+// locally is whether it asks for a GPU at all: one that does is left to the
+// backend, one that does not can be told the flag is a no-op.
 //
 // cpu is accepted against any app: every cluster runs it, and no node carries a
 // label for it, so it is never something an app has to declare to get.
@@ -129,6 +170,9 @@ func checkDeclaredComputeMode(appInfo map[string]interface{}, appName, requested
 	}
 	declared := declaredComputeModes(appInfo)
 	if len(declared) == 0 {
+		if declaresLegacyGPU(appInfo) {
+			return nil
+		}
 		return fmt.Errorf("--compute-mode %q cannot be honored: %q declares no accelerator modes and always runs on the CPU — re-run without --compute-mode",
 			requested, appName)
 	}

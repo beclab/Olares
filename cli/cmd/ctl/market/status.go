@@ -391,6 +391,9 @@ func renderStatusMatches(opts *MarketOptions, matches []statusRow) error {
 		}
 		fmt.Printf("App:        %s\n", match.Name)
 		fmt.Printf("Source:     %s\n", match.Source)
+		if match.Version != "" {
+			fmt.Printf("Version:    %s\n", match.Version)
+		}
 		fmt.Printf("State:      %s\n", match.State)
 		if match.OpType != "" {
 			fmt.Printf("Operation:  %s\n", match.OpType)

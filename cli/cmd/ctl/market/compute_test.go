@@ -38,6 +38,15 @@ func TestCheckDeclaredComputeMode(t *testing.T) {
 	noAccelerator := map[string]interface{}{
 		"app_info": map[string]interface{}{"app_entry": map[string]interface{}{}},
 	}
+	// A pre-0.12.0 manifest asks for a GPU through the flattened cap instead of
+	// an accelerator matrix, and app-service synthesizes an nvidia mode for it.
+	legacyGPU := func(requiredGPU string) map[string]interface{} {
+		return map[string]interface{}{
+			"app_info": map[string]interface{}{
+				"app_entry": map[string]interface{}{"requiredGPU": requiredGPU},
+			},
+		}
+	}
 
 	cases := []struct {
 		name      string
@@ -51,6 +60,19 @@ func TestCheckDeclaredComputeMode(t *testing.T) {
 		{"declared mode passes", entry("nvidia"), "nvidia", ""},
 		{"underscore spelling of a declared mode passes", entry("nvidia-gb10"), "nvidia_gb10", ""},
 		{"undeclared mode names the declared ones", entry("nvidia", "apple-m"), "intel", "declared: nvidia, apple-m"},
+		{"legacy flattened gpu cap is left to the backend", legacyGPU("3Gi"), "nvidia", ""},
+		{"legacy zero gpu cap is still cpu-only", legacyGPU("0"), "nvidia", "declares no accelerator modes"},
+		{"legacy empty gpu cap is still cpu-only", legacyGPU(""), "nvidia", "declares no accelerator modes"},
+		// An accelerator matrix is authoritative even next to a stale
+		// flattened cap, so an undeclared mode is still refused.
+		{"accelerator matrix wins over a flattened cap", map[string]interface{}{
+			"app_info": map[string]interface{}{
+				"app_entry": map[string]interface{}{
+					"accelerator": []interface{}{map[string]interface{}{"mode": "apple-m"}},
+					"requiredGPU": "3Gi",
+				},
+			},
+		}, "nvidia", "declared: apple-m"},
 	}
 
 	for _, tc := range cases {
