@@ -67,6 +67,7 @@ var providerModelModes = []string{
 func NewModelCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "model",
+		RunE:  refuseUnknownVerb,
 		Short: "the models this Router is configured with",
 		Long: `Manage the models this Router can reach.
 

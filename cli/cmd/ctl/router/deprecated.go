@@ -33,6 +33,7 @@ import (
 func newDeprecatedLocalCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:    "local",
+		RunE:   refuseUnknownVerb,
 		Short:  "moved onto `router model`",
 		Hidden: true,
 	}
@@ -63,6 +64,7 @@ func newDeprecatedLocalCommand(f *cmdutil.Factory) *cobra.Command {
 func newDeprecatedLocalSpecCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:    "spec",
+		RunE:   refuseUnknownVerb,
 		Short:  "moved to `router model spec`",
 		Hidden: true,
 	}
@@ -91,6 +93,7 @@ func newDeprecatedLocalSpecCommand(f *cmdutil.Factory) *cobra.Command {
 func newDeprecatedSpecCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:    "spec",
+		RunE:   refuseUnknownVerb,
 		Short:  "moved to `router model spec`",
 		Hidden: true,
 	}
@@ -154,6 +157,7 @@ func newDeprecatedKeyLocalCommand(f *cmdutil.Factory) *cobra.Command {
 func newDeprecatedDefaultCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:    "default",
+		RunE:   refuseUnknownVerb,
 		Short:  "moved to `router route`",
 		Hidden: true,
 	}
@@ -190,6 +194,7 @@ func newDeprecatedDefaultShowCommand(f *cmdutil.Factory) *cobra.Command {
 func newDeprecatedProviderModelsCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:    "models",
+		RunE:   refuseUnknownVerb,
 		Short:  "moved to `router model`",
 		Hidden: true,
 	}

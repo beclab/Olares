@@ -57,6 +57,7 @@ type createdKey struct {
 func NewKeyCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "key",
+		RunE:  refuseUnknownVerb,
 		Short: "API keys for software that calls Router",
 		Long: `Issue and manage the sk- keys other software uses to call models.
 

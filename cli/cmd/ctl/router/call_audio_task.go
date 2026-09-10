@@ -114,6 +114,7 @@ func (t *audioTask) pollPath(id string) string {
 func newCallTaskCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "task",
+		RunE:  refuseUnknownVerb,
 		Short: "read an audio job submitted with --async",
 		Long: `Pick up work an audio verb handed back instead of finishing.
 

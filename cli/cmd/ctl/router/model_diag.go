@@ -41,6 +41,7 @@ import (
 func newModelDiagCommand(f *cmdutil.Factory, how localAddressing) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "diag",
+		RunE:  refuseUnknownVerb,
 		Short: "why a working local model behaves the way it does",
 		Long: `Look inside a model application that is running.
 

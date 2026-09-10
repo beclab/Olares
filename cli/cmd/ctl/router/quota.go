@@ -77,6 +77,7 @@ const (
 func NewQuotaCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "quota",
+		RunE:  refuseUnknownVerb,
 		Short: "spend and rate ceilings on a key, a person, a model, or an application",
 		Long: `Cap what a key, a person, a model or an application may consume.
 
