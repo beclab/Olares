@@ -45,7 +45,7 @@ How Router verifies a caller, and what credential the caller needs to provide, d
 | --- | --- | --- |
 | <nobr>**Apps in Olares**</nobr> | Every request inside Olares passes through the platform first, which verifies the caller and stamps an identity header onto the request: `X-Olares-App-ID` for apps running in Olares, or `X-BFL-USER` for signed-in users. Only the platform can add this header, so it cannot be forged. Router therefore always knows who is calling, and the caller needs to provide nothing else. | None |
 | <nobr>**Devices in LAN**</nobr> | The request arrives over the LAN with no platform-stamped identity. The caller presents an API key (`Authorization: Bearer <api-key>`), and Router validates the key and attributes the call to the key's owner. | Router-issued<br>API key |
-| **Remote** | The same is true over the internet. The caller presents an API key, and Router validates the key and attributes the call to the key's owner. | Router-issued<br>API key |
+| **Remote** | A request from the internet also arrives without a platform-stamped identity. The caller presents an API key, and Router validates the key and attributes the call to the key's owner. | Router-issued<br>API key |
 
 :::info Two kinds of API keys
 The key you add for a cloud vendor stays inside Router and never reaches a caller. A caller only presents the key Router issues, and Router uses its stored credentials when it talks to the vendor.
