@@ -22,7 +22,7 @@ olares-cli router call history delete <reading> --model <tts-model> --yes
 
 ## Synthesis is spelled two ways, and an engine answers one of them
 
-`/v1/audio/speech` is the OpenAI spelling, which reads the voice from the body. `/v1/text-to-speech/<voice>` is the ElevenLabs spelling, which addresses it in the path. Router mounts both and forwards each unchanged; it translates between them only for the ElevenLabs vendor itself, so a model application answers whichever its image was built for. `call speak` and `speak --voices` read the operation catalogue and send only the spelling it names, falling back to the guess below when there is no catalogue to read.
+`/v1/audio/speech` is the OpenAI spelling, which reads the voice from the body. `/v1/text-to-speech/<voice>` is the ElevenLabs spelling, which addresses it in the path. Router mounts both and forwards each unchanged; it translates between them only for the ElevenLabs vendor itself, so a model application answers whichever its image was built for. `call speak` and `speak --voices` read the operation catalogue: they send only the spelling a current one names, try that spelling first and keep the other where the catalogue has aged out, and fall back to the guess below where there is no catalogue to read.
 
 `router call models --operations` prints that catalogue — the routes each model declares, with the method, the path and whether the work can be submitted asynchronously. Each model is labelled with how much its list is worth:
 
