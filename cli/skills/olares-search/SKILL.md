@@ -34,12 +34,12 @@ Use `olares-cli search <subcommand> --help` for syntax.
 
 ## Verb index
 
-| Subcommand | Purpose | Key decision |
+| Subcommand | Purpose | Read when triggered |
 |---|---|---|
-| `drive` (`files`) | One search across Drive, Sync, Google Drive, and Dropbox | choose filename-only or aggregate based on intent |
-| `sync` | Sync (Seafile) libraries only | a narrowed view of what `drive` already covers |
-| `knowledge` (`wise`) | Wise/Knowledge content search | requires Olares 1.12.7+; aggregate only |
-| `app` | Visible installed-app title search | not lifecycle inventory |
+| `drive` (`files`) | One search across Drive, Sync, Google Drive, and Dropbox | [index coverage](#index-coverage-drive-only) — what the index reaches decides whether a miss means anything |
+| `sync` | Sync (Seafile) libraries only | [indexing](#indexing-drive--sync--cloud--knowledge) — a narrowed view of what `drive` already covers |
+| `knowledge` (`wise`) | Wise/Knowledge content search | [indexing](#indexing-drive--sync--cloud--knowledge) — Wise owns this index; needs Olares 1.12.7+ |
+| `app` | Visible installed-app title search | nothing further; it is a title match, not lifecycle inventory |
 
 There is no separate `gdrive` or `dropbox` verb: on Olares 1.12.7+ `drive` searches `files_v2`, `google_drive`, `dropbox`, and `seafile` in one asynchronous federated request, mirroring the Desktop dialog's single "Files" entry. `sync` restricts that same channel to `seafile`. Olares 1.12.6 and older have no federated channel: there `drive` covers local Drive files only and `sync` falls back to `/api/search/sync`, so on those versions both commands are needed to cover what one covers on 1.12.7+.
 

@@ -344,6 +344,73 @@ class ValidatorTests(unittest.TestCase):
                 validate.ROOT = original_root
             return errors
 
+    def test_the_three_shared_sections_are_required_under_one_name(self):
+        """Five names for the closing section, three for the verb index.
+
+        An agent crossing from one skill to another had to scan for both
+        rather than jump to a heading.
+        """
+        complete = (
+            "> **Shared front door:** load the shared skill.\n\n"
+            "## Verb index\n\n| Verb | Purpose | Read when triggered |\n|---|---|---|\n"
+            "| `list` | list apps | [list](references/list.md) |\n\n"
+            "## Safety and escalation\n\n- Stop when asked to.\n"
+        )
+        self.assertEqual(self.shared_section_errors_for("olares-test", complete), [])
+
+        for missing, expected in [
+            ("## Safety and escalation", "'## Safety and escalation'"),
+            ("## Verb index", "'## Verb index'"),
+            ("> **Shared front door:**", "Shared front door"),
+        ]:
+            with self.subTest(missing=missing):
+                errors = self.shared_section_errors_for(
+                    "olares-test", complete.replace(missing, "## Something else")
+                )
+                self.assertTrue(errors, f"{missing} went unnoticed")
+                self.assertIn(expected, errors[0])
+
+    def test_a_verb_index_that_does_not_say_what_to_read_is_refused(self):
+        errors = self.shared_section_errors_for(
+            "olares-test",
+            "> **Shared front door:** load the shared skill.\n\n"
+            "## Verb index\n\n| Verb | Purpose | Reference |\n|---|---|---|\n"
+            "| `list` | list apps | [list](references/list.md) |\n\n"
+            "## Safety and escalation\n\n- Stop when asked to.\n",
+        )
+        self.assertEqual(len(errors), 1, errors)
+        self.assertIn("Read when triggered", errors[0])
+
+    def test_the_skills_with_no_verb_tree_still_need_the_other_two(self):
+        body = (
+            "> **Shared front door:** load the shared skill.\n\n"
+            "## Safety and escalation\n\n- Stop when asked to.\n"
+        )
+        for name in sorted(validate.NO_VERB_INDEX - {validate.SHARED_SKILL}):
+            with self.subTest(skill=name):
+                self.assertEqual(self.shared_section_errors_for(name, body), [])
+        self.assertEqual(
+            self.shared_section_errors_for(
+                validate.SHARED_SKILL, "## Safety and escalation\n\n- Stop when asked to.\n"
+            ),
+            [],
+        )
+
+    def shared_section_errors_for(self, skill_name, body):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            skill_dir = root / skill_name
+            skill_dir.mkdir(parents=True)
+            (skill_dir / "SKILL.md").write_text(body, encoding="utf-8")
+            original_root = validate.ROOT
+            validate.ROOT = root
+            try:
+                errors = []
+                validate.validate_shared_sections(skill_dir, errors)
+            finally:
+                validate.ROOT = original_root
+            return errors
+
     def test_front_door_may_link_the_shared_models_but_no_other_peer_reference(self):
         with tempfile.TemporaryDirectory() as directory:
             # Resolved because the validator resolves every link target before

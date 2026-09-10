@@ -55,7 +55,7 @@ Proceed by default:
 
 Do not preflight every command. The CLI refreshes and retries an authentication rejection once. Stop for login when the CLI explicitly says the credential is absent/invalidated or prints a login action after a persistent 401/459. A 403 permission denial, network error or 5xx is not a login signal. Never build a retry loop around auth errors.
 
-## Security and task scope
+## Safety and escalation
 
 - **Never** place a password in command arguments. Use the interactive prompt or `--password-stdin`.
 - **Never** print access or refresh tokens. Source imports from a secret environment variable or secret manager.

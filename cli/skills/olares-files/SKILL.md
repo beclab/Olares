@@ -81,7 +81,7 @@ Archives, NFS, and `drive/Common` require Olares 1.12.6+. Treat daily builds by 
 | `nfs` | [export discovery and mount](references/olares-files-nfs.md) |
 | `repos` | Sync (Seafile) libraries by id; the repo id is what a `sync/` path is built from |
 
-## Safety contract
+## Safety and escalation
 
 - Treat the user's requested file operation and named paths as task-scope authorisation. Ask again only when a target is ambiguous, bytes may be overwritten without explicit intent, deletion expands beyond the named target, or the action leaves that scope.
 - For upload, first decide whether collision should overwrite, fail, or create a distinct name; backend auto-renaming is not an acceptable implicit decision.

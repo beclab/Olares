@@ -66,6 +66,8 @@ ClawHub publishes the entire skill directory (including `references/`), so refer
 - **Error → fix** — only symptoms the CLI output cannot resolve by itself, such as cross-command diagnosis or a cause at a different layer. If stderr already gives the cause and next action, do not copy it.
 - **Stop / escalate** — missing user input, credentials, ambiguous targets, or actions that expand the authorised task scope.
 
+Three of those carry fixed names, and `validate.py` enforces them, because an agent crossing from one skill to the next should jump to a heading instead of scanning the file. The closing section is `## Safety and escalation` in all twelve (it had five names). The command tree is `## Verb index` whose last column is `Read when triggered` — the first column stays whatever that tree's nouns are, `Verb` or `Family` or `Noun` or `Area`. And every skill but `olares-shared` opens with a `> **Shared front door:**` block; a skill whose authoring half needs no login says so there rather than burying the exception fifty lines down.
+
 **Route by intent, not by checklist.** Whichever table comes first, it maps one state or goal to one destination. Do not present every reference as a list of things to read.
 
 Use progressive disclosure:

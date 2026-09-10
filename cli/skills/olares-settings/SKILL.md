@@ -66,7 +66,7 @@ Load the shared [platform model](../olares-shared/references/olares-platform.md)
 - Overlay writes are asynchronous. `--watch` observes the gateway/app state settling; per-app overlay changes may restart a running app through Market.
 - Search indexing and rebuild are asynchronous. A successful request does not mean newly indexed content is immediately searchable.
 
-## Security rules
+## Safety and escalation
 
 - Never expose access tokens, SSO session fields, initial passwords, integration credentials, backup passwords, or VPN secrets in chat or command history.
 - Read secrets from stdin or environment variables supported by the selected verb.

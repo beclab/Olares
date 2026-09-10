@@ -61,6 +61,16 @@ SHARED_SKILL = "olares-shared"
 # command that answers anything, so a fast-path table for them would be
 # a fiction written to satisfy this check.
 NO_FAST_PATH = {SHARED_SKILL, "olares-chart", "olares-publish"}
+# The three sections that mean the same thing in every skill, so an agent
+# crossing from one to another can jump to a heading instead of re-reading.
+SAFETY_HEADING = "Safety and escalation"
+VERB_INDEX_HEADING = "Verb index"
+VERB_INDEX_LAST_COLUMN = "Read when triggered"
+FRONT_DOOR_MARKER = "> **Shared front door:**"
+# olares-shared routes the suite rather than driving a command tree, and
+# olares-publish's work is a GitHub submission whose steps are not olares-cli
+# verbs. Neither has a verb list to index.
+NO_VERB_INDEX = {SHARED_SKILL, "olares-publish"}
 REQUIRED_ENTRYPOINT_FACTS = {
     "olares-knowledge/SKILL.md": [
         (
@@ -77,7 +87,7 @@ REQUIRED_ENTRYPOINT_FACTS = {
         ),
         (
             "knowledge search requires Olares 1.12.7+",
-            r"^\| `knowledge` \(`wise`\) \| Wise/Knowledge content search \| requires Olares 1\.12\.7\+; aggregate only \|$",
+            r"^\| `knowledge` \(`wise`\) \| Wise/Knowledge content search \|.*needs Olares 1\.12\.7\+ \|$",
         ),
     ],
     "olares-cluster/SKILL.md": [
@@ -444,6 +454,58 @@ def validate_structure(skill_dir: Path, errors: list[str]) -> None:
             )
 
 
+def validate_shared_sections(skill_dir: Path, errors: list[str]) -> None:
+    """Make the same thing carry the same name in all twelve skills.
+
+    An agent that has read one skill should already know where the next
+    one keeps its limits and its command list. It did not: the closing
+    section had five names and the verb index had three, so finding
+    either meant scanning the file rather than jumping to a heading.
+
+    The names are arbitrary; having one of them is not.
+    """
+    skill = skill_dir / "SKILL.md"
+    text = skill.read_text(encoding="utf-8")
+    headings = set(HEADING_RE.findall(without_fenced_code(text)))
+    relative = skill.relative_to(ROOT)
+
+    if SAFETY_HEADING not in headings:
+        errors.append(
+            f"{relative}: no '## {SAFETY_HEADING}' section — every skill closes with what it "
+            "must not do and when to hand back, under that name"
+        )
+
+    if skill_dir.name not in NO_VERB_INDEX:
+        if VERB_INDEX_HEADING not in headings:
+            errors.append(
+                f"{relative}: no '## {VERB_INDEX_HEADING}' section — the command list goes under "
+                "that name so an agent can find it without reading the file"
+            )
+        elif not any(
+            cells[-1] == VERB_INDEX_LAST_COLUMN
+            for cells in table_rows(section_body(text, VERB_INDEX_HEADING))
+        ):
+            errors.append(
+                f"{relative}: its '## {VERB_INDEX_HEADING}' table has no "
+                f"'{VERB_INDEX_LAST_COLUMN}' column — the first columns differ per tree, but the "
+                "last one always answers what to read next"
+            )
+
+    # olares-shared is the front door; pointing it at itself says nothing.
+    if skill_dir.name != SHARED_SKILL and FRONT_DOOR_MARKER not in text:
+        errors.append(
+            f"{relative}: no '{FRONT_DOOR_MARKER}' block — an agent entering here has not loaded "
+            "suite routing, profile selection or the auth gate, and nothing tells it to"
+        )
+
+
+def section_body(text: str, heading: str) -> str:
+    parts = re.split(rf"^#{{1,6}}\s+{re.escape(heading)}\s*$", without_fenced_code(text), flags=re.MULTILINE)
+    if len(parts) < 2:
+        return ""
+    return re.split(r"^#{1,6}\s+", parts[1], flags=re.MULTILINE)[0]
+
+
 def validate_one_version(skill_dirs: list[Path], errors: list[str]) -> None:
     """The suite ships as one artifact, so it carries one version.
 
@@ -486,6 +548,7 @@ def main() -> int:
     for skill_dir in skill_dirs:
         validate_frontmatter(skill_dir / "SKILL.md", errors)
         validate_skill_entrypoint(skill_dir, errors)
+        validate_shared_sections(skill_dir, errors)
         validate_structure(skill_dir, errors)
         validate_verb_index_rows(skill_dir / "SKILL.md", errors)
         validate_fast_paths(skill_dir, errors)
