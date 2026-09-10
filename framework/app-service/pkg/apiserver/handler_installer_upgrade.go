@@ -355,12 +355,19 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 	if appMgr.Spec.RawAppName != "" {
 		rawAppName = appMgr.Spec.RawAppName
 	}
+	// Version must be passed here. This is the only call on the upgrade path
+	// that reaches GetIndexAndDownloadChart, and that download is what fills
+	// ./charts/{rawAppName} — the version-less directory every later read
+	// resolves against. Omitting it resolves the index's latest instead, so the
+	// Version the helpers below carry describes a chart that is no longer on
+	// disk.
 	apiVersion, err := apputils.GetAppConfigVersion(req.Request.Context(), &apputils.ConfigOptions{
 		App:          app,
 		RawAppName:   rawAppName,
 		Owner:        prevCfg.OwnerName,
 		RepoURL:      request.RepoURL,
 		MarketSource: marketSource,
+		Version:      request.Version,
 	})
 	if err != nil {
 		klog.Errorf("Failed to get api version err=%v", err)
