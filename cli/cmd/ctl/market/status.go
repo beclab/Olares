@@ -22,7 +22,10 @@ func NewCmdMarketStatus(f *cmdutil.Factory) *cobra.Command {
 		Aliases: []string{"stat", "st"},
 		Short:   "Show runtime state / progress for installed apps (read /market/state)",
 		Long: `Show runtime status of installed apps. Output is the live
-state row (STATE / OPERATION / PROGRESS / SOURCE), not the catalog.
+state row (VERSION / STATE / OPERATION / PROGRESS / SOURCE), not the
+catalog. VERSION is the version the row records, i.e. the one last
+requested — a row at upgradeFailed still names the target that failed,
+not what is running.
 
 Two forms:
 
@@ -77,8 +80,16 @@ Examples:
 }
 
 type statusRow struct {
-	Name     string `json:"name"`
-	State    string `json:"state"`
+	Name  string `json:"name"`
+	State string `json:"state"`
+	// Version is the version this state row records, which is the one the user
+	// last asked for -- not necessarily the one running. A row left at
+	// upgradeFailed still names the target that failed, because that is what
+	// the request set. Reading the version actually deployed means asking the
+	// workload (`olares-cli cluster ...`), not this row. It is reported here
+	// anyway because status is where a reader looks first, and `list --mine`
+	// reports the same field from the same place: the two agreeing is the point.
+	Version  string `json:"version,omitempty"`
 	OpType   string `json:"opType,omitempty"`
 	Progress string `json:"progress,omitempty"`
 	CfgType  string `json:"cfgType,omitempty"`
@@ -131,6 +142,7 @@ func parseStatusRows(resp *APIResponse, source string, showAll bool) ([]statusRo
 			}
 			rows = append(rows, statusRow{
 				Name:       name,
+				Version:    strings.TrimSpace(appState.Version),
 				State:      appState.Status.State,
 				OpType:     appState.Status.OpType,
 				Progress:   progress,
@@ -264,9 +276,13 @@ func runStatusAll(opts *MarketOptions) error {
 	// code, and -o json still emits a structured payload with no
 	// columns at all.
 	w := tabwriter.NewWriter(os.Stdout, 0, 4, 2, ' ', 0)
-	fmt.Fprintln(w, "NAME\tSTATE\tOPERATION\tPROGRESS\tSOURCE")
+	fmt.Fprintln(w, "NAME\tVERSION\tSTATE\tOPERATION\tPROGRESS\tSOURCE")
 	for _, r := range rows {
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", r.Name, r.State, r.OpType, r.Progress, r.Source)
+		version := r.Version
+		if version == "" {
+			version = "-"
+		}
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\n", r.Name, version, r.State, r.OpType, r.Progress, r.Source)
 	}
 	w.Flush()
 	return nil

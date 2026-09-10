@@ -2,6 +2,7 @@ package market
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -88,6 +89,74 @@ func (e *computeModeSelectError) Error() string {
 	}
 	return fmt.Sprintf("app %q supports multiple compute modes; re-run with --compute-mode <type> (installable: %s)",
 		e.appName, strings.Join(e.installable, ", "))
+}
+
+// declaredComputeModes returns the compute modes an app's manifest declares,
+// read from spec.accelerator on the catalog entry. An app with no accelerator
+// block declares none: it runs on the CPU and there is no mode to pick.
+func declaredComputeModes(appInfo map[string]interface{}) []string {
+	entries, ok := getNestedValue(appInfo, "app_info", "app_entry", "accelerator").([]interface{})
+	if !ok {
+		return nil
+	}
+	modes := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		item, ok := entry.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		if mode := strings.TrimSpace(getStringValue(item, "mode")); mode != "" {
+			modes = append(modes, mode)
+		}
+	}
+	return modes
+}
+
+// checkDeclaredComputeMode rejects a --compute-mode the app cannot honor.
+//
+// The backend only asks for a mode when an app declares more than one, so a
+// mode aimed at a single-mode app -- or at one with no accelerator block at all
+// -- is accepted and then dropped. The install lands on the mode the app
+// declares, no GPU appears anywhere near the pod, and nothing says the flag did
+// nothing. Deciding this locally is what makes it reportable at all.
+//
+// cpu is accepted against any app: every cluster runs it, and no node carries a
+// label for it, so it is never something an app has to declare to get.
+func checkDeclaredComputeMode(appInfo map[string]interface{}, appName, requested string) error {
+	requested = strings.TrimSpace(requested)
+	if requested == "" || normalizeMarketComputeMode(requested) == "cpu" {
+		return nil
+	}
+	declared := declaredComputeModes(appInfo)
+	if len(declared) == 0 {
+		return fmt.Errorf("--compute-mode %q cannot be honored: %q declares no accelerator modes and always runs on the CPU — re-run without --compute-mode",
+			requested, appName)
+	}
+	norm := normalizeMarketComputeMode(requested)
+	for _, mode := range declared {
+		if normalizeMarketComputeMode(mode) == norm {
+			return nil
+		}
+	}
+	return fmt.Errorf("--compute-mode %q is not a declared mode for %q (declared: %s)",
+		requested, appName, strings.Join(declared, ", "))
+}
+
+// preflightComputeMode is checkDeclaredComputeMode with the catalog read in
+// front of it, for the verb that does not already hold the app's entry. A read
+// that fails leaves the mode unchecked rather than blocking the operation --
+// the backend still has the final say on a mode it does support.
+func preflightComputeMode(ctx context.Context, opts *MarketOptions, mc *MarketClient, appName, source, requested string) error {
+	if strings.TrimSpace(requested) == "" {
+		return nil
+	}
+	appInfo, err := fetchAppInfo(ctx, mc, appName, source)
+	if err != nil {
+		opts.info("warning: preflight could not read catalog metadata for '%s' from source '%s' (%v); leaving --compute-mode to the backend",
+			appName, source, err)
+		return nil
+	}
+	return checkDeclaredComputeMode(appInfo, appName, requested)
 }
 
 // resolveComputeMode turns a computeModeSelect 422 payload into the
