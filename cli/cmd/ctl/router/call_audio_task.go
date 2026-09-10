@@ -216,8 +216,10 @@ A task that has not succeeded has no result, and this says so rather than
 waiting — for one still running as well as for one that failed. "task get
 --wait" is what waits. A result the engine has already dropped is reported as
 gone rather than as missing: it is kept for a while after the work finishes.
-If this fetch fails, check the task status before retrying: another successful
-fetch can bill the same result again.
+If this fetch fails it is safe to run again: a second collection of the same
+result loses a compare-and-swap on the task's binding and is settled once. Only
+a Router restart between the two attempts leaves the double charge to the
+ledger's own duplicate check.
 
 Examples:
   olares-cli router call task result tsk_1f3c
@@ -348,10 +350,11 @@ func audioTaskPath(path, model string) string {
 	return withQuery(path, q)
 }
 
-// audioTaskErr says which of the four ways a task lookup fails happened, since
+// audioTaskErr says which of the five ways a task lookup fails happened, since
 // the status alone reads the same for a job that is running well and one that
-// is gone: a request Router could not place, a task nothing has, a task with no
-// result yet, and a result that has been dropped.
+// is gone: a request Router could not place, a task Router cannot attribute
+// right now, a task nothing has, a task with no result yet, and a result that
+// has been dropped.
 func audioTaskErr(err error, id string) error {
 	if err == nil {
 		return nil
@@ -366,10 +369,21 @@ func audioTaskErr(err error, id string) error {
 			"submitted through another gateway — and an id alone does not say which engine is "+
 			"running it. Name the model the work was submitted to: --model <name>. The verb "+
 			"that submitted it printed the whole command", err, id)
+	case re.Code == "audio_task_owner_unavailable":
+		// Router holds the binding that says whose task this is, and could not
+		// read it. It used to answer that with the 404 below, which is the one
+		// sentence a client must not hear about work that is still running: a
+		// caller told its submission does not exist submits again, and an
+		// audio task is minutes of GPU time. So the read is the thing to
+		// repeat here, and nothing else.
+		return fmt.Errorf("%w\nRouter could not establish who owns task %s just now, so it refused "+
+			"the read rather than answering that the task is gone. The work is untouched.%s "+
+			"`olares-cli router call task get %s` again is the whole fix — do not submit the "+
+			"operation a second time", err, id, retryAdvice(re.RetryAfter), id)
 	case re.Status == 404:
-		return fmt.Errorf("%w\nEither the engine has forgotten task %s — a finished result is kept "+
-			"for a while and then dropped — or --model names a different engine from the one "+
-			"the work was submitted to", err, id)
+		return fmt.Errorf("%w\nTask %s is not one Router will answer for: the engine has forgotten it "+
+			"— a finished result is kept for a while and then dropped — or it belongs to another "+
+			"caller, or --model names a different engine from the one the work was submitted to", err, id)
 	case re.Status == 409:
 		// The engine has the task and no result to give: it is still working,
 		// or it stopped without producing one. Which of the two is in the
@@ -395,6 +409,16 @@ func audioTaskErr(err error, id string) error {
 			err, id)
 	}
 	return callErr(err)
+}
+
+// ownerLookupUnavailable is Router refusing a task read because it could not
+// establish who owns the task, as opposed to answering that nobody does. It is
+// the one lookup failure worth waiting through rather than reporting: the task
+// is somebody's, the work is still running, and there is nothing to fix at this
+// end.
+func ownerLookupUnavailable(err error) bool {
+	re := routerErrorOf(err)
+	return re != nil && re.Code == "audio_task_owner_unavailable"
 }
 
 func runAudioTaskGet(ctx context.Context, f *cmdutil.Factory, opts audioTaskOptions) error {
@@ -468,6 +492,9 @@ func waitForAudioTaskWith(ctx context.Context, task *audioTask, model string,
 	deadline := ops.now().Add(timeout)
 	lastNote := ""
 	delay := time.Second
+	// Said once, however many reads it takes: it is the same fact each time,
+	// and the point of the line is that waiting is what to do about it.
+	saidUnavailable := false
 	timeoutErr := func() error {
 		return fmt.Errorf("task %s is still %s after %s; it keeps running — "+
 			"`olares-cli router call task get %s --model %s` picks it up",
@@ -490,12 +517,14 @@ func waitForAudioTaskWith(ctx context.Context, task *audioTask, model string,
 				return err
 			}
 			final := audioTask{Poll: task.Poll}
-			if err := ops.fetch(ctx, task.ID, model, &final); err != nil {
+			switch err := ops.fetch(ctx, task.ID, model, &final); {
+			case err == nil:
+				*task = final
+				if task.settled() {
+					return nil
+				}
+			case !ownerLookupUnavailable(err):
 				return err
-			}
-			*task = final
-			if task.settled() {
-				return nil
 			}
 			return timeoutErr()
 		}
@@ -507,7 +536,20 @@ func waitForAudioTaskWith(ctx context.Context, task *audioTask, model string,
 		}
 		next := audioTask{Poll: task.Poll}
 		if err := ops.fetch(ctx, task.ID, model, &next); err != nil {
-			return err
+			if !ownerLookupUnavailable(err) {
+				return err
+			}
+			// Router cannot say whose task this is at the moment. Giving up
+			// here would hand the caller a failure over minutes of work that
+			// is still running, and the id is the only thing that was ever
+			// at risk, so the wait goes on within the budget it was given.
+			if verbose && !saidUnavailable {
+				saidUnavailable = true
+				fmt.Fprintln(os.Stderr, "task "+task.ID+
+					": Router cannot say who owns it just now — still waiting")
+			}
+			delay = nextAudioPollDelay(delay, false)
+			continue
 		}
 		progressed := audioTaskNote(&next) != note
 		*task = next

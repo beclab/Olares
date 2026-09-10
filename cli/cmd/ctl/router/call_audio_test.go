@@ -281,9 +281,9 @@ func TestReceiptKeepsRoutingModelInJSON(t *testing.T) {
 	}
 }
 
-func TestTaskResultHelpWarnsAgainstBlindRetry(t *testing.T) {
+func TestTaskResultHelpSaysASecondCollectionSettlesOnce(t *testing.T) {
 	help := newCallTaskResultCommand(nil).Long
-	for _, want := range []string{"check the task status before retrying", "bill the same result again"} {
+	for _, want := range []string{"safe to run again", "settled once"} {
 		if !strings.Contains(help, want) {
 			t.Errorf("task result help is missing %q", want)
 		}
@@ -636,14 +636,16 @@ func TestADialogueScriptSendsItsRecordingsInline(t *testing.T) {
 // three of them are about a task that exists: it is not ready, it is not
 // reachable from here, or what it produced has been thrown away. Only one means
 // the task is gone.
-func TestATaskRefusalSaysWhichOfTheFourItIs(t *testing.T) {
+func TestATaskRefusalSaysWhichOfTheFiveItIs(t *testing.T) {
 	cases := []struct {
 		name string
 		err  *RouterError
 		want string
 	}{
 		{"unplaceable", &RouterError{Status: 400, Code: "model_required"}, "--model"},
-		{"unknown", &RouterError{Status: 404}, "forgotten task"},
+		{"unattributable", &RouterError{Status: 503, Code: "audio_task_owner_unavailable"},
+			"do not submit the operation a second time"},
+		{"unknown", &RouterError{Status: 404}, "forgotten it"},
 		{"unfinished", &RouterError{Status: 409}, "no result yet"},
 		{"dropped", &RouterError{Status: 410}, "Submit the work again"},
 	}
@@ -662,6 +664,63 @@ func TestATaskRefusalSaysWhichOfTheFourItIs(t *testing.T) {
 	}
 	if audioTaskErr(nil, "tsk_1f3c") != nil {
 		t.Error("a lookup that worked was reported as a failure")
+	}
+	// The wait Router asked for travels with the refusal, since "read it
+	// again" is only actionable with a when attached.
+	unavailable := audioTaskErr(&RouterError{Status: 503, Code: "audio_task_owner_unavailable",
+		RetryAfter: 2 * time.Second}, "tsk_1f3c")
+	if !strings.Contains(unavailable.Error(), "2s") {
+		t.Errorf("the Retry-After did not reach the caller: %q", unavailable)
+	}
+}
+
+// Router refusing to say who owns a task is the one lookup failure that must not
+// end a wait. The work is minutes of GPU time that is still running, and the
+// alternative reading — that the submission is gone — is what makes a caller
+// send the same recording twice.
+func TestAWaitSurvivesRouterNotKnowingWhoOwnsTheTask(t *testing.T) {
+	now := time.Unix(0, 0)
+	fetches := 0
+	ops := audioTaskWaitOps{
+		now: func() time.Time { return now },
+		sleep: func(_ context.Context, d time.Duration) error {
+			now = now.Add(d)
+			return nil
+		},
+		fetch: func(_ context.Context, _, _ string, out *audioTask) error {
+			fetches++
+			if fetches == 1 {
+				return audioTaskErr(&RouterError{Status: 503,
+					Code: "audio_task_owner_unavailable"}, "tsk")
+			}
+			*out = audioTask{ID: "tsk", Status: "succeeded"}
+			return nil
+		},
+	}
+	task := audioTask{ID: "tsk", Status: "running"}
+	if err := waitForAudioTaskWith(context.Background(), &task, categorySTT,
+		30*time.Second, false, ops); err != nil {
+		t.Fatalf("a blip ended the wait: %v", err)
+	}
+	if fetches != 2 || task.Status != "succeeded" {
+		t.Fatalf("fetches=%d status=%q", fetches, task.Status)
+	}
+
+	// Anything else still ends it: a task the engine really has forgotten is
+	// not a task waiting will produce.
+	fetches = 0
+	now = time.Unix(0, 0)
+	ops.fetch = func(_ context.Context, _, _ string, out *audioTask) error {
+		fetches++
+		return audioTaskErr(&RouterError{Status: 404}, "tsk")
+	}
+	task = audioTask{ID: "tsk", Status: "running"}
+	if err := waitForAudioTaskWith(context.Background(), &task, categorySTT,
+		30*time.Second, false, ops); err == nil {
+		t.Fatal("a 404 was waited through")
+	}
+	if fetches != 1 {
+		t.Fatalf("a 404 was retried: fetches=%d", fetches)
 	}
 }
 

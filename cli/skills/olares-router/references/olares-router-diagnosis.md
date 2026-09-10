@@ -25,7 +25,7 @@ Three failures look alike and are not:
 
 A failed read is nothing: run it again. A failed **write** has two histories the CLI cannot tell apart — Router never saw it, or Router applied it and the reply was lost — and only one of them makes "try again" right.
 
-Router has no idempotency key, so a retry is a second request rather than the same one. Nothing the CLI sends changes that, which is why the error carries the consequence instead: it says the outcome is unknown, and what a second identical request would do to that particular route. Read it before acting. Three shapes:
+Router has an idempotency key on the three music submissions and nowhere else, so anywhere else a retry is a second request rather than the same one. Nothing the CLI sends changes that, which is why the error carries the consequence instead: it says the outcome is unknown, and what a second identical request would do to that particular route. Read it before acting. Three shapes:
 
 - **Refused on repeat** — providers, routes, quotas, and adding a named model to a provider all have a uniqueness constraint. Retrying is safe and self-checking: a `409` means the first attempt landed, and is not a new problem.
 - **Costly on repeat** — `key issue` mints a second key, `provider rollback` appends another credential version, and any `router call` may already have been billed. Look first: `key list`, `provider history`, `usage list --limit 5`.

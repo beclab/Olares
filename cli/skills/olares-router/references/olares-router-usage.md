@@ -44,12 +44,14 @@ Every accepted call becomes a row, including one the upstream then refused. Cost
 
 What a call is priced by depends on the mode, so the quantity column is whichever one the row filled in: tokens for text, seconds for audio and video, pictures for images, tracks and meshes for the two newest families, pages for OCR, objects for 3D, queries for search. Reading the row rather than the mode is deliberate — a mode this CLI has never heard of still reports the right figure. A dash means nothing measurable came back.
 
+An asynchronous generation is counted by what it delivered rather than by the request that submitted it: the pictures the result actually carries, and one duration per song a track produced rather than one for the generation. Both were being read as a single unit, so a four-picture workflow and a three-song track reported the first one and gave the rest away.
+
 **`TOOK` is not how long the request was open.** An asynchronous call — a diarization, a video, a long synthesis — is accepted, worked on, and collected later, so the request that returns the result is a JSON forward measured in milliseconds while the work took minutes. The row therefore carries both: `latency_ms` is the request and `job_ms` is the work, and `TOOK` shows the work when there is one. A row with no `job_ms` was synchronous and its request time is the whole story. This matters when reading a slow report: a 273-second diarization used to appear as five milliseconds, which made the engine look idle.
 
 Three zeros mean three different things and `list` says which under the table:
 
 - **still running** — priced when it ends, as above.
-- **`unpriced`** — the quantity was measured and the model row carries no rate for it. Music and 3D generation are permanently here today: Router has no price list for either, so the traffic is real and the money is not. Fixing it means putting prices on the model row.
+- **`unpriced`** — the quantity was measured and the model row carries no rate for it. Music and 3D generation are permanently here today: Router has no price list for either, so the traffic is real and the money is not. Fixing it means putting prices on the model row — a picture rate is per picture, so an image workflow that reads `unpriced` while its pictures are counted has only the tiered rates (resolution, quality) configured and not that one.
 - **`audio_unmetered`** — the engine reported no duration, and audio is charged by the second, so there was nothing to multiply.
 
 `--session` follows one piece of work across the calls it took. An agent or a split audio job sends a session id, so the six calls that transcribed one recording are one filter apart instead of six rows to spot by timestamp.

@@ -193,22 +193,44 @@ func operationPathMatches(pattern, target string) bool {
 	return true
 }
 
-// trustworthyCatalogue is whether this list may be used to choose a route
-// instead of guessing one.
-//
-// Authoritative alone decides, and CapabilityStale deliberately does not.
-// Router's own gate reads only the first: a catalogue last observed hours ago
-// is enforced exactly as a fresh one is, and an operation it does not list is
-// refused before the engine sees it. So declining to read a stale catalogue
-// would not make the CLI cautious, it would make it guess a path Router is
-// about to refuse — a worse outcome than the 404 the guess used to cost,
-// because a refusal is final and the guess at least had a second chance.
-//
-// Stale is worth printing for the reader, who can go and look at the engine.
-// It is not worth acting on, because acting on it changes nothing Router will
-// accept.
-func (m *modelObject) trustworthyCatalogue() bool {
-	return m.Authoritative != nil && *m.Authoritative && len(m.Operations) > 0
+// catalogueTrust is how much of a routing decision this model's operation list
+// may make. Router publishes the two facts behind it separately, and they carry
+// different consequences for a caller.
+type catalogueTrust int
+
+const (
+	// catalogueGuess is a list nothing was declared for: Router built it from
+	// the capability flags, enforces nothing against it, and forwards an
+	// undeclared route to the engine, which answers with its own bare 404.
+	catalogueGuess catalogueTrust = iota
+	// catalogueAdvisory is a declaration Router has stopped holding requests
+	// to. It waives the gate fifteen minutes after the catalogue was last
+	// observed, because a Model Console that has been unreachable since then
+	// cannot go on refusing capabilities the user may have installed in the
+	// meantime. The declaration is still the best reading of the engine, so
+	// it decides which route to try first — but it can no longer make the
+	// other one unreachable, and getting it wrong costs the 404 it always
+	// cost rather than a refusal.
+	catalogueAdvisory
+	// catalogueEnforced is a current declaration. Router refuses an operation
+	// it does not list before the engine is reached, so a spelling the
+	// catalogue omits is not worth sending: the retry that made a wrong guess
+	// harmless can only buy a second refusal here.
+	catalogueEnforced
+)
+
+// catalogueTrust reads the standing off the row. An empty list is nothing to
+// enforce however it is labelled — that is the shape Router publishes when
+// every endpoint an application declared was refused, and it degrades to the
+// supports-derived list anyway.
+func (m *modelObject) catalogueTrust() catalogueTrust {
+	if m.Authoritative == nil || !*m.Authoritative || len(m.Operations) == 0 {
+		return catalogueGuess
+	}
+	if m.CapabilityStale {
+		return catalogueAdvisory
+	}
+	return catalogueEnforced
 }
 
 type modelsListResponse struct {
@@ -435,25 +457,24 @@ func renderModelOperations(w io.Writer, items []modelObject) error {
 		return err
 	}
 	_, err := fmt.Fprintf(w, "\nPATH is Router's, and a braced segment accepts one value: a path ending "+
-		"in {voice_id} is addressed as %s. Where the catalogue is declared, Router refuses an operation "+
-		"it does not list with `audio_operation_not_supported` rather than forwarding it; where it is "+
-		"reconstructed, an undeclared route is forwarded and the engine's own 404 comes back.\n",
+		"in {voice_id} is addressed as %s. Where the catalogue is declared and still current, Router "+
+		"refuses an operation it does not list with `audio_operation_not_supported` rather than "+
+		"forwarding it; where it is reconstructed, or was last seen over 15 minutes ago, an undeclared "+
+		"route is forwarded and the engine's own 404 comes back.\n",
 		epSpeakAs("en-f"))
 	return err
 }
 
-// catalogueStanding says how much the list below it is worth. Router publishes
-// the two facts separately, and they fail differently: an unauthoritative
-// catalogue was never declared, a stale one was and has since aged out of the
-// fifteen minutes Router trusts it for.
+// catalogueStanding is the standing in words, for the reader of the block it
+// heads. It is the same judgement `speak` routes on rather than a second one.
 func catalogueStanding(m *modelObject) string {
-	switch {
-	case m.Authoritative == nil || !*m.Authoritative:
-		return "reconstructed from capabilities"
-	case m.CapabilityStale:
+	switch m.catalogueTrust() {
+	case catalogueEnforced:
+		return "declared by the application"
+	case catalogueAdvisory:
 		return "declared, last seen over 15 minutes ago"
 	default:
-		return "declared by the application"
+		return "reconstructed from capabilities"
 	}
 }
 
