@@ -27,6 +27,15 @@ Load the shared [platform model](../olares-shared/references/olares-platform.md)
 
 `workload stop/start` changes controller replicas; it does not update the Market lifecycle row. Use `market stop/resume` for app-level lifecycle.
 
+## Fast paths
+
+| Task | Read | First command |
+|---|---|---|
+| See whether an app's pods are up | [pod operations](references/olares-cluster-pod.md) | `olares-cli cluster pod list -n <namespace> -o json`, then read each `.status.phase` |
+| Read a container's logs | [pod operations](references/olares-cluster-pod.md) | `olares-cli cluster pod logs <pod> -n <namespace>` |
+| Find what this profile can see at all | this file | `olares-cli cluster context -o json` |
+| Restart a workload | [workload operations](references/olares-cluster-workload.md) | `olares-cli cluster workload restart <name> -n <namespace>` |
+
 ## The identity-vs-server-decides principle (cross-cutting)
 
 - Identity is the active profile; there is no per-invocation profile override.

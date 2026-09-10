@@ -38,6 +38,17 @@ RELEASE_VERSION_RE = re.compile(r"\d+\.\d+\.\d+-cli\.\d+")
 # The one skill whose references every front door is expected to link directly:
 # it hosts the platform and app-state models the runtime skills read once.
 SHARED_SKILL = "olares-shared"
+# Skills with no fast path to declare, and why.
+#
+# olares-shared is the front door every other path is measured through;
+# it is not a destination.
+#
+# olares-chart and olares-publish describe authoring work -- porting a
+# repository into an Olares app, getting a listing through GitBot. Both
+# are sequences with a diagnosis at the front, and neither has a first
+# command that answers anything, so a fast-path table for them would be
+# a fiction written to satisfy this check.
+NO_FAST_PATH = {SHARED_SKILL, "olares-chart", "olares-publish"}
 REQUIRED_ENTRYPOINT_FACTS = {
     "olares-knowledge/SKILL.md": [
         (
@@ -193,19 +204,42 @@ def line_count(path: Path) -> int:
 
 
 def validate_fast_paths(skill_dir: Path, errors: list[str]) -> None:
-    """Hold a skill's own declared read paths to the first-command budget.
+    """Hold a skill's declared read paths to the first-command budget.
 
-    The block is optional; what is not optional is that a path a skill
-    advertises as fast actually is. Each row totals the shared front door,
-    this SKILL.md, and every file the row links -- which is what the agent
-    reads before it can issue the command in that row.
+    Each row totals the shared front door, this SKILL.md, and every file
+    the row links -- which is what the agent reads before it can issue the
+    command in that row.
+
+    The block was optional to begin with, which left the budget checking
+    only the three skills that had volunteered for it. A skill with no
+    block was not under budget; it was unmeasured, and the two paths that
+    turned out to be over were both found by writing a block down.
+
+    So it is required, except of the skills in NO_FAST_PATH. Those are
+    exempt because a fast path is a claim about a first command, and the
+    work they describe has no first command to name -- the exemption is
+    the honest answer for them, not a hole to hide a heavy skill in.
     """
     skill = skill_dir / "SKILL.md"
     text = without_fenced_code(skill.read_text(encoding="utf-8"))
     section = re.split(rf"^#{{1,6}}\s+{re.escape(FAST_PATHS_HEADING)}\s*$", text, flags=re.MULTILINE)
     if len(section) < 2:
+        if skill_dir.name not in NO_FAST_PATH:
+            errors.append(
+                f"{skill.relative_to(ROOT)}: no '## {FAST_PATHS_HEADING}' block — name the tasks an "
+                f"agent can act on after one read, so the {READ_PATH_MAX_LINES}-line budget has "
+                "something to measure"
+            )
         return
+    if skill_dir.name in NO_FAST_PATH:
+        errors.append(
+            f"{skill.relative_to(ROOT)}: declares fast paths but is listed in NO_FAST_PATH; "
+            "remove it from that list"
+        )
     body = re.split(r"^#{1,6}\s+", section[1], flags=re.MULTILINE)[0]
+    if not table_rows(body):
+        errors.append(f"{skill.relative_to(ROOT)}: '## {FAST_PATHS_HEADING}' has no rows")
+        return
 
     front_door = ROOT / SHARED_SKILL / "SKILL.md"
     base = line_count(skill)

@@ -33,7 +33,7 @@ A **model** application is installed here like any other — `install` for a pin
 | Install a catalog app and know when it started | [watch and diagnosis routing](references/olares-market-watch.md) | `olares-cli market install <app> --watch --watch-timeout 1m -o json`, then read `.finalState` |
 | See what this user has installed | this file | `olares-cli market list --mine -o json` |
 | Follow one app's lifecycle | this file | `olares-cli market status <app>` |
-| Put a chart you built on this Olares | [publishing a chart](references/olares-market-chart-publish.md) | `olares-cli market upload ./chart.tgz` then `market install <name> -s upload` |
+| Put a chart you built on this Olares | [publishing a chart](references/olares-market-chart-publish.md) | `olares-cli market upload ./chart.tgz` then `olares-cli market install <name> -s upload` |
 
 `--watch` polls, so a timeout means "not terminal yet" rather than failure, and `running` means every entrance answers TCP rather than that the app works.
 

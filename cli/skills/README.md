@@ -84,7 +84,7 @@ Keep CLI and Skill responsibilities separate:
 
 For all behavioural claims:
 
-- **Ground every behavioral claim in the implementation.** Before documenting what a verb / flag / error does, confirm it against the code (status derivation, typed error names, retry / timeout, argument arity). Model agent stop / continue rules on the tool's real control flow — typed errors, auto-retry, transient vs terminal — not on a surface status string. Keep this verification in your process only: still **no Go source-path citations** in the shipped skill (see "What to leave out" below).
+- **Ground every behavioral claim in the implementation.** Before documenting what a verb / flag / error does, confirm it against the code (status derivation, typed error names, retry / timeout, argument arity). Model agent stop / continue rules on the tool's real control flow — typed errors, auto-retry, transient vs terminal — not on a surface status string. Keep this verification in your process only: still **no Go source-path citations** in the shipped skill.
 - **One representation per fact within a file.** Don't place two tables / sections that encode the same thing. When a decision derives from a fact table, express it as prose that points at that table, not a second parallel table.
 
 Each non-trivial trigger gets a `references/<skill>-<trigger>.md` file that adds — on top of `--help` — safety constraints, agent-facing multi-step flows, and common-error troubleshooting tables. Do NOT re-list flag descriptions; trust `--help`. A trigger is usually one verb, which is why most of these files are named after one; when a single verb covers several unrelated tasks (`router call` spans chat, transcription and OCR), the split follows the tasks.
@@ -97,7 +97,7 @@ What to leave out of SKILL.md (and references):
 - Internal package walkthroughs / "Source layout" sections
 - "What's NOT here yet" / future-work sections — keep skills focused on current capability
 
-Per-file ceilings: SKILL.md ≤ 250 lines (≤ 300 for the most complex command tree). Each reference: ≤ 150 lines. These are ceilings, not the budget — see below for the budget.
+Per-file ceilings: SKILL.md ≤ 250 lines, each reference ≤ 150. `validate.py` enforces both, with no exception for a complex tree — a 300-line front door is over the whole read-path budget on its own, before it has linked anything. These are ceilings, not the budget; the budget is below.
 
 ## The budget is a task path, not a file
 

@@ -235,12 +235,44 @@ class ValidatorTests(unittest.TestCase):
             self.assertIn("fast path install", errors[0])
             self.assertIn("first-command budget", errors[0])
 
-    def test_a_skill_without_fast_paths_is_not_forced_to_have_them(self):
+    def test_a_skill_without_fast_paths_is_refused(self):
+        """An undeclared path is unmeasured, not under budget.
+
+        While the block was optional the budget above checked the three
+        skills that had volunteered for it, and both paths that turned
+        out to be over were found by writing a block down.
+        """
+        errors = self.fast_path_errors_for("olares-test", "## Verb index\n")
+        self.assertEqual(len(errors), 1, errors)
+        self.assertIn("no '## Fast paths' block", errors[0])
+
+    def test_the_skills_with_no_first_command_are_exempt(self):
+        for name in sorted(validate.NO_FAST_PATH):
+            with self.subTest(skill=name):
+                self.assertEqual(self.fast_path_errors_for(name, "## Verb index\n"), [])
+
+    def test_an_exempt_skill_that_declares_fast_paths_is_told_to_leave_the_list(self):
+        errors = self.fast_path_errors_for(
+            sorted(validate.NO_FAST_PATH)[0],
+            "## Fast paths\n\n| Task | Read | First command |\n|---|---|---|\n"
+            "| list | this file | `olares-cli market list` |\n",
+        )
+        self.assertEqual(len(errors), 1, errors)
+        self.assertIn("NO_FAST_PATH", errors[0])
+
+    def test_an_empty_fast_paths_block_is_refused(self):
+        errors = self.fast_path_errors_for("olares-test", "## Fast paths\n\nSoon.\n")
+        self.assertEqual(len(errors), 1, errors)
+        self.assertIn("no rows", errors[0])
+
+    def fast_path_errors_for(self, skill_name, body):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory).resolve()
-            skill_dir = root / "olares-test"
-            skill_dir.mkdir(parents=True)
-            (skill_dir / "SKILL.md").write_text("## Verb index\n", encoding="utf-8")
+            (root / validate.SHARED_SKILL).mkdir(parents=True, exist_ok=True)
+            (root / validate.SHARED_SKILL / "SKILL.md").write_text("front door\n", encoding="utf-8")
+            skill_dir = root / skill_name
+            skill_dir.mkdir(parents=True, exist_ok=True)
+            (skill_dir / "SKILL.md").write_text(body, encoding="utf-8")
             original_root = validate.ROOT
             validate.ROOT = root
             try:
@@ -248,7 +280,7 @@ class ValidatorTests(unittest.TestCase):
                 validate.validate_fast_paths(skill_dir, errors)
             finally:
                 validate.ROOT = original_root
-            self.assertEqual(errors, [])
+            return errors
 
     def test_front_door_may_link_the_shared_models_but_no_other_peer_reference(self):
         with tempfile.TemporaryDirectory() as directory:

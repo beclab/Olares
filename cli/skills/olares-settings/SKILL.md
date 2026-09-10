@@ -24,13 +24,23 @@ Load the shared [platform model](../olares-shared/references/olares-platform.md)
 
 > **Mental model:** `settings` covers configuration that the Olares Settings SPA exposes — **post-install per-app config**, mesh / VPN, backup, accounts, system appearance. Lifecycle and runtime live in sibling skills.
 
+## Fast paths
+
+| Task | Read | First command |
+|---|---|---|
+| Find out who this profile is and what version it is on | this file | `olares-cli settings me version -o json` |
+| Read or change one app's configuration | [post-install app configuration](references/olares-settings-apps.md) | `olares-cli settings apps get <app> -o json` |
+| See whether a cloud account is bound | [integration accounts](references/olares-settings-integration.md) | `olares-cli settings integration accounts list -o json` |
+| List the users on this Olares | [user lifecycle and password handling](references/olares-settings-users.md) | `olares-cli settings users list -o json` |
+
 ## Verb index
 
 | Area | Verbs / resources | Read when triggered |
 |---|---|---|
 | `me` | `whoami`, `version`, `check-update`, `sso list` | `me version` is how the version gates other skills carry get answered |
 | `users` | `me`, `list`, `get`, `create`, `delete` | [user lifecycle and password handling](references/olares-settings-users.md) |
-| `apps` | list/get, entrances, env, domain, policy, auth-level, suspend/resume | [post-install app configuration](references/olares-settings-apps.md) |
+| `apps` | list/get, entrances, env, suspend/resume | [post-install app configuration](references/olares-settings-apps.md) |
+| `apps` (one entrance) | domain, policy, auth-level | [per-entrance configuration](references/olares-settings-apps-entrance.md) |
 | `vpn` | devices, hidden `routes enable/disable`, SSH, subroutes (hidden enable/disable), ACL, public-domain-policy | [VPN and ACL decisions](references/olares-settings-vpn.md) |
 | `integration` | account list/get/add/delete, `cookie import/list/rm/validate` | [integration accounts](references/olares-settings-integration.md); [cookie store](references/olares-settings-cookies.md) |
 | `backup` | plans, snapshots, password | [backup decisions](references/olares-settings-backup.md) |

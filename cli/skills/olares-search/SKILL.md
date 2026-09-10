@@ -23,6 +23,15 @@ Use `olares-cli search <subcommand> --help` for syntax.
 
 > **Mental model:** `search drive` / `search sync` / `search knowledge` answer *"which file CONTAINS this text"* by querying the pre-built per-user index. `search app` answers *"which installed app matches this name"*. It is not lifecycle inventory (`market list --mine` / `market status`) or resource ranking (`dashboard applications`). To LIST or READ a known path, use [`olares-files`](../olares-files/SKILL.md) (`files ls` / `files cat` / `files download`).
 
+## Fast paths
+
+| Task | Read | First command |
+|---|---|---|
+| Find a file by name or content | this file | `olares-cli search drive "quarterly report" -o json` |
+| Find an installed app by its title | this file | `olares-cli search app music -o json` |
+| Find something in Wise | this file | `olares-cli search knowledge "retrieval" -o json` |
+| Tell "not indexed" from "not there" | this file, then [`olares-files`](../olares-files/SKILL.md) for the known path | `olares-cli settings search status -o json` |
+
 ## Verb index
 
 | Subcommand | Purpose | Key decision |

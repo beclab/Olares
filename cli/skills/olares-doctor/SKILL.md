@@ -28,6 +28,18 @@ This skill is a thin diagnostic router over Market, Cluster, and Dashboard. Load
 
 > **Mental model:** `doctor` answers *"why is this broken and what do I do next?"* Diagnosis is read-only by default; the only mutation is the explicitly approved `thirdleveldomain --force-dedupe` repair. The four-skill develop->deploy->debug combo is `chart` + `market` + `olares-shared` + `doctor`.
 
+## Fast paths
+
+Every row here is one symptom read plus the command that opens it. The
+routing table below is the same set indexed by what the user reported.
+
+| Task | Read | First command |
+|---|---|---|
+| An install never reached `running` | [stuck installs](references/olares-doctor-app-stuck.md) | `olares-cli market status <app> -o json` |
+| An app keeps restarting | [crash diagnosis](references/olares-doctor-app-crash.md) | `olares-cli cluster pod list -n <namespace> -o json`, then read the container states |
+| An app is `running` but its page will not load | [entrance diagnosis](references/olares-doctor-running-unhealthy.md) | `olares-cli doctor thirdleveldomain -o json` |
+| An image will not pull | [image diagnosis](references/olares-doctor-image.md) | `olares-cli doctor images -o json` |
+
 ## Symptom routing
 
 | Symptom | Reference |
