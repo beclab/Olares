@@ -744,11 +744,7 @@ func renderSummaryBuckets(w io.Writer, dim string, items []spendSummaryRow) erro
 	t := newTable(w, headers...)
 	for i := range items {
 		it := &items[i]
-		label := it.Label
-		if strings.TrimSpace(label) == "" {
-			label = it.Key
-		}
-		cells := []string{nonEmpty(label), strconv.FormatInt(it.Requests, 10), money(it.CostUSD)}
+		cells := []string{nonEmpty(bucketLabel(it)), strconv.FormatInt(it.Requests, 10), money(it.CostUSD)}
 		if tokens {
 			cells = append(cells,
 				strconv.FormatInt(it.TotalTokens, 10),
@@ -775,7 +771,54 @@ func renderSummaryBuckets(w io.Writer, dim string, items []spendSummaryRow) erro
 		}
 		t.row(cells...)
 	}
-	return t.flush()
+	if err := t.flush(); err != nil {
+		return err
+	}
+	return noteSplitModelBuckets(w, dim, items)
+}
+
+// noteSplitModelBuckets says so when one model occupies two rows: once as
+// <provider>/<model> and once as the bare name. Router counts them separately
+// and the bare bucket is the calls it never bound to a provider — the ones that
+// failed before it got that far — so the two rows are two different facts, and
+// reading the qualified one as the model's whole traffic undercounts it.
+//
+// Annotated rather than merged: the split is Router's aggregation and adding the
+// rows together here would report a number no Router endpoint agrees with.
+func noteSplitModelBuckets(w io.Writer, dim string, items []spendSummaryRow) error {
+	if !strings.EqualFold(dim, "model") {
+		return nil
+	}
+	present := make(map[string]bool, len(items))
+	for i := range items {
+		present[bucketLabel(&items[i])] = true
+	}
+	var split []string
+	for i := range items {
+		name := bucketLabel(&items[i])
+		slash := strings.Index(name, "/")
+		if slash <= 0 {
+			continue
+		}
+		if bare := name[slash+1:]; present[bare] {
+			split = append(split, bare)
+		}
+	}
+	if len(split) == 0 {
+		return nil
+	}
+	_, err := fmt.Fprintf(w, "\n%s appears twice, once qualified by its provider and once not. Router "+
+		"records a call it never bound to a provider under the bare name, which is where a call that "+
+		"failed early lands, so neither row is the model's whole traffic — add them. `olares-cli "+
+		"router usage list --model <name>` shows the calls behind either.\n", strings.Join(split, ", "))
+	return err
+}
+
+func bucketLabel(it *spendSummaryRow) string {
+	if label := strings.TrimSpace(it.Label); label != "" {
+		return label
+	}
+	return strings.TrimSpace(it.Key)
 }
 
 func renderSummaryTotals(w io.Writer, tot *spendTotals) error {

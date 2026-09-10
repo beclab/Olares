@@ -116,6 +116,10 @@ three are spoken with the same way.
 An empty list is an answer rather than a fault: a model built to speak from a
 reference recording has no library to list, and "call clone" is how it is used.
 
+Leaving --model off resolves default-tts, unlike "call history", which refuses.
+A library is a property of whichever engine would speak, so the default is the
+right guess here; a past reading may belong to another engine entirely.
+
 Examples:
   olares-cli router call voice list
   olares-cli router call voice list --model Olares/<tts-model>

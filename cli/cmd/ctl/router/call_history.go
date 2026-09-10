@@ -35,6 +35,13 @@ import (
 // Router has no default category for history, so every verb here takes
 // --model: a reading lives in the engine that performed it, and "the history"
 // is not something to resolve.
+//
+// That is why these verbs refuse where `call voice list` resolves default-tts
+// for the same shape of request. A voice library is a property of the engine you
+// would speak with anyway, so the default is the right guess; a reading is a
+// past event, and guessing the default here would report an empty history for
+// work another engine did. `--model default-tts` says so explicitly when that is
+// what was meant.
 
 func newCallHistoryCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
