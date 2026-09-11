@@ -99,24 +99,52 @@ func TestCreateMacvlanInitPatchDryRunHasNoAllocationSideEffect(t *testing.T) {
 	}
 }
 
-func TestMacvlanNetworkAnnotationPreservesExistingSelections(t *testing.T) {
-	existing := `[{"name":"other-net","interface":"net2","cni-args":{"foo":"bar"}},{"name":"underlay-macvlan","interface":"net1"}]`
-	raw, err := macvlanNetworkAnnotation(existing, "02:00:00:00:00:01")
+func TestPlatformMacvlanSelectionIsCanonical(t *testing.T) {
+	got := platformMacvlanSelection("02:00:00:00:00:01")
+	want := `[{"name":"underlay-macvlan","namespace":"kube-system","interface":"net1","mac":"02:00:00:00:00:01"}]`
+	if got != want {
+		t.Fatalf("platformMacvlanSelection = %s, want %s", got, want)
+	}
+}
+
+// Chart-authored selections must never survive admission: not an extra
+// network, not a self-chosen MAC hidden behind capitalized keys, and not a
+// default-network override.
+func TestCreateMacvlanInitPatchRebuildsChartAuthoredSelections(t *testing.T) {
+	wh := testMacvlanWebhook()
+	pod := macvlanPod()
+	pod.Labels[constants.ApplicationMacvlanInitLabel] = "true"
+	pod.Annotations = map[string]string{
+		"k8s.v1.cni.cncf.io/networks":      `[{"Name":"underlay-macvlan","namespace":"kube-system","mac":"02:de:ad:be:ef:01"},{"name":"other-net","interface":"net2","cni-args":{"foo":"bar"}}]`,
+		"v1.multus-cni.io/default-network": "underlay-macvlan",
+		"unrelated":                        "kept",
+	}
+	req := macvlanBypassAdmissionRequest(t, pod)
+
+	if _, err := wh.CreateMacvlanInitPatch(req, pod); err != nil {
+		t.Fatalf("CreateMacvlanInitPatch: %v", err)
+	}
+	app, err := wh.dynamicClient.AppV1alpha1().Applications().Get(t.Context(), "app-space-jellyfin", metav1.GetOptions{})
 	if err != nil {
-		t.Fatalf("macvlanNetworkAnnotation: %v", err)
+		t.Fatalf("get application: %v", err)
 	}
-	var selections []map[string]interface{}
-	if err := json.Unmarshal([]byte(raw), &selections); err != nil {
-		t.Fatalf("decode network selections: %v", err)
+	mac := app.Spec.Settings[overlayMACSetting]
+	if mac == "" {
+		t.Fatal("expected a persisted platform MAC")
 	}
-	if got := selections[0]["interface"]; got != "net2" {
-		t.Fatalf("existing interface = %v, want net2", got)
+	if got := pod.Annotations["k8s.v1.cni.cncf.io/networks"]; got != platformMacvlanSelection(mac) {
+		t.Fatalf("networks annotation = %s, want the platform selection for %s", got, mac)
 	}
-	if got := selections[0]["cni-args"].(map[string]interface{})["foo"]; got != "bar" {
-		t.Fatalf("existing cni-args = %v, want bar", got)
+	for _, leaked := range []string{"02:de:ad:be:ef:01", "other-net", "cni-args"} {
+		if strings.Contains(pod.Annotations["k8s.v1.cni.cncf.io/networks"], leaked) {
+			t.Fatalf("chart-authored value %q leaked into %s", leaked, pod.Annotations["k8s.v1.cni.cncf.io/networks"])
+		}
 	}
-	if got := selections[1]["mac"]; got != "02:00:00:00:00:01" {
-		t.Fatalf("underlay MAC = %v", got)
+	if _, ok := pod.Annotations["v1.multus-cni.io/default-network"]; ok {
+		t.Fatal("default-network override must be removed")
+	}
+	if pod.Annotations["unrelated"] != "kept" {
+		t.Fatal("unrelated annotations must be preserved")
 	}
 }
 
