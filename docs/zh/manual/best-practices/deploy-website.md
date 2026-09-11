@@ -1,309 +1,189 @@
 ---
 outline: [2, 3]
-description: 通过 OpenCode 等 AI 编程助手把已开发好的网站部署到 Olares，本教程以 Portfolio Landing Page 为例。
+description: 通过由 olares-cli agent skills 驱动的 AI 智能体，把已开发好的网站项目发布到自定义域名。
 head:
   - - meta
     - name: keywords
-      content: Olares, OpenCode, Claude Code, 部署网站, 自定义域名, 镜像仓库, 预览, portfolio
+      content: Olares, Lares, 发布网站, 自定义域名, olares-cli, olares-cli agent skills
 ---
 
-# 通过 AI Agent 部署网站到 Olares
+# 发布网站到自定义域名
 
-Olares 支持直接通过 AI 编程助手把已开发好的网站部署到设备上。你把项目告诉 Agent，它会帮你打包成 Olares 应用、推送镜像、安装到 Olares 设备上，并绑定自定义域名，其他人就能通过 HTTPS 访问这个网站。
+在 Olares 上，你可以让 AI 智能体帮你部署已经开发好的网站。在 Olares CLI 的支持下，智能体会完成打包、推送镜像、安装到设备、绑定自定义域名等一系列操作，让网站以一个固定、公开的 HTTPS 地址对外可用。
 
-本教程以 **OpenCode** 和 **Portfolio Landing Page** 项目作为运行示例。你可以用同样的步骤在 Claude Code 中操作，或替换为自己的网站项目。
-
-本教程只讲**部署和分享**，不教如何开发网站。开始前，你需要已经有一个能在本地跑起来的网站项目。
-
-## 学习目标
-
-完成本教程后，你将学会：
-
-- 准备项目源码；
-- 部署前通过临时预览链接查看网站效果；
-- 把网站构建并部署到 Olares；
-- 配置自定义域名并上传 RSA 证书。
+本教程以 Lares 和一个托管在 GitHub 上的网站项目为例，演示完整的部署流程。使用其他 AI 智能体、或部署你自己的网站项目时，步骤同样适用。
 
 ## 前提条件
 
 开始前，请确认已有：
 
-- 一台资源足够运行该网站的 Olares 设备；
-- 已安装 OpenCode 应用；
-- 已安装并登录 Olares CLI 和 Agent Skills；
-- 一个已经能运行的网站项目源码；
+**Olares 环境**
+
+- 一台运行 v1.12.7 或更高版本的 Olares 设备；
+- 已安装 Lares 和 Router，并连接了本地模型；
+- Olares CLI（v1.12.7 或更高版本）和 Agent Skills。Olares CLI 已随 Olares 内置，运行在 Olares 设备上的智能体都自带；如果你在电脑上使用 AI 智能体，先安装 [Olares CLI 和 Agent Skills](/zh/developer/cli-overview.md)，用你的 Olares ID 登录后，本地的智能体都可以使用它们。
+
+**你的项目**
+
+- 一个已开发完成、源码可获取的网站项目。
+
+**账号与权限**
+
 - 以下镜像仓库之一：
   - Docker Hub 账号；
-  - 本地 Olares 镜像仓库访问权限；
-- 如果要公开分享，还需要一个自定义域名和 RSA SSL 证书。
-
-:::warning 本教程假设网站已可运行
-下文从一个已经能在本地构建运行的项目开始。如果你还没有网站项目，请先完成开发工作。
-:::
+  - 拥有创建 `write:packages` 权限 personal access token 的 GitHub 账号；
+- 一个你拥有的自定义域名，以及它的 DNS 管理控制台访问权限。
 
 ## 部署流程概览
 
-具体打包工作大部分由 Agent 完成，但整体流程分为以下阶段：
+大部分打包工作由智能体完成，整体流程分为以下阶段：
 
-1. **准备源码** —— Agent 读取本地、Olares Files 或 GitHub 上的项目。
-2. **预览验证** —— 在 OpenCode 内启动网站，通过预览 URL 确认效果。
-3. **构建并部署** —— Agent 生成生产构建、`Dockerfile`、容器镜像和 Olares chart，然后安装应用。
-4. **分享** —— 绑定自定义域名、上传 RSA 证书，并把入口设为 public。
+1. **源码**：智能体从 GitHub、Olares Files 或你的电脑读取项目。
+2. **预览**：在智能体中运行网站，打开预览 URL 确认效果。
+3. **构建并部署**：智能体生成生产构建、Dockerfile、容器镜像和 Olares chart，然后安装应用。
+4. **绑定并分享**：智能体申请 RSA 证书并绑定自定义域名。你只需添加两条 DNS 记录，网站即可通过 HTTPS 访问。
 
 ## 步骤 1：准备项目源码
 
-告诉 Agent 项目在哪。不同来源的处理方式如下。
-
-:::info 示例项目
-本教程以 Portfolio Landing Page 仓库 `https://github.com/arnobt78/Portfolio-Landing-Page-7-React-Frontend` 为例。实际操作时，把 URL 和目录名替换为你自己的项目。
-:::
-
-### 源码在本地电脑
-
-如果源码在自己电脑上，需要让 Olares 上的 OpenCode 能访问到它。你可以自己完成，也可以让 Agent 帮你做：
-
-- **直接使用**：如果你用的是能读取本地文件的本地 OpenCode CLI；
-- **推送到 GitHub**：自己推送到 GitHub，或让 Agent 创建仓库并推送。然后把仓库地址告诉 Agent；
-- **上传到 Olares Files**：自己上传到 `Home/Code` 目录，或让 Agent 复制过去。然后在 OpenCode 里以该目录创建 workspace。
-
-示例：
-
-> “把当前项目上传到 Olares Files 的 Home/Code 目录，并在 OpenCode 里作为 workspace 打开。”
-
-### 源码已在 Olares Files
-
-OpenCode 可以直接把项目目录作为 workspace 打开。Agent 会在这个 workspace 里执行构建、打包和部署命令。
+告诉智能体项目源码的位置。不同来源的处理方式不同。
 
 ### 源码在 GitHub
 
-把仓库地址告诉 Agent。公开仓库直接贴链接让它克隆；私有仓库需要先给 Agent 提供 GitHub personal access token 或 SSH key。
+把仓库地址告诉智能体。
 
-示例：
+- 公开仓库：直接提供链接，让它克隆；
+- 私有仓库：按提示先给智能体提供 GitHub personal access token 或 SSH key。
 
-> “克隆 Portfolio Landing Page 仓库 `https://github.com/arnobt78/Portfolio-Landing-Page-7-React-Frontend`，并作为 workspace 打开。”
-
-Agent 会克隆项目并在该目录下继续工作。
-
-## 步骤 2：在 OpenCode 中预览网站
-
-项目准备好后，向 Agent 请求预览。
-
-如果 Agent 主动询问是否要安装依赖并启动开发服务器，直接同意即可。如果没有主动询问，直接告诉它：
-
-> “安装依赖、启动开发服务器，并把预览链接给我。”
-
-Agent 会执行对应命令，然后返回一个临时预览 URL，例如：
+**示例：**
 
 ```text
-https://<host>/__preview/<listen-port>/
+Clone the repository from https://github.com/arnobt78/Portfolio-Landing-Page-7-React-Frontend
 ```
 
-或
+**结果：**
+
+Lares 会把项目克隆到它在 Olares Files 中的默认 workspace `Data/lares/data/workspace/`，并在该目录下工作。之后它会简单介绍项目，并询问如何继续。例如：
 
 ```text
-<appid>-<listen-port>.<userzone>
+Cloned successfully to Portfolio-Landing-Page-7-React-Frontend in the workspace. Quick overview: ...
+
+Want me to install dependencies and run it locally, or explore the source code?
 ```
 
-例如：
+### 源码在 Olares Files
+
+在 Lares 中选择 Olares Files 里的项目目录作为 workspace。智能体会在这个 workspace 中执行构建、打包和部署命令。
+
+### 源码在本地电脑
+
+如果源码在你电脑上，需要先让它能被 Olares 上的 Lares 访问到。你可以自己完成，也可以让智能体来做：
+
+- **推送到 GitHub**：把项目推送到仓库，然后把仓库地址告诉智能体。
+- **上传到 Olares Files**：上传到任意目录，然后把路径告诉智能体。
+
+## 步骤 2：预览网站
+
+项目就位后，Lares 会询问如何继续。告诉它运行网站。Lares 会在需要时安装项目依赖、启动开发服务器，并返回一个临时预览 URL。在浏览器中打开该 URL，确认网站运行正常。
+
+**示例：**
 
 ```text
-https://1f47cd9b0.laresprime.olares.com/__preview/5173/#home
+The app is up and running 🎉
+
+Dev server — Vite v7.3.1:
+Local: http://localhost:5173/
+Verified: HTTP 200, page serves correctly
 ```
 
-在浏览器中打开预览 URL，检查网站是否正常。
+## 步骤 3：构建、部署并发布
 
-:::tip 预览仅用于开发阶段
-预览 URL 是临时的，只能验证网站能否运行。要让网站长期可用并对外分享，需要继续执行后面的部署步骤。
-:::
+确认预览效果后，告诉智能体把网站发布到你的自定义域名。
 
-## 步骤 3：构建并部署
+剩下的工作由智能体完成。它会检查你的环境（Olares 版本、节点架构、Docker 配置），构建生产版本，并直接在 Olares 设备上打包容器镜像，镜像架构与节点一致。
 
-确认预览效果后，让 Agent 直接部署：
-
-> “预览没问题，部署到 Olares。”
-
-Agent 会完成剩余工作：生产构建、`Dockerfile`、镜像构建与推送、Olares chart、安装。安装完成后，应用会出现在 Launchpad 中。
-
-如果安装卡住，请参考下方的[常见问题](#常见问题)。
-
-### 选择镜像仓库
-
-Agent 需要一个镜像仓库来存放镜像。如果你不明确告诉它用哪个仓库，它可能会直接选一个默认值而不询问。建议在构建前就声明偏好。
-
-- **Docker Hub**：告诉 Agent 你的 Docker Hub 用户名，例如：
-
-  > “把镜像推送到 Docker Hub 我的用户名 `myusername` 下面。”
-
-  如果系统里 `~/.docker/config.json` 已经配置了 Docker 凭证，Agent 可能会默认使用 Docker Hub 和该用户名，而不会再次询问。
-
-- **Olares 本地镜像仓库**：如果在 Olares 系统内操作，可以让 Agent 使用本地仓库：
-
-  > “使用 Olares 本地镜像仓库，不要推送到 Docker Hub。”
-
-  Agent 通常可以直接推送到 `mirrors.olares.com`，无需额外凭证。
-
-推送完成后，确认镜像最终存到了哪里：
-
-> “镜像推送到哪里了？把完整的镜像名和仓库告诉我。”
-
-答案会显示在 Agent 的输出里，也会在 chart 的 image 字段中体现。
-
-### 避免架构不匹配
-
-:::warning 注意 CPU 架构
-如果在 Apple Silicon Mac（arm64）上构建镜像，而 Olares 设备是 AMD64，容器启动会报 `exec format error`。
-:::
-
-确保镜像架构与 Olares 节点一致。例如：
-
-> “我的 Olares 节点是 AMD64，镜像请按 `linux/amd64` 构建。”
-
-Agent 会执行类似下面的命令：
-
-```bash
-docker buildx build --platform linux/amd64 -t <image>:<tag> .
-```
-
-如果希望镜像同时支持 ARM 和 AMD64 设备，可以让 Agent 构建多架构镜像：
-
-> “构建一个同时支持 ARM64 和 AMD64 的多架构镜像。”
-
-```bash
-docker buildx build --platform linux/amd64,linux/arm64 -t <image>:<tag> --push .
-```
-
-:::tip 每次重新构建都要换一个镜像标签
-修复问题后重新构建镜像时，请使用新 tag，例如 `0.1.0`、`0.1.1`、`0.1.2`。如果复用 tag，Olares 节点可能缓存旧层，继续运行有问题的镜像。
-:::
-
-:::tip 每次上传都要更新 chart 版本号
-修改 chart 后重新上传时，请提升 `Chart.yaml` 和 `OlaresManifest.yaml` 中的版本号。Olares 可能对重复版本号的 chart 拒绝上传或表现异常。
-:::
-
-## 步骤 4：配置自定义域名
-
-告诉 Agent 你想使用的真实子域名：
-
-> “把这个应用的入口域名设为 `website.bellame.online`。”
-
-:::warning 使用你真实拥有的域名
-请把 `yourdomain.com` 替换为你实际拥有的域名。
-:::
-
-Agent 会先把入口访问级别设为 public，然后向你索要 TLS 证书和私钥。如果你还没有证书，它会给出 certbot 命令并说明必须使用 RSA：
+**示例：**
 
 ```text
-First, I need to set the entrance auth level to public (required for custom domains):
-Auth level set to public.
-
-To register website.bellame.online, I need the TLS certificate and private key for this domain. Do you have these files available? I need:
-
-Certificate file (full chain PEM, e.g., cert.pem)
-Private key file (RSA PEM, e.g., key.pem)
-If you don't have them yet, you can generate one with certbot:
-
-certbot certonly -d website.bellame.online --key-type rsa
-Note: RSA key type is required (certbot defaults to ECDSA, which won't work).
+The preview looks good. Publish it to `website.bellame.online`.
 ```
 
-按 Agent 的提示继续。接下来需要：生成证书、添加 CNAME 记录、把证书复制到 Agent 或 `olares-cli` 能读取的位置，然后上传。
+### 提供镜像仓库
 
-### 申请 RSA 证书
+智能体需要一个镜像仓库来存放镜像，它会询问你使用哪一个。
 
-Olares 要求使用 RSA 证书。certbot 默认可能会申请 ECDSA 证书，配置后会导致 BFL 服务异常。
+- **Docker Hub（推荐）**：把你的 Docker Hub 用户名告诉智能体。当它要求凭证时，按它的说明创建 access token 并粘贴。智能体登录后会推送镜像，并验证镜像可以匿名拉取——Olares 节点正是通过这种方式下载镜像。推送完成后，记得在 Docker Hub 中删除该 token，它只用于这一次推送。
 
-你可以在本地终端自己运行 certbot：
+- **GitHub Container Registry**：智能体可以把镜像推送到你 GitHub 账号下的 `ghcr.io`。当它要求凭证时，创建一个带 `write:packages` 权限的 personal access token 并粘贴。镜像仓库必须设为 public，Olares 节点才能匿名拉取。
 
-```bash
-sudo certbot certonly --manual --preferred-challenges dns --key-type rsa -d <your-domain>
-```
+镜像推送完成后，智能体会创建一个入口访问级别为 `public` 的 Olares chart（自定义域名要求如此），上传 chart 并安装应用。完成后，应用会出现在 Launchpad 中。
 
-按提示操作，certbot 要求添加 DNS TXT 记录时，在 DNS 服务商处添加对应记录。
+如果安装卡住，请参考[常见问题](#常见问题)。
 
-### 添加 CNAME 记录
+## 步骤 4：绑定自定义域名
 
-在 DNS 服务商处添加一条 CNAME 记录，把域名指向 Olares：
+应用运行起来后，智能体开始绑定你的自定义域名。它会为域名申请 RSA 证书，并挂载到应用入口。你只需要在 DNS 服务商的控制台添加两条记录，具体的值由智能体提供。绑定过程中应用会重启一次，这是正常现象。
 
-| 类型 | 名称 | 值 |
-| :--- | :--- | :--- |
-| CNAME | `<your-subdomain>` | `laresprime.olares.com` |
+Olares 只接受 RSA 证书。某些工具默认生成的 ECDSA 证书会导致 BFL 服务异常，所以智能体一律申请 RSA 证书。
 
-### 上传证书
+### 1. 添加 TXT 记录
 
-在本地电脑上，certbot 把证书保存在 `/etc/letsencrypt/live/<your-domain>/`。该目录需要 root 权限，`olares-cli` 无法直接读取。
+为了证明你拥有该域名，智能体会让你在 DNS 控制台添加一条 TXT 记录。
 
-1. 先把证书复制到当前用户能读取的位置：
+**示例：**
 
-   ```bash
-   sudo cp /etc/letsencrypt/live/<your-domain>/fullchain.pem ~/cert.pem
-   sudo cp /etc/letsencrypt/live/<your-domain>/privkey.pem ~/key.pem
-   sudo chown $(whoami) ~/cert.pem ~/key.pem
-   ```
+- Type: `TXT`
+- Name: `_acme-challenge.website`（必须包含完整的子域）
+- Value: 智能体提供的具体值
 
-2. 确保你已经在本地安装并登录了 `olares-cli`（v1.12.6+）。
+智能体会持续查询公共 DNS，一旦查到这条 TXT 记录，就会自动签发 RSA 证书。这个过程可能需要几分钟。TXT 记录只是临时验证用的，证书签发完成后就可以删除。
 
-3. 在本地运行域名绑定命令：
+### 2. 添加 CNAME 记录
 
-   ```bash
-   olares-cli settings apps domain set <app-name> <entrance-name> \
-     --third-party <your-domain> \
-     --cert-file ~/cert.pem \
-     --key-file ~/key.pem
-   ```
+添加一条 CNAME 记录，把你的域名指向 Olares。这样，访问你域名的人就会被导到你的 Olares 设备。
 
-   例如：
+**示例：**
 
-   ```bash
-   olares-cli settings apps domain set portfolio7 portfolio7 \
-     --third-party website.bellame.online \
-     --cert-file ~/cert.pem \
-     --key-file ~/key.pem
-   ```
+- Type: `CNAME`
+- Name: `website`
+- Value: `laresprime.olares.com`
 
-### 验证入口
+### 3. 验证
 
-让 Agent 验证域名是否可以通过 HTTPS 访问：
+智能体进行最后的检查：证书、域名绑定、CNAME 记录，以及端到端的 HTTPS 测试。全部通过后，它会告诉你网站已上线。
 
-> “自定义域名已经绑定，请验证 `website.bellame.online` 是否能通过 HTTPS 访问。”
-
-你也可以让 Agent 列出所有入口确认 URL：
-
-> “列出这个应用的所有入口，告诉我当前的 URL。”
-
-Agent 设置好访问级别后会自动验证域名，你看到的输出类似：
+**示例：**
 
 ```text
-set auth level for portfolio7/portfolio7 to "public"
-Auth level is set to public.
-https://website.bellame.online is now returning HTTP 200 and serving your portfolio site directly.
-The portfolio site is live and accessible at https://website.bellame.online.
+✓ RSA certificate issued and valid
+✓ Domain website.bellame.online bound to the app entrance
+✓ CNAME record detected and active
+✓ HTTPS check passed (HTTP 200)
+The site is live at https://website.bellame.online 🎉
 ```
 
-:::warning public 入口仍需登录 Olares
-设为 public 后，任何能登录你的 Olares 设备的用户都能访问该网站。未登录的访问者会先被重定向到 Olares 的认证页面。
+在浏览器中打开线上地址确认，然后把 URL 分享给需要访问的人。
+
+:::tip 证书续期
+Let's Encrypt 证书的有效期为 90 天。续期时，让智能体用新证书重新绑定域名即可。重新绑定过程中应用会短暂重启。
 :::
 
-## 步骤 5：分享网站
+## 步骤 5：更新网站（可选）
 
-在浏览器中打开自定义域名，确认网站能正常加载，然后把 URL 分享给需要访问的人。
+网站上线后，你可以持续改进它。
 
-例如：
-
-```text
-https://website.bellame.online
-```
+告诉智能体你想改什么。智能体会用新的镜像标签重新构建网站、使用新的 chart 版本，并重新上传和安装应用。你的域名、证书和 DNS 记录都保持不变。
 
 ## 常见问题
 
-### 安装一直卡在 `initializing`
+### 安装一直卡在 `Initializing`
 
 常见原因：
 
 - 镜像架构与 Olares 节点不一致；
-- 镜像 tag 被复用，节点缓存了旧层；
+- 镜像标签被复用，节点缓存了旧层；
 - 重新上传 chart 时未更新版本号。
 
-可以尝试卸载旧版本、提升版本号后重新上传安装：
+可以尝试卸载旧版本、删除旧版本号、使用新的镜像标签和 chart 版本后重新安装：
 
 ```bash
 olares-cli market uninstall <app-name>
@@ -312,9 +192,13 @@ olares-cli market upload <new-chart>
 olares-cli market install <app-name> -s upload --watch
 ```
 
+### 镜像架构与节点不一致
+
+智能体自动识别节点架构，并直接在 Olares 设备上构建镜像，所以这种情况很少发生。如果错误架构的镜像被安装（例如在 AMD64 节点上装了 `linux/arm64` 的镜像），容器会报 `exec format error` 崩溃。让智能体按节点架构重新构建镜像并重新安装应用即可。
+
 ### nginx 权限错误
 
-如果容器以非 root 用户运行，nginx 可能无法写入 PID 文件。让 Dockerfile 修改 PID 路径，并把相关目录权限交给 nginx 用户：
+如果容器以非 root 用户运行，nginx 可能无法写入 PID 文件。让 Dockerfile 修改 PID 路径，并把相关目录的所有权交给 nginx 用户：
 
 ```dockerfile
 RUN sed -i 's|/run/nginx.pid|/tmp/nginx.pid|' /etc/nginx/nginx.conf \
@@ -328,12 +212,6 @@ USER nginx
 
 ### DNS TXT 记录验证失败
 
-在 DNS 服务商添加 TXT 记录时，记录名称必须包含完整子域。例如域名是 `n1.monster`，证书申请的是 `portfolio.n1.monster`，则 TXT 名称应填 `_acme-challenge.portfolio`，而不是只填 `_acme-challenge`。
+在 DNS 服务商添加 TXT 记录时，记录名称必须包含完整的子域。例如域名是 `n1.monster`，证书申请的是 `portfolio.n1.monster`，则 TXT 名称应填 `_acme-challenge.portfolio`，而不是只填 `_acme-challenge`。
 
-### 恢复应用后 auth level 变回 private
-
-修改访问级别后如果恢复应用，chart 中定义的 `authLevel` 可能会覆盖手动设置。需要修改 chart 源文件中的 `OlaresManifest.yaml`，把 `authLevel` 设为 `public`，提升版本号后重新部署。
-
-### Agent 无法读取 certbot 证书
-
-certbot 把证书存在 `/etc/letsencrypt`，只有 root 能访问。先把证书复制到项目目录并修改所有者，再让 Agent 读取。
+如果记录正确但验证仍失败，可能是公共解析器缓存了上一次尝试的旧 TXT 值。等待缓存过期，或用你域名的权威名称服务器核对记录值。

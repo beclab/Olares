@@ -582,7 +582,7 @@ const side = {
           link: "/zh/manual/best-practices/connect-ai-apps",
         },
         {
-          text: "部署网站",
+          text: "发布网站到自定义域名",
           link: "/zh/manual/best-practices/deploy-website",
         },
       ],
