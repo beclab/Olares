@@ -93,6 +93,7 @@ Examples:
 		},
 	}
 	opts.addOutputFlags(cmd)
+	describeLifecycleJSON(cmd)
 	opts.addCascadeFlag(cmd)
 	opts.addDeleteDataFlag(cmd)
 	opts.addWatchFlags(cmd)

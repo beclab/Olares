@@ -11,6 +11,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -95,6 +96,58 @@ type voice struct {
 	Description string            `json:"description"`
 	Labels      map[string]string `json:"labels,omitempty"`
 	Settings    json.RawMessage   `json:"settings,omitempty"`
+}
+
+// keptVoice is what a route that keeps a voice answers with, which is either the
+// voice or a receipt for the task that is making it.
+//
+// One shape reads both because the route does not say in advance which it will
+// be, and nothing the caller sends decides: making a voice is minutes of work on
+// some engines and instant on others, so `voices/add` and `text-to-voice` each
+// answer inline or with a task depending on who is behind the category. The
+// discriminator is the receipt's own key rather than the status code — these
+// verbs never ask for a task, so a 202 is the engine's choice to report, not the
+// caller's to interpret.
+type keptVoice struct {
+	voice
+	Task *audioTask `json:"task,omitempty"`
+}
+
+// keep resolves an answer to the voice it made, waiting out the task when the
+// answer was a receipt.
+//
+// Read as a voice, a receipt is a voice with no id: the command reports a name
+// that nothing can be spoken with, and — because a submission opens a spend row
+// the settling lookup is supposed to close — Router is left holding a row for
+// work nobody ever came back for.
+func (k keptVoice) keep(ctx context.Context, dp *routerClient, model string,
+	timeout time.Duration, verbose bool) (voice, error) {
+	if k.Task == nil || strings.TrimSpace(k.Task.ID) == "" {
+		return k.voice, nil
+	}
+	task := k.Task
+	if !task.settled() {
+		if err := waitForAudioTask(ctx, dp, task, model, timeout, verbose); err != nil {
+			return voice{}, err
+		}
+	}
+	if !strings.EqualFold(task.Status, "succeeded") {
+		if task.Error != nil && strings.TrimSpace(task.Error.Message) != "" {
+			return voice{}, fmt.Errorf("the voice was not kept: %s", task.Error.Message)
+		}
+		return voice{}, fmt.Errorf("the voice was not kept: task %s ended %s",
+			task.ID, nonEmpty(task.Status))
+	}
+	if len(task.Result) == 0 {
+		return voice{}, fmt.Errorf("task %s finished without naming the voice it made; "+
+			"`olares-cli router call voice list --model %s` shows whether it is there",
+			task.ID, nonEmpty(model))
+	}
+	var made voice
+	if err := json.Unmarshal(task.Result, &made); err != nil {
+		return voice{}, fmt.Errorf("read the voice task %s made: %w", task.ID, err)
+	}
+	return made, nil
 }
 
 func newVoiceListCommand(f *cmdutil.Factory) *cobra.Command {
@@ -236,6 +289,7 @@ func newVoiceAddCommand(f *cmdutil.Factory) *cobra.Command {
 		sample      string
 		description string
 		refText     string
+		timeout     time.Duration
 	)
 	cmd := &cobra.Command{
 		Use:   "add <name>",
@@ -250,6 +304,10 @@ re-uploading anything.
 --sample is the recording. --ref-text is what is said in it, which some engines
 use to align the clone and all of them ignore harmlessly when they do not.
 
+Some engines store the voice as they answer and some run it as a job; either
+way this waits and prints the id the voice actually has. --timeout bounds the
+wait, and a timeout leaves the job running rather than losing it.
+
 Needs a model declaring supports_tts_clone; without --model this resolves
 default-tts-clone, and a machine with no cloning model says so rather than
 sending the recording somewhere that cannot use it.
@@ -263,20 +321,22 @@ Example:
 				return fmt.Errorf("--sample is required: a voice made from a recording needs the recording")
 			}
 			return runVoiceAdd(c.Context(), f, args[0], sample, description, refText,
-				callModel(model, categoryTTSClone), apiKey, output)
+				callModel(model, categoryTTSClone), apiKey, output, timeout)
 		},
 	}
 	addVoiceModelFlag(cmd, &model, categoryTTSClone)
 	cmd.Flags().StringVar(&sample, "sample", "", "the recording to keep as a voice")
 	cmd.Flags().StringVar(&description, "description", "", "what this voice is, for the person reading the list")
 	cmd.Flags().StringVar(&refText, "ref-text", "", "what is said in the recording")
+	cmd.Flags().DurationVar(&timeout, "timeout", 10*time.Minute,
+		"give up waiting after this long; the model keeps making the voice")
 	cmd.Flags().StringVar(&apiKey, "api-key", "", dataPlaneKeyFlagUsage)
 	addOutputFlag(cmd, &output)
 	return cmd
 }
 
 func runVoiceAdd(ctx context.Context, f *cmdutil.Factory, name, sample, description, refText,
-	model, apiKey, outputRaw string) error {
+	model, apiKey, outputRaw string, timeout time.Duration) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -313,11 +373,18 @@ func runVoiceAdd(ctx context.Context, f *cmdutil.Factory, name, sample, descript
 	if resp.StatusCode/100 != 2 {
 		return callErr(dp.formatErr(http.MethodPost, route, resp.StatusCode, raw))
 	}
-	if format == FormatJSON {
-		return printRawJSON(os.Stdout, raw)
+	var answer keptVoice
+	if err := json.Unmarshal(raw, &answer); err != nil {
+		return fmt.Errorf("read the answer to %s: %w (body=%s)",
+			route, err, truncate(string(raw), 200))
 	}
-	var made voice
-	_ = json.Unmarshal(raw, &made)
+	made, err := answer.keep(ctx, dp, model, timeout, format == FormatTable)
+	if err != nil {
+		return err
+	}
+	if format == FormatJSON {
+		return printJSON(os.Stdout, made)
+	}
 	_, err = fmt.Printf("kept as %s. `olares-cli router call speak \"…\" --voice %s` speaks with it.\n",
 		nonEmpty(made.ID), nonEmpty(made.ID))
 	return err
@@ -331,6 +398,7 @@ func newVoiceDesignCommand(f *cmdutil.Factory) *cobra.Command {
 		text    string
 		save    string
 		outPath string
+		timeout time.Duration
 	)
 	cmd := &cobra.Command{
 		Use:   "design <description…>",
@@ -360,13 +428,15 @@ Examples:
 				return err
 			}
 			return runVoiceDesign(c.Context(), f, description, text, save, outPath,
-				callModel(model, categoryTTSDesign), apiKey, output)
+				callModel(model, categoryTTSDesign), apiKey, output, timeout)
 		},
 	}
 	addVoiceModelFlag(cmd, &model, categoryTTSDesign)
 	cmd.Flags().StringVar(&text, "text", "", "the line the preview should read")
 	cmd.Flags().StringVar(&save, "save", "", "keep the first preview under this name")
 	cmd.Flags().StringVar(&outPath, "out", "", "write the first preview here")
+	cmd.Flags().DurationVar(&timeout, "timeout", 10*time.Minute,
+		"give up waiting for --save after this long; the model keeps keeping the voice")
 	cmd.Flags().StringVar(&apiKey, "api-key", "", dataPlaneKeyFlagUsage)
 	addOutputFlag(cmd, &output)
 	return cmd
@@ -383,7 +453,7 @@ type voicePreview struct {
 }
 
 func runVoiceDesign(ctx context.Context, f *cmdutil.Factory, description, text, save, outPath,
-	model, apiKey, outputRaw string) error {
+	model, apiKey, outputRaw string, timeout time.Duration) error {
 	format, dp, err := voicePlane(ctx, f, outputRaw, apiKey)
 	if err != nil {
 		return err
@@ -415,18 +485,22 @@ func runVoiceDesign(ctx context.Context, f *cmdutil.Factory, description, text, 
 	}
 
 	if name := strings.TrimSpace(save); name != "" {
-		var kept voice
+		var answer keptVoice
 		if err := dp.doJSON(ctx, http.MethodPost, voicePath(epTextToVoice, model), map[string]any{
 			"generated_voice_id": first.GeneratedVoiceID,
 			"voice_name":         name,
 			"voice_description":  description,
-		}, &kept); err != nil {
+		}, &answer); err != nil {
 			return callErr(err)
+		}
+		kept, err := answer.keep(ctx, dp, model, timeout, format == FormatTable)
+		if err != nil {
+			return err
 		}
 		if format == FormatJSON {
 			return printJSON(os.Stdout, kept)
 		}
-		_, err := fmt.Printf("kept as %s. `olares-cli router call speak \"…\" --voice %s` speaks with it.\n",
+		_, err = fmt.Printf("kept as %s. `olares-cli router call speak \"…\" --voice %s` speaks with it.\n",
 			nonEmpty(kept.ID), nonEmpty(kept.ID))
 		return err
 	}

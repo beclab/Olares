@@ -9,6 +9,8 @@ head:
 
 Olares ID 是 Olares 生态系统中的唯一标识符，作为你的数字身份，可用于访问各种服务和功能。
 
+Olares ID 只能在 LarePass 移动端创建。
+
 Olares ID 由本地名称和域名两部分组成。以 `alice123@olares.cn` 为例：
 - `alice123`：本地名称
 - `olares.cn`：域名
@@ -24,7 +26,7 @@ Olares ID 由本地名称和域名两部分组成。以 `alice123@olares.cn` 为
 ## 创建 Olares ID
 
 ::: tip 高级创建
-本节主要介绍如何创建个人 Olares ID 以快速体验 Olares。如有更高级的需求，如创建使用个人社交账号认证的 Olares ID，或创建用于组织用途的 Olares ID，请参阅[创建账号](../larepass/create-account.md)。
+本节主要介绍如何创建个人 Olares ID 以快速体验 Olares。如有更高级的需求，如创建使用个人社交账号认证的 Olares ID，或创建用于组织用途的 Olares ID，请参阅[设置自定义域名 Olares ID](../best-practices/set-custom-domain.md)。
 :::
 
 :::warning `.com`域名 与 `.cn`域名
@@ -52,3 +54,7 @@ Olares ID 由本地名称和域名两部分组成。以 `alice123@olares.cn` 为
 
 如果要登录 Olares Space：
 - [管理 Olares Space 账号](/zh/manual/space/manage-accounts.md)
+
+为保证身份安全并进行后续管理：
+- [备份助记词](../larepass/back-up-mnemonics.md)
+- [在 LarePass 中管理 Olares ID](../larepass/manage-accounts.md)

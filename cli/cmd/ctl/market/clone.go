@@ -61,6 +61,7 @@ Examples:
 	}
 	opts.addCommonFlags(cmd)
 	opts.addOutputFlags(cmd)
+	describeLifecycleJSON(cmd)
 	opts.addTitleFlag(cmd)
 	opts.addEnvFlag(cmd)
 	opts.addEntranceTitleFlag(cmd)
@@ -123,6 +124,11 @@ func runClone(opts *MarketOptions, appName string) error {
 	if computeMode != "" && !atLeast126 {
 		return opts.failOp("clone", appName, fmt.Errorf("--compute-mode requires Olares 1.12.6+; this backend uses a different (unchanged) clone path — re-run without --compute-mode"))
 	}
+	// The entry is already in hand from the clone-support check above, so the
+	// mode is checked against it directly rather than re-reading the catalog.
+	if err := checkDeclaredComputeMode(appInfo, appName, computeMode); err != nil {
+		return opts.failOp("clone", appName, err)
+	}
 	selected := ""
 	if atLeast126 {
 		selected = computeMode
@@ -154,7 +160,7 @@ func runClone(opts *MarketOptions, appName string) error {
 		}
 	}
 	if err != nil {
-		if envErr := parseServerEnvError(resp, appName); envErr != nil {
+		if envErr := parseServerEnvError(resp, appName, source); envErr != nil {
 			return opts.failOp("clone", appName, envErr)
 		}
 		if cloneErr := parseServerCloneError(resp); cloneErr != nil {

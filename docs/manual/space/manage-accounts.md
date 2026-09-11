@@ -13,7 +13,7 @@ This guide covers logging in to Olares Space, managing multiple accounts, and lo
 
 ## Log in to Olares Space
 
-Open [Olares Space](https://space.olares.com/) in your browser, and scan the QR code using LarePass to log in. The available features depend on the account type you use.
+Open [Olares Space](https://www.olares.com/space) in your browser, and scan the QR code using LarePass to log in. The available features depend on the account type you use.
 
 ### Log in with an Olares ID
 

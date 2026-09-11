@@ -11,7 +11,7 @@ olares-cli knowledge download inspect 'https://example.com/file.zip' -o json
 
 Returns provider (`yt-dlp` / `aria2` / `huggingface` / …), title, and (for yt-dlp) `available_qualities`. Probe failures often still return HTTP 200 with `Error` / `error_category` set — treat as a hint, not a gate before `create`.
 
-Run it to pick a quality or to show the user what a URL resolves to. You do **not** need it to name a task: `create` runs the same probe and sends the title as `file_name` on its own, so there is no reason to inspect first and pass the title back through `--name`. See [task lifecycle](olares-knowledge-download-lifecycle.md) for the naming rules.
+Run it to pick a quality or to show the user what a URL resolves to. You do **not** need it to name a task: `create` runs the same probe and sends the title as `file_name` on its own, so there is no reason to inspect first and pass the title back through `--name`. See [create and follow a task](olares-knowledge-download-create.md) for the naming rules.
 
 If `Available: false` for yt-dlp, the yt-dlp daemon is unreachable (often not installed). Create for yt-dlp URLs will fail until it is available; aria2 / huggingface URLs are unaffected.
 

@@ -56,6 +56,7 @@ Examples:
 		},
 	}
 	opts.addOutputFlags(cmd)
+	describeLifecycleJSON(cmd)
 	opts.addComputeBindingFlag(cmd)
 	opts.addWatchFlags(cmd)
 	return cmd
