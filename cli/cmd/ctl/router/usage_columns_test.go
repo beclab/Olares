@@ -128,6 +128,59 @@ func TestARunningCallHasNoCostYet(t *testing.T) {
 	}
 }
 
+// A row records the name the caller wrote, and a call that named no model wrote
+// a category. Reading `default-tts-clone` off a bill tells nobody which engine
+// spent the time.
+func TestTheModelColumnNamesWhatAnswered(t *testing.T) {
+	cases := map[string]struct {
+		row  spendLog
+		want string
+	}{
+		"a category resolves to the model behind it": {
+			spendLog{ModelName: "default-tts-clone", ServedModelName: "Olares/Breeze-TTS-2"},
+			"Olares/Breeze-TTS-2",
+		},
+		"a named model is shown as named": {
+			spendLog{ModelName: "Olares/Breeze-TTS-2", ServedModelName: "Olares/Breeze-TTS-2"},
+			"Olares/Breeze-TTS-2",
+		},
+		"a refusal that reached no model keeps the caller's own name": {
+			spendLog{ModelName: "default-rerank"},
+			"default-rerank",
+		},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			if got := spendModel(&tc.row); got != tc.want {
+				t.Fatalf("got %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+// The table is one line per call, so the substitution has to be said somewhere:
+// a reader who cannot find the name they typed would take the page for the
+// wrong account.
+func TestASubstitutedCategoryIsReportedOnce(t *testing.T) {
+	var buf bytes.Buffer
+	rows := []spendLog{
+		{Mode: "tts", Status: "success", ModelName: "default-tts-clone",
+			ServedModelName: "Olares/Breeze-TTS-2"},
+		{Mode: "chat", Status: "success", ModelName: "Olares/Qwen3-8B",
+			ServedModelName: "Olares/Qwen3-8B"},
+	}
+	if err := spendZeroNotes(&buf, rows); err != nil {
+		t.Fatalf("spendZeroNotes: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "1 call named a category") {
+		t.Fatalf("the notes should count the one substituted row, got:\n%s", out)
+	}
+	if strings.Count(out, "named a category") != 1 {
+		t.Fatalf("the note belongs on the page once, got:\n%s", out)
+	}
+}
+
 // Four different facts share one glyph in the money column, so the page says
 // which of them it is showing.
 func TestTheZerosOnThePageAreExplained(t *testing.T) {

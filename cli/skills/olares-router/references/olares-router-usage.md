@@ -54,6 +54,10 @@ Three zeros mean three different things and `list` says which under the table:
 - **`unpriced`** — the quantity was measured and the model row carries no rate for it. Music and 3D generation are permanently here today: Router has no price list for either, so the traffic is real and the money is not. Fixing it means putting prices on the model row — a picture rate is per picture, so an image workflow that reads `unpriced` while its pictures are counted has only the tiered rates (resolution, quality) configured and not that one.
 - **`audio_unmetered`** — the engine reported no duration, and audio is charged by the second, so there was nothing to multiply.
 
+**`MODEL` is what answered, not always what was asked for.** A row records the name the caller wrote, and a call that named no model wrote a category — `default-tts-clone`, `default-stt`, `default-ocr`. That is a true record of the request and says nothing about which engine spent the time, so the column resolves the category to the model behind it and the page counts the rows it did that for. `-o json` carries both: `model_name` is what was asked for, `served_model_name` is what ran. A refusal that never reached a model has only the one name, and the column shows it.
+
+Both names matter for different questions. `--model` and `usage summary --by model` group by the model that answered, so a category and the qualified name are one bucket; `model_name` is what somebody searches by when they remember what they typed.
+
 `--session` follows one piece of work across the calls it took. An agent or a split audio job sends a session id, so the six calls that transcribed one recording are one filter apart instead of six rows to spot by timestamp.
 
 A row carries a key only when the call presented one. `router call` presents none by default, so its rows have an empty key and are attributed to the person: **`--key` will not find them, and `--user` is how they are read.** A row with no key is the normal shape for a call made from `olares-cli` or from a browser, not a record that lost its attribution.
