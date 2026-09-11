@@ -26,9 +26,10 @@ const (
 	CallerJWTAppidClaim       = callerjwt.ClaimAppid
 	CallerJWTClientAppidClaim = callerjwt.ClaimClientAppid
 	// CallerJWTViewerHeader is filled from the verified JWT viewer claim after
-	// gateway authn. Client-supplied X-BFL-USER is overwritten and must not be
-	// trusted as identity on its own.
-	CallerJWTViewerHeader = "X-BFL-USER"
+	// gateway authn. A client-supplied X-CALLER-USER is stripped before authn
+	// and must not be trusted as identity on its own; a caller's own
+	// X-BFL-USER is passed through untouched.
+	CallerJWTViewerHeader = "X-CALLER-USER"
 	// CallerJWTAppidHeader and CallerJWTClientAppidHeader both map to
 	// X-Caller-Appid: Shared tokens carry olares.caller.appid, ordinary
 	// callers carry olares.caller.clientAppid; the claims stay mutually
@@ -53,7 +54,7 @@ func securityPolicyName(srr *srrv1alpha1.SharedRouteRegistry) string {
 }
 
 // desiredSharedRouteSecurityPolicy builds JWT authn for a Shared HTTPRoute.
-// After verification, the gateway copies olares.viewer → X-BFL-USER and
+// After verification, the gateway copies olares.viewer → X-CALLER-USER and
 // either olares.caller.appid or olares.caller.clientAppid → X-Caller-Appid
 // (Shared vs ordinary callers; claims are mutually exclusive). A header is
 // written only when that claim exists in the token; missing JWT is rejected.

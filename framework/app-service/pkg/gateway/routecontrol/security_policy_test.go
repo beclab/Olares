@@ -85,9 +85,10 @@ func TestDesiredSharedRouteSecurityPolicyJWTAuthn(t *testing.T) {
 	if claimMap["claim"] != CallerJWTViewerClaim || claimMap["header"] != CallerJWTViewerHeader {
 		t.Fatalf("claimToHeaders[0] = %#v", claimMap)
 	}
-	// Spoofed client X-BFL-USER is overwritten after JWT authn; keep this mapping.
-	if claimMap["header"] != "X-BFL-USER" {
-		t.Fatalf("viewer header must remain X-BFL-USER for gateway overwrite, got %#v", claimMap["header"])
+	// The verified viewer is written to X-CALLER-USER after JWT authn; a caller's
+	// own X-BFL-USER is no longer the platform identity header on this path.
+	if claimMap["header"] != "X-CALLER-USER" {
+		t.Fatalf("viewer header must be X-CALLER-USER, got %#v", claimMap["header"])
 	}
 	appidMap := claimToHeaders[1].(map[string]any)
 	if appidMap["claim"] != CallerJWTAppidClaim || appidMap["header"] != CallerJWTAppidHeader {
@@ -171,7 +172,7 @@ func TestIssuedJWTSatisfiesClaimToHeaderPaths(t *testing.T) {
 			want:   "f3395cd5",
 		},
 		{
-			name:   "X-BFL-USER",
+			name:   "X-CALLER-USER",
 			req:    callerjwt.IssueRequest{Namespace: "ns", ServiceAccountName: "sa", AppRef: "demo", Viewer: "alice", ClientAppid: "6bf98da2"},
 			header: CallerJWTViewerHeader,
 			claim:  CallerJWTViewerClaim,
