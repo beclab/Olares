@@ -11,7 +11,7 @@ head:
 
 With Olares, you can ask an AI agent to deploy a website you have already built. Powered by the Olares CLI, the agent packages the site, pushes the image, installs it on your device, and binds a custom domain so the site is available over HTTPS at a stable, public URL.
 
-This tutorial uses Lares and a GitHub-hosted website project as an example to walk you through the whole deployment process. The same flow also applies when you use another AI agent to deploy your own website project.
+This tutorial uses Lares and a GitHub-hosted website project as an example to walk you through the whole deployment process. The same flow applies when you use another AI agent with Olares CLI agent skills to deploy your own website project.
 
 ## Prerequisites
 
