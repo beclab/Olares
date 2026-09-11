@@ -1638,7 +1638,7 @@ func (h *Handler) macvlanAnnotationValidate(req *restful.Request, resp *restful.
 		klog.Errorf("Failed to decode macvlan annotation admission request err=%v", err)
 		admissionResp.Response = h.sidecarWebhook.AdmissionError("", err)
 	} else {
-		admissionResp.Response = h.macvlanAnnotationValidateMutate(admissionReq.Request, proxyUUID)
+		admissionResp.Response = h.macvlanAnnotationValidateMutate(req.Request.Context(), admissionReq.Request, proxyUUID)
 	}
 	admissionResp.TypeMeta = admissionReq.TypeMeta
 	admissionResp.Kind = admissionReq.Kind
@@ -1647,7 +1647,7 @@ func (h *Handler) macvlanAnnotationValidate(req *restful.Request, resp *restful.
 	}
 }
 
-func (h *Handler) macvlanAnnotationValidateMutate(req *admissionv1.AdmissionRequest, proxyUUID uuid.UUID) *admissionv1.AdmissionResponse {
+func (h *Handler) macvlanAnnotationValidateMutate(ctx context.Context, req *admissionv1.AdmissionRequest, proxyUUID uuid.UUID) *admissionv1.AdmissionResponse {
 	if req == nil {
 		return h.sidecarWebhook.AdmissionError("", errNilAdmissionRequest)
 	}
@@ -1656,16 +1656,29 @@ func (h *Handler) macvlanAnnotationValidateMutate(req *admissionv1.AdmissionRequ
 		klog.Errorf("Failed to unmarshal macvlan annotation pod uuid=%s err=%v", proxyUUID, err)
 		return h.sidecarWebhook.AdmissionError(req.UID, err)
 	}
-	if err := webhook.ValidateMacvlanAnnotation(&pod); err != nil {
-		klog.Errorf("Rejected direct macvlan annotation pod=%s/%s err=%v", req.Namespace, pod.Name, err)
+	allowed := &admissionv1.AdmissionResponse{Allowed: true, UID: req.UID}
+	if req.Operation == admissionv1.Update && len(req.OldObject.Raw) > 0 {
+		var oldPod corev1.Pod
+		if err := json.Unmarshal(req.OldObject.Raw, &oldPod); err != nil {
+			klog.Errorf("Failed to unmarshal previous macvlan annotation pod uuid=%s err=%v", proxyUUID, err)
+			return h.sidecarWebhook.AdmissionError(req.UID, err)
+		}
+		if !webhook.MacvlanSelectionAnnotationsChanged(&oldPod, &pod) {
+			return allowed
+		}
+	}
+	dryRun := req.DryRun != nil && *req.DryRun
+	if err := h.sidecarWebhook.ValidateMacvlanAnnotation(ctx, &pod, req.Namespace, dryRun); err != nil {
+		klog.Errorf("Rejected macvlan network selection pod=%s/%s uuid=%s err=%v", req.Namespace, pod.Name, proxyUUID, err)
 		return h.sidecarWebhook.AdmissionError(req.UID, err)
 	}
-	return &admissionv1.AdmissionResponse{Allowed: true, UID: req.UID}
+	return allowed
 }
 
 // macvlanInitMutate is the core mutation logic for the macvlan-init webhook.
-// It is a no-op for pods without the macvlan-init label or whose owning
-// Application does not opt into enableOverlayGateway.
+// Pods whose Application enabled the Overlay Gateway get the platform network
+// selection and init containers; every other pod that declares a network
+// selection of its own has it removed but is still admitted.
 func (h *Handler) macvlanInitMutate(ctx context.Context, req *admissionv1.AdmissionRequest, proxyUUID uuid.UUID) *admissionv1.AdmissionResponse {
 	if req == nil {
 		klog.Error("Failed to get admission request err=admission request is nil")
@@ -1682,22 +1695,43 @@ func (h *Handler) macvlanInitMutate(ctx context.Context, req *admissionv1.Admiss
 		return h.sidecarWebhook.AdmissionError(req.UID, err)
 	}
 
-	// Defense-in-depth: ObjectSelector already filters by this label, but
-	// re-check here in case the webhook is invoked from a misconfigured caller.
-	if pod.Labels[constants.ApplicationMacvlanInitLabel] != "true" {
-		return resp
-	}
 	ns := req.Namespace
+	dryRun := req.DryRun != nil && *req.DryRun
+	appName := pod.Labels[constants.ApplicationNameLabel]
 
+	// Authorization is decided by the application's Overlay Gateway switch
+	// alone; the label and any chart-authored annotation only decide whether
+	// this handler is reached.
 	shouldInject, err := h.sidecarWebhook.ShouldInjectMacvlanInit(ctx, &pod, ns)
 	if err != nil {
 		klog.Errorf("Failed to evaluate macvlan-init injection for pod=%s/%s err=%v", req.Namespace, pod.Name, err)
 		return h.sidecarWebhook.AdmissionError(req.UID, err)
 	}
 	if !shouldInject {
+		if !webhook.HasMacvlanSelectionAnnotations(&pod) {
+			return resp
+		}
+		patchBytes, removed, err := h.sidecarWebhook.StripMacvlanAnnotations(req, &pod)
+		if err != nil {
+			klog.Errorf("Failed to strip macvlan network selection from pod=%s/%s err=%v", req.Namespace, pod.Name, err)
+			return h.sidecarWebhook.AdmissionError(req.UID, err)
+		}
+		if len(patchBytes) > 0 {
+			h.sidecarWebhook.PatchAdmissionResponse(resp, patchBytes)
+		}
+		klog.Warningf("macvlan-init: stripped network selection %v from pod=%s/%s app=%q uuid=%s (Overlay Gateway not enabled)", removed, req.Namespace, pod.Name, appName, proxyUUID)
+		reason, message := webhook.EventReasonOverlayGatewayDisabled,
+			fmt.Sprintf("Application %q declares a LAN network attachment, but Overlay Gateway is not enabled for it; the attachment was removed. Enable Overlay Gateway in the application settings to allow it.", appName)
+		if len(removed) == 1 && removed[0] == "v1.multus-cni.io/default-network" {
+			reason, message = webhook.EventReasonDefaultNetworkNotAllowed,
+				fmt.Sprintf("Application %q tried to replace the pod default network; the override was removed.", appName)
+		}
+		h.sidecarWebhook.RecordMacvlanEvent(ctx, &pod, ns, reason, message, dryRun)
 		return resp
 	}
 
+	previousSelection := pod.Annotations["k8s.v1.cni.cncf.io/networks"]
+	_, hadDefaultNetwork := pod.Annotations["v1.multus-cni.io/default-network"]
 	patchBytes, err := h.sidecarWebhook.CreateMacvlanInitPatchWithContext(ctx, req, &pod)
 	if err != nil {
 		klog.Errorf("Failed to create macvlan-init patch for pod=%s/%s err=%v", req.Namespace, pod.Name, err)
@@ -1705,6 +1739,16 @@ func (h *Handler) macvlanInitMutate(ctx context.Context, req *admissionv1.Admiss
 	}
 	if len(patchBytes) > 0 {
 		h.sidecarWebhook.PatchAdmissionResponse(resp, patchBytes)
+	}
+	if hadDefaultNetwork {
+		klog.Warningf("macvlan-init: removed default network override from pod=%s/%s app=%q uuid=%s", req.Namespace, pod.Name, appName, proxyUUID)
+		h.sidecarWebhook.RecordMacvlanEvent(ctx, &pod, ns, webhook.EventReasonDefaultNetworkNotAllowed,
+			fmt.Sprintf("Application %q tried to replace the pod default network; the override was removed.", appName), dryRun)
+	}
+	if previousSelection != "" && previousSelection != pod.Annotations["k8s.v1.cni.cncf.io/networks"] {
+		klog.Warningf("macvlan-init: rebuilt chart-authored network selection for pod=%s/%s app=%q uuid=%s", req.Namespace, pod.Name, appName, proxyUUID)
+		h.sidecarWebhook.RecordMacvlanEvent(ctx, &pod, ns, webhook.EventReasonOverlayNetworkRebuilt,
+			fmt.Sprintf("Application %q wrote its own LAN network selection; it was replaced by the platform-managed selection.", appName), dryRun)
 	}
 	klog.Infof("macvlan-init: injected init container for pod=%s/%s uuid=%s", req.Namespace, pod.Name, proxyUUID)
 	return resp
