@@ -1,17 +1,17 @@
 ---
 outline: [2, 3]
-description: Publish a website you have already built with a custom domain through an AI agent such as Lares, using the Portfolio Landing Page project as an example.
+description: Use an AI agent powered by olares-cli agent skills to publish your website project with a custom domain.
 head:
   - - meta
     - name: keywords
-      content: Olares, Lares, Router, deploy website, custom domain, image registry, preview, portfolio
+      content: Olares, Lares, publish website, custom domain, olares-cli, olares-cli agent skills
 ---
 
-# Publish a website with a custom domain
+# Publish your website to a custom domain
 
-Olares lets you deploy a website you have already built through an AI agent. Powered by the Olares CLI, the agent packages the site, pushes the image, installs it on your device, and binds a custom domain so other people can reach the site over HTTPS.
+With Olares, you can ask an AI agent to deploy a website you have already built. Powered by the Olares CLI, the agent packages the site, pushes the image, installs it on your device, and binds a custom domain so the site is available over HTTPS at a stable, public URL.
 
-This tutorial walks through the whole flow with Lares, using a website project on GitHub. You can follow the same steps with other AI agent, or adapt them to your own website project.
+This tutorial uses Lares and a GitHub-hosted website project as an example to walk you through the whole deployment process. The same flow also applies when you use another AI agent to deploy your own website project.
 
 ## Prerequisites
 
@@ -21,7 +21,7 @@ Before you begin, ensure you have:
 
 - An Olares device running v1.12.7 or later.
 - Lares and Router installed, with a connected local model.
-- Olares CLI (v1.12.7 or later) and Agent Skills. These come preinstalled with Lares. You only need to install and log in them yourself if you use an AI agent on your computer.
+- Olares CLI (v1.12.7 or later) and Agent Skills. The CLI is included with Olares, so every AI agent running on your Olares device already has it. If you use an AI agent on your computer, install the [Olares CLI and Agent Skills](/developer/cli-overview.md#drive-olares-from-an-ai-agent), log in with your Olares ID, and all your local agents can use them.
 
 **Your project**
 
@@ -38,30 +38,28 @@ Before you begin, ensure you have:
 
 The agent handles most of the packaging work, but the overall flow follows these stages:
 
-1. **Source code**: The agent reads your project from your computer, Olares Files, or GitHub.
-2. **Preview**: You run the site in Lares and open a preview URL to confirm it works.
+1. **Source code**: The agent reads your project from Github, Olares Files, or your computer.
+2. **Preview**: You run the site in the agent and open a preview URL to confirm it works.
 3. **Build and deploy**: The agent creates a production build, Dockerfile, container image, and Olares chart, then installs the app.
 4. **Bind and share**: The agent issues an RSA certificate and binds your custom domain. You add two DNS records, and the site is reachable over HTTPS.
 
 ## Step 1: Prepare your project source code
 
-Tell the agent where your project lives. The steps differ depending on the source location.
+Tell the agent where your project source code is located. The steps differ depending on the source location.
 
-:::info Example project
-This tutorial uses the Portfolio Landing Page public repository at `https://github.com/arnobt78/Portfolio-Landing-Page-7-React-Frontend` as an example. Replace the URL and folder names with your own project.
-:::
-
-### Source code is on GitHub
+### Source code on GitHub
 
 Tell the agent the repository URL.
-- For a public repository, paste the link and ask it to clone.
+- For a public repository, provide the link and ask it to clone.
 - For a private repository, give the agent a GitHub personal access token or an SSH key for authentication as prompted.
 
-Example:
+**Example:**
 
 ```text
 Clone the repository from https://github.com/arnobt78/Portfolio-Landing-Page-7-React-Frontend
 ```
+
+**Result:**
 
 Lares clones the project into its default workspace at `Data/lares/data/workspace/` in Olares Files and starts working in that folder. It then gives a brief overview of the project and asks how to proceed. For example:
 
@@ -71,24 +69,22 @@ Cloned successfully to Portfolio-Landing-Page-7-React-Frontend in the workspace.
 Want me to install dependencies and run it locally, or explore the source code?
 ```
 
-Reply that you want to run it, and the agent moves on to preview the website.
+### Source code in Olares Files
 
-### Source code is in Olares Files
+In Lares, choose the project folder in Olares Files as the workspace. The agent runs build, package, and deploy commands from inside that workspace.
 
-Lares can open the project folder as a workspace directly. The agent runs build, package, and deploy commands from inside that workspace.
-
-### Source code is on your computer
+### Source code on your computer
 
 If the source code is on your computer, you need to make it available to Lares on Olares. You can do this yourself or ask the agent to do it:
 
-- **Push it to GitHub** yourself, or ask the agent to create a repo and push it. Then give the repository URL to the agent.
-- **Upload it to Olares Files** under `Home/Code` yourself, or ask the agent to copy it there. Then open that folder as a workspace in Lares.
+- **Push it to GitHub**: Push the project to a repository, then give the repository URL to the agent.
+- **Upload it to Olares Files**: Upload the project to Files, then tell the agent the path.
 
 ## Step 2: Preview the website
 
-Once the project is in place, tell Lares to run the site. Lares installs the project's dependencies if needed, starts a dev server, and returns a temporary preview URL. Open the URL in your browser and make sure the site works as expected.
+Once the project is in place, Lares asks how to proceed. Tell it to run the site. Lares installs the project's dependencies if needed, starts a dev server, and returns a temporary preview URL. Open the URL in your browser and make sure the site works as expected.
 
-For example, Lares reports the dev server is up and gives the preview link:
+**Example:**
 
 ```text
 The app is up and running 🎉
@@ -100,23 +96,21 @@ Verified: HTTP 200, page serves correctly
 
 ## Step 3: Build, deploy, and publish
 
-After you confirm the preview, tell the agent to publish the site to your custom domain:
+After you confirm the preview, tell the agent to publish the site to your custom domain.
+
+The agent takes it from there. It checks your environment (Olares version, node architecture, Docker setup), builds the production site, and packages it as a container image right on your Olares device, matched to the node's architecture.
+
+**Example:**
 
 ```text
 The preview looks good. Publish it to `website.bellame.online`.
 ```
 
-The agent takes it from there. It checks your environment (Olares version, node architecture, Docker setup), builds the production site, and packages it as a container image right on your Olares device, matched to the node's architecture.
-
 ### Provide an image registry
 
 The agent needs a registry to store the image and will ask which one to use.
 
-- **Docker Hub (recommended)**: Give the agent your Docker Hub username. When it asks for credentials:
-
-  1. In Docker Hub, go to **Account Settings → Personal Access Tokens → Generate new token** and create a token.
-  2. Paste the token to the agent. It logs in, pushes the image, and verifies the image can be pulled anonymously, which is how the Olares node downloads it.
-  3. Delete the token in Docker Hub afterwards. It is only needed for this one push.
+- **Docker Hub (recommended)**: Give the agent your Docker Hub username. When it asks for credentials, follow its instructions to create an access token and paste it. The agent logs in, pushes the image, and verifies the image can be pulled anonymously, which is how the Olares node downloads it. Delete the token in Docker Hub afterwards. It is only needed for this one push.
 
 - **GitHub Container Registry**: The agent can push the image to `ghcr.io` under your GitHub account. When it asks for credentials, create a personal access token with the `write:packages` scope and paste it. The package must be set to public so the Olares node can pull it anonymously.
 
@@ -124,43 +118,59 @@ Once the image is pushed, the agent creates an Olares chart with the entrance au
 
 If the installation gets stuck, see [Common issues](#common-issues).
 
-:::tip Update the site later
-When you want to change the site, just send the agent your changes. It rebuilds the site with a new image tag, bumps the chart version, and re-uploads and reinstalls the app.
-:::
-
 ## Step 4: Bind the custom domain
 
 Once the app is running, the agent starts binding your custom domain. It issues an RSA certificate for the domain and attaches it to the app's entrance. You only need to add two DNS records in your provider's console, and the agent gives you the exact values. The app restarts once during the binding, which is normal.
 
 Olares only accepts RSA certificates. The ECDSA certificates that some tools default to can break the BFL service, so the agent always requests RSA.
 
-### 1. Add a TXT record for certificate issuance
+### 1. Add a TXT record
 
-To prove you own the domain, the agent asks you to add one TXT record:
+To prove you own the domain, the agent asks you to add one TXT record in your DNS console.
+
+**Example:**
 
 - Type: `TXT`
 - Name: `_acme-challenge.website` (must include the full subdomain)
-- Value: the exact value the agent gives you
+- Value: The exact value provided by the agent
 
-The agent polls public DNS and completes the certificate automatically once the record propagates. The temporary TXT record is no longer needed after issuance and can be deleted.
+The agent keeps checking public DNS and issues the RSA certificate automatically once the TXT record shows up there. This can take a few seconds to a few minutes. The temporary TXT record is no longer needed after issuance and you can delete it then.
 
 ### 2. Add a CNAME record
 
-Add a CNAME record that points your domain to Olares:
+Add a CNAME record that points your domain to Olares, so that visits to your domain are routed to your Olares device.
+
+**Example:**
 
 - Type: `CNAME`
 - Name: `website`
 - Value: `laresprime.olares.com`
 
-If the same name already has other records (for example an old A record), delete them first. A CNAME cannot coexist with other records on the same name.
-
 ### 3. Verify
 
-The agent verifies the certificate chain, binds the domain, and polls until the platform marks the CNAME as active, then checks the site end to end over HTTPS. When it reports the domain is live, open `https://website.bellame.online` in your browser to confirm, and send the URL to the people you want to share it with.
+The agent runs the final checks: the certificate, the domain binding, the CNAME record, and an end-to-end HTTPS test. When everything passes, it reports that the site is live.
+
+**Example:**
+
+```text
+✓ RSA certificate issued and valid
+✓ Domain website.bellame.online bound to the app entrance
+✓ CNAME record detected and active
+✓ HTTPS check passed (HTTP 200)
+The site is live at https://website.bellame.online 🎉
+```
+
+Open the live site in your browser to confirm, and send the URL to the people you want to share it with.
 
 :::tip Certificate renewal
 Let's Encrypt certificates are valid for 90 days. When you renew, ask the agent to re-bind the domain with the new certificate. The app restarts briefly during the re-bind.
 :::
+
+## Step 5: Update the website (optional)
+
+After the site is live, you can keep improving it.
+
+Tell the agent what you want to change. The agent rebuilds the site with a new image tag, uses a new chart version, and re-uploads and reinstalls the app. Your domain, certificate, and DNS records stay as they are.
 
 ## Common issues
 
@@ -170,9 +180,9 @@ Common causes:
 
 - The image architecture does not match the Olares node.
 - The image tag was reused and the old layer is cached on the node.
-- The chart version was not bumped before re-uploading.
+- The chart version was not changed before re-uploading.
 
-Try uninstalling, deleting the old version, bumping both versions, and reinstalling:
+Try uninstalling, deleting the old version, using new image tag and chart versions, and reinstalling:
 
 ```bash
 olares-cli market uninstall <app-name>
