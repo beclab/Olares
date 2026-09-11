@@ -55,7 +55,13 @@ type spendLog struct {
 	ProviderID      *string `json:"provider_id,omitempty"`
 	ProviderModelID *string `json:"provider_model_id,omitempty"`
 	ModelName       string  `json:"model_name"`
-	Mode            string  `json:"mode"`
+	// ServedModelName is the model that answered, qualified by its provider.
+	// ModelName is what the caller wrote, which is a `default-*` category for
+	// a call that named no model and does not say which engine ran. Empty for
+	// a row with no model to name: a refusal that never reached one, and a
+	// model deleted since the call.
+	ServedModelName string `json:"served_model_name,omitempty"`
+	Mode            string `json:"mode"`
 	// Op is the operation within the mode: which media operation, which
 	// audio route. A mode alone does not say what was asked for.
 	Op            *string `json:"op,omitempty"`
@@ -907,6 +913,11 @@ func newUsageListCommand(f *cmdutil.Factory) *cobra.Command {
 One row per call. WHO is the key, person or application Router billed it to;
 STATUS is the outcome, and a failed call carries the error code Router returned.
 
+MODEL is the model that answered. A call that named no model sent a category
+instead — "default-tts-clone", say — and that is what the row records, so the
+column resolves it to whichever model Router picked. The page says how many rows
+it did that for, and -o json carries both names.
+
 USAGE is the quantity the call was priced by, which is not tokens for most of
 what Router serves: audio is priced by the second, images by the picture, video
 by both, search by the query, OCR by the page and 3D by the object. The column
@@ -996,7 +1007,7 @@ func renderUsageList(ctx context.Context, pc *preparedClient, w io.Writer, items
 		}
 		t.row(
 			it.CreatedAt.Local().Format("2006-01-02 15:04:05"),
-			clip(nonEmpty(it.ModelName), 28), nonEmpty(spendOp(it)),
+			clip(nonEmpty(spendModel(it)), 28), nonEmpty(spendOp(it)),
 			clip(spendActor(it, who), 24), clip(status, 30),
 			spendQuantity(it), spendCost(it),
 			spendDuration(it))
@@ -1008,6 +1019,23 @@ func renderUsageList(ctx context.Context, pc *preparedClient, w io.Writer, items
 		return err
 	}
 	return pageFooter(w, len(items), total, offset)
+}
+
+// spendModel is the MODEL column: which model the call actually ran on.
+//
+// A row stores the name the caller wrote, and a call that named no model wrote
+// a category — `default-tts-clone` is a true record of the request and says
+// nothing about where the time went. Router resolves the model behind it, and
+// this column reports that, with the category kept for the footer note and for
+// `-o json`, where both names are always present.
+//
+// A row with nothing resolved falls back to the name the caller wrote, which is
+// then the whole of what happened: a refusal that never reached a model.
+func spendModel(it *spendLog) string {
+	if name := strings.TrimSpace(it.ServedModelName); name != "" {
+		return name
+	}
+	return it.ModelName
 }
 
 // spendOp is the MODE column: the mode, and the operation within it when Router
@@ -1110,12 +1138,19 @@ func spendCost(it *spendLog) string {
 // spendZeroNotes explains the zeros on the page, because a zero cost has four
 // readings and the column shows one glyph for all of them: still running, priced
 // at nothing, measured with no rate to apply, or moved audio nobody measured.
+//
+// It also owns the one note that is not about a zero: a table is one line per
+// call, so a row showing the model that answered has nowhere to also show the
+// category that was asked for.
 func spendZeroNotes(w io.Writer, items []spendLog) error {
-	var running, unpriced, unmetered int
+	var running, unpriced, unmetered, substituted int
 	for i := range items {
 		it := &items[i]
 		if it.Status == statusInProgress {
 			running++
+		}
+		if name := strings.TrimSpace(it.ServedModelName); name != "" && name != it.ModelName {
+			substituted++
 		}
 		for _, tag := range it.Tags {
 			switch tag {
@@ -1143,6 +1178,12 @@ func spendZeroNotes(w io.Writer, items []spendLog) error {
 			"%d audio %s tagged audio_unmetered: the engine reported no duration, and audio is priced "+
 				"by the second, so nothing could be charged.",
 			unmetered, plural(unmetered, "call is", "calls are")))
+	}
+	if substituted > 0 {
+		notes = append(notes, fmt.Sprintf(
+			"%d %s named a category rather than a model. MODEL is what answered; "+
+				"`-o json` carries the name that was asked for as well.",
+			substituted, plural(substituted, "call", "calls")))
 	}
 	for _, note := range notes {
 		if _, err := fmt.Fprintln(w, note); err != nil {
