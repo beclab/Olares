@@ -9,7 +9,7 @@ head:
 
 # Install and activate Olares from the command line
 
-Use this advanced setup guide to install and activate a new or uninitialized Olares device, such as Olares One, from the host terminal.
+Use this guide to install and activate a new or uninitialized Olares device, such as Olares One, from the host terminal.
 
 :::warning Use the standard setup unless you need command-line activation
 This workflow requires host administrator access and your 12-word mnemonic phrase. Do not share the command, terminal output, screenshots, or shell history because they can expose the phrase and account credentials.

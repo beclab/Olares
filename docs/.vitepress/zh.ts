@@ -240,6 +240,20 @@ const side = {
             },
           ],
         },
+        {
+          text: "个性化设置",
+          collapsed: true,
+          items: [
+            {
+              text: "更改语言与外观",
+              link: "/zh/manual/olares/settings/language-appearance",
+            },
+            {
+              text: "创建 Profile",
+              link: "/zh/manual/olares/profile",
+            },
+          ],
+        },
       ],
     },
     {
@@ -298,7 +312,7 @@ const side = {
       ],
     },
     {
-      text: "文件与数据",
+      text: "文件与存储",
       link: "/zh/manual/olares/files/",
       collapsed: false,
       items: [
@@ -357,20 +371,6 @@ const side = {
               link: "/zh/manual/olares/files/mount-cloud-storage",
             },
           ],
-        },
-      ],
-    },
-    {
-      text: "个性化",
-      collapsed: false,
-      items: [
-        {
-          text: "更改语言与外观",
-          link: "/zh/manual/olares/settings/language-appearance",
-        },
-        {
-          text: "创建 Profile",
-          link: "/zh/manual/olares/profile",
         },
       ],
     },
@@ -472,7 +472,7 @@ const side = {
       ],
     },
     {
-      text: "高级设置指南",
+      text: "高级设置",
       link: "/zh/manual/best-practices/",
       collapsed: true,
       items: [
@@ -570,9 +570,9 @@ const side = {
           text: "已知问题",
           link: "/zh/manual/help/known-issues",
         },
+        { text: "术语表", link: "/zh/manual/glossary" },
       ],
     },
-    { text: "术语表", link: "/zh/manual/glossary" },
   ],
 };
 

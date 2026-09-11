@@ -40,7 +40,7 @@ Olares 是一款可以用自然语言操作的开源个人云操作系统，让�
   </a>
   <a class="doc-map-card" href="./best-practices/">
     <span class="doc-map-icon"><span class="material-symbols-outlined">menu_book</span></span>
-    <span class="doc-map-title">高级设置指南</span>
+    <span class="doc-map-title">高级设置</span>
     <span class="doc-map-desc">完成命令行安装、集群、存储扩展和主机硬件等高级设置任务</span>
   </a>
 </div>

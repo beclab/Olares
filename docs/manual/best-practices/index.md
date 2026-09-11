@@ -5,7 +5,7 @@ head:
     - name: keywords
       content: Olares, advanced setup, custom domain, multi-node cluster, GPU passthrough, storage expansion
 ---
-# Advanced setup guides
+# Advanced setup
 
 Use these how-to guides for optional or advanced configurations that are not part of the standard setup path.
 

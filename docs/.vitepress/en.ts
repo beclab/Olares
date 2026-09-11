@@ -240,6 +240,20 @@ const side = {
             },
           ],
         },
+        {
+          text: "Personal settings",
+          collapsed: true,
+          items: [
+            {
+              text: "Change language and appearance",
+              link: "/manual/olares/settings/language-appearance",
+            },
+            {
+              text: "Create an Olares profile",
+              link: "/manual/olares/profile",
+            },
+          ],
+        },
       ],
     },
     {
@@ -297,7 +311,7 @@ const side = {
       ],
     },
     {
-      text: "Files and data",
+      text: "Files and storage",
       link: "/manual/olares/files/",
       collapsed: false,
       items: [
@@ -356,20 +370,6 @@ const side = {
               link: "/manual/olares/files/mount-cloud-storage",
             },
           ],
-        },
-      ],
-    },
-    {
-      text: "Personalize Olares",
-      collapsed: false,
-      items: [
-        {
-          text: "Change language and appearance",
-          link: "/manual/olares/settings/language-appearance",
-        },
-        {
-          text: "Create an Olares profile",
-          link: "/manual/olares/profile",
         },
       ],
     },
@@ -471,7 +471,7 @@ const side = {
       ],
     },
     {
-      text: "Advanced setup guides",
+      text: "Advanced setup",
       link: "/manual/best-practices/",
       collapsed: true,
       items: [
@@ -569,9 +569,9 @@ const side = {
           text: "Known issues",
           link: "/manual/help/known-issues",
         },
+        { text: "Glossary", link: "/manual/glossary" },
       ],
     },
-    { text: "Glossary", link: "/manual/glossary" },
   ],
 };
 

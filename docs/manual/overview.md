@@ -40,7 +40,7 @@ Get Olares running, whether you install the OS yourself or use a dedicated devic
   </a>
   <a class="doc-map-card" href="./best-practices/">
     <span class="doc-map-icon"><span class="material-symbols-outlined">menu_book</span></span>
-    <span class="doc-map-title">Advanced setup guides</span>
+    <span class="doc-map-title">Advanced setup</span>
     <span class="doc-map-desc">Complete advanced setup tasks for command-line installation, clusters, storage, and host hardware</span>
   </a>
 </div>
