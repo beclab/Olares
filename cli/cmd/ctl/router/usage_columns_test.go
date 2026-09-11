@@ -8,10 +8,9 @@ import (
 	"testing"
 )
 
-// One row of every non-token shape Router v2.6.0 writes. The point is the
-// pointers: a quantity that arrived and a quantity that did not are different
-// facts, and a struct that decoded both as 0 would report unmeasured audio as
-// free.
+// One row of every non-token shape Router writes. The point is the pointers: a
+// quantity that arrived and a quantity that did not are different facts, and a
+// struct that decoded both as 0 would report unmeasured audio as free.
 const liveSpendRow = `{
   "id": 4711,
   "attempt_id": "att_01HZX",
@@ -26,6 +25,7 @@ const liveSpendRow = `{
   "status": "success",
   "http_status": 200,
   "latency_ms": 91234,
+  "job_ms": 273000,
   "ttft_ms": 800,
   "queue_ms": 120,
   "streamed": false,
@@ -52,6 +52,9 @@ func TestASpendRowDecodesTheColumnsRouterAnswersWith(t *testing.T) {
 	}
 	if it.QueueMS == nil || *it.QueueMS != 120 {
 		t.Fatalf("queue_ms did not decode: %+v", it.QueueMS)
+	}
+	if it.JobMS == nil || *it.JobMS != 273000 {
+		t.Fatalf("job_ms did not decode: %+v", it.JobMS)
 	}
 	if it.Videos == nil || *it.Videos != 1 {
 		t.Fatalf("videos did not decode: %+v", it.Videos)
@@ -88,6 +91,8 @@ func TestEachRowReportsTheQuantityItWasPricedBy(t *testing.T) {
 	audioIn := 12.5
 	audioOut := 0.0
 	queries := int64(3)
+	pages := int64(7)
+	objects := int64(1)
 
 	cases := map[string]struct {
 		row  spendLog
@@ -99,6 +104,8 @@ func TestEachRowReportsTheQuantityItWasPricedBy(t *testing.T) {
 		"audio in":                   {spendLog{Mode: "audio", AudioInputSeconds: &audioIn}, "12.5s in"},
 		"a measured zero is a zero":  {spendLog{Mode: "audio", AudioOutputSeconds: &audioOut}, "0s out"},
 		"queries":                    {spendLog{Mode: "search", Queries: &queries}, "3 q"},
+		"OCR pages":                  {spendLog{Mode: "ocr", Pages: &pages}, "7 pg"},
+		"3D objects":                 {spendLog{Mode: "model3d_generation", Objects: &objects}, "1 obj"},
 		"nothing measured is a dash": {spendLog{Mode: "music_generation"}, "-"},
 	}
 	for name, tc := range cases {
@@ -118,6 +125,59 @@ func TestARunningCallHasNoCostYet(t *testing.T) {
 	}
 	if got := spendCost(&spendLog{Status: "success", CostUSD: 0}); got != "$0" {
 		t.Fatalf("a settled free call really is $0, got %q", got)
+	}
+}
+
+// A row records the name the caller wrote, and a call that named no model wrote
+// a category. Reading `default-tts-clone` off a bill tells nobody which engine
+// spent the time.
+func TestTheModelColumnNamesWhatAnswered(t *testing.T) {
+	cases := map[string]struct {
+		row  spendLog
+		want string
+	}{
+		"a category resolves to the model behind it": {
+			spendLog{ModelName: "default-tts-clone", ServedModelName: "Olares/Breeze-TTS-2"},
+			"Olares/Breeze-TTS-2",
+		},
+		"a named model is shown as named": {
+			spendLog{ModelName: "Olares/Breeze-TTS-2", ServedModelName: "Olares/Breeze-TTS-2"},
+			"Olares/Breeze-TTS-2",
+		},
+		"a refusal that reached no model keeps the caller's own name": {
+			spendLog{ModelName: "default-rerank"},
+			"default-rerank",
+		},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			if got := spendModel(&tc.row); got != tc.want {
+				t.Fatalf("got %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+// The table is one line per call, so the substitution has to be said somewhere:
+// a reader who cannot find the name they typed would take the page for the
+// wrong account.
+func TestASubstitutedCategoryIsReportedOnce(t *testing.T) {
+	var buf bytes.Buffer
+	rows := []spendLog{
+		{Mode: "tts", Status: "success", ModelName: "default-tts-clone",
+			ServedModelName: "Olares/Breeze-TTS-2"},
+		{Mode: "chat", Status: "success", ModelName: "Olares/Qwen3-8B",
+			ServedModelName: "Olares/Qwen3-8B"},
+	}
+	if err := spendZeroNotes(&buf, rows); err != nil {
+		t.Fatalf("spendZeroNotes: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "1 call named a category") {
+		t.Fatalf("the notes should count the one substituted row, got:\n%s", out)
+	}
+	if strings.Count(out, "named a category") != 1 {
+		t.Fatalf("the note belongs on the page once, got:\n%s", out)
 	}
 }
 
@@ -168,6 +228,18 @@ func TestASummaryShowsTheColumnsItsBucketsCarry(t *testing.T) {
 		t.Fatalf("no bucket carried a token, so the column should be gone:\n%s", out)
 	}
 
+	var work bytes.Buffer
+	if err := renderSummaryBuckets(&work, "model", []spendSummaryRow{
+		{Key: "m", Requests: 3, Pages: 12, Objects: 2},
+	}); err != nil {
+		t.Fatalf("renderSummaryBuckets: %v", err)
+	}
+	for _, want := range []string{"PAGES", "OBJECTS"} {
+		if !strings.Contains(work.String(), want) {
+			t.Fatalf("missing the %s column in:\n%s", want, work.String())
+		}
+	}
+
 	var tokens bytes.Buffer
 	if err := renderSummaryBuckets(&tokens, "model", []spendSummaryRow{
 		{Key: "m", Requests: 2, TotalTokens: 100, PromptTokens: 60, CompletionTok: 40},
@@ -187,13 +259,16 @@ func TestTheTotalsNameEveryQuantityThatArrived(t *testing.T) {
 	err := renderSummaryTotals(&buf, &spendTotals{
 		TotalRequests: 9, TotalSuccessRequests: 9, TotalCostUSD: 2,
 		TotalAudioSeconds: 61.5, TotalImages: 3, TotalVideos: 1, TotalVideoSeconds: 5,
-		TotalQueries: 4,
+		TotalQueries: 4, TotalPages: 12, TotalObjects: 2,
 	})
 	if err != nil {
 		t.Fatalf("renderSummaryTotals: %v", err)
 	}
 	out := buf.String()
-	for _, want := range []string{"61.5s of audio", "3 images", "1 video", "5s of video", "4 queries"} {
+	for _, want := range []string{
+		"61.5s of audio", "3 images", "1 video", "5s of video", "4 queries",
+		"12 pages", "2 3D objects",
+	} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("the totals should state %q, got:\n%s", want, out)
 		}
@@ -237,12 +312,70 @@ func TestTheNewFiltersReachRouterUnderItsOwnNames(t *testing.T) {
 	}
 }
 
+// Speech synthesis is its own mode, and this list is a gate rather than a hint:
+// a mode missing from it is a mode nobody can ask about from here, however
+// happily Router would answer.
+func TestEveryModeRouterWritesCanBeAskedFor(t *testing.T) {
+	for _, mode := range spendModes {
+		q, err := resolveSpendQuery(context.Background(), nil, spendFilter{Mode: mode})
+		if err != nil {
+			t.Fatalf("--mode %s: %v", mode, err)
+		}
+		if got := q.Get("mode"); got != mode {
+			t.Fatalf("--mode %s reached Router as %q", mode, got)
+		}
+	}
+	if !containsString(spendModes, "tts") {
+		t.Fatal("speech synthesis is its own mode since ADR-63; without it no TTS call can be filtered for")
+	}
+}
+
+// One capability is not one mode: the ElevenLabs-shaped routes are `tts` and
+// the rest of the audio work stayed `audio`, so "what did audio cost me" needs
+// both at once.
+func TestSeveralModesTravelInOneRequest(t *testing.T) {
+	q, err := resolveSpendQuery(context.Background(), nil, spendFilter{Mode: " Audio , TTS ,audio"})
+	if err != nil {
+		t.Fatalf("resolveSpendQuery: %v", err)
+	}
+	if got := q.Get("mode"); got != "audio,tts" {
+		t.Fatalf("got %q, want the modes normalized and deduplicated", got)
+	}
+}
+
+func TestASummaryCanBeRankedByAQuantityRatherThanCost(t *testing.T) {
+	q, err := resolveSpendQuery(context.Background(), nil, spendFilter{RankBy: "Requests"})
+	if err != nil {
+		t.Fatalf("resolveSpendQuery: %v", err)
+	}
+	if got := q.Get("rank_by"); got != "requests" {
+		t.Fatalf("rank_by: got %q, want requests", got)
+	}
+}
+
+// An async call is opened by one request and settled by another, and the
+// settling request is not what took the time.
+func TestTheDurationShownIsTheWorkRatherThanTheRequest(t *testing.T) {
+	job := int64(273000)
+	if got := spendDuration(&spendLog{LatencyMS: 5, JobMS: &job}); got != "4m33s" {
+		t.Fatalf("got %q, want the job duration", got)
+	}
+	if got := spendDuration(&spendLog{LatencyMS: 843}); got != "843ms" {
+		t.Fatalf("a synchronous call is its own request, got %q", got)
+	}
+	if got := spendDuration(&spendLog{LatencyMS: 12400}); got != "12.4s" {
+		t.Fatalf("got %q, want seconds", got)
+	}
+}
+
 func TestAValueRouterWouldRefuseIsRefusedHere(t *testing.T) {
 	cases := map[string]spendFilter{
-		"a status that is not one": {Status: "pending"},
-		"a mode that is not one":   {Mode: "chatting"},
-		"a column nobody sorts by": {SortBy: "user_agent"},
-		"an order that is not one": {SortOrder: "sideways"},
+		"a status that is not one":  {Status: "pending"},
+		"a mode that is not one":    {Mode: "chatting"},
+		"a mode list of nothing":    {Mode: " , "},
+		"a column nobody sorts by":  {SortBy: "user_agent"},
+		"an order that is not one":  {SortOrder: "sideways"},
+		"a ranking that is not one": {RankBy: "latency"},
 	}
 	for name, fl := range cases {
 		t.Run(name, func(t *testing.T) {

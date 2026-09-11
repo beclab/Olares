@@ -30,8 +30,8 @@ func mediaCommand(t *testing.T, names []string, line ...string) (*cobra.Command,
 // parameter for, so a field nobody asked for must not appear. Sending
 // `"n": 0` because a flag defaults to zero is asking for something.
 func TestCanonicalSendsOnlyWhatWasAskedFor(t *testing.T) {
-	cmd, flags := mediaCommand(t, musicFields)
-	request, err := flags.canonical(cmd, "FlowStudio/track", "a slow waltz")
+	cmd, flags := mediaCommand(t, model3DFields)
+	request, err := flags.canonical(cmd, "FlowStudio/mesh", "a brass lantern")
 	if err != nil {
 		t.Fatalf("build: %v", err)
 	}
@@ -55,19 +55,19 @@ func TestCanonicalSendsOnlyWhatWasAskedFor(t *testing.T) {
 }
 
 // A zero a caller wrote is a request, and it has to survive. seed 0 is a
-// reproducible seed and instrumental=false is a track with vocals; both would
+// reproducible seed and pbr=false is bare geometry asked for; both would
 // disappear if presence were read from the value.
 func TestCanonicalKeepsAZeroTheCallerAskedFor(t *testing.T) {
-	cmd, flags := mediaCommand(t, musicFields, "--seed", "0", "--instrumental=false")
-	request, err := flags.canonical(cmd, "FlowStudio/track", "a waltz")
+	cmd, flags := mediaCommand(t, model3DFields, "--seed", "0", "--pbr=false")
+	request, err := flags.canonical(cmd, "FlowStudio/mesh", "a lantern")
 	if err != nil {
 		t.Fatalf("build: %v", err)
 	}
 	if request.Seed == nil || *request.Seed != 0 {
 		t.Errorf("seed: got %v, want 0", request.Seed)
 	}
-	if request.Music == nil || request.Music.Instrumental == nil || *request.Music.Instrumental {
-		t.Errorf("music: got %+v, want instrumental=false", request.Music)
+	if request.Output == nil || request.Output.PBR == nil || *request.Output.PBR {
+		t.Errorf("output: got %+v, want pbr=false", request.Output)
 	}
 }
 

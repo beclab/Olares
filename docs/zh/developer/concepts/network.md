@@ -90,5 +90,5 @@ Olares 在网关架构中采用多层代理路由设计。流量经过多个层�
 
 ## 了解更多
 
-- [为应用设置自定义域名](../../manual/olares/settings/custom-app-domain.md#自定义域名)
+- [为应用设置自定义域名](../../manual/olares/settings/custom-app-domain.md#设置自定义域名)
 - [通过专用网络访问 Olares 应用](../../manual/larepass/private-network.md)

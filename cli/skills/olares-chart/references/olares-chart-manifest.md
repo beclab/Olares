@@ -67,7 +67,7 @@ spec:
 
 > **Resource envelope (optional, under `spec`):** a non-accelerator app sets flat `spec.requiredCpu` / `limitedCpu` / `requiredMemory` / `limitedMemory` / `requiredDisk` (no `mode`); a GPU/accelerator app uses `spec.accelerator[]` instead — the two are mutually exclusive. See the Accelerator sizing §A.1.
 
-> **`appid` vs `lint`:** `chart lint` only requires `name`, `icon`, `description`, `title`, `version` (`appid` is `omitempty` in the schema, so a chart lints without it). **Keep `appid` present and equal to `metadata.name`** when hand-authoring a manifest (e.g. from a generic Helm chart); rename it alongside `name` / the folder / `Chart.yaml`. **`lint` passes without it; `market upload` does not** — omitting it produces `upload payload missing ... metadata.appid`. It does not decide the entrance host, which the platform derives from the app name — see the system-injected Helm values reference.
+> **`appid` vs `lint`:** `chart lint` only requires `name`, `icon`, `description`, `title`, `version` (`appid` is `omitempty` in the schema, so a chart lints without it). `market upload` accepts it missing too — the chart uploads and publishes, with the platform supplying the value. **Keep `appid` present and equal to `metadata.name`** anyway when hand-authoring a manifest (e.g. from a generic Helm chart), and rename it alongside `name` / the folder / `Chart.yaml`: a value someone else decides for you is one you will eventually misread, and a mismatch is harder to notice than an absence. (`upload payload missing ... metadata.appid` comes from Market's internal payload path, not from uploading a chart that omits the field.) It does not decide the entrance host, which the platform derives from the app name — see the system-injected Helm values reference.
 
 ### Keep as stub (deploy to your Olares)
 
@@ -110,7 +110,7 @@ In the deployment template, replace the PVC mount with the injected host path (`
 
 Replace any bundled `postgres`/`redis`/`mongodb`/`mysql`/`mariadb`/`minio`/`rabbitmq`/`nats` workload with Olares **system middleware**, prefer Postgres over a bundled SQLite, and depend on an already-ported companion app instead of copying its workload. `lint` does **not** flag a bundled db, so this is on you. Full rules — the SQLite→Postgres decision, the `middleware:` block, the PostgreSQL extension catalog, `type: application` dependencies, and the self-hosted escape hatch — are in the Middleware & dependencies area. Env wiring of the `.Values.<mw>.*` values is in the Env area.
 
-> The `olares` `type: system` dependency (see "System dependency: olares") is a **separate, always-required** entry in `options.dependencies` — keep it when you add or remove middleware / application dependencies.
+> The `olares` `type: system` dependency ([System dependency: olares](#system-dependency-olares-required)) is a **separate, always-required** entry in `options.dependencies` — keep it when you add or remove middleware / application dependencies.
 
 ## 4. Entrances & ports
 

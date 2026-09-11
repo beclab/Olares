@@ -74,6 +74,22 @@ empty result.
 Pagination: --limit sets the page size (default 100). --page picks one
 1-indexed page (default 1). --all drains every page until exhausted
 and is mutually exclusive with --page > 1.
+
+-o json prints {items, totalItems, page, limit, all}. Each item is the
+pod as the cluster reports it: .metadata.name / .metadata.namespace,
+.spec.nodeName, .status.phase, and .status.containerStatuses[] with a
+restartCount and a state of {running|waiting|terminated}.
+
+The phase answers "is it up" and never answers "why not" — for that,
+read .status.containerStatuses[].state.waiting.reason, in both phases
+that have one. A Pending pod usually names ImagePullBackOff or
+CreateContainerConfigError there, and a Running pod can hold a
+container waiting on CrashLoopBackOff. A pod so early that no container
+has a status yet has nothing there either way, and .status.conditions
+plus 'cluster pod events' are what say why it has not been scheduled.
+
+Compare .totalItems with len(.items) to tell a truncated page from a
+complete answer.
 `,
 		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {

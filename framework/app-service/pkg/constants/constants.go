@@ -139,6 +139,27 @@ const (
 	AMDGPU    = "amd.com/gpu"
 	IntelIGPU = "gpu.intel.com/i915"
 	IntelGPU  = "gpu.intel.com/xe"
+
+	// PodRequiredGPUMemory / PodLimitedGPUMemory are pod-template annotations a
+	// chart uses to declare its GPU-memory quota for the auto-resource ("-1")
+	// sentinel. They exist because only nvidia can carry that quota as a
+	// container resource: nvidia.com/gpumem is exempted from the scheduler's
+	// capacity check by HAMi's extender (managedResources.ignoredByScheduler),
+	// and no such exemption exists for the discrete AMD/Intel cards, whose
+	// device plugins advertise a card count and nothing else. A chart that put
+	// amd.com/gpumem in resources would leave the pod Pending on
+	// "Insufficient amd.com/gpumem" forever, and reusing nvidia.com/gpumem is
+	// no better: the gpu-limit webhook strips it from limits for a non-nvidia
+	// mode but never touches requests, and the apiserver then rejects the pod
+	// with "Limit must be set for non overcommitable resources".
+	//
+	// An annotation is inert to the scheduler, so it carries the number without
+	// any of that. The value is a plain Kubernetes quantity ("23Gi"), read the
+	// same way as the manifest's requiredGPUMemory it backfills — unlike
+	// nvidia.com/gpumem, which HAMi defines as a bare MiB count.
+	PodRequiredGPUMemory = "gpu.bytetrade.io/required-gpu-memory"
+	PodLimitedGPUMemory  = "gpu.bytetrade.io/limited-gpu-memory"
+
 	// NodeIntelRegisterKey is the node annotation written by the Intel GPU
 	// device plugin. Its value lists each Intel card as
 	// "<igpu|dgpu>,<cardN>,<i915|xe>,<name>,<architecture>,<codename>,<mem>"

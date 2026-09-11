@@ -1,6 +1,6 @@
 # market list / categories / get / status (catalog + runtime)
 
-> **Prerequisite:** Read [`../../olares-shared/SKILL.md`](../../olares-shared/SKILL.md) and the parent [`../SKILL.md`](../SKILL.md) (especially "What apps do I have? routing" and the `-s` / `-a` matrix) first.
+> **Prerequisite:** Read [`../../olares-shared/SKILL.md`](../../olares-shared/SKILL.md) and the parent [`../SKILL.md`](../SKILL.md), especially [Inventory decisions](../SKILL.md#inventory-decisions), first.
 > **Flags & examples:** `olares-cli market <verb> --help` for each verb below.
 
 The read-only family — catalog browsing, runtime status, and the `--mine` inventory view.

@@ -23,7 +23,7 @@ When users creates a Olares account, a DID is automatically generated in the beg
 - Backup/Import Olares IDs with a mnemonic phrase for quick setup and account recovery
 - Manage multiple DIDs/Olares IDs 
 
-See [Manage Accounts with LarePass](../../manual/larepass/create-account.md) for more detailed information.
+See [Manage Accounts with LarePass](../../manual/larepass/manage-accounts.md) for more detailed information.
 
 ## Manage VCs
 

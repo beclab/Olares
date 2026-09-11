@@ -70,14 +70,17 @@ const translateBatchLimit = 64
 
 func newCallTranslateCommand(f *cmdutil.Factory) *cobra.Command {
 	var (
-		output    string
-		to        string
-		from      string
-		html      bool
-		perLine   bool
-		detect    bool
-		languages bool
-		apiKey    string
+		output     string
+		to         string
+		from       string
+		html       bool
+		perLine    bool
+		detect     bool
+		languages  bool
+		transcript string
+		background string
+		glossary   []string
+		apiKey     string
 	)
 	cmd := &cobra.Command{
 		Use:   "translate [text…]",
@@ -96,6 +99,14 @@ first against an unfamiliar deployment — a pair the model was not built for is
 refused rather than routed through English. --detect reports what language the
 text is in, and also translates nothing.
 
+--transcript translates a conversation rather than a text. The model reads the
+turns around each line before rendering it, and answers one result per turn
+under the ids that were sent — which is the difference between a two-word reply
+coming back as "yes" and as "right". Use it for anything that came out of a
+diarizer or a meeting tool; --per-line on the same file translates each turn
+with nothing around it. The file is either a "segments" array or an object
+carrying one alongside "context", "background" and "glossary"; "-" reads stdin.
+
 There is no --model here. These routes carry no model field: Router resolves the
 translate default per call, so the model is a deployment's choice rather than a
 caller's. "olares-cli router route list --kind default" says which one it is.
@@ -106,6 +117,7 @@ Examples:
   cat strings.txt | olares-cli router call translate --to de --per-line
   olares-cli router call translate --languages
   olares-cli router call translate --detect "Der Hund"
+  olares-cli router call translate --to en --transcript meeting.json --background "sprint review"
 `,
 		Args: cobra.ArbitraryArgs,
 		RunE: func(c *cobra.Command, args []string) error {
@@ -128,6 +140,24 @@ Examples:
 				return fmt.Errorf("name the language to translate into with --to; " +
 					"`olares-cli router call translate --languages` lists what this model serves")
 			}
+			if strings.TrimSpace(transcript) != "" {
+				if perLine {
+					return fmt.Errorf("--per-line translates each line with nothing around it, " +
+						"which is what --transcript exists to avoid; pass one or the other")
+				}
+				if len(args) > 0 {
+					return fmt.Errorf("--transcript reads the turns from a file; it takes no text")
+				}
+				return runCallTranscript(c.Context(), f, transcriptOptions{
+					Path: strings.TrimSpace(transcript), To: strings.TrimSpace(to),
+					From: strings.TrimSpace(from), Background: strings.TrimSpace(background),
+					Glossary: glossary, APIKey: apiKey, OutputIn: output,
+				})
+			}
+			if strings.TrimSpace(background) != "" || len(glossary) > 0 {
+				return fmt.Errorf("--background and --term describe a conversation, and only " +
+					"--transcript translates one")
+			}
 			return runCallTranslate(c.Context(), f, translateOptions{
 				To: strings.TrimSpace(to), From: strings.TrimSpace(from),
 				HTML: html, PerLine: perLine, Args: args,
@@ -141,6 +171,12 @@ Examples:
 	cmd.Flags().BoolVar(&perLine, "per-line", false, "translate each line of input separately")
 	cmd.Flags().BoolVar(&detect, "detect", false, "report what language the text is in and translate nothing")
 	cmd.Flags().BoolVar(&languages, "languages", false, "list the languages and pairs this model serves")
+	cmd.Flags().StringVar(&transcript, "transcript", "",
+		"translate the conversation in this JSON file as a whole; `-` reads stdin")
+	cmd.Flags().StringVar(&background, "background", "",
+		"what the conversation is about, for the model to read (--transcript only)")
+	cmd.Flags().StringArrayVar(&glossary, "term", nil,
+		"pin a term: `source=target`, repeatable (--transcript only)")
 	cmd.Flags().StringVar(&apiKey, "api-key", "", dataPlaneKeyFlagUsage)
 	addOutputFlag(cmd, &output)
 	return cmd

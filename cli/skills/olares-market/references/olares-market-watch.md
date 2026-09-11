@@ -2,6 +2,8 @@
 
 > **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) first. Verb details are in the parent lifecycle row; state-machine facts (states, transitions, fail TTLs, `running` semantics) live in the shared **application state machine**.
 
+A one-shot mutation returns as soon as the server acknowledges it, and the server usually carries on afterwards, so the state a mutation returns is rarely the state it ends at. `--watch` is how a command follows the rest, and it does so by polling — `--help` carries the timeout and interval defaults. What follows is what to set them to, and what the answer means.
+
 ## `--watch` interaction with each verb
 
 | Verb | Terminal-success buckets | Idempotent shortcut |
@@ -21,25 +23,25 @@ An upgrade does not always end on `running`. Upgrading an already-`stopped` app 
 
 1. It captures the row's `statusTime` during the upgrade pre-flight, so the pre-request row cannot short-circuit the watch at tick zero.
 2. A `stopped` row newer than that baseline is terminal.
-3. `reason` picks the verdict: `upgradeCancelByUser` / `upgradeCancelBySystem` (the backend TTL fired) report **failure** — the app is still on its previous version; anything else is a normal upgrade-from-stopped **success**.
+3. `reason` picks the verdict, by **matching the two cancel values** `upgradeCancelByUser` / `upgradeCancelBySystem` (the backend TTL fired), which report failure. Anything else is a normal upgrade-from-stopped success.
 
-`version` cannot substitute for `reason` here: the state row's version is the upgrade *target*, and it does not roll back when the upgrade is cancelled.
+Step 3 is a whitelist, not an emptiness check: `reason` is set on healthy transitions too. Neither can `version` substitute for it. The reasoning for both, and what the version field actually reports after a cancel, is under *Non-obvious terminal behaviors* in the shared **application state machine**.
 
 ### Per-op foreground watch windows
 
-`--watch` defaults to a 15m timeout, but progressing states have much longer backend TTLs (`downloading` = 24h; `installing` 30m; `initializing` 60m; `upgrading` 24h while pulling images, then 30m — see the shared **application state machine**). Don't sit on the default. Use a short foreground window sized to the verb, then switch to polling:
+`--watch` defaults to a 15m timeout. Every backend TTL is longer than that, some of them by a day, so the default window is long enough to waste a session and too short to be an answer — waiting it out tells you nothing the first tick did not. The numbers are in the shared **application state machine**; what matters here is that no useful verdict comes from waiting for one. Use a short foreground window sized to the verb, then switch to polling:
 
 | Verb / phase | Suggested foreground `--watch-timeout` | After timeout |
 |---|---|---|
 | `stop` / `cancel` / `resume` / `restart` / `uninstall` | `30s` | poll `market status <app> --watch --watch-interval 5s` |
 | `install` deploy phase (post-download) / `upgrade` / `clone` | `1m` | poll `status`, then diagnose if STATE doesn't move |
-| `install` while STATE is `downloading` | judge by pull progress, not a timeout (see below) | keep polling patiently — the 24h TTL means it won't self-fail inside a normal session |
+| `install` while STATE is `downloading` | judge by pull progress, not a timeout (see below) | keep polling patiently — this state will not self-fail inside a normal session |
 
 A timed-out short window is **not** a failure — it just means "not terminal yet". Re-judge by the STATE row, never by the PROGRESS number (unreliable).
 
 ### `install` download phase is special
 
-When STATE is `downloading`, the app is pulling images and may legitimately stay there for many minutes (multi-GB images), with a 24h backend TTL — so it will not self-fail inside a normal session. Poll patiently (`market status <app> --watch --watch-interval 5s`); only once it **leaves** `downloading` (into `installing`/`initializing`) do the 1m deploy-phase window and the "stuck" rules apply. A `downloading` row that never advances AND whose byte-level pull progress is flat is a *stalled* pull, not a slow one — diagnose via [`../../olares-doctor/SKILL.md`](../../olares-doctor/SKILL.md) (it shows where real pull progress lives). Judge by STATE, not PROGRESS.
+When STATE is `downloading`, the app is pulling images and may legitimately stay there for many minutes (multi-GB images). Its backend TTL is the longest of any state — long enough that it will not self-fail inside a normal session, so a timeout here is your impatience, not a verdict. Poll patiently (`market status <app> --watch --watch-interval 5s`); only once it **leaves** `downloading` (into `installing`/`initializing`) do the 1m deploy-phase window and the "stuck" rules apply. A `downloading` row that never advances AND whose byte-level pull progress is flat is a *stalled* pull, not a slow one — diagnose via [`../../olares-doctor/SKILL.md`](../../olares-doctor/SKILL.md) (it shows where real pull progress lives). Judge by STATE, not PROGRESS.
 
 ### Verifying an app is actually healthy
 
@@ -49,7 +51,7 @@ When STATE is `downloading`, the app is pulling images and may legitimately stay
 
 - **For "install X and tell me when it's running"** → `market install X --watch -o json`, then parse `.finalState`.
 - **For "upgrade X if there's a newer version"** → `market get X -o json` to check version, then `market upgrade X --watch`. The pre-flight will short-circuit if there's no newer chart.
-- **For "re-apply an upload chart I just re-uploaded"** → `market upgrade X -s upload --version <same-version> --watch`. The same-version upgrade is allowed for `-s upload` (gate 3 exception) and is the right verb once the app already exists (`running` / `upgradeFailed` / ...) — `install` would be rejected by app-service in those states.
+- **For "retry an upgrade that failed for a transient reason"** → `market upgrade X -s upload --version <same-version> --watch`. The same-version upgrade is allowed for `-s upload` (gate 3 exception) and is the right verb once the app already exists (`running` / `upgradeFailed` / ...) — `install` would be rejected in those states. It re-applies the **stored** chart, so if the chart itself was the problem, fix it and upload under a **new** version instead: a published version cannot be overwritten.
 - **For "stop everything for this user"** → `market list --mine -o json | jq -r '.[].name'` + a shell loop calling `market stop`. The cluster doesn't expose a bulk-stop verb.
 - **For "install a custom chart"** → `market upload ./mychart.tgz` (always lands in source `upload`), then `market install <name> -s upload`.
 - **For ambiguous source rows on uninstall/stop/resume**: the verb already resolves automatically. Don't pass `-s` even when the SPA shows it under multiple sources.
@@ -68,7 +70,7 @@ A long `installing` / `initializing` is NOT a failure — app-service polls a lo
 |---|---|---|
 | `missing required env var(s): KEY1, KEY2 ...` (install) | App declares required envs | Re-run with `--env KEY=VALUE` per missing var |
 | `app 'X' is not in an upgradable state (current: Y)` | Pre-flight gate 2 | Wait for terminal state, or run `cancel` first |
-| `target version '1.2.3' is already installed — nothing to do` | Pre-flight gate 3 | Nothing to upgrade. **Does NOT fire for `-s upload`** — same-version upgrade is allowed there to re-apply an overwritten chart |
+| `target version '1.2.3' is already installed — nothing to do` | Pre-flight gate 3 | Nothing to upgrade. **Does NOT fire for `-s upload`** — a same-version upgrade is allowed there as a retry of the stored chart |
 | `chart is marked 'suspend' or 'remove' in source 'X' ...` | Pre-flight gate 4 (`app_simple_info.app_labels` contains `suspend` or `remove`) | Upstream withdrew the app; the SPA hides its Upgrade button too. Contact the app maintainer |
 | `app 'X' is not cloneable` | `clone` against an app that is neither multi-instance nor a template | Check `market get X -o json` for `allowMultipleInstall` / `templateOnly` |
 | `--title is required` | `clone` without `--title` | Add `--title "..."` |

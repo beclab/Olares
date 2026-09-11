@@ -1,6 +1,7 @@
 package router
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -16,13 +17,14 @@ import (
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
-// GET /v1/audio/tasks, GET /v1/audio/tasks/:id[/result], DELETE /v1/audio/tasks/:id
+// GET /v1/tasks, GET /v1/tasks/:id[/result], DELETE /v1/tasks/:id
 //
-// Every audio verb answers with its result, and takes --async to answer with a
-// receipt instead. That is not a convenience: an engine transcribing an hour of
-// audio holds the connection for as long as the work takes, and a request held
-// open that long is one an edge, a proxy or a laptop lid will cut. The task
-// survives the connection; the sync request does not.
+// Batch HTTP audio operations normally answer with their result and may take
+// --async when their operation catalogue declares support. That is not a
+// convenience: an engine transcribing an hour of audio holds the connection
+// for as long as the work takes, and a request held open that long is one an
+// edge, a proxy or a laptop lid will cut. The task survives the connection;
+// the sync request does not.
 //
 // Where `--async` goes in the request is the engine's choice rather than this
 // tree's, and it differs by route: the multipart routes read an `async` form
@@ -31,17 +33,29 @@ import (
 // long answer they thought they had escaped.
 //
 // A task lives on the engine that created it and nowhere else, so reading one
-// means reaching the same provider. Router remembers which backend answered each
-// `--async` submission and routes a bare lookup back to it, so an id is usually
-// enough. `--model` is what covers the cases that memory cannot: a gateway that
-// has restarted, a task minted through a different one, or a result old enough
-// that the id has aged out. When it is given it is sent as `?model=`, exactly as
-// the submitting call did.
+// means reaching the same provider. Router persists the binding from each new
+// opaque `atask_*` id to its backend and owner, so Router restart does not make
+// the model mandatory. `--model` remains useful for legacy upstream ids or a
+// task minted through another gateway.
+//
+// What the binding cannot repair is the engine losing the task, because only
+// the id was ever Router's: the work and the result are engine memory, they
+// expire 1800 seconds after the work finishes, and a pod restart takes them.
+// Router says so with `audio_task_lost` rather than resubmitting, which is the
+// right call — re-running an hour of audio is not a decision to make for
+// somebody.
 
 type audioTask struct {
-	ID            string          `json:"id"`
-	Kind          string          `json:"kind"`
-	Cap           string          `json:"cap"`
+	ID   string `json:"id"`
+	Kind string `json:"kind"`
+	Cap  string `json:"cap"`
+	// Poll and ResultURL are where this task says to come back to. Router
+	// rewrites both onto its own prefix and its own opaque id before handing
+	// the receipt over, so they are addresses in Router's namespace rather
+	// than the engine's, and following them is what keeps this tree off a
+	// path Router has to keep alive for it.
+	Poll          string          `json:"poll,omitempty"`
+	ResultURL     string          `json:"result_url,omitempty"`
 	Model         string          `json:"model"`
 	Status        string          `json:"status"`
 	Created       float64         `json:"created"`
@@ -86,22 +100,34 @@ func (t *audioTask) binary() bool {
 	return t.ResultKind != nil && strings.EqualFold(*t.ResultKind, "binary")
 }
 
+// pollPath is where this task said to come back to, or the canonical path
+// built from its id when it said nothing — an id pasted into a terminal a day
+// later has no receipt behind it.
+//
+// Only a data-plane path is followed; onDataPlane says why.
+func (t *audioTask) pollPath(id string) string {
+	if p := strings.TrimSpace(t.Poll); onDataPlane(p) {
+		return p
+	}
+	return epTask(id)
+}
+
 func newCallTaskCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "task",
 		Short: "read an audio job submitted with --async",
 		Long: `Pick up work an audio verb handed back instead of finishing.
 
-Any audio verb takes --async and answers with a task id. These read it: "get"
-says how it is going, "result" collects it, "cancel" drops it, and "list" shows
-the engine's whole board.
+An HTTP audio operation can take --async only when the selected model's
+operation catalogue declares support. These read an accepted task: "get" says
+how it is going, "result" collects it, "cancel" drops it, and "list" shows the
+engine's whole board. WebSocket and HTTP chunked streams cannot be async.
 
-A task exists only inside the engine that is running it, and Router remembers
-which one that was: an id is enough for "get", "result" and "cancel". Pass
---model when it is not — after a Router restart, or for work submitted through
-another gateway — and it has to be the model the work was submitted to, because
-a task read against a different engine is a 404 for a job that is running
-perfectly well.
+A task exists only inside the engine that is running it. Router persists the
+backend and owner for its opaque atask_* ids, so an id remains enough for
+"get", "result" and "cancel" across a Router restart. Pass --model for a legacy
+upstream id or work submitted through another gateway. An engine restart loses
+the task, and retained results expire after 1800 seconds.
 
 The model shown in a submission receipt is the routing reference needed to find
 that engine again, not the engine's canonical model id.
@@ -191,8 +217,10 @@ A task that has not succeeded has no result, and this says so rather than
 waiting — for one still running as well as for one that failed. "task get
 --wait" is what waits. A result the engine has already dropped is reported as
 gone rather than as missing: it is kept for a while after the work finishes.
-If this fetch fails, check the task status before retrying: another successful
-fetch can bill the same result again.
+If this fetch fails it is safe to run again: a second collection of the same
+result loses a compare-and-swap on the task's binding and is settled once. Only
+a Router restart between the two attempts leaves the double charge to the
+ledger's own duplicate check.
 
 Examples:
   olares-cli router call task result tsk_1f3c
@@ -281,17 +309,29 @@ Examples:
 			})
 		},
 	}
-	cmd.Flags().StringVar(&model, "model", "", audioTaskModelFlagUsage)
+	cmd.Flags().StringVar(&model, "model", "", audioTaskListModelFlagUsage)
 	cmd.Flags().StringVar(&status, "status", "", "only queued, running, succeeded, failed or canceled")
 	cmd.Flags().IntVar(&limit, "limit", 0, "how many tasks to list")
 	cmd.Flags().StringVar(&apiKey, "api-key", "", dataPlaneKeyFlagUsage)
 	addOutputFlag(cmd, &output)
+	// A queue belongs to one engine and there is no view across them, so this
+	// one is required rather than a recovery aid. Cobra refuses it before the
+	// request, which is what the flag help used to contradict.
+	if err := cmd.MarkFlagRequired("model"); err != nil {
+		panic(err)
+	}
 	return cmd
 }
 
 const audioTaskModelFlagUsage = "the model the task was submitted to, as <provider>/<model>, " +
 	"a route name or the default category the verb used; only needed when Router " +
 	"no longer remembers the task"
+
+// Not the same flag as on the verbs that follow one task by id. There, Router
+// usually remembers which engine holds it; here the queue is the thing being
+// asked about and naming its engine is the whole request.
+const audioTaskListModelFlagUsage = "the engine whose queue to list, as <provider>/<model>, a route " +
+	"name or a default category; required, because each audio application runs a queue of its own"
 
 type audioTaskOptions struct {
 	ID      string
@@ -323,10 +363,11 @@ func audioTaskPath(path, model string) string {
 	return withQuery(path, q)
 }
 
-// audioTaskErr says which of the four ways a task lookup fails happened, since
+// audioTaskErr says which of the five ways a task lookup fails happened, since
 // the status alone reads the same for a job that is running well and one that
-// is gone: a request Router could not place, a task nothing has, a task with no
-// result yet, and a result that has been dropped.
+// is gone: a request Router could not place, a task Router cannot attribute
+// right now, a task nothing has, a task with no result yet, and a result that
+// has been dropped.
 func audioTaskErr(err error, id string) error {
 	if err == nil {
 		return nil
@@ -336,15 +377,32 @@ func audioTaskErr(err error, id string) error {
 		return callErr(err)
 	}
 	switch {
+	case re.Code == "model_required" && id == "":
+		// `task list` follows no task, so the sentence below had nothing to put
+		// where the id goes and read "does not remember task  —".
+		return fmt.Errorf("%w\nA queue belongs to one engine and there is no view across them, so "+
+			"listing needs the engine named: --model <name>. `olares-cli router model list --mode "+
+			"audio` and `--mode tts` name the candidates", err)
 	case re.Code == "model_required":
 		return fmt.Errorf("%w\nRouter does not remember task %s — it restarted, or the work was "+
 			"submitted through another gateway — and an id alone does not say which engine is "+
 			"running it. Name the model the work was submitted to: --model <name>. The verb "+
 			"that submitted it printed the whole command", err, id)
+	case re.Code == "audio_task_owner_unavailable":
+		// Router holds the binding that says whose task this is, and could not
+		// read it. It used to answer that with the 404 below, which is the one
+		// sentence a client must not hear about work that is still running: a
+		// caller told its submission does not exist submits again, and an
+		// audio task is minutes of GPU time. So the read is the thing to
+		// repeat here, and nothing else.
+		return fmt.Errorf("%w\nRouter could not establish who owns task %s just now, so it refused "+
+			"the read rather than answering that the task is gone. The work is untouched.%s "+
+			"`olares-cli router call task get %s` again is the whole fix — do not submit the "+
+			"operation a second time", err, id, retryAdvice(re.RetryAfter), id)
 	case re.Status == 404:
-		return fmt.Errorf("%w\nEither the engine has forgotten task %s — a finished result is kept "+
-			"for a while and then dropped — or --model names a different engine from the one "+
-			"the work was submitted to", err, id)
+		return fmt.Errorf("%w\nTask %s is not one Router will answer for: the engine has forgotten it "+
+			"— a finished result is kept for a while and then dropped — or it belongs to another "+
+			"caller, or --model names a different engine from the one the work was submitted to", err, id)
 	case re.Status == 409:
 		// The engine has the task and no result to give: it is still working,
 		// or it stopped without producing one. Which of the two is in the
@@ -352,12 +410,34 @@ func audioTaskErr(err error, id string) error {
 		return fmt.Errorf("%w\nTask %s has no result yet. `olares-cli router call task get %s "+
 			"--wait` waits for it and says why if the work failed or was canceled instead",
 			err, id, id)
+	case re.Code == "audio_task_lost":
+		// Router still has the binding — that is how it knew which engine to
+		// ask — and the engine no longer has the task. Only the id survives a
+		// Router restart; the work and the result live in engine memory and
+		// go with it. So this is not the expiry below, which is a finished
+		// result ageing out, and Router deliberately does not resubmit:
+		// re-running an hour of audio is not something to do on a caller's
+		// behalf without being asked.
+		return fmt.Errorf("%w\nThe engine no longer has task %s. Router remembers where it was sent, "+
+			"but the task and its result live in the engine's memory: a pod or engine restart loses "+
+			"them, and they expire 1800 seconds after the work finishes. Nothing was resubmitted — "+
+			"send the operation again", err, id)
 	case re.Status == 410:
 		return fmt.Errorf("%w\nTask %s finished, and the engine has since dropped what it "+
 			"produced — a result is kept for a while, not forever. Submit the work again",
 			err, id)
 	}
 	return callErr(err)
+}
+
+// ownerLookupUnavailable is Router refusing a task read because it could not
+// establish who owns the task, as opposed to answering that nobody does. It is
+// the one lookup failure worth waiting through rather than reporting: the task
+// is somebody's, the work is still running, and there is nothing to fix at this
+// end.
+func ownerLookupUnavailable(err error) bool {
+	re := routerErrorOf(err)
+	return re != nil && re.Code == "audio_task_owner_unavailable"
 }
 
 func runAudioTaskGet(ctx context.Context, f *cmdutil.Factory, opts audioTaskOptions) error {
@@ -387,7 +467,10 @@ func runAudioTaskGet(ctx context.Context, f *cmdutil.Factory, opts audioTaskOpti
 }
 
 func fetchAudioTask(ctx context.Context, dp *routerClient, id, model string, out *audioTask) error {
-	path := audioTaskPath(epAudioTask(id), model)
+	// `out` carries the previous reading while polling, so a task that named
+	// its own follow-up route is read at the route it named after the first
+	// lookup has found it.
+	path := audioTaskPath(out.pollPath(id), model)
 	if err := dp.doJSON(ctx, "GET", path, nil, out); err != nil {
 		return audioTaskErr(err, id)
 	}
@@ -428,6 +511,9 @@ func waitForAudioTaskWith(ctx context.Context, task *audioTask, model string,
 	deadline := ops.now().Add(timeout)
 	lastNote := ""
 	delay := time.Second
+	// Said once, however many reads it takes: it is the same fact each time,
+	// and the point of the line is that waiting is what to do about it.
+	saidUnavailable := false
 	timeoutErr := func() error {
 		return fmt.Errorf("task %s is still %s after %s; it keeps running — "+
 			"`olares-cli router call task get %s --model %s` picks it up",
@@ -449,13 +535,15 @@ func waitForAudioTaskWith(ctx context.Context, task *audioTask, model string,
 			if err := ctx.Err(); err != nil {
 				return err
 			}
-			var final audioTask
-			if err := ops.fetch(ctx, task.ID, model, &final); err != nil {
+			final := audioTask{Poll: task.Poll}
+			switch err := ops.fetch(ctx, task.ID, model, &final); {
+			case err == nil:
+				*task = final
+				if task.settled() {
+					return nil
+				}
+			case !ownerLookupUnavailable(err):
 				return err
-			}
-			*task = final
-			if task.settled() {
-				return nil
 			}
 			return timeoutErr()
 		}
@@ -465,9 +553,22 @@ func waitForAudioTaskWith(ctx context.Context, task *audioTask, model string,
 		if !ops.now().Before(deadline) {
 			return timeoutErr()
 		}
-		var next audioTask
+		next := audioTask{Poll: task.Poll}
 		if err := ops.fetch(ctx, task.ID, model, &next); err != nil {
-			return err
+			if !ownerLookupUnavailable(err) {
+				return err
+			}
+			// Router cannot say whose task this is at the moment. Giving up
+			// here would hand the caller a failure over minutes of work that
+			// is still running, and the id is the only thing that was ever
+			// at risk, so the wait goes on within the budget it was given.
+			if verbose && !saidUnavailable {
+				saidUnavailable = true
+				fmt.Fprintln(os.Stderr, "task "+task.ID+
+					": Router cannot say who owns it just now — still waiting")
+			}
+			delay = nextAudioPollDelay(delay, false)
+			continue
 		}
 		progressed := audioTaskNote(&next) != note
 		*task = next
@@ -561,7 +662,7 @@ func runAudioTaskResult(ctx context.Context, f *cmdutil.Factory, opts audioTaskO
 	}
 	dp := dataPlane(pc, opts.APIKey)
 
-	path := audioTaskPath(epAudioTaskResult(opts.ID), opts.Model)
+	path := audioTaskPath(epTaskResult(opts.ID), opts.Model)
 	resp, err := dp.do(ctx, "GET", path, nil, "")
 	if err != nil {
 		return err
@@ -596,12 +697,18 @@ func runAudioTaskResult(ctx context.Context, f *cmdutil.Factory, opts audioTaskO
 		return fmt.Errorf("task %s produced %s; name a file with --out, or pipe the output",
 			opts.ID, nonEmpty(resp.Header.Get("Content-Type")))
 	}
-	n, err := io.Copy(dst, resp.Body)
+	// A collection never asked for a container, so the name is the only claim
+	// being made about the bytes and the only one that can be wrong.
+	head := make([]byte, audioHeaderBytes)
+	read, _ := io.ReadFull(resp.Body, head)
+	head = head[:read]
+	n, err := io.Copy(dst, io.MultiReader(bytes.NewReader(head), resp.Body))
 	if err != nil {
 		return fmt.Errorf("write the result: %w", err)
 	}
 	if p := strings.TrimSpace(opts.Out); p != "" {
 		fmt.Fprintf(os.Stderr, "wrote %s (%s)\n", p, humanBytes(n))
+		reportOutNameMismatch(os.Stderr, p, head)
 	}
 	return nil
 }
@@ -621,7 +728,7 @@ func runAudioTaskCancel(ctx context.Context, f *cmdutil.Factory, opts audioTaskO
 		Dropped   bool   `json:"dropped"`
 		Canceling bool   `json:"canceling"`
 	}
-	path := audioTaskPath(epAudioTask(opts.ID), opts.Model)
+	path := audioTaskPath(epTask(opts.ID), opts.Model)
 	if err := dp.doJSON(ctx, "DELETE", path, nil, &out); err != nil {
 		return audioTaskErr(err, opts.ID)
 	}
@@ -667,7 +774,7 @@ func runAudioTaskList(ctx context.Context, f *cmdutil.Factory, opts audioTaskLis
 		q.Set("limit", strconv.Itoa(opts.Limit))
 	}
 	var board audioTaskBoard
-	if err := dp.doJSON(ctx, "GET", withQuery(epAudioTasks, q), nil, &board); err != nil {
+	if err := dp.doJSON(ctx, "GET", withQuery(epTasks, q), nil, &board); err != nil {
 		return audioTaskErr(err, "")
 	}
 	if opts.Format == FormatJSON {

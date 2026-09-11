@@ -16,6 +16,18 @@ View your system's status through these specialized dashboards:
 - **Overview**: Shows current resource usage and system health.
 - **Applications**: Displays running applications and their status.
 
+## Choose the resource to investigate
+
+Memory, GPU memory, and disk space describe different limits. Use the symptom to choose the next guide:
+
+| Resource | What it affects | What to do when it is low or full |
+|---|---|---|
+| Memory (RAM) | Running apps and system processes | If an app cannot install or resume, or memory remains in use after you stop it, see [Memory insufficient or not freed after stopping an app](../help/ts-free-memory.md). |
+| GPU memory (VRAM) | Models and other apps assigned to an accelerator | If a GPU app stays stopped or cannot reserve enough VRAM, see [GPU app remains stopped after installation or resume](../help/ts-vram-shortage.md). |
+| Disk space | Persistent files, app data, downloaded models, and container images | Use **Occupancy analysis** to find the full file system. To remove unused models or reviewed container images, see [Free up disk space](../free-up-disk-space.md). |
+
+Stopping an app can release RAM or VRAM, but it does not automatically delete the app's models, data, or container images from disk. Likewise, deleting an unused image frees disk space but does not increase RAM or VRAM.
+
 ## Overview
 
 The Overview page provides a comprehensive, at-a-glance view of your Olares system's health and resource utilization. It is divided into key sections to help you monitor performance effectively:
@@ -216,5 +228,5 @@ For applications supporting multiple entrances (such as Wordpress), you can clic
 ## Resources
 
 - [Manage accelerator resources](settings/gpu-resource.md): Check GPU usage and switch GPU modes.
-- [My hardware](settings/my-olares.md#my-hardware): View your device model and hardware status.
+- [Manage hardware settings](../../one/hardware-settings.md): View your device model and hardware status.
 - [Manage applications in Market](market/market.md#uninstall-applications): Free up resources by stopping or uninstalling apps.

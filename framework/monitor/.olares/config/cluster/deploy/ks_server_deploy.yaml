@@ -30,7 +30,7 @@ spec:
                     operator: Exists
       containers:
       - name: monitoring-server
-        image: beclab/monitoring-server-v1:v0.3.15
+        image: beclab/monitoring-server-v1:v0.3.16
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8000

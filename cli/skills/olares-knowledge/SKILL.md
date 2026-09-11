@@ -28,11 +28,21 @@ Use `olares-cli knowledge download <verb> --help` for syntax.
 
 All verbs require Olares 1.12.7+ because the Settings download edge and provider are both required. If the version cannot be established, follow the shared profile/auth gate before deciding that an upgrade is needed.
 
+## Fast paths
+
+| Task | Read | First command |
+|---|---|---|
+| Download a URL and know when it lands | [creating a task](references/olares-knowledge-download-create.md) | `olares-cli knowledge download create <url> -o json`, then `download wait <id>` |
+| See what is downloading now | this file | `olares-cli knowledge download list -o json` |
+| Find out which qualities a link offers before taking one | [provider/quality inspection](references/olares-knowledge-download-inspect.md) | `olares-cli knowledge download inspect <url> -o json` |
+| Check whether something is already on disk | [URL vs resource-path decisions](references/olares-knowledge-download-files.md) | `olares-cli knowledge download file exists <path> -o json` |
+
 ## Verb index
 
 | Family | Verbs | Read when triggered |
 |---|---|---|
-| lifecycle | `create`, `list`, `info`, `wait`, `pause`, `resume`, `cancel`, `remove` | [task lifecycle and state decisions](references/olares-knowledge-download-lifecycle.md) |
+| start one | `create`, `info`, `wait` | [create and follow a task](references/olares-knowledge-download-create.md) |
+| manage the ones that exist | `list`, `pause`, `resume`, `cancel`, `remove` | [listing, pausing and retiring tasks](references/olares-knowledge-download-manage.md) |
 | probe + prefs | `inspect`, `prefs get`, `prefs set` | [provider/quality inspection](references/olares-knowledge-download-inspect.md) |
 | sync | `unfinished`, `sync` | [cursor and drain semantics](references/olares-knowledge-download-sync.md) |
 | torrent | `torrent inspect`, `stats`, `peers`, `files`, `seed stop/resume`; torrent create | [torrent selection and seeding](references/olares-knowledge-download-torrent.md) |

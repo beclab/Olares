@@ -120,7 +120,7 @@ func renderProviderGet(w io.Writer, d *providerDetail) error {
 			intOrDash(m.ContextSize),
 		}
 		if wide {
-			cells = append(cells, intOrDash(m.MaxConcurrency))
+			cells = append(cells, atOnceLabel(*m))
 		}
 		cells = append(cells, summarizeSupports(m.Supports))
 		mt.row(cells...)
@@ -131,7 +131,8 @@ func renderProviderGet(w io.Writer, d *providerDetail) error {
 	if wide {
 		_, err := fmt.Fprintln(w, "\nAT ONCE is how many requests the engine was launched to work on at "+
 			"the same time. A request beyond that waits its turn, which looks like a slow model rather "+
-			"than a queue — ENGINE LOAD above is what tells the two apart.")
+			"than a queue — ENGINE LOAD above is what tells the two apart. shared means those slots "+
+			"share one KV pool smaller than (window × width).")
 		return err
 	}
 	return nil
@@ -142,4 +143,19 @@ func intOrDash(v int) string {
 		return "-"
 	}
 	return strconv.Itoa(v)
+}
+
+func atOnceLabel(m providerModelRow) string {
+	return atOnceLabelOf(m.ContextSize, m.MaxConcurrency, m.KVPoolTokens)
+}
+
+// atOnceLabelOf marks a width whose slots cannot each hold a full window. The
+// three figures reach this tree through two different rows — the console's and
+// the data plane's — and the reading is the same one either way.
+func atOnceLabelOf(contextSize, maxConcurrency, kvPoolTokens int) string {
+	if contextSize > 0 && maxConcurrency > 1 && kvPoolTokens > 0 &&
+		int64(contextSize)*int64(maxConcurrency) > int64(kvPoolTokens) {
+		return strconv.Itoa(maxConcurrency) + " shared"
+	}
+	return intOrDash(maxConcurrency)
 }

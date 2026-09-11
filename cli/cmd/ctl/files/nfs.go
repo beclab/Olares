@@ -189,7 +189,7 @@ Examples:
 		},
 	}
 	cmd.Flags().StringVar(&o.node, "node", "", "target node (defaults to the first /api/nodes/ entry)")
-	cmd.Flags().BoolVar(&o.jsonOut, "json", false, "print the discovered export list as JSON instead of a table")
+	addOutputFormatFlag(cmd, &o.jsonOut, "print the discovered export list as JSON instead of a table")
 	return cmd
 }
 
@@ -453,7 +453,7 @@ func newNFSHistoryListCommand(f *cmdutil.Factory) *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&o.node, "node", "", "node whose history to read (defaults to the first /api/nodes/ entry)")
-	cmd.Flags().BoolVar(&o.jsonOut, "json", false, "print each entry as JSON (one per line)")
+	addOutputFormatFlag(cmd, &o.jsonOut, "print each entry as JSON (one per line)")
 	cmd.Flags().BoolVar(&o.all, "all", false, "include SMB favorites (// shares), not just NFS-shaped entries")
 	return cmd
 }

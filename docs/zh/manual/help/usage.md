@@ -34,89 +34,30 @@ head:
 
 可以。你可以使用自己熟悉的本地开发工具构建应用，将其打包为 [Olares 应用 Chart](../../developer/develop/package/chart.md)，并在提交到应用市场前先在 Olares 设备上测试。
 
+### AI 应用之间是如何连接的？
+
+在 Olares 上使用 AI 时，你通常需要同时操作两个应用：一个 AI 服务应用在后台提供 AI 能力，另一个 AI 客户端应用则提供你直接交互的聊天界面。
+
+- **AI 客户端应用**：提供你直接交互的前端聊天界面或工作流画布，如 LobeHub。它们依赖 AI 服务应用（通常称为 **provider**）来执行生成文本、提取数据等 AI 任务。
+- **AI 服务应用**：通过 API 为兼容的客户端提供聊天、搜索、语音识别等 AI 能力。部分应用自带管理 Web 界面，另一些主要作为无界面的后端服务运行。
+
+    在 Olares 上，AI 服务应用分为两类：
+    - **LLM 服务应用**：托管大型语言模型（LLM），用于文本生成、代码补全和聊天。包括八个预构建模型应用，以及在[引擎基座应用](/zh/use-cases/llm-base-apps.md)上创建的自定义模型实例。
+    - **其他 AI 服务应用**：提供 LLM 之外的功能，例如语音识别（Speaches）和文本提取（PaddleOCR）。
+
+由于不同 provider 使用不同的通信规则，它们依赖特定的 **API 格式**，你可以把这些格式理解为应用之间交流的“语言”。最常见的两种格式是 **OpenAI-Compatible** 和 **Ollama**。连接时，需要在客户端应用中填写服务应用的 Base URL、模型名称和 API key。具体步骤请参考[连接 AI 应用与模型服务](../best-practices/connect-ai-apps.md)。
+
 ### 可以手动更新应用版本吗？
 
 :::tip 重要说明
-我们建议，始终通过应用市场更新应用，以确保稳定性和兼容性。
+我们建议始终通过应用市场更新应用，以确保稳定性和兼容性。
 :::
 
-在发布更新到应用市场之前，Olares 团队会对新版本进行全面测试，以确保兼容性和稳定性。在某些情况下，应用内部可能会提示有新版本可用，但该版本尚未正式在应用市场上架。
+可以。某些情况下，应用内部可能提示有新版本可用，但该版本尚未正式在应用市场上架。如果急需使用最新功能，可以在控制面板中[手动更新应用镜像](../update-app-image.md)。
 
-如果你急需使用最新功能，可通过控制面板手动更新应用的 Docker 镜像。
+请注意，控制面板中的手动编辑都是临时改动，会在下次应用市场更新时被覆盖；手动更新后应用也可能因兼容性问题无法启动。操作前请先阅读[手动更新应用镜像](../update-app-image.md)中的警告说明。
 
-在手动更新之前，应注意以下几点：
-
-- **改动是临时的**：在控制面板中对配置所做的所有手动编辑都不会持久化。若后续通过应用市场更新该应用，应用市场的版本会覆盖你所有的手动配置，包括镜像版本。
-- **可能出现异常行为**：手动更新后，应用可能会因兼容性等问题而无法启动或运行异常。
-
-<Tabs>
-<template #使用官方镜像更新>
-
-:::warning 兼容性与权限
-- 官方镜像可能未完全适配 Olares，因为配置路径或环境变量可能存在差异。
-- 如果应用需要 root 权限或其他特殊权限，使用来自其他组织的镜像可能会由于权限限制而导致应用无法启动。
-:::
-
-下列步骤以 Ollama 为例演示如何手动更新。
-
-1. 找到官方 Docker 镜像名称和最新的发布标签（tag）。
-2. 记下镜像名称和标签，例如 `ollama/ollama` 和 `0.23.1`。
-
-    ![Ollama Docker image name](/images/manual/help/faq-ollama-docker-hub.png#bordered)
-
-    ![Ollama Docker image version tag](/images/manual/help/faq-ollama-image-tag.png#bordered)    
-
-3. 打开控制面板，进入 **浏览** > **System** > **ollamaserver-shared** > **部署** > **ollama**，点击 <span class="material-symbols-outlined">edit_square</span>。
-4. 在 YAML 编辑器中，找到 `containers` 区域，记下当前的镜像和标签，以便后续回滚。例如 `docker.io/beclab/ollama-ollama:0.20.5`。
-
-    ![Ollama Docker image hub](/images/zh/manual/use-cases/faq-ollama-container-update.png#bordered)
-
-5. 将该字段更新为新的官方镜像名称和标签。例如，将 `docker.io/beclab/ollama-ollama:0.20.5` 改为 `docker.io/ollama/ollama:0.23.1`。
-6. 点击 **Confirm**。系统会自动拉取新镜像并重启容器。大体积镜像可能需要数分钟下载。完成后，容器状态会恢复为 **Running**。
-
-    ![Ollama Docker image updated in Control Hub](/images/zh/manual/use-cases/faq-ollama-container-updated.png#bordered)
-
-7. 在控制面板中打开容器的终端，执行版本命令 `ollama -v` 以确认更新成功。
-
-    ![Ollama Docker image update verify in Control Hub](/images/zh/manual/use-cases/faq-ollama-container-update-verify.png#bordered)
-
-</template>
-<template #使用-Olares-镜像仓库中的镜像更新>
-
-:::warning 潜在冲突
-`beclab` 镜像是 Olares 为方便访问而提供的。但由于某些更新包含环境适配方面的调整，手动拉取新版本可能导致与当前环境的配置不匹配，进而使应用无法启动或运行异常。
-:::
-
-对于某些更新频率较高的 AI 应用，Olares 可能已将最新镜像同步到官方仓库，但尚未将对应的 Chart 更新推送到应用市场。
-
-下列步骤以 OpenClaw 为例演示如何手动更新。
-
-1. 访问 [Olares 官方 Docker 仓库](https://hub.docker.com/u/beclab)。
-2. 搜索 `OpenClaw`，进入详情页，查看 **Tags** 标签页，记下最新的版本标签。例如 `2026.5.7`。
-
-    ![Search for latest docker image in Olares Docker registry](/images/manual/help/faq-openclaw-latest-image.png#bordered)
-
-3. 打开控制面板，进入**浏览** > **{用户名}** > **clawdbot-{用户名}** > **部署** > **clawdbot**，点击 <span class="material-symbols-outlined">edit_square</span>。
-4. 在 YAML 编辑器中，找到 `containers` 区域，记下当前的镜像和标签，以便后续回滚。例如 `beclab/openclaw-openclaw:2026.3.12`。
-
-    ![OpenClaw image tag in Control Hub](/images/zh/manual/use-cases/faq-openclaw-container-update.png#bordered)
-
-5. 仅更新现有 `beclab` 镜像的版本标签。例如，将 `beclab/openclaw-openclaw:2026.3.12` 改为 `beclab/openclaw-openclaw:2026.5.7`。
-6. 点击 **Confirm**。系统会自动拉取新镜像并重启容器。大体积镜像可能需要数分钟下载。完成后，容器状态会恢复为 **Running**。
-
-    ![OpenClaw Docker image updated in Control Hub](/images/zh/manual/use-cases/faq-openclaw-container-updated.png#bordered)
-
-7. 在控制面板中打开容器的终端，执行版本命令 `openclaw -v` 以确认更新成功。
-
-    ![OpenClaw Docker image update verify in Control Hub](/images/zh/manual/use-cases/faq-openclaw-container-update-verify.png#bordered)
-</template>
-</Tabs>
-
-:::tip 回滚
-如果手动更新后，应用无法启动或出现兼容性问题，可以重新编辑 YAML，使用之前记下的旧镜像标签恢复。例如，将 `docker.io/ollama/ollama:0.23.1` 改回 `docker.io/beclab/ollama-ollama:0.20.5`。
-:::
-
-## 存储
+## 存储## 存储
 
 ### 如果在运行中的 Olares 机器上添加新硬盘，系统会自动使用吗？
 

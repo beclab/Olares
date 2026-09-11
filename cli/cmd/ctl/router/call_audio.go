@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
+	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -334,13 +336,17 @@ the file named by --out, or to standard output when that is a pipe. Writing
 audio bytes into a terminal is refused rather than done.
 
 --voice and --response-format are passed through untouched: which voices exist
-and which container formats they come in is the engine's business, and Router
-does not translate either. --voices lists what this model offers and synthesises
-nothing; a model built only for voice cloning has no list and answers 404.
+and which formats they come in is the engine's business, and Router does not
+translate either. Its format names carry a sample rate — "wav_16000",
+"mp3_44100_128" — so a bare "wav" is refused with the list it does take.
+--voices lists what this model offers and synthesises nothing; a model built
+only for voice cloning has no list and answers 404.
 
---out is where the audio goes. -o names the format of the voice listing, which
-is the only thing this verb prints rather than plays, and has no effect on a
-synthesis.
+--out is where the audio goes and not what format it is in: name a file .wav
+without asking for wav and the bytes are still whatever the engine defaults to,
+which is reported rather than left to be discovered later. -o names the format
+of the voice listing, which is the only thing this verb prints rather than
+plays, and has no effect on a synthesis.
 
 --sound-fx generates a sound from a description of it instead of speech from
 words. It is the same request to the same endpoint: engines that make sound
@@ -357,7 +363,7 @@ it.
 
 Examples:
   olares-cli router call speak "your build finished" --out done.mp3
-  olares-cli router call speak "hello" --voice alloy --out hello.wav --response-format wav
+  olares-cli router call speak "hello" --voice alloy --out hello.wav --response-format wav_16000
   echo "read this aloud" | olares-cli router call speak --out out.mp3
   olares-cli router call speak "piped" | ffplay -
   olares-cli router call speak --voices
@@ -404,7 +410,7 @@ Examples:
 		modelFlagHelp(categoryTTS)+", or "+categorySoundFX+" with --sound-fx")
 	cmd.Flags().StringVar(&voice, "voice", "", "voice name, as the engine names it")
 	cmd.Flags().StringVar(&outPath, "out", "", "write the audio here instead of standard output")
-	cmd.Flags().StringVar(&respFmt, "response-format", "", "container format, e.g. mp3 or wav")
+	cmd.Flags().StringVar(&respFmt, "response-format", "", audioRespFormatFlagUsage)
 	cmd.Flags().Float64Var(&speed, "speed", 1, "playback rate, if the engine supports it")
 	cmd.Flags().BoolVar(&voices, "voices", false, "list the voices this model offers and synthesise nothing")
 	cmd.Flags().BoolVar(&soundFX, "sound-fx", false,
@@ -416,12 +422,41 @@ Examples:
 	return cmd
 }
 
-// GET /v1/audio/voices
+// GET /v1/audio/voices or GET /v1/voices
+//
+// Router folds both spellings into one operation because they are the OpenAI
+// and ElevenLabs names for the same question, but it forwards the path it was
+// given, and an engine implements one of them. Asking the right one is what
+// makes the flag answer the question rather than the URL: a 404 from the OpenAI
+// spelling said "no named voices" about a model with four of them.
 //
 // Named voices are one of two ways a TTS engine picks a voice; the other is a
 // reference recording, and an engine built for that has nothing to list. So an
-// empty list and a 404 both mean "this model is not chosen from a menu" rather
-// than a misconfiguration.
+// empty list and a 404 from both spellings mean "this model is not chosen from
+// a menu" rather than a misconfiguration.
+
+// noVoiceToAddressErr replaces the generic audio 404 rather than adding to it.
+// That hint blames the wrong engine — recognition answering for synthesis —
+// and this is a synthesis engine that spells synthesis the other way, so
+// following the hint sends the caller looking for a model they already have.
+func noVoiceToAddressErr(err error) error {
+	var re *RouterError
+	if !errors.As(err, &re) {
+		return err
+	}
+	return fmt.Errorf("%w\nThis engine addresses a voice in the path rather than reading one from "+
+		"the body, so it cannot speak until one is named. `olares-cli router call speak --voices` "+
+		"lists them and `--voice <id>` picks one", re)
+}
+
+// routeAbsent is the engine saying it has no such path, as opposed to Router
+// refusing the call. Only that is worth asking a second way: an unresolved
+// model or a rejected key would fail identically on the other spelling.
+func routeAbsent(err error) bool {
+	var re *RouterError
+	return errors.As(err, &re) && re.Status == http.StatusNotFound && re.Code == ""
+}
+
 func runListVoices(ctx context.Context, f *cmdutil.Factory, model, apiKey string, format Format) error {
 	if ctx == nil {
 		ctx = context.Background()
@@ -431,23 +466,38 @@ func runListVoices(ctx context.Context, f *cmdutil.Factory, model, apiKey string
 		return err
 	}
 	dp := dataPlane(pc, apiKey)
-	path := epAudioVoices
-	if m := strings.TrimSpace(model); m != "" {
-		q := url.Values{}
-		q.Set("model", m)
-		path = withQuery(path, q)
-	}
+	// The two spellings name the same fields differently, so both sets are
+	// decoded and the renderer takes whichever arrived. Reading only the
+	// OpenAI names against an ElevenLabs-shaped engine lists the voices with
+	// no ids, which is a table nobody can act on.
 	var resp struct {
 		Voices []struct {
-			ID          string   `json:"id"`
-			Name        string   `json:"name"`
-			Language    string   `json:"language"`
-			Languages   []string `json:"languages"`
-			Gender      string   `json:"gender"`
-			Description string   `json:"description"`
+			ID          string            `json:"id"`
+			VoiceID     string            `json:"voice_id"`
+			Name        string            `json:"name"`
+			Language    string            `json:"language"`
+			Languages   []string          `json:"languages"`
+			Gender      string            `json:"gender"`
+			Description string            `json:"description"`
+			Labels      map[string]string `json:"labels"`
 		} `json:"voices"`
 	}
-	if err := dp.doJSON(ctx, "GET", path, nil, &resp); err != nil {
+	err = nil
+	for _, route := range voiceListRoutes(ctx, dp, model) {
+		path := route
+		if m := strings.TrimSpace(model); m != "" {
+			q := url.Values{}
+			q.Set("model", m)
+			path = withQuery(path, q)
+		}
+		if err = dp.doJSON(ctx, "GET", path, nil, &resp); err == nil {
+			break
+		}
+		if !routeAbsent(err) {
+			return callErr(err)
+		}
+	}
+	if err != nil {
 		return callErr(err)
 	}
 	if format == FormatJSON {
@@ -465,7 +515,14 @@ func runListVoices(ctx context.Context, f *cmdutil.Factory, model, apiKey string
 		if lang == "" {
 			lang = strings.Join(v.Languages, " ")
 		}
-		t.row(v.ID, nonEmpty(v.Name), nonEmpty(lang), clip(v.Description, 48))
+		if lang == "" {
+			lang = v.Labels["language"]
+		}
+		id := strings.TrimSpace(v.ID)
+		if id == "" {
+			id = v.VoiceID
+		}
+		t.row(nonEmpty(id), nonEmpty(v.Name), nonEmpty(lang), clip(v.Description, 48))
 	}
 	return t.flush()
 }
@@ -500,11 +557,26 @@ func runCallSpeak(ctx context.Context, f *cmdutil.Factory, text string, opts spe
 	if err != nil {
 		return fmt.Errorf("marshal request body: %w", err)
 	}
-	return streamAudioAnswer(ctx, dp, audioAnswer{
-		Method: "POST", Route: audioRequestPath(epAudioSpeech, opts.Model, opts.Async),
-		Body: bytes.NewReader(buf), ContentType: "application/json",
-		Model: opts.Model, Out: opts.OutPath, Async: opts.Async, Format: opts.Format,
-	})
+	// Both spellings read the same body — the fields this verb sends are the
+	// ones each shape looks for — so only the path differs between attempts,
+	// and a 404 arrives before anything is written to --out.
+	answer := audioAnswer{
+		Method: "POST", ContentType: "application/json",
+		Model: opts.Model, Out: opts.OutPath, RespFormat: opts.RespFormat,
+		Async: opts.Async, Format: opts.Format,
+	}
+	routes := synthesisRoutes(ctx, dp, opts.Model, opts.Voice)
+	for _, route := range routes {
+		answer.Body = bytes.NewReader(buf)
+		answer.Route = audioRequestPath(route, opts.Model, opts.Async)
+		if err = streamAudioAnswer(ctx, dp, answer); !routeAbsent(err) {
+			return err
+		}
+	}
+	if strings.TrimSpace(opts.Voice) == "" {
+		return noVoiceToAddressErr(err)
+	}
+	return err
 }
 
 func buildSpeakRequest(text string, opts speakOptions) map[string]any {

@@ -25,7 +25,7 @@ Three failures look alike and are not:
 
 A failed read is nothing: run it again. A failed **write** has two histories the CLI cannot tell apart — Router never saw it, or Router applied it and the reply was lost — and only one of them makes "try again" right.
 
-Router has no idempotency key, so a retry is a second request rather than the same one. Nothing the CLI sends changes that, which is why the error carries the consequence instead: it says the outcome is unknown, and what a second identical request would do to that particular route. Read it before acting. Three shapes:
+Router has an idempotency key on the three music submissions and nowhere else, so anywhere else a retry is a second request rather than the same one. Nothing the CLI sends changes that, which is why the error carries the consequence instead: it says the outcome is unknown, and what a second identical request would do to that particular route. Read it before acting. Three shapes:
 
 - **Refused on repeat** — providers, routes, quotas, and adding a named model to a provider all have a uniqueness constraint. Retrying is safe and self-checking: a `409` means the first attempt landed, and is not a new problem.
 - **Costly on repeat** — `key issue` mints a second key, `provider rollback` appends another credential version, and any `router call` may already have been billed. Look first: `key list`, `provider history`, `usage list --limit 5`.
@@ -59,7 +59,7 @@ A model application owns its row from the moment it is installed, so a model tha
 
 - **A model `router model list` calls callable that `router call models` does not list** is down to the credential, and only when one is being presented: a key restricted to named models sees only those, and `router key list` shows the allowlist. Reaching a model the key may not call is a 404 on the name, which reads like a configuration problem and is not one. A keyless call has no allowlist, so dropping `--api-key` and `OLARES_ROUTER_API_KEY` is the quickest way to rule this out.
 - **The reverse — `router call models` serving something `model list` says is not callable** is possible and narrow. Router only asks about weights while the loop that writes the phase is running; when it is not, its gate falls back to asking whether the container is up, and dispatch is more permissive than this list. The data plane is the authority in that disagreement.
-- **A call refused with `no_default_model`** means that category has nothing behind it. `route list --kind default` names which do and which do not.
+- **A call refused with `no_default_model`** means nothing is currently answering that category, which is not the same as nothing being installed for it. A model whose application is stopped is installed and answers nothing at once, and the data plane cannot see it at all — Router's own message for this says nothing is installed, and on a machine with rerank, OCR and enhance models all present but stopped it said that about every one of them. `route candidates <category>` is the verb that knows: it lists the models that qualify including the stopped ones, `route get <category>` names the stopped application in its trailing note, and `market resume <app>` is the fix. Only when candidates comes back empty is the category genuinely unserved, and then `market install <app>` or `provider create` is what fills it. `route list --kind default` says which categories are empty but cannot say which of the two kinds of empty they are.
 - **A model Router offers a capability for that it turns out not to have** is the projection trailing the application's own card. `router model spec show <model>` says which copy you are reading: `cache` is Router's, and an edit through `router model spec edit` corrects both at once.
 - **A call refused for a mode mismatch, or a bare 404 on an audio route**, is the verb and the model disagreeing about what the model does. `router model list` prints the mode; for a local model `router model spec show` prints what the application declares, which is the copy to trust.
 
@@ -88,6 +88,7 @@ olares-cli router model progress <model>
 - **An engine alive with no model loaded** — the weights or the card are wrong for this engine; `router model spec show <model>` reads the card and `router model spec edit` corrects it, relaunching the engine when the flags change.
 - **An engine that was answering and stopped** — `router model restart <model>` relaunches the process on the card it already has, which is the fix when the configuration is right and the process is not.
 - **A model answering, but slowly** — `router model diag gpu <model>` says how much is resident. A model mostly on the CPU is the common answer.
+- **A model answering some calls and refusing others with `kv_budget_exhausted`** — the engine is full rather than wrong, and nothing here is broken. Its slots share one KV pool that cannot hold a full window each, so the calls being refused are the long ones. `router model get <model>` prints the pool beside the window and the width; `router model diag gpu <model>` shows how much of the cache is in use. Widening the pool is an `--engine-args` change and a relaunch, not a Router setting.
 - **An install that never finished** — `router provider get <app>` reports where the application stalled, and `olares-cli market status <app>` carries the Market's own reason.
 
 ## Then below it
@@ -99,3 +100,12 @@ If the application is stopped, crash-looping, cannot pull its image, or has no G
 **Editing Router when the model application is the problem.** Changing a provider's base URL, re-importing models, or re-registering the provider does nothing for a model that has not finished downloading. Check `model progress <model>` before touching the Router row.
 
 **Treating a whole-subtree 404 as a missing resource.** A Market-proxy route answering 404 means Router's Market proxy is not configured; a Model Console route answering 404 can mean it arrived in a later Model Console version than the one installed, which `model diag endpoints --app <app>` confirms by listing what this application actually mounts. Neither is a row that went missing.
+
+**Giving `listen` a container instead of samples.** There is no decoder on the other end, so wav, mp3 or m4a bytes are transcribed as noise and can produce an empty transcript at exit 0. Produce headerless 16-bit mono PCM and make `--sample-rate` match it:
+
+```
+ffmpeg -i talk.m4a -f s16le -ar 16000 -ac 1 talk.pcm
+ffmpeg -i talk.m4a -f s16le -ar 16000 -ac 1 - | olares-cli router call listen --sample-rate 16000
+```
+
+**Reading an empty result as evidence the model heard nothing.** `call vad <file>` says whether there is speech, `call transcribe <file>` whether it is intelligible, and `xxd <file> | head -1` whether the bytes have the expected format. Empty diarization often means one speaker rather than silence: a real 16 kHz single-speaker recording produced no turns while `vad` found two speech segments in the same file.

@@ -12,13 +12,13 @@ olares-cli market status <app> -o json     # STATE / OPERATION / SOURCE
 olares-cli market status -a                 # is ANY app currently downloading?
 ```
 
-app-service admits **one `downloading` app at a time**; everything else waits in `pending`. So a `pending` row while another app downloads is **normal queuing, not stuck** — it advances when the in-flight download finishes. Only treat `pending` as a problem if nothing is downloading and it never moves.
+Downloads are serialized — the shared **application state machine** has the rule — so a `pending` row while another app downloads is **normal queuing, not stuck**: it advances when the in-flight download finishes. Only treat `pending` as a problem if nothing is downloading and it never moves.
 
 Then branch on STATE.
 
 ## `downloading` — slow pull vs stalled pull
 
-A `downloading` row has a **24h** backend TTL, so it will not self-fail inside a normal session — judge it by byte-level pull progress, not by waiting. The market PROGRESS field is unreliable; real progress is in the per-node `image-service` DaemonSet (it pulls via containerd):
+`downloading` has the longest backend TTL of any state (the shared **application state machine** carries the number), so it will not self-fail inside a normal session — judge it by byte-level pull progress, not by waiting. The market PROGRESS field is unreliable; real progress is in the per-node `image-service` DaemonSet (it pulls via containerd):
 
 ```bash
 olares-cli cluster pod list -n os-framework | grep image-service
@@ -31,7 +31,7 @@ olares-cli cluster pod logs os-framework/<image-service-pod> -f | grep -E "progr
 
 ## `installing` / `initializing` stuck — two traps
 
-`installing` (30m TTL) and `initializing` (1h TTL) only fast-fail on hard pod conditions that persist past a 5-minute grace; otherwise they poll the long TTL. So a stuck row needs pod-level inspection, not more waiting. Resolve the namespace (`<app>-<owner>`, or `<app>-shared` for a shared app; a v2 app spans several namespaces — see finding an app's namespace), then:
+Both fast-fail only on hard pod conditions that persist past a 5-minute grace; short of that they poll until their TTL, which is far longer than the grace. So a stuck row needs pod-level inspection, not more waiting. Resolve the namespace (`<app>-<owner>`, or `<app>-shared` for a shared app; a v2 app spans several namespaces — see finding an app's namespace), then:
 
 ```bash
 olares-cli cluster application status <ns>          # workload readiness at a glance

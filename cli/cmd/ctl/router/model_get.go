@@ -101,6 +101,19 @@ func renderProviderModel(w io.Writer, p *providerRow, m *providerModelRow) error
 	if m.MaxConcurrency > 0 {
 		t.row("AT ONCE", fmt.Sprintf("%d requests", m.MaxConcurrency))
 	}
+	// The pool the two figures above are served out of. It is worth a line of
+	// its own only when it cannot cover them: a pool that fits window × width
+	// tells the reader nothing they could not multiply, while one that does
+	// not is the reason a request is refused with slots still free.
+	if m.KVPoolTokens > 0 {
+		row := fmt.Sprintf("%d tokens", m.KVPoolTokens)
+		if m.ContextSize > 0 && m.MaxConcurrency > 1 &&
+			int64(m.ContextSize)*int64(m.MaxConcurrency) > int64(m.KVPoolTokens) {
+			row += fmt.Sprintf(", shared across all %d — the window is what a request may ask for, "+
+				"not what is reserved for it", m.MaxConcurrency)
+		}
+		t.row("KV POOL", row)
+	}
 	if args := strings.TrimSpace(m.EngineArgs); args != "" {
 		t.row("ENGINE ARGS", args)
 	}

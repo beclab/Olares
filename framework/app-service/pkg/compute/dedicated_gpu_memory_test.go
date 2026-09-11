@@ -238,9 +238,56 @@ func TestAllocationRecordsGPUQuotaForDiscreteCards(t *testing.T) {
 			if len(allocations) != 1 {
 				t.Fatalf("expected 1 allocation, got %d", len(allocations))
 			}
-			if allocations[0].Memory != req.RequiredGPU {
-				t.Fatalf("allocation memory = %d, want the declared gpu quota %d",
-					allocations[0].Memory, req.RequiredGPU)
+			// AvailableSupportTypes makes every discrete Intel/AMD card
+			// Exclusive-only, so the app holds the card outright and the
+			// allocation records Memory=0 ("whole card") the way an Exclusive
+			// nvidia card does. Writing the quota here instead would claim a
+			// partition of a card that cannot be partitioned, and would suggest
+			// the remaining VRAM is up for grabs when exclusive-already-bound
+			// refuses every further binding.
+			if allocations[0].Memory != 0 {
+				t.Fatalf("allocation memory = %d, want 0 (whole card) for an exclusive %s card",
+					allocations[0].Memory, mode)
+			}
+		})
+	}
+}
+
+// A discrete Intel/AMD app that declares no GPU-memory quota still has to get a
+// binding out of resume. Its fit target is zero — requiredGPUMemory is only
+// mandatory for modes listed under spec.resources, and the auto-resource
+// sentinel resolves to zero whenever the rendered chart carries neither
+// nvidia.com/gpumem nor the GPU-memory pod annotation — and the frontend sends
+// no per-card memory for a whole-card mode. That combination used to fall
+// through every branch of allocationsFromResolvedSelection and drop the card,
+// which reached the user as "empty-compute-binding" on an idle, healthy card.
+func TestResumeBindsDiscreteCardWithoutGPUQuota(t *testing.T) {
+	for _, mode := range []string{utils.AMDGPUType, utils.IntelGPUType} {
+		t.Run(mode, func(t *testing.T) {
+			req := RequirementFromMode(appcfg.ResourceMode{
+				Mode: mode,
+				ResourceRequirement: appcfg.ResourceRequirement{
+					RequiredCPU: "1", RequiredMemory: "2Gi", RequiredDisk: "1Gi",
+				},
+			})
+			if req.RequiredGPU != 0 {
+				t.Fatalf("precondition: expected a zero gpu quota, got %d", req.RequiredGPU)
+			}
+			device := exclusiveDevice(mode, 24*gib)
+			node := singleDeviceNode(device)
+			appConfig := &appcfg.ApplicationConfig{AppName: "app", OwnerName: "owner"}
+
+			// Memory is left at zero exactly as the resume picker submits it.
+			selections := []BindingSelection{{NodeName: node.NodeName, DeviceID: device.ID}}
+			allocations, validation := bindAllocations(appConfig, req, selections, []Node{node}, PressureSnapshot{})
+			if !validation.OK {
+				t.Fatalf("resume binding refused: %s", validation.Code)
+			}
+			if len(allocations) != 1 {
+				t.Fatalf("expected 1 allocation, got %d", len(allocations))
+			}
+			if allocations[0].DeviceID != device.ID {
+				t.Fatalf("allocation bound to %q, want %q", allocations[0].DeviceID, device.ID)
 			}
 		})
 	}

@@ -5,9 +5,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, OpenClaw, OpenClaw 升级, 升级故障排除
-app_version: "1.0.17"
-doc_version: "1.3"
-doc_updated: "2026-07-31"
+app_version: "1.0.36"
+doc_version: "1.4"
+doc_updated: "2026-09-04"
 ---
 
 :::warning
@@ -17,6 +17,67 @@ doc_updated: "2026-07-31"
 # 升级 OpenClaw
 
 升级 OpenClaw 前，建议先查看本页面的版本变更内容和故障排除步骤，确保升级顺利。
+
+## 升级到 v2026.9.1
+
+OpenClaw 2026.09.01 更新可能会导致部分插件不兼容，使网关无法启动（应用显示启动失败）。该更新还引入了更严格的代理归因检查，可能会在升级后阻止 Control UI 访问。
+
+### 升级后网关无法启动
+
+请按以下步骤解决。
+
+1. 从启动台打开控制面板，找到 **clawdbot** 容器，然后点击其名称旁的终端图标。
+
+    ![打开 OpenClaw 容器终端](/images/manual/use-cases/openclaw-container-terminal.png#bordered)
+
+2. 在容器终端中运行修复命令，并按屏幕提示操作：
+
+    ```bash
+    openclaw update repair
+    ```
+
+3. 如果修复后网关仍无法启动，请逐个将不兼容的插件更新到最新版本：
+
+    ```bash
+    openclaw plugins update <插件名称>
+    ```
+
+    所有不兼容的插件更新完成后，网关应能正常启动。
+
+### Control UI 显示代理归因错误
+
+升级后，Control UI 可能会显示以下错误：
+
+```text
+Proxy client attribution is required. Configure gateway.trustedProxies narrowly and make the proxy overwrite or safely rebuild forwarded client headers.
+```
+
+请按以下步骤解决。
+
+1. 打开 Files 应用，进入 **Data** > **clawdbot** > **config**，然后打开 `openclaw.json` 文件。
+2. 点击右上角的编辑图标进入编辑模式。
+3. 找到 `gateway` 部分，然后添加 `trustedProxies` 数组：
+
+    ```json
+    "trustedProxies": [
+    "10.233.0.0/16",
+    "10.244.0.0/16",
+    "10.42.0.0/16",
+    "127.0.0.1",
+    "::1"
+    ],
+    ```
+
+    ![添加 OpenClaw 配置](/images/manual/use-cases/openclaw-config-file.png#bordered)
+
+4. 保存更改。
+5. 返回控制面板，点击**部署**下的 **clawdbot**，然后点击右上角的**重启**。
+
+     ![重启 OpenClaw](/images/zh/manual/use-cases/restart-openclaw.png#bordered)
+
+6. 重新打开 Control UI，验证其是否正常加载。
+
+更多信息，请参阅 [OpenClaw 发布说明](https://github.com/openclaw/openclaw/releases/tag/v2026.9.1)。
 
 ## 升级到 v2026.6.5
 

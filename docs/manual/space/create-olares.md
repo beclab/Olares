@@ -22,7 +22,7 @@ Ensure you get an Olares ID to log in to Olares Space and activate the Olares in
 
 ## Create an Olares
 
-1. Log in to [Olares Space](https://space.olares.com/) by scanning the QR code using LarePass.
+1. Log in to [Olares Space](https://www.olares.com/space) by scanning the QR code using LarePass.
 2. Navigate to the **Cluster** page and select the second option to start creating.
 
     ![Basic Configuration](/images/how-to/space/basic_configuration.jpg#bordered)

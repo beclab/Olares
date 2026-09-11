@@ -14,6 +14,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
 	"github.com/beclab/Olares/framework/app-service/pkg/compute/validation"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/helm"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
@@ -345,6 +346,32 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
+	// Check before downloading the chart so a rejected request does not leave
+	// the app in UpgradeFailed. Allow recovery from UpgradeFailed because the
+	// release may report the version of the failed upgrade.
+	if request.Version != "" && appMgr.Status.State != appv1alpha1.UpgradeFailed {
+		actionConfig, _, err := helm.InitConfig(h.kubeConfig, appMgr.Spec.AppNamespace)
+		if err != nil {
+			api.HandleError(resp, req, fmt.Errorf("initialize helm for %s: %w", app, err))
+			return
+		}
+		deployedVersion, _, err := apputils.GetDeployedReleaseVersion(actionConfig, appMgr.Spec.AppName)
+		if err != nil {
+			api.HandleError(resp, req, fmt.Errorf("get deployed release version for %s: %w", app, err))
+			return
+		}
+		isDowngrade, err := apputils.IsDowngrade(request.Version, deployedVersion)
+		if err != nil {
+			api.HandleBadRequest(resp, req, err)
+			return
+		}
+		if isDowngrade {
+			err = fmt.Errorf("cannot upgrade %s to version %s, version %s is already deployed", app, request.Version, deployedVersion)
+			api.HandleBadRequest(resp, req, err)
+			return
+		}
+	}
+
 	token, err := h.GetUserServiceAccountToken(req.Request.Context(), owner)
 	if err != nil {
 		klog.Error("Failed to get user service account token: ", err)
@@ -355,12 +382,19 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 	if appMgr.Spec.RawAppName != "" {
 		rawAppName = appMgr.Spec.RawAppName
 	}
+	// Version must be passed here. This is the only call on the upgrade path
+	// that reaches GetIndexAndDownloadChart, and that download is what fills
+	// ./charts/{rawAppName} — the version-less directory every later read
+	// resolves against. Omitting it resolves the index's latest instead, so the
+	// Version the helpers below carry describes a chart that is no longer on
+	// disk.
 	apiVersion, err := apputils.GetAppConfigVersion(req.Request.Context(), &apputils.ConfigOptions{
 		App:          app,
 		RawAppName:   rawAppName,
 		Owner:        prevCfg.OwnerName,
 		RepoURL:      request.RepoURL,
 		MarketSource: marketSource,
+		Version:      request.Version,
 	})
 	if err != nil {
 		klog.Errorf("Failed to get api version err=%v", err)

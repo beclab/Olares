@@ -43,25 +43,28 @@ export const redirects = {
     '/zh/developer/contribute/system-app/other': '/zh/manual/overview',
     '/zh/one/deploy': '/zh/manual/overview',
 
-    // Refactor: /space/** → /manual/space/**
-    '/space/': '/manual/space/',
+    // Refactor: /space/** → /manual/space/** (the /manual/space/ hub was removed;
+    // manage-accounts is the section entry point)
+    '/space/': '/manual/space/manage-accounts',
     '/space/billing': '/manual/space/billing',
     '/space/manage-domain': '/manual/space/manage-domain',
     '/space/manage-accounts': '/manual/space/manage-accounts',
-    '/space/backup-restore': '/manual/space/backup-restore',
+    '/space/backup-restore': '/manual/olares/settings/backup',
     '/space/create-olares': '/manual/space/create-olares',
     '/space/manage-olares': '/manual/space/manage-olares',
     '/space/host-domain': '/manual/space/host-domain',
+    '/manual/space/': '/manual/space/manage-accounts',
 
     // Refactor: /zh/space/** → /zh/manual/space/**
-    '/zh/space/': '/zh/manual/space/',
+    '/zh/space/': '/zh/manual/space/manage-accounts',
     '/zh/space/billing': '/zh/manual/space/billing',
     '/zh/space/manage-domain': '/zh/manual/space/manage-domain',
     '/zh/space/manage-accounts': '/zh/manual/space/manage-accounts',
-    '/zh/space/backup-restore': '/zh/manual/space/backup-restore',
+    '/zh/space/backup-restore': '/zh/manual/olares/settings/backup',
     '/zh/space/create-olares': '/zh/manual/space/create-olares',
     '/zh/space/manage-olares': '/zh/manual/space/manage-olares',
     '/zh/space/host-domain': '/zh/manual/space/host-domain',
+    '/zh/manual/space/': '/zh/manual/space/manage-accounts',
 
     // Rename: deerflow → deerflow2 (permanent: old name is retired)
     '/use-cases/deerflow': '/use-cases/deerflow2',
@@ -177,13 +180,14 @@ export const redirects = {
     '/zh/developer/install/log-in-to-olares': '/zh/manual/get-started/install-olares',
     '/zh/developer/install/reusables': '/zh/manual/get-started/install-olares',
 
-    // Removed: empty advanced-dev stub pages → advanced overview
-    '/developer/develop/advanced/rss': '/developer/develop/advanced/',
-    '/developer/develop/advanced/frontend': '/developer/develop/advanced/',
-    '/developer/develop/advanced/notification': '/developer/develop/advanced/',
-    '/zh/developer/develop/advanced/rss': '/zh/developer/develop/advanced/',
-    '/zh/developer/develop/advanced/frontend': '/zh/developer/develop/advanced/',
-    '/zh/developer/develop/advanced/notification': '/zh/developer/develop/advanced/',
+    // Removed: empty advanced-dev stub pages → develop section overview
+    // (/developer/develop/advanced/ has no index page; the stubs were removed in an earlier cleanup)
+    '/developer/develop/advanced/rss': '/developer/develop/',
+    '/developer/develop/advanced/frontend': '/developer/develop/',
+    '/developer/develop/advanced/notification': '/developer/develop/',
+    '/zh/developer/develop/advanced/rss': '/zh/developer/develop/',
+    '/zh/developer/develop/advanced/frontend': '/zh/developer/develop/',
+    '/zh/developer/develop/advanced/notification': '/zh/developer/develop/',
 
     // Removed: empty contribute overview stub → contribute landing
     '/developer/contribute/overview': '/developer/contribute/olares',
@@ -236,6 +240,42 @@ export const redirects = {
     '/zh/one/ace-step': '/zh/use-cases/ace-step-1.5',
     '/zh/one/create-users': '/zh/manual/olares/settings/manage-team',
     '/zh/one/config-app-access': '/zh/manual/olares/settings/manage-entrance',
+
+    // Refactor: terminal/SSH how-to moved from developer reference to Olares OS manual
+    '/developer/reference/access-olares-terminal': '/manual/access-olares-terminal',
+    '/zh/developer/reference/access-olares-terminal': '/zh/manual/access-olares-terminal',
+
+    // Merge: create-account -> create-olares-id (single onboarding topic for first-time identity creation)
+    '/manual/larepass/create-account': '/manual/get-started/create-olares-id',
+    '/zh/manual/larepass/create-account': '/zh/manual/get-started/create-olares-id',
+
+    // Merge: settings/integrations dissolved (content redistributed: cloud storage -> mount-cloud-storage, SMB -> mount-SMB, cookies -> wise/manage-cookies, Space -> space/)
+    '/manual/olares/settings/integrations': '/manual/olares/files/mount-cloud-storage',
+    '/zh/manual/olares/settings/integrations': '/zh/manual/olares/files/mount-cloud-storage',
+    // Split: settings/my-olares dissolved (hardware -> one/hardware-settings, password/devices -> manual/password-and-devices)
+    '/manual/olares/settings/my-olares': '/manual/password-and-devices',
+    '/zh/manual/olares/settings/my-olares': '/zh/manual/password-and-devices',
+    // Merge: settings/restore and space/backup-restore absorbed into settings/backup (single back up and restore page)
+    '/manual/olares/settings/restore': '/manual/olares/settings/backup',
+    '/zh/manual/olares/settings/restore': '/zh/manual/olares/settings/backup',
+    '/manual/space/backup-restore': '/manual/olares/settings/backup',
+    '/zh/manual/space/backup-restore': '/zh/manual/olares/settings/backup',
+    // Merge: larepass/integrations -> settings/integrations (single integrations hub; cloud storage tasks live in mount-cloud-storage)
+    '/manual/larepass/integrations': '/manual/olares/files/mount-cloud-storage',
+    '/zh/manual/larepass/integrations': '/zh/manual/olares/files/mount-cloud-storage',
+    // Merge: controlhub/configure-env-var -> settings/manage-app-env (Control Hub advanced editing absorbed)
+    '/manual/olares/controlhub/configure-env-var': '/manual/olares/settings/manage-app-env',
+    '/zh/manual/olares/controlhub/configure-env-var': '/zh/manual/olares/settings/manage-app-env',
+
+    // Removed: the generic database-status guide is superseded by per-service middleware guides.
+    '/manual/olares/controlhub/view-database-status': '/developer/develop/mw-overview',
+    '/zh/manual/olares/controlhub/view-database-status': '/zh/developer/develop/mw-overview',
+
+    // Removed: feature-hub index pages with no standalone content (task nav covers their topics)
+    '/manual/olares/settings/': '/manual/olares/',
+    '/zh/manual/olares/settings/': '/zh/manual/olares/',
+    '/manual/best-practices/': '/manual/best-practices/activate-olares-using-cli',
+    '/zh/manual/best-practices/': '/zh/manual/best-practices/activate-olares-using-cli',
 }
 
 // Temporary redirects (302): content is offline but the URL may be reused later.

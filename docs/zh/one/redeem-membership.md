@@ -29,7 +29,7 @@ Olares Space 是一个安全的连接平台，在扩展本地设备功能的同�
 
 ## 登录 Olares Space
 
-1. 访问 https://space.olares.com。
+1. 访问 https://www.olares.com/space。
 
     ![Olares Space 登录页面](/images/one/olares-space-login.png#bordered)
 
@@ -134,5 +134,5 @@ Basic 会员严格绑定到用于购买订单的特定邮箱地址。如果你�
 
 ## 资源
 
-- [在 Olares Space 中监控流量](../manual/space/manage-olares.md#检查流量使用情况)
-- [Olares Space 介绍](../manual/space/index.md)
+- [在 Olares Space 中查看流量](../manual/space/manage-olares.md#查看流量使用)
+- [登录并管理 Olares Space 账号](../manual/space/manage-accounts.md)

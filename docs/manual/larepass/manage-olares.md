@@ -4,11 +4,11 @@ description: Learn how to use the LarePass app to manage your Olares device.
 head:
   - - meta
     - name: keywords
-      content: Olares, LarePass, device management, system update, remote shutdown, Wi-Fi
+      content: Olares, LarePass, device management, remote shutdown, Wi-Fi
 ---
 # Manage Olares with LarePass
 
-The LarePass app allows you to easily manage your Olares device. You can upgrade Olares, monitor system status, manage network connections, perform remote controls, and check device information from your phone.
+The LarePass app allows you to easily manage your Olares device. You can monitor system status, manage network connections, perform remote controls, and check device information from your phone.
 
 ## Prerequisites
 
@@ -20,20 +20,7 @@ Before you begin, ensure the following:
 
 ## Access Olares management
 
-The **Olares management** page is the central hub for using LarePass to manage your Olares device. To access **Olares management**:
-
-1. Open LarePass app and go to **Settings**.
-2. In the **My Olares** card, tap **System** to enter the **Olares management** page.
-
-![Access Olares management](/images/manual/larepass/system.png#bordered)
-
-On this page, you can:
-- View device information
-- Upgrade Olares
-- Restart or shut down Olares remotely
-- Modify network settings
-- Restore Olares to factory settings
-- Reset the SSH password <Badge type="tip" text="Olares One Only" />
+Open LarePass and go to **Settings**. In the **My Olares** card, tap **System** to enter the **Olares management** page. From this page, you can view device information, update Olares, restart or shut down Olares, modify network settings, and restore Olares to factory settings.
 
 ![Olares management](/images/manual/larepass/olares-management1.png#bordered)
 
@@ -46,44 +33,23 @@ Tap the Device information area at the top to view detailed information, includi
 
 ![View device information](/images/manual/larepass/view-device-information.png#bordered)
 
-### Upgrade Olares
-:::warning Olares admin required
-Only Olares admin can perform system updates. Updates will apply to all members within the same Olares cluster.
-:::
+To check for and install a system update, see [Check and update Olares](../olares/settings/update.md).
 
-To install a system update:
+### Restart or shut down Olares
 
-1. On the **Olares management** page, tap **System update**.
+You can restart or shut down Olares from the LarePass app or from Olares Settings. Either way, you'll confirm the action in LarePass.
 
-2. On the **System update** page, confirm the available version in the **New version** field, then click **Upgrade**.
-  ![Check for available version](/images/one/check-version1.png#bordered)
+- **From LarePass**: On the **Olares management** page, tap the <i class="material-symbols-outlined">power_settings_new</i> icon in the upper-right corner.
+- **From Olares Settings**: On the **My Olares** > **My hardware** page, click **Shutdown** or **Restart**.
 
-3. In the pop-up dialog, select how you want to upgrade:
+![Restart or shut down Olares](/images/manual/larepass/device-control1.png#bordered)
 
-   - **Download only**<br>
-     Olares downloads the update package in the background while you continue using the system.
-
-   - **Download and upgrade**<br>
-     Olares downloads the update package and will install it after you confirm a restart.
-   
-    ![Choose upgrade method](/images/one/olares-upgrade1.png#bordered)
-
-4. If you selected **Download only**, click **Upgrade now** on the **System update** page to initiate the process.
-5. If you selected **Download and upgrade**, confirm the restart when prompted to begin installation.
-6. Wait for the upgrade and restart to finish. A success message indicates the upgrade is completed.
-    ![Upgrade success message](/images/one/upgrade-success.png#bordered)
-7. Refresh your Olares desktop to sync the latest system changes.
-
-### Restart or shut down Olares remotely
-
-In the upper-right corner of the **Olares management** page, tap the <i class="material-symbols-outlined">power_settings_new</i> icon to access remote control options:
-- **Remote shutdown**: Your Olares will power off. If your phone is on the same network as Olares, its status will show `Powered off`. Remote operations are unavailable after shutdown, and you must turn the device back on manually.
-- **Restart device**: Your Olares will restart. If your phone is on the same network as Olares, its status will show `Restarting` and will return to `Olares running` in approximately 5–8 minutes.
+After the operation starts, the device status in LarePass changes as follows:
+- **Shutdown**: Your Olares powers off. If your phone is on the same network as Olares, its status shows `Powered off`. Remote operations are unavailable after shutdown, and you must turn the device back on manually.
+- **Restart**: Your Olares restarts. If your phone is on the same network as Olares, its status shows `Restarting` and returns to `Olares running` in approximately 5–8 minutes.
   ::: tip Note
   If you restart from a network outside Olares, the **My Olares** card will be inaccessible during the restart and will return to normal after startup is complete.
   :::
-
-![Restart or shut down Olares remotely](/images/manual/larepass/device-control1.png#bordered)
 
 ### Modify network settings
 :::tip Same network required
@@ -125,17 +91,6 @@ This action will reset your device to the prepare phase, where you can scan the 
    ![Enter local unlock password](/images/manual/larepass/enter-password-to-uninstall.png#bordered)
 
 4. Wait for the reset to complete. Once finished, you will return to the Olares activation page.
-
-### Reset SSH password <Badge type="tip" text="Olares One Only" />
-:::warning Required action
-This dialog will continue to appear until you reset the password. While you can reset later from the [My hardware](../olares/settings/my-olares.md#reset-ssh) settings page, we strongly recommend doing it immediately.
-:::
-After you activate **Olares One** with LarePass, a **Reset SSH Password** dialog will appear automatically. Use it to change the default SSH password and prevent unintended SSH access.
-
-![Reset SSH Password](/images/manual/larepass/change-ssh-pw.png#bordered)
-
-1. In the **Reset SSH Password** dialog, enter a new password. Make sure it meets all strength requirements.
-2. Click **Confirm**.
 
 ## FAQ
 ### How do I reconnect Olares after moving it to a new network?

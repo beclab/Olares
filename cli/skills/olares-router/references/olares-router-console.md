@@ -79,4 +79,8 @@ olares-cli router model restart <model>   # relaunch the engine with the current
 
 `restart` is the one verb here with a Router road as well as a direct one: named by model it goes through Router, and `--app` signals the console itself. Both mean the same thing to a caller of the model.
 
+`restart` waits for the outcome rather than reporting that a signal was sent. The application supervises its own engine, so it can say what happened, and the three answers mean different things: **confirmed** is a process that went away and came back, **no-supervisor** is a signal nothing was watching for — the engine is still the old one and a redeploy is what replaces it — and **unverified** is a restart that could not be confirmed, usually because the engine was already down when the signal arrived. Waiting takes up to a minute; `--no-wait` prints the signal and returns, which is the old behaviour and is right in a script that checks `model status` itself.
+
+During those seconds the data plane answers `model_not_ready` with a 503. That is the restart, not a fault: a large model takes minutes to load its weights again, and `model status` reports the phase while it does.
+
 If both leave the phase where it was, the problem is below the console — an image that will not pull, a node without the memory, a GPU binding that is missing. Continue in [deciding which layer is wrong](olares-router-diagnosis.md), which routes to [`olares-doctor`](../../olares-doctor/SKILL.md) for those.

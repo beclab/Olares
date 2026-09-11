@@ -27,12 +27,16 @@ to. The CLI used to expose -s/--source here, but a delete that targets
 a different bucket from where the upload landed never resolved
 correctly. Pinning the source eliminates that mismatch.
 
-If --version is omitted, every uploaded version of the chart in the
-'upload' bucket is removed.
+Delete always removes the WHOLE app from the bucket: every uploaded
+version and its stored chart, whether or not --version is given. The
+backend takes the app name and drops all of its artifacts; --version
+only selects which version the request names, never how much is
+deleted. There is no way to remove a single version today, so treat
+this as "unpublish the app" rather than "unpublish a release".
 
 Examples:
-  olares-cli market delete myapp                    # remove every uploaded version
-  olares-cli market delete myapp --version 1.0.0    # one version only
+  olares-cli market delete myapp                    # remove the app and every uploaded version
+  olares-cli market delete myapp --version 1.0.0    # same result: all versions go
   olares-cli market delete myapp -o json            # structured result
   olares-cli market delete myapp -q                 # silent; exit code only`,
 		Args: cobra.ExactArgs(1),
@@ -42,6 +46,7 @@ Examples:
 	}
 	opts.addOutputFlags(cmd)
 	opts.addVersionFlag(cmd)
+	cmd.Flags().Lookup("version").Usage = "version to name in the request (default: latest available). Does NOT narrow the delete: every version of the app is removed either way"
 	return cmd
 }
 
@@ -60,16 +65,20 @@ func runDelete(opts *MarketOptions, appName string) error {
 		if err := validateVersion(version); err != nil {
 			return opts.failOp("delete", appName, err)
 		}
+		opts.info("note: --version names the request but does not narrow the delete; every uploaded version of '%s' will be removed", appName)
 	} else {
-		v, err := resolveVersionInSource(mc, appName, source)
+		// --version does not narrow a delete, so a failure here must not
+		// suggest it: the backend answers a delete of an app it does not hold
+		// with success, which turns this correct failure into a false one.
+		v, err := resolveVersionInSource(mc, appName, source, false)
 		if err != nil {
-			return opts.failOp("delete", appName, fmt.Errorf("cannot determine version in source '%s': %w (use --version to specify)", source, err))
+			return opts.failOp("delete", appName, err)
 		}
 		version = v
 		opts.info("Using version: %s", version)
 	}
 
-	opts.info("Deleting chart '%s' version '%s' from source '%s'...", appName, version, source)
+	opts.info("Deleting chart '%s' (all versions, request names '%s') from source '%s'...", appName, version, source)
 
 	ctx := context.Background()
 	if _, err := mc.DeleteLocalApp(ctx, appName, version, source); err != nil {
@@ -80,7 +89,7 @@ func runDelete(opts *MarketOptions, appName string) error {
 		App:       appName,
 		Operation: "delete",
 		Status:    "success",
-		Message:   fmt.Sprintf("version %s deleted from source '%s'", version, source),
+		Message:   fmt.Sprintf("all versions deleted from source '%s' (request named %s)", source, version),
 		Source:    source,
 		Version:   version,
 	}

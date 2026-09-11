@@ -131,6 +131,54 @@ func (o *MarketOptions) addCommonFlags(cmd *cobra.Command) {
 // delete) don't render tables, so --no-headers on them was a no-op
 // footgun in scripts (`market stop firefox --no-headers` silently
 // ignored the flag).
+// lifecycleJSONShape names the fields of the document every mutating
+// verb prints under -o json. It lives in --help rather than in the agent
+// skills for the same reason flag descriptions do: a shape transcribed
+// somewhere else is a second copy, and it drifts on the next field.
+//
+// The last paragraph is the part that is not derivable from the struct.
+// `status` and `finalState` are both present and answer different
+// questions: one is about the command, the other about the app, and
+// which state counts as a good one is not the same for every verb.
+const lifecycleJSONShape = `-o json prints one OperationResult document:
+
+  app          the app acted on; targetApp on a clone
+  operation    the verb that ran
+  status       accepted (request taken, server still working),
+               success (--watch saw it settle), or failed
+  message      what happened, and why on a failure
+  source       the market source resolved for this operation
+  version      the version installed, upgraded to, or acted on
+  user         the acting user
+  state        the row's state when the command returned
+  progress     a percentage the backend reports; unreliable, do not gate on it
+  finalState   --watch only: the state the row settled at
+  finalOpType  --watch only: the operation that state belongs to
+
+.status is the verdict on the command and .finalState is where the app
+landed; they are not interchangeable. A --watch run reports success once
+the row settles the way this verb intended, so that is what a script
+should test, along with the exit code. Read .finalState when you need
+the state itself — but what a good one looks like differs by verb, and
+"running" is only it for install, upgrade and restart. A successful stop
+settles at stopped and a successful uninstall at uninstalled, so a check
+written against "running" calls both of them failures.
+
+Without --watch, neither final* field is present and .status is
+accepted, meaning the server took the request — not that the app is up.`
+
+// describeLifecycleJSON appends the shape above to a verb's help, before
+// its examples if it has any -- a reader looking for the field list
+// should not have to scroll past a dozen command lines to reach it.
+func describeLifecycleJSON(cmd *cobra.Command) {
+	long := strings.TrimRight(cmd.Long, "\n")
+	if index := strings.Index(long, "\nExamples:"); index >= 0 {
+		cmd.Long = strings.TrimRight(long[:index], "\n") + "\n\n" + lifecycleJSONShape + "\n" + long[index:] + "\n"
+		return
+	}
+	cmd.Long = long + "\n\n" + lifecycleJSONShape + "\n"
+}
+
 func (o *MarketOptions) addOutputFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVarP(&o.Output, "output", "o", "table", "output format: table, json")
 	cmd.Flags().BoolVarP(&o.Quiet, "quiet", "q", false, "suppress output; exit code indicates success/failure")

@@ -16,6 +16,31 @@ HEADING_RE = re.compile(r"^#{1,6}\s+(.+?)\s*$", re.MULTILINE)
 HTML_ANCHOR_RE = re.compile(r'<a\s+(?:name|id)=["\']([^"\']+)["\']', re.IGNORECASE)
 SKILL_MAX_LINES = 250
 REFERENCE_MAX_LINES = 150
+# The per-file ceilings above are satisfiable while the thing an agent pays
+# for gets worse: what it reads before its first command is a path across
+# files -- the shared front door, the domain SKILL.md, and the references
+# this task triggers. A skill states its own common paths in a table; this
+# is what one row of it may total.
+READ_PATH_MAX_LINES = 250
+# The heading that table sits under. Two spellings, because a skill whose
+# whole job is diagnosis indexes by what the user reported rather than by
+# what the agent means to do, and `## Symptom routing` is the shape the
+# README names to copy. Requiring the other name there produced two tables
+# routing the same symptoms to the same references, and the shorter one
+# was missing a symptom.
+FAST_PATHS_HEADINGS = ("Fast paths", "Symptom routing")
+# Pointing at a section by quoting its name resolves for nobody and survives
+# no rename. Two of the three this suite had were naming headings that no
+# longer existed.
+PROSE_SECTION_RE = re.compile(r'\b(?:especially|see(?:\s+also)?|section)\s+"([^"\n]{2,80})"')
+# Any Go file, cited any way. The first version of this wanted a `cli/`
+# prefix and so read past both citations in the app-state reference, which
+# name a file inside app-service and a package path with no repository root
+# on it. What makes a citation useless to an agent is that it points at
+# source, not which tree the source is in.
+SOURCE_CITATION_RE = re.compile(r"[\w.-]*(?:/[\w.-]+)*\w\.go(?::\d+)?")
+TABLE_ROW_RE = re.compile(r"^\s*\|(?P<cells>.*)\|\s*$")
+BACKTICKED_RE = re.compile(r"`[^`]+`")
 # A skill's version is the olares-cli release it ships in, spelled the way npm
 # spells it (see .github/workflows/release-cli.yaml, which rejects any other
 # shape). The skills are compiled into the binary, so what they document is
@@ -25,6 +50,27 @@ RELEASE_VERSION_RE = re.compile(r"\d+\.\d+\.\d+-cli\.\d+")
 # The one skill whose references every front door is expected to link directly:
 # it hosts the platform and app-state models the runtime skills read once.
 SHARED_SKILL = "olares-shared"
+# Skills with no fast path to declare, and why.
+#
+# olares-shared is the front door every other path is measured through;
+# it is not a destination.
+#
+# olares-chart and olares-publish describe authoring work -- porting a
+# repository into an Olares app, getting a listing through GitBot. Both
+# are sequences with a diagnosis at the front, and neither has a first
+# command that answers anything, so a fast-path table for them would be
+# a fiction written to satisfy this check.
+NO_FAST_PATH = {SHARED_SKILL, "olares-chart", "olares-publish"}
+# The three sections that mean the same thing in every skill, so an agent
+# crossing from one to another can jump to a heading instead of re-reading.
+SAFETY_HEADING = "Safety and escalation"
+VERB_INDEX_HEADING = "Verb index"
+VERB_INDEX_LAST_COLUMN = "Read when triggered"
+FRONT_DOOR_MARKER = "> **Shared front door:**"
+# olares-shared routes the suite rather than driving a command tree, and
+# olares-publish's work is a GitHub submission whose steps are not olares-cli
+# verbs. Neither has a verb list to index.
+NO_VERB_INDEX = {SHARED_SKILL, "olares-publish"}
 REQUIRED_ENTRYPOINT_FACTS = {
     "olares-knowledge/SKILL.md": [
         (
@@ -41,7 +87,7 @@ REQUIRED_ENTRYPOINT_FACTS = {
         ),
         (
             "knowledge search requires Olares 1.12.7+",
-            r"^\| `knowledge` \(`wise`\) \| Wise/Knowledge content search \| requires Olares 1\.12\.7\+; aggregate only \|$",
+            r"^\| `knowledge` \(`wise`\) \| Wise/Knowledge content search \|.*needs Olares 1\.12\.7\+ \|$",
         ),
     ],
     "olares-cluster/SKILL.md": [
@@ -63,7 +109,7 @@ REQUIRED_ENTRYPOINT_FACTS = {
     "olares-market/SKILL.md": [
         (
             "canceling resuming/upgrading apps requires Olares 1.12.7+",
-            r"^\| lifecycle \| `install`, `upgrade`, `uninstall`, `clone`, `stop`, `resume`, `cancel` \| Canceling `resuming` / `upgrading` requires Olares 1\.12\.7\+; \[lifecycle decisions\]\(references/olares-market-lifecycle\.md\) \|$",
+            r"^\| lifecycle — taking one off or pausing it \|.*cancelling `resuming` / `upgrading` needs Olares 1\.12\.7\+ .*\|$",
         ),
     ],
 }
@@ -124,6 +170,152 @@ def validate_links(path: Path, errors: list[str]) -> None:
                 errors.append(f"{path.relative_to(ROOT)}: missing anchor {target}")
 
 
+def validate_prose_section_refs(path: Path, errors: list[str]) -> None:
+    """Refuse `(especially "Some Heading")` in favour of an anchor link.
+
+    A quoted heading is a link the anchor validator cannot follow and a
+    rename cannot update, and it fails silently in the direction that
+    matters: the agent goes looking for a section that is not there.
+    """
+    text = without_fenced_code(path.read_text(encoding="utf-8"))
+    for name in PROSE_SECTION_RE.findall(text):
+        errors.append(
+            f"{path.relative_to(ROOT)}: names a section in prose ({name!r}); "
+            "link it with an anchor so a rename fails the build"
+        )
+
+
+def validate_no_source_citations(path: Path, errors: list[str]) -> None:
+    """Keep Go source paths out of what ships.
+
+    Grounding a claim in the implementation is required; citing where you
+    grounded it is not, because an agent driving the CLI has no way to
+    open a Go file and no reason to want one.
+
+    Checked over every markdown file, not just the front doors. While it
+    ran on SKILL.md alone, the canonical app-state reference carried two
+    of these -- including a paragraph whose entire subject was which of
+    two Go maps to believe.
+    """
+    citation = re.search(SOURCE_CITATION_RE, path.read_text(encoding="utf-8"))
+    if citation:
+        errors.append(
+            f"{path.relative_to(ROOT)}: Go source citation {citation.group(0)!r} belongs in "
+            "verification, not the shipped skill"
+        )
+
+
+def table_rows(text: str) -> list[list[str]]:
+    rows: list[list[str]] = []
+    for line in text.splitlines():
+        match = TABLE_ROW_RE.match(line)
+        if not match:
+            continue
+        cells = [cell.strip() for cell in match.group("cells").split("|")]
+        if all(set(cell) <= set("-: ") for cell in cells):
+            continue
+        rows.append(cells)
+    return rows
+
+
+def validate_verb_index_rows(skill: Path, errors: list[str]) -> None:
+    """A row that only points at `--help` spends a line to say nothing.
+
+    The agent already knows `--help` exists; what a verb index owes it is
+    the thing `--help` will not say. A row with nothing else to give is
+    better collapsed into a single catch-all row than listed on its own.
+    """
+    text = without_fenced_code(skill.read_text(encoding="utf-8"))
+    for cells in table_rows(text):
+        cell = cells[-1]
+        if "](" in cell or "--help" not in cell:
+            continue
+        spans = BACKTICKED_RE.findall(cell)
+        if not spans or not all(span.rstrip("`").endswith("--help") for span in spans):
+            continue
+        residue = BACKTICKED_RE.sub("", cell)
+        if set(residue) <= set(";,. \t/"):
+            errors.append(
+                f"{skill.relative_to(ROOT)}: verb-index row {cells[0]} points only at "
+                f"{cell} — give the caller what --help will not say, or collapse the row"
+            )
+
+
+def line_count(path: Path) -> int:
+    return len(path.read_text(encoding="utf-8").splitlines())
+
+
+def validate_fast_paths(skill_dir: Path, errors: list[str]) -> None:
+    """Hold a skill's declared read paths to the first-command budget.
+
+    Each row totals the shared front door, this SKILL.md, and every file
+    the row links -- which is what the agent reads before it can issue the
+    command in that row.
+
+    The block was optional to begin with, which left the budget checking
+    only the three skills that had volunteered for it. A skill with no
+    block was not under budget; it was unmeasured, and the two paths that
+    turned out to be over were both found by writing a block down.
+
+    So it is required, except of the skills in NO_FAST_PATH. Those are
+    exempt because a fast path is a claim about a first command, and the
+    work they describe has no first command to name -- the exemption is
+    the honest answer for them, not a hole to hide a heavy skill in.
+    """
+    skill = skill_dir / "SKILL.md"
+    text = without_fenced_code(skill.read_text(encoding="utf-8"))
+    heading = "|".join(re.escape(name) for name in FAST_PATHS_HEADINGS)
+    spellings = " or ".join(f"'## {name}'" for name in FAST_PATHS_HEADINGS)
+    section = re.split(rf"^#{{1,6}}\s+(?:{heading})\s*$", text, flags=re.MULTILINE)
+    if len(section) < 2:
+        if skill_dir.name not in NO_FAST_PATH:
+            errors.append(
+                f"{skill.relative_to(ROOT)}: no {spellings} block — name the tasks an "
+                f"agent can act on after one read, so the {READ_PATH_MAX_LINES}-line budget has "
+                "something to measure"
+            )
+        return
+    if skill_dir.name in NO_FAST_PATH:
+        errors.append(
+            f"{skill.relative_to(ROOT)}: declares fast paths but is listed in NO_FAST_PATH; "
+            "remove it from that list"
+        )
+    if len(section) > 2:
+        # Both spellings in one file is how doctor ended up routing the same
+        # symptoms twice, so it is refused rather than measured.
+        errors.append(
+            f"{skill.relative_to(ROOT)}: has more than one of {spellings}; one table routes the "
+            "agent, a second one competes with it"
+        )
+    body = re.split(r"^#{1,6}\s+", section[1], flags=re.MULTILINE)[0]
+    if not table_rows(body):
+        errors.append(f"{skill.relative_to(ROOT)}: its {spellings} block has no rows")
+        return
+
+    front_door = ROOT / SHARED_SKILL / "SKILL.md"
+    base = line_count(skill)
+    if skill_dir.name != SHARED_SKILL:
+        base += line_count(front_door)
+
+    for cells in table_rows(body):
+        total = base
+        seen: set[Path] = set()
+        for target in LINK_RE.findall(" ".join(cells)):
+            link = unquote(target.strip().strip("<>").partition("#")[0])
+            if not link or "://" in link:
+                continue
+            resolved = (skill.parent / link).resolve()
+            if not resolved.exists() or resolved in seen or resolved == skill or resolved == front_door:
+                continue
+            seen.add(resolved)
+            total += line_count(resolved)
+        if total > READ_PATH_MAX_LINES:
+            errors.append(
+                f"{skill.relative_to(ROOT)}: fast path {cells[0]} reads {total} lines, over the "
+                f"{READ_PATH_MAX_LINES}-line first-command budget — split what it links, or stop calling it fast"
+            )
+
+
 def validate_skill_entrypoint(skill_dir: Path, errors: list[str]) -> None:
     skill = skill_dir / "SKILL.md"
     text = without_fenced_code(skill.read_text(encoding="utf-8"))
@@ -149,11 +341,6 @@ def validate_skill_entrypoint(skill_dir: Path, errors: list[str]) -> None:
         if phrase in text:
             errors.append(f"{skill.relative_to(ROOT)}: forbidden phrase {phrase!r}; {guidance}")
 
-    source_citation = re.search(r"`?cli/(?:cmd|pkg|internal)/[^`\s]+\.go(?::\d+)?`?", text)
-    if source_citation:
-        errors.append(
-            f"{skill.relative_to(ROOT)}: Go source citation {source_citation.group(0)!r} belongs in verification, not the shipped skill"
-        )
 
 
 def validate_frontmatter(skill: Path, errors: list[str]) -> None:
@@ -267,6 +454,58 @@ def validate_structure(skill_dir: Path, errors: list[str]) -> None:
             )
 
 
+def validate_shared_sections(skill_dir: Path, errors: list[str]) -> None:
+    """Make the same thing carry the same name in all twelve skills.
+
+    An agent that has read one skill should already know where the next
+    one keeps its limits and its command list. It did not: the closing
+    section had five names and the verb index had three, so finding
+    either meant scanning the file rather than jumping to a heading.
+
+    The names are arbitrary; having one of them is not.
+    """
+    skill = skill_dir / "SKILL.md"
+    text = skill.read_text(encoding="utf-8")
+    headings = set(HEADING_RE.findall(without_fenced_code(text)))
+    relative = skill.relative_to(ROOT)
+
+    if SAFETY_HEADING not in headings:
+        errors.append(
+            f"{relative}: no '## {SAFETY_HEADING}' section — every skill closes with what it "
+            "must not do and when to hand back, under that name"
+        )
+
+    if skill_dir.name not in NO_VERB_INDEX:
+        if VERB_INDEX_HEADING not in headings:
+            errors.append(
+                f"{relative}: no '## {VERB_INDEX_HEADING}' section — the command list goes under "
+                "that name so an agent can find it without reading the file"
+            )
+        elif not any(
+            cells[-1] == VERB_INDEX_LAST_COLUMN
+            for cells in table_rows(section_body(text, VERB_INDEX_HEADING))
+        ):
+            errors.append(
+                f"{relative}: its '## {VERB_INDEX_HEADING}' table has no "
+                f"'{VERB_INDEX_LAST_COLUMN}' column — the first columns differ per tree, but the "
+                "last one always answers what to read next"
+            )
+
+    # olares-shared is the front door; pointing it at itself says nothing.
+    if skill_dir.name != SHARED_SKILL and FRONT_DOOR_MARKER not in text:
+        errors.append(
+            f"{relative}: no '{FRONT_DOOR_MARKER}' block — an agent entering here has not loaded "
+            "suite routing, profile selection or the auth gate, and nothing tells it to"
+        )
+
+
+def section_body(text: str, heading: str) -> str:
+    parts = re.split(rf"^#{{1,6}}\s+{re.escape(heading)}\s*$", without_fenced_code(text), flags=re.MULTILINE)
+    if len(parts) < 2:
+        return ""
+    return re.split(r"^#{1,6}\s+", parts[1], flags=re.MULTILINE)[0]
+
+
 def validate_one_version(skill_dirs: list[Path], errors: list[str]) -> None:
     """The suite ships as one artifact, so it carries one version.
 
@@ -304,10 +543,15 @@ def main() -> int:
     skill_dirs = sorted(path.parent for path in ROOT.glob("olares-*/SKILL.md"))
     for path in sorted(ROOT.glob("olares-*/**/*.md")):
         validate_links(path, errors)
+        validate_prose_section_refs(path, errors)
+        validate_no_source_citations(path, errors)
     for skill_dir in skill_dirs:
         validate_frontmatter(skill_dir / "SKILL.md", errors)
         validate_skill_entrypoint(skill_dir, errors)
+        validate_shared_sections(skill_dir, errors)
         validate_structure(skill_dir, errors)
+        validate_verb_index_rows(skill_dir / "SKILL.md", errors)
+        validate_fast_paths(skill_dir, errors)
     validate_one_version(skill_dirs, errors)
 
     if errors:

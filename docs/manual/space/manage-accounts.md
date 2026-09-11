@@ -1,4 +1,5 @@
 ---
+outline: [2, 3]
 description: Learn how to log in to Olares Space with a DID or Olares ID, manage multiple accounts, and log out.
 head:
   - - meta
@@ -12,7 +13,7 @@ This guide covers logging in to Olares Space, managing multiple accounts, and lo
 
 ## Log in to Olares Space
 
-Open [Olares Space](https://space.olares.com/) in your browser, and scan the QR code using LarePass to log in. The available features depend on the account type you use.
+Open [Olares Space](https://www.olares.com/space) in your browser, and scan the QR code using LarePass to log in. The available features depend on the account type you use.
 
 ### Log in with an Olares ID
 
@@ -33,7 +34,7 @@ See [Set up a custom domain for your Olares](../best-practices/set-custom-domain
    ![LarePass account list showing a DID](/images/manual/tutorials/did-stage1.png)
 
 2. Tap the scan icon in the top-right corner and scan the QR code on the Olares Space login page.
-   ![LarePass QR code scanner](/images/manual/tutorials/scan-qr-code1.png)
+   ![LarePass QR code scanner](/images/manual/tutorials/scan-qr-code2.png)
 
 ## Log out
 

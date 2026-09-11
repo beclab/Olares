@@ -87,6 +87,12 @@ func repeatNote(method, path string) string {
 	path = strings.SplitN(path, "?", 2)[0]
 
 	switch method {
+	case "GET":
+		// Two routes here answer a read and a write on the same path —
+		// the engine restart signal and the outcome it produces. Only
+		// the caller's method tells them apart, and warning that a
+		// repeated read relaunches an engine would be false.
+		return ""
 	case "PATCH", "PUT":
 		return "This route sets fields rather than creating a row, so sending it again " +
 			"lands on the same state either way"
