@@ -36,8 +36,8 @@ Preparation depends on your starting point. Find yours in the following table.
 | Olares One v1.12.7 factory image<br>(new device) | <ul><li>Lares</li><li>Router</li><li><nobr>Qwen3.8-27B (llama.cpp)</nobr></li></ul> | Open Lares and start. |
 | <ul><li>Self-hosted Olares v1.12.7<br>(fresh install or upgrade)</li> <li><nobr>Olares One upgraded to v1.12.7</nobr></li></ul> | None | Install Router and Lares, then install a model app or add a provider in Router. |
 
-:::warning One conversation at a time
-The Qwen3.8-27B (llama.cpp) model runs in GPU time-slicing mode and serves one conversation at a time. If you run other agent apps alongside Lares, make sure they use a different model.
+:::warning One request at a time
+Local AI models share accelerator resources through time slicing and can only process one request at a time. Lares processes tasks sequentially. If a task is running, new requests wait in line and start automatically when the current one finishes. To run Lares and other agents at the same time, connect them to different models.
 :::
 
 ## Step 2: Start your first Lares conversation

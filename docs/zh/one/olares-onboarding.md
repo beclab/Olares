@@ -40,8 +40,8 @@ Lares 是 Olares 内置的 AI 助手。借助 Router 和已连接的模型，它
 | Olares One v1.12.7 出厂镜像<br>（新设备） | <ul><li>Lares</li><li>Router</li><li><nobr>Qwen3.8-27B (llama.cpp)</nobr></li></ul> | 打开 Lares 即可开始 |
 | <ul><li>自托管 Olares v1.12.7<br>（全新安装或升级）</li><li><nobr>Olares One 升级至 v1.12.7</nobr></li></ul> | 无 | 安装 Router 和 Lares，然后安装模型应用或在 Router 中添加提供商 |
 
-:::warning 同时只能进行一个会话
-Qwen3.8-27B (llama.cpp) 模型以 GPU 时间分片模式运行，同时只能服务一个会话。如果要让其他智能体应用与 Lares 并行使用，请确保它们使用另一个模型。
+:::warning 同时只能处理一个请求
+本地 AI 模型共享硬件资源，一次只能处理一个请求。Lares 按顺序处理任务。如果有任务正在运行，新的请求会排队等待，当前任务完成后自动开始。如果要让 Lares 和其他智能体同时运行，请为它们连接不同的模型。
 :::
 
 ## 步骤 2：开始第一次 Lares 对话
