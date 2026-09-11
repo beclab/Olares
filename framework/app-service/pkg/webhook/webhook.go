@@ -1091,11 +1091,10 @@ func (wh *Webhook) CreateMacvlanInitPatchWithContext(ctx context.Context, req *a
 	if pod.Annotations == nil {
 		pod.Annotations = make(map[string]string)
 	}
-	networkAnnotation, err := macvlanNetworkAnnotation(pod.Annotations["k8s.v1.cni.cncf.io/networks"], mac)
-	if err != nil {
-		return nil, err
-	}
-	pod.Annotations["k8s.v1.cni.cncf.io/networks"] = networkAnnotation
+	// Rebuild the selection wholesale: chart-authored values (extra networks,
+	// a self-chosen MAC, legacy fields) never reach Multus.
+	pod.Annotations[multusNetworksAnnotation] = platformMacvlanSelection(mac)
+	delete(pod.Annotations, multusDefaultNetworkAnnotation)
 
 	hasReplyInit := false
 	for _, c := range pod.Spec.InitContainers {
@@ -1115,4 +1114,68 @@ func (wh *Webhook) CreateMacvlanInitPatchWithContext(ctx context.Context, req *a
 	// while the bypass has to win the head of the nat/filter chains.
 	sidecar.EnsureMacvlanBypassLast(pod)
 	return makePatches(req, pod)
+}
+
+// StripMacvlanAnnotations removes every Multus network selection from a pod
+// whose application is not entitled to the underlay network and returns the
+// admission patch plus the keys that were removed. The pod itself stays
+// admitted: losing an extra NIC is recoverable from the UI, a rejected pod is
+// not.
+func (wh *Webhook) StripMacvlanAnnotations(req *admissionv1.AdmissionRequest, pod *corev1.Pod) ([]byte, []string, error) {
+	if req == nil {
+		return nil, nil, errEmptyAdmissionRequestBody
+	}
+	if pod == nil {
+		return nil, nil, errors.New("nil pod")
+	}
+	removed := stripMacvlanSelectionAnnotations(pod)
+	if len(removed) == 0 {
+		return nil, nil, nil
+	}
+	patch, err := makePatches(req, pod)
+	if err != nil {
+		return nil, removed, err
+	}
+	return patch, removed, nil
+}
+
+// RecordMacvlanEvent tells the user, through a namespaced Event on the pod,
+// what the platform decided about its network selection. Admission dry runs
+// must not leave side effects, so they only log.
+func (wh *Webhook) RecordMacvlanEvent(ctx context.Context, pod *corev1.Pod, ns, reason, message string, dryRun bool) {
+	if pod == nil {
+		return
+	}
+	podName := pod.Name
+	if podName == "" {
+		podName = pod.GenerateName
+	}
+	if dryRun || wh.kubeClient == nil {
+		klog.Infof("macvlan-event: pod=%s/%s reason=%s message=%q (not recorded)", ns, podName, reason, message)
+		return
+	}
+	now := metav1.Now()
+	event := &corev1.Event{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: strings.TrimSuffix(podName, "-") + "-overlay-",
+			Namespace:    ns,
+		},
+		InvolvedObject: corev1.ObjectReference{
+			Kind:       "Pod",
+			APIVersion: "v1",
+			Namespace:  ns,
+			Name:       podName,
+			UID:        pod.UID,
+		},
+		Reason:         reason,
+		Message:        message,
+		Type:           corev1.EventTypeWarning,
+		Source:         corev1.EventSource{Component: "app-service"},
+		FirstTimestamp: now,
+		LastTimestamp:  now,
+		Count:          1,
+	}
+	if _, err := wh.kubeClient.CoreV1().Events(ns).Create(ctx, event, metav1.CreateOptions{}); err != nil {
+		klog.Warningf("macvlan-event: failed to record event pod=%s/%s reason=%s err=%v", ns, podName, reason, err)
+	}
 }

@@ -68,29 +68,34 @@ func overlayMACKey(mac string) string {
 	return strings.ToLower(strings.ReplaceAll(mac, ":", ""))
 }
 
-func (wh *Webhook) ensureOverlayMAC(ctx context.Context, pod *corev1.Pod, dryRun bool) (string, error) {
+// overlayInstance is the resolved identity a macvlan pod maps to in the ledger.
+type overlayInstance struct {
+	app         *appv1alpha1.Application
+	instanceKey string
+	ordinal     string
+	hasOrdinal  bool
+}
+
+func (wh *Webhook) resolveOverlayInstance(ctx context.Context, pod *corev1.Pod) (*overlayInstance, error) {
 	if wh.dynamicClient == nil || wh.allocationClient == nil {
-		return "", errors.New("overlay MAC allocator clients are not configured")
+		return nil, errors.New("overlay MAC allocator clients are not configured")
 	}
 	appName := pod.Labels[constants.ApplicationNameLabel]
 	owner := pod.Labels[constants.ApplicationOwnerLabel]
 	if appName == "" {
-		return "", errors.New("overlay MAC allocation requires an application name label")
+		return nil, errors.New("overlay MAC allocation requires an application name label")
 	}
 	applicationName, err := apputils.FmtAppMgrName(appName, owner, pod.Namespace)
 	if err != nil {
-		return "", fmt.Errorf("resolve application name: %w", err)
+		return nil, fmt.Errorf("resolve application name: %w", err)
 	}
 	app, err := wh.dynamicClient.AppV1alpha1().Applications().Get(ctx, applicationName, metav1.GetOptions{})
 	if err != nil {
-		return "", fmt.Errorf("get application %q: %w", applicationName, err)
-	}
-	if !dryRun && app.UID == "" {
-		return "", fmt.Errorf("application %q has no UID; refusing to allocate overlay MAC", app.Name)
+		return nil, fmt.Errorf("get application %q: %w", applicationName, err)
 	}
 	instanceKey, err := wh.overlayMACInstanceKey(ctx, pod, appName)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	ordinal, hasOrdinal := "", false
 	for _, ownerRef := range pod.OwnerReferences {
@@ -98,6 +103,47 @@ func (wh *Webhook) ensureOverlayMAC(ctx context.Context, pod *corev1.Pod, dryRun
 			ordinal, hasOrdinal = statefulSetOrdinal(pod)
 			break
 		}
+	}
+	return &overlayInstance{app: app, instanceKey: instanceKey, ordinal: ordinal, hasOrdinal: hasOrdinal}, nil
+}
+
+// boundOverlayMAC returns the MAC the ledger has bound to the pod's application
+// instance. The persisted setting is only the lookup key; the allocation's
+// ownership check is what authorizes the value, so a tampered setting cannot
+// claim another instance's MAC.
+func (wh *Webhook) boundOverlayMAC(ctx context.Context, pod *corev1.Pod) (string, error) {
+	identity, err := wh.resolveOverlayInstance(ctx, pod)
+	if err != nil {
+		return "", err
+	}
+	mac, err := persistedOverlayMAC(identity.app, identity.ordinal, identity.hasOrdinal)
+	if err != nil {
+		return "", err
+	}
+	if mac == "" {
+		return "", fmt.Errorf("application %q has no persisted overlay MAC", identity.app.Name)
+	}
+	allocation, err := wh.allocationClient.Resource(overlayMACAllocationGVR).Get(ctx, overlayMACKey(mac), metav1.GetOptions{})
+	if err != nil {
+		return "", fmt.Errorf("get overlay MAC allocation %s: %w", overlayMACKey(mac), err)
+	}
+	if err := validateOverlayMACAllocation(allocation, identity.app, identity.instanceKey, mac); err != nil {
+		return "", err
+	}
+	if phase, _, _ := unstructured.NestedString(allocation.Object, "spec", "phase"); phase != overlayMACAllocationPhase {
+		return "", fmt.Errorf("overlay MAC allocation %s is not bound (phase=%q)", allocation.GetName(), phase)
+	}
+	return mac, nil
+}
+
+func (wh *Webhook) ensureOverlayMAC(ctx context.Context, pod *corev1.Pod, dryRun bool) (string, error) {
+	identity, err := wh.resolveOverlayInstance(ctx, pod)
+	if err != nil {
+		return "", err
+	}
+	app, instanceKey, ordinal, hasOrdinal := identity.app, identity.instanceKey, identity.ordinal, identity.hasOrdinal
+	if !dryRun && app.UID == "" {
+		return "", fmt.Errorf("application %q has no UID; refusing to allocate overlay MAC", app.Name)
 	}
 	persisted, err := persistedOverlayMAC(app, ordinal, hasOrdinal)
 	if err != nil {
@@ -528,40 +574,35 @@ func (wh *Webhook) ensureMasterPlacement(ctx context.Context, pod *corev1.Pod) e
 	return nil
 }
 
-func macvlanNetworkAnnotation(existing, mac string) (string, error) {
-	selection := []map[string]interface{}{}
-	switch strings.TrimSpace(existing) {
-	case "", "kube-system/underlay-macvlan":
-		selection = append(selection, map[string]interface{}{
-			"name":      "underlay-macvlan",
-			"namespace": "kube-system",
-			"mac":       mac,
-		})
-	default:
-		if err := json.Unmarshal([]byte(existing), &selection); err != nil {
-			return "", fmt.Errorf("unsupported existing Multus networks annotation: %w", err)
-		}
-		found := false
-		for i := range selection {
-			name, _, _ := unstructured.NestedString(selection[i], "name")
-			namespace, _, _ := unstructured.NestedString(selection[i], "namespace")
-			if name == "underlay-macvlan" && (namespace == "" || namespace == "kube-system") {
-				selection[i]["namespace"] = "kube-system"
-				selection[i]["mac"] = mac
-				found = true
-			}
-		}
-		if !found {
-			selection = append(selection, map[string]interface{}{
-				"name":      "underlay-macvlan",
-				"namespace": "kube-system",
-				"mac":       mac,
-			})
-		}
-	}
-	raw, err := json.Marshal(selection)
+const (
+	underlayMacvlanNetworkName = "underlay-macvlan"
+	underlayMacvlanNamespace   = "kube-system"
+	underlayMacvlanInterface   = "net1"
+)
+
+// macvlanSelection is the one network selection a macvlan pod may carry. The
+// struct fixes the field order so the validating side can compare the rendered
+// string byte-for-byte instead of parsing user input.
+type macvlanSelection struct {
+	Name      string `json:"name"`
+	Namespace string `json:"namespace"`
+	Interface string `json:"interface"`
+	Mac       string `json:"mac"`
+}
+
+// platformMacvlanSelection renders the canonical Multus selection for the
+// underlay network. Whatever the chart wrote is discarded: the platform is the
+// only author of this annotation, which is what makes the value comparable.
+func platformMacvlanSelection(mac string) string {
+	raw, err := json.Marshal([]macvlanSelection{{
+		Name:      underlayMacvlanNetworkName,
+		Namespace: underlayMacvlanNamespace,
+		Interface: underlayMacvlanInterface,
+		Mac:       mac,
+	}})
 	if err != nil {
-		return "", fmt.Errorf("marshal Multus networks annotation: %w", err)
+		klog.Errorf("macvlan: failed to render platform network selection mac=%s err=%v", mac, err)
+		return ""
 	}
-	return string(raw), nil
+	return string(raw)
 }

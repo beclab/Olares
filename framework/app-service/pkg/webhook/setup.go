@@ -2,6 +2,7 @@ package webhook
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"strconv"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	admissionregv1 "k8s.io/api/admissionregistration/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/version"
 	"k8s.io/client-go/util/retry"
 	"k8s.io/klog/v2"
 )
@@ -1266,9 +1268,11 @@ func (wh *Webhook) CreateOrUpdateArgoResourceValidatingWebhook() error {
 }
 
 // CreateOrUpdateMacvlanInitMutatingWebhook creates or updates the macvlan init container mutating webhook.
-// It only fires for pods labeled applications.app.bytetrade.io/macvlan-init=true on Create.
-// FailurePolicy is Fail because the webhook owns the fixed-MAC and placement
-// invariants for macvlan pods.
+// It fires on pod Create for pods that either carry the
+// applications.app.bytetrade.io/macvlan-init label or already declare a Multus
+// network selection, so chart-authored selections always pass through the
+// platform before Multus sees them. FailurePolicy is Fail because the webhook
+// owns the fixed-MAC and placement invariants for macvlan pods.
 func (wh *Webhook) CreateOrUpdateMacvlanInitMutatingWebhook() error {
 	webhookPath := "/app-service/v1/macvlan-init/inject"
 	port, err := strconv.Atoi(strings.Split(constants.WebhookServerListenAddress, ":")[1])
@@ -1278,6 +1282,7 @@ func (wh *Webhook) CreateOrUpdateMacvlanInitMutatingWebhook() error {
 	webhookPort := int32(port)
 	failurePolicy := admissionregv1.Fail
 	matchPolicy := admissionregv1.Exact
+	reinvocationPolicy := admissionregv1.IfNeededReinvocationPolicy
 	webhookTimeout := int32(30)
 
 	mwhLabels := map[string]string{"velero.io/exclude-from-backup": "true"}
@@ -1333,11 +1338,13 @@ func (wh *Webhook) CreateOrUpdateMacvlanInitMutatingWebhook() error {
 						},
 					},
 				},
-				ObjectSelector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						constants.ApplicationMacvlanInitLabel: "true",
+				MatchConditions: []admissionregv1.MatchCondition{
+					{
+						Name:       "macvlan-init-label-or-network-selection",
+						Expression: macvlanInitMatchExpression(),
 					},
 				},
+				ReinvocationPolicy: &reinvocationPolicy,
 				Rules: []admissionregv1.RuleWithOperations{
 					{
 						Operations: []admissionregv1.OperationType{admissionregv1.Create},
@@ -1388,10 +1395,22 @@ func (wh *Webhook) CreateOrUpdateMacvlanInitMutatingWebhook() error {
 	return nil
 }
 
-// CreateOrUpdateMacvlanAnnotationValidatingWebhook rejects direct underlay
-// macvlan annotations unless the platform-owned label is also present. The
-// match condition keeps this webhook out of the path for ordinary Pods.
+// CreateOrUpdateMacvlanAnnotationValidatingWebhook guards the outcome of the
+// mutating step: a pod may only leave admission with exactly the platform
+// network selection or with none. The match condition keeps this webhook out
+// of the path for ordinary Pods; on API servers that do not evaluate match
+// conditions the webhook is not registered at all, because fail-closed plus
+// every pod in scope would turn any app-service restart into a cluster-wide
+// outage.
 func (wh *Webhook) CreateOrUpdateMacvlanAnnotationValidatingWebhook() error {
+	if info, err := wh.kubeClient.Discovery().ServerVersion(); err != nil {
+		klog.Warningf("macvlan-annotation-webhook: failed to read server version, assuming match conditions are supported err=%v", err)
+	} else if supported, err := admissionMatchConditionsSupported(info.GitVersion); err != nil {
+		klog.Warningf("macvlan-annotation-webhook: failed to parse server version %q, assuming match conditions are supported err=%v", info.GitVersion, err)
+	} else if !supported {
+		klog.Errorf("macvlan-annotation-webhook: kubernetes %s does not evaluate admission match conditions; skipping validating webhook registration", info.GitVersion)
+		return nil
+	}
 	webhookPath := "/app-service/v1/macvlan-init/validate"
 	port, err := strconv.Atoi(strings.Split(constants.WebhookServerListenAddress, ":")[1])
 	if err != nil {
@@ -1468,8 +1487,8 @@ func (wh *Webhook) CreateOrUpdateMacvlanAnnotationValidatingWebhook() error {
 				},
 				MatchConditions: []admissionregv1.MatchCondition{
 					{
-						Name:       "has-underlay-macvlan-selection",
-						Expression: "has(object.metadata.annotations) && object.metadata.annotations.exists(k, k == 'k8s.v1.cni.cncf.io/networks')",
+						Name:       "has-network-selection",
+						Expression: macvlanSelectionMatchExpression,
 					},
 				},
 				SideEffects: func() *admissionregv1.SideEffectClass {
@@ -1620,4 +1639,26 @@ func (wh *Webhook) CreateOrUpdatePodArchNodeSelectorMutatingWebhook() error {
 	}
 	klog.Infof("Finished creating MutatingWebhookConfiguration %s", podArchWebhookName)
 	return nil
+}
+
+// macvlanSelectionMatchExpression matches pods that declare any Multus network
+// selection. Both keys are checked by presence only; the value is never
+// interpreted here so spelling variants cannot dodge the webhook.
+const macvlanSelectionMatchExpression = "has(object.metadata.annotations) && ('k8s.v1.cni.cncf.io/networks' in object.metadata.annotations || 'v1.multus-cni.io/default-network' in object.metadata.annotations)"
+
+// macvlanInitMatchExpression matches pods that opted into macvlan through the
+// platform label or that carry a network selection of their own.
+func macvlanInitMatchExpression() string {
+	return fmt.Sprintf("(has(object.metadata.labels) && %[1]q in object.metadata.labels && object.metadata.labels[%[1]q] == 'true') || (%[2]s)",
+		constants.ApplicationMacvlanInitLabel, macvlanSelectionMatchExpression)
+}
+
+// admissionMatchConditionsSupported reports whether the API server evaluates
+// webhook match conditions (enabled by default since Kubernetes 1.28).
+func admissionMatchConditionsSupported(gitVersion string) (bool, error) {
+	v, err := version.ParseGeneric(gitVersion)
+	if err != nil {
+		return false, err
+	}
+	return v.AtLeast(version.MustParseGeneric("1.28.0")), nil
 }
