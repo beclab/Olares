@@ -74,7 +74,7 @@ Router 如何验证调用方，调用方需要提供什么凭证，取决于请�
   ![How to call this model 窗口](/images/manual/use-cases/router-how-to-call-model.png#bordered)
 
 - **Model name**：从 **How to call this model** 窗口复制模型名称。或者在 **Default models** 页面为每类能力设置默认模型，然后使用 `default-chat` 这样的系统名称，而不是具体模型名。
-- **API key**：在 **API Keys** 页面创建。只有局域网或互联网的调用方需要。Olares 中的应用可以填任何占位符。
+- **API key**：在 **API Keys** 页面创建。只有局域网或互联网的调用方需要。Olares 中的应用无需填写。
 
 ## 配置客户端
 
