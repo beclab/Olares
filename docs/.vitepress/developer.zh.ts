@@ -181,10 +181,6 @@ export const developerSidebar: DefaultTheme.Sidebar = {
                   text: "推荐算法",
                   link: "/zh/developer/develop/package/recommend",
                 },*/
-                {
-                  text: "Helm 扩展",
-                  link: "/zh/developer/develop/package/extension",
-                },
               ],
             },
             //  {
