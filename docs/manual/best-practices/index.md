@@ -17,4 +17,4 @@ This section offers in-depth guides and proven best practices to help you get th
 - [Expand Olares storage capacity](expand-storage-in-olares.md)
 - [Access Olares services locally](local-access.md)
 - [Connect AI apps](connect-ai-apps.md)
-- [Publish a website with a custom domain](deploy-website.md)
+- [Publish a website to a custom domain](deploy-website.md)
