@@ -64,6 +64,10 @@ Reading the table is `default-tts` rather than a category of its own because a c
 
 Every design and every clone is a billed synthesis. Designing four descriptions to compare them costs four calls.
 
+## Keeping a voice may be a task
+
+`voice add` and `voice design --save` each come back one of two ways, and nothing the caller sends decides which: the voice itself, or a receipt for the task making it. Which one arrives depends on the engine behind the category. Both verbs wait the task out and print the real voice id either way, so **an id these verbs print is always addressable** — but against a task engine the verb blocks for as long as the work takes. `--timeout` bounds that wait (10 minutes by default), and a timeout leaves the task running and names the `router call task get` that picks it up.
+
 ## Cloning here versus `call clone`
 
 `call clone me.wav "your build finished" --out done.wav` uploads a recording, speaks one line with it, and forgets the recording. `call voice add "Night Host" --sample me.wav` uploads the same recording and keeps it, so `call speak --voice <id>` reaches it again without another upload.
