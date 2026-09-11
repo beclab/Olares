@@ -1,6 +1,7 @@
 # Strip client-supplied platform identity headers before jwt_authn, then
-# SecurityPolicy claimToHeaders re-injects verified values (L4-equivalent
-# clear-then-inject on the Shared east-west path through app-gateway).
+# SecurityPolicy claimToHeaders re-injects verified values (clear-then-inject
+# on the Shared east-west path through app-gateway). A caller's own
+# X-BFL-USER is not a platform header on this path and is passed through.
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: ClientTrafficPolicy
 metadata:
@@ -18,5 +19,5 @@ spec:
   headers:
     earlyRequestHeaders:
       remove:
-        - x-bfl-user
+        - x-caller-user
         - x-caller-appid
