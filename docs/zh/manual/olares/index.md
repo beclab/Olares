@@ -39,11 +39,6 @@ Olares 系统应用是 Olares 生态的核心组成部分，预装在你的 Olar
     <span class="doc-map-title">Wise</span>
     <span class="doc-map-desc">收集、阅读并整理内容，打造个人信息中心</span>
   </a> -->
-  <a class="doc-map-card" href="./settings/">
-    <span class="doc-map-icon"><span class="material-symbols-outlined">settings</span></span>
-    <span class="doc-map-title">设置</span>
-    <span class="doc-map-desc">配置用户、应用、网络、安全与外观</span>
-  </a>
   <a class="doc-map-card" href="./controlhub/">
     <span class="doc-map-icon"><span class="material-symbols-outlined">tune</span></span>
     <span class="doc-map-title">控制面板</span>

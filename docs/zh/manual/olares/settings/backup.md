@@ -85,7 +85,7 @@ Olares 提供灵活的备份方案，可对**指定文件夹**与 **Wise 应用*
 使用备份和恢复服务前，请了解存储和带宽费用。每个实例包含一定量的免费流量，超出配额部分将产生费用。对于自托管 Olares 用户，请重点关注备份的存储用量。更多详情，请见[计费说明](../../space/billing.md)。
 :::
 
-1. 使用 LarePass 应用扫码登录 [Olares Space](https://space.olares.com)。
+1. 使用 LarePass 应用扫码登录 [Olares Space](https://www.olares.com/space)。
 2. 点击左侧导航栏的 **Backup**。**Backup Usage** 区域显示所有备份占用的总存储空间及配额。
 
    ![Olares Space 备份列表](/images/how-to/space/backup_list.png#bordered)

@@ -38,7 +38,7 @@ Olares 是一款可以用自然语言操作的开源个人云操作系统，让�
     <span class="doc-map-title">Olares One</span>
     <span class="doc-map-desc">获取开箱即用的个人 AI 云专属硬件设备</span>
   </a>
-  <a class="doc-map-card" href="./best-practices/">
+  <a class="doc-map-card" href="./best-practices/activate-olares-using-cli">
     <span class="doc-map-icon"><span class="material-symbols-outlined">menu_book</span></span>
     <span class="doc-map-title">高级设置</span>
     <span class="doc-map-desc">完成命令行安装、集群、存储扩展和主机硬件等高级设置任务</span>
@@ -60,10 +60,10 @@ Olares 是一款可以用自然语言操作的开源个人云操作系统，让�
     <span class="doc-map-title">Olares 应用</span>
     <span class="doc-map-desc">桌面、应用市场、文件、Vault、Control Hub、设置等系统应用的日常使用指南</span>
   </a>
-  <a class="doc-map-card" href="./space/">
+  <a class="doc-map-card" href="./space/manage-accounts">
     <span class="doc-map-icon"><span class="material-symbols-outlined">cloud</span></span>
     <span class="doc-map-title">Olares Space</span>
-    <span class="doc-map-desc">管理 Olares、自定义域名、备份与账单</span>
+    <span class="doc-map-desc">登录 Olares Space，管理账号、设备和自定义域名</span>
   </a>
 </div>
 

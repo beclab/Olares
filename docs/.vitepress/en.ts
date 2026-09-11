@@ -258,6 +258,7 @@ const side = {
     },
     {
       text: "Apps",
+      link: "/manual/olares/",
       collapsed: false,
       items: [
         {
@@ -472,7 +473,6 @@ const side = {
     },
     {
       text: "Advanced setup",
-      link: "/manual/best-practices/",
       collapsed: true,
       items: [
         {

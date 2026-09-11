@@ -84,7 +84,7 @@ You can use existing backup snapshots to restore files to a specified directory 
 Understand charges for storage and bandwidth before using backup and restore services. Each instance includes a certain amount of free traffic, and any usage exceeding the quota will incur charges. For self-hosted Olares users, it's also important to monitor the storage usage of backups. For more information, see [Billing](../../space/billing.md).
 :::
 
-1. Use the LarePass app to scan and log in to [Olares Space](https://space.olares.com).
+1. Use the LarePass app to scan and log in to [Olares Space](https://www.olares.com/space).
 2. Click **Backup** in the left navigation pane. The **Backup Usage** section shows the total storage used by all backups and the total quota.
 
    ![Backup list in Olares Space](/images/how-to/space/backup_list.png#bordered)

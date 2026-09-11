@@ -473,7 +473,6 @@ const side = {
     },
     {
       text: "高级设置",
-      link: "/zh/manual/best-practices/",
       collapsed: true,
       items: [
         {
@@ -587,7 +586,7 @@ export const zh = defineConfig({
     socialLinks: [{ icon: "github", link: "https://github.com/beclab/olares" }],
 
     nav: [
-      { text: "Olares OS", link: "zh/manual/overview" },
+      { text: "Olares OS", link: "/zh/manual/overview" },
       { text: "Olares One", link: "/zh/one/" },
       { text: "应用示例", link: "/zh/use-cases/" },
       { text: "开发者文档", link: "/zh/developer/concepts/" },

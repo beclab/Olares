@@ -38,7 +38,7 @@ Get Olares running, whether you install the OS yourself or use a dedicated devic
     <span class="doc-map-title">Olares One</span>
     <span class="doc-map-desc">Get the dedicated hardware device that runs your personal AI cloud out of the box</span>
   </a>
-  <a class="doc-map-card" href="./best-practices/">
+  <a class="doc-map-card" href="./best-practices/activate-olares-using-cli">
     <span class="doc-map-icon"><span class="material-symbols-outlined">menu_book</span></span>
     <span class="doc-map-title">Advanced setup</span>
     <span class="doc-map-desc">Complete advanced setup tasks for command-line installation, clusters, storage, and host hardware</span>
@@ -60,10 +60,10 @@ Manage your cloud, applications, files, identity, and access from day to day.
     <span class="doc-map-title">Olares applications</span>
     <span class="doc-map-desc">Daily guides for Desktop, Market, Files, Vault, Control Hub, Settings, and other system apps</span>
   </a>
-  <a class="doc-map-card" href="./space/">
+  <a class="doc-map-card" href="./space/manage-accounts">
     <span class="doc-map-icon"><span class="material-symbols-outlined">cloud</span></span>
     <span class="doc-map-title">Olares Space</span>
-    <span class="doc-map-desc">Manage Olares, custom domains, backups, and billing</span>
+    <span class="doc-map-desc">Log in to Olares Space and manage your accounts, devices, and custom domains</span>
   </a>
 </div>
 

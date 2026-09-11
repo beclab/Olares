@@ -15,7 +15,7 @@ head:
 | 入口 | 适合查看 |
 |---|---|
 | Olares **设置** > 左上角头像 > **Olares Space** | 推荐的登录入口，以及已关联账户、套餐、备份空间和流量用量摘要 |
-| [Olares Space](https://space.olares.com/) | 远程系统状态、活跃主机、近期流量和计费周期用量 |
+| [Olares Space](https://www.olares.com/space) | 远程系统状态、活跃主机、近期流量和计费周期用量 |
 | Olares **仪表板** | 本机资源和应用的详细诊断信息 |
 
 ## 在设置中连接 Olares Space

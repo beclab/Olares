@@ -15,7 +15,7 @@ The information available depends on where you open it:
 | Location | Use it for |
 |---|---|
 | **Settings** > your avatar > **Olares Space** | The recommended sign-in entry and a quick summary of the linked account, plan, backup storage, and traffic usage |
-| [Olares Space](https://space.olares.com/) | Remote Olares status, active hosts, recent traffic, and billing-cycle usage |
+| [Olares Space](https://www.olares.com/space) | Remote Olares status, active hosts, recent traffic, and billing-cycle usage |
 | **Dashboard** in Olares | Detailed local resource and application diagnostics |
 
 ## Connect Olares Space in Settings
