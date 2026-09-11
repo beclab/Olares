@@ -189,7 +189,7 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                 },
                 {
                   text: "Dify",
-                  link: "/zh/use-cases/dify-upgrade",
+                  link: "/zh/use-cases/dify",
                 },
               ],
             },

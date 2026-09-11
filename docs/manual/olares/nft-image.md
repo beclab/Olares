@@ -6,7 +6,7 @@ description: Add unique NFT images as your Olares profile picture by connecting 
 Olares allows you to use NFT (Non-Fungible Token) images as unique avatars for your profile, adding a personalized touch to your digital identity. This feature requires connecting a blockchain wallet to your account.
 
 ## Before you begin
-Before you begin, [connect your Olares with Olares Space](./settings/integrations.md).
+Before you begin, connect your Olares with Olares Space. For the authorization steps, see [Monitor Olares status and traffic in Olares Space](../space/manage-olares.md#before-you-begin).
 
 ## Step 1. Set up blockchain wallet
 1. Find and install the MetaMask extension from the Chrome Web Store.

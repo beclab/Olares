@@ -64,7 +64,7 @@ export const developerSidebar: DefaultTheme.Sidebar = {
             //   link: "/developer/install/cli/olares-cli",
             //   collapsed: true,
             //   items: [
-            //     { text: "Access Olares terminal", link: "/developer/reference/access-olares-terminal" },
+            //     { text: "Access Olares terminal", link: "/manual/access-olares-terminal" },
             //     {
             //       text: "backups",
             //       link: "/developer/install/cli/backups",

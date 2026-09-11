@@ -4,11 +4,11 @@ description: 了解如何使用 LarePass 应用管理你的 Olares 设备。
 head:
   - - meta
     - name: keywords
-      content: Olares, LarePass, 管理 Olares, 系统升级, 远程重启, 网络设置, Olares One
+      content: Olares, LarePass, 管理 Olares, 远程重启, 网络设置, Olares One
 ---
 # 使用 LarePass 管理 Olares
 
-LarePass 应用可以让你轻松管理你的 Olares 设备。你可以通过手机升级 Olares、监控系统状态、管理网络连接、执行远程控制以及查看设备信息。
+LarePass 应用可以让你轻松管理你的 Olares 设备。你可以通过手机监控系统状态、管理网络连接、执行远程控制以及查看设备信息。
 
 ## 前提条件
 
@@ -20,20 +20,7 @@ LarePass 应用可以让你轻松管理你的 Olares 设备。你可以通过手
 
 ## 访问 Olares 管理页面
 
-**Olares 管理**页面是使用 LarePass 管理 Olares 设备的核心入口。要访问 **Olares 管理**页面：
-
-1. 打开 LarePass，进入**设置**。 
-2. 在**我的 Olares** 卡片里，点击**系统**，进入 **Olares 管理**页面。
-
-![访问 Olares 管理](/images/zh/manual/larepass/system.png#bordered)
-
-在此页面上，你可以：
-- 查看设备信息
-- 升级 Olares
-- 远程重启或关闭 Olares
-- 修改网络设置
-- 将 Olares 恢复出厂设置
-- 重置 SSH 密码 <Badge type="tip" text="Olares One 专有" />
+打开 LarePass，进入**设置**，在**我的 Olares**卡片里点击**系统**，即可进入 **Olares 管理**页面。在此页面上，可以查看设备信息、更新 Olares、重启或关闭 Olares、修改网络设置，以及将 Olares 恢复出厂设置。
 
 ![Olares 管理](/images/zh/manual/larepass/olares-management1.png#bordered)
 
@@ -46,41 +33,23 @@ LarePass 应用可以让你轻松管理你的 Olares 设备。你可以通过手
 
 ![查看设备信息](/images/zh/manual/larepass/view-device-information.png#bordered)
 
-## 升级 Olares
-:::warning 仅管理员可以升级
-只有 Olares 管理员可以执行系统更新。更新将应用于同一 Olares 集群内的所有用户。
-:::
+检查并安装系统更新的方法，参见[查看并更新 Olares](../olares/settings/update.md)。
 
-要安装系统更新：
+## 重启或关闭 Olares
 
-1. 在 **Olares 管理**页面，点击**系统更新**。
+你可以从 LarePass 应用或 Olares 设置中重启或关闭 Olares。无论哪种方式，都需要在 LarePass 中确认操作。
 
-2. 在**系统更新**页面，确认**新版本**字段中的可更新版本信息，然后点击**升级**。
-   ![检查可用更新](/images/zh/manual/larepass/check-version1.png#bordered)
+- **在 LarePass 中**：在 **Olares 管理**页右上角点击 <i class="material-symbols-outlined">power_settings_new</i> 图标。
+- **在 Olares 设置中**：在**我的 Olares** > **硬件**页面，点击**关机**或**重启**。
 
-3. 在弹出的对话框中，选择升级方式：
-    - **仅下载**：  
-    Olares 只下载更新包，你可以照常使用 Olares。  
-    - **下载并升级**：  
-    Olares 会下载更新包，并在你确认重启后开始安装。
-   ![升级方法](/images/zh/manual/larepass/olares-upgrade2.png#bordered)
+![重启或关闭 Olares](/images/zh/manual/larepass/device-control1.png#bordered)
 
-4. 如果你选择了**仅下载**，在**系统更新**页面点击**升级**，开始更新流程。
-5. 如果你选择了**下载并升级**，在出现提示时确认重新启动，即可开始安装。
-6. 等待更新和重启完成。出现成功消息表示升级已完成。
-   ![升级成功提示](/images/zh/manual/larepass/olares-upgrade-success.png#bordered)
-7. 刷新你的 Olares 桌面以同步最新的系统更改。
-
-## 远程重启或关闭 Olares
-
-在 **Olares 管理**页右上角点击 <i class="material-symbols-outlined">power_settings_new</i>，可执行：
-- **关闭 Olares**：设备将关机。如手机和 Olares 在同一网络，Olares 状态将显示为 `Olares 已关机`。关机后无法执行远程操作，需手动开机。
-- **重启 Olares**：设备将重启。如手机和 Olares 在同一网络，重启过程中 Olares 状态将显示为 `正在重启`，约 5–8 分钟后恢复为 `Olares 运行中`。  
+操作开始后，LarePass 中的设备状态变化如下：
+- **关闭 Olares**：设备将关机。如手机和 Olares 在同一网络，状态将显示为 `Olares 已关机`。关机后无法执行远程操作，需手动开机。
+- **重启 Olares**：设备将重启。如手机和 Olares 在同一网络，重启过程中状态将显示为 `正在重启`，约 5–8 分钟后恢复为 `Olares 运行中`。
   ::: tip 注意
   如果你在 Olares 之外的网络执行了重启操作，**我的 Olares** 卡片在重启过程中将无法访问，启动完成即可恢复正常。
   :::
-
-![远程重启或关闭 Olares](/images/zh/manual/larepass/device-control1.png#bordered)
 
 ## 修改网络设置
 :::tip 需要同一网络
@@ -122,17 +91,6 @@ LarePass 应用可以让你轻松管理你的 Olares 设备。你可以通过手
    ![输入本地解锁密码](/images/zh/manual/larepass/enter-password-to-uninstall.png#bordered)
 
 4. 等待重置完成，系统将返回账号激活页面。
-
-## 重置 SSH 密码 <Badge type="tip" text="Olares One 专有" />
-:::warning 必须操作
-在你完成密码重置之前，该对话框会反复弹出。虽然你也可以之后在 Olares 的[**我的硬件**](../olares/settings/my-olares.md#reset-ssh)里操作，但我们强烈建议在 LarePass 里看到弹窗时立即完成重置。
-:::
-使用 LarePass 激活 **Olares One** 后，会自动弹出**重置 SSH 密码**对话框。请立即修改默认 SSH 密码，以防止非授权的 SSH 访问。
-
-![重置 SSH 密码](/images/zh/manual/larepass/change-ssh-pw.png)
-
-1. 在**重置 SSH 密码**对话框中输入一个新密码。确保它满足所有强度要求。
-2. 点击**确认**。
 
 ## 常见问题
 ### 将 Olares 设备移动到新网络后如何重新连接？

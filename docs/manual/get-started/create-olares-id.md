@@ -12,6 +12,8 @@ The steps in this guide differ for users in Mainland China due to regional diffe
 
 An Olares ID is a unique identifier within the Olares ecosystem, serving as your digital identity and gateway to various services and features.
 
+Olares ID creation is only available in the LarePass mobile app.
+
 An Olares ID consists of a local name and a domain. For example, in `alice123@olares.com`:
 - `alice123`: Local name
 - `olares.com`: Domain name
@@ -31,7 +33,7 @@ To get started with Olares, you'll need to download LarePass on your mobile devi
 ::: tip
 This section is dedicated to helping first-time users quickly create a personal Olares ID for immediate use. 
 
-For advanced use cases, such as creating an Olares ID using your social account handle or setting up accounts for a team, refer to [Create accounts](../larepass/create-account.md).
+For advanced use cases, such as creating an Olares ID using your social account handle or setting up accounts for a team, refer to [Set up a custom-domain Olares ID](../best-practices/set-custom-domain.md).
 :::
 
 1. In the LarePass app, tap **Create an account**.
@@ -42,14 +44,6 @@ For advanced use cases, such as creating an Olares ID using your social account 
 3. Click **Continue** to finish the creation process.
 
 ![Fast creation](/images/manual/get-started/create-olares-id-1.12.6.png)
-
-:::tip `.cn` vs. `.com` domains
-To ensure the best connectivity and performance, Olares automatically assigns a domain based on your phone's system language and region.
-
-If your phone's system language is set to Chinese, LarePass will assign a `.cn` domain. While functional, this may result in slower performance or DNS resolution issues outside of mainland China due to its specific routing.
-
-To resolve this, please enter **Advanced account creation** mode <i class="material-symbols-outlined">display_settings</i> from the top-right corner of the LarePass account creation page, and switch the default domain to `.com`.
-:::
 
 ## Next step
 
@@ -63,3 +57,7 @@ If your team already has Olares, and you're joining as a member:
 
 If you wish to log in to Olares Space:
 - [Manage accounts in Olares Space](/manual/space/manage-accounts.md)
+
+To keep your identity safe and manage it later:
+- [Back up your mnemonic phrase](../larepass/back-up-mnemonics.md)
+- [Manage Olares IDs in LarePass](../larepass/manage-accounts.md)

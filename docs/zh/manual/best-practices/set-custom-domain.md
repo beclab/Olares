@@ -60,7 +60,7 @@ head:
 
 以下步骤以 `space.n1.monster` 为例。
 
-1. 在浏览器中打开 [Olares Space](https://space.olares.com/)，使用 LarePass 扫码登录。
+1. 在浏览器中打开 [Olares Space](https://www.olares.com/space)，使用 LarePass 扫码登录。
 
    ![LarePass 扫码登录](/images/manual/tutorials/scan-qr-code1.png)
 

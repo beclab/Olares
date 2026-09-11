@@ -18,26 +18,20 @@ SMB (Server Message Block) is a protocol used to share files, printers, and othe
   - The SMB share path, which is typically in the format of `//<IP-address>/<Shared-folder-name>`.
   - The username and password required to access the SMB share.
 
-## Mount an SMB share
+## Save SMB accounts
 
-1. Open the Files app, and then go to **Drive** > **External**.
-2. Click **Connect to server** in the upper-right corner.
-3. In the popup window, click the **Protocol** list, and then select **SMB**.
+To keep SMB credentials in one place, save them in **Settings** > **Integration** > **SMB account management**.
 
-    ![Configure SMB connection](/images/manual/olares/add-SMB-share-path.png#bordered)
+1. To view saved accounts, go to **Settings** > **Integration** > **SMB account management**.
+2. To add an account, click **Add account**, enter the username and password for the SMB share, and click **Confirm**.
+3. To delete an account, click <i class="material-symbols-outlined">delete</i> on the right of the record, and then click **Confirm**.
 
-4. In the **Server address** field, enter the SMB share path. For example, `//192.168.1.100/Documents`.
-5. (Optional) Save frequently used server addresses for quick access next time:
+:::tip
+- SMB credentials are stored locally and are not uploaded to the cloud.
+- Saved accounts are for reference only. Files does not list them in the mount dialog, so you still need to enter the username and password manually when mounting a share.
+:::
 
-    - To add an address to **Favorite servers**, click <i class="material-symbols-outlined">add</i> after entering the share path.
-    - To remove a saved address, click it in **Favorite servers**, and then click <i class="material-symbols-outlined">remove</i>.
-
-6. Click **Confirm**.
-7. Enter the username and password, and then click **Confirm**.
-
-    Once connected, the SMB share appears in the **External** directory, and you can access your shared files and folders seamlessly.
-
-## Unmount an SMB share
+## Mount an SMB share## Unmount an SMB share
 
 When you no longer need access to the network files, you can safely disconnect the share.
 

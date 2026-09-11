@@ -8,18 +8,40 @@ head:
 
 # 挂载与使用云存储
 
-你可以通过 Olares 的**集成**功能轻松挂载云存储服务，并在**文件管理器**应用中直接访问和管理云端文件。
+你可以将 Google Drive、Dropbox、AWS S3、腾讯云 COS 等云存储挂载到 Olares，并在**文件管理器**应用中直接访问和管理云端文件。
 
 ![云存储](/images/zh/manual/olares/files-cloud.png)
 
-## 挂载云存储
+## 连接云存储服务
 
-要挂载云存储，请在 **LarePass** 或 Olares 的**设置**中连接对应服务：
+云存储通过**集成**功能连接，可在 LarePass 手机端或 Olares**设置**中完成，具体步骤取决于服务类型。
 
-- **基于 OAuth 的存储服务**：如 Google Drive 和 Dropbox。通过 [LarePass 手机端](../../larepass/integrations.md#通过-oauth-添加云盘)添加对应的集成。
-- **基于 API 凭证的存储服务**：如 AWS S3 或腾讯云对象存储（COS）。可通过 [LarePass 手机端](../../larepass/integrations.md#通过-api-密钥添加云盘)或 [Olares 设置](../settings/integrations.md#通过-api-密钥添加云对象存储)中添加对应的集成。
+### 通过 OAuth 连接（Google Drive、Dropbox）
 
-连接成功后，云存储将自动挂载至**文件管理器**应用中的**云存储**目录下。
+基于 OAuth 登录的服务需在 LarePass 手机端完成授权：
+
+1. 在手机上打开 LarePass。
+2. 进入**设置** > **LarePass 设置** > **集成**，点击右上角 <i class="material-symbols-outlined">add</i>。
+3. 选择 **Google Drive** 或 **Dropbox**。
+4. 按提示登录并授权。
+
+### 通过 API 密钥连接（AWS S3、腾讯云 COS）
+
+AWS S3、腾讯云 COS 等服务需在 Olares**设置**中使用 Access Key & Secret Key 手动配置：
+
+1. 从 Dock 或启动台打开**设置**，进入**集成** > **关联您的账户与数据**。
+2. 点击右上角**添加账户**。
+3. 选择 **AWS S3** 或 **Tencent COS**，点击**确认**。
+4. 在弹出的对话框中输入 Access Key、Secret Key、Region 和 Bucket name。
+5. 点击**下一步**。凭证验证通过后将显示成功提示。
+
+你也可以在 LarePass 中添加此类服务：进入**设置** > **LarePass 设置** > **集成**，点击右上角 <i class="material-symbols-outlined">add</i>，选择服务并输入凭证。
+
+:::tip 需要在 LarePass 中操作的集成
+OAuth 类型的集成以及 Olares Space 需在 **LarePass** 应用中完成连接。
+:::
+
+连接成功后，云存储将出现在文件管理器的**云存储**目录下。
 
 ## 访问云存储
 
@@ -33,8 +55,7 @@ head:
 
 ## 卸载云存储
 
-若需取消挂载，可移除对应的集成服务：
+卸载云存储即移除对应的集成服务：
 
-- [在 LarePass 中移除集成](../../larepass/integrations.md#断开集成)
-- [在 Olares 设置中移除集成](../settings/integrations.md#查看与管理现有集成)
-
+- **在 LarePass 中**：进入**设置** > **LarePass 设置** > **集成**，点击要移除的集成，点击右上角 <i class="material-symbols-outlined">more_horiz</i>，选择**删除**。
+- **在 Olares 设置中**：进入**集成** > **关联您的账户与数据**，点击集成卡片，在**账户设置**页面点击**删除**。
