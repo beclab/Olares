@@ -483,6 +483,10 @@ const side = {
           text: "Install a specific NVIDIA driver version",
           link: "/manual/best-practices/install-specific-cuda-version",
         },
+        {
+          text: "Publish a website to a custom domain",
+          link: "/manual/best-practices/deploy-website",
+        },
       ],
     },
     {
