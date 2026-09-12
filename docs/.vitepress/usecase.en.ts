@@ -10,6 +10,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "Local LLMs",
               link: "/use-cases/llm-base-apps",
             },
+            {
+              text: "Olares Router",
+              link: "/use-cases/olares-router",
+            },
           ],
         },
         {
