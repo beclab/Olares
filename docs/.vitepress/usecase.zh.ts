@@ -10,6 +10,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "本地大模型",
               link: "/zh/use-cases/llm-base-apps",
             },
+            {
+              text: "Lares",
+              link: "/zh/use-cases/lares",
+            },
           ],
         },
         {
