@@ -266,7 +266,7 @@ spec:
       "cniVersion": "0.3.1",
       "name": "underlay",
       "type": "macvlan",
-      "master": "br-olares",
+      "master": "olares-lan",
       "mode": "bridge",
       "ipam": {
         "type": "dhcp",
