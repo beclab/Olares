@@ -10,6 +10,7 @@ import (
 	"strings"
 	"syscall"
 	"testing"
+	"time"
 
 	"github.com/vishvananda/netlink"
 )
@@ -106,5 +107,84 @@ func TestEnsureOverlayParentAltnamePropagatesSelectionError(t *testing.T) {
 	}
 	if len(f.written) != 0 {
 		t.Fatal("no link file without a parent")
+	}
+}
+
+func TestEnsureOverlayParentAltnameKeepsBoundDeviceWhenSelectionFails(t *testing.T) {
+	orig := OverlayLinkFile
+	defer func() { OverlayLinkFile = orig }()
+	OverlayLinkFile = filepath.Join(t.TempDir(), "10-olares-lan.link")
+
+	f := newFakeParentOps(map[string]string{"enp3s0": "enp3s0", OverlayParentAltname: "enp3s0"})
+	dev, err := ensureOverlayParentAltname(context.Background(), f.ops("", ErrNoWiredInterface))
+	if err != nil || dev != "enp3s0" {
+		t.Fatalf("a name already in place must be kept when the NIC has no address yet, got %q,%v", dev, err)
+	}
+	if len(f.added) != 0 {
+		t.Fatalf("nothing to add, got %v", f.added)
+	}
+	if len(f.written) != 1 {
+		t.Fatal("link file must be refreshed for the bound device")
+	}
+}
+
+func TestConvergeOverlayParentRetriesEnsureThenHeals(t *testing.T) {
+	ensureCalls, healCalls := 0, 0
+	ensure := func(context.Context) (string, error) {
+		ensureCalls++
+		if ensureCalls < 3 {
+			return "", ErrNoWiredInterface
+		}
+		return "enp3s0", nil
+	}
+	heal := func(context.Context) (int, error) {
+		healCalls++
+		if healCalls < 2 {
+			return 0, errors.New("apiserver not ready")
+		}
+		return 1, nil
+	}
+	fired := make(chan time.Time, 1)
+	after := func(time.Duration) <-chan time.Time {
+		fired <- time.Time{}
+		return fired
+	}
+	convergeOverlayParent(context.Background(), ensure, heal, after)
+	if ensureCalls != 3 {
+		t.Fatalf("ensure must be retried until it succeeds, got %d calls", ensureCalls)
+	}
+	if healCalls != 2 {
+		t.Fatalf("heal must run after the name is in place and retry until the API answers, got %d calls", healCalls)
+	}
+}
+
+func TestConvergeOverlayParentGivesUpAfterBoundedAttempts(t *testing.T) {
+	ensureCalls, healCalls := 0, 0
+	ensure := func(context.Context) (string, error) { ensureCalls++; return "", ErrNoWiredInterface }
+	heal := func(context.Context) (int, error) { healCalls++; return 0, nil }
+	fired := make(chan time.Time, 1)
+	after := func(time.Duration) <-chan time.Time { fired <- time.Time{}; return fired }
+	convergeOverlayParent(context.Background(), ensure, heal, after)
+	if ensureCalls != overlayConvergeAttempts {
+		t.Fatalf("ensure must stop after %d attempts, got %d", overlayConvergeAttempts, ensureCalls)
+	}
+	if healCalls != 0 {
+		t.Fatal("heal must not run when the name was never restored")
+	}
+}
+
+func TestConvergeOverlayParentStopsOnContextCancel(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	ensureCalls := 0
+	ensure := func(context.Context) (string, error) {
+		ensureCalls++
+		cancel()
+		return "", ErrNoWiredInterface
+	}
+	heal := func(context.Context) (int, error) { t.Fatal("heal must not run"); return 0, nil }
+	after := func(time.Duration) <-chan time.Time { return make(chan time.Time) }
+	convergeOverlayParent(ctx, ensure, heal, after)
+	if ensureCalls != 1 {
+		t.Fatalf("ensure must stop once the context is cancelled, got %d calls", ensureCalls)
 	}
 }
