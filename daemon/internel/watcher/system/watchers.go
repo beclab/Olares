@@ -98,15 +98,23 @@ type bridgeConnectionWatcher struct {
 	cancel context.CancelFunc
 }
 
-func NewBridgeConnectionWatcher() *bridgeConnectionWatcher {
+// NewOverlayParentWatcher watches the carrier of the wired NIC that carries the
+// overlay gateway while the gateway is enabled.
+func NewOverlayParentWatcher() *bridgeConnectionWatcher {
 	return &bridgeConnectionWatcher{}
 }
 
 func (w *bridgeConnectionWatcher) Watch(ctx context.Context) {
-	if c, err := utils.FindBridgeConnection(ctx); err != nil {
-		klog.Error("find bridge connection error, ", err)
-	} else if c == nil {
-		// bridge connection is removed, stop watching
+	device := ""
+	if utils.OverlayGatewayDesired() {
+		if dev, err := utils.ResolveOverlayParent(ctx); err != nil {
+			klog.V(4).Infof("overlay parent %s not resolvable yet: %v", utils.OverlayParentAltname, err)
+		} else {
+			device = dev
+		}
+	}
+	if device == "" {
+		// overlay gateway is off or its parent is gone, stop watching
 		w.mu.Lock()
 		if w.cancel != nil {
 			w.cancel()
@@ -120,16 +128,16 @@ func (w *bridgeConnectionWatcher) Watch(ctx context.Context) {
 			w.mu.Unlock()
 			return
 		}
-		// bridge connection is back, start watching
+		// overlay gateway is on, start watching its parent
 		w.ctx, w.cancel = context.WithCancel(context.Background())
 		watchCtx := w.ctx
 		w.mu.Unlock()
 
-		klog.Info("start watching network carrier changes for bridge connection")
+		klog.Infof("start watching network carrier changes for overlay parent %s", device)
 		go func() {
 			defer func() {
 				if r := recover(); r != nil {
-					klog.Errorf("bridge carrier watch panic recovered: %v", r)
+					klog.Errorf("overlay parent carrier watch panic recovered: %v", r)
 				}
 				w.mu.Lock()
 				w.cancel = nil
@@ -137,7 +145,7 @@ func (w *bridgeConnectionWatcher) Watch(ctx context.Context) {
 				w.mu.Unlock()
 			}()
 
-			err := utils.ListenNetworkCarrierChanges(watchCtx, func() {
+			err := utils.ListenNetworkCarrierChanges(watchCtx, device, func() {
 				// disable the overlay gateway supported apps' option for all users
 				apps, err := utils.GetOverlayGatewaySupportedApps(ctx, "")
 				if err != nil {

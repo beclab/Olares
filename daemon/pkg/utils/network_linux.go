@@ -1147,7 +1147,10 @@ func FindBridgeConnection(ctx context.Context) (*BridgeConnection, error) {
 	return nil, nil
 }
 
-func ListenNetworkCarrierChanges(ctx context.Context, downCallback func()) error {
+// ListenNetworkCarrierChanges runs downCallback whenever the named device loses
+// carrier or is set down. The device is the current overlay parent, resolved by
+// the caller through the alternative name.
+func ListenNetworkCarrierChanges(ctx context.Context, device string, downCallback func()) error {
 	updates := make(chan netlink.LinkUpdate)
 
 	if err := netlink.LinkSubscribe(updates, ctx.Done()); err != nil {
@@ -1158,7 +1161,7 @@ func ListenNetworkCarrierChanges(ctx context.Context, downCallback func()) error
 	for {
 		select {
 		case update, ok := <-updates:
-			if handleCarrierLinkUpdate(ctx, update, ok, downCallback) {
+			if handleCarrierLinkUpdate(ctx, device, update, ok, downCallback) {
 				klog.Info("stop listening network changes")
 				return nil
 			}
@@ -1173,7 +1176,7 @@ func ListenNetworkCarrierChanges(ctx context.Context, downCallback func()) error
 // watcher should stop (channel closed or context cancelled). A closed channel
 // yields a zero-value LinkUpdate whose Link is nil; callers must not call
 // Attrs() on it.
-func handleCarrierLinkUpdate(ctx context.Context, update netlink.LinkUpdate, ok bool, downCallback func()) (stop bool) {
+func handleCarrierLinkUpdate(ctx context.Context, device string, update netlink.LinkUpdate, ok bool, downCallback func()) (stop bool) {
 	if !ok || ctx.Err() != nil {
 		return true
 	}
@@ -1181,7 +1184,7 @@ func handleCarrierLinkUpdate(ctx context.Context, update netlink.LinkUpdate, ok 
 		return false
 	}
 	attrs := update.Attrs()
-	if attrs == nil || attrs.Name != bridgeConnectionName {
+	if attrs == nil || attrs.Name != device {
 		return false
 	}
 

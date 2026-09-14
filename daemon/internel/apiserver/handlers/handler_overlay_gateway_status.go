@@ -37,6 +37,9 @@ type OverlayGatewayStatus struct {
 	DisableReason string                       `json:"disable_reason"`
 	SupportedApps []OverlayGatewaySupportedApp `json:"supported_apps"`
 	ErrorMessage  string                       `json:"error_message"`
+	// CniDhcpActive reports the CNI DHCP daemon health. It is infrastructure
+	// that runs regardless of the switch, so it is never folded into Status.
+	CniDhcpActive bool `json:"cni_dhcp_active"`
 }
 
 func (h *Handlers) GetOverlayGatewayStatus(ctx *fiber.Ctx) error {
@@ -110,28 +113,32 @@ func (h *Handlers) getOverlayGatewaySupportedApps(ctx context.Context, user stri
 	return apps, nil
 }
 
+// getOverlayGatewayStatus derives the switch state from the desired-state file
+// and the presence of the overlay parent alternative name. When the state is
+// desired but the name cannot be resolved, the switch reads "off" with an
+// error message: enabling it again re-adds the name, which is the repair path.
 func (h *Handlers) getOverlayGatewayStatus(ctx context.Context) (*OverlayGatewayStatus, error) {
 	s := &OverlayGatewayStatus{
-		Status: OverlayGatewayOff,
+		Status:        OverlayGatewayOff,
+		CniDhcpActive: utils.IsCniDhcpActive(ctx),
 	}
 
-	c, err := utils.FindBridgeConnection(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	if c == nil {
+	if !utils.OverlayGatewayDesired() {
 		s.Disable, s.DisableReason = h.isUnsupported(ctx)
 		return s, nil
 	}
 
-	if c.Active {
-		s.Status = OverlayGatewayOn
+	dev, up, err := utils.OverlayParentLinkUp(ctx)
+	if err != nil {
+		klog.Errorf("overlay gateway status: %s is not present although the gateway is enabled: %v", utils.OverlayParentAltname, err)
+		s.ErrorMessage = "overlay parent interface " + utils.OverlayParentAltname + " is missing; enable the overlay gateway again to restore it"
 		return s, nil
 	}
-
-	s.Disable, s.DisableReason = h.isUnsupported(ctx)
-
+	if !up {
+		klog.Warningf("overlay gateway status: overlay parent %s (%s) is down", dev, utils.OverlayParentAltname)
+		s.ErrorMessage = "overlay parent interface " + dev + " is down"
+	}
+	s.Status = OverlayGatewayOn
 	return s, nil
 }
 
@@ -149,6 +156,8 @@ func (h *Handlers) isUnsupported(ctx context.Context) (unsupported bool, reason 
 		return true, "WSL is not supported"
 	case utils.IsDarwin():
 		return true, "MacOS is not supported"
+	case !utils.KernelSupportsAltname():
+		return true, "Kernel is too old for alternative interface names (5.5 or later is required)"
 	case !isEthernetConnected(ctx):
 		return true, "Ethernet connection is not active"
 	}

@@ -96,6 +96,11 @@ func main() {
 		klog.Error(err)
 	}
 
+	// Bring the overlay gateway back to its desired state after a restart:
+	// keep the CNI DHCP daemon running, restore the parent alternative name
+	// and heal overlay pods that came up without their LAN interface.
+	utils.ConvergeOverlayGateway(mainCtx)
+
 	go wait.UntilWithContext(mainCtx, utils.UpdateNetworkTraffic, time.Second)
 
 	state.CurrentState.OlaresdVersion = version.RawVersion()
@@ -132,7 +137,7 @@ func main() {
 
 	state.WatchStatus(mainCtx, []watcher.Watcher{
 		system.NewSystemWatcher(),
-		system.NewBridgeConnectionWatcher(),
+		system.NewOverlayParentWatcher(),
 		// usb.NewUsbWatcher(),
 		usb.NewUmountWatcher(),
 		upgrade.NewUpgradeWatcher(),
@@ -186,11 +191,10 @@ func main() {
 						// is running with the overlay gateway enabled, if not restart the sunshine mdns proxy
 						var overlaygatewayEnabled bool
 
-						c, err := utils.FindBridgeConnection(mainCtx)
-						if err != nil {
-							klog.Error("find bridge connection error, ", err)
-						} else {
-							if c != nil && c.Active {
+						if utils.OverlayGatewayDesired() {
+							if _, err := utils.ResolveOverlayParent(mainCtx); err != nil {
+								klog.Error("resolve overlay parent error, ", err)
+							} else {
 								enabled, err := utils.GetApplicationSettings(mainCtx, "steamheadless", "enableOverlayGateway")
 								if err != nil {
 									klog.Error("get application settings error, ", err)
