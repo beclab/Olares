@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
-	github.com/beclab/api v0.0.25
+	github.com/beclab/api v0.0.27-0.20260929062526-d281261cdff4
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 	github.com/thoas/go-funk v0.9.3
 	golang.org/x/text v0.37.0
