@@ -19,6 +19,24 @@ const (
 	OverlayGatewayEnableLockFile  = "/var/run/overlay_gateway_enable.lock"
 )
 
+// Node facts the status derivation depends on, as variables so the derivation
+// can be unit-tested without netlink, systemd or NetworkManager.
+var (
+	overlayGatewayDesired = utils.OverlayGatewayDesired
+	overlayParentLinkUp   = utils.OverlayParentLinkUp
+	isCniDhcpActive       = utils.IsCniDhcpActive
+	kernelSupportsAltname = utils.KernelSupportsAltname
+	isWSL                 = utils.IsWSL
+	isDarwin              = utils.IsDarwin
+	isEthernetConnected   = func(ctx context.Context) bool {
+		iface, _, _, err := utils.GetEthernetConnection(ctx)
+		if err != nil {
+			return false
+		}
+		return iface != ""
+	}
+)
+
 var disableOverlayGatewayError string = ""
 var enableOverlayGatewayError string = ""
 var operateOverlayGatewayMutex sync.Mutex
@@ -120,15 +138,15 @@ func (h *Handlers) getOverlayGatewaySupportedApps(ctx context.Context, user stri
 func (h *Handlers) getOverlayGatewayStatus(ctx context.Context) (*OverlayGatewayStatus, error) {
 	s := &OverlayGatewayStatus{
 		Status:        OverlayGatewayOff,
-		CniDhcpActive: utils.IsCniDhcpActive(ctx),
+		CniDhcpActive: isCniDhcpActive(ctx),
 	}
 
-	if !utils.OverlayGatewayDesired() {
+	if !overlayGatewayDesired() {
 		s.Disable, s.DisableReason = h.isUnsupported(ctx)
 		return s, nil
 	}
 
-	dev, up, err := utils.OverlayParentLinkUp(ctx)
+	dev, up, err := overlayParentLinkUp(ctx)
 	if err != nil {
 		klog.Errorf("overlay gateway status: %s is not present although the gateway is enabled: %v", utils.OverlayParentAltname, err)
 		s.ErrorMessage = "overlay parent interface " + utils.OverlayParentAltname + " is missing; enable the overlay gateway again to restore it"
@@ -143,20 +161,12 @@ func (h *Handlers) getOverlayGatewayStatus(ctx context.Context) (*OverlayGateway
 }
 
 func (h *Handlers) isUnsupported(ctx context.Context) (unsupported bool, reason string) {
-	isEthernetConnected := func(ctx context.Context) bool {
-		iface, _, _, err := utils.GetEthernetConnection(ctx)
-		if err != nil {
-			return false
-		}
-		return iface != ""
-	}
-
 	switch {
-	case utils.IsWSL():
+	case isWSL():
 		return true, "WSL is not supported"
-	case utils.IsDarwin():
+	case isDarwin():
 		return true, "MacOS is not supported"
-	case !utils.KernelSupportsAltname():
+	case !kernelSupportsAltname():
 		return true, "Kernel is too old for alternative interface names (5.5 or later is required)"
 	case !isEthernetConnected(ctx):
 		return true, "Ethernet connection is not active"

@@ -90,17 +90,22 @@ func EnsureOverlayParentAltname(ctx context.Context) (string, error) {
 }
 
 func ensureOverlayParentAltname(ctx context.Context, ops overlayParentOps) (string, error) {
-	dev, err := ops.selectParent(ctx)
-	if err != nil {
-		klog.Errorf("overlay-parent: select wired interface failed: %v", err)
-		return "", err
-	}
-	if bound, err := ops.linkByName(OverlayParentAltname); err == nil {
-		if bound.Attrs().Name != dev {
-			klog.Errorf("overlay-parent: %s is bound to %s but the wired interface is %s", OverlayParentAltname, bound.Attrs().Name, dev)
-			return "", fmt.Errorf("%w: %s is on %s, wired interface is %s", ErrAltnameBound, OverlayParentAltname, bound.Attrs().Name, dev)
-		}
-	} else {
+	bound, boundErr := ops.linkByName(OverlayParentAltname)
+	dev, selErr := ops.selectParent(ctx)
+	switch {
+	case selErr != nil && boundErr == nil:
+		// The name is already in place (the link file re-adds it at boot) but
+		// the wired NIC cannot be identified yet, typically because DHCP has
+		// not finished. Keep the bound device instead of failing.
+		dev = bound.Attrs().Name
+		klog.Warningf("overlay-parent: wired interface not identified (%v); keeping %s on %s", selErr, OverlayParentAltname, dev)
+	case selErr != nil:
+		klog.Errorf("overlay-parent: select wired interface failed: %v", selErr)
+		return "", selErr
+	case boundErr == nil && bound.Attrs().Name != dev:
+		klog.Errorf("overlay-parent: %s is bound to %s but the wired interface is %s", OverlayParentAltname, bound.Attrs().Name, dev)
+		return "", fmt.Errorf("%w: %s is on %s, wired interface is %s", ErrAltnameBound, OverlayParentAltname, bound.Attrs().Name, dev)
+	case boundErr != nil:
 		link, err := ops.linkByName(dev)
 		if err != nil {
 			klog.Errorf("overlay-parent: lookup %s failed: %v", dev, err)
@@ -141,11 +146,17 @@ const (
 	netlinkFlagLowerUp = 0x10000 // IFF_LOWER_UP
 )
 
+const (
+	overlayConvergeAttempts = 30
+	overlayConvergeInterval = 10 * time.Second
+)
+
 // ConvergeOverlayGateway brings the node to the state the desired-state file
 // asks for. It runs at daemon start: the CNI DHCP daemon is kept running in
-// every case, the alternative name is re-added when the switch is on, and
-// overlay Pods that lost their LAN interface are restarted once so a node that
-// booted before the name existed heals without user action.
+// every case; when the switch is on, the alternative name is re-added and
+// overlay Pods that lost their LAN interface are restarted once. Both steps
+// retry in the background because the daemon may start before the wired NIC
+// has its address or before the API server answers.
 func ConvergeOverlayGateway(ctx context.Context) {
 	if err := EnsureCniDhcpActive(ctx); err != nil {
 		klog.Errorf("overlay-converge: %v", err)
@@ -153,25 +164,53 @@ func ConvergeOverlayGateway(ctx context.Context) {
 	if !OverlayGatewayDesired() {
 		return
 	}
-	if _, err := EnsureOverlayParentAltname(ctx); err != nil {
-		klog.Errorf("overlay-converge: alternative name not restored: %v", err)
-		return
-	}
-	go func() {
-		for attempt := 0; attempt < 30; attempt++ {
-			restarted, err := HealOverlayPodsWithoutNet1(ctx)
-			if err == nil {
-				if restarted > 0 {
-					klog.Infof("overlay-converge: restarted %d overlay pod(s) that had no %s", restarted, overlayLANInterface)
-				}
-				return
-			}
-			klog.V(4).Infof("overlay-converge: heal attempt %d not ready: %v", attempt+1, err)
-			select {
-			case <-ctx.Done():
-				return
-			case <-time.After(10 * time.Second):
-			}
+	go convergeOverlayParent(ctx, EnsureOverlayParentAltname, HealOverlayPodsWithoutNet1, time.After)
+}
+
+// convergeOverlayParent retries the alternative name until it is in place,
+// then heals the overlay Pods once the API server answers. It gives up after
+// a bounded number of attempts and logs why, so a node that never gets a
+// wired address does not spin forever.
+func convergeOverlayParent(ctx context.Context, ensure func(context.Context) (string, error), heal func(context.Context) (int, error), after func(time.Duration) <-chan time.Time) {
+	wait := func() bool {
+		select {
+		case <-ctx.Done():
+			return false
+		case <-after(overlayConvergeInterval):
+			return true
 		}
-	}()
+	}
+	var lastErr error
+	for attempt := 1; ; attempt++ {
+		dev, err := ensure(ctx)
+		if err == nil {
+			if attempt > 1 {
+				klog.Infof("overlay-converge: %s restored on %s after %d attempts", OverlayParentAltname, dev, attempt)
+			}
+			break
+		}
+		lastErr = err
+		if attempt >= overlayConvergeAttempts {
+			klog.Errorf("overlay-converge: alternative name not restored after %d attempts, giving up: %v", attempt, lastErr)
+			return
+		}
+		klog.V(4).Infof("overlay-converge: attempt %d to restore the alternative name failed: %v", attempt, err)
+		if !wait() {
+			return
+		}
+	}
+	for attempt := 1; attempt <= overlayConvergeAttempts; attempt++ {
+		restarted, err := heal(ctx)
+		if err == nil {
+			if restarted > 0 {
+				klog.Infof("overlay-converge: restarted %d overlay pod(s) that had no %s", restarted, overlayLANInterface)
+			}
+			return
+		}
+		klog.V(4).Infof("overlay-converge: heal attempt %d not ready: %v", attempt, err)
+		if !wait() {
+			return
+		}
+	}
+	klog.Errorf("overlay-converge: overlay pods not checked for %s after %d attempts", overlayLANInterface, overlayConvergeAttempts)
 }
