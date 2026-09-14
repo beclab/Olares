@@ -36,7 +36,7 @@ func TestUpgrader20260914TaskOrder(t *testing.T) {
 		return -1
 	}
 	sys := names(u.UpgradeSystemComponents())
-	order := []string{"MigrateOverlayBridgeToDirect", "EnsureOverlayAltname", "GenerateMultusDefine", "DeployMultusDefine", "WriteOverlayDesiredState", "RecreateOverlayGatewayPodsAfterMigration", "ClearOverlayMigrationMarker"}
+	order := []string{"MigrateOverlayBridgeToDirect", "ReassertHostsAfterMigration", "EnsureOverlayAltname", "GenerateMultusDefine", "DeployMultusDefine", "WriteOverlayDesiredState", "RecreateOverlayGatewayPodsAfterMigration", "WaitOverlayGatewayPodsNet1", "ClearOverlayMigrationMarker"}
 	prev := -1
 	for _, name := range order {
 		at := index(sys, name)

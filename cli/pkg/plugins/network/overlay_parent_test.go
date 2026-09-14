@@ -154,6 +154,9 @@ func TestMigrateBridgeToDirectRestoresBridgeWhenPhyStaysDown(t *testing.T) {
 	if r.indexOfExact("nmcli connection delete br-olares") >= 0 || r.indexOf("nmcli connection delete br-olares-slave") >= 0 {
 		t.Fatal("bridge profiles must survive a failed migration")
 	}
+	if rm := r.indexOfExact("rm -f /var/lib/olares/overlay-gateway/.migrated-from-bridge"); rm < 0 || rm < restoreUp {
+		t.Fatalf("migration marker must be removed after the bridge is restored, got %v", r.calls)
+	}
 }
 
 func TestMigrateBridgeToDirectInactiveBridgeOnlyDeletesProfiles(t *testing.T) {
