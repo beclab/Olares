@@ -1,7 +1,7 @@
 ---
 outline: [2, 3]
 title: Use Olares Router as your AI gateway
-description: Learn what Olares Router is and how to call LLM, audio, creative, and tool capabilities through one OpenAI-compatible endpoint, with the right credential for each caller.
+description: Learn what Olares Router is and how to call LLM, audio, creative, and tool capabilities through one unified access layer, with the right credential for each caller.
 head:
   - - meta
     - name: keywords
@@ -10,23 +10,32 @@ head:
 
 # Use Olares Router as your AI gateway
 
-Olares Router is the AI gateway built into Olares, shipping with v1.12.7. It exposes every AI capability on your Olares, local or cloud, through a single OpenAI-compatible endpoint. Clients never connect to local models or cloud vendors directly: they connect to Router, and Router routes every request to the right backend.
+Olares Router is the AI gateway built into Olares, shipping with v1.12.7. It exposes every AI capability on your Olares, local or cloud, through a single access layer. Clients never connect to local models or cloud vendors directly: they connect to Router, and Router routes every request to the right backend.
 
-## Why Olares Router
+## What is Olares Router
 
-Many users add a standalone LLM proxy such as LiteLLM when they need to connect applications to multiple AI service providers. With Router, that extra layer is no longer needed. Router solves the same core problem from inside Olares and goes further: 
+To understand how Router simplifies your AI workflows, it helps to look at where it sits within the platform and how it unifies different AI workloads into standard capabilities.
 
-- **Built in, not an add-on**: Router arrives with Olares itself. It brings AI access and management into the same system that already runs your applications and local AI workloads. A LiteLLM-style proxy is one more component to deploy, configure, and maintain. 
-- **Native visibility into local AI**: Router discovers and synchronizes installed model and utility apps automatically. A proxy requires every model to be registered before it can be used.
-- **Olares-aware access**: Apps running inside Olares can use their platform identity instead of storing an API key. Clients outside Olares use Router-issued API keys, while cloud-provider credentials remain stored inside Router. With a proxy, every caller is another key to issue, store, and rotate.
-- **Tune in one place**: Every local model in Router opens a model card where you can edit engine arguments and tunable parameters, or restart the engine in the UI. With a proxy, launch parameters live in the model server's own config, and every experiment means a manual edit and restart on the server.
-- **New AI capabilities, same endpoint**: New models, modalities, and AI utilities supported by Olares can be exposed through Router with nothing new to deploy. Clients use the same access layer, while Router handles the platform-side integration. A proxy can grow too, but every addition is another round of configuration.
+### Where Router sits
 
-## One gateway for every AI capability
+Router functions as the central dispatch layer for your entire AI ecosystem. Rather than interacting with fragmented backends directly, all traffic flows through this single gateway.
 
-Modern AI work is rarely one model doing everything. A chat model drafts text, a translation model localizes it, a TTS model voices it, a video model illustrates it, and a search tool grounds it in fresh sources. A workload like this needs one access layer that reaches every model and tool it uses conveniently. Router is exactly that access layer. It treats AI as a set of system capabilities, grouped the way real workloads use them, and exposes each one as a model with its own name. Connect once, and the name is all a caller needs to reach any capability.
+![Olares Router architecture](/images/manual/use-cases/router-archi.png#bordered)
 
-These capabilities fall into four categories:
+As shown in the architecture above, the system operates through three core layers:
+1. **Callers (The inbound request)**: Whether the request comes from an internal application, a user via the Olares CLI, or a third-party client over the network, it connects to Router. Callers never interact with the backend infrastructure directly.
+2. **Router (The gateway)**: Once a request arrives, Router handles the caller's authentication, quota management, and capability routing. For external cloud models, Router uses credentials securely stored within the platform, ensuring these secrets are never exposed to the caller. 
+3. **Model Backends (The outbound routing)**: Router acts as a traffic director, dispatching the request to the correct destination:
+   * **Local Models:** Requests for local capabilities are routed to installed model applications (like vLLM, SGLang, or llama.cpp). Each application includes a `model_console` adapter that standardizes lifecycles and API protocols, and pulls model weights directly from the platform's shared storage.
+   * **Cloud Providers:** Requests for remote models are securely routed across the internet to providers like OpenAI or Anthropic, authenticated by Router's stored credentials.
+
+### One gateway for every AI capability
+
+While LLMs have converged on standard APIs because a single model usually completes the task, multi-modal and functional tools lack this standardization. For example, an audio workflow typically requires separate models for voice separation, enhancement, speech recognition, and text to speech. These models come from different providers with different API structures, and there is no universal interface.
+
+Router solves this fragmentation by acting as a universal abstraction layer for your AI ecosystem. It takes language models, audio/video models, and utility tools, and exposes them as unified system capabilities behind a single gateway. This provides one standard format for all your AI workloads.
+
+To keep your ecosystem organized and accessible, Router groups these unified capabilities into four core categories:
 
 | Category | What lives here | Examples |
 | --- | --- | --- |
@@ -37,23 +46,27 @@ These capabilities fall into four categories:
 
 ![Capability categories in Olares Router](/images/manual/use-cases/router-capabilities.png#bordered)
 
-## How authentication works
+## Why Olares Router
 
-How Router verifies a caller, and what credential the caller needs to provide, depends on where the request comes from.
+Router is integrated directly into the Olares platform alongside your applications and models. It functions as a platform-level gateway that manages access, lifecycles, and multi-modal routing:
 
-| Caller location | How it works | <nobr>Credential needed</nobr> |
+- **Identity and access**: Router utilizes the Olares identity system. Internal applications authenticate using their platform identity, and external callers use Router-issued API keys. Underlying cloud provider credentials are kept isolated within Router and are never exposed to callers.
+- **Model observability**: Router syncs automatically with the Model Console to discover installed models. It provides a UI to tune or restart underlying engines and tracks all request metrics by caller on the Usage page.
+- **Unified multi-modal capabilities**: Router aggregates language, audio, video models, as well as utility tools (like search and embeddings), behind a single access layer. Clients use one standard interface and can invoke any system capability by its name.
+
+## How callers authenticate with Router
+
+Every call through Router has an identified caller, and what the caller needs to provide depends on who that caller is.
+
+| Caller | How Router identifies it | <nobr>Credential needed</nobr> |
 | --- | --- | --- |
-| <nobr>**Apps in Olares**</nobr> | Every request inside Olares passes through the platform first, which verifies the caller and stamps an identity header onto the request: `X-Olares-App-ID` for apps running in Olares, or `X-BFL-USER` for signed-in users. Only the platform can add this header, so it cannot be forged. Router therefore always knows who is calling, and the caller needs to provide nothing else. | None |
-| <nobr>**Devices in LAN**</nobr> | The request arrives over the LAN with no platform-stamped identity. The caller presents an API key (`Authorization: Bearer <api-key>`), and Router validates the key and attributes the call to the key's owner. | Router-issued<br>API key |
-| **Remote** | A request from the internet also arrives without a platform-stamped identity. The caller presents an API key, and Router validates the key and attributes the call to the key's owner. | Router-issued<br>API key |
-
-:::info Two kinds of API keys
-The key you add for a cloud vendor stays inside Router and never reaches a caller. A caller only presents the key Router issues, and Router uses its stored credentials when it talks to the vendor.
-:::
+| <nobr>**Olares apps**</nobr> | Every request from an app inside Olares passes through the platform first, which verifies the caller and stamps an identity header `X-Olares-App-ID` onto the request. Only the platform can add this header, so the caller needs to provide nothing else. | None |
+| <nobr>**Olares users**</nobr> | Every request from a signed-in Olares user passes through the platform first, which verifies the caller and stamps an identity header `X-BFL-USER` onto the request. Only the platform can add this header, so the caller needs to provide nothing else. Olares CLI works in the same way: it authenticates with your Olares ID once, and every later call carries your identity. | None |
+| <nobr>**Third parties**</nobr> | A caller that is neither an Olares app nor an Olares user presents a Router-issued API key (`Authorization: Bearer <api-key>`). Router validates the key and attributes the call to the key's owner. Delete the key and the access will end.<br><br>This is how your own devices outside Olares reach your models, and how you share the models on your Olares with anyone outside it. | Router-issued<br>API key |
 
 ## Get connection details from Router
 
-Connecting to Router generally takes three parameters, and Router has a source for each.
+Connecting to Router generally takes three parameters, and Router provides a dedicated location for each.
 
 - **Base URL**: Open a capability page such as **LLM**, find the model, and click the **View connection example** icon on the right.
 
@@ -72,58 +85,23 @@ Connecting to Router generally takes three parameters, and Router has a source f
 - **Model name**: Copy the model name from the **How to call this model** window. Or set a default model for each capability on the **Default models** page, and use the system name like `default-chat` instead of a specific model name.
 - **API key**: Created on the **API Keys** page. Required only for callers from the LAN or the internet. Apps in Olares do not need to enter API keys.
 
-## Set up a client
+## Call models through Router
 
-With the connection details ready, the examples below show you how to configure a client in each caller location.
+The examples below show how each type of caller connects to and calls models through Router.
 
 ### Apps in Olares
 
-**Configurations**: OpenClaw, an app running on Olares. In the custom provider settings, point the model at Router, with no API key required:
-
+OpenClaw, an app running on Olares, connects to Router in its custom provider settings. Its platform identity covers authentication, so only the base URL and a model name are needed:
 - **API Base URL**: `https://router.<your-olares-id>.olares.com/v1`
 - **Model ID**: `default-chat`
 
-**Result**: The status line shows the session answering as `default-chat`.
+The session then answers as `default-chat`.
 
 ![OpenClaw chatting through Router with default-chat](/images/manual/use-cases/router-client-connect-openclaw.png#bordered)
 
-### Devices on the local network
+### Olares users
 
-**Configurations**: OpenCode running on a Mac connected to the same network as your Olares. In the configuration file `opencode.jsonc`, add a provider entry that points at the `.local` address with an API key created in Router:
-
-```jsonc
-{
-  "provider": {
-    "router": {
-      "npm": "@ai-sdk/openai-compatible",
-      "name": "Router",
-      "options": {
-        "baseURL": "http://router.<your-olares-id>.olares.local/v1",
-        "apiKey": "<your-api-key>"
-      },
-      "models": {
-        "default-chat": { "name": "Router-chat" }
-      }
-    }
-  }
-}
-```
-
-**Result**: OpenCode on the Mac talks to Router at the `.local` address, and each build is labeled with the display name `Router-chat` from the config. These calls also appear on the **Usage** page in Router, attributed to you.
-
-![OpenCode chatting through Router default-chat](/images/manual/use-cases/router-client-connect-opencode.png#bordered)
-
-### Remote clients
-
-:::tip
-In this setup, ensure that the Router entrance's **Authentication level** is set to **Public** in Olares Settings.
-:::
-
-**Configurations**: A client outside your local network, for example a laptop on a public Wi-Fi. Use the public base URL `https://router.<your-olares-id>.olares.com/v1` with an API key created in Router. The same key works from anywhere.
-
-## Skip the client: Call with Olares CLI
-
-Sometimes all you want is to check what is callable or try a model right now, not configure a client. Olares CLI is the fastest way there: no base URL, no API key, just your signed-in identity (`X-BFL-USER`). It takes three commands:
+Olares users can also call models with the Olares CLI: no base URL, no API key, just the platform-stamped user identity.
 
 1. Authenticate the Olares CLI with your Olares ID. The CLI saves the address and your identity for later calls.
 
@@ -149,9 +127,9 @@ Sometimes all you want is to check what is callable or try a model right now, no
     myfirecrawl/scrape                          scrape  -                                                        ready      myfirecrawl
     myjina/reader                               scrape  -                                                        ready      myjina
     mysearxng/search                            search  -                                                        ready      mysearxng
-    myserper/search                             search  -                                                        ready      myserper
+    myserper/search                            search  -                                                        ready      myserper
     mytavily/extract                            scrape  -                                                        ready      mytavily
-    mytavily/search                             search  -                                                        ready      mytavily
+    mytavily/search                            search  -                                                        ready      mytavily
     mytavily/search-advanced                    search  -                                                        ready      mytavily
     ```
 
@@ -170,3 +148,20 @@ Sometimes all you want is to check what is callable or try a model right now, no
 
     unsloth/Qwen3.8-27B-GGUF:UD-Q4_K_XL
     ```
+
+### Callers outside Olares
+
+Anyone outside Olares needs two things: a base URL matching their location, and a Router-issued API key. The base URL differs between the LAN and the internet, but the key works from anywhere.
+
+:::tip
+For callers reaching Router over the internet, set the Router entrance's **Authentication level** to **Public** in Olares Settings. LAN access is not affected.
+:::
+
+This example uses the public URL. On a device in the same LAN, use the `.local` base URL obtained from the connection details.
+
+```bash
+curl https://router.<your-olares-id>.olares.com/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <your-api-key>" \
+  -d '{"model": "default-chat", "messages": [{"role": "user", "content": "Hello"}]}'
+```
