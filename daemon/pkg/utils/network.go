@@ -51,19 +51,3 @@ func GetInterfaceTraffic(iface string) (rxBytes, txBytes float64, err error) {
 func GetEthernetConnection(ctx context.Context) (iface, ifUUID, connection string, err error) {
 	return "", "", "", errors.New("not implemented")
 }
-
-func FindBridgeConnection(ctx context.Context) (*BridgeConnection, error) {
-	return nil, errors.New("not implemented")
-}
-
-func CreateBridgeConnection(ctx context.Context) error {
-	return errors.New("not implemented")
-}
-
-func ResetBridgeConnection(ctx context.Context) error {
-	return errors.New("not implemented")
-}
-
-func CheckOverlayGatewayStatus(ctx context.Context) error {
-	return errors.New("not implemented")
-}
