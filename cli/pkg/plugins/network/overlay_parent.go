@@ -275,11 +275,13 @@ func migrateBridgeToDirect(run commandRunner, sleep func(time.Duration)) (bool, 
 		return false, errors.Wrap(err, "write migration marker")
 	}
 	if _, err := run("nmcli connection down " + overlayBridgeConnection); err != nil {
+		clearOverlayMigratedMarker(run)
 		return false, errors.Wrap(err, "deactivate the bridge")
 	}
 	if _, err := run("nmcli connection up " + overlayOriginalConnection); err != nil {
 		logger.Errorf("overlay-parent: activating %s failed: %v; restoring the bridge", overlayOriginalConnection, err)
 		_, _ = run("nmcli connection up " + overlayBridgeConnection)
+		clearOverlayMigratedMarker(run)
 		return false, errors.Wrap(err, "activate the physical connection")
 	}
 	for i := 0; i < overlayMigrateVerifyAttempts; i++ {
@@ -293,7 +295,16 @@ func migrateBridgeToDirect(run commandRunner, sleep func(time.Duration)) (bool, 
 	logger.Errorf("overlay-parent: %s did not obtain an address and default route; restoring the bridge", st.Phy)
 	_, _ = run("nmcli connection down " + overlayOriginalConnection)
 	_, _ = run("nmcli connection up " + overlayBridgeConnection)
+	clearOverlayMigratedMarker(run)
 	return false, fmt.Errorf("%s did not come up with an IPv4 address and default route after leaving the bridge", st.Phy)
+}
+
+// clearOverlayMigratedMarker removes the marker after a failed migration so it
+// only ever means "the bridge was torn down", never "a migration was attempted".
+func clearOverlayMigratedMarker(run commandRunner) {
+	if _, err := run("rm -f " + overlayMigratedMarker); err != nil {
+		logger.Warnf("overlay-parent: remove migration marker failed: %v", err)
+	}
 }
 
 func parentDir(path string) string {

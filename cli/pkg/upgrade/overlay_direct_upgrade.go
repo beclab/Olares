@@ -11,6 +11,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/core/logger"
 	"github.com/beclab/Olares/cli/pkg/core/task"
 	"github.com/beclab/Olares/cli/pkg/plugins/network"
+	"github.com/beclab/Olares/cli/pkg/terminus"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
@@ -91,10 +92,13 @@ func waitOverlayGatewayPodsNet1(ctx context.Context, kube kubernetes.Interface) 
 	}
 }
 
-// recreateOverlayGatewayPodsAfterMigration recreates the overlay Pods after the
-// bridge was torn down. Unlike the best-effort recreate used for a daemon
-// restart, this step is required: the old macvlan interfaces vanished with the
-// bridge, so a Pod that is not recreated has no LAN presence at all.
+// recreateOverlayGatewayPodsAfterMigration deletes the overlay Pods after the
+// bridge was torn down so their controllers recreate them on the new parent.
+// Unlike the best-effort recreate used for a daemon restart, this step is
+// required: the old macvlan interfaces vanished with the bridge, so a Pod that
+// is not recreated has no LAN presence at all. Waiting for the recreated Pods
+// is a separate task, so a slow node retries the wait without deleting Pods
+// that already came back with their LAN interface.
 type recreateOverlayGatewayPodsAfterMigration struct {
 	common.KubeAction
 }
@@ -108,7 +112,7 @@ func (a *recreateOverlayGatewayPodsAfterMigration) Execute(runtime connector.Run
 	if err != nil {
 		return errors.Wrap(err, "kube client for overlay gateway pod recreate")
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), overlayRecreateTimeout+overlayNet1WaitTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), overlayRecreateTimeout)
 	defer cancel()
 
 	deleted, remaining, err := recreateOverlayGatewayPods(ctx, kube)
@@ -116,10 +120,27 @@ func (a *recreateOverlayGatewayPodsAfterMigration) Execute(runtime connector.Run
 		return errors.Wrapf(err, "recreate overlay gateway pods (%d deleted, %d left)", deleted, remaining)
 	}
 	logger.Infof("overlay-parent: deleted %d overlay gateway pods for recreate on the wired parent", deleted)
+	return nil
+}
 
-	waitCtx, cancelWait := context.WithTimeout(ctx, overlayNet1WaitTimeout)
-	defer cancelWait()
-	if err := waitOverlayGatewayPodsNet1(waitCtx, kube); err != nil {
+// waitOverlayGatewayPodsNet1AfterMigration waits until every recreated overlay
+// Pod runs with its LAN interface on the new parent.
+type waitOverlayGatewayPodsNet1AfterMigration struct {
+	common.KubeAction
+}
+
+func (a *waitOverlayGatewayPodsNet1AfterMigration) Execute(runtime connector.Runtime) error {
+	if !network.OverlayMigratedFromBridge(runtime) {
+		return nil
+	}
+	kube, err := kubeClientFromRuntime()
+	if err != nil {
+		return errors.Wrap(err, "kube client for overlay gateway pod wait")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), overlayNet1WaitTimeout)
+	defer cancel()
+	if err := waitOverlayGatewayPodsNet1(ctx, kube); err != nil {
+		logger.Errorf("overlay-parent: %v", err)
 		return err
 	}
 	logger.Infof("overlay-parent: every overlay gateway pod runs with %s again", overlayLANInterface)
@@ -134,6 +155,15 @@ func overlayDirectPreTasks() []task.Interface {
 			Name:   "MigrateOverlayBridgeToDirect",
 			Desc:   "Move the overlay parent from the legacy bridge to the wired NIC",
 			Action: new(network.MigrateBridgeToDirect),
+		},
+		// The daemon's host address check may have pointed the host name at
+		// another interface while the NIC was between the bridge and its own
+		// address; write the entry the upgrade started with again.
+		&task.LocalTask{
+			Name:   "ReassertHostsAfterMigration",
+			Desc:   "Point the host name at the wired NIC address again",
+			Action: new(terminus.UpdateKubeKeyHosts),
+			Retry:  5,
 		},
 		&task.LocalTask{
 			Name:   "EnsureOverlayAltname",
@@ -157,6 +187,11 @@ func overlayDirectPostTasks() []task.Interface {
 			Name:   "RecreateOverlayGatewayPodsAfterMigration",
 			Desc:   "Recreate overlay gateway pods on the wired parent",
 			Action: new(recreateOverlayGatewayPodsAfterMigration),
+		},
+		&task.LocalTask{
+			Name:   "WaitOverlayGatewayPodsNet1",
+			Desc:   "Wait for the overlay gateway pods to run with their LAN interface",
+			Action: new(waitOverlayGatewayPodsNet1AfterMigration),
 			Retry:  5,
 			Delay:  10 * time.Second,
 		},
