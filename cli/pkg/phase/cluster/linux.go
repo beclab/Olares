@@ -89,6 +89,7 @@ func (l *linuxInstallPhaseBuilder) installGpuPlugin() phase {
 func (l *linuxInstallPhaseBuilder) installTerminus() phase {
 	return []module.Module{
 		&terminus.GetNATGatewayIPModule{},
+		&terminus.InstallGenericDevicePluginModule{},
 		&terminus.InstallAccountModule{},
 		&terminus.InstallSettingsModule{},
 		&terminus.InstallOsSystemModule{},

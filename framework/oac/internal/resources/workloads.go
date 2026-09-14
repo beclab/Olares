@@ -5,7 +5,10 @@ import (
 	"fmt"
 	"sort"
 
+	apimanifest "github.com/beclab/api/manifest"
 	"helm.sh/helm/v3/pkg/kube"
+	appsv1 "k8s.io/api/apps/v1"
+	"k8s.io/client-go/kubernetes/scheme"
 )
 
 // CollectWorkloadNames returns the set of Deployment and StatefulSet names
@@ -62,6 +65,86 @@ func CheckWorkloadReplicas(list kube.ResourceList, replicas map[string]int32) er
 			"workloadReplicas entry %q does not match any rendered Deployment/StatefulSet",
 			name,
 		))
+	}
+
+	return errors.Join(errs...)
+}
+
+// CheckWorkloadOptions validates the parts of workloadOptions that depend on
+// the rendered workload: exact key coverage, target container names, and the
+// single-replica/Recreate constraints required by instance device resources.
+func CheckWorkloadOptions(list kube.ResourceList, options apimanifest.WorkloadOptions) error {
+	workloads := CollectWorkloadNames(list)
+	var errs []error
+
+	for name := range workloads {
+		if _, ok := options[name]; !ok {
+			errs = append(errs, fmt.Errorf("workloadOptions is missing workload %q", name))
+		}
+	}
+	for name := range options {
+		if _, ok := workloads[name]; !ok {
+			errs = append(errs, fmt.Errorf("workloadOptions entry %q does not match any rendered Deployment/StatefulSet", name))
+		}
+	}
+
+	for _, r := range list {
+		kind := r.Object.GetObjectKind().GroupVersionKind().Kind
+		if kind != KindDeployment && kind != KindStatefulSet {
+			continue
+		}
+		option, ok := options[r.Name]
+		if !ok {
+			continue
+		}
+
+		var containerNames map[string]struct{}
+		var deploymentStrategy appsv1.DeploymentStrategyType
+		switch kind {
+		case KindDeployment:
+			var deployment appsv1.Deployment
+			if err := scheme.Scheme.Convert(r.Object, &deployment, nil); err != nil {
+				return err
+			}
+			containerNames = make(map[string]struct{}, len(deployment.Spec.Template.Spec.Containers))
+			for _, container := range deployment.Spec.Template.Spec.Containers {
+				containerNames[container.Name] = struct{}{}
+			}
+			deploymentStrategy = deployment.Spec.Strategy.Type
+		case KindStatefulSet:
+			var statefulSet appsv1.StatefulSet
+			if err := scheme.Scheme.Convert(r.Object, &statefulSet, nil); err != nil {
+				return err
+			}
+			containerNames = make(map[string]struct{}, len(statefulSet.Spec.Template.Spec.Containers))
+			for _, container := range statefulSet.Spec.Template.Spec.Containers {
+				containerNames[container.Name] = struct{}{}
+			}
+		}
+
+		hasDevice := false
+		for i, capability := range option.Allow {
+			for _, container := range capability.Containers {
+				if _, exists := containerNames[container]; !exists {
+					errs = append(errs, fmt.Errorf("workloadOptions.%s.allow[%d] targets unknown container %q", r.Name, i, container))
+				}
+			}
+			if capability.Type == apimanifest.WorkloadAllowDeviceSerial ||
+				capability.Type == apimanifest.WorkloadAllowDeviceVideo ||
+				capability.Type == apimanifest.WorkloadAllowDeviceAudio ||
+				capability.Type == apimanifest.WorkloadAllowDeviceHID {
+				hasDevice = true
+			}
+		}
+		if !hasDevice {
+			continue
+		}
+		if option.Replicas == nil || *option.Replicas != 1 {
+			errs = append(errs, fmt.Errorf("workloadOptions.%s.replicas must be 1 when a device capability is declared", r.Name))
+		}
+		if kind == KindDeployment && deploymentStrategy != appsv1.RecreateDeploymentStrategyType {
+			errs = append(errs, fmt.Errorf("Deployment %q must use strategy.type=Recreate when a device capability is declared", r.Name))
+		}
 	}
 
 	return errors.Join(errs...)

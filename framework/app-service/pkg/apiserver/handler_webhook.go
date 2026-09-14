@@ -102,7 +102,6 @@ func (h *Handler) mutate(ctx context.Context, req *admissionv1.AdmissionRequest,
 		Allowed: true,
 		UID:     req.UID,
 	}
-
 	if pod.Spec.HostNetwork && !strings.HasPrefix(req.Namespace, "user-space-") {
 		klog.Errorf("Pod with uid=%s namespace=%s has HostNetwork enabled, that's DENIED", proxyUUID, req.Namespace)
 		return h.sidecarWebhook.AdmissionError(req.UID, errors.New("HostNetwork Enabled Unsupported"))
@@ -384,6 +383,7 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 		Allowed: true,
 		UID:     req.UID,
 	}
+	var attachmentPatch []byte
 
 	// cleanupAndReturn emits remove patches for any GPU-related fields the
 	// gpu-limit webhook may have injected on a prior install/upgrade. We
@@ -403,7 +403,7 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 		if len(patchBytes) > 0 {
 			klog.Infof("[gpu-limit] emitting cleanup patch namespace=%s name=%s kind=%s patch=%s",
 				req.Namespace, req.Name, req.Kind.Kind, string(patchBytes))
-			h.sidecarWebhook.PatchAdmissionResponse(resp, patchBytes)
+			h.sidecarWebhook.PatchAdmissionResponse(resp, combineJSONPatches(attachmentPatch, patchBytes))
 		}
 		return resp
 	}
@@ -417,6 +417,13 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 	if appcfg == nil {
 		klog.Error("get appcfg is empty")
 		return resp
+	}
+	attachmentPatch, err = h.createAttachmentPatch(ctx, req, tpl, appcfg)
+	if err != nil {
+		return h.sidecarWebhook.AdmissionError(req.UID, err)
+	}
+	if len(attachmentPatch) > 0 {
+		h.sidecarWebhook.PatchAdmissionResponse(resp, attachmentPatch)
 	}
 
 	appName := appcfg.AppName
@@ -514,6 +521,9 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 			// klog.Error(err)
 			// return h.sidecarWebhook.AdmissionError(req.UID, err)
 		}
+		if existing := tpl.Spec.NodeSelector[corev1.LabelHostname]; existing != "" && existing != allocations[0].NodeName {
+			return h.sidecarWebhook.AdmissionError(req.UID, fmt.Errorf("attachment node %s conflicts with compute allocation node %s", existing, allocations[0].NodeName))
+		}
 		patchBytes, err = appendNodeSelectorPatch(patchBytes, tpl, allocations[0].NodeName)
 		if err != nil {
 			klog.Errorf("append node selector patch error %v", err)
@@ -522,7 +532,7 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 	}
 	klog.Info("patchBytes:", string(patchBytes))
 	if len(patchBytes) > 0 {
-		h.sidecarWebhook.PatchAdmissionResponse(resp, patchBytes)
+		h.sidecarWebhook.PatchAdmissionResponse(resp, combineJSONPatches(attachmentPatch, patchBytes))
 	}
 	return resp
 }

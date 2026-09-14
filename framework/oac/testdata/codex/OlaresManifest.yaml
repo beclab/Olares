@@ -1,0 +1,166 @@
+olaresManifest.version: '0.12.0'
+olaresManifest.type: app
+apiVersion: 'v3'
+
+workloadReplicas:
+  codex: 1
+  terminal: 1
+metadata:
+  name: codex
+  icon: https://app.cdn.olares.com/appstore/codex/icon.png
+  description: OpenAI's lightweight coding agent that runs in your terminal
+  appid: codex
+  title: Codex CLI
+  version: 1.0.19
+  categories:
+  - Developer Tools
+  - Productivity_v112
+  - agents
+  tags:
+  - coding
+  - framework
+
+entrances:
+- name: terminal
+  host: terminal
+  port: 80
+  title: Codex CLI
+  icon: https://app.cdn.olares.com/appstore/codex/icon.png
+  openMethod: window
+  authLevel: internal
+spec:
+  versionName: '0.149.1'
+  fullDescription: |
+    **Overview**
+    Codex CLI is OpenAI's lightweight, open-source coding agent that runs locally in your terminal. It understands your codebase, executes routine tasks through natural language, and helps you ship faster while staying in flow.
+
+    **Key Features**
+    - Terminal-native TUI with streaming tool output, slash commands, interrupt-and-redirect, and rich diff review.
+    - Real file edits, shell execution, git workflows, and test runs driven by natural language.
+    - MCP-compatible tool calling and reusable agent instructions via AGENTS.md / `.codex/skills`.
+    - Works with a ChatGPT Plus / Pro / Business / Edu / Enterprise plan (OAuth) or an OpenAI API key.
+    - Workspace image ships common language runtimes and build toolchains (Python, Node.js, Go, Rust, OpenJDK 21, Ruby, PHP, Lua) plus database clients (PostgreSQL, MySQL/MariaDB, Redis), git-lfs, protobuf compiler, Gradle, tmux, dig/ss/nc, shellcheck, clang-format/tidy, graphviz, and extra -dev headers (libpq, MySQL client, curl, ICU, LDAP) so agents can run typical dev commands without root.
+    - Optional Docker-in-Docker sidecar (`ENABLE_DIND`, default on): run `docker build`, `docker compose`, and containerized dev stacks from the terminal.
+
+    **First-time Setup**
+    Open the `Codex CLI` entrance and run `codex` to launch the OAuth login flow ("Sign in with ChatGPT"), or set `OPENAI_API_KEY` in the app environment variables and restart.
+
+    **Use a Local Model (Ollama / OpenAI-compatible Gateway)**
+    To route Codex at a local Ollama, Olares Router, or any OpenAI-compatible `/v1` proxy, set these app env vars — no per-session `export`/`unset`. Blank values are omitted from the container and the managed `~/.codex/config.toml` block is removed, so Codex falls back to ChatGPT OAuth / the official API.
+
+    - `OPENAI_BASE_URL` = `http://<your-shared-domain>/v1` (shared entrance of an Ollama / Router / vLLM app)
+    - `OPENAI_API_KEY` = dummy or real key the gateway expects (e.g. `ollama` for many Ollama proxies)
+    - `CODEX_MODEL` = `qwen3-coder:30b` (or the model that gateway exposes)
+
+    **Switch back to cloud**
+    Clear `OPENAI_BASE_URL` and `CODEX_MODEL`, keep or set a real `OPENAI_API_KEY` (or leave it blank and run `codex login`), then restart. The next pod start strips the managed local-routing block.
+
+    **If Codex says it lacks agentic execution capabilities**
+    In the Codex terminal, before running `codex`, reinstall the official standalone CLI into the workspace bin:
+
+    `curl -fsSL https://chatgpt.com/codex/install.sh | CODEX_INSTALL_DIR=/opt/data/.local/bin sh`
+
+    This installs the latest complete package (including code-mode host and other dependencies) onto the persisted volume and repairs a binary-only install.
+
+  upgradeDescription: |
+    **v1.0.17**
+
+    **Codex CLI**
+    - Pin install version from **0.147.0** to **0.149.1**.
+    - Switch `init-install-codex` from the GitHub musl binary tarball to OpenAI's official standalone installer (`https://chatgpt.com/codex/install.sh`). Existing installs that only had `codex` (and reported missing agentic execution capabilities) are repaired on upgrade.
+
+    **Base image (`beclab/harveyff-codex-base:0.5.9`, was 0.5.8)**
+    - Workspace / init image tag bumped to **0.5.9**.
+
+    **Local / cloud model routing**
+    - App env `OPENAI_BASE_URL` + `CODEX_MODEL` write a managed block at the **top** of `~/.codex/config.toml` (root keys must precede TOML tables). Leave them blank to switch back to ChatGPT OAuth / the official API.
+
+    **v1.0.12**
+
+    **Codex CLI**
+    - Pin install version from **0.146.0** to **0.147.0** (`init-install-codex` uses chart `appVersion`).
+
+    **Base image (`beclab/harveyff-codex-base:0.5.8`, was 0.5.7)**
+    - Baked `@olares/cli` upgraded to **1.12.7-cli.0** (from 1.12.6-cli.2).
+
+  developer: OpenAI
+  website: https://chatgpt.com/codex
+  sourceCode: https://github.com/openai/codex
+  submitter: Olares
+  locale:
+  - en-US
+  - zh-CN
+  - de-DE
+  - es-ES
+  - it-IT
+  - fr-FR
+  - ja-JP
+  doc: https://github.com/openai/codex/tree/main/docs
+  license:
+  - text: Apache-2.0
+    url: https://github.com/openai/codex/blob/main/LICENSE
+  requiredMemory: 3Gi
+  limitedMemory: 44Gi
+  requiredDisk: 1Gi
+  limitedDisk: 50Gi
+  requiredCpu: 500m
+  limitedCpu: 12
+  supportArch:
+  - amd64
+  - arm64
+permission:
+  appData: true
+  appCache: true
+  userData:
+  - Home
+  externalData: true
+options:
+  allowMultipleInstall: true
+  apiTimeout: 0
+  dependencies:
+  - name: olares
+    type: system
+    version: '>=1.12.6-0'
+envs:
+- envName: OPENAI_API_KEY
+  type: password
+  required: false
+  applyOnChange: true
+  editable: true
+  default: ""
+  description: "OpenAI API key for official cloud, or the bearer token a local gateway expects (e.g. ollama). Leave empty for ChatGPT OAuth login."
+- envName: OPENAI_BASE_URL
+  type: url
+  required: false
+  applyOnChange: true
+  editable: true
+  default: ""
+  description: "OpenAI-compatible API base URL for a local/self-hosted gateway (e.g. http://<shared-domain>/v1). Leave empty to use the official OpenAI / ChatGPT cloud endpoint."
+- envName: CODEX_MODEL
+  type: string
+  required: false
+  applyOnChange: true
+  editable: true
+  default: ""
+  description: "Default model (e.g. qwen3-coder:30b for a local gateway, or gpt-5-codex for cloud). Leave empty to use the Codex default."
+- envName: ENABLE_DIND
+  type: bool
+  required: false
+  applyOnChange: true
+  editable: true
+  default: "true"
+  description: "Run a privileged Docker-in-Docker sidecar in the pod. Exposes docker CLI in the terminal via DOCKER_HOST=tcp://localhost:2375 (uses extra CPU/RAM/disk under app data). Disable if your environment forbids privileged containers"
+- envName: ALLOW_HOME_DIR_ACCESS
+  type: bool
+  required: false
+  applyOnChange: true
+  editable: true
+  default: "false"
+  description: "Allow Codex CLI to read/write the Olares Home directory"
+- envName: ALLOW_EXTERNAL_DIR_ACCESS
+  type: bool
+  required: false
+  applyOnChange: true
+  editable: true
+  default: "false"
+  description: "Allow Codex CLI to read/write the Olares External directory"

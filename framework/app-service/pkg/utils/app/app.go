@@ -1125,9 +1125,11 @@ func toApplicationConfig(opt *ConfigOptions, chart string, cfg *appcfg.AppConfig
 		LLMGatewaySupported:  cfg.Options.LLMGatewaySupported,
 		OverlayGateway:       cfg.OverlayGateway,
 		WorkloadReplicas:     cfg.WorkloadReplicas,
+		WorkloadOptions:      cfg.WorkloadOptions,
 		TemplateOnly:         cfg.Options.TemplateOnly,
 		Shared:               cfg.Options.Shared,
 	}
+	appConfig.OverlayGateway = appConfig.EffectiveOverlayGateway()
 
 	// Shared apps are themselves the destination of cross-namespace shared
 	// traffic and need the same downstream treatment (mesh sidecar,

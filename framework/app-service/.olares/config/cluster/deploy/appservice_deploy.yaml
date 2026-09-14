@@ -215,6 +215,8 @@ spec:
           value: "beclab/ws-gateway:v1.0.5"
         - name: UPLOAD_CONTAINER_IMAGE
           value: "beclab/upload:v1.0.3"
+        - name: BLUEZ_DBUS_PROXY_IMAGE
+          value: "beclab/bluez-dbus-proxy:0.1.0"
         - name: JOB_IMAGE
           value: "beclab/upgrade-job:0.1.7"
         - name: MESH_IN_AGENT_IMAGE
