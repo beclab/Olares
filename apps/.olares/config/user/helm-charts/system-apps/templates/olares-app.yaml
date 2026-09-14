@@ -269,7 +269,7 @@ spec:
           imagePullPolicy: IfNotPresent
           name: check-auth
         - name: olares-app-init
-          image: beclab/system-frontend:v1.11.50
+          image: beclab/system-frontend:v1.11.53
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
