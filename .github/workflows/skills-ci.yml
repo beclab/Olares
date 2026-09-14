@@ -49,7 +49,7 @@ jobs:
       - name: Validate skill content
         run: |
           python3 -m pip install -r cli/skills/requirements.txt
-          python3 -m unittest cli/skills/test_validate.py
+          python3 -m unittest cli/skills/test_validate.py cli/skills/test_listing.py
           python3 cli/skills/validate.py
           bash cli/skills/publish.sh --dry-run
 
