@@ -26,6 +26,12 @@ Before submission, finalize the user-facing English fields with the [Manifest co
 ## Step 1: Prepare the OAC
 
 1. Ensure `olares-cli chart lint ./<app>` passes after market polish
+   Then run the [listing check script](../scripts/check_listing.py) with Python 3 and PyYAML installed (`python3 -m pip install PyYAML` if needed). Resolve the script path relative to this skill's directory:
+
+   ```bash
+   python3 <skill-dir>/scripts/check_listing.py ./<app>
+   ```
+
 2. Confirm root/English copy drift is resolved, `spec.locale` matches complete locale files, and upgrade notes describe user impact rather than chart implementation
 3. Package (optional for the PR — the folder is what gets committed, not the `.tgz`):
    ```bash
