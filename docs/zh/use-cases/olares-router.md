@@ -1,7 +1,7 @@
 ---
 outline: [2, 3]
 title: 使用 Olares Router 作为你的 AI 网关
-description: 了解 Olares Router 是什么，如何通过一个 OpenAI 兼容端点调用 LLM、音频、创意和工具能力，以及不同调用方应使用哪种凭证。
+description: 了解 Olares Router 是什么，如何通过一个统一访问层调用 LLM、音频、创意和工具能力，以及不同调用方应使用哪种凭证。
 head:
   - - meta
     - name: keywords
@@ -14,23 +14,35 @@ head:
 
 # 使用 Olares Router 作为你的 AI 网关
 
-Olares Router 是内置于 Olares 的 AI 网关，随 v1.12.7 版本提供。它将 Olares 上的所有 AI 能力（无论本地还是云端）通过一个 OpenAI 兼容端点暴露出来。客户端从不直接连接本地模型或云厂商，而是连接 Router，由 Router 将每个请求路由到正确的后端。
+Olares Router 是内置于 Olares 的 AI 网关，随 v1.12.7 版本提供。它将 Olares 上的所有 AI 能力，无论本地还是云端，都通过同一个访问层暴露出来。客户端从不直接连接本地模型或云厂商，而是连接 Router，由 Router 将每个请求路由到正确的后端。
 
-## 为什么选择 Olares Router
+## 什么是 Olares Router
 
-许多用户在需要把应用连接到多家 AI 服务提供商时，会部署 LiteLLM 这类独立的 LLM 代理。有了 Router，这层额外的组件就不再需要了。Router 在 Olares 内部解决了同样的核心问题，并更进一步：
+要理解 Router 如何简化你的 AI 工作流，可以先看它在平台中的位置，以及它如何把不同的 AI 工作负载统一成标准能力。
 
-- **内置，而非外挂**：Router 随 Olares 一同到来。它将 AI 的访问和管理带入运行你应用和本地 AI 负载的同一套系统。LiteLLM 式的代理则是又一个需要部署、配置和维护的组件。
-- **本地 AI，自动发现**：Router 自动发现并同步已安装的模型和实用工具应用。代理则要求每个模型都必须先注册才能使用。
-- **内用身份，外用密钥**：Olares 内的应用使用平台身份，无需存储 API 密钥。Olares 外的客户端使用 Router 签发的 API 密钥，云厂商凭证始终留在 Router 内部。用代理时，每个调用者都是又一把需要签发、保存和轮换的密钥。
-- **调参集中在一处**：Router 中每个本地模型都有模型卡，可以编辑引擎参数和可调参数，或在界面中直接重启引擎。用代理时，启动参数在模型服务自己的配置里，每次试验都得在服务器上手动改配置、重启。
-- **新 AI 能力，同一端点**：Olares 支持的新模型、新模态和新 AI 实用工具都能通过 Router 暴露，无需任何新的部署。客户端使用同一访问层，平台侧集成由 Router 完成。代理也可以扩展，但每增加一项都是新一轮配置。
+### Router 的位置
 
-## 一个网关覆盖所有 AI 能力
+Router 是整个 AI 生态的中央调度层。所有流量都经由这一个网关，而不是直接面对分散的后端。
 
-现代的 AI 工作很少由一个模型包办。聊天模型起草文本，翻译模型做本地化，TTS 模型配音，视频模型生成画面，搜索工具为内容补上最新的事实依据。这样的工作负载需要一个访问层，方便地触达其中每个模型和工具。Router 正是这样的访问层。它把 AI 当作一组系统能力，按真实工作负载的使用方式来分组，每项能力都有自己的模型名。只需连接一次，调用任何能力都只需要这个名字。
+![Olares Router 架构](/images/manual/use-cases/router-archi.png#bordered)
 
-这些能力分为四类：
+如架构图所示，整个系统分为三层：
+
+1. **调用方（入向请求）**：无论请求来自 Olares 内的应用、已登录的 Olares 用户，还是 Olares 之外的第三方，都连接到 Router。调用方从不与后端基础设施直接交互。
+
+2. **Router（网关）**：请求到达后，Router 负责调用方鉴权、配额管理和能力路由。对于外部云模型，Router 使用保存在平台内部的凭证，确保这些密钥不会暴露给调用方。
+
+3. **模型后端（出向路由）**：Router 充当流量调度者，将请求分发到正确的目的地：
+   - **本地模型**：本地能力的请求被路由到已安装的模型应用（如 vLLM、SGLang 或 llama.cpp）。每个应用都带有一个 `model_console` 适配器，统一生命周期和 API 协议，并直接从平台的共享存储拉取模型权重。
+   - **云厂商**：远程模型的请求经由互联网安全地路由到 OpenAI 或 Anthropic 等厂商，由 Router 保存的凭证完成认证。
+
+### 一个网关覆盖所有 AI 能力
+
+LLM 之所以能收敛到标准 API，是因为单个模型通常就能完成任务，而多模态和功能性工具缺少这样的标准化。以音频工作流为例，它通常需要语音分离、增强、语音识别、文字转语音等多个模型。这些模型来自不同厂商，API 结构各不相同，也不存在通用接口。
+
+Router 作为 AI 生态的通用抽象层解决了这种碎片化。它把语言模型、音频和视频模型、实用工具统一暴露为同一个网关后面的系统能力，为所有 AI 工作负载提供一种标准格式。
+
+为了让整个生态井然有序、易于触达，Router 把这些统一的能力划分为四大类：
 
 | 分类 | 包含内容 | 示例 |
 | --- | --- | --- |
@@ -41,19 +53,23 @@ Olares Router 是内置于 Olares 的 AI 网关，随 v1.12.7 版本提供。它
 
 ![Router 的能力分类](/images/manual/use-cases/router-capabilities.png#bordered)
 
-## 鉴权方式
+## 为什么选择 Olares Router
 
-Router 如何验证调用方，调用方需要提供什么凭证，取决于请求来自哪里。
+Router 直接集成在 Olares 平台中，与你的应用和模型同处一套系统。它是一个平台级网关，统一管理访问、生命周期和多模态路由：
 
-| 调用方位置 | 工作原理 | <nobr>所需凭证</nobr> |
+- **身份与访问**：Router 复用 Olares 的身份体系。内部调用方使用平台身份完成鉴权，外部调用方使用 Router 签发的 API 密钥。底层云厂商的凭证隔离保存在 Router 内部，不会暴露给调用方。
+- **模型可观测性**：Router 与 Model Console 自动同步，发现已安装的模型。它提供界面调整或重启底层引擎，并在 Usage 页面按调用方追踪所有请求指标。
+- **统一的多模态能力**：Router 把语言、音频、视频模型以及搜索、嵌入等实用工具聚合在同一个访问层后面。客户端使用一种标准接口，按名字调用任何系统能力。
+
+## 调用方如何向 Router 鉴权
+
+通过 Router 的每一次调用都有明确的调用方，调用方需要提供什么，取决于它是谁。
+
+| 调用方 | Router 如何识别 | <nobr>所需凭证</nobr> |
 | --- | --- | --- |
-| <nobr>**Olares 中的应用**</nobr> | Olares 内部的每个请求都先经过平台，平台验证调用方后会在请求上盖一个身份头：对运行在 Olares 中的应用是 `X-Olares-App-ID`，对已登录用户是 `X-BFL-USER`。只有平台能添加这个头，因此无法伪造。Router 因此始终知道谁在调用，调用方无需再提供其他任何东西。 | 无 |
-| <nobr>**局域网设备**</nobr> | 请求经局域网到达，没有平台盖戳的身份。调用方出示一个 API 密钥（`Authorization: Bearer <api-key>`），Router 验证密钥并将调用记到密钥所有者名下。 | Router 签发的<br>API 密钥 |
-| **远程** | 来自互联网的请求同样没有平台盖戳的身份。调用方出示一个 API 密钥，Router 验证密钥并将调用记到密钥所有者名下。 | Router 签发的<br>API 密钥 |
-
-:::info 两种 API 密钥
-你为云厂商添加的密钥留在 Router 内部，永远不会到达调用方。调用方出示的始终是 Router 签发的密钥，Router 与云厂商通信时使用自己保存的凭证。
-:::
+| <nobr>**Olares 应用**</nobr> | 来自 Olares 内部的每个应用请求都先经过平台，平台验证调用方后会在请求上盖一个身份头 `X-Olares-App-ID`。只有平台能添加这个头，所以调用方无需再提供其他任何东西。 | 无 |
+| <nobr>**Olares 用户**</nobr> | 来自已登录 Olares 用户的每个请求同样先经过平台，平台验证调用方后会在请求上盖一个身份头 `X-BFL-USER`。只有平台能添加这个头，所以调用方无需再提供其他任何东西。Olares CLI 以同样的方式工作，用你的 Olares ID 认证一次，之后的每次调用都携带你的身份。 | 无 |
+| <nobr>**第三方**</nobr> | 既不是 Olares 应用也不是 Olares 用户的调用方，需要出示 Router 签发的 API 密钥（`Authorization: Bearer <api-key>`）。Router 验证密钥并将调用记到密钥所有者名下。删除密钥，访问随即终止。<br><br>你自己在 Olares 之外的设备，以及任何 Olares 之外的人，都是通过这种方式访问你的模型。 | Router 签发的<br>API 密钥 |
 
 ## 从 Router 获取连接信息
 
@@ -74,60 +90,26 @@ Router 如何验证调用方，调用方需要提供什么凭证，取决于请�
   ![How to call this model 窗口](/images/manual/use-cases/router-how-to-call-model.png#bordered)
 
 - **Model name**：从 **How to call this model** 窗口复制模型名称。或者在 **Default models** 页面为每类能力设置默认模型，然后使用 `default-chat` 这样的系统名称，而不是具体模型名。
-- **API key**：在 **API Keys** 页面创建。只有局域网或互联网的调用方需要。Olares 中的应用无需填写。
+- **API key**：在 **API keys** 页面创建。只有局域网或互联网的调用方需要。Olares 中的应用无需填写。
 
-## 配置客户端
+## 通过 Router 调用模型
 
-拿到连接信息后，下面的示例展示如何在每种调用方位置配置客户端。
+下面的示例展示每类调用方如何连接 Router 并调用模型。
 
 ### Olares 中的应用
 
-**配置**：OpenClaw，一个运行在 Olares 上的应用。在自定义提供商设置中，将模型指向 Router，无需 API 密钥：
+OpenClaw 是一个运行在 Olares 上的应用，它在自定义提供商设置中连接 Router。平台身份已经覆盖鉴权，所以只需要填写 base URL 和模型名：
 
 - **API Base URL**：`https://router.<your-olares-id>.olares.com/v1`
 - **Model ID**：`default-chat`
 
-**结果**：状态栏显示该会话以 `default-chat` 应答。
+会话随后以 `default-chat` 应答。
 
 ![OpenClaw 通过 Router 使用 default-chat 聊天](/images/manual/use-cases/router-client-connect-openclaw.png#bordered)
 
-### 局域网设备
+### Olares 用户
 
-**配置**：OpenCode，运行在与你 Olares 处于同一网络的 Mac 上。在配置文件 `opencode.jsonc` 中添加一个提供商条目，指向 `.local` 地址，并使用在 Router 中创建的 API 密钥：
-
-```jsonc
-{
-  "provider": {
-    "router": {
-      "npm": "@ai-sdk/openai-compatible",
-      "name": "Router",
-      "options": {
-        "baseURL": "http://router.<your-olares-id>.olares.local/v1",
-        "apiKey": "<your-api-key>"
-      },
-      "models": {
-        "default-chat": { "name": "Router-chat" }
-      }
-    }
-  }
-}
-```
-
-**结果**：Mac 上的 OpenCode 通过 `.local` 地址与 Router 通信，每次构建都显示配置中的显示名称 `Router-chat`。这些调用也会出现在 Router 的 **Usage** 页面，记在你名下。
-
-![OpenCode 通过 Router 的 default-chat 聊天](/images/manual/use-cases/router-client-connect-opencode.png#bordered)
-
-### 远程客户端
-
-:::tip
-这种场景下，要确保在 Olares Settings 中将 Router 入口的 **Authentication level** 设置为 **Public**。
-:::
-
-**配置**：本地网络之外的客户端，比如连接公共 Wi-Fi 的笔记本电脑。使用公网 base URL `https://router.<your-olares-id>.olares.com/v1`，搭配在 Router 中创建的 API 密钥。同一个密钥在任何地方都通用。
-
-## 跳过客户端：使用 Olares CLI 调用
-
-有时候你只是想看看有什么可以调用，或者马上试一个模型，而不是配置客户端。Olares CLI 是最快的方式，不需要 base URL，不需要 API 密钥，只用你已登录的身份（`X-BFL-USER`）。只需要三条命令：
+Olares 用户也可以用 Olares CLI 调用模型，不需要 base URL，不需要 API 密钥，只靠平台盖戳的用户身份。
 
 1. 使用你的 Olares ID 认证 Olares CLI。CLI 会保存地址和你的身份，供后续调用使用。
 
@@ -173,3 +155,20 @@ Router 如何验证调用方，调用方需要提供什么凭证，取决于请�
 
     unsloth/Qwen3.8-27B-GGUF:UD-Q4_K_XL
     ```
+
+### Olares 之外的调用方
+
+Olares 之外的任何调用方都需要两样东西，一个匹配所在位置的 base URL，和一个 Router 签发的 API 密钥。base URL 在局域网和互联网之间不同，但密钥在任何地方都通用。
+
+:::tip
+对于通过互联网访问 Router 的调用方，需要在 Olares Settings 中将 Router 入口的 **Authentication level** 设置为 **Public**。局域网访问不受影响。
+:::
+
+这个示例使用公网 URL。在同一局域网的设备上，改用连接信息中的 `.local` base URL。
+
+```bash
+curl https://router.<your-olares-id>.olares.com/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <your-api-key>" \
+  -d '{"model": "default-chat", "messages": [{"role": "user", "content": "Hello"}]}'
+```

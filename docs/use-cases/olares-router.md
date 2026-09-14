@@ -23,7 +23,7 @@ Router functions as the central dispatch layer for your entire AI ecosystem. Rat
 ![Olares Router architecture](/images/manual/use-cases/router-archi.png#bordered)
 
 As shown in the architecture above, the system operates through three core layers:
-1. **Callers (The inbound request)**: Whether the request comes from an internal application, a user via the Olares CLI, or a third-party client over the network, it connects to Router. Callers never interact with the backend infrastructure directly.
+1. **Callers (The inbound request)**: Whether the request comes from an app inside Olares, a signed-in Olares user, or a third party outside it, it connects to Router. Callers never interact with the backend infrastructure directly.
 2. **Router (The gateway)**: Once a request arrives, Router handles the caller's authentication, quota management, and capability routing. For external cloud models, Router uses credentials securely stored within the platform, ensuring these secrets are never exposed to the caller. 
 3. **Model Backends (The outbound routing)**: Router acts as a traffic director, dispatching the request to the correct destination:
    * **Local Models:** Requests for local capabilities are routed to installed model applications (like vLLM, SGLang, or llama.cpp). Each application includes a `model_console` adapter that standardizes lifecycles and API protocols, and pulls model weights directly from the platform's shared storage.
@@ -50,7 +50,7 @@ To keep your ecosystem organized and accessible, Router groups these unified cap
 
 Router is integrated directly into the Olares platform alongside your applications and models. It functions as a platform-level gateway that manages access, lifecycles, and multi-modal routing:
 
-- **Identity and access**: Router utilizes the Olares identity system. Internal applications authenticate using their platform identity, and external callers use Router-issued API keys. Underlying cloud provider credentials are kept isolated within Router and are never exposed to callers.
+- **Identity and access**: Router utilizes the Olares identity system. Internal callers authenticate using their platform identity, and external callers use Router-issued API keys. Underlying cloud provider credentials are kept isolated within Router and are never exposed to callers.
 - **Model observability**: Router syncs automatically with the Model Console to discover installed models. It provides a UI to tune or restart underlying engines and tracks all request metrics by caller on the Usage page.
 - **Unified multi-modal capabilities**: Router aggregates language, audio, video models, as well as utility tools (like search and embeddings), behind a single access layer. Clients use one standard interface and can invoke any system capability by its name.
 
@@ -83,7 +83,7 @@ Connecting to Router generally takes three parameters, and Router provides a ded
   ![The How to call this model window](/images/manual/use-cases/router-how-to-call-model.png#bordered)
 
 - **Model name**: Copy the model name from the **How to call this model** window. Or set a default model for each capability on the **Default models** page, and use the system name like `default-chat` instead of a specific model name.
-- **API key**: Created on the **API Keys** page. Required only for callers from the LAN or the internet. Apps in Olares do not need to enter API keys.
+- **API key**: Created on the **API keys** page. Required only for callers from the LAN or the internet. Apps in Olares do not need to enter API keys.
 
 ## Call models through Router
 
