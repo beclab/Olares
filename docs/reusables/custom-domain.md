@@ -136,7 +136,13 @@ To avoid activation failures, ensure that both your phone and the Olares device 
    - If your Olares device is connected to a public IP network, this step will be skipped automatically.
    :::
 
-6. Follow the on-screen instructions to set the login password for Olares, then tap **Complete**.
+6. Select the language for Olares. Olares supports English, Simplified Chinese, German, Spanish, Italian, French, and Japanese.
+
+   :::info
+   This selection does not change the language of the LarePass app. The remaining activation steps stay in the current LarePass language. After activation, Olares Desktop uses the language selected here.
+   :::
+
+7. Follow the on-screen instructions to set the login password for Olares, then tap **Complete**.
 
    ![ISO Activate-2](/images/manual/larepass/iso-activate-4.png#bordered)
 

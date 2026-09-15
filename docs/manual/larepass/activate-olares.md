@@ -46,14 +46,20 @@ If you reinstalled Olares using an ISO file or a Docker image, follow these step
 4. On your Olares activation page, tap **Discover nearby Olares**. LarePass will list the detected Olares instances in the same network.
 5. Select the target Olares instance from the list and tap **Install now**.
 6. When the installation completes, click **Activate now**.
-7. In the **Select a reverse proxy** dialog, select a node that is closer to your geographical location. The installer will then configure HTTPs certificate and DNS for Olares.
+7. In the **Select a reverse proxy** dialog, select a node that is closer to your geographical location. The installer will then configure HTTPS certificate and DNS for Olares.
 
     :::tip Note
     - You can change this setting later on the [Change reverse proxy](../olares/settings/change-frp.md) page in Olares.
     - If your Olares device is connected to a public IP network, this step will be skipped automatically.
     :::
 
-8. Follow the on-screen instructions to reset the login password for Olares, and then tap **Complete**.
+8. Select the language for Olares. Olares supports English, Simplified Chinese, German, Spanish, Italian, French, and Japanese.
+
+    :::info
+    This selection does not change the language of the LarePass app. The remaining activation steps stay in the current LarePass language. After activation, Olares Desktop uses the language selected here.
+    :::
+
+9. Follow the on-screen instructions to reset the login password for Olares, and then tap **Complete**.
 
     ![Reset password](/images/manual/larepass/docker-reset-password.png#bordered)
 

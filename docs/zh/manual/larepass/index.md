@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: 下载适用于 iOS、Android、macOS、Windows 或 Linux 的 LarePass，并查找所需的账户设置指南。
+description: 下载适用于 iOS、Android、macOS、Windows 或 Linux 的 LarePass，更改语言并查找账户设置指南。
 head:
   - - meta
     - name: keywords
@@ -35,6 +35,15 @@ LarePass 是用于创建和管理 Olares ID、激活 Olares，以及在手机和
 :::
 
 请从 [LarePass 官网](https://www.olares.cn/larepass)下载最新 Linux 桌面客户端。
+
+## 更改语言
+
+LarePass 支持英语、简体中文、德语、西班牙语、意大利语、法语和日语。更改语言只会影响当前设备上的 LarePass，不会更改 Olares 系统语言。
+
+- **手机端**：进入**设置** > **通用** > **语言**，然后选择所需语言。
+- **桌面端**：进入**设置** > **语言**，然后选择所需语言。
+
+更改会立即生效。
 
 ## 设置账户
 
