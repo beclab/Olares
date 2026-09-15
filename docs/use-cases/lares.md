@@ -18,7 +18,7 @@ As a fully autonomous agent, Lares handles both quick, everyday tasks and comple
 
 Review the following requirements and considerations.
 
-- **Prerequisites**: Ensure Router is installed and at least one model is connected.
+- **Prerequisites**: Your Olares is running v1.12.7 or later, with Router installed and at least one model connected.
 - **One task at a time**: Local AI models share accelerator resources through time slicing and can only process one request at a time.
     - **Queuing in Lares**: Lares handles one task at a time. If a task is running, new requests wait in line and start automatically when the current one finishes.
     - **Running concurrently**: To run Lares and other agents at the same time, connect them to different models.
