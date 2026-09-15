@@ -23,17 +23,17 @@ Router functions as the central dispatch layer for your entire AI ecosystem. Rat
 ![Olares Router architecture](/images/manual/use-cases/router-archi1.png#bordered)
 
 As shown in the architecture above, the system operates through three core layers:
-1. **Callers (The inbound request)**: Whether the request comes from an app inside Olares, a signed-in Olares user, or a third party outside it, it connects to Router. Callers never interact with the backend infrastructure directly.
-2. **Router (The gateway)**: Once a request arrives, Router handles the caller's authentication, quota management, and capability routing. For external cloud models, Router uses credentials securely stored within the platform, ensuring these secrets are never exposed to the caller. 
-3. **Model Backends (The outbound routing)**: Router acts as a traffic director, dispatching the request to the correct destination:
-   * **Local Models:** Requests for local capabilities are routed to installed model applications (like vLLM, SGLang, or llama.cpp). Each application includes a `model_console` adapter that standardizes lifecycles and API protocols, and pulls model weights directly from the platform's shared storage.
-   * **Cloud Providers:** Requests for remote models are securely routed across the internet to providers like OpenAI or Anthropic, authenticated by Router's stored credentials.
+1. **Callers**: Whether the request comes from an app inside Olares, a signed-in Olares user, or a third party outside it, it connects to Router. Callers never interact with the backends directly.
+2. **Router**: Every call enters through this one gateway. Router handles caller authentication, access control, and quota management. It normalizes interfaces from every source and modality into one standard API, then routes the call to the named capability.
+3. **Backend capabilities**: Router dispatches each request to the corresponding destination as follows:
+    - **Local Capabilities**: Requests for local workloads are routed to specific backend capability based on the task. LLM and Audio run on local inference engines managed by the Model Console, FlowStudio runs on its own workflow runtime, and Tools are served by installed tool apps.
+    - **External Providers**: Requests for remote models are routed to cloud platforms, such as OpenAI, ElevenLabs, Google Vertex AI, and Tavily.
 
 ### One gateway for every AI capability
 
-While LLMs have converged on standard APIs because a single model usually completes the task, multi-modal and functional tools lack this standardization. For example, an audio workflow typically requires separate models for voice separation, enhancement, speech recognition, and text to speech. These models come from different providers with different API structures, and there is no universal interface.
+While LLMs have converged on standard APIs because a single model usually completes the task, multi-modal and functional tools lack this standardization. For example, an audio workflow typically requires separate models for voice separation, enhancement, speech recognition, and text to speech. These models come from different providers with different API structures, and there is no common interface.
 
-Router solves this fragmentation by acting as a universal abstraction layer for your AI ecosystem. It takes language models, audio/video models, and utility tools, and exposes them as unified system capabilities behind a single gateway. This provides one standard format for all your AI workloads.
+Router solves this fragmentation by acting as an abstraction layer over your entire AI ecosystem. It takes language models, audio/video models, and utility tools, and exposes them as unified system capabilities behind a single gateway. This provides one standard format for all your AI workloads.
 
 To keep your ecosystem organized and accessible, Router groups these unified capabilities into four core categories:
 
@@ -61,7 +61,7 @@ Every call through Router has an identified caller, and what the caller needs to
 | Caller | How Router identifies it | <nobr>Credential needed</nobr> |
 | --- | --- | --- |
 | <nobr>**Olares apps**</nobr> | The platform stamps an identity header `X-Olares-App-ID` onto every request from an app inside Olares, so the caller needs to provide nothing else. | None |
-| <nobr>**Olares users**</nobr> | The platform stamps an identity header `X-BFL-USER` onto every request from the signed-in Olares users, so the caller needs to provide nothing else. | None |
+| <nobr>**Olares users**</nobr> | The platform stamps an identity header `X-BFL-USER` onto every request from a signed-in Olares user, so the caller needs to provide nothing else. | None |
 | <nobr>**Third parties**</nobr> | A caller that is neither an Olares app nor an Olares user presents a Router-issued API key (`Authorization: Bearer <api-key>`). Router validates the key and attributes the call to its owner. Delete the key and the access will end.<br><br>This covers your own devices outside Olares and anyone you share the models with. | Router-issued<br>API key |
 
 ## Get connection details from Router
@@ -79,15 +79,11 @@ Connecting to Router takes three parameters:
 
 ## Call models through Router
 
-The examples below show how each type of caller connects to and calls models through Router.
-
 ### Apps in Olares
 
 OpenClaw, an app running on Olares, connects to Router in its custom provider settings. Its platform identity covers authentication, so only the base URL and a model name are needed:
 - **API Base URL**: `https://router.<your-olares-id>.olares.com/v1`
 - **Model ID**: `default-chat`
-
-The session then answers as `default-chat`.
 
 ### Callers outside Olares
 
@@ -105,13 +101,3 @@ curl https://router.<your-olares-id>.olares.com/v1/chat/completions \
   -H "Authorization: Bearer <your-api-key>" \
   -d '{"model": "default-chat", "messages": [{"role": "user", "content": "Hello"}]}'
 ```
-
-## Manage models and access
-
-Beyond routing requests, Router gives you one place to manage what is exposed and who can reach it:
-
-- **Default models**: Map each capability to a model behind a system name like `default-chat`. Apps call the system name, so you can swap, upgrade, or relocate the backing model without touching app configurations.
-- **API keys**: Issue and revoke keys for callers outside Olares. Every call is attributed to its key, so you can trace usage per caller and end access by deleting the key.
-- **Usage**: See every call by caller, model, and token consumption.
-
-Model app lifecycle, installation, engine parameters, and restarts, is managed in Model Console.
