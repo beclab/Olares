@@ -20,7 +20,7 @@ To understand how Router simplifies your AI workflows, it helps to look at where
 
 Router functions as the central dispatch layer for your entire AI ecosystem. Rather than interacting with fragmented backends directly, all traffic flows through this single gateway.
 
-![Olares Router architecture](/images/manual/use-cases/router-archi1.png#bordered)
+![Olares Router architecture](/images/manual/use-cases/router-archi2.png#bordered)
 
 As shown in the architecture above, the system operates through three core layers:
 1. **Callers**: Whether the request comes from an app inside Olares, a signed-in Olares user, or a third party outside it, it connects to Router. Callers never interact with the backends directly.
@@ -64,6 +64,29 @@ Every call through Router has an identified caller, and what the caller needs to
 | <nobr>**Olares users**</nobr> | The platform stamps an identity header `X-BFL-USER` onto every request from a signed-in Olares user, so the caller needs to provide nothing else. | None |
 | <nobr>**Third parties**</nobr> | A caller that is neither an Olares app nor an Olares user presents a Router-issued API key (`Authorization: Bearer <api-key>`). Router validates the key and attributes the call to its owner. Delete the key and the access will end.<br><br>This covers your own devices outside Olares and anyone you share the models with. | Router-issued<br>API key |
 
+## Understand model naming conventions
+
+When you view or configure models in Router, you will notice different naming formats. Router uses these names to identify the model's provider, origin, and routing logic. Understanding these rules is essential for configuring API requests and troubleshooting connections.
+
+### Names with a slash
+
+If a model name contains one or more slashes, Router parses the string by splitting it at the first slash:
+
+- **Provider**: The segment before the first slash
+- **Model Name**: Everything after the first slash
+
+For example:
+- `deepseek/deepseek-v4-flash`: The provider is `deepseek`, and the model name is `deepseek-v4-flash`.
+- `Olares/unsloth/Qwen3.5-27B-GGUF:Q4_K_M`: The provider is `Olares`, indicating a local workload. The remaining string (`unsloth/Qwen3.5-27B-GGUF:Q4_K_M`) is the exact model name, which corresponds to its Hugging Face repository path.
+
+### Names without a slash
+
+If a model name does not contain a slash, it is not a direct provider-to-model mapping. Instead, it represents a custom routing configuration. It will always fall into one of the following three categories:
+
+- **Default system names**: Names starting with the `default-` prefix, such as `default-chat` or `default-tts`, are system-level names. They automatically route requests to whichever model is currently assigned to that capability.
+- **Model groups**: A unified name created for load balancing. For example, you might create a group named `DeepSeek-V4` that distributes requests across a local model, an OpenAI-compatible API, and an OpenRouter endpoint. The group name itself contains no slashes.
+- **Aliases**: Custom, user-defined short names created for convenience. For example, renaming a long model name to a simple one.
+
 ## Get connection details from Router
 
 Connecting to Router takes three parameters:
@@ -76,28 +99,3 @@ Connecting to Router takes three parameters:
 
 - **Model name**: Copy the model name from the **How to call this model** window. Or set a default model for each capability on the **Default models** page, and use the system name like `default-chat` instead of a specific model name.
 - **API key**: Created on the **API keys** page. Required only for callers from the LAN or the internet. Apps in Olares do not need to enter API keys.
-
-## Call models through Router
-
-### Apps in Olares
-
-OpenClaw, an app running on Olares, connects to Router in its custom provider settings. Its platform identity covers authentication, so only the Base URL and a model name are needed:
-- **API Base URL**: `https://router.<your-olares-id>.olares.com/v1`
-- **Model ID**: `default-chat`
-
-### Callers outside Olares
-
-Anyone outside Olares needs two things: a Base URL matching their location, and a Router-issued API key. The Base URL differs between the LAN and the internet, but the key works from anywhere.
-
-:::tip
-For callers reaching Router over the internet, set the Router entrance's **Authentication level** to **Public** in Olares Settings. LAN access is not affected.
-:::
-
-This example uses the public URL. For a device in the same LAN, use the `.local` Base URL obtained from the connection details.
-
-```bash
-curl https://router.<your-olares-id>.olares.com/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <your-api-key>" \
-  -d '{"model": "default-chat", "messages": [{"role": "user", "content": "Hello"}]}'
-```
