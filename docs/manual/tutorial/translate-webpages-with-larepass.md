@@ -17,6 +17,10 @@ You also get the convenience of an integrated browser translator:
 - **Lightweight and multilingual:** Hy-MT2 supports translation across 33 languages. Its compact 1.8B size balances translation quality with the resources required to run it locally.
 - **Automatic integration:** Router uses your Olares identity to authenticate requests and automatically detects and configures the installed Hy-MT2 model. You do not need to configure model endpoints or API keys.
 
+:::info
+LarePass also supports Google and Microsoft. This guide focuses on private translation with Hy-MT2 running on your Olares.
+:::
+
 ## Prerequisites
 
 - [Install the LarePass browser extension](../install-larepass-browser-extension.md).

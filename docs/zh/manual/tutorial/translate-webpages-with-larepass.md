@@ -17,6 +17,10 @@ head:
 - **轻量且支持多语言**：Hy-MT2 支持 33 种语言互译，其 18 亿参数规模兼顾了翻译质量和本地运行所需的资源。
 - **自动集成**：Router 使用 Olares 身份验证请求，并自动识别和配置已安装的 Hy-MT2 模型，无需配置模型地址或 API 密钥。
 
+:::info
+LarePass 也支持 Google 和 Microsoft。本文重点介绍使用运行在自己 Olares 上的 Hy-MT2 进行私密翻译。
+:::
+
 ## 前提条件
 
 - [安装 LarePass 浏览器扩展](../install-larepass-browser-extension.md)。
