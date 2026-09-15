@@ -12,7 +12,7 @@ head:
 
 Lares is the official AI assistant for Olares, introduced in v1.12.7. With Router and a connected model, you state a goal in plain language, and Lares plans and carries out the task on your device.
 
-As a fully autonomous agent, Lares handles both quick, everyday commands and complex automations. Instead of just executing single instructions, it breaks down high-level goals, dynamically chains tools, and carries out end-to-end plans directly on your device. From the first request to the final result, everything happens in one conversation.
+As a fully autonomous agent, Lares handles both quick, everyday tasks and complex automations. Instead of just executing single instructions, it breaks down high-level goals, dynamically chains tools, and carries out end-to-end plans directly on your device. From the first request to the final result, everything happens in the conversation.
 
 ## Before you begin
 
@@ -105,3 +105,7 @@ Use web search to find 3 relevant public sources about preserving personal voice
 ```
 
 Lares should return source links and summaries from the selected search service. Once you verify that search works, you can ask Lares to complete complex research tasks that combine source discovery, page reading, and synthesis.
+
+## Learn more
+
+- Olares Router: Pending link
