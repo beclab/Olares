@@ -97,7 +97,7 @@ Olares One 支持以下电源管理功能：
 
 - **自动开机**：支持。接通电源或停电后恢复供电时，Olares One 可以自动开机。
   - 使用 Olares OS 时，需要 Olares OS 1.12.6 或更高版本以及 EC 固件 1.03 或更高版本。操作方法请参阅[管理硬件设置](hardware-settings.md#设置自动开机)。
-  - 使用 Ubuntu 时，需要通过命令行完成配置。操作方法请参阅 Ubuntu Server 或 Ubuntu Desktop 安装指南中的[配置自动开机](install-ubuntu-server.md#配置自动开机)章节。
+  - 使用 Ubuntu 时，需要通过命令行完成配置。操作方法请参阅 [Ubuntu Server](install-ubuntu-server.md#配置自动开机) 或 [Ubuntu Desktop](install-ubuntu-desktop.md#配置自动开机) 安装指南中的**配置自动开机**章节。
 - **局域网唤醒（WOL）**：安装 Ubuntu 或 Windows 的 Olares One 支持此功能。
 - **远程 KVM**：不支持。
 - **IPMI**：不支持。
