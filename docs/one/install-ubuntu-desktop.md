@@ -75,6 +75,39 @@ The graphical installation wizard guides you through replacing Olares OS on the 
 4. Remove the installation USB drive and press **Enter** when prompted. The system restarts and reboots into your fresh Ubuntu Desktop environment.
 5. Log in using the account credentials you set during configurations.
 
+## Configure automatic startup
+
+Configure Olares One to start automatically when AC power is connected or restored after a power outage.
+
+:::warning Olares One only
+These commands access the Embedded Controller (EC) directly and apply only to Olares One. Do not run them on another device.
+:::
+
+1. Confirm that the EC firmware is version 1.03 or later. To check the version or update the firmware, see [Manage BIOS and EC](update-firmware.md).
+2. Install `ioport`:
+
+   ```bash
+   sudo apt install ioport
+   ```
+
+3. Enable automatic startup:
+
+   ```bash
+   sudo outb 0x302 0x5e && sudo outb 0x303 0x01
+   ```
+
+   This writes the persistent automatic startup setting to the EC.
+
+The setting remains enabled across restarts, power outages, and operating system reinstalls. You might need to configure it again after updating the EC firmware.
+
+To optionally verify the setting:
+
+1. Fully shut down Olares One.
+2. Disconnect AC power briefly.
+3. Reconnect AC power.
+
+Olares One should start automatically.
+
 ## Resources
 
 - [Install Ubuntu Server on Olares One](install-ubuntu-server.md)

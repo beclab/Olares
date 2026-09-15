@@ -91,6 +91,17 @@ Olares OS 通过一键部署和工作流集成简化了本地 AI，这与标准 
 
 是的。Olares One 作为个人 AI 云运行，可可靠支持 24/7 连续运行，适用于大语言模型（LLM）托管等场景。
 
+### Olares One 支持带外管理吗？
+
+Olares One 支持以下电源管理功能：
+
+- **自动开机**：支持。接通电源或停电后恢复供电时，Olares One 可以自动开机。
+  - 使用 Olares OS 时，需要 Olares OS 1.12.6 或更高版本以及 EC 固件 1.03 或更高版本。操作方法请参阅[管理硬件设置](hardware-settings.md#设置自动开机)。
+  - 使用 Ubuntu 时，需要通过命令行完成配置。操作方法请参阅 Ubuntu Server 或 Ubuntu Desktop 安装指南中的[配置自动开机](install-ubuntu-server.md#配置自动开机)章节。
+- **局域网唤醒（WOL）**：安装 Ubuntu 或 Windows 的 Olares One 支持此功能。
+- **远程 KVM**：不支持。
+- **IPMI**：不支持。
+
 ### 使用 Olares One 是否有额外费用？
 
 没有。Olares OS 和系统更新完全免费。
