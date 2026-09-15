@@ -18,11 +18,11 @@ head:
 
 ## 原因
 
-Olares One 设备的底层操作系统运行正常，因此能够成功连接至路由器并显示在线。然而，核心 Olares 软件服务（Kubernetes 集群）意外卡死或崩溃。
+这些现象无法直接指向唯一原因。`ping` 成功只表示设备能够响应基础网络请求。系统服务未启动、部分 Pod 异常、资源不足，或访问链路故障，都可能导致 Olares 仍然无法访问。
 
 ## 解决方案
 
-按以下步骤收集诊断信息，以便 Olares 团队协助你恢复访问。
+先通过可用方式进入主机，再判断问题来自 Olares 内部服务还是网络访问链路。
 
 ### 步骤 1：尝试 SSH 连接
 
@@ -77,12 +77,20 @@ Olares One 设备的底层操作系统运行正常，因此能够成功连接至
 
 ### 步骤 3：检查系统 Pod 状态
 
-1. 登录成功后，输入以下命令并按回车键，查看所有命名空间下的 Pod 状态：
+1. 登录成功后，运行以下命令，查看所有命名空间下的 Pod 状态：
 
    ```bash
    kubectl get pods -A
    ```
 
-2. 查看 **STATUS** 列，找到状态不是 `Running` 的 Pod。
-3. 对完整命令输出拍摄清晰照片或截图，或手动记录异常 Pod。
-4. 通过[提交 GitHub Issue](https://github.com/beclab/Olares/issues/new) 将照片或记录连同问题描述发送给 Olares 团队。
+2. 查看 **STATUS** 列，并根据结果继续：
+
+   - 如果 Pod 显示 `CrashLoopBackOff`、`Error`、`ImagePullBackOff` 等错误状态，或长时间处于 `Pending`，只记录对应的 **NAMESPACE**、**NAME**、**STATUS** 和 **RESTARTS**。任务 Pod 显示 `Completed` 本身不代表异常。
+   - 如果没有 Pod 显示错误，且重启次数没有持续增加，问题更可能出在访问或网络链路。分别记录本地访问、Olares 域名和 LarePass 专用网络是否可用。
+
+3. 记录检查时间、时区和当前 Olares 版本。
+4. 按照[收集诊断信息](../collect-diagnostic-information.md)生成日志压缩包，并通过非公开渠道发送。
+
+:::warning 不要公开完整日志
+Pod 输出和系统日志可能包含 Olares ID、主机名、IP 地址、域名和应用元数据。公开 GitHub Issue 中可以描述现象并提供上面列出的有限字段，但不要附上完整命令输出或日志压缩包。
+:::

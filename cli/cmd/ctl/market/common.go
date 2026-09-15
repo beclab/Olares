@@ -3,8 +3,10 @@ package market
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
@@ -82,6 +84,33 @@ func resolveInstalledRow(ctx context.Context, mc *MarketClient, appName string) 
 	return row, nil
 }
 
+// resolveUpgradeSource picks the source `market upgrade` should target.
+//
+// Unlike stop / resume / uninstall, upgrade does expose `-s`, so an explicit
+// flag always wins: pointing an upgrade at a different source is legitimate
+// when a chart has been moved between them. But defaulting to the catalog is
+// not, which is what upgrade used to do. An app installed from `upload` has
+// no row in market.olares, so the default made version resolution read the
+// wrong source ("no versions found", or worse, some unrelated app's version)
+// and addressed the upgrade to a source that never held the chart.
+//
+// Lookup failures fall back to the catalog default rather than erroring:
+// preflightUpgrade re-reads the row immediately afterwards and owns the
+// not-installed / wrong-state messages, and duplicating them here would only
+// make the two disagree.
+func resolveUpgradeSource(ctx context.Context, opts *MarketOptions, mc *MarketClient, appName string) string {
+	if s := strings.TrimSpace(opts.Source); s != "" {
+		return s
+	}
+	if row, err := resolveInstalledRow(ctx, mc, appName); err == nil {
+		opts.info("Using source: %s (the source '%s' is installed from)", row.Source, appName)
+		return row.Source
+	}
+	source := resolveCatalogSource(opts)
+	opts.info("Using source: %s", source)
+	return source
+}
+
 func validateVersion(version string) error {
 	if _, err := semver.StrictNewVersion(strings.TrimPrefix(version, "v")); err != nil {
 		return fmt.Errorf("invalid version '%s': must be a valid semver (e.g. 1.0.0, 1.2.3)", version)
@@ -98,20 +127,92 @@ func validateEnvName(name string) error {
 	return nil
 }
 
-func resolveVersionInSource(mc *MarketClient, appName, source string) (string, error) {
+// unknownSourceError says a -s value names no source this cluster has, and
+// lists the ones it does. Without it a typo read as "app not found in source
+// 'bogussource'", which sends the reader looking for a missing app.
+type unknownSourceError struct {
+	Source string
+	Known  []string
+}
+
+func (e *unknownSourceError) Error() string {
+	return fmt.Sprintf("unknown market source '%s': this cluster has %s",
+		e.Source, strings.Join(e.Known, ", "))
+}
+
+// appNotInSourceError says the source exists and holds no such app. It is a
+// type rather than a message because the verbs that resolve a version have to
+// tell it apart from a version lookup that failed for some other reason: no
+// version of an absent app is reachable, so "use --version to specify" is not
+// the next step.
+type appNotInSourceError struct {
+	App    string
+	Source string
+}
+
+func (e *appNotInSourceError) Error() string {
+	return fmt.Sprintf("app '%s' not found in source '%s'", e.App, e.Source)
+}
+
+// knownSources returns the source ids this cluster actually has, read from the
+// per-user source map of /market/data -- the same keys `market list -a`
+// iterates. Nothing is hardcoded on purpose: --help used to publish a closed
+// list that omitted market.test while that source held 247 apps, so a
+// hand-written list is what produced the wrong error to begin with.
+//
+// Called only after a lookup has already failed, so the extra request never
+// lands on a working path.
+func knownSources(ctx context.Context, mc *MarketClient) []string {
+	resp, err := mc.GetMarketData(ctx)
+	if err != nil {
+		return nil
+	}
+	var data MarketDataResponse
+	if err := json.Unmarshal(resp.Data, &data); err != nil || data.UserData == nil {
+		return nil
+	}
+	sources := make([]string, 0, len(data.UserData.Sources))
+	for name := range data.UserData.Sources {
+		if name = strings.TrimSpace(name); name != "" {
+			sources = append(sources, name)
+		}
+	}
+	sort.Strings(sources)
+	return sources
+}
+
+// resolveVersionInSource returns the version the catalog holds for an app.
+//
+// versionFlagNarrows says whether passing --version instead would change what
+// the caller's verb does, which decides whether the failure may suggest it. It
+// does for install and upgrade. It does not for delete, where --version names
+// the request but removes every version regardless -- and following the
+// suggestion there turns a correct failure on an absent app into a success,
+// because the backend treats deleting nothing as done.
+func resolveVersionInSource(mc *MarketClient, appName, source string, versionFlagNarrows bool) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
 	appInfo, err := fetchAppInfo(ctx, mc, appName, source)
-	if err != nil {
-		return "", err
+	if err == nil {
+		if version, _ := appInfo["version"].(string); version != "" {
+			return version, nil
+		}
+		err = fmt.Errorf("app '%s' version not found in source '%s'", appName, source)
 	}
 
-	version, _ := appInfo["version"].(string)
-	if version == "" {
-		return "", fmt.Errorf("app '%s' version not found in source '%s'", appName, source)
+	// A missing source or a missing app is the whole reason no version came
+	// back, so it is reported as itself. Wrapping it in "cannot determine
+	// version" buries the cause under a symptom.
+	var unknownSource *unknownSourceError
+	var notInSource *appNotInSourceError
+	if errors.As(err, &unknownSource) || errors.As(err, &notInSource) {
+		return "", err
 	}
-	return version, nil
+	if versionFlagNarrows {
+		return "", fmt.Errorf("cannot determine version in source '%s': %w (use --version to specify)", source, err)
+	}
+	return "", fmt.Errorf("cannot determine version in source '%s': %w", source, err)
 }
 
 func fetchAppInfo(ctx context.Context, mc *MarketClient, appName, source string) (map[string]interface{}, error) {
@@ -127,7 +228,14 @@ func fetchAppInfo(ctx context.Context, mc *MarketClient, appName, source string)
 
 	apps, _ := result["apps"].([]interface{})
 	if len(apps) == 0 {
-		return nil, fmt.Errorf("app '%s' not found in source '%s'", appName, source)
+		// An empty result is the same reply for "no such source" and "no such
+		// app in it", so ask the cluster which of the two it was. A source
+		// list we cannot obtain leaves the app-level answer, which is the
+		// safer of the two to guess.
+		if known := knownSources(ctx, mc); len(known) > 0 && !containsSource(known, source) {
+			return nil, &unknownSourceError{Source: source, Known: known}
+		}
+		return nil, &appNotInSourceError{App: appName, Source: source}
 	}
 
 	appInfo, ok := apps[0].(map[string]interface{})
@@ -135,6 +243,15 @@ func fetchAppInfo(ctx context.Context, mc *MarketClient, appName, source string)
 		return nil, fmt.Errorf("failed to parse app '%s' info", appName)
 	}
 	return appInfo, nil
+}
+
+func containsSource(sources []string, source string) bool {
+	for _, s := range sources {
+		if strings.EqualFold(s, source) {
+			return true
+		}
+	}
+	return false
 }
 
 // appSupportsClone reports whether an app can be cloned. A regular

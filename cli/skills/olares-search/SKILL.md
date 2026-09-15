@@ -23,14 +23,23 @@ Use `olares-cli search <subcommand> --help` for syntax.
 
 > **Mental model:** `search drive` / `search sync` / `search knowledge` answer *"which file CONTAINS this text"* by querying the pre-built per-user index. `search app` answers *"which installed app matches this name"*. It is not lifecycle inventory (`market list --mine` / `market status`) or resource ranking (`dashboard applications`). To LIST or READ a known path, use [`olares-files`](../olares-files/SKILL.md) (`files ls` / `files cat` / `files download`).
 
+## Fast paths
+
+| Task | Read | First command |
+|---|---|---|
+| Find a file by name or content | this file | `olares-cli search drive "quarterly report" -o json` |
+| Find an installed app by its title | this file | `olares-cli search app music -o json` |
+| Find something in Wise | this file | `olares-cli search knowledge "retrieval" -o json` |
+| Tell "not indexed" from "not there" | this file, then [`olares-files`](../olares-files/SKILL.md) for the known path | `olares-cli settings search status -o json` |
+
 ## Verb index
 
-| Subcommand | Purpose | Key decision |
+| Subcommand | Purpose | Read when triggered |
 |---|---|---|
-| `drive` (`files`) | One search across Drive, Sync, Google Drive, and Dropbox | choose filename-only or aggregate based on intent |
-| `sync` | Sync (Seafile) libraries only | a narrowed view of what `drive` already covers |
-| `knowledge` (`wise`) | Wise/Knowledge content search | requires Olares 1.12.7+; aggregate only |
-| `app` | Visible installed-app title search | not lifecycle inventory |
+| `drive` (`files`) | One search across Drive, Sync, Google Drive, and Dropbox | [index coverage](#index-coverage-drive-only) — what the index reaches decides whether a miss means anything |
+| `sync` | Sync (Seafile) libraries only | [indexing](#indexing-drive--sync--cloud--knowledge) — a narrowed view of what `drive` already covers |
+| `knowledge` (`wise`) | Wise/Knowledge content search | [indexing](#indexing-drive--sync--cloud--knowledge) — Wise owns this index; needs Olares 1.12.7+ |
+| `app` | Visible installed-app title search | nothing further; it is a title match, not lifecycle inventory |
 
 There is no separate `gdrive` or `dropbox` verb: on Olares 1.12.7+ `drive` searches `files_v2`, `google_drive`, `dropbox`, and `seafile` in one asynchronous federated request, mirroring the Desktop dialog's single "Files" entry. `sync` restricts that same channel to `seafile`. Olares 1.12.6 and older have no federated channel: there `drive` covers local Drive files only and `sync` falls back to `/api/search/sync`, so on those versions both commands are needed to cover what one covers on 1.12.7+.
 

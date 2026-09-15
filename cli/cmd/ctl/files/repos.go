@@ -165,8 +165,7 @@ Examples:
 	}
 	cmd.Flags().StringVar(&o.kind, "type", "mine",
 		"filter: mine | share-to-me | shared | all")
-	cmd.Flags().BoolVar(&o.asJSON, "json", false,
-		"print raw JSON instead of a table")
+	addOutputFormatFlag(cmd, &o.asJSON, "print raw JSON instead of a table")
 	return cmd
 }
 
@@ -500,8 +499,7 @@ Examples:
 			return runReposCreate(cmd.Context(), f, cmd.OutOrStdout(), args[0], asJSON)
 		},
 	}
-	cmd.Flags().BoolVar(&asJSON, "json", false,
-		"print the new repo as a JSON object instead of two human-readable lines")
+	addOutputFormatFlag(cmd, &asJSON, "print the new repo as a JSON object instead of two human-readable lines")
 	return cmd
 }
 

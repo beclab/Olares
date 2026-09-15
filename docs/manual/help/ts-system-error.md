@@ -24,11 +24,11 @@ This guide uses Olares One as an example. If you installed Olares on your own ha
 
 ## Cause
 
-The "System error" message usually means one or more system pods are not running normally. When this happens, LarePass cannot retrieve system status.
+The message means LarePass could not obtain a healthy system state. One or more system pods might be unhealthy, but the message alone does not identify the failing component or root cause.
 
 ## Solution
 
-Follow the steps below to access the device terminal, identify any pod that is not running normally, inspect its error details, and share the results with the Olares team. This helps narrow down possible causes and speed up troubleshooting.
+Follow the steps below to access the device terminal, identify any pod that is not running normally, and inspect only the event information needed to narrow down the cause.
 
 ### Step 1: Try to access Olares desktop
 
@@ -104,11 +104,15 @@ If SSH is also unavailable, log in directly on the device using a monitor and ke
     kubectl get pods -A
     ```
 
-2. Check the **STATUS** column for any pods that are not in the `Running` state.
-3. Note the **NAMESPACE** and **NAME** of each problematic pod.
+2. Check **STATUS** and **RESTARTS**. Look for states such as `CrashLoopBackOff`, `Error`, `ImagePullBackOff`, or a pod that remains `Pending`. A job in `Completed` state is not an error by itself.
+3. Note the **NAMESPACE** and **NAME** of each pod that shows an error or a restart count that keeps increasing. If none do, skip to [Step 6](#step-6-record-the-result-and-collect-logs).
     ![Locate problematic pod](/images/manual/help/ts-sys-err-pod-crash.png#bordered){width=90%}
 
 ### Step 5: Inspect the pod error
+
+:::warning Review output before sharing it
+`kubectl describe` can include IP addresses, node names, Olares IDs, domains, and configuration values. Do not paste its complete output into a public issue.
+:::
 
 1. Run the following command, replacing `<namespace>` and `<pod-name>` with the values you noted in the previous step:
 
@@ -125,12 +129,15 @@ If SSH is also unavailable, log in directly on the device using a monitor and ke
 2. Scroll down to the **Events** section to find the detailed error message.
     ![Pod event details](/images/manual/help/ts-sys-err-pod-event-detail.png#bordered){width=90%}
 
-### Step 6: Contact support
+### Step 6: Record the result and collect logs
 
-Create an issue in the [Olares GitHub repository](https://github.com/beclab/Olares/issues) and include the following:
+Record the following minimum information:
 
-- The full output of `kubectl describe pod <pod-name> -n <namespace>` for each problematic pod
-- A screenshot of the error message, if available
-- A brief description of when the error first appeared (for example, after an update or restart)
+- The affected pod's **NAMESPACE**, **NAME**, **STATUS**, and **RESTARTS** values
+- The error lines in the **Events** section
+- The time the error appeared and your time zone
+- Your installed Olares version and whether the error followed an update or restart
 
-This information helps the team investigate and resolve the issue faster.
+If no pod shows an error and restart counts are not increasing, record that result instead. It means the message cannot be explained by pod status alone and needs a different diagnostic branch.
+
+For a reproducible software bug, you can open a [GitHub Issue](https://github.com/beclab/Olares/issues/new) with the symptom and the limited fields above after redacting IDs, hostnames, IP addresses, and domains. Follow [Collect diagnostic information](../collect-diagnostic-information.md) to create the full log archive, and send it only through the private channel described there.

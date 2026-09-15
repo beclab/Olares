@@ -24,10 +24,12 @@ func NewCmdMarketList(f *cmdutil.Factory) *cobra.Command {
 
 Without --mine this browses the catalog (/market/data): the CLI
 auto-selects a source from market settings (use -s to override, -a to
-span every source the user has). Valid source ids are 'market.olares'
-(the remote catalog) and 'cli' / 'upload' / 'studio' (the three local
-chart sources). Unknown ids silently produce an empty result with a
-"no apps in source 'X'" stderr hint.
+span every source the user has). Which source ids exist is a per-cluster
+setting, so -a is how you find out; a cluster subscribed to the staging
+catalog also has 'market.test'. The usual ones are 'market.olares' (the
+public catalog) and 'cli' / 'upload' / 'studio' (the local chart
+buckets). An id this cluster does not have produces an empty result with
+a "no apps in source 'X'" stderr hint rather than an error.
 
 Pass --mine (-m) to instead list the active profile's apps from
 /market/state — the same set the Market UI's "My Terminus" tab shows.
@@ -87,9 +89,10 @@ func NewCmdMarketCategories(f *cmdutil.Factory) *cobra.Command {
 		Long: `List app categories with counts across market sources.
 
 By default queries the auto-selected source. Use -s to pin to a specific
-source ('market.olares' for the remote catalog, 'cli' / 'upload' /
-'studio' for local helm-chart sources); use -a to span every source
-the user has configured.
+source ('market.olares' for the public catalog, 'market.test' for the
+staging one where a cluster subscribes to it, 'cli' / 'upload' / 'studio'
+for local helm-chart buckets); use -a to span every source the user has
+configured, which is also how to see which ids this cluster has.
 
 Examples:
   olares-cli market categories                    # auto-selected source

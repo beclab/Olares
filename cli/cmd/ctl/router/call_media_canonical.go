@@ -110,7 +110,9 @@ const (
 	flagPBR            = "pbr"
 	flagPolycount      = "polycount"
 	flagLyrics         = "lyrics"
+	flagTitle          = "title"
 	flagInstrumental   = "instrumental"
+	flagRepaint        = "repaint"
 	flagProviderOption = "provider-option"
 )
 
@@ -135,11 +137,13 @@ var (
 		flagAspectRatio, flagResolution, flagDuration, flagFPS, flagQuality,
 		flagImage, flagMask, flagAudioIn, flagSource, flagProviderOption,
 	}
-	// No size, no aspect ratio and no inputs: music is asked for in words and
-	// produced from nothing else.
+	// No size and no aspect ratio, and no count: the music route produces one
+	// track per request. The one input is the recording a repaint works from,
+	// which is the only operation music has besides generating from nothing.
 	musicFields = []string{
-		flagNegative, flagN, flagSeed, flagFormat, flagDuration,
-		flagLyrics, flagInstrumental, flagProviderOption,
+		flagNegative, flagSeed, flagFormat, flagDuration,
+		flagTitle, flagLyrics, flagInstrumental, flagRepaint, flagAudioIn,
+		flagProviderOption,
 	}
 	// Formats rather than a format, a polygon budget rather than a size, and an
 	// image on a plain generate — the one family where that is admitted.
@@ -172,8 +176,10 @@ type mediaFlags struct {
 	texture         bool
 	pbr             bool
 	polycount       int
+	title           string
 	lyrics          string
 	instrumental    bool
+	repaint         bool
 	providerOptions []string
 }
 
@@ -228,10 +234,15 @@ func (m *mediaFlags) register(cmd *cobra.Command, names ...string) {
 			f.BoolVar(&m.pbr, name, false, "produce physically based rendering materials")
 		case flagPolycount:
 			f.IntVar(&m.polycount, name, 0, "the polygon budget to aim for")
+		case flagTitle:
+			f.StringVar(&m.title, name, "", "what to call the piece")
 		case flagLyrics:
 			f.StringVar(&m.lyrics, name, "", "the words to sing")
 		case flagInstrumental:
 			f.BoolVar(&m.instrumental, name, false, "produce a track with no vocals")
+		case flagRepaint:
+			f.BoolVar(&m.repaint, name, false,
+				"regenerate part of the recording given with --"+flagAudioIn+", rather than starting from nothing")
 		case flagProviderOption:
 			f.StringArrayVar(&m.providerOptions, name, nil,
 				"a vendor parameter this contract has no field for, as key=value (repeatable); "+

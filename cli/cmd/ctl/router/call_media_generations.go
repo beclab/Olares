@@ -10,83 +10,23 @@ import (
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
-// `router call music` and `router call 3d` — the two families that exist only
-// on the unified route.
+// `router call 3d` — the one family that exists only on the unified route.
 //
-// A track and a mesh are generations like an image or a video: submitted,
-// polled, downloaded from the same content route, and recorded in the same
-// table. What they do not have is a released OpenAI-shaped route, because
-// OpenAI has no music or 3D API to be shaped like — so /v1/generations is the
-// only way to ask for either, and their fields have no legacy spelling.
+// A mesh is a generation like an image or a video: submitted, polled,
+// downloaded from the same content route, and recorded in the same table. What
+// it does not have is a released OpenAI-shaped route, because OpenAI has no 3D
+// API to be shaped like — so /v1/generations is the only way to ask for one,
+// and its fields have no legacy spelling. Music was here too until it grew a
+// surface of its own; `call_music.go` says why.
 //
-// Both require --model, and the reason is worth stating because it is not an
+// It requires --model, and the reason is worth stating because it is not an
 // oversight: Router resolves a default category for image and video generation
-// and deliberately has none for these two. Its own registry says why — a
+// and deliberately has none for this one. Its own registry says why — a
 // category is a promise that something sensible answers it, and with one
-// implementation apiece (FlowStudio serves both today) a default would name
-// that one implementation while reading like a choice. So the model is named or
-// the request is refused, and `router model list --mode music_generation` is
-// what says which names exist here.
-
-func newCallMusicCommand(f *cmdutil.Factory) *cobra.Command {
-	var (
-		output   string
-		model    string
-		out      string
-		outputID string
-		noWait   bool
-		id       string
-		timeout  time.Duration
-		apiKey   string
-		flags    mediaFlags
-	)
-	cmd := &cobra.Command{
-		Use:   "music [prompt…]",
-		Short: "generate a track",
-		Long: `Generate music from a description.
-
-The track is written to --out, or to a file named after the generation. Router
-holds the bytes, so the file does not depend on a provider's link staying alive.
-
---lyrics gives the words to sing; --instrumental asks for a track without any.
-A model that cannot honor one of these refuses the request rather than ignoring
-the field, which is the point of naming it.
-
---model is required. Router resolves a default for image and video generation
-and none for music: today FlowStudio is the only thing serving it, and a
-default would name that one workflow while reading like a choice. "olares-cli
-router model list --mode music_generation" lists the names this credential can
-send.
-
---no-wait prints the generation id and stops; "--id <id>" collects it later. A
-generation expires, and --no-wait says when.
-
-Examples:
-  olares-cli router call music "a slow waltz on a rainy afternoon" --model FlowStudio/ace-step
-  olares-cli router call music "an upbeat theme" --model FlowStudio/ace-step --duration 30 --instrumental
-  olares-cli router call music "a ballad" --model FlowStudio/ace-step --lyrics "$(cat words.txt)"
-  olares-cli router call music --id gen_01H… --model FlowStudio/ace-step
-`,
-		Args: cobra.ArbitraryArgs,
-		RunE: func(c *cobra.Command, args []string) error {
-			return runCanonicalMedia(c, f, musicKind, canonicalVerb{
-				model: model, id: id, out: out, outputID: outputID,
-				wait: !noWait, timeout: timeout, apiKey: apiKey, format: output,
-				flags: &flags, args: args, mode: "music_generation",
-			})
-		},
-	}
-	cmd.Flags().StringVar(&model, "model", "", modelRequiredHelp("music_generation"))
-	cmd.Flags().StringVar(&out, "out", "", "write the track here instead of a name derived from the generation")
-	cmd.Flags().StringVar(&outputID, "output-id", "", "which of the generation's outputs to write; the first when omitted")
-	cmd.Flags().BoolVar(&noWait, "no-wait", false, "print the generation id instead of waiting for the track")
-	cmd.Flags().StringVar(&id, "id", "", "collect a generation submitted earlier")
-	cmd.Flags().DurationVar(&timeout, "timeout", 10*time.Minute, "give up waiting after this long; the work continues")
-	cmd.Flags().StringVar(&apiKey, "api-key", "", dataPlaneKeyFlagUsage)
-	flags.register(cmd, musicFields...)
-	addOutputFlag(cmd, &output)
-	return cmd
-}
+// implementation (FlowStudio serves it today) a default would name that one
+// implementation while reading like a choice. So the model is named or the
+// request is refused, and `router model list --mode model3d_generation` is what
+// says which names exist here.
 
 func newCall3DCommand(f *cmdutil.Factory) *cobra.Command {
 	var (

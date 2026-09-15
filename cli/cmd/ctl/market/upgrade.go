@@ -71,6 +71,7 @@ Examples:
 	}
 	opts.addCommonFlags(cmd)
 	opts.addOutputFlags(cmd)
+	describeLifecycleJSON(cmd)
 	opts.addVersionFlag(cmd)
 	opts.addWatchFlags(cmd)
 	return cmd
@@ -82,10 +83,8 @@ func runUpgrade(opts *MarketOptions, appName string) error {
 		return opts.failOp("upgrade", appName, err)
 	}
 
-	source := resolveCatalogSource(opts)
-	if strings.TrimSpace(opts.Source) == "" {
-		opts.info("Using source: %s", source)
-	}
+	ctx := context.Background()
+	source := resolveUpgradeSource(ctx, opts, mc, appName)
 
 	version := strings.TrimSpace(opts.Version)
 	if version != "" {
@@ -93,15 +92,14 @@ func runUpgrade(opts *MarketOptions, appName string) error {
 			return opts.failOp("upgrade", appName, err)
 		}
 	} else {
-		v, err := resolveVersionInSource(mc, appName, source)
+		v, err := resolveVersionInSource(mc, appName, source, true)
 		if err != nil {
-			return opts.failOp("upgrade", appName, fmt.Errorf("cannot determine version in source '%s': %w (use --version to specify)", source, err))
+			return opts.failOp("upgrade", appName, err)
 		}
 		version = v
 		opts.info("Using latest version: %s", version)
 	}
 
-	ctx := context.Background()
 	// Pre-flight gate mirroring the SPA's canUpgrade(): refuse early
 	// (with an actionable message) when the state row is missing, in a
 	// non-upgradable state, when the target version is not newer than

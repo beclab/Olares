@@ -40,7 +40,7 @@ Use the Wizard URL and initial one-time password to activate. This process conne
 <!-- #endregion scan-qr-and-reset-password -->
 
    ::: tip 
-   If you reinstall Olares, the original instance becomes unavailable. To continue using the same Olares ID, you need to [reactivate Olares](../larepass/activate-olares.md#reactivate-olares-with-the-same-olares-id).
+   If you reinstall Olares, the original instance becomes unavailable. To continue using the same Olares ID, you need to [reactivate Olares](../larepass/activate-olares.md).
    :::
 
 <!-- #region activation-complete-redirect -->

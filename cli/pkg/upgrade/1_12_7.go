@@ -36,6 +36,10 @@ func (u upgrader_1_12_7) AddedBreakingChange() bool {
 func (u upgrader_1_12_7) PrepareForUpgrade() []task.Interface {
 	tasks := migrateContainerdConfigV3()
 	tasks = append(tasks, &task.LocalTask{
+		Name:   "RestartNvidiaApplicationPods",
+		Action: new(restartNvidiaApplicationPods),
+	})
+	tasks = append(tasks, &task.LocalTask{
 		Name:    "CleanupK3sCertsRenewService",
 		Prepare: new(common.OnlyK3s),
 		Action:  new(certs.UninstallAutoRenewCerts),

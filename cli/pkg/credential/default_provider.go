@@ -8,6 +8,7 @@ import (
 
 	"github.com/beclab/Olares/cli/pkg/auth"
 	"github.com/beclab/Olares/cli/pkg/cliconfig"
+	"github.com/beclab/Olares/cli/pkg/clierr"
 	"github.com/beclab/Olares/cli/pkg/olares"
 )
 
@@ -63,6 +64,26 @@ func (e *ErrNotLoggedIn) Error() string {
 	return fmt.Sprintf("no access token for %s; run: olares-cli profile login --olares-id %s  (or profile import --refresh-token <tok>)", e.OlaresID, e.OlaresID)
 }
 
+// The three methods below put this error in the `-o json` envelope
+// under a code instead of the message it would otherwise be read out
+// of. See the note on ErrNoProfile for why the credential errors are
+// the ones classified first.
+
+func (e *ErrNotLoggedIn) ErrorCode() string { return clierr.CodeAuthNotLoggedIn }
+
+// Retryable is false rather than unknown: nothing about running the
+// same command again produces a token.
+func (e *ErrNotLoggedIn) Retryable() *bool { return &no }
+
+func (e *ErrNotLoggedIn) RecoveryAction() string {
+	// A managed credential is minted by the platform, so `profile
+	// login` is refused for it and would not help if it were not.
+	if e.Managed {
+		return managedRecovery(e.AppName)
+	}
+	return fmt.Sprintf("olares-cli profile login --olares-id %s", e.OlaresID)
+}
+
 // managedRemedy is the tail shared by every managed-credential failure. The
 // application is named when we know it, because a user who finds an account
 // they never logged into has no other way to tell which install to repair.
@@ -85,6 +106,12 @@ type ErrTokenExpired struct {
 func (e *ErrTokenExpired) Error() string {
 	return fmt.Sprintf("access token for %s expired at %s; please run: olares-cli profile login --olares-id %s  (or profile import --olares-id %s --refresh-token <tok>)",
 		e.OlaresID, e.ExpiredAt.Format(time.RFC3339), e.OlaresID, e.OlaresID)
+}
+
+func (e *ErrTokenExpired) ErrorCode() string { return clierr.CodeAuthTokenExpired }
+func (e *ErrTokenExpired) Retryable() *bool  { return &no }
+func (e *ErrTokenExpired) RecoveryAction() string {
+	return fmt.Sprintf("olares-cli profile login --olares-id %s", e.OlaresID)
 }
 
 // ErrTokenInvalidated is returned when a stored token has been explicitly
@@ -111,6 +138,35 @@ func (e *ErrTokenInvalidated) Error() string {
 	return fmt.Sprintf("refresh token for %s became invalid at %s; please run: olares-cli profile login --olares-id %s  (or profile import --olares-id %s --refresh-token <tok>)",
 		e.OlaresID, e.InvalidatedAt.Format(time.RFC3339), e.OlaresID, e.OlaresID)
 }
+
+func (e *ErrTokenInvalidated) ErrorCode() string { return clierr.CodeAuthTokenInvalidated }
+
+// Retryable is false, and this is the case where saying so is worth
+// most: the failure looks transient -- a token that worked an hour ago
+// -- and no amount of retrying or refreshing recovers a rejected grant.
+func (e *ErrTokenInvalidated) Retryable() *bool { return &no }
+
+func (e *ErrTokenInvalidated) RecoveryAction() string {
+	if e.Managed {
+		return managedRecovery(e.AppName)
+	}
+	return fmt.Sprintf("olares-cli profile login --olares-id %s", e.OlaresID)
+}
+
+// managedRecovery is the action half of managedRemedy. It is prose
+// rather than a command because there is no command: what has to happen
+// is a reinstall or repair of the application, which is done where that
+// application is managed.
+func managedRecovery(appName string) string {
+	if appName == "" {
+		return "reinstall or repair the application that requested this platform-issued credential"
+	}
+	return fmt.Sprintf("reinstall or repair application %q, which requested this platform-issued credential", appName)
+}
+
+// no is addressable so it can be returned as *bool, which is what keeps
+// "we do not know" distinct from "no" in the envelope.
+var no = false
 
 // Resolve implements Provider.
 func (d *DefaultProvider) Resolve(_ context.Context, profile *cliconfig.ProfileConfig) (*ResolvedProfile, error) {

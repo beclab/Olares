@@ -72,6 +72,20 @@ func epProviderSyncModels(id string) string { return epProvider(id) + "/sync-mod
 
 func epProviderValidate(id string) string { return epProvider(id) + "/validate" }
 
+// The same probe for a provider that does not exist yet. A hyphen rather than
+// /providers/validate because a static segment cannot sit beside the
+// /providers/:id wildcard — the same reason the two catalog routes are spelled
+// that way.
+const epProviderValidateDraft = consoleAPI + "/provider-validate"
+
+// The app directory's cache. It answers whether an application is on this
+// Olares at all, which no other route does: the model-app list says what may be
+// installed, the provider list says what Router can call, and the caller_app
+// dimension of the spend summary only knows an application that has already
+// billed something. Readable by any authenticated console user, unlike almost
+// everything else under /console/api.
+const epInstalledApps = consoleAPI + "/installed-apps"
+
 func epProviderCredentialHistory(id string) string { return epProvider(id) + "/credential-history" }
 
 func epProviderRollback(id string, version int) string {
@@ -139,6 +153,18 @@ func epModelRouteMember(routeID, modelID string) string {
 	return epModelRoute(routeID) + "/members/" + url.PathEscape(modelID)
 }
 
+// What a default category answers with, when an administrator rather than
+// reconciliation decides it.
+//
+// A subresource rather than a field on the route itself, and the same on this
+// side as on Router's: pinning a category stops reconciliation maintaining it,
+// which is not something a rename-and-enable patch has anything to say about.
+// The candidates read is the other half — the categories select on capability,
+// so which models one would accept is a question only Router can answer.
+func epModelRouteTarget(routeID string) string { return epModelRoute(routeID) + "/target" }
+
+func epModelRouteCandidates(routeID string) string { return epModelRoute(routeID) + "/candidates" }
+
 // Spend: what was called, what it cost, the same rows as a download, and how
 // long the per-call rows are kept.
 const (
@@ -173,6 +199,9 @@ func epQuota(id int64) string { return epQuotas + "/" + strconv.FormatInt(id, 10
 // afterwards. OCR only ever answers with a receipt.
 const (
 	epChatCompletions = dataPlaneAPI + "/chat/completions"
+	// One path, two protocols: POST is the whole answer, and a GET carrying an
+	// Upgrade is the same call with the answer arriving as it is written. A
+	// GET without the upgrade is refused with 426 rather than answered.
 	epResponses       = dataPlaneAPI + "/responses"
 	epEmbeddings      = dataPlaneAPI + "/embeddings"
 	epRerank          = dataPlaneAPI + "/rerank"
@@ -180,6 +209,15 @@ const (
 	epSearch          = dataPlaneAPI + "/search"
 	epScrape          = dataPlaneAPI + "/scrape"
 )
+
+// The Anthropic-shaped ingress. Router mounts it beside the OpenAI one so a
+// client built for Claude reaches the same models over the same key, and both
+// shapes share one dispatch and one spend path.
+//
+// Counting is the half worth having a verb for, and it is mounted apart from
+// everything else: it sits above the quota line and records no spend, because
+// it asks how large a turn would be rather than sending one.
+const epMessagesCountTokens = dataPlaneAPI + "/messages/count_tokens"
 
 // Audio is one catch-all upstream, so every suffix here reaches the sibling
 // audio engine unchanged. Which suffixes exist depends on the engine behind the
@@ -202,31 +240,77 @@ const (
 	epAudioAlign       = dataPlaneAPI + "/audio/align"
 )
 
-// The audio WebSocket routes. Router recognises exactly these three by path and
-// proxies them frame for frame; every other audio suffix is HTTP. They are
-// separate constants rather than a suffix on the HTTP ones because a socket
-// opens with a different scheme, and a typo here would silently arrive as a
-// POST.
+// The audio WebSocket routes wrapped by CLI commands. Router's full protocol
+// surface has three: these two input streams plus /v1/audio/speech/stream for
+// streaming TTS. `call speak` uses the HTTP synthesis dialects, so it does not
+// need a third socket constant here. These are separate constants rather than
+// suffixes on the HTTP routes because a typo would silently arrive as a POST.
 const (
 	epAudioStreamWS        = dataPlaneAPI + "/audio/stream"
 	epAudioDiarizeStreamWS = dataPlaneAPI + "/audio/diarize/stream"
 )
 
-// Audio tasks. `--async` on any audio verb answers with a receipt instead of a
-// result, and these read it.
+// Audio tasks. Batch HTTP operations whose operation catalogue declares async
+// support can answer `--async` with a receipt instead of a result; WebSocket
+// and HTTP chunked streams cannot. These commands read the receipt.
 //
-// The engine's own canonical path is /v1/tasks, with /v1/audio/tasks kept as an
-// alias — but /v1/tasks is not a route Router mounts, and the audio prefix is
-// what reaches the catch-all. So the alias is the only one addressable through
-// the gateway, which is why Router rewrites a receipt's `poll` and `result_url`
-// onto it before handing the document back. These constants build the same paths
-// from the id, which is what a caller that kept the id rather than the document
-// has to work from.
-const epAudioTasks = dataPlaneAPI + "/audio/tasks"
+// /v1/tasks is the canonical prefix and /v1/audio/tasks is the alias Router
+// retains for the clients that were written before it. This tree stayed on the
+// alias while the canonical side was still settling; it no longer is, and the
+// receipt Router writes now names the canonical one in its own `poll` and
+// `result_url`. Following a receipt to a path it does not name is how a client
+// ends up being the reason an alias cannot be retired.
+//
+// A receipt is not always in hand — an id can be pasted from a terminal a day
+// later — so these build the same paths from an id alone.
+const epTasks = dataPlaneAPI + "/tasks"
 
-func epAudioTask(id string) string { return epAudioTasks + "/" + url.PathEscape(id) }
+func epTask(id string) string { return epTasks + "/" + url.PathEscape(id) }
 
-func epAudioTaskResult(id string) string { return epAudioTask(id) + "/result" }
+func epTaskResult(id string) string { return epTask(id) + "/result" }
+
+// onDataPlane reports whether a path handed back in a response addresses the
+// data plane. A receipt names its own follow-up routes and Router writes them
+// relative, so anything else is not Router redirecting a client — it is a
+// response steering one, and the id alone already reaches the task.
+func onDataPlane(p string) bool { return strings.HasPrefix(p, dataPlaneAPI+"/") }
+
+// The voice library and the log of what has been read out.
+//
+// These sit at the root of /v1 rather than under /audio because they are the
+// ElevenLabs shape, which a synthesis engine serves alongside the OpenAI one.
+// It is not merely a second spelling: these routes expose durable voices and,
+// on ElevenLabs-shaped engines, synthesis history with retained audio. The
+// OpenAI-shaped /v1/audio/speech contract does not itself promise history.
+//
+// Which default each reaches is Router's decision and it is not uniform:
+// reading or editing the voice table is default-tts, creating a voice from a
+// recording is default-tts-clone, and creating one from a description is
+// default-tts-design. History reaches no default at all, so a history verb has
+// to name a model.
+const (
+	epVoices            = dataPlaneAPI + "/voices"
+	epVoicesAdd         = epVoices + "/add"
+	epVoiceSettings     = epVoices + "/settings/default"
+	epTextToVoice       = dataPlaneAPI + "/text-to-voice"
+	epTextToVoiceDesign = epTextToVoice + "/design"
+	epTextToSpeech      = dataPlaneAPI + "/text-to-speech"
+	epHistory           = dataPlaneAPI + "/history"
+)
+
+func epVoice(id string) string { return epVoices + "/" + url.PathEscape(id) }
+
+// epSpeakAs is /v1/audio/speech in the other dialect, where the voice is the
+// address rather than a field. Router forwards both without translating
+// between them for a locally installed engine, so which one answers is a
+// property of the image the model application was built from.
+func epSpeakAs(voice string) string { return epTextToSpeech + "/" + url.PathEscape(voice) }
+
+func epVoiceOwnSettings(id string) string { return epVoice(id) + "/settings" }
+
+func epHistoryItem(id string) string { return epHistory + "/" + url.PathEscape(id) }
+
+func epHistoryAudio(id string) string { return epHistoryItem(id) + "/audio" }
 
 // Images and video. A generation is a row Router keeps, so it can be asked
 // about after the request that started it has gone, and the bytes come from the
@@ -263,14 +347,49 @@ func epGeneration(id string) string { return epGenerations + "/" + url.PathEscap
 
 func epGenerationContent(id string) string { return epGeneration(id) + "/content" }
 
-// Translate mirrors the upstream's own service-root names under /v1. These four
+// Music. The same table and the same record as the unified route above, on a
+// surface of its own, because a track is asked for in a shape the canonical
+// body has no room for: a flat request with a title and words, and two things
+// that happen before any audio is generated at all.
+//
+// A format pass runs a model's own language model over a caption and lyrics and
+// hands back what it would actually sing, so the words can be confirmed before
+// the minutes of compute; a draft writes both from one sentence. Neither is a
+// generation to download, and both are asynchronous, which is why they are
+// resources rather than fields.
+//
+// Cancel is here and nowhere else in this tree: a track is the one family whose
+// upstream can be stopped mid-run and settled at what it used.
+const (
+	epMusicGenerations = dataPlaneAPI + "/music/generations"
+	epMusicFormats     = dataPlaneAPI + "/music/formats"
+	epMusicDrafts      = dataPlaneAPI + "/music/drafts"
+)
+
+func epMusicGeneration(id string) string { return epMusicGenerations + "/" + url.PathEscape(id) }
+
+func epMusicGenerationContent(id string) string { return epMusicGeneration(id) + "/content" }
+
+func epMusicLyricsAlignment(id string) string { return epMusicGeneration(id) + "/lyrics-alignment" }
+
+func epMusicFormat(id string) string { return epMusicFormats + "/" + url.PathEscape(id) }
+
+func epMusicDraft(id string) string { return epMusicDrafts + "/" + url.PathEscape(id) }
+
+// Translate mirrors the upstream's own service-root names under /v1. These five
 // carry no model field: each resolves the translate default per call, so there
 // is nothing for a caller to name and nothing to get wrong.
+//
+// The transcript route is the one that is not MTran-compatible. The other four
+// translate a text at a time; this one takes a stretch of dialogue, lets the
+// model read the turns around each line, and answers one result per turn under
+// the ids it was given.
 const (
-	epTranslate      = dataPlaneAPI + "/translate"
-	epTranslateBatch = epTranslate + "/batch"
-	epLanguages      = dataPlaneAPI + "/languages"
-	epDetect         = dataPlaneAPI + "/detect"
+	epTranslate           = dataPlaneAPI + "/translate"
+	epTranslateBatch      = epTranslate + "/batch"
+	epTranslateTranscript = epTranslate + "/transcript"
+	epLanguages           = dataPlaneAPI + "/languages"
+	epDetect              = dataPlaneAPI + "/detect"
 )
 
 // OCR. The prefix is /v1/ocr rather than the upstream's bare /v1 because the

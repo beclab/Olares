@@ -98,13 +98,18 @@ type generationUsage struct {
 
 func (g *generationView) done() bool {
 	switch strings.ToLower(g.Status) {
-	case "completed", "failed":
+	case "completed", "failed", "canceled":
 		return true
 	}
 	return false
 }
 
 func (g *generationView) failed() bool { return strings.EqualFold(g.Status, "failed") }
+
+// canceled is terminal without being a failure. Only a track can reach it, and
+// only because somebody asked: waiting for one would be waiting for a state
+// nothing will leave.
+func (g *generationView) canceled() bool { return strings.EqualFold(g.Status, "canceled") }
 
 // progressNote is the one thing worth showing while waiting. Not every provider
 // reports it, and its absence is not worth a word.
@@ -152,6 +157,10 @@ type mediaOptions struct {
 	// /v1/generations takes the canonical body. Neither is assembled here,
 	// because a verb knows which fields its family admits and this does not.
 	Body any
+	// Idempotent asks for a key on the submit, which only the music routes
+	// honor. It is what makes a submit whose answer was lost safe to send
+	// again: without it the retry is a second track and a second bill.
+	Idempotent bool
 }
 
 func newCallImageCommand(f *cmdutil.Factory) *cobra.Command {
@@ -358,14 +367,20 @@ var videoKind = mediaKind{
 	get: epVideo, content: epVideoContent, defaultExt: ".mp4",
 }
 
-// The two families with no released route of their own. They create, poll and
-// download exactly like the other two — the record is the same and so is the
-// content proxy — which is why they are two more rows here rather than a
-// surface of their own.
+// The two families OpenAI has no API for. They create, poll and download
+// exactly like the other two — the record is the same and so is the content
+// proxy — which is why they are two more rows here rather than surfaces of
+// their own.
+//
+// Music has its own prefix and 3D does not, which is not an inconsistency: the
+// music routes exist because a track carries fields the canonical body has no
+// room for and has two text passes that produce no audio at all. A mesh is
+// described entirely in canonical fields, so /v1/generations says everything
+// there is to say about one.
 var (
 	musicKind = mediaKind{
-		noun: "track", verb: "music", submitPath: epGenerations,
-		get: epGeneration, content: epGenerationContent, defaultExt: ".mp3",
+		noun: "track", verb: "music", submitPath: epMusicGenerations,
+		get: epMusicGeneration, content: epMusicGenerationContent, defaultExt: ".mp3",
 	}
 	model3DKind = mediaKind{
 		noun: "model", verb: "3d", submitPath: epGenerations,
@@ -436,6 +451,15 @@ func runMedia(ctx context.Context, f *cmdutil.Factory, kind mediaKind, opts medi
 	if gen.failed() {
 		return fmt.Errorf("%s %s failed: %s", kind.noun, gen.ID, gen.reason())
 	}
+	if gen.canceled() {
+		if format == FormatJSON {
+			return printJSON(os.Stdout, gen)
+		}
+		_, err := fmt.Printf("%s was canceled, so there is no %s to collect. What ran before the cancel "+
+			"was still billed; `olares-cli router usage list --limit 5` says what it came to.\n",
+			gen.ID, kind.noun)
+		return err
+	}
 	if !gen.done() {
 		if format == FormatJSON {
 			return printJSON(os.Stdout, gen)
@@ -457,6 +481,13 @@ func submitMedia(ctx context.Context, dp *routerClient, kind mediaKind, opts med
 	// the header is redundant and harmless; for an image it is the difference
 	// between a record to come back to and a one-shot answer.
 	async := dp.withHeader("Prefer", "respond-async")
+	if opts.Idempotent {
+		key, err := idempotencyKey()
+		if err != nil {
+			return nil, err
+		}
+		async = async.withHeader("Idempotency-Key", key)
+	}
 	err := async.doJSON(ctx, "POST", kind.submitPath, opts.Body, gen)
 	if err == nil {
 		return nil, nil

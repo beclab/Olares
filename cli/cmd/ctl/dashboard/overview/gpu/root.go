@@ -47,9 +47,10 @@ func NewGPUCommand(f *cmdutil.Factory, cf *pkgdashboard.CommonFlags) *cobra.Comm
   olares-cli dashboard overview gpu tasks <name>          # task details page (auto-resolves pod-uid)`,
 		SilenceErrors: true,
 		SilenceUsage:  true,
+		Args:          cmdutil.RefuseUnknownVerbArgs,
 		RunE: func(c *cobra.Command, args []string) error {
 			if len(args) > 0 {
-				return unknownSubcommandRunE(c, args)
+				return cmdutil.RefuseUnknownVerb(c, args)
 			}
 			if err := common.Validate(); err != nil {
 				return err

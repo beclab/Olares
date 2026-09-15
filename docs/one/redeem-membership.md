@@ -25,7 +25,7 @@ Olares Space is a secure connectivity platform that extends the capabilities of 
 
 ## Log in to Olares Space
 
-1. Go to https://space.olares.com.
+1. Go to https://www.olares.com/space.
 
     ![Olares Space login page](/images/one/olares-space-login.png#bordered)
 
@@ -131,4 +131,4 @@ When your complimentary Basic plan expires:
 ## Resources
 
 - [Monitor traffic in Olares Space](../manual/space/manage-olares.md#check-traffic-usage)
-- [Olares Space introduction](../manual/space/index.md)
+- [Log in and manage Olares Space accounts](../manual/space/manage-accounts.md)

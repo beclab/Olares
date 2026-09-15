@@ -26,7 +26,7 @@ head:
 - **多身份管理**  
   同时管理多个 DID / Olares ID  
 
-详细说明参见 [使用 LarePass 管理账户](../../manual/larepass/create-account.md)。
+详细说明参见 [使用 LarePass 管理账户](../../manual/larepass/manage-accounts.md)。
 
 ## 管理可验证凭证（VC）
 

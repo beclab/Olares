@@ -75,7 +75,7 @@ export const developerSidebar: DefaultTheme.Sidebar = {
               link: "/zh/developer/install/cli/olares-cli",
               collapsed: true,
               items: [
-                { text: "访问 Olares 主机终端", link: "/zh/developer/reference/access-olares-terminal" },
+                { text: "访问 Olares 主机终端", link: "/zh/manual/access-olares-terminal" },
                 {
                   text: "backups",
                   link: "/zh/developer/install/cli/backups",

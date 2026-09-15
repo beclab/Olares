@@ -11,7 +11,7 @@ head:
 
 The default Olares installation sets up a single-node cluster. Starting from v1.11.3, support is added for adding worker nodes to Olares installations on Linux systems.
 
-This tutorial explains how to configure a master node and add worker nodes to create a scalable, multi-node Olares cluster.
+This guide explains how to configure a master node and add worker nodes to create a multi-node Olares cluster.
 
 :::warning Alpha feature
 This feature is currently in the **Alpha** stage and is not recommended for production environments. It may contain performance issues and require additional manual configurations. If you encounter any issues, please report them to the [Olares GitHub repository](https://github.com/beclab/Olares/issues).
@@ -20,14 +20,6 @@ This feature is currently in the **Alpha** stage and is not recommended for prod
 :::info For Olares One hardware
 If you want to set up a multi-node Olares cluster using two Olares One devices, see [Connect two Olares One](/one/connect-two-olares-one.md).
 :::
-
-## Learning objectives
-
-In this tutorial, you will learn how to:
-
-- Install Olares on the master node with support for JuiceFS.
-- Add a worker node to the cluster.
-- Handle potential network changes to ensure the cluster continues to function properly and efficiently.
 
 ## Before you begin
 

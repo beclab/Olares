@@ -42,14 +42,16 @@ Olares v1.12.6 推出了 **Model Console**，一个用于管理本地大语言�
 
     ![Market 中的引擎基座应用](/images/manual/olares/llm-base-apps1.png#bordered)
 
-2. 选择适合你需求的引擎基座。每个都针对不同的推理场景做了优化：
+2. 根据模型格式和服务目标选择引擎。先看模型格式：GGUF 文件使用 llama.cpp，Ollama 模型标签使用 Ollama，包含 `.safetensors` 权重的 Hugging Face 仓库使用 vLLM 或 SGLang。
 
-    | 引擎基座 | 适用场景 |
-    | :--- | :--- |
-    | **llama.cpp 引擎基座** | 运行轻量 GGUF 模型，或在显存有限的环境中部署。<br>它是 Olares One 上推荐的引擎。 |
-    | **Ollama 引擎基座** | 希望快速上手、且需要广泛的模型兼容性。它通过原生模型标签自动拉取模型，非常适合聊天和嵌入任务。 |
-    | **SGLang 引擎基座** | 需要高效的结构化生成或高级推理优化。 |
-    | **vLLM 引擎基座** | 在高并发负载下对 Hugging Face 模型进行高吞吐量推理服务。 |
+    | 引擎基座 | 模型来源 | 适用场景 |
+    | :--- | :--- | :--- |
+    | **llama.cpp 引擎基座** | Hugging Face 上的 GGUF 文件 | 运行量化 GGUF 模型、GPU 显存有限，或需要使用 CPU 推理。Olares One 推荐使用该引擎。 |
+    | **Ollama 引擎基座** | Ollama 模型库中的模型标签 | 希望快速完成配置，并兼容多种对话或嵌入模型。Ollama 会根据原生标签下载模型。 |
+    | **SGLang 引擎基座** | 包含 `.safetensors` 权重的 Hugging Face 仓库 | 需要结构化生成或高级推理优化，并且模型支持 SGLang。 |
+    | **vLLM 引擎基座** | 包含 `.safetensors` 权重的 Hugging Face 仓库 | 需要为多个并发请求提供高吞吐量服务，并且模型支持 vLLM。 |
+
+    如果应用市场已经提供对应模型的预构建应用，除非需要更换引擎或调整启动参数，否则优先安装预构建应用。它使用的模型与引擎组合已经过 Olares 验证。
 
 ## 创建新的模型实例
 
@@ -144,6 +146,8 @@ Olares v1.12.6 推出了 **Model Console**，一个用于管理本地大语言�
     - **Engine**：推理服务上线后显示 `Running`。
 
     ![模型控制台就绪](/images/manual/olares/llm-base-model-console-status.png#bordered)
+
+    如果任一状态一直未就绪，请参考[模型或引擎未就绪](/zh/manual/help/ts-model-engine-not-ready.md)。
 
 4. 当引擎显示 `Running` 后，配置客户端应用如何访问该服务。
 

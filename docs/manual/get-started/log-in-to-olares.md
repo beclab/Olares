@@ -9,7 +9,9 @@ noindex: true
 2. On the login page, enter your Olares login password.
 
    ![Log in](/images/manual/get-started/log-in1.png#bordered)
-3. You will be prompted to complete two-factor verification. You can confirm the login on LarePass, or manually enter the 6-digit verification code.
+3. You will be prompted to complete two-factor verification:
+   - **Confirm on LarePass**: Open the login notification on your phone, and tap **Confirm**.
+   - **Enter the code manually**: Select **Verify using one time password from LarePass** on the login page. Get the 6-digit code from the LarePass app on your phone (**Settings** > **My Olares** card, tap the authenticator) or from the LarePass desktop client (**Vault**, the first item in the list), and enter it to complete the login.
 
    ![Confirm login](/images/manual/larepass/confirm-login1.png#bordered)
    ::: info

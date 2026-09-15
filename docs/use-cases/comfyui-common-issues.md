@@ -233,7 +233,7 @@ Olares One ships with a CPU whose default maximum frequency is 5.4 GHz. Use the 
 4. Run your task in ComfyUI.
 5. After the workload completes, turn off **Limit CPU frequency**.
 
-For more details, see [Limit CPU frequency](/manual/olares/settings/my-olares#limit-cpu-frequency).
+For more details, see [Limit CPU frequency](/one/hardware-settings#limit-cpu-frequency).
 
 ### Olares OS 1.12.5 or earlier
 

@@ -13,6 +13,7 @@ cli/skills/
 ├── olares-shared/
 │   ├── SKILL.md       # foundation: profile model, login, token refresh
 │   └── references/
+│       ├── olares-suite-map.md  # which skill owns a task; installing the binary
 │       ├── olares-auth.md       # login flows, status details, token storage and refresh
 │       ├── olares-platform.md   # storage, uid 1000, namespaces, middleware, versions
 │       └── olares-platform-appstate.md # app lifecycle and state semantics
@@ -60,10 +61,14 @@ ClawHub publishes the entire skill directory (including `references/`), so refer
 
 - **When to use** — the trigger scope and the 1–3 neighbouring skills most easily confused with it.
 - **Decision rules** — cross-cutting concepts and hard constraints that change what the agent does next.
-- **Verb index** — one compact row per verb pointing at `--help` and, when needed, one reference. Keep this map: without it an agent has to probe subcommands and is more likely to invent one.
-- **Workflow routing** — route one current intent or state to one reference. Do not present every reference as a checklist.
+- **Intent index** — the skill's first table, routing one current intent or symptom to one reference. This is the table the agent actually enters through: it arrives holding a goal, not a verb, and a skill that indexes only by verb makes it read the whole front door to find out which verb its goal is spelled as. `olares-doctor`'s `## Symptom routing` and `olares-publish`'s workflow index are the shape to copy.
+- **Verb index** — the command tree, second. Without it an agent has to probe subcommands and is more likely to invent one, so keep the map — but every row has to change a decision. A row whose only pointer is `` `<cmd> --help` `` tells the agent what it would have learned by running `--help` on the parent; either give it the one thing that surprises a caller, or collapse those verbs into a single "everything else is `--help`" row.
 - **Error → fix** — only symptoms the CLI output cannot resolve by itself, such as cross-command diagnosis or a cause at a different layer. If stderr already gives the cause and next action, do not copy it.
 - **Stop / escalate** — missing user input, credentials, ambiguous targets, or actions that expand the authorised task scope.
+
+Three of those carry fixed names, and `validate.py` enforces them, because an agent crossing from one skill to the next should jump to a heading instead of scanning the file. The closing section is `## Safety and escalation` in all twelve (it had five names). The command tree is `## Verb index` whose last column is `Read when triggered` — the first column stays whatever that tree's nouns are, `Verb` or `Family` or `Noun` or `Area`. And every skill but `olares-shared` opens with a `> **Shared front door:**` block; a skill whose authoring half needs no login says so there rather than burying the exception fifty lines down.
+
+**Route by intent, not by checklist.** Whichever table comes first, it maps one state or goal to one destination. Do not present every reference as a list of things to read.
 
 Use progressive disclosure:
 
@@ -77,25 +82,40 @@ Keep CLI and Skill responsibilities separate:
 - CLI errors carry facts known at the failing request: what failed, the cause, relevant context and a concrete next action.
 - Skills carry multi-command orchestration, asynchronous semantics, platform/product models and safety or authorisation decisions.
 - A CLI error and its corresponding Skill cleanup ship together. Do not delete guidance until the released CLI output carries it.
+- **`-o json`'s top-level fields belong to `--help`, the same as flags do.** A skill that transcribes an output shape is a second copy that drifts on the next field. What the skill owns is which field decides the next step — "an install is up when `.finalState` reads `running`" — because `--help` describes the payload without knowing what the agent is trying to conclude from it.
 
 For all behavioural claims:
 
-- **Ground every behavioral claim in the implementation.** Before documenting what a verb / flag / error does, confirm it against the code (status derivation, typed error names, retry / timeout, argument arity). Model agent stop / continue rules on the tool's real control flow — typed errors, auto-retry, transient vs terminal — not on a surface status string. Keep this verification in your process only: still **no Go source-path citations** in the shipped skill (see "What to leave out" below).
+- **Ground every behavioral claim in the implementation.** Before documenting what a verb / flag / error does, confirm it against the code (status derivation, typed error names, retry / timeout, argument arity). Model agent stop / continue rules on the tool's real control flow — typed errors, auto-retry, transient vs terminal — not on a surface status string. Keep this verification in your process only: still **no Go source-path citations** in the shipped skill.
 - **One representation per fact within a file.** Don't place two tables / sections that encode the same thing. When a decision derives from a fact table, express it as prose that points at that table, not a second parallel table.
 
-Each non-trivial subcommand gets a `references/<skill>-<verb>.md` file that adds — on top of `--help` — safety constraints, agent-facing multi-step flows, and common-error troubleshooting tables. Do NOT re-list flag descriptions; trust `--help`.
+Each non-trivial trigger gets a `references/<skill>-<trigger>.md` file that adds — on top of `--help` — safety constraints, agent-facing multi-step flows, and common-error troubleshooting tables. Do NOT re-list flag descriptions; trust `--help`. A trigger is usually one verb, which is why most of these files are named after one; when a single verb covers several unrelated tasks (`router call` spans chat, transcription and OCR), the split follows the tasks.
 
 What to leave out of SKILL.md (and references):
 
 - Per-flag descriptions (in `--help`)
 - Error strings or recovery steps already printed by the CLI
-- Source-path citations like `cli/cmd/ctl/files/path.go` — agents don't review Go source
+- Source-path citations like `cli/cmd/ctl/files/path.go` — agents don't review Go source. Ground the claim in the implementation, then leave the path in the commit message; `validate.py` refuses any Go path in any file of the suite, whatever tree it names
 - Internal package walkthroughs / "Source layout" sections
 - "What's NOT here yet" / future-work sections — keep skills focused on current capability
 
-Target sizes: SKILL.md ≤ 250 lines (≤ 300 for the most complex command tree). Each reference: ≤ 150 lines.
+Per-file ceilings: SKILL.md ≤ 250 lines, each reference ≤ 150. `validate.py` enforces both, with no exception for a complex tree — a 300-line front door is over the whole read-path budget on its own, before it has linked anything. These are ceilings, not the budget; the budget is below.
 
-**Reference depth (one level deep):** every reference must be linked **directly from its own `SKILL.md`**, so no file is reachable only by going through another one. A concept buried two hops down is unreliable. A pointer between two references of the *same* skill is fine and often needed — both ends are already one hop from the front door, so it is a lateral cross-reference, not a second hop. What is not fine is deep-linking **another skill's** reference: that lands the agent inside a file whose own prerequisites it has not read (see the peer-skill rule below). Keep each reference short enough to be read whole (≤ 150 lines); when one outgrows that, split it into sibling references rather than adding an in-file table of contents — the `##` headings already are the structure, so a TOC just duplicates them and spends the line budget.
+## The budget is a task path, not a file
+
+Every rule above constrains one file, and every one of them is satisfiable while the thing an agent actually pays for gets worse. What it pays for is the **read path**: the shared front door, plus the domain `SKILL.md`, plus the references this task triggers — everything it must read before it can issue its first correct command. Files are what we write; paths are what get read.
+
+**First-command budget: ≤ 250 lines on the read path.** Measured from the shared front door to the first command the agent can correctly issue, for the skill's most common tasks. When adding a skill or reworking one, list two or three of its common tasks and their path line counts, and put those numbers in the PR description. A skill can pass every per-file check and still cost 500 lines to enter; only the path number says so.
+
+Give the common paths a name in the skill, so the agent does not have to reconstruct one by reading everything: a short `## Fast paths` block naming a task, the files it needs, and the command it ends at. `validate.py` requires the block, totals what each row links, and holds every row to the budget.
+
+A diagnosis skill writes `## Symptom routing` instead, and `validate.py` accepts either name — but only one of them per skill. The two are the same table under different first columns: a symptom is what the user reported, a task is what the agent means to do next, and for `olares-doctor` those are the same list. Writing both is how it ended up routing five symptoms twice, with the second table a symptom short.
+
+**Split on triggers, not on line count.** A reference serves one trigger. If a file answers two questions an agent would never ask on the same task — `call chat` and `call transcribe`, `install` and `uninstall` — split it, even at 40 lines. The 150-line ceiling is the point past which a file is certainly too big; it was never the point at which a file *becomes* worth splitting, and treating it that way produces the failure it was meant to prevent: an author at 150 lines compresses five triggers into one file instead of writing five files, and every agent then reads all five triggers to serve one.
+
+**Reference depth (one level deep):** every reference must be linked **directly from its own `SKILL.md`**, so no file is reachable only by going through another one. A concept buried two hops down is unreliable. A pointer between two references of the *same* skill is fine and often needed — both ends are already one hop from the front door, so it is a lateral cross-reference, not a second hop. What is not fine is deep-linking **another skill's** reference: that lands the agent inside a file whose own prerequisites it has not read (see the peer-skill rule below). Do not add an in-file table of contents — the `##` headings already are the structure, so a TOC just duplicates them and spends the line budget.
+
+**Point at a section with a link, never with its name in prose.** `(especially "OpType vs State")` is a reference no tool can resolve and no rename updates, and both of the ones this suite had were pointing at headings that no longer existed. Write `[App lifecycle / state machine](../SKILL.md#app-lifecycle--state-machine)`; `validate.py` resolves anchors and will fail the next rename. It rejects the prose form outright.
 
 These rules apply to **every** skill, including `olares-chart` — even though it is a local-only chart-authoring skill (no live profile / login) rather than a CLI-driving one, it still avoids Go source-path citations and keeps each reference ≤ 150 lines.
 
@@ -110,7 +130,7 @@ Facts used by **≥2 skills** are defined **once** and linked, never copied. Thi
 - **Anything that needs a *peer* skill links that skill's `SKILL.md` and names the section — references and `SKILL.md`s alike.** The rule above says how to reach the shared platform model — name it, because every runtime `SKILL.md` already loads it. A sibling skill is nobody's prerequisite, so naming alone leaves it unfindable; link one hop up instead (`](../../olares-settings/SKILL.md)`, then "under `apps` → **`domain set` — RMW semantics + cert/key handling**") and let that skill's verb index make the last hop. Deep-linking its reference lands the agent on a file whose own first line demands two files it has not read, and skips the auth gate and verb floors its front door carries. `olares-shared`'s references are the single exception, and only from a `SKILL.md`: the rule above requires that link.
 - **Self-containment is traded for a suite contract.** Strictly, Skills are self-contained and "cannot reference files in other skill folders". We deliberately cross-link because these skills **ship and install as one suite** (stated under Layout). A standalone install leaves cross-skill links dangling — that is the documented trade-off, not an accident.
 - **When a fact is genuinely two skills' own angle, let each keep its own framing.** `files` describes the storage areas as *addressing* (`drive/Home`), `chart` as *mounting* (`.Values.userspace.appData`). That is not duplication to dedupe — only the underlying platform facts (backends, durability, uid, version gates) are centralized in `olares-platform.md`.
-- **Routing has one source of truth too: the Skill suite map** in [`olares-shared/SKILL.md`](olares-shared/SKILL.md). The canonical intent->skill scope for the whole suite lives there once. The target state after the suite-wide cleanup is that runtime skills no longer repeat an “anything outside this scope” pointer: the thin shared front door is already in context. Their `## When to use` only names the closest ambiguous boundaries.
+- **Routing has one source of truth too: the Skill suite map** in [`olares-shared/references/olares-suite-map.md`](olares-shared/references/olares-suite-map.md). The canonical intent->skill scope for the whole suite lives there once. It sits one hop off the front door rather than inside it because routing and running are different moments: by the time a domain skill loads the shared prerequisite, the routing decision has already been made, and the map is thirty lines the task will not use again. The target state after the suite-wide cleanup is that runtime skills no longer repeat an “anything outside this scope” pointer: the thin shared front door is already in context. Their `## When to use` only names the closest ambiguous boundaries.
 
 ## Runtime requirement
 
@@ -141,7 +161,7 @@ ClawHub does **not** install the `olares-cli` binary for you — it is part of e
 
 ### Local validation (no network)
 
-`clawhub skill publish` does not have a `--dry-run` flag. The `--dry-run` mode here is a **local-only** sanity check: parses each `SKILL.md` frontmatter, verifies that `name` matches the folder slug, that `version` names an `olares-cli` release (`x.y.z-cli.n`), that `description` is ≤ 1024 characters, and that `metadata.openclaw.requires.bins` includes `olares-cli`. It then prints the `clawhub skill publish` command that would actually run.
+`clawhub skill publish` does not have a `--dry-run` flag. The `--dry-run` mode here is a **local-only** sanity check: parses each `SKILL.md` frontmatter, verifies that `name` matches the folder slug, that `version` names an `olares-cli` release (`x.y.z-cli.n`), that `description` is ≤ 1024 characters, and that `metadata.openclaw.requires.bins` includes `olares-cli`. It also enforces the writing rules that can be checked mechanically: link and anchor targets resolve, per-file ceilings hold, no reference deep-links a peer skill, no section is named in prose instead of linked, no verb-index row points only at `--help`, and every skill declares its read paths in one `## Fast paths` (or `## Symptom routing`) block that stays inside the first-command budget. It then prints the `clawhub skill publish` command that would actually run.
 
 ```bash
 python3 -m unittest cli/skills/test_validate.py

@@ -2,6 +2,7 @@ package market
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -67,26 +68,46 @@ func runDelete(opts *MarketOptions, appName string) error {
 		}
 		opts.info("note: --version names the request but does not narrow the delete; every uploaded version of '%s' will be removed", appName)
 	} else {
-		v, err := resolveVersionInSource(mc, appName, source)
+		// --version does not narrow a delete, so a failure here must not
+		// suggest it: the backend answers a delete of an app it does not hold
+		// with success, which turns this correct failure into a false one.
+		v, err := resolveVersionInSource(mc, appName, source, false)
 		if err != nil {
-			return opts.failOp("delete", appName, fmt.Errorf("cannot determine version in source '%s': %w (use --version to specify)", source, err))
+			return opts.failOp("delete", appName, err)
 		}
 		version = v
 		opts.info("Using version: %s", version)
 	}
 
-	opts.info("Deleting chart '%s' (all versions, request names '%s') from source '%s'...", appName, version, source)
+	opts.info("Deleting chart '%s' (all versions, request names '%s') from source '%s' for user '%s'...", appName, version, source, mc.olaresID)
 
 	ctx := context.Background()
-	if _, err := mc.DeleteLocalApp(ctx, appName, version, source); err != nil {
+	resp, err := mc.DeleteLocalApp(ctx, appName, version, source)
+	if err != nil {
 		return opts.failOp("delete", appName, err)
 	}
 
+	// The backend answers a delete of an app it does not hold with HTTP 200
+	// and success=true, reporting the work it actually did in
+	// data.deleted_rows (market pkg/v2/api/catalog_local.go). Without
+	// reading that, `delete some-typo` and `delete --version 9.9.9` both
+	// printed "all versions deleted" having removed nothing.
+	rows, known := deletedRowCount(resp)
+	if known && rows == 0 {
+		return opts.failOp("delete", appName, fmt.Errorf(
+			"nothing was deleted: source '%s' holds no app named '%s' (run 'olares-cli market list -s %s' to see what is there)",
+			source, appName, source))
+	}
+
+	message := fmt.Sprintf("all versions deleted from source '%s' (request named %s)", source, version)
+	if known {
+		message = fmt.Sprintf("%s; %d row(s) removed", message, rows)
+	}
 	result := OperationResult{
 		App:       appName,
 		Operation: "delete",
 		Status:    "success",
-		Message:   fmt.Sprintf("all versions deleted from source '%s' (request named %s)", source, version),
+		Message:   message,
 		Source:    source,
 		Version:   version,
 	}
@@ -94,4 +115,21 @@ func runDelete(opts *MarketOptions, appName string) error {
 		opts.printResult(result)
 	}
 	return nil
+}
+
+// deletedRowCount pulls data.deleted_rows out of a /local-apps/delete
+// response. `known` is false when the field is absent or not a number —
+// an older backend, or a shape change — in which case the caller must not
+// treat the delete as a no-op on the strength of a missing field.
+func deletedRowCount(resp *APIResponse) (count int, known bool) {
+	if resp == nil || len(resp.Data) == 0 {
+		return 0, false
+	}
+	var payload struct {
+		DeletedRows *float64 `json:"deleted_rows"`
+	}
+	if err := json.Unmarshal(resp.Data, &payload); err != nil || payload.DeletedRows == nil {
+		return 0, false
+	}
+	return int(*payload.DeletedRows), true
 }

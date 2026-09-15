@@ -41,7 +41,7 @@ noindex: true
 <!-- #endregion scan-qr-and-reset-password -->
 
    ::: tip 提示
-   如果你重新安装了 Olares，原有实例将不可用。你可以使用同一个 ID [重新激活 Olares](../larepass/activate-olares.md#使用同一-olares-id-重新激活)。
+   如果你重新安装了 Olares，原有实例将不可用。你可以使用同一个 ID [重新激活 Olares](../larepass/activate-olares.md)。
    :::
 
 <!-- #region activation-complete-redirect -->

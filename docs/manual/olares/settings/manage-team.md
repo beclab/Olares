@@ -8,13 +8,11 @@ head:
 # Manage your team
 As an administrator, you can create and manage users in your team while ensuring system security and resource efficiency.
 
-:::tip Note on role permissions
-As an administrator, Super Admin and Admin share most system management permissions, but only the **Super Admin** can create or remove Admin accounts. Admins can only create and manage Member accounts. See [Roles and permissions](roles-permissions.md) for more information.
-:::
+Before assigning a role, check [Roles and permissions](roles-permissions.md) to confirm which actions are available to Members, Admins, and Super Admins.
 
 ![Manage users](/images/manual/olares/manage-users.png#bordered)
 
-## Before you begin
+## Prerequisites
 Ensure that:
 
 * You have Super Admin or Admin privileges

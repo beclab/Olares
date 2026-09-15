@@ -65,7 +65,7 @@ GitBot checks mechanical policy; it does not validate product quality, screensho
 - Local install and `running` validation belong to Chart/Market and can be asynchronous; do not infer that a successful upload ACK proves installability.
 - GitBot processing is asynchronous. Interpret its current label/check state using the submission reference; do not repeatedly open duplicate PRs.
 
-## Agent boundaries
+## Safety and escalation
 
 - **Do NOT** fork, push, or open PRs on the developer's behalf without explicit consent — these write to their GitHub account.
 - **The fork here is legitimate and required.** Submitting to the public Market is the standard open-source contribution flow: fork [`beclab/apps`](https://github.com/beclab/apps), push a branch, open a PR. This is the *public app catalog*, a different repo from the beclab dev repos the workspace "no-fork, push to `origin`" rule covers — that rule does not apply to `beclab/apps` submissions.

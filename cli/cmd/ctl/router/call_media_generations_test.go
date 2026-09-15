@@ -3,7 +3,6 @@ package router
 import (
 	"bytes"
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -191,43 +190,19 @@ func TestAMeshCanBeAskedForWithAPictureAlone(t *testing.T) {
 	}
 }
 
-// Both verbs create on the unified route and read the record back from it. A
+// A mesh creates on the unified route and reads the record back from it. A
 // generation created there is not addressable on the released routes, so a
 // mismatch here is a submission that succeeds and an id that cannot be
 // collected.
-func TestMusicAnd3DUseTheUnifiedRoute(t *testing.T) {
-	for _, kind := range []mediaKind{musicKind, model3DKind} {
-		if kind.submitPath != epGenerations {
-			t.Errorf("%s submits to %s", kind.verb, kind.submitPath)
-		}
-		if got := kind.get("gen_1"); got != epGeneration("gen_1") {
-			t.Errorf("%s reads from %s", kind.verb, got)
-		}
-		if got := kind.content("gen_1"); got != epGenerationContent("gen_1") {
-			t.Errorf("%s downloads from %s", kind.verb, got)
-		}
+func Test3DUsesTheUnifiedRoute(t *testing.T) {
+	if model3DKind.submitPath != epGenerations {
+		t.Errorf("3d submits to %s", model3DKind.submitPath)
 	}
-}
-
-// The canonical body is what /v1/generations parses, and it parses strictly: a
-// field under the wrong name is a 400 rather than a field that is ignored.
-func TestATrackIsSpelledTheWayRouterReadsIt(t *testing.T) {
-	cmd, flags := mediaCommand(t, musicFields,
-		"--duration", "30", "--format", "mp3", "--lyrics", "la la", "--instrumental=false",
-	)
-	request, err := flags.canonical(cmd, "FlowStudio/ace-step", "a waltz")
-	if err != nil {
-		t.Fatalf("build: %v", err)
+	if got := model3DKind.get("gen_1"); got != epGeneration("gen_1") {
+		t.Errorf("3d reads from %s", got)
 	}
-	encoded, err := json.Marshal(request)
-	if err != nil {
-		t.Fatalf("encode: %v", err)
-	}
-	const want = `{"model":"FlowStudio/ace-step","prompt":"a waltz",` +
-		`"output":{"format":"mp3","duration_seconds":30},` +
-		`"music":{"lyrics":"la la","instrumental":false}}`
-	if string(encoded) != want {
-		t.Errorf("body:\n got %s\nwant %s", encoded, want)
+	if got := model3DKind.content("gen_1"); got != epGenerationContent("gen_1") {
+		t.Errorf("3d downloads from %s", got)
 	}
 }
 

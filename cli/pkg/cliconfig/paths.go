@@ -34,6 +34,15 @@ const defaultDir = ".olares-cli"
 // cli/pkg/auth/token_store_keychain.go.
 const configFilename = "config.json"
 
+// lockDir is the subdirectory of Home() holding every advisory lock the CLI
+// takes: this package's config.lock plus the per-olaresId token-refresh
+// locks built by pkg/credential.
+const lockDir = "locks"
+
+// configLockFilename serializes read-modify-write cycles on config.json.
+// See MutateProfile.
+const configLockFilename = "config.lock"
+
 // Permissions for the config dir & file. config.json holds the profile index
 // (no secrets) but we still keep it 0600 because it does carry the
 // `currentProfile` selection and any auth-URL overrides.
@@ -79,4 +88,18 @@ func ConfigFile() (string, error) {
 		return "", err
 	}
 	return filepath.Join(dir, configFilename), nil
+}
+
+// LockPath returns the absolute path of the named lock file under
+// Home()/locks/. Neither the directory nor the file is created here —
+// lockfile.Acquire does that when it takes the lock.
+//
+// Callers naming a lock after user input must run it through
+// lockfile.Sanitize first; this function does not validate `name`.
+func LockPath(name string) (string, error) {
+	dir, err := Home()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, lockDir, name), nil
 }

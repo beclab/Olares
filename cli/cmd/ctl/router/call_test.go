@@ -41,7 +41,22 @@ func TestEveryCallVerbFallsBackToACategory(t *testing.T) {
 		// whichever backend the category happens to name today — a different
 		// one is the ordinary case, and it answers 404 for an id it never saw.
 		if verb.Name() == "task" {
-			assertTaskSubcommandsRequireAModel(t, verb)
+			assertSubcommandsRefuseACategory(t, verb, false)
+			continue
+		}
+		// `history` is the same shape for a different reason: Router registers
+		// no category for the history routes, so a reading is addressable only
+		// through the engine that performed it.
+		if verb.Name() == "history" {
+			assertSubcommandsRefuseACategory(t, verb, true)
+			continue
+		}
+		// `voice` is a noun rather than a verb, and its subcommands do not
+		// share one category: reading the table is default-tts, while making a
+		// voice from a recording and making one from a description each need a
+		// capability the other model may not declare.
+		if verb.Name() == "voice" {
+			assertSubcommandsNameACategory(t, verb)
 			continue
 		}
 		flag := verb.Flags().Lookup("model")
@@ -88,22 +103,49 @@ func TestEveryCallVerbFallsBackToACategory(t *testing.T) {
 	}
 }
 
-func assertTaskSubcommandsRequireAModel(t *testing.T, task *cobra.Command) {
+// alwaysNeeded separates the two nouns that cannot resolve a category. A task
+// names its backend only when Router has forgotten the submission, so its
+// --model is a fallback; a history verb has nothing to fall back to and has to
+// say so up front.
+func assertSubcommandsRefuseACategory(t *testing.T, noun *cobra.Command, alwaysNeeded bool) {
 	t.Helper()
-	subs := task.Commands()
+	subs := noun.Commands()
 	if len(subs) == 0 {
-		t.Fatal("call task: no subcommands")
+		t.Fatalf("call %s: no subcommands", noun.Name())
 	}
 	for _, sub := range subs {
 		flag := sub.Flags().Lookup("model")
 		if flag == nil {
-			t.Errorf("call task %s: no --model flag, but a task id alone does not "+
-				"say which backend holds it", sub.Name())
+			t.Errorf("call %s %s: no --model flag, but an id alone does not "+
+				"say which backend holds it", noun.Name(), sub.Name())
 			continue
 		}
 		if strings.Contains(flag.Usage, "default-") {
-			t.Errorf("call task %s: --model names a category, which would resolve a "+
-				"backend that never saw this task: %q", sub.Name(), flag.Usage)
+			t.Errorf("call %s %s: --model names a category, which would resolve a "+
+				"backend that never saw this id: %q", noun.Name(), sub.Name(), flag.Usage)
+		}
+		if alwaysNeeded && !strings.Contains(flag.Usage, "required") {
+			t.Errorf("call %s %s: --model does not say it is required: %q",
+				noun.Name(), sub.Name(), flag.Usage)
+		}
+	}
+}
+
+func assertSubcommandsNameACategory(t *testing.T, noun *cobra.Command) {
+	t.Helper()
+	subs := noun.Commands()
+	if len(subs) == 0 {
+		t.Fatalf("call %s: no subcommands", noun.Name())
+	}
+	for _, sub := range subs {
+		flag := sub.Flags().Lookup("model")
+		if flag == nil {
+			t.Errorf("call %s %s: no --model flag", noun.Name(), sub.Name())
+			continue
+		}
+		if !strings.Contains(flag.Usage, "default-") {
+			t.Errorf("call %s %s: --model does not name the category it falls back to: %q",
+				noun.Name(), sub.Name(), flag.Usage)
 		}
 	}
 }
@@ -139,6 +181,7 @@ func TestEveryCategoryIsSpelledLikeADefaultRoute(t *testing.T) {
 		"align":         categoryAlign,
 		"tts":           categoryTTS,
 		"tts_clone":     categoryTTSClone,
+		"tts_design":    categoryTTSDesign,
 		"dialogue":      categoryTTSDialogue,
 		"vad":           categoryVAD,
 		"diarization":   categoryDiarization,

@@ -131,6 +131,7 @@ type providerModelRow struct {
 	// number an admin typed would be a width the engine never agreed to.
 	// Absent on a cloud model, which has no engine of ours to be launched.
 	MaxConcurrency int       `json:"max_concurrency,omitempty"`
+	KVPoolTokens   int       `json:"kv_pool_tokens,omitempty"`
 	EngineArgs     string    `json:"engine_args,omitempty"`
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
@@ -141,6 +142,12 @@ type providerDetail struct {
 	Models []providerModelRow `json:"models"`
 }
 
+// title falls back to the application id for a local model provider, because
+// Router often sends no display title for one: `provider get bgererankerv2m3`
+// reports TITLE `bgererankerv2m3` while `usage apps` has the readable name for
+// the same application. The right name exists and this endpoint does not carry
+// it, so the fallback stays here and the fix belongs in Router rather than in a
+// second lookup from every verb that prints a provider.
 func (p *providerRow) title() string {
 	if p.ProviderDisplayTitle != nil && *p.ProviderDisplayTitle != "" {
 		return *p.ProviderDisplayTitle

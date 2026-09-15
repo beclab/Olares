@@ -33,6 +33,8 @@ import (
 	"github.com/spf13/viper"
 )
 
+const unknownVerbGroupAnnotation = "olares-cli/unknown-verb-group"
+
 func NewDefaultCommand() *cobra.Command {
 	var showVendor bool
 	// One Factory per process. Subcommands that need an authenticated HTTP
@@ -133,5 +135,48 @@ func NewDefaultCommand() *cobra.Command {
 	cmds.AddCommand(router.NewRouterCommand(factory))
 	cmds.AddCommand(cluster.NewClusterCommand(factory))
 
+	wireUnknownVerbRefusals(cmds)
+	skipPreRunsForGroupHelp(cmds)
 	return cmds
+}
+
+func wireUnknownVerbRefusals(cmd *cobra.Command) {
+	children := cmd.Commands()
+	if len(children) > 0 && !cmd.Runnable() {
+		cmd.Args = cmdutil.RefuseUnknownVerbGroupArgs
+		cmd.RunE = cmdutil.RefuseUnknownVerb
+		if cmd.Annotations == nil {
+			cmd.Annotations = make(map[string]string)
+		}
+		cmd.Annotations[unknownVerbGroupAnnotation] = "true"
+	}
+	for _, child := range children {
+		wireUnknownVerbRefusals(child)
+	}
+}
+
+func skipPreRunsForGroupHelp(cmd *cobra.Command) {
+	if run := cmd.PersistentPreRun; run != nil {
+		cmd.PersistentPreRun = func(current *cobra.Command, args []string) {
+			if !isGroupHelp(current, args) {
+				run(current, args)
+			}
+		}
+	}
+	if run := cmd.PersistentPreRunE; run != nil {
+		cmd.PersistentPreRunE = func(current *cobra.Command, args []string) error {
+			if isGroupHelp(current, args) {
+				return nil
+			}
+			return run(current, args)
+		}
+	}
+	for _, child := range cmd.Commands() {
+		skipPreRunsForGroupHelp(child)
+	}
+}
+
+func isGroupHelp(cmd *cobra.Command, args []string) bool {
+	return cmd.Annotations[unknownVerbGroupAnnotation] == "true" &&
+		len(args) > 0 && args[0] == "help"
 }

@@ -45,15 +45,87 @@ func TestARouteIsCallableOnlyWithSomethingBehindIt(t *testing.T) {
 
 // An empty category and an empty group mean different things, and the cell has
 // to say which: nobody built the group, versus Router built the category and
-// this machine has nothing that serves it. The second is fixed in Market.
+// nothing is currently answering it.
+//
+// What the category's cell must not say is that nothing is installed. A model
+// whose application is stopped is absent from Members and installed all the
+// same, and this cell cannot tell those apart without asking for the candidates
+// of every empty category — so it stops at what it knows.
 func TestAnEmptyRouteSaysWhichKindOfEmptyItIs(t *testing.T) {
 	group := modelRoute{Kind: routeKindGroup}
 	if got := group.answersWith(); got != "nothing" {
 		t.Errorf("empty group reads %q", got)
 	}
 	category := modelRoute{Kind: routeKindDefault}
-	if got := category.answersWith(); !strings.Contains(got, "installed") {
-		t.Errorf("empty category reads %q, which does not point at Market", got)
+	got := category.answersWith()
+	if got == "nothing" {
+		t.Errorf("empty category reads %q, the same as an empty group", got)
+	}
+	if strings.Contains(got, "installed") {
+		t.Errorf("empty category reads %q, which claims something this cell cannot know", got)
+	}
+}
+
+// The two ways a category comes to answer nothing have different fixes, and
+// `route get` is where the difference is resolved: it probes the candidates, so
+// it can name the stopped application instead of sending somebody to install a
+// model they already have.
+func TestAnEmptyCategoryWithAStoppedCandidateNamesTheApplication(t *testing.T) {
+	app := "bgererankerv2m3"
+	stopped := []routeMember{{
+		ProviderName:  "Olares",
+		ModelName:     "bge-reranker-v2-m3",
+		QualifiedName: "Olares/bge-reranker-v2-m3",
+		OlaresAppName: &app,
+	}}
+
+	var buf strings.Builder
+	if err := renderRouteWithCandidates(&buf, &modelRoute{
+		Name: "default-rerank", Kind: routeKindDefault, Mode: "rerank", Enabled: true,
+	}, stopped); err != nil {
+		t.Fatalf("renderRouteWithCandidates: %v", err)
+	}
+	out := buf.String()
+	if strings.Contains(out, "Nothing installed") {
+		t.Errorf("a category with a stopped candidate still claims nothing is installed:\n%s", out)
+	}
+	for _, want := range []string{"bge-reranker-v2-m3", "market resume " + app} {
+		if !strings.Contains(out, want) {
+			t.Errorf("the note does not mention %q:\n%s", want, out)
+		}
+	}
+
+	// With no candidate the old wording is the right one: there really is
+	// nothing, and Market is where a model comes from.
+	buf.Reset()
+	if err := renderRouteWithCandidates(&buf, &modelRoute{
+		Name: "default-search", Kind: routeKindDefault, Mode: "search", Enabled: true,
+	}, nil); err != nil {
+		t.Fatalf("renderRouteWithCandidates: %v", err)
+	}
+	if !strings.Contains(buf.String(), "Nothing installed answers search") {
+		t.Errorf("a genuinely empty category reads:\n%s", buf.String())
+	}
+}
+
+// A probe is only worth making for a category that is empty and unpinned. A
+// pinned one is already explained by the pin, and a populated one has nothing
+// to explain.
+func TestOnlyAnEmptyUnpinnedDefaultIsProbedForCandidates(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		route modelRoute
+	}{
+		{"a group", modelRoute{Kind: routeKindGroup}},
+		{"a populated default", modelRoute{
+			Kind: routeKindDefault, Members: []routeMember{member("a", true)},
+		}},
+		{"a pinned default", modelRoute{Kind: routeKindDefault, TargetPinned: true}},
+	} {
+		// A nil client would panic if the probe ran, which is the assertion.
+		if got := stoppedCandidates(nil, nil, &tc.route); got != nil {
+			t.Errorf("%s was probed and returned %v", tc.name, got)
+		}
 	}
 }
 

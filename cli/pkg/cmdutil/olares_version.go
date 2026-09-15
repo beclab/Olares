@@ -198,10 +198,8 @@ func (f *Factory) fetchBackendVersion(ctx context.Context, rp *credential.Resolv
 
 	// Persist best-effort; a write failure (e.g. an env-only profile that
 	// isn't in config.json) must not break the command.
-	if cfg, lerr := cliconfig.LoadMultiProfileConfig(); lerr == nil {
-		if _, serr := cfg.SetBackendVersion(rp.OlaresID, v.Original(), time.Now().Unix()); serr != nil {
-			fmt.Fprintf(os.Stderr, "warning: could not cache Olares backend version: %v\n", serr)
-		}
+	if _, serr := cliconfig.SetBackendVersion(ctx, rp.OlaresID, v.Original(), time.Now().Unix()); serr != nil {
+		fmt.Fprintf(os.Stderr, "warning: could not cache Olares backend version: %v\n", serr)
 	}
 	return v, nil
 }

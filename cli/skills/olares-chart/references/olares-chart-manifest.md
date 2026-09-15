@@ -110,7 +110,7 @@ In the deployment template, replace the PVC mount with the injected host path (`
 
 Replace any bundled `postgres`/`redis`/`mongodb`/`mysql`/`mariadb`/`minio`/`rabbitmq`/`nats` workload with Olares **system middleware**, prefer Postgres over a bundled SQLite, and depend on an already-ported companion app instead of copying its workload. `lint` does **not** flag a bundled db, so this is on you. Full rules — the SQLite→Postgres decision, the `middleware:` block, the PostgreSQL extension catalog, `type: application` dependencies, and the self-hosted escape hatch — are in the Middleware & dependencies area. Env wiring of the `.Values.<mw>.*` values is in the Env area.
 
-> The `olares` `type: system` dependency (see "System dependency: olares") is a **separate, always-required** entry in `options.dependencies` — keep it when you add or remove middleware / application dependencies.
+> The `olares` `type: system` dependency ([System dependency: olares](#system-dependency-olares-required)) is a **separate, always-required** entry in `options.dependencies` — keep it when you add or remove middleware / application dependencies.
 
 ## 4. Entrances & ports
 

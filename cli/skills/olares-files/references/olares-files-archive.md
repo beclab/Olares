@@ -10,7 +10,7 @@ The **read-only** counterpart to `compress` / `extract`: inspect an archive WITH
 
 | Sub-command | Purpose |
 |---|---|
-| `archive entries <archive>` | Stream the archive's entry list (table by default; `--json` for NDJSON) |
+| `archive entries <archive>` | Stream the archive's entry list (table by default; `--output json` for NDJSON — `-o` is a local file path on `archive cat`, so this verb takes the long form only) |
 | `archive cat <archive> <inner-path>` | Stream one member's bytes to stdout (or to a file via `-o`) |
 
 ## Namespace allow-list
@@ -26,7 +26,7 @@ Same as compress / extract: `drive/Home`, `drive/Data`, `drive/Common`, `cache/<
 
 | Flag | Applies to | Meaning |
 |---|---|---|
-| `--json` | `entries` | One JSON object per line (`path` / `size` / `modified` / `is_dir` / `encrypted`) |
+| `--output json` | `entries` | One JSON object per line (`path` / `size` / `modified` / `is_dir` / `encrypted`) |
 | `--max-entries N` | `entries` | Stop after N entries (0 = no limit); head-style preview of huge archives |
 | `-o, --output FILE` | `cat` | Write the member's bytes to a local file (atomic tmp+rename) instead of stdout |
 | `--password-stdin` | both | Read the password from STDIN (zip / 7z only) |
@@ -40,7 +40,7 @@ Same as compress / extract: `drive/Home`, `drive/Data`, `drive/Common`, `cache/<
 olares-cli files archive entries drive/Home/Backups/2026-Q1.zip
 
 # JSON pipeline.
-olares-cli files archive entries drive/Home/Backups/2026-Q1.zip --json | jq '.path'
+olares-cli files archive entries drive/Home/Backups/2026-Q1.zip --output json | jq '.path'
 
 # Head-style preview of a huge archive.
 olares-cli files archive entries drive/Home/Backups/huge.7z --max-entries 50 --password-stdin
@@ -62,7 +62,7 @@ GET /api/archive/<node>/entry?source=<archive>&path=<inner-path>  (application/o
 ## Agent notes
 
 - **`cat` is binary-safe** — pipe into `less` / `hexdump` / `head -c`. In default (no `-o`) mode stdout stays a clean byte stream, so a status line is printed only with `-o`.
-- **`entries --json` keeps stdout NDJSON-clean** — the truncation notice for `--max-entries` goes to stderr in JSON mode.
+- **`entries --output json` keeps stdout NDJSON-clean** — the truncation notice for `--max-entries` goes to stderr in JSON mode.
 - **`<inner-path>` for `cat` is the in-archive path** (leading `/` is normalized away). Use `archive entries` first to discover member paths.
 
 ## Common errors

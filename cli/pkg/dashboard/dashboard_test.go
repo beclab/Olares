@@ -651,10 +651,8 @@ func TestPodDeploymentName(t *testing.T) {
 	}
 }
 
-// unknownSubcommandRunE / TestAllLeafCommandsSilenced live in
-// cli/cmd/ctl/dashboard/dashboard_test.go because they're inherently
-// tied to NewDashboardCommand's cobra binding (an artefact of the cmd
-// shell, not the pkg core).
+// TestAllLeafCommandsSilenced lives in cli/cmd/ctl/dashboard/dashboard_test.go
+// because it is tied to NewDashboardCommand's Cobra binding.
 
 // ----------------------------------------------------------------------------
 // overview disk — lsblk subtree resolution + tree prefix

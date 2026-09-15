@@ -12,6 +12,7 @@ import (
 
 	aprv1 "bytetrade.io/web3os/tapr/pkg/apis/apr/v1alpha1"
 	"bytetrade.io/web3os/tapr/pkg/constants"
+	aprclientset "bytetrade.io/web3os/tapr/pkg/generated/clientset/versioned"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"golang.org/x/crypto/bcrypt"
@@ -83,6 +84,14 @@ func createOrUpdateUser(request *aprv1.MiddlewareRequest, namespace, password st
 	return config, nil
 }
 func CreateOrUpdateUser(request *aprv1.MiddlewareRequest, namespace, password string) (*Config, error) {
+	ns, name := request.Namespace, request.Name
+	request, err := latestMiddlewareRequest(request, fetchMiddlewareRequest)
+	if skipMissingMiddlewareRequest(ns, name, err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
 	clientSet, err := newClientSet()
 	if err != nil {
 		return nil, err
@@ -347,6 +356,43 @@ func GetOriginSubjectName(subjectName string) string {
 		return match[1]
 	}
 	return ""
+}
+
+func latestMiddlewareRequest(request *aprv1.MiddlewareRequest, get func(ns, name string) (*aprv1.MiddlewareRequest, error)) (*aprv1.MiddlewareRequest, error) {
+	if request == nil {
+		return nil, fmt.Errorf("middleware request is nil")
+	}
+	if request.Namespace == "" || request.Name == "" {
+		return nil, fmt.Errorf("middleware request namespace/name is empty")
+	}
+	live, err := get(request.Namespace, request.Name)
+	if err != nil {
+		klog.Infof("get middleware request %s/%s err=%v", request.Namespace, request.Name, err)
+		return nil, err
+	}
+	return live, nil
+}
+
+func skipMissingMiddlewareRequest(ns, name string, err error) bool {
+	if !apierrors.IsNotFound(err) {
+		return false
+	}
+	klog.Infof("middleware request %s/%s not found, skip createOrUpdateUser", ns, name)
+	return true
+}
+
+func fetchMiddlewareRequest(ns, name string) (*aprv1.MiddlewareRequest, error) {
+	config, err := ctrl.GetConfig()
+	if err != nil {
+		klog.Infof("get config err=%v", err)
+		return nil, err
+	}
+	cs, err := aprclientset.NewForConfig(config)
+	if err != nil {
+		klog.Infof("create apr clientset err=%v", err)
+		return nil, err
+	}
+	return cs.AprV1alpha1().MiddlewareRequests(ns).Get(context.TODO(), name, metav1.GetOptions{})
 }
 
 func newClientSet() (*kubernetes.Clientset, error) {

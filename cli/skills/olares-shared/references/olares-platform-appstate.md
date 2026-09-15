@@ -56,7 +56,7 @@ Used by: `market` (verb pre-flight gating), `chart` (install-vs-upgrade verb cho
 
 ## Backend fail TTLs (how long a state can sit before app-service gives up)
 
-Each progressing state has its own timeout before the backend itself gives up on the op. The live values are the ones app-service's reconciler passes when it loads the state handler (`controllers/load.go`, `LoadStatefulApp`):
+Each progressing state has its own timeout before the backend itself gives up on the op. These are the values app-service's reconciler passes when it loads the state handler — the ones that actually run:
 
 | State | Backend TTL |
 |---|---|
@@ -68,8 +68,6 @@ Each progressing state has its own timeout before the backend itself gives up on
 | `applyingEnv` | 30m |
 | `resuming` | 60m |
 | `stopping` / `uninstalling` | 30m |
-
-> Do not read these off `StateToDurationMap` in `pkg/appstate/state_transition.go` — that map (which still says 30 days for `downloading`) has no non-test caller; the loader above is what actually runs.
 
 The `downloading` 24h TTL is the headline fact: **a slow/large image pull will not self-fail within any normal agent session**, so a foreground `--watch` that sits in `downloading` is not a hang to wait out — judge it by image-pull progress, not by waiting for a terminal state. It does eventually expire, though: a pull genuinely stuck for a day ends up cancelled rather than parked forever.
 

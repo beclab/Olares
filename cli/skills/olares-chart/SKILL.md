@@ -12,9 +12,11 @@ metadata:
 
 # Deploy your code or any project to your Olares
 
+> **Shared front door:** load [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) for suite routing, active-profile selection, and platform entry points. Authoring — `from-compose`, `lint`, `package` — needs no Olares at all, so start it without one; apply the shared auth gate when the work reaches upload, install or any other deploy step. Load its auth reference only when login, profile switching, token storage, or auth recovery is actually needed.
+
 Flags and syntax come from `olares-cli chart <verb> --help`. Read the shared [Olares platform model](../olares-shared/references/olares-platform.md) before porting: chart decisions depend on its storage, uid-1000, namespace, middleware and version semantics.
 
-Authoring (`from-compose`, `lint`, `package`) is local-only. Building for a specific Olares needs the target node architecture before the first image build, and deployment needs the active profile.
+Building for a specific Olares needs the target node architecture before the first image build, not at deploy time.
 
 Porting targets Olares 1.12.6+; load [versioning](references/olares-chart-versioning.md) before writing manifest/chart version and dependency fields.
 
@@ -111,13 +113,13 @@ Two red lines: never `chown -R` at runtime, and never set an explicit root `secu
 | One heavy backend serves multiple users | [shared backend](references/olares-chart-shared.md) |
 | The running app needs a memorable route or custom FQDN | [custom URL](references/olares-chart-custom-domain.md) |
 
-After `lint` passes, drive the deploy/debug loop within the authorised chart task without asking at every install, upgrade, restart, uninstall or clean reinstall. Stop for login, missing registry credentials, an ambiguous target or work outside that task scope. The full assembly sequence is in [workflow](references/olares-chart-workflow.md).
+The full assembly sequence is in [workflow](references/olares-chart-workflow.md).
 
-## CLI verbs
+## Verb index
 
 The only `olares-cli chart` subcommands (source of truth: `--help`). Everything else above is docker or sibling skills.
 
-| Verb | What it does | Reference |
+| Verb | What it does | Read when triggered |
 |---|---|---|
 | `from-compose` (alias `init`) | kompose-convert compose file(s) into an Olares chart skeleton | [from-compose.md](references/olares-chart-from-compose.md) |
 | `lint` | validate a chart dir / `.tgz` with the Market ingest pipeline | [lint.md](references/olares-chart-lint.md) |
@@ -150,3 +152,10 @@ Skip references that would mislead:
 - **Declared `.Values.userspace.appData`/`appCache`/`userData` mounts MUST have the matching `permission` field**, or the app-data cross-check fails.
 - **`hostPath` volumes + rolling updates are incompatible** — replace host mounts with the userspace volumes above.
 - **The entrance proxy caps every request at `options.apiTimeout` seconds (default 15s)** — long LLM streams / big uploads / slow reports get cut at the entrance (504 / closed connection) even when the pod is healthy. Set `options.apiTimeout: 0` to disable, or a large bounded value; a *negative* value is not "unlimited" (it falls back to 15s). See the Manifest refinement areas.
+
+## Safety and escalation
+
+- Once `lint` passes, the deploy/debug loop is inside the authorised chart task: install, upgrade, restart, uninstall and clean reinstall of **that** app do not need a fresh confirmation each time. Asking at every iteration turns a loop into an interview.
+- Stop and hand back for login, missing registry credentials, an ambiguous target, or anything outside that task's app.
+- A chart the user did not name is somebody else's app. Read it, do not deploy over it.
+- Never put a registry password in a command argument — `docker login --password-stdin`, or a credential helper.

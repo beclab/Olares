@@ -94,7 +94,10 @@ on the other end, so a compressed file sent here is transcribed as noise instead
 of being refused. ffmpeg is what converts one.
 
 The running transcript goes to stderr and the final one to stdout, so this pipes
-while still being watchable. --no-partials keeps stderr quiet.
+while still being watchable. It is drawn in place with a carriage return, which
+only reads as one line on a terminal — captured to a file it is one copy of the
+sentence per refinement, so it is off unless stderr is a terminal. --partials
+asks for it anyway and --no-partials keeps stderr quiet either way.
 
 This needs a model that declares streaming recognition, which is not the same as
 one that declares recognition: an application does one or the other. Leaving
@@ -118,6 +121,15 @@ Examples:
 				Partials:   partials,
 				Render:     renderTranscriptStream,
 			}
+			// A partial is drawn with a carriage return and an erase-line
+			// escape, which mean something on a terminal and nothing in a file.
+			// Captured, the running transcript arrived as dozens of copies of
+			// the same sentence with an ESC[K between them, ahead of the one
+			// line that was the answer. So the default follows stderr, and
+			// asking for them explicitly still gets them.
+			if !c.Flags().Changed("partials") {
+				opts.Partials = isTerminal(os.Stderr)
+			}
 			if len(args) > 0 {
 				opts.Path = args[0]
 			}
@@ -126,9 +138,9 @@ Examples:
 	}
 	cmd.Flags().StringVar(&model, "model", "", modelFlagHelp(categorySTTStream))
 	cmd.Flags().StringVar(&language, "language", "", "language of the audio, as an ISO-639-1 code")
-	cmd.Flags().IntVar(&sampleRate, "sample-rate", 16000, "sample rate of the PCM being sent")
+	cmd.Flags().IntVar(&sampleRate, "sample-rate", 16000, "sample rate of the PCM being sent; defaults to 16000 and must match the input and model catalogue")
 	cmd.Flags().IntVar(&stepMillis, "step-ms", 0, "how much audio the engine decodes at a time; its own default when 0")
-	cmd.Flags().BoolVar(&partials, "partials", true, "report the running transcript on stderr while it decodes")
+	cmd.Flags().BoolVar(&partials, "partials", true, "report the running transcript on stderr while it decodes; on by default only when stderr is a terminal")
 	cmd.Flags().StringVar(&apiKey, "api-key", "", dataPlaneKeyFlagUsage)
 	return cmd
 }
@@ -166,7 +178,7 @@ func runAudioStream(ctx context.Context, f *cmdutil.Factory, opts audioStreamOpt
 	if err != nil {
 		return err
 	}
-	conn, err := dialAudioStream(ctx, pc, token, opts)
+	conn, err := dialRouterSocket(ctx, pc, token, opts.Route, opts.Model, opts.APIKey)
 	if err != nil {
 		return err
 	}
@@ -214,13 +226,17 @@ func openPCMSource(path string) (io.Reader, func(), error) {
 	return os.Stdin, func() {}, nil
 }
 
-// dialAudioStream opens the socket to Router. The handshake carries the
+// dialRouterSocket opens a socket to Router. The handshake carries the
 // profile's session in the same header the HTTP client's transport uses, since
 // a WebSocket dial does not go through that transport, plus the data-plane key
 // when one was named.
-func dialAudioStream(ctx context.Context, pc *preparedClient, token string,
-	opts audioStreamOptions) (*websocket.Conn, error) {
-	target, err := audioStreamURL(pc.found.BaseURL, opts)
+//
+// Every WebSocket route Router mounts is reached this way — the streaming
+// audio ones and the Responses one — because the difference between them is
+// what travels over the socket, not how it is opened.
+func dialRouterSocket(ctx context.Context, pc *preparedClient, token, route, model,
+	apiKey string) (*websocket.Conn, error) {
+	target, err := routerSocketURL(pc.found.BaseURL, route, model)
 	if err != nil {
 		return nil, err
 	}
@@ -232,18 +248,18 @@ func dialAudioStream(ctx context.Context, pc *preparedClient, token string,
 	h.Set("X-Authorization", token)
 	h.Set("X-Unauth-Error", "Non-Redirect")
 	h.Set("Cookie", "auth_token="+token)
-	if named := resolveDataPlaneAuth(opts.APIKey); named.Mode == authKey {
+	if named := resolveDataPlaneAuth(apiKey); named.Mode == authKey {
 		h.Set("Authorization", "Bearer "+named.Key)
 	}
 	conn, resp, err := d.DialContext(ctx, target, h)
 	if err != nil {
-		return nil, audioStreamHandshakeError(err, resp, opts.Route)
+		return nil, socketHandshakeError(err, resp, route)
 	}
 	return conn, nil
 }
 
-func audioStreamURL(baseURL string, opts audioStreamOptions) (string, error) {
-	u, err := url.Parse(strings.TrimRight(baseURL, "/") + opts.Route)
+func routerSocketURL(baseURL, route, model string) (string, error) {
+	u, err := url.Parse(strings.TrimRight(baseURL, "/") + route)
 	if err != nil {
 		return "", fmt.Errorf("build the stream URL: %w", err)
 	}
@@ -254,17 +270,17 @@ func audioStreamURL(baseURL string, opts audioStreamOptions) (string, error) {
 		u.Scheme = "ws"
 	}
 	q := u.Query()
-	if m := strings.TrimSpace(opts.Model); m != "" {
+	if m := strings.TrimSpace(model); m != "" {
 		q.Set("model", m)
 	}
 	u.RawQuery = q.Encode()
 	return u.String(), nil
 }
 
-// audioStreamHandshakeError turns a refused upgrade into something actionable.
+// socketHandshakeError turns a refused upgrade into something actionable.
 // A failed handshake is an HTTP response, so Router's own envelope is in it and
 // callErr can say what every other verb would have said.
-func audioStreamHandshakeError(err error, resp *http.Response, route string) error {
+func socketHandshakeError(err error, resp *http.Response, route string) error {
 	if resp == nil {
 		return fmt.Errorf("open %s: %w", route, err)
 	}
@@ -410,6 +426,15 @@ func readAudioStream(conn *websocket.Conn, opts audioStreamOptions) error {
 	}
 }
 
+// eraseProgressLine clears whatever the partials drew. Only on a terminal:
+// written to a file the escape is four literal characters ahead of the answer,
+// and there is nothing to erase there anyway.
+func eraseProgressLine() {
+	if isTerminal(os.Stderr) {
+		fmt.Fprint(os.Stderr, "\r\033[K")
+	}
+}
+
 // renderTranscriptStream rewrites one line while decoding and commits the text
 // to stdout at the end. Carriage return rather than a new line per partial: the
 // transcript grows in place, and a hundred lines of the same sentence being
@@ -419,7 +444,7 @@ func renderTranscriptStream(frame *audioStreamFrame, final bool) error {
 		_, err := fmt.Fprintf(os.Stderr, "\r%s", clip(strings.TrimSpace(frame.Text), 100))
 		return err
 	}
-	fmt.Fprint(os.Stderr, "\r\033[K")
+	eraseProgressLine()
 	_, err := fmt.Fprintln(os.Stdout, strings.TrimSpace(frame.Text))
 	return err
 }
@@ -434,9 +459,9 @@ func renderDiarizationStream(frame *audioStreamFrame, final bool) error {
 			len(frame.Segments), len(frame.Speakers))
 		return err
 	}
-	fmt.Fprint(os.Stderr, "\r\033[K")
+	eraseProgressLine()
 	if len(frame.Segments) == 0 {
-		_, err := fmt.Fprintln(os.Stdout, "the engine found nobody speaking.")
+		_, err := fmt.Fprintln(os.Stdout, emptyDiarizationNote)
 		return err
 	}
 	t := newTable(os.Stdout, "SPEAKER", "START", "END", "LENGTH")
@@ -464,7 +489,9 @@ func runDiarizeStream(ctx context.Context, f *cmdutil.Factory, path, model strin
 		Model:      callModel(model, categoryDiarStream),
 		SampleRate: sampleRate,
 		APIKey:     apiKey,
-		Partials:   true,
-		Render:     renderDiarizationStream,
+		// Progress here is a segment count rather than text, redrawn the same
+		// way, so it belongs on a terminal for the same reason.
+		Partials: isTerminal(os.Stderr),
+		Render:   renderDiarizationStream,
 	})
 }

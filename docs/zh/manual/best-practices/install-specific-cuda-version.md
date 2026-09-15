@@ -1,27 +1,19 @@
 ---
 outline: [2, 3]
-description: 了解如何在 Olares 宿主机上安装特定版本的 NVIDIA CUDA 驱动，以满足不同场景下的版本需求。
+description: 在 Olares 主机上安装特定版本的 NVIDIA 驱动，以满足工作负载对驱动或 CUDA 的兼容性要求。
 head:
   - - meta
     - name: keywords
       content: Olares, CUDA, NVIDIA 驱动, GPU, 驱动安装, runfile
 ---
 
-# 安装特定版本的 CUDA
+# 安装特定版本的 NVIDIA 驱动
 
 在 Olares 上运行 GPU 应用时，宿主机需要安装 NVIDIA 驱动，应用容器需要 CUDA 运行时。Olares 官方维护最新版本的驱动以支持最前沿的 AI 应用。但在以下场景中，你可能需要安装其他版本：
 
 - 某些应用或 AI 模型依赖特定的 CUDA 或驱动版本才能运行。
 - 你希望固定版本以保持稳定性，避免自动升级。
 - 最新驱动与你的工作负载存在兼容性问题。
-
-## 学习目标
-
-通过本教程，你将学会：
-
-- 查看 Olares 宿主机上当前的 CUDA 和驱动版本。
-- 从 runfile 下载并安装特定版本的 NVIDIA 驱动。
-- 安装新驱动后在 Olares 中更新 GPU 状态。
 
 ## 前提条件
 
@@ -31,7 +23,7 @@ head:
 - 兼容的 NVIDIA GPU
 - 对 Olares 宿主机的 root 或 sudo 权限
 
-## 查看当前 CUDA 版本
+## 查看当前驱动和支持的 CUDA 版本
 
 在 Olares 宿主机上运行以下命令，查看当前的驱动版本和 CUDA 版本：
 

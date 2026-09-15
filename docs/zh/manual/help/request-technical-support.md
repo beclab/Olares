@@ -1,5 +1,5 @@
 ---
-description: 了解如何获取 Olares 技术支持。
+description: 了解如何报告 Olares 问题、提供有效上下文，并在需要时通过私密渠道共享诊断日志。
 head:
   - - meta
     - name: keywords
@@ -7,18 +7,27 @@ head:
 ---
 # 获取技术支持
 
-如果你无法通过故障排查指南解决问题，可以导出系统日志并联系 Olares 团队获取帮助。
+如果你无法通过故障排查指南解决问题，请报告问题现象，并提供足够的上下文，帮助 Olares 团队调查。只有在确有需要时再收集完整系统日志，并通过私密渠道共享。
 
-## 第一步：导出系统日志
-<!--@include: ../../reusables/export-system-logs.md#export-system-logs-steps-->
+## 描述问题
 
-## 第二步：联系 Olares 团队
+请提供：
 
-1. 打开 [Olares GitHub 仓库](https://github.com/beclab/Olares)，选择以下方式提交问题：
-    - 创建一个新的 **[Discussion](https://github.com/beclab/Olares/discussions/new?category=q-a)**（适合一般问题或需求帮助）。
-    - 提交一个 **[Issue](https://github.com/beclab/Olares/issues/new)**（适合报告 Bug 或技术问题）。
-2. 描述问题，并尽量提供以下信息：
-    - 复现问题的具体步骤。
-    - 错误信息或异常行为的描述。
-    - 使用环境的信息（操作系统、Olares 版本等）。
-    - 导出的系统日志文件。
+- 能够复现问题的最短步骤。
+- 预期结果和实际结果。
+- 完整错误信息和发生时间。
+- Olares 版本、受影响的应用版本，以及相关硬件或操作系统信息。
+- 最近进行过的更改，例如 Olares 更新、应用更新、网络变更或重启。
+
+请从问题描述和截图中移除密码、助记词、API key、访问令牌及其他密钥。
+
+## 选择联系渠道
+
+- 一般问题或需要协助时，创建 [GitHub Discussion](https://github.com/beclab/Olares/discussions/new?category=q-a)。
+- 可复现的软件缺陷，请提交 [GitHub Issue](https://github.com/beclab/Olares/issues/new)。
+
+请勿把完整系统日志压缩包附在公开的 Discussion 或 Issue 中。
+
+## 按要求提供日志
+
+当 Olares 团队要求提供日志时，请参考[收集诊断信息](../collect-diagnostic-information.md)。通过支持人员提供的私密渠道发送日志压缩包，或发送至 [hi@olares.com](mailto:hi@olares.com)；如已有对应的 Discussion 或 Issue，请一并提供编号。

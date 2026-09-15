@@ -69,6 +69,8 @@ var capabilityFlags = []string{
 	"supports_enhance",
 	"supports_tts",
 	"supports_tts_clone",
+	"supports_tts_design",
+	"supports_tts_custom",
 	"supports_tts_dialogue",
 	"supports_audio_llm",
 	"supports_audio_s2s",
@@ -577,7 +579,7 @@ func renderModelList(w io.Writer, items []adminModelRow, total, limit, offset in
 			summarizeSupports(it.Model.Supports),
 		}
 		if wide {
-			cells = append(cells, intOrDash(it.Model.MaxConcurrency))
+			cells = append(cells, atOnceLabel(it.Model))
 		}
 		cells = append(cells, it.callableNote(), clip(it.routeNote(), 30))
 		t.row(cells...)
@@ -591,7 +593,8 @@ func renderModelList(w io.Writer, items []adminModelRow, total, limit, offset in
 	if wide {
 		if _, err := fmt.Fprintln(w, "\nAT ONCE is how many requests that model's engine was launched to "+
 			"work on at the same time. It is only known for a local engine whose launch flags said so; "+
-			"`router provider get <app>` reads the engine's current queue beside it."); err != nil {
+			"`router provider get <app>` reads the engine's current queue beside it. shared means those "+
+			"slots share one KV pool smaller than (window × width)."); err != nil {
 			return err
 		}
 	}

@@ -16,7 +16,7 @@ Multi-arch images, listing images, and the marketing fields are **not** gates. M
 
 Before submission, finalize the user-facing English fields with the [Manifest copy reference](olares-publish-manifest-copy.md). If the chart declares more than English, validate every locale with the [localization reference](olares-publish-localization.md). An `ADD` normally omits `upgradeDescription`; an `UPDATE` includes it only when reliable current-upgrade information exists.
 
-## Agent boundaries
+## Safety and escalation
 
 - **Do NOT** fork, push, or open PRs on the developer's behalf without explicit consent
 - **Do** verify the chart against the market-ready checklist

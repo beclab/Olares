@@ -13,7 +13,7 @@ head:
 
 ## 登录 Olares Space
 
-在浏览器中打开 [Olares Space](https://space.olares.com/)，使用 LarePass 扫描二维码登录。可用功能取决于你使用的账户类型。
+在浏览器中打开 [Olares Space](https://www.olares.com/space)，使用 LarePass 扫描二维码登录。可用功能取决于你使用的账户类型。
 
 ### 使用 Olares ID 登录
 
