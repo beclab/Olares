@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"syscall"
@@ -38,7 +39,9 @@ type overlayParentOps struct {
 	linkByName   func(name string) (netlink.Link, error)
 	addAltName   func(link netlink.Link, name string) error
 	readMAC      func(dev string) (string, error)
+	lookPath     func(file string) (string, error)
 	writeFile    func(path string, data []byte) error
+	removeFile   func(path string) error
 }
 
 func defaultOverlayParentOps() overlayParentOps {
@@ -50,12 +53,14 @@ func defaultOverlayParentOps() overlayParentOps {
 			b, err := os.ReadFile("/sys/class/net/" + dev + "/address")
 			return strings.TrimSpace(string(b)), err
 		},
+		lookPath: exec.LookPath,
 		writeFile: func(path string, data []byte) error {
 			if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 				return err
 			}
 			return os.WriteFile(path, data, 0o644)
 		},
+		removeFile: os.Remove,
 	}
 }
 
@@ -122,9 +127,17 @@ func ensureOverlayParentAltname(ctx context.Context, ops overlayParentOps) (stri
 		klog.Errorf("overlay-parent: read MAC of %s failed: %v", dev, err)
 		return "", fmt.Errorf("read MAC of %s: %w", dev, err)
 	}
-	if err := ops.writeFile(OverlayLinkFile, []byte(overlayLinkFileContent(mac))); err != nil {
-		klog.Errorf("overlay-parent: persist %s failed: %v", OverlayLinkFile, err)
+	ipPath, err := ops.lookPath("ip")
+	if err != nil {
+		klog.Errorf("overlay-parent: locate the ip command failed: %v", err)
+		return "", fmt.Errorf("locate the ip command for the udev rule: %w", err)
+	}
+	if err := ops.writeFile(OverlayUdevRuleFile, []byte(overlayUdevRuleContent(mac, ipPath))); err != nil {
+		klog.Errorf("overlay-parent: persist %s failed: %v", OverlayUdevRuleFile, err)
 		return "", fmt.Errorf("persist alternative name: %w", err)
+	}
+	if err := ops.removeFile(legacyOverlayLinkFile); err != nil && !os.IsNotExist(err) {
+		klog.Warningf("overlay-parent: remove legacy %s failed: %v", legacyOverlayLinkFile, err)
 	}
 	return dev, nil
 }

@@ -25,9 +25,15 @@ var (
 	// gateway on this node. It is the single source of truth for the switch;
 	// the runtime state is converged towards it on boot.
 	OverlayDesiredStateFile = "/var/lib/olares/overlay-gateway/enabled"
-	// OverlayLinkFile persists the alternative name across reboots through
-	// systemd-udevd, independently of olaresd.
-	OverlayLinkFile = "/etc/systemd/network/10-olares-lan.link"
+	// OverlayUdevRuleFile re-adds the alternative name whenever the NIC
+	// appears, before NetworkManager and this daemon start. A udev rule is
+	// used rather than a systemd.link file because udev applies only the first
+	// matching .link file per device and netplan already ships one for every
+	// NetworkManager connection.
+	OverlayUdevRuleFile = "/etc/udev/rules.d/80-olares-lan.rules"
+	// legacyOverlayLinkFile is the earlier persistence file; it is removed
+	// whenever the rule is written.
+	legacyOverlayLinkFile = "/etc/systemd/network/10-olares-lan.link"
 )
 
 // ErrNoWiredInterface is returned when no connected ethernet interface can
@@ -60,11 +66,13 @@ func SetOverlayGatewayDesired(enabled bool) error {
 	return nil
 }
 
-// overlayLinkFileContent renders the systemd.link unit that re-adds the
-// alternative name whenever the NIC appears. Matching on MAC plus type keeps
-// the rule stable across kernel interface renames.
-func overlayLinkFileContent(mac string) string {
-	return fmt.Sprintf("[Match]\nMACAddress=%s\nType=ether\n\n[Link]\nAlternativeName=%s\n", mac, OverlayParentAltname)
+// overlayUdevRuleContent renders the udev rule that re-adds the alternative
+// name when the NIC with this MAC appears. ipPath must be absolute: udev does
+// not search PATH. $env{INTERFACE} is the final interface name after any
+// rename, which %k is not guaranteed to be.
+func overlayUdevRuleContent(mac, ipPath string) string {
+	return fmt.Sprintf(`ACTION=="add", SUBSYSTEM=="net", ATTR{address}=="%s", RUN+="%s link property add dev $env{INTERFACE} altname %s"`+"\n",
+		mac, ipPath, OverlayParentAltname)
 }
 
 // kernelSupportsAltname reports whether the release string (as in
