@@ -483,6 +483,10 @@ const side = {
           text: "安装特定版本的 NVIDIA 驱动",
           link: "/zh/manual/best-practices/install-specific-cuda-version",
         },
+        {
+          text: "发布网站到自定义域名",
+          link: "/zh/manual/best-practices/deploy-website",
+        },
       ],
     },
     {
