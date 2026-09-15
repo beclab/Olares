@@ -12,9 +12,9 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 )
 
-func TestUpgrader20260914TaskOrder(t *testing.T) {
-	u := upgrader_1_12_7_20260914{}
-	if u.Version().String() != "1.12.7-20260914" {
+func TestUpgrader20260915TaskOrder(t *testing.T) {
+	u := upgrader_1_12_7_20260915{}
+	if u.Version().String() != "1.12.7-20260915" {
 		t.Fatalf("version = %s", u.Version())
 	}
 	if !u.AddedBreakingChange() {

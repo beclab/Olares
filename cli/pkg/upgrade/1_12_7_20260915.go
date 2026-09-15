@@ -5,7 +5,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/core/task"
 )
 
-// upgrader_1_12_7_20260914 moves the overlay gateway parent interface from the
+// upgrader_1_12_7_20260915 moves the overlay gateway parent interface from the
 // br-olares bridge to the wired NIC, addressed through the alternative name
 // olares-lan. Enabling or disabling the overlay gateway no longer switches the
 // host's primary link. On nodes where the bridge is active the steps run in
@@ -15,15 +15,15 @@ import (
 //  3. re-render the underlay NAD so its master is the alternative name;
 //  4. record the overlay gateway as enabled and recreate its Pods, whose
 //     macvlan interfaces vanished with the bridge.
-type upgrader_1_12_7_20260914 struct {
+type upgrader_1_12_7_20260915 struct {
 	breakingUpgraderBase
 }
 
-func (u upgrader_1_12_7_20260914) Version() *semver.Version {
-	return semver.MustParse("1.12.7-20260914")
+func (u upgrader_1_12_7_20260915) Version() *semver.Version {
+	return semver.MustParse("1.12.7-20260915")
 }
 
-func (u upgrader_1_12_7_20260914) UpgradeSystemComponents() []task.Interface {
+func (u upgrader_1_12_7_20260915) UpgradeSystemComponents() []task.Interface {
 	tasks := make([]task.Interface, 0)
 	tasks = append(tasks, overlayDirectPreTasks()...)
 	tasks = append(tasks, upgradeMultus()...)
@@ -33,5 +33,5 @@ func (u upgrader_1_12_7_20260914) UpgradeSystemComponents() []task.Interface {
 }
 
 func init() {
-	registerDailyUpgrader(upgrader_1_12_7_20260914{})
+	registerDailyUpgrader(upgrader_1_12_7_20260915{})
 }
