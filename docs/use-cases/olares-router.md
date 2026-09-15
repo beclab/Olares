@@ -81,19 +81,19 @@ Connecting to Router takes three parameters:
 
 ### Apps in Olares
 
-OpenClaw, an app running on Olares, connects to Router in its custom provider settings. Its platform identity covers authentication, so only the base URL and a model name are needed:
+OpenClaw, an app running on Olares, connects to Router in its custom provider settings. Its platform identity covers authentication, so only the Base URL and a model name are needed:
 - **API Base URL**: `https://router.<your-olares-id>.olares.com/v1`
 - **Model ID**: `default-chat`
 
 ### Callers outside Olares
 
-Anyone outside Olares needs two things: a base URL matching their location, and a Router-issued API key. The base URL differs between the LAN and the internet, but the key works from anywhere.
+Anyone outside Olares needs two things: a Base URL matching their location, and a Router-issued API key. The Base URL differs between the LAN and the internet, but the key works from anywhere.
 
 :::tip
 For callers reaching Router over the internet, set the Router entrance's **Authentication level** to **Public** in Olares Settings. LAN access is not affected.
 :::
 
-This example uses the public URL. On a device in the same LAN, use the `.local` base URL obtained from the connection details.
+This example uses the public URL. For a device in the same LAN, use the `.local` Base URL obtained from the connection details.
 
 ```bash
 curl https://router.<your-olares-id>.olares.com/v1/chat/completions \
