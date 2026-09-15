@@ -63,9 +63,14 @@ func overlayUdevRuleContent(mac, ipPath string) string {
 		mac, ipPath, OverlayParentAltname)
 }
 
+// overlayUdevRuleCommand writes the rule through the node runner. The runner
+// wraps every command in `bash -c "..."`, inside which single quotes do not
+// stop parameter expansion, so the `$` of $env{INTERFACE} must be escaped or
+// bash would expand it to an empty variable before the rule reaches the file.
 func overlayUdevRuleCommand(mac, ipPath string) string {
+	rule := strings.ReplaceAll(overlayUdevRuleContent(mac, ipPath), "$", `\$`)
 	return fmt.Sprintf("mkdir -p %s && printf '%%s\\n' '%s' > %s && rm -f %s",
-		parentDir(OverlayUdevRuleFile), overlayUdevRuleContent(mac, ipPath), OverlayUdevRuleFile, legacyOverlayLinkFile)
+		parentDir(OverlayUdevRuleFile), rule, OverlayUdevRuleFile, legacyOverlayLinkFile)
 }
 
 // resolveIPCommand returns the absolute path of the ip utility on this node.
