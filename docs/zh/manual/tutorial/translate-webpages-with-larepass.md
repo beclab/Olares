@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: 使用 LarePass Chrome 扩展和运行在 Olares 上的 Hy-MT2 模型，更私密地翻译网页。
+description: 使用 LarePass Chrome 扩展和运行在 Olares 上的 Hy-MT2-1.8B 模型，更私密地翻译网页。
 head:
   - - meta
     - name: keywords
@@ -9,7 +9,7 @@ head:
 
 # 使用 LarePass 私密翻译网页 <Badge type="tip" text="^ 1.12.7" />
 
-使用云端翻译扩展时，网页文本需要发送到服务商的服务器处理。LarePass 采用自托管方式，将文本通过 Router 交给运行在自己 Olares 上的 **Hy-MT2**，而不是第三方翻译服务，从而更自主地控制内容的处理方式。
+使用云端翻译扩展时，网页文本需要发送到服务商的服务器处理。LarePass 采用自托管方式，将文本通过 Router 交给运行在自己 Olares 上的 **Hy-MT2-1.8B**，而不是第三方翻译服务，从而更自主地控制内容的处理方式。
 
 同时，还能获得和常见浏览器翻译工具一样简单的使用体验：
 
@@ -18,7 +18,7 @@ head:
 - **自动集成**：Router 使用 Olares 身份验证请求，并自动识别和配置已安装的 Hy-MT2 模型，无需配置模型地址或 API 密钥。
 
 :::info
-LarePass 也支持 Google 和 Microsoft。本文重点介绍使用运行在自己 Olares 上的 Hy-MT2 进行私密翻译。
+LarePass 也支持 Google 和 Microsoft，但网页文本会由相应服务商的服务器处理。本文重点介绍在自己的 Olares 上处理文本的 Hy-MT2。
 :::
 
 ## 前提条件
@@ -30,7 +30,7 @@ LarePass 也支持 Google 和 Microsoft。本文重点介绍使用运行在自�
 ## 开始本地翻译
 
 1. 在 [Olares 应用市场](../olares/market/market.md#安装模型)搜索并安装 **Hy-MT2-1.8B**。等待安装完成，以便 Router 自动识别并配置该模型。
-2. 打开一个网页，点击 Chrome 工具栏中的 LarePass 图标。点击 <i class="material-symbols-outlined">translate</i>，选择源语言和目标语言，并将**翻译服务**设置为 **Olares Hy-MT2**，然后点击**翻译当前页面**。
+2. 打开一个网页，点击 Chrome 工具栏中的 LarePass 图标。点击 <i class="material-symbols-outlined">translate</i>，选择源语言和目标语言，并将**翻译服务**设置为 `Olares/tencent/Hy-MT2-1.8B-GGUF:Q4_K_M`，然后点击**翻译当前页面**。
 
 如需恢复原文，点击**显示原文**。如果安装扩展或模型时网页已经打开，请先刷新再翻译。
 

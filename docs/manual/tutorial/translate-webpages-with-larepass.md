@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Translate webpages privately with the LarePass Chrome extension and the Hy-MT2 model running on your Olares.
+description: Translate webpages privately with the LarePass Chrome extension and the Hy-MT2-1.8B model running on your Olares.
 head:
   - - meta
     - name: keywords
@@ -9,7 +9,7 @@ head:
 
 # Translate webpages privately with LarePass <Badge type="tip" text="^ 1.12.7" />
 
-Cloud-based translation extensions process webpage text on the provider's servers. LarePass takes a self-hosted approach: it sends the text through Router to **Hy-MT2** running on your Olares, rather than to a third-party translation provider. You retain more control over how your content is processed.
+Cloud-based translation extensions process webpage text on the provider's servers. LarePass takes a self-hosted approach: it sends the text through Router to **Hy-MT2-1.8B** running on your Olares, rather than to a third-party translation provider. You retain more control over how your content is processed.
 
 You also get the convenience of an integrated browser translator:
 
@@ -18,7 +18,7 @@ You also get the convenience of an integrated browser translator:
 - **Automatic integration:** Router uses your Olares identity to authenticate requests and automatically detects and configures the installed Hy-MT2 model. You do not need to configure model endpoints or API keys.
 
 :::info
-LarePass also supports Google and Microsoft. This guide focuses on private translation with Hy-MT2 running on your Olares.
+LarePass also supports Google and Microsoft, which process webpage text on their servers. This guide focuses on Hy-MT2, which processes it on your Olares.
 :::
 
 ## Prerequisites
@@ -30,7 +30,7 @@ LarePass also supports Google and Microsoft. This guide focuses on private trans
 ## Get started with local translation
 
 1. In [Olares Market](../olares/market/market.md#install-models), search for and install **Hy-MT2-1.8B**. Wait for the installation to finish so Router can automatically detect and configure the model.
-2. Open a webpage and click the LarePass icon in the Chrome toolbar. Select <i class="material-symbols-outlined">translate</i>, choose the source and target languages, and select **Olares Hy-MT2** as the **Translation provider**. Then click **Translate this page**.
+2. Open a webpage and click the LarePass icon in the Chrome toolbar. Select <i class="material-symbols-outlined">translate</i>, choose the source and target languages, and select `Olares/tencent/Hy-MT2-1.8B-GGUF:Q4_K_M` as the **Translation provider**. Then click **Translate this page**.
 
 To restore the original text, click **Show original**. If the webpage was already open when you installed the extension or model, refresh it before translating.
 
