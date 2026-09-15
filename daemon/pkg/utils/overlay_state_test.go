@@ -50,11 +50,14 @@ func TestKernelSupportsAltname(t *testing.T) {
 	}
 }
 
-func TestOverlayLinkFileContent(t *testing.T) {
-	got := overlayLinkFileContent("d8:43:ae:af:5a:33")
-	for _, want := range []string{"[Match]", "MACAddress=d8:43:ae:af:5a:33", "Type=ether", "[Link]", "AlternativeName=olares-lan"} {
+func TestOverlayUdevRuleContent(t *testing.T) {
+	got := overlayUdevRuleContent("d8:43:ae:af:5a:33", "/bin/ip")
+	for _, want := range []string{`ACTION=="add"`, `SUBSYSTEM=="net"`, `ATTR{address}=="d8:43:ae:af:5a:33"`, `RUN+="/bin/ip link property add dev $env{INTERFACE} altname olares-lan"`} {
 		if !strings.Contains(got, want) {
-			t.Fatalf("link file %q lacks %q", got, want)
+			t.Fatalf("udev rule %q lacks %q", got, want)
 		}
+	}
+	if !strings.HasSuffix(got, "\n") {
+		t.Fatal("rule file must end with a newline")
 	}
 }

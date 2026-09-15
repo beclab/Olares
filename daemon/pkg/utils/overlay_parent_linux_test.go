@@ -6,6 +6,7 @@ package utils
 import (
 	"context"
 	"errors"
+	"os"
 	"path/filepath"
 	"strings"
 	"syscall"
@@ -19,7 +20,9 @@ type fakeParentOps struct {
 	links   map[string]string // name or altname -> primary name
 	added   []string
 	written map[string]string
+	removed []string
 	macErr  error
+	lookErr error
 }
 
 func (f *fakeParentOps) ops(dev string, selectErr error) overlayParentOps {
@@ -37,10 +40,15 @@ func (f *fakeParentOps) ops(dev string, selectErr error) overlayParentOps {
 			f.links[name] = link.Attrs().Name
 			return nil
 		},
-		readMAC: func(dev string) (string, error) { return "d8:43:ae:af:5a:33", f.macErr },
+		readMAC:  func(dev string) (string, error) { return "d8:43:ae:af:5a:33", f.macErr },
+		lookPath: func(string) (string, error) { return "/bin/ip", f.lookErr },
 		writeFile: func(path string, data []byte) error {
 			f.written[path] = string(data)
 			return nil
+		},
+		removeFile: func(path string) error {
+			f.removed = append(f.removed, path)
+			return os.ErrNotExist
 		},
 	}
 }
@@ -50,9 +58,9 @@ func newFakeParentOps(links map[string]string) *fakeParentOps {
 }
 
 func TestEnsureOverlayParentAltnameAddsNameAndPersists(t *testing.T) {
-	orig := OverlayLinkFile
-	defer func() { OverlayLinkFile = orig }()
-	OverlayLinkFile = filepath.Join(t.TempDir(), "10-olares-lan.link")
+	orig := OverlayUdevRuleFile
+	defer func() { OverlayUdevRuleFile = orig }()
+	OverlayUdevRuleFile = filepath.Join(t.TempDir(), "80-olares-lan.rules")
 
 	f := newFakeParentOps(map[string]string{"enp3s0": "enp3s0"})
 	dev, err := ensureOverlayParentAltname(context.Background(), f.ops("enp3s0", nil))
@@ -62,8 +70,25 @@ func TestEnsureOverlayParentAltnameAddsNameAndPersists(t *testing.T) {
 	if len(f.added) != 1 || f.added[0] != "enp3s0="+OverlayParentAltname {
 		t.Fatalf("alternative name must be added to enp3s0, got %v", f.added)
 	}
-	if !strings.Contains(f.written[OverlayLinkFile], "MACAddress=d8:43:ae:af:5a:33") {
-		t.Fatalf("link file must be persisted, got %v", f.written)
+	rule := f.written[OverlayUdevRuleFile]
+	for _, want := range []string{`ATTR{address}=="d8:43:ae:af:5a:33"`, `RUN+="/bin/ip link property add dev $env{INTERFACE} altname olares-lan"`} {
+		if !strings.Contains(rule, want) {
+			t.Fatalf("udev rule must be persisted with %q, got %q", want, rule)
+		}
+	}
+	if len(f.removed) != 1 || f.removed[0] != legacyOverlayLinkFile {
+		t.Fatalf("legacy link file must be removed, got %v", f.removed)
+	}
+}
+
+func TestEnsureOverlayParentAltnameFailsWithoutIPCommand(t *testing.T) {
+	f := newFakeParentOps(map[string]string{"enp3s0": "enp3s0"})
+	f.lookErr = errors.New("executable file not found")
+	if _, err := ensureOverlayParentAltname(context.Background(), f.ops("enp3s0", nil)); err == nil {
+		t.Fatal("a rule with an unknown ip path must not be written")
+	}
+	if len(f.written) != 0 {
+		t.Fatalf("no rule may be written without the ip path, got %v", f.written)
 	}
 }
 
@@ -76,7 +101,7 @@ func TestEnsureOverlayParentAltnameIsIdempotent(t *testing.T) {
 		t.Fatalf("name already on the right device must not be added again, got %v", f.added)
 	}
 	if len(f.written) != 1 {
-		t.Fatal("link file must still be refreshed")
+		t.Fatal("udev rule must still be refreshed")
 	}
 }
 
@@ -106,14 +131,14 @@ func TestEnsureOverlayParentAltnamePropagatesSelectionError(t *testing.T) {
 		t.Fatalf("expected ErrNoWiredInterface, got %v", err)
 	}
 	if len(f.written) != 0 {
-		t.Fatal("no link file without a parent")
+		t.Fatal("no udev rule without a parent")
 	}
 }
 
 func TestEnsureOverlayParentAltnameKeepsBoundDeviceWhenSelectionFails(t *testing.T) {
-	orig := OverlayLinkFile
-	defer func() { OverlayLinkFile = orig }()
-	OverlayLinkFile = filepath.Join(t.TempDir(), "10-olares-lan.link")
+	orig := OverlayUdevRuleFile
+	defer func() { OverlayUdevRuleFile = orig }()
+	OverlayUdevRuleFile = filepath.Join(t.TempDir(), "80-olares-lan.rules")
 
 	f := newFakeParentOps(map[string]string{"enp3s0": "enp3s0", OverlayParentAltname: "enp3s0"})
 	dev, err := ensureOverlayParentAltname(context.Background(), f.ops("", ErrNoWiredInterface))
@@ -124,7 +149,7 @@ func TestEnsureOverlayParentAltnameKeepsBoundDeviceWhenSelectionFails(t *testing
 		t.Fatalf("nothing to add, got %v", f.added)
 	}
 	if len(f.written) != 1 {
-		t.Fatal("link file must be refreshed for the bound device")
+		t.Fatal("udev rule must be refreshed for the bound device")
 	}
 }
 
