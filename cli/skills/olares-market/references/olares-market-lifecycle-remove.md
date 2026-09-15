@@ -33,11 +33,31 @@ On a **cascading uninstall of a v2 multi-chart app** the flag reaches only the u
 
 ### Uninstalling an in-flight app (auto-orchestrated)
 
-app-service only accepts `uninstall` from a settled state (`running` / `stopped` / a terminal `*Failed`, including `installFailed`); while an operation is in flight it accepts only `cancel`. `market uninstall` handles this for you so **`uninstall` always means "fully remove"** regardless of state:
+app-service only accepts `uninstall` from a settled state (`running` / `stopped` / `installFailed` / `upgradeFailed` and the other post-install `*Failed` states); while an operation is in flight it accepts only `cancel`. `market uninstall` handles the in-flight case for you:
 
 - If the app is **in-flight** (`pending` / `downloading` / `installing` / `initializing` / `upgrading` / `applyingEnv` / `resuming`), the CLI **cancels first**, then follows the teardown-vs-stop split under `cancel` below: a cancel that tore the partial install down finishes the job, while one that only stopped the app is followed by the **real uninstall**.
 - The cancel step always blocks (it must, to decide the next step) even without `--watch`.
 - `installFailed` no longer needs this dance — `uninstall` is accepted directly.
+
+**There are settled states `uninstall` cannot act on at all.**
+`downloadFailed`, `uninstalled` and the `pendingCanceled` /
+`downloadingCanceled` / `installingCanceled` trio accept only a fresh
+`install`, so an uninstall there is answered with a 404. Nothing was ever
+deployed; the row is a record of the operation that failed.
+
+`downloadFailed` is the one to expect, and the reason this is easy to get
+wrong: **a bad image reference lands in `downloadFailed`, not
+`installFailed`**, because the pull fails before the install begins. Most
+prose about broken apps says `installFailed`, which does accept an
+uninstall.
+
+The row stays in `market status` either way. What clears it depends on where
+the chart came from:
+
+```bash
+olares-cli market delete <app>     # upload-source apps: removes the chart, and the row with it
+olares-cli market install <app>    # catalog apps: retry; a success replaces the row
+```
 
 ## `stop` / `resume`
 
@@ -72,5 +92,5 @@ olares-cli market cancel firefox --watch               # block until row stops m
 - **`API error (HTTP 404): App not found or current state does not allow operation` usually means the operation already finished**, not that the app or the backend is wrong — a cancel racing a watch often lands after the install it was meant to stop. Market spells "no such app" and "nothing left to cancel" the same way; the CLI adds the app's last known state and points at `market status <app>` when it knows the app exists. Confirm where the row settled before treating it as a failure.
 - A cancelled resume settles at `stopped` (it never reaches a `resumingCanceled` state — that transition does not exist); a rejected cancel request lands at `resumingCancelFailed`. A cancelled upgrade likewise settles at `stopped`, on the **previous** version, with `reason=upgradeCancelByUser`; a rejected one lands at `upgradingCancelFailed`.
 - **The widest watcher in the tree**: any "row stopped moving" state counts as success, including `*Canceled`, `*Failed` (the underlying op died, cancel "won by default"), and stable resting states `running` / `stopped` / `uninstalled` (cancel raced and lost, OR rollback landed). Failure is surfaced ONLY for `*CancelFailed` — the cancel request itself was rejected.
-- The terminal row carries the **underlying op** (install / upgrade / ...) as its `opType`, not `cancel`. `matchOpType` is OFF — no race-tracking gate applies.
+- The terminal row's `opType` is **`cancel`**, not the op that was cancelled — observed on app-service 0.6.49 for both a cancelled `upgrade` and a cancelled `download`. Either way, do not gate on it: `matchOpType` is OFF for this watcher, so no race-tracking gate applies, and the state is what tells you where the app landed.
 - **Teardown vs stop**: cancel of the `pending` / `downloading` / `installing` flow **tears the partial install down (namespace deleted)** — functionally equivalent to uninstall. Cancel of `initializing` / `upgrading` / `applyingEnv` / `resuming` only **stops** the app (lands in `stopped`); the app is still installed. `market uninstall` relies on this split when auto-orchestrating (see `uninstall` above).

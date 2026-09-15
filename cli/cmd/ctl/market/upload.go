@@ -195,7 +195,11 @@ func uploadFile(opts *MarketOptions, mc *MarketClient, filePath, source string) 
 
 func doUploadFile(opts *MarketOptions, mc *MarketClient, filePath, source string) error {
 	absPath, _ := filepath.Abs(filePath)
-	opts.info("Uploading '%s' to source '%s'...", filepath.Base(absPath), source)
+	// Name the target user the way install / upgrade / uninstall do. Upload
+	// is the verb most likely to be run right after `profile use`, and it
+	// was the only write verb whose output gave no clue which Olares it
+	// landed on — the uploader only showed up in a later `market get` dump.
+	opts.info("Uploading '%s' to source '%s' for user '%s'...", filepath.Base(absPath), source, mc.olaresID)
 	ctx := context.Background()
 	response, err := mc.UploadChart(ctx, absPath, source)
 	if err != nil {

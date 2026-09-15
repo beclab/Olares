@@ -84,6 +84,33 @@ func resolveInstalledRow(ctx context.Context, mc *MarketClient, appName string) 
 	return row, nil
 }
 
+// resolveUpgradeSource picks the source `market upgrade` should target.
+//
+// Unlike stop / resume / uninstall, upgrade does expose `-s`, so an explicit
+// flag always wins: pointing an upgrade at a different source is legitimate
+// when a chart has been moved between them. But defaulting to the catalog is
+// not, which is what upgrade used to do. An app installed from `upload` has
+// no row in market.olares, so the default made version resolution read the
+// wrong source ("no versions found", or worse, some unrelated app's version)
+// and addressed the upgrade to a source that never held the chart.
+//
+// Lookup failures fall back to the catalog default rather than erroring:
+// preflightUpgrade re-reads the row immediately afterwards and owns the
+// not-installed / wrong-state messages, and duplicating them here would only
+// make the two disagree.
+func resolveUpgradeSource(ctx context.Context, opts *MarketOptions, mc *MarketClient, appName string) string {
+	if s := strings.TrimSpace(opts.Source); s != "" {
+		return s
+	}
+	if row, err := resolveInstalledRow(ctx, mc, appName); err == nil {
+		opts.info("Using source: %s (the source '%s' is installed from)", row.Source, appName)
+		return row.Source
+	}
+	source := resolveCatalogSource(opts)
+	opts.info("Using source: %s", source)
+	return source
+}
+
 func validateVersion(version string) error {
 	if _, err := semver.StrictNewVersion(strings.TrimPrefix(version, "v")); err != nil {
 		return fmt.Errorf("invalid version '%s': must be a valid semver (e.g. 1.0.0, 1.2.3)", version)

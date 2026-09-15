@@ -16,7 +16,7 @@ olares-cli market install firefox --watch              # block until terminal (a
 ```
 
 - `--version` defaults to the latest catalog version. Strict semver validated client-side before send.
-- `--env KEY=VALUE` (repeatable) for required env vars. Missing required envs surface as `missing required env var(s): KEY1, KEY2 ...` (server returns HTTP 422 / `type=appenv`).
+- `--env KEY=VALUE` (repeatable) for required env vars. The server returns HTTP 422 / `type=appenv`, which the CLI renders as `environment variable requirements not met` followed by a `Missing required values: KEY1, KEY2` line and the `market get <app>` command that lists the declared envs. Match on the `Missing required values:` line, not on the older one-line `missing required env var(s): ...` phrasing.
 - **To install a locally-uploaded chart, pass `-s upload`** (the bucket `market upload` writes to).
 - `--compute-mode <type>` (**Olares 1.12.6+ only**) pins the accelerator mode (`cpu`, `nvidia`, ...). Apps that can run on more than one mode require a choice: when `--compute-mode` is omitted the backend returns HTTP 422 / `type=computeModeSelect`, and the CLI either **prompts interactively** (TTY) or **fails listing the installable modes** (non-interactive: `-q`, `-o json`, or a pipe) so you re-run with the flag. On **1.12.5 the install path is unchanged** and `--compute-mode` is rejected.
 
@@ -40,10 +40,12 @@ Mirrors the SPA's `canUpgrade()`. Bails locally with a self-contained error (for
 
 Known app-service defect, present through 1.12.7. **`upgrade` deploys the newest chart in the source, not the version the request named.** The install path pins the version when it fetches the chart; the upgrade path omits it, so the fetch resolves the index's latest and unpacks it over the version-less chart cache. The response and the state row both report the version you asked for, which is what makes this hard to catch.
 
-Two consequences for a local bucket holding several versions:
+In practice the upload bucket makes this hard to hit, and that is worth knowing before trying to work around it: **it catalogs one version per app**, and `upload` requires a strictly higher version than the one already there. So "the newest chart in the source" and "the version you named" are normally the same chart, and the defect only shows up where a source really does index several versions.
 
-- A same-version `upgrade` (gate 3's exception) re-applies **whatever is newest in the bucket**, not the stored chart at that version. It is still a usable retry when the version you named *is* the newest, which is the ordinary case right after an upload.
-- Upgrading to a stored version that is **not** the newest fails or silently lands the newest instead. Neither is what was asked for. Do not use `upgrade` to move between two stored versions; uninstall and install the one you want.
+What follows from the single-version bucket, rather than from the defect:
+
+- A same-version `upgrade` (gate 3's exception) re-applies the only version the bucket has, which is the one you named. That makes it a usable retry right after an upload.
+- There is no pair of stored versions in the bucket to move between. An earlier version is gone from the catalog once a higher one is uploaded, so `install --version <older>` answers 404 rather than reinstalling it. Recovering an older build means repackaging it under a higher version number.
 
 A cancelled upgrade compounds it: cancel does no helm rollback, so the release keeps the new chart's templates merged with the old values. After A1 is fixed those templates are at least the version that was requested.
 
@@ -51,7 +53,13 @@ A cancelled upgrade compounds it: cancel does no helm rollback, so the release k
 
 Two outcomes settle on `stopped` rather than `running`. **Upgrading an already-`stopped` app** re-renders the chart at `replicas=0` and returns to `stopped` — a normal success with nothing to launch. **A cancelled upgrade** also settles at `stopped`, and `--watch` reports it as failure. What separates them is `status.reason` matching `upgradeCancelByUser` or `upgradeCancelBySystem` — not whether `reason` is set, which it always is. *Non-obvious terminal behaviors* in the shared **application state machine** has the reasoning, and why the row's version field cannot discriminate either.
 
-That version field is the one `market status` and `market list --mine` both report, and it is **the version last requested, not the one running**. After a failed or cancelled upgrade the row names the target that did not land, so a script that reads it as "what is deployed" is wrong exactly when it matters. The deployed version is on the workload: `olares-cli cluster deployment get <app> -n <user-ns>`, annotation `applications.app.bytetrade.io/version`.
+That version field is the one `market status` and `market list --mine` both report, and it is **the version last requested, not the one running**. After a failed or cancelled upgrade the row names the target that did not land, so a script that reads it as "what is deployed" is wrong exactly when it matters. The deployed version is on the workload, in the `applications.app.bytetrade.io/version` annotation:
+
+```bash
+olares-cli cluster workload get <app> -n user-space-<user> --kind deployment -o json
+```
+
+`--kind` is required (`deployment` | `statefulset` | `daemonset`); there is no `cluster deployment` verb. This is the only way to see what is actually deployed rather than what was last asked for, so it is worth confirming the annotation and the container image agree before concluding a version landed.
 
 ## `clone`
 

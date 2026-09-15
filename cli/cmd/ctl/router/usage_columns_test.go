@@ -28,6 +28,7 @@ const liveSpendRow = `{
   "job_ms": 273000,
   "ttft_ms": 800,
   "queue_ms": 120,
+  "decode_ms": 9800,
   "streamed": false,
   "videos": 1,
   "video_seconds": 5.5,
@@ -55,6 +56,9 @@ func TestASpendRowDecodesTheColumnsRouterAnswersWith(t *testing.T) {
 	}
 	if it.JobMS == nil || *it.JobMS != 273000 {
 		t.Fatalf("job_ms did not decode: %+v", it.JobMS)
+	}
+	if it.DecodeMS == nil || *it.DecodeMS != 9800 {
+		t.Fatalf("decode_ms did not decode: %+v", it.DecodeMS)
 	}
 	if it.Videos == nil || *it.Videos != 1 {
 		t.Fatalf("videos did not decode: %+v", it.Videos)
