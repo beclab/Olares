@@ -60,10 +60,13 @@ func TestOverlayUdevRuleContentAndCommand(t *testing.T) {
 		t.Fatalf("udev rule must not contain single quotes, it is written through a single-quoted printf: %q", rule)
 	}
 	cmd := overlayUdevRuleCommand("d8:43:ae:af:5a:33", "/bin/ip")
-	for _, want := range []string{"mkdir -p /etc/udev/rules.d", "> " + OverlayUdevRuleFile, "rm -f " + legacyOverlayLinkFile, rule} {
+	for _, want := range []string{"mkdir -p /etc/udev/rules.d", "> " + OverlayUdevRuleFile, "rm -f " + legacyOverlayLinkFile, `dev \$env{INTERFACE} altname`} {
 		if !strings.Contains(cmd, want) {
 			t.Fatalf("rule command %q lacks %q", cmd, want)
 		}
+	}
+	if strings.Contains(cmd, " $env{") {
+		t.Fatalf("the $ must be escaped for the runner's bash -c wrapper, got %q", cmd)
 	}
 }
 
@@ -197,7 +200,7 @@ func TestEnsureOverlayAltnameAddsNameAndUdevRule(t *testing.T) {
 	if rule < 0 || rule < add {
 		t.Fatalf("udev rule must be written after the name is added, got %v", r.calls)
 	}
-	for _, want := range []string{"/bin/ip link property add dev $env{INTERFACE} altname olares-lan", "> /etc/udev/rules.d/80-olares-lan.rules", "rm -f /etc/systemd/network/10-olares-lan.link"} {
+	for _, want := range []string{`/bin/ip link property add dev \$env{INTERFACE} altname olares-lan`, "> /etc/udev/rules.d/80-olares-lan.rules", "rm -f /etc/systemd/network/10-olares-lan.link"} {
 		if !strings.Contains(r.calls[rule], want) {
 			t.Fatalf("rule command %q lacks %q", r.calls[rule], want)
 		}
