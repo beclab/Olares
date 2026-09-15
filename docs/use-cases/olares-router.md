@@ -20,7 +20,7 @@ To understand how Router simplifies your AI workflows, it helps to look at where
 
 Router functions as the central dispatch layer for your entire AI ecosystem. Rather than interacting with fragmented backends directly, all traffic flows through this single gateway.
 
-![Olares Router architecture](/images/manual/use-cases/router-archi.png#bordered)
+![Olares Router architecture](/images/manual/use-cases/router-archi1.png#bordered)
 
 As shown in the architecture above, the system operates through three core layers:
 1. **Callers (The inbound request)**: Whether the request comes from an app inside Olares, a signed-in Olares user, or a third party outside it, it connects to Router. Callers never interact with the backend infrastructure directly.
@@ -60,25 +60,17 @@ Every call through Router has an identified caller, and what the caller needs to
 
 | Caller | How Router identifies it | <nobr>Credential needed</nobr> |
 | --- | --- | --- |
-| <nobr>**Olares apps**</nobr> | Every request from an app inside Olares passes through the platform first, which verifies the caller and stamps an identity header `X-Olares-App-ID` onto the request. Only the platform can add this header, so the caller needs to provide nothing else. | None |
-| <nobr>**Olares users**</nobr> | Every request from a signed-in Olares user passes through the platform first, which verifies the caller and stamps an identity header `X-BFL-USER` onto the request. Only the platform can add this header, so the caller needs to provide nothing else. Olares CLI works in the same way: it authenticates with your Olares ID once, and every later call carries your identity. | None |
-| <nobr>**Third parties**</nobr> | A caller that is neither an Olares app nor an Olares user presents a Router-issued API key (`Authorization: Bearer <api-key>`). Router validates the key and attributes the call to the key's owner. Delete the key and the access will end.<br><br>This is how your own devices outside Olares reach your models, and how you share the models on your Olares with anyone outside it. | Router-issued<br>API key |
+| <nobr>**Olares apps**</nobr> | The platform stamps an identity header `X-Olares-App-ID` onto every request from an app inside Olares, so the caller needs to provide nothing else. | None |
+| <nobr>**Olares users**</nobr> | The platform stamps an identity header `X-BFL-USER` onto every request from the signed-in Olares users, so the caller needs to provide nothing else. | None |
+| <nobr>**Third parties**</nobr> | A caller that is neither an Olares app nor an Olares user presents a Router-issued API key (`Authorization: Bearer <api-key>`). Router validates the key and attributes the call to its owner. Delete the key and the access will end.<br><br>This covers your own devices outside Olares and anyone you share the models with. | Router-issued<br>API key |
 
 ## Get connection details from Router
 
-Connecting to Router generally takes three parameters, and Router provides a dedicated location for each.
+Connecting to Router takes three parameters:
 
 - **Base URL**: Open a capability page such as **LLM**, find the model, and click the **View connection example** icon on the right.
 
   ![The View connection example icon on a model row](/images/manual/use-cases/router-view-connection-examp.png#bordered)
-
-  In the **How to call this model** window, each of the three caller locations has its own tab with the matching base URL, ready to be copied into your client.
-
-  | Caller location | Base URL |
-  | --- | --- |
-  | Apps in Olares | `https://router.<your-olares-id>.olares.com/v1` |
-  | Devices in LAN | <ul><li>Windows, Linux: `http://router-<your-olares-id>-olares.local/v1`</li><li>macOS: `http://router.<your-olares-id>.olares.local/v1`</li></ul> |
-  | Remote | `https://router.<your-olares-id>.olares.com/v1` |  
 
   ![The How to call this model window](/images/manual/use-cases/router-how-to-call-model.png#bordered)
 
@@ -97,58 +89,6 @@ OpenClaw, an app running on Olares, connects to Router in its custom provider se
 
 The session then answers as `default-chat`.
 
-![OpenClaw chatting through Router with default-chat](/images/manual/use-cases/router-client-connect-openclaw.png#bordered)
-
-### Olares users
-
-Olares users can also call models with the Olares CLI: no base URL, no API key, just the platform-stamped user identity.
-
-1. Authenticate the Olares CLI with your Olares ID. The CLI saves the address and your identity for later calls.
-
-   ```bash
-   olares-cli profile login --olares-id <your-olares-id>
-   ```
-
-2. See everything callable on your Olares, with readiness.
-
-   ```bash
-   olares-cli router call models
-   ```
-
-    Sample output:
-
-
-    ```text
-    NAME                                        MODE    SUPPORTS                                                 READINESS  SERVED BY
-    Olares/onnx-community/silero-vad            audio   vad                                                      ready      Olares
-    Olares/unsloth/Qwen3.8-27B-GGUF:UD-Q4_K_XL  chat    function_calling,parallel_function_calling,reasoning,+3  ready      Olares
-    deepseek/deepseek-v4-flash                  chat    assistant_prefill,function_calling,native_streaming,+7   ready      deepseek
-    deepseek/deepseek-v4-pro                    chat    assistant_prefill,function_calling,native_streaming,+7   ready      deepseek
-    myfirecrawl/scrape                          scrape  -                                                        ready      myfirecrawl
-    myjina/reader                               scrape  -                                                        ready      myjina
-    mysearxng/search                            search  -                                                        ready      mysearxng
-    myserper/search                            search  -                                                        ready      myserper
-    mytavily/extract                            scrape  -                                                        ready      mytavily
-    mytavily/search                            search  -                                                        ready      mytavily
-    mytavily/search-advanced                    search  -                                                        ready      mytavily
-    ```
-
-3. Send a chat message.
-
-   ```bash
-   olares-cli router call chat "explain what is AI gateway in one sentence"
-   ```
-
-    Sample output:
-
-    ```text
-    [reasoning] User asks: "explain what is AI gateway in one sentence". Need answer one sentence. Need final only one sentence.
-
-    An AI gateway is a central access point that routes, secures, manages, and monitors requests to AI models and APIs.
-
-    unsloth/Qwen3.8-27B-GGUF:UD-Q4_K_XL
-    ```
-
 ### Callers outside Olares
 
 Anyone outside Olares needs two things: a base URL matching their location, and a Router-issued API key. The base URL differs between the LAN and the internet, but the key works from anywhere.
@@ -165,3 +105,13 @@ curl https://router.<your-olares-id>.olares.com/v1/chat/completions \
   -H "Authorization: Bearer <your-api-key>" \
   -d '{"model": "default-chat", "messages": [{"role": "user", "content": "Hello"}]}'
 ```
+
+## Manage models and access
+
+Beyond routing requests, Router gives you one place to manage what is exposed and who can reach it:
+
+- **Default models**: Map each capability to a model behind a system name like `default-chat`. Apps call the system name, so you can swap, upgrade, or relocate the backing model without touching app configurations.
+- **API keys**: Issue and revoke keys for callers outside Olares. Every call is attributed to its key, so you can trace usage per caller and end access by deleting the key.
+- **Usage**: See every call by caller, model, and token consumption.
+
+Model app lifecycle, installation, engine parameters, and restarts, is managed in Model Console.
