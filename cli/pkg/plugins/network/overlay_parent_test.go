@@ -49,35 +49,21 @@ func (r *scriptedRunner) indexOfExact(cmd string) int {
 
 func noSleep(time.Duration) {}
 
-func TestSelectWiredInterfaceSkipsWifiAndBridgeSlaves(t *testing.T) {
-	devs := parseNMDevices(strings.Join([]string{
-		"wlo1:wifi:connected:home-wifi",
-		"enp3s0:ethernet:connected:br-olares-slave-enp3s0",
-		"enp4s0:ethernet:connected (externally):Wired connection 2",
-		"docker0:bridge:connected (externally):docker0",
-		"lo:loopback:connected (externally):lo",
-	}, "\n"))
-	dev, ok := selectWiredInterface(devs)
-	if !ok || dev != "enp4s0" {
-		t.Fatalf("selectWiredInterface = %q,%v; want enp4s0", dev, ok)
-	}
-}
-
-func TestSelectWiredInterfaceNoneWhenOnlyWifi(t *testing.T) {
-	if dev, ok := selectWiredInterface(parseNMDevices("wlo1:wifi:connected:x\nenp3s0:ethernet:disconnected:")); ok {
-		t.Fatalf("expected no wired interface, got %q", dev)
-	}
-}
-
-func TestOverlayLinkFileContent(t *testing.T) {
-	got := overlayLinkFileContent("d8:43:ae:af:5a:33")
-	for _, want := range []string{"[Match]", "MACAddress=d8:43:ae:af:5a:33", "Type=ether", "[Link]", "AlternativeName=olares-lan"} {
-		if !strings.Contains(got, want) {
-			t.Fatalf("link file %q lacks %q", got, want)
+func TestOverlayUdevRuleContentAndCommand(t *testing.T) {
+	rule := overlayUdevRuleContent("d8:43:ae:af:5a:33", "/bin/ip")
+	for _, want := range []string{`ACTION=="add"`, `SUBSYSTEM=="net"`, `ATTR{address}=="d8:43:ae:af:5a:33"`, `RUN+="/bin/ip link property add dev $env{INTERFACE} altname olares-lan"`} {
+		if !strings.Contains(rule, want) {
+			t.Fatalf("udev rule %q lacks %q", rule, want)
 		}
 	}
-	if !strings.Contains(overlayLinkFileCommand("d8:43:ae:af:5a:33"), OverlayLinkFile) {
-		t.Fatal("link file command must write the persisted unit path")
+	if strings.Contains(rule, "'") {
+		t.Fatalf("udev rule must not contain single quotes, it is written through a single-quoted printf: %q", rule)
+	}
+	cmd := overlayUdevRuleCommand("d8:43:ae:af:5a:33", "/bin/ip")
+	for _, want := range []string{"mkdir -p /etc/udev/rules.d", "> " + OverlayUdevRuleFile, "rm -f " + legacyOverlayLinkFile, rule} {
+		if !strings.Contains(cmd, want) {
+			t.Fatalf("rule command %q lacks %q", cmd, want)
+		}
 	}
 }
 
@@ -112,7 +98,7 @@ func TestMigrateBridgeToDirectActiveBridge(t *testing.T) {
 	if err != nil || !migrated {
 		t.Fatalf("migrate = %v,%v; want true,nil (calls %v)", migrated, err, r.calls)
 	}
-	marker, down, up, delSlave, delBridge := r.indexOf("mkdir -p /var/lib/olares/overlay-gateway && touch /var/lib/olares/overlay-gateway/.migrated-from-bridge"),
+	marker, down, up, delSlave, delBridge := r.indexOfExact("mkdir -p /var/lib/olares/overlay-gateway && printf '%s' 'enp3s0' > /var/lib/olares/overlay-gateway/.migrated-from-bridge"),
 		r.indexOf("nmcli connection down br-olares"), r.indexOf("nmcli connection up original-connection"),
 		r.indexOf("nmcli connection delete br-olares-slave-enp3s0"), r.indexOfExact("nmcli connection delete br-olares")
 	for name, at := range map[string]int{"marker": marker, "down": down, "up": up, "delete slave": delSlave, "delete bridge": delBridge} {
@@ -190,46 +176,89 @@ func TestMigrateBridgeToDirectNoBridge(t *testing.T) {
 	}
 }
 
-func TestEnsureOverlayAltnameAddsNameAndLinkFile(t *testing.T) {
-	r := &scriptedRunner{answers: []scriptedAnswer{
-		{prefix: "nmcli -t -f DEVICE,TYPE,STATE,CONNECTION device", out: "enp3s0:ethernet:connected:Wired connection 1\nwlo1:wifi:connected:home\n"},
+func ensureAnswers(extra ...scriptedAnswer) []scriptedAnswer {
+	return append(extra, []scriptedAnswer{
 		{prefix: "ip -o link show olares-lan", err: errors.New("does not exist")},
 		{prefix: "cat /sys/class/net/enp3s0/address", out: "d8:43:ae:af:5a:33\n"},
-	}}
-	dev, err := ensureOverlayAltname(r.run)
-	if err != nil || dev != "enp3s0" {
-		t.Fatalf("ensureOverlayAltname = %q,%v", dev, err)
+		{prefix: "command -v ip", out: "/bin/ip\n"},
+	}...)
+}
+
+func TestEnsureOverlayAltnameAddsNameAndUdevRule(t *testing.T) {
+	r := &scriptedRunner{answers: ensureAnswers()}
+	if err := ensureOverlayAltname(r.run, "enp3s0"); err != nil {
+		t.Fatalf("ensureOverlayAltname: %v", err)
 	}
-	if r.indexOf("ip link property add dev enp3s0 altname olares-lan") < 0 {
+	add := r.indexOfExact("ip link property add dev enp3s0 altname olares-lan")
+	if add < 0 {
 		t.Fatalf("alternative name must be added, got %v", r.calls)
 	}
-	if r.indexOf("mkdir -p /etc/systemd/network && printf") < 0 {
-		t.Fatalf("link file must be written, got %v", r.calls)
+	rule := r.indexOf("mkdir -p /etc/udev/rules.d && printf")
+	if rule < 0 || rule < add {
+		t.Fatalf("udev rule must be written after the name is added, got %v", r.calls)
+	}
+	for _, want := range []string{"/bin/ip link property add dev $env{INTERFACE} altname olares-lan", "> /etc/udev/rules.d/80-olares-lan.rules", "rm -f /etc/systemd/network/10-olares-lan.link"} {
+		if !strings.Contains(r.calls[rule], want) {
+			t.Fatalf("rule command %q lacks %q", r.calls[rule], want)
+		}
+	}
+	if r.indexOf("nmcli") >= 0 {
+		t.Fatalf("the upgrade must not select an interface itself, got %v", r.calls)
 	}
 }
 
-func TestEnsureOverlayAltnameRefusesToRebind(t *testing.T) {
-	r := &scriptedRunner{answers: []scriptedAnswer{
-		{prefix: "nmcli -t -f DEVICE,TYPE,STATE,CONNECTION device", out: "enp3s0:ethernet:connected:Wired connection 1\n"},
-		{prefix: "ip -o link show olares-lan", out: "7: enp2s0: <BROADCAST> mtu 1500"},
-	}}
-	if _, err := ensureOverlayAltname(r.run); err == nil {
-		t.Fatal("expected an error when olares-lan already names another device")
+func TestEnsureOverlayAltnameMovesLeftoverNameToThePhy(t *testing.T) {
+	r := &scriptedRunner{answers: ensureAnswers(scriptedAnswer{prefix: "ip -o link show olares-lan", out: "7: enp2s0: <BROADCAST> mtu 1500"})}
+	if err := ensureOverlayAltname(r.run, "enp3s0"); err != nil {
+		t.Fatalf("a leftover binding must be moved, not fail the upgrade: %v", err)
 	}
-	if r.indexOf("ip link property add") >= 0 {
-		t.Fatal("must not add the name to a second device")
+	del, add := r.indexOfExact("ip link property del dev enp2s0 altname olares-lan"), r.indexOfExact("ip link property add dev enp3s0 altname olares-lan")
+	if del < 0 || add < 0 || del > add {
+		t.Fatalf("name must be removed from enp2s0 before being added to enp3s0, got %v", r.calls)
 	}
 }
 
-func TestEnsureOverlayAltnameSkipsWithoutWiredInterface(t *testing.T) {
-	r := &scriptedRunner{answers: []scriptedAnswer{
-		{prefix: "nmcli -t -f DEVICE,TYPE,STATE,CONNECTION device", out: "wlo1:wifi:connected:home\n"},
-	}}
-	dev, err := ensureOverlayAltname(r.run)
-	if err != nil || dev != "" {
-		t.Fatalf("expected a silent skip, got %q,%v", dev, err)
+func TestEnsureOverlayAltnameIdempotentWhenAlreadyOnPhy(t *testing.T) {
+	r := &scriptedRunner{answers: ensureAnswers(scriptedAnswer{prefix: "ip -o link show olares-lan", out: "2: enp3s0: <BROADCAST> mtu 1500"})}
+	if err := ensureOverlayAltname(r.run, "enp3s0"); err != nil {
+		t.Fatalf("ensureOverlayAltname: %v", err)
 	}
-	if len(r.calls) != 1 {
-		t.Fatalf("no changes expected without a wired interface, got %v", r.calls)
+	if r.indexOf("ip link property add") >= 0 || r.indexOf("ip link property del") >= 0 {
+		t.Fatalf("name already on the phy must not be touched, got %v", r.calls)
+	}
+	if r.indexOf("mkdir -p /etc/udev/rules.d && printf") < 0 {
+		t.Fatalf("udev rule must still be refreshed, got %v", r.calls)
+	}
+}
+
+func TestEnsureOverlayAltnameFailsWithoutIPCommand(t *testing.T) {
+	r := &scriptedRunner{answers: ensureAnswers(scriptedAnswer{prefix: "command -v ip", err: errors.New("exit 1")})}
+	if err := ensureOverlayAltname(r.run, "enp3s0"); err == nil {
+		t.Fatal("a rule with an unknown ip path must not be written")
+	}
+	if r.indexOf("mkdir -p /etc/udev/rules.d") >= 0 {
+		t.Fatalf("rule must not be written without the ip path, got %v", r.calls)
+	}
+}
+
+func TestOverlayMigratedFromBridgeReadsThePhy(t *testing.T) {
+	r := &scriptedRunner{answers: []scriptedAnswer{{prefix: "cat /var/lib/olares/overlay-gateway/.migrated-from-bridge", out: "enp3s0\n"}}}
+	if phy, ok := overlayMigratedFromBridge(r.run); !ok || phy != "enp3s0" {
+		t.Fatalf("overlayMigratedFromBridge = %q,%v; want enp3s0,true", phy, ok)
+	}
+	r = &scriptedRunner{answers: []scriptedAnswer{{prefix: "cat /var/lib/olares/overlay-gateway/.migrated-from-bridge", err: errors.New("No such file")}}}
+	if phy, ok := overlayMigratedFromBridge(r.run); ok || phy != "" {
+		t.Fatalf("missing marker must read as not migrated, got %q,%v", phy, ok)
+	}
+}
+
+func TestRemoveOverlayAltnameDropsRuleAndLegacyLinkFile(t *testing.T) {
+	r := &scriptedRunner{answers: []scriptedAnswer{{prefix: "ip -o link show olares-lan", out: "2: enp3s0: <BROADCAST> mtu 1500"}}}
+	removeOverlayAltname(r.run)
+	if r.indexOfExact("rm -f /etc/udev/rules.d/80-olares-lan.rules /etc/systemd/network/10-olares-lan.link") < 0 {
+		t.Fatalf("both persistence files must be removed, got %v", r.calls)
+	}
+	if r.indexOfExact("ip link property del dev enp3s0 altname olares-lan") < 0 {
+		t.Fatalf("alternative name must be dropped, got %v", r.calls)
 	}
 }
