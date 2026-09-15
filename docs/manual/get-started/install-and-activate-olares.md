@@ -13,13 +13,18 @@ To avoid activation failures, ensure that both your phone and the Olares device 
 ![ISO Activate](/images/manual/larepass/iso-activate1.png#bordered)
 
 4. When the installation completes, click **Activate now**.
-5. In the **Select a reverse proxy** dialog, select a node that is closer to your geographical location. The installer will then configure HTTPs certificate and DNS for Olares. 
+5. In the **Select a reverse proxy** dialog, select a node that is closer to your geographical location. The installer will then configure HTTPS certificate and DNS for Olares.
 
    :::tip Note
    - You can change this setting later on the [Change reverse proxy](../olares/settings/change-frp.md) page in Olares.
    - If your Olares device is connected to a public IP network, this step will be skipped automatically.
    :::
-6. Follow the on-screen instructions to set the login password for Olares, then tap **Complete**.
+6. Select the language for Olares. Olares supports English, Simplified Chinese, German, Spanish, Italian, French, and Japanese.
+
+   :::info
+   This selection does not change the language of the LarePass app. The remaining activation steps stay in the current LarePass language. After activation, Olares Desktop uses the language selected here.
+   :::
+7. Follow the on-screen instructions to set the login password for Olares, then tap **Complete**.
 
    ![ISO Activate-2](/images/manual/larepass/iso-activate-4.png#bordered)
 

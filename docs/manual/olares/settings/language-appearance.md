@@ -13,11 +13,18 @@ Personalizing your Olares experience is easy. You can set your preferred languag
 Olares is currently available in the following languages:
 - English
 - Chinese (simplified)
+- German
+- Spanish
+- Italian
+- French
+- Japanese
 
 To change your display language:
 1. Open the Settings app from the Dock or Launchpad.
 2. Select **Appearance** from the left sidebar.
 3. Click the dropdown and select your language.
+
+The change applies immediately.
 
 ## Theme
 Switch between light and dark themes for system applications. 
