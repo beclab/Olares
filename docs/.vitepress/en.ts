@@ -151,8 +151,22 @@ const side = {
           link: "/manual/olares/desktop",
         },
         {
+          text: "Install the LarePass browser extension",
+          link: "/manual/install-larepass-browser-extension",
+        },
+        {
           text: "What's next",
           link: "/manual/get-started/next-steps",
+        },
+      ],
+    },
+    {
+      text: "Tutorials",
+      collapsed: false,
+      items: [
+        {
+          text: "Translate webpages privately with LarePass",
+          link: "/manual/tutorial/translate-webpages-with-larepass",
         },
       ],
     },
