@@ -5,9 +5,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, Penpot, MCP, Model Context Protocol, Cursor, design collaboration, prototype, self-hosted design tool
-app_version: "1.0.15"
-doc_version: "1.0"
-doc_updated: "2026-05-22"
+app_version: "1.0.29"
+doc_version: "1.1"
+doc_updated: "2026-09-15"
 ---
 
 :::warning
@@ -20,20 +20,26 @@ Penpot 是一款开源的、基于网页的设计和原型工具，支持 UI 设
 
 在 Olares 上，你可以将 Penpot 作为自托管设计工作空间运行，并通过 Penpot MCP 将其连接到 Cursor。本指南将带你完成一个完整的工作流程：打开 Penpot 文件、让 Cursor 读取其结构、请求 Cursor 添加一个卡片式组件，并在 Penpot 中检查结果。
 
+:::info 最新版本的 Penpot 中 MCP 配置方式已变更
+Penpot 现在提供内置的 MCP 服务器，取代了此前基于插件的配置方式。如果你在此次更新前配置过 Penpot MCP，旧的配置已不再生效。请按照新流程[重新连接 Penpot 和 Cursor](#通过-mcp-连接-penpot-和-cursor)。
+
+Penpot MCP 端点现在默认使用 internal 认证级别。要从 Cursor 连接，你的电脑和 Olares 必须处于同一局域网，或者你需要在电脑上开启 LarePass VPN。
+:::
+
 ## 学习目标
 
 在本指南中，你将学习如何：
 
 - 从 Market 安装 Penpot。
-- 从 Olares Settings 获取 Penpot MCP 端点。
-- 将活跃的 Penpot 文件连接到 MCP 服务器。
-- 配置 Cursor 以读取已连接的 Penpot 文件。
+- 启用内置的 Penpot MCP 服务器并获取连接 URL。
+- 配置 Cursor，使其通过 MCP 读取你的 Penpot 文件。
 - 使用 Cursor 检查画板并添加新的设计元素。
 - 在 Penpot 中审查更改，并通过后续提示进行优化。
 
 ## 前提条件
 
 - 你的电脑上已安装 Cursor。
+- 你的电脑和 Olares 处于同一局域网，或已在电脑上开启 LarePass VPN。
 - 在 Penpot 中已创建或导入一个 Penpot 文件。
 
 ## 安装 Penpot
@@ -55,67 +61,30 @@ Penpot 是一款开源的、基于网页的设计和原型工具，支持 UI 设
 3. 选择你希望 Cursor 处理的页面和画板。
 
 :::tip 保持文件打开
-Cursor 只能读取当前活跃且已连接的 Penpot 文件。在整个工作流程中，请保持此浏览器标签页打开。
+在整个工作流程中，请保持 Penpot 文件在浏览器标签页中打开，以便随时查看 Cursor 所做的更改。
 :::
 
 ## 通过 MCP 连接 Penpot 和 Cursor
 
-从 Olares 获取你的 Penpot MCP 端点，然后将它们添加到 Penpot 和 Cursor 中。
+最新版本的 Penpot 内置了 MCP 服务器。在你的 Penpot 账户中启用它，复制生成的连接 URL，并将其添加到 Cursor。
 
-### 获取 MCP 端点
+### 在 Penpot 中启用 MCP 服务器
 
-1. 打开 Settings，然后进入 **Applications** > **Penpot**。
+1. 从 Launchpad 打开 Penpot。
 
-   ![Penpot application endpoints](/images/manual/use-cases/penpot-entrances.png#bordered)
+2. 点击右上角的头像，选择 **Your account**。
 
-2. 进入目标入口，找到 **Penpot MCP Plugin** 和 **Penpot MCP HTTP** 的端点 URL。
+3. 进入 **Integrations** > **MCP Server**，打开开关以启用 MCP 服务器。
 
-   - **Penpot MCP Plugin**：使用此端点安装 Penpot 插件。
-
-      ![Copy Penpot MCP Plugin endpoint](/images/manual/use-cases/lp-penpotmcpplugin-endpoint.png#bordered)
-
-   - **Penpot MCP HTTP**：使用此端点连接 Cursor。
-
-      ![Copy Penpot MCP HTTP endpoint](/images/manual/use-cases/lp-penpotmcphttp-endpoint.png#bordered)
-
-3. 保持此页面打开，或复制两个 URL。你将在接下来的步骤中使用它们。
-
-### 在 Penpot 中安装并连接 MCP 插件
-
-在目标文件已在 Penpot 中打开的情况下：
-
-1. 在 Penpot 编辑器中，点击 <i class="material-symbols-outlined">more_vert</i> 打开主菜单，然后选择 **Plugins** > **Plugin manager**。
-
-   ![Open Penpot plugin manager](/images/manual/use-cases/penpot-plugin-manager.png#bordered)
-
-2. 在你的 MCP Plugin 端点后面追加 `/manifest.json`。按以下格式输入 URL，然后点击 **Install**：
+4. 生成访问令牌（access token），并复制 MCP 连接 URL。该 URL 包含你的访问令牌，格式如下：
 
    ```text
-   <your-mcp-plugin-endpoint>/manifest.json
+   https://2550d96f0.alice.olares.com/mcp/stream?userToken=<your-access-token>
    ```
 
-   例如：
-   ```text
-   https://2550d96f1.laresprime.olares.com/manifest.json
-   ```
-
-   ![Add Penpot MCP plugin](/images/manual/use-cases/penpot-add-plugin.png#bordered){width=60%}
-
-3. 查看权限提示，然后点击 **Allow**。
-
-4. 该插件现在会出现在 **INSTALLED PLUGINS** 部分。
-
-   ![Penpot MCP plugin installed](/images/manual/use-cases/penpot-plugin-installed.png#bordered){width=60%}
-
-5. 在 Plugin manager 中，点击 MCP 插件旁边的 **Open**。
-
-6. 在插件面板中，点击 **CONNECT TO MCP SERVER**。
-
-   ![Connect Penpot plugin to MCP server](/images/manual/use-cases/penpot-plugin-connect.png#bordered){width=95%}
-
-7. 等待状态变为 **Connected to MCP server**。
-
-   ![Penpot plugin connected](/images/manual/use-cases/penpot-plugin-connected.png#bordered){width=40%}
+:::warning 妥善保管连接 URL
+连接 URL 中包含你的访问令牌。任何持有该 URL 的人都可以通过 MCP 访问你的 Penpot 文件。请勿分享该 URL，也不要将其提交到公开的代码仓库。
+:::
 
 ### 将 Cursor 配置为 MCP 客户端
 
@@ -125,19 +94,17 @@ Cursor 只能读取当前活跃且已连接的 Penpot 文件。在整个工作�
 
    ![Add Custom MCP in Cursor](/images/manual/use-cases/penpot-cursor-add-mcp.png#bordered)
 
-3. 在你的 MCP HTTP 端点后面追加 `/mcp`。在 `~/.cursor/mcp.json` 中，添加以下配置：
+3. 在 `~/.cursor/mcp.json` 中，使用你复制的连接 URL 添加 Penpot MCP 服务器：
 
    ```json
    {
      "mcpServers": {
        "penpot": {
-         "url": "<your-mcp-http-endpoint>/mcp"
+         "url": "<your-penpot-mcp-connection-url>"
        }
      }
    }
    ```
-
-   ![Configure Penpot MCP in Cursor](/images/manual/use-cases/penpot-cursor-mcp-config.png#bordered)
 
    :::warning 检查 JSON 语法
    确保你完全按照上述格式复制，包括所有引号 `"` 和大括号 `{}`。JSON 无效会导致 Cursor 无法加载 MCP 服务器。
@@ -145,9 +112,11 @@ Cursor 只能读取当前活跃且已连接的 Penpot 文件。在整个工作�
 
 4. 保存文件。在 macOS 上，按 `Cmd + S`。在 Windows 上，按 `Ctrl + S`。
 
-5. 在 **Tools & MCPs** 中，启用 **penpot** 旁边的开关。如果没有出现，请重启 Cursor 并重新打开 **Tools & MCPs**。
+5. 重启 Cursor，然后回到 **Tools & MCPs**，确认 **penpot** 已启用并成功连接。
 
    ![Enable Penpot MCP in Cursor](/images/manual/use-cases/penpot-cursor-mcp-enabled.png#bordered)
+
+   如果 **penpot** 连接失败，请确认你的电脑和 Olares 处于同一局域网，或在电脑上开启 LarePass VPN，然后再次重启 Cursor。
 
 ## 使用 Cursor 编辑 Penpot 文件
 
@@ -155,7 +124,7 @@ Cursor 只能读取当前活跃且已连接的 Penpot 文件。在整个工作�
 
 首先，请求 Cursor 读取设计结构。
 
-1. 保持你的 Penpot 文件打开，并确保插件状态为 **Connected to MCP server**。
+1. 在 Penpot 中，打开你希望 Cursor 处理的文件。
 
 2. 在 Cursor 中，开启一个新对话并提问：
 
@@ -223,25 +192,14 @@ Rename the card layers so they are easy for developers to inspect.
 
 #### 原因
 
-MCP 插件未连接、Penpot 浏览器标签页已关闭，或者活跃的是另一个文件或页面。
+Penpot 账户中未启用 MCP 服务器、`~/.cursor/mcp.json` 中的连接 URL 缺失或已过期，或者 Cursor 无法通过网络访问 Olares。
 
 #### 解决方案
 
-打开目标 Penpot 文件，打开 MCP 插件，点击 **Connect to server**，并等待状态显示为 **Connected to MCP server**。然后在 Cursor 中重试你的提示。
-
-### Penpot MCP 连接是如何工作的？
-
-Penpot MCP 将 Cursor 连接到你浏览器中当前打开的 Penpot 文件。
-
-| 组件 | 使用者 | 功能 | 手动设置 |
-|:----------|:--------|:-------------|:-------------|
-| MCP Plugin | Penpot 文件 | 将活跃文件、页面、画板、图层、组件、样式和 token 暴露给 MCP 服务器。 | 在 Penpot 中添加。 |
-| MCP HTTP | Cursor | 接收来自 Cursor 的 MCP 请求，并将其转发给已连接的 Penpot 文件。 | 在 Cursor 中配置。 |
-| MCP WebSocket | 插件和 MCP 服务器 | 实时保持 Penpot 文件与 MCP 服务器的连接。 | 无需手动设置。 |
-
-Cursor 只需要在 MCP HTTP 端点后面追加 `/mcp`。MCP WebSocket 连接在 Penpot 插件和 MCP 服务器之间内部使用。
-
-在 Cursor 处理文件时，插件必须保持与 Penpot 的连接。
+1. 在 Penpot 中，进入 **Your account** > **Integrations** > **MCP Server**，确认 MCP 服务器已启用。
+2. 如果你重新生成过访问令牌，请复制新的连接 URL 并更新 `~/.cursor/mcp.json`。
+3. 确认你的电脑和 Olares 处于同一局域网，或在电脑上开启 LarePass VPN。
+4. 重启 Cursor 并重试你的提示。
 
 ## 了解更多
 
