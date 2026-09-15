@@ -93,7 +93,7 @@ Olares OS 通过一键部署和工作流集成简化了本地 AI，这与标准 
 
 ### Olares One 支持带外管理吗？
 
-Olares One 支持以下电源管理功能：
+Olares One 对常见带外管理功能的支持情况如下：
 
 - **自动开机**：支持。接通电源或停电后恢复供电时，Olares One 可以自动开机。
   - 使用 Olares OS 时，需要 Olares OS 1.12.6 或更高版本以及 EC 固件 1.03 或更高版本。操作方法请参阅[管理硬件设置](hardware-settings.md#设置自动开机)。

@@ -88,7 +88,7 @@ Yes. Olares One functions as a personal AI cloud and reliably supports 24/7 cont
 
 ### Does Olares One support out-of-band management?
 
-Olares One supports the following power management capabilities:
+Support for common out-of-band management capabilities on Olares One is as follows:
 
 - **Automatic startup**: Supported. Olares One can start automatically when AC power is connected or restored after a power outage.
   - On Olares OS, this feature requires Olares OS 1.12.6 or later and EC firmware 1.03 or later. See [Manage hardware settings](hardware-settings.md#set-automatic-startup).
