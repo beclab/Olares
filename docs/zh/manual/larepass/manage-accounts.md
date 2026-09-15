@@ -1,10 +1,10 @@
 ---
 outline: [2, 3]
-description: 在 LarePass 移动端应用或桌面客户端中导入、切换和删除 Olares 账户。
+description: 在 LarePass 移动端、桌面端或 Chrome 扩展中导入 Olares 账户，并管理设备上的账户。
 head:
   - - meta
     - name: keywords
-      content: Olares, LarePass, 导入账户, 切换账户, 删除账户, Olares ID, 助记词
+      content: Olares, LarePass, 浏览器扩展, 导入账户, 切换账户, 删除账户, Olares ID, 助记词
 ---
 
 # 在 LarePass 中管理账户
@@ -39,6 +39,15 @@ head:
 
    ![在桌面端导入账户](/images/manual/larepass/import-account-desktop.png#bordered)
 
+### Chrome 扩展
+
+1. 点击 Chrome 工具栏中的 LarePass 图标。
+2. 如果出现功能介绍，可以点击 **Skip** 跳过，也可以点击箭头依次查看。
+3. 点击**导入账户**。
+4. 输入 Olares ID 对应的 12 个助记词。
+
+   ![在 LarePass Chrome 扩展中输入助记词](/images/manual/larepass/import-account-browser-extension.png#bordered)
+
 ## 切换账户
 
 如果已在 LarePass 中添加多个 Olares ID，可以随时切换使用。
@@ -66,6 +75,11 @@ head:
 
    ![在桌面端切换账户](/images/manual/larepass/switch-account-desktop1.png#bordered)
 
+### Chrome 扩展
+
+1. 点击或将鼠标悬停在右下角的个人头像上。
+2. 在账户列表中选择要使用的账户。
+
 ## 删除账户
 
 如果不想继续在当前设备上保留某个账户，可以将其从 LarePass 中删除。
@@ -92,3 +106,9 @@ head:
 3. 点击**删除账户**删除当前账户，然后确认删除。
 
    ![在桌面端删除账户](/images/manual/larepass/delete-account-desktop.png#bordered)
+
+### Chrome 扩展
+
+1. 点击右下角个人头像上方的 <i class="material-symbols-outlined">settings</i>。
+2. 点击 **Account**。
+3. 点击 **Delete**，然后确认删除。
