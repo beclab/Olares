@@ -21,12 +21,19 @@ const (
 	// OverlayDesiredStateFile marks that the user has enabled the overlay
 	// gateway on this node. olaresd converges the node towards it on boot.
 	OverlayDesiredStateFile = "/var/lib/olares/overlay-gateway/enabled"
-	// OverlayLinkFile persists the alternative name across reboots through
-	// systemd-udevd, independently of olaresd.
-	OverlayLinkFile = "/etc/systemd/network/10-olares-lan.link"
+	// OverlayUdevRuleFile re-adds the alternative name whenever the NIC
+	// appears, before NetworkManager and olaresd start. A udev rule is used
+	// rather than a systemd.link file because udev applies only the first
+	// matching .link file per device and netplan already ships one for every
+	// NetworkManager connection.
+	OverlayUdevRuleFile = "/etc/udev/rules.d/80-olares-lan.rules"
+	// legacyOverlayLinkFile is the earlier persistence file; it is removed
+	// whenever the rule is written or the alternative name is dropped.
+	legacyOverlayLinkFile = "/etc/systemd/network/10-olares-lan.link"
 	// overlayMigratedMarker records that the bridge was active before the
-	// upgrade tore it down, so the later upgrade steps know they must write the
-	// desired state and recreate the overlay Pods even when re-run.
+	// upgrade tore it down and names the NIC that left the bridge, so the later
+	// upgrade steps know which device to name and that the desired state and
+	// the overlay Pods must be restored even when re-run.
 	overlayMigratedMarker = "/var/lib/olares/overlay-gateway/.migrated-from-bridge"
 
 	overlayBridgeConnection   = "br-olares"
@@ -47,62 +54,28 @@ func sudoRunner(runtime connector.Runtime) commandRunner {
 	}
 }
 
-// nmDevice is one row of `nmcli -t -f DEVICE,TYPE,STATE,CONNECTION device`.
-type nmDevice struct {
-	Name       string
-	Type       string
-	State      string
-	Connection string
+// overlayUdevRuleContent renders the udev rule that re-adds the alternative
+// name when the NIC with this MAC appears. ipPath must be absolute: udev does
+// not search PATH. $env{INTERFACE} is the final interface name after any
+// rename, which %k is not guaranteed to be.
+func overlayUdevRuleContent(mac, ipPath string) string {
+	return fmt.Sprintf(`ACTION=="add", SUBSYSTEM=="net", ATTR{address}=="%s", RUN+="%s link property add dev $env{INTERFACE} altname %s"`,
+		mac, ipPath, OverlayParentAltname)
 }
 
-func parseNMDevices(out string) []nmDevice {
-	var devs []nmDevice
-	for _, line := range strings.Split(out, "\n") {
-		line = strings.TrimSpace(line)
-		if line == "" {
-			continue
-		}
-		fields := strings.SplitN(line, ":", 4)
-		if len(fields) < 3 {
-			continue
-		}
-		d := nmDevice{Name: fields[0], Type: fields[1], State: fields[2]}
-		if len(fields) == 4 {
-			d.Connection = fields[3]
-		}
-		devs = append(devs, d)
+func overlayUdevRuleCommand(mac, ipPath string) string {
+	return fmt.Sprintf("mkdir -p %s && printf '%%s\\n' '%s' > %s && rm -f %s",
+		parentDir(OverlayUdevRuleFile), overlayUdevRuleContent(mac, ipPath), OverlayUdevRuleFile, legacyOverlayLinkFile)
+}
+
+// resolveIPCommand returns the absolute path of the ip utility on this node.
+func resolveIPCommand(run commandRunner) (string, error) {
+	out, err := run("command -v ip")
+	path := strings.TrimSpace(out)
+	if err != nil || path == "" {
+		return "", errors.New("ip command not found")
 	}
-	return devs
-}
-
-// selectWiredInterface picks the wired NIC that carries the LAN: an ethernet
-// device NetworkManager reports as connected and that is not enslaved to the
-// legacy overlay bridge. The default-route interface is deliberately not used
-// as a fallback: a host with Wi-Fi as a second default route would pick the
-// wrong device.
-func selectWiredInterface(devs []nmDevice) (string, bool) {
-	for _, d := range devs {
-		if d.Type != "ethernet" || !strings.HasPrefix(d.State, "connected") {
-			continue
-		}
-		if strings.HasPrefix(d.Connection, overlayBridgeSlavePrefix) {
-			continue
-		}
-		return d.Name, true
-	}
-	return "", false
-}
-
-// overlayLinkFileContent renders the systemd.link unit that re-adds the
-// alternative name whenever the NIC appears. Matching on MAC plus type keeps
-// the rule stable across kernel interface renames.
-func overlayLinkFileContent(mac string) string {
-	return fmt.Sprintf("[Match]\nMACAddress=%s\nType=ether\n\n[Link]\nAlternativeName=%s\n", mac, OverlayParentAltname)
-}
-
-func overlayLinkFileCommand(mac string) string {
-	return fmt.Sprintf("mkdir -p /etc/systemd/network && printf '%%s\\n' '[Match]' 'MACAddress=%s' 'Type=ether' '' '[Link]' 'AlternativeName=%s' > %s",
-		mac, OverlayParentAltname, OverlayLinkFile)
+	return path, nil
 }
 
 // linkNameFromIPOutput extracts the primary interface name from
@@ -130,40 +103,42 @@ func resolveOverlayAltname(run commandRunner) string {
 	return linkNameFromIPOutput(out)
 }
 
-// ensureOverlayAltname adds the alternative name to the selected wired NIC and
-// persists it. It refuses to move the name to a different device: a silent
-// re-bind would move every overlay Pod to another network.
-func ensureOverlayAltname(run commandRunner) (string, error) {
-	out, err := run("nmcli -t -f DEVICE,TYPE,STATE,CONNECTION device")
-	if err != nil {
-		return "", errors.Wrap(err, "list network devices")
+// ensureOverlayAltname puts the alternative name on phy, the NIC that just
+// left the bridge, and persists it. The upgrade is the authoritative
+// reconciliation for that node: a name found on another device can only be a
+// leftover, so it is moved with a warning instead of failing the upgrade.
+func ensureOverlayAltname(run commandRunner, phy string) error {
+	if bound := resolveOverlayAltname(run); bound != "" && bound != phy {
+		logger.Warnf("overlay-parent: alternative name %s was on %s, moving it to %s", OverlayParentAltname, bound, phy)
+		if _, err := run(fmt.Sprintf("ip link property del dev %s altname %s", bound, OverlayParentAltname)); err != nil {
+			return errors.Wrapf(err, "remove alternative name %s from %s", OverlayParentAltname, bound)
+		}
+	} else if bound == phy {
+		logger.Infof("overlay-parent: %s already carries alternative name %s", phy, OverlayParentAltname)
 	}
-	dev, ok := selectWiredInterface(parseNMDevices(out))
-	if !ok {
-		logger.Warnf("overlay-parent: no connected wired interface, alternative name %s not added", OverlayParentAltname)
-		return "", nil
-	}
-	if bound := resolveOverlayAltname(run); bound != "" && bound != dev {
-		return "", fmt.Errorf("alternative name %s is bound to %s, expected %s", OverlayParentAltname, bound, dev)
-	} else if bound == "" {
-		if _, err := run(fmt.Sprintf("ip link property add dev %s altname %s", dev, OverlayParentAltname)); err != nil {
-			return "", errors.Wrapf(err, "add alternative name %s to %s", OverlayParentAltname, dev)
+	if resolveOverlayAltname(run) != phy {
+		if _, err := run(fmt.Sprintf("ip link property add dev %s altname %s", phy, OverlayParentAltname)); err != nil {
+			return errors.Wrapf(err, "add alternative name %s to %s", OverlayParentAltname, phy)
 		}
 	}
-	mac, err := run("cat /sys/class/net/" + dev + "/address")
+	mac, err := run("cat /sys/class/net/" + phy + "/address")
 	if err != nil {
-		return "", errors.Wrapf(err, "read MAC of %s", dev)
+		return errors.Wrapf(err, "read MAC of %s", phy)
 	}
 	mac = strings.TrimSpace(mac)
-	if _, err := run(overlayLinkFileCommand(mac)); err != nil {
-		return "", errors.Wrap(err, "write systemd link file")
+	ipPath, err := resolveIPCommand(run)
+	if err != nil {
+		return err
 	}
-	logger.Infof("overlay-parent: %s carries alternative name %s (mac %s)", dev, OverlayParentAltname, mac)
-	return dev, nil
+	if _, err := run(overlayUdevRuleCommand(mac, ipPath)); err != nil {
+		return errors.Wrap(err, "write udev rule")
+	}
+	logger.Infof("overlay-parent: %s carries alternative name %s (mac %s), persisted in %s", phy, OverlayParentAltname, mac, OverlayUdevRuleFile)
+	return nil
 }
 
 func removeOverlayAltname(run commandRunner) {
-	_, _ = run("rm -f " + OverlayLinkFile)
+	_, _ = run("rm -f " + OverlayUdevRuleFile + " " + legacyOverlayLinkFile)
 	if dev := resolveOverlayAltname(run); dev != "" {
 		_, _ = run(fmt.Sprintf("ip link property del dev %s altname %s", dev, OverlayParentAltname))
 	}
@@ -271,7 +246,7 @@ func migrateBridgeToDirect(run commandRunner, sleep func(time.Duration)) (bool, 
 	if _, err := run(fmt.Sprintf("nmcli connection modify %s connection.autoconnect yes", overlayOriginalConnection)); err != nil {
 		return false, errors.Wrap(err, "enable autoconnect on the physical connection")
 	}
-	if _, err := run(fmt.Sprintf("mkdir -p %s && touch %s", parentDir(overlayMigratedMarker), overlayMigratedMarker)); err != nil {
+	if _, err := run(fmt.Sprintf("mkdir -p %s && printf '%%s' '%s' > %s", parentDir(overlayMigratedMarker), st.Phy, overlayMigratedMarker)); err != nil {
 		return false, errors.Wrap(err, "write migration marker")
 	}
 	if _, err := run("nmcli connection down " + overlayBridgeConnection); err != nil {
@@ -314,9 +289,14 @@ func parentDir(path string) string {
 	return "/"
 }
 
-func overlayMigratedFromBridge(run commandRunner) bool {
-	_, err := run("test -f " + overlayMigratedMarker)
-	return err == nil
+// overlayMigratedFromBridge reports whether this upgrade tore down an active
+// bridge and, if so, which NIC left it.
+func overlayMigratedFromBridge(run commandRunner) (phy string, migrated bool) {
+	out, err := run("cat " + overlayMigratedMarker)
+	if err != nil {
+		return "", false
+	}
+	return strings.TrimSpace(out), true
 }
 
 // MigrateBridgeToDirect is the upgrade task that retires the legacy overlay
@@ -336,14 +316,25 @@ func (m *MigrateBridgeToDirect) Execute(runtime connector.Runtime) error {
 	return nil
 }
 
-// EnsureOverlayAltname adds the alternative name to the wired NIC and persists it.
+// EnsureOverlayAltname names the NIC that left the bridge and persists the
+// name. Nodes that had no active bridge are left untouched: their alternative
+// name is added by olaresd when the user enables the overlay gateway.
 type EnsureOverlayAltname struct {
 	common.KubeAction
 }
 
 func (e *EnsureOverlayAltname) Execute(runtime connector.Runtime) error {
-	_, err := ensureOverlayAltname(sudoRunner(runtime))
-	return err
+	run := sudoRunner(runtime)
+	phy, migrated := overlayMigratedFromBridge(run)
+	if !migrated {
+		logger.Infof("overlay-parent: no bridge was migrated, alternative name left to olaresd")
+		return nil
+	}
+	if phy == "" {
+		logger.Warnf("overlay-parent: migration marker names no interface, alternative name left to olaresd")
+		return nil
+	}
+	return ensureOverlayAltname(run, phy)
 }
 
 // WriteOverlayDesiredIfMigrated records the overlay gateway as enabled when the
@@ -355,7 +346,7 @@ type WriteOverlayDesiredIfMigrated struct {
 
 func (w *WriteOverlayDesiredIfMigrated) Execute(runtime connector.Runtime) error {
 	run := sudoRunner(runtime)
-	if !overlayMigratedFromBridge(run) {
+	if _, migrated := overlayMigratedFromBridge(run); !migrated {
 		return nil
 	}
 	if _, err := run(fmt.Sprintf("mkdir -p %s && touch %s", parentDir(OverlayDesiredStateFile), OverlayDesiredStateFile)); err != nil {
@@ -378,7 +369,8 @@ func (c *ClearOverlayMigrationMarker) Execute(runtime connector.Runtime) error {
 // OverlayMigratedFromBridge reports whether the current upgrade tore down an
 // active bridge on this node.
 func OverlayMigratedFromBridge(runtime connector.Runtime) bool {
-	return overlayMigratedFromBridge(sudoRunner(runtime))
+	_, migrated := overlayMigratedFromBridge(sudoRunner(runtime))
+	return migrated
 }
 
 // RemoveOverlayAltname is the uninstall task that drops the alternative name

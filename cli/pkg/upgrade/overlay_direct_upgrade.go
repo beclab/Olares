@@ -147,6 +147,17 @@ func (a *waitOverlayGatewayPodsNet1AfterMigration) Execute(runtime connector.Run
 	return nil
 }
 
+// overlayBridgeMigrated gates the node-side steps on the bridge having been
+// torn down by this upgrade, so a node with the overlay gateway off is not
+// touched at all.
+type overlayBridgeMigrated struct {
+	common.KubePrepare
+}
+
+func (p *overlayBridgeMigrated) PreCheck(runtime connector.Runtime) (bool, error) {
+	return network.OverlayMigratedFromBridge(runtime), nil
+}
+
 // overlayDirectPreTasks run before the NAD is re-rendered: the bridge must be
 // gone and the alternative name in place before any Pod resolves the new master.
 func overlayDirectPreTasks() []task.Interface {
@@ -160,16 +171,18 @@ func overlayDirectPreTasks() []task.Interface {
 		// another interface while the NIC was between the bridge and its own
 		// address; write the entry the upgrade started with again.
 		&task.LocalTask{
-			Name:   "ReassertHostsAfterMigration",
-			Desc:   "Point the host name at the wired NIC address again",
-			Action: new(terminus.UpdateKubeKeyHosts),
-			Retry:  5,
+			Name:    "ReassertHostsAfterMigration",
+			Desc:    "Point the host name at the wired NIC address again",
+			Prepare: new(overlayBridgeMigrated),
+			Action:  new(terminus.UpdateKubeKeyHosts),
+			Retry:   5,
 		},
 		&task.LocalTask{
-			Name:   "EnsureOverlayAltname",
-			Desc:   "Add the overlay parent alternative name to the wired NIC",
-			Action: new(network.EnsureOverlayAltname),
-			Retry:  3,
+			Name:    "EnsureOverlayAltname",
+			Desc:    "Add the overlay parent alternative name to the NIC that left the bridge",
+			Prepare: new(overlayBridgeMigrated),
+			Action:  new(network.EnsureOverlayAltname),
+			Retry:   3,
 		},
 	}
 }
