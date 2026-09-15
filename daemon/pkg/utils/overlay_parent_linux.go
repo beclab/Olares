@@ -99,7 +99,7 @@ func ensureOverlayParentAltname(ctx context.Context, ops overlayParentOps) (stri
 	dev, selErr := ops.selectParent(ctx)
 	switch {
 	case selErr != nil && boundErr == nil:
-		// The name is already in place (the link file re-adds it at boot) but
+		// The name is already in place (the udev rule re-adds it at boot) but
 		// the wired NIC cannot be identified yet, typically because DHCP has
 		// not finished. Keep the bound device instead of failing.
 		dev = bound.Attrs().Name
