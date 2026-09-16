@@ -24,7 +24,7 @@ Olares Router 是内置于 Olares 的 AI 网关，随 v1.12.7 版本提供。它
 
 Router 是整个 AI 生态的中央调度层。所有流量都经由这一个网关，而不是直接面对分散的后端。
 
-![Olares Router 架构](/images/manual/use-cases/router-archi1.png#bordered)
+![Olares Router 架构](/images/manual/use-cases/router-archi2.png#bordered)
 
 如架构图所示，整个系统分为三层：
 
@@ -71,6 +71,30 @@ Router 直接集成在 Olares 平台中，与你的应用和模型同处一套�
 | <nobr>**Olares 用户**</nobr> | 平台会在来自已登录 Olares 用户的每个请求上盖一个身份头 `X-BFL-USER`，调用方无需再提供其他任何东西。 | 无 |
 | <nobr>**第三方**</nobr> | 既不是 Olares 应用也不是 Olares 用户的调用方，需要出示 Router 签发的 API 密钥（`Authorization: Bearer <api-key>`）。Router 验证密钥并将调用记到密钥所有者名下。删除密钥，访问随即终止。<br><br>你自己在 Olares 之外的设备，以及任何 Olares 之外的人，都是通过这种方式访问你的模型。 | Router 签发的<br>API 密钥 |
 
+## 理解模型命名规范
+
+在 Router 中查看或配置模型时，你会注意到不同的命名格式。Router 用这些名字来标识模型的提供商、来源和路由逻辑。理解这些规则对配置 API 请求和排查连接问题至关重要。
+
+### 带斜杠的名字
+
+如果模型名包含一个或多个斜杠，Router 会在第一个斜杠处拆分字符串来解析它：
+
+- **Provider**：第一个斜杠之前的部分
+- **Model Name**：第一个斜杠之后的全部内容
+
+例如：
+
+- `deepseek/deepseek-v4-flash`：Provider 是 `deepseek`，模型名是 `deepseek-v4-flash`。
+- `Olares/unsloth/Qwen3.5-27B-GGUF:Q4_K_M`：Provider 是 `Olares`，表示本地工作负载。剩余的字符串 `unsloth/Qwen3.5-27B-GGUF:Q4_K_M` 就是精确的模型名，对应它在 Hugging Face 上的仓库路径。
+
+### 不带斜杠的名字
+
+如果模型名不包含斜杠，它就不直接对应某个提供商的某个模型。它表示一种自定义的路由配置，只会属于以下三类之一：
+
+- **系统默认名**：以 `default-` 前缀开头的名字，如 `default-chat` 或 `default-tts`，是系统级名称。它们会自动把请求路由到当前分配给该能力的模型。
+- **模型组**：为负载均衡创建的统一名称。例如，你可以创建一个名为 `DeepSeek-V4` 的组，把请求分发到本地模型和远端服务。组名本身不包含斜杠。
+- **别名**：为方便而创建的自定义短名称。例如，把一个冗长的模型名改成简单的名字。
+
 ## 从 Router 获取连接信息
 
 连接 Router 需要三个参数：
@@ -83,29 +107,3 @@ Router 直接集成在 Olares 平台中，与你的应用和模型同处一套�
 
 - **Model name**：从 **How to call this model** 窗口复制模型名称。或者在 **Default models** 页面为每类能力设置默认模型，然后使用 `default-chat` 这样的系统名称，而不是具体模型名。
 - **API key**：在 **API keys** 页面创建。只有局域网或互联网的调用方需要。Olares 中的应用无需填写。
-
-## 通过 Router 调用模型
-
-### Olares 中的应用
-
-OpenClaw 是一个运行在 Olares 上的应用，它在自定义提供商设置中连接 Router。平台身份已经覆盖鉴权，所以只需要填写 Base URL 和模型名：
-
-- **API Base URL**：`https://router.<your-olares-id>.olares.com/v1`
-- **Model ID**：`default-chat`
-
-### Olares 之外的调用方
-
-Olares 之外的任何调用方都需要两样东西，一个匹配所在位置的 Base URL，和一个 Router 签发的 API 密钥。Base URL 在局域网和互联网之间不同，但密钥在任何地方都通用。
-
-:::tip
-对于通过互联网访问 Router 的调用方，需要在 Olares Settings 中将 Router 入口的 **Authentication level** 设置为 **Public**。局域网访问不受影响。
-:::
-
-这个示例使用公网 URL。若是在同一局域网的设备上，改用从连接信息中获取的 `.local` Base URL。
-
-```bash
-curl https://router.<your-olares-id>.olares.com/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <your-api-key>" \
-  -d '{"model": "default-chat", "messages": [{"role": "user", "content": "Hello"}]}'
-```

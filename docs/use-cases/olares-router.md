@@ -81,10 +81,10 @@ For example:
 
 ### Names without a slash
 
-If a model name does not contain a slash, it is not a direct provider-to-model mapping. Instead, it represents a custom routing configuration. It will always fall into one of the following three categories:
+If a model name does not contain a slash, it does not point to a specific provider and model directly. Instead, it represents a custom routing configuration. It will always fall into one of the following three categories:
 
 - **Default system names**: Names starting with the `default-` prefix, such as `default-chat` or `default-tts`, are system-level names. They automatically route requests to whichever model is currently assigned to that capability.
-- **Model groups**: A unified name created for load balancing. For example, you might create a group named `DeepSeek-V4` that distributes requests across a local model, an OpenAI-compatible API, and an OpenRouter endpoint. The group name itself contains no slashes.
+- **Model groups**: A unified name created for load balancing. For example, you might create a group named `DeepSeek-V4` that distributes requests across local models and remote services. The group name itself contains no slashes.
 - **Aliases**: Custom, user-defined short names created for convenience. For example, renaming a long model name to a simple one.
 
 ## Get connection details from Router
