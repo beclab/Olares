@@ -325,6 +325,10 @@ const side = {
               link: "/manual/olares/files/add-edit-download",
             },
             {
+              text: "Save resources to Olares",
+              link: "/manual/larepass/save-resources-to-olares",
+            },
+            {
               text: "Compress and extract files",
               link: "/manual/olares/files/compress-extract-files",
             },
