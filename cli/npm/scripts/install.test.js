@@ -77,10 +77,25 @@ test('every supported platform maps to a GoReleaser target', () => {
   }
 });
 
-test('both sources are https and name the same archive', () => {
+test('every source is https and names this archive', () => {
   const name = archiveName();
-  for (const url of urls()) {
+  const sources = urls();
+  assert.ok(sources.length > 0, 'there must be at least one source');
+  for (const url of sources) {
     assert.match(url, /^https:\/\//, url);
     assert.ok(url.endsWith(name), `${url} should end with ${name}`);
+  }
+});
+
+// A GitHub Releases source was tried first for a long time and 404d on every
+// version npm can install -- the release workflow publishes no such release.
+// This guards the removal: adding it back is only correct once those assets
+// exist under exactly these names.
+test('GitHub Releases is not a source', () => {
+  for (const url of urls()) {
+    assert.ok(
+      !url.includes('github.com'),
+      `${url}: no release is published there for an X.Y.Z-cli.N version`
+    );
   }
 });

@@ -21,7 +21,17 @@ const PLATFORM_MAP = {
   'win32-arm64': 'windows_arm64',
 };
 
-const GH_BASE = 'https://github.com/beclab/Olares/releases/download';
+// The CDN is the only source, because it is the only place these archives
+// are published. A GitHub Releases URL used to be tried first and could never
+// have worked on this channel: the release workflow tags locally and never
+// pushes (.github/workflows/release-cli.yaml), GoReleaser has `release:
+// disable: true`, and nothing uploads a release asset — so every version npm
+// can install 404s there. It cost a round trip to github.com on every install
+// (~0.7s from a fast network, far worse from one that reaches GitHub slowly)
+// and put a red herring at the top of every failure report. Do not add it
+// back without first making the release publish those assets under exactly
+// these names; `gh api repos/beclab/Olares/releases --jq '.[].tag_name'` shows
+// whether an X.Y.Z-cli.N release exists at all.
 const DEFAULT_CDN_BASE = 'https://cdn.olares.com';
 const MIRROR = process.env.OLARES_CLI_DOWNLOAD_MIRROR;
 const CDN_BASE = MIRROR || DEFAULT_CDN_BASE;
@@ -49,12 +59,11 @@ function archiveName() {
   return `olares-cli-v${VERSION_RAW}_${target}.tar.gz`;
 }
 
+// A list rather than a single string: the loop that consumes it reports every
+// source it tried, and a second one can be added here the day there is a
+// second place to add.
 function urls() {
-  const name = archiveName();
-  return [
-    `${GH_BASE}/${VERSION_RAW}/${name}`,
-    `${CDN_BASE}/${name}`,
-  ];
+  return [`${CDN_BASE}/${archiveName()}`];
 }
 
 // expectedDigest reads the one line of checksums.txt that names this archive.

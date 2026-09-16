@@ -330,7 +330,7 @@ cli/
 └── go.mod
 ```
 
-The npm wrapper's `postinstall` downloads a prebuilt binary from GitHub Releases, falling back to `https://cdn.olares.com`; `OLARES_CLI_DOWNLOAD_MIRROR` overrides the second, and `OLARES_CLI_SKIP_DOWNLOAD=1` installs the shim alone. A local Go toolchain is needed only to modify the CLI itself.
+The npm wrapper's `postinstall` downloads a prebuilt binary from `https://cdn.olares.com`, which is where the release workflow publishes these archives and the only place they exist — a GitHub Releases URL was tried first for a long time and 404d every time, because no `X.Y.Z-cli.N` release is ever created. `OLARES_CLI_DOWNLOAD_MIRROR` replaces that host (safe, since the archive is checksum-verified either way), and `OLARES_CLI_SKIP_DOWNLOAD=1` installs the shim alone. A local Go toolchain is needed only to modify the CLI itself.
 
 The install engine in `pkg/core` runs a `Pipeline → Module → Task → Action` stack, moving a host through five lifecycle stages:
 
