@@ -34,21 +34,24 @@ If that is the setup you want, silence the one you drive less: `export OLARES_CL
 | `olares-cli skills export <dir>` | wherever you say | exactly the binary's | no |
 | `olares-cli skills read <skill>` | nothing | exactly the binary's | n/a |
 | `npx skills add beclab/Olares` | the `skills` CLI decides | this repository's `main`, whose skills declare `0.0.0-cli.0` | no |
-| [ClawHub](https://clawhub.ai) (search "olares") | the ClawHub CLI decides | whatever was last accepted there — see below | no |
 
-The first three are the same bytes, so they cannot disagree with the verbs the binary has. The last two can, and silently: a skill declares `requires.bins: [olares-cli]`, which any build satisfies, so an agent reading `main`'s instructions against a six-month-old binary gets told to run flags that do not exist.
+The first three are the same bytes, so they cannot disagree with the verbs the binary has. The fourth can, and silently: a skill declares `requires.bins: [olares-cli]`, which any build satisfies, so an agent reading `main`'s instructions against a six-month-old binary gets told to run flags that do not exist.
 
 "Notice sees it" means the notice reads the marker `skills install` leaves in the store. A copy written by anything else is a copy it has nothing to compare.
 
 Fetching from `main` has a second cost: the version in git is a placeholder. A release stamps the version it is building into the frontmatter just before compiling ([skills/stamp.py](../../skills/stamp.py)), so `0.0.0-cli.0` is what a copy taken from the repository says about itself, forever.
 
-## ClawHub
+## ClawHub, retired
 
-**ClawHub is not being updated**, as of 2026-09. A skill's version names the release it ships in (`1.12.7-cli.4`), which is numerically below the per-skill numbering the registry already holds (`olares-chart` reached `4.18.0`), so a push is refused by a registry that requires increasing versions.
+The suite was published to [ClawHub](https://clawhub.ai) before it was compiled into the binary, and for a while `cli/skills/publish.sh` kept that path open. It was removed once it could not work and was not wanted.
 
-`publish.sh` still works if that is ever resolved — it refuses a placeholder, so it has to be run against a stamped tree — but until then, treat what is on the registry as a copy from before the suite moved into the binary.
+It could not work because a skill's version names the release it ships in (`1.12.7-cli.4`), which is numerically below the per-skill numbering the registry already holds (`olares-chart` had reached `4.18.0`), so a push is refused by a registry that requires increasing versions.
 
-> Note: [cli/skills/README.md](../../skills/README.md) still documents ClawHub publishing as a live procedure. That file has not been reconciled with this one.
+It was not wanted because a registry copy sits in the bottom half of the table above: it can disagree with the binary in front of it, silently, which is the failure embedding was adopted to end.
+
+The script's only remaining use was its `--dry-run`, a frontmatter check that [`skills/validate.py`](../../skills/validate.py) already made more strictly — with one exception, the 1024-character `description` cap, which moved into `validate.py` with the removal.
+
+> The listings published before the retirement are still on the registry and there is no longer anything here that can update or withdraw them. Treat what is there as a copy from before the suite moved into the binary.
 
 ## No Claude Code plugin marketplace entry
 

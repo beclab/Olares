@@ -187,7 +187,7 @@ If `olares-cli` is not on the machine at all, install it first ([For users](#for
 
 From the binary. `skills install`, `skills export` and `skills read` all serve the same compiled-in bytes, so none of them can disagree with the verbs you have.
 
-Every other route can, and silently — a skill declares `requires.bins: [olares-cli]`, which any build satisfies, so instructions from a git ref or a registry read as valid against a binary six months older. That rules out `npx skills add beclab/Olares` (whose copy declares the placeholder `0.0.0-cli.0` forever), ClawHub (not being updated), and a Claude Code plugin marketplace entry (deliberately absent, for the same reason). The full comparison is in [docs/design/skills-provenance.md](docs/design/skills-provenance.md#where-a-copy-can-come-from-and-what-each-costs).
+Every other route can, and silently — a skill declares `requires.bins: [olares-cli]`, which any build satisfies, so instructions from a git ref or a registry read as valid against a binary six months older. That rules out `npx skills add beclab/Olares` (whose copy declares the placeholder `0.0.0-cli.0` forever) and a Claude Code plugin marketplace entry (deliberately absent, for the same reason). The full comparison is in [docs/design/skills-provenance.md](docs/design/skills-provenance.md#where-a-copy-can-come-from-and-what-each-costs).
 
 > Logging in is the human's job: `olares-cli profile login --olares-id <id>` prompts for a password at the terminal. Verify with `olares-cli profile whoami`, then `olares-cli dashboard overview`.
 
@@ -258,7 +258,6 @@ go test ./cmd/ctl -run TestEveryCommandTheSkillsDocumentResolves
 python3 -m pip install -r skills/requirements.txt
 python3 -m unittest skills/test_validate.py # the validator and the release stamp
 python3 skills/validate.py                  # frontmatter, and one version across the suite
-bash skills/publish.sh --dry-run            # frontmatter as the registry would read it
 ```
 
 That is what [skills-ci.yml](../.github/workflows/skills-ci.yml) runs on a pull request.

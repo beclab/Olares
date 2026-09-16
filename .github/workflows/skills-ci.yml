@@ -51,7 +51,6 @@ jobs:
           python3 -m pip install -r cli/skills/requirements.txt
           python3 -m unittest cli/skills/test_validate.py
           python3 cli/skills/validate.py
-          bash cli/skills/publish.sh --dry-run
 
       # ./skills/... is the embedded suite itself: that it matches the checkout,
       # that it exports whole, that a script arrives executable, that a symlink

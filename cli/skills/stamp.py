@@ -33,7 +33,7 @@ VERSION_KEY = "version:"
 RELEASE_VERSION_RE = re.compile(r"^\d+\.\d+\.\d+-cli\.\d+$")
 # What is committed. It satisfies the shape above, so validate.py needs no
 # carve-out for it, and it names no release anybody could mistake for one.
-# publish.sh refuses it; embed_test.go pins it.
+# embed_test.go pins it, and the release job fails if it reaches a binary.
 PLACEHOLDER_VERSION = "0.0.0-cli.0"
 
 

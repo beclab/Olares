@@ -33,8 +33,8 @@ func TestEmbedCoversTheWholeSuite(t *testing.T) {
 }
 
 // Every skill has to be readable as a skill, not merely present as bytes:
-// an agent is handed the frontmatter's name and description, and publish.sh
-// reads the version. A SKILL.md whose fence never closes parses as prose and
+// an agent is handed the frontmatter's name and description, and the release
+// stamps the version. A SKILL.md whose fence never closes parses as prose and
 // would install as a skill with no name.
 func TestEverySkillDeclaresItself(t *testing.T) {
 	metas, err := List()
@@ -121,8 +121,7 @@ func TestTheCommittedSuiteCarriesThePlaceholder(t *testing.T) {
 	}
 }
 
-// Kept in step with PLACEHOLDER_VERSION in skills/stamp.py, which writes it,
-// and with the check in publish.sh, which refuses it.
+// Kept in step with PLACEHOLDER_VERSION in skills/stamp.py, which writes it.
 const placeholderVersion = "0.0.0-cli.0"
 
 func TestReadDefaultsToTheEntryDocument(t *testing.T) {
@@ -157,8 +156,8 @@ func TestReadRefusesToEscapeTheSuite(t *testing.T) {
 
 // suiteOnDisk walks the olares-* directories beside this file. Scoping to
 // that prefix is the point: the same directory holds validate.py, stamp.py,
-// publish.sh, requirements.txt, the suite README and this test, none of
-// which belongs in the binary.
+// requirements.txt, the suite README and this test, none of which belongs
+// in the binary.
 func suiteOnDisk(t *testing.T) []string {
 	t.Helper()
 
