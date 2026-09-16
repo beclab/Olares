@@ -73,9 +73,22 @@ func main() {
 // prose, and it lands on the stream a failing `-o json` answers on, so a
 // caller feeding stderr to a parser would get the notice and the error
 // envelope concatenated, which parses as neither.
+// skillDriftExempt are the verbs the staleness notice must not follow.
+//
+//   - skills: the verb that fixes it, which would otherwise report the
+//     problem it has just resolved.
+//   - update: the same, one level up — `update` re-runs `skills install` from
+//     the binary it installed, so by the time this process exits the store is
+//     correct and the only thing left that disagrees with it is this process,
+//     which is the copy being replaced. Announcing drift there tells the user
+//     their successful update failed.
+//   - version: answers the same question in its own output, with both digests
+//     and an in_sync field, rather than as a line of prose beside it.
+var skillDriftExempt = map[string]bool{"skills": true, "update": true, "version": true}
+
 func shouldAnnounceSkillDrift(machineReadable bool, args []string) bool {
 	if machineReadable {
 		return false
 	}
-	return len(args) < 2 || args[1] != "skills"
+	return len(args) < 2 || !skillDriftExempt[args[1]]
 }
