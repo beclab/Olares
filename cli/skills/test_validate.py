@@ -97,21 +97,70 @@ class ValidatorTests(unittest.TestCase):
             self.assertIn("ships as one artifact", errors[0])
             self.assertIn("1.12.7-cli.3: olares-b", errors[0])
 
-    def test_publish_script_lists_every_skill(self):
-        """publish.sh names its slugs by hand, so a new skill is invisible to it.
+    def test_description_over_the_limit_is_rejected(self):
+        """The 1024-character cap moved here when publish.sh was retired.
 
-        Nothing fails when that happens: the script publishes the eleven it
-        knows about and reports success, and the twelfth is missing from the
-        registry until somebody notices. The binary is unaffected -- it embeds
-        by pattern -- which is exactly why this needs a test rather than a
-        reader.
+        It was the one check that script made and validate.py did not, so it
+        is the one that could have been lost in the removal without anything
+        failing.
         """
-        script = (MODULE_PATH.parent / "publish.sh").read_text(encoding="utf-8")
-        # Closed on a line of its own; the display names contain parentheses.
-        block = script.split("SKILLS=(\n", 1)[1].split("\n)", 1)[0]
-        listed = {line.strip().strip('"').split("|", 1)[0] for line in block.splitlines() if "|" in line}
-        on_disk = {path.parent.name for path in MODULE_PATH.parent.glob("olares-*/SKILL.md")}
-        self.assertEqual(listed, on_disk)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            skill_dir = root / "olares-a"
+            skill_dir.mkdir()
+            skill = skill_dir / "SKILL.md"
+            skill.write_text(
+                "---\n"
+                "name: olares-a\n"
+                "version: 1.12.7-cli.3\n"
+                f"description: {'x' * (validate.DESCRIPTION_LIMIT + 1)}\n"
+                "compatibility: olares\n"
+                "metadata:\n"
+                "  openclaw:\n"
+                "    requires:\n"
+                "      bins:\n"
+                "        - olares-cli\n"
+                "---\n",
+                encoding="utf-8",
+            )
+            original_root = validate.ROOT
+            validate.ROOT = root
+            try:
+                errors: list[str] = []
+                validate.validate_frontmatter(skill, errors)
+            finally:
+                validate.ROOT = original_root
+            self.assertEqual(len(errors), 1, errors)
+            self.assertIn("over the 1024 limit", errors[0])
+
+    def test_description_at_the_limit_is_accepted(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            skill_dir = root / "olares-a"
+            skill_dir.mkdir()
+            skill = skill_dir / "SKILL.md"
+            skill.write_text(
+                "---\n"
+                "name: olares-a\n"
+                "version: 1.12.7-cli.3\n"
+                f"description: {'x' * validate.DESCRIPTION_LIMIT}\n"
+                "compatibility: olares\n"
+                "metadata:\n"
+                "  openclaw:\n"
+                "    requires:\n"
+                "      bins:\n"
+                "        - olares-cli\n"
+                "---\n",
+                encoding="utf-8",
+            )
+            original_root = validate.ROOT
+            validate.ROOT = root
+            try:
+                errors: list[str] = []
+                validate.validate_frontmatter(skill, errors)
+            finally:
+                validate.ROOT = original_root
+            self.assertEqual(errors, [])
 
     def test_cluster_requires_exec_gate_on_both_rows(self):
         with tempfile.TemporaryDirectory() as directory:
