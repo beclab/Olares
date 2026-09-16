@@ -37,7 +37,7 @@ Follow the path from first boot to everyday use and advanced customization.
       <div class="vpath-links">
         <a href="./olares-onboarding">Manage Olares through natural language</a>
         <a href="./access-olares-via-vpn">Access Olares via VPN</a>
-        <a href="./access-olares-via-local-domain">Access Olares via .local domain</a>
+        <a href="./access-olares-via-local-domain">Access Olares on your local network</a>
         <div class="vpath-seealso">See also: <a href="../manual/olares/">All system app guides in the Olares OS manual</a></div>
         <div class="vpath-seealso">See also: <a href="../use-cases/">Browse all use cases</a></div>
       </div>

@@ -37,7 +37,7 @@ Olares One 将工作站级硬件与 Olares OS 集成在一台设备中，为你�
       <div class="vpath-links">
         <a href="./olares-onboarding">通过自然语言管理 Olares</a>
         <a href="./access-olares-via-vpn">通过 VPN 访问 Olares</a>
-        <a href="./access-olares-via-local-domain">通过 .local 域名访问 Olares</a>
+        <a href="./access-olares-via-local-domain">在局域网内访问 Olares</a>
         <div class="vpath-seealso">另见：<a href="../manual/olares/">Olares OS 手册中的所有系统应用指南</a></div>
         <div class="vpath-seealso">另见：<a href="../use-cases/">浏览所有使用场景</a></div>
       </div>
