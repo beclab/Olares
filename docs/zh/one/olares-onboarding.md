@@ -7,11 +7,7 @@ head:
       content: Olares One, Lares, Router, Agent Skills, 自然语言, AI 智能体, Olares CLI
 ---
 
-:::warning
-本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../one/olares-onboarding.md)为准。
-:::
-
-# 通过自然语言管理 Olares <Badge type="tip" text="30 min" />
+# 通过自然语言管理 Olares
 
 Lares 是 Olares 内置的 AI 助手。借助 Router 和已连接的模型，它能理解你的自然语言请求，并通过 Olares CLI Agent Skills 将其转化为真实的设备管理操作。例如，你可以让 Lares 检查系统状态、安装应用、管理文件或排查问题。
 
@@ -25,12 +21,6 @@ Lares 是 Olares 内置的 AI 助手。借助 Router 和已连接的模型，它
 - 开始与 Lares 的第一次对话。
 - 通过自然语言管理 Olares。
 
-## 前提条件
-
-- **系统**：Olares OS v1.12.7 或更高版本。
-- **AI 组件**：Router、Lares 和模型。模型可以来自本地模型应用，或 Router 中配置的提供商。
-- **用户权限**：管理员权限，用于从 Market 安装共享应用。
-
 ## 步骤 1：准备环境
 
 准备工作取决于你的起点。请在下表中找到属于你的情况。
@@ -38,10 +28,10 @@ Lares 是 Olares 内置的 AI 助手。借助 Router 和已连接的模型，它
 | 起点 | 预装应用 | 下一步 |
 | --- | --- | --- |
 | Olares One v1.12.7 出厂镜像<br>（新设备） | <ul><li>Lares</li><li>Router</li><li><nobr>Qwen3.8-27B (llama.cpp)</nobr></li></ul> | 打开 Lares 即可开始 |
-| <ul><li>自托管 Olares v1.12.7<br>（全新安装或升级）</li><li><nobr>Olares One 升级至 v1.12.7</nobr></li></ul> | 无 | 安装 Router 和 Lares，然后安装模型应用或在 Router 中添加提供商 |
+| <ul><li>自托管 Olares v1.12.7<br>（全新安装或升级）</li><li><nobr>Olares One 升级至 v1.12.7</nobr></li></ul> | 无 | 从 Market 安装 Router、Lares 和 Qwen3.8-27B (llama.cpp) |
 
-:::warning 同时只能处理一个请求
-本地 AI 模型共享硬件资源，一次只能处理一个请求。Lares 按顺序处理任务。如果有任务正在运行，新的请求会排队等待，当前任务完成后自动开始。如果要让 Lares 和其他智能体同时运行，请为它们连接不同的模型。
+:::warning 重要：一次只运行一个任务
+Qwen3.8-27B (llama.cpp) 一次只能处理一个请求。设备会为单个智能体预留 100K 的 Q8 上下文，模型权重加载后，这部分上下文的 KV cache 会占掉剩余显存的大部分。一个运行中的任务就会将其占满，第二个任务无处分配。如果有任务正在运行时发送新请求，它会排队等待。为了获得最佳体验，请一次只运行一个任务。其他模型的并发上限不同，具体查看方法请参阅 Router 文档。
 :::
 
 ## 步骤 2：开始第一次 Lares 对话
@@ -49,7 +39,7 @@ Lares 是 Olares 内置的 AI 助手。借助 Router 和已连接的模型，它
 1. 从启动台打开 Lares。
 2. 保留默认工作区，或选择其他工作区。
 3. 保留默认的写入权限，或选择只读或完全访问。
-4. 确认已选中模型。
+4. 确认已选中 Qwen3.8-27B 模型。
 
    ![Lares 聊天界面](/images/one/lares-chat.png#bordered)
 
@@ -105,5 +95,3 @@ Lares 是推荐入口，但不是使用 Olares CLI Agent Skills 的唯一方式�
 ## 资源
 
 - [安装与使用 Agent Skills](../developer/cli-agent-skills.md)：Olares CLI 技能包详情。
-- [管理 AI 算力资源
-](../manual/olares/settings/gpu-resource.md)：了解如何查看 GPU 使用情况、切换 GPU 模式以及释放加速器资源。
