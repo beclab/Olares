@@ -7,7 +7,7 @@ head:
       content: Olares One, Lares, Router, Agent Skills, natural language, AI agent, Olares CLI
 ---
 
-# Manage Olares through natural language <Badge type="tip" text="30 min" />
+# Manage Olares through natural language
 
 Lares is Olares' built-in AI assistant. With Router and a connected model, it can understand your requests in natural language and turn them into real device management actions through Olares CLI Agent Skills. For example, you can ask Lares to check system status, install apps, manage files, or troubleshoot issues.
 
@@ -21,12 +21,6 @@ By the end of this tutorial, you will learn how to:
 - Start your first conversation with Lares.
 - Manage Olares through natural language.
 
-## Prerequisites
-
-- **System**: Olares OS v1.12.7 or later.
-- **AI components**: Router, Lares, and a model. The model can come from a local model app or from a provider configured in Router.
-- **User permissions**: Admin privileges to install shared apps from Market.
-
 ## Step 1: Prepare your environment
 
 Preparation depends on your starting point. Find yours in the following table.
@@ -34,10 +28,10 @@ Preparation depends on your starting point. Find yours in the following table.
 | Starting point | <nobr>What's preinstalled</nobr> | Next step |
 | --- | --- | --- |
 | Olares One v1.12.7 factory image<br>(new device) | <ul><li>Lares</li><li>Router</li><li><nobr>Qwen3.8-27B (llama.cpp)</nobr></li></ul> | Open Lares and start. |
-| <ul><li>Self-hosted Olares v1.12.7<br>(fresh install or upgrade)</li> <li><nobr>Olares One upgraded to v1.12.7</nobr></li></ul> | None | Install Router and Lares, then install a model app or add a provider in Router. |
+| <ul><li>Self-hosted Olares v1.12.7<br>(fresh install or upgrade)</li> <li><nobr>Olares One upgraded to v1.12.7</nobr></li></ul> | None | Install Router, Lares, and Qwen3.8-27B (llama.cpp) from Market. |
 
-:::warning One request at a time
-Local AI models share accelerator resources through time slicing and can only process one request at a time. Lares processes tasks sequentially. If a task is running, new requests wait in line and start automatically when the current one finishes. To run Lares and other agents at the same time, connect them to different models.
+:::warning Important: Run one task at a time
+Qwen3.8-27B (llama.cpp) serves one request at a time. The device reserves 100K of Q8 context for a single agent, and the KV cache for that context takes up most of the remaining VRAM after the model weights load. One running task fills it completely, so a second task has nowhere to go. If you send a new request while a task is running, it waits in line. For the best experience, run one task at a time. Other models have different concurrency limits. See the Router documentation for how to check them.
 :::
 
 ## Step 2: Start your first Lares conversation
@@ -45,7 +39,7 @@ Local AI models share accelerator resources through time slicing and can only pr
 1. Open Lares from the Launchpad.
 2. Keep the default workspace, or select another one.
 3. Keep the default write permission, or choose read-only or full access.
-4. Check that the model is selected.
+4. Check that the Qwen3.8-27B model is selected.
 
     ![Lares chat interface](/images/one/lares-chat.png#bordered)
 
@@ -101,4 +95,3 @@ Lares is the recommended entry point, but it is not the only way to use Olares C
 ## Resources
 
 - [Install and use Agent Skills](../developer/cli-agent-skills.md): Details about the Olares CLI skill bundles.
-- [Manage accelerator resources](../manual/olares/settings/gpu-resource.md): Learn how to check GPU usage, switch GPU modes, and release accelerator resources.
