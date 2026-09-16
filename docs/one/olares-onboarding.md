@@ -31,7 +31,9 @@ Preparation depends on your starting point. Find yours in the following table.
 | <ul><li>Self-hosted Olares v1.12.7<br>(fresh install or upgrade)</li> <li><nobr>Olares One upgraded to v1.12.7</nobr></li></ul> | None | Install Router, Lares, and Qwen3.8-27B (llama.cpp) from Market. |
 
 :::warning Important: Run one task at a time
-Qwen3.8-27B (llama.cpp) serves one request at a time. To support a 100K context window, the model uses a large KV cache, which leaves limited VRAM available after the model weights are loaded. When a task is running, additional requests need to wait until the current task finishes. For the best experience, run one task at a time.
+Qwen3.8-27B (llama.cpp) is a resource-intensive model, especially with a large context window. For the best experience, run one task at a time.
+
+If multiple tasks run at the same time, later requests might wait or be rejected due to KV cache usage and available system resources.
 :::
 
 ## Step 2: Start your first Lares conversation
