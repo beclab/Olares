@@ -24,7 +24,9 @@ import (
 	"github.com/beclab/Olares/cli/cmd/ctl/search"
 	"github.com/beclab/Olares/cli/cmd/ctl/settings"
 	"github.com/beclab/Olares/cli/cmd/ctl/skills"
+	"github.com/beclab/Olares/cli/cmd/ctl/update"
 	"github.com/beclab/Olares/cli/cmd/ctl/user"
+	versioncmd "github.com/beclab/Olares/cli/cmd/ctl/version"
 	"github.com/beclab/Olares/cli/cmd/ctl/wizard"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 	"github.com/beclab/Olares/cli/pkg/credential"
@@ -124,6 +126,15 @@ func NewDefaultCommand() *cobra.Command {
 	// files only — nothing about them is host-side, and the npm distribution
 	// is exactly where an agent needs them.
 	cmds.AddCommand(skills.NewSkillsCommand())
+	// `version` is the machine-readable form of --version, which stays byte
+	// for byte as it is because the npm install wizard parses it.
+	cmds.AddCommand(versioncmd.NewVersionCommand())
+	// `update` is olares-cli updating itself, and is registered on every
+	// channel including the Olares host — that host is where the confusion
+	// with `upgrade` (which upgrades Olares OS) actually happens, so it is
+	// where a verb that says so has to exist. It refuses to npm-install over
+	// an OS bundle; see cmd/ctl/update.
+	cmds.AddCommand(update.NewUpdateCommand())
 	cmds.AddCommand(market.NewMarketCommand(factory))
 	cmds.AddCommand(profile.NewProfileCommand(factory))
 	cmds.AddCommand(knowledge.NewKnowledgeCommand(factory))
