@@ -28,7 +28,7 @@ After any of those, authenticate (interactive, prompts for password + optional T
 
 ```bash
 olares-cli profile login --olares-id <your-olares-id>
-olares-cli profile current      # verify
+olares-cli profile whoami       # verify
 ```
 
 > This package distributes the `olares-cli` binary as a **client** only. The Node wrapper auto-sets `OLARES_CLI_REMOTE_ONLY=1`, which hides the Go binary's host-side verbs (`uninstall`, `upgrade`, `node`, `os`, `gpu`, `disk`, `wizard`, `user`, `osinfo`, `amdgpu`); these are reachable only on an Olares host through `/usr/local/bin/olares-cli`. The `install` verb is intercepted by the Node shim itself and routed to the first-run wizard (it never reaches the Go binary). Installing Olares OS itself is out of scope for this package — on a Linux host run `curl -fsSL https://olares.sh | bash`.
@@ -64,7 +64,7 @@ npm install -g @olares/cli@latest --prefix ~/.olares-cli-npm
 export PATH="$HOME/.olares-cli-npm/bin:$PATH"   # PATH order decides which copy wins
 
 # Option 2 — npx, no install:
-npx @olares/cli@latest profile current
+npx @olares/cli@latest profile whoami
 ```
 
 Don't use `npm install -g --force` on an Olares host — it would clobber the OS-managed binary.
