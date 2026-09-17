@@ -14,14 +14,18 @@ Lares is the official AI assistant for Olares, introduced in v1.12.7. With Route
 
 As a fully autonomous agent, Lares handles both quick, everyday tasks and complex automations. Instead of just executing single instructions, it breaks down high-level goals, dynamically chains tools, and carries out end-to-end plans directly on your device. From the first request to the final result, everything happens in the conversation.
 
-## Before you begin
+## Learning objectives
 
-Review the following requirements and considerations.
+By the end of this page, you will learn how to:
 
-- **Prerequisites**: Your Olares is running v1.12.7 or later, with Router installed and at least one model connected.
-- **One task at a time**: Local AI models share accelerator resources through time slicing and can only process one request at a time.
-    - **Queuing in Lares**: Lares handles one task at a time. If a task is running, new requests wait in line and start automatically when the current one finishes.
-    - **Running concurrently**: To run Lares and other agents at the same time, connect them to different models.
+- Understand how Lares connects to Router and works under the permissions you assign.
+- Start with a simple question in Lares.
+- Set up a web research tool and run a more complex research task.
+
+## Prerequisites
+
+- **System**: Olares OS v1.12.7 or later.
+- **Apps**: Router and Qwen3.8-27B (llama.cpp) have been installed from Market.
 
 ## Understand how Lares works
 
@@ -36,14 +40,14 @@ To carry out tasks on your device securely, Lares operates based on two core mec
 
     ![Lares chat interface](/images/manual/use-cases/lares.png#bordered)
 
-2. Ask your first question:
+2. Start with a simple question:
 
    ```text
    Check this device's configuration
    ```
 
-    :::warning One request at a time
-    Lares works on one request at a time. If you send another message before the current task finishes, it waits in line. To run Lares and other agents at the same time, connect them to different models.
+    :::warning Important: Run one task at a time
+    When running Qwen3.8-27B (llama.cpp) on Olares One, we recommend running only one request at a time to ensure the best experience with the 100K context window and model precision.
     :::
 
 ## Run a deep research task
@@ -105,7 +109,3 @@ Use web search to find 3 relevant public sources about preserving personal voice
 ```
 
 Lares should return source links and summaries from the selected search service. Once you verify that search works, you can ask Lares to complete complex research tasks that combine source discovery, page reading, and synthesis.
-
-## Learn more
-
-- Olares Router: Pending link
