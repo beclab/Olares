@@ -18,21 +18,21 @@ As a fully autonomous agent, Lares handles both quick, everyday tasks and comple
 
 By the end of this page, you will learn how to:
 
-- Understand how Lares connects to Router and works under the permissions you assign.
+- Understand how Lares connects to Router and works under your assigned permissions.
 - Start with a simple question in Lares.
-- Set up a web research tool and run a more complex research task.
+- Configure web research tools to run complex research tasks.
 
 ## Prerequisites
 
-- **System**: Olares OS v1.12.7 or later.
-- **Apps**: Router and Qwen3.8-27B (llama.cpp) have been installed from Market.
+- **System**: Olares OS v1.12.7 or later
+- **Apps**: Lares, Router and Qwen3.8-27B (llama.cpp) installed from Market
 
 ## Understand how Lares works
 
 To carry out tasks on your device securely, Lares operates based on two core mechanisms: built-in model routing and strict access control.
 
 - **Integration with Router**: Lares automatically accesses the AI models and tools you have configured in Router. It authenticates using its in-cluster identity, meaning no personal logins or API keys are required.
-- **Permission-aware execution**: Lares executes tasks on your behalf using Olares CLI Agent Skills, but you control its scope. You can assign specific permission levels, such as Read Only, Write, or Full Access, to define exactly what it is allowed to perform on your system.
+- **Permission-aware execution**: Lares executes tasks on your behalf using Olares CLI Agent Skills, but you control the scope. You can assign specific permission levels, such as Read Only, Write, or Full Access, to define exactly what it is allowed to perform on your system.
 
 ## Get started
 
@@ -52,7 +52,7 @@ To carry out tasks on your device securely, Lares operates based on two core mec
 
 ## Run a deep research task
 
-By default, Lares works with what is already on your Olares. To research a topic using public web content, configure a Web Research tool in Router, then select and use the tool in Lares.
+By default, Lares works with what is already on your Olares. To expand its capabilities and research a topic using public web content, you can configure a Web Research tool in Router, then select and use it in Lares.
 
 ### 1. Choose a web research tool
 
@@ -61,7 +61,7 @@ Web research uses two capabilities, and Router shows them as tags on each Web Re
 | Tag | Tools | Capability |
 | --- | ----- | ---------- |
 | `search` | <nobr>SearXNG, Serper, Tavily</nobr> | Finds relevant pages and returns titles, snippets, and source links. |
-| `scrape` | <nobr>Firecrawl, Tavily, Jina Reader</nobr>  | Reads a page you provide and turns its content into material Lares can analyze, summarize, or save. |
+| `scrape` | <nobr>Firecrawl, Tavily, Jina Reader</nobr>  | Reads a provided URL and turns its content into material Lares can analyze, summarize, or save. |
 
 ### 2. Get the connection details
 
@@ -78,14 +78,14 @@ The following steps use SearXNG as an example.
 2. Select **SearXNG**, and then specify the following settings:
 
     - **Provider name**: `localsearxng`
-    - **SearXNG instance URL**: The entrance URL prepared in Step 2 
+    - **SearXNG instance URL**: The entrance URL obtained in Step 2 
 
 3. Click **Add**. The tool appears in the **Available** list.
 4. Click <i class="material-symbols-outlined">add</i> to enable it.
 
     ![Enable SearXNG in Router](/images/manual/use-cases/router-search-tool-enable.png#bordered)
 
-5. Make sure the configured tool is enabled and appears in the **Configured** list.
+    The tool appears in the **Configured** list.
 
     ![Enable SearXNG in Router](/images/manual/use-cases/router-search-tool-enabled.png#bordered)
 
@@ -105,7 +105,11 @@ While all Web Research tools are configured in Router, tools with the `search` t
 Start with a simple request to confirm the search tool is working correctly. For example:
 
 ```text
-Use web search to find 3 relevant public sources about preserving personal voice when using AI writing tools. For each source, return the title, URL, and one-sentence summary.
+Use web search to find 3 relevant public sources about preserving personal 
+voice when using AI writing tools. For each source, return the title, URL, 
+and one-sentence summary.
 ```
 
-Lares should return source links and summaries from the selected search service. Once you verify that search works, you can ask Lares to complete complex research tasks that combine source discovery, page reading, and synthesis.
+Lares should return source links and summaries from the selected search service. 
+
+Once you verify that the search works, you can ask Lares to complete complex research tasks that combine source discovery, page reading, and synthesis.
