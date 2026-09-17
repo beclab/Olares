@@ -31,9 +31,7 @@ Lares 是 Olares 内置的 AI 助手。借助 Router 和已连接的模型，它
 | <ul><li>自托管 Olares v1.12.7<br>（全新安装或升级）</li><li><nobr>Olares One 升级至 v1.12.7</nobr></li></ul> | 无 | 从 Market 安装 Router、Lares 和 Qwen3.8-27B (llama.cpp) |
 
 :::warning 重要：一次只运行一个任务
-Qwen3.8-27B (llama.cpp) 是资源占用较高的模型，大上下文窗口下尤其明显。为了获得最佳体验，请一次只运行一个任务。
-
-如果同时运行多个任务，由于 KV cache 占用和系统可用资源的限制，后续的请求可能需要排队等待，也可能被系统拒绝。
+在 Olares One 上运行 Qwen3.8-27B (llama.cpp) 时，我们建议一次只运行一个请求，以保证 100K 上下文窗口和模型精度下的最佳体验。
 :::
 
 ## 步骤 2：开始第一次 Lares 对话
