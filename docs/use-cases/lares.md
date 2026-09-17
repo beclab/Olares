@@ -31,7 +31,7 @@ By the end of this page, you will learn how to:
 
 To carry out tasks on your device securely, Lares operates based on two core mechanisms: built-in model routing and strict access control.
 
-- **Integration with Router**: Lares automatically accesses the AI models and tools you have configured in Router. It authenticates using its in-cluster identity, meaning no personal logins or API keys are required.
+- **Integration with Router**: Lares automatically accesses the AI models and tools configured in Router. Everything you connect in Router works in Lares right away, with no extra setup.
 - **Permission-aware execution**: Lares executes tasks on your behalf using Olares CLI Agent Skills, but you control the scope. You can assign specific permission levels, such as Read Only, Write, or Full Access, to define exactly what it is allowed to perform on your system.
 
 ## Get started

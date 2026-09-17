@@ -35,7 +35,7 @@ Lares 是 Olares 的官方 AI 助手，在 v1.12.7 中推出。有了 Router 和
 
 为了在设备上安全地执行任务，Lares 基于两个核心机制运作：内置的模型路由和严格的访问控制。
 
-- **与 Router 集成**：Lares 自动接入你在 Router 中配置的 AI 模型和工具。它通过集群内身份完成认证，无需个人登录，也无需 API 密钥。
+- **与 Router 集成**：Lares 自动接入在 Router 中配置的 AI 模型和工具。在 Router 里连接好的一切，Lares 里即刻可用，无需额外配置。
 - **权限可控的执行**：Lares 通过 Olares CLI Agent Skills 代你执行任务，但范围由你掌控。你可以为它指定具体的权限级别，比如 **Read Only**、**Write** 或 **Full Access**，精确界定它在系统上可以执行哪些操作。
 
 ## 开始使用
