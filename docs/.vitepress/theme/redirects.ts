@@ -241,6 +241,10 @@ export const redirects = {
     '/zh/one/create-users': '/zh/manual/olares/settings/manage-team',
     '/zh/one/config-app-access': '/zh/manual/olares/settings/manage-entrance',
 
+    // Consolidated eGPU overview into the existing Olares One eGPU route.
+    '/one/egpu-support-overview': '/one/egpu',
+    '/zh/one/egpu-support-overview': '/zh/one/egpu',
+
     // Refactor: terminal/SSH how-to moved from developer reference to Olares OS manual
     '/developer/reference/access-olares-terminal': '/manual/access-olares-terminal',
     '/zh/developer/reference/access-olares-terminal': '/zh/manual/access-olares-terminal',

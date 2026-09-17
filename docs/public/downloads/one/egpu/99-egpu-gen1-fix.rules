@@ -1,0 +1,8 @@
+# Start egpu-gen1-fix.service whenever an NVIDIA display controller (VGA 0x030000 /
+# 3D 0x030200) appears (add event). Both cold-boot coldplug and hotplug produce an add
+# event, so both are covered. The service script itself filters to Thunderbolt-attached
+# GPUs via removable=="removable", so the internal GPU is skipped.
+# Use SYSTEMD_WANTS (not RUN+=) to hand the heavy work to systemd asynchronously,
+# avoiding blocking udev / rescan reentrancy.
+ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x030000", TAG+="systemd", ENV{SYSTEMD_WANTS}+="egpu-gen1-fix.service"
+ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x030200", TAG+="systemd", ENV{SYSTEMD_WANTS}+="egpu-gen1-fix.service"
