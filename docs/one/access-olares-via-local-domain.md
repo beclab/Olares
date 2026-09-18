@@ -1,47 +1,41 @@
 ---
 outline: [2, 3]
-description: Learn how to access Olares One directly from a computer on the same local network.
+description: Learn how to access your Olares services on the same network using the `.local` domain.
 head:
   - - meta
     - name: keywords
-      content: Olares One, local access, host mappings, .local domain, LAN
+      content: Olares, .local domain, local access
 ---
 
-# Access Olares One on your local network
+# Access Olares via .local domain
 
-When your computer is on the same local network as Olares One, you can keep traffic on the LAN instead of routing it through the public reverse proxy. This provides faster access and lets you reach your apps when the internet is unavailable.
+When your computer or phone is on the same local network as Olares One, you can use a `.local` domain to reach your Olares services so traffic stays on your LAN.
 
-## Before you begin
+## Prerequisites
 
-- Make sure Olares One and your computer are on the same local network.
-- To use LarePass host mappings, install LarePass Desktop on Windows or macOS and import your Olares ID.
+**Hardware**
+- Olares One is set up and connected to your network.
+- A client device (computer or phone) on the same network as Olares One.
 
-## Find the right method
+**LarePass** (Required for Windows)
+- The LarePass desktop client is installed on your Windows device.
+- You have imported your Olares ID on the LarePass desktop client.
 
-| If this applies to you | What to do |
-| --- | --- |
-| You want to keep using standard `olares.com` URLs on this computer | [Configure local access with LarePass](#configure-local-access-with-larepass). |
-| You use macOS or iOS and do not want to use LarePass | [Use a `.local` URL](#use-a-local-url-without-larepass). |
-| You regularly move between local and remote networks | [Use LarePass VPN](./access-olares-via-vpn.md). |
+## URL format
 
-## Configure local access with LarePass
+<!--@include: ../reusables/local-domain.md#local-domain-url-format-->
 
-<!--@include: ../reusables/local-domain.md#larepass-local-domains-summary-->
+## macOS
 
-## Use a .local URL without LarePass
+No setup is needed. Use the local URL in your browser (for example, `http://desktop.<username>.olares.local`).
 
-On macOS or iOS, local service discovery can resolve multi-level `.local` hostnames without additional configuration. Open a URL such as:
+## Windows
 
-```text
-http://desktop.<username>.olares.local
-```
-
-On Windows, use LarePass Desktop to configure the multi-level `.local` hostname.
+<!--@include: ../reusables/local-domain.md#windows-local-domain-->
 
 ## Troubleshooting
 
 <!--@include: ../reusables/local-domain.md#local-domain-faq-->
 
 ## Learn more
-
-- [Access Olares services locally](../manual/best-practices/local-access.md): Compare all local access methods and find FAQs and troubleshooting steps.
+- [Access Olares services locally](../manual/best-practices/local-access.md): DNS configuration, hosts file, and other local access methods.
