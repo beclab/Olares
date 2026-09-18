@@ -1,29 +1,28 @@
 ---
 outline: [2, 3]
-description: Run Codex CLI in a persistent workspace on Olares and access it remotely from any computer through a browser. Connect it to ChatGPT, an OpenAI API key, or a local model.
+description: Run Codex CLI on Olares to inspect repositories, edit code, execute commands, and test changes. Connect with ChatGPT, an OpenAI API key, or a local model.
 head:
   - - meta
     - name: keywords
-      content: Olares, Codex CLI, OpenAI, AI coding agent, remote development, browser terminal, ChatGPT, local LLM, Qwen3.6, self-hosted
+      content: Olares, Codex CLI, OpenAI, AI coding agent, browser terminal, ChatGPT, local LLM, Qwen3.6, self-hosted
 app_version: "1.0.18"
 doc_version: "1.0"
 doc_updated: "2026-09-18"
 ---
 
-# Run Codex remotely on Olares
+# Run Codex CLI on Olares
 
 Codex CLI is OpenAI's open-source coding agent for the terminal. It can inspect a repository, edit files, run commands and tests, and help you understand unfamiliar code through natural-language requests.
 
-On Olares, Codex runs in a persistent, browser-based development workspace on your own device. You can leave the environment on Olares and return to it from another computer, while connecting Codex to ChatGPT, an OpenAI API key, or a local model.
+On Olares, Codex CLI runs inside a browser-based terminal with a preconfigured development environment. You can connect it to ChatGPT, use an OpenAI API key, or route it to a local OpenAI-compatible model.
 
 ## Learning objectives
 
 In this guide, you will learn how to:
 
-- Run Codex CLI in a persistent Olares workspace.
-- Access the workspace from another computer through a browser.
+- Install Codex CLI from Market.
 - Connect Codex to ChatGPT, an OpenAI API key, or a local model.
-- Run a coding task and check the result.
+- Run coding tasks and review the results.
 - Switch model connections and clear stored credentials.
 - Authenticate Olares CLI for Olares management tasks.
 
@@ -41,61 +40,6 @@ To deploy a different local model, see [Host local large language models with En
    <!-- ![Codex CLI in Market](/images/manual/use-cases/codex-cli.png#bordered) -->
 
 2. Click **Get**, then **Install**, and wait for installation to complete.
-
-## Access Codex from another computer
-
-The Codex CLI app opens as a browser terminal from Launchpad. Use the same Olares workspace from another computer over your local network or through LarePass VPN.
-
-<tabs>
-<template #Use-.local-domain-(LAN)>
-
-Use this method when your computer and Olares are on the same local network.
-
-:::info Windows users
-On Windows, multi-level `.local` domains require additional setup. Try one of these:
-- **Import hosts in LarePass**: Open the LarePass desktop app and use the built-in option to import Olares hosts to your system.
-- **Use the single-level domain**: Open LarePass and use the local address it provides for your Olares desktop.
-
-For details, see [Access Olares services locally](../manual/best-practices/local-access.md).
-:::
-
-1. Open a browser on your computer.
-2. Go to your Olares desktop using its `.local` address. For example:
-
-   ```text
-   http://desktop.<username>.olares.local
-   ```
-
-3. Sign in to Olares.
-4. Open Codex CLI from Launchpad. The Codex browser terminal opens on your computer.
-
-</template>
-<template #Use-.com-domain-(VPN)>
-
-Use this method when your computer and Olares are on different networks.
-
-1. Install LarePass on your computer and sign in with your Olares ID.
-2. Enable LarePass VPN.
-
-   ![Enable LarePass VPN on desktop](/images/manual/get-started/larepass-vpn-desktop.png#bordered)
-
-3. Open your Olares desktop in a browser. For example:
-
-   ```text
-   https://desktop.<username>.olares.com
-   ```
-
-4. Sign in to Olares.
-5. Open Codex CLI from Launchpad. The Codex browser terminal opens over the VPN connection.
-
-For complete VPN setup instructions, see [Access Olares One services securely using LarePass VPN](/one/access-olares-via-vpn.md).
-
-</template>
-</tabs>
-
-:::tip Keep work available between connections
-Store projects under `/opt/data` so they remain available when the app restarts. For a command that must keep running after you close the browser, run it inside `tmux`.
-:::
 
 ## Connect to a model
 
@@ -192,6 +136,8 @@ This example connects Codex CLI to Qwen3.6-27B MTP (llama.cpp) through its OpenA
    ```
 
 ## Use Codex CLI
+
+All project work happens in the `/opt/data` directory. Files stored there persist across app restarts.
 
 1. Check the installed CLI version:
 
