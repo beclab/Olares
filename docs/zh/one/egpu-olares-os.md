@@ -24,7 +24,7 @@ description: 在 Olares One 上连接 NVIDIA eGPU、应用临时 Gen1 方案、�
 
 在该配置中，应用临时方案后也能同时使用内置 RTX 5090M 与外置 RTX 4060 Ti。
 
-其他扩展坞和显卡组合尚未测试。继续操作前，请查看 [eGPU 支持概览](./egpu.md)。
+临时方案文件没有写死特定的扩展坞或显卡型号。已测试的硬件组合请查看 [eGPU 支持概览](./egpu.md)。
 
 还需要准备：
 
@@ -32,8 +32,9 @@ description: 在 Olares One 上连接 NVIDIA eGPU、应用临时 Gen1 方案、�
 - 终端访问权限
 - 带独立电源的雷电 eGPU 扩展坞
 - 认证的雷电 5 线材，优先使用扩展坞附带的线材
+- 基于 Turing 或更新架构的 NVIDIA 显卡
 
-<!-- TODO(tech-review): 确认上述 Olares OS、Ubuntu 基础系统和 NVIDIA 驱动版本准确且可公开。 -->
+雷电协议可以向下兼容。为获得更可靠的使用体验，建议使用雷电 5 硬件，不建议使用低于雷电 5 的扩展坞。
 
 ## 性能影响
 
@@ -43,8 +44,6 @@ description: 在 Olares One 上连接 NVIDIA eGPU、应用临时 Gen1 方案、�
 - 使用 CPU offload、显存不足、频繁通过 PCIe 传输数据、游戏和实时渲染时，影响可能更明显。
 
 实际影响取决于具体工作负载。
-
-<!-- TODO(tech-review): 确认实测链路宽度为 Gen1 x4 后，再发布近似带宽数据。 -->
 
 ## 安装临时方案
 
@@ -83,12 +82,11 @@ description: 在 Olares One 上连接 NVIDIA eGPU、应用临时 Gen1 方案、�
 
    命令应返回 `enabled`。
 
-此方案设计为只匹配可移除的 NVIDIA 显示设备，并排除内置显卡。
+临时方案先根据 PCI vendor 和显示设备类型识别 NVIDIA 显示控制器，然后只处理标记为可移除的设备，从而排除内置显卡。
 
 <!-- TODO(tech-review):
 确认完整安装流程，包括：
 - 关机前是否需要执行 daemon-reload 和 udev 规则重载
-- removable 是否能可靠区分雷电 eGPU 与内置显卡
 - systemd 单元依赖是否适用于支持的 Olares OS 版本
 -->
 
@@ -119,19 +117,15 @@ description: 在 Olares One 上连接 NVIDIA eGPU、应用临时 Gen1 方案、�
 
 ### 确认临时方案已生效
 
-1. 确认两张显卡都已出现，并找到外置 NVIDIA 显示控制器的 PCI 地址：
+1. 确认两张显卡都已出现：
 
    ```bash
    nvidia-smi
-   lspci -nn | grep -i nvidia
    ```
 
-   输出中还可能包含内置显卡和 NVIDIA 音频设备。请选择外置显示控制器的地址，不要选择音频设备。
-
-2. 用外置显示控制器的实际地址替换下方的 `0000:0a:00.0`：
+2. 查看临时方案日志：
 
    ```bash
-   cat /sys/bus/pci/devices/0000:0a:00.0/current_link_speed
    sudo tail -n 20 /var/log/egpu-gen1-fix.log
    ```
 
@@ -142,8 +136,6 @@ after rescan: 0000:0a:00.0 speed=2.5 GT/s PCIe driver=nvidia
 ```
 
 如果开机卡在 logo，关机并断开 eGPU 后重新开机，再参考[故障排查](./ts-egpu.md)。
-
-<!-- TODO(tech-review): 提供一种可靠识别外置显卡 PCI 地址的命令，避免用户根据 lspci 输出自行判断。 -->
 
 ## 安全断开 eGPU
 
@@ -184,15 +176,14 @@ after rescan: 0000:0a:00.0 speed=2.5 GT/s PCIe driver=nvidia
 
 eGPU 通过雷电隧道传输 PCIe 数据。在实测配置中，将扩展坞的 PCIe 链路限制为 Gen1 后，NVIDIA 驱动初始化更加可靠。
 
-在 Olares OS 1.12.6 的多次冷启动测试中，未应用临时方案时经常卡在开机阶段。后续 Olares OS 版本是否仍需此方案尚未验证。
+在 Olares OS 1.12.6 的 10 次冷启动测试中，未应用临时方案时约有 70% 的启动会卡在 Olares logo。测试覆盖 AOOSTAR EG02 + RTX 4060 Ti 和 Razer Core X V2 + RTX 4090。后续 Olares OS 版本是否仍需此方案尚未验证。
 
 根本原因尚未确认，可能与 NVIDIA 驱动、PCIe 链路行为和雷电路径之间的交互有关。实测中，Windows 使用不同的驱动栈，在相同扩展坞和显卡下可稳定运行 Gen4。
 
-<!-- TODO(tech-review): 确认冷启动测试次数和结果后，再决定是否恢复具体失败比例。 -->
 <!-- TODO(tech-review): 确认当前 Olares OS 版本是否仍需此临时方案。 -->
-<!-- TODO(tech-review): 确认 Windows Gen4 测试是否使用了相同的扩展坞、显卡、线材和主机。 -->
 
 ## 相关文档
 
 - [Olares One eGPU 支持概览](./egpu.md)
 - [排查 eGPU 问题](./ts-egpu.md)
+- [前往 Olares 论坛讨论 eGPU 配置](https://www.olares.com/forum/)

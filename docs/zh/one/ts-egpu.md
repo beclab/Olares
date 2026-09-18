@@ -27,8 +27,6 @@ nvidia-smi
 
 输出中应同时显示内置显卡和 eGPU。要确认 Gen1 临时方案是否生效，请运行下方诊断脚本并查看 `Summary`。链路速率显示 `2.5 GT/s PCIe` 表示 Gen1 已生效。
 
-<!-- TODO(tech-review): 确认诊断脚本能可靠识别外置显卡，并在 Olares OS 设置和故障排查指南中使用同一种正式方法。 -->
-
 ## 收集 Olares OS 诊断信息
 
 1. 下载 <a href="/downloads/one/egpu/collect-egpu-info.sh" download>`collect-egpu-info.sh`</a>。
@@ -55,18 +53,16 @@ nvidia-smi
 准备以下信息：
 
 1. **设备管理器** > **显示适配器**截图，包含警告图标。
-2. GPU-Z 或 GPUMon 截图，包含 eGPU 的 PCIe 代数和错误计数。
-3. NVIDIA App 中的驱动版本。
-4. **设备属性** > **常规** > **设备状态** 中的完整消息和错误代码。
+2. 已安装的 NVIDIA 驱动版本。
+3. **设备属性** > **常规** > **设备状态** 中的完整消息和错误代码。
 
 检查截图，并删除不希望公开的个人信息或设备信息。
 
-同时记录扩展坞与显卡型号、操作系统、连接方式、开机顺序、现象、发生概率和已尝试的操作。对于偶发的启动问题，请使用相同连接顺序完成五次冷启动，并记录每次结果。
-
-<!-- TODO(tech-review): 选择正式推荐的 Windows 监控工具，提供下载地址，并说明 PCIe 代数和错误计数的准确字段。确认五次冷启动是否为 Windows 问题的标准复现流程。 -->
+同时记录扩展坞与显卡型号、操作系统、连接方式、开机顺序、现象、发生概率和已尝试的操作。对于偶发的启动问题，请使用相同连接顺序完成数次冷启动，并记录每次结果。冷启动是指完全关闭 Olares One 后，再按推荐顺序给扩展坞通电、连接线材并启动 Olares One。
 
 ## 相关文档
 
 - [Olares One eGPU 支持概览](./egpu.md)
 - [在 Olares OS 上设置 eGPU](./egpu-olares-os.md)
 - [在 Windows 上设置 eGPU](./egpu-windows.md)
+- [前往 Olares 论坛讨论 eGPU 配置](https://www.olares.com/forum/)

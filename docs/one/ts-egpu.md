@@ -29,8 +29,6 @@ nvidia-smi
 
 Both the built-in GPU and eGPU should appear. To check whether the Gen1 workaround is active, run the diagnostic script below and review its `Summary` section. A link speed of `2.5 GT/s PCIe` means Gen1 is active.
 
-<!-- TODO(tech-review): Confirm that the diagnostic script reliably identifies the external GPU. Use the same approved method in the Olares OS setup and troubleshooting guides. -->
-
 ## Collect Olares OS diagnostics
 
 1. Download <a href="/downloads/one/egpu/collect-egpu-info.sh" download>`collect-egpu-info.sh`</a>.
@@ -57,18 +55,16 @@ The report may contain the device hostname, kernel command line, hardware topolo
 Collect:
 
 1. **Device Manager** > **Display adapters** screenshot, including warning icons.
-2. GPU-Z or GPUMon screenshot showing the eGPU PCIe generation and error count.
-3. NVIDIA App driver version.
-4. The complete message and error code under **Device properties** > **General** > **Device status**.
+2. NVIDIA driver version.
+3. The complete message and error code under **Device properties** > **General** > **Device status**.
 
 Review screenshots and remove any personal or device information you do not want to share publicly.
 
-Also record the enclosure and GPU models, operating system, connection path, startup order, symptom, frequency, and attempted fixes. For intermittent startup failures, perform five cold starts with the same connection order and record each result.
-
-<!-- TODO(tech-review): Choose the approved Windows monitoring tool, provide its download location, and identify the exact PCIe generation and error-count fields. Confirm whether five cold starts is the required Windows reproduction procedure. -->
+Also record the enclosure and GPU models, operating system, connection path, startup order, symptom, frequency, and attempted fixes. For intermittent startup failures, perform several cold starts with the same connection order and record each result. A cold start means starting Olares One after it has been completely powered off.
 
 ## Related pages
 
 - [Olares One eGPU support overview](./egpu.md)
 - [Set up an eGPU on Olares OS](./egpu-olares-os.md)
 - [Set up an eGPU on Windows](./egpu-windows.md)
+- [Discuss eGPU configurations in the Olares forum](https://www.olares.com/forum/)

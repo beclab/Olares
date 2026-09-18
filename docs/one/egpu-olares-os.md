@@ -24,7 +24,7 @@ This workaround has been tested with:
 
 It also allowed the built-in RTX 5090M and external RTX 4060 Ti to run together in this configuration.
 
-Other enclosures and GPUs have not been tested. Check the [eGPU support overview](./egpu.md) before continuing.
+The workaround files do not hard-code a specific enclosure or GPU model. Check the [eGPU support overview](./egpu.md) for tested configurations.
 
 You also need:
 
@@ -32,8 +32,9 @@ You also need:
 - Terminal access
 - A Thunderbolt eGPU enclosure with its own power supply
 - A certified Thunderbolt 5 cable, preferably the cable supplied with the enclosure
+- An NVIDIA GPU based on the Turing architecture or newer
 
-<!-- TODO(tech-review): Confirm that the Olares OS, Ubuntu base, and NVIDIA driver versions above are accurate and approved for publication. -->
+Thunderbolt is backward-compatible. For best results, use Thunderbolt 5 hardware. Older Thunderbolt enclosures are not recommended.
 
 ## Performance impact
 
@@ -43,8 +44,6 @@ This workaround limits the eGPU link to Gen1. It does not reduce the GPU's compu
 - CPU offload, limited VRAM, frequent PCIe transfers, gaming, and real-time rendering may experience a larger impact.
 
 Actual performance depends on the workload.
-
-<!-- TODO(tech-review): Confirm whether the tested link width was Gen1 x4 before publishing an approximate bandwidth figure. -->
 
 ## Install the workaround
 
@@ -83,12 +82,11 @@ This workaround changes the eGPU's PCIe link settings and temporarily removes an
 
    The command should return `enabled`.
 
-The workaround is designed to target removable NVIDIA display controllers and exclude the built-in GPU.
+The workaround identifies NVIDIA display controllers by PCI vendor and display class. It only acts on devices marked as removable, which excludes the built-in GPU.
 
 <!-- TODO(tech-review):
 Confirm the installation procedure, including:
 - whether daemon-reload and udev rule reload are required before shutdown
-- whether removable reliably distinguishes Thunderbolt eGPUs from the built-in GPU
 - whether the systemd unit dependencies are valid on supported Olares OS versions
 -->
 
@@ -119,19 +117,15 @@ Complete both checks below. Dashboard confirms that Olares detects the eGPU. The
 
 ### Confirm that the workaround is active
 
-1. Confirm that both GPUs appear and find the PCI address of the external NVIDIA display controller:
+1. Confirm that both GPUs appear:
 
    ```bash
    nvidia-smi
-   lspci -nn | grep -i nvidia
    ```
 
-   The output may also include the built-in GPU and NVIDIA audio functions. Use the address of the external display controller, not its audio device.
-
-2. Replace `0000:0a:00.0` below with the external display controller address:
+2. Check the workaround log:
 
    ```bash
-   cat /sys/bus/pci/devices/0000:0a:00.0/current_link_speed
    sudo tail -n 20 /var/log/egpu-gen1-fix.log
    ```
 
@@ -142,8 +136,6 @@ after rescan: 0000:0a:00.0 speed=2.5 GT/s PCIe driver=nvidia
 ```
 
 If startup stalls, power off Olares One, disconnect the eGPU, and start it again. Then see [Troubleshoot eGPU issues](./ts-egpu.md).
-
-<!-- TODO(tech-review): Provide a reliable command for identifying the external GPU PCI address without requiring users to infer it from lspci output. -->
 
 ## Disconnect the eGPU
 
@@ -184,15 +176,14 @@ The next time you connect the eGPU, it uses the default PCIe link behavior. The 
 
 An eGPU carries PCIe traffic through a Thunderbolt tunnel. In the tested configuration, forcing the enclosure's PCIe link to Gen1 allowed the NVIDIA driver to initialize more reliably.
 
-In repeated cold-start testing with Olares OS 1.12.6, startup frequently stalled without the workaround. Whether this workaround is still required on later Olares OS releases has not been verified.
+In 10 cold-start tests with Olares OS 1.12.6, startup stalled at the Olares logo in about 70% of attempts without the workaround. The tests covered AOOSTAR EG02 with RTX 4060 Ti and Razer Core X V2 with RTX 4090. Whether this workaround is still required on later Olares OS releases has not been verified.
 
 The underlying cause has not been confirmed. It may involve the interaction between the NVIDIA driver, PCIe link behavior, and the Thunderbolt path. In testing, Windows used a different driver stack and remained stable at Gen4 with the same enclosure and GPU.
 
-<!-- TODO(tech-review): Confirm the cold-start sample size and results before restoring a numeric failure rate. -->
 <!-- TODO(tech-review): Confirm whether current Olares OS releases still require this workaround. -->
-<!-- TODO(tech-review): Confirm whether Windows Gen4 testing used the same enclosure, GPU, cable, and host. -->
 
 ## Related pages
 
 - [Olares One eGPU support overview](./egpu.md)
 - [Troubleshoot eGPU issues](./ts-egpu.md)
+- [Discuss eGPU configurations in the Olares forum](https://www.olares.com/forum/)

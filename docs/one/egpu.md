@@ -23,13 +23,13 @@ Before using an eGPU, make sure you have:
 
 - A Thunderbolt eGPU enclosure with its own power supply.
 - A certified Thunderbolt 5 cable, preferably the cable supplied with the enclosure.
-- An NVIDIA GPU supported by your operating system and NVIDIA driver.
+- An NVIDIA GPU based on the Turing architecture or newer and supported by your operating system and NVIDIA driver.
+
+Thunderbolt is backward-compatible. For best results, use Thunderbolt 5 hardware. Older Thunderbolt enclosures are not recommended.
 
 Meeting the requirements does not mean every GPU and enclosure combination has been verified. Check the tables below for tested configurations.
 
 For the first test, connect only one eGPU and disconnect other high-bandwidth Thunderbolt devices.
-
-<!-- TODO(tech-review): Confirm the minimum supported NVIDIA GPU architecture before adding it to the requirements. -->
 
 ## Support status
 
@@ -38,20 +38,19 @@ Each result is labeled **Verified**, **Requires setup**, **Not verified**, **Und
 | Setup | Windows | Olares OS |
 |---|---|---|
 | AOOSTAR EG02 + RTX 4060 Ti, connected before startup | **Verified.** | **Requires setup.** Apply the [Gen1 workaround](./egpu-olares-os.md). |
-| Razer Core + RTX 4090 | **Not verified.** | **Not verified.** Startup was unstable without the workaround. This combination has not been tested with it. |
-| Built-in RTX 5090M + AOOSTAR EG02 with RTX 4060 Ti | **Requires setup.** Perform a clean driver installation. The built-in GPU also has a known power issue confirmed with NVIDIA. | **Requires setup.** Apply the workaround. Both GPUs worked together in the tested configuration. |
+| Razer Core X V2 + RTX 4090 | **Verified in the tested multi-eGPU configuration.** | **Not verified.** Startup was unstable without the workaround. This combination has not been tested with it. |
+| Built-in RTX 5090M + AOOSTAR EG02 with RTX 4060 Ti | **Requires setup.** Reinstall the NVIDIA driver with the eGPU connected. The built-in GPU also has a known power limitation when eGPUs are connected. | **Requires setup.** Apply the workaround. Both GPUs worked together in the tested configuration. |
 | Desktop RTX 5090 | **Not verified.** | **Under investigation.** Driver initialization failed in the tested configuration. PCIe resource allocation is being investigated. |
-| Multiple eGPUs | **Not verified.** Multi-eGPU support is still being evaluated. | **Not supported.** Connect only one eGPU at a time. |
+| Multiple eGPUs | **Verified in one configuration.** Three external GPUs and the built-in GPU completed a one-hour load test. Other combinations have not been tested. | **Not supported.** Connect only one eGPU at a time. |
 | Hot-plugging | **Not verified.** | **Not supported.** Connect and power the eGPU before startup. |
 
 <!-- TODO(tech-review): Confirm the Windows hot-plug configuration before documenting it. -->
-<!-- TODO(tech-review): Confirm whether multi-eGPU testing means multiple external GPUs or the built-in GPU plus one external GPU. -->
-
 ## Set up your eGPU
 
 - [Set up an eGPU on Olares OS](./egpu-olares-os.md)
 - [Set up an eGPU on Olares One with Windows](./egpu-windows.md)
 - [Troubleshoot eGPU issues on Olares One](./ts-egpu.md)
+- [Discuss eGPU configurations in the Olares forum](https://www.olares.com/forum/)
 
 ## Tested combinations
 
@@ -61,7 +60,7 @@ Each result is labeled **Verified**, **Requires setup**, **Not verified**, **Und
 |---|---|---|---|
 | AOOSTAR EG02 | RTX 4060 Ti | Stable after applying the workaround. No further disconnects were observed. | Follow the [Olares OS setup](./egpu-olares-os.md). |
 | AOOSTAR EG02 | RTX 4060 Ti + built-in RTX 5090M | Both GPUs worked and could be assigned separately to AI apps. | Apply the workaround. |
-| Razer Core | RTX 4090 | Startup is unstable without the workaround. The configuration has not been tested with it. | No recommendation is available until testing is complete. |
+| Razer Core X V2 | RTX 4090 | Startup is unstable without the workaround. The configuration has not been tested with it. | No recommendation is available until testing is complete. |
 | Not specified | Desktop RTX 5090 | Driver initialization failed in the tested configuration. PCIe resource allocation is under investigation. | Not currently recommended. |
 | Chained Thunderbolt enclosures | RTX 3090 + 2× RTX 2080 Ti | The tested multi-eGPU configuration did not work. | Connect only one eGPU. |
 
@@ -70,7 +69,7 @@ Each result is labeled **Verified**, **Requires setup**, **Not verified**, **Und
 | Enclosure | GPU | Result | Recommendation |
 |---|---|---|---|
 | AOOSTAR EG02 | RTX 4060 Ti | Reached 165 W at stable Gen4 speeds with no observed PCIe errors. | Follow the [Windows setup](./egpu-windows.md). |
-| Chained Thunderbolt enclosures | RTX 3090 + 2× RTX 2080 Ti | The tested multi-eGPU configuration did not work. | Multi-eGPU configurations are not verified. |
+| Razer Thunderbolt 5 Dock with AOOSTAR EG02, Razer Core X V2, and Razer Core X | RTX 4060 Ti + RTX 4090 + RTX 4060, with the built-in RTX 5090M | All four GPUs completed a one-hour load test without an observed issue. | Treat this result as specific to the tested topology. |
 
 <!-- TODO(tech-review): Confirm which enclosure was used for the desktop RTX 5090 test. -->
 
@@ -87,9 +86,8 @@ Each result is labeled **Verified**, **Requires setup**, **Not verified**, **Und
   - **What to do**: Shut down Olares One, power and connect the eGPU, and then start Olares One.
 
 - **Multiple eGPUs**
-  - **Symptom**: Additional eGPUs may not be detected.
-  - **Possible cause**: Each additional enclosure and GPU increases PCIe address-space and power requirements.
-  - **What to do**: On Olares OS, connect only one eGPU at a time. Multi-eGPU configurations on Windows have not been verified.
+  - **Olares OS**: Connect only one eGPU at a time. Additional eGPUs may not be detected.
+  - **Windows**: One configuration with three external GPUs passed a one-hour load test. Other GPU, enclosure, dock, and connection combinations have not been tested.
 
 - **Desktop GPUs with large amounts of VRAM**
   - **Symptom**: The GPU may appear on the PCI bus, but the driver may fail to initialize.
@@ -98,8 +96,8 @@ Each result is labeled **Verified**, **Requires setup**, **Not verified**, **Und
 
 - **Built-in RTX 5090M power on Windows**
   - **Symptom**: The built-in GPU reached about 95 W instead of 175 W under full load.
-  - **Cause**: This is a known issue confirmed with NVIDIA. The eGPU link itself remains stable at Gen4.
-  - **What to do**: Wait for an upstream fix. This issue does not affect eGPU use.
+  - **Status**: This is a known issue confirmed with NVIDIA. The tested eGPU link remained stable at Gen4.
+  - **Impact**: The issue affects the built-in GPU power and did not affect eGPU use in the tested configuration.
 
 ## Terms
 
