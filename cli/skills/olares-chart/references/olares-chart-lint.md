@@ -30,7 +30,7 @@ olares-cli chart lint ./myapp --auto-owner=false --owner alice --admin root
 
 | Stage | Catches | Skip flag |
 |---|---|---|
-| Folder layout | missing `Chart.yaml` / `values.yaml` / `templates/` / `OlaresManifest.yaml` | `--skip-folder` |
+| Folder layout | missing `Chart.yaml` / `values.yaml` / `templates/` / `OlaresManifest.yaml`; **directory name ≠ chart name** | `--skip-folder` |
 | Manifest validation | structural + cross-field errors in `OlaresManifest.yaml` | `--skip-manifest` |
 | Helm dry-run + workload integrity | templates don't render, or no `Deployment`/`StatefulSet` named after the app | (always) |
 | Resource limits | containers missing CPU/memory limits | `--skip-resource` |
@@ -55,6 +55,7 @@ By default lint renders the chart under **both** `owner==admin` (admin install) 
 
 | Message | Cause | Fix |
 |---|---|---|
+| `inconsistent info. name must be the same in chart. name in Chart.yaml:<a>, chartFolder:<b>, OlaresManifest.yaml:<c>` | the **chart directory name** is part of the identity, not just the two `name` fields | rename the directory to match. This is the first thing a copied-and-renamed chart hits: copying `myapp/` to `myapp2/` and editing only the two manifests fails here |
 | `must have a Deployment or StatefulSet named "<app>"` | no workload named after the app | rename the primary workload's `metadata.name` to the app name (`from-compose` does this automatically) |
 | app-data / permission mismatch | template mounts `.Values.userspace.*` not declared in `permission` (or reverse) | align `permission.appData/appCache/userData` with template mounts |
 | `Chart.yaml` vs manifest version mismatch | the two `version` fields differ | set them equal |

@@ -24,7 +24,9 @@ import (
 	"github.com/beclab/Olares/cli/cmd/ctl/search"
 	"github.com/beclab/Olares/cli/cmd/ctl/settings"
 	"github.com/beclab/Olares/cli/cmd/ctl/skills"
+	"github.com/beclab/Olares/cli/cmd/ctl/update"
 	"github.com/beclab/Olares/cli/cmd/ctl/user"
+	versioncmd "github.com/beclab/Olares/cli/cmd/ctl/version"
 	"github.com/beclab/Olares/cli/cmd/ctl/wizard"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 	"github.com/beclab/Olares/cli/pkg/credential"
@@ -32,6 +34,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
+
+const unknownVerbGroupAnnotation = "olares-cli/unknown-verb-group"
 
 func NewDefaultCommand() *cobra.Command {
 	var showVendor bool
@@ -122,6 +126,15 @@ func NewDefaultCommand() *cobra.Command {
 	// files only — nothing about them is host-side, and the npm distribution
 	// is exactly where an agent needs them.
 	cmds.AddCommand(skills.NewSkillsCommand())
+	// `version` is the machine-readable form of --version, which stays byte
+	// for byte as it is because the npm install wizard parses it.
+	cmds.AddCommand(versioncmd.NewVersionCommand())
+	// `update` is olares-cli updating itself, and is registered on every
+	// channel including the Olares host — that host is where the confusion
+	// with `upgrade` (which upgrades Olares OS) actually happens, so it is
+	// where a verb that says so has to exist. It refuses to npm-install over
+	// an OS bundle; see cmd/ctl/update.
+	cmds.AddCommand(update.NewUpdateCommand())
 	cmds.AddCommand(market.NewMarketCommand(factory))
 	cmds.AddCommand(profile.NewProfileCommand(factory))
 	cmds.AddCommand(knowledge.NewKnowledgeCommand(factory))
@@ -133,5 +146,48 @@ func NewDefaultCommand() *cobra.Command {
 	cmds.AddCommand(router.NewRouterCommand(factory))
 	cmds.AddCommand(cluster.NewClusterCommand(factory))
 
+	wireUnknownVerbRefusals(cmds)
+	skipPreRunsForGroupHelp(cmds)
 	return cmds
+}
+
+func wireUnknownVerbRefusals(cmd *cobra.Command) {
+	children := cmd.Commands()
+	if len(children) > 0 && !cmd.Runnable() {
+		cmd.Args = cmdutil.RefuseUnknownVerbGroupArgs
+		cmd.RunE = cmdutil.RefuseUnknownVerb
+		if cmd.Annotations == nil {
+			cmd.Annotations = make(map[string]string)
+		}
+		cmd.Annotations[unknownVerbGroupAnnotation] = "true"
+	}
+	for _, child := range children {
+		wireUnknownVerbRefusals(child)
+	}
+}
+
+func skipPreRunsForGroupHelp(cmd *cobra.Command) {
+	if run := cmd.PersistentPreRun; run != nil {
+		cmd.PersistentPreRun = func(current *cobra.Command, args []string) {
+			if !isGroupHelp(current, args) {
+				run(current, args)
+			}
+		}
+	}
+	if run := cmd.PersistentPreRunE; run != nil {
+		cmd.PersistentPreRunE = func(current *cobra.Command, args []string) error {
+			if isGroupHelp(current, args) {
+				return nil
+			}
+			return run(current, args)
+		}
+	}
+	for _, child := range cmd.Commands() {
+		skipPreRunsForGroupHelp(child)
+	}
+}
+
+func isGroupHelp(cmd *cobra.Command, args []string) bool {
+	return cmd.Annotations[unknownVerbGroupAnnotation] == "true" &&
+		len(args) > 0 && args[0] == "help"
 }

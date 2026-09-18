@@ -156,3 +156,15 @@ func MetricsExporterTasks() []task.Interface {
 		checkMetricsExporter,
 	}
 }
+
+func UpgradeAmdDevicePluginTasks() []task.Interface {
+	return []task.Interface{
+		&task.LocalTask{
+			Name:    "upgradeAmdDevicePlugin",
+			Prepare: new(HasAmdGPUOrAPU),
+			Action:  new(InstallAmdPlugin),
+			Retry:   10,
+			Delay:   5 * time.Second,
+		},
+	}
+}

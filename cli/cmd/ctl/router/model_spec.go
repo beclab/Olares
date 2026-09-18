@@ -63,9 +63,11 @@ const (
 // Console adds the flags a mode requires and files capability keys it does not
 // know under extensions.
 type specWriteResult struct {
-	Spec           json.RawMessage `json:"spec,omitempty"`
-	Restarted      bool            `json:"restarted"`
-	RestartWarning string          `json:"restart_warning,omitempty"`
+	Spec               json.RawMessage `json:"spec,omitempty"`
+	Restarted          bool            `json:"restarted"`
+	RestartSupervision string          `json:"restart_supervision,omitempty"`
+	RestartWarning     string          `json:"restart_warning,omitempty"`
+	PendingAppRestart  []string        `json:"pending_app_restart,omitempty"`
 }
 
 func newModelSpecCommand(f *cmdutil.Factory, how localAddressing) *cobra.Command {
@@ -448,22 +450,28 @@ func renderSpecWrite(w io.Writer, model string, res *specWriteResult) error {
 			}
 		}
 	}
+	var err error
 	switch {
 	case res.RestartWarning == "run_dir_unset":
-		_, err := fmt.Fprintln(w, "\nThe card is written, but this application cannot signal its engine, "+
+		_, err = fmt.Fprintln(w, "\nThe card is written, but this application cannot signal its engine, "+
 			"so the flags take effect only when the application itself restarts: "+
 			"`olares-cli market restart <app>`.")
-		return err
 	case res.RestartWarning != "":
-		_, err := fmt.Fprintf(w, "\nThe card is written. The engine was not relaunched: %s\n", res.RestartWarning)
-		return err
+		_, err = fmt.Fprintf(w, "\nThe card is written. The engine was not relaunched: %s\n", res.RestartWarning)
 	case res.Restarted:
-		_, err := fmt.Fprintln(w, "\nWritten, and the engine is relaunching. It answers again once the "+
+		_, err = fmt.Fprintln(w, "\nWritten, and the engine is relaunching. It answers again once the "+
 			"model has loaded; `olares-cli router model status <model>` reports how far along that is.")
+	case len(res.PendingAppRestart) == 0:
+		_, err = fmt.Fprintln(w, "\nWritten. Nothing needed relaunching, so this is in effect now. "+
+			"Router's own copy was updated with what the application confirmed.")
+	}
+	if err != nil {
 		return err
 	}
-	_, err := fmt.Fprintln(w, "\nWritten. Nothing needed relaunching, so this is in effect now. "+
-		"Router's own copy was updated with what the application confirmed.")
+	if len(res.PendingAppRestart) > 0 {
+		_, err = fmt.Fprintf(w, "\nSaved, but these fields take effect only after the model application restarts: %s.\n"+
+			"Run `olares-cli market restart <app>`.\n", strings.Join(res.PendingAppRestart, ", "))
+	}
 	return err
 }
 

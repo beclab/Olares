@@ -128,6 +128,40 @@ func (e *RouterError) Error() string {
 		e.Method, e.Path, e.Status, label, msg, e.recovery())
 }
 
+// RouterError classifies itself for clierr.Structured, so a `-o json`
+// invocation that fails answers with the same code the human line names in
+// parentheses rather than only inside a sentence.
+
+func (e *RouterError) ErrorCode() string {
+	if e.Code != "" {
+		return e.Code
+	}
+	return e.Type
+}
+
+// Retryable answers only where the status settles it. A `Retry-After`, a 429
+// or a 503 are Router saying to come back; a 4xx is a refusal that the same
+// request will earn again. The remaining 5xx are genuinely unknown — an
+// application that is still loading recovers on its own and one that crashed
+// does not, and the status alone does not separate them.
+func (e *RouterError) Retryable() *bool {
+	yes, no := true, false
+	if e.RetryAfter > 0 {
+		return &yes
+	}
+	switch {
+	case e.Status == http.StatusTooManyRequests, e.Status == http.StatusServiceUnavailable:
+		return &yes
+	case e.Status >= 400 && e.Status < 500:
+		return &no
+	}
+	return nil
+}
+
+func (e *RouterError) RecoveryAction() string {
+	return strings.TrimPrefix(strings.TrimSpace(e.recovery()), "; ")
+}
+
 // recovery names the next action for the rejections a caller can actually do
 // something about. Everything else reads better without a guess appended.
 func (e *RouterError) recovery() string {

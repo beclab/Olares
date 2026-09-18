@@ -289,7 +289,7 @@ func GetKubeletConfiguration(runtime connector.Runtime, kubeConf *common.KubeCon
 		"failSwapOn":                      false,
 		"kubeReserved": map[string]string{
 			"cpu":    "200m",
-			"memory": utils.KubeReservedMemory,
+			"memory": utils.KubeReservedMemory(utils.NodeRunsControlPlane(runtime)),
 		},
 		"systemReserved": map[string]string{
 			"cpu":    "200m",

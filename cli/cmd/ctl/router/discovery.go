@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/beclab/Olares/cli/pkg/bflenvelope"
 	"github.com/beclab/Olares/cli/pkg/credential"
 	"github.com/beclab/Olares/cli/pkg/whoami"
 )
@@ -65,18 +66,14 @@ type myApp struct {
 // is the authority on what is installed — Router hides the provider of an
 // application that is not running.
 func listMyApps(ctx context.Context, doer *whoami.HTTPClient) ([]myApp, error) {
-	var env struct {
-		Code    int             `json:"code"`
-		Message string          `json:"message"`
-		Data    json.RawMessage `json:"data"`
-	}
+	var env bflenvelope.Envelope
 	if err := doer.DoJSON(ctx, "GET", "/api/myapps", nil, &env); err != nil {
 		return nil, fmt.Errorf("list installed apps: %w", err)
 	}
 	switch env.Code {
 	case 0, 200:
 	default:
-		msg := strings.TrimSpace(env.Message)
+		msg := strings.TrimSpace(env.Message.Text)
 		if msg == "" {
 			msg = fmt.Sprintf("code %d", env.Code)
 		}

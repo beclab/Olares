@@ -10,6 +10,7 @@ import (
 
 	"github.com/beclab/Olares/cli/internal/lockfile"
 	"github.com/beclab/Olares/cli/pkg/auth"
+	"github.com/beclab/Olares/cli/pkg/cliconfig"
 )
 
 // Refresher is the runtime token-refresh primitive: given a (likely-expired)
@@ -175,7 +176,7 @@ func (r *Refresher) refresh(ctx context.Context, in refreshInput) (string, error
 
 	// Cross-process serialization. Bound the wait so a stuck peer can't
 	// hang us indefinitely.
-	lockPath, err := lockfile.RefreshLockPath(olaresID)
+	lockPath, err := refreshLockPath(olaresID)
 	if err != nil {
 		return "", fmt.Errorf("derive refresh lock path: %w", err)
 	}
@@ -345,4 +346,11 @@ func (r *Refresher) alreadyFresh(olaresID, currentAccessToken string, managed bo
 		return stored.AccessToken, true, nil
 	}
 	return "", false, nil
+}
+
+// refreshLockPath returns the per-olaresId lock that serializes /api/refresh
+// across processes. One lock per identity, not one global lock: two profiles
+// rotating their own tokens have no reason to wait on each other.
+func refreshLockPath(olaresID string) (string, error) {
+	return cliconfig.LockPath(lockfile.Sanitize(olaresID) + ".refresh.lock")
 }

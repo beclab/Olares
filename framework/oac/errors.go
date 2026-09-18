@@ -47,7 +47,13 @@ func (e *ValidationError) Error() string {
 		b.WriteString(e.Version)
 		b.WriteString(")")
 	}
-	if e.Field != "" {
+	// Field is skipped when Reason already opens with it, so a single-field
+	// failure names its path once. WrapValidation sets Field to the first
+	// offending path, and most validators in internal/manifest spell the
+	// full path inside their own message ("spec.resources[0].limitedCpu is
+	// required to declare ..."), which used to print as
+	// "metadata.icon: metadata.icon: metadata.icon is required".
+	if e.Field != "" && !reasonNamesField(e.Reason, e.Field) {
 		b.WriteString(": ")
 		b.WriteString(e.Field)
 	}
@@ -56,6 +62,18 @@ func (e *ValidationError) Error() string {
 		b.WriteString(e.Reason)
 	}
 	return b.String()
+}
+
+// reasonNamesField reports whether reason already opens with field, so that
+// prefixing it again would repeat the path. The character after the match
+// must be a separator: otherwise field "spec" would suppress the prefix on a
+// reason like "specification is malformed".
+func reasonNamesField(reason, field string) bool {
+	if field == "" || !strings.HasPrefix(reason, field) {
+		return false
+	}
+	rest := reason[len(field):]
+	return rest == "" || rest[0] == ':' || rest[0] == ' '
 }
 
 func (e *ValidationError) Unwrap() error { return e.Inner }
@@ -81,6 +99,14 @@ func WrapValidation(version string, err error) error {
 		sort.Slice(fields, func(i, j int) bool { return fields[i].path < fields[j].path })
 		var lines []string
 		for _, f := range fields {
+			// Validators in internal/manifest spell the full path in their
+			// own message; prefixing those would say it twice. Ozzo's
+			// built-ins ("cannot be blank") do not, and need the prefix to
+			// be actionable at all.
+			if reasonNamesField(f.reason, f.path) {
+				lines = append(lines, f.reason)
+				continue
+			}
 			lines = append(lines, fmt.Sprintf("%s: %s", f.path, f.reason))
 		}
 		return &ValidationError{

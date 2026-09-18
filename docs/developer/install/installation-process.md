@@ -159,7 +159,7 @@ The container runtime is a critical component for running containerized applicat
 :::
 ### Materialize the Market preinstall bundle
 
-Offline preinstall currently supports Linux and WSL only. On macOS/minikube installs, the whole pipeline described in this section is skipped: no bundle is published to the host, no Hugging Face cache is copied, and the three production preinstall apps are never triggered; the macOS install otherwise proceeds normally through minikube.
+Offline preinstall currently supports Linux only. On macOS/minikube and WSL installs, the whole pipeline described in this section is skipped: no bundle is published to the host, no Hugging Face cache is copied, and the production preinstall apps are never triggered; the install otherwise proceeds normally. WSL still preloads images, because an offline install needs the system's own images in containerd whether or not anything is preinstalled. An upgrade publishes a declaration on every platform, so a WSL device that started with none has one — holding catalog entries only — after its first upgrade.
 
 Official offline Market bootstrap data may be included in the installation package at `<installerDir>/preinstall/market`. If that directory is absent, preparation is a no-op: an ordinary release continues normally and preserves any existing managed overlay. With preinstall enabled, Market's runtime bootstrap state reports an importer-confirmed missing bundle as `overall_status="no_bundle"` and a fresh malformed importer failure as `overall_status="preinstall_degraded"`, including before any database row exists. After a successful import, persisted bundle revision and managed app rows are authoritative. `enabled=false` separately means the feature is disabled. The initial production target is a three-app chain: a model app with an inference engine and `llm-init` sidecar, `llm-gateway`, and an agent WebUI. The installer and Market read app IDs and install scopes from the bundle; they do not hard-code those production IDs.
 
@@ -213,7 +213,7 @@ Market mount contains no `artifacts/model/...` Source payload:
 The artifact payload is read from installer media during the install phase. Its
 small manifest is available in the Market mount for contract validation.
 
-The publish root is the Olares root directory (`storage.OlaresRootDir`, `/olares`), which is also what the market chart renders as `.Values.rootPath` for its hostPath mount; it is not the installer base directory. On Linux and WSL, all staged Market directories use mode `0555`, every file remains `0444`, and every child directory remains `0555`. Market's `readOnly: true` mount is the runtime write boundary; its existing `/opt/app/data` volume remains writable. If the hostPath is empty, the Market importer fails open and normal Market startup continues. This whole materialization step is Linux/WSL only; macOS/minikube installs skip it entirely and never create this directory (see "Materialize the Market preinstall bundle" above).
+The publish root is the Olares root directory (`storage.OlaresRootDir`, `/olares`), which is also what the market chart renders as `.Values.rootPath` for its hostPath mount; it is not the installer base directory. All staged Market directories use mode `0555`, every file remains `0444`, and every child directory remains `0555`. Market's `readOnly: true` mount is the runtime write boundary; its existing `/opt/app/data` volume remains writable. If the hostPath is empty, the Market importer fails open and normal Market startup continues. On a fresh install this whole materialization step is Linux only; macOS/minikube and WSL installs skip it entirely and never create this directory (see "Materialize the Market preinstall bundle" above). An upgrade runs it on every platform.
 
 Each bundle app may declare `defaultEnvs`. For an air-gapped model app, these
 defaults include `HF_HUB_OFFLINE=1` and llm-init source syntax such as
@@ -372,9 +372,10 @@ local (default)   openebs.io/local   Delete   WaitForFirstConsumer   false   31s
 
 ### Materialize an offline Hugging Face cache
 
-Like the rest of offline preinstall, this step is Linux/WSL only. On
-macOS/minikube installs, `HFCacheMaterializeModule` is never wired into the
-install phase, so no Hugging Face cache is copied there.
+Like the rest of offline preinstall, this step is Linux only. On macOS/minikube
+installs, `HFCacheMaterializeModule` is never wired into the install phase. WSL
+shares the Linux builder, so the module is wired there and skipped through its
+`Skip` field; either way no Hugging Face cache is copied.
 
 Model acquisition and model-app installation are separate operations. During
 the install phase, `InstallOsSystemModule` creates Common and deploys the

@@ -108,9 +108,28 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           //   ]
         },
         {
-          text: "Set up with eGPU",
+          text: "Set up your eGPU",
           link: "/one/egpu",
-        },        
+          collapsed: true,
+          items: [
+            {
+              text: "Set up on Olares OS",
+              link: "/one/egpu-olares-os",
+            },
+            {
+              text: "Set up on Windows",
+              link: "/one/egpu-windows",
+            },
+            {
+              text: "Troubleshoot eGPU issues",
+              link: "/one/ts-egpu",
+            },
+          ],
+        },
+        {
+          text: "Manage hardware settings",
+          link: "/one/hardware-settings",
+        },
         {
           text: "Dual-boot Olares OS with Windows",
           collapsed: true,
@@ -195,7 +214,7 @@ export const oneSidebar: DefaultTheme.Sidebar = {
         {
           text: "Manage BIOS and EC",
           link: "/one/update-firmware",
-        },        
+        },
       ]
     },
   ],

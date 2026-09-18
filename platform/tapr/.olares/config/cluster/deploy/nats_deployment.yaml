@@ -163,6 +163,13 @@ spec:
       priorityClassName: "system-cluster-critical"
       serviceAccountName: nats
       serviceAccount: nats
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-role.kubernetes.io/control-plane
+                    operator: Exists
       initContainers:
       - name: cm-sidecar
         image: beclab/cm-sidecar:0.0.1
@@ -249,7 +256,7 @@ spec:
             - /var/run/nats/nats.pid
             - -config
             - /data/config/nats.conf
-          image: beclab/nats-server-config-reloader:v1
+          image: beclab/natsio-nats-server-config-reloader:0.24.0
           name: reloader
           env:
             - name: ADMIN_PASSWORD

@@ -271,13 +271,20 @@ func renderCatalogList(w io.Writer, entries []catalogEntry) error {
 	return err
 }
 
+// requiredFieldNames lists the credential fields a vendor insists on, once
+// each. Several catalog entries declare the same variable twice — a schema that
+// repeats a field it inherits — and the cell read "api_key,api_key", which looks
+// like two secrets to supply.
 func requiredFieldNames(e *catalogEntry) string {
 	fields := e.credentialFields()
 	names := make([]string, 0, len(fields))
+	seen := make(map[string]bool, len(fields))
 	for _, fld := range fields {
-		if fld.Required {
-			names = append(names, fld.Variable)
+		if !fld.Required || fld.Variable == "" || seen[fld.Variable] {
+			continue
 		}
+		seen[fld.Variable] = true
+		names = append(names, fld.Variable)
 	}
 	return strings.Join(names, ",")
 }

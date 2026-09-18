@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
@@ -19,6 +20,7 @@ import (
 
 	kbopv1alpha1 "github.com/apecloud/kubeblocks/apis/operations/v1alpha1"
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilwait "k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
@@ -103,10 +105,25 @@ func (p *SuspendingApp) Exec(ctx context.Context) (StatefulInProgressApp, error)
 		})
 }
 
+// podStopGrace is how long a running pod that nobody has asked to terminate may
+// hold up a stop. Scale(0) and the patch path only request termination, so there
+// is a short window in which a pod is still running with no DeletionTimestamp;
+// past that window the pod answers to something the chart does not own and
+// waiting cannot remove it. A var so tests can reach the fast-fail branch.
+var podStopGrace = 2 * time.Minute
+
+// podStopBlocker names a pod keeping a stop from completing, plus whatever
+// created it. The pod is the symptom; its owner is what has to change.
+type podStopBlocker struct {
+	name  string
+	owner string
+}
+
 func (p *SuspendingApp) waitForPodsGone(ctx context.Context) error {
 	// Scale(0)/patch only requests termination; do not claim Stopped while
 	// pods remain or upgrade resource checks that treat Stopped as "full"
 	// would under-count live requests. Cancel interrupts via ctx.
+	start := time.Now()
 	return utilwait.PollImmediate(time.Second, 30*time.Minute, func() (bool, error) {
 		if err := ctx.Err(); err != nil {
 			return false, err
@@ -116,13 +133,65 @@ func (p *SuspendingApp) waitForPodsGone(ctx context.Context) error {
 			klog.Errorf("list pods while suspending app %s failed %v", p.manager.Spec.AppName, err)
 			return false, err
 		}
-		if len(pods) == 0 {
+		terminating, blockers := classifyPodsForStop(pods)
+		if terminating == 0 && len(blockers) == 0 {
 			return true, nil
 		}
-		klog.Infof("suspend app %s waiting for %d pod(s) to terminate in namespace %s",
-			p.manager.Spec.AppName, len(pods), p.manager.Spec.AppNamespace)
+		if len(blockers) > 0 && time.Since(start) >= podStopGrace {
+			// Burning the whole Stopping TTL told an operator only that
+			// something timed out, so name what is still running and what
+			// made it.
+			return false, fmt.Errorf("suspend app %s blocked by pod(s) that are not terminating in namespace %s: %s",
+				p.manager.Spec.AppName, p.manager.Spec.AppNamespace, formatPodStopBlockers(blockers))
+		}
+		klog.Infof("suspend app %s waiting for %d terminating and %d running pod(s) in namespace %s",
+			p.manager.Spec.AppName, terminating, len(blockers), p.manager.Spec.AppNamespace)
 		return false, nil
 	})
+}
+
+// classifyPodsForStop splits an app namespace's pods into the ones a stop must
+// still wait for and the ones that will not leave on their own.
+//
+// A pod in a terminal phase is not waited on: it holds no compute, and charts
+// leave completed hook and job pods behind, which made every stop of such an
+// app burn the full Stopping TTL before reporting a timeout.
+func classifyPodsForStop(pods []corev1.Pod) (terminating int, blockers []podStopBlocker) {
+	for i := range pods {
+		pod := &pods[i]
+		if pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodFailed {
+			continue
+		}
+		if pod.DeletionTimestamp != nil {
+			terminating++
+			continue
+		}
+		blockers = append(blockers, podStopBlocker{name: pod.Name, owner: describePodOwner(pod)})
+	}
+	return terminating, blockers
+}
+
+// describePodOwner renders a pod's controller as kind/name. An unowned pod is
+// worth spelling out rather than omitting: it is the case where scaling a
+// workload down cannot help, because no workload created the pod.
+func describePodOwner(pod *corev1.Pod) string {
+	for _, ref := range pod.OwnerReferences {
+		if ref.Controller != nil && *ref.Controller {
+			return ref.Kind + "/" + ref.Name
+		}
+	}
+	if len(pod.OwnerReferences) > 0 {
+		return pod.OwnerReferences[0].Kind + "/" + pod.OwnerReferences[0].Name
+	}
+	return "no owner"
+}
+
+func formatPodStopBlockers(blockers []podStopBlocker) string {
+	parts := make([]string, 0, len(blockers))
+	for _, b := range blockers {
+		parts = append(parts, fmt.Sprintf("%s (owned by %s)", b.name, b.owner))
+	}
+	return strings.Join(parts, ", ")
 }
 
 func (p *SuspendingApp) exec(ctx context.Context) error {

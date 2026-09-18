@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Understand shared apps in Olares, the Engine Base architecture, differences from v2, and how to migrate legacy shared applications.
+description: Understand how Olares shared applications are installed, managed, accessed, and implemented in the current architecture.
 head:
   - - meta
     - name: keywords
@@ -11,7 +11,7 @@ head:
 
 Shared applications are a special category of community applications in Olares. They are deployed and managed centrally by the administrator, and every member of the cluster can use them without installing their own copy.
 
-This page explains what shared applications are, why Olares moved to a new architecture in Olares 1.12.6, and how to migrate from legacy v2 to the new architecture.
+This page explains what shared applications are, how members access them, and why Olares moved to a unified architecture in Olares 1.12.6.
 
 ## Understand shared applications
 
@@ -49,6 +49,8 @@ Benefits of the new architecture include:
 - **No orphaned services**: Uninstalling a user-facing app no longer affects the shared server.
 - **Personalized access**: Every member accesses a shared app through their own username, using the same HTTPS URL pattern across all shared apps.
 
+If you installed a shared app before Olares 1.12.6, follow [Migrate legacy shared applications](../../migrate-shared-apps.md) before uninstalling it.
+
 ## Replace Ollama with Engine Base
 
 The standalone **Ollama** shared app and legacy model apps have been replaced by the new **Engine Base** architecture.
@@ -68,60 +70,7 @@ Instead of pulling models into a single Ollama app or installing pre-bundled app
 
 For details on creating and configuring model instances with Engine Base apps, see [Host local large language models with Engine Base apps](/use-cases/llm-base-apps.md).
 
-## Manage legacy v2 shared apps
-
-Installed v2 shared apps continue to work after upgrading to Olares v1.12.6. You can start, use, stop, and resume them as before, but you cannot upgrade them directly to the new architecture.
-
-:::tip Identify v2 shared apps
-To check if an app is a legacy v2 version, open its details page in Market and check the **Compatibility** field in the **Information** panel. A v2 shared app typically shows `Olares >=1.12.3-0, <1.12.6`.
-:::
-
-:::warning Check your app data before uninstalling
-Before you uninstall, you might need to back up app-specific data to avoid losing your workflows. See [Migrate from v2 to the new architecture](#migrate-from-v2-to-the-new-architecture) for app-specific guidance.
-:::
-
-## Migrate from v2 to the new architecture
-
-Different shared apps require different migration paths. Choose the option below that matches the shared app you are migrating.
-
-### Option 1: Migrate data automatically
-
-Use this option when the shared app supports automatic data migration.
-
-- **Apps in this category**: ComfyUI
-- **Steps**: For detailed steps on migrating ComfyUI, including how to preserve your data and the new data locations, see [ComfyUI migration notes](/use-cases/comfyui-common-issues.md).
-
-### Option 2: Perform a clean reinstallation
-
-Use this option when the shared app has no user-created data to migrate.
-
-- **Apps in this category**: Apps with no significant data, such as Falco and MTranServer
-- **Steps**: Uninstall the v2 shared app, and then install the new shared app from Market.
-
-  :::tip Identify v2 and new versions
-  On the app details page, check the **Compatibility** field in the **Information** panel:
-
-  - The v2 shared app shows `Olares >=1.12.3-0, <1.12.6`.
-  - The new shared app shows `Olares >=1.12.6-0`.
-  :::
-
-### Option 3: Back up and restore manually
-
-Use this option when the shared app stores user-created data or settings that must be moved manually.
-
-- **Apps in this category**: Dify, OnlyOffice, SearXNG, and Xinference
-- **Steps**: Follow the migration guide for the shared app you are migrating: [Dify](/use-cases/dify-upgrade.md), [OnlyOffice](/use-cases/onlyoffice-migration.md), [SearXNG](/use-cases/searxng.md), and [Xinference](/use-cases/xinference.md).
-
-### Option 4: Upgrade the Ollama app to Engine Base
-
-Use this option when you are migrating from the standalone Ollama shared app to the new Engine Base architecture.
-
-- **Apps in this category**: The Ollama app installed to pull models
-- **Steps**: Deploy the model pulled via Ollama on an [Engine Base app](/use-cases/llm-base-apps.md), get the Base URL in the model console, and then reconfigure your clients.
-
-## FAQs
-
-### Shared entrance usage
+## Understand the shared entrance
 
 The **Shared entrance** is still present in the system, but you should not use it to access a shared app.
 

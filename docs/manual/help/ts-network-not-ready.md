@@ -18,11 +18,11 @@ Use this guide to troubleshoot an Olares One device that appears powered on and 
 
 ## Cause
 
-Your device's underlying operating system is running normally, which is why it successfully connects to your router and appears online. However, the core Olares software services (the Kubernetes cluster) have unexpectedly frozen or crashed. 
+These symptoms do not identify a single cause. A successful `ping` only confirms that the device responds to basic network traffic. Olares might still be unavailable because system services have not started, one or more pods are unhealthy, the device is short on resources, or the access path is failing.
 
 ## Solution
 
-Follow these steps to gather diagnostic information so Olares team can help you get back online.
+Use the shortest available path to access the host, then check whether the problem is inside Olares or limited to the network access path.
 
 ### Step 1: Attempt SSH connection
 
@@ -74,13 +74,20 @@ When the SSH access is unavailable, log in to the device locally using a monitor
 
 ### Step 3: Check system pod status
 
-1. Once you log in successfully, type the following command and then press **Enter** to to get the status of all pods across all namespaces:
+1. Once you log in successfully, run the following command to get the status of all pods across all namespaces:
 
     ```bash
     kubectl get pods -A
     ```
     
-2. Check the **STATUS** column for any pods that are not in the `Running` state.
-3. Take a clear photo or a screenshot of the full command output, or manually note down the problematic pods.
-4. Attach this photo or your notes with descriptions to Olares team by [submitting a GitHub Issue](https://github.com/beclab/Olares/issues/new).
+2. Check the **STATUS** column and continue based on the result:
 
+    - If a pod shows an error state such as `CrashLoopBackOff`, `Error`, `ImagePullBackOff`, or remains `Pending`, record only its **NAMESPACE**, **NAME**, **STATUS**, and **RESTARTS** values. A job in `Completed` state is not an error by itself.
+    - If no pod shows an error and restart counts are not increasing, the symptom is more likely related to the access or network path. Record whether local access, the Olares domain, and LarePass VPN each work.
+
+3. Record the time of the check, your time zone, and the installed Olares version.
+4. Follow [Collect diagnostic information](../collect-diagnostic-information.md) to create a log archive and share it through a private channel.
+
+:::warning Do not post complete logs publicly
+Pod output and system logs can contain Olares IDs, hostnames, IP addresses, domains, and application metadata. A public GitHub Issue can include the symptom and the limited fields listed above, but not the complete command output or log archive.
+:::

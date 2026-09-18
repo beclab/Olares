@@ -24,6 +24,13 @@ spec:
         linkerd.io/inject: disabled
     spec:
       serviceAccountName: linkerd-pki-guardian
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-role.kubernetes.io/control-plane
+                    operator: Exists
       securityContext:
         runAsNonRoot: true
         runAsUser: 65532

@@ -3,10 +3,11 @@ module github.com/beclab/Olares/framework/app-service
 go 1.25.0
 
 require (
+	dario.cat/mergo v1.0.2
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/apecloud/kubeblocks v1.0.0
 	github.com/argoproj/argo-workflows/v3 v3.7.10
-	github.com/beclab/Olares/framework/oac v0.0.0-20260820131126-7c6e29f28ef3
+	github.com/beclab/Olares/framework/oac v0.0.0-20260827142328-d8439d0b8dee
 	github.com/beclab/api v0.0.26
 	github.com/beclab/lldap-client v0.0.11
 	github.com/containerd/containerd v1.7.29
@@ -65,7 +66,6 @@ require (
 	cloud.google.com/go/iam v1.5.2 // indirect
 	cloud.google.com/go/monitoring v1.24.2 // indirect
 	cloud.google.com/go/storage v1.55.0 // indirect
-	dario.cat/mergo v1.0.2 // indirect
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20230811130428-ced1acdcaa24 // indirect
 	github.com/AdamKorcz/go-118-fuzz-build v0.0.0-20230306123547-8075edf89bb0 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20250102033503-faa5f7b0171c // indirect

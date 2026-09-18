@@ -77,7 +77,7 @@ Specific reasons:
 | `vgpu_unavailable` | gpu list / tasks / get / task HTTP 5xx; `meta.error` carries upstream text |
 | `no_gpu_detected` | gpu list / tasks / get / task HTTP 200 empty body |
 
-Fan is hard-gated: non-Olares-One devices return `empty_reason=not_olares_one` before any fetch and still exit 0. GPU is soft-gated: the CLI always queries HAMI, but `meta.note` records SPA-hidden advisories such as non-admin profile or no node label.
+Fan is hard-gated: non-Olares-One devices return `empty_reason=not_olares_one` before any fetch and still exit 0. GPU is soft-gated: the CLI always queries the vendors' exporters, but `meta.note` records SPA-hidden advisories such as a non-admin profile or no node carrying a `gpu.bytetrade.io/*` GPU label.
 
 ## Agent decision tree
 

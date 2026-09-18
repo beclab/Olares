@@ -86,6 +86,16 @@ olares-cli router model restart Olares/qwen3-4b
 
 Two consequences. Changing `--engine-args` relaunches the inference process, and the model does not answer until the weights have loaded again. And the application has to be running: a card cannot be written into something that is not there, which is when `model spec show` starts saying `cache`.
 
+## How much the engine can actually hold
+
+`router model get <model>` prints three figures a caller sizes a request against, and they are measured rather than declared: the Model Console probes the engine each time it reaches ready, because an engine routinely serves something other than what its flags asked for.
+
+- CONTEXT is the window one request may use.
+- AT ONCE is how many requests the engine was launched to work on together, and is absent when nothing declared a width — an engine's own default is not readable from out here.
+- KV POOL is the whole cache those slots are served out of, and it is **not** CONTEXT × AT ONCE. llama.cpp in unified mode (`-kvu`) lets every slot promise the full window out of one pool that cannot cover them all, which is a deliberate trade: most prompts are short, so the alternative wastes most of the cache. `router model list` and `router provider get <app>` mark that case as `N shared` on the AT ONCE column.
+
+A shared pool changes what a refusal means. The window stops being a reservation and becomes a ceiling, so a long prompt can be turned away with a slot standing free — that is `kv_budget_exhausted`, and it is the engine's gate rather than Router's. Retrying the same model does not help until something finishes; a shorter prompt does. See the failure table in [making calls](olares-router-calling.md).
+
 `router model spec set` reaches the same document at the application instead of through Router. It is a whole-document replace with no merge, so a field left out is gone — engine flags included. Use it for an application Router has no provider row for, and `model spec edit` otherwise.
 
 An application whose engine is a sidecar — OCR, audio, embedding — takes no engine flags at all. There `--mode` is the field that matters, because it is the gate the data plane routes on, and `model restart` succeeds having changed nothing.

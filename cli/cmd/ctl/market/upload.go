@@ -156,7 +156,16 @@ func uploadDir(opts *MarketOptions, mc *MarketClient, dir, source string) error 
 	}
 
 	if opts.isJSON() {
-		return opts.printJSON(results)
+		// The per-file report is the output either way; what a caller in a
+		// pipeline reads is the exit code, so it has to agree with the quiet
+		// and table branches rather than reporting the encode alone.
+		if err := opts.printJSON(results); err != nil {
+			return err
+		}
+		if failed > 0 {
+			return errReported
+		}
+		return nil
 	}
 
 	if failed > 0 {
@@ -186,29 +195,18 @@ func uploadFile(opts *MarketOptions, mc *MarketClient, filePath, source string) 
 
 func doUploadFile(opts *MarketOptions, mc *MarketClient, filePath, source string) error {
 	absPath, _ := filepath.Abs(filePath)
-	opts.info("Uploading '%s' to source '%s'...", filepath.Base(absPath), source)
+	// Name the target user the way install / upgrade / uninstall do. Upload
+	// is the verb most likely to be run right after `profile use`, and it
+	// was the only write verb whose output gave no clue which Olares it
+	// landed on — the uploader only showed up in a later `market get` dump.
+	opts.info("Uploading '%s' to source '%s' for user '%s'...", filepath.Base(absPath), source, mc.olaresID)
 	ctx := context.Background()
 	response, err := mc.UploadChart(ctx, absPath, source)
 	if err != nil {
 		if architectureErr := parseUploadArchitectureError(response); architectureErr != nil {
 			return architectureErr
 		}
-		if manifestErr := parseUploadManifestError(response); manifestErr != nil {
-			return manifestErr
-		}
 		return fmt.Errorf("upload failed: %w", err)
-	}
-	return nil
-}
-
-func parseUploadManifestError(response *APIResponse) error {
-	if response == nil {
-		return nil
-	}
-	message := strings.ToLower(strings.TrimSpace(response.Message))
-	if strings.Contains(message, "appid") &&
-		(strings.Contains(message, "required") || strings.Contains(message, "missing") || strings.Contains(message, "empty")) {
-		return fmt.Errorf("upload rejected: OlaresManifest.yaml metadata.appid is required; set it explicitly, repackage the chart, and do not retry the unchanged package")
 	}
 	return nil
 }

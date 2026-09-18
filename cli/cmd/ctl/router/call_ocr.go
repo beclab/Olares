@@ -52,6 +52,42 @@ func (t *ocrTask) done() bool {
 	return false
 }
 
+// ocrAccepted is the submission answer: a receipt with the task nested under
+// one key, not a task. Read as a task it yields no id, and an id is the only
+// thing the wait loop has to ask about — so the loop polled the list route
+// instead, read no status off it, and waited out the whole timeout on a job the
+// engine had already finished. job_id is the same id one level up, kept as the
+// fallback because a receipt that names the job is still a usable receipt.
+type ocrAccepted struct {
+	JobID  string  `json:"job_id"`
+	Status string  `json:"status"`
+	Task   ocrTask `json:"task"`
+}
+
+// task reads the receipt as the task it is a receipt for.
+func (a ocrAccepted) task() ocrTask {
+	t := a.Task
+	if t.ID == "" {
+		t.ID = a.JobID
+	}
+	if t.Status == "" {
+		t.Status = a.Status
+	}
+	return t
+}
+
+// ocrTaskPath adds the model, when there is one, so the lookup reaches the
+// engine holding the task — the same reason audioTaskPath does it. Without it
+// every poll and cancel goes to whichever model answers the default OCR route,
+// which is not necessarily the one the task was submitted to.
+func ocrTaskPath(path, model string) string {
+	q := url.Values{}
+	if m := strings.TrimSpace(model); m != "" {
+		q.Set("model", m)
+	}
+	return withQuery(path, q)
+}
+
 func newCallOCRCommand(f *cmdutil.Factory) *cobra.Command {
 	var (
 		output      string
@@ -102,6 +138,7 @@ Examples:
 					return fmt.Errorf("--queue lists the board; it takes neither a file nor --task")
 				}
 				return runOCRQueue(c.Context(), f, ocrQueueOptions{
+					Model:  callModel(model, categoryOCR),
 					Status: strings.TrimSpace(queueStatus), Limit: queueLimit,
 					APIKey: apiKey, OutputIn: output,
 				})
@@ -175,7 +212,7 @@ func runCallOCR(ctx context.Context, f *cmdutil.Factory, opts ocrOptions) error 
 	dp := dataPlane(pc, opts.APIKey)
 
 	if opts.TaskID != "" && opts.Cancel {
-		path := epOCRTask(opts.TaskID)
+		path := ocrTaskPath(epOCRTask(opts.TaskID), opts.Model)
 		if err := dp.doJSON(ctx, "DELETE", path, nil, nil); err != nil {
 			return callErr(err)
 		}
@@ -186,7 +223,7 @@ func runCallOCR(ctx context.Context, f *cmdutil.Factory, opts ocrOptions) error 
 	var task ocrTask
 	switch {
 	case opts.TaskID != "":
-		if err := fetchOCRTask(ctx, dp, opts.TaskID, &task); err != nil {
+		if err := fetchOCRTask(ctx, dp, opts.TaskID, opts.Model, &task); err != nil {
 			return err
 		}
 	default:
@@ -211,8 +248,15 @@ func runCallOCR(ctx context.Context, f *cmdutil.Factory, opts ocrOptions) error 
 		if resp.StatusCode/100 != 2 {
 			return callErr(dp.formatErr("POST", epOCR, resp.StatusCode, raw))
 		}
-		if uerr := json.Unmarshal(raw, &task); uerr != nil {
+		var accepted ocrAccepted
+		if uerr := json.Unmarshal(raw, &accepted); uerr != nil {
 			return fmt.Errorf("decode the submission answer: %w (body=%s)", uerr, truncate(string(raw), 200))
+		}
+		task = accepted.task()
+		if task.ID == "" {
+			return fmt.Errorf("the file was accepted but the answer named no task, "+
+				"so there is nothing to wait for or come back to (body=%s)",
+				truncate(string(raw), 200))
 		}
 		if !opts.Wait {
 			if format == FormatJSON {
@@ -225,7 +269,7 @@ func runCallOCR(ctx context.Context, f *cmdutil.Factory, opts ocrOptions) error 
 	}
 
 	if !task.done() {
-		if err := waitForOCRTask(ctx, dp, &task, opts.Timeout, format == FormatTable); err != nil {
+		if err := waitForOCRTask(ctx, dp, &task, opts.Model, opts.Timeout, format == FormatTable); err != nil {
 			return err
 		}
 	}
@@ -257,6 +301,7 @@ type ocrQueue struct {
 }
 
 type ocrQueueOptions struct {
+	Model    string
 	Status   string
 	Limit    int
 	APIKey   string
@@ -277,6 +322,9 @@ func runOCRQueue(ctx context.Context, f *cmdutil.Factory, opts ocrQueueOptions) 
 	}
 	dp := dataPlane(pc, opts.APIKey)
 	q := url.Values{}
+	if m := strings.TrimSpace(opts.Model); m != "" {
+		q.Set("model", m)
+	}
 	if opts.Status != "" {
 		q.Set("status", opts.Status)
 	}
@@ -339,8 +387,8 @@ func ocrTaskAge(task *ocrTask) string {
 	return time.Since(at).Round(time.Second).String() + " ago"
 }
 
-func fetchOCRTask(ctx context.Context, dp *routerClient, id string, out *ocrTask) error {
-	path := epOCRTask(id)
+func fetchOCRTask(ctx context.Context, dp *routerClient, id, model string, out *ocrTask) error {
+	path := ocrTaskPath(epOCRTask(id), model)
 	if err := dp.doJSON(ctx, "GET", path, nil, out); err != nil {
 		return callErr(err)
 	}
@@ -350,7 +398,10 @@ func fetchOCRTask(ctx context.Context, dp *routerClient, id string, out *ocrTask
 // waitForOCRTask polls until the task settles. Progress goes to stderr so the
 // text on stdout stays clean, and a timeout leaves the task running rather than
 // cancelling it: work already done is worth picking up later.
-func waitForOCRTask(ctx context.Context, dp *routerClient, task *ocrTask, timeout time.Duration, verbose bool) error {
+func waitForOCRTask(
+	ctx context.Context, dp *routerClient, task *ocrTask,
+	model string, timeout time.Duration, verbose bool,
+) error {
 	deadline := time.Now().Add(timeout)
 	lastNote := ""
 	for {
@@ -371,7 +422,7 @@ func waitForOCRTask(ctx context.Context, dp *routerClient, task *ocrTask, timeou
 		case <-time.After(time.Second):
 		}
 		var next ocrTask
-		if err := fetchOCRTask(ctx, dp, task.ID, &next); err != nil {
+		if err := fetchOCRTask(ctx, dp, task.ID, model, &next); err != nil {
 			return err
 		}
 		*task = next

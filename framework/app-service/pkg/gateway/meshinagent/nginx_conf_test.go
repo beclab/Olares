@@ -26,6 +26,9 @@ func TestRenderNginxConfContainsListenAndJWT(t *testing.T) {
 		JWTSecretMountPath + "/token",
 		"app-gateway-data.os-gateway.svc",
 		"proxy_pass http://app-gateway-data.os-gateway.svc:80",
+		"map $http_upgrade $connection_upgrade",
+		"proxy_set_header Upgrade $http_upgrade",
+		"proxy_set_header Connection $connection_upgrade",
 		"fail-closed",
 		"js_set $mesh_in_host_ok",
 		"js_set $mesh_in_caller_jwt",
@@ -63,6 +66,15 @@ func TestRenderNginxConfContainsListenAndJWT(t *testing.T) {
 	}
 	if strings.Count(got, "proxy_pass http://app-gateway-data.os-gateway.svc:80") < 2 {
 		t.Fatal("expected HTTP and HTTPS terminate servers both proxy to gateway:80")
+	}
+	if strings.Count(got, "proxy_set_header Upgrade $http_upgrade;") < 2 {
+		t.Fatal("expected HTTP and HTTPS terminate locations both forward Upgrade")
+	}
+	if strings.Count(got, "proxy_set_header Connection $connection_upgrade;") < 2 {
+		t.Fatal("expected HTTP and HTTPS terminate locations both forward Connection")
+	}
+	if at, firstServer := strings.Index(got, "map $http_upgrade $connection_upgrade"), strings.Index(got, "  server {"); at < 0 || firstServer < 0 || at > firstServer {
+		t.Fatalf("connection_upgrade map must sit in http {} before the first server block:\n%s", got)
 	}
 }
 

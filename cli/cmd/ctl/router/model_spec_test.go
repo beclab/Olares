@@ -1,6 +1,8 @@
 package router
 
 import (
+	"bytes"
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -80,6 +82,42 @@ func TestTheConfirmationNamesTheRelaunch(t *testing.T) {
 	withoutArgs := specEditConsequence(map[string]any{"mode": "chat"})
 	if strings.Contains(withoutArgs, "relaunches") {
 		t.Errorf("a mode edit claims a relaunch: %q", withoutArgs)
+	}
+}
+
+func TestSpecWriteResultKeepsPendingAppRestart(t *testing.T) {
+	var result specWriteResult
+	if err := json.Unmarshal([]byte(`{
+		"restarted": false,
+		"restart_supervision": "confirmed",
+		"pending_app_restart": ["extensions.translate"]
+	}`), &result); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if result.RestartSupervision != "confirmed" {
+		t.Errorf("restart supervision = %q", result.RestartSupervision)
+	}
+	if len(result.PendingAppRestart) != 1 ||
+		result.PendingAppRestart[0] != "extensions.translate" {
+		t.Errorf("pending app restart = %v", result.PendingAppRestart)
+	}
+}
+
+func TestSpecWriteNamesFieldsWaitingForAnAppRestart(t *testing.T) {
+	var out bytes.Buffer
+	err := renderSpecWrite(&out, "translator", &specWriteResult{
+		PendingAppRestart: []string{"extensions.translate"},
+	})
+	if err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	for _, want := range []string{"extensions.translate", "market restart <app>"} {
+		if !strings.Contains(out.String(), want) {
+			t.Errorf("output does not mention %q:\n%s", want, out.String())
+		}
+	}
+	if strings.Contains(out.String(), "in effect now") {
+		t.Errorf("pending write claims immediate effect:\n%s", out.String())
 	}
 }
 

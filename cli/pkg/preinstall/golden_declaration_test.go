@@ -21,7 +21,7 @@ func TestPublishMatchesGoldenRuntimeDeclaration(t *testing.T) {
 	err := Publish(source, baseDir, testOSVersion, ProfileSelections{
 		HardwareProfile: "nvidia-cuda",
 		DetectedGPUType: "nvidia",
-	})
+	}, OmitCatalogApps)
 	if err != nil {
 		t.Fatalf("Publish() error = %v", err)
 	}
@@ -41,12 +41,13 @@ func TestPublishMatchesGoldenRuntimeDeclaration(t *testing.T) {
 	if app.SelectedGPUType != "nvidia" {
 		t.Fatalf("selectedGpuType = %q", app.SelectedGPUType)
 	}
-	// The catalog apps this version expects are declared alongside whatever the
-	// medium carried, which is the whole point of one file: Market has one list
-	// to read rather than two to reconcile.
-	router := declarationApp(t, declaration, catalogApps[0].AppID)
-	if router.ChartSource != ChartSourceCatalog || router.Version != "" {
-		t.Fatalf("catalog app = %#v", router)
+	// An install declares its medium and nothing else. The catalog apps this
+	// version expects belong to the upgrade, which publishes them for the trunk
+	// it upgrades to.
+	for _, entry := range declaration.Apps {
+		if entry.ChartSource == ChartSourceCatalog {
+			t.Fatalf("install declared catalog app = %#v", entry)
+		}
 	}
 }
 

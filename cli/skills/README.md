@@ -2,17 +2,17 @@
 
 LLM-readable skills (one folder per command tree) that teach OpenClaw — and any other Claude-style agent — how to drive `olares-cli` against a live Olares instance. Each folder contains a single `SKILL.md` whose YAML frontmatter declares the skill's name, version, and runtime requirements.
 
-These skills are published to [ClawHub](https://clawhub.ai/), the public registry for OpenClaw skills, under their canonical names.
+These skills are compiled into the `olares-cli` binary ([`embed.go`](embed.go)) and reach a machine through it — `olares-cli skills install` or `skills export`. There is no separate registry to publish to; see [cli/docs/design/skills-provenance.md](../docs/design/skills-provenance.md) for why that is the only route.
 
 ## Layout
 
 ```
 cli/skills/
 ├── README.md          # this file
-├── publish.sh         # publish helper (used locally and from CI)
 ├── olares-shared/
 │   ├── SKILL.md       # foundation: profile model, login, token refresh
 │   └── references/
+│       ├── olares-suite-map.md  # which skill owns a task; installing the binary
 │       ├── olares-auth.md       # login flows, status details, token storage and refresh
 │       ├── olares-platform.md   # storage, uid 1000, namespaces, middleware, versions
 │       └── olares-platform-appstate.md # app lifecycle and state semantics
@@ -36,7 +36,7 @@ cli/skills/
 ├── olares-router/     # olares-cli router (Router gateway + the Model Console inside a model app; Olares >= 1.12.7)
 │   ├── SKILL.md
 │   └── references/    # architecture / external providers / local LLM / multimodal /
-│                      # console / defaults+access / usage+audit+trace / calling / diagnosis
+│                      # console / defaults+access / usage+audit / calling / diagnosis
 ├── olares-chart/      # olares-cli chart (chart authoring + deploy to your Olares)
 │   ├── SKILL.md
 │   └── references/    # one file per refinement area / capability
@@ -50,9 +50,9 @@ cli/skills/
 
 `olares-chart` is a partial exception on **login**, not on linking: its authoring verbs (`from-compose` / `lint` / `package`) are local-only and need **no profile / login / cluster**, so it never logs in to author a chart. It still reads `olares-platform.md` for platform facts (no login needed) and only requires `olares-shared` login when **deploying a chart to a real Olares** (`market upload` + `install`). `olares-publish` is the public-distribution counterpart: it picks up after the app already runs locally (via `olares-chart`) and covers market-ready polish, the `beclab/apps` PR, and paid apps.
 
-ClawHub publishes the entire skill directory (including `references/`), so reference files ship automatically without any change to `publish.sh`.
+The embed pattern takes the entire skill directory (including `references/`), so reference files ship automatically.
 
-**`olares-publish/scripts/` is the one deliberate exception to markdown-only.** Producing a Market icon is deterministic pixel work — corner sampling, edge flood-fill to strip a white backplate, gradient backplate, safe-zone fit — and prose that asks each agent to re-derive it yields a different icon every run. Shipping the script makes the output reproducible. Same mechanism as `references/`: `publish.sh` runs `clawhub skill publish "$dir"` on the whole folder, so scripts upload with no change to the publish helper. Keep this rare — a script earns its place only when the task is exactly specified and the agent would otherwise improvise.
+**`olares-publish/scripts/` is the one deliberate exception to markdown-only.** Producing a Market icon is deterministic pixel work — corner sampling, edge flood-fill to strip a white backplate, gradient backplate, safe-zone fit — and prose that asks each agent to re-derive it yields a different icon every run. Shipping the script makes the output reproducible. Same mechanism as `references/`: the whole folder is embedded, so scripts ship with no change anywhere else. Keep this rare — a script earns its place only when the task is exactly specified and the agent would otherwise improvise.
 
 ## Writing style
 
@@ -60,10 +60,14 @@ ClawHub publishes the entire skill directory (including `references/`), so refer
 
 - **When to use** — the trigger scope and the 1–3 neighbouring skills most easily confused with it.
 - **Decision rules** — cross-cutting concepts and hard constraints that change what the agent does next.
-- **Verb index** — one compact row per verb pointing at `--help` and, when needed, one reference. Keep this map: without it an agent has to probe subcommands and is more likely to invent one.
-- **Workflow routing** — route one current intent or state to one reference. Do not present every reference as a checklist.
+- **Intent index** — the skill's first table, routing one current intent or symptom to one reference. This is the table the agent actually enters through: it arrives holding a goal, not a verb, and a skill that indexes only by verb makes it read the whole front door to find out which verb its goal is spelled as. `olares-doctor`'s `## Symptom routing` and `olares-publish`'s workflow index are the shape to copy.
+- **Verb index** — the command tree, second. Without it an agent has to probe subcommands and is more likely to invent one, so keep the map — but every row has to change a decision. A row whose only pointer is `` `<cmd> --help` `` tells the agent what it would have learned by running `--help` on the parent; either give it the one thing that surprises a caller, or collapse those verbs into a single "everything else is `--help`" row.
 - **Error → fix** — only symptoms the CLI output cannot resolve by itself, such as cross-command diagnosis or a cause at a different layer. If stderr already gives the cause and next action, do not copy it.
 - **Stop / escalate** — missing user input, credentials, ambiguous targets, or actions that expand the authorised task scope.
+
+Three of those carry fixed names, and `validate.py` enforces them, because an agent crossing from one skill to the next should jump to a heading instead of scanning the file. The closing section is `## Safety and escalation` in all twelve (it had five names). The command tree is `## Verb index` whose last column is `Read when triggered` — the first column stays whatever that tree's nouns are, `Verb` or `Family` or `Noun` or `Area`. And every skill but `olares-shared` opens with a `> **Shared front door:**` block; a skill whose authoring half needs no login says so there rather than burying the exception fifty lines down.
+
+**Route by intent, not by checklist.** Whichever table comes first, it maps one state or goal to one destination. Do not present every reference as a list of things to read.
 
 Use progressive disclosure:
 
@@ -77,25 +81,40 @@ Keep CLI and Skill responsibilities separate:
 - CLI errors carry facts known at the failing request: what failed, the cause, relevant context and a concrete next action.
 - Skills carry multi-command orchestration, asynchronous semantics, platform/product models and safety or authorisation decisions.
 - A CLI error and its corresponding Skill cleanup ship together. Do not delete guidance until the released CLI output carries it.
+- **`-o json`'s top-level fields belong to `--help`, the same as flags do.** A skill that transcribes an output shape is a second copy that drifts on the next field. What the skill owns is which field decides the next step — "an install is up when `.finalState` reads `running`" — because `--help` describes the payload without knowing what the agent is trying to conclude from it.
 
 For all behavioural claims:
 
-- **Ground every behavioral claim in the implementation.** Before documenting what a verb / flag / error does, confirm it against the code (status derivation, typed error names, retry / timeout, argument arity). Model agent stop / continue rules on the tool's real control flow — typed errors, auto-retry, transient vs terminal — not on a surface status string. Keep this verification in your process only: still **no Go source-path citations** in the shipped skill (see "What to leave out" below).
+- **Ground every behavioral claim in the implementation.** Before documenting what a verb / flag / error does, confirm it against the code (status derivation, typed error names, retry / timeout, argument arity). Model agent stop / continue rules on the tool's real control flow — typed errors, auto-retry, transient vs terminal — not on a surface status string. Keep this verification in your process only: still **no Go source-path citations** in the shipped skill.
 - **One representation per fact within a file.** Don't place two tables / sections that encode the same thing. When a decision derives from a fact table, express it as prose that points at that table, not a second parallel table.
 
-Each non-trivial subcommand gets a `references/<skill>-<verb>.md` file that adds — on top of `--help` — safety constraints, agent-facing multi-step flows, and common-error troubleshooting tables. Do NOT re-list flag descriptions; trust `--help`.
+Each non-trivial trigger gets a `references/<skill>-<trigger>.md` file that adds — on top of `--help` — safety constraints, agent-facing multi-step flows, and common-error troubleshooting tables. Do NOT re-list flag descriptions; trust `--help`. A trigger is usually one verb, which is why most of these files are named after one; when a single verb covers several unrelated tasks (`router call` spans chat, transcription and OCR), the split follows the tasks.
 
 What to leave out of SKILL.md (and references):
 
 - Per-flag descriptions (in `--help`)
 - Error strings or recovery steps already printed by the CLI
-- Source-path citations like `cli/cmd/ctl/files/path.go` — agents don't review Go source
+- Source-path citations like `cli/cmd/ctl/files/path.go` — agents don't review Go source. Ground the claim in the implementation, then leave the path in the commit message; `validate.py` refuses any Go path in any file of the suite, whatever tree it names
 - Internal package walkthroughs / "Source layout" sections
 - "What's NOT here yet" / future-work sections — keep skills focused on current capability
 
-Target sizes: SKILL.md ≤ 250 lines (≤ 300 for the most complex command tree). Each reference: ≤ 150 lines.
+Per-file ceilings: SKILL.md ≤ 250 lines, each reference ≤ 150. `validate.py` enforces both, with no exception for a complex tree — a 300-line front door is over the whole read-path budget on its own, before it has linked anything. These are ceilings, not the budget; the budget is below.
 
-**Reference depth (one level deep):** every reference must be linked **directly from its own `SKILL.md`**, so no file is reachable only by going through another one. A concept buried two hops down is unreliable. A pointer between two references of the *same* skill is fine and often needed — both ends are already one hop from the front door, so it is a lateral cross-reference, not a second hop. What is not fine is deep-linking **another skill's** reference: that lands the agent inside a file whose own prerequisites it has not read (see the peer-skill rule below). Keep each reference short enough to be read whole (≤ 150 lines); when one outgrows that, split it into sibling references rather than adding an in-file table of contents — the `##` headings already are the structure, so a TOC just duplicates them and spends the line budget.
+## The budget is a task path, not a file
+
+Every rule above constrains one file, and every one of them is satisfiable while the thing an agent actually pays for gets worse. What it pays for is the **read path**: the shared front door, plus the domain `SKILL.md`, plus the references this task triggers — everything it must read before it can issue its first correct command. Files are what we write; paths are what get read.
+
+**First-command budget: ≤ 250 lines on the read path.** Measured from the shared front door to the first command the agent can correctly issue, for the skill's most common tasks. When adding a skill or reworking one, list two or three of its common tasks and their path line counts, and put those numbers in the PR description. A skill can pass every per-file check and still cost 500 lines to enter; only the path number says so.
+
+Give the common paths a name in the skill, so the agent does not have to reconstruct one by reading everything: a short `## Fast paths` block naming a task, the files it needs, and the command it ends at. `validate.py` requires the block, totals what each row links, and holds every row to the budget.
+
+A diagnosis skill writes `## Symptom routing` instead, and `validate.py` accepts either name — but only one of them per skill. The two are the same table under different first columns: a symptom is what the user reported, a task is what the agent means to do next, and for `olares-doctor` those are the same list. Writing both is how it ended up routing five symptoms twice, with the second table a symptom short.
+
+**Split on triggers, not on line count.** A reference serves one trigger. If a file answers two questions an agent would never ask on the same task — `call chat` and `call transcribe`, `install` and `uninstall` — split it, even at 40 lines. The 150-line ceiling is the point past which a file is certainly too big; it was never the point at which a file *becomes* worth splitting, and treating it that way produces the failure it was meant to prevent: an author at 150 lines compresses five triggers into one file instead of writing five files, and every agent then reads all five triggers to serve one.
+
+**Reference depth (one level deep):** every reference must be linked **directly from its own `SKILL.md`**, so no file is reachable only by going through another one. A concept buried two hops down is unreliable. A pointer between two references of the *same* skill is fine and often needed — both ends are already one hop from the front door, so it is a lateral cross-reference, not a second hop. What is not fine is deep-linking **another skill's** reference: that lands the agent inside a file whose own prerequisites it has not read (see the peer-skill rule below). Do not add an in-file table of contents — the `##` headings already are the structure, so a TOC just duplicates them and spends the line budget.
+
+**Point at a section with a link, never with its name in prose.** `(especially "OpType vs State")` is a reference no tool can resolve and no rename updates, and both of the ones this suite had were pointing at headings that no longer existed. Write `[App lifecycle / state machine](../SKILL.md#app-lifecycle--state-machine)`; `validate.py` resolves anchors and will fail the next rename. It rejects the prose form outright.
 
 These rules apply to **every** skill, including `olares-chart` — even though it is a local-only chart-authoring skill (no live profile / login) rather than a CLI-driving one, it still avoids Go source-path citations and keeps each reference ≤ 150 lines.
 
@@ -110,7 +129,7 @@ Facts used by **≥2 skills** are defined **once** and linked, never copied. Thi
 - **Anything that needs a *peer* skill links that skill's `SKILL.md` and names the section — references and `SKILL.md`s alike.** The rule above says how to reach the shared platform model — name it, because every runtime `SKILL.md` already loads it. A sibling skill is nobody's prerequisite, so naming alone leaves it unfindable; link one hop up instead (`](../../olares-settings/SKILL.md)`, then "under `apps` → **`domain set` — RMW semantics + cert/key handling**") and let that skill's verb index make the last hop. Deep-linking its reference lands the agent on a file whose own first line demands two files it has not read, and skips the auth gate and verb floors its front door carries. `olares-shared`'s references are the single exception, and only from a `SKILL.md`: the rule above requires that link.
 - **Self-containment is traded for a suite contract.** Strictly, Skills are self-contained and "cannot reference files in other skill folders". We deliberately cross-link because these skills **ship and install as one suite** (stated under Layout). A standalone install leaves cross-skill links dangling — that is the documented trade-off, not an accident.
 - **When a fact is genuinely two skills' own angle, let each keep its own framing.** `files` describes the storage areas as *addressing* (`drive/Home`), `chart` as *mounting* (`.Values.userspace.appData`). That is not duplication to dedupe — only the underlying platform facts (backends, durability, uid, version gates) are centralized in `olares-platform.md`.
-- **Routing has one source of truth too: the Skill suite map** in [`olares-shared/SKILL.md`](olares-shared/SKILL.md). The canonical intent->skill scope for the whole suite lives there once. The target state after the suite-wide cleanup is that runtime skills no longer repeat an “anything outside this scope” pointer: the thin shared front door is already in context. Their `## When to use` only names the closest ambiguous boundaries.
+- **Routing has one source of truth too: the Skill suite map** in [`olares-shared/references/olares-suite-map.md`](olares-shared/references/olares-suite-map.md). The canonical intent->skill scope for the whole suite lives there once. It sits one hop off the front door rather than inside it because routing and running are different moments: by the time a domain skill loads the shared prerequisite, the routing decision has already been made, and the map is thirty lines the task will not use again. The target state after the suite-wide cleanup is that runtime skills no longer repeat an “anything outside this scope” pointer: the thin shared front door is already in context. Their `## When to use` only names the closest ambiguous boundaries.
 
 ## Runtime requirement
 
@@ -127,78 +146,30 @@ metadata:
 
 `description` must stay ≤ 1024 characters (OpenCode limit). Put detailed trigger phrases in the skill body's `## When to use` section.
 
-ClawHub does **not** install the `olares-cli` binary for you — it is part of every Olares device, so the `bins:` line just gates the skill behind "you must be on a host that has olares-cli on PATH". The binary itself ships through Olares' regular release channels (see [`cli/.goreleaser.yaml`](../.goreleaser.yaml) and [`.github/workflows/release-cli.yaml`](../../.github/workflows/release-cli.yaml)).
+Nothing installs the `olares-cli` binary on the strength of that line — it is advisory, so an agent can warn rather than guess. The binary ships through Olares' regular release channels (see [`cli/.goreleaser.yaml`](../.goreleaser.yaml) and [`.github/workflows/release-cli.yaml`](../../.github/workflows/release-cli.yaml)).
 
-## Publishing to ClawHub
+## Validating
 
-### Prerequisites
-
-1. Account on [clawhub.ai](https://clawhub.ai/) with a linked GitHub account that is at least 1 week old (ClawHub anti-abuse policy).
-2. **Node.js 22+** (or 20.10+ with `--experimental-import-attributes`). One of `clawhub`'s transitive deps uses ES2025 import attributes (`import x from '...' with { type: 'json' }`); older Node prints `SyntaxError: Unexpected token 'with'` on every command.
-3. `clawhub` CLI installed: `npm i -g clawhub`.
-4. Either an interactive `clawhub login` session, or a non-interactive token exported as `CLAWHUB_TOKEN`.
-5. Python dependencies for repository validation: `python3 -m pip install -r cli/skills/requirements.txt`.
-
-### Local validation (no network)
-
-`clawhub skill publish` does not have a `--dry-run` flag. The `--dry-run` mode here is a **local-only** sanity check: parses each `SKILL.md` frontmatter, verifies that `name` matches the folder slug, that `version` names an `olares-cli` release (`x.y.z-cli.n`), that `description` is ≤ 1024 characters, and that `metadata.openclaw.requires.bins` includes `olares-cli`. It then prints the `clawhub skill publish` command that would actually run.
+The suite ships compiled into the `olares-cli` binary, so there is no publish step — a release of the CLI is a release of the skills. What there is instead is validation, run on every pull request by [`skills-ci.yml`](../../.github/workflows/skills-ci.yml):
 
 ```bash
+python3 -m pip install -r cli/skills/requirements.txt
 python3 -m unittest cli/skills/test_validate.py
 python3 cli/skills/validate.py
-./cli/skills/publish.sh --dry-run                  # validate all 12
-./cli/skills/publish.sh --dry-run olares-shared    # validate one
 ```
 
-### Server-side preview (optional)
+`validate.py` checks the frontmatter (name matches the folder slug, `version` names an `olares-cli` release `x.y.z-cli.n`, `description` is within its 1024-character limit, `metadata.openclaw.requires.bins` is exactly `[olares-cli]`) and the writing rules that can be checked mechanically: link and anchor targets resolve, per-file ceilings hold, no reference deep-links a peer skill, no section is named in prose instead of linked, no verb-index row points only at `--help`, and every skill declares its read paths in one `## Fast paths` (or `## Symptom routing`) block that stays inside the first-command budget. It also refuses a suite whose 12 skills do not all carry one version.
 
-For a real "what would the registry do" preview — including remote slug/version conflict checks — use the `sync` subcommand. It enumerates the directory, validates against the live registry schema, and reports new vs. updated skills without uploading:
+### Versions
 
-```bash
-# from the repo root:
-clawhub sync --workdir cli --dry-run
-# or, equivalently:
-( cd cli && clawhub sync --dry-run )
-```
+Versions come from each skill's frontmatter `version:` field, and all 12 carry the same one: the `olares-cli` release they ship in, spelled the way npm spells it (`1.12.7-cli.4`). The suite is compiled into that binary, so what a skill documents is that release's command tree; a number of its own would be a second thing to bump and a second thing to get wrong.
 
-**WARNING**: `clawhub sync` resolves its scan root as `<workdir>/skills` (default workdir = current directory). If that path doesn't exist it silently falls back to the OpenClaw workspace at `~/.openclaw/skills` (or `D:\openclaw\skills` on Windows), which usually contains community skills installed by OpenClaw itself. Always pass `--workdir cli` (or `cd cli` first) so it scans `cli/skills/` here — otherwise a real (non-dry-run) `sync` would re-upload third-party skills under **your** account.
+**Do not edit `version:` by hand.** What is committed is the placeholder `0.0.0-cli.0`, and the release job writes the real one with [`stamp.py`](stamp.py) immediately before compiling — `1.12.7-cli.4` on the npm channel, `1.12.7-cli.0` for an OS-line build. It was a hand edit in the release PR until the failure mode became clear: forgetting it shipped new instructions under the label a user already had installed, so nothing anywhere said their copy was behind.
 
-Note: `clawhub sync` defaults to bumping the patch version on updates. For deterministic releases driven by the `version:` field in each `SKILL.md`, prefer the `publish.sh` (no `--dry-run`) path for actual uploads.
+## Names
 
-### Publish
+The 12 skills use these canonical short names, which are what an agent loads them by:
 
-```bash
-./cli/skills/publish.sh                            # publish all 12
-./cli/skills/publish.sh olares-files olares-market # publish a subset
-```
+`olares-shared`, `olares-files`, `olares-knowledge`, `olares-search`, `olares-market`, `olares-settings`, `olares-dashboard`, `olares-cluster`, `olares-doctor`, `olares-router`, `olares-chart`, `olares-publish`.
 
-Versions come from each skill's frontmatter `version:` field, and all 12 carry the same one: the `olares-cli` release they ship in, spelled the way npm spells it (`1.12.7-cli.4`). The suite is compiled into that binary, so what a skill documents is that release's command tree; a number of its own would be a second thing to bump and a second thing to get wrong. `validate.py` rejects any other shape and rejects the 12 disagreeing — but it is not what puts the number there.
-
-**Do not edit `version:` by hand.** What is committed is the placeholder `0.0.0-cli.0`, and the release job writes the real one with [`stamp.py`](stamp.py) immediately before compiling — `1.12.7-cli.4` on the npm channel, `1.12.7-cli.0` for an OS-line build. It was a hand edit in the release PR until the failure mode became clear: forgetting it shipped new instructions under the label a user already had installed, so nothing anywhere said their copy was behind. `publish.sh` refuses the placeholder, so publishing to ClawHub means stamping first:
-
-```bash
-python3 cli/skills/stamp.py 1.12.7-cli.4   # then publish, then discard the edit
-```
-
-Slugs and display names are baked into [`publish.sh`](publish.sh).
-
-## Slug policy
-
-The 12 skills publish under their canonical short names:
-
-| Slug              | Display name                                |
-|-------------------|---------------------------------------------|
-| `olares-shared`   | Olares Shared (olares-cli foundation)       |
-| `olares-files`    | Olares Files (olares-cli files)             |
-| `olares-knowledge`| Olares Knowledge (olares-cli knowledge)     |
-| `olares-search`   | Olares Search (olares-cli search)           |
-| `olares-market`   | Olares Market (olares-cli market)           |
-| `olares-settings` | Olares Settings (olares-cli settings)       |
-| `olares-dashboard`| Olares Dashboard (olares-cli dashboard)     |
-| `olares-cluster`  | Olares Cluster (olares-cli cluster)         |
-| `olares-doctor`   | Olares Doctor (runtime diagnosis)           |
-| `olares-router`   | Olares Router (Router and model applications)|
-| `olares-chart`    | Olares Chart (olares-cli chart)             |
-| `olares-publish`  | Olares Publish (Olares Market distribution) |
-
-If a slug is ever taken on ClawHub, fall back to the `olares-cli-` prefix (e.g. `olares-cli-shared`) and update **all** cross-references to `../olares-shared/SKILL.md` inside the runtime skills accordingly.
+Renaming one means updating **all** cross-references to it — `../olares-shared/SKILL.md` and the like — inside the other skills.

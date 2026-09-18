@@ -66,12 +66,12 @@ func TestAnEmptyGroupingIsRefused(t *testing.T) {
 // The totals belong to the whole answer, not to any one table, so they are
 // printed once however many groupings were asked for.
 func TestTheTotalsAreStatedOnceAcrossGroupings(t *testing.T) {
-	multi := &spendMultiSummary{
+	multi := &spendMultiSummary{spendTotals: spendTotals{
 		TotalRequests:        10,
 		TotalSuccessRequests: 8,
 		TotalCostUSD:         1.5,
 		TotalTokens:          400,
-	}
+	}}
 	multi.Dims = map[string]struct {
 		Items     []spendSummaryRow `json:"items"`
 		Truncated bool              `json:"truncated"`
@@ -97,7 +97,7 @@ func TestTheTotalsAreStatedOnceAcrossGroupings(t *testing.T) {
 // A grouping that was asked for and not answered is said out loud: an empty
 // table would read as "no calls were grouped this way".
 func TestAGroupingRouterDidNotAnswerIsNamed(t *testing.T) {
-	multi := &spendMultiSummary{TotalRequests: 3, TotalSuccessRequests: 3}
+	multi := &spendMultiSummary{spendTotals: spendTotals{TotalRequests: 3, TotalSuccessRequests: 3}}
 	multi.Dims = map[string]struct {
 		Items     []spendSummaryRow `json:"items"`
 		Truncated bool              `json:"truncated"`

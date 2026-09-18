@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/beclab/Olares/cli/cmd/ctl/settings/internal/preflight"
+	"github.com/beclab/Olares/cli/pkg/bflenvelope"
 	"github.com/beclab/Olares/cli/pkg/cliutil"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 	"github.com/beclab/Olares/cli/pkg/whoami"
@@ -229,7 +230,7 @@ type aclAllRow struct {
 // All three resolve to the same map[string][]AclInfo so callers and
 // tests can stay shape-agnostic.
 func getAllACLViaDoer(ctx context.Context, d Doer) (map[string][]AclInfo, error) {
-	var env bflEnvelope
+	var env bflenvelope.Envelope
 	if err := d.DoJSON(ctx, "GET", "/api/acl/all", nil, &env); err != nil {
 		return nil, err
 	}
@@ -420,7 +421,7 @@ func runACLGet(ctx context.Context, f *cmdutil.Factory, app, outputRaw string) e
 // envelope back.
 func getAppACLViaDoer(ctx context.Context, d Doer, app string) ([]AclInfo, error) {
 	path := "/api/acl/app/status?name=" + url.QueryEscape(app)
-	var env bflEnvelope
+	var env bflenvelope.Envelope
 	if err := d.DoJSON(ctx, "GET", path, nil, &env); err != nil {
 		return nil, err
 	}

@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+
+	"github.com/beclab/Olares/cli/pkg/bflenvelope"
 )
 
 func TestDecodeSSHStatus(t *testing.T) {
@@ -136,7 +138,7 @@ func TestEnvelopeLooksWrapped(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			var env bflEnvelope
+			var env bflenvelope.Envelope
 			_ = json.Unmarshal([]byte(c.body), &env)
 			got := envelopeLooksWrapped([]byte(c.body), env)
 			if got != c.want {

@@ -48,6 +48,14 @@ func TestParseNodeIntelRegister(t *testing.T) {
 			want: []IntelGPUEntry{{Kind: "igpu", Card: "card0", Driver: "xe", Name: "Intel Graphics", Architecture: "Xe", Codename: "Tiger Lake", Mem: 0}},
 		},
 		{
+			name: "amd discrete gpu",
+			in:   "dgpu,card1,amdgpu,AMD Radeon AI PRO R9700,GC_12_0_0,7551,34208743424",
+			want: []IntelGPUEntry{{
+				Kind: "dgpu", Card: "card1", Driver: "amdgpu",
+				Name: "AMD Radeon AI PRO R9700", Architecture: "GC_12_0_0", Codename: "7551", Mem: 34208743424,
+			}},
+		},
+		{
 			name:    "wrong field count",
 			in:      "igpu,card0,i915",
 			wantErr: true,
@@ -59,7 +67,7 @@ func TestParseNodeIntelRegister(t *testing.T) {
 		},
 		{
 			name:    "unknown driver",
-			in:      "igpu,card0,amdgpu,name,arch,code,0",
+			in:      "igpu,card0,nouveau,name,arch,code,0",
 			wantErr: true,
 		},
 		{
@@ -110,5 +118,23 @@ func TestIntelRegisterFromNode(t *testing.T) {
 	got, err = IntelRegisterFromNode(empty)
 	if err != nil || got != nil {
 		t.Errorf("IntelRegisterFromNode(no annotation) = (%+v, %v), want (nil, nil)", got, err)
+	}
+}
+
+func TestAmdRegisterFromNode(t *testing.T) {
+	node := &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        "n0",
+			Annotations: map[string]string{constants.NodeAmdRegisterKey: "dgpu,card1,amdgpu,AMD Radeon AI PRO R9700,GC_12_0_0,7551,34208743424"},
+		},
+	}
+
+	got, err := AmdRegisterFromNode(node)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	want := []IntelGPUEntry{{Kind: "dgpu", Card: "card1", Driver: "amdgpu", Name: "AMD Radeon AI PRO R9700", Architecture: "GC_12_0_0", Codename: "7551", Mem: 34208743424}}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("AmdRegisterFromNode = %+v, want %+v", got, want)
 	}
 }

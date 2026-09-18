@@ -177,10 +177,22 @@ func callErr(err error) error {
 			"For a person, `olares-cli settings users get <name>` shows their account; for an "+
 			"application, `olares-cli market list --mine` says whether it is still here", err)
 	case re.Code == "no_default_model":
-		return fmt.Errorf("%w\nNothing installed can serve that category. `olares-cli router route list --kind default` "+
-			"says where each one stands, and it fills once a model of that kind exists — a category is "+
-			"maintained against what is configured rather than pointed at by hand. --model names one "+
-			"directly in the meantime", err)
+		// A category is normally reconciled rather than chosen, so the fix is
+		// usually to install something rather than to point it anywhere. The
+		// exception is worth naming: `route pin` is a standing choice, and a
+		// category pinned to a model that was deleted refuses with this same
+		// code while `route list` shows a model beside it.
+		// Router's own message for this says nothing is installed, and that is
+		// not a claim the data plane can make: a model whose application is
+		// stopped is invisible from here and installed all the same. Only the
+		// console plane knows, so this points at the verb that asks it rather
+		// than repeating the absence.
+		return fmt.Errorf("%w\nNothing is answering that category. Whether anything is installed for it is "+
+			"a separate question — `olares-cli router route candidates <category>` names the models that "+
+			"could and says whether one is merely stopped, which `olares-cli market resume <app>` starts. "+
+			"`router route list --kind default` shows where every category stands. On a verb that takes "+
+			"--model, naming one goes directly in the meantime; if the category was pinned, "+
+			"`router route unpin <category>` hands it back to Router", err)
 	case re.Code == "model_route_disabled":
 		return fmt.Errorf("%w\nThe name resolves, but the route serving it is switched off. "+
 			"`olares-cli router route get <name>` shows it, and `route enable <name>` puts it back", err)
@@ -194,17 +206,37 @@ func callErr(err error) error {
 			"qualified names", err)
 	case re.Code == "model_at_capacity":
 		// Not a quota: nobody set this number and no admin can raise it. The
-		// engine was launched to serve so many requests at once and is serving
-		// them, so the answer is to wait rather than to change a setting —
-		// which is why it comes back 503 with a Retry-After and not the 429 a
+		// engine was launched to serve so many requests at once, and Router
+		// now holds a caller in a soft queue while they are all busy — ten
+		// seconds for an interactive call, a minute for a generation. So this
+		// code no longer means "full", it means "still full after the wait",
+		// which is why the answer is to try again rather than to change a
+		// setting, and why it is a 503 with a Retry-After and not the 429 a
 		// budget produces.
-		return fmt.Errorf("%w\nThe model is already serving every request it was launched to handle, so "+
-			"this one was refused rather than queued behind them.%s `olares-cli router provider get "+
-			"<provider>` shows how wide the engine is and how deep its queue was when Router last "+
-			"looked", err, retryAdvice(re.RetryAfter))
+		return fmt.Errorf("%w\nRouter waited for a slot and the model was still serving every request "+
+			"it was launched to handle, so this one was refused rather than held any longer.%s "+
+			"`olares-cli router provider get <provider>` shows how wide the engine is and how deep "+
+			"its queue was when Router last looked", err, retryAdvice(re.RetryAfter))
+	case re.Code == "kv_budget_exhausted":
+		// The engine's own door, not Router's. A slot was free — otherwise
+		// this would have been model_at_capacity — and the KV cache behind all
+		// the slots was not: in unified mode they share one pool that cannot
+		// hold a full window each, so a long prompt is refused while the
+		// engine is answering short ones. It has to stay ahead of the 5xx
+		// branch below, which would read this as an application that is not
+		// serving, and it is the one refusal here that a shorter prompt fixes.
+		return fmt.Errorf("%w\nThe model's KV cache is fully reserved. The engine is serving, not "+
+			"broken: its slots share one pool, and this prompt did not fit in what was left of it.%s "+
+			"Router already tried the other members of the route, so a shorter prompt, fewer "+
+			"concurrent calls, or waiting is what gets through. `olares-cli router model get <model>` "+
+			"shows the pool against the window and the width", err, retryAdvice(re.RetryAfter))
 	case re.Code == "model_not_ready":
 		return fmt.Errorf("%w\nThe model is still coming up.%s `olares-cli router model status <model>` "+
 			"follows the phase it is in", err, retryAdvice(re.RetryAfter))
+	case mediaAdvice(re) != "":
+		// Before the two suffix matches below, which would otherwise answer a
+		// media family's "unsupported for provider" with audio's advice.
+		return fmt.Errorf("%w\n%s", err, mediaAdvice(re))
 	case re.Type == "quota_exceeded_error":
 		return fmt.Errorf("%w\n`olares-cli router quota list` shows the limits, and `router usage summary` "+
 			"what has been spent against them", err)
@@ -218,11 +250,27 @@ func callErr(err error) error {
 		return fmt.Errorf("%w\nThe model is configured for a different kind of work than this verb asks "+
 			"for. `olares-cli router model list` shows each model's mode, and a route can only serve the mode "+
 			"it was created with", err)
+	case re.Code == "audio_operation_not_supported":
+		// The model's application declared the routes it serves and this is
+		// not one of them, so Router refused rather than forwarding. That is
+		// the useful half: an engine that was merely forwarded to answers a
+		// bare 404, which reads the same whether the route is absent, the URL
+		// is wrong or the engine is the wrong one. Here the catalogue is the
+		// record, and it can be read.
+		return fmt.Errorf("%w\nThis model declares the routes it serves and this operation is not among "+
+			"them, so nothing was sent to the engine. `olares-cli router call models --operations` "+
+			"prints what each model does declare; another model of the same mode may serve it, and "+
+			"leaving --model off lets Router pick one that does", err)
 	case strings.HasSuffix(re.Code, "_unsupported_for_provider") || re.Code == "audio_path_unsupported":
 		return fmt.Errorf("%w\nThis model's provider does not serve that route at all. For a model "+
 			"running on this Olares that usually means a different engine image does this job: "+
 			"`olares-cli router model list --mode audio` and `router provider get <provider>` show which "+
 			"capability each one declares", err)
+	case re.Code == "" && re.Type == "" && namesFormatChoices(re.Body):
+		// An engine refusing --response-format, forwarded with no envelope of
+		// Router's own. The flag help invited this for as long as it named bare
+		// containers, and the refusal arrived with nothing added to it.
+		return hintFormatRefusal(err)
 	case re.Code == "capability_not_supported" || re.Code == "stream_unsupported_for_model":
 		return fmt.Errorf("%w\n`olares-cli router provider get <provider>` lists what the model supports", err)
 	case re.Status == 404 && re.Code == "" && re.Type == "":
@@ -239,6 +287,12 @@ func callErr(err error) error {
 			"that usually means the application is not serving yet: `olares-cli router provider get <provider>` "+
 			"shows its Olares status, and a degraded one is a matter for `olares-cli market` rather than "+
 			"anything here", err)
+	case strings.HasPrefix(re.Code, "media_") || strings.HasPrefix(re.Code, "image_generation_async_"):
+		// A media code this build has no sentence for. Naming it as one is
+		// better than the two status branches above claiming the provider
+		// never answered, which for a refusal made before dispatch is untrue.
+		return fmt.Errorf("%w\nRouter refused this before it reached the provider. `olares-cli router "+
+			"model get <model>` shows what the model declares", err)
 	case re.Status == 401 || re.Status == 403:
 		// Last resort, and it has to stay last: Router refuses with these two
 		// statuses as well, and every refusal of its own is named above. A
@@ -250,4 +304,108 @@ func callErr(err error) error {
 			"the upstream, and `router provider update` replaces it", err)
 	}
 	return err
+}
+
+// mediaAdvice is what a refused creative request needs next, or "" for a code
+// that is not one of theirs.
+//
+// The four field codes are the whole point of the canonical contract, and they
+// are worth keeping apart. A field Router has no name for, a field that belongs
+// to another family, two fields describing the same thing, and a value outside
+// its domain are four different things to change; before the contract they were
+// one thing — forwarded to a provider that ignored them, and billed.
+//
+// Nothing here restates which field was refused. Router words these in the
+// caller's own spelling — a request on a released route is told
+// `reference_images` rather than `inputs.images` — and repeating it in
+// canonical names would take that back.
+func mediaAdvice(re *RouterError) string {
+	switch re.Code {
+	case "media_field_unknown":
+		return "Router parses a creative body strictly, so a field it has no name for is refused " +
+			"rather than passed on and charged for. A vendor's own parameter belongs in " +
+			"`--provider-option key=value`, which is forwarded untouched; anything else is a misspelling."
+	case "media_field_not_allowed":
+		return "The field is real and belongs to another family: a duration describes a video or a " +
+			"track, a polygon budget a mesh. Each verb offers only its own family's fields, so this " +
+			"usually means one arrived through --provider-option."
+	case "media_field_conflict":
+		return "Two fields describe the same thing and Router will not guess which was meant. " +
+			"--size against --aspect-ratio or --resolution is the usual pair: ask in pixels or in a shape."
+	case "media_field_invalid":
+		return "The field is right and the value is outside what it accepts. --size is <width>x<height> " +
+			"and --aspect-ratio is <w>:<h>; a provider's own vocabulary, \"2K\" or \"auto\", goes through " +
+			"--provider-option."
+	case "media_input_unsupported":
+		return "The request is well formed and this model has no parameter for what it names. Router " +
+			"refuses instead of dropping the field and billing for the rest, which is what used to " +
+			"happen. `olares-cli router model get <model>` lists what it declares; without that field " +
+			"the request runs as it stands."
+	case "media_input_required":
+		return "The operation works from something, and nothing was given. --image, --audio and " +
+			"--source-generation are the three ways to name it, and which one applies follows from " +
+			"the operation."
+	case "media_prompt_required":
+		return "This family is asked in words. Only a mesh can be asked for with a picture alone."
+	case "media_input_invalid":
+		return "The input reached Router and could not be read as an image or a recording. A file on " +
+			"this machine is encoded before it is sent, so this is usually a link that answers with " +
+			"something other than the media it names."
+	case "media_input_too_large":
+		return "One of the inputs is over the cap on a single reference. A file on this machine is " +
+			"encoded into the request, which makes it about a third larger than on disk; a link the " +
+			"provider can fetch is passed through as written and costs nothing here."
+	case "media_payload_too_large":
+		return "The request as a whole is over the cap, which is usually several encoded inputs rather " +
+			"than one large one. Passing them as links instead leaves the body small."
+	case "media_operation_invalid":
+		return "That is not an operation this family has. Video is the only one with more than " +
+			"generate, which is why --operation is video's alone."
+	case "media_operation_not_declared", "video_operation_not_declared", "image_operation_not_declared":
+		return "The operation exists and this model does not offer it. `olares-cli router model get " +
+			"<model>` lists the ones it declares, and another model of the same mode may serve it."
+	case "media_generation_unsupported_for_provider", "image_generation_unsupported_for_provider",
+		"video_generation_unsupported_for_provider":
+		return "This model's provider does not serve this kind of generation at all. `olares-cli router " +
+			"model list --mode <mode>` shows which models do, and for a model running on this Olares " +
+			"the mode follows from the application that was installed."
+	case "media_mode_unsupported":
+		return "The model resolves and is not a creative model: this verb creates a generation, and " +
+			"only image, video, music and 3D models produce one. `olares-cli router model list` shows " +
+			"each model's mode."
+	case "media_model_required":
+		return "This route resolves no default, so the model has to be named. `olares-cli router model " +
+			"list --mode <mode>` shows the names this credential can send."
+	case "media_output_not_found":
+		return "--output-id names an output that is not this generation's. The ids are printed once a " +
+			"generation has more than one, and leaving the flag off writes the first."
+	case "media_generation_not_found":
+		return "A generation belongs to the credential that created it and expires on its own, so an id " +
+			"that used to work is either past its expiry or being collected with another key. " +
+			"--no-wait prints the expiry when the work is submitted."
+	case "media_content_unavailable":
+		return "The generation exists and its bytes do not: it has not finished, or the provider " +
+			"binding it was created against has moved. Collecting it again with --id reports which."
+	case "image_generation_async_multiple_unsupported":
+		return "A generation is one file behind one content route, so a persisted image is exactly one " +
+			"output. Several pictures are several calls."
+	case "lyrics_alignment_unavailable":
+		return "There is no timeline for this track. Either the generation has not completed — a " +
+			"timeline describes finished audio, so there is nothing to place until then — or the " +
+			"model application that made it does not serve one. Router asks the model that made " +
+			"this track and no other, so retrying against a different model is not an option here."
+	case "lyrics_alignment_invalid":
+		return "The model application answered with something that is not a timeline: out of order, " +
+			"outside the track, or not the shape at all. Router refuses it rather than passing on " +
+			"timings a player would seek to the wrong place with."
+	case "lyrics_alignment_upstream_error":
+		return "The model application that made this track did not answer. It is the only one that " +
+			"can, since the timeline comes from the generation's own provider; `olares-cli router " +
+			"provider get <provider>` says whether the application is still serving."
+	case "image_generation_async_required":
+		return "This provider serves image generation only as a generation to come back for, which is " +
+			"what this verb asks for. Seeing it here means the request reached Router without that " +
+			"preference — an older build of this CLI, or another client."
+	}
+	return ""
 }

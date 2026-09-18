@@ -232,6 +232,41 @@ func TestLint_WorkloadReplicas_OK(t *testing.T) {
 	}
 }
 
+// TestLint_WorkloadScaleToZero_DefaultFilter is the regression this check was
+// written for. The chart's replicas line references
+// workloads.<name>.replicaCount, so the static template scan is satisfied, but
+// `| default 1` discards the platform's scale-to-zero because helm's default
+// treats 0 as empty. Installed, such an app hangs in Stopping until its TTL
+// expires, and nothing in the failure names the chart.
+func TestLint_WorkloadScaleToZero_DefaultFilter(t *testing.T) {
+	err := oac.Lint("testdata/wlrdefault",
+		oac.WithOwnerAdmin("alice"),
+		oac.SkipResourceCheck(),
+	)
+	if err == nil {
+		t.Fatal("expected Lint to fail: `| default 1` discards replicaCount=0")
+	}
+	if !strings.Contains(err.Error(), "spec.replicas") {
+		t.Fatalf("error should name spec.replicas, got: %v", err)
+	}
+}
+
+// TestLint_WorkloadScaleToZero_Absent covers the other shape of the same bug: a
+// template that omits spec.replicas entirely. The static scan has no line to
+// object to, and Kubernetes silently defaults the field to 1.
+func TestLint_WorkloadScaleToZero_Absent(t *testing.T) {
+	err := oac.Lint("testdata/wlrnoreplicas",
+		oac.WithOwnerAdmin("alice"),
+		oac.SkipResourceCheck(),
+	)
+	if err == nil {
+		t.Fatal("expected Lint to fail: the Deployment declares no spec.replicas")
+	}
+	if !strings.Contains(err.Error(), "unset") {
+		t.Fatalf("error should say the field is unset, got: %v", err)
+	}
+}
+
 // TestLint_OverlayGatewayWorkloadMissing confirms the rendered check fires
 // through Lint when an overlayGateway entrance references a workload that no
 // rendered Deployment/StatefulSet provides.

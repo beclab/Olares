@@ -1228,6 +1228,13 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       serviceAccountName: linkerd-destination
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-role.kubernetes.io/control-plane
+                    operator: Exists
       volumes:
       - name: sp-tls
         secret:
@@ -1573,6 +1580,13 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       serviceAccountName: linkerd-identity
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-role.kubernetes.io/control-plane
+                    operator: Exists
       volumes:
       - name: identity-issuer
         secret:
@@ -1921,6 +1935,13 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       serviceAccountName: linkerd-proxy-injector
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-role.kubernetes.io/control-plane
+                    operator: Exists
       volumes:
       - configMap:
           name: linkerd-config

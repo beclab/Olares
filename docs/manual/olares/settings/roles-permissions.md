@@ -1,40 +1,39 @@
 ---
-description: Understand Olares team roles and permissions. Learn about administrator responsibilities, user access levels, and effective team management structures.
+outline: [2, 3]
+description: Compare the permissions of Member, Admin, and Super Admin roles in an Olares cluster.
 head:
   - - meta
     - name: keywords
-      content: Olares, Settings, user roles, permissions, Super Admin, Admin, Member
+      content: Olares, roles, permissions, Super Admin, Admin, Member, team access
 ---
-# User roles and permissions
 
-Olares supports multi-user operations, allowing multiple users to access the system simultaneously. Each user can securely access resources based on their assigned role and permissions.
+# Roles and permissions
+
+Olares uses three built-in roles to control who can manage the cluster, shared resources, and team members. Use this reference before assigning a role or asking an administrator to perform an action.
 
 ## Role types
-Olares has two default user roles:
 
-- **Super Admin**: The first user to activate and log into Olares. Has full, unrestricted control of the system and can create other Admin and Member accounts.
-- **Admin**: Created by the Super Admin. Has nearly the same system management permissions as the Super Admin. **Can only create and manage Members**, not other Admin accounts.
-- **Member**: Standard users created by Super Admin or Admin, with limited system resources and access permissions.
+- **Super Admin**: The first user who activates Olares. A Super Admin has full system control and can create or manage Admin and Member accounts.
+- **Admin**: An administrator created by a Super Admin. An Admin can manage the system and Member accounts, but cannot create, manage, or delete another Admin.
+- **Member**: A regular user created by a Super Admin or Admin. A Member can use personal and permitted shared resources, but cannot perform cluster-wide administrative tasks.
 
-This structure ensures organizations can scale Olares management securely, with multiple Admins sharing responsibility while the Super Admin retains ultimate authority.
+## Permission matrix
 
-## Role permissions
-
-| Permission Area | Member | Admin | Super Admin |
-|-----------------|--------|-------|-------------|
-| Use system apps (Files, Vault, Wise, Profile, Dashboard, Control Hub) | ✅ | ✅ | ✅ |
-| Enable VPN for private entrances | ✅ | ✅ | ✅ |
-| Connect to Olares Space | ✅ | ✅ | ✅ |
-| Customize app entrances | ✅ | ✅ | ✅ |
+| Permission | Member | Admin | Super Admin |
+|---|:---:|:---:|:---:|
+| Use system apps | ✅ | ✅ | ✅ |
+| Use LarePass VPN for private access | ✅ | ✅ | ✅ |
+| Connect an Olares Space account | ✅ | ✅ | ✅ |
+| Customize personal app entrances | ✅ | ✅ | ✅ |
 | Install regular apps from Market | ✅ | ✅ | ✅ |
-| Access shared vaults with assigned permissions | ✅ | ✅ | ✅ |
+| Access shared Vault items when permission is granted | ✅ | ✅ | ✅ |
 | View basic system status in Control Hub | ✅ | ✅ | ✅ |
-| Manage Vault teams & shared vaults | ❌ | ✅ | ✅ |
-| Install and manage shared apps | ❌ | ✅ | ✅ |
+| Manage Vault teams and shared Vaults | ❌ | ✅ | ✅ |
+| Install and manage shared applications | ❌ | ✅ | ✅ |
 | Monitor and manage system resources | ❌ | ✅ | ✅ |
-| Set GPU usage modes | ❌ | ✅ | ✅ |
-| Update Olares versions | ❌ | ✅ | ✅ |
+| Configure accelerator usage modes | ❌ | ✅ | ✅ |
+| Update Olares | ❌ | ✅ | ✅ |
 | Create, edit, and delete Members | ❌ | ✅ | ✅ |
-| Create, edit, and delete Admins | ❌ |❌| ✅ |
+| Create, edit, and delete Admins | ❌ | ❌ | ✅ |
 
-
+For steps to add a user, change resource limits, reset a member password, or remove a user, see [Create and manage team members](manage-team.md).

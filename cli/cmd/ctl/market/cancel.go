@@ -97,6 +97,7 @@ Examples:
 	}
 	opts.addSourceFlag(cmd, "market source id (1.12.6+ when state row is absent)")
 	opts.addOutputFlags(cmd)
+	describeLifecycleJSON(cmd)
 	opts.addWatchFlags(cmd)
 	return cmd
 }

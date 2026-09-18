@@ -57,7 +57,7 @@ import (
 // refusal names its own list, which is the one that is right.
 var providerModelModes = []string{
 	"chat", "embedding", "rerank", "moderation",
-	"audio", "translate", "image_generation", "responses", "ocr",
+	"audio", "tts", "translate", "image_generation", "responses", "ocr",
 	"search", "scrape", "video_generation",
 	"music_generation", "model3d_generation",
 }

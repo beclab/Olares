@@ -1,0 +1,16 @@
+[Unit]
+Description=Force Thunderbolt-attached NVIDIA GPU PCIe link to Gen1 (generic; cold-boot + hotplug)
+# NOTE: do NOT add After=multi-user.target -- combined with Before=nvidia-persistenced +
+# WantedBy=multi-user.target it forms an ordering cycle. When systemd breaks the cycle it may
+# delete this very service, so on cold boot nvidia would init the eGPU at Gen4 and hang.
+After=bolt.service
+Before=nvidia-persistenced.service nvidia-powerd.service
+
+[Service]
+Type=oneshot
+# No RemainAfterExit: so every udev trigger (hotplug) can run it again;
+# the script has flock serialization + idempotent skip.
+ExecStart=/usr/local/sbin/fix-egpu-link.sh
+
+[Install]
+WantedBy=multi-user.target

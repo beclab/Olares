@@ -123,6 +123,13 @@ spec:
               - key: files.conf
                 path: files.conf
 
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-role.kubernetes.io/control-plane
+                    operator: Exists
       dnsPolicy: ClusterFirst
       priorityClassName: system-cluster-critical
       restartPolicy: Always

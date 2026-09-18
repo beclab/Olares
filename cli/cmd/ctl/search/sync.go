@@ -29,7 +29,8 @@ On Olares 1.12.7 and newer this uses the same asynchronous federated
 search channel as search drive, restricted to the seafile source.
 Olares 1.12.6 and older keep using /api/search/sync.
 
---offset/--limit are applied client-side on both paths.
+--offset/--limit are applied client-side on both paths. The asynchronous
+search prints every hit by default; the legacy path keeps one 20-result page.
 
 Examples:
   olares-cli search sync notes
@@ -46,7 +47,7 @@ Examples:
 		},
 	}
 	cmd.SilenceUsage = true
-	registerPagingFlags(cmd, &o.pagingOptions)
+	registerPagingFlags(cmd, &o.pagingOptions, 0)
 	return cmd
 }
 
@@ -64,11 +65,11 @@ func runSyncSearch(ctx context.Context, f *cmdutil.Factory, keyword string, o *s
 		return err
 	}
 	if useAsync {
-		items, err := runAsyncSearch(ctx, f, keyword, syncSearchSources, searchTypeAggregate, &o.pagingOptions, nil)
+		page, err := runAsyncSearch(ctx, f, keyword, syncSearchSources, searchTypeAggregate, &o.pagingOptions, nil)
 		if err != nil {
 			return err
 		}
-		return printSearchResults(format, items)
+		return printSearchResults(format, page)
 	}
 
 	return runLegacySyncSearch(ctx, f, keyword, o, format)
@@ -90,11 +91,16 @@ func runLegacySyncSearch(ctx context.Context, f *cmdutil.Factory, keyword string
 	if err := doEnvelope(ctx, doer, "POST", "/api/search/sync", body, &rawRows); err != nil {
 		return err
 	}
-	rawRows = paginateRaw(rawRows, o.offset, o.limit)
 
-	items, err := decodeResultRows(rawRows)
+	paging := o.sessionPaging()
+	items, err := decodeResultRows(paginateRaw(rawRows, paging.offset, paging.limit))
 	if err != nil {
 		return err
 	}
-	return printSearchResults(format, items)
+	return printSearchResults(format, searchPage{
+		items:    items,
+		offset:   paging.offset,
+		total:    len(rawRows),
+		windowed: paging.windowed(),
+	})
 }

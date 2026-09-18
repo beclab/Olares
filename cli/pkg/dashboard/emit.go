@@ -9,13 +9,10 @@ import (
 	"github.com/beclab/Olares/cli/pkg/clierr"
 )
 
-// ErrAlreadyReported is the sentinel cmd subpackages return when their
-// RunE has already written a user-visible diagnostic to stderr (for
-// example, the `unknownSubcommandRunE` helper that prints a typo
-// suggestion before returning). The dashboard root's leaf-error wrapper
-// (cmd/ctl/dashboard/root.go::wrapLeafErrors) checks for this with
-// errors.Is and skips the redundant Fprintln, while still propagating
-// the error up so cobra exits non-zero.
+// ErrAlreadyReported is the sentinel returned after a dashboard command has
+// already emitted its envelope or per-iteration error. The dashboard root's
+// leaf-error wrapper skips the redundant Fprintln while still propagating the
+// error so Cobra exits non-zero.
 //
 // It wraps clierr.ErrAlreadyReported so cmd/main.go recognises it and
 // exits without printing the sentinel's own text.

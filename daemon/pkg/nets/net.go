@@ -133,6 +133,14 @@ func LookupHostIps() (addrs []string, err error) {
 		return
 	}
 
+	// Read the explicit selection directly; hostname resolution can still cache
+	// the previous IP after change-host updates /etc/hosts.
+	if addr, e := GetHostIpFromHostsFile(hostname); e == nil {
+		if ip := net.ParseIP(addr); ip != nil && ip.To4() != nil && ip.IsGlobalUnicast() {
+			return []string{ip.To4().String()}, nil
+		}
+	}
+
 	ips, err := net.LookupIP(hostname)
 	if err != nil {
 		klog.Error("get host ip error, ", err, ", ", hostname)

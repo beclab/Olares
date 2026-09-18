@@ -16,6 +16,7 @@ func TestPublishDeclarationModuleUsesProvidedPathsAndSelections(t *testing.T) {
 		InstallerDir:      "/installer",
 		RootDir:           "/olares",
 		ProfileSelections: selections,
+		CatalogPolicy:     OmitCatalogApps,
 	}
 
 	module.Init()
@@ -38,6 +39,11 @@ func TestPublishDeclarationModuleUsesProvidedPathsAndSelections(t *testing.T) {
 	if action.InstallerDir != "/installer" || action.RootDir != "/olares" ||
 		action.ProfileSelections.HardwareProfile != "fixture" {
 		t.Fatalf("action = %#v", action)
+	}
+	// Publish refuses a policy it was not given, so a module that dropped this
+	// one would fail the install rather than declare the wrong list.
+	if action.CatalogPolicy != OmitCatalogApps {
+		t.Fatalf("action catalog policy = %q", action.CatalogPolicy)
 	}
 }
 

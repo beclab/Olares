@@ -1,0 +1,225 @@
+package router
+
+import (
+	"bytes"
+	"encoding/binary"
+	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/spf13/cobra"
+
+	"github.com/beclab/Olares/cli/pkg/cmdutil"
+)
+
+func testWAV(payload []byte) []byte {
+	result := make([]byte, 12+len(payload))
+	copy(result[:4], "RIFF")
+	binary.LittleEndian.PutUint32(result[4:8], uint32(len(result)-8))
+	copy(result[8:12], "WAVE")
+	copy(result[12:], payload)
+	return result
+}
+
+func TestGenerationDownloadResumesAndAtomicallyPublishesWAV(t *testing.T) {
+	raw := testWAV([]byte("generated-audio"))
+	directory := t.TempDir()
+	target := filepath.Join(directory, "song.wav")
+	first := &http.Response{
+		StatusCode:    http.StatusOK,
+		ContentLength: int64(len(raw)),
+		Header:        http.Header{"Content-Type": []string{"audio/wav"}},
+		Body:          io.NopCloser(bytes.NewReader(raw[:10])),
+	}
+	resumes := 0
+	written, err := saveGenerationContent(target, first, func(offset int64) (*http.Response, error) {
+		resumes++
+		if offset != 10 {
+			t.Fatalf("resume offset=%d", offset)
+		}
+		return &http.Response{
+			StatusCode:    http.StatusPartialContent,
+			ContentLength: int64(len(raw)) - offset,
+			Header:        http.Header{"Content-Range": []string{"bytes 10-" + fmt.Sprint(len(raw)-1) + "/" + fmt.Sprint(len(raw))}},
+			Body:          io.NopCloser(bytes.NewReader(raw[offset:])),
+		}, nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := os.ReadFile(target)
+	if err != nil || !bytes.Equal(got, raw) || written != int64(len(raw)) || resumes != 1 {
+		t.Fatalf("written=%d resumes=%d err=%v body=%q", written, resumes, err, got)
+	}
+	matches, err := filepath.Glob(filepath.Join(directory, "*.partial"))
+	if err != nil || len(matches) != 0 {
+		t.Fatalf("partial downloads remain: %v err=%v", matches, err)
+	}
+}
+
+func TestGenerationDownloadRejectsTruncatedWAVWithoutReplacingTarget(t *testing.T) {
+	raw := testWAV([]byte("generated-audio"))
+	directory := t.TempDir()
+	target := filepath.Join(directory, "song.wav")
+	if err := os.WriteFile(target, []byte("previous"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	first := &http.Response{
+		StatusCode:    http.StatusOK,
+		ContentLength: int64(len(raw)),
+		Header:        http.Header{"Content-Type": []string{"audio/wav"}},
+		Body:          io.NopCloser(bytes.NewReader(raw[:10])),
+	}
+	if _, err := saveGenerationContent(target, first, nil); err == nil || !strings.Contains(err.Error(), "truncated") {
+		t.Fatalf("expected truncation error, got %v", err)
+	}
+	got, err := os.ReadFile(target)
+	if err != nil || string(got) != "previous" {
+		t.Fatalf("target was replaced: %q err=%v", got, err)
+	}
+}
+
+func mediaVerb(t *testing.T, name string) *cobra.Command {
+	t.Helper()
+	for _, verb := range NewCallCommand(&cmdutil.Factory{}).Commands() {
+		if verb.Name() == name {
+			return verb
+		}
+	}
+	t.Fatalf("call %s is not registered", name)
+	return nil
+}
+
+// runVerb executes a verb on its own, away from the tree. A command with a
+// parent takes its arguments from the process rather than from SetArgs, which in
+// a test binary means the test runner's own flags.
+//
+// Stdin is emptied for the duration, because a prompt can be piped in: left
+// alone, a verb reading it would take whatever the runner was started with, and
+// the answer would depend on whose terminal the suite is running under.
+func runVerb(t *testing.T, cmd *cobra.Command, args ...string) error {
+	t.Helper()
+	empty, err := os.Open(os.DevNull)
+	if err != nil {
+		t.Fatalf("open %s: %v", os.DevNull, err)
+	}
+	defer func() { _ = empty.Close() }()
+	saved := os.Stdin
+	os.Stdin = empty
+	defer func() { os.Stdin = saved }()
+
+	cmd.SetArgs(args)
+	cmd.SetOut(io.Discard)
+	cmd.SetErr(io.Discard)
+	cmd.SilenceUsage = true
+	cmd.SilenceErrors = true
+	return cmd.Execute()
+}
+
+// Router has no default category for either family, so a call with no --model
+// has to fail here with a reason. Sent as it stands it would resolve nothing and
+// come back as a model that does not exist, which points the reader at their own
+// spelling instead of at an absence.
+func TestMusicAnd3DRefuseToRunWithoutAModel(t *testing.T) {
+	factory := &cmdutil.Factory{}
+	for name, verb := range map[string]*cobra.Command{
+		"music": newCallMusicCommand(factory), "3d": newCall3DCommand(factory),
+	} {
+		err := runVerb(t, verb, "a lantern")
+		if err == nil {
+			t.Errorf("call %s ran with no model", name)
+			continue
+		}
+		if !strings.Contains(err.Error(), "--model is required") ||
+			!strings.Contains(err.Error(), "model list --mode") {
+			t.Errorf("call %s: %v", name, err)
+		}
+	}
+}
+
+// Only the fields the family admits. A flag Router would refuse for this family
+// reads as a promise, and the reader finds out it was not one after paying for
+// the round trip.
+func TestMusicAnd3DOfferOnlyTheirOwnFields(t *testing.T) {
+	cases := map[string]struct{ has, lacks []string }{
+		"music": {
+			has:   []string{flagLyrics, flagInstrumental, flagDuration, flagFormat, flagSeed},
+			lacks: []string{flagSize, flagAspectRatio, flagResolution, flagFPS, flagImage, flagOperation},
+		},
+		"3d": {
+			has:   []string{flagFormats, flagTexture, flagPBR, flagPolycount, flagImage},
+			lacks: []string{flagSize, flagDuration, flagFPS, flagFormat, flagLyrics, flagOperation},
+		},
+	}
+	for name, want := range cases {
+		verb := mediaVerb(t, name)
+		for _, flag := range want.has {
+			if verb.Flags().Lookup(flag) == nil {
+				t.Errorf("call %s has no --%s", name, flag)
+			}
+		}
+		for _, flag := range want.lacks {
+			if verb.Flags().Lookup(flag) != nil {
+				t.Errorf("call %s offers --%s, which this family cannot express", name, flag)
+			}
+		}
+	}
+}
+
+// A mesh is usually asked for with a picture rather than with words, and 3D is
+// the one family that admits an input on a plain generate. So a prompt is
+// optional there and required everywhere else — but one of the two has to be
+// present, or there is nothing to generate from.
+func TestAMeshCanBeAskedForWithAPictureAlone(t *testing.T) {
+	cmd, flags := mediaCommand(t, model3DFields, "--image", "data:image/png;base64,AA==")
+	request, err := flags.canonical(cmd, "FlowStudio/mesh", "")
+	if err != nil {
+		t.Fatalf("build: %v", err)
+	}
+	if request.Prompt != "" || request.Inputs == nil || len(request.Inputs.Images) != 1 {
+		t.Errorf("request: %+v", request)
+	}
+
+	err = runVerb(t, newCall3DCommand(&cmdutil.Factory{}), "--model", "FlowStudio/mesh")
+	if err == nil || !strings.Contains(err.Error(), "nothing to work from") {
+		t.Errorf("a mesh with neither a prompt nor an image: %v", err)
+	}
+}
+
+// A mesh creates on the unified route and reads the record back from it. A
+// generation created there is not addressable on the released routes, so a
+// mismatch here is a submission that succeeds and an id that cannot be
+// collected.
+func Test3DUsesTheUnifiedRoute(t *testing.T) {
+	if model3DKind.submitPath != epGenerations {
+		t.Errorf("3d submits to %s", model3DKind.submitPath)
+	}
+	if got := model3DKind.get("gen_1"); got != epGeneration("gen_1") {
+		t.Errorf("3d reads from %s", got)
+	}
+	if got := model3DKind.content("gen_1"); got != epGenerationContent("gen_1") {
+		t.Errorf("3d downloads from %s", got)
+	}
+}
+
+// A track and a mesh arrive as their own content types, and a file named
+// otherwise is a file that opens wrong.
+func TestAFileIsNamedAfterWhatArrived(t *testing.T) {
+	cases := map[string]string{
+		"audio/mpeg":         ".mp3",
+		"audio/wav":          ".wav",
+		"model/gltf-binary":  ".glb",
+		"application/zip":    ".zip",
+		"video/mp4":          ".mp4",
+		"application/x-what": ".bin",
+	}
+	for contentType, want := range cases {
+		if got := extForContentType(contentType, ".bin"); got != want {
+			t.Errorf("%s: got %q want %q", contentType, got, want)
+		}
+	}
+}

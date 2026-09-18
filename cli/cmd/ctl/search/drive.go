@@ -32,6 +32,13 @@ With --watch, Olares 1.12.7+ prints each result as soon as its asynchronous
 batch arrives. JSON output is JSONL (one result object per line). Older
 versions have no result stream and print the completed legacy result instead.
 
+The asynchronous search runs the whole job before it can finish, so every hit
+it produced is printed by default. --limit caps that; --offset skips ahead.
+Under --watch the window applies in arrival order, so the same --offset/--limit
+can select different results than a plain run, which windows the completed set
+grouped by source. Olares 1.12.6 and older page server-side and keep printing
+one 20-result page at a time.
+
 Examples:
   olares-cli search drive report
   olares-cli search files report
@@ -53,7 +60,7 @@ Examples:
 		"search mode: aggregate, file_name")
 	cmd.Flags().BoolVarP(&o.watch, "watch", "w", false,
 		"print results as asynchronous search batches arrive (Olares >= 1.12.7)")
-	registerPagingFlags(cmd, &o.pagingOptions)
+	registerPagingFlags(cmd, &o.pagingOptions, 0)
 	return cmd
 }
 
@@ -73,16 +80,16 @@ func runDriveSearch(ctx context.Context, f *cmdutil.Factory, keyword string, o *
 	var watcher *watchResultPrinter
 	var onHit func(asyncIndexedHit) error
 	if o.watch {
-		watcher = newWatchResultPrinter(os.Stdout, format, o.offset, o.limit)
+		watcher = newWatchResultPrinter(os.Stdout, os.Stderr, format, o.offset, o.limit)
 		onHit = watcher.emit
 	}
 
-	items, async, err := runVersionedFileSearch(ctx, f, keyword, searchType, &o.pagingOptions, onHit)
+	page, async, err := runVersionedFileSearch(ctx, f, keyword, searchType, &o.pagingOptions, onHit)
 	if err != nil {
 		return err
 	}
 	if o.watch && async {
-		return watcher.finish()
+		return watcher.finish(page.total)
 	}
-	return printSearchResults(format, items)
+	return printSearchResults(format, page)
 }

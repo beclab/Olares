@@ -1,10 +1,3 @@
 {
-  "apps": [
-    {
-      "appId": "f3395cd5",
-      "appName": "router",
-      "installScope": "shared",
-      "installOrder": 20
-    }
-  ]
+  "apps": []
 }

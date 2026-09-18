@@ -133,6 +133,13 @@ spec:
       serviceAccountName: market-sa
       serviceAccount: market-sa
       priorityClassName: "system-cluster-critical"
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-role.kubernetes.io/control-plane
+                    operator: Exists
       initContainers:
         - args:
           - -it
@@ -148,7 +155,7 @@ spec:
           name: check-appservice
       containers:
       - name: appstore-backend
-        image: beclab/market-backend:v0.6.104
+        image: beclab/market-backend:v0.6.123
         imagePullPolicy: IfNotPresent
         ports:
           - containerPort: 81

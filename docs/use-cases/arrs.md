@@ -34,7 +34,7 @@ Ensure you have properly configured the core settings of your media managers and
 
 ## Upgrade notes
 
-Starting with Olares V1.12.6, *Arr apps use internal entrance URLs instead of provider URLs. If you upgraded from an earlier version, check the [Upgrade notes for *Arrs](arrs-upgrade.md) and update the affected settings.
+Starting with Olares V1.12.6, *Arr apps use internal entrance URLs instead of provider URLs. If you updated from an earlier version, check the [Update notes for *Arr apps](arrs-upgrade.md) and update the affected settings.
 
 ## Install the *Arr applications
 

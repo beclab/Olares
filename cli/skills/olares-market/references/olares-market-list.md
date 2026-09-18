@@ -1,6 +1,6 @@
 # market list / categories / get / status (catalog + runtime)
 
-> **Prerequisite:** Read [`../../olares-shared/SKILL.md`](../../olares-shared/SKILL.md) and the parent [`../SKILL.md`](../SKILL.md) (especially "What apps do I have? routing" and the `-s` / `-a` matrix) first.
+> **Prerequisite:** Read [`../../olares-shared/SKILL.md`](../../olares-shared/SKILL.md) and the parent [`../SKILL.md`](../SKILL.md), especially [Inventory decisions](../SKILL.md#inventory-decisions), first.
 > **Flags & examples:** `olares-cli market <verb> --help` for each verb below.
 
 The read-only family — catalog browsing, runtime status, and the `--mine` inventory view.
@@ -31,6 +31,8 @@ olares-cli market list -q                       # exit code only
 ### `--mine` filter (matches SPA "My Terminus" exactly)
 
 Hides only **6 SPA-hidden states** (`pendingCanceled`, `downloadingCanceled`, `downloadFailed`, `installFailed`, `installingCanceled`, `uninstalled`). Everything else stays visible — including in-flight installs, transitional states (`upgrading` / `stopping` / `resuming` / `applyingEnv` / `uninstalling`), and post-install failures (`upgradeFailed` / `stopFailed` / `resumeFailed` / `applyEnvFailed` / `uninstallFailed`).
+
+This is why a freshly failed install can look like it vanished: a bad image reference settles on `downloadFailed`, which `--mine` hides. Use `market status <app> -a` to see the row, and note that the same six states do **not** all behave alike when you try to clear them — see [uninstall, stop, resume, cancel](olares-market-lifecycle-remove.md).
 
 > **"My apps" is intentionally broader than "completed installs only"** because the SPA's My Terminus tab is too. The user clicked something and wants to monitor / retry / cancel the row.
 

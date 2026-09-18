@@ -1121,8 +1121,8 @@ func (h *Handler) cliCredentialInject(pod *corev1.Pod, namespace string) (*corev
 		return pod, nil
 	}
 
-	// The Secret is provisioned before the chart is installed, so a pod
-	// reaching admission for an app that asked for the credential should
+	// The Secret is provisioned before the chart is installed or upgraded, so
+	// a pod reaching admission for an app that asked for the credential should
 	// always find it. Mounting it unconditionally (rather than checking the
 	// Secret first) keeps the pod from silently coming up logged out: without
 	// the Secret kubelet holds the pod in ContainerCreating, which is visible,

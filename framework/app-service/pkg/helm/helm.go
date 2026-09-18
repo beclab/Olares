@@ -106,6 +106,7 @@ func UpgradeCharts(ctx context.Context, actionConfig *action.Configuration, sett
 	client := action.NewUpgrade(actionConfig)
 	client.Namespace = namespace
 	client.Timeout = 300 * time.Second
+	client.MaxHistory = 10
 	client.Recreate = false
 	// Do not use Atomic, this could cause helm wait all resource ready.
 	//client.Atomic = true

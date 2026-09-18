@@ -38,14 +38,16 @@ Choose the base app for the engine you want, clone it to deploy a model, then ru
 
     ![Engine Base apps in Market](/images/manual/olares/llm-base-apps1.png#bordered)
 
-2. Choose the engine base that fits your needs. Each one is optimized for a different inference scenario:
+2. Choose the engine base that fits your model and serving goal. Start with the model format: a GGUF file uses llama.cpp, an Ollama model tag uses Ollama, and a Hugging Face repository with `.safetensors` weights uses vLLM or SGLang.
 
-    | Engine Base | When to choose |
-    | :--- | :--- |
-    | **llama.cpp Engine Base** | Choose llama.cpp when you are running lightweight<br> GGUF models or deploying with limited GPU memory.<br>It is the recommended engine on Olares One. |
-    | **Ollama Engine Base** | Choose Ollama when you want to get started quickly with<br> broad model compatibility. It pulls models automatically<br> using native model tags, making it ideal for chat and <br>embedding tasks. |
-    | **SGLang Engine Base** | Choose SGLang when you need efficient structured<br> generation or advanced reasoning optimizations. |
-    | **vLLM Engine Base** | Choose vLLM when you need high-throughput serving<br> of Hugging Face models under heavy concurrent load. |
+    | Engine Base | Model source | When to choose |
+    | :--- | :--- | :--- |
+    | **llama.cpp Engine Base** | GGUF files from Hugging Face | You want to run a quantized GGUF model, have limited GPU memory, or need CPU execution. This is the recommended engine on Olares One. |
+    | **Ollama Engine Base** | Model tags from the Ollama library | You want the quickest setup and broad model compatibility for chat or embedding tasks. Ollama downloads the selected model by its native tag. |
+    | **SGLang Engine Base** | Hugging Face repositories with `.safetensors` weights | You need structured generation or advanced reasoning optimizations and the model supports SGLang. |
+    | **vLLM Engine Base** | Hugging Face repositories with `.safetensors` weights | You need high-throughput serving for several concurrent requests and the model supports vLLM. |
+
+    If Market already provides a pre-built app for the model, use that app unless you need to change the engine or its startup parameters. The packaged model-and-engine combination has already been validated for Olares.
 
 ## Create a new model instance
 
@@ -140,6 +142,8 @@ Open the built-in model console to track the model download, confirm the model a
     - **Engine**: Shows **Running** after the inference service is online.
 
     ![Model console ready](/images/manual/olares/llm-base-model-console-status.png#bordered)
+
+    If either status does not become ready, see [Model or engine is not ready](/manual/help/ts-model-engine-not-ready.md).
 
 4. When the engine shows **Running**, configure how client apps reach the service.
 

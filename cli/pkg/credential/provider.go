@@ -2,10 +2,10 @@ package credential
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/beclab/Olares/cli/pkg/cliconfig"
+	"github.com/beclab/Olares/cli/pkg/clierr"
 )
 
 // CredentialProvider selects the Provider that owns the active profile.
@@ -33,7 +33,30 @@ func NewCredentialProvider(managed, local Provider) *CredentialProvider {
 // ErrNoProfile is returned when no Provider could resolve a profile (typically
 // because the user hasn't run `profile login` yet AND no in-cluster env vars
 // are present).
-var ErrNoProfile = errors.New("no Olares profile is configured: run `olares-cli profile login --olares-id <id>` or `olares-cli profile import --olares-id <id> --refresh-token <tok>`")
+//
+// It is a typed singleton rather than errors.New so it can carry a code
+// into the `-o json` envelope. Comparison is unaffected: the value is a
+// comparable empty struct, so both errors.Is and a bare == still hold.
+//
+// The credential errors are the ones classified first because they are
+// the failures a caller is most likely to meet before anything else
+// works, and the ones where the recovery differs most between cases
+// that read alike -- no profile at all, a profile with no token, and a
+// grant the server has rejected all say "authentication" and want three
+// different things done.
+var ErrNoProfile error = noProfileError{}
+
+type noProfileError struct{}
+
+func (noProfileError) Error() string {
+	return "no Olares profile is configured: run `olares-cli profile login --olares-id <id>` or `olares-cli profile import --olares-id <id> --refresh-token <tok>`"
+}
+
+func (noProfileError) ErrorCode() string { return clierr.CodeAuthNoProfile }
+func (noProfileError) Retryable() *bool  { return &no }
+func (noProfileError) RecoveryAction() string {
+	return "olares-cli profile login --olares-id <id>"
+}
 
 // Resolve loads the on-disk profile and hands it to whichever provider owns
 // that kind of profile. ErrNoProfile is returned when there is no profile to

@@ -228,7 +228,7 @@ Examples:
 	cmd.Flags().StringVarP(&o.password, "password", "p", "", "SMB password (also: --password-stdin to read from stdin)")
 	cmd.Flags().BoolVar(&o.passwordStdin, "password-stdin", false, "read SMB password from the first stdin line (mutually exclusive with --password)")
 	cmd.Flags().StringVar(&o.node, "node", "", "target node (defaults to the first /api/nodes/ entry)")
-	cmd.Flags().BoolVar(&o.jsonOut, "json", false, "print code-300 share list as JSON (one path per line in default mode)")
+	addOutputFormatFlag(cmd, &o.jsonOut, "print code-300 share list as JSON (one path per line in default mode)")
 	cmd.Flags().BoolVar(&o.noHistory, "no-history", false, "skip the per-node SMB history autofill (force explicit flags / interactive prompt)")
 	return cmd
 }
@@ -774,7 +774,7 @@ func newSMBHistoryListCommand(f *cmdutil.Factory) *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&o.node, "node", "", "node whose history to read (defaults to the first /api/nodes/ entry)")
-	cmd.Flags().BoolVar(&o.jsonOut, "json", false, "print each entry as JSON (one per line)")
+	addOutputFormatFlag(cmd, &o.jsonOut, "print each entry as JSON (one per line)")
 	return cmd
 }
 

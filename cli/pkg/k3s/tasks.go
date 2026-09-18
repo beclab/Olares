@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"text/template"
 
 	"github.com/beclab/Olares/cli/pkg/storage"
 	storagetpl "github.com/beclab/Olares/cli/pkg/storage/templates"
@@ -41,6 +42,10 @@ import (
 	"github.com/pkg/errors"
 	versionutil "k8s.io/apimachinery/pkg/util/version"
 )
+
+// hostMemoryProtectionDropIn is the file name every memory protection drop-in
+// gets, inside its own <unit>.d directory.
+const hostMemoryProtectionDropIn = "10-olares-memory.conf"
 
 type GetClusterStatus struct {
 	common.KubeAction
@@ -186,17 +191,51 @@ func (g *GenerateK3sService) Execute(runtime connector.Runtime) error {
 		server = fmt.Sprintf("https://%s:%d", g.KubeConf.Cluster.ControlPlaneEndpoint.Domain, g.KubeConf.Cluster.ControlPlaneEndpoint.Port)
 	}
 
+	// Resolved once: it reaches the host, and the reserve below and the
+	// protection further down must not disagree about what this node runs.
+	runsControlPlane := utils.NodeRunsControlPlane(runtime)
+
 	defaultKubeletArs := map[string]string{
-		"kube-reserved":           fmt.Sprintf("cpu=200m,memory=%s,ephemeral-storage=1Gi", utils.KubeReservedMemory),
-		"system-reserved":         fmt.Sprintf("cpu=200m,memory=%s,ephemeral-storage=1Gi", utils.SystemReservedMemory(runtime, g.KubeConf.Arg.EnablePodSwap)),
-		"eviction-hard":           "memory.available<5%,nodefs.available<5%,imagefs.available<5%",
-		"config":                  "/etc/rancher/k3s/kubelet.config",
-		"containerd":              container.DefaultContainerdCRISocket,
-		"cgroup-driver":           "systemd",
-		"runtime-request-timeout": "5m",
-		"image-gc-high-threshold": "96",
-		"image-gc-low-threshold":  "95",
-		"housekeeping_interval":   "5s",
+		"kube-reserved":   fmt.Sprintf("cpu=200m,memory=%s,ephemeral-storage=1Gi", utils.KubeReservedMemory(runsControlPlane)),
+		"system-reserved": fmt.Sprintf("cpu=200m,memory=%s,ephemeral-storage=1Gi", utils.SystemReservedMemory(runtime, g.KubeConf.Arg.EnablePodSwap)),
+		// Soft eviction gives kubelet a runway. Reaching a hard threshold means
+		// reclaim has already failed, and terminating a pod from there takes long
+		// enough that the OOM killer can decide first — and it does not choose
+		// with the cluster in mind.
+		//
+		// The soft threshold is on allocatableMemory.available rather than
+		// memory.available because that is the signal that answers "have the pods
+		// used up what they were given", which is the condition worth reacting to
+		// early. kubelet will not create it: addAllocatableThresholds in
+		// pkg/kubelet/eviction/helpers.go copies only *hard* memory thresholds onto
+		// that signal. Its capacity is kubepods.slice's own allowance, so it is
+		// unaffected by the host releasing or taking page cache, and it moves with
+		// the reserve above rather than with the size of the machine.
+		//
+		// It has to stay a percentage, and above the 5% below. eviction-hard's
+		// memory.available<5% is copied onto the allocatable signal as 5% of that
+		// same allowance, so an absolute value here could not stay above it across
+		// machine sizes: whatever value sits above 5% on a small node sits below
+		// it on a large one, and there the hard copy fires first and the grace
+		// period below is never reached.
+		//
+		// Nothing is reserved for this. Only hard thresholds are subtracted from
+		// Node Allocatable (hardEvictionReservation in pkg/kubelet/cm/helpers.go,
+		// whose switch does not even have a case for the allocatable signal), so
+		// the cost of the 10% is that pods cannot sit above 90% of their allowance
+		// indefinitely, not that the 10% goes unscheduled.
+		"eviction-hard":                       "memory.available<5%,nodefs.available<5%,imagefs.available<5%,pid.available<10%",
+		"eviction-soft":                       "allocatableMemory.available<10%",
+		"eviction-soft-grace-period":          "allocatableMemory.available=1m",
+		"eviction-max-pod-grace-period":       "120",
+		"eviction-pressure-transition-period": "30s",
+		"config":                              "/etc/rancher/k3s/kubelet.config",
+		"containerd":                          container.DefaultContainerdCRISocket,
+		"cgroup-driver":                       "systemd",
+		"runtime-request-timeout":             "5m",
+		"image-gc-high-threshold":             "96",
+		"image-gc-low-threshold":              "95",
+		"housekeeping_interval":               "5s",
 	}
 	defaultKubeProxyArgs := map[string]string{
 		"proxy-mode": "ipvs",
@@ -248,6 +287,18 @@ func (g *GenerateK3sService) Execute(runtime connector.Runtime) error {
 		return err
 	}
 
+	// Written here rather than as its own task so that the reserve above and the
+	// protection below cannot be changed independently, and so that the upgrade
+	// path, which regenerates the unit through this task, refreshes both.
+	//
+	// Sized through NodeRunsControlPlane rather than the IsMaster above. That one
+	// decides what this unit is told to be, so it has to take the declared role
+	// at face value; this one only has to size what the node actually runs, and
+	// so gets to confirm a declared master against the host.
+	if err := g.generateHostMemoryProtection(runtime, runsControlPlane); err != nil {
+		return err
+	}
+
 	templateAction = action.Template{
 		Name:     "K3sKubeletConfig",
 		Template: templates.K3sKubeletConfig,
@@ -264,6 +315,120 @@ func (g *GenerateK3sService) Execute(runtime connector.Runtime) error {
 	if err := templateAction.Execute(runtime); err != nil {
 		return err
 	}
+
+	return nil
+}
+
+// generateHostMemoryProtection installs the systemd drop-ins that keep k3s,
+// containerd and the shims resident while the node is under memory pressure.
+//
+// All three are written together on purpose. The per-service values are inert
+// without the one on system.slice, and a node where only the services are
+// configured reclaims them just as readily as one with nothing configured at
+// all, so there is no useful halfway state to leave behind on a partial failure.
+func (g *GenerateK3sService) generateHostMemoryProtection(runtime connector.Runtime, runsControlPlane bool) error {
+	dropIns := []struct {
+		tmpl *template.Template
+		unit string
+		data util.Data
+	}{
+		{
+			tmpl: templates.HostMemoryProtectionSlice,
+			unit: "system.slice",
+			data: util.Data{
+				"SystemSliceMemoryMin": fmt.Sprintf("%dM", utils.HostDaemonsMemoryMi(runsControlPlane)),
+			},
+		},
+		{
+			tmpl: templates.HostMemoryProtectionK3s,
+			unit: "k3s.service",
+			data: util.Data{
+				"K3sMemoryMin": fmt.Sprintf("%dM", utils.K3sMemoryMi(runsControlPlane)),
+			},
+		},
+		{
+			tmpl: templates.HostMemoryProtectionContainerd,
+			unit: "containerd.service",
+			data: util.Data{
+				"ContainerdMemoryMin": fmt.Sprintf("%dM", utils.ContainerdMemoryMi()),
+			},
+		},
+	}
+
+	// Only a control plane has an etcd.service to protect, and writing a drop-in
+	// for a unit that does not exist would leave a file that quietly starts
+	// applying if one ever appears.
+	if runsControlPlane {
+		dropIns = append(dropIns, struct {
+			tmpl *template.Template
+			unit string
+			data util.Data
+		}{
+			tmpl: templates.HostMemoryProtectionEtcd,
+			unit: "etcd.service",
+			data: util.Data{
+				"EtcdMemoryMin": fmt.Sprintf("%dM", utils.EtcdMemoryMi(runsControlPlane)),
+			},
+		})
+	}
+
+	for _, dropIn := range dropIns {
+		dir := filepath.Join("/etc/systemd/system", dropIn.unit+".d")
+		if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("mkdir -p %s", dir), false, false); err != nil {
+			return errors.Wrapf(errors.WithStack(err), "create drop-in dir %s failed", dir)
+		}
+
+		templateAction := action.Template{
+			Name:     "GenerateHostMemoryProtection",
+			Template: dropIn.tmpl,
+			Dst:      filepath.Join(dir, hostMemoryProtectionDropIn),
+			Data:     dropIn.data,
+		}
+		templateAction.Init(nil, nil)
+		if err := templateAction.Execute(runtime); err != nil {
+			return errors.Wrapf(errors.WithStack(err), "write memory protection for %s failed", dropIn.unit)
+		}
+	}
+
+	if _, err := runtime.GetRunner().SudoCmd("systemctl daemon-reload", false, false); err != nil {
+		return errors.Wrap(errors.WithStack(err), "systemctl daemon-reload failed")
+	}
+
+	// daemon-reload is not enough on its own. It updates systemd's own view but
+	// does not write a running service's cgroup attributes back to the kernel,
+	// which happens when the unit next starts: after a reload that changes these
+	// values, systemctl show reports the new MemoryMin while the unit's
+	// memory.min still holds the old one. Waiting for a restart is not an answer
+	// either, because system.slice is the ancestor the others depend on — cgroup
+	// v2 caps a cgroup's effective protection at what its parents protect — and a
+	// slice cannot be restarted.
+	//
+	// set-property leaves a drop-in under /run that outranks the one under /etc
+	// for the rest of the boot. That is safe only because both are written here
+	// from the same numbers on every run; writing just one of them is what makes
+	// a stale value stick until reboot.
+	applied := []string{
+		fmt.Sprintf("system.slice MemoryMin=%dM", utils.HostDaemonsMemoryMi(runsControlPlane)),
+		fmt.Sprintf("k3s.service MemoryMin=%dM MemorySwapMax=0", utils.K3sMemoryMi(runsControlPlane)),
+		fmt.Sprintf("containerd.service MemoryMin=%dM MemorySwapMax=0", utils.ContainerdMemoryMi()),
+	}
+	if runsControlPlane {
+		applied = append(applied,
+			fmt.Sprintf("etcd.service MemoryMin=%dM MemorySwapMax=0", utils.EtcdMemoryMi(runsControlPlane)))
+	}
+	for _, props := range applied {
+		cmd := fmt.Sprintf("systemctl set-property --runtime %s", props)
+		if _, err := runtime.GetRunner().SudoCmd(cmd, false, false); err != nil {
+			// The drop-in under /etc still governs from the next boot, so this is
+			// worth reporting rather than failing an install over.
+			logger.Warnf("could not apply memory protection to the running unit (%s), "+
+				"it will take effect on reboot: %v", props, err)
+		}
+	}
+
+	logger.Infof("host memory protection: system.slice %dMi, k3s %dMi, containerd %dMi, etcd %dMi",
+		utils.HostDaemonsMemoryMi(runsControlPlane), utils.K3sMemoryMi(runsControlPlane),
+		utils.ContainerdMemoryMi(), utils.EtcdMemoryMi(runsControlPlane))
 
 	return nil
 }

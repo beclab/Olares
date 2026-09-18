@@ -105,9 +105,9 @@ func TestPathSegmentsAreEscaped(t *testing.T) {
 			consoleAPI + "/providers/p/models/meta-llama%2FLlama-3"},
 		{"api key", epAPIKey("k/1"), consoleAPI + "/api-keys/k%2F1"},
 		{"audit log", epAuditLog("x y"), consoleAPI + "/audit-logs/x%20y"},
-		{"audio task", epAudioTask("t/2"), dataPlaneAPI + "/audio/tasks/t%2F2"},
-		{"audio task result", epAudioTaskResult("t/2"),
-			dataPlaneAPI + "/audio/tasks/t%2F2/result"},
+		{"audio task", epTask("t/2"), dataPlaneAPI + "/tasks/t%2F2"},
+		{"audio task result", epTaskResult("t/2"),
+			dataPlaneAPI + "/tasks/t%2F2/result"},
 		{"ocr task", epOCRTask("t/2"), dataPlaneAPI + "/ocr/tasks/t%2F2"},
 		{"ocr result", epOCRTaskResult("t/2"), dataPlaneAPI + "/ocr/tasks/t%2F2/result"},
 		{"image generation", epImageGeneration("g/1"), dataPlaneAPI + "/images/generations/g%2F1"},
@@ -115,6 +115,9 @@ func TestPathSegmentsAreEscaped(t *testing.T) {
 			dataPlaneAPI + "/images/generations/g%2F1/content"},
 		{"video", epVideo("v 1"), dataPlaneAPI + "/videos/v%201"},
 		{"video content", epVideoContent("v 1"), dataPlaneAPI + "/videos/v%201/content"},
+		{"generation", epGeneration("g/1"), dataPlaneAPI + "/generations/g%2F1"},
+		{"generation content", epGenerationContent("g/1"),
+			dataPlaneAPI + "/generations/g%2F1/content"},
 	}
 	for _, c := range cases {
 		if c.got != c.want {

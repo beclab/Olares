@@ -60,15 +60,6 @@ func PluginTasks() []task.Interface {
 		Retry:   1,
 	}
 
-	// install the discrete-GPU host driver stack; only runs when a discrete Intel
-	// GPU is present, in-tree and kernel-supported
-	installDGPUDrivers := &task.LocalTask{
-		Name:    "InstallIntelDGPUDrivers",
-		Action:  new(InstallIntelDGPUDrivers),
-		Prepare: new(HasQualifyingIntelDGPU),
-		Retry:   1,
-	}
-
 	// nfd.yaml installs CRDs; keep it in its own task and retry so the CRDs are
 	// established before the dependent CR / plugin manifests are applied.
 	applyNFD := &task.LocalTask{
@@ -124,7 +115,6 @@ func PluginTasks() []task.Interface {
 
 	return []task.Interface{
 		labelNode,
-		installDGPUDrivers,
 		applyNFD,
 		applyNodeFeatureRules,
 		applyGPUPlugin,
