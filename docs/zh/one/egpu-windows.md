@@ -23,16 +23,6 @@ description: 在运行 Windows 11 的 Olares One 上设置并验证 NVIDIA eGPU�
 - NVIDIA GeForce RTX 4060 Ti
 - NVIDIA 驱动 610.74
 
-<!-- TODO(tech-review): 确认 Windows 日常热插拔是否受支持，以及是否需要额外配置。 -->
-
-<!-- TODO(tech-review):
-确认以下文件获准公开的版本、用途、提供方、下载地址和完整性校验方式：
-- AGBOX4_WIN1124H2EN20260527
-- CleanupTool_1.0.21.0
-- NVIDIA_APP_11.0.5.420_1146713
-- NVIDIA 驱动 610.74
--->
-
 ## 准备 Windows
 
 1. 可选：安装 Windows 11 24H2。测试使用的一键安装包为 `AGBOX4_WIN1124H2EN20260527`。
@@ -80,8 +70,7 @@ description: 在运行 Windows 11 的 Olares One 上设置并验证 NVIDIA eGPU�
   - **现象**：完成驱动恢复后，链路可能仍为 Gen1。
   - **处理**：重启 Windows，让链路重新协商为 Gen4。
 
-## 相关文档
+## 相关资源
 
 - [Olares One eGPU 支持概览](./egpu.md)
 - [排查 eGPU 问题](./ts-egpu.md)
-- [前往 Olares 论坛讨论 eGPU 配置](https://www.olares.com/forum/)

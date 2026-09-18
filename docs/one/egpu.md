@@ -44,13 +44,13 @@ Each result is labeled **Verified**, **Requires setup**, **Not verified**, **Und
 | Multiple eGPUs | **Verified in one configuration.** Three external GPUs and the built-in GPU completed a one-hour load test. Other combinations have not been tested. | **Not supported.** Connect only one eGPU at a time. |
 | Hot-plugging | **Not verified.** | **Not supported.** Connect and power the eGPU before startup. |
 
-<!-- TODO(tech-review): Confirm the Windows hot-plug configuration before documenting it. -->
 ## Set up your eGPU
 
 - [Set up an eGPU on Olares OS](./egpu-olares-os.md)
 - [Set up an eGPU on Olares One with Windows](./egpu-windows.md)
 - [Troubleshoot eGPU issues on Olares One](./ts-egpu.md)
-- [Discuss eGPU configurations in the Olares forum](https://www.olares.com/forum/)
+
+If you want to discuss your configuration, share test results, or ask about an issue, see [Ask for help in the Olares forum](./ts-egpu.md#ask-for-help-in-the-olares-forum) for the information to include in your post.
 
 ## Tested combinations
 
@@ -70,8 +70,6 @@ Each result is labeled **Verified**, **Requires setup**, **Not verified**, **Und
 |---|---|---|---|
 | AOOSTAR EG02 | RTX 4060 Ti | Reached 165 W at stable Gen4 speeds with no observed PCIe errors. | Follow the [Windows setup](./egpu-windows.md). |
 | Razer Thunderbolt 5 Dock with AOOSTAR EG02, Razer Core X V2, and Razer Core X | RTX 4060 Ti + RTX 4090 + RTX 4060, with the built-in RTX 5090M | All four GPUs completed a one-hour load test without an observed issue. | Treat this result as specific to the tested topology. |
-
-<!-- TODO(tech-review): Confirm which enclosure was used for the desktop RTX 5090 test. -->
 
 ## Current limitations
 

@@ -38,13 +38,13 @@ description: 查看 Olares One eGPU 兼容状态、实测硬件组合、当前�
 | 多张 eGPU | **已验证一种配置。** 三张外置 GPU 与内置 GPU 完成了一小时满载测试。其他组合尚未测试。 | **暂不支持。** 每次只连接一台 eGPU。 |
 | 热插拔 | **尚未验证。** | **暂不支持。** 请在开机前连接 eGPU 并通电。 |
 
-<!-- TODO(tech-review): 发布前确认 Windows 热插拔所需配置。 -->
 ## 设置 eGPU
 
 - [在 Olares OS 上设置 eGPU](./egpu-olares-os.md)
 - [在 Windows 上设置 eGPU](./egpu-windows.md)
 - [排查 Olares One eGPU 问题](./ts-egpu.md)
-- [前往 Olares 论坛讨论 eGPU 配置](https://www.olares.com/forum/)
+
+如果你想讨论自己的配置、分享测试结果或咨询遇到的问题，请查看[在 Olares 论坛求助](./ts-egpu.md#在-olares-论坛求助)，了解发帖时需要提供哪些信息。
 
 ## 实测组合
 
@@ -64,8 +64,6 @@ description: 查看 Olares One eGPU 兼容状态、实测硬件组合、当前�
 |---|---|---|---|
 | AOOSTAR EG02 | RTX 4060 Ti | 满载功耗达到 165 W，Gen4 链路稳定，未观察到 PCIe 错误。 | 按 [Windows 设置](./egpu-windows.md)操作。 |
 | Razer Thunderbolt 5 Dock，连接 AOOSTAR EG02、Razer Core X V2 和 Razer Core X | RTX 4060 Ti + RTX 4090 + RTX 4060，以及内置 RTX 5090M | 四张 GPU 完成一小时满载测试，未观察到异常。 | 该结果仅适用于实测连接方式。 |
-
-<!-- TODO(tech-review): 确认桌面版 RTX 5090 测试所使用的扩展坞型号。 -->
 
 ## 当前限制
 

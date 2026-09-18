@@ -84,12 +84,6 @@ description: 在 Olares One 上连接 NVIDIA eGPU、应用临时 Gen1 方案、�
 
 临时方案先根据 PCI vendor 和显示设备类型识别 NVIDIA 显示控制器，然后只处理标记为可移除的设备，从而排除内置显卡。
 
-<!-- TODO(tech-review):
-确认完整安装流程，包括：
-- 关机前是否需要执行 daemon-reload 和 udev 规则重载
-- systemd 单元依赖是否适用于支持的 Olares OS 版本
--->
-
 ## 关闭设备并连接 eGPU
 
 1. 打开 **Settings**，选择 **My hardware** > **Shutdown**。
@@ -180,10 +174,7 @@ eGPU 通过雷电隧道传输 PCIe 数据。在实测配置中，将扩展坞的
 
 根本原因尚未确认，可能与 NVIDIA 驱动、PCIe 链路行为和雷电路径之间的交互有关。实测中，Windows 使用不同的驱动栈，在相同扩展坞和显卡下可稳定运行 Gen4。
 
-<!-- TODO(tech-review): 确认当前 Olares OS 版本是否仍需此临时方案。 -->
-
-## 相关文档
+## 相关资源
 
 - [Olares One eGPU 支持概览](./egpu.md)
 - [排查 eGPU 问题](./ts-egpu.md)
-- [前往 Olares 论坛讨论 eGPU 配置](https://www.olares.com/forum/)

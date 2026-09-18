@@ -84,12 +84,6 @@ This workaround changes the eGPU's PCIe link settings and temporarily removes an
 
 The workaround identifies NVIDIA display controllers by PCI vendor and display class. It only acts on devices marked as removable, which excludes the built-in GPU.
 
-<!-- TODO(tech-review):
-Confirm the installation procedure, including:
-- whether daemon-reload and udev rule reload are required before shutdown
-- whether the systemd unit dependencies are valid on supported Olares OS versions
--->
-
 ## Shut down and connect the eGPU
 
 1. Open **Settings**, then select **My hardware** > **Shutdown**.
@@ -180,10 +174,7 @@ In 10 cold-start tests with Olares OS 1.12.6, startup stalled at the Olares logo
 
 The underlying cause has not been confirmed. It may involve the interaction between the NVIDIA driver, PCIe link behavior, and the Thunderbolt path. In testing, Windows used a different driver stack and remained stable at Gen4 with the same enclosure and GPU.
 
-<!-- TODO(tech-review): Confirm whether current Olares OS releases still require this workaround. -->
-
-## Related pages
+## Resources
 
 - [Olares One eGPU support overview](./egpu.md)
 - [Troubleshoot eGPU issues](./ts-egpu.md)
-- [Discuss eGPU configurations in the Olares forum](https://www.olares.com/forum/)

@@ -23,18 +23,6 @@ This guide has been tested with:
 - NVIDIA GeForce RTX 4060 Ti
 - NVIDIA driver 610.74
 
-<!-- TODO(tech-review):
-Confirm whether routine Windows hot-plugging is supported and document any required configuration.
--->
-
-<!-- TODO(tech-review):
-Confirm the approved public versions, purpose, source, download URL, and integrity-check method for:
-- AGBOX4_WIN1124H2EN20260527
-- CleanupTool_1.0.21.0
-- NVIDIA_APP_11.0.5.420_1146713
-- NVIDIA driver 610.74
--->
-
 ## Prepare Windows
 
 :::warning Back up your data
@@ -84,8 +72,7 @@ Results may vary with the GPU, enclosure, power supply, driver, and workload. Ru
 | Built-in RTX 5090M reaches about 95 W instead of 175 W | This is a known issue confirmed with NVIDIA. The tested eGPU link remained stable at Gen4, and eGPU use was not affected. |
 | Built-in GPU reports an error after connecting the eGPU | Perform the clean installation above and restart. |
 
-## Related pages
+## Resources
 
 - [Olares One eGPU support overview](./egpu.md)
 - [Troubleshoot eGPU issues](./ts-egpu.md)
-- [Discuss eGPU configurations in the Olares forum](https://www.olares.com/forum/)

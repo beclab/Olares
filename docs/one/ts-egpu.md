@@ -62,9 +62,25 @@ Review screenshots and remove any personal or device information you do not want
 
 Also record the enclosure and GPU models, operating system, connection path, startup order, symptom, frequency, and attempted fixes. For intermittent startup failures, perform several cold starts with the same connection order and record each result. A cold start means starting Olares One after it has been completely powered off.
 
-## Related pages
+## Ask for help in the Olares forum
+
+If the issue continues, or if you want to discuss an unlisted hardware configuration, create a post in the [Olares forum](https://www.olares.com/forum/). Include the following information so others can understand and reproduce your setup:
+
+```text
+System: Windows or Olares OS
+Hardware: eGPU enclosure and GPU model, for example, AOOSTAR EG02 + RTX 4060 Ti
+Connection: How Olares One, the Thunderbolt 5 cable, enclosure, and any Thunderbolt dock or hub are connected
+Startup order: For example, power the enclosure, connect the cable, and then start Olares One
+Symptom: For example, startup stalls at the Olares logo, nvidia-smi cannot find the eGPU, or the eGPU disconnects after 10 minutes
+Frequency: For example, three failures and two successful starts in five attempts
+Attempted fixes: For example, installed and enabled the Gen1 workaround or replaced the cable
+Attachments: egpu-report-*.txt for Olares OS, or the screenshots and error details collected above for Windows
+```
+
+Review diagnostic files and screenshots before posting, and remove any information you do not want to share publicly.
+
+## Resources
 
 - [Olares One eGPU support overview](./egpu.md)
 - [Set up an eGPU on Olares OS](./egpu-olares-os.md)
 - [Set up an eGPU on Windows](./egpu-windows.md)
-- [Discuss eGPU configurations in the Olares forum](https://www.olares.com/forum/)
