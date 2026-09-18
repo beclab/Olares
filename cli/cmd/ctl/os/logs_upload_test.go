@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -13,6 +14,56 @@ import (
 	"testing"
 	"time"
 )
+
+type uploadTestTransport func(*http.Request) (*http.Response, error)
+
+func (f uploadTestTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
+}
+
+func TestPutArchiveRetriesWrappedNetworkErrors(t *testing.T) {
+	orig := sleep
+	sleep = func(time.Duration) {}
+	defer func() { sleep = orig }()
+	archive := filepath.Join(t.TempDir(), "logs.tar.gz")
+	const payload = "complete archive contents"
+	if err := os.WriteFile(archive, []byte(payload), 0600); err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		name string
+		err  error
+	}{
+		{"EOF", io.EOF},
+		{"timeout", &net.OpError{Op: "write", Net: "tcp", Err: os.ErrDeadlineExceeded}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			for _, succeedsOnRetry := range []bool{true, false} {
+				attempts := 0
+				client := &http.Client{Transport: uploadTestTransport(func(req *http.Request) (*http.Response, error) {
+					defer req.Body.Close()
+					body, err := io.ReadAll(req.Body)
+					if err != nil || string(body) != payload {
+						t.Errorf("attempt %d: body=%q err=%v", attempts+1, body, err)
+					}
+					attempts++
+					if !succeedsOnRetry || attempts == 1 {
+						return nil, tc.err
+					}
+					return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader("")), Header: make(http.Header)}, nil
+				})}
+				err := putArchive(client, &presignResponse{UploadURL: "https://storage.example/logs"}, archive, int64(len(payload)))
+				if succeedsOnRetry {
+					if err != nil || attempts != 2 {
+						t.Fatalf("recovery: attempts=%d err=%v", attempts, err)
+					}
+				} else if !errors.Is(err, tc.err) || attempts != maxTransientAttempts {
+					t.Fatalf("exhaustion: attempts=%d err=%v", attempts, err)
+				}
+			}
+		})
+	}
+}
 
 // captureStderr swaps os.Stderr for a pipe (never a TTY) and returns whatever
 // fn wrote to it.

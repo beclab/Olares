@@ -310,7 +310,7 @@ func putArchiveOnce(client *http.Client, presign *presignResponse, path string, 
 	resp, err := client.Do(req)
 	finish()
 	if err != nil {
-		return fmt.Errorf("upload archive: %v", err)
+		return fmt.Errorf("upload archive: %w", err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
