@@ -48,6 +48,7 @@ export const useCases: UseCase[] = [
   { title: "Hermes Agent", link: "/use-cases/hermes", category: "AI agent", description: "Self-directed agent with Olares skills and a Gateway API", descriptionZh: "具备 Olares 技能和 Gateway API 的自主智能体" },
   { title: "OpenCode", link: "/use-cases/opencode", category: "AI agent", description: "AI coding agent driven by natural language", descriptionZh: "通过自然语言驱动的 AI 编程智能体" },
   { title: "Claude Code", link: "/use-cases/claude-code", category: "AI agent", description: "Write, test, and manage code through natural language", descriptionZh: "通过自然语言编写、测试和管理代码" },
+  { title: "Codex CLI", link: "/use-cases/codex-cli", category: "AI agent", description: "Run a persistent coding agent from any browser", descriptionZh: "从任意浏览器访问常驻的 AI 编程环境" },
   { title: "Pool CLI", link: "/use-cases/pool-cli", category: "AI agent", description: "Read code, run commands, and edit files via natural language", descriptionZh: "用自然语言读取代码、运行命令并编辑文件" },
   { title: "Paperclip", link: "/use-cases/paperclip", category: "AI agent", description: "Coordinate multiple AI agents on the same tasks", descriptionZh: "协调多个 AI 智能体协作处理同一任务" },
   { title: "DeerFlow 2.0", link: "/use-cases/deerflow2", category: "AI agent", description: "AI-powered deep research with a local model", descriptionZh: "基于本地模型的 AI 深度研究" },
