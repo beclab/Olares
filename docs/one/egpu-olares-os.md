@@ -7,7 +7,7 @@ description: Connect an NVIDIA eGPU to Olares One, apply the temporary Gen1 work
 
 Use this guide to connect an NVIDIA eGPU to Olares One and apply a temporary Gen1 workaround that improved initialization reliability in the tested Olares OS environment.
 
-:::warning Power off before connecting
+:::danger Power off before connecting
 Do not connect or disconnect the eGPU while Olares OS is running. Power off Olares One completely before changing the connection.
 :::
 
@@ -165,14 +165,6 @@ Before removing the workaround, shut down Olares One and disconnect the eGPU. St
    ```
 
 The next time you connect the eGPU, it uses the default PCIe link behavior. The initialization issue may return.
-
-## Technical background
-
-An eGPU carries PCIe traffic through a Thunderbolt tunnel. In the tested configuration, forcing the enclosure's PCIe link to Gen1 allowed the NVIDIA driver to initialize more reliably.
-
-In 10 cold-start tests with Olares OS 1.12.6, startup stalled at the Olares logo in about 70% of attempts without the workaround. The tests covered AOOSTAR EG02 with RTX 4060 Ti and Razer Core X V2 with RTX 4090. Whether this workaround is still required on later Olares OS releases has not been verified.
-
-The underlying cause has not been confirmed. It may involve the interaction between the NVIDIA driver, PCIe link behavior, and the Thunderbolt path. In testing, Windows used a different driver stack and remained stable at Gen4 with the same enclosure and GPU.
 
 ## Resources
 

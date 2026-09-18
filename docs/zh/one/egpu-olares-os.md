@@ -7,7 +7,7 @@ description: 在 Olares One 上连接 NVIDIA eGPU、应用临时 Gen1 方案、�
 
 本文介绍如何在 Olares One 上连接 NVIDIA eGPU，并应用临时 Gen1 方案。该方案在实测的 Olares OS 环境中提高了驱动初始化的可靠性。
 
-:::warning 连接前先关机
+:::danger 连接前先关机
 不要在 Olares OS 运行期间连接或断开 eGPU。改变连接前，必须完全关闭 Olares One。
 :::
 
@@ -165,14 +165,6 @@ after rescan: 0000:0a:00.0 speed=2.5 GT/s PCIe driver=nvidia
    ```
 
 下次连接 eGPU 时，系统将使用默认 PCIe 链路行为，初始化问题可能再次出现。
-
-## 技术背景
-
-eGPU 通过雷电隧道传输 PCIe 数据。在实测配置中，将扩展坞的 PCIe 链路限制为 Gen1 后，NVIDIA 驱动初始化更加可靠。
-
-在 Olares OS 1.12.6 的 10 次冷启动测试中，未应用临时方案时约有 70% 的启动会卡在 Olares logo。测试覆盖 AOOSTAR EG02 + RTX 4060 Ti 和 Razer Core X V2 + RTX 4090。后续 Olares OS 版本是否仍需此方案尚未验证。
-
-根本原因尚未确认，可能与 NVIDIA 驱动、PCIe 链路行为和雷电路径之间的交互有关。实测中，Windows 使用不同的驱动栈，在相同扩展坞和显卡下可稳定运行 Gen4。
 
 ## 相关资源
 

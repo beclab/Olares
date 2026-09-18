@@ -11,9 +11,7 @@ head:
 
 Use this page to check whether your eGPU setup has been tested and choose the right setup guide. Results depend on the enclosure, GPU, power supply, cable, operating system, and NVIDIA driver.
 
-The tables below show verified, unverified, and unsupported configurations, along with configurations that remain under investigation. An unlisted combination may still work, but it has not been evaluated.
-
-:::warning Connect before startup
+:::danger Connect before startup
 For Olares OS, do not connect or disconnect an eGPU while the system is running. Shut down Olares One completely, power the enclosure, connect the cable, and then start Olares One.
 :::
 
@@ -25,24 +23,35 @@ Before using an eGPU, make sure you have:
 - A certified Thunderbolt 5 cable, preferably the cable supplied with the enclosure.
 - An NVIDIA GPU based on the Turing architecture or newer and supported by your operating system and NVIDIA driver.
 
+:::info Thunderbolt compatibility
 Thunderbolt is backward-compatible. For best results, use Thunderbolt 5 hardware. Older Thunderbolt enclosures are not recommended.
+:::
 
-Meeting the requirements does not mean every GPU and enclosure combination has been verified. Check the tables below for tested configurations.
-
+:::tip First-time setup
 For the first test, connect only one eGPU and disconnect other high-bandwidth Thunderbolt devices.
+:::
 
 ## Support status
 
-Each result is labeled **Verified**, **Requires setup**, **Not verified**, **Under investigation**, or **Not supported**.
+Each result is labeled **Verified**, **Supported**, **Requires setup**, **Not verified**, **Under investigation**, or **Not supported**.
 
-| Setup | Windows | Olares OS |
+The tables below show verified, unverified, and unsupported configurations, along with configurations that remain under investigation. An unlisted combination may still work, but it has not been evaluated. Meeting the requirements does not mean every GPU and enclosure combination has been verified.
+
+### Hardware compatibility
+
+| Hardware configuration | Windows | Olares OS |
 |---|---|---|
 | AOOSTAR EG02 + RTX 4060 Ti, connected before startup | **Verified.** | **Requires setup.** Apply the [Gen1 workaround](./egpu-olares-os.md). |
-| Razer Core X V2 + RTX 4090 | **Verified in the tested multi-eGPU configuration.** | **Not verified.** Startup was unstable without the workaround. This combination has not been tested with it. |
+| Razer Core X V2 + RTX 4090 | **Verified only as part of the tested multi-eGPU configuration.** It has not been tested as a standalone configuration. | **Not verified.** Startup was unstable without the workaround. This combination has not been tested with it. |
 | Built-in RTX 5090M + AOOSTAR EG02 with RTX 4060 Ti | **Requires setup.** Reinstall the NVIDIA driver with the eGPU connected. The built-in GPU also has a known power limitation when eGPUs are connected. | **Requires setup.** Apply the workaround. Both GPUs worked together in the tested configuration. |
 | Desktop RTX 5090 | **Not verified.** | **Under investigation.** Driver initialization failed in the tested configuration. PCIe resource allocation is being investigated. |
+
+### Feature support
+
+| Feature | Windows | Olares OS |
+|---|---|---|
 | Multiple eGPUs | **Verified in one configuration.** Three external GPUs and the built-in GPU completed a one-hour load test. Other combinations have not been tested. | **Not supported.** Connect only one eGPU at a time. |
-| Hot-plugging | **Not verified.** | **Not supported.** Connect and power the eGPU before startup. |
+| Hot-plugging | **Supported.** Complete the Windows setup and driver installation first. | **Not supported.** Connect and power the eGPU before startup. |
 
 ## Set up your eGPU
 

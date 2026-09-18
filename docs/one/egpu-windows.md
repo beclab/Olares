@@ -13,32 +13,30 @@ Remove the existing NVIDIA software before connecting the eGPU. Power the enclos
 
 ## Before you start
 
-You can use an existing Windows 11 24H2 installation. You do not need to reinstall Windows solely to set up an eGPU. If you are installing Windows, the image `AGBOX4_WIN1124H2EN20260527` was used in testing and includes the system and drivers.
+You can use an existing Windows installation. You do not need to reinstall Windows solely to set up an eGPU.
 
-This guide has been tested with:
+:::info Tested configuration
+This guide was tested on Olares One running Windows 11 24H2 with an AOOSTAR EG02 and NVIDIA GeForce RTX 4060 Ti.
 
-- Olares One
-- Windows 11 24H2
-- AOOSTAR EG02
-- NVIDIA GeForce RTX 4060 Ti
-- NVIDIA driver 610.74
+The test used NVIDIA App installer `11.0.5.420_1146713` and NVIDIA driver `610.74`.
+:::
 
 ## Prepare Windows
 
 :::warning Back up your data
-Installing Windows can remove the existing operating system, apps, settings, and files from the Windows partition. Back up any data you want to keep before continuing.
+If you install Windows, the installation can remove the existing operating system, apps, settings, and files from the Windows partition. Back up any data you want to keep before continuing.
 :::
 
-1. If needed, install Windows 11 24H2. The image used in testing is `AGBOX4_WIN1124H2EN20260527`.
+1. If Windows is not installed, follow [Install Windows on the primary drive](./install-windows-primary-drive.md).
 2. Open **Settings** > **Windows Update** and install all available Windows updates. Wait for the update process to finish before continuing.
-3. Run `CleanupTool_1.0.21.0` and remove all NVIDIA apps and drivers.
+3. Uninstall all existing NVIDIA apps and drivers.
 
 ## Connect the eGPU and install the driver
 
 1. Install the GPU in the enclosure and turn on the enclosure.
 2. Connect it to the Thunderbolt 5 (USB-C) port on Olares One with a certified Thunderbolt 5 cable.
-3. Run `NVIDIA_APP_11.0.5.420_1146713` to install NVIDIA App.
-4. In NVIDIA App, download and install the graphics driver. Version 610.74 was used in testing.
+3. Install NVIDIA App.
+4. In NVIDIA App, download and install the graphics driver.
 5. After the driver installation is complete, continue to [Check the connection](#check-the-connection).
 
 ## Recover the built-in GPU
@@ -59,6 +57,8 @@ Use these steps if the built-in GPU shows a warning or disappears from NVIDIA Ap
 
 In **Device Manager** > **Display adapters**, confirm that both the built-in GPU and eGPU appear without warning icons.
 
+After the setup and driver installation are complete, Windows supports connecting and disconnecting the eGPU while the system is running.
+
 ## Tested performance
 
 In the single-eGPU test, the RTX 4060 Ti reached 165 W under FurMark load at Gen4, with no observed PCIe errors.
@@ -67,10 +67,9 @@ Results may vary with the GPU, enclosure, power supply, driver, and workload. Ru
 
 ## Known issues
 
-| Symptom | Status |
-|---|---|
-| Built-in RTX 5090M reaches about 95 W instead of 175 W | This is a known issue confirmed with NVIDIA. The tested eGPU link remained stable at Gen4, and eGPU use was not affected. |
-| Built-in GPU reports an error after connecting the eGPU | Perform the clean installation above and restart. |
+**Built-in RTX 5090M has reduced power**
+
+Under full load, the built-in RTX 5090M reaches about 95 W instead of 175 W. This is a known issue confirmed with NVIDIA. In testing, the eGPU link remained stable at Gen4, and eGPU use was not affected.
 
 ## Resources
 

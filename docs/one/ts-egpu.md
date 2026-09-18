@@ -64,18 +64,14 @@ Also record the enclosure and GPU models, operating system, connection path, sta
 
 ## Ask for help in the Olares forum
 
-If the issue continues, or if you want to discuss an unlisted hardware configuration, create a post in the [Olares forum](https://www.olares.com/forum/). Include the following information so others can understand and reproduce your setup:
+If the issue continues, or if you want to discuss an unlisted hardware configuration, create a post in the [Olares forum](https://www.olares.com/forum/). Provide as much of the following information as you can:
 
-```text
-System: Windows or Olares OS
-Hardware: eGPU enclosure and GPU model, for example, AOOSTAR EG02 + RTX 4060 Ti
-Connection: How Olares One, the Thunderbolt 5 cable, enclosure, and any Thunderbolt dock or hub are connected
-Startup order: For example, power the enclosure, connect the cable, and then start Olares One
-Symptom: For example, startup stalls at the Olares logo, nvidia-smi cannot find the eGPU, or the eGPU disconnects after 10 minutes
-Frequency: For example, three failures and two successful starts in five attempts
-Attempted fixes: For example, installed and enabled the Gen1 workaround or replaced the cable
-Attachments: egpu-report-*.txt for Olares OS, or the screenshots and error details collected above for Windows
-```
+- **System**: Windows or Olares OS, including the version
+- **Hardware**: The eGPU enclosure and GPU model
+- **Setup**: How the eGPU is connected and, if relevant, the startup order
+- **Issue**: What happened and whether it occurs consistently
+- **Attempted fixes**: Any setup steps, cable changes, or other fixes you have tried
+- **Attachments**: The Olares OS diagnostic report, or relevant Windows screenshots and error details
 
 Review diagnostic files and screenshots before posting, and remove any information you do not want to share publicly.
 
