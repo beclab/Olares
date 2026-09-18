@@ -115,6 +115,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   link: "/use-cases/claude-code",
                 },
                 {
+                  text: "Codex CLI",
+                  link: "/use-cases/codex-cli",
+                },
+                {
                   text: "Pool CLI",
                   link: "/use-cases/pool-cli",
                 },                
