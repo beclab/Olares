@@ -35,17 +35,20 @@ Olares 上的 Open Design 0.22.1 暂不支持通过文本直接生成独立图�
 
 ## 前提条件
 
-- Olares 1.12.6 或更高版本。
-- 已从 Market 安装 Qwen3.6-27B (llama.cpp)，并确认模型在 Model Console 中已就绪。本指南使用该模型作为本地模型。
+开始前，你需要：
 
-如需部署其他本地模型，请参阅[使用引擎基座应用托管本地大语言模型](llm-base-apps.md)。
+- Olares 1.12.6 或更高版本。
+- 以下模型：
+
+  | 模型类型 | 模型 | 获取方式 |
+  | :--- | :--- | :--- |
+  | 对话 | Qwen3.6-27B (llama.cpp) | 从 Market 安装 |
+
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## 安装 Open Design
 
 1. 打开 Market，搜索 "Open Design"。
-
-   <!-- ![Market 中的 Open Design](/images/manual/use-cases/open-design.png#bordered) -->
-
 2. 点击 **Get**，然后点击 **Install**，等待安装完成。
 
 ## 连接本地模型
@@ -83,9 +86,6 @@ Olares 上的 Open Design 0.22.1 暂不支持通过文本直接生成独立图�
 1. 在首页选择项目类型，例如 **Prototype**、**Slide deck**、**Document** 或 **Website clone**。
 2. 选择符合任务需求的 Skill 预设，例如 **Blog Post**。也可以打开提示词下方的示例，将它作为起点。
 3. 根据需要选择 **Design system** 和 **Working directory**。
-
-   <!-- ![选择项目类型、Skill 和设计系统](/images/manual/use-cases/open-design-skill-design-system.png#bordered) -->
-
 4. 输入具体需求。建议说明目标受众、内容、视觉风格和输出格式。例如：
 
    ```text
@@ -94,6 +94,8 @@ Olares 上的 Open Design 0.22.1 暂不支持通过文本直接生成独立图�
    产品名称为“Northstar”，副标题为“Find your next move.”。
    ```
 
+   <!-- ![选择项目类型和设计系统](/images/manual/use-cases/open-design-create-project.png#bordered) -->
+
 5. 确认已选择目标模型，然后点击箭头开始生成。
 6. 等待工作区打开并显示预览。
 
@@ -101,8 +103,6 @@ Olares 上的 Open Design 0.22.1 暂不支持通过文本直接生成独立图�
 
 7. 在对话中继续调整结果。你可以拖入参考图片，或输入 `@` 添加项目文件，然后说明要修改的部分。
 8. 完成后打开导出菜单，根据项目类型下载 ZIP、PDF 或 PPTX 文件。
-
-   <!-- ![从 Open Design 导出项目](/images/manual/use-cases/open-design-export.png#bordered) -->
 
 ## 可选：连接云端模型
 

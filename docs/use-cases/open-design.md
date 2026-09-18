@@ -31,10 +31,16 @@ In this guide, you will learn how to:
 
 ## Prerequisites
 
-- Olares 1.12.6 or later.
-- Qwen3.6-27B (llama.cpp) installed from Market and ready in Model Console. This guide uses it as the local model.
+Before you begin, you need:
 
-To deploy a different local model, see [Host local large language models with Engine Base apps](llm-base-apps.md).
+- Olares 1.12.6 or later.
+- The following model:
+
+  | Model type | Model | How to get it |
+  | :--- | :--- | :--- |
+  | Chat | Qwen3.6-27B (llama.cpp) | Install from Market |
+
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## Install Open Design
 
@@ -76,9 +82,6 @@ Ask Open Design to create a single title slide before starting a multi-page deck
 1. On the Home page, select a project type, such as **Prototype**, **Slide deck**, **Document**, or **Website clone**.
 2. Choose a Skill preset that matches your task, such as **Blog Post**. You can also open one of the examples below the prompt to use it as a starting point.
 3. Optionally, select a **Design system** and **Working directory**.
-
-   <!-- ![Select a project type, Skill, and design system](/images/manual/use-cases/open-design-skill-design-system.png#bordered) -->
-
 4. Enter a specific brief. Include the intended audience, content, visual direction, and output format. For example:
 
    ```text
@@ -87,6 +90,8 @@ Ask Open Design to create a single title slide before starting a multi-page deck
    Include the product name "Northstar" and the subtitle "Find your next move."
    ```
 
+   <!-- ![Select a project type and design system](/images/manual/use-cases/open-design-create-project.png#bordered) -->
+
 5. Check that the intended model is selected, then click the arrow to start generating.
 6. Wait for the workspace to open and the preview to render.
 
@@ -94,8 +99,6 @@ Ask Open Design to create a single title slide before starting a multi-page deck
 
 7. Refine the result in the conversation. You can drag in a reference image or type `@` to attach a project file, then describe the part you want to change.
 8. When the result is ready, open the export menu and download it as ZIP, PDF, or PPTX, depending on the project type.
-
-   <!-- ![Export a project from Open Design](/images/manual/use-cases/open-design-export.png#bordered) -->
 
 ## Optional: Connect a cloud model
 
