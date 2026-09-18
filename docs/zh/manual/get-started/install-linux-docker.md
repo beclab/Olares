@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: 了解如何使用 Docker Compose 在 Linux 服务器上部署 Olares。本安装指南涵盖系统要求、配置、安装、激活以及容器管理的相关内容。
+description: 使用 Docker Compose 在 Linux 服务器上安装并激活 Olares，然后管理其容器。
 head:
   - - meta
     - name: keywords
@@ -9,32 +9,13 @@ head:
 # 使用 Docker Compose 在 Linux 上安装 Olares
 通过 Docker 可以在容器化环境中安装和运行 Olares。本文将介绍如何使用 Docker 设置 Olares、准备安装环境、完成激活过程以及管理容器生命周期。
 
-<!--@include: ./reusables.md#installation-troubleshooting-tip-->
+## 前提条件
 
-## 系统要求
-
-### 必要配置
-
-- **CPU**：4 核及以上。
-- **内存**：至少 8 GB 可用内存。
-- **存储**：至少 150 GB 的可用 SSD 磁盘空间。
-   :::warning 必须使用 SSD
-   使用机械硬盘 (HDD) 会导致安装失败。
-   :::
-- **支持的系统**：
-   - Ubuntu 22.04-25.04 LTS
-   - Debian 12 或 13
-
-<!--@include: ./reusables.md#version-compatibility-->
-
-### 可选硬件
-
-<!--@include: ./gpu-requirements.md#gpu-requirements-->
-
-## 开始之前
-开始安装前，请确保：
-- 系统中已安装并运行 [Docker](https://docs.docker.com/engine/install/) 和 [Docker Compose](https://docs.docker.com/compose/install/)。
-- 已知当前设备的 IP 地址。
+- **Olares 设备**：一台满足 [Linux 系统要求](install-olares.md#linux)的设备。
+- **操作系统**：Ubuntu 22.04–25.04 或 Debian 12/13。
+<!--@include: ./reusables.md#larepass-prerequisite-->
+- **Docker**：系统中已安装并运行 [Docker](https://docs.docker.com/engine/install/) 和 [Docker Compose](https://docs.docker.com/compose/install/)。
+- **宿主机 IP 地址**：Olares 设备的 IP 地址。
   :::tip 查看 IP 地址
   如需确认 IP 地址，在终端中运行以下命令：
   ```bash
@@ -42,7 +23,6 @@ head:
   ```
   找到以 `default via` 开头的行，对应默认网关和正在使用的网络接口。
   :::
-- 已通过 LarePass [创建 Olares ID](/zh/manual/get-started/create-olares-id.md) 且使用默认的 `olares.cn` 域名。
 
 ## 创建文件夹
 创建文件夹存储 Olares 的配置文件。例如，用如下命令创建名为 `olares-config` 的文件夹：
@@ -193,3 +173,5 @@ cd ~/olares-config
 <!--@include: ./manage-olares-container.md-->
 
 <!--@include: ./reusables.md#protect-olares-id-->
+
+<!--@include: ./reusables.md#installation-troubleshooting-tip-->

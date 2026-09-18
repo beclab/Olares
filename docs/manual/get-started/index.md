@@ -9,10 +9,10 @@ head:
 Welcome to Olares! This guide will help you quickly set up and start using Olares on your preferred platform.
 
 <div class="cta">
-  <a href="./create-olares-id">
+  <a href="./install-olares">
     <div class="content">
       <h3>First time using Olares?</h3>
-      <p>Learn how to create an Olares ID, and get your Olares up and running.</p>
+      <p>Choose an installation method and follow the guide through activation and first login.</p>
     </div>
     <div class="arrow">→</div>
   </a>
@@ -22,7 +22,7 @@ Welcome to Olares! This guide will help you quickly set up and start using Olare
   <a href="./join-olares">
     <div class="content">
       <h3>Joining an existing Olares?</h3>
-      <p>Create your Olares ID and activate your account using the link from your admin.</p>
+      <p>Follow your admin's invitation to join Olares and activate your access.</p>
     </div>
     <div class="arrow">→</div>
   </a>

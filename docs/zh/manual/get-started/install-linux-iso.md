@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: 通过官方 ISO 镜像在物理机上安装 Olares 系统，包括系统要求、安装命令和激活流程。
+description: 通过启动 U 盘在 Linux 物理机上安装 Olares，然后使用 LarePass 完成激活。
 head:
   - - meta
     - name: keywords
@@ -11,24 +11,14 @@ head:
 
 本文介绍如何通过官方 ISO 镜像在物理机上安装 Olares 系统。
 
-<!--@include: ./reusables.md#installation-troubleshooting-tip-->
+## 前提条件
 
-## 系统要求
-
-### 必要配置
-
-- **CPU**：4 核及以上，x86-64 架构（AMD 或 Intel）。ARM 芯片目前不支持 ISO 镜像安装。
-- **内存**：至少 8 GB 可用内存。
-- **存储**：至少 150 GB 的可用 SSD 磁盘空间。
-   :::warning 必须使用 SSD
-   使用机械硬盘 (HDD) 会导致安装失败。
-   :::
-- **网络**：需连接至有线局域网。
-- **U 盘**：容量 8 GB 或更大。
-
-### 可选硬件
-
-<!--@include: ./gpu-requirements.md#gpu-requirements-->
+- **Olares 设备**：一台满足 [Linux 系统要求](install-olares.md#linux)的物理机。
+- **处理器**：Intel 或 AMD x86-64，不支持 ARM。
+<!--@include: ./reusables.md#larepass-prerequisite-->
+- **网络**：有线局域网连接。
+- **U 盘**：容量至少为 8 GB。
+- **操作电脑**：一台用于制作启动盘的 Windows、macOS 或 Linux 电脑。
 
 ## 制作启动盘
 
@@ -90,3 +80,5 @@ head:
 <!--@include: ./log-in-to-olares.md-->
 
 <!--@include: ./reusables.md#protect-olares-id-->
+
+<!--@include: ./reusables.md#installation-troubleshooting-tip-->

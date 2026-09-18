@@ -9,10 +9,10 @@ head:
 嗨！欢迎来到 Olares 的世界！让我们帮你在你喜欢的平台上轻松上手 Olares。
 
 <div class="cta">
-  <a href="./create-olares-id">
+  <a href="./install-olares">
     <div class="content">
       <h3>刚认识 Olares？</h3>
-      <p>从创建 Olares ID 开始，轻松搞定初始设置。</p>
+      <p>选择安装方式，按照指南完成安装、激活和首次登录。</p>
     </div>
     <div class="arrow">→</div>
   </a>
@@ -22,7 +22,7 @@ head:
   <a href="./join-olares">
     <div class="content">
       <h3>加入 Olares 集群？</h3>
-      <p>使用管理员提供的链接，创建 Olares ID 并激活账号。</p>
+      <p>按照管理员发送的邀请加入 Olares，并激活访问权限。</p>
     </div>
     <div class="arrow">→</div>
   </a>

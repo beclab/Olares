@@ -37,6 +37,10 @@ Proxmox 虚拟环境（PVE）是一个基于 Debian Linux 的开源虚拟化平�
 PVE 中如需使用 GPU，必须配置显卡直通。详细步骤见[在 PVE 中配置 GPU 直通](/zh/manual/best-practices/install-olares-gpu-passthrough.md#在-pve-中配置-gpu-直通)。
 :::
 
+## 开始之前
+
+<!--@include: ./reusables.md#larepass-prerequisite-->
+
 ## 安装 Olares
 
 在 PVE 命令行中，执行以下命令：

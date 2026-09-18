@@ -26,7 +26,7 @@ Get Olares running, whether you install the OS yourself or use a dedicated devic
   <a class="doc-map-card" href="./get-started/">
     <span class="doc-map-icon"><span class="material-symbols-outlined">rocket_launch</span></span>
     <span class="doc-map-title">Get started</span>
-    <span class="doc-map-desc">Create your Olares ID and install Olares on your own hardware</span>
+    <span class="doc-map-desc">Choose an installation method and set up Olares on your own hardware</span>
   </a>
   <a class="doc-map-card" href="./larepass/">
     <span class="doc-map-icon"><span class="material-symbols-outlined">smartphone</span></span>

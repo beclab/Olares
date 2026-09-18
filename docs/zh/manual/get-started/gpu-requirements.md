@@ -12,6 +12,7 @@ noindex: true
 :::
 - **显存**：建议至少 8 GB。即使是受支持的显卡，如果显存过小，也会导致许多 AI 应用无法运行。
 
+<!-- #region gpu-compatibility-check -->
 :::details 不确定显卡是否受支持？
 在终端中运行以下命令，并查看输出中的代号前缀：
 
@@ -38,4 +39,5 @@ lspci | grep -i nvidia
 
 你也可以参考 NVIDIA 开源驱动仓库中提供的[完整兼容 GPU 列表](https://github.com/NVIDIA/open-gpu-kernel-modules?tab=readme-ov-file#compatible-gpus)进行确认。
 :::
+<!-- #endregion gpu-compatibility-check -->
 <!-- #endregion gpu-requirements -->

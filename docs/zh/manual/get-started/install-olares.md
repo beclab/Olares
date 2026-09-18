@@ -1,56 +1,72 @@
 ---
-description: 概览 Olares 支持的安装方式。推荐在 Linux 环境下通过 ISO 镜像或一行命令安装。其他平台（如 macOS、Windows、PVE、Raspberry Pi）适用于测试和开发。
+description: 比较 Olares One、自托管 Linux 硬件和 NVIDIA DGX Spark 的设置路径与安装要求。
 outline: [2,4]
 head:
   - - meta
     - name: keywords
-      content: Olares, 安装方式, 平台选择, Linux, macOS, PVE, DGX Spark
+      content: Olares, Olares One, 系统要求, 安装方式, Linux, Ubuntu, Debian, DGX Spark
 ---
 
 # 安装 Olares
 
-本文介绍 Olares 支持的安装方式。
+先选择你使用的设备，再按照对应路径完成设置。
 
-## 开始之前
+## Olares One
 
-- 如果还没有 Olares ID，请先创建 [Olares ID](create-olares-id.md)。
-- 确认操作系统和硬件满足具体安装文档中列出的最低要求。
+Olares One 提供专用的设置和恢复流程，以保留其硬件专属功能。
 
-## 选择合适的安装方式
+:::warning 请使用 Olares One 专用指南
+不要使用下方的通用 Linux ISO 镜像或一行命令安装 Olares One。否则，设备可能被识别为通用硬件，导致部分 Olares One 专属功能无法使用。
+:::
 
-Olares 支持多平台、多部署方式。请根据你的使用场景选择最合适的安装方式。
+| 任务 | 推荐指南 |
+| --- | --- |
+| 首次设置 Olares One | [首次启动](/zh/one/first-boot) |
+| 重装或恢复 Olares OS | [Olares One 专用 ISO](/zh/one/create-bootable-usb) |
+| 从主机终端安装并激活 | [Olares CLI](/zh/manual/best-practices/activate-olares-using-cli)**（高级）** |
 
-### 生产环境推荐方式
+## Linux
 
-推荐在 Linux（Ubuntu 或 Debian）系统上运行 Olares，以获得最佳性能和稳定性。
+使用以下方式在你自己的兼容硬件上安装 Olares。生产环境推荐使用 Linux。
 
-- [**ISO 镜像**](install-linux-iso.md)（推荐）：在物理机上全新安装，自动配置 Linux 宿主环境、容器运行时、驱动及核心依赖。
-- [**一行命令**](install-linux-script.md)：在现有 Linux 系统中快速安装 Olares。
-- [**Docker 镜像**](install-linux-docker.md)：在 Linux 上以容器化方式运行 Olares。
+### 系统要求
 
-### DGX Spark
+:::warning 必须使用 SSD
+使用机械硬盘（HDD）会导致安装失败。
+:::
+
+| 项目 | 要求 |
+| --- | --- |
+| CPU | 4 核及以上 |
+| 内存 | 8 GB 及以上 |
+| 存储 | 150 GB 及以上 SSD 存储空间 |
+
+### 可选 GPU
+
+安装 Olares 无需 GPU，但大多数 AI 应用需要 GPU 才能运行。目前仅支持 NVIDIA GPU。
+
+| 项目 | 要求 |
+| --- | --- |
+| 架构 | Turing 或更新架构，包括 GTX 16xx，以及 RTX 20xx、30xx、40xx 和 50xx 系列 |
+| 显存 | 建议 8 GB 及以上 |
+
+<!--@include: ./gpu-requirements.md#gpu-compatibility-check-->
+
+### 安装方式
+
+| 安装方式 | 适用场景 |
+| --- | --- |
+| [**ISO 镜像**](install-linux-iso.md)**（推荐）** | 在使用 Intel 或 AMD x86-64 处理器的物理机上全新安装 |
+| [**一行命令**](install-linux-script.md) | 在已有 Ubuntu 22.04–25.04 或 Debian 12/13 系统上安装 |
+| [**Docker Compose**](install-linux-docker.md) | 在 Ubuntu 22.04–25.04 或 Debian 12/13 上以容器方式安装 |
+
+## DGX Spark
 
 NVIDIA DGX Spark 是一款紧凑型 AI 开发平台，配备高性能 GPU。Olares 经过优化，可充分发挥 DGX Spark 硬件的性能。
 
-- [**一行命令**](install-spark-script.md)（推荐）：通过命令行在 DGX Spark 上快速安装。
-- [**ISO 镜像**](install-spark-iso.md)：使用官方 ISO 镜像在 DGX Spark 上安装 Olares。
+### 安装方式
 
-<!-- ### 其他安装方式
-
-以下方式适用于开发、测试或轻量级环境。
-
-#### Windows
-- [**一行命令**](install-windows-script.md)：在 WSL2 虚拟化环境中安装 Olares。
-[**Docker 镜像**](install-windows-docker.md) — 在 WSL2 的 Docker 容器中运行 Olares。
-
-#### macOS
-- [**一行命令**](install-mac-script.md)：使用 MiniKube 在容器化环境中安装 Olares。
-- [**Docker 镜像**](install-mac-docker.md)：在 macOS 上通过 Docker 部署 Olares。
-
-#### PVE
-- [**ISO 镜像**](install-pve-iso.md)（推荐）：在 Proxmox VE 中使用 ISO 安装程序以虚拟机方式部署 Olares。
-- [**一行命令**](install-pve-script.md)：直接在 PVE 节点上安装 Olares。
-- [**LXC 容器**](install-lxc.md)：在 PVE 中使用 Linux 容器（LXC）部署 Olares。
-
-#### Raspberry Pi（ARM）
-- [**一行命令**](install-raspberry-pi.md)：在基于 ARM 架构的 Raspberry Pi 设备上安装 Olares。 -->
+| 安装方式 | 适用场景 |
+| --- | --- |
+| [**一行命令**](install-spark-script.md)**（推荐）** | 从现有 DGX OS 安装，需至少 150 GB 可用 SSD 存储空间 |
+| [**ISO 镜像**](install-spark-iso.md) | 通过启动 U 盘全新安装 |
