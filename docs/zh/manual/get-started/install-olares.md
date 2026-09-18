@@ -1,5 +1,5 @@
 ---
-description: 比较 Olares One、自托管 Linux 硬件和 NVIDIA DGX Spark 的设置路径与安装要求。
+description: 比较自托管 Linux 硬件、Olares One 和 NVIDIA DGX Spark 的设置路径与安装要求。
 outline: [2,4]
 head:
   - - meta
@@ -9,21 +9,11 @@ head:
 
 # 安装 Olares
 
-先选择你使用的设备，再按照对应路径完成设置。
+根据你使用的设备选择设置路径：
 
-## Olares One
-
-Olares One 提供专用的设置和恢复流程，以保留其硬件专属功能。
-
-:::warning 请使用 Olares One 专用指南
-不要使用下方的通用 Linux ISO 镜像或一行命令安装 Olares One。否则，设备可能被识别为通用硬件，导致部分 Olares One 专属功能无法使用。
-:::
-
-| 任务 | 推荐指南 |
-| --- | --- |
-| 首次设置 Olares One | [首次启动](/zh/one/first-boot) |
-| 重装或恢复 Olares OS | [Olares One 专用 ISO](/zh/one/create-bootable-usb) |
-| 从主机终端安装并激活 | [Olares CLI](/zh/manual/best-practices/activate-olares-using-cli)**（高级）** |
+- **自有设备**：[在 Linux 上安装 Olares](#linux)。
+- **Olares One**：[设置或重装 Olares One](#olares-one)。
+- **NVIDIA DGX Spark**：[在 DGX Spark 上安装 Olares](#dgx-spark)。
 
 ## Linux
 
@@ -59,6 +49,19 @@ Olares One 提供专用的设置和恢复流程，以保留其硬件专属功能
 | [**ISO 镜像**](install-linux-iso.md)**（推荐）** | 在使用 Intel 或 AMD x86-64 处理器的物理机上全新安装 |
 | [**一行命令**](install-linux-script.md) | 在已有 Ubuntu 22.04–25.04 或 Debian 12/13 系统上安装 |
 | [**Docker Compose**](install-linux-docker.md) | 在 Ubuntu 22.04–25.04 或 Debian 12/13 上以容器方式安装 |
+
+## Olares One
+
+Olares One 提供专用的设置和恢复流程，以保留其硬件专属功能。
+
+:::warning 请使用 Olares One 专用指南
+不要使用通用 Linux ISO 镜像或一行命令安装 Olares One。否则，设备可能被识别为通用硬件，导致部分 Olares One 专属功能无法使用。
+:::
+
+| 任务 | 推荐指南 |
+| --- | --- |
+| 首次设置 Olares One | [首次启动](/zh/one/first-boot) |
+| 重装或恢复 Olares OS | [Olares One 专用 ISO](/zh/one/create-bootable-usb) |
 
 ## DGX Spark
 

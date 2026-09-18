@@ -1,5 +1,5 @@
 ---
-description: Compare setup paths and installation requirements for Olares One, self-hosted Linux hardware, and NVIDIA DGX Spark.
+description: Compare setup paths and installation requirements for self-hosted Linux hardware, Olares One, and NVIDIA DGX Spark.
 outline: [2,4]
 head:
   - - meta
@@ -9,21 +9,11 @@ head:
 
 # Install Olares
 
-Choose your device first, then follow the setup path for that hardware.
+Choose the path that matches your device:
 
-## Olares One
-
-Olares One has dedicated setup and recovery workflows that preserve its hardware-specific features.
-
-:::warning Use the Olares One setup guides
-Do not install Olares One using the generic Linux ISO image or one-line script below. The device may be recognized as generic hardware, and some Olares One features may be unavailable.
-:::
-
-| Task | Recommended guide |
-| --- | --- |
-| Set up a new Olares One | [First boot](/one/first-boot) |
-| Reinstall or recover Olares OS | [Olares One ISO](/one/create-bootable-usb) |
-| Install and activate from the host terminal | [Olares CLI](/manual/best-practices/activate-olares-using-cli) **(Advanced)** |
+- **Your own device**: [Install Olares on Linux](#linux).
+- **Olares One**: [Set up or reinstall Olares One](#olares-one).
+- **NVIDIA DGX Spark**: [Install Olares on DGX Spark](#dgx-spark).
 
 ## Linux
 
@@ -59,6 +49,19 @@ A GPU is not required to install Olares, but most AI apps need one. Only NVIDIA 
 | [**ISO image**](install-linux-iso.md) **(Recommended)** | A fresh installation on a physical machine with an Intel or AMD x86-64 processor |
 | [**One-line script**](install-linux-script.md) | An existing Ubuntu 22.04–25.04 or Debian 12/13 system |
 | [**Docker Compose**](install-linux-docker.md) | A containerized installation on Ubuntu 22.04–25.04 or Debian 12/13 |
+
+## Olares One
+
+Olares One has dedicated setup and recovery workflows that preserve its hardware-specific features.
+
+:::warning Use the Olares One setup guides
+Do not install Olares One using the generic Linux ISO image or one-line script. The device may be recognized as generic hardware, and some Olares One features may be unavailable.
+:::
+
+| Task | Recommended guide |
+| --- | --- |
+| Set up a new Olares One | [First boot](/one/first-boot) |
+| Reinstall or recover Olares OS | [Olares One ISO](/one/create-bootable-usb) |
 
 ## DGX Spark
 
