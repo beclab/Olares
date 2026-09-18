@@ -61,19 +61,18 @@ Olares 上的 Open Design 0.22.1 暂不支持通过文本直接生成独立图�
 ### 在 Open Design 中添加模型
 
 1. 从启动台打开 Open Design。
-2. 打开**设置**。在**模型与提供商**页面选择 **API 提供方**。
-3. 在**提供商预设**中选择**自定义提供方**，然后将 **API 协议**设置为 **OpenAI**。
+2. 打开 **Settings**。在 **Models & providers** 页面选择 **API provider**。
+3. 在 **Provider preset** 中选择 **Custom provider**。
 4. 配置提供方：
 
-   - **Base URL**：原样粘贴从 Model Console 复制的 Base URL，包括末尾的 `/v1`。
+   - **Base URL**：粘贴从 Model Console 复制的 Base URL，包括末尾的 `/v1`。
    - **API Key**：输入任意非空值，例如 `olares`。同一 Olares 集群中的应用调用本地模型时，不需要真实密钥。
-   - **模型**：输入从 Model Console 复制的完整 Model name。
-   - **最大 tokens（可选）**：输入 `65536`。如需使用更小的上下文窗口，可改为 `32768`。
+   - **Model**：输入从 Model Console 复制的完整 Model name。
+   - **Max tokens（可选）**：输入 `65536`。如需使用更小的上下文窗口，可改为 `32768`。
 
    <!-- ![在 Open Design 中配置 API 提供方](/images/manual/use-cases/open-design-api-provider.png#bordered) -->
 
-5. 点击**保存**，然后点击**测试**。
-6. Open Design 显示连接成功后再继续。
+5. 点击 **Test** 检查连接。显示绿色的 **Connected** 状态表示连接成功。修改会自动保存。
 
 :::tip 先做小规模测试
 开始制作多页幻灯片或落地页之前，先让 Open Design 生成一张封面幻灯片。预览成功后，说明 Base URL、模型名称和 token 上限可以正常配合使用。
@@ -81,11 +80,11 @@ Olares 上的 Open Design 0.22.1 暂不支持通过文本直接生成独立图�
 
 ## 创建设计项目
 
-1. 在 Open Design 中新建项目。
-2. 根据目标产物选择 Skill，例如幻灯片、落地页或原型。
-3. 选择设计系统。首次使用时，可以直接采用默认设计系统。
+1. 在首页选择项目类型，例如 **Prototype**、**Slide deck**、**Document** 或 **Website clone**。
+2. 选择符合任务需求的 Skill 预设，例如 **Blog Post**。也可以打开提示词下方的示例，将它作为起点。
+3. 根据需要选择 **Design system** 和 **Working directory**。
 
-   <!-- ![选择 Skill 和设计系统](/images/manual/use-cases/open-design-skill-design-system.png#bordered) -->
+   <!-- ![选择项目类型、Skill 和设计系统](/images/manual/use-cases/open-design-skill-design-system.png#bordered) -->
 
 4. 输入具体需求。建议说明目标受众、内容、视觉风格和输出格式。例如：
 
@@ -95,12 +94,13 @@ Olares 上的 Open Design 0.22.1 暂不支持通过文本直接生成独立图�
    产品名称为“Northstar”，副标题为“Find your next move.”。
    ```
 
-5. 发送提示词，等待右侧生成预览。
+5. 确认已选择目标模型，然后点击箭头开始生成。
+6. 等待工作区打开并显示预览。
 
    <!-- ![Open Design 工作区和预览](/images/manual/use-cases/open-design-workspace-preview.png#bordered) -->
 
-6. 在对话中继续调整结果。你可以拖入参考图片，或输入 `@` 添加项目文件，然后说明要修改的部分。
-7. 完成后打开导出菜单，根据项目类型下载 ZIP、PDF 或 PPTX 文件。
+7. 在对话中继续调整结果。你可以拖入参考图片，或输入 `@` 添加项目文件，然后说明要修改的部分。
+8. 完成后打开导出菜单，根据项目类型下载 ZIP、PDF 或 PPTX 文件。
 
    <!-- ![从 Open Design 导出项目](/images/manual/use-cases/open-design-export.png#bordered) -->
 

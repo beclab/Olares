@@ -39,9 +39,6 @@ To deploy a different local model, see [Host local large language models with En
 ## Install Open Design
 
 1. Open Market and search for "Open Design".
-
-   <!-- ![Open Design in Market](/images/manual/use-cases/open-design.png#bordered) -->
-
 2. Click **Get**, then **Install**, and wait for installation to complete.
 
 ## Connect a local model
@@ -58,18 +55,17 @@ In this guide, Open Design connects to Qwen3.6-27B (llama.cpp) using the **OpenA
 
 1. Open Open Design from Launchpad.
 2. Open **Settings**. On the **Models & providers** page, select **API provider**.
-3. Under **Provider preset**, select **Custom provider**, then select **OpenAI** as the **API protocol**.
+3. Under **Provider preset**, select **Custom provider**.
 4. Configure the provider:
 
-   - **Base URL**: Paste the Base URL copied from Model Console exactly as shown, including the trailing `/v1`.
+   - **Base URL**: Paste the Base URL copied from Model Console, including the trailing `/v1`.
    - **API key**: Enter any non-empty value, such as `olares`. Local model apps do not require a real key for requests from another app in the same Olares cluster.
    - **Model**: Enter the exact Model name copied from Model Console.
    - **Max tokens (optional)**: Enter `65536`. You can use `32768` for a smaller context window.
 
    <!-- ![Configure an API provider in Open Design](/images/manual/use-cases/open-design-api-provider.png#bordered) -->
 
-5. Click **Save**, then click **Test**.
-6. Continue after Open Design reports that the provider is connected.
+5. Click **Test** to verify the connection. A green **Connected** status confirms that the connection is established. Changes are saved automatically.
 
 :::tip Start with a small test
 Ask Open Design to create a single title slide before starting a multi-page deck or landing page. A successful preview confirms that the Base URL, model name, and token limit work together.
@@ -77,11 +73,11 @@ Ask Open Design to create a single title slide before starting a multi-page deck
 
 ## Create a design project
 
-1. Create a new project in Open Design.
-2. Select the Skill that matches the output you want, such as a slide deck, landing page, or prototype.
-3. Select a design system. The built-in default is suitable for a first project.
+1. On the Home page, select a project type, such as **Prototype**, **Slide deck**, **Document**, or **Website clone**.
+2. Choose a Skill preset that matches your task, such as **Blog Post**. You can also open one of the examples below the prompt to use it as a starting point.
+3. Optionally, select a **Design system** and **Working directory**.
 
-   <!-- ![Select a Skill and design system](/images/manual/use-cases/open-design-skill-design-system.png#bordered) -->
+   <!-- ![Select a project type, Skill, and design system](/images/manual/use-cases/open-design-skill-design-system.png#bordered) -->
 
 4. Enter a specific brief. Include the intended audience, content, visual direction, and output format. For example:
 
@@ -91,12 +87,13 @@ Ask Open Design to create a single title slide before starting a multi-page deck
    Include the product name "Northstar" and the subtitle "Find your next move."
    ```
 
-5. Send the prompt and wait for the preview to render beside the conversation.
+5. Check that the intended model is selected, then click the arrow to start generating.
+6. Wait for the workspace to open and the preview to render.
 
    <!-- ![Open Design workspace and preview](/images/manual/use-cases/open-design-workspace-preview.png#bordered) -->
 
-6. Refine the result in the conversation. You can drag in a reference image or type `@` to attach a project file, then describe the part you want to change.
-7. When the result is ready, open the export menu and download it as ZIP, PDF, or PPTX, depending on the project type.
+7. Refine the result in the conversation. You can drag in a reference image or type `@` to attach a project file, then describe the part you want to change.
+8. When the result is ready, open the export menu and download it as ZIP, PDF, or PPTX, depending on the project type.
 
    <!-- ![Export a project from Open Design](/images/manual/use-cases/open-design-export.png#bordered) -->
 
