@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Install Olares on a physical machine using the official ISO image, including system requirements, installation steps, and activation process.
+description: Install Olares on a physical Linux machine from a bootable USB drive, then activate it with LarePass.
 head:
   - - meta
     - name: keywords
@@ -11,24 +11,14 @@ head:
 
 This guide explains how to install Olares on a physical machine using the official ISO image.
 
-<!--@include: ./reusables.md#installation-troubleshooting-tip-->
+## Prerequisites
 
-## System requirements
-
-### Required specifications
-
-- **CPU**: At least 4 cores. Intel or AMD x86-64 architecture required. ARM is not currently supported.
-- **RAM**: At least 8 GB of available memory.
-- **Storage**: At least 150 GB of available SSD storage.
-  :::warning SSD required
-  The installation will fail if an HDD (mechanical hard drive) is used instead of an SSD.
-  :::
-- **Network**: Wired LAN connection required.
-- **USB flash drive**: 8 GB capacity or larger.
-
-### Optional hardware
-
-<!--@include: ./gpu-requirements.md#gpu-requirements-->
+- **Olares device**: A physical machine that meets the [Linux system requirements](install-olares.md#linux).
+- **Processor**: Intel or AMD x86-64. ARM is not supported.
+<!--@include: ./reusables.md#larepass-prerequisite-->
+- **Network**: A wired LAN connection.
+- **USB flash drive**: At least 8 GB of capacity.
+- **Setup computer**: A Windows, macOS, or Linux computer for creating the bootable USB drive.
 
 ## Create a bootable USB drive
 
@@ -94,3 +84,5 @@ After rebooting, the system will enter Ubuntu.
 <!--@include: ./log-in-to-olares.md-->
 
 <!--@include: ./reusables.md#protect-olares-id-->
+
+<!--@include: ./reusables.md#installation-troubleshooting-tip-->

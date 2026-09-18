@@ -53,14 +53,6 @@ const side = {
       link: "/zh/manual/get-started/",
       items: [
         {
-          text: "下载 LarePass",
-          link: "/zh/manual/larepass/",
-        },
-        {
-          text: "创建 Olares ID",
-          link: "/zh/manual/get-started/create-olares-id",
-        },
-        {
           text: "安装 Olares",
           link: "/zh/manual/get-started/install-olares",
           collapsed: true,
@@ -164,6 +156,14 @@ const side = {
           text: "Olares ID",
           collapsed: true,
           items: [
+            {
+              text: "下载 LarePass",
+              link: "/zh/manual/larepass/",
+            },
+            {
+              text: "创建 Olares ID",
+              link: "/zh/manual/get-started/create-olares-id",
+            },
             {
               text: "在 LarePass 中管理 Olares ID",
               link: "/zh/manual/larepass/manage-accounts",

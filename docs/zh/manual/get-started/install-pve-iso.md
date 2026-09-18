@@ -35,6 +35,10 @@ head:
 PVE 中如需使用 GPU，必须配置显卡直通。详细步骤见[在 PVE 中配置 GPU 直通](/zh/manual/best-practices/install-olares-gpu-passthrough.md#在-pve-中配置-gpu-直通)。
 :::
 
+## 开始之前
+
+<!--@include: ./reusables.md#larepass-prerequisite-->
+
 ## 下载 Olares ISO 镜像
 
 下载[最新官方 Olares ISO 镜像](https://cdn.olares.cn/olares-v1.12.6-amd64.iso)。

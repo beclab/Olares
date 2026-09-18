@@ -53,14 +53,6 @@ const side = {
       link: "/manual/get-started/",
       items: [
         {
-          text: "Download LarePass",
-          link: "/manual/larepass/",
-        },
-        {
-          text: "Create an Olares ID",
-          link: "/manual/get-started/create-olares-id",
-        },
-        {
           text: "Install Olares",
           link: "/manual/get-started/install-olares",
           collapsed: true,
@@ -164,6 +156,14 @@ const side = {
           text: "Olares ID",
           collapsed: true,
           items: [
+            {
+              text: "Download LarePass",
+              link: "/manual/larepass/",
+            },
+            {
+              text: "Create an Olares ID",
+              link: "/manual/get-started/create-olares-id",
+            },
             {
               text: "Manage Olares IDs in LarePass",
               link: "/manual/larepass/manage-accounts",

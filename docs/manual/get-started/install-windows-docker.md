@@ -40,6 +40,7 @@ You can also confirm your GPU in **Task Manager > Performance**. To verify the d
 
 ## Before you begin
 Before you begin, ensure the following:
+<!--@include: ./reusables.md#larepass-prerequisite-->
 - [Docker Desktop](https://docs.docker.com/desktop/setup/install/windows-install/)  is installed and running on your system.
   :::info WSL 2 and Hyper-V  
   If Docker Desktop is configured to use **Hyper-V**, GPU support for Olares cannot be enabled. Ensure Docker Desktop is set to run in the **WSL 2** mode.
@@ -51,7 +52,6 @@ Before you begin, ensure the following:
   ipconfig | findstr /i "IPv4.*192"
   ```
     :::
-- You have [created an Olares ID via LarePass](/manual/get-started/create-olares-id.md).
 
 ## Configure WSL 2
 1. Open PowerShell and run the following command to confirm the kernel version of WSL installed on your system:

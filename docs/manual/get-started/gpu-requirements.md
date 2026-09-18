@@ -12,6 +12,7 @@ GPUs with older architectures are not recognized by Olares. AI applications that
 :::
 - **VRAM**: At least 8 GB recommended. Even on a supported GPU, limited VRAM will prevent many AI applications from running.
 
+<!-- #region gpu-compatibility-check -->
 :::details Not sure if your GPU is supported?
 Run the following command and check the code name prefix in the output:
 
@@ -38,4 +39,5 @@ The code name prefix maps to GPU architecture as follows:
 
 You can also verify against the [full compatible GPU list](https://github.com/NVIDIA/open-gpu-kernel-modules?tab=readme-ov-file#compatible-gpus) from the NVIDIA open driver repository.
 :::
+<!-- #endregion gpu-compatibility-check -->
 <!-- #endregion gpu-requirements -->

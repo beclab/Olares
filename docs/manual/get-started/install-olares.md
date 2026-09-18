@@ -1,56 +1,75 @@
 ---
-description: Compare Olares installation methods for Linux, macOS, Windows, PVE, and Raspberry Pi, including recommended production and testing options.
+description: Compare setup paths and installation requirements for self-hosted Linux hardware, Olares One, and NVIDIA DGX Spark.
 outline: [2,4]
 head:
   - - meta
     - name: keywords
-      content: Olares, install Olares, installation methods, Linux, macOS, Windows, PVE, Raspberry Pi, DGX Spark
+      content: Olares, install Olares, Olares One, system requirements, Linux, Ubuntu, Debian, DGX Spark
 ---
 
 # Install Olares
 
-This page provides an overview of supported installation methods for Olares.
+Choose the path that matches your device:
 
-## Before you begin
+- **Your own device**: [Install Olares on Linux](#linux).
+- **Olares One**: [Set up or reinstall Olares One](#olares-one).
+- **NVIDIA DGX Spark**: [Install Olares on DGX Spark](#dgx-spark).
 
-- Create your [Olares ID](create-olares-id.md) if you haven't already.
-- Check that your operating system and hardware meet the minimum requirements described in the specific installation guide.
+## Linux
 
-## Choosing the right method
+Use the following methods to install Olares on your own compatible hardware. Linux is recommended for production deployments.
 
-Olares supports multiple platforms and deployment methods. Choose the installation method that best fits your environment.
+### System requirements
 
-### Recommended for production
+:::warning SSD required
+Installation on an HDD will fail.
+:::
 
-Linux (Ubuntu or Debian) is the recommended platform for running Olares, as it offers the best performance and stability in production environments.
+| Item | Requirement |
+| --- | --- |
+| CPU | 4 cores or more |
+| Memory | 8 GB or more |
+| Storage | 150 GB or more on an SSD |
 
-- [**ISO image**](install-linux-iso.md) (Recommended): Perform a fresh installation on a physical machine, auto-configuring the Linux host environment, container runtime, drivers, and core dependencies.
-- [**One-line script**](install-linux-script.md): Quick install on existing Linux systems.
-- [**Docker image**](install-linux-docker.md): Run Olares in a containerized environment on Linux.
+### Optional GPU
 
-### DGX Spark
+A GPU is not required to install Olares, but most AI apps need one. Only NVIDIA GPUs are supported.
+
+| Item | Requirement |
+| --- | --- |
+| Architecture | Turing or newer, including GTX 16xx and RTX 20xx, 30xx, 40xx, and 50xx series |
+| VRAM | 8 GB or more recommended |
+
+<!--@include: ./gpu-requirements.md#gpu-compatibility-check-->
+
+### Installation methods
+
+| Method | Best for |
+| --- | --- |
+| [**ISO image**](install-linux-iso.md) **(Recommended)** | A fresh installation on a physical machine with an Intel or AMD x86-64 processor |
+| [**One-line script**](install-linux-script.md) | An existing Ubuntu 22.04–25.04 or Debian 12/13 system |
+| [**Docker Compose**](install-linux-docker.md) | A containerized installation on Ubuntu 22.04–25.04 or Debian 12/13 |
+
+## Olares One
+
+Olares One has dedicated setup and recovery workflows that preserve its hardware-specific features.
+
+:::warning Use the Olares One setup guides
+Do not install Olares One using the generic Linux ISO image or one-line script. The device may be recognized as generic hardware, and some Olares One features may be unavailable.
+:::
+
+| Task | Recommended guide |
+| --- | --- |
+| Set up a new Olares One | [First boot](/one/first-boot) |
+| Reinstall or recover Olares OS | [Olares One ISO](/one/create-bootable-usb) |
+
+## DGX Spark
 
 NVIDIA DGX Spark is a compact AI development platform featuring a high-performance GPU. Olares is optimized to leverage the full capabilities of DGX Spark hardware.
 
-- [**One-line script**](install-spark-script.md) (Recommended): Quick install via command line on DGX Spark.
-- [**ISO image**](install-spark-iso.md): Install Olares using the official ISO image for DGX Spark.
+### Installation methods
 
-<!-- ### Alternative installation methods
-
-These methods are suitable for development, testing, or lightweight environments. 
-
-#### Windows
-- [**One-line script**](install-windows-script.md): Install Olares in Windows Subsystem for Linux 2 (WSL 2).
-[**Docker image**](install-windows-docker.md): Run Olares in Docker with WSL 2 integration.
-
-#### macOS
-- [**One-line script**](install-mac-script.md): Install Olares in a containerized environment via MiniKube.
-- [**Docker image**](install-mac-docker.md): Run Olares in Docker on macOS.
-
-#### PVE
-- [**ISO image**](install-pve-iso.md) (Recommended): Deploy Olares as a full VM in Proxmox VE using the ISO installer.
-- [**One-line script**](install-pve-script.md): Install Olares directly on a PVE node.
-- [**LXC container**](install-lxc.md): Deploy Olares in Proxmox VE using Linux containers (LXC).
-
-#### Raspberry Pi (ARM)
-- [**One-line script**](install-raspberry-pi.md): Install Olares on ARM-based Raspberry Pi devices. -->
+| Method | Best for |
+| --- | --- |
+| [**One-line script**](install-spark-script.md) **(Recommended)** | Installing from the existing DGX OS with at least 150 GB of available SSD storage |
+| [**ISO image**](install-spark-iso.md) | A fresh installation from a bootable USB drive |
