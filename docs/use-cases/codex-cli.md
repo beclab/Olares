@@ -29,16 +29,13 @@ In this guide, you will learn how to:
 ## Prerequisites
 
 - Olares 1.12.6 or later.
-- Qwen3.6-27B MTP (llama.cpp) installed from Market and ready in Model Console. This guide uses it for the local model connection.
+- If you plan to use the local model connection in this guide, install Qwen3.6-27B MTP (llama.cpp) from Market and ensure it is ready in Model Console.
 
 To deploy a different local model, see [Host local large language models with Engine Base apps](llm-base-apps.md).
 
 ## Install Codex CLI
 
 1. Open Market and search for "Codex CLI".
-
-   <!-- ![Codex CLI in Market](/images/manual/use-cases/codex-cli.png#bordered) -->
-
 2. Click **Get**, then **Install**, and wait for installation to complete.
 
 ## Connect to a model
@@ -58,7 +55,7 @@ Codex's standard browser login returns credentials to a callback service on `loc
 
 3. Open the URL shown in the terminal, sign in to ChatGPT, and enter the one-time code.
 
-   <!-- ![Codex device code login](/images/manual/use-cases/codex-cli-device-auth.png#bordered) -->
+   ![Codex device code login](/images/manual/use-cases/codex-cli-device-auth.png#bordered)
 
    If device code login is unavailable, enable it in your ChatGPT security settings or ask your workspace administrator to allow it.
 
@@ -68,7 +65,7 @@ Codex's standard browser login returns credentials to a callback service on `loc
    codex login status
    ```
 
-   <!-- ![Codex login status](/images/manual/use-cases/codex-cli-login-status.png#bordered) -->
+   ![Codex login status](/images/manual/use-cases/codex-cli-login-status.png#bordered)
 
 ::: details Fallback: Complete the browser callback inside the container
 Use this method only when device code authentication is unavailable.
@@ -85,8 +82,6 @@ Use this method only when device code authentication is unavailable.
 5. Return to the first terminal and run `codex login status`.
 
 The authorization code and callback URL are short-lived credentials. Do not share them or include them in screenshots.
-
-<!-- ![Codex browser callback success](/images/manual/use-cases/codex-cli-callback-success.png#bordered) -->
 :::
 
 ### Connect with an OpenAI API key
@@ -115,8 +110,6 @@ This example connects Codex CLI to Qwen3.6-27B MTP (llama.cpp) through its OpenA
 
    c. Copy the **Base URL** exactly as shown.
 
-   <!-- ![Qwen3.6-27B MTP model connection details](/images/manual/use-cases/codex-cli-qwen36-mtp-model-console.png#bordered) -->
-
 #### Configure Codex CLI
 
 1. Navigate to **Settings** > **Applications** > **Codex CLI** > **Manage environment variables**.
@@ -126,7 +119,7 @@ This example connects Codex CLI to Qwen3.6-27B MTP (llama.cpp) through its OpenA
    - **OPENAI_API_KEY**: Enter a non-empty placeholder value, such as `olares`. The local model app does not require a real OpenAI key for requests from another app in the same Olares cluster.
    - **CODEX_MODEL**: Enter the exact Model name copied from Model Console.
 
-   <!-- ![Codex CLI local model environment variables](/images/manual/use-cases/codex-cli-local-model-env.png#bordered) -->
+   ![Codex CLI local model environment variables](/images/manual/use-cases/codex-cli-local-model-env.png#bordered)
 
 3. Click **Apply** and wait for Codex CLI to restart.
 4. Open Codex CLI from Launchpad and run:
@@ -166,9 +159,9 @@ All project work happens in the `/opt/data` directory. Files stored there persis
 4. Review the proposed commands and file changes before approving them.
 5. Inspect the result and ask a follow-up question or request another change.
 
-   <!-- ![Codex CLI coding session](/images/manual/use-cases/codex-cli-session.png#bordered) -->
+   ![Codex CLI coding session](/images/manual/use-cases/codex-cli-session.png#bordered)
 
-### Manage Olares with Olares CLI
+## Manage Olares with Olares CLI
 
 Codex authentication only grants access to the selected model service. To ask Codex to install Olares apps, inspect cluster status, or perform other Olares management tasks, authenticate Olares CLI separately:
 
@@ -213,7 +206,7 @@ The callback service runs inside the Codex CLI container, so your computer's bro
 
 ### Why does Codex still use the local model after I sign in to ChatGPT?
 
-**OPENAI_BASE_URL** and **CODEX_MODEL** still route Codex to the local service. Clear both variables in the app settings, click **Apply**, and wait for the app to restart.
+`OPENAI_BASE_URL` and `CODEX_MODEL` still route Codex to the local service. Clear both variables in the app settings, click **Apply**, and wait for the app to restart.
 
 ### Why does the local model return 404?
 
@@ -221,7 +214,7 @@ Open the model's Model Console and copy its Base URL again. Select **OpenAI-Comp
 
 ### Why does Codex report `model not found`?
 
-Compare **CODEX_MODEL** with the **Model name** in Model Console. The values must match exactly.
+Compare `CODEX_MODEL` with the **Model name** in Model Console. The values must match exactly.
 
 ### How do I remove a remaining login file?
 
