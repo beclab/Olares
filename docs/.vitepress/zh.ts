@@ -151,8 +151,22 @@ const side = {
           link: "/zh/manual/olares/desktop",
         },
         {
+          text: "安装 LarePass 浏览器扩展",
+          link: "/zh/manual/install-larepass-browser-extension",
+        },
+        {
           text: "探索",
           link: "/zh/manual/get-started/next-steps",
+        },
+      ],
+    },
+    {
+      text: "教程",
+      collapsed: false,
+      items: [
+        {
+          text: "使用 LarePass 私密翻译网页",
+          link: "/zh/manual/tutorial/translate-webpages-with-larepass",
         },
       ],
     },
