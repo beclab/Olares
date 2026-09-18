@@ -100,8 +100,9 @@ upload, no login token is needed.
 
 If --file is omitted, logs are collected first (requires root) and the
 resulting archive is uploaded. If upload or ticket creation fails after
-collection, the archive is kept; retry with --file to skip collecting
-again.`,
+collection, the archive is kept. Upload failures can be retried with --file
+to skip collecting again. After a ticket creation failure, check AssistHub
+before retrying: the ticket may already exist.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			options.Endpoint = resolveTicketEndpoint(options.Endpoint)
 			if err := runLogsUpload(options); err != nil {
@@ -182,7 +183,7 @@ func runLogsUpload(options *logUploadOptions) error {
 	fmt.Fprintln(os.Stderr, "creating ticket...")
 	ticket, err := createTicket(apiClient, endpoint, options, presign.AttachmentID, newIdempotencyKey())
 	if err != nil {
-		return keepArchiveHint(archivePath, collected, err)
+		return ticketCreationFailure(archivePath, presign.AttachmentID, err)
 	}
 
 	if cleanup != nil {
@@ -190,6 +191,15 @@ func runLogsUpload(options *logUploadOptions) error {
 	}
 	fmt.Fprintf(os.Stderr, "logs uploaded, ticket created: %s (%s)\n", ticket.TicketNumber, ticket.TicketID)
 	return nil
+}
+
+// A failed response does not prove that ticket creation failed. A new CLI
+// invocation creates a fresh attachment and idempotency key, so never recommend
+// an unconditional --file retry after the ticket request has been attempted.
+// This applies to caller-supplied archives as well as automatically collected ones.
+func ticketCreationFailure(archivePath, attachmentID string, err error) error {
+	fmt.Fprintf(os.Stderr, "archive retained at %s\nuploaded attachment: %s\n", archivePath, attachmentID)
+	return fmt.Errorf("ticket creation could not be confirmed; the ticket may already exist. Check AssistHub before retrying to avoid creating a duplicate ticket: %w", err)
 }
 
 // keepArchiveHint leaves a collected temp archive on disk so the user can retry
@@ -408,6 +418,9 @@ func createTicket(client *http.Client, endpoint string, options *logUploadOption
 	if err := postJSON(client, endpoint+ticketPath, reqBody, headers, &resp); err != nil {
 		return nil, fmt.Errorf("create ticket: %w", err)
 	}
+	if resp.TicketID == "" || resp.TicketNumber == "" {
+		return nil, fmt.Errorf("create ticket: response missing ticket_id or ticket_number")
+	}
 	return &resp, nil
 }
 
@@ -449,9 +462,12 @@ func postJSONOnce(client *http.Client, url string, body []byte, headers map[stri
 	}
 	defer resp.Body.Close()
 
-	data, _ := io.ReadAll(resp.Body)
+	data, readErr := io.ReadAll(resp.Body)
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return apiError(resp.StatusCode, data)
+	}
+	if readErr != nil {
+		return fmt.Errorf("read response: %w", readErr)
 	}
 	if out != nil {
 		if err := json.Unmarshal(data, out); err != nil {
