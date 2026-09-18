@@ -108,8 +108,23 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           //   ]
         },
         {
-          text: "使用 eGPU 设置",
+          text: "设置 eGPU",
           link: "/zh/one/egpu",
+          collapsed: true,
+          items: [
+            {
+              text: "在 Olares OS 上设置",
+              link: "/zh/one/egpu-olares-os",
+            },
+            {
+              text: "在 Windows 上设置",
+              link: "/zh/one/egpu-windows",
+            },
+            {
+              text: "排查 eGPU 问题",
+              link: "/zh/one/ts-egpu",
+            },
+          ],
         },
         {
           text: "管理硬件设置",
