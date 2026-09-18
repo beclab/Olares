@@ -2,10 +2,14 @@ package os
 
 import (
 	"bytes"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -34,8 +38,18 @@ const (
 	ticketEndpointEnv     = "OLARES_TICKET_API"
 	defaultTicketEndpoint = "https://ticket.olares.com"
 	gzipMimeType          = "application/gzip"
-	presignPath       = "/v1/olares-cli/attachments/presigned-upload"
-	ticketPath        = "/v1/olares-cli/tickets"
+	presignPath           = "/v1/olares-cli/attachments/presigned-upload"
+	ticketPath            = "/v1/olares-cli/tickets"
+	headerIdempotencyKey  = "Idempotency-Key"
+
+	// JSON calls (presign / create ticket) are tiny; a long shared timeout
+	// is only for the S3 PUT. Mixing them on one Client also reuses the
+	// Cloudflare connection after a minutes-long upload, which surfaces as
+	// "unexpected EOF" on the follow-up POST.
+	jsonRequestTimeout   = 30 * time.Second
+	tlsHandshakeTimeout  = 45 * time.Second
+	maxTransientAttempts = 3
+	defaultUploadTimeout = 30 * time.Minute
 )
 
 type presignRequest struct {
@@ -73,7 +87,7 @@ type ticketResponse struct {
 }
 
 func newCmdLogsUpload() *cobra.Command {
-	options := &logUploadOptions{Timeout: 30 * time.Minute}
+	options := &logUploadOptions{Timeout: defaultUploadTimeout}
 
 	cmd := &cobra.Command{
 		Use:   "upload",
@@ -85,7 +99,10 @@ only credential required: together with your Olares ID it authorizes this
 upload, no login token is needed.
 
 If --file is omitted, logs are collected first (requires root) and the
-resulting archive is uploaded.`,
+resulting archive is uploaded. If upload or ticket creation fails after
+collection, the archive is kept. Upload failures can be retried with --file
+to skip collecting again. After a ticket creation failure, check AssistHub
+before retrying: the ticket may already exist.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			options.Endpoint = resolveTicketEndpoint(options.Endpoint)
 			if err := runLogsUpload(options); err != nil {
@@ -100,7 +117,7 @@ resulting archive is uploaded.`,
 	cmd.Flags().StringVar(&options.File, "file", "", "Path to an existing log archive to upload; if empty, logs are collected first")
 	cmd.Flags().StringVar(&options.Description, "description", "", "Optional ticket description")
 	cmd.Flags().StringVar(&options.OlaresVersion, "olares-version", "", "Optional Olares version recorded on the ticket")
-	cmd.Flags().DurationVar(&options.Timeout, "timeout", options.Timeout, "HTTP timeout for each upload/API call, raise it for large archives on slow links")
+	cmd.Flags().DurationVar(&options.Timeout, "timeout", options.Timeout, "HTTP timeout for the archive upload to storage, raise it for large archives on slow links")
 
 	_ = cmd.MarkFlagRequired("olares-id")
 	_ = cmd.MarkFlagRequired("code")
@@ -121,51 +138,78 @@ func resolveTicketEndpoint(flagValue string) string {
 }
 
 func runLogsUpload(options *logUploadOptions) error {
+	collected := false
 	archivePath := options.File
+	var cleanup func()
 	if archivePath == "" {
-		collected, cleanup, err := collectForUpload()
-		if cleanup != nil {
-			defer cleanup()
-		}
+		collectedPath, collectedCleanup, err := collectForUpload()
+		cleanup = collectedCleanup
 		if err != nil {
+			if cleanup != nil {
+				cleanup()
+			}
 			return err
 		}
-		archivePath = collected
+		archivePath = collectedPath
+		collected = true
 	}
 
 	info, err := os.Stat(archivePath)
 	if err != nil {
-		return fmt.Errorf("failed to stat archive %s: %v", archivePath, err)
+		return keepArchiveHint(archivePath, collected, fmt.Errorf("failed to stat archive %s: %v", archivePath, err))
 	}
 	if info.IsDir() {
-		return fmt.Errorf("archive %s is a directory, expected a file", archivePath)
+		return keepArchiveHint(archivePath, collected, fmt.Errorf("archive %s is a directory, expected a file", archivePath))
 	}
 
 	endpoint := strings.TrimRight(options.Endpoint, "/")
 	timeout := options.Timeout
 	if timeout <= 0 {
-		timeout = 30 * time.Minute
+		timeout = defaultUploadTimeout
 	}
-	client := &http.Client{Timeout: timeout}
+	apiClient := newAPIClient()
+	storageClient := newStorageClient(timeout)
 
 	fmt.Fprintln(os.Stderr, "requesting upload URL...")
-	presign, err := requestPresign(client, endpoint, options, filepath.Base(archivePath), info.Size())
+	presign, err := requestPresign(apiClient, endpoint, options, filepath.Base(archivePath), info.Size())
 	if err != nil {
-		return err
+		return keepArchiveHint(archivePath, collected, err)
 	}
 
-	if err := putArchive(client, presign, archivePath, info.Size()); err != nil {
-		return err
+	if err := putArchive(storageClient, presign, archivePath, info.Size()); err != nil {
+		return keepArchiveHint(archivePath, collected, err)
 	}
 
 	fmt.Fprintln(os.Stderr, "creating ticket...")
-	ticket, err := createTicket(client, endpoint, options, presign.AttachmentID)
+	ticket, err := createTicket(apiClient, endpoint, options, presign.AttachmentID, newIdempotencyKey())
 	if err != nil {
-		return err
+		return ticketCreationFailure(archivePath, presign.AttachmentID, err)
 	}
 
+	if cleanup != nil {
+		cleanup()
+	}
 	fmt.Fprintf(os.Stderr, "logs uploaded, ticket created: %s (%s)\n", ticket.TicketNumber, ticket.TicketID)
 	return nil
+}
+
+// A failed response does not prove that ticket creation failed. A new CLI
+// invocation creates a fresh attachment and idempotency key, so never recommend
+// an unconditional --file retry after the ticket request has been attempted.
+// This applies to caller-supplied archives as well as automatically collected ones.
+func ticketCreationFailure(archivePath, attachmentID string, err error) error {
+	fmt.Fprintf(os.Stderr, "archive retained at %s\nuploaded attachment: %s\n", archivePath, attachmentID)
+	return fmt.Errorf("ticket creation could not be confirmed; the ticket may already exist. Check AssistHub before retrying to avoid creating a duplicate ticket: %w", err)
+}
+
+// keepArchiveHint leaves a collected temp archive on disk so the user can retry
+// with --file instead of gathering logs again, and points them at that path.
+func keepArchiveHint(archivePath string, collected bool, err error) error {
+	if !collected {
+		return err
+	}
+	fmt.Fprintf(os.Stderr, "archive kept at %s\nretry with --file %s to skip collecting again\n", archivePath, archivePath)
+	return err
 }
 
 // collectForUpload runs a full local collection into a temp directory and
@@ -206,7 +250,7 @@ func requestPresign(client *http.Client, endpoint string, options *logUploadOpti
 		IsLargeLog: true,
 	}
 	var resp presignResponse
-	if err := postJSON(client, endpoint+presignPath, reqBody, &resp); err != nil {
+	if err := postJSON(client, endpoint+presignPath, reqBody, nil, &resp); err != nil {
 		return nil, fmt.Errorf("request presigned upload: %w", err)
 	}
 	if resp.UploadURL == "" || resp.AttachmentID == "" {
@@ -216,6 +260,25 @@ func requestPresign(client *http.Client, endpoint string, options *logUploadOpti
 }
 
 func putArchive(client *http.Client, presign *presignResponse, path string, size int64) error {
+	var last error
+	for attempt := 1; attempt <= maxTransientAttempts; attempt++ {
+		if attempt > 1 {
+			fmt.Fprintf(os.Stderr, "retrying upload (attempt %d/%d)...\n", attempt, maxTransientAttempts)
+			sleep(time.Duration(attempt-1) * time.Second)
+		}
+		err := putArchiveOnce(client, presign, path, size)
+		if err == nil {
+			return nil
+		}
+		last = err
+		if !isTransientNetErr(err) {
+			return err
+		}
+	}
+	return last
+}
+
+func putArchiveOnce(client *http.Client, presign *presignResponse, path string, size int64) error {
 	f, err := os.Open(path)
 	if err != nil {
 		return fmt.Errorf("open archive: %v", err)
@@ -229,6 +292,7 @@ func putArchive(client *http.Client, presign *presignResponse, path string, size
 	body, finish := uploadBody(f, size)
 	req, err := http.NewRequest(method, presign.UploadURL, body)
 	if err != nil {
+		finish()
 		return fmt.Errorf("build upload request: %v", err)
 	}
 	req.ContentLength = size
@@ -246,12 +310,12 @@ func putArchive(client *http.Client, presign *presignResponse, path string, size
 	resp, err := client.Do(req)
 	finish()
 	if err != nil {
-		return fmt.Errorf("upload archive: %v", err)
+		return fmt.Errorf("upload archive: %w", err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("upload archive: storage returned %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+		respBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("upload archive: storage returned %d: %s", resp.StatusCode, strings.TrimSpace(string(respBody)))
 	}
 	return nil
 }
@@ -338,7 +402,7 @@ func humanBytes(n int64) string {
 	return fmt.Sprintf("%.1f %cB", float64(n)/float64(div), "KMGTPE"[exp])
 }
 
-func createTicket(client *http.Client, endpoint string, options *logUploadOptions, attachmentID string) (*ticketResponse, error) {
+func createTicket(client *http.Client, endpoint string, options *logUploadOptions, attachmentID, idempotencyKey string) (*ticketResponse, error) {
 	reqBody := ticketRequest{
 		OlaresID:      options.OlaresID,
 		Code:          options.Code,
@@ -346,27 +410,64 @@ func createTicket(client *http.Client, endpoint string, options *logUploadOption
 		OlaresVersion: options.OlaresVersion,
 		Attachments:   []attachmentRef{{AttachmentID: attachmentID}},
 	}
+	headers := map[string]string{}
+	if idempotencyKey != "" {
+		headers[headerIdempotencyKey] = idempotencyKey
+	}
 	var resp ticketResponse
-	if err := postJSON(client, endpoint+ticketPath, reqBody, &resp); err != nil {
+	if err := postJSON(client, endpoint+ticketPath, reqBody, headers, &resp); err != nil {
 		return nil, fmt.Errorf("create ticket: %w", err)
+	}
+	if resp.TicketID == "" || resp.TicketNumber == "" {
+		return nil, fmt.Errorf("create ticket: response missing ticket_id or ticket_number")
 	}
 	return &resp, nil
 }
 
-func postJSON(client *http.Client, url string, payload any, out any) error {
+func postJSON(client *http.Client, url string, payload any, headers map[string]string, out any) error {
 	body, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("marshal request: %v", err)
 	}
-	resp, err := client.Post(url, "application/json", bytes.NewReader(body))
+	var last error
+	for attempt := 1; attempt <= maxTransientAttempts; attempt++ {
+		if attempt > 1 {
+			sleep(time.Duration(attempt-1) * time.Second)
+		}
+		err := postJSONOnce(client, url, body, headers, out)
+		if err == nil {
+			return nil
+		}
+		last = err
+		if !isTransientNetErr(err) {
+			return err
+		}
+	}
+	return last
+}
+
+func postJSONOnce(client *http.Client, url string, body []byte, headers map[string]string, out any) error {
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
+
+	resp, err := client.Do(req)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
 
-	data, _ := io.ReadAll(resp.Body)
+	data, readErr := io.ReadAll(resp.Body)
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return apiError(resp.StatusCode, data)
+	}
+	if readErr != nil {
+		return fmt.Errorf("read response: %w", readErr)
 	}
 	if out != nil {
 		if err := json.Unmarshal(data, out); err != nil {
@@ -374,6 +475,60 @@ func postJSON(client *http.Client, url string, payload any, out any) error {
 		}
 	}
 	return nil
+}
+
+func newAPIClient() *http.Client {
+	tr := http.DefaultTransport.(*http.Transport).Clone()
+	tr.DisableKeepAlives = true
+	tr.TLSHandshakeTimeout = tlsHandshakeTimeout
+	return &http.Client{Timeout: jsonRequestTimeout, Transport: tr}
+}
+
+func newStorageClient(timeout time.Duration) *http.Client {
+	tr := http.DefaultTransport.(*http.Transport).Clone()
+	tr.TLSHandshakeTimeout = tlsHandshakeTimeout
+	return &http.Client{Timeout: timeout, Transport: tr}
+}
+
+func newIdempotencyKey() string {
+	var b [16]byte
+	if _, err := rand.Read(b[:]); err != nil {
+		return fmt.Sprintf("cli-%d", time.Now().UnixNano())
+	}
+	return hex.EncodeToString(b[:])
+}
+
+// sleep is time.Sleep so tests can skip the retry backoff.
+var sleep = time.Sleep
+
+func isTransientNetErr(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
+		return true
+	}
+	var netErr net.Error
+	if errors.As(err, &netErr) && netErr.Timeout() {
+		return true
+	}
+	msg := strings.ToLower(err.Error())
+	switch {
+	case strings.Contains(msg, "tls handshake timeout"):
+		return true
+	case strings.Contains(msg, "unexpected eof"):
+		return true
+	case strings.Contains(msg, "connection reset"):
+		return true
+	case strings.Contains(msg, "broken pipe"):
+		return true
+	case strings.Contains(msg, "http2: server sent goaway"):
+		return true
+	case strings.Contains(msg, "connection refused"):
+		return true
+	default:
+		return false
+	}
 }
 
 // apiError turns a non-2xx ticket API response into a friendly message, adding
