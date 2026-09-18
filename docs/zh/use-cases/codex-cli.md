@@ -32,10 +32,18 @@ Codex CLI 是 OpenAI 开源的终端编程智能体。你可以使用自然语�
 
 ## 前提条件
 
-- Olares 1.12.6 或更高版本。
-- 如果计划使用本指南中的本地模型连接，需已从 Market 安装 Qwen3.6-27B MTP (llama.cpp)，且模型已在 Model Console 中就绪。
+开始前，你需要：
 
-如需部署其他本地模型，请参阅[使用 Engine Base 应用托管本地大语言模型](llm-base-apps.md)。
+- 一台运行 Olares 1.12.6 或更高版本，并具备足够磁盘空间和内存的 Olares 设备。
+- 如果计划使用 ChatGPT 连接，需要一个具有 Codex 使用权限的 ChatGPT 账户。
+- 如果计划通过 OpenAI Platform 连接，需要一个 OpenAI API 密钥。
+- 如果计划使用本地模型，需要在 Olares 设备上运行一个针对编程优化的模型。本指南使用以下模型：
+
+   | 模型类型 | 模型 | 获取方式 |
+   | :--- | :--- | :--- |
+   | 对话 | Qwen3.6-27B MTP (llama.cpp) | 从 Market 安装 |
+
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## 安装 Codex CLI
 

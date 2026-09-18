@@ -28,10 +28,18 @@ In this guide, you will learn how to:
 
 ## Prerequisites
 
-- Olares 1.12.6 or later.
-- If you plan to use the local model connection in this guide, install Qwen3.6-27B MTP (llama.cpp) from Market and ensure it is ready in Model Console.
+Before you begin, you need:
 
-To deploy a different local model, see [Host local large language models with Engine Base apps](llm-base-apps.md).
+- An Olares device running Olares 1.12.6 or later, with sufficient disk space and memory.
+- A ChatGPT account with Codex access, if you plan to connect using ChatGPT.
+- An OpenAI API key, if you plan to connect through OpenAI Platform.
+- A local model optimized for coding running on your Olares device, if you plan to use local execution. This guide uses the following model:
+
+   | Model type | Model | How to get it |
+   | :--- | :--- | :--- |
+   | Chat | Qwen3.6-27B MTP (llama.cpp) | Install from Market |
+
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## Install Codex CLI
 
