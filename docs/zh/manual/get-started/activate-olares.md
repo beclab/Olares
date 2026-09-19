@@ -13,7 +13,7 @@ noindex: true
 2. 输入一次性密码，点击**继续**。
 
    ![输入密码](/images/manual/get-started/wizard-enter-password1.png#bordered)
-3. 选择系统语言。
+3. 选择系统语言。Olares 支持英语、简体中文、德语、西班牙语、意大利语、法语和日语。选择后，向导会立即切换语言。激活后，Olares 桌面也会使用该语言。
 
    ![选择语言](/images/manual/get-started/select-language.png#bordered)
 <!-- #endregion activation-wizard-basics -->

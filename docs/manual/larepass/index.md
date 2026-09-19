@@ -1,5 +1,5 @@
 ---
-description: Download LarePass for iOS, Android, macOS, Windows, or Linux and find the account setup guide you need.
+description: Download LarePass for iOS, Android, macOS, Windows, or Linux, change its language, and find account setup guides.
 outline: [2, 3]
 head:
   - - meta
@@ -35,6 +35,15 @@ Download the latest desktop client from the [LarePass website](https://www.olare
 :::
 
 Download the latest Linux desktop client from the [LarePass website](https://www.olares.com/larepass).
+
+## Change the language
+
+LarePass is available in English, Simplified Chinese, German, Spanish, Italian, French, and Japanese. Changing the language affects only LarePass on that device. It does not change the language of your Olares system.
+
+- **Mobile**: Go to **Settings** > **General** > **Language**, then select a language.
+- **Desktop**: Go to **Settings** > **Language**, then select a language.
+
+The change applies immediately.
 
 ## Set up your account
 
