@@ -325,6 +325,10 @@ const side = {
               link: "/zh/manual/olares/files/add-edit-download",
             },
             {
+              text: "将资源转存到 Olares",
+              link: "/zh/manual/larepass/save-resources-to-olares",
+            },
+            {
               text: "压缩与解压缩文件",
               link: "/zh/manual/olares/files/compress-extract-files",
             },

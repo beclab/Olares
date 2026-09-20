@@ -45,7 +45,7 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           link: "/one/access-olares-via-vpn",
         },
         {
-          text: "Access Olares via .local domain",
+          text: "Access Olares on your local network",
           link: "/one/access-olares-via-local-domain",
         },
       ]
