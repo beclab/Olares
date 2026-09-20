@@ -13,7 +13,7 @@ head:
 
 # 使用 Olares CLI 管理 Olares
 
-OpenCode 内置 Olares CLI [Agent Skills](/developer/cli-agent-skills.md)，你的 Agent 可以通过自然语言管理 Olares 设备上的文件和应用。比如让它列出文件、读取日志，或从 Olares Market 安装应用。
+OpenCode 内置 Olares CLI [Agent Skills](/zh/developer/cli-agent-skills.md)，你的 Agent 可以通过自然语言管理 Olares 设备上的文件和应用。比如让它列出文件、读取日志，或从 Olares Market 安装应用。
 
 ## 准备工作
 
