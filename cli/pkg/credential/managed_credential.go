@@ -59,6 +59,22 @@ func LoadManagedCredential() (*ManagedCredential, bool) {
 	return cred, true
 }
 
+// managedCredentialMounted reports whether this process is running inside a
+// container the platform issued a credential to.
+//
+// It asks a weaker question than LoadManagedCredential on purpose: a mount
+// that is present but malformed is still a mount, and what to do about it is
+// still "repair the application" rather than "log in". Only the presence of
+// the file is read, never its contents.
+func managedCredentialMounted() bool {
+	dir := strings.TrimSpace(os.Getenv(EnvCredentialsDir))
+	if dir == "" {
+		return false
+	}
+	_, err := os.Stat(filepath.Join(dir, credentialFilename))
+	return err == nil
+}
+
 // loadManagedCredentialFrom is the testable core: it reports why a directory
 // yielded no credential instead of collapsing everything into a bool.
 func loadManagedCredentialFrom(dir string) (*ManagedCredential, error) {
