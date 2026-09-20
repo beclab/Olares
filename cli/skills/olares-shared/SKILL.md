@@ -49,12 +49,9 @@ Use `olares-cli profile --help` for flags and [the auth reference](references/ol
 
 Proceed by default:
 
-- `logged-in` and `expired` proceed; an expired access token normally refreshes on the next request.
-- `never` and `invalidated` stop for `profile login` or `profile import`.
-- `pending` proceeds: it belongs to a platform-issued profile that has not exchanged its grant yet, and the next command does that.
+- `logged-in`, `expired` and `pending` proceed; an expired access token normally refreshes on the next request, and `pending` is a platform-issued profile whose grant has not been exchanged yet.
+- `never` and `invalidated` stop for `profile login` or `profile import` — unless `SOURCE` reads `platform(<app>)`, which the platform issued to an application: `login`, `import` and `remove` are all refused there, nothing local can mint or revoke that grant, and the recovery is reinstalling or repairing that application. The same answer covers no profile at all inside an application container — say the application needs repair rather than asking for a login.
 - For `unknown` or an unparseable token, run the business command and react to its typed error instead of guessing.
-
-A profile whose `SOURCE` column reads `platform(<app>)` is issued by the platform to an application, not created by anyone here. Never route it to `profile login`, `profile import` or `profile remove` — all three are refused, and nothing local could mint or revoke that grant. When such a profile cannot be used, or the CLI reports no profile at all inside an application container, say the application needs reinstalling or repairing; do not ask the user to log in.
 
 Do not preflight every command. The CLI refreshes and retries an authentication rejection once. Stop for login when the CLI explicitly says the credential is absent/invalidated or prints a login action after a persistent 401/459. A 403 permission denial, network error or 5xx is not a login signal. Never build a retry loop around auth errors.
 
