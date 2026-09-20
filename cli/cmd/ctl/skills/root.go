@@ -38,10 +38,6 @@ build was made from.
 	}
 	cmd.SilenceErrors = true
 	cmd.SilenceUsage = true
-	cmd.PersistentPreRun = func(c *cobra.Command, args []string) {
-		c.SilenceErrors = true
-		c.SilenceUsage = true
-	}
 	cmd.AddCommand(newListCommand(), newReadCommand(), newExportCommand(), newInstallCommand())
 	return cmd
 }

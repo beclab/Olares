@@ -73,10 +73,6 @@ cli/skills/olares-market/SKILL.md.`,
 	}
 	cmd.SilenceErrors = true
 	cmd.SilenceUsage = true
-	cmd.PersistentPreRun = func(c *cobra.Command, args []string) {
-		c.SilenceErrors = true
-		c.SilenceUsage = true
-	}
 
 	cmd.AddCommand(NewCmdMarketList(f))
 	cmd.AddCommand(NewCmdMarketCategories(f))
