@@ -1,7 +1,7 @@
 ---
 outline: [2, 3]
 title: Install Olares on Linux with Docker Compose
-description: Install Olares on a Linux server with Docker Compose. Check requirements, configure and activate Olares, and manage its containers.
+description: Install and activate Olares on a Linux server with Docker Compose, then manage its containers.
 head:
   - - meta
     - name: keywords
@@ -10,32 +10,13 @@ head:
 # Install Olares on Linux with Docker Compose
 You can use Docker to install and run Olares in a containerized environment. This guide walks you through setting up Olares with Docker, preparing the installation environment, completing the activation process, and managing the container lifecycle.
 
-<!--@include: ./reusables.md#installation-troubleshooting-tip-->
+## Prerequisites
 
-## System requirements
-
-### Required specifications
-
-- **CPU**: At least 4 cores.
-- **RAM**: At least 8 GB of available memory.
-- **Storage**: At least 150 GB of available SSD storage.
-  :::warning SSD required
-  The installation will fail if an HDD (mechanical hard drive) is used instead of an SSD.
-  :::
-- **Supported systems**:
-  - Ubuntu 22.04-25.04 LTS
-  - Debian 12 or 13
-
-<!--@include: ./reusables.md#version-compatibility-->
-
-### Optional hardware
-
-<!--@include: ./gpu-requirements.md#gpu-requirements-->
-
-## Before you begin
-Before you begin, ensure the following:
-- [Docker](https://docs.docker.com/engine/install/) and [Docker Compose](https://docs.docker.com/compose/install/) are installed and running on your system.
-- You know the IP address of the current device.
+- **Olares device**: A machine that meets the [Linux system requirements](install-olares.md#linux).
+- **Operating system**: Ubuntu 22.04–25.04 or Debian 12/13.
+<!--@include: ./reusables.md#larepass-prerequisite-->
+- **Docker**: [Docker](https://docs.docker.com/engine/install/) and [Docker Compose](https://docs.docker.com/compose/install/) installed and running.
+- **Host IP address**: The IP address of the Olares device.
   :::tip Verify host IP
   To verify your host IP, run the following command in the terminal:
   ```bash
@@ -43,7 +24,6 @@ Before you begin, ensure the following:
   ```
   Look for the line starting with `default via`. It will show the default gateway and the network interface being used.
   :::
-- You have [created an Olares ID via LarePass](/manual/get-started/create-olares-id.md).
 
 ## Create a new directory
 Create a directory to store the Olares configuration files. For example, you could make a new directory called `olares-config` with the following command:
@@ -175,3 +155,5 @@ cd ~/olares-config
 <!--@include: ./manage-olares-container.md-->
 
 <!--@include: ./reusables.md#protect-olares-id-->
+
+<!--@include: ./reusables.md#installation-troubleshooting-tip-->
