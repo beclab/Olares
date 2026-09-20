@@ -22,7 +22,9 @@ import (
 
 	aprv1 "bytetrade.io/web3os/tapr/pkg/apis/apr/v1alpha1"
 	"bytetrade.io/web3os/tapr/pkg/signals"
+	workload_nats "bytetrade.io/web3os/tapr/pkg/workload/nats"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -40,7 +42,6 @@ func main() {
 	stopCh := signals.SetupSignalHandler(apiCtx, cancel)
 
 	requestController, requestLister := middlewarerequest.NewController(config, apiCtx)
-	configMapController, _ := middlewarerequest.NewConfigmapController(config, apiCtx)
 	pgclusterController, pgclusterLister := pgcluster.NewController(config, apiCtx, requestLister, func(cluster *aprv1.PGCluster) {
 		requestController.PGClusterRecreated(cluster)
 	})
@@ -59,7 +60,6 @@ func main() {
 		go func() { utilruntime.Must(redixClusterController.Run(1)) }()
 		go func() { utilruntime.Must(kvrocksBackupController.Run(1)) }()
 		go func() { utilruntime.Must(kvrocksRestoreController.Run(1)) }()
-		go func() { utilruntime.Must(configMapController.Run(1)) }()
 		// go func() { backupWatcher.Start() }()
 	}
 
@@ -68,6 +68,11 @@ func main() {
 		Short: "middleware operator server",
 		Long:  `The middleware operator server provides the os middleware services`,
 		Run: func(cmd *cobra.Command, args []string) {
+			k8sClient := kubernetes.NewForConfigOrDie(config)
+			if err := workload_nats.EnsureConfigMap(apiCtx, k8sClient); err != nil {
+				klog.Fatalf("ensure nats configmap failed: %v", err)
+			}
+
 			runControllers()
 
 			s := &app.Server{

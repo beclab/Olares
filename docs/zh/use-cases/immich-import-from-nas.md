@@ -11,7 +11,7 @@ doc_updated: "2026-04-09"
 ---
 
 :::warning
-本文档由 AI 自动翻译，可能存在表述差异。如需核对，请参考[英文原文](../../use-cases/immich-import-from-nas.md)。
+本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../use-cases/immich-import-from-nas.md)为准。
 :::
 
 # 将 NAS 中的照片导入 Immich

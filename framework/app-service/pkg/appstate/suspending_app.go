@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
@@ -18,7 +19,10 @@ import (
 	appsv1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	kbopv1alpha1 "github.com/apecloud/kubeblocks/apis/operations/v1alpha1"
+	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilwait "k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -48,42 +52,146 @@ func NewSuspendingApp(deps Deps,
 }
 
 func (p *SuspendingApp) Exec(ctx context.Context) (StatefulInProgressApp, error) {
-	err := p.exec(ctx)
-	if err != nil {
-		klog.Errorf("suspend app %s failed %v", p.manager.Spec.AppName, err)
-		if IsRetryableWebhookError(err) {
-			// Keep Stopping so cold-start webhook/Service lag can recover without
-			// permanently landing in StopFailed. TTL Cancel still applies.
-			klog.Infof("suspend app %s hit retryable webhook error, requeue: %v", p.manager.Spec.AppName, err)
-			return nil, NewWaitingInLine(5)
-		}
-		opRecord := makeRecord(p.manager, appsv1.StopFailed, fmt.Sprintf(constants.OperationFailedTpl, p.manager.Spec.OpType, err.Error()))
-		updateErr := p.updateStatus(ctx, p.manager, appsv1.StopFailed, opRecord, err.Error(), appsv1.StopFailed.String())
-		if updateErr != nil {
-			klog.Errorf("update app manager %s to %s state failed %v", p.manager.Name, appsv1.StopFailed, err)
-			return nil, updateErr
-		}
+	opCtx, cancel := context.WithCancel(context.Background())
 
-		return nil, nil
-	}
-
-	opRecord := makeRecord(p.manager, appsv1.Stopped, fmt.Sprintf(constants.StopOperationCompletedTpl, p.manager.Spec.AppName))
-	// Read latest status directly from apiserver to avoid cache staleness
-	reason := p.manager.Status.Reason
-	if cli, err := utils.GetClient(); err == nil {
-		if am, err := cli.AppV1alpha1().ApplicationManagers().Get(ctx, p.manager.Name, metav1.GetOptions{}); err == nil && am != nil {
-			if am.Status.Reason != "" {
-				reason = am.Status.Reason
+	return p.deps.Factory.execAndWatch(opCtx, p,
+		func(c context.Context) (StatefulInProgressApp, error) {
+			in := suspendingInProgressApp{
+				SuspendingApp: p,
+				baseStatefulInProgressApp: &baseStatefulInProgressApp{
+					done:   c.Done,
+					cancel: cancel,
+				},
 			}
+
+			go func() {
+				defer cancel()
+				err := p.exec(c)
+				if err != nil {
+					p.finally = func() {
+						klog.Infof("suspending app %s failed %v", p.manager.Spec.AppName, err)
+						opRecord := makeRecord(p.manager, appsv1.StopFailed, fmt.Sprintf(constants.OperationFailedTpl, p.manager.Spec.OpType, err.Error()))
+						updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.StopFailed, opRecord, err.Error(), appsv1.StopFailed.String())
+						if updateErr != nil {
+							klog.Errorf("update app manager %s to %s state failed %v", p.manager.Name, appsv1.StopFailed.String(), err)
+							err = errors.Wrapf(err, "update status failed %v", updateErr)
+							return
+						}
+					}
+					return
+				}
+
+				p.finally = func() {
+					klog.Infof("suspended app %s success", p.manager.Spec.AppName)
+					opRecord := makeRecord(p.manager, appsv1.Stopped, fmt.Sprintf(constants.StopOperationCompletedTpl, p.manager.Spec.AppName))
+					// Read latest status directly from apiserver to avoid cache staleness
+					reason := p.manager.Status.Reason
+					if cli, getErr := utils.GetClient(); getErr == nil {
+						if am, getErr := cli.AppV1alpha1().ApplicationManagers().Get(context.TODO(), p.manager.Name, metav1.GetOptions{}); getErr == nil && am != nil {
+							if am.Status.Reason != "" {
+								reason = am.Status.Reason
+							}
+						}
+					}
+					updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.Stopped, opRecord, fmt.Sprintf(constants.StopOperationCompletedTpl, p.manager.Spec.AppName), reason)
+					if updateErr != nil {
+						klog.Errorf("update app manager %s to %s state failed %v", p.manager.Name, appsv1.Stopped.String(), updateErr)
+						return
+					}
+				}
+			}()
+
+			return &in, nil
+		})
+}
+
+// podStopGrace is how long a running pod that nobody has asked to terminate may
+// hold up a stop. Scale(0) and the patch path only request termination, so there
+// is a short window in which a pod is still running with no DeletionTimestamp;
+// past that window the pod answers to something the chart does not own and
+// waiting cannot remove it. A var so tests can reach the fast-fail branch.
+var podStopGrace = 2 * time.Minute
+
+// podStopBlocker names a pod keeping a stop from completing, plus whatever
+// created it. The pod is the symptom; its owner is what has to change.
+type podStopBlocker struct {
+	name  string
+	owner string
+}
+
+func (p *SuspendingApp) waitForPodsGone(ctx context.Context) error {
+	// Scale(0)/patch only requests termination; do not claim Stopped while
+	// pods remain or upgrade resource checks that treat Stopped as "full"
+	// would under-count live requests. Cancel interrupts via ctx.
+	start := time.Now()
+	return utilwait.PollImmediate(time.Second, 30*time.Minute, func() (bool, error) {
+		if err := ctx.Err(); err != nil {
+			return false, err
+		}
+		pods, err := listAppPods(p.manager, p.client)
+		if err != nil {
+			klog.Errorf("list pods while suspending app %s failed %v", p.manager.Spec.AppName, err)
+			return false, err
+		}
+		terminating, blockers := classifyPodsForStop(pods)
+		if terminating == 0 && len(blockers) == 0 {
+			return true, nil
+		}
+		if len(blockers) > 0 && time.Since(start) >= podStopGrace {
+			// Burning the whole Stopping TTL told an operator only that
+			// something timed out, so name what is still running and what
+			// made it.
+			return false, fmt.Errorf("suspend app %s blocked by pod(s) that are not terminating in namespace %s: %s",
+				p.manager.Spec.AppName, p.manager.Spec.AppNamespace, formatPodStopBlockers(blockers))
+		}
+		klog.Infof("suspend app %s waiting for %d terminating and %d running pod(s) in namespace %s",
+			p.manager.Spec.AppName, terminating, len(blockers), p.manager.Spec.AppNamespace)
+		return false, nil
+	})
+}
+
+// classifyPodsForStop splits an app namespace's pods into the ones a stop must
+// still wait for and the ones that will not leave on their own.
+//
+// A pod in a terminal phase is not waited on: it holds no compute, and charts
+// leave completed hook and job pods behind, which made every stop of such an
+// app burn the full Stopping TTL before reporting a timeout.
+func classifyPodsForStop(pods []corev1.Pod) (terminating int, blockers []podStopBlocker) {
+	for i := range pods {
+		pod := &pods[i]
+		if pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodFailed {
+			continue
+		}
+		if pod.DeletionTimestamp != nil {
+			terminating++
+			continue
+		}
+		blockers = append(blockers, podStopBlocker{name: pod.Name, owner: describePodOwner(pod)})
+	}
+	return terminating, blockers
+}
+
+// describePodOwner renders a pod's controller as kind/name. An unowned pod is
+// worth spelling out rather than omitting: it is the case where scaling a
+// workload down cannot help, because no workload created the pod.
+func describePodOwner(pod *corev1.Pod) string {
+	for _, ref := range pod.OwnerReferences {
+		if ref.Controller != nil && *ref.Controller {
+			return ref.Kind + "/" + ref.Name
 		}
 	}
-	updateErr := p.updateStatus(ctx, p.manager, appsv1.Stopped, opRecord, fmt.Sprintf(constants.StopOperationCompletedTpl, p.manager.Spec.AppName), reason)
-	if updateErr != nil {
-		klog.Errorf("update app manager %s to %s state failed %v", p.manager.Name, appsv1.Stopped.String(), err)
-		return nil, updateErr
+	if len(pod.OwnerReferences) > 0 {
+		return pod.OwnerReferences[0].Kind + "/" + pod.OwnerReferences[0].Name
 	}
+	return "no owner"
+}
 
-	return nil, nil
+func formatPodStopBlockers(blockers []podStopBlocker) string {
+	parts := make([]string, 0, len(blockers))
+	for _, b := range blockers {
+		parts = append(parts, fmt.Sprintf("%s (owned by %s)", b.name, b.owner))
+	}
+	return strings.Join(parts, ", ")
 }
 
 func (p *SuspendingApp) exec(ctx context.Context) error {
@@ -95,7 +203,28 @@ func (p *SuspendingApp) exec(ctx context.Context) error {
 	// v2 apps and legacy v1/v3 manifests fall back to the original
 	// suspendV2AppAll / suspendV1AppOrV2Client patch path.
 	if err := p.scaleOrPatchSuspend(ctx, stopServer); err != nil {
-		return err
+		// Cold-start webhook/Service lag: keep retrying Scale/patch until
+		// success or the Stopping TTL Cancel interrupts ctx, instead of
+		// permanently landing in StopFailed on a transient failure.
+		if IsRetryableWebhookError(err) {
+			klog.Infof("suspend app %s hit retryable webhook error, retrying: %v", p.manager.Spec.AppName, err)
+			err = utilwait.PollImmediate(5*time.Second, 30*time.Minute, func() (bool, error) {
+				if err := ctx.Err(); err != nil {
+					return false, err
+				}
+				if scaleErr := p.scaleOrPatchSuspend(ctx, stopServer); scaleErr != nil {
+					if IsRetryableWebhookError(scaleErr) {
+						klog.Infof("suspend app %s still hit retryable webhook error: %v", p.manager.Spec.AppName, scaleErr)
+						return false, nil
+					}
+					return false, scaleErr
+				}
+				return true, nil
+			})
+		}
+		if err != nil {
+			return err
+		}
 	}
 	var appCfg appcfg.ApplicationConfig
 	if err := json.Unmarshal([]byte(p.manager.Spec.Config), &appCfg); err != nil {
@@ -161,6 +290,11 @@ func (p *SuspendingApp) exec(ctx context.Context) error {
 		}
 	}
 
+	if err := p.waitForPodsGone(ctx); err != nil {
+		klog.Errorf("waiting for app %s pods to terminate failed %v", p.manager.Spec.AppName, err)
+		return err
+	}
+
 	if err := compute.DeleteAllocationsForComputeTarget(ctx, p.client, &appCfg, stopServer); err != nil {
 		klog.Errorf("delete compute allocation for suspended app %s failed %v", p.manager.Spec.AppName, err)
 		return err
@@ -169,6 +303,11 @@ func (p *SuspendingApp) exec(ctx context.Context) error {
 }
 
 func (p *SuspendingApp) Cancel(ctx context.Context) error {
+	klog.Infof("cancel suspending operation appName=%s", p.manager.Spec.AppName)
+	if ok := p.deps.Factory.cancelOperation(p.manager.Name); !ok {
+		klog.Errorf("app %s operation is not in progress", p.manager.Name)
+	}
+
 	opRecord := makeRecord(p.manager, appsv1.StopFailed,
 		fmt.Sprintf(constants.OperationFailedTpl, p.manager.Spec.OpType, "stopping ttl exceeded"))
 	return p.updateStatus(ctx, p.manager, appsv1.StopFailed, opRecord,
@@ -238,4 +377,16 @@ func (p *SuspendingApp) execMiddleware(ctx context.Context) error {
 		return err
 	}
 	return nil
+}
+
+var _ StatefulInProgressApp = &suspendingInProgressApp{}
+
+type suspendingInProgressApp struct {
+	*SuspendingApp
+	*baseStatefulInProgressApp
+}
+
+// override to avoid duplicate exec
+func (p *suspendingInProgressApp) Exec(ctx context.Context) (StatefulInProgressApp, error) {
+	return nil, nil
 }

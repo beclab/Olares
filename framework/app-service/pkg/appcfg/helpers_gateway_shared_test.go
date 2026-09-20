@@ -146,43 +146,69 @@ func TestLogicalHostPattern(t *testing.T) {
 		}
 	})
 
+	t.Run("non-com platformDomain still uses SharedMeshDomain", func(t *testing.T) {
+		got, err := LogicalHostPattern("demo1234", 0, 1, "bytetrade.io", true)
+		if err != nil {
+			t.Fatalf("LogicalHostPattern() error = %v", err)
+		}
+		want := appv1alpha1.SharedEntranceID("demo1234", 0, 1) + ".shared." + SharedMeshDomain
+		if got != want {
+			t.Fatalf("LogicalHostPattern() = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("empty platformDomain still succeeds", func(t *testing.T) {
+		got, err := LogicalHostPattern("demo1234", 0, 1, "", true)
+		if err != nil {
+			t.Fatalf("LogicalHostPattern() error = %v", err)
+		}
+		want := appv1alpha1.SharedEntranceID("demo1234", 0, 1) + ".shared." + SharedMeshDomain
+		if got != want {
+			t.Fatalf("LogicalHostPattern() = %q, want %q", got, want)
+		}
+	})
+
 	t.Run("invalid inputs", func(t *testing.T) {
 		cases := []struct {
-			name           string
-			appid          string
-			entranceIndex  int
-			entranceCount  int
-			platformDomain string
+			name          string
+			appid         string
+			entranceIndex int
+			entranceCount int
 		}{
 			{
-				name:           "empty appid",
-				appid:          "",
-				entranceIndex:  0,
-				entranceCount:  1,
-				platformDomain: "olares.com",
+				name:          "empty appid",
+				appid:         "",
+				entranceIndex: 0,
+				entranceCount: 1,
 			},
 			{
-				name:           "invalid index",
-				appid:          "demo1234",
-				entranceIndex:  1,
-				entranceCount:  1,
-				platformDomain: "olares.com",
-			},
-			{
-				name:           "empty platform domain",
-				appid:          "demo1234",
-				entranceIndex:  0,
-				entranceCount:  1,
-				platformDomain: "",
+				name:          "invalid index",
+				appid:         "demo1234",
+				entranceIndex: 1,
+				entranceCount: 1,
 			},
 		}
 		for _, tc := range cases {
 			t.Run(tc.name, func(t *testing.T) {
-				if _, err := LogicalHostPattern(tc.appid, tc.entranceIndex, tc.entranceCount, tc.platformDomain, true); err == nil {
-					t.Fatalf("LogicalHostPattern(%q, %d, %d, %q) expected error", tc.appid, tc.entranceIndex, tc.entranceCount,
-						tc.platformDomain)
+				if _, err := LogicalHostPattern(tc.appid, tc.entranceIndex, tc.entranceCount, "olares.com", true); err == nil {
+					t.Fatalf("LogicalHostPattern(%q, %d, %d) expected error", tc.appid, tc.entranceIndex, tc.entranceCount)
 				}
 			})
 		}
 	})
+}
+
+func TestIsSharedMeshExactHost(t *testing.T) {
+	if !IsSharedMeshExactHost("deadbeef.shared.olares.com") {
+		t.Fatal("expected shared mesh exact host")
+	}
+	if IsSharedMeshExactHost("shared.olares.com") {
+		t.Fatal("bare shared zone must not match")
+	}
+	if IsSharedMeshExactHost("deadbeef.shared.olares.cn") {
+		t.Fatal("non-com shared host must not match")
+	}
+	if IsSharedMeshExactHost("*.shared.olares.com") {
+		t.Fatal("wildcard must not match")
+	}
 }

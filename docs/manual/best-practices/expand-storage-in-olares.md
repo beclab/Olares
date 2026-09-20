@@ -1,222 +1,28 @@
 ---
 outline: [2, 3]
-description: Expand Olares storage with SMB servers, USB auto-mount, CLI commands, and manually mounted HDDs or SSDs for files and large AI models.
+description: Expand Olares system storage on LVM-based setups by merging new disks into the system volume with the Olares CLI.
 head:
   - - meta
     - name: keywords
-      content: Olares, expand storage, SMB, USB mount, HDD SSD, LVM, disk extend, external storage
+      content: Olares, expand system storage, LVM, disk extend, olares-cli
 ---
-# Expand storage in Olares
+# Expand Olares system storage
 
-This document describes how to expand storage in Olares using different approaches. Choose the method that best matches your scenario:
+If your Olares system uses LVM-based storage, you can expand its system storage capacity using the `olares-cli disk` command. After extension, the added drive is merged into the system volume and is no longer shown as an independent mount point.
 
-- **Connect to an SMB server** to access shared files on a NAS or another computer over the network.
-- **Use USB auto-mount** for plug-and-play external storage. No Linux commands required.
-- **Manually mount an HDD or SSD** under `/olares/share` to keep a disk as independent external storage for large files.
-- **Expand system storage via Olares CLI** (`disk extend`) to increase system capacity on LVM-based setups by merging new disk(s) into the system volume.
-
-## Connect to an SMB server
-
-You can easily mount Server Message Block (SMB) shares in Olares to access and manage shared files.
-
-1. On the Olares web interface, navigate to **Files** > **External** > **Connect to server**.
-
-2. Enter the server address (for example: `//192.168.1.10/shared`) and click **Confirm**.
-
-3. Once connected, you can access the shared directory under **Files** > **External**.
-
-For details, please refer to [Mount SMB shares](../olares/files/mount-SMB.md).
-
-## Expand storage via USB devices
-
-**Olares** automatically detects and mounts inserted USB storage devices.
-
-- Once you insert a USB device, it will be mounted automatically — no command-line operations are required.
-
-- You can access it in **Files** > **External** from both Olares and Larepass.
-
-- The system automatically unmounts the device when you unplug it.
-
-- You can manually eject the device via the Olares web interface. Right-click the USB drive in Files and select **Unmount**.
-
-## Manually mount an HDD or SSD
-
-You can manually mount an HDD or SSD to Olares from your **Linux** hosting system.
-
-This approach is recommended for **large data storage** (e.g., AI models) or **long-term storage expansion**.
-
-### Before you begin
-
-Please ensure the following:
-
-- You have **administrator (sudo) privileges** on your Linux system.
-
-- **Olares** is properly installed and running.
-
-- The target drive is **already formatted** (recommended file systems: `ext4` or `XFS`).
-
-:::tip  Mount path restriction
-
-Currently, only mounts under the `/olares/share` directory are supported.
-
-Mounting flexibility will be improved in future versions.
-:::
-
-### Identify the drive
-
-1. Insert the hard drive into the host machine.
-
-2. Run the following command to view detected drives:
-
-   ```bash
-   fdisk -l
-   ```
-
-3. Identify the target drive type and device name from the output:
-
-    - **NVMe SSD**: typically appear as `/dev/nvme0n1`, `/dev/nvme1n1`, etc.
-    - **SATA** or **HDD**: typically appear as `/dev/sda`, `/dev/sdb`, etc.
-
-    Each drive lists its partitions under the Device column, such as `/dev/nvme1n1p1`, `/dev/nvme1n1p2`, or `/dev/sdb1`.
-    ![Partition list](/images/manual/tutorials/expand-storage-partition.png#bordered)
-   
-
-4. Confirm the target partition to mount (e.g., `/dev/nvme1n1p1`).
-
-### Temporarily mount a partition
-
-Temporary mounting is suitable for **one-time** or **short-term** use (e.g., file transfer).
-
-The mount configuration will be lost after a Linux or Olares reboot.
-
-1. Create a mount directory:
-
-    ```bash
-    sudo mkdir -p /olares/share/<directory_name>
-    ```
-
-    Replace `<directory_name>` with a custom name.
-
-2. Mount the partition:
-
-    ```bash
-    sudo mount /dev/<partition> /olares/share/<directory_name>    
-    ```
-
-    **Example**:
-
-    ```
-    sudo mount /dev/nvme1n1p1 /olares/share/hdd0
-    ```
-
-3. Verify the mount result:
-
-    After successful mounting, you can access the partition from **Files** > **External**.
-
-    ![Check mount result](/images/manual/tutorials/expand-storage-mount-result-en.png#bordered)
-
-### Permanently mount a partition
-
-If you want the mount configuration to remain after reboot, configure **automatic mounting** in `/etc/fstab`.
-
-1. Run the following command to list all drives and find the target partition:
-
-    ```bash
-    lsblk -f
-    ```
-
-    Record the following information:
-    - **FSTYPE**: File system type (e.g., `ext4`, `xfs`).
-    - **UUID**: Unique identifier of the partition.
-
-    ![Check mount result](/images/manual/tutorials/expand-storage-fstype.png#bordered)
-
-2. Create a mount directory:
-    
-    ```bash
-    sudo mkdir -p /olares/share/<directory_name>
-    ```
-
-    Replace `<directory_name>` with a custom name.
-
-3. Edit the mount configuration file:
-    
-    ```bash
-    sudo vi /etc/fstab
-    ```
-
-4. Add a mount entry using **UUID** (recommended to prevent issues if device names change):
-
-    ```
-    UUID=<UUID> /olares/share/<directory_name> <FSTYPE> defaults,nofail 0 0
-    ```
-
-    **Example**:
-
-    ```
-    UUID=1234-ABCD /olares/share/my_disk ext4 defaults,nofail 0 0
-    ```
-
-5. Save and exit the editor.
-
-6. Verify the configuration (recommended):
-
-    ```bash
-    mount -a
-    ```
-    
-    If no errors appear, the setup is successful.
-
-7. After reboot, confirm the drive is automatically mounted via **Files** > **External**.
-
-    :::warning
-    An incorrect /etc/fstab configuration may prevent your system from booting.
-    It is strongly recommended to run `mount -a` first to validate the configuration before rebooting.
-    :::
-
-### Unmount a partition
-
-You can unmount partitions mounted using either temporary or permanent methods.
-
-1. Unmount the partition:
-
-    ```bash
-    sudo umount /olares/share/<directory_name>
-    ```
-
-    :::tip NOTE
-    Make sure no programs or terminals are accessing the directory before unmounting.
-    :::
-
-2. Remove the empty directory (optional):
-
-    ```bash
-    rm -rf /olares/share/<directory_name>
-    ```
-
-    :::warning
-    Ensure the directory is empty and fully unmounted before deleting.
-    :::
-
-    You can also view and remove this directory from **Files** in Olares.
-
-## Expand system storage via Olares CLI
-
-If your Olares system uses LVM-based storage, you can expand its system storage capacity using the `disk` command.
-
-Manual mounting adds an external drive under `/olares/share`. In contrast, `disk extend` expands Olares system storage. After extension, the added drive is no longer shown as an independent mount point.
+For other storage options, see [Connect an SMB share](../olares/files/mount-SMB.md), [mount a local disk](../mount-local-disk.md), or [use a USB drive](../use-usb-drive.md).
 
 :::warning Data loss
 `disk extend` will destroy all data on the selected disk.  
 Make sure the disk does not contain important data, or back up the data before continuing.
 :::
 
-### Before you begin
+## Before you begin
 
 - Connect the external drive to the Olares host machine.
 - SSH into the Olares terminal.
 
-### Identify the unmounted disk
+## Identify the unmounted disk
 
 List block devices on the host:
 
@@ -237,7 +43,7 @@ nvme1n1     259:3    0 931.5G  0 disk
 ```
 In this example, `sda` is the system drive which is mounted at `/` and `/boot`, while `nvme1n1` is the newly connected disk.
 
-### Extend system storage
+## Extend system storage
 
 1. Verify that Olares recognizes the unmounted disk:
 
@@ -278,11 +84,11 @@ In this example, `sda` is the system drive which is mounted at `/` and `/boot`, 
     3   swap  olares-vg  1.00g
     ...
     ```
-### Verify the extension
+## Verify the extension
 
 You can verify the storage increase in both terminal and UI.
 
-#### In terminal
+### In terminal
 
 - Check the size of the `/olares` directory where data is stored to confirm expansion:
 
@@ -313,9 +119,9 @@ You can verify the storage increase in both terminal and UI.
       └─olares--vg-swap 252:0    0    1G  0 lvm  [SWAP]
     ```
 
-#### In UI
+### In UI
 Open Dashboard from Launchpad and confirm that total system storage capacity has increased.
 
 ![Check disk volume in Dashboard](/images/manual/tutorials/expand-dashboard-disk.png#bordered)
 
-For full command usage and options, please refer to the `disk` command documentation.
+For full command usage and options, see the [`disk` command](/developer/install/cli/disk.md) documentation.

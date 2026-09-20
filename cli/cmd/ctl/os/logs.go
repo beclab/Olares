@@ -53,9 +53,18 @@ type LogCollectOptions struct {
 	SkipNetwork     bool
 	SkipClusterInfo bool
 	SkipPodLogs     bool
+	// DmesgPrevBoots is how many boots before the current one to also
+	// collect kernel logs for. Part of the dmesg section, so SkipDmesg
+	// turns it off too.
+	DmesgPrevBoots int
 }
 
 var servicesToCollectLogs = []string{"k3s", "containerd", "olaresd", "kubelet", "juicefs", "redis", "minio", "etcd", "NetworkManager"}
+
+// journalctlBin is the journalctl executable journalctlToTar runs. It is a
+// variable so tests can substitute a stub instead of requiring a host with a
+// populated journal.
+var journalctlBin = "journalctl"
 
 // setSkipIfK8sNotReachable checks if the Kubernetes API server port is reachable
 // and automatically sets skip-kube-apiserver to true if not reachable
@@ -131,6 +140,12 @@ func collectLogs(options *LogCollectOptions) error {
 		fmt.Println("collecting dmesg logs ...")
 		if err := collectDmesgLogs(tw, options); err != nil {
 			return fmt.Errorf("failed to collect dmesg logs: %v", err)
+		}
+		if options.DmesgPrevBoots > 0 {
+			fmt.Println("collecting kernel logs of previous boots ...")
+			if err := collectPrevBootKernelLogs(tw, options); err != nil {
+				return fmt.Errorf("failed to collect kernel logs of previous boots: %v", err)
+			}
 		}
 	}
 
@@ -318,6 +333,110 @@ func collectDmesgLogs(tw *tar.Writer, options *LogCollectOptions) error {
 	}
 	if _, err := tw.Write(output); err != nil {
 		return fmt.Errorf("failed to write dmesg data: %v", err)
+	}
+	return nil
+}
+
+// collectPrevBootKernelLogs adds the kernel log of earlier boots, which
+// `dmesg` cannot reach because it only reads the running kernel's ring
+// buffer. When a machine froze or was hard-reset, its OOM kills and hardware
+// errors are recorded only there, and rebooting to run this command is
+// exactly what destroys the evidence. The per-service collection above does
+// span boots, but journalctl -u never includes kernel messages, so without
+// this the incident's kernel side is simply unavailable.
+//
+// Every failure here is reported as a warning rather than returned: a host
+// with volatile journaling (no /var/log/journal) or with fewer boots on
+// record than requested is a normal configuration, not a collection failure.
+func collectPrevBootKernelLogs(tw *tar.Writer, options *LogCollectOptions) error {
+	if _, err := util.GetCommand(journalctlBin); err != nil {
+		fmt.Println("warning: journalctl not found, skipping kernel logs of previous boots")
+		return nil
+	}
+
+	tempDir, err := os.MkdirTemp("", "olares-kernel-logs-*")
+	if err != nil {
+		return fmt.Errorf("failed to create temp directory: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	// The boot list resolves the -N offsets used below to boot IDs and time
+	// ranges, which is what lets a reader tell which file covers the
+	// incident being investigated.
+	if err := journalctlToTar(tw, tempDir, "boots.txt", "--list-boots"); err != nil {
+		fmt.Printf("warning: failed to collect the boot list: %v\n", err)
+	}
+
+	for i := 1; i <= options.DmesgPrevBoots; i++ {
+		args := []string{"-k", "-b", fmt.Sprintf("-%d", i)}
+		if options.MaxLines > 0 {
+			args = append(args, "-n", fmt.Sprintf("%d", options.MaxLines))
+		}
+		if err := journalctlToTar(tw, tempDir, fmt.Sprintf("dmesg-prev-%d.log", i), args...); err != nil {
+			// Boots are requested newest first, so once one is out of
+			// reach every older one is too.
+			fmt.Printf("warning: kernel log of boot -%d is unavailable, not looking further back: %v\n", i, err)
+			return nil
+		}
+		fmt.Printf("collected kernel log of boot -%d\n", i)
+	}
+	return nil
+}
+
+// journalctlToTar runs one journalctl invocation and stores its output in the
+// archive under name. The output is staged in a temp file rather than held in
+// memory because a single boot's kernel log can be large.
+func journalctlToTar(tw *tar.Writer, tempDir, name string, args ...string) error {
+	tempFile := filepath.Join(tempDir, name)
+	out, err := os.Create(tempFile)
+	if err != nil {
+		return fmt.Errorf("failed to create temp file: %v", err)
+	}
+
+	cmd := exec.Command(journalctlBin, append([]string{"--no-pager"}, args...)...)
+	cmd.Stdout = out
+	// journalctl explains an unreachable boot on stderr (e.g. "Data from the
+	// specified boot is not available"); that message is the whole point of
+	// the warning the caller prints.
+	var stderr strings.Builder
+	cmd.Stderr = &stderr
+	runErr := cmd.Run()
+	out.Close()
+	if runErr != nil {
+		if msg := strings.TrimSpace(stderr.String()); msg != "" {
+			return fmt.Errorf("%v: %s", runErr, msg)
+		}
+		return runErr
+	}
+
+	fi, err := os.Stat(tempFile)
+	if err != nil {
+		return fmt.Errorf("failed to stat temp file: %v", err)
+	}
+	// Some journalctl versions report an unreachable boot on stderr while
+	// still exiting 0, leaving an empty file. Treat that as unavailable so
+	// the archive does not carry a misleading empty log.
+	if fi.Size() == 0 {
+		return fmt.Errorf("journalctl returned no output")
+	}
+
+	in, err := os.Open(tempFile)
+	if err != nil {
+		return fmt.Errorf("failed to open temp file: %v", err)
+	}
+	defer in.Close()
+
+	header := &tar.Header{
+		Name:    name,
+		Mode:    0644,
+		Size:    fi.Size(),
+		ModTime: time.Now(),
+	}
+	if err := tw.WriteHeader(header); err != nil {
+		return fmt.Errorf("failed to write header for %s: %v", name, err)
+	}
+	if _, err := io.CopyN(tw, in, header.Size); err != nil {
+		return fmt.Errorf("failed to write data for %s: %v", name, err)
 	}
 	return nil
 }
@@ -650,6 +769,7 @@ func NewCmdLogs() *cobra.Command {
 		MaxLines:         20000,
 		OutputDir:        "./olares-logs",
 		IgnoreKubeErrors: false,
+		DmesgPrevBoots:   1,
 	}
 
 	cmd := &cobra.Command{
@@ -664,6 +784,7 @@ func NewCmdLogs() *cobra.Command {
 - etcd logs
 - Olaresd logs
 - olares-cli logs
+- kernel logs of the current boot, and of previous boots when the journal is persistent
 - network configurations
 - Kubernetes pod info and logs
 - Kubernetes node info`,
@@ -683,6 +804,7 @@ func NewCmdLogs() *cobra.Command {
 	cmd.Flags().StringSliceVar(&options.PodNamespaces, "pod-namespaces", nil, "Restrict /var/log/pods collection to these namespaces (comma-separated). If empty, collects pod logs from all namespaces")
 	cmd.Flags().BoolVar(&options.SkipSystemd, "skip-systemd", options.SkipSystemd, "Skip collecting systemd service logs")
 	cmd.Flags().BoolVar(&options.SkipDmesg, "skip-dmesg", options.SkipDmesg, "Skip collecting dmesg (kernel) logs")
+	cmd.Flags().IntVar(&options.DmesgPrevBoots, "dmesg-prev-boots", options.DmesgPrevBoots, "How many boots before the current one to also collect kernel logs for, as dmesg-prev-N.log (0 disables). Needed to investigate a freeze or hard reset, since dmesg only covers the running kernel; requires persistent journaling")
 	cmd.Flags().BoolVar(&options.SkipNetwork, "skip-network", options.SkipNetwork, "Skip collecting network configs (ip/iptables/nft)")
 	cmd.Flags().BoolVar(&options.SkipClusterInfo, "skip-cluster-info", options.SkipClusterInfo, "Skip collecting cluster info (kubectl describe/pods-list, envoy config) and olares-cli logs")
 	cmd.Flags().BoolVar(&options.SkipPodLogs, "skip-pod-logs", options.SkipPodLogs, "Skip collecting pod logs from /var/log/pods")

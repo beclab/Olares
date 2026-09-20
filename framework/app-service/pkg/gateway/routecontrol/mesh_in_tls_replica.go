@@ -21,9 +21,9 @@ import (
 )
 
 const (
-	labelTLSReplica          = "gateway.olares.io/tls-replica"
-	labelReplicaDemandSource = "gateway.olares.io/demand-source"
-	nsOwnerLabel             = "bytetrade.io/ns-owner"
+	labelTLSReplica           = "gateway.olares.io/tls-replica"
+	labelReplicaDemandSource  = "gateway.olares.io/demand-source"
+	nsOwnerLabel              = "bytetrade.io/ns-owner"
 	replicaDemandSourceServer = "server"
 	replicaDemandSourceCaller = "caller"
 	entranceTLSSecretPrefix   = sharedEntranceTLSPrefix

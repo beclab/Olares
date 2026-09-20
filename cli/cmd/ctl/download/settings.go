@@ -16,13 +16,11 @@ func NewSettingsCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "settings",
 		Short: "download-server global settings (aria2 max concurrency)",
-		Long: `Read or update download-server global settings (GET/PUT
-/api/system/settings). Today the manager exposes a single global knob,
-aria2_max_concurrent (aria2 max-concurrent-downloads).
+		Long: `Read or update global download settings.
 
-These are server-wide, not per-user, so changing them may require
-administrator privileges — the CLI does not pre-check this and defers to
-the server, which returns an error if the caller is not allowed.`,
+Currently, aria2_max_concurrent controls the number of concurrent aria2
+downloads. This setting applies to the whole server, not just the active
+user, and changing it may require administrator privileges.`,
 	}
 	cmd.AddCommand(newSettingsGetCommand(f))
 	cmd.AddCommand(newSettingsSetCommand(f))
@@ -80,13 +78,12 @@ func newSettingsSetCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "set",
 		Short: "update a download-server global setting",
-		Long: `Update a download-server global setting (PUT /api/system/settings).
+		Long: `Set the maximum number of concurrent aria2 downloads.
 
-The manager applies exactly one key/value pair per request. Today the
-only supported knob is aria2_max_concurrent, set via
---aria2-max-concurrent (server-validated range [1, 16]). The updated
-snapshot is printed on success.`,
-		Args: cobra.NoArgs,
+The accepted range is 1 through 16. The updated setting is printed on
+success.`,
+		Example: `  olares-cli knowledge download settings set --aria2-max-concurrent 4`,
+		Args:    cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
 			if !c.Flags().Changed("aria2-max-concurrent") {
 				return fmt.Errorf("nothing to set: provide --aria2-max-concurrent")

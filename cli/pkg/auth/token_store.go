@@ -29,6 +29,11 @@ import (
 // writes it. Phase 2's refreshWithLock will write it. The only way to
 // clear it back to 0 is a successful `profile login` / `profile import`
 // (Set() defensively zeroes it).
+//
+// Managed marks an entry whose grant came from a platform-mounted
+// credential.json rather than from a login on this machine. Such an entry
+// always has an empty RefreshToken: the refresh token stays in the mount,
+// which is the only copy and the only thing the platform can revoke.
 type StoredToken struct {
 	OlaresID      string `json:"olaresId"`
 	AccessToken   string `json:"accessToken"`
@@ -36,6 +41,7 @@ type StoredToken struct {
 	SessionID     string `json:"sessionId,omitempty"`
 	GrantedAt     int64  `json:"grantedAt,omitempty"`     // unix milliseconds, audit-only
 	InvalidatedAt int64  `json:"invalidatedAt,omitempty"` // unix milliseconds; 0 = valid
+	Managed       bool   `json:"managed,omitempty"`
 }
 
 // TokenStore abstracts the per-olaresId secret backend. Phase 2's only

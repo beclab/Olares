@@ -25,10 +25,12 @@ func HasProviderPermission(perms []appcfg.ProviderPermission) bool {
 }
 
 // ShouldInject reports whether the mesh-out agent should replace envoy outbound
-// for this workload. Shared inbound-only pods never receive the agent.
+// for this workload.
+//
+// Injection is disabled: provider access via permission.provider is retired,
+// so no application needs the mesh-out agent and nothing is injected.
 func ShouldInject(isSharedApp bool, perms []appcfg.ProviderPermission) bool {
-	if isSharedApp {
-		return false
-	}
-	return HasProviderPermission(perms)
+	_ = isSharedApp
+	_ = perms
+	return false
 }

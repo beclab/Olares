@@ -109,6 +109,11 @@ type ApplicationConfig struct {
 	SharedEntrances      []Entrance
 	SelectedGpuType      string
 	Accelerator          []ResourceMode
+	// SupportArch mirrors spec.supportArch in OlaresManifest.yaml. When it
+	// declares exactly one architecture (amd64 or arm64) the pod-arch
+	// mutating webhook pins the app's pods to matching nodes via a
+	// kubernetes.io/arch nodeSelector.
+	SupportArch []string
 	// NeedsSharedAccess signals that the app needs cross-namespace access to
 	// a shared app's services (e.g. for service-mesh sidecar injection).
 	// Force-set to true for SHARED apps in toApplicationConfig regardless of
@@ -144,6 +149,14 @@ type ApplicationConfig struct {
 	// for market installs (push events then fall back to the installing
 	// user); otherwise the uploading user.
 	ChartOwner string
+
+	// LoginOlaresCLI mirrors permission.loginOlaresCLI in
+	// OlaresManifest.yaml: the app asks for a long-lived Olares credential
+	// belonging to its owner, mounted read-only into every container so
+	// olares-cli inside the pod starts out logged in. oac restricts the
+	// field to an allowlist, so by the time it reaches here the app has
+	// already been vetted.
+	LoginOlaresCLI bool
 }
 
 func (c *ApplicationConfig) IsMiddleware() bool {

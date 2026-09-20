@@ -61,6 +61,7 @@ Examples:
 	}
 	opts.addCommonFlags(cmd)
 	opts.addOutputFlags(cmd)
+	describeLifecycleJSON(cmd)
 	opts.addVersionFlag(cmd)
 	opts.addEnvFlag(cmd)
 	opts.addComputeModeFlag(cmd)
@@ -85,9 +86,9 @@ func runInstall(opts *MarketOptions, appName string) error {
 			return opts.failOp("install", appName, err)
 		}
 	} else {
-		v, err := resolveVersionInSource(mc, appName, source)
+		v, err := resolveVersionInSource(mc, appName, source, true)
 		if err != nil {
-			return opts.failOp("install", appName, fmt.Errorf("cannot determine version in source '%s': %w (use --version to specify)", source, err))
+			return opts.failOp("install", appName, err)
 		}
 		version = v
 		opts.info("Using latest version: %s", version)
@@ -99,6 +100,10 @@ func runInstall(opts *MarketOptions, appName string) error {
 	}
 
 	ctx := context.Background()
+
+	if err := preflightInstall(ctx, opts, mc, appName); err != nil {
+		return opts.failOp("install", appName, err)
+	}
 
 	// Compute-mode selection is a 1.12.6+ feature. Detect the backend
 	// version so we never touch the (untouched) 1.12.5 install path: on
@@ -114,6 +119,10 @@ func runInstall(opts *MarketOptions, appName string) error {
 	computeMode := strings.TrimSpace(opts.ComputeMode)
 	if computeMode != "" && !atLeast126 {
 		return opts.failOp("install", appName, fmt.Errorf("--compute-mode requires Olares 1.12.6+; this backend uses a different (unchanged) install path — re-run without --compute-mode"))
+	}
+
+	if err := preflightComputeMode(ctx, opts, mc, appName, source, computeMode); err != nil {
+		return opts.failOp("install", appName, err)
 	}
 
 	opts.info("Installing '%s' version '%s' from '%s' for user '%s'...", appName, version, source, mc.olaresID)
@@ -142,7 +151,7 @@ func runInstall(opts *MarketOptions, appName string) error {
 		}
 	}
 	if err != nil {
-		if envErr := parseServerEnvError(resp, appName); envErr != nil {
+		if envErr := parseServerEnvError(resp, appName, source); envErr != nil {
 			return opts.failOp("install", appName, envErr)
 		}
 		return opts.failOp("install", appName, err)

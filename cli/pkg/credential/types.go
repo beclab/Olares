@@ -2,33 +2,31 @@
 // cliconfig.ProfileConfig + a stored token into a fully-resolved view that
 // command code can consume without touching disk directly.
 //
-// The package is intentionally small in Phase 1: a Provider interface, a
-// chained CredentialProvider, a DefaultProvider that reads
-// ~/.olares-cli/{config,tokens}.json, and an EnvProvider stub for the future
-// in-cluster (sandbox) scenario. Phase 2 adds keychain + automatic refresh
-// inside DefaultProvider; the interface stays stable.
+// There are two kinds of profile and one Provider for each: DefaultProvider
+// for an account somebody logged into on this machine, and ManagedProvider
+// for one the platform issued by mounting a credential into an application
+// container. CredentialProvider picks between them by reading the selected
+// profile, never by trying both.
 package credential
 
 import (
 	"context"
 
 	"github.com/beclab/Olares/cli/pkg/cliconfig"
-	"github.com/beclab/Olares/cli/pkg/olares"
 )
 
 // ResolvedProfile is the "ready to make an API call" view of a profile —
 // analogous to lark-cli's CliConfig. Command code interacts only with this
-// struct so that swapping in an EnvProvider later requires zero changes
-// upstream.
+// struct, so where the token came from is not something a verb has to know.
 type ResolvedProfile struct {
-	Name       string // alias, falls back to OlaresID
-	OlaresID   string
-	UserUID    string
+	Name     string // alias, falls back to OlaresID
+	OlaresID string
+	UserUID  string
 
-	AuthURL    string
-	VaultURL   string
-	DesktopURL string
-	SettingsURL string
+	AuthURL      string
+	VaultURL     string
+	DesktopURL   string
+	SettingsURL  string
 	FilesURL     string
 	MarketURL    string
 	DashboardURL string
@@ -45,63 +43,26 @@ type ResolvedProfile struct {
 	ExpiresAt int64
 
 	// Source identifies which Provider produced this ResolvedProfile (for
-	// diagnostics: "default", "env", ...).
+	// diagnostics: "default" or "managed").
 	Source string
 
 	// InsecureSkipVerify is forwarded from the underlying ProfileConfig so
 	// HTTP clients constructed against this profile honor the dev override.
 	InsecureSkipVerify bool
 
-	// Location is the CLI's network position relative to this Olares (see
-	// pkg/olares.Location). It determined the URLs above and selects the
-	// http.Transport resolver; it must travel with the resolved profile
-	// because external/host/cluster share identical URLs and differ only in
-	// transport. Empty means "not yet probed" — the Factory backfills it on
-	// the first command that resolves this profile.
-	Location olares.Location
-
-	// LocalURLPrefix is the dev-only URL label (forwarded from ProfileConfig).
-	// Kept on the resolved profile so the reprobe path can re-derive
-	// endpoints for a new Location without reloading config.
-	LocalURLPrefix string
-
-	// AuthURLOverride, when non-empty, is the user-pinned auth URL. The
-	// reprobe/relocation path checks it to avoid rewriting a deliberately
-	// overridden endpoint.
-	AuthURLOverride string
+	// Managed and AppName mirror the same fields on ProfileConfig, so error
+	// formatters can tell a user whose grant came from an application
+	// install that logging in is not the way out of a failure.
+	Managed bool
+	AppName string
 }
 
-// ApplyLocation re-derives every per-service URL for loc and records it on rp.
-// The pinned auth URL override (when set) is preserved. Used by the Factory's
-// lazy backfill and reprobe paths to switch a resolved profile to a freshly
-// detected Location without reloading config. A malformed OlaresID is a
-// silent no-op (it would already have failed earlier resolution).
-func (rp *ResolvedProfile) ApplyLocation(loc olares.Location) {
-	id, err := olares.ParseID(rp.OlaresID)
-	if err != nil {
-		return
-	}
-	ep := id.Endpoints(loc, rp.LocalURLPrefix)
-	if rp.AuthURLOverride == "" {
-		rp.AuthURL = ep.Auth
-	}
-	rp.VaultURL = ep.Vault
-	rp.DesktopURL = ep.Desktop
-	rp.SettingsURL = ep.Settings
-	rp.FilesURL = ep.Files
-	rp.MarketURL = ep.Market
-	rp.DashboardURL = ep.Dashboard
-	rp.ControlHubURL = ep.ControlHub
-	rp.Location = loc
-}
-
-// Provider is implemented by anything that can turn a ProfileConfig (which
-// may be nil for env-driven providers) into a ResolvedProfile. Returning
-// (nil, nil) means "I don't claim this profile, try the next provider".
+// Provider is implemented by anything that can turn a ProfileConfig into a
+// ResolvedProfile. Returning (nil, nil) means "this is not a profile I own",
+// which the orchestrating CredentialProvider surfaces as ErrNoProfile.
 //
-// The `profile` argument is provided by the orchestrating CredentialProvider:
-// it's the currently-selected ProfileConfig from cliconfig (or nil when none
-// exists). EnvProvider may ignore it entirely; DefaultProvider requires it.
+// The `profile` argument is the currently-selected ProfileConfig from
+// cliconfig, supplied by CredentialProvider.
 type Provider interface {
 	Name() string
 	Resolve(ctx context.Context, profile *cliconfig.ProfileConfig) (*ResolvedProfile, error)

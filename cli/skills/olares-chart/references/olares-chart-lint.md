@@ -12,7 +12,8 @@
 | Folder layout, manifest structure, helm dry-run | ✅ | ✅ |
 | `metadata.categories` enum | ❌ (stub `Utilities` passes) | ✅ |
 | `featuredImage`, `promoteImage`, `fullDescription` | ❌ | recommended for listing |
-| Multi-arch / `spec.supportArch` alignment | partial (cross-field if accelerator set) | expected for public Market |
+| `spec.supportArch` present and non-empty | ✅ | ✅ |
+| Whether `spec.supportArch` matches the image's built arch | ❌ (declaration only; cross-checked against accelerator mode) | expected for public Market |
 
 **Deploy to your Olares:** `lint OK` + a live install reaching `running` → sufficient. Stub metadata is fine.
 
@@ -29,7 +30,7 @@ olares-cli chart lint ./myapp --auto-owner=false --owner alice --admin root
 
 | Stage | Catches | Skip flag |
 |---|---|---|
-| Folder layout | missing `Chart.yaml` / `values.yaml` / `templates/` / `OlaresManifest.yaml` | `--skip-folder` |
+| Folder layout | missing `Chart.yaml` / `values.yaml` / `templates/` / `OlaresManifest.yaml`; **directory name ≠ chart name** | `--skip-folder` |
 | Manifest validation | structural + cross-field errors in `OlaresManifest.yaml` | `--skip-manifest` |
 | Helm dry-run + workload integrity | templates don't render, or no `Deployment`/`StatefulSet` named after the app | (always) |
 | Resource limits | containers missing CPU/memory limits | `--skip-resource` |
@@ -42,6 +43,8 @@ olares-cli chart lint ./myapp --auto-owner=false --owner alice --admin root
 
 > **The RBAC + securityContext checks run unconditionally.** `--with-rbac` / `--with-security-context` exist as flags (and their `--help` text claims "off by default"), but the CLI never actually disables either check — both run on every `chart lint`, so passing the flags is a no-op. Don't rely on them to *enable* anything; treat both checks as always-on.
 
+> **lint trusts a narrower image set than the cluster does, and it is an install gate.** The runtime admission policy trusts roughly 21 prefixes (`beclab/`, `aboveos/`, `minio/`, `onlyoffice/`, `busybox:`, …, matched after stripping `docker.io/`); `chart lint` trusts **only** `beclab/`. Since app-service lints on install and on upgrade, an `aboveos/` container asking for root would be admitted at runtime and still cannot be installed. Use a `beclab/` image for anything that must run as root — see the run identity (uid 1000) guidance.
+
 > **lint does not check middleware usage.** A chart that bundles its own `postgres`/`redis` instead of using system middleware passes `lint` cleanly — removing the bundled db is the author's responsibility (see the Middleware & dependencies area).
 
 ## Owner scenarios
@@ -52,6 +55,7 @@ By default lint renders the chart under **both** `owner==admin` (admin install) 
 
 | Message | Cause | Fix |
 |---|---|---|
+| `inconsistent info. name must be the same in chart. name in Chart.yaml:<a>, chartFolder:<b>, OlaresManifest.yaml:<c>` | the **chart directory name** is part of the identity, not just the two `name` fields | rename the directory to match. This is the first thing a copied-and-renamed chart hits: copying `myapp/` to `myapp2/` and editing only the two manifests fails here |
 | `must have a Deployment or StatefulSet named "<app>"` | no workload named after the app | rename the primary workload's `metadata.name` to the app name (`from-compose` does this automatically) |
 | app-data / permission mismatch | template mounts `.Values.userspace.*` not declared in `permission` (or reverse) | align `permission.appData/appCache/userData` with template mounts |
 | `Chart.yaml` vs manifest version mismatch | the two `version` fields differ | set them equal |

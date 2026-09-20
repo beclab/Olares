@@ -15,7 +15,6 @@ import (
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils"
 
 	"github.com/beclab/Olares/cli/pkg/core/logger"
-	"github.com/beclab/Olares/cli/pkg/preinstall"
 	"github.com/beclab/Olares/cli/pkg/storage"
 
 	"github.com/beclab/Olares/cli/pkg/common"
@@ -23,6 +22,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/core/connector"
 	"github.com/beclab/Olares/cli/pkg/core/task"
 	"github.com/beclab/Olares/cli/pkg/core/util"
+	"github.com/beclab/Olares/cli/pkg/systemcomponents"
 	configmaptemplates "github.com/beclab/Olares/cli/pkg/terminus/templates"
 	"github.com/beclab/Olares/cli/pkg/utils"
 	"github.com/pkg/errors"
@@ -64,11 +64,6 @@ func (t *InstallOsSystem) Execute(runtime connector.Runtime) error {
 		"fs_type":                            storage.GetRootFSType(),
 		common.HelmValuesKeyOlaresRootFSPath: storage.OlaresRootDir,
 		"sharedlib":                          storage.OlaresSharedLibDir,
-		"ensureApps":                         preinstall.EnsureAppsPublished(storage.OlaresRootDir),
-		// Market only reads the preinstall mount when this says a bundle was
-		// published; an installer that ships none leaves the feature off
-		// instead of having Market look into an empty directory every boot.
-		common.HelmValuesKeyPreinstall: preinstall.Published(storage.OlaresRootDir),
 	}
 
 	var platformPath = path.Join(runtime.GetInstallerDir(), "wizard", "config", "os-platform")
@@ -365,30 +360,20 @@ func (m *InstallOsSystemModule) Init() {
 		Action: &CreateBackupConfigMap{},
 	}
 
+	// everything installed after this point is reconciled by app-service, so it
+	// is awaited on its own before the rest of the system comes up
 	checkSystemService := &task.LocalTask{
-		Name: "CheckSystemServiceStatus",
-		Action: &CheckPodsRunning{
-			labels: map[string][]string{
-				"os-framework": {"tier=app-service"},
-			},
-		},
-		Retry: 20,
-		Delay: 10 * time.Second,
+		Name:   "CheckSystemServiceStatus",
+		Action: &CheckSystemComponentsReady{Components: systemcomponents.AppService()},
+		Retry:  20,
+		Delay:  10 * time.Second,
 	}
 
 	checkLinkerdControlPlane := &task.LocalTask{
-		Name: "CheckLinkerdControlPlane",
-		Action: &CheckPodsRunning{
-			labels: map[string][]string{
-				agwconfig.LinkerdNamespace(): {
-					"linkerd.io/control-plane-component=destination",
-					"linkerd.io/control-plane-component=identity",
-					"linkerd.io/control-plane-component=proxy-injector",
-				},
-			},
-		},
-		Retry: 20,
-		Delay: 10 * time.Second,
+		Name:   "CheckLinkerdControlPlane",
+		Action: &CheckSystemComponentsReady{Components: systemcomponents.Mesh(agwconfig.LinkerdNamespace())},
+		Retry:  20,
+		Delay:  10 * time.Second,
 	}
 
 	patchOs := &task.LocalTask{

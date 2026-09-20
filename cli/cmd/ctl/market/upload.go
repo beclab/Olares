@@ -2,6 +2,7 @@ package market
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -52,6 +53,27 @@ type uploadItemResult struct {
 	File    string `json:"file"`
 	Status  string `json:"status"`
 	Message string `json:"message,omitempty"`
+}
+
+type uploadArchitectureError struct {
+	Code                  string
+	ManifestArchitectures []string
+	ClusterArchitectures  []string
+}
+
+func (e *uploadArchitectureError) Error() string {
+	switch e.Code {
+	case "architecture_incompatible":
+		return fmt.Sprintf(
+			"upload rejected: manifest supports %v, cluster provides %v; update spec.supportArch and image platforms, repackage, and do not retry the unchanged package",
+			e.ManifestArchitectures,
+			e.ClusterArchitectures,
+		)
+	case "cluster_arch_unavailable":
+		return "upload blocked: cluster node discovery is unavailable; keep the current package and version, then retry after node discovery recovers"
+	default:
+		return "upload architecture validation failed"
+	}
 }
 
 func isChartFile(name string) bool {
@@ -134,7 +156,16 @@ func uploadDir(opts *MarketOptions, mc *MarketClient, dir, source string) error 
 	}
 
 	if opts.isJSON() {
-		return opts.printJSON(results)
+		// The per-file report is the output either way; what a caller in a
+		// pipeline reads is the exit code, so it has to agree with the quiet
+		// and table branches rather than reporting the encode alone.
+		if err := opts.printJSON(results); err != nil {
+			return err
+		}
+		if failed > 0 {
+			return errReported
+		}
+		return nil
 	}
 
 	if failed > 0 {
@@ -164,11 +195,41 @@ func uploadFile(opts *MarketOptions, mc *MarketClient, filePath, source string) 
 
 func doUploadFile(opts *MarketOptions, mc *MarketClient, filePath, source string) error {
 	absPath, _ := filepath.Abs(filePath)
-	opts.info("Uploading '%s' to source '%s'...", filepath.Base(absPath), source)
+	// Name the target user the way install / upgrade / uninstall do. Upload
+	// is the verb most likely to be run right after `profile use`, and it
+	// was the only write verb whose output gave no clue which Olares it
+	// landed on — the uploader only showed up in a later `market get` dump.
+	opts.info("Uploading '%s' to source '%s' for user '%s'...", filepath.Base(absPath), source, mc.olaresID)
 	ctx := context.Background()
-	_, err := mc.UploadChart(ctx, absPath, source)
+	response, err := mc.UploadChart(ctx, absPath, source)
 	if err != nil {
+		if architectureErr := parseUploadArchitectureError(response); architectureErr != nil {
+			return architectureErr
+		}
 		return fmt.Errorf("upload failed: %w", err)
 	}
 	return nil
+}
+
+func parseUploadArchitectureError(response *APIResponse) error {
+	if response == nil {
+		return nil
+	}
+	switch response.Code {
+	case "cluster_arch_unavailable":
+		return &uploadArchitectureError{Code: response.Code}
+	case "architecture_incompatible":
+		var data struct {
+			ManifestArchitectures []string `json:"manifest_architectures"`
+			ClusterArchitectures  []string `json:"cluster_architectures"`
+		}
+		_ = json.Unmarshal(response.Data, &data)
+		return &uploadArchitectureError{
+			Code:                  response.Code,
+			ManifestArchitectures: data.ManifestArchitectures,
+			ClusterArchitectures:  data.ClusterArchitectures,
+		}
+	default:
+		return nil
+	}
 }

@@ -1,6 +1,8 @@
 package system
 
 import (
+	"os"
+	"strings"
 	"testing"
 
 	olarescommon "github.com/beclab/Olares/cli/pkg/common"
@@ -19,38 +21,91 @@ func TestMacosPhaseBuilderSkipsOfflinePreinstallWiring(t *testing.T) {
 	for _, module := range modules {
 		switch module.(type) {
 		case *images.PreloadImagesModule:
-			t.Fatalf("macOS phase must not include PreloadImagesModule: offline preinstall only supports Linux/WSL")
-		case *preinstall.MaterializeModule:
-			t.Fatalf("macOS phase must not include MaterializeModule: offline preinstall only supports Linux/WSL")
+			t.Fatalf("macOS phase must not include PreloadImagesModule: minikube installs load no images locally")
+		case *preinstall.PublishDeclarationModule:
+			t.Fatalf("macOS phase must not include PublishDeclarationModule: market preinstall only supports Linux")
 		}
 	}
 }
 
-func TestMarketPreinstallModulesFollowImagePreload(t *testing.T) {
+// The two phase builders below are asserted against their source rather than
+// their module lists. Neither can be built here: linuxPhaseBuilder.build()
+// reads the platform through BaseRuntime.GetSystemInfo(), whose backing field
+// is private and reachable only via NewBaseRuntime -- which creates
+// directories and a log file -- and wslPhaseBuilder.build() probes the real
+// GPU on its first line.
+
+func TestLinuxPhasePreloadsImagesBeforePublishingTheDeclaration(t *testing.T) {
+	source := phaseSource(t, "linux.go")
+	preload := strings.Index(source, "&images.PreloadImagesModule{")
+	publish := strings.Index(source, "addModule(marketPreinstallModules(")
+	if preload < 0 || publish < 0 {
+		t.Fatalf("build markers: preload=%d publish=%d", preload, publish)
+	}
+	// Market reads the declaration as soon as it is published, and installing
+	// a local chart needs the images already in containerd.
+	if preload >= publish {
+		t.Fatalf("declaration is published before images are preloaded: preload=%d publish=%d", preload, publish)
+	}
+}
+
+func TestWslPhasePublishesNoDeclarationButStillPreloadsImages(t *testing.T) {
+	source := phaseSource(t, "wsl.go")
+	if strings.Contains(source, "marketPreinstallModules(") {
+		t.Fatalf("WSL phase must not publish a preinstall declaration: market preinstall only supports Linux")
+	}
+	// Preloading is not part of preinstall: an offline WSL install needs the
+	// system's own images in containerd whether or not anything is
+	// preinstalled.
+	if !strings.Contains(source, "&images.PreloadImagesModule{") {
+		t.Fatalf("WSL phase must still preload images: offline installs have no registry to pull from")
+	}
+}
+
+func phaseSource(t *testing.T, name string) string {
+	t.Helper()
+	data, err := os.ReadFile(name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(data)
+}
+
+func TestMarketPreinstallModulesCarryWhatThePublishNeeds(t *testing.T) {
 	selections := preinstall.ProfileSelections{
 		HardwareProfile: gpu.IntelType,
 		DetectedGPUType: gpu.IntelType,
 	}
-	modules := marketPreinstallModules(manifest.InstallationManifest{}, "/installer", "/base", selections)
-	if len(modules) != 2 {
+	modules := marketPreinstallModules(manifest.InstallationManifest{}, "/installer", "/base", "1.12.7-rc.1", selections)
+	if len(modules) != 1 {
 		t.Fatalf("module count = %d", len(modules))
 	}
-	if _, ok := modules[0].(*images.PreloadImagesModule); !ok {
-		t.Fatalf("first module = %T", modules[0])
-	}
-	materialize, ok := modules[1].(*preinstall.MaterializeModule)
+	materialize, ok := modules[0].(*preinstall.PublishDeclarationModule)
 	if !ok {
-		t.Fatalf("second module = %T", modules[1])
+		t.Fatalf("module = %T", modules[0])
 	}
+	// The declaration is published under the Olares root the market chart
+	// mounts, not under the installer's base directory.
 	if materialize.InstallerDir != "/installer" || materialize.RootDir != storage.OlaresRootDir {
 		t.Fatalf("materialize paths = %#v", materialize)
+	}
+	// The declaration is named after the version being installed, so that
+	// version has to reach the module that writes it.
+	if materialize.OSVersion != "1.12.7-rc.1" {
+		t.Fatalf("materialize osVersion = %q", materialize.OSVersion)
 	}
 	if materialize.ProfileSelections.HardwareProfile != gpu.IntelType ||
 		materialize.ProfileSelections.DetectedGPUType != gpu.IntelType {
 		t.Fatalf("production selections = %#v", materialize.ProfileSelections)
 	}
+	// An install declares what its medium carries. Declaring the release's
+	// catalog apps here would have a machine that may have no network at all
+	// expected to fetch them.
+	if materialize.CatalogPolicy != preinstall.OmitCatalogApps {
+		t.Fatalf("install catalog policy = %q, want %q",
+			materialize.CatalogPolicy, preinstall.OmitCatalogApps)
+	}
 }
-
 func TestDetectPreinstallGPUTypeUsesMostSpecificHardware(t *testing.T) {
 	systemInfo := &connector.SystemInfo{
 		HostInfo: &connector.HostInfo{OsType: common.Darwin, OsArch: "arm64"},
@@ -72,6 +127,12 @@ func TestDetectPreinstallGPUTypeUsesMostSpecificHardware(t *testing.T) {
 	}
 
 	systemInfo.CpuInfo.IsRyzenAIMax = false
+	systemInfo.HasAmdGPU = true
+	if got := detectPreinstallGPUType(systemInfo, true); got != gpu.AmdGpuType {
+		t.Fatalf("detectPreinstallGPUType() = %q, want %q", got, gpu.AmdGpuType)
+	}
+
+	systemInfo.HasAmdGPU = false
 	if got := detectPreinstallGPUType(systemInfo, true); got != gpu.IntelType {
 		t.Fatalf("detectPreinstallGPUType() = %q, want %q", got, gpu.IntelType)
 	}

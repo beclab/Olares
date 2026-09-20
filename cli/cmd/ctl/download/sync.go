@@ -26,23 +26,25 @@ func NewSyncCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "sync",
 		Short: "incremental cursor sync of download tasks",
-		Long: `Incrementally pull tasks by a composite cursor (GET /api/download/sync).
+		Long: `Fetch download task changes incrementally.
 
-The server keys the feed on (updated_at, id): it returns rows whose
-updated_at is newer than --since, or equal to --since with an id greater
-than --since-id, in (updated_at, id) ascending order. Unlike an id-only
-feed this DOES surface progress updates to tasks you already saw, because
-any change bumps updated_at. Remember the cursor of the last row you saw
-(printed after each page) and pass it back as --since / --since-id to fetch
-only newer changes.
+The cursor consists of --since and --since-id. The command prints the next
+cursor after each page; pass both values back to continue without missing
+tasks that share the same update time.
 
 --since accepts the local time shown in the list/sync table (e.g.
 2026-07-15T23:03 or "2026-07-15 23:03"), a bare date (2026-07-15), or a
-zoned RFC3339 value (2026-07-15T15:03:00Z); a value without a zone is read
-in your local timezone, so no UTC math is needed. Omit it for a full drain
-from the beginning. --all drains every page (advancing the cursor for you)
-and prints the combined result; without --all one page is fetched and, if
-more remain, the next --since / --since-id cursor is printed.`,
+zoned RFC3339 value (2026-07-15T15:03:00Z). Values without a zone use your
+local timezone. Omit it to start from the beginning. Use --all to fetch all
+remaining pages automatically.`,
+		Example: `  # fetch one page from the beginning
+  olares-cli knowledge download sync
+
+  # continue from a previously printed cursor
+  olares-cli knowledge download sync --since 2026-07-15T23:03 --since-id 42
+
+  # fetch all remaining pages
+  olares-cli knowledge download sync --since 2026-07-15T23:03 --since-id 42 --all`,
 		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
 			return runSync(c.Context(), f, app, limit, since, sinceID, all, output)
@@ -63,6 +65,16 @@ func runSync(ctx context.Context, f *cmdutil.Factory, app string, limit int, sin
 	}
 	format, err := parseFormat(outputRaw)
 	if err != nil {
+		return err
+	}
+	app, err = validateApp(app)
+	if err != nil {
+		return err
+	}
+	if err := validateLimit(limit); err != nil {
+		return err
+	}
+	if err := validateSinceID(sinceID); err != nil {
 		return err
 	}
 	since, err := parseSince(sinceRaw)

@@ -134,14 +134,10 @@ func placementPressure(added AddedResources, placement PreflightPlacement, state
 		if !ok {
 			return nil, fmt.Errorf("placement node %q is missing", nodeName)
 		}
-		projected, err := placementAddedResources(added, nodeName, placement.Allocations, state.Nodes)
-		if err != nil {
-			return nil, err
-		}
-		if err := validateNodeProjection(state.Pressure.UsageByNode[nodeName], projected); err != nil {
+		if err := validateNodeProjection(state.Pressure.UsageByNode[nodeName], added); err != nil {
 			return nil, fmt.Errorf("node %q: %w", nodeName, err)
 		}
-		dimensions := state.Pressure.PressuredDimensions(node, projected)
+		dimensions := state.Pressure.PressuredDimensions(node, added)
 		if len(dimensions) > 0 {
 			out = append(out, PreflightPressure{Source: "node/" + nodeName, Dimensions: dimensions})
 		}
@@ -164,28 +160,6 @@ func validateNodeProjection(usage prometheus.NodeResourceUsage, added AddedResou
 		}
 	}
 	return nil
-}
-
-func placementAddedResources(added AddedResources, nodeName string, allocations []Allocation, nodes []Node) (AddedResources, error) {
-	for _, allocation := range allocations {
-		if allocation.NodeName != nodeName {
-			continue
-		}
-		node, ok := findNode(nodes, nodeName)
-		if !ok {
-			return AddedResources{}, fmt.Errorf("node %q is missing", nodeName)
-		}
-		device, ok := findDevice(node, allocation.DeviceID)
-		if !ok {
-			return AddedResources{}, fmt.Errorf("device %q is missing", allocation.DeviceID)
-		}
-		var valid bool
-		added.Memory, valid = checkedAdd(added.Memory, timeSliceAddedMemory(device))
-		if !valid {
-			return AddedResources{}, fmt.Errorf("host memory projection overflows")
-		}
-	}
-	return added, nil
 }
 
 func applyDemand(demand PreflightDemand, placement PreflightPlacement, state *PreflightSnapshot) error {
@@ -211,11 +185,7 @@ func applyDemand(demand PreflightDemand, placement PreflightPlacement, state *Pr
 
 func applyPlacement(added AddedResources, placement PreflightPlacement, state *PreflightSnapshot) error {
 	for _, nodeName := range placement.NodeNames {
-		projected, err := placementAddedResources(added, nodeName, placement.Allocations, state.Nodes)
-		if err != nil {
-			return err
-		}
-		if err := projectPressure(&state.Pressure, nodeName, projected); err != nil {
+		if err := projectPressure(&state.Pressure, nodeName, added); err != nil {
 			return err
 		}
 	}

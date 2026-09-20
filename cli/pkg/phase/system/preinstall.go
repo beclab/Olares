@@ -12,14 +12,19 @@ import (
 
 func marketPreinstallModules(
 	manifestMap manifest.InstallationManifest,
-	installerDir, baseDir string,
+	installerDir, baseDir, osVersion string,
 	selections preinstall.ProfileSelections,
 ) []module.Module {
 	return []module.Module{
-		&preinstall.MaterializeModule{
+		&preinstall.PublishDeclarationModule{
 			InstallerDir:      installerDir,
 			RootDir:           storage.OlaresRootDir,
+			OSVersion:         osVersion,
 			ProfileSelections: selections,
+			// An install declares what its medium carries. The catalog apps of
+			// the release are left to the first upgrade, which runs on a device
+			// that can already reach the catalog.
+			CatalogPolicy: preinstall.OmitCatalogApps,
 		},
 	}
 }
@@ -39,6 +44,8 @@ func detectPreinstallGPUType(systemInfo connector.Systems, nvidiaEnabled bool) s
 		return gpu.GB10ChipType
 	case systemInfo.IsRyzenAIMax():
 		return gpu.AMDType
+	case systemInfo.IsAmdGPU():
+		return gpu.AmdGpuType
 	case systemInfo.IsIntelGPU():
 		return gpu.IntelType
 	case systemInfo.IsMThreadsM1000():

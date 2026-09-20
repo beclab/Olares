@@ -1,0 +1,66 @@
+package router
+
+import (
+	"github.com/spf13/cobra"
+
+	"github.com/beclab/Olares/cli/pkg/cmdutil"
+)
+
+// NewRouterCommand assembles the `olares-cli router` subtree: Router's
+// management surface plus the Model Console runtime behind locally installed
+// models. Identity and transport come from the active profile, as in the
+// market / files / settings trees.
+func NewRouterCommand(f *cmdutil.Factory) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "router",
+		Short: "AI models through Router and the Model Console",
+		Long: `Configure and operate the AI models this Olares can reach.
+
+Router is the gateway every model call goes through, whether the model runs
+on this machine or at a cloud provider. It is a Market application, so this
+tree locates it at runtime instead of assuming a hostname; a verb that cannot
+find it says whether it is missing or invisible to this profile.
+
+  model         the models themselves: list, attach and correct the ones Router
+                is configured with, and read, retry or relaunch the ones that
+                run on this machine
+  route         the names callers may send instead of a provider and model,
+                including the default-* categories Router maintains itself
+  provider      the upstreams Router routes to: cloud accounts and model apps
+  call          send work to a model: text, embeddings, web, images, audio, OCR,
+                and "call models" for the names a caller may send
+  key           API keys for software that calls Router
+  quota         ceilings on a key, a person, a model, or an application
+  usage         what has been called, what it cost, and how long it is kept
+  audit         who changed Router, and to what
+
+Model applications are installed, cloned, upgraded and removed with
+"olares-cli market"; the people on this Olares are "olares-cli settings users".
+
+Most of Router's management surface is admin-only. Requires Olares 1.12.7+.
+
+Run "olares-cli router <verb> --help" for details.
+`,
+	}
+	cmd.SilenceErrors = true
+	cmd.SilenceUsage = true
+	cmd.PersistentPreRun = func(c *cobra.Command, args []string) {
+		c.SilenceErrors = true
+		c.SilenceUsage = true
+	}
+
+	cmd.AddCommand(NewModelCommand(f))
+	cmd.AddCommand(NewRouteCommand(f))
+	cmd.AddCommand(NewProviderCommand(f))
+	cmd.AddCommand(NewCallCommand(f))
+	cmd.AddCommand(NewKeyCommand(f))
+	cmd.AddCommand(NewQuotaCommand(f))
+	cmd.AddCommand(NewUsageCommand(f))
+	cmd.AddCommand(NewAuditCommand(f))
+	cmd.AddCommand(newDeprecatedListCommand(f))
+	cmd.AddCommand(newDeprecatedModelsCommand(f))
+	cmd.AddCommand(newDeprecatedDefaultCommand(f))
+	cmd.AddCommand(newDeprecatedSpecCommand(f))
+	cmd.AddCommand(newDeprecatedLocalCommand(f))
+	return cmd
+}

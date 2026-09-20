@@ -9,7 +9,6 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/cluster"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
-	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway/meshinagent"
 	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/security"
@@ -91,6 +90,7 @@ func (r *MeshInSharedHostsReconciler) Reconcile(ctx context.Context, req reconci
 		}
 	}
 	sharedHostsTargetCount.WithLabelValues(hashCallerNS(req.Namespace)).Set(float64(len(nsTargets)))
+	noteEmptySharedHostsTargets(req.Namespace, nsTargets)
 	return reconcile.Result{}, r.ReconcileNamespace(ctx, req.Namespace, nsTargets)
 }
 
@@ -238,9 +238,7 @@ func BuildSharedHostsDemand(ctx context.Context, c client.Client, platformDomain
 	if err := c.List(ctx, &nsList, client.MatchingLabels{security.NamespaceInClusterCallerLabel: "true"}); err != nil {
 		return nil, err
 	}
-	ownerIdx := gateway.BuildClusterAppOwnerIndex(appList.Items)
-	nsOwnerIdx := buildNamespaceOwnerIndex(appList.Items)
-	srrByOwner := groupSRRByOwner(srrList.Items, nsOwnerIdx)
+	srrIdx := buildSharedGatewaySRRIndex(srrList.Items, appList.Items)
 	appsByNS := map[string][]appv1alpha1.Application{}
 	for i := range appList.Items {
 		app := appList.Items[i]
@@ -256,9 +254,14 @@ func BuildSharedHostsDemand(ctx context.Context, c client.Client, platformDomain
 	type key struct{ ns, viewer string }
 	authByKey := map[key]map[string]struct{}{}
 	tlsByKey := map[key]map[string]struct{}{}
-	addViewerHosts := func(callerNS, viewer string) {
+	// addViewerHosts materializes srrs under viewer. The SRR set (what may be
+	// called) and the viewer (whose URL segment the caller uses) are separate
+	// inputs on purpose: the viewer is always the caller's own owner, never the
+	// installer of the shared app being called.
+	addViewerHosts := func(callerNS, viewer string, srrs []srrv1alpha1.SharedRouteRegistry) {
 		viewer = strings.ToLower(strings.TrimSpace(viewer))
 		if viewer == "" {
+			sharedHostsDropTotal.WithLabelValues(rDropOwnerUnresolved).Inc()
 			return
 		}
 		k := key{ns: callerNS, viewer: viewer}
@@ -268,7 +271,7 @@ func BuildSharedHostsDemand(ctx context.Context, c client.Client, platformDomain
 		if tlsByKey[k] == nil {
 			tlsByKey[k] = map[string]struct{}{}
 		}
-		auth, tlsHosts := enumerateHostsForViewer(viewer, srrByOwner[viewer], platformDomain)
+		auth, tlsHosts := enumerateHostsForViewer(viewer, srrs, platformDomain)
 		for _, h := range auth {
 			authByKey[k][h] = struct{}{}
 		}
@@ -281,24 +284,23 @@ func BuildSharedHostsDemand(ctx context.Context, c client.Client, platformDomain
 		for _, app := range appsByNS[callerNS] {
 			refs := callerSharedAppRefs(&app)
 			if len(refs) == 0 {
-				// No named callee refs: still project viewer hosts when the app is a caller.
+				// Eligibility caller: no named callee, so the whole shared
+				// gateway menu is offered under the caller's own viewer.
 				if !meshinagent.DeclaresSharedCaller(app.Spec.Settings) {
 					continue
 				}
-				addViewerHosts(callerNS, app.Spec.Owner)
+				addViewerHosts(callerNS, app.Spec.Owner, srrIdx.all)
 				continue
 			}
 			if len(refs) > 1 {
 				sharedHostsDropTotal.WithLabelValues(rDropMultiRef).Inc()
 			}
-			owners := gateway.SplitClusterAppRefs(gateway.ResolveClusterAppOwner(ownerIdx, refs[0]))
-			if len(owners) == 0 {
-				sharedHostsDropTotal.WithLabelValues(rDropOwnerUnresolved).Inc()
+			srrs := srrIdx.byAppRef[refs[0]]
+			if len(srrs) == 0 {
+				sharedHostsDropTotal.WithLabelValues(rDropRefUnresolved).Inc()
 				continue
 			}
-			for _, owner := range owners {
-				addViewerHosts(callerNS, owner)
-			}
+			addViewerHosts(callerNS, app.Spec.Owner, srrs)
 		}
 	}
 	out := make([]SharedHostsTarget, 0, len(authByKey))

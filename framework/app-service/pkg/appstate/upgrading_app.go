@@ -15,7 +15,6 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/images"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
-	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 	appsv1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -103,6 +102,22 @@ func (p *UpgradingApp) Exec(ctx context.Context) (StatefulInProgressApp, error) 
 						execErr = fmt.Errorf("panic: %v", r)
 					}
 					if execErr != nil {
+						// A cancel (POST /cancel, the TTL watchdog or a force
+						// uninstall) cancels opCtx, which is what aborts the image
+						// download / helm upgrade / startup wait, so execErr here is
+						// the cancellation itself rather than an upgrade failure. The
+						// initiator already wrote the terminal target state
+						// (UpgradingCanceling for cancel, Uninstalling for force
+						// uninstall) and UpgradingCancelingApp owns the transition to
+						// Stopping; UpgradingCanceling -> UpgradeFailed is not a
+						// declared transition, so this write would only be rejected
+						// by the guard. Bail out quietly (Finally() tolerates the
+						// closed channel) and let the initiator drive the state.
+						if c.Err() != nil {
+							klog.Infof("upgrade of app %s canceled; leaving terminal state to the initiator", p.manager.Spec.AppName)
+							return
+						}
+
 						reason := appsv1.UpgradeFailed.String()
 						if errors.Is(execErr, errcode.ErrPodPending) || errors.Is(execErr, errcode.ErrServerSidePodPending) {
 							reason = constants.AppUnschedulable
@@ -161,7 +176,6 @@ func (p *UpgradingApp) Exec(ctx context.Context) (StatefulInProgressApp, error) 
 
 func (p *UpgradingApp) exec(ctx context.Context) error {
 	var err error
-	var version string
 	var actionConfig *action.Configuration
 	kubeConfig, err := p.deps.KubeConfig()
 	if err != nil {
@@ -174,19 +188,17 @@ func (p *UpgradingApp) exec(ctx context.Context) error {
 		return err
 	}
 	var appConfig *appcfg.ApplicationConfig
-	deployedVersion, _, err := apputils.GetDeployedReleaseVersion(actionConfig, p.manager.Spec.AppName)
-	if err != nil {
+	// Confirm the release exists before touching it. The version it reports is
+	// not read here any more: the downgrade check this call used to feed moved
+	// to the upgrade API, where a refusal is a 400 instead of an app left in
+	// UpgradeFailed.
+	if _, _, err = apputils.GetDeployedReleaseVersion(actionConfig, p.manager.Spec.AppName); err != nil {
 		klog.Errorf("Failed to get release revision err=%v", err)
 		return err
 	}
 
-	if !utils.MatchVersion(version, ">= "+deployedVersion) {
-		err = errors.New("upgrade version should great than deployed version")
-		return err
-	}
-
 	annotations := p.manager.Annotations
-	version = annotations[api.AppVersionKey]
+	version := annotations[api.AppVersionKey]
 	repoURL := annotations[api.AppRepoURLKey]
 	token := annotations[api.AppTokenKey]
 	marketSource := annotations[api.AppMarketSourceKey]

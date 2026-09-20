@@ -101,11 +101,21 @@ func RenderNginxConf(in NginxConfInput) string {
 		}
 		lb.WriteString("      proxy_http_version 1.1;\n")
 		lb.WriteString("      proxy_buffering off;\n")
+		// Stream the request body instead of spooling it to disk first: the
+		// sidecar runs under a 64Mi memory limit and buffering a large upload
+		// adds a full write-then-read round trip before the gateway sees it.
+		lb.WriteString("      proxy_request_buffering off;\n")
 		lb.WriteString(fmt.Sprintf("      proxy_read_timeout %s;\n", constants.MeshInProxyReadTimeout))
 		lb.WriteString(fmt.Sprintf("      proxy_send_timeout %s;\n", constants.MeshInProxySendTimeout))
 		lb.WriteString("      proxy_set_header Host $host;\n")
 		lb.WriteString("      proxy_set_header X-Forwarded-Proto $scheme;\n")
 		lb.WriteString("      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n")
+		// Connection/Upgrade are hop-by-hop: nginx drops them unless a location
+		// forwards them explicitly, which silently downgrades every WebSocket
+		// handshake routed through this hop (e.g. cross-instance Shared audio
+		// streams) into a plain request the callee answers with a non-101 status.
+		lb.WriteString("      proxy_set_header Upgrade $http_upgrade;\n")
+		lb.WriteString("      proxy_set_header Connection $connection_upgrade;\n")
 		lb.WriteString(fmt.Sprintf("      proxy_set_header %s $mesh_in_caller_jwt;\n", callerjwt.CallerJWTHeaderName))
 		lb.WriteString("      proxy_pass_request_headers on;\n")
 		lb.WriteString(fmt.Sprintf("      proxy_pass http://%s:%d;\n", in.GatewayHost, in.GatewayHTTPPort))
@@ -124,6 +134,11 @@ func RenderNginxConf(in NginxConfInput) string {
 	b.WriteString(failClosedNote + "\n")
 	b.WriteString("http {\n")
 	b.WriteString("  access_log off;\n")
+	// nginx -c replaces the image's main config, so nothing seeds a body limit
+	// and the built-in 1m default would reject every upload above it with 413.
+	// Set MeshInMaxBodySize once at http level so both the plain and TLS-offload
+	// servers, and any location added later, inherit it.
+	b.WriteString(fmt.Sprintf("  client_max_body_size %s;\n", constants.MeshInMaxBodySize))
 	b.WriteString("  js_import main from /tmp/mesh-in/bearer.js;\n")
 	b.WriteString(fmt.Sprintf("  # jwt path: %s\n", in.JWTTokenPath))
 	b.WriteString(fmt.Sprintf("  # certs: %s\n", in.CertDir))
@@ -132,6 +147,13 @@ func RenderNginxConf(in NginxConfInput) string {
 	b.WriteString(fmt.Sprintf("  # tls-hosts: %s\n", in.TLSHostsFile))
 	b.WriteString("  js_set $tls_cert_path main.pickCert;\n")
 	b.WriteString("  js_set $tls_key_path main.pickKey;\n")
+	// Echoing $http_upgrade back as Connection is not enough: a plain request
+	// would then carry "Connection: upgrade" too, so map it -- "upgrade" only
+	// when the client actually asked for a handshake, "close" otherwise.
+	b.WriteString("  map $http_upgrade $connection_upgrade {\n")
+	b.WriteString("    default upgrade;\n")
+	b.WriteString("    ''      close;\n")
+	b.WriteString("  }\n")
 	b.WriteString("  server {\n")
 	b.WriteString(fmt.Sprintf("    listen %d;\n", in.HTTPListenPort))
 	b.WriteString("    server_name _;\n")

@@ -15,7 +15,7 @@ This page lists confirmed issues that may affect Olares users. Each issue includ
 Olares will update this page when issues are identified, mitigated, or resolved.
 :::
 
-## Chrome real-time updates may stop when LarePass VPN is enabled
+## Chrome real-time updates may stop when LarePass VPN is enabled <Badge type="warning" text="Olares 1.12.5 only" />
 
 ### Summary
 
@@ -25,7 +25,7 @@ Olares will update this page when issues are identified, mitigated, or resolved.
 | Affected browser | Google Chrome 148 or later |
 | Trigger conditions | Accessing Olares through an `olares.com` URL in Chrome while LarePass VPN is enabled |
 | Impact | WebSocket-based real-time updates may stop working |
-| Status | Pending fix in an upcoming Olares release |
+| Status | Fixed in Olares 1.12.6 |
 
 ### Description
 
@@ -45,18 +45,18 @@ Starting in Chrome 148, Chrome enforces stricter Local Network Access checks for
 
 When LarePass VPN is enabled and you open Olares through an `olares.com` address, Chrome may treat some WebSocket connections as local network requests. For WebSocket connections, Chrome checks the `101 Switching Protocols` response. If the response is missing the header Chrome expects, the connection is blocked.
 
-Olares does not currently include this header in the WebSocket upgrade response, which triggers the block. A fix is planned for an upcoming release.
+Olares 1.12.5 does not include this header in the WebSocket upgrade response, which triggers the block. Olares 1.12.6 includes the required header and fixes this issue.
 
 ### Workarounds
 
-Use one of the following workarounds until you upgrade to an Olares version that includes the fix.
+If you cannot upgrade from Olares 1.12.5 immediately, use one of the following temporary workarounds.
 
 #### Option 1: Temporarily disable Chrome's local network access check
 
 If you need to keep using the `olares.com` URL with LarePass VPN, you can temporarily disable Chrome's local network access check.
 
 :::warning
-This changes a browser security setting. Use it only as a temporary workaround. After you upgrade to an Olares version that includes the fix, restore this flag to **Default** or **Enabled**.
+This changes a browser security setting. Use it only as a temporary workaround. After you upgrade to Olares 1.12.6 or later, restore this flag to **Default** or **Enabled**.
 :::
 
 1. In Chrome, open:

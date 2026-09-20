@@ -39,7 +39,7 @@ olares-cli files nfs mount 192.168.1.10:/data
 
 ## Safety constraints
 
-- **Mount / unmount mutate the per-node state — confirm intent with the user.**
+- The requested mount/unmount authorises the named export and node. Ask again when either target is ambiguous.
 - `nfs history rm` deletes favorites — confirm the URLs.
 
 ## Examples
@@ -74,13 +74,13 @@ DELETE /api/smb_history/<node>/  body: array of {url}  (history rm)
 - **After mount the entry lives at `external/<node>/<entry>/`** and is consumed by every other `files` verb like any other namespace. `files ls external/<node>/` confirms the actual (sanitized) entry name to pass to `unmount`.
 - **A discovery response is NOT an error** — surface the export list verbatim and ask which one to mount; the non-zero exit is just the "pick one and re-run" signal.
 - **`--node` is rarely needed** — defaults to the first `/api/nodes/` entry; pass it on multi-node Olares.
-- **Don't `mkdir` under `external/<node>/`** — that's [quirk #3](../SKILL.md#3-externalnode-is-a-virtual-volume-listing-layer-read-only); new volumes come from mount.
+- **Don't `mkdir` under `external/<node>/`** — see [backend quirks](../SKILL.md#backend-quirks-that-change-decisions); new volumes come from mount.
 
 ## Common errors
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| Backend version could not be determined | Profile version cache is missing or stale | Confirm `profile login`, then run `olares-cli profile list --refresh` |
+| Backend version could not be determined | Profile version cache is missing or stale | Confirm `profile login`, then run `olares-cli profile list --refresh-version` |
 | `require Olares >= 1.12.6`, with a detected older version | Backend predates NFS support | Upgrade Olares |
 | `looks like a URL scheme` / `is an SMB-style path` | `nfs://...` or `//host/share` passed | Use bare host or `host:/export`; use `files smb` for `//` shares |
 | `nfs mount returned an export list` | Bare host → discovery | Re-run with one of the printed `host:/export` paths |

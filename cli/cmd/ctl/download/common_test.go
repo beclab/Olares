@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -12,6 +14,7 @@ import (
 
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 	"github.com/beclab/Olares/cli/pkg/credential"
+	"github.com/beclab/Olares/cli/pkg/whoami"
 )
 
 type fakeDoer struct {
@@ -55,7 +58,7 @@ func TestPrepareVersionGate(t *testing.T) {
 		if err == nil || pc != nil {
 			t.Fatalf("expected fail-closed version error, got client=%v err=%v", pc, err)
 		}
-		for _, want := range []string{"could not be determined", "profile login", "profile list --refresh"} {
+		for _, want := range []string{"could not be determined", "profile login", "profile list --refresh-version"} {
 			if !strings.Contains(err.Error(), want) {
 				t.Fatalf("error %q missing %q", err, want)
 			}
@@ -131,6 +134,153 @@ func TestDoMutateErrorCode(t *testing.T) {
 	}
 }
 
+func TestDoMutateAddsRecoveryForKnownTaskErrors(t *testing.T) {
+	d := &fakeDoer{resp: []byte(`{"code":400,"message":"unsupported file type"}`)}
+	err := doMutate(context.Background(), d, "POST", "/api/download", nil, nil)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	for _, want := range []string{"unsupported file type", "duplicate URL creates a new task", "olares-cli knowledge download list"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("create 400 %q missing %q", err, want)
+		}
+	}
+
+	d = &fakeDoer{resp: []byte(`{"code":409,"message":"task already exists"}`)}
+	err = doMutate(context.Background(), d, "POST", "/api/download", nil, nil)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if strings.Contains(err.Error(), "knowledge download list") {
+		t.Fatalf("obsolete create-409 duplicate recovery still present: %q", err)
+	}
+
+	d = &fakeDoer{resp: []byte(`{"code":409,"message":"preference already exists"}`)}
+	err = doMutate(context.Background(), d, "PUT", "/api/user/preferences", nil, nil)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if strings.Contains(err.Error(), "knowledge download list") {
+		t.Fatalf("unrelated conflict received task recovery: %q", err)
+	}
+
+	d = &fakeDoer{resp: []byte(`{"code":404,"message":"task not found"}`)}
+	err = doMutate(context.Background(), d, "PUT", "/api/download/pause/42", nil, nil)
+	if err == nil || !strings.Contains(err.Error(), "olares-cli knowledge download list") {
+		t.Fatalf("task 404 should refresh IDs, got %v", err)
+	}
+
+	d = &fakeDoer{resp: []byte(`{"code":400,"message":"cannot pause in status \"waiting_to_move\""}`)}
+	err = doMutate(context.Background(), d, "PUT", "/api/download/pause/42", nil, nil)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	for _, want := range []string{"cannot pause", "pause only works while downloading or waiting", "olares-cli knowledge download info 42"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("pause 400 %q missing %q", err, want)
+		}
+	}
+
+	d = &fakeDoer{resp: []byte(`{"code":500,"message":"yt-dlp unavailable: connection refused"}`)}
+	err = doMutate(context.Background(), d, "POST", "/api/download", nil, nil)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	for _, want := range []string{"yt-dlp unavailable", ytdlpMarketInstall} {
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("yt-dlp create failure %q missing %q", err, want)
+		}
+	}
+
+	d = &fakeDoer{resp: []byte(`{"code":500,"message":"timeout of 3000ms exceeded"}`)}
+	err = doGet(context.Background(), d, "/api/url/inspect?url=https://example.com", nil)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	for _, want := range []string{"timeout of 3000ms", "channel/RSS probes", "create the task directly"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("inspect timeout %q missing %q", err, want)
+		}
+	}
+
+	d = &fakeDoer{resp: []byte(`{"code":409,"message":"task is moving to its destination"}`)}
+	err = doMutate(context.Background(), d, "PUT", "/api/download/cancel/42", nil, nil)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	for _, want := range []string{"wait for the move to finish", "olares-cli knowledge download info 42"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("mid-move conflict %q missing %q", err, want)
+		}
+	}
+}
+
+func TestDoMutateAddsRecoveryForHTTPTaskErrors(t *testing.T) {
+	tests := []struct {
+		name    string
+		status  int
+		path    string
+		want    []string
+		notWant string
+	}{
+		{
+			name:    "mid-move conflict",
+			status:  http.StatusConflict,
+			path:    "/api/download/cancel/42",
+			want:    []string{"wait for the move to finish", "olares-cli knowledge download info 42"},
+			notWant: "knowledge download status",
+		},
+		{
+			name:   "missing task",
+			status: http.StatusNotFound,
+			path:   "/api/download/pause/42",
+			want:   []string{"refresh task IDs", "olares-cli knowledge download list"},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(test.status)
+			}))
+			t.Cleanup(server.Close)
+
+			client := whoami.NewHTTPClient(server.Client(), server.URL, "")
+			err := doMutate(context.Background(), client, "POST", test.path, nil, nil)
+			if err == nil {
+				t.Fatal("expected error")
+			}
+			for _, want := range test.want {
+				if !strings.Contains(err.Error(), want) {
+					t.Fatalf("error %q missing %q", err, want)
+				}
+			}
+			if test.notWant != "" && strings.Contains(err.Error(), test.notWant) {
+				t.Fatalf("error %q contains obsolete CTA %q", err, test.notWant)
+			}
+		})
+	}
+}
+
+func TestDoMutateAddsRecoveryForRemoveConflict(t *testing.T) {
+	d := &fakeDoer{resp: []byte(`{"code":409}`)}
+	err := doMutate(
+		context.Background(),
+		d,
+		http.MethodDelete,
+		"/api/download/remove",
+		RemoveReq{TaskID: 42},
+		nil,
+	)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	for _, want := range []string{"wait for the move to finish", "olares-cli knowledge download info 42"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("remove conflict %q missing %q", err, want)
+		}
+	}
+}
+
 func TestDoMutateCodeZeroOK(t *testing.T) {
 	d := &fakeDoer{resp: []byte(`{"code":0,"data":{"provider":"aria2"}}`)}
 	var data InspectData
@@ -149,14 +299,17 @@ func TestDoMutateTransportError(t *testing.T) {
 	}
 }
 
-func TestDoMutateFileCheckEnvelope(t *testing.T) {
-	d := &fakeDoer{resp: []byte(`{"code":200,"exist":true}`)}
-	var res FileCheckResult
-	if err := doGet(context.Background(), d, "/api/download/file_check/none?user=alice&path=drive/Home/x", &res); err != nil {
+func TestDoMutateBatchEnvelope(t *testing.T) {
+	d := &fakeDoer{resp: []byte(`{"code":200,"succeeded":[1,2],"failed":[{"task_id":3,"error":"not found"}]}`)}
+	var res BatchResult
+	if err := doMutate(context.Background(), d, "PUT", "/api/download/batch/pause", BatchReq{TaskIDs: []int64{1, 2, 3}}, &res); err != nil {
 		t.Fatal(err)
 	}
-	if !res.Exist {
-		t.Fatalf("expected Exist=true, got %+v", res)
+	if len(res.Succeeded) != 2 || res.Succeeded[0] != 1 || res.Succeeded[1] != 2 {
+		t.Fatalf("succeeded: %+v", res.Succeeded)
+	}
+	if len(res.Failed) != 1 || res.Failed[0].TaskID != 3 || res.Failed[0].Error != "not found" {
+		t.Fatalf("failed: %+v", res.Failed)
 	}
 }
 
@@ -248,14 +401,64 @@ func TestDoMutateSyncEnvelope(t *testing.T) {
 	}
 }
 
-func TestDoMutateCookieListEnvelope(t *testing.T) {
-	d := &fakeDoer{resp: []byte(`{"code":200,"total":1,"list":[{"domain":"youtube.com","provider":"yt-dlp","has_cookie":true,"updated_at":1700000000}]}`)}
-	var res CookieListResult
-	if err := doGet(context.Background(), d, "/api/integration/cookies", &res); err != nil {
-		t.Fatal(err)
+func TestNormalizeDownloadPath(t *testing.T) {
+	cases := []struct {
+		raw        string
+		allowEmpty bool
+		want       string
+		wantErr    bool
+	}{
+		{raw: "", allowEmpty: true, want: ""},
+		{raw: "", allowEmpty: false, wantErr: true},
+		{raw: "drive/Home/Downloads/", want: "drive/Home/Downloads/"},
+		{raw: "drive/Data/cache/y", want: "drive/Data/cache/y"},
+		{raw: "drive/Home", want: "drive/Home"},
+		{raw: "/api/resources/drive/Home/Pictures/", want: "drive/Home/Pictures/"},
+		{raw: "https://files.alice.olares.cn/api/resources/drive/Home/Pictures/clip.mp4", want: "drive/Home/Pictures/clip.mp4"},
+		// A destination that merely contains the Files API segments (a
+		// folder named api) must survive intact — only a leading prefix
+		// is stripped.
+		{raw: "drive/Home/api/resources/clips/", want: "drive/Home/api/resources/clips/"},
+		{raw: "https://files.alice.olares.cn/api/resources/drive/Home/api/resources/clip.mp4", want: "drive/Home/api/resources/clip.mp4"},
+		{raw: "Home/Downloads/x", wantErr: true},
+		{raw: "drive/home/x", wantErr: true},
+		{raw: "drive/Cache/x", wantErr: true},
+		{raw: "https://files.alice.olares.cn/Files/Home/x", wantErr: true},
+		{raw: "drive/Home/../Data/x", wantErr: true},
 	}
-	if res.Total != 1 || len(res.List) != 1 || res.List[0].Domain != "youtube.com" || !res.List[0].HasCookie {
-		t.Fatalf("unexpected cookie list: %+v", res)
+	for _, tc := range cases {
+		got, err := normalizeDownloadPath(tc.raw, tc.allowEmpty)
+		if tc.wantErr {
+			if err == nil {
+				t.Fatalf("normalizeDownloadPath(%q) should fail", tc.raw)
+			}
+			continue
+		}
+		if err != nil {
+			t.Fatalf("normalizeDownloadPath(%q): %v", tc.raw, err)
+		}
+		if got != tc.want {
+			t.Fatalf("normalizeDownloadPath(%q)=%q want %q", tc.raw, got, tc.want)
+		}
+	}
+}
+
+func TestValidateDrivePath(t *testing.T) {
+	for _, valid := range []string{
+		"drive/Home/Downloads/x",
+		"drive/Data/cache/y",
+		"/api/resources/drive/Home/x",
+		"https://files.alice.olares.com/api/resources/drive/Data/y",
+		"drive/Home/api/resources/x",
+	} {
+		if err := validateDrivePath(valid); err != nil {
+			t.Fatalf("validateDrivePath(%q): %v", valid, err)
+		}
+	}
+	for _, bad := range []string{"", "Home/Downloads/x", "drive/home/x", "/Files/Home/x"} {
+		if err := validateDrivePath(bad); err == nil {
+			t.Fatalf("validateDrivePath(%q) should fail", bad)
+		}
 	}
 }
 
@@ -295,5 +498,101 @@ func TestParseTaskID(t *testing.T) {
 	}
 	if _, err := parseTaskID("x"); err == nil {
 		t.Fatal("expected error for non-int")
+	}
+}
+
+func TestValidateApp(t *testing.T) {
+	// The default app decides which namespace an unqualified create
+	// lands in and which rows an unqualified list returns, so pin the
+	// value itself rather than only "empty resolves to the default".
+	if defaultApp != "larepass" {
+		t.Fatalf("defaultApp = %q, want larepass", defaultApp)
+	}
+	for _, tc := range []struct{ in, want string }{
+		{"", defaultApp},
+		{"   ", defaultApp},
+		{"wise", "wise"},
+		{"larepass", "larepass"},
+		{" larepass ", "larepass"},
+	} {
+		got, err := validateApp(tc.in)
+		if err != nil {
+			t.Fatalf("validateApp(%q) unexpected error: %v", tc.in, err)
+		}
+		if got != tc.want {
+			t.Fatalf("validateApp(%q)=%q want %q", tc.in, got, tc.want)
+		}
+	}
+	_, err := validateApp("namespace")
+	if err == nil {
+		t.Fatal("unknown app should fail")
+	}
+	for _, want := range []string{"unsupported --app", allowedApps} {
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("validateApp error %q missing %q", err, want)
+		}
+	}
+}
+
+func TestValidateNonNegativeFlag(t *testing.T) {
+	if err := validateNonNegativeFlag("--page", 0); err != nil {
+		t.Fatal(err)
+	}
+	if err := validateNonNegativeFlag("--page", 2); err != nil {
+		t.Fatal(err)
+	}
+	err := validateNonNegativeFlag("--page", -1)
+	if err == nil || !strings.Contains(err.Error(), "unsupported --page") {
+		t.Fatalf("negative page should fail, got %v", err)
+	}
+}
+
+func TestValidateLimit(t *testing.T) {
+	if err := validateLimit(0); err != nil {
+		t.Fatal(err)
+	}
+	if err := validateLimit(100); err != nil {
+		t.Fatal(err)
+	}
+	if err := validateLimit(-1); err == nil || !strings.Contains(err.Error(), "unsupported --limit") {
+		t.Fatalf("negative limit should fail, got %v", err)
+	}
+	if err := validateLimit(101); err == nil || !strings.Contains(err.Error(), "max 100") {
+		t.Fatalf("over-max limit should fail, got %v", err)
+	}
+}
+
+func TestValidateSinceID(t *testing.T) {
+	if err := validateSinceID(0); err != nil {
+		t.Fatal(err)
+	}
+	if err := validateSinceID(-1); err == nil || !strings.Contains(err.Error(), "unsupported --since-id") {
+		t.Fatalf("negative since-id should fail, got %v", err)
+	}
+}
+
+func TestInspectYTDLPHint(t *testing.T) {
+	falseVal := false
+	trueVal := true
+	if hint := inspectYTDLPHint(InspectData{Provider: "yt-dlp", Available: &falseVal}); !strings.Contains(hint, ytdlpMarketInstall) {
+		t.Fatalf("Available=false should hint install, got %q", hint)
+	}
+	if hint := inspectYTDLPHint(InspectData{Provider: "aria2", Available: &falseVal}); hint != "" {
+		t.Fatalf("aria2 Available=false should not hint yt-dlp, got %q", hint)
+	}
+	if hint := inspectYTDLPHint(InspectData{Provider: "yt-dlp", Available: &trueVal}); hint != "" {
+		t.Fatalf("Available=true should not hint, got %q", hint)
+	}
+	if hint := inspectYTDLPHint(InspectData{Error: "yt-dlp daemon unreachable"}); !strings.Contains(hint, ytdlpMarketInstall) {
+		t.Fatalf("error text should hint install, got %q", hint)
+	}
+}
+
+func TestShouldHintInspectTimeout(t *testing.T) {
+	if !shouldHintInspectTimeout("timeout of 3000ms exceeded") {
+		t.Fatal("expected timeout hint")
+	}
+	if shouldHintInspectTimeout("bad url") {
+		t.Fatal("non-timeout should not hint")
 	}
 }

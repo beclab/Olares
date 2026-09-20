@@ -261,50 +261,73 @@ func readMarker(root *os.Root, name string, out any) (bool, error) {
 	return true, nil
 }
 
-func openStaticBundle(installerDir string) (*os.Root, []byte, BundleV1, bool, error) {
+// medium is what the installer brought with it: the bundle it declares and the
+// directory those charts and manifests sit in. An installer that carries none is
+// the ordinary shape rather than a missing one -- an upgrade fetches everything
+// over the network -- so callers ask the value what it carries instead of
+// carrying a found flag beside a root that may be nil.
+type medium struct {
+	root   *os.Root
+	bundle BundleV1
+}
+
+// present reports that the installer brought a medium at all. What it carries is
+// whatever its bundle names; an absent medium carries nothing, which is why the
+// two questions collapse into this one.
+func (m medium) present() bool {
+	return m.root != nil
+}
+
+func (m medium) close() error {
+	if m.root == nil {
+		return nil
+	}
+	return m.root.Close()
+}
+
+func openStaticBundle(installerDir string) (medium, error) {
+	if strings.TrimSpace(installerDir) == "" {
+		return medium{}, nil
+	}
 	staticPath := filepath.Join(installerDir, filepath.FromSlash(StaticRelativeDir))
 	if _, err := os.Lstat(staticPath); os.IsNotExist(err) {
-		return nil, nil, BundleV1{}, false, nil
+		return medium{}, nil
 	} else if err != nil {
-		return nil, nil, BundleV1{}, false, fmt.Errorf("inspect preinstall source: %w", err)
+		return medium{}, fmt.Errorf("inspect preinstall source: %w", err)
 	}
 	installerRoot, err := openDirectoryNoSymlink(installerDir)
 	if err != nil {
-		return nil, nil, BundleV1{}, false, fmt.Errorf("open installer root: %w", err)
+		return medium{}, fmt.Errorf("open installer root: %w", err)
 	}
 	defer installerRoot.Close()
 	if err := rejectRootSymlinkComponents(installerRoot, StaticRelativeDir); err != nil {
-		return nil, nil, BundleV1{}, false, err
+		return medium{}, err
 	}
 	info, err := installerRoot.Lstat(StaticRelativeDir)
 	if err != nil {
-		return nil, nil, BundleV1{}, false, fmt.Errorf("inspect preinstall source: %w", err)
+		return medium{}, fmt.Errorf("inspect preinstall source: %w", err)
 	}
 	if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
-		return nil, nil, BundleV1{}, false, fmt.Errorf("preinstall source must be a directory")
+		return medium{}, fmt.Errorf("preinstall source must be a directory")
 	}
 	root, err := installerRoot.OpenRoot(StaticRelativeDir)
 	if err != nil {
-		return nil, nil, BundleV1{}, false, fmt.Errorf("open preinstall source: %w", err)
+		return medium{}, fmt.Errorf("open preinstall source: %w", err)
 	}
-	data, bundle, err := decodeBundleRoot(root)
+	bundle, err := decodeBundleRoot(root)
 	if err != nil {
 		_ = root.Close()
-		return nil, nil, BundleV1{}, false, err
+		return medium{}, err
 	}
-	return root, data, bundle, true, nil
+	return medium{root: root, bundle: bundle}, nil
 }
 
-func decodeBundleRoot(root *os.Root) ([]byte, BundleV1, error) {
+func decodeBundleRoot(root *os.Root) (BundleV1, error) {
 	data, err := readRootFileLimited(root, BundleFileName, MaxBundleJSONBytes)
 	if err != nil {
-		return nil, BundleV1{}, err
+		return BundleV1{}, err
 	}
-	bundle, err := DecodeBundle(data)
-	if err != nil {
-		return nil, BundleV1{}, err
-	}
-	return data, bundle, nil
+	return DecodeBundle(data)
 }
 
 func openRootRegularFile(root *os.Root, name string) (*os.File, error) {

@@ -263,6 +263,45 @@ func appLabels(appInfo map[string]interface{}) []string {
 	return labels
 }
 
+// preflightInstall refuses an install the per-user state row already rules
+// out. Without it the only feedback is whatever app-service says once the
+// request has travelled through market and back, and app-service answers a
+// state-machine refusal with the same opaque failure it uses for an
+// unschedulable chart — the user cannot tell "already installed" from
+// "cluster is full" from the CLI output alone.
+//
+// The gate is the SPA's own installability set inverted: the six
+// `uninstalledAppStates` (notInstalledStates in types.go) are exactly the rows
+// install may start from, plus the case where no row exists at all. Everything
+// else splits two ways for the hint, because the two need different verbs: a
+// settled app wants `upgrade`, an in-flight one wants `cancel` or patience.
+//
+// Lookup errors soft-fail, matching preflightUpgrade's catalog probe. A flaky
+// read must not block an install the backend would have accepted; the backend
+// keeps the final say either way.
+func preflightInstall(ctx context.Context, opts *MarketOptions, mc *MarketClient, appName string) error {
+	row, err := lookupInstalledApp(ctx, mc, appName)
+	if err != nil {
+		opts.info("warning: preflight could not read the state row for '%s' (%v); proceeding", appName, err)
+		return nil
+	}
+	if row == nil || !isInstalledState(row.State) {
+		return nil
+	}
+
+	if isUpgradable(row.State) {
+		return fmt.Errorf(
+			"cannot install '%s': it is already installed (state '%s') — use 'olares-cli market upgrade %s' to move it to another version, or 'olares-cli market uninstall %s' first to reinstall from scratch",
+			appName, row.State, appName, appName,
+		)
+	}
+
+	return fmt.Errorf(
+		"cannot install '%s': an operation is already in flight (state '%s') — run 'olares-cli market status %s --watch' to wait for it to settle, or 'olares-cli market cancel %s' to abandon an install you no longer want",
+		appName, row.State, appName, appName,
+	)
+}
+
 // preflightUpgrade mirrors the SPA's `canUpgrade(statusLatest, appId,
 // sourceId)` predicate in apps/.../constant/config.ts — same four
 // gates, same order:
@@ -271,9 +310,8 @@ func appLabels(appInfo map[string]interface{}) []string {
 //  2. installed + target version both present
 //  3. target version > installed (strict semver) — EXCEPT for the
 //     `upload` source, where target == installed is also allowed
-//     (re-uploading the same version overwrites the stored chart and
-//     app-service permits a same-version upgrade); a true downgrade is
-//     always rejected
+//     (app-service permits a same-version upgrade, which re-applies the
+//     stored chart); a true downgrade is always rejected
 //  4. catalog row is NOT marked `suspend` / `remove` (`isAppSuspended`)
 //
 // Returns nil on pass. On any explicit gate failure returns a typed
@@ -323,14 +361,14 @@ func preflightUpgrade(ctx context.Context, opts *MarketOptions, mc *MarketClient
 		return nil, fmt.Errorf("cannot upgrade '%s': target version is empty (internal error — version resolution did not produce a version string)", appName)
 	}
 
-	// The "upload" bucket (chartUploadSource) overwrites the stored
-	// chart in place when the same version is re-uploaded, and
-	// app-service accepts a same-version upgrade (it gates on
-	// `>= deployedVersion`, not strictly greater — see
-	// framework/app-service/pkg/appstate/upgrading_app.go). So for
-	// upload-source apps, `upgrade` to the SAME version is the
-	// sanctioned way to re-apply an edited chart (and to recover an
-	// app stuck in upgradeFailed) without an artificial version bump.
+	// app-service gates upgrade on `>= deployedVersion`, not strictly
+	// greater (framework/app-service/pkg/appstate/upgrading_app.go), so
+	// a same-version upgrade is accepted. For upload-source apps that
+	// makes it a retry: it re-applies the STORED chart at that version,
+	// which is the way to recover from an upgradeFailed caused by a
+	// transient failure. It is not a way to apply edited bytes — market
+	// refuses to re-upload a published version (see the upload rule in
+	// olares-market-charts.md), so a fixed chart needs a new version.
 	// We only relax the same-version no-op gate; a true downgrade
 	// (cmp < 0) is still rejected because app-service rejects it too.
 	isUpload := strings.TrimSpace(source) == chartUploadSource

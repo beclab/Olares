@@ -40,9 +40,10 @@ func NewApplicationsCommand(f *cmdutil.Factory, cf *pkgdashboard.CommonFlags) *c
 		Short:         "Workload-grain application table (mirrors the SPA's Applications page)",
 		SilenceErrors: true,
 		SilenceUsage:  true,
+		Args:          cmdutil.RefuseUnknownVerbArgs,
 		RunE: func(c *cobra.Command, args []string) error {
 			if len(args) > 0 {
-				return unknownSubcommandRunE(c, args)
+				return cmdutil.RefuseUnknownVerb(c, args)
 			}
 			if err := common.Validate(); err != nil {
 				return err

@@ -305,6 +305,13 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 		Returns(http.StatusOK, "inject runasuser success", nil)).
 		Consumes(restful.MIME_JSON)
 
+	ws.Route(ws.POST("/clicredential/inject").
+		To(handler.handleCliCredential).
+		Doc("mutating webhook for mounting the olares-cli credential into an app pod").
+		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
+		Returns(http.StatusOK, "inject olares-cli credential success", nil)).
+		Consumes(restful.MIME_JSON)
+
 	ws.Route(ws.POST("/workflow/inject").
 		To(handler.cronWorkflowInject).
 		Doc("mutating webhook for cron workflow").
@@ -336,6 +343,13 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 	ws.Route(ws.POST("/macvlan-init/inject").
 		To(handler.macvlanInitInject).
 		Doc("mutating webhook to inject macvlan reply-via-eth0 init container").
+		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
+		Returns(http.StatusOK, "Success to inject", nil)).
+		Consumes(restful.MIME_JSON)
+
+	ws.Route(ws.POST("/podarch/inject").
+		To(handler.podArchInject).
+		Doc("mutating webhook to inject kubernetes.io/arch nodeSelector for single-arch apps").
 		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
 		Returns(http.StatusOK, "Success to inject", nil)).
 		Consumes(restful.MIME_JSON)

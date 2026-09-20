@@ -98,17 +98,23 @@ The worker must be in one of these states:
     :::info
     By default, all Olares One units have the hostname `olares`. Kubernetes requires unique hostnames for every node in a cluster. Before joining it to the cluster, you must ensure it has a unique hostname.
     :::
-3. Download `joincluster.sh`:
+3. Set the Olares version, then download the matching `joincluster.sh`:
+
+    :::info About `VERSION`
+    `VERSION` selects which release of `joincluster.sh` to download. This guide uses `1.12.6`.
+    :::
 
     ::: code-group
     ```bash [curl]
     # This command is for users who have curl installed.
-    curl -fsSL https://raw.githubusercontent.com/beclab/Olares/refs/heads/main/build/base-package/joincluster.sh -o joincluster.sh
+    export VERSION=1.12.6
+    curl -fsSL "https://github.com/beclab/Olares/releases/download/${VERSION}/joincluster.sh" -o joincluster.sh
     ```
 
     ```bash [wget]
     # This command is for users who have wget installed.
-    wget https://raw.githubusercontent.com/beclab/Olares/refs/heads/main/build/base-package/joincluster.sh
+    export VERSION=1.12.6
+    wget "https://github.com/beclab/Olares/releases/download/${VERSION}/joincluster.sh"
     ```
     :::
 4. Run the script with the master node details:

@@ -19,11 +19,16 @@ func TestRenderNginxConfContainsListenAndJWT(t *testing.T) {
 		"decideOffload",
 		"ssl_certificate_cache",
 		"proxy_buffering off",
+		"proxy_request_buffering off",
+		"client_max_body_size " + constants.MeshInMaxBodySize,
 		"proxy_read_timeout 600s",
 		"return 421",
 		JWTSecretMountPath + "/token",
 		"app-gateway-data.os-gateway.svc",
 		"proxy_pass http://app-gateway-data.os-gateway.svc:80",
+		"map $http_upgrade $connection_upgrade",
+		"proxy_set_header Upgrade $http_upgrade",
+		"proxy_set_header Connection $connection_upgrade",
 		"fail-closed",
 		"js_set $mesh_in_host_ok",
 		"js_set $mesh_in_caller_jwt",
@@ -61,6 +66,60 @@ func TestRenderNginxConfContainsListenAndJWT(t *testing.T) {
 	}
 	if strings.Count(got, "proxy_pass http://app-gateway-data.os-gateway.svc:80") < 2 {
 		t.Fatal("expected HTTP and HTTPS terminate servers both proxy to gateway:80")
+	}
+	if strings.Count(got, "proxy_set_header Upgrade $http_upgrade;") < 2 {
+		t.Fatal("expected HTTP and HTTPS terminate locations both forward Upgrade")
+	}
+	if strings.Count(got, "proxy_set_header Connection $connection_upgrade;") < 2 {
+		t.Fatal("expected HTTP and HTTPS terminate locations both forward Connection")
+	}
+	if at, firstServer := strings.Index(got, "map $http_upgrade $connection_upgrade"), strings.Index(got, "  server {"); at < 0 || firstServer < 0 || at > firstServer {
+		t.Fatalf("connection_upgrade map must sit in http {} before the first server block:\n%s", got)
+	}
+}
+
+// TestRenderNginxConfLiftsDefaultBodyCap guards the 413 regression: nginx -c
+// replaces the image's main config, so without an explicit directive the
+// built-in 1m client_max_body_size applied and every relayed upload above 1 MiB
+// was rejected with "413 Request Entity Too Large" on both the plain and the
+// TLS-offload listener.
+func TestRenderNginxConfLiftsDefaultBodyCap(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		enableHTTPS bool
+		wantProxies int
+	}{
+		{name: "http and https", enableHTTPS: true, wantProxies: 2},
+		{name: "http only", enableHTTPS: false, wantProxies: 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := RenderNginxConf(NginxConfInput{FailClosed: true, EnableHTTPS: tc.enableHTTPS})
+
+			limit := "client_max_body_size " + constants.MeshInMaxBodySize + ";"
+			if n := strings.Count(got, limit); n != 1 {
+				t.Fatalf("client_max_body_size occurrences = %d, want 1 at http level:\n%s", n, got)
+			}
+			// http level, not per server: it must precede the first server block
+			// so both listeners and any later location inherit it.
+			if at, firstServer := strings.Index(got, limit), strings.Index(got, "  server {"); at < 0 || firstServer < 0 || at > firstServer {
+				t.Fatalf("client_max_body_size must sit in http {} before the first server block:\n%s", got)
+			}
+			if n := strings.Count(got, "proxy_request_buffering off;"); n != tc.wantProxies {
+				t.Fatalf("proxy_request_buffering off occurrences = %d, want %d (one per proxy location)", n, tc.wantProxies)
+			}
+			// Unbuffered upload requires HTTP/1.1 upstream; keep them paired.
+			if n := strings.Count(got, "proxy_http_version 1.1;"); n != tc.wantProxies {
+				t.Fatalf("proxy_http_version 1.1 occurrences = %d, want %d", n, tc.wantProxies)
+			}
+		})
+	}
+}
+
+func TestMeshInMaxBodySizeIsAPIUploadBound(t *testing.T) {
+	// Keep above nginx's 1m default and below multi-GB fileserver caps; 100m
+	// is the hop-local ceiling for Shared east-west relays.
+	if constants.MeshInMaxBodySize != "100m" {
+		t.Fatalf("MeshInMaxBodySize = %q, want \"100m\"", constants.MeshInMaxBodySize)
 	}
 }
 

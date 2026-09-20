@@ -81,6 +81,11 @@ type State struct {
 	// OsVersion is the OS version string, e.g. "22.04".
 	OsVersion string `json:"os_version"`
 
+	// OsKernel is the kernel release string from GetMachineInfo (OS_KERNEL).
+	// It is daemon-internal: excluded from /system/status so that endpoint's
+	// wire format stays unchanged. /system/node-status projects it as os_kernel.
+	OsKernel string `json:"-"`
+
 	// CpuInfo is the CPU model name as reported by the OS.
 	CpuInfo string `json:"cpu_info"`
 

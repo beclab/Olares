@@ -2,8 +2,6 @@ package meshinagent
 
 import (
 	"fmt"
-	"regexp"
-	"strings"
 )
 
 // BearerJS is the njs module for JWT reads, auth/tls host allowlists, and stream
@@ -14,18 +12,13 @@ func BearerJS() string {
 		HostsMountPath+"/"+SharedHostsFileName,
 		HostsMountPath+"/"+TLSHostsFileName,
 		HTTPSTerminatePort,
-		"olares.com",
 		CertsMountPath,
 		PlaceholderCertDir,
 	)
 }
 
 // BearerJSWith builds the njs module with explicit paths (tests / render).
-func BearerJSWith(jwtPath, authHostsFile, tlsHostsFile string, terminatePort int, platformDomain, certDir, placeholderDir string) string {
-	escapedDomain := regexp.QuoteMeta(strings.ToLower(strings.TrimSpace(platformDomain)))
-	if escapedDomain == "" {
-		escapedDomain = "olares\\.com"
-	}
+func BearerJSWith(jwtPath, authHostsFile, tlsHostsFile string, terminatePort int, certDir, placeholderDir string) string {
 	if certDir == "" {
 		certDir = CertsMountPath
 	}
@@ -39,7 +32,6 @@ const AUTH_HOSTS_FILE = '%s';
 const TLS_HOSTS_FILE = '%s';
 const TERMINATE = '127.0.0.1:%d';
 const CACHE_TTL_MS = 5000;
-const PLATFORM_SUFFIX = '.%s';
 const REAL_CERT = '%s/tls.crt';
 const REAL_KEY = '%s/tls.key';
 const PH_CERT = '%s/tls.crt';
@@ -64,10 +56,6 @@ function normalizeHost(v) {
 function passthrough(host) {
   if (!host) { return 'invalid.local:443'; }
   return host + ':443';
-}
-
-function isPlatformHost(host) {
-  return host.length > PLATFORM_SUFFIX.length && host.endsWith(PLATFORM_SUFFIX);
 }
 
 function parseHosts(content) {
@@ -182,17 +170,18 @@ function authDeny(r) {
 function decideOffload(s) {
   // Empty SNI means the connection was redirected by IP (no hostname). Under
   // REDIRECT the original destination is unrecoverable — log and fail closed.
+  // Offload is allowlist-only (tls-hosts): no hard-coded platform suffix, so
+  // any zone the control plane materialized (e.g. .olares.cn) can terminate.
   const host = normalizeHost(s.variables.ssl_preread_server_name);
   if (!host) {
     s.error('mesh-in: no SNI on hijacked 443; original destination unrecoverable under REDIRECT, connection dropped');
     return passthrough(host);
   }
-  if (!isPlatformHost(host)) { return passthrough(host); }
   const hosts = reloadTLSHosts();
   if (hosts[host]) { return TERMINATE; }
   return passthrough(host);
 }
 
 export default {readJWT, checkHost, callerJwt, authDeny, decideOffload, tlsMode, pickCert, pickKey};
-`, jwtPath, authHostsFile, tlsHostsFile, terminatePort, escapedDomain, certDir, certDir, placeholderDir, placeholderDir)
+`, jwtPath, authHostsFile, tlsHostsFile, terminatePort, certDir, certDir, placeholderDir, placeholderDir)
 }

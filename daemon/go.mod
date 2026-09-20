@@ -6,6 +6,7 @@ replace (
 	bytetrade.io/web3os/backups-sdk => github.com/Above-Os/backups-sdk v0.1.17
 	bytetrade.io/web3os/bfl => github.com/beclab/bfl v0.3.36
 	github.com/beclab/Olares/cli => ../cli
+	github.com/beclab/Olares/framework/app-service => ../framework/app-service
 	github.com/labstack/echo/v4 => github.com/eball/echo/v4 v4.13.4-patch
 	k8s.io/api => k8s.io/api v0.34.0
 	k8s.io/apimachinery => k8s.io/apimachinery v0.34.0
@@ -21,11 +22,11 @@ require (
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
 	github.com/beclab/Olares/cli v0.0.0-20251230161135-5264df60cc33
 	github.com/beclab/Olares/framework/app-service v0.0.0-20260528090802-b69f2bf96b82
-	github.com/beclab/api v0.0.21-0.20260618085457-f1a6694882f5
+	github.com/beclab/api v0.0.26
 	github.com/containerd/containerd v1.7.29
 	github.com/distribution/distribution/v3 v3.0.0
 	github.com/dustin/go-humanize v1.0.1
-	github.com/eball/zeroconf v0.2.5
+	github.com/eball/zeroconf v0.2.6
 	github.com/go-resty/resty/v2 v2.16.5
 	github.com/godbus/dbus/v5 v5.2.2
 	github.com/gofiber/fiber/v2 v2.52.12
@@ -34,6 +35,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/hirochachacha/go-smb2 v1.1.0
 	github.com/jaypipes/ghw v0.13.0
+	github.com/jaypipes/pcidb v1.0.1
 	github.com/jochenvg/go-udev v0.0.0-20171110120927-d6b62d56d37b
 	github.com/joho/godotenv v1.5.1
 	github.com/k8snetworkplumbingwg/network-attachment-definition-client v1.7.7
@@ -161,7 +163,6 @@ require (
 	github.com/huandu/xstrings v1.5.0 // indirect
 	github.com/illumos/go-kstat v0.0.0-20210513183136-173c9b0a9973 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/jaypipes/pcidb v1.0.1 // indirect
 	github.com/jkeiser/iter v0.0.0-20200628201005-c8aa0ae784d1 // indirect
 	github.com/jmoiron/sqlx v1.4.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect

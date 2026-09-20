@@ -15,8 +15,10 @@ import (
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	rbac_configv3 "github.com/envoyproxy/go-control-plane/envoy/config/rbac/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	mutationrulesv3 "github.com/envoyproxy/go-control-plane/envoy/config/common/mutation_rules/v3"
 	accesslogfilev3 "github.com/envoyproxy/go-control-plane/envoy/extensions/access_loggers/file/v3"
 	extauthzv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/ext_authz/v3"
+	headermutationv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/header_mutation/v3"
 	luav3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/lua/v3"
 	rbac_filterv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/rbac/v3"
 	routerv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/router/v3"
@@ -25,6 +27,7 @@ import (
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	tcpproxyv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/tcp_proxy/v3"
 	udpproxyv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/udp/udp_proxy/v3"
+	earlyheadermutationv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/early_header_mutation/header_mutation/v3"
 	ppupstreamv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/proxy_protocol/v3"
 	rawtransportv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/raw_buffer/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
@@ -64,6 +67,36 @@ local PUSH_STATE_SCRIPT = "<script>\n" ..
   "})();\n" ..
   "</script>"
 
+-- F2: clear Set-Cookie Domain= values (parity with historic oes set_cookie_tpl).
+local COOKIE_DOMAIN_PATTERN = "Domain=([^;]*)"
+
+function rewrite_set_cookie_domains(response_handle)
+  local headers = response_handle:headers()
+  local n = headers:getNumValues("Set-Cookie")
+  if n == 0 then return end
+  local cookies = {}
+  for i = 0, n - 1 do
+    local v = headers:getAtIndex("Set-Cookie", i)
+    if v and v ~= "" then
+      table.insert(cookies, v)
+    end
+  end
+  local first = true
+  for _, cookie in ipairs(cookies) do
+    local updated = cookie
+    local set_cookie_domain = string.match(cookie, COOKIE_DOMAIN_PATTERN)
+    if set_cookie_domain ~= nil and set_cookie_domain ~= "" then
+      updated = string.gsub(cookie, COOKIE_DOMAIN_PATTERN, "Domain=", 1)
+    end
+    if first then
+      headers:replace("Set-Cookie", updated)
+      first = false
+    else
+      headers:add("Set-Cookie", updated)
+    end
+  end
+end
+
 function envoy_on_request(request_handle)
   local meta = request_handle:metadata()
   if not meta then return end
@@ -81,6 +114,9 @@ function envoy_on_request(request_handle)
 end
 
 function envoy_on_response(response_handle)
+  -- Always rewrite Cookie Domain before optional HTML body filters.
+  rewrite_set_cookie_domains(response_handle)
+
   local dm = response_handle:streamInfo():dynamicMetadata():get("envoy.filters.http.lua")
   if not dm or not dm["needs_sub_filter"] then return end
 
@@ -126,6 +162,15 @@ end
 //	}
 const xForwardedProtoValue = "%REQ(x-forwarded-proto?:SCHEME)%"
 
+// xOriginalURLValue is the original client URL for Authelia /api/verify/.
+// Envoy path_prefix rewrites the auth check path to /api/verify/<orig>, so
+// without this header Authelia builds rd from the check URI (e.g. /api/verify//).
+const xOriginalURLValue = "%REQ(x-forwarded-proto?:SCHEME)%://%REQ(:AUTHORITY)%%REQ(:PATH)%"
+
+// autheliaVerifyPathPrefix is the filter-default Authelia Legacy verify path.
+// Per-route overrides are only emitted when PathPrefix differs from this value.
+const autheliaVerifyPathPrefix = "/api/verify/"
+
 var (
 	tcpIdleTimeout        = time.Hour
 	httpStreamIdleTimeout = 30 * time.Minute
@@ -144,6 +189,68 @@ func SetTimeouts(tcpIdle, httpStream, connect, route, clusterIdle time.Duration)
 	connectTimeout = connect
 	routeTimeout = route
 	clusterIdleTimeout = clusterIdle
+}
+
+// clientSpoofableIdentityHeaders are stripped at HCM early mutation (before
+// any HTTP filter, including ExtAuth) so forged client values never enter the
+// filter chain or reach Authelia/upstream. Envoy matches case-insensitively.
+func clientSpoofableIdentityHeaders() []string {
+	return []string{
+		"x-bfl-user",
+		"x-caller-appid",
+	}
+}
+
+// spoofableAppIdentityHeadersToRemove is the RDS RequestHeadersToRemove list.
+// x-bfl-user is intentionally absent: Authelia may set it via
+// AllowedUpstreamHeaders after ExtAuth allow; an RDS remove would strip that
+// session identity. x-caller-appid stays here as a second strip (never
+// reinjected on this path).
+func spoofableAppIdentityHeadersToRemove() []string {
+	return []string{
+		"x-caller-appid",
+	}
+}
+
+const earlyHeaderMutationExtensionName = "envoy.http.early_header_mutation.header_mutation"
+
+// buildEarlyClientIdentityStripExtensions strips forged north-south identity
+// headers before the HTTP filter chain runs.
+func buildEarlyClientIdentityStripExtensions() []*corev3.TypedExtensionConfig {
+	mutations := make([]*mutationrulesv3.HeaderMutation, 0, len(clientSpoofableIdentityHeaders()))
+	for _, h := range clientSpoofableIdentityHeaders() {
+		mutations = append(mutations, &mutationrulesv3.HeaderMutation{
+			Action: &mutationrulesv3.HeaderMutation_Remove{Remove: h},
+		})
+	}
+	return []*corev3.TypedExtensionConfig{{
+		Name: earlyHeaderMutationExtensionName,
+		TypedConfig: mustAny(&earlyheadermutationv3.HeaderMutation{
+			Mutations: mutations,
+		}),
+	}}
+}
+
+// buildClientIdentityStripFilter strips the same forged headers again as the
+// first HTTP filter (before ExtAuth) so any path that skipped early mutation
+// still cannot carry client-supplied identity into ExtAuth or upstream.
+func buildClientIdentityStripFilter() *hcmv3.HttpFilter {
+	mutations := make([]*mutationrulesv3.HeaderMutation, 0, len(clientSpoofableIdentityHeaders()))
+	for _, h := range clientSpoofableIdentityHeaders() {
+		mutations = append(mutations, &mutationrulesv3.HeaderMutation{
+			Action: &mutationrulesv3.HeaderMutation_Remove{Remove: h},
+		})
+	}
+	return &hcmv3.HttpFilter{
+		Name: "envoy.filters.http.header_mutation",
+		ConfigType: &hcmv3.HttpFilter_TypedConfig{
+			TypedConfig: mustAny(&headermutationv3.HeaderMutation{
+				Mutations: &headermutationv3.Mutations{
+					RequestMutations: mutations,
+				},
+			}),
+		},
+	}
 }
 
 // mustAny marshals a proto.Message into an anypb.Any, panicking on error.
@@ -446,7 +553,7 @@ func buildMultiUserHTTPSListener(port uint32, proxyProtocol bool, httpListeners 
 				continue
 			}
 
-			vh := translateVirtualHost(vhIR)
+			vh := translateVirtualHost(vhIR, clusterMap)
 			vh.Domains = keptDomains[i]
 			virtualHosts = append(virtualHosts, vh)
 
@@ -528,6 +635,13 @@ func buildMultiUserHTTPSListener(port uint32, proxyProtocol bool, httpListeners 
 				{Header: &corev3.HeaderValue{Key: "X-Real-IP", Value: "%DOWNSTREAM_REMOTE_ADDRESS_WITHOUT_PORT%"}, AppendAction: corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD},
 				{Header: &corev3.HeaderValue{Key: "X-Original-Forwarded-For", Value: "%REQ(X-FORWARDED-FOR)%"}, AppendAction: corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD},
 			},
+			// Client identity forgeries are stripped in HCM early mutation + a
+			// HeaderMutation filter before ExtAuth. RDS must not remove
+			// x-bfl-user here: Authelia sets session identity via
+			// AllowedUpstreamHeaders after allow, and a late RDS remove would
+			// drop it. x-caller-appid stays (never reinjected on this path).
+			MostSpecificHeaderMutationsWins: true,
+			RequestHeadersToRemove:          spoofableAppIdentityHeadersToRemove(),
 		}
 		routeConfigs = append(routeConfigs, routeConfig)
 
@@ -545,7 +659,7 @@ func buildMultiUserHTTPSListener(port uint32, proxyProtocol bool, httpListeners 
 		// toggles deny_all, only the per-VH RBAC overrides in the RDS route
 		// config change — the filter chain itself is byte-identical → no
 		// Envoy listener drain on deny_all policy switch.
-		httpFilters := []*hcmv3.HttpFilter{}
+		httpFilters := []*hcmv3.HttpFilter{buildClientIdentityStripFilter()}
 		extAuthzFilter := buildExtAuthzFilter(autheliaClusterName, clusterMap, httpIR.UserName)
 		if extAuthzFilter != nil {
 			httpFilters = append(httpFilters, extAuthzFilter)
@@ -585,7 +699,8 @@ func buildMultiUserHTTPSListener(port uint32, proxyProtocol bool, httpListeners 
 					},
 				},
 			},
-			HttpFilters: httpFilters,
+			HttpFilters:                    httpFilters,
+			EarlyHeaderMutationExtensions:  buildEarlyClientIdentityStripExtensions(),
 			UpgradeConfigs: []*hcmv3.HttpConnectionManager_UpgradeConfig{
 				{UpgradeType: "websocket"},
 				{UpgradeType: "tailscale-control-protocol"},
@@ -712,7 +827,7 @@ func buildMultiUserHTTPSListener(port uint32, proxyProtocol bool, httpListeners 
 // virtual-host level (routes that require auth re-enable it via per-route
 // TypedPerFilterConfig). If SourceCIDRs is non-empty, an RBAC per-route
 // override is added to restrict traffic to those CIDRs (deny_all mode).
-func translateVirtualHost(vhIR *ir.VirtualHostIR) *routev3.VirtualHost {
+func translateVirtualHost(vhIR *ir.VirtualHostIR, clusterMap map[string]*ir.ClusterIR) *routev3.VirtualHost {
 	vh := &routev3.VirtualHost{
 		Name:    vhIR.Name,
 		Domains: vhIR.Domains,
@@ -735,7 +850,7 @@ func translateVirtualHost(vhIR *ir.VirtualHostIR) *routev3.VirtualHost {
 	}
 
 	for _, routeIR := range vhIR.Routes {
-		route := translateRoute(routeIR)
+		route := translateRoute(routeIR, clusterMap)
 		if subFilterMeta != nil && route.GetDirectResponse() == nil {
 			route.Metadata = subFilterMeta
 		}
@@ -794,7 +909,7 @@ func translateVirtualHost(vhIR *ir.VirtualHostIR) *routev3.VirtualHost {
 // sorted key order for deterministic output. If ExtAuth is set and not
 // disabled, a per-route TypedPerFilterConfig enables the ext_authz check for
 // that route.
-func translateRoute(routeIR *ir.HTTPRouteIR) *routev3.Route {
+func translateRoute(routeIR *ir.HTTPRouteIR, clusterMap map[string]*ir.ClusterIR) *routev3.Route {
 	route := &routev3.Route{
 		Name: routeIR.Name,
 	}
@@ -812,6 +927,28 @@ func translateRoute(routeIR *ir.HTTPRouteIR) *routev3.Route {
 			pfx = "/"
 		}
 		match.PathSpecifier = &routev3.RouteMatch_Prefix{Prefix: pfx}
+	}
+	for _, hm := range routeIR.HeaderMatches {
+		header := &routev3.HeaderMatcher{Name: hm.Name}
+		switch {
+		case hm.SafeRegex != "":
+			header.HeaderMatchSpecifier = &routev3.HeaderMatcher_StringMatch{
+				StringMatch: &matcherv3.StringMatcher{
+					MatchPattern: &matcherv3.StringMatcher_SafeRegex{
+						SafeRegex: &matcherv3.RegexMatcher{Regex: hm.SafeRegex},
+					},
+				},
+			}
+		case hm.Exact != "":
+			header.HeaderMatchSpecifier = &routev3.HeaderMatcher_StringMatch{
+				StringMatch: &matcherv3.StringMatcher{
+					MatchPattern: &matcherv3.StringMatcher_Exact{Exact: hm.Exact},
+				},
+			}
+		default:
+			continue
+		}
+		match.Headers = append(match.Headers, header)
 	}
 	route.Match = match
 
@@ -856,10 +993,26 @@ func translateRoute(routeIR *ir.HTTPRouteIR) *routev3.Route {
 	}
 
 	if routeIR.ExtAuth != nil && !routeIR.ExtAuth.Disabled {
+		checkSettings := &extauthzv3.CheckSettings{}
+		// CheckSettings.http_service replaces the filter-level HttpService
+		// entirely. When PathPrefix matches the filter default (/api/verify/),
+		// emit an empty CheckSettings only so the filter Auth block is reused
+		// and we never ship a path-only override shell.
+		if path := routeIR.ExtAuth.PathPrefix; path != "" && path != autheliaVerifyPathPrefix && clusterMap != nil {
+			if c, ok := clusterMap[routeIR.ExtAuth.Cluster]; ok && c.Host != "" {
+				userName := ""
+				if routeIR.RequestHeaders != nil {
+					userName = routeIR.RequestHeaders["X-BFL-USER"]
+				}
+				checkSettings.ServiceOverride = &extauthzv3.CheckSettings_HttpService{
+					HttpService: buildAutheliaHttpService(routeIR.ExtAuth.Cluster, c.Host, path, userName),
+				}
+			}
+		}
 		route.TypedPerFilterConfig = map[string]*anypb.Any{
 			"envoy.filters.http.ext_authz": mustAny(&extauthzv3.ExtAuthzPerRoute{
 				Override: &extauthzv3.ExtAuthzPerRoute_CheckSettings{
-					CheckSettings: &extauthzv3.CheckSettings{},
+					CheckSettings: checkSettings,
 				},
 			}),
 		}
@@ -892,54 +1045,11 @@ func buildExtAuthzFilter(autheliaClusterName string, clusterMap map[string]*ir.C
 
 	extAuthz := &extauthzv3.ExtAuthz{
 		Services: &extauthzv3.ExtAuthz_HttpService{
-			HttpService: &extauthzv3.HttpService{
-				ServerUri: &corev3.HttpUri{
-					Uri:              fmt.Sprintf("http://%s", clusterIR.Host),
-					HttpUpstreamType: &corev3.HttpUri_Cluster{Cluster: autheliaClusterName},
-					Timeout:          durationpb.New(15 * time.Second),
-				},
-				PathPrefix: "/api/authz/ext-authz/",
-				AuthorizationRequest: &extauthzv3.AuthorizationRequest{
-					HeadersToAdd: []*corev3.HeaderValue{
-						{Key: "X-Forwarded-Proto", Value: xForwardedProtoValue},
-						{Key: "X-BFL-USER", Value: userName},
-					},
-				},
-				AuthorizationResponse: &extauthzv3.AuthorizationResponse{
-					AllowedUpstreamHeaders: &matcherv3.ListStringMatcher{
-						Patterns: []*matcherv3.StringMatcher{
-							{MatchPattern: &matcherv3.StringMatcher_Prefix{Prefix: "remote-"}},
-							{MatchPattern: &matcherv3.StringMatcher_Prefix{Prefix: "authelia-"}},
-						},
-					},
-					AllowedClientHeaders: &matcherv3.ListStringMatcher{
-						Patterns: []*matcherv3.StringMatcher{
-							{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "set-cookie"}},
-							{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "location"}},
-							{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "www-authenticate"}},
-						},
-					},
-					AllowedClientHeadersOnSuccess: &matcherv3.ListStringMatcher{
-						Patterns: []*matcherv3.StringMatcher{
-							{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "set-cookie"}},
-						},
-					},
-				},
-			},
+			HttpService: buildAutheliaHttpService(autheliaClusterName, clusterIR.Host, autheliaVerifyPathPrefix, userName),
 		},
-		// AllowedHeaders replaces the deprecated AuthorizationRequest.allowed_headers.
-		// It controls which request headers are forwarded to the authz server.
-		AllowedHeaders: &matcherv3.ListStringMatcher{
-			Patterns: []*matcherv3.StringMatcher{
-				{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "host"}},
-				{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "authorization"}},
-				{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "proxy-authorization"}},
-				{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "accept"}},
-				{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "cookie"}},
-				{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "x-authorization"}},
-				{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "x-forwarded-for"}},
-			},
-		},
+		// AllowedHeaders is filter-level (not part of HttpService); per-route
+		// CheckSettings.http_service does not override it.
+		AllowedHeaders:      autheliaAllowedHeaders,
 		TransportApiVersion: corev3.ApiVersion_V3,
 		FailureModeAllow:    false,
 		ClearRouteCache:     false,
@@ -948,6 +1058,86 @@ func buildExtAuthzFilter(autheliaClusterName string, clusterMap map[string]*ir.C
 	return &hcmv3.HttpFilter{
 		Name:       "envoy.filters.http.ext_authz",
 		ConfigType: &hcmv3.HttpFilter_TypedConfig{TypedConfig: mustAny(extAuthz)},
+	}
+}
+
+// Shared Authelia ext_authz pieces used by both the filter-level HttpService
+// and per-route CheckSettings overrides. AllowedHeaders stays filter-only.
+var (
+	autheliaAllowedUpstreamHeaders = &matcherv3.ListStringMatcher{
+		Patterns: []*matcherv3.StringMatcher{
+			{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "authorization"}},
+			{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "proxy-authorization"}},
+			{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "x-bfl-user"}},
+			{MatchPattern: &matcherv3.StringMatcher_Prefix{Prefix: "remote-"}},
+			{MatchPattern: &matcherv3.StringMatcher_Prefix{Prefix: "authelia-"}},
+		},
+	}
+	autheliaAllowedClientHeaders = &matcherv3.ListStringMatcher{
+		Patterns: []*matcherv3.StringMatcher{
+			{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "set-cookie"}},
+			{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "location"}},
+			{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "www-authenticate"}},
+		},
+	}
+	autheliaAllowedClientHeadersOnSuccess = &matcherv3.ListStringMatcher{
+		Patterns: []*matcherv3.StringMatcher{
+			{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "set-cookie"}},
+		},
+	}
+	autheliaAllowedHeaders = &matcherv3.ListStringMatcher{
+		Patterns: []*matcherv3.StringMatcher{
+			{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "host"}},
+			{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "authorization"}},
+			{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "proxy-authorization"}},
+			{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "accept"}},
+			{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "cookie"}},
+			{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "x-authorization"}},
+			{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "x-forwarded-for"}},
+			{MatchPattern: &matcherv3.StringMatcher_Exact{Exact: "x-unauth-error"}},
+		},
+	}
+)
+
+func autheliaAuthorizationRequest(userName string) *extauthzv3.AuthorizationRequest {
+	return &extauthzv3.AuthorizationRequest{
+		HeadersToAdd: []*corev3.HeaderValue{
+			{Key: "X-Forwarded-Proto", Value: xForwardedProtoValue},
+			// Authelia ForwardAuth/Verify uses these for the post-login rd=
+			// target. Values are Envoy formatters evaluated from the original
+			// downstream request (not the /api/verify/<path> check URI).
+			{Key: "X-Original-URL", Value: xOriginalURLValue},
+			{Key: "X-Forwarded-Uri", Value: "%REQ(:PATH)%"},
+			{Key: "X-Forwarded-Host", Value: "%REQ(:AUTHORITY)%"},
+			{Key: "X-Original-Method", Value: "%REQ(:METHOD)%"},
+			{Key: "X-Forwarded-Method", Value: "%REQ(:METHOD)%"},
+			{Key: "X-BFL-USER", Value: userName},
+		},
+	}
+}
+
+func autheliaAuthorizationResponse() *extauthzv3.AuthorizationResponse {
+	return &extauthzv3.AuthorizationResponse{
+		AllowedUpstreamHeaders:        autheliaAllowedUpstreamHeaders,
+		AllowedClientHeaders:          autheliaAllowedClientHeaders,
+		AllowedClientHeadersOnSuccess: autheliaAllowedClientHeadersOnSuccess,
+	}
+}
+
+// buildAutheliaHttpService builds Authelia HttpService for the filter default
+// and per-route CheckSettings overrides. Envoy replaces the filter HttpService
+// entirely when CheckSettings.http_service is set, so PathPrefix overrides must
+// carry the same AuthorizationRequest/Response as buildExtAuthzFilter.
+func buildAutheliaHttpService(clusterName, host, pathPrefix, userName string) *extauthzv3.HttpService {
+	return &extauthzv3.HttpService{
+		ServerUri: &corev3.HttpUri{
+			Uri:              fmt.Sprintf("http://%s", host),
+			HttpUpstreamType: &corev3.HttpUri_Cluster{Cluster: clusterName},
+			Timeout:          durationpb.New(15 * time.Second),
+		},
+		PathPrefix:            pathPrefix,
+		AuthorizationRequest:  autheliaAuthorizationRequest(userName),
+		AuthorizationResponse: autheliaAuthorizationResponse(),
 	}
 }
 

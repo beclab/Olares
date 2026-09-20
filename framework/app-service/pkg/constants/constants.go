@@ -31,6 +31,14 @@ const (
 	ApplicationImageLabel         = "applications.app.bytetrade.io/images"
 	ApplicationTargetLabel        = "applications.app.bytetrade.io/target"
 	ApplicationRunAsUserLabel     = "applications.apps.bytetrade.io/runasuser"
+	// UserspacePrepareInitContainerName is the platform-injected init
+	// container that brings userspace hostPath directories to 1000:1000.
+	UserspacePrepareInitContainerName = "olares-prepare-userspace"
+	// UserspaceUID / UserspaceGID are the ownership and access identity
+	// Olares fixes for everything under a user's space. Both the
+	// directories on disk and the app processes converge on this pair.
+	UserspaceUID int64 = 1000
+	UserspaceGID int64 = 1000
 	ApplicationVersionLabel       = "applications.app.bytetrade.io/version"
 	ApplicationSourceLabel        = "applications.app.bytetrade.io/source"
 	ApplicationTailScaleKey       = "applications.app.bytetrade.io/tailscale"
@@ -61,18 +69,18 @@ const (
 
 	UserChartsPath = "./userapps"
 
-	EnvoyUID                        int64 = 1555
+	EnvoyUID int64 = 1555
 	// LinkerdProxyUID is the upstream linkerd-proxy default runAsUser.
-	LinkerdProxyUID                 int64 = 2102
+	LinkerdProxyUID int64 = 2102
 	// Linkerd admin / inbound / tap ports (align with linkerd-init inbound-ports-to-ignore).
-	LinkerdTapPort                  = 4190
-	LinkerdAdminPort                = 4191
-	LinkerdInboundPort              = 4143
+	LinkerdTapPort     = 4190
+	LinkerdAdminPort   = 4191
+	LinkerdInboundPort = 4143
 	// Mesh agent UIDs (16xx band; orthogonal to Envoy 1555 / d2 1556 / linkerd 2102 / nginx:alpine 101).
-	MeshInAgentUID                  int64 = 1651
-	MeshOutAgentUID                 int64 = 1652
+	MeshInAgentUID  int64 = 1651
+	MeshOutAgentUID int64 = 1652
 	// MeshAgentUIDReservedStart marks 1653+ for future mesh-* sidecars (do not reuse for apps).
-	MeshAgentUIDReservedStart       int64 = 1653
+	MeshAgentUIDReservedStart int64 = 1653
 
 	// Mesh-in CT-1 control-plane object names (WI-OC-MESH-IN-CT1-02).
 	MeshInSharedHostsCMName         = "olares-mesh-in-shared-hosts"
@@ -87,22 +95,28 @@ const (
 	MeshInCertCacheValid            = "1m"
 	MeshInProxyReadTimeout          = "600s"
 	MeshInProxySendTimeout          = "600s"
+	// MeshInMaxBodySize lifts nginx's built-in 1m request-body cap for Shared
+	// east-west relays (e.g. audio embeddings). 100m covers typical API uploads
+	// while still bounding abuse at this hop; destination apps may set a lower
+	// limit. With proxy_request_buffering off, this does not require buffering
+	// the full body in the 64Mi sidecar.
+	MeshInMaxBodySize               = "100m"
 	LabelTLSReplica                 = "gateway.olares.io/tls-replica"
-	DefaultEnvoyLogLevel                  = "debug"
-	EnvoyImageVersion                     = "beclab/envoy:v1.25.11.1"
-	EnvoyContainerName                    = "olares-envoy-sidecar"
-	EnvoyAdminPort                        = 15000
-	EnvoyAdminPortName                    = "proxy-admin"
-	EnvoyInboundListenerPort              = 15003
-	EnvoyInboundListenerPortName          = "proxy-inbound"
-	EnvoyOutboundListenerPort             = 15001
-	EnvoyOutboundListenerPortName         = "proxy-outbound"
-	EnvoyLivenessProbePort                = 15008
-	EnvoyConfigFileName                   = "envoy.yaml"
-	EnvoyConfigFilePath                   = "/config"
-	EnvoyConfigOnlyOutBoundFileName       = "envoy2.yaml"
-	WsContainerName                       = "olares-ws-sidecar"
-	WsContainerImage                      = "WS_CONTAINER_IMAGE"
+	DefaultEnvoyLogLevel            = "debug"
+	EnvoyImageVersion               = "beclab/envoy:v1.25.11.1"
+	EnvoyContainerName              = "olares-envoy-sidecar"
+	EnvoyAdminPort                  = 15000
+	EnvoyAdminPortName              = "proxy-admin"
+	EnvoyInboundListenerPort        = 15003
+	EnvoyInboundListenerPortName    = "proxy-inbound"
+	EnvoyOutboundListenerPort       = 15001
+	EnvoyOutboundListenerPortName   = "proxy-outbound"
+	EnvoyLivenessProbePort          = 15008
+	EnvoyConfigFileName             = "envoy.yaml"
+	EnvoyConfigFilePath             = "/config"
+	EnvoyConfigOnlyOutBoundFileName = "envoy2.yaml"
+	WsContainerName                 = "olares-ws-sidecar"
+	WsContainerImage                = "WS_CONTAINER_IMAGE"
 
 	UploadContainerName  = "olares-upload-sidecar"
 	UploadContainerImage = "UPLOAD_CONTAINER_IMAGE"
@@ -125,6 +139,27 @@ const (
 	AMDGPU    = "amd.com/gpu"
 	IntelIGPU = "gpu.intel.com/i915"
 	IntelGPU  = "gpu.intel.com/xe"
+
+	// PodRequiredGPUMemory / PodLimitedGPUMemory are pod-template annotations a
+	// chart uses to declare its GPU-memory quota for the auto-resource ("-1")
+	// sentinel. They exist because only nvidia can carry that quota as a
+	// container resource: nvidia.com/gpumem is exempted from the scheduler's
+	// capacity check by HAMi's extender (managedResources.ignoredByScheduler),
+	// and no such exemption exists for the discrete AMD/Intel cards, whose
+	// device plugins advertise a card count and nothing else. A chart that put
+	// amd.com/gpumem in resources would leave the pod Pending on
+	// "Insufficient amd.com/gpumem" forever, and reusing nvidia.com/gpumem is
+	// no better: the gpu-limit webhook strips it from limits for a non-nvidia
+	// mode but never touches requests, and the apiserver then rejects the pod
+	// with "Limit must be set for non overcommitable resources".
+	//
+	// An annotation is inert to the scheduler, so it carries the number without
+	// any of that. The value is a plain Kubernetes quantity ("23Gi"), read the
+	// same way as the manifest's requiredGPUMemory it backfills — unlike
+	// nvidia.com/gpumem, which HAMi defines as a bare MiB count.
+	PodRequiredGPUMemory = "gpu.bytetrade.io/required-gpu-memory"
+	PodLimitedGPUMemory  = "gpu.bytetrade.io/limited-gpu-memory"
+
 	// NodeIntelRegisterKey is the node annotation written by the Intel GPU
 	// device plugin. Its value lists each Intel card as
 	// "<igpu|dgpu>,<cardN>,<i915|xe>,<name>,<architecture>,<codename>,<mem>"
@@ -132,6 +167,10 @@ const (
 	// lets the gpu-limit webhook pick gpu.intel.com/i915 vs gpu.intel.com/xe
 	// from the real bound driver instead of guessing from integrated/discrete.
 	NodeIntelRegisterKey = "bytetrade.io/node-intel-register"
+	// NodeAmdRegisterKey is the node annotation written by the AMD GPU device
+	// plugin. The value uses the same tuple format as NodeIntelRegisterKey,
+	// with driver amdgpu (e.g. "dgpu,card1,amdgpu,<name>,<arch>,<codename>,<mem>").
+	NodeAmdRegisterKey = "bytetrade.io/node-amd-register"
 
 	AuthorizationLevelOfPublic   = "public"
 	AuthorizationLevelOfPrivate  = "private"
@@ -205,6 +244,11 @@ const (
 	ArchLabelKey                       = "kubernetes.io/arch"
 	CudaVersionLabelKey                = "gpu.bytetrade.io/cuda"
 	NodeNvidiaRegistryKey              = "hami.io/node-nvidia-register"
+	// NodeHandshakeKey is the liveness half of the pair HAMi's device plugin
+	// patches onto a node alongside NodeNvidiaRegistryKey. The register
+	// annotation is never cleared once written, so the handshake is the only
+	// thing that says whether the cards it lists are still there.
+	NodeHandshakeKey = "hami.io/node-handshake"
 )
 
 var (

@@ -360,7 +360,8 @@ func frontendPathToMkdirTarget(raw string) (mkdir.Target, error) {
 // messages, mirroring the cp / rm / rename / download reformatters.
 // Status branches:
 //
-//   - 401/403: token rejected → suggest `profile login`. Same wording
+//   - 401/459: persistent authentication failure → suggest `profile login`.
+//   - 403: permission denial → suggest refreshing the current identity.
 //     as the other verbs so the user gets one consistent CTA.
 //   - 404: parent directory not found → suggest `-p` to create the
 //     missing intermediates.
@@ -387,14 +388,7 @@ func reformatMkdirHTTPErr(err error, olaresID, displayPath string) error {
 	if errors.As(err, &hErr) {
 		switch hErr.Status {
 		case 401, 403, 459:
-			if olaresID != "" {
-				return fmt.Errorf(
-					"server rejected the access token (HTTP %d); please run: olares-cli profile login --olares-id %s",
-					hErr.Status, olaresID)
-			}
-			return fmt.Errorf(
-				"server rejected the access token (HTTP %d); please re-run `olares-cli profile login`",
-				hErr.Status)
+			return credential.FormatHTTPAuthError(hErr.Status, nil, olaresID)
 		case 404:
 			return fmt.Errorf(
 				"mkdir %s: parent directory does not exist (HTTP 404); pass -p to create missing intermediates",
@@ -438,4 +432,3 @@ func parentDisplayPath(t mkdir.Target) string {
 	}
 	return t.FileType + "/" + t.Extend + "/"
 }
-

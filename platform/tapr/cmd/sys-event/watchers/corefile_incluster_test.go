@@ -337,14 +337,33 @@ func TestSharedInclusterEntrancesFromSRRItems_logicalPatternNotFirst(t *testing.
 		[]unstructured.Unstructured{*srr},
 		nil,
 	)
-	if len(got) != 1 {
-		t.Fatalf("expected 1 entrance, got %d (%+v)", len(got), got)
+	if len(got) != 2 {
+		t.Fatalf("expected 2 entrances (one per hostPattern), got %d (%+v)", len(got), got)
 	}
-	if got[0].EntranceID != "api" {
-		t.Fatalf("unexpected entranceID %q", got[0].EntranceID)
+	if got[0].EntranceID != "api" || got[0].HostPattern != "api.*.olares.com" {
+		t.Fatalf("first = %+v, want api / api.*.olares.com", got[0])
 	}
-	if got[0].HostPattern != "api.*.olares.com" {
-		t.Fatalf("unexpected hostPattern %q", got[0].HostPattern)
+	if got[1].EntranceID != prefix || got[1].HostPattern != prefix+".shared.olares.com" {
+		t.Fatalf("second = %+v, want %s / %s.shared.olares.com", got[1], prefix, prefix)
+	}
+}
+
+func TestSharedInclusterEntrancesFromSRRItems_friendlyAndHash(t *testing.T) {
+	srr := unstructuredSRR("router-shared", "app-f3395cd5-web", map[string]string{
+		labelSRRAppID: "f3395cd5", labelSRREntrance: "web",
+	}, "gateway", []string{
+		"router.*.olares.com",
+		"f3395cd5.*.olares.com",
+	})
+	got := sharedInclusterEntrancesFromSRRItems(
+		[]unstructured.Unstructured{*srr},
+		nil,
+	)
+	if len(got) != 2 {
+		t.Fatalf("expected 2, got %d (%+v)", len(got), got)
+	}
+	if got[0].HostPattern != "router.*.olares.com" || got[1].HostPattern != "f3395cd5.*.olares.com" {
+		t.Fatalf("patterns = %q, %q", got[0].HostPattern, got[1].HostPattern)
 	}
 }
 
@@ -536,6 +555,26 @@ func TestRegenerateCorefileReloadAndSizeGuard(t *testing.T) {
 			t.Fatalf("corefile ConfigMap must remain unchanged on reject")
 		}
 	})
+
+	t.Run("skip configmap update when regenerated corefile is unchanged", func(t *testing.T) {
+		kubeClient, dynamicClient := buildCorefileRegenerateHarness(t, true)
+		if err := RegenerateCorefile(ctx, kubeClient, dynamicClient); err != nil {
+			t.Fatalf("first RegenerateCorefile failed: %v", err)
+		}
+		afterFirst := mustReadCorefileConfigMap(t, ctx, kubeClient)
+		resourceVersionAfterFirst := mustReadCorefileResourceVersion(t, ctx, kubeClient)
+
+		if err := RegenerateCorefile(ctx, kubeClient, dynamicClient); err != nil {
+			t.Fatalf("second RegenerateCorefile failed: %v", err)
+		}
+		afterSecond := mustReadCorefileConfigMap(t, ctx, kubeClient)
+		if afterSecond != afterFirst {
+			t.Fatalf("corefile content changed on no-op regen")
+		}
+		if got := mustReadCorefileResourceVersion(t, ctx, kubeClient); got != resourceVersionAfterFirst {
+			t.Fatalf("expected ConfigMap resourceVersion unchanged, first=%s second=%s", resourceVersionAfterFirst, got)
+		}
+	})
 }
 
 func buildCorefileRegenerateHarness(t *testing.T, inClusterEnabled bool) (*kubefake.Clientset, *dynamicfake.FakeDynamicClient) {
@@ -670,11 +709,21 @@ func setClusterConfigInclusterGateway(ctx context.Context, dynamicClient *dynami
 
 func mustReadCorefileConfigMap(t *testing.T, ctx context.Context, kubeClient *kubefake.Clientset) string {
 	t.Helper()
+	return mustGetCorefileConfigMap(t, ctx, kubeClient).Data["Corefile"]
+}
+
+func mustReadCorefileResourceVersion(t *testing.T, ctx context.Context, kubeClient *kubefake.Clientset) string {
+	t.Helper()
+	return mustGetCorefileConfigMap(t, ctx, kubeClient).ResourceVersion
+}
+
+func mustGetCorefileConfigMap(t *testing.T, ctx context.Context, kubeClient *kubefake.Clientset) *corev1.ConfigMap {
+	t.Helper()
 	cm, err := kubeClient.CoreV1().ConfigMaps("kube-system").Get(ctx, "coredns", metav1.GetOptions{})
 	if err != nil {
 		t.Fatalf("get coredns ConfigMap failed: %v", err)
 	}
-	return cm.Data["Corefile"]
+	return cm
 }
 
 func assertContainsSharedExactTemplate(t *testing.T, corefileBody string) {

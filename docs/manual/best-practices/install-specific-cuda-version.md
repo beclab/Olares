@@ -7,21 +7,13 @@ head:
       content: Olares, CUDA version, NVIDIA driver, GPU, nvidia-smi, runfile, olares-cli gpu enable
 ---
 
-# Install a specific CUDA version
+# Install a specific NVIDIA driver version
 
 To run GPU-based applications on Olares, the host needs the NVIDIA driver and application containers need the CUDA runtime. Olares officially maintains the latest driver version to support cutting-edge AI applications. However, you may need a different version in the following cases:
 
 - A specific application or AI model requires a particular CUDA or driver version.
 - You prefer to lock the version for stability and avoid automatic upgrades.
 - The latest driver has compatibility issues with your workload.
-
-## Learning objectives
-
-By the end of this tutorial, you will learn how to:
-
-- Check the current CUDA and driver version on your Olares host.
-- Download and install a specific NVIDIA driver version from a runfile.
-- Update the GPU status in Olares after installing a new driver.
 
 ## Prerequisites
 
@@ -30,7 +22,7 @@ Before you start, ensure that your setup meets the following requirements:
 - An Olares device with GPU support enabled, and network access
 - Root or sudo access to the Olares host
 
-## Check the current CUDA version
+## Check the current driver and supported CUDA version
 
 Run the following command on the Olares host to check the current driver and CUDA version:
 

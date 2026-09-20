@@ -195,7 +195,10 @@ func TestValidateBindingSelectionTopologyAndMemorySlice(t *testing.T) {
 	}
 }
 
-func TestTimeSlicePressureUsesFullMemoryOfEverySelectedCard(t *testing.T) {
+// Install and resume must agree that a time-slice selection costs the node only
+// what the app declared, not the physical memory of every card it was given.
+// The two paths compute pressure independently, so both are asserted here.
+func TestTimeSlicePressureChargesOnlyTheDeclaredMemory(t *testing.T) {
 	app := &appcfg.ApplicationConfig{AppName: "trainer", OwnerName: "alice"}
 	req := Requirement{
 		Mode:              utils.NvidiaCardType,
@@ -211,26 +214,37 @@ func TestTimeSlicePressureUsesFullMemoryOfEverySelectedCard(t *testing.T) {
 			Device{ID: "gpu1", Memory: 16 * gi, Health: deviceHealthYes, SupportType: SupportTypeTimeSlice},
 		),
 	}
+	selection := []BindingSelection{
+		{NodeName: "nvidia-a", DeviceID: "gpu0"},
+		{NodeName: "nvidia-a", DeviceID: "gpu1"},
+	}
+	// 29Gi of 64Gi is in use, leaving 28.6Gi under the 0.9 threshold. The
+	// app's 1Gi fits easily; adding both cards' 32Gi on top would not, which
+	// is exactly what used to block it.
 	pressure := PressureSnapshot{
 		Threshold: 0.9,
 		UsageByNode: map[string]prometheus.NodeResourceUsage{
-			// 29Gi is already used. The app's 1Gi plus its 24Gi GPU limit
-			// would stay below the 57.6Gi threshold, while reserving both
-			// selected cards' full 32Gi correctly exceeds it.
 			"nvidia-a": {MemoryCapacity: 64 * gi, MemoryAvailable: 35 * gi},
 		},
 	}
 
-	if picked, ok := PickAllocations(app, req, nodes, pressure); ok {
-		t.Fatalf("install scheduling must account for both full time-slice cards, got %#v", picked)
+	if _, ok := PickAllocations(app, req, nodes, pressure); !ok {
+		t.Fatal("install scheduling must charge only the app's declared memory")
+	}
+	if result := ValidateBindingSelection(req, selection, nodes, pressure); !result.OK {
+		t.Fatalf("resume validation must charge only the app's declared memory, got %#v", result)
 	}
 
-	result := ValidateBindingSelection(req, []BindingSelection{
-		{NodeName: "nvidia-a", DeviceID: "gpu0"},
-		{NodeName: "nvidia-a", DeviceID: "gpu1"},
-	}, nodes, pressure)
+	// A declared memory larger than the remaining headroom is still refused,
+	// on both paths.
+	req.RequiredMemory = 29 * gi
+	req.LimitedMemory = 29 * gi
+	if picked, ok := PickAllocations(app, req, nodes, pressure); ok {
+		t.Fatalf("install scheduling must reject a request beyond the node's headroom, got %#v", picked)
+	}
+	result := ValidateBindingSelection(req, selection, nodes, pressure)
 	if result.OK || result.Code != "node-pressure:nvidia-a" {
-		t.Fatalf("resume validation must account for both full time-slice cards, got %#v", result)
+		t.Fatalf("resume validation must reject a request beyond the node's headroom, got %#v", result)
 	}
 }
 

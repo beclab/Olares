@@ -1,24 +1,19 @@
 ---
 outline: [2, 3]
-description: 如何使用 Olares CLI 安装和激活 Olares 设备。
+description: 使用 Olares CLI 从主机终端安装并激活全新或未初始化的 Olares 设备。
 head:
   - - meta
     - name: keywords
       content: Olares, Olares CLI, 激活设备, FRP, 设备激活, LarePass
 ---
 
-# 使用 Olares CLI 激活 Olares 设备
+# 通过命令行安装并激活 Olares
 
-使用 Olares CLI 工具激活全新或未初始化的 Olares 设备（例如 Olares One）。
+按照本指南，从主机终端安装并激活全新或未初始化的 Olares 设备，例如 Olares One。
 
-## 学习目标
-
-通过本教程，你将学习：
-
-- 在新设备上安装 Olares。
-- 获取并运行适合当前系统版本的 Olares CLI 工具。
-- 获取用于远程访问的 Fast Reverse Proxy (FRP) 主机地址。
-- 运行激活命令以配置设备。
+:::warning 没有命令行激活需求时，请使用标准设置流程
+该流程需要主机管理员权限和 12 个单词的助记词。命令、终端输出、截图和 shell 历史记录都可能泄露助记词及账户凭据，请勿分享。
+:::
 
 ## 前提条件
 

@@ -1,0 +1,6 @@
+apiVersion: v2
+name: wlrdefault
+description: fixture whose replicas reference is neutralised by `| default 1`
+type: application
+version: 1.0.0
+appVersion: "1"

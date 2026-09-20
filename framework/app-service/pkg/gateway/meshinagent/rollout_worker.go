@@ -29,7 +29,7 @@ type RolloutJob struct {
 	Fingerprint   string
 	Inject        bool
 	Edges         string
-	ReadyEpoch   string
+	ReadyEpoch    string
 }
 
 // RolloutWorker processes mesh-in rollouts with concurrency K and retry backoff.
@@ -210,7 +210,7 @@ func (w *RolloutWorker) EnqueueAppRollout(ctx context.Context, app *appv1alpha1.
 		Fingerprint:   fp,
 		Inject:        inject,
 		Edges:         edges,
-		ReadyEpoch:   readyEpoch,
+		ReadyEpoch:    readyEpoch,
 	})
 }
 
@@ -240,9 +240,9 @@ func (w *RolloutWorker) EnqueueMeshReadySweep(ctx context.Context, epoch string)
 	dataplane := FilterWorkloadsNeedingInject(ctx, w.Client, append(shared, eg...), LinkerdOnlyInject())
 	for _, ref := range dataplane {
 		w.Enqueue(RolloutJob{
-			Key:         "dataplane/" + epoch + "/" + ref.Key(),
-			Reason:      ReasonMeshReady,
-			Workloads:   []WorkloadRef{ref},
+			Key:        "dataplane/" + epoch + "/" + ref.Key(),
+			Reason:     ReasonMeshReady,
+			Workloads:  []WorkloadRef{ref},
 			ReadyEpoch: epoch,
 		})
 	}

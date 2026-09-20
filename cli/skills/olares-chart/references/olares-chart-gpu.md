@@ -39,7 +39,7 @@ Declaring the accelerator modes and sizing the resource envelope are covered in 
 
 AI apps often need multi-GB model weights. **Do not bake weights into the image** (bloats the image, can't be updated, re-downloaded per app). Instead download at startup into Olares' cross-app shared cache so every AI app reuses one copy.
 
-Olares already reserves a shared Hugging Face cache: `appCommon/huggingface` (alongside `ollama`, `llama.cpp`, `comfyui`). The pattern:
+Olares already reserves a shared Hugging Face cache: `appCommon/huggingface` (alongside `ollama` and `comfyui`). GGUF engines such as llama.cpp share the Hugging Face one rather than a cache of their own. The pattern:
 
 - Mount `.Values.userspace.appCommon` (requires `permission.appCommon: true`) and point `HF_HOME` / `HF_HUB_CACHE` at `{{ .Values.userspace.appCommon }}/huggingface`.
 - An **initContainer** runs `huggingface-cli download` and blocks until the weights are present, then the main container starts. (Use an initContainer, not a long-lived sidecar — the main process must not start before the model exists.)

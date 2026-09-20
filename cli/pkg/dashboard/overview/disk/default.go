@@ -25,9 +25,16 @@ func RunDefault(ctx context.Context, c *pkgdashboard.Client, cf *pkgdashboard.Co
 	now := time.Now()
 	env := BuildSectionsEnvelope(ctx, c, cf, now)
 	if cf.Output == pkgdashboard.OutputJSON {
-		return pkgdashboard.WriteJSON(os.Stdout, env)
+		if err := pkgdashboard.WriteJSON(os.Stdout, env); err != nil {
+			return err
+		}
+	} else if err := WriteSectionsTable(os.Stdout, env); err != nil {
+		return err
 	}
-	return WriteSectionsTable(os.Stdout, env)
+	if pkgdashboard.EverySectionFailed(env) {
+		return pkgdashboard.ErrAlreadyReported
+	}
+	return nil
 }
 
 // BuildSectionsEnvelope is the per-iteration aggregator. main goes
@@ -69,10 +76,21 @@ func BuildSectionsEnvelope(ctx context.Context, c *pkgdashboard.Client, cf *pkgd
 	// Embed per-device partitions under a single envelope whose
 	// Sections field is the device→partitions map. Lets consumers
 	// walk sections.partitions.sda just like sections.main.
-	sections["partitions"] = pkgdashboard.Envelope{
+	partitions := pkgdashboard.Envelope{
 		Kind:     pkgdashboard.KindOverviewDiskPart,
 		Sections: partitionEnvs,
 	}
+	// The device list comes out of main, so a failed main leaves this
+	// shell with nothing under it. Saying so on Meta.Error is what makes
+	// a wholly unreachable backend exit non-zero: EverySectionFailed
+	// reads the two top-level sections, and an unexplained empty shell
+	// counts as a section that succeeded. Meta.Empty would be the wrong
+	// field — a gated or genuinely empty section is not a failure.
+	if mainErr != nil {
+		partitions.Meta.Error = "not attempted: the main disk fetch failed, so there is no device list to enumerate"
+		partitions.Meta.ErrorKind = pkgdashboard.ClassifyTransportErr(mainErr)
+	}
+	sections["partitions"] = partitions
 	return pkgdashboard.Envelope{
 		Kind:     pkgdashboard.KindOverviewDisk,
 		Meta:     pkgdashboard.NewMeta(time.Now().In(cf.Timezone.Time()), c.OlaresID(), cf.User),
@@ -108,6 +126,10 @@ func WriteSectionsTable(w io.Writer, env pkgdashboard.Envelope) error {
 		}
 	}
 	if !hasParts {
+		return nil
+	}
+	if partsEnv.Meta.Error != "" {
+		fmt.Fprintf(w, "\n== PARTITIONS ==\n(error: %s)\n", partsEnv.Meta.Error)
 		return nil
 	}
 	devices := make([]string, 0, len(partsEnv.Sections))

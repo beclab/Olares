@@ -155,6 +155,15 @@ func (r *PodAbnormalSuspendAppController) Reconcile(ctx context.Context, req ctr
 			klog.Infof("app not suspendable yet app=%s owner=%s, requeue after 5s", appName, owner)
 			return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 		}
+		// An Evicted pod is a one-shot signal: once acted on, drop it so a later
+		// resync cannot replay it against a healthy app. Nothing else reclaims
+		// it — the eviction controller skips pods carrying app labels, and a
+		// suspended app runs at replicas=0.
+		klog.Infof("deleting evicted pod name=%s namespace=%s app=%s owner=%s", pod.Name, pod.Namespace, appName, owner)
+		if err := r.deleteEvictedPod(ctx, &pod); err != nil {
+			klog.Errorf("failed to delete evicted pod name=%s namespace=%s: %v", pod.Name, pod.Namespace, err)
+			return ctrl.Result{}, err
+		}
 		return ctrl.Result{}, nil
 	}
 
@@ -212,6 +221,13 @@ func pendingTimeoutStart(pod *corev1.Pod, controllerStartedAt time.Time) time.Ti
 		return controllerStartedAt
 	}
 	return pod.CreationTimestamp.Time
+}
+
+func (r *PodAbnormalSuspendAppController) deleteEvictedPod(ctx context.Context, pod *corev1.Pod) error {
+	if err := r.Delete(ctx, pod); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+	return nil
 }
 
 func isScheduled(pod *corev1.Pod) bool {

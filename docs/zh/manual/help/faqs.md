@@ -1,6 +1,22 @@
 ---
-noindex: true
-description: "关于 Olares 的常见问题解答，涵盖安装、激活、账号、应用、存储以及个人云的日常使用。"
+outline: [2, 3]
+description: 按产品、安装配置和日常使用浏览长期有效的问题，并从故障排查入口查找错误信息说明。
 ---
-# FAQs
-This section summarizes frequently asked questions about Olares.
+
+# 浏览 Olares 常见问题
+
+常见问题按主题集中整理，让相互关联的问题和回答保留在同一页面中。
+
+## 选择问题主题
+
+| 主题 | 包含的问题 |
+|---|---|
+| [了解 Olares](./olares.md) | 产品概念、安全与隐私、账号、存储和支持的硬件 |
+| [安装、激活与登录](./installation.md) | 系统要求和一般设置问题；错误信息说明也会出现在故障排查入口中 |
+| [使用 Olares](./usage.md) | 应用、文件、更新、容器镜像、Ollama、OpenClaw 和日常管理 |
+
+## 常见问题还是故障排查？
+
+如果你想了解功能原理或确认 Olares 是否支持某项能力，请查看常见问题。如果已经出现错误或异常，需要按步骤解决，请使用[故障排查指南](./troubleshooting-guide.md)。
+
+如果问题与特定版本有关，或需要临时解决方案，请查看[已知问题](./known-issues.md)。

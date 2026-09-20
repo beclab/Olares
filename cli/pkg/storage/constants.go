@@ -44,7 +44,6 @@ var (
 
 	AppCommonDir        = path.Join(OlaresJuiceFSRootDir, "Common")
 	HuggingFaceCacheDir = path.Join(AppCommonDir, "huggingface")
-	LLampCPPCacheDir    = path.Join(AppCommonDir, "llama.cpp")
 	OllamaCacheDir      = path.Join(AppCommonDir, "ollama")
 	ComfyUICacheDir     = path.Join(AppCommonDir, "comfyui")
 )

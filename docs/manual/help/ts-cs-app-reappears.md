@@ -8,7 +8,11 @@ head:
       content: Olares, App exclusive mode, GPU, stopped app, shared application, troubleshoot
 ---
 
-# Cannot remove a stopped app in App exclusive mode
+# Cannot remove a stopped app in App exclusive mode <Badge type="warning" text="Olares 1.12.5 only" />
+
+:::info Version scope
+This issue and workaround apply only to Olares 1.12.5. If you use Olares 1.12.6 or later, see [Remove an app from a GPU](../olares/settings/gpu-resource.md#remove-an-app-from-a-gpu).
+:::
 
 Use this guide when an app still appears in **App exclusive** mode after you stop and remove it, preventing you from assigning the GPU to another app.
 

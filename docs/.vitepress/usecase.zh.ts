@@ -3,6 +3,16 @@ import { defineConfig, type DefaultTheme } from "vitepress";
 export const useCaseSidebar: DefaultTheme.Sidebar = {
     "/zh/use-cases/": [
         {
+          text: "Olares 必备",
+          collapsed: false,
+          items: [
+            {
+              text: "本地大模型",
+              link: "/zh/use-cases/llm-base-apps",
+            },
+          ],
+        },
+        {
           text: "AI",
           collapsed: false,
           items: [
@@ -40,10 +50,6 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                       text: "使用 OpenClaw 管理 Olares",
                       link: "/zh/use-cases/openclaw-olares-skills",
                     },
-                    //{
-                    //  text: "启用本地文件访问",
-                    //  link: "/zh/use-cases/openclaw-local-access",
-                    //},
                     {
                       text: "启用沙盒",
                       link: "/zh/use-cases/openclaw-enable-sandbox",
@@ -183,7 +189,7 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                 },
                 {
                   text: "Dify",
-                  link: "/zh/use-cases/dify-upgrade",
+                  link: "/zh/use-cases/dify",
                 },
               ],
             },
@@ -244,10 +250,6 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "模型服务",
               collapsed: true,
               items: [
-                {
-                  text: "引擎基座",
-                  link: "/zh/use-cases/llm-base-apps",
-                },
                 {
                   text: "Ollama",
                   link: "/zh/use-cases/ollama",
@@ -339,20 +341,6 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/zh/use-cases/jellyfin",
             },
             {
-              text: "Steam",
-              collapsed: true,
-              items: [
-                {
-                  text: "在 Olares 本机游玩",
-                  link: "/zh/use-cases/steam-direct-play",
-                },
-                {
-                  text: "串流到其他设备",
-                  link: "/zh/use-cases/steam-stream",
-                }
-              ]
-            },
-            {
               text: "Komga",
               link: "/zh/use-cases/komga",
             },
@@ -377,13 +365,45 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               collapsed: true,
               items: [
                 {
-                  text: "升级 *Arrs",
+                  text: "*Arr 应用更新说明",
                   link: "/zh/use-cases/arrs-upgrade",
                 },
                 {
-                  text: "升级下载客户端",
+                  text: "下载客户端更新说明",
                   link: "/zh/use-cases/download-clients-upgrade",
                 },
+              ]
+            },
+          ]
+        },
+        {
+          text: "游戏",
+          collapsed: false,
+          items: [
+            {
+              text: "Palworld",
+              link: "/zh/use-cases/palworld",
+            },
+            {
+              text: "Minecraft",
+              link: "/zh/use-cases/minecraft",
+            },
+            {
+              text: "Steam",
+              collapsed: true,
+              items: [
+                {
+                  text: "在 Olares 本机游玩",
+                  link: "/zh/use-cases/steam-direct-play",
+                },
+                {
+                  text: "串流到其他设备",
+                  link: "/zh/use-cases/steam-stream",
+                },
+                {
+                  text: "常见问题",
+                  link: "/zh/use-cases/steam-common-issues",
+                }
               ]
             },
           ]
@@ -427,6 +447,13 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "OnlyOffice",
               link: "/zh/use-cases/onlyoffice",
+              collapsed: true,
+              items: [
+                {
+                  text: "迁移指南",
+                  link: "/zh/use-cases/onlyoffice-migration",
+                },
+              ],
             },
             // {
             //   text: "Stirling PDF",

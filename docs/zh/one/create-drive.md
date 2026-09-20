@@ -8,7 +8,7 @@ head:
 ---
 
 :::warning
-当前文档由 AI 翻译生成，若发现术语或表述不准确，请查看[英文原文](../../one/create-drive.md)。
+本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../one/create-drive.md)为准。
 :::
 
 # 使用可启动 USB 重新安装 Olares OS <Badge type="tip" text="15 min"/>

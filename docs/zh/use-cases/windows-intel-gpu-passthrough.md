@@ -8,7 +8,7 @@ head:
 ---
 
 :::warning
-本页面由 AI 自动翻译，部分技术术语可能与中文习惯存在差异。如有疑问，请以[英文原文](../../use-cases/windows-intel-gpu-passthrough.md)为准。
+本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../use-cases/windows-intel-gpu-passthrough.md)为准。
 :::
 
 # 为 Windows VM 启用 Intel 集成显卡直通
@@ -205,4 +205,3 @@ sudo driverctl set-override 0000:00:02.1 vfio-pci
 4. 确认 Intel 显卡设备已出现且运行正常，没有错误。
 
    ![Intel integrated GPU](/images/manual/use-cases/windows-intel-gpu.png#bordered)
-

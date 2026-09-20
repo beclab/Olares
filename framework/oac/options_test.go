@@ -16,6 +16,7 @@ func (stubManifest) AppName() string               { return "stub" }
 func (stubManifest) AppVersion() string            { return "0.0.0" }
 func (stubManifest) Entrances() []olm.EntranceInfo { return nil }
 func (stubManifest) OptionsImages() []string       { return nil }
+func (stubManifest) Taxonomy() olm.Taxonomy        { return olm.Taxonomy{} }
 func (stubManifest) PermissionAppData() bool       { return false }
 func (stubManifest) PermissionAppCommon() bool     { return false }
 func (stubManifest) PermissionExternalData() bool  { return false }

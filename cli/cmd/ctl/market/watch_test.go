@@ -432,6 +432,36 @@ func TestWaitForTerminalStatusSurfacesFailure(t *testing.T) {
 	}
 }
 
+func TestWatchErrorsIncludeDeterministicNextActions(t *testing.T) {
+	timeout := &watchTimeoutError{
+		target: newWatchTarget(watchInstall, "myapp", "market.olares"),
+		last:   &statusRow{State: "downloading", OpType: "install"},
+	}
+	timeoutErr := timeout.Error()
+	for _, want := range []string{
+		"timeout is not failure",
+		"olares-cli market status myapp",
+	} {
+		if !strings.Contains(timeoutErr, want) {
+			t.Fatalf("timeout error %q missing %q", timeoutErr, want)
+		}
+	}
+
+	failureErr := (&watchFailureError{
+		target: newWatchTarget(watchInstall, "myapp", "market.olares"),
+		row:    statusRow{State: "installFailed", OpType: "install", Message: "image pull error"},
+	}).Error()
+	if !strings.Contains(failureErr, "olares-cli market status myapp") {
+		t.Fatalf("failure error should point to status inspection, got %q", failureErr)
+	}
+	if got := watchResultStatus(timeout); got != "timeout" {
+		t.Fatalf("timeout result status = %q", got)
+	}
+	if got := watchResultStatus(errors.New("network failed")); got != "failed" {
+		t.Fatalf("generic error result status = %q", got)
+	}
+}
+
 func TestClassifierStopResume(t *testing.T) {
 	stopT := newWatchTarget(watchStop, "myapp", "")
 	if got := classifyForTest(stopT, statusRow{State: "stopping", OpType: "stop"}); got != "progressing" {

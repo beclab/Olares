@@ -55,8 +55,8 @@ Olares 提供三类域名：
 
 ### 个人 Olares ID 创建方式
 
-- **[快速创建](../../manual/larepass/create-account.md#快速创建)**：选择一个可用的本地名立即生成 ID。
-- **[高级创建](../../manual/larepass/create-account.md#高级创建)**：使用可验证凭证 (VC) 将现有可信身份（如邮箱）绑定至 Olares ID。
+- **[快速创建](../../manual/get-started/create-olares-id.md)**：选择一个可用的本地名立即生成 ID。
+- **[高级创建](../../manual/get-started/create-olares-id.md)**：使用可验证凭证 (VC) 将现有可信身份（如邮箱）绑定至 Olares ID。
     - 通过 OAuth 验证
     - 将社交身份与 Olares DID 建立加密关联
 
@@ -68,5 +68,5 @@ Olares ID 采用类似邮箱的可读格式，使 DID 更易用，同时保持�
 
 ## 深入阅读
 
-- [创建 Olares ID](../../manual/larepass/create-account.md)
+- [创建 Olares ID](../../manual/get-started/create-olares-id.md)
 - [去中心化标识符 (DID)](did.md)

@@ -40,57 +40,39 @@ func DecodeBundle(data []byte) (BundleV1, error) {
 	return bundle, nil
 }
 
-func LoadDirectory(dir string) (*ContractV1, error) {
+// LoadStaticBundle reads and fully validates the bundle a medium carries,
+// including every artifact manifest it names. It is the read-only half of
+// publishing: whatever this accepts is what a declaration can be built from.
+func LoadStaticBundle(dir string) (BundleV1, error) {
 	root, err := openDirectoryNoSymlink(dir)
 	if err != nil {
-		return nil, fmt.Errorf("open contract directory: %w", err)
+		return BundleV1{}, fmt.Errorf("open contract directory: %w", err)
 	}
 	defer root.Close()
 	bundleData, err := readRootFileLimited(root, BundleFileName, MaxBundleJSONBytes)
 	if err != nil {
-		return nil, err
+		return BundleV1{}, err
 	}
 	bundle, err := DecodeBundle(bundleData)
 	if err != nil {
-		return nil, err
+		return BundleV1{}, err
 	}
-	profileData, err := readRootFileLimited(root, ProfileFileName, MaxProfileJSONBytes)
-	if err != nil {
-		return nil, err
-	}
-	if err := rejectDuplicateJSONKeys(profileData); err != nil {
-		return nil, fmt.Errorf("decode profile: %w", err)
-	}
-	schema, err := schemaVersion(profileData)
-	if err != nil {
-		return nil, fmt.Errorf("decode profile schema: %w", err)
-	}
-	if schema != SupportedSchemaVersion {
-		return nil, fmt.Errorf("profile schemaVersion %q is not supported", schema)
-	}
-	var profile InstallProfileV1
-	if err := strictDecode(profileData, &profile); err != nil {
-		return nil, fmt.Errorf("decode profile: %w", err)
-	}
-	if err := Validate(bundle, profile); err != nil {
-		return nil, err
+	if err := Validate(bundle); err != nil {
+		return BundleV1{}, err
 	}
 	for _, app := range bundle.Apps {
 		for _, artifact := range app.Artifacts {
 			if _, err := LoadArtifactManifest(root, artifact); err != nil {
-				return nil, fmt.Errorf("bundle app %q artifact manifest: %w", app.AppID, err)
+				return BundleV1{}, fmt.Errorf("bundle app %q artifact manifest: %w", app.AppID, err)
 			}
 		}
 	}
-	return &ContractV1{Bundle: bundle, Profile: profile}, nil
+	return bundle, nil
 }
 
-func Validate(bundle BundleV1, profile InstallProfileV1) error {
-	apps, err := validateBundle(bundle)
-	if err != nil {
-		return err
-	}
-	return validateProfile(profile, apps)
+func Validate(bundle BundleV1) error {
+	_, err := validateBundle(bundle)
+	return err
 }
 
 func validateBundle(bundle BundleV1) (map[string]BundleAppV1, error) {
@@ -335,42 +317,6 @@ func validateArtifactManifest(manifest ArtifactManifestV1, artifact BundleArtifa
 	}
 	if total != artifact.TotalSize {
 		return fmt.Errorf("artifact manifest file total %d does not match totalSize %d", total, artifact.TotalSize)
-	}
-	return nil
-}
-
-func validateProfile(profile InstallProfileV1, bundleApps map[string]BundleAppV1) error {
-	if profile.SchemaVersion != SupportedSchemaVersion {
-		return fmt.Errorf("profile schemaVersion %q is not supported", profile.SchemaVersion)
-	}
-	seen := make(map[string]struct{}, len(profile.Apps))
-	for i, app := range profile.Apps {
-		prefix := fmt.Sprintf("profile apps[%d]", i)
-		if strings.TrimSpace(app.AppID) == "" {
-			return fmt.Errorf("%s appId is required", prefix)
-		}
-		if _, exists := seen[app.AppID]; exists {
-			return fmt.Errorf("profile duplicate appId %q", app.AppID)
-		}
-		seen[app.AppID] = struct{}{}
-		bundleApp, exists := bundleApps[app.AppID]
-		if !exists {
-			return fmt.Errorf("%s appId %q is not present in bundle", prefix, app.AppID)
-		}
-		allowedEnvs := stringSet(bundleApp.AllowedEnvs)
-		for key := range app.Envs {
-			if sensitiveEnvKey(key) {
-				return fmt.Errorf("%s env %q is sensitive", prefix, key)
-			}
-			if _, ok := allowedEnvs[key]; !ok {
-				return fmt.Errorf("%s env %q is not allowed", prefix, key)
-			}
-		}
-		if app.SelectedGPUType != "" {
-			if _, ok := stringSet(bundleApp.AllowedGPUTypes)[app.SelectedGPUType]; !ok {
-				return fmt.Errorf("%s selectedGpuType %q is not allowed", prefix, app.SelectedGPUType)
-			}
-		}
 	}
 	return nil
 }

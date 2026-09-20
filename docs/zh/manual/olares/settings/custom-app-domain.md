@@ -34,6 +34,10 @@ head:
 
 你可以为应用设置自定义路由 ID，获得更简洁的 URL。以 Jellyfin 为例：
 
+:::warning 使用唯一的路由 ID
+自定义路由 ID 不能与同一 Olares 账号下其他应用入口的默认路由或自定义路由 ID 重复。如果修改路由 ID 后应用 URL 返回 `404`，请参考[自定义路由 ID 导致应用无法访问](../../help/ts-custom-route-domain.md)。
+:::
+
 1. 在 Olares 上，打开**设置**，前往 **应用** > **Jellyfin**。
 2. 在**入口**下，点击 **Jellyfin**。
 3. 在**端点配置**下，点击**设置自定义路由 ID** 旁的 <i class="material-symbols-outlined">add</i>。

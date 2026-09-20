@@ -25,7 +25,7 @@ const (
 	ReasonDecideFalseToTrue = "decide_false_to_true"
 	ReasonDecideTrueToFalse = "decide_true_to_false"
 	ReasonDecideEdges       = "decide_edges_changed"
-	ReasonMeshReady  = "mesh_ready"
+	ReasonMeshReady         = "mesh_ready"
 	ReasonAppCreateInject   = "app_create_inject"
 
 	RestartedAtAnnotation = "kubectl.kubernetes.io/restartedAt"

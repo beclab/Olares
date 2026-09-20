@@ -87,8 +87,10 @@ func (r *SharedRouteProducerReconciler) reconcileApp(ctx context.Context, app *a
 			return fmt.Errorf("build SRR spec for entrance %q: %w", entrance.Name, err)
 		}
 		name := ResourceNameForEntrance(appid, entrance.Name)
-		if err := CheckLogicalPatternUniqueness(ctx, r.Client, spec.HostPatterns[0], app.Spec.Namespace, name); err != nil {
-			return fmt.Errorf("uniqueness check for entrance %q: %w", entrance.Name, err)
+		for _, hp := range spec.HostPatterns {
+			if err := CheckLogicalPatternUniqueness(ctx, r.Client, hp, app.Spec.Namespace, name); err != nil {
+				return fmt.Errorf("uniqueness check for entrance %q pattern %q: %w", entrance.Name, hp, err)
+			}
 		}
 		if _, err := ReconcileForEntrance(ctx, r.Client, app, entrance, spec); err != nil {
 			return err
@@ -119,8 +121,10 @@ func (r *SharedRouteProducerReconciler) reconcileApp(ctx context.Context, app *a
 			return fmt.Errorf("build SRR spec for application entrance %q: %w", entrance.Name, err)
 		}
 		name := ResourceNameForEntranceApp(appid, entrance.Name)
-		if err := CheckLogicalPatternUniqueness(ctx, r.Client, spec.HostPatterns[0], app.Spec.Namespace, name); err != nil {
-			return fmt.Errorf("uniqueness check for application entrance %q: %w", entrance.Name, err)
+		for _, hp := range spec.HostPatterns {
+			if err := CheckLogicalPatternUniqueness(ctx, r.Client, hp, app.Spec.Namespace, name); err != nil {
+				return fmt.Errorf("uniqueness check for application entrance %q pattern %q: %w", entrance.Name, hp, err)
+			}
 		}
 		if _, err := ReconcileForEntrance(ctx, r.Client, app, entrance, spec); err != nil {
 			return err

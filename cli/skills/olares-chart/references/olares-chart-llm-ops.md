@@ -1,6 +1,6 @@
 # Operate an official generation clone
 
-> **Prerequisite:** complete [the official generation workflow](olares-chart-llm-models.md) first. This reference covers only capability selection, context sizing, updates, and diagnosis after cloning a published template.
+> **Prerequisite:** complete [the official generation workflow](olares-chart-llm-models.md) first. This reference covers only capability selection, context sizing, install-time changes, and diagnosis after cloning a published template.
 
 ## Capability mapping
 
@@ -30,11 +30,11 @@ For `nvidia-gb10`, use the same stability rule but budget against unified pod me
 
 Useful engine-specific controls include llama.cpp flash attention and quantized KV cache, vLLM `--kv-cache-dtype fp8`, and SGLang `--mem-fraction-static`. Apply only controls supported by the selected engine and model.
 
-## Update the model and model card
+## Change what a deployed clone serves
 
 Use the Market lifecycle in [`../../olares-market/SKILL.md`](../../olares-market/SKILL.md) to update `MODEL_SOURCE`, `MODEL_NAME`, `MODEL_SUPPORTS`, `ENGINE_ARGS`, or related published environment values. Keep the engine aligned with the artifact format when switching models.
 
-The `llm-init` control plane accepts model-card updates through `PUT /api/model-spec`. The advertised `context_size` is independent from the engine window: set it to the real configured window and never higher. A client may otherwise send prompts that the engine truncates or rejects.
+Those values seed the first boot only. Once the clone is running, the model card inside it is what it serves from, and editing that card belongs to [`olares-router`](../../olares-router/SKILL.md) — `router model spec show/set --app` reads and replaces it, and Router has to be told to re-mirror it afterwards. Reinstalling with different environment values is the long way round to a change that reference makes directly.
 
 ## Errors and routing
 

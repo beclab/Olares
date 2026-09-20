@@ -59,7 +59,7 @@ Make sure you have:
 
 The following steps use `space.n1.monster` as an example custom domain.
 
-1. Open [Olares Space](https://space.olares.com/) in your browser and scan the QR code with LarePass to log in.
+1. Open [Olares Space](https://www.olares.com/space) in your browser and scan the QR code with LarePass to log in.
 
    ![LarePass QR code scanner](/images/manual/tutorials/scan-qr-code1.png)
 

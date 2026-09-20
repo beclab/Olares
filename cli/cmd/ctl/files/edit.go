@@ -196,27 +196,27 @@ var isTTY = func() bool {
 // Edit a file in place on the per-user files-backend. Wire flow:
 //
 //  0. preflight                       — TTY guard + path / plan /
-//                                       binary-ext / pickEditor.
-//                                       ALL local; fails fast
-//                                       BEFORE profile resolve,
-//                                       network, or temp-file
-//                                       allocation. A typo in
-//                                       --editor never reaches
-//                                       the server.
+//     binary-ext / pickEditor.
+//     ALL local; fails fast
+//     BEFORE profile resolve,
+//     network, or temp-file
+//     allocation. A typo in
+//     --editor never reaches
+//     the server.
 //  1. download.Stat                   — list parent dir, find file,
-//                                       enforce pre-fetch size cap
+//     enforce pre-fetch size cap
 //  2. GET /api/raw/<encPath>          — pull current bytes via a
-//                                       bounded LimitReader (cap+1)
-//                                       so a misreported Stat.Size
-//                                       can't trigger an unbounded
-//                                       download (Bug 5)
+//     bounded LimitReader (cap+1)
+//     so a misreported Stat.Size
+//     can't trigger an unbounded
+//     download (Bug 5)
 //  3. write to a temp file under $TMPDIR/olares-files-edit-*/
 //  4. spawn $EDITOR on the temp file (foreground, inherits the
 //     parent's stdin/stdout/stderr so vi / nano / hx all work)
 //  5. PUT /api/resources/<encPath>    — when the post-edit bytes
-//                                       differ from the pre-edit
-//                                       bytes (no PUT on a
-//                                       bytes-equal `:q!`)
+//     differ from the pre-edit
+//     bytes (no PUT on a
+//     bytes-equal `:q!`)
 //
 // `edit` is strictly UPDATE-ONLY — there is no `--create` knob.
 // The backend's `PUT /api/resources/<path>` handler is wired as
@@ -654,12 +654,12 @@ func runEdit(
 //
 //  1. frontendPathToEditTarget  — path shape + dot-segment ban
 //  2. edit.Plan                  — namespace allow-list + final
-//                                  URL composition
+//     URL composition
 //  3. hasBinaryExtension         — extension deny-list (text-only
-//                                  policy, layer 1)
+//     policy, layer 1)
 //  4. pickEditor                 — $VISUAL / $EDITOR cascade,
-//                                  PATH lookup of the resolved
-//                                  binary (or the platform fallback)
+//     PATH lookup of the resolved
+//     binary (or the platform fallback)
 //
 // The ordering is the public contract — pinned by
 // TestPreflightEdit_Order — because it directly determines the
@@ -998,14 +998,7 @@ func reformatEditHTTPErr(err error, olaresID, op, target string) error {
 	if status, ok := editStatus(err); ok {
 		switch status {
 		case 401, 403, 459:
-			if olaresID != "" {
-				return fmt.Errorf(
-					"server rejected the access token (HTTP %d); please run: olares-cli profile login --olares-id %s",
-					status, olaresID)
-			}
-			return fmt.Errorf(
-				"server rejected the access token (HTTP %d); please re-run `olares-cli profile login`",
-				status)
+			return credential.FormatHTTPAuthError(status, nil, olaresID)
 		case 404:
 			return fmt.Errorf("%s %s: not found on the server (HTTP 404)", op, target)
 		case 409:

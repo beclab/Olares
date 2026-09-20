@@ -18,12 +18,13 @@ const (
 	AppResumeAllKey                  = "bytetrade.io/resume-all"
 	AppStopByControllerDuePendingPod = "bytetrade.io/pending-pod"
 	AppImagesKey                     = "bytetrade.io/images"
-	// AppPreUpgradeStateKey records the ApplicationManager state right
-	// before an UpgradeOp or ApplyEnvOp begins. upgrading_app/applying_env_app
-	// read it to decide whether to scale the workloads back up after the helm
-	// upgrade or to land in Stopped (when the pre-op state was Stopped). It must
-	// be refreshed on every such operation so a stale Stopped value cannot make
-	// a Running app incorrectly land back in Stopped.
+	// AppPreUpgradeStateKey records the steady ApplicationManager intent
+	// (Running or Stopped) right before an UpgradeOp or ApplyEnvOp begins.
+	// upgrading_app/applying_env_app read it to decide whether to scale
+	// workloads back up after the helm upgrade or to land in Stopped.
+	// Use SnapshotPreUpgradeState to set it: only Running/Stopped overwrite
+	// the value, so a retry from UpgradeFailed cannot forget that the app
+	// was Stopped and incorrectly pull pods back up.
 	AppPreUpgradeStateKey = "bytetrade.io/pre-upgrade-state"
 )
 

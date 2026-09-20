@@ -1,0 +1,19 @@
+{{- if eq .Values.gpuAccess "dra" -}}
+# https://github.com/intel/intel-resource-drivers-for-kubernetes/tree/main/doc/gpu#gpu-monitor-deployment
+apiVersion: resource.k8s.io/v1
+kind: ResourceClaimTemplate
+metadata:
+  name: {{ include "xpumd.fullname" . }}
+spec:
+  spec:
+    devices:
+      requests:
+      - name: gpu
+        exactly:
+          deviceClassName: gpu.intel.com
+          adminAccess: true
+          allocationMode: "All"
+          tolerations:
+          - effect: NoExecute
+          - effect: NoSchedule
+{{- end }}

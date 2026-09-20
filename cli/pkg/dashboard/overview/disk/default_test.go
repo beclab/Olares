@@ -80,6 +80,47 @@ func TestBuildSectionsEnvelope_Smoke(t *testing.T) {
 	}
 }
 
+// TestBuildSectionsEnvelope_MainFailureMarksPartitions pins the
+// exit-code contract for a wholly unreachable backend. partitions is
+// derived from main's device list, so a failed main leaves it empty;
+// without an error of its own it would read as a section that
+// succeeded and `dashboard overview disk` would exit 0 on a run that
+// produced no data at all.
+func TestBuildSectionsEnvelope_MainFailureMarksPartitions(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer srv.Close()
+
+	env := BuildSectionsEnvelope(context.Background(), newTestClient(srv), fixtureFlags(t), time.Now())
+
+	main, ok := env.Sections["main"]
+	if !ok || main.Meta.Error == "" {
+		t.Fatalf("main.Meta.Error = %q, want the transport failure", main.Meta.Error)
+	}
+	parts, ok := env.Sections["partitions"]
+	if !ok {
+		t.Fatal("section `partitions` missing")
+	}
+	if parts.Meta.Error == "" {
+		t.Error("partitions.Meta.Error is empty; an unexplained empty shell reads as a section that succeeded")
+	}
+	if parts.Meta.ErrorKind == "" {
+		t.Error("partitions.Meta.ErrorKind is empty; JSON consumers classify on it")
+	}
+	if !pkgdashboard.EverySectionFailed(env) {
+		t.Error("EverySectionFailed = false, want true so the command exits non-zero")
+	}
+
+	var buf bytes.Buffer
+	if err := WriteSectionsTable(&buf, env); err != nil {
+		t.Fatalf("WriteSectionsTable: %v", err)
+	}
+	if out := buf.String(); !strings.Contains(out, "== PARTITIONS ==") || !strings.Contains(out, parts.Meta.Error) {
+		t.Errorf("human view drops the partitions failure; full output:\n%s", out)
+	}
+}
+
 // TestWriteSectionsTable_BannersAndOrder pins the human-readable
 // scrollback layout: a "== MAIN ==" banner followed by per-device
 // "== PARTITIONS: <device> ==" banners in alphabetical order.

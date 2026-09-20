@@ -165,8 +165,7 @@ Examples:
 	}
 	cmd.Flags().StringVar(&o.kind, "type", "mine",
 		"filter: mine | share-to-me | shared | all")
-	cmd.Flags().BoolVar(&o.asJSON, "json", false,
-		"print raw JSON instead of a table")
+	addOutputFormatFlag(cmd, &o.asJSON, "print raw JSON instead of a table")
 	return cmd
 }
 
@@ -419,12 +418,7 @@ func reformatReposHTTPErr(err error, olaresID, op string) error {
 	if errors.As(err, &hErr) {
 		switch hErr.Status {
 		case 401, 403:
-			if olaresID != "" {
-				return fmt.Errorf("server rejected the access token (HTTP %d) during %s; please run: olares-cli profile login --olares-id %s",
-					hErr.Status, op, olaresID)
-			}
-			return fmt.Errorf("server rejected the access token (HTTP %d) during %s; please re-run `olares-cli profile login`",
-				hErr.Status, op)
+			return fmt.Errorf("%s: %w", op, credential.FormatHTTPAuthError(hErr.Status, nil, olaresID))
 		case 404:
 			return fmt.Errorf("%s: not found on the server (HTTP 404)", op)
 		}
@@ -505,8 +499,7 @@ Examples:
 			return runReposCreate(cmd.Context(), f, cmd.OutOrStdout(), args[0], asJSON)
 		},
 	}
-	cmd.Flags().BoolVar(&asJSON, "json", false,
-		"print the new repo as a JSON object instead of two human-readable lines")
+	addOutputFormatFlag(cmd, &asJSON, "print the new repo as a JSON object instead of two human-readable lines")
 	return cmd
 }
 

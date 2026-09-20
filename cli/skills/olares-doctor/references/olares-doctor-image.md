@@ -13,6 +13,14 @@ olares-cli cluster pod list -n <ns> -o json     # state.waiting.reason on the fa
 olares-cli cluster pod events <ns>/<pod>        # "Failed to pull image ...": the registry/auth/arch detail
 ```
 
+**During an `upgrade` there is no failing pod to inspect.** app-service pulls the new images itself before touching the release, so a bad tag fails inside that download while the old pods stay healthy — the two commands above find nothing wrong. The only surface that reports it is the app's own state row, which is what `market status <app>` prints:
+
+```bash
+olares-cli market status <app> -o json          # .state = upgradeFailed, .message = the pull error
+```
+
+Expect it to take a minute or two: the download retries several times before giving up. `market get <app> -s <source> -o json` also shows `registry_error` on the offending image, recorded at upload time — but treat that as a hint, not a verdict, since it does not separate a missing tag from a registry that failed to answer once.
+
 | Reason | Root cause | Next step |
 |---|---|---|
 | `ImagePullBackOff` / `ErrImagePull` | Image missing, private without creds, or registry/mirror unreachable | Confirm the ref is public & pullable; if a mirror is down, treat it as the app-stuck stalled-pull path |

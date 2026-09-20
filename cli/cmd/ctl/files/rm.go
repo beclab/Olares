@@ -486,11 +486,7 @@ func reformatRmHTTPErr(err error, olaresID string, g *rm.Group) error {
 	}
 	switch status {
 	case 401, 403:
-		if olaresID != "" {
-			return fmt.Errorf("server rejected the access token (HTTP %d); please run: olares-cli profile login --olares-id %s",
-				status, olaresID)
-		}
-		return fmt.Errorf("server rejected the access token (HTTP %d); please re-run `olares-cli profile login`", status)
+		return credential.FormatHTTPAuthError(status, nil, olaresID)
 	case 404:
 		if g != nil {
 			return fmt.Errorf("delete %s/%s%s: not found on the server (HTTP 404)",

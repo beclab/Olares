@@ -463,46 +463,46 @@ type SystemStatusResponse struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
 	Data    struct {
-		TerminusdState            string `json:"terminusdState"`
-		TerminusState             string `json:"terminusState"`
-		TerminusName              string `json:"terminusName"`
-		TerminusVersion           string `json:"terminusVersion"`
-		InstalledTime             int64  `json:"installedTime"`
-		InitializedTime           int64  `json:"initializedTime"`
-		OlaresdVersion            string `json:"olaresdVersion"`
-		DeviceName                string `json:"device_name"`
-		HostName                  string `json:"host_name"`
-		OsType                    string `json:"os_type"`
-		OsArch                    string `json:"os_arch"`
-		OsInfo                    string `json:"os_info"`
-		OsVersion                 string `json:"os_version"`
-		CpuInfo                   string `json:"cpu_info"`
-		GpuInfo                   string `json:"gpu_info"`
+		TerminusdState            string   `json:"terminusdState"`
+		TerminusState             string   `json:"terminusState"`
+		TerminusName              string   `json:"terminusName"`
+		TerminusVersion           string   `json:"terminusVersion"`
+		InstalledTime             int64    `json:"installedTime"`
+		InitializedTime           int64    `json:"initializedTime"`
+		OlaresdVersion            string   `json:"olaresdVersion"`
+		DeviceName                string   `json:"device_name"`
+		HostName                  string   `json:"host_name"`
+		OsType                    string   `json:"os_type"`
+		OsArch                    string   `json:"os_arch"`
+		OsInfo                    string   `json:"os_info"`
+		OsVersion                 string   `json:"os_version"`
+		CpuInfo                   string   `json:"cpu_info"`
+		GpuInfo                   string   `json:"gpu_info"`
 		GPUList                   []string `json:"gpu_list"`
-		Memory                    string `json:"memory"`
-		Disk                      string `json:"disk"`
-		WifiConnected             bool   `json:"wifiConnected"`
-		WiredConnected            bool   `json:"wiredConnected"`
-		HostIp                    string `json:"hostIp"`
-		ExternalIp                string `json:"externalIp"`
-		InstallingState           string `json:"installingState"`
-		InstallingProgress        string `json:"installingProgress"`
-		UninstallingState         string `json:"uninstallingState"`
-		UninstallingProgress      string `json:"uninstallingProgress"`
-		UpgradingTarget           string `json:"upgradingTarget"`
-		UpgradingRetryNum         int    `json:"upgradingRetryNum"`
-		UpgradingState            string `json:"upgradingState"`
-		UpgradingStep             string `json:"upgradingStep"`
-		UpgradingProgress         string `json:"upgradingProgress"`
-		UpgradingError            string `json:"upgradingError"`
-		UpgradingDownloadState    string `json:"upgradingDownloadState"`
-		UpgradingDownloadStep     string `json:"upgradingDownloadStep"`
-		UpgradingDownloadProgress string `json:"upgradingDownloadProgress"`
-		UpgradingDownloadError    string `json:"upgradingDownloadError"`
-		CollectingLogsState       string `json:"collectingLogsState"`
-		CollectingLogsError       string `json:"collectingLogsError"`
-		DefaultFrpServer          string `json:"defaultFrpServer"`
-		FrpEnable                 string `json:"frpEnable"`
+		Memory                    string   `json:"memory"`
+		Disk                      string   `json:"disk"`
+		WifiConnected             bool     `json:"wifiConnected"`
+		WiredConnected            bool     `json:"wiredConnected"`
+		HostIp                    string   `json:"hostIp"`
+		ExternalIp                string   `json:"externalIp"`
+		InstallingState           string   `json:"installingState"`
+		InstallingProgress        string   `json:"installingProgress"`
+		UninstallingState         string   `json:"uninstallingState"`
+		UninstallingProgress      string   `json:"uninstallingProgress"`
+		UpgradingTarget           string   `json:"upgradingTarget"`
+		UpgradingRetryNum         int      `json:"upgradingRetryNum"`
+		UpgradingState            string   `json:"upgradingState"`
+		UpgradingStep             string   `json:"upgradingStep"`
+		UpgradingProgress         string   `json:"upgradingProgress"`
+		UpgradingError            string   `json:"upgradingError"`
+		UpgradingDownloadState    string   `json:"upgradingDownloadState"`
+		UpgradingDownloadStep     string   `json:"upgradingDownloadStep"`
+		UpgradingDownloadProgress string   `json:"upgradingDownloadProgress"`
+		UpgradingDownloadError    string   `json:"upgradingDownloadError"`
+		CollectingLogsState       string   `json:"collectingLogsState"`
+		CollectingLogsError       string   `json:"collectingLogsError"`
+		DefaultFrpServer          string   `json:"defaultFrpServer"`
+		FrpEnable                 string   `json:"frpEnable"`
 	} `json:"data"`
 }
 

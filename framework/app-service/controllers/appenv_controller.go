@@ -301,13 +301,13 @@ func (r *AppEnvController) triggerApplyEnv(ctx context.Context, appEnv *sysv1alp
 
 	appMgrCopy := targetAppMgr.DeepCopy()
 	appMgrCopy.Spec.OpType = appv1alpha1.ApplyEnvOp
-	// Record the state right before applyEnv so the applyEnv flow can detect an
-	// app that was Stopped (scaled to zero) and land it back in Stopped without
-	// waiting for pods, instead of forcing it to start up.
+	// Snapshot the pre-op state so applying_env_app can land Stopped apps
+	// back in Stopped without waiting for pods. Only Running/Stopped
+	// overwrite; retries from failed states keep the prior steady intent.
 	if appMgrCopy.Annotations == nil {
 		appMgrCopy.Annotations = make(map[string]string)
 	}
-	appMgrCopy.Annotations[api.AppPreUpgradeStateKey] = string(state)
+	api.SnapshotPreUpgradeState(appMgrCopy.Annotations, state)
 
 	if err := r.Patch(ctx, appMgrCopy, client.MergeFrom(&targetAppMgr)); err != nil {
 		return fmt.Errorf("failed to update ApplicationManager Spec.OpType: %v", err)

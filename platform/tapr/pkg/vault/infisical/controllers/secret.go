@@ -115,6 +115,13 @@ func (s *secretController) RetrieveSecret(c *fiber.Ctx) error {
 
 	workspaceId, err := s.Clientset().GetWorkspace(token.(string), orgId, userWorkspace)
 	if err != nil {
+		if s.Clientset().IsNotFound(err) {
+			return c.JSON(fiber.Map{
+				"code":    http.StatusNotFound,
+				"message": "secret not found",
+			})
+		}
+
 		return c.JSON(fiber.Map{
 			"code":    http.StatusInternalServerError,
 			"message": "get user workspace error, " + err.Error(),
@@ -176,8 +183,18 @@ func (s *secretController) ListSecret(c *fiber.Ctx) error {
 
 	userWorkspace := UserWorkspaceName(reqWorkspaceName, userName)
 
+	resData := []*Secret{}
+
 	workspaceId, err := s.Clientset().GetWorkspace(token.(string), orgId, userWorkspace)
 	if err != nil {
+		if s.Clientset().IsNotFound(err) {
+			return c.JSON(fiber.Map{
+				"code":    StatusOK,
+				"message": "",
+				"data":    resData,
+			})
+		}
+
 		return c.JSON(fiber.Map{
 			"code":    http.StatusInternalServerError,
 			"message": "get user workspace error, " + err.Error(),
@@ -192,7 +209,6 @@ func (s *secretController) ListSecret(c *fiber.Ctx) error {
 		})
 	}
 
-	var resData []*Secret
 	list, err := s.Clientset().ListSecretInWorkspace(token.(string), workspaceId, projectKey,
 		secret.Environment)
 	if err != nil {
@@ -247,6 +263,13 @@ func (s *secretController) DeleteSecret(c *fiber.Ctx) error {
 
 	workspaceId, err := s.Clientset().GetWorkspace(token.(string), orgId, userWorkspace)
 	if err != nil {
+		if s.Clientset().IsNotFound(err) {
+			return c.JSON(fiber.Map{
+				"code":    StatusOK,
+				"message": "delete secret succeed",
+			})
+		}
+
 		return c.JSON(fiber.Map{
 			"code":    http.StatusInternalServerError,
 			"message": "get user workspace error, " + err.Error(),
@@ -308,6 +331,13 @@ func (s *secretController) UpdateSecret(c *fiber.Ctx) error {
 
 	workspaceId, err := s.Clientset().GetWorkspace(token.(string), orgId, userWorkspace)
 	if err != nil {
+		if s.Clientset().IsNotFound(err) {
+			return c.JSON(fiber.Map{
+				"code":    http.StatusNotFound,
+				"message": "secret not found",
+			})
+		}
+
 		return c.JSON(fiber.Map{
 			"code":    http.StatusInternalServerError,
 			"message": "get user workspace error, " + err.Error(),

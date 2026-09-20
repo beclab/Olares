@@ -39,9 +39,20 @@ func RunDefault(ctx context.Context, c *pkgdashboard.Client, cf *pkgdashboard.Co
 
 	env, liveErr := BuildSectionsEnvelope(ctx, c, cf, now)
 	if cf.Output == pkgdashboard.OutputJSON {
-		return pkgdashboard.WriteJSON(os.Stdout, env)
+		if err := pkgdashboard.WriteJSON(os.Stdout, env); err != nil {
+			return err
+		}
+	} else if err := WriteSectionsTable(os.Stdout, env, liveErr); err != nil {
+		return err
 	}
-	return WriteSectionsTable(os.Stdout, env, liveErr)
+	// Unreachable today, and deliberately kept: curve is computed
+	// locally, so a failed live fetch still leaves one section of real
+	// data and exit 0 is the honest answer. The check is here so the
+	// exit code follows if curve ever becomes a remote read.
+	if pkgdashboard.EverySectionFailed(env) {
+		return pkgdashboard.ErrAlreadyReported
+	}
+	return nil
 }
 
 // BuildSectionsEnvelope assembles { live, curve } in one fan-out.

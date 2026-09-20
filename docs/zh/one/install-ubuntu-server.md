@@ -7,11 +7,11 @@ head:
       content: Olares One, Ubuntu Server, NVMe SSD, 操作系统安装, 全新安装
 ---
 
-# 在 Olares One 上安装 Ubuntu Server <Badge type="tip" text="25 min" />
-
 :::warning
-当前文档由 AI 翻译生成，若发现术语或表述不准确，请查看[英文原文](../../one/install-ubuntu-server.md)。
+本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../one/install-ubuntu-server.md)为准。
 :::
+
+# 在 Olares One 上安装 Ubuntu Server <Badge type="tip" text="25 min" />
 
 将 Olares One 主 NVMe SSD 上预装的 Olares OS 替换为 Ubuntu Server 的全新安装。
 

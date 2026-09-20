@@ -65,9 +65,17 @@ type HTTPRouteIR struct {
 	PathRegex        string
 	Cluster          string
 	RequestHeaders   map[string]string
+	HeaderMatches    []HeaderMatchIR
 	DirectResponse   *DirectResponseIR
 	ExtAuth          *ExtAuthConfigIR
 	WebSocketUpgrade bool
+}
+
+// HeaderMatchIR is an AND-ed request header condition on a route match.
+type HeaderMatchIR struct {
+	Name      string
+	Exact     string
+	SafeRegex string
 }
 
 type DirectResponseIR struct {
@@ -240,6 +248,9 @@ func (r *HTTPRouteIR) DeepCopy() *HTTPRouteIR {
 		for k, v := range r.RequestHeaders {
 			out.RequestHeaders[k] = v
 		}
+	}
+	if r.HeaderMatches != nil {
+		out.HeaderMatches = append([]HeaderMatchIR(nil), r.HeaderMatches...)
 	}
 	if r.DirectResponse != nil {
 		cp := *r.DirectResponse

@@ -18,11 +18,11 @@ func TestResolveSharedFlags(t *testing.T) {
 	mgrLabeled.Labels = map[string]string{constants.AppSharedLabel: constants.AppSharedTrue}
 
 	cases := []struct {
-		name            string
-		ns              *corev1.Namespace
-		mgr             *v1alpha1.ApplicationManager
-		wantShared      bool
-		wantSharedApp   bool
+		name          string
+		ns            *corev1.Namespace
+		mgr           *v1alpha1.ApplicationManager
+		wantShared    bool
+		wantSharedApp bool
 	}{
 		{
 			name: "v3 shared ns: app-shared without applications name label",

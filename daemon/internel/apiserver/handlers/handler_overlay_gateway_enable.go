@@ -26,12 +26,12 @@ func (h *Handlers) EnableOverlayGateway(ctx *fiber.Ctx, cmd commands.Interface) 
 	}
 
 	// check if the lock file exists
-	if _, err := os.Stat(OverlayGatewayEnableLockFile); err == nil {
+	if inFlight, _ := consumeOverlayGatewayOpLock(OverlayGatewayEnableLockFile); inFlight {
 		s.Status = OverlayGatewayActivating
 		return h.OkJSON(ctx, "success", s)
 	}
 
-	if _, err := os.Stat(OverlayGatewayDisableLockFile); err == nil {
+	if inFlight, _ := consumeOverlayGatewayOpLock(OverlayGatewayDisableLockFile); inFlight {
 		s.Status = OverlayGatewayDeactivating
 		return h.OkJSON(ctx, "success", s)
 	}

@@ -50,7 +50,7 @@ func TestValidateInstallScope(t *testing.T) {
 			}
 			bundle := decodeBundle(t, raw)
 
-			err := Validate(bundle, InstallProfileV1{SchemaVersion: SupportedSchemaVersion})
+			err := Validate(bundle)
 
 			if tt.wantErr {
 				if err == nil || !strings.Contains(err.Error(), "installScope") {
@@ -82,7 +82,7 @@ func TestValidateRejectsInvalidDefaultEnvs(t *testing.T) {
 			}
 			bundle.Apps[0].DefaultEnvs = map[string]string{tt.key: ""}
 
-			err := Validate(bundle, InstallProfileV1{SchemaVersion: SupportedSchemaVersion})
+			err := Validate(bundle)
 
 			if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
 				t.Fatalf("Validate() error = %v, want containing %q", err, tt.wantErr)
@@ -104,37 +104,7 @@ func TestDecodeBundleRejectsDuplicateJSONKeysRecursively(t *testing.T) {
 	}
 }
 
-func TestLoadDirectoryRejectsDuplicateProfileKeys(t *testing.T) {
-	dir := canonicalTempDir(t)
-	if err := os.WriteFile(filepath.Join(dir, BundleFileName), []byte(validBundleJSON), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	profile := `{"schemaVersion":"1","apps":[],"apps":[]}`
-	if err := os.WriteFile(filepath.Join(dir, ProfileFileName), []byte(profile), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	_, err := LoadDirectory(dir)
-
-	if err == nil || !strings.Contains(err.Error(), "duplicate JSON key") {
-		t.Fatalf("LoadDirectory() error = %v", err)
-	}
-}
-
-func TestLoadDirectoryRejectsOversizedProfile(t *testing.T) {
-	dir := writeContractDirectory(t)
-	if err := os.Truncate(filepath.Join(dir, ProfileFileName), MaxProfileJSONBytes+1); err != nil {
-		t.Fatal(err)
-	}
-
-	_, err := LoadDirectory(dir)
-
-	if err == nil || !strings.Contains(err.Error(), "install-profile.json exceeds") {
-		t.Fatalf("LoadDirectory() error = %v", err)
-	}
-}
-
-func TestLoadDirectoryRejectsSymlinks(t *testing.T) {
+func TestLoadStaticBundleRejectsSymlinks(t *testing.T) {
 	t.Run("bundle leaf", func(t *testing.T) {
 		dir := writeContractDirectory(t)
 		bundle := filepath.Join(dir, BundleFileName)
@@ -145,23 +115,8 @@ func TestLoadDirectoryRejectsSymlinks(t *testing.T) {
 		if err := os.Symlink(outside, bundle); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := LoadDirectory(dir); err == nil || !strings.Contains(err.Error(), "symlink") {
-			t.Fatalf("LoadDirectory() error = %v", err)
-		}
-	})
-
-	t.Run("profile leaf", func(t *testing.T) {
-		dir := writeContractDirectory(t)
-		profile := filepath.Join(dir, ProfileFileName)
-		outside := filepath.Join(t.TempDir(), ProfileFileName)
-		if err := os.Rename(profile, outside); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.Symlink(outside, profile); err != nil {
-			t.Fatal(err)
-		}
-		if _, err := LoadDirectory(dir); err == nil || !strings.Contains(err.Error(), "symlink") {
-			t.Fatalf("LoadDirectory() error = %v", err)
+		if _, err := LoadStaticBundle(dir); err == nil || !strings.Contains(err.Error(), "symlink") {
+			t.Fatalf("LoadStaticBundle() error = %v", err)
 		}
 	})
 
@@ -173,8 +128,8 @@ func TestLoadDirectoryRejectsSymlinks(t *testing.T) {
 			t.Fatal(err)
 		}
 		linkedDir := filepath.Join(link, filepath.Base(dir))
-		if _, err := LoadDirectory(linkedDir); err != nil {
-			t.Fatalf("LoadDirectory() through symlinked ancestor error = %v", err)
+		if _, err := LoadStaticBundle(linkedDir); err != nil {
+			t.Fatalf("LoadStaticBundle() through symlinked ancestor error = %v", err)
 		}
 	})
 }
@@ -183,7 +138,7 @@ func TestValidateRejectsTooManyApps(t *testing.T) {
 	bundle := decodeBundle(t, validBundleJSON)
 	bundle.Apps = make([]BundleAppV1, MaxBundleApps+1)
 
-	err := Validate(bundle, InstallProfileV1{SchemaVersion: SupportedSchemaVersion})
+	err := Validate(bundle)
 
 	if err == nil || !strings.Contains(err.Error(), "at most") {
 		t.Fatalf("Validate() error = %v", err)
@@ -212,54 +167,33 @@ func TestValidateRejectsOverlappingCharts(t *testing.T) {
 	second.Chart = bundle.Apps[0].Chart + "/nested.tgz"
 	bundle.Apps = append(bundle.Apps, second)
 
-	err := Validate(bundle, InstallProfileV1{SchemaVersion: SupportedSchemaVersion})
+	err := Validate(bundle)
 
 	if err == nil || !strings.Contains(err.Error(), "overlaps chart") {
 		t.Fatalf("Validate() overlapping chart error = %v", err)
 	}
 }
 
-func TestValidateRejectsInvalidBundleAndProfile(t *testing.T) {
-	bundle := decodeBundle(t, validBundleJSON)
-	profile := InstallProfileV1{
-		SchemaVersion:   SupportedSchemaVersion,
-		HardwareProfile: "nvidia-cuda",
-		Apps: []InstallProfileAppV1{{
-			AppID:           "app-a",
-			SelectedGPUType: "nvidia",
-			Envs:            map[string]string{"WORKER_COUNT": "1"},
-		}},
-	}
-	if err := Validate(bundle, profile); err != nil {
-		t.Fatalf("Validate() valid contract error = %v", err)
+func TestValidateRejectsInvalidBundle(t *testing.T) {
+	if err := Validate(decodeBundle(t, validBundleJSON)); err != nil {
+		t.Fatalf("Validate() valid bundle error = %v", err)
 	}
 
-	tests := []struct {
+	for _, tt := range []struct {
 		name    string
-		mutate  func(*BundleV1, *InstallProfileV1)
+		mutate  func(*BundleV1)
 		wantErr string
 	}{
-		{"schema", func(b *BundleV1, _ *InstallProfileV1) { b.SchemaVersion = "2" }, "schemaVersion"},
-		{"source", func(b *BundleV1, _ *InstallProfileV1) { b.SourceID = "upload" }, "sourceId"},
-		{"duplicate app", func(b *BundleV1, _ *InstallProfileV1) { b.Apps = append(b.Apps, b.Apps[0]) }, "duplicate appId"},
-		{"absolute chart", func(b *BundleV1, _ *InstallProfileV1) { b.Apps[0].Chart = "/charts/app.tgz" }, "chart"},
-		{"short digest", func(b *BundleV1, _ *InstallProfileV1) { b.Apps[0].ChartSHA256 = "abc" }, "chartSha256"},
-		{"unknown app", func(_ *BundleV1, p *InstallProfileV1) { p.Apps[0].AppID = "other" }, "not present"},
-		{"unknown env", func(_ *BundleV1, p *InstallProfileV1) { p.Apps[0].Envs["OTHER"] = "x" }, "not allowed"},
-		{"sensitive env", func(b *BundleV1, p *InstallProfileV1) {
-			b.Apps[0].AllowedEnvs = append(b.Apps[0].AllowedEnvs, "API_TOKEN")
-			p.Apps[0].Envs["API_TOKEN"] = "x"
-		}, "sensitive"},
-		{"unknown gpu", func(_ *BundleV1, p *InstallProfileV1) { p.Apps[0].SelectedGPUType = "amd" }, "selectedGpuType"},
-	}
-	for _, tt := range tests {
+		{"schema", func(b *BundleV1) { b.SchemaVersion = "2" }, "schemaVersion"},
+		{"source", func(b *BundleV1) { b.SourceID = "upload" }, "sourceId"},
+		{"duplicate app", func(b *BundleV1) { b.Apps = append(b.Apps, b.Apps[0]) }, "duplicate appId"},
+		{"absolute chart", func(b *BundleV1) { b.Apps[0].Chart = "/charts/app.tgz" }, "chart"},
+		{"short digest", func(b *BundleV1) { b.Apps[0].ChartSHA256 = "abc" }, "chartSha256"},
+	} {
 		t.Run(tt.name, func(t *testing.T) {
-			b := decodeBundle(t, validBundleJSON)
-			p := profile
-			p.Apps = append([]InstallProfileAppV1(nil), profile.Apps...)
-			p.Apps[0].Envs = map[string]string{"WORKER_COUNT": "1"}
-			tt.mutate(&b, &p)
-			err := Validate(b, p)
+			bundle := decodeBundle(t, validBundleJSON)
+			tt.mutate(&bundle)
+			err := Validate(bundle)
 			if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
 				t.Fatalf("Validate() error = %v, want containing %q", err, tt.wantErr)
 			}
@@ -272,8 +206,7 @@ func TestHFCacheArtifactContract(t *testing.T) {
 	artifact := validHFCacheArtifact(manifest)
 	bundle := decodeBundle(t, validBundleJSON)
 	bundle.Apps[0].Artifacts = []BundleArtifactV1{artifact}
-	profile := InstallProfileV1{SchemaVersion: SupportedSchemaVersion}
-	if err := Validate(bundle, profile); err != nil {
+	if err := Validate(bundle); err != nil {
 		t.Fatalf("Validate() valid artifact error = %v", err)
 	}
 
@@ -300,7 +233,7 @@ func TestHFCacheArtifactContract(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			candidate := decodeBundle(t, mustJSON(t, bundle))
 			tt.mutate(&candidate)
-			err := Validate(candidate, profile)
+			err := Validate(candidate)
 			if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
 				t.Fatalf("Validate() error = %v, want containing %q", err, tt.wantErr)
 			}
@@ -312,7 +245,7 @@ func TestHFCacheArtifactContract(t *testing.T) {
 	bundle.Apps[1].AppName = "app-b"
 	bundle.Apps[1].Chart = "charts/app-b-1.0.0.tgz"
 	bundle.Apps[1].Artifacts[0].Source = "artifacts/models/subdir"
-	if err := Validate(bundle, profile); err == nil || !strings.Contains(err.Error(), "overlaps") {
+	if err := Validate(bundle); err == nil || !strings.Contains(err.Error(), "overlaps") {
 		t.Fatalf("Validate() overlapping artifact source error = %v", err)
 	}
 
@@ -330,7 +263,7 @@ func TestHFCacheArtifactContract(t *testing.T) {
 				second.Artifacts[0].Manifest = candidate.Apps[0].Chart
 			}
 			candidate.Apps = append(candidate.Apps, second)
-			err := Validate(candidate, profile)
+			err := Validate(candidate)
 			if err == nil || !strings.Contains(err.Error(), "conflicts with chart") {
 				t.Fatalf("Validate() cross-app chart conflict error = %v", err)
 			}
@@ -365,7 +298,7 @@ func TestValidateRejectsAllArtifactPathOverlaps(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			bundle := twoArtifactBundle(t, artifact)
 			tt.mutate(&bundle)
-			err := Validate(bundle, InstallProfileV1{SchemaVersion: SupportedSchemaVersion})
+			err := Validate(bundle)
 			if err == nil || !strings.Contains(err.Error(), "overlaps") {
 				t.Fatalf("Validate() error = %v", err)
 			}
@@ -547,9 +480,6 @@ func writeContractDirectory(t *testing.T) string {
 	t.Helper()
 	dir := canonicalTempDir(t)
 	if err := os.WriteFile(filepath.Join(dir, BundleFileName), []byte(validBundleJSON), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(dir, ProfileFileName), []byte(`{"schemaVersion":"1","apps":[]}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	return dir

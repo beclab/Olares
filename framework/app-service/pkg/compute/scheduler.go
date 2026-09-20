@@ -8,6 +8,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -57,6 +58,11 @@ func AllocateForInstall(ctx context.Context, c client.Client, appConfig *appcfg.
 		return nil, err
 	}
 	if !manage {
+		// Not a failure: the app shares another user's server, which owns the
+		// card. Logged because from the outside it looks the same as an app
+		// that was supposed to get a card and silently didn't.
+		klog.Infof("compute: app %s/%s gets no card of its own, its compute lives on the shared server it consumes",
+			appConfig.OwnerName, appConfig.AppName)
 		return nil, DeleteAllocationsForApp(ctx, c, appConfig.AppName, appConfig.OwnerName)
 	}
 	appConfig = targetConfig
@@ -65,6 +71,8 @@ func AllocateForInstall(ctx context.Context, c client.Client, appConfig *appcfg.
 		return nil, fmt.Errorf("compute type %s not found in application resources", appConfig.SelectedGpuType)
 	}
 	if req.Mode == utils.CPUType {
+		klog.Infof("compute: app %s/%s runs in cpu mode, so no card is bound",
+			appConfig.OwnerName, appConfig.AppName)
 		return nil, DeleteAllocationsForApp(ctx, c, appConfig.AppName, appConfig.OwnerName)
 	}
 	pressure, err := FetchPressureSnapshot(ctx)
@@ -74,9 +82,30 @@ func AllocateForInstall(ctx context.Context, c client.Client, appConfig *appcfg.
 	var pickedAllocations []Allocation
 	allocation, err := mutateAllocations(ctx, c, func(nodes []Node, allocations []Allocation) ([]Allocation, *Allocation, error) {
 		attachBindings(nodes, withoutAppAllocations(allocations, appConfig.AppName, appConfig.OwnerName))
-		picked, ok := PickAllocations(appConfig, req, nodes, pressure)
+		// Same first step as resume: classify every node and device against
+		// the app's requirement. Where resume hands that view to the user,
+		// install picks from it here and then runs the pick through resume's
+		// own validation so an automatic placement can't bypass a rule a
+		// manual one has to satisfy.
+		availability := listAvailableForLaunch(req, nodes, pressure)
+		selections, ok := pickLaunchSelection(req, availability, pressure, allocationOptions{checkPressure: true})
 		if !ok {
+			// The install is about to fail with a one-line error, so spell out
+			// the whole candidate set here: this is the only record of which
+			// cards existed and what disqualified each one.
+			klog.Infof("compute: no card could be picked for app %s/%s, %s: %s",
+				appConfig.OwnerName, appConfig.AppName, describeRequirement(req),
+				explainPlacement(req, availability, pressure))
 			return nil, nil, fmt.Errorf("no available compute resource for type %s", req.Mode)
+		}
+		picked, validation := bindAllocations(appConfig, req, selections, nodes, pressure)
+		if !validation.OK {
+			// The picker and this validation read the same view, so a rejection
+			// here means the two disagree — worth the full dump.
+			klog.Infof("compute: the card picked for app %s/%s was refused by validation (%s), picked=%s: %s",
+				appConfig.OwnerName, appConfig.AppName, validation.Code,
+				describeSelections(selections), explainPlacement(req, availability, pressure))
+			return nil, nil, fmt.Errorf("no available compute resource for type %s: %s", req.Mode, validation.Code)
 		}
 		pickedAllocations = picked
 		next := replaceAppAllocations(allocations, picked)
@@ -85,15 +114,13 @@ func AllocateForInstall(ctx context.Context, c client.Client, appConfig *appcfg.
 	if err != nil {
 		return nil, err
 	}
-	if err := deleteHAMIBindingsForApp(ctx, c, appConfig.AppName, appConfig.OwnerName); err != nil {
-		_ = DeleteAllocationsForApp(ctx, c, appConfig.AppName, appConfig.OwnerName)
+	// Logged out here, not inside the mutation: that closure is replayed on a
+	// write conflict, so a line printed there could announce a placement that
+	// was then rolled back and re-picked.
+	klog.Infof("compute: app %s/%s placed on %s, %s",
+		appConfig.OwnerName, appConfig.AppName, describeAllocations(pickedAllocations), describeRequirement(req))
+	if err := syncHAMIBindings(ctx, c, appConfig.AppName, appConfig.OwnerName, pickedAllocations); err != nil {
 		return nil, err
-	}
-	for _, item := range pickedAllocations {
-		if err := createHAMIBinding(ctx, c, item); err != nil {
-			_ = DeleteAllocationsForApp(ctx, c, appConfig.AppName, appConfig.OwnerName)
-			return nil, err
-		}
 	}
 	return allocation, nil
 }
@@ -154,6 +181,19 @@ func EvaluateInstallMode(req Requirement, nodes []Node) ModePlanResult {
 	return ModePlanResult{ComputeType: req.Mode, Status: StatusInsufficientResources, Reason: "insufficient_resources"}
 }
 
+// matchingNodes returns the nodes that support `mode`, each projected onto that
+// single mode (Devices filtered to the mode) so the device-centric helpers only
+// ever see the relevant devices of a multi-mode node.
+func matchingNodes(mode string, nodes []Node) []Node {
+	out := make([]Node, 0)
+	for _, node := range nodes {
+		if node.SupportsMode(mode) {
+			out = append(out, node.viewForMode(mode))
+		}
+	}
+	return out
+}
+
 func PickAllocations(appConfig *appcfg.ApplicationConfig, req Requirement, nodes []Node, pressure PressureSnapshot) ([]Allocation, bool) {
 	return pickAllocations(appConfig, req, nodes, pressure, allocationOptions{checkPressure: true})
 }
@@ -164,31 +204,62 @@ type allocationOptions struct {
 	pressureAdded *AddedResources
 }
 
+// pickAllocations places an app automatically: it builds the availability view
+// resume would show the user, picks a binding out of it, and turns that binding
+// into allocation rows through the same resolve/build path resume uses for a
+// manually submitted one.
 func pickAllocations(appConfig *appcfg.ApplicationConfig, req Requirement, nodes []Node, pressure PressureSnapshot, pressureOptions allocationOptions) ([]Allocation, bool) {
-	if req.Mode == utils.CPUType {
+	availability := listAvailableForLaunchWithOptions(req, nodes, pressure, pressureOptions)
+	selections, ok := pickLaunchSelection(req, availability, pressure, pressureOptions)
+	if !ok {
 		return nil, false
 	}
-	matching := matchingNodes(req.Mode, nodes)
-	if req.Mode == utils.NvidiaCardType && req.SupportMultiNodes {
-		return pickAggregateAllocations(appConfig, req, matching, pressure, pressureOptions, true)
+	resolved, err := resolveSelection(selections, nodes)
+	if err != nil {
+		return nil, false
 	}
-	if req.Mode == utils.NvidiaCardType && req.SupportMultiCards {
-		return pickAggregateAllocations(appConfig, req, matching, pressure, pressureOptions, false)
+	allocations := allocationsFromResolvedSelection(appConfig, req, resolved)
+	if len(allocations) == 0 {
+		return nil, false
 	}
-	return pickSingleAllocation(appConfig, req, matching, pressure, pressureOptions)
+	return allocations, true
 }
 
-// matchingNodes returns the nodes that support `mode`, each projected onto that
-// single mode (Devices filtered to the mode) so the device-centric scheduling
-// helpers only ever see the relevant devices of a multi-mode node.
-func matchingNodes(mode string, nodes []Node) []Node {
-	out := make([]Node, 0)
-	for _, node := range nodes {
-		if node.SupportsMode(mode) {
-			out = append(out, node.viewForMode(mode))
-		}
+// pickLaunchSelection auto-picks a compute binding out of the availability view
+// that resume hands to the user for a manual pick. Install runs this instead of
+// prompting, so both flows choose among exactly the same devices, ranked the
+// same way: the best fit level first (an app that fits its limit is placed
+// before one that only fits its request), then whole cards before shared ones,
+// then at random among the remaining ties to spread load across the cluster.
+func pickLaunchSelection(req Requirement, availability *AvailabilityResult, pressure PressureSnapshot, opts allocationOptions) ([]BindingSelection, bool) {
+	if availability == nil || req.Mode == utils.CPUType {
+		return nil, false
 	}
-	return out
+	selections, ok := pickWithinScope(req, availability, pressure, opts)
+	if !ok {
+		// Deliberately terse: listAvailableForLaunchWithOptions has just logged
+		// the full candidate set at the same verbosity, so repeating it here
+		// would only double the volume. What it cannot say is that the pick
+		// then failed — which happens even when the view reports schedulable,
+		// because node status ignores pressure for nvidia while the fit check
+		// applies it. V(2) rather than Info because preflight runs this against
+		// a simulated cluster and treats a failed pick as a normal answer; the
+		// callers for which it really is a failure log it themselves.
+		klog.V(2).Infof("compute: no card picked for %s out of %d candidate node(s)",
+			describeRequirement(req), len(availability.Nodes))
+	}
+	return selections, ok
+}
+
+func pickWithinScope(req Requirement, availability *AvailabilityResult, pressure PressureSnapshot, opts allocationOptions) ([]BindingSelection, bool) {
+	switch availability.Scope {
+	case AvailabilityScopeCrossNode:
+		return pickAggregateSelection(req, availability.Nodes, pressure, opts, true)
+	case AvailabilityScopeSingleNode:
+		return pickAggregateSelection(req, availability.Nodes, pressure, opts, false)
+	default:
+		return pickSingleSelection(req, availability.Nodes, pressure, opts)
+	}
 }
 
 func evaluateCPUInstallMode(req Requirement, nodes []Node) ModePlanResult {
@@ -229,100 +300,89 @@ func installCapacityFits(req Requirement, nodes []Node) bool {
 		}
 		return false
 	}
-	if req.Mode == utils.NvidiaCardType {
-		for _, node := range nodes {
-			for _, device := range node.Devices {
-				if device.Memory >= req.RequiredGPU {
-					return true
-				}
-			}
-		}
-		return false
-	}
+	// Every remaining mode is scheduled one device at a time, but a node can
+	// still expose several of them (nvidia cards, nvidia-gb10 cards, discrete
+	// Intel GPUs), so every device gets a look rather than just the first.
+	target := requiredTargetForMode(req)
 	for _, node := range nodes {
-		if len(node.Devices) > 0 && node.Devices[0].Memory >= req.RequiredMemory {
-			return true
+		for _, device := range node.Devices {
+			if device.Memory >= target {
+				return true
+			}
 		}
 	}
 	return false
 }
 
-func pickSingleAllocation(appConfig *appcfg.ApplicationConfig, req Requirement, nodes []Node, pressure PressureSnapshot, pressureOptions allocationOptions) ([]Allocation, bool) {
+// pickSingleSelection places the app on one device, which is the unit of
+// scheduling for every mode except multi-card nvidia.
+func pickSingleSelection(req Requirement, nodes []NodeOption, pressure PressureSnapshot, opts allocationOptions) ([]BindingSelection, bool) {
 	for _, level := range []string{FitLevelLimit, FitLevelRequired} {
 		for _, supportType := range supportTypeOrder(req.Mode) {
-			candidates := make([]Allocation, 0)
+			candidates := make([]BindingSelection, 0)
 			for _, node := range nodes {
-				for _, device := range node.Devices {
-					if supportType != "" && device.SupportType != supportType {
+				for _, option := range node.Devices {
+					if option.SupportType != supportType || !option.Operable {
 						continue
 					}
-					fits, amount := deviceFitsLevelWithPressure(req, node, device, pressure, level, false, 0, pressureOptions)
-					if fits {
-						assigned := requiredTargetForMode(req)
-						if assigned == 0 {
-							assigned = amount
-						}
-						candidates = append(candidates, buildAllocation(appConfig, req, node, device, assigned))
+					if fits, _ := deviceOptionFits(req, option, pressure, level, false, opts); !fits {
+						continue
 					}
+					candidates = append(candidates, selectDevice(option, requiredTargetForMode(req)))
 				}
 			}
 			if len(candidates) > 0 {
-				if pressureOptions.deterministic {
-					return []Allocation{candidates[0]}, true
+				if opts.deterministic {
+					return []BindingSelection{candidates[0]}, true
 				}
-				return []Allocation{candidates[rand.Intn(len(candidates))]}, true
+				return []BindingSelection{candidates[rand.Intn(len(candidates))]}, true
 			}
 		}
 	}
 	return nil, false
 }
 
-func pickAggregateAllocations(appConfig *appcfg.ApplicationConfig, req Requirement, nodes []Node, pressure PressureSnapshot, pressureOptions allocationOptions, crossNode bool) ([]Allocation, bool) {
+// pickAggregateSelection places a multi-card nvidia app across several cards,
+// either within a single node or — when the app declares multi-node support —
+// across the whole cluster.
+func pickAggregateSelection(req Requirement, nodes []NodeOption, pressure PressureSnapshot, opts allocationOptions, crossNode bool) ([]BindingSelection, bool) {
 	for _, level := range []string{FitLevelLimit, FitLevelRequired} {
 		target := targetGPU(req, level)
 		if target <= 0 {
 			continue
 		}
 		if crossNode {
-			picked, ok := collectDevicesForTarget(appConfig, req, nodes, pressure, pressureOptions, level, target, req.RequiredGPU)
-			if ok {
-				return picked, ok
+			if picked, ok := collectDevicesForTarget(req, nodes, pressure, opts, level, target, req.RequiredGPU); ok {
+				return picked, true
 			}
 			continue
 		}
 		for _, node := range nodes {
-			picked, ok := collectDevicesForTarget(appConfig, req, []Node{node}, pressure, pressureOptions, level, target, req.RequiredGPU)
-			if ok {
-				return picked, ok
+			if picked, ok := collectDevicesForTarget(req, []NodeOption{node}, pressure, opts, level, target, req.RequiredGPU); ok {
+				return picked, true
 			}
 		}
 	}
 	return nil, false
 }
 
-func collectDevicesForTarget(appConfig *appcfg.ApplicationConfig, req Requirement, nodes []Node, pressure PressureSnapshot, pressureOptions allocationOptions, level string, target, allocationTarget int64) ([]Allocation, bool) {
+func collectDevicesForTarget(req Requirement, nodes []NodeOption, pressure PressureSnapshot, opts allocationOptions, level string, target, allocationTarget int64) ([]BindingSelection, bool) {
 	fitRemaining := target
 	allocationRemaining := allocationTarget
-	var out []Allocation
-	timeSliceMemoryByNode := make(map[string]int64)
+	var out []BindingSelection
 	for _, supportType := range supportTypeOrder(req.Mode) {
 		for _, node := range nodes {
-			for _, device := range node.Devices {
-				if supportType != "" && device.SupportType != supportType {
+			for _, option := range node.Devices {
+				if option.SupportType != supportType || !option.Operable {
 					continue
 				}
-				fits, amount := deviceFitsLevelWithPressure(req, node, device, pressure, level, true, timeSliceMemoryByNode[node.NodeName], pressureOptions)
+				fits, amount := deviceOptionFits(req, option, pressure, level, true, opts)
 				if !fits || amount <= 0 {
 					continue
 				}
-				nextMemory, ok := checkedAdd(timeSliceMemoryByNode[node.NodeName], timeSliceAddedMemory(device))
-				if !ok {
-					continue
-				}
-				timeSliceMemoryByNode[node.NodeName] = nextMemory
 				if allocationRemaining > 0 {
 					assigned := minInt64(amount, allocationRemaining)
-					out = append(out, buildAllocation(appConfig, req, node, device, assigned))
+					out = append(out, selectDevice(option, assigned))
 					allocationRemaining -= assigned
 				}
 				fitRemaining -= amount
@@ -335,11 +395,24 @@ func collectDevicesForTarget(appConfig *appcfg.ApplicationConfig, req Requiremen
 	return nil, false
 }
 
-func deviceFitsLevel(req Requirement, node Node, device Device, pressure PressureSnapshot, level string, allowPartial bool, priorTimeSliceMemory int64) (bool, int64) {
-	return deviceFitsLevelWithPressure(req, node, device, pressure, level, allowPartial, priorTimeSliceMemory, allocationOptions{checkPressure: true})
+// selectDevice records a picked device as the same BindingSelection the resume
+// frontend submits. `assigned` only reaches the allocation for memory-slice
+// cards, where the binding carves out an explicit slice; whole-card placements
+// ignore it. A non-positive amount means the app declared no concrete demand
+// for this mode, so it takes whatever the card has free.
+func selectDevice(option DeviceOption, assigned int64) BindingSelection {
+	if assigned <= 0 {
+		assigned = option.Available
+	}
+	return BindingSelection{NodeName: option.NodeName, DeviceID: option.DeviceID, Memory: assigned}
 }
 
-func deviceFitsLevelWithPressure(req Requirement, node Node, device Device, pressure PressureSnapshot, level string, allowPartial bool, priorTimeSliceMemory int64, pressureOptions allocationOptions) (bool, int64) {
+func deviceOptionFits(req Requirement, option DeviceOption, pressure PressureSnapshot, level string, allowPartial bool, opts allocationOptions) (bool, int64) {
+	node, device := option.asNodeDevice(req.Mode)
+	return deviceFitsLevelWithPressure(req, node, device, pressure, level, allowPartial, opts)
+}
+
+func deviceFitsLevelWithPressure(req Requirement, node Node, device Device, pressure PressureSnapshot, level string, allowPartial bool, pressureOptions allocationOptions) (bool, int64) {
 	if device.Health != "" && device.Health != deviceHealthYes {
 		return false, 0
 	}
@@ -357,26 +430,22 @@ func deviceFitsLevelWithPressure(req Requirement, node Node, device Device, pres
 	if available < required && !(allowPartial && req.Mode == utils.NvidiaCardType) {
 		return false, available
 	}
-	if allocationWouldPressure(req, node, device, pressure, level, priorTimeSliceMemory, pressureOptions) {
+	if allocationWouldPressure(req, node, pressure, level, pressureOptions) {
 		return false, available
 	}
 	return true, available
 }
 
-func allocationWouldPressure(req Requirement, node Node, device Device, pressure PressureSnapshot, level string, priorTimeSliceMemory int64, options allocationOptions) bool {
+// allocationWouldPressure reports whether placing the app on this node would
+// push it past the pressure threshold. It deliberately does not look at the
+// candidate device: an app's declared memory already covers the VRAM that a
+// unified-memory card swaps into host memory, so the projection is the same
+// whichever card is picked.
+func allocationWouldPressure(req Requirement, node Node, pressure PressureSnapshot, level string, options allocationOptions) bool {
 	if !options.checkPressure {
 		return false
 	}
-	added := levelAddedResources(req, level, options)
-	timeSliceMemory, ok := checkedAdd(priorTimeSliceMemory, timeSliceAddedMemory(device))
-	if !ok {
-		return true
-	}
-	added.Memory, ok = checkedAdd(added.Memory, timeSliceMemory)
-	if !ok {
-		return true
-	}
-	return pressure.WouldPressure(node, added)
+	return pressure.WouldPressure(node, levelAddedResources(req, level, options))
 }
 
 func levelAddedResources(req Requirement, level string, options allocationOptions) AddedResources {
@@ -390,24 +459,29 @@ func levelAddedResources(req Requirement, level string, options allocationOption
 	}
 }
 
-// A time-slice GPU with a positive target needs host-memory headroom equal to
-// the card's physical memory. Zero-target fit checks preserve legacy behavior.
-func timeSliceAddedMemory(device Device) int64 {
-	if device.SupportType != SupportTypeTimeSlice {
-		return 0
-	}
-	return device.Memory
-}
-
+// targetForMode is the amount of device memory the app needs from a single
+// device at the given fit level. Dedicated-VRAM modes (nvidia / amd-gpu /
+// intel-gpu) are sized by the manifest's GPU-memory quota, which is the only
+// quantity that describes their separate memory pool; the unified-memory modes
+// have no such quota and are sized by the pod memory request, which for them
+// covers the VRAM too because it is the same RAM.
+//
+// A dedicated-VRAM app may still land here with a zero target: the quota is
+// only mandatory for manifests that declare the mode under spec.resources, and
+// an auto-resource sentinel resolves to zero whenever the chart carries no
+// nvidia.com/gpumem. A zero target means "no declared demand" and lets the app
+// take whatever the device has free, so it must not be read as "needs nothing
+// and fits anywhere" — see the Exclusive guard in
+// validateResolvedBindingSelection.
 func targetForMode(req Requirement, level string) int64 {
-	if req.Mode == utils.NvidiaCardType {
+	if utils.HasDedicatedGPUMemory(req.Mode) {
 		return targetGPU(req, level)
 	}
 	return levelMemory(req, level)
 }
 
 func requiredTargetForMode(req Requirement) int64 {
-	if req.Mode == utils.NvidiaCardType {
+	if utils.HasDedicatedGPUMemory(req.Mode) {
 		return req.RequiredGPU
 	}
 	return req.RequiredMemory
@@ -428,15 +502,21 @@ func levelMemory(req Requirement, level string) int64 {
 }
 
 func buildAllocation(appConfig *appcfg.ApplicationConfig, req Requirement, node Node, device Device, memory int64) Allocation {
-	// In Exclusive / TimeSlice modes the pod has access to the entire
+	// On an Exclusive / TimeSlice device the pod has access to the entire
 	// card (Exclusive: solo binding; TimeSlice: full memory during the
 	// pod's time slice). Recording a per-pod memory amount here would
 	// cap the pod via the HAMI binding's spec.memory annotation, even
 	// though no slicing is happening. Persist 0 so createHAMIBinding
 	// omits spec.memory and HAMI treats the pod as unrestricted. The
 	// scheduler's accounting (deviceAvailableMemory / remainingMemory)
-	// never reads Allocation.Memory for these modes, so this is safe.
-	if isWholeCardMode(req.Mode, device.SupportType) {
+	// never reads Allocation.Memory for these devices, so this is safe.
+	//
+	// The discrete AMD/Intel cards are Exclusive-only and build no HAMI
+	// binding at all, so for them the 0 is purely the allocation ledger
+	// saying "this app holds the whole card" — which is the only thing it
+	// could truthfully say, since exclusive-already-bound refuses every
+	// further binding whatever the app's quota.
+	if isWholeCardSupportType(device.SupportType) {
 		memory = 0
 	}
 	return Allocation{
@@ -450,15 +530,23 @@ func buildAllocation(appConfig *appcfg.ApplicationConfig, req Requirement, node 
 	}
 }
 
-// isWholeCardMode reports whether binding a pod to a device with this NVIDIA
-// support type grants it the entire card: Exclusive (solo binding) or
-// TimeSlice (full memory during the pod's slice). buildAllocation records
-// Memory=0 for these, and they are always one-binding-per-card, so allocation
-// distribution must emit a separate binding for every selected card instead of
-// folding several of them into a single shared VRAM budget.
-func isWholeCardMode(mode, supportType string) bool {
-	return mode == utils.NvidiaCardType &&
-		(supportType == SupportTypeExclusive || supportType == SupportTypeTimeSlice)
+// isWholeCardSupportType reports whether binding a pod to a device with this
+// support type grants it the entire card: Exclusive (solo binding) or TimeSlice
+// (full memory during the pod's slice). buildAllocation records Memory=0 for
+// these, and they are always one-binding-per-card, so allocation distribution
+// must emit a separate binding for every selected card instead of folding
+// several of them into a single shared VRAM budget.
+//
+// The support type answers this on its own, for every mode — which is why the
+// mode is no longer a parameter. Gating it on nvidia left the discrete
+// AMD/Intel cards in a state no branch of allocationsFromResolvedSelection
+// covered: AvailableSupportTypes makes them Exclusive-only, requiredTargetForMode
+// judges them against a GPU-memory quota, and an app that declares no quota
+// therefore has a zero target with the whole-card branch closed to it. Its card
+// was dropped from its own binding as "nothing left to allocate", which reached
+// the user as empty-compute-binding on resume.
+func isWholeCardSupportType(supportType string) bool {
+	return supportType == SupportTypeExclusive || supportType == SupportTypeTimeSlice
 }
 
 func supportTypeOrder(mode string) []string {

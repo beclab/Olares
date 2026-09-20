@@ -94,7 +94,7 @@ done
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Command:         []string{"/bin/sh", "-c", script},
 		SecurityContext: &corev1.SecurityContext{
-			RunAsUser: &root,
+			RunAsUser:    &root,
 			Capabilities: &corev1.Capabilities{Add: []corev1.Capability{"NET_ADMIN", "NET_RAW"}},
 		},
 	}

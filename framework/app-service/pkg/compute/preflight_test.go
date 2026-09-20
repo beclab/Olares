@@ -88,23 +88,42 @@ func TestSimulatePreflightExclusiveGPUCompetition(t *testing.T) {
 }
 
 func TestSimulatePreflightTimeSliceHostMemory(t *testing.T) {
-	snapshot := installablePreflightSnapshot()
-	snapshot.Nodes = []Node{nvidiaNode("gpu-a",
-		Device{ID: "gpu0", Memory: 16 * gi, Health: deviceHealthYes, SupportType: SupportTypeTimeSlice},
-		Device{ID: "gpu1", Memory: 16 * gi, Health: deviceHealthYes, SupportType: SupportTypeTimeSlice},
-	)}
-	snapshot.Pressure = PressureSnapshot{
-		Threshold: 0.9,
-		UsageByNode: map[string]prometheus.NodeResourceUsage{
-			"gpu-a": {MemoryCapacity: 32 * gi, MemoryAvailable: 32 * gi},
-		},
+	// A 32Gi node with two 16Gi time-slice cards, 0.9 threshold, nothing in
+	// use yet: 28.8Gi of headroom.
+	newSnapshot := func() PreflightSnapshot {
+		snapshot := installablePreflightSnapshot()
+		snapshot.Nodes = []Node{nvidiaNode("gpu-a",
+			Device{ID: "gpu0", Memory: 16 * gi, Health: deviceHealthYes, SupportType: SupportTypeTimeSlice},
+			Device{ID: "gpu1", Memory: 16 * gi, Health: deviceHealthYes, SupportType: SupportTypeTimeSlice},
+		)}
+		snapshot.Pressure = PressureSnapshot{
+			Threshold: 0.9,
+			UsageByNode: map[string]prometheus.NodeResourceUsage{
+				"gpu-a": {MemoryCapacity: 32 * gi, MemoryAvailable: 32 * gi},
+			},
+		}
+		return snapshot
 	}
-	demand := gpuDemand("multi", "alice", 24*gi)
-	demand.Requirement.RequiredMemory = gi
-	demand.Requirement.LimitedMemory = gi
-	demand.Requirement.SupportMultiCards = true
+	newDemand := func(memory int64) PreflightDemand {
+		demand := gpuDemand("multi", "alice", 24*gi)
+		demand.Requirement.RequiredMemory = memory
+		demand.Requirement.LimitedMemory = memory
+		demand.Requirement.SupportMultiCards = true
+		return demand
+	}
 
-	report, err := SimulatePreflight([]PreflightDemand{demand}, snapshot)
+	// Only the declared 1Gi counts. Adding both cards' 32Gi on top used to
+	// make this unschedulable on a node that can host it fine.
+	report, err := SimulatePreflight([]PreflightDemand{newDemand(gi)}, newSnapshot())
+	if err != nil {
+		t.Fatalf("simulate: %v", err)
+	}
+	if !report.Installable {
+		t.Fatalf("expected the app to fit when only its declared memory is charged: %#v", report)
+	}
+
+	// The declared memory alone still has to fit under the threshold.
+	report, err = SimulatePreflight([]PreflightDemand{newDemand(30 * gi)}, newSnapshot())
 	if err != nil {
 		t.Fatalf("simulate: %v", err)
 	}
@@ -112,8 +131,8 @@ func TestSimulatePreflightTimeSliceHostMemory(t *testing.T) {
 		t.Fatalf("unexpected report: %#v", report)
 	}
 	if len(report.Pressure) != 1 || len(report.Pressure[0].Dimensions) != 1 ||
-		report.Pressure[0].Dimensions[0].Required != 33*gi {
-		t.Fatalf("expected pod plus both cards in host memory pressure: %#v", report.Pressure)
+		report.Pressure[0].Dimensions[0].Required != 30*gi {
+		t.Fatalf("host memory pressure must report only the declared memory: %#v", report.Pressure)
 	}
 }
 

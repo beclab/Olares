@@ -12,13 +12,13 @@
 //     pkg-side CommonFlags, and forwards a *pkgdashboard.Client into each
 //     leaf RunE. Per-area subdirectories mirror the command tree exactly:
 //
-//	     dashboard/
-//	       ├── overview/                            (NewOverviewCommand)
-//	       │   ├── disk/                            (NewDiskCommand)
-//	       │   ├── fan/                             (NewFanCommand)
-//	       │   └── gpu/                             (NewGPUCommand)
-//	       ├── applications/                        (NewApplicationsCommand)
-//	       └── schema/                              (NewSchemaCommand)
+//     dashboard/
+//     ├── overview/                            (NewOverviewCommand)
+//     │   ├── disk/                            (NewDiskCommand)
+//     │   ├── fan/                             (NewFanCommand)
+//     │   └── gpu/                             (NewGPUCommand)
+//     ├── applications/                        (NewApplicationsCommand)
+//     └── schema/                              (NewSchemaCommand)
 //
 //   - cli/pkg/dashboard/                           — Heavy core. Owns
 //     Envelope/Item/Meta/CommonFlags/Client/Runner, all fetchers, all
@@ -31,12 +31,11 @@ package dashboard
 import (
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/spf13/cobra"
 
-	pkgdashboard "github.com/beclab/Olares/cli/pkg/dashboard"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
+	pkgdashboard "github.com/beclab/Olares/cli/pkg/dashboard"
 
 	"github.com/beclab/Olares/cli/cmd/ctl/dashboard/applications"
 	"github.com/beclab/Olares/cli/cmd/ctl/dashboard/overview"
@@ -73,7 +72,6 @@ For agent integration, run "olares-cli dashboard schema" to discover the
 available commands + their JSON Schemas.`,
 		SilenceErrors: true,
 		SilenceUsage:  true,
-		RunE:          unknownSubcommandRunE,
 	}
 
 	bindPersistentFlags(&common, cmd)
@@ -93,10 +91,8 @@ available commands + their JSON Schemas.`,
 // — runtime errors must not splat usage / help text on stderr; only the
 // structured envelope or the typed error reaches the agent).
 //
-// Errors marked with pkgdashboard.ErrAlreadyReported are passed through
-// unchanged: the RunE has already written a user-visible diagnostic
-// (e.g. unknownSubcommandRunE's typo hint, or Runner.emitFailure's
-// per-iteration warning) and printing again would be redundant.
+// Errors marked with pkgdashboard.ErrAlreadyReported have already produced
+// their user-visible output. Unknown-verb errors are printed by cmd/main.go.
 //
 // This wiring is local to the dashboard subtree — other ctl subtrees
 // (files / profile / os / …) still rely on cobra's default auto-print
@@ -105,7 +101,9 @@ func wrapLeafErrors(c *cobra.Command) {
 	if orig := c.RunE; orig != nil {
 		c.RunE = func(cmd *cobra.Command, args []string) error {
 			err := orig(cmd, args)
-			if err != nil && !errors.Is(err, pkgdashboard.ErrAlreadyReported) {
+			if err != nil &&
+				!errors.Is(err, pkgdashboard.ErrAlreadyReported) &&
+				!cmdutil.IsUnknownVerb(err) {
 				fmt.Fprintln(cmd.ErrOrStderr(), err)
 			}
 			return err
@@ -114,23 +112,4 @@ func wrapLeafErrors(c *cobra.Command) {
 	for _, sub := range c.Commands() {
 		wrapLeafErrors(sub)
 	}
-}
-
-// unknownSubcommandRunE is the RunE wired onto the dashboard root. With
-// no args it falls through to cobra's help; with positional args it
-// writes a "Did you mean…" hint to stderr (since SilenceErrors=true
-// otherwise swallows cobra's own suggestion) and returns
-// pkgdashboard.ErrAlreadyReported so the process exits non-zero AND the
-// leaf-error wrapper (wrapLeafErrors) doesn't double-print.
-func unknownSubcommandRunE(c *cobra.Command, args []string) error {
-	if len(args) == 0 {
-		return c.Help()
-	}
-	msg := fmt.Sprintf("Error: unknown subcommand %q for %q", args[0], c.CommandPath())
-	if suggestions := c.SuggestionsFor(args[0]); len(suggestions) > 0 {
-		msg += "\n\nDid you mean this?\n\t" + strings.Join(suggestions, "\n\t")
-	}
-	fmt.Fprintln(c.ErrOrStderr(), msg)
-	fmt.Fprintf(c.ErrOrStderr(), "\nRun '%s --help' for usage.\n", c.CommandPath())
-	return pkgdashboard.ErrAlreadyReported
 }

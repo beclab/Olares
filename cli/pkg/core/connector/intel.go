@@ -1,6 +1,7 @@
 package connector
 
 import (
+	"fmt"
 	"os/exec"
 	"strings"
 )
@@ -41,11 +42,13 @@ done
 `
 
 // detectIntelGPUs runs intelGPUDetectScript and returns every Intel display-class
-// GPU on the host, classified as integrated or discrete.
-func detectIntelGPUs(cmdExec func(s string) (string, error)) []IntelGPU {
+// GPU on the host, classified as integrated or discrete. A probe failure is
+// returned as an error rather than an empty list so callers cannot confuse
+// "no Intel GPU" with "detection did not run".
+func detectIntelGPUs(cmdExec func(s string) (string, error)) ([]IntelGPU, error) {
 	out, err := cmdExec(intelGPUDetectScript)
 	if err != nil {
-		return nil
+		return nil, fmt.Errorf("detect Intel GPUs: %w", err)
 	}
 	var gpus []IntelGPU
 	for _, line := range strings.Split(out, "\n") {
@@ -61,7 +64,7 @@ func detectIntelGPUs(cmdExec func(s string) (string, error)) []IntelGPU {
 			gpus = append(gpus, IntelGPU{ID: id, Discrete: true})
 		}
 	}
-	return gpus
+	return gpus, nil
 }
 
 // intelLocalExec runs a shell snippet against the local machine.
@@ -80,12 +83,12 @@ func intelRuntimeExec(execRuntime Runtime) func(string) (string, error) {
 }
 
 // IntelGPUsLocal returns the Intel GPUs detected on the local machine.
-func IntelGPUsLocal() []IntelGPU {
+func IntelGPUsLocal() ([]IntelGPU, error) {
 	return detectIntelGPUs(intelLocalExec)
 }
 
 // IntelGPUs returns the Intel GPUs detected on the given runtime's host.
-func IntelGPUs(execRuntime Runtime) []IntelGPU {
+func IntelGPUs(execRuntime Runtime) ([]IntelGPU, error) {
 	return detectIntelGPUs(intelRuntimeExec(execRuntime))
 }
 
@@ -109,24 +112,40 @@ func hasIntelDGPU(gpus []IntelGPU) bool {
 
 // HasIntelIGPULocal reports whether the local machine exposes an Intel
 // integrated GPU (the "intel" unified-memory mode).
-func HasIntelIGPULocal() bool {
-	return hasIntelIGPU(IntelGPUsLocal())
+func HasIntelIGPULocal() (bool, error) {
+	gpus, err := IntelGPUsLocal()
+	if err != nil {
+		return false, err
+	}
+	return hasIntelIGPU(gpus), nil
 }
 
 // HasIntelIGPU reports whether the given runtime's host exposes an Intel
 // integrated GPU (the "intel" unified-memory mode).
-func HasIntelIGPU(execRuntime Runtime) bool {
-	return hasIntelIGPU(IntelGPUs(execRuntime))
+func HasIntelIGPU(execRuntime Runtime) (bool, error) {
+	gpus, err := IntelGPUs(execRuntime)
+	if err != nil {
+		return false, err
+	}
+	return hasIntelIGPU(gpus), nil
 }
 
 // HasIntelDGPULocal reports whether the local machine exposes an Intel discrete
 // GPU (e.g. Arc/Data Center GPU on a PCIe slot).
-func HasIntelDGPULocal() bool {
-	return hasIntelDGPU(IntelGPUsLocal())
+func HasIntelDGPULocal() (bool, error) {
+	gpus, err := IntelGPUsLocal()
+	if err != nil {
+		return false, err
+	}
+	return hasIntelDGPU(gpus), nil
 }
 
-// HasIntelDGPU reports whether the given runtime's host exposes an Intel
-// discrete GPU (e.g. Arc/Data Center GPU on a PCIe slot).
-func HasIntelDGPU(execRuntime Runtime) bool {
-	return hasIntelDGPU(IntelGPUs(execRuntime))
+// HasIntelDGPU reports whether the given runtime's host exposes an Intel discrete
+// GPU (e.g. Arc/Data Center GPU on a PCIe slot).
+func HasIntelDGPU(execRuntime Runtime) (bool, error) {
+	gpus, err := IntelGPUs(execRuntime)
+	if err != nil {
+		return false, err
+	}
+	return hasIntelDGPU(gpus), nil
 }

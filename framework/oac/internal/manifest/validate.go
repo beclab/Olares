@@ -115,7 +115,7 @@ func ValidateAppConfiguration(c *AppConfiguration) error {
 	return errors.Join(
 		structErr,
 		checkSubCharts(c),
-		validatePermission(c.ConfigVersion, c.Permission),
+		validatePermission(c.ConfigVersion, c.Metadata.Name, c.Permission, c.Options.Shared),
 		validateRootProvider(c.ConfigVersion, c.Provider),
 		validateWorkloadReplicas(c.ConfigVersion, c.APIVersion, c.WorkloadReplicas),
 		validateModernFieldRequiresManifestVersion(c),
@@ -150,7 +150,7 @@ func validateAppMetaData(v interface{}) error {
 			validation.Required.Error("metadata.version is required"),
 			isSemver.Error("metadata.version must be a valid semantic version (e.g. 1.2.3)"),
 		),
-		validation.Field(&m.AppID,
+		validation.Field(&m.Name,
 			validation.By(validateMetadataAppID),
 		),
 	)
@@ -164,14 +164,14 @@ func validateAppMetaData(v interface{}) error {
 func validateMetadataAppID(v interface{}) error {
 	s, ok := v.(string)
 	if !ok {
-		return fmt.Errorf("metadata.appid: unexpected type %T", v)
+		return fmt.Errorf("metadata.name: unexpected type %T", v)
 	}
 	if s == "" {
 		return nil
 	}
 	if IsReservedSystemAppID(s) {
 		return fmt.Errorf(
-			"metadata.appid %q collides with a reserved system app id; choose a different value (the loader normalizes appid to md5(metadata.name)[:8] anyway, so leaving the field empty is also fine)",
+			"%q collides with a reserved system app; choose a different value",
 			s,
 		)
 	}
@@ -312,6 +312,8 @@ func validateAppSpec(configVersion, apiVersion string, templateOnly bool, s AppS
 		validation.Field(&s.RequiredGPU, optionalGPUQuantity),
 		validation.Field(&s.LimitedGPU, optionalLimitedGPUQuantity),
 		validation.Field(&s.SupportArch,
+			validation.Required.Error("spec.supportArch is required"),
+			validation.Length(1, 0).Error("spec.supportArch must contain at least one item"),
 			validation.Each(validation.By(validateSupportArchEntry)),
 			validation.By(uniqueSupportArches),
 		),
@@ -507,12 +509,22 @@ func validateFlatResourceQuantities(spec *AppSpec, templateOnly bool) error {
 //     modern manifest must leave it empty so the platform can finish
 //     migrating callers away from it.
 //
+//   - permission.loginOlaresCLI (a mounted ten-year user credential) is
+//     restricted to the apps in loginOlaresCLIAllowlist; any other app
+//     declaring it is rejected here so gitbot blocks the submission long
+//     before an install could mint a token. It is also incompatible with
+//     options.shared: a shared app is a cluster singleton whose identity
+//     is the cluster owner, which is not the per-user login this
+//     permission exists to provide.
+//
 // permission.appCommon (access to the cross-app Common directory) is a
 // >= 1.12.6 field and is gated by validateModernFieldRequiresManifestVersion
 // (requires olaresManifest.version >= 0.12.0 + Olares dep locked to
 // >=1.12.6-0), so this function deliberately leaves it alone — adding a
-// check here would emit a duplicate error.
-func validatePermission(configVersion string, p Permission) error {
+// check here would emit a duplicate error. permission.loginOlaresCLI is
+// version-gated the same way (it is one of detectOlares1126OnlyFields), so
+// only its allowlist and shared-incompatibility halves live here.
+func validatePermission(configVersion, appName string, p Permission, shared bool) error {
 	var errs []error
 	if p.ExternalData && !resourcesCheckApplies(configVersion) {
 		errs = append(errs, fmt.Errorf(
@@ -524,6 +536,17 @@ func validatePermission(configVersion string, p Permission) error {
 		errs = append(errs, fmt.Errorf(
 			"permission.provider must be empty for olaresManifest.version >= %s; cross-app provider access is no longer granted via permission.provider",
 			minResourcesManifestVersion,
+		))
+	}
+	if p.LoginOlaresCLI && !IsLoginOlaresCLIAllowed(appName) {
+		errs = append(errs, fmt.Errorf(
+			"permission.loginOlaresCLI is not available to %q; the permission mounts a long-lived Olares credential into the app and is limited to apps on the platform allowlist",
+			appName,
+		))
+	}
+	if p.LoginOlaresCLI && shared {
+		errs = append(errs, fmt.Errorf(
+			"permission.loginOlaresCLI cannot be combined with options.shared; the credential is a per-user login and is not defined for a cluster-wide shared app",
 		))
 	}
 	return errors.Join(errs...)
@@ -603,6 +626,9 @@ func detectOlares1126OnlyFields(c *AppConfiguration) []string {
 	if c.Permission.AppCommon {
 		fields = append(fields, "permission.appCommon")
 	}
+	if c.Permission.LoginOlaresCLI {
+		fields = append(fields, "permission.loginOlaresCLI")
+	}
 	return fields
 }
 
@@ -638,7 +664,8 @@ func pickOlaresDepRule(c *AppConfiguration) (rule olaresDepConstraintRule, featu
 //   - apiVersion=v3 — the v3 runtime itself ships with Olares 1.12.6+.
 //   - any field returned by detectOlares1126OnlyFields (spec.accelerator,
 //     workloadReplicas, overlayGateway, options.LLMGatewaySupported,
-//     options.templateOnly, options.shared, permission.appCommon).
+//     options.templateOnly, options.shared, permission.appCommon,
+//     permission.loginOlaresCLI).
 //
 // When any trigger is declared the manifest must bump
 // olaresManifest.version to at least 0.12.0 AND lock

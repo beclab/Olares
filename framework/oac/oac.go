@@ -34,6 +34,12 @@ type OAC struct {
 	skipResourceNamespace  bool
 	skipRunRBAC            bool
 	skipRunSecurityContext bool
+	skipSubPathExpr        bool
+
+	// checkBlindChown is opt-in rather than opt-out: the rule is OFF by
+	// default so it never trips the install/upgrade admission gate for
+	// existing charts. Turn it on with WithBlindChownCheck() on PR gates.
+	checkBlindChown bool
 
 	customValidators []CustomValidator
 
@@ -60,7 +66,12 @@ type OAC struct {
 //     the rendered-resource namespace check runs by default — turn it
 //     off with SkipResourceNamespaceCheck();
 //     the non-beclab image securityContext check runs by default — turn
-//     it off with SkipSecurityContextCheck())
+//     it off with SkipSecurityContextCheck();
+//     the volumeMounts.subPathExpr ban runs by default — turn it off
+//     with SkipSubPathExprCheck();
+//     the blind recursive-chown check is the one rule that is OFF by
+//     default (it would otherwise reject existing charts at install
+//     time) — turn it on with WithBlindChownCheck())
 func New(opts ...Option) *OAC {
 	c := &OAC{}
 	for _, opt := range opts {

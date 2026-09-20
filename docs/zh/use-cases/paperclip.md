@@ -11,7 +11,7 @@ doc_updated: "2026-06-12"
 ---
 
 :::warning
-本页面内容经 AI 翻译生成，仅供参考。具体细节请以[英文原文](../../use-cases/paperclip.md)为准。
+本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../use-cases/paperclip.md)为准。
 :::
 
 # 使用 Paperclip 协调多个 AI 智能体

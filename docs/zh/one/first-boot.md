@@ -6,11 +6,11 @@ head:
       content: Olares, Olares One, 首次启动, 初始设置, 首次使用
 ---
 
-# 首次启动
-
 :::warning
-当前文档由 AI 翻译生成，若发现术语或表述不准确，请查看[英文原文](../../one/first-boot.md)。
+本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../one/first-boot.md)为准。
 :::
+
+# 首次启动
 
 本指南将引导你完成 Olares One 的首次设置。
 

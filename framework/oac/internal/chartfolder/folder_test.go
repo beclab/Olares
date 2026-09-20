@@ -21,6 +21,7 @@ func (s stubManifest) AppName() string               { return s.name }
 func (s stubManifest) AppVersion() string            { return s.version }
 func (s stubManifest) Entrances() []olm.EntranceInfo { return nil }
 func (s stubManifest) OptionsImages() []string       { return nil }
+func (s stubManifest) Taxonomy() olm.Taxonomy        { return olm.Taxonomy{} }
 func (s stubManifest) PermissionAppData() bool      { return false }
 func (s stubManifest) PermissionAppCommon() bool    { return false }
 func (s stubManifest) PermissionExternalData() bool { return false }

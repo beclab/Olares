@@ -97,7 +97,7 @@ App-service does **not** return a 5xx. It returns HTTP 200 with an embedded `cod
 }
 ```
 
-The CLI renders these (e.g. as "missing required env var(s): …"). **`lint` does not check any of this** — it neither validates env values nor verifies that the template actually maps `.Values.olaresEnv.<name>` into a container `env:`. Only app-service validates, at install time.
+The CLI renders these as `environment variable requirements not met`, followed by a `Missing required values: <names>` line. **`lint` does not check any of this** — it neither validates env values nor verifies that the template actually maps `.Values.olaresEnv.<name>` into a container `env:`. Only app-service validates, at install time.
 
 ### required / type / regex at a glance
 

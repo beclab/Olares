@@ -7,11 +7,11 @@ head:
       content: Olares One, Olares, 个人云
 ---
 
-# Olares One 常见问题
-
 :::warning
-本文档由 AI 自动翻译，可能存在表述差异。如需核对，请参考[英文原文](../../one/faq.md)。
+本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../one/faq.md)为准。
 :::
+
+# Olares One 常见问题
 
 查找关于 Olares One 和系统功能的常见问题解答。
 

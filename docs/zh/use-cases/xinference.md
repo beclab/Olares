@@ -10,8 +10,8 @@ doc_version: "1.0"
 doc_updated: "2026-07-27"
 ---
 
-:::warning WARNING
-本页面内容由 AI 翻译生成，仅供参考。如有疑问，请以[英文原文](../../use-cases/xinference.md)为准。
+:::warning
+本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../use-cases/xinference.md)为准。
 :::
 
 # 将 Xinference 迁移到新架构

@@ -20,15 +20,20 @@ import (
 	"github.com/beclab/Olares/cli/cmd/ctl/osinfo"
 	"github.com/beclab/Olares/cli/cmd/ctl/preinstall"
 	"github.com/beclab/Olares/cli/cmd/ctl/profile"
+	"github.com/beclab/Olares/cli/cmd/ctl/router"
 	"github.com/beclab/Olares/cli/cmd/ctl/search"
 	"github.com/beclab/Olares/cli/cmd/ctl/settings"
+	"github.com/beclab/Olares/cli/cmd/ctl/skills"
 	"github.com/beclab/Olares/cli/cmd/ctl/user"
 	"github.com/beclab/Olares/cli/cmd/ctl/wizard"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
+	"github.com/beclab/Olares/cli/pkg/credential"
 	"github.com/beclab/Olares/cli/version"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
+
+const unknownVerbGroupAnnotation = "olares-cli/unknown-verb-group"
 
 func NewDefaultCommand() *cobra.Command {
 	var showVendor bool
@@ -52,6 +57,12 @@ func NewDefaultCommand() *cobra.Command {
 			viper.BindPFlags(cmd.InheritedFlags())
 			viper.BindPFlags(cmd.PersistentFlags())
 			viper.BindPFlags(cmd.Flags())
+			// Not on the Factory's lazy chain: `profile list` reads
+			// config.json and the keychain directly and only touches the
+			// Factory for --refresh-version, so a managed profile imported
+			// there would be invisible in the one command most likely to
+			// go looking for it.
+			credential.ImportManagedCredential(cmd.Context())
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			if showVendor {
@@ -72,12 +83,12 @@ func NewDefaultCommand() *cobra.Command {
 		version.GitCommit, version.BuildTime,
 	))
 
-	// Version-compat controls (--olares-version) live on the `profile`
-	// command tree, not here: backend version is a per-profile property
-	// (cached in config.json, eagerly fetched at login). Other
+	// Version-compat controls (--olares-version / --refresh-version) live on
+	// the `profile` command tree, not here: backend version is a per-profile
+	// property (cached in config.json, eagerly fetched at login). Other
 	// command trees that branch on it (market, version-aware settings) read
 	// that cache and auto-detect on demand; to override or force a refresh,
-	// use the profile namespace (e.g. `profile list --refresh`).
+	// use the profile namespace (e.g. `profile list --refresh-version`).
 	// Identity is single-source: whichever profile `olares-cli profile use`
 	// (or the most recent `profile login` / `profile import`) selected. There
 	// is intentionally no per-invocation `--profile` override — agents and
@@ -109,6 +120,10 @@ func NewDefaultCommand() *cobra.Command {
 	// that go through control-hub.<terminus> via the active profile's token.
 	cmds.AddCommand(chart.NewChartCommand())
 	cmds.AddCommand(preinstall.NewPreinstallCommand())
+	// The skill suite is compiled in, so these verbs read and write local
+	// files only — nothing about them is host-side, and the npm distribution
+	// is exactly where an agent needs them.
+	cmds.AddCommand(skills.NewSkillsCommand())
 	cmds.AddCommand(market.NewMarketCommand(factory))
 	cmds.AddCommand(profile.NewProfileCommand(factory))
 	cmds.AddCommand(knowledge.NewKnowledgeCommand(factory))
@@ -117,7 +132,51 @@ func NewDefaultCommand() *cobra.Command {
 	cmds.AddCommand(dashboard.NewDashboardCommand(factory))
 	cmds.AddCommand(settings.NewSettingsCommand(factory))
 	cmds.AddCommand(search.NewSearchCommand(factory))
+	cmds.AddCommand(router.NewRouterCommand(factory))
 	cmds.AddCommand(cluster.NewClusterCommand(factory))
 
+	wireUnknownVerbRefusals(cmds)
+	skipPreRunsForGroupHelp(cmds)
 	return cmds
+}
+
+func wireUnknownVerbRefusals(cmd *cobra.Command) {
+	children := cmd.Commands()
+	if len(children) > 0 && !cmd.Runnable() {
+		cmd.Args = cmdutil.RefuseUnknownVerbGroupArgs
+		cmd.RunE = cmdutil.RefuseUnknownVerb
+		if cmd.Annotations == nil {
+			cmd.Annotations = make(map[string]string)
+		}
+		cmd.Annotations[unknownVerbGroupAnnotation] = "true"
+	}
+	for _, child := range children {
+		wireUnknownVerbRefusals(child)
+	}
+}
+
+func skipPreRunsForGroupHelp(cmd *cobra.Command) {
+	if run := cmd.PersistentPreRun; run != nil {
+		cmd.PersistentPreRun = func(current *cobra.Command, args []string) {
+			if !isGroupHelp(current, args) {
+				run(current, args)
+			}
+		}
+	}
+	if run := cmd.PersistentPreRunE; run != nil {
+		cmd.PersistentPreRunE = func(current *cobra.Command, args []string) error {
+			if isGroupHelp(current, args) {
+				return nil
+			}
+			return run(current, args)
+		}
+	}
+	for _, child := range cmd.Commands() {
+		skipPreRunsForGroupHelp(child)
+	}
+}
+
+func isGroupHelp(cmd *cobra.Command, args []string) bool {
+	return cmd.Annotations[unknownVerbGroupAnnotation] == "true" &&
+		len(args) > 0 && args[0] == "help"
 }

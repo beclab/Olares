@@ -6,3 +6,5 @@ output:
       name: beclab/mesh-in-agent:1.30.0-r5
     -
       name: beclab/mesh-out-agent:1.30.0-r4
+    -
+      name: beclab/init:v1.2.3

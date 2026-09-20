@@ -21,13 +21,13 @@ package clusteropts
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
 
+	"github.com/beclab/Olares/cli/pkg/clierr"
 	"github.com/beclab/Olares/cli/pkg/clusterclient"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
@@ -40,7 +40,10 @@ import (
 //
 // Exported (capital E) so subpackages (cluster/pod, cluster/application,
 // ...) can return the same sentinel without re-declaring it.
-var ErrReported = errors.New("(already reported)")
+//
+// It is the shared clierr sentinel, which is what cmd/main.go checks
+// before deciding whether to print an error line.
+var ErrReported = clierr.ErrAlreadyReported
 
 // ClusterOptions is the per-command shared option bag for the cluster
 // umbrella, mirroring the per-area MarketOptions / per-settings-area

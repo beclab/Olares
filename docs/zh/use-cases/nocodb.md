@@ -10,8 +10,8 @@ doc_version: "2.0"
 doc_updated: "2026-07-31"
 ---
 
-:::info AI 翻译说明
-本文档由 AI 自动翻译，可能存在表述差异。如需核对，请参考[英文原文](../../use-cases/nocodb.md)。
+:::warning
+本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../use-cases/nocodb.md)为准。
 :::
 
 # 使用 NocoDB 构建自托管智能表格数据库

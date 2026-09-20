@@ -64,6 +64,20 @@ func (a *ApplyingEnvApp) Exec(ctx context.Context) (StatefulInProgressApp, error
 
 				err := a.exec(c)
 				if err != nil {
+					// A cancel (POST /cancel, the TTL watchdog or a force uninstall)
+					// cancels opCtx, which is what aborts the helm env upgrade and
+					// the startup wait, so err here is the cancellation itself rather
+					// than an applyEnv failure. The initiator already wrote the
+					// terminal target state (ApplyingEnvCanceling for cancel,
+					// Uninstalling for force uninstall) and owns the transition;
+					// ApplyingEnvCanceling -> ApplyEnvFailed is not a declared
+					// transition, so this write would only be rejected by the guard.
+					// Bail out quietly and let the initiator drive the state.
+					if c.Err() != nil {
+						klog.Infof("applyEnv of app %s canceled; leaving terminal state to the initiator", a.manager.Spec.AppName)
+						return
+					}
+
 					a.finally = func() {
 						klog.Info("ApplyEnv operation failed, update app status to ApplyEnvFailed, ", a.manager.Name)
 						opRecord := makeRecord(a.manager, appsv1.ApplyEnvFailed,

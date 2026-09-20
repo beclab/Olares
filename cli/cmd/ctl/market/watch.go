@@ -375,12 +375,12 @@ type watchTimeoutError struct {
 
 func (e *watchTimeoutError) Error() string {
 	if e.last != nil {
-		return fmt.Sprintf("%s '%s' watch timed out (last state: %s, op: %s)",
+		return fmt.Sprintf("%s '%s' watch timed out (last state: %s, op: %s); timeout is not failure and the operation may still be progressing; inspect with `olares-cli market status %s`",
 			e.target.op, e.target.appName,
-			valueOrUnknown(e.last.State), valueOrUnknown(e.last.OpType))
+			valueOrUnknown(e.last.State), valueOrUnknown(e.last.OpType), e.target.appName)
 	}
-	return fmt.Sprintf("%s '%s' watch timed out (no status reported by the backend)",
-		e.target.op, e.target.appName)
+	return fmt.Sprintf("%s '%s' watch timed out (no status reported by the backend); timeout is not failure; inspect with `olares-cli market status %s`",
+		e.target.op, e.target.appName, e.target.appName)
 }
 
 // watchFailureError represents a terminal-failure classification. It exposes
@@ -398,8 +398,8 @@ func (e *watchFailureError) Error() string {
 	if detail := strings.TrimSpace(e.row.Message); detail != "" {
 		parts = append(parts, "reason: "+detail)
 	}
-	return fmt.Sprintf("%s '%s' failed: %s",
-		e.target.op, e.target.appName, strings.Join(parts, " "))
+	return fmt.Sprintf("%s '%s' failed: %s; inspect with `olares-cli market status %s`",
+		e.target.op, e.target.appName, strings.Join(parts, " "), e.target.appName)
 }
 
 // waitForTerminal polls /market/state until the row classifies as terminal
@@ -650,6 +650,14 @@ func valueOrUnknown(s string) string {
 	return s
 }
 
+func watchResultStatus(err error) string {
+	var timeout *watchTimeoutError
+	if errors.As(err, &timeout) {
+		return "timeout"
+	}
+	return "failed"
+}
+
 // runWithWatch is the shared post-mutation flow used by every command that
 // adds --watch. When opts.Watch is false it simply prints the existing
 // "accepted" result; when true it polls until terminal and folds the final
@@ -674,7 +682,7 @@ func runWithWatch(opts *MarketOptions, mc *MarketClient, accepted OperationResul
 		// state so JSON consumers see structured data instead of a
 		// bare error string.
 		failed := accepted
-		failed.Status = "failed"
+		failed.Status = watchResultStatus(err)
 		failed.Message = err.Error()
 		var fail *watchFailureError
 		if errors.As(err, &fail) {

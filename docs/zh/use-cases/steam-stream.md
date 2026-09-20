@@ -71,52 +71,90 @@ Steam Headless 集成了开源串流服务器 Sunshine。要串流游戏，你�
 
 ### 访问 Sunshine 控制台
 
-访问 Sunshine 控制台，将你的 Moonlight 客户端与 Olares 配对。
+首先打开 Sunshine Web UI，为配对做好准备。具体地址取决于你的网络环境。
 
-1. 在 Steam Headless 浏览器标签页中，复制其 URL。
-2. 新建一个浏览器标签页，修改 URL 以访问端口 `47990`。根据所在网络不同，地址格式如下：
+:::info Sunshine 必须使用 HTTPS
+打开 Sunshine Web UI 时必须添加 `https://`。即使使用局域网 IP 或 `.local` 域名，也不要使用 `http://`。
+:::
 
-    - **同一网络**：使用 HTTPS 及你的 `.local` 地址，以下两种格式均可（主机名中用点或连字符）：
+1. 根据网络环境选择一种方式打开 Sunshine Web UI：
 
-   :::info 使用 HTTPS 访问 Sunshine
-   大多数 Olares 服务支持通过 HTTP 协议访问 `.local` 地址。  
-   但 Sunshine Web UI 需使用 HTTPS 以保障本地通信安全。
-   :::
-   ```plain
-   https://139ebc4f0.<your Olares ID>.olares.local:47990
-   https://139ebc4f0-<your Olares ID>-olares.local:47990
-   ```
+   - **Overlay 网关（局域网内推荐）**
 
-    - **不同网络（通过专用网络）**：在设备上启用 LarePass 专用网络后，在地址后追加 `:47990`。例如：
+     :::info Overlay 网关使用条件
+     仅当 Olares 运行在使用有线网络连接的原生 Linux 主机上时，才可使用此方式。如果当前环境不满足要求，请改用下方的 `.local` 方式。
 
-   ```plain
-   https://139ebc4f0.<your Olares ID>.olares.com:47990
-   ```
+     如果无法开启系统级服务，需联系超级管理员。详情可参阅[管理应用的 Overlay 网关](../manual/olares/settings/overlay-gateway.md)。
+     :::
 
-3. 按回车键打开 Sunshine 控制台页面。
-4. 使用你之前创建的`SUNSHINE_USER`和`SUNSHINE_PASS`凭据登录。
+     Overlay 网关会为 Steam Headless 分配一个局域网 IP，使视频、音频和控制数据可通过局域网直接传输，无需经过 `.local` 域名解析、内部代理和集群网络转发。
+
+     a. 打开**设置** > **网络** > **Overlay 网关**。
+
+     b. 确认系统级服务已开启，然后为 Steam Headless 开启Overlay 网关。
+
+     c. 等待 Steam Headless 恢复为**运行中**。分配给应用的局域网地址会显示在应用下方。
+
+        ![查看 Steam Headless 的 Overlay 网关地址](/images/zh/manual/use-cases/steam-enable-overlay-gateway.png#bordered)
+
+     d. 复制 **Sunshine Web UI** 地址，在前面添加 `https://`，然后通过浏览器打开。例如：
+
+        ```plain
+        https://192.168.50.117:47990
+        ```
+
+   - **同一网络（`.local` 域名）**
+
+     复制当前 Steam Headless 浏览器标签页的 URL，将主机名改为 `.local` 格式并添加端口 `47990`，然后通过浏览器打开。以下两种本地主机名格式均可：
+
+     ```plain
+     https://139ebc4f0.<your Olares ID>.olares.local:47990
+     https://139ebc4f0-<your Olares ID>-olares.local:47990
+     ```
+
+     Windows 用户可通过 LarePass 桌面端导入 Olares hosts，或使用连字符形式的单级主机名。详情请参阅[在局域网内访问 Olares 服务](../manual/best-practices/local-access.md)。
+
+   - **不同网络（LarePass 专用网络）**：先[启用 LarePass 专用网络](../manual/larepass/private-network.md#在-larepass-中启用专用网络)，然后复制 Steam Headless 的 `.com` URL，添加端口 `47990`，并通过浏览器打开。例如：
+
+     ```plain
+     https://139ebc4f0.<your Olares ID>.olares.com:47990
+     ```
+
+2. 页面打开后，使用之前创建的 `SUNSHINE_USER` 和 `SUNSHINE_PASS` 凭据登录。
    ![登录 Sunshine](/images/manual/use-cases/steam-sign-in-to-sunshine.png#bordered)
-5. 点击 **PIN** 标签页。页面会进入等待配对 PIN 的状态。
+3. 点击 **PIN** 标签页。页面会进入等待配对 PIN 的状态。
    ![Sunshine 上的 PIN](/images/manual/use-cases/steam-pin-on-sunshine.png#bordered)
 
 ### 在 Moonlight 中添加主机
-当 Moonlight 与你的 Olares 设备处于同一局域网时，通常会自动检测到你的 Olares 主机。
 
-如果没有显示，或者你需要跨网络连接，请按以下步骤手动添加主机。以下示例使用 macOS Moonlight 客户端。
+接下来，在 Moonlight 中将 Olares 添加为主机。以下步骤以 macOS 客户端为例。
 
-:::info 从不同网络连接？
-如果你的 Moonlight 客户端和 Olares 设备不在同一网络，先在运行 Moonlight 的设备上[启用 LarePass 专用网络](../manual/larepass/private-network.md#在-larepass-中启用专用网络)。
-:::
+在同一局域网内，Moonlight 可能会自动发现 Steam Headless。如果没有显示，或需要远程连接，请手动添加：
 
-1. 在你的串流设备上打开 Moonlight。
-2. 点击 **Add Host** 按钮（外观为带有加号的电脑图标）。
-3. 输入你的 Olares 域名，不要包含`https://`前缀。例如：
+1. 在串流设备上打开 Moonlight。
+2. 点击 **Add Host**（带有加号的电脑图标）。
+3. 根据网络环境输入主机地址。不要添加 `http://` 或 `https://`：
 
-   ```plain
-   139ebc4f0.<your Olares ID>.olares.com
-   ```
+   - **Overlay 网关**：输入上方截图中 **Moonlight HTTP** 下显示的地址，包括端口。不要添加协议。例如：
+
+     ```plain
+     192.168.50.117:47989
+     ```
+
+   - **同一网络（`.local` 域名）**：输入 `.local` 主机名，不要添加端口。例如：
+
+     ```plain
+     139ebc4f0.<your Olares ID>.olares.local
+     ```
+
+   - **不同网络（LarePass 专用网络）**：输入 `.com` 主机名，不要添加端口。例如：
+
+     ```plain
+     139ebc4f0.<your Olares ID>.olares.com
+     ```
+
 4. 点击 **OK**。此时会出现一个带锁的主机图标。
-5. 点击该带锁图标。Moonlight 将显示一个 4 位数的配对 PIN 码。
+5. 点击该图标。Moonlight 将显示一个 4 位数的配对 PIN。
    ![获取配对 PIN 码](/images/manual/use-cases/steam-get-pairing-pin.png#bordered) 
 
 ### 完成配对
@@ -147,6 +185,13 @@ Steam Headless 集成了开源串流服务器 Sunshine。要串流游戏，你�
 此时，Steam 将进入大屏幕模式，你可以开始畅玩游戏了。
 
 ## 常见问题
+
+### 为什么 Steam 串流会出现卡顿或延迟？
+
+网络状况、GPU 分配、电源设置、Proton 兼容性以及 CPU 或内存限制都可能导致串流卡顿或延迟。
+
+按照[排查 Steam 串流卡顿或延迟](../manual/help/ts-steam-stream-lag.md)中的步骤定位并解决问题。
+
 ### 为什么使用 `.local` 地址无法打开 Sunshine Web UI？
 
 Olares 下大多数服务支持通过 HTTP 协议访问 `.local` 地址，但 Sunshine Web UI 需使用 HTTPS 以保证本地通信安全。若在 `.local` 的 URL 中使用 `http://`，Sunshine 页面将无法加载。

@@ -135,6 +135,13 @@ spec:
     spec:
       serviceAccountName: infisical-sa
       priorityClassName: "system-cluster-critical"
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-role.kubernetes.io/control-plane
+                    operator: Exists
       initContainers:
       - name: init-container
         image: 'postgres:16.0-alpine3.18'
@@ -231,7 +238,7 @@ spec:
           subPath: nginx.conf
 
       - name: tapr-sidecar
-        image: beclab/secret-vault:0.1.16
+        image: beclab/secret-vault:0.1.17
         imagePullPolicy: IfNotPresent
         ports:
         - name: proxy

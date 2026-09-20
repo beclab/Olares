@@ -11,7 +11,7 @@ doc_updated: "2026-05-09"
 ---
 
 :::warning
-本文档由 AI 自动翻译，可能存在表述差异。如需核对，请参考[英文原文](../../use-cases/rna-sequencing.md)。
+本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../use-cases/rna-sequencing.md)为准。
 :::
 
 # 分析单细胞 RNA 测序数据

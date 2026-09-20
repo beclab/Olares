@@ -23,11 +23,11 @@ head:
 
 ## 原因
 
-“系统错误”通常意味着一个或多个系统 Pod 运行异常。发生这种情况时，LarePass 无法获取整体系统状态。
+该提示表示 LarePass 未能获取到健康的系统状态。一个或多个系统 Pod 可能处于异常状态，但仅凭这条提示无法确定故障组件或根本原因。
 
 ## 解决方案
 
-按照以下步骤访问 Olares 设备终端，定位未正常运行的 Pod，查看其错误详情，并将这些信息提供给 Olares 团队。这有助于缩小可能原因范围，加快故障排查。
+按照以下步骤访问 Olares 设备终端，定位未正常运行的 Pod，并只查看定位原因所需的事件信息。
 
 ### 步骤 1：尝试访问 Olares 桌面
 
@@ -101,11 +101,15 @@ head:
     ```bash
     kubectl get pods -A
     ```
-2. 查看 **STATUS** 列，找到状态不是 `Running` 的 Pod。
-3. 准确记录每个异常 Pod 的 **NAMESPACE** 和 **NAME**。
+2. 查看 **STATUS** 和 **RESTARTS**。重点检查 `CrashLoopBackOff`、`Error`、`ImagePullBackOff` 等错误状态，或长时间处于 `Pending` 的 Pod。任务 Pod 显示 `Completed` 本身不代表异常。
+3. 记录显示错误或重启次数持续增加的 Pod 对应的 **NAMESPACE** 和 **NAME**。如果没有，直接跳到[步骤 6](#步骤-6-记录结果并收集日志)。
     ![定位异常 Pod](/images/zh/manual/help/ts-sys-err-pod-crash.png#bordered){width=90%}
 
 ### 步骤 5：查看 Pod 错误信息
+
+:::warning 分享前检查输出
+`kubectl describe` 的输出可能包含 IP 地址、节点名称、Olares ID、域名和配置值。请勿将完整输出粘贴到公开 Issue 中。
+:::
 
 1. 运行以下命令，并将 `<namespace>` 和 `<pod-name>` 替换为上一步记录的值：
 
@@ -121,12 +125,15 @@ head:
 2. 在输出结果中向下滚动到 **Events** 部分，查看失败相关的错误信息。
     ![Pod 错误详情](/images/zh/manual/help/ts-sys-err-pod-event-detail.png#bordered){width=90%}
 
-### 步骤 6：联系技术支持
+### 步骤 6：记录结果并收集日志
 
-在 [Olares GitHub 仓库](https://github.com/beclab/Olares/issues)提交 Issue，并提供以下信息：
+只记录以下必要信息：
 
-- 每个异常 Pod 对应的 `kubectl describe pod <pod-name> -n <namespace>` 完整输出结果
-- 错误信息的截图（如有）
-- 错误最初出现的时间及简要说明（例如，是在更新后还是重启后出现的）
+- 异常 Pod 的 **NAMESPACE**、**NAME**、**STATUS** 和 **RESTARTS**
+- **Events** 部分中的错误行
+- 报错时间和时区
+- 当前 Olares 版本，以及错误是否出现在更新或重启之后
 
-这些信息将帮助团队更快排查并解决问题。
+如果没有 Pod 显示错误，且重启次数没有持续增加，也请记录这一结果。这表示仅凭 Pod 状态无法解释该提示，需要转到其他诊断方向。
+
+如确认是可复现的软件缺陷，可以提交 [GitHub Issue](https://github.com/beclab/Olares/issues/new)。公开内容只包含上述有限信息，并移除 ID、主机名、IP 地址和域名。完整日志压缩包请按照[收集诊断信息](../collect-diagnostic-information.md)生成，并仅通过该页面说明的非公开渠道发送。

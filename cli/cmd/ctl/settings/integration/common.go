@@ -15,6 +15,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/beclab/Olares/cli/pkg/bflenvelope"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 	"github.com/beclab/Olares/cli/pkg/credential"
 	"github.com/beclab/Olares/cli/pkg/whoami"
@@ -52,7 +53,11 @@ type preparedClient struct {
 	doer    Doer
 }
 
-func prepare(ctx context.Context, f *cmdutil.Factory) (*preparedClient, error) {
+func resolveClient(
+	ctx context.Context,
+	f *cmdutil.Factory,
+	pickBase func(*credential.ResolvedProfile) string,
+) (*preparedClient, error) {
 	if f == nil {
 		return nil, fmt.Errorf("internal error: settings integration not wired with cmdutil.Factory")
 	}
@@ -64,16 +69,29 @@ func prepare(ctx context.Context, f *cmdutil.Factory) (*preparedClient, error) {
 	if err != nil {
 		return nil, err
 	}
+	base := pickBase(rp)
+	if base == "" {
+		return nil, fmt.Errorf("profile %q has no URL for this endpoint; re-run `olares-cli profile login`", rp.Name)
+	}
 	return &preparedClient{
 		profile: rp,
-		doer:    whoami.NewHTTPClient(hc, rp.DesktopURL, rp.OlaresID),
+		doer:    whoami.NewHTTPClient(hc, base, rp.OlaresID),
 	}, nil
 }
 
-type bflEnvelope struct {
-	Code    int             `json:"code"`
-	Message string          `json:"message"`
-	Data    json.RawMessage `json:"data"`
+func prepare(ctx context.Context, f *cmdutil.Factory) (*preparedClient, error) {
+	return resolveClient(ctx, f, func(rp *credential.ResolvedProfile) string {
+		return rp.DesktopURL
+	})
+}
+
+// prepareSettings targets the settings host. The account routes live on
+// the desktop host, but /api/cookie/* is only exposed here — the same
+// origin the Settings SPA writes cookies through.
+func prepareSettings(ctx context.Context, f *cmdutil.Factory) (*preparedClient, error) {
+	return resolveClient(ctx, f, func(rp *credential.ResolvedProfile) string {
+		return rp.SettingsURL
+	})
 }
 
 func doGetEnvelope(ctx context.Context, d Doer, path string, out interface{}) error {
@@ -84,26 +102,11 @@ func doGetEnvelope(ctx context.Context, d Doer, path string, out interface{}) er
 // account.controller.ts wraps every route in returnSucceed/returnError,
 // so reads and writes share the same {code, message, data} envelope.
 func doMutateEnvelope(ctx context.Context, d Doer, method, path string, body, out interface{}) error {
-	var env bflEnvelope
+	var env bflenvelope.Envelope
 	if err := d.DoJSON(ctx, method, path, body, &env); err != nil {
 		return err
 	}
-	switch env.Code {
-	case 0, 200:
-	default:
-		msg := strings.TrimSpace(env.Message)
-		if msg == "" {
-			return fmt.Errorf("%s %s: upstream returned code %d", method, path, env.Code)
-		}
-		return fmt.Errorf("%s %s: upstream returned code %d: %s", method, path, env.Code, msg)
-	}
-	if out == nil || len(env.Data) == 0 {
-		return nil
-	}
-	if err := json.Unmarshal(env.Data, out); err != nil {
-		return fmt.Errorf("%s %s: decode data: %w", method, path, err)
-	}
-	return nil
+	return bflenvelope.Data(method, path, env, out)
 }
 
 func printJSON(w io.Writer, v interface{}) error {

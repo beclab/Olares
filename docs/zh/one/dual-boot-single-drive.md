@@ -8,7 +8,7 @@ head:
 ---
 
 :::warning
-本文档由 AI 自动翻译，可能存在表述差异。如需核对，请参考[英文原文](../../one/dual-boot-single-drive.md)。
+本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../one/dual-boot-single-drive.md)为准。
 :::
 
 # 在单块 SSD 上双系统启动 Windows <Badge type="tip" text="45 min" />

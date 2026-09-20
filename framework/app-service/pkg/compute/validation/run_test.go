@@ -7,7 +7,14 @@ import (
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/prometheus"
 	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes"
+	k8sfake "k8s.io/client-go/kubernetes/fake"
 )
 
 // fakeValidator is the only Validator the run-level tests use so the
@@ -272,17 +279,20 @@ func TestChainShapes(t *testing.T) {
 	wantInstall := []string{
 		"cluster-capacity",
 		"compute-mode",
-		"user-quota",
 	}
 	assertChainNames(t, "InstallabilityValidators", InstallabilityValidators(), wantInstall)
 
-	// UpgradabilityValidators is intentionally just cluster-capacity:
-	// upgrade reuses the existing allocation (compute-mode), the
-	// running deployment is already counted against the owner's quota
-	// (user-quota), and helm upgrade goes through kube-scheduler for
-	// the rest. See UpgradabilityValidators in validators.go.
+	// UpgradabilityValidators gates cluster-capacity on the new chart's
+	// absolute requirements, then cluster-pressure / k8s-request on the
+	// non-negative delta (new − old). user-quota, compute-mode,
+	// node-pressure and compute-allocation stay excluded: user-quota is
+	// not gated on install/resume/upgrade submit, upgrade reuses the
+	// existing allocation, and helm upgrade goes through kube-scheduler.
+	// See UpgradabilityValidators in validators.go.
 	wantUpgrade := []string{
 		"cluster-capacity",
+		"cluster-pressure",
+		"k8s-request",
 	}
 	assertChainNames(t, "UpgradabilityValidators", UpgradabilityValidators(), wantUpgrade)
 
@@ -292,6 +302,15 @@ func TestChainShapes(t *testing.T) {
 		"node-pressure",
 	}
 	assertChainNames(t, "RuntimePressureValidators", RuntimePressureValidators(), wantRuntime)
+
+	// ResumePressureValidators is the resume HTTP submit gate:
+	// cluster-pressure + k8s-request only. user-quota / compute-mode /
+	// node-pressure / compute-allocation stay excluded.
+	wantResume := []string{
+		"cluster-pressure",
+		"k8s-request",
+	}
+	assertChainNames(t, "ResumePressureValidators", ResumePressureValidators(), wantResume)
 
 	// InstallRuntimePressureValidators = RuntimePressure ++ compute-allocation,
 	// with the heavier side-effecting allocator strictly last so the
@@ -324,19 +343,20 @@ func assertChainNames(t *testing.T, label string, chain []Validator, want []stri
 // here would silently include or exclude the wrong validator for a
 // given lifecycle stage.
 //
-// UpgradeOp is opted into ONLY by cluster-capacity (so the upgrade
-// handler can reject a new chart whose declared requirements exceed
-// the cluster's total schedulable capacity before any helm work
-// happens). Every other validator in this package is intentionally
-// false for UpgradeOp.
+// UpgradeOp is opted into by cluster-capacity (absolute new
+// requirements) and by cluster-pressure / k8s-request (which run
+// against the delta new − old on upgrade). user-quota, compute-mode,
+// node-pressure and compute-allocation stay false for UpgradeOp.
 //
 // The remaining semantic mapping (matching the comments inside
-// validators.go):
+// validators.go). Note AppliesTo for user-quota still reports
+// install+resume, but InstallabilityValidators / ResumePressureValidators
+// no longer include that validator in their chains:
 //
-//   - cluster-pressure, k8s-request, node-pressure :
-//     install + resume.
-//   - user-quota         : install + resume (quota is a running total
-//     that grows on either transition).
+//   - cluster-pressure, k8s-request : install + resume + upgrade.
+//   - node-pressure                 : install + resume.
+//   - user-quota         : AppliesTo install + resume only; not wired
+//     into any exported submit chain.
 //   - cluster-capacity   : install + upgrade — resume reuses the
 //     placement chosen at install; the cluster's
 //     total schedulable capacity hasn't shrunk in
@@ -372,16 +392,21 @@ func TestAppliesToMatrix(t *testing.T) {
 			},
 		},
 		{
+			// cluster-pressure runs on upgrade too, but against the
+			// resource delta (new − old) rather than absolute new.
 			name: "cluster-pressure",
 			v:    clusterPressureValidator{},
 			want: map[Op]bool{
 				v1alpha1.InstallOp: true,
-				v1alpha1.UpgradeOp: false,
+				v1alpha1.UpgradeOp: true,
 				v1alpha1.ResumeOp:  true,
 				v1alpha1.StopOp:    false,
 			},
 		},
 		{
+			// user-quota.AppliesTo remains install + resume, but the
+			// validator is no longer included in InstallabilityValidators
+			// or ResumePressureValidators (see those chain constructors).
 			name: "user-quota",
 			v:    userQuotaValidator{},
 			want: map[Op]bool{
@@ -392,11 +417,13 @@ func TestAppliesToMatrix(t *testing.T) {
 			},
 		},
 		{
+			// k8s-request runs on upgrade too, but against the resource
+			// delta so already-scheduled requests are not double-counted.
 			name: "k8s-request",
 			v:    k8sRequestValidator{},
 			want: map[Op]bool{
 				v1alpha1.InstallOp: true,
-				v1alpha1.UpgradeOp: false,
+				v1alpha1.UpgradeOp: true,
 				v1alpha1.ResumeOp:  true,
 				v1alpha1.StopOp:    false,
 			},
@@ -446,5 +473,434 @@ func TestAppliesToMatrix(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func upgradeConfig(name string, cpuMilli, memory int64) *appcfg.ApplicationConfig {
+	cfg := &appcfg.ApplicationConfig{AppName: name, OwnerName: "alice", Namespace: name + "-alice"}
+	if cpuMilli > 0 {
+		cfg.Requirement.CPU = resource.NewMilliQuantity(cpuMilli, resource.DecimalSI)
+	}
+	if memory > 0 {
+		cfg.Requirement.Memory = resource.NewQuantity(memory, resource.BinarySI)
+	}
+	return cfg
+}
+
+// stubKube points the validators at a fake kube API holding the given
+// objects for the duration of the test.
+func stubKube(t *testing.T, objects ...runtime.Object) {
+	t.Helper()
+	original := kubeClientset
+	cs := k8sfake.NewSimpleClientset(objects...)
+	kubeClientset = func() (kubernetes.Interface, error) { return cs, nil }
+	t.Cleanup(func() { kubeClientset = original })
+}
+
+func namespaceObj(name string) *corev1.Namespace {
+	return &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: name}}
+}
+
+func podObj(namespace, name string, phase corev1.PodPhase) *corev1.Pod {
+	return &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
+		Spec:       corev1.PodSpec{NodeName: "node-a"},
+		Status:     corev1.PodStatus{Phase: phase},
+	}
+}
+
+func TestUpgradePrevHoldsRequestsIgnoresUnscheduledPods(t *testing.T) {
+	pod := podObj("app-alice", "app-pending", corev1.PodPending)
+	pod.Spec.NodeName = ""
+	stubKube(t, namespaceObj("app-alice"), pod)
+
+	holds, err := upgradePrevHoldsRequests(context.Background(), upgradeConfig("app", 1000, 2<<30), v1alpha1.UpgradeFailed, "")
+	if err != nil {
+		t.Fatalf("upgradePrevHoldsRequests: %v", err)
+	}
+	if holds {
+		t.Fatal("unscheduled pod must not count as holding requests")
+	}
+}
+
+func TestUpgradePrevHoldsRequestsRunningForcesDelta(t *testing.T) {
+	// Running short-circuits before the kube lookup, so an empty fake
+	// cluster is intentional: the state alone decides.
+	stubKube(t)
+
+	holds, err := upgradePrevHoldsRequests(context.Background(), upgradeConfig("app", 1000, 2<<30), v1alpha1.Running, "")
+	if err != nil {
+		t.Fatalf("upgradePrevHoldsRequests: %v", err)
+	}
+	if !holds {
+		t.Fatal("Running must force the delta path")
+	}
+}
+
+func TestUpgradePrevHoldsRequestsStoppedDoesNotHold(t *testing.T) {
+	stubKube(t, namespaceObj("app-alice"), podObj("app-alice", "app-0", corev1.PodRunning))
+
+	holds, err := upgradePrevHoldsRequests(context.Background(), upgradeConfig("app", 1000, 2<<30), v1alpha1.Stopped, "")
+	if err != nil {
+		t.Fatalf("upgradePrevHoldsRequests: %v", err)
+	}
+	if holds {
+		t.Fatal("Stopped must not report holding requests")
+	}
+}
+
+func TestSkipUpgradeResourceCheck(t *testing.T) {
+	cases := []struct {
+		name     string
+		state    v1alpha1.ApplicationManagerState
+		preState string
+		want     bool
+	}{
+		{name: "stopped skips", state: v1alpha1.Stopped, want: true},
+		{name: "upgradeFailed+stopped skips", state: v1alpha1.UpgradeFailed, preState: string(v1alpha1.Stopped), want: true},
+		{name: "running does not skip", state: v1alpha1.Running, want: false},
+		{name: "upgradeFailed+running does not skip", state: v1alpha1.UpgradeFailed, preState: string(v1alpha1.Running), want: false},
+		{name: "upgradeFailed+empty does not skip", state: v1alpha1.UpgradeFailed, want: false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := skipUpgradeResourceCheck(Input{
+				Op:                    v1alpha1.UpgradeOp,
+				PrevState:             tc.state,
+				PreUpgradeSteadyState: tc.preState,
+			})
+			if got != tc.want {
+				t.Fatalf("skip=%v want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+// TestUpgradeStoppedSkipsResourceChecks verifies Stopped (and
+// UpgradeFailed with pre-upgrade-state=stopped) skip capacity / pressure /
+// k8s-request without backend calls.
+func TestUpgradeStoppedSkipsResourceChecks(t *testing.T) {
+	originalCluster := checkAppRequirement
+	originalK8s := checkAppK8sRequestResource
+	originalMetrics := clusterMetricsProvider
+	t.Cleanup(func() {
+		checkAppRequirement = originalCluster
+		checkAppK8sRequestResource = originalK8s
+		clusterMetricsProvider = originalMetrics
+	})
+
+	var calls int
+	checkAppRequirement = func(string, *appcfg.ApplicationConfig, v1alpha1.OpType) (constants.ResourceType, constants.ResourceConditionType, error) {
+		calls++
+		return "", "", nil
+	}
+	checkAppK8sRequestResource = func(*appcfg.ApplicationConfig, v1alpha1.OpType) (constants.ResourceType, constants.ResourceConditionType, error) {
+		calls++
+		return "", "", nil
+	}
+	clusterMetricsProvider = func(string) (*prometheus.ClusterMetrics, []string, error) {
+		calls++
+		return nil, nil, errors.New("metrics should not be called")
+	}
+
+	cases := []Input{
+		{
+			AppConfig:     upgradeConfig("app", 3000, 4<<30),
+			PrevAppConfig: upgradeConfig("app", 1000, 2<<30),
+			PrevState:     v1alpha1.Stopped,
+			Op:            v1alpha1.UpgradeOp,
+		},
+		{
+			AppConfig:             upgradeConfig("app", 3000, 4<<30),
+			PrevAppConfig:         upgradeConfig("app", 1000, 2<<30),
+			PrevState:             v1alpha1.UpgradeFailed,
+			PreUpgradeSteadyState: string(v1alpha1.Stopped),
+			Op:                    v1alpha1.UpgradeOp,
+		},
+	}
+	for _, in := range cases {
+		calls = 0
+		decision, err := Run(context.Background(), in, UpgradabilityValidators()...)
+		if err != nil {
+			t.Fatalf("Run(%s): %v", in.PrevState, err)
+		}
+		if !decision.OK {
+			t.Fatalf("Run(%s) decision=%#v, want OK", in.PrevState, decision)
+		}
+		if calls != 0 {
+			t.Fatalf("Run(%s) expected zero backend calls, got %d", in.PrevState, calls)
+		}
+	}
+}
+
+func TestUpgradePrevHoldsRequestsUpgradeFailedUsesAnnotation(t *testing.T) {
+	cases := []struct {
+		name      string
+		preState  string
+		withPod   bool
+		wantHolds bool
+	}{
+		{
+			name:      "annotation running forces delta without probe",
+			preState:  string(v1alpha1.Running),
+			wantHolds: true,
+		},
+		{
+			name:      "annotation stopped does not hold (skip at requirementConfigForOp)",
+			preState:  string(v1alpha1.Stopped),
+			withPod:   true,
+			wantHolds: false,
+		},
+		{
+			name:      "empty annotation falls back to probe with scheduled pod",
+			preState:  "",
+			withPod:   true,
+			wantHolds: true,
+		},
+		{
+			name:      "empty annotation falls back to probe without pods",
+			preState:  "",
+			wantHolds: false,
+		},
+		{
+			name:      "garbage annotation falls back to probe without pods",
+			preState:  "upgradeFailed",
+			wantHolds: false,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			objs := []runtime.Object{namespaceObj("app-alice")}
+			if tc.withPod {
+				objs = append(objs, podObj("app-alice", "app-0", corev1.PodRunning))
+			}
+			stubKube(t, objs...)
+
+			holds, err := upgradePrevHoldsRequests(context.Background(), upgradeConfig("app", 1000, 2<<30), v1alpha1.UpgradeFailed, tc.preState)
+			if err != nil {
+				t.Fatalf("upgradePrevHoldsRequests: %v", err)
+			}
+			if holds != tc.wantHolds {
+				t.Fatalf("holds=%v want %v", holds, tc.wantHolds)
+			}
+		})
+	}
+}
+
+// TestUpgradeDeltaFeedsPressureChecks verifies the delta-aware upgrade
+// validators receive the non-negative delta (new − old) when the
+// deployed version still has live pods, not the new chart's absolute
+// requirements.
+func TestUpgradeDeltaFeedsPressureChecks(t *testing.T) {
+	originalCluster := checkAppRequirement
+	originalK8s := checkAppK8sRequestResource
+	t.Cleanup(func() {
+		checkAppRequirement = originalCluster
+		checkAppK8sRequestResource = originalK8s
+	})
+
+	var gotCPU int64 = -1
+	capture := func(cfg *appcfg.ApplicationConfig) {
+		if cfg != nil && cfg.Requirement.CPU != nil {
+			gotCPU = cfg.Requirement.CPU.MilliValue()
+		}
+	}
+	checkAppRequirement = func(_ string, cfg *appcfg.ApplicationConfig, _ v1alpha1.OpType) (constants.ResourceType, constants.ResourceConditionType, error) {
+		capture(cfg)
+		return "", "", nil
+	}
+	checkAppK8sRequestResource = func(cfg *appcfg.ApplicationConfig, _ v1alpha1.OpType) (constants.ResourceType, constants.ResourceConditionType, error) {
+		capture(cfg)
+		return "", "", nil
+	}
+
+	stubKube(t, namespaceObj("app-alice"), podObj("app-alice", "app-0", corev1.PodRunning))
+
+	// new needs 3000m, old needs 1000m -> delta 2000m.
+	in := Input{
+		AppConfig:     upgradeConfig("app", 3000, 4<<30),
+		PrevAppConfig: upgradeConfig("app", 1000, 2<<30),
+		PrevState:     v1alpha1.UpgradeFailed,
+		Op:            v1alpha1.UpgradeOp,
+	}
+
+	for _, v := range []Validator{clusterPressureValidator{}, k8sRequestValidator{}} {
+		gotCPU = -1
+		decision, err := v.Validate(context.Background(), in)
+		if err != nil {
+			t.Fatalf("%s validate: %v", v.Name(), err)
+		}
+		if !decision.OK {
+			t.Fatalf("%s decision=%#v, want OK", v.Name(), decision)
+		}
+		if gotCPU != 2000 {
+			t.Fatalf("%s received CPU=%dm, want delta 2000m", v.Name(), gotCPU)
+		}
+	}
+}
+
+// TestUpgradeZeroDeltaShortCircuits verifies the delta-aware upgrade
+// validators pass without touching any backend when an app with live
+// pods is upgraded to a version that keeps or lowers its requests.
+func TestUpgradeZeroDeltaShortCircuits(t *testing.T) {
+	originalCluster := checkAppRequirement
+	originalK8s := checkAppK8sRequestResource
+	t.Cleanup(func() {
+		checkAppRequirement = originalCluster
+		checkAppK8sRequestResource = originalK8s
+	})
+
+	var calls int
+	checkAppRequirement = func(string, *appcfg.ApplicationConfig, v1alpha1.OpType) (constants.ResourceType, constants.ResourceConditionType, error) {
+		calls++
+		return "", "", nil
+	}
+	checkAppK8sRequestResource = func(*appcfg.ApplicationConfig, v1alpha1.OpType) (constants.ResourceType, constants.ResourceConditionType, error) {
+		calls++
+		return "", "", nil
+	}
+
+	stubKube(t, namespaceObj("app-alice"), podObj("app-alice", "app-0", corev1.PodRunning))
+
+	// new <= old on every dimension -> delta zero.
+	in := Input{
+		AppConfig:     upgradeConfig("app", 1000, 2<<30),
+		PrevAppConfig: upgradeConfig("app", 2000, 3<<30),
+		PrevState:     v1alpha1.Running,
+		Op:            v1alpha1.UpgradeOp,
+	}
+
+	for _, v := range []Validator{clusterPressureValidator{}, k8sRequestValidator{}} {
+		decision, err := v.Validate(context.Background(), in)
+		if err != nil {
+			t.Fatalf("%s validate: %v", v.Name(), err)
+		}
+		if !decision.OK {
+			t.Fatalf("%s decision=%#v, want OK", v.Name(), decision)
+		}
+	}
+	if calls != 0 {
+		t.Fatalf("expected zero backend calls for zero delta, got %d", calls)
+	}
+}
+
+// TestUpgradeWithoutLivePodsChecksAbsolute verifies the delta discount
+// is only applied while the deployed version actually holds its
+// requests. A namespace whose pods have all terminated frees nothing, so
+// a zero delta must not short-circuit: the validators have to see the
+// new chart's full requirements.
+func TestUpgradeWithoutLivePodsChecksAbsolute(t *testing.T) {
+	originalCluster := checkAppRequirement
+	originalK8s := checkAppK8sRequestResource
+	t.Cleanup(func() {
+		checkAppRequirement = originalCluster
+		checkAppK8sRequestResource = originalK8s
+	})
+
+	var calls int
+	var gotCPU int64
+	capture := func(cfg *appcfg.ApplicationConfig) {
+		calls++
+		gotCPU = -1
+		if cfg != nil && cfg.Requirement.CPU != nil {
+			gotCPU = cfg.Requirement.CPU.MilliValue()
+		}
+	}
+	checkAppRequirement = func(_ string, cfg *appcfg.ApplicationConfig, _ v1alpha1.OpType) (constants.ResourceType, constants.ResourceConditionType, error) {
+		capture(cfg)
+		return "", "", nil
+	}
+	checkAppK8sRequestResource = func(cfg *appcfg.ApplicationConfig, _ v1alpha1.OpType) (constants.ResourceType, constants.ResourceConditionType, error) {
+		capture(cfg)
+		return "", "", nil
+	}
+
+	stubKube(t,
+		namespaceObj("app-alice"),
+		podObj("app-alice", "app-succeeded", corev1.PodSucceeded),
+		podObj("app-alice", "app-failed", corev1.PodFailed),
+	)
+
+	// new needs 1000m, old needs 2000m -> delta zero. UpgradeFailed falls
+	// through to the live-pod probe, which finds nothing scheduled.
+	in := Input{
+		AppConfig:     upgradeConfig("app", 1000, 2<<30),
+		PrevAppConfig: upgradeConfig("app", 2000, 3<<30),
+		PrevState:     v1alpha1.UpgradeFailed,
+		Op:            v1alpha1.UpgradeOp,
+	}
+
+	for _, v := range []Validator{clusterPressureValidator{}, k8sRequestValidator{}} {
+		calls, gotCPU = 0, 0
+		decision, err := v.Validate(context.Background(), in)
+		if err != nil {
+			t.Fatalf("%s validate: %v", v.Name(), err)
+		}
+		if !decision.OK {
+			t.Fatalf("%s decision=%#v, want OK", v.Name(), decision)
+		}
+		if calls != 1 {
+			t.Fatalf("%s: %d backend calls, want 1 against absolute requirements", v.Name(), calls)
+		}
+		if gotCPU != 1000 {
+			t.Fatalf("%s: received CPU=%dm, want absolute 1000m", v.Name(), gotCPU)
+		}
+	}
+}
+
+// TestUpgradeAbortsWhenPreviousWorkloadUnknown verifies the delta-aware
+// validators refuse to guess: if the previous release's namespace can't
+// be inspected the check fails loudly instead of silently picking a
+// discount that may not exist.
+func TestUpgradeAbortsWhenPreviousWorkloadUnknown(t *testing.T) {
+	originalCluster := checkAppRequirement
+	originalK8s := checkAppK8sRequestResource
+	t.Cleanup(func() {
+		checkAppRequirement = originalCluster
+		checkAppK8sRequestResource = originalK8s
+	})
+
+	var calls int
+	checkAppRequirement = func(string, *appcfg.ApplicationConfig, v1alpha1.OpType) (constants.ResourceType, constants.ResourceConditionType, error) {
+		calls++
+		return "", "", nil
+	}
+	checkAppK8sRequestResource = func(*appcfg.ApplicationConfig, v1alpha1.OpType) (constants.ResourceType, constants.ResourceConditionType, error) {
+		calls++
+		return "", "", nil
+	}
+
+	noNamespace := upgradeConfig("app", 2000, 3<<30)
+	noNamespace.Namespace = ""
+
+	cases := []struct {
+		name string
+		prev *appcfg.ApplicationConfig
+	}{
+		{"namespace missing from cluster", upgradeConfig("app", 2000, 3<<30)},
+		{"previous config absent", nil},
+		{"previous config has no namespace", noNamespace},
+	}
+
+	// The fake cluster deliberately holds no namespace at all.
+	stubKube(t)
+
+	for _, c := range cases {
+		in := Input{
+			AppConfig:     upgradeConfig("app", 1000, 2<<30),
+			PrevAppConfig: c.prev,
+			PrevState:     v1alpha1.UpgradeFailed,
+			Op:            v1alpha1.UpgradeOp,
+		}
+
+		for _, v := range []Validator{clusterPressureValidator{}, k8sRequestValidator{}} {
+			calls = 0
+			if _, err := v.Validate(context.Background(), in); err == nil {
+				t.Fatalf("%s with %s: expected error, got none", v.Name(), c.name)
+			}
+			if calls != 0 {
+				t.Fatalf("%s with %s: %d backend calls, want none", v.Name(), c.name, calls)
+			}
+		}
 	}
 }

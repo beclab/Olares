@@ -1,0 +1,38 @@
+{{- if .Values.prometheus.monitor -}}
+# Place ServiceMonitor in the Prometheus namespace (same pattern as HAMi dcgm-exporter).
+# Olares Prometheus lives in kubesphere-monitoring-system; SMs only in kube-system are
+# not picked up as scrape targets on this stack.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "xpumd.fullname" . }}
+  namespace: kubesphere-monitoring-system
+  labels:
+    {{- include "xpumd.labels" . | nindent 4 }}
+    release: {{ .Values.prometheus.release }}
+spec:
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+  selector:
+    matchLabels:
+      {{- include "xpumd.selectorLabels" . | nindent 6 }}
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 5s
+    relabelings:
+    - action: replace
+      sourceLabels:
+      - __meta_kubernetes_pod_node_name
+      targetLabel: node
+    metricRelabelings:
+      - action: drop
+        regex: integrated
+        sourceLabels:
+        - hw_gpu_type
+      - action: drop
+        regex: "0000:00:02.0"
+        sourceLabels:
+        - pci_bdf
+{{- end }}

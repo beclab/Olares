@@ -65,7 +65,7 @@ ComfyUI 无法启动、意外停止或行为异常。
 
 1. 检查你的系统资源。如果你的 CPU 或内存使用率已满，请停止其他资源密集型应用。
 2. 如果系统资源看起来正常，前往**设置** > **AI 算力**检查你的 GPU 模式：
-   - 如果你使用的是**容量分片**，需确保 ComfyUI 已绑定到 GPU 并有足够的显存分配。
+   - 如果你使用的是**容量切分**，需确保 ComfyUI 已绑定到 GPU 并有足够的显存分配。
    - 如果你使用的是**独占分配**，需确保独占应用设置为 ComfyUI。
 3. 等待片刻，然后再次尝试启动 ComfyUI。
 
@@ -234,7 +234,7 @@ Olares One 配备的 CPU 默认最大频率为 5.4 GHz。使用**限制 CPU 频�
 4. 在 ComfyUI 中运行任务。
 5. 工作负载完成后，关闭**限制 CPU 频率**。
 
-更多信息请参阅[限制 CPU 频率](/zh/manual/olares/settings/my-olares#limit-cpu-frequency)。
+更多信息请参阅[限制 CPU 频率](/zh/one/hardware-settings#限制-cpu-频率)。
 
 ### Olares OS 1.12.5 或更早版本
 

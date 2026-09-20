@@ -1,0 +1,22 @@
+# Strip client-supplied platform identity headers before jwt_authn, then
+# SecurityPolicy claimToHeaders re-injects verified values (L4-equivalent
+# clear-then-inject on the Shared east-west path through app-gateway).
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: app-gateway-strip-identity-headers
+  namespace: os-gateway
+  labels:
+    applications.app.bytetrade.io/author: bytetrade.io
+    app.kubernetes.io/name: app-gateway
+    app.kubernetes.io/component: client-traffic-policy
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: app-gateway
+  headers:
+    earlyRequestHeaders:
+      remove:
+        - x-bfl-user
+        - x-caller-appid

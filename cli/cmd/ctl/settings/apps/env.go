@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/url"
 	"os"
+	"sort"
 	"strings"
 	"text/tabwriter"
 
@@ -22,17 +23,12 @@ import (
 //	GET /api/env/apps/{appName}/env             -> BaseEnv[] (BFL envelope)
 //	PUT /api/env/apps/{appName}/env  body: UpdateEnvItem[]
 //
-// UpdateEnvItem is just `{envName, value}` — the SPA strips the
-// definition fields and sends back only the changed values, all in one
-// PUT (the upstream replaces the entire vector each call). To match
-// that semantic safely from the CLI we:
-//
-//   - fetch the current env first with the same GET,
-//   - merge user-supplied --var KEY=VALUE pairs on top, and
-//   - PUT the merged set.
-//
-// Without the read-modify-write merge, a CLI user setting one variable
-// would clobber every other variable the SPA had set previously.
+// UpdateEnvItem is just `{envName, value}`. The upstream patches the
+// entries it finds by name and leaves the rest of the vector untouched,
+// so the PUT carries only what the caller asked to change. Sending the
+// whole vector back is worse than redundant: the handler rejects the
+// entire request if any named variable is not editable, so a full-vector
+// PUT fails on every app that declares a read-only variable.
 
 func NewEnvCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
@@ -152,11 +148,15 @@ func newEnvSetCommand(f *cmdutil.Factory) *cobra.Command {
 		Short: "update one or more environment variables on an installed app",
 		Long: `Update one or more environment variables on an installed app.
 
-The CLI does a read-modify-write to avoid clobbering values it doesn't
-know about: it fetches the current vector, overlays the --var pairs you
-pass, and PUTs the merged result back. Only variables the SPA flagged
-as editable: true can be updated; the upstream rejects writes to system
-fields with a 400.
+Only the variables you name are sent. The upstream patches the matching
+entries and leaves the rest of the vector alone, so there is nothing to
+merge client-side.
+
+Two upstream rules to know:
+  - only variables the app declares as editable can be written; naming a
+    read-only one fails the whole request with a 400
+  - a name the app does not declare is ignored rather than created, so
+    this command reports which of your keys actually landed
 
 Examples:
   olares-cli settings apps env set my-app \
@@ -194,32 +194,69 @@ func runAppEnvSet(ctx context.Context, f *cmdutil.Factory, appName string, vars 
 	if err != nil {
 		return err
 	}
-	current, err := fetchAppEnv(ctx, pc.doer, appName)
-	if err != nil {
-		return err
-	}
-	merged := mergeEnvUpdates(current, updates)
-	body := make([]map[string]string, 0, len(merged))
-	for _, e := range merged {
-		body = append(body, map[string]string{"envName": e.envName, "value": e.value})
-	}
+	return runAppEnvSetWithDoer(ctx, pc.doer, appName, updates)
+}
+
+// runAppEnvSetWithDoer is the wire-level core of `apps env set`, split
+// out so tests can assert the request shape without a live cluster.
+func runAppEnvSetWithDoer(ctx context.Context, d Doer, appName string, updates map[string]string) error {
+	body := envUpdateBody(updates)
 	path := "/api/env/apps/" + url.PathEscape(appName) + "/env"
-	if err := doMutateEnvelope(ctx, pc.doer, "PUT", path, body, nil); err != nil {
+	var after []baseEnv
+	if err := doMutateEnvelope(ctx, d, "PUT", path, body, &after); err != nil {
 		return err
 	}
-	keys := make([]string, 0, len(updates))
-	for k := range updates {
-		keys = append(keys, k)
+	applied, ignored := splitAppliedEnvKeys(updates, after)
+	if len(applied) > 0 {
+		fmt.Printf("Updated %d environment variable(s) on %q: %s\n", len(applied), appName, strings.Join(applied, ", "))
 	}
-	fmt.Printf("Updated %d environment variable(s) on %q: %s\n", len(updates), appName, strings.Join(keys, ", "))
+	if len(ignored) > 0 {
+		return fmt.Errorf("%q does not declare %s, so %s ignored (this app's variables come from its chart, they cannot be created here)",
+			appName, strings.Join(ignored, ", "), plural(len(ignored), "it was", "they were"))
+	}
 	return nil
 }
 
-// envPair is the wire shape we emit on PUT — matches UpdateEnvItem in
-// constant/index.ts.
-type envPair struct {
-	envName string
-	value   string
+// envUpdateBody emits UpdateEnvItem[] (constant/index.ts) sorted by name
+// so a given set of updates always produces the same request.
+func envUpdateBody(updates map[string]string) []map[string]string {
+	names := make([]string, 0, len(updates))
+	for name := range updates {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	body := make([]map[string]string, 0, len(names))
+	for _, name := range names {
+		body = append(body, map[string]string{"envName": name, "value": updates[name]})
+	}
+	return body
+}
+
+// splitAppliedEnvKeys sorts the requested names into those the app
+// declares (the upstream echoes its full vector back) and those it does
+// not, which the upstream drops without saying so.
+func splitAppliedEnvKeys(updates map[string]string, after []baseEnv) (applied, ignored []string) {
+	declared := make(map[string]bool, len(after))
+	for _, e := range after {
+		declared[e.EnvName] = true
+	}
+	for name := range updates {
+		if declared[name] {
+			applied = append(applied, name)
+		} else {
+			ignored = append(ignored, name)
+		}
+	}
+	sort.Strings(applied)
+	sort.Strings(ignored)
+	return applied, ignored
+}
+
+func plural(n int, one, many string) string {
+	if n == 1 {
+		return one
+	}
+	return many
 }
 
 // parseVarFlags splits "KEY=VALUE" inputs into a map. Values may contain
@@ -239,27 +276,4 @@ func parseVarFlags(raw []string) (map[string]string, error) {
 		out[key] = val
 	}
 	return out, nil
-}
-
-// mergeEnvUpdates takes the upstream's current BaseEnv vector, overlays
-// the user's KEY=VALUE updates, and returns the full vector to PUT.
-// New keys (not in `current`) are appended at the end so the SPA's
-// stable order survives a CLI mutation.
-func mergeEnvUpdates(current []baseEnv, updates map[string]string) []envPair {
-	out := make([]envPair, 0, len(current)+len(updates))
-	seen := make(map[string]bool, len(current))
-	for _, e := range current {
-		v := e.Value
-		if up, ok := updates[e.EnvName]; ok {
-			v = up
-		}
-		out = append(out, envPair{envName: e.EnvName, value: v})
-		seen[e.EnvName] = true
-	}
-	for k, v := range updates {
-		if !seen[k] {
-			out = append(out, envPair{envName: k, value: v})
-		}
-	}
-	return out
 }

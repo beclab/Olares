@@ -124,6 +124,10 @@ func (b *handlerBuilder) Build() (*Handler, error) {
 	if err != nil {
 		return nil, err
 	}
+	err = wh.CreateOrUpdateCliCredentialMutatingWebhook()
+	if err != nil {
+		return nil, err
+	}
 	err = wh.CreateOrUpdateAppLabelMutatingWebhook()
 	if err != nil {
 		return nil, err
@@ -145,6 +149,10 @@ func (b *handlerBuilder) Build() (*Handler, error) {
 		return nil, err
 	}
 	err = wh.CreateOrUpdateMacvlanInitMutatingWebhook()
+	if err != nil {
+		return nil, err
+	}
+	err = wh.CreateOrUpdatePodArchNodeSelectorMutatingWebhook()
 	if err != nil {
 		return nil, err
 	}

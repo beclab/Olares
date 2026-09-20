@@ -7,18 +7,40 @@ head:
 ---
 # Mount and use cloud storage
 
-You can easily mount a cloud storage through the **Integration** function in Olares, and access and manage your cloud files directly in the **Files** application.
+You can mount cloud storage services such as Google Drive, Dropbox, AWS S3, and Tencent Cloud COS, and access your cloud files directly in the Files app.
 
 ![Cloud storage](/images/manual/olares/files-cloud.png)
 
-## Mount a cloud storage
+## Connect a cloud storage service
 
-To mount a cloud storage, connect to it in **Integrations** in LarePass or Olares Settings:
+Cloud storage is connected through **Integrations**, either in the LarePass mobile app or in Olares Settings. The steps depend on the service type.
 
-* **OAuth-based storage services**: Google Drive and Dropbox. Connect via [**LarePass** app](../../larepass/integrations.md#add-a-cloud-drive-via-oauth).
-* **API credential-based services**: AWS S3 or Tencent Cloud Object Storage (COS); Connect via [LarePass app](../../larepass/integrations.md#add-a-cloud-storage-using-api-keys) or [Olares Settings](../settings/integrations.md#add-cloud-object-storage-via-api-keys).
+### Connect via OAuth (Google Drive, Dropbox)
 
-Once connected, the cloud storage will be automatically mounted under **Cloud Drive** in **Files**.
+OAuth-based services are authorized in the LarePass mobile app:
+
+1. Open LarePass on your mobile device.
+2. Tap **Settings** > **LarePass settings** > **Integration**, then tap <i class="material-symbols-outlined">add</i> in the top-right corner.
+3. Select **Google Drive** or **Dropbox**.
+4. Follow the login prompts to authorize your account.
+
+### Connect via API keys (AWS S3, Tencent Cloud COS)
+
+Services like AWS S3 and Tencent Cloud COS are configured with API keys (Access Key & Secret Key) in Olares Settings:
+
+1. Open **Settings** from the Dock or Launcher, and go to **Integrations** > **Link your accounts and data**.
+2. Click **+ Add Account** in the top-right corner.
+3. Select **AWS S3** or **Tencent COS**, then click **Confirm**.
+4. In the mount dialog, fill in the Access Key, Secret Key, Region, and Bucket name.
+5. Click **Next**. You will see a success message if the credentials are valid.
+
+You can also add these services in LarePass: tap **Settings** > **LarePass settings** > **Integration** > <i class="material-symbols-outlined">add</i>, select the service, and enter your credentials.
+
+:::tip Integrations that require LarePass
+OAuth-based integrations and **Olares Space** connections must be completed in the **LarePass** app.
+:::
+
+Once connected, the cloud storage appears under **Cloud Drive** in Files.
 
 ## Access a cloud storage
 
@@ -32,7 +54,7 @@ Changes made in the Files app will sync with your remote storage provider.
 
 ## Unmount a cloud storage
 
-You can unmount a cloud storage by removing the corresponding integration:
+You unmount a cloud storage by removing its integration:
 
-* [Remove integration in LarePass](../../larepass/integrations.md#disconnect-integrations)
-* [Remove integration in Olares Settings](../settings/integrations.md#view-and-manage-existing-integrations)
+* **In LarePass**: Go to **Settings** > **LarePass settings** > **Integration**, tap the integration, tap <i class="material-symbols-outlined">more_horiz</i>, and tap **Delete**.
+* **In Olares Settings**: Go to **Integrations** > **Link your accounts and data**, click the integration card, and click **Delete** on the **Account settings** page.

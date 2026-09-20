@@ -35,13 +35,13 @@ NVIDIA DGX Spark is a compact AI development platform featuring a high-performan
 - [**One-line script**](install-spark-script.md) (Recommended): Quick install via command line on DGX Spark.
 - [**ISO image**](install-spark-iso.md): Install Olares using the official ISO image for DGX Spark.
 
-### Alternative installation methods
+<!-- ### Alternative installation methods
 
 These methods are suitable for development, testing, or lightweight environments. 
 
 #### Windows
 - [**One-line script**](install-windows-script.md): Install Olares in Windows Subsystem for Linux 2 (WSL 2).
-<!--  [**Docker image**](install-windows-docker.md): Run Olares in Docker with WSL 2 integration. -->
+[**Docker image**](install-windows-docker.md): Run Olares in Docker with WSL 2 integration.
 
 #### macOS
 - [**One-line script**](install-mac-script.md): Install Olares in a containerized environment via MiniKube.
@@ -53,4 +53,4 @@ These methods are suitable for development, testing, or lightweight environments
 - [**LXC container**](install-lxc.md): Deploy Olares in Proxmox VE using Linux containers (LXC).
 
 #### Raspberry Pi (ARM)
-- [**One-line script**](install-raspberry-pi.md): Install Olares on ARM-based Raspberry Pi devices.
+- [**One-line script**](install-raspberry-pi.md): Install Olares on ARM-based Raspberry Pi devices. -->

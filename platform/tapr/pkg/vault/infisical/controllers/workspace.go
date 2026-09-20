@@ -164,6 +164,15 @@ func (w *workspaceClient) DeleteWorkspace(token, workspaceId string) error {
 
 }
 
+// IsNotFound reports whether err means the workspace simply is not there yet,
+// as opposed to a failure to find out.
+//
+// A user's workspace is created lazily, on their first secret write, so every
+// user who has never written one reads back as not-found. That is the ordinary
+// state of a fresh account, not a fault: read paths should answer with an empty
+// result and write paths should create the workspace, which is what
+// CreateSecret does. Reporting it as a server error instead pushes every
+// consumer into matching on the message text to recover.
 func (w *workspaceClient) IsNotFound(err error) bool {
 	return strings.HasPrefix(err.Error(), "not found")
 }

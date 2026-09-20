@@ -17,6 +17,7 @@ import (
 	"k8s.io/klog"
 
 	bflconst "bytetrade.io/web3os/bfl/pkg/constants"
+	"github.com/beclab/Olares/cli/pkg/systemcomponents"
 	"github.com/beclab/Olares/daemon/pkg/commands"
 	"github.com/beclab/Olares/daemon/pkg/nets"
 	"github.com/joho/godotenv"
@@ -284,33 +285,28 @@ func IsTerminusInitializing(ctx context.Context) (bool, error) {
 	return status != string(bflconst.Completed), nil
 }
 
-// IsTerminusRunning reports whether all key pods are ready. The client argument
-// is retained for signature compatibility; pod reads now go through the shared
-// informer cache.
+// IsTerminusRunning reports whether every Olares system component is ready,
+// comparing the ready replicas of their Deployments, StatefulSets and DaemonSets
+// against the desired ones. The client argument is retained for signature
+// compatibility; reads go through the shared informer caches.
+//
+// A component that is merely unready yields (false, nil). An error is only
+// returned when the cluster cannot be read, which the caller treats as a
+// harder failure than a component still coming up.
 func IsTerminusRunning(ctx context.Context, client kubernetes.Interface) (bool, error) {
-	pods, err := ListPods(ctx)
-	if err != nil {
-		klog.Error("list pods error, ", err)
-		return false, err
+	err := CheckSystemComponents(ctx)
+	if err == nil {
+		return true, nil
 	}
 
-	for _, pod := range pods {
-		if isKeyPod(pod) {
-			switch pod.Status.Phase {
-			case corev1.PodRunning:
-				if !isPodReady(pod) {
-					return false, nil
-				}
-				continue
-			case corev1.PodSucceeded:
-				continue
-			default:
-				return false, nil
-			}
-		}
+	var notReady *systemcomponents.NotReadyError
+	if errors.As(err, &notReady) {
+		klog.Info("olares is not fully up: ", notReady)
+		return false, nil
 	}
 
-	return true, nil
+	klog.Error("check olares system components error, ", err)
+	return false, err
 }
 
 func IsIpChanged(ctx context.Context, installed bool) bool {
@@ -557,15 +553,6 @@ func ListUsers(ctx context.Context, filters ...Filter) ([]*unstructured.Unstruct
 	}
 
 	return userList, nil
-}
-
-func isKeyPod(pod *corev1.Pod) bool {
-	return strings.HasPrefix(pod.Namespace, "user-space") ||
-		strings.HasPrefix(pod.Namespace, "user-system") ||
-		pod.Namespace == "os-framework" ||
-		pod.Namespace == "os-network" ||
-		pod.Namespace == "os-platform" ||
-		pod.Namespace == "os-gpu"
 }
 
 func GetTerminusInfo(ctx context.Context, client dynamic.Interface) (*sysv1.Terminus, error) {
@@ -1114,47 +1101,6 @@ func GetUserRole(ctx context.Context, username string, client dynamic.Interface)
 	}
 
 	return role, nil
-}
-
-func isPodReady(pod *corev1.Pod) bool {
-	hasReadyCondition := false
-	for _, cond := range pod.Status.Conditions {
-		// K8s 1.28+
-		if cond.Type == "PodReadyToStartContainers" && cond.Status != corev1.ConditionTrue {
-			return false
-		}
-		if cond.Type == corev1.PodReady {
-			if cond.Status == corev1.ConditionTrue {
-				hasReadyCondition = true
-			}
-		}
-	}
-
-	if !hasReadyCondition {
-		return false
-	}
-
-	if len(pod.Status.ContainerStatuses) == 0 {
-		return false
-	}
-
-	for _, containerStatus := range pod.Status.ContainerStatuses {
-		if containerStatus.State.Running == nil {
-			if containerStatus.State.Waiting != nil {
-				return false
-			}
-			return false
-		}
-
-		if !containerStatus.Ready {
-			return false
-		}
-
-		if containerStatus.State.Running.StartedAt.IsZero() {
-			return false
-		}
-	}
-	return true
 }
 
 func IsMasterNode(n *corev1.Node) bool {

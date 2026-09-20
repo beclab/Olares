@@ -132,4 +132,4 @@ olares-cli dashboard overview ranking --watch -o json \
 
 ## Common errors
 
-The watch-knob, window mutual-exclusion, and iteration-failure exit errors are in the consolidated [Common errors](../SKILL.md#common-errors) table in the parent skill (with the exit-code semantics described above).
+For watch/window selection and repeated iteration failures, use the parent skill's [watch and diagnosis decisions](../SKILL.md#watch-and-diagnosis) together with the exit-code semantics above.

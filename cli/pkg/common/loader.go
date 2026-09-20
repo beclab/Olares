@@ -84,10 +84,6 @@ func (d *DefaultLoader) Load() (*kubekeyapiv1alpha2.Cluster, error) {
 		}
 	}
 
-	if err := localSSH(osType); err != nil {
-		return nil, err
-	}
-
 	ip := d.arg.SystemInfo.GetLocalIp()
 	hostname := d.arg.SystemInfo.GetHostname()
 
@@ -169,15 +165,12 @@ func normalizedBuildVersion(version string) string {
 }
 
 // Load() runs once per runtime, and a single user-facing command can build
-// several runtimes -- `node join` drives six pipelines in a row. These two steps
-// are idempotent and their outcome cannot change within one process, so they are
-// memoized instead of re-running (and, for localSSH, rewriting authorized_keys)
-// on every one of them.
+// several runtimes -- `node join` drives six pipelines in a row. Installing sudo
+// is idempotent and its outcome cannot change within one process, so it is
+// memoized instead of re-running on every one of them.
 var (
-	sudoOnce    sync.Once
-	sudoErr     error
-	localSSHDo  sync.Once
-	localSSHErr error
+	sudoOnce sync.Once
+	sudoErr  error
 )
 
 func installSUDOIfMissing() error {
@@ -192,22 +185,6 @@ func installSUDOIfMissing() error {
 		}
 	})
 	return sudoErr
-}
-
-func localSSH(osType string) error {
-	if osType == Windows {
-		return nil
-	}
-	localSSHDo.Do(func() {
-		if output, err := exec.Command("/bin/sh", "-c", "if [ ! -f \"$HOME/.ssh/id_rsa\" ]; then mkdir -p \"$HOME/.ssh\" && ssh-keygen -t rsa-sha2-512 -P \"\" -f $HOME/.ssh/id_rsa && ls $HOME/.ssh;fi;").CombinedOutput(); err != nil {
-			localSSHErr = errors.Errorf("Failed to generate public key: %v\n%s", err, string(output))
-			return
-		}
-		if output, err := exec.Command("/bin/sh", "-c", "sudo -E /bin/bash -c 'echo \"\n$(cat $HOME/.ssh/id_rsa.pub)\" >> $HOME/.ssh/authorized_keys' && awk ' !x[$0]++{print > \"'$HOME'/.ssh/authorized_keys.tmp\"}' $HOME/.ssh/authorized_keys && mv $HOME/.ssh/authorized_keys.tmp $HOME/.ssh/authorized_keys").CombinedOutput(); err != nil {
-			localSSHErr = errors.Errorf("Failed to copy public key to authorized_keys: %v\n%s", err, string(output))
-		}
-	})
-	return localSSHErr
 }
 
 // defaultCommonClusterConfig kubernetes version, registry mirrors, container manager, etc.

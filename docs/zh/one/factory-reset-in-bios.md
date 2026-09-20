@@ -8,7 +8,7 @@ head:
 ---
 
 :::warning
-当前文档由 AI 翻译生成，若发现术语或表述不准确，请查看[英文原文](../../one/factory-reset-in-bios.md)。
+本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../one/factory-reset-in-bios.md)为准。
 :::
 
 # 恢复 BIOS 默认设置 <Badge type="tip" text="10 min" />
@@ -41,4 +41,3 @@ head:
 ## 步骤 2：通过 LarePass 完成激活
 
 然后你可以再次通过 LarePass 激活 Olares One。详细说明请参阅[首次启动](first-boot.md)。
-

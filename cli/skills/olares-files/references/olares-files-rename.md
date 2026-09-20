@@ -14,9 +14,9 @@ Rename a remote entry in place — same parent directory, new basename. Synchron
 
 ## Safety constraints
 
-- **Destructive (mutates the server) — confirm intent with the user.**
+- The requested rename authorises the named path and new basename. Ask again when either is ambiguous or the action expands beyond that target.
 - **`<new-name>` is a BARE basename** — no `/` or `\`. Empty, `.`, `..` are rejected.
-- **Protected names** ([quirk #4](../SKILL.md#4-the-system-managed-drivehome-directories-are-protected)) refuse to be renamed at the first level under `drive/Home/`; deeper paths are fine.
+- **Protected names** ([backend quirks](../SKILL.md#backend-quirks-that-change-decisions)) refuse to be renamed at the first level under `drive/Home/`; deeper paths are fine.
 - **Volume roots** (`drive/Home/`, `sync/<repo>/`, ...) are refused.
 - **`.` or `..` segments ANYWHERE in `<remote-path>`** are rejected (path-traversal blacklist on raw input).
 

@@ -1,6 +1,6 @@
 ---
 name: olares-knowledge
-version: 1.0.1
+version: 0.0.0-cli.0
 description: "Olares Knowledge via olares-cli knowledge — manage download-server URL, yt-dlp, aria2, torrent, HuggingFace, and Wise download tasks: create/list/inspect/pause/resume/cancel/remove, prefs, sync, and file probes. Requires Olares 1.12.7+. Not for installer download or copying a Drive file with files download."
 compatibility: Requires olares-cli on PATH, active Olares profile, Olares >= 1.12.7
 metadata:
@@ -12,67 +12,57 @@ metadata:
 
 # knowledge
 
-**CRITICAL — before doing anything, load the `olares-shared` skill first (profile selection, login, token refresh, auth-error recovery). Flag reference: `olares-cli knowledge download <verb> --help`.**
+> **Shared front door:** load [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) for suite routing, active-profile selection, platform entry points, and the auth proceed/stop gate. Load its auth reference only when login, profile switching, token storage, or auth recovery is actually needed.
 
-> **Source of truth for flags is always `olares-cli knowledge download <verb> --help`.** This file only carries scope, edge path, version gate, and the error → fix matrix.
+Use `olares-cli knowledge download <verb> --help` for syntax.
 
 ## When to use
 
-- Manage download-server tasks via `knowledge download`: create a URL download, list / inspect progress, pause / resume / cancel / remove.
-- Probe a URL for provider + available yt-dlp qualities before create.
-- Read or set per-app default yt-dlp quality (`prefs`).
-- Keywords: knowledge download, download task, pause download, yt-dlp, aria2, huggingface download, wise download, download-server.
-
-> Anything outside this scope -> see the **Skill suite map** in [`../olares-shared/SKILL.md`](../olares-shared/SKILL.md) (already loaded as the suite prerequisite).
+- Create and manage URL, yt-dlp, aria2, torrent, HuggingFace, or Wise download-server tasks.
+- Inspect providers/qualities, synchronize task changes, manage torrent state, or probe/remove downloaded resources.
+- Read or change download preferences and download-server settings.
 
 > **Not** top-level `download` (installer packages: `download component` / `wizard` / `check`). **Not** `files download` (pull a Drive/Sync file) — that lives in [`olares-files`](../olares-files/SKILL.md).
 
-## Edge path & auth
-
-```text
-olares-cli knowledge download
-  → SettingsURL + "/download" + /api/...
-  → settings nginx → user-service DownloadController
-  → download provider → download-server
-```
-
-- Auth: profile access token (`X-Authorization`). The gateway injects `X-Bfl-User`; the CLI must not set it.
-- Response envelope is download-server's `{code, data|list|total|message}` (success `code` 200 or 0), not BFL's market envelope.
-- Default `--app` is `wise`.
-
 ## Version gate
 
-Requires **Olares >= 1.12.7** (settings `/download` edge + download provider). Below that, every verb fails closed before any HTTP call:
+All verbs require Olares 1.12.7+ because the Settings download edge and provider are both required. If the version cannot be established, follow the shared profile/auth gate before deciding that an upgrade is needed.
 
-```text
-`knowledge download` requires Olares >= 1.12.7 (settings /download edge + download provider), but this backend is …
-```
+## Fast paths
 
-If version detection fails, confirm the active profile is logged in and run `olares-cli profile list --refresh`. If the detected version is below 1.12.7, upgrade Olares.
+| Task | Read | First command |
+|---|---|---|
+| Download a URL and know when it lands | [creating a task](references/olares-knowledge-download-create.md) | `olares-cli knowledge download create <url> -o json`, then `download wait <id>` |
+| See what is downloading now | this file | `olares-cli knowledge download list -o json` |
+| Find out which qualities a link offers before taking one | [provider/quality inspection](references/olares-knowledge-download-inspect.md) | `olares-cli knowledge download inspect <url> -o json` |
+| Check whether something is already on disk | [URL vs resource-path decisions](references/olares-knowledge-download-files.md) | `olares-cli knowledge download file exists <path> -o json` |
 
 ## Verb index
 
-| Family | Verbs | Details |
+| Family | Verbs | Read when triggered |
 |---|---|---|
-| lifecycle | `create` / `list` / `info` / `pause` / `resume` / `cancel` / `remove` | [references/olares-knowledge-download-lifecycle.md](references/olares-knowledge-download-lifecycle.md) |
-| probe + prefs | `inspect` / `prefs get` / `prefs set` | [references/olares-knowledge-download-inspect.md](references/olares-knowledge-download-inspect.md) |
-| sync | `unfinished` / `sync` (`--since`/`--since-id` cursor, `--all` drain) | [references/olares-knowledge-download-sync.md](references/olares-knowledge-download-sync.md) |
-| torrent | `torrent inspect` / `stats` / `peers` / `files` / `seed stop\|resume` (+ `create --torrent` / `--select-files` / magnet) | [references/olares-knowledge-download-torrent.md](references/olares-knowledge-download-torrent.md) |
-| file tools | `file exists` (URL pre-check) / `file check` / `file remove` (resource path) | [references/olares-knowledge-download-files.md](references/olares-knowledge-download-files.md) |
-| settings | `settings get` / `settings set` (download-server global config) | [references/olares-knowledge-download-settings.md](references/olares-knowledge-download-settings.md) |
+| start one | `create`, `info`, `wait` | [create and follow a task](references/olares-knowledge-download-create.md) |
+| manage the ones that exist | `list`, `pause`, `resume`, `cancel`, `remove` | [listing, pausing and retiring tasks](references/olares-knowledge-download-manage.md) |
+| probe + prefs | `inspect`, `prefs get`, `prefs set` | [provider/quality inspection](references/olares-knowledge-download-inspect.md) |
+| sync | `unfinished`, `sync` | [cursor and drain semantics](references/olares-knowledge-download-sync.md) |
+| torrent | `torrent inspect`, `stats`, `peers`, `files`, `seed stop/resume`; torrent create | [torrent selection and seeding](references/olares-knowledge-download-torrent.md) |
+| file tools | `file exists`, `file remove` | [URL vs resource-path decisions](references/olares-knowledge-download-files.md) |
+| settings | `settings get`, `settings set` | [global download-server settings](references/olares-knowledge-download-settings.md) |
 
-> `cookies` is hidden: production integration-provider is read-only (`retrieve` only); `list` / `set` / `delete` / `health` 404 on a real cluster. See [references/olares-knowledge-download-cookies.md](references/olares-knowledge-download-cookies.md).
+## Task and asynchronous semantics
 
-Universal: `-o table|json`. Identity/cluster from the active profile only (`profile use` / `profile login`).
+- Create returns a server-side task id; command success does not mean bytes have finished downloading or moving. Take the id and poll `info <id>` every few seconds rather than blocking a turn on `create --wait`, which is there for scripts that want one call. Either way the status is the only terminality input: `waiting_to_move` / `moving` are still in progress, and `error` is a failure even when `will_auto_retry` says a server sweep may pick the row up again.
+- Create names the task itself, from the URL's inspect title. Leave `--name` off unless the user asked for a specific filename, and never build one out of a URL path — a name sent on create is pinned to the row for good. Magnet links, `--torrent` uploads and HuggingFace repos reject the flag outright: those names come from torrent metadata or the repo id.
+- Re-submitting the same URL always creates a **new** task (no identity dedup). Landing-name collisions are resolved with a `(n)` suffix; they do not reuse or block an existing row. Create sends `Idempotency-Key` only to collapse transport retries of one attempt — not URL dedup.
+- Pause only applies while `waiting` or `downloading` (otherwise 400). Resume, cancel, and remove return **409** while the task is in the yt-dlp mover phase (`waiting_to_move` / `moving`) — wait and retry; do not treat pause the same way.
+- Task ownership follows the active profile. Do not infer another user's task from an id or try alternate identities.
+- `inspect` is advisory: provider/quality probing may fail while a create still works. Report that uncertainty instead of declaring the URL undownloadable.
+- Sync cursors describe change observation, not task completion. Preserve the cursor when continuing an incremental sync.
 
-## Error → fix
+## Safety and escalation
 
-| Symptom | Fix |
-|---|---|
-| Backend version could not be determined | Confirm `profile login`, then run `olares-cli profile list --refresh` |
-| `requires Olares >= 1.12.7`, with a detected older version | Upgrade Olares; the Settings `/download` edge is not available on older releases |
-| `server rejected the access token` / 401 / 403 | `olares-cli profile login` (see olares-shared Auth-readiness gate) |
-| `task not found` on pause/info/remove | Wrong id, or task owned by another user (ownership is header-only) |
-| create / prefs `ytdlp_quality must be one of…` | Use `best`, `2160p`, `1080p`, `720p`, `480p`, `360p`, or `audio` |
-| inspect shows `Error:` / empty qualities | Advisory only — create may still work; check provider / yt-dlp install |
-| HTTP 409 on resume/cancel/remove | Task is mid-move (`waiting_to_move` / `moving`); retry after move finishes |
+- Confirm create, cancel, remove, seed stop/resume, file remove, preference writes, and global setting writes.
+- Before create, confirm destination/app, provider intent, torrent file selection, and whether an existing equivalent task should be reused. Use `list` / `info` to check; the CLI does **not** detect or block duplicates.
+- `file remove` takes a download-server resource path, not an arbitrary local filesystem path.
+- A URL that fails for a missing login is not a dead end: cookies live in [`olares-settings`](../olares-settings/SKILL.md) under `settings integration cookie`. The hand-off does need the user, though — the `cookies.txt` is their own browser export, so ask for it rather than hunting for a file. See [provider/quality inspection](references/olares-knowledge-download-inspect.md) for the signals and the full flow.
+- Stop on ambiguous URL/resource path, task owner, duplicate-task intent, torrent selection, or any credential request the cookie hand-off does not cover.

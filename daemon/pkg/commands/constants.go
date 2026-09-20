@@ -34,6 +34,11 @@ var (
 	REDIS_CONF             = OS_ROOT_DIR + "/data/redis/etc/redis.conf"
 	EXPORT_POD_LOGS_DIR    = "Home/pod_logs"
 
+	// CLUSTER_OPERATIONS_DIR holds one record per cluster-wide power
+	// operation. They are kept on disk because the thing they describe takes
+	// the machine that would otherwise remember them down.
+	CLUSTER_OPERATIONS_DIR = "cluster-operations"
+
 	ProgressNumFinished = 100
 )
 
@@ -55,6 +60,7 @@ func Init() {
 	PREPARE_LOCK = filepath.Join(baseDir, PREPARE_LOCK)
 	PREV_IP_TO_CHANGE_FILE = filepath.Join(baseDir, PREV_IP_TO_CHANGE_FILE)
 	PREV_IP_CHANGE_FAILED = filepath.Join(baseDir, PREV_IP_CHANGE_FAILED)
+	CLUSTER_OPERATIONS_DIR = filepath.Join(baseDir, CLUSTER_OPERATIONS_DIR)
 
 	COMMAND_BASE_DIR = filepath.Join(baseDir, "versions", "v"+INSTALLED_VERSION)
 	LOG_FILE = filepath.Join(COMMAND_BASE_DIR, "logs", LOG_FILE)
@@ -67,6 +73,7 @@ func Init() {
 	klog.Info("var COMMAND_BASE_DIR, ", COMMAND_BASE_DIR)
 	klog.Info("var LOG_FILE, ", LOG_FILE)
 	klog.Info("var MOUNT_BASE_DIR, ", MOUNT_BASE_DIR)
+	klog.Info("var CLUSTER_OPERATIONS_DIR, ", CLUSTER_OPERATIONS_DIR)
 }
 
 func mustEnv(env string) string {

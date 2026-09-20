@@ -48,10 +48,11 @@ func newPrefsSetCommand(f *cmdutil.Factory) *cobra.Command {
 		output  string
 	)
 	cmd := &cobra.Command{
-		Use:   "set",
-		Short: "set yt-dlp quality preference for an app",
-		Long:  `PUT /api/user/preferences. --quality must be one of: ` + ytdlpQualityValues + `.`,
-		Args:  cobra.NoArgs,
+		Use:     "set",
+		Short:   "set yt-dlp quality preference for an app",
+		Long:    `Set the default yt-dlp quality used when create does not specify --quality or --format-id. Allowed values: ` + ytdlpQualityValues + `.`,
+		Example: `  olares-cli knowledge download prefs set --app wise --quality 1080p`,
+		Args:    cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
 			return runPrefsSet(c.Context(), f, app, quality, output)
 		},
@@ -71,9 +72,9 @@ func runPrefsGet(ctx context.Context, f *cmdutil.Factory, app, outputRaw string)
 	if err != nil {
 		return err
 	}
-	app = strings.TrimSpace(app)
-	if app == "" {
-		app = defaultApp
+	app, err = validateApp(app)
+	if err != nil {
+		return err
 	}
 	pc, err := prepare(ctx, f)
 	if err != nil {
@@ -106,13 +107,13 @@ func runPrefsSet(ctx context.Context, f *cmdutil.Factory, app, quality, outputRa
 	if err != nil {
 		return err
 	}
-	app = strings.TrimSpace(app)
-	if app == "" {
-		app = defaultApp
+	app, err = validateApp(app)
+	if err != nil {
+		return err
 	}
 	quality = strings.TrimSpace(quality)
-	if quality == "" {
-		return fmt.Errorf("--quality is required")
+	if err := validateYTDLPQuality(quality, true); err != nil {
+		return err
 	}
 	pc, err := prepare(ctx, f)
 	if err != nil {

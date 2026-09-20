@@ -11,7 +11,6 @@ import (
 	"bytetrade.io/web3os/bfl/pkg/api/response"
 	v1alpha1client "bytetrade.io/web3os/bfl/pkg/client/clientset/v1alpha1"
 	"bytetrade.io/web3os/bfl/pkg/constants"
-	"bytetrade.io/web3os/bfl/pkg/utils"
 
 	appv1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	appclientset "github.com/beclab/api/pkg/generated/clientset/versioned"
@@ -75,20 +74,7 @@ func (h *Handler) handleGetHeadscaleSshAcl(req *restful.Request, resp *restful.R
 	}
 
 	// get headscale acl env
-	allowSSH := false
-	for _, acl := range app.Spec.TailScale.ACLs {
-		if utils.ListContains(acl.Dst, "*:22") && strings.ToLower(acl.Proto) == "tcp" {
-			allowSSH = true
-			break
-		}
-	}
-
-	for _, acl := range app.Spec.TailScaleACLs {
-		if utils.ListContains(acl.Dst, "*:22") && strings.ToLower(acl.Proto) == "tcp" {
-			allowSSH = true
-			break
-		}
-	}
+	allowSSH := hasTCPSSHACL(app.Spec.TailScale.ACLs) || hasTCPSSHACL(app.Spec.TailScaleACLs)
 
 	response.Success(resp, SshAcl{AllowSSH: allowSSH, State: AclStateApplied})
 }
@@ -99,15 +85,7 @@ func (h *Handler) handleDisableHeadscaleSshAcl(req *restful.Request, resp *restf
 		response.HandleError(resp, err)
 		return
 	}
-	acls := make([]appv1.ACL, 0)
-	for _, acl := range app.Spec.TailScale.ACLs {
-		if acl.Dst[0] == "*:22" {
-			continue
-		}
-		acls = append(acls, acl)
-	}
-
-	h.setHeadscaleAcl(req, resp, systemAppName, acls)
+	h.setHeadscaleAcl(req, resp, systemAppName, disableTCPSSHACL(app.Spec.TailScale.ACLs))
 }
 
 func (h *Handler) handleEnableHeadscaleSshAcl(req *restful.Request, resp *restful.Response) {
@@ -116,9 +94,7 @@ func (h *Handler) handleEnableHeadscaleSshAcl(req *restful.Request, resp *restfu
 		response.HandleError(resp, err)
 		return
 	}
-	acls := app.Spec.TailScale.ACLs
-	acls = append(acls, appv1.ACL{Proto: "tcp", Dst: []string{"*:22"}})
-	h.setHeadscaleAcl(req, resp, systemAppName, acls)
+	h.setHeadscaleAcl(req, resp, systemAppName, enableTCPSSHACL(app.Spec.TailScale.ACLs))
 }
 
 // app's acl

@@ -15,10 +15,10 @@ import (
 )
 
 const (
-	JWKSCAConfigMapName     = "caller-jwt-jwks-ca"
-	JWKSCAConfigMapDataKey  = "ca.crt"
+	JWKSCAConfigMapName      = "caller-jwt-jwks-ca"
+	JWKSCAConfigMapDataKey   = "ca.crt"
 	JWKSBackendTLSPolicyName = "caller-jwt-jwks"
-	jwksServicePortName     = "https"
+	jwksServicePortName      = "https"
 )
 
 var backendTLSPolicyGVK = schema.GroupVersionKind{

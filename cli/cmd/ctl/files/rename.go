@@ -228,7 +228,8 @@ func frontendPathToRenameTarget(raw string) (rename.Target, error) {
 // reformatRenameHTTPErr maps rename.HTTPError onto user-friendly
 // messages, mirroring the cp/rm/download reformatters. Status branches:
 //
-//   - 401/403: token rejected → suggest `profile login`. Same wording
+//   - 401: persistent authentication failure → suggest `profile login`.
+//   - 403: permission denial → suggest refreshing the current identity.
 //     as the other verbs so the user gets one consistent CTA.
 //   - 404: source not found → echo the path so the user can re-try
 //     against a corrected one.
@@ -255,14 +256,7 @@ func reformatRenameHTTPErr(err error, olaresID, src, dst string) error {
 	if errors.As(err, &hErr) {
 		switch hErr.Status {
 		case 401, 403:
-			if olaresID != "" {
-				return fmt.Errorf(
-					"server rejected the access token (HTTP %d); please run: olares-cli profile login --olares-id %s",
-					hErr.Status, olaresID)
-			}
-			return fmt.Errorf(
-				"server rejected the access token (HTTP %d); please re-run `olares-cli profile login`",
-				hErr.Status)
+			return credential.FormatHTTPAuthError(hErr.Status, nil, olaresID)
 		case 404:
 			return fmt.Errorf("rename %s: not found on the server (HTTP 404)", src)
 		case 409:

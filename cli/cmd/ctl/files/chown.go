@@ -70,7 +70,9 @@ var commonChownUIDPresets = []struct {
 //
 // Namespace gate (mirrors LarePass's `permissionInDriveType` =
 // [Drive, Data, Cache] in InfoDialog.vue): only `drive/Home`,
-// `drive/Data`, and `cache/<node>/...` are accepted on the CLI.
+// `drive/Data`, `drive/Common` and `cache/<node>/...` are accepted
+// on the CLI. `drive/Common` additionally goes through the
+// Olares >= 1.12.6 backend gate in common_gate.go.
 // Other namespaces (sync, external, every cloud account drive) hide
 // the Permission tab in the web app and the server-side behavior at
 // those paths is not part of this surface — we fail fast client-side
@@ -112,6 +114,8 @@ Supported namespaces (mirrors LarePass's ` + "`permissionInDriveType`" + `):
 
     drive/Home/<sub>           — the Home volume on the user's PVC
     drive/Data/<sub>           — the Data volume on the user's PVC
+    drive/Common/<sub>         — the cross-app common volume
+                                 (requires Olares >= 1.12.6)
     cache/<node>/<sub>         — the per-node Cache volume
 
 Other namespaces are intentionally rejected client-side:
@@ -129,7 +133,8 @@ Other namespaces are intentionally rejected client-side:
 
 Other refusals:
 
-  - The volume root (` + "`drive/Home/`" + `, ` + "`drive/Data/`" + `, ` + "`cache/<node>/`" + `):
+  - The volume root (` + "`drive/Home/`" + `, ` + "`drive/Data/`" + `,
+    ` + "`drive/Common/`" + `, ` + "`cache/<node>/`" + `):
     chowning an entire namespace root is almost never the user's
     intent and the blast radius is severe. Pick a one-level-deeper
     path with -r if you want to fan out.

@@ -30,6 +30,7 @@ rules:
       - "/app-store/api/v2/tasks/*"
       - "/app-store/api/v2/llm-providers"
       - "/app-store/api/v2/llm-providers/*"
+      - "/app-store/api/v2/installed-apps"
     verbs: ["*"]
 
 ---

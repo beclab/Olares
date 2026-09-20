@@ -14,23 +14,14 @@ olares-cli files ls sync/<repo_id>/
 olares-cli files ls awss3/<account>/<bucket>
 olares-cli files ls cache/<node>/
 olares-cli files ls external/<node>/           # virtual volume-listing layer (see SKILL.md quirk #3)
-olares-cli files ls drive/Home/Documents --json  # raw envelope, pretty-printed
+olares-cli files ls drive/Home/Documents -o json  # raw envelope, pretty-printed
 ```
 
 ## Output shape
 
 Default table: `MODE  SIZE  TYPE  MODIFIED  NAME`. Directories sort before files; directory names get a trailing `/`. Empty directories print `(empty)`.
 
-`--json` prints the raw JSON envelope, useful for scripting.
-
-## Envelope shapes (transparent to the user, matters when reading `--json`)
-
-| Namespace | Children field | Per-item size | `mode` / `modified` |
-|---|---|---|---|
-| `drive` / `sync` / `cache` / `external` / `share` | `items` | `size` (number) | numeric `mode`, RFC3339 `modified` |
-| `awss3` / `google` / `dropbox` / `tencent` | `data` | `fileSize` | empty strings; the table renders `d---------` / `----------` and `-` in MODE / MODIFIED |
-
-The cloud envelope ALSO omits the parent-level `numDirs` / `numFiles` / `modified` summary; the table header falls back to counting items so it stays informative.
+`-o json` prints the backend's own envelope, which is not the same shape on every namespace — `olares-cli files ls --help` spells out how the cloud drives differ. The table hides that difference, so code written against one namespace's JSON breaks on another.
 
 ## Agent notes
 

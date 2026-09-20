@@ -35,6 +35,7 @@ func newValidConfig() *AppConfiguration {
 			RequiredMemory: "128Mi",
 			LimitedMemory:  "256Mi",
 			RequiredDisk:   "1Gi",
+			SupportArch:    []string{"amd64"},
 		},
 		Options: Options{
 			Dependencies: []Dependency{{
@@ -1056,16 +1057,24 @@ func TestSpec_SupportArch_AcceptsKnownArches(t *testing.T) {
 	}
 }
 
-func TestSpec_SupportArch_EmptyIsAccepted(t *testing.T) {
+func TestSpec_SupportArch_RejectsEmpty(t *testing.T) {
 	c := newValidConfig()
 	c.Spec.SupportArch = nil
-	if err := ValidateAppConfiguration(c); err != nil {
-		t.Fatalf("empty supportArch must remain valid (no enum gate): %v", err)
+	err := ValidateAppConfiguration(c)
+	if err == nil {
+		t.Fatal("nil supportArch must be rejected")
+	}
+	if !strings.Contains(err.Error(), "spec.supportArch is required") {
+		t.Fatalf("error should mention required, got: %v", err)
 	}
 
 	c.Spec.SupportArch = []string{}
-	if err := ValidateAppConfiguration(c); err != nil {
-		t.Fatalf("zero-length supportArch slice must remain valid: %v", err)
+	err = ValidateAppConfiguration(c)
+	if err == nil {
+		t.Fatal("zero-length supportArch slice must be rejected")
+	}
+	if !strings.Contains(err.Error(), "spec.supportArch") {
+		t.Fatalf("error should mention spec.supportArch, got: %v", err)
 	}
 }
 

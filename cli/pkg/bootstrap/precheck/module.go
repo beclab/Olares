@@ -80,7 +80,7 @@ func (m *RunPrechecksModule) Init() {
 		new(RequiredPortsCheck),
 		new(ConflictingContainerdCheck),
 		new(NvidiaCardArchChecker),
-		new(NouveauChecker),
+		new(ConflictingGPUDriverChecker),
 		new(CudaChecker),
 		new(RocmChecker),
 	}
