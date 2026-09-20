@@ -11,6 +11,10 @@ head:
 
 This guide explains how to install Olares on a physical machine using the official ISO image.
 
+:::warning Installing on Olares One?
+This ISO is for self-hosted x86-64 hardware. For Olares One, follow the [Olares One ISO guide](/one/create-bootable-usb) and use the device-specific image to keep Olares One features available.
+:::
+
 ## Prerequisites
 
 - **Olares device**: A physical machine that meets the [Linux system requirements](install-olares.md#linux).

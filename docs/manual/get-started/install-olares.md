@@ -9,7 +9,9 @@ head:
 
 # Install Olares
 
-Choose the path that matches your device:
+Olares is open source and can be installed on hardware you already own. For self-hosting, you can start with a clean machine, install on an existing Linux system, or use Docker Compose. Olares One and NVIDIA DGX Spark provide device-specific setup options.
+
+Choose the section that matches your device:
 
 - **Your own device**: [Install Olares on Linux](#linux).
 - **Olares One**: [Set up or reinstall Olares One](#olares-one).

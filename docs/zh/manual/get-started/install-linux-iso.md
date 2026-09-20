@@ -11,6 +11,10 @@ head:
 
 本文介绍如何通过官方 ISO 镜像在物理机上安装 Olares 系统。
 
+:::warning 在 Olares One 上安装？
+此 ISO 仅适用于自托管 x86-64 硬件。如需在 Olares One 上重装系统，请参阅 [Olares One 专用 ISO 指南](/zh/one/create-bootable-usb)，使用专用镜像以保留 Olares One 的专属功能。
+:::
+
 ## 前提条件
 
 - **Olares 设备**：一台满足 [Linux 系统要求](install-olares.md#linux)的物理机。

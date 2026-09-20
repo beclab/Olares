@@ -9,7 +9,9 @@ head:
 
 # 安装 Olares
 
-根据你使用的设备选择设置路径：
+Olares 是开源系统，可以安装在你自己的硬件上。自托管时，可以在空白设备上全新安装、在现有 Linux 系统上安装，或使用 Docker Compose 部署。Olares One 和 NVIDIA DGX Spark 则提供针对设备的专用设置方式。
+
+根据你使用的设备选择对应章节：
 
 - **自有设备**：[在 Linux 上安装 Olares](#linux)。
 - **Olares One**：[设置或重装 Olares One](#olares-one)。
