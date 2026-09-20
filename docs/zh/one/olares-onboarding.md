@@ -94,4 +94,4 @@ Lares 是推荐入口，但不是使用 Olares CLI Agent Skills 的唯一方式�
 
 ## 资源
 
-- [安装与使用 Agent Skills](../developer/cli-agent-skills.md)：Olares CLI 技能包详情。
+- [Olares、Olares CLI 与 AI 智能体：关系解读](https://www.olares.com/blog/olares-cli-ai-agents-explained/)：Olares、Olares CLI 和 AI 智能体应用之间的关系。
