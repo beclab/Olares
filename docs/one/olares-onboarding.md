@@ -94,4 +94,4 @@ Lares is the recommended entry point, but it is not the only way to use Olares C
 
 ## Resources
 
-- [Olares, Olares CLI, and AI Agents: The Relationship Explained](https://www.olares.com/blog/olares-cli-ai-agents-explained/): How Olares, Olares CLI, and AI agent apps fit together.
+- [Olares, Olares CLI, and AI Agents: The Relationship Explained](https://www.olares.com/blog/olares-cli-ai-agents-explained): How Olares, Olares CLI, and AI agent apps fit together.
