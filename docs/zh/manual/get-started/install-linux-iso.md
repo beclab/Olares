@@ -26,7 +26,7 @@ head:
 
 ## 制作启动盘
 
-1. 下载[最新官方 Olares ISO 镜像](https://cdn.olares.cn/olares-v1.12.6-amd64.iso)。
+1. 下载[适用于自托管硬件的最新 Olares ISO 镜像](https://cdn.olares.cn/olares-v1.12.6-amd64.iso)。
 2. 下载并安装 [**Balena Etcher**](https://etcher.balena.io/) 工具。
 3. 将 U 盘插入电脑。
 4. 打开 Etcher，依次选择：
