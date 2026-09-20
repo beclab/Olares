@@ -20,7 +20,7 @@ head:
 
 在设备终端运行 Olares Space 中显示的命令，即可自动上传系统日志并创建工单。
 
-1. 在浏览器中打开 [Olares Space](https://space.olares.com/)，使用 LarePass 扫描二维码登录。
+1. 在浏览器中打开 [Olares Space](https://space.olares.com)，使用 LarePass 扫描二维码登录。
 2. 在左侧边栏中，选择**工单**，然后点击 <i class="material-symbols-outlined">terminal</i>。
 
    ![使用 Olares CLI 上传日志](/images/zh/manual/space/upload-log-cli.png#bordered)
@@ -49,7 +49,7 @@ head:
 
 通过网页表单提交新的支持请求。
 
-1. 在浏览器中打开 [Olares Space](https://space.olares.com/)，使用 LarePass 扫描二维码登录。
+1. 在浏览器中打开 [Olares Space](https://space.olares.com)，使用 LarePass 扫描二维码登录。
 2. 在左侧边栏中，选择**工单**，然后点击 **+ 新建工单**。
 3. 填写必要的问题详情，然后点击**新建工单**。
 

@@ -20,7 +20,7 @@ Olares OS v1.12.7 or later is required.
 
 Run the command shown in Olares Space on your device terminal to upload system logs and create a ticket automatically.
 
-1. Open [Olares Space](https://space.olares.com/) in your browser, and scan the QR code using LarePass to log in.
+1. Open [Olares Space](https://space.olares.com) in your browser, and scan the QR code using LarePass to log in.
 2. On the left sidebar, select **Tickets**, and then click <i class="material-symbols-outlined">terminal</i> .
 
    ![Upload logs with Olares CLI](/images/how-to/space/upload-log-cli.png#bordered)
@@ -49,7 +49,7 @@ Once submitted, you can track the ticket's progress, view replies, and communica
 
 Submit a new support request through the web form.
 
-1. Open [Olares Space](https://space.olares.com/) in your browser, and scan the QR code using LarePass to log in.
+1. Open [Olares Space](https://space.olares.com) in your browser, and scan the QR code using LarePass to log in.
 2. On the left sidebar, select **Tickets**, and then click **+ Create ticket**.
 3. Fill in the required issue details, and then click **Create ticket**.
 
