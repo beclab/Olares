@@ -92,6 +92,6 @@ Lares 会检查源应用、准备 Olares 应用 chart 并更新所需的清单�
 
 Lares 是推荐入口，但不是使用 Olares CLI Agent Skills 的唯一方式。你也可以在 Olares 上的其他智能体应用中使用同样的技能，或通过 Codex、Cursor 等本地智能体，用自然语言管理你的 Olares 设备。
 
-## 资源
+## 了解更多
 
 - [Olares、Olares CLI 与 AI 智能体：关系解读](https://www.olares.com/blog/olares-cli-ai-agents-explained)：Olares、Olares CLI 和 AI 智能体应用之间的关系。
