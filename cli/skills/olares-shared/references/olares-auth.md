@@ -50,9 +50,18 @@ Source the token from an environment variable or secret manager. Never paste it 
 | `expired` | Access token expiry is in the past | Proceed; the next command normally refreshes it |
 | `invalidated` | The server rejected the refresh grant | Stop and run `profile login` or `profile import` |
 | `never` | No token has been stored | Stop and run `profile login` or `profile import` |
+| `pending` | A platform-issued profile that has not exchanged its grant yet | Proceed; the next command exchanges it |
 | `unknown` / `logged-in (unparseable token)` | Token storage or JWT parsing could not establish status | Run the command; re-login if the typed auth failure persists |
 
-The `VERSION` column is the cached Olares backend version. `profile list --refresh-version` refreshes it. The leading `*` marks the selected profile.
+The `VERSION` column is the cached Olares backend version. `profile list --refresh-version` refreshes it. The leading `*` marks the selected profile. A `SOURCE` column appears only when some profile is platform-issued.
+
+## Platform-issued profiles
+
+An application that declares `permission.loginOlaresCLI` gets a credential mounted into its container, and the CLI turns that mount into a profile on its own. `profile list` marks it `platform(<app>)` in the `SOURCE` column.
+
+Such a profile is not the user's to manage: `profile login`, `profile import` and `profile remove` are all refused for it, because the platform holds the only copy of the grant and uninstalling the application is what revokes it. The recovery for a broken one is reinstalling or repairing that application.
+
+This also changes what "no profile is configured" means. Inside an application container it means the mount failed to become a profile, not that nobody has logged in, and the CLI says so. Reporting it as a login problem sends the user somewhere that cannot help.
 
 ## Re-authentication
 
