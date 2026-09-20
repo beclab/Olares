@@ -66,8 +66,8 @@ OpenCode 要代替你运行 Olares CLI Agent Skills，需要先用你的 Olares 
    *  laresprime@olares.com  laresprime@olares.com  logged-in  1.12.6
    ```
 
-   :::info 一次登录有效期 30 天
-   Olares CLI 会在后台自动刷新凭据，在此期间无需重新登录。30 天到期后，或 OpenCode 的应用数据被重置时，再运行一次 `olares-cli profile login` 即可。
+   :::info
+   一次登录可以让 OpenCode 保持认证状态最多 30 天。到期后需要重新登录一次。
    :::
 
 ## 步骤 2：让 Agent 执行任务

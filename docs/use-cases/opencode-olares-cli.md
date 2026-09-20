@@ -62,8 +62,8 @@ Before OpenCode can run Olares CLI Agent Skills on your behalf, authenticate the
    *  laresprime@olares.com  laresprime@olares.com  logged-in  1.12.6
    ```
 
-   :::info One login lasts 30 days
-   The Olares CLI refreshes its credentials in the background, so you don't need to log in again during this period. When the 30 days are up, or if OpenCode's app data is reset, run `olares-cli profile login` once more.
+   :::info
+   This login keeps OpenCode authenticated for up to 30 days. When it expires, you will need to log in once more.
    :::
 
 ## Step 2: Direct your agent to execute tasks
