@@ -495,7 +495,7 @@ const side = {
           link: "/manual/collect-diagnostic-information",
         },
         {
-          text: "Create and manage support tickets",
+          text: "Create and manage support tickets in Olares Space",
           link: "/manual/space/tickets",
         },
         {

@@ -495,7 +495,7 @@ const side = {
           link: "/zh/manual/collect-diagnostic-information",
         },
         {
-          text: "创建与管理支持工单",
+          text: "在 Olares Space 中创建和管理支持工单",
           link: "/zh/manual/space/tickets",
         },
         {
