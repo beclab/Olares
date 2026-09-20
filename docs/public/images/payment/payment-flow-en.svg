@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1210 330" font-family="system-ui,-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif">
+  <rect x="1" y="1" width="1208" height="328" rx="20" fill="#ffffff" stroke="#e3e6ee"/>
+  <text x="30" y="50" font-size="17" font-weight="650" fill="#1f2329">From sign-in to your first payment</text>
+  
+    <g>
+      <rect x="30" y="92" rx="16" width="212" height="176" fill="#f7f8fc" stroke="#e3e6ee"/>
+      <circle cx="60" cy="126" r="16" fill="#6366f1"/>
+      <text x="60" y="132" font-size="16" font-weight="600" fill="#fff" text-anchor="middle">1</text>
+      <text x="50" y="170" font-size="16" font-weight="650" fill="#1f2329">Sign in with</text><text x="50" y="190" font-size="16" font-weight="650" fill="#1f2329">LarePass</text>
+      <text x="50" y="216" font-size="14" fill="#5b6470">Scan the QR to create</text><text x="50" y="236" font-size="14" fill="#5b6470">your merchant account</text>
+    </g>
+    <g>
+      <rect x="270" y="92" rx="16" width="212" height="176" fill="#f7f8fc" stroke="#e3e6ee"/>
+      <circle cx="300" cy="126" r="16" fill="#6366f1"/>
+      <text x="300" y="132" font-size="16" font-weight="600" fill="#fff" text-anchor="middle">2</text>
+      <text x="290" y="180" font-size="16" font-weight="650" fill="#1f2329">Ready to receive</text>
+      <text x="290" y="216" font-size="14" fill="#5b6470">Your LarePass EVM</text><text x="290" y="236" font-size="14" fill="#5b6470">address on 7 chains</text>
+    </g>
+    <g>
+      <rect x="510" y="92" rx="16" width="212" height="176" fill="#f7f8fc" stroke="#e3e6ee"/>
+      <circle cx="540" cy="126" r="16" fill="#6366f1"/>
+      <text x="540" y="132" font-size="16" font-weight="600" fill="#fff" text-anchor="middle">3</text>
+      <text x="530" y="180" font-size="16" font-weight="650" fill="#1f2329">Create API keys</text>
+      <text x="530" y="216" font-size="14" fill="#5b6470">pk_live / sk_live</text><text x="530" y="236" font-size="14" fill="#5b6470">from the dashboard</text>
+    </g>
+    <g>
+      <rect x="750" y="92" rx="16" width="212" height="176" fill="#f7f8fc" stroke="#e3e6ee"/>
+      <circle cx="780" cy="126" r="16" fill="#6366f1"/>
+      <text x="780" y="132" font-size="16" font-weight="600" fill="#fff" text-anchor="middle">4</text>
+      <text x="770" y="180" font-size="16" font-weight="650" fill="#1f2329">Integrate the API</text>
+      <text x="770" y="216" font-size="14" fill="#5b6470">createPayment returns</text><text x="770" y="236" font-size="14" fill="#5b6470">the hosted checkout</text>
+    </g>
+    <g>
+      <rect x="990" y="92" rx="16" width="212" height="176" fill="#f7f8fc" stroke="#e3e6ee"/>
+      <circle cx="1020" cy="126" r="16" fill="#6366f1"/>
+      <text x="1020" y="132" font-size="16" font-weight="600" fill="#fff" text-anchor="middle">5</text>
+      <text x="1010" y="170" font-size="16" font-weight="650" fill="#1f2329">Buyer pays, you</text><text x="1010" y="190" font-size="16" font-weight="650" fill="#1f2329">get paid</text>
+      <text x="1010" y="216" font-size="14" fill="#5b6470">Any EVM wallet, funds</text><text x="1010" y="236" font-size="14" fill="#5b6470">settle to your wallet</text>
+    </g>
+  <path d="M244 180 l16 0 m-7 -8 l8 8 l-8 8" stroke="#6366f1" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M484 180 l16 0 m-7 -8 l8 8 l-8 8" stroke="#6366f1" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M724 180 l16 0 m-7 -8 l8 8 l-8 8" stroke="#6366f1" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M964 180 l16 0 m-7 -8 l8 8 l-8 8" stroke="#6366f1" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

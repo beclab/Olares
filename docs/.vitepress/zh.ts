@@ -379,6 +379,14 @@ const side = {
       ],
     },
     {
+      text: "Olares Payment",
+      link: "/zh/manual/payment/",
+      collapsed: false,
+      items: [
+        { text: "收款快速上手", link: "/zh/manual/payment/receive-payments" },
+      ],
+    },
+    {
       text: "系统",
       collapsed: false,
       items: [

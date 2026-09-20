@@ -18,6 +18,8 @@ import { redirects, temporaryRedirects } from './redirects';
 const clientRedirects: Record<string, string> = { ...redirects, ...temporaryRedirects };
 import AppLinkGlobal from './components/AppLinkGlobal.vue'
 import AppLinkCN from './components/AppLinkCN.vue'
+import TryIt from './components/TryIt.vue'
+import PaymentLlmsLink from './components/PaymentLlmsLink.vue'
 
 
 const LANGUAGE_LOCAL_KEY = "language";
@@ -34,6 +36,8 @@ enhanceApp({ app, router }: { app: App; router: Router }) {
     app.component("VersionSwitcher", VersionSwitcher);
     app.component('AppLinkGlobal', AppLinkGlobal)
     app.component('AppLinkCN', AppLinkCN)
+    app.component('TryIt', TryIt)
+    app.component('PaymentLlmsLink', PaymentLlmsLink)
 
       router.onBeforeRouteChange = (to: string) => {
           const path = to.replace(/\.html$/i, ''),

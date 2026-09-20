@@ -382,6 +382,27 @@ export const developerSidebar: DefaultTheme.Sidebar = {
       ],
     },
     {
+      text: "Payment",
+      link: "/developer/payment/",
+      collapsed: false,
+      items: [
+        { text: "Quickstart", link: "/developer/payment/quickstart" },
+        {
+          text: "API reference",
+          link: "/developer/payment/api-reference/",
+          collapsed: false,
+          items: [
+            { text: "Payments", link: "/developer/payment/api-reference/payments" },
+            { text: "Refunds", link: "/developer/payment/api-reference/refunds" },
+            { text: "Receiving", link: "/developer/payment/api-reference/receiving" },
+            { text: "Account & connectivity", link: "/developer/payment/api-reference/account" },
+          ],
+        },
+        { text: "Webhooks", link: "/developer/payment/webhooks" },
+        { text: "Build a payment store with an AI agent", link: "/developer/payment/ai-agents" },
+      ],
+    },
+    {
       text: "Contribute to Olares",
       items: [
         /*

@@ -379,6 +379,14 @@ const side = {
       ],
     },
     {
+      text: "Olares Payment",
+      link: "/manual/payment/",
+      collapsed: false,
+      items: [
+        { text: "Hands-on walkthrough", link: "/manual/payment/receive-payments" },
+      ],
+    },
+    {
       text: "System",
       collapsed: false,
       items: [
