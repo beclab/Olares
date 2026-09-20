@@ -5,9 +5,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, Steam Headless, 常见问题, Flatpak, apt, 黑神话悟空, DLSS 帧生成, 故障排查
-app_version: "1.0.46"
+app_version: "1.0.49"
 doc_version: "1.1"
-doc_updated: "2026-09-18"
+doc_updated: "2026-09-20"
 ---
 
 :::warning
@@ -35,25 +35,42 @@ doc_updated: "2026-09-18"
 
 ## 《黑神话：悟空》无法开启帧生成
 
-通过 Proton 运行《黑神话：悟空》时，游戏的图形设置中可能无法开启**帧生成**。Steam Headless 1.0.46 及更高版本内置了修复脚本，用于在游戏的 Proton 环境中配置 DirectX 12、DLSS 和硬件加速 GPU 调度。
+通过 Proton 运行《黑神话：悟空》时，游戏的图形设置中可能无法开启**帧生成**。最新版 Steam Headless 内置了修复脚本，用于在游戏的 Proton 环境中配置 DirectX 12、DLSS 和硬件加速 GPU 调度。
 
-1. 在 Steam 中安装《黑神话：悟空》。
-2. 启动一次游戏，让 Steam 创建 Proton 环境，然后完全退出游戏。
-3. 打开 Control Hub，前往 **Browse** > **steamheadless**。
-4. 展开 **Deployments** > **steamheadless**，然后打开正在运行的 Pod。
-5. 在 **Containers** 下，点击 **steam-headless** 旁边的 Terminal 图标。
-6. 执行以下命令：
+1. 打开应用市场，将 Steam Headless 更新到商店提供的最新版本。
+2. 在 Steam 游戏库中选择《黑神话：悟空》。等待下载和文件验证完成，确认页面显示 **Play**。
+3. 点击 **Play**，等待游戏进入主菜单，然后完全退出游戏。
+4. 打开 Control Hub，前往 **Browse** > **steamheadless**。
+5. 展开 **Deployments** > **steamheadless**，然后打开正在运行的 Pod。
+6. 在 **Containers** 下，点击 **steam-headless** 旁边的 Terminal 图标。
+7. 确认修复脚本已安装：
+
+   ```bash
+   command -v fix-wukong-frame-gen.sh
+   ```
+
+   命令应返回：
+
+   ```plain
+   /usr/bin/fix-wukong-frame-gen.sh
+   ```
+
+   如果命令没有返回任何内容，请返回应用市场，确认 Steam Headless 已更新到最新版本，再继续操作。
+
+8. 执行修复脚本：
 
    ```bash
    /usr/bin/fix-wukong-frame-gen.sh
    ```
 
-7. 确认命令返回以下信息：
+9. 确认输出包含以下信息：
 
    ```plain
+   [OK] GameUserSettings.ini: Dx12=1, Dlss=1
+   [OK] Wrote registry HwSchMode=2 into system.reg
    [OK] Done. Launch Black Myth: Wukong and enable Frame Generation in the graphics menu.
    ```
 
-8. 启动游戏，在图形设置中开启**帧生成**。
+10. 启动游戏，在图形设置中开启**帧生成**。
 
-重新安装或更新游戏后，需要再次执行该脚本。如果脚本提示游戏正在运行，请完全退出游戏后重试。
+重新安装或更新游戏后，需要再次执行该脚本。如果脚本提示游戏正在运行，请完全退出游戏后重试。不要依赖 Steam 启动参数 `-dx12`，Steam 客户端可能会将其清除。
