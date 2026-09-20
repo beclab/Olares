@@ -42,10 +42,6 @@ Open the **Checkouts** page to see the receive address and accepted coins on eac
 
 The **Share & collect** section at the bottom lets you create a **fixed-amount invoice** — a one-off payment link for a specific amount. Send it to your buyer to get paid.
 
-<video controls preload="none" poster="/images/payment/dashboard-intro-poster.png" style="width:100%;border-radius:8px"><source src="/videos/payment/dashboard-intro.en-voiced.mp4" type="video/mp4" /></video>
-
-*The dashboard in one minute: ready on first sign-in → add your own receive address from an empty checkout → watch funds show up.*
-
 ## Step 4. Watch funds arrive
 
 After the buyer pays and the transfer confirms on-chain, funds land directly in your receive address. The **Transactions** page and the home page's Recent transactions list every payment — buyer, amount, coin, and chain.

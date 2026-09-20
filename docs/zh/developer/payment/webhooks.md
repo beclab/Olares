@@ -1,5 +1,5 @@
 ---
-description: Olares Payment webhook——注册端点、验证签名、处理 payment.succeeded,并用免费公网 URL 测试投递。
+description: Olares Payment webhook——注册端点、验证签名、处理 payment.succeeded,并在商户后台测试与调试。
 head:
   - - meta
     - name: keywords
@@ -17,10 +17,6 @@ Webhook 把支付生命周期事件推送到你的服务器,让你无需轮询�
 3. 你的服务器验证签名并返回 `2xx`。其他任何结果都会触发重试。
 
 在商户后台新建的端点默认订阅 `payment.succeeded`、`refund.succeeded` 与 `refund.failed`。
-
-::: warning 退款上线之前创建的端点
-投递按端点订阅的事件过滤,而既有端点不会被自动补订阅——老端点会**悄无声息地收不到任何退款回调**。请打开 **Checkouts → Advanced settings → Webhooks**,给它补上这两个退款事件。
-:::
 
 ![注册端点](/images/payment/dashboard-advanced-settings.png#bordered)
 
@@ -188,22 +184,3 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 - **Test**——向你的端点发送一笔真实签名的 `endpoint.test` 投递。这是验证接收端的最快方式。你的处理器应对它返回 200(未知事件类型安全忽略即可)。
 - **Delivery log**——每次投递的记录,含状态、尝试次数与最后一次错误。
 - **Replay**——端点修复后,重发失败的投递。
-
-## 用免费公网 URL 做本地开发
-
-网关必须够得到你的服务器,所以本地开发需要一个公网 HTTPS 地址。按场景选——全部免费、无需注册:
-
-**场景 A:我只想看看 webhook 投递的内容长什么样。** 打开 [webhook.site](https://webhook.site)——它直接给你一个现成的公网 URL。把这个 URL 填进商户后台当 webhook 地址,之后每笔投递的内容都会实时显示在那个网页上。全程不需要你自己的服务器。
-
-**场景 B:我要本地运行的 demo 程序真正收到并处理 webhook。** 用隧道把本地服务映射成公网地址,再把这个地址登记到商户后台:
-
-| 工具 | 一条命令 | 说明 |
-|---|---|---|
-| **localtunnel**(推荐) | `npx localtunnel --port 3000` | 有 npm 就零安装、免注册。输出就一行:`your url is: https://….loca.lt` |
-| **Cloudflare Quick Tunnel** | `cloudflared tunnel --url http://localhost:3000` | 免费、免账号。URL 在输出的 "Visit it at" 框里;网络不稳老掉线就加 `--protocol http2`。也可走 npm:`npx cloudflared tunnel --url …` |
-
-免费隧道的域名是随机的,每次重启都会变——变了就到商户后台改 webhook 地址。
-
-::: warning 切勿用于生产
-这些免费 URL 仅供开发使用。生产环境的 webhook 请指向你自己的稳定 HTTPS 端点。
-:::

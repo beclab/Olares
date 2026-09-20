@@ -111,10 +111,6 @@ The dividing line is worth coding against: **`code < 1950` means the request rea
 | 1952 | `SDK_NETWORK_ERROR` | Network failure or non-JSON response |
 | 1953 | `SDK_RPC_ERROR` | Direct-RPC verification failed |
 
-::: warning Older integrations
-Before refunds shipped, the SDK-local codes were `1901` / `1902` / `1903` — numbers that now belong to refunds. Code still branching on them reads `1902` ambiguously: "refund exceeds the balance" (never retry) or "network failure" (safe to retry). Move that branching to `1951` / `1952` / `1953`.
-:::
-
 ## Client configuration
 
 ```ts

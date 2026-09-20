@@ -184,6 +184,6 @@ Instead of polling, register a [webhook](./webhooks) and fulfill on `payment.suc
 
 - [API reference](./api-reference/) — all methods, parameters, and error codes
 - [Refunds](./api-reference/refunds) — send a payment back along its original route
-- [Webhooks](./webhooks) — signatures, retries, and local testing with a free public URL
+- [Webhooks](./webhooks) — signatures, retries, and testing from the dashboard
 - [Build a payment store with an AI agent](./ai-agents) — hand this documentation to an agent and get a store installed on Olares OS
 - [Demo store example](https://github.com/beclab/olares-payment-developer-example) — a minimal reference integration you can clone

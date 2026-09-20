@@ -184,6 +184,6 @@ curl -X POST https://www.olares.com/payment/api/getPayment \
 
 - [API 参考](./api-reference/)——全部方法、参数和错误码
 - [退款](./api-reference/refunds)——把一笔支付沿原路退回买家
-- [Webhook](./webhooks)——签名、重试,以及用免费公网 URL 做本地测试
+- [Webhook](./webhooks)——签名、重试,以及在商户后台测试与调试
 - [用 AI 智能体构建](./ai-agents)——把本文档交给智能体,让它为你生成一个 demo 商店
 - [demo 商店示例仓库](https://github.com/beclab/olares-payment-developer-example)——一个可以直接克隆的最小集成示例

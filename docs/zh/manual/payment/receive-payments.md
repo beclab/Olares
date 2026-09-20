@@ -42,10 +42,6 @@ head:
 
 页面下方的 **Share & collect** 可以生成**定额账单**——为某一笔具体金额生成一次性收款链接,发给买家即可收款。
 
-<video controls preload="none" poster="/images/payment/dashboard-intro-poster.png" style="width:100%;border-radius:8px"><source src="/videos/payment/dashboard-intro.mp4" type="video/mp4" /></video>
-
-*一分钟看完商户后台:登录即收款就绪 → 从空收银台添加自己的收款地址 → 资金实时可见。*
-
 ## 第 4 步:查看到账
 
 买家付款并在链上确认后,款项直接进入你的收款地址。**Transactions** 页和首页的 Recent transactions 会列出每一笔到账,含买家、金额、币种与链。

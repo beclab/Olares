@@ -1,5 +1,5 @@
 ---
-description: Olares Payment webhooks — register an endpoint, verify signatures, handle payment.succeeded, and test deliveries with a free public URL.
+description: Olares Payment webhooks — register an endpoint, verify signatures, handle payment.succeeded, and test deliveries from the dashboard.
 head:
   - - meta
     - name: keywords
@@ -17,10 +17,6 @@ Webhooks push payment lifecycle events to your server, so you can fulfill orders
 3. Your server verifies the signature and answers `2xx`. Anything else triggers retries.
 
 Endpoints created in the dashboard subscribe to `payment.succeeded`, `refund.succeeded`, and `refund.failed` by default.
-
-::: warning Endpoints created before refunds shipped
-Delivery is filtered by the endpoint's subscribed events, and existing endpoints were never re-subscribed for you — an older endpoint silently receives no refund callbacks. Open **Checkouts → Advanced settings → Webhooks** and add the two refund events to it.
-:::
 
 ![Registering an endpoint](/images/payment/dashboard-advanced-settings.png#bordered)
 
@@ -188,22 +184,3 @@ After 8 total attempts the delivery is dead-lettered (`failed`). Handle events *
 - **Test** — sends a real signed `endpoint.test` delivery to your endpoint. The fastest way to validate your receiver. Your handler should answer 200 to it (unknown event types are safe to ignore).
 - **Delivery log** — every delivery with its status, attempts, and last error.
 - **Replay** — resend a failed delivery once your endpoint is fixed.
-
-## Local development with a free public URL
-
-The gateway must be able to reach your server, so local development needs a public HTTPS address. Pick by scenario — all free, no account required:
-
-**A. "I just want to see what a delivery looks like."** Open [webhook.site](https://webhook.site) — it hands you a ready-made public URL. Register that URL in the dashboard, and every delivery shows up on that page in your browser. No server of your own involved.
-
-**B. "I want my local demo to actually receive and handle webhooks."** Point a tunnel at your local server, then register the tunnel URL in the dashboard:
-
-| Tool | One command | Notes |
-|---|---|---|
-| **localtunnel** (recommended) | `npx localtunnel --port 3000` | Nothing to install beyond npm. Prints one clean line: `your url is: https://….loca.lt` |
-| **Cloudflare Quick Tunnel** | `cloudflared tunnel --url http://localhost:3000` | The URL is in the "Visit it at" box of the output; add `--protocol http2` if it keeps dropping on your network. Also on npm: `npx cloudflared tunnel --url …` |
-
-Free tunnel URLs are random and change on every restart — re-register the webhook in the dashboard when yours changes.
-
-::: warning Never in production
-These free URLs are for development. Point production webhooks at your own stable HTTPS endpoint.
-:::
