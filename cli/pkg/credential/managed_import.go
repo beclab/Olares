@@ -180,12 +180,18 @@ func (m *managedImporter) adoptTokenEntry(olaresID string, deadAt time.Time) {
 	}
 }
 
-// save degrades a write failure to a warning. config.json lands under a
-// directory the container may not be able to create — HOME is sometimes / and
-// sometimes read-only — and refusing to run every other verb over that would
-// be a far bigger failure than the managed profile being absent.
+// save degrades a write failure to a warning, because refusing to run every
+// other verb over it would be a far bigger failure than the managed profile
+// being absent.
+//
+// Reaching this now takes an explicit $OLARES_CLI_HOME pointing somewhere
+// unwritable: cachedir already moves off a platform cache directory it cannot
+// write to, so the container case that used to land here no longer does. The
+// warning names the consequence rather than just the errno, since what the
+// reader is about to see is a command claiming no profile is configured.
 func (m *managedImporter) save(cfg *cliconfig.MultiProfileConfig) {
 	if err := cliconfig.SaveMultiProfileConfig(cfg); err != nil {
-		fmt.Fprintf(m.stderr, "warning: cannot persist the platform-issued profile: %v\n", err)
+		fmt.Fprintf(m.stderr,
+			"warning: cannot persist the platform-issued profile, so later commands will not see it: %v\n", err)
 	}
 }
