@@ -9,66 +9,118 @@ head:
 
 # 用 AI 智能体搭建收款商店
 
-本文说明如何借助 AI 智能体构建接入 Olares Payment 的最小商店，并将其打包安装到 Olares OS。安装完成后，商店将获得可公开访问的域名，能够接收任意地方的下单。
+这篇文章带你用 AI 智能体做一个能收稳定币的在线商店，安装到 Olares OS 上，获得一个任何地方都能访问的固定域名。
 
-下文以 `olarespayment@olares.com` 为例演示。请将其替换为你自己的 Olares ID。
-
-:::warning
-本教程需要 Olares OS 1.12.5 或更高版本。
+::: warning 版本要求
+本教程需要 Olares OS 1.12.6 或更高版本。
 :::
 
-## 准备工作
+全文只有两个值需要确认，先记下来，后面照抄即可：
+
+| 值 | 本文示例 | 说明 |
+|---|---|---|
+| Olares ID 域名前缀 | `olarespayment` | 你的 Olares ID 中 @ 前的部分 |
+| 商店入口名称 | `demo` | 也是商店的子域名前缀，自取，但全文必须一致 |
+
+按示例，商店的最终地址就是 `https://demo.olarespayment.olares.com`。
+
+整件事只有三步，写代码、打包、安装交给智能体完成：
+
+| 步骤 | 你做什么 | 智能体做什么 | 做完后的状态 |
+|---|---|---|---|
+| 1. 准备 | 在 Olares Payment 商户后台创建 API 密钥，登记 webhook，把三个密钥写进 `.env` | — | 密钥全部就绪 |
+| 2. 开发部署 | 发一段提示词 | 写代码、打包、安装 Olares 应用 | 商店上线，有了固定域名 |
+| 3. 验收 | 打开商店下一单 | — | 订单变为“已支付” |
+
+webhook 为什么能在第 1 步就登记？Olares 应用的域名是确定的，由入口名和 Olares ID 拼成，入口名由你在提示词里指定。所以 `https://demo.olarespayment.olares.com/webhook` 这个地址在安装之前就是已知的。
+
+## 开始前检查
 
 - **准备好 AI 智能体**：任意 AI 编程智能体，如 Codex、Claude Code、Cursor、DeepSeek Harness。
 - **安装 olares-cli 和 Agent Skills**：见[安装 olares-cli](../cli-install) 和[安装与使用 Agent Skills](../cli-agent-skills)。
-- **用 olares-cli 登录 Olares OS**：步骤见[登录 Olares](../cli-log-in)。确保当前登录的是文中示例的 Olares ID，如图。
+- **用 olares-cli 登录 Olares OS**：步骤见[登录 Olares](../cli-log-in)。确保当前登录的是文中示例的 Olares ID。
 
-  ![olares-cli profile list 登录状态](/images/payment/cli-profile-list.png#bordered)
+  ```bash
+  olares-cli profile list
+  ```
 
-- **能把镜像推送到远程仓库**：本机已登录 Docker Hub 或其他镜像仓库，可将镜像推送到仓库，供 Olares 节点拉取。
-- **在 Olares Payment 后台创建 API key**：拿到 `pk_live_…`（API key）和 `sk_live_…`（API secret）。步骤见[快速开始](./quickstart)。Webhook 地址填 `https://demo.olarespayment.olares.com/webhook`，保存后会生成 `whsec_…`。
+  输出示例：
 
-  ![Olares Payment 后台中的 API key 与 webhook](/images/payment/dashboard-api-webhook.png#bordered)
+  ```text
+      NAME                      OLARES-ID                 STATUS
+  *   olarespayment@olares.com  olarespayment@olares.com  logged-in
+  ```
 
-  地址里的 `olarespayment.olares.com` 由 Olares ID `olarespayment@olares.com` 派生，把 `@` 换成 `.`。替换成你自己的 Olares ID。
+  开头的 `*` 标记当前 profile。
 
-- **准备工作目录**：建一个空目录。把上面的 API key、API secret 和 webhook secret 写进 `.env`：
+- **Docker**：本机已 `docker login` 到 Docker Hub 或其他公共镜像仓库，第 2 步推镜像要用。
+
+## 第 1 步：准备
+
+1. 用 LarePass 扫码登录 Olares Payment 商户后台，首次登录会自动创建商户账号。
+
+2. 进入 **Checkouts** 页面，打开默认商店的 **Advanced settings**，在 **API keys** 一栏创建密钥，拿到 `pk_live_…` 和 `sk_live_…`。（图文步骤见[快速开始](./quickstart)的前两步）
+
+3. 在同一面板的 **Webhooks** 一栏，webhook 地址填 `https://demo.olarespayment.olares.com/webhook`，保存，拿到签名密钥 `whsec_…`。
+
+   ![Olares Payment 商户后台中的 API 密钥与 webhook](/images/payment/dashboard-api-webhook.png#bordered)
+
+4. 建一个仓库，把三个密钥写进 `.env`：
+
+   ```bash
+   mkdir demo && cd demo
+   git init
+   echo ".env" >> .gitignore
+   ```
+
+   ```plain
+   # .env
+   PAYMENT_API_KEY=pk_live_…
+   PAYMENT_API_SECRET=sk_live_…
+   PAYMENT_WEBHOOK_SECRET=whsec_…
+   ```
+
+## 第 2 步：开发部署
+
+在仓库目录下启动智能体（`codex`、`claude`，或用 Cursor 打开该文件夹），发送下面这段提示词。整段只有 `demo` 一处需要改，换成你的入口名，和第 1 步 webhook 地址里的保持一致：
 
 ```plain
-# .env
-PAYMENT_API_KEY=pk_live_…
-PAYMENT_API_SECRET=sk_live_…
-PAYMENT_WEBHOOK_SECRET=whsec_…
+做一个最小的在线商店（Node.js）：一个商品页面、一个下单接口、一个订单结果页。
+用 Olares Payment 收款：
+- 下单时调用 createPayment 创建支付，把 checkoutUrl 返回给前端，跳转到托管收银台
+- 提供一个 /webhook 接口接收 payment.succeeded，验签通过后把订单标记为已支付
+- 密钥从 .env 读取（PAYMENT_API_KEY / PAYMENT_API_SECRET / PAYMENT_WEBHOOK_SECRET），
+  不要写进代码
+
+然后把它打包成 Olares 应用，安装到我的 Olares OS 上：
+- 构建镜像并推送到公共镜像仓库
+- 生成 chart：对外入口名固定为 demo，入口设为公开访问，
+  支付密钥做成可配置的环境变量
+- 上传并安装，完成后告诉我商店的访问地址
+
+支付 API 文档：https://www.olares.com/docs/developer/payment/llms-full.txt
 ```
 
-## 构建并安装到 Olares OS
+智能体读完文档后会一口气做完：写代码、本地跑通、打包安装（打包细节在 `olares-chart`、`olares-market` 等 Skills 里，不用你指导）。入口名固定为 `demo`，装出来的地址就是第 1 步登记 webhook 用的那个。
 
-把下面的支付 API 文档和提示词发给智能体。跑完后，商店会装到你的 Olares OS 上，打开就能下单收款。
-
-<PaymentLlmsLink />
-
-```plain
-做一个能收款的最小商店（Node.js），商品 0.01 美元，
-密钥从 .env 读取。按我给的 Olares Payment API 文档接入。
-
-打包安装到我已用 olares-cli 登录的 Olares OS。
-商店地址用 https://demo.olarespayment.olares.com，
-打开就能下一单并完成收款。
-```
-
-:::tip
-提示词里的商店地址是示例。把 `olarespayment.olares.com` 换成你的 Olares ID 派生地址。
+::: info 地址和预期不一致时
+如果安装后智能体报告的地址和预期不一致（入口名被占用时 Olares 会分配别的域名），回商户后台把 webhook 地址改成实际域名即可。
 :::
+
+## 第 3 步：验收
+
+打开 `https://demo.olarespayment.olares.com`，真实下一单：跳转收银台 → 完成支付 → 返回商店，订单显示“已支付”。
+
+订单状态是靠 webhook 通知翻转的，所以看到“已支付”就说明收款、通知、履约整条链路都通了。
 
 执行完毕后，商店页面如下：
 
-![demo 商店](/images/payment/ds-v4-flash-store.png#bordered)
+![商店页面](/images/payment/demo-store.png#bordered)
 
-:::tip
-本 demo 由 DeepSeek-V4.1-Flash 生成。
+::: info 示例来源
+本示例由 DeepSeek-V4.1-Flash 生成。
 :::
 
 ## 下一步
 
 最小商店已经能收款。接下来可以继续扩展，比如让智能体做一个订单管理后台；等打磨好了，再把它[发布到 Olares 应用市场](../develop/submit-apps)，让更多人用上。
-

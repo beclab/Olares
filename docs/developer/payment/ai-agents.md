@@ -9,65 +9,116 @@ head:
 
 # Build a payment store with an AI agent
 
-This guide shows how to use an AI agent to build a minimal store that accepts Olares Payment and install it on Olares OS. After installation, the store gets a public domain and can take orders from anywhere.
+This article walks you through using an AI agent to build an online store that accepts stablecoins, install it on Olares OS, and get a fixed domain you can reach from anywhere.
 
-The walkthrough below uses `olarespayment@olares.com`. Replace it with your own Olares ID.
-
-:::warning
-This tutorial requires Olares OS 1.12.5 or later.
+::: warning Version requirement
+This tutorial requires Olares OS 1.12.6 or later.
 :::
 
-## Prepare
+Only two values need your attention. Note them down now and copy them as you go:
+
+| Value | In this tutorial | Description |
+|---|---|---|
+| Olares ID domain prefix | `olarespayment` | The part of your Olares ID before the @ |
+| Store entrance name | `demo` | Also the store's subdomain prefix. Pick your own, but keep it identical throughout. |
+
+Following the example, the final address of the store is `https://demo.olarespayment.olares.com`.
+
+The whole job takes three steps. Writing the code, packaging, and installing all go to the agent:
+
+| Step | What you do | What the agent does | State when done |
+|---|---|---|---|
+| 1. Prepare | Create an API key in the Olares Payment merchant dashboard, register the webhook, and write the three secrets into `.env` | — | All secrets ready |
+| 2. Develop and deploy | Send one prompt | Write the code, package and install the Olares app | The store is live with a fixed domain |
+| 3. Verify | Open the store and place an order | — | The order turns "paid" |
+
+Why can you register the webhook in step 1? An Olares app's domain is fixed. It is built from the entrance name and your Olares ID, and you specify the entrance name in the prompt. So `https://demo.olarespayment.olares.com/webhook` is known before you install anything.
+
+## Before you start
 
 - **Prepare an AI agent**: any AI coding agent, such as Codex, Claude Code, Cursor, or DeepSeek Harness.
 - **Install olares-cli and Agent Skills**: see [Install olares-cli](../cli-install) and [Install and use Agent Skills](../cli-agent-skills).
-- **Sign in to Olares OS with olares-cli**: see [Log in to Olares](../cli-log-in). Make sure you are signed in with the example Olares ID, as shown here.
+- **Sign in to Olares OS with olares-cli**: see [Log in to Olares](../cli-log-in). Make sure you are signed in with the example Olares ID.
 
-  ![olares-cli profile list signed-in status](/images/payment/cli-profile-list.png#bordered)
+  ```bash
+  olares-cli profile list
+  ```
 
-- **Push images to a remote registry**: this machine is signed in to Docker Hub or another registry, so you can push images for Olares nodes to pull.
-- **Create an API key in the Olares Payment dashboard**: copy `pk_live_…` (API key) and `sk_live_…` (API secret). See [Quickstart](./quickstart). Set the webhook URL to `https://demo.olarespayment.olares.com/webhook`. After you save, you get `whsec_…`.
+  Example output:
 
-  ![API key and webhook in the Olares Payment dashboard](/images/payment/dashboard-api-webhook.png#bordered)
+  ```text
+      NAME                      OLARES-ID                 STATUS
+  *   olarespayment@olares.com  olarespayment@olares.com  logged-in
+  ```
 
-  In that URL, `olarespayment.olares.com` comes from the Olares ID `olarespayment@olares.com`, with `@` replaced by `.`. Replace it with your own Olares ID.
+  The leading `*` marks the current profile.
 
-- **Prepare a working directory**: create an empty directory. Write the API key, API secret, and webhook secret into `.env`:
+- **Docker**: this machine is logged in to Docker Hub or another public registry with `docker login`. Step 2 pushes images to it.
+
+## Step 1: Prepare
+
+1. Scan the QR code with LarePass to sign in to the Olares Payment merchant dashboard. Your merchant account is created automatically on first sign-in.
+
+2. Open the **Checkouts** page, open **Advanced settings** of the default store, and create a key under **API keys**. You get `pk_live_…` and `sk_live_…`. (For the illustrated steps, see the first two steps of the [Quickstart](./quickstart).)
+
+3. On the same panel, under **Webhooks**, set the webhook URL to `https://demo.olarespayment.olares.com/webhook` and save. You get the signing secret `whsec_…`.
+
+   ![API key and webhook in the Olares Payment merchant dashboard](/images/payment/dashboard-api-webhook.png#bordered)
+
+4. Create a repository and write the three secrets into `.env`:
+
+   ```bash
+   mkdir demo && cd demo
+   git init
+   echo ".env" >> .gitignore
+   ```
+
+   ```plain
+   # .env
+   PAYMENT_API_KEY=pk_live_…
+   PAYMENT_API_SECRET=sk_live_…
+   PAYMENT_WEBHOOK_SECRET=whsec_…
+   ```
+
+## Step 2: Develop and deploy
+
+Start the agent in the repository directory (`codex`, `claude`, or open the folder in Cursor), then send the prompt below. Only `demo` needs changing: replace it with your entrance name, the same one you used in the webhook URL in step 1.
 
 ```plain
-# .env
-PAYMENT_API_KEY=pk_live_…
-PAYMENT_API_SECRET=sk_live_…
-PAYMENT_WEBHOOK_SECRET=whsec_…
+Build a minimal online store (Node.js): a product page, a checkout endpoint, and an order result page.
+Take payments with Olares Payment:
+- On checkout, call createPayment, return checkoutUrl to the frontend, and redirect to the hosted checkout page
+- Expose a /webhook endpoint that receives payment.succeeded and marks the order paid once the signature is verified
+- Read secrets from .env (PAYMENT_API_KEY / PAYMENT_API_SECRET / PAYMENT_WEBHOOK_SECRET);
+  never hardcode them
+
+Then package it as an Olares app and install it on my Olares OS:
+- Build the image and push it to a public registry
+- Generate the chart: fix the external entrance name to demo, make the entrance publicly accessible,
+  and expose the payment secrets as configurable environment variables
+- Upload and install it, then tell me the store's address
+
+Payment API docs: https://www.olares.com/docs/developer/payment/llms-full.txt
 ```
 
-## Build and install on Olares OS
+Once the agent has read the docs, it does the rest in one pass: write the code, run it locally, then package and install it. Packaging details live in the `olares-chart` and `olares-market` skills, so you do not need to guide it. The entrance name is fixed to `demo`, so the address it produces is the one you registered the webhook with in step 1.
 
-Send the payment API document and the prompt below to the agent. When it finishes, the store is installed on your Olares OS. Open it to place an order and get paid.
-
-<PaymentLlmsLink />
-
-```plain
-Build a minimal store (Node.js) that can take payments. Price the
-product at $0.01. Read credentials from .env. Integrate using the
-Olares Payment API docs I provide.
-
-Package it and install it on the Olares OS I have already signed
-in to with olares-cli.
-Use https://demo.olarespayment.olares.com as the store URL.
-Opening it should let me place an order and complete a payment.
-```
-
-:::tip
-The store URL in the prompt is an example. Replace `olarespayment.olares.com` with the address derived from your Olares ID.
+::: info When the address is not what you expected
+If the address the agent reports after installation is not what you expected (Olares assigns another domain when the entrance name is taken), go back to the merchant dashboard and change the webhook URL to the actual domain.
 :::
 
-After it finishes, the store looks like this:
+## Step 3: Verify
 
-![Demo store](/images/payment/ds-v4-flash-store.png#bordered)
+Open `https://demo.olarespayment.olares.com` and place a real order: redirect to the hosted checkout → complete the payment → return to the store, where the order shows "paid".
 
-:::tip
-This demo was generated with DeepSeek-V4.1-Flash.
+The order status is flipped by the webhook notification, so seeing "paid" means the whole chain works: payment, notification, and fulfillment.
+
+When it finishes, the store page looks like this:
+
+![Store page](/images/payment/demo-store.png#bordered)
+
+::: info Example source
+This example was generated with DeepSeek-V4.1-Flash.
 :::
 
 ## Next steps
