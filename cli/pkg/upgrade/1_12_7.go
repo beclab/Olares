@@ -5,6 +5,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/certs"
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/task"
+	"github.com/beclab/Olares/cli/pkg/etcd"
 	"github.com/beclab/Olares/cli/pkg/kubesphere/plugins"
 	"github.com/beclab/Olares/cli/version"
 )
@@ -34,7 +35,8 @@ func (u upgrader_1_12_7) AddedBreakingChange() bool {
 }
 
 func (u upgrader_1_12_7) PrepareForUpgrade() []task.Interface {
-	tasks := migrateContainerdConfigV3()
+	tasks := refreshBackupETCDScript()
+	tasks = append(tasks, migrateContainerdConfigV3()...)
 	tasks = append(tasks, &task.LocalTask{
 		Name:   "RestartNvidiaApplicationPods",
 		Action: new(restartNvidiaApplicationPods),
@@ -57,6 +59,15 @@ func (u upgrader_1_12_7) PrepareForUpgrade() []task.Interface {
 
 	tasks = append(tasks, u.upgraderBase.PrepareForUpgrade()...)
 	return tasks
+}
+
+func refreshBackupETCDScript() []task.Interface {
+	return []task.Interface{
+		&task.LocalTask{
+			Name:   "RefreshBackupETCDScript",
+			Action: new(etcd.BackupETCD),
+		},
+	}
 }
 
 func (u upgrader_1_12_7) PostUpgrade() []task.Interface {
