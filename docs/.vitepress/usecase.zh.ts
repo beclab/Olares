@@ -105,6 +105,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                       link: "/zh/use-cases/opencode-extensions",
                     },
                     {
+                      text: "使用 Olares CLI 管理 Olares",
+                      link: "/zh/use-cases/opencode-olares-cli",
+                    },
+                    {
                       text: "常见问题",
                       link: "/zh/use-cases/opencode-issues",
                     },

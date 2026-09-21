@@ -392,6 +392,7 @@ OpenCode 将其配置存储在 JSON 文件中。你可以直接编辑此文件�
 
 - [管理包](opencode-packages.md)：安装系统级和语言特定的包。
 - [技能和插件](opencode-extensions.md)：通过技能和插件添加功能。
+- [使用 Olares CLI 管理 Olares](opencode-olares-cli.md)：认证 Olares CLI，让 Agent 管理设备上的文件和应用。
 - [使用 oh-my-openagent 编排多代理工作流](opencode-omo.md)：启用 OMO 以在 OpenCode 中运行多代理协作。
 - [常见问题](opencode-issues.md)：已知问题的解决方案。
 - [使用 Context7 将 AI 编码助手连接到最新文档](context7.md#opencode)：在 OpenCode 中将 Context7 注册为远程 MCP 服务器。
