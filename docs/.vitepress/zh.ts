@@ -504,6 +504,10 @@ const side = {
           collapsed: true,
           items: [
             {
+              text: "识别需要的 Olares 凭据",
+              link: "/zh/manual/help/password-and-account-recovery",
+            },
+            {
               text: "应用市场应用缺失",
               link: "/zh/manual/help/ts-missing-apps",
             },
