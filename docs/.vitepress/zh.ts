@@ -499,6 +499,10 @@ const side = {
           link: "/zh/manual/collect-diagnostic-information",
         },
         {
+          text: "在 Olares Space 中创建和管理支持工单",
+          link: "/zh/manual/space/tickets",
+        },
+        {
           text: "故障排查",
           link: "/zh/manual/help/troubleshooting-guide",
           collapsed: true,
