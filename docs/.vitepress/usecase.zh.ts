@@ -14,6 +14,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "Olares Router",
               link: "/zh/use-cases/olares-router",
             },
+            {
+              text: "Lares",
+              link: "/zh/use-cases/lares",
+            },
           ],
         },
         {
