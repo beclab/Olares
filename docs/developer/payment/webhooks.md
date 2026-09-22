@@ -110,9 +110,6 @@ Verification rules:
 - Reject timestamps more than 5 minutes old (replay protection).
 - In Express, use `express.raw` for the webhook route — a prior `express.json()` would destroy the raw body.
 
-<Tabs>
-<template #TypeScript>
-
 ```ts
 import { webhooks } from '@olares/payment-sdk';
 
@@ -142,32 +139,6 @@ app.post('/webhook', express.raw({ type: 'application/json' }), (req, res) => {
 ```
 
 You can also pass `{ body, headers }` when your framework already buffered the body. A failed verification throws `PaymentError` — never treat the delivery as valid.
-
-</template>
-<template #Go>
-
-```go
-func handleWebhook(w http.ResponseWriter, r *http.Request) {
-    e, err := paymentsdk.ConstructEvent(r, webhookSecret) // SDK reads the raw body itself
-    if err != nil {
-        w.WriteHeader(http.StatusBadRequest)
-        return
-    }
-    switch e.Type {
-    case "payment.succeeded":
-        // e.PaymentID / e.Buyer / e.Metadata / e.PaidAt
-    case "refund.succeeded", "refund.failed":
-        // e.Refund holds the refund facts: RefundId, Amount, TokenSymbol, Chain.
-        // e.PaymentID / e.TxHash / e.FailReason are filled in at the top level too.
-    }
-    w.WriteHeader(http.StatusOK)
-}
-```
-
-If the body was already consumed (queue replay, eager middleware), use `ConstructEventFromParts(rawBody, r.Header, secret)`.
-
-</template>
-</Tabs>
 
 ## Retries
 

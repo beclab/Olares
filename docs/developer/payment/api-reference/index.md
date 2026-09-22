@@ -32,7 +32,6 @@ Webhooks are a local concern — signature verification with `constructEvent` li
 | Language | Package | Install |
 |---|---|---|
 | TypeScript (Node.js 18+) | `@olares/payment-sdk` | `npm install @olares/payment-sdk` |
-| Go | `github.com/beclab/olares-payment/packages/payment-sdk-go` | `go get github.com/beclab/olares-payment/packages/payment-sdk-go` |
 | Any (raw HTTP) | — | No SDK needed — sign per [Authentication](#authentication) |
 
 The SDK points at the production gateway `https://www.olares.com/payment` out of the box — nothing to configure.
@@ -75,11 +74,11 @@ Every response is a single envelope:
 { "code": 1203, "message": "payment not found" }
 ```
 
-Wire keys are `snake_case`. The TS SDK translates them to `camelCase` at the boundary (e.g. `intent_id` → `paymentId`); the Go SDK uses generated protobuf types.
+Wire keys are `snake_case`. The TS SDK translates them to `camelCase` at the boundary (e.g. `intent_id` → `paymentId`).
 
 ## Errors
 
-SDK calls throw `PaymentError` (TS) / return `*paymentsdk.Error` (Go) with `code`, `httpStatus`, and `message`.
+SDK calls throw `PaymentError` with `code`, `httpStatus`, and `message`.
 
 | Range | Meaning |
 |---|---|

@@ -91,15 +91,17 @@ console.log(handoff.executionUrl, handoff.executionExpiresAt);
 ```
 
 </template>
-<template #Go>
+<template #cURL>
 
-```go
-handoff, err := merchant.CreateRefund(ctx, &paymentv1.CreateRefundReq{
-    PaymentId: "pi_1a07b0148515b9a95bc",
-    Amount:    proto.String("600000"),
-    Reason:    proto.String("customer downgraded the plan"),
-}, paymentsdk.WithIdempotencyKey("refund:ord_001:1"))
-// handoff.RefundExecutionUrl、handoff.ExecutionExpiresAt
+```bash
+curl -X POST https://www.olares.com/payment/api/createRefund \
+  -H 'content-type: application/json' \
+  -H "x-olares-payment-key: $PAYMENT_API_KEY" \
+  -H "x-olares-payment-timestamp: $(date +%s%3N)" \
+  -H "x-olares-payment-nonce: $(uuidgen)" \
+  -H "x-olares-payment-signature: $SIGNATURE" \
+  -H "Idempotency-Key: refund:ord_001:1" \
+  -d '{"payment_id":"pi_1a07b0148515b9a95bc","amount":"600000","reason":"customer downgraded the plan"}'
 ```
 
 </template>

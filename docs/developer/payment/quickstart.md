@@ -8,7 +8,7 @@ head:
 
 # Quickstart
 
-Integrate stablecoin payments into your own service in five steps. You need an [Olares ID](/manual/get-started/create-olares-id) and the LarePass app on your phone, plus a server runtime (Node.js 18+ or Go).
+Integrate stablecoin payments into your own service in five steps. You need an [Olares ID](/manual/get-started/create-olares-id) and the LarePass app on your phone, plus a server runtime (Node.js 18+).
 
 ::: tip Prefer code over reading?
 The [demo store example](https://github.com/beclab/olares-payment-developer-example) is this quickstart as a runnable repository — clone it, add your keys, and watch a payment arrive.
@@ -55,22 +55,6 @@ const client = new MerchantClient({
 ```
 
 </template>
-<template #Go>
-
-```bash
-go get github.com/beclab/olares-payment/packages/payment-sdk-go
-```
-
-```go
-import paymentsdk "github.com/beclab/olares-payment/packages/payment-sdk-go"
-
-merchant := paymentsdk.NewMerchantClient(paymentsdk.Config{
-    APIKey:    os.Getenv("PAYMENT_API_KEY"),    // pk_live_…
-    APISecret: os.Getenv("PAYMENT_API_SECRET"), // sk_live_…
-})
-```
-
-</template>
 <template #cURL>
 
 Every endpoint is a plain `POST /api/<method>` with HMAC headers — usable from any language:
@@ -103,17 +87,6 @@ const { paymentId, checkoutUrl } = await client.createPayment({
 ```
 
 </template>
-<template #Go>
-
-```go
-resp, err := merchant.CreatePayment(ctx, &paymentv1.CreatePaymentReq{
-    AmountCents: 499,
-    Metadata:    &structpb.Struct{ /* order_id: ord_001 */ },
-})
-// resp.IntentId, resp.CheckoutUrl
-```
-
-</template>
 <template #cURL>
 
 ```bash
@@ -130,7 +103,7 @@ curl -X POST https://www.olares.com/payment/api/createPayment \
 </Tabs>
 
 ::: details Safe retries with an idempotency key
-Pass a stable key (`{ idempotencyKey: 'order:ord_001' }` / `WithIdempotencyKey(...)` / `Idempotency-Key` header). A replayed request returns the first result instead of creating a duplicate payment.
+Pass a stable key (`{ idempotencyKey: 'order:ord_001' }` or an `Idempotency-Key` header). A replayed request returns the first result instead of creating a duplicate payment.
 :::
 
 Your buyer sees the hosted checkout and pays with any EVM wallet — no Olares account needed:
@@ -149,16 +122,6 @@ const result = await client.getPayment(paymentId);
 if (result.paid) {
   const { txHash, payAmount, payCurrency, chain } = result.credential;
   // fulfill the order
-}
-```
-
-</template>
-<template #Go>
-
-```go
-res, err := merchant.GetPayment(ctx, intentId)
-if res.Paid {
-    // res.Credential.TxHash — fulfill the order
 }
 ```
 

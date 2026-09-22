@@ -8,7 +8,7 @@ head:
 
 # 快速开始
 
-五步把稳定币支付集成到你自己的服务。你需要一个 [Olares ID](/zh/manual/get-started/create-olares-id),并在手机上装好 LarePass 应用;还需要一个服务端运行时(Node.js 18+ 或 Go)。
+五步把稳定币支付集成到你自己的服务。你需要一个 [Olares ID](/zh/manual/get-started/create-olares-id),并在手机上装好 LarePass 应用;还需要一个服务端运行时(Node.js 18+)。
 
 ::: tip 想先看能跑的代码?
 [demo 商店示例仓库](https://github.com/beclab/olares-payment-developer-example)就是本篇的可运行版本——克隆、填入你的密钥,就能看到一笔支付到账。
@@ -55,22 +55,6 @@ const client = new MerchantClient({
 ```
 
 </template>
-<template #Go>
-
-```bash
-go get github.com/beclab/olares-payment/packages/payment-sdk-go
-```
-
-```go
-import paymentsdk "github.com/beclab/olares-payment/packages/payment-sdk-go"
-
-merchant := paymentsdk.NewMerchantClient(paymentsdk.Config{
-    APIKey:    os.Getenv("PAYMENT_API_KEY"),    // pk_live_…
-    APISecret: os.Getenv("PAYMENT_API_SECRET"), // sk_live_…
-})
-```
-
-</template>
 <template #cURL>
 
 每个端点都是普通的 `POST /api/<method>`,带 HMAC 请求头——任何语言都可以直接调用:
@@ -103,17 +87,6 @@ const { paymentId, checkoutUrl } = await client.createPayment({
 ```
 
 </template>
-<template #Go>
-
-```go
-resp, err := merchant.CreatePayment(ctx, &paymentv1.CreatePaymentReq{
-    AmountCents: 499,
-    Metadata:    &structpb.Struct{ /* order_id: ord_001 */ },
-})
-// resp.IntentId, resp.CheckoutUrl
-```
-
-</template>
 <template #cURL>
 
 ```bash
@@ -130,7 +103,7 @@ curl -X POST https://www.olares.com/payment/api/createPayment \
 </Tabs>
 
 ::: details 安全重试:幂等键
-传入稳定的幂等键(`{ idempotencyKey: 'order:ord_001' }` / `WithIdempotencyKey(...)` / `Idempotency-Key` 请求头)。重放的请求会返回首次调用的结果,而不会重复创建支付单。
+传入稳定的幂等键(`{ idempotencyKey: 'order:ord_001' }` 或 `Idempotency-Key` 请求头)。重放的请求会返回首次调用的结果,而不会重复创建支付单。
 :::
 
 你的买家会看到托管收银台,并用任意 EVM 钱包付款——无需 Olares 账户:
@@ -149,16 +122,6 @@ const result = await client.getPayment(paymentId);
 if (result.paid) {
   const { txHash, payAmount, payCurrency, chain } = result.credential;
   // fulfill the order
-}
-```
-
-</template>
-<template #Go>
-
-```go
-res, err := merchant.GetPayment(ctx, intentId)
-if res.Paid {
-    // res.Credential.TxHash — fulfill the order
 }
 ```
 

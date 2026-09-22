@@ -32,7 +32,6 @@ Webhook 是本地动作——用 `constructEvent` 验签,见 [Webhook](../webhoo
 | 语言 | 包 | 安装 |
 |---|---|---|
 | TypeScript (Node.js 18+) | `@olares/payment-sdk` | `npm install @olares/payment-sdk` |
-| Go | `github.com/beclab/olares-payment/packages/payment-sdk-go` | `go get github.com/beclab/olares-payment/packages/payment-sdk-go` |
 | 任意语言(裸 HTTP) | — | 不需要 SDK——按[认证](#认证)签名即可 |
 
 SDK 开箱即指向生产网关 `https://www.olares.com/payment`——无需任何配置。
@@ -75,11 +74,11 @@ canonical = "{method}\n{body}\n{timestamp}\n{nonce}"
 { "code": 1203, "message": "payment not found" }
 ```
 
-Wire 层字段为 `snake_case`。TS SDK 在边界处将其转换为 `camelCase`(例如 `intent_id` → `paymentId`);Go SDK 使用生成的 protobuf 类型。
+Wire 层字段为 `snake_case`。TS SDK 在边界处将其转换为 `camelCase`(例如 `intent_id` → `paymentId`)。
 
 ## 错误码
 
-SDK 调用抛出 `PaymentError`(TS)/ 返回 `*paymentsdk.Error`(Go),含 `code`、`httpStatus` 与 `message`。
+SDK 调用抛出 `PaymentError`,含 `code`、`httpStatus` 与 `message`。
 
 | 区间 | 含义 |
 |---|---|

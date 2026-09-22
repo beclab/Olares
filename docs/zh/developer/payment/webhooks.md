@@ -110,9 +110,6 @@ Webhook 把支付生命周期事件推送到你的服务器,让你无需轮询�
 - 拒绝超过 5 分钟的时间戳(防重放)。
 - 在 Express 中,webhook 路由使用 `express.raw`——先挂 `express.json()` 会破坏原始请求体。
 
-<Tabs>
-<template #TypeScript>
-
 ```ts
 import { webhooks } from '@olares/payment-sdk';
 
@@ -142,32 +139,6 @@ app.post('/webhook', express.raw({ type: 'application/json' }), (req, res) => {
 ```
 
 如果你的框架已经缓冲了请求体,也可以传 `{ body, headers }`。验证失败会抛出 `PaymentError`——绝不要将本次投递视为有效。
-
-</template>
-<template #Go>
-
-```go
-func handleWebhook(w http.ResponseWriter, r *http.Request) {
-    e, err := paymentsdk.ConstructEvent(r, webhookSecret) // SDK reads the raw body itself
-    if err != nil {
-        w.WriteHeader(http.StatusBadRequest)
-        return
-    }
-    switch e.Type {
-    case "payment.succeeded":
-        // e.PaymentID / e.Buyer / e.Metadata / e.PaidAt
-    case "refund.succeeded", "refund.failed":
-        // e.Refund 里是退款事实:RefundId、Amount、TokenSymbol、Chain。
-        // e.PaymentID / e.TxHash / e.FailReason 也会回填到顶层。
-    }
-    w.WriteHeader(http.StatusOK)
-}
-```
-
-如果请求体已被消费(队列重放、急切中间件),使用 `ConstructEventFromParts(rawBody, r.Header, secret)`。
-
-</template>
-</Tabs>
 
 ## 重试
 
