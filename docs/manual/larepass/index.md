@@ -49,3 +49,5 @@ The change applies immediately.
 
 - On mobile devices, you can [create an Olares ID](../get-started/create-olares-id.md) directly in LarePass. To use a custom domain, see [Create an Olares ID with a custom domain](create-org-account.md).
 - On the desktop client, [import an existing account](manage-accounts.md#import-an-account).
+
+On the desktop client, you can also [save remote resources directly to Olares](save-resources-to-olares.md).

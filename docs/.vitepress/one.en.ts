@@ -45,7 +45,7 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           link: "/one/access-olares-via-vpn",
         },
         {
-          text: "Access Olares via .local domain",
+          text: "Access Olares on your local network",
           link: "/one/access-olares-via-local-domain",
         },
       ]
@@ -108,8 +108,23 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           //   ]
         },
         {
-          text: "Set up with eGPU",
+          text: "Set up your eGPU",
           link: "/one/egpu",
+          collapsed: true,
+          items: [
+            {
+              text: "Set up on Olares OS",
+              link: "/one/egpu-olares-os",
+            },
+            {
+              text: "Set up on Windows",
+              link: "/one/egpu-windows",
+            },
+            {
+              text: "Troubleshoot eGPU issues",
+              link: "/one/ts-egpu",
+            },
+          ],
         },
         {
           text: "Manage hardware settings",

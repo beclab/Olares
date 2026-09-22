@@ -343,6 +343,35 @@ func TestImport_UnwritableConfigWarnsAndContinues(t *testing.T) {
 	}
 }
 
+// An agent sandbox refuses writes to the directory the platform exported,
+// which used to mean the mounted identity lived only as long as the process
+// and every later command reported that no profile was configured. The entry
+// has to survive to disk somewhere the process can actually write.
+func TestImport_UnwritableCacheDirStillLandsTheProfile(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root ignores directory permissions")
+	}
+	h := newImportHarness(t, testCredential())
+	denied := t.TempDir()
+	if err := os.Chmod(denied, 0o555); err != nil {
+		t.Fatalf("prepare: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(denied, 0o700) })
+	t.Setenv("OLARES_CLI_HOME", "")
+	t.Setenv("TMPDIR", t.TempDir())
+	t.Setenv("OLARES_CLI_CACHE_DIR", denied)
+
+	h.run(context.Background())
+
+	p := loadProfile(t, managedID)
+	if p == nil || !p.Managed {
+		t.Fatalf("profile = %+v, want a managed entry readable by the next command", p)
+	}
+	if h.stderr.Len() != 0 {
+		t.Errorf("stderr = %q, want silence once the write found a home", h.stderr.String())
+	}
+}
+
 // A mount naming something that is not a parseable Olares ID is skipped
 // rather than turned into a profile no URL can be derived from.
 func TestImport_UnparseableOlaresIDIsSkipped(t *testing.T) {

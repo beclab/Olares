@@ -32,6 +32,8 @@ olares-cli market list -q                       # exit code only
 
 Hides only **6 SPA-hidden states** (`pendingCanceled`, `downloadingCanceled`, `downloadFailed`, `installFailed`, `installingCanceled`, `uninstalled`). Everything else stays visible — including in-flight installs, transitional states (`upgrading` / `stopping` / `resuming` / `applyingEnv` / `uninstalling`), and post-install failures (`upgradeFailed` / `stopFailed` / `resumeFailed` / `applyEnvFailed` / `uninstallFailed`).
 
+This is why a freshly failed install can look like it vanished: a bad image reference settles on `downloadFailed`, which `--mine` hides. Use `market status <app> -a` to see the row, and note that the same six states do **not** all behave alike when you try to clear them — see [uninstall, stop, resume, cancel](olares-market-lifecycle-remove.md).
+
 > **"My apps" is intentionally broader than "completed installs only"** because the SPA's My Terminus tab is too. The user clicked something and wants to monitor / retry / cancel the row.
 
 ### Version on `--mine` rows

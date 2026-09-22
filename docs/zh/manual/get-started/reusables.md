@@ -6,6 +6,10 @@ head:
       content: Olares, 安装命令, 系统要求, 配置 Wizard, 安装脚本, root 密码
 ---
 
+<!-- #region larepass-prerequisite -->
+- **LarePass**：在手机上[安装 LarePass](/zh/manual/larepass/)。完成设置和激活 Olares 时必须使用 LarePass。
+<!-- #endregion larepass-prerequisite -->
+
 <!-- #region install-script-command -->
 ```bash
 curl -fsSL https://cn.olares.sh |  bash -
@@ -35,7 +39,11 @@ olares-cli uninstall --all
 <!-- #endregion prepare-wizard-heading -->
 
 <!-- #region prepare-wizard-details -->
-安装过程结束时，你需要输入域名和 Olares ID。
+安装过程结束时，你需要输入域名和 Olares ID。请输入 LarePass 中使用的 ID。如果还没有，请打开 LarePass，点击**创建账号**并按提示完成设置，然后返回继续。
+
+:::warning 中国大陆用户请选择 `.cn` 域名
+如果手机系统语言为英文，请在高级创建选项中选择 `.cn` 域名。
+:::
 
 ![输入 Olares ID](/images/zh/manual/get-started/enter-olares-id.png)
 

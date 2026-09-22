@@ -1,206 +1,169 @@
 ---
 outline: [2,3]
-description: Learn the different methods to access Olares services locally for improved speed and offline capability.
+description: Compare the methods for accessing Olares directly over your local network.
 head:
   - - meta
     - name: keywords
-      content: Olares, local access, LarePass VPN, local DNS, hosts file, local domain, offline access
+      content: Olares, local access, LarePass VPN, host mappings, local DNS, hosts file, .local domain
 ---
 # Access Olares services locally
 
-Olares is designed to provide seamless access to your self-hosted services anytime, anywhere.
+Olares services normally use standard `olares.com` URLs that work from both local and remote networks. When your computer or another device is on the same LAN as Olares, you can use a local route instead of sending the connection through the public reverse proxy.
 
-However, accessing your devices locally provides several advantages:
-- **Maximum performance**: Transfer files at full speed without the latency and potential bottlenecks of the internet.
-- **Enhanced privacy**: Keep your traffic contained within your home network for added security.
-- **Offline independence**: Access your data and apps even when your internet service is unavailable.
+Keeping traffic on the LAN can reduce latency, improve transfer speeds, and preserve access when the internet is unavailable. The right method depends on whether you move between networks, want to keep using the standard URL, need the setting to cover multiple devices, or need an app to have its own LAN IP.
 
-## Learning objectives
-By the end of this tutorial, you will learn how to:
+## Choose a local access method
 
-- Establish a secure, high-speed local connection using the LarePass VPN.
-- Access Olares services using `.local` domains.
-- Configure local DNS so standard `olares.com` URLs resolve locally across your entire network.
-- Manually map hosts files to ensure access on specific machines without internet.
+| Requirement | Recommended method | URL | Applies to |
+|:------------|:-------------------|:----|:-----------|
+| Move between local and remote networks | [LarePass VPN](#use-larepass-vpn) | Standard `olares.com` URL | Current device |
+| Use direct LAN access on Windows or macOS | [LarePass host mappings](#configure-host-mappings-with-larepass) | `olares.com` or `olares.local` | Current computer |
+| Use local access without LarePass Desktop | [A `.local` URL](#use-a-local-url-without-larepass) | `olares.local` | Current device |
+| Configure local resolution for multiple devices | [Local DNS](#configure-local-dns) | Standard `olares.com` URL | Local network |
+| Give a supported app a dedicated LAN IP | [Overlay gateway](#access-an-app-through-overlay-gateway) | App-specific IP address | Local network |
 
-## Choose a connection method
-There are four ways to establish a local connection:
+:::warning Avoid a public-network detour
+On the same LAN, opening a standard `olares.com` URL without VPN, a matching hosts entry, or local DNS may send the connection through the public reverse proxy. The service can still load, but this route is slower and is not recommended for local access.
+:::
 
-* **[Method 1: Enable LarePass VPN](#method-1-enable-larepass-vpn)**<br/>
-  Uses LarePass VPN to automatically detect your local network and optimize the connection speed without changing settings.
-* **[Method 2: Use `.local` domain](#method-2-use-local-domain)**<br/>
-  Access the device via a specific local URL format. No installation required.
-* **[Method 3: Configure local DNS](#method-3-configure-local-dns)**<br/>
-  Updates your router or computer's DNS settings to map standard `olares.com` URLs to the local IP address.
-* **[Method 4: Modify hosts files](#method-4-modify-hosts-files)**<br/>
-  Manually maps the standard Olares URL to the local IP on a single computer.
+## Use LarePass VPN
 
-## Method 1: Enable LarePass VPN
-The LarePass VPN is designed to secure your connection while optimizing performance. When enabled, LarePass detects if you are on the same network as your device and switches to **Intranet** mode.
+Use this option if you frequently move between networks. LarePass automatically selects a connection type. When you are on the same LAN as Olares, it switches to **Intranet** for a direct local connection.
 
 <!--@include: ../../reusables/larepass-vpn.md#vpn-setup-notes-->
-
-Enable the LarePass VPN directly on the device you are currently using to access Olares.
 
 <!--@include: ../../reusables/larepass-vpn.md#enable-larepass-vpn-->
 
 <!--@include: ../../reusables/larepass-vpn.md#check-vpn-status-->
 
-## Method 2: Use `.local` domain
+## Configure host mappings with LarePass
 
-If you prefer not to install additional apps, you can access services using the `.local` domain. There are two domain formats available depending on your operating system.
-
-### Single-level domain (All operating systems)
-:::warning Supported for community apps only
-Olares system apps such as Desktop and Files do not support this URL format and will not load correctly.
-:::
-This format uses a single-level domain by connecting the entrance ID and the username with hyphens (`-`).
-
-**Standard URL**
-```plain
-https://<entrance_id>.<username>.olares.com
-```
-**Local URL**
-```plain
-http://<entrance_id>-<username>-olares.local
-```
-
-### Multi-level domain
-
-The multi-level format below matches the structure of your standard Olares URL. Use it as shown.
+Use this option for direct LAN access from a Windows or macOS computer without running the LarePass VPN.
 
 <!--@include: ../../reusables/local-domain.md#local-domain-overview-->
 
-![Multi-level local domain](/images/manual/get-started/multilevel-local-domain-mac.png#bordered)
+<!--@include: ../../reusables/local-domain.md#larepass-local-domains-->
 
-#### macOS and iOS
-Apple devices support local service discovery via [Bonjour](https://developer.apple.com/bonjour/) (zero‑configuration networking), which can resolve multi‑label domains under `.local` on macOS and iOS.
+## Use a .local URL without LarePass
 
-Therefore, no extra setup is needed. You can directly use local URL in your browser.
+Use this option when the client device and Olares are on the same LAN and you do not want to configure LarePass Desktop.
 
-#### Windows
+### Multi-level domain
 
-<!--@include: ../../reusables/local-domain.md#windows-local-domain-->
+<!--@include: ../../reusables/local-domain.md#local-domain-url-format-->
 
-## Method 3: Configure local DNS
-Method 3 is for standard Olares URLs that use the `olares.com` domain. These are the same URLs you normally use from outside your local network. By making your DNS resolver answer these `olares.com` names with your Olares device's internal IP address, traffic stays on your LAN while the URL stays unchanged.
+On macOS and iOS, local service discovery can resolve multi-level `.local` hostnames without additional configuration. On Windows, use [LarePass host mappings](#configure-host-mappings-with-larepass).
 
-:::info `.local` URLs do not need DNS configuration
-Skip this method if you use `.local` URLs from [Method 2](#method-2-use-local-domain). These local domains use local name resolution and do not depend on `olares.com` DNS records.
+### Single-level domain
+
+Single-level `.local` hostnames work across operating systems, but support community apps only. Olares system apps such as Desktop and Files do not support this format.
+
+```text
+http://<entrance_id>-<username>-olares.local
+```
+
+## Configure local DNS
+
+Use local DNS if you want standard `olares.com` URLs to resolve to the Olares LAN IP for multiple devices. This configuration typically applies to the entire network and does not require LarePass on each client.
+
+:::info
+Skip this method if you use `.local` URLs. They use local name resolution and do not depend on the `olares.com` DNS records.
 :::
 
-### Find the internal IP for Olares device
-To configure DNS, first you need to find the internal IP for your Olares device.
+### Find the Olares LAN IP
+
 <tabs>
-<template #Check-via-the-LarePass-mobile-client>
+<template #Use-LarePass-mobile>
 
-If your phone and Olares device are on the same network:
-1. Open the LarePass app, and go to **Settings** > **System** to navigate to the **Olares management** page
-   ![Tap the System card](/images/manual/get-started/larepass-system.png#bordered)
+1. Make sure your phone and Olares are on the same network.
+2. Open LarePass and go to **Settings** > **System**.
 
-2. Tap on the device card.
-   ![Tap the device card](/images/manual/get-started/larepass-device-card.png#bordered)
+   ![Open System settings in LarePass](/images/manual/get-started/larepass-system.png#bordered)
+3. Tap the Olares device card.
 
-3. Scroll down to the **Network** section. You can find the **Intranet IP** there.
-   ![Find Network section](/images/manual/get-started/larepass-network.png#bordered)
+   ![Open the Olares device card](/images/manual/get-started/larepass-device-card.png#bordered)
+4. In **Network**, find the **Intranet IP**.
+
+   ![Find the Intranet IP](/images/manual/get-started/larepass-network.png#bordered)
 
 </template>
-<template #Check-via-Olares-Terminal>
+<template #Use-Control-Hub>
 
-Control Hub provides a built-in terminal that allows you to run system commands directly from the browser, without needing an external SSH client.
-1. Open the Control Hub app, and under **Terminal**, select **Olares** in the left navigation bar.
-   ![Find internal IP from Control Hub](/images/manual/get-started/find-internal-ip-from-controlhub.png#bordered)
+1. In Control Hub, open **Terminal** and select **Olares**.
 
-2. Type `ifconfig` in the terminal and press **Enter**.
-3. Look for your active connection, typically named `enp3s0` (wired) or `wlo1` (wireless). The IP address follows `inet`.
+   ![Open the Olares terminal in Control Hub](/images/manual/get-started/find-internal-ip-from-controlhub.png#bordered)
+2. Run `ifconfig`.
+3. Find the `inet` address for the active wired or Wi-Fi interface. It is typically in a private range such as `192.168.x.x`.
 
-   Example output:
-   ```bash
-    enp3s0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
-    inet 192.168.50.116  netmask 255.255.255.0  broadcast 192.168.50.255
-    inet6 fe80::4194:4045:c35e:7b32  prefixlen 64  scopeid 0x20<link>
-    ether d8:43:ae:54:ce:fc  txqueuelen 1000  (Ethernet)
-    RX packets 80655321  bytes 71481515308 (71.4 GB)
-    RX errors 0  dropped 136  overruns 0  frame 0
-    TX packets 51867817  bytes 15924740708 (15.9 GB)
-    TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
-   ```
-   In this example, `192.168.50.116` is the internal IP.
 </template>
 </tabs>
 
-### Configure DNS
-With the internal IP address identified, configure DNS for your standard `olares.com` URLs. You can apply this configuration to a single computer for individual access, or update your router to enable seamless local resolution for all devices on your network.
+### Configure the DNS server
+
+Configure the DNS server on one computer or on your router.
+
 <tabs>
-<template #Configure-for-local-device>
+<template #One-computer>
 
-Update the DNS settings on your specific computer. For example, on macOS:
-1. Open Apple menu and go to **System Settings**.
-2. Select **Wi-Fi**, then click **Details** on your connected network.
-3. Select **DNS** and update the server list:
+The exact steps depend on your operating system. For example, on macOS:
 
-   a. Click the **+** button under **DNS Servers** to add your Olares device's internal IP (e.g., `192.168.x.x`).
-
-   b. Ensure the Olares IP is listed at the top. Add your original DNS (or `1.1.1.1`) below it as a fallback. <br/>This ensures that if your Olares device shuts down, the router will automatically switch to the secondary DNS, keeping your internet connection alive.
-
-4. Click **OK** to save changes.
+1. Open the Apple menu and go to **System Settings**.
+2. Select **Wi-Fi**, then click **Details** for the connected network.
+3. Select **DNS**.
+4. Add the Olares LAN IP under **DNS Servers** and move it to the top of the list.
+5. Keep the existing DNS server, or add a public resolver such as `1.1.1.1`, below it as a fallback.
+6. Click **OK**.
 
 </template>
+<template #All-devices>
 
-<template #Configure-for-all-devices>
+1. Sign in to your router's administration page.
+2. Open its DHCP or DNS settings.
+3. Set **Primary DNS** to the Olares LAN IP.
+4. Keep the existing primary DNS server, or a public resolver such as `1.1.1.1`, as **Secondary DNS**.
+5. Save the settings and reconnect client devices so they receive the updated DNS configuration.
 
-Update the DNS on your router to apply changes to every device in your network.
-
-1.  Log in to your router's admin panel.
-2.  Navigate to **DHCP / DNS Settings**.
-3.  Set **Primary DNS** to your Olares device's internal IP (e.g., `192.168.x.x`).
-4.  Set **Secondary DNS** to your current Primary DNS (or a public provider like `1.1.1.1`). <br/>This ensures that if your Olares device shuts down, the router will automatically switch to the secondary DNS, keeping your internet connection alive.
-5.  Save and reconnect your devices to refresh the DNS cache.
 </template>
 </tabs>
 
-Once configured, open your standard `olares.com` URLs as usual. They will resolve to the Olares device's internal IP when you are on the same network.
+Once configured, open the standard `olares.com` URLs as usual. They should resolve to the Olares LAN IP while you are on the same network.
+
 :::tip
 You can install AdGuard Home from the Olares Market to monitor traffic and manage DNS mappings graphically.
 :::
-## Method 4: Modify hosts files
-:::info `.local` URLs do not need manual hosts changes
-If you use `.local` URLs from [Method 2](#method-2-use-local-domain), skip this method. These local domains use local name resolution and do not require manually editing the hosts file.
-:::
 
-Method 4 is for standard `olares.com` URLs only. If you cannot change router settings and need immediate offline access on a specific computer, you can manually map standard `olares.com` domains in your hosts file.
+:::info Verify hostname resolution
+After configuring LarePass host mappings or local DNS, resolve a standard service hostname from the client computer:
 
-1. Locate your hosts file:
-   - **Windows**: `C:\Windows\System32\drivers\etc\hosts`
-   - **macOS/Linux**: `/etc/hosts`
-2. Open the file with a text editor, which requires Administrator privileges.
-3. Add the mapping lines:
-    ```plain
-    # Replace with the actual internal IP and the username
-    # Olares apps
-    192.168.31.208  desktop.<username>.olares.com
-    192.168.31.208  auth.<username>.olares.com
-    192.168.31.208  files.<username>.olares.com
-    192.168.31.208  market.<username>.olares.com
-    192.168.31.208  settings.<username>.olares.com
-    192.168.31.208  dashboard.<username>.olares.com
-    192.168.31.208  control-hub.<username>.olares.com
-    192.168.31.208  profile.<username>.olares.com
-    192.168.31.208  vault.<username>.olares.com
-    # Add other community apps as needed
-    192.168.31.208  <entrance_id>.<username>.olares.com
-    ```
-4. Save the file to apply changes and ensure local access without an internet connection.
-
-Verify the changes by checking the URL for quick loading or using the terminal:
 ```bash
 ping desktop.<username>.olares.com
 ```
-If the IP address starts with `192.168`, it indicates successful configuration.
 
+The returned address should match the LAN IP of your Olares. Private LAN addresses commonly begin with `192.168`, `10`, or `172.16`–`172.31`.
+:::
+
+## Access an app through overlay gateway
+
+Some apps need to appear as independent devices on your LAN for device discovery, casting, multiplayer connections, or other protocols that do not use an Olares web URL. For supported apps, overlay gateway assigns the app a dedicated LAN IP through a virtual network interface.
+
+This method is separate from LarePass VPN, host mappings, and local DNS. Use the IP address shown for the app rather than an `olares.com` or `olares.local` URL.
+
+Overlay gateway requires Olares to run on a native Linux host with a wired Ethernet connection. For availability, permissions, and setup steps, see [Manage overlay gateway for applications](../olares/settings/overlay-gateway.md).
+
+## Troubleshooting
+
+### A LarePass-managed URL no longer opens locally
+
+The LAN IP of Olares may have changed. Make sure the computer and Olares are on the same LAN, turn off **VPN connection**, then apply the hosts update offered by LarePass.
+
+### LarePass cannot add or update the hosts entries
+
+Make sure LarePass has permission to update the system hosts file. If you need to adjust the entries, edit them in **Update host mappings** in LarePass and leave the management markers beginning with `#` unchanged.
 
 ## FAQs
 
 <!--@include: ../../reusables/larepass-vpn.md#larepass-vpn-faq-->
+
+<!--@include: ../../reusables/local-domain.md#larepass-local-domain-faq-->
 
 <!--@include: ../../reusables/local-domain.md#local-domain-faq-->

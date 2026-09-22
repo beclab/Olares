@@ -26,7 +26,7 @@ Olares 是一款可以用自然语言操作的开源个人云操作系统，让�
   <a class="doc-map-card" href="./get-started/">
     <span class="doc-map-icon"><span class="material-symbols-outlined">rocket_launch</span></span>
     <span class="doc-map-title">快速开始</span>
-    <span class="doc-map-desc">创建 Olares ID，在你自己的硬件上安装 Olares</span>
+    <span class="doc-map-desc">选择安装方式，在自己的硬件上完成 Olares 设置</span>
   </a>
   <a class="doc-map-card" href="./larepass/">
     <span class="doc-map-icon"><span class="material-symbols-outlined">smartphone</span></span>

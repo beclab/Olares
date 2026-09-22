@@ -8,7 +8,9 @@ import (
 	aprv1 "bytetrade.io/web3os/tapr/pkg/apis/apr/v1alpha1"
 	"bytetrade.io/web3os/tapr/pkg/constants"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes/fake"
 )
 
@@ -103,6 +105,58 @@ func TestGetOriginSubjectName(t *testing.T) {
 		if testCase.expectedName != GetOriginSubjectName(testCase.originalName) {
 			t.Fatalf("expetd: %s, but got: %s", testCase.expectedName, GetOriginSubjectName(testCase.originalName))
 		}
+	}
+}
+
+func TestLatestMiddlewareRequestUsesLiveSpec(t *testing.T) {
+	stale := &aprv1.MiddlewareRequest{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "os-framework", Name: "search-server-nats"},
+		Spec: aprv1.MiddlewareSpec{
+			Nats: aprv1.Nats{
+				User: "os-search-server",
+				Subjects: []aprv1.Subject{
+					{Name: "search.*"},
+				},
+			},
+		},
+	}
+	live := stale.DeepCopy()
+	live.Spec.Nats.Subjects = append(live.Spec.Nats.Subjects, aprv1.Subject{Name: "search.>"})
+
+	got, err := latestMiddlewareRequest(stale, func(ns, name string) (*aprv1.MiddlewareRequest, error) {
+		if ns != "os-framework" || name != "search-server-nats" {
+			t.Fatalf("get %s/%s", ns, name)
+		}
+		return live, nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Spec.Nats.Subjects) != 2 || got.Spec.Nats.Subjects[1].Name != "search.>" {
+		t.Fatalf("expected live spec with search.>, got %#v", got.Spec.Nats.Subjects)
+	}
+}
+
+func TestSkipMissingMiddlewareRequest(t *testing.T) {
+	notFound := apierrors.NewNotFound(schema.GroupResource{Resource: "middlewarerequests"}, "search-server-nats")
+	if !skipMissingMiddlewareRequest("os-framework", "search-server-nats", notFound) {
+		t.Fatal("NotFound should skip")
+	}
+	if skipMissingMiddlewareRequest("os-framework", "search-server-nats", fmt.Errorf("timeout")) {
+		t.Fatal("other errors must not skip")
+	}
+	if skipMissingMiddlewareRequest("os-framework", "search-server-nats", nil) {
+		t.Fatal("nil error must not skip")
+	}
+}
+
+func TestLatestMiddlewareRequestRequiresNamespacedName(t *testing.T) {
+	_, err := latestMiddlewareRequest(&aprv1.MiddlewareRequest{}, func(ns, name string) (*aprv1.MiddlewareRequest, error) {
+		t.Fatal("get should not be called")
+		return nil, fmt.Errorf("unused")
+	})
+	if err == nil {
+		t.Fatal("expected error for empty namespace/name")
 	}
 }
 

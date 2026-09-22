@@ -11,16 +11,15 @@ head:
 
 This guide explains how to install Olares on NVIDIA DGX Spark using the command-line installation script.
 
-<!--@include: ./reusables.md#installation-troubleshooting-tip-->
+## Prerequisites
 
-## System requirements
-
-- **DGX Spark**: Ensure your device has completed the [initial setup](https://docs.nvidia.com/dgx/dgx-spark/first-boot.html), with a user account created and network configured.
-- **Storage**: At least 150 GB of available SSD storage on DGX Spark.
-- **Access method**: You need access to the terminal on DGX Spark, either via:
+- **Olares device**: NVIDIA DGX Spark with at least 150 GB of available SSD storage.
+<!--@include: ./reusables.md#larepass-prerequisite-->
+- **Initial setup**: DGX Spark has completed the [initial setup](https://docs.nvidia.com/dgx/dgx-spark/first-boot.html), including user account and network configuration.
+- **Terminal access**: Use either method:
   - Direct access: Connect a monitor, keyboard, and mouse to DGX Spark.
   - Remote access: Connect via SSH from another computer on the same network.
-- **Network**: An Ethernet cable connecting DGX Spark to your router (recommended for stable connection).
+- **Network**: An Ethernet connection to your router is recommended.
 
 ## Prepare DGX Spark
 
@@ -107,3 +106,5 @@ If needed, you can manually adjust the memory allocation for each AI application
 4. In the **Edit VRAM allocation** dialog, enter the desired VRAM amount in GB and click **Confirm**.
 
 <!--@include: ./reusables.md#protect-olares-id-->
+
+<!--@include: ./reusables.md#installation-troubleshooting-tip-->

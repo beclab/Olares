@@ -24,6 +24,10 @@ head:
    使用机械硬盘 (HDD) 会导致安装失败。
    :::
 
+## 开始之前
+
+<!--@include: ./reusables.md#larepass-prerequisite-->
+
 ## 配置环境
 1. 配置 Raspbian 环境，启用必要功能：
 

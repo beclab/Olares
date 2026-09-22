@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Install Olares on a physical machine using the official ISO image, including system requirements, installation steps, and activation process.
+description: Install Olares on a physical Linux machine from a bootable USB drive, then activate it with LarePass.
 head:
   - - meta
     - name: keywords
@@ -11,28 +11,22 @@ head:
 
 This guide explains how to install Olares on a physical machine using the official ISO image.
 
-<!--@include: ./reusables.md#installation-troubleshooting-tip-->
+:::warning Installing on Olares One?
+This ISO is for self-hosted x86-64 hardware. For Olares One, follow the [Olares One ISO guide](/one/create-bootable-usb) and use the device-specific image to keep Olares One features available.
+:::
 
-## System requirements
+## Prerequisites
 
-### Required specifications
-
-- **CPU**: At least 4 cores. Intel or AMD x86-64 architecture required. ARM is not currently supported.
-- **RAM**: At least 8 GB of available memory.
-- **Storage**: At least 150 GB of available SSD storage.
-  :::warning SSD required
-  The installation will fail if an HDD (mechanical hard drive) is used instead of an SSD.
-  :::
-- **Network**: Wired LAN connection required.
-- **USB flash drive**: 8 GB capacity or larger.
-
-### Optional hardware
-
-<!--@include: ./gpu-requirements.md#gpu-requirements-->
+- **Olares device**: A physical machine that meets the [Linux system requirements](install-olares.md#linux).
+- **Processor**: Intel or AMD x86-64. ARM is not supported.
+<!--@include: ./reusables.md#larepass-prerequisite-->
+- **Network**: A wired LAN connection.
+- **USB flash drive**: At least 8 GB of capacity.
+- **Setup computer**: A Windows, macOS, or Linux computer for creating the bootable USB drive.
 
 ## Create a bootable USB drive
 
-1. Download [the latest official Olares ISO image](https://cdn.olares.com/olares-v1.12.6-amd64.iso).
+1. Download the [latest Olares ISO image for self-hosted hardware](https://cdn.olares.com/olares-v1.12.6-amd64.iso).
 2. Download and install [**Balena Etcher**](https://etcher.balena.io/).
 3. Insert the USB flash drive into your computer.
 4. Launch Etcher and follow these steps:
@@ -94,3 +88,5 @@ After rebooting, the system will enter Ubuntu.
 <!--@include: ./log-in-to-olares.md-->
 
 <!--@include: ./reusables.md#protect-olares-id-->
+
+<!--@include: ./reusables.md#installation-troubleshooting-tip-->

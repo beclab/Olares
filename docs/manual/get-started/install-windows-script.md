@@ -41,6 +41,10 @@ We recommend using it only for development or testing purposes.
 You can also confirm your GPU in **Task Manager > Performance**. To verify the driver is accessible in WSL, run `nvidia-smi` in your WSL terminal.
 :::
 
+## Before you begin
+
+<!--@include: ./reusables.md#larepass-prerequisite-->
+
 ## Set up system environment
 1. Enable the required Windows features for virtualization.
 

@@ -11,6 +11,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/beclab/Olares/cli/internal/cachedir"
 )
 
 // homeEnv is the environment variable used to override the config dir, mirroring
@@ -21,8 +23,9 @@ const homeEnv = "OLARES_CLI_HOME"
 // writable emptyDir mounted into an application container. It sits between
 // the explicit override and $HOME so a managed container gets a config dir it
 // can actually write to, without changing anything on a host install where
-// the variable is unset.
-const cacheDirEnv = "OLARES_CLI_CACHE_DIR"
+// the variable is unset. Whether it is writable is cachedir's question to
+// answer, not ours; the name is kept here for the tests that set it.
+const cacheDirEnv = cachedir.EnvCacheDir
 
 // defaultDir is the directory name used under $HOME when $OLARES_CLI_HOME is
 // unset.
@@ -34,6 +37,15 @@ const defaultDir = ".olares-cli"
 // cli/pkg/auth/token_store_keychain.go.
 const configFilename = "config.json"
 
+// lockDir is the subdirectory of Home() holding every advisory lock the CLI
+// takes: this package's config.lock plus the per-olaresId token-refresh
+// locks built by pkg/credential.
+const lockDir = "locks"
+
+// configLockFilename serializes read-modify-write cycles on config.json.
+// See MutateProfile.
+const configLockFilename = "config.lock"
+
 // Permissions for the config dir & file. config.json holds the profile index
 // (no secrets) but we still keep it 0600 because it does carry the
 // `currentProfile` selection and any auth-URL overrides.
@@ -43,15 +55,20 @@ const (
 )
 
 // Home returns the resolved olares-cli config directory: $OLARES_CLI_HOME,
-// then $OLARES_CLI_CACHE_DIR/config, then $HOME/.olares-cli. The directory is
-// NOT created here — callers that intend to write should call EnsureHome
-// instead.
+// then the platform cache base's `config`, then $HOME/.olares-cli. The
+// directory is NOT created here — callers that intend to write should call
+// EnsureHome instead.
+//
+// The middle rung goes through cachedir, which substitutes a writable
+// directory when the one the platform exported cannot be written to. Reads
+// resolve through the same call, so config.json is looked for where the last
+// write actually landed.
 func Home() (string, error) {
 	if v := os.Getenv(homeEnv); v != "" {
 		return v, nil
 	}
-	if v := os.Getenv(cacheDirEnv); v != "" {
-		return filepath.Join(v, "config"), nil
+	if base, ok := cachedir.Base(); ok {
+		return filepath.Join(base, "config"), nil
 	}
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -79,4 +96,18 @@ func ConfigFile() (string, error) {
 		return "", err
 	}
 	return filepath.Join(dir, configFilename), nil
+}
+
+// LockPath returns the absolute path of the named lock file under
+// Home()/locks/. Neither the directory nor the file is created here —
+// lockfile.Acquire does that when it takes the lock.
+//
+// Callers naming a lock after user input must run it through
+// lockfile.Sanitize first; this function does not validate `name`.
+func LockPath(name string) (string, error) {
+	dir, err := Home()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, lockDir, name), nil
 }

@@ -41,6 +41,10 @@ Windows 版 Olares 目前存在以下限制：
 你也可以在 **任务管理器 > 性能** 中确认显卡型号是否为 NVIDIA，并在 WSL 终端中运行 `nvidia-smi` 检查驱动是否在子系统中可用。
 :::
 
+## 开始之前
+
+<!--@include: ./reusables.md#larepass-prerequisite-->
+
 ## 配置系统环境
 1. 启用虚拟化所需的 Windows 功能。
 

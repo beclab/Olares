@@ -9,7 +9,7 @@ head:
 
 # 管理仓库和镜像
 
-在**设置**的**高级**页面中，可以管理软件仓库镜像源，并查看已下载的应用和系统镜像。导出系统日志请参阅[收集诊断信息](../../collect-diagnostic-information.md)。配置系统级环境变量请参阅[设置系统级环境变量](../../manage-system-env.md)。
+在**设置**的**高级**页面中，可以管理软件仓库镜像源、查看已下载的应用和系统镜像，以及导出系统日志。配置系统级环境变量请参阅[设置系统级环境变量](../../manage-system-env.md)。
 
 ## 管理仓库
 
@@ -40,3 +40,18 @@ head:
 **镜像管理**页面提供了 Olares 系统上下载和缓存的所有应用及软件包镜像的全面视图。你可以通过筛选或搜索快速找到特定镜像。
 
 ![镜像管理](/images/zh/manual/olares/image-management1.png#bordered){width=65%}
+
+## 导出系统日志
+
+系统日志记录了系统组件的运行状态，为故障排除提供关键的诊断信息。
+
+你可以手动导出日志文件，并将其附加到支持工单或 GitHub Issue 中，以帮助 Olares 团队更快地解决你的问题。
+
+<!--@include: ../../../reusables/export-system-logs.md#export-system-logs-steps-->
+
+:::tip 自动收集日志
+除了手动导出，你也可以自动收集日志：
+- 在 [Ticket 应用](../../help/request-technical-support.md#通过-ticket-应用提交)中，展开**系统日志**并选择**采集日志**。
+- 在 [Olares Space](../../space/tickets.md#通过-olares-cli-自动创建工单) 中，使用 `olares-cli` 上传日志。
+:::
+

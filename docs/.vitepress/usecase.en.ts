@@ -10,6 +10,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "Local LLMs",
               link: "/use-cases/llm-base-apps",
             },
+            {
+              text: "Olares Router",
+              link: "/use-cases/olares-router",
+            },
           ],
         },
         {
@@ -105,6 +109,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                       link: "/use-cases/opencode-extensions",
                     },
                     {
+                      text: "Manage Olares with Olares CLI",
+                      link: "/use-cases/opencode-olares-cli",
+                    },
+                    {
                       text: "Common issues",
                       link: "/use-cases/opencode-issues",
                     },
@@ -113,6 +121,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                 {
                   text: "Claude Code",
                   link: "/use-cases/claude-code",
+                },
+                {
+                  text: "Codex CLI",
+                  link: "/use-cases/codex-cli",
                 },
                 {
                   text: "Pool CLI",
@@ -215,6 +227,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                       link: "/use-cases/comfyui-common-issues",
                     },
                   ]
+                },
+                {
+                  text: "Open Design",
+                  link: "/use-cases/open-design",
                 },
                 {
                   text: "ACE-Step 1.5",

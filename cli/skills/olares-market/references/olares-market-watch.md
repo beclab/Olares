@@ -68,7 +68,7 @@ A long `installing` / `initializing` is NOT a failure — app-service polls a lo
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `missing required env var(s): KEY1, KEY2 ...` (install) | App declares required envs | Re-run with `--env KEY=VALUE` per missing var |
+| `environment variable requirements not met` + `Missing required values: KEY1, KEY2` (install) | App declares required envs | Re-run with `--env KEY=VALUE` per missing var |
 | `app 'X' is not in an upgradable state (current: Y)` | Pre-flight gate 2 | Wait for terminal state, or run `cancel` first |
 | `target version '1.2.3' is already installed — nothing to do` | Pre-flight gate 3 | Nothing to upgrade. **Does NOT fire for `-s upload`** — a same-version upgrade is allowed there as a retry of the stored chart |
 | `chart is marked 'suspend' or 'remove' in source 'X' ...` | Pre-flight gate 4 (`app_simple_info.app_labels` contains `suspend` or `remove`) | Upstream withdrew the app; the SPA hides its Upgrade button too. Contact the app maintainer |

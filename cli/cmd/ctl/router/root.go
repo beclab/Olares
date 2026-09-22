@@ -44,10 +44,6 @@ Run "olares-cli router <verb> --help" for details.
 	}
 	cmd.SilenceErrors = true
 	cmd.SilenceUsage = true
-	cmd.PersistentPreRun = func(c *cobra.Command, args []string) {
-		c.SilenceErrors = true
-		c.SilenceUsage = true
-	}
 
 	cmd.AddCommand(NewModelCommand(f))
 	cmd.AddCommand(NewRouteCommand(f))

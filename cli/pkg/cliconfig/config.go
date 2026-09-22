@@ -1,13 +1,16 @@
 package cliconfig
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
+	"time"
 
+	"github.com/beclab/Olares/cli/internal/lockfile"
 	"github.com/beclab/Olares/cli/pkg/olares"
 )
 
@@ -271,99 +274,151 @@ func (m *MultiProfileConfig) Upsert(p ProfileConfig) *ProfileConfig {
 	return &m.Profiles[len(m.Profiles)-1]
 }
 
-// SetOwnerRole atomically updates the OwnerRole + WhoamiRefreshedAt fields
-// for the profile keyed by olaresID, then persists config.json.
+// configLockTimeout bounds the wait for config.lock. The critical section is
+// a small read, an in-memory edit and a rename, so anything approaching this
+// means a peer died holding the lock rather than that we are queued behind
+// honest work.
+const configLockTimeout = 10 * time.Second
+
+// MutateProfile applies fn to the profile keyed by olaresID and persists the
+// result, serializing the whole read-modify-write cycle on config.lock and
+// re-reading config.json from disk inside it.
+//
+// Re-reading under the lock is the entire point, and the reason these are
+// package functions rather than methods on MultiProfileConfig. Every field
+// the Set* helpers below touch is a cache that some command refreshes
+// mid-flight, while CurrentProfile / PreviousProfile on the same struct are
+// what `profile use` writes. A caller that edited one field of a config it
+// loaded at process start and saved the whole struct would also write back
+// the active profile as it was at load time, silently undoing a
+// `profile use` that landed in between: atomicWriteFile gives us atomicity,
+// not isolation. Taking a MultiProfileConfig receiver here would let that
+// bug back in, so there is deliberately nothing to pass.
+//
+// A missing profile is an error rather than a silent no-op: every caller
+// only gets here after a successful API call against that olaresID, so the
+// profile disappearing means something else removed it and the caller
+// should say so.
+func MutateProfile(ctx context.Context, olaresID string, fn func(*ProfileConfig) error) error {
+	if olaresID == "" {
+		return errors.New("cliconfig: empty olaresID")
+	}
+	lockPath, err := LockPath(configLockFilename)
+	if err != nil {
+		return err
+	}
+	lockCtx, cancel := context.WithTimeout(ctx, configLockTimeout)
+	defer cancel()
+	release, err := lockfile.Acquire(lockCtx, lockPath)
+	if err != nil {
+		return fmt.Errorf("acquire config lock: %w", err)
+	}
+	defer release() //nolint:errcheck // best-effort lock release
+
+	cfg, err := LoadMultiProfileConfig()
+	if err != nil {
+		return err
+	}
+	target := cfg.FindByOlaresID(olaresID)
+	if target == nil {
+		return fmt.Errorf("profile %q not found", olaresID)
+	}
+	if err := fn(target); err != nil {
+		return err
+	}
+	if err := SaveMultiProfileConfig(cfg); err != nil {
+		return fmt.Errorf("save config: %w", err)
+	}
+	return nil
+}
+
+// SetOwnerRole updates the OwnerRole + WhoamiRefreshedAt fields for the
+// profile keyed by olaresID.
 //
 // Returns:
 //   - changed: true iff OwnerRole transitioned to a different non-empty
 //     value (used by callers to decide whether to print a "role changed"
 //     notice). A first-time write (empty → role) also reports changed=true
 //     because that's a new piece of information from the user's perspective.
-//   - err:     any I/O / serialization error from SaveMultiProfileConfig.
-//
-// If no profile matches olaresID we return (false, error) — callers should
-// surface this rather than silently writing nothing, because every code
-// path here only runs after a successful API call against that olaresID.
+//     The comparison is against the value on disk, not against whatever the
+//     caller last read.
+//   - err:     any lock / I/O / serialization error.
 //
 // refreshedAt is the wall-clock the caller observed the API success at;
 // passed in (rather than re-read here) so test code and replay-style
 // flows can pin it deterministically.
-func (m *MultiProfileConfig) SetOwnerRole(olaresID, role string, refreshedAt int64) (changed bool, err error) {
-	target := m.FindByOlaresID(olaresID)
-	if target == nil {
-		return false, fmt.Errorf("profile %q not found", olaresID)
+func SetOwnerRole(ctx context.Context, olaresID, role string, refreshedAt int64) (changed bool, err error) {
+	err = MutateProfile(ctx, olaresID, func(p *ProfileConfig) error {
+		changed = role != "" && p.OwnerRole != role
+		p.OwnerRole = role
+		p.WhoamiRefreshedAt = refreshedAt
+		return nil
+	})
+	if err != nil {
+		return false, err
 	}
-	prev := target.OwnerRole
-	target.OwnerRole = role
-	target.WhoamiRefreshedAt = refreshedAt
-	if err := SaveMultiProfileConfig(m); err != nil {
-		return false, fmt.Errorf("save config: %w", err)
-	}
-	return role != "" && prev != role, nil
+	return changed, nil
 }
 
-// SetClusterContext atomically updates the ClusterContext +
-// ClusterContextRefreshedAt fields for the profile keyed by olaresID, then
-// persists config.json. Mirrors SetOwnerRole's contract.
+// SetClusterContext updates the ClusterContext + ClusterContextRefreshedAt
+// fields for the profile keyed by olaresID. Mirrors SetOwnerRole's contract.
 //
 // Returns:
 //   - changed: true iff GlobalRole transitioned to a different non-empty
 //     value (used by `cluster context` to print a "role changed" notice).
 //     A first-time write (cache was nil) also reports changed=true.
-//   - err:     any I/O / serialization error from SaveMultiProfileConfig.
+//   - err:     any lock / I/O / serialization error.
 //
-// `ctx` is the freshly-decoded snapshot to persist; passing nil is treated
+// `cache` is the freshly-decoded snapshot to persist; passing nil is treated
 // as an explicit "clear the cache" (used by tests / future eviction).
 //
 // IMPORTANT: this writes a snapshot of identity/role/visibility metadata
 // only — the cache MUST NOT be consulted to decide whether a verb is
 // allowed to run. See ProfileConfig.ClusterContext doc.
-func (m *MultiProfileConfig) SetClusterContext(olaresID string, ctx *ClusterContextCache, refreshedAt int64) (changed bool, err error) {
-	target := m.FindByOlaresID(olaresID)
-	if target == nil {
-		return false, fmt.Errorf("profile %q not found", olaresID)
-	}
-	prevRole := ""
-	if target.ClusterContext != nil {
-		prevRole = target.ClusterContext.GlobalRole
-	}
-	target.ClusterContext = ctx
-	target.ClusterContextRefreshedAt = refreshedAt
-	if err := SaveMultiProfileConfig(m); err != nil {
-		return false, fmt.Errorf("save config: %w", err)
-	}
+func SetClusterContext(ctx context.Context, olaresID string, cache *ClusterContextCache, refreshedAt int64) (changed bool, err error) {
 	newRole := ""
-	if ctx != nil {
-		newRole = ctx.GlobalRole
+	if cache != nil {
+		newRole = cache.GlobalRole
 	}
-	return newRole != "" && prevRole != newRole, nil
+	err = MutateProfile(ctx, olaresID, func(p *ProfileConfig) error {
+		prevRole := ""
+		if p.ClusterContext != nil {
+			prevRole = p.ClusterContext.GlobalRole
+		}
+		changed = newRole != "" && prevRole != newRole
+		p.ClusterContext = cache
+		p.ClusterContextRefreshedAt = refreshedAt
+		return nil
+	})
+	if err != nil {
+		return false, err
+	}
+	return changed, nil
 }
 
-// SetBackendVersion atomically updates the BackendVersion +
-// BackendVersionRefreshedAt fields for the profile keyed by olaresID, then
-// persists config.json. Mirrors SetOwnerRole's contract.
+// SetBackendVersion updates the BackendVersion + BackendVersionRefreshedAt
+// fields for the profile keyed by olaresID. Mirrors SetOwnerRole's contract.
 //
 // Returns:
 //   - changed: true iff BackendVersion transitioned to a different non-empty
 //     value (callers can use this to notice "the backend was upgraded"). A
 //     first-time write (empty → version) also reports changed=true.
-//   - err:     any I/O / serialization error from SaveMultiProfileConfig.
+//   - err:     any lock / I/O / serialization error.
 //
 // refreshedAt is the wall-clock the caller observed the /api/olares-info
 // success at; passed in (rather than re-read here) so test code can pin it
 // deterministically.
-func (m *MultiProfileConfig) SetBackendVersion(olaresID, version string, refreshedAt int64) (changed bool, err error) {
-	target := m.FindByOlaresID(olaresID)
-	if target == nil {
-		return false, fmt.Errorf("profile %q not found", olaresID)
+func SetBackendVersion(ctx context.Context, olaresID, version string, refreshedAt int64) (changed bool, err error) {
+	err = MutateProfile(ctx, olaresID, func(p *ProfileConfig) error {
+		changed = version != "" && p.BackendVersion != version
+		p.BackendVersion = version
+		p.BackendVersionRefreshedAt = refreshedAt
+		return nil
+	})
+	if err != nil {
+		return false, err
 	}
-	prev := target.BackendVersion
-	target.BackendVersion = version
-	target.BackendVersionRefreshedAt = refreshedAt
-	if err := SaveMultiProfileConfig(m); err != nil {
-		return false, fmt.Errorf("save config: %w", err)
-	}
-	return version != "" && prev != version, nil
+	return changed, nil
 }
 
 // Remove deletes a profile by Name or OlaresID. If the removed profile was

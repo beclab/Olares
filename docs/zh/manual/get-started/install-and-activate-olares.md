@@ -8,9 +8,14 @@ noindex: true
 :::
 
 <!-- #region iso-activation-flow -->
-1. 打开手机上的 LarePass 应用。
-2. 在 Olares 激活页面点击**发现附近的 Olares**。LarePass 将列出同一网络中检测到的 Olares 实例。
-3. 从列表中选择目标 Olares 实例，并点击**立即安装**。
+1. 打开 LarePass。如果还没有 Olares ID，点击**创建账号**并按提示完成设置。
+
+   :::warning 中国大陆用户请选择 `.cn` 域名
+   如果手机系统语言为英文，请在高级创建选项中选择 `.cn` 域名。
+   :::
+2. 在激活页面点击**发现附近的 Olares**。LarePass 会列出同一网络中发现的 Olares 实例。
+3. 选择你的 Olares 实例，点击**立即安装**。
+
    ![ISO 激活](/images/manual/larepass/iso-activate1.png#bordered)
 4. 安装完成后，点击**立即激活**。
 

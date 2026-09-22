@@ -28,6 +28,29 @@ var inFlightCancelableStates = map[string]bool{
 	stateResuming:  true,
 }
 
+// uninstallRejectingStates are the settled states whose entry in
+// app-service's OperationAllowedInState
+// (framework/app-service/pkg/appstate/state_transition.go) permits InstallOp
+// but not UninstallOp: nothing was ever deployed, so an uninstall is answered
+// with a 404.
+//
+// This is deliberately NOT notInstalledStates from types.go, which answers a
+// different question — whether the row renders under `market list --mine`.
+// The two sets differ on exactly one state, and it matters: `installFailed`
+// is absent from `--mine` yet DOES accept UninstallOp, because a failed
+// install can have left resources behind that the uninstall cleans up.
+//
+// `downloadFailed` is the member to expect in practice. A bad image
+// reference fails while pulling, so it lands here rather than in
+// installFailed.
+var uninstallRejectingStates = map[string]bool{
+	"downloadFailed":      true,
+	"pendingCanceled":     true,
+	"downloadingCanceled": true,
+	"installingCanceled":  true,
+	"uninstalled":         true,
+}
+
 func NewCmdMarketUninstall(f *cmdutil.Factory) *cobra.Command {
 	opts := newMarketOptions(f)
 	cmd := &cobra.Command{
@@ -167,6 +190,28 @@ func runUninstall(opts *MarketOptions, cmd *cobra.Command, appName string) error
 	// of state.
 	if row != nil && inFlightCancelableStates[curState] {
 		return runUninstallViaCancel(opts, mc, appName, source, version, cascade, curState, atLeast126)
+	}
+
+	// A row in one of the states that does not accept UninstallOp names a
+	// source but has nothing deployed behind it, and app-service answers the
+	// uninstall with a bare 404. Forwarding that reads like the app name was
+	// wrong, when in fact the record of a failed operation is all that is
+	// left.
+	//
+	// This is the same stance as the missing-row branch below — nothing
+	// actionable to delete, so report it and stop — except that we must not
+	// hand off to --watch: the row is present and will never move, so the
+	// watcher would sit there until it timed out and then exit non-zero.
+	if row != nil && uninstallRejectingStates[curState] {
+		opts.info("'%s' is in state '%s', which is not an installed app; nothing to uninstall", appName, curState)
+		if source == chartUploadSource {
+			opts.info("  the row is a record of the failed operation; 'olares-cli market delete %s' removes the uploaded chart and clears it", appName)
+		} else {
+			opts.info("  the row is a record of the failed operation; re-run 'olares-cli market install %s' to retry", appName)
+		}
+		result := newOperationResult(mc, "uninstall", appName, source, version,
+			fmt.Sprintf("state %q is not installed; nothing to uninstall", curState), nil)
+		return finishOperation(opts, mc, result)
 	}
 
 	opts.info("Uninstalling '%s' for user '%s'...", appName, mc.olaresID)

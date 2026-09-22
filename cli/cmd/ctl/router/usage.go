@@ -87,8 +87,14 @@ type spendLog struct {
 	// only for a stream. QueueMS is the part of the latency the engine did
 	// not spend working, and only a local engine reports the timings it is
 	// derived from.
-	TTFTMS   *int64 `json:"ttft_ms,omitempty"`
-	QueueMS  *int64 `json:"queue_ms,omitempty"`
+	TTFTMS  *int64 `json:"ttft_ms,omitempty"`
+	QueueMS *int64 `json:"queue_ms,omitempty"`
+	// DecodeMS is the part of the latency the model spent writing, and it is
+	// what the reported generation speed divides by. Nil means no span could
+	// be established -- a buffered answer from an upstream that reports no
+	// timings has no first-token moment to subtract -- and such a call is
+	// left out of that speed rather than counted at its wall clock.
+	DecodeMS *int64 `json:"decode_ms,omitempty"`
 	Streamed bool   `json:"streamed"`
 
 	AudioInputSeconds  *float64 `json:"audio_input_seconds,omitempty"`
@@ -157,7 +163,12 @@ type spendTotals struct {
 	TotalQueries      int64   `json:"total_queries"`
 	TotalPages        int64   `json:"total_pages"`
 	TotalObjects      int64   `json:"total_objects"`
-	AvgTPS            float64 `json:"avg_tps"`
+	// Generation speed, not the speed of a whole request: the denominator is
+	// the time the models spent writing, so the prompt read and the engine's
+	// queue are outside it. Zero means no call in the window could be
+	// measured that way, which is why it is reported as absent rather than
+	// as a speed of nothing.
+	AvgDecodeTPS float64 `json:"avg_decode_tps"`
 }
 
 type spendSummary struct {
@@ -870,8 +881,8 @@ func renderSummaryTotals(w io.Writer, tot *spendTotals) error {
 	if _, err := fmt.Fprintf(w, ", %s", strings.Join(quantities, ", ")); err != nil {
 		return err
 	}
-	if tot.AvgTPS > 0 {
-		if _, err := fmt.Fprintf(w, ", averaging %.1f tokens/s", tot.AvgTPS); err != nil {
+	if tot.AvgDecodeTPS > 0 {
+		if _, err := fmt.Fprintf(w, ", generating at %.1f tokens/s", tot.AvgDecodeTPS); err != nil {
 			return err
 		}
 	}

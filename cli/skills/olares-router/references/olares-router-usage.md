@@ -48,6 +48,8 @@ An asynchronous generation is counted by what it delivered rather than by the re
 
 **`TOOK` is not how long the request was open.** An asynchronous call — a diarization, a video, a long synthesis — is accepted, worked on, and collected later, so the request that returns the result is a JSON forward measured in milliseconds while the work took minutes. The row therefore carries both: `latency_ms` is the request and `job_ms` is the work, and `TOOK` shows the work when there is one. A row with no `job_ms` was synchronous and its request time is the whole story. This matters when reading a slow report: a 273-second diarization used to appear as five milliseconds, which made the engine look idle.
 
+**The speed `summary` reports is a generation speed, not a throughput.** `avg_decode_tps` divides the tokens the models wrote by `decode_ms`, the time they spent writing — so reading the prompt, the engine's queue, a failed attempt and the trip back are all outside it, and the figure is comparable to the tokens/s a model's own benchmark quotes. Only `chat` and `responses` calls can contribute; a translation's tokens are a side effect of other work and would make the number mean two things at once. A call whose decode span cannot be established sits the speed out instead of being counted at its wall clock, so a window with none reports no speed rather than a slow one. Read the whole of a window's cost from the token and cost columns, never from this.
+
 Three zeros mean three different things and `list` says which under the table:
 
 - **still running** — priced when it ends, as above.
