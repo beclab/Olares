@@ -45,3 +45,5 @@ Download the ZIP package from the [LarePass website](https://www.olares.com/lare
 - On mobile devices, you can [create an Olares ID](../get-started/create-olares-id.md) directly in LarePass. To use a custom domain, see [Create an Olares ID with a custom domain](create-org-account.md).
 - On the desktop client, [import an existing account](manage-accounts.md#import-an-account).
 - In the Chrome browser extension, [import an existing account](manage-accounts.md#chrome-extension).
+
+On the desktop client, you can also [save remote resources directly to Olares](save-resources-to-olares.md).

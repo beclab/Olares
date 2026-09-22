@@ -40,10 +40,10 @@ Run the following commands on the Olares host:
 
 ```bash
 mkdir -p "$HOME/olares-logs"
-sudo olares-cli logs --output-dir "$HOME/olares-logs"
+sudo olares-cli logs --max-lines 0 --output-dir "$HOME/olares-logs"
 ```
 
-The command collects recent Olares system, Kubernetes, container, kernel, and network diagnostics. When it finishes, the last line prints the full archive path, for example:
+The command collects recent Olares system, Kubernetes, container, kernel, and network diagnostics. `--max-lines 0` removes the per-source line limit for system service logs and previous-boot kernel logs. The default seven-day time range still applies. When the command finishes, the last line prints the full archive path, for example:
 
 ```plain
 logs have been collected and archived in: /home/olares/olares-logs/olares-logs-20260827-050839.tar.gz

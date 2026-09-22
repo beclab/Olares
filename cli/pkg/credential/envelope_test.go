@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -84,6 +87,33 @@ func TestAManagedCredentialIsNotSentToProfileLogin(t *testing.T) {
 		if bytes.Contains([]byte(action), []byte("profile login")) {
 			t.Fatalf("%T points at a command that is refused for managed credentials: %q", err, action)
 		}
+	}
+}
+
+// "Nothing is configured" inside a container the platform issued a credential
+// to means the mount failed to become a profile, not that the user forgot to
+// log in. Sending them to `profile login` there costs them a round of trying
+// a command that is refused.
+func TestNoProfileInAManagedContainerDoesNotSayLogin(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, credentialFilename), []byte("{}"), 0o600); err != nil {
+		t.Fatalf("prepare: %v", err)
+	}
+	t.Setenv(EnvCredentialsDir, dir)
+
+	body := envelopeFor(t, ErrNoProfile)
+	action, _ := body["action"].(string)
+	message, _ := body["message"].(string)
+	for field, text := range map[string]string{"action": action, "message": message} {
+		if text == "" {
+			t.Fatalf("%s is empty", field)
+		}
+		if strings.Contains(text, "profile login") || strings.Contains(text, "profile import") {
+			t.Errorf("%s points at a command that is refused for managed credentials: %q", field, text)
+		}
+	}
+	if body["code"] != clierr.CodeAuthNoProfile {
+		t.Errorf("code = %v, want it unchanged at %q", body["code"], clierr.CodeAuthNoProfile)
 	}
 }
 

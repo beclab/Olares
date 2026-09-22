@@ -39,6 +39,7 @@ Windows 版 Olares 目前存在以下限制：
 
 ## 开始之前
 开始安装前，请确保：
+<!--@include: ./reusables.md#larepass-prerequisite-->
 - 系统中已安装并运行 [Docker Desktop](https://docs.docker.com/desktop/setup/install/windows-install/)。
    :::info WSL 2 and Hyper-V
    如果 Docker Desktop 的模式为 **Hyper-V**，则无法启用 Olares 的 GPU 支持。请确保 Docker Desktop 在 **WSL 2** 模式下运行。  
@@ -50,7 +51,6 @@ Windows 版 Olares 目前存在以下限制：
   ipconfig | findstr /i "IPv4.*192"
   ```
   :::
-- 已通过 LarePass [创建 Olares ID](/zh/manual/get-started/create-olares-id.md) 且使用默认的 `olares.cn` 域名。
 
 ## 配置 WSL 2
 1. 打开 PowerShell，运行以下命令确认系统中安装的 WSL 内核版本：

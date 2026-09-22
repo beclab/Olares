@@ -343,6 +343,9 @@ def validate_skill_entrypoint(skill_dir: Path, errors: list[str]) -> None:
 
 
 
+DESCRIPTION_LIMIT = 1024
+
+
 def validate_frontmatter(skill: Path, errors: list[str]) -> None:
     lines = skill.read_text(encoding="utf-8").splitlines()
     if not lines or lines[0] != "---":
@@ -400,6 +403,18 @@ def validate_frontmatter(skill: Path, errors: list[str]) -> None:
     for key in ("description", "compatibility"):
         if not isinstance(root.get(key), str) or not root[key].strip():
             errors.append(f"{skill.relative_to(ROOT)}: frontmatter {key!r} is required")
+
+    # The description is what an agent matches a request against before it
+    # reads anything else, and 1024 is the ceiling the skill formats impose on
+    # it. This check used to live in publish.sh, which was the only thing
+    # enforcing it; it is the one thing that script checked and this file did
+    # not, so it moved here when the ClawHub publishing path was retired.
+    description = root.get("description")
+    if isinstance(description, str) and len(description) > DESCRIPTION_LIMIT:
+        errors.append(
+            f"{skill.relative_to(ROOT)}: frontmatter description is "
+            f"{len(description)} characters, over the {DESCRIPTION_LIMIT} limit"
+        )
 
     if root.get("metadata") != {
         "openclaw": {

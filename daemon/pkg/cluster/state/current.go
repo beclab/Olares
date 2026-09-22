@@ -230,6 +230,8 @@ func refreshCurrentStatus(ctx context.Context) error {
 		return nil
 	}
 
+	// GetHostIp reads the explicit hosts selection. A selected address that
+	// still belongs to a local interface must not be replaced by resolver data.
 	if hostIp != "" {
 		if !slices.ContainsFunc(ips, func(i *nets.NetInterface) bool { return i.IP == hostIp }) {
 			// wrong host ip
@@ -237,8 +239,8 @@ func refreshCurrentStatus(ctx context.Context) error {
 			if err = fix(); err != nil {
 				klog.Warning("fix host ip failed,", err)
 			}
-		} else if hostIpInFile, err := nets.GetHostIpFromHostsFile(hostname); err == nil && hostIpInFile != "" && hostIpInFile != hostIp {
-			klog.Warningf("host ip %s in hosts file is different from current host ip %s, try to fix it", hostIpInFile, hostIp)
+		} else if hostIpInFile, err := nets.GetHostIpFromHostsFile(hostname); err == nil && hostIpInFile == "" {
+			klog.Warningf("host ip for %s is missing from hosts file, try to fix it", hostname)
 			if err = fix(); err != nil {
 				klog.Warning("fix host ip failed,", err)
 			}

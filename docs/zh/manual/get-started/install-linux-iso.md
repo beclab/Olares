@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: 通过官方 ISO 镜像在物理机上安装 Olares 系统，包括系统要求、安装命令和激活流程。
+description: 通过启动 U 盘在 Linux 物理机上安装 Olares，然后使用 LarePass 完成激活。
 head:
   - - meta
     - name: keywords
@@ -11,28 +11,22 @@ head:
 
 本文介绍如何通过官方 ISO 镜像在物理机上安装 Olares 系统。
 
-<!--@include: ./reusables.md#installation-troubleshooting-tip-->
+:::warning 在 Olares One 上安装？
+此 ISO 仅适用于自托管 x86-64 硬件。如需在 Olares One 上重装系统，请参阅 [Olares One 专用 ISO 指南](/zh/one/create-bootable-usb)，使用专用镜像以保留 Olares One 的专属功能。
+:::
 
-## 系统要求
+## 前提条件
 
-### 必要配置
-
-- **CPU**：4 核及以上，x86-64 架构（AMD 或 Intel）。ARM 芯片目前不支持 ISO 镜像安装。
-- **内存**：至少 8 GB 可用内存。
-- **存储**：至少 150 GB 的可用 SSD 磁盘空间。
-   :::warning 必须使用 SSD
-   使用机械硬盘 (HDD) 会导致安装失败。
-   :::
-- **网络**：需连接至有线局域网。
-- **U 盘**：容量 8 GB 或更大。
-
-### 可选硬件
-
-<!--@include: ./gpu-requirements.md#gpu-requirements-->
+- **Olares 设备**：一台满足 [Linux 系统要求](install-olares.md#linux)的物理机。
+- **处理器**：Intel 或 AMD x86-64，不支持 ARM。
+<!--@include: ./reusables.md#larepass-prerequisite-->
+- **网络**：有线局域网连接。
+- **U 盘**：容量至少为 8 GB。
+- **操作电脑**：一台用于制作启动盘的 Windows、macOS 或 Linux 电脑。
 
 ## 制作启动盘
 
-1. 下载[最新官方 Olares ISO 镜像](https://cdn.olares.cn/olares-v1.12.6-amd64.iso)。
+1. 下载[适用于自托管硬件的最新 Olares ISO 镜像](https://cdn.olares.cn/olares-v1.12.6-amd64.iso)。
 2. 下载并安装 [**Balena Etcher**](https://etcher.balena.io/) 工具。
 3. 将 U 盘插入电脑。
 4. 打开 Etcher，依次选择：
@@ -90,3 +84,5 @@ head:
 <!--@include: ./log-in-to-olares.md-->
 
 <!--@include: ./reusables.md#protect-olares-id-->
+
+<!--@include: ./reusables.md#installation-troubleshooting-tip-->

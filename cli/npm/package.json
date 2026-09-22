@@ -7,6 +7,7 @@
   },
   "scripts": {
     "postinstall": "node scripts/install.js",
+    "test": "node --test scripts/install.test.js",
     "prepublishOnly": "node scripts/check-version.js"
   },
   "os": [
@@ -25,6 +26,8 @@
   "files": [
     "bin/",
     "scripts/",
+    "!scripts/*.test.js",
+    "checksums.txt",
     "README.md"
   ],
   "dependencies": {

@@ -30,7 +30,14 @@ olares-cli-*.tar.gz
 .vscode
 .DS_Store
 cli/output
-cli/docs/
+# cli/docs/ is local scratch (design notes, drafts) and stays untracked, with
+# one exception: cli/docs/design/ holds the reasoning that used to live in
+# cli/README.md and is meant to be read by anyone with the repository. Git
+# cannot re-include a path under an excluded *directory*, so the contents are
+# excluded rather than the directory itself -- a bare `!cli/docs/design/`
+# under `cli/docs/` would silently do nothing.
+cli/docs/*
+!cli/docs/design/
 daemon/output
 daemon/bin
 

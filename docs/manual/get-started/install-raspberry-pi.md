@@ -24,6 +24,10 @@ Currently, Olares on Raspberry Pi has certain limitations. We recommend using it
   The installation will fail if an HDD (mechanical hard drive) is used instead of an SSD.
   :::
 
+## Before you begin
+
+<!--@include: ./reusables.md#larepass-prerequisite-->
+
 ## Set up system environment
 1. Configure the Raspbian environment to enable necessary features:
 

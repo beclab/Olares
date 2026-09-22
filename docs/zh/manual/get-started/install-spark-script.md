@@ -11,16 +11,15 @@ head:
 
 本文介绍如何在 NVIDIA DGX Spark 上通过命令行安装脚本安装 Olares。
 
-<!--@include: ./reusables.md#installation-troubleshooting-tip-->
+## 前提条件
 
-## 系统要求
-
-- **DGX Spark**：确保设备已完成[首次启动设置](https://docs.nvidia.com/dgx/dgx-spark/first-boot.html)，创建了用户账户并配置好网络。
-- **存储**：DGX Spark 上至少有 150 GB 的可用 SSD 存储空间。
-- **访问方式**：你需要访问 DGX Spark 的终端，可通过以下任一方式：
+- **Olares 设备**：一台至少有 150 GB 可用 SSD 存储空间的 NVIDIA DGX Spark。
+<!--@include: ./reusables.md#larepass-prerequisite-->
+- **初始设置**：DGX Spark 已完成[首次启动设置](https://docs.nvidia.com/dgx/dgx-spark/first-boot.html)，包括创建用户账号和配置网络。
+- **终端访问**：使用以下任一方式：
   - 直接访问：将显示器、键盘和鼠标连接到 DGX Spark。
   - 远程访问：通过 SSH 从同一网络的另一台电脑连接。
-- **网络**：建议使用网线将 DGX Spark 连接到路由器，以获得稳定的网络连接。
+- **网络**：建议使用网线连接 DGX Spark 和路由器。
 
 ## 准备 DGX Spark
 
@@ -107,3 +106,5 @@ DGX Spark 采用统一内存架构，CPU 和 GPU 共享 128 GB 的 LPDDR5x 内�
 4. 在**编辑显存分配**对话框中，输入所需的显存大小（GB），然后点击**确认**。
 
 <!--@include: ./reusables.md#protect-olares-id-->
+
+<!--@include: ./reusables.md#installation-troubleshooting-tip-->

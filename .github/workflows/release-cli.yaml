@@ -304,6 +304,21 @@ jobs:
           fi
           echo "embedded skills name this release: $declared"
 
+      # The checksums GoReleaser just computed are the root of trust for the
+      # npm postinstall: it hashes what it downloaded and refuses to extract
+      # an archive that does not match (cli/npm/scripts/install.js). The
+      # publish job checks out the repository fresh, so the file has to
+      # travel as an artifact -- recomputing it there would hash whatever the
+      # CDN served, which is the thing being verified.
+      - name: Upload checksums for the npm package
+        if: ${{ inputs.publish-npm }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: olares-cli-checksums
+          path: cli/output/checksums.txt
+          if-no-files-found: error
+          retention-days: 1
+
       - name: Install coscmd
         run: pip install coscmd
 
@@ -362,6 +377,41 @@ jobs:
         with:
           node-version: '22'
           registry-url: 'https://registry.npmjs.org'
+
+      # Lands at cli/npm/checksums.txt, which package.json lists under "files"
+      # so it is packed into the published tarball. prepublishOnly
+      # (scripts/check-version.js) fails the publish if it is missing or names
+      # a different build than the version being published.
+      - name: Download checksums into the npm package
+        uses: actions/download-artifact@v4
+        with:
+          name: olares-cli-checksums
+          path: cli/npm
+
+      # The postinstall's integrity check is reached only by `npm install` on
+      # a user's machine, so this is the one place in the pipeline that
+      # exercises it before it ships.
+      - name: Test the postinstall verification
+        working-directory: cli/npm
+        run: npm test
+
+      - name: Verify the checksums match this release
+        working-directory: cli/npm
+        env:
+          NPM_VERSION: ${{ needs.resolve-versions.outputs.npm_version }}
+        run: |
+          set -euo pipefail
+          test -s checksums.txt
+          for arch in linux_amd64 linux_arm64 linux_arm darwin_amd64 darwin_arm64 windows_amd64 windows_arm64; do
+            file="olares-cli-v${NPM_VERSION}_${arch}.tar.gz"
+            if ! grep -qE "^[0-9a-f]{64}  ${file}\$" checksums.txt; then
+              echo "::error::checksums.txt has no entry for ${file}; postinstall would fail closed on that platform"
+              cat checksums.txt
+              exit 1
+            fi
+          done
+          echo "checksums OK for every published platform:"
+          cat checksums.txt
 
       - name: Sync npm package.json version
         working-directory: cli/npm

@@ -46,15 +46,27 @@ func NewCredentialProvider(managed, local Provider) *CredentialProvider {
 // different things done.
 var ErrNoProfile error = noProfileError{}
 
+// noProfileError stays an empty struct so the singleton keeps comparing equal
+// (TestErrNoProfileStillCompares), and reads the machine when it is rendered
+// rather than when it is built. What is missing is the same either way; which
+// recovery applies is a property of where the command ran, and inside a
+// container the platform issued a credential to, `profile login` is not it —
+// RequireNotManaged refuses it, and nothing local could mint that grant.
 type noProfileError struct{}
 
 func (noProfileError) Error() string {
+	if managedCredentialMounted() {
+		return "no Olares profile is configured: the platform-issued credential for this application is mounted but could not be loaded; reinstall or repair the application that requested it"
+	}
 	return "no Olares profile is configured: run `olares-cli profile login --olares-id <id>` or `olares-cli profile import --olares-id <id> --refresh-token <tok>`"
 }
 
 func (noProfileError) ErrorCode() string { return clierr.CodeAuthNoProfile }
 func (noProfileError) Retryable() *bool  { return &no }
 func (noProfileError) RecoveryAction() string {
+	if managedCredentialMounted() {
+		return managedRecovery("")
+	}
 	return "olares-cli profile login --olares-id <id>"
 }
 

@@ -5,6 +5,7 @@ package keychain
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -79,6 +80,49 @@ func TestStorageDir_NoCacheDirKeepsXDGDefault(t *testing.T) {
 
 	if got, want := StorageDir("svc"), filepath.Join(home, ".local", "share", "svc"); got != want {
 		t.Fatalf("StorageDir() = %q, want %q", got, want)
+	}
+}
+
+// An agent sandbox leaves the platform's cache directory mounted and refuses
+// every write to it. The keychain is the rung that fails first and loudest:
+// the master key has to be created before anything can be stored at all, so a
+// store that cannot move off that directory cannot hold the access token the
+// mounted grant was just exchanged for.
+func TestPlatformRoundTrip_UnwritableCacheDir(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root ignores directory permissions")
+	}
+	denied := t.TempDir()
+	if err := os.Chmod(denied, 0o555); err != nil {
+		t.Fatalf("prepare: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(denied, 0o700) })
+	tmp := t.TempDir()
+	tmp, _ = filepath.EvalSymlinks(tmp)
+	t.Setenv("OLARES_CLI_DATA_DIR", "")
+	t.Setenv("TMPDIR", tmp)
+	t.Setenv("OLARES_CLI_CACHE_DIR", denied)
+
+	const (
+		service = "olares-cli-test"
+		account = "alice@olares.com"
+		secret  = `{"olaresId":"alice@olares.com","accessToken":"abc"}`
+	)
+
+	dir := StorageDir(service)
+	if !strings.HasPrefix(dir, tmp) {
+		t.Fatalf("StorageDir() = %q, want it moved under %q", dir, tmp)
+	}
+
+	if err := platformSet(service, account, secret); err != nil {
+		t.Fatalf("platformSet() error = %v", err)
+	}
+	got, err := platformGet(service, account)
+	if err != nil || got != secret {
+		t.Fatalf("platformGet() = (%q, %v), want the secret back", got, err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "master.key")); err != nil {
+		t.Fatalf("master key was not created in the fallback: %v", err)
 	}
 }
 

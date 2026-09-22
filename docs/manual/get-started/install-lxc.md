@@ -40,6 +40,7 @@ To use the GPU within Olares on LXC, you must configure device passthrough first
 
 ## Prerequisites
 
+<!--@include: ./reusables.md#larepass-prerequisite-->
 -  Working directories for storing images and packages on the PVE host. You can set it using the following command:
 
    ``` bash
