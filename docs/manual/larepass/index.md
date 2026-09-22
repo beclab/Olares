@@ -1,10 +1,10 @@
 ---
-description: Download LarePass for iOS, Android, macOS, Windows, or Linux, change its language, and find account setup guides.
+description: Download LarePass for mobile, desktop, or Chrome, change its language, and find account setup guides.
 outline: [2, 3]
 head:
   - - meta
     - name: keywords
-      content: Olares, LarePass, client, iOS, Android, macOS, Windows, Linux, download
+      content: Olares, LarePass, client, browser extension, Chrome, iOS, Android, macOS, Windows, Linux, download
 ---
 
 # Download LarePass
@@ -36,6 +36,10 @@ Download the latest desktop client from the [LarePass website](https://www.olare
 
 Download the latest Linux desktop client from the [LarePass website](https://www.olares.com/larepass).
 
+### Chrome browser extension
+
+Download the ZIP package from the [LarePass website](https://www.olares.com/larepass). The extension must be installed manually in Chrome. See [Install the LarePass browser extension](../install-larepass-browser-extension.md) for instructions.
+
 ## Change the language
 
 LarePass is available in English, Simplified Chinese, German, Spanish, Italian, French, and Japanese. Changing the language affects only LarePass on that device. It does not change the language of your Olares system.
@@ -49,5 +53,6 @@ The change applies immediately.
 
 - On mobile devices, you can [create an Olares ID](../get-started/create-olares-id.md) directly in LarePass. To use a custom domain, see [Create an Olares ID with a custom domain](create-org-account.md).
 - On the desktop client, [import an existing account](manage-accounts.md#import-an-account).
+- In the Chrome browser extension, [import an existing account](manage-accounts.md#chrome-extension).
 
 On the desktop client, you can also [save remote resources directly to Olares](save-resources-to-olares.md).

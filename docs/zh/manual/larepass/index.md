@@ -1,10 +1,10 @@
 ---
 outline: [2, 3]
-description: 下载适用于 iOS、Android、macOS、Windows 或 Linux 的 LarePass，更改语言并查找账户设置指南。
+description: 下载适用于移动端、桌面端或 Chrome 的 LarePass，更改语言并查找账户设置指南。
 head:
   - - meta
     - name: keywords
-      content: Olares, LarePass, 官方客户端, iOS, Android, macOS, Windows, Linux, 下载
+      content: Olares, LarePass, 官方客户端, 浏览器扩展, Chrome, iOS, Android, macOS, Windows, Linux, 下载
 ---
 
 # 下载 LarePass
@@ -36,6 +36,10 @@ LarePass 是用于创建和管理 Olares ID、激活 Olares，以及在手机和
 
 请从 [LarePass 官网](https://www.olares.cn/larepass)下载最新 Linux 桌面客户端。
 
+### Chrome 浏览器扩展
+
+从 [LarePass 官网](https://www.olares.cn/larepass)下载 ZIP 安装包。该扩展需要在 Chrome 中手动安装，具体操作请参阅[安装 LarePass 浏览器扩展](../install-larepass-browser-extension.md)。
+
 ## 更改语言
 
 LarePass 支持英语、简体中文、德语、西班牙语、意大利语、法语和日语。更改语言只会影响当前设备上的 LarePass，不会更改 Olares 系统语言。
@@ -49,5 +53,6 @@ LarePass 支持英语、简体中文、德语、西班牙语、意大利语、�
 
 - 在移动设备上，你可以使用 LarePass 直接[创建 Olares ID](/zh/manual/get-started/create-olares-id.md)。如需使用自定义域名，请参阅[使用自定义域名创建 Olares ID](create-org-account.md)。
 - 在桌面客户端上，请[导入已有账户](manage-accounts.md#导入账户)。
+- 在 Chrome 浏览器扩展中，请[导入已有账户](manage-accounts.md#chrome-扩展)。
 
 在桌面客户端上，你还可以[将网络资源直接转存到 Olares](save-resources-to-olares.md)。
