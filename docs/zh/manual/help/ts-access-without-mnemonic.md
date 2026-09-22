@@ -18,9 +18,14 @@ description: 忘记助记词时恢复对 Olares 的访问。
 
 ## 解决方案
 
-### 步骤 1：打开 LarePass 中的 Vault
+要恢复访问，请先通过 SSH 登录 Olares 主机，再按需重置 Olares 登录密码。如果无法使用 SSH，也可以通过本地终端登录。
 
-如果你已知道主机用户名和密码，可直接跳到[步骤 3](#步骤-3-进入主机终端)。否则，在手机上打开 LarePass，查看 Vault 中是否保存了主机密码。
+- **在自己的设备上安装 Olares**：使用为该设备设置的主机用户名和密码，然后前往[步骤 3](#步骤-3-进入主机终端)。
+- **Olares One**：按步骤 1 和 2 在 LarePass Vault 中查找激活时生成的 SSH 密码。如果你已知道密码，可直接前往[步骤 3](#步骤-3-进入主机终端)。
+
+### 步骤 1：使用 Olares One 时在 LarePass 中打开 Vault
+
+在手机上打开 LarePass。
 
 :::info
 连续 6 次输错密码后，LarePass 会锁定账户 15 分钟，期间无法使用生物识别解锁。请停止尝试、关闭 LarePass，等待 15 分钟后再继续。
@@ -28,9 +33,9 @@ description: 忘记助记词时恢复对 Olares 的访问。
 
 点击 **Vault**，再根据出现的界面操作：
 
-- **Vault 打开时未要求输入密码**：前往[步骤 2](#步骤-2-查找保存的主机密码)。
+- **Vault 打开时未要求输入密码**：前往[步骤 2](#步骤-2-查找-olares-one-ssh-密码)。
 
-- **Vault 要求输入密码，而你记得密码**：输入 LarePass 本地密码，然后前往[步骤 2](#步骤-2-查找保存的主机密码)。
+- **Vault 要求输入密码，而你记得密码**：输入 LarePass 本地密码，然后前往[步骤 2](#步骤-2-查找-olares-one-ssh-密码)。
 
 - **Vault 要求输入密码，而你忘记了密码**：点击面容或指纹图标，尝试使用生物识别解锁。
 
@@ -38,20 +43,20 @@ description: 忘记助记词时恢复对 Olares 的访问。
 
   ![使用生物识别解锁 LarePass](/images/manual/help/olares-one-biometric-verification.png#bordered)
 
-  - 如果 Vault 打开，前往[步骤 2](#步骤-2-查找保存的主机密码)。
-  - 如果 Vault 无法打开，请保留 LarePass。如果从未启用生物识别解锁，忘记的本地密码无法显示或重置。如果你已有对应安装环境的主机登录信息，前往[步骤 3](#步骤-3-进入主机终端)；否则，请[联系技术支持](./request-technical-support.md)。
+  - 如果 Vault 打开，前往[步骤 2](#步骤-2-查找-olares-one-ssh-密码)。
+  - 如果 Vault 无法打开，请保留 LarePass。如果从未启用生物识别解锁，忘记的本地密码无法显示或重置。如果你已知道 Olares One 主机密码，前往[步骤 3](#步骤-3-进入主机终端)；否则，请[联系技术支持](./request-technical-support.md)。
 
 :::info
 打开 Vault 后，无需查看本地密码即可继续操作。如果你希望查看密码以备后用，请将 LarePass 更新到最新版本，然后进入 **Settings** > **LarePass Settings** > **Safety** > **Local password**，并完成生物识别验证。
 :::
 
-### 步骤 2：查找保存的主机密码
+### 步骤 2：查找 Olares One SSH 密码
 
 1. 在 **Vault** 中点击左上角的筛选项，选择 **All vaults**。
 
    ![在 LarePass 中选择 All vaults](/images/manual/help/olares-one-vault-filter.jpg#bordered)
 
-2. 打开带有终端图标的条目，查看保存的主机密码。
+2. 打开带有终端图标的条目，查看 Olares One SSH 密码。
 
    ![在 Vault 中查找主机密码条目](/images/manual/help/olares-one-host-password.jpg#bordered)
 
@@ -75,7 +80,7 @@ description: 忘记助记词时恢复对 Olares 的访问。
 3. 根据提示输入主机密码。
 
 :::info Olares One SSH 登录信息
-Olares One 的 SSH 用户名为 `olares`，命令为 `ssh olares@<内网-IP>`。激活时生成的 SSH 密码保存在 Vault 中，可以按[步骤 2](#步骤-2-查找保存的主机密码)查找。
+Olares One 的 SSH 用户名为 `olares`，命令为 `ssh olares@<内网-IP>`。激活时生成的 SSH 密码保存在 Vault 中，可以按[步骤 2](#步骤-2-查找-olares-one-ssh-密码)查找。
 :::
 
 **本地终端**
