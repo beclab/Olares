@@ -38,7 +38,7 @@ To carry out tasks on your device securely, Lares operates based on two core mec
 
 1. Open Lares, select the model, and confirm the permission level for it to work under.
 
-    ![Lares chat interface](/images/manual/use-cases/lares.png#bordered)
+    ![Lares chat interface](/images/manual/use-cases/lares1.png#bordered)
 
 2. Start with a simple question:
 

@@ -42,7 +42,7 @@ Lares 是 Olares 的官方 AI 助手，在 v1.12.7 中推出。有了 Router 和
 
 1. 打开 Lares，选择模型，并确认它工作时的权限级别。
 
-    ![Lares 聊天界面](/images/manual/use-cases/lares.png#bordered)
+    ![Lares 聊天界面](/images/manual/use-cases/lares1.png#bordered)
 
 2. 从一个简单的问题开始：
 
