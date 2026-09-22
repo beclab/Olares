@@ -5,6 +5,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, Jellyfin, jellyfin vs plex, plex alternative, self-hosted media server, jellyfin remote access, DLNA, jellyfin on olares
+app_version: "1.0.35"
+doc_version: "1.3"
+doc_updated: "2026-09-22"
 ---
 # 使用 Jellyfin 构建你的私人媒体服务器
 
@@ -53,10 +56,25 @@ Jellyfin 是一款强大的开源媒体服务器软件，让你完全掌控自�
 ### 安装 Jellyfin
 
 1. 打开 Market，搜索 "Jellyfin"。
+2. 点击 **Get**，然后点击 **Install**。
 
-   ![安装 Jellyfin](/images/manual/use-cases/jellyfin-install.png#bordered)
+3. 在 **Choose a hardware accelerator** 弹窗中，根据硬件和 Olares 版本选择加速器：
+   - **Olares 1.12.7 及更高版本**:
+      - 如果使用 Intel 核显，选择 **Intel**。
+      - 如果使用 AMD 核显，选择 **AMD**。
+      - 如果不需要硬件加速转码，选择 **CPU** 。
+   - **Olares 1.12.6**: 选择 **CPU**。 即使对话框中显示 Intel 和 AMD 模式，也无法使用，因为这些模式依赖 Olares 1.12.7 引入的硬件加速支持。 如需使用旧版硬件加速方案，可参阅[旧版设置方法](#legacy-hardware-acceleration-on-olares-1126)。
+4. 点击 **Confirm**，等待安装完成。
 
-2. 点击**获取**，然后点击**安装**，等待安装完成。
+:::info 已安装 Jellyfin？
+升级 Jellyfin 不会改变现有安装所选的加速器。
+
+如果不需要硬件转码，可以正常升级。若要在 Olares 1.12.7 或更高版本启用硬件转码，请卸载并重新安装 Jellyfin，然后在加速器弹窗中选择 **Intel** 或 **AMD**。
+:::
+
+:::warning 保留 Jellyfin 数据
+在 **Uninstall Jellyfin?** 弹窗中，先取消勾选 **Also remove all local data**，再点击 **Uninstall**。该选项默认已勾选。保留本地数据后，重新安装时仍可使用原有的媒体库、用户、设置、插件和其他配置。
+:::
 
 ### 完成初始设置
 
@@ -95,38 +113,48 @@ Jellyfin 安装并运行后，下一步是告诉它你的媒体存储在哪里�
 
 Jellyfin 仍会优先使用 Direct Play 或 Remux，仅在需要转码时使用硬件加速。
 
-下面以在 Olares One 设备上启用 Intel QSV 硬件加速为例，介绍具体操作步骤：
+如果安装 Jellyfin 时选择了 **Intel** 或 **AMD** 加速器，请按以下步骤配置：
 
-1. 在 Olares Market 中将 Jellyfin 更新至 1.0.21 或更高版本。
-2. 进入 **设置** > **应用** > **Jellyfin** > **管理环境变量**。
-   - 将 `ENABLE_HW_ACCEL` 变量设置为 `true`；
-   - 将 `VIDEO_GID` 设置为 `44`，将 `RENDER_GID` 设置为 `994`。这些是 Olares One 的默认 GID 值。
-   在其他设备上，从**控制面板**打开 Olares 终端并运行：
-      ``` bash
-      getent group video
-      getent group render
-      ls -ln /dev/dri
-      ```
+1. 在 Jellyfin **Dashboard** 中，进入 **Playback** > **Transcoding**。
+2. 在 **Hardware acceleration** 下选择与核显对应的选项：
+   - **Intel**：选择 **Intel Quicksync (QSV)**。
+   - **AMD**：选择 **Video Acceleration API (VAAPI)**。
+3. 根据 GPU 的支持情况选择编解码格式。例如，如果硬件支持，可为 `H264`、`HEVC` 和 `HEVC 10bit` 启用硬件编码。
+4. 其他选项保持默认设置，然后保存更改。
 
-    ![获取 GID](/images/manual/use-cases/jellyfin-gid.png#bordered){width=90%}
+不同设备支持的硬件功能可能有所不同。有关支持的加速方式和配置详情，请参阅 Jellyfin 官方[硬件加速文档](https://jellyfin.org/docs/general/post-install/transcoding/hardware-acceleration/)。
 
-3. 保存更改。Olares 会自动重启 Jellyfin。
-
-4. 在 Jellyfin **Dashboard** 中，进入 **Playback** > **Transcoding**。
-5. 在 **Hardware acceleration** 选项下，根据Olares 设备的硬件配置选择相应选项。例如，在 Olares One 上：
-   - 选择 **Intel QuickSync (QSV)**。
-   - 为 `H264`、`HEVC`、`HEVC 10bit` 启用硬件解码。
-   - 其余选项保持默认设置。
-
-不同设备支持的硬件功能可能有所不同。更多详细配置请参考 Jellyfin 官方[转码文档](https://jellyfin.org/docs/general/post-install/transcoding/)。
-
-   ![启用转码](/images/manual/use-cases/jellyfin-transcoding.png#bordered){width=90%}
+![启用转码](/images/manual/use-cases/jellyfin-transcoding.png#bordered){width=90%}
 
 :::tip 最佳实践
 对于家庭影院，建议使用支持 HEVC Main 10、HDR10、SRT 字幕及常见音频格式的电视或播放器，让 Jellyfin 尽可能使用 Direct Play。硬件加速转码主要用于解决格式兼容问题，或改善远程及带宽受限网络下的播放体验，不应替代 Direct Play。
 :::
-:::warning 设备访问权限
-启用 `ENABLE_HW_ACCEL` 后，Jellyfin 将获得访问主机 `/dev/dri` 图形设备的额外权限。仅在需要硬件加速时启用此选项。
+:::info 同时装有核显和 NVIDIA 独显的主机
+如果主机同时装有核显和 NVIDIA 独显，Jellyfin 进行硬件转码时只能访问绑定到所选核显的设备节点。这样可以避免 Intel Quick Sync Video（QSV）因枚举到 NVIDIA 设备而初始化失败，无需额外配置。
+:::
+
+<span id="legacy-hardware-acceleration-on-olares-1126"></span>
+
+:::details Olares 1.12.6 的旧版硬件加速设置
+以下以 Olares One 上的 Intel Quick Sync Video（QSV）为例，说明 Olares 1.12.6 的设置方法：
+
+1. 安装 Jellyfin 时选择 **CPU** 加速器。
+2. 进入 **Settings** > **Applications** > **Jellyfin** > **Manage Environment Variables**。
+3. 将 `ENABLE_HW_ACCEL` 设置为 `true`。
+4. 将 `VIDEO_GID` 和 `RENDER_GID` 设置为主机上相应用户组的 ID。Olares One 的默认值分别为 `44` 和 `994`。
+
+   在其他设备上，从控制面板打开 Olares 终端并运行：
+
+   ```bash
+   getent group video
+   getent group render
+   ls -ln /dev/dri
+   ```
+
+5. 保存更改。Olares 会自动重启 Jellyfin。
+6. 在 Jellyfin **Dashboard** 中，进入 **Playback** > **Transcoding**。
+7. 在 **Hardware acceleration** 下选择 **Intel Quicksync (QSV)**。
+8. 选择硬件支持的编解码格式，然后保存更改。
 :::
 
 ## 安装社区插件提升体验
