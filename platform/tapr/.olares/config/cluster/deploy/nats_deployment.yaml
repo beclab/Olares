@@ -256,7 +256,7 @@ spec:
             - /var/run/nats/nats.pid
             - -config
             - /data/config/nats.conf
-          image: beclab/nats-server-config-reloader:v1
+          image: beclab/natsio-nats-server-config-reloader:0.24.0
           name: reloader
           env:
             - name: ADMIN_PASSWORD

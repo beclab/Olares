@@ -322,66 +322,65 @@ func IsIpChanged(ctx context.Context, installed bool) bool {
 		return false
 	}
 
+	// Compare the explicitly selected address, not cached hostname results.
+	hostIp, err := nets.GetHostIp()
+	if err != nil {
+		klog.Error("get host ip error, ", err)
+		return false
+	}
+
 	for _, ip := range ips {
-		hostIps, err := nets.LookupHostIps()
-		if err != nil {
-			klog.Error("get host ip error, ", err)
-			return false
-		}
+		if hostIp == ip.IP {
+			klog.V(8).Info("host ip is the same as internal ip of interface, ", hostIp, ", ", ip.IP)
 
-		for _, hostIp := range hostIps {
-			if hostIp == ip.IP {
-				klog.V(8).Info("host ip is the same as internal ip of interface, ", hostIp, ", ", ip.IP)
-
-				if !installed {
-					// terminus not installed
-					if masterIpFromETCD == "" {
-						return false
-					}
-
-					if masterIpFromETCD == ip.IP {
-						return false
-					}
-
-					return true
-				}
-
-				kubeClient, err := GetKubeClient()
-				if err != nil {
-					klog.Error("get kube client error, ", err)
+			if !installed {
+				// terminus not installed
+				if masterIpFromETCD == "" {
 					return false
 				}
 
-				_, nodeIp, nodeRole, err := GetThisNodeName(ctx, kubeClient)
-				if err != nil {
-					klog.Warning("get this node name error, ", err, ", try to compare with etcd ip")
-					if masterIpFromETCD == "" {
-						klog.Info("master node ip not found, mybe it's a worker node")
-						return false
-					}
-
-					if masterIpFromETCD == ip.IP {
-						return false
-					}
-
-					klog.Info("master node ip from etcd is not the same as internal ip of interface, ", masterIpFromETCD, ", ", hostIp, ", ", ip.IP)
-					return true
-
-				}
-
-				if nodeRole == "master" && nodeIp == ip.IP {
+				if masterIpFromETCD == ip.IP {
 					return false
 				}
 
-				// FIXME:(BUG) worker node will not work with this check
-				if nodeRole == "worker" {
-					return false
-				}
-
-				klog.Info("node is master and node ip is not the same as internal ip of interface, ", nodeIp, ", ", hostIp, ", ", ip.IP)
 				return true
 			}
-		} // end for host ips
+
+			kubeClient, err := GetKubeClient()
+			if err != nil {
+				klog.Error("get kube client error, ", err)
+				return false
+			}
+
+			_, nodeIp, nodeRole, err := GetThisNodeName(ctx, kubeClient)
+			if err != nil {
+				klog.Warning("get this node name error, ", err, ", try to compare with etcd ip")
+				if masterIpFromETCD == "" {
+					klog.Info("master node ip not found, mybe it's a worker node")
+					return false
+				}
+
+				if masterIpFromETCD == ip.IP {
+					return false
+				}
+
+				klog.Info("master node ip from etcd is not the same as internal ip of interface, ", masterIpFromETCD, ", ", hostIp, ", ", ip.IP)
+				return true
+
+			}
+
+			if nodeRole == "master" && nodeIp == ip.IP {
+				return false
+			}
+
+			// FIXME:(BUG) worker node will not work with this check
+			if nodeRole == "worker" {
+				return false
+			}
+
+			klog.Info("node is master and node ip is not the same as internal ip of interface, ", nodeIp, ", ", hostIp, ", ", ip.IP)
+			return true
+		}
 	} // end for interface ips
 
 	klog.Info("no host ip is the same as internal ip of interface, ", ips)

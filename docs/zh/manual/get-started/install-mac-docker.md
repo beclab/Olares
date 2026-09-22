@@ -28,6 +28,7 @@ Mac 版 Olares 目前存在以下限制：
 
 ## 开始之前
 开始安装前，请确保：
+<!--@include: ./reusables.md#larepass-prerequisite-->
 - 系统中已安装并运行 [Docker](https://docs.docker.com/engine/install/)。
 - 已知当前设备的 IP 地址。
   ::: tip 查看 IP 地址
@@ -35,7 +36,6 @@ Mac 版 Olares 目前存在以下限制：
   - 使用图形界面：打开**系统设置**（或**系统偏好设置**）> **网络**，在当前活动的网络连接中查看详细信息。
   - 使用命令行：打开终端窗口，Wi-Fi 网络输入 `ipconfig getifaddr en0`，有线网络输入 `ipconfig getifaddr en1`。
   :::
-- 已通过 LarePass [创建 Olares ID](/zh/manual/get-started/create-olares-id.md) 且使用默认的 `olares.cn` 域名。
 
 ## 运行 `olaresd-proxy`
 ::: tip 确认 Mac 芯片  

@@ -3,12 +3,13 @@
 // tree it drives are one release rather than two.
 //
 // The suite used to reach a machine only over the network: `npx skills add
-// beclab/Olares`, which resolves to GitHub's HEAD, or a maintainer running
-// publish.sh against ClawHub. Both leave the version an agent reads free to
+// beclab/Olares`, which resolves to GitHub's HEAD, or a maintainer publishing
+// to the ClawHub registry. Both leave the version an agent reads free to
 // disagree with the verbs its binary actually has, and the disagreement is
 // silent — a skill declares `requires.bins: [olares-cli]`, which an old
 // build satisfies. Embedding removes the degree of freedom: `skills export`
-// writes these bytes and nothing else does.
+// writes these bytes and nothing else does. The ClawHub path has since been
+// removed outright; see cli/docs/design/skills-provenance.md.
 package skills
 
 import (
@@ -29,7 +30,7 @@ import (
 // (olares-publish/references/olares-publish-icon.md invokes
 // ../scripts/generate_icon.py, so leaving scripts/ out would ship an
 // instruction that cannot be followed). Everything else in this directory
-// — validate.py, stamp.py, publish.sh, requirements.txt, the suite README —
+// — validate.py, stamp.py, requirements.txt, the suite README —
 // is maintainer tooling and stays out of the binary.
 //
 // TestEmbedCoversTheWholeSuite asserts this set equals the olares-* subtree

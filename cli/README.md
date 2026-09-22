@@ -4,26 +4,26 @@
 [![Go Version](https://img.shields.io/badge/Go-1.25%2B-00ADD8.svg)](https://go.dev)
 [![npm @olares/cli](https://img.shields.io/npm/v/@olares/cli?label=npm%20%40olares%2Fcli)](https://www.npmjs.com/package/@olares/cli)
 
-`olares-cli` is the official CLI for installing and operating [Olares](https://olares.com) — an AI-native, self-hosted personal cloud. One static Go binary drives the whole product: OS bootstrap, Olares ID, Files, Market, Dashboard, Settings, ControlHub, Router. It also carries the twelve `olares-*` agent skills that document it, compiled in, so the instructions an agent reads and the verbs it can call always come from the same release.
+`olares-cli` is the official CLI for installing and operating [Olares](https://olares.com) — an AI-native, self-hosted personal cloud. One static Go binary drives the whole product: OS bootstrap, Olares ID, Files, Market, Dashboard, Settings, ControlHub, Router. It also carries the `olares-*` agent skills that document it, compiled in, so the instructions an agent reads and the verbs it can call always come from the same release.
 
-Three ways to read the rest of this page, depending on who you are:
+Install it, anywhere that is not already an Olares host:
 
-- [**For users**](#for-users) — install the CLI, log in, upgrade it
-- [**For AI agents**](#for-ai-agents) — get the skills onto this machine and keep them current
-- [**For developers**](#for-developers) — build the CLI, install your build, edit skills live
+```bash
+npx @olares/cli@latest install
+```
 
-## Which copy of olares-cli am I running?
+Then read the part of this page you need:
 
-There are four, and they differ in who upgrades them and which verbs they expose. `command -v olares-cli` and `olares-cli --version` tell you which one you have.
-
-| Copy | Path | Upgraded by | Verbs |
-| --- | --- | --- | --- |
-| **OS bundle** — a Linux host running Olares OS | `/usr/local/bin/olares-cli` | `olares-cli upgrade`, and Olares OS releases | all of them, including the [system layer](#three-layer-command-system) |
-| **npm global** | `<npm prefix>/bin/olares-cli` | `npm install -g @olares/cli@<tag>` | everything except the system layer |
-| **npx**, for the length of one command | `~/.npm/_npx/<hash>/…/vendor/olares-cli`, temporary | nothing — each run resolves the tag you name | same as npm global |
-| **your own build** | wherever `make install` put it | you | all of them |
-
-The npm channel hides the whole system layer — everything that manages an Olares host, from `upgrade` and `start` through `node`, `gpu` and `disk` — because those verbs need a host filesystem laid down by the OS installer. The Node shim sets `OLARES_CLI_REMOTE_ONLY=1` and the Go binary then never registers them ([cmd/ctl/root.go](cmd/ctl/root.go)), so they do not appear in `--help` and return `unknown command`. `install` is the one exception: the shim keeps that name for the setup wizard, so it never reaches the Go binary on that channel.
+| | |
+| --- | --- |
+| [**For users**](#for-users) | install, log in, work out which copy you have, upgrade it |
+| [**For AI agents**](#for-ai-agents) | get the skills onto this machine and keep them current |
+| [**For developers**](#for-developers) | build the CLI, install your build, edit skills live |
+| [Three-layer command system](#three-layer-command-system) | how the verbs are grouped, and which ones your copy has |
+| [Output formats](#output-formats) | `--output json`, and where it is stable |
+| [Troubleshooting](#troubleshooting) | the failures people actually hit |
+| [Repository layout](#repository-layout) | what is where, and the install engine's lifecycle |
+| [Security & risks](#security--risks) | credentials, download integrity, the `--yes` contract |
 
 ## For users
 
@@ -47,18 +47,72 @@ npx @olares/cli@latest files ls /drive/Home
 
 Each invocation pays roughly a second or two of npx cold start and leaves nothing on PATH. Your login survives anyway, because it lives in the OS keychain rather than in the package.
 
-> This wizard does **not** install Olares OS. Bootstrapping a Linux host is `curl -fsSL https://olares.sh | bash` — see [docs/manual/get-started](https://docs.olares.com/manual/get-started/install-olares/linux.html). There is also no `config init` step: Olares authenticates with your Olares ID directly.
+> This wizard does **not** install Olares OS. Bootstrapping a Linux host is `curl -fsSL https://olares.sh | bash` — see the [Linux installation guide](https://www.olares.com/docs/manual/get-started/install-linux-script). There is also no `config init` step: Olares authenticates with your Olares ID directly.
+
+### On a Linux Olares host
+
+This applies **only** to Linux hosts with Olares OS installed, where `/usr/local/bin/olares-cli` already exists. macOS, Windows and non-Olares Linux boxes never hit it.
+
+The OS bundle is pinned to whatever shipped with your Olares OS release, and identity verbs land in npm releases first, so a host bundle can be missing verbs you want. The bundle is canonical for the system layer and `olares-cli upgrade` is what replaces it — so install the npm copy *beside* it rather than over it. A plain `npm install -g @olares/cli` aborts with `EEXIST` for exactly that reason, and your existing binary is never overwritten.
+
+```bash
+# Option 1 — a separate prefix, PATH order decides which copy wins.
+npm install -g @olares/cli@latest --prefix ~/.olares-cli-npm
+export PATH="$HOME/.olares-cli-npm/bin:$PATH"
+olares-cli --version
+olares-cli skills install
+# Revert by reordering PATH, or `rm -rf ~/.olares-cli-npm/`.
+
+# Option 2 — npx, no persistent install and no PATH changes.
+npx @olares/cli@latest profile whoami
+```
+
+Never pass `--force` to `npm install -g` here: it would clobber the OS-managed binary.
+
+The setup wizard automates that safety net. It reads `--version` on the existing binary and keeps anything release-grade (`1.12.7`, `-rc1`, `-beta.1`), printing the Option 1 block above instead of attempting an install that would fail. A build that is *not* release-grade — `0.0.0-development`, `git describe` output, a CI version — it removes, so npm can install over the same path; that is the case where a `make install` build parked at `/usr/local/bin` is replaced rather than preserved.
+
+For `EACCES` on distro-packaged Node, see [Troubleshooting](#troubleshooting).
 
 ### Log in
 
-Interactive — it opens a browser and may ask for a TOTP code — which is why the wizard leaves it to you:
+Interactive — it prompts for your password in the terminal, and for a TOTP code when two-factor is on — which is why the wizard leaves it to you:
 
 ```bash
 olares-cli profile login --olares-id <your-olares-id>
-olares-cli profile current
+olares-cli profile whoami
 ```
 
+### Which copy do I have?
+
+There are four, and they differ in who upgrades them and which verbs they expose. `olares-cli version` tells you which one you have, and names what upgrades it:
+
+```bash
+olares-cli version
+olares-cli version -o json
+```
+
+Use it rather than `--version` alone, which reports the Olares OS line. On the npm channel that number is the same across every release inside it — `1.12.7-cli.0` through `1.12.7-cli.8` all say `1.12.7` — so it cannot tell you which published version you have. `version` reports both.
+
+| Copy | Path | Upgraded by | Verbs |
+| --- | --- | --- | --- |
+| **OS bundle** — a Linux host running Olares OS | `/usr/local/bin/olares-cli` | `olares-cli upgrade`, and Olares OS releases | all of them, including the [system layer](#three-layer-command-system) |
+| **npm global** | `<npm prefix>/bin/olares-cli` | `olares-cli update` | everything except the system layer |
+| **npx**, for the length of one command | `~/.npm/_npx/<hash>/…/vendor/olares-cli`, temporary | nothing — each run resolves the tag you name | same as npm global |
+| **your own build** | wherever `make install` put it | you | all of them |
+
+The npm channel hides the whole system layer — everything that manages an Olares host, from `upgrade` and `start` through `node`, `gpu` and `disk` — because those verbs need a host filesystem laid down by the OS installer. The Node shim sets `OLARES_CLI_REMOTE_ONLY=1` and the Go binary then never registers them ([cmd/ctl/root.go](cmd/ctl/root.go)), so they do not appear in `--help` and return `unknown command`. `install` is the one exception: the shim keeps that name for the setup wizard, so it never reaches the Go binary on that channel.
+
 ### Upgrade
+
+`update` is the CLI. `upgrade` is Olares OS — one letter apart, and on a host the wrong one starts a cluster upgrade.
+
+```bash
+olares-cli update --check     # what would change, and nothing else
+olares-cli update             # install it, and the skills with it
+olares-cli update --channel next
+```
+
+It updates the binary and then runs `skills install` **from the binary it just installed**, which is the step people forget and the reason the skills used to end up a release behind. Only an npm-installed copy can be moved in place; on an OS bundle, a local build or an npx run, `update` prints what does move that copy instead of doing something to it.
 
 Two npm tags, and the difference matters:
 
@@ -67,13 +121,15 @@ Two npm tags, and the difference matters:
 | `@latest` | the promoted stable release. Promotion is a manual step, so this can sit several releases behind |
 | `@next` | every release, as CI publishes it |
 
+`update` prints both every time, and says so when `latest` is behind — check for yourself with `npm view @olares/cli dist-tags`. By hand, if you prefer:
+
 ```bash
 npx @olares/cli@latest install     # re-run the wizard: CLI and skills together
 npm install -g @olares/cli@next    # or move just the CLI, to a tag you pick
 olares-cli skills install          # then bring the skills along
 ```
 
-That last line is the step people forget, so the CLI reminds you: while the skills on disk name a different release than the binary, every command other than `skills` itself prints one line about it on stderr. On an Olares host the OS bundle upgrades through `olares-cli upgrade` instead, which does not touch the skills — run `skills install` after it too.
+That last line is what `update` does for you. Skip it and the CLI reminds you: while the skills on disk name a different release than the binary, every command other than `skills`, `update` and `version` prints one line about it on stderr. On an Olares host the OS bundle upgrades through `olares-cli upgrade` instead, which does not touch the skills — run `skills install` after it too.
 
 ### Uninstall
 
@@ -119,35 +175,21 @@ olares-cli skills export ./skills
 
 ### Keep them current
 
-Run `skills install` again after every CLI upgrade. Until you do, each command prints a line on stderr saying the installed copy came from a different build; `OLARES_CLI_NO_SKILL_NOTICE=1` silences it where the extra output cannot be tolerated.
+Run `skills install` again after every CLI upgrade — or let `olares-cli update` do it, which runs that step from the binary it just installed.
 
-That line is decided by content, not by the version the skills declare. `skills install` and `skills export` leave a `.olares-cli-suite` file recording a hash of what they wrote, and the notice compares it against what the running binary carries. Comparing the declared versions instead would be silent in the case that matters most: on the daily channel the version moves every few weeks while the skills move every day, so two copies a month apart carry one label. When that happens the notice says so in as many words — same version, different copy — rather than printing one version twice.
+Until the copies match, each command prints one line on stderr saying the installed skills came from a different build. `OLARES_CLI_NO_SKILL_NOTICE=1` silences it where the extra output cannot be tolerated.
 
-The hash is provenance, not a checksum of the tree: it says which build wrote this copy, so editing an installed skill for your own machine is not reported as drift. Agent directories hold no marker of their own; they are links (or copies) of the store, and the store is what the notice reads.
-
-One store, though, and possibly two binaries: an Olares host that also has the npm copy installed has two `olares-cli` builds sharing `~/.agents/skills`, and they are never the same release. Whichever ran `skills install` last owns the store, and the other one says so on every command — correctly, since the skills there do document the other build. If that is the setup you want, silence the one you drive less: `export OLARES_CLI_NO_SKILL_NOTICE=1` in the shell where it is noise, or re-run `skills install` from whichever binary your agents should be reading.
+The notice compares **content**, not the version the skills declare: within one release the label is stable while the skills are not, so a version comparison would be silent in exactly the case that matters. It is a provenance hash rather than a checksum, so editing an installed skill for your own machine is not reported as drift. Details, and what happens when one machine has two binaries sharing one store: [docs/design/skills-provenance.md](docs/design/skills-provenance.md).
 
 If `olares-cli` is not on the machine at all, install it first ([For users](#for-users)) and then run `skills install`. Skill discovery never installs the CLI for you — `metadata.requires.bins` is advisory, so an agent can warn instead of guessing.
 
-### Where a copy can come from, and what each costs
+### Where a copy should come from
 
-| Route | Writes | Version you get | Notice sees it |
-| --- | --- | --- | --- |
-| `olares-cli skills install` | `~/.agents/skills` + existing agent directories | exactly the binary's | yes |
-| `olares-cli skills export <dir>` | wherever you say | exactly the binary's | no |
-| `olares-cli skills read <skill>` | nothing | exactly the binary's | n/a |
-| `npx skills add beclab/Olares` | the `skills` CLI decides | this repository's `main`, whose skills declare `0.0.0-cli.0` | no |
-| [ClawHub](https://clawhub.ai) (search "olares") | the ClawHub CLI decides | whatever was last accepted there — see below | no |
+From the binary. `skills install`, `skills export` and `skills read` all serve the same compiled-in bytes, so none of them can disagree with the verbs you have.
 
-The first three are the same bytes, so they cannot disagree with the verbs the binary has. The last two can, and silently: a skill declares `requires.bins: [olares-cli]`, which any build satisfies, so an agent reading `main`'s instructions against a six-month-old binary gets told to run flags that do not exist. "Notice sees it" means the [notice](#keep-them-current) reads the marker `skills install` leaves in the store — a copy written by anything else is a copy it has nothing to compare.
+Every other route can, and silently — a skill declares `requires.bins: [olares-cli]`, which any build satisfies, so instructions from a git ref or a registry read as valid against a binary six months older. That rules out `npx skills add beclab/Olares` (whose copy declares the placeholder `0.0.0-cli.0` forever) and a Claude Code plugin marketplace entry (deliberately absent, for the same reason). The full comparison is in [docs/design/skills-provenance.md](docs/design/skills-provenance.md#where-a-copy-can-come-from-and-what-each-costs).
 
-Fetching from `main` has a second cost now: the version in git is a placeholder. A release stamps the version it is building into the frontmatter just before compiling, so `0.0.0-cli.0` is what a copy taken from the repository says about itself, forever.
-
-**ClawHub is not being updated.** A skill's version names the release it ships in (`1.12.7-cli.4`), which is numerically below the per-skill numbering the registry already holds (`olares-chart` reached `4.18.0`), so a push is refused by a registry that requires increasing versions. `publish.sh` still works if that is ever resolved — it refuses a placeholder, so it has to be run against a stamped tree — but until then, treat what is there as a copy from before the suite moved into the binary.
-
-There is also no Claude Code plugin marketplace here, deliberately. A marketplace entry points at a git ref, which puts it in the bottom half of that table: a version nobody can check against the binary in front of it.
-
-> Logging in is the human's job: `olares-cli profile login --olares-id <id>` opens a browser. Verify with `olares-cli profile current`, then `olares-cli dashboard overview`.
+> Logging in is the human's job: `olares-cli profile login --olares-id <id>` prompts for a password at the terminal. Verify with `olares-cli profile whoami`, then `olares-cli dashboard overview`.
 
 ### The suite
 
@@ -216,7 +258,6 @@ go test ./cmd/ctl -run TestEveryCommandTheSkillsDocumentResolves
 python3 -m pip install -r skills/requirements.txt
 python3 -m unittest skills/test_validate.py # the validator and the release stamp
 python3 skills/validate.py                  # frontmatter, and one version across the suite
-bash skills/publish.sh --dry-run            # frontmatter as the registry would read it
 ```
 
 That is what [skills-ci.yml](../.github/workflows/skills-ci.yml) runs on a pull request.
@@ -229,7 +270,9 @@ That is what [skills-ci.yml](../.github/workflows/skills-ci.yml) runs on a pull 
 | plain `go build` | `0.0.0-development`, the default in [version/version.go](version/version.go) |
 | a release | the release version, stamped through ldflags in CI |
 
-Both dev forms matter beyond your own shell: the setup wizard reads `--version` on `/usr/local/bin/olares-cli` and replaces anything that is not release-grade, so a `make install` build parked there is removed rather than preserved.
+The setup wizard parses this output, which is why its three lines are frozen: `olares-cli version -o json` is where new fields go instead. That parsing is also what decides whether a `make install` build at `/usr/local/bin` is kept or replaced ([On a Linux Olares host](#on-a-linux-olares-host)).
+
+A local build is recognised by its version rather than its path, because `make install` writes where the OS bundle lives and `update` must not offer to npm-install over somebody's own build.
 
 The skills have a version of their own, and it is not this one. In git it is the placeholder `0.0.0-cli.0`; the release job runs [skills/stamp.py](skills/stamp.py) over the frontmatter before compiling, so a released binary's skills name the release that built them — `1.12.7-cli.4` on the npm channel, `1.12.7-cli.0` for an OS-line build — and CI fails the release if the stamp did not reach the binary. A local build therefore reports `0.0.0-cli.0` for its skills, which is why the staleness notice stays quiet on a development build: it has nothing to compare that would mean anything.
 
@@ -239,9 +282,9 @@ The skills have a version of their own, and it is not this one. In git it is the
 olares-cli <area> [<noun>] <verb> [flags]
 ```
 
-- **System layer** (root-level, no `<area>` prefix): `install`, `uninstall`, `upgrade`, `start`, `stop`, `status`, `backup`, `precheck`, `prepare`, `download`, `change-ip`, `release`, `printinfo`, `logs`, `node`, `gpu`, `amdgpu`, `disk`, `osinfo`, `wizard`, `user`. These manage the host running Olares OS and need root / kubeconfig access; no Olares ID is involved. Registered only when `OLARES_CLI_REMOTE_ONLY` is unset — in practice, only through an Olares host's `/usr/local/bin/olares-cli`.
+- **System layer** (root-level, no `<area>` prefix): `install`, `uninstall`, `upgrade`, `start`, `stop`, `status`, `backups`, `precheck`, `prepare`, `download`, `change-ip`, `release`, `info`, `logs`, `node`, `gpu`, `amdgpu`, `disk`, `osinfo`, `wizard`, `user`. These manage the host running Olares OS and need root / kubeconfig access; no Olares ID is involved. Registered only when `OLARES_CLI_REMOTE_ONLY` is unset — in practice, only through an Olares host's `/usr/local/bin/olares-cli`.
 - **Identity layer** (`<area>` = `profile`, `files`, `market`, `settings`, `dashboard`, `cluster`, `doctor`, `router`, `search`, `knowledge`): acts as the currently selected Olares ID against a running Olares HTTP API. Choose the identity once with `olares-cli profile use <name>`; every verb in this layer then uses it. Available on every channel.
-- **Local layer** (`<area>` = `skills`, `chart`, `preinstall`): this machine's files only — no Olares instance, no identity, no network. `skills` reads the suite compiled into the binary and writes it out; `chart` authors and validates an app chart before anything is deployed.
+- **Local layer** (`<area>` = `skills`, `chart`, `preinstall`, `version`, `update`): this machine's files only — no Olares instance and no identity. `skills` reads the suite compiled into the binary and writes it out; `chart` authors and validates an app chart before anything is deployed; `version` reports which copy this is; `update` replaces it. The last two are the only ones here that reach the network, and only to the npm registry.
 
 `--help` is the source of truth for flags and wire shapes:
 
@@ -261,32 +304,21 @@ olares-cli market list --output json | jq '.items[] | {name, version, status}'
 olares-cli cluster workload images --limit 50 --page 1 -o json
 ```
 
-## On a Linux Olares host
+## Troubleshooting
 
-This applies **only** to Linux hosts with Olares OS installed, where `/usr/local/bin/olares-cli` already exists. macOS, Windows and non-Olares Linux boxes never hit it.
+Every row here is a message you can paste into a search box, which is how most of them are met.
 
-The OS bundle is pinned to whatever shipped with your Olares OS release, and identity verbs land in npm releases first, so a host bundle can be missing verbs you want. The bundle is canonical for the system layer and `olares-cli upgrade` is what is supposed to replace it — so install the npm copy *beside* it rather than over it. A plain `npm install -g @olares/cli` aborts with `EEXIST` for exactly that reason, and your existing binary is never overwritten.
-
-```bash
-# Option 1 — a separate prefix, PATH order decides which copy wins.
-npm install -g @olares/cli@latest --prefix ~/.olares-cli-npm
-export PATH="$HOME/.olares-cli-npm/bin:$PATH"
-olares-cli --version
-olares-cli skills install
-# Revert by reordering PATH, or `rm -rf ~/.olares-cli-npm/`.
-
-# Option 2 — npx, no persistent install and no PATH changes.
-npx @olares/cli@latest profile current
-```
-
-Never pass `--force` to `npm install -g` here: it would clobber the OS-managed binary.
-
-The setup wizard automates that safety net. It reads `--version` on the existing binary and:
-
-- **release-grade** (stable `1.12.7`, or `-rc1` / `-beta.1` / `-alpha2`) → kept. If `npm config get prefix` resolves to the same `bin` directory — typical on an Olares host, where it is `/usr/local` — the wizard skips the doomed `npm install -g` attempt entirely rather than waiting out its timeout, and exits printing the Option 1 block above with the version it would have installed.
-- **dev, test or unparseable** (`0.0.0-development`, `git describe` output like `1.12.7-3-gabc1234-dirty`, a CI build's `1.12.7-12345678`) → removed, so npm can install over the same path. If removal needs root, the wizard exits with a one-line sudo hint instead of failing quietly.
-
-**Permission errors on Linux** (`EACCES` while npm writes to `/usr/lib/node_modules` or `/usr/local/lib/node_modules`) are typical for distro-packaged Node, where the global prefix is root-owned. The wizard surfaces npm's own `stderr` plus a one-time fix that moves npm to a user-owned prefix (`npm config set prefix ~/.npm-global`, then extend `PATH`) so global installs stop needing `sudo`.
+| What you see | What it means | What to do |
+| --- | --- | --- |
+| `EACCES` while npm writes to `/usr/lib/node_modules` | distro-packaged Node, root-owned global prefix | `npm config set prefix ~/.npm-global`, then put `~/.npm-global/bin` on PATH. Do not `sudo npm install -g` |
+| `EEXIST` installing on an Olares host | the guard protecting the OS bundle — working as intended | install beside it, not over it: [On a Linux Olares host](#on-a-linux-olares-host). Never `--force` |
+| `[SECURITY] checksum mismatch` during install | a download source served bytes that do not match the checksum shipped in the package | do not work around it. Report it — see [Security & risks](#security--risks) |
+| `failed to download vendor binary` | `cdn.olares.com` unreachable | set `OLARES_CLI_DOWNLOAD_MIRROR` to a reachable mirror; the archive is checksum-verified either way |
+| `unknown command` for `upgrade`, `node`, `gpu`, `disk` … | you are on the npm or npx channel, which does not register the [system layer](#three-layer-command-system) | run those on the Olares host's `/usr/local/bin/olares-cli` |
+| `the agent skills in … were written by a different olares-cli` | the skills on disk did not come from this binary | `olares-cli skills install`. `OLARES_CLI_NO_SKILL_NOTICE=1` silences it |
+| `olares-cli update` says you are already current, but a newer release exists | `latest` is promoted by hand and can sit months behind | `olares-cli update --channel next`. `update` prints both tags every time |
+| `stdin is not a terminal — pass --yes to confirm` | a prompting verb in a script or CI | pass `--yes`; see the [`--yes` contract](#security--risks) |
+| `olares-cli upgrade` started upgrading Olares itself | `upgrade` is the OS; `update` is the CLI | [`olares-cli update`](#upgrade) is what you wanted |
 
 ## Repository layout
 
@@ -309,7 +341,7 @@ cli/
 └── go.mod
 ```
 
-The npm wrapper's `postinstall` downloads a prebuilt binary from GitHub Releases, falling back to `https://cdn.olares.com`; `OLARES_CLI_DOWNLOAD_MIRROR` overrides the second, and `OLARES_CLI_SKIP_DOWNLOAD=1` installs the shim alone. A local Go toolchain is needed only to modify the CLI itself.
+The npm wrapper's `postinstall` downloads a prebuilt binary from `https://cdn.olares.com`, which is where the release workflow publishes these archives and the only place they exist — a GitHub Releases URL was tried first for a long time and 404d every time, because no `X.Y.Z-cli.N` release is ever created. `OLARES_CLI_DOWNLOAD_MIRROR` replaces that host (safe, since the archive is checksum-verified either way), and `OLARES_CLI_SKIP_DOWNLOAD=1` installs the shim alone. A local Go toolchain is needed only to modify the CLI itself.
 
 The install engine in `pkg/core` runs a `Pipeline → Module → Task → Action` stack, moving a host through five lifecycle stages:
 
@@ -325,7 +357,8 @@ The install engine in `pkg/core` runs a `Pipeline → Module → Task → Action
 - **Profile isolation** — there is no per-invocation `--profile` flag. Identity is single-source via `olares-cli profile use <name>`, so agents and scripts commit to one identity up front instead of hopping mid-pipeline.
 - **`--yes` contract** — every mutating verb on the identity layer prompts by default. `--yes` is the agreed bypass; treat it as a safety check, not a style preference.
 - **Skills are advisory about their host** — a skill declares `["olares-cli"]` under `metadata.requires.bins` so an agent can warn when the binary is missing. Discovery never installs it.
-- **Code signing** — on macOS and Windows the downloaded binary is currently unsigned, so Gatekeeper or SmartScreen may warn on first run. Verify with `sha256sum` against the matching GitHub Release if you need certainty.
+- **Download integrity** — the npm `postinstall` verifies the archive it downloads against a `checksums.txt` packed into the published package, and refuses to extract anything that does not match. npm's own integrity check covers the package; the package covers the binary. Nothing about the transport is trusted, including `OLARES_CLI_DOWNLOAD_MIRROR`, so pointing that at a local mirror is safe — a mirror cannot substitute the binary, only fail the check. A package assembled without `checksums.txt` fails closed rather than installing unverified.
+- **Code signing** — on macOS and Windows the downloaded binary is currently unsigned, so Gatekeeper or SmartScreen may warn on first run.
 
 ## License
 

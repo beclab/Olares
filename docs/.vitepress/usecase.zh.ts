@@ -11,6 +11,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/zh/use-cases/llm-base-apps",
             },
             {
+              text: "Olares Router",
+              link: "/zh/use-cases/olares-router",
+            },
+            {
               text: "Lares",
               link: "/zh/use-cases/lares",
             },
@@ -109,6 +113,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                       link: "/zh/use-cases/opencode-extensions",
                     },
                     {
+                      text: "使用 Olares CLI 管理 Olares",
+                      link: "/zh/use-cases/opencode-olares-cli",
+                    },
+                    {
                       text: "常见问题",
                       link: "/zh/use-cases/opencode-issues",
                     },
@@ -117,6 +125,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                 {
                   text: "Claude Code",
                   link: "/zh/use-cases/claude-code",
+                },
+                {
+                  text: "Codex CLI",
+                  link: "/zh/use-cases/codex-cli",
                 },
                 {
                   text: "Pool CLI",
@@ -219,6 +231,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                       link: "/zh/use-cases/comfyui-common-issues",
                     },
                   ]
+                },
+                {
+                  text: "Open Design",
+                  link: "/zh/use-cases/open-design",
                 },
                 {
                   text: "ACE-Step 1.5",

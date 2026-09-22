@@ -44,9 +44,6 @@ endpoint (/api/v1/namespaces/<ns>/pods/<name>).
 `,
 	}
 	cmd.SilenceUsage = true
-	cmd.PersistentPreRun = func(c *cobra.Command, args []string) {
-		c.SilenceUsage = true
-	}
 
 	cmd.AddCommand(NewListCommand(f))
 	cmd.AddCommand(NewEnvCommand(f))

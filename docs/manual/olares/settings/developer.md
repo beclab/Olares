@@ -9,7 +9,7 @@ head:
 
 # Manage repositories and images
 
-Use the **Advanced** page in **Settings** to manage software repository mirrors and inspect downloaded application and system images. To export system logs, see [Collect diagnostic information](../../collect-diagnostic-information.md). To configure system-level environment variables, see [Set system environment variables](../../manage-system-env.md).
+Use the **Advanced** page in **Settings** to manage software repository mirrors, inspect downloaded application and system images, and export system logs. To configure system-level environment variables, see [Set system environment variables](../../manage-system-env.md).
 
 ## Manage repositories
 
@@ -40,3 +40,18 @@ Manage mirror endpoints for repositories to improve access speed and stability.
 The **Image management** page provides a comprehensive view of all downloaded and cached application and software package images on your Olares system. You can filter or search to quickly find specific images.
 
 ![Image management](/images/manual/olares/image-management1.png#bordered){width=65%}
+## Export system logs
+
+System logs record the operational status of system components and provide crucial diagnostic information.
+
+You can manually export the log file and attach it to a support ticket or GitHub issue to help the Olares team resolve your problem faster.
+
+<!--@include: ../../../reusables/export-system-logs.md#export-system-logs-steps-->
+
+:::tip Automatic log collection
+Instead of exporting logs manually, you can collect them automatically:
+
+- In the [Ticket app](../../help/request-technical-support.md#submit-via-the-ticket-app), expand **System logs** and click **Collect logs**.
+- In [Olares Space](../../space/tickets.md#create-a-ticket-automatically-via-olares-cli), use `olares-cli` to upload logs.
+:::
+

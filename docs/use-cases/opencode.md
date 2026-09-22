@@ -388,6 +388,7 @@ OpenCode stores its configuration in a JSON file. You can edit this file directl
 
 - [Manage packages](opencode-packages.md): Install system-level and language-specific packages.
 - [Skills and plugins](opencode-extensions.md): Add capabilities through skills and plugins.
+- [Manage Olares with Olares CLI](opencode-olares-cli.md): Authenticate the Olares CLI so the agent can manage files and apps on your device.
 - [Orchestrate multi-agent workflows with oh-my-openagent](opencode-omo.md): Enable OMO to run multi-agent collaboration in OpenCode.
 - [Common issues](opencode-issues.md): Solutions for known problems.
 - [Connect AI coding assistants to up-to-date docs with Context7](context7.md#opencode): Register Context7 as a remote MCP server in OpenCode.

@@ -84,8 +84,8 @@ const msg = {
   done:
     'You are all set!\n\n' +
     'Next:\n' +
-    '  olares-cli profile login --olares-id <your-olares-id>   # authenticate (browser/password + optional TOTP)\n' +
-    '  olares-cli profile current                              # verify\n\n' +
+    '  olares-cli profile login --olares-id <your-olares-id>   # authenticate (password + optional TOTP)\n' +
+    '  olares-cli profile whoami                              # verify\n\n' +
     'Then tell your AI agent: "Load the olares-shared skill, then use olares-cli to ..."',
   // Saying "all set" after skipping the skills would contradict the step that
   // just said it skipped them, and the reader believes the last line.
@@ -93,17 +93,17 @@ const msg = {
     'Setup is incomplete: the skills were not installed.\n\n' +
     'Next:\n' +
     '  olares-cli skills install                               # the step that was skipped above\n' +
-    '  olares-cli profile login --olares-id <your-olares-id>   # authenticate (browser/password + optional TOTP)\n' +
-    '  olares-cli profile current                              # verify',
+    '  olares-cli profile login --olares-id <your-olares-id>   # authenticate (password + optional TOTP)\n' +
+    '  olares-cli profile whoami                              # verify',
   nonTtyHint:
     'To finish setup, run:\n' +
     '  olares-cli profile login --olares-id <your-olares-id>\n' +
-    '  olares-cli profile current',
+    '  olares-cli profile whoami',
   nonTtyHintWithoutSkills:
     'To finish setup, run:\n' +
     '  olares-cli skills install\n' +
     '  olares-cli profile login --olares-id <your-olares-id>\n' +
-    '  olares-cli profile current',
+    '  olares-cli profile whoami',
 };
 
 // ---------------------------------------------------------------------------

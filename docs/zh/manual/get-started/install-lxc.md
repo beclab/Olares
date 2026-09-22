@@ -39,6 +39,7 @@ LXC 是一种轻量级的虚拟化技术，可以在隔离的容器中运行应�
 
 ## 准备工作
 
+<!--@include: ./reusables.md#larepass-prerequisite-->
 - 在 PVE 主机上创建用于存储镜像和软件包的工作目录。
   
    ```bash

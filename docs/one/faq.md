@@ -86,6 +86,17 @@ For detailed instructions, see [Manage BIOS](../one/update-firmware.md).
 
 Yes. Olares One functions as a personal AI cloud and reliably supports 24/7 continuous operation for scenarios like Large Language Model (LLM) hosting.
 
+### Does Olares One support out-of-band management?
+
+Support for common out-of-band management capabilities on Olares One is as follows:
+
+- **Automatic startup**: Supported. Olares One can start automatically when AC power is connected or restored after a power outage.
+  - On Olares OS, this feature requires Olares OS 1.12.6 or later and EC firmware 1.03 or later. See [Manage hardware settings](hardware-settings.md#set-automatic-startup).
+  - On Ubuntu, configure the setting from the command line. See **Configure automatic startup** in the [Ubuntu Server](install-ubuntu-server.md#configure-automatic-startup) or [Ubuntu Desktop](install-ubuntu-desktop.md#configure-automatic-startup) installation guide.
+- **Wake-on-LAN (WOL)**: Supported on Olares One running Ubuntu or Windows.
+- **Remote KVM**: Not supported.
+- **IPMI**: Not supported.
+
 ### Are there additional fees to use Olares One?
 
 No. Olares OS and system updates are completely free.

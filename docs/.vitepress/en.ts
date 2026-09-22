@@ -53,14 +53,6 @@ const side = {
       link: "/manual/get-started/",
       items: [
         {
-          text: "Download LarePass",
-          link: "/manual/larepass/",
-        },
-        {
-          text: "Create an Olares ID",
-          link: "/manual/get-started/create-olares-id",
-        },
-        {
           text: "Install Olares",
           link: "/manual/get-started/install-olares",
           collapsed: true,
@@ -164,6 +156,14 @@ const side = {
           text: "Olares ID",
           collapsed: true,
           items: [
+            {
+              text: "Download LarePass",
+              link: "/manual/larepass/",
+            },
+            {
+              text: "Create an Olares ID",
+              link: "/manual/get-started/create-olares-id",
+            },
             {
               text: "Manage Olares IDs in LarePass",
               link: "/manual/larepass/manage-accounts",
@@ -323,6 +323,10 @@ const side = {
             {
               text: "Upload, edit, and download files",
               link: "/manual/olares/files/add-edit-download",
+            },
+            {
+              text: "Save resources to Olares",
+              link: "/manual/larepass/save-resources-to-olares",
             },
             {
               text: "Compress and extract files",
@@ -493,6 +497,10 @@ const side = {
         {
           text: "Collect diagnostic information",
           link: "/manual/collect-diagnostic-information",
+        },
+        {
+          text: "Create and manage support tickets in Olares Space",
+          link: "/manual/space/tickets",
         },
         {
           text: "Troubleshooting",

@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: 使用官方 ISO 镜像在 NVIDIA DGX Spark 上安装 Olares，包括制作启动盘、安装步骤和激活流程。
+description: 通过启动 U 盘在 NVIDIA DGX Spark 上安装 Olares，然后激活并配置 GPU 显存。
 head:
   - - meta
     - name: keywords
@@ -11,14 +11,14 @@ head:
 
 本文介绍如何使用官方 ISO 镜像在 NVIDIA DGX Spark 上安装 Olares。
 
-<!--@include: ./reusables.md#installation-troubleshooting-tip-->
+## 前提条件
 
-## 系统要求
-
-- **DGX Spark**：确保设备已连接显示器和键盘。
-- **U 盘**：容量 8 GB 或更大。
-- **电脑**：一台运行 Windows、macOS 或 Linux 的电脑，用于制作启动盘。
-- **网络**：建议使用网线将 DGX Spark 连接到路由器，以获得稳定的网络连接。
+- **Olares 设备**：NVIDIA DGX Spark。
+<!--@include: ./reusables.md#larepass-prerequisite-->
+- **外设**：已连接到 DGX Spark 的显示器和键盘。
+- **U 盘**：容量至少为 8 GB。
+- **操作电脑**：一台用于制作启动盘的 Windows、macOS 或 Linux 电脑。
+- **网络**：建议使用网线连接 DGX Spark 和路由器。
 
 ## 制作启动盘
 
@@ -68,19 +68,21 @@ head:
 
 5. 为避免启动延迟，打开 DGX Spark 并立即反复按 **Delete** 键进入 BIOS 设置。将内部硬盘设置为 **Boot Option #1**。
 
-## 连接到 DGX Spark
+## 完成安装并激活 Olares
+
+### 连接到 DGX Spark
 
 <tabs>
 <template #通过有线局域网设置>
 
 1. 确保 DGX Spark 通过网线连接到路由器。
-2. 在 LarePass 应用的账户激活页面，点击**发现附近的 Olares**。
+2. 打开 LarePass。如果还没有 Olares ID，点击**创建账号**并按提示完成设置。在激活页面点击**发现附近的 Olares**。
 3. 从列表中选择目标 Olares 实例。
 
 </template>
 <template #通过无线网络设置>
 
-1. 在 LarePass 应用的账户激活页面，点击**发现附近的 Olares**。
+1. 打开 LarePass。如果还没有 Olares ID，点击**创建账号**并按提示完成设置。在激活页面点击**发现附近的 Olares**。
 2. 点击底部的**蓝牙网络设置**。
 3. 从蓝牙列表中选择你的设备，点击**网络设置**。
 4. 按照提示将 DGX Spark 连接到你手机当前使用的 Wi-Fi 网络。
@@ -89,7 +91,7 @@ head:
 </template>
 </tabs>
 
-## 激活 Olares
+### 激活 Olares
 
 1. 在 LarePass 应用中，在你刚找到的设备上点击**立即安装**。
 2. 安装完成后，点击**立即激活**。
@@ -122,3 +124,5 @@ DGX Spark 采用统一内存架构，CPU 和 GPU 共享 128 GB 的 LPDDR5x 内�
 4. 在**编辑显存分配**对话框中，输入所需的显存大小（GB），然后点击**确认**。
 
 <!--@include: ./reusables.md#protect-olares-id-->
+
+<!--@include: ./reusables.md#installation-troubleshooting-tip-->

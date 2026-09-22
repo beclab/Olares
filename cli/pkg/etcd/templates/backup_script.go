@@ -26,6 +26,8 @@ import (
 var EtcdBackupScript = template.Must(template.New("etcd-backup.sh").Parse(
 	dedent.Dedent(`#!/bin/bash
 
+set -euo pipefail
+
 ETCDCTL_PATH='/usr/local/bin/etcdctl'
 ENDPOINTS='{{ .Etcdendpoint }}'
 ETCD_DATA_DIR="/var/lib/etcd"
@@ -52,6 +54,6 @@ export ETCDCTL_API=3;$ETCDCTL_PATH --endpoints="$ENDPOINTS" snapshot save $BACKU
 
 sleep 3
 
-cd $BACKUP_DIR/../;ls -lt |awk '{if(NR > '$KEEPBACKUPNUMBER'){print "rm -rf "$9}}'|sh
+cd "$BACKUP_DIR/.." && ls -lt |awk '{if(NR > '$KEEPBACKUPNUMBER'){print "rm -rf "$9}}'|sh
 
 `)))
