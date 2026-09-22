@@ -41,11 +41,11 @@ When running Qwen3.8-27B (llama.cpp) on Olares One, we recommend running only on
 3. Keep the default write permission, or choose read-only or full access.
 4. Check that the Qwen3.8-27B model is selected.
 
-    ![Lares chat interface](/images/one/lares-chat.png#bordered)
+    ![Lares chat interface](/images/one/lares-chat1.png#bordered)
 
 5. Send your first `Hello`. Once the message goes through, you are ready to manage Olares by chatting with Lares.
 
-    ![Lares chat response](/images/one/lares-chat-response.png#bordered)
+    ![Lares chat response](/images/one/lares-chat-response1.png#bordered)
 
 ## Step 3: Try common tasks
 
@@ -59,7 +59,7 @@ Start with a basic question:
 I'm new to Olares. Check this device's configuration first.
 ```
 
-![Check device configuration in Lares](/images/one/onboard-scenario-question1.png#bordered)
+![Check device configuration in Lares](/images/one/onboard-scenario-question2.png#bordered)
 
 ### Install an app from Market
 
@@ -69,7 +69,7 @@ Ask Lares to install an app for you:
 Install NocoDB from the Olares Market and tell me when it's ready.
 ```
 
-![Install an app in Lares](/images/one/onboard-scenario-install3.png#bordered)
+![Install an app in Lares](/images/one/onboard-scenario-install4.png#bordered)
 
 ### Deploy an app to Olares
 
@@ -82,7 +82,7 @@ and make sure it has a desktop icon.
 
 Lares will inspect the source app, prepare the Olares app chart, and update the required manifest files. Depending on the app, this might take a few minutes. When it finishes, Lares will tell you how to verify the result.
 
-![Deploy an app in Lares](/images/one/onboard-scenario-porting2.png#bordered)
+![Deploy an app in Lares](/images/one/onboard-scenario-porting3.png#bordered)
 
 You can then find the app on the Launchpad and in My Olares.
 
