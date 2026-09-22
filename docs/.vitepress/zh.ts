@@ -504,10 +504,6 @@ const side = {
           collapsed: true,
           items: [
             {
-              text: "识别需要的 Olares 凭据",
-              link: "/zh/manual/help/password-and-account-recovery",
-            },
-            {
               text: "应用市场应用缺失",
               link: "/zh/manual/help/ts-missing-apps",
             },
@@ -558,6 +554,10 @@ const side = {
             {
               text: "忘记桌面登录密码",
               link: "/zh/manual/help/ts-forget-login-password",
+            },
+            {
+              text: "忘记助记词后无法登录 Olares One",
+              link: "/zh/manual/help/ts-olares-one-access-without-mnemonic",
             },
             {
               text: "登录与激活错误信息",

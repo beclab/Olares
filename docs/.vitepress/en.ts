@@ -504,10 +504,6 @@ const side = {
           collapsed: true,
           items: [
             {
-              text: "Find the right Olares credential",
-              link: "/manual/help/password-and-account-recovery",
-            },
-            {
               text: "Missing apps in Market",
               link: "/manual/help/ts-missing-apps",
             },
@@ -558,6 +554,10 @@ const side = {
             {
               text: "Forgotten desktop login password",
               link: "/manual/help/ts-forget-login-password",
+            },
+            {
+              text: "Cannot access Olares One after forgetting the mnemonic phrase",
+              link: "/manual/help/ts-olares-one-access-without-mnemonic",
             },
             {
               text: "Login and activation error messages",
