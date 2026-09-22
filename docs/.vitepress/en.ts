@@ -556,8 +556,8 @@ const side = {
               link: "/manual/help/ts-forget-login-password",
             },
             {
-              text: "Cannot access Olares One after forgetting the mnemonic phrase",
-              link: "/manual/help/ts-olares-one-access-without-mnemonic",
+              text: "Cannot access Olares after forgetting the mnemonic phrase",
+              link: "/manual/help/ts-access-without-mnemonic",
             },
             {
               text: "Login and activation error messages",
