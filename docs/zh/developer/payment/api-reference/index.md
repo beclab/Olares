@@ -32,7 +32,7 @@ Webhook 是本地动作——用 `constructEvent` 验签,见 [Webhook](../webhoo
 | 语言 | 包 | 安装 |
 |---|---|---|
 | TypeScript (Node.js 18+) | `@olares/payment-sdk` | `npm install @olares/payment-sdk` |
-| Go | `github.com/Above-Os/olares-payment/packages/payment-sdk-go` | `go get github.com/Above-Os/olares-payment/packages/payment-sdk-go` |
+| Go | `github.com/beclab/olares-payment/packages/payment-sdk-go` | `go get github.com/beclab/olares-payment/packages/payment-sdk-go` |
 | 任意语言(裸 HTTP) | — | 不需要 SDK——按[认证](#认证)签名即可 |
 
 SDK 开箱即指向生产网关 `https://www.olares.com/payment`——无需任何配置。
@@ -56,9 +56,9 @@ canonical = "{method}\n{body}\n{timestamp}\n{nonce}"
    body    = the exact raw request body string
 ```
 
-`method` 是短方法名(`createPayment`、`getPayment` …)。请求 URL 是 `POST /api/{method}`。不要把 `/api/` 或主机名写进签名。`timestamp` 与 `nonce` 必须与请求头逐字节一致。`apiSecret` 是完整的 `sk_live_…` 字符串,不去前缀。
+`method` 是短方法名(`createPayment`、`getPayment` …)。`timestamp` 与 `nonce` 必须与请求头逐字节一致。`apiSecret` 是完整的 `sk_live_…` 字符串,不去前缀。
 
-超过 5 分钟的请求会被拒绝(`1502 TIMESTAMP_EXPIRED`)。SDK 会为你完成所有这些计算;只有在自己实现新客户端时才需要手写。
+超过 5 分钟的请求会被拒绝(返回 `1301 UNAUTHENTICATED`)。SDK 会为你完成所有这些计算;只有在自己实现新客户端时才需要手写。
 
 ### 公开端点
 
@@ -85,7 +85,7 @@ SDK 调用抛出 `PaymentError`(TS)/ 返回 `*paymentsdk.Error`(Go),含 `code`�
 |---|---|
 | `1000–1899` | 网关业务错误:请求已到达网关。按 `code` 处理。 |
 | `1900–1949` | 网关**退款**错误,由四个退款方法抛出。见[退款 → 错误码](./refunds#错误码)。 |
-| `1950–1999` | SDK 本地传输错误,由 SDK 抛出,网关不会返回。查询类可直接重试;创建支付、创建退款等写操作请带 `Idempotency-Key` 重试——超时可能发生在网关已处理之后,幂等键可避免重复建单。 |
+| `1950–1999` | SDK 本地错误(传输失败或本地校验不通过),由 SDK 抛出,网关不会返回。查询类可直接重试;创建支付、创建退款等写操作请带 `Idempotency-Key` 重试——超时可能发生在网关已处理之后,幂等键可避免重复建单。 |
 
 这条分界线值得直接写进代码:**`code < 1950` 表示请求到过网关**,`code >= 1950` 表示请求根本没发出去。
 
@@ -93,23 +93,23 @@ SDK 调用抛出 `PaymentError`(TS)/ 返回 `*paymentsdk.Error`(Go),含 `code`�
 |---|---|---|
 | 1000 | `INTERNAL_ERROR` | 服务端内部错误 |
 | 1100 | `INVALID_ARGUMENT` | 参数错误 |
+| 1101 | `MISSING_PARAMETER` | 缺少必填参数(`verifyTransaction` 的 `tx_hash`/`chain`/`network`) |
+| 1103 | `CHAIN_NOT_SUPPORTED` | `verifyTransaction` 的链/网络不支持 |
 | 1104 | `INVALID_RETURN_URL` | `returnUrl` 不是绝对 http(s) URL |
+| 1105 | `INVALID_CURSOR` | 分页游标无效(`listPayments`、收款流水等) |
 | 1203 | `PAYMENT_NOT_FOUND` | 支付单不存在 |
 | 1300 | `PERMISSION_DENIED` | 该 API key 的权限被拒绝 |
-| 1301 | `UNAUTHENTICATED` | 需要认证 |
-| 1500 | `SIGNATURE_MISMATCH` | HMAC 或 webhook 签名不匹配 |
-| 1501 | `INVALID_API_KEY` | 未知或已吊销的 API key |
-| 1502 | `TIMESTAMP_EXPIRED` | 时间戳超出 5 分钟窗口 |
+| 1301 | `UNAUTHENTICATED` | 认证失败——缺认证 header、API key 无效、签名不匹配、时间戳超窗,或 `client_secret` 配对失败 |
 | 1901 | `REFUND_PRECONDITION_FAILED` | 支付单尚不可退 |
 | 1902 | `REFUND_AMOUNT_EXCEEDED` | 退款额超出可退余额 |
 | 1903 | `REFUND_STATE_CONFLICT` | 当前退款状态不允许该操作 |
 | 1904 | `REFUND_EXECUTION_INVALID` | 执行凭据失效或已过期 |
 | 1905 | `REFUND_ROUTE_UNSUPPORTED` | 这笔支付无法退款 |
 | 1906 | `REFUND_ALREADY_OPEN` | 该支付单已有未结清退款 |
-| 1907 | `REFUND_CANCEL_UNAVAILABLE` | 暂时不能取消(静默期未满) |
 | 1951 | `SDK_TIMEOUT` | 客户端超时 |
 | 1952 | `SDK_NETWORK_ERROR` | 网络故障或非 JSON 响应 |
 | 1953 | `SDK_RPC_ERROR` | 直连 RPC 核实失败 |
+| 1954 | `SDK_INVALID_AMOUNT` | SDK 本地金额校验失败(请求未发往网关) |
 
 ## 客户端配置
 

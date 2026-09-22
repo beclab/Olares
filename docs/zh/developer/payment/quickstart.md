@@ -58,11 +58,11 @@ const client = new MerchantClient({
 <template #Go>
 
 ```bash
-go get github.com/Above-Os/olares-payment/packages/payment-sdk-go
+go get github.com/beclab/olares-payment/packages/payment-sdk-go
 ```
 
 ```go
-import paymentsdk "github.com/Above-Os/olares-payment/packages/payment-sdk-go"
+import paymentsdk "github.com/beclab/olares-payment/packages/payment-sdk-go"
 
 merchant := paymentsdk.NewMerchantClient(paymentsdk.Config{
     APIKey:    os.Getenv("PAYMENT_API_KEY"),    // pk_live_…

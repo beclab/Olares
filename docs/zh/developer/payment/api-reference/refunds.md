@@ -24,7 +24,7 @@ flowchart TD
     F -->|回执成功 且路由与金额相符| G[SUCCEEDED 计入已退]
     F -->|交易 revert 或对不上| H[FAILED 额度仍占 可重试]
     F -->|查不到 RPC 挂 确认数不够| E
-    B -->|静默期过后 cancelRefund| I[CANCELED 唯一释放额度的出口]
+    B -->|cancelRefund| I[CANCELED 唯一释放额度的出口]
     H -->|cancelRefund| I
 ```
 
@@ -143,8 +143,6 @@ cancelRefund(refundId: string): Promise<Refund>
 ```
 
 取消一笔尚未结清的退款——**只对 `PREPARED` 与 `FAILED` 开放**——这也是**唯一**能把占住的金额还回可退余额的方式。对 `SUBMITTED` 或终态退款调用会返回 `1903`。
-
-刚创建的退款有一段静默期保护(默认约 50 个区块):刚广播出去的转账可能还躺在内存池里,任何链上查询都看不见它,此时允许取消等于说谎。静默期内该调用返回 `1907`,过几分钟再试即可。
 
 ---
 
@@ -278,7 +276,6 @@ remainingRefundable = receivedAmount − Σ(已成功的退款)
 | 1904 | `REFUND_EXECUTION_INVALID` | 执行凭据失效或已过期 | `reissueRefundLink` 后把新链接交出去 |
 | 1905 | `REFUND_ROUTE_UNSUPPORTED` | 这笔支付根本无法退款 | 看 `nonRefundableReason`;改走平台外处理 |
 | 1906 | `REFUND_ALREADY_OPEN` | 该支付单已有未结清退款 | 先把它做完或取消 |
-| 1907 | `REFUND_CANCEL_UNAVAILABLE` | 暂时不能取消(静默期未满) | 过几分钟再试 |
 
 合约钱包(Safe、智能账户)付的款无法原路退回,收银台因此一开始就拒绝它们付款;若某笔支付单仍属于这种情况,建退款会返回 `1905`。
 

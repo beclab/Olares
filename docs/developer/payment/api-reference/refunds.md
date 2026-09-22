@@ -24,7 +24,7 @@ flowchart TD
     F -->|Receipt ok, route and amount match| G[SUCCEEDED - counts as refunded]
     F -->|Reverted or does not match| H[FAILED - quota still held, can be retried]
     F -->|Not found yet, RPC down, too few confirmations| E
-    B -->|cancelRefund after the quiet period| I[CANCELED - the only way quota is released]
+    B -->|cancelRefund| I[CANCELED - the only way quota is released]
     H -->|cancelRefund| I
 ```
 
@@ -143,8 +143,6 @@ cancelRefund(refundId: string): Promise<Refund>
 ```
 
 Cancels a refund that has not settled — `PREPARED` or `FAILED` only — and is **the only way the held amount returns to the refundable balance**. Cancelling a `SUBMITTED` or terminal refund fails with `1903`.
-
-A freshly created refund is protected by a short quiet period (roughly 50 blocks by default): a transfer broadcast moments ago can still be sitting in the mempool where no chain query can see it, and cancelling it would be a lie. During that window the call returns `1907` — retry in a few minutes.
 
 ---
 
@@ -278,7 +276,6 @@ Refund codes occupy `1900–1949`. (SDK-local transport failures start at `1951`
 | 1904 | `REFUND_EXECUTION_INVALID` | Execution credential invalid or expired | `reissueRefundLink` and hand over the new link |
 | 1905 | `REFUND_ROUTE_UNSUPPORTED` | This payment cannot be refunded at all | Check `nonRefundableReason`; settle off-platform |
 | 1906 | `REFUND_ALREADY_OPEN` | Another refund is already open on this payment | Finish or cancel it first |
-| 1907 | `REFUND_CANCEL_UNAVAILABLE` | Cancellation is not available yet (quiet period) | Retry in a few minutes |
 
 Payments from contract wallets (Safe, smart accounts) cannot be refunded back to their source, which is why the checkout refuses them in the first place; if a payment still falls in this case, creation fails with `1905`.
 

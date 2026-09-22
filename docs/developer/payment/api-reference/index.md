@@ -32,7 +32,7 @@ Webhooks are a local concern — signature verification with `constructEvent` li
 | Language | Package | Install |
 |---|---|---|
 | TypeScript (Node.js 18+) | `@olares/payment-sdk` | `npm install @olares/payment-sdk` |
-| Go | `github.com/Above-Os/olares-payment/packages/payment-sdk-go` | `go get github.com/Above-Os/olares-payment/packages/payment-sdk-go` |
+| Go | `github.com/beclab/olares-payment/packages/payment-sdk-go` | `go get github.com/beclab/olares-payment/packages/payment-sdk-go` |
 | Any (raw HTTP) | — | No SDK needed — sign per [Authentication](#authentication) |
 
 The SDK points at the production gateway `https://www.olares.com/payment` out of the box — nothing to configure.
@@ -56,9 +56,9 @@ canonical = "{method}\n{body}\n{timestamp}\n{nonce}"
    body    = the exact raw request body string
 ```
 
-`method` is the short name (`createPayment`, `getPayment`, …). The request URL is `POST /api/{method}`. Do not put `/api/` or the host in the signature. `timestamp` and `nonce` must match the headers byte-for-byte. `apiSecret` is the full `sk_live_…` string; nothing is stripped.
+`method` is the short name (`createPayment`, `getPayment`, …). `timestamp` and `nonce` must match the headers byte-for-byte. `apiSecret` is the full `sk_live_…` string; nothing is stripped.
 
-A request more than 5 minutes old is rejected (`1502 TIMESTAMP_EXPIRED`). The SDKs compute all of this for you; implement it yourself only when writing a new client.
+A request more than 5 minutes old is rejected with `1301 UNAUTHENTICATED`. The SDKs compute all of this for you; implement it yourself only when writing a new client.
 
 ### Public endpoints
 
@@ -85,7 +85,7 @@ SDK calls throw `PaymentError` (TS) / return `*paymentsdk.Error` (Go) with `code
 |---|---|
 | `1000–1899` | Gateway business errors — the request reached the gateway. Handle by `code`. |
 | `1900–1949` | Gateway **refund** errors, raised by the four refund methods. See [Refunds → Errors](./refunds#errors). |
-| `1950–1999` | SDK-local transport errors, raised by the SDK and never returned by the gateway. Reads can be retried directly; for writes such as creating a payment or a refund, retry with an `Idempotency-Key` — a timeout can happen after the gateway has already processed the request, and the key prevents duplicates. |
+| `1950–1999` | SDK-local errors (transport failures or local validation), raised by the SDK and never returned by the gateway. Reads can be retried directly; for writes such as creating a payment or a refund, retry with an `Idempotency-Key` — a timeout can happen after the gateway has already processed the request, and the key prevents duplicates. |
 
 The dividing line is worth coding against: **`code < 1950` means the request reached the gateway**, while `code >= 1950` means it never got there.
 
@@ -93,23 +93,23 @@ The dividing line is worth coding against: **`code < 1950` means the request rea
 |---|---|---|
 | 1000 | `INTERNAL_ERROR` | Server-side internal error |
 | 1100 | `INVALID_ARGUMENT` | Bad parameters |
+| 1101 | `MISSING_PARAMETER` | A required parameter is missing (`tx_hash`/`chain`/`network` on `verifyTransaction`) |
+| 1103 | `CHAIN_NOT_SUPPORTED` | Chain/network not supported by `verifyTransaction` |
 | 1104 | `INVALID_RETURN_URL` | `returnUrl` is not an absolute http(s) URL |
+| 1105 | `INVALID_CURSOR` | Invalid pagination cursor (`listPayments`, receiving transactions) |
 | 1203 | `PAYMENT_NOT_FOUND` | Payment does not exist |
 | 1300 | `PERMISSION_DENIED` | Capability denied for this key |
-| 1301 | `UNAUTHENTICATED` | Authentication required |
-| 1500 | `SIGNATURE_MISMATCH` | HMAC or webhook signature mismatch |
-| 1501 | `INVALID_API_KEY` | Unknown or revoked key |
-| 1502 | `TIMESTAMP_EXPIRED` | Timestamp outside the 5-minute window |
+| 1301 | `UNAUTHENTICATED` | Authentication failed — missing auth headers, invalid API key, signature mismatch, timestamp outside the window, or a `client_secret` pairing failure |
 | 1901 | `REFUND_PRECONDITION_FAILED` | Payment is not refundable yet |
 | 1902 | `REFUND_AMOUNT_EXCEEDED` | Refund amount exceeds the refundable balance |
 | 1903 | `REFUND_STATE_CONFLICT` | The refund is not in a state that allows this action |
 | 1904 | `REFUND_EXECUTION_INVALID` | Execution credential invalid or expired |
 | 1905 | `REFUND_ROUTE_UNSUPPORTED` | This payment cannot be refunded |
 | 1906 | `REFUND_ALREADY_OPEN` | Another refund is already open on this payment |
-| 1907 | `REFUND_CANCEL_UNAVAILABLE` | Cancellation is unavailable right now (quiet period) |
 | 1951 | `SDK_TIMEOUT` | Client-side timeout |
 | 1952 | `SDK_NETWORK_ERROR` | Network failure or non-JSON response |
 | 1953 | `SDK_RPC_ERROR` | Direct-RPC verification failed |
+| 1954 | `SDK_INVALID_AMOUNT` | SDK-local amount validation failed (the request never reached the gateway) |
 
 ## Client configuration
 
