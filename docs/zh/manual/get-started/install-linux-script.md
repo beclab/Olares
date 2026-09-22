@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: 在 Linux 系统 Ubuntu 和 Debian 上安装配置 Olares 的完整步骤，包括系统要求、安装命令和激活流程。
+description: 使用一行命令在 Ubuntu 或 Debian 上安装并激活 Olares。
 head:
   - - meta
     - name: keywords
@@ -9,27 +9,12 @@ head:
 # 在 Linux 设备上使用命令行安装 Olares
 本文介绍如何在 Linux 上使用一行命令行脚本安装 Olares。
 
-<!--@include: ./reusables.md#installation-troubleshooting-tip-->
+## 前提条件
 
-## 系统要求
-
-### 必要配置
-- **CPU**：4 核及以上。
-- **内存**：至少 8 GB 可用内存。
-- **存储**：至少 150 GB 的可用 SSD 磁盘空间。
-   :::warning 必须使用 SSD
-   使用机械硬盘 (HDD) 会导致安装失败。
-   :::
-- **支持的系统**：
-  - Ubuntu 22.04-25.04 LTS
-  - Debian 12 或 13
-
-<!--@include: ./reusables.md#version-compatibility-->
-
-
-### 可选硬件
-
-<!--@include: ./gpu-requirements.md#gpu-requirements-->
+- **Olares 设备**：一台满足 [Linux 系统要求](install-olares.md#linux)的设备。
+- **操作系统**：Ubuntu 22.04–25.04 或 Debian 12/13。
+<!--@include: ./reusables.md#larepass-prerequisite-->
+- **权限**：具有 `sudo` 权限的用户账号。
 
 ## 安装 Olares
 
@@ -50,3 +35,5 @@ head:
 <!--@include: ./log-in-to-olares.md-->
 
 <!--@include: ./reusables.md#protect-olares-id-->
+
+<!--@include: ./reusables.md#installation-troubleshooting-tip-->

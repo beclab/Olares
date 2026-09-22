@@ -47,10 +47,6 @@ Run "olares-cli knowledge download <verb> --help" for verb-specific flags.
 	}
 	cmd.SilenceErrors = true
 	cmd.SilenceUsage = true
-	cmd.PersistentPreRun = func(c *cobra.Command, args []string) {
-		c.SilenceErrors = true
-		c.SilenceUsage = true
-	}
 
 	cmd.AddCommand(NewCreateCommand(f))
 	cmd.AddCommand(NewListCommand(f))

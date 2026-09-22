@@ -28,6 +28,7 @@ We recommend using it only for development or testing purposes.
 
 ## Before you begin
 Before you begin, ensure the following:
+<!--@include: ./reusables.md#larepass-prerequisite-->
 - [Docker](https://www.docker.com/) is installed and running on your system.
 - You know the IP address of the current device.
   ::: tip View IP Address
@@ -35,7 +36,6 @@ Before you begin, ensure the following:
    - Using the graphical interface: Open **System Settings** (or **System Preferences**) > **Network**, and check the details under the currently active network connection.
    - Using the command line: Open a terminal window and enter `ipconfig getifaddr en0` for Wi-Fi, or `ipconfig getifaddr en1` for wired network.
      :::
-- You have [created an Olares ID via LarePass](/manual/get-started/create-olares-id.md).
 
 ## Run `olaresd-proxy`
 ::: tip Check Mac chip  

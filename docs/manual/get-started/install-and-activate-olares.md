@@ -7,12 +7,13 @@ To avoid activation failures, ensure that both your phone and the Olares device 
 :::
 
 <!-- #region iso-activation-flow -->
-1. Open LarePass app on your phone.
-2. On your Olares activation page, tap **Discover nearby Olares**. LarePass will list the detected Olares instances in the same network.
-3. Select the target Olares instance from the list and tap **Install now**.
-![ISO Activate](/images/manual/larepass/iso-activate1.png#bordered)
+1. Open LarePass. If you do not have an Olares ID, tap **Create an account** and follow the prompts.
+2. On the activation page, tap **Discover nearby Olares**. LarePass lists the Olares instances detected on the same network.
+3. Select your Olares instance and tap **Install now**.
 
-4. When the installation completes, click **Activate now**.
+   ![ISO Activate](/images/manual/larepass/iso-activate1.png#bordered)
+
+4. When the installation completes, tap **Activate now**.
 5. In the **Select a reverse proxy** dialog, select a node that is closer to your geographical location. The installer will then configure HTTPs certificate and DNS for Olares. 
 
    :::tip Note
