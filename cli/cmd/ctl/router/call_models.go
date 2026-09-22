@@ -55,10 +55,22 @@ type modelObject struct {
 	Object  string `json:"object"`
 	Created int64  `json:"created"`
 	OwnedBy string `json:"owned_by"`
+	// Name is what to call this model in front of a person, sent only when
+	// the id is not already one. Most ids read as names; a FlowStudio scene's
+	// does not, because its model half is the workflow's UUID — the id cannot
+	// follow a rename without orphaning every allowlist and quota entry
+	// pointing at it, so the author's own label travels here instead.
+	Name string `json:"name,omitempty"`
 	// QualifiedID repeats ID. It predates `id` itself carrying the qualified
 	// "<provider>/<model>" reference, and Router still sends both so that
 	// clients written against the older shape keep working. Read ID.
 	QualifiedID string `json:"qualified_id"`
+	// CanonicalFields names the creative request fields this one model
+	// honors, for the providers that answer per model rather than per mode.
+	// Absent is not empty: it means nobody declared them, which is every
+	// model whose vocabulary follows from its mode, and such a model takes
+	// the mode's full field set rather than none of it.
+	CanonicalFields []string `json:"canonical_fields,omitempty"`
 	// Mode is the endpoint family: chat, embedding, tts, ocr, image and the
 	// rest. The list mixes them, and the qualified ids are nothing like the
 	// "tts-1" a client pattern-matches against, so this is the only reliable
@@ -364,6 +376,20 @@ func modelsPath(includeNotReady, operations bool) string {
 	return withQuery(epDataPlaneModels, q)
 }
 
+// modelLabelOf is the human name for a row, or "" when the id already is one.
+// A name equal to the id, or to its model half, is the second case spelled
+// out rather than a name.
+func modelLabelOf(m *modelObject) string {
+	name := strings.TrimSpace(m.Name)
+	if name == "" || name == m.ID {
+		return ""
+	}
+	if _, half, ok := strings.Cut(m.ID, "/"); ok && name == half {
+		return ""
+	}
+	return name
+}
+
 func renderModelsList(w io.Writer, items []modelObject, includeNotReady bool) error {
 	if len(items) == 0 {
 		msg := "this credential can call nothing. Either no model is configured, or the key's " +
@@ -379,10 +405,18 @@ func renderModelsList(w io.Writer, items []modelObject, includeNotReady bool) er
 	// engine. A column of dashes on a list of cloud models would read as a
 	// figure nobody filled in.
 	wide := false
+	// CALLED likewise only where an id is not already a name, which today is
+	// only ever a FlowStudio scene. A column of repeats, or of dashes, tells
+	// a reader of an all-cloud list nothing it did not already have.
+	labelled := false
 	for i := range items {
 		wide = wide || items[i].MaxConcurrency > 0
+		labelled = labelled || modelLabelOf(&items[i]) != ""
 	}
 	headers := []string{"NAME", "MODE", "SUPPORTS", "READINESS"}
+	if labelled {
+		headers = append(headers, "CALLED")
+	}
 	if wide {
 		headers = append(headers, "AT ONCE")
 	}
@@ -395,6 +429,9 @@ func renderModelsList(w io.Writer, items []modelObject, includeNotReady bool) er
 			nonEmpty(m.Mode),
 			summarizeSupportNames(m.Supports),
 			nonEmpty(m.Readiness),
+		}
+		if labelled {
+			cells = append(cells, nonEmpty(clip(modelLabelOf(m), 32)))
 		}
 		if wide {
 			cells = append(cells, atOnceLabelOf(m.ContextSize, m.MaxConcurrency, m.KVPoolTokens))
