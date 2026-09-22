@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: 下载适用于移动端、桌面端或 Chrome 的 LarePass，并查找所需的设置指南。
+description: 下载适用于移动端、桌面端或 Chrome 的 LarePass，更改语言并查找账户设置指南。
 head:
   - - meta
     - name: keywords
@@ -39,6 +39,15 @@ LarePass 是用于创建和管理 Olares ID、激活 Olares，以及在手机和
 ### Chrome 浏览器扩展
 
 从 [LarePass 官网](https://www.olares.cn/larepass)下载 ZIP 安装包。该扩展需要在 Chrome 中手动安装，具体操作请参阅[安装 LarePass 浏览器扩展](../install-larepass-browser-extension.md)。
+
+## 更改语言
+
+LarePass 支持英语、简体中文、德语、西班牙语、意大利语、法语和日语。更改语言只会影响当前设备上的 LarePass，不会更改 Olares 系统语言。
+
+- **手机端**：进入**设置** > **通用** > **语言**，然后选择所需语言。
+- **桌面端**：进入**设置** > **语言**，然后选择所需语言。
+
+更改会立即生效。
 
 ## 设置账户
 

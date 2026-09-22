@@ -1,5 +1,5 @@
 ---
-description: Download LarePass for mobile, desktop, or Chrome, and find the setup guide you need.
+description: Download LarePass for mobile, desktop, or Chrome, change its language, and find account setup guides.
 outline: [2, 3]
 head:
   - - meta
@@ -39,6 +39,15 @@ Download the latest Linux desktop client from the [LarePass website](https://www
 ### Chrome browser extension
 
 Download the ZIP package from the [LarePass website](https://www.olares.com/larepass). The extension must be installed manually in Chrome. See [Install the LarePass browser extension](../install-larepass-browser-extension.md) for instructions.
+
+## Change the language
+
+LarePass is available in English, Simplified Chinese, German, Spanish, Italian, French, and Japanese. Changing the language affects only LarePass on that device. It does not change the language of your Olares system.
+
+- **Mobile**: Go to **Settings** > **General** > **Language**, then select a language.
+- **Desktop**: Go to **Settings** > **Language**, then select a language.
+
+The change applies immediately.
 
 ## Set up your account
 

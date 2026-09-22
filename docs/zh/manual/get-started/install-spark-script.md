@@ -67,7 +67,7 @@ sudo nft flush ruleset
 2. 输入一次性密码，点击**继续**。
 
    ![输入密码](/images/manual/get-started/wizard-enter-password1.png#bordered)
-3. 选择系统语言。
+3. 选择系统语言。Olares 支持英语、简体中文、德语、西班牙语、意大利语、法语和日语。选择后，向导会立即切换语言。激活后，Olares 桌面也会使用该语言。
 
    ![选择语言](/images/manual/get-started/select-language.png#bordered)
 4. 选择一个距你所在位置最近的反向代理节点。你也可以之后在 Olares 的[更改反向代理](../olares/settings/change-frp.md)页面进行调整。

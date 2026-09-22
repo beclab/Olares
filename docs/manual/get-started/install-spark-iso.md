@@ -102,7 +102,11 @@ This guide explains how to install Olares on NVIDIA DGX Spark using the official
    :::tip Note
    You can change this setting later on the [Change reverse proxy](../olares/settings/change-frp.md) page in Olares.
    :::
-4. Follow the on-screen instructions to set the login password for Olares, then tap **Complete**.
+4. Select the language for Olares. Olares supports English, Simplified Chinese, German, Spanish, Italian, French, and Japanese.
+   :::info
+   This selection does not change the language of the LarePass app. The remaining activation steps stay in the current LarePass language. After activation, Olares Desktop uses the language selected here.
+   :::
+5. Follow the on-screen instructions to set the login password for Olares, then tap **Complete**.
 
    ![ISO Activate-2](/images/manual/larepass/iso-activate-4.png#bordered)
 

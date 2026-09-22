@@ -99,7 +99,11 @@ head:
    :::tip 提示
    你可以在之后 Olares 的[更改反向代理](../olares/settings/change-frp.md)页面调整此设置。
    :::
-4. 按照屏幕提示设置 Olares 的登录密码，然后点击**完成**。
+4. 选择 Olares 语言。Olares 支持英语、简体中文、德语、西班牙语、意大利语、法语和日语。
+   :::info
+   这里选择的是 Olares 语言，不会改变当前 LarePass 的界面语言。后续激活流程仍使用 LarePass 当前语言。激活完成后，Olares 桌面会使用此处选择的语言。
+   :::
+5. 按照屏幕提示设置 Olares 的登录密码，然后点击**完成**。
 
    ![ISO 激活-2](/images/manual/larepass/iso-activate-4.png#bordered)
 
