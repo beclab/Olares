@@ -2,14 +2,13 @@
 
 LLM-readable skills (one folder per command tree) that teach OpenClaw — and any other Claude-style agent — how to drive `olares-cli` against a live Olares instance. Each folder contains a single `SKILL.md` whose YAML frontmatter declares the skill's name, version, and runtime requirements.
 
-These skills are published to [ClawHub](https://clawhub.ai/), the public registry for OpenClaw skills, under their canonical names.
+These skills are compiled into the `olares-cli` binary ([`embed.go`](embed.go)) and reach a machine through it — `olares-cli skills install` or `skills export`. There is no separate registry to publish to; see [cli/docs/design/skills-provenance.md](../docs/design/skills-provenance.md) for why that is the only route.
 
 ## Layout
 
 ```
 cli/skills/
 ├── README.md          # this file
-├── publish.sh         # publish helper (used locally and from CI)
 ├── olares-shared/
 │   ├── SKILL.md       # foundation: profile model, login, token refresh
 │   └── references/
@@ -51,9 +50,9 @@ cli/skills/
 
 `olares-chart` is a partial exception on **login**, not on linking: its authoring verbs (`from-compose` / `lint` / `package`) are local-only and need **no profile / login / cluster**, so it never logs in to author a chart. It still reads `olares-platform.md` for platform facts (no login needed) and only requires `olares-shared` login when **deploying a chart to a real Olares** (`market upload` + `install`). `olares-publish` is the public-distribution counterpart: it picks up after the app already runs locally (via `olares-chart`) and covers market-ready polish, the `beclab/apps` PR, and paid apps.
 
-ClawHub publishes the entire skill directory (including `references/`), so reference files ship automatically without any change to `publish.sh`.
+The embed pattern takes the entire skill directory (including `references/`), so reference files ship automatically.
 
-**`olares-publish/scripts/` is the one deliberate exception to markdown-only.** Producing a Market icon is deterministic pixel work — corner sampling, edge flood-fill to strip a white backplate, gradient backplate, safe-zone fit — and prose that asks each agent to re-derive it yields a different icon every run. Shipping the script makes the output reproducible. Same mechanism as `references/`: `publish.sh` runs `clawhub skill publish "$dir"` on the whole folder, so scripts upload with no change to the publish helper. Keep this rare — a script earns its place only when the task is exactly specified and the agent would otherwise improvise.
+**`olares-publish/scripts/` is the one deliberate exception to markdown-only.** Producing a Market icon is deterministic pixel work — corner sampling, edge flood-fill to strip a white backplate, gradient backplate, safe-zone fit — and prose that asks each agent to re-derive it yields a different icon every run. Shipping the script makes the output reproducible. Same mechanism as `references/`: the whole folder is embedded, so scripts ship with no change anywhere else. Keep this rare — a script earns its place only when the task is exactly specified and the agent would otherwise improvise.
 
 ## Writing style
 
@@ -147,78 +146,30 @@ metadata:
 
 `description` must stay ≤ 1024 characters (OpenCode limit). Put detailed trigger phrases in the skill body's `## When to use` section.
 
-ClawHub does **not** install the `olares-cli` binary for you — it is part of every Olares device, so the `bins:` line just gates the skill behind "you must be on a host that has olares-cli on PATH". The binary itself ships through Olares' regular release channels (see [`cli/.goreleaser.yaml`](../.goreleaser.yaml) and [`.github/workflows/release-cli.yaml`](../../.github/workflows/release-cli.yaml)).
+Nothing installs the `olares-cli` binary on the strength of that line — it is advisory, so an agent can warn rather than guess. The binary ships through Olares' regular release channels (see [`cli/.goreleaser.yaml`](../.goreleaser.yaml) and [`.github/workflows/release-cli.yaml`](../../.github/workflows/release-cli.yaml)).
 
-## Publishing to ClawHub
+## Validating
 
-### Prerequisites
-
-1. Account on [clawhub.ai](https://clawhub.ai/) with a linked GitHub account that is at least 1 week old (ClawHub anti-abuse policy).
-2. **Node.js 22+** (or 20.10+ with `--experimental-import-attributes`). One of `clawhub`'s transitive deps uses ES2025 import attributes (`import x from '...' with { type: 'json' }`); older Node prints `SyntaxError: Unexpected token 'with'` on every command.
-3. `clawhub` CLI installed: `npm i -g clawhub`.
-4. Either an interactive `clawhub login` session, or a non-interactive token exported as `CLAWHUB_TOKEN`.
-5. Python dependencies for repository validation: `python3 -m pip install -r cli/skills/requirements.txt`.
-
-### Local validation (no network)
-
-`clawhub skill publish` does not have a `--dry-run` flag. The `--dry-run` mode here is a **local-only** sanity check: parses each `SKILL.md` frontmatter, verifies that `name` matches the folder slug, that `version` names an `olares-cli` release (`x.y.z-cli.n`), that `description` is ≤ 1024 characters, and that `metadata.openclaw.requires.bins` includes `olares-cli`. It also enforces the writing rules that can be checked mechanically: link and anchor targets resolve, per-file ceilings hold, no reference deep-links a peer skill, no section is named in prose instead of linked, no verb-index row points only at `--help`, and every skill declares its read paths in one `## Fast paths` (or `## Symptom routing`) block that stays inside the first-command budget. It then prints the `clawhub skill publish` command that would actually run.
+The suite ships compiled into the `olares-cli` binary, so there is no publish step — a release of the CLI is a release of the skills. What there is instead is validation, run on every pull request by [`skills-ci.yml`](../../.github/workflows/skills-ci.yml):
 
 ```bash
+python3 -m pip install -r cli/skills/requirements.txt
 python3 -m unittest cli/skills/test_validate.py
 python3 cli/skills/validate.py
-./cli/skills/publish.sh --dry-run                  # validate all 12
-./cli/skills/publish.sh --dry-run olares-shared    # validate one
 ```
 
-### Server-side preview (optional)
+`validate.py` checks the frontmatter (name matches the folder slug, `version` names an `olares-cli` release `x.y.z-cli.n`, `description` is within its 1024-character limit, `metadata.openclaw.requires.bins` is exactly `[olares-cli]`) and the writing rules that can be checked mechanically: link and anchor targets resolve, per-file ceilings hold, no reference deep-links a peer skill, no section is named in prose instead of linked, no verb-index row points only at `--help`, and every skill declares its read paths in one `## Fast paths` (or `## Symptom routing`) block that stays inside the first-command budget. It also refuses a suite whose 12 skills do not all carry one version.
 
-For a real "what would the registry do" preview — including remote slug/version conflict checks — use the `sync` subcommand. It enumerates the directory, validates against the live registry schema, and reports new vs. updated skills without uploading:
+### Versions
 
-```bash
-# from the repo root:
-clawhub sync --workdir cli --dry-run
-# or, equivalently:
-( cd cli && clawhub sync --dry-run )
-```
+Versions come from each skill's frontmatter `version:` field, and all 12 carry the same one: the `olares-cli` release they ship in, spelled the way npm spells it (`1.12.7-cli.4`). The suite is compiled into that binary, so what a skill documents is that release's command tree; a number of its own would be a second thing to bump and a second thing to get wrong.
 
-**WARNING**: `clawhub sync` resolves its scan root as `<workdir>/skills` (default workdir = current directory). If that path doesn't exist it silently falls back to the OpenClaw workspace at `~/.openclaw/skills` (or `D:\openclaw\skills` on Windows), which usually contains community skills installed by OpenClaw itself. Always pass `--workdir cli` (or `cd cli` first) so it scans `cli/skills/` here — otherwise a real (non-dry-run) `sync` would re-upload third-party skills under **your** account.
+**Do not edit `version:` by hand.** What is committed is the placeholder `0.0.0-cli.0`, and the release job writes the real one with [`stamp.py`](stamp.py) immediately before compiling — `1.12.7-cli.4` on the npm channel, `1.12.7-cli.0` for an OS-line build. It was a hand edit in the release PR until the failure mode became clear: forgetting it shipped new instructions under the label a user already had installed, so nothing anywhere said their copy was behind.
 
-Note: `clawhub sync` defaults to bumping the patch version on updates. For deterministic releases driven by the `version:` field in each `SKILL.md`, prefer the `publish.sh` (no `--dry-run`) path for actual uploads.
+## Names
 
-### Publish
+The 12 skills use these canonical short names, which are what an agent loads them by:
 
-```bash
-./cli/skills/publish.sh                            # publish all 12
-./cli/skills/publish.sh olares-files olares-market # publish a subset
-```
+`olares-shared`, `olares-files`, `olares-knowledge`, `olares-search`, `olares-market`, `olares-settings`, `olares-dashboard`, `olares-cluster`, `olares-doctor`, `olares-router`, `olares-chart`, `olares-publish`.
 
-Versions come from each skill's frontmatter `version:` field, and all 12 carry the same one: the `olares-cli` release they ship in, spelled the way npm spells it (`1.12.7-cli.4`). The suite is compiled into that binary, so what a skill documents is that release's command tree; a number of its own would be a second thing to bump and a second thing to get wrong. `validate.py` rejects any other shape and rejects the 12 disagreeing — but it is not what puts the number there.
-
-**Do not edit `version:` by hand.** What is committed is the placeholder `0.0.0-cli.0`, and the release job writes the real one with [`stamp.py`](stamp.py) immediately before compiling — `1.12.7-cli.4` on the npm channel, `1.12.7-cli.0` for an OS-line build. It was a hand edit in the release PR until the failure mode became clear: forgetting it shipped new instructions under the label a user already had installed, so nothing anywhere said their copy was behind. `publish.sh` refuses the placeholder, so publishing to ClawHub means stamping first:
-
-```bash
-python3 cli/skills/stamp.py 1.12.7-cli.4   # then publish, then discard the edit
-```
-
-Slugs and display names are baked into [`publish.sh`](publish.sh).
-
-## Slug policy
-
-The 12 skills publish under their canonical short names:
-
-| Slug              | Display name                                |
-|-------------------|---------------------------------------------|
-| `olares-shared`   | Olares Shared (olares-cli foundation)       |
-| `olares-files`    | Olares Files (olares-cli files)             |
-| `olares-knowledge`| Olares Knowledge (olares-cli knowledge)     |
-| `olares-search`   | Olares Search (olares-cli search)           |
-| `olares-market`   | Olares Market (olares-cli market)           |
-| `olares-settings` | Olares Settings (olares-cli settings)       |
-| `olares-dashboard`| Olares Dashboard (olares-cli dashboard)     |
-| `olares-cluster`  | Olares Cluster (olares-cli cluster)         |
-| `olares-doctor`   | Olares Doctor (runtime diagnosis)           |
-| `olares-router`   | Olares Router (Router and model applications)|
-| `olares-chart`    | Olares Chart (olares-cli chart)             |
-| `olares-publish`  | Olares Publish (Olares Market distribution) |
-
-If a slug is ever taken on ClawHub, fall back to the `olares-cli-` prefix (e.g. `olares-cli-shared`) and update **all** cross-references to `../olares-shared/SKILL.md` inside the runtime skills accordingly.
+Renaming one means updating **all** cross-references to it — `../olares-shared/SKILL.md` and the like — inside the other skills.

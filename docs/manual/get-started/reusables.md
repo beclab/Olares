@@ -6,6 +6,10 @@ head:
       content: Olares, installation, system requirements, install script, wizard URL, setup
 ---
 
+<!-- #region larepass-prerequisite -->
+- **LarePass**: [Install LarePass](/manual/larepass/) on your phone. It is required to finish setup and activate Olares.
+<!-- #endregion larepass-prerequisite -->
+
 <!-- #region install-script-command -->
 ```bash
 curl -fsSL https://olares.sh |  bash -
@@ -35,7 +39,7 @@ After uninstalling, retry the installation by running the original installation 
 <!-- #endregion prepare-wizard-heading -->
 
 <!-- #region prepare-wizard-details -->
-At the end of the installation process, you will be prompted to enter your domain name and Olares ID.
+At the end of the installation process, you will be prompted to enter your domain name and Olares ID. Enter the ID you use in LarePass. If you do not have one yet, open LarePass, tap **Create an account**, and follow the prompts before continuing.
 
 ![Enter domain name and Olares ID](/images/manual/get-started/enter-olares-id.png)
 

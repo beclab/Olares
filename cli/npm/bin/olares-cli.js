@@ -37,10 +37,21 @@ if (!fs.existsSync(bin)) {
 // manifest-not-found errors. The host-bundled binary at
 // /usr/local/bin/olares-cli is invoked by install.sh without this env var
 // and keeps the full verb set.
+// OLARES_CLI_NPM_VERSION is the exact published version of this package.
+// The Go binary cannot know it: version.VERSION is stamped with the Olares
+// OS line (1.12.7) while npm iterates inside it (1.12.7-cli.0 … -cli.8), so
+// every npm release of one OS version reports the same number. `olares-cli
+// version` and `olares-cli update` need the real one — the second because
+// comparing 1.12.7 against an npm dist-tag would claim an upgrade that is
+// already installed, forever.
 const res = spawnSync(bin, args, {
   stdio: 'inherit',
   windowsHide: true,
-  env: { ...process.env, OLARES_CLI_REMOTE_ONLY: '1' },
+  env: {
+    ...process.env,
+    OLARES_CLI_REMOTE_ONLY: '1',
+    OLARES_CLI_NPM_VERSION: require('../package.json').version,
+  },
 });
 
 if (res.error) {

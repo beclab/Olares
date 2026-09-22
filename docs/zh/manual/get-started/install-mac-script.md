@@ -28,6 +28,7 @@ Mac 版 Olares 目前存在以下限制：
 
 ## 前置准备
 请确保已安装以下软件：
+<!--@include: ./reusables.md#larepass-prerequisite-->
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 - [MiniKube](https://minikube.sigs.k8s.io/docs/start/?arch=%2Fmacos%2Farm64%2Fstable%2Fhomebrew)
   ::: tip

@@ -6,9 +6,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, Penpot, MCP, Model Context Protocol, Cursor, design collaboration, prototype, self-hosted design tool
-app_version: "1.0.15"
-doc_version: "1.0"
-doc_updated: "2026-05-22"
+app_version: "1.0.29"
+doc_version: "1.1"
+doc_updated: "2026-09-15"
 ---
 
 # Use Cursor to inspect and edit Penpot files with MCP
@@ -17,20 +17,26 @@ Penpot is an open-source, web-based design and prototyping tool for UI design, i
 
 On Olares, you can run Penpot as a self-hosted design workspace and connect it to Cursor through Penpot MCP. This guide walks through a complete workflow: open a Penpot file, let Cursor read its structure, ask Cursor to add a card-style component, and check the result in Penpot.
 
+:::info MCP setup changed in the latest Penpot version
+Penpot now provides a built-in MCP server, which replaces the previous plugin-based setup. If you configured Penpot MCP before this update, the old configuration no longer works. [Reconnect Penpot and Cursor](#connect-penpot-and-cursor-through-mcp) with the new flow.
+
+The Penpot MCP endpoint now uses internal authentication by default. To connect from Cursor, your computer and Olares must be on the same local network, or you must enable LarePass VPN on your computer.
+:::
+
 ## Learning objectives
 
 In this guide, you will learn how to:
 
 - Install Penpot from Market.
-- Get the Penpot MCP endpoints from Olares Settings.
-- Connect an active Penpot file to the MCP server.
-- Configure Cursor to read the connected Penpot file.
+- Enable the built-in Penpot MCP server and get the connection URL.
+- Configure Cursor to read your Penpot files through MCP.
 - Use Cursor to inspect frames and add a new design element.
 - Review the change in Penpot and refine it with follow-up prompts.
 
 ## Prerequisites
 
 - Cursor installed on your computer.
+- Your computer and Olares are on the same local network, or LarePass VPN is enabled on your computer.
 - A Penpot file created or imported in Penpot.
 
 ## Install Penpot
@@ -52,67 +58,30 @@ This guide uses a simple task: ask Cursor to inspect a Penpot file and add a car
 3. Select the page and frame you want Cursor to work with.
 
 :::tip Keep the file open
-Cursor can only read the Penpot file that is currently active and connected. Keep this browser tab open throughout the workflow.
+Keep the Penpot file open in a browser tab throughout the workflow so you can review Cursor's changes as they happen.
 :::
 
 ## Connect Penpot and Cursor through MCP
 
-Get your Penpot MCP endpoints from Olares, then add them to Penpot and Cursor.
+The latest Penpot version includes a built-in MCP server. Enable it in your Penpot account, copy the generated connection URL, and add it to Cursor.
 
-### Get the MCP endpoints
+### Enable the MCP server in Penpot
 
-1. Open Settings, then go to **Applications** > **Penpot**.
-   
-   ![Penpot application endpoints](/images/manual/use-cases/penpot-entrances.png#bordered)
+1. Open Penpot from Launchpad.
 
-2. Go to the target entrance, and find the endpoint URLs for **Penpot MCP Plugin** and **Penpot MCP HTTP**.
+2. Click your profile icon in the top-right corner, and select **Your account**.
 
-   - **Penpot MCP Plugin**: Use this endpoint to install the Penpot plugin.
+3. Go to **Integrations** > **MCP Server**, and turn on the toggle to enable the MCP server.
 
-      ![Copy Penpot MCP Plugin endpoint](/images/manual/use-cases/lp-penpotmcpplugin-endpoint.png#bordered)
-
-   - **Penpot MCP HTTP**: Use this endpoint to connect Cursor.
-
-      ![Copy Penpot MCP HTTP endpoint](/images/manual/use-cases/lp-penpotmcphttp-endpoint.png#bordered)
-   
-3. Keep this page open or copy both URLs. You will use them in the next steps.
-
-### Install and connect the MCP plugin in Penpot
-
-With the target file open in Penpot:
-
-1. In the Penpot editor, click <i class="material-symbols-outlined">more_vert</i> to open the main menu, then select **Plugins** > **Plugin manager**.
-   
-   ![Open Penpot plugin manager](/images/manual/use-cases/penpot-plugin-manager.png#bordered)
-
-2. Append `/manifest.json` to your MCP Plugin endpoint. Enter the URL in the following format, then click **Install**:
+4. Generate an access token, and copy the MCP connection URL. The URL contains your access token and looks like this:
 
    ```text
-   <your-mcp-plugin-endpoint>/manifest.json
-   ```
-   
-   For example:
-   ```text
-   https://2550d96f1.laresprime.olares.com/manifest.json
+   https://2550d96f0.alice.olares.com/mcp/stream?userToken=<your-access-token>
    ```
 
-   ![Add Penpot MCP plugin](/images/manual/use-cases/penpot-add-plugin.png#bordered){width=60%}
-
-3. Review the permission prompt, then click **Allow**.
-
-4. The plugin now appears in the **INSTALLED PLUGINS** section.
-   
-   ![Penpot MCP plugin installed](/images/manual/use-cases/penpot-plugin-installed.png#bordered){width=60%}
-
-5. In Plugin manager, click **Open** next to the MCP plugin.
-
-6. In the plugin panel, click **CONNECT TO MCP SERVER**.
-
-   ![Connect Penpot plugin to MCP server](/images/manual/use-cases/penpot-plugin-connect.png#bordered){width=95%}
-
-7. Wait until the status changes to **Connected to MCP server**.
-   
-   ![Penpot plugin connected](/images/manual/use-cases/penpot-plugin-connected.png#bordered){width=40%}
+:::warning Keep the connection URL private
+The connection URL includes your access token. Anyone with this URL can access your Penpot files through MCP. Do not share it or commit it to a public repository.
+:::
 
 ### Configure Cursor as an MCP client
 
@@ -122,19 +91,17 @@ With the target file open in Penpot:
 
    ![Add Custom MCP in Cursor](/images/manual/use-cases/penpot-cursor-add-mcp.png#bordered)
 
-3. Append `/mcp` to your MCP HTTP endpoint. In `~/.cursor/mcp.json`, add the following configuration:
+3. In `~/.cursor/mcp.json`, add the Penpot MCP server with the connection URL you copied:
 
    ```json
    {
      "mcpServers": {
        "penpot": {
-         "url": "<your-mcp-http-endpoint>/mcp"
+         "url": "<your-penpot-mcp-connection-url>"
        }
      }
    }
    ```
-
-   ![Configure Penpot MCP in Cursor](/images/manual/use-cases/penpot-cursor-mcp-config.png#bordered)
 
    :::warning Check your JSON syntax
    Ensure you copy the exact format above, including all quotation marks `"` and braces `{}`. Invalid JSON will cause Cursor to fail to load the MCP server.
@@ -142,9 +109,11 @@ With the target file open in Penpot:
 
 4. Save the file. On macOS, press `Cmd + S`. On Windows, press `Ctrl + S`.
 
-5. In **Tools & MCPs**, enable the switch next to **penpot**. If it does not appear, restart Cursor and reopen **Tools & MCPs**.
-   
+5. Restart Cursor, then go back to **Tools & MCPs** and check that **penpot** is enabled and connected.
+
    ![Enable Penpot MCP in Cursor](/images/manual/use-cases/penpot-cursor-mcp-enabled.png#bordered)
+
+   If **penpot** fails to connect, make sure your computer and Olares are on the same local network, or enable LarePass VPN on your computer, then restart Cursor again.
 
 ## Use Cursor to edit the Penpot file
 
@@ -152,7 +121,7 @@ With the target file open in Penpot:
 
 Start by asking Cursor to read the design structure.
 
-1. Keep your Penpot file open and ensure the plugin status is **Connected to MCP server**.
+1. In Penpot, open the file you want Cursor to work with.
 
 2. In Cursor, start a new chat and ask:
 
@@ -220,25 +189,14 @@ The workflow is complete when:
 
 #### Cause
 
-The MCP plugin is not connected, the Penpot browser tab is closed, or a different file or page is active.
+The MCP server is not enabled in your Penpot account, the connection URL in `~/.cursor/mcp.json` is missing or expired, or Cursor cannot reach Olares over the network.
 
 #### Solution
 
-Open the target Penpot file, open the MCP plugin, click **Connect to server**, and wait until the status shows **Connected to MCP server**. Then retry your prompt in Cursor.
-
-### How does the Penpot MCP connection work?
-
-Penpot MCP connects Cursor to the Penpot file currently open in your browser.
-
-| Component | Used by | What it does | Manual setup |
-|:----------|:--------|:-------------|:-------------|
-| MCP Plugin | Penpot file | Exposes the active file, page, frames, layers, components, styles, and tokens to the MCP server. | Add it in Penpot. |
-| MCP HTTP | Cursor | Receives MCP requests from Cursor and forwards them to the connected Penpot file. | Configure it in Cursor. |
-| MCP WebSocket | Plugin and MCP server | Keeps the Penpot file and MCP server connected in real time. | No manual setup needed. |
-
-Cursor only needs the MCP HTTP endpoint with `/mcp` appended. The MCP WebSocket connection is used internally between the Penpot plugin and the MCP server.
-
-The plugin must stay connected in Penpot while Cursor works with the file.
+1. In Penpot, go to **Your account** > **Integrations** > **MCP Server** and make sure the MCP server is enabled.
+2. If you regenerated the access token, copy the new connection URL and update `~/.cursor/mcp.json`.
+3. Make sure your computer and Olares are on the same local network, or enable LarePass VPN on your computer.
+4. Restart Cursor and retry your prompt.
 
 ## Learn more
 

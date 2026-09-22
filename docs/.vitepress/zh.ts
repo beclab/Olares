@@ -57,14 +57,6 @@ const side = {
       link: "/zh/manual/get-started/",
       items: [
         {
-          text: "下载 LarePass",
-          link: "/zh/manual/larepass/",
-        },
-        {
-          text: "创建 Olares ID",
-          link: "/zh/manual/get-started/create-olares-id",
-        },
-        {
           text: "安装 Olares",
           link: "/zh/manual/get-started/install-olares",
           collapsed: true,
@@ -155,8 +147,22 @@ const side = {
           link: "/zh/manual/olares/desktop",
         },
         {
+          text: "安装 LarePass 浏览器扩展",
+          link: "/zh/manual/install-larepass-browser-extension",
+        },
+        {
           text: "探索",
           link: "/zh/manual/get-started/next-steps",
+        },
+      ],
+    },
+    {
+      text: "教程",
+      collapsed: false,
+      items: [
+        {
+          text: "使用 LarePass 私密翻译网页",
+          link: "/zh/manual/tutorial/translate-webpages-with-larepass",
         },
       ],
     },
@@ -168,6 +174,14 @@ const side = {
           text: "Olares ID",
           collapsed: true,
           items: [
+            {
+              text: "下载 LarePass",
+              link: "/zh/manual/larepass/",
+            },
+            {
+              text: "创建 Olares ID",
+              link: "/zh/manual/get-started/create-olares-id",
+            },
             {
               text: "在 LarePass 中管理 Olares ID",
               link: "/zh/manual/larepass/manage-accounts",
@@ -327,6 +341,10 @@ const side = {
             {
               text: "上传、编辑和下载文件",
               link: "/zh/manual/olares/files/add-edit-download",
+            },
+            {
+              text: "将资源转存到 Olares",
+              link: "/zh/manual/larepass/save-resources-to-olares",
             },
             {
               text: "压缩与解压缩文件",
@@ -497,6 +515,10 @@ const side = {
         {
           text: "收集诊断信息",
           link: "/zh/manual/collect-diagnostic-information",
+        },
+        {
+          text: "在 Olares Space 中创建和管理支持工单",
+          link: "/zh/manual/space/tickets",
         },
         {
           text: "故障排查",

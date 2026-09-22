@@ -3,6 +3,7 @@ package ctl
 import (
 	"fmt"
 	goOS "os"
+	"sync"
 
 	"github.com/beclab/Olares/cli/cmd/config"
 	"github.com/beclab/Olares/cli/cmd/ctl/amdgpu"
@@ -24,7 +25,9 @@ import (
 	"github.com/beclab/Olares/cli/cmd/ctl/search"
 	"github.com/beclab/Olares/cli/cmd/ctl/settings"
 	"github.com/beclab/Olares/cli/cmd/ctl/skills"
+	"github.com/beclab/Olares/cli/cmd/ctl/update"
 	"github.com/beclab/Olares/cli/cmd/ctl/user"
+	versioncmd "github.com/beclab/Olares/cli/cmd/ctl/version"
 	"github.com/beclab/Olares/cli/cmd/ctl/wizard"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 	"github.com/beclab/Olares/cli/pkg/credential"
@@ -53,16 +56,17 @@ func NewDefaultCommand() *cobra.Command {
 		// SilenceErrors: cmd/main.go prints the error once on non-zero exit; without
 		// this, Cobra also prints to stderr and users see duplicate "Error:" lines.
 		SilenceErrors: true,
+		// SilenceUsage on the root is what every subtree needs, and Cobra
+		// reads it here: it prints usage only when neither the root nor the
+		// command that ran has the flag set. Subtrees used to reach the
+		// second of those through a PersistentPreRun of their own, which is
+		// how a purely cosmetic setting ended up displacing the identity
+		// import below — Cobra runs the nearest hook and nothing above it.
+		SilenceUsage: true,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			viper.BindPFlags(cmd.InheritedFlags())
 			viper.BindPFlags(cmd.PersistentFlags())
 			viper.BindPFlags(cmd.Flags())
-			// Not on the Factory's lazy chain: `profile list` reads
-			// config.json and the keychain directly and only touches the
-			// Factory for --refresh-version, so a managed profile imported
-			// there would be invisible in the one command most likely to
-			// go looking for it.
-			credential.ImportManagedCredential(cmd.Context())
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			if showVendor {
@@ -124,6 +128,15 @@ func NewDefaultCommand() *cobra.Command {
 	// files only — nothing about them is host-side, and the npm distribution
 	// is exactly where an agent needs them.
 	cmds.AddCommand(skills.NewSkillsCommand())
+	// `version` is the machine-readable form of --version, which stays byte
+	// for byte as it is because the npm install wizard parses it.
+	cmds.AddCommand(versioncmd.NewVersionCommand())
+	// `update` is olares-cli updating itself, and is registered on every
+	// channel including the Olares host — that host is where the confusion
+	// with `upgrade` (which upgrades Olares OS) actually happens, so it is
+	// where a verb that says so has to exist. It refuses to npm-install over
+	// an OS bundle; see cmd/ctl/update.
+	cmds.AddCommand(update.NewUpdateCommand())
 	cmds.AddCommand(market.NewMarketCommand(factory))
 	cmds.AddCommand(profile.NewProfileCommand(factory))
 	cmds.AddCommand(knowledge.NewKnowledgeCommand(factory))
@@ -136,8 +149,61 @@ func NewDefaultCommand() *cobra.Command {
 	cmds.AddCommand(cluster.NewClusterCommand(factory))
 
 	wireUnknownVerbRefusals(cmds)
+	wireManagedIdentity(cmds)
 	skipPreRunsForGroupHelp(cmds)
 	return cmds
+}
+
+// wireManagedIdentity puts the platform-credential import in front of every
+// command, whichever PersistentPreRun Cobra decides to run.
+//
+// Hanging it on the root's hook alone was wrong: Cobra walks up from the
+// command that ran, executes the first persistent hook it finds and breaks.
+// A subtree that declares one of its own — for years these did nothing but
+// set SilenceUsage — therefore removed the identity from every verb beneath
+// it, and `market list` in a fresh container reported that no profile was
+// configured while the credential sat unread on its mount. cmd/main.go
+// records the same trap for the skill-drift notice.
+//
+// Wrapping the declared hooks is enough to cover the tree: a command with no
+// hook of its own runs an ancestor's, and the root declares one, so every
+// path ends at something wrapped. Ordering matters twice — this runs before
+// skipPreRunsForGroupHelp so `<group> help` still skips everything including
+// the import, and the import runs before the wrapped body so a gate like
+// files/nfs's version check has an identity to work with.
+//
+// It stays off the Factory's lazy chain because `profile list` reads
+// config.json and the keychain directly, and only reaches for the Factory on
+// --refresh-version: a profile imported there would be invisible in the one
+// command most likely to go looking for it.
+//
+// The guard is per tree rather than per process: one tree serves one
+// invocation, and a test that builds a second one is asking for a second
+// container's worth of behavior, not a replay of the first.
+func wireManagedIdentity(root *cobra.Command) {
+	once := &sync.Once{}
+	do := func(cmd *cobra.Command) {
+		once.Do(func() { credential.ImportManagedCredential(cmd.Context()) })
+	}
+	var wire func(*cobra.Command)
+	wire = func(cmd *cobra.Command) {
+		if run := cmd.PersistentPreRun; run != nil {
+			cmd.PersistentPreRun = func(current *cobra.Command, args []string) {
+				do(current)
+				run(current, args)
+			}
+		}
+		if run := cmd.PersistentPreRunE; run != nil {
+			cmd.PersistentPreRunE = func(current *cobra.Command, args []string) error {
+				do(current)
+				return run(current, args)
+			}
+		}
+		for _, child := range cmd.Commands() {
+			wire(child)
+		}
+	}
+	wire(root)
 }
 
 func wireUnknownVerbRefusals(cmd *cobra.Command) {

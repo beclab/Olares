@@ -45,7 +45,7 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           link: "/zh/one/access-olares-via-vpn",
         },
         {
-          text: "通过 .local 域名访问 Olares",
+          text: "在局域网内访问 Olares",
           link: "/zh/one/access-olares-via-local-domain",
         },
       ]
@@ -108,8 +108,23 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           //   ]
         },
         {
-          text: "使用 eGPU 设置",
+          text: "设置 eGPU",
           link: "/zh/one/egpu",
+          collapsed: true,
+          items: [
+            {
+              text: "在 Olares OS 上设置",
+              link: "/zh/one/egpu-olares-os",
+            },
+            {
+              text: "在 Windows 上设置",
+              link: "/zh/one/egpu-windows",
+            },
+            {
+              text: "排查 eGPU 问题",
+              link: "/zh/one/ts-egpu",
+            },
+          ],
         },
         {
           text: "管理硬件设置",

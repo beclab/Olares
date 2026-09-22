@@ -28,6 +28,7 @@ We recommend using it only for development or testing purposes.
 
 ## Before you begin
 Ensure you have the following installed:
+<!--@include: ./reusables.md#larepass-prerequisite-->
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 - [MiniKube](https://minikube.sigs.k8s.io/docs/start/?arch=%2Fmacos%2Farm64%2Fstable%2Fhomebrew)
     ::: tip

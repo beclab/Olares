@@ -88,9 +88,6 @@ tree is the runtime-state view of the resulting K8s objects.
 `,
 	}
 	cmd.SilenceUsage = true
-	cmd.PersistentPreRun = func(c *cobra.Command, args []string) {
-		c.SilenceUsage = true
-	}
 
 	cmd.AddCommand(NewContextCommand(f))
 	cmd.AddCommand(pod.NewPodCommand(f))
