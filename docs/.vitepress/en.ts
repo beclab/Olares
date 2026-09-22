@@ -13,6 +13,10 @@ const side = {
           collapsed: true,
           items: [
             {
+              text: "Olares 1.12.7",
+              link: "/manual/update-guides/1.12.7",
+            },
+            {
               text: "Olares 1.12.6",
               link: "/manual/update-guides/1.12.6",
             },
