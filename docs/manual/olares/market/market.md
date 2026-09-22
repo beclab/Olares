@@ -15,13 +15,35 @@ This guide helps users understand how to install, update, and uninstall applicat
 
 ## Find applications
 
-When you open Market, the **Discover** page presents curated sections such as featured picks, community choices, top apps, and latest releases. You can also browse apps by category, including Creativity, Productivity, Fun, Lifestyle, Utilities, Developer Tools, and AI.
+When you open Market, the **Discover** page presents curated sections such as featured picks, community choices, top apps, and latest releases. You can also browse apps by category, including Agents, Models, Workspace, Homelab, and Developer.
 
 ![Market](/images/manual/olares/market-discover1.png#bordered)
 
 To find a specific app, open the **Manage** submenu on the left and click **Search**. Enter the keywords, and the relevant results will appear as you type.
 
 ![Search app](/images/manual/olares/search-app.png#bordered)
+
+## Switch market source
+
+Olares automatically configures the corresponding official market source:
+
+- **Global**: `https://api.olares.com/market`
+- **China**: `https://api.olares.cn/market`
+
+You can add custom sources, then switch between configured sources to browse, search for, and install their apps.
+
+- **To add a custom source**:
+  1. Navigate to **My Olares** > **Settings**.
+  2. Under **Market sources**, click **Add source**.
+  3. Enter the source name, URL, and description, then click **Confirm**.
+- **To switch sources**:
+  1. Click <i class="material-symbols-outlined">database</i> next to **My Olares** at the bottom of the sidebar.
+  2. Select a source from the list. The checkmark indicates the active source.
+  3. The Market page updates to show content from the selected source.
+
+:::info
+Applications from different installation sources will generate corresponding tabs in **My Olares** for easier application management.
+:::
 
 ## Install applications
 
@@ -125,21 +147,6 @@ The application operation log details the processes and statuses of app operatio
 3. Click **Logs** in the top right corner. 
 
 You can also click the <i class="material-symbols-outlined">download</i> button to download the logs.
-
-## Switch market source
-
-You can switch market sources to speed up browsing, searching, and downloading, or to install apps exclusive to a particular source.
-
-1.  Open **Market**, and navigate to **My Olares** > **Settings**.
-2.  Under **Market sources**, click **Add source** to add a new app source. The current official sources include:
-    * Global: `https://api.olares.com/market`
-    * China: `https://api.olares.cn/market`
-3.  Fill in the source name, URL, and description as required, then click **Confirm**.
-4.  In the source list, select the target source to activate it. Wait for about 10 minutes for the store page to switch.
-
-:::info
-Applications from different installation sources will generate corresponding tabs in **My Olares** for easier application management.
-:::
 
 ## FAQs
 
