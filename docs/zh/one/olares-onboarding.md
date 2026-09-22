@@ -41,11 +41,11 @@ Lares 是 Olares 内置的 AI 助手。借助 Router 和已连接的模型，它
 3. 保留默认的写入权限，或选择只读或完全访问。
 4. 确认已选中 Qwen3.8-27B 模型。
 
-   ![Lares 聊天界面](/images/one/lares-chat.png#bordered)
+   ![Lares 聊天界面](/images/one/lares-chat1.png#bordered)
 
 5. 发送你的第一句 `Hello`。消息发送成功后，你就可以通过与 Lares 对话来管理 Olares 了。
 
-   ![Lares 回复](/images/one/lares-chat-response.png#bordered)
+   ![Lares 回复](/images/one/lares-chat-response1.png#bordered)
 
 ## 步骤 3：尝试常见任务
 
@@ -59,7 +59,7 @@ Lares 是 Olares 内置的 AI 助手。借助 Router 和已连接的模型，它
 I'm new to Olares. Check this device's configuration first.
 ```
 
-![在 Lares 中查看设备配置](/images/one/onboard-scenario-question1.png#bordered)
+![在 Lares 中查看设备配置](/images/one/onboard-scenario-question2.png#bordered)
 
 ### 从 Market 安装应用
 
@@ -69,7 +69,7 @@ I'm new to Olares. Check this device's configuration first.
 Install NocoDB from the Olares Market and tell me when it's ready.
 ```
 
-![在 Lares 中安装应用](/images/one/onboard-scenario-install3.png#bordered)
+![在 Lares 中安装应用](/images/one/onboard-scenario-install4.png#bordered)
 
 ### 部署应用到 Olares
 
@@ -82,7 +82,7 @@ and make sure it has a desktop icon.
 
 Lares 会检查源应用、准备 Olares 应用 chart 并更新所需的清单文件。根据应用不同，这可能需要几分钟。完成后，Lares 会告诉你如何验证结果。
 
-![在 Lares 中部署应用](/images/one/onboard-scenario-porting2.png#bordered)
+![在 Lares 中部署应用](/images/one/onboard-scenario-porting3.png#bordered)
 
 然后，你就可以在启动台和 **My Olares** 中找到该应用。
 
