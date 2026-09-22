@@ -1,10 +1,10 @@
 ---
 outline: [2, 3]
-description: Import, switch, and delete Olares accounts in the LarePass mobile app or desktop client.
+description: Import an Olares account into LarePass on mobile, desktop, or Chrome, and manage accounts on your devices.
 head:
   - - meta
     - name: keywords
-      content: Olares, LarePass, import account, switch account, delete account, Olares ID, mnemonic phrase
+      content: Olares, LarePass, browser extension, import account, switch account, delete account, Olares ID, mnemonic phrase
 ---
 
 # Manage accounts in LarePass
@@ -39,6 +39,15 @@ To import an Olares ID, you need its 12-word mnemonic phrase. If you do not have
 
    ![Import account on desktop](/images/manual/larepass/import-account-desktop.png#bordered)
 
+### Chrome extension
+
+1. Select the LarePass icon in the Chrome toolbar.
+2. If the introduction appears, click **Skip**, or use the arrow to view all the introductory screens.
+3. Click **Import an account**.
+4. Enter the 12-word mnemonic phrase for your Olares ID.
+
+   ![Enter the mnemonic phrase in the LarePass Chrome extension](/images/manual/larepass/import-account-browser-extension.png#bordered)
+
 ## Switch accounts
 
 If you have added multiple Olares IDs in LarePass, you can switch between them at any time.
@@ -66,6 +75,11 @@ If you have added multiple Olares IDs in LarePass, you can switch between them a
 
    ![Switch accounts on desktop](/images/manual/larepass/switch-account-desktop1.png#bordered)
 
+### Chrome extension
+
+1. Click or hover over your profile avatar in the lower-right corner.
+2. Select the account you want to use from the account list.
+
 ## Delete accounts
 
 Remove an account from LarePass when you no longer want to keep it on the current device.
@@ -92,3 +106,9 @@ You can delete an account only after you have [backed up its mnemonic phrase](ba
 3. Click **Delete account** to delete the current account, then confirm the deletion.
 
    ![Delete accounts on desktop](/images/manual/larepass/delete-account-desktop.png#bordered)
+
+### Chrome extension
+
+1. Click <i class="material-symbols-outlined">settings</i> above your profile avatar in the lower-right corner.
+2. Click **Account**.
+3. Click **Delete**, then confirm the deletion.
