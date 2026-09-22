@@ -1,77 +1,66 @@
 ---
 outline: [2, 3]
-description: 在运行 Windows 11 的 Olares One 上设置并验证 NVIDIA eGPU，并处理内置显卡驱动报错。
+description: 在运行 Windows 11 的 Olares One 上设置 NVIDIA eGPU，并处理内置显卡驱动报错。
 ---
 
 # 在安装 Windows 的 Olares One 上设置 eGPU
 
-本文介绍如何在运行 Windows 11 的 Olares One 上连接并验证 NVIDIA eGPU，以及接入 eGPU 后内置显卡报错时的恢复方法。
+首次在 Windows 11 上设置 eGPU，或连接 eGPU 后内置显卡报错时，使用本指南。
 
-:::warning 暂时不要连接 eGPU
-先卸载现有 NVIDIA 软件，再连接 eGPU。扩展坞需使用独立电源，并通过认证的雷电 5 线材连接。
+:::warning 先断开 eGPU
+在未连接 eGPU 的状态下启动 Windows。如果 eGPU 已连接，请关闭 Olares One，断开 eGPU，再重新启动 Windows。
 :::
 
 ## 开始前
 
-可以使用现有 Windows 系统。不要仅为设置 eGPU 而重装 Windows。
+需要准备：
 
-:::info 实测配置
-本文已在 Olares One、Windows 11 24H2、AOOSTAR EG02 和 NVIDIA GeForce RTX 4060 Ti 组合下完成测试。
+- 已安装全部可用更新的 Windows 11 24H2。
+- 已接通电源的雷电外置显卡设备和经过认证的雷电线材。设备可以预装 GPU，也可以通过 eGPU dock 或 eGPU enclosure 安装桌面版显卡。
+- Windows 管理员权限。
 
-测试使用 NVIDIA App 安装程序 `11.0.5.420_1146713` 和 NVIDIA 驱动 `610.74`。
-:::
+如果尚未安装 Windows，请先参阅[在主硬盘上安装 Windows](./install-windows-primary-drive.md)。仅为添加 eGPU，无需重装 Windows。
 
-## 准备 Windows
+## 首次设置 eGPU
 
-:::warning 备份数据
-如果需要安装 Windows，安装过程可能会删除 Windows 分区中现有的操作系统、应用、设置和文件。继续前，请备份需要保留的数据。
-:::
+1. 从 Windows 卸载现有的 NVIDIA 应用和显卡驱动。
+2. 如果卸载程序提示重启，请先重启 Windows。
+3. 准备 eGPU 并接通电源：
 
-1. 如果尚未安装 Windows，请参阅[在主硬盘上安装 Windows](./install-windows-primary-drive.md)。
-2. 打开 **设置** > **Windows 更新**，安装所有可用的 Windows 更新。等待更新完成后再继续。
-3. 卸载所有现有的 NVIDIA 应用和驱动。
+   - 如果设备已经安装 GPU，请连接它的电源适配器。
+   - 如果使用 eGPU dock 或 eGPU enclosure，请装入桌面版显卡，并接好显卡所需的全部供电线。
 
-## 连接 eGPU 并安装驱动
+4. 使用认证的雷电线材，将 eGPU 直接连接到 Olares One 的雷电 5（USB-C）接口。
+5. 安装 NVIDIA App。
+6. 打开 NVIDIA App，下载并安装显卡驱动。
+7. 重启 Windows。
 
-1. 将显卡安装到扩展坞，并给扩展坞通电。
-2. 使用认证的雷电 5 线材，将扩展坞连接到 Olares One 的雷电 5（USB-C）接口。
-3. 安装 NVIDIA App。
-4. 打开 NVIDIA App，下载并安装显卡驱动。
-5. 驱动安装完成后，继续[确认连接状态](#确认连接状态)。
+连接其他雷电设备前，先[检查设置结果](#检查设置结果)。
 
 ## 恢复内置显卡
 
-接入 eGPU 后，如果内置显卡出现警告或从 NVIDIA App 消失：
+连接 eGPU 后，如果内置显卡在设备管理器中显示警告图标，或从 NVIDIA App 中消失，请按以下步骤操作。
+
+操作期间保持 eGPU 连接。
 
 1. 打开 **NVIDIA App** > **驱动程序** > **重新安装**。
 2. 选择 **自定义安装**。
 3. 勾选 **执行清洁安装**，完成安装。
-
-   :::warning 不要跳过重启
-   在实测配置中，重启前 eGPU 会保持在 Gen1。重启 Windows，让链路重新协商为 Gen4。
-   :::
-
 4. 重启 Windows。
 
-## 确认连接状态
+## 检查设置结果
 
-在 **设备管理器** > **显示适配器** 中，确认内置显卡和 eGPU 均已显示，且没有警告图标。
+1. 打开 **设备管理器** > **显示适配器**。
+2. 检查内置显卡和 eGPU 是否都已显示，并且没有警告图标。
+3. 打开 NVIDIA App，检查其中是否显示两张显卡。
 
-完成设置和驱动安装后，Windows 支持在系统运行期间连接或断开 eGPU。
+本指南只介绍一台 eGPU，不包括热插拔和多 eGPU 设置。
 
-## 实测性能
+## 显卡缺失或报错
 
-在实测配置中，RTX 4060 Ti 运行 FurMark 满载时达到 165 W，链路稳定在 Gen4，且未观察到 PCIe 错误。
-
-实际结果可能因显卡、扩展坞、供电、驱动和工作负载而异。完成设置不要求运行 FurMark。
-
-## 已知问题
-
-**内置 RTX 5090M 功耗较低**
-
-内置 RTX 5090M 满载约 95 W，未达到 175 W。这是已与 NVIDIA 确认的已知问题。实测中 eGPU 链路可稳定运行在 Gen4，eGPU 使用不受影响。
+请参考[排查 eGPU 问题](./ts-egpu.md)。重新安装驱动前，先记录设备管理器中的错误代码，这有助于判断问题原因。
 
 ## 相关资源
 
-- [Olares One eGPU 支持概览](./egpu.md)
+- [将 eGPU 连接到 Olares One](./egpu.md)
 - [排查 eGPU 问题](./ts-egpu.md)

@@ -1,80 +1,101 @@
 ---
 outline: [2, 3]
-description: 在 Olares One 上连接 NVIDIA eGPU、应用临时 Gen1 方案、确认显卡状态并安全断开设备。
+description: 将 NVIDIA eGPU 连接到 Olares One，在 Olares OS 中检查连接，并在需要时安装 Gen1 临时方案。
 ---
 
 # 在 Olares OS 上设置 eGPU
 
-本文介绍如何在 Olares One 上连接 NVIDIA eGPU，并应用临时 Gen1 方案。该方案在实测的 Olares OS 环境中提高了驱动初始化的可靠性。
+启动 Olares One 前先连接 eGPU。首次使用时先尝试标准连接。只有在开机卡住、系统看不到 eGPU 或使用过程中掉卡时，才安装 Gen1 临时方案。
 
-:::danger 连接前先关机
-不要在 Olares OS 运行期间连接或断开 eGPU。改变连接前，必须完全关闭 Olares One。
+:::danger 改变连接前必须关机
+Olares OS 不支持 eGPU 热插拔。连接或断开 eGPU 前，必须关闭 Olares One。
 :::
-
-在实测的 Olares OS 环境中，eGPU 的 PCIe 链路运行在 Gen4 时，有时无法完成驱动初始化。本文的临时方案会在 NVIDIA 驱动初始化前，将扩展坞内部 PCIe 链路限制为 Gen1。
 
 ## 开始前
 
-本文方案已在以下环境中测试：
+准备以下任一种设备：
 
-- 基于 Ubuntu 24.04 的 Olares OS 1.12.6
-- NVIDIA 驱动 595.84
-- AOOSTAR EG02
-- NVIDIA GeForce RTX 4060 Ti
+- 已安装 GPU 的雷电外置显卡设备及其电源适配器。
+- 雷电 eGPU dock 或 eGPU enclosure、桌面版 NVIDIA 显卡，以及符合显卡要求的电源。
 
-在该配置中，应用临时方案后也能同时使用内置 RTX 5090M 与外置 RTX 4060 Ti。
+显卡必须采用 Turing 或更新架构。使用经过认证的雷电线材，建议优先使用外置显卡设备附带的线材。
 
-临时方案文件没有写死特定的扩展坞或显卡型号。已测试的硬件组合请查看 [eGPU 支持概览](./egpu.md)。
+首次设置时，将一台 eGPU 直接连接到 Olares One，并断开其他高带宽雷电设备。
 
-还需要准备：
+## 连接 eGPU
 
-- Olares OS 的 `sudo` 权限
-- 终端访问权限
-- 带独立电源的雷电 eGPU 扩展坞
-- 认证的雷电 5 线材，优先使用扩展坞附带的线材
-- 基于 Turing 或更新架构的 NVIDIA 显卡
+1. 打开 **Settings** > **My hardware** > **Shutdown**。
 
-雷电协议可以向下兼容。为获得更可靠的使用体验，建议使用雷电 5 硬件，不建议使用低于雷电 5 的扩展坞。
+   ![关闭 Olares One](/images/one/shut-down-olares-one.png#bordered)
 
-## 性能影响
+2. 使用 LarePass 扫描二维码，再点击 **Confirm**。
+3. 等待 Olares One 完全关机。
+4. 准备 eGPU：
 
-此临时方案会将 eGPU 链路限制为 Gen1。它不会减少显卡的计算资源，但在系统内存与显存之间传输数据时，性能可能下降。
+   - 如果设备已经安装 GPU，请连接它的电源适配器。
+   - 如果使用 eGPU dock 或 eGPU enclosure，请装入桌面版显卡，并接好显卡所需的全部供电线。
 
-- 如果模型和工作数据能够长期保留在显存中，影响可能主要出现在模型加载阶段。
-- 使用 CPU offload、显存不足、频繁通过 PCIe 传输数据、游戏和实时渲染时，影响可能更明显。
+5. 给 eGPU 通电。
+6. 将它直接连接到 Olares One 的雷电 5（USB-C）接口。
+7. 按下 Olares One 的电源键。
 
-实际影响取决于具体工作负载。
+## 检查连接状态
 
-## 安装临时方案
+1. 登录 Olares，打开 **Dashboard**。
+2. 选择 **GPU** 卡片。
+3. 检查内置显卡和 eGPU 是否都已显示。
 
-:::warning 系统级临时方案
-此方案会修改 eGPU 的 PCIe 链路设置，并在启动期间暂时移除设备后重新扫描。请只使用本页提供的文件。如果你的配置与上述实测配置不同，请先查看 [eGPU 支持概览](./egpu.md)。
+   ![在 Dashboard 中检查 eGPU](/images/one/egpu-verify.png#bordered)
+
+也可以在终端中检查：
+
+```bash
+nvidia-smi
+```
+
+如果 eGPU 始终正常显示，设置已经完成。跳过临时方案。
+
+如果开机卡住，请关闭 Olares One，断开 eGPU，再重新开机。重新连接 eGPU 前，先安装下方的临时方案。
+
+## 必要时安装临时方案
+
+临时方案会在 NVIDIA 驱动加载前，将外置显卡的 PCIe 链路设为 Gen1。
+
+:::info 性能影响
+临时方案会降低系统内存与显存之间的传输带宽，因此模型加载、CPU offload、游戏和实时渲染可能变慢。显卡的计算资源不会改变。
 :::
 
-1. 将以下文件下载到同一目录：
+:::warning 系统级临时方案
+该方案会修改系统文件和外置显卡的 PCIe 链路设置。请只安装本页提供的文件。
+:::
+
+1. 在不连接 eGPU 的情况下启动 Olares One。
+2. 将以下三个文件下载到同一目录：
 
    - <a href="/downloads/one/egpu/fix-egpu-link.sh" download>`fix-egpu-link.sh`</a>
    - <a href="/downloads/one/egpu/egpu-gen1-fix.service" download>`egpu-gen1-fix.service`</a>
    - <a href="/downloads/one/egpu/99-egpu-gen1-fix.rules" download>`99-egpu-gen1-fix.rules`</a>
 
-2. 在下载目录中打开终端，确认系统可以使用 `setpci`：
+3. 在下载目录中打开终端，确认系统可以使用 `setpci`：
 
    ```bash
    command -v setpci
    ```
 
-   命令应返回类似 `/usr/sbin/setpci` 的路径。临时方案依赖 `pciutils` 软件包提供的 `setpci`。如果没有任何输出，请先停止操作，并向技术支持确认当前 Olares OS 版本支持的安装方式。
+   命令应返回 `/usr/sbin/setpci` 等路径。如果没有任何输出，请停止操作并联系 Olares 技术支持。
 
-3. 安装并启用配置：
+4. 安装文件并启用服务：
 
    ```bash
    sudo install -m 0755 fix-egpu-link.sh       /usr/local/sbin/fix-egpu-link.sh
    sudo install -m 0644 egpu-gen1-fix.service  /etc/systemd/system/egpu-gen1-fix.service
    sudo install -m 0644 99-egpu-gen1-fix.rules /etc/udev/rules.d/99-egpu-gen1-fix.rules
+   sudo systemctl daemon-reload
+   sudo udevadm control --reload-rules
    sudo systemctl enable egpu-gen1-fix.service
    ```
 
-4. 确认服务已启用：
+5. 检查安装结果：
 
    ```bash
    sudo systemctl is-enabled egpu-gen1-fix.service
@@ -82,72 +103,42 @@ description: 在 Olares One 上连接 NVIDIA eGPU、应用临时 Gen1 方案、�
 
    命令应返回 `enabled`。
 
-临时方案先根据 PCI vendor 和显示设备类型识别 NVIDIA 显示控制器，然后只处理标记为可移除的设备，从而排除内置显卡。
+6. 再次按照[连接 eGPU](#连接-egpu)中的步骤操作。
 
-## 关闭设备并连接 eGPU
+## 检查临时方案
 
-1. 打开 **Settings**，选择 **My hardware** > **Shutdown**。
+Olares One 启动后，先在 Dashboard 或 `nvidia-smi` 中检查 eGPU 是否显示，再查看临时方案日志：
 
-   ![关闭 Olares One](/images/one/shut-down-olares-one.png#bordered)
+```bash
+sudo tail -n 20 /var/log/egpu-gen1-fix.log
+```
 
-2. 使用 LarePass 扫描二维码。出现提示时，点击 **Confirm** 关闭 Olares One。
-3. 等待 Olares One 完全关机。
-4. 将显卡装入扩展坞，并连接扩展坞的独立电源。
-5. 给扩展坞通电，然后使用认证的雷电 5 线材，将扩展坞连接到 Olares One 的雷电 5（USB-C）接口。
-6. 按下电源键启动 Olares One。
-
-系统会在启动时自动运行临时方案。
-
-## 确认连接状态
-
-请完成以下两项检查。Dashboard 用于确认 Olares 已识别 eGPU，链路速率和日志用于确认临时方案已经生效。
-
-### 在 Dashboard 中确认 eGPU 已识别
-
-1. 登录 Olares，打开 **Dashboard**。
-2. 选择 **GPU** 卡片，确认内置显卡和外置显卡均已显示。
-
-   ![在 Dashboard 中确认 eGPU](/images/one/egpu-verify.png#bordered)
-
-### 确认临时方案已生效
-
-1. 确认两张显卡都已出现：
-
-   ```bash
-   nvidia-smi
-   ```
-
-2. 查看临时方案日志：
-
-   ```bash
-   sudo tail -n 20 /var/log/egpu-gen1-fix.log
-   ```
-
-`2.5 GT/s PCIe` 表示 Gen1 已生效。成功日志类似：
+在日志中查找类似内容：
 
 ```plain
 after rescan: 0000:0a:00.0 speed=2.5 GT/s PCIe driver=nvidia
 ```
 
-如果开机卡在 logo，关机并断开 eGPU 后重新开机，再参考[故障排查](./ts-egpu.md)。
+`2.5 GT/s PCIe` 表示外置显卡链路正在以 Gen1 运行。不同系统显示的 PCI 地址可能不同。
 
-## 安全断开 eGPU
+如果仍然看不到 eGPU，或运行不稳定，请参考[排查 eGPU 问题](./ts-egpu.md)。
+
+## 断开 eGPU
 
 1. 打开 **Settings** > **My hardware** > **Shutdown**。
-2. 在 LarePass 中确认关机，并等待 Olares One 完全关闭。
-3. 关闭扩展坞电源。
-4. 从 Olares One 拔下雷电线。
-5. 按下电源键重新启动 Olares One。
+2. 在 LarePass 中批准关机，并等待 Olares One 完全关闭。
+3. 关闭 eGPU 电源。
+4. 从 Olares One 断开雷电线。
+5. 重新启动 Olares One。
 
 ## 卸载临时方案
 
 :::warning 先断开 eGPU
-卸载临时方案前，请关闭 Olares One 并断开 eGPU。卸载后如果在 eGPU 仍连接的情况下启动 Olares One，初始化问题可能再次出现。
+卸载临时方案前，先关闭 Olares One 并断开 eGPU。
 :::
 
-1. 按照[安全断开 eGPU](#安全断开-egpu)中的步骤操作，并在不连接 eGPU 的情况下启动 Olares One。
-
-2. 打开终端并卸载临时方案：
+1. 在不连接 eGPU 的情况下启动 Olares One。
+2. 卸载临时方案：
 
    ```bash
    sudo systemctl disable egpu-gen1-fix.service
@@ -164,9 +155,7 @@ after rescan: 0000:0a:00.0 speed=2.5 GT/s PCIe driver=nvidia
    sudo reboot
    ```
 
-下次连接 eGPU 时，系统将使用默认 PCIe 链路行为，初始化问题可能再次出现。
-
 ## 相关资源
 
-- [Olares One eGPU 支持概览](./egpu.md)
+- [将 eGPU 连接到 Olares One](./egpu.md)
 - [排查 eGPU 问题](./ts-egpu.md)

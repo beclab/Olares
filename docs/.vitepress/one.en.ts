@@ -108,7 +108,7 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           //   ]
         },
         {
-          text: "Set up your eGPU",
+          text: "Connect an eGPU",
           link: "/one/egpu",
           collapsed: true,
           items: [

@@ -1,77 +1,66 @@
 ---
 outline: [2, 3]
-description: Set up and verify an NVIDIA eGPU on Olares One running Windows 11, including recovery steps for built-in GPU driver errors.
+description: Set up an NVIDIA eGPU on Olares One running Windows 11 and recover the built-in GPU if its driver reports an error.
 ---
 
 # Set up an eGPU on Olares One with Windows
 
-Use this guide to connect and verify an NVIDIA eGPU on Olares One running Windows 11. It also explains how to recover the built-in GPU if it reports a driver error after the eGPU is connected.
+Use this guide for the first eGPU setup on Windows 11 or when the built-in GPU reports an error after you connect an eGPU.
 
-:::warning Do not connect the eGPU yet
-Remove the existing NVIDIA software before connecting the eGPU. Power the enclosure with its dedicated power supply and use a certified Thunderbolt 5 cable.
+:::warning Disconnect the eGPU first
+Start Windows without the eGPU connected. If it is already connected, shut down Olares One, disconnect it, and then start Windows again.
 :::
 
 ## Before you start
 
-You can use an existing Windows installation. You do not need to reinstall Windows solely to set up an eGPU.
+You need:
 
-:::info Tested configuration
-This guide was tested on Olares One running Windows 11 24H2 with an AOOSTAR EG02 and NVIDIA GeForce RTX 4060 Ti.
+- Windows 11 24H2 with all available Windows updates installed.
+- A powered Thunderbolt external graphics device and a certified Thunderbolt cable. The GPU may be preinstalled, or you can install a desktop GPU in an eGPU dock or enclosure.
+- Administrator access to Windows.
 
-The test used NVIDIA App installer `11.0.5.420_1146713` and NVIDIA driver `610.74`.
-:::
+If Windows is not installed, first follow [Install Windows on the primary drive](./install-windows-primary-drive.md). You do not need to reinstall Windows just to add an eGPU.
 
-## Prepare Windows
+## Set up the eGPU for the first time
 
-:::warning Back up your data
-If you install Windows, the installation can remove the existing operating system, apps, settings, and files from the Windows partition. Back up any data you want to keep before continuing.
-:::
+1. Uninstall all existing NVIDIA apps and graphics drivers from Windows.
+2. Restart Windows if the uninstaller asks you to do so.
+3. Prepare and power on the eGPU:
 
-1. If Windows is not installed, follow [Install Windows on the primary drive](./install-windows-primary-drive.md).
-2. Open **Settings** > **Windows Update** and install all available Windows updates. Wait for the update process to finish before continuing.
-3. Uninstall all existing NVIDIA apps and drivers.
+   - If the GPU is already installed, connect the device's power adapter.
+   - If you use an eGPU dock or enclosure, install the desktop GPU and connect all required GPU power cables.
 
-## Connect the eGPU and install the driver
+4. Connect the eGPU directly to a Thunderbolt 5 (USB-C) port on Olares One with a certified Thunderbolt cable.
+5. Install NVIDIA App.
+6. In NVIDIA App, download and install the graphics driver.
+7. Restart Windows.
 
-1. Install the GPU in the enclosure and turn on the enclosure.
-2. Connect it to the Thunderbolt 5 (USB-C) port on Olares One with a certified Thunderbolt 5 cable.
-3. Install NVIDIA App.
-4. In NVIDIA App, download and install the graphics driver.
-5. After the driver installation is complete, continue to [Check the connection](#check-the-connection).
+Before connecting other Thunderbolt devices, [check the setup](#check-the-setup).
 
 ## Recover the built-in GPU
 
-Use these steps if the built-in GPU shows a warning or disappears from NVIDIA App after you connect the eGPU.
+Use these steps if the built-in GPU has a warning icon in Device Manager or disappears from NVIDIA App after you connect the eGPU.
+
+Keep the eGPU connected during this procedure.
 
 1. Open **NVIDIA App** > **Drivers** > **Reinstall**.
 2. Select **Custom installation**.
-3. Select **Perform a clean installation**, then finish the installation.
-
-   :::warning Do not skip the restart
-   In the tested configuration, the eGPU remained at Gen1 until Windows was restarted. Restart Windows to let the link renegotiate at Gen4.
-   :::
-
+3. Select **Perform a clean installation** and finish the installation.
 4. Restart Windows.
 
-## Check the connection
+## Check the setup
 
-In **Device Manager** > **Display adapters**, confirm that both the built-in GPU and eGPU appear without warning icons.
+1. Open **Device Manager** > **Display adapters**.
+2. Check that the built-in GPU and eGPU both appear without warning icons.
+3. Open NVIDIA App and check that it shows both GPUs.
 
-After the setup and driver installation are complete, Windows supports connecting and disconnecting the eGPU while the system is running.
+This guide covers one eGPU. It does not cover hot-plugging or multi-eGPU setup.
 
-## Tested performance
+## If a GPU is missing or reports an error
 
-In the single-eGPU test, the RTX 4060 Ti reached 165 W under FurMark load at Gen4, with no observed PCIe errors.
+Follow [Troubleshoot eGPU issues](./ts-egpu.md). Record the Device Manager error code before reinstalling the driver because the code helps identify the failure.
 
-Results may vary with the GPU, enclosure, power supply, driver, and workload. Running FurMark is not required to complete the setup.
+## Related resources
 
-## Known issues
-
-**Built-in RTX 5090M has reduced power**
-
-Under full load, the built-in RTX 5090M reaches about 95 W instead of 175 W. This is a known issue confirmed with NVIDIA. In testing, the eGPU link remained stable at Gen4, and eGPU use was not affected.
-
-## Resources
-
-- [Olares One eGPU support overview](./egpu.md)
+- [Connect an eGPU to Olares One](./egpu.md)
 - [Troubleshoot eGPU issues](./ts-egpu.md)

@@ -1,80 +1,119 @@
 ---
 outline: [2, 3]
-description: 排查 Olares One eGPU 开机、识别、掉卡和 Windows 驱动问题，并收集诊断信息。
+description: 排查 Olares One eGPU 开机与识别问题，并收集 Olares OS 或 Windows 所需的诊断信息。
 ---
 
 # 排查 Olares One eGPU 问题
 
-开机卡住、系统无法识别 eGPU、运行中掉卡，或 Windows 报显卡驱动错误时，使用本文排查。
+先找到与你遇到的现象一致的章节。如果快速检查无法解决问题，请先收集诊断信息，再寻求帮助。
 
-## 先尝试快速修复
+:::danger Olares OS 不支持热插拔
+连接或断开 eGPU 前，必须关闭 Olares One。冷启动时，先给 eGPU 通电并连接到 Olares One，再启动 Olares One。
+:::
 
-| 平台 | 现象 | 检查方法 |
-|---|---|---|
-| Olares OS | 开机卡在 Olares logo | 关闭 Olares One，断开 eGPU 后重新启动，再确认 [Gen1 临时方案](./egpu-olares-os.md)已安装并启用。 |
-| Olares OS | 系统启动但看不到 eGPU | 检查扩展坞供电、连接顺序和认证的雷电 5 线材。确认扩展坞连接到 Olares One 的雷电 5（USB-C）接口。 |
-| Olares OS | eGPU 在使用过程中掉卡 | 确认 Gen1 临时方案已生效。检查扩展坞供电是否充足，并确认显卡供电线已牢固连接。 |
-| Windows | 内置显卡报错 | [清洁安装驱动](./egpu-windows.md#恢复内置显卡)后重启 Windows。 |
+## Olares OS 开机卡在 logo
 
-Olares OS 冷启动的正确顺序为：扩展坞通电 → 连接雷电线 → Olares One 开机。首次安装 Windows 驱动时，请按 [Windows 设置指南](./egpu-windows.md)中的顺序连接。
+1. 关闭 Olares One。
+2. 断开 eGPU。
+3. 重新启动 Olares One。
+4. 检查 Gen1 临时方案是否已启用：
 
-## 在 Olares OS 上确认 eGPU 状态
+   ```bash
+   sudo systemctl is-enabled egpu-gen1-fix.service
+   ```
 
-```bash
-lspci -nn | grep -i nvidia
-nvidia-smi
-```
+   命令必须返回 `enabled`。如果结果不同，请按照[在 Olares OS 上设置 eGPU](./egpu-olares-os.md)重新安装临时方案。
 
-输出中应同时显示内置显卡和 eGPU。要确认 Gen1 临时方案是否生效，请运行下方诊断脚本并查看 `Summary`。链路速率显示 `2.5 GT/s PCIe` 表示 Gen1 已生效。
+5. 再次尝试连接前，先[收集 Olares OS 诊断信息](#收集-olares-os-诊断信息)。报告可能保留了上次开机卡住时的日志。
+
+## Olares OS 可以启动，但看不到 eGPU
+
+按顺序检查：
+
+1. 检查 eGPU 是否已通电，设备电源是否连接正常。
+2. 如果通过 eGPU dock 或 eGPU enclosure 使用桌面版显卡，请检查电源功率和显卡的全部供电线。
+3. 将 eGPU 直接连接到 Olares One 的雷电 5（USB-C）接口。不要经过其他 Dock，并断开连接路径中的其他雷电设备。
+4. 使用认证的雷电线材，优先使用外置显卡设备附带的线材。
+5. 再次冷启动。先给 eGPU 通电，再连接线材，最后启动 Olares One。
+6. 检查操作系统和 NVIDIA 驱动是否识别显卡：
+
+   ```bash
+   lspci -nn | grep -i nvidia
+   nvidia-smi
+   ```
+
+两条命令都应显示外置显卡。如果 `lspci` 能看到 eGPU，但 `nvidia-smi` 看不到，请先收集诊断信息，不要立即更换驱动。
+
+## Olares OS 运行任务时掉卡
+
+1. 检查临时方案日志：
+
+   ```bash
+   sudo tail -n 20 /var/log/egpu-gen1-fix.log
+   ```
+
+   查找 `speed=2.5 GT/s PCIe`。该内容表示 eGPU 链路正在以 Gen1 运行。
+
+2. 检查外置显卡设备的电源。如果通过 eGPU dock 或 eGPU enclosure 使用桌面版显卡，还要检查电源功率和显卡的全部供电线。
+3. 断开其他高带宽雷电设备，将 eGPU 直接连接到 Olares One 后重试。
+4. 掉卡后立即收集诊断信息。
+
+## Windows 显示显卡错误
+
+1. 在 **设备管理器** > **显示适配器** 中打开报错的设备。
+2. 记录 **常规** > **设备状态** 中的完整消息和错误代码。
+3. 按照[恢复内置显卡](./egpu-windows.md#恢复内置显卡)中的步骤操作。
+4. 重启 Windows，检查两张显卡是否都已显示，并且没有警告图标。
+
+如果仍然缺少显卡，请收集下方列出的 Windows 信息。
 
 ## 收集 Olares OS 诊断信息
 
 1. 下载 <a href="/downloads/one/egpu/collect-egpu-info.sh" download>`collect-egpu-info.sh`</a>。
-2. 在出现问题的那次开机后运行。如果上次开机卡住，可断开 eGPU 正常开机后再运行。系统保留相关日志时，报告也会包含上一次开机的日志。
+2. 在下载目录中打开终端并运行：
 
    ```bash
    chmod +x collect-egpu-info.sh
    sudo ./collect-egpu-info.sh
    ```
 
-3. 打开当前目录生成的 `egpu-report-*.txt`，查看 `Summary`。
+3. 打开生成的 `egpu-report-*.txt`，查看 `Summary`。
 
-   - 如果运行脚本时 eGPU 仍然连接，但显示 `External GPU detected : NO`，请检查扩展坞供电、雷电 5 线材和雷电 5（USB-C）接口。
-   - 如果为了从开机卡住状态中恢复而主动断开了 eGPU，显示 `External GPU detected : NO` 属于正常现象。系统保留相关日志时，报告仍可能包含上一次开机的日志。
+   - 如果运行脚本时 eGPU 仍然连接，但报告显示 `External GPU detected : NO`，请再次检查供电、线材、接口和连接路径。
+   - 如果开机卡住后主动断开了 eGPU，报告显示 `External GPU detected : NO` 属于正常现象。如果系统保留了上一次开机日志，报告仍会包含相关内容。
 
-脚本不会修改系统设置或上传数据。它会读取系统信息，并在当前目录写入一份报告。报告包含系统与驱动版本、雷电和 PCIe 拓扑、链路速率、BAR 分配、临时方案状态及相关日志。
+脚本只读取系统状态，并在当前目录写入一份报告。它不会修改设置、联网或上传报告。
 
 :::warning 分享前检查报告
-报告可能包含设备主机名、内核命令行、硬件拓扑和系统日志。公开分享前，请检查文件并删除不希望公开的信息。
+报告可能包含主机名、内核命令行、硬件拓扑和系统日志。公开发布前，请删除不希望分享的信息。
 :::
 
 ## 收集 Windows 诊断信息
 
-准备以下信息：
+准备以下内容：
 
-1. **设备管理器** > **显示适配器**截图，包含警告图标。
-2. 已安装的 NVIDIA 驱动版本。
-3. **设备属性** > **常规** > **设备状态** 中的完整消息和错误代码。
+1. **设备管理器** > **显示适配器**截图，包含所有警告图标。
+2. NVIDIA App 中显示的驱动版本。
+3. 每张报错显卡在设备管理器中的完整错误消息和代码。
 
-检查截图，并删除不希望公开的个人信息或设备信息。
-
-同时记录扩展坞与显卡型号、操作系统、连接方式、开机顺序、现象、发生概率和已尝试的操作。对于偶发的启动问题，请使用相同连接顺序完成数次冷启动，并记录每次结果。冷启动是指完全关闭 Olares One 后，再按推荐顺序给扩展坞通电、连接线材并启动 Olares One。
+分享截图前，请先删除个人信息。
 
 ## 在 Olares 论坛求助
 
-如果问题仍未解决，或者想讨论文档中未列出的硬件组合，可以前往 [Olares 论坛](https://www.olares.com/forum/)发帖。建议尽量提供以下信息：
+如果问题仍未解决，请前往 [Olares 论坛](https://www.olares.cn/forum/)发帖。附上诊断报告或截图，并填写：
 
-- **系统**：Windows 或 Olares OS，以及具体版本
-- **硬件**：eGPU 扩展坞和显卡型号
-- **设置方式**：eGPU 的连接方式，以及与问题相关时的开机顺序
-- **问题**：具体表现，以及是否稳定复现
-- **已尝试的操作**：已经执行的设置步骤、更换线材等排查操作
-- **附件**：Olares OS 诊断报告，或相关的 Windows 截图和错误信息
-
-发帖前请检查诊断文件和截图，删除不希望公开的信息。
+```plain
+系统与版本：
+外置显卡设备，或 eGPU dock、eGPU enclosure 与显卡：
+连接方式（包括 Dock 或 Hub）：
+开机顺序：
+问题现象：
+已尝试的操作：
+附件：
+```
 
 ## 相关资源
 
-- [Olares One eGPU 支持概览](./egpu.md)
+- [将 eGPU 连接到 Olares One](./egpu.md)
 - [在 Olares OS 上设置 eGPU](./egpu-olares-os.md)
 - [在 Windows 上设置 eGPU](./egpu-windows.md)

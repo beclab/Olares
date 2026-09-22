@@ -73,7 +73,14 @@ Olares OS 通过一键部署和工作流集成简化了本地 AI，这与标准 
 可以。你可以通过多个内部插槽和扩展端口修改硬件：
 * **存储**：主板包含两个 PCIe SSD 插槽，一个 PCIe 4.0 和一个 PCIe 5.0。预装的 2TB SSD 占用 PCIe 4.0 插槽。第二个插槽可用于通过 LVM 扩展系统存储，或用于双启动配置。
 * **内存**：RAM 容量可升级至最大 128GB。
-* **外接显卡和显示器**：Thunderbolt 5 端口支持 eGPU 外接显卡扩展坞。它还支持扩展坞同时连接最多两个外部显示器，最高可达 8K 分辨率，视频输出由 RTX 5090 Mobile 处理。
+* **外接显卡**：可以连接兼容的雷电外置显卡设备。详情请参阅[可以给 Olares One 连接 eGPU 吗？](#可以给-olares-one-连接-egpu-吗)
+* **外接显示器**：Thunderbolt 5 端口支持通过扩展坞同时连接最多两台外接显示器，最高支持 8K 分辨率。视频输出由内置 RTX 5090 Mobile 处理。
+
+### 可以给 Olares One 连接 eGPU 吗？
+
+可以。你可以连接已安装 GPU 的雷电外置显卡设备，也可以通过独立供电的 eGPU dock 或 eGPU enclosure 使用兼容的桌面版 NVIDIA 显卡。不同硬件组合在 Olares OS 和 Windows 11 上的兼容状态及设置方法并不相同。
+
+请参阅[将 eGPU 连接到 Olares One](egpu.md)，查看已知兼容状态、当前限制和设置方法。
 
 ### 有没有办法通过 HDMI 查看 Olares OS 界面？
 
