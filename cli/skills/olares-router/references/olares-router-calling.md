@@ -22,6 +22,12 @@ So there are two steps, not five: pass `--api-key sk-...`, or `OLARES_ROUTER_API
 
 Reach for a key when the call needs something the identity cannot carry: a model allowlist, a budget of its own, or an origin the platform cannot vouch for — anything outside Olares, which is where the header is added.
 
+### Inside an application, `router call` is the wrong caller
+
+The profile identity is stamped by the Olares edge, and a command running **inside** the cluster did not cross it. Router then reads the calling application's `x-caller-appid` instead, and the call is from the application — which for a shared-chart app means the chart's owner, not the person at the keyboard. Nothing fails: the work runs, the usage row is written, and a provider that keeps a per-user library files the result under somebody else.
+
+So an agent hosted by an Olares application does not reach Router with `router call`. Such an application proxies Router in process, under its own base URL — Lares publishes `$LARES_LLM_BASE_URL` — and that proxy stamps the logged-in person. POST the OpenAI-shaped path there. Where such a base URL exists, **the application's own skill governs generation** and this tree covers everything else: configuration, diagnosis, the catalogue, and calling from a shell that is outside the cluster.
+
 Two refusals are specific to this and mean different things:
 
 - `missing_credentials` — the Router being called predates v2.2.1 and does not read `X-BFL-USER` on `/v1`. Upgrade the Router application, or pass a key.
@@ -36,6 +42,8 @@ Router anchors a stored response and a media generation on `(user, key)`, so a j
 ## Choosing the model
 
 `--model` takes a qualified `<provider>/<model>` as `router model list` prints it, or any route name — an alias, a group, or a `default-*` category.
+
+A FlowStudio scene's model half is the workflow's UUID, and that UUID **is** the id: it cannot follow a rename without orphaning every allowlist and quota entry pointing at it. The author's label travels beside it instead, as `name` on the row — `router call models` shows it in the `CALLED` column and `-o json` carries it. Read the label from there; do not call FlowStudio to map a UUID to a title.
 
 Leaving `--model` off names the default category for that kind of work: `default-chat` for chat, `default-stt` for transcription, `default-tts` for speech, and so on for every verb. Router decides what a category answers with by reconciling it against what is installed; nothing is set by hand and nothing falls back per call. `router route list --kind default` prints where each category currently stands, and a category nothing serves is refused rather than approximated.
 
