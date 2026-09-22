@@ -5,9 +5,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, Jellyfin, jellyfin vs plex, plex alternative, self-hosted media server, jellyfin remote access, DLNA, jellyfin on olares
-app_version: "1.0.19"
-doc_version: "1.2"
-doc_updated: "2026-07-28"
+app_version: "1.0.35"
+doc_version: "1.3"
+doc_updated: "2026-09-22"
 ---
 
 # Build your private media server with Jellyfin
@@ -57,10 +57,24 @@ With your media ready, install Jellyfin and complete its setup wizard.
 ### Install Jellyfin
 
 1. Open Market and search for "Jellyfin".
+2. Click **Get**, click **Install**.
+3. In the **Choose a hardware accelerator** dialog, select the option that matches your hardware and Olares version:
+   - **Olares 1.12.7 or later**:
+      - Select **Intel** for an Intel integrated GPU.
+      - Select **AMD** for an AMD integrated GPU.
+      - Select **CPU** if you do not need hardware-accelerated transcoding.
+   - **Olares 1.12.6**: Select **CPU**. The Intel and AMD modes require the hardware acceleration support introduced in Olares 1.12.7, even if they appear in the dialog. To use the legacy hardware acceleration setup, see [Legacy hardware acceleration on Olares 1.12.6](#legacy-hardware-acceleration-on-olares-1126).
+4. Click **Confirm**, then wait for the installation to complete.
 
-   ![Install Jellyfin](/images/manual/use-cases/jellyfin-install.png#bordered)
+:::info Already have Jellyfin installed?
+Upgrading Jellyfin does not change the accelerator selected for the existing installation.
 
-2. Click **Get**, then click **Install**, and wait for the installation to complete.
+If you do not need hardware acceleration, upgrade Jellyfin normally. To enable hardware acceleration on Olares 1.12.7 or later, uninstall and reinstall Jellyfin, then select **Intel** or **AMD** in the accelerator dialog.
+:::
+
+:::warning Keep your Jellyfin data
+In the **Uninstall Jellyfin?** dialog, clear the **Also remove all local data** checkbox before clicking **Uninstall**. This checkbox is selected by default. Keeping the local data preserves your media libraries, users, settings, plugins, and other configuration for reinstallation.
+:::
 
 ### Complete the initial setup
 
@@ -93,44 +107,55 @@ With Jellyfin installed and running, the next step is to tell it where your medi
 
 Once saved, Jellyfin will automatically scan your folders and begin building your library. This process may take several minutes, depending on the size of your collection.
 
-## Enable hardware acceleration for transcoding 
+## Enable hardware acceleration for transcoding
 
 Hardware acceleration reduces CPU usage when Jellyfin needs to transcode video. Transcoding may be required when the client does not support the original format, the resolution or bitrate must be reduced, HDR content must be converted to SDR, or subtitles need to be burned into the video.
 
 Jellyfin still prioritizes Direct Play and Remux. Hardware acceleration is used only when transcoding is required.
 
+If you selected the **Intel** or **AMD** accelerator when installing Jellyfin:
 
-To enable Intel Quick Sync Video (QSV) on Olares One:
+1. In the Jellyfin **Dashboard**, go to **Playback** > **Transcoding**.
+2. Under **Hardware acceleration**, select the option that matches your integrated GPU:
+   - For **Intel**, select **Intel Quicksync (QSV)**.
+   - For **AMD**, select **Video Acceleration API (VAAPI)**.
+3. Select the codecs supported by your GPU. For example, enable hardware encoding for `H264`, `HEVC`, and `HEVC 10bit` if your hardware supports them.
+4. Keep the other options at their default values, then save the changes.
 
-1. In Olares Market, update Jellyfin to version 1.0.21 or later.
-2. Navigate to **Settings** > **Applications** > **Jellyfin** > **Manage Environment Variables**.
-   - Set `ENABLE_HW_ACCEL` to `true`.
-   - Set `VIDEO_GID` to `44`, and `RENDER_GID` to `994`. These GID values are the defaults for Olares One. 
-   On other devices, open Olares terminal from **Control Hub** and run:
-      ```bash
-      getent group video
-      getent group render
-      ls -ln /dev/dri
-      ```
-    ![Get GID](/images/manual/use-cases/jellyfin-gid.png#bordered){width=90%}
-3. Save the changes. Olares automatically restarts Jellyfin.
+Hardware capabilities vary by device. For supported acceleration methods and configuration details, refer to the official [Jellyfin hardware acceleration documentation](https://jellyfin.org/docs/general/post-install/transcoding/hardware-acceleration/).
 
-4. In the Jellyfin **Dashboard**, go to **Playback** > **Transcoding**.
-5. Under **Hardware acceleration**, select the appropriate options based on your Olares device's hardware. For example, on Olares One:
-   - Select **Intel QuickSync (QSV)**.
-   - Enable hardware coding for `H264`, `HEVC`, and `HEVC 10bit`. 
-   - Keep the other options at their default values. 
-
-Hardware capabilities vary by device. For configuration details, refer to the official [Jellyfin transcoding docs](https://jellyfin.org/docs/general/post-install/transcoding/).
-
-   
-   ![Enable transcoding](/images/manual/use-cases/jellyfin-transcoding.png#bordered){width=90%}
+![Enable transcoding](/images/manual/use-cases/jellyfin-transcoding.png#bordered){width=90%}
 
 :::tip Best practices
 For a home theater setup, use a TV or media player that supports HEVC Main 10, HDR10, SRT subtitles, and common audio formats so Jellyfin can use Direct Play whenever possible. Hardware-accelerated transcoding is mainly intended to resolve format compatibility issues or improve playback over remote or bandwidth-limited networks. It should not replace Direct Play.
 :::
-::: warning Device access
-Enabling `ENABLE_HW_ACCEL` gives Jellyfin additional access to the host’s `/dev/dri` graphics devices. Enable this option only when hardware acceleration is needed.
+
+:::info Hosts with integrated and NVIDIA GPUs
+On a host with both an integrated GPU and an NVIDIA discrete GPU, only the device nodes bound to the selected integrated GPU remain available to Jellyfin for hardware transcoding. This prevents Intel Quick Sync Video (QSV) from failing when it enumerates an NVIDIA device. No additional device configuration is required.
+:::
+
+<span id="legacy-hardware-acceleration-on-olares-1126"></span>
+
+:::details Legacy hardware acceleration on Olares 1.12.6
+The following steps use Intel Quick Sync Video (QSV) on Olares One as an example of the Olares 1.12.6 setup:
+
+1. Install Jellyfin with the **CPU** accelerator.
+2. Go to **Settings** > **Applications** > **Jellyfin** > **Manage Environment Variables**.
+3. Set `ENABLE_HW_ACCEL` to `true`.
+4. Set `VIDEO_GID` and `RENDER_GID` to the IDs of the corresponding groups on the host. The default values for Olares One are `44` and `994`.
+
+   On other devices, open the Olares terminal from Control Hub and run:
+
+   ```bash
+   getent group video
+   getent group render
+   ls -ln /dev/dri
+   ```
+
+5. Save the changes. Olares restarts Jellyfin automatically.
+6. In the Jellyfin **Dashboard**, go to **Playback** > **Transcoding**.
+7. Under **Hardware acceleration**, select **Intel Quicksync (QSV)**.
+8. Select the supported codecs, then save the changes.
 :::
 
 ## Enhance experience with community plugins
