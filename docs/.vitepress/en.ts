@@ -556,7 +556,7 @@ const side = {
               link: "/manual/help/ts-forget-login-password",
             },
             {
-              text: "Cannot access Olares after forgetting the mnemonic phrase",
+              text: "Recover access to LarePass and Olares",
               link: "/manual/help/ts-access-without-mnemonic",
             },
             {

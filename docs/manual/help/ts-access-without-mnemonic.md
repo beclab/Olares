@@ -1,111 +1,102 @@
 ---
 outline: [2, 3]
-description: Recover access to Olares when your mnemonic phrase is unavailable.
+description: Identify the credential blocking access to LarePass, Olares Desktop, or your device when no mnemonic backup is available.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, LarePass, mnemonic phrase, local password, login password, host password
 ---
 
-# Cannot access Olares after forgetting the mnemonic phrase
+# Recover access to LarePass, Olares Desktop, or your Olares device
 
-Use this page if you have forgotten your 12-word mnemonic phrase and cannot log in to Olares. The phrase recovers your Olares ID and it is not the password for signing in to Olares or its host operating system.
+Use this guide if your mnemonic phrase is unavailable and you need to regain access to LarePass, Olares Desktop, or the device running Olares. Start with the section that matches what you cannot access.
 
-:::warning
-Do not uninstall LarePass or delete the Olares ID inside it until you have saved the mnemonic phrase elsewhere. Removing the app or ID could delete your only copy.
+:::warning Keep every existing LarePass installation
+Do not uninstall LarePass or remove your Olares ID from any device where it is still available. Without a mnemonic backup, doing either may permanently prevent you from using that Olares ID in LarePass again.
 :::
 
-## Condition
+## If you forgot your mnemonic phrase or never backed it up
 
-- You cannot recall the mnemonic phrase for your Olares ID and do not have a separate backup.
-- You cannot sign in to Olares and need to regain access to the host or reset the Olares login password.
+Check every phone and computer where you previously used LarePass.
 
-## Solution
+If your Olares ID is available in any LarePass client, keep that client installed and follow the steps for its platform.
 
-To regain access, sign in to the Olares host over SSH, then reset the Olares login password if needed. If SSH is unavailable, use the physical console.
+### On mobile
 
-- **Olares installed on your own device:** Use the host username and password configured for that device, then go to [Step 3](#step-3-access-the-host-terminal).
-- **Olares One:** Find the activation-generated SSH password in LarePass Vault using Steps 1 and 2. If you already know the password, go directly to [Step 3](#step-3-access-the-host-terminal).
+1. Go to **Settings** > **LarePass Settings** > **Security** > **Mnemonic phrase**.
+2. If prompted, enter your LarePass local password. If you do not know it, follow [If you forgot or have not set your LarePass local password](#if-you-forgot-or-have-not-set-your-larepass-local-password).
+3. Reveal the 12 words, write them down in order, and store them offline.
+4. Complete the in-app verification to confirm that the backup is correct.
 
-### Step 1: For Olares One, open Vault in LarePass
+### On desktop
 
-Open LarePass on your phone.
+1. Go to **Settings** > **Account** > **Manage Account**.
+2. Locate your Olares ID and follow the prompts to view its mnemonic phrase.
+3. Write down the 12 words in order and store them offline.
 
-:::info
-After six incorrect password attempts, LarePass locks the account for 15 minutes and disables biometric unlock during that time. Stop trying passwords, close LarePass, and wait 15 minutes before continuing.
-:::
+If your Olares ID is absent from every LarePass client and you do not have another copy of the mnemonic phrase, the phrase cannot be retrieved.
 
-Tap **Vault** and follow the path that matches what you see:
+## If you forgot or have not set your LarePass local password
 
-- **Vault opens without asking for a password:** Continue to [Step 2](#step-2-find-the-olares-one-ssh-password).
+The local password unlocks protected LarePass features on the current device. Each LarePass installation has its own local password.
 
-- **Vault asks for a password and you remember it:** Enter the LarePass local password, then continue to [Step 2](#step-2-find-the-olares-one-ssh-password).
+### On mobile
 
-- **Vault asks for a password you have forgotten:** Tap the face or fingerprint icon to try biometric unlock.
+- If LarePass asks you to create a local password, create one and follow the prompts.
+- If no prompt appears, go to **Settings** > **LarePass Settings** and set a local password.
+- If you forgot the local password and biometric unlock is enabled, go to **Settings** > **LarePass Settings** > **Security**, tap **Reveal local password**, and complete biometric verification.
+- If biometric unlock is not enabled, the local password cannot be revealed on that device. Use another LarePass client where your Olares ID is still accessible.
 
-  When enabled, LarePass uses the local password stored in your phone's secure keystore to unlock Vault after biometric verification.
+### On desktop
 
-  ![Unlock LarePass with biometrics](/images/manual/help/olares-one-biometric-verification.png#bordered)
+- If LarePass asks you to create a local password, create one and follow the prompts.
+- If no prompt appears, go to **Settings** > **Security** and set a local password.
+- If you forgot the local password, it cannot be revealed in the desktop client.
 
-  - If Vault opens, continue to [Step 2](#step-2-find-the-olares-one-ssh-password).
-  - If Vault does not open, keep LarePass installed. If biometric unlock was never enabled, the forgotten local password cannot be displayed or reset. If you know the Olares One host password, continue to [Step 3](#step-3-access-the-host-terminal). Otherwise, [contact support](./request-technical-support.md).
+## If you forgot your Olares login password
 
-:::info
-After unlocking Vault, you do not need the local password to continue. To view it for future use, update LarePass to the latest version, then go to **Settings** > **LarePass Settings** > **Safety** > **Local password** and complete biometric verification.
-:::
+Follow [Forgotten desktop login password](./ts-forget-login-password.md) to access the Olares device terminal and reset the password.
 
-### Step 2: Find the Olares One SSH password
+## If you cannot find the 2FA code
 
-1. In **Vault**, tap the filter in the top-left corner and select **All vaults**.
+If the sign-in notification does not appear in LarePass, enter a 2FA code instead:
+
+1. On the Olares login page, switch to code verification.
+2. Find the current six-digit code in a LarePass client that contains your Olares ID:
+
+   - On mobile, open **Vault**, which displays 2FA codes by default. Alternatively, go to **Settings**, find the **My Olares** card, and tap the authenticator.
+   - On desktop, open **Vault**. The authenticator is the first item in the list.
+
+3. Enter the code on the Olares login page before it expires.
+
+## If you need the username, password, or IP address for the Olares device terminal
+
+### Olares One
+
+The system username for an activated Olares One is `olares`. Its system password is generated during activation and saved in LarePass Vault.
+
+If you already know the system password, skip to step 3.
+
+1. Open **Vault** in the LarePass mobile app. If a local-password prompt blocks access, follow [If you forgot or have not set your LarePass local password](#if-you-forgot-or-have-not-set-your-larepass-local-password).
+2. Tap the filter in the top-left corner and select **All vaults**. Open the item with the terminal icon to view the system password.
 
    ![Select All vaults in LarePass](/images/manual/help/olares-one-vault-filter.jpg#bordered)
 
-2. Open the item with the terminal icon to view the Olares One SSH password.
+   ![Find the Olares One system password in Vault](/images/manual/help/olares-one-host-password.jpg#bordered)
 
-   ![Find the terminal password item in Vault](/images/manual/help/olares-one-host-password.jpg#bordered)
-
-### Step 3: Access the host terminal
-
-Use the host account for your installation. You can connect through SSH if the host allows it, or sign in at the physical console.
-
-**SSH**
-
-1. In LarePass, tap **Settings**. Under **My Olares**, tap **System** and open the device card. Find the **Intranet IP** using the path for your version:
-
-   - **LarePass 1.11.56 or later:** Tap **Node** > **Network** > **Intranet IP**.
-   - **Earlier versions:** On the device card, go to **Network** > **Intranet IP**.
-
-2. On a computer connected to the same local network, run:
+3. In LarePass, go to **Settings** > **System**, open the Olares One device card, and note the **Intranet IP** under **Network**.
+4. On a computer connected to the same local network, run:
 
    ```bash
-   ssh <username>@<intranet-ip>
+   ssh olares@<intranet-ip>
    ```
 
-3. Enter the host password when prompted.
+5. Enter the system password.
 
-:::info Olares One SSH login
-On Olares One, use `olares` as the SSH username: `ssh olares@<intranet-ip>`. The SSH password generated during activation is saved in Vault and can be found in [Step 2](#step-2-find-the-olares-one-ssh-password).
-:::
+If SSH is unavailable, connect a monitor and keyboard to Olares One and log in with the same username and password. For details, see [Access Olares One terminal via SSH](/one/access-terminal-ssh.md) or [Access Olares One terminal physically](/one/access-physical-console.md).
 
-**Physical console**
+If you cannot open Vault and do not know the system password, keep LarePass installed and [contact support](./request-technical-support.md). Do not send support your passwords or mnemonic phrase.
 
-Connect a monitor and keyboard to the host, then sign in with its operating-system account.
+### Olares installed on your own device
 
-Once you reach the host terminal, you have access to the device running Olares. If you can also sign in to the Olares desktop, skip Step 4 and continue to Step 5.
-
-### Step 4: Reset the desktop login password if needed
-
-If you can already sign in to the Olares desktop, skip this step. If you also forgot its login password, run these commands from the host terminal:
-
-```bash
-kubectl patch clusterrole backend:auth-provider --type='json' \
-  -p='[{"op": "add", "path": "/rules/0/nonResourceURLs/-", "value": "/cli/api/reset/*"}]'
-
-olares-cli user reset-password <olares-id> -p '<new-password>'
-```
-
-For `<olares-id>`, use the part of your Olares ID before `@`. For example, use `alice123` for `alice123@olares.com`.
-
-After the reset succeeds, wait about 10 seconds, then sign in to the desktop with the new password.
-
-### Step 5: Back up the mnemonic phrase if available
-
-If you can still unlock LarePass and reveal the phrase, go to **Settings** > **LarePass Settings** > **Safety** > **Mnemonic phrase**. Write down all 12 words in order and keep them offline. Logging in to the host or resetting the desktop password does not reveal the phrase.
-
-If a step does not match what you see, [contact support](./request-technical-support.md). Tell them which screen rejects you, whether Vault opens, and whether you can access the host terminal. Do not send your passwords or mnemonic phrase.
+Use the operating-system username and password configured on the device where you installed Olares. Connect over SSH or log in locally with a monitor and keyboard. For details, see [Access the Olares terminal](../access-olares-terminal.md).

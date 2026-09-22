@@ -556,7 +556,7 @@ const side = {
               link: "/zh/manual/help/ts-forget-login-password",
             },
             {
-              text: "忘记助记词后无法登录 Olares",
+              text: "恢复 LarePass 和 Olares 访问",
               link: "/zh/manual/help/ts-access-without-mnemonic",
             },
             {
