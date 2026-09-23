@@ -1,6 +1,8 @@
 # Calling a model — pictures, clips, tracks and meshes
 
 > **Prerequisite:** [the calling contract](olares-router-calling.md) — the credential, what `--model` takes, and how to read a refusal — holds for every verb here. `music` and `3d` require `--model`; Router keeps no default category for either.
+>
+> **Not from inside an application.** These four verbs are the ones whose result is filed under whoever asked, so calling them from in-cluster is where the wrong caller does visible damage: the generation belongs to the shared chart owner and the person who asked for it cannot find it. Use the host application's in-process base URL and its own skill — see [inside an application](olares-router-calling.md#inside-an-application-router-call-is-the-wrong-caller).
 
 ```
 olares-cli router call image "a red bicycle" --out bike.png
@@ -21,7 +23,9 @@ The generation is anchored on `(user, key)`, so a `--no-wait` submission and the
 
 ## One contract, four shapes
 
-Each verb offers only the fields its own family can express — an image has no `--fps`, a mesh has no `--lyrics` — so a field that could only be refused is not a flag there at all; all four share `--negative`, `--seed` and `--provider-option k=v`, the last carrying a vendor knob this contract has no field for. `--size` and `--aspect-ratio` describe the same shape, so giving both is refused before the request. `3d` is the one family that needs no words at all: most 3D workflows work from a picture, so `--image lantern.png` is a complete request, and a local file becomes a data URL while a data URL or a link is sent as written.
+Each verb offers only the fields its own family can express — an image has no `--fps`, a mesh has no `--lyrics` — so a field that could only be refused is not a flag there at all; all four share `--negative`, `--seed` and `--provider-option k=v`, the last carrying a vendor knob this contract has no field for. Some providers narrow it again per model rather than per family: where a row carries `canonical_fields` (`router call models -o json`), that list is the whole vocabulary that model accepts, and a field outside it is refused as `media_field_*` before any provider sees it. A row without the key declares nothing and takes its family's full set — absent is not empty.
+
+Leaving `--seed` off gives the run a fresh seed, so the same prompt asked twice returns two different results. Pass one only to reproduce a specific earlier result. `--size` and `--aspect-ratio` describe the same shape, so giving both is refused before the request. `3d` is the one family that needs no words at all: most 3D workflows work from a picture, so `--image lantern.png` is a complete request, and a local file becomes a data URL while a data URL or a link is sent as written.
 
 Underneath, image and video ride the OpenAI-shaped routes they shipped with, `3d` rides Router's unified one, and music has a surface of its own; the fields mean the same thing on all three. It shows in one place only: an image provider that keeps no generations to poll answers inline, and `image` handles that as well as the polled kind, which is why it was not moved onto the unified route.
 
