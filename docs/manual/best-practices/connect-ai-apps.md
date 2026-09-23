@@ -37,13 +37,15 @@ When you use AI on Olares, you typically work with two separate applications:
 
 ### Provider
 
-In most AI client apps, a provider (or engine type) is the service or vendor that supplies the AI capability, such as OpenAI or Ollama. On Olares 1.12.7 and later, every request goes to Router, so the Base URL and other connection details always come from Router no matter which provider type you choose.
+In a traditional setup, a provider (or engine type) is the vendor or service that supplies the AI capability, such as OpenAI or Ollama. However, when using Olares, Router acts as your single, unified provider.
 
-The provider type determines how the client formats requests to Router. Choose the type that matches the capability you are connecting:
+Because Router handles the actual routing in the background, you do not select the underlying vendor in the client app. Instead, you use the client's "Provider" or "Engine" dropdown simply to tell it which API format it should use to communicate with Router.
 
-- **For LLM models**: Select **Ollama** for models that run on the Ollama engine. For non-Ollama models, select **Custom Provider**.
-- **For other tools**: First, look for **Custom Provider** or **Custom Endpoint**. If your client does not offer those options, select **OpenAI** (or **OpenAI-Compatible**).
-- **For specific tools**: Some clients offer a dedicated provider or engine type for a specific tool, such as **SearXNG**. If available, select that type.
+When configuring this field in your client app, follow this logic:
+
+- For all non-Ollama models and tools: Router standardizes these into the widely used OpenAI API format. In the client app, first look for **Custom Provider** or **Custom Endpoint**. If your client does not offer those options, select **OpenAI** or **OpenAI-Compatible**.
+- For Ollama models: Select **Ollama**. Router will transparently pass the requests using the native Ollama API format.
+- For specific tools: Some clients offer a dedicated provider option for a specific tool.  For example, a SearXNG search engine. If available, select that specific type.
 
 ### Base URL
 
