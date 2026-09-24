@@ -40,14 +40,18 @@ type ConnectState struct {
 	ErrMsg *string    `json:"errMsg,omitempty"`
 }
 
-type ConnectContext struct {
-	SSID     string `json:"ssid"`
-	Password string `json:"password"`
-}
+type ConnectContext = wifi.ConnectRequest
 
 type AccessPoint struct {
 	wifi.AccessPoint `json:",inline"`
-	Connected        bool `json:"co"`
+	Connected        bool `json:"-"` // Retained for sorting and internal callbacks only.
+}
+
+// advertisedAP contains the network name, signal strength and authentication types.
+type advertisedAP struct {
+	Strength      byte            `json:"st"`
+	SSID          string          `json:"ss"`
+	SecurityTypes []wifi.Security `json:"se"`
 }
 
 func (c ConnectState) String() string {

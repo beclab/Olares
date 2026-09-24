@@ -16,48 +16,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/beclab/Olares/daemon/internel/wifi"
 	"github.com/godbus/dbus/v5"
 	"github.com/vishvananda/netlink"
 	"k8s.io/klog/v2"
 )
 
 func ConnectWifi(ctx context.Context, ssid, password string) error {
-	if ssid == "" {
-		return errors.New("ssid is empty")
-	}
-
-	nmcli, err := findCommand(ctx, "nmcli")
-	if err != nil {
-		return err
-	}
-
-	args := []string{
-		"d",
-		"wifi",
-		"connect",
-		ssid,
-	}
-
-	if password != "" {
-		args = append(args, "password", password)
-	}
-
-	cmd := exec.CommandContext(ctx, nmcli, args...)
-	cmd.Env = os.Environ()
-	output, err := cmd.CombinedOutput()
-	klog.Info(string(output))
-
-	if err != nil {
-		klog.Error("exec cmd error, ", err, ", nmcli", " ", strings.Join(args, " "))
-		return err
-	}
-
-	if strings.Contains(string(output), "Error") {
-		err = errors.New(string(output))
-		return err
-	}
-
-	return nil
+	return wifi.Connect(ctx, wifi.ConnectRequest{SSID: ssid, Password: password})
 }
 
 func EnableWifi(ctx context.Context) error {

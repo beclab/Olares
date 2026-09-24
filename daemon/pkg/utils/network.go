@@ -11,8 +11,7 @@ import (
 )
 
 func ConnectWifi(ctx context.Context, ssid, password string) error {
-	klog.Warning("not implement")
-	return nil
+	return errors.New("wifi connection is supported only on linux")
 }
 
 func EnableWifi(ctx context.Context) error {

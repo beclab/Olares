@@ -1,0 +1,15 @@
+<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"
+ "http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">
+<node name="/com/olares/desktop/PortalHelper">
+  <interface name="com.olares.desktop.PortalHelper">
+    <!-- Both methods must return immediately and be idempotent by connectionUuid. -->
+    <method name="OpenPortal">
+      <arg name="connectionUuid" type="s" direction="in"/>
+      <arg name="interfaceName" type="s" direction="in"/>
+      <arg name="url" type="s" direction="in"/>
+    </method>
+    <method name="ClosePortal">
+      <arg name="connectionUuid" type="s" direction="in"/>
+    </method>
+  </interface>
+</node>

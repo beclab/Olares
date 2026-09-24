@@ -2,6 +2,7 @@ package ble
 
 import (
 	"encoding/json"
+	"errors"
 	"slices"
 	"time"
 
@@ -84,10 +85,7 @@ func (s *service) connectWifi(value []byte) {
 		return
 	}
 
-	param := connectwifi.Param{
-		SSID:     cctx.SSID,
-		Password: cctx.Password,
-	}
+	param := *cctx
 
 	cmd := connectwifi.New()
 	_, err = cmd.Execute(s.ctx, &param)
@@ -110,6 +108,9 @@ func (s *service) connectWifi(value []byte) {
 
 func (s *service) parseConnectConext(value []byte) (*ConnectContext, error) {
 	var cctx ConnectContext
+	if len(value) > 512 {
+		return nil, errors.New("wifi connection request exceeds BLE limit of 512 bytes")
+	}
 
 	err := json.Unmarshal(value, &cctx)
 	if err != nil {
@@ -155,6 +156,7 @@ func (s *service) getAPList() {
 		return
 	}
 
+	defer wm.Close()
 	devices, err := wm.GetWifiDevices()
 	if err != nil {
 		klog.Errorf("Failed to list wifi devices: %s", err)
@@ -169,53 +171,69 @@ func (s *service) getAPList() {
 			continue
 		}
 		for _, a := range aps {
-			connected := false
-			if state.CurrentState.WifiSSID != nil && *state.CurrentState.WifiSSID == a.SSID {
-				connected = true
-			}
-			list = append(list, AccessPoint{a, connected})
+			list = append(list, AccessPoint{AccessPoint: a, Connected: a.Connected})
 		}
 	}
 
 	slices.SortFunc(list, func(o1, o2 AccessPoint) int {
-		if o2.Connected {
+		if o2.Connected && !o1.Connected {
 			return 1
 		}
 
-		if o1.Connected {
+		if o1.Connected && !o2.Connected {
 			return -1
 		}
 
 		return int(o2.Strength) - int(o1.Strength)
 	})
 
-	// marshal list, limit top 5
-	var (
-		listData []byte
-		retList  []AccessPoint
-	)
-	sublen := len(list)
-	for {
-		var err error
-		retList = list[:sublen]
-		listData, err = json.Marshal(retList)
-		if err != nil {
-			klog.Errorf("Failed to marshal list wifi ap: %s", err)
-			return
-		}
+	s.publishAPList(list)
+}
 
-		// According to the Bluetooth specification, the maximum size of any attribute is 512 bytes.
-		if len(listData) <= 512 {
-			break
-		}
-
-		sublen--
-	}
-
-	s.apList = string(listData)
-
-	// update ap list callback
+func (s *service) publishAPList(list []AccessPoint) {
+	// HTTP receives the complete scan; only the BLE characteristic is bounded.
 	if s.updateApListCB != nil {
-		s.updateApListCB(retList)
+		s.updateApListCB(list)
 	}
+	// Merge equivalent networks across radios, keeping the strongest signal.
+	// Retain the first occurrence's connection/signal priority in the input list.
+	type apKey struct{ ssid, security string }
+	positions := make(map[apKey]int, len(list))
+	compact := make([]advertisedAP, 0, len(list))
+	for _, ap := range list {
+		security := append([]wifi.Security(nil), ap.SecurityTypes...)
+		slices.Sort(security)
+		encodedSecurity, _ := json.Marshal(security)
+		key := apKey{ap.SSID, string(encodedSecurity)}
+		if index, ok := positions[key]; ok {
+			if ap.Strength > compact[index].Strength {
+				compact[index].Strength = ap.Strength
+			}
+			continue
+		}
+		positions[key] = len(compact)
+		compact = append(compact, advertisedAP{SSID: ap.SSID, Strength: ap.Strength, SecurityTypes: security})
+	}
+	// Measure serialized bytes, including JSON punctuation and escaping. Skip
+	// entries that cannot fit so shorter later entries can fill the capacity.
+	data := []byte{'['}
+	for _, ap := range compact {
+		item, err := json.Marshal(ap)
+		if err != nil {
+			klog.Error("Failed to marshal wifi access point")
+			continue
+		}
+		separator := 0
+		if len(data) > 1 {
+			separator = 1
+		}
+		if len(data)+separator+len(item)+1 > 512 {
+			continue
+		}
+		if separator != 0 {
+			data = append(data, ',')
+		}
+		data = append(data, item...)
+	}
+	s.apList = string(append(data, ']'))
 }
