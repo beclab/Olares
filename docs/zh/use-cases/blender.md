@@ -6,7 +6,7 @@ head:
     - name: keywords
       content: Olares, Blender, Lares, MCP, 3D 建模, 3D 场景, 渲染, 动画
 app_version: "0.1.27"
-doc_version: "1.0"
+doc_version: "1.1"
 doc_updated: "2026-09-24"
 ---
 
@@ -32,7 +32,7 @@ Blender 是一套用于建模、动画和渲染的 3D 创作工具。在 Olares 
 
 2. 点击 **Get**，然后点击 **Install**，等待安装完成。
 
-如果安装时需要选择计算模式，请根据硬件和任务选择：
+安装时，请根据硬件和任务选择计算模式：
 
 | 模式 | 适用场景 |
 |:---|:---|
@@ -55,18 +55,18 @@ Blender 是一套用于建模、动画和渲染的 3D 创作工具。在 Olares 
 
 ## 在 Lares 中配置 Blender
 
-1. 打开 Olares **Settings**，前往 **Applications** > **Blender** > **Entrances**。
+1. 打开 Olares Settings，前往 **Applications** > **Blender** > **Entrances**。
 2. 选择 **Blender MCP**，复制其中的 **Endpoint** URL。
-3. 打开 Lares，前往 **Settings** > **MCP**，按以下信息添加服务器：
+3. 打开 Lares，前往**设置** > **MCP**。点击**添加服务器**，填写以下信息：
 
    | 设置 | 值 |
    |:---|:---|
-   | Server name | `blender` |
-   | Transport | `Streamable HTTP` |
-   | MCP URL | 粘贴刚才复制的 Endpoint。如果结尾没有 `/mcp`，请手动补上。 |
-   | Headers | `{}` |
+   | **服务器名称** | `blender` |
+   | **连接方式** | `Streamable HTTP` |
+   | **MCP URL** | 粘贴刚才复制的 Endpoint。如果结尾没有 `/mcp`，请手动补上。 |
+   | **请求头** | `{}` |
 
-4. 保存并启用服务器。
+4. 点击**保存**。Lares 会自动连接服务器并加载工具。
 5. 新建一个对话，发送以下提示词：
 
    ```text
@@ -76,7 +76,7 @@ Blender 是一套用于建模、动画和渲染的 3D 创作工具。在 Olares 
 
 Lares 应调用 Blender 工具并返回场景内容。新建的默认场景通常包含 `Camera`、`Cube` 和 `Light`。
 
-请选择 **Blender MCP** 入口，不要选择 **Blender** 桌面入口。本应用包的内部 MCP 连接不需要应用令牌，因此 Headers 保持为空。对于本例这种在同一设备上运行的工作流，请勿将该入口公开到外部网络。
+请选择 **Blender MCP** 入口，不要选择 **Blender** 桌面入口。本应用包的内部 MCP 连接不需要应用令牌，因此**请求头**保持为 `{}`。对于本例这种在同一设备上运行的工作流，请勿将该入口公开到外部网络。
 
 ## 创建太阳系场景
 
@@ -223,7 +223,7 @@ ffmpeg -framerate 24 -start_number 1 -i f%04d.jpg -c:v libx264 -pix_fmt yuv420p 
 
 ### 为什么 Lares 找不到 Blender 工具？
 
-确认 Blender 正在运行，且 Lares 中已启用对应服务器。Transport 应设置为 **Streamable HTTP**，URL 应来自 **Blender MCP**，并以 `/mcp` 结尾。如果仍无法连接，请从启动台打开一次 Blender，然后重试只读的场景检查。
+确认 Blender 正在运行，且 Lares 中已启用对应服务器。**连接方式**应设置为 **Streamable HTTP**，URL 应来自 **Blender MCP**，并以 `/mcp` 结尾。如果仍无法连接，请从启动台打开一次 Blender，然后重试只读的场景检查。
 
 ### 浏览器标签页需要一直打开吗？
 

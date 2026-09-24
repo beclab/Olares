@@ -111,7 +111,7 @@ ONLYOFFICE 将内置测试客户端作为集成示例提供。它不使用用户
 
 ### 可以关闭演示界面并创建用户吗？
 
-不可以。内置 Web 界面是 Document Server 的测试客户端，不是可配置的 Workspace 或 DocSpace 门户。你可以用它完成简单的浏览器文档编辑；如需账号和文档管理功能，请将 Document Server 接入兼容的平台。
+不可以。内置 Web 界面是 Document Server 的测试客户端，不是可配置的 Workspace 或 DocSpace 门户。你可以用它完成简单的浏览器文档编辑。如需账号和文档管理功能，请将 Document Server 接入兼容的平台。
 
 ## 了解更多
 

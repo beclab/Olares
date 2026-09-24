@@ -1,4 +1,6 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /zh/use-cases/pdfmathtranslate
 outline: [2, 4]
 description: 学习如何在 Olares 上安装和配置 PDFMathTranslate。本教程将指导你使用兼容 OpenAI API 的本地模型翻译学术 PDF，同时保留原始排版和数学公式。
 head:
@@ -13,6 +15,8 @@ head:
 
 # 翻译学术 PDF 并保留排版
 
+<VersionRouteSelect />
+
 PDFMathTranslate 是一款用于翻译学术 PDF 文档的应用，能够在保留原始排版和数学公式的同时完成翻译。
 
 本教程使用兼容 OpenAI API 的本地模型在 Olares 上翻译 PDF。
@@ -25,11 +29,16 @@ PDFMathTranslate 是一款用于翻译学术 PDF 文档的应用，能够在保�
 
 ## 前提条件
 
-开始前，你需要以下模型：
+开始前，你需要：
 
-| 用途 | 模型 | 获取方式 |
-| :--- | :--- | :--- |
-| 翻译 | Qwen3.6-27B (llama.cpp) | 从 Market 安装 |
+<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
+- 以下模型：
+
+  | 用途 | 模型 | 获取方式 |
+  | :--- | :--- | :--- |
+  | 翻译 | Qwen3.8-27B (llama.cpp) | 从 Market 安装 |
+
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## 安装 PDFMathTranslate
 
@@ -61,22 +70,22 @@ PDFMathTranslate 是一款用于翻译学术 PDF 文档的应用，能够在保�
 
 ### 获取模型连接信息
 
-PDFMathTranslate 通过 Qwen3.6-27B 的 OpenAI-compatible API 与其连接。
+PDFMathTranslate 通过 Qwen3.8-27B 的 OpenAI-compatible API 与其连接。
 
 <!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
-对于 Qwen3.6-27B (llama.cpp)：
+对于 Qwen3.8-27B (llama.cpp)：
 
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
-使用 **OpenAI-Compatible** API 格式。模型名称为 `unsloth/Qwen3.6-27B-GGUF:Q4_K_M`。
+使用 **OpenAI-Compatible** API 格式。模型名称为 `default-chat`。
 
 ### 配置翻译服务
 
 1. 在 PDFMathTranslate 中，从 **Service** 列表选择 **OpenAI**。
-2. 在 **OPENAI_BASE_URL** 字段中，输入从模型控制台复制的 Base URL。
+2. 在 **OPENAI_BASE_URL** 字段中，输入从 Router 复制的 Base URL。
 3. 在 **OPENAI_API_KEY** 字段中，输入任意非空值，例如 `none`。本地模型 endpoint 不需要 API key。
-4. 在 **OPENAI_MODEL** 字段中，输入复制的 Model name。
+4. 在 **OPENAI_MODEL** 字段中，填写 `default-chat`。
 
 ### 选择语言和范围
 

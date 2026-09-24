@@ -1,4 +1,6 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /zh/use-cases/deerflow2
 outline: deep
 description: 在 Olares 设备上设置 DeerFlow 2.0，并将其与本地模型应用配置，实现 AI 驱动的研究和任务处理。
 head:
@@ -7,7 +9,7 @@ head:
       content: Olares, DeerFlow, AI agent, deep research, multi-agent, self-hosted, LLM
 doc_version: "1.2"
 app_version: "1.0.6"
-doc_updated: "2026-07-27"
+doc_updated: "2026-09-23"
 ---
 
 :::warning
@@ -15,6 +17,8 @@ doc_updated: "2026-07-27"
 :::
 
 # 设置 DeerFlow 2.0 实现 AI 驱动的研究和任务处理
+
+<VersionRouteSelect />
 
 DeerFlow 是字节跳动开源的智能代理框架，基于 LangGraph 和 LangChain 构建。它通过可扩展的 skill 编排子代理、记忆和沙盒来处理复杂任务。
 
@@ -30,12 +34,12 @@ DeerFlow 2.0 是原版 [DeerFlow](https://github.com/bytedance/deer-flow) 的彻
 
 开始前，你需要：
 
-- 一台具有足够磁盘空间和内存的 Olares 设备。
+<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - 以下模型：
 
   | 模型类型 | 模型 | 获取方式 |
   | :--- | :--- | :--- |
-  | 聊天 | Qwen3.6-27B (llama.cpp) | 从 Market 安装 |
+  | 聊天 | Qwen3.8-27B (llama.cpp) | 从 Market 安装 |
 
 <!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
@@ -54,7 +58,7 @@ DeerFlow 2.0 使用 `config.yaml` 文件作为核心配置。要将其连接到�
 
 <!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
-对于 Qwen3.6-27B (llama.cpp)：
+对于 Qwen3.8-27B (llama.cpp)：
 
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
@@ -66,15 +70,20 @@ DeerFlow 2.0 使用 `config.yaml` 文件作为核心配置。要将其连接到�
 
    ```yaml
    models:
-     - name: unsloth/Qwen3.6-27B-GGUF:Q4_K_M      # 模型的唯一标识符
-       display_name: Qwen3.6-27B      # UI 中显示的名称
+     - name: default-chat      # 模型的唯一标识符
+       display_name: Qwen3.8-27B      # UI 中显示的名称
        use: langchain_openai:ChatOpenAI      # 用于 OpenAI-compatible API 的 LangChain 类
-       model: unsloth/Qwen3.6-27B-GGUF:Q4_K_M      # 模型 ID
+       model: default-chat      # 模型 ID
        api_key: olares      # 使用任意非空文本
-       base_url: https://e46e044d.laresprime.olares.com/v1      # 模型控制台中的 Base URL
+       base_url: PASTE_ROUTER_BASE_URL
        supports_thinking: true      # 如果模型支持扩展思考，则设为 true
    ```
+
+   <!--
+   TODO: 素材清单 04，待补 Router 截图：deerflow2-config-router.png；替换下方旧图后再取消注释。
    ![编辑 config.yaml](/images/manual/use-cases/deerflow2-edit-config-yaml1.png#bordered)
+   -->
+
 
 4. 点击 <span class="material-symbols-outlined">save</span> 保存更改。
 
@@ -126,7 +135,7 @@ DeerFlow 2.0 使用 `config.yaml` 文件作为核心配置。要将其连接到�
 如果代理无法启动或卡住：
 
 - **检查模型兼容性**：确保你选择的模型已在 `config.yaml` 中正确配置。验证端点 URL 是否正确。
-- **检查连接信息**：确保 Model name 和 Base URL 与模型控制台中显示的值一致。
+- **检查连接信息**：确保 Model name 和 Base URL 与Router 中显示的值一致。
 
 ### 如何启用后续建议？
 

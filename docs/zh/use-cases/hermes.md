@@ -1,16 +1,20 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /zh/use-cases/hermes
 outline: [2,3]
 description: 在 Olares 上安装 Hermes Agent，将其接入 Discord，使用 Olares 技能，并通过 Gateway API 与其他应用打通。
 head:
   - - meta
     - name: keywords
       content: Olares, Hermes, Hermes Agent, 自主 AI, 自我进化 AI, Discord 机器人, 自托管
-app_version: "1.3.33"
+app_version: "1.3.46"
 doc_version: "3.0"
-doc_updated: "2026-07-28"
+doc_updated: "2026-09-24"
 ---
 
 # 用 Hermes 搭建一个自主工作的 AI 助手
+
+<VersionRouteSelect />
 
 Hermes Agent 是一个能够自主执行任务的 AI 助手。接入本地模型后，它可以执行系统任务、编写代码、管理工作流程。它能够在多次对话之间保持记忆，还能根据与你的互动，自动生成可复用的技能。
 
@@ -28,12 +32,14 @@ Hermes Agent 是一个能够自主执行任务的 AI 助手。接入本地模型
 ## 前提条件
 
 开始前，你需要：
+
+<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - **Discord 账号**：用来创建机器人应用。
 - **Discord 服务器**：确保你在这个服务器上有添加机器人的权限。
 - 以下模型：
     | 模型类型 | 模型 | 获取方式 |
     | :--- | :--- | :--- |
-    | 聊天 | Qwen3.6-27B (llama.cpp) | 从应用市场安装 |
+    | 聊天 | Qwen3.8-27B (llama.cpp) | 从应用市场安装 |
     :::tip
     Hermes Agent 要求模型的上下文窗口至少为 64K tokens。
     :::
@@ -67,7 +73,7 @@ Olares 支持克隆应用。如果你想同时运行多个独立的 AI 助手，
 
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
-5. 切换到**配置**标签页，展开**高级参数**，记录 `--ctx-size` 的值 `131072`。这就是当前模型的上下文大小，后续步骤会用到。
+5. 在 Router 的 **LLM** 页面，点击 Qwen3.8-27B (llama.cpp) 所在行的信息图标，打开 **Model card**。在 **Engine args** 中读取 `-c` 后的数值。例如，`-c 104448` 表示下一步应填写 `104448`。截图说明见[查看实际上下文大小](/zh/manual/best-practices/connect-ai-apps.md#check-context-window)。
 
 ### 第 2 步：运行设置向导
 
@@ -80,16 +86,20 @@ Olares 支持克隆应用。如果你想同时运行多个独立的 AI 助手，
 
 3. 向导会逐步引导你完成设置。使用方向键移动，按**回车**键确认。
 
+    下表中的模型选择提示是不同分支。根据检测到的模型数量完成对应分支，再继续填写 **Context length in tokens**。
+
     | 配置   | 选项   |
     |:-----------|:---------|
     | How would you like to set up Hermes | 选择 **Full setup — configure every provider, tool & option yourself (bring your own keys)**。 |
     | Select provider | 选择 **Custom endpoint (enter URL manually)**。  |
-    | API base URL  | 输入从 Model Console 复制的 **Base URL**。<br>例如 `https://e46e044d.laresprime.olares.com/v1`。  |
+    | API base URL  | 输入从 Router 复制的 **Base URL**。<br>例如 `https://router.<your-olares-domain>/v1`。  |
     | API key  | 输入任意占位值，例如 `local`。<br>出于安全考虑，输入内容会被隐藏。 |
-    | Select API compatibility mode | 输入 `1` 选择 **Auto-detect [current]**。该选项会根据 URL 自动判断 API 模式，最适合标准的 OpenAI 兼容端点。 |
-    | Use this model | 确认检测到的模型名称正确，然后输入 `y`。 |
-    | Context length in tokens | 留空，让系统自动检测。<br><br>**注意**：如果你模型的上下文窗口小于 `65536`，填写一个大于 `65536` 的值。Hermes Agent 至少需要 64K tokens 的上下文窗口。 |
-    | Display name | 输入一个便于识别该模型的名称，例如 `qwen3.6-27b-local`。|
+    | Select API compatibility mode | 输入 `1`，选择 **Auto-detect**。 |
+    | Use this model? [Y/n] — 仅检测到一个模型时出现 | 输入 `n`，然后在接下来的 **Model name** 提示中填写 `default-chat`。确认提示只接受是/否，不是在这里输入模型名。 |
+    | Select model [1-N] or type name — 检测到多个模型时出现 | 直接输入 `default-chat`，不要选择列表中的编号。 |
+    | Model name — 未检测到模型时出现 | 输入 `default-chat`。 |
+    | Context length in tokens | 填写 Router 的 **Model card > Engine args** 中的精确上下文大小。例如，`-c 104448` 对应填写 `104448`。Hermes 要求至少 `65536` token，且填写值不能超过引擎实际配置。 |
+    | Display name | 输入一个便于识别该模型的名称，例如 `router-chat`。|
     | Select terminal backend | 选择 **Local - run directly on this machine**。 |
     | Select platforms to configure | 按 **ESC** 暂时跳过。 |
     | Tools for CLI | 按 **ESC** 暂时跳过。 |

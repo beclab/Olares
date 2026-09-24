@@ -1,11 +1,13 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /zh/use-cases/llm-base-apps
 outline: [2, 3]
 title: 使用 Engine Base 运行本地大模型
 description: 了解如何在 Olares 中使用引擎基座应用来自托管本地大语言模型，并通过克隆基座应用运行不同的推理引擎。
 head:
   - - meta
     - name: keywords
-      content: Olares, Model Console, Engine Base, self-hosted LLM, vLLM, llama.cpp, SGLang, run LLM locally
+      content: Olares, Router, Engine Base, self-hosted LLM, vLLM, llama.cpp, SGLang, run LLM locally
 ---
 
 :::warning
@@ -14,13 +16,15 @@ head:
 
 # 使用 Ollama、vLLM、llama.cpp 和 SGLang 运行本地大模型
 
-Olares v1.12.6 推出了 **Model Console**，一个用于管理本地大语言模型（LLM）全生命周期的平台。该平台提供四个引擎基座应用，每个基于不同的推理引擎构建：**Ollama 引擎基座**、**vLLM 引擎基座**、**llama.cpp 引擎基座**和**SGLang 引擎基座**。
+<VersionRouteSelect />
 
-选择你所需引擎对应的基座应用，克隆它来部署模型，然后通过专属控制台运行和管理该模型。
+Olares 提供四个引擎基座应用，每个基于不同的推理引擎构建：**Ollama 引擎基座**、**vLLM 引擎基座**、**llama.cpp 引擎基座**和**SGLang 引擎基座**。
+
+选择所需引擎对应的基座应用，克隆它来部署模型。在模型应用中确认部署就绪后，通过 Router 查看模型详情并连接客户端。
 
 ## 开始之前
 
-- 你的 Olares 系统已升级至 v1.12.6 或更高版本。
+- 你的 Olares 系统已升级至 v1.12.7 或更高版本。
 - 如果你想跳过手动配置、快速体验模型，可以直接从 Market 安装预构建的模型应用。这些应用打包了 Olares 验证推荐的模型与引擎组合。
 
   ::: details 查看可用的预构建模型应用
@@ -133,7 +137,7 @@ Olares v1.12.6 推出了 **Model Console**，一个用于管理本地大语言�
 
 ## 监控部署并配置模型服务
 
-打开内置的模型控制台，跟踪模型下载、确认模型与引擎就绪、配置客户端访问，并查看 GPU 占用与性能。
+在模型应用的 Model Console 中跟踪下载进度，确认模型是否就绪、引擎是否运行。模型详情、上下文配置和客户端连接信息均在 Router 中查看。
 
 1. 在引擎基座应用详情页的 **Instances** 面板中找到该模型实例，或在 Launchpad 中找到它。
 2. 打开它，启动专属的模型控制台。
@@ -149,86 +153,28 @@ Olares v1.12.6 推出了 **Model Console**，一个用于管理本地大语言�
 
     如果任一状态一直未就绪，请参考[模型或引擎未就绪](/zh/manual/help/ts-model-engine-not-ready.md)。
 
-4. 当引擎显示 `Running` 后，配置客户端应用如何访问该服务。
+### 在 Router 中查看模型详情
 
-    - **Connection source**：选择客户端的运行位置。
-        - **Apps in Olares**：用于在 Olares 内运行的应用。
-        - **Devices on your network**：用于同一局域网内的设备。
-        - **Remote**：用于通过公网访问，需先在 LarePass 中开启 VPN。
-    - **API format**：选择客户端所需的 API 风格：**Ollama**、**OpenAI-Compatible** 或 **Anthropic-Compatible**。
-    - **Base URL**：复制客户端应用连接服务所用的 URL。
-    - **Supported endpoints**：展开此列表可查看所选 API 格式暴露的每个端点，包括其 HTTP 方法、路径和用途。
+部署完成后，打开 Router 查看模型能力、上下文窗口和引擎参数。以下以 Qwen3.8-27B (llama.cpp) 为例：
 
-5. 选择 **Configuration** 标签页查看模型详情：
+<!--@include: ../reusables/ai-service-connections.md#model-context-window-->
 
-    ![Configuration 标签页](/images/manual/olares/llm-base-model-console-config.png#bordered)
-
-    - **Model**：显示模型名称、模式，以及该实例暴露的能力标签。
-    - **Parameters**：查看引擎参数。展开 **Advanced parameters** 查看完整参数，并可在 **Form** 和 **Raw** 之间切换视图。
-
-6. 在 **GPU residency** 部分，点击 **Detect**，然后：
-
-    - **查看模式**：确认模型运行在哪种模式下。
-        - **Full GPU**：整个模型运行在 GPU 上。这是速度最快的状态，也是安装时选择 GPU 加速器后的预期状态。
-        - **CPU** 或 **Split**：模型的一部分或全部运行在 CPU 上，会让推理变慢。
-            - 如果安装时选择了 CPU 加速器，`CPU` 是预期状态。
-            - 如果安装时选择了 GPU 加速器，请检查 `[ENGINE]_REQUIRED_GPU_MEMORY` 设置和引擎参数。
-    - **查看显存占用**：查看 **VRAM**、**KV cache used** 和 **GPU memory utilization**，了解模型占用了多少显存，以及还剩多少余量用于更长的上下文或更多并发请求。
-
-7. 在 **Performance** 部分，点击 **Run test** 测量两项响应速度指标。用它们对比不同的量化级别、上下文长度或引擎参数，并在采用某项改动前先验证它确实提升了速度：
-
-    - **TTFT**（Time To First Token，首字延迟）：你等待第一个字出现的时长。值越低，模型响应越快。
-    - **Cold start**（冷启动）：引擎从零加载模型所需的时间，例如重启后。值越低，模型越快可以对外服务。
+如需调整引擎参数，点击模型卡片中的 **Edit**。保存更改后的参数会重新启动引擎。
 
 ## 将客户端应用连接到模型服务
 
-模型实例运行后，任何使用 OpenAI 兼容 API 的客户端应用都可以通过 Base URL 连接它。
+在 Olares 1.12.7 及更高版本中，客户端通过 Router 连接模型实例。Router 提供客户端使用的地址、模型名称和访问控制。
 
-下面的示例以 [OpenCode](./opencode.md) 作为客户端。
+1. 从 Launchpad 打开 Router，在 **LLM** 中找到聊天模型。发送请求前，确认状态为 **Callable**；如果不可用，查看状态下方显示的原因。
+2. 在 **Default models** 中将该实例设为默认聊天模型。应用教程使用 Qwen3.8-27B (llama.cpp)，你也可以选择在本教程中创建的聊天模型实例。
+3. 返回模型所在行，点击 **View connection example**。对于安装在 Olares 中的客户端，选择 **Apps in Olares**，然后复制 **Base URL**，保留 `/v1` 后缀。
 
-1. 在模型控制台中进入 **Status** 标签页。在 **Service status** 下：
+   ![复制 Router 连接信息](/images/manual/use-cases/router-how-to-call-model.png#bordered)
 
-    - **Connection source**：选择 **Apps in Olares**，因为 OpenCode 在 Olares 内运行。
-    - **API format**：选择 **OpenAI-Compatible**。
-    - 复制 **Base URL**，并记下 **Model name**。
+4. 按照[将 OpenCode 连接到自定义提供方](opencode.md#连接到自定义提供方)操作，使用 Router 的 Base URL，并手动添加 `default-chat` 作为模型 ID。如果希望客户端始终使用该实例，不随默认模型更改，请改用 Router 中的完整**模型名称**。
+5. 在 OpenCode 中发送一条简短消息，然后在 Router 的 **Usage** 中确认请求使用了预期的模型。
 
-2. 在 OpenCode 中，点击左下角的 <i class="material-symbols-outlined">settings</i>，选择 **Providers**，向下滚动并点击 **Custom Provider** 旁的 **Connect**。
-
-3. 填写以下信息：
-
-    - **Provider ID**：该 provider 的唯一标识符。例如 `olares-llm`。
-    - **Display name**：在 provider 列表中显示的名称。例如 `Olares LLM`。
-    - **Base URL**：你从模型控制台复制的 **Base URL**。
-    - **Models**：
-        - **Model ID**：你的 `MODEL_NAME`。例如 `Qwen3.6-35B-A3B`。
-        - **Display Name**：该模型显示的名称。例如 `Qwen3.6 35B A3B`。
-
-4. 点击 **Submit** 保存配置。该 provider 会出现在 provider 列表中。
-5. 运行一个任务来测试连接。本示例使用 Olares skills 将一个应用部署到 Olares。
-
-    a. 在顶部点击 **Search** 字段，选择 **Toggle terminal** 打开终端。
-
-    b. 登录 Olares CLI 以使用内置 Olares skills。将 `alice123@olares.com` 替换为你自己的 Olares ID。
-
-    ```bash
-    olares-cli profile login --olares-id alice123@olares.com
-    ```
-
-    c. 出现提示时，输入你的 Olares 密码并按 **Enter**。输入内容不会显示。
-
-    d. 如果你的 Olares 开启了两步验证，CLI 会提示你输入该 Olares ID 的两步验证码。在 LarePass 中获取 6 位验证码，输入后按 **Enter**。
-
-    e. 在聊天框下方，选择 **Big Pickle** 打开模型选择器，再从列表中选择 **Qwen3.6 35B A3B**。
-
-    f. 发送任务。下面的示例使用 `dockersamples/101-tutorial`，一个适合初学者的 Docker 教程 Web 应用。
-
-    ```text
-    Deploy this app to Olares: https://github.com/dockersamples/101-tutorial
-    ```
-
-    g. 如果出现提示，按提示操作直到部署完成。然后你可以在启动台和 **My Olares** 中找到该应用。
-
-    ![部署到 My Olares 的应用](/images/manual/olares/llm-base-model-inst-task1.png#bordered)
+外部客户端需使用对应连接标签页中的地址和 Router 签发的 API 密钥。嵌入模型实例应使用完整模型名称，不能使用 `default-chat`。详情见[连接 AI 应用](/zh/manual/best-practices/connect-ai-apps.md)。
 
 ## 参考资料
 

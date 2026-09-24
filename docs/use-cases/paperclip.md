@@ -1,4 +1,6 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /use-cases/paperclip
 outline: [2, 3]
 description: Run Paperclip on Olares to coordinate AI agents backed by Claude Code, Codex, OpenCode, Cursor, and other providers through shared issues.
 head:
@@ -7,14 +9,25 @@ head:
       content: Olares, Paperclip, AI agent, multi-agent, Claude Code, Codex, OpenCode, Cursor, self-hosted
 app_version: "1.0.22"
 doc_version: "1.1"
-doc_updated: "2026-06-12"
+doc_updated: "2026-09-23"
 ---
 
 # Coordinate multiple AI agents with Paperclip
 
+<VersionRouteSelect />
+
 Paperclip is an open-source platform for coordinating multiple AI agents under one unified workspace. By setting up a virtual company, you add AI agents powered by Claude Code, Codex, OpenCode, Cursor, or other providers, and assign them issues to work on. Whether the task involves coding, research, or content creation, Paperclip manages the workflow.
 
 Running Paperclip as a self-hosted app on Olares ensures that your API keys, task history, and agent outputs remain entirely private on your device.
+
+## Prerequisites
+
+Before you begin, you need:
+
+<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
+- Qwen3.8-27B (llama.cpp) installed from Market, if you plan to use a local model.
+
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## Learning objectives
 
@@ -204,13 +217,13 @@ This optional workflow uses the following model:
 
 | Model | How to get it |
 | :--- | :--- |
-| Qwen3.6-27B (llama.cpp) | Install from Market |
+| Qwen3.8-27B (llama.cpp) | Install from Market |
 
 <!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
-The model name is `unsloth/Qwen3.6-27B-GGUF:Q4_K_M`.
+The model name is `default-chat`.
 
 ### Configure the local model in OpenCode
 
@@ -225,19 +238,19 @@ This OpenCode runs inside the Paperclip container and is separate from the OpenC
 
    b. Rename `opencode.jsonc` to `opencode.json` and open it in edit mode.
 
-   c. Replace the default configuration with the following example. Replace `<base-url>` with the Base URL copied from Model Console. If Model Console shows a different model name, replace every occurrence of `unsloth/Qwen3.6-27B-GGUF:Q4_K_M` with that exact value.
+   c. Replace the default configuration with the following example. Replace `<base-url>` with the Base URL copied from Router. Keep `default-chat` to follow the default model configured in Router.
 
    ```json {wrap}
    {
      "$schema": "https://opencode.ai/config.json",
-     "model": "olares/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
+     "model": "olares/default-chat",
      "provider": {
        "olares": {
-         "name": "Qwen3.6-27B",
+         "name": "Qwen3.8-27B",
          "npm": "@ai-sdk/openai-compatible",
          "models": {
-           "unsloth/Qwen3.6-27B-GGUF:Q4_K_M": {
-             "name": "Qwen3.6-27B"
+           "default-chat": {
+             "name": "Qwen3.8-27B"
            }
          },
          "options": {
@@ -248,14 +261,18 @@ This OpenCode runs inside the Paperclip container and is separate from the OpenC
    }
    ```
 
+   <!--
+   TODO: 素材清单 15，待补 Router 截图：paperclip-opencode-config-router.png；替换下方旧图后再取消注释。
+   ![OpenCode local model in agent config](/images/manual/use-cases/paperclip-opencode-model-config.png#bordered)
+   -->
+
+
    :::tip OpenAI-compatible Base URL
-   The Base URL for Qwen3.6-27B already ends with `/v1`. If you use an Ollama-based model instead, select **OpenAI-Compatible** in Model Console and copy the Base URL displayed there. If you use an Ollama-format Base URL obtained elsewhere, append `/v1` so OpenCode can access its OpenAI-compatible API.
+   Copy the Router Base URL with `/v1` included. The backend engine does not change this client-facing URL.
    :::
 
 3. Restart the Paperclip container.
 4. In Paperclip, go to **Agents** > **Configuration** > **Permissions & Configuration** to verify the newly added local model.
-
-   ![OpenCode local model in agent config](/images/manual/use-cases/paperclip-opencode-model-config.png#bordered)
 
    :::warning
    If you do not plan to use the default `openai/gpt-5.1-codex-mini` as the cheap model, be sure to turn this feature off or switch to another available model.
@@ -267,7 +284,7 @@ You can monitor the execution process and result in the task's **Activity** > **
 
 - Ask the CEO to hire a new agent:
    - **Task title:** Hire a CMO
-   - **Task description:** Hire a content generation agent that uses opencode as the runtime and olares/unsloth/Qwen3.6-27B-GGUF:Q4_K_M as the model.
+   - **Task description:** Hire a content generation agent that uses opencode as the runtime and olares/default-chat as the model.
 
    ![Agent run activity](/images/manual/use-cases/paperclip-agent-run-activity.png#bordered)
 

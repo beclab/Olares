@@ -1,20 +1,24 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /use-cases/nemoclaw
 outline: [2, 3]
-description: Run NemoClaw on Olares with Qwen3.6-27B as a local LLM. Set up an always-on AI agent backed by the NVIDIA OpenShell runtime, with no cloud API required.
+description: Run NemoClaw on Olares with Qwen3.8-27B as a local LLM. Set up an always-on AI agent backed by the NVIDIA OpenShell runtime, with no cloud API required.
 head:
   - - meta
     - name: keywords
       content: Olares, NemoClaw, NVIDIA, OpenShell, OpenClaw, local LLM, AI assistant, Discord, web search, ClawHub, skills, plugins
 app_version: "1.0.8"
 doc_version: "1.2"
-doc_updated: "2026-07-29"
+doc_updated: "2026-09-23"
 ---
 
 # Run NemoClaw with a local LLM
 
+<VersionRouteSelect />
+
 NemoClaw is an open-source reference stack from NVIDIA that runs OpenClaw with the NVIDIA OpenShell runtime bundled.
 
-This guide walks you through running NemoClaw on Olares with the Qwen3.6-27B (llama.cpp) model app as the backend LLM.
+This guide walks you through running NemoClaw on Olares with the Qwen3.8-27B (llama.cpp) model app as the backend LLM.
 
 :::warning Alpha software
 NemoClaw is an early preview release from NVIDIA and is not recommended for production use. For official updates and community feedback, see [NVIDIA/NemoClaw](https://github.com/NVIDIA/NemoClaw).
@@ -33,24 +37,19 @@ In this guide, you will learn how to:
 
 Before you begin, you need:
 
+<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - Admin privileges to install apps from Market and edit application settings.
 - The following model:
 
   | Model type | Model | How to get it |
   | :--- | :--- | :--- |
-  | Chat | Qwen3.6-27B (llama.cpp) | Install from Market|
+  | Chat | Qwen3.8-27B (llama.cpp) | Install from Market|
+
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## Get model connection details
 
-<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
-
-NemoClaw needs the model name and its shared endpoint URL during installation.
-
-For Qwen3.6-27B (llama.cpp), NemoClaw uses the OpenAI-compatible API format:
-
-1. Open the model app from Launchpad. Its Model Console opens automatically.
-2. Wait until **Model** shows **READY** and **Engine** shows **RUNNING**.
-3. Under **Service status**, make sure **Apps in Olares** is selected. Copy the **Model name** and **Base URL** exactly as shown.
+<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
 ## Install NemoClaw
 
@@ -61,10 +60,14 @@ For Qwen3.6-27B (llama.cpp), NemoClaw uses the OpenAI-compatible API format:
 2. Click **Get**, then **Install**.
 3. When prompted, set the environment variables:
 
-   - **NEMOCLAW_ENDPOINT_URL**: Paste the Base URL copied from the Qwen3.6-27B Model Console. Use it exactly as displayed.
-   - **NEMOCLAW_MODEL**: Enter the Model name copied from the Model Console. In this example, it is `unsloth/Qwen3.6-27B-GGUF:Q4_K_M`.
+   - **NEMOCLAW_ENDPOINT_URL**: Paste the Base URL copied from Router. Use it exactly as displayed.
+   - **NEMOCLAW_MODEL**: Enter `default-chat`.
 
+   <!--
+   TODO: 素材清单 08，待补 Router 截图：nemoclaw-env-router.png；替换下方旧图后再取消注释。
    ![Set environment variables for NemoClaw](/images/manual/use-cases/nemoclaw-set-environment-variables.png#bordered){width=70%}
+   -->
+
 
    :::tip
    You can change these environment variables later in **Settings** > **Applications** > **NemoClaw** > **Manage environment variables**.

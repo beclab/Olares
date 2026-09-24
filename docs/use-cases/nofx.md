@@ -1,4 +1,6 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /use-cases/nofx
 outline: deep
 title: Set up an autonomous trading agent with NOFX
 description: Run NOFX, an open-source autonomous AI trading agent, on Olares. Fund an AI wallet, connect an exchange, configure a strategy, and let the agent trade.
@@ -8,10 +10,12 @@ head:
       content: Olares, NOFX, AI trading, autonomous agent, crypto, Hyperliquid, self-hosted
 app_version: "1.0.12"
 doc_version: "1.2"
-doc_updated: "2026-08-03"
+doc_updated: "2026-09-23"
 ---
 
 # Set up an autonomous AI trading agent with NOFX
+
+<VersionRouteSelect />
 
 NOFX is an open-source autonomous AI trading agent. Unlike traditional AI tools that require you to configure models, manage API keys, and wire up data sources, NOFX senses the market, picks a model, and pulls the data on its own. You set the strategy, and the agent handles the rest.
 
@@ -207,30 +211,19 @@ Yes, you can use a local model, but ensure it meets the following requirements:
 - It must support OpenAI-compatible API calls.
 - It needs strong instruction-following capabilities, a sufficient context window, and fast inference speeds. Otherwise, the model might fail to output valid trading instructions.
 
-To configure a local model:
-<!-- #region get-model-connection-details -->
-1. Open the model app from Launchpad. Its Model Console opens automatically.
-2. Wait until **Model** shows **READY** and **Engine** shows **RUNNING**.
+Before connecting a local model, you need:
 
-   ![Qwen3.6-27B model console](/images/manual/use-cases/qwen3.6-27b-model-console1.png#bordered)
+<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
+- Qwen3.8-27B (llama.cpp) installed from Market.
 
-3. Under **Model**, copy the **Model name** exactly as shown.
-4. Under **Engine**:
-
-   a. **Connection source**: Select **Apps in Olares**. 
-   
-   b. **API format**: Select **OpenAI-Compatible**.
-   
-   c. Copy the provided **Base URL** exactly as shown.
-
-<!-- #endregion get-model-connection-details -->
+<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 5. Open NOFX, and click **+ MODELS_CONFIG** on the **Config** page.
 6. Click **Other API Providers**, and then select **OpenAI**.
 7. Specify the following settings:
 
    - **API Key**: Enter any text string such as `local`.
-   - **Base URL**: Enter the **Base URL** copied from the Model Console. Ensure the URL ends with `/v1`.
-   - **Model Name (Optional)**: Enter the **Model name** copied from the Model Console.
+   - **Base URL**: Enter the **Base URL** copied from Router. Ensure the URL ends with `/v1`.
+   - **Model Name (Optional)**: 填写 `default-chat`。
 
 8. Click **Save Configuration**.
 

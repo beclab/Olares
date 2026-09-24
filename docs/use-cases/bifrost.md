@@ -33,7 +33,7 @@ Before you begin, you need the following model:
 | :--- | :--- | :--- |
 | Chat | Qwen3.6-27B (llama.cpp) | Install from Market |
 
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
+<!--@include: ../reusables/ai-service-connections-1.12.6.md#use-different-model-->
 
 ## Install Bifrost
 
@@ -49,7 +49,7 @@ In Bifrost, a model provider represents the engine hosting your AI models. You c
 
 ### Get model connection details
 
-<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
+<!--@include: ../reusables/ai-service-connections-1.12.6.md#get-model-connection-details-->
 
 ### Configure the model provider in Bifrost
 

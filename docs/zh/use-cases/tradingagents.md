@@ -1,4 +1,6 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /zh/use-cases/tradingagents
 outline: [2, 3]
 description: 在 Olares 上运行 TradingAgents，通过多个 AI 智能体模拟专业金融交易公司。配置本地模型、分析金融市场并生成交易策略。
 head:
@@ -7,7 +9,7 @@ head:
       content: Olares, TradingAgents, AI trading, multi-agent, local LLM, Ollama, market analysis, financial research
 app_version: "1.0.7"
 doc_version: "2.0"
-doc_updated: "2026-08-03"
+doc_updated: "2026-09-23"
 ---
 
 :::warning
@@ -15,6 +17,8 @@ doc_updated: "2026-08-03"
 :::
 
 # 使用 TradingAgents 分析金融市场
+
+<VersionRouteSelect />
 
 TradingAgents 是一个多智能体金融交易框架，模拟真实交易公司的运作方式。它部署专门的 AI 智能体来评估市场状况、辩论策略并提供交易决策。这些智能体包括基本面分析师、情绪专家、技术分析师、交易员和风险经理。
 
@@ -38,13 +42,14 @@ TradingAgents 项目开发者、贡献者和 Olares 对因使用本项目而导�
 
 ## 前提条件
 
-开始前，您需要：
+开始前，你需要：
 
-以下模型：
+<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
+- 以下模型：
 
-| 模型类型 | 模型 | 获取方式 |
-| :--- | :--- | :--- |
-| 聊天 | Gemma 4 26B (Ollama) | 从 Market 安装 |
+  | 模型类型 | 模型 | 获取方式 |
+  | :--- | :--- | :--- |
+  | 聊天 | Qwen3.8-27B (llama.cpp) | 从 Market 安装 |
 
 <!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
@@ -62,28 +67,20 @@ TradingAgents 项目开发者、贡献者和 Olares 对因使用本项目而导�
 
 ### 获取模型连接信息
 
-1. 从 Launchpad 打开模型应用。其模型控制台会自动打开。
-2. 等待 **Model** 显示 **READY**，且 **Engine** 显示 **RUNNING**。
-
-   <!--![Gemma4 26B model console](/images/manual/use-cases/gemma4-26b-model-console1.png#bordered)-->
-
-3. 在 **Model** 部分，按显示内容原样复制 **Model name**。
-4. 在 **Engine** 部分：
-
-   a. **Connection source**：选择 **Apps in Olares**。 
-   
-   b. **API format**：选择 **Ollama**。
-   
-   c. 按显示内容原样复制 **Base URL** 地址。
+<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
 ### 配置 TradingAgents
 
 1. 打开 Settings，然后进入 **Applications** > **TradingAgents** > **Manage environment variables**。
 2. 点击 <i class="material-symbols-outlined">edit_square</i> 旁边的 `OLLAMA_BASE_URL`。
 
-   ![Configure environment variables](/images/manual/use-cases/tradingagents-env-vars1.png#bordered){width=70%}
+3. 输入从 Router 复制的 **Base URL**，保留末尾的 `/v1`。例如，`https://router.<your-olares-domain>/v1`。
 
-3. 输入从模型控制台复制的 **Base URL**，并在末尾追加 `/v1`。例如，`https://74bfa5ee.laresprime.olares.com/v1`。
+   <!--
+   TODO: 素材清单 16，待补 Router 截图：tradingagents-env-router.png；替换下方旧图后再取消注释。
+   ![Configure environment variables](/images/manual/use-cases/tradingagents-env-vars1.png#bordered){width=70%}
+   -->
+
 4. 点击 **Confirm**，然后点击 **Apply**。
 
    :::tip 连接云模型
@@ -127,11 +124,11 @@ TradingAgents 项目开发者、贡献者和 Olares 对因使用本项目而导�
       更深入的研究需要显著更多的处理时间。对于初始运行，请选择最低深度以了解工作流程，然后再开始全面分析。
       :::
       
-   f. **Select Your LLM Provider**：选择 **Ollama**。
+   f. **Select Your LLM Provider**：选择 **Ollama**，即应用中的本地 OpenAI 兼容连接选项。
    
-   g. **Select Your [Quick-Thinking LLM Engine]**：选择用于快速分析的模型。如果您的本地模型未列出，请选择 **Custom model ID**，然后输入从模型控制台复制的精确模型名称。
+   g. **Select Your [Quick-Thinking LLM Engine]**：选择用于快速分析的模型。如果您的本地模型未列出，请选择 **Custom model ID**，然后输入从 Router 复制的精确模型名称。
    
-   h. **Select Your [Deep-Thinking LLM Engine]**：选择用于深度分析的模型。如果您的本地模型未列出，请选择 **Custom model ID**，然后输入从模型控制台复制的精确模型名称。
+   h. **Select Your [Deep-Thinking LLM Engine]**：选择用于深度分析的模型。如果您的本地模型未列出，请选择 **Custom model ID**，然后输入从 Router 复制的精确模型名称。
 
 ## 查看分析报告
 

@@ -1,4 +1,6 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /use-cases/pdfmathtranslate
 outline: [2, 4]
 title: Translate scientific PDFs in PDFMathTranslate
 description: Run PDFMathTranslate on Olares with a local OpenAI-compatible model to translate scientific PDFs while preserving page layouts, formulas, and other technical content.
@@ -9,6 +11,8 @@ head:
 ---
 
 # Translate scientific PDFs while preserving layout
+
+<VersionRouteSelect />
 
 PDFMathTranslate is an application designed to translate scientific PDF documents while retaining the original layout and mathematical formulas.
 
@@ -22,11 +26,16 @@ By the end of this tutorial, you are able to:
 
 ## Prerequisites
 
-Before you begin, you need the following model:
+Before you begin, you need:
 
-| Used for | Model | How to get it |
-| :--- | :--- | :--- |
-| Translation | Qwen3.6-27B (llama.cpp) | Install from Market |
+<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
+- The following model:
+
+  | Used for | Model | How to get it |
+  | :--- | :--- | :--- |
+  | Translation | Qwen3.8-27B (llama.cpp) | Install from Market |
+
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## Install PDFMathTranslate
 
@@ -58,22 +67,22 @@ In the **File** area, select your input **Type**:
 
 ### Get model connection details
 
-PDFMathTranslate connects to Qwen3.6-27B through its OpenAI-compatible API.
+PDFMathTranslate connects to Qwen3.8-27B through its OpenAI-compatible API.
 
 <!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
-For Qwen3.6-27B (llama.cpp):
+For Qwen3.8-27B (llama.cpp):
 
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
-Use the **OpenAI-Compatible** API format. The model name is `unsloth/Qwen3.6-27B-GGUF:Q4_K_M`.
+Use the **OpenAI-Compatible** API format. The model name is `default-chat`.
 
 ### Configure the translation service
 
 1. In PDFMathTranslate, select **OpenAI** from the **Service** list.
-2. In the **OPENAI_BASE_URL** field, enter the Base URL copied from Model Console.
+2. In the **OPENAI_BASE_URL** field, enter the Base URL copied from Router.
 3. In the **OPENAI_API_KEY** field, enter any non-empty value, such as `none`. The local model endpoint does not require an API key.
-4. In the **OPENAI_MODEL** field, enter the copied Model name.
+4. In the **OPENAI_MODEL** field, enter `default-chat`.
 
 ### Select languages and scope
 

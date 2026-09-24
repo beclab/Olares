@@ -1,4 +1,6 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /zh/use-cases/claude-code
 outline: [2, 3]
 description: 在 Olares 上设置 Claude Code，通过自然语言编写、测试和管理代码。通过 OAuth 或本地模型连接。
 head:
@@ -7,7 +9,7 @@ head:
       content: Olares, Claude Code, Anthropic, AI coding, Ollama, terminal, TUI, self-hosted
 app_version: "0.1.13"
 doc_version: "2.0"
-doc_updated: "2026-07-29"
+doc_updated: "2026-09-23"
 ---
 
 :::warning
@@ -15,6 +17,8 @@ doc_updated: "2026-07-29"
 :::
 
 # 使用 Claude Code 编写代码
+
+<VersionRouteSelect />
 
 Claude Code 是一个 AI 编码助手，帮助你使用自然语言编写、测试和管理代码。在 Olares 上，这个命令行界面运行在基于浏览器的终端中，配备了预配置的 Ubuntu 开发环境。
 
@@ -29,13 +33,13 @@ Claude Code 是一个 AI 编码助手，帮助你使用自然语言编写、测�
 ## 前提条件
 
 开始前，你需要：
-- 具有足够磁盘空间和内存的 Olares 设备。
-- 如果你计划使用远程模型连接，需要活跃的 Claude Pro 或 Max 订阅。
-- 如果你计划使用本地执行，需要在 Olares 设备上运行一个针对编码优化的本地模型。本教程使用以下模型：
 
-   | 模型类型 | 模型 | 获取方式 |
-   | :--- | :--- | :--- |
-   | 聊天 | Qwen3.6-27B (llama.cpp) | 从应用市场安装 |
+<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
+
+根据连接方式，准备以下其中一项：
+
+- **Claude**：有效的 Claude Pro 或 Max 订阅。
+- **本地模型**：从应用市场安装 Qwen3.8-27B (llama.cpp)。
 
 <!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
@@ -77,7 +81,7 @@ Claude Code 是一个 AI 编码助手，帮助你使用自然语言编写、测�
 
 ### 使用本地模型连接
 
-使用此方法在本地运行 Claude Code。此示例使用模型应用 **Qwen3.6-27B (llama.cpp)**。
+使用此方法在本地运行 Claude Code。此示例使用模型应用 **Qwen3.8-27B (llama.cpp)**。
 
 <!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
@@ -86,11 +90,15 @@ Claude Code 是一个 AI 编码助手，帮助你使用自然语言编写、测�
 5. 打开 Olares Settings，前往 **Applications** > **Claude Code** > **Manage environment variables**。
 6. 设置以下环境变量：
 
-   - **ANTHROPIC_AUTH_TOKEN**: 输入任何文本，例如 `local`。模型应用不会验证此值，但 Claude Code 需要一个填充的认证令牌。
-   - **ANTHROPIC_BASE_URL**: 输入从模型控制台复制的 **Base URL**。例如，`https://e46e044d.laresprime.olares.com`。
-   - **ANTHROPIC_MODEL**: 输入从模型控制台复制的**模型名称**。例如，`unsloth/Qwen3.6-27B-GGUF:Q4_K_M`。
+   - **ANTHROPIC_AUTH_TOKEN**: 输入任何文本，例如 `local`。Router 通过平台识别 Olares 内应用；Claude Code 仍要求此字段非空。
+   - **ANTHROPIC_BASE_URL**: 输入从 Router 复制的 **Base URL**。例如，`https://router.<your-olares-domain>`。
+   - **ANTHROPIC_MODEL**: 填写 `default-chat`。
 
-   ![Claude Code 环境变量设置](/images/manual/use-cases/claude-env-var1.png#bordered){width=70%}  
+   <!--
+   TODO: 素材清单 02，待补 Router 截图：claude-code-env-router.png；替换下方旧图后再取消注释。
+   ![Claude Code 环境变量设置](/images/manual/use-cases/claude-env-var1.png#bordered){width=70%}
+   -->
+
 
 7. 点击 **Apply**。等待约 10 秒让容器重启。
 8. 从 Launchpad 打开 Claude Code CLI，然后在终端中输入 `claude` 以启动你的会话。

@@ -6,7 +6,7 @@ head:
     - name: keywords
       content: Olares, Blender, Lares, MCP, 3D modeling, rendering, animation
 app_version: "0.1.27"
-doc_version: "1.0"
+doc_version: "1.1"
 doc_updated: "2026-09-24"
 ---
 
@@ -14,7 +14,7 @@ doc_updated: "2026-09-24"
 
 Blender is a 3D creation suite for modeling, animation, and rendering. On Olares, you can use its desktop interface in a browser or ask Lares to work on the same scene through Model Context Protocol (MCP).
 
-This example builds a solar-system illustration in small steps, then saves an editable project and a PNG in Files. You can also turn the scene into a short looping animation.
+This guide uses Lares to build a solar-system illustration, then save an editable Blender project and a PNG in Files. You can also turn the scene into a short looping animation.
 
 ## Prerequisites
 
@@ -28,7 +28,7 @@ This example builds a solar-system illustration in small steps, then saves an ed
 
 2. Click **Get**, then **Install**, and wait for installation to complete.
 
-When the installation offers a compute mode, choose one that matches your hardware and workload:
+During installation, select a compute mode that matches your hardware and workload:
 
 | Mode | When to choose it |
 |:---|:---|
@@ -41,28 +41,28 @@ The MCP configuration is the same in all three modes. The example below does not
 ## Start Blender
 
 1. Open Blender from Launchpad and wait for the default scene to appear.
-2. Leave the Blender application running. You can close its browser tab; Lares does not need the tab to remain open.
+2. Leave the Blender application running. You can close its browser tab. Lares can continue working with the scene.
 
 The browser displays a streamed desktop. To watch scene changes with less delay, enable LarePass VPN on your computer before opening Blender.
 
 :::tip On the same local network?
-You can use the Olares `.local` address instead. See [Access Olares services locally](../manual/best-practices/local-access.md) for the address format and Windows setup. This changes how you view the desktop; Lares still uses the internal MCP entrance.
+You can use the Olares `.local` address instead. See [Access Olares services locally](../manual/best-practices/local-access.md) for the address format and Windows setup. Lares uses the internal MCP entrance regardless of how you view the desktop.
 :::
 
 ## Configure Blender in Lares
 
 1. Open Olares Settings and go to **Applications** > **Blender** > **Entrances**.
 2. Select **Blender MCP** and copy its **Endpoint** URL.
-3. Open Lares and go to **Settings** > **MCP**. Add a server with these values:
+3. Open Lares and go to **Settings** > **MCP**. Click **Add server** and enter these values:
 
    | Setting | Value |
    |:---|:---|
-   | Server name | `blender` |
-   | Transport | `Streamable HTTP` |
-   | MCP URL | The copied endpoint. Append `/mcp` only if it is missing. |
-   | Headers | `{}` |
+   | **Server name** | `blender` |
+   | **Transport** | `Streamable HTTP` |
+   | **MCP URL** | The copied endpoint. Append `/mcp` only if it is missing. |
+   | **Headers** | `{}` |
 
-4. Save and enable the server.
+4. Click **Save**. Lares connects to the server and loads its tools automatically.
 5. Start a new conversation and send:
 
    ```text
@@ -187,7 +187,7 @@ Once the still image looks right, continue in the same conversation. This exampl
 
    Drive each planet's orbit with an Empty at the origin and a linear
    frame expression: start_angle + turns * 2 * pi * (frame - 1) / 72.
-   Do not use eased keyframes. Frame 73 should match frame 1; export
+   Do not use eased keyframes. Frame 73 should match frame 1. Export
    only frames 1-72. Report the orbit counts before rendering.
    ```
 

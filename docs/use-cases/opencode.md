@@ -1,16 +1,20 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /use-cases/opencode
 outline: deep
 description: Set up OpenCode on Olares to run an AI coding agent. Connect it to a local model or OpenAI, and use natural language to write, test, and manage code.
 head:
   - - meta
     - name: keywords
-      content: Olares, OpenCode, AI coding agent, Qwen3.6, OpenAI, ChatGPT, self-hosted, code generation, TUI
+      content: Olares, OpenCode, AI coding agent, Qwen3.8, OpenAI, ChatGPT, self-hosted, code generation, TUI
 app_version: "1.0.11"
 doc_version: "1.3"
-doc_updated: "2026-07-29"
+doc_updated: "2026-09-23"
 ---
 
 # Set up OpenCode as your AI coding agent
+
+<VersionRouteSelect />
 
 OpenCode is an AI-powered coding agent that lets you write, test, and manage code through natural language. It supports multiple AI providers and can run shell commands, create files, and install development environments from a chat interface.
 
@@ -29,15 +33,19 @@ By the end of this tutorial, you will learn how to:
 
 ## Prerequisites
 
-- An Olares device with sufficient disk space and memory.
+Before you begin, you need:
+
+<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - Admin privileges to install apps from Market.
 - Additional requirements depend on how you use OpenCode:
 
    | Usage | Requirements |
    | :--- | :--- |
-   | Browser with a local model | Qwen3.6-27B (llama.cpp) installed from Market |
+   | Browser with a local model | Qwen3.8-27B (llama.cpp) installed from Market |
    | Browser with OpenAI | A ChatGPT Plus/Pro account or an OpenAI API key |
-   | OpenCode CLI on your computer | [Ollama](./ollama.md) installed on Olares with at least one model downloaded, and LarePass VPN enabled on your computer.|
+   | OpenCode CLI on your computer | A default chat model configured in Router and a Router-issued API key. |
+
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## Run OpenCode in the browser
 
@@ -62,13 +70,13 @@ For multi-local-model setups under [oh-my-openagent](opencode-omo.md), use singl
 
 <!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
-In this example, OpenCode connects to Qwen3.6-27B using the OpenAI-compatible API format:
+In this example, OpenCode connects to Qwen3.8-27B using the OpenAI-compatible API format:
 
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
 ### Connect to a custom provider
 
-Add Qwen3.6-27B as a custom provider in OpenCode.
+Add Qwen3.8-27B as a custom provider in OpenCode.
 
 1. In OpenCode, click <i class="material-symbols-outlined">settings</i> in the bottom-left corner.
    ![Open OpenCode settings](/images/manual/use-cases/opencode-settings.png#bordered)
@@ -77,15 +85,20 @@ Add Qwen3.6-27B as a custom provider in OpenCode.
    ![Select custom provider](/images/manual/use-cases/opencode-custom-provider.png#bordered)
 
 3. Enter the following details:
-   - **Provider ID**: Enter a unique identifier, such as `qwen3.6-27b`.
-   - **Display name**: Enter the name shown in the provider list, such as `Qwen3.6 27B`.
-   - **Base URL**: Paste the Base URL copied from Model Console. Use it exactly as displayed.
+   - **Provider ID**: Enter a unique identifier, such as `olares`.
+   - **Display name**: Enter the name shown in the provider list, such as `Router chat`.
+   - **Base URL**: Paste the Base URL copied from Router. Use it exactly as displayed.
    - **Models**:
-     - **Model ID**: Enter the exact Model name copied from Model Console. In this example, it is `unsloth/Qwen3.6-27B-GGUF:Q4_K_M`.
-     - **Display Name**: Enter the name shown for this model, such as `Qwen3.6 27B`.
+     - **Model ID**: Enter `default-chat`.
+     - **Display Name**: Enter the name shown for this model, such as `Router chat`.
 
 4. Click **Submit** to save the configuration. Your newly added provider will appear in the provider list.
+
+   <!--
+   TODO: 素材清单 10，待补 Router 截图：opencode-provider-router.png；替换下方旧图后再取消注释。
    ![Provider list](/images/manual/use-cases/opencode-provider-list.png#bordered)
+   -->
+
 
 ### Connect to OpenAI
 
@@ -184,7 +197,7 @@ To work with multiple projects, create subfolders under `Home/Code` first:
 You can now interact with OpenCode through the chat interface.
 
 1. Select a project to open the coding agent interface.
-2. Below the chat box, select **Big Pickle** to open the model selector, and select **Qwen3.6 27B** from the list.
+2. Below the chat box, select **Big Pickle** to open the model selector, and select **Router chat** from the list.
 3. Type a coding task in natural language.
    ![Code generation](/images/manual/use-cases/opencode-code-generation.png#bordered)
 
@@ -210,8 +223,13 @@ OpenCode also offers a terminal-based UI (TUI). You can launch it in two ways:
 2. In the terminal panel, run `opencode` to launch the TUI.
    ![Launch TUI in the OpenCode UI](/images/manual/use-cases/opencode-web-launch-tui.png#bordered)
 
-3. Use the `/models` command to switch to Qwen3.6 27B.
+3. Use the `/models` command to switch to **Router chat**.
+
+   <!--
+   TODO: 素材清单 11，待补 Router 截图：opencode-web-tui-model-router.png；替换下方旧图后再取消注释。
    ![Select model in TUI](/images/manual/use-cases/opencode-web-tui-select-model.png#bordered)
+   -->
+
 
 4. Type your prompt directly. For example, ask OpenCode to improve the code.
    ![Chat in TUI](/images/manual/use-cases/opencode-web-tui-chat.png#bordered)
@@ -224,8 +242,13 @@ OpenCode also offers a terminal-based UI (TUI). You can launch it in two ways:
 2. Run `opencode` to launch the TUI.
    ![Launch TUI in OpenCode Terminal](/images/manual/use-cases/opencode-terminal-launch-tui.png#bordered)
 
-3. Use the `/models` command to switch to Qwen3.6 27B.
+3. Use the `/models` command to switch to **Router chat**.
+
+   <!--
+   TODO: 素材清单 12，待补 Router 截图：opencode-terminal-model-router.png；替换下方旧图后再取消注释。
    ![Select model in OpenCode Terminal](/images/manual/use-cases/opencode-terminal-select-model.png#bordered)
+   -->
+
 
 4. Type your prompt directly. For example, use `@` to mention a file and ask OpenCode about it.
    ![Chat in OpenCode Terminal](/images/manual/use-cases/opencode-terminal-mention.png#bordered)
@@ -235,7 +258,7 @@ OpenCode also offers a terminal-based UI (TUI). You can launch it in two ways:
 
 ## Run OpenCode from your computer
 
-This optional workflow installs the OpenCode CLI on your computer and connects it to Ollama on Olares through LarePass VPN.
+This optional workflow installs OpenCode CLI on your computer and connects it to Olares Router using an API key.
 
 ### Install OpenCode CLI
 
@@ -280,84 +303,54 @@ This optional workflow installs the OpenCode CLI on your computer and connects i
 
    The config file is created at `~/.config/opencode/opencode.jsonc`.
 
-### Get the Ollama service endpoint
+### Get Router connection details
 
-OpenCode CLI connects to the Ollama app as a service provider.
-
-<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
-
-1. Go to Olares **Settings** > **Applications** > **Ollama** > **Entrances**.
-2. Select **Ollama API**, then copy the **Endpoint** URL.
+1. Open Router and set Qwen3.8-27B (llama.cpp) as the default chat model on **Default models**. Then find the model on **LLM** and click **View connection example**.
+2. In **How to call this model**, select **Devices in LAN** or **Remote** and copy the Base URL.
+3. Create a key on **API keys** for OpenCode on your computer. A VPN connection does not replace this key.
 
 ### Configure the connection
 
-1. Enable LarePass VPN on your computer to connect to Olares.
-   ![Enable LarePass VPN on desktop](/images/manual/get-started/larepass-vpn-desktop.png#bordered)
+1. In the terminal where you run OpenCode, set the `OLARES_ROUTER_API_KEY` environment variable to your Router-issued key.
+2. Open `~/.config/opencode/opencode.jsonc` and add the following configuration. Replace `<router-base-url>` with the full URL copied from Router, including `/v1`.
 
-   :::tip On the same local network?
-   If your computer and Olares are on the same LAN, you can skip VPN and use the `.local` domain instead. For details, see [Use `.local` domain](../manual/best-practices/local-access.md#method-2-use-local-domain).
-   :::
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "olares/default-chat",
+  "provider": {
+    "olares": {
+      "name": "Olares Router",
+      "npm": "@ai-sdk/openai-compatible",
+      "options": {
+        "baseURL": "<router-base-url>",
+        "apiKey": "{env:OLARES_ROUTER_API_KEY}"
+      },
+      "models": {
+        "default-chat": { "name": "Router chat" }
+      }
+    }
+  }
+}
+```
 
-2. Open the OpenCode config file at `~/.config/opencode/opencode.jsonc` in a text editor. Add a custom provider with your Ollama endpoint and model. The general format is:
-
-   ```json
-   {
-     "$schema": "https://opencode.ai/config.json",
-     "provider": {
-       "<provider-id>": {
-         "npm": "@ai-sdk/openai-compatible",
-         "name": "<display-name>",
-         "options": {
-           "baseURL": "<your-endpoint>/v1"
-         },
-         "models": {
-           "<model-id>": {
-             "name": "<model-display-name>"
-           }
-         }
-       }
-     }
-   }
-   ```
-
-   For example, to connect to Ollama on Olares with the Qwen3.6 27B model:
-
-   ```json
-   {
-     "$schema": "https://opencode.ai/config.json",
-     "provider": {
-       "olares-ollama": {
-         "name": "olares-ollama",
-         "npm": "@ai-sdk/openai-compatible",
-        "models": {
-           "qwen3.6:27b": {
-             "name": "Qwen3.6 27B"
-           }
-         },
-         "options": {
-           "baseURL": "<Ollama-Endpoint>/v1"
-         }
-       }
-     }
-   }
-   ```
-
-   :::info Windows WSL users
-   If you installed OpenCode in WSL, the config file path is `~/.local/share/opencode/config.json`.
-   :::
-
-3. Save the file.
+3. Save the file and restart OpenCode.
 
 ### Launch OpenCode TUI
 
 1. In your terminal, run `opencode` to launch the TUI:
    ![Launch OpenCode TUI in terminal](/images/manual/use-cases/opencode-terminal-tui.png#bordered)
 
-2. Use the `/models` command to switch to Qwen3.6 27B.
+2. Use the `/models` command to switch to **Router chat**.
+
+   <!--
+   TODO: 素材清单 13，待补 Router 截图：opencode-local-tui-model-router.png；替换下方旧图后再取消注释。
    ![Select model in terminal TUI](/images/manual/use-cases/opencode-terminal-tui-select-model.png#bordered)
+   -->
+
 
 3. Start chatting with your self-hosted models.
-   ![Chat in terminal TUI](/images/manual/use-cases/opencode-terminal-tui-chat.png#bordered)
+   ![Chat in terminal TUI](/images/manual/use-cases/router-client-connect-opencode.png#bordered)
 
 :::info First connection
 The first connection might take longer to establish.

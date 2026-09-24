@@ -1,4 +1,6 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /use-cases/openwebui
 outline: [2, 3]
 description: Self-host Open WebUI on Olares for private, local AI chat. Connect it to local models and keep conversations on your device.
 head:
@@ -7,10 +9,12 @@ head:
       content: Olares, Open WebUI, self-hosted AI platform, local LLM, open webui on olares
 app_version: "1.0.38"
 doc_version: "3.0"
-doc_updated: "2026-07-30"
+doc_updated: "2026-09-23"
 ---
 
 # Set up Open WebUI for local AI chat
+
+<VersionRouteSelect />
 
 Open WebUI is a self-hosted chat interface that lets you interact with local models on your Olares device.
 
@@ -29,11 +33,11 @@ In this guide, you will learn how to:
 
 Before you begin, you need:
 
-- An Olares device with sufficient disk space and memory
+<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - The following model:
    | Model type | Model | How to get it |
    | :--- | :--- | :--- |
-   | Chat | Qwen3.6-27B (llama.cpp) | Install from Market |
+   | Chat | Qwen3.8-27B (llama.cpp) | Install from Market |
 
 <!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
@@ -57,7 +61,7 @@ The first time you launch Open WebUI, you need to create a local administrator a
 
 ## Get model connection details
 
-To connect Open WebUI to a model, you first need to collect the model's connection information from its Model Console.
+To connect Open WebUI to a model, you first need to collect the model's connection information from Router.
 
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
@@ -68,11 +72,16 @@ With the connection details ready, add the model as an OpenAI-compatible provide
 1. In Open WebUI, click your profile icon and select **Admin Panel**.
 2. Select the **Settings** tab, and then choose **Connections** from the left sidebar.
 3. To the right of **Manage OpenAI API Connections**, click <span class="material-symbols-outlined">add</span> to add a new connection.
-4. In the **API Base URL** field, enter the **Base URL** you copied from the Model Console. For example, `https://e46e044d.laresprime.olares.com/v1`.
+4. In the **API Base URL** field, enter the **Base URL** you copied from Router. For example, `https://router.<your-olares-domain>/v1`.
 
+5. Expand **Advanced**, use **Add a Model ID** to add `default-chat`, and set **Auth** to **None** for this Olares app.
+6. Click **Save**. Open WebUI verifies the connection automatically.
+
+   <!--
+   TODO: 素材清单 14，待补 Router 截图：openwebui-connection-router.png；替换下方旧图后再取消注释。
    ![Connection established](/images/manual/use-cases/open-webui-connection-established1.png#bordered)
+   -->
 
-5. Click **Save**. Open WebUI verifies the connection automatically.
 
    When you see the "OpenAI API settings updated" message, the connection is established.
 

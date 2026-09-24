@@ -316,7 +316,7 @@ const side = {
           link: "/zh/manual/olares/settings/manage-entrance",
         },
         {
-          text: "连接 AI 应用与模型服务",
+          text: "为应用接入 AI 能力",
           link: "/zh/manual/best-practices/connect-ai-apps",
         },
         {

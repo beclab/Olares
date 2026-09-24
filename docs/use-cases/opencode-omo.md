@@ -1,4 +1,6 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /use-cases/opencode-omo
 outline: [2, 3]
 title: Run multi-agent workflows with oh-my-openagent
 description: Run oh-my-openagent with OpenCode on Olares to orchestrate multiple AI agents, choose local or external models, and use built-in MCP servers.
@@ -8,10 +10,12 @@ head:
       content: Olares, OpenCode, oh-my-openagent, OMO, multi-agent, AI coding agent, ultrawork, MCP, self-hosted
 app_version: "1.0.10"
 doc_version: "1.1"
-doc_updated: "2026-07-29"
+doc_updated: "2026-09-23"
 ---
 
 # Orchestrate multi-agent workflows with oh-my-openagent
+
+<VersionRouteSelect />
 
 oh-my-openagent (OMO) is a multi-model agent orchestration plugin for OpenCode. Once enabled, you can trigger multi-agent collaboration in OpenCode with the keyword `ultrawork` (or the alias `ulw`). Specialized agents such as Sisyphus, Hephaestus, Oracle, and Atlas divide the work and handle complex coding tasks together.
 
@@ -32,16 +36,21 @@ By the end of this tutorial, you will learn how to:
 
 Before you begin, you need:
 
+<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - Internet access for your Olares device.
 - [OpenCode installed](opencode.md) on Olares, chart version 1.0.6 or later.
 - The following models:
 
   | Used for | Model | How to get it |
   | :--- | :--- | :--- |
-  | Core agents | Qwen3.6-27B (llama.cpp) | Install from Market |
+  | Core agents | Qwen3.8-27B (llama.cpp) | Install from Market |
   | Lightweight subagents | Qwen3.5-9B (Ollama) | [Create with an Ollama Engine Base app](llm-base-apps.md#create-a-new-model-instance) |
 
 Before configuring OMO, [connect both models to OpenCode](opencode.md#connect-to-a-custom-provider).
+
+On Router's **Default models** page, set Qwen3.8-27B (llama.cpp) as the default chat model. Use one OpenCode provider with ID `olares` and the Router Base URL. Add `default-chat` for core agents. For lightweight tasks, find Qwen3.5-9B in Router, copy its full **Model name**, and add that name as a second model under the same provider.
+
+In every example below, replace `<lightweight-model-name>` with that full Router model name, including its `Olares/` prefix. This pins lightweight tasks to Qwen3.5-9B while core agents follow the default chat model.
 
 <!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
@@ -143,7 +152,7 @@ Configure `~/.config/opencode/oh-my-openagent.json` so OMO delegates work to you
 OMO uses models in two places:
 
 - **Main agent**: Select its model separately in the OpenCode model selector. This section does not change that selection.
-- **Subagents and task categories**: Assign Qwen3.6-27B to core agents and demanding tasks. Use Qwen3.5-9B for Explore, Librarian, and lightweight tasks.
+- **Subagents and task categories**: Assign Qwen3.8-27B to core agents and demanding tasks. Use Qwen3.5-9B for Explore, Librarian, and lightweight tasks.
 
 :::tip Restart required
 Restart OpenCode after every edit to `oh-my-openagent.json` to apply the changes.
@@ -158,46 +167,42 @@ Restart OpenCode after every edit to `oh-my-openagent.json` to apply the changes
 
    a. Set each agent's `model` field. The value must include the provider prefix used in OpenCode, followed by the exact model name.
 
-   b. Assign Qwen3.6-27B to the core agents and Qwen3.5-9B to Explore and Librarian. Add `"stream": false` to agents that use the Ollama model.
+   b. Assign Qwen3.8-27B to the core agents and Qwen3.5-9B to Explore and Librarian.
 
-   For example, if your providers are named `qwen3.6-27b` and `qwen3.5-9b`:
+   For example, using the `olares` provider and the two models configured above:
 
    ```json
    {
      "agents": {
-       "sisyphus": { "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M" },
-       "hephaestus": { "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M" },
-       "prometheus": { "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M" },
-       "atlas": { "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M" },
-       "explore": { "model": "qwen3.5-9b/qwen3.5:9b", "stream": false },
-       "librarian": { "model": "qwen3.5-9b/qwen3.5:9b", "stream": false }
+       "sisyphus": { "model": "olares/default-chat" },
+       "hephaestus": { "model": "olares/default-chat" },
+       "prometheus": { "model": "olares/default-chat" },
+       "atlas": { "model": "olares/default-chat" },
+       "explore": { "model": "olares/<lightweight-model-name>" },
+       "librarian": { "model": "olares/<lightweight-model-name>" }
      }
    }
    ```
 
-   :::info `"stream": false` requirement
-   Ollama's streaming mode returns NDJSON, which the SDK can't parse. Agents that use tools, especially Librarian and Explore, silently fall back to the next model in the chain if `"stream": false` is missing. This is a known Ollama limitation.
-   :::
-
-4. In the `categories` section, use Qwen3.5-9B for `quick` and `writing`. Use Qwen3.6-27B for the other categories. Keep the existing `fallback_models` entries unchanged. For example:
+4. In the `categories` section, use Qwen3.5-9B for `quick` and `writing`. Use Qwen3.8-27B for the other categories. Keep the existing `fallback_models` entries unchanged. For example:
 
    ```jsonc
    {
      "categories": {
        "visual-engineering": {
-         "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
+         "model": "olares/default-chat",
          "fallback_models": [
            // Keep the existing fallback entries unchanged
          ]
        },
        "quick": {
-         "model": "qwen3.5-9b/qwen3.5:9b",
+         "model": "olares/<lightweight-model-name>",
          "fallback_models": [
            // Keep the existing fallback entries unchanged
          ]
        },
        "writing": {
-         "model": "qwen3.5-9b/qwen3.5:9b",
+         "model": "olares/<lightweight-model-name>",
          "fallback_models": [
            // Keep the existing fallback entries unchanged
          ]
@@ -211,10 +216,10 @@ Restart OpenCode after every edit to `oh-my-openagent.json` to apply the changes
    {
      "categories": {
        "visual-engineering": {
-         "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
+         "model": "olares/default-chat",
          "fallback_models": [
            {
-             "model": "qwen3.5-9b/qwen3.5:9b"
+             "model": "olares/<lightweight-model-name>"
            },
            {
              "model": "google/gemini-3.1-pro-preview",
@@ -238,10 +243,10 @@ Restart OpenCode after every edit to `oh-my-openagent.json` to apply the changes
          ]
        },
        "ultrabrain": {
-         "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
+         "model": "olares/default-chat",
          "fallback_models": [
            {
-             "model": "qwen3.5-9b/qwen3.5:9b"
+             "model": "olares/<lightweight-model-name>"
            },
            {
              "model": "openai/gpt-5.4",
@@ -269,10 +274,10 @@ Restart OpenCode after every edit to `oh-my-openagent.json` to apply the changes
          ]
        },
        "deep": {
-         "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
+         "model": "olares/default-chat",
          "fallback_models": [
            {
-             "model": "qwen3.5-9b/qwen3.5:9b"
+             "model": "olares/<lightweight-model-name>"
            },
            {
              "model": "openai/gpt-5.4",
@@ -304,10 +309,10 @@ Restart OpenCode after every edit to `oh-my-openagent.json` to apply the changes
          ]
        },
        "artistry": {
-         "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
+         "model": "olares/default-chat",
          "fallback_models": [
            {
-             "model": "qwen3.5-9b/qwen3.5:9b"
+             "model": "olares/<lightweight-model-name>"
            },
            {
              "model": "google/gemini-3.1-pro-preview",
@@ -337,10 +342,10 @@ Restart OpenCode after every edit to `oh-my-openagent.json` to apply the changes
          ]
        },
        "quick": {
-         "model": "qwen3.5-9b/qwen3.5:9b",
+         "model": "olares/<lightweight-model-name>",
          "fallback_models": [
            {
-             "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M"
+             "model": "olares/default-chat"
            },
            {
              "model": "openai/gpt-5.4-mini"
@@ -366,10 +371,10 @@ Restart OpenCode after every edit to `oh-my-openagent.json` to apply the changes
          ]
        },
        "unspecified-low": {
-         "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
+         "model": "olares/default-chat",
          "fallback_models": [
            {
-             "model": "qwen3.5-9b/qwen3.5:9b"
+             "model": "olares/<lightweight-model-name>"
            },
            {
              "model": "anthropic/claude-sonnet-4-6"
@@ -393,10 +398,10 @@ Restart OpenCode after every edit to `oh-my-openagent.json` to apply the changes
          ]
        },
        "unspecified-high": {
-         "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
+         "model": "olares/default-chat",
          "fallback_models": [
            {
-             "model": "qwen3.5-9b/qwen3.5:9b"
+             "model": "olares/<lightweight-model-name>"
            },
            {
              "model": "anthropic/claude-sonnet-4-6"
@@ -420,10 +425,10 @@ Restart OpenCode after every edit to `oh-my-openagent.json` to apply the changes
          ]
        },
        "writing": {
-         "model": "qwen3.5-9b/qwen3.5:9b",
+         "model": "olares/<lightweight-model-name>",
          "fallback_models": [
            {
-             "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M"
+             "model": "olares/default-chat"
            },
            {
              "model": "google/gemini-3-flash-preview"
@@ -453,12 +458,11 @@ Restart OpenCode after every edit to `oh-my-openagent.json` to apply the changes
    {
      "background_task": {
        "providerConcurrency": {
-         "qwen3.6-27b": 1,
-         "qwen3.5-9b": 1
+         "olares": 3
        },
        "modelConcurrency": {
-         "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M": 1,
-         "qwen3.5-9b/qwen3.5:9b": 2
+         "olares/default-chat": 1,
+         "olares/<lightweight-model-name>": 2
        }
      }
    }
@@ -476,18 +480,18 @@ Restart OpenCode after every edit to `oh-my-openagent.json` to apply the changes
       "max_fallback_attempts": 7
     },
     "agents": {
-      "sisyphus": { "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M" },
-      "hephaestus": { "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M" },
-      "prometheus": { "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M" },
-      "atlas": { "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M" },
-      "explore": { "model": "qwen3.5-9b/qwen3.5:9b" },
-      "librarian": { "model": "qwen3.5-9b/qwen3.5:9b" }
+      "sisyphus": { "model": "olares/default-chat" },
+      "hephaestus": { "model": "olares/default-chat" },
+      "prometheus": { "model": "olares/default-chat" },
+      "atlas": { "model": "olares/default-chat" },
+      "explore": { "model": "olares/<lightweight-model-name>" },
+      "librarian": { "model": "olares/<lightweight-model-name>" }
     },
     "categories": {
       "visual-engineering": {
-        "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
+        "model": "olares/default-chat",
         "fallback_models": [
-          { "model": "qwen3.5-9b/qwen3.5:9b" },
+          { "model": "olares/<lightweight-model-name>" },
           { "model": "google/gemini-3.1-pro-preview", "variant": "high" },
           { "model": "github-copilot/gemini-3.1-pro-preview", "variant": "high" },
           { "model": "anthropic/claude-opus-4-6", "variant": "max" },
@@ -496,9 +500,9 @@ Restart OpenCode after every edit to `oh-my-openagent.json` to apply the changes
         ]
       },
       "ultrabrain": {
-        "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
+        "model": "olares/default-chat",
         "fallback_models": [
-          { "model": "qwen3.5-9b/qwen3.5:9b" },
+          { "model": "olares/<lightweight-model-name>" },
           { "model": "openai/gpt-5.4", "variant": "xhigh" },
           { "model": "google/gemini-3.1-pro-preview", "variant": "high" },
           { "model": "github-copilot/gemini-3.1-pro-preview", "variant": "high" },
@@ -508,9 +512,9 @@ Restart OpenCode after every edit to `oh-my-openagent.json` to apply the changes
         ]
       },
       "deep": {
-        "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
+        "model": "olares/default-chat",
         "fallback_models": [
-          { "model": "qwen3.5-9b/qwen3.5:9b" },
+          { "model": "olares/<lightweight-model-name>" },
           { "model": "openai/gpt-5.4", "variant": "medium" },
           { "model": "github-copilot/gpt-5.4", "variant": "medium" },
           { "model": "anthropic/claude-opus-4-6", "variant": "max" },
@@ -521,9 +525,9 @@ Restart OpenCode after every edit to `oh-my-openagent.json` to apply the changes
         ]
       },
       "artistry": {
-        "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
+        "model": "olares/default-chat",
         "fallback_models": [
-          { "model": "qwen3.5-9b/qwen3.5:9b" },
+          { "model": "olares/<lightweight-model-name>" },
           { "model": "google/gemini-3.1-pro-preview", "variant": "high" },
           { "model": "github-copilot/gemini-3.1-pro-preview", "variant": "high" },
           { "model": "anthropic/claude-opus-4-6", "variant": "max" },
@@ -534,9 +538,9 @@ Restart OpenCode after every edit to `oh-my-openagent.json` to apply the changes
         ]
       },
       "quick": {
-        "model": "qwen3.5-9b/qwen3.5:9b",
+        "model": "olares/<lightweight-model-name>",
         "fallback_models": [
-          { "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M" },
+          { "model": "olares/default-chat" },
           { "model": "openai/gpt-5.4-mini" },
           { "model": "github-copilot/gpt-5.4-mini" },
           { "model": "anthropic/claude-haiku-4-5" },
@@ -547,9 +551,9 @@ Restart OpenCode after every edit to `oh-my-openagent.json` to apply the changes
         ]
       },
       "unspecified-low": {
-        "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
+        "model": "olares/default-chat",
         "fallback_models": [
-          { "model": "qwen3.5-9b/qwen3.5:9b" },
+          { "model": "olares/<lightweight-model-name>" },
           { "model": "anthropic/claude-sonnet-4-6" },
           { "model": "github-copilot/claude-sonnet-4.6" },
           { "model": "openai/gpt-5.3-codex", "variant": "medium" },
@@ -559,9 +563,9 @@ Restart OpenCode after every edit to `oh-my-openagent.json` to apply the changes
         ]
       },
       "unspecified-high": {
-        "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
+        "model": "olares/default-chat",
         "fallback_models": [
-          { "model": "qwen3.5-9b/qwen3.5:9b" },
+          { "model": "olares/<lightweight-model-name>" },
           { "model": "anthropic/claude-sonnet-4-6" },
           { "model": "github-copilot/claude-sonnet-4.6" },
           { "model": "openai/gpt-5.3-codex", "variant": "medium" },
@@ -571,9 +575,9 @@ Restart OpenCode after every edit to `oh-my-openagent.json` to apply the changes
         ]
       },
       "writing": {
-        "model": "qwen3.5-9b/qwen3.5:9b",
+        "model": "olares/<lightweight-model-name>",
         "fallback_models": [
-          { "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M" },
+          { "model": "olares/default-chat" },
           { "model": "google/gemini-3-flash-preview" },
           { "model": "github-copilot/gemini-3-flash-preview" },
           { "model": "anthropic/claude-sonnet-4-6" },
@@ -584,12 +588,11 @@ Restart OpenCode after every edit to `oh-my-openagent.json` to apply the changes
     },
     "background_task": {
       "providerConcurrency": {
-        "qwen3.6-27b": 1,
-        "qwen3.5-9b": 1
+        "olares": 3
       },
       "modelConcurrency": {
-        "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M": 1,
-        "qwen3.5-9b/qwen3.5:9b": 2
+        "olares/default-chat": 1,
+        "olares/<lightweight-model-name>": 2
       }
     }
   }
@@ -603,7 +606,6 @@ Restart OpenCode after every edit to `oh-my-openagent.json` to apply the changes
    a. Open Settings and navigate to **Applications** > **OpenCode**.
 
    b. Click **Stop**, then **Resume**.
-
 
 ### Confirm the plugin is loaded
 
@@ -929,7 +931,7 @@ Yes. When `runtime_fallback` switches to another model, a toast notification app
 
 ## Learn more
 
-- [Set up OpenCode as your AI coding agent](opencode.md): Install OpenCode and connect it to Ollama.
+- [Set up OpenCode as your AI coding agent](opencode.md): Install OpenCode and connect it to Router.
 - [Extend OpenCode with skills and plugins](opencode-extensions.md): Add capabilities through skills and plugins.
 - [Connect AI coding assistants to up-to-date docs with Context7](context7.md#opencode): Register Context7 as a remote MCP server in OpenCode.
 - [OMO overview](https://github.com/code-yeongyu/oh-my-openagent/blob/dev/docs/guide/overview.md): Official introduction to OMO's architecture and agents.
