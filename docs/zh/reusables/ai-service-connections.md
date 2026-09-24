@@ -14,8 +14,8 @@
 <!-- #endregion model-connection-overview -->
 
 <!-- #region get-model-connection-details -->
-1. 从启动台打开 Router。在 **Default models** 页面将 Qwen3.8-27B (llama.cpp) 设为默认聊天模型，然后在 **LLM** 页面等待该模型显示 **Callable**。
-2. 点击模型所在行的 **View connection example** 图标。
+1. 从启动台打开 Router。在 **Default models** 页面将 Qwen3.8-27B (llama.cpp) 设为默认聊天模型。
+2. 进入 **LLM** 页面，找到 Qwen3.8-27B (llama.cpp)，点击模型所在行的 **View connection example** 图标。
 
    ![在 Router 中查看 Qwen3.8-27B 的连接示例](/images/manual/use-cases/router-view-connection-examp.png#bordered)
 
@@ -43,8 +43,8 @@
 <!-- #endregion app-endpoint-overview -->
 
 <!-- #region get-model-connection-details-anthropic -->
-1. 从启动台打开 Router。在 **Default models** 页面将 Qwen3.8-27B (llama.cpp) 设为默认聊天模型，然后在 **LLM** 页面等待该模型显示 **Callable**。
-2. 点击模型所在行的 **View connection example** 图标。
+1. 从启动台打开 Router。在 **Default models** 页面将 Qwen3.8-27B (llama.cpp) 设为默认聊天模型。
+2. 进入 **LLM** 页面，找到 Qwen3.8-27B (llama.cpp)，点击模型所在行的 **View connection example** 图标。
 
    ![在 Router 中查看 Qwen3.8-27B 的连接示例](/images/manual/use-cases/router-view-connection-examp.png#bordered)
 

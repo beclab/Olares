@@ -14,8 +14,8 @@ This guide uses Qwen3.8-27B (llama.cpp) as the default chat model. For connectio
 <!-- #endregion model-connection-overview -->
 
 <!-- #region get-model-connection-details -->
-1. Open Router from Launchpad. On **Default models**, set Qwen3.8-27B (llama.cpp) as the default chat model. On **LLM**, wait until that model shows **Callable**.
-2. On the model row, click **View connection example**.
+1. Open Router from Launchpad. On **Default models**, set Qwen3.8-27B (llama.cpp) as the default chat model.
+2. Go to **LLM**, find Qwen3.8-27B (llama.cpp), and click **View connection example** on its row.
 
    ![View the Qwen3.8-27B connection example in Router](/images/manual/use-cases/router-view-connection-examp.png#bordered)
 
@@ -43,8 +43,8 @@ When a client connects to another Olares app, it uses that app's endpoint as the
 <!-- #endregion app-endpoint-overview -->
 
 <!-- #region get-model-connection-details-anthropic -->
-1. Open Router from Launchpad. On **Default models**, set Qwen3.8-27B (llama.cpp) as the default chat model. On **LLM**, wait until that model shows **Callable**.
-2. On the model row, click **View connection example**.
+1. Open Router from Launchpad. On **Default models**, set Qwen3.8-27B (llama.cpp) as the default chat model.
+2. Go to **LLM**, find Qwen3.8-27B (llama.cpp), and click **View connection example** on its row.
 
    ![View the Qwen3.8-27B connection example in Router](/images/manual/use-cases/router-view-connection-examp.png#bordered)
 
