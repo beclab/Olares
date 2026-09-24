@@ -1,6 +1,7 @@
 ---
 outline: [2, 3]
 description: Match common Olares symptoms to troubleshooting guides for apps, AI, networking, storage, accounts, and Olares One hardware.
+pageClass: troubleshooting-guide
 ---
 
 # Troubleshoot Olares

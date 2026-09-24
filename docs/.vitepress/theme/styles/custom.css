@@ -4,3 +4,14 @@
   white-space: normal;
   overflow-wrap: break-word;
 }
+
+/* Keep symptom and guide columns balanced in the troubleshooting index. */
+.troubleshooting-guide table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.troubleshooting-guide th:first-child,
+.troubleshooting-guide td:first-child {
+  width: 40%;
+}

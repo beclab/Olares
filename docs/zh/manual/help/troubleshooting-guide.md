@@ -1,6 +1,7 @@
 ---
 outline: [2, 3]
 description: 根据现象查找应用、AI、网络、存储、账号和 Olares One 硬件对应的故障排查指南。
+pageClass: troubleshooting-guide
 ---
 
 # 排查 Olares 故障
