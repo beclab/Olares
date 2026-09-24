@@ -7,7 +7,7 @@ import (
 
 	"github.com/beclab/Olares/daemon/internel/wifi"
 	"github.com/beclab/Olares/daemon/pkg/cluster/state"
-	"github.com/beclab/Olares/daemon/pkg/utils"
+	connectwifi "github.com/beclab/Olares/daemon/pkg/commands/connect_wifi"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/ptr"
 )
@@ -84,7 +84,13 @@ func (s *service) connectWifi(value []byte) {
 		return
 	}
 
-	err = utils.ConnectWifi(s.ctx, cctx.SSID, cctx.Password)
+	param := connectwifi.Param{
+		SSID:     cctx.SSID,
+		Password: cctx.Password,
+	}
+
+	cmd := connectwifi.New()
+	_, err = cmd.Execute(s.ctx, &param)
 	if err != nil {
 		state := ConnectState{
 			State:  ptr.To(Fail),
