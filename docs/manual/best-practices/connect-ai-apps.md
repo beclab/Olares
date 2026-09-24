@@ -2,131 +2,104 @@
 connectionVersion: "1.12.7"
 connectionLatestPath: /manual/best-practices/connect-ai-apps
 outline: [2, 3]
-description: Connect an AI client to Olares Router. Get the correct Base URL, choose a model name, configure credentials, and test the connection.
+description: Understand how AI clients connect to local and remote models through Olares Router.
 head:
   - - meta
     - name: keywords
-      content: Olares, Router, AI apps, default-chat, OpenAI-compatible API, Base URL, API key
+      content: Olares, AI client, model service, LarePass VPN, Router, default-chat, Base URL, API key
 ---
 
-# Connect AI apps through Olares Router
+# How AI apps connect to Olares models
 
 <VersionRouteSelect />
 
-Use this guide when you need to configure an AI client, such as LobeHub or OpenCode, to call a model through Olares Router. It covers the connection values that most clients request: API format, Base URL, model name, and API key.
+Many AI apps focus on the interface or workflow, while a separate model service performs inference. LobeHub, OpenCode, and Claude Code all follow this pattern.
 
-This guide applies to Olares 1.12.7 and later and uses Qwen3.8-27B (llama.cpp) as the chat model. For the exact settings in a particular client, follow its [app-specific tutorial](#app-specific-tutorials).
+Connecting an AI app means telling the app which API to use, where to send requests, which model to call, and how to authenticate.
 
-:::info Looking for Router concepts?
-See [Use Olares Router as your AI gateway](/use-cases/olares-router.md) for its architecture, capability categories, authentication model, and naming rules. This page focuses only on connecting a client.
-:::
+## Client apps, Router, and model services
 
-## Before you begin
+An AI connection on Olares involves three parts:
 
-1. Install your AI client and Qwen3.8-27B (llama.cpp) from Market.
-2. Open Router from Launchpad. On **LLM**, confirm that Qwen3.8-27B (llama.cpp) shows **Callable**. If it is unavailable, check the reason shown below its status.
-3. On **Default models**, set Qwen3.8-27B (llama.cpp) as the default chat model.
+- **Client app**: The chat interface, coding tool, or workflow app that sends model requests.
+- **Router**: The shared entry point for AI capabilities on Olares. It authenticates the caller and routes each request.
+- **Model service**: A model running in a local model app or a remote model provider connected to Router.
 
-Setting the default determines where `default-chat` requests are routed. It does not start a stopped model.
+The client uses Router as a shared gateway. Router sends the request to the selected model and returns the response. Local and remote models use the same Router service, while the Base URL used by the client depends on the request origin.
 
-## Choose an API format
+A local model app exposes an in-cluster shared entrance for Router to call its inference engine. That address belongs to the connection between Router and the model backend. Client apps use the Base URL provided by Router.
 
-The client's **Provider** or **Engine** setting determines the API format it uses. Choose a format supported by both the client and Router.
+## The request origin determines the connection
 
-- For an OpenAI-compatible connection, look for **Custom Provider**, **Custom Endpoint**, **OpenAI**, or **OpenAI-Compatible**.
-- Choose **Ollama** only when the app-specific tutorial or Router connection example uses the Ollama API. An Ollama backend does not require every client to use the Ollama format.
-- For another API or a tool-specific integration, follow the app-specific tutorial. It might use the tool app's own endpoint instead of Router.
+Choose a connection according to the component that sends the API request and its network location.
 
-Cloud provider credentials are stored in Router. Selecting **OpenAI** in a client to use its API format does not mean that you need to enter an OpenAI API key in the client.
+- **Server-side request**: An app installed on Olares usually sends requests from its own server process. The request stays within the Olares network.
+- **Direct client request**: A desktop app, CLI, IDE extension, or browser client sends requests from your computer. The request reaches Olares through the local network or LarePass VPN.
 
-## Get the Router Base URL
+Some web apps can switch between server-side and browser-side requests. For example, enabling a setting such as **Client Request Mode** moves the request origin from the Olares app to the browser. Follow the app-specific tutorial when such an option is available.
 
-1. In Router, open the relevant capability page, find the model, and click its **View connection example** icon. For Qwen3.8-27B, open **LLM**.
+| Request origin | Router connection option | Access method |
+| --- | --- | --- |
+| An app process in Olares | **Apps in Olares** | The platform injects the app identity |
+| A computer on the same local network | **Devices in LAN** | Direct LAN access with a Router API key |
+| A computer outside the local network | **Remote** | LarePass VPN with a Router API key |
 
-   ![View the Qwen3.8-27B connection example](/images/manual/use-cases/router-view-connection-examp.png#bordered)
+### Connecting from outside the local network
 
-2. In **How to call this model**, select the tab that matches the client's location:
+A computer on the same local network can reach Router directly. A computer on another network uses the connection information under **Remote** and first joins the Olares private network through LarePass VPN.
 
-   | Client location | Tab |
-   | --- | --- |
-   | An app installed in Olares | **Apps in Olares** |
-   | A computer or device on the same local network | **Devices in LAN** |
-   | A device connecting from outside the local network | **Remote** |
+The VPN and API key solve different parts of the connection. LarePass VPN provides an encrypted network path to Olares. The Router API key identifies the external client and grants access to model capabilities. A remote client needs both.
 
-   ![Router connection details for apps in Olares](/images/manual/use-cases/router-how-to-call-model.png#bordered)
+## Connection parameters
 
-3. Copy the **Base URL** from that tab. Use the address shown on your device. The screenshot contains an example address.
+AI apps use different labels, but a model connection usually contains the following values:
 
-Keep the path required by the client's API format. OpenAI-compatible clients usually need the trailing `/v1`. If a client appends `/v1` itself, enter the Router root URL instead. For example, Claude Code's `ANTHROPIC_BASE_URL` uses the root URL because its SDK appends `/v1/messages`.
-
-## Choose a model name
-
-For general chat and agent clients, use `default-chat`. It routes requests to the default chat model selected in Router. You can change that model later without updating clients that use this name.
-
-`default-chat` does not appear in the model-list API. Add it manually if the client supports custom model IDs. If the client only allows models returned by the API, copy the full model name from **How to call this model**, including its provider prefix. For the Qwen model in this guide, the full name is `Olares/unsloth/Qwen3.8-27B-GGUF:UD-Q4_K_XL`.
-
-Use the appropriate model or default system name for non-chat capabilities. For example, search can use `default-search` after a default search provider is configured. `default-chat` cannot replace an embedding, speech, or search model.
-
-## Set the API key
-
-The required credential depends on where the request originates:
-
-| Caller | What to enter |
+| Parameter | Purpose |
 | --- | --- |
-| An app in Olares | Leave the field empty. If the client requires a value, enter a placeholder such as `olares`. |
-| A signed-in Olares user making a request through the platform | No additional Router API key is required. |
-| A client on the LAN or internet | Create a key on Router's **API keys** page and enter it in the client. A VPN connection alone does not provide an Olares user identity. |
+| Provider or API format | Defines the request format expected by the client and Router |
+| Base URL | Identifies the Router address and API path |
+| Model name or model ID | Identifies the model or routing rule to call |
+| API key | Authenticates a client outside Olares |
 
-Cloud provider keys belong in Router's provider configuration, not in clients that connect through Router.
+### Provider and API format
 
-## Check the configured context size {#check-context-window}
+“Provider” refers to different objects in the client and in Router:
 
-Some clients, such as Hermes, ask for a context size. Check the active model configuration in Router:
+- In a client, the provider is usually an adapter that formats requests. For example, an OpenAI-compatible provider can call a model running locally on Olares.
+- In Router, a provider is the backend to which Router forwards requests. It can be a local model app or a cloud provider.
 
-<!--@include: ../../reusables/ai-service-connections.md#model-context-window-->
+Use the provider or adapter specified in the app tutorial. Different formats can use different paths and request structures even when they call the same model.
 
-## Configure and test the client
+### Base URL
 
-Open the client's provider or model settings and enter:
+The Base URL tells the client where to send requests. Router provides a different URL for **Apps in Olares**, **Devices in LAN**, and **Remote** because each request reaches Router through a different network path.
 
-| Client setting | Value |
-| --- | --- |
-| Provider or API format | The format selected in [Choose an API format](#choose-an-api-format) |
-| Base URL | The Router URL for the client's location, including the path expected by the client |
-| Model name or model ID | `default-chat` or the full model name copied from Router |
-| API key | Empty or a placeholder for apps in Olares. Use a Router-issued key for external clients. |
+Copy the complete URL for the request origin, including a path such as `/v1` when shown. Some clients append their own API path, so the app tutorial may instruct you to remove or change the suffix.
 
-1. Save the settings and run the client's connection test if available.
-2. Send a short request. For a chat model, start a new conversation and ask a simple question.
-3. Open **Usage** in Router and confirm that the request reached the expected model.
+### API key
 
-## Fix common connection errors
+The platform authenticates requests from apps in Olares. Clients on a computer use a key created in Router, including clients on the same local network.
 
-| Symptom | What to check |
-| --- | --- |
-| `default-chat` is missing from the model list | Add it manually. The model-list API returns individual models, not default system names. |
-| The default model is unavailable | Check which model is selected on **Default models**, then inspect its status on **LLM**. Setting a default does not start a stopped model. |
-| The client reports "Model not found" | Use `default-chat`, or copy the full model name from Router, including its provider prefix. |
-| Authentication fails | External clients need a valid Router-issued API key with access to the requested model. |
-| The URL is unreachable or returns 404 | Copy the URL from the tab that matches the client's location. Check whether the client expects `/v1` in its Base URL. |
-| A browser reports a CORS error or opens an Olares login page | Check whether the client sends requests from its server or directly from the browser. Follow its tutorial for the correct request mode. |
+When an Olares app requires a value in the key field, use the placeholder given in that app's tutorial.
 
-## Connect other app services
+## Model selection
 
-Some clients connect to an app's own API, such as a workflow server, gateway, or document processor. Use the endpoint and credentials in that app's tutorial. Router Base URLs and `default-chat` apply only to capabilities called through Router.
+The model name determines how Router handles the request:
 
-Tools such as SearXNG and Firecrawl must be registered in Router before a client can call them through the gateway. For a complete search setup example, see [Run a deep research task with Lares](/use-cases/lares.md#run-a-deep-research-task).
+- **`default-chat`** routes the request to the model selected for chat on Router's **Default models** page. Apps using this name automatically follow later changes to the default model.
+- **A full model name** sends the request to one specific model. Use it when the app must remain on that model.
+
+`default-chat` is a routing name, while the model-list API returns individual models. If a client builds its model menu from that API, add `default-chat` manually. Clients restricted to models returned in the list use the full model name.
 
 ## App-specific tutorials
 
+The following tutorials show the provider, URL format, and fields required by each client:
+
 - [Build your local AI agent with LobeHub](/use-cases/lobechat.md)
-- [Set up Open WebUI for local AI chat](/use-cases/openwebui.md)
-- [Customize your local AI assistant using Dify](/use-cases/dify.md)
 - [Set up OpenCode as your AI coding agent](/use-cases/opencode.md)
 - [Write code using Claude Code](/use-cases/claude-code.md)
 
 ## Learn more
 
-- [Use Olares Router as your AI gateway](/use-cases/olares-router.md): Understand Router's architecture, capabilities, identities, and naming rules.
-- [Run local LLMs with Engine Base apps](/use-cases/llm-base-apps.md): Deploy and manage local inference engines.
-- [Manage application entrances](../olares/settings/manage-entrance.md): Find service endpoints and configure access policies.
+- [Use Olares Router as your AI gateway](/use-cases/olares-router.md)
+- [Connect to your Olares network with LarePass VPN](../larepass/private-network.md)

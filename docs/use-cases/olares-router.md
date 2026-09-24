@@ -87,8 +87,15 @@ If a model name does not contain a slash, it does not point to a specific provid
 - **Model groups**: A unified name created for load balancing. For example, you might create a group named `DeepSeek-V4` that distributes requests across local models and remote services. The group name itself contains no slashes.
 - **Aliases**: Custom, user-defined short names created for convenience. For example, renaming a long model name to a simple one.
 
-## Connect an app to Router
+## Get connection details from Router
 
-When you are ready to connect a client, open the relevant capability page and click the model's **View connection example** icon. The connection values depend on the client's location and API format.
+Connecting to Router takes three parameters:
 
-Follow [Connect AI apps through Olares Router](/manual/best-practices/connect-ai-apps.md) to choose the correct Base URL, model name, and credential, then test the request in Router. That guide also provides the direct Model Console workflow for Olares 1.12.6.
+- **Base URL**: Open a capability page such as **LLM**, find the model, and click the **View connection example** icon on the right.
+
+  ![The View connection example icon on a model row](/images/manual/use-cases/router-view-connection-examp.png#bordered)
+
+  ![The How to call this model window](/images/manual/use-cases/router-how-to-call-model.png#bordered)
+
+- **Model name**: Copy the model name from the **How to call this model** window. Or set a default model for each capability on the **Default models** page, and use the system name like `default-chat` instead of a specific model name.
+- **API key**: Created on the **API keys** page. Required only for callers from the LAN or the internet. Apps in Olares do not need to enter API keys.

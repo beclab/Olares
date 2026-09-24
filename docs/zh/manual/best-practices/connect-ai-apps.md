@@ -2,131 +2,104 @@
 connectionVersion: "1.12.7"
 connectionLatestPath: /zh/manual/best-practices/connect-ai-apps
 outline: [2, 3]
-description: 将 AI 客户端连接到 Olares Router，获取正确的 Base URL，选择模型名称，配置凭证并测试连接。
+description: 了解 AI 客户端如何通过 Olares Router 连接本地或远程模型。
 head:
   - - meta
     - name: keywords
-      content: Olares, Router, AI 应用, default-chat, OpenAI 兼容 API, Base URL, API 密钥
+      content: Olares, AI 客户端, 模型服务, LarePass VPN, Router, default-chat, Base URL, API key
 ---
 
-# 通过 Olares Router 连接 AI 应用
+# AI 应用如何连接 Olares 模型
 
 <VersionRouteSelect />
 
-需要让 LobeHub、OpenCode 等 AI 客户端通过 Olares Router 调用模型时，请使用本指南。这里介绍大多数客户端都需要的连接信息，包括 API 格式、Base URL、模型名称和 API 密钥。
+许多 AI 应用只提供交互界面或工作流，模型能力由独立的服务提供。LobeHub、OpenCode 和 Claude Code 都属于这类应用。
 
-本指南适用于 Olares 1.12.7 及以上版本，以 Qwen3.8-27B (llama.cpp) 为聊天模型。具体客户端中的字段和操作，请参阅对应的[应用教程](#应用教程)。
+连接 AI 应用，就是告诉应用使用哪种 API、将请求发送到哪里、调用哪个模型，以及如何完成鉴权。
 
-:::info 想先了解 Router？
-Router 的架构、能力分类、鉴权机制和命名规则，请参阅[使用 Olares Router 作为 AI 网关](/zh/use-cases/olares-router.md)。本页只介绍如何连接客户端。
-:::
+## 客户端、Router 与模型服务
 
-## 开始之前
+Olares 上的 AI 连接包含三个部分：
 
-1. 从应用市场安装 AI 客户端和 Qwen3.8-27B (llama.cpp)。
-2. 从启动台打开 Router。在 **LLM** 页面确认 Qwen3.8-27B (llama.cpp) 显示 **Callable**。如果模型不可用，请查看状态下方的原因。
-3. 在 **Default models** 页面，将 Qwen3.8-27B (llama.cpp) 设为默认聊天模型。
+- **客户端应用**：发送模型请求的聊天界面、编程工具或工作流应用。
+- **Router**：Olares AI 能力的统一入口，负责验证调用方身份并转发请求。
+- **模型服务**：本地模型应用中运行的模型，或 Router 已接入的远程模型服务商。
 
-设置默认模型只是指定 `default-chat` 请求的目标，不会启动已停止的模型。
+客户端统一连接 Router。Router 将请求发送给选定的模型，再把结果返回给客户端。本地模型和远程模型共用同一个 Router 服务，客户端使用的 Base URL 则取决于请求来源。
 
-## 选择 API 格式
+本地模型应用会在 Olares 内提供共享入口，供 Router 调用模型引擎。这个地址属于 Router 与模型后端之间的连接。客户端应使用 Router 提供的 Base URL。
 
-客户端中的 **Provider** 或 **Engine** 决定它使用哪种 API 格式。请选择 Router 和客户端都支持的格式。
+## 请求来源决定连接方式
 
-- 使用 OpenAI 兼容接口时，查找 **Custom Provider**、**Custom Endpoint**、**OpenAI** 或 **OpenAI-Compatible**。
-- 只有应用教程或 Router 连接示例使用 Ollama API 时，才选择 **Ollama**。模型通过 Ollama 运行，并不意味着所有客户端都必须使用 Ollama 格式。
-- 使用其他 API 或工具专用集成时，请按照对应应用教程操作。它可能需要工具应用自身的端点，而不是 Router 地址。
+选择连接方式时，应以发送 API 请求的组件及其网络位置为准。
 
-云端提供商的凭证保存在 Router 中。客户端选择 **OpenAI** 来使用其 API 格式，并不代表需要在客户端中填写 OpenAI API 密钥。
+- **服务端请求**：安装在 Olares 上的应用通常由应用自身的服务进程发送请求，请求始终位于 Olares 内部网络。
+- **客户端直连**：桌面应用、命令行工具、IDE 扩展或浏览器客户端从电脑发送请求，通过局域网或 LarePass VPN 访问 Olares。
 
-## 获取 Router Base URL
+部分网页应用可以在服务端请求和浏览器请求之间切换。例如，启用 **Client Request Mode** 一类的设置后，请求来源会从 Olares 内的应用转移到浏览器。遇到这类选项时，应按照对应应用的教程选择请求模式。
 
-1. 在 Router 中打开对应的能力页面，找到模型，点击所在行的 **View connection example** 图标。Qwen3.8-27B 位于 **LLM** 页面。
+| 请求来源 | Router 连接选项 | 访问方式 |
+| --- | --- | --- |
+| Olares 内的应用进程 | **Apps in Olares** | 平台注入应用身份 |
+| 与 Olares 位于同一局域网的电脑 | **Devices in LAN** | 局域网直连并使用 Router API key |
+| 位于局域网外的电脑 | **Remote** | 通过 LarePass VPN 接入并使用 Router API key |
 
-   ![查看 Qwen3.8-27B 的连接示例](/images/manual/use-cases/router-view-connection-examp.png#bordered)
+### 从局域网外连接
 
-2. 在 **How to call this model** 窗口中，根据客户端的位置选择标签页：
+同一局域网内的电脑可以直接访问 Router。电脑位于其他网络时，使用 **Remote** 中的连接信息，并先通过 LarePass VPN 接入 Olares 私有网络。
 
-   | 客户端位置 | 标签页 |
-   | --- | --- |
-   | 安装在 Olares 内的应用 | **Apps in Olares** |
-   | 同一局域网内的电脑或其他设备 | **Devices in LAN** |
-   | 从局域网外连接的设备 | **Remote** |
+VPN 和 API key 解决的是连接中的不同问题。LarePass VPN 在电脑与 Olares 之间建立加密的网络通道，Router API key 则用于识别外部客户端，并授权其使用模型能力。因此，远程客户端需要同时使用两者。
 
-   ![Olares 内应用的 Router 连接信息](/images/manual/use-cases/router-how-to-call-model.png#bordered)
+## 连接参数
 
-3. 复制所选标签页中的 **Base URL**。请使用自己设备上显示的地址，截图中的地址仅为示例。
+各 AI 应用使用的字段名称有所差异，模型连接通常包含以下参数：
 
-保留客户端 API 格式需要的路径。OpenAI 兼容客户端通常需要末尾的 `/v1`。如果客户端会自动追加 `/v1`，则填写 Router 根地址。例如，Claude Code 的 `ANTHROPIC_BASE_URL` 使用根地址，由 SDK 追加 `/v1/messages`。
-
-## 选择模型名称
-
-通用聊天和 Agent 客户端使用 `default-chat`。请求会转发到 Router 中选定的默认聊天模型，以后更换默认模型时，无需修改使用该名称的客户端。
-
-模型列表 API 不会返回 `default-chat`。如果客户端支持自定义模型 ID，请手动添加。如果客户端只能选择 API 返回的模型，请从 **How to call this model** 复制带提供商前缀的完整模型名称。本指南中 Qwen 模型的完整名称为 `Olares/unsloth/Qwen3.8-27B-GGUF:UD-Q4_K_XL`。
-
-非聊天能力应使用对应的模型或默认系统名称。例如，设置默认搜索提供商后，搜索可以使用 `default-search`。`default-chat` 不能代替嵌入、语音或搜索模型。
-
-## 配置 API 密钥
-
-请求来源不同，需要的凭证也不同：
-
-| 调用方 | 如何填写 |
+| 参数 | 作用 |
 | --- | --- |
-| Olares 内的应用 | 留空。如果客户端要求必填，可填写 `olares` 等占位值。 |
-| 已登录 Olares、通过平台发起请求的用户 | 无需额外填写 Router API 密钥。 |
-| 局域网或互联网中的外部客户端 | 在 Router 的 **API keys** 页面创建密钥并填入客户端。仅连接 VPN 不会提供 Olares 用户身份。 |
+| Provider 或 API 格式 | 定义客户端和 Router 之间的请求格式 |
+| Base URL | 指定 Router 的访问地址和 API 路径 |
+| 模型名称或 Model ID | 指定要调用的模型或路由规则 |
+| API key | 验证 Olares 外部客户端的身份 |
 
-云端提供商的密钥应保存在 Router 的提供商配置中，而不是填写到通过 Router 连接的客户端中。
+### Provider 和 API 格式
 
-## 查看实际上下文大小 {#check-context-window}
+“Provider”在客户端和 Router 中表示不同的对象：
 
-Hermes 等客户端需要手动填写上下文大小。请在 Router 中查看当前模型的配置：
+- 在客户端中，Provider 通常是负责组织请求格式的适配器。例如，OpenAI 兼容的 Provider 可以调用运行在 Olares 本地的模型。
+- 在 Router 中，Provider 是 Router 转发请求的后端，可以是本地模型应用，也可以是云服务商。
 
-<!--@include: ../../reusables/ai-service-connections.md#model-context-window-->
+请使用应用教程中指定的 Provider 或适配器。即使调用同一个模型，不同 API 格式使用的请求结构和路径也可能不同。
 
-## 配置并测试客户端
+### Base URL
 
-打开客户端的提供商或模型设置，填写以下信息：
+Base URL 告诉客户端将请求发送到哪里。Router 分别为 **Apps in Olares**、**Devices in LAN** 和 **Remote** 提供地址，因为三类请求通过不同的网络路径到达 Router。
 
-| 客户端设置 | 填写内容 |
-| --- | --- |
-| 提供商或 API 格式 | 在[选择 API 格式](#选择-api-格式)中确定的格式 |
-| Base URL | 与客户端位置匹配的 Router 地址，并保留客户端要求的路径 |
-| 模型名称或模型 ID | `default-chat`，或从 Router 复制的完整模型名称 |
-| API 密钥 | Olares 内应用留空或填写占位值。外部客户端填写 Router 签发的密钥。 |
+应根据请求来源复制完整地址，包括界面中显示的 `/v1` 等路径。部分客户端会自动追加 API 路径，因此具体教程可能要求移除或修改该后缀。
 
-1. 保存设置。如果客户端提供连接测试，请先运行测试。
-2. 发送一条简短请求。聊天模型可以新建对话并提一个简单问题。
-3. 打开 Router 的 **Usage** 页面，确认请求到达预期模型。
+### API key
 
-## 排查常见连接错误
+Olares 内部应用由平台完成身份验证。电脑上的客户端使用在 Router 中创建的 API key，包括来自同一局域网的请求。
 
-| 问题 | 检查方法 |
-| --- | --- |
-| 模型列表中找不到 `default-chat` | 手动添加。模型列表 API 返回具体模型，不包含默认系统名称。 |
-| 默认模型不可用 | 在 **Default models** 中确认选中的模型，再到 **LLM** 页面查看状态。设置默认模型不会启动已停止的模型。 |
-| 提示找不到模型 | 使用 `default-chat`，或从 Router 复制带有提供商前缀的完整模型名称。 |
-| 鉴权失败 | 外部客户端需要有效的 Router API 密钥，并且该密钥需要有权访问请求的模型。 |
-| 地址无法访问或返回 404 | 从与客户端位置匹配的标签页复制地址，并确认 Base URL 是否需要包含 `/v1`。 |
-| 浏览器报告 CORS 错误或打开 Olares 登录页 | 确认客户端通过服务器还是浏览器直接发送请求，并按照应用教程选择正确的请求方式。 |
+Olares 内的应用遇到必填的 API key 字段时，请填写该应用教程中给出的占位值。
 
-## 连接其他应用服务
+## 模型选择
 
-有些客户端需要连接工作流服务、网关或文档处理应用自身的 API。请使用对应应用教程提供的端点和凭证。Router Base URL 和 `default-chat` 只适用于通过 Router 调用的能力。
+模型名称决定 Router 如何处理请求：
 
-SearXNG、Firecrawl 等工具需要先注册到 Router，客户端才能通过网关调用。完整的搜索配置示例，请参阅[使用 Lares 运行深度研究任务](/zh/use-cases/lares.md#运行深度研究任务)。
+- **`default-chat`** 将请求转发给 Router **Default models** 页面中设置的聊天模型。之后更换默认模型时，使用该名称的应用会自动跟随。
+- **完整模型名称**将请求发送给一个指定模型。需要让应用始终使用同一模型时，请使用这种方式。
 
-## 应用教程
+`default-chat` 是路由名称，模型列表 API 则返回具体模型。如果客户端根据该 API 生成模型列表，需要手动添加 `default-chat`。只允许选择列表内模型的客户端应使用完整模型名称。
+
+## 应用配置教程
+
+以下教程介绍各客户端所需的 Provider、URL 格式和配置字段：
 
 - [使用 LobeHub 构建本地 AI 助手](/zh/use-cases/lobechat.md)
-- [设置 Open WebUI 进行本地 AI 聊天](/zh/use-cases/openwebui.md)
-- [使用 Dify 定制本地 AI 助手](/zh/use-cases/dify.md)
 - [将 OpenCode 设置为 AI 编程助手](/zh/use-cases/opencode.md)
 - [使用 Claude Code 编写代码](/zh/use-cases/claude-code.md)
 
 ## 了解更多
 
-- [使用 Olares Router 作为 AI 网关](/zh/use-cases/olares-router.md)：了解 Router 的架构、能力、身份体系和命名规则。
-- [通过引擎基座应用运行本地模型](/zh/use-cases/llm-base-apps.md)：部署和管理本地推理引擎。
-- [管理应用入口](../olares/settings/manage-entrance.md)：查找服务端点并配置访问策略。
+- [使用 Olares Router 作为 AI 网关](/zh/use-cases/olares-router.md)
+- [通过 LarePass VPN 连接 Olares 私有网络](../larepass/private-network.md)
