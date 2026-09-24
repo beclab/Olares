@@ -223,7 +223,7 @@ Before connecting a local model, you need:
 
    - **API Key**: Enter any text string such as `local`.
    - **Base URL**: Enter the **Base URL** copied from Router. Ensure the URL ends with `/v1`.
-   - **Model Name (Optional)**: 填写 `default-chat`。
+   - **Model Name (Optional)**: Enter `default-chat`.
 
 8. Click **Save Configuration**.
 

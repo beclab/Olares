@@ -94,7 +94,7 @@ LarePass 专用网络与 hosts 映射不能同时启用。添加或更新 hosts 
 2. 找到**hosts 映射**，然后点击**关闭**。
 3. 在**停用 hosts 映射**确认窗口中再次点击**关闭**。
 
-LarePass 会删除此前由它添加到这台电脑的全部 hosts 条目。标准 `olares.com` 地址随后恢复使用常规网络路径；在不支持原生解析的系统上，多级 `.local` 地址可能不再能够解析。
+LarePass 会删除此前由它添加到这台电脑的全部 hosts 条目。标准 `olares.com` 地址随后恢复使用常规网络路径。在不支持原生解析的系统上，多级 `.local` 地址可能不再能够解析。
 :::
 <!-- #endregion larepass-local-domains -->
 
@@ -115,7 +115,7 @@ hosts 映射与 LarePass 专用网络不能同时启用。前往 **设置** > **
 
 #### 停用 hosts 映射后会发生什么？
 
-LarePass 会删除由它管理的 hosts 条目。标准 `olares.com` 地址随后恢复使用常规网络路径；在不支持原生解析的系统上，多级 `.local` 地址可能不再能够解析。
+LarePass 会删除由它管理的 hosts 条目。标准 `olares.com` 地址随后恢复使用常规网络路径。在不支持原生解析的系统上，多级 `.local` 地址可能不再能够解析。
 
 #### 如何查看 hosts 文件或恢复备份？
 

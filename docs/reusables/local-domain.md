@@ -36,7 +36,7 @@ On Windows and macOS, LarePass Desktop can configure direct LAN access for the c
 3. Start the update from either location:
    - Click **Map hosts** in the lower-left corner.
    - Click your avatar, go to **Settings** > **Host mappings**, and click **Enable**.
-4. In **Update host mappings**, review and edit the entries as needed. Do not edit lines beginning with `#`; LarePass uses these markers to manage the entries. When you finish, click **Update**.
+4. In **Update host mappings**, review and edit the entries as needed. Do not edit lines beginning with `#`. LarePass uses these markers to manage the entries. When you finish, click **Update**.
 5. Enter the administrator password for your computer and confirm the change.
 6. Wait for the **Success** message.
 
@@ -60,7 +60,7 @@ On Windows, use LarePass Desktop to add the required entries to the hosts file s
 3. Start the update from either location:
    - Click **Map hosts** in the lower-left corner.
    - Click your avatar, go to **Settings** > **Host mappings**, and click **Enable**.
-4. In **Update host mappings**, review and edit the entries as needed. Do not edit lines beginning with `#`; LarePass uses these markers to manage the entries. When you finish, click **Update**.
+4. In **Update host mappings**, review and edit the entries as needed. Do not edit lines beginning with `#`. LarePass uses these markers to manage the entries. When you finish, click **Update**.
 5. Enter the administrator password for your computer and confirm the change.
 <!-- #endregion windows-local-domain -->
 
@@ -78,7 +78,7 @@ LarePass VPN and host mappings are mutually exclusive. Turn off **VPN connection
 3. Start the update from either location:
    - Click **Map hosts** in the lower-left corner.
    - Click your avatar, go to **Settings** > **Host mappings**, and click **Enable**.
-4. In **Update host mappings**, review and edit the entries as needed. Do not edit lines beginning with `#`; LarePass uses these markers to manage the entries. When you finish, click **Update**.
+4. In **Update host mappings**, review and edit the entries as needed. Do not edit lines beginning with `#`. LarePass uses these markers to manage the entries. When you finish, click **Update**.
 5. When the password prompt appears, enter the administrator password for your computer and confirm the change.
 6. Wait for the **Success** message.
 
