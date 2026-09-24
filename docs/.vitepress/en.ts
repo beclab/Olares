@@ -578,6 +578,10 @@ const side = {
               link: "/manual/help/ts-forget-login-password",
             },
             {
+              text: "Recover access to LarePass and Olares",
+              link: "/manual/help/ts-access-without-mnemonic",
+            },
+            {
               text: "Login and activation error messages",
               link: "/manual/login-and-activation-errors",
             },

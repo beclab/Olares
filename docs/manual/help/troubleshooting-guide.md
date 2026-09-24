@@ -1,6 +1,7 @@
 ---
 outline: [2, 3]
 description: Match common Olares symptoms to troubleshooting guides for apps, AI, networking, storage, accounts, and Olares One hardware.
+pageClass: troubleshooting-guide
 ---
 
 # Troubleshoot Olares
@@ -56,6 +57,7 @@ Use this category for sign-in, password, activation, and authentication failures
 | What you see | Guide |
 |---|---|
 | You forgot the desktop login password | [Forgotten desktop login password](./ts-forget-login-password.md) |
+| You cannot access LarePass, Olares Desktop, or your device and have no mnemonic backup | [Recover access to LarePass, Olares Desktop, or your Olares device](./ts-access-without-mnemonic.md) |
 | LarePass shows **System error** | ["System error" in LarePass](./ts-system-error.md) |
 | Sign-in or activation shows a specific error message | [Login and activation error messages](../login-and-activation-errors.md) |
 

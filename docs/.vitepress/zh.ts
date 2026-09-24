@@ -578,6 +578,10 @@ const side = {
               link: "/zh/manual/help/ts-forget-login-password",
             },
             {
+              text: "恢复 LarePass 和 Olares 访问",
+              link: "/zh/manual/help/ts-access-without-mnemonic",
+            },
+            {
               text: "登录与激活错误信息",
               link: "/zh/manual/login-and-activation-errors",
             },
