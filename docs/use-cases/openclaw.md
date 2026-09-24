@@ -8,9 +8,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, OpenClaw, self-hosted ai agent, personal ai agent, local ai agent, openclaw on olares
-app_version: "1.0.36"
+app_version: "1.0.44"
 doc_version: "3.0"
-doc_updated: "2026-09-23"
+doc_updated: "2026-09-24"
 ---
 
 # Run OpenClaw as your self-hosted personal AI agent
@@ -115,11 +115,14 @@ Set up OpenClaw using the step-by-step interactive wizard.
     | Help make OpenClaw better   | Select as needed.   |
     | <nobr>Setup mode</nobr>   | Select **QuickStart**.   |
     | Model/auth provider | Select **Custom Provider**. |
-    | API compatibility | Select **OpenAI-compatible**. |
-    | Base URL | Paste the Router Base URL from Step 1, including `/v1`. |
-    | API key | Leave empty if allowed, or enter `olares` if required. |
-    | Model ID | Enter `default-chat` manually. |
-    | Provider ID | Enter `router`. The default model is `router/default-chat`. |
+    | API Base URL | Paste the Router Base URL from Step 1, including `/v1`. |
+    | How do you want to provide this API key? | Select **Paste API key now** if this prompt appears. |
+    | API Key (leave blank if not required) | Leave blank for this app in Olares. |
+    | Endpoint compatibility | Select **OpenAI-compatible**. |
+    | Model ID | Enter `default-chat`. The wizard may verify the endpoint before continuing. |
+    | Endpoint ID | Enter `router`. The model reference is `router/default-chat`. |
+    | Model alias (optional) | Leave blank. |
+    | Does this model support image input? | If prompted, select **Yes** for Qwen3.8-27B (llama.cpp). For another model, check its capabilities in Router. |
     | Test AI access now with a live completion | Select **Yes**.<br>The message `AI access works` indicates that OpenClaw can successfully connect to the model. |
     | Remaining settings (channels, search provider,<br>and skill dependencies) | Select **Skip for now**.<br>You can configure them later. |
 

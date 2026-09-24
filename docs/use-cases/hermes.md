@@ -7,9 +7,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, Hermes, Hermes Agent, autonomous AI, self-improving AI, Discord bot, self-hosted
-app_version: "1.3.33"
+app_version: "1.3.46"
 doc_version: "3.0"
-doc_updated: "2026-09-23"
+doc_updated: "2026-09-24"
 ---
 
 # Set up a self-directed AI agent with Hermes
@@ -89,14 +89,18 @@ Run a quick setup to connect Hermes Agent to your local model.
 
 3. The wizard guides you through a series of steps. Use the arrow keys to navigate and press **Enter** to confirm.
 
+    The model-selection prompts below are alternative branches. Follow the row that matches the number of models detected, then continue to **Context length in tokens**.
+
     | Settings   | Option   |
     |:-----------|:---------|
     | How would you like to set up Hermes | Select **Full setup — configure every provider, tool & option yourself (bring your own keys)**. |
     | Select provider | Select **Custom endpoint (enter URL manually)**.  |
     | API base URL  | Enter the **Base URL** you copied from Router.<br>For example, `https://router.<your-olares-domain>/v1`.  |
     | API key  | Enter any text as a placeholder value, such as `local`.<br>The input remains hidden for security. |
-    | Select API compatibility mode | Enter `1` to select **Auto-detect [current]**. This option uses Hermes URL heuristics and works best for standard OpenAI-compatible endpoints. |
-    | Use this model | Enter `default-chat` manually instead of accepting a different auto-detected model. |
+    | Select API compatibility mode | Enter `1` to select **Auto-detect**. |
+    | Use this model? [Y/n] — only when one model is detected | Enter `n`. At the following **Model name** prompt, enter `default-chat`. This confirmation accepts yes/no, not a model name. |
+    | Select model [1-N] or type name — only when multiple models are detected | Type `default-chat` instead of selecting a numbered model. |
+    | Model name — when no model is detected | Enter `default-chat`. |
     | Context length in tokens | Enter the exact context size from Router's **Model card > Engine args**, such as `104448` for `-c 104448`. Hermes requires at least `65536` tokens; the value must not exceed the engine configuration. |
     | Display name |  Enter a name to identify this model, such as `router-chat`.|
     | Select terminal backend | Select **Local - run directly on this machine**. |
