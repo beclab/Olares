@@ -5,22 +5,11 @@ description: Connect an NVIDIA eGPU to Olares One, check it in Olares OS, and in
 
 # Set up an eGPU on Olares OS
 
-Connect the eGPU before starting Olares One and try the standard connection first. Install the Gen1 workaround only if startup stalls or Olares OS does not detect the eGPU.
+Use this guide to connect the eGPU. Install the Gen1 workaround only if startup stalls or the GPU is not detected.
 
 :::danger Always power off before changing the connection
 Olares OS does not support eGPU hot-plugging. Shut down Olares One before connecting or disconnecting the eGPU.
 :::
-
-## Before you start
-
-Prepare one of the following:
-
-- A Thunderbolt external graphics device with a GPU already installed and its power adapter.
-- A Thunderbolt eGPU dock or enclosure, a desktop NVIDIA GPU, and a suitable power supply.
-
-The GPU must use the Turing architecture or newer. Use a certified Thunderbolt cable, preferably the cable supplied with the external graphics device.
-
-Connect one eGPU directly to Olares One for the first setup. Disconnect other high-bandwidth Thunderbolt devices.
 
 ## Connect the eGPU
 
@@ -36,7 +25,7 @@ Connect one eGPU directly to Olares One for the first setup. Disconnect other hi
    - If you use an eGPU dock or enclosure, install the desktop GPU and connect all required GPU power cables.
 
 5. Turn on the eGPU.
-6. Connect it directly to a Thunderbolt 5 (USB-C) port on Olares One.
+6. Disconnect other high-bandwidth Thunderbolt devices. Using a certified Thunderbolt 5 cable, connect the eGPU directly to a Thunderbolt 5 (USB-C) port on Olares One.
 7. Press the power button on Olares One.
 
 ## Check the connection
@@ -53,7 +42,7 @@ You can also check from the terminal:
 nvidia-smi
 ```
 
-If the eGPU appears and remains available, setup is finished. Skip the workaround.
+If the eGPU appears in Dashboard and `nvidia-smi`, do not install the workaround.
 
 If startup stalls or the eGPU does not appear in Dashboard or `nvidia-smi`, shut down Olares One, disconnect the eGPU, and start Olares One again. Install the workaround below before reconnecting the eGPU.
 
@@ -66,7 +55,7 @@ The workaround reduces bandwidth between system memory and GPU memory. Model loa
 :::
 
 :::warning Temporary workaround
-This workaround is provided by Olares and is not an official NVIDIA fix. It changes system files and the external GPU's PCIe link setting. Install only the files linked from this page. A future Olares release will include this workaround, so manual setup will no longer be required.
+This workaround is provided by Olares and is not an official NVIDIA fix. Install only the files linked from this page. A future Olares release will include the workaround, so manual setup will no longer be required.
 :::
 
 1. Start Olares One without the eGPU connected.

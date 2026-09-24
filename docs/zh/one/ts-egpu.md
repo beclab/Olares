@@ -46,25 +46,17 @@ description: 排查 Olares One eGPU 开机与识别问题，并收集 Olares OS 
 
 ## Olares OS 运行任务时掉卡
 
-1. 检查临时方案日志：
-
-   ```bash
-   sudo tail -n 20 /var/log/egpu-gen1-fix.log
-   ```
-
-   查找 `speed=2.5 GT/s PCIe`。该内容表示 eGPU 链路正在以 Gen1 运行。
-
-2. 检查外置显卡设备的电源。如果通过 eGPU dock 或 eGPU enclosure 使用桌面版显卡，还要检查电源功率和显卡的全部供电线。
-3. 断开其他高带宽雷电设备，将 eGPU 直接连接到 Olares One 后重试。
-4. 掉卡后立即收集诊断信息。
+1. 检查外置显卡设备的电源。如果通过 eGPU dock 或 eGPU enclosure 使用桌面版显卡，还要检查电源功率和显卡的全部供电线。
+2. 断开其他高带宽雷电设备，将 eGPU 直接连接到 Olares One 后重试。
+3. 掉卡后立即收集诊断信息。
 
 ## Windows 显示显卡错误
 
 1. 在 **设备管理器** > **显示适配器** 中打开报错的设备。
 2. 记录 **常规** > **设备状态** 中的完整消息和错误代码。
-3. 安装所有可用的 Windows 更新，以及适用于当前显卡的最新 NVIDIA 驱动。
-4. 按照[恢复内置显卡](./egpu-windows.md#恢复内置显卡)中的步骤操作。
-5. 重启 Windows，检查预期的全部 GPU 是否都已显示，并且没有警告图标。
+3. 安装所有可用的 Windows 更新，并更新 NVIDIA 驱动。
+4. 重启 Windows，检查预期的全部 GPU 是否都已显示，并且没有警告图标。
+5. 如果内置显卡仍然报错，请按照[恢复内置显卡](./egpu-windows.md#恢复内置显卡)中的步骤操作。
 
 如果仍然缺少显卡，请收集下方列出的 Windows 信息。
 
@@ -74,7 +66,7 @@ description: 排查 Olares One eGPU 开机与识别问题，并收集 Olares OS 
 
 ```plain
 系统与版本：
-外置显卡设备，或 eGPU dock、eGPU enclosure 与显卡：
+eGPU 设备，或 dock、enclosure 与显卡：
 连接方式（包括 Dock 或 Hub）：
 开机顺序：
 问题现象：

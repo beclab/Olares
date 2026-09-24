@@ -46,25 +46,17 @@ Both commands should list the external GPU. If `lspci` lists it but `nvidia-smi`
 
 ## Olares OS loses the eGPU under load
 
-1. Check the workaround log:
-
-   ```bash
-   sudo tail -n 20 /var/log/egpu-gen1-fix.log
-   ```
-
-   Look for `speed=2.5 GT/s PCIe`. This shows that the eGPU link is running at Gen1.
-
-2. Check the external graphics device's power supply. If you use an eGPU dock or enclosure with a desktop GPU, also check the power supply rating and all GPU power connectors.
-3. Remove other high-bandwidth Thunderbolt devices and try again with the eGPU connected directly to Olares One.
-4. Collect diagnostics immediately after the disconnect.
+1. Check the external graphics device's power supply. If you use an eGPU dock or enclosure with a desktop GPU, also check the power supply rating and all GPU power connectors.
+2. Remove other high-bandwidth Thunderbolt devices and try again with the eGPU connected directly to Olares One.
+3. Collect diagnostics immediately after the disconnect.
 
 ## Windows reports a GPU error
 
 1. In **Device Manager** > **Display adapters**, open the affected device.
 2. Record the complete message and error code under **General** > **Device status**.
-3. Install all available Windows updates and the latest NVIDIA driver for your GPU.
-4. Follow [Recover the built-in GPU](./egpu-windows.md#recover-the-built-in-gpu).
-5. Restart Windows, then check that all expected GPUs appear without warning icons.
+3. Install all available Windows updates and update the NVIDIA driver.
+4. Restart Windows, then check that all expected GPUs appear without warning icons.
+5. If the built-in GPU still reports an error, follow [Recover the built-in GPU](./egpu-windows.md#recover-the-built-in-gpu).
 
 If any GPU is still missing, collect the Windows information below.
 
@@ -74,7 +66,7 @@ If the problem continues, create a post in the [Olares forum](https://www.olares
 
 ```plain
 System and version:
-External graphics device, or eGPU dock or enclosure and GPU:
+eGPU device, or dock or enclosure and GPU:
 Connection path, including any dock or hub:
 Power-on order:
 What happened:

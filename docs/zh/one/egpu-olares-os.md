@@ -5,22 +5,11 @@ description: 将 NVIDIA eGPU 连接到 Olares One，在 Olares OS 中检查连�
 
 # 在 Olares OS 上设置 eGPU
 
-启动 Olares One 前先连接 eGPU，并先尝试标准连接。只有在开机卡住或 Olares OS 无法识别 eGPU 时，才安装 Gen1 临时方案。
+按照本文步骤连接 eGPU。仅当开机卡住或系统无法识别显卡时，才安装 Gen1 临时方案。
 
 :::danger 改变连接前必须关机
 Olares OS 不支持 eGPU 热插拔。连接或断开 eGPU 前，必须关闭 Olares One。
 :::
-
-## 开始前
-
-准备以下任一种设备：
-
-- 已安装 GPU 的雷电外置显卡设备及其电源适配器。
-- 雷电 eGPU dock 或 eGPU enclosure、桌面版 NVIDIA 显卡，以及符合显卡要求的电源。
-
-显卡必须采用 Turing 或更新架构。使用经过认证的雷电线材，建议优先使用外置显卡设备附带的线材。
-
-首次设置时，将一台 eGPU 直接连接到 Olares One，并断开其他高带宽雷电设备。
 
 ## 连接 eGPU
 
@@ -36,7 +25,7 @@ Olares OS 不支持 eGPU 热插拔。连接或断开 eGPU 前，必须关闭 Ola
    - 如果使用 eGPU dock 或 eGPU enclosure，请装入桌面版显卡，并接好显卡所需的全部供电线。
 
 5. 给 eGPU 通电。
-6. 将它直接连接到 Olares One 的雷电 5（USB-C）接口。
+6. 断开其他高带宽雷电设备。使用认证的雷电 5 线材，将 eGPU 直接连接到 Olares One 的雷电 5（USB-C）接口。
 7. 按下 Olares One 的电源键。
 
 ## 检查连接状态
@@ -53,7 +42,7 @@ Olares OS 不支持 eGPU 热插拔。连接或断开 eGPU 前，必须关闭 Ola
 nvidia-smi
 ```
 
-如果 eGPU 始终正常显示，设置已经完成。跳过临时方案。
+如果 Dashboard 和 `nvidia-smi` 中都能看到 eGPU，则无需安装临时方案。
 
 如果开机卡住，或 Dashboard 和 `nvidia-smi` 中都看不到 eGPU，请关闭 Olares One，断开 eGPU，再重新开机。重新连接 eGPU 前，先安装下方的临时方案。
 
@@ -66,7 +55,7 @@ nvidia-smi
 :::
 
 :::warning 临时解决方案
-这是 Olares 提供的临时解决方案，不是 NVIDIA 官方修复。该方案会修改系统文件和外置显卡的 PCIe 链路设置，请只安装本页提供的文件。后续 Olares 版本会内置该方案，届时无需手动配置。
+这是 Olares 提供的临时解决方案，不是 NVIDIA 官方修复。请只安装本页提供的文件。后续 Olares 版本会内置该方案，届时无需手动配置。
 :::
 
 1. 在不连接 eGPU 的情况下启动 Olares One。

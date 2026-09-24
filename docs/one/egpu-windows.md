@@ -13,11 +13,7 @@ For the initial setup, leave the eGPU disconnected until CleanupTool finishes an
 
 ## Before you start
 
-You need:
-
-- Windows 11 updated to the latest version available through Windows Update. The tested configurations used Windows 11 24H2.
-- A powered Thunderbolt external graphics device and a certified Thunderbolt cable. The GPU may be preinstalled, or you can install a desktop GPU in an eGPU dock or enclosure.
-- Administrator access to Windows.
+Make sure the eGPU meets the [hardware requirements](./egpu.md#choose-hardware) and that you have administrator access to Windows.
 
 If Windows is not installed, first follow [Install Windows on the primary drive](./install-windows-primary-drive.md). You do not need to reinstall Windows or use a specific Windows image just to add an eGPU.
 
@@ -25,7 +21,6 @@ If Windows is not installed, first follow [Install Windows on the primary drive]
 
 1. Open **Settings** > **Windows Update**. Install all available updates, then check again until Windows reports that it is up to date.
 2. Download and run [`CleanupTool_1.0.21.0`](https://cdn.olares.com/common/CleanupTool_1.0.21.0.exe) to remove all existing NVIDIA apps, graphics drivers, and related utilities.
-
 3. When CleanupTool prompts you to restart, select **Yes** and wait for Windows to start again.
 4. Shut down Olares One.
 5. Prepare and power on the eGPU:
@@ -33,13 +28,11 @@ If Windows is not installed, first follow [Install Windows on the primary drive]
    - If the GPU is already installed, connect the device's power adapter.
    - If you use an eGPU dock or enclosure, install the desktop GPU and connect all required GPU power cables.
 
-6. Connect the eGPU directly to a Thunderbolt 5 (USB-C) port on Olares One with a certified Thunderbolt cable.
+6. Disconnect other high-bandwidth Thunderbolt devices. Using a certified Thunderbolt 5 cable, connect the eGPU directly to a Thunderbolt 5 (USB-C) port on Olares One.
 7. Start Olares One.
 8. Install NVIDIA App.
 9. In NVIDIA App, download and install the latest graphics driver available for your GPU.
 10. Restart Windows.
-
-Before connecting other Thunderbolt devices, [check the setup](#check-the-setup).
 
 ## Recover the built-in GPU
 
@@ -56,15 +49,6 @@ Keep the eGPU connected during this procedure.
 
 1. Open **Device Manager** > **Display adapters**.
 2. Check that the built-in GPU and every connected eGPU appear without warning icons.
-3. Open NVIDIA App and check that it shows all expected GPUs.
-
-This guide covers the recommended setup with one eGPU. A tested three-eGPU topology is summarized in [Check known compatibility](./egpu.md#check-known-compatibility). This guide does not cover hot-plugging.
-
-## Known issues
-
-**Reduced power for the built-in RTX 5090M**
-
-In the tested multi-eGPU configuration, the built-in RTX 5090M was limited to about 95 W instead of 175 W. This limitation affects the built-in GPU, not the connected eGPUs.
 
 ## If a GPU is missing or reports an error
 

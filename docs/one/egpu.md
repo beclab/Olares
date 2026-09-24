@@ -9,7 +9,7 @@ head:
 
 # Connect an eGPU to Olares One
 
-You can add GPU capacity to Olares One by connecting an external GPU (eGPU) over Thunderbolt. This page covers the hardware options, known compatibility, and setup paths for Olares OS and Windows 11.
+You can add GPU capacity to Olares One by connecting an external GPU (eGPU) over Thunderbolt.
 
 :::danger Shut down before connecting on Olares OS
 Do not connect or disconnect an eGPU while Olares OS is running. Shut down Olares One, power on and connect the eGPU, and then start Olares One.
@@ -17,16 +17,14 @@ Do not connect or disconnect an eGPU while Olares OS is running. Shut down Olare
 
 ## Check known compatibility
 
-The table lists hardware combinations for which compatibility results are available. It is not a list of recommended products or a complete compatibility list. An unlisted combination may work, but has not been verified.
+The table lists available compatibility results, not recommended products or every possible combination. Results also depend on the dock or enclosure, power supply, cable, operating system, and NVIDIA driver. An unlisted combination may work, but has not been verified.
 
 | External graphics hardware | Olares OS | Windows 11 |
 |---|---|---|
-| AOOSTAR EG02 eGPU dock + RTX 4060 Ti | **Works after setup.** Install the [Gen1 workaround](./egpu-olares-os.md#install-the-workaround-if-needed). | **Works after setup.** Reinstall the NVIDIA driver with the eGPU connected. This combination was also verified in the tested multi-eGPU setup. |
+| AOOSTAR EG02 eGPU dock + RTX 4060 Ti | **Works after setup.** Install the [Gen1 workaround](./egpu-olares-os.md#install-the-workaround-if-needed). | **Works after setup.** Reinstall the NVIDIA driver with the eGPU connected. |
 | Razer Core X V2 eGPU enclosure + RTX 4090 | **Under verification.** Startup was unstable without the Gen1 workaround. Results with the workaround are not verified. | **Verified only in the tested multi-eGPU setup.** Standalone use has not been verified. |
 | Razer Core X eGPU enclosure + RTX 4060 | **Not verified.** | **Verified only in the tested multi-eGPU setup.** Standalone use has not been verified. |
 | eGPU dock or enclosure + desktop RTX 5090 | **Not supported.** The NVIDIA driver did not initialize, and no workaround is available. | **Not verified.** |
-
-Compatibility also depends on the eGPU dock or enclosure, power supply, cable, operating system, and NVIDIA driver.
 
 In this table, **Works** and **Verified** mean that the GPU completed a workload test. Detection in Dashboard, Device Manager, or `nvidia-smi` alone is not treated as a compatibility result.
 
@@ -39,34 +37,30 @@ We have verified one Windows 11 configuration with three eGPUs connected through
 - Razer Core X V2 with RTX 4090
 - Razer Core X with RTX 4060
 
+In this configuration, the built-in RTX 5090M was limited to about 95 W instead of 175 W.
+
 Multi-eGPU compatibility depends on the dock and connection topology. Start with one eGPU, then connect and verify additional devices one at a time.
 :::
 
-## Before you start
+## Choose hardware
 
-- For a desktop GPU, use an NVIDIA GPU based on the Turing architecture or newer. Make sure the eGPU dock or enclosure and its power supply meet the GPU requirements.
-- Use a certified Thunderbolt 5 cable. The cable supplied with the external graphics device is recommended.
-- For the first setup, connect one eGPU directly to Olares One. Disconnect other high-bandwidth Thunderbolt devices and do not route the eGPU through another dock.
+Prepare one of the following:
 
-:::info Older Thunderbolt hardware
+- A Thunderbolt external graphics device with a GPU already installed and its power adapter.
+- A Thunderbolt eGPU dock or enclosure, a desktop NVIDIA GPU based on the Turing architecture or newer, and a power supply that meets the GPU requirements.
+
+:::info Thunderbolt 5
+Use a certified Thunderbolt 5 cable, preferably the cable supplied with the external graphics device.
+
 Older Thunderbolt external graphics devices may work, but Thunderbolt 5 is recommended.
 :::
 
 ## Set up your eGPU
 
-### Olares OS
+Choose the guide for your operating system:
 
-Start with a cold connection. Shut down Olares One, power on and connect the eGPU, and then start Olares One. If the eGPU is detected and remains available, no other setup is needed.
-
-Follow [Set up an eGPU on Olares OS](./egpu-olares-os.md). The guide includes a Gen1 workaround for startup or detection problems.
-
-Olares OS does not support hot-plugging.
-
-### Windows 11
-
-You can use an existing Windows 11 installation. Before setup, update Windows to the latest version available through Windows Update. The first setup requires removing the existing NVIDIA software, connecting the eGPU, and then installing the NVIDIA driver again.
-
-Follow [Set up an eGPU on Windows](./egpu-windows.md). The guide covers the recommended single-eGPU setup and does not cover hot-plugging.
+- [Set up an eGPU on Olares OS](./egpu-olares-os.md)
+- [Set up an eGPU on Windows 11](./egpu-windows.md)
 
 ## Get help
 
