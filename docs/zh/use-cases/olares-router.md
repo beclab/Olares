@@ -95,15 +95,8 @@ Router 直接集成在 Olares 平台中，与你的应用和模型同处一套�
 - **模型组**：为负载均衡创建的统一名称。例如，你可以创建一个名为 `DeepSeek-V4` 的组，把请求分发到本地模型和远端服务。组名本身不包含斜杠。
 - **别名**：为方便而创建的自定义短名称。例如，把一个冗长的模型名改成简单的名字。
 
-## 从 Router 获取连接信息
+## 将应用连接到 Router
 
-连接 Router 需要三个参数：
+准备连接客户端时，请打开对应的能力页面，点击模型的 **View connection example** 图标。客户端的位置和 API 格式不同，需要填写的连接信息也会不同。
 
-- **Base URL**：打开 **LLM** 等能力页面，找到模型，点击右侧的 **View connection example** 图标。
-
-  ![模型行上的 View connection example 图标](/images/manual/use-cases/router-view-connection-examp.png#bordered)
-
-  ![How to call this model 窗口](/images/manual/use-cases/router-how-to-call-model.png#bordered)
-
-- **Model name**：从 **How to call this model** 窗口复制模型名称。或者在 **Default models** 页面为每类能力设置默认模型，然后使用 `default-chat` 这样的系统名称，而不是具体模型名。
-- **API key**：在 **API keys** 页面创建。只有局域网或互联网的调用方需要。Olares 中的应用无需填写。
+请按照[通过 Olares Router 连接 AI 应用](/zh/manual/best-practices/connect-ai-apps.md)中的步骤选择 Base URL、模型名称和凭证，并在 Router 中确认请求结果。该指南也保留了 Olares 1.12.6 通过 Model Console 直接连接的流程。

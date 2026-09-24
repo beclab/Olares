@@ -316,7 +316,7 @@ const side = {
           link: "/manual/olares/settings/manage-entrance",
         },
         {
-          text: "Connect your apps to AI capabilities",
+          text: "Connect AI apps through Router",
           link: "/manual/best-practices/connect-ai-apps",
         },
         {
