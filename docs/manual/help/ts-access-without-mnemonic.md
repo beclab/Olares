@@ -138,9 +138,9 @@ If you already know the system password, skip to step 3.
 1. Open **Vault** in the LarePass mobile app. If a local-password prompt blocks access, follow [If you forgot or have not set your LarePass local password](#if-you-forgot-or-have-not-set-your-larepass-local-password).
 2. Tap the filter in the top-left corner and select **All vaults**. Open the item with the terminal icon to view the system password.
 
-   ![Select All vaults in LarePass](/images/manual/help/olares-one-vault-filter.jpg#bordered)
+   ![Select All vaults in LarePass](/images/one/ssh-switch-filter.png#bordered)
 
-   ![Find the Olares One system password in Vault](/images/manual/help/olares-one-host-password.jpg#bordered)
+   ![Find the Olares One system password in Vault](/images/one/ssh-check-password-in-vault.png#bordered)
 
 3. In LarePass, go to **Settings** > **System**, open the Olares One device card, and note the **Intranet IP** under **Network**.
 4. On a computer connected to the same local network, run:

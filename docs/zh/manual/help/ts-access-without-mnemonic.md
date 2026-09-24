@@ -138,9 +138,9 @@ Olares One 激活后，系统用户名为 `olares`。系统密码用于通过 SS
 1. 在 LarePass 移动端打开 **Vault**。如果本地密码阻止访问，请参考[如果忘记了 LarePass 本地密码或尚未设置](#如果忘记了-larepass-本地密码或尚未设置)。
 2. 点击左上角的筛选项，选择 **All vaults**，再打开带有终端图标的条目查看系统密码。
 
-   ![在 LarePass 中选择 All vaults](/images/manual/help/olares-one-vault-filter.jpg#bordered)
+   ![在 LarePass 中选择 All vaults](/images/one/ssh-switch-filter.png#bordered)
 
-   ![在 Vault 中查看 Olares One 系统密码](/images/manual/help/olares-one-host-password.jpg#bordered)
+   ![在 Vault 中查看 Olares One 系统密码](/images/one/ssh-check-password-in-vault.png#bordered)
 
 3. 在 LarePass 中进入 **Settings** > **System**，打开 Olares One 设备卡片，在 **Network** 下找到 **Intranet IP**。
 4. 在同一局域网中的电脑上运行：
