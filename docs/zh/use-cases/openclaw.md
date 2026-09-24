@@ -1,4 +1,6 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /zh/use-cases/openclaw
 outline: [2, 3]
 title: 将 OpenClaw 作为自托管个人 AI 助手运行
 description: 在 Olares 上将 OpenClaw 作为自托管个人 AI 助手运行。连接 Discord 或 Slack，同时让助手和数据保留在你的设备上。
@@ -8,7 +10,7 @@ head:
       content: Olares, OpenClaw, self-hosted ai agent, personal ai agent, local ai agent, openclaw on olares
 app_version: "1.0.36"
 doc_version: "3.0"
-doc_updated: "2026-09-04"
+doc_updated: "2026-09-23"
 ---
 
 :::warning
@@ -16,6 +18,8 @@ doc_updated: "2026-09-04"
 :::
 
 # 将 OpenClaw 作为你的自托管个人 AI 助手运行
+
+<VersionRouteSelect />
 
 OpenClaw 是一款专为本地设备设计的个人 AI 助手。它可以直接接入 Discord、Slack 等消息应用，让你在这些应用中与其交互。
 
@@ -33,18 +37,19 @@ OpenClaw 是一款专为本地设备设计的个人 AI 助手。它可以直接�
 
 ## 前提条件
 
-开始前，你需要准备：
+开始前，你需要：
 
+<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - Discord 账号：用于创建机器人应用。
 - Discord 服务器：确保你在这个服务器上有添加机器人的权限。
 - 以下模型：
 
   | 模型类型 | 模型 | 获取方式 |
   | :--- | :--- | :--- |
-  | 聊天 | Gemma 4 26B (Ollama) | 从 Market 安装 |
+  | 聊天 | Qwen3.8-27B (llama.cpp) | 从 Market 安装 |
 
   :::tip 模型提供方
-  本教程通过 Ollama API 使用 Gemma 4 26B。如使用其他提供方或本地代理，请参阅 [OpenClaw 关于自定义模型提供方的文档](https://docs.openclaw.ai/concepts/model-providers#providers-via-models-providers-custom%2Fbase-url)。
+  本教程通过 Router 的 OpenAI 兼容 API 使用 Qwen3.8-27B (llama.cpp)。如使用其他提供方或本地代理，请参阅 [OpenClaw 关于自定义模型提供方的文档](https://docs.openclaw.ai/concepts/model-providers#providers-via-models-providers-custom%2Fbase-url)。
   :::
 
 ## 升级说明
@@ -73,7 +78,7 @@ Olares 支持应用克隆。如果你希望同时运行多个独立的 AI 助手
 
 ### 步骤 1：获取模型连接信息
 
-本教程使用 Gemma 4 26B (Ollama)，这是一款可从 Market 获取的支持工具调用的模型。
+本教程使用 Qwen3.8-27B (llama.cpp)，这是一款可从 Market 获取的支持工具调用的模型。
 
 :::tip
 OpenClaw 需要较大的"上下文窗口"（即 AI 的短期记忆）来处理复杂任务而不会忘记之前的指令。如使用本地模型，建议选择原生支持至少 64K token 上下文窗口的模型。
@@ -81,7 +86,7 @@ OpenClaw 需要较大的"上下文窗口"（即 AI 的短期记忆）来处理�
 
 <!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
-<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-ollama-->
+<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
 ### 步骤 2：运行安装向导
 
@@ -111,17 +116,18 @@ OpenClaw 需要较大的"上下文窗口"（即 AI 的短期记忆）来处理�
     | Personal-by-default acknowledgment | 选择 **Yes**。  |
     | Help make OpenClaw better | 按需选择。  |
     | Setup mode   | 选择 **QuickStart**。   |
-    | Model/auth provider  | 选择 **More**，然后选择 **Ollama**。<br>对于非 Ollama 本地模型，选择 **Custom Provider**。 |
-    | Ollama auth method | 选择 **Ollama**。 |
-    | Ollama mode | 选择 **Local only**。 |
-    | Ollama base URL  | 移除默认占位文本，然后输入[步骤 1](#步骤-1-获取模型连接信息) 中复制的 **Base URL**。 |
-    | Default model | 选择 **Browse all models**，然后选择已安装的模型 `ollama/gemma4:26b`。 |
+    | Model/auth provider | 选择 **Custom Provider**。 |
+    | API compatibility | 选择 **OpenAI-compatible**。 |
+    | Base URL | 粘贴步骤 1 中从 Router 复制的 Base URL，保留 `/v1`。 |
+    | API key | 允许留空时留空，必填时填写 `olares`。 |
+    | Model ID | 手动填写 `default-chat`。 |
+    | Provider ID | 填写 `router`。默认模型为 `router/default-chat`。 |
     | Test AI access now with a live completion | 选择 **Yes**。<br>出现 `AI access works` 消息表示 OpenClaw 已成功连接到模型。 |
     | Remaining settings (channels, search provider,<br>and skill dependencies) | 选择 **Skip for now**。<br>你可以稍后配置它们。 |
 
     完成安装向导后，OpenClaw 会自动打开终端用户界面（TUI）。
 
-    ![OpenClaw TUI after setup](/images/manual/use-cases/openclaw-setup-finish-tui2.png#bordered)
+    ![OpenClaw TUI after setup](/images/manual/use-cases/router-client-connect-openclaw.png#bordered)
 
 4. 输入 `/quit` 并按 **Enter** 退出。
 
@@ -222,7 +228,7 @@ OpenClaw 需要较大的"上下文窗口"（即 AI 的短期记忆）来处理�
 
 1. 在聊天区域，确保已选中你的模型。
 
-   右下角的指示器（例如 `gemma4:26b · Off`）显示当前模型和推理状态。`Off` 表示推理已禁用，而不是模型不可用。
+   右下角的指示器（例如 `default-chat · Off`）显示当前模型和推理状态。`Off` 表示推理已禁用，而不是模型不可用。
 
 2. （可选）启用推理。
 

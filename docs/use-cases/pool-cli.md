@@ -1,4 +1,6 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /use-cases/pool-cli
 outline: [2, 3]
 description: Set up Pool CLI on Olares to read code, run terminal commands, and edit files using natural language. Connect via Poolside cloud API or a local model.
 head:
@@ -7,10 +9,12 @@ head:
       content: Olares, Pool CLI, AI coding, terminal, TUI, self-hosted, MCP
 app_version: "0.1.0"
 doc_version: "1.0"
-doc_updated: "2026-06-04"
+doc_updated: "2026-09-23"
 ---
 
 # Code with Pool CLI
+
+<VersionRouteSelect />
 
 Pool CLI is a terminal-based coding agent that helps you read code, run terminal commands, and edit files using natural language. On Olares, this command-line interface runs inside a browser-based terminal equipped with a pre-configured Ubuntu development environment.
 
@@ -28,12 +32,12 @@ In this guide, you will learn how to:
 
 Before you begin, you need:
 
-- An Olares device with sufficient disk space and memory.
+<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - The following model:
 
   | Used for | Model | How to get it |
   | :--- | :--- | :--- |
-  | Local model connection | Qwen3.6-27B (llama.cpp) | Install from Market |
+  | Local model connection | Qwen3.8-27B (llama.cpp) | Install from Market |
 
 ## Install Pool CLI
 
@@ -98,13 +102,13 @@ Before you begin, create a Poolside account and obtain an API key.
 
 ### Connect using a local model
 
-Use this method to run Pool CLI entirely offline with Qwen3.6-27B.
+Use this method to run Pool CLI entirely offline with Qwen3.8-27B.
 
 #### Get model connection details
 
 <!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
-For Qwen3.6-27B (llama.cpp):
+For Qwen3.8-27B (llama.cpp):
 
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
@@ -113,8 +117,8 @@ For Qwen3.6-27B (llama.cpp):
 1. Go to **Settings** > **Applications** > **Pool CLI** > **Manage environment variables**, and click <i class="material-symbols-outlined">edit</i> to configure the following variables:
 
    - **USE_LOCAL_LLM**: Set it to `true` to enable local model mode.
-   - **POOLSIDE_STANDALONE_BASE_URL**: Enter the Base URL copied from Model Console. Use it exactly as displayed.
-   - **POOL_MODEL**: Enter the Model name copied from Model Console.
+   - **POOLSIDE_STANDALONE_BASE_URL**: Enter the Base URL copied from Router. Use it exactly as displayed.
+   - **POOL_MODEL**: Enter `default-chat`.
 
 2. Click **Apply** and wait for the Pool CLI container to restart.
 3. Open Pool CLI from Launchpad, and enter the following command to start a session:

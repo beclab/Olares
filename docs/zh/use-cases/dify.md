@@ -1,22 +1,22 @@
 ---
-description: 在 Olares 上自托管 Dify，构建本地 AI 应用与助手。部署 Dify、接入 Ollama 模型，并添加个人知识库，实现私有的 RAG 工作流。
+connectionVersion: "1.12.7"
+connectionLatestPath: /zh/use-cases/dify
+description: 在 Olares 上自托管 Dify，构建本地 AI 应用与助手。部署 Dify、通过 Router 接入模型，并添加个人知识库，实现私有的 RAG 工作流。
 head:
   - - meta
     - name: keywords
       content: Olares, Dify, dify self hosted, dify vs n8n, dify ollama, dify on olares
 ---
 # Dify 定制 AI 助手
+
+<VersionRouteSelect />
 Dify 是一个 AI 应用开发平台。它是 Olares 集成的关键开源项目之一，帮助你构建和管理 AI 应用，同时确保数据完全由自己掌控。
 此外，你也可以在 Dify 中接入个人知识库文档，让 AI 应用更懂你。
 
 ## 开始之前
-要使用本地 AI 模型，请确保你的环境中已配置以下内容：
-- Olares 环境中已安装并运行 [Ollama](ollama.md)。
-- 已安装 [Open WebUI](openwebui.md)，并下载了你偏好的语言模型。
-- 访问设备已安装 LarePass 并已[启用专用网络](../manual/larepass/private-network.md)。
-  :::tip 提示
-  建议使用 `gemma2` 或 `qwen` 等轻量但功能强大的模型，可在速度和性能间取得良好平衡。
-  :::
+
+<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
+- 从应用市场安装 Qwen3.8-27B (llama.cpp)。
 
 ## 安装 Dify
 :::info
@@ -34,29 +34,26 @@ Dify 是一个 AI 应用开发平台。它是 Olares 集成的关键开源项目
 2. 右侧点击**去设置**，进入模型供应商配置页面。你可以选择远程模型或本地托管模型。
    ![应用初始页面](/images/zh/manual/use-cases/dify-app-init.png#bordered)
 
-## 添加 Ollama 作为模型提供商
+## 通过 Router 添加聊天模型
 
-1. 进入**设置** > **应用** > **Ollama** > **入口**，设置 Ollama 的认证级别为“内部”。该设置允许其他应用在本地网络环境下可无需认证即可访问 Ollama 服务。
-   
-   ![Ollama entrance](/images/zh/manual/use-cases/dify-ollama-entrance.png#bordered)
+<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
-2. 在 Dify 的 模型提供者商配置页面，选择 Ollama 作为模型提供者商，并进行以下配置：
-    - **模型名称**：填写模型名称，例如：`gemma2`。
-    - **基础 URL**：填入 Ollama 本地地址: `https://39975b9a1.{username}.olares.cn`。将 `{username}` 替换为 Olares 管理员的用户名。例如：`https://39975b9a1.marvin123.olares.com`。
-   
-    ![配置 Ollama](/images/zh/manual/use-cases/dify-add-gemma2.png#bordered){width=70%}
-
-      :::info 提示
-      其他必填字段可以保留默认值。
-      :::
-3. 点击**保存**。
+1. 在 Dify 中打开 **Settings** > **Model Provider**，安装并选择 **OpenAI-API-compatible** 提供商插件。
+2. 添加模型，**Model Name** 填写 `default-chat`，模型类型选择聊天或 **LLM**。
+3. **Base URL** 填写从 Router 复制的地址，保留 `/v1`。API 密钥允许留空时留空，必填时填写 `olares`。
+4. 保存配置。
 
 ## 配置 Ashia
 
 1. 切换至 Dify 的**工作室**选项，并进入 **Ashia** 应用。
 2. 从右侧模型列表中选择已配置好的 Gemma2 本地模型。
 
+
+   <!--
+   TODO: 素材清单 05，待补 Router 截图：dify-model-router.png；替换下方旧图后再取消注释。
    ![选择模型](/images/zh/manual/use-cases/dify-select-model.png#bordered)
+   -->
+
 3. 点击**发布**。现在可以在**调试与预览**窗口试着和 Gemma2 聊天了。
 
    ![聊天](/images/zh/manual/use-cases/dify-chat-with-ashia.png#bordered)

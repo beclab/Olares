@@ -1,4 +1,6 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /zh/use-cases/lobechat
 outline: [2, 4]
 title: 使用 LobeHub 构建本地 AI 智能体
 description: 在 Olares 上安装 LobeHub 并接入本地模型，构建支持知识库、技能和多模态输入的自托管 AI 助手。
@@ -13,6 +15,8 @@ head:
 :::
 
 # 使用 LobeHub 构建你的本地 AI 智能体
+
+<VersionRouteSelect />
 
 LobeHub（前身为 LobeChat）是一个开源平台，用于构建安全、自托管的 AI 智能体和聊天体验。它可以连接到你的本地模型，支持文件处理和知识库，并允许你创建具有自定义技能的专用智能体。
 
@@ -30,11 +34,14 @@ LobeHub 是官方平台名称，但应用目前在 Olares Market 中列为 "Lobe
 
 ## 前提条件
 
-开始前，你需要以下模型：
+开始前，你需要：
 
-| 模型类型 | 模型 | 获取方式 |
-| :--- | :--- | :--- |
-| 聊天 | Qwen3.6-27B (llama.cpp) | 从应用市场安装 |
+<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
+- 以下模型：
+
+  | 模型类型 | 模型 | 获取方式 |
+  | :--- | :--- | :--- |
+  | 聊天 | Qwen3.8-27B (llama.cpp) | 从应用市场安装 |
 
 <!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
@@ -70,7 +77,7 @@ LobeHub 是官方平台名称，但应用目前在 Olares Market 中列为 "Lobe
 2. 配置以下设置：
 
    - **API 密钥**：输入任意占位文本，例如 `local`。
-   - **API 代理 URL**：输入你从 Model Console 复制的 **Base URL**。例如，`https://e46e044d.laresprime.olares.com/v1`。
+   - **API 代理 URL**：输入你从 Router 复制的 **Base URL**。例如，`https://router.<your-olares-domain>/v1`。
    - **使用 Responses API 规范**：确保此选项已禁用。
    - **使用客户端请求模式**：确保此选项已禁用。
 
@@ -78,16 +85,24 @@ LobeHub 是官方平台名称，但应用目前在 Olares Market 中列为 "Lobe
       运行本地模型时，不要启用**使用客户端请求模式**选项。此模式专为远程 API 调用设计，可能会导致连接错误。
       :::
 
-3. 在**模型列表**部分，点击**获取模型**以拉取支持的模型列表。模型名称 `unsloth/Qwen3.6-27B-GGUF:Q4_K_M` 会出现在列表中。
+3. 在 **Model List** 中添加自定义模型，模型 ID 填写 `default-chat`。**Fetch models** 只返回具体模型，因此需要手动添加这个路由名称。
 
+   <!--
+   TODO: 素材清单 06，待补 Router 截图：lobehub-add-model-router.png；替换下方旧图后再取消注释。
    ![获取模型列表并启用模型](/images/manual/use-cases/lobehub-fetch-enable-model1.png#bordered)
+   -->
+
 
 4. 点击 <i class="material-symbols-outlined">toggle_off</i> 启用它。
 5. 在**连接检查**部分，从列表中选择你刚刚启用的模型，然后点击**检查**以验证连接。如果模型较大，加载可能需要更长时间。
 
    按钮变为**检查通过**，表示连接已建立。
 
-   ![连接检查成功](/images/manual/use-cases/lobehub-checkpass2.png#bordered)  
+   <!--
+   TODO: 素材清单 07，待补 Router 截图：lobehub-connection-check-router.png；替换下方旧图后再取消注释。
+   ![连接检查成功](/images/manual/use-cases/lobehub-checkpass2.png#bordered)
+   -->
+
 
 6. 点击左上角的 Home 图标返回 LobeHub 主页。
 

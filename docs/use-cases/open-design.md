@@ -1,20 +1,24 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /use-cases/open-design
 outline: [2, 3]
 description: Use Open Design on Olares to turn prompts into HTML prototypes, landing pages, and slide decks with a local or cloud AI model.
 head:
   - - meta
     - name: keywords
-      content: Olares, Open Design, AI design studio, AI prototyping, landing page generator, presentation generator, OpenAI-compatible, local LLM, Qwen3.6, self-hosted
+      content: Olares, Open Design, AI design studio, AI prototyping, landing page generator, presentation generator, OpenAI-compatible, local LLM, Qwen3.8, self-hosted
 app_version: "0.22.1"
 doc_version: "1.0"
-doc_updated: "2026-09-18"
+doc_updated: "2026-09-23"
 ---
 
 # Create design files with Open Design
 
+<VersionRouteSelect />
+
 Open Design is an open-source AI design studio that turns natural-language briefs into working design files. Its built-in OpenCode agent uses a model provider you configure to create previewable HTML prototypes, landing pages, dashboards, wireframes, and slide decks.
 
-On Olares, you can connect Open Design to a local model through Model Console or bring an API key for a cloud provider. Projects keep their prompts, references, previews, and generated files together so you can iterate on a design before exporting it.
+On Olares, you can connect Open Design to a local model through Router or bring an API key for a cloud provider. Projects keep their prompts, references, previews, and generated files together so you can iterate on a design before exporting it.
 
 :::warning Current output limitation
 Open Design 0.22.1 on Olares does not generate standalone images from text. Use it to create pages, prototypes, dashboards, or slide decks instead.
@@ -33,12 +37,12 @@ In this guide, you will learn how to:
 
 Before you begin, you need:
 
-- Olares 1.12.6 or later.
+<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - The following model:
 
   | Model type | Model | How to get it |
   | :--- | :--- | :--- |
-  | Chat | Qwen3.6-27B (llama.cpp) | Install from Market |
+  | Chat | Qwen3.8-27B (llama.cpp) | Install from Market |
 
 <!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
@@ -53,7 +57,7 @@ Before you begin, you need:
 
 <!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
-In this guide, Open Design connects to Qwen3.6-27B (llama.cpp) using the **OpenAI-Compatible** API format:
+In this guide, Open Design connects to Qwen3.8-27B (llama.cpp) using the **OpenAI-Compatible** API format:
 
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
@@ -64,9 +68,9 @@ In this guide, Open Design connects to Qwen3.6-27B (llama.cpp) using the **OpenA
 3. Under **Provider preset**, select **Custom provider**.
 4. Configure the provider:
 
-   - **Base URL**: Paste the Base URL copied from Model Console, including the trailing `/v1`.
+   - **Base URL**: Paste the Base URL copied from Router, including the trailing `/v1`.
    - **API key**: Enter any non-empty value, such as `olares`. Local model apps do not require a real key for requests from another app in the same Olares cluster.
-   - **Model**: Enter the exact Model name copied from Model Console.
+   - **Model**: Enter `default-chat`.
    - **Max tokens (optional)**: Enter `65536`. You can use `32768` for a smaller context window.
 
    <!-- ![Configure an API provider in Open Design](/images/manual/use-cases/open-design-api-provider.png#bordered) -->
@@ -120,7 +124,7 @@ Cloud usage is billed by the selected provider. Use that provider's exact model 
 
 ### The connection test fails or returns 404
 
-Paste the Base URL from Model Console again without changing its path. For the local model in this guide, select **OpenAI-Compatible** in Model Console and use the URL exactly as displayed, including `/v1`.
+Copy the Base URL from **Apps in Olares** in Router's **How to call this model** window, including `/v1`. Check that the default chat model shows **Callable** on **LLM**.
 
 ### Generation stops before the design is complete
 
@@ -132,7 +136,7 @@ Return to the model app's Model Console. Continue only when **Model** shows **RE
 
 ### Open Design uses the wrong model
 
-Compare the **Model** value in Open Design with the **Model name** in Model Console. The values must match exactly.
+Use `default-chat` and check its target on Router's **Default models** page. To pin a specific model, copy its full name from Router instead.
 
 ### Open Design does not create a standalone image
 

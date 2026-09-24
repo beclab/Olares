@@ -1,4 +1,6 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /zh/use-cases/pool-cli
 outline: [2, 3]
 description: 在 Olares 上安装 Pool CLI，通过自然语言读取代码、运行终端命令和编辑文件。支持连接 Poolside 云端 API 或本地模型。
 head:
@@ -7,7 +9,7 @@ head:
       content: Olares, Pool CLI, AI coding, terminal, TUI, self-hosted, MCP
 app_version: "0.1.0"
 doc_version: "1.0"
-doc_updated: "2026-06-04"
+doc_updated: "2026-09-23"
 ---
 
 :::warning
@@ -15,6 +17,8 @@ doc_updated: "2026-06-04"
 :::
 
 # 使用 Pool CLI 进行编码
+
+<VersionRouteSelect />
 
 Pool CLI 是一个基于终端的编码助手，可以帮助你通过自然语言读取代码、运行终端命令和编辑文件。在 Olares 上，这个命令行界面运行在一个基于浏览器的终端中，该终端配备了一个预配置的 Ubuntu 开发环境。
 
@@ -32,12 +36,12 @@ Pool CLI 是一个基于终端的编码助手，可以帮助你通过自然语�
 
 开始前，你需要：
 
-- 一台具有足够磁盘空间和内存的 Olares 设备。
+<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - 以下模型：
 
   | 用途 | 模型 | 获取方式 |
   | :--- | :--- | :--- |
-  | 连接本地模型 | Qwen3.6-27B (llama.cpp) | 从 Market 安装 |
+  | 连接本地模型 | Qwen3.8-27B (llama.cpp) | 从 Market 安装 |
 
 ## 安装 Pool CLI
 
@@ -102,13 +106,13 @@ Pool CLI 是一个基于终端的编码助手，可以帮助你通过自然语�
 
 ### 使用本地模型连接
 
-使用此方法可以通过 Qwen3.6-27B 完全离线运行 Pool CLI。
+使用此方法可以通过 Qwen3.8-27B 完全离线运行 Pool CLI。
 
 #### 获取模型连接信息
 
 <!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
-对于 Qwen3.6-27B (llama.cpp)：
+对于 Qwen3.8-27B (llama.cpp)：
 
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
@@ -117,8 +121,8 @@ Pool CLI 是一个基于终端的编码助手，可以帮助你通过自然语�
 1. 前往 **Settings** > **Applications** > **Pool CLI** > **Manage environment variables**，然后点击 <i class="material-symbols-outlined">edit</i> 配置以下变量：
 
    - **USE_LOCAL_LLM**：设置为 `true` 以启用本地模型模式。
-   - **POOLSIDE_STANDALONE_BASE_URL**：输入从模型控制台复制的 Base URL，并按显示内容原样使用。
-   - **POOL_MODEL**：输入从模型控制台复制的 Model name。
+   - **POOLSIDE_STANDALONE_BASE_URL**：输入从 Router 复制的 Base URL，并按显示内容原样使用。
+   - **POOL_MODEL**：填写 `default-chat`。
 
 2. 点击 **Apply**，等待 Pool CLI 容器重启。
 3. 从启动台打开 Pool CLI，然后输入以下命令启动会话：

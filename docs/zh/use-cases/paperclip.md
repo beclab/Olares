@@ -1,4 +1,6 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /zh/use-cases/paperclip
 outline: [2, 3]
 description: 在 Olares 上运行 Paperclip，协调多个 AI 智能体协同完成同一组任务。添加由 Claude Code、Codex、OpenCode、Cursor 或其他提供商支持的智能体，并为它们分配任务单。
 head:
@@ -7,7 +9,7 @@ head:
       content: Olares, Paperclip, AI agent, multi-agent, Claude Code, Codex, OpenCode, Cursor, self-hosted
 app_version: "1.0.22"
 doc_version: "1.1"
-doc_updated: "2026-06-12"
+doc_updated: "2026-09-23"
 ---
 
 :::warning
@@ -16,9 +18,18 @@ doc_updated: "2026-06-12"
 
 # 使用 Paperclip 协调多个 AI 智能体
 
+<VersionRouteSelect />
+
 Paperclip 是一个开源平台，用于在同一个统一工作区下协调多个 AI 智能体。通过设置虚拟公司，你可以添加由 Claude Code、Codex、OpenCode、Cursor 或其他提供商驱动的 AI 智能体，并为它们分配任务单。无论是编码、研究还是内容创作，Paperclip 都能管理工作流。
 
 将 Paperclip 作为自托管应用运行在 Olares 上，可以确保你的 API 密钥、任务历史和智能体输出完全保留在你的设备上。
+
+## 前提条件
+
+开始前，你需要：
+
+<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
+- 如需使用本地模型，从应用市场安装 Qwen3.8-27B (llama.cpp)。
 
 ## 学习目标
 
@@ -210,13 +221,13 @@ Paperclip 是一个完全自主的多智能体协作平台。完全在本地模�
 
 | 模型 | 获取方式 |
 | :--- | :--- |
-| Qwen3.6-27B (llama.cpp) | 从 Market 安装 |
+| Qwen3.8-27B (llama.cpp) | 从 Market 安装 |
 
 <!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
-模型名称为 `unsloth/Qwen3.6-27B-GGUF:Q4_K_M`。
+模型名称为 `default-chat`。
 
 ### 在 OpenCode 中配置本地模型
 
@@ -231,19 +242,19 @@ Paperclip 是一个完全自主的多智能体协作平台。完全在本地模�
 
    b. 将 `opencode.jsonc` 重命名为 `opencode.json`，并以编辑模式打开。
 
-   c. 将默认配置替换为以下示例。将 `<base-url>` 替换为从模型控制台复制的 Base URL。如果模型控制台显示了不同的模型名称，请将所有 `unsloth/Qwen3.6-27B-GGUF:Q4_K_M` 替换为该准确值。
+   c. 将默认配置替换为以下示例。将 `<base-url>` 替换为从 Router 复制的 Base URL。保留 `default-chat`，即可使用 Router 中设置的默认聊天模型。
 
    ```json {wrap}
    {
      "$schema": "https://opencode.ai/config.json",
-     "model": "olares/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
+     "model": "olares/default-chat",
      "provider": {
        "olares": {
-         "name": "Qwen3.6-27B",
+         "name": "Qwen3.8-27B",
          "npm": "@ai-sdk/openai-compatible",
          "models": {
-           "unsloth/Qwen3.6-27B-GGUF:Q4_K_M": {
-             "name": "Qwen3.6-27B"
+           "default-chat": {
+             "name": "Qwen3.8-27B"
            }
          },
          "options": {
@@ -254,14 +265,18 @@ Paperclip 是一个完全自主的多智能体协作平台。完全在本地模�
    }
    ```
 
+   <!--
+   TODO: 素材清单 15，待补 Router 截图：paperclip-opencode-config-router.png；替换下方旧图后再取消注释。
+   ![OpenCode local model in agent config](/images/manual/use-cases/paperclip-opencode-model-config.png#bordered)
+   -->
+
+
    :::tip OpenAI-compatible Base URL
-   Qwen3.6-27B 的 Base URL 已以 `/v1` 结尾。如果改用基于 Ollama 的模型，请在模型控制台中选择 **OpenAI-Compatible**，并复制该格式下显示的 Base URL。如果使用的是从其他位置获得的 Ollama 格式 Base URL，请在末尾添加 `/v1`，以便 OpenCode 访问其 OpenAI-compatible API。
+   复制 Router Base URL 时保留 `/v1`。更换后端推理引擎不会改变这个客户端地址。
    :::
 
 3. 重启 Paperclip 容器。
 4. 在 Paperclip 中，进入 **Agents** > **Configuration** > **Permissions & Configuration** 以验证新添加的本地模型。
-
-   ![OpenCode local model in agent config](/images/manual/use-cases/paperclip-opencode-model-config.png#bordered)
 
    :::warning
    如果你不打算使用默认的 `openai/gpt-5.1-codex-mini` 作为 cheap model，请务必关闭此功能或切换到其他可用模型。
@@ -273,7 +288,7 @@ Paperclip 是一个完全自主的多智能体协作平台。完全在本地模�
 
 - 要求 CEO 雇佣一个新智能体：
    - **Task title:** Hire a CMO
-   - **Task description:** Hire a content generation agent that uses opencode as the runtime and olares/unsloth/Qwen3.6-27B-GGUF:Q4_K_M as the model.
+   - **Task description:** Hire a content generation agent that uses opencode as the runtime and olares/default-chat as the model.
 
    ![Agent run activity](/images/manual/use-cases/paperclip-agent-run-activity.png#bordered)
 

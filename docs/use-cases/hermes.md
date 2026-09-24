@@ -1,4 +1,6 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /use-cases/hermes
 outline: [2,3]
 description: Learn how to install Hermes Agent on Olares, connect it to Discord, install Olares skills, and integrate it with other applications via the Gateway API.
 head:
@@ -7,10 +9,12 @@ head:
       content: Olares, Hermes, Hermes Agent, autonomous AI, self-improving AI, Discord bot, self-hosted
 app_version: "1.3.33"
 doc_version: "3.0"
-doc_updated: "2026-07-28"
+doc_updated: "2026-09-23"
 ---
 
 # Set up a self-directed AI agent with Hermes
+
+<VersionRouteSelect />
 
 Hermes Agent is a self-directed AI assistant that connects to your local models to execute system tasks, generate code, and manage workflows. It retains memory across sessions and creates reusable skills based on your interactions.
 
@@ -30,13 +34,14 @@ In this guide, you will learn how to:
 
 Before you begin, you need:
 
+<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - Discord account: Required to create the bot application.
 - Discord server: A server where you have permissions to add bots.
 - The following model:
 
     | Model type | Model | How to get it |
     | :--- | :--- | :--- |
-    | Chat | Qwen3.6-27B (llama.cpp) | Install from Market |
+    | Chat | Qwen3.8-27B (llama.cpp) | Install from Market |
 
     :::tip
     Hermes Agent requires a model with a context window of at least 64K tokens.
@@ -71,7 +76,7 @@ Run a quick setup to connect Hermes Agent to your local model.
 
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
-5. Go to the **Configuration** tab, expand **Advanced parameters**, and then note down the `--ctx-size` value, `131072`. This is the context size, and you will need it later.
+5. Open Qwen3.8-27B (llama.cpp) from Launchpad. In its Model Console, check the configured context size under **Configuration** for the next step.
 
 ### Step 2: Run the setup wizard
 
@@ -88,12 +93,12 @@ Run a quick setup to connect Hermes Agent to your local model.
     |:-----------|:---------|
     | How would you like to set up Hermes | Select **Full setup — configure every provider, tool & option yourself (bring your own keys)**. |
     | Select provider | Select **Custom endpoint (enter URL manually)**.  |
-    | API base URL  | Enter the **Base URL** you copied from the Model Console.<br>For example, `https://e46e044d.laresprime.olares.com/v1`.  |
+    | API base URL  | Enter the **Base URL** you copied from Router.<br>For example, `https://router.<your-olares-domain>/v1`.  |
     | API key  | Enter any text as a placeholder value, such as `local`.<br>The input remains hidden for security. |
     | Select API compatibility mode | Enter `1` to select **Auto-detect [current]**. This option uses Hermes URL heuristics and works best for standard OpenAI-compatible endpoints. |
-    | Use this model | Verify that the detected model name is correct, and then enter `y`. |
-    | Context length in tokens | Leave this field blank to auto-detect.<br><br>**Note**: If your model's context window is less than `65536`, enter a value greater than `65536`. Hermes Agent requires a minimum context window of 64K tokens. |
-    | Display name |  Enter a name to identify this model, such as `qwen3.6-27b-local`.|
+    | Use this model | Enter `default-chat` manually instead of accepting a different auto-detected model. |
+    | Context length in tokens | Enter the context size configured in Model Console, at least 65536. Do not enter a value larger than the engine configuration. |
+    | Display name |  Enter a name to identify this model, such as `router-chat`.|
     | Select terminal backend | Select **Local - run directly on this machine**. |
     | Select platforms to configure | Press **ESC** to skip for now. |
     | Tools for CLI | Press **ESC** to skip for now. |

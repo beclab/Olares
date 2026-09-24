@@ -1,13 +1,15 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /zh/use-cases/codex-cli
 outline: [2, 3]
 description: 在 Olares 上运行 Codex CLI，检查代码仓库、编辑代码、执行命令并测试更改。你可以使用 ChatGPT、OpenAI API 密钥或本地模型连接 Codex。
 head:
   - - meta
     - name: keywords
-      content: Olares, Codex CLI, OpenAI, AI 编程智能体, 浏览器终端, ChatGPT, 本地大语言模型, Qwen3.6, 自托管
+      content: Olares, Codex CLI, OpenAI, AI 编程智能体, 浏览器终端, ChatGPT, 本地大语言模型, Qwen3.8, 自托管
 app_version: "1.0.18"
 doc_version: "1.0"
-doc_updated: "2026-09-18"
+doc_updated: "2026-09-23"
 ---
 
 :::warning
@@ -15,6 +17,8 @@ doc_updated: "2026-09-18"
 :::
 
 # 在 Olares 上运行 Codex CLI
+
+<VersionRouteSelect />
 
 Codex CLI 是 OpenAI 开源的终端编程智能体。你可以使用自然语言让它检查代码仓库、编辑文件、运行命令和测试，并帮助你理解不熟悉的代码。
 
@@ -34,14 +38,13 @@ Codex CLI 是 OpenAI 开源的终端编程智能体。你可以使用自然语�
 
 开始前，你需要：
 
-- 一台运行 Olares 1.12.6 或更高版本，并具备足够磁盘空间和内存的 Olares 设备。
-- 如果计划使用 ChatGPT 连接，需要一个具有 Codex 使用权限的 ChatGPT 账户。
-- 如果计划通过 OpenAI Platform 连接，需要一个 OpenAI API 密钥。
-- 如果计划使用本地模型，需要在 Olares 设备上运行一个针对编程优化的模型。本指南使用以下模型：
+<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 
-   | 模型类型 | 模型 | 获取方式 |
-   | :--- | :--- | :--- |
-   | 对话 | Qwen3.6-27B MTP (llama.cpp) | 从 Market 安装 |
+根据连接方式，准备以下其中一项：
+
+- **ChatGPT**：具有 Codex 使用权限的 ChatGPT 账户。
+- **OpenAI Platform**：OpenAI API 密钥。
+- **本地模型**：从应用市场安装 Qwen3.8-27B (llama.cpp)。
 
 <!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
@@ -107,31 +110,26 @@ Codex 的标准浏览器登录流程会将凭据返回到 `localhost:1455` 上�
 
 ### 使用本地模型连接
 
-本示例通过 OpenAI 兼容 API 将 Codex CLI 连接到 Qwen3.6-27B MTP (llama.cpp)。
+本示例通过 OpenAI 兼容 API 将 Codex CLI 连接到 Qwen3.8-27B (llama.cpp)。
 
 #### 获取模型连接信息
 
-1. 从 Launchpad 打开 Qwen3.6-27B MTP (llama.cpp)。Model Console 会自动打开。
-2. 等待 **Model** 显示 **READY**，且 **Engine** 显示 **RUNNING**。
-3. 在 **Model** 下，准确复制显示的 **Model name**。
-4. 在 **Engine** 下：
-
-   a. 在 **Connection source** 中选择 **Apps in Olares**。
-
-   b. 在 **API format** 中选择 **OpenAI-Compatible**。
-
-   c. 准确复制显示的 **Base URL**。
+<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
 #### 配置 Codex CLI
 
 1. 前往 **Settings** > **Applications** > **Codex CLI** > **Manage environment variables**。
 2. 配置以下环境变量：
 
-   - **OPENAI_BASE_URL**：粘贴从 Model Console 复制的 Base URL，包括末尾的 `/v1`。
-   - **OPENAI_API_KEY**：输入一个非空占位值，例如 `olares`。本地模型应用不会验证来自同一 Olares 集群内其他应用的真实 OpenAI 密钥，但 Codex CLI 要求该值非空。
-   - **CODEX_MODEL**：输入从 Model Console 复制的准确 Model name。
+   - **OPENAI_BASE_URL**：粘贴从 Router 复制的 Base URL，包括末尾的 `/v1`。
+   - **OPENAI_API_KEY**：输入一个非空占位值，例如 `olares`。Router 通过平台识别 Olares 内应用，Codex CLI 要求此字段非空。
+   - **CODEX_MODEL**：填写 `default-chat`。
 
+   <!--
+   TODO: 素材清单 03，待补 Router 截图：codex-cli-env-router.png；替换下方旧图后再取消注释。
    ![配置 Codex CLI 本地模型环境变量](/images/manual/use-cases/codex-cli-local-model-env.png#bordered)
+   -->
+
 
 3. 点击 **Apply**，等待 Codex CLI 重启。
 4. 从 Launchpad 打开 Codex CLI，然后运行：
@@ -222,11 +220,11 @@ olares-cli profile login --olares-id <your-olares-id>
 
 ### 为什么本地模型返回 404？
 
-打开模型的 Model Console，重新复制 Base URL。选择 **OpenAI-Compatible**，并准确使用界面显示的 URL，包括 `/v1`。同时确认 **Model** 显示 **READY**，且 **Engine** 显示 **RUNNING**。
+从 Router 的 **How to call this model** 窗口重新复制 **Apps in Olares** 下的 Base URL，保留 `/v1`。在 **LLM** 页面确认默认聊天模型显示 **Callable**。
 
 ### 为什么 Codex 报告 `model not found`？
 
-将 `CODEX_MODEL` 与 Model Console 中的 **Model name** 进行比较，两者必须完全一致。
+使用 `default-chat`，并在 Router 的 **Default models** 页面检查它指向的模型。如需固定使用某个模型，请改填 Router 中显示的完整模型名称。
 
 ### 如何删除残留的登录文件？
 

@@ -1,16 +1,20 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /use-cases/codex-cli
 outline: [2, 3]
 description: Run Codex CLI on Olares to inspect repositories, edit code, execute commands, and test changes. Connect with ChatGPT, an OpenAI API key, or a local model.
 head:
   - - meta
     - name: keywords
-      content: Olares, Codex CLI, OpenAI, AI coding agent, browser terminal, ChatGPT, local LLM, Qwen3.6, self-hosted
+      content: Olares, Codex CLI, OpenAI, AI coding agent, browser terminal, ChatGPT, local LLM, Qwen3.8, self-hosted
 app_version: "1.0.18"
 doc_version: "1.0"
-doc_updated: "2026-09-18"
+doc_updated: "2026-09-23"
 ---
 
 # Run Codex CLI on Olares
+
+<VersionRouteSelect />
 
 Codex CLI is OpenAI's open-source coding agent for the terminal. It can inspect a repository, edit files, run commands and tests, and help you understand unfamiliar code through natural-language requests.
 
@@ -30,14 +34,13 @@ In this guide, you will learn how to:
 
 Before you begin, you need:
 
-- An Olares device running Olares 1.12.6 or later, with sufficient disk space and memory.
-- A ChatGPT account with Codex access, if you plan to connect using ChatGPT.
-- An OpenAI API key, if you plan to connect through OpenAI Platform.
-- A local model optimized for coding running on your Olares device, if you plan to use local execution. This guide uses the following model:
+<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 
-   | Model type | Model | How to get it |
-   | :--- | :--- | :--- |
-   | Chat | Qwen3.6-27B MTP (llama.cpp) | Install from Market |
+Depending on how you connect, prepare one of the following:
+
+- **ChatGPT**: A ChatGPT account with Codex access.
+- **OpenAI Platform**: An OpenAI API key.
+- **Local model**: Qwen3.8-27B (llama.cpp) installed from Market.
 
 <!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
@@ -103,31 +106,26 @@ Use this method to bill Codex usage through your OpenAI Platform account.
 
 ### Connect with a local model
 
-This example connects Codex CLI to Qwen3.6-27B MTP (llama.cpp) through its OpenAI-compatible API.
+This example connects Codex CLI to Qwen3.8-27B (llama.cpp) through its OpenAI-compatible API.
 
 #### Get the model connection details
 
-1. Open Qwen3.6-27B MTP (llama.cpp) from Launchpad. Its Model Console opens automatically.
-2. Wait until **Model** shows **READY** and **Engine** shows **RUNNING**.
-3. Under **Model**, copy the **Model name** exactly as shown.
-4. Under **Engine**:
-
-   a. For **Connection source**, select **Apps in Olares**.
-
-   b. For **API format**, select **OpenAI-Compatible**.
-
-   c. Copy the **Base URL** exactly as shown.
+<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
 #### Configure Codex CLI
 
 1. Navigate to **Settings** > **Applications** > **Codex CLI** > **Manage environment variables**.
 2. Configure the following variables:
 
-   - **OPENAI_BASE_URL**: Paste the Base URL copied from Model Console exactly as shown, including the trailing `/v1`.
-   - **OPENAI_API_KEY**: Enter a non-empty placeholder value, such as `olares`. The local model app does not require a real OpenAI key for requests from another app in the same Olares cluster.
-   - **CODEX_MODEL**: Enter the exact Model name copied from Model Console.
+   - **OPENAI_BASE_URL**: Paste the Base URL copied from Router exactly as shown, including the trailing `/v1`.
+   - **OPENAI_API_KEY**: Enter a non-empty placeholder value, such as `olares`. Router identifies requests from this Olares app through the platform.
+   - **CODEX_MODEL**: Enter `default-chat`.
 
+   <!--
+   TODO: 素材清单 03，待补 Router 截图：codex-cli-env-router.png；替换下方旧图后再取消注释。
    ![Codex CLI local model environment variables](/images/manual/use-cases/codex-cli-local-model-env.png#bordered)
+   -->
+
 
 3. Click **Apply** and wait for Codex CLI to restart.
 4. Open Codex CLI from Launchpad and run:
@@ -218,11 +216,11 @@ The callback service runs inside the Codex CLI container, so your computer's bro
 
 ### Why does the local model return 404?
 
-Open the model's Model Console and copy its Base URL again. Select **OpenAI-Compatible** and use the URL exactly as displayed, including `/v1`. Also confirm that **Model** shows **READY** and **Engine** shows **RUNNING**.
+Copy the Base URL from **Apps in Olares** in Router's **How to call this model** window, including `/v1`. Check that the default chat model shows **Callable** on **LLM**.
 
 ### Why does Codex report `model not found`?
 
-Compare `CODEX_MODEL` with the **Model name** in Model Console. The values must match exactly.
+Use `default-chat` and check its target on Router's **Default models** page. To pin a specific model, copy its full name from Router instead.
 
 ### How do I remove a remaining login file?
 

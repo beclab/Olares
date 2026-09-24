@@ -1,4 +1,6 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /zh/use-cases/karakeep
 outline: [2, 3]
 description: 在 Olares 上运行 Karakeep，将链接、笔记、图片和 PDF 保存在一个自托管工作空间中。通过手机访问你的收藏，并使用本地模型添加 AI 自动标签。
 head:
@@ -7,7 +9,7 @@ head:
       content: Olares, Karakeep, Hoarder, bookmark manager, self-hosted, AI auto-tag, mobile app, Ollama, video download
 app_version: "1.0.4"
 doc_version: "1.1"
-doc_updated: "2026-07-29"
+doc_updated: "2026-09-23"
 ---
 
 :::warning
@@ -15,6 +17,8 @@ doc_updated: "2026-07-29"
 :::
 
 # 使用 Karakeep 保存和整理书签
+
+<VersionRouteSelect />
 
 Karakeep（前身为 Hoarder）是一个自托管的书签和内容管理应用，将链接、笔记、图片和 PDF 集中存储在一处。它自动获取页面元数据，为全文搜索索引内容，支持共享列表，并可以使用本地 AI 模型自动为条目添加标签。
 
@@ -33,11 +37,14 @@ Karakeep（前身为 Hoarder）是一个自托管的书签和内容管理应用�
 
 ## 前提条件
 
-如需完成 AI 自动标签部分，请准备以下模型：
+开始前，你需要：
 
-| 模型类型 | 模型 | 获取方式 |
-| :--- | :--- | :--- |
-| 聊天 | Gemma 4 26B (Ollama) | 从 Market 安装 |
+<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
+- 完成 AI 自动标签步骤所需的模型：
+
+  | 模型类型 | 模型 | 获取方式 |
+  | :--- | :--- | :--- |
+  | 聊天 | Qwen3.8-27B (llama.cpp) | 从 Market 安装 |
 
 ## 安装 Karakeep
 
@@ -123,38 +130,33 @@ Karakeep 还支持浏览器扩展和其他客户端。有关完整列表，请�
 
 ## 使用本地模型自动为书签添加标签
 
-Karakeep 可以使用 Olares 上托管的本地模型为保存的内容生成标签。目前，Karakeep 通过 Ollama API 连接本地模型。
+Karakeep 可以使用 Olares 上托管的本地模型为保存的内容生成标签。本示例通过 Router 的 OpenAI 兼容 API 连接模型。
 
-本指南使用 Market 中预构建的 Gemma 4 26B (Ollama) 模型应用。
+本指南使用 Market 中预构建的 Qwen3.8-27B (llama.cpp) 模型应用。
 
 ### 获取模型连接信息
 
-<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
-
-对于 Gemma 4 26B (Ollama)：
-
-1. 从 Launchpad 打开模型应用。模型控制台会自动打开。
-2. 等待 **Model** 显示 **READY**，且 **Engine** 显示 **RUNNING**。
-3. 在 **Service status** 下，选择 **Apps in Olares** 和 **Ollama**，然后按显示内容原样复制 **Model name** 和 **Base URL**。
-
-   ![Gemma4-26B model console](/images/manual/use-cases/gemma4-26b-model-console.png#bordered){width=90%}
+<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
 ### 将 Karakeep 连接到本地模型
 
-1. 打开**设置**，然后前往**应用** > **Karakeep** > **管理环境变量**。
-2. 点击每个变量旁边的 <i class="material-symbols-outlined">edit_square</i>，输入值，然后点击**确认**：
+1. 打开**设置** > **应用** > **Karakeep** > **管理环境变量**，配置以下值：
 
-   - **OLLAMA_BASE_URL**：从 Gemma 4 26B 模型控制台复制的 Base URL。
-   - **INFERENCE_TEXT_MODEL**：从模型控制台复制的 Model name。本示例中为 `gemma4:26b`。
-   - **INFERENCE_IMAGE_MODEL**（可选）：如需为图像添加标签，请安装 [Ollama](ollama.md)，拉取 `llava` 等视觉模型，并填写其模型名称。
+   - **OPENAI_API_KEY**：填写 `olares`。Karakeep 需要非空值来启用此提供商；Router 通过平台识别 Olares 内应用。
+   - **OLLAMA_BASE_URL**：清空，避免继续使用原来的 Ollama 连接。
+   - **INFERENCE_TEXT_MODEL**：填写 `default-chat`。
+   - **INFERENCE_IMAGE_MODEL**：仅做文本标签时留空。如需图像标签，填写 Router 中具有视觉能力的完整模型名称。
 
-3. 点击**应用**，等待 Karakeep 重启。
+2. 点击**应用**，等待 Karakeep 重启。
+3. 当前应用市场版本未在设置中提供 `OPENAI_BASE_URL`。打开 Control Hub，找到 Karakeep 项目，在 **Deployments** 中编辑 **karakeep** 的 YAML。
+4. 在名为 `karakeep` 的容器的 `env` 列表中添加以下条目。将示例值替换为从 Router 复制的 Base URL，保留 `/v1`：
 
-   ![管理 Karakeep 环境变量](/images/manual/use-cases/karakeep-manage-env-vars.png#bordered)
+   ```yaml
+   - name: OPENAI_BASE_URL
+     value: "<router-base-url>"
+   ```
 
-:::info 仅文本标签
-如果你只需要文本标签，请将 `INFERENCE_IMAGE_MODEL` 留空。
-:::
+5. 保存修改，等待部署恢复运行。以后通过设置修改环境变量或升级应用后，检查此自定义变量是否保留。
 
 ### 为现有书签生成标签
 
@@ -242,5 +244,5 @@ Karakeep 重启后，你可以从管理员用户管理页面发送电子邮件�
 ## 了解更多
 
 - [Karakeep 文档](https://docs.karakeep.app/)：官方功能参考、API 文档和第三方客户端集成。
-- [通过 Ollama 下载和运行本地 AI 模型](ollama.md)：安装 Ollama 以托管用于图像标签的视觉模型。
+- [使用 Olares Router](olares-router.md)：管理聊天和视觉模型连接。
 - [设置 Open WebUI 进行本地 AI 聊天](openwebui.md)：Olares 上共享模型端点的参考工作流。

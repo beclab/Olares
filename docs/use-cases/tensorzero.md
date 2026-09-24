@@ -1,4 +1,6 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /use-cases/tensorzero
 outline: [2, 3]
 title: Use TensorZero as an AI model gateway
 description: Set up TensorZero on Olares to connect your apps to your AI models, monitor their performance, and manage your setup in one place.
@@ -8,10 +10,12 @@ head:
       content: Olares, TensorZero, LLMOps, AI gateway, observability, evaluation, MCP, self-hosted
 app_version: "1.0.5"
 doc_version: "1.0"
-doc_updated: "2026-05-09"
+doc_updated: "2026-09-23"
 ---
 
 # Use TensorZero as an AI model gateway and observability platform
+
+<VersionRouteSelect />
 
 TensorZero is an all-in-one platform to manage, connect, and monitor your AI models. It acts as a central gateway that connects your client applications to your local AI models. It records every chat and request so you can track performance, and it helps you test different setups to get the best results.
 
@@ -28,11 +32,14 @@ In this guide, you will learn how to:
 
 ## Prerequisites
 
+Before you begin, you need:
+
+<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - Install the following models:
 
   | Model type | Model | How to get it |
   | :--- | :--- | :--- |
-  | Chat | Qwen3.6-27B (llama.cpp) | Install from Market |
+  | Chat | Qwen3.8-27B (llama.cpp) | Install from Market |
   | Embedding | EmbeddingGemma | Install from Market. Optional if your client apps do not need embeddings |
 
 - Ensure your client applications, such as OpenCode and AgentZero, are already installed and fully functional. This guide covers only the specific settings required to connect them to TensorZero.
@@ -50,7 +57,7 @@ In this guide, you will learn how to:
 TensorZero does not provide a graphical interface for configuring models. You manage all settings by editing its configuration file in Files.
 
 Before you edit the file, review the following rules to avoid errors:
-- **Strict permission**: TensorZero rejects direct requests to raw model names like `gpt-4o` and `Qwen3.6-27B`. You must define an alias for every model you want to use. Do not use dots or colons in your alias names. For example, use `qwen3_6_27b`, not `qwen3.6:27b`.
+- **Strict permission**: TensorZero rejects direct requests to raw model names like `gpt-4o` and `Qwen3.8-27B`. You must define an alias for every model you want to use. Do not use dots or colons in your alias names. For example, use `router_chat`, not `qwen3.8:27b`.
 - **Exact naming**: When you connect other apps to TensorZero, you must prepend your model aliases with specific prefixes, such as `tensorzero::model_name::<alias>` and `tensorzero::function_name::<alias>`.
 
     :::tip
@@ -63,9 +70,15 @@ Before you edit the file, review the following rules to avoid errors:
 
 <!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
-For Qwen3.6-27B (llama.cpp) and EmbeddingGemma, select the **OpenAI-Compatible** API format:
+For the chat model:
 
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
+
+For the embedding model:
+
+<!--@include: ../reusables/ai-service-connections.md#get-embedding-model-connection-details-openai-->
+
+Replace `<embedding-model-name>` in the following settings with the full model name copied from Router.
 
 ## Configure a chat model and function
 
@@ -73,22 +86,22 @@ To make TensorZero work, you need two things: a model to act as the AI engine, a
 
 You define the model to tell TensorZero where the AI is, and then you link it to a function to handle the requests. 
 
-This example connects Qwen3.6-27B (llama.cpp).
+This example connects Qwen3.8-27B (llama.cpp).
 
 1. Open Files, and then go to **Data** > **tensorzero** > **config**.
 2. Right-click `tensorzero.toml`, and then click <i class="material-symbols-outlined">edit_square</i>.
-3. In the editor, add the following snippet. Replace `<qwen-base-url>` with the Qwen3.6-27B Base URL copied from the Model Console.
+3. In the editor, add the following snippet. Replace `<qwen-base-url>` with the Router Base URL.
 
-    This configuration registers the model under the alias `qwen3_6_27b`, and creates a client-facing function named `general_chat` that routes incoming app requests to that model.
+    This configuration registers the model under the alias `router_chat`, and creates a client-facing function named `general_chat` that routes incoming app requests to that model.
 
     ```toml
     # models
-    [models.qwen3_6_27b]
+    [models.router_chat]
     routing = ["qwen"]
-    [models.qwen3_6_27b.providers.qwen]
+    [models.router_chat.providers.qwen]
     type = "openai"
     api_base = "<qwen-base-url>"
-    model_name = "unsloth/Qwen3.6-27B-GGUF:Q4_K_M"
+    model_name = "default-chat"
     api_key_location = "none"
 
     # functions
@@ -96,7 +109,7 @@ This example connects Qwen3.6-27B (llama.cpp).
     type = "chat"
     [functions.general_chat.variants.my_default_variant]
     type = "chat_completion"
-    model = "qwen3_6_27b"
+    model = "router_chat"
     ```
 
 4. Click <i class="material-symbols-outlined">save</i>, and then close the file.
@@ -110,7 +123,7 @@ Some apps require embedding models to search through documents or build memory f
 
 1. Add the following snippet in `tensorzero.toml` to define an embedding model:
 
-    Replace `<embedding-base-url>` with the EmbeddingGemma Base URL copied from the Model Console. This configuration registers the model under the alias `embeddinggemma`.
+    Replace `<embedding-base-url>` with the embedding Base URL copied from Router. This configuration registers the model under the alias `embeddinggemma`.
 
     ```toml
     # embedding_models
@@ -119,7 +132,7 @@ Some apps require embedding models to search through documents or build memory f
     [embedding_models.embeddinggemma.providers.embeddinggemma]
     type = "openai"
     api_base = "<embedding-base-url>"
-    model_name = "embeddinggemma-300m"
+    model_name = "<embedding-model-name>"
     api_key_location = "none"
     ```
 
@@ -173,11 +186,11 @@ Construct the correct model name using the following prefixes based on the resou
 | Resource type | Required string format | Example |
 | :--- | :--- | :--- |
 | **Function** | `tensorzero::function_name::<alias>` | `tensorzero::function_name::general_chat` |
-| **Model** | `tensorzero::model_name::<alias>` | `tensorzero::model_name::qwen3_6_27b` |
+| **Model** | `tensorzero::model_name::<alias>` | `tensorzero::model_name::router_chat` |
 | **Embedding** | `tensorzero::embedding_model_name::<alias>` | `tensorzero::embedding_model_name::embeddinggemma` |
 
 :::tip
-- Do not use dots or colons in your alias names. For example, use `qwen3_6_27b`, not `qwen3.6:27b`.
+- Do not use dots or colons in your alias names. For example, use `router_chat`, not `qwen3.8:27b`.
 - If the model name does not work, prepend `openai/` to satisfy the LiteLLM framework and try again. For example, use `openai/tensorzero::embedding_model_name::embeddinggemma`.
 :::
 
@@ -310,14 +323,14 @@ In TensorZero, both models and functions allow your applications to communicate 
 
 ### Error: model field must start with `tensorzero::function_name::...`
 
-**Why it happens**: You entered a raw model name like `unsloth/Qwen3.6-27B-GGUF:Q4_K_M` or an incorrect format in your client’s model field.
+**Why it happens**: You entered a raw model name like `default-chat` or an incorrect format in your client’s model field.
 
 **How to fix**: Always use one of these three exact formats, depending on what you want to connect:
 
 | You want to call | Format | Example |
 | :--- | :--- | :--- |
 | A function | `tensorzero::function_name::<alias>` | `tensorzero::function_name::general_chat` |
-| A model directly | `tensorzero::model_name::<alias>` | `tensorzero::model_name::qwen3_6_27b` |
+| A model directly | `tensorzero::model_name::<alias>` | `tensorzero::model_name::router_chat` |
 | An embedding model | `tensorzero::embedding_model_name::<alias>` | `tensorzero::embedding_model_name::embeddinggemma` |
 
 ### Error: `litellm.BadRequestError: LLM Provider NOT provided`
@@ -342,7 +355,7 @@ For example, if the error mentions `model=tensorzero::embedding_model_name::embe
 3. Look for the following common errors:
 
     - `Failed to parse tensorzero.toml`: Syntax error. Ensure you have exactly one empty line between every section block (`# models`, `# functions`, `# embedding_models`). If you deleted the empty lines when pasting the code, the application will fail to start.
-    - `unknown field`: Incorrect setting name, such as dots or colons in aliases. Use underscores, like `qwen3_6_27b`, not `qwen3.6:27b`.
+    - `unknown field`: Incorrect setting name, such as dots or colons in aliases. Use underscores, like `router_chat`, not `qwen3.8:27b`.
     - `provider...not found`: The provider name in your `routing = ["name"]` line does not match the block defined immediately below it `[models.alias.providers.name]`. For example, if you write `routing = ["qwen"]`, you must have a matching `[models.xxx.providers.qwen]` block.
 
 4. After fixing the syntax, restart the TensorZero container.

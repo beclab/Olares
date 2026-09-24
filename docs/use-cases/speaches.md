@@ -1,4 +1,6 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /use-cases/speaches
 outline: [2, 3]
 description: Install Speaches on Olares for speech-to-text, text-to-speech, and AI voice chat. Use the OpenAI-compatible API to integrate speech services with other apps.
 head:
@@ -7,10 +9,12 @@ head:
       content: Olares, Speaches, speech-to-text, text-to-speech, STT, TTS, voice chat, OpenAI-compatible, Whisper, Kokoro
 app_version: "1.0.7"
 doc_version: "1.0"
-doc_updated: "2026-04-14"
+doc_updated: "2026-09-23"
 ---
 
 # Set up speech services with Speaches
+
+<VersionRouteSelect />
 
 Speaches is an OpenAI-compatible speech server for speech-to-text (STT) and text-to-speech (TTS). With pre-loaded models, you can use it right out of the box, or easily integrate it as a drop-in backend for any app supporting the OpenAI SDK.
 
@@ -29,12 +33,15 @@ In this guide, you will learn how to:
 
 ## Prerequisites
 
+Before you begin, you need:
+
+<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - Olares is running on a device with an NVIDIA GPU.
 - To use Audio Chat, install the following chat model:
 
   | Model type | Model | How to get it |
   | :--- | :--- | :--- |
-  | Chat | Qwen3.6-27B (llama.cpp) | Install from Market |
+  | Chat | Qwen3.8-27B (llama.cpp) | Install from Market |
 
 ## Install Speaches
 
@@ -115,7 +122,7 @@ Use **Audio Chat** to talk to an AI model with voice, text, or an audio file. Sp
 
 <!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
-In this guide, Audio Chat uses Qwen3.6-27B (llama.cpp) with the **OpenAI-Compatible** API format.
+In this guide, Audio Chat uses Qwen3.8-27B (llama.cpp) with the **OpenAI-Compatible** API format.
 
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
@@ -123,7 +130,7 @@ In this guide, Audio Chat uses Qwen3.6-27B (llama.cpp) with the **OpenAI-Compati
 
 1. Go to Olares **Settings** > **Applications** > **Speaches** > **Manage environment variables**.
 2. Click <i class="material-symbols-outlined">edit_square</i> next to `CHAT_COMPLETION_BASE_URL`.
-3. Paste the OpenAI-compatible **Base URL** from the Model Console exactly as shown, including the trailing `/v1`, then click **Confirm**.
+3. Paste the OpenAI-compatible **Base URL** from Router exactly as shown, including the trailing `/v1`, then click **Confirm**.
 4. Click **Apply** to save the changes.
 
 Speaches restarts automatically and loads the models available from the configured endpoint.
@@ -131,7 +138,7 @@ Speaches restarts automatically and loads the models available from the configur
 #### Start a voice conversation
 
 1. Open Speaches and click the **Audio Chat** tab.
-2. Under **Chat Model**, select `unsloth/Qwen3.6-27B-GGUF:Q4_K_M`.
+2. Under **Chat Model**, select the Qwen3.8-27B entry returned by Router, such as `Olares/unsloth/Qwen3.8-27B-GGUF:UD-Q4_K_XL`. This selector lists individual models rather than `default-chat`.
 3. Send a message using one of these methods:
    - **Audio file**: Upload an audio file.
    - **Text**: Type your message in the input field next to the microphone icon and send it.
@@ -300,7 +307,7 @@ Speaches automatically redeploys in CPU mode. Processing will be slower compared
 
 ### Why does Audio Chat show an error?
 
-Audio Chat cannot load models if `CHAT_COMPLETION_BASE_URL` is empty, incorrect, or unavailable. Make sure the chat model is running, then [configure Speaches](#configure-speaches) again using the OpenAI-compatible Base URL shown in its Model Console.
+Audio Chat cannot load models if `CHAT_COMPLETION_BASE_URL` is empty, incorrect, or unavailable. Make sure the chat model is running, then [configure Speaches](#configure-speaches) again using the OpenAI-compatible Base URL from Router.
 
 ### Why do tasks fail after switching to a larger model?
 

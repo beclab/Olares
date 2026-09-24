@@ -1,4 +1,6 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /use-cases/open-notebook
 outline: deep
 description: Run Open Notebook on Olares to collect research sources, generate AI insights, chat with your knowledge base, take notes, and create podcasts.
 head:
@@ -7,10 +9,12 @@ head:
       content: Olares, Open Notebook, AI notebook, research assistant, NotebookLLM alternative, RAG, knowledge base, podcast, transformations
 app_version: "1.0.4"
 doc_version: "2.1"
-doc_updated: "2026-07-27"
+doc_updated: "2026-09-23"
 ---
 
 # Build a research notebook with Open Notebook
+
+<VersionRouteSelect />
 
 Open Notebook is an AI-powered research workspace for collecting source materials, generating structured insights, chatting with your knowledge base, and turning research into editable notes or podcast episodes.
 
@@ -30,12 +34,12 @@ In this guide, you will learn how to:
 
 Before you begin, you need:
 
-- An Olares device with sufficient disk space and memory.
+<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - The following models:
 
   | Model type | Model | How to get it |
   | :--- | :--- | :--- |
-  | Chat | Qwen3.6-27B (llama.cpp) | Install from Market |
+  | Chat | Qwen3.8-27B (llama.cpp) | Install from Market |
   | Embedding | EmbeddingGemma | Install from Market |
   | TTS | `speaches-ai/Kokoro-82M-v1.0-ONNX` | Install [Speaches](speaches.md) from Market |
   | STT | `Systran/faster-whisper-small` | Install Speaches from Market. Optional if you will not process audio or video sources |
@@ -75,9 +79,15 @@ Open Notebook uses AI models for summaries, chat, retrieval, and podcast generat
 
 <!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
-For Qwen3.6-27B (llama.cpp) and EmbeddingGemma:
+For the chat model:
 
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
+
+For the embedding model:
+
+<!--@include: ../reusables/ai-service-connections.md#get-embedding-model-connection-details-openai-->
+
+Replace `<embedding-model-name>` in the following settings with the full model name copied from Router.
 
 Both models use the **OpenAI-Compatible** API format.
 
@@ -96,8 +106,8 @@ On Open Notebook, go to **Manage** > **Models**. For each service, find the matc
 
 | Service | Provider | Configuration name | Base URL |
 | :-- | :-- | :-- | :-- |
-| Qwen3.6-27B (llama.cpp) | **OpenAI Compatible** | Any recognizable name, e.g. `Qwen3.6-27B` | From the Qwen3.6-27B (llama.cpp) Model Console |
-| EmbeddingGemma | **OpenAI Compatible** | Any recognizable name, e.g. `EmbeddingGemma` | From the EmbeddingGemma Model Console |
+| Qwen3.8-27B (llama.cpp) | **OpenAI Compatible** | Any recognizable name, e.g. `Qwen3.8-27B` | From Router |
+| EmbeddingGemma | **OpenAI Compatible** | Any recognizable name, e.g. `EmbeddingGemma` | From Router |
 | Speaches | **OpenAI Compatible** | Any recognizable name, e.g. `Speaches` | Speaches API endpoint with `/v1` appended |
 
 ### Add models
@@ -106,8 +116,8 @@ In each configuration, click **Models** and add the following models:
 
 | Configuration | Type | Model ID |
 | :-- | :-- | :-- |
-| Qwen3.6-27B (llama.cpp) | **Language** | `unsloth/Qwen3.6-27B-GGUF:Q4_K_M` |
-| EmbeddingGemma | **Embedding** | `embeddinggemma-300m` |
+| Qwen3.8-27B (llama.cpp) | **Language** | `default-chat` |
+| EmbeddingGemma | **Embedding** | `<embedding-model-name>` |
 | Speaches | **TTS** | `speaches-ai/Kokoro-82M-v1.0-ONNX` |
 | Speaches | **STT** | `Systran/faster-whisper-small` |
 
@@ -117,17 +127,21 @@ Under **Default Model Assignments**, assign the models as follows:
 
 | Slot | Model |
 | :-- | :-- |
-| Chat Model | `unsloth/Qwen3.6-27B-GGUF:Q4_K_M` |
-| Embedding Model | `embeddinggemma-300m` |
+| Chat Model | `default-chat` |
+| Embedding Model | `<embedding-model-name>` |
 | Text-to-Speech Model | `speaches-ai/Kokoro-82M-v1.0-ONNX` |
 | Speech-to-Text Model | `Systran/faster-whisper-small` |
-| Transformation Model | `unsloth/Qwen3.6-27B-GGUF:Q4_K_M` |
-| Tools Model | `unsloth/Qwen3.6-27B-GGUF:Q4_K_M` |
-| Large Context Model | `unsloth/Qwen3.6-27B-GGUF:Q4_K_M` |
+| Transformation Model | `default-chat` |
+| Tools Model | `default-chat` |
+| Large Context Model | `default-chat` |
 
 If **Auto-assign Defaults** is available, you can use it to fill the slots automatically, then review the selections.
 
+<!--
+TODO: 素材清单 09，待补 Router 截图：open-notebook-default-models-router.png；替换下方旧图后再取消注释。
 ![Model assignments](/images/manual/use-cases/open-notebook-set-models-result1.png#bordered)
+-->
+
 
 ## Create your first research notebook
 
@@ -313,7 +327,6 @@ After the episode is complete, you can:
 - Review the generated transcript in **Details**.
 
 ![Generated podcast](/images/manual/use-cases/open-notebook-podcast-result.png#bordered){width=90%}
-
 
 ## Explore more features
 

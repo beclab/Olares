@@ -12,6 +12,7 @@ import { onMounted, watch, nextTick, onBeforeMount,computed } from "vue";
 import mediumZoom from "medium-zoom";
 import OSTabs from "./components/OStabs.vue";
 import VersionSwitcher from "./components/VersionSwitcher.vue";
+import VersionRouteSelect from "./components/VersionRouteSelect.vue";
 import _ from "lodash";
 import { redirects, temporaryRedirects } from './redirects';
 
@@ -32,6 +33,7 @@ enhanceApp({ app, router }: { app: App; router: Router }) {
     app.component("UseCaseGallery", UseCaseGallery);
     app.component("OSTabs", OSTabs);
     app.component("VersionSwitcher", VersionSwitcher);
+    app.component("VersionRouteSelect", VersionRouteSelect);
     app.component('AppLinkGlobal', AppLinkGlobal)
     app.component('AppLinkCN', AppLinkCN)
 

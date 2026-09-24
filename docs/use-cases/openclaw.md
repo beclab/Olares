@@ -1,4 +1,6 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /use-cases/openclaw
 outline: [2, 3]
 title: Run a self-hosted OpenClaw AI agent
 description: Run OpenClaw on Olares as a self-hosted personal AI agent. Connect Discord or Slack while keeping the assistant and its data on your device.
@@ -8,10 +10,12 @@ head:
       content: Olares, OpenClaw, self-hosted ai agent, personal ai agent, local ai agent, openclaw on olares
 app_version: "1.0.36"
 doc_version: "3.0"
-doc_updated: "2026-09-04"
+doc_updated: "2026-09-23"
 ---
 
 # Run OpenClaw as your self-hosted personal AI agent
+
+<VersionRouteSelect />
 
 OpenClaw is a personal AI assistant that is designed to run on your local device. It connects directly to messaging apps like Discord and Slack, and allows you to interact with it right in the app.
 
@@ -31,16 +35,17 @@ In this guide, you will learn how to:
 
 Before you begin, you need:
 
+<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - Discord account: Required to create the bot application.
 - Discord server: A server where you have permissions to add bots.
 - The following model:
 
   | Model type | Model | How to get it |
   | :--- | :--- | :--- |
-  | Chat | Gemma 4 26B (Ollama) | Install from Market |
+  | Chat | Qwen3.8-27B (llama.cpp) | Install from Market |
 
   :::tip Model provider
-  This tutorial uses Gemma 4 26B through its Ollama API. If you use a different provider or local proxy, see the [OpenClaw documentation on custom providers](https://docs.openclaw.ai/concepts/model-providers#providers-via-models-providers-custom%2Fbase-url).
+  This tutorial uses Qwen3.8-27B (llama.cpp) through Router's OpenAI-compatible API. If you use a different provider or local proxy, see the [OpenClaw documentation on custom providers](https://docs.openclaw.ai/concepts/model-providers#providers-via-models-providers-custom%2Fbase-url).
   :::
 
 ## Upgrade notes
@@ -69,7 +74,7 @@ Run a quick setup for the agent.
 
 ### Step 1: Get model connection details
 
-This tutorial uses Gemma 4 26B (Ollama), a tool-capable model available from Market.
+This tutorial uses Qwen3.8-27B (llama.cpp), a tool-capable model available from Market.
 
 :::tip
 OpenClaw requires a large "context window" (that is the AI's short-term memory) to handle complex tasks without forgetting your previous instructions. If you are using local models, it is recommended to select a model that natively supports a context window of at least 64K tokens.
@@ -77,7 +82,7 @@ OpenClaw requires a large "context window" (that is the AI's short-term memory) 
 
 <!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
-<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-ollama-->
+<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
 ### Step 2: Run onboarding wizard
 
@@ -107,17 +112,18 @@ Set up OpenClaw using the step-by-step interactive wizard.
     | Personal-by-default acknowledgment | Select **Yes**.  |
     | Help make OpenClaw better   | Select as needed.   |
     | <nobr>Setup mode</nobr>   | Select **QuickStart**.   |
-    | <nobr>Model/auth provider</nobr>  | Select **More**, and then select **Ollama**.<br>For non-Ollama local models, select **Custom Provider**. |
-    | <nobr>Ollama auth method</nobr> | Select **Ollama**. |
-    | <nobr>Ollama mode</nobr> | Select **Local only**. |
-    | <nobr>Ollama base URL</nobr>  | Remove the default placeholder text, and then enter the **Base URL** copied in [Step 1](#step-1-get-model-connection-details). |
-    | <nobr>Default model</nobr> | Select **Browse all models**, and then select the installed model `ollama/gemma4:26b`. |
+    | Model/auth provider | Select **Custom Provider**. |
+    | API compatibility | Select **OpenAI-compatible**. |
+    | Base URL | Paste the Router Base URL from Step 1, including `/v1`. |
+    | API key | Leave empty if allowed, or enter `olares` if required. |
+    | Model ID | Enter `default-chat` manually. |
+    | Provider ID | Enter `router`. The default model is `router/default-chat`. |
     | Test AI access now with a live completion | Select **Yes**.<br>The message `AI access works` indicates that OpenClaw can successfully connect to the model. |
     | Remaining settings (channels, search provider,<br>and skill dependencies) | Select **Skip for now**.<br>You can configure them later. |
 
     Once you complete the onboarding wizard, OpenClaw opens the Terminal User Interface (TUI) automatically.
 
-    ![OpenClaw TUI after setup](/images/manual/use-cases/openclaw-setup-finish-tui2.png#bordered)
+    ![OpenClaw TUI after setup](/images/manual/use-cases/router-client-connect-openclaw.png#bordered)
 
 4. Type `/quit` and press **Enter** to exit.
 
@@ -218,7 +224,7 @@ This process establishes the agent's identity, behavioral boundaries, and long-t
 
 1. In the chat area, ensure your model is selected.
 
-   The indicator in the bottom-right corner (for example, `gemma4:26b · Off`) shows the current model and reasoning status. `Off` means reasoning is disabled, not that the model is unavailable.
+   The indicator in the bottom-right corner (for example, `default-chat · Off`) shows the current model and reasoning status. `Off` means reasoning is disabled, not that the model is unavailable.
 
 2. (Optional) Enable reasoning.
 

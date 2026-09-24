@@ -1,20 +1,24 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /zh/use-cases/nemoclaw
 outline: [2, 3]
-description: 在 Olares 上使用 Qwen3.6-27B 本地大语言模型（LLM）运行 NemoClaw。无需云端 API，即可部署一个基于 NVIDIA OpenShell 运行时的常驻 AI Agent。
+description: 在 Olares 上使用 Qwen3.8-27B 本地大语言模型（LLM）运行 NemoClaw。无需云端 API，即可部署一个基于 NVIDIA OpenShell 运行时的常驻 AI Agent。
 head:
   - - meta
     - name: keywords
       content: Olares, NemoClaw, NVIDIA, OpenShell, OpenClaw, 本地 LLM, AI 助手, Discord, 网页搜索, ClawHub, skills, plugins
 app_version: "1.0.8"
 doc_version: "1.2"
-doc_updated: "2026-07-29"
+doc_updated: "2026-09-23"
 ---
 
 # 使用本地 LLM 运行 NemoClaw
 
+<VersionRouteSelect />
+
 NemoClaw 是 NVIDIA 开源的参考技术栈，内置 NVIDIA OpenShell 运行时，并在其中运行 OpenClaw。
 
-本文介绍如何在 Olares 上使用 Qwen3.6-27B (llama.cpp) 模型应用作为后端大语言模型（LLM）来运行 NemoClaw。
+本文介绍如何在 Olares 上使用 Qwen3.8-27B (llama.cpp) 模型应用作为后端大语言模型（LLM）来运行 NemoClaw。
 
 :::warning Alpha 软件
 NemoClaw 是 NVIDIA 发布的早期预览版本，不建议用于生产环境。如需了解官方更新和社区反馈，可参阅 [NVIDIA/NemoClaw](https://github.com/NVIDIA/NemoClaw)。
@@ -33,22 +37,17 @@ NemoClaw 是 NVIDIA 发布的早期预览版本，不建议用于生产环境。
 
 开始前，你需要：
 
+<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - 拥有从 Market 安装应用、编辑应用设置的管理员权限。
 - 以下模型：
 
   | 模型类型 | 模型 | 获取方式 |
   | :--- | :--- | :--- |
-  | 聊天 | Qwen3.6-27B (llama.cpp) | 从 Market 安装 |
+  | 聊天 | Qwen3.8-27B (llama.cpp) | 从 Market 安装 |
 
 ## 获取模型连接信息
 
-<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
-
-对于 Qwen3.6-27B (llama.cpp)，NemoClaw 使用 OpenAI-compatible API 格式：
-
-1. 从 Launchpad 打开模型应用。模型控制台会自动打开。
-2. 等待 **Model** 显示 **READY**，且 **Engine** 显示 **RUNNING**。
-3. 在 **Service status** 下，选择 **Apps in Olares** 和 **OpenAI-Compatible**，然后按显示内容原样复制 **Model name** 和 **Base URL**。
+<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
 ## 安装 NemoClaw
 
@@ -59,10 +58,14 @@ NemoClaw 是 NVIDIA 发布的早期预览版本，不建议用于生产环境。
 2. 点击**获取**，然后点击**安装**。
 3. 按提示设置环境变量：
 
-   - **NEMOCLAW_ENDPOINT_URL**：粘贴从 Qwen3.6-27B 模型控制台复制的 Base URL。请按显示内容原样使用。
-   - **NEMOCLAW_MODEL**：输入从模型控制台复制的 Model name。本示例中为 `unsloth/Qwen3.6-27B-GGUF:Q4_K_M`。
+   - **NEMOCLAW_ENDPOINT_URL**：粘贴从 Router 复制的 Base URL。请按显示内容原样使用。
+   - **NEMOCLAW_MODEL**：填写 `default-chat`。
 
+   <!--
+   TODO: 素材清单 08，待补 Router 截图：nemoclaw-env-router.png；替换下方旧图后再取消注释。
    ![为 NemoClaw 设置环境变量](/images/manual/use-cases/nemoclaw-set-environment-variables.png#bordered){width=70%}
+   -->
+
 
    :::tip
    之后也可在**设置** > **应用** > **NemoClaw** > **管理环境变量**中更改这些环境变量。

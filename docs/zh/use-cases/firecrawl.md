@@ -1,4 +1,6 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /zh/use-cases/firecrawl
 outline: [2, 3]
 description: 在 Olares 上设置 Firecrawl，作为 Open WebUI 等应用的网页加载器，或使用其 API 抓取和爬取网站。
 head:
@@ -7,7 +9,7 @@ head:
       content: Olares, Firecrawl, web crawler, web scraping, Firecrawl v2, scrape API, crawl API, Open WebUI, web loader, self-hosted
 app_version: "1.0.21"
 doc_version: "1.1"
-doc_updated: "2026-07-28"
+doc_updated: "2026-09-23"
 ---
 
 :::warning
@@ -16,9 +18,18 @@ doc_updated: "2026-07-28"
 
 # 使用 Firecrawl 作为网页加载器
 
+<VersionRouteSelect />
+
 Firecrawl 是一个无头网页数据服务，可将网页转换为干净的 Markdown、结构化 JSON、摘要和元数据。在 Olares 上，Open WebUI 等应用可以使用 Firecrawl 在找到搜索结果后加载完整的网页内容。
 
 你也可以直接调用 Firecrawl API 来测试抓取和爬取功能。
+
+## 前提条件
+
+开始前，你需要：
+
+<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
+- 如需使用本地模型，从应用市场安装 Qwen3.8-27B (llama.cpp)。
 
 ## 安装 Firecrawl
 
@@ -179,11 +190,11 @@ Firecrawl 可以使用配置的 LLM 来总结页面或返回结构化 JSON。
 
 ### 配置模型访问
 
-本示例通过 OpenAI 兼容 API 使用 Qwen3.6-27B (llama.cpp)。从 Market 安装该模型，并等待模型就绪。
+本示例通过 OpenAI 兼容 API 使用 Qwen3.8-27B (llama.cpp)。从 Market 安装该模型，并等待模型就绪。
 
 <!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
-对于 Qwen3.6-27B (llama.cpp)，使用 **OpenAI-Compatible** API 格式：
+对于 Qwen3.8-27B (llama.cpp)，使用 **OpenAI-Compatible** API 格式：
 
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
@@ -195,14 +206,13 @@ Firecrawl 可以使用配置的 LLM 来总结页面或返回结构化 JSON。
    | 变量 | 描述 |
    |:---------|:------------|
    | `OPENAI_API_KEY` | 输入任意非空值，例如 `olares`。 |
-   | `OPENAI_BASE_URL` | 输入 Qwen3.6-27B Model Console 中显示的 Base URL。 |
-   | `MODEL_NAME` | 输入 Qwen3.6-27B Model Console 中显示的准确 Model name。 |
+   | `OPENAI_BASE_URL` | 输入 Router 中显示的 Base URL。 |
+   | `MODEL_NAME` | 填写 `default-chat`。 |
 
 3. 点击 **Apply**。
 4. 打开 Control Hub，在 **Browse** 下选择你的 Firecrawl 项目，然后重启 `worker`、`nuq-worker` 和 `firecrawl` 部署以应用环境变量。
 
 ### 返回结构化 JSON
-
 
 ```javascript
 const endpoint = "<your-firecrawl-endpoint>";

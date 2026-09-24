@@ -1,4 +1,6 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /zh/use-cases/openwebui-search
 outline: deep
 description: 在 Olares 上使用 SearXNG 和嵌入模型，为 Open WebUI 启用网页搜索，以检索最新信息。
 head:
@@ -7,7 +9,7 @@ head:
       content: Olares, Open WebUI, 网页搜索, SearXNG, 嵌入模型, RAG
 app_version: "1.0.38"
 doc_version: "2.0"
-doc_updated: "2026-08-05"
+doc_updated: "2026-09-23"
 ---
 
 :::warning
@@ -15,6 +17,8 @@ doc_updated: "2026-08-05"
 :::
 
 # 在 Open WebUI 中启用网页搜索
+
+<VersionRouteSelect />
 
 为 Open WebUI 添加网页搜索能力，让本地 AI 模型可以从互联网检索最新信息。该集成需要一个已连接的嵌入模型来生成嵌入向量，并使用 SearXNG 获取网页搜索结果。
 
@@ -63,16 +67,18 @@ doc_updated: "2026-08-05"
 
 配置嵌入模型，使 Open WebUI 能够将文本转换为用于检索的向量表示。
 
+<!-- #region configure-document-embeddings -->
 1. 在 Open WebUI 中，选择你的头像图标，然后前往 **Admin Panel** > **Settings**。
 2. 在左侧边栏中，找到 **Tools** 部分，然后选择 **Documents**。
 3. 在 **Embedding** 区域中，指定以下设置：
 
    - **Embedding Model Engine**：选择 **OpenAI**。
-   - **API Base URL**：输入你从 Model Console 复制的嵌入模型的 **Base URL**。
-   - **Embedding Model**：输入你从 Model Console 复制的嵌入模型的 **Model name**。
+   - **API Base URL**：输入你从 Router 复制的嵌入模型的 **Base URL**。
+   - **Embedding Model**：输入你从 Router 复制的嵌入模型的 **Model name**。
 
 4. 向下滚动到页面底部，然后点击右下角的 **Reindex** 以应用更改。
 5. 选择 **Save**。
+<!-- #endregion configure-document-embeddings -->
 
 ### 启用网页搜索
 

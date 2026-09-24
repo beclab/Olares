@@ -1,4 +1,6 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /use-cases/llm-base-apps
 outline: [2, 3]
 title: Run local AI models with Engine Base apps
 description: Learn how to use the Engine Base applications on Olares to self-host large language models and run different inference engines by cloning the base apps.
@@ -9,6 +11,8 @@ head:
 ---
 
 # Run local LLMs with Ollama, vLLM, llama.cpp, and SGLang
+
+<VersionRouteSelect />
 
 Olares v1.12.6 introduces **Model Console**, a platform that manages the full lifecycle of local large language models (LLMs). This platform provides four Engine Base applications, each built on a different inference engine: **Ollama Engine Base**, **vLLM Engine Base**, **llama.cpp Engine Base**, and **SGLang Engine Base**.
 
@@ -145,15 +149,7 @@ Open the built-in model console to track the model download, confirm the model a
 
     If either status does not become ready, see [Model or engine is not ready](/manual/help/ts-model-engine-not-ready.md).
 
-4. When the engine shows **Running**, configure how client apps reach the service.
-
-    - **Connection source**: Select where the client runs.
-        - **Apps in Olares**: For apps running in Olares.
-        - **Devices on your network**: For devices on the same local network.
-        - **Remote**: For access over the public internet, which requires you to enable the VPN in LarePass first.
-    - **API format**: Select the API style that matches your client: **Ollama**, **OpenAI-Compatible**, or **Anthropic-Compatible**.
-    - **Base URL**: Copy the URL to use for client app connections.
-    - **Supported endpoints**: Expand this list to see every endpoint the selected API format exposes, with its HTTP method, path, and purpose.
+4. When the engine shows **Running**, open Router and find the instance on **LLM** or **Tools**. Wait until it shows **Callable**. Use Router for client connection details, as described below.
 
 5. Select the **Configuration** tab to review the model's details:
 
@@ -180,53 +176,18 @@ Open the built-in model console to track the model download, confirm the model a
 
 ## Connect client apps to the model service
 
-Once the model instance is running, any client app that speaks the OpenAI-compatible API can connect to it through the base URL.
+On Olares 1.12.7 and later, clients connect to your model instance through Router. Model Console manages the engine; Router provides the client-facing URL, model name, and access controls.
 
-The following example uses [OpenCode](./opencode.md) as the client.
+1. Open Router from Launchpad. Find your chat model on **LLM** and wait until it shows **Callable**.
+2. On **Default models**, select the instance as the default chat model. The app tutorials use Qwen3.8-27B (llama.cpp); you can select the chat instance you created here instead.
+3. Return to the model row and click **View connection example**. Select **Apps in Olares** for an installed client, then copy the **Base URL**, including `/v1`.
 
-1. In the model console, go to the **Status** tab. Under **Service status**:
+   ![Copy the Router connection details](/images/manual/use-cases/router-how-to-call-model.png#bordered)
 
-    - **Connection source**: Select **Apps in Olares**, because OpenCode runs in Olares.
-    - **API format**: Select **OpenAI-Compatible**.
-    - Copy the **Base URL** and note down the **Model name**.
+4. Follow [Connect OpenCode to a custom provider](opencode.md#connect-to-a-custom-provider). Use the Router Base URL and add `default-chat` as the model ID. To keep the client on this instance regardless of the default model setting, use its full **Model name** from Router instead.
+5. Send a short message in OpenCode. In Router, check **Usage** to confirm that the request reached the intended model.
 
-2. In OpenCode, click <i class="material-symbols-outlined">settings</i> in the bottom-left corner, select **Providers**, then scroll down and select **Connect** next to **Custom Provider**.
-
-3. Enter the following details:
-
-    - **Provider ID**: A unique identifier for this provider. For example, `olares-llm`.
-    - **Display name**: The name shown in the provider list. For example, `Olares LLM`.
-    - **Base URL**: The **Base URL** you copied from the model console.
-    - **Models**:
-        - **Model ID**: Your `MODEL_NAME`. For example, `Qwen3.6-35B-A3B`.
-        - **Display Name**: The name shown for this model. For example, `Qwen3.6 35B A3B`.
-
-4. Click **Submit** to save the configuration. The provider appears in the provider list.
-5. Run a task to test the connection. This example uses the Olares skills to deploy an app to Olares.
-
-    a. At the top, click the **Search** field and select **Toggle terminal** to open a terminal.
-
-    b. Log in to the Olares CLI to use the built-in Olares skills. Replace `alice123@olares.com` with your own Olares ID.
-    
-    ```bash
-    olares-cli profile login --olares-id alice123@olares.com
-    ```
-
-    c. When prompted, type your Olares password and press **Enter**. The input stays hidden.
-
-    d. If two-factor authentication is enabled on your Olares, the CLI prompts you for a two-factor code for the Olares ID. Enter the 6-digit code from LarePass and press **Enter**.
-
-    e. Below the chat box, select **Big Pickle** to open the model selector, and select **Qwen3.6 35B A3B** from the list.
-
-    f. Send a task. The example below uses `dockersamples/101-tutorial`, a beginner-friendly Docker tutorial web app.
-
-    ```text
-    Deploy this app to Olares: https://github.com/dockersamples/101-tutorial
-    ```
-
-    g. Follow any prompts that appear until the deployment finishes. You can then find the app on the Launchpad and in **My Olares**.
-
-    ![App deployed to My Olares](/images/manual/olares/llm-base-model-inst-task1.png#bordered)
+For external clients, use the appropriate connection tab and a Router-issued API key. For embedding instances, use their full model name instead of `default-chat`. See [Connect AI apps](/manual/best-practices/connect-ai-apps.md) for details.
 
 ## References
 

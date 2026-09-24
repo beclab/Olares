@@ -1,13 +1,15 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /zh/use-cases/open-design
 outline: [2, 3]
 description: 在 Olares 上使用 Open Design，通过本地或云端 AI 模型，将提示词转化为 HTML 原型、落地页和幻灯片。
 head:
   - - meta
     - name: keywords
-      content: Olares, Open Design, AI 设计工作室, AI 原型, 落地页生成, 演示文稿生成, OpenAI 兼容, 本地大模型, Qwen3.6, 自托管
+      content: Olares, Open Design, AI 设计工作室, AI 原型, 落地页生成, 演示文稿生成, OpenAI 兼容, 本地大模型, Qwen3.8, 自托管
 app_version: "0.22.1"
 doc_version: "1.0"
-doc_updated: "2026-09-18"
+doc_updated: "2026-09-23"
 ---
 
 :::warning
@@ -16,9 +18,11 @@ doc_updated: "2026-09-18"
 
 # 使用 Open Design 创建设计文件
 
+<VersionRouteSelect />
+
 Open Design 是一款开源 AI 设计工作室，可以将自然语言需求转化为可直接使用的设计文件。它通过内置的 OpenCode 调用你配置的模型，生成可预览的 HTML 原型、落地页、仪表盘、线框图和幻灯片。
 
-在 Olares 上，你可以通过 Model Console 将 Open Design 连接到本地模型，也可以使用云端模型的 API Key。每个项目集中保存提示词、参考素材、预览和生成文件，方便你持续调整并导出最终设计。
+在 Olares 上，你可以通过 Router 将 Open Design 连接到本地模型，也可以使用云端模型的 API Key。每个项目集中保存提示词、参考素材、预览和生成文件，方便你持续调整并导出最终设计。
 
 :::warning 当前输出限制
 Olares 上的 Open Design 0.22.1 暂不支持通过文本直接生成独立图片。请用它创建页面、原型、仪表盘或幻灯片。
@@ -37,12 +41,12 @@ Olares 上的 Open Design 0.22.1 暂不支持通过文本直接生成独立图�
 
 开始前，你需要：
 
-- Olares 1.12.6 或更高版本。
+<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - 以下模型：
 
   | 模型类型 | 模型 | 获取方式 |
   | :--- | :--- | :--- |
-  | 对话 | Qwen3.6-27B (llama.cpp) | 从 Market 安装 |
+  | 对话 | Qwen3.8-27B (llama.cpp) | 从 Market 安装 |
 
 <!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
@@ -57,7 +61,7 @@ Olares 上的 Open Design 0.22.1 暂不支持通过文本直接生成独立图�
 
 <!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
-本指南使用 **OpenAI-Compatible** API 格式，将 Open Design 连接到 Qwen3.6-27B (llama.cpp)：
+本指南使用 **OpenAI-Compatible** API 格式，将 Open Design 连接到 Qwen3.8-27B (llama.cpp)：
 
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
@@ -68,9 +72,9 @@ Olares 上的 Open Design 0.22.1 暂不支持通过文本直接生成独立图�
 3. 在 **Provider preset** 中选择 **Custom provider**。
 4. 配置提供方：
 
-   - **Base URL**：粘贴从 Model Console 复制的 Base URL，包括末尾的 `/v1`。
+   - **Base URL**：粘贴从 Router 复制的 Base URL，包括末尾的 `/v1`。
    - **API Key**：输入任意非空值，例如 `olares`。同一 Olares 集群中的应用调用本地模型时，不需要真实密钥。
-   - **Model**：输入从 Model Console 复制的完整 Model name。
+   - **Model**：填写 `default-chat`。
    - **Max tokens（可选）**：输入 `65536`。如需使用更小的上下文窗口，可改为 `32768`。
 
    <!-- ![在 Open Design 中配置 API 提供方](/images/manual/use-cases/open-design-api-provider.png#bordered) -->
@@ -124,7 +128,7 @@ Olares 上的 Open Design 0.22.1 暂不支持通过文本直接生成独立图�
 
 ### 连接测试失败或返回 404
 
-重新复制 Model Console 中的 Base URL，不要修改路径。本指南使用本地模型时，需要在 Model Console 中选择 **OpenAI-Compatible**，并原样使用显示的 URL，包括 `/v1`。
+从 Router 的 **How to call this model** 窗口重新复制 **Apps in Olares** 下的 Base URL，保留 `/v1`。在 **LLM** 页面确认默认聊天模型显示 **Callable**。
 
 ### 设计尚未生成完成便停止
 
@@ -136,7 +140,7 @@ Olares 上的 Open Design 0.22.1 暂不支持通过文本直接生成独立图�
 
 ### Open Design 使用了错误的模型
 
-比较 Open Design 中的**模型**与 Model Console 中的 **Model name**。两者必须完全一致。
+使用 `default-chat`，并在 Router 的 **Default models** 页面检查它指向的模型。如需固定使用某个模型，请改填 Router 中显示的完整模型名称。
 
 ### Open Design 无法生成独立图片
 

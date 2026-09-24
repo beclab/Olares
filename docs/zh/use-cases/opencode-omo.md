@@ -1,4 +1,6 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /zh/use-cases/opencode-omo
 outline: [2, 3]
 description: 在 Olares 上的 OpenCode 中启用 oh-my-openagent (OMO) 以编排多个 AI 代理。使用 ultrawork 触发多代理协作，配置本地或外部模型，并使用内置 MCP 服务器。
 head:
@@ -7,7 +9,7 @@ head:
       content: Olares, OpenCode, oh-my-openagent, OMO, multi-agent, AI coding agent, ultrawork, MCP, self-hosted
 app_version: "1.0.10"
 doc_version: "1.1"
-doc_updated: "2026-07-29"
+doc_updated: "2026-09-23"
 ---
 
 :::warning
@@ -15,6 +17,8 @@ doc_updated: "2026-07-29"
 :::
 
 # 使用 oh-my-openagent 编排多代理工作流
+
+<VersionRouteSelect />
 
 oh-my-openagent (OMO) 是 OpenCode 的多模型代理编排插件。启用后，你可以在 OpenCode 中使用关键词 `ultrawork`（或别名 `ulw`）触发多代理协作。Sisyphus、Hephaestus、Oracle 和 Atlas 等专业代理分工协作，共同处理复杂的编码任务。
 
@@ -35,16 +39,21 @@ oh-my-openagent (OMO) 是 OpenCode 的多模型代理编排插件。启用后，
 
 开始前，你需要：
 
+<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - 你的 Olares 设备必须具有互联网访问权限。
 - 在 Olares 上[安装 OpenCode](opencode.md)，chart 版本 1.0.6 或更高。
 - 以下模型：
 
   | 用途 | 模型 | 获取方式 |
   | :--- | :--- | :--- |
-  | 核心代理 | Qwen3.6-27B (llama.cpp) | 从 Market 安装 |
+  | 核心代理 | Qwen3.8-27B (llama.cpp) | 从 Market 安装 |
   | 轻量子代理 | Qwen3.5-9B (Ollama) | [通过 Ollama Engine Base 应用创建](llm-base-apps.md#创建新的模型实例) |
 
 配置 OMO 前，请先[将两个模型连接到 OpenCode](opencode.md#连接到自定义提供方)。
+
+在 Router 的 **Default models** 页面，将 Qwen3.8-27B (llama.cpp) 设为默认聊天模型。在 OpenCode 中创建 ID 为 `olares` 的提供方，使用 Router 的 Base URL，并添加 `default-chat` 供核心代理使用。随后，在 Router 中找到 Qwen3.5-9B，复制完整的**模型名称**，将该名称作为第二个模型添加到同一提供方。
+
+下方所有示例中的 `<lightweight-model-name>` 都需替换为复制的完整 Router 模型名称，包含 `Olares/` 前缀。这样，轻量任务固定使用 Qwen3.5-9B，核心代理则跟随默认聊天模型。
 
 <!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
@@ -146,7 +155,7 @@ OMO 由 `OPENCODE_OMO` 环境变量控制：
 OMO 在两个位置使用模型：
 
 - **主代理**：在 OpenCode 模型选择器中单独选择模型。本节不会更改该选择。
-- **子代理和任务类别**：将 Qwen3.6-27B 分配给核心代理和高负载任务，将 Qwen3.5-9B 用于 Explore、Librarian 和轻量任务。
+- **子代理和任务类别**：将 Qwen3.8-27B 分配给核心代理和高负载任务，将 Qwen3.5-9B 用于 Explore、Librarian 和轻量任务。
 
 :::tip 需要重启
 每次编辑 `oh-my-openagent.json` 后，都需重启 OpenCode 才能使更改生效。
@@ -161,46 +170,42 @@ OMO 在两个位置使用模型：
 
    a. 设置每个代理的 `model` 字段。该值必须包含 OpenCode 中使用的 provider 前缀，后接准确的模型名称。
 
-   b. 将 Qwen3.6-27B 分配给核心代理，将 Qwen3.5-9B 分配给 Explore 和 Librarian。为使用 Ollama 模型的代理添加 `"stream": false`。
+   b. 将 Qwen3.8-27B 分配给核心代理，将 Qwen3.5-9B 分配给 Explore 和 Librarian。
 
-   例如，如果 provider 名称分别为 `qwen3.6-27b` 和 `qwen3.5-9b`：
+   例如，使用上文配置的 `olares` 提供方和两个模型：
 
    ```json
    {
      "agents": {
-       "sisyphus": { "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M" },
-       "hephaestus": { "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M" },
-       "prometheus": { "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M" },
-       "atlas": { "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M" },
-       "explore": { "model": "qwen3.5-9b/qwen3.5:9b", "stream": false },
-       "librarian": { "model": "qwen3.5-9b/qwen3.5:9b", "stream": false }
+       "sisyphus": { "model": "olares/default-chat" },
+       "hephaestus": { "model": "olares/default-chat" },
+       "prometheus": { "model": "olares/default-chat" },
+       "atlas": { "model": "olares/default-chat" },
+       "explore": { "model": "olares/<lightweight-model-name>" },
+       "librarian": { "model": "olares/<lightweight-model-name>" }
      }
    }
    ```
 
-   :::info `"stream": false` 要求
-   Ollama 的流式模式返回 SDK 无法解析的 NDJSON。如果缺少 `"stream": false`，使用工具的代理，尤其是 Librarian 和 Explore，会静默回退到模型链中的下一个模型。这是 Ollama 的已知限制。
-   :::
-
-4. 在 `categories` 部分，为 `quick` 和 `writing` 使用 Qwen3.5-9B，其他类别使用 Qwen3.6-27B。保留现有的 `fallback_models` 条目。例如：
+4. 在 `categories` 部分，为 `quick` 和 `writing` 使用 Qwen3.5-9B，其他类别使用 Qwen3.8-27B。保留现有的 `fallback_models` 条目。例如：
 
    ```jsonc
    {
      "categories": {
        "visual-engineering": {
-         "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
+         "model": "olares/default-chat",
          "fallback_models": [
            // 保留现有的 fallback 条目
          ]
        },
        "quick": {
-         "model": "qwen3.5-9b/qwen3.5:9b",
+         "model": "olares/<lightweight-model-name>",
          "fallback_models": [
            // 保留现有的 fallback 条目
          ]
        },
        "writing": {
-         "model": "qwen3.5-9b/qwen3.5:9b",
+         "model": "olares/<lightweight-model-name>",
          "fallback_models": [
            // 保留现有的 fallback 条目
          ]
@@ -214,10 +219,10 @@ OMO 在两个位置使用模型：
    {
      "categories": {
        "visual-engineering": {
-         "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
+         "model": "olares/default-chat",
          "fallback_models": [
            {
-             "model": "qwen3.5-9b/qwen3.5:9b"
+             "model": "olares/<lightweight-model-name>"
            },
            {
              "model": "google/gemini-3.1-pro-preview",
@@ -241,10 +246,10 @@ OMO 在两个位置使用模型：
          ]
        },
        "ultrabrain": {
-         "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
+         "model": "olares/default-chat",
          "fallback_models": [
            {
-             "model": "qwen3.5-9b/qwen3.5:9b"
+             "model": "olares/<lightweight-model-name>"
            },
            {
              "model": "openai/gpt-5.4",
@@ -272,10 +277,10 @@ OMO 在两个位置使用模型：
          ]
        },
        "deep": {
-         "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
+         "model": "olares/default-chat",
          "fallback_models": [
            {
-             "model": "qwen3.5-9b/qwen3.5:9b"
+             "model": "olares/<lightweight-model-name>"
            },
            {
              "model": "openai/gpt-5.4",
@@ -307,10 +312,10 @@ OMO 在两个位置使用模型：
          ]
        },
        "artistry": {
-         "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
+         "model": "olares/default-chat",
          "fallback_models": [
            {
-             "model": "qwen3.5-9b/qwen3.5:9b"
+             "model": "olares/<lightweight-model-name>"
            },
            {
              "model": "google/gemini-3.1-pro-preview",
@@ -340,10 +345,10 @@ OMO 在两个位置使用模型：
          ]
        },
        "quick": {
-         "model": "qwen3.5-9b/qwen3.5:9b",
+         "model": "olares/<lightweight-model-name>",
          "fallback_models": [
            {
-             "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M"
+             "model": "olares/default-chat"
            },
            {
              "model": "openai/gpt-5.4-mini"
@@ -369,10 +374,10 @@ OMO 在两个位置使用模型：
          ]
        },
        "unspecified-low": {
-         "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
+         "model": "olares/default-chat",
          "fallback_models": [
            {
-             "model": "qwen3.5-9b/qwen3.5:9b"
+             "model": "olares/<lightweight-model-name>"
            },
            {
              "model": "anthropic/claude-sonnet-4-6"
@@ -396,10 +401,10 @@ OMO 在两个位置使用模型：
          ]
        },
        "unspecified-high": {
-         "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
+         "model": "olares/default-chat",
          "fallback_models": [
            {
-             "model": "qwen3.5-9b/qwen3.5:9b"
+             "model": "olares/<lightweight-model-name>"
            },
            {
              "model": "anthropic/claude-sonnet-4-6"
@@ -423,10 +428,10 @@ OMO 在两个位置使用模型：
          ]
        },
        "writing": {
-         "model": "qwen3.5-9b/qwen3.5:9b",
+         "model": "olares/<lightweight-model-name>",
          "fallback_models": [
            {
-             "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M"
+             "model": "olares/default-chat"
            },
            {
              "model": "google/gemini-3-flash-preview"
@@ -456,12 +461,11 @@ OMO 在两个位置使用模型：
    {
      "background_task": {
        "providerConcurrency": {
-         "qwen3.6-27b": 1,
-         "qwen3.5-9b": 1
+         "olares": 3
        },
        "modelConcurrency": {
-         "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M": 1,
-         "qwen3.5-9b/qwen3.5:9b": 2
+         "olares/default-chat": 1,
+         "olares/<lightweight-model-name>": 2
        }
      }
    }
@@ -479,18 +483,18 @@ OMO 在两个位置使用模型：
       "max_fallback_attempts": 7
     },
     "agents": {
-      "sisyphus": { "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M" },
-      "hephaestus": { "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M" },
-      "prometheus": { "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M" },
-      "atlas": { "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M" },
-      "explore": { "model": "qwen3.5-9b/qwen3.5:9b" },
-      "librarian": { "model": "qwen3.5-9b/qwen3.5:9b" }
+      "sisyphus": { "model": "olares/default-chat" },
+      "hephaestus": { "model": "olares/default-chat" },
+      "prometheus": { "model": "olares/default-chat" },
+      "atlas": { "model": "olares/default-chat" },
+      "explore": { "model": "olares/<lightweight-model-name>" },
+      "librarian": { "model": "olares/<lightweight-model-name>" }
     },
     "categories": {
       "visual-engineering": {
-        "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
+        "model": "olares/default-chat",
         "fallback_models": [
-          { "model": "qwen3.5-9b/qwen3.5:9b" },
+          { "model": "olares/<lightweight-model-name>" },
           { "model": "google/gemini-3.1-pro-preview", "variant": "high" },
           { "model": "github-copilot/gemini-3.1-pro-preview", "variant": "high" },
           { "model": "anthropic/claude-opus-4-6", "variant": "max" },
@@ -499,9 +503,9 @@ OMO 在两个位置使用模型：
         ]
       },
       "ultrabrain": {
-        "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
+        "model": "olares/default-chat",
         "fallback_models": [
-          { "model": "qwen3.5-9b/qwen3.5:9b" },
+          { "model": "olares/<lightweight-model-name>" },
           { "model": "openai/gpt-5.4", "variant": "xhigh" },
           { "model": "google/gemini-3.1-pro-preview", "variant": "high" },
           { "model": "github-copilot/gemini-3.1-pro-preview", "variant": "high" },
@@ -511,9 +515,9 @@ OMO 在两个位置使用模型：
         ]
       },
       "deep": {
-        "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
+        "model": "olares/default-chat",
         "fallback_models": [
-          { "model": "qwen3.5-9b/qwen3.5:9b" },
+          { "model": "olares/<lightweight-model-name>" },
           { "model": "openai/gpt-5.4", "variant": "medium" },
           { "model": "github-copilot/gpt-5.4", "variant": "medium" },
           { "model": "anthropic/claude-opus-4-6", "variant": "max" },
@@ -524,9 +528,9 @@ OMO 在两个位置使用模型：
         ]
       },
       "artistry": {
-        "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
+        "model": "olares/default-chat",
         "fallback_models": [
-          { "model": "qwen3.5-9b/qwen3.5:9b" },
+          { "model": "olares/<lightweight-model-name>" },
           { "model": "google/gemini-3.1-pro-preview", "variant": "high" },
           { "model": "github-copilot/gemini-3.1-pro-preview", "variant": "high" },
           { "model": "anthropic/claude-opus-4-6", "variant": "max" },
@@ -537,9 +541,9 @@ OMO 在两个位置使用模型：
         ]
       },
       "quick": {
-        "model": "qwen3.5-9b/qwen3.5:9b",
+        "model": "olares/<lightweight-model-name>",
         "fallback_models": [
-          { "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M" },
+          { "model": "olares/default-chat" },
           { "model": "openai/gpt-5.4-mini" },
           { "model": "github-copilot/gpt-5.4-mini" },
           { "model": "anthropic/claude-haiku-4-5" },
@@ -550,9 +554,9 @@ OMO 在两个位置使用模型：
         ]
       },
       "unspecified-low": {
-        "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
+        "model": "olares/default-chat",
         "fallback_models": [
-          { "model": "qwen3.5-9b/qwen3.5:9b" },
+          { "model": "olares/<lightweight-model-name>" },
           { "model": "anthropic/claude-sonnet-4-6" },
           { "model": "github-copilot/claude-sonnet-4.6" },
           { "model": "openai/gpt-5.3-codex", "variant": "medium" },
@@ -562,9 +566,9 @@ OMO 在两个位置使用模型：
         ]
       },
       "unspecified-high": {
-        "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M",
+        "model": "olares/default-chat",
         "fallback_models": [
-          { "model": "qwen3.5-9b/qwen3.5:9b" },
+          { "model": "olares/<lightweight-model-name>" },
           { "model": "anthropic/claude-sonnet-4-6" },
           { "model": "github-copilot/claude-sonnet-4.6" },
           { "model": "openai/gpt-5.3-codex", "variant": "medium" },
@@ -574,9 +578,9 @@ OMO 在两个位置使用模型：
         ]
       },
       "writing": {
-        "model": "qwen3.5-9b/qwen3.5:9b",
+        "model": "olares/<lightweight-model-name>",
         "fallback_models": [
-          { "model": "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M" },
+          { "model": "olares/default-chat" },
           { "model": "google/gemini-3-flash-preview" },
           { "model": "github-copilot/gemini-3-flash-preview" },
           { "model": "anthropic/claude-sonnet-4-6" },
@@ -587,12 +591,11 @@ OMO 在两个位置使用模型：
     },
     "background_task": {
       "providerConcurrency": {
-        "qwen3.6-27b": 1,
-        "qwen3.5-9b": 1
+        "olares": 3
       },
       "modelConcurrency": {
-        "qwen3.6-27b/unsloth/Qwen3.6-27B-GGUF:Q4_K_M": 1,
-        "qwen3.5-9b/qwen3.5:9b": 2
+        "olares/default-chat": 1,
+        "olares/<lightweight-model-name>": 2
       }
     }
   }
@@ -606,7 +609,6 @@ OMO 在两个位置使用模型：
    a. 打开设置，前往**应用** > **OpenCode**。
 
    b. 点击**停止**，然后点击**恢复**。
-
 
 ### 确认插件已加载
 
@@ -932,7 +934,7 @@ UI 选择控制主代理（你与之聊天的代理）。`oh-my-openagent.json` 
 
 ## 了解更多
 
-- [将 OpenCode 设置为你的 AI 编码代理](opencode.md)：安装 OpenCode 并将其连接到 Ollama。
+- [将 OpenCode 设置为你的 AI 编码代理](opencode.md)：安装 OpenCode 并将其连接到 Router。
 - [使用技能和插件扩展 OpenCode](opencode-extensions.md)：通过技能和插件添加功能。
 - [使用 Context7 将 AI 编码助手连接到最新文档](context7.md#opencode)：在 OpenCode 中将 Context7 注册为远程 MCP 服务器。
 - [OMO 概述](https://github.com/code-yeongyu/oh-my-openagent/blob/dev/docs/guide/overview.md)：OMO 架构和代理的官方介绍。

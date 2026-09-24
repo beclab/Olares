@@ -1,13 +1,15 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /zh/use-cases/perplexica
 outline: [2, 3]
-description: 在 Olares 上自托管 Vane（前身为 Perplexica），作为私有的 Perplexity 替代方案。用本地 Ollama 模型和 SearXNG 搜索后端，获得带引用的 AI 回答。
+description: 在 Olares 上自托管 Vane（前身为 Perplexica），作为私有的 Perplexity 替代方案。通过 Olares Router 连接模型，结合 SearXNG 搜索后端，获得带引用的 AI 回答。
 head:
   - - meta
     - name: keywords
       content: Olares, Vane, Perplexica, perplexity alternative, self-hosted perplexity, AI search, SearXNG, vane on olares
 app_version: "1.12.0"
 doc_version: "1.2"
-doc_updated: "2026-04-17"
+doc_updated: "2026-09-23"
 ---
 
 :::warning
@@ -16,15 +18,18 @@ doc_updated: "2026-04-17"
 
 # 自托管私人 AI 搜索引擎 Vane
 
+<VersionRouteSelect />
+
 Vane（前身为 Perplexica）是一款开源的 AI 驱动问答引擎。它将网络搜索与本地或云端大语言模型（LLM）相结合，在保护你查询隐私的同时，提供带有引用来源的对话式回答。
 
-本指南使用 Ollama 作为模型提供商，SearXNG 作为搜索后端。
+本指南通过 Olares Router 使用 Qwen3.8-27B (llama.cpp)，并以 SearXNG 为搜索后端。
 
 ## 前提条件
 
-开始前，请确保：
-- [Ollama 已安装](ollama.md) 并在你的 Olares 环境中运行。
-- Ollama 中已安装至少一个聊天模型。嵌入模型为可选项，因为 Vane 内置了嵌入模型。
+开始前，你需要：
+
+<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
+- 从应用市场安装 Qwen3.8-27B (llama.cpp)。Vane 可使用内置嵌入模型。
 
 ## 安装 SearXNG
 
@@ -44,18 +49,26 @@ SearXNG 是一款注重隐私的元搜索引擎，它聚合多个搜索引擎的
 
 ## 配置 Vane
 
-1. 启动 Vane。首次启动时会打开设置向导，Ollama 及其已安装的模型将被自动检测到。
+<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
+
+1. 打开 Vane，在首次设置向导或 **Settings** 的模型设置中添加 **OpenAI** 提供商。
+2. **Base URL** 填写从 Router 复制的地址，保留 `/v1`；**API Key** 填写 `olares`。
+
+   <!--
+   TODO: 素材清单 17，待补 Router 截图：vane-provider-router.png；替换下方旧图后再取消注释。
    ![Manage connections](/images/manual/use-cases/vane-manage-connections.png#bordered)
+   -->
 
-2. 点击 **下一步**。
-3. 选择一个聊天模型和一个嵌入模型，然后点击 **完成**。
+3. 在该提供商下手动添加聊天模型，名称可填 `Router chat`，模型 ID 填写 `default-chat`。
+4. 选择该聊天模型和一个 Vane 内置嵌入模型，完成设置。
+
+   <!--
+   TODO: 素材清单 18，待补 Router 截图：vane-models-router.png；替换下方旧图后再取消注释。
    ![Configure models](/images/manual/use-cases/vane-configure-models.png#bordered)
+   -->
 
-   :::tip 嵌入模型选项
-   如果你在 Ollama 中没有嵌入模型，可以选择 Vane 内置的嵌入模型之一。
-   :::
 
-   你将进入主聊天页面。如需稍后更改模型或连接设置，点击左下角的 <i class="material-symbols-outlined">settings</i> 打开 **设置** 页面。
+之后可通过左下角的设置图标修改模型和连接。
 
 ## 开始提问
 
@@ -64,5 +77,5 @@ SearXNG 是一款注重隐私的元搜索引擎，它聚合多个搜索引擎的
 
 ## 了解更多
 
-- [Ollama](ollama.md)：在 Olares 上运行本地 LLM，作为 Vane 的模型后端。
+- [Olares Router](olares-router.md)：管理 Vane 使用的模型。
 - [Vane on GitHub](https://github.com/ItzCrazyKns/Vane)：上游项目 README、架构说明及社区 Discord。

@@ -1,4 +1,6 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /zh/use-cases/anythingllm
 outline: [2, 3]
 description: 在 Olares 上使用 AnythingLLM 构建私有知识库。添加文档、创建嵌入，并使用 RAG 进行查询。
 head:
@@ -7,7 +9,7 @@ head:
       content: Olares, AnythingLLM, self-hosted rag, private knowledge base, anythingllm ollama, local LLM, embedding, anythingllm on olares
 app_version: "1.0.13"
 doc_version: "2.0"
-doc_updated: "2026-07-27"
+doc_updated: "2026-09-23"
 ---
 
 :::warning
@@ -15,6 +17,8 @@ doc_updated: "2026-07-27"
 :::
 
 # 使用 AnythingLLM 构建本地知识库
+
+<VersionRouteSelect />
 
 AnythingLLM 是一个开源的一体化 AI 应用，让你可以使用检索增强生成（RAG）与文档对话。它支持多个 LLM 提供方和向量数据库，并可在 Olares 设备上本地运行。
 
@@ -30,13 +34,13 @@ AnythingLLM 是一个开源的一体化 AI 应用，让你可以使用检索增�
 
 开始前，你需要：
 
-- 一台具有足够磁盘空间和内存的 Olares 设备。
+<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - 从 Market 安装应用的管理员权限。
 - 以下模型：
 
   | 模型类型 | 模型 | 获取方式 |
   | :--- | :--- | :--- |
-  | 聊天 | Qwen3.6-27B (llama.cpp) | 从 Market 安装 |
+  | 聊天 | Qwen3.8-27B (llama.cpp) | 从 Market 安装 |
   | 嵌入 | all-MiniLM-L6-v2 | AnythingLLM 内置的嵌入模型 |
 
 <!--@include: ../reusables/ai-service-connections.md#use-different-model-->
@@ -53,7 +57,7 @@ AnythingLLM 是一个开源的一体化 AI 应用，让你可以使用检索增�
 
 <!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
-对于 Qwen3.6-27B (llama.cpp)：
+对于 Qwen3.8-27B (llama.cpp)：
 
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
@@ -66,10 +70,14 @@ AnythingLLM 是一个开源的一体化 AI 应用，让你可以使用检索增�
 1. 从 Launchpad 打开 AnythingLLM。
 2. 在主页上，点击左下角的 **Open settings** 图标。
 3. 在左侧边栏中，选择 **AI Providers** > **LLM**，然后选择 **Generic OpenAI** 作为 LLM 提供方。
-4. 在 **Base URL** 中，粘贴 Qwen3.6-27B (llama.cpp) 模型控制台中的 Base URL。
-5. 在 **Selected Model** 中选择 `unsloth/Qwen3.6-27B-GGUF:Q4_K_M`。
+4. 在 **Base URL** 中，粘贴 Router 中的 Base URL。
+5. 在 **Selected Model** 中手动填写 `default-chat`。
 
+   <!--
+   TODO: 素材清单 01，待补 Router 截图：anythingllm-chat-model-router.png；替换下方旧图后再取消注释。
    ![配置聊天模型](/images/manual/use-cases/anythingllm-configure-chat-model.png#bordered)
+   -->
+
 
 6. 点击 **Save changes**。显示 "LLM preferences saved successfully" 消息。
 
