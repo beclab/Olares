@@ -24,7 +24,7 @@ description: 排查 Olares One eGPU 开机与识别问题，并收集 Olares OS 
 
    命令必须返回 `enabled`。如果结果不同，请按照[在 Olares OS 上设置 eGPU](./egpu-olares-os.md)重新安装临时方案。
 
-5. 再次尝试连接前，先[收集 Olares OS 诊断信息](#收集-olares-os-诊断信息)。报告可能保留了上次开机卡住时的日志。
+5. 再次尝试连接前，先[收集 Olares OS 诊断信息](#olares-os)。报告可能保留了上次开机卡住时的日志。
 
 ## Olares OS 可以启动，但看不到 eGPU
 
@@ -62,12 +62,29 @@ description: 排查 Olares One eGPU 开机与识别问题，并收集 Olares OS 
 
 1. 在 **设备管理器** > **显示适配器** 中打开报错的设备。
 2. 记录 **常规** > **设备状态** 中的完整消息和错误代码。
-3. 按照[恢复内置显卡](./egpu-windows.md#恢复内置显卡)中的步骤操作。
-4. 重启 Windows，检查两张显卡是否都已显示，并且没有警告图标。
+3. 安装所有可用的 Windows 更新，以及适用于当前显卡的最新 NVIDIA 驱动。
+4. 按照[恢复内置显卡](./egpu-windows.md#恢复内置显卡)中的步骤操作。
+5. 重启 Windows，检查预期的全部 GPU 是否都已显示，并且没有警告图标。
 
 如果仍然缺少显卡，请收集下方列出的 Windows 信息。
 
-## 收集 Olares OS 诊断信息
+## 在 Olares 论坛求助
+
+如果问题仍未解决，请前往 [Olares 论坛](https://www.olares.cn/forum/)发帖，并填写：
+
+```plain
+系统与版本：
+外置显卡设备，或 eGPU dock、eGPU enclosure 与显卡：
+连接方式（包括 Dock 或 Hub）：
+开机顺序：
+问题现象：
+已尝试的操作：
+附件：
+```
+
+发帖前，请根据所用操作系统收集诊断信息，并附上报告或截图。
+
+### Olares OS
 
 1. 下载 <a href="/downloads/one/egpu/collect-egpu-info.sh" download>`collect-egpu-info.sh`</a>。
 2. 在下载目录中打开终端并运行：
@@ -88,7 +105,7 @@ description: 排查 Olares One eGPU 开机与识别问题，并收集 Olares OS 
 报告可能包含主机名、内核命令行、硬件拓扑和系统日志。公开发布前，请删除不希望分享的信息。
 :::
 
-## 收集 Windows 诊断信息
+### Windows
 
 准备以下内容：
 
@@ -97,20 +114,6 @@ description: 排查 Olares One eGPU 开机与识别问题，并收集 Olares OS 
 3. 每张报错显卡在设备管理器中的完整错误消息和代码。
 
 分享截图前，请先删除个人信息。
-
-## 在 Olares 论坛求助
-
-如果问题仍未解决，请前往 [Olares 论坛](https://www.olares.cn/forum/)发帖。附上诊断报告或截图，并填写：
-
-```plain
-系统与版本：
-外置显卡设备，或 eGPU dock、eGPU enclosure 与显卡：
-连接方式（包括 Dock 或 Hub）：
-开机顺序：
-问题现象：
-已尝试的操作：
-附件：
-```
 
 ## 相关资源
 

@@ -5,7 +5,7 @@ description: 将 NVIDIA eGPU 连接到 Olares One，在 Olares OS 中检查连�
 
 # 在 Olares OS 上设置 eGPU
 
-启动 Olares One 前先连接 eGPU。首次使用时先尝试标准连接。只有在开机卡住、系统看不到 eGPU 或使用过程中掉卡时，才安装 Gen1 临时方案。
+启动 Olares One 前先连接 eGPU，并先尝试标准连接。只有在开机卡住或 Olares OS 无法识别 eGPU 时，才安装 Gen1 临时方案。
 
 :::danger 改变连接前必须关机
 Olares OS 不支持 eGPU 热插拔。连接或断开 eGPU 前，必须关闭 Olares One。
@@ -55,18 +55,18 @@ nvidia-smi
 
 如果 eGPU 始终正常显示，设置已经完成。跳过临时方案。
 
-如果开机卡住，请关闭 Olares One，断开 eGPU，再重新开机。重新连接 eGPU 前，先安装下方的临时方案。
+如果开机卡住，或 Dashboard 和 `nvidia-smi` 中都看不到 eGPU，请关闭 Olares One，断开 eGPU，再重新开机。重新连接 eGPU 前，先安装下方的临时方案。
 
 ## 必要时安装临时方案
 
-临时方案会在 NVIDIA 驱动加载前，将外置显卡的 PCIe 链路设为 Gen1。
+临时方案会在 NVIDIA 驱动加载前，将外置显卡的 PCIe 链路设为 Gen1。它只作用于通过雷电连接的 NVIDIA GPU，不会修改内置显卡。
 
 :::info 性能影响
 临时方案会降低系统内存与显存之间的传输带宽，因此模型加载、CPU offload、游戏和实时渲染可能变慢。显卡的计算资源不会改变。
 :::
 
-:::warning 系统级临时方案
-该方案会修改系统文件和外置显卡的 PCIe 链路设置。请只安装本页提供的文件。
+:::warning 临时解决方案
+这是 Olares 提供的临时解决方案，不是 NVIDIA 官方修复。该方案会修改系统文件和外置显卡的 PCIe 链路设置，请只安装本页提供的文件。后续 Olares 版本会内置该方案，届时无需手动配置。
 :::
 
 1. 在不连接 eGPU 的情况下启动 Olares One。

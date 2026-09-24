@@ -24,7 +24,7 @@ Shut down Olares One before connecting or disconnecting an eGPU. For a cold star
 
    The command must return `enabled`. If it does not, reinstall the workaround by following [Set up an eGPU on Olares OS](./egpu-olares-os.md).
 
-5. Before trying again, [collect the Olares OS diagnostics](#collect-olares-os-diagnostics). The report may include logs from the stalled startup.
+5. Before trying again, [collect the Olares OS diagnostics](#olares-os). The report may include logs from the stalled startup.
 
 ## Olares OS starts but does not detect the eGPU
 
@@ -62,12 +62,29 @@ Both commands should list the external GPU. If `lspci` lists it but `nvidia-smi`
 
 1. In **Device Manager** > **Display adapters**, open the affected device.
 2. Record the complete message and error code under **General** > **Device status**.
-3. Follow [Recover the built-in GPU](./egpu-windows.md#recover-the-built-in-gpu).
-4. Restart Windows, then check that both GPUs appear without warning icons.
+3. Install all available Windows updates and the latest NVIDIA driver for your GPU.
+4. Follow [Recover the built-in GPU](./egpu-windows.md#recover-the-built-in-gpu).
+5. Restart Windows, then check that all expected GPUs appear without warning icons.
 
-If either GPU is still missing, collect the Windows information below.
+If any GPU is still missing, collect the Windows information below.
 
-## Collect Olares OS diagnostics
+## Ask for help in the Olares forum
+
+If the problem continues, create a post in the [Olares forum](https://www.olares.com/forum/). Include:
+
+```plain
+System and version:
+External graphics device, or eGPU dock or enclosure and GPU:
+Connection path, including any dock or hub:
+Power-on order:
+What happened:
+Steps already tried:
+Attachments:
+```
+
+Before posting, collect the diagnostics for your operating system and attach the report or screenshots.
+
+### Olares OS
 
 1. Download <a href="/downloads/one/egpu/collect-egpu-info.sh" download>`collect-egpu-info.sh`</a>.
 2. Open a terminal in the download directory and run:
@@ -88,7 +105,7 @@ The script reads system state and writes one report in the current directory. It
 The report may contain the hostname, kernel command line, hardware topology, and system logs. Remove any information you do not want to post publicly.
 :::
 
-## Collect Windows diagnostics
+### Windows
 
 Prepare:
 
@@ -97,20 +114,6 @@ Prepare:
 3. The complete Device Manager error message and code for each affected GPU.
 
 Remove personal information from screenshots before sharing them.
-
-## Ask for help in the Olares forum
-
-If the problem continues, create a post in the [Olares forum](https://www.olares.com/forum/). Attach the diagnostic report or screenshots and include:
-
-```plain
-System and version:
-External graphics device, or eGPU dock or enclosure and GPU:
-Connection path, including any dock or hub:
-Power-on order:
-What happened:
-Steps already tried:
-Attachments:
-```
 
 ## Related resources
 

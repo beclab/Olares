@@ -17,19 +17,29 @@ Do not connect or disconnect an eGPU while Olares OS is running. Shut down Olare
 
 ## Check known compatibility
 
-The table lists the single-eGPU hardware combinations for which compatibility results are available. It is not a list of recommended products or a complete compatibility list. An unlisted combination may work, but has not been verified.
+The table lists hardware combinations for which compatibility results are available. It is not a list of recommended products or a complete compatibility list. An unlisted combination may work, but has not been verified.
 
 | External graphics hardware | Olares OS | Windows 11 |
 |---|---|---|
-| ROG XG Mobile (2025) with NVIDIA GeForce RTX 5070 Ti Laptop GPU | **Works after connection.** No additional setup was needed after a cold start. | **Not verified.** |
-| AOOSTAR EG02 eGPU dock + RTX 4060 Ti | **Works after setup.** Install the [Gen1 workaround](./egpu-olares-os.md#install-the-workaround-if-needed). | **Works after setup.** Reinstall the NVIDIA driver with the eGPU connected. |
-| Razer Core X V2 eGPU enclosure + RTX 4090 | **Under verification.** Startup was unstable without the Gen1 workaround. Results with the workaround are not verified. | **Under verification.** |
+| AOOSTAR EG02 eGPU dock + RTX 4060 Ti | **Works after setup.** Install the [Gen1 workaround](./egpu-olares-os.md#install-the-workaround-if-needed). | **Works after setup.** Reinstall the NVIDIA driver with the eGPU connected. This combination was also verified in the tested multi-eGPU setup. |
+| Razer Core X V2 eGPU enclosure + RTX 4090 | **Under verification.** Startup was unstable without the Gen1 workaround. Results with the workaround are not verified. | **Verified only in the tested multi-eGPU setup.** Standalone use has not been verified. |
+| Razer Core X eGPU enclosure + RTX 4060 | **Not verified.** | **Verified only in the tested multi-eGPU setup.** Standalone use has not been verified. |
 | eGPU dock or enclosure + desktop RTX 5090 | **Not supported.** The NVIDIA driver did not initialize, and no workaround is available. | **Not verified.** |
 
 Compatibility also depends on the eGPU dock or enclosure, power supply, cable, operating system, and NVIDIA driver.
 
-:::warning Start with one eGPU
-Olares OS does not support multiple eGPUs. Windows has detected up to two eGPUs, but multi-eGPU support is still under verification. A chained setup with three eGPUs did not work on either operating system.
+In this table, **Works** and **Verified** mean that the GPU completed a workload test. Detection in Dashboard, Device Manager, or `nvidia-smi` alone is not treated as a compatibility result.
+
+:::info Multiple eGPUs
+If you need multiple eGPUs, use Windows 11. Olares OS currently supports only one eGPU at a time.
+
+We have verified one Windows 11 configuration with three eGPUs connected through a Razer Thunderbolt 5 Dock:
+
+- AOOSTAR EG02 with RTX 4060 Ti
+- Razer Core X V2 with RTX 4090
+- Razer Core X with RTX 4060
+
+Multi-eGPU compatibility depends on the dock and connection topology. Start with one eGPU, then connect and verify additional devices one at a time.
 :::
 
 ## Before you start
@@ -48,15 +58,15 @@ Older Thunderbolt external graphics devices may work, but Thunderbolt 5 is recom
 
 Start with a cold connection. Shut down Olares One, power on and connect the eGPU, and then start Olares One. If the eGPU is detected and remains available, no other setup is needed.
 
-Follow [Set up an eGPU on Olares OS](./egpu-olares-os.md). The guide includes a Gen1 workaround for startup, detection, or disconnection problems.
+Follow [Set up an eGPU on Olares OS](./egpu-olares-os.md). The guide includes a Gen1 workaround for startup or detection problems.
 
 Olares OS does not support hot-plugging.
 
 ### Windows 11
 
-You can use an existing Windows 11 installation. The first setup requires reinstalling the NVIDIA driver with the eGPU connected.
+You can use an existing Windows 11 installation. Before setup, update Windows to the latest version available through Windows Update. The first setup requires removing the existing NVIDIA software, connecting the eGPU, and then installing the NVIDIA driver again.
 
-Follow [Set up an eGPU on Windows](./egpu-windows.md). The guide covers one eGPU and does not cover hot-plugging.
+Follow [Set up an eGPU on Windows](./egpu-windows.md). The guide covers the recommended single-eGPU setup and does not cover hot-plugging.
 
 ## Get help
 
