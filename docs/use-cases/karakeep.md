@@ -140,7 +140,7 @@ This guide uses the pre-built Qwen3.8-27B (llama.cpp) model app from Market.
 
 1. Open **Settings** > **Applications** > **Karakeep** > **Manage environment variables** and configure:
 
-   - **OPENAI_API_KEY**: Enter `olares`. Karakeep requires a non-empty value to enable this provider; Router identifies the Olares app through the platform.
+   - **OPENAI_API_KEY**: Enter `olares`. Karakeep requires a non-empty value to enable this provider. Router identifies the Olares app through the platform.
    - **OLLAMA_BASE_URL**: Clear this field to stop using the old Ollama connection.
    - **INFERENCE_TEXT_MODEL**: Enter `default-chat`.
    - **INFERENCE_IMAGE_MODEL**: Leave empty for text-only tagging. For image tagging, enter the full Router name of a vision-capable model.

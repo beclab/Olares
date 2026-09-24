@@ -54,7 +54,7 @@ SearXNG 是一款注重隐私的元搜索引擎，它聚合多个搜索引擎的
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
 1. 打开 Vane，在首次设置向导或 **Settings** 的模型设置中添加 **OpenAI** 提供商。
-2. **Base URL** 填写从 Router 复制的地址，保留 `/v1`；**API Key** 填写 `olares`。
+2. **Base URL** 填写从 Router 复制的地址，保留 `/v1`。**API Key** 填写 `olares`。
 
    <!--
    TODO: 素材清单 17，待补 Router 截图：vane-provider-router.png；替换下方旧图后再取消注释。

@@ -101,7 +101,7 @@ Run a quick setup to connect Hermes Agent to your local model.
     | Use this model? [Y/n] — only when one model is detected | Enter `n`. At the following **Model name** prompt, enter `default-chat`. This confirmation accepts yes/no, not a model name. |
     | Select model [1-N] or type name — only when multiple models are detected | Type `default-chat` instead of selecting a numbered model. |
     | Model name — when no model is detected | Enter `default-chat`. |
-    | Context length in tokens | Enter the exact context size from Router's **Model card > Engine args**, such as `104448` for `-c 104448`. Hermes requires at least `65536` tokens; the value must not exceed the engine configuration. |
+    | Context length in tokens | Enter the exact context size from Router's **Model card > Engine args**, such as `104448` for `-c 104448`. Hermes requires at least `65536` tokens. The value must not exceed the engine configuration. |
     | Display name |  Enter a name to identify this model, such as `router-chat`.|
     | Select terminal backend | Select **Local - run directly on this machine**. |
     | Select platforms to configure | Press **ESC** to skip for now. |

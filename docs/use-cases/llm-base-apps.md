@@ -161,11 +161,11 @@ To change engine arguments, use **Edit** in the model card. Saving changed argum
 
 On Olares 1.12.7 and later, clients connect to your model instance through Router. Router provides the client-facing URL, model name, and access controls.
 
-1. Open Router from Launchpad. Find your chat model on **LLM**. Before sending a request, confirm that it shows **Callable**; if it is unavailable, check the reason shown below its status.
-2. On **Default models**, select the instance as the default chat model. The app tutorials use Qwen3.8-27B (llama.cpp); you can select the chat instance you created here instead.
+1. Open Router from Launchpad. Find your chat model on **LLM**. Before sending a request, confirm that it shows **Callable**. If it is unavailable, check the reason shown below its status.
+2. On **Default models**, select the instance as the default chat model. The app tutorials use Qwen3.8-27B (llama.cpp). You can select the chat instance you created here instead.
 3. Return to the model row and click **View connection example**. Select **Apps in Olares** for an installed client, then copy the **Base URL**, including `/v1`.
 
-   ![Copy the Router connection details](/images/manual/use-cases/router-how-to-call-model.png#bordered)
+   <!-- ![Copy the Router connection details](/images/manual/use-cases/router-how-to-call-model.png#bordered) -->
 
 4. Follow [Connect OpenCode to a custom provider](opencode.md#connect-to-a-custom-provider). Use the Router Base URL and add `default-chat` as the model ID. To keep the client on this instance regardless of the default model setting, use its full **Model name** from Router instead.
 5. Send a short message in OpenCode. In Router, check **Usage** to confirm that the request reached the intended model.

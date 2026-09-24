@@ -144,7 +144,7 @@ Karakeep 可以使用 Olares 上托管的本地模型为保存的内容生成标
 
 1. 打开**设置** > **应用** > **Karakeep** > **管理环境变量**，配置以下值：
 
-   - **OPENAI_API_KEY**：填写 `olares`。Karakeep 需要非空值来启用此提供商；Router 通过平台识别 Olares 内应用。
+   - **OPENAI_API_KEY**：填写 `olares`。Karakeep 需要非空值来启用此提供商。Router 通过平台识别 Olares 内应用。
    - **OLLAMA_BASE_URL**：清空，避免继续使用原来的 Ollama 连接。
    - **INFERENCE_TEXT_MODEL**：填写 `default-chat`。
    - **INFERENCE_IMAGE_MODEL**：仅做文本标签时留空。如需图像标签，填写 Router 中具有视觉能力的完整模型名称。

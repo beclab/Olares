@@ -93,9 +93,9 @@ Connecting to Router takes three parameters:
 
 - **Base URL**: Open a capability page such as **LLM**, find the model, and click the **View connection example** icon on the right.
 
-  ![The View connection example icon on a model row](/images/manual/use-cases/router-view-connection-examp.png#bordered)
+  <!-- ![The View connection example icon on a model row](/images/manual/use-cases/router-view-connection-examp.png#bordered) -->
 
-  ![The How to call this model window](/images/manual/use-cases/router-how-to-call-model.png#bordered)
+  <!-- ![The How to call this model window](/images/manual/use-cases/router-how-to-call-model.png#bordered) -->
 
 - **Model name**: Copy the model name from the **How to call this model** window. Or set a default model for each capability on the **Default models** page, and use the system name like `default-chat` instead of a specific model name.
 - **API key**: Created on the **API keys** page. Required only for callers from the LAN or the internet. Apps in Olares do not need to enter API keys.
