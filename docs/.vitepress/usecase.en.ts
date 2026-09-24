@@ -237,6 +237,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   ]
                 },
                 {
+                  text: "Concat",
+                  link: "/use-cases/concat",
+                },
+                {
                   text: "Open Design",
                   link: "/use-cases/open-design",
                 },
