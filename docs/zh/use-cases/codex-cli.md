@@ -251,5 +251,5 @@ curl -fsSL https://chatgpt.com/codex/install.sh | CODEX_INSTALL_DIR=/opt/data/.l
 
 - [Codex CLI 文档](https://developers.openai.com/codex/cli)：了解 Codex CLI 工作流和命令。
 - [Codex 认证](https://developers.openai.com/codex/auth)：了解 ChatGPT、API 密钥和无头登录方式。
-- [使用 Engine Base 应用托管本地大语言模型](llm-base-apps.md)：通过 Model Console 部署和管理模型。
+- [使用 Engine Base 应用托管本地大语言模型](llm-base-apps.md)：使用引擎基座应用部署本地模型，并通过 Router 连接。
 - [安装 Olares CLI](/zh/developer/cli-install.md)：设置 Olares 管理命令和 Agent 技能。

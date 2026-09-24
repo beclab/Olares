@@ -7,7 +7,7 @@ description: 了解如何在 Olares 中使用引擎基座应用来自托管本�
 head:
   - - meta
     - name: keywords
-      content: Olares, Model Console, Engine Base, self-hosted LLM, vLLM, llama.cpp, SGLang, run LLM locally
+      content: Olares, Router, Engine Base, self-hosted LLM, vLLM, llama.cpp, SGLang, run LLM locally
 ---
 
 :::warning
@@ -18,13 +18,13 @@ head:
 
 <VersionRouteSelect />
 
-Olares v1.12.6 推出了 **Model Console**，一个用于管理本地大语言模型（LLM）全生命周期的平台。该平台提供四个引擎基座应用，每个基于不同的推理引擎构建：**Ollama 引擎基座**、**vLLM 引擎基座**、**llama.cpp 引擎基座**和**SGLang 引擎基座**。
+Olares 提供四个引擎基座应用，每个基于不同的推理引擎构建：**Ollama 引擎基座**、**vLLM 引擎基座**、**llama.cpp 引擎基座**和**SGLang 引擎基座**。
 
-选择你所需引擎对应的基座应用，克隆它来部署模型，然后通过专属控制台运行和管理该模型。
+选择所需引擎对应的基座应用，克隆它来部署模型。在模型应用中确认部署就绪后，通过 Router 查看模型详情并连接客户端。
 
 ## 开始之前
 
-- 你的 Olares 系统已升级至 v1.12.6 或更高版本。
+- 你的 Olares 系统已升级至 v1.12.7 或更高版本。
 - 如果你想跳过手动配置、快速体验模型，可以直接从 Market 安装预构建的模型应用。这些应用打包了 Olares 验证推荐的模型与引擎组合。
 
   ::: details 查看可用的预构建模型应用
@@ -137,7 +137,7 @@ Olares v1.12.6 推出了 **Model Console**，一个用于管理本地大语言�
 
 ## 监控部署并配置模型服务
 
-打开内置的模型控制台，跟踪模型下载、确认模型与引擎就绪、配置客户端访问，并查看 GPU 占用与性能。
+在模型应用的 Model Console 中跟踪下载进度，确认模型是否就绪、引擎是否运行。模型详情、上下文配置和客户端连接信息均在 Router 中查看。
 
 1. 在引擎基座应用详情页的 **Instances** 面板中找到该模型实例，或在 Launchpad 中找到它。
 2. 打开它，启动专属的模型控制台。
@@ -153,34 +153,19 @@ Olares v1.12.6 推出了 **Model Console**，一个用于管理本地大语言�
 
     如果任一状态一直未就绪，请参考[模型或引擎未就绪](/zh/manual/help/ts-model-engine-not-ready.md)。
 
-4. 当引擎显示 `Running` 后，打开 Router，在 **LLM** 或 **Tools** 中找到该实例，等待其状态变为 **Callable**。客户端连接信息从 Router 获取，具体步骤见下文。
+### 在 Router 中查看模型详情
 
-5. 选择 **Configuration** 标签页查看模型详情：
+部署完成后，打开 Router 查看模型能力、上下文窗口和引擎参数。以下以 Qwen3.8-27B (llama.cpp) 为例：
 
-    ![Configuration 标签页](/images/manual/olares/llm-base-model-console-config.png#bordered)
+<!--@include: ../reusables/ai-service-connections.md#model-context-window-->
 
-    - **Model**：显示模型名称、模式，以及该实例暴露的能力标签。
-    - **Parameters**：查看引擎参数。展开 **Advanced parameters** 查看完整参数，并可在 **Form** 和 **Raw** 之间切换视图。
-
-6. 在 **GPU residency** 部分，点击 **Detect**，然后：
-
-    - **查看模式**：确认模型运行在哪种模式下。
-        - **Full GPU**：整个模型运行在 GPU 上。这是速度最快的状态，也是安装时选择 GPU 加速器后的预期状态。
-        - **CPU** 或 **Split**：模型的一部分或全部运行在 CPU 上，会让推理变慢。
-            - 如果安装时选择了 CPU 加速器，`CPU` 是预期状态。
-            - 如果安装时选择了 GPU 加速器，请检查 `[ENGINE]_REQUIRED_GPU_MEMORY` 设置和引擎参数。
-    - **查看显存占用**：查看 **VRAM**、**KV cache used** 和 **GPU memory utilization**，了解模型占用了多少显存，以及还剩多少余量用于更长的上下文或更多并发请求。
-
-7. 在 **Performance** 部分，点击 **Run test** 测量两项响应速度指标。用它们对比不同的量化级别、上下文长度或引擎参数，并在采用某项改动前先验证它确实提升了速度：
-
-    - **TTFT**（Time To First Token，首字延迟）：你等待第一个字出现的时长。值越低，模型响应越快。
-    - **Cold start**（冷启动）：引擎从零加载模型所需的时间，例如重启后。值越低，模型越快可以对外服务。
+如需调整引擎参数，点击模型卡片中的 **Edit**。保存更改后的参数会重新启动引擎。
 
 ## 将客户端应用连接到模型服务
 
-在 Olares 1.12.7 及更高版本中，客户端通过 Router 连接模型实例。模型控制台负责管理引擎，Router 提供客户端使用的地址、模型名称和访问控制。
+在 Olares 1.12.7 及更高版本中，客户端通过 Router 连接模型实例。Router 提供客户端使用的地址、模型名称和访问控制。
 
-1. 从 Launchpad 打开 Router，在 **LLM** 中找到聊天模型，等待其状态变为 **Callable**。
+1. 从 Launchpad 打开 Router，在 **LLM** 中找到聊天模型。发送请求前，确认状态为 **Callable**；如果不可用，查看状态下方显示的原因。
 2. 在 **Default models** 中将该实例设为默认聊天模型。应用教程使用 Qwen3.8-27B (llama.cpp)，你也可以选择在本教程中创建的聊天模型实例。
 3. 返回模型所在行，点击 **View connection example**。对于安装在 Olares 中的客户端，选择 **Apps in Olares**，然后复制 **Base URL**，保留 `/v1` 后缀。
 

@@ -20,7 +20,7 @@ Olares Router 为 AI 应用提供统一的本地和云端模型入口。在 Rout
 ## 开始之前
 
 - 从应用市场安装 AI 客户端和 Qwen3.8-27B (llama.cpp)。
-- 从启动台打开 Router，在 **LLM** 页面等待模型显示 **Callable**。
+- 从启动台打开 Router。发送请求前，确认模型在 **LLM** 页面显示 **Callable**；如果不可用，查看状态下方显示的原因。
 - 在 **Default models** 页面，将 Qwen3.8-27B (llama.cpp) 设为默认聊天模型。
 
 ## 获取 Router Base URL
@@ -52,6 +52,12 @@ OpenAI 兼容客户端通常需要保留末尾的 `/v1`。如果客户端会自�
 如果希望客户端始终使用指定模型，请复制 **How to call this model** 窗口中的完整模型名称，保留提供商前缀。上图中的名称为 `Olares/unsloth/Qwen3.8-27B-GGUF:UD-Q4_K_XL`。
 
 嵌入、语音等能力需要使用各自的模型或默认路由，不能用 `default-chat` 代替。创建和查询知识库时，应保持嵌入模型一致。
+
+## 查看实际上下文大小 {#check-context-window}
+
+部分客户端（例如 Hermes）需要手动填写上下文大小。在 Router 中查看所用模型的配置：
+
+<!--@include: ../../reusables/ai-service-connections.md#model-context-window-->
 
 ## 配置 API 密钥
 

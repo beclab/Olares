@@ -76,7 +76,7 @@ Run a quick setup to connect Hermes Agent to your local model.
 
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
-5. Open Qwen3.8-27B (llama.cpp) from Launchpad. In its Model Console, check the configured context size under **Configuration** for the next step.
+5. In Router, open **LLM** and click the information icon on the Qwen3.8-27B (llama.cpp) row to open **Model card**. Under **Engine args**, read the number after `-c`. For example, `-c 104448` means you should enter `104448` in the next step. See [Check the configured context size](/manual/best-practices/connect-ai-apps.md#check-context-window) for screenshots.
 
 ### Step 2: Run the setup wizard
 
@@ -97,7 +97,7 @@ Run a quick setup to connect Hermes Agent to your local model.
     | API key  | Enter any text as a placeholder value, such as `local`.<br>The input remains hidden for security. |
     | Select API compatibility mode | Enter `1` to select **Auto-detect [current]**. This option uses Hermes URL heuristics and works best for standard OpenAI-compatible endpoints. |
     | Use this model | Enter `default-chat` manually instead of accepting a different auto-detected model. |
-    | Context length in tokens | Enter the context size configured in Model Console, at least 65536. Do not enter a value larger than the engine configuration. |
+    | Context length in tokens | Enter the exact context size from Router's **Model card > Engine args**, such as `104448` for `-c 104448`. Hermes requires at least `65536` tokens; the value must not exceed the engine configuration. |
     | Display name |  Enter a name to identify this model, such as `router-chat`.|
     | Select terminal backend | Select **Local - run directly on this machine**. |
     | Select platforms to configure | Press **ESC** to skip for now. |

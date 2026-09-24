@@ -144,6 +144,6 @@ This is a limitation of Open Design 0.22.1 on Olares. Select a Skill for a page,
 
 ## Learn more
 
-- [Host local large language models with Engine Base apps](llm-base-apps.md): Deploy and manage models through Model Console.
+- [Host local large language models with Engine Base apps](llm-base-apps.md): Deploy local models with Engine Base apps and connect them through Router.
 - [Connect AI apps to model services](/manual/best-practices/connect-ai-apps.md): Understand model names, API formats, and Base URLs.
 - [Open Design website](https://open-design.ai/): Explore the upstream project and its capabilities.

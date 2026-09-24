@@ -7,20 +7,20 @@ description: Learn how to use the Engine Base applications on Olares to self-hos
 head:
   - - meta
     - name: keywords
-      content: Olares, Model Console, Engine Base, self-hosted LLM, vLLM, llama.cpp, SGLang, run LLM locally
+      content: Olares, Router, Engine Base, self-hosted LLM, vLLM, llama.cpp, SGLang, run LLM locally
 ---
 
 # Run local LLMs with Ollama, vLLM, llama.cpp, and SGLang
 
 <VersionRouteSelect />
 
-Olares v1.12.6 introduces **Model Console**, a platform that manages the full lifecycle of local large language models (LLMs). This platform provides four Engine Base applications, each built on a different inference engine: **Ollama Engine Base**, **vLLM Engine Base**, **llama.cpp Engine Base**, and **SGLang Engine Base**.
+Olares provides four Engine Base applications, each built on a different inference engine: **Ollama Engine Base**, **vLLM Engine Base**, **llama.cpp Engine Base**, and **SGLang Engine Base**.
 
-Choose the base app for the engine you want, clone it to deploy a model, then run and manage that model from its dedicated console.
+Choose the base app for the engine you want and clone it to deploy a model. Check deployment readiness in the model app, then use Router to view model details and connect clients.
 
 ## Before you start
 
-- Your Olares system has been upgraded to v1.12.6 or later.
+- Your Olares system has been upgraded to v1.12.7 or later.
 - If you want to skip manual configuration and quickly try out a model, install a pre-built model app from Market instead. These apps package the recommended model-and-engine combinations validated for Olares.
 
   ::: details Check available pre-built model apps
@@ -133,7 +133,7 @@ To change these variables after installation, go to Olares **Settings** > **Appl
 
 ## Monitor deployment and configure the model service
 
-Open the built-in model console to track the model download, confirm the model and engine readiness, configure client access, and inspect GPU usage and performance.
+Use the model app's Model Console to track downloads and check whether the model is ready and the engine is running. View model details, context settings, and client connection information in Router.
 
 1. Locate the model instance in the **Instances** panel on the Engine Base app details page, or find it on the Launchpad.
 2. Open it to launch the dedicated model console.
@@ -149,36 +149,19 @@ Open the built-in model console to track the model download, confirm the model a
 
     If either status does not become ready, see [Model or engine is not ready](/manual/help/ts-model-engine-not-ready.md).
 
-4. When the engine shows **Running**, open Router and find the instance on **LLM** or **Tools**. Wait until it shows **Callable**. Use Router for client connection details, as described below.
+### View model details in Router
 
-5. Select the **Configuration** tab to review the model's details:
+After deployment, open Router to review the model's capabilities, context window, and engine arguments. The following example uses Qwen3.8-27B (llama.cpp):
 
-    ![Configuration tab in model console](/images/manual/olares/llm-base-model-console-config.png#bordered)
+<!--@include: ../reusables/ai-service-connections.md#model-context-window-->
 
-    - **Model**: Shows the model name, mode, and the capability tags.
-    - **Parameters**: View the engine parameters. Expand **Advanced parameters** for the full set, and switch the view between **Form** and **Raw**.
-
-6. In the **GPU residency** section, click **Detect**, and then:
-
-    - **Check the mode**: Confirm where the model is running.
-        - **Full GPU**: The entire model runs on the GPU. This is the fastest state, and is expected when you selected the GPU accelerator during installation.
-        - **CPU** or **Split**: Part or all of the model runs on the CPU, which makes inference slower.
-            - If you chose the CPU accelerator during installation, `CPU` is expected. 
-            - If you chose the GPU accelerator, review your `[ENGINE]_REQUIRED_GPU_MEMORY` setting and engine arguments.
-    - **Check the memory usage**: Review the **VRAM**, **KV cache used**, and **GPU memory utilization** to see how much memory the model occupies and how much memory is left for longer contexts or more concurrent requests.
-
-7. In the **Performance** section, click **Run test** to measure two response-speed metrics.
-
-    Use them to compare quantization levels, context sizes, or engine arguments, and to verify that a change actually improved speed before you use it:
-
-    - **TTFT** (Time To First Token): How long you wait before the first word appears. A lower value means the model responds faster.
-    - **Cold start**: How long the engine takes to load the model from scratch, for example after a restart. A lower value means the model is ready to serve sooner.
+To change engine arguments, use **Edit** in the model card. Saving changed arguments relaunches the engine.
 
 ## Connect client apps to the model service
 
-On Olares 1.12.7 and later, clients connect to your model instance through Router. Model Console manages the engine; Router provides the client-facing URL, model name, and access controls.
+On Olares 1.12.7 and later, clients connect to your model instance through Router. Router provides the client-facing URL, model name, and access controls.
 
-1. Open Router from Launchpad. Find your chat model on **LLM** and wait until it shows **Callable**.
+1. Open Router from Launchpad. Find your chat model on **LLM**. Before sending a request, confirm that it shows **Callable**; if it is unavailable, check the reason shown below its status.
 2. On **Default models**, select the instance as the default chat model. The app tutorials use Qwen3.8-27B (llama.cpp); you can select the chat instance you created here instead.
 3. Return to the model row and click **View connection example**. Select **Apps in Olares** for an installed client, then copy the **Base URL**, including `/v1`.
 

@@ -257,10 +257,10 @@ OpenClaw 需要较大的"上下文窗口"（即 AI 的短期记忆）来处理�
 6. （可选）如果助手未能更新人设文件，请在聊天中明确要求它执行。
 
     如果问题仍然存在，请使用以下方法之一解决：
-    - **增加上下文窗口**：打开 Files 应用，进入 **Data** > **clawdbot** > **config** > `openclaw.json`，然后将 `contextWindow` 值增加到至少 64K（建议 200K）。
+    - **检查上下文窗口**：先[在 Router 中查看实际配置的上下文大小](/zh/manual/best-practices/connect-ai-apps.md#check-context-window)。在 Files 中打开 **Data** > **clawdbot** > **config** > `openclaw.json`，将 `contextWindow` 设为引擎支持的值。例如，**Engine args** 显示 `-c 104448` 时，填写值不能超过 `104448`。
 
         :::tip
-        请注意，较大的上下文窗口会消耗更多显存，因此请选择硬件可支持的值。
+        修改 OpenClaw 的 `contextWindow` 不会扩大引擎的上下文容量。如需更大的上下文，先在 Router 中将引擎配置为模型和硬件支持的值，再更新客户端。
         :::
 
     - **更换模型**：切换到具有更好工具调用和指令遵循能力的模型。

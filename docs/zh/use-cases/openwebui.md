@@ -66,7 +66,7 @@ Open WebUI 是一个自托管的聊天界面，让你在 Olares 设备上与本�
 
 ## 获取模型连接信息
 
-要将 Open WebUI 连接到模型，你需要先从模型控制台收集连接信息。
+要将 Open WebUI 连接到模型，你需要先从 Router 获取连接信息。
 
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 

@@ -73,7 +73,7 @@ Olares 支持克隆应用。如果你想同时运行多个独立的 AI 助手，
 
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
-5. 从启动台打开 Qwen3.8-27B (llama.cpp) 的 Model Console，在 **Configuration** 中查看实际配置的上下文窗口大小，供下一步使用。
+5. 在 Router 的 **LLM** 页面，点击 Qwen3.8-27B (llama.cpp) 所在行的信息图标，打开 **Model card**。在 **Engine args** 中读取 `-c` 后的数值。例如，`-c 104448` 表示下一步应填写 `104448`。截图说明见[查看实际上下文大小](/zh/manual/best-practices/connect-ai-apps.md#check-context-window)。
 
 ### 第 2 步：运行设置向导
 
@@ -94,7 +94,7 @@ Olares 支持克隆应用。如果你想同时运行多个独立的 AI 助手，
     | API key  | 输入任意占位值，例如 `local`。<br>出于安全考虑，输入内容会被隐藏。 |
     | Select API compatibility mode | 输入 `1` 选择 **Auto-detect [current]**。该选项会根据 URL 自动判断 API 模式，最适合标准的 OpenAI 兼容端点。 |
     | Use this model | 手动输入 `default-chat`。不要接受自动检测到的其他模型。 |
-    | Context length in tokens | 填写 Model Console 中实际配置的上下文窗口大小，至少为 65536。不要填写超过引擎实际配置的值。 |
+    | Context length in tokens | 填写 Router 的 **Model card > Engine args** 中的精确上下文大小。例如，`-c 104448` 对应填写 `104448`。Hermes 要求至少 `65536` token，且填写值不能超过引擎实际配置。 |
     | Display name | 输入一个便于识别该模型的名称，例如 `router-chat`。|
     | Select terminal backend | 选择 **Local - run directly on this machine**。 |
     | Select platforms to configure | 按 **ESC** 暂时跳过。 |

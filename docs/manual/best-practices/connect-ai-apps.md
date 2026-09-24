@@ -20,7 +20,7 @@ This guide covers Olares 1.12.7 and later and uses Qwen3.8-27B (llama.cpp) as th
 ## Before you begin
 
 - Install your AI client app and Qwen3.8-27B (llama.cpp) from Market.
-- Open Router from Launchpad. On **LLM**, wait until the model shows **Callable**.
+- Open Router from Launchpad. Before sending a request, confirm that the model shows **Callable** on **LLM**. If it is unavailable, check the reason shown below its status.
 - On **Default models**, set Qwen3.8-27B (llama.cpp) as the default chat model.
 
 ## Get the Router Base URL
@@ -52,6 +52,12 @@ Use `default-chat` for general chat and agent examples. It routes requests to th
 To keep a client on a specific model, copy the full model name from **How to call this model**, including its provider prefix. For the model shown above, it is `Olares/unsloth/Qwen3.8-27B-GGUF:UD-Q4_K_XL`.
 
 For embeddings, speech, or other capabilities, use a model or default route for that capability. `default-chat` cannot replace an embedding model. Keep the embedding model consistent when creating and searching a knowledge base.
+
+## Check the configured context size {#check-context-window}
+
+Some clients, such as Hermes, ask you to enter the context size manually. Check the model configuration in Router:
+
+<!--@include: ../../reusables/ai-service-connections.md#model-context-window-->
 
 ## Set the API key
 

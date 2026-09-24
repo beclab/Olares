@@ -247,5 +247,5 @@ Restart the Codex CLI session and try again.
 
 - [Codex CLI documentation](https://developers.openai.com/codex/cli): Learn about Codex CLI workflows and commands.
 - [Codex authentication](https://developers.openai.com/codex/auth): Review ChatGPT, API key, and headless login options.
-- [Host local large language models with Engine Base apps](llm-base-apps.md): Deploy and manage models through Model Console.
+- [Host local large language models with Engine Base apps](llm-base-apps.md): Deploy local models with Engine Base apps and connect them through Router.
 - [Install Olares CLI](/developer/cli-install.md): Set up Olares management commands and agent skills.

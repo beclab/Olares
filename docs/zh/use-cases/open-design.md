@@ -148,6 +148,6 @@ Olares 上的 Open Design 0.22.1 暂不支持通过文本直接生成独立图�
 
 ## 了解更多
 
-- [使用引擎基座应用托管本地大语言模型](llm-base-apps.md)：通过 Model Console 部署和管理模型。
+- [使用引擎基座应用托管本地大语言模型](llm-base-apps.md)：使用引擎基座应用部署本地模型，并通过 Router 连接。
 - [将 AI 应用连接到模型服务](/zh/manual/best-practices/connect-ai-apps.md)：了解模型名称、API 格式和 Base URL。
 - [Open Design 官网](https://open-design.ai/)：了解上游项目及其功能。
