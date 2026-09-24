@@ -34,7 +34,38 @@ If your Olares ID is available in any LarePass client, keep that client installe
 2. Locate your Olares ID and follow the prompts to view its mnemonic phrase.
 3. Write down the 12 words in order and store them offline.
 
-If your Olares ID is absent from every LarePass client and you do not have another copy of the mnemonic phrase, the phrase cannot be retrieved.
+### If the original LarePass client is unavailable
+
+If the LarePass client on which you created the Olares ID has been uninstalled or is no longer accessible, check whether the Olares ID is available in another LarePass client. If it is not and you have no mnemonic backup, the phrase cannot be recovered.
+
+To use the device again, uninstall Olares, reinstall it, and activate it with a new Olares ID.
+
+:::warning Uninstalling Olares deletes data
+The uninstall command removes Olares components and data from the device. Back up any files you can still access before continuing.
+:::
+
+1. Open the Olares device terminal:
+
+   - If you can sign in to Olares Desktop, open **Control Hub**, then select **Terminal** > **Olares**.
+   - Otherwise, connect through SSH or log in locally with a monitor and keyboard.
+
+2. Uninstall Olares:
+
+   - In the Control Hub terminal, run:
+
+     ```bash
+     olares-cli uninstall
+     ```
+
+   - In an SSH or local terminal, run:
+
+     ```bash
+     sudo olares-cli uninstall
+     ```
+
+3. Wait for the uninstall process to finish.
+4. Install or open LarePass, create a new Olares ID, and follow [Install Olares](../get-started/install-olares.md) to reinstall and activate the device.
+5. Back up the new mnemonic phrase immediately after activation.
 
 ## If you forgot or have not set your LarePass local password
 
@@ -73,7 +104,34 @@ If the sign-in notification does not appear in LarePass, enter a 2FA code instea
 
 ### Olares One
 
-The system username for an activated Olares One is `olares`. Its system password is generated during activation and saved in LarePass Vault.
+The system username for an activated Olares One is `olares`. The system password is used for SSH and local terminal sign-in.
+
+#### Reset the system password from Olares Desktop
+
+If you can sign in to Olares Desktop but do not know the system password, reset it using either method.
+
+- **Control Hub**:
+
+  1. Open **Control Hub**, then select **Terminal** > **Olares**.
+  2. Run:
+
+     ```bash
+     passwd olares
+     ```
+
+  3. Enter the new password twice as prompted.
+
+- **Settings**:
+
+  1. Open **Settings**. On the **My Olares** page, select **My hardware**.
+  2. Select **Reset SSH login password**.
+  3. Enter a new password that meets the strength requirements, then click **OK**.
+  4. Open LarePass and scan the QR code shown on the screen.
+  5. Tap **Confirm** in LarePass. The new password is saved to Vault.
+
+#### Find the current system password in LarePass
+
+The system password is generated during activation and saved in LarePass Vault.
 
 If you already know the system password, skip to step 3.
 
@@ -99,4 +157,9 @@ If you cannot open Vault and do not know the system password, keep LarePass inst
 
 ### Olares installed on your own device
 
-Use the operating-system username and password configured on the device where you installed Olares. Connect over SSH or log in locally with a monitor and keyboard. For details, see [Access the Olares terminal](../access-olares-terminal.md).
+Use the credentials that match how Olares was installed:
+
+- **Olares ISO installed on dedicated hardware**: Use `olares` as both the system username and password.
+- **Olares installed on an existing operating system**: Use the operating-system username and password you configured on that device.
+
+Connect over SSH or log in locally with a monitor and keyboard. For details, see [Access the Olares terminal](../access-olares-terminal.md).

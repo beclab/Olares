@@ -43,13 +43,18 @@ The system username is `olares`. The system password is generated during activat
 
 #### Olares installed on your own device
 
-Use the operating-system username and password configured on the device where you installed Olares. Use that device's local IP address for SSH. If you do not know the IP address or cannot use SSH, connect a monitor and keyboard and log in locally. For more terminal access options, see [Access the Olares terminal](../access-olares-terminal.md).
+Use the credentials that match how Olares was installed:
+
+- **Olares ISO installed on dedicated hardware**: Use `olares` as both the system username and password.
+- **Olares installed on an existing operating system**: Use the operating-system username and password you configured on that device.
+
+Use the device's local IP address for SSH. If you do not know the IP address or cannot use SSH, connect a monitor and keyboard and log in locally. For more terminal access options, see [Access the Olares terminal](../access-olares-terminal.md).
 
 ### Step 2: Access the device terminal
 
 Connect to your Olares device's terminal using one of the following methods:
 
-- **SSH**: Open a terminal on another computer on the same local network, and run `ssh <username>@<device-ip>`. For Olares One, run `ssh olares@<intranet-ip>`.
+- **SSH**: Open a terminal on another computer on the same local network, and run `ssh <username>@<device-ip>`. For Olares One or an Olares ISO installation, use `olares` as the username.
 - **Local login**: Connect a monitor and keyboard directly to the device and log in.
 
 ### Step 3: Reset the password

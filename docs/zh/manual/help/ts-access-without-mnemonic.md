@@ -34,7 +34,38 @@ head:
 2. 找到你的 Olares ID，按照页面提示查看助记词。
 3. 按顺序写下 12 个单词并离线保存。
 
-如果所有 LarePass 客户端中都没有该 Olares ID，并且也没有其他助记词备份，则无法找回助记词。
+### 如果无法使用最初创建 Olares ID 的 LarePass
+
+如果最初创建 Olares ID 的 LarePass 已被卸载或无法访问，请检查其他 LarePass 客户端中是否仍有该 Olares ID。如果所有客户端中都没有，并且也没有助记词备份，则无法找回助记词。
+
+如需继续使用该设备，请卸载并重新安装 Olares，再使用新的 Olares ID 激活。
+
+:::warning 卸载 Olares 会删除数据
+卸载命令会移除设备中的 Olares 组件和数据。继续操作前，请备份仍可访问的文件。
+:::
+
+1. 打开 Olares 设备终端：
+
+   - 如果仍能登录 Olares 桌面，请打开 **Control Hub**，然后选择 **Terminal** > **Olares**。
+   - 否则，请通过 SSH 连接，或使用显示器和键盘在设备上直接登录。
+
+2. 卸载 Olares：
+
+   - 在 Control Hub 终端中运行：
+
+     ```bash
+     olares-cli uninstall
+     ```
+
+   - 在 SSH 或本地终端中运行：
+
+     ```bash
+     sudo olares-cli uninstall
+     ```
+
+3. 等待卸载完成。
+4. 安装或打开 LarePass，创建新的 Olares ID，再按照[安装 Olares](../get-started/install-olares.md)重新安装并激活设备。
+5. 激活后立即备份新 Olares ID 的助记词。
 
 ## 如果忘记了 LarePass 本地密码或尚未设置
 
@@ -73,7 +104,34 @@ head:
 
 ### Olares One
 
-Olares One 激活后，系统用户名为 `olares`。系统密码会在激活时生成，并保存在 LarePass Vault 中。
+Olares One 激活后，系统用户名为 `olares`。系统密码用于通过 SSH 或本地终端登录。
+
+#### 从 Olares 桌面重置系统密码
+
+如果仍能登录 Olares 桌面，但不知道系统密码，可以使用以下任一方式重置。
+
+- **Control Hub**：
+
+  1. 打开 **Control Hub**，然后选择 **Terminal** > **Olares**。
+  2. 运行：
+
+     ```bash
+     passwd olares
+     ```
+
+  3. 根据提示输入两次新密码。
+
+- **Settings**：
+
+  1. 打开 **Settings**，在 **My Olares** 页面选择 **My hardware**。
+  2. 选择 **Reset SSH login password**。
+  3. 输入符合强度要求的新密码，然后点击 **OK**。
+  4. 打开 LarePass，扫描屏幕上显示的二维码。
+  5. 在 LarePass 中点击 **Confirm**。新密码会保存到 Vault。
+
+#### 在 LarePass 中查找当前系统密码
+
+系统密码会在激活时生成，并保存在 LarePass Vault 中。
 
 如果已经知道系统密码，请直接从步骤 3 开始。
 
@@ -99,4 +157,9 @@ Olares One 激活后，系统用户名为 `olares`。系统密码会在激活时
 
 ### 安装在自有设备上的 Olares
 
-使用安装 Olares 时在该设备上配置的操作系统用户名和密码，通过 SSH 连接或使用显示器和键盘在本地登录。详细操作请参考[访问 Olares 终端](../access-olares-terminal.md)。
+根据 Olares 的安装方式使用相应的登录信息：
+
+- **通过 Olares ISO 安装在专用设备上**：系统用户名和密码均为 `olares`。
+- **安装在已有操作系统上**：使用你在该设备上配置的操作系统用户名和密码。
+
+通过 SSH 连接，或使用显示器和键盘在本地登录。详细操作请参考[访问 Olares 终端](../access-olares-terminal.md)。
