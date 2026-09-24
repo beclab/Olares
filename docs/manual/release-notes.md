@@ -57,6 +57,10 @@ For release highlights and walkthroughs, see the [Olares 1.12.7 blog post](https
 - Reworked [eGPU guidance for Olares One](/one/egpu) with separate Olares OS and Windows setup guides, compatibility information, and troubleshooting. The [Olares One FAQ](/one/faq#does-olares-one-support-out-of-band-management) now explains which out-of-band management capabilities are available.
 - Updated [Jellyfin](/use-cases/jellyfin) hardware acceleration, [Steam streaming](/use-cases/steam-stream) network setup, and [Penpot](/use-cases/penpot) integration with its built-in MCP server.
 
+### Retired docs
+
+- Retired the standalone Ollama use-case guide, following the deprecation announced in Olares 1.12.6. Use [Ollama Engine Base](/use-cases/llm-base-apps) for new model deployments. Existing Ollama guide URLs redirect to the Engine Base guide.
+
 ### Moved and consolidated docs
 
 - Consolidated backup and restore instructions in [Back up and restore Olares](/manual/olares/settings/backup). Previous restore and Olares Space backup links redirect to this guide.
@@ -80,7 +84,7 @@ For the highlights and walk-through of Olares v1.12.6, see the [Olares 1.12.6 bl
 - Added [Compress and extract files](/manual/olares/files/compress-extract-files), covering ZIP, 7z, TAR, and password-protected archives in Olares Files.
 - Added [Mount NFS shares](/manual/olares/files/mount-nfs), for accessing NFS shared directories from Olares.
 - Added [About shared applications](/manual/olares/market/shared-apps), explaining the new shared app architecture, and [Migrate legacy shared applications](/manual/migrate-shared-apps), covering migration options for v2 apps.
-  - [Ollama](/use-cases/ollama)
+  - Ollama
   - [ComfyUI](/use-cases/comfyui-common-issues)
   - [Dify](/use-cases/dify-upgrade)
   - [OnlyOffice](/use-cases/onlyoffice-migration)
@@ -109,7 +113,7 @@ For the highlights and walk-through of Olares v1.12.6, see the [Olares 1.12.6 bl
 
 ### Deprecated docs
 
-- Added a deprecation notice to the [Ollama](/use-cases/ollama) use-case guide because the standalone Ollama app was removed from Market in Olares 1.12.6.
+- Added a deprecation notice to the Ollama use-case guide because the standalone Ollama app was removed from Market in Olares 1.12.6.
 - Retired the Olares CLI reference pages. The deprecated pages have been superseded by the new [Olares CLI overview](/developer/cli-overview), [Install Olares CLI](/developer/cli-install), [Log in with Olares CLI](/developer/cli-log-in), and [Olares CLI agent skills](/developer/cli-agent-skills) guides.
 - Retired all Studio documentation. Studio is no longer available in Market. Use the [Olares CLI agent skills](/developer/cli-agent-skills) guide and the [App submission guide](/developer/develop/submit-apps) for the new packaging and porting workflow.
 - The **Allow subnet routing** feature is temporarily disabled in Olares 1.12.6, and the related documentation has been removed from [Configure VPN access to Olares](/manual/olares/settings/remote-access#allow-subnet-routing). The feature will return in a future release.
@@ -117,4 +121,4 @@ For the highlights and walk-through of Olares v1.12.6, see the [Olares 1.12.6 bl
 
 ### Upcoming deprecations
 
-- The [Ollama](/use-cases/ollama) use-case guide will be removed in a future release. The standalone Ollama app was already removed from Market in Olares 1.12.6, and AI use-case guides now connect to models through the Model Console.
+- The Ollama use-case guide will be removed in a future release. The standalone Ollama app was already removed from Market in Olares 1.12.6, and AI use-case guides now connect to models through the Model Console.

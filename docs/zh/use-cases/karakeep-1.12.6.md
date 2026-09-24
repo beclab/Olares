@@ -152,7 +152,7 @@ Karakeep 可以使用 Olares 上托管的本地模型为保存的内容生成标
 
    - **OLLAMA_BASE_URL**：从 Gemma 4 26B 模型控制台复制的 Base URL。
    - **INFERENCE_TEXT_MODEL**：从模型控制台复制的 Model name。本示例中为 `gemma4:26b`。
-   - **INFERENCE_IMAGE_MODEL**（可选）：如需为图像添加标签，请安装 [Ollama](ollama.md)，拉取 `llava` 等视觉模型，并填写其模型名称。
+   - **INFERENCE_IMAGE_MODEL**（可选）：如需为图像添加标签，请填写同一 **OLLAMA_BASE_URL** 下可用的视觉模型名称。
 
 3. 点击**应用**，等待 Karakeep 重启。
 
@@ -248,5 +248,5 @@ Karakeep 重启后，你可以从管理员用户管理页面发送电子邮件�
 ## 了解更多
 
 - [Karakeep 文档](https://docs.karakeep.app/)：官方功能参考、API 文档和第三方客户端集成。
-- [通过 Ollama 下载和运行本地 AI 模型](ollama.md)：安装 Ollama 以托管用于图像标签的视觉模型。
+- [Ollama Engine Base](llm-base-apps-1.12.6.md)：部署 Ollama 模型实例，包括支持视觉的模型。
 - [设置 Open WebUI 进行本地 AI 聊天](openwebui-1.12.6.md)：Olares 上共享模型端点的参考工作流。

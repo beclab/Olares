@@ -279,10 +279,6 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               collapsed: true,
               items: [
                 {
-                  text: "Ollama",
-                  link: "/zh/use-cases/ollama",
-                },
-                {
                   text: "Bifrost",
                   link: "/zh/use-cases/bifrost",
                 },

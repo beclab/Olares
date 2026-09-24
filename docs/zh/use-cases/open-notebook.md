@@ -468,6 +468,6 @@ Open Notebook 根据知识库中的匹配内容返回综合答案。
 
 ## 了解更多
 
-- [Ollama](ollama.md)：在 Olares 上下载并运行本地语言模型。
+- [使用 Engine Base 运行本地模型](llm-base-apps.md)：通过 Ollama 等推理引擎部署模型。
 - [Speaches](speaches.md)：设置本地语音转文本和文本转语音服务。
 - [管理 GPU 资源](/zh/manual/olares/settings/gpu-resource.md)：为本地 AI 应用分配 GPU 资源。

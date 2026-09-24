@@ -394,4 +394,4 @@ If you are running OpenCode V1.0.4 on an ARM-based machine, the terminal command
 ## Learn more
 
 - [Context7 documentation](https://context7.com/docs)
-- [Download and run local AI models via Ollama](ollama.md)
+- [Run local models with Engine Base apps](llm-base-apps.md): Deploy models with Ollama and other inference engines.

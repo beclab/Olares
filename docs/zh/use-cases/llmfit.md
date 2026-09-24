@@ -65,5 +65,5 @@ LLMFit 使用其内置的 Web 仪表板作为主要界面，以简化操作。�
 
 ## 了解更多
 
-- [通过 Ollama 下载和运行本地 AI 模型](ollama.md)
+- [使用 Engine Base 运行本地模型](llm-base-apps.md)：通过 Ollama 等推理引擎部署模型。
 - [设置 Open WebUI](openwebui.md)

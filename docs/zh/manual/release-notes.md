@@ -61,6 +61,10 @@ head:
 - 重写 [Olares One eGPU 指南](/zh/one/egpu)，分别提供 Olares OS 和 Windows 配置步骤，并补充兼容性与故障排查说明。[Olares One 常见问题](/zh/one/faq#olares-one-支持带外管理吗)新增带外管理能力的支持情况说明。
 - 更新 [Jellyfin](/zh/use-cases/jellyfin) 硬件加速、[Steam 串流](/zh/use-cases/steam-stream)网络配置，以及 [Penpot](/zh/use-cases/penpot) 内置 MCP 服务器的连接方法。
 
+### 已下架文档
+
+- 按照 Olares 1.12.6 中的弃用预告，下架独立 Ollama 应用的使用指南。新部署请使用 [Ollama Engine Base](/zh/use-cases/llm-base-apps)。旧指南地址会跳转至 Engine Base 指南。
+
 ### 页面迁移与合并
 
 - 将备份与恢复说明合并到[备份与恢复 Olares](/zh/manual/olares/settings/backup)。原恢复页面及 Olares Space 备份页面会跳转至此。
@@ -84,7 +88,7 @@ Olares v1.12.6 的亮点和详细介绍请参见 [Olares 1.12.6 发布博客](ht
 - 新增[压缩与解压缩文件](/zh/manual/olares/files/compress-extract-files)，涵盖 Olares Files 中 ZIP、7z、TAR 和加密压缩包的操作。
 - 新增[挂载 NFS 共享](/zh/manual/olares/files/mount-nfs)，说明如何从 Olares 访问 NFS 共享目录。
 - 新增[关于共享应用](/zh/manual/olares/market/shared-apps)，介绍新的共享应用架构；新增[迁移旧版共享应用](/zh/manual/migrate-shared-apps)，说明 v2 应用的迁移方式。
-  - [Ollama](/zh/use-cases/ollama)
+  - Ollama
   - [ComfyUI](/zh/use-cases/comfyui-common-issues)
   - [Dify](/zh/use-cases/dify-upgrade)
   - [OnlyOffice](/zh/use-cases/onlyoffice-migration)
@@ -113,7 +117,7 @@ Olares v1.12.6 的亮点和详细介绍请参见 [Olares 1.12.6 发布博客](ht
 
 ### 已下架文档
 
-- [通过 Ollama 下载和运行本地 AI 模型](/zh/use-cases/ollama)已添加下架说明，因为独立 Ollama 应用已在 Olares 1.12.6 中从应用市场移除。
+- “通过 Ollama 下载和运行本地 AI 模型”已添加下架说明，因为独立 Ollama 应用已在 Olares 1.12.6 中从应用市场移除。
 - Olares CLI 参考页面已下架。旧页面已被新的 [Olares CLI](/zh/developer/cli-overview)、[安装 olares-cli](/zh/developer/cli-install)、[登录 Olares](/zh/developer/cli-log-in) 和[安装与使用 Agent Skills](/zh/developer/cli-agent-skills) 指南取代。
 - 所有 Studio 相关文档已下架。Studio 已不再上架应用市场。新的打包和移植流程请参见[安装与使用 Agent Skills](/zh/developer/cli-agent-skills) 和[应用提交指南](/zh/developer/develop/submit-apps)。
 - **允许子网路由** 功能在 Olares 1.12.6 中暂时下架，[配置 VPN 访问 Olares](/zh/manual/olares/settings/remote-access#allow-subnet-routing) 中的相关内容已移除。该功能会在后续版本中恢复。
@@ -121,4 +125,4 @@ Olares v1.12.6 的亮点和详细介绍请参见 [Olares 1.12.6 发布博客](ht
 
 ### 即将下架
 
-- [通过 Ollama 下载和运行本地 AI 模型](/zh/use-cases/ollama)指南将在后续版本中移除。独立 Ollama 应用已在 Olares 1.12.6 中从应用市场移除，AI 应用指南现在通过 Model Console 获取模型端点。
+- “通过 Ollama 下载和运行本地 AI 模型”指南将在后续版本中移除。独立 Ollama 应用已在 Olares 1.12.6 中从应用市场移除，AI 应用指南现在通过 Model Console 获取模型端点。
