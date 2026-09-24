@@ -47,7 +47,7 @@ OpenCode 是一个 AI 驱动的编码代理，允许你通过自然语言编写�
 | :--- | :--- |
 | 在浏览器中使用本地模型 | 从 Market 安装 Qwen3.6-27B (llama.cpp) |
 | 在浏览器中使用 OpenAI | ChatGPT Plus/Pro 账号或 OpenAI API key |
-| 在计算机上使用 OpenCode CLI | 在 Olares 上安装 [Ollama](./ollama.md) 并下载 `qwen3.6:27b`，同时在计算机上启用 LarePass VPN |
+| 在计算机上使用 OpenCode CLI | Olares 上已有独立 Ollama 应用并已下载 `qwen3.6:27b`，同时在计算机上启用 LarePass VPN。新部署请参阅 [Ollama Engine Base](llm-base-apps-1.12.6.md)。 |
 
 ## 在浏览器中运行 OpenCode
 

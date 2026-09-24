@@ -397,4 +397,4 @@ ctx7 skills remove pdf
 ## 了解更多
 
 - [Context7 文档](https://context7.com/docs)
-- [通过 Ollama 下载和运行本地 AI 模型](ollama.md)
+- [使用 Engine Base 运行本地模型](llm-base-apps.md)：通过 Ollama 等推理引擎部署模型。

@@ -43,7 +43,7 @@ By the end of this tutorial, you will learn how to:
    | :--- | :--- |
    | Browser with a local model | Qwen3.6-27B (llama.cpp) installed from Market |
    | Browser with OpenAI | A ChatGPT Plus/Pro account or an OpenAI API key |
-   | OpenCode CLI on your computer | [Ollama](./ollama.md) installed on Olares with at least one model downloaded, and LarePass VPN enabled on your computer.|
+   | OpenCode CLI on your computer | An existing standalone Ollama installation on Olares with at least one model downloaded, and LarePass VPN enabled on your computer. For new deployments, see [Ollama Engine Base](llm-base-apps-1.12.6.md).|
 
 ## Run OpenCode in the browser
 
