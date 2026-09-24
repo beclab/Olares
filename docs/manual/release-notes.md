@@ -15,6 +15,9 @@ The docs are built and published from the `main` branch of the [Olares GitHub re
 <details>
 <summary>For Olares OS software release notes, see the GitHub releases page.</summary>
 
+<!-- TODO: Uncomment when the Olares 1.12.7 software release notes are ready.
+- [Olares 1.12.7](https://github.com/beclab/Olares/releases/tag/1.12.7)
+-->
 - [Olares 1.12.6](https://github.com/beclab/Olares/releases/tag/1.12.6)
 - [Olares 1.12.5](https://github.com/beclab/Olares/releases/tag/1.12.5)
 </details>

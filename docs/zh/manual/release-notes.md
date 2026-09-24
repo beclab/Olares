@@ -19,6 +19,9 @@ head:
 <details>
 <summary>Olares OS 软件发行说明请参见 GitHub releases 页面。</summary>
 
+<!-- TODO: Olares 1.12.7 软件发行说明更新后取消注释。
+- [Olares 1.12.7](https://github.com/beclab/Olares/releases/tag/1.12.7)
+-->
 - [Olares 1.12.6](https://github.com/beclab/Olares/releases/tag/1.12.6)
 - [Olares 1.12.5](https://github.com/beclab/Olares/releases/tag/1.12.5)
 </details>
