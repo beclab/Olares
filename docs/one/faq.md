@@ -68,7 +68,14 @@ Olares OS simplifies local AI with one-click deployment and workflow integration
 Yes. You can modify the hardware through several internal slots and expansion ports:
 * **Storage**: The motherboard includes two PCIe SSD slots, one PCIe 4.0 and one PCIe 5.0. The preinstalled 2TB SSD occupies the PCIe 4.0 slot. The second slot remains available for system storage expansion via LVM or for a dual-boot configuration.
 * **Memory**: The RAM capacity can be upgraded to a maximum of 128GB.
-* **External graphics & displays**: The Thunderbolt 5 port supports eGPU enclosures to connect external graphics cards. It also supports docking stations to connect up to two external monitors simultaneously at up to 8K resolution, with video output handled by the RTX 5090 Mobile.
+* **External graphics**: You can connect a compatible Thunderbolt external graphics device. See [Can I use an eGPU with Olares One?](#can-i-use-an-egpu-with-olares-one)
+* **External displays**: The Thunderbolt 5 port supports docking stations with up to two external monitors at up to 8K resolution. The built-in RTX 5090 Mobile handles video output.
+
+### Can I use an eGPU with Olares One?
+
+Yes. You can connect a Thunderbolt external graphics device with a GPU already installed, or install a compatible desktop NVIDIA GPU in a powered eGPU dock or enclosure. Hardware compatibility and setup differ between Olares OS and Windows 11.
+
+See [Connect an eGPU to Olares One](egpu.md) for known compatibility, current limitations, and setup instructions.
 
 ### Is there a way to view the Olares OS UI via HDMI?
 

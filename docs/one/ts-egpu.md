@@ -1,82 +1,114 @@
 ---
 outline: [2, 3]
-description: Diagnose Olares One eGPU startup, detection, disconnect, and Windows driver issues, then collect information for support.
+description: Fix common Olares One eGPU startup and detection problems, then collect the right diagnostics for Olares OS or Windows.
 ---
 
 # Troubleshoot eGPU issues on Olares One
 
-Use this guide when startup stalls, the eGPU is not detected, the GPU disconnects, or Windows reports a GPU driver error.
+Find the symptom that matches your problem. If the quick checks do not resolve it, collect diagnostics before asking for help.
 
-## Try the quick fixes
+:::danger Do not hot-plug on Olares OS
+Shut down Olares One before connecting or disconnecting an eGPU. For a cold start, turn on the eGPU, connect it to Olares One, and then start Olares One.
+:::
 
-| Platform | Symptom | What to check |
-|---|---|---|
-| Olares OS | Startup stalls at the Olares logo | Power off Olares One, disconnect the eGPU, and start it again. Then confirm that the [Gen1 workaround](./egpu-olares-os.md) is installed and enabled. |
-| Olares OS | The system starts but does not detect the eGPU | Check the enclosure power, connection order, and certified Thunderbolt 5 cable. Confirm that the enclosure is connected to the Thunderbolt 5 (USB-C) port on Olares One. |
-| Olares OS | The eGPU disappears while in use | Confirm that the Gen1 workaround is active. Check that the enclosure power supply is sufficient and that all GPU power connectors are secure. |
-| Windows | The built-in GPU reports an error | Perform a [clean driver installation](./egpu-windows.md#recover-the-built-in-gpu), then restart Windows. |
+## Olares OS startup stalls at the logo
 
-For Olares OS cold starts, power the enclosure, connect the Thunderbolt cable, then start Olares One. 
+1. Power off Olares One.
+2. Disconnect the eGPU.
+3. Start Olares One again.
+4. Check that the Gen1 workaround is enabled:
 
-For the initial Windows driver setup, follow the connection order in the [Windows setup guide](./egpu-windows.md).
+   ```bash
+   sudo systemctl is-enabled egpu-gen1-fix.service
+   ```
 
-## Verify the eGPU on Olares OS
+   The command must return `enabled`. If it does not, reinstall the workaround by following [Set up an eGPU on Olares OS](./egpu-olares-os.md).
 
-```bash
-lspci -nn | grep -i nvidia
-nvidia-smi
+5. Before trying again, [collect the Olares OS diagnostics](#olares-os). The report may include logs from the stalled startup.
+
+## Olares OS starts but does not detect the eGPU
+
+Check each item in order:
+
+1. Check that the eGPU is on and its power supply is connected.
+2. If you use an eGPU dock or enclosure with a desktop GPU, check the power supply rating and all GPU power connectors.
+3. Connect the eGPU directly to a Thunderbolt 5 (USB-C) port on Olares One. Remove docks and other Thunderbolt devices from the connection path.
+4. Use a certified Thunderbolt cable, preferably the one supplied with the external graphics device.
+5. Repeat the cold-start order. Turn on the eGPU, connect the cable, and then start Olares One.
+6. Check whether the operating system and NVIDIA driver detect the GPU:
+
+   ```bash
+   lspci -nn | grep -i nvidia
+   nvidia-smi
+   ```
+
+Both commands should list the external GPU. If `lspci` lists it but `nvidia-smi` does not, collect diagnostics before changing the driver.
+
+## Olares OS loses the eGPU under load
+
+1. Check the external graphics device's power supply. If you use an eGPU dock or enclosure with a desktop GPU, also check the power supply rating and all GPU power connectors.
+2. Remove other high-bandwidth Thunderbolt devices and try again with the eGPU connected directly to Olares One.
+3. Collect diagnostics immediately after the disconnect.
+
+## Windows reports a GPU error
+
+1. In **Device Manager** > **Display adapters**, open the affected device.
+2. Record the complete message and error code under **General** > **Device status**.
+3. Install all available Windows updates and update the NVIDIA driver.
+4. Restart Windows, then check that all expected GPUs appear without warning icons.
+5. If the built-in GPU still reports an error, follow [Recover the built-in GPU](./egpu-windows.md#recover-the-built-in-gpu).
+
+If any GPU is still missing, collect the Windows information below.
+
+## Ask for help in the Olares forum
+
+If the problem continues, create a post in the [Olares forum](https://www.olares.com/forum/). Include:
+
+```plain
+System and version:
+eGPU device, or dock or enclosure and GPU:
+Connection path, including any dock or hub:
+Power-on order:
+What happened:
+Steps already tried:
+Attachments:
 ```
 
-Both the built-in GPU and eGPU should appear. To check whether the Gen1 workaround is active, run the diagnostic script below and review its `Summary` section. A link speed of `2.5 GT/s PCIe` means Gen1 is active.
+Before posting, collect the diagnostics for your operating system and attach the report or screenshots.
 
-## Collect Olares OS diagnostics
+### Olares OS
 
 1. Download <a href="/downloads/one/egpu/collect-egpu-info.sh" download>`collect-egpu-info.sh`</a>.
-2. Run it after the affected startup. If startup stalled, disconnect the eGPU, start normally, and run the script. When available, the report also includes logs from the previous startup.
+2. Open a terminal in the download directory and run:
 
    ```bash
    chmod +x collect-egpu-info.sh
    sudo ./collect-egpu-info.sh
    ```
 
-3. Open `egpu-report-*.txt` and review `Summary`.
+3. Open the generated `egpu-report-*.txt` file and read the `Summary` section.
 
-   - If the eGPU was connected when you ran the script and `External GPU detected : NO` appears, check the enclosure power, Thunderbolt 5 cable, and Thunderbolt 5 (USB-C) port.
-   - If you disconnected the eGPU to recover from a stalled startup, `External GPU detected : NO` is expected. When available, the report may still include logs from the previous startup.
+   - If the eGPU was connected when you ran the script and the report says `External GPU detected : NO`, check the power, cable, port, and connection path again.
+   - If you disconnected the eGPU after a stalled startup, `External GPU detected : NO` is expected. When the previous boot log is available, the report still includes it.
 
-The script does not change system settings or upload data. It reads system information and writes one report file to the current directory. The report includes system and driver versions, Thunderbolt and PCIe topology, link speeds, BAR allocation, workaround status, and relevant logs.
+The script reads system state and writes one report in the current directory. It does not change settings, connect to the internet, or upload the report.
 
 :::warning Review the report before sharing
-The report may contain the device hostname, kernel command line, hardware topology, and system logs. Review the file and remove any information you do not want to share publicly.
+The report may contain the hostname, kernel command line, hardware topology, and system logs. Remove any information you do not want to post publicly.
 :::
 
-## Collect Windows diagnostics
+### Windows
 
-Collect:
+Prepare:
 
-1. **Device Manager** > **Display adapters** screenshot, including warning icons.
-2. NVIDIA driver version.
-3. The complete message and error code under **Device properties** > **General** > **Device status**.
+1. A screenshot of **Device Manager** > **Display adapters**, including any warning icons.
+2. The NVIDIA driver version shown in NVIDIA App.
+3. The complete Device Manager error message and code for each affected GPU.
 
-Review screenshots and remove any personal or device information you do not want to share publicly.
+Remove personal information from screenshots before sharing them.
 
-Also record the enclosure and GPU models, operating system, connection path, startup order, symptom, frequency, and attempted fixes. For intermittent startup failures, perform several cold starts with the same connection order and record each result. A cold start means starting Olares One after it has been completely powered off.
+## Related resources
 
-## Ask for help in the Olares forum
-
-If the issue continues, or if you want to discuss an unlisted hardware configuration, create a post in the [Olares forum](https://www.olares.com/forum/). Provide as much of the following information as you can:
-
-- **System**: Windows or Olares OS, including the version
-- **Hardware**: The eGPU enclosure and GPU model
-- **Setup**: How the eGPU is connected and, if relevant, the startup order
-- **Issue**: What happened and whether it occurs consistently
-- **Attempted fixes**: Any setup steps, cable changes, or other fixes you have tried
-- **Attachments**: The Olares OS diagnostic report, or relevant Windows screenshots and error details
-
-Review diagnostic files and screenshots before posting, and remove any information you do not want to share publicly.
-
-## Resources
-
-- [Olares One eGPU support overview](./egpu.md)
+- [Connect an eGPU to Olares One](./egpu.md)
 - [Set up an eGPU on Olares OS](./egpu-olares-os.md)
 - [Set up an eGPU on Windows](./egpu-windows.md)
