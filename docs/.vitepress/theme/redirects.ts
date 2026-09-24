@@ -276,6 +276,12 @@ export const redirects = {
     '/zh/manual/olares/settings/': '/zh/manual/olares/',
     '/manual/best-practices/': '/manual/best-practices/activate-olares-using-cli',
     '/zh/manual/best-practices/': '/zh/manual/best-practices/activate-olares-using-cli',
+
+    //Refactor: /developer/develop/extension → /developer/develop/app-sys-injected-variables
+    '/developer/develop/package/extension': '/developer/develop/app-sys-injected-variables',
+
+    //Refactor: /zh/developer/develop/extension → /zh/developer/develop/app-sys-injected-variables
+    '/zh/developer/develop/package/extension': '/zh/developer/develop/app-sys-injected-variables',
 }
 
 // Temporary redirects (302): content is offline but the URL may be reused later.
