@@ -365,7 +365,7 @@ spec:
             - name: NATS_SUBJECT_VAULT
               value: os.vault.{{ .Values.bfl.username}}
         - name: user-service
-          image: beclab/user-service:v0.1.19
+          image: qq815776412/user-service:v0.1.21-alpha.1
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
@@ -719,7 +719,7 @@ data:
         gzip_types *;
         index index.html;
         location /ts2021 {
-          proxy_pass http://headscale-server-svc:8080;
+          proxy_pass http://headscale-server-svc.os-network:8080;
           proxy_method POST;
           proxy_http_version 1.1;
           proxy_set_header Upgrade 'tailscale-control-protocol';
@@ -738,7 +738,7 @@ data:
           add_header X-Frame-Options SAMEORIGIN;
         }
         location / {
-          proxy_pass http://headscale-server-svc:8080;
+          proxy_pass http://headscale-server-svc.os-network:8080;
           proxy_http_version 1.1;
           proxy_set_header Upgrade $http_upgrade;
           proxy_set_header Connection '$connection_upgrade';

@@ -11,3 +11,6 @@ subjects:
 - kind: ServiceAccount
   name: system-frontend
   namespace: {{ .Release.Namespace }}
+- kind: User
+  name: {{ .Values.bfl.username }}
+  apiGroup: rbac.authorization.k8s.io
