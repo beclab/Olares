@@ -102,7 +102,7 @@ OpenClaw 需要较大的"上下文窗口"（即 AI 的短期记忆）来处理�
     ```
 
     :::tip 不要单独运行 `openclaw onboard`
-    不要单独运行 `openclaw onboard` —— 它会启动一个对话式 TUI，需要在环境变量中配置 API 密钥。由于当前没有配置 API 密钥，这条路走不通。对于交互式向导，请改用 `openclaw onboard --classic`。
+    不要单独运行 `openclaw onboard`。该命令会启动一个对话式 TUI，需要在环境变量中配置 API 密钥。由于当前没有配置 API 密钥，这条路走不通。对于交互式向导，请改用 `openclaw onboard --classic`。
 
     如果不小心进入了 TUI，输入 `/quit` 并按 **Enter** 退出。
     :::

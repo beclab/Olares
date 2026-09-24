@@ -98,7 +98,7 @@ Set up OpenClaw using the step-by-step interactive wizard.
     ```
 
     :::tip Do not run `openclaw onboard`
-    Do not run `openclaw onboard` on its own — it launches a conversational TUI that requires an API key configured in the environment variables. Since no API key is configured there, this path is unusable. For the interactive wizard, use `openclaw onboard --classic` instead.
+    Do not run `openclaw onboard` on its own. It launches a conversational TUI that requires an API key configured in the environment variables. Since no API key is configured there, this path is unusable. For the interactive wizard, use `openclaw onboard --classic` instead.
 
     If you accidentally entered the TUI, type `/quit` and press **Enter** to exit.
     :::

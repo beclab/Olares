@@ -6,20 +6,20 @@ head:
     - name: keywords
       content: Olares, Concat, Lares, MCP, video editing, MP4, self-hosted
 app_version: "0.2.5"
-doc_version: "1.0"
+doc_version: "1.1"
 doc_updated: "2026-09-24"
 ---
 
 # Create videos with Concat and Lares
 
-Concat is a video editor with multiple tracks, titles, transitions, and MP4 export. On Olares, you can use its editor in a browser or let an AI assistant edit through Model Context Protocol (MCP).
+Concat is a video editor for arranging clips, adding titles and transitions, and exporting MP4 videos. On Olares, you can use its editor in a browser or let an AI assistant edit through Model Context Protocol (MCP).
 
 This example uses Lares to turn a few images into a short introduction to Olares. Your source media, saved projects, and exported videos stay in the Concat folder in Files.
 
 ## Prerequisites
 
 - Olares 1.12.7 or later on an amd64 device. This Concat package uses CPU rendering and does not require a GPU.
-- [Lares](lares.md) configured with a model that can call tools.
+- [Lares](lares.md) configured with a model that can call tools, installed on the same Olares as Concat.
 - Three or four images for your video.
 
 ## Install Concat
@@ -42,17 +42,17 @@ These subfolders are suggestions, not folders created automatically during insta
 | `Home/Documents/Concat/assets/my-demo` | `assets/my-demo` |
 | `Home/Documents/Concat/outputs/my-demo` | `outputs/my-demo` |
 
-The browser editor sees `Home/Documents/Concat` as `/config/Projects`. Files on the assistant's computer are not automatically available to Concat; upload them before editing.
+The browser editor sees `Home/Documents/Concat` as `/config/Projects`. Upload your source media to this folder before asking Lares to edit it.
 
 ## Configure Concat in Lares
 
 ### Get the MCP endpoint
 
 1. Open Settings and go to **Applications** > **Concat** > **Entrances**.
-2. Select **Concat API** and copy its **Endpoint** URL. This is the MCP entrance; the editor uses a different entrance.
-3. Append `/mcp` to the copied URL, without adding an extra slash.
+2. Select **Concat API** and copy its **Endpoint** URL. Use this entrance for MCP connections. The **Concat** entrance opens the browser editor.
+3. Check that the URL ends in `/mcp`. If it does not, append `/mcp` without duplicating the slash.
 
-The MCP entrance is internal by default. Use Lares on the same Olares instance for this example. An application token does not replace Olares network access requirements.
+The MCP entrance is internal by default and is accessible to Lares on the same Olares device.
 
 ### Get the application token
 
@@ -63,7 +63,7 @@ The token is generated when Concat is installed. It is not your Olares password.
 
 1. Open Files and find Concat's application data under **Application** > **Data** > **concat** > **config**.
 2. Open the `api-token` file as text. If text preview is unavailable, download it and open it in a text editor.
-3. Copy the complete line. This is the plain token; no decoding is needed.
+3. Copy the complete line. Use this token directly without decoding it.
 
 The file is in `Data/concat/config/api-token`, not in `Home/Documents/Concat`. Do not edit or rename it.
 
@@ -82,19 +82,19 @@ Use the decoded value, not the Base64 text from `data.token`. See [View Secrets]
 
 Keep the token private. Paste it into the MCP configuration, not into a chat prompt or a shared screenshot.
 
-### Add the MCP service
+### Add the MCP server
 
-1. Open Lares and go to its MCP configuration.
-2. Add a remote HTTP MCP service with these values:
+1. Open Lares and go to **Settings** > **MCP**.
+2. Click **Add server** and enter these values:
 
    | Setting | Value |
    |:---|:---|
-   | Name | `Concat` |
-   | URL | The endpoint copied above, followed by `/mcp` |
-   | Header name | `Authorization` |
-   | Header value | `Bearer <your-token>` |
+   | **Server name** | `concat` |
+   | **Transport** | `Streamable HTTP` |
+   | **MCP URL** | The URL ending in `/mcp` prepared above |
+   | **Headers** | The JSON object below |
 
-   Replace `<your-token>` with the token you copied. Keep one space after `Bearer`. If the headers field accepts JSON, enter:
+   In **Headers**, enter the following JSON. Replace `<your-token>` with the token you copied and keep one space after `Bearer`:
 
    ```json
    {
@@ -102,7 +102,7 @@ Keep the token private. Paste it into the MCP configuration, not into a chat pro
    }
    ```
 
-3. Save the service, connect it, and refresh the available tools.
+3. Click **Save**. Lares connects to the server and loads its tools automatically.
 4. In a new conversation, ask:
 
    ```text
@@ -113,7 +113,7 @@ Keep the token private. Paste it into the MCP configuration, not into a chat pro
 Lares should call `concat_status`, `concat_help`, and `concat_list_files` and report your uploaded images. Concat exposes seven MCP tools. Seeing their names alone does not confirm that calls work.
 
 :::tip Other assistants
-The same endpoint and Authorization header work with compatible remote HTTP MCP clients, including OpenCode. A client outside Olares also needs network access; see [Access Olares services locally](../manual/best-practices/local-access.md). This endpoint handles MCP POST requests, not a legacy SSE connection or an editor page.
+The same endpoint and Authorization header work with compatible remote HTTP MCP clients, including OpenCode. For network access from a client outside Olares, see [Access Olares services locally](../manual/best-practices/local-access.md). This endpoint handles MCP POST requests, not a legacy SSE connection or an editor page.
 :::
 
 ## Make a short video
@@ -139,10 +139,10 @@ The same endpoint and Authorization header work with compatible remote HTTP MCP 
    concat_finish_edit. Tell me the full location of the video in Files.
    ```
 
-3. Wait for Lares to report that the export succeeded. A render job ID means the work was submitted; it does not mean the MP4 is ready.
+3. Wait for Lares to report that the export succeeded. A render job ID confirms submission. Wait for the completed export before opening the MP4.
 4. In Files, open **Home** > **Documents** > **Concat** > **outputs** > **my-demo** and play the returned MP4. Check the titles, transitions, and sound.
 
-For another revision, describe what to change and ask for a new output filename. Concat rejects overwriting an existing output. The exact result depends on your images and model; review the previews before exporting a longer video.
+For another revision, describe what to change and ask for a new output filename. Concat rejects overwriting an existing output. The result depends on your images and model. Review the previews before exporting a longer video.
 
 ## Edit in the browser
 
@@ -161,7 +161,7 @@ Saving a project does not export an MP4. Manual exports appear at the destinatio
 
 ### Why does the MCP connection fail?
 
-A login page or HTML response points to the Olares entrance or network policy. Check that you copied the **Concat API** endpoint and that your client can reach it. A Concat `401` response means the application token is missing or invalid; check the plain token and the space after `Bearer`.
+A login page or HTML response points to the Olares entrance or network policy. Check that you copied the **Concat API** endpoint and that your client can reach it. A Concat `401` response means the application token is missing or invalid. Check the plain token and the space after `Bearer`.
 
 Opening `/mcp` directly in a browser sends a GET request and is not a connection test. Use the read-only prompt above.
 

@@ -193,7 +193,7 @@ olares-cli profile login --olares-id <your-olares-id>
 
 ### 从本地模型切换到 OpenAI
 
-清除 **OPENAI_BASE_URL** 和 **CODEX_MODEL**。如需使用 API 密钥认证，请保留真实的 **OPENAI_API_KEY**；如需使用 ChatGPT 认证，请一并清除该变量。点击 **Apply**，然后等待应用重启。
+清除 **OPENAI_BASE_URL** 和 **CODEX_MODEL**。如需使用 API 密钥认证，请保留真实的 **OPENAI_API_KEY**。如需使用 ChatGPT 认证，请一并清除该变量。点击 **Apply**，然后等待应用重启。
 
 ### 退出登录
 

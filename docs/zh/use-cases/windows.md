@@ -18,7 +18,7 @@ Olares 允许您直接在设备上运行完整的 Windows 虚拟机，为您提�
 :::info 系统功能
 - Olares 支持运行基本的 Windows 应用程序。
 - 默认情况下，Windows VM 使用基于 CPU 的虚拟化和虚拟显示输出。
-- Intel 集成显卡支持仅在支持的硬件上可用。在 Olares One 上，所需的显卡配置已默认包含，无需额外的主机设置；在自托管设备上，则需要额外的主机配置。请参阅[为 Windows VM 启用 Intel 集成显卡直通](./windows-intel-gpu-passthrough.md)。
+- Intel 集成显卡支持仅在支持的硬件上可用。在 Olares One 上，所需的显卡配置已默认包含，无需额外的主机设置。在自托管设备上，则需要额外的主机配置。请参阅[为 Windows VM 启用 Intel 集成显卡直通](./windows-intel-gpu-passthrough.md)。
 - 仅通过远程桌面（RDP）连接时才支持音频输出。
 :::
 

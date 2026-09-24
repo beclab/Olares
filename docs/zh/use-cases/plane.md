@@ -147,7 +147,7 @@ Plane 依赖多个中间件组件才能平稳运行。虽然 PostgreSQL 和 Redi
 2. 点击 **Set your first cycle** 或 **Add cycle**。
 3. 定义阶段的核心详情：
    - **Title**: `Phase 1: Discovery`
-   - **Description**: `Research, wireframe, and define the core value proposition; the goal is to finalize the skeleton of the new product page`
+   - **Description**: `Research, wireframe, and define the core value proposition. The goal is to finalize the skeleton of the new product page`
 4. 选择开始和结束日期。
 5. 点击 **Create cycle**。
 
@@ -155,7 +155,7 @@ Plane 依赖多个中间件组件才能平稳运行。虽然 PostgreSQL 和 Redi
 
 6. 重复这些步骤来创建 Phase 2 的迭代周期：
    - **Title**: `Phase 2: Execution`
-   - **Description**: `Hi-Fi UI design, final copy production, and SEO auditing; the goal is to complete final visual assets and prepare for development`
+   - **Description**: `Hi-Fi UI design, final copy production, and SEO auditing. The goal is to complete final visual assets and prepare for development`
 
 ### 创建并分配工作项
 

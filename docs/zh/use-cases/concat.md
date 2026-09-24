@@ -6,7 +6,7 @@ head:
     - name: keywords
       content: Olares, Concat, Lares, MCP, 视频剪辑, MP4, 自托管
 app_version: "0.2.5"
-doc_version: "1.0"
+doc_version: "1.1"
 doc_updated: "2026-09-24"
 ---
 
@@ -16,14 +16,14 @@ doc_updated: "2026-09-24"
 
 # 使用 Concat 和 Lares 制作视频
 
-Concat 是一款支持多轨道、标题、转场和 MP4 导出的视频编辑器。在 Olares 上，你既可以在浏览器中手动剪辑，也可以通过模型上下文协议（MCP）让 AI 助手完成剪辑。
+Concat 是一款视频编辑器，可用于排列片段、添加标题和转场，以及导出 MP4 视频。在 Olares 上，你既可以在浏览器中手动剪辑，也可以通过模型上下文协议（MCP）让 AI 助手完成剪辑。
 
 本示例将使用 Lares，把几张图片制作成一段 Olares 介绍视频。源素材、项目文件和导出的视频都会保存在文件管理器的 Concat 文件夹中。
 
 ## 前提条件
 
 - 在 `amd64` 设备上运行 Olares 1.12.7 或更高版本。当前 Concat 应用包使用 CPU 渲染，不需要 GPU。
-- 已配置 [Lares](lares.md)，且所选模型支持工具调用。
+- 已在同一台 Olares 上安装并配置 [Lares](lares.md)，且所选模型支持工具调用。
 - 准备三到四张用于制作视频的图片。
 
 ## 安装 Concat
@@ -46,21 +46,21 @@ Concat 是一款支持多轨道、标题、转场和 MP4 导出的视频编辑�
 | `Home/Documents/Concat/assets/my-demo` | `assets/my-demo` |
 | `Home/Documents/Concat/outputs/my-demo` | `outputs/my-demo` |
 
-浏览器编辑器会将 `Home/Documents/Concat` 识别为 `/config/Projects`。AI 助手所在电脑中的文件不会自动提供给 Concat，请先把素材上传到上述文件夹。
+浏览器编辑器会将 `Home/Documents/Concat` 识别为 `/config/Projects`。请先把素材上传到该文件夹，再让 Lares 开始剪辑。
 
 ## 在 Lares 中配置 Concat
 
 ### 获取 MCP Endpoint
 
 1. 打开 Settings，前往 **Applications** > **Concat** > **Entrances**。
-2. 选择 **Concat API**，复制其中的 **Endpoint** URL。这是 MCP 入口，编辑器使用的是另一个入口。
-3. 在复制的 URL 末尾添加 `/mcp`，注意不要重复添加斜杠。
+2. 选择 **Concat API**，复制其中的 **Endpoint** URL。该入口用于 MCP 连接，**Concat** 入口则用于打开浏览器编辑器。
+3. 确认 URL 以 `/mcp` 结尾。如果没有，请补上 `/mcp`，注意不要重复添加斜杠。
 
-MCP 入口默认仅限 Olares 内部访问。本示例需要使用同一台 Olares 上的 Lares。应用令牌不能替代 Olares 的网络访问要求。
+MCP 入口默认仅限 Olares 内部访问，同一台设备上的 Lares 可以访问该入口。
 
 ### 获取应用令牌
 
-应用令牌会在安装 Concat 时生成，它不是你的 Olares 密码。请使用有权访问该应用数据的账号，通过以下任一方法获取；你也可以向管理员索取。
+应用令牌会在安装 Concat 时生成，它不是你的 Olares 密码。请使用有权访问该应用数据的账号，通过以下任一方法获取。你也可以向管理员索取。
 
 <tabs>
 <template #文件管理器>
@@ -86,19 +86,19 @@ MCP 入口默认仅限 Olares 内部访问。本示例需要使用同一台 Olar
 
 请妥善保管令牌。把它粘贴到 MCP 配置中，不要发到聊天消息或包含在共享截图中。
 
-### 添加 MCP 服务
+### 添加 MCP 服务器
 
-1. 打开 Lares，进入 MCP 配置。
-2. 按以下信息添加一个远程 HTTP MCP 服务：
+1. 打开 Lares，前往**设置** > **MCP**。
+2. 点击**添加服务器**，填写以下信息：
 
    | 设置 | 值 |
    |:---|:---|
-   | Name | `Concat` |
-   | URL | 前面复制的 Endpoint，末尾加上 `/mcp` |
-   | Header name | `Authorization` |
-   | Header value | `Bearer <your-token>` |
+   | **服务器名称** | `concat` |
+   | **连接方式** | `Streamable HTTP` |
+   | **MCP URL** | 前面准备好的、以 `/mcp` 结尾的 URL |
+   | **请求头** | 下方的 JSON 对象 |
 
-   将 `<your-token>` 替换为刚才复制的令牌。`Bearer` 后保留一个空格。如果 Headers 字段接受 JSON，请输入：
+   在**请求头**中填写以下 JSON。将 `<your-token>` 替换为刚才复制的令牌，并在 `Bearer` 后保留一个空格：
 
    ```json
    {
@@ -106,7 +106,7 @@ MCP 入口默认仅限 Olares 内部访问。本示例需要使用同一台 Olar
    }
    ```
 
-3. 保存并连接该服务，然后刷新可用工具列表。
+3. 点击**保存**。Lares 会自动连接服务器并加载工具。
 4. 新建一个对话，发送：
 
    ```text
@@ -145,7 +145,7 @@ Lares 应调用 `concat_status`、`concat_help` 和 `concat_list_files`，并返
 3. 等待 Lares 确认导出成功。返回渲染任务 ID 只表示任务已提交，并不代表 MP4 已经生成。
 4. 在文件管理器中打开 **Home** > **Documents** > **Concat** > **outputs** > **my-demo**，播放 Lares 返回的 MP4，检查标题、转场和声音。
 
-如需继续调整，请说明要修改的内容，并要求使用新的输出文件名。Concat 不允许覆盖已有输出文件。最终效果取决于素材和所用模型；导出较长视频前，请先检查预览。
+如需继续调整，请说明要修改的内容，并要求使用新的输出文件名。Concat 不允许覆盖已有输出文件。最终效果取决于素材和所用模型。导出较长视频前，请先检查预览。
 
 ## 在浏览器中剪辑
 
@@ -164,7 +164,7 @@ Lares 应调用 `concat_status`、`concat_help` 和 `concat_list_files`，并返
 
 ### 为什么 MCP 连接失败？
 
-如果返回登录页面或 HTML 响应，通常表示请求被 Olares 入口或网络策略拦截。确认复制的是 **Concat API** Endpoint，且客户端可以访问该地址。Concat 返回 `401` 表示应用令牌缺失或无效；请检查明文令牌，并确认 `Bearer` 后有一个空格。
+如果返回登录页面或 HTML 响应，通常表示请求被 Olares 入口或网络策略拦截。确认复制的是 **Concat API** Endpoint，且客户端可以访问该地址。Concat 返回 `401` 表示应用令牌缺失或无效。请检查明文令牌，并确认 `Bearer` 后有一个空格。
 
 直接在浏览器中打开 `/mcp` 会发送 GET 请求，不能用于测试连接。请使用前面的只读提示词进行检查。
 

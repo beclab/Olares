@@ -30,7 +30,7 @@ Olares 上的 Minecraft 运行的是官方原版 Minecraft Java 版专用服务�
 
 - **Olares OS**：Olares 版本为 1.12.6 或更高。
 - **硬件与网络**：Olares 设备运行在原生的 Linux 主机上，并使用有线以太网连接。Overlay gateway 在 Wi-Fi 或 WSL 环境下无法工作。
-- **权限**：需要 Super admin 开启系统级的 Overlay gateway 服务；服务开启后，Admin 或 Member 可以为 Minecraft 启用 Overlay gateway。
+- **权限**：需要 Super admin 开启系统级的 Overlay gateway 服务。服务开启后，Admin 或 Member 可以为 Minecraft 启用 Overlay gateway。
 - **客户端要求**：每位玩家的电脑上已安装 Minecraft Java 版。Bedrock、主机和移动版无法连接。客户端版本必须与 Market 页面上显示的 Minecraft **App version** 一致。
 
 ## 安装 Minecraft
@@ -46,7 +46,7 @@ Olares 上的 Minecraft 运行的是官方原版 Minecraft Java 版专用服务�
 Overlay gateway 会为 Minecraft 分配一个专用的本地 IP 地址，让同一网络中的玩家可以直接连接。
 
 1. 打开 Olares **Settings**，进入 **Network** > **Overlay gateway**。
-2. 确认 **Enable overlay gateway** 开关已打开。这是系统级服务开关；如未开启，需由 Super admin 打开。
+2. 确认 **Enable overlay gateway** 开关已打开。这是系统级服务开关。如未开启，需由 Super admin 打开。
 3. 在 **Applications** 列表中找到 **Minecraft**，确认其状态为 **Running**，然后为该应用启用 Overlay gateway。
 4. 在 **Minecraft Java** 右侧，复制显示的地址。例如 `192.168.50.219:25565`。
 
