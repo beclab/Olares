@@ -214,6 +214,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               collapsed: true,
               items: [
                 {
+                  text: "Blender",
+                  link: "/zh/use-cases/blender",
+                },
+                {
                   text: "ComfyUI",
                   link: "/zh/use-cases/comfyui",
                   collapsed: true,
