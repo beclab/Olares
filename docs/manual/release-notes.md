@@ -46,7 +46,7 @@ For release highlights and walkthroughs, see the [Olares 1.12.7 blog post](https
 ### Updated docs
 
 - Rewrote [Connect your apps to AI capabilities](/manual/best-practices/connect-ai-apps) for Router, covering API formats, model and tool setup, default system names such as `default-chat`, and API keys for external clients.
-- Updated AI client tutorials for the Router workflow, using Qwen3.8-27B (llama.cpp) as the chat example. Added an on-page version selector to affected guides so readers can choose the Olares 1.12.7 or 1.12.6 instructions. [OpenClaw](/use-cases/openclaw) and [Hermes Agent](/use-cases/hermes) now follow the interactive wizard order, with model configuration and context size checked in Router.
+- Updated AI client tutorials for the Router workflow, using Qwen3.8-27B (llama.cpp) as the chat example. Added an on-page version selector to affected guides so readers can choose the Olares 1.12.7 or 1.12.6 instructions.
 - Reorganized the [Olares manual](/manual/overview) around user tasks and [installation guidance](/manual/get-started/install-olares) around Linux, Olares One, and DGX Spark setup paths. Updated [Olares One onboarding](/one/olares-onboarding) for Lares.
 - Updated [local access guidance](/manual/best-practices/local-access) with LarePass host mappings on Windows and macOS, alongside VPN and `.local` access options.
 - Updated [Market](/manual/olares/market/market) with app and model discovery and source selection, and [language settings](/manual/olares/settings/language-appearance) with the additional language options.

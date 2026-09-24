@@ -50,7 +50,7 @@ head:
 ### 更新文档
 
 - 重写[为应用接入 AI 能力](/zh/manual/best-practices/connect-ai-apps)，介绍 Router 的 API 格式、模型与工具配置、`default-chat` 等默认系统名称，以及外部客户端的 API 密钥。
-- 更新 AI 客户端教程，以 Qwen3.8-27B (llama.cpp) 为聊天示例，改用 Router 连接流程。在相关页面加入版本切换，可选择 Olares 1.12.7 或 1.12.6 的操作说明。[OpenClaw](/zh/use-cases/openclaw) 和 [Hermes Agent](/zh/use-cases/hermes) 的步骤已按交互式向导顺序调整，模型配置和上下文大小改为在 Router 中查看。
+- 更新 AI 客户端教程，以 Qwen3.8-27B (llama.cpp) 为聊天示例，改用 Router 连接流程。在相关页面加入版本切换，可选择 Olares 1.12.7 或 1.12.6 的操作说明。
 - 按用户任务重新组织 [Olares 手册](/zh/manual/overview)，按 Linux、Olares One 和 DGX Spark 区分[安装路径](/zh/manual/get-started/install-olares)。[Olares One 新手引导](/zh/one/olares-onboarding)已更新为使用 Lares。
 - 更新[本地访问指南](/zh/manual/best-practices/local-access)，补充 Windows 和 macOS 上的 LarePass hosts 映射，并说明 VPN 与 `.local` 地址的使用方式。
 - 更新[应用市场](/zh/manual/olares/market/market)的应用与模型发现、来源选择流程，并在[语言设置](/zh/manual/olares/settings/language-appearance)中补充新增语言选项。
