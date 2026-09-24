@@ -61,6 +61,7 @@ export const useCases: UseCase[] = [
   { title: "Vane (Perplexica)", link: "/use-cases/perplexica", category: "AI workbench", description: "Private, AI-powered search and Q&A", descriptionZh: "注重隐私的 AI 搜索与问答" },
   { title: "Dify", link: "/use-cases/dify", category: "AI workbench", description: "Build AI apps and agents with a shared workspace", descriptionZh: "在共享工作空间中构建 AI 应用与智能体" },
   { title: "ComfyUI", link: "/use-cases/comfyui", category: "Creative media", description: "Node-based AI image generation", descriptionZh: "节点式 AI 图像生成" },
+  { title: "Concat", link: "/use-cases/concat", category: "Creative media", description: "Edit videos in your browser or through MCP", descriptionZh: "在浏览器中剪辑视频，或通过 MCP 对话式编辑" },
   { title: "Open Design", link: "/use-cases/open-design", category: "Creative media", description: "Turn prompts into prototypes, pages, and slide decks", descriptionZh: "将提示词转化为原型、页面和幻灯片" },
   { title: "ACE-Step 1.5", link: "/use-cases/ace-step-1.5", category: "Creative media", description: "Generate music from prompts or lyrics", descriptionZh: "根据提示词或歌词生成音乐" },
   { title: "Whisper-WebUI", link: "/use-cases/whisper-webui", category: "Creative media", description: "Speech-to-text, subtitles, and translation", descriptionZh: "语音转文字、字幕生成与翻译" },
