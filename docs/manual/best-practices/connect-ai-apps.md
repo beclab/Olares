@@ -1,83 +1,127 @@
 ---
 outline: [2, 3]
-description: Connect an AI client app to a model service by choosing the connection source and API format, copying the Base URL, and entering the model name and API key.
+description: Connect your apps to AI capabilities on Olares through Router, the AI gateway for models and tools, by copying the Base URL, entering the model name, and creating an API key for external callers.
 head:
   - - meta
     - name: keywords
-      content: Olares, AI apps, Model Console, LLM service, API format, Base URL, Ollama, OpenAI-Compatible
+      content: Olares, AI apps, Router, AI gateway, Model Console, LLM service, Base URL, Ollama
 ---
 
-# Connect an AI app to a model service <Badge type="tip" text="^ 1.12.6" />
+# Connect your apps to AI capabilities <Badge type="tip" text="^ 1.12.7" />
 
-On Olares, an AI service app provides AI capabilities over an API, while a client app provides the interface or workflow you use. Connecting them follows the same pattern across apps: choose how the client reaches the service, match the API format, and copy the service address and model name.
+Starting with 1.12.7, client applications on Olares access AI capabilities through Router, the Olares-native AI gateway for models and tools. Instead of connecting a client app directly to individual model endpoints, you connect it to Router, and Router routes every request to the corresponding backend. When the backend model changes, the client configuration stays the same.
 
-This page covers that common pattern. For the exact fields and buttons in a specific client app, use the app-specific tutorial linked at the end of this page.
+This page explains the basic connection concepts and how to connect a client app to a model through Router.
 
-## Before you begin
+This guide explains how to understand your apps, gather the required connection details, and configure the connection.
 
-- Install both the AI service app and the AI client app.
-- For an LLM service app, open it from the Launchpad and make sure **Model** shows **Ready** and **Engine** shows **Running**.
+## Learning objectives
 
-## Choose the connection source and API format
+By the end of this tutorial, you will be able to:
+- Distinguish between AI service apps and AI client apps.
+- Understand the essential connection parameters and how to get them.
+- Connect common AI apps.
 
-Open the LLM service app from the Launchpad to launch its **Model Console**, and then select the options that match your client app:
+## Understand the connection concepts
 
-- **Connection source**: Select the option that matches where your client app runs. For example, select **Apps in Olares** when the client is installed in the same Olares cluster.
-- **API format**: Select the format your client app supports, such as **OpenAI-Compatible** or **Ollama**. The Model Console displays the Base URL that matches your selection.
+### AI service apps and AI client apps
 
-:::info
-Non-LLM services like PaddleOCR do not use these generic formats. They communicate using their own tool-specific protocols, so you do not need to configure a provider format for them.
+When you use AI on Olares, you typically work with two separate applications:
+
+- **AI client apps**: They provide the front-end chat interface or workflow canvas you interact with directly, such as LobeHub. They rely on an AI service app (often called a provider) to perform AI tasks, such as generating text.
+- **AI service apps**: They provide AI capabilities for compatible clients over an API, such as chat, search, and speech recognition. Some AI service apps have their own web interface for management, while others run primarily as headless backend services.
+
+    On Olares, AI service apps fall into two categories:
+    - **LLM service apps**: Apps that host large language models (LLMs) for text generation, code completion, and chat. They include eight pre-built model apps, and custom model instances created on [Engine Base apps](/use-cases/llm-base-apps.md).
+    - **Other AI service apps**: Utility apps that provide non-LLM functions, such as web search.
+
+### Provider
+
+In a traditional setup, a provider (or engine type) is the vendor or service that supplies the AI capability, such as OpenAI or Ollama. However, when using Olares, Router acts as your single, unified provider.
+
+Because Router handles the actual routing in the background, you do not select the underlying vendor in the client app. Instead, you use the client's "Provider" or "Engine" dropdown simply to tell it which API format it should use to communicate with Router.
+
+When configuring this field in your client app, follow this logic:
+
+- For all non-Ollama models and tools: Router standardizes these into the widely used OpenAI API format. In the client app, first look for **Custom Provider** or **Custom Endpoint**. If your client does not offer those options, select **OpenAI** or **OpenAI-Compatible**.
+- For Ollama models: Select **Ollama**. Router will transparently pass the requests using the native Ollama API format.
+- For specific tools: Some clients offer a dedicated provider option for a specific tool.  For example, a SearXNG search engine. If available, select that specific type.
+
+### Base URL
+
+The Base URL is the network address (or endpoint) where the AI service app receives and processes your tasks.
+
+You always copy it from the **How to call this model** window in Router. Note that it varies with where the client runs. Some tools must be registered in Router first before they appear on the **Tools** page. See [Connect through Router](#connect-through-router).
+
+### Model name
+
+The model name is the exact identifier the client sends with every request so Router knows which model to use. Router gives every callable capability a model name, including tools such as `localsearxng/search`. You have two options:
+
+- Copy the specific model name from the **How to call this model** window. Copy it exactly as displayed, without removing repository prefixes or quantization tags.
+- Set a default model for a capability on the **Default models** page in Router, and use the system name such as `default-chat` and `default-search`. With a system name, you can switch the backend model in Router later without changing the client configuration.
+
+### API key
+
+An API key is a credential that proves the caller's identity. Router identifies callers in two ways:
+
+- **Apps in Olares**: Router trusts requests from apps inside the cluster, so no API key is required. If the client app requires a value in the API key field, enter any placeholder text such as `olares`.
+- **LAN and remote callers**: Callers outside the cluster must present a Router-issued API key. Create one on the **API keys** page in Router.
+
+## Connect through Router
+
+Router lists every callable capability as a model, whether it is a chat model on the **LLM** page or a tool on the **Tools** page. The connection flow is the same for every model. The only difference is that some tools must be registered in Router first, using the app's entrance URL.
+
+### Register a tool app first
+
+Tool apps provide utility capabilities over their own protocols. Some tools, such as SearXNG and Firecrawl, can be installed from Market and run on your Olares. Before such a tool appears in Router, register it using its entrance URL. The following steps use SearXNG as an example.
+
+1. Install **SearXNG** from Market.
+2. Open Olares Settings, go to **Applications** > **SearXNG** > **Entrances**, and copy the **Endpoint URL**. Make sure the entrance's **Authentication level** allows access from other apps in the cluster.
+3. Open Router and go to **Tools** > **Manage providers**.
+4. Select **SearXNG**, enter a **Provider name** such as `localsearxng`, paste the entrance URL into **SearXNG instance URL**, and then click **Add**.
+5. Enable the tool so it appears in the **Configured** list.
+
+Once registered, the tool appears on the **Tools** page like any other capability, and you get its connection details the same way.
+
+### Get connection details and configure the client
+
+Router organizes capabilities into four pages: **LLM**, **Audio**, **Creative**, and **Tools**. Each model appears as a row with a **View connection example** icon. The following steps use the Qwen 3.8 27B model as an example.
+
+1. Open Router from the Launchpad.
+2. Go to the **LLM** capability page, locate the model, and click the **View connection example** icon on the right to open the **How to call this model** window.
+3. Select the connection source that matches where your client app runs: **Apps in Olares**, **Devices in LAN**, or **Remote**.
+4. Copy the base URL exactly as displayed.
+5. Copy the model name exactly as displayed, or use a system name such as `default-chat` if you have set a default model on the **Default models** page.
+6. If the client app runs outside Olares on the LAN or the internet, go to the **API keys** page in Router, create an API key, and copy it.
+7. In the client app, open the provider settings and enter the collected values:
+
+   | Client setting | Value to use |
+   |---|---|
+   | Provider | The type that matches the capability. See [Provider](#provider). |
+   | Base URL or endpoint | The complete URL copied from the **How to call this model** window |
+   | Model name or model ID | The model name or system name such as `default-chat` |
+   | API key | The Router-issued API key, or a placeholder such as `olares` for apps in Olares |
+
+:::info Connect directly through the Model Console on 1.12.6
+On Olares 1.12.6 without Router, open the LLM service app from the Launchpad to launch its **Model Console**. Select the **Connection source** and **API format**, copy the **Base URL** and **Model name**, and enter a placeholder API key such as `olares` in the client app. This direct connection still works on later versions, but Router is the recommended way because it lets you switch backend models without reconfiguring clients.
 :::
-
-## Copy the Base URL
-
-The Base URL is the network address where the service app receives and processes requests.
-
-- **For LLM service apps**: Copy the **Base URL** displayed in the Model Console. Copy it exactly as shown, including any path suffix such as `/v1`.
-- **For other AI service apps**: Open Olares Settings, go to **Applications** > **[AppName]** > **Entrances**, and copy the **Endpoint URL**. Ensure the entrance's **Authentication level** is set to **Internal** so other apps can access it without a login barrier.
-
-    :::tip Multiple entrances
-    Some apps expose more than one entrance. Choose the entrance that matches your client's protocol or use case. For example, use the main entrance for web UI access and a dedicated API entrance for programmatic integrations.
-    :::
-
-## Enter the model name and API key
-
-- **Model name**: Copy the **Model name** from the Model Console exactly as displayed. Do not abbreviate it or remove repository prefixes (such as `unsloth/`) or quantization tags (such as `UD-Q4_K_XL`), otherwise the client might return an error like "Model not found".
-- **API key**: AI service apps deployed locally on Olares trust requests from other apps in the same cluster, so a real API key is usually not required. If the client app still requires a value in this field, enter any placeholder text such as `olares` or `local`.
-
-## Add the service to the client app
-
-Open the client app's model, provider, or integration settings, then enter the values collected from the service app:
-
-| Client setting | Value to use |
-|---|---|
-| Provider or API format | The format selected in Model Console, such as **OpenAI-Compatible** or **Ollama** |
-| Base URL or endpoint | The complete URL copied from Model Console or the app entrance |
-| Model name or model ID | The complete model name shown in Model Console |
-| API key | The real key required by the service, or a placeholder if the local client requires a non-empty value |
-
-The labels vary by client. If a client asks for additional fields or changes where requests are sent from, follow that client's tutorial instead of guessing.
 
 ## Verify the connection
 
-Save the provider settings and use the client app's connection test or model-list refresh. If the client has neither option, start a new session, select the configured model, and send a short request. A response confirms that the client can reach the service and use the selected model.
+1. In the client app, start a new conversation, select the model you configured, and send a short question. A normal response confirms that the client can reach Router and use the model.
+2. Open Router and go to the **Usage** page. The request appears in the usage records, confirming that the call went through Router.
 
 ## Fix common connection errors
 
 | Symptom | Likely cause and fix |
 |---|---|
-| The client reports "Model not found" | The model name was abbreviated or missing prefixes. Copy the full model name from the Model Console. |
-| The connectivity check fails or the Base URL is unreachable | The connection source does not match where the client runs. Reopen the Model Console, select the matching **Connection source**, and copy the Base URL again. |
+| The client reports "Model not found" | The model name was abbreviated or missing prefixes. Copy the full model name from the **How to call this model** window. |
+| The connectivity check fails or the Base URL is unreachable | The connection source does not match where the client runs. Reopen the **How to call this model** window, select the matching **Connection source**, and copy the Base URL again. |
+| The client gets a 401 or unauthorized error | A caller from the LAN or the internet needs a Router-issued API key. Create one on the **API keys** page. |
 | A browser reports a CORS error or Olares authentication page | The client may be sending requests from the browser instead of its server. Check the client tutorial for the correct request mode and service entrance. |
-
-## App-specific tutorials
-
-- [Build your local AI agent with LobeHub](/use-cases/lobechat.md)
-- [Set up Open WebUI for local AI chat](/use-cases/openwebui.md)
-- [Customize your local AI assistant using Dify](/use-cases/dify.md)
 
 ## Learn more
 
-- [How do AI apps connect on Olares?](../help/usage.md#how-do-ai-apps-connect-on-olares)
+- [Use Olares Router as your AI gateway](../../use-cases/olares-router.md)
 - [Run local LLMs with Ollama, vLLM, llama.cpp, and SGLang](../../use-cases/llm-base-apps.md)
 - [Manage application entrances](../olares/settings/manage-entrance.md)
