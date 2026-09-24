@@ -47,6 +47,8 @@ Speaches 是一个兼容 OpenAI API 的语音服务器，支持语音转文本�
   | :--- | :--- | :--- |
   | 聊天 | Qwen3.8-27B (llama.cpp) | 从应用市场安装 |
 
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
+
 ## 安装 Speaches
 
 1. 打开 Market 并搜索 "Speaches"。

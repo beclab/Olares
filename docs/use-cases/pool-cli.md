@@ -39,6 +39,8 @@ Before you begin, you need:
   | :--- | :--- | :--- |
   | Local model connection | Qwen3.8-27B (llama.cpp) | Install from Market |
 
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
+
 ## Install Pool CLI
 
 1. Open Market, and search for "Pool CLI".

@@ -45,6 +45,8 @@ Before you begin, you need:
    | Browser with OpenAI | A ChatGPT Plus/Pro account or an OpenAI API key |
    | OpenCode CLI on your computer | A default chat model configured in Router and a Router-issued API key. |
 
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
+
 ## Run OpenCode in the browser
 
 This option installs OpenCode as an application on your Olares device. You access it through your browser.

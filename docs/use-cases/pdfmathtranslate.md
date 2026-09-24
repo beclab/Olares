@@ -35,6 +35,8 @@ Before you begin, you need:
   | :--- | :--- | :--- |
   | Translation | Qwen3.8-27B (llama.cpp) | Install from Market |
 
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
+
 ## Install PDFMathTranslate
 
 1. Open the Olares Market and search for "PDFMathTranslate".

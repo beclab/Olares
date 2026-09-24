@@ -48,6 +48,8 @@ Before you begin, you need:
   This tutorial uses Qwen3.8-27B (llama.cpp) through Router's OpenAI-compatible API. If you use a different provider or local proxy, see the [OpenClaw documentation on custom providers](https://docs.openclaw.ai/concepts/model-providers#providers-via-models-providers-custom%2Fbase-url).
   :::
 
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
+
 ## Upgrade notes
 
 If you are upgrading an existing OpenClaw installation, review the version-specific changes and troubleshooting steps before proceeding. For more information, see [Upgrade OpenClaw](openclaw-upgrade.md).

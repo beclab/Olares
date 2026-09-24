@@ -38,6 +38,8 @@ PDFMathTranslate 是一款用于翻译学术 PDF 文档的应用，能够在保�
   | :--- | :--- | :--- |
   | 翻译 | Qwen3.8-27B (llama.cpp) | 从 Market 安装 |
 
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
+
 ## 安装 PDFMathTranslate
 
 1. 打开 Olares Market，搜索 "PDFMathTranslate"。

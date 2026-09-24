@@ -31,6 +31,8 @@ Firecrawl 是一个无头网页数据服务，可将网页转换为干净的 Mar
 <!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - 如需使用本地模型，从应用市场安装 Qwen3.8-27B (llama.cpp)。
 
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
+
 ## 安装 Firecrawl
 
 1. 打开 Market，搜索 "Firecrawl"。

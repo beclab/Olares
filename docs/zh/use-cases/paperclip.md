@@ -31,6 +31,8 @@ Paperclip 是一个开源平台，用于在同一个统一工作区下协调多�
 <!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - 如需使用本地模型，从应用市场安装 Qwen3.8-27B (llama.cpp)。
 
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
+
 ## 学习目标
 
 在本指南中，你将学习如何：

@@ -45,6 +45,8 @@ NemoClaw 是 NVIDIA 发布的早期预览版本，不建议用于生产环境。
   | :--- | :--- | :--- |
   | 聊天 | Qwen3.8-27B (llama.cpp) | 从 Market 安装 |
 
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
+
 ## 获取模型连接信息
 
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->

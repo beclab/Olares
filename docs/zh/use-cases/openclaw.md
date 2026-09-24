@@ -52,6 +52,8 @@ OpenClaw 是一款专为本地设备设计的个人 AI 助手。它可以直接�
   本教程通过 Router 的 OpenAI 兼容 API 使用 Qwen3.8-27B (llama.cpp)。如使用其他提供方或本地代理，请参阅 [OpenClaw 关于自定义模型提供方的文档](https://docs.openclaw.ai/concepts/model-providers#providers-via-models-providers-custom%2Fbase-url)。
   :::
 
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
+
 ## 升级说明
 
 如果你正在升级现有的 OpenClaw 安装，请在继续之前查看版本特定的更改和故障排除步骤。更多信息，请参阅[升级 OpenClaw](openclaw-upgrade.md)。

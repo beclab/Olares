@@ -18,6 +18,8 @@ Dify is an AI application development platform. It's one of the key open-source 
 <!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - Install Qwen3.8-27B (llama.cpp) from Market.
 
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
+
 ## Install Dify
 :::info
 Starting from Olares 1.11.6, if "Dify For Cluster" or "Dify" was previously installed, uninstall them before proceeding.

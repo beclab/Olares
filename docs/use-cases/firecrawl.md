@@ -27,6 +27,8 @@ Before you begin, you need:
 <!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - Qwen3.8-27B (llama.cpp) installed from Market, if you plan to use a local model.
 
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
+
 ## Install Firecrawl
 
 1. Open Market and search for "Firecrawl".

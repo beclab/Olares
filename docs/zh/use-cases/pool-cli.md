@@ -43,6 +43,8 @@ Pool CLI 是一个基于终端的编码助手，可以帮助你通过自然语�
   | :--- | :--- | :--- |
   | 连接本地模型 | Qwen3.8-27B (llama.cpp) | 从 Market 安装 |
 
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
+
 ## 安装 Pool CLI
 
 1. 打开 Market，搜索 "Pool CLI"。

@@ -18,6 +18,8 @@ Dify 是一个 AI 应用开发平台。它是 Olares 集成的关键开源项目
 <!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - 从应用市场安装 Qwen3.8-27B (llama.cpp)。
 
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
+
 ## 安装 Dify
 :::info
 从 Olares 1.11.6 开始，如果已安装 "Dify For Cluster" 或 "Dify"，需先卸载这些版本。

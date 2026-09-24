@@ -44,6 +44,8 @@ Before you begin, you need:
 
 - Ensure your client applications, such as OpenCode and AgentZero, are already installed and fully functional. This guide covers only the specific settings required to connect them to TensorZero.
 
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
+
 ## Install TensorZero
 
 1. Open Market and search for "TensorZero".

@@ -45,6 +45,8 @@ Before you begin, you need:
   | :--- | :--- | :--- |
   | Chat | Qwen3.8-27B (llama.cpp) | Install from Market|
 
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
+
 ## Get model connection details
 
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->

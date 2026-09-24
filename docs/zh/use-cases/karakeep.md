@@ -46,6 +46,8 @@ Karakeep（前身为 Hoarder）是一个自托管的书签和内容管理应用�
   | :--- | :--- | :--- |
   | 聊天 | Qwen3.8-27B (llama.cpp) | 从 Market 安装 |
 
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
+
 ## 安装 Karakeep
 
 1. 打开 Market 并搜索 "Karakeep"。

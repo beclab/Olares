@@ -43,6 +43,8 @@ Before you begin, you need:
   | :--- | :--- | :--- |
   | Chat | Qwen3.8-27B (llama.cpp) | Install from Market |
 
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
+
 ## Install Speaches
 
 1. Open Market and search for "Speaches".

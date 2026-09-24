@@ -49,6 +49,8 @@ OpenCode 是一个 AI 驱动的编码代理，允许你通过自然语言编写�
    | 在浏览器中使用 OpenAI | ChatGPT Plus/Pro 账号或 OpenAI API key |
    | 在计算机上使用 OpenCode CLI | Olares 上已配置 Router 默认聊天模型，并已创建 Router API 密钥。 |
 
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
+
 ## 在浏览器中运行 OpenCode
 
 此选项在你的 Olares 设备上将 OpenCode 安装为应用。你通过浏览器访问它。

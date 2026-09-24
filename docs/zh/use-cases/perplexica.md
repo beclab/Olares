@@ -31,6 +31,8 @@ Vane（前身为 Perplexica）是一款开源的 AI 驱动问答引擎。它将�
 <!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - 从应用市场安装 Qwen3.8-27B (llama.cpp)。Vane 可使用内置嵌入模型。
 
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
+
 ## 安装 SearXNG
 
 SearXNG 是一款注重隐私的元搜索引擎，它聚合多个搜索引擎的结果，且不会追踪用户。Vane 通过它获取干净、无偏见的搜索结果，供 AI 模型处理。

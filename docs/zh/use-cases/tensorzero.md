@@ -47,6 +47,8 @@ TensorZero 是一个一体化平台，用于管理、连接和监控你的 AI �
 
 - 确保你的客户端应用（如 OpenCode 和 AgentZero）已经安装并完全可用。本指南仅涵盖将它们连接到 TensorZero 所需的特定设置。
 
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
+
 ## 安装 TensorZero
 
 1. 打开 Market，搜索 "TensorZero"。

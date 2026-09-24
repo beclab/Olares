@@ -26,6 +26,8 @@ Before you begin, you need:
 <!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - Install Qwen3.8-27B (llama.cpp) from Market. Vane can use its built-in embedding models.
 
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
+
 ## Install SearXNG
 
 SearXNG is a privacy-focused meta-search engine that aggregates results from multiple search engines without tracking users. Vane uses it to fetch clean, unbiased results for the AI model to process.
