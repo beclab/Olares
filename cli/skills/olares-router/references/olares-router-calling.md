@@ -22,11 +22,15 @@ So there are two steps, not five: pass `--api-key sk-...`, or `OLARES_ROUTER_API
 
 Reach for a key when the call needs something the identity cannot carry: a model allowlist, a budget of its own, or an origin the platform cannot vouch for — anything outside Olares, which is where the header is added.
 
-### Inside an application, `router call` is the wrong caller
+### Inside an application, the host says who is calling
 
 The profile identity is stamped by the Olares edge, and a command running **inside** the cluster did not cross it. Router then reads the calling application's `x-caller-appid` instead, and the call is from the application — which for a shared-chart app means the chart's owner, not the person at the keyboard. Nothing fails: the work runs, the usage row is written, and a provider that keeps a per-user library files the result under somebody else.
 
-So an agent hosted by an Olares application does not reach Router with `router call`. Such an application proxies Router in process, under its own base URL — Lares publishes `$LARES_LLM_BASE_URL` — and that proxy stamps the logged-in person. POST the OpenAI-shaped path there. Where such a base URL exists, **the application's own skill governs generation** and this tree covers everything else: configuration, diagnosis, the catalogue, and calling from a shell that is outside the cluster.
+An application that hosts an agent proxies Router in process and stamps the logged-in person, and it tells the commands it runs where by setting `OLARES_ROUTER_DATA_PLANE_URL` to that proxy's `/v1` root — Lares sets it to `$LARES_LLM_BASE_URL`. With it set, every `router call` verb goes through the proxy and is from the person; `router key current` shows `CALLS USE  the host application's proxy`. Two things stay as they were: a named key (`--api-key`, `OLARES_ROUTER_API_KEY`) still goes to Router directly as that key, and the streaming sockets (`listen` and `responses --stream`) still dial Router, since a proxy that forwards requests does not forward sockets.
+
+**Where the variable is not set, do not generate from in-cluster with `router call`** — that is where the wrong caller does visible damage. Use the host application's own skill and base URL instead.
+
+A sandbox that can write only its workspace and `$TMPDIR` still works: the refresh lock falls back to the temp dir, and a platform-issued (managed) token that cannot be cached is used for the one command and refreshed from the mount by the next.
 
 Two refusals are specific to this and mean different things:
 

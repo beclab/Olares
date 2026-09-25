@@ -275,6 +275,14 @@ func epTaskResult(id string) string { return epTask(id) + "/result" }
 // response steering one, and the id alone already reaches the task.
 func onDataPlane(p string) bool { return strings.HasPrefix(p, dataPlaneAPI+"/") }
 
+// hostProxyBase turns the /v1 root a host application publishes for its
+// Router proxy into the base every data-plane path here is appended to.
+func hostProxyBase(root string) string {
+	return strings.TrimSuffix(strings.TrimRight(strings.TrimSpace(root), "/"), dataPlaneAPI)
+}
+
+func hostProxyRoot(base string) string { return base + dataPlaneAPI }
+
 // The voice library and the log of what has been read out.
 //
 // These sit at the root of /v1 rather than under /audio because they are the

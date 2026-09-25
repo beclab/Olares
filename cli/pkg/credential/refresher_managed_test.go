@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 	"time"
 
@@ -267,4 +269,54 @@ func TestRefresh_StillRotatesRefreshTokenAndIsNotManaged(t *testing.T) {
 	if stored.Managed {
 		t.Error("an ordinary refresh must not mark the entry managed")
 	}
+}
+
+// An agent sandbox lets a command write its workspace and $TMPDIR and nothing
+// else. Neither the lock under the config dir nor the cached copy of a managed
+// token is worth failing the command over: the mount holds the credential.
+func TestRefreshWith_ReadOnlyConfigDirStillRefreshes(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root ignores directory permissions")
+	}
+	home := t.TempDir()
+	if err := os.Chmod(home, 0o500); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(home, 0o700) })
+	t.Setenv("OLARES_CLI_HOME", home)
+	t.Setenv("TMPDIR", t.TempDir())
+	store := &unwritableStore{fakeStore: newFakeStore()}
+	srv := newRefreshServer(t)
+
+	r := NewRefresherWith(store, time.Now)
+	got, err := r.RefreshWith(context.Background(), managedID, srv.URL, "", "mounted-RT", false)
+	if err != nil {
+		t.Fatalf("RefreshWith: %v", err)
+	}
+	if got != "AT1" {
+		t.Fatalf("got = %q, want AT1", got)
+	}
+	if _, err := os.Stat(fallbackRefreshLockPath(managedID)); err != nil {
+		t.Errorf("the lock should have moved to the temp dir: %v", err)
+	}
+}
+
+func TestRefresh_UnmanagedStillFailsWhenItCannotPersist(t *testing.T) {
+	setupRefresherEnv(t)
+	store := &unwritableStore{fakeStore: newFakeStore()}
+	store.items["alice@olares.com"] = auth.StoredToken{
+		OlaresID: "alice@olares.com", AccessToken: "old-AT", RefreshToken: "RT-orig",
+	}
+	srv := newRefreshServer(t)
+
+	r := NewRefresherWith(store, time.Now)
+	if _, err := r.Refresh(context.Background(), "alice@olares.com", srv.URL, "old-AT", false); err == nil {
+		t.Fatal("a rotated refresh token that cannot be saved must fail the refresh")
+	}
+}
+
+type unwritableStore struct{ *fakeStore }
+
+func (s *unwritableStore) Set(auth.StoredToken) error {
+	return fs.ErrPermission
 }

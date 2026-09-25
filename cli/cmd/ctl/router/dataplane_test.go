@@ -1,6 +1,8 @@
 package router
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,6 +14,7 @@ import (
 // overrides it for one command, which only works in that order.
 func TestAnExplicitKeyBeatsTheEnvironmentAndBothBeatThePlatform(t *testing.T) {
 	t.Setenv(dataPlaneKeyEnv, "sk-from-env")
+	t.Setenv(dataPlaneURLEnv, "")
 
 	if got := resolveDataPlaneAuth("sk-from-flag"); got.Mode != authKey || got.Key != "sk-from-flag" {
 		t.Errorf("--api-key did not win over %s: got %+v", dataPlaneKeyEnv, got)
@@ -32,6 +35,7 @@ func TestAnExplicitKeyBeatsTheEnvironmentAndBothBeatThePlatform(t *testing.T) {
 // refused, never reaching the X-BFL-USER branch that is the point of this.
 func TestAKeylessCallSendsNoAuthorizationHeaderAtAll(t *testing.T) {
 	t.Setenv(dataPlaneKeyEnv, "")
+	t.Setenv(dataPlaneURLEnv, "")
 	pc := &preparedClient{router: newRouterClient(nil, "https://router.example", "someone@olares")}
 
 	keyless := dataPlane(pc, "")
@@ -146,4 +150,50 @@ func TestARefusalRouterMadeItselfIsNotBlamedOnTheUpstream(t *testing.T) {
 			t.Errorf("%s: advice points the wrong way with %q:\n%s", tc.name, tc.avoids, err)
 		}
 	}
+}
+
+// Inside an application the edge is never crossed, so without the host's
+// proxy the call would be the application's. A named key still wins: it is an
+// identity of its own and the proxy would strip it.
+func TestAHostProxyCarriesTheCallUnlessAKeyIsNamed(t *testing.T) {
+	var got *http.Request
+	proxy := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		got = r
+		_, _ = w.Write([]byte(`{"data":[]}`))
+	}))
+	defer proxy.Close()
+	t.Setenv(dataPlaneKeyEnv, "")
+	t.Setenv(dataPlaneURLEnv, proxy.URL+"/llm/v1/")
+	session := &http.Client{Transport: stampToken{}}
+	pc := &preparedClient{
+		router: newRouterClient(session, "https://router.example", "someone@olares"),
+		hc:     session,
+	}
+
+	auth := resolveDataPlaneAuth("")
+	if auth.Mode != authHost || auth.Base != proxy.URL+"/llm" {
+		t.Fatalf("the proxy root should resolve to host mode under %s/llm, got %+v", proxy.URL, auth)
+	}
+	var out map[string]any
+	if err := dataPlane(pc, "").doJSON(t.Context(), http.MethodGet, epDataPlaneModels, nil, &out); err != nil {
+		t.Fatalf("call through the proxy: %v", err)
+	}
+	if got == nil || got.URL.Path != "/llm/v1/models" {
+		t.Fatalf("the verb's /v1 path should land under the proxy's /v1, got %v", got)
+	}
+	if v := got.Header.Get("X-Authorization"); v != "" {
+		t.Errorf("the profile's edge token leaked to the host proxy: %q", v)
+	}
+
+	if keyed := resolveDataPlaneAuth("sk-named"); keyed.Mode != authKey {
+		t.Errorf("a named key should still go to Router as that key, got %+v", keyed)
+	}
+}
+
+type stampToken struct{}
+
+func (stampToken) RoundTrip(r *http.Request) (*http.Response, error) {
+	r = r.Clone(r.Context())
+	r.Header.Set("X-Authorization", "profile-token")
+	return http.DefaultTransport.RoundTrip(r)
 }
