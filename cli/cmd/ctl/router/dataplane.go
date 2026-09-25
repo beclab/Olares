@@ -3,6 +3,7 @@ package router
 import (
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -25,13 +26,18 @@ import (
 // platform says is calling. In a pod that is the application; from a laptop it
 // is the person holding the profile.
 //
-// Hence two steps rather than five:
+// Hence three steps rather than five:
 //
 //  1. A key named explicitly — flag, then environment — wins. Someone naming a
 //     credential is not asking to be second-guessed, and a key remains the way
 //     to call with a model allowlist, a budget of its own, or from outside
 //     Olares entirely.
-//  2. Otherwise send nothing, and let the platform say who this is.
+//  2. Otherwise, inside an application that proxies Router for the person
+//     using it, go through that proxy. A command in a pod never crosses the
+//     edge, so the platform would vouch for the application — for a shared
+//     chart, its owner — and the host is the only party that knows who is at
+//     the keyboard. It names its proxy in OLARES_ROUTER_DATA_PLANE_URL.
+//  3. Otherwise send nothing, and let the platform say who this is.
 //
 // What stood here before was a keychain lookup, a probe gated on running inside
 // a container, and — for every laptop, on the first call of any kind — minting
@@ -48,6 +54,10 @@ import (
 // dataPlaneKeyEnv names a key for one run without saving it anywhere.
 const dataPlaneKeyEnv = "OLARES_ROUTER_API_KEY"
 
+// dataPlaneURLEnv is the /v1 root of a host application's Router proxy, set by
+// the host for the commands it runs. Lares sets it to $LARES_LLM_BASE_URL.
+const dataPlaneURLEnv = "OLARES_ROUTER_DATA_PLANE_URL"
+
 // keychainAccountSuffix separates a data-plane key saved by an older build from
 // the profile's own access token, which lives under the bare Olares ID in the
 // same keychain service. Nothing writes this entry now; `key current` reads it
@@ -60,11 +70,15 @@ type authMode string
 const (
 	authPlatform authMode = "platform"
 	authKey      authMode = "key"
+	authHost     authMode = "host"
 )
 
 type dataPlaneAuth struct {
 	Mode authMode
 	Key  string
+	// Base is the host proxy's root with its /v1 removed, so the verbs'
+	// dataPlaneAPI paths resolve under it unchanged.
+	Base string
 }
 
 // dataPlane returns a client for /v1. Choosing the credential reads a flag and
@@ -73,10 +87,19 @@ type dataPlaneAuth struct {
 // at all and the platform vouches for the caller.
 func dataPlane(pc *preparedClient, explicitKey string) *routerClient {
 	auth := resolveDataPlaneAuth(explicitKey)
-	if auth.Mode == authPlatform {
-		return pc.router
+	switch auth.Mode {
+	case authKey:
+		return pc.router.withHeader("Authorization", "Bearer "+auth.Key)
+	case authHost:
+		// The profile's session is for the edge; the host proxy authenticates
+		// the call itself and has no use for the person's Olares token.
+		hc := &http.Client{}
+		if pc.hc != nil {
+			hc.Timeout = pc.hc.Timeout
+		}
+		return newRouterClient(hc, auth.Base, pc.router.olaresID)
 	}
-	return pc.router.withHeader("Authorization", "Bearer "+auth.Key)
+	return pc.router
 }
 
 func resolveDataPlaneAuth(explicitKey string) *dataPlaneAuth {
@@ -85,6 +108,9 @@ func resolveDataPlaneAuth(explicitKey string) *dataPlaneAuth {
 	}
 	if k := strings.TrimSpace(os.Getenv(dataPlaneKeyEnv)); k != "" {
 		return &dataPlaneAuth{Mode: authKey, Key: k}
+	}
+	if base := hostProxyBase(os.Getenv(dataPlaneURLEnv)); base != "" {
+		return &dataPlaneAuth{Mode: authHost, Base: base}
 	}
 	return &dataPlaneAuth{Mode: authPlatform}
 }

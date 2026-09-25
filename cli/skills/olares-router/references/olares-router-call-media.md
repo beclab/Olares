@@ -2,7 +2,7 @@
 
 > **Prerequisite:** [the calling contract](olares-router-calling.md) — the credential, what `--model` takes, and how to read a refusal — holds for every verb here. `music` and `3d` require `--model`; Router keeps no default category for either.
 >
-> **Not from inside an application.** These four verbs are the ones whose result is filed under whoever asked, so calling them from in-cluster is where the wrong caller does visible damage: the generation belongs to the shared chart owner and the person who asked for it cannot find it. Use the host application's in-process base URL and its own skill — see [inside an application](olares-router-calling.md#inside-an-application-router-call-is-the-wrong-caller).
+> **From inside an application, only through its proxy.** These four verbs are the ones whose result is filed under whoever asked, so a call that reaches Router as the application files the generation under the shared chart owner and the person who asked cannot find it. Inside an application that sets `OLARES_ROUTER_DATA_PLANE_URL` the verbs go through its proxy as the person; where it is not set, use the host application's own skill — see [inside an application](olares-router-calling.md#inside-an-application-the-host-says-who-is-calling).
 
 ```
 olares-cli router call image "a red bicycle" --out bike.png
