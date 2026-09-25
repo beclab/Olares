@@ -68,8 +68,6 @@ Mount `.Values.userspace.appCommon` with `permission.appCommon: true` so `/cache
 
 ## Canonical Model Console references
 
-- [README](https://github.com/beclab/model-console#readme) and the [environment template](https://github.com/beclab/model-console/blob/main/deploy/compose/.env.example)
-- [`MODEL_SOURCE` contract](https://github.com/beclab/model-console/blob/main/internal/config/modelsource.go)
-- [model-spec file and `supports_*` keys](https://github.com/beclab/model-console/blob/main/internal/config/modelspec.go), served by [`GET /api/model-spec`](https://github.com/beclab/model-console/blob/main/internal/controlplane/modelspec.go)
-- [`ENGINE_ARGS` contract](https://github.com/beclab/model-console/blob/main/internal/config/engine_args.go)
-- [Kubernetes](https://github.com/beclab/model-console/tree/main/deploy/k8s) and [Compose](https://github.com/beclab/model-console/tree/main/deploy/compose) reference deployments
+- [README](https://github.com/beclab/model-console#readme): responsibilities, the standardized APIs, and `GET /api/model-spec`
+- [Environment template](https://github.com/beclab/model-console/blob/main/deploy/compose/.env.example): the documented variables, including `MODEL_SOURCE`, `ENGINE_ARGS`, and `MODEL_SUPPORTS`
+- [Kubernetes](https://github.com/beclab/model-console/tree/main/deploy/k8s) and [Compose](https://github.com/beclab/model-console/tree/main/deploy/compose) reference deployments, one per engine
