@@ -121,16 +121,14 @@ const (
 // ever be refused reads as a promise, and the caller finds out it was not one
 // after paying for the round trip.
 //
-// Three absences are decisions rather than gaps. An image has no operation,
-// because both routes run an image as generate and nothing else — and therefore
-// no inputs either, since there is no operation for a reference or a mask to
-// belong to. An image also has no count: one generation is one file with one
-// content route, which is why Router refuses more than one output on a
-// persisted image.
+// An image has no count: one generation is one file with one content route,
+// which is why Router refuses more than one output on a persisted image.
+// Prompt-only image generation stays on the released route, while an explicit
+// operation and its image or mask use the canonical route.
 var (
 	imageFields = []string{
-		flagNegative, flagSeed, flagFormat, flagSize, flagAspectRatio,
-		flagQuality, flagProviderOption,
+		flagNegative, flagSeed, flagOperation, flagImage, flagMask, flagFormat,
+		flagSize, flagAspectRatio, flagQuality, flagProviderOption,
 	}
 	videoFields = []string{
 		flagNegative, flagN, flagSeed, flagOperation, flagFormat, flagSize,
