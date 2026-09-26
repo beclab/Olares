@@ -174,6 +174,9 @@ func runKeyLocal(ctx context.Context, f *cmdutil.Factory, forget bool, outputRaw
 	if env := strings.TrimSpace(os.Getenv(dataPlaneKeyEnv)); env != "" {
 		state["env_override"] = dataPlaneKeyEnv
 	}
+	if auth := resolveDataPlaneAuth(""); auth.Mode == authHost {
+		state["host_proxy"] = hostProxyRoot(auth.Base)
+	}
 	if format == FormatJSON {
 		return printJSON(os.Stdout, state)
 	}
@@ -183,11 +186,15 @@ func runKeyLocal(ctx context.Context, f *cmdutil.Factory, forget bool, outputRaw
 func renderKeyLocal(w io.Writer, state map[string]any) error {
 	env, _ := state["env_override"].(string)
 	keyed := state["credential"] == string(authKey)
+	proxy, hosted := state["host_proxy"].(string)
 	t := newTable(w)
 	t.row("PROFILE", fmt.Sprintf("%v", state["profile"]))
-	if keyed {
+	switch {
+	case keyed:
 		t.row("CALLS USE", "the key in "+env)
-	} else {
+	case hosted:
+		t.row("CALLS USE", "the host application's proxy at "+proxy)
+	default:
 		t.row("CALLS USE", "your platform identity, no key")
 	}
 	saved, _ := state["saved"].(bool)
@@ -204,6 +211,11 @@ func renderKeyLocal(w io.Writer, state map[string]any) error {
 	switch {
 	case keyed:
 		_, err := fmt.Fprintf(w, "\n%s is set, so calls present that key. Unset it to call as yourself again.\n", env)
+		return err
+	case hosted:
+		_, err := fmt.Fprintf(w, "\n%s is set by the application this runs in, so calls go as the person "+
+			"using it rather than as the application. Streaming sockets still go to Router directly.\n",
+			dataPlaneURLEnv)
 		return err
 	case saved:
 		_, err := fmt.Fprintln(w, "\nThe saved key is left over from an older olares-cli and is no longer used, "+
