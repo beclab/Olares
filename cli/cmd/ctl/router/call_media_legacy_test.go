@@ -7,16 +7,17 @@ import (
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
-// The two released verbs offer their family's row and nothing else. An image has
-// no operation because both routes run an image as generate; without an
-// operation there is nothing for a reference image or a mask to belong to, so
-// those go with it. A flag that could only ever be refused reads as a promise.
+// Prompt-only images stay on the released route, while explicit image
+// operations have the input flags the canonical route can express.
 func TestImageAndVideoOfferTheirOwnFields(t *testing.T) {
 	cases := map[string]struct{ has, lacks []string }{
 		"image": {
-			has: []string{flagSize, flagAspectRatio, flagQuality, flagFormat, flagSeed, flagNegative},
+			has: []string{
+				flagOperation, flagImage, flagMask, flagSize, flagAspectRatio,
+				flagQuality, flagFormat, flagSeed, flagNegative,
+			},
 			lacks: []string{
-				flagOperation, flagImage, flagMask, flagSource, flagN,
+				flagSource, flagN,
 				flagResolution, flagDuration, flagFPS, flagLyrics, flagFormats,
 			},
 		},
@@ -43,7 +44,7 @@ func TestImageAndVideoOfferTheirOwnFields(t *testing.T) {
 	}
 }
 
-// Image and video stay on the routes they were released on, and that is a
+// Plain image generation and video stay on the routes they were released on, and that is a
 // decision rather than an omission: Router lifts every key those routes take
 // onto the canonical field it means, and the image route additionally answers
 // synchronously for a provider that keeps no generations. Submitting an image on
@@ -56,6 +57,39 @@ func TestImageAndVideoStayOnTheirReleasedRoutes(t *testing.T) {
 		if kind.submitPath == epGenerations {
 			t.Errorf("%s moved to the unified route, which has no synchronous answer", kind.verb)
 		}
+	}
+}
+
+func TestImageEditUsesTheUnifiedLifecycle(t *testing.T) {
+	if imageOperationKind.submitPath != epGenerations {
+		t.Errorf("image edit submits to %s", imageOperationKind.submitPath)
+	}
+	if got := imageOperationKind.get("gen_1"); got != epGeneration("gen_1") {
+		t.Errorf("image edit reads from %s", got)
+	}
+	if got := imageOperationKind.content("gen_1"); got != epGenerationContent("gen_1") {
+		t.Errorf("image edit downloads from %s", got)
+	}
+
+	err := runVerb(t, newCallImageCommand(&cmdutil.Factory{}),
+		"a bicycle", "--image", "data:image/png;base64,QUJD")
+	if err == nil || !strings.Contains(err.Error(), "require --operation edit") {
+		t.Fatalf("image input without an operation: %v", err)
+	}
+}
+
+func TestImageEditBuildsCanonicalRequest(t *testing.T) {
+	cmd, flags := mediaCommand(t, imageFields,
+		"--operation", "edit", "--image", "data:image/png;base64,QUJD",
+		"--mask", "data:image/png;base64,REVG", "--quality", "high",
+	)
+	body, err := flags.canonical(cmd, "OpenAI/gpt-image-1", "make it blue")
+	if err != nil {
+		t.Fatalf("build: %v", err)
+	}
+	if body.Operation != "edit" || body.Inputs == nil || len(body.Inputs.Images) != 1 ||
+		body.Inputs.Mask == "" || body.Output == nil || body.Output.Quality != "high" {
+		t.Fatalf("canonical edit body=%+v", body)
 	}
 }
 

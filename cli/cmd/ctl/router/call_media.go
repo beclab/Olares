@@ -48,10 +48,9 @@ import (
 // to the first on a Router with no persistent media API, where the bytes arrive
 // inline instead. Video has only the asynchronous path.
 //
-// Router also serves /v1/images/edits and /v1/images/variations, and neither has
-// a verb here. Both take an input image and a mask, which is a file-handling
-// surface of its own rather than another flag on this one, and an edit is
-// something people reach for in a picture editor. Left to a direct call.
+// An image edit uses Router's canonical /v1/generations surface. That surface
+// turns data-URL inputs into the multipart upload a cloud provider needs, while
+// handing the same canonical request to a FlowStudio edit workflow.
 
 // generationView is Router's record of one piece of work, and every media
 // family answers with it on all three routes.
@@ -177,8 +176,8 @@ func newCallImageCommand(f *cmdutil.Factory) *cobra.Command {
 	)
 	cmd := &cobra.Command{
 		Use:   "image [prompt…]",
-		Short: "generate an image",
-		Long: `Generate an image from a description.
+		Short: "generate or edit an image",
+		Long: `Generate an image from a description, or edit an existing image.
 
 The image is written to --out, or to a file named after the generation in the
 current directory. What comes back is a file rather than a URL: Router holds the
@@ -196,17 +195,24 @@ when: after that the id is gone along with the image.
 Image generation needs a model whose mode is image_generation; "olares-cli router
 list --mode image_generation" shows the ones that qualify.
 
+Image editing uses --operation edit with one or more --image inputs and an
+optional --mask. It runs through Router's canonical generation lifecycle, so
+the same command works with a FlowStudio edit workflow and a cloud model whose
+catalog declares the edit operation. When collecting a no-wait edit later,
+repeat --operation edit with --id so the canonical generation route is used.
+
 Examples:
   olares-cli router call image "a red bicycle in the rain"
   olares-cli router call image "a logo for a coffee shop" --out logo.png
   olares-cli router call image "a wide landscape" --size 1792x1024
   olares-cli router call image "a portrait" --aspect-ratio 2:3 --quality high --seed 7
+  olares-cli router call image "make the bicycle blue" --model OpenAI/gpt-image-1 --operation edit --image bike.png --out blue.png
   olares-cli router call image "slow one" --no-wait
   olares-cli router call image --id gen_01H…
 `,
 		Args: cobra.ArbitraryArgs,
 		RunE: func(c *cobra.Command, args []string) error {
-			return runLegacyMedia(c, f, imageKind, legacyVerb{
+			return runImageMedia(c, f, legacyVerb{
 				model: callModel(model, categoryImage), id: id, out: out, outputID: outputID,
 				wait: !noWait, timeout: timeout, apiKey: apiKey, format: output,
 				flags: &flags, args: args,
@@ -362,6 +368,11 @@ var imageKind = mediaKind{
 	get: epImageGeneration, content: epImageGenerationContent, defaultExt: ".png",
 }
 
+var imageOperationKind = mediaKind{
+	noun: "image", verb: "image edit", submitPath: epGenerations,
+	get: epGeneration, content: epGenerationContent, defaultExt: ".png",
+}
+
 var videoKind = mediaKind{
 	noun: "video", verb: "video", submitPath: epVideos,
 	get: epVideo, content: epVideoContent, defaultExt: ".mp4",
@@ -390,6 +401,43 @@ var (
 
 func runCallImage(ctx context.Context, f *cmdutil.Factory, opts mediaOptions) error {
 	return runMedia(ctx, f, imageKind, opts)
+}
+
+// runImageMedia keeps prompt-only generation on the released image route and
+// moves explicit image operations onto the canonical lifecycle. The latter is
+// what can express inputs and lets Router select either FlowStudio's workflow
+// adapter or a cloud provider's multipart edit endpoint.
+func runImageMedia(c *cobra.Command, f *cmdutil.Factory, verb legacyVerb) error {
+	operation := strings.TrimSpace(verb.flags.operation)
+	canonical := operation != "" && operation != "generate"
+	hasImage := c.Flags().Changed(flagImage) || c.Flags().Changed(flagMask)
+	if hasImage && !canonical {
+		return fmt.Errorf("--image and --mask require --operation edit (or another declared image operation)")
+	}
+	if !canonical {
+		return runLegacyMedia(c, f, imageKind, verb)
+	}
+	opts := mediaOptions{
+		Out: verb.out, OutputID: verb.outputID, Wait: verb.wait, Timeout: verb.timeout,
+		APIKey: verb.apiKey, OutputIn: verb.format, ID: strings.TrimSpace(verb.id),
+	}
+	if opts.ID != "" {
+		if len(verb.args) > 0 {
+			return fmt.Errorf("--id collects a generation that already exists; it takes no prompt")
+		}
+		return runMedia(c.Context(), f, imageOperationKind, opts)
+	}
+	prompt, err := resolvePrompt(c, verb.flags, verb.args,
+		"give --image for the picture to edit")
+	if err != nil {
+		return err
+	}
+	body, err := verb.flags.canonical(c, verb.model, prompt)
+	if err != nil {
+		return err
+	}
+	opts.Body = body
+	return runMedia(c.Context(), f, imageOperationKind, opts)
 }
 
 func runCallVideo(ctx context.Context, f *cmdutil.Factory, opts mediaOptions) error {

@@ -20,6 +20,7 @@ const liveModelEntry = `{
   "created": 1755600000,
   "owned_by": "Olares",
   "qualified_id": "Olares/SenseVoiceSmall",
+  "creative": {"media":"image","operations":["edit"]},
   "mode": "audio",
   "supports": ["stt", "vad"],
   "readiness": "ready"
@@ -36,9 +37,12 @@ func TestModelObjectDecodesEveryFieldOnTheWire(t *testing.T) {
 		Created:     1755600000,
 		OwnedBy:     "Olares",
 		QualifiedID: "Olares/SenseVoiceSmall",
-		Mode:        "audio",
-		Supports:    []string{"stt", "vad"},
-		Readiness:   "ready",
+		Creative: &creativeModelProjection{
+			Media: "image", Operations: []string{"edit"},
+		},
+		Mode:      "audio",
+		Supports:  []string{"stt", "vad"},
+		Readiness: "ready",
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("decoded entry:\n got %+v\nwant %+v", got, want)
