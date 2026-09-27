@@ -71,6 +71,10 @@ type modelObject struct {
 	// model whose vocabulary follows from its mode, and such a model takes
 	// the mode's full field set rather than none of it.
 	CanonicalFields []string `json:"canonical_fields,omitempty"`
+	// Creative is the media operation declaration Router enforces before a
+	// billable request. It is separate from the HTTP endpoint Operations field
+	// below.
+	Creative *creativeModelProjection `json:"creative,omitempty"`
 	// Mode is the endpoint family: chat, embedding, tts, ocr, image and the
 	// rest. The list mixes them, and the qualified ids are nothing like the
 	// "tts-1" a client pattern-matches against, so this is the only reliable
@@ -119,6 +123,11 @@ type modelObject struct {
 	// first also means "do not expect one".
 	Authoritative   *bool `json:"authoritative,omitempty"`
 	CapabilityStale bool  `json:"capability_stale,omitempty"`
+}
+
+type creativeModelProjection struct {
+	Media      string   `json:"media"`
+	Operations []string `json:"operations"`
 }
 
 // modelAvailability is why a model cannot be called, when it cannot. Readiness
