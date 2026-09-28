@@ -7,6 +7,9 @@ the same JSON object. Existing `ssid` and `password` requests remain valid for
 unambiguous personal networks. The server resolves authentication from the AP
 scan; hidden networks absent from the scan are not supported by this version.
 
+`POST /command/connect-wifi` does not require `X-Signature` or an access token.
+Server readiness, operation-state checks, and request validation still apply.
+
 Fields:
 
 - `ssid`: required, 1–32 bytes.

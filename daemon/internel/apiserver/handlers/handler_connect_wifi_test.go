@@ -2,10 +2,12 @@ package handlers
 
 import (
 	"context"
+	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"github.com/beclab/Olares/daemon/pkg/cluster/state"
 	"github.com/beclab/Olares/daemon/pkg/commands"
 	connectwifi "github.com/beclab/Olares/daemon/pkg/commands/connect_wifi"
 	"github.com/gofiber/fiber/v2"
@@ -42,5 +44,33 @@ func TestConnectWifiForwardsEnterpriseAndLegacy(t *testing.T) {
 		if strings.Contains(body, "alice") && (cmd.request.Username != "alice" || cmd.request.Enterprise.Phase2Auth != "pap") {
 			t.Fatal("enterprise parameters not forwarded")
 		}
+	}
+}
+
+// Exercise the registered route so a signature middleware regression cannot be
+// hidden by calling PostConnectWifi directly. Malformed JSON avoids network work.
+func TestConnectWifiRegisteredRouteDoesNotRequireSignature(t *testing.T) {
+	previous := state.CurrentState
+	t.Cleanup(func() { state.CurrentState = previous })
+	state.CurrentState.TerminusdState = state.Running
+	state.CurrentState.TerminusState = state.NotInstalled
+	for _, headers := range []map[string]string{nil, {"X-Signature": "unused"}} {
+		resp, body := callRegisteredMethod(t, http.MethodPost, "/command/connect-wifi", "{", headers)
+		resp.Body.Close()
+		if resp.StatusCode != http.StatusBadRequest || !strings.Contains(string(body), "unable to parse body") {
+			t.Fatalf("unsigned Wi-Fi request did not reach body validation: status=%d body=%s", resp.StatusCode, body)
+		}
+	}
+	// Removing the Wi-Fi gate must not affect other signed commands.
+	resp, body := callRegisteredMethod(t, http.MethodPost, "/command/change-host", "{", nil)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusForbidden || !strings.Contains(string(body), "request is forbidden") {
+		t.Fatalf("change-host signature gate changed: status=%d body=%s", resp.StatusCode, body)
+	}
+	state.CurrentState.TerminusdState = ""
+	resp, body = callRegisteredMethod(t, http.MethodPost, "/command/connect-wifi", "{", nil)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusForbidden || !strings.Contains(string(body), "server is not running") {
+		t.Fatalf("Wi-Fi server readiness gate changed: status=%d body=%s", resp.StatusCode, body)
 	}
 }
