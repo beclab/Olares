@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Diagnose and collect information when LarePass shows "System error" in the System section.
+description: Collect logs and get help when LarePass shows "System error", with options for your Olares version and optional pod diagnostics.
 head:
   - - meta
     - name: keywords
@@ -9,10 +9,10 @@ head:
 
 # "System error" in LarePass
 
-Use this guide when the **System** section in LarePass displays "System error". There can be multiple underlying causes for this message, so follow the steps below to collect diagnostic information and then share the results with the Olares team.
+Use this guide when the **System** section in LarePass displays "System error". Collect logs using the option for your Olares version and contact the Olares team. For further investigation, follow the advanced diagnostic steps below.
 
-:::info
-This guide uses Olares One as an example. If you installed Olares on your own hardware, the diagnostic steps are the same, but the way you access the terminal might differ.
+:::warning Do not uninstall LarePass or Olares OS
+Do not uninstall LarePass, or open the **System error** page to uninstall Olares OS or restore factory settings. Uninstalling Olares OS or restoring factory settings can erase your data.
 :::
 
 ![System error in LarePass](/images/manual/help/ts-sys-err.png#bordered){width=90%}
@@ -24,13 +24,29 @@ This guide uses Olares One as an example. If you installed Olares on your own ha
 
 ## Cause
 
-The message means LarePass could not obtain a healthy system state. One or more system pods might be unhealthy, but the message alone does not identify the failing component or root cause.
+The message means LarePass could not obtain a healthy system state. One or more system pods might be unhealthy. System logs and pod events help identify the cause.
 
 ## Solution
 
-Follow the steps below to access the device terminal, identify any pod that is not running normally, and inspect only the event information needed to narrow down the cause.
+### Collect logs and contact support
 
-### Step 1: Try to access Olares desktop
+On Olares 1.12.7 or later, use the Ticket app to submit a support ticket. Under **System logs**, click **Collect logs** to collect and attach logs automatically. See [Submit via the Ticket app](request-technical-support.md#submit-via-the-ticket-app) for prerequisites and steps.
+
+On these versions, if the Ticket app is unavailable but you can access the device terminal, use the command provided in Olares Space to collect and upload logs and create a ticket automatically. See [Create a ticket automatically via Olares CLI](../space/tickets.md#create-a-ticket-automatically-via-olares-cli).
+
+On versions earlier than 1.12.7, [export logs from Settings](../olares/settings/developer.md#export-system-logs) or collect them in the device terminal with [`olares-cli logs`](../../developer/install/cli/logs.md). Send the log archive to the Olares team at [hi@olares.com](mailto:hi@olares.com).
+
+Along with the logs, include a screenshot of **System error**, the time it appeared and your time zone, your Olares version, and any recent update or restart.
+
+### Advanced diagnostics (optional)
+
+Use the device terminal to check system pod status and inspect error events. These details help the Olares team locate the failing component.
+
+:::info
+This guide uses Olares One as an example. If you installed Olares on your own hardware, the diagnostic steps are the same, but the way you access the terminal might differ.
+:::
+
+#### Step 1: Try to access Olares desktop
 
 If you can still access the Olares desktop, open Control Hub and use its built-in terminal.
 
@@ -46,7 +62,7 @@ If you can still access the Olares desktop, open Control Hub and use its built-i
 
 If you can access the terminal successfully, skip to [Step 4](#step-4-check-system-pod-status).
 
-### Step 2: Connect via SSH
+#### Step 2: Connect via SSH
 
 If you cannot access the Olares desktop, try connecting via SSH.
 
@@ -83,7 +99,7 @@ Your computer and Olares One should be on the same local network.
 
 If the connection is successful, skip to [Step 4](#step-4-check-system-pod-status).
 
-### Step 3: Log in locally
+#### Step 3: Log in locally
 
 If SSH is also unavailable, log in directly on the device using a monitor and keyboard.
 
@@ -96,7 +112,7 @@ If SSH is also unavailable, log in directly on the device using a monitor and ke
 2. Type the username `olares` and press **Enter**.
 3. Enter the SSH password from [Step 2](#step-2-connect-via-ssh) and press **Enter**.
 
-### Step 4: Check system pod status
+#### Step 4: Check system pod status
 
 1. Run the following command to get the status of all pods across all namespaces:
 
@@ -104,15 +120,11 @@ If SSH is also unavailable, log in directly on the device using a monitor and ke
     kubectl get pods -A
     ```
 
-2. Check **STATUS** and **RESTARTS**. Look for states such as `CrashLoopBackOff`, `Error`, `ImagePullBackOff`, or a pod that remains `Pending`. A job in `Completed` state is not an error by itself.
+2. Check **STATUS** and **RESTARTS**. Look for states such as `CrashLoopBackOff`, `Error`, `ImagePullBackOff`, or a pod that remains `Pending`. A job in `Completed` state has finished successfully.
 3. Note the **NAMESPACE** and **NAME** of each pod that shows an error or a restart count that keeps increasing. If none do, skip to [Step 6](#step-6-record-the-result-and-collect-logs).
     ![Locate problematic pod](/images/manual/help/ts-sys-err-pod-crash.png#bordered){width=90%}
 
-### Step 5: Inspect the pod error
-
-:::warning Review output before sharing it
-`kubectl describe` can include IP addresses, node names, Olares IDs, domains, and configuration values. Do not paste its complete output into a public issue.
-:::
+#### Step 5: Inspect the pod error
 
 1. Run the following command, replacing `<namespace>` and `<pod-name>` with the values you noted in the previous step:
 
@@ -129,15 +141,13 @@ If SSH is also unavailable, log in directly on the device using a monitor and ke
 2. Scroll down to the **Events** section to find the detailed error message.
     ![Pod event details](/images/manual/help/ts-sys-err-pod-event-detail.png#bordered){width=90%}
 
-### Step 6: Record the result and collect logs
+#### Step 6: Share the diagnostic results {#step-6-record-the-result-and-collect-logs}
 
-Record the following minimum information:
+Share the following details with the Olares team:
 
 - The affected pod's **NAMESPACE**, **NAME**, **STATUS**, and **RESTARTS** values
 - The error lines in the **Events** section
 - The time the error appeared and your time zone
 - Your installed Olares version and whether the error followed an update or restart
 
-If no pod shows an error and restart counts are not increasing, record that result instead. It means the message cannot be explained by pod status alone and needs a different diagnostic branch.
-
-For a reproducible software bug, you can open a [GitHub Issue](https://github.com/beclab/Olares/issues/new) with the symptom and the limited fields above after redacting IDs, hostnames, IP addresses, and domains. Follow [Collect diagnostic information](../collect-diagnostic-information.md) to create the full log archive, and send it only through the private channel described there.
+If all pods appear healthy and restart counts are stable, include that observation to help the Olares team narrow down the cause.
