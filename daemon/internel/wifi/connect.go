@@ -189,6 +189,9 @@ func existingProfile(ctx context.Context, b nmBus, r ConnectRequest, iface strin
 		if !profileMatches(original, r, iface) {
 			continue
 		}
+		if err := normalizeIPv6Settings(original); err != nil {
+			return "", nil, err
+		}
 		// GetSettings intentionally omits secrets. Fetch them before modifying so
 		// rollback cannot silently erase a saved password.
 		for _, section := range []string{"802-11-wireless-security", "802-1x"} {
