@@ -300,7 +300,7 @@ OpenClaw 需要较大的"上下文窗口"（即 AI 的短期记忆）来处理�
 1. [与 Discord 集成](openclaw-integration.md)，实现与助手的远程对话。
 2. [启用网页搜索](openclaw-web-access.md)，使助手能够访问实时互联网信息。
 3. [安装技能和插件](openclaw-skills.md)，进一步扩展助手的能力。
-4. [从 Android 和 iOS 连接](openclaw-mobile.md)，通过 LarePass VPN 扫码或手动配对。
+4. [使用 Openclaw 移动客户端连接](openclaw-mobile.md)，通过 LarePass VPN 扫码或手动配对。
 
 ## 故障排除和常见问题
 
