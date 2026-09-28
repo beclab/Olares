@@ -1,6 +1,6 @@
 ---
 outline: [2,3]
-description: 当 LarePass 显示“系统错误”时，通过 Ticket 或设置收集日志并获取帮助，也可使用终端进一步检查系统 Pod。
+description: 当 LarePass 显示“系统错误”时，通过 Ticket 收集日志并获取帮助，也可使用终端进一步检查系统 Pod。
 head:
   - - meta
     - name: keywords
@@ -11,7 +11,7 @@ head:
 当 LarePass 移动端的**系统**部分显示“系统错误”时，参考本指南进行排查。这条提示可能有多种原因。你可以先收集日志并联系 Olares 团队，也可以通过下方的进阶排查进一步定位原因。
 
 :::warning 不要卸载 LarePass 或 Olares OS
-不要卸载 LarePass，也不要进入“系统错误”页面卸载 Olares OS 或恢复出厂设置。出现这条提示不代表需要重装。请保留 LarePass，以便访问账户和继续排查；卸载 Olares OS 或恢复出厂设置可能清除数据。
+不要卸载 LarePass，也不要进入“系统错误”页面卸载 Olares OS 或恢复出厂设置。出现这条提示不代表需要重装。请保留 LarePass，以便访问账户和继续排查。卸载 Olares OS 或恢复出厂设置可能清除数据。
 :::
 
  ![系统错误](/images/zh/manual/help/ts-sys-err.png#bordered){width=90%}
@@ -29,12 +29,9 @@ head:
 
 ### 收集日志并获取帮助
 
-无需先运行终端命令，可以根据当前能访问的功能选择：
+无需先运行终端命令，就可以获取帮助。Olares 1.12.7 及以上版本可通过 Ticket 应用提交支持工单。在**系统日志**中点击**采集日志**，自动收集并附加日志。前提条件和操作步骤见[通过 Ticket 应用提交](request-technical-support.md#通过-ticket-应用提交)。
 
-- **Ticket 应用（Olares 1.12.7 及以上）**：如果可以打开 Ticket，在**系统日志**中点击**采集日志**，自动收集并附加到支持工单。前提条件和操作步骤见[通过 Ticket 应用提交](request-technical-support.md#通过-ticket-应用提交)。
-- **设置**：如果可以打开 Olares 设置，通过**高级** > **导出系统日志**导出日志，再附加到支持工单。操作步骤见[导出系统日志](../olares/settings/developer.md#导出系统日志)。
-
-如果两者都无法使用，可以[通过 Olares Space 提交工单](request-technical-support.md#通过-olares-space-提交)，暂时无法收集日志也可以先描述问题。请提供“系统错误”截图、出现时间和时区、Olares 版本（如已知），并说明是否在更新或重启后出现。完整日志仅通过非公开支持渠道提供，不要上传到公开的 GitHub Issue。
+如果无法使用 Ticket 应用，可以[通过 Olares Space 提交工单](request-technical-support.md#通过-olares-space-提交)，暂时无法收集日志也可以先描述问题。请提供“系统错误”截图、出现时间和时区、Olares 版本（如已知），并说明是否在更新或重启后出现。完整日志仅通过非公开支持渠道提供，不要上传到公开的 GitHub Issue。
 
 ### 进阶排查（可选）
 
@@ -151,6 +148,6 @@ head:
 
 如果没有 Pod 显示错误，且重启次数没有持续增加，也请记录这一结果。这表示仅凭 Pod 状态无法解释该提示，需要转到其他诊断方向。
 
-将排查结果补充到支持工单中。如果仍需日志压缩包，但无法使用 Ticket 或设置，请参考[收集诊断信息](../collect-diagnostic-information.md)，通过终端收集日志。
+将排查结果补充到支持工单中。
 
 如确认是可复现的软件缺陷，可以提交 [GitHub Issue](https://github.com/beclab/Olares/issues/new)。公开内容只包含上述有限信息，并移除 ID、主机名、IP 地址和域名。完整日志压缩包仅通过非公开支持工单提供。

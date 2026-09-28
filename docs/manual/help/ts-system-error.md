@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Get help when LarePass shows "System error", collect logs through Ticket or Settings, and optionally check system pods.
+description: Get help when LarePass shows "System error", collect logs through Ticket, and optionally check system pods.
 head:
   - - meta
     - name: keywords
@@ -12,7 +12,7 @@ head:
 Use this guide when the **System** section in LarePass displays "System error". The message can have several causes. Start by collecting logs for the Olares team, or use the optional terminal checks below to narrow down the cause.
 
 :::warning Do not uninstall LarePass or Olares OS
-Do not uninstall LarePass, or open the **System error** page to uninstall Olares OS or restore factory settings. This error alone does not mean you need to reinstall. Keep LarePass available for account access and troubleshooting; uninstalling Olares OS or restoring factory settings can erase your data.
+Do not uninstall LarePass, or open the **System error** page to uninstall Olares OS or restore factory settings. This error alone does not mean you need to reinstall. Keep LarePass available for account access and troubleshooting. Uninstalling Olares OS or restoring factory settings can erase your data.
 :::
 
 ![System error in LarePass](/images/manual/help/ts-sys-err.png#bordered){width=90%}
@@ -30,12 +30,9 @@ The message means LarePass could not obtain a healthy system state. One or more 
 
 ### Collect logs and contact support
 
-You do not need to run terminal commands before asking for help. Choose an available option:
+You do not need to run terminal commands before asking for help. On Olares 1.12.7 or later, use the Ticket app to submit a support ticket. Under **System logs**, click **Collect logs** to collect and attach logs automatically. See [Submit via the Ticket app](request-technical-support.md#submit-via-the-ticket-app) for prerequisites and steps.
 
-- **Ticket app (Olares 1.12.7 or later)**: If the app is accessible, use **Collect logs** under **System logs** to collect and attach logs to your support ticket. See [Submit via the Ticket app](request-technical-support.md#submit-via-the-ticket-app) for prerequisites and steps.
-- **Settings**: If Olares Settings is accessible, export logs from **Advanced** > **Export system logs** and attach the archive to a support ticket. See [Export system logs](../olares/settings/developer.md#export-system-logs).
-
-If neither is accessible, [submit a ticket through Olares Space](request-technical-support.md#submit-via-olares-space) and describe the issue, even if you cannot collect logs yet. Include a screenshot of **System error**, when it appeared and your time zone, your Olares version if known, and whether it followed an update or restart. Share full logs only through a private support channel, not a public GitHub issue.
+If you cannot use the Ticket app, [submit a ticket through Olares Space](request-technical-support.md#submit-via-olares-space) and describe the issue, even if you cannot collect logs yet. Include a screenshot of **System error**, when it appeared and your time zone, your Olares version if known, and whether it followed an update or restart. Share full logs only through a private support channel, not a public GitHub issue.
 
 ### Advanced diagnostics (optional)
 
@@ -155,6 +152,6 @@ Record the following minimum information:
 
 If no pod shows an error and restart counts are not increasing, record that result instead. It means the message cannot be explained by pod status alone and needs a different diagnostic branch.
 
-Add the results to your support ticket. If you still need a log archive and cannot use Ticket or Settings, follow [Collect diagnostic information](../collect-diagnostic-information.md) to collect it from the terminal.
+Add the results to your support ticket.
 
 For a reproducible software bug, you can open a [GitHub Issue](https://github.com/beclab/Olares/issues/new) with the symptom and the limited fields above after redacting IDs, hostnames, IP addresses, and domains. Keep the full log archive in the private support ticket.
