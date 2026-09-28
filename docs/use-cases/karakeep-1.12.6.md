@@ -148,7 +148,7 @@ For Gemma 4 26B (Ollama):
 
    - **OLLAMA_BASE_URL**: The Base URL copied from the Gemma 4 26B Model Console.
    - **INFERENCE_TEXT_MODEL**: The Model name copied from the Model Console. In this example, it is `gemma4:26b`.
-   - **INFERENCE_IMAGE_MODEL** (optional): To tag images, install [Ollama](ollama.md), pull a vision model such as `llava`, and enter its model name.
+   - **INFERENCE_IMAGE_MODEL** (optional): To tag images, enter the name of a vision-capable model available at the same **OLLAMA_BASE_URL**.
 
 3. Click **Apply**, and wait for Karakeep to restart.
 
@@ -245,5 +245,5 @@ Some failures are caused by restrictions on the source website. In these cases, 
 ## Learn more
 
 - [Karakeep documentation](https://docs.karakeep.app/): Official feature reference, API documentation, and third-party client integrations.
-- [Download and run local AI models via Ollama](ollama.md): Install Ollama to host a vision model for image tagging.
+- [Ollama Engine Base](llm-base-apps-1.12.6.md): Deploy Ollama model instances, including vision-capable models.
 - [Set up Open WebUI for local AI chat](openwebui-1.12.6.md): Reference workflow for shared model endpoints on Olares.

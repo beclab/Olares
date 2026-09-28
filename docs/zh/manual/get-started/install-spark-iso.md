@@ -22,7 +22,7 @@ head:
 
 ## 制作启动盘
 
-1. 下载[适用于 DGX Spark 的官方 Olares ISO 镜像](https://cdn.olares.cn/spark/olares-v1.12.6-arm64.iso)。
+1. 下载[适用于 DGX Spark 的官方 Olares ISO 镜像](https://cdn.olares.cn/spark/olares-v1.12.7-arm64.iso)。
 2. 下载并安装 [**Balena Etcher**](https://etcher.balena.io/) 工具。
 3. 将 U 盘插入电脑。
 4. 打开 Balena Etcher，依次选择：

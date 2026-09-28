@@ -464,6 +464,6 @@ If the error message lists supported voice IDs, update the speaker profile with 
 
 ## Learn more
 
-- [Ollama](ollama.md): Download and run local language models on Olares.
+- [Run local models with Engine Base apps](llm-base-apps.md): Deploy models with Ollama and other inference engines.
 - [Speaches](speaches.md): Set up local speech-to-text and text-to-speech services.
 - [Manage accelerator resources](/manual/olares/settings/gpu-resource.md): Allocate accelerator resources for local AI apps.

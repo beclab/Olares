@@ -24,7 +24,7 @@ This guide uses Ollama as the model provider and SearXNG as the search backend.
 ## Prerequisites
 
 Before you begin, make sure:
-- [Ollama is installed](ollama.md) and running in your Olares environment.
+- An existing standalone Ollama installation running on Olares. This section applies to existing installations. For new deployments, see [Ollama Engine Base](llm-base-apps-1.12.6.md).
 - At least one chat model is installed in Ollama. An embedding model is optional, since Vane ships with built-in ones.
 
 ## Install SearXNG
@@ -65,5 +65,5 @@ Try a search to test your new private search environment.
 
 ## Learn more
 
-- [Ollama](ollama.md): Run local LLMs on Olares as Vane's model backend.
+- [Ollama Engine Base](llm-base-apps-1.12.6.md): Deploy new Ollama model instances on Olares.
 - [Vane on GitHub](https://github.com/ItzCrazyKns/Vane): Upstream project README, architecture notes, and community Discord.

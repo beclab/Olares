@@ -21,12 +21,12 @@ This ISO is for self-hosted x86-64 hardware. For Olares One, follow the [Olares 
 - **Processor**: Intel or AMD x86-64. ARM is not supported.
 <!--@include: ./reusables.md#larepass-prerequisite-->
 - **Network**: A wired LAN connection.
-- **USB flash drive**: At least 8 GB of capacity.
+- **USB flash drive**: At least 16 GB of capacity.
 - **Setup computer**: A Windows, macOS, or Linux computer for creating the bootable USB drive.
 
 ## Create a bootable USB drive
 
-1. Download the [latest Olares ISO image for self-hosted hardware](https://cdn.olares.com/olares-v1.12.6-amd64.iso).
+1. Download the [latest Olares ISO image for self-hosted hardware](https://cdn.olares.com/olares-v1.12.7-amd64.iso).
 2. Download and install [**Balena Etcher**](https://etcher.balena.io/).
 3. Insert the USB flash drive into your computer.
 4. Launch Etcher and follow these steps:

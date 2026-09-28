@@ -41,7 +41,7 @@ To use the GPU within Olares on PVE, you must configure GPU passthrough first. R
 <!--@include: ./reusables.md#larepass-prerequisite-->
 
 ## Download Olares ISO image
-Download [the latest official Olares ISO image](https://cdn.olares.com/olares-v1.12.6-amd64.iso).
+Download [the latest official Olares ISO image](https://cdn.olares.com/olares-v1.12.7-amd64.iso).
 
 ## Configure VM in PVE
 

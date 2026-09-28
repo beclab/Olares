@@ -35,7 +35,7 @@ Proxmox 虚拟环境（PVE）中的 GPU 直通允许虚拟机（VM）直接访�
 - **内存**：推荐 16 GB 及以上
 - **存储**：不少于 200 GB 的 SSD 可用磁盘空间（HDD 可能导致安装失败）
 - **PVE 版本**：8.3.2
-- **Olares ISO 镜像**：[官方镜像](https://cdn.olares.cn/olares-v1.12.6-amd64.iso)
+- **Olares ISO 镜像**：[官方镜像](https://cdn.olares.cn/olares-v1.12.7-amd64.iso)
 
 ## 在 PVE 中配置 GPU 直通
 

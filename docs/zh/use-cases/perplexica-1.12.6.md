@@ -29,7 +29,7 @@ Vane（前身为 Perplexica）是一款开源的 AI 驱动问答引擎。它将�
 ## 前提条件
 
 开始前，请确保：
-- [Ollama 已安装](ollama.md) 并在你的 Olares 环境中运行。
+- Olares 上已有正在运行的独立 Ollama 应用。本节适用于已有安装，新部署请参阅 [Ollama Engine Base](llm-base-apps-1.12.6.md)。
 - Ollama 中已安装至少一个聊天模型。嵌入模型为可选项，因为 Vane 内置了嵌入模型。
 
 ## 安装 SearXNG
@@ -70,5 +70,5 @@ SearXNG 是一款注重隐私的元搜索引擎，它聚合多个搜索引擎的
 
 ## 了解更多
 
-- [Ollama](ollama.md)：在 Olares 上运行本地 LLM，作为 Vane 的模型后端。
+- [Ollama Engine Base](llm-base-apps-1.12.6.md)：在 Olares 上部署新的 Ollama 模型实例。
 - [Vane on GitHub](https://github.com/ItzCrazyKns/Vane)：上游项目 README、架构说明及社区 Discord。

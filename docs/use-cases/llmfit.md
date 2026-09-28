@@ -62,5 +62,5 @@ If you prefer the terminal-based TUI:
 
 ## Learn more
 
-- [Download and run local AI models via Ollama](ollama.md)
+- [Run local models with Engine Base apps](llm-base-apps.md): Deploy models with Ollama and other inference engines.
 - [Set up Open WebUI](openwebui.md)

@@ -21,12 +21,12 @@ head:
 - **处理器**：Intel 或 AMD x86-64，不支持 ARM。
 <!--@include: ./reusables.md#larepass-prerequisite-->
 - **网络**：有线局域网连接。
-- **U 盘**：容量至少为 8 GB。
+- **U 盘**：容量至少为 16 GB。
 - **操作电脑**：一台用于制作启动盘的 Windows、macOS 或 Linux 电脑。
 
 ## 制作启动盘
 
-1. 下载[适用于自托管硬件的最新 Olares ISO 镜像](https://cdn.olares.cn/olares-v1.12.6-amd64.iso)。
+1. 下载[适用于自托管硬件的最新 Olares ISO 镜像](https://cdn.olares.cn/olares-v1.12.7-amd64.iso)。
 2. 下载并安装 [**Balena Etcher**](https://etcher.balena.io/) 工具。
 3. 将 U 盘插入电脑。
 4. 打开 Etcher，依次选择：
