@@ -174,6 +174,10 @@ export const oneSidebar: DefaultTheme.Sidebar = {
               {
                 text: "Install Ubuntu Desktop on Olares One",
                 link: "/one/install-ubuntu-desktop",
+              },
+              {
+                text: "Set up Wake-on-LAN",
+                link: "/one/wake-on-lan",
               }
             ]
         },                
