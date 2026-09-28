@@ -34,6 +34,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   collapsed: true,
                   items: [
                     {
+                      text: "Connect from Android and iOS",
+                      link: "/use-cases/openclaw-mobile",
+                    },
+                    {
                       text: "Integrate with channels",
                       items: [
                         {

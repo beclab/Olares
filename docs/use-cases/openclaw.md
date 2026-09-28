@@ -290,6 +290,7 @@ This process establishes the agent's identity, behavioral boundaries, and long-t
 1. [Integrate with Discord](openclaw-integration.md) to chat with your agent remotely.
 2. [Enable web search](openclaw-web-access.md) to give your agent access to the live internet information.
 3. [Install skills and plugins](openclaw-skills.md) to enhance your agent's capabilities.
+4. [Connect from Android and iOS](openclaw-mobile.md) using QR or manual pairing over LarePass VPN.
 
 ## Troubleshooting and FAQs
 

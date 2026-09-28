@@ -34,6 +34,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   collapsed: true,
                   items: [
                     {
+                      text: "从 Android 和 iOS 连接",
+                      link: "/zh/use-cases/openclaw-mobile",
+                    },
+                    {
                       text: "集成聊天应用",
                       items: [
                         {
