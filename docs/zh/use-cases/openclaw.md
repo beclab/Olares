@@ -132,6 +132,12 @@ OpenClaw 需要较大的"上下文窗口"（即 AI 的短期记忆）来处理�
 
     完成安装向导后，OpenClaw 会自动打开终端用户界面（TUI）。
 
+    :::tip 向导自动打开的 TUI 提示 HTTP 403
+    OpenClaw 2026.9.6 的向导可能使用容器的 LAN 地址打开 TUI。在 Olares 的代理配置下，这条连接会触发 `proxy_attribution_required`，即使模型配置正确也会出现此错误。
+
+    输入 `/quit` 退出该 TUI，然后在同一个 OpenClaw CLI 终端运行 `openclaw tui`。确认顶部显示 `ws://127.0.0.1:18789`。本地连接会使用现有配置和凭据。对于向导路径上的这一特定错误，无需添加 `gateway.remote.edgeAuth`，也无需修改手机使用的 Gateway URL。
+    :::
+
     ![OpenClaw TUI after setup](/images/manual/use-cases/router-client-connect-openclaw.png#bordered)
 
 4. 输入 `/quit` 并按 **Enter** 退出。
