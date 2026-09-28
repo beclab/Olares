@@ -165,11 +165,11 @@ Olares 提供四个引擎基座应用，每个基于不同的推理引擎构建�
 
 在 Olares 1.12.7 及更高版本中，客户端通过 Router 连接模型实例。Router 提供客户端使用的地址、模型名称和访问控制。
 
-1. 从 Launchpad 打开 Router，在 **LLM** 中找到聊天模型。发送请求前，确认状态为 **Callable**；如果不可用，查看状态下方显示的原因。
+1. 从 Launchpad 打开 Router，在 **LLM** 中找到聊天模型。发送请求前，确认状态为 **Callable**。如果不可用，查看状态下方显示的原因。
 2. 在 **Default models** 中将该实例设为默认聊天模型。应用教程使用 Qwen3.8-27B (llama.cpp)，你也可以选择在本教程中创建的聊天模型实例。
 3. 返回模型所在行，点击 **View connection example**。对于安装在 Olares 中的客户端，选择 **Apps in Olares**，然后复制 **Base URL**，保留 `/v1` 后缀。
 
-   ![复制 Router 连接信息](/images/manual/use-cases/router-how-to-call-model.png#bordered)
+   <!-- ![复制 Router 连接信息](/images/manual/use-cases/router-how-to-call-model.png#bordered) -->
 
 4. 按照[将 OpenCode 连接到自定义提供方](opencode.md#连接到自定义提供方)操作，使用 Router 的 Base URL，并手动添加 `default-chat` 作为模型 ID。如果希望客户端始终使用该实例，不随默认模型更改，请改用 Router 中的完整**模型名称**。
 5. 在 OpenCode 中发送一条简短消息，然后在 Router 的 **Usage** 中确认请求使用了预期的模型。

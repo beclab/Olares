@@ -17,13 +17,13 @@ This guide uses Qwen3.8-27B (llama.cpp) as the default chat model. For connectio
 1. Open Router from Launchpad. On **Default models**, set Qwen3.8-27B (llama.cpp) as the default chat model.
 2. Go to **LLM**, find Qwen3.8-27B (llama.cpp), and click **View connection example** on its row.
 
-   ![View the Qwen3.8-27B connection example in Router](/images/manual/use-cases/router-view-connection-examp.png#bordered)
+   <!-- ![View the Qwen3.8-27B connection example in Router](/images/manual/use-cases/router-view-connection-examp.png#bordered) -->
 
 3. In **How to call this model**, select **Apps in Olares** and copy the **Base URL**, including `/v1`.
 
-   ![Copy the Router Base URL for apps in Olares](/images/manual/use-cases/router-how-to-call-model.png#bordered)
+   <!-- ![Copy the Router Base URL for apps in Olares](/images/manual/use-cases/router-how-to-call-model.png#bordered) -->
 
-4. Use `default-chat` as the model name in the client. Apps in Olares do not need a Router API key; leave the key empty where possible, or use `olares` if the client requires a value.
+4. Use `default-chat` as the model name in the client. Apps in Olares do not need a Router API key. Leave the key empty where possible, or use `olares` if the client requires a value.
 
    `default-chat` is a routing name and is not returned by the model-list API. Add it manually if the client fetches a model list. If the client only supports selecting a listed model, use the full model name from Router instead.
 <!-- #endregion get-model-connection-details -->
@@ -46,13 +46,13 @@ When a client connects to another Olares app, it uses that app's endpoint as the
 1. Open Router from Launchpad. On **Default models**, set Qwen3.8-27B (llama.cpp) as the default chat model.
 2. Go to **LLM**, find Qwen3.8-27B (llama.cpp), and click **View connection example** on its row.
 
-   ![View the Qwen3.8-27B connection example in Router](/images/manual/use-cases/router-view-connection-examp.png#bordered)
+   <!-- ![View the Qwen3.8-27B connection example in Router](/images/manual/use-cases/router-view-connection-examp.png#bordered) -->
 
-3. In **How to call this model**, select **Apps in Olares** and copy the **Base URL**, then remove the trailing `/v1` for the Anthropic-compatible client. For example, use `https://router.<your-olares-domain>`; the client appends `/v1/messages`.
+3. In **How to call this model**, select **Apps in Olares** and copy the **Base URL**, then remove the trailing `/v1` for the Anthropic-compatible client. For example, use `https://router.<your-olares-domain>`. The client appends `/v1/messages`.
 
-   ![Copy the Router Base URL for apps in Olares](/images/manual/use-cases/router-how-to-call-model.png#bordered)
+   <!-- ![Copy the Router Base URL for apps in Olares](/images/manual/use-cases/router-how-to-call-model.png#bordered) -->
 
-4. Use `default-chat` as the model name in the client. Apps in Olares do not need a Router API key; leave the key empty where possible, or use `olares` if the client requires a value.
+4. Use `default-chat` as the model name in the client. Apps in Olares do not need a Router API key. Leave the key empty where possible, or use `olares` if the client requires a value.
 
    `default-chat` is a routing name and is not returned by the model-list API. Add it manually if the client fetches a model list. If the client only supports selecting a listed model, use the full model name from Router instead.
 <!-- #endregion get-model-connection-details-anthropic -->
@@ -61,9 +61,9 @@ When a client connects to another Olares app, it uses that app's endpoint as the
 1. Open Router from Launchpad and go to **Tools**. Find the installed embedding model and wait until it shows **Callable**.
 2. On its model row, click **View connection example**.
 3. In **How to call this model**, select **Apps in Olares** and copy the **Base URL**, including `/v1`.
-4. Copy the full **Model name** from this window, including the `Olares/` prefix, and use it in the client's embedding settings. Apps in Olares do not need a Router API key; use `olares` only if the client requires a value.
+4. Copy the full **Model name** from this window, including the `Olares/` prefix, and use it in the client's embedding settings. Apps in Olares do not need a Router API key. Use `olares` only if the client requires a value.
 
-Use the embedding model's name, not `default-chat`. Keep the same embedding model when querying an existing knowledge base; changing it can require reindexing your documents.
+Use the embedding model's name, not `default-chat`. Keep the same embedding model when querying an existing knowledge base. Changing it can require reindexing your documents.
 <!-- #endregion get-embedding-model-connection-details-openai -->
 
 <!-- #region model-context-window -->
@@ -75,7 +75,7 @@ Use the embedding model's name, not `default-chat`. Keep the same embedding mode
 
    ![Read the exact llama.cpp context size in Router Engine args](/images/manual/use-cases/router-model-card-context.png#bordered)
 
-Use the value shown for your own model instance; `104448` is an example, not a fixed value for every installation. The `-c` parameter is specific to llama.cpp; other engines use different context parameters.
+Use the value shown for your own model instance. `104448` is an example, not a fixed value for every installation. The `-c` parameter is specific to llama.cpp. Other engines use different context parameters.
 
 The client's context setting must not exceed the engine's configured context size. Increasing the client setting alone does not increase the engine's capacity. If you change the model behind `default-chat`, review the client's context setting as well.
 <!-- #endregion model-context-window -->

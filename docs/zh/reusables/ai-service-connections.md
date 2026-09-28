@@ -17,13 +17,13 @@
 1. 从启动台打开 Router。在 **Default models** 页面将 Qwen3.8-27B (llama.cpp) 设为默认聊天模型。
 2. 进入 **LLM** 页面，找到 Qwen3.8-27B (llama.cpp)，点击模型所在行的 **View connection example** 图标。
 
-   ![在 Router 中查看 Qwen3.8-27B 的连接示例](/images/manual/use-cases/router-view-connection-examp.png#bordered)
+   <!-- ![在 Router 中查看 Qwen3.8-27B 的连接示例](/images/manual/use-cases/router-view-connection-examp.png#bordered) -->
 
 3. 在 **How to call this model** 窗口中，选择 **Apps in Olares**，复制完整的 **Base URL**，保留末尾的 `/v1`。
 
-   ![复制 Olares 内应用使用的 Router Base URL](/images/manual/use-cases/router-how-to-call-model.png#bordered)
+   <!-- ![复制 Olares 内应用使用的 Router Base URL](/images/manual/use-cases/router-how-to-call-model.png#bordered) -->
 
-4. 在客户端中将模型名称填写为 `default-chat`。Olares 内的应用无需 Router API 密钥；允许留空时留空，必填时可填写 `olares`。
+4. 在客户端中将模型名称填写为 `default-chat`。Olares 内的应用无需 Router API 密钥。允许留空时留空，必填时可填写 `olares`。
 
    `default-chat` 是路由名称，不会出现在模型列表 API 的返回结果中。如果客户端自动获取模型列表，需要手动添加它。如果客户端只允许选择列表中的模型，请改用 Router 中显示的完整模型名称。
 <!-- #endregion get-model-connection-details -->
@@ -46,13 +46,13 @@
 1. 从启动台打开 Router。在 **Default models** 页面将 Qwen3.8-27B (llama.cpp) 设为默认聊天模型。
 2. 进入 **LLM** 页面，找到 Qwen3.8-27B (llama.cpp)，点击模型所在行的 **View connection example** 图标。
 
-   ![在 Router 中查看 Qwen3.8-27B 的连接示例](/images/manual/use-cases/router-view-connection-examp.png#bordered)
+   <!-- ![在 Router 中查看 Qwen3.8-27B 的连接示例](/images/manual/use-cases/router-view-connection-examp.png#bordered) -->
 
-3. 在 **How to call this model** 窗口中，选择 **Apps in Olares**，复制 **Base URL**，然后去掉末尾的 `/v1`，供 Anthropic 兼容客户端使用。例如填写 `https://router.<你的 Olares 域名>`；客户端会自动追加 `/v1/messages`。
+3. 在 **How to call this model** 窗口中，选择 **Apps in Olares**，复制 **Base URL**，然后去掉末尾的 `/v1`，供 Anthropic 兼容客户端使用。例如填写 `https://router.<你的 Olares 域名>`。客户端会自动追加 `/v1/messages`。
 
-   ![复制 Olares 内应用使用的 Router Base URL](/images/manual/use-cases/router-how-to-call-model.png#bordered)
+   <!-- ![复制 Olares 内应用使用的 Router Base URL](/images/manual/use-cases/router-how-to-call-model.png#bordered) -->
 
-4. 在客户端中将模型名称填写为 `default-chat`。Olares 内的应用无需 Router API 密钥；允许留空时留空，必填时可填写 `olares`。
+4. 在客户端中将模型名称填写为 `default-chat`。Olares 内的应用无需 Router API 密钥。允许留空时留空，必填时可填写 `olares`。
 
    `default-chat` 是路由名称，不会出现在模型列表 API 的返回结果中。如果客户端自动获取模型列表，需要手动添加它。如果客户端只允许选择列表中的模型，请改用 Router 中显示的完整模型名称。
 <!-- #endregion get-model-connection-details-anthropic -->
@@ -61,9 +61,9 @@
 1. 从启动台打开 Router，进入 **Tools** 页面，找到已安装的嵌入模型，等待其显示 **Callable**。
 2. 点击模型所在行的 **View connection example** 图标。
 3. 在 **How to call this model** 窗口中，选择 **Apps in Olares**，复制完整的 **Base URL**，保留末尾的 `/v1`。
-4. 从此窗口复制完整的 **Model name**，包括 `Olares/` 前缀，填入客户端的嵌入模型设置。Olares 内的应用无需 Router API 密钥；仅在客户端要求必填时填写 `olares`。
+4. 从此窗口复制完整的 **Model name**，包括 `Olares/` 前缀，填入客户端的嵌入模型设置。Olares 内的应用无需 Router API 密钥。仅在客户端要求必填时填写 `olares`。
 
-这里应填写嵌入模型名称，不能使用 `default-chat`。查询已有知识库时应使用原来的嵌入模型；更换模型可能需要重新索引文档。
+这里应填写嵌入模型名称，不能使用 `default-chat`。查询已有知识库时应使用原来的嵌入模型。更换模型可能需要重新索引文档。
 <!-- #endregion get-embedding-model-connection-details-openai -->
 
 <!-- #region model-context-window -->
@@ -75,7 +75,7 @@
 
    ![在 Router 的 Engine args 中查看 llama.cpp 的精确上下文大小](/images/manual/use-cases/router-model-card-context.png#bordered)
 
-请以自己模型实例中的配置为准；`104448` 只是本例的值，并非所有安装的固定值。`-c` 是 llama.cpp 的参数，其他引擎使用不同的上下文参数。
+请以自己模型实例中的配置为准。`104448` 只是本例的值，并非所有安装的固定值。`-c` 是 llama.cpp 的参数，其他引擎使用不同的上下文参数。
 
 客户端填写的上下文大小不能超过引擎的实际配置。只增大客户端的设置不会扩大引擎的上下文容量。更换 `default-chat` 指向的模型后，也要检查客户端的上下文设置。
 <!-- #endregion model-context-window -->
