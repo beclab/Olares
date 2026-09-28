@@ -99,9 +99,13 @@ head:
 
 首次使用网络唤醒时，建议先使用休眠模式。部分网络环境或电源设置可能不支持从完全关机状态唤醒。
 
-## 唤醒 Olares One
+## 发送魔术包唤醒 Olares One
 
 以下方式均需要使用之前记录的 MAC 地址。发送唤醒包的设备必须与 Olares One 位于同一局域网。
+
+:::info 选择一种发送方式
+只需配置用于发送魔术包的手机或电脑。以下方式发送的魔术包相同，无需完成所有小节。
+:::
 
 ### 通过手机唤醒
 
@@ -118,7 +122,7 @@ head:
 
    ![在手机上配置网络唤醒设备](/images/one/wol-add-device.png#bordered){width=50%}
 
-4. 保存设备，然后点击该设备发送魔术包。
+4. 保存设备。需要唤醒 Olares One 时，点击已保存的设备。应用会立即发送魔术包。
 
    ![网络唤醒包发送成功提示](/images/one/wol-packet-sent.png#bordered){width=35%}
 
@@ -139,6 +143,8 @@ head:
    wakeonlan <MAC 地址>
    ```
 
+   运行命令后会立即发送魔术包。等待 Olares One 启动。
+
 ### 通过 macOS 唤醒
 
 1. 如果尚未安装 Homebrew，请根据 [Homebrew 官网](https://brew.sh/)的说明完成安装。
@@ -154,7 +160,13 @@ head:
    wakeonlan <MAC 地址>
    ```
 
+   运行命令后会立即发送魔术包。等待 Olares One 启动。
+
 ### 通过 Windows 唤醒
+
+:::info 无需下载工具
+PowerShell 可以直接生成并发送魔术包。无需下载 `magic_pkt.zip`，也无需安装其他网络唤醒工具。
+:::
 
 1. 打开 PowerShell。
 2. 将以下脚本中的 `<MAC 地址>` 替换为 Olares One 有线网卡的 MAC 地址，然后运行脚本：
@@ -171,7 +183,7 @@ head:
    $udp.Close()
    ```
 
-3. 等待 Olares One 启动。
+3. 运行脚本后会立即发送魔术包。等待 Olares One 启动。
 
 ## 故障排查
 

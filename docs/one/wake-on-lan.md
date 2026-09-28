@@ -99,9 +99,13 @@ Keep Olares One connected to AC power and Ethernet. Then use one of the followin
 
 Start with suspend if this is your first time using Wake-on-LAN. Some network environments or power settings might not support waking from a full shutdown.
 
-## Wake Olares One
+## Send a Magic Packet to wake Olares One
 
 Use the MAC address you recorded earlier. The sending device must be connected to the same local network as Olares One.
+
+:::info Choose one sending device
+You only need to configure the phone or computer that you will use to send the Magic Packet. Each method below sends the same type of packet, so you do not need to complete every subsection.
+:::
 
 ### From a phone
 
@@ -118,7 +122,7 @@ The following steps use Easy WOL as an example. You can use another app that sen
 
    ![Wake-on-LAN device settings on a phone](/images/one/wol-add-device.png#bordered){width=50%}
 
-4. Save the device, and then tap it to send the Magic Packet.
+4. Save the device. To wake Olares One, tap the saved device. This sends the Magic Packet immediately.
 
    ![Wake-on-LAN packet sent confirmation](/images/one/wol-packet-sent.png#bordered){width=35%}
 
@@ -139,6 +143,8 @@ The following steps use Easy WOL as an example. You can use another app that sen
    wakeonlan <mac-address>
    ```
 
+   The command sends the Magic Packet immediately. Wait for Olares One to start.
+
 ### From macOS
 
 1. If Homebrew is not installed, follow the installation instructions on the [Homebrew website](https://brew.sh/).
@@ -154,7 +160,13 @@ The following steps use Easy WOL as an example. You can use another app that sen
    wakeonlan <mac-address>
    ```
 
+   The command sends the Magic Packet immediately. Wait for Olares One to start.
+
 ### From Windows
+
+:::info No download required
+PowerShell generates and sends the Magic Packet directly. You do not need to download `magic_pkt.zip` or install a separate Wake-on-LAN utility.
+:::
 
 1. Open PowerShell.
 2. Replace `<mac-address>` in the following script with the wired interface MAC address of Olares One, and then run the script:
@@ -171,7 +183,7 @@ The following steps use Easy WOL as an example. You can use another app that sen
    $udp.Close()
    ```
 
-3. Wait for Olares One to start.
+3. Running the script sends the Magic Packet immediately. Wait for Olares One to start.
 
 ## Troubleshooting
 
