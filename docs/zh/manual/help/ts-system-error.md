@@ -1,6 +1,6 @@
 ---
 outline: [2,3]
-description: 当 LarePass 显示“系统错误”时，通过 Ticket 收集日志并获取帮助，也可使用终端进一步检查系统 Pod。
+description: 当 LarePass 显示“系统错误”时，根据 Olares 版本选择日志收集方式并获取帮助，也可使用终端进一步检查系统 Pod。
 head:
   - - meta
     - name: keywords
@@ -8,7 +8,7 @@ head:
 ---
 # LarePass 显示“系统错误”
 
-当 LarePass 移动端的**系统**部分显示“系统错误”时，参考本指南进行排查。你可以通过 Ticket 收集日志并联系 Olares 团队，也可以按下方的进阶排查步骤进一步定位原因。
+当 LarePass 移动端的**系统**部分显示“系统错误”时，参考本指南进行排查。你可以根据 Olares 版本选择日志收集方式并联系 Olares 团队，也可以按下方的进阶排查步骤进一步定位原因。
 
 :::warning 不要卸载 LarePass 或 Olares OS
 不要卸载 LarePass，也不要进入“系统错误”页面卸载 Olares OS 或恢复出厂设置。卸载 Olares OS 或恢复出厂设置可能清除数据。
@@ -31,9 +31,11 @@ head:
 
 Olares 1.12.7 及以上版本可通过 Ticket 应用提交支持工单。在**系统日志**中点击**采集日志**，自动收集并附加日志。前提条件和操作步骤见[通过 Ticket 应用提交](request-technical-support.md#通过-ticket-应用提交)。
 
-如果无法使用 Ticket 应用，但可以访问设备终端，可运行 Olares Space 提供的命令，自动收集、上传日志并创建工单。操作步骤见[通过 Olares CLI 自动创建工单](../space/tickets.md#通过-olares-cli-自动创建工单)。
+在这些版本中，如果无法使用 Ticket 应用，但可以访问设备终端，可运行 Olares Space 提供的命令，自动收集、上传日志并创建工单。操作步骤见[通过 Olares CLI 自动创建工单](../space/tickets.md#通过-olares-cli-自动创建工单)。
 
-在工单中附上“系统错误”截图、出现时间和时区、Olares 版本，并说明近期是否更新或重启过设备。
+如果使用的版本低于 1.12.7，可以[通过设置导出日志](../olares/settings/developer.md#导出系统日志)，或在设备终端使用 [`olares-cli logs`](../../developer/install/cli/logs.md) 收集日志。将日志压缩包发送至 [hi@olares.com](mailto:hi@olares.com)，联系 Olares 团队。
+
+提供日志时，附上“系统错误”截图、出现时间和时区、Olares 版本，并说明近期是否更新或重启过设备。
 
 ### 进阶排查（可选）
 
@@ -137,11 +139,11 @@ Olares 1.12.7 及以上版本可通过 Ticket 应用提交支持工单。在**�
 
 #### 步骤 6：提供排查结果 {#步骤-6-记录结果并收集日志}
 
-将以下信息补充到支持工单中：
+将以下信息提供给 Olares 团队：
 
 - 异常 Pod 的 **NAMESPACE**、**NAME**、**STATUS** 和 **RESTARTS**
 - **Events** 部分中的错误行
 - 报错时间和时区
 - 当前 Olares 版本，以及错误是否出现在更新或重启之后
 
-如果所有 Pod 状态正常，且重启次数保持稳定，也请在工单中说明，帮助 Olares 团队缩小排查范围。
+如果所有 Pod 状态正常，且重启次数保持稳定，也请一并说明，帮助 Olares 团队缩小排查范围。

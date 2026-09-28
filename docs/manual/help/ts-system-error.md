@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Get help when LarePass shows "System error", collect logs through Ticket, and optionally check system pods.
+description: Collect logs and get help when LarePass shows "System error", with options for your Olares version and optional pod diagnostics.
 head:
   - - meta
     - name: keywords
@@ -9,7 +9,7 @@ head:
 
 # "System error" in LarePass
 
-Use this guide when the **System** section in LarePass displays "System error". Use Ticket to collect logs and contact the Olares team. For further investigation, follow the advanced diagnostic steps below.
+Use this guide when the **System** section in LarePass displays "System error". Collect logs using the option for your Olares version and contact the Olares team. For further investigation, follow the advanced diagnostic steps below.
 
 :::warning Do not uninstall LarePass or Olares OS
 Do not uninstall LarePass, or open the **System error** page to uninstall Olares OS or restore factory settings. Uninstalling Olares OS or restoring factory settings can erase your data.
@@ -32,9 +32,11 @@ The message means LarePass could not obtain a healthy system state. One or more 
 
 On Olares 1.12.7 or later, use the Ticket app to submit a support ticket. Under **System logs**, click **Collect logs** to collect and attach logs automatically. See [Submit via the Ticket app](request-technical-support.md#submit-via-the-ticket-app) for prerequisites and steps.
 
-If the Ticket app is unavailable but you can access the device terminal, use the command provided in Olares Space to collect and upload logs and create a ticket automatically. See [Create a ticket automatically via Olares CLI](../space/tickets.md#create-a-ticket-automatically-via-olares-cli).
+On these versions, if the Ticket app is unavailable but you can access the device terminal, use the command provided in Olares Space to collect and upload logs and create a ticket automatically. See [Create a ticket automatically via Olares CLI](../space/tickets.md#create-a-ticket-automatically-via-olares-cli).
 
-In the ticket, include a screenshot of **System error**, the time it appeared and your time zone, your Olares version, and any recent update or restart.
+On versions earlier than 1.12.7, [export logs from Settings](../olares/settings/developer.md#export-system-logs) or collect them in the device terminal with [`olares-cli logs`](../../developer/install/cli/logs.md). Send the log archive to the Olares team at [hi@olares.com](mailto:hi@olares.com).
+
+Along with the logs, include a screenshot of **System error**, the time it appeared and your time zone, your Olares version, and any recent update or restart.
 
 ### Advanced diagnostics (optional)
 
@@ -141,11 +143,11 @@ If SSH is also unavailable, log in directly on the device using a monitor and ke
 
 #### Step 6: Share the diagnostic results {#step-6-record-the-result-and-collect-logs}
 
-Add the following details to your support ticket:
+Share the following details with the Olares team:
 
 - The affected pod's **NAMESPACE**, **NAME**, **STATUS**, and **RESTARTS** values
 - The error lines in the **Events** section
 - The time the error appeared and your time zone
 - Your installed Olares version and whether the error followed an update or restart
 
-If all pods appear healthy and restart counts are stable, include that observation in the ticket to help the Olares team narrow down the cause.
+If all pods appear healthy and restart counts are stable, include that observation to help the Olares team narrow down the cause.
