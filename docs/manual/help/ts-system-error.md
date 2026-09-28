@@ -9,10 +9,10 @@ head:
 
 # "System error" in LarePass
 
-Use this guide when the **System** section in LarePass displays "System error". The message can have several causes. Start by collecting logs for the Olares team, or use the optional terminal checks below to narrow down the cause.
+Use this guide when the **System** section in LarePass displays "System error". Use Ticket to collect logs and contact the Olares team. For further investigation, follow the advanced diagnostic steps below.
 
 :::warning Do not uninstall LarePass or Olares OS
-Do not uninstall LarePass, or open the **System error** page to uninstall Olares OS or restore factory settings. This error alone does not mean you need to reinstall. Keep LarePass available for account access and troubleshooting. Uninstalling Olares OS or restoring factory settings can erase your data.
+Do not uninstall LarePass, or open the **System error** page to uninstall Olares OS or restore factory settings. Uninstalling Olares OS or restoring factory settings can erase your data.
 :::
 
 ![System error in LarePass](/images/manual/help/ts-sys-err.png#bordered){width=90%}
@@ -24,19 +24,21 @@ Do not uninstall LarePass, or open the **System error** page to uninstall Olares
 
 ## Cause
 
-The message means LarePass could not obtain a healthy system state. One or more system pods might be unhealthy, but the message alone does not identify the failing component or root cause.
+The message means LarePass could not obtain a healthy system state. One or more system pods might be unhealthy. System logs and pod events help identify the cause.
 
 ## Solution
 
 ### Collect logs and contact support
 
-You do not need to run terminal commands before asking for help. On Olares 1.12.7 or later, use the Ticket app to submit a support ticket. Under **System logs**, click **Collect logs** to collect and attach logs automatically. See [Submit via the Ticket app](request-technical-support.md#submit-via-the-ticket-app) for prerequisites and steps.
+On Olares 1.12.7 or later, use the Ticket app to submit a support ticket. Under **System logs**, click **Collect logs** to collect and attach logs automatically. See [Submit via the Ticket app](request-technical-support.md#submit-via-the-ticket-app) for prerequisites and steps.
 
-If you cannot use the Ticket app, [submit a ticket through Olares Space](request-technical-support.md#submit-via-olares-space) and describe the issue, even if you cannot collect logs yet. Include a screenshot of **System error**, when it appeared and your time zone, your Olares version if known, and whether it followed an update or restart. Share full logs only through a private support channel, not a public GitHub issue.
+If the Ticket app is unavailable but you can access the device terminal, use the command provided in Olares Space to collect and upload logs and create a ticket automatically. See [Create a ticket automatically via Olares CLI](../space/tickets.md#create-a-ticket-automatically-via-olares-cli).
+
+In the ticket, include a screenshot of **System error**, the time it appeared and your time zone, your Olares version, and any recent update or restart.
 
 ### Advanced diagnostics (optional)
 
-If you are comfortable using a terminal, or the Olares team asks for more details, follow these steps to identify unhealthy system pods and inspect their error events.
+Use the device terminal to check system pod status and inspect error events. These details help the Olares team locate the failing component.
 
 :::info
 This guide uses Olares One as an example. If you installed Olares on your own hardware, the diagnostic steps are the same, but the way you access the terminal might differ.
@@ -116,15 +118,11 @@ If SSH is also unavailable, log in directly on the device using a monitor and ke
     kubectl get pods -A
     ```
 
-2. Check **STATUS** and **RESTARTS**. Look for states such as `CrashLoopBackOff`, `Error`, `ImagePullBackOff`, or a pod that remains `Pending`. A job in `Completed` state is not an error by itself.
+2. Check **STATUS** and **RESTARTS**. Look for states such as `CrashLoopBackOff`, `Error`, `ImagePullBackOff`, or a pod that remains `Pending`. A job in `Completed` state has finished successfully.
 3. Note the **NAMESPACE** and **NAME** of each pod that shows an error or a restart count that keeps increasing. If none do, skip to [Step 6](#step-6-record-the-result-and-collect-logs).
     ![Locate problematic pod](/images/manual/help/ts-sys-err-pod-crash.png#bordered){width=90%}
 
 #### Step 5: Inspect the pod error
-
-:::warning Review output before sharing it
-`kubectl describe` can include IP addresses, node names, Olares IDs, domains, and configuration values. Do not paste its complete output into a public issue.
-:::
 
 1. Run the following command, replacing `<namespace>` and `<pod-name>` with the values you noted in the previous step:
 
@@ -141,17 +139,13 @@ If SSH is also unavailable, log in directly on the device using a monitor and ke
 2. Scroll down to the **Events** section to find the detailed error message.
     ![Pod event details](/images/manual/help/ts-sys-err-pod-event-detail.png#bordered){width=90%}
 
-#### Step 6: Record the result and collect logs
+#### Step 6: Share the diagnostic results {#step-6-record-the-result-and-collect-logs}
 
-Record the following minimum information:
+Add the following details to your support ticket:
 
 - The affected pod's **NAMESPACE**, **NAME**, **STATUS**, and **RESTARTS** values
 - The error lines in the **Events** section
 - The time the error appeared and your time zone
 - Your installed Olares version and whether the error followed an update or restart
 
-If no pod shows an error and restart counts are not increasing, record that result instead. It means the message cannot be explained by pod status alone and needs a different diagnostic branch.
-
-Add the results to your support ticket.
-
-For a reproducible software bug, you can open a [GitHub Issue](https://github.com/beclab/Olares/issues/new) with the symptom and the limited fields above after redacting IDs, hostnames, IP addresses, and domains. Keep the full log archive in the private support ticket.
+If all pods appear healthy and restart counts are stable, include that observation in the ticket to help the Olares team narrow down the cause.

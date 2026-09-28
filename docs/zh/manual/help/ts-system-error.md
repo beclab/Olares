@@ -8,10 +8,10 @@ head:
 ---
 # LarePass 显示“系统错误”
 
-当 LarePass 移动端的**系统**部分显示“系统错误”时，参考本指南进行排查。这条提示可能有多种原因。你可以先收集日志并联系 Olares 团队，也可以通过下方的进阶排查进一步定位原因。
+当 LarePass 移动端的**系统**部分显示“系统错误”时，参考本指南进行排查。你可以通过 Ticket 收集日志并联系 Olares 团队，也可以按下方的进阶排查步骤进一步定位原因。
 
 :::warning 不要卸载 LarePass 或 Olares OS
-不要卸载 LarePass，也不要进入“系统错误”页面卸载 Olares OS 或恢复出厂设置。出现这条提示不代表需要重装。请保留 LarePass，以便访问账户和继续排查。卸载 Olares OS 或恢复出厂设置可能清除数据。
+不要卸载 LarePass，也不要进入“系统错误”页面卸载 Olares OS 或恢复出厂设置。卸载 Olares OS 或恢复出厂设置可能清除数据。
 :::
 
  ![系统错误](/images/zh/manual/help/ts-sys-err.png#bordered){width=90%}
@@ -23,19 +23,21 @@ head:
 
 ## 原因
 
-该提示表示 LarePass 未能获取到健康的系统状态。一个或多个系统 Pod 可能处于异常状态，但仅凭这条提示无法确定故障组件或根本原因。
+该提示表示 LarePass 未能获取到健康的系统状态。一个或多个系统 Pod 可能处于异常状态，可以通过系统日志和 Pod 事件进一步定位原因。
 
 ## 解决方案
 
 ### 收集日志并获取帮助
 
-无需先运行终端命令，就可以获取帮助。Olares 1.12.7 及以上版本可通过 Ticket 应用提交支持工单。在**系统日志**中点击**采集日志**，自动收集并附加日志。前提条件和操作步骤见[通过 Ticket 应用提交](request-technical-support.md#通过-ticket-应用提交)。
+Olares 1.12.7 及以上版本可通过 Ticket 应用提交支持工单。在**系统日志**中点击**采集日志**，自动收集并附加日志。前提条件和操作步骤见[通过 Ticket 应用提交](request-technical-support.md#通过-ticket-应用提交)。
 
-如果无法使用 Ticket 应用，可以[通过 Olares Space 提交工单](request-technical-support.md#通过-olares-space-提交)，暂时无法收集日志也可以先描述问题。请提供“系统错误”截图、出现时间和时区、Olares 版本（如已知），并说明是否在更新或重启后出现。完整日志仅通过非公开支持渠道提供，不要上传到公开的 GitHub Issue。
+如果无法使用 Ticket 应用，但可以访问设备终端，可运行 Olares Space 提供的命令，自动收集、上传日志并创建工单。操作步骤见[通过 Olares CLI 自动创建工单](../space/tickets.md#通过-olares-cli-自动创建工单)。
+
+在工单中附上“系统错误”截图、出现时间和时区、Olares 版本，并说明近期是否更新或重启过设备。
 
 ### 进阶排查（可选）
 
-如果你熟悉终端操作，或 Olares 团队需要更多信息，可以按以下步骤检查系统 Pod（运行系统组件的容器组），定位异常并查看错误事件。
+通过设备终端检查系统 Pod（运行系统组件的容器组）的状态和错误事件，帮助 Olares 团队定位故障组件。
 
 :::info
 本文以 Olares One 为例。如果你在自己的设备上安装 Olares，排查步骤基本相同，只是访问终端的方式可能存在差异。
@@ -113,15 +115,11 @@ head:
     ```bash
     kubectl get pods -A
     ```
-2. 查看 **STATUS** 和 **RESTARTS**。重点检查 `CrashLoopBackOff`、`Error`、`ImagePullBackOff` 等错误状态，或长时间处于 `Pending` 的 Pod。任务 Pod 显示 `Completed` 本身不代表异常。
+2. 查看 **STATUS** 和 **RESTARTS**。重点检查 `CrashLoopBackOff`、`Error`、`ImagePullBackOff` 等错误状态，或长时间处于 `Pending` 的 Pod。任务 Pod 显示 `Completed` 表示已成功完成。
 3. 记录显示错误或重启次数持续增加的 Pod 对应的 **NAMESPACE** 和 **NAME**。如果没有，直接跳到[步骤 6](#步骤-6-记录结果并收集日志)。
     ![定位异常 Pod](/images/zh/manual/help/ts-sys-err-pod-crash.png#bordered){width=90%}
 
 #### 步骤 5：查看 Pod 错误信息
-
-:::warning 分享前检查输出
-`kubectl describe` 的输出可能包含 IP 地址、节点名称、Olares ID、域名和配置值。请勿将完整输出粘贴到公开 Issue 中。
-:::
 
 1. 运行以下命令，并将 `<namespace>` 和 `<pod-name>` 替换为上一步记录的值：
 
@@ -137,17 +135,13 @@ head:
 2. 在输出结果中向下滚动到 **Events** 部分，查看失败相关的错误信息。
     ![Pod 错误详情](/images/zh/manual/help/ts-sys-err-pod-event-detail.png#bordered){width=90%}
 
-#### 步骤 6：记录结果并收集日志
+#### 步骤 6：提供排查结果 {#步骤-6-记录结果并收集日志}
 
-只记录以下必要信息：
+将以下信息补充到支持工单中：
 
 - 异常 Pod 的 **NAMESPACE**、**NAME**、**STATUS** 和 **RESTARTS**
 - **Events** 部分中的错误行
 - 报错时间和时区
 - 当前 Olares 版本，以及错误是否出现在更新或重启之后
 
-如果没有 Pod 显示错误，且重启次数没有持续增加，也请记录这一结果。这表示仅凭 Pod 状态无法解释该提示，需要转到其他诊断方向。
-
-将排查结果补充到支持工单中。
-
-如确认是可复现的软件缺陷，可以提交 [GitHub Issue](https://github.com/beclab/Olares/issues/new)。公开内容只包含上述有限信息，并移除 ID、主机名、IP 地址和域名。完整日志压缩包仅通过非公开支持工单提供。
+如果所有 Pod 状态正常，且重启次数保持稳定，也请在工单中说明，帮助 Olares 团队缩小排查范围。
