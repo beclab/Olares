@@ -131,6 +131,10 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           link: "/zh/one/hardware-settings",
         },
         {
+          text: "设置网络唤醒",
+          link: "/zh/one/wake-on-lan",
+        },
+        {
           text: "Olares OS 与 Windows 双启动",
           collapsed: true,
           items:
@@ -174,10 +178,6 @@ export const oneSidebar: DefaultTheme.Sidebar = {
               {
                 text: "在 Olares One 上安装 Ubuntu Desktop",
                 link: "/zh/one/install-ubuntu-desktop",
-              },
-              {
-                text: "设置网络唤醒",
-                link: "/zh/one/wake-on-lan",
               }
             ]
         },                 

@@ -100,7 +100,7 @@ Support for common out-of-band management capabilities on Olares One is as follo
 - **Automatic startup**: Supported. Olares One can start automatically when AC power is connected or restored after a power outage.
   - On Olares OS, this feature requires Olares OS 1.12.6 or later and EC firmware 1.03 or later. See [Manage hardware settings](hardware-settings.md#set-automatic-startup).
   - On Ubuntu, configure the setting from the command line. See **Configure automatic startup** in the [Ubuntu Server](install-ubuntu-server.md#configure-automatic-startup) or [Ubuntu Desktop](install-ubuntu-desktop.md#configure-automatic-startup) installation guide.
-- **Wake-on-LAN (WOL)**: Supported on Olares One running Ubuntu or Windows.
+- **Wake-on-LAN (WOL)**: Supported on Olares One running Olares OS, Ubuntu, or Windows, with EC firmware 1.01 or later and a wired network connection. For setup and wake-up instructions on the same local network, see [Set up Wake-on-LAN for Olares One](wake-on-lan.md). The Windows steps cover waking from sleep.
 - **Remote KVM**: Not supported.
 - **IPMI**: Not supported.
 
