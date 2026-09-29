@@ -204,8 +204,7 @@ The following steps use Easy WOL as an example. You can use another app that sen
 
 The following steps use Magic Packet Utility as an example. You can also use another Wake-on-LAN tool.
 
-<!-- TODO: Replace the placeholder URL below with the CDN URL after uploading magic_pkt.zip. -->
-1. On the sending Windows computer, download [Magic Packet Utility](https://cdn.example.com/REPLACE_WITH_CDN_PATH/magic_pkt.zip), extract `magic_pkt.zip`, and open `MAGPAC.EXE`.
+1. On the sending Windows computer, download [Magic Packet Utility](https://cdn.olares.com/common/magic_packet_utility.zip), extract `magic_packet_utility.zip`, and open `MAGPAC.EXE`.
 2. Select **Magic Packets** > **Power On One Host**.
 3. Fill in both fields:
    - **IP Broadcast Address**: The broadcast address of the subnet containing Olares One, such as `192.168.1.255`. Replace the default value with your actual broadcast address.

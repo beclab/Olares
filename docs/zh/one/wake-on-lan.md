@@ -204,8 +204,7 @@ head:
 
 以下以 Magic Packet Utility 为例，也可以使用其他支持 Wake-on-LAN 的工具。
 
-<!-- TODO：将 magic_pkt.zip 上传到 CDN 后，替换下方的占位下载地址。 -->
-1. 在发送端 Windows 电脑上下载 [Magic Packet Utility](https://cdn.example.com/REPLACE_WITH_CDN_PATH/magic_pkt.zip)，解压 `magic_pkt.zip`，打开 `MAGPAC.EXE`。
+1. 在发送端 Windows 电脑上下载 [Magic Packet Utility](https://cdn.olares.com/common/magic_packet_utility.zip)，解压 `magic_packet_utility.zip`，打开 `MAGPAC.EXE`。
 2. 选择 **Magic Packets** > **Power On One Host**。
 3. 填写以下两个字段：
    - **IP Broadcast Address**：Olares One 所在子网的广播地址，例如 `192.168.1.255`。将默认值替换为你的实际广播地址。

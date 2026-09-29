@@ -131,10 +131,6 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           link: "/one/hardware-settings",
         },
         {
-          text: "Set up Wake-on-LAN",
-          link: "/one/wake-on-lan",
-        },
-        {
           text: "Dual-boot Olares OS with Windows",
           collapsed: true,
           items:
@@ -181,6 +177,10 @@ export const oneSidebar: DefaultTheme.Sidebar = {
               }
             ]
         },                
+        {
+          text: "Set up Wake-on-LAN",
+          link: "/one/wake-on-lan",
+        },
       ]
     },
     {
