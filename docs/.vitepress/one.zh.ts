@@ -177,6 +177,10 @@ export const oneSidebar: DefaultTheme.Sidebar = {
               }
             ]
         },                 
+        {
+          text: "设置网络唤醒",
+          link: "/zh/one/wake-on-lan",
+        },
       ]
     },
     {

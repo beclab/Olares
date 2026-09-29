@@ -177,6 +177,10 @@ export const oneSidebar: DefaultTheme.Sidebar = {
               }
             ]
         },                
+        {
+          text: "Set up Wake-on-LAN",
+          link: "/one/wake-on-lan",
+        },
       ]
     },
     {
