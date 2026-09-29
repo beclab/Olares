@@ -84,7 +84,7 @@ jobs:
             fi
           elif [ -z "$bin_ver" ]; then
             # Non-publish callers (daily/check/release) build from their own
-            # version forms (1.12.7-<date>, 1.12.7-<random>, a release tag);
+            # version forms (1.12.8-<date>, 1.12.8-<random>, a release tag);
             # keep the previous behavior and reuse the npm version as-is.
             if echo "$npm_ver" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+-cli\.[0-9]+$'; then
               bin_ver=$(echo "$npm_ver" | sed -E 's/^([0-9]+\.[0-9]+\.[0-9]+)-cli\.[0-9]+$/\1/')
@@ -265,7 +265,7 @@ jobs:
       #
       # It runs on every path, because every path stamps. Only the X.Y.Z
       # prefixes are compared: the two lines number differently past that
-      # (1.12.7 and 1.12.7-cli.4 are the same release).
+      # (1.12.8 and 1.12.8-cli.4 are the same release).
       - name: Assert the embedded skills name the release being built
         working-directory: cli
         env:

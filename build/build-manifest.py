@@ -6,13 +6,25 @@ import os
 import requests
 import sys
 import json
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 CDN_URL = "https://cdn.olares.com"
+
+retry = Retry(
+    total=5,
+    backoff_factor=0.5,
+    status_forcelist=(429, 500, 502, 503, 504),
+    allowed_methods=frozenset(("HEAD", "GET")),
+)
+session = requests.Session()
+session.mount("http://", HTTPAdapter(max_retries=retry))
+session.mount("https://", HTTPAdapter(max_retries=retry))
 
 def get_file_size(objectid, fileid):
     url = f"{CDN_URL}/{objectid}"
     try:
-        response = requests.head(url)
+        response = session.head(url)
         response.raise_for_status()
         content_length = response.headers.get('Content-Length')
         if content_length:
@@ -28,7 +40,7 @@ def download_checksum(name):
     """Downloads the checksum for a given name."""
     url = f"{CDN_URL}/{name}.checksum.txt"
     try:
-        response = requests.get(url)
+        response = session.get(url)
         response.raise_for_status()
         return response.text.split()[0]
     except requests.exceptions.RequestException as e:
@@ -39,7 +51,7 @@ def get_image_manifest(name):
     """Downloads the image manifest for a given name."""
     url = f"{CDN_URL}/{name}.manifest.json"
     try:
-        response = requests.get(url)
+        response = session.get(url)
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
@@ -84,7 +96,7 @@ def main():
                     sys.exit(1)
 
                 filename, path, deps, _, fileid = fields[:5]
-                print(f"Downloading file checksum for {filename}")
+                print(f"Downloading file checksum for {filename}", flush=True)
 
                 name = hashlib.md5(filename.encode()).hexdigest()
                 url_amd64 = name
