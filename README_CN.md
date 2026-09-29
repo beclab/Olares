@@ -30,15 +30,20 @@
 
 Olares 基于 Kubernetes 构建，能把你手中的设备变成一个自托管的 AI 平台，打开浏览器就能用。无论是个人用户还是小型团队，都能在这里统一管理算力、存储、网络和应用。
 
-https://github.com/user-attachments/assets/01490c33-41ce-46fe-8450-6939b40db98e
+https://github.com/user-attachments/assets/3e4b0c5d-dcbe-47eb-8628-88b062411fa0
 
 > 🌟 *如果 Olares 对你有帮助，欢迎点亮 Star。你的支持会激励我们不断把它打磨得更好。*
+
+## 版本动态
+
+- **[Olares 1.12.7](https://www.olares.com/blog/olares-1-12-7/)**：Router、Lares，以及更丰富的本地 AI 模型。
+- **[Olares 1.12.6](https://www.olares.com/blog/olares-1-12-6/)**：Agent Skills、本地大模型的模型控制台，以及更可靠的共享应用。
 
 ## 为什么选择 Olares
 
 真正好用的 AI，得足够懂你，而这意味着它要能读到你的文件、消息和过往记录。可是不少云端 AI 服务，会把这些敏感数据存在第三方服务器上，还要按用量向你收费。
 
-Olares 把 AI 带回本地：你可以在自己的硬件上，用本地大模型运行像 [OpenClaw](https://www.olares.com/docs/zh/use-cases/openclaw) 这样的 Agent，同时依然保有云端那份随时随地、开箱即用的便利。
+Olares 把 AI 带回本地：你可以在自己的硬件上，搭配本地大模型使用 Olares 官方 AI 助手 [Lares](https://www.olares.com/docs/zh/use-cases/lares)，或像 [OpenClaw](https://www.olares.com/docs/zh/use-cases/openclaw) 这样的 Agent，同时依然保有云端那份随时随地、开箱即用的便利。
 
 ![公有云服务构建的数字生活，与由 Olares 个人云上开源应用驱动的数字生活对比](https://app.cdn.olares.com/github/olares/public-cloud-to-personal-cloud.jpg)
 
@@ -48,14 +53,14 @@ Olares 把 AI 带回本地：你可以在自己的硬件上，用本地大模型
 - **加速计算管理**：把多个节点上的 GPU 和加速器统一调度，支持时间切片、显存切片和 GPU 独占模式，兼顾 AI、媒体和游戏等不同负载。
 - **[文件与存储管理](https://www.olares.com/docs/zh/manual/olares/files/)**：用内置的「文件」应用，统一管理本地文件、同步数据、已接入的云存储，以及外部的 SMB/NFS 共享，还能[自定义备份](https://www.olares.com/docs/zh/manual/olares/settings/backup)。
 - **[私有网络与访问控制](https://www.olares.com/docs/zh/developer/concepts/network)**：内置私有 VPN 和反向代理，配合公开、私有、内部三种访问入口，为每个应用自动分配 HTTPS 地址，无需手动开放端口。
-- **随时随地访问**：一个 Olares ID 加上 [LarePass](https://www.olares.com/docs/zh/manual/larepass/)，就能从手机、电脑或浏览器访问你的全部服务。
+- **随时随地访问**：从手机、电脑或浏览器访问你的应用和文件。
 - **完整的系统应用**：文件、Vault、应用市场、仪表盘、控制中心等一应俱全，登录即用。
 
 ## 快速开始
 
 ### Linux 脚本安装要求
 
-Olares 可以装在 Linux 主机上（物理机或虚拟机），也为 Windows、macOS 和树莓派准备了专门的安装方式。不同平台、不同方式的要求各有差异。下面这个 Linux 脚本的要求如下：
+使用下面的脚本在现有 Linux 系统上安装 Olares，你的设备需要满足以下要求：
 
 - **CPU**：4 核及以上
 - **内存**：8 GB 及以上可用内存
@@ -64,27 +69,27 @@ Olares 可以装在 Linux 主机上（物理机或虚拟机），也为 Windows�
 
 独立显卡为可选项，装上后可加速本地 AI。
 
-### 安装并激活
+### 在 Linux 上安装
 
-1. 先在 [LarePass](https://www.olares.com/docs/zh/manual/larepass/) 里创建你的 Olares ID。LarePass 是配套客户端，提供安全登录、内置 VPN 和文件同步。
+在 Ubuntu 或 Debian 主机上，使用具有 `sudo` 权限的账户运行以下命令：
 
-2. 在 Linux 主机上运行：
+```bash
+curl -fsSL https://olares.sh | bash -
+```
 
-    ```bash
-    curl -fsSL https://olares.sh | bash -
-    ```
+这条命令会从 `olares.sh` 下载官方安装程序，并交给 Bash 运行。完整设置步骤和常见问题，请看 [Linux 脚本安装指南](https://www.olares.com/docs/zh/manual/get-started/install-linux-script)。
 
-    这条命令会从 `olares.sh` 下载官方安装程序，并交给 Bash 运行。完整要求、各平台的具体步骤和常见问题，请看 [Linux 脚本安装指南](https://www.olares.com/docs/zh/manual/get-started/install-linux-script)。
+如果要在 Intel 或 AMD x86-64 设备上全新安装，可以使用 [ISO 镜像](https://www.olares.com/docs/zh/manual/get-started/install-linux-iso)。如果希望在 Linux 上以容器方式安装，请参考 [Docker Compose 安装指南](https://www.olares.com/docs/zh/manual/get-started/install-linux-docker)。
 
-    想装在 Windows、macOS、树莓派或虚拟机上？在[安装指南](https://www.olares.com/docs/zh/manual/get-started/install-olares)里选择对应平台即可。
+设置完成后，在浏览器中打开你的 Olares 桌面地址即可访问，例如 `https://desktop.marvin123.olares.com`。
 
-3. 按照网页向导一步步操作，或者干脆全程用命令行，参考[用 Olares CLI 激活](https://www.olares.com/docs/zh/manual/best-practices/activate-olares-using-cli)教程。
+### 尝试第一个 AI 任务
 
-激活完成后，你就能在任意浏览器里，通过与 Olares ID 关联的地址访问 Olares。比如 Olares ID 是 `marvin123`，桌面地址就是 `https://desktop.marvin123.olares.com`。
+按照 [AI 入门指南](https://www.olares.com/docs/zh/one/olares-onboarding)配置 Router、Lares 和本地模型，然后开始第一次对话。试着对 Lares 说：“检查这台设备的配置。”
 
 ## 主要使用场景
 
-- **交给个人 AI Agent**：用自然语言，把调研、编程、文件整理和日常自动化都交给它。
+- **交给个人 AI Agent**：用自然语言，把调研、文件整理和日常自动化交给 [Lares](https://www.olares.com/docs/zh/use-cases/lares)，也可以用你喜欢的 Agent 完成编程和其他任务。
 - **在本地跑生成式 AI**：与开源模型对话、生成图像和视频，还能把本地模型接入其他应用，全程都在自己的硬件上完成。
 - **管理智能家居与媒体**：接入家庭自动化设备，随时串流播放自己的音乐和影片库。
 - **开发和托管应用**：在 Olares 的隔离环境里开发、测试、运行应用和工作流。
