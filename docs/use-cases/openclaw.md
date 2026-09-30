@@ -128,6 +128,12 @@ Set up OpenClaw using the step-by-step interactive wizard.
 
     Once you complete the onboarding wizard, OpenClaw opens the Terminal User Interface (TUI) automatically.
 
+    :::tip If the TUI opened by onboarding reports HTTP 403
+    In OpenClaw 2026.9.6, the wizard can open the TUI using the container's LAN address. With the Olares proxy configuration, this connection can fail with `proxy_attribution_required` even though the model is configured correctly.
+
+    Enter `/quit` to leave that TUI, then run `openclaw tui` in the same OpenClaw CLI terminal. Check that the heading shows `ws://127.0.0.1:18789`. This local connection uses the existing configuration and credentials. For this specific error on the onboarding path, you do not need to add `gateway.remote.edgeAuth` or change the mobile Gateway URL.
+    :::
+
     ![OpenClaw TUI after setup](/images/manual/use-cases/router-client-connect-openclaw.png#bordered)
 
 4. Type `/quit` and press **Enter** to exit.
@@ -290,6 +296,7 @@ This process establishes the agent's identity, behavioral boundaries, and long-t
 1. [Integrate with Discord](openclaw-integration.md) to chat with your agent remotely.
 2. [Enable web search](openclaw-web-access.md) to give your agent access to the live internet information.
 3. [Install skills and plugins](openclaw-skills.md) to enhance your agent's capabilities.
+4. [Connect using OpenClaw mobile clients](openclaw-mobile.md) using QR or manual pairing over LarePass VPN.
 
 ## Troubleshooting and FAQs
 
