@@ -4,27 +4,23 @@ connectionLatestPath: /use-cases/openclaw-mobile
 outline: [2, 3]
 title: Connect using OpenClaw mobile clients
 description: Pair the OpenClaw Android or iOS app with your Olares Gateway using a QR code or manual connection settings over LarePass VPN.
-app_version: "1.0.46"
+app_version: "1.0.47"
 doc_version: "1.0"
-doc_updated: "2026-09-28"
+doc_updated: "2026-09-30"
 ---
 
 # Connect using OpenClaw mobile clients
-
-<VersionRouteSelect />
 
 Use the OpenClaw mobile app to chat with the agent running on Olares. Pair the phone once, then use the same Gateway address at home and away with LarePass VPN enabled.
 
 ## Prerequisites
 
 - Complete [OpenClaw setup](openclaw.md) on Olares, including configuring a model for chat.
-- Install LarePass on the phone, sign in with the Olares account that owns this OpenClaw instance, and enable its VPN connection. See [Access Olares services securely](../manual/get-started/local-access.md).
-- Have access to **OpenClaw CLI** on Olares for generating setup codes and approving devices.
+- Install LarePass on the phone and sign in with the Olares account that owns this OpenClaw instance.
+- Upgrade OpenClaw to Chart version **1.0.47 or later**.
 
-:::important Keep LarePass VPN enabled on the phone
-The **OpenClaw Gateway** entrance uses the **Internal** access policy. This skips Olares sign-in for connections through LarePass VPN. Being on the same Wi-Fi network alone does not grant that exemption.
-
-Keep the VPN enabled on both local Wi-Fi and mobile data. On the local network, LarePass can use an Intranet connection. OpenClaw's token or setup code does not replace Olares entrance authentication.
+::: warning Important
+Keep LarePass VPN enabled on the phone whether you use local Wi-Fi or mobile data. On the local network, LarePass automatically uses an Intranet connection. OpenClaw tokens and setup codes do not replace Olares entrance authentication.
 :::
 
 ## Confirm the Gateway address and Auth Level
@@ -34,7 +30,7 @@ Keep the VPN enabled on both local Wi-Fi and mobile data. On the local network, 
 
 The Gateway entrance is hidden from the Launchpad. Its address differs from **OpenClaw CLI**, **Control UI**, and the Olares Desktop address. If you use a cloned app, select that instance's Gateway entrance.
 
-In the examples below, replace `gateway.example.com` with that domain. The connection URL is `wss://gateway.example.com`, using port **443** and **TLS**. The internal service port `18789` is not the port to enter when using the Olares entrance.
+In the examples below, replace `efa2f8ec2.yourolaresid.olares.com` with that domain. The connection URL is `wss://efa2f8ec2.yourolaresid.olares.com`, using port **443** and **TLS**. The internal service port `18789` is not the port to enter when using the Olares entrance.
 
 Install and connect the client
 
@@ -55,19 +51,19 @@ Install and connect the client
    openclaw qr
    ```
 
-   New installations of Olares app version **1.0.46 or later** configure the Gateway entrance as the pairing URL. Check that the output's **Gateway** line contains the domain you copied, with `wss://`.
+   New installations of Olares app version **1.0.47 or later** configure the Gateway entrance as the pairing URL. Check that the output's **Gateway** line contains the domain you copied, with `wss://`.
 
 3. If you upgraded an existing installation, changed the entrance domain, or the displayed address is incorrect, specify the address explicitly:
 
    ```bash
-   openclaw qr --url 'wss://gateway.example.com'
+   openclaw qr --url 'wss://efa2f8ec2.yourolaresid.olares.com'
    ```
 
    This command does not change your saved configuration. Upgrades preserve existing `openclaw.json` settings, so a new default does not overwrite an existing installation.
 
-4. On your iPhone, open Gateway setup when first launching OpenClaw, or open **Settings** > **Gateway** to add a Gateway.
-5. Choose the QR scanning option, allow camera access when prompted, and scan the terminal QR code.
-6. Confirm that the displayed Gateway address matches your Olares Gateway entrance, then connect. Official clients can pair automatically when the setup-code metadata matches. If approval remains pending, follow [Approve a pending device](#approve-a-pending-device).
+4. Open **Connections** in the mobile client and select **Scan QR to pair**.
+5. Allow camera access when prompted, then scan the terminal QR code.
+6. On the first connection, the client asks whether to trust the Gateway. Verify that the address matches your Olares Gateway entrance, then select **Trust and connect**. The client pairs automatically; if approval remains pending, follow [Approve a pending device](#approve-a-pending-device).
 7. Open chat, send a message, and confirm a reply.
 
 The QR code contains a short-lived pairing credential. Keep it private and generate a new one if it expires. By default, a `wss://` setup code grants node access and full Gateway operator access. Add `--limited` to request a reduced operator profile. See the [upstream QR reference](https://docs.openclaw.ai/cli/qr).
@@ -82,23 +78,45 @@ The QR code contains a short-lived pairing credential. Keep it private and gener
 
    Copy the token privately to the phone. It is an OpenClaw credential, not your Olares account password.
 
-
 2. On your iPhone, open **Settings** > **Gateway** and enable **Use Manual Gateway** (or **Manual Host**, depending on the app version).
 3. Fill in the connection details:
 
    | Field | Value |
    | --- | --- |
-   | Host | Your Gateway entrance domain, such as `gateway.example.com`. Do not include a scheme or path when host and port are separate fields. |
+   | Host | Your Gateway entrance domain, such as `efa2f8ec2.yourolaresid.olares.com`. Do not include a scheme or path when host and port are separate fields. |
    | Port | `443` |
    | Token | The Gateway token from step 1 |
    | Password | Leave empty for the default token-based Olares deployment |
    | Connection security / TLS | **Secure (TLS)** / enabled |
 
-   If the client provides one complete URL field, enter `wss://gateway.example.com`. If you changed OpenClaw to password authentication, enter the configured Gateway password instead.
+   If the client provides one complete URL field, enter `wss://efa2f8ec2.yourolaresid.olares.com`. If you changed OpenClaw to password authentication, enter the configured Gateway password instead.
 
 4. Tap **Test connection**, **Connect**, or **Save & Connect**. A **pairing required** message means the connection reached the Gateway and needs device approval.
-5. Follow [Approve a pending device](#approve-a-pending-device), then return to the client and reconnect.
-6. Open chat, send a message, and confirm a reply.
+5. Follow [Approve a pending device](#approve-a-pending-device), using `openclaw devices approve <requestId>` to approve the connection. Return to the client and reconnect, keeping the app in the foreground.
+6. In **OpenClaw CLI**, list the node capability requests created after reconnection:
+
+   ```bash
+   openclaw nodes pending
+   ```
+
+7. Identify your phone and review its requested commands and capabilities. If a request is pending, approve it using the Request ID from this list:
+
+   ```bash
+   openclaw nodes approve <nodeRequestId>
+   ```
+
+   This node request ID differs from the device pairing request ID in `devices list`. Do not interchange them. If no node request is pending, continue to check the node status.
+
+8. Check node connectivity and capabilities:
+
+   ```bash
+   openclaw nodes status
+   openclaw nodes describe --node <nodeId>
+   ```
+
+   Replace `<nodeId>` with your phone's node ID from the status output. Confirm it is connected. Camera, microphone, and location features also require permission on the phone. See [Node pairing](https://docs.openclaw.ai/cli/nodes#pairing).
+
+9. Open chat, send a message, and confirm a reply.
 
 </template>
 
@@ -118,19 +136,19 @@ The QR code contains a short-lived pairing credential. Keep it private and gener
    openclaw qr
    ```
 
-   New installations of Olares app version **1.0.46 or later** configure the Gateway entrance as the pairing URL. Check that the output's **Gateway** line contains the domain you copied, with `wss://`.
+   New installations of Olares app version **1.0.47 or later** configure the Gateway entrance as the pairing URL. Check that the output's **Gateway** line contains the domain you copied, with `wss://`.
 
 3. If you upgraded an existing installation, changed the entrance domain, or the displayed address is incorrect, specify the address explicitly:
 
    ```bash
-   openclaw qr --url 'wss://gateway.example.com'
+   openclaw qr --url 'wss://efa2f8ec2.yourolaresid.olares.com'
    ```
 
    This command does not change your saved configuration. Upgrades preserve existing `openclaw.json` settings, so a new default does not overwrite an existing installation.
 
-4. On your Android phone, choose **Scan QR or setup code** during OpenClaw setup. If already configured, open **Settings** > **Gateway** > **Add Gateway**.
-5. Open the QR scanner, allow camera access when prompted, and scan the terminal QR code.
-6. Confirm that the displayed Gateway address matches your Olares Gateway entrance, then connect. Official clients can pair automatically when the setup-code metadata matches. If approval remains pending, follow [Approve a pending device](#approve-a-pending-device).
+4. Open **Connections** in the mobile client and select **Scan QR to pair**.
+5. Allow camera access when prompted, then scan the terminal QR code.
+6. On the first connection, the client asks whether to trust the Gateway. Verify that the address matches your Olares Gateway entrance, then select **Trust and connect**. The client pairs automatically; if approval remains pending, follow [Approve a pending device](#approve-a-pending-device).
 7. Open chat, send a message, and confirm a reply.
 
 The QR code contains a short-lived pairing credential. Keep it private and generate a new one if it expires. By default, a `wss://` setup code grants node access and full Gateway operator access. Add `--limited` to request a reduced operator profile. See the [upstream QR reference](https://docs.openclaw.ai/cli/qr).
@@ -145,23 +163,45 @@ The QR code contains a short-lived pairing credential. Keep it private and gener
 
    Copy the token privately to the phone. It is an OpenClaw credential, not your Olares account password.
 
-
 2. In the Android client, choose **Set up manually**, or open **Settings** > **Gateway** > **Manual Gateway**.
 3. Fill in the connection details:
 
    | Field | Value |
    | --- | --- |
-   | Host | Your Gateway entrance domain, such as `gateway.example.com`. Do not include a scheme or path when host and port are separate fields. |
+   | Host | Your Gateway entrance domain, such as `efa2f8ec2.yourolaresid.olares.com`. Do not include a scheme or path when host and port are separate fields. |
    | Port | `443` |
    | Token | The Gateway token from step 1 |
    | Password | Leave empty for the default token-based Olares deployment |
    | Connection security / TLS | **Secure (TLS)** / enabled |
 
-   If the client provides one complete URL field, enter `wss://gateway.example.com`. If you changed OpenClaw to password authentication, enter the configured Gateway password instead.
+   If the client provides one complete URL field, enter `wss://efa2f8ec2.yourolaresid.olares.com`. If you changed OpenClaw to password authentication, enter the configured Gateway password instead.
 
 4. Tap **Test connection**, **Connect**, or **Save & Connect**. A **pairing required** message means the connection reached the Gateway and needs device approval.
-5. Follow [Approve a pending device](#approve-a-pending-device), then return to the client and reconnect.
-6. Open chat, send a message, and confirm a reply.
+5. Follow [Approve a pending device](#approve-a-pending-device), using `openclaw devices approve <requestId>` to approve the connection. Return to the client and reconnect, keeping the app in the foreground.
+6. In **OpenClaw CLI**, list the node capability requests created after reconnection:
+
+   ```bash
+   openclaw nodes pending
+   ```
+
+7. Identify your phone and review its requested commands and capabilities. If a request is pending, approve it using the Request ID from this list:
+
+   ```bash
+   openclaw nodes approve <nodeRequestId>
+   ```
+
+   This node request ID differs from the device pairing request ID in `devices list`. Do not interchange them. If no node request is pending, continue to check the node status.
+
+8. Check node connectivity and capabilities:
+
+   ```bash
+   openclaw nodes status
+   openclaw nodes describe --node <nodeId>
+   ```
+
+   Replace `<nodeId>` with your phone's node ID from the status output. Confirm it is connected. Camera, microphone, and location features also require permission on the phone. See [Node pairing](https://docs.openclaw.ai/cli/nodes#pairing).
+
+9. Open chat, send a message, and confirm a reply.
 
 </template>
 </Tabs>
@@ -210,9 +250,10 @@ You do not need to change the domain, port, or TLS setting when moving between n
 | Symptom | What to check |
 | --- | --- |
 | `Expected HTTP 101 response but was '400 Bad Request'` | The WebSocket handshake failed before pairing. First check that LarePass VPN is enabled on this phone, the host is the **Gateway** entrance, and the port is `443` with TLS. A `400` alone does not identify which proxy returned it. |
-| QR advertises loopback, a container IP, or the wrong domain | Generate it again with `openclaw qr --url 'wss://gateway.example.com'`. |
+| QR advertises loopback, a container IP, or the wrong domain | Generate it again with `openclaw qr --url 'wss://efa2f8ec2.yourolaresid.olares.com'`. |
 | Setup code expired or rejected | Generate a fresh QR code and scan it again. Do not use the pairing credential in the manual token field. |
 | Token authentication fails | Retrieve the current token from this OpenClaw instance. Do not use the Olares password or a token from another clone. |
+| Pairing command shown on the phone fails | Run `openclaw devices list` in OpenClaw CLI, identify your phone’s pending request, then run `openclaw devices approve <requestId>`. The phone may display an older requestId; **use the current requestId from CLI**. |
 | `pairing required` or `unknown requestId` | Follow [Approve a pending device](#approve-a-pending-device), using the latest request for your phone. |
 | Paired in CLI, but the phone still shows an old error | Reconnect with VPN enabled. If necessary, close and reopen the mobile app. |
 | iOS reports `Gateway setup incomplete` | Generate a fresh QR/setup code and pair again to obtain both node and operator credentials. |
