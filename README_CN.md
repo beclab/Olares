@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="#快速开始">安装 Olares</a> ·
-  <a href="https://www.olares.com/docs/zh/developer/cli-agent-skills">用 AI 管理 Olares</a> ·
+  <a href="https://www.olares.com/docs/zh/one/olares-onboarding">用 AI 管理 Olares</a> ·
   <a href="#参与贡献">参与贡献</a>
 </p>
 
@@ -139,9 +139,9 @@ Olares 欢迎各种形式的贡献，你可以按自己想改进的方向来选�
 
 - **[安装指南](https://www.olares.com/docs/zh/manual/get-started/install-olares)**：选择安装方式并激活 Olares。
 - **[使用场景](https://www.olares.com/docs/zh/use-cases/)**：了解本地 AI、媒体、办公和自托管等玩法。
-- **[CLI 指南](https://www.olares.com/docs/zh/developer/install/cli/olares-cli)**：从命令行安装、管理和诊断 Olares。
+- **[CLI 指南](https://www.olares.com/docs/zh/developer/cli-overview)**：从命令行安装、管理和诊断 Olares。
 - **[Agent Skills](https://www.olares.com/docs/zh/developer/cli-agent-skills)**：让 AI Agent 通过 `olares-cli` 操作 Olares。
-- **[进阶教程](https://www.olares.com/docs/zh/manual/best-practices/)**：配置 GPU、多节点部署、自定义域名、扩容存储等。
+- **进阶教程**：配置 [GPU 资源](https://www.olares.com/docs/zh/manual/olares/settings/gpu-resource)、[多节点部署](https://www.olares.com/docs/zh/manual/best-practices/install-olares-multi-node)、[自定义域名](https://www.olares.com/docs/zh/manual/best-practices/set-custom-domain)和[存储扩容](https://www.olares.com/docs/zh/manual/best-practices/expand-storage-in-olares)。
 
 ## 社区
 

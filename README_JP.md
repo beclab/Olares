@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="#はじめに">Olaresをインストール</a> ·
-  <a href="https://www.olares.com/docs/developer/cli-agent-skills">AIでOlaresを管理</a> ·
+  <a href="https://www.olares.com/docs/one/olares-onboarding">AIでOlaresを管理</a> ·
   <a href="#貢献">貢献する</a>
 </p>
 
@@ -139,9 +139,9 @@ Olaresはプロジェクト全体への貢献を歓迎します。改善した�
 
 - **[インストールガイド](https://www.olares.com/docs/manual/get-started/install-olares)**：インストール方法を選んでOlaresをアクティベーションします。
 - **[ユースケース](https://www.olares.com/docs/use-cases/)**：ローカルAI、メディア、生産性、セルフホストの活用例を紹介します。
-- **[CLIガイド](https://www.olares.com/docs/developer/install/cli/olares-cli)**：コマンドラインからOlaresをインストール・管理・診断します。
+- **[CLIガイド](https://www.olares.com/docs/developer/cli-overview)**：コマンドラインからOlaresをインストール・管理・診断します。
 - **[Agent Skills](https://www.olares.com/docs/developer/cli-agent-skills)**：AIエージェントが `olares-cli` を通じてOlaresを操作できるようにします。
-- **[高度なチュートリアル](https://www.olares.com/docs/manual/best-practices/)**：GPU、マルチノード構成、カスタムドメイン、ストレージ拡張などを設定します。
+- **高度なチュートリアル**：[GPUリソース](https://www.olares.com/docs/manual/olares/settings/gpu-resource)、[マルチノード構成](https://www.olares.com/docs/manual/best-practices/install-olares-multi-node)、[カスタムドメイン](https://www.olares.com/docs/manual/best-practices/set-custom-domain)、[ストレージ拡張](https://www.olares.com/docs/manual/best-practices/expand-storage-in-olares)を設定します。
 
 ## コミュニティ
 

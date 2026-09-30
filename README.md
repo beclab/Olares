@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="#get-started">Install Olares</a> ·
-  <a href="https://www.olares.com/docs/developer/cli-agent-skills">Manage Olares with AI</a> ·
+  <a href="https://www.olares.com/docs/one/olares-onboarding">Manage Olares with AI</a> ·
   <a href="#contributing">Contribute</a>
 </p>
 
@@ -139,9 +139,9 @@ Olares welcomes contributions across the project. Choose the path that best matc
 
 - **[Installation guide](https://www.olares.com/docs/manual/get-started/install-olares):** Choose an installation method and activate Olares.
 - **[Use cases](https://www.olares.com/docs/use-cases/):** Explore local AI, media, productivity, and self-hosted workflows.
-- **[CLI guide](https://www.olares.com/docs/developer/install/cli/olares-cli):** Install, manage, and diagnose Olares from the command line.
+- **[CLI guide](https://www.olares.com/docs/developer/cli-overview):** Install, manage, and diagnose Olares from the command line.
 - **[Agent Skills](https://www.olares.com/docs/developer/cli-agent-skills):** Let AI agents operate Olares through `olares-cli`.
-- **[Advanced tutorials](https://www.olares.com/docs/manual/best-practices/):** Configure GPUs, multi-node deployments, custom domains, and storage expansion.
+- **Advanced tutorials:** Configure [GPU resources](https://www.olares.com/docs/manual/olares/settings/gpu-resource), [multi-node deployments](https://www.olares.com/docs/manual/best-practices/install-olares-multi-node), [custom domains](https://www.olares.com/docs/manual/best-practices/set-custom-domain), and [storage expansion](https://www.olares.com/docs/manual/best-practices/expand-storage-in-olares).
 
 ## Community
 
