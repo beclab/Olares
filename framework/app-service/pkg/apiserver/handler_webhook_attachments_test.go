@@ -140,8 +140,8 @@ func TestInjectBluetoothHidesHostBusFromApplication(t *testing.T) {
 	if len(tpl.Spec.Containers) != 3 || tpl.Spec.Containers[2].Name != bluezProxyContainerName {
 		t.Fatalf("bluez proxy not injected: %#v", tpl.Spec.Containers)
 	}
-	if len(tpl.Spec.InitContainers) != 1 || tpl.Spec.InitContainers[0].Name != bluezProxyInitContainerName {
-		t.Fatal("bluez socket ownership initializer was not injected")
+	if len(tpl.Spec.InitContainers) != 0 {
+		t.Fatalf("bluetooth injection added unexpected init containers: %#v", tpl.Spec.InitContainers)
 	}
 	if len(tpl.Spec.Containers[0].VolumeMounts) != 1 || tpl.Spec.Containers[0].VolumeMounts[0].Name != bluezVolumeName {
 		t.Fatal("target container did not receive filtered socket")

@@ -31,7 +31,6 @@ const (
 	deviceResourcePrefix         = "devices.bytetrade.io/"
 	bluezVolumeName              = "olares-bluez"
 	bluezProxyContainerName      = "bluez-dbus-proxy"
-	bluezProxyInitContainerName  = "bluez-dbus-proxy-prepare"
 )
 
 // Olares hosts use the standard dialout, audio, and video group IDs for
@@ -144,13 +143,6 @@ func cleanupManagedAttachments(tpl *corev1.PodTemplateSpec, managedBefore bool) 
 		containers = append(containers, container)
 	}
 	tpl.Spec.Containers = containers
-	initContainers := tpl.Spec.InitContainers[:0]
-	for _, container := range tpl.Spec.InitContainers {
-		if container.Name != bluezProxyInitContainerName {
-			initContainers = append(initContainers, container)
-		}
-	}
-	tpl.Spec.InitContainers = initContainers
 	if managedBefore {
 		delete(tpl.Spec.NodeSelector, corev1.LabelHostname)
 		if tpl.Spec.SecurityContext != nil {
@@ -421,18 +413,6 @@ func injectBluetooth(tpl *corev1.PodTemplateSpec, targets []string) error {
 		corev1.Volume{Name: bluezVolumeName, VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}}},
 		corev1.Volume{Name: attachmentVolumePrefix + "bluez-host", VolumeSource: corev1.VolumeSource{HostPath: &corev1.HostPathVolumeSource{Path: "/run/dbus/system_bus_socket", Type: &socketType}}},
 	)
-	tpl.Spec.InitContainers = append(tpl.Spec.InitContainers, corev1.Container{
-		Name:    bluezProxyInitContainerName,
-		Image:   image,
-		Command: []string{"sh", "-ec", "chown 65532:65532 /run/olares-bluez && chmod 0700 /run/olares-bluez"},
-		SecurityContext: &corev1.SecurityContext{
-			AllowPrivilegeEscalation: ptr.To(false),
-			ReadOnlyRootFilesystem:   ptr.To(true),
-			RunAsNonRoot:             ptr.To(false),
-			RunAsUser:                ptr.To(int64(0)),
-		},
-		VolumeMounts: []corev1.VolumeMount{{Name: bluezVolumeName, MountPath: "/run/olares-bluez"}},
-	})
 	tpl.Spec.Containers = append(tpl.Spec.Containers, corev1.Container{
 		Name: bluezProxyContainerName, Image: image,
 		Command: []string{"sh", "-ec"},
