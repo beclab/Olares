@@ -29,6 +29,10 @@ This tutorial uses a coastal car poster as a running example across four scenari
 
 - Olares OS 1.12.7 or later
 
+:::warning Avoid running FlowStudio generation and Qwen3.8-27B chats at the same time
+When using Qwen3.8-27B (llama.cpp) in Lares, wait for any image or video generation task started directly in FlowStudio to finish before sending a message. Running both at the same time can cause GPU memory conflicts and make the model unresponsive.
+:::
+
 ## Install FlowStudio
 
 If you installed FlowStudio previously, update it to the latest version before continuing.

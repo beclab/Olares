@@ -27,6 +27,10 @@ FlowStudio 提供现成的工作流，用于生成图片、编辑已有图片和
 | 在 FlowStudio 中创作 | 在 FlowStudio 中选择场景，输入提示词、提供所需素材，并配置生成参数。 | [在 FlowStudio 中生成图片和视频](flowstudio-create.md) |
 | 通过 Lares 创作 | 在对话中描述需求，由 Lares 通过 Router 调用可用的 FlowStudio 能力。 | [通过 Lares 使用 FlowStudio](flowstudio-lares.md) |
 
+:::warning 避免同时运行 FlowStudio 生成任务和 Qwen3.8-27B 对话
+在 Lares 中使用 Qwen3.8-27B (llama.cpp) 时，请等待直接在 FlowStudio 中启动的图片或视频生成任务完成，再发送消息。同时运行两者可能导致显存冲突，使模型无法响应。
+:::
+
 ## 应用如何协作
 
 无论直接在 FlowStudio 中创作，还是通过 Lares 发起请求，生成工作流都由 FlowStudio 执行。Lares 提供对话界面，通过 Router 发送请求。使用任一方式前，都需要在 FlowStudio 中创建所需场景，并等待模型下载和初始化完成。

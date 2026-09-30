@@ -23,6 +23,10 @@ Create directly in FlowStudio, or ask Lares to call its capabilities through Rou
 | Create in FlowStudio | Choose a scene, supply a prompt and any required media, and configure generation parameters in FlowStudio. | [Generate images and videos in FlowStudio](flowstudio-create.md) |
 | Create through Lares | Describe your request in a conversation. Lares calls the available FlowStudio capabilities through Router. | [Use FlowStudio through Lares](flowstudio-lares.md) |
 
+:::warning Avoid running FlowStudio generation and Qwen3.8-27B chats at the same time
+When using Qwen3.8-27B (llama.cpp) in Lares, wait for any image or video generation task started directly in FlowStudio to finish before sending a message. Running both at the same time can cause GPU memory conflicts and make the model unresponsive.
+:::
+
 ## How the apps work together
 
 Whether you create directly in FlowStudio or through Lares, FlowStudio runs the generation workflow. Lares provides a conversational interface and sends requests through Router. Before using either method, create the required scenes in FlowStudio and wait for model downloads and initialization to finish.

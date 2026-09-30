@@ -21,6 +21,14 @@ Lares lets you request image and video generation in a conversation. Router conn
 - Qwen3.8-27B (llama.cpp) installed, with the model download complete.
 - Required FlowStudio scenes created, with model downloads and initialization complete. For setup instructions, see [Generate images and videos in FlowStudio](flowstudio-create.md).
 
+:::warning Important: Run one task at a time
+When running Qwen3.8-27B (llama.cpp) on Olares One, we recommend running only one request at a time to ensure the best experience with the 102K context window and model precision.
+:::
+
+:::warning Avoid running FlowStudio generation and Qwen3.8-27B chats at the same time
+When using Qwen3.8-27B (llama.cpp) in Lares, wait for any image or video generation task started directly in FlowStudio to finish before sending a message. Running both at the same time can cause GPU memory conflicts and make the model unresponsive.
+:::
+
 ## Get started
 
 1. Open Lares, select **Qwen3.8-27B (llama.cpp)**, and confirm the permission level.
@@ -34,10 +42,6 @@ Lares lets you request image and video generation in a conversation. Router conn
    ```
 
 3. Review the available capabilities, then describe what you want to create. To use a specific generation model, include its name in your prompt. Otherwise, let Lares choose based on your request and the available models.
-
-:::warning Important: Run one task at a time
-When running Qwen3.8-27B (llama.cpp) on Olares One, we recommend running only one request at a time to ensure the best experience with the 102K context window and model precision.
-:::
 
 ## Generate an image
 

@@ -33,6 +33,10 @@ doc_updated: "2026-09-29"
 
 - Olares OS 1.12.7 或更高版本。
 
+:::warning 避免同时运行 FlowStudio 生成任务和 Qwen3.8-27B 对话
+在 Lares 中使用 Qwen3.8-27B (llama.cpp) 时，请等待直接在 FlowStudio 中启动的图片或视频生成任务完成，再发送消息。同时运行两者可能导致显存冲突，使模型无法响应。
+:::
+
 ## 安装 FlowStudio
 
 如果此前已安装 FlowStudio，请先更新至最新版本。
