@@ -1,19 +1,19 @@
 ---
 outline: [2, 3]
-description: 将双节点 Olares 集群从 1.12.5 升级到 1.12.6。
+description: 手动升级双节点 Olares 集群中的 master 节点和 worker 节点。
 head:
   - - meta
     - name: keywords
-      content: Olares One, 多节点, 双节点, 升级, 1.12.5, 1.12.6
+      content: Olares One, 多节点, 双节点, 升级
 ---
 
 :::warning
 本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../one/upgrade-multi-node-cluster.md)为准。
 :::
 
-# 将双节点 Olares 集群从 1.12.5 升级到 1.12.6
+# 升级双节点 Olares 集群
 
-本教程介绍如何手动将双节点 Olares 集群从 1.12.5 升级到 1.12.6。升级过程包括在两个节点上下载升级包、升级 Olares CLI 和守护进程，以及分别升级 master 节点和 worker 节点。
+本指南介绍如何手动将双节点 Olares 集群升级到新版本。升级过程包括在两个节点上下载升级包、升级 Olares CLI 和守护进程，以及分别升级 master 节点和 worker 节点。
 
 ## 准备工作
 
@@ -24,6 +24,14 @@ head:
 
 **访问**
 - 你可以通过 SSH 以具有 `sudo` 权限的用户访问两个节点。
+
+**版本**
+- 升级前，两个节点运行相同的 Olares 版本。
+- 目标版本支持从当前版本升级。
+
+在以下命令中，将 `<source-version>` 替换为升级前的版本号，将 `<target-version>` 替换为目标版本号，均不带 `v` 前缀。
+
+例如，从 1.12.6 升级到 1.12.7 时，将 `<source-version>` 替换为 `1.12.6`，将 `<target-version>` 替换为 `1.12.7`。
 
 ## 步骤 1：连接到两个节点
 
@@ -62,7 +70,7 @@ head:
 3. 创建升级目标文件以触发下载：
 
    ```bash
-   echo '{"version":"1.12.6", "downloadOnly": true}' > $OLARES_BASE_DIR/upgrade.target
+   echo '{"version":"<target-version>", "downloadOnly": true}' > "$OLARES_BASE_DIR/upgrade.target"
    ```
 
 4. 检查下载进度：
@@ -96,7 +104,7 @@ head:
 3. 将 Olares CLI 更新到新版本：
 
    ```bash
-   cp -f $OLARES_BASE_DIR/pkg/components/olares-cli-v1.12.6 /usr/local/bin/olares-cli
+   cp -f "$OLARES_BASE_DIR/pkg/components/olares-cli-v<target-version>" /usr/local/bin/olares-cli
    ```
 
 4. 导入新容器镜像：
@@ -135,10 +143,10 @@ head:
    kubectl get pod -o wide -A
    ```
 
-4. 临时将集群版本号改回 `1.12.5`，以便升级 worker 节点：
+4. 临时将集群版本号改回升级前的版本 `<source-version>`，以便升级 worker 节点：
 
    ```bash
-   kubectl patch terminus terminus --type=merge -p '{"spec":{"version":"1.12.5"}}'
+   kubectl patch terminus terminus --type=merge -p '{"spec":{"version":"<source-version>"}}'
    ```
 
 ## 步骤 5：升级 worker 节点
@@ -155,17 +163,17 @@ master 节点升级完成并临时修改版本号后，即可升级 worker 节�
 
 ## 步骤 6：在 master 节点上恢复集群版本
 
-worker 节点升级完成后，将 master 节点上的版本号恢复为 `1.12.6`，以完成整个升级过程。
+worker 节点升级完成后，在 master 节点上将集群版本号恢复为 `<target-version>`，以完成整个升级过程。
 
 如果到 master 节点的 SSH 连接已超时，请先重新连接再继续。
 
 1. 在 master 节点的 SSH 窗口中，执行以下命令：
 
    ```bash
-   kubectl patch terminus terminus --type=merge -p '{"spec":{"version":"1.12.6"}}'
+   kubectl patch terminus terminus --type=merge -p '{"spec":{"version":"<target-version>"}}'
    ```
 
-   此时，双节点集群已运行在 Olares 1.12.6 上。
+   此时，双节点集群已运行目标 Olares 版本。
 
 2. 要验证集群中两个节点的最终状态，请执行以下命令：
 
