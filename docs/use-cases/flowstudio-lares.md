@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Prepare FlowStudio scenes, Router, and Lares to request image and video generation through a conversation.
+description: Generate images and videos through Lares conversations using workflows prepared in FlowStudio.
 head:
   - - meta
     - name: keywords
@@ -10,35 +10,57 @@ doc_version: "1.0"
 doc_updated: "2026-09-29"
 ---
 
-# Use FlowStudio through Lares (in Draft)
+# Use FlowStudio through Lares
 
-Lares lets you request image and video generation in a conversation. Router connects the request to an available FlowStudio capability, and FlowStudio runs the generation workflow. For the roles of all three apps, see [FlowStudio](flowstudio.md#how-the-apps-work-together).
+Lares lets you request image and video generation in a conversation. Router connects the request to an available FlowStudio capability, and FlowStudio runs the generation workflow.
 
 ## Prerequisites
 
-- Olares System 1.12.7.
-- FlowStudio, Router, and Lares installed from Market. For existing installations, update the apps to the latest available versions before continuing.
-- Qwen3.8-27B (llama.cpp) installed for Lares, as described in the [Lares guide](lares.md#prerequisites).
-- The FlowStudio scenes you want to call created and initialized, with their required models downloaded.
+- Olares OS 1.12.7 or later.
+- FlowStudio, Router, and Lares installed from Market. Update existing installations to the latest available versions.
+- Qwen3.8-27B (llama.cpp) installed, with the model download complete.
+- Required FlowStudio scenes created, with model downloads and initialization complete. For setup instructions, see [Generate images and videos in FlowStudio](flowstudio-create.md).
 
-The LLM used by Lares interprets your request. The image and video models used by FlowStudio perform the generation. Installing the Lares LLM alone does not prepare FlowStudio's generation capabilities.
+## Get started
 
-## Prepare the FlowStudio scenes
+1. Open Lares, select **Qwen3.8-27B (llama.cpp)**, and confirm the permission level.
 
-1. Open FlowStudio and choose the image or video workflow you need in **Workflow Plaza**.
-2. Review **Pre-run checks**, then click **Create scene** when the checks pass.
-3. In the **Initialization progress** panel that opens on the right, wait for **Init finished**. Model downloads marked **Completed** alone do not mean the scene is ready.
-4. Open **Create** > **Scenes** and check that the scene appears.
+   ![Lares chat interface](/images/manual/use-cases/lares1.png#bordered)
 
-For the full setup and example inputs, see [Generate images and videos in FlowStudio](flowstudio-create.md).
+2. Ask Lares which image and video generation capabilities are available:
 
-## Request generation in Lares
+   ```text
+   What image and video generation capabilities are currently available through FlowStudio?
+   ```
 
-The next part of this guide will cover how to check that the prepared capabilities are available through Router, request image generation in Lares, and request video generation with the required inputs.
+3. Review the available capabilities, then describe what you want to create. To use a specific generation model, include its name in your prompt. Otherwise, let Lares choose based on your request and the available models.
 
-<!-- TODO: Verify Router capability availability, Lares input controls, image and video prompts, task progress, and result handling with screenshots before adding actionable steps. Do not infer Lares controls from the FlowStudio UI. -->
+:::warning Important: Run one task at a time
+When running Qwen3.8-27B (llama.cpp) on Olares One, we recommend running only one request at a time to ensure the best experience with the 102K context window and model precision.
+:::
+
+## Generate an image
+
+1. Describe the image you want. This example specifies the generation model:
+
+   ```text
+   Use Qwen-Image 2.1 NVFP4 · Text to Image to generate a 16:9 automotive poster. Show a red vintage coupe on a coastal road, with a seaside village and turquoise sea in the background. Use warm late-afternoon lighting and add the headline "TIMELESS DRIVE".
+   ```
+
+2. Wait for generation to finish, then open the image to review the result.
+
+## Generate a video
+
+1. Describe the scene, motion, and sound you want. This example lets Lares select an available generation model:
+
+   ```text
+   Generate a 5-second video at 480p. A red vintage coupe drives slowly along a coastal road at sunset. The camera tracks alongside it, keeping the whole car visible as its wheels turn. Add a gentle engine sound and soft instrumental music. No dialogue or text.
+   ```
+
+2. Wait for generation to finish, then play the video to review the result.
 
 ## Learn more
 
-- [Lares](lares.md#get-started): Select a model and confirm its permission level.
+- [FlowStudio](flowstudio.md#how-the-apps-work-together): Understand how FlowStudio, Router, and Lares work together.
+- [Lares](lares.md): Learn how to use Lares to manage Olares and run research tasks.
 - [Generate images and videos in FlowStudio](flowstudio-create.md): Use the scenes directly and prepare example media.
