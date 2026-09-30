@@ -37,7 +37,7 @@ If your current versions are older than the ones listed below, download the corr
 
 | Version | <nobr>Release date</nobr> | Changelog |
 |:--------|:-------------|:----------|
-| [1.07 (Download)](https://cdn.olares.com/common/OlaresOne_BIOS_1.07.zip) | 2026-09-24 | <ul><li>Open the GPU PCIe speed interface to the production test tool, enabling automated switching between Gen4 and Gen5. The default setting and system performance remain unchanged.</li></ul> |
+| [1.07 (Download)](https://cdn.olares.com/common/OlaresOne_BIOS_1.07.zip) | 2026-09-24 | <ul><li>Expose the GPU PCIe speed interface to the production test tool, enabling automated switching between Gen4 and Gen5. The default setting and system performance remain unchanged.</li></ul> |
 | 1.05 | 2026-07-06 | <ul><li>Fix the Thunderbolt port issue by disabling the D3 (D3Cold) low-power state only for the GPU. Previously, D3 was disabled for all devices to address the abnormal power consumption issue.</li></ul> |
 | 1.04 | 2026-05-09 | <ul><li>Add a warning prompt when changing the **Primary Display** setting to **HG**.</li><li>Fix the issue where the GPU unexpectedly disconnects by locking the GPU PCIe speed to Gen4.</li><li>Fix the issue where performance degrades and power consumption is abnormally limited after prolonged use by disabling the function that puts the GPU into sleep mode when the product is idle.</li></ul> |
 | 1.03  | 2026-03-19 | <ul><li>Fix the ACPI error that occurs during Ubuntu system boot.</li><li>Update the Intel CPU microcode to version 0x121.</li></ul> |
