@@ -18,6 +18,21 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "Lares",
               link: "/use-cases/lares",
             },
+            {
+              text: "FlowStudio",
+              link: "/use-cases/flowstudio",
+              collapsed: false,
+              items: [
+                {
+                  text: "Create in FlowStudio",
+                  link: "/use-cases/flowstudio-create",
+                },
+                {
+                  text: "Use through Lares",
+                  link: "/use-cases/flowstudio-lares",
+                },
+              ],
+            },
           ],
         },
         {
