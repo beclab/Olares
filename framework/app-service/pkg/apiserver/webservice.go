@@ -207,6 +207,37 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 		Param(ws.PathParameter(ParamAppName, "the name of a application")).
 		Returns(http.StatusOK, "Success to get the application settings", nil))
 
+	ws.Route(ws.GET("/applications/{"+ParamAppName+"}/device-inventory").
+		To(handler.getDeviceInventory).
+		Doc("list selectable physical devices for an application workload").
+		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
+		Param(ws.PathParameter(ParamAppName, "the name of an application")).
+		Param(ws.QueryParameter("workload", "the workload declared in workloadOptions")).
+		Returns(http.StatusOK, "Device inventory", &DeviceInventoryResponse{}))
+
+	ws.Route(ws.GET("/applications/{"+ParamAppName+"}/attachment-capabilities").
+		To(handler.getAttachmentCapabilities).
+		Doc("list application workloads and their attachable capabilities").
+		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
+		Param(ws.PathParameter(ParamAppName, "the name of an application")).
+		Returns(http.StatusOK, "Application attachment capabilities", &AttachmentCapabilitiesResponse{}))
+
+	ws.Route(ws.GET("/applications/{"+ParamAppName+"}/attachments").
+		To(handler.getAttachments).
+		Doc("get application folder and device attachments").
+		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
+		Param(ws.PathParameter(ParamAppName, "the name of an application")).
+		Returns(http.StatusOK, "Application attachments", &AttachmentsResponse{}))
+
+	ws.Route(ws.PUT("/applications/{"+ParamAppName+"}/attachments").
+		To(handler.updateAttachments).
+		Doc("replace application folder and device attachments").
+		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
+		Param(ws.PathParameter(ParamAppName, "the name of an application")).
+		Reads(UpdateAttachmentsRequest{}).
+		Consumes(restful.MIME_JSON).
+		Returns(http.StatusOK, "Application attachments", &AttachmentsResponse{}))
+
 	ws.Route(ws.POST("/applications/{"+ParamAppName+"}/{"+ParamEntranceName+"}/setup").
 		To(handler.setupAppEntranceDomain).
 		Doc("update the application settings of custom domain").

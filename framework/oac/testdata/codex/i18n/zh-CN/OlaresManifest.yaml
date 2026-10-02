@@ -1,0 +1,55 @@
+metadata:
+  title: Codex CLI
+  description: OpenAI 官方原版的终端 AI 编码助手
+spec:
+  fullDescription: |
+    **概述**
+    Codex CLI 是 OpenAI 官方推出的开源终端智能编码助手。它能够理解你的代码库，通过自然语言执行日常任务，帮助你更高效地开发和保持专注。
+
+    **主要功能**
+    - 基于终端的原生 TUI，支持工具实时输出流、斜杠命令、中断与重定向、丰富的差异审查体验。
+    - 可通过自然语言进行真实文件编辑、Shell 执行、Git 工作流和测试操作。
+    - 兼容 MCP 工具调用，可复用 AGENTS.md / `.codex/skills` 中的智能体指令。
+    - 支持通过 ChatGPT Plus / Pro / Business / Edu / Enterprise 计划（OAuth 登录）或 OpenAI API 密钥使用。
+    - 工作区镜像预装常见语言运行时与构建工具链（Python、Node.js、Go、Rust、OpenJDK 21、Ruby、PHP、Lua），以及数据库客户端（PostgreSQL、MySQL/MariaDB、Redis）、git-lfs、protobuf 编译器、Gradle、tmux、dig/ss/nc、shellcheck、clang-format/tidy、graphviz，以及各类常见 -dev 头文件（libpq、MySQL 客户端、curl、ICU、LDAP）等，便于在无 root 下完成常见开发任务。
+    - 可选 Docker-in-Docker 边车（`ENABLE_DIND`，默认开启）：在终端中直接运行 `docker build`、`docker compose` 等容器化开发命令（特权边车容器）。
+
+    **首次设置**
+    打开 `Codex CLI` 入口并运行 `codex`，开启 OAuth 登录流程（“使用 ChatGPT 登录”）；也可在应用环境变量中配置 `OPENAI_API_KEY`，然后重启应用。
+
+    **接入本地模型（Ollama / OpenAI 兼容网关）**
+    若要让 Codex 走本机 Ollama、Olares Router，或任意 OpenAI 兼容的 `/v1` 代理，在应用环境变量里配置即可，无需每次 `export`/`unset`。留空时不会写入容器，并会删除托管的 `~/.codex/config.toml` 段，从而回到 ChatGPT OAuth / 官方 API。
+
+    - `OPENAI_BASE_URL` = `http://<共享入口域名>/v1`（Ollama / Router / vLLM 等应用的 shared 入口）
+    - `OPENAI_API_KEY` = 网关要求的密钥；很多 Ollama 代理可填 `ollama`
+    - `CODEX_MODEL` = `qwen3-coder:30b`（或该网关实际暴露的模型名）
+
+    **切回云端**
+    清空 `OPENAI_BASE_URL` 和 `CODEX_MODEL`，保留或填入真实的 `OPENAI_API_KEY`（也可留空后运行 `codex login`），然后重启。下次启动会去掉本地路由托管段。
+
+    **如果 Codex 提示缺少 agentic execution capabilities（无法执行代理任务）**
+    在 Codex 终端里、运行 `codex` 之前，用官方安装脚本重装到工作区 bin：
+
+    `curl -fsSL https://chatgpt.com/codex/install.sh | CODEX_INSTALL_DIR=/opt/data/.local/bin sh`
+
+    这会把最新的完整独立包（含 code-mode host 等依赖）装到持久化卷，并修复只有单个 `codex` 二进制的残缺安装。
+  upgradeDescription: |
+    **v1.0.17**
+
+    **Codex CLI**
+    - 安装版本由 **0.147.0** 升级至 **0.149.1**。
+    - `init-install-codex` 改为使用 OpenAI 官方独立安装器（`https://chatgpt.com/codex/install.sh`），不再只解压 GitHub musl 二进制。升级后会修复此前缺少 agentic execution 能力的残缺安装。
+
+    **基础镜像（`beclab/harveyff-codex-base:0.5.9`，原 0.5.8）**
+    - 工作区 / init 镜像升级至 **0.5.9**。
+
+    **本地 / 云端模型切换**
+    - 应用环境变量 `OPENAI_BASE_URL` + `CODEX_MODEL` 会把托管段写在 `~/.codex/config.toml` **文件开头**（根键必须在 TOML 表之前）。留空即切回 ChatGPT OAuth / 官方 API。
+
+    **v1.0.12**
+
+    **Codex CLI**
+    - 安装版本由 **0.146.0** 升级至 **0.147.0**（`init-install-codex` 使用 chart `appVersion` 拉取）。
+
+    **基础镜像（`beclab/harveyff-codex-base:0.5.8`，原 0.5.7）**
+    - 镜像内置 `@olares/cli` 升级至 **1.12.7-cli.0**（原 1.12.6-cli.2）。

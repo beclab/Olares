@@ -4,9 +4,11 @@ import (
 	"strings"
 	"testing"
 
+	apimanifest "github.com/beclab/api/manifest"
 	"helm.sh/helm/v3/pkg/kube"
 	appsv1 "k8s.io/api/apps/v1"
 	cliresource "k8s.io/cli-runtime/pkg/resource"
+	corev1 "k8s.io/api/core/v1"
 )
 
 func TestCollectWorkloadNames(t *testing.T) {
@@ -64,6 +66,45 @@ func TestCheckWorkloadReplicas_UnknownEntry(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), `entry "ghost" does not match`) {
 		t.Fatalf("error should flag unknown 'ghost', got: %v", err)
+	}
+}
+
+func TestCheckWorkloadOptions_DeviceDeployment(t *testing.T) {
+	replicas := int32(1)
+	deployment := newDeployment("frigate", corev1.Container{Name: "frigate"})
+	deployment.Object.(*appsv1.Deployment).Spec.Strategy.Type = appsv1.RecreateDeploymentStrategyType
+	options := apimanifest.WorkloadOptions{
+		"frigate": {
+			Replicas: &replicas,
+			Allow: []apimanifest.WorkloadCapability{{
+				Type:       apimanifest.WorkloadAllowDeviceVideo,
+				Containers: []string{"frigate"},
+			}},
+		},
+	}
+	if err := CheckWorkloadOptions(kube.ResourceList{deployment}, options); err != nil {
+		t.Fatalf("valid device workload failed: %v", err)
+	}
+}
+
+func TestCheckWorkloadOptions_RejectsUnknownContainerAndRollingUpdate(t *testing.T) {
+	replicas := int32(1)
+	deployment := newDeployment("frigate", corev1.Container{Name: "frigate"})
+	options := apimanifest.WorkloadOptions{
+		"frigate": {
+			Replicas: &replicas,
+			Allow: []apimanifest.WorkloadCapability{{
+				Type:       apimanifest.WorkloadAllowDeviceVideo,
+				Containers: []string{"missing"},
+			}},
+		},
+	}
+	err := CheckWorkloadOptions(kube.ResourceList{deployment}, options)
+	if err == nil {
+		t.Fatal("expected workloadOptions render validation to fail")
+	}
+	if !strings.Contains(err.Error(), `unknown container "missing"`) || !strings.Contains(err.Error(), "strategy.type=Recreate") {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }
 

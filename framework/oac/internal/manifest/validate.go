@@ -14,6 +14,8 @@ import (
 
 var validChartName = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`)
 
+var minWorkloadOptionsManifestVersion = semver.MustParse("0.13.0")
+
 var (
 	errInvalidSubChartName = fmt.Errorf(
 		"invalid subchart name, must match regex %s and the length must not be longer than 53",
@@ -117,12 +119,117 @@ func ValidateAppConfiguration(c *AppConfiguration) error {
 		checkSubCharts(c),
 		validatePermission(c.ConfigVersion, c.Metadata.Name, c.Permission, c.Options.Shared),
 		validateRootProvider(c.ConfigVersion, c.Provider),
-		validateWorkloadReplicas(c.ConfigVersion, c.APIVersion, c.WorkloadReplicas),
+		validateWorkloadSchema(c),
 		validateModernFieldRequiresManifestVersion(c),
 		validateOlaresDependency(c),
 		validateSharedAppRequirements(c),
 		validateV3Configuration(c),
 	)
+}
+
+func workloadOptionsCheckApplies(version string) bool {
+	v, err := semver.NewVersion(version)
+	return err == nil && v.GreaterThanEqual(minWorkloadOptionsManifestVersion)
+}
+
+func validateWorkloadSchema(c *AppConfiguration) error {
+	if !workloadOptionsCheckApplies(c.ConfigVersion) {
+		var errs []error
+		if len(c.WorkloadOptions) > 0 {
+			errs = append(errs, fmt.Errorf("workloadOptions requires olaresManifest.version >= %s", minWorkloadOptionsManifestVersion))
+		}
+		errs = append(errs, validateWorkloadReplicas(c.ConfigVersion, c.APIVersion, c.WorkloadReplicas))
+		return errors.Join(errs...)
+	}
+
+	var errs []error
+	if c.WorkloadReplicas != nil {
+		errs = append(errs, fmt.Errorf("workloadReplicas is not supported for olaresManifest.version >= %s; use workloadOptions", minWorkloadOptionsManifestVersion))
+	}
+	if c.OverlayGateway.Enable || len(c.OverlayGateway.Entrances) > 0 {
+		errs = append(errs, fmt.Errorf("top-level overlayGateway is not supported for olaresManifest.version >= %s; use workloadOptions.<workload>.overlayGateway", minWorkloadOptionsManifestVersion))
+	}
+	if len(c.WorkloadOptions) == 0 {
+		errs = append(errs, fmt.Errorf("workloadOptions is required for olaresManifest.version >= %s", minWorkloadOptionsManifestVersion))
+		return errors.Join(errs...)
+	}
+
+	for name, option := range c.WorkloadOptions {
+		if strings.TrimSpace(name) == "" {
+			errs = append(errs, errors.New("workloadOptions contains an empty workload name"))
+			continue
+		}
+		if err := validateWorkloadOption(name, option); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return errors.Join(errs...)
+}
+
+func validateWorkloadOption(name string, option WorkloadOption) error {
+	prefix := fmt.Sprintf("workloadOptions.%s", name)
+	var errs []error
+	if option.Replicas == nil {
+		errs = append(errs, fmt.Errorf("%s.replicas is required", prefix))
+	} else if *option.Replicas < 0 {
+		errs = append(errs, fmt.Errorf("%s.replicas must be >= 0", prefix))
+	}
+
+	validTypes := map[string]struct{}{
+		WorkloadAllowFolder: {}, WorkloadAllowDeviceSerial: {},
+		WorkloadAllowDeviceVideo: {}, WorkloadAllowDeviceAudio: {},
+		WorkloadAllowDeviceHID: {}, WorkloadAllowBluetooth: {},
+	}
+	seenTypes := make(map[string]struct{}, len(option.Allow))
+	for i, capability := range option.Allow {
+		capPrefix := fmt.Sprintf("%s.allow[%d]", prefix, i)
+		if _, ok := validTypes[capability.Type]; !ok {
+			errs = append(errs, fmt.Errorf("%s.type must be one of folder, device.serial, device.video, device.audio, device.hid, bluetooth", capPrefix))
+		}
+		if _, duplicate := seenTypes[capability.Type]; duplicate {
+			errs = append(errs, fmt.Errorf("%s.type %q is duplicated", capPrefix, capability.Type))
+		}
+		seenTypes[capability.Type] = struct{}{}
+		if len(capability.Containers) == 0 {
+			errs = append(errs, fmt.Errorf("%s.containers must not be empty", capPrefix))
+		}
+		seenContainers := make(map[string]struct{}, len(capability.Containers))
+		for _, container := range capability.Containers {
+			if strings.TrimSpace(container) == "" {
+				errs = append(errs, fmt.Errorf("%s.containers must not contain an empty name", capPrefix))
+				continue
+			}
+			if _, duplicate := seenContainers[container]; duplicate {
+				errs = append(errs, fmt.Errorf("%s.containers contains duplicate %q", capPrefix, container))
+			}
+			seenContainers[container] = struct{}{}
+		}
+		if strings.HasPrefix(capability.Type, "device.") && len(capability.Containers) != 1 {
+			errs = append(errs, fmt.Errorf("%s.containers must contain exactly one container for a device capability", capPrefix))
+		}
+	}
+
+	if option.OverlayGateway != nil {
+		for i, entrance := range option.OverlayGateway.Entrances {
+			entrancePrefix := fmt.Sprintf("%s.overlayGateway.entrances[%d]", prefix, i)
+			if err := validation.ValidateStruct(&entrance,
+				validation.Field(&entrance.Title,
+					validation.Required.Error(entrancePrefix+".title is required"),
+					validation.Length(1, 30).Error(entrancePrefix+".title must be 1-30 characters"),
+				),
+				validation.Field(&entrance.Port,
+					validation.Required.Error(entrancePrefix+".port is required"),
+					validation.Min(int32(1)).Error(entrancePrefix+".port must be > 0"),
+				),
+				validation.Field(&entrance.Protocol,
+					validation.In(validOverlayProtocols...).Error(entrancePrefix+`.protocol must be one of "", "tcp", "udp"`),
+				),
+			); err != nil {
+				errs = append(errs, err)
+			}
+		}
+	}
+	return errors.Join(errs...)
 }
 
 func validateAppMetaData(v interface{}) error {
@@ -503,6 +610,7 @@ func validateFlatResourceQuantities(spec *AppSpec, templateOnly bool) error {
 //   - permission.externalData (grants access to the External directory) was
 //     introduced with olaresManifest.version 0.12.0; declaring it on an
 //     older manifest is rejected.
+//
 //   - permission.provider (cross-app provider access) was retired starting
 //     with olaresManifest.version 0.12.0; the field is still accepted
 //     structurally for backwards compatibility on legacy manifests, but a
@@ -610,6 +718,9 @@ func detectOlares1126OnlyFields(c *AppConfiguration) []string {
 	}
 	if c.WorkloadReplicas != nil && len(*c.WorkloadReplicas) > 0 {
 		fields = append(fields, "workloadReplicas")
+	}
+	if len(c.WorkloadOptions) > 0 {
+		fields = append(fields, "workloadOptions")
 	}
 	if c.OverlayGateway.Enable || len(c.OverlayGateway.Entrances) > 0 {
 		fields = append(fields, "overlayGateway")
