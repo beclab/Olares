@@ -97,9 +97,9 @@ func GetSystemPendingShutdowm() (mode string, shuttingdown bool, err error) {
 	return "", false, nil
 }
 
-// getScheduledShutdownFromLogind reads logind's ScheduledShutdown property,
-// which is set for delayed shutdowns (the same source that backs
-// /run/systemd/shutdown/scheduled).
+// getScheduledShutdownFromLogind reads logind's ScheduledShutdown property.
+// Besides delayed shutdowns, logind may leave an immediate sleep action such as
+// ("suspend", 0) in this property after the machine wakes up.
 func getScheduledShutdownFromLogind(conn *dbus.Conn) (mode string, scheduled bool) {
 	obj := conn.Object("org.freedesktop.login1", dbus.ObjectPath("/org/freedesktop/login1"))
 	v, err := obj.GetProperty("org.freedesktop.login1.Manager.ScheduledShutdown")
@@ -116,13 +116,7 @@ func getScheduledShutdownFromLogind(conn *dbus.Conn) (mode string, scheduled boo
 
 	action, _ := fields[0].(string)
 	action = strings.TrimSpace(action)
-	// empty action means nothing is scheduled; dry-run actions only send a wall
-	// message and do not actually power the machine down.
-	if action == "" || strings.HasPrefix(action, "dry-") {
-		return "", false
-	}
-
-	return normalizeShutdownMode(action), true
+	return scheduledShutdownMode(action)
 }
 
 // getActiveShutdownFromSystemd checks whether systemd has a pending job for any
@@ -147,13 +141,17 @@ func getActiveShutdownFromSystemd(conn *dbus.Conn) (mode string, shuttingdown bo
 	return "", false, nil
 }
 
-// normalizeShutdownMode maps a logind/systemd action string to the coarse mode
-// used by callers ("reboot" or "shutdown").
-func normalizeShutdownMode(action string) string {
-	if strings.Contains(action, shutdownModeReboot) || strings.Contains(action, "kexec") {
-		return shutdownModeReboot
+// scheduledShutdownMode accepts only known shutdown and reboot actions.
+// Sleep, unknown, and dry-prefixed actions must not be treated as poweroff.
+func scheduledShutdownMode(action string) (mode string, scheduled bool) {
+	switch action {
+	case "reboot", "kexec", "soft-reboot":
+		return shutdownModeReboot, true
+	case "poweroff", "halt":
+		return shutdownModePoweroff, true
+	default:
+		return "", false
 	}
-	return shutdownModePoweroff
 }
 
 // getPendingShutdownFromFile is the legacy detection based on
