@@ -167,10 +167,6 @@ export const developerSidebar: DefaultTheme.Sidebar = {
               text: "Recommendation",
               link: "/developer/develop/package/recommend",
             },*/
-            {
-              text: "Helm extension",
-              link: "/developer/develop/package/extension",
-            },
           ],
         },
         //  {
