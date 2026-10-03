@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1210 330" font-family="system-ui,-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif">
+  <rect x="1" y="1" width="1208" height="328" rx="20" fill="#ffffff" stroke="#e3e6ee"/>
+  <text x="30" y="50" font-size="17" font-weight="650" fill="#1f2329">从登录到收到第一笔付款</text>
+  
+    <g>
+      <rect x="30" y="92" rx="16" width="212" height="176" fill="#f7f8fc" stroke="#e3e6ee"/>
+      <circle cx="60" cy="126" r="16" fill="#6366f1"/>
+      <text x="60" y="132" font-size="16" font-weight="600" fill="#fff" text-anchor="middle">1</text>
+      <text x="50" y="170" font-size="17" font-weight="650" fill="#1f2329">LarePass 扫码登录</text>
+      <text x="50" y="196" font-size="14" fill="#5b6470">扫码即开通商户账户</text><text x="50" y="222" font-size="14" fill="#5b6470">无需填表</text>
+    </g>
+    <g>
+      <rect x="270" y="92" rx="16" width="212" height="176" fill="#f7f8fc" stroke="#e3e6ee"/>
+      <circle cx="300" cy="126" r="16" fill="#6366f1"/>
+      <text x="300" y="132" font-size="16" font-weight="600" fill="#fff" text-anchor="middle">2</text>
+      <text x="290" y="170" font-size="17" font-weight="650" fill="#1f2329">收款地址就绪</text>
+      <text x="290" y="196" font-size="14" fill="#5b6470">7 条链自动配好,地址</text><text x="290" y="222" font-size="14" fill="#5b6470">就是你的 LarePass 地址</text>
+    </g>
+    <g>
+      <rect x="510" y="92" rx="16" width="212" height="176" fill="#f7f8fc" stroke="#e3e6ee"/>
+      <circle cx="540" cy="126" r="16" fill="#6366f1"/>
+      <text x="540" y="132" font-size="16" font-weight="600" fill="#fff" text-anchor="middle">3</text>
+      <text x="530" y="170" font-size="17" font-weight="650" fill="#1f2329">创建 API 密钥</text>
+      <text x="530" y="196" font-size="14" fill="#5b6470">后台生成</text><text x="530" y="222" font-size="14" fill="#5b6470">pk_live / sk_live</text>
+    </g>
+    <g>
+      <rect x="750" y="92" rx="16" width="212" height="176" fill="#f7f8fc" stroke="#e3e6ee"/>
+      <circle cx="780" cy="126" r="16" fill="#6366f1"/>
+      <text x="780" y="132" font-size="16" font-weight="600" fill="#fff" text-anchor="middle">4</text>
+      <text x="770" y="170" font-size="17" font-weight="650" fill="#1f2329">集成支付 API</text>
+      <text x="770" y="196" font-size="14" fill="#5b6470">createPayment 一步</text><text x="770" y="222" font-size="14" fill="#5b6470">拿到托管收银台</text>
+    </g>
+    <g>
+      <rect x="990" y="92" rx="16" width="212" height="176" fill="#f7f8fc" stroke="#e3e6ee"/>
+      <circle cx="1020" cy="126" r="16" fill="#6366f1"/>
+      <text x="1020" y="132" font-size="16" font-weight="600" fill="#fff" text-anchor="middle">5</text>
+      <text x="1010" y="170" font-size="17" font-weight="650" fill="#1f2329">买家付款,资金直达</text>
+      <text x="1010" y="196" font-size="14" fill="#5b6470">任意 EVM 钱包可付,</text><text x="1010" y="222" font-size="14" fill="#5b6470">链上确认后直达你钱包</text>
+    </g>
+  <path d="M244 180 l16 0 m-7 -8 l8 8 l-8 8" stroke="#6366f1" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M484 180 l16 0 m-7 -8 l8 8 l-8 8" stroke="#6366f1" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M724 180 l16 0 m-7 -8 l8 8 l-8 8" stroke="#6366f1" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M964 180 l16 0 m-7 -8 l8 8 l-8 8" stroke="#6366f1" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

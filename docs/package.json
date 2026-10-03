@@ -1,8 +1,9 @@
 {
   "scripts": {
     "sync-redirects": "node .vitepress/scripts/sync-redirects.mjs",
-    "predev": "npm run sync-redirects",
-    "prebuild": "npm run sync-redirects",
+    "sync-llms": "node .vitepress/scripts/sync-llms.mjs",
+    "predev": "npm run sync-redirects && npm run sync-llms",
+    "prebuild": "npm run sync-redirects && npm run sync-llms",
     "dev": "vitepress dev",
     "build": "vitepress build",
     "preview": "vitepress preview"
