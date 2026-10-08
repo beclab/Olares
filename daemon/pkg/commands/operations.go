@@ -5,10 +5,106 @@ import (
 	"fmt"
 	"os"
 	osexec "os/exec"
+	"regexp"
+	"strings"
+	"sync"
+	"unicode"
 
 	"k8s.io/klog/v2"
 	"k8s.io/utils/exec"
 )
+
+const commandErrorTailLimit = 4096
+
+var (
+	commandBearer       = regexp.MustCompile(`(?i)(\b(?:bearer|basic)\s+)([^\s,;]+)`)
+	commandSecret       = regexp.MustCompile(`(?i)((?:[a-z0-9_-]*(?:password|passwd|token|secret|authorization|api[_-]?key))\s*[=:]\s*|--(?:password|passwd|token|secret|api-key)\s+)([^\s,;]+)`)
+	commandQuotedSecret = regexp.MustCompile(`(?i)(["']?[a-z0-9_-]*(?:password|passwd|token|secret|authorization|api[_-]?key)["']?\s*[=:]\s*|--(?:password|passwd|token|secret|api-key)\s+)("(?:[^"\\]|\\.)*"|'[^']*')`)
+	commandURLUser      = regexp.MustCompile(`(https?://)[^\s/@]+:[^\s/@]+@`)
+	commandANSI         = regexp.MustCompile(`\x1b\[[0-9;]*[A-Za-z]`)
+)
+
+// CommandExecutionError carries only a bounded, redacted CLI diagnostic. Upgrade
+// stages may return this detail to their owner without exposing arbitrary errors.
+type CommandExecutionError struct {
+	Err    error
+	Detail string
+}
+
+func NewCommandExecutionError(err error, output string) *CommandExecutionError {
+	return &CommandExecutionError{Err: err, Detail: CommandErrorSummary(output)}
+}
+
+func (e *CommandExecutionError) Error() string {
+	if e.Detail == "" {
+		return e.Err.Error()
+	}
+	return fmt.Sprintf("%v: %s", e.Err, e.Detail)
+}
+
+func (e *CommandExecutionError) Unwrap() error { return e.Err }
+
+// CommandErrorSummary is shared by local commands and the cluster stage path.
+func CommandErrorSummary(message string) string {
+	var tail commandErrorTail
+	_, _ = tail.Write([]byte(message))
+	return tail.summary()
+}
+
+// commandErrorTail keeps only the end of stderr. CLI prints its final error
+// there, while its full progress and diagnostic output remains in log files.
+type commandErrorTail struct {
+	mu        sync.Mutex
+	data      []byte
+	truncated bool
+}
+
+func (t *commandErrorTail) Write(p []byte) (int, error) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if len(p) >= commandErrorTailLimit {
+		t.truncated = true
+		t.data = append(t.data[:0], p[len(p)-commandErrorTailLimit:]...)
+		return len(p), nil
+	}
+	t.data = append(t.data, p...)
+	if len(t.data) > commandErrorTailLimit {
+		t.truncated = true
+		t.data = append([]byte(nil), t.data[len(t.data)-commandErrorTailLimit:]...)
+	}
+	return len(p), nil
+}
+
+func (t *commandErrorTail) summary() string {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	data := t.data
+	if t.truncated {
+		// The first retained line may start in the middle of a secret.
+		// Discard it instead of exposing an unrecognizable value fragment.
+		end := strings.IndexByte(string(data), '\n')
+		if end < 0 {
+			return ""
+		}
+		data = data[end+1:]
+	}
+	message := strings.TrimSpace(string(data))
+	message = commandANSI.ReplaceAllString(message, "")
+	message = strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) && r != '\n' && r != '\t' {
+			return -1
+		}
+		return r
+	}, message)
+	message = commandURLUser.ReplaceAllString(message, "${1}[redacted]@")
+	message = commandQuotedSecret.ReplaceAllString(message, "${1}[redacted]")
+	message = commandBearer.ReplaceAllString(message, "${1}[redacted]")
+	message = commandSecret.ReplaceAllString(message, "${1}[redacted]")
+	if len(message) > 1024 {
+		message = message[len(message)-1024:]
+	}
+	return strings.TrimSpace(message)
+}
 
 type Operations string
 
@@ -112,7 +208,21 @@ func (c *BaseCommand) WithWatchDog_(fn func(ctx context.Context)) *BaseCommand {
 }
 
 func (c *BaseCommand) RunAsync_(ctx context.Context, cmdStr string, args ...string) error {
+	_, err := c.runAsync_(ctx, false, cmdStr, args...)
+	return err
+}
+
+// RunAsyncWithResult_ reports the final process result to callers that must
+// distinguish an unsuccessful CLI run from a missing progress log marker.
+func (c *BaseCommand) RunAsyncWithResult_(ctx context.Context, cmdStr string, args ...string) (<-chan error, error) {
+	return c.runAsync_(ctx, true, cmdStr, args...)
+}
+
+func (c *BaseCommand) runAsync_(ctx context.Context, reportResult bool, cmdStr string, args ...string) (<-chan error, error) {
 	cmd := osexec.CommandContext(ctx, cmdStr, args...)
+	if reportResult {
+		cmd = NewCommandContext(ctx, cmdStr, args...)
+	}
 	if c.dir != "" {
 		cmd.Dir = c.dir
 	}
@@ -121,11 +231,15 @@ func (c *BaseCommand) RunAsync_(ctx context.Context, cmdStr string, args ...stri
 	for k, v := range c.envs {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", k, v))
 	}
+	var stderr commandErrorTail
+	if reportResult {
+		cmd.Stderr = &stderr
+	}
 
 	err := cmd.Start()
 	if err != nil {
 		klog.Error("run command error, ", err, ", ", cmdStr, " ", args)
-		return err
+		return nil, err
 	}
 
 	if c.pidFile != "" {
@@ -133,8 +247,12 @@ func (c *BaseCommand) RunAsync_(ctx context.Context, cmdStr string, args ...stri
 		err = os.WriteFile(c.pidFile, []byte(fmt.Sprintf("%d", pid)), 0644)
 		if err != nil {
 			klog.Error("write pid file error, ", err)
-			return err
+			return nil, err
 		}
+	}
+	var result chan error
+	if reportResult {
+		result = make(chan error, 1)
 	}
 
 	go func() {
@@ -162,14 +280,23 @@ func (c *BaseCommand) RunAsync_(ctx context.Context, cmdStr string, args ...stri
 			}
 		}()
 
-		err = cmd.Wait()
-		if err != nil {
-			klog.Errorf("Command finished with error: %v, %s %v", err, cmdStr, args)
+		waitErr := cmd.Wait()
+		if waitErr != nil {
+			klog.Errorf("Command finished with error: %v, %s %v", waitErr, cmdStr, args)
+			if detail := stderr.summary(); detail != "" {
+				waitErr = NewCommandExecutionError(waitErr, detail)
+			}
+		}
+		if result != nil {
+			result <- waitErr
+			close(result)
+		}
+		if waitErr != nil {
 			return
 		}
 
 		klog.Info("run command completed, ", cmdStr, " ", args)
 	}()
 
-	return nil
+	return result, nil
 }

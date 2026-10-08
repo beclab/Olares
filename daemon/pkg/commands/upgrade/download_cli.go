@@ -6,15 +6,17 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
+	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/beclab/Olares/daemon/pkg/cluster/state"
-
 	"github.com/beclab/Olares/daemon/pkg/commands"
+	"k8s.io/klog/v2"
 )
 
 type downloadCLI struct {
 	commands.Operation
+	installedVersion func() (*semver.Version, error)
 }
 
 var _ commands.Interface = &downloadCLI{}
@@ -24,6 +26,7 @@ func NewDownloadCLI() commands.Interface {
 		Operation: commands.Operation{
 			Name: commands.DownloadCLI,
 		},
+		installedVersion: installedCLIVersion,
 	}
 }
 
@@ -32,11 +35,20 @@ func (i *downloadCLI) Execute(ctx context.Context, p any) (res any, err error) {
 	if !ok {
 		return nil, errors.New("invalid param")
 	}
-
-	arch := "amd64"
-	if runtime.GOARCH == "arm" {
-		arch = "arm64"
+	// Node preparation is reentrant, and the selected CLI may already have
+	// been installed before olaresd restarted. Do not make a fresh CDN request
+	// for a binary that installCLI would deliberately leave untouched.
+	readVersion := i.installedVersion
+	if readVersion == nil {
+		readVersion = installedCLIVersion
 	}
+	if current, err := readVersion(); err == nil && current.Equal(&target.Version) {
+		return newExecutionRes(true, nil), nil
+	} else if err != nil {
+		klog.Warningf("Failed to read the installed olares-cli version: %v, downloading anyway", err)
+	}
+
+	arch := releaseArch()
 
 	destDir := filepath.Join(commands.TERMINUS_BASE_DIR, "pkg", "components")
 	if err := os.MkdirAll(destDir, 0755); err != nil {
@@ -49,8 +61,21 @@ func (i *downloadCLI) Execute(ctx context.Context, p any) (res any, err error) {
 	}
 	tarFile := filepath.Join(destDir, fmt.Sprintf("olares-cli-v%s.tar.gz", target.Version.Original()))
 
-	if err := downloadFile(downloadURL, tarFile); err != nil {
-		return nil, fmt.Errorf("failed to download olares-cli: %v", err)
+	var downloadErr error
+	for attempt := 0; attempt < 3; attempt++ {
+		if downloadErr = downloadFile(ctx, downloadURL, tarFile); downloadErr == nil {
+			break
+		}
+		if attempt == 2 {
+			return nil, fmt.Errorf("failed to download olares-cli after 3 attempts: %w", downloadErr)
+		}
+		timer := time.NewTimer(time.Duration(attempt+1) * time.Second)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return nil, ctx.Err()
+		case <-timer.C:
+		}
 	}
 
 	if err := extractTarGz(tarFile, destDir); err != nil {

@@ -28,13 +28,17 @@ func (u upgrader_1_12_7_20260908) Version() *semver.Version {
 	return semver.MustParse("1.12.7-20260908")
 }
 
-// PostUpgrade, rather than PrepareForUpgrade, is where the regeneration goes:
-// it restarts k3s, and the phases before this one run tasks that exec into pods,
-// which then race the kubelet's re-sync and fail with "pod does not exist". Here
-// the only thing that follows is the base's wait for the system components to
-// come back, which is exactly the guard a restart wants.
+// PostUpgradeNode regenerates the machine-local kubelet and systemd files on
+// every node. It stays after the cluster upgrade because restarting k3s before
+// then races tasks that exec into pods with the kubelet's re-sync.
+func (u upgrader_1_12_7_20260908) PostUpgradeNode() []task.Interface {
+	return append(regenerateKubeFilesOnNode(), u.upgraderBase.PostUpgradeNode()...)
+}
+
+// PostUpgrade regenerates kubeadm's control-plane files on the admin node. The
+// base checks that the cluster has recovered after this restart.
 func (u upgrader_1_12_7_20260908) PostUpgrade() []task.Interface {
-	return append(regenerateKubeFiles(), u.upgraderBase.PostUpgrade()...)
+	return append(regenerateKubeFilesOnControlNode(), u.upgraderBase.PostUpgrade()...)
 }
 
 func init() {

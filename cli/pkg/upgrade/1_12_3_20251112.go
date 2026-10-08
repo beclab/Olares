@@ -14,7 +14,12 @@ func (u upgrader_1_12_3_20251112) Version() *semver.Version {
 }
 
 func (u upgrader_1_12_3_20251112) PrepareForUpgrade() []task.Interface {
-	return append(regenerateKubeFiles(), u.upgraderBase.PrepareForUpgrade()...)
+	tasks := regenerateKubeFilesOnControlNode()
+	return append(tasks, u.upgraderBase.PrepareForUpgrade()...)
+}
+
+func (u upgrader_1_12_3_20251112) PreUpgradeNode() []task.Interface {
+	return append(regenerateKubeFilesOnNode(), u.upgraderBase.PreUpgradeNode()...)
 }
 
 func init() {
