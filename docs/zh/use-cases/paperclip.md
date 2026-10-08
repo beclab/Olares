@@ -7,9 +7,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, Paperclip, AI agent, multi-agent, Claude Code, Codex, OpenCode, Cursor, self-hosted
-app_version: "1.0.22"
-doc_version: "1.1"
-doc_updated: "2026-09-23"
+app_version: "1.0.34"
+doc_version: "1.2"
+doc_updated: "2026-10-08"
 ---
 
 :::warning
@@ -68,7 +68,7 @@ Paperclip 是一个开源平台，用于在同一个统一工作区下协调多�
 
 ### 配置 API 密钥
 
-每个智能体都需要其底层模型提供商的 API 密钥。你可以在 Settings 应用中将密钥配置为环境变量。
+云端模型认证取决于提供商。下列环境变量适用于使用原有认证配置的适配器；采用新版 AI Connections 的智能体通过所选连接认证。本地模型不要求必须提供云端模型 API 密钥。
 
 :::tip
 在创建管理员账户之前，先在 **Settings** 中设置 API 密钥，以便云端模型可以立即使用。
@@ -109,9 +109,11 @@ Paperclip 默认没有用户账户。要首次访问平台，你需要通过注�
 
    ![Claim this instance](/images/manual/use-cases/paperclip-claim-instance.png#bordered){width=60%}
 
-4. 命名你的公司，并按照指示完成引导流程。
+4. 命名你的公司。使用云端模型时按指示完成引导；使用本地模型时继续阅读[在 Paperclip 中使用本地模型](#在-paperclip-中使用本地模型)。
 
 ## 创建你的第一个公司
+
+下方截图展示旧版引导流程。`2026.916.1` 和 `2026.1005.0` 的初始引导主要提供 OpenAI 和 Claude；其他提供商及本地模型请参见[本地模型说明](#在-paperclip-中使用本地模型)。
 
 Paperclip 工作区围绕虚拟公司结构组织。该公司用于组织你的智能体和任务。
 
@@ -209,96 +211,168 @@ Paperclip 工作区围绕虚拟公司结构组织。该公司用于组织你的�
 
 ## 在 Paperclip 中使用本地模型
 
-:::warning 谨慎使用本地模型
-Paperclip 是一个完全自主的多智能体协作平台。完全在本地模型上运行可能会因模型能力限制、上下文溢出或并发限制而导致工作流中断，从而可能引发级联故障。
+OpenCode 可以通过 Olares Router 调用兼容 OpenAI API 的本地模型。这里的 OpenCode 运行在 Paperclip 内，与 Market 中单独安装的 OpenCode 应用相互独立。
 
-考虑使用混合配置：将高性能云端模型分配给 CEO 或 CTO 等关键角色，同时为执行型智能体使用本地模型以降低成本。或者，将本地模型指定为 `cheap model` 用于要求较低的任务。
+:::info 适用版本
+本节区分 Paperclip `2026.609.0` 与 `2026.916.1`、`2026.1005.0`。后两个版本的新建 OpenCode 智能体页面会绑定 **OpenRouter AI connection**。手动输入 `olares/default-chat` 不会解除绑定，而会触发兼容性提示。**Environment: Local** 仅表示智能体在本机执行，不代表使用本地模型。
 
-仔细评估每个模型的能力和你的工作流需求，以确定最佳设置。
+下文无绑定智能体的 CLI 流程依据 `2026.1005.0` 的 CLI 和服务端接口编写。本指南尚未完成该路径的本地推理端到端验证，请先完成验证步骤，再分配正式任务。
 :::
 
-### 准备本地模型
+### 准备模型并备份现有设置
 
-此可选流程使用以下模型：
-
-| 模型 | 获取方式 |
-| :--- | :--- |
-| Qwen3.8-27B (llama.cpp) | 从 Market 安装 |
+1. 从 Market 安装并启动 Qwen3.8-27B (llama.cpp)，或其他支持 OpenAI 兼容 API 和工具调用的本地模型。对于 `gemma-4-12b-long`，请在 Olares 团队提供新移植的 v3 chart 后手动安装。本流程不会自动迁移原有模型应用。
+2. 在 Router 中配置模型并复制连接信息。
 
 <!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
-模型名称为 `default-chat`。
+3. 使用 Router 默认模型时，模型名为 `default-chat`，并须确认该别名实际路由到本地模型。直连模型服务时，改为该接口实际接受的模型 ID。
+4. 修改前，在文件管理器中备份 **Data > paperclip > paperclip > .config > opencode**，同时记录智能体当前模型和配置。不要通过删除凭证或应用数据来重置模型配置。
 
-### 在 OpenCode 中配置本地模型
+### 配置 OpenCode
 
-:::info 独立的 OpenCode 实例
-此 OpenCode 运行在 Paperclip 容器内部，与从 Olares Market 安装的 OpenCode 应用是分开的。你需要独立配置它。
+Paperclip 容器内的持久化配置路径为 `/paperclip/.config/opencode/opencode.json`。
+
+- 已有 `opencode.json`：合并下列字段，保留其他 provider、插件、MCP 服务及设置。
+- 只有 `opencode.jsonc`：先备份，再将副本转换为严格 JSON，去除注释和末尾多余逗号，并保留原设置。转换后将原 JSONC 移出生效的配置目录，避免两个文件的设置冲突。
+- 两个文件都不存在：创建 `opencode.json`。
+
+以下示例使用 Router 默认模型。将 `<router-base-url-including-v1>` 替换为包含 `/v1` 的实际 API Base URL，不要使用模型应用的网页地址。
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "autoupdate": false,
+  "model": "olares/default-chat",
+  "small_model": "olares/default-chat",
+  "provider": {
+    "olares": {
+      "name": "Olares local model",
+      "npm": "@ai-sdk/openai-compatible",
+      "models": {
+        "default-chat": {
+          "name": "Local model via Router"
+        }
+      },
+      "options": {
+        "baseURL": "<router-base-url-including-v1>"
+      }
+    }
+  }
+}
+```
+
+认证方式以 Router 连接说明为准。如果接口要求密钥，请配置该接口的密钥，不能用 OpenAI 或 OpenRouter 云端密钥代替。提交问题反馈时不要公开凭证文件。
+
+`model` 指定 OpenCode 默认模型；`small_model` 让 OpenCode 辅助请求也使用本地模型。Paperclip 独立的 **cheap model** 设置如已启用，也需改为可用本地模型或关闭。`autoupdate: false` 关闭 OpenCode 内部升级尝试；内置 CLI 应通过 Paperclip Market 镜像更新。
+
+OpenCode 本身支持 JSONC，但 Paperclip 准备临时运行配置时会使用严格 JSON 解析器读取 `opencode.json`。使用有效 JSON 可避免智能体运行时忽略设置。
+
+:::tip 环境变量替代方式
+Paperclip `2026.1005.0` 也读取 `PAPERCLIP_OPENCODE_PROVIDERS`（内容是 `provider` 内的 JSON 对象，不是完整配置）和 `PAPERCLIP_OPENCODE_SMALL_MODEL`，可用于注入运行配置，替代编辑文件。但这不会解除 OpenRouter AI connection 绑定。只有已安装 chart 实际暴露了这些变量时，才能通过 Olares 设置配置；本指南不假设设置页面已有这些变量。
 :::
 
-1. 创建智能体时，选择 **OpenCode** 作为运行时。选择一个临时模型，如 **big-pickle**，以完成初始设置。你将在下一步将其替换为本地模型配置。
-2. 初始化后，配置本地模型：
+### 新安装：创建不绑定 AI Connection 的 OpenCode 智能体
 
-   a. 打开 Files 应用，进入 **Data** > **paperclip** > **paperclip** > **.config** > **opencode**。
+1. 注册并获得实例管理员或组织访问权限，然后创建组织。配置 OpenCode 本身不要求先提供云端模型密钥。
+2. 组织创建后，在 Paperclip 域名下直接打开 `/agents/new`，进入完整适配器选择页。组织没有智能体时，先不要返回 Dashboard，否则可能再次打开 onboarding。直接访问路径已在有智能体的组织中检查；如果新组织仍被引导页阻挡，在组织创建成功后使用下方 CLI。
+3. 在 `2026.916.1` 和 `2026.1005.0` 中，不要通过绑定 OpenRouter 的表单完成本地模型智能体创建。使用内置 Paperclip CLI，以你自己的管理员身份创建不带 `runtimeConfig.aiConnection` 的智能体。
 
-   b. 将 `opencode.jsonc` 重命名为 `opencode.json`，并以编辑模式打开。
+从启动台打开 **Paperclip CLI**。将地址替换为 Paperclip 应用域名，不要附加 `/api` 或 Dashboard 路径：
 
-   c. 将默认配置替换为以下示例。将 `<base-url>` 替换为从 Router 复制的 Base URL。保留 `default-chat`，即可使用 Router 中设置的默认聊天模型。
+```bash
+export PAPERCLIP_LOCAL_API='https://your-paperclip-domain'
+paperclipai auth login --api-base "$PAPERCLIP_LOCAL_API" --no-browser
+```
 
-   ```json {wrap}
-   {
-     "$schema": "https://opencode.ai/config.json",
-     "model": "olares/default-chat",
-     "provider": {
-       "olares": {
-         "name": "Qwen3.8-27B",
-         "npm": "@ai-sdk/openai-compatible",
-         "models": {
-           "default-chat": {
-             "name": "Qwen3.8-27B"
-           }
-         },
-         "options": {
-           "baseURL": "<base-url>"
-         }
-       }
-     }
-   }
+在浏览器中打开 CLI 输出的授权链接，用你自己的 Paperclip 账户批准。这是授权 CLI 访问 Paperclip，不是登录模型提供商。然后列出组织：
+
+```bash
+paperclipai company list --api-base "$PAPERCLIP_LOCAL_API" --json
+```
+
+复制目标组织 `id` 字段中的 UUID，不要使用组织短前缀。创建一个智能体：
+
+```bash
+export PAPERCLIP_LOCAL_COMPANY='<organization-uuid>'
+mkdir -p /paperclip/workspaces/local-model
+paperclipai agent create \
+  --api-base "$PAPERCLIP_LOCAL_API" \
+  --company-id "$PAPERCLIP_LOCAL_COMPANY" \
+  --payload-json '{
+    "name": "Local model agent",
+    "role": "general",
+    "adapterType": "opencode_local",
+    "adapterConfig": {
+      "cwd": "/paperclip/workspaces/local-model",
+      "model": "olares/default-chat"
+    },
+    "runtimeConfig": {
+      "heartbeat": {
+        "enabled": false,
+        "maxConcurrentRuns": 1
+      }
+    },
+    "permissions": {
+      "canCreateAgents": false
+    }
+  }' --json
+```
+
+记录返回的智能体 ID。该命令会创建新智能体，重复执行会再次创建。示例关闭定时心跳和招聘权限，以便控制首次验证范围。`maxConcurrentRuns: 1` 仅限制这一个智能体，不限制所有智能体或模型的其他调用方。
+
+检查保存的配置：
+
+```bash
+paperclipai agent get '<agent-id>' --api-base "$PAPERCLIP_LOCAL_API" --json
+```
+
+确认 `adapterType` 为 `opencode_local`、`adapterConfig.model` 为 `olares/default-chat`，且 `runtimeConfig.aiConnection` 不存在。在 Paperclip 的 **Agents** 中打开该智能体，保留原有/非托管认证方式，不要切换为 OpenRouter 连接。不要让已绑定云端连接的管理智能体代为创建，因为智能体发起的招聘可能继承托管连接。
+
+### 从旧版本升级
+
+升级镜像不意味着所有旧智能体已采用 Connections。修改前逐个检查配置。
+
+| 现有智能体 | 操作方式 |
+| :--- | :--- |
+| OpenCode 智能体没有 `runtimeConfig.aiConnection` | 备份并合并上述 OpenCode 配置。在智能体配置中将模型设为 `olares/default-chat`，保留其他设置并验证。 |
+| OpenCode 智能体已绑定 OpenRouter | 保留原智能体，通过 CLI 新建无绑定智能体，验证后再有计划地转移任务。从更新请求中删除 `aiConnection` 不会解除绑定，当前服务端会保留它。 |
+| 仍在使用 `2026.609.0` | 可继续使用原有配置路径，不受新版 Connections 绑定限制。不要假设新版 CLI 命令存在，使用前运行 `paperclipai agent --help` 检查。 |
+
+Paperclip 会通过 `--model` 参数向 OpenCode 传递智能体选择的模型。仅修改 `opencode.json` 中的默认 `model`，不能覆盖智能体仍然选定的云端模型。
+
+共享配置修改完成后，等待活动任务停止，再通过 Market 重启 Paperclip。不要修改 `/app`、手动替换容器镜像或通过修改数据库解除连接绑定。
+
+### 验证与恢复
+
+1. 在 Paperclip CLI 中检查内置版本与模型发现：
+
+   ```bash
+   opencode --version
+   opencode models olares
    ```
 
-   <!--
-   TODO: 素材清单 15，待补 Router 截图：paperclip-opencode-config-router.png；替换下方旧图后再取消注释。
-   ![OpenCode local model in agent config](/images/manual/use-cases/paperclip-opencode-model-config.png#bordered)
-   -->
+   确认出现 `olares/default-chat`。这只验证模型发现，不代表推理成功。
+2. 显式向本地模型发送一个短请求：
 
+   ```bash
+   opencode run --model olares/default-chat 'Reply with OK only. Do not use tools.'
+   ```
 
-   :::tip OpenAI-compatible Base URL
-   复制 Router Base URL 时保留 `/v1`。更换后端推理引擎不会改变这个客户端地址。
-   :::
+3. 在无绑定智能体的配置页运行环境/连接测试。CLI 成功不代表智能体使用相同凭证、环境和模型。
+4. 手动分配一个短任务并检查运行日志。启用定时任务前，串行完成五次短任务，确认响应成功且没有上下文、KV-cache 或超时报错。验证期间保持其他模型调用方空闲；单个智能体的并发限制不是模型全局容量限制。
 
-3. 重启 Paperclip 容器。
-4. 在 Paperclip 中，进入 **Agents** > **Configuration** > **Permissions & Configuration** 以验证新添加的本地模型。
+| 现象 | 排查方向 |
+| :--- | :--- |
+| “This connection does not support the current harness and model” | 检查 `runtimeConfig.aiConnection`。修改 OpenCode 文件不能解决 OpenRouter 绑定冲突。 |
+| “Method not allowed” | 核对实际请求 URL、`/v1` 路径和 OpenAI 兼容协议。模型列表不能验证聊天接口。Gemma 还需确认请求指向新安装的 v3 服务。 |
+| CLI 正常，但智能体报 “Internal server error” | 对比智能体模型、工作目录、连接绑定和环境，收集对应的服务端错误并隐去密钥。仅凭 500 提示无法判断根因。 |
+| OpenCode 升级失败 | 使用 Market 提供的镜像更新，不要开放镜像目录写权限来修复自升级。 |
+| 原 JSONC 被覆盖 | 有备份则恢复，否则需重新构建所需配置。重启或组织导出都不能恢复原文件的精确内容。 |
 
-   :::warning
-   如果你不打算使用默认的 `openai/gpt-5.1-codex-mini` 作为 cheap model，请务必关闭此功能或切换到其他可用模型。
-   :::
-
-### 测试工作流
-
-你可以在任务的 **Activity** > **Continuation Summary** 中监控执行过程和结果。
-
-- 要求 CEO 雇佣一个新智能体：
-   - **Task title:** Hire a CMO
-   - **Task description:** Hire a content generation agent that uses opencode as the runtime and olares/default-chat as the model.
-
-   ![Agent run activity](/images/manual/use-cases/paperclip-agent-run-activity.png#bordered)
-
-- 要求 CMO 撰写品牌故事：
-   - **Task title:** Write a brand story
-   - **Task description:** Output in md format and upload the final result as an attachment to the task.
-
-   ![Brand story output](/images/manual/use-cases/paperclip-brand-story-output.png#bordered)
+撤销修改时，暂停新智能体或停止向其分配任务，恢复备份的 OpenCode 配置和原智能体模型，待活动任务停止后通过 Market 重启。验证成功前保留原智能体。组织导出不是数据库、本地配置、凭证和工作区文件的完整备份；重装或降级前应另行备份这些数据。不要假设新版本迁移过的数据库兼容旧镜像。
 
 ## 常见问题
 
@@ -308,7 +382,7 @@ Paperclip 目前支持以下智能体适配器。你根据选择的适配器将�
 
 - Claude Code: 需要 `ANTHROPIC_API_KEY`。
 - Codex: 需要 `OPENAI_API_KEY`。
-- OpenCode: 需要 `ANTHROPIC_API_KEY` 或 `OPENAI_API_KEY`。
+- OpenCode：认证取决于模型提供商，本地模型不要求必须提供 Anthropic 或 OpenAI 密钥。新版 OpenRouter 绑定及本地模型配置方式参见[在 Paperclip 中使用本地模型](#在-paperclip-中使用本地模型)。
 - Pi: 需要 `ANTHROPIC_API_KEY` 或 `OPENAI_API_KEY`。
 - Cursor: 需要 `CURSOR_API_KEY`。
 
