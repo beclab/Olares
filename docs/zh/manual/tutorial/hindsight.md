@@ -57,8 +57,8 @@ Hindsight 涉及两类地址：
 
 ## 获取 API 地址并选择记忆库
 
-1. 在 Olares 设置中打开 Hindsight 的应用设置，找到 API 入口。网页控制台入口和 API 入口是两个不同地址。
-2. 复制 API 入口地址，保留 HTTPS。作为客户端基础地址使用时，去掉 `/health` 等路径。
+1. 打开 **Settings（设置）**，依次进入 **Applications（应用）** → **Hindsight** → **Hindsight API**。网页控制台入口和 API 入口是两个不同地址。
+2. 复制 **Endpoint**，将其作为 Hindsight API 地址，保留 HTTPS。作为客户端基础地址使用时，去掉 `/health` 等路径。
 3. 检查入口访问策略是否允许目标智能体访问。Chart 默认将 API 入口设为内部访问。请从智能体所在环境测试 `/health`，不能只看浏览器是否能打开。
 4. 在 Hindsight 控制台创建记忆库，复制它的 ID，例如 `hermes-personal` 或 `opencode-project-a`。
 

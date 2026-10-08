@@ -57,8 +57,8 @@ An upgrade may preserve a previously entered base URL. Clear `HINDSIGHT_API_LLM_
 
 ## Getting the API URL and choosing a bank
 
-1. Open Hindsight's application settings in Olares Settings and locate its API entrance. The web control-plane entrance and API entrance are different.
-2. Copy the API entrance URL. Keep its HTTPS scheme and remove any trailing path such as `/health` before using it as a client base URL.
+1. Open **Settings** and go to **Applications** → **Hindsight** → **Hindsight API**. The web control-plane entrance and API entrance are different.
+2. Copy **Endpoint** and use it as your Hindsight API URL. Keep its HTTPS scheme and remove any trailing path such as `/health` before using it as a client base URL.
 3. Check the entrance access policy for the agent you want to connect. The Chart declares the API entrance internal by default. Test `/health` from that agent; browser access alone is not enough.
 4. Create a bank in the Hindsight control plane and copy its ID. Use a name such as `hermes-personal` or `opencode-project-a`.
 
