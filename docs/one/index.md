@@ -49,6 +49,7 @@ Follow the path from first boot to everyday use and advanced customization.
       <div class="vpath-title">Advanced</div>
       <div class="vpath-links">
         <a href="./access-overview">Access the Olares One terminal</a>
+        <a href="./direct-display">Use Olares One with a direct display</a>
         <a href="./expand-storage-usb-drive">Expand storage</a>
         <a href="./connect-two-olares-one">Connect two Olares One</a>
         <a href="./egpu">Set up with eGPU</a>
