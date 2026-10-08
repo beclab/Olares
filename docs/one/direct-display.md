@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Use Olares One with an HDMI display to open Olares Desktop, install apps from Market, and manage the device locally.
+description: Use Olares One locally with an HDMI display, keyboard, and mouse while keeping your apps and data accessible from a browser.
 head:
   - - meta
     - name: keywords
@@ -9,7 +9,7 @@ head:
 
 # Use Olares One with a direct display <Badge type="warning" text="Alpha" />
 
-Olares One can work as both an always-on personal cloud and a local computer. Connect an HDMI display to access the same Olares Desktop that you use in a browser, install apps from Market, manage the device through Node Display, and use the local terminal.
+Use Olares One as a local computer with an HDMI display, keyboard, and mouse. Access your apps and data without another computer. You can also access Olares from a browser while someone is using it locally.
 
 :::warning Alpha feature
 This feature is currently in the **Alpha** stage and is not recommended for production environments. It is disabled by default and requires you to install the preview `olares-desktop` package. It may contain performance issues and require additional manual configurations. If you encounter any issues, please report them to the [Olares GitHub repository](https://github.com/beclab/Olares/issues).
@@ -25,9 +25,6 @@ This feature is currently in the **Alpha** stage and is not recommended for prod
 
 **System**
 - Olares OS v1.12.7 or later running on the Olares One.
-
-**Software**
-- No additional software is required before you start. You can install apps from Market after Olares Desktop opens.
 
 ## Step 1: Access Olares One directly
 
@@ -49,7 +46,7 @@ This feature is currently in the **Alpha** stage and is not recommended for prod
 3. Enter the host login password you prepared above, and then press **Enter**.
 
 :::tip
-If you prefer to prepare Olares One remotely, you can use SSH or Control Hub to install the package before connecting the display. See [Access Olares One terminal](./access-overview.md) for the available methods.
+If you prefer to prepare Olares One remotely, you can use SSH or Control Hub to download and install the package before connecting the display. See [Access Olares One terminal](./access-overview.md) for the available methods.
 :::
 
 ## Step 2: Download and install the Olares Desktop preview package
@@ -74,35 +71,30 @@ If you prefer to prepare Olares One remotely, you can use SSH or Control Hub to 
    sudo start-desktop
    ```
 
-2. Wait several seconds for the Olares sign-in screen to appear. Select your Olares profile, enter your Olares Desktop password in the password field, and press **Enter** to sign in.
+2. Wait for the Olares sign-in screen to appear, and then enter your Olares Desktop password to log in.
 
 ## Step 4: Switch between top-level windows
 
-Press and hold **Ctrl**, then press **Tab** repeatedly to cycle through the available top-level windows. Release **Ctrl** to open the highlighted window. The default windows are:
+Press and hold **Ctrl**, then press **Tab** repeatedly to cycle through the available top-level windows. Release **Ctrl** to open the highlighted window.
 
-![Use Ctrl+Tab to switch between Olares Desktop, Node Display, and the local terminal](/images/one/direct-display-window-switcher.png#bordered)
-
+The default windows are:
 - **Olares Desktop**: The same Olares Desktop interface that you access in a browser. You can install apps from Market and access your apps and data in the same way.
 - **Node Display**: A local interface for managing the Olares One device.
 - **`olares@olares:~`**: The local terminal.
 
-## Step 5: Install and open apps
+![Use Ctrl+Tab to switch between Olares Desktop, Node Display, and the local terminal](/images/one/direct-display-window-switcher.png#bordered)
 
-After Olares Desktop appears, use it as you would use Olares Desktop in a browser. Open **Market** to install apps, then open installed apps from Olares Desktop. Each app becomes available as a top-level window through **Ctrl+Tab**.
+## Step 5: Use the local desktop
 
-### Install an app
+Use the local Olares Desktop just as you would in a browser. For example, you can:
 
-1. Open **Market** from Olares Desktop.
-2. Find the app you want to use.
-3. Install the app and complete its first-time setup.
-4. Open the app from Olares Desktop.
-5. Press **Ctrl+Tab** to switch between the app and other top-level windows.
-
+- Open Files to browse and manage your files.
+- Open Market to find and install apps.
+- Open installed apps from Olares Desktop.
 
 ## Step 6: Stop the direct display interface
 
 1. Save your work in any open app.
-
 2. Stop the direct display interface using one of the following methods:
 
    - To stop it manually, press **Ctrl+Tab** to switch to **`olares@olares:~`**, and run:
