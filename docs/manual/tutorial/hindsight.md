@@ -30,10 +30,12 @@ The web control plane lets you inspect banks and memory data. The API serves age
 
 1. Open Router and check that `default-chat` points to your chat model and `default-embedding` points to your embedding model.
 2. Test both models with a short input. A model application marked Running does not prove that inference works.
-3. Install Hindsight from the source available to you in Market. While the listing is under testing, use the uploaded Chart in Local Sources → Upload.
-4. Configure the installation inputs below. Keep the default values when using Router's default routes.
+3. Install Hindsight from Market using the default settings. No installation parameters need to be entered when using Router's default routes without API key authentication.
+4. Wait for Hindsight to reach Running. Open its web control plane.
 
-| Input | Default behavior | When to change it |
+If your configuration differs from the defaults, go to **Settings** → **Applications** → **Hindsight** → **Manage environment variables** after installation. Change only the variables you need from the table below and apply the changes.
+
+| Environment variable | Default behavior | When to change it |
 | --- | --- | --- |
 | `HINDSIGHT_API_LLM_BASE_URL` | Leave empty to generate `https://router.<your-olares-domain>/v1` | Use another OpenAI-compatible endpoint serving chat and embeddings |
 | `HINDSIGHT_API_LLM_MODEL` | `default-chat` | Use a specific chat model or route |
@@ -42,14 +44,13 @@ The web control plane lets you inspect banks and memory data. The API serves age
 
 The placeholder satisfies Hindsight's non-empty key check. It does not authenticate with a provider that requires a valid key. The same configured key and base URL are used for chat and embeddings.
 
-5. Wait for Hindsight to reach Running. Open its web control plane.
-6. Check the API health endpoint from the agent's environment:
+Check the API health endpoint from the agent's environment:
 
-   ```bash
-   curl -fsS "${HINDSIGHT_API_URL}/health"
-   ```
+```bash
+curl -fsS "${HINDSIGHT_API_URL}/health"
+```
 
-   Set `HINDSIGHT_API_URL` to the actual API entrance URL first. A successful response contains `"status":"healthy"` and `"database":"connected"`.
+Set `HINDSIGHT_API_URL` to the actual API entrance URL first. A successful response contains `"status":"healthy"` and `"database":"connected"`.
 
 :::tip Existing configuration
 An upgrade may preserve a previously entered base URL. Clear `HINDSIGHT_API_LLM_BASE_URL` and apply the change if you want to use the dynamic Router default.

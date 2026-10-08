@@ -30,10 +30,12 @@ Hindsight 涉及两类地址：
 
 1. 打开 Router，检查 `default-chat` 是否指向聊天模型，`default-embedding` 是否指向嵌入模型。
 2. 分别用简短输入测试两个模型。模型应用显示 Running，不代表推理一定正常。
-3. 在市场中从你可用的来源安装 Hindsight。应用仍在测试阶段时，使用 Local Sources → Upload 中已上传的 Chart。
-4. 按下表填写安装参数。使用 Router 默认路由时，可以保留默认设置。
+3. 在市场中使用默认设置安装 Hindsight。使用 Router 默认路由且未开启 API 密钥认证时，无需填写安装参数。
+4. 等待 Hindsight 状态变为 Running，打开网页控制台。
 
-| 安装参数 | 默认行为 | 何时修改 |
+如果你的配置与默认设置不同，安装后进入 **Settings（设置）** → **Applications（应用）** → **Hindsight** → **Manage environment variables（管理环境变量）**，按下表修改需要调整的变量并应用更改。
+
+| 环境变量 | 默认行为 | 何时修改 |
 | --- | --- | --- |
 | `HINDSIGHT_API_LLM_BASE_URL` | 留空后自动生成 `https://router.<你的 Olares 域名>/v1` | 使用同时提供聊天和嵌入模型的其他 OpenAI 兼容端点 |
 | `HINDSIGHT_API_LLM_MODEL` | `default-chat` | 指定聊天模型或路由 |
@@ -42,14 +44,13 @@ Hindsight 涉及两类地址：
 
 占位值只用于通过 Hindsight 的非空检查，不能通过服务端的真实密钥认证。聊天和嵌入请求共用这里设置的密钥和地址。
 
-5. 等待 Hindsight 状态变为 Running，打开网页控制台。
-6. 从智能体所在环境检查 API 健康状态：
+从智能体所在环境检查 API 健康状态：
 
-   ```bash
-   curl -fsS "${HINDSIGHT_API_URL}/health"
-   ```
+```bash
+curl -fsS "${HINDSIGHT_API_URL}/health"
+```
 
-   先将 `HINDSIGHT_API_URL` 设为实际 API 入口地址。正常响应包含 `"status":"healthy"` 和 `"database":"connected"`。
+先将 `HINDSIGHT_API_URL` 设为实际 API 入口地址。正常响应包含 `"status":"healthy"` 和 `"database":"connected"`。
 
 :::tip 升级后的旧配置
 升级可能保留之前填写的服务地址。要使用动态生成的 Router 地址，请清空 `HINDSIGHT_API_LLM_BASE_URL` 并应用更改。
