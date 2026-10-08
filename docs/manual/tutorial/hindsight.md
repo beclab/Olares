@@ -30,7 +30,7 @@ The web control plane lets you inspect banks and memory data. The API serves age
 
 1. Open Router and check that `default-chat` points to your chat model and `default-embedding` points to your embedding model.
 2. Test both models with a short input. A model application marked Running does not prove that inference works.
-3. Install Hindsight from Market using the default settings. No installation parameters need to be entered when using Router's default routes without API key authentication.
+3. Install Hindsight from Market using the default settings. Optional environment variables are not prompted during installation. If Router has API key authentication enabled, after installation go to **Settings** → **Applications** → **Hindsight** → **Manage environment variables**, set `HINDSIGHT_API_LLM_API_KEY` to a valid Router API key, and apply the change.
 4. Wait for Hindsight to reach Running. Open its web control plane.
 
 If your configuration differs from the defaults, go to **Settings** → **Applications** → **Hindsight** → **Manage environment variables** after installation. Change only the variables you need from the table below and apply the changes.

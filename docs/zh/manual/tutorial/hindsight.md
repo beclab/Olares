@@ -30,7 +30,7 @@ Hindsight 涉及两类地址：
 
 1. 打开 Router，检查 `default-chat` 是否指向聊天模型，`default-embedding` 是否指向嵌入模型。
 2. 分别用简短输入测试两个模型。模型应用显示 Running，不代表推理一定正常。
-3. 在市场中使用默认设置安装 Hindsight。使用 Router 默认路由且未开启 API 密钥认证时，无需填写安装参数。
+3. 在市场中使用默认设置安装 Hindsight，无需填写安装参数。非必填环境变量不会在安装时弹出供用户填写。如果 Router 开启了 API 密钥认证，安装后进入 **Settings（设置）** → **Applications（应用）** → **Hindsight** → **Manage environment variables（管理环境变量）**，将 `HINDSIGHT_API_LLM_API_KEY` 设为有效的 Router API 密钥并应用更改。
 4. 等待 Hindsight 状态变为 Running，打开网页控制台。
 
 如果你的配置与默认设置不同，安装后进入 **Settings（设置）** → **Applications（应用）** → **Hindsight** → **Manage environment variables（管理环境变量）**，按下表修改需要调整的变量并应用更改。
