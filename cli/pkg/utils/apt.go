@@ -291,7 +291,7 @@ func writeAptSources(filePath string, sources []AptSource) error {
 
 	// Read original file to preserve comments and other content
 	content, err := os.ReadFile(filePath)
-	if err != nil {
+	if err != nil && !os.IsNotExist(err) {
 		return errors.Wrap(err, "failed to read original file")
 	}
 
