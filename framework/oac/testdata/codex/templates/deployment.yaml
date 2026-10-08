@@ -1,0 +1,546 @@
+# Codex CLI on Olares
+#
+# Architecture:
+#   - Base image: beclab/harveyff-codex-base (Ubuntu 24.04 with
+#     common CLI deps pre-installed, non-root user UID 1000 baked in).
+#   - initContainers:
+#       * init-chmod-data (root): ensures /opt/data is owned by 1000:1000.
+#       * init-skills (root): flattens baked Olares skills into ~/.codex/skills.
+#       * init-olares-model-config (UID 1000): writes/clears a managed
+#         block in ~/.codex/config.toml from OPENAI_BASE_URL +
+#         CODEX_MODEL so local vs cloud is env-driven (Claude Code
+#         pattern). Blank env = strip the block = official cloud.
+#       * init-install-codex (UID 1000): runs OpenAI's official
+#         standalone installer (chatgpt.com/codex/install.sh) into
+#         /opt/data/.local/bin + ~/.codex/packages/standalone on first
+#         run for this version+arch. A version+target sentinel skips
+#         later restarts. The old GitHub musl-tarball path only copied
+#         `codex` and left installs reporting missing agentic execution.
+#       * init-docker-cli (optional, ENABLE_DIND): copies docker CLI +
+#         compose/buildx plugins into a shared emptyDir.
+#   - Optional docker-dind sidecar (ENABLE_DIND, default on): privileged
+#     dockerd on tcp://localhost:2375; main container gets DOCKER_HOST.
+#   - Main container runs as UID 1000 with all Linux capabilities
+#     dropped and privilege escalation forbidden. The entrypoint is
+#     `sleep infinity`; the real work happens when the Olares terminal
+#     entrance kubectl-execs into this container.
+#   - /opt/data is the single source of truth: ~/.codex (sessions,
+#     auth.json, skills, config.toml) and .local/bin/codex. All
+#     persisted through the app-data-home hostPath volume.
+#   - Auto-updates are disabled de facto: upgrades go through chart
+#     version bumps, which change the sentinel filename and trigger a
+#     fresh download.
+
+{{- $codexDomainENV := split  ","  .Values.domain.terminal -}}
+{{- $codexDomain := index $codexDomainENV "_0" -}}
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    io.kompose.service: codex
+  name: "{{ .Release.Name }}"
+  namespace: "{{ .Release.Namespace }}"
+spec:
+  replicas: {{ .Values.workloads.codex.replicaCount }}
+  selector:
+    matchLabels:
+      io.kompose.service: codex
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        io.kompose.service: codex
+        bytetrade.io/terminal: codex
+    spec:
+      securityContext:
+        fsGroup: 1000
+
+      initContainers:
+        # Fix ownership of the PVC so the non-root runtime user can
+        # write to it. Root is required here because hostPath volumes
+        # land on disk with root ownership on first create.
+        - name: init-chmod-data
+          image: "beclab/ubuntu:24.04"
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsUser: 0
+            runAsGroup: 0
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              mkdir -p /opt/data/.local/bin /opt/data/.codex/skills /opt/data/.install-state
+              chown -R 1000:1000 /opt/data
+              chmod -R 0755 /opt/data
+              echo "[init-chmod-data] /opt/data owned by 1000:1000"
+          resources: {}
+          volumeMounts:
+            - mountPath: /opt/data
+              name: app-data-home
+
+        # Flatten Olares skills from /skills-staging into Codex's
+        # user skills dir (~/.codex/skills = /opt/data/.codex/skills).
+        - name: init-skills
+          image: "beclab/harveyff-codex-base:0.5.9"
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsUser: 0
+            runAsGroup: 0
+          command:
+            - sh
+            - -c
+            - |
+              set -u
+              if [ ! -d /skills-staging ]; then
+                echo "[init-skills] /skills-staging not in image; skipping"
+                exit 0
+              fi
+              mkdir -p /opt/data/.codex/skills
+              for d in /skills-staging/*/; do
+                name="$(basename "$d")"
+                rm -rf "/opt/data/.codex/skills/$name"
+                cp -a "$d" "/opt/data/.codex/skills/$name"
+                chown -R 1000:1000 "/opt/data/.codex/skills/$name"
+              done
+              echo "[init-skills] Olares skills installed under /opt/data/.codex/skills:"
+              ls -1 /skills-staging
+          resources: {}
+          volumeMounts:
+            - mountPath: /opt/data
+              name: app-data-home
+
+        # Always rewrite the Olares-managed model block so applyOnChange
+        # env edits take effect on the next Pod start. Codex persists
+        # provider routing in ~/.codex/config.toml (openai_base_url /
+        # model), not only via process env — leaving BASE_URL blank
+        # must delete the block or the previous local gateway sticks.
+        - name: init-olares-model-config
+          image: "beclab/ubuntu:24.04"
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          env:
+            - name: HOME
+              value: /opt/data
+            - name: CODEX_HOME
+              value: /opt/data/.codex
+            {{- with .Values.olaresEnv.OPENAI_BASE_URL }}
+            - name: OPENAI_BASE_URL
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.olaresEnv.CODEX_MODEL }}
+            - name: CODEX_MODEL
+              value: {{ . | quote }}
+            {{- end }}
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              CONFIG="${CODEX_HOME}/config.toml"
+              mkdir -p "$CODEX_HOME"
+              touch "$CONFIG"
+
+              stripped="$(mktemp)"
+              awk '
+                BEGIN { skip = 0 }
+                /^# BEGIN OLARES-MANAGED[[:space:]]*$/ { skip = 1; next }
+                /^# END OLARES-MANAGED[[:space:]]*$/ { skip = 0; next }
+                skip == 0 { print }
+              ' "$CONFIG" > "$stripped"
+
+              toml_escape() {
+                printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g'
+              }
+
+              if [ -n "${OPENAI_BASE_URL:-}" ]; then
+                {
+                  # Root keys MUST come before any [table]. Appending
+                  # openai_base_url after [tui.model_availability_nux]
+                  # makes TOML treat the URL as a key of that table
+                  # (it expects u32), and Codex refuses to start.
+                  printf '# BEGIN OLARES-MANAGED\n'
+                  printf 'openai_base_url = "%s"\n' "$(toml_escape "$OPENAI_BASE_URL")"
+                  if [ -n "${CODEX_MODEL:-}" ]; then
+                    printf 'model = "%s"\n' "$(toml_escape "$CODEX_MODEL")"
+                  fi
+                  printf '# END OLARES-MANAGED\n'
+                  if [ -s "$stripped" ]; then
+                    printf '\n'
+                    sed -e :a -e '/^[[:space:]]*$/{$d;N;ba' -e '}' "$stripped"
+                    printf '\n'
+                  fi
+                } > "$CONFIG"
+                echo "[init-olares-model-config] local/gateway routing enabled (openai_base_url set)"
+              else
+                sed -e :a -e '/^[[:space:]]*$/{$d;N;ba' -e '}' "$stripped" > "$CONFIG"
+                echo "[init-olares-model-config] no OPENAI_BASE_URL; using official cloud / OAuth"
+              fi
+              rm -f "$stripped"
+              echo "[init-olares-model-config] wrote $CONFIG"
+          resources: {}
+          volumeMounts:
+            - mountPath: /opt/data
+              name: app-data-home
+
+        # First-run / version bump: official standalone installer into the
+        # shared /opt/data PVC (UID 1000; writes only under $HOME).
+        # Bumping appVersion changes the sentinel and forces a reinstall.
+        # Require ~/.codex/packages/standalone so a leftover musl `codex`
+        # binary is not treated as a complete install.
+        - name: init-install-codex
+          image: "beclab/harveyff-codex-base:0.5.9"
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          env:
+            - name: HOME
+              value: /opt/data
+            - name: CODEX_HOME
+              value: /opt/data/.codex
+            - name: CODEX_INSTALL_DIR
+              value: /opt/data/.local/bin
+            - name: CODEX_NON_INTERACTIVE
+              value: "1"
+            - name: JAVA_HOME
+              value: /usr/lib/jvm/java-21-openjdk-current
+            - name: CODEX_VERSION
+              value: "{{ .Chart.AppVersion }}"
+          command:
+            - bash
+            - -c
+            - |
+              set -euo pipefail
+              mkdir -p "$HOME/.install-state" "$HOME/.local/bin" "$HOME/.codex"
+
+              # Sentinel is arch-specific so a hostPath cache cannot reuse
+              # an amd64 binary on arm64 (Exec format error).
+              ARCH="$(uname -m)"
+              case "$ARCH" in
+                x86_64|amd64)  TARGET="x86_64-unknown-linux-musl" ;;
+                aarch64|arm64) TARGET="aarch64-unknown-linux-musl" ;;
+                *) echo "[init-install-codex] unsupported arch: $ARCH" >&2; exit 1 ;;
+              esac
+              SENTINEL="$HOME/.install-state/codex-standalone-${CODEX_VERSION}-${TARGET}"
+              STANDALONE_CURRENT="$HOME/.codex/packages/standalone/current"
+
+              if [ -x "$HOME/.local/bin/codex" ] && [ -e "$STANDALONE_CURRENT" ] && [ -f "$SENTINEL" ]; then
+                if "$HOME/.local/bin/codex" --version >/dev/null 2>&1; then
+                  echo "[init-install-codex] cached standalone package found (installed $(cat "$SENTINEL"), ${TARGET})"
+                  "$HOME/.local/bin/codex" --version
+                  exit 0
+                fi
+                echo "[init-install-codex] cached binary unusable on ${TARGET}; reinstalling"
+              fi
+
+              INSTALLER="$(mktemp --suffix=.sh)"
+              trap 'rm -f "$INSTALLER"' EXIT
+
+              echo "[init-install-codex] fetching official installer..."
+              curl -fSL --retry 5 --retry-delay 3 \
+                https://chatgpt.com/codex/install.sh -o "$INSTALLER"
+              echo "[init-install-codex] installer downloaded ($(wc -c < "$INSTALLER") bytes)"
+
+              echo "[init-install-codex] running official installer for ${CODEX_VERSION} (${TARGET})"
+              CODEX_INSTALL_DIR="$HOME/.local/bin" \
+              CODEX_HOME="$HOME/.codex" \
+              CODEX_NON_INTERACTIVE=1 \
+                bash "$INSTALLER" --release "${CODEX_VERSION}"
+
+              if [ ! -x "$HOME/.local/bin/codex" ]; then
+                echo "[init-install-codex] installer completed but binary not found at $HOME/.local/bin/codex" >&2
+                ls -la "$HOME/.local/bin" "$HOME/.codex/packages/standalone" 2>/dev/null >&2 || true
+                exit 1
+              fi
+
+              date -u +%Y-%m-%dT%H:%M:%SZ > "$SENTINEL"
+              echo "[init-install-codex] installed official standalone Codex ${CODEX_VERSION} for ${TARGET}"
+              "$HOME/.local/bin/codex" --version
+          resources:
+            limits:
+              cpu: "2"
+              memory: 4Gi
+            requests:
+              cpu: 50m
+              memory: 128Mi
+          volumeMounts:
+            - mountPath: /opt/data
+              name: app-data-home
+        {{- if eq (toString .Values.olaresEnv.ENABLE_DIND) "true" }}
+        - name: init-docker-cli
+          image: "docker.io/beclab/docker:29.3.0-dind"
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              # docker CLI itself
+              cp /usr/local/bin/docker /docker-cli/docker
+              # CLI plugins (docker compose / buildx). The dind image ships
+              # these under one of the standard cli-plugins dirs; copy whatever
+              # exists into the shared dir so the main container can find them.
+              mkdir -p /docker-cli/cli-plugins
+              for d in /usr/local/libexec/docker/cli-plugins \
+                       /usr/local/lib/docker/cli-plugins \
+                       /usr/libexec/docker/cli-plugins \
+                       /usr/lib/docker/cli-plugins; do
+                [ -d "$d" ] || continue
+                cp "$d"/docker-compose /docker-cli/cli-plugins/ 2>/dev/null || true
+                cp "$d"/docker-buildx  /docker-cli/cli-plugins/ 2>/dev/null || true
+              done
+              echo "[init-docker-cli] copied:" && ls -la /docker-cli /docker-cli/cli-plugins
+          resources: {}
+          volumeMounts:
+            - mountPath: /docker-cli
+              name: docker-cli-bin
+        {{- end }}
+      serviceAccountName: proxylistener
+      containers:
+        # Workspace container. kubectl exec from the beclab terminal
+        # apiserver lands here as UID 1000. HOME/PATH are set on env so
+        # login / non-login / interactive / non-interactive shells all
+        # see the codex binary on PATH.
+        - name: codex
+          image: "beclab/harveyff-codex-base:0.5.9"
+          imagePullPolicy: IfNotPresent
+          workingDir: /opt/data
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          env:
+            - name: TZ
+              value: Etc/UTC
+            - name: TERM
+              value: xterm-256color
+            - name: HOME
+              value: /opt/data
+            - name: JAVA_HOME
+              value: /usr/lib/jvm/java-21-openjdk-current
+            - name: PATH
+              value: "/opt/data/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            - name: CODEX_HOME
+              value: /opt/data/.codex
+            {{- /*
+              Routing env vars are conditionally injected. Blank values
+              are omitted so Codex sees them as unset (OAuth / official
+              cloud). OPENAI_BASE_URL + CODEX_MODEL are also written
+              into ~/.codex/config.toml by init-olares-model-config.
+            */ -}}
+            {{- with .Values.olaresEnv.OPENAI_API_KEY }}
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $.Release.Name }}-secrets
+                  key: OPENAI_API_KEY
+            {{- end }}
+            {{- with .Values.olaresEnv.OPENAI_BASE_URL }}
+            - name: OPENAI_BASE_URL
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.olaresEnv.CODEX_MODEL }}
+            - name: CODEX_MODEL
+              value: {{ . | quote }}
+            {{- end }}
+            {{- if eq (toString .Values.olaresEnv.ENABLE_DIND) "true" }}
+            - name: DOCKER_HOST
+              value: "tcp://localhost:2375"
+            {{- end }}
+          command:
+            - sleep
+            - infinity
+          resources:
+            limits:
+              cpu: "4"
+              memory: 24Gi
+            requests:
+              cpu: 100m
+              memory: 2Gi
+          volumeMounts:
+            - mountPath: /opt/data
+              name: app-data-home
+            {{- if eq (toString .Values.olaresEnv.ALLOW_HOME_DIR_ACCESS) "true" }}
+            - mountPath: /home/userdata/home/
+              name: olares-home-dir
+            {{- end }}
+            {{- if eq (toString .Values.olaresEnv.ALLOW_EXTERNAL_DIR_ACCESS) "true" }}
+            - mountPath: /home/userdata/external/
+              name: olares-external-dir
+            {{- end }}
+            {{- if eq (toString .Values.olaresEnv.ENABLE_DIND) "true" }}
+            - mountPath: /usr/local/bin/docker
+              name: docker-cli-bin
+              subPath: docker
+              readOnly: true
+            - mountPath: /usr/local/lib/docker/cli-plugins
+              name: docker-cli-bin
+              subPath: cli-plugins
+              readOnly: true
+            {{- end }}
+        {{- if eq (toString .Values.olaresEnv.ENABLE_DIND) "true" }}
+        - name: docker-dind
+          image: "docker.io/beclab/docker:29.3.0-dind"
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            privileged: true
+          env:
+            - name: DOCKER_TLS_CERTDIR
+              value: ""
+          command:
+            - dockerd
+            - --host
+            - tcp://0.0.0.0:2375
+            - --host
+            - unix:///var/run/docker.sock
+            - --mtu=1450
+          ports:
+            - containerPort: 2375
+          startupProbe:
+            exec:
+              command:
+                - docker
+                - info
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            failureThreshold: 60
+            timeoutSeconds: 10
+          readinessProbe:
+            exec:
+              command:
+                - docker
+                - info
+            initialDelaySeconds: 5
+            periodSeconds: 20
+            timeoutSeconds: 15
+            failureThreshold: 5
+          resources:
+            limits:
+              cpu: "8"
+              memory: 16Gi
+            requests:
+              cpu: 200m
+              memory: 512Mi
+          volumeMounts:
+            - mountPath: /var/lib/docker
+              name: dind-storage
+            # Share the workspace at the SAME path so bind-mounts resolve
+            # correctly inside dockerd.
+            - mountPath: /opt/data
+              name: app-data-home
+        {{- end }}
+        - name: port-watcher
+          image: beclab/proxy-listener:0.0.1
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: PORT_WATCHER_ADDR
+              value: "127.0.0.1:19790"
+            - name: PORT_WATCHER_DENYLIST
+              value: "19790"
+            - name: PORT_WATCHER_DEBOUNCE
+              value: "1s"
+            - name: ENTRANCE_HOST
+              value: "{{ $codexDomain }}"
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_UID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.uid
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+
+      restartPolicy: Always
+      volumes:
+        - name: app-data-home
+          hostPath:
+            path: "{{ .Values.userspace.appData }}/home"
+            type: DirectoryOrCreate
+        {{- if eq (toString .Values.olaresEnv.ALLOW_HOME_DIR_ACCESS) "true" }}
+        - name: olares-home-dir
+          hostPath:
+            path: "{{ .Values.userspace.userData }}"
+            type: DirectoryOrCreate
+        {{- end }}
+        {{- if eq (toString .Values.olaresEnv.ALLOW_EXTERNAL_DIR_ACCESS) "true" }}
+        - name: olares-external-dir
+          hostPath:
+            path: "{{ .Values.sharedlib }}"
+            type: DirectoryOrCreate
+        {{- end }}
+        {{- if eq (toString .Values.olaresEnv.ENABLE_DIND) "true" }}
+        - name: docker-cli-bin
+          emptyDir: {}
+        - name: dind-storage
+          hostPath:
+            path: "{{ .Values.userspace.appData }}/docker"
+            type: DirectoryOrCreate
+        {{- end }}
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: proxylistener
+  namespace: {{ .Release.Namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Release.Name }}-{{ .Values.bfl.username }}
+rules:
+  - apiGroups:
+      - app.bytetrade.io
+    resources:
+      - applications
+    verbs:
+      - get
+      - list
+      - watch
+      - update
+      - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ .Release.Name }}-{{ .Values.bfl.username }}
+subjects:
+  - kind: ServiceAccount
+    name: proxylistener
+    namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: ClusterRole
+  name: {{ .Release.Name }}-{{ .Values.bfl.username }}
+  apiGroup: rbac.authorization.k8s.io

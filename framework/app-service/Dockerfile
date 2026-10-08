@@ -6,6 +6,7 @@ WORKDIR /workspace
 COPY go.mod github.com/beclab/Olares/framework/app-service/go.mod
 COPY go.sum github.com/beclab/Olares/framework/app-service/go.sum
 
+
 RUN cd github.com/beclab/Olares/framework/app-service && \
     go mod download
 
