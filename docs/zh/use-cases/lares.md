@@ -1,6 +1,5 @@
 ---
 outline: [2, 3]
-title: Lares
 description: 认识 Lares，Olares 官方 AI 助手。通过自然语言管理应用、文件和系统，深入展开研究。
 head:
   - - meta
@@ -12,7 +11,7 @@ head:
 本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../use-cases/lares.md)为准。
 :::
 
-# Lares
+# 使用 Lares 管理 Olares 并开展研究
 
 Lares 是 Olares 的官方 AI 助手，在 v1.12.7 中推出。有了 Router 和一个已连接的模型，你用自然语言说出一个目标，Lares 就会在你的设备上规划并执行任务。
 
@@ -51,7 +50,7 @@ Lares 是 Olares 的官方 AI 助手，在 v1.12.7 中推出。有了 Router 和
    ```
 
     :::warning 重要：一次运行一个任务
-    在 Olares One 上运行 Qwen3.8-27B（llama.cpp）时，建议一次只运行一个请求，以保证 100K 上下文窗口和模型精度的最佳体验。
+    在 Olares One 上运行 Qwen3.8-27B（llama.cpp）时，建议一次只运行一个请求，以保证 102K 上下文窗口和模型精度的最佳体验。
     :::
 
 ## 运行深度研究任务

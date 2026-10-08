@@ -1,4 +1,6 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /use-cases/anythingllm
 outline: [2, 3]
 description: Build a private knowledge base with AnythingLLM on Olares. Add documents, create embeddings, and query them with RAG.
 head:
@@ -7,10 +9,12 @@ head:
       content: Olares, AnythingLLM, self-hosted rag, private knowledge base, anythingllm ollama, local LLM, embedding, anythingllm on olares
 app_version: "1.0.13"
 doc_version: "2.0"
-doc_updated: "2026-07-27"
+doc_updated: "2026-09-23"
 ---
 
 # Build a local knowledge base with AnythingLLM
+
+<VersionRouteSelect />
 
 AnythingLLM is an open-source, all-in-one AI application that lets you chat with documents using Retrieval-Augmented Generation (RAG). It supports multiple LLM providers and vector databases, all running locally on your Olares device.
 
@@ -26,13 +30,13 @@ In this guide, you will learn how to:
 
 Before you begin, you need:
 
-- An Olares device with sufficient disk space and memory.
+<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - Admin privileges to install apps from Market.
 - The following models:
 
   | Model type | Model | How to get it |
   | :--- | :--- | :--- |
-  | Chat | Qwen3.6-27B (llama.cpp) | Install from Market |
+  | Chat | Qwen3.8-27B (llama.cpp) | Install from Market |
   | Embedding | all-MiniLM-L6-v2 | The built-in embedder from AnythingLLM |
 
 <!--@include: ../reusables/ai-service-connections.md#use-different-model-->
@@ -49,7 +53,7 @@ Before you begin, you need:
 
 <!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
-For Qwen3.6-27B (llama.cpp):
+For Qwen3.8-27B (llama.cpp):
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
 ## Configure AnythingLLM
@@ -61,10 +65,14 @@ Configure the chat model and embedding provider. These settings become the syste
 1. Open AnythingLLM from Launchpad.
 2. On the home page, click the **Open settings** icon in the bottom-left.
 3. In the left sidebar, select **AI Providers** > **LLM**, and then select **Generic OpenAI** as the LLM provider.
-4. In **Base URL**, paste the Base URL from the Qwen3.6-27B (llama.cpp) Model Console.
-5. In **Selected Model**, select `unsloth/Qwen3.6-27B-GGUF:Q4_K_M`.
+4. In **Base URL**, paste the Base URL from Router.
+5. In **Selected Model**, enter `default-chat` manually.
 
+   <!--
+   TODO: 素材清单 01，待补 Router 截图：anythingllm-chat-model-router.png；替换下方旧图后再取消注释。
    ![Configure chat model](/images/manual/use-cases/anythingllm-configure-chat-model.png#bordered)
+   -->
+
 
 6. Click **Save changes**. The "LLM preferences saved successfully" message is displayed.
 

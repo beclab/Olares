@@ -1,113 +1,67 @@
 ---
 outline: [2, 3]
-description: 查看 Olares One eGPU 兼容状态、实测硬件组合、当前限制，以及 Olares OS 和 Windows 设置入口。
+description: 了解 eGPU、查看已知硬件组合的兼容状态，并将 NVIDIA eGPU 连接到 Olares One。
+head:
+  - - meta
+    - name: keywords
+      content: Olares One, eGPU, 外置显卡, 雷电 5, NVIDIA
 ---
 
-# Olares One eGPU 支持概览
+# 将 eGPU 连接到 Olares One
 
-本文用于确认 eGPU 组合是否经过实测，并选择对应的设置指南。实际表现受扩展坞、显卡、供电、线材、操作系统和 NVIDIA 驱动共同影响。
+需要更多 GPU 算力时，可以通过雷电接口给 Olares One 连接 eGPU。
 
-:::danger 开机前连接
-使用 Olares OS 时，不要在系统运行期间连接或断开 eGPU。完全关闭 Olares One，给扩展坞通电并连接线材，然后再启动 Olares One。
+:::danger 在 Olares OS 上连接前先关机
+不要在 Olares OS 运行时连接或断开 eGPU。先关闭 Olares One，再给 eGPU 通电并连接线材，最后启动 Olares One。
 :::
 
-## 使用要求
+## 查看已知兼容状态
 
-使用 eGPU 前，请确认已准备：
+下表列出目前已有的兼容结果，不代表产品推荐，也无法涵盖所有组合。实际表现还取决于 dock 或 enclosure、供电、线材、操作系统和 NVIDIA 驱动。未列出的组合可能可以使用，但尚未验证。
 
-- 带独立电源的雷电 eGPU 扩展坞。
-- 认证的雷电 5 线材，优先使用扩展坞附带的线材。
-- 基于 Turing 或更新架构，并且受当前操作系统和 NVIDIA 驱动支持的 NVIDIA 显卡。
-
-:::info 雷电兼容性
-雷电协议可以向下兼容。为获得更可靠的使用体验，建议使用雷电 5 硬件，不建议使用低于雷电 5 的扩展坞。
-:::
-
-:::tip 首次设置
-首次测试时，只连接一台 eGPU，并断开其他高带宽雷电设备。
-:::
-
-## 支持状态
-
-每项结果使用 **已验证**、**支持**、**需要配置**、**尚未验证**、**调查中** 或 **暂不支持** 标注。
-
-下方表格列出已经验证、尚未验证、调查中和暂不支持的配置。未列出的组合不代表不能使用，只表示尚未验证。满足上述要求也不代表所有显卡与扩展坞组合均已通过验证。
-
-### 硬件兼容性
-
-| 硬件组合 | Windows | Olares OS |
+| 外置显卡硬件 | Olares OS | Windows 11 |
 |---|---|---|
-| AOOSTAR EG02 + RTX 4060 Ti，开机前连接 | **已验证。** | **需要配置。** 应用 [Gen1 临时方案](./egpu-olares-os.md)。 |
-| Razer Core X V2 + RTX 4090 | **仅作为实测多 eGPU 配置的一部分完成验证。** 尚未单独测试这一组合。 | **尚未验证。** 未应用临时方案时开机不稳定，应用后的表现尚未实测。 |
-| 内置 RTX 5090M + AOOSTAR EG02 与 RTX 4060 Ti | **需要配置。** 在连接 eGPU 后重新安装 NVIDIA 驱动。连接 eGPU 时，内置显卡还存在功耗限制。 | **需要配置。** 应用临时方案后，两张显卡在该实测配置中可同时使用。 |
-| 桌面版 RTX 5090 | **尚未验证。** | **调查中。** 实测配置中驱动初始化失败，PCIe 资源分配问题仍在调查。 |
+| AOOSTAR EG02 eGPU dock + RTX 4060 Ti | **设置后可用。** 安装 [Gen1 临时方案](./egpu-olares-os.md#必要时安装临时方案)。 | **设置后可用。** 连接 eGPU 后重新安装 NVIDIA 驱动。 |
+| Razer Core X V2 eGPU enclosure + RTX 4090 | **验证中。** 未安装 Gen1 临时方案时开机不稳定。安装后的表现尚未验证。 | **仅在实测的多 eGPU 配置中完成验证。** 尚未单独验证。 |
+| Razer Core X eGPU enclosure + RTX 4060 | **尚未验证。** | **仅在实测的多 eGPU 配置中完成验证。** 尚未单独验证。 |
+| eGPU dock 或 eGPU enclosure + 桌面版 RTX 5090 | **暂不支持。** NVIDIA 驱动无法初始化，目前没有可用方案。 | **尚未验证。** |
 
-### 功能支持
+表中的**可用**和**已验证**表示显卡完成过实际负载测试。仅在 Dashboard、设备管理器或 `nvidia-smi` 中识别到显卡，不视为兼容性验证通过。
 
-| 功能 | Windows | Olares OS |
-|---|---|---|
-| 多张 eGPU | **已验证一种配置。** 三张外置 GPU 与内置 GPU 完成了一小时满载测试。其他组合尚未测试。 | **暂不支持。** 每次只连接一台 eGPU。 |
-| 热插拔 | **支持。** 请先完成 Windows 设置和驱动安装。 | **暂不支持。** 请在开机前连接 eGPU 并通电。 |
+:::info 多 eGPU
+如果需要使用多台 eGPU，建议使用 Windows 11。Olares OS 目前每次只支持连接一台 eGPU。
+
+我们在 Windows 11 上验证了一种通过 Razer Thunderbolt 5 Dock 连接三台 eGPU 的配置：
+
+- AOOSTAR EG02 + RTX 4060 Ti
+- Razer Core X V2 + RTX 4090
+- Razer Core X + RTX 4060
+
+在该配置中，内置 RTX 5090M 的功耗约为 95 W，而不是 175 W。
+
+多 eGPU 的兼容性取决于 Dock 和连接拓扑。建议先完成单 eGPU 设置，再逐台连接并检查其他设备。
+:::
+
+## 选择硬件
+
+准备以下任一种设备：
+
+- 已安装 GPU 的雷电外置显卡设备及其电源适配器。
+- 雷电 eGPU dock 或 eGPU enclosure、采用 Turing 或更新架构的桌面版 NVIDIA 显卡，以及符合显卡要求的电源。
+
+:::info 雷电 5
+使用认证的雷电 5 线材，建议优先使用外置显卡设备附带的线材。
+
+旧款雷电外置显卡设备可能也能使用，但建议选择雷电 5 设备。
+:::
 
 ## 设置 eGPU
 
+根据操作系统选择指南：
+
 - [在 Olares OS 上设置 eGPU](./egpu-olares-os.md)
-- [在 Windows 上设置 eGPU](./egpu-windows.md)
-- [排查 Olares One eGPU 问题](./ts-egpu.md)
+- [在 Windows 11 上设置 eGPU](./egpu-windows.md)
 
-如果你想讨论自己的配置、分享测试结果或咨询遇到的问题，请查看[在 Olares 论坛求助](./ts-egpu.md#在-olares-论坛求助)，了解发帖时需要提供哪些信息。
+## 获取帮助
 
-## 实测组合
-
-### Olares OS
-
-| 扩展坞 | 显卡 | 结果 | 建议 |
-|---|---|---|---|
-| AOOSTAR EG02 | RTX 4060 Ti | 应用临时方案后可长时间稳定运行，未再掉卡。 | 按 [Olares OS 设置](./egpu-olares-os.md)操作。 |
-| AOOSTAR EG02 | RTX 4060 Ti + 内置 RTX 5090M | 实测中两张显卡可同时使用，并可分别分配给 AI 应用。 | 应用临时方案。 |
-| Razer Core X V2 | RTX 4090 | 未配置时无法稳定开机，应用临时方案后的表现尚未实测。 | 完成测试前暂无建议。 |
-| 未说明 | 桌面版 RTX 5090 | 实测配置中驱动初始化失败，PCIe 资源分配问题仍在调查。 | 目前不建议使用。 |
-| 雷电扩展坞串接 | RTX 3090 + 2× RTX 2080 Ti | 实测的多 eGPU 配置未能正常工作。 | 每次只连接一台 eGPU。 |
-
-### Windows
-
-| 扩展坞 | 显卡 | 结果 | 建议 |
-|---|---|---|---|
-| AOOSTAR EG02 | RTX 4060 Ti | 满载功耗达到 165 W，Gen4 链路稳定，未观察到 PCIe 错误。 | 按 [Windows 设置](./egpu-windows.md)操作。 |
-| Razer Thunderbolt 5 Dock，连接 AOOSTAR EG02、Razer Core X V2 和 Razer Core X | RTX 4060 Ti + RTX 4090 + RTX 4060，以及内置 RTX 5090M | 四张 GPU 完成一小时满载测试，未观察到异常。 | 该结果仅适用于实测连接方式。 |
-
-## 当前限制
-
-- **Olares OS 使用 Gen4**
-  - **现象**：开机可能卡住、无法识别显卡，或者 eGPU 在使用过程中掉卡。
-  - **可能原因**：NVIDIA 驱动初始化包含对时序敏感的通信，实测雷电链路在 Gen4 下稳定性较低。该解释尚未确认为根本原因。
-  - **建议**：使用 [Gen1 临时方案](./egpu-olares-os.md)。
-
-- **Olares OS 热插拔**
-  - **现象**：开机后连接 eGPU，可能无法识别显卡或导致系统停止响应。
-  - **可能原因**：系统运行中新建雷电隧道，可能会干扰驱动初始化。
-  - **建议**：关闭 Olares One，给 eGPU 通电并完成连接，然后再启动 Olares One。
-
-- **多张 eGPU**
-  - **Olares OS**：每次只连接一台 eGPU。额外连接的 eGPU 可能无法识别。
-  - **Windows**：一种三张外置 GPU 的配置已通过一小时满载测试。其他显卡、扩展坞、Dock 和连接方式尚未测试。
-
-- **桌面旗舰大显存卡**
-  - **现象**：PCIe 总线可能显示显卡，但驱动可能无法初始化。
-  - **可能原因**：PCIe 资源分配问题仍在调查。系统可能没有为显卡预留足够的地址空间。
-  - **建议**：目前没有已验证的临时方案。
-
-- **Windows 内置 RTX 5090M 功耗**
-  - **现象**：内置显卡满载功耗约为 95 W，未达到 175 W。
-  - **状态**：这是已与 NVIDIA 确认的已知问题。实测中 eGPU 链路可稳定运行在 Gen4。
-  - **影响**：该问题影响内置显卡功耗，在实测配置中不影响 eGPU 使用。
-
-## 名词速查
-
-| 名词 | 含义 |
-|---|---|
-| Gen1 / Gen4 | PCIe 链路速率档位。链路宽度相同时，Gen4 的原始传输速率约为 Gen1 的 8 倍。 |
-| 雷电隧道 | 通过雷电连接，在 Olares One 与 eGPU 扩展坞之间传输 PCIe 数据的通道。 |
-| BAR / 显存映射 | 供系统访问显卡资源的 PCIe 地址窗口，其中包括部分显存。 |
-| 冷启动 / 热插拔 | 冷启动是先给 eGPU 通电并完成连接，再启动 Olares One。热插拔是在系统运行期间连接或断开 eGPU。 |
-| 掉卡 | eGPU 在使用过程中停止响应，或不再显示在操作系统中。 |
+如果 Olares One 无法启动、系统看不到 eGPU，或显卡驱动报错，请参考[排查 eGPU 问题](./ts-egpu.md)。

@@ -1,4 +1,6 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /use-cases/openwebui-search
 outline: deep
 description: Enable web search in Open WebUI on Olares using SearXNG and an embedding model for retrieving up-to-date information.
 head:
@@ -7,10 +9,12 @@ head:
       content: Olares, Open WebUI, web search, SearXNG, embedding, RAG
 app_version: "1.0.38"
 doc_version: "2.0"
-doc_updated: "2026-08-05"
+doc_updated: "2026-09-23"
 ---
 
 # Enable web search in Open WebUI
+
+<VersionRouteSelect />
 
 Add web search capabilities to Open WebUI to allow your local AI models to retrieve up-to-date information from the internet. This integration requires a connected embedding model to generate embeddings and SearXNG to fetch web results.
 
@@ -56,20 +60,21 @@ To link Open WebUI with your background services, you need to locate the connect
 Apply the details you retrieved to the Open WebUI configuration panel.
 
 ### Set up document embeddings
-<!--Note this section is reused in openwebui-knowledge, from line 63 to 72-->
 
 Configure the embedding model so Open WebUI can convert text into vector representations for retrieval.
 
+<!-- #region configure-document-embeddings -->
 1. In Open WebUI, select your profile icon, and then go to **Admin Panel** > **Settings**.
 2. On the left sidebar, locate the **Tools** section, and then select **Documents**.
 3. Under the **Embedding** section, specify the following settings:
 
    - **Embedding Model Engine**: Select **OpenAI**.
-   - **API Base URL**: Enter the embedding model **Base URL** you copied from the Model Console.
-   - **Embedding Model**: Enter the embedding **Model name** you copied from the Model Console.
+   - **API Base URL**: Enter the embedding model **Base URL** you copied from Router.
+   - **Embedding Model**: Enter the embedding **Model name** you copied from Router.
 
 4. Scroll down to the bottom of the page, and then click **Reindex** in the lower-right corner to apply the changes.
 5. Select **Save**.
+<!-- #endregion configure-document-embeddings -->
 
 ### Enable web search
 

@@ -1,4 +1,6 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /zh/use-cases/nofx
 outline: deep
 description: 在 Olares 上运行 NOFX，一个开源的自主 AI 交易智能体。为 AI 钱包充值，连接交易所，配置策略，并让智能体进行交易。
 head:
@@ -7,7 +9,7 @@ head:
       content: Olares, NOFX, AI trading, autonomous agent, crypto, Hyperliquid, self-hosted
 app_version: "1.0.5"
 doc_version: "1.1"
-doc_updated: "2026-05-09"
+doc_updated: "2026-09-23"
 ---
 
 :::warning
@@ -15,6 +17,8 @@ doc_updated: "2026-05-09"
 :::
 
 # 使用 NOFX 设置自主 AI 交易智能体
+
+<VersionRouteSelect />
 
 NOFX 是一个开源的自主 AI 交易智能体。与传统需要你配置模型、管理 API 密钥和连接数据源的 AI 工具不同，NOFX 感知市场、选择模型，并自行拉取数据。你设置策略，智能体处理其余部分。
 
@@ -210,30 +214,19 @@ NOFX 需要两个不同的钱包用于不同的目的：
 - 它必须支持 OpenAI 兼容的 API 调用。
 - 它需要强大的指令遵循能力、足够的上下文窗口和快速的推理速度。否则，模型可能无法输出有效的交易指令。
 
-要配置本地模型：
-<!-- #region get-model-connection-details -->
-1. 从启动台打开模型应用。其模型控制台会自动打开。
-2. 等待**模型**显示**就绪**，且**引擎**显示**运行中**。
+连接本地模型前，你需要：
 
-   ![Qwen3.6-27B 模型控制台](/images/zh/manual/use-cases/qwen3.6-27b-model-console1.png#bordered)
+<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
+- 已从应用市场安装 Qwen3.8-27B (llama.cpp)。
 
-3. 在**模型**部分，按显示内容原样复制**模型名称**。
-4. 在**引擎**部分：
-
-   a. **连接来源**：选择 **Olares 内应用**。
-
-   b. **API 格式**：选择 **OpenAI-Compatible**。
-
-   c.按显示内容原样复制 **Base URL** 地址。
-
-<!-- #endregion get-model-connection-details -->
+<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 5. 打开 NOFX，然后点击 **Config** 页面上的 **+ MODELS_CONFIG**。
 6. 点击 **Other API Providers**，然后选择 **OpenAI**。
 7. 指定以下设置：
 
    - **API Key**：输入任意文本字符串，例如 `local`。
-   - **Base URL**：输入从模型控制台复制的 **Base URL**。确保 URL 以 `/v1` 结尾。
-   - **Model Name (Optional)**：输入从模型控制台复制的 **Model name**。
+   - **Base URL**：输入从 Router 复制的 **Base URL**。确保 URL 以 `/v1` 结尾。
+   - **Model Name (Optional)**： 填写 `default-chat`。
 
 8. 点击 **Save Configuration**。
 

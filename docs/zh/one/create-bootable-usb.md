@@ -25,7 +25,7 @@ head:
 
 ## 前提条件
 
-- USB 闪存盘：容量 8 GB 或更大。
+- USB 闪存盘：容量至少为 32 GB。
 
     :::warning 数据丢失
     创建可启动驱动器时，选定的 USB 驱动器将被擦除。请继续前备份所有重要文件。
@@ -36,7 +36,7 @@ head:
 
 ## 创建可启动 USB 驱动器
 
-1. 下载[最新的官方 Olares One ISO 镜像](https://cdn.olares.com/one/olares-v1.12.6-amd64.iso)到你的电脑。
+1. 下载[最新的官方 Olares One ISO 镜像](https://cdn.olares.cn/one/v1.12.7-amd64.iso)到你的电脑。
 
 2. 下载并安装 [**Balena Etcher**](https://etcher.balena.io/)。
 

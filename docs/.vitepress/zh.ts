@@ -316,7 +316,7 @@ const side = {
           link: "/zh/manual/olares/settings/manage-entrance",
         },
         {
-          text: "连接 AI 应用与模型服务",
+          text: "AI 应用连接方式",
           link: "/zh/manual/best-practices/connect-ai-apps",
         },
         {
@@ -576,6 +576,10 @@ const side = {
             {
               text: "忘记桌面登录密码",
               link: "/zh/manual/help/ts-forget-login-password",
+            },
+            {
+              text: "恢复 LarePass 和 Olares 访问",
+              link: "/zh/manual/help/ts-access-without-mnemonic",
             },
             {
               text: "登录与激活错误信息",

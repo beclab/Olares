@@ -70,6 +70,10 @@ export const redirects = {
     '/use-cases/deerflow': '/use-cases/deerflow2',
     '/zh/use-cases/deerflow': '/zh/use-cases/deerflow2',
 
+    // Retired: standalone Ollama guide → Engine Base apps
+    '/use-cases/ollama': '/use-cases/llm-base-apps',
+    '/zh/use-cases/ollama': '/zh/use-cases/llm-base-apps',
+
     // Rename: ace-step → ace-step-1.5 (permanent: old name is retired)
     '/use-cases/ace-step': '/use-cases/ace-step-1.5',
     '/zh/use-cases/ace-step': '/zh/use-cases/ace-step-1.5',

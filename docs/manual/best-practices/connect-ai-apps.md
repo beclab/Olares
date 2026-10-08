@@ -1,83 +1,105 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /manual/best-practices/connect-ai-apps
 outline: [2, 3]
-description: Connect an AI client app to a model service by choosing the connection source and API format, copying the Base URL, and entering the model name and API key.
+description: Understand how AI clients connect to local and remote models through Olares Router.
 head:
   - - meta
     - name: keywords
-      content: Olares, AI apps, Model Console, LLM service, API format, Base URL, Ollama, OpenAI-Compatible
+      content: Olares, AI client, model service, LarePass VPN, Router, default-chat, Base URL, API key
 ---
 
-# Connect an AI app to a model service <Badge type="tip" text="^ 1.12.6" />
+# How AI apps connect to Olares models
 
-On Olares, an AI service app provides AI capabilities over an API, while a client app provides the interface or workflow you use. Connecting them follows the same pattern across apps: choose how the client reaches the service, match the API format, and copy the service address and model name.
+<VersionRouteSelect />
 
-This page covers that common pattern. For the exact fields and buttons in a specific client app, use the app-specific tutorial linked at the end of this page.
+Many AI apps focus on the interface or workflow, while a separate model service performs inference. LobeHub, OpenCode, and Claude Code all follow this pattern.
 
-## Before you begin
+Connecting an AI app means telling the app which API to use, where to send requests, which model to call, and how to authenticate.
 
-- Install both the AI service app and the AI client app.
-- For an LLM service app, open it from the Launchpad and make sure **Model** shows **Ready** and **Engine** shows **Running**.
+## Client apps, Router, and model services
 
-## Choose the connection source and API format
+An AI connection on Olares involves three parts:
 
-Open the LLM service app from the Launchpad to launch its **Model Console**, and then select the options that match your client app:
+- **Client app**: The chat interface, coding tool, or workflow app that sends model requests.
+- **Router**: The shared entry point for AI capabilities on Olares. It authenticates the caller and routes each request.
+- **Model service**: A model running in a local model app or a remote model provider connected to Router.
 
-- **Connection source**: Select the option that matches where your client app runs. For example, select **Apps in Olares** when the client is installed in the same Olares cluster.
-- **API format**: Select the format your client app supports, such as **OpenAI-Compatible** or **Ollama**. The Model Console displays the Base URL that matches your selection.
+The client uses Router as a shared gateway. Router sends the request to the selected model and returns the response. Local and remote models use the same Router service, while the Base URL used by the client depends on the request origin.
 
-:::info
-Non-LLM services like PaddleOCR do not use these generic formats. They communicate using their own tool-specific protocols, so you do not need to configure a provider format for them.
-:::
+A local model app exposes an in-cluster shared entrance for Router to call its inference engine. That address belongs to the connection between Router and the model backend. Client apps use the Base URL provided by Router.
 
-## Copy the Base URL
+## The request origin determines the connection
 
-The Base URL is the network address where the service app receives and processes requests.
+Choose a connection according to the component that sends the API request and its network location.
 
-- **For LLM service apps**: Copy the **Base URL** displayed in the Model Console. Copy it exactly as shown, including any path suffix such as `/v1`.
-- **For other AI service apps**: Open Olares Settings, go to **Applications** > **[AppName]** > **Entrances**, and copy the **Endpoint URL**. Ensure the entrance's **Authentication level** is set to **Internal** so other apps can access it without a login barrier.
+- **Server-side request**: An app installed on Olares usually sends requests from its own server process. The request stays within the Olares network.
+- **Direct client request**: A desktop app, CLI, IDE extension, or browser client sends requests from your computer. The request reaches Olares through the local network or LarePass VPN.
 
-    :::tip Multiple entrances
-    Some apps expose more than one entrance. Choose the entrance that matches your client's protocol or use case. For example, use the main entrance for web UI access and a dedicated API entrance for programmatic integrations.
-    :::
+Some web apps can switch between server-side and browser-side requests. For example, enabling a setting such as **Client Request Mode** moves the request origin from the Olares app to the browser. Follow the app-specific tutorial when such an option is available.
 
-## Enter the model name and API key
+| Request origin | Router connection option | Access method |
+| --- | --- | --- |
+| An app process in Olares | **Apps in Olares** | The platform injects the app identity |
+| A computer on the same local network | **Devices in LAN** | Direct LAN access with a Router API key |
+| A computer outside the local network | **Remote** | LarePass VPN with a Router API key |
 
-- **Model name**: Copy the **Model name** from the Model Console exactly as displayed. Do not abbreviate it or remove repository prefixes (such as `unsloth/`) or quantization tags (such as `UD-Q4_K_XL`), otherwise the client might return an error like "Model not found".
-- **API key**: AI service apps deployed locally on Olares trust requests from other apps in the same cluster, so a real API key is usually not required. If the client app still requires a value in this field, enter any placeholder text such as `olares` or `local`.
+### Connecting from outside the local network
 
-## Add the service to the client app
+A computer on the same local network can reach Router directly. A computer on another network uses the connection information under **Remote** and first joins the Olares private network through LarePass VPN.
 
-Open the client app's model, provider, or integration settings, then enter the values collected from the service app:
+The VPN and API key solve different parts of the connection. LarePass VPN provides an encrypted network path to Olares. The Router API key identifies the external client and grants access to model capabilities. A remote client needs both.
 
-| Client setting | Value to use |
-|---|---|
-| Provider or API format | The format selected in Model Console, such as **OpenAI-Compatible** or **Ollama** |
-| Base URL or endpoint | The complete URL copied from Model Console or the app entrance |
-| Model name or model ID | The complete model name shown in Model Console |
-| API key | The real key required by the service, or a placeholder if the local client requires a non-empty value |
+## Connection parameters
 
-The labels vary by client. If a client asks for additional fields or changes where requests are sent from, follow that client's tutorial instead of guessing.
+AI apps use different labels, but a model connection usually contains the following values:
 
-## Verify the connection
+| Parameter | Purpose |
+| --- | --- |
+| Provider or API format | Defines the request format expected by the client and Router |
+| Base URL | Identifies the Router address and API path |
+| Model name or model ID | Identifies the model or routing rule to call |
+| API key | Authenticates a client outside Olares |
 
-Save the provider settings and use the client app's connection test or model-list refresh. If the client has neither option, start a new session, select the configured model, and send a short request. A response confirms that the client can reach the service and use the selected model.
+### Provider and API format
 
-## Fix common connection errors
+“Provider” refers to different objects in the client and in Router:
 
-| Symptom | Likely cause and fix |
-|---|---|
-| The client reports "Model not found" | The model name was abbreviated or missing prefixes. Copy the full model name from the Model Console. |
-| The connectivity check fails or the Base URL is unreachable | The connection source does not match where the client runs. Reopen the Model Console, select the matching **Connection source**, and copy the Base URL again. |
-| A browser reports a CORS error or Olares authentication page | The client may be sending requests from the browser instead of its server. Check the client tutorial for the correct request mode and service entrance. |
+- In a client, the provider is usually an adapter that formats requests. For example, an OpenAI-compatible provider can call a model running locally on Olares.
+- In Router, a provider is the backend to which Router forwards requests. It can be a local model app or a cloud provider.
+
+Use the provider or adapter specified in the app tutorial. Different formats can use different paths and request structures even when they call the same model.
+
+### Base URL
+
+The Base URL tells the client where to send requests. Router provides a different URL for **Apps in Olares**, **Devices in LAN**, and **Remote** because each request reaches Router through a different network path.
+
+Copy the complete URL for the request origin, including a path such as `/v1` when shown. Some clients append their own API path, so the app tutorial may instruct you to remove or change the suffix.
+
+### API key
+
+The platform authenticates requests from apps in Olares. Clients on a computer use a key created in Router, including clients on the same local network.
+
+When an Olares app requires a value in the key field, use the placeholder given in that app's tutorial.
+
+## Model selection
+
+The model name determines how Router handles the request:
+
+- **`default-chat`** routes the request to the model selected for chat on Router's **Default models** page. Apps using this name automatically follow later changes to the default model.
+- **A full model name** sends the request to one specific model. Use it when the app must remain on that model.
+
+`default-chat` is a routing name, while the model-list API returns individual models. If a client builds its model menu from that API, add `default-chat` manually. Clients restricted to models returned in the list use the full model name.
 
 ## App-specific tutorials
 
+The following tutorials show the provider, URL format, and fields required by each client:
+
 - [Build your local AI agent with LobeHub](/use-cases/lobechat.md)
-- [Set up Open WebUI for local AI chat](/use-cases/openwebui.md)
-- [Customize your local AI assistant using Dify](/use-cases/dify.md)
+- [Set up OpenCode as your AI coding agent](/use-cases/opencode.md)
+- [Write code using Claude Code](/use-cases/claude-code.md)
 
 ## Learn more
 
-- [How do AI apps connect on Olares?](../help/usage.md#how-do-ai-apps-connect-on-olares)
-- [Run local LLMs with Ollama, vLLM, llama.cpp, and SGLang](../../use-cases/llm-base-apps.md)
-- [Manage application entrances](../olares/settings/manage-entrance.md)
+- [Use Olares Router as your AI gateway](/use-cases/olares-router.md)
+- [Connect to your Olares network with LarePass VPN](../larepass/private-network.md)

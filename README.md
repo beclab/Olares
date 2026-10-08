@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="#get-started">Install Olares</a> ·
-  <a href="https://www.olares.com/docs/developer/cli-agent-skills">Manage Olares with AI</a> ·
+  <a href="https://www.olares.com/docs/one/olares-onboarding">Manage Olares with AI</a> ·
   <a href="#contributing">Contribute</a>
 </p>
 
@@ -30,15 +30,20 @@
 
 Powered by Kubernetes, it turns your machines into a self-hosted AI platform accessible from any browser, giving everyone from individual users to small teams a unified place for compute, storage, networking, and apps.
 
-https://github.com/user-attachments/assets/01490c33-41ce-46fe-8450-6939b40db98e
+https://github.com/user-attachments/assets/3e4b0c5d-dcbe-47eb-8628-88b062411fa0
 
 > 🌟 *If Olares is useful to you, consider giving the project a star. Your support encourages us to keep improving it.*
+
+## Release highlights
+
+- **[Olares 1.12.7](https://www.olares.com/blog/olares-1-12-7/):** Router, Lares, and a broader local AI model catalog.
+- **[Olares 1.12.6](https://www.olares.com/blog/olares-1-12-6/):** Agent Skills, Model Console for local LLMs, and more reliable shared apps.
 
 ## Why Olares
 
 Great AI needs to know you. That requires access to your files, messages, and history. Many cloud AI services store this sensitive data on third-party servers and charge based on usage.
 
-Olares brings AI home, so you can run agents like [OpenClaw](https://www.olares.com/docs/use-cases/openclaw) with local LLMs on hardware you own while still enjoying the access and convenience of the cloud.
+Olares brings AI home, so you can use [Lares](https://www.olares.com/docs/use-cases/lares), the official Olares AI assistant, or agents like [OpenClaw](https://www.olares.com/docs/use-cases/openclaw) with local LLMs on hardware you own while still enjoying the access and convenience of the cloud.
 
 ![Comparison of a digital life built on public cloud services with one powered by open-source apps on an Olares personal cloud](https://app.cdn.olares.com/github/olares/public-cloud-to-personal-cloud.jpg)
 
@@ -48,14 +53,14 @@ Features include:
 - **Accelerated computing management:** Pool GPUs and other accelerators across nodes, with time-slicing, memory-slicing, and exclusive GPU modes for AI, media, and gaming workloads.
 - **[Files and storage management](https://www.olares.com/docs/manual/olares/files/):** Access local files, synced data, connected cloud storage, and external SMB/NFS shares through the built-in Files app, with [configurable backups](https://www.olares.com/docs/manual/olares/settings/backup).
 - **[Private networking and access controls](https://www.olares.com/docs/developer/concepts/network):** Use a private VPN, reverse proxy, and public, private, or internal entrances to give apps HTTPS endpoints without manually exposing individual ports.
-- **Anytime, anywhere access:** Use your Olares ID and [LarePass](https://www.olares.com/docs/manual/larepass/) to access all your services from a phone, desktop, or browser.
+- **Anytime, anywhere access:** Access your apps and files from your phone, desktop, or browser.
 - **A suite of system apps:** Files, Vault, Market, Dashboard, Control Hub, and more, ready the moment you log in.
 
 ## Get started
 
 ### Linux script requirements
 
-Olares installs on a Linux host (bare metal or VM), with dedicated installation methods for Windows, macOS, and Raspberry Pi. Requirements vary by platform and installation method. The Linux script used below requires:
+To install Olares on an existing Linux system using the script below, your machine needs:
 
 - **CPU:** At least 4 cores
 - **RAM:** At least 8 GB of available memory
@@ -64,27 +69,27 @@ Olares installs on a Linux host (bare metal or VM), with dedicated installation 
 
 A dedicated GPU is optional and enables local AI acceleration.
 
-### Install and activate
+### Install on Linux
 
-1. Create your Olares ID in [LarePass](https://www.olares.com/docs/manual/larepass/), the client app that adds secure login, a built-in VPN, and file sync.
+On your Ubuntu or Debian host, run the following command from an account with `sudo` access:
 
-2. On your Linux host, run:
+```bash
+curl -fsSL https://olares.sh | bash -
+```
 
-    ```bash
-    curl -fsSL https://olares.sh | bash -
-    ```
+This command downloads the official installer from `olares.sh` and runs it with Bash. See the [Linux script installation guide](https://www.olares.com/docs/manual/get-started/install-linux-script) for the full setup steps and troubleshooting.
 
-    This command downloads the official installer from `olares.sh` and runs it with Bash. For complete requirements, platform-specific instructions, and troubleshooting, see the [Linux script installation guide](https://www.olares.com/docs/manual/get-started/install-linux-script).
+For a fresh installation on an Intel or AMD x86-64 machine, use the [ISO image](https://www.olares.com/docs/manual/get-started/install-linux-iso). For a containerized installation on Linux, see the [Docker Compose guide](https://www.olares.com/docs/manual/get-started/install-linux-docker).
 
-    For Windows, macOS, Raspberry Pi, or a VM, choose your platform in the [installation guide](https://www.olares.com/docs/manual/get-started/install-olares).
+Once setup is complete, open your Olares desktop in a browser at its address, for example, `https://desktop.marvin123.olares.com`.
 
-3. Follow the guided web wizard, or do it entirely from the terminal with the [Activate using the Olares CLI](https://www.olares.com/docs/manual/best-practices/activate-olares-using-cli) tutorial.
+### Try your first AI task
 
-Once activated, you can access Olares from any browser at an address based on your Olares ID. For example, if your Olares ID is `marvin123`, your desktop is at `https://desktop.marvin123.olares.com`.
+Follow the [AI onboarding guide](https://www.olares.com/docs/one/olares-onboarding) to set up Router, Lares, and a local model, then start your first conversation. Try asking Lares: "Check this device's configuration."
 
 ## Key use cases
 
-- **Use a personal AI agent.** Delegate research, coding, file management, and routine automation through plain language.
+- **Use a personal AI agent.** Delegate research, file management, and routine automation to [Lares](https://www.olares.com/docs/use-cases/lares) through plain language, or use your preferred agent for coding and other tasks.
 - **Run generative AI locally.** Chat with open models, generate images and video, and connect local models to other apps, all from your own hardware.
 - **Manage smart home devices and media.** Connect home automation tools and stream your personal music and video libraries.
 - **Build and host agentic apps.** Develop, test, and run apps and workflows in isolated environments on Olares.
@@ -134,9 +139,8 @@ Olares welcomes contributions across the project. Choose the path that best matc
 
 - **[Installation guide](https://www.olares.com/docs/manual/get-started/install-olares):** Choose an installation method and activate Olares.
 - **[Use cases](https://www.olares.com/docs/use-cases/):** Explore local AI, media, productivity, and self-hosted workflows.
-- **[CLI guide](https://www.olares.com/docs/developer/install/cli/olares-cli):** Install, manage, and diagnose Olares from the command line.
+- **[CLI guide](https://www.olares.com/docs/developer/cli-overview):** Install, manage, and diagnose Olares from the command line.
 - **[Agent Skills](https://www.olares.com/docs/developer/cli-agent-skills):** Let AI agents operate Olares through `olares-cli`.
-- **[Advanced tutorials](https://www.olares.com/docs/manual/best-practices/):** Configure GPUs, multi-node deployments, custom domains, and storage expansion.
 
 ## Community
 

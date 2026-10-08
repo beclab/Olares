@@ -1,4 +1,6 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /use-cases/deerflow2
 outline: deep
 title: Set up DeerFlow 2.0 for AI research
 description: Set up DeerFlow 2.0 on your Olares device and configure it with a local model app for deep research.
@@ -8,10 +10,12 @@ head:
       content: Olares, DeerFlow, AI agent, deep research, multi-agent, self-hosted, LLM
 doc_version: "1.2"
 app_version: "1.0.6"
-doc_updated: "2026-07-27"
+doc_updated: "2026-09-23"
 ---
 
 # Set up DeerFlow 2.0 for AI-powered research and tasks
+
+<VersionRouteSelect />
 
 DeerFlow is an open-source agent harness by ByteDance, built on LangGraph and LangChain. It orchestrates sub-agents, memory, and sandboxes to handle complex tasks through extensible skills.
 
@@ -27,12 +31,12 @@ In this guide, you will learn how to:
 
 Before you begin, you need:
 
-- An Olares device with sufficient disk space and memory.
+<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - The following model:
 
   | Model type | Model | How to get it |
   | :--- | :--- | :--- |
-  | Chat | Qwen3.6-27B (llama.cpp) | Install from Market |
+  | Chat | Qwen3.8-27B (llama.cpp) | Install from Market |
 
 <!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
@@ -51,7 +55,7 @@ DeerFlow 2.0 uses a `config.yaml` file for its core configuration. To connect it
 
 <!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
-For Qwen3.6-27B (llama.cpp):
+For Qwen3.8-27B (llama.cpp):
 
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
@@ -59,19 +63,24 @@ For Qwen3.6-27B (llama.cpp):
 
 1. Open Files and navigate to the DeerFlow 2.0 app data directory: `/Data/deerflowv2/config/`.
 2. Open `config.yaml`, and click <span class="material-symbols-outlined">edit_square</span> in the top-right corner to open the editor.
-3. Under the `models:` section, add the model configuration below. Replace `PASTE_BASE_URL_FROM_MODEL_CONSOLE` with the Base URL copied from the Qwen3.6-27B Model Console.
+3. Under the `models:` section, add the model configuration below. Replace `PASTE_ROUTER_BASE_URL` with the Base URL copied from Router.
 
    ```yaml
    models:
-     - name: unsloth/Qwen3.6-27B-GGUF:Q4_K_M      # Unique identifier for the model
-       display_name: Qwen3.6-27B      # Name shown in the UI
+     - name: default-chat      # Unique identifier for the model
+       display_name: Qwen3.8-27B      # Name shown in the UI
        use: langchain_openai:ChatOpenAI      # LangChain class for OpenAI-compatible APIs
-       model: unsloth/Qwen3.6-27B-GGUF:Q4_K_M      # Model ID
+       model: default-chat      # Model ID
        api_key: olares      # Use any non-empty text
-       base_url: https://e46e044d.laresprime.olares.com/v1      # Base URL from MOdel Console
+       base_url: PASTE_ROUTER_BASE_URL
        supports_thinking: true      # Set to true if the model supports extended thinking
    ```
+
+   <!--
+   TODO: 素材清单 04，待补 Router 截图：deerflow2-config-router.png；替换下方旧图后再取消注释。
    ![Edit config.yaml](/images/manual/use-cases/deerflow2-edit-config-yaml1.png#bordered)
+   -->
+
 
 4. Click <span class="material-symbols-outlined">save</span> to save the changes.
 
@@ -123,7 +132,7 @@ Once the model is configured, you can start using DeerFlow 2.0.
 If the agent fails to start or hangs:
 
 - **Check model compatibility**: Ensure the model you selected is properly configured in `config.yaml`. Verify the endpoint URL is correct.
-- **Check connection details**: Make sure the Model name and Base URL match the values displayed in the Model Console.
+- **Check connection details**: Use `default-chat` as the model and the Base URL copied from Router. Check the default chat model on **Default models**.
 
 ### How do I enable follow-up suggestions?
 

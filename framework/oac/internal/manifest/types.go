@@ -10,6 +10,13 @@ const (
 	APIVersionV1 = "v1"
 	APIVersionV2 = "v2"
 	APIVersionV3 = "v3"
+
+	WorkloadAllowFolder       = apimanifest.WorkloadAllowFolder
+	WorkloadAllowDeviceSerial = apimanifest.WorkloadAllowDeviceSerial
+	WorkloadAllowDeviceVideo  = apimanifest.WorkloadAllowDeviceVideo
+	WorkloadAllowDeviceAudio  = apimanifest.WorkloadAllowDeviceAudio
+	WorkloadAllowDeviceHID    = apimanifest.WorkloadAllowDeviceHID
+	WorkloadAllowBluetooth    = apimanifest.WorkloadAllowBluetooth
 )
 
 // All schema types are direct aliases onto github.com/beclab/api/manifest
@@ -18,53 +25,58 @@ const (
 // validation/parsing pipeline operating on a single concrete type, so values
 // flow freely without conversion.
 type (
-	AppMetaData         = apimanifest.AppMetaData
-	AppConfiguration    = apimanifest.AppConfiguration
-	AppSpec             = apimanifest.AppSpec
-	Hardware            = apimanifest.Hardware
-	CpuConfig           = apimanifest.CpuConfig
-	GpuConfig           = apimanifest.GpuConfig
-	SupportClient       = apimanifest.SupportClient
-	Permission          = apimanifest.Permission
-	ProviderPermission  = apimanifest.ProviderPermission
-	Policy              = apimanifest.Policy
-	Dependency          = apimanifest.Dependency
-	Conflict            = apimanifest.Conflict
-	Options             = apimanifest.Options
-	ResetCookie         = apimanifest.ResetCookie
-	AppScope            = apimanifest.AppScope
-	WsConfig            = apimanifest.WsConfig
-	Upload              = apimanifest.Upload
-	OIDC                = apimanifest.OIDC
-	Chart               = apimanifest.Chart
-	OverlayGateway      = apimanifest.OverlayGateway
-	OverlayEntrance     = apimanifest.OverlayEntrance
-	WorkloadReplicas    = apimanifest.WorkloadReplicas
-	Provider            = apimanifest.Provider
-	SpecialResource     = apimanifest.SpecialResource
-	ResourceRequirement = apimanifest.ResourceRequirement
-	ResourceMode        = apimanifest.ResourceMode
-	Middleware          = apimanifest.Middleware
-	Database            = apimanifest.Database
-	PostgresConfig      = apimanifest.PostgresConfig
-	ArgoConfig          = apimanifest.ArgoConfig
-	MinioConfig         = apimanifest.MinioConfig
-	Bucket              = apimanifest.Bucket
-	RabbitMQConfig      = apimanifest.RabbitMQConfig
-	VHost               = apimanifest.VHost
-	ElasticsearchConfig = apimanifest.ElasticsearchConfig
-	Index               = apimanifest.Index
-	RedisConfig         = apimanifest.RedisConfig
-	MongodbConfig       = apimanifest.MongodbConfig
-	MariaDBConfig       = apimanifest.MariaDBConfig
-	MySQLConfig         = apimanifest.MySQLConfig
-	ClickHouseConfig    = apimanifest.ClickHouseConfig
-	NatsConfig          = apimanifest.NatsConfig
-	Subject             = apimanifest.Subject
-	Export              = apimanifest.Export
-	Ref                 = apimanifest.Ref
-	RefSubject          = apimanifest.RefSubject
-	PermissionNats      = apimanifest.PermissionNats
+	AppMetaData             = apimanifest.AppMetaData
+	AppConfiguration        = apimanifest.AppConfiguration
+	AppSpec                 = apimanifest.AppSpec
+	Hardware                = apimanifest.Hardware
+	CpuConfig               = apimanifest.CpuConfig
+	GpuConfig               = apimanifest.GpuConfig
+	SupportClient           = apimanifest.SupportClient
+	Permission              = apimanifest.Permission
+	ProviderPermission      = apimanifest.ProviderPermission
+	Policy                  = apimanifest.Policy
+	Dependency              = apimanifest.Dependency
+	Conflict                = apimanifest.Conflict
+	Options                 = apimanifest.Options
+	ResetCookie             = apimanifest.ResetCookie
+	AppScope                = apimanifest.AppScope
+	WsConfig                = apimanifest.WsConfig
+	Upload                  = apimanifest.Upload
+	OIDC                    = apimanifest.OIDC
+	Chart                   = apimanifest.Chart
+	OverlayGateway          = apimanifest.OverlayGateway
+	OverlayEntrance         = apimanifest.OverlayEntrance
+	WorkloadReplicas        = apimanifest.WorkloadReplicas
+	WorkloadOptions         = apimanifest.WorkloadOptions
+	WorkloadOption          = apimanifest.WorkloadOption
+	WorkloadCapability      = apimanifest.WorkloadCapability
+	WorkloadOverlayGateway  = apimanifest.WorkloadOverlayGateway
+	WorkloadOverlayEntrance = apimanifest.WorkloadOverlayEntrance
+	Provider                = apimanifest.Provider
+	SpecialResource         = apimanifest.SpecialResource
+	ResourceRequirement     = apimanifest.ResourceRequirement
+	ResourceMode            = apimanifest.ResourceMode
+	Middleware              = apimanifest.Middleware
+	Database                = apimanifest.Database
+	PostgresConfig          = apimanifest.PostgresConfig
+	ArgoConfig              = apimanifest.ArgoConfig
+	MinioConfig             = apimanifest.MinioConfig
+	Bucket                  = apimanifest.Bucket
+	RabbitMQConfig          = apimanifest.RabbitMQConfig
+	VHost                   = apimanifest.VHost
+	ElasticsearchConfig     = apimanifest.ElasticsearchConfig
+	Index                   = apimanifest.Index
+	RedisConfig             = apimanifest.RedisConfig
+	MongodbConfig           = apimanifest.MongodbConfig
+	MariaDBConfig           = apimanifest.MariaDBConfig
+	MySQLConfig             = apimanifest.MySQLConfig
+	ClickHouseConfig        = apimanifest.ClickHouseConfig
+	NatsConfig              = apimanifest.NatsConfig
+	Subject                 = apimanifest.Subject
+	Export                  = apimanifest.Export
+	Ref                     = apimanifest.Ref
+	RefSubject              = apimanifest.RefSubject
+	PermissionNats          = apimanifest.PermissionNats
 )
 
 type (

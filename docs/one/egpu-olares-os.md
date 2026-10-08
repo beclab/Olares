@@ -1,80 +1,90 @@
 ---
 outline: [2, 3]
-description: Connect an NVIDIA eGPU to Olares One, apply the temporary Gen1 workaround, verify the GPU, and disconnect it safely.
+description: Connect an NVIDIA eGPU to Olares One, check it in Olares OS, and install the temporary Gen1 workaround when needed.
 ---
 
 # Set up an eGPU on Olares OS
 
-Use this guide to connect an NVIDIA eGPU to Olares One and apply a temporary Gen1 workaround that improved initialization reliability in the tested Olares OS environment.
+Use this guide to connect the eGPU. Install the Gen1 workaround only if startup stalls or the GPU is not detected.
 
-:::danger Power off before connecting
-Do not connect or disconnect the eGPU while Olares OS is running. Power off Olares One completely before changing the connection.
+:::danger Always power off before changing the connection
+Olares OS does not support eGPU hot-plugging. Shut down Olares One before connecting or disconnecting the eGPU.
 :::
 
-In the tested Olares OS environment, the eGPU sometimes failed to initialize when its PCIe link operated at Gen4. The workaround in this guide limits the enclosure's PCIe link to Gen1 before initialization.
+## Connect the eGPU
 
-## Before you start
+1. Open **Settings** > **My hardware** > **Shutdown**.
 
-This workaround has been tested with:
+   ![Shut down Olares One](/images/one/shut-down-olares-one.png#bordered)
 
-- Olares OS 1.12.6 based on Ubuntu 24.04
-- NVIDIA driver 595.84
-- AOOSTAR EG02
-- NVIDIA GeForce RTX 4060 Ti
+2. Scan the QR code with LarePass, then tap **Confirm**.
+3. Wait until Olares One is completely off.
+4. Prepare the eGPU:
 
-It also allowed the built-in RTX 5090M and external RTX 4060 Ti to run together in this configuration.
+   - If the GPU is already installed, connect the device's power adapter.
+   - If you use an eGPU dock or enclosure, install the desktop GPU and connect all required GPU power cables.
 
-The workaround files do not hard-code a specific enclosure or GPU model. Check the [eGPU support overview](./egpu.md) for tested configurations.
+5. Turn on the eGPU.
+6. Disconnect other high-bandwidth Thunderbolt devices. Using a certified Thunderbolt 5 cable, connect the eGPU directly to a Thunderbolt 5 (USB-C) port on Olares One.
+7. Press the power button on Olares One.
 
-You also need:
+## Check the connection
 
-- `sudo` access to Olares OS
-- Terminal access
-- A Thunderbolt eGPU enclosure with its own power supply
-- A certified Thunderbolt 5 cable, preferably the cable supplied with the enclosure
-- An NVIDIA GPU based on the Turing architecture or newer
+1. Log in to Olares and open **Dashboard**.
+2. Select the **GPU** card.
+3. Check that the built-in GPU and eGPU both appear.
 
-Thunderbolt is backward-compatible. For best results, use Thunderbolt 5 hardware. Older Thunderbolt enclosures are not recommended.
+   ![Verify the eGPU in Dashboard](/images/one/egpu-verify.png#bordered)
 
-## Performance impact
+You can also check from the terminal:
 
-This workaround limits the eGPU link to Gen1. It does not reduce the GPU's compute resources, but it may reduce performance when data moves between system memory and GPU memory.
+```bash
+nvidia-smi
+```
 
-- Workloads that keep the model and working data in VRAM may be affected mainly during model loading.
-- CPU offload, limited VRAM, frequent PCIe transfers, gaming, and real-time rendering may experience a larger impact.
+If the eGPU appears in Dashboard and `nvidia-smi`, do not install the workaround.
 
-Actual performance depends on the workload.
+If startup stalls or the eGPU does not appear in Dashboard or `nvidia-smi`, shut down Olares One, disconnect the eGPU, and start Olares One again. Install the workaround below before reconnecting the eGPU.
 
-## Install the workaround
+## Install the workaround if needed
 
-:::warning System-level workaround
-This workaround changes the eGPU's PCIe link settings and temporarily removes and rescans the device during startup. Use only the files provided on this page. If your configuration differs from the tested configuration, check the [eGPU support overview](./egpu.md) before continuing.
+The workaround sets the external GPU's PCIe link to Gen1 before the NVIDIA driver loads. It targets only Thunderbolt-connected NVIDIA GPUs and does not change the built-in GPU.
+
+:::info Performance impact
+The workaround reduces bandwidth between system memory and GPU memory. Model loading, CPU offload, gaming, and real-time rendering may be slower. It does not change the GPU's compute resources.
 :::
 
-1. Download these files into the same directory:
+:::warning Temporary workaround
+This workaround is provided by Olares and is not an official NVIDIA fix. Install only the files linked from this page. A future Olares release will include the workaround, so manual setup will no longer be required.
+:::
+
+1. Start Olares One without the eGPU connected.
+2. Download all three files to the same directory:
 
    - <a href="/downloads/one/egpu/fix-egpu-link.sh" download>`fix-egpu-link.sh`</a>
    - <a href="/downloads/one/egpu/egpu-gen1-fix.service" download>`egpu-gen1-fix.service`</a>
    - <a href="/downloads/one/egpu/99-egpu-gen1-fix.rules" download>`99-egpu-gen1-fix.rules`</a>
 
-2. Open a terminal in the download directory and check that `setpci` is available:
+3. Open a terminal in that directory and check that `setpci` is available:
 
    ```bash
    command -v setpci
    ```
 
-   The command should return a path such as `/usr/sbin/setpci`. The workaround requires `setpci`, which is provided by the `pciutils` package. If the command returns nothing, stop here and confirm the supported installation method for your Olares OS version.
+   The command should return a path such as `/usr/sbin/setpci`. If it returns nothing, stop and contact Olares support.
 
-3. Install the files:
+4. Install the files and enable the service:
 
    ```bash
    sudo install -m 0755 fix-egpu-link.sh       /usr/local/sbin/fix-egpu-link.sh
    sudo install -m 0644 egpu-gen1-fix.service  /etc/systemd/system/egpu-gen1-fix.service
    sudo install -m 0644 99-egpu-gen1-fix.rules /etc/udev/rules.d/99-egpu-gen1-fix.rules
+   sudo systemctl daemon-reload
+   sudo udevadm control --reload-rules
    sudo systemctl enable egpu-gen1-fix.service
    ```
 
-4. Confirm that the service is enabled:
+5. Check the result:
 
    ```bash
    sudo systemctl is-enabled egpu-gen1-fix.service
@@ -82,72 +92,42 @@ This workaround changes the eGPU's PCIe link settings and temporarily removes an
 
    The command should return `enabled`.
 
-The workaround identifies NVIDIA display controllers by PCI vendor and display class. It only acts on devices marked as removable, which excludes the built-in GPU.
+6. Follow [Connect the eGPU](#connect-the-egpu) again.
 
-## Shut down and connect the eGPU
+## Check the workaround
 
-1. Open **Settings**, then select **My hardware** > **Shutdown**.
+After Olares One starts, check that the eGPU appears in Dashboard or `nvidia-smi`. Then check the workaround log:
 
-   ![Shut down Olares One](/images/one/shut-down-olares-one.png#bordered)
+```bash
+sudo tail -n 20 /var/log/egpu-gen1-fix.log
+```
 
-2. Scan the QR code with LarePass. When prompted, tap **Confirm** to shut down Olares One.
-3. Wait until Olares One is completely off.
-4. Install the GPU in its enclosure and connect the enclosure to its dedicated power supply.
-5. Power on the enclosure, then connect it to the Thunderbolt 5 (USB-C) port on Olares One with a certified Thunderbolt 5 cable.
-6. Press the power button to start Olares One.
-
-The workaround runs automatically during startup.
-
-## Verify the connection
-
-Complete both checks below. Dashboard confirms that Olares detects the eGPU. The link speed and log confirm that the workaround is active.
-
-### Confirm eGPU detection in Dashboard
-
-1. Log in to Olares and open **Dashboard**.
-2. Select the **GPU** card. Confirm that both the built-in GPU and external GPU appear.
-
-   ![Verify the eGPU in Dashboard](/images/one/egpu-verify.png#bordered)
-
-### Confirm that the workaround is active
-
-1. Confirm that both GPUs appear:
-
-   ```bash
-   nvidia-smi
-   ```
-
-2. Check the workaround log:
-
-   ```bash
-   sudo tail -n 20 /var/log/egpu-gen1-fix.log
-   ```
-
-`2.5 GT/s PCIe` means Gen1 is active. A successful log includes:
+Look for a line similar to this one:
 
 ```plain
 after rescan: 0000:0a:00.0 speed=2.5 GT/s PCIe driver=nvidia
 ```
 
-If startup stalls, power off Olares One, disconnect the eGPU, and start it again. Then see [Troubleshoot eGPU issues](./ts-egpu.md).
+`2.5 GT/s PCIe` means the external GPU link is running at Gen1. The PCI address differs by system.
+
+If the eGPU is still missing or unstable, follow [Troubleshoot eGPU issues](./ts-egpu.md).
 
 ## Disconnect the eGPU
 
 1. Open **Settings** > **My hardware** > **Shutdown**.
-2. Confirm the shutdown in LarePass and wait until Olares One is completely off.
-3. Turn off the enclosure.
+2. Approve the shutdown in LarePass and wait until Olares One is completely off.
+3. Turn off the eGPU.
 4. Disconnect the Thunderbolt cable from Olares One.
-5. Press the power button to start Olares One again.
+5. Start Olares One again.
 
 ## Remove the workaround
 
 :::warning Disconnect the eGPU first
-Before removing the workaround, shut down Olares One and disconnect the eGPU. Starting Olares One with the eGPU connected after removal may cause the initialization issue to return.
+Shut down Olares One and disconnect the eGPU before removing the workaround.
 :::
 
-1. Follow [Disconnect the eGPU](#disconnect-the-egpu) and start Olares One without the eGPU connected.
-
-2. Open a terminal and remove the workaround:
+1. Start Olares One without the eGPU connected.
+2. Remove the workaround:
 
    ```bash
    sudo systemctl disable egpu-gen1-fix.service
@@ -164,9 +144,7 @@ Before removing the workaround, shut down Olares One and disconnect the eGPU. St
    sudo reboot
    ```
 
-The next time you connect the eGPU, it uses the default PCIe link behavior. The initialization issue may return.
+## Related resources
 
-## Resources
-
-- [Olares One eGPU support overview](./egpu.md)
+- [Connect an eGPU to Olares One](./egpu.md)
 - [Troubleshoot eGPU issues](./ts-egpu.md)

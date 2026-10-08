@@ -1,4 +1,6 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /use-cases/firecrawl
 outline: [2, 3]
 description: Set up Firecrawl on Olares as a web page loader for apps such as Open WebUI, or use its API to scrape and crawl websites.
 head:
@@ -7,14 +9,25 @@ head:
       content: Olares, Firecrawl, web crawler, web scraping, Firecrawl v2, scrape API, crawl API, Open WebUI, web loader, self-hosted
 app_version: "1.0.21"
 doc_version: "1.1"
-doc_updated: "2026-07-28"
+doc_updated: "2026-09-23"
 ---
 
 # Use Firecrawl as a web page loader
 
+<VersionRouteSelect />
+
 Firecrawl is a headless web data service that turns web pages into clean Markdown, structured JSON, summaries, and metadata. On Olares, apps such as Open WebUI can use Firecrawl to load full web page content after search results are found.
 
 You can also call the Firecrawl API directly to test scraping and crawling.
+
+## Prerequisites
+
+Before you begin, you need:
+
+<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
+- Qwen3.8-27B (llama.cpp) installed from Market, if you plan to use a local model.
+
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## Install Firecrawl
 
@@ -175,11 +188,11 @@ Structured JSON and summary output require a configured LLM provider. Local Olla
 
 ### Configure model access
 
-This example uses Qwen3.6-27B (llama.cpp) through its OpenAI-compatible API. Install the model from Market and wait until it is ready.
+This example uses Qwen3.8-27B (llama.cpp) through its OpenAI-compatible API. Install the model from Market and wait until it is ready.
 
 <!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
-For Qwen3.6-27B (llama.cpp), use the **OpenAI-Compatible** API format:
+For Qwen3.8-27B (llama.cpp), use the **OpenAI-Compatible** API format:
 
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
@@ -191,14 +204,13 @@ To configure Firecrawl:
    | Variable | Description |
    |:---------|:------------|
    | `OPENAI_API_KEY` | Enter any non-empty value, such as `olares`. |
-   | `OPENAI_BASE_URL` | Enter the Base URL from the Qwen3.6-27B Model Console. |
-   | `MODEL_NAME` | Enter the exact Model name from the Qwen3.6-27B Model Console. |
+   | `OPENAI_BASE_URL` | Enter the Base URL from Router. |
+   | `MODEL_NAME` | Enter `default-chat`. |
 
 3. Click **Apply**.
 4. Open Control Hub, select your Firecrawl project under **Browse**, then restart the `worker`, `nuq-worker`, and `firecrawl` deployments to apply the environment variables.
 
 ### Return structured JSON
-
 
 ```javascript
 const endpoint = "<your-firecrawl-endpoint>";

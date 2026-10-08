@@ -1,4 +1,6 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /zh/use-cases/openwebui-knowledge
 outline: deep
 description: 在 Olares 上通过 Open WebUI 上传文档并创建知识库，用于检索增强生成（RAG）。
 head:
@@ -7,7 +9,7 @@ head:
       content: Olares, Open WebUI, 知识库, RAG, 文档上传, PDF
 app_version: "1.0.38"
 doc_version: "2.0"
-doc_updated: "2026-08-05"
+doc_updated: "2026-09-23"
 ---
 
 :::warning
@@ -15,6 +17,8 @@ doc_updated: "2026-08-05"
 :::
 
 # 在 Open WebUI 中与文档和知识库聊天
+
+<VersionRouteSelect />
 
 Open WebUI 支持检索增强生成（RAG），可帮助本地 AI 模型基于你上传的文档或整理好的知识库回答问题。
 
@@ -51,7 +55,7 @@ Open WebUI 支持检索增强生成（RAG），可帮助本地 AI 模型基于�
 
 ### 在 Open WebUI 中应用嵌入设置
 
-<!--@include: ./openwebui-search.md{66,75}-->
+<!--@include: ./openwebui-search.md#configure-document-embeddings-->
 
 ## 分析单个文档
 

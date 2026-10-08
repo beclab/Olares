@@ -64,11 +64,11 @@ Before you begin, you need:
 
 ### Get model connection details
 
-<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
+<!--@include: ../reusables/ai-service-connections-1.12.6.md#model-connection-overview-->
 
 For Qwen3.6-27B (llama.cpp), LiteLLM uses the OpenAI-compatible API format. In the Model Console, select **OpenAI-Compatible**, then follow these steps:
 
-<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
+<!--@include: ../reusables/ai-service-connections-1.12.6.md#get-model-connection-details-->
 
 ### Add the model to LiteLLM
 

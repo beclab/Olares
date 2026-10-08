@@ -1,4 +1,6 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /zh/use-cases/speaches
 outline: [2, 3]
 description: 在 Olares 上安装 Speaches，实现语音转文本、文本转语音和 AI 语音聊天。使用 OpenAI-compatible API 将语音服务与其他应用集成。
 head:
@@ -7,7 +9,7 @@ head:
       content: Olares, Speaches, speech-to-text, text-to-speech, STT, TTS, voice chat, OpenAI-compatible, Whisper, Kokoro
 app_version: "1.0.7"
 doc_version: "1.0"
-doc_updated: "2026-04-14"
+doc_updated: "2026-09-23"
 ---
 
 :::warning
@@ -15,6 +17,8 @@ doc_updated: "2026-04-14"
 :::
 
 # 使用 Speaches 搭建语音服务
+
+<VersionRouteSelect />
 
 Speaches 是一个兼容 OpenAI API 的语音服务器，支持语音转文本（STT）和文本转语音（TTS）。它预装了模型，开箱即用，也可以轻松作为任何支持 OpenAI SDK 的应用的即插即用后端。
 
@@ -33,12 +37,17 @@ Speaches 是一个兼容 OpenAI API 的语音服务器，支持语音转文本�
 
 ## 前提条件
 
+开始前，你需要：
+
+<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - Olares 运行在一台带有 NVIDIA GPU 的设备上。
 - 如需使用 Audio Chat，请安装以下聊天模型：
 
   | 模型类型 | 模型 | 获取方式 |
   | :--- | :--- | :--- |
-  | 聊天 | Qwen3.6-27B (llama.cpp) | 从应用市场安装 |
+  | 聊天 | Qwen3.8-27B (llama.cpp) | 从应用市场安装 |
+
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## 安装 Speaches
 
@@ -119,7 +128,7 @@ Speaches 可以自动检测音频语言并将其翻译为英文。
 
 <!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
-本指南使用 Qwen3.6-27B (llama.cpp) 作为 Audio Chat 的聊天模型，并使用 **OpenAI-Compatible** API 格式。
+本指南使用 Qwen3.8-27B (llama.cpp) 作为 Audio Chat 的聊天模型，并使用 **OpenAI-Compatible** API 格式。
 
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
@@ -127,7 +136,7 @@ Speaches 可以自动检测音频语言并将其翻译为英文。
 
 1. 前往 Olares **Settings** > **Applications** > **Speaches** > **Manage environment variables**。
 2. 点击 `CHAT_COMPLETION_BASE_URL` 旁边的 <i class="material-symbols-outlined">edit_square</i>。
-3. 将模型控制台中显示的 OpenAI-compatible **Base URL** 原样粘贴，包括末尾的 `/v1`，然后点击 **Confirm**。
+3. 将Router 中显示的 OpenAI-compatible **Base URL** 原样粘贴，包括末尾的 `/v1`，然后点击 **Confirm**。
 4. 点击 **Apply** 保存更改。
 
 Speaches 会自动重启，并加载该 endpoint 提供的模型。
@@ -135,7 +144,7 @@ Speaches 会自动重启，并加载该 endpoint 提供的模型。
 #### 开始语音对话
 
 1. 打开 Speaches 并点击 **Audio Chat** 标签页。
-2. 在 **Chat Model** 下，选择 `unsloth/Qwen3.6-27B-GGUF:Q4_K_M`。
+2. 在 **Chat Model** 下，选择 Router 返回的 Qwen3.8-27B 条目，例如 `Olares/unsloth/Qwen3.8-27B-GGUF:UD-Q4_K_XL`。此选择器列出具体模型，不包含 `default-chat`。
 3. 使用以下任一方式发送消息：
    - **Audio file**：上传一个音频文件。
    - **Text**：在麦克风图标旁的输入框中输入你的消息并发送。
@@ -305,7 +314,7 @@ Speaches 会自动以 CPU 模式重新部署。与 GPU 模式相比，处理速�
 
 ### 为什么 Audio Chat 显示错误？
 
-如果 `CHAT_COMPLETION_BASE_URL` 为空、填写错误或无法访问，Audio Chat 将无法加载模型。请确保聊天模型正在运行，然后使用模型控制台中显示的 OpenAI-compatible Base URL [重新配置 Speaches](#配置-speaches)。
+如果 `CHAT_COMPLETION_BASE_URL` 为空、填写错误或无法访问，Audio Chat 将无法加载模型。请确保聊天模型正在运行，然后使用Router 中显示的 OpenAI-compatible Base URL [重新配置 Speaches](#配置-speaches)。
 
 ### 为什么切换到更大的模型后任务会失败？
 

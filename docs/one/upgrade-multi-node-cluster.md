@@ -1,15 +1,15 @@
 ---
 outline: [2, 3]
-description: Upgrade a two-node Olares cluster from version 1.12.5 to 1.12.6.
+description: Manually upgrade the master and worker nodes in a two-node Olares cluster.
 head:
   - - meta
     - name: keywords
-      content: Olares One, multi-node, two-node, upgrade, 1.12.5, 1.12.6
+      content: Olares One, multi-node, two-node, upgrade
 ---
 
-# Upgrade a two-node Olares cluster from 1.12.5 to 1.12.6
+# Upgrade a two-node Olares cluster
 
-This guide walks you through manually upgrading a two-node Olares cluster from version 1.12.5 to 1.12.6.
+This guide walks you through manually upgrading a two-node Olares cluster to a newer version.
 
 The procedure involves downloading upgrade packages on both nodes, upgrading the Olares CLI and daemon, and upgrading the master and worker nodes separately.
 
@@ -22,6 +22,14 @@ The procedure involves downloading upgrade packages on both nodes, upgrading the
 
 **Access**
 - You can access both nodes via SSH as a user with `sudo` privileges.
+
+**Versions**
+- Both nodes are running the same Olares version before the upgrade.
+- The target version supports upgrading from your current version.
+
+In the commands below, replace `<source-version>` with your pre-upgrade version and `<target-version>` with the version to install, without a leading `v`.
+
+For example, when upgrading from 1.12.6 to 1.12.7, use `1.12.6` for `<source-version>` and `1.12.7` for `<target-version>`.
 
 ## Step 1: Connect to both nodes
 
@@ -60,7 +68,7 @@ Download the upgrade files without installing them. Run the following commands i
 3. Create the upgrade target file to trigger the download:
 
    ```bash
-   echo '{"version":"1.12.6", "downloadOnly": true}' > $OLARES_BASE_DIR/upgrade.target
+   echo '{"version":"<target-version>", "downloadOnly": true}' > "$OLARES_BASE_DIR/upgrade.target"
    ```
 
 4. Check the download progress:
@@ -94,7 +102,7 @@ After the downloads finish, import the new images and update the core management
 3. Update the Olares CLI to the new version:
 
    ```bash
-   cp -f $OLARES_BASE_DIR/pkg/components/olares-cli-v1.12.6 /usr/local/bin/olares-cli
+   cp -f "$OLARES_BASE_DIR/pkg/components/olares-cli-v<target-version>" /usr/local/bin/olares-cli
    ```
 
 4. Import the new container images:
@@ -133,10 +141,10 @@ With both nodes prepared, upgrade the master node first.
    kubectl get pod -o wide -A
    ```
 
-4. Temporarily set the cluster version back to `1.12.5` so the worker node can be upgraded:
+4. Temporarily set the cluster version back to `<source-version>`, the pre-upgrade version, so the worker node can be upgraded:
 
    ```bash
-   kubectl patch terminus terminus --type=merge -p '{"spec":{"version":"1.12.5"}}'
+   kubectl patch terminus terminus --type=merge -p '{"spec":{"version":"<source-version>"}}'
    ```
 
 ## Step 5: Upgrade the worker node
@@ -153,17 +161,17 @@ Now that the master node is upgraded and patched, you can upgrade the worker nod
 
 ## Step 6: Restore the cluster version on the master node
 
-After the worker node finishes upgrading, restore the version on the master node to `1.12.6` to complete the process.
+After the worker node finishes upgrading, restore the cluster version to `<target-version>` on the master node to complete the process.
 
 If your SSH session to the master node times out, reconnect before proceeding.
 
 1. In the master node SSH window, run the following command:
 
    ```bash
-   kubectl patch terminus terminus --type=merge -p '{"spec":{"version":"1.12.6"}}'
+   kubectl patch terminus terminus --type=merge -p '{"spec":{"version":"<target-version>"}}'
    ```
 
-   The two-node cluster is now running Olares 1.12.6.
+   The two-node cluster is now running the target Olares version.
 
 2. To verify the final status of both nodes in the cluster, run the following command:
 

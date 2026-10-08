@@ -1,6 +1,5 @@
 ---
 outline: [2, 3]
-title: Lares
 description: Meet Lares, the official AI assistant for Olares. Manage apps, files, and your system, or dive into research, all through natural language.
 head:
   - - meta
@@ -8,7 +7,7 @@ head:
       content: Olares, Lares, Olares Router, Olares local AI, local AI agent, AI assistant, natural language, Olares 1.12.7
 ---
 
-# Lares
+# Manage Olares and run research tasks with Lares
 
 Lares is the official AI assistant for Olares, introduced in v1.12.7. With Router and a connected model, you state a goal in plain language, and Lares plans and carries out the task on your device.
 
@@ -47,7 +46,7 @@ To carry out tasks on your device securely, Lares operates based on two core mec
    ```
 
     :::warning Important: Run one task at a time
-    When running Qwen3.8-27B (llama.cpp) on Olares One, we recommend running only one request at a time to ensure the best experience with the 100K context window and model precision.
+    When running Qwen3.8-27B (llama.cpp) on Olares One, we recommend running only one request at a time to ensure the best experience with the 102K context window and model precision.
     :::
 
 ## Run a deep research task

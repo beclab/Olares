@@ -14,7 +14,7 @@ import (
 // before envs are even inspected).
 func v3EnvManifest(envs []AppEnvVar) *AppConfiguration {
 	c := newValidConfig()
-	c.ConfigVersion = "0.13.0"
+	c.ConfigVersion = "0.12.0"
 	c.APIVersion = APIVersionV3
 	wr := WorkloadReplicas{c.Metadata.Name: 1}
 	c.WorkloadReplicas = &wr

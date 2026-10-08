@@ -1,25 +1,32 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /use-cases/perplexica
 outline: [2, 3]
-description: Self-host Vane (formerly Perplexica) on Olares as a private Perplexity alternative. Get cited AI answers using local Ollama models and a SearXNG search backend.
+description: Self-host Vane (formerly Perplexica) on Olares as a private Perplexity alternative. Get cited answers using models through Olares Router and SearXNG search.
 head:
   - - meta
     - name: keywords
       content: Olares, Vane, Perplexica, perplexity alternative, self-hosted perplexity, AI search, SearXNG, vane on olares
 app_version: "1.12.0"
 doc_version: "1.2"
-doc_updated: "2026-04-17"
+doc_updated: "2026-09-23"
 ---
 # Self-host a private AI search engine with Vane
 
+<VersionRouteSelect />
+
 Vane (previously Perplexica) is an open-source AI-powered answering engine. It combines web search with local or cloud LLMs to deliver cited, conversational answers while keeping your queries private.
 
-This guide uses Ollama as the model provider and SearXNG as the search backend.
+This guide uses Qwen3.8-27B (llama.cpp) through Olares Router and SearXNG as the search backend.
 
 ## Prerequisites
 
-Before you begin, make sure:
-- [Ollama is installed](ollama.md) and running in your Olares environment.
-- At least one chat model is installed in Ollama. An embedding model is optional, since Vane ships with built-in ones.
+Before you begin, you need:
+
+<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
+- Install Qwen3.8-27B (llama.cpp) from Market. Vane can use its built-in embedding models.
+
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## Install SearXNG
 
@@ -39,18 +46,26 @@ SearXNG is a privacy-focused meta-search engine that aggregates results from mul
 
 ## Configure Vane
 
-1. Launch Vane. A setup wizard opens on first launch, with Ollama and its installed models detected automatically.
+<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
+
+1. Open Vane. In the setup wizard or the model section of **Settings**, add an **OpenAI** provider.
+2. Set **Base URL** to the Router URL, including `/v1`, and enter `olares` for **API Key**.
+
+   <!--
+   TODO: 素材清单 17，待补 Router 截图：vane-provider-router.png；替换下方旧图后再取消注释。
    ![Manage connections](/images/manual/use-cases/vane-manage-connections.png#bordered)
+   -->
 
-2. Click **Next**.
-3. Select a chat model and an embedding model, then click **Finish**.
+3. Add a chat model manually under this provider. Use a display name such as `Router chat` and set the model ID to `default-chat`.
+4. Select this chat model and one of Vane's built-in embedding models, then finish setup.
+
+   <!--
+   TODO: 素材清单 18，待补 Router 截图：vane-models-router.png；替换下方旧图后再取消注释。
    ![Configure models](/images/manual/use-cases/vane-configure-models.png#bordered)
+   -->
 
-   :::tip Embedding model options
-   If you don't have an embedding model in Ollama, you can pick one of Vane's built-in embedding models instead.
-   :::
 
-You're taken to the main chat page. To change models or connections later, click <i class="material-symbols-outlined">settings</i> in the bottom-left corner to open the **Settings** page.
+To change models or connections later, open **Settings** using the icon in the bottom-left corner.
 
 ## Start asking questions
 
@@ -59,5 +74,5 @@ Try a search to test your new private search environment.
 
 ## Learn more
 
-- [Ollama](ollama.md): Run local LLMs on Olares as Vane's model backend.
+- [Olares Router](olares-router.md): Manage the models used by Vane.
 - [Vane on GitHub](https://github.com/ItzCrazyKns/Vane): Upstream project README, architecture notes, and community Discord.

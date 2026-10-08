@@ -1,4 +1,6 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /use-cases/lobechat
 outline: [2, 4] 
 title: Build a local AI agent with LobeHub
 description: Install LobeHub on Olares and connect it to local models to build self-hosted AI assistants with knowledge bases, skills, and multimodal input.
@@ -8,10 +10,12 @@ head:
       content: Olares, LobeHub, LobeChat, self-hosted lobechat, AI agent, lobechat on olares
 app_version: "1.0.14"
 doc_version: "2.0"
-doc_updated: "2026-07-29"      
+doc_updated: "2026-09-23"
 ---
 
 # Build your local AI agent with LobeHub
+
+<VersionRouteSelect />
 
 LobeHub (previously known as LobeChat) is an open-source platform for building secure, self-hosted AI agents and chat experiences. It connects to your local models, supports file handling and knowledge bases, and allows you to create specialized agents with custom skills.
 
@@ -30,10 +34,14 @@ LobeHub is the official platform name, but the application is currently listed a
 
 ## Prerequisites
 
-Before you begin, you need the following model:
-| Model type | Model | How to get it |
-| :--- | :--- | :--- |
-| Chat | Qwen3.6-27B (llama.cpp) | Install from Market |
+Before you begin, you need:
+
+<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
+- The following model:
+
+  | Model type | Model | How to get it |
+  | :--- | :--- | :--- |
+  | Chat | Qwen3.8-27B (llama.cpp) | Install from Market |
 
 <!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
@@ -69,7 +77,7 @@ Connect LobeHub to your local model to make the chat interface work.
 2. Configure the following settings:
 
    - **API Key**: Enter any placeholder text such as `local`.
-   - **API Proxy URL**: Enter the **Base URL** you copied from the Model Console. For example, `https://e46e044d.laresprime.olares.com/v1`.
+   - **API Proxy URL**: Enter the **Base URL** you copied from Router. For example, `https://router.<your-olares-domain>/v1`.
    - **Use Responses API Specification**: Ensure this option is disabled.
    - **Use Client Request Mode**: Ensure this option is disabled.
 
@@ -77,16 +85,24 @@ Connect LobeHub to your local model to make the chat interface work.
       Do not enable the **Use Client Request Mode** option when running local models. This mode is designed for remote API calls and might cause connection errors.
       :::
 
-3. In the **Model List** section, click **Fetch models** to pull the list of supported models. The model name `unsloth/Qwen3.6-27B-GGUF:Q4_K_M` appears in the list.
+3. In **Model List**, add a custom model with the ID `default-chat`. **Fetch models** only returns individual models, so add this routing name manually.
 
+   <!--
+   TODO: 素材清单 06，待补 Router 截图：lobehub-add-model-router.png；替换下方旧图后再取消注释。
    ![Fetch model list and enable models](/images/manual/use-cases/lobehub-fetch-enable-model1.png#bordered)
+   -->
+
 
 4. Click <i class="material-symbols-outlined">toggle_off</i> to enable it.
 5. In the **Connectivity Check** section, select the model you just enabled from the list, and then click **Check** to verify the connection. If the model is large, it might take a little longer to load.
 
    The button changes to **Check Passed**, indicating that the connection is established. 
 
-   ![Connectivity check success](/images/manual/use-cases/lobehub-checkpass2.png#bordered)  
+   <!--
+   TODO: 素材清单 07，待补 Router 截图：lobehub-connection-check-router.png；替换下方旧图后再取消注释。
+   ![Connectivity check success](/images/manual/use-cases/lobehub-checkpass2.png#bordered)
+   -->
+
 
 6. Click the home icon at the upper-left corner to return to the LobeHub home page.
 
@@ -301,7 +317,7 @@ For complex workflows, a single agent might not be enough. LobeHub allows you to
 If you encounter the `Error requesting Ollama service` error, troubleshoot as follows and retry:
 
    ![Connectivity error](/images/manual/use-cases/lobehub-connection-error.png#bordered)
-1. Check the Model Console to confirm that the Model shows **READY** and the Engine shows **RUNNING**.
+1. Check Router to confirm that the Model shows **READY** and the Engine shows **RUNNING**.
 2. Ensure the **Use Client Request Mode** option on the Ollama settings page is disabled.
 
    ![Disable the use client request mode option](/images/manual/use-cases/lobehub-disable-client-request-mode3.png#bordered)

@@ -68,11 +68,11 @@ LiteLLM 位于你的应用和模型提供商之间，充当代理层：
 
 ### 获取模型连接信息
 
-<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
+<!--@include: ../reusables/ai-service-connections-1.12.6.md#model-connection-overview-->
 
 对于 Qwen3.6-27B (llama.cpp)，LiteLLM 使用 OpenAI-compatible API 格式。在模型控制台中选择 **OpenAI-Compatible**，然后按照以下步骤操作：
 
-<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
+<!--@include: ../reusables/ai-service-connections-1.12.6.md#get-model-connection-details-->
 
 ### 将模型添加到 LiteLLM
 

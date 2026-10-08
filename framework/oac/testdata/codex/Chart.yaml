@@ -1,0 +1,6 @@
+apiVersion: v2
+appVersion: '0.149.1'
+description: OpenAI's lightweight coding agent that runs in your terminal
+name: codex
+type: application
+version: 1.0.19

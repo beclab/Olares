@@ -18,6 +18,21 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "Lares",
               link: "/use-cases/lares",
             },
+            {
+              text: "FlowStudio",
+              link: "/use-cases/flowstudio",
+              collapsed: false,
+              items: [
+                {
+                  text: "Create in FlowStudio",
+                  link: "/use-cases/flowstudio-create",
+                },
+                {
+                  text: "Use through Lares",
+                  link: "/use-cases/flowstudio-lares",
+                },
+              ],
+            },
           ],
         },
         {
@@ -33,6 +48,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   link: "/use-cases/openclaw",
                   collapsed: true,
                   items: [
+                    {
+                      text: "Connect using OpenClaw mobile clients",
+                      link: "/use-cases/openclaw-mobile",
+                    },
                     {
                       text: "Integrate with channels",
                       items: [
@@ -214,6 +233,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               collapsed: true,
               items: [
                 {
+                  text: "Blender",
+                  link: "/use-cases/blender",
+                },
+                {
                   text: "ComfyUI",
                   link: "/use-cases/comfyui",
                   collapsed: true,
@@ -231,6 +254,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                       link: "/use-cases/comfyui-common-issues",
                     },
                   ]
+                },
+                {
+                  text: "Concat",
+                  link: "/use-cases/concat",
                 },
                 {
                   text: "Open Design",
@@ -270,10 +297,6 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "Model services",
               collapsed: true,
               items: [
-                {
-                  text: "Ollama",
-                  link: "/use-cases/ollama",
-                },
                 {
                   text: "Bifrost",
                   link: "/use-cases/bifrost",

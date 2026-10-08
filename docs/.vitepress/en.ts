@@ -316,7 +316,7 @@ const side = {
           link: "/manual/olares/settings/manage-entrance",
         },
         {
-          text: "Connect an AI app to a model service",
+          text: "AI app connections",
           link: "/manual/best-practices/connect-ai-apps",
         },
         {
@@ -576,6 +576,10 @@ const side = {
             {
               text: "Forgotten desktop login password",
               link: "/manual/help/ts-forget-login-password",
+            },
+            {
+              text: "Recover access to LarePass and Olares",
+              link: "/manual/help/ts-access-without-mnemonic",
             },
             {
               text: "Login and activation error messages",

@@ -68,7 +68,14 @@ Olares OS simplifies local AI with one-click deployment and workflow integration
 Yes. You can modify the hardware through several internal slots and expansion ports:
 * **Storage**: The motherboard includes two PCIe SSD slots, one PCIe 4.0 and one PCIe 5.0. The preinstalled 2TB SSD occupies the PCIe 4.0 slot. The second slot remains available for system storage expansion via LVM or for a dual-boot configuration.
 * **Memory**: The RAM capacity can be upgraded to a maximum of 128GB.
-* **External graphics & displays**: The Thunderbolt 5 port supports eGPU enclosures to connect external graphics cards. It also supports docking stations to connect up to two external monitors simultaneously at up to 8K resolution, with video output handled by the RTX 5090 Mobile.
+* **External graphics**: You can connect a compatible Thunderbolt external graphics device. See [Can I use an eGPU with Olares One?](#can-i-use-an-egpu-with-olares-one)
+* **External displays**: The Thunderbolt 5 port supports docking stations with up to two external monitors at up to 8K resolution. The built-in RTX 5090 Mobile handles video output.
+
+### Can I use an eGPU with Olares One?
+
+Yes. You can connect a Thunderbolt external graphics device with a GPU already installed, or install a compatible desktop NVIDIA GPU in a powered eGPU dock or enclosure. Hardware compatibility and setup differ between Olares OS and Windows 11.
+
+See [Connect an eGPU to Olares One](egpu.md) for known compatibility, current limitations, and setup instructions.
 
 ### Is there a way to view the Olares OS UI via HDMI?
 
@@ -93,7 +100,7 @@ Support for common out-of-band management capabilities on Olares One is as follo
 - **Automatic startup**: Supported. Olares One can start automatically when AC power is connected or restored after a power outage.
   - On Olares OS, this feature requires Olares OS 1.12.6 or later and EC firmware 1.03 or later. See [Manage hardware settings](hardware-settings.md#set-automatic-startup).
   - On Ubuntu, configure the setting from the command line. See **Configure automatic startup** in the [Ubuntu Server](install-ubuntu-server.md#configure-automatic-startup) or [Ubuntu Desktop](install-ubuntu-desktop.md#configure-automatic-startup) installation guide.
-- **Wake-on-LAN (WOL)**: Supported on Olares One running Ubuntu or Windows.
+- **Wake-on-LAN (WOL)**: Supported on Olares One running Olares OS, Ubuntu, or Windows, with EC firmware 1.01 or later and a wired network connection. For setup and wake-up instructions on the same local network, see [Set up Wake-on-LAN for Olares One](wake-on-lan.md). The Windows steps cover waking from sleep.
 - **Remote KVM**: Not supported.
 - **IPMI**: Not supported.
 

@@ -18,6 +18,21 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "Lares",
               link: "/zh/use-cases/lares",
             },
+            {
+              text: "FlowStudio",
+              link: "/zh/use-cases/flowstudio",
+              collapsed: false,
+              items: [
+                {
+                  text: "在 FlowStudio 中创作",
+                  link: "/zh/use-cases/flowstudio-create",
+                },
+                {
+                  text: "通过 Lares 使用",
+                  link: "/zh/use-cases/flowstudio-lares",
+                },
+              ],
+            },
           ],
         },
         {
@@ -33,6 +48,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   link: "/zh/use-cases/openclaw",
                   collapsed: true,
                   items: [
+                    {
+                      text: "使用 Openclaw 移动客户端连接",
+                      link: "/zh/use-cases/openclaw-mobile",
+                    },
                     {
                       text: "集成聊天应用",
                       items: [
@@ -214,6 +233,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               collapsed: true,
               items: [
                 {
+                  text: "Blender",
+                  link: "/zh/use-cases/blender",
+                },
+                {
                   text: "ComfyUI",
                   link: "/zh/use-cases/comfyui",
                   collapsed: true,
@@ -231,6 +254,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                       link: "/zh/use-cases/comfyui-common-issues",
                     },
                   ]
+                },
+                {
+                  text: "Concat",
+                  link: "/zh/use-cases/concat",
                 },
                 {
                   text: "Open Design",
@@ -270,10 +297,6 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "模型服务",
               collapsed: true,
               items: [
-                {
-                  text: "Ollama",
-                  link: "/zh/use-cases/ollama",
-                },
                 {
                   text: "Bifrost",
                   link: "/zh/use-cases/bifrost",

@@ -33,7 +33,7 @@ Bifrost 是一个 AI 网关，位于你的客户端应用和多个模型提供�
 | :--- | :--- | :--- |
 | 对话 | Qwen3.6-27B (llama.cpp) | 从 Market 安装 |
 
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
+<!--@include: ../reusables/ai-service-connections-1.12.6.md#use-different-model-->
 
 ## 安装 Bifrost
 
@@ -49,7 +49,7 @@ Bifrost 是一个 AI 网关，位于你的客户端应用和多个模型提供�
 
 ### 获取模型连接信息
 
-<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
+<!--@include: ../reusables/ai-service-connections-1.12.6.md#get-model-connection-details-->
 
 ### 在 Bifrost 中配置模型提供商
 

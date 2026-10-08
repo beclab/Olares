@@ -1,4 +1,6 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /use-cases/tradingagents
 outline: [2, 3]
 description: Run TradingAgents on Olares to simulate a multi-agent trading firm. Configure local models, analyze financial markets, and generate strategies.
 head:
@@ -7,10 +9,12 @@ head:
       content: Olares, TradingAgents, AI trading, multi-agent, local LLM, Ollama, market analysis, financial research
 app_version: "1.0.7"
 doc_version: "2.0"
-doc_updated: "2026-08-03"
+doc_updated: "2026-09-23"
 ---
 
 # Analyze financial markets with TradingAgents
+
+<VersionRouteSelect />
 
 TradingAgents is a multi-agent financial trading framework that simulates a real-world trading firm. It deploys specialized AI agents to assess market conditions, debate strategies, and provide trading decisions. These agents include fundamental analysts, sentiment experts, technical analysts, traders, and risk managers. 
 
@@ -36,10 +40,12 @@ In this guide, you will learn how to:
 
 Before you begin, you need:
 
-The following model:
-| Model type | Model | How to get it |
-| :--- | :--- | :--- |
-| Chat | Gemma 4 26B (Ollama) | Install from Market |
+<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
+- The following model:
+
+  | Model type | Model | How to get it |
+  | :--- | :--- | :--- |
+  | Chat | Qwen3.8-27B (llama.cpp) | Install from Market |
 
 <!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
@@ -57,28 +63,20 @@ To power your AI agents, connect TradingAgents to a local model.
 
 ### Get model connection details
 
-1. Open the model app from Launchpad. Its Model Console opens automatically.
-2. Wait until **Model** shows **READY** and **Engine** shows **RUNNING**.
-
-   <!--![Gemma4 26B model console](/images/manual/use-cases/gemma4-26b-model-console1.png#bordered)-->
-
-3. Under **Model**, copy the **Model name** exactly as shown.
-4. Under **Engine**:
-
-   a. **Connection source**: Select **Apps in Olares**. 
-   
-   b. **API format**: Select **Ollama**.
-   
-   c. Copy the provided **Base URL** exactly as shown.
+<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
 ### Configure TradingAgents
 
 1. Open Settings, and then go to **Applications** > **TradingAgents** > **Manage environment variables**.
 2. Click <i class="material-symbols-outlined">edit_square</i> next to `OLLAMA_BASE_URL`.
 
-   ![Configure environment variables](/images/manual/use-cases/tradingagents-env-vars1.png#bordered){width=70%}
+3. Enter the **Base URL** copied from Router including the trailing `/v1`. For example, `https://router.<your-olares-domain>/v1`.
 
-3. Enter the **Base URL** copied from the Model Console and append `/v1` to the end. For example, `https://74bfa5ee.laresprime.olares.com/v1`.
+   <!--
+   TODO: 素材清单 16，待补 Router 截图：tradingagents-env-router.png；替换下方旧图后再取消注释。
+   ![Configure environment variables](/images/manual/use-cases/tradingagents-env-vars1.png#bordered){width=70%}
+   -->
+
 4. Click **Confirm**, and then click **Apply**.
 
    :::tip Connect a cloud model
@@ -122,11 +120,11 @@ With your local model configured, start a market analysis session using the app'
       Deeper research requires significantly more time to process. Select the lowest depth for your initial run to understand the workflow before starting a comprehensive analysis.
       :::
       
-   f. **Select Your LLM Provider**: Select **Ollama**.
+   f. **Select Your LLM Provider**: Select **Ollama**, the app's local OpenAI-compatible connection option.
 
-   g. **Select Your [Quick-Thinking LLM Engine]**: Choose the model for quick analysis. If your local model is not listed, select **Custom model ID**, and then enter the exact model name copied from the Model Console.
+   g. **Select Your [Quick-Thinking LLM Engine]**: Choose the model for quick analysis. If your local model is not listed, select **Custom model ID**, and then enter `default-chat`.
 
-   h. **Select Your [Deep-Thinking LLM Engine]**: Choose the model for deep analysis. If your local model is not listed, select **Custom model ID**, and then enter the exact model name copied from the Model Console.
+   h. **Select Your [Deep-Thinking LLM Engine]**: Choose the model for deep analysis. If your local model is not listed, select **Custom model ID**, and then enter `default-chat`.
 
 ## Review analysis reports
 

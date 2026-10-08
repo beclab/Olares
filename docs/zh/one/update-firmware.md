@@ -41,22 +41,23 @@ head:
 
 | 版本 | 发布日期 | 更新日志 |
 |:--------|:-------------|:----------|
-| [1.05 (下载)](https://cdn.olares.com/common/OlaresOne_BIOS_1.05.zip) | 2026-07-06 | <ul><li>修复雷电口功能异常的问题。此前为改善功耗异常，禁用了所有设备的 D3 (D3Cold) 低功耗状态；现在仅禁用 GPU 的 D3 状态。</li></ul> |
-| 1.04 | 2026-05-09 | <ul><li>在将 **Primary Display** 设置更改为 **HG** 时添加警告提示。</li><li>通过锁定 GPU PCIe 速度为 Gen4 修复 GPU 意外断开连接的问题。</li><li>通过禁用产品空闲时将 GPU 置于睡眠模式的功能，修复长时间使用后性能下降且功耗异常受限的问题。</li></ul> |
-| 1.03  | 2026-03-19 | <ul><li>修复 Ubuntu 系统启动时出现的 ACPI 错误。</li><li>将 Intel CPU 微码更新至版本 0x121。</li></ul> |
-| 1.01  | 2025-12-04 | <ul><li>通过禁用 SSD1 和 SSD2 的 ASPM 和 L-state 电源管理，修复 SSD 意外断开连接的问题。</li></ul> |
-| 1.00 | 2025-11-28 | <ul><li>更新版本命名规范。</li></ul> |
-| C400 | 2025-11-05 | <ul><li>默认隐藏高级 BIOS 选项。</li><li>移除 MCU 版本显示。</li><li>通过启用 SAGV 修复内存测试报错的问题。</li></ul> |
+| [1.07 (下载)](https://cdn.olares.com/common/OlaresOne_BIOS_1.07.zip) | <nobr>2026-09-24</nobr> | <ul><li>向产测工具开放 GPU PCIe 速度设置接口，可在 Gen4/Gen5 之间自动切换。默认设置与整机性能不变。</li></ul> |
+| 1.05 | <nobr>2026-07-06</nobr> | <ul><li>修复雷电口功能异常的问题。此前为改善功耗异常，禁用了所有设备的 D3 (D3Cold) 低功耗状态；现在仅禁用 GPU 的 D3 状态。</li></ul> |
+| 1.04 | <nobr>2026-05-09</nobr> | <ul><li>在将 **Primary Display** 设置更改为 **HG** 时添加警告提示。</li><li>通过锁定 GPU PCIe 速度为 Gen4 修复 GPU 意外断开连接的问题。</li><li>通过禁用产品空闲时将 GPU 置于睡眠模式的功能，修复长时间使用后性能下降且功耗异常受限的问题。</li></ul> |
+| 1.03  | <nobr>2026-03-19</nobr> | <ul><li>修复 Ubuntu 系统启动时出现的 ACPI 错误。</li><li>将 Intel CPU 微码更新至版本 0x121。</li></ul> |
+| 1.01  | <nobr>2025-12-04</nobr> | <ul><li>通过禁用 SSD1 和 SSD2 的 ASPM 和 L-state 电源管理，修复 SSD 意外断开连接的问题。</li></ul> |
+| 1.00 | <nobr>2025-11-28</nobr> | <ul><li>更新版本命名规范。</li></ul> |
+| C400 | <nobr>2025-11-05</nobr> | <ul><li>默认隐藏高级 BIOS 选项。</li><li>移除 MCU 版本显示。</li><li>通过启用 SAGV 修复内存测试报错的问题。</li></ul> |
 
 ### EC 版本
 
 | 版本 | 发布日期 | 更新日志 |
 |:--------|:-------------|:----------|
-| [1.03 (下载)](https://cdn.olares.com/common/OlaresOne_EC_1.03.zip) | 2026-05-29 | <ul><li>增加连接适配器后自动开机的端口，从而支持设置中的<strong>自动开机</strong>功能。</li><li>**注意**：需要 Olares OS 1.12.6 或更高版本。</li></ul> |
-| [1.02 (下载)](https://cdn.olares.com/common/OlaresOne_EC_1.02.zip) | 2026-01-19 | <ul><li>修复键盘无法唤醒系统从睡眠模式恢复的问题。</li></ul> |
-| 1.01 | 2026-01-13 | <ul><li>添加对网络唤醒（WOL）的支持。</li><li>在睡眠模式下禁用白色呼吸 LED 指示灯。</li></ul> |
-| 1.00 | 2025-12-01 | <ul><li>在睡眠模式下启用白色呼吸 LED 指示灯。</li></ul> |
-| C3.00 | 2025-11-25 | <ul><li>修复从睡眠模式唤醒后风扇不转的问题。</li></ul> |
+| [1.03 (下载)](https://cdn.olares.com/common/OlaresOne_EC_1.03.zip) | <nobr>2026-05-29</nobr> | <ul><li>增加连接适配器后自动开机的端口，从而支持设置中的<strong>自动开机</strong>功能。</li><li>**注意**：需要 Olares OS 1.12.6 或更高版本。</li></ul> |
+| [1.02 (下载)](https://cdn.olares.com/common/OlaresOne_EC_1.02.zip) | <nobr>2026-01-19</nobr> | <ul><li>修复键盘无法唤醒系统从睡眠模式恢复的问题。</li></ul> |
+| 1.01 | <nobr>2026-01-13</nobr> | <ul><li>添加对网络唤醒（WOL）的支持。</li><li>在睡眠模式下禁用白色呼吸 LED 指示灯。</li></ul> |
+| 1.00 | <nobr>2025-12-01</nobr> | <ul><li>在睡眠模式下启用白色呼吸 LED 指示灯。</li></ul> |
+| C3.00 | <nobr>2025-11-25</nobr> | <ul><li>修复从睡眠模式唤醒后风扇不转的问题。</li></ul> |
 
 ## 更新固件
 

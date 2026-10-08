@@ -101,9 +101,9 @@ Router 直接集成在 Olares 平台中，与你的应用和模型同处一套�
 
 - **Base URL**：打开 **LLM** 等能力页面，找到模型，点击右侧的 **View connection example** 图标。
 
-  ![模型行上的 View connection example 图标](/images/manual/use-cases/router-view-connection-examp.png#bordered)
+  <!-- ![模型行上的 View connection example 图标](/images/manual/use-cases/router-view-connection-examp.png#bordered) -->
 
-  ![How to call this model 窗口](/images/manual/use-cases/router-how-to-call-model.png#bordered)
+  <!-- ![How to call this model 窗口](/images/manual/use-cases/router-how-to-call-model.png#bordered) -->
 
 - **Model name**：从 **How to call this model** 窗口复制模型名称。或者在 **Default models** 页面为每类能力设置默认模型，然后使用 `default-chat` 这样的系统名称，而不是具体模型名。
 - **API key**：在 **API keys** 页面创建。只有局域网或互联网的调用方需要。Olares 中的应用无需填写。

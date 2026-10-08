@@ -143,7 +143,7 @@ In this scenario, we will create two cycles to show the transition from planning
 2. Click **Set your first cycle** or **Add cycle**.
 3. Define the core details of the phase:
    - **Title**: `Phase 1: Discovery`
-   - **Description**: `Research, wireframe, and define the core value proposition; the goal is to finalize the skeleton of the new product page`
+   - **Description**: `Research, wireframe, and define the core value proposition. The goal is to finalize the skeleton of the new product page`
 4. Select the start and end dates.
 5. Click **Create cycle**.
 
@@ -151,7 +151,7 @@ In this scenario, we will create two cycles to show the transition from planning
 
 6. Repeat these steps to create the cycle for Phase 2:
    - **Title**: `Phase 2: Execution`
-   - **Description**: `Hi-Fi UI design, final copy production, and SEO auditing; the goal is to complete final visual assets and prepare for development`
+   - **Description**: `Hi-Fi UI design, final copy production, and SEO auditing. The goal is to complete final visual assets and prepare for development`
 
 ### Create and assign work items
 

@@ -1,5 +1,7 @@
 ---
-description: Self-host Dify on Olares to build local AI apps and assistants. Deploy Dify, connect Ollama models, and add a personal knowledge base for private RAG workflows.
+connectionVersion: "1.12.7"
+connectionLatestPath: /use-cases/dify
+description: Self-host Dify on Olares to build local AI apps and assistants. Deploy Dify, connect models through Router, and add a personal knowledge base for private RAG workflows.
 head:
   - - meta
     - name: keywords
@@ -7,16 +9,16 @@ head:
 ---
 # Customize your local AI assistant using Dify
 
+<VersionRouteSelect />
+
 Dify is an AI application development platform. It's one of the key open-source projects that Olares integrates to help you build and manage AI applications while maintaining full data ownership. Additionally, you can integrate your personal knowledge base documents into Dify for more personalized interactions.
 
 ## Before you begin
-To use local AI models on Dify, ensure you have:
-- [Ollama installed](ollama.md) and running in your Olares environment.
-- LassPass installed and [VPN enabled](../manual/larepass/private-network.md#enable-vpn-on-larepass) on your device.
-- [Open WebUI installed](openwebui.md) with your preferred language models downloaded.
-  :::tip
-  For optimal performance, consider using lightweight yet powerful models like `gemma2` or `qwen`, which offer a good balance between speed and capability.
-  :::
+
+<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
+- Install Qwen3.8-27B (llama.cpp) from Market.
+
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## Install Dify
 :::info
@@ -34,30 +36,26 @@ Starting from Olares 1.11.6, if "Dify For Cluster" or "Dify" was previously inst
 2. Click **Go to settings** on the right to access the model provider configuration page. You can choose between remote models or locally hosted models. 
    ![App initial age](/images/manual/use-cases/dify-app-init.png#bordered)
 
-## Add Ollama as model provider
+## Add a chat model through Router
 
-1. Navigate to **Settings** > **Application** > **Ollama** > **Entrances**, and set the authentication level for Ollama to **Internal**. This configuration allows other applications to access Ollama services within the local network without authentication. 
-    
-    ![Ollama entrance](/images/manual/use-cases/dify-ollama-entrance.png#bordered)
+<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
-2. In Dify, navigate to **Settings** > **Model Provider**.
-3. Select Ollama as the model provider, with the following configurations:
-    - **Model Name**: Enter the model name. For example: `gemma2`.
-    - **Base URL**: Enter Ollama's local address: `https://39975b9a1.{username}.olares.com`. Replace `{username}` with the Olares Admin's local name. For example, `https://39975b9a1.marvin123.olares.com`.
-
-     ![Add gemma2](/images/manual/use-cases/dify-add-gemma2.png#bordered){width=70%}
-
-      :::tip
-      You can keep default values for other required fields.
-      :::
-4. Click **Save**.
+1. In Dify, open **Settings** > **Model Provider**, then install and select the **OpenAI-API-compatible** provider plugin.
+2. Add a model with **Model Name** set to `default-chat` and the model type set to chat or **LLM**.
+3. Set **Base URL** to the URL copied from Router, including `/v1`. Leave the API key empty if allowed, or enter `olares` if required.
+4. Save the configuration.
 
 ## Configure Ashia
 
 1. Navigate to Dify's **Studio** tab and enter Ashia.  
-2. From the model list on the right, select the Gemma2 model you just configured.
+2. From the model list on the right, select the `default-chat` model you just configured.
 
+
+   <!--
+   TODO: 素材清单 05，待补 Router 截图：dify-model-router.png；替换下方旧图后再取消注释。
    ![Select model](/images/manual/use-cases/dify-select-model.png#bordered)
+   -->
+
 3. Click **Publish**. Now you can chat with Ashia in the **Debug & Preview** window. 
 
    ![Chat](/images/manual/use-cases/dify-chat-with-ashia.png#bordered)

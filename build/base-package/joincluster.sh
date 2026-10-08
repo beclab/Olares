@@ -89,8 +89,8 @@ resolve_version() {
     if [[ -z "$VERSION" || "${VERSION:3}" == "VERSION__" ]]; then
         VERSION=""
         while [[ -z "$VERSION" ]]; do
-            read_tty "Olares version to join (for example 1.12.7): " VERSION \
-                "the Olares version is unknown; set VERSION to the version running on the master (VERSION=1.12.7), or use the command printed by 'olares-cli node join-command' on the master"
+            read_tty "Olares version to join (for example 1.12.8): " VERSION \
+                "the Olares version is unknown; set VERSION to the version running on the master (VERSION=1.12.8), or use the command printed by 'olares-cli node join-command' on the master"
         done
     fi
     if [[ ! "$VERSION" =~ ^[A-Za-z0-9._-]+$ ]]; then

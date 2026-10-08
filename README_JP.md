@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="#はじめに">Olaresをインストール</a> ·
-  <a href="https://www.olares.com/docs/developer/cli-agent-skills">AIでOlaresを管理</a> ·
+  <a href="https://www.olares.com/docs/one/olares-onboarding">AIでOlaresを管理</a> ·
   <a href="#貢献">貢献する</a>
 </p>
 
@@ -30,15 +30,20 @@
 
 OlaresはKubernetesを基盤に、手元のマシンを、どのブラウザからでも使えるセルフホスト型のAIプラットフォームへと変えます。個人ユーザーから小さなチームまで、コンピュート・ストレージ・ネットワーク・アプリをひとつの場所でまとめて扱えます。
 
-https://github.com/user-attachments/assets/01490c33-41ce-46fe-8450-6939b40db98e
+https://github.com/user-attachments/assets/3e4b0c5d-dcbe-47eb-8628-88b062411fa0
 
 > 🌟 *Olaresが役に立ったら、ぜひスターを付けてください。応援が改善を続ける励みになります。*
+
+## リリース情報
+
+- **[Olares 1.12.7](https://www.olares.com/blog/olares-1-12-7/)**：Router、Lares、そしてさらに充実したローカルAIモデル。
+- **[Olares 1.12.6](https://www.olares.com/blog/olares-1-12-6/)**：Agent Skills、ローカルLLM向けのModel Console、共有アプリの信頼性向上。
 
 ## なぜOlaresなのか
 
 本当に使えるAIは、あなたのことをよく知っている必要があります。そのためには、ファイルやメッセージ、これまでの履歴にアクセスできることが欠かせません。ところが多くのクラウドAIは、こうした機微なデータをサードパーティのサーバーに預けさせ、しかも使った分だけ課金します。
 
-OlaresはAIを手元に取り戻します。[OpenClaw](https://www.olares.com/docs/use-cases/openclaw) のようなエージェントを、自分のハードウェア上のローカルLLMで動かしながら、クラウドならではの手軽さと、どこからでもアクセスできる利便性はそのまま得られます。
+OlaresはAIを手元に取り戻します。Olares公式AIアシスタントの [Lares](https://www.olares.com/docs/use-cases/lares) や、[OpenClaw](https://www.olares.com/docs/use-cases/openclaw) のようなエージェントを、自分のハードウェア上のローカルLLMで動かしながら、クラウドならではの手軽さと、どこからでもアクセスできる利便性はそのまま得られます。
 
 ![パブリッククラウドサービスで築いたデジタルライフと、Olaresパーソナルクラウド上のオープンソースアプリで動くデジタルライフの比較](https://app.cdn.olares.com/github/olares/public-cloud-to-personal-cloud.jpg)
 
@@ -48,14 +53,14 @@ OlaresはAIを手元に取り戻します。[OpenClaw](https://www.olares.com/do
 - **アクセラレーテッドコンピューティング管理**：複数ノードのGPUやアクセラレータをまとめて割り当て、タイムスライシング・メモリスライシング・GPU専有モードにより、AI・メディア・ゲームなど用途に応じて使い分けられます。
 - **[ファイルとストレージ管理](https://www.olares.com/docs/manual/olares/files/)**：内蔵の「Files」アプリから、ローカルファイル・同期データ・接続済みのクラウドストレージ・外部のSMB/NFS共有をまとめて扱え、[バックアップも自由に設定](https://www.olares.com/docs/manual/olares/settings/backup)できます。
 - **[プライベートネットワークとアクセス制御](https://www.olares.com/docs/developer/concepts/network)**：プライベートVPNとリバースプロキシに加え、公開・非公開・内部の3つの入口を用意。ポートを手動で開けなくても、各アプリにHTTPSのアドレスが割り当てられます。
-- **いつでも、どこからでも**：Olares IDと [LarePass](https://www.olares.com/docs/manual/larepass/) があれば、スマホ・PC・ブラウザからすべてのサービスにアクセスできます。
+- **いつでも、どこからでも**：スマホ・PC・ブラウザからアプリやファイルにアクセスできます。
 - **充実のシステムアプリ**：Files、Vault、Market、Dashboard、Control Hubなどを最初から搭載。ログインすればすぐに使えます。
 
 ## はじめに
 
 ### Linuxスクリプトの動作要件
 
-OlaresはLinuxホスト（物理マシンでも仮想マシンでも可）にインストールでき、Windows・macOS・Raspberry Pi向けには専用の方法も用意しています。要件はプラットフォームやインストール方法によって異なります。ここで使うLinuxスクリプトの要件は次のとおりです。
+以下のスクリプトで既存のLinuxシステムにOlaresをインストールするには、次の要件を満たすマシンが必要です。
 
 - **CPU**：4コア以上
 - **メモリ**：8 GB以上の空き
@@ -64,27 +69,27 @@ OlaresはLinuxホスト（物理マシンでも仮想マシンでも可）にイ
 
 専用GPUは任意で、あればローカルAIを高速化できます。
 
-### インストールとアクティベーション
+### Linuxにインストール
 
-1. まず [LarePass](https://www.olares.com/docs/manual/larepass/) でOlares IDを作成します。LarePassは、安全なログイン・内蔵VPN・ファイル同期を備えたコンパニオンアプリです。
+UbuntuまたはDebianホストで、`sudo` 権限のあるアカウントから次のコマンドを実行します。
 
-2. Linuxホストで次を実行します。
+```bash
+curl -fsSL https://olares.sh | bash -
+```
 
-    ```bash
-    curl -fsSL https://olares.sh | bash -
-    ```
+このコマンドは `olares.sh` から公式インストーラーを取得し、Bashで実行します。セットアップの詳しい手順やトラブルシューティングは [Linuxスクリプトインストールガイド](https://www.olares.com/docs/manual/get-started/install-linux-script) をご覧ください。
 
-    このコマンドは `olares.sh` から公式インストーラーを取得し、Bashで実行します。詳しい要件やプラットフォーム別の手順、トラブルシューティングは [Linuxスクリプトインストールガイド](https://www.olares.com/docs/manual/get-started/install-linux-script) をご覧ください。
+IntelまたはAMD x86-64マシンに新規インストールする場合は、[ISOイメージ](https://www.olares.com/docs/manual/get-started/install-linux-iso) を利用できます。Linux上にコンテナとしてインストールする場合は、[Docker Composeガイド](https://www.olares.com/docs/manual/get-started/install-linux-docker) をご覧ください。
 
-    Windows・macOS・Raspberry Pi・仮想マシンにインストールする場合は、[インストールガイド](https://www.olares.com/docs/manual/get-started/install-olares) で対象のプラットフォームを選んでください。
+セットアップが完了したら、ブラウザでOlaresデスクトップのアドレス（例：`https://desktop.marvin123.olares.com`）を開きます。
 
-3. 画面のガイド付きウィザードに従うか、[Olares CLIでのアクティベーション](https://www.olares.com/docs/manual/best-practices/activate-olares-using-cli) を参考に、ターミナルだけで完結させることもできます。
+### 最初のAIタスクを試す
 
-アクティベーションが済んだら、Olares IDに紐づくアドレスから、どのブラウザでもOlaresを開けます。たとえばOlares IDが `marvin123` なら、デスクトップは `https://desktop.marvin123.olares.com` です。
+[AI入門ガイド](https://www.olares.com/docs/one/olares-onboarding) に沿ってRouter、Lares、ローカルモデルを設定し、最初の会話を始めましょう。Laresに「このデバイスの構成を確認して」と話しかけてみてください。
 
 ## 主なユースケース
 
-- **パーソナルAIエージェントに任せる**：リサーチ、コーディング、ファイル整理、日々の自動化を、自然言語で任せられます。
+- **パーソナルAIエージェントに任せる**：リサーチ、ファイル整理、日々の自動化を、自然言語で [Lares](https://www.olares.com/docs/use-cases/lares) に任せられます。コーディングなどの作業には、好みのエージェントも使えます。
 - **生成AIをローカルで動かす**：オープンモデルとチャットし、画像や動画を生成し、ローカルモデルを他のアプリにつなぐ。すべて自分のハードウェア上で完結します。
 - **スマートホームとメディアを管理する**：ホームオートメーション機器をつなぎ、自分の音楽や動画ライブラリをいつでもストリーミングできます。
 - **エージェンティックなアプリを開発・運用する**：隔離された環境で、アプリやワークフローを開発・テスト・実行できます。
@@ -134,9 +139,8 @@ Olaresはプロジェクト全体への貢献を歓迎します。改善した�
 
 - **[インストールガイド](https://www.olares.com/docs/manual/get-started/install-olares)**：インストール方法を選んでOlaresをアクティベーションします。
 - **[ユースケース](https://www.olares.com/docs/use-cases/)**：ローカルAI、メディア、生産性、セルフホストの活用例を紹介します。
-- **[CLIガイド](https://www.olares.com/docs/developer/install/cli/olares-cli)**：コマンドラインからOlaresをインストール・管理・診断します。
+- **[CLIガイド](https://www.olares.com/docs/developer/cli-overview)**：コマンドラインからOlaresをインストール・管理・診断します。
 - **[Agent Skills](https://www.olares.com/docs/developer/cli-agent-skills)**：AIエージェントが `olares-cli` を通じてOlaresを操作できるようにします。
-- **[高度なチュートリアル](https://www.olares.com/docs/manual/best-practices/)**：GPU、マルチノード構成、カスタムドメイン、ストレージ拡張などを設定します。
 
 ## コミュニティ
 

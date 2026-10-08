@@ -21,7 +21,7 @@ Do not use Olares ISO images linked from other Olares installation documentation
 
 ## Prerequisites
 
-- USB flash drive: A drive with 8 GB or larger capacity.
+- USB flash drive: A drive with 32 GB or larger capacity.
 
     :::warning Data loss
     The selected USB drive will be erased when you create the bootable drive. Back up any important files before continuing.
@@ -32,7 +32,7 @@ Do not use Olares ISO images linked from other Olares installation documentation
 
 ## Create the bootable USB drive
 
-1. Download [the latest official Olares One ISO image](https://cdn.olares.com/one/olares-v1.12.6-amd64.iso) to your computer.
+1. Download [the latest official Olares One ISO image](https://cdn.olares.com/one/v1.12.7-amd64.iso) to your computer.
 
 2. Download and install [**Balena Etcher**](https://etcher.balena.io/).
 

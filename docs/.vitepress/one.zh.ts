@@ -108,7 +108,7 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           //   ]
         },
         {
-          text: "设置 eGPU",
+          text: "连接 eGPU",
           link: "/zh/one/egpu",
           collapsed: true,
           items: [
@@ -177,6 +177,10 @@ export const oneSidebar: DefaultTheme.Sidebar = {
               }
             ]
         },                 
+        {
+          text: "设置网络唤醒",
+          link: "/zh/one/wake-on-lan",
+        },
       ]
     },
     {
