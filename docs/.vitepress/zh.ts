@@ -161,6 +161,10 @@ const side = {
       collapsed: false,
       items: [
         {
+          text: "在 Olares 上使用 Hindsight",
+          link: "/zh/manual/tutorial/hindsight",
+        },
+        {
           text: "使用 LarePass 私密翻译网页",
           link: "/zh/manual/tutorial/translate-webpages-with-larepass",
         },
