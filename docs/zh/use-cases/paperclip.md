@@ -178,6 +178,14 @@ https://<你的-Paperclip-域名>/agents/all
 
 ## 在 Paperclip 中使用本地模型
 
+:::warning 请使用下面的本地模型配置方法
+最新版 Paperclip 的新建智能体页面默认将 **OpenCode 接入 OpenRouter**，而不是直接使用原 OpenCode 配置文件中的本地模型设置。对已绑定 OpenRouter AI connection 的智能体，运行时会使用独立配置目录、注入 OpenRouter 凭证，并以智能体中选择的模型覆盖配置文件的默认模型。因此，**原先仅修改 `opencode.json` 或 `opencode.jsonc` 的方法对这类智能体不再生效**，请按照下文同时配置 OpenCode 并创建无绑定智能体。
+
+这不表示所有配置文件都已失效：未绑定 AI connection 的 OpenCode 智能体仍可使用配置文件。手动输入 `olares/default-chat` 不会解除 OpenRouter 绑定；**Environment: Local** 也只表示智能体在本机执行，不代表使用本地模型。
+
+该行为已对照上游的[新建智能体页面](https://github.com/paperclipai/paperclip/blob/v2026.1005.0/ui/src/components/new-agent/NewAgentSetup.tsx)、[连接运行配置](https://github.com/paperclipai/paperclip/blob/v2026.1005.0/server/src/services/ai-connection-runtime.ts)和 [OpenCode 执行逻辑](https://github.com/paperclipai/paperclip/blob/v2026.1005.0/packages/adapters/opencode-local/src/server/execute.ts)核实。
+:::
+
 :::warning 谨慎使用本地模型
 Paperclip 是一个完全自主的多智能体协作平台。完全在本地模型上运行可能会因模型能力限制、上下文溢出或并发限制而导致工作流中断，从而可能引发级联故障。
 
@@ -187,12 +195,6 @@ Paperclip 是一个完全自主的多智能体协作平台。完全在本地模�
 :::
 
 OpenCode 可以通过 Olares Router 调用兼容 OpenAI API 的本地模型。这里的 OpenCode 运行在 Paperclip 内，与 Market 中单独安装的 OpenCode 应用相互独立。
-
-:::info OpenCode 的连接配置
-当前 OpenCode 新建页面会绑定 **OpenRouter AI connection**。手动输入 `olares/default-chat` 不会解除绑定，而会触发兼容性提示。**Environment: Local** 仅表示智能体在本机执行，不代表使用本地模型。
-
-下文使用内置 CLI 创建无绑定智能体。本指南尚未完成该路径的本地推理端到端验证，请先完成验证步骤，再分配正式任务。
-:::
 
 ### 准备模型并备份现有设置
 
@@ -250,6 +252,10 @@ Paperclip 也读取 `PAPERCLIP_OPENCODE_PROVIDERS`（内容是 `provider` 内的
 :::
 
 ### 创建不绑定 AI Connection 的 OpenCode 智能体
+
+:::info 验证范围
+下文使用内置 CLI 创建无绑定智能体。本指南尚未完成该路径的本地推理端到端验证，请先完成验证步骤，再分配正式任务。
+:::
 
 1. 注册并获得实例管理员或组织访问权限，然后创建组织。配置 OpenCode 本身不要求先提供云端模型密钥。
 2. 组织创建后，在浏览器地址栏手动打开 Paperclip 域名下的 `/agents/all`，离开 onboarding 并进入智能体创建入口。OpenCode 本地模型请使用下方 CLI 流程，不要完成绑定 OpenRouter 的表单。
