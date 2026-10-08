@@ -41,13 +41,6 @@ In this guide, you will learn how to:
 - Monitor operations and metrics from the dashboard.
 - Optional: Use local models with Paperclip.
 
-## Upgrade notes
-
-Starting with V1.0.22, Paperclip uses the official image and requires new environment dependencies. Your runtime environment might change after upgrading.
-
-- If you haven't initialized Paperclip or have no important data, uninstall the app, delete all related data, then reinstall.
-- If Paperclip is already initialized, your existing data is preserved, but you might need to reconfigure local agent settings and environment dependencies. If you run into issues after upgrading, contact the Olares team.
-
 ## Install Paperclip
 
 1. Open Market and search for "Paperclip".
@@ -64,7 +57,7 @@ After installing Paperclip, create the first admin account to complete the initi
 
 ### Configure API keys
 
-Cloud-model authentication depends on the provider. The following environment variables apply to adapters using the original authentication configuration. Agents using newer AI Connections authenticate through their selected connection instead. Local models do not inherently require a cloud-model API key.
+Cloud-model authentication depends on the provider. The following environment variables apply to adapters without an AI connection binding. Agents using AI Connections authenticate through their selected connection instead. Local models do not inherently require a cloud-model API key.
 
 :::tip
 Before creating an admin account, set up your API key in **Settings** so cloud models can be used immediately.
@@ -105,52 +98,26 @@ Paperclip ships without a default user account. To access the platform for the f
 
 4. Name your company. For cloud models, finish onboarding as instructed. For local models, continue with [Use local models in Paperclip](#use-local-models-in-paperclip).
 
-## Create your first company
+## Complete onboarding
 
-The screenshots below show the older onboarding flow. In `2026.916.1` and `2026.1005.0`, the initial flow focuses on OpenAI and Claude. For other providers and local models, use the [local-model instructions](#use-local-models-in-paperclip).
+When you create your first organization, Paperclip opens onboarding to help you set up the organization and its first agent.
 
-A Paperclip workspace is organized around a virtual company structure. This company organizes your agents and tasks.
+1. Enter the organization name and follow the prompts to describe its goal.
+2. Name your first agent.
+3. Select a model provider. The default onboarding currently **supports only OpenAI and Claude**. Follow the prompts to connect the corresponding account or provide an API key, select a model, and verify the connection.
+4. Complete the guided agent setup to enter your organization's workspace.
 
-1. On the **Company** tab, configure the basic information:
+### Create your first agent with another adapter
 
-   a. Specify a name for the company.
+To use another adapter, such as **OpenCode or Hermes**, first create the organization. Then manually enter this URL in your browser's address bar:
 
-   b. (Optional) Specify the mission or goal.
+```text
+https://<your-paperclip-domain>/agents/all
+```
 
-   ![Set company basics](/images/manual/use-cases/paperclip-set-company.png#bordered)
+From the agent list, click the button to create an agent, enter its name, select an adapter, and complete its runtime configuration. Avoid returning to Dashboard while the organization has no agents because it can reopen onboarding.
 
-   c. Click **Next**.
-
-2. On the **Agent** tab, create your first agent:
-
-   a. Specify the following settings:
-
-      - **Agent name**: Use the default name **CEO** or a custom one.
-      - **Adapter type**: Select the underlying framework. For example, select **Claude Code (Local Claude agent)** or **Codex (Local Codex agent)**.
-      - **More Agent Adapter Types**: Expand to select alternatives like **OpenCode** or **Cursor**.
-      - **Model**: Select a specific AI model from the drop-down list.
-
-   b. Click **Test now** to verify the configuration works with your API key.
-
-   c. Click **Next**.
-
-   ![Create an agent](/images/manual/use-cases/paperclip-create-agent.png#bordered)
-
-   :::tip
-   To review the API key requirements for each adapter, see [Which agent adapters does Paperclip support](#which-agent-adapters-does-paperclip-support).
-   :::
-
-3. On the **Task** tab, define your first task:
-
-   a. **Task title** and **Description**: Specify the title and description, or keep the defaults.
-
-   b. Click **Next**. This task automatically converts into your first issue after the setup is completed.
-
-   ![Set up a task](/images/manual/use-cases/paperclip-set-task.png#bordered)
-
-4. Click **Create & Open Issue**. The **Issues** page opens, displaying your active workspace.
-
-   ![Issue page after setup](/images/manual/use-cases/paperclip-issue-page.png#bordered)
+This entry point provides the full adapter selector, but does not remove OpenCode's OpenRouter connection restriction. To use OpenCode with a local model, continue with [Use local models in Paperclip](#use-local-models-in-paperclip) and create an unbound agent through the CLI.
 
 ## Create and track issues
 
@@ -205,17 +172,25 @@ As your agents complete issues, use the dashboard to track your company's overal
 
 ## Use local models in Paperclip
 
+:::warning Use local models with caution
+Paperclip is a fully autonomous multi-agent collaboration platform. Running it entirely on local models can cause workflow disruptions due to model capability limits, context overflow, or concurrency restrictions, potentially leading to cascading failures.
+
+Consider using a hybrid configuration: assign high-performance cloud models to critical roles such as CEO or CTO, while using local models for execution-focused agents to reduce costs. Alternatively, designate local models as `cheap model` for less demanding tasks.
+
+Carefully assess the capabilities of each model and your workflow requirements to determine the optimal setup.
+:::
+
 OpenCode can call an OpenAI-compatible local model through Olares Router. This OpenCode runs inside Paperclip and is separate from the OpenCode app in Market.
 
-:::info Version scope
-These instructions distinguish Paperclip `2026.609.0` from `2026.916.1` and `2026.1005.0`. In the latter two versions, the new OpenCode agent form binds an **OpenRouter AI connection**. Manually entering `olares/default-chat` does not remove that binding and produces a compatibility warning. **Environment: Local** means the agent executes locally; it does not select a local model.
+:::info OpenCode connection configuration
+The OpenCode creation form binds an **OpenRouter AI connection**. Manually entering `olares/default-chat` does not remove that binding and produces a compatibility warning. **Environment: Local** means the agent executes locally; it does not select a local model.
 
-The unbound-agent CLI path below is based on the `2026.1005.0` CLI and server interfaces. Complete the validation steps before assigning production tasks; local inference through this path has not yet been validated end to end for this guide.
+The procedure below uses the bundled CLI to create an unbound agent. Local inference through this path has not yet been validated end to end for this guide. Complete the validation steps before assigning production tasks.
 :::
 
 ### Prepare the model and preserve existing settings
 
-1. Install and start Qwen3.8-27B (llama.cpp) from Market, or another local model with an OpenAI-compatible API and tool-calling support. For `gemma-4-12b-long`, use the newly ported v3 chart supplied by the Olares team and install it manually when available. An existing installation is not automatically migrated by these instructions.
+1. Install and start Qwen3.8-27B (llama.cpp) from Market.
 2. Configure the model in Router and copy its connection details.
 
 <!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
@@ -265,14 +240,14 @@ Follow the Router connection instructions for authentication. If your endpoint r
 OpenCode supports JSONC, but Paperclip's temporary runtime-config preparation reads `opencode.json` with a strict JSON parser. Using valid JSON avoids settings being ignored during agent runs.
 
 :::tip Environment-variable alternative
-Paperclip `2026.1005.0` also reads `PAPERCLIP_OPENCODE_PROVIDERS` (a JSON object containing the entries inside `provider`, not the entire config) and `PAPERCLIP_OPENCODE_SMALL_MODEL`. These can supply runtime configuration instead of editing a file. This does not remove an OpenRouter AI connection binding. Only use Olares Settings for variables actually exposed by the installed chart; this guide does not assume these variables are available there.
+Paperclip also reads `PAPERCLIP_OPENCODE_PROVIDERS` (a JSON object containing the entries inside `provider`, not the entire config) and `PAPERCLIP_OPENCODE_SMALL_MODEL`. These can supply runtime configuration instead of editing a file. This does not remove an OpenRouter AI connection binding. Only use Olares Settings for variables actually exposed by the installed chart; this guide does not assume these variables are available there.
 :::
 
-### New installation: create an unbound OpenCode agent
+### Create an unbound OpenCode agent
 
 1. Register and obtain instance-admin or organization access, then create an organization. You do not need a cloud-model key to configure OpenCode itself.
-2. After the organization exists, open `/agents/new` on your Paperclip domain directly. This opens the full adapter selector. Avoid returning to Dashboard while the organization has no agents because it can reopen onboarding. The direct route was checked in an organization that already had an agent; if onboarding still blocks a new organization, use the CLI below once the organization has been created.
-3. On `2026.916.1` and `2026.1005.0`, do not finish the OpenRouter-bound form for a local-model agent. Use the bundled Paperclip CLI as your human administrator to create an agent without `runtimeConfig.aiConnection`.
+2. After the organization exists, manually open `/agents/all` on your Paperclip domain to leave onboarding and access agent creation. For a local OpenCode model, use the CLI procedure below instead of completing the OpenRouter-bound form.
+3. Use the bundled Paperclip CLI as your human administrator to create an agent without `runtimeConfig.aiConnection`.
 
 Open **Paperclip CLI** from Launchpad. Replace the URL with your Paperclip application origin, without `/api` or a dashboard path:
 
@@ -325,15 +300,9 @@ paperclipai agent get '<agent-id>' --api-base "$PAPERCLIP_LOCAL_API" --json
 
 Confirm `adapterType` is `opencode_local`, `adapterConfig.model` is `olares/default-chat`, and `runtimeConfig.aiConnection` is absent. Open **Agents** in Paperclip and select this agent. Keep its existing/unmanaged authentication configuration; do not adopt an OpenRouter connection. Do not ask a cloud-connected manager agent to perform this setup because agent-created hires may inherit a managed connection.
 
-### Upgrading an existing installation
+### Configure an existing agent
 
-Upgrading the image does not by itself mean every existing agent has adopted Connections. Inspect each agent before changing it.
-
-| Existing agent | What to do |
-| :--- | :--- |
-| OpenCode agent with no `runtimeConfig.aiConnection` | Back up and merge the OpenCode config above. Set the agent's model to `olares/default-chat` in its configuration, preserve its other settings, and validate it. |
-| OpenCode agent already bound to OpenRouter | Keep the existing agent. Create a separate unbound agent using the CLI procedure, validate it, and then deliberately reassign work. Removing `aiConnection` from an update payload does not detach it: the current server preserves the binding. |
-| Older `2026.609.0` installation | The original configuration path is available without the newer Connections binding. Do not assume the newer CLI commands exist; check `paperclipai agent --help` before using them. |
+If an existing OpenCode agent has no `runtimeConfig.aiConnection`, merge the configuration above and set its model to `olares/default-chat`, preserving its other settings. If it is already bound to OpenRouter, create an unbound agent using the CLI procedure, validate it, and then reassign work. Removing `aiConnection` from an update payload does not detach it: the server preserves the binding.
 
 Paperclip passes the agent's selected model to OpenCode with `--model`. Changing only the default `model` in `opencode.json` does not override an agent still configured with a cloud model.
 
@@ -361,12 +330,12 @@ Use Market to restart Paperclip after changing shared configuration, once active
 | Symptom | Next step |
 | :--- | :--- |
 | “This connection does not support the current harness and model” | Check `runtimeConfig.aiConnection`. Changing the OpenCode file cannot resolve an OpenRouter binding conflict. |
-| “Method not allowed” | Check the actual request URL, `/v1` path, and OpenAI-compatible protocol. Model discovery does not validate the chat endpoint. For Gemma, verify requests reach the newly installed v3 service. |
+| “Method not allowed” | Check the actual request URL, `/v1` path, and OpenAI-compatible protocol. Model discovery does not validate the chat endpoint. |
 | CLI works, but the agent reports “Internal server error” | Compare the agent's model, working directory, connection binding, and environment. Collect the matching server error with secrets redacted; the generic 500 message alone does not identify the cause. |
 | OpenCode update fails | Use the Market-provided image update. Do not make image-owned directories writable to repair self-update. |
 | Original JSONC was overwritten | Restore a backup if available. Otherwise reconstruct the required configuration; neither restart nor organization export restores the exact original file. |
 
-To undo the change, pause the new agent or stop assigning it work, restore the backed-up OpenCode configuration and the previous agent model, and restart through Market after active runs stop. Keep existing agents until validation succeeds. Organization export is not a full backup of the database, local configuration, credentials, and workspace files; retain those separately before any reinstall or downgrade. A database migrated by a newer Paperclip version must not be assumed compatible with an older image.
+To undo the change, pause the new agent or stop assigning it work, restore the backed-up OpenCode configuration and the previous agent model, and restart through Market after active runs stop. Keep existing agents until validation succeeds. Organization export is not a full backup of the database, local configuration, credentials, and workspace files; retain those separately before reinstalling.
 
 ## FAQs
 
@@ -376,7 +345,7 @@ Paperclip currently supports the following agent adapters. You configure specifi
 
 - Claude Code: Requires `ANTHROPIC_API_KEY`.
 - Codex: Requires `OPENAI_API_KEY`.
-- OpenCode: Authentication depends on the model provider. Local models do not inherently require an Anthropic or OpenAI key. For the newer OpenRouter-bound UI and local-model setup, see [Use local models in Paperclip](#use-local-models-in-paperclip).
+- OpenCode: Authentication depends on the model provider. Local models do not inherently require an Anthropic or OpenAI key. For the OpenRouter-bound UI and local-model setup, see [Use local models in Paperclip](#use-local-models-in-paperclip).
 - Pi: Requires `ANTHROPIC_API_KEY` or `OPENAI_API_KEY`.
 - Cursor: Requires `CURSOR_API_KEY`.
 
