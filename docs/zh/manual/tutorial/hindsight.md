@@ -86,7 +86,7 @@ curl -fsS "${HINDSIGHT_API_URL}/health"
 5. 开始新的 Hermes 对话：
 
    ```bash
-   hermes
+   hermes chat
    ```
 
 Local External 连接已经部署在 Olares 上的服务。Local Embedded（`local_embedded`，内嵌服务）会启动另一套 Hindsight，需要安装 `hindsight-all` 等额外依赖。

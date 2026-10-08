@@ -86,7 +86,7 @@ Run these commands inside the Hermes environment. The Hermes image used in this 
 5. Start a new Hermes conversation:
 
    ```bash
-   hermes
+   hermes chat
    ```
 
 Local External uses the server you installed on Olares. Local Embedded (`local_embedded`) starts another server and requires additional packages such as `hindsight-all`.
