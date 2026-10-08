@@ -8,3 +8,5 @@ output:
       name: beclab/mesh-out-agent:1.30.0-r4
     -
       name: beclab/init:v1.2.3
+    -
+      name: beclab/bluez-dbus-proxy:0.1.0
