@@ -11,6 +11,7 @@ func init() {
 	system.Get("/status", handlers.RequireLocal(handlers.GetTerminusState))
 	system.Get("/node-status", handlers.RequireAuthorizationOrOwnerSignature(handlers.RequireLocal(handlers.GetNodeStatus)))
 	system.Get("/ifs", handlers.RequireLocal(handlers.GetNetIfs))
+	system.Get("/list-aps", handlers.RequireLocal(handlers.GetListAPs))
 	system.Get("/hosts-file", handlers.RequireMaster(handlers.RequireLocal(handlers.GetHostsfile)))
 	system.Post("/hosts-file", handlers.RequireMaster(handlers.RequireLocal(handlers.PostHostsfile)))
 	system.Get("/mounted-usb", handlers.RequireMaster(handlers.RequireLocal(handlers.GetMountedUsb)))

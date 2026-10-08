@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 
+	"github.com/beclab/Olares/daemon/internel/wifi"
 	"github.com/beclab/Olares/daemon/pkg/commands"
-	"github.com/beclab/Olares/daemon/pkg/utils"
 )
 
 type connectWifi struct {
@@ -29,13 +29,7 @@ func (s *connectWifi) Execute(ctx context.Context, p any) (res any, err error) {
 		return
 	}
 
-	// force enable wifi
-	// err = utils.EnableWifi(ctx)
-	// if err != nil {
-	// 	return
-	// }
-
-	err = utils.ConnectWifi(ctx, param.SSID, param.Password)
+	err = wifi.Connect(ctx, *param)
 
 	return
 }

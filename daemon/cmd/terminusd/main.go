@@ -14,6 +14,7 @@ import (
 	"github.com/beclab/Olares/daemon/internel/apiserver/handlers"
 	"github.com/beclab/Olares/daemon/internel/ble"
 	"github.com/beclab/Olares/daemon/internel/mdns"
+	"github.com/beclab/Olares/daemon/internel/portal"
 	"github.com/beclab/Olares/daemon/internel/watcher"
 	"github.com/beclab/Olares/daemon/internel/watcher/cert"
 	intranetwatcher "github.com/beclab/Olares/daemon/internel/watcher/intranet"
@@ -40,12 +41,14 @@ func main() {
 	port := 18088
 	var showVersion bool
 	var showVendor bool
+	var portalHelperService string
 
 	klog.InitFlags(nil)
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 	pflag.CommandLine.BoolVar(&showVersion, "version", false, "show olaresd version")
 	pflag.CommandLine.BoolVar(&showVendor, "vendor", false, "show the vendor type of olaresd")
 
+	pflag.CommandLine.StringVar(&portalHelperService, "portal-helper-service", portal.DefaultService, "system bus service for captive portal authentication")
 	pflag.Parse()
 
 	if showVersion {
@@ -84,6 +87,8 @@ func main() {
 	}
 
 	mainCtx, cancel := context.WithCancel(context.Background())
+	portalDone := portal.Start(mainCtx, portalHelperService)
+	defer func() { cancel(); <-portalDone }()
 
 	// Set up the shared informers' lifecycle context. The factory itself starts
 	// lazily once the cluster is reachable; readers fall back to live Lists
