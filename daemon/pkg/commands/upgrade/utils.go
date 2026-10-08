@@ -1,20 +1,31 @@
 package upgrade
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/beclab/Olares/daemon/cmd/terminusd/version"
-	"github.com/dustin/go-humanize"
 	"io"
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/beclab/Olares/daemon/cmd/terminusd/version"
+	"github.com/dustin/go-humanize"
 )
+
+// releaseArch is the architecture a release uses in its file names. It is
+// GOARCH: comparing against "arm" never matches an arm64 build, which is how
+// every arm64 machine used to be handed the amd64 CLI and image manifest.
+func releaseArch() string {
+	return runtime.GOARCH
+}
 
 func getCurrentCliVersion() (*semver.Version, error) {
 	cmd := exec.Command("olares-cli", "-v")
@@ -51,8 +62,12 @@ func getCurrentDaemonVersion() (*semver.Version, error) {
 	return v, nil
 }
 
-func downloadFile(url, filepath string) error {
-	resp, err := http.Get(url)
+func downloadFile(ctx context.Context, url, destPath string) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return err
+	}
+	resp, err := (&http.Client{Timeout: 15 * time.Minute}).Do(req)
 	if err != nil {
 		return err
 	}
@@ -62,14 +77,20 @@ func downloadFile(url, filepath string) error {
 		return fmt.Errorf("bad status: %s", resp.Status)
 	}
 
-	out, err := os.Create(filepath)
+	out, err := os.CreateTemp(filepath.Dir(destPath), ".olares-cli-download-*")
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	defer os.Remove(out.Name())
 
-	_, err = io.Copy(out, resp.Body)
-	return err
+	if _, err = io.Copy(out, resp.Body); err != nil {
+		out.Close()
+		return err
+	}
+	if err := out.Close(); err != nil {
+		return err
+	}
+	return os.Rename(out.Name(), destPath)
 }
 
 func extractTarGz(tarFile, destDir string) error {

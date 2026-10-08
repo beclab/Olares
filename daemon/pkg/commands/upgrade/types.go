@@ -1,20 +1,26 @@
 package upgrade
 
 import (
-	"github.com/distribution/distribution/v3/manifest/ocischema"
+	"context"
+	"errors"
 	"math"
 	"regexp"
 	"strconv"
+
+	"github.com/beclab/Olares/daemon/pkg/commands"
+	"github.com/distribution/distribution/v3/manifest/ocischema"
 )
 
 type ExecutionRes interface {
 	Finished() bool
 	Progress() <-chan int
+	Completion() <-chan error
 }
 
 type executionRes struct {
 	finished     bool
 	progressChan <-chan int
+	completion   <-chan error
 }
 
 func (r *executionRes) Finished() bool {
@@ -25,10 +31,64 @@ func (r *executionRes) Progress() <-chan int {
 	return r.progressChan
 }
 
+func (r *executionRes) Completion() <-chan error {
+	return r.completion
+}
+
 func newExecutionRes(finished bool, progressChan <-chan int) ExecutionRes {
 	return &executionRes{
 		finished:     finished,
 		progressChan: progressChan,
+	}
+}
+
+func newExecutionResWithCompletion(progressChan <-chan int, completion <-chan error) ExecutionRes {
+	return &executionRes{progressChan: progressChan, completion: completion}
+}
+
+// AwaitExecution requires both the success log marker and a successful result
+// when the phase provides a completion channel. Already-finished phases and
+// legacy phases without a completion channel retain their progress behavior.
+func AwaitExecution(ctx context.Context, res ExecutionRes, onProgress func(int)) error {
+	if res.Finished() {
+		return nil
+	}
+	progress := res.Progress()
+	completion := res.Completion()
+	var latest int
+	for {
+		if progress == nil && completion == nil {
+			if latest >= commands.ProgressNumFinished {
+				return nil
+			}
+			return errors.New("command execution did not succeed")
+		}
+		if latest >= commands.ProgressNumFinished && completion == nil {
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case p, ok := <-progress:
+			if !ok {
+				progress = nil
+				continue
+			}
+			if p > latest {
+				latest = p
+				if onProgress != nil {
+					onProgress(p)
+				}
+			}
+		case err, ok := <-completion:
+			completion = nil
+			if !ok {
+				return errors.New("command exited without a result")
+			}
+			if err != nil {
+				return err
+			}
+		}
 	}
 }
 

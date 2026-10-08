@@ -43,21 +43,21 @@ func (u upgrader_1_12_3_20251217) NeedRestart() bool {
 }
 
 func (u upgrader_1_12_3_20251217) UpdateOlaresVersion() []task.Interface {
-	var tasks []task.Interface
-	tasks = append(tasks,
-		&task.LocalTask{
-			Name:   "UpgradeGPUDriver",
-			Action: new(upgradeGPUDriverIfNeeded),
-		},
-	)
-	tasks = append(tasks, u.upgraderBase.UpdateOlaresVersion()...)
-	tasks = append(tasks,
-		&task.LocalTask{
-			Name:   "RebootIfNeeded",
-			Action: new(rebootIfNeeded),
-		},
-	)
-	return tasks
+	return u.upgraderBase.UpdateOlaresVersion()
+}
+
+// PostUpgradeNode installs the target NVIDIA driver on the machine it runs
+// on: every node has its own GPU and its own kernel to build against.
+func (u upgrader_1_12_3_20251217) PostUpgradeNode() []task.Interface {
+	return append(upgradeGPUDriver(), u.upgraderBase.PostUpgradeNode()...)
+}
+
+// RebootNodes restarts the machines whose driver changed. It runs after the
+// version has been flipped, which is what the marker the driver upgrade
+// writes depends on: while that marker exists olaresd reports the system as
+// upgrading-and-rebooting rather than briefly reporting it as complete.
+func (u upgrader_1_12_3_20251217) RebootNodes() []task.Interface {
+	return append(rebootAfterGPUDriver(), u.upgraderBase.RebootNodes()...)
 }
 
 func init() {

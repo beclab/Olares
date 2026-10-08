@@ -58,7 +58,7 @@ func (i *prepareOlaresd) Execute(ctx context.Context, p any) (res any, err error
 	if err != nil {
 		klog.Warningf("Failed to get current olaresd version: %v, proceeding with installation", err)
 	} else {
-		if !currentVersion.LessThan(&target.Version) {
+		if currentVersion.Equal(&target.Version) {
 			return newExecutionRes(true, nil), nil
 		}
 	}
@@ -82,11 +82,12 @@ func (i *prepareOlaresd) Execute(ctx context.Context, p any) (res any, err error
 		"--version", target.Version.Original(),
 		"--base-dir", commands.TERMINUS_BASE_DIR,
 	}
-	if err = cmd.RunAsync_(ctx, cli.TERMINUS_CLI, params...); err != nil {
+	completion, err := cmd.RunAsyncWithResult_(ctx, cli.TERMINUS_CLI, params...)
+	if err != nil {
 		return nil, err
 	}
 
-	return newExecutionRes(false, progressChan), nil
+	return newExecutionResWithCompletion(progressChan, completion), nil
 }
 
 func (i *prepareOlaresd) watch(ctx context.Context) {
