@@ -107,10 +107,22 @@ If you plan to use Steam, complete the following steps after the local desktop s
    EOF
    ```
 
+   When the command finishes successfully, the terminal displays:
+
+   ```text
+   configmap/olares-desktop-config created
+   ```
+
 3. Update the Steam Headless environment. Replace `<username>` with your Olares user name (such as `laresprime`). This sets Steam Headless to use the compatibility mode while the local desktop is running.
 
    ```bash
    kubectl patch appenv steamheadless-<username> -n steamheadless-<username> --type='json' -p='[{"op": "add", "path": "/envs/2/value", "value": "secondary"}]'
+   ```
+
+   When the command finishes successfully, the terminal displays:
+
+   ```text
+   appenv.sys.bytetrade.io/steamheadless-<username> patched
    ```
 
 4. Press and hold **Ctrl**, then press **Tab** to switch back to Olares Desktop.
@@ -154,8 +166,20 @@ If you enabled Steam compatibility mode in Step 4, run the following commands in
    kubectl delete cm -n os-framework olares-desktop-config
    ```
 
+   When the command finishes successfully, the terminal displays:
+
+   ```text
+   configmap "olares-desktop-config" deleted
+   ```
+
 2. Restore the Steam Headless environment. Replace `<username>` with your Olares user name (such as `laresprime`). This removes the temporary compatibility setting from Steam Headless.
 
    ```bash
    kubectl patch appenv steamheadless-<username> -n steamheadless-<username> --type='json' -p='[{"op": "remove", "path": "/envs/2/value"}]'
+   ```
+
+   When the command finishes successfully, the terminal displays:
+
+   ```text
+   appenv.sys.bytetrade.io/steamheadless-<username> patched
    ```
