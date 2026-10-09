@@ -126,7 +126,8 @@ If you plan to use Steam, complete the following steps after the local desktop s
    ```
 
 4. Press and hold **Ctrl**, then press **Tab** to switch back to Olares Desktop.
-5. Open Steam Headless from the Launchpad.
+5. Open Olares Settings, go to **Applications** > **Steam Headless**, stop the app and then resume it.
+6. Open Steam Headless from the Launchpad and sign in.
 
 ## Step 5: Switch between top-level windows
 
@@ -158,7 +159,7 @@ Use the local Olares Desktop just as you would in a browser. For example, you ca
 
 ## Step 8: Restore Steam settings
 
-If you enabled Steam compatibility mode in Step 4, run the following commands in the local terminal to restore the Steam settings.
+After you stop the direct display interface in Step 7, if you enabled Steam compatibility mode in Step 4, run the following commands in the local terminal to restore the Steam settings.
 
 1. Remove the Olares Desktop configuration. This disables the compatibility configuration after you stop the direct display interface.
 
