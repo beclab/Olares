@@ -24,7 +24,10 @@ This feature is currently in the **Alpha** stage and is not recommended for prod
 - If Olares OS is activated, a mobile device with the LarePass app installed is required to retrieve the login password from Vault.
 
 **System**
-- Olares OS v1.12.7 or later running on the Olares One.
+- Olares OS v1.12.7 running on the Olares One.
+
+**Software**
+- Steam Headless updated to the latest available version from **Market**, if you plan to use Steam.
 
 ## Step 1: Access Olares One directly
 
@@ -85,7 +88,35 @@ If you prefer to prepare Olares One remotely, you can use SSH or Control Hub to 
 
 2. Wait for the Olares sign-in screen to appear, and then enter your Olares Desktop password to log in.
 
-## Step 4: Switch between top-level windows
+## Step 4: Configure Steam compatibility
+
+If you plan to use Steam, complete the following steps after the local desktop starts.
+
+1. Press and hold **Ctrl**, then press **Tab** until the local terminal (`olares@olares:~`) is highlighted. Release **Ctrl** to open it.
+2. Create the Olares Desktop configuration. This enables the configuration required for Steam compatibility mode.
+
+   ```bash
+   kubectl apply -f - <<EOF
+   kind: ConfigMap
+   apiVersion: v1
+   metadata:
+     name: olares-desktop-config
+     namespace: os-framework
+   data:
+     enabled: 'true'
+   EOF
+   ```
+
+3. Update the Steam Headless environment. Replace `<username>` with your Olares user name (such as `laresprime`). This sets Steam Headless to use the compatibility mode while the local desktop is running.
+
+   ```bash
+   kubectl patch appenv steamheadless-<username> -n steamheadless-<username> --type='json' -p='[{"op": "add", "path": "/envs/2/value", "value": "secondary"}]'
+   ```
+
+4. Press and hold **Ctrl**, then press **Tab** to switch back to Olares Desktop.
+5. Open Steam Headless from the Launchpad.
+
+## Step 5: Switch between top-level windows
 
 Press and hold **Ctrl**, then press **Tab** repeatedly to cycle through the available top-level windows. Release **Ctrl** to open the highlighted window.
 
@@ -96,7 +127,7 @@ The default windows are:
 
 ![Switch between Olares Desktop, Node Display, and the local terminal](/images/one/direct-display-window-switcher.png#bordered)
 
-## Step 5: Use the local desktop
+## Step 6: Use the local desktop
 
 Use the local Olares Desktop just as you would in a browser. For example, you can:
 
@@ -104,11 +135,27 @@ Use the local Olares Desktop just as you would in a browser. For example, you ca
 - Open Market to find and install apps.
 - Open installed apps from the Launchpad.
 
-## Step 6: Stop the direct display interface
+## Step 7: Stop the direct display interface
 
 1. Save your work in any open app.
 2. Use **Ctrl+Tab** to switch to the local terminal (`olares@olares:~`), then run:
 
    ```bash
    sudo stop-desktop
+   ```
+
+## Step 8: Restore Steam settings
+
+If you enabled Steam compatibility mode in Step 4, run the following commands in the local terminal to restore the Steam settings.
+
+1. Remove the Olares Desktop configuration. This disables the compatibility configuration after you stop the direct display interface.
+
+   ```bash
+   kubectl delete cm -n os-framework olares-desktop-config
+   ```
+
+2. Restore the Steam Headless environment. Replace `<username>` with your Olares user name (such as `laresprime`). This removes the temporary compatibility setting from Steam Headless.
+
+   ```bash
+   kubectl patch appenv steamheadless-<username> -n steamheadless-<username> --type='json' -p='[{"op": "remove", "path": "/envs/2/value"}]'
    ```
