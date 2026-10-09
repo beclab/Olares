@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
+	"github.com/beclab/Olares/cli/pkg/core/task"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -125,6 +127,25 @@ func TestFixedMACNADMigratesToWiredParent(t *testing.T) {
 		t.Fatalf("NAD: %s", raw)
 	}
 }
+func TestFixedMACUpgradeRunsAfterSystemComponents(t *testing.T) {
+	const version = "1.12.8-20261009"
+	tasks := getUpgraderByVersion(semver.MustParse(version)).UpgradeSystemComponents()
+	system, fixed := -1, -1
+	for i, entry := range tasks {
+		if local, ok := entry.(*task.LocalTask); ok {
+			if local.Name == "UpgradeSystemComponents" {
+				system = i
+			}
+			if local.Name == "UpgradeFixedMACDHCP" {
+				fixed = i
+			}
+		}
+	}
+	if system < 0 || fixed <= system {
+		t.Fatalf("%s task order: system %d fixed %d", version, system, fixed)
+	}
+}
+
 func TestFixedMACPlansDesiredInstanceWithoutAnyPod(t *testing.T) {
 	dc := fixedMACDynamic()
 	app, err := dc.Resource(fixedMACApplications).Get(t.Context(), "apps-media", metav1.GetOptions{})
@@ -145,5 +166,26 @@ func TestFixedMACPlansDesiredInstanceWithoutAnyPod(t *testing.T) {
 	}
 	if pod, err := replacementFixedMAC(t.Context(), kube, dc, p.Instances[0]); pod != nil || err != nil {
 		t.Fatalf("expected pending instance: %v %v", pod, err)
+	}
+}
+
+func TestOverlayDailyUpgradeEntry(t *testing.T) {
+	const version = "1.12.8-20261009"
+	u := getUpgraderByVersion(semver.MustParse(version))
+	count := 0
+	system, wait, migration := -1, -1, -1
+	for i, item := range u.UpgradeSystemComponents() {
+		switch item.GetName() {
+		case "UpgradeSystemComponents":
+			system = i
+		case "WaitFixedMACSystemComponents":
+			wait = i
+		case "UpgradeFixedMACDHCP":
+			migration = i
+			count++
+		}
+	}
+	if count != 1 || system < 0 || wait <= system || migration <= wait {
+		t.Fatalf("%s: count=%d system=%d wait=%d migration=%d", version, count, system, wait, migration)
 	}
 }
