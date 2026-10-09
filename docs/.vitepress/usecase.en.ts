@@ -527,6 +527,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/use-cases/context7",
             },
             {
+              text: "Hindsight",
+              link: "/use-cases/hindsight",
+            },
+            {
               text: "Falco",
               link: "/use-cases/falco",
             },

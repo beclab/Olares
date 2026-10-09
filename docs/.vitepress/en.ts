@@ -161,10 +161,6 @@ const side = {
       collapsed: false,
       items: [
         {
-          text: "Using Hindsight on Olares",
-          link: "/manual/tutorial/hindsight",
-        },
-        {
           text: "Translate webpages privately with LarePass",
           link: "/manual/tutorial/translate-webpages-with-larepass",
         },
