@@ -107,12 +107,8 @@ Use the local Olares Desktop just as you would in a browser. For example, you ca
 ## Step 6: Stop the direct display interface
 
 1. Save your work in any open app.
-2. Stop the direct display interface using one of the following methods:
+2. Use **Ctrl+Tab** to switch to the local terminal (`olares@olares:~`), then run:
 
-   - To stop it manually, press **Ctrl+Tab** to switch to **`olares@olares:~`**, and run:
-
-     ```bash
-     sudo stop-desktop
-     ```
-
-   - To stop it automatically, disconnect the HDMI cable.
+   ```bash
+   sudo stop-desktop
+   ```
