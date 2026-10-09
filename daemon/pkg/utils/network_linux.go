@@ -15,8 +15,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
 	"github.com/beclab/Olares/daemon/internel/wifi"
-	"github.com/godbus/dbus/v5"
 	"github.com/vishvananda/netlink"
 	"k8s.io/klog/v2"
 )
