@@ -61,7 +61,7 @@ Paperclip 是一个开源平台，用于在同一个统一工作区下协调多�
 
 ### 配置 API 密钥
 
-云端模型认证取决于提供商。下列环境变量适用于未绑定 AI connection 的适配器；采用 AI Connections 的智能体通过所选连接认证。本地模型不要求必须提供云端模型 API 密钥。
+每个智能体都需要其底层模型提供商的 API 密钥。你可以在 Settings 应用中将密钥配置为环境变量。
 
 :::tip
 在创建管理员账户之前，先在 **Settings** 中设置 API 密钥，以便云端模型可以立即使用。
@@ -102,7 +102,7 @@ Paperclip 默认没有用户账户。要首次访问平台，你需要通过注�
 
    ![Claim this instance](/images/manual/use-cases/paperclip-claim-instance.png#bordered){width=60%}
 
-4. 命名你的公司。使用云端模型时按指示完成引导；使用本地模型时继续阅读[在 Paperclip 中使用本地模型](#在-paperclip-中使用本地模型)。
+4. 命名你的公司，并按照指示完成引导流程。
 
 ## 完成初始引导
 
