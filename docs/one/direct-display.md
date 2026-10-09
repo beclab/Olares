@@ -7,9 +7,9 @@ head:
       content: Olares One, HDMI display, direct display, Olares Desktop, Node Display
 ---
 
-# Use Olares One with a direct display <Badge type="warning" text="Alpha" />
+# Use Olares One with a direct display <Badge type="warning" text="Alpha"/>
 
-Use Olares One as a local computer with an HDMI display, keyboard, and mouse. Access your apps and data without another computer. You can also access Olares from a browser while someone is using it locally.
+Connect an HDMI display, keyboard, and mouse to Olares One to access your apps and data directly, without another computer. You can use Olares Desktop on the connected display and in a browser at the same time without either session interrupting the other.
 
 :::warning Alpha feature
 This feature is currently in the **Alpha** stage and is not recommended for production environments. It is disabled by default and requires you to install the preview `olares-desktop` package. It may contain performance issues and require additional manual configurations. If you encounter any issues, please report them to the [Olares GitHub repository](https://github.com/beclab/Olares/issues).
@@ -43,7 +43,7 @@ This feature is currently in the **Alpha** stage and is not recommended for prod
    olares login:
    ```
 
-3. Enter the host login password you prepared above, and then press **Enter**.
+3. Enter the host login password you prepared above, and then press **Enter**. For security, characters will not appear on the screen as you type.
 
 :::tip
 If you prefer to prepare Olares One remotely, you can use SSH or Control Hub to download and install the package before connecting the display. See [Access Olares One terminal](./access-overview.md) for the available methods.
@@ -82,7 +82,7 @@ The default windows are:
 - **Node Display**: A local interface for managing the Olares One device.
 - **`olares@olares:~`**: The local terminal.
 
-![Use Ctrl+Tab to switch between Olares Desktop, Node Display, and the local terminal](/images/one/direct-display-window-switcher.png#bordered)
+![Switch between Olares Desktop, Node Display, and the local terminal](/images/one/direct-display-window-switcher.png#bordered)
 
 ## Step 5: Use the local desktop
 
