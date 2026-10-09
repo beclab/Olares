@@ -44,4 +44,6 @@ rules:
 - nonResourceURLs: 
   - "/headscale/node"
   - "/headscale/node/rename"
+  - "/headscale/policy/exit-users"
+  - "/headscale/policy/exit-users/*"
   verbs: ["*"]
