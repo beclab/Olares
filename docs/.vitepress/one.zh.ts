@@ -74,6 +74,10 @@ export const oneSidebar: DefaultTheme.Sidebar = {
             ]
         },        
         {
+          text: "使用直连显示器操作 Olares One",
+          link: "/zh/one/direct-display",
+        },
+        {
           text: "扩展存储",
           collapsed: true,
           items:

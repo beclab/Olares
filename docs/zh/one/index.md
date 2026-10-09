@@ -49,6 +49,7 @@ Olares One 将工作站级硬件与 Olares OS 集成在一台设备中，为你�
       <div class="vpath-title">高级</div>
       <div class="vpath-links">
         <a href="./access-overview">访问 Olares One 终端</a>
+        <a href="./direct-display">使用直连显示器操作 Olares One</a>
         <a href="./expand-storage-usb-drive">扩展存储</a>
         <a href="./connect-two-olares-one">连接两台 Olares One</a>
         <a href="./egpu">搭配 eGPU 使用</a>
