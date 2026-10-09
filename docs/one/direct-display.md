@@ -20,14 +20,14 @@ This feature is currently in the **Alpha** stage and is not recommended for prod
 **Hardware**
 - Your Olares One is set up and powered on.
 - An HDMI display, keyboard, and mouse connected to Olares One.
-- Audio output connected to Olares One if you want to play games locally.
+- An audio output device connected to Olares One if you want game audio.
 - If Olares OS is activated, a mobile device with the LarePass app installed is required to retrieve the login password from Vault.
 
 **System**
 - Olares OS v1.12.7 running on the Olares One.
 
 **Software**
-- Steam Headless updated to the latest available version from **Market**, if you plan to use Steam.
+- Steam Headless updated to the latest version, if you plan to use Steam.
 
 ## Step 1: Access Olares One directly
 
@@ -88,9 +88,13 @@ If you prefer to prepare Olares One remotely, you can use SSH or Control Hub to 
 
 2. Wait for the Olares sign-in screen to appear, and then enter your Olares Desktop password to log in.
 
-## Step 4: Configure Steam compatibility
+## Step 4: Configure Steam for local display
 
 If you plan to use Steam, complete the following steps after the local desktop starts.
+
+:::warning
+Steam compatibility mode is temporary. Each time you start the local desktop with `sudo start-desktop`, complete Step 4 afterward. Each time you stop it with `sudo stop-desktop`, complete Step 7 afterward.
+:::
 
 1. Press and hold **Ctrl**, then press **Tab** until the local terminal (`olares@olares:~`) is highlighted. Release **Ctrl** to open it.
 2. Create the Olares Desktop configuration. This enables the configuration required for Steam compatibility mode.
@@ -134,21 +138,13 @@ If you plan to use Steam, complete the following steps after the local desktop s
 Press and hold **Ctrl**, then press **Tab** repeatedly to cycle through the available top-level windows. Release **Ctrl** to open the highlighted window.
 
 The default windows are:
-- **Olares Desktop**: The same Olares Desktop interface that you access in a browser. You can install apps from Market and access your apps and data in the same way.
+- **Olares Desktop**: The local Olares Desktop interface, which you can use just as in a browser.
 - **Node Display**: A local interface for managing the Olares One device.
 - **`olares@olares:~`**: The local terminal.
 
 ![Switch between Olares Desktop, Node Display, and the local terminal](/images/one/direct-display-window-switcher.png#bordered)
 
-## Step 6: Use the local desktop
-
-Use the local Olares Desktop just as you would in a browser. For example, you can:
-
-- Open Files to browse and manage your files.
-- Open Market to find and install apps.
-- Open installed apps from the Launchpad.
-
-## Step 7: Stop the direct display interface
+## Step 6: Stop the direct display interface
 
 1. Save your work in any open app.
 2. Use **Ctrl+Tab** to switch to the local terminal (`olares@olares:~`), then run:
@@ -157,9 +153,9 @@ Use the local Olares Desktop just as you would in a browser. For example, you ca
    sudo stop-desktop
    ```
 
-## Step 8: Restore Steam settings
+## Step 7: Restore Steam to its default mode
 
-After you stop the direct display interface in Step 7, if you enabled Steam compatibility mode in Step 4, run the following commands in the local terminal to restore the Steam settings.
+If you enabled Steam compatibility mode in [Step 4](#step-4-configure-steam-for-local-display), restore the Steam settings using the commands below. Run these commands only after stopping the direct display interface in [Step 6](#step-6-stop-the-direct-display-interface).
 
 1. Remove the Olares Desktop configuration. This disables the compatibility configuration after you stop the direct display interface.
 
