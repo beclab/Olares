@@ -63,9 +63,21 @@ If you prefer to prepare Olares One remotely, you can use SSH or Control Hub to 
    sudo bash -c 'apt update && DEBIAN_FRONTEND=noninteractive apt-get install -y -f ./olares-desktop_0.1.0_20260928_amd64.deb'
    ```
 
+3. If prompted about the configuration file `/etc/default/apport`, press **Enter** to accept the default option `N` and keep the existing configuration.
+
+   ```text
+   *** apport (Y/I/N/O/D/Z) [default=N] ?
+   ```
+
+4. Wait for the installation to finish and the terminal prompt to return.
+
+   ```text
+   olares@olares:/tmp$
+   ```
+
 ## Step 3: Start the local desktop
 
-1. Start the local desktop:
+1. Run the following command:
 
    ```bash
    sudo start-desktop
