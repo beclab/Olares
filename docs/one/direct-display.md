@@ -102,7 +102,7 @@ Use the local Olares Desktop just as you would in a browser. For example, you ca
 
 - Open Files to browse and manage your files.
 - Open Market to find and install apps.
-- Open installed apps from Olares Desktop.
+- Open installed apps from the Launchpad.
 
 ## Step 6: Stop the direct display interface
 
