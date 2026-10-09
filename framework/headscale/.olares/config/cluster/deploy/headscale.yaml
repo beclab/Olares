@@ -71,13 +71,6 @@ rules:
   - apiGroups: ["iam.kubesphere.io"]
     resources: ["users"]
     verbs: ["list"]
-  # A future single-domain Olares stores its complete account domain (for
-  # example pengpeng.olares.com) in the existing cluster-wide SystemEnv API.
-  # Restrict this read to that one optional object.
-  - apiGroups: ["sys.bytetrade.io"]
-    resources: ["systemenvs"]
-    resourceNames: ["olares-system-account-domain"]
-    verbs: ["get"]
   # The API wrapper authenticates the app-service service-account token before
   # allowing it to read or replace the application-owned policy ports.
   - apiGroups: ["authentication.k8s.io"]
@@ -132,10 +125,9 @@ metadata:
     app: headscale
 data:
   config.yaml.tpl: |
-    # Nginx terminates TLS for the in-cluster endpoint and forwards requests to
-    # Headscale on loopback. External devices reach it through the per-user
-    # Olares application domain rather than this cluster-local service name.
-    server_url: https://headscale-server-svc.os-network.svc.cluster.local
+    # The renderer replaces this with the public shared Headscale URL after
+    # the unified Olares DNS zone is bound.
+    server_url: __HEADSCALE_SERVER_URL__
     listen_addr: 0.0.0.0:8080
     metrics_listen_addr: 0.0.0.0:9090
     grpc_listen_addr: 127.0.0.1:50443
@@ -478,6 +470,7 @@ spec:
               kube_api=https://kubernetes.default.svc:443
               kube_ca=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
               kube_token_file=/var/run/secrets/kubernetes.io/serviceaccount/token
+              headscale_server_url=https://headscale-server-svc.os-network.svc.cluster.local
 
               kube() {
                 kubectl \
@@ -500,40 +493,17 @@ spec:
                 esac
               }
 
-              # The future single-domain model publishes one complete Olares
-              # account domain through OLARES_SYSTEM_ACCOUNT_DOMAIN. Object
-              # existence selects the new single-domain model. The
-              # object is created during installation and may intentionally be
-              # empty until the owner completes domain binding.
-              if ! domain_record="$(
-                kube get systemenvs.sys.bytetrade.io \
-                  olares-system-account-domain \
-                  --request-timeout=30s \
-                  --ignore-not-found \
-                  -o jsonpath='{.metadata.name}{"|"}{.value}{"|"}{.default}'
-              )"; then
-                echo "failed to read OLARES_SYSTEM_ACCOUNT_DOMAIN" >&2
-                exit 1
-              fi
-
-              if test -n "${domain_record}"; then
-                domain_values="${domain_record#*|}"
-                global_zone="${domain_values%%|*}"
-                if test -z "${global_zone}"; then
-                  global_zone="${domain_values#*|}"
-                fi
-
-                if test -z "${global_zone}"; then
-                  echo "global Olares domain is not bound; rendering empty split DNS"
-                elif normalized_zone="$(valid_zone "${global_zone}")"; then
+              if test -n "${OLARES_DNS_ZONE}"; then
+                if normalized_zone="$(valid_zone "${OLARES_DNS_ZONE}")"; then
                   echo "using global Olares split DNS zone: ${normalized_zone}"
                   printf '%s\n' "${normalized_zone}" > "${zones}"
+                  headscale_server_url="https://headscale.${normalized_zone}"
                 else
-                  echo "invalid OLARES_SYSTEM_ACCOUNT_DOMAIN: ${global_zone}" >&2
+                  echo "invalid Olares DNS zone annotation: ${OLARES_DNS_ZONE}" >&2
                   exit 1
                 fi
               else
-                echo "global Olares domain marker is absent; using per-user DNS zones"
+                echo "global Olares DNS zone is absent; using per-user DNS zones"
 
                 # Compatibility path for current multi-domain Olares. Only the
                 # zone consumed by CoreDNS proves that binding has completed.
@@ -567,6 +537,7 @@ spec:
               fi
 
               sed \
+                -e "s|__HEADSCALE_SERVER_URL__|${headscale_server_url}|g" \
                 -e '/^[[:space:]]*__TAILSCALE_DNS_SPLIT__[[:space:]]*$/ {' \
                 -e 'r /etc/headscale-runtime/dns-split.yaml' \
                 -e 'd' \
@@ -577,6 +548,10 @@ spec:
 
               rm -f "${raw_zones}" "${zones}" "${split}"
           env:
+            - name: OLARES_DNS_ZONE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.annotations['bytetrade.io/zone']
             - name: HOME
               value: /etc/headscale-runtime
           securityContext:
@@ -899,7 +874,7 @@ spec:
               mountPath: /etc/nginx/conf.d
               readOnly: true
         - name: headscale-api-wrapper
-          image: beclab/headscale-api-wrapper:v0.2.1
+          image: beclab/headscale-api-wrapper:v0.2.2
           imagePullPolicy: IfNotPresent
           command: [/bin/sh, -ec]
           args:
@@ -1137,6 +1112,8 @@ spec:
           env:
             - name: TS_DISABLE_TAILDROP
               value: "true"
+            - name: TS_DEBUG_FIREWALL_MODE
+              value: nftables
             - name: TS_SOCKET
               value: /var/run/tailscale/tailscaled.sock
             - name: TS_STATE_DIR
@@ -1164,6 +1141,7 @@ spec:
               value: >-
                 --login-server=https://headscale-server-svc.os-network.svc.cluster.local
                 --netfilter-mode=on
+                --advertise-exit-node
           securityContext:
             privileged: false
             allowPrivilegeEscalation: false
