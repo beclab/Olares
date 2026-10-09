@@ -18,6 +18,7 @@ type Module struct {
 func (m *Module) Init() {
 	m.Name = "UpgradeOlares"
 
+	m.Tasks = append(m.Tasks, &task.LocalTask{Name: "ResumeOverlayNetwork", Action: new(resumeFixedMACNetwork), Retry: 3})
 	u := getUpgraderByVersion(m.TargetVersion)
 	m.Tasks = append(m.Tasks, u.PrepareForUpgrade()...)
 	m.Tasks = append(m.Tasks, u.ClearAppChartValues()...)
@@ -49,6 +50,7 @@ func (m *PrecheckModule) Init() {
 	}
 
 	m.Tasks = []task.Interface{
+		&task.LocalTask{Name: "ResumeOverlayNetwork", Action: new(resumeFixedMACNetwork), Retry: 3},
 		runPreChecks,
 	}
 }
