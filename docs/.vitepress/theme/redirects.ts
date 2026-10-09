@@ -1,4 +1,8 @@
 export const redirects = {
+    // Move the Hindsight app tutorial to Use cases.
+    '/manual/tutorial/hindsight': '/use-cases/hindsight',
+    '/zh/manual/tutorial/hindsight': '/zh/use-cases/hindsight',
+
     // Root → default docs landing
     '/': '/manual/overview',
 

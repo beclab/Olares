@@ -99,6 +99,7 @@ export const useCases: UseCase[] = [
   { title: "JupyterHub", link: "/use-cases/jupyterhub", category: "Developer tools", description: "Multi-user Jupyter notebook environment", descriptionZh: "多用户 Jupyter Notebook 环境" },
   { title: "PDFMathTranslate", link: "/use-cases/pdfmathtranslate", category: "Utilities", description: "Translate scientific PDFs while preserving layout", descriptionZh: "翻译科学 PDF 并保留排版" },
   { title: "Context7", link: "/use-cases/context7", category: "Utilities", description: "Give AI coding assistants up-to-date docs via MCP", descriptionZh: "通过 MCP 为 AI 编程助手提供最新文档" },
+  { title: "Hindsight", link: "/use-cases/hindsight", category: "Utilities", description: "Store and recall agent memories across conversations", descriptionZh: "让智能体跨对话保存和检索记忆" },
   { title: "Falco", link: "/use-cases/falco", category: "Utilities", description: "Runtime security monitoring for hosts and containers", descriptionZh: "面向主机和容器的运行时安全监控" },
   { title: "Firecrawl", link: "/use-cases/firecrawl", category: "Utilities", description: "Web page loader and scraper for apps", descriptionZh: "面向应用的网页加载与抓取工具" },
   { title: "FlareSolverr", link: "/use-cases/flaresolverr", category: "Utilities", description: "Set up FlareSolverr with Prowlarr to bypass Cloudflare", descriptionZh: "设置 FlareSolverr 与 Prowlarr，绕过 Cloudflare" },
