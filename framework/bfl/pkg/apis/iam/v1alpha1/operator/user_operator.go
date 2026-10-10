@@ -195,27 +195,17 @@ func (o *UserOperator) GetUserZone(user *iamV1alpha2.User) string {
 	if zone != "" {
 		return zone
 	}
-
 	creator := o.GetUserAnnotation(user, constants.AnnotationUserCreator)
-	if creator != "" {
-		if creator == "cli" {
-			oUser, err := o.GetOwnerUser()
-			if err != nil {
-				klog.Errorf("failed to get user with owner role %v", err)
-			}
-			if err == nil {
-				return oUser.Name
-			}
-		} else {
-			creatorUser, err := o.GetUser(creator)
-			if err != nil {
-				klog.Errorf("failed to get creator user %v", err)
-			}
-			if err == nil && creatorUser != nil {
-				return o.GetUserAnnotation(creatorUser, constants.UserAnnotationZoneKey)
-			}
-		}
-
+	// cli creates the first local admin, which has no domain to inherit.
+	if creator == "" || creator == "cli" {
+		return ""
+	}
+	creatorUser, err := o.GetUser(creator)
+	if err != nil {
+		klog.Errorf("failed to get creator user %v", err)
+	}
+	if err == nil && creatorUser != nil {
+		return o.GetUserAnnotation(creatorUser, constants.UserAnnotationZoneKey)
 	}
 	return ""
 }
@@ -233,27 +223,17 @@ func (o *UserOperator) GetUserDomainType(user *iamV1alpha2.User) (bool, string, 
 	if zone != "" {
 		return false, zone, nil
 	}
-
 	// Find the creator user's zone
 	creatorUserName := o.GetUserAnnotation(user, constants.AnnotationUserCreator)
-	if creatorUserName != "" {
-		var creatorUser *iamV1alpha2.User
-		var err error
-		if creatorUserName == "cli" {
-			creatorUser, err = o.GetOwnerUser()
-			if err != nil {
-				return false, "", err
-			}
-		} else {
-			creatorUser, err = o.GetUser(creatorUserName)
-			if err != nil {
-				return false, "", err
-			}
-		}
-
-		if v := o.GetUserAnnotation(creatorUser, constants.UserAnnotationZoneKey); v != "" {
-			return true, v, nil
-		}
+	if creatorUserName == "" || creatorUserName == "cli" {
+		return false, "", nil
+	}
+	creatorUser, err := o.GetUser(creatorUserName)
+	if err != nil {
+		return false, "", err
+	}
+	if v := o.GetUserAnnotation(creatorUser, constants.UserAnnotationZoneKey); v != "" {
+		return true, v, nil
 	}
 
 	return false, "", nil
