@@ -74,6 +74,10 @@ export const oneSidebar: DefaultTheme.Sidebar = {
             ]
         },        
         {
+          text: "Use Olares One with a direct display",
+          link: "/one/direct-display",
+        },
+        {
           text: "Expand storage",
           collapsed: true,
           items:
