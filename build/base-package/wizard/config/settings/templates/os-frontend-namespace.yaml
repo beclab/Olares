@@ -3,4 +3,5 @@ kind: Namespace
 metadata:
   name: os-frontend
   labels:
+    bytetrade.io/ns-type: system
     kubesphere.io/workspace: system-workspace
