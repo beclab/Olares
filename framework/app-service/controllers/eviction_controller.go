@@ -79,6 +79,7 @@ func (r *EvictionManagerController) Reconcile(ctx context.Context, req ctrl.Requ
 	nss = append(nss, security.OSSystemNamespaces...)
 	nss = append(nss, security.GPUSystemNamespaces...)
 	nss = append(nss, security.OSNetworkNamespaces...)
+	nss = append(nss, security.OSFrontendNamespaces...)
 	nss = append(nss, security.OSProtectedNamespaces...)
 	nss = append(nss, security.OSMeshNamespaces...)
 	nss = append(nss, security.OSGatewayNamespaces...)

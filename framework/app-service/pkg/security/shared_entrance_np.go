@@ -30,6 +30,7 @@ var SharedEntranceOSNamespaces = []string{
 	"os-mesh",
 	"os-protected",
 	"os-gpu",
+	"os-frontend",
 }
 
 // ExcludeSharedEntrancePods appends a NotIn expression so the selector
