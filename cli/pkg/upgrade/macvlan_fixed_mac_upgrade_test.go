@@ -128,7 +128,7 @@ func TestFixedMACNADMigratesToWiredParent(t *testing.T) {
 	}
 }
 func TestFixedMACUpgradeRunsAfterSystemComponents(t *testing.T) {
-	const version = "1.12.8-20261009"
+	const version = "1.12.8-20261010"
 	tasks := getUpgraderByVersion(semver.MustParse(version)).UpgradeSystemComponents()
 	system, fixed := -1, -1
 	for i, entry := range tasks {
@@ -169,8 +169,75 @@ func TestFixedMACPlansDesiredInstanceWithoutAnyPod(t *testing.T) {
 	}
 }
 
+func TestRetainEnabledFixedMACSkipsDisabledAndDeleted(t *testing.T) {
+	enabled := &unstructured.Unstructured{Object: map[string]interface{}{
+		"apiVersion": "app.bytetrade.io/v1alpha1", "kind": "Application",
+		"metadata": map[string]interface{}{"name": "apps-media"},
+		"spec": map[string]interface{}{"namespace": "apps", "name": "media", "settings": map[string]interface{}{"enableOverlayGateway": "true"}},
+	}}
+	disabled := &unstructured.Unstructured{Object: map[string]interface{}{
+		"apiVersion": "app.bytetrade.io/v1alpha1", "kind": "Application",
+		"metadata": map[string]interface{}{"name": "apps-home"},
+		"spec": map[string]interface{}{"namespace": "home", "name": "homeassistant", "settings": map[string]interface{}{"enableOverlayGateway": "false"}},
+	}}
+	dc := dynamicfake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(), map[schema.GroupVersionResource]string{
+		fixedMACAllocations: "OverlayMACAllocationList", fixedMACNAD: "NetworkAttachmentDefinitionList", fixedMACApplications: "ApplicationList",
+	}, enabled, disabled)
+	p := &fixedMACProgress{Instances: []fixedMACInstance{
+		{Namespace: "apps", ApplicationName: "media", Name: "media-0", Kind: "StatefulSet", Workload: "media", WorkloadUID: "sts"},
+		{Namespace: "home", ApplicationName: "homeassistant", Name: "homeassistant-0", Kind: "StatefulSet", Workload: "homeassistant", WorkloadUID: "home-sts"},
+		{Namespace: "gone", ApplicationName: "deleted", Name: "deleted-0", Kind: "StatefulSet", Workload: "deleted", WorkloadUID: "gone-sts"},
+	}}
+	saved := 0
+	if err := retainEnabledFixedMACInstances(t.Context(), kubefake.NewSimpleClientset(), dc, p, func(*fixedMACProgress) error {
+		saved++
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if saved != 1 || len(p.Instances) != 1 || p.Instances[0].ApplicationName != "media" {
+		t.Fatalf("kept=%+v saves=%d", p.Instances, saved)
+	}
+}
+
+func TestRetainEnabledFixedMACFailsOnApplicationListError(t *testing.T) {
+	dc := dynamicfake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(), map[schema.GroupVersionResource]string{
+		fixedMACAllocations: "OverlayMACAllocationList", fixedMACNAD: "NetworkAttachmentDefinitionList", fixedMACApplications: "ApplicationList",
+	})
+	dc.PrependReactor("list", "*", func(ktesting.Action) (bool, runtime.Object, error) {
+		return true, nil, context.DeadlineExceeded
+	})
+	p := &fixedMACProgress{Instances: []fixedMACInstance{{Namespace: "apps", ApplicationName: "media", Name: "media-0", Kind: "StatefulSet", Workload: "media", WorkloadUID: "sts"}}}
+	if err := retainEnabledFixedMACInstances(t.Context(), kubefake.NewSimpleClientset(), dc, p, func(*fixedMACProgress) error {
+		t.Fatal("must not persist after list failure")
+		return nil
+	}); err == nil {
+		t.Fatal("list failure accepted as disabled")
+	}
+	if len(p.Instances) != 1 {
+		t.Fatalf("instances mutated on list failure: %+v", p.Instances)
+	}
+}
+
+func TestRetainEnabledFixedMACFailsOnApplicationResolveError(t *testing.T) {
+	dc := dynamicfake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(), map[schema.GroupVersionResource]string{
+		fixedMACAllocations: "OverlayMACAllocationList", fixedMACNAD: "NetworkAttachmentDefinitionList", fixedMACApplications: "ApplicationList",
+	}, &unstructured.Unstructured{Object: map[string]interface{}{
+		"apiVersion": "app.bytetrade.io/v1alpha1", "kind": "Application",
+		"metadata": map[string]interface{}{"name": "apps-media"},
+		"spec": map[string]interface{}{"namespace": "apps", "name": "media", "settings": map[string]interface{}{"enableOverlayGateway": "true"}},
+	}})
+	p := &fixedMACProgress{Instances: []fixedMACInstance{{Namespace: "apps", Name: "media-0", Kind: "StatefulSet", Workload: "media", WorkloadUID: "sts"}}}
+	if err := retainEnabledFixedMACInstances(t.Context(), kubefake.NewSimpleClientset(), dc, p, func(*fixedMACProgress) error {
+		t.Fatal("must not persist after resolve failure")
+		return nil
+	}); err == nil {
+		t.Fatal("missing application name accepted as disabled")
+	}
+}
+
 func TestOverlayDailyUpgradeEntry(t *testing.T) {
-	const version = "1.12.8-20261009"
+	const version = "1.12.8-20261010"
 	u := getUpgraderByVersion(semver.MustParse(version))
 	count := 0
 	system, wait, migration := -1, -1, -1

@@ -13,6 +13,7 @@ import (
 
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/connector"
+	"github.com/beclab/Olares/cli/pkg/core/logger"
 	"github.com/beclab/Olares/cli/pkg/core/task"
 	"github.com/beclab/Olares/cli/pkg/manifest"
 	"github.com/beclab/Olares/cli/pkg/plugins/network"
@@ -40,13 +41,14 @@ var fixedMACApplications = schema.GroupVersionResource{Group: "app.bytetrade.io"
 var fixedMACAllocations = schema.GroupVersionResource{Group: "app.bytetrade.io", Version: "v1alpha1", Resource: "overlaymacallocations"}
 
 type fixedMACInstance struct {
-	Namespace      string
-	Name           string
-	OldUID         types.UID
-	Kind           string
-	Workload       string
-	WorkloadUID    types.UID
-	ReplacementUID types.UID
+	Namespace       string
+	ApplicationName string `json:",omitempty"`
+	Name            string
+	OldUID          types.UID
+	Kind            string
+	Workload        string
+	WorkloadUID     types.UID
+	ReplacementUID  types.UID
 }
 type fixedMACProgress struct {
 	Instances []fixedMACInstance
@@ -255,7 +257,7 @@ func snapshotFixedMAC(ctx context.Context, kube kubernetes.Interface, dc dynamic
 		if owner == nil {
 			return nil, fmt.Errorf("pod %s/%s has no controller; cannot safely recreate", pod.Namespace, pod.Name)
 		}
-		item := fixedMACInstance{Namespace: pod.Namespace, Name: pod.Name, OldUID: pod.UID, Kind: owner.Kind, Workload: owner.Name, WorkloadUID: owner.UID}
+		item := fixedMACInstance{Namespace: pod.Namespace, ApplicationName: pod.Labels["applications.app.bytetrade.io/name"], Name: pod.Name, OldUID: pod.UID, Kind: owner.Kind, Workload: owner.Name, WorkloadUID: owner.UID}
 		switch owner.Kind {
 		case "ReplicaSet":
 			rs, err := kube.AppsV1().ReplicaSets(pod.Namespace).Get(ctx, owner.Name, metav1.GetOptions{})
@@ -512,6 +514,102 @@ func recoverFixedMAC(ctx context.Context, kube kubernetes.Interface, dc dynamic.
 	return nil
 }
 
+func fixedMACInstanceApplicationName(ctx context.Context, kube kubernetes.Interface, item fixedMACInstance) (string, error) {
+	if item.ApplicationName != "" {
+		return item.ApplicationName, nil
+	}
+	var labels map[string]string
+	switch item.Kind {
+	case "Deployment":
+		workload, err := kube.AppsV1().Deployments(item.Namespace).Get(ctx, item.Workload, metav1.GetOptions{})
+		if err != nil {
+			return "", fmt.Errorf("fixed-mac: read Deployment %s/%s while resolving application: %w", item.Namespace, item.Workload, err)
+		}
+		if workload.UID != item.WorkloadUID {
+			return "", fmt.Errorf("fixed-mac: Deployment %s/%s changed identity while resolving application", item.Namespace, item.Workload)
+		}
+		labels = workload.Spec.Template.Labels
+	case "StatefulSet":
+		workload, err := kube.AppsV1().StatefulSets(item.Namespace).Get(ctx, item.Workload, metav1.GetOptions{})
+		if err != nil {
+			return "", fmt.Errorf("fixed-mac: read StatefulSet %s/%s while resolving application: %w", item.Namespace, item.Workload, err)
+		}
+		if workload.UID != item.WorkloadUID {
+			return "", fmt.Errorf("fixed-mac: StatefulSet %s/%s changed identity while resolving application", item.Namespace, item.Workload)
+		}
+		labels = workload.Spec.Template.Labels
+	default:
+		return "", fmt.Errorf("fixed-mac: unsupported workload %s while resolving application", item.Kind)
+	}
+	name := labels["applications.app.bytetrade.io/name"]
+	if name == "" {
+		return "", fmt.Errorf("fixed-mac: workload %s/%s has no application name", item.Namespace, item.Workload)
+	}
+	return name, nil
+}
+
+// retainEnabledFixedMACInstances reconciles the durable pre-migration snapshot
+// with current user intent. The legacy carrier watcher may disable Overlay while
+// the old bridge is removed; disabled or deleted applications reach a stable
+// non-Overlay state and can be enabled later through the normal product flow.
+func retainEnabledFixedMACInstances(ctx context.Context, kube kubernetes.Interface, dc dynamic.Interface, p *fixedMACProgress, save func(*fixedMACProgress) error) error {
+	apps, err := dc.Resource(fixedMACApplications).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		logger.Errorf("fixed-mac: list applications before recovery failed: %v", err)
+		return err
+	}
+	enabled := make(map[string]bool, len(apps.Items))
+	for _, app := range apps.Items {
+		namespace, _, _ := unstructured.NestedString(app.Object, "spec", "namespace")
+		name, _, _ := unstructured.NestedString(app.Object, "spec", "name")
+		if namespace == "" || name == "" {
+			continue
+		}
+		key := namespace + "/" + name
+		if _, exists := enabled[key]; exists {
+			return fmt.Errorf("fixed-mac: multiple applications resolve to %s", key)
+		}
+		on, _, _ := unstructured.NestedString(app.Object, "spec", "settings", "enableOverlayGateway")
+		enabled[key] = on == "true"
+	}
+
+	kept := make([]fixedMACInstance, 0, len(p.Instances))
+	changed := false
+	for _, item := range p.Instances {
+		name, err := fixedMACInstanceApplicationName(ctx, kube, item)
+		if err != nil {
+			logger.Errorf("fixed-mac: resolve application for %s/%s failed: %v", item.Namespace, item.Workload, err)
+			return err
+		}
+		key := item.Namespace + "/" + name
+		on, exists := enabled[key]
+		if !exists {
+			logger.Infof("fixed-mac: skip %s: application was deleted during topology migration", key)
+			changed = true
+			continue
+		}
+		if !on {
+			logger.Infof("fixed-mac: skip %s: overlay was disabled during topology migration; user may enable it later", key)
+			changed = true
+			continue
+		}
+		if item.ApplicationName == "" {
+			item.ApplicationName = name
+			changed = true
+		}
+		kept = append(kept, item)
+	}
+	if !changed {
+		return nil
+	}
+	p.Instances = kept
+	if err := save(p); err != nil {
+		logger.Errorf("fixed-mac: persist reconciled recovery plan failed: %v", err)
+		return err
+	}
+	return nil
+}
+
 // Stage only the published DHCP binary; other CNI executables remain untouched.
 func stageFixedMACDHCP(runtime connector.Runtime, manifestPath string) (string, error) {
 	hashes := map[string]string{"amd64": "fd946fea15d15cce9e62e295c974288954a0e283fe55225c43e26f3157fba083", "arm64": "855e62230e7622641853559c038164fc6d046c87157d331d8f0d337ad1fa7bae"}
@@ -743,6 +841,9 @@ func (a *upgradeFixedMAC) Execute(runtime connector.Runtime) error {
 	if err = setFixedMACGate(ctx, kube, "recovering"); err != nil {
 		return err
 	}
+	if err = retainEnabledFixedMACInstances(ctx, kube, dc, p, saveFixedMACProgress); err != nil {
+		return err
+	}
 	if err = recoverFixedMAC(ctx, kube, dc, p, saveFixedMACProgress); err != nil {
 		return err
 	}
@@ -841,7 +942,7 @@ func includeDesiredFixedMAC(ctx context.Context, kube kubernetes.Interface, dc d
 		if replicas != 1 {
 			return fmt.Errorf("fixed MAC Deployment %s/%s has %d replicas", d.Namespace, d.Name, replicas)
 		}
-		add(fixedMACInstance{Namespace: d.Namespace, Kind: "Deployment", Workload: d.Name, WorkloadUID: d.UID})
+		add(fixedMACInstance{Namespace: d.Namespace, ApplicationName: d.Spec.Template.Labels["applications.app.bytetrade.io/name"], Kind: "Deployment", Workload: d.Name, WorkloadUID: d.UID})
 	}
 	sets, err := kube.AppsV1().StatefulSets("").List(ctx, metav1.ListOptions{})
 	if err != nil {
@@ -860,7 +961,7 @@ func includeDesiredFixedMAC(ctx context.Context, kube kubernetes.Interface, dc d
 			start = sts.Spec.Ordinals.Start
 		}
 		for i := start; i < start+replicas; i++ {
-			add(fixedMACInstance{Namespace: sts.Namespace, Name: sts.Name + "-" + strconv.Itoa(int(i)), Kind: "StatefulSet", Workload: sts.Name, WorkloadUID: sts.UID})
+			add(fixedMACInstance{Namespace: sts.Namespace, ApplicationName: sts.Spec.Template.Labels["applications.app.bytetrade.io/name"], Name: sts.Name + "-" + strconv.Itoa(int(i)), Kind: "StatefulSet", Workload: sts.Name, WorkloadUID: sts.UID})
 		}
 	}
 	return nil

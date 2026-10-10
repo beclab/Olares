@@ -182,7 +182,7 @@ func TestFixedMACLegacyPreflightValidatesClaimOwnership(t *testing.T) {
 func TestFixedMACResumePrecedesKubernetesTasks(t *testing.T) {
 	precheck := &PrecheckModule{}
 	precheck.Init()
-	upgrade := &Module{TargetVersion: semver.MustParse("1.12.8-20261009")}
+	upgrade := &Module{TargetVersion: semver.MustParse("1.12.8-20261010")}
 	upgrade.Init()
 	for _, tasks := range [][]task.Interface{precheck.Tasks, upgrade.Tasks} {
 		first, ok := tasks[0].(*task.LocalTask)
