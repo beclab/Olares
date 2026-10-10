@@ -1,0 +1,34 @@
+# Provider registration only; user grants belong to account provisioning.
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: os-frontend:settings-provider-svc
+  annotations:
+    provider-registry-ref: os-frontend/settings
+    provider-service-ref: settings-service.os-frontend
+rules:
+- nonResourceURLs:
+  - "/api/cloud/getNFTAddress"
+  - "/api/account/"
+  - "/api/backup/password"
+  - "/api/account/retrieve"
+  - "/api/account/all"
+  - "/api/cookie/retrieve"
+  - "/api/cookie"
+  - "/api/abilities"
+  verbs: ["*"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: os-frontend:edge-desktop-provider-svc
+  annotations:
+    provider-registry-ref: os-frontend/edge-desktop
+    provider-service-ref: edge-desktop.os-frontend
+rules:
+- nonResourceURLs:
+  - "/server/intent/send"
+  - "/server/ai_message"
+  verbs: ["*"]

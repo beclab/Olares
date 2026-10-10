@@ -1,0 +1,1303 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: olares-app-nginx-config
+  namespace: os-frontend
+data:
+  nginx.conf: |-
+    user nginx;
+    worker_processes 2;
+    worker_rlimit_nofile 65535;
+    worker_shutdown_timeout 240s;
+
+    error_log   /var/log/nginx/error.log notice;
+    pid         /var/run/nginx.pid;
+
+    events {
+        multi_accept        on;
+        worker_connections 16384;
+        use epoll;
+    }
+
+    http {
+        aio                 threads;
+        aio_write           on;
+        tcp_nopush          on;
+        tcp_nodelay         on;
+        log_subrequest      on;
+        reset_timedout_connection on;
+        keepalive_timeout  75s;
+        keepalive_requests 100;
+        client_body_temp_path           /tmp/client-body;
+        fastcgi_temp_path               /tmp/fastcgi-temp;
+        proxy_temp_path                 /tmp/proxy-temp;
+        client_max_body_size            1g;
+        client_header_buffer_size       1k;
+        client_header_timeout           60s;
+        large_client_header_buffers     4 8k;
+        client_body_buffer_size         8k;
+        client_body_timeout             60s;
+        types_hash_max_size             2048;
+        server_names_hash_max_size      4096;
+        server_names_hash_bucket_size   1024;
+        map_hash_bucket_size            64;
+        proxy_headers_hash_max_size     512;
+        proxy_headers_hash_bucket_size  64;
+        variables_hash_bucket_size      256;
+        variables_hash_max_size         2048;
+        underscores_in_headers          off;
+        ignore_invalid_headers          on;
+        include       /etc/nginx/mime.types;
+        default_type  application/octet-stream;
+
+        log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                          '$status $body_bytes_sent "$http_referer" '
+                          '"$http_user_agent" "$http_x_forwarded_for"';
+
+        access_log  /var/log/nginx/access.log  main;
+        proxy_ssl_session_reuse on;
+
+        sendfile        on;
+        include /etc/nginx/resolver.conf;
+        resolver_timeout        30s;
+        send_timeout            60s;
+
+        map $http_upgrade $connection_upgrade {
+        default upgrade;
+        ''      close;
+        }
+
+        include /etc/nginx/conf.d/*.conf;
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: olares-app-routes
+  namespace: os-frontend
+data:
+  headscale.conf: |-
+    server {
+        listen 85;
+        # Gzip Settings
+        gzip on;
+        gzip_disable "msie6";
+        gzip_min_length 1k;
+        gzip_buffers 16 64k;
+        gzip_http_version 1.1;
+        gzip_comp_level 6;
+        gzip_types *;
+        index index.html;
+        location /ts2021 {
+          proxy_pass http://headscale-server-svc.os-network:8080;
+          proxy_method POST;
+          proxy_http_version 1.1;
+          proxy_set_header Upgrade 'tailscale-control-protocol';
+          proxy_set_header Connection '$connection_upgrade';
+          more_set_headers 'Upgrade: $http_upgrade';
+        }
+        location /api/refresh {
+          add_header Access-Control-Allow-Headers "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization";
+          add_header Access-Control-Allow-Methods "PUT, GET, DELETE, POST, OPTIONS";
+          add_header Access-Control-Allow-Origin $http_origin;
+          add_header Access-Control-Allow-Credentials true;
+          proxy_pass http://authelia-backend.os-framework:9091;
+          proxy_set_header            Host $host;
+          proxy_set_header            X-real-ip $remote_addr;
+          proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+          add_header X-Frame-Options SAMEORIGIN;
+        }
+        location / {
+          proxy_pass http://headscale-server-svc.os-network:8080;
+          proxy_http_version 1.1;
+          proxy_set_header Upgrade $http_upgrade;
+          proxy_set_header Connection '$connection_upgrade';
+        }
+    }
+  legacy-providers.conf: |-
+    # These provider services have no shared replacement yet. Resolve them on
+    # demand so they do not block installation before any user exists. Keep
+    # these routes behind providers; do not bypass authorization via backends.
+    map "" $legacy_monitoring { default monitoring.os-frontend.svc.cluster.local:28080; }
+    map "" $legacy_infisical { default infisical.os-frontend.svc.cluster.local:28080; }
+    map "" $legacy_backup { default backup.os-frontend.svc.cluster.local:28080; }
+    map "" $legacy_middleware { default middleware.os-frontend.svc.cluster.local:28080; }
+    map "" $legacy_vault { default vault.os-frontend.svc.cluster.local:28080; }
+    map "" $legacy_bfl { default bfl.os-frontend.svc.cluster.local:80; }
+    map "" $legacy_auth_frontend { default authelia-svc.os-frontend.svc.cluster.local:80; }
+  dashboard-control-hub.conf: |-
+    # upstream Analytics {
+    #     server analytics-server.os-framework:3010;
+    # }
+
+
+    server {
+      listen 81;
+      gzip off;
+      gzip_disable "msie6";
+      gzip_min_length 1k;
+      gzip_buffers 16 64k;
+      gzip_http_version 1.1;
+      gzip_comp_level 5;
+      gzip_types *;
+      root /www/dashboard;
+
+      location / {
+        try_files $uri $uri/index.html /index.html;
+        add_header Cache-Control "private,no-cache";
+        add_header Last-Modified "Oct, 03 Jan 2022 13:46:41 GMT";
+        expires 0;
+      }
+
+      location /ws {
+        proxy_pass http://127.0.0.1:3100;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+      }
+
+      location /bfl {
+        add_header 'Access-Control-Allow-Headers' 'x-api-nonce,x-api-ts,x-api-ver,x-api-source';
+        proxy_pass http://$legacy_bfl;
+        proxy_set_header            Host $host;
+        proxy_set_header            X-real-ip $remote_addr;
+        proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+
+        add_header X-Frame-Options SAMEORIGIN;
+      }
+
+      location /kapis {
+        proxy_pass http://$legacy_monitoring;
+        proxy_set_header X-Forwarded-Host $http_host;
+      }
+
+      location /hami/ {
+        proxy_pass http://127.0.0.1:3010;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Host $host;
+      }
+
+      location /user-service {
+        proxy_pass http://127.0.0.1:3010;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Host $host;
+        rewrite ^/user-service(.*)$ $1 break;
+      }
+
+      location /api/gpu/list {
+        proxy_pass http://127.0.0.1:3010;
+        proxy_set_header            Host $host;
+        proxy_set_header            X-real-ip $remote_addr;
+        proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+      }
+
+      location /api/profile/init {
+        proxy_pass http://127.0.0.1:3010;
+        proxy_set_header            Host $host;
+        proxy_set_header            X-real-ip $remote_addr;
+        proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+      }
+
+      location /api {
+        proxy_pass http://$legacy_monitoring;
+        proxy_set_header X-Forwarded-Host $http_host;
+      }
+
+      location /capi {
+        proxy_pass http://$legacy_monitoring;
+        proxy_set_header            Host $host;
+        proxy_set_header            X-real-ip $remote_addr;
+        proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Host $http_host;
+      }
+
+      # location = /js/api/send {
+      #   proxy_pass http://Analytics;
+      #   proxy_set_header Host $host;
+      #   proxy_set_header X-Real-IP $remote_addr;
+      #   proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      #   proxy_set_header X-Forwarded-Proto $scheme;
+
+      #   rewrite ^/js(.*)$ $1 break;
+      # }
+
+      # location /analytics_service {
+      #   proxy_pass http://Analytics;
+      #   proxy_http_version 1.1;
+      #   proxy_set_header Upgrade $http_upgrade;
+      #   proxy_set_header Connection "Upgrade";
+      #   proxy_set_header Host $host;
+      #   rewrite ^/analytics_service(.*)$ $1 break;
+      # }
+
+      location ~ /(kapis/terminal|api/v1/watch|apis/apps/v1/watch) {
+        proxy_pass http://$legacy_monitoring;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Host $http_host;
+      }
+
+      location = /js/script.js {
+        add_header Access-Control-Allow-Origin "*";
+      }
+      location ~.*\.(js|css|png|jpg|svg|woff|woff2)$ {
+        add_header Cache-Control "public, max-age=2678400";
+      }
+    }
+
+    server {
+      listen 82;
+      gzip off;
+      gzip_disable "msie6";
+      gzip_min_length 1k;
+      gzip_buffers 16 64k;
+      gzip_http_version 1.1;
+      gzip_comp_level 5;
+      gzip_types *;
+      root /www/control-hub;
+
+      location / {
+        try_files $uri $uri/index.html /index.html;
+        add_header Cache-Control "private,no-cache";
+        add_header Last-Modified "Oct, 03 Jan 2022 13:46:41 GMT";
+        expires 0;
+      }
+
+      location /bfl {
+        add_header 'Access-Control-Allow-Headers' 'x-api-nonce,x-api-ts,x-api-ver,x-api-source';
+        proxy_pass http://$legacy_bfl;
+        proxy_set_header            Host $host;
+        proxy_set_header            X-real-ip $remote_addr;
+        proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+
+        add_header X-Frame-Options SAMEORIGIN;
+      }
+
+      location /kapis {
+        proxy_pass http://$legacy_monitoring;
+        proxy_set_header X-Forwarded-Host $http_host;
+      }
+
+      location /api {
+        proxy_pass http://$legacy_monitoring;
+        proxy_set_header X-Forwarded-Host $http_host;
+      }
+
+      location /user-service {
+        proxy_pass http://127.0.0.1:3010;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Host $host;
+        rewrite ^/user-service(.*)$ $1 break;
+      }
+
+      location /current_user {
+        proxy_pass http://$legacy_monitoring;
+        proxy_set_header X-Forwarded-Host $http_host;
+      }
+
+      location /capi {
+        proxy_pass http://$legacy_monitoring;
+        proxy_set_header            Host $host;
+        proxy_set_header            X-real-ip $remote_addr;
+        proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Host $http_host;
+      }
+
+      # location = /js/api/send {
+      #   proxy_pass http://Analytics;
+      #   proxy_set_header Host $host;
+      #   proxy_set_header X-Real-IP $remote_addr;
+      #   proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      #   proxy_set_header X-Forwarded-Proto $scheme;
+
+      #   rewrite ^/js(.*)$ $1 break;
+      # }
+
+      # location /analytics_service {
+      #   proxy_pass http://Analytics;
+      #   proxy_http_version 1.1;
+      #   proxy_set_header Upgrade $http_upgrade;
+      #   proxy_set_header Connection "Upgrade";
+      #   proxy_set_header Host $host;
+      #   rewrite ^/analytics_service(.*)$ $1 break;
+      # }
+
+      location /middleware {
+        add_header 'Access-Control-Allow-Headers' 'x-api-nonce,x-api-ts,x-api-ver,x-api-source';
+        proxy_pass http://$legacy_middleware;
+        proxy_set_header            Host $host;
+        proxy_set_header            X-real-ip $remote_addr;
+        proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Host $http_host;
+
+        add_header X-Frame-Options SAMEORIGIN;
+      }
+
+      location ~ /(kapis/terminal|api/v1/watch|apis/apps/v1/watch) {
+        proxy_pass http://$legacy_monitoring;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Host $http_host;
+      }
+
+      location = /js/script.js {
+        add_header Access-Control-Allow-Origin "*";
+      }
+      location ~.*\.(js|css|png|jpg|svg|woff|woff2)$ {
+        add_header Cache-Control "public, max-age=2678400";
+      }
+    }
+  desktop.conf: |-
+    upstream DesktopSVCServer {
+      server 127.0.0.1:3010;
+    }
+
+
+
+    server {
+        listen 91;
+        gzip off;
+        gzip_disable "msie6";
+        gzip_min_length 1k;
+        gzip_buffers 16 64k;
+        gzip_http_version 1.1;
+        gzip_comp_level 6;
+        gzip_types *;
+        root /www/desktop;
+
+        location / {
+            try_files $uri $uri/index.html /index.html;
+            add_header Cache-Control "private,no-cache";
+            add_header Last-Modified "Oct, 03 Jan 2022 13:46:41 GMT";
+            expires 0;
+        }
+
+        location /market-backend {
+            proxy_pass http://127.0.0.1:3010;
+
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $host;
+        }
+
+        location /kapis {
+            proxy_pass http://$legacy_monitoring;
+            proxy_set_header X-Forwarded-Host $http_host;
+        }
+
+        location /api/logout {
+            add_header 'Access-Control-Allow-Headers' 'x-api-nonce,x-api-ts,x-api-ver,x-api-source';
+            proxy_pass http://$legacy_auth_frontend;
+            proxy_set_header            Host $host;
+            proxy_set_header            X-real-ip $remote_addr;
+            proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+            add_header X-Frame-Options SAMEORIGIN;
+        }
+        location /api/device {
+            add_header Access-Control-Allow-Headers "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization";
+            add_header Access-Control-Allow-Methods "PUT, GET, DELETE, POST, OPTIONS";
+            add_header Access-Control-Allow-Origin $http_origin;
+            add_header Access-Control-Allow-Credentials true;
+            proxy_pass http://settings-service;
+            proxy_set_header            Host $host;
+            proxy_set_header            X-real-ip $remote_addr;
+            proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+            add_header X-Frame-Options SAMEORIGIN;
+        }
+        location /api/refresh {
+            add_header Access-Control-Allow-Headers "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization";
+            add_header Access-Control-Allow-Methods "PUT, GET, DELETE, POST, OPTIONS";
+            add_header Access-Control-Allow-Origin $http_origin;
+            add_header Access-Control-Allow-Credentials true;
+            proxy_pass http://authelia-backend.os-framework:9091;
+            proxy_set_header            Host $host;
+            proxy_set_header            X-real-ip $remote_addr;
+            proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+            add_header X-Frame-Options SAMEORIGIN;
+        }
+        location /api {
+            proxy_pass http://DesktopSVCServer;
+            # rewrite ^/server(.*)$ $1 break;
+            # Add original-request-related headers
+            proxy_set_header            Host $host;
+            proxy_set_header            X-real-ip $remote_addr;
+            proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+        location /server {
+            if ($request_method = 'OPTIONS') {
+                add_header Access-Control-Allow-Headers "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization";
+                add_header Access-Control-Allow-Methods "PUT, GET, DELETE, POST, OPTIONS";
+                add_header Access-Control-Allow-Origin $http_origin;
+                add_header Access-Control-Allow-Credentials true;
+                add_header 'Access-Control-Max-Age' 1728000;
+                add_header 'Content-Type' 'text/plain; charset=utf-8';
+                add_header 'Content-Length' 0;
+                return 204;
+            }
+            add_header Access-Control-Allow-Headers "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization";
+            add_header Access-Control-Allow-Methods "PUT, GET, DELETE, POST, OPTIONS";
+            add_header Access-Control-Allow-Origin $http_origin;
+            add_header Access-Control-Allow-Credentials true;
+            proxy_pass http://DesktopSVCServer;
+            # rewrite ^/server(.*)$ $1 break;
+            # Add original-request-related headers
+            proxy_set_header            Host $host;
+            proxy_set_header            X-real-ip $remote_addr;
+            proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+        location /notification {
+            proxy_pass http://DesktopSVCServer;
+            # rewrite ^/server(.*)$ $1 break;
+            # Add original-request-related headers
+            proxy_set_header            Host $host;
+            proxy_set_header            X-real-ip $remote_addr;
+            proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+        location /video {
+            proxy_pass http://DesktopSVCServer;
+            # rewrite ^/server(.*)$ $1 break;
+            # Add original-request-related headers
+            proxy_set_header            Host $host;
+            proxy_set_header            X-real-ip $remote_addr;
+            proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+        location /seahub/ {
+            proxy_pass http://seafile.os-framework/;
+            # rewrite ^/server(.*)$ $1 break;
+            # Add original-request-related headers
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $host;
+            add_header Accept-Ranges bytes;
+            client_body_timeout 60s;
+            client_max_body_size 2000M;
+            proxy_request_buffering off;
+            keepalive_timeout 75s;
+            proxy_read_timeout 60s;
+            proxy_send_timeout 60s;
+        }
+        location /ws {
+            proxy_pass http://127.0.0.1:3100;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            proxy_set_header Host $host;
+        }
+        location ~.*\.(js|css|png|jpg|svg|woff|woff2)$ {
+            add_header Cache-Control "public, max-age=2678400";
+        }
+    }
+  files.conf: |-
+    server {
+        listen 88;
+        gzip off;
+        gzip_disable "msie6";
+        gzip_min_length 1k;
+        gzip_buffers 16 64k;
+        gzip_http_version 1.1;
+        gzip_comp_level 6;
+        gzip_types *;
+        client_max_body_size 2000M;
+        keepalive_timeout 2700s;
+        root /www/files;
+        location / {
+            try_files $uri $uri/index.html /index.html;
+            add_header Cache-Control "private,no-cache";
+            add_header Last-Modified "Oct, 03 Jan 2022 13:46:41 GMT";
+            expires 0;
+        }
+        location /api/resources/AppData {
+            proxy_pass http://files-provider-svc.os-framework:28080;
+            # rewrite ^/server(.*)$ $1 break;
+            # Add original-request-related headers
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $http_host;
+            client_body_timeout 60s;
+            client_max_body_size 2000M;
+            proxy_request_buffering off;
+            keepalive_timeout 75s;
+            proxy_read_timeout 60s;
+            proxy_send_timeout 60s;
+        }
+        location /api/raw/AppData {
+            proxy_pass http://files-provider-svc.os-framework:28080;
+            # rewrite ^/server(.*)$ $1 break;
+            # Add original-request-related headers
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $http_host;
+            client_body_timeout 1800s;
+            client_max_body_size 2000M;
+            proxy_request_buffering off;
+            keepalive_timeout 2700s;
+            proxy_read_timeout 1800s;
+            proxy_send_timeout 1800s;
+        }
+        location /api/raw {
+            proxy_pass http://files-provider-svc.os-framework:28080;
+            # rewrite ^/server(.*)$ $1 break;
+            # Add original-request-related headers
+            add_header Accept-Ranges bytes;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $http_host;
+            client_body_timeout 1800s;
+            client_max_body_size 2000M;
+            proxy_request_buffering off;
+            keepalive_timeout 2700s;
+            proxy_read_timeout 1800s;
+            proxy_send_timeout 1800s;
+        }
+
+        location /api/md5 {
+            proxy_pass http://files-provider-svc.os-framework:28080;
+            # rewrite ^/server(.*)$ $1 break;
+            # Add original-request-related headers
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $http_host;
+            client_body_timeout 1800s;
+            client_max_body_size 4000M;
+            proxy_request_buffering off;
+            keepalive_timeout 2700s;
+            proxy_read_timeout 1800s;
+            proxy_send_timeout 1800s;
+        }
+
+        location /api/paste {
+            proxy_pass http://files-provider-svc.os-framework:28080;
+            # rewrite ^/server(.*)$ $1 break;
+            # Add original-request-related headers
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $http_host;
+            client_body_timeout 1800s;
+            client_max_body_size 4000M;
+            proxy_request_buffering off;
+            keepalive_timeout 2700s;
+            proxy_read_timeout 1800s;
+            proxy_send_timeout 1800s;
+        }
+
+        location /api/cache {
+            proxy_pass http://files-provider-svc.os-framework:28080;
+            # rewrite ^/server(.*)$ $1 break;
+            # Add original-request-related headers
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $http_host;
+            client_body_timeout 1800s;
+            client_max_body_size 4000M;
+            proxy_request_buffering off;
+            keepalive_timeout 2700s;
+            proxy_read_timeout 1800s;
+            proxy_send_timeout 1800s;
+        }
+
+        location /provider {
+            proxy_pass http://files-provider-svc.os-framework:28080;
+            # rewrite ^/server(.*)$ $1 break;
+            # Add original-request-related headers
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $http_host;
+            client_body_timeout 60s;
+            client_max_body_size 2000M;
+            proxy_request_buffering off;
+            keepalive_timeout 75s;
+            proxy_read_timeout 60s;
+            proxy_send_timeout 60s;
+        }
+
+        location /api {
+            proxy_pass http://files-provider-svc.os-framework:28080;
+            # rewrite ^/server(.*)$ $1 break;
+            # Add original-request-related headers
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $http_host;
+            add_header Accept-Ranges bytes;
+            client_body_timeout 600s;
+            client_max_body_size 4000M;
+            proxy_request_buffering off;
+            keepalive_timeout 750s;
+            proxy_read_timeout 600s;
+            proxy_send_timeout 600s;
+        }
+
+        location /share_link {
+            proxy_pass http://files-provider-svc.os-framework:28080;
+            # rewrite ^/server(.*)$ $1 break;
+            # Add original-request-related headers
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $http_host;
+            add_header Accept-Ranges bytes;
+            client_body_timeout 600s;
+            client_max_body_size 4000M;
+            proxy_request_buffering off;
+            keepalive_timeout 750s;
+            proxy_read_timeout 600s;
+            proxy_send_timeout 600s;
+        }
+
+        location /upload {
+            proxy_pass http://files-provider-svc.os-framework:28080;
+            # rewrite ^/server(.*)$ $1 break;
+            # Add original-request-related headers
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $http_host;
+            add_header Accept-Ranges bytes;
+            client_body_timeout 600s;
+            client_max_body_size 4000M;
+            proxy_request_buffering off;
+            keepalive_timeout 750s;
+            proxy_read_timeout 600s;
+            proxy_send_timeout 600s;
+        }
+        location /seahub/ {
+            proxy_pass http://seafile.os-framework/;
+            # rewrite ^/server(.*)$ $1 break;
+            # Add original-request-related headers
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $http_host;
+            add_header Accept-Ranges bytes;
+            client_body_timeout 60s;
+            client_max_body_size 2000M;
+            proxy_request_buffering off;
+            keepalive_timeout 75s;
+            proxy_read_timeout 60s;
+            proxy_send_timeout 60s;
+        }
+        location /seafhttp/ {
+            add_header Access-Control-Allow-Headers "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization";
+            add_header Access-Control-Allow-Methods "PUT, GET, DELETE, POST, OPTIONS";
+
+            proxy_pass http://files-provider-svc.os-framework:28080;
+            # rewrite ^/server(.*)$ $1 break;
+            # Add original-request-related headers
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $http_host;
+            add_header Accept-Ranges bytes;
+            client_body_timeout 60s;
+            client_max_body_size 2000M;
+            proxy_request_buffering off;
+            keepalive_timeout 75s;
+            proxy_read_timeout 60s;
+            proxy_send_timeout 60s;
+        }
+        # location /videos/ {
+        #     if ($request_method = 'OPTIONS') {
+        #         add_header Access-Control-Allow-Headers "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization";
+        #         add_header Access-Control-Allow-Methods "PUT, GET, DELETE, POST, OPTIONS";
+        #         add_header Access-Control-Allow-Origin $http_origin;
+        #         add_header Access-Control-Allow-Credentials true;
+        #         add_header 'Access-Control-Max-Age' 1728000;
+        #         add_header 'Content-Type' 'text/plain; charset=utf-8';
+        #         add_header 'Content-Length' 0;
+        #         return 204;
+        #     }
+        #     add_header Access-Control-Allow-Headers "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization";
+        #     add_header Access-Control-Allow-Methods "PUT, GET, DELETE, POST, OPTIONS";
+        #     add_header Access-Control-Allow-Origin $http_origin;
+        #     proxy_pass http://media-server-service.os-framework:9090;
+        # }
+        location /drive/ {
+            proxy_pass http://127.0.0.1:8181;
+            # rewrite ^/server(.*)$ $1 break;
+            # Add original-request-related headers
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $http_host;
+        }
+        location /api/raw/Home/ {
+            expires 30d;
+            add_header Cache-Control "public, max-age=2592000";
+            proxy_pass http://files-provider-svc.os-framework:28080;
+            # rewrite ^/server(.*)$ $1 break;
+            # Add original-request-related headers
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $http_host;
+            add_header Accept-Ranges bytes;
+            client_body_timeout 600s;
+            client_max_body_size 4000M;
+            proxy_request_buffering off;
+            keepalive_timeout 750s;
+            proxy_read_timeout 600s;
+            proxy_send_timeout 600s;
+        }
+        # Set cache for static resources
+        location ~ ^/(assets|js|css|fonts|img)/.*.(js|css|png|jpg|svg|woff|woff2)$
+        {
+            add_header Cache-Control "public, max-age=2678400";
+        }
+        location ~ ^/resources/Home/Pictures/(.*.(png|jpg|svg|gif|jpeg))$
+        {
+            proxy_pass http://files-provider-svc.os-framework:28080/api/raw/drive/Home/Pictures/$1;
+            add_header Cache-Control "public, max-age=2592000";
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $http_host;
+            add_header Accept-Ranges bytes;
+            client_body_timeout 600s;
+            client_max_body_size 4000M;
+            proxy_request_buffering off;
+            keepalive_timeout 750s;
+            proxy_read_timeout 600s;
+            proxy_send_timeout 600s;
+            autoindex off;
+        }
+    }
+  market.conf: |-
+    upstream AppstoreBackendServer {
+      server market-provider-svc.os-framework:28080;
+    }
+    server {
+        listen 90;
+        gzip off;
+        gzip_types text/plain text/xml application/javascript text/css;
+        gzip_disable "msie6";
+        gzip_min_length 1k;
+        gzip_buffers 16 64k;
+        gzip_http_version 1.1;
+        gzip_comp_level 6;
+        root /www/market;
+
+        location / {
+            add_header Cache-Control "no-store";
+            try_files $uri $uri/index.html /index.html;
+        }
+
+        location /ws {
+            proxy_pass http://127.0.0.1:3100;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            proxy_set_header Host $host;
+        }
+
+        location /app-store/ {
+            add_header 'Access-Control-Allow-Headers' 'x-api-nonce,x-api-ts,x-api-ver,x-api-source X-Authorization';
+            proxy_http_version 1.1;
+            proxy_pass http://AppstoreBackendServer;
+            proxy_set_header            Host $host;
+            proxy_set_header            X-real-ip $remote_addr;
+            proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $http_host;
+
+        }
+
+        location /api/env {
+            proxy_pass http://127.0.0.1:3010;
+
+            proxy_set_header            Host $host;
+            proxy_set_header            X-real-ip $remote_addr;
+            proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+
+        location /api/users {
+            proxy_pass http://127.0.0.1:3010;
+
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $host;
+        }
+
+        location /server {
+            add_header Access-Control-Allow-Headers "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization";
+            add_header Access-Control-Allow-Methods "PUT, GET, DELETE, POST, OPTIONS";
+            add_header Access-Control-Allow-Origin $http_origin;
+            add_header Access-Control-Allow-Credentials true;
+            proxy_pass http://DesktopSVCServer;
+            # rewrite ^/server(.*)$ $1 break;
+            # Add original-request-related headers
+            proxy_set_header            Host $host;
+            proxy_set_header            X-real-ip $remote_addr;
+            proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $http_host;
+
+        }
+
+        location ~.*\.(js|css|png|jpg|svg|woff|woff2)$ {
+            add_header Cache-Control "public, max-age=2678400";
+        }
+    }
+  profile-editor.conf: |-
+    server {
+      listen 83;
+
+      # Gzip Settings
+      gzip off;
+      gzip_disable "msie6";
+      gzip_min_length 1k;
+      gzip_buffers 16 64k;
+      gzip_http_version 1.1;
+      gzip_comp_level 6;
+      gzip_types *;
+      root /www/profile-editor;
+
+
+      # normal routes
+      # serve given url and default to index.html if not found
+      # e.g. /, /user and /foo/bar will return index.html
+      location / {
+        try_files $uri $uri/index.html /index.html;
+        add_header Cache-Control "private,no-cache";
+        add_header Last-Modified "Oct, 03 Jan 2022 13:46:41 GMT";
+        expires 0;
+      }
+
+      location /api {
+            proxy_pass http://127.0.0.1:3010;
+
+            proxy_set_header            Host $host;
+            proxy_set_header            X-real-ip $remote_addr;
+            proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+      }
+
+      location /images {
+            proxy_pass http://127.0.0.1:15080;
+
+
+            # Add original-request-related headers
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $host;
+        }
+
+      location ~.*\.(js|css|png|jpg|svg|woff|woff2)$
+        {
+          add_header Cache-Control "public, max-age=2678400";
+        }
+    }
+  profile-preview.conf: |-
+    server {
+      listen 8090;
+
+      # Gzip Settings
+      gzip off;
+      gzip_disable "msie6";
+      gzip_min_length 1k;
+      gzip_buffers 16 64k;
+      gzip_http_version 1.1;
+      gzip_comp_level 6;
+      gzip_types *;
+      root /www/profile-preview;
+
+
+      # normal routes
+      # serve given url and default to index.html if not found
+      # e.g. /, /user and /foo/bar will return index.html
+      location / {
+      try_files $uri $uri/index.html /index.html;
+        add_header Cache-Control "private,no-cache";
+        add_header Last-Modified "Oct, 03 Jan 2022 13:46:41 GMT";
+        expires 0;
+      }
+
+      location /api/profile/init {
+        proxy_pass http://127.0.0.1:3010;
+
+        proxy_set_header            Host $host;
+        proxy_set_header            X-real-ip $remote_addr;
+        proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+      }
+
+      location /api/olares-info {
+        proxy_pass http://127.0.0.1:3010;
+
+        proxy_set_header            Host $host;
+        proxy_set_header            X-real-ip $remote_addr;
+        proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+      }
+
+      location /api/terminus-info {
+        proxy_pass http://127.0.0.1:3010;
+
+        proxy_set_header            Host $host;
+        proxy_set_header            X-real-ip $remote_addr;
+        proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+      }
+
+      location ~.*\.(js|css|png|jpg|svg|woff|woff2)$
+        {
+          add_header Cache-Control "public, max-age=2678400";
+        }
+    }
+  settings.conf: |-
+    server {
+        listen 86;
+
+        # Gzip Settings
+        gzip off;
+        gzip_disable "msie6";
+        gzip_min_length 1k;
+        gzip_buffers 16 64k;
+        gzip_http_version 1.1;
+        gzip_comp_level 6;
+        gzip_types *;
+        root /www/settings;
+
+        # normal routes
+        # serve given url and default to index.html if not found
+        # e.g. /, /user and /foo/bar will return index.html
+        location / {
+            try_files $uri $uri/index.html /index.html;
+            add_header Cache-Control "private,no-cache";
+            add_header Last-Modified "Oct, 03 Jan 2022 13:46:41 GMT";
+            expires 0;
+        }
+
+        location /api/logout {
+            add_header 'Access-Control-Allow-Headers' 'x-api-nonce,x-api-ts,x-api-ver,x-api-source';
+            proxy_pass http://$legacy_auth_frontend;
+            proxy_set_header            Host $host;
+            proxy_set_header            X-real-ip $remote_addr;
+            proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+            add_header X-Frame-Options SAMEORIGIN;
+        }
+
+        location /ws {
+          proxy_pass http://127.0.0.1:3100;
+          proxy_http_version 1.1;
+          proxy_set_header Upgrade $http_upgrade;
+          proxy_set_header Connection "upgrade";
+          proxy_set_header Host $host;
+        }
+
+
+        location /kapis {
+            proxy_pass http://$legacy_monitoring;
+            proxy_set_header X-Forwarded-Host $http_host;
+            # rewrite ^/server(.*)$ $1 break;
+
+            # Add original-request-related headers
+            # proxy_set_header X-Real-IP $remote_addr;
+            # proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+
+        location /market-backend {
+             proxy_pass http://127.0.0.1:3010;
+
+             proxy_set_header X-Real-IP $remote_addr;
+             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+             proxy_set_header X-Forwarded-Host $host;
+        }
+
+        location /headscale {
+            proxy_pass http://127.0.0.1:3010;
+
+            proxy_set_header            Host $host;
+            proxy_set_header            X-real-ip $remote_addr;
+            proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+
+        location /api {
+            proxy_pass http://127.0.0.1:3010;
+
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $host;
+        }
+
+        location /apis/backup {
+            proxy_pass http://$legacy_backup;
+           add_header Accept "application/json, text/plain, */*";
+           add_header Content-Type "application/json; charset=utf-8";
+            proxy_set_header X-Forwarded-Host $http_host;
+        }
+
+        location /api/resources {
+           proxy_pass http://files-provider-svc.os-framework:28080;
+           # rewrite ^/server(.*)$ $1 break;
+
+           # Add original-request-related headers
+           proxy_set_header X-Real-IP $remote_addr;
+           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+           proxy_set_header X-Forwarded-Host $http_host;
+
+           add_header Accept-Ranges bytes;
+
+           client_body_timeout 600s;
+           client_max_body_size 4000M;
+           proxy_request_buffering off;
+           keepalive_timeout 750s;
+           proxy_read_timeout 600s;
+           proxy_send_timeout 600s;
+        }
+
+        location /drive {
+            proxy_pass http://127.0.0.1:8080;
+
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $http_host;
+        }
+
+        location /api/cloud/sign {
+            proxy_pass http://127.0.0.1:3010;
+
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $http_host;
+        }
+
+        location /admin {
+            proxy_pass http://$legacy_infisical;
+            proxy_set_header X-Forwarded-Host $http_host;
+        }
+
+        location /images {
+            proxy_pass http://127.0.0.1:15080;
+
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $http_host;
+        }
+
+        location /vault {
+            add_header Access-Control-Allow-Headers "x-authorization";
+
+            proxy_pass http://$legacy_vault;
+
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $http_host;
+        }
+
+        location /api/nodes/ {
+            proxy_pass http://files-provider-svc.os-framework:28080;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $http_host;
+            add_header Accept-Ranges bytes;
+            client_body_timeout 600s;
+            client_max_body_size 4000M;
+            proxy_request_buffering off;
+            keepalive_timeout 750s;
+            proxy_read_timeout 600s;
+            proxy_send_timeout 600s;
+        }
+
+        location ~.*\.(js|css|png|jpg|svg|woff|woff2)$ {
+            add_header Cache-Control "public, max-age=2678400";
+        }
+    }
+  share.conf: |-
+    server {
+        listen 92;
+        gzip off;
+        gzip_disable "msie6";
+        gzip_min_length 1k;
+        gzip_buffers 16 64k;
+        gzip_http_version 1.1;
+        gzip_comp_level 6;
+        gzip_types *;
+        client_max_body_size 2000M;
+        keepalive_timeout 2700s;
+        root /www/share;
+        location / {
+            try_files $uri $uri/index.html /index.html;
+            add_header Cache-Control "private,no-cache";
+            add_header Last-Modified "Oct, 03 Jan 2022 13:46:41 GMT";
+            expires 0;
+        }
+        location /api {
+            proxy_pass http://files-provider-svc.os-framework:28080;
+            # rewrite ^/server(.*)$ $1 break;
+            # Add original-request-related headers
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $http_host;
+            proxy_set_header Host $host;
+            add_header Accept-Ranges bytes;
+            client_body_timeout 600s;
+            client_max_body_size 4000M;
+            proxy_request_buffering off;
+            keepalive_timeout 750s;
+            proxy_read_timeout 600s;
+            proxy_send_timeout 600s;
+        }
+
+        location /upload {
+            proxy_pass http://files-provider-svc.os-framework:28080;
+            # rewrite ^/server(.*)$ $1 break;
+            # Add original-request-related headers
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $http_host;
+            proxy_set_header Host $host;
+            add_header Accept-Ranges bytes;
+            client_body_timeout 600s;
+            client_max_body_size 4000M;
+            proxy_request_buffering off;
+            keepalive_timeout 750s;
+            proxy_read_timeout 600s;
+            proxy_send_timeout 600s;
+        }
+
+        location /videos {
+            proxy_pass http://files-provider-svc.os-framework:28080/videos;
+            # rewrite ^/server(.*)$ $1 break;
+            # Add original-request-related headers
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $http_host;
+            proxy_set_header Host $host;
+            add_header Accept-Ranges bytes;
+            client_body_timeout 600s;
+            client_max_body_size 4000M;
+            proxy_request_buffering off;
+            keepalive_timeout 750s;
+            proxy_read_timeout 600s;
+            proxy_send_timeout 600s;
+        }
+
+        location /seafhttp/ {
+            add_header Access-Control-Allow-Headers "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization";
+            add_header Access-Control-Allow-Methods "PUT, GET, DELETE, POST, OPTIONS";
+
+            proxy_pass http://seafile.os-framework:8082/;
+            # rewrite ^/server(.*)$ $1 break;
+            # Add original-request-related headers
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $http_host;
+            add_header Accept-Ranges bytes;
+            client_body_timeout 60s;
+            client_max_body_size 2000M;
+            proxy_request_buffering off;
+            keepalive_timeout 75s;
+            proxy_read_timeout 60s;
+            proxy_send_timeout 60s;
+        }
+
+        location /bfl/ {
+            add_header Access-Control-Allow-Headers "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization";
+            proxy_pass http://$legacy_bfl;
+            proxy_set_header            Host $host;
+            proxy_set_header            X-real-ip $remote_addr;
+            proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+            add_header X-Frame-Options SAMEORIGIN;
+        }
+
+        location ~ ^/(assets|js|css|fonts|img)/.*.(js|css|png|jpg|svg|woff|woff2)$
+        {
+            add_header Cache-Control "public, max-age=2678400";
+        }
+
+    }
+  vault.conf: |-
+    server {
+        listen 89;
+        gzip off;
+        gzip_disable "msie6";
+        gzip_min_length 1k;
+        gzip_buffers 16 64k;
+        gzip_http_version 1.1;
+        gzip_comp_level 6;
+        gzip_types *;
+        root /www/vault;
+        location / {
+            try_files $uri $uri/index.html /index.html;
+            add_header Cache-Control "private,no-cache";
+            add_header Last-Modified "Oct, 03 Jan 2022 13:46:41 GMT";
+            expires 0;
+        }
+        location /bfl/ {
+            add_header Access-Control-Allow-Headers "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization";
+            proxy_pass http://$legacy_bfl;
+            proxy_set_header            Host $host;
+            proxy_set_header            X-real-ip $remote_addr;
+            proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+            add_header X-Frame-Options SAMEORIGIN;
+        }
+        location /server {
+            add_header Access-Control-Allow-Headers "x-authorization";
+            proxy_pass http://$legacy_vault;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $http_host;
+            client_body_timeout 60s;
+            client_max_body_size 2000M;
+            proxy_request_buffering off;
+            keepalive_timeout 75s;
+            proxy_read_timeout 60s;
+            proxy_send_timeout 60s;
+        }
+        location /notification{
+            proxy_pass http://127.0.0.1:3010;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $host;
+        }
+
+        location /api/firstfactor {
+            add_header Access-Control-Allow-Headers "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization";
+            add_header Access-Control-Allow-Methods "PUT, GET, DELETE, POST, OPTIONS";
+            add_header Access-Control-Allow-Origin $http_origin;
+            add_header Access-Control-Allow-Credentials true;
+            proxy_pass http://authelia-backend.os-framework:9091;
+            proxy_set_header            Host $host;
+            proxy_set_header            X-real-ip $remote_addr;
+            proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+            add_header X-Frame-Options SAMEORIGIN;
+        }
+
+        location /api/refresh {
+            add_header Access-Control-Allow-Headers "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization";
+            add_header Access-Control-Allow-Methods "PUT, GET, DELETE, POST, OPTIONS";
+            add_header Access-Control-Allow-Origin $http_origin;
+            add_header Access-Control-Allow-Credentials true;
+            proxy_pass http://authelia-backend.os-framework:9091;
+            proxy_set_header            Host $host;
+            proxy_set_header            X-real-ip $remote_addr;
+            proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+
+            add_header X-Frame-Options SAMEORIGIN;
+        }
+
+        location /api/cookie {
+            add_header Access-Control-Allow-Headers "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization";
+            proxy_pass http://settings-service;
+
+            proxy_set_header            Host $host;
+            proxy_set_header            X-real-ip $remote_addr;
+            proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+
+            proxy_set_header X-Forwarded-Host $http_host;
+
+            client_body_timeout 60s;
+            client_max_body_size 2000M;
+            proxy_request_buffering off;
+            keepalive_timeout 75s;
+            proxy_read_timeout 60s;
+            proxy_send_timeout 60s;
+
+            add_header X-Frame-Options SAMEORIGIN;
+        }
+        location /ws {
+            proxy_pass http://127.0.0.1:3100;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            proxy_set_header Host $host;
+        }
+        location ~.*\.(js|css|png|jpg|svg|woff|woff2|wasm)$
+        {
+            add_header Cache-Control "public, max-age=2678400";
+        }
+    }
