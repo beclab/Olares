@@ -74,7 +74,7 @@ func NewCreator(client client.Client, config *rest.Config, user string) *Creator
 	}
 }
 
-func (c *Creator) CreateUserApps(ctx context.Context) (int32, int32, error) {
+func (c *Creator) CreateUserApps(ctx context.Context) error {
 	//userspace, userspaceRoleBinding, err := c.createNamespace(ctx)
 	userspaceNs := fmt.Sprintf("user-space-%s", c.user)
 	//err := c.createNamespace(ctx)
@@ -116,7 +116,7 @@ func (c *Creator) CreateUserApps(ctx context.Context) (int32, int32, error) {
 
 	actionCfg, settings, err := helm.InitConfig(c.k8sConfig, userspaceNs)
 	if err != nil {
-		return 0, 0, err
+		return err
 	}
 	c.helmCfg.ActionCfg = actionCfg
 	c.helmCfg.Settings = settings
@@ -124,13 +124,13 @@ func (c *Creator) CreateUserApps(ctx context.Context) (int32, int32, error) {
 	_, err = c.installLauncher(ctx, userspaceNs)
 	if err != nil {
 		klog.Errorf("failed to install launcher in ns %s, %v", userspaceNs, err)
-		return 0, 0, err
+		return err
 	}
 
 	var bfl *corev1.Pod
 	if bfl, err = c.checkLauncher(ctx, userspaceNs, checkLauncherRunning); err != nil {
 		klog.Errorf("check launcher failed %v", err)
-		return 0, 0, err
+		return err
 	}
 	klog.Infof("c.name: %s", c.user)
 	klog.Infof("userspaceNs: %s", userspaceNs)
@@ -139,12 +139,10 @@ func (c *Creator) CreateUserApps(ctx context.Context) (int32, int32, error) {
 	err = c.installSysApps(ctx, bfl)
 	if err != nil {
 		klog.Errorf("failed to install sys apps %v", err)
-		return 0, 0, err
+		return err
 	}
 
-	desktopPort, wizardPort, err := c.checkDesktopRunning(ctx, userspaceNs)
-
-	return desktopPort, wizardPort, err
+	return err
 }
 
 func (c *Creator) createNamespace(ctx context.Context) error {
