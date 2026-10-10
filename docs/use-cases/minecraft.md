@@ -30,10 +30,10 @@ In this guide, you will learn how to:
 
 ## Prerequisites
 
-- Olares version 1.12.6 or later.
-- A native Linux host with a wired Ethernet connection for local overlay access. Overlay gateway does not work on Wi-Fi or WSL.
-- A super admin to enable the system-level overlay gateway service. After it is on, an admin or member can enable it for Minecraft.
-- Minecraft Java Edition installed on each player's computer. Bedrock, console, and mobile editions cannot connect directly. The client must match the selected Minecraft **VERSION**, rather than the app package version.
+- **Olares OS**: Olares version 1.12.6 or later.
+- **Hardware and network**: A native Linux host with a wired Ethernet connection for the Olares device. Overlay gateway does not work on Wi-Fi or WSL.
+- **Permissions**: A super admin must toggle on the system-level overlay gateway service. After the service is on, an admin or member can enable overlay gateway for Minecraft.
+- **Client requirements**: Minecraft Java Edition installed on each player's computer. Bedrock, console, and mobile editions cannot connect directly. The client version must match the Minecraft **VERSION** selected during installation, rather than the app package version shown on the Market page.
 
 ## Install Minecraft
 

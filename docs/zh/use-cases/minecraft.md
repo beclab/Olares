@@ -34,10 +34,10 @@ Olares 上的 Minecraft 托管 Java 版专用服务器，支持 Vanilla、Forge 
 
 ## 准备工作
 
-- Olares 版本为 1.12.6 或更高。
-- 使用原生 Linux 主机和有线以太网进行本地 Overlay 访问。Overlay gateway 在 Wi-Fi 或 WSL 环境下无法工作。
-- 由 Super admin 开启系统级 Overlay gateway 服务。开启后，Admin 或 Member 可以为 Minecraft 启用该功能。
-- 每位玩家的电脑上已安装 Minecraft Java 版。Bedrock、主机和移动版不能直接连接。客户端须匹配所选的 Minecraft **VERSION**，而不是应用包版本。
+- **Olares OS**：Olares 版本为 1.12.6 或更高。
+- **硬件与网络**：Olares 设备运行在原生的 Linux 主机上，并使用有线以太网连接。Overlay gateway 在 Wi-Fi 或 WSL 环境下无法工作。
+- **权限**：需要 Super admin 开启系统级的 Overlay gateway 服务。服务开启后，Admin 或 Member 可以为 Minecraft 启用 Overlay gateway。
+- **客户端要求**：每位玩家的电脑上已安装 Minecraft Java 版。Bedrock、主机和移动版无法直接连接。客户端版本必须与安装时选择的 Minecraft **VERSION** 一致，而不是 Market 页面显示的应用包版本。
 
 ## 安装 Minecraft
 
