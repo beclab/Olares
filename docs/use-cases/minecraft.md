@@ -125,6 +125,19 @@ Clone lets you run separate versions or mod setups on the same Olares device. It
 
 Each instance receives its own external port for VPN access and its own Overlay address when enabled. Copy the address for the instance you want to join using the connection steps below. The Overlay port remains `25565`; the external VPN port is assigned separately. Running several servers also increases memory and CPU use.
 
+#### Reuse the original instance's data
+
+You can copy an existing world to a Clone to continue playing or test another version. With matching game, loader, and mod versions, the world can usually be reused. Upgrading might convert the world and requires compatible mods. Downgrading or changing loaders can prevent startup or lose world content. You can choose to test compatibility in the Clone while keeping the original instance as a fallback.
+
+1. In Market > **My Olares**, open the target Clone's details. Its App ID is the URL segment after `/app/<market-source>/` and before `?`. For example, `/app/market.test/minecraftb5764c?source=…` identifies `minecraftb5764c`, whose data directory is `Data/minecraftb5764c/data`. Check the original instance's ID the same way.
+2. Stop both instances and back up their entire data directories. Replace the Clone's `data` contents with a copy of the original instance's `data` contents.
+3. Check the Clone's mods and dependencies against the target version. Review its environment variables separately; they are not copied with the files. Keep **ONLINE_MODE** unchanged to preserve player UUIDs and inventory associations, and review the copied operator, whitelist, and ban lists.
+4. Start the Clone, check its logs, then join using its own address. Verify builds, inventories, entities, and mod behavior. Stop it if compatibility errors appear.
+
+:::warning Keep a backup
+Each instance must use a separate data directory. Progress is not synchronized between them. To roll back, restore the backup from before the upgrade; do not copy an upgraded world back to an older server.
+:::
+
 ## Enable overlay gateway for Minecraft
 
 Overlay gateway gives Minecraft a dedicated local IP address so players on the same network can connect directly.
