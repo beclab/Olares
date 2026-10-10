@@ -19,7 +19,6 @@ package common
 import (
 	"encoding/json"
 	"fmt"
-	"net"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -63,17 +62,14 @@ type Argument struct {
 	// master node ssh config
 	*MasterHostConfig
 
-	// User
-	User *User `json:"user"`
 	// if juicefs is opted off, the local storage is used directly
 	// only used in prepare phase
 	// the existence of juicefs should be checked in other phases
 	// to avoid wrong information given by user
 	WithJuiceFS bool `json:"with_juicefs"`
 	// the object storage service used as backend for JuiceFS
-	Storage         *Storage         `json:"storage"`
-	NetworkSettings *NetworkSettings `json:"network_settings"`
-	GPU             *GPU             `json:"gpu"`
+	Storage *Storage `json:"storage"`
+	GPU     *GPU     `json:"gpu"`
 
 	IsCloudInstance    bool     `json:"is_cloud_instance"`
 	MinikubeProfile    string   `json:"minikube_profile"`
@@ -135,37 +131,6 @@ func (cfg *MasterHostConfig) Validate() error {
 	return nil
 }
 
-type NetworkSettings struct {
-	// OSPublicIPs contains a list of public ip(s)
-	// by looking at local network interfaces
-	// if any
-	OSPublicIPs []net.IP `json:"os_public_ips"`
-
-	// CloudProviderPublicIP contains the info retrieved from the cloud provider instance metadata service
-	// if any
-	CloudProviderPublicIP net.IP `json:"cloud_provider_public_ip"`
-
-	// ExternalPublicIP is the IP address seen by others on the internet
-	// it may not be an IP address
-	// that's directly bound to a local network interface, e.g. on an AWS EC2 instance
-	// or may not be an IP address
-	// that can be used to access the machine at all, e.g. a machine behind multiple NAT gateways
-	// this is used as a fallback method to determine the machine's public IP address
-	// if none can be found from the OS or AWS IMDS service
-	// but the user explicitly specifies that the machine is publicly accessible
-	ExternalPublicIP net.IP `json:"external_public_ip"`
-
-	EnableReverseProxy *bool `json:"enable_reverse_proxy"`
-}
-
-type User struct {
-	UserName          string `json:"user_name"`
-	Password          string `json:"user_password"`
-	EncryptedPassword string `json:"-"`
-	Email             string `json:"user_email"`
-	DomainName        string `json:"user_domain_name"`
-}
-
 type Storage struct {
 	StorageVendor    string `json:"storage_vendor"`
 	StorageType      string `json:"storage_type"`
@@ -192,13 +157,7 @@ func NewArgument() *Argument {
 		Storage: &Storage{
 			StorageType: ManagedMinIO,
 		},
-		GPU: &GPU{},
-		User: &User{
-			UserName:   strings.TrimSpace(viper.GetString(FlagOSUserName)),
-			DomainName: strings.TrimSpace(viper.GetString(FlagOSDomainName)),
-			Password:   strings.TrimSpace(viper.GetString(FlagOSPassword)),
-		},
-		NetworkSettings:  &NetworkSettings{},
+		GPU:              &GPU{},
 		RegistryMirrors:  viper.GetString(FlagRegistryMirrors),
 		OlaresCDNService: viper.GetString(FlagCDNService),
 		HostIP:           viper.GetString(FlagHostIP),
@@ -220,7 +179,7 @@ func NewArgument() *Argument {
 	return arg
 }
 
-func (a *Argument) SaveReleaseInfo(withoutName bool) error {
+func (a *Argument) SaveReleaseInfo() error {
 	if a.BaseDir == "" {
 		return errors.New("invalid: empty base directory")
 	}
@@ -231,22 +190,6 @@ func (a *Argument) SaveReleaseInfo(withoutName bool) error {
 	releaseInfoMap := map[string]string{
 		ENV_OLARES_BASE_DIR: a.BaseDir,
 		ENV_OLARES_VERSION:  a.OlaresVersion,
-	}
-
-	if !withoutName {
-		if a.User != nil && a.User.UserName != "" && a.User.DomainName != "" {
-			releaseInfoMap["OLARES_NAME"] = fmt.Sprintf("%s@%s", a.User.UserName, a.User.DomainName)
-		} else {
-			if util.IsExist(OlaresReleaseFile) {
-				// if the user is not set, try to load the user name from the release file
-				envs, err := godotenv.Read(OlaresReleaseFile)
-				if err == nil {
-					if userName, ok := envs["OLARES_NAME"]; ok {
-						releaseInfoMap["OLARES_NAME"] = userName
-					}
-				}
-			}
-		}
 	}
 
 	if !util.IsExist(filepath.Dir(OlaresReleaseFile)) {

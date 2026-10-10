@@ -113,7 +113,7 @@ func (p *phaseBuilder) phaseInstall() *phaseBuilder {
 				PhaseFile: common.TerminusStateFileInstalled,
 				BaseDir:   p.runtime.GetBaseDir(),
 			},
-			&terminus.WriteReleaseFileModule{WithoutName: true},
+			&terminus.WriteReleaseFileModule{},
 		)
 	}
 	return p
