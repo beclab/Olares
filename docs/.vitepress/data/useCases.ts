@@ -82,7 +82,7 @@ export const useCases: UseCase[] = [
   { title: "Jellyfin", link: "/use-cases/jellyfin", category: "Entertainment", description: "Private media streaming server", descriptionZh: "私人流媒体服务器" },
   { title: "Steam", link: "/use-cases/steam-direct-play", category: "Games", description: "Play Steam games locally or stream them", descriptionZh: "本地游玩 Steam 游戏或串流到其他设备" },
   { title: "Komga", link: "/use-cases/komga", category: "Entertainment", description: "Self-hosted comic and manga library", descriptionZh: "自托管的漫画书库" },
-  { title: "Minecraft", link: "/use-cases/minecraft", category: "Games", description: "Play Minecraft Java Edition with friends on Olares", descriptionZh: "与好友在 Olares 上联机游玩 Minecraft Java 版" },
+  { title: "Minecraft", link: "/use-cases/minecraft", category: "Games", description: "Host Vanilla or modded Minecraft servers with independent instances", descriptionZh: "托管原版或模组 Minecraft 服务器，创建独立实例" },
   { title: "Navidrome", link: "/use-cases/navidrome", category: "Entertainment", description: "Private music streaming server", descriptionZh: "私人音乐流媒体服务器" },
   { title: "Palworld", link: "/use-cases/palworld", category: "Games", description: "Play Palworld with friends on Olares", descriptionZh: "与好友在 Olares 上联机游玩 Palworld" },
   { title: "TREK (NOMAD)", link: "/use-cases/trek", category: "Entertainment", description: "Plan trips collaboratively", descriptionZh: "协作规划行程" },
