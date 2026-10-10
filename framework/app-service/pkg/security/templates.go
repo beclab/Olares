@@ -198,6 +198,55 @@ var (
 		},
 	} // end NPOSNetwork
 
+	// NPOSFrontend is NPOSNetwork plus system and protected namespace types.
+	NPOSFrontend = netv1.NetworkPolicy{
+		ObjectMeta: metav1.ObjectMeta{},
+		Spec: netv1.NetworkPolicySpec{
+			PodSelector: metav1.LabelSelector{},
+			Ingress: []netv1.NetworkPolicyIngressRule{
+				{
+					From: []netv1.NetworkPolicyPeer{
+						{
+							NamespaceSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									NamespaceTypeLabel: Internal,
+								},
+							},
+						},
+						{
+							NamespaceSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									"kubesphere.io/namespace": "kube-system",
+								},
+							},
+						},
+						{
+							NamespaceSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									"kubesphere.io/namespace": "kubesphere-system",
+								},
+							},
+						},
+						{
+							NamespaceSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									NamespaceTypeLabel: System,
+								},
+							},
+						},
+						{
+							NamespaceSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									NamespaceTypeLabel: Protected,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	} // end NPOSFrontend
+
 	// NPOSProtected is a network policy template for os-protected.
 	NPOSProtected = netv1.NetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{},
