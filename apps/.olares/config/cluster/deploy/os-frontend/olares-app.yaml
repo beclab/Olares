@@ -1,0 +1,337 @@
+# Shared frontend deployment. This chart is packaged in the os-framework release,
+# so resource namespaces must not follow .Release.Namespace.
+apiVersion: v1
+kind: Service
+metadata:
+  name: dashboard-service
+  namespace: os-frontend
+spec:
+  selector:
+    app: olares-app
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      name: dashboard
+      port: 80
+      targetPort: 81
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: control-hub-service
+  namespace: os-frontend
+spec:
+  selector:
+    app: olares-app
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      name: control-hub
+      port: 80
+      targetPort: 82
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: profile-service
+  namespace: os-frontend
+spec:
+  type: ClusterIP
+  selector:
+    app: olares-app
+  ports:
+    - name: "profile-editor"
+      protocol: TCP
+      port: 80
+      targetPort: 83
+    - name: "profile-preview"
+      protocol: TCP
+      port: 3000
+      targetPort: 8090
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: headscale-svc
+  namespace: os-frontend
+spec:
+  selector:
+    app: olares-app
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      name: headscale
+      port: 80
+      targetPort: 85
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: settings-service
+  namespace: os-frontend
+spec:
+  selector:
+    app: olares-app
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      name: settings
+      port: 80
+      targetPort: 86
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: files-fe-service
+  namespace: os-frontend
+spec:
+  selector:
+    app: olares-app
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      name: files
+      port: 80
+      targetPort: 88
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vault-service
+  namespace: os-frontend
+spec:
+  type: ClusterIP
+  selector:
+    app: olares-app
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 89
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: appstore-fe-service
+  namespace: os-frontend
+spec:
+  selector:
+    app: olares-app
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      name: appstore
+      port: 80
+      targetPort: 90
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: edge-desktop
+  namespace: os-frontend
+spec:
+  type: ClusterIP
+  selector:
+    app: olares-app
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 91
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: share-fe-service
+  namespace: os-frontend
+spec:
+  selector:
+    app: olares-app
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      name: share
+      port: 80
+      targetPort: 92
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: olares-app-deployment
+  namespace: os-frontend
+  labels:
+    app: olares-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: olares-app
+  template:
+    metadata:
+      annotations:
+        checksum/nginx: {{ include (replace "olares-app.yaml" "olares-app-nginx.yaml" .Template.Name) . | sha256sum }}
+      labels:
+        app: olares-app
+        io.bytetrade.app: "true"
+    spec:
+      priorityClassName: "system-cluster-critical"
+      serviceAccountName: system-frontend
+      initContainers:
+        - name: olares-app-init
+          image: beclab/system-frontend:v1.11.58
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -c
+            - |
+              cp -r /apps/* /www/
+          volumeMounts:
+            - mountPath: /www
+              name: www-dir
+
+      containers:
+        - name: olares-app
+          image: beclab/docker-nginx-headers-more:ubuntu-v0.1.0
+          imagePullPolicy: IfNotPresent
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 91
+          ports:
+            - containerPort: 81
+            - containerPort: 82
+            - containerPort: 83
+            - containerPort: 85
+            - containerPort: 86
+            - containerPort: 88
+            - containerPort: 89
+            - containerPort: 90
+            - containerPort: 91
+            - containerPort: 92
+            - containerPort: 8090
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -eu
+              rm -f /etc/nginx/conf.d/default.conf
+              # Use the pod's DNS server for legacy routes resolved at request time.
+              awk '/^nameserver / { print "resolver " $2 " valid=30s ipv6=off;"; exit }' /etc/resolv.conf > /etc/nginx/resolver.conf
+              exec nginx -g 'daemon off;'
+          volumeMounts:
+            - name: www-dir
+              mountPath: /www
+            - name: olares-app-nginx-config
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+            - name: olares-app-routes
+              mountPath: /etc/nginx/conf.d
+        - name: user-service
+          image: beclab/user-service:v0.1.20
+          imagePullPolicy: IfNotPresent
+          readinessProbe:
+            tcpSocket:
+              port: http
+          ports:
+            - name: http
+              containerPort: 3010
+            - name: websocket
+              containerPort: 3100
+          env:
+            - name: DEV_MODE
+              value: ''
+            - name: NODE_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: TERMINUSD_HOST
+              value: master-node:18088
+            - name: APP_SERVICE_SERVICE_HOST
+              value: app-service.os-framework
+            - name: APP_SERVICE_SERVICE_PORT
+              value: '6755'
+            - name: APP_SERVICE_CHAIN_ID
+              value: '10'
+            - name: APP_SERVICE_VERIFYING_CONTRACT
+              value: '0xe2eaba0979277a90511f8873ae1e8ca26b54e740'
+            - name: APP_SERVICE_CLOUD_URL
+              value: 'https://cloud-api.bttcdn.com'
+            # value: none / nvidia / nvshare / virtaitech
+            - name: GPU
+              value: {{ .Values.gpu | default "none" | quote }}
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: pg_password
+                  name: user-service-secrets
+            - name: DATABASE_URL
+              value: postgres://user_service_os_frontend:$(DATABASE_PASSWORD)@citus-headless.os-platform:5432/os_frontend_user_service?sslmode=disable
+            - name: NATS_HOST
+              value: nats.os-platform
+            - name: NATS_PORT
+              value: '4222'
+            - name: NATS_USERNAME_USERSERVICE
+              value: user-service-os-frontend
+            - name: NATS_PASSWORD_USERSESRVICE
+              valueFrom:
+                secretKeyRef:
+                  key: nats_password
+                  name: user-service-nats-secret
+            # Isolated bootstrap subjects until the image supports per-user delivery.
+            - name: NATS_SUBJECT_MARKET
+              value: os.market.os-frontend
+            - name: NATS_SUBJECT_APPLICATION
+              value: os.application.os-frontend
+            - name: NATS_SUBJECT_USER_NOTIFICATION
+              value: os.notification.os-frontend
+            - name: NATS_SUBJECT_DOWNLOAD_STATUS
+              value: os.download_status.os-frontend
+            - name: NATS_SUBJECT_FILES
+              value: os.files.os-frontend
+            - name: NATS_SUBJECT_KNOWLEDGE
+              value: os.knowledge.os-frontend
+            - name: NATS_SUBJECT_VAULT
+              value: os.vault.os-frontend
+            - name: NATS_SUBJECT_BACKUP
+              value: os.backup.os-frontend
+            - name: NATS_SUBJECT_INTENT
+              value: os.intent.os-frontend
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: redis_password
+                  name: user-service-secrets
+            - name: REDIS_HOST
+              value: redis-cluster-proxy.os-platform
+            - name: REDIS_PORT
+              value: '6379'
+      volumes:
+        - name: www-dir
+          emptyDir: {}
+        - name: olares-app-nginx-config
+          configMap:
+            name: olares-app-nginx-config
+        - name: olares-app-routes
+          configMap:
+            name: olares-app-routes
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-service
+  namespace: os-frontend
+spec:
+  selector:
+    app: olares-app
+  ports:
+    - name: http
+      port: 3010
+      targetPort: http
+    - name: websocket
+      port: 3100
+      targetPort: websocket
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: system-frontend
+  namespace: os-frontend
