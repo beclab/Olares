@@ -13,6 +13,7 @@ import (
 	"github.com/beclab/Olares/daemon/internel/watcher"
 	"github.com/beclab/Olares/daemon/pkg/commands"
 	"github.com/beclab/Olares/daemon/pkg/nets"
+	"github.com/beclab/Olares/daemon/pkg/onboarding"
 	"github.com/beclab/Olares/daemon/pkg/utils"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
@@ -410,6 +411,7 @@ func refreshCurrentStatus(ctx context.Context) error {
 		return nil
 	}
 
+	CurrentState.OnboardingState = ""
 	if tmsrunning, err := utils.IsTerminusRunning(ctx, kubeClient); err != nil {
 		currentTerminusState = SystemError
 		return err
@@ -430,20 +432,19 @@ func refreshCurrentStatus(ctx context.Context) error {
 			CurrentState.TerminusVersion = terminusVerion
 		}
 
-		inited, failed, err := utils.IsTerminusInitialized(ctx, dynamicClient)
+		onboardingStatus, err := utils.GetOnboardingStatus(ctx)
 		if err != nil {
 			currentTerminusState = SystemError
-			klog.Error("check olares initialized error, ", err)
-
-			// check status error, report state as system error
-			return nil
+			return err
 		}
+		CurrentState.OnboardingState = onboardingStatus.State
+		inited := onboardingStatus.State == onboarding.Completed
+		failed := onboardingStatus.State == onboarding.Failed
 
 		if inited {
 			currentTerminusState = TerminusRunning
-			CurrentState.InitializedTime, err = utils.GetTerminusInitializedTime(ctx, kubeClient)
-			if err != nil {
-				klog.Error(err)
+			if at, err := time.Parse(time.RFC3339, onboardingStatus.CompletedAt); err == nil {
+				CurrentState.InitializedTime = pointer.Int64(at.Unix())
 			}
 
 			restarting, err := utils.SystemStartLessThan(1 * time.Minute) // uptime less then 1 minutes
@@ -466,10 +467,7 @@ func refreshCurrentStatus(ctx context.Context) error {
 			return nil
 		}
 
-		initing, err := utils.IsTerminusInitializing(ctx)
-		if err != nil {
-			return err
-		}
+		initing := onboardingStatus.State == onboarding.Creating || onboardingStatus.State == onboarding.Created || onboardingStatus.State == onboarding.WaitingPassword
 
 		if initing {
 			currentTerminusState = Initializing
