@@ -63,11 +63,12 @@ func (i *prepareImages) Execute(ctx context.Context, p any) (res any, err error)
 		"--version", target.Version.Original(),
 		"--base-dir", commands.TERMINUS_BASE_DIR,
 	}
-	if err = cmd.RunAsync_(ctx, cli.TERMINUS_CLI, params...); err != nil {
+	completion, err := cmd.RunAsyncWithResult_(ctx, cli.TERMINUS_CLI, params...)
+	if err != nil {
 		return nil, err
 	}
 
-	return newExecutionRes(false, progressChan), nil
+	return newExecutionResWithCompletion(progressChan, completion), nil
 }
 
 func (i *prepareImages) watch(ctx context.Context) {

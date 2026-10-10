@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -200,11 +201,14 @@ func GetMachineInfo(ctx context.Context) (osType, osInfo, osArch, osVersion, osK
 }
 
 type UpgradeTarget struct {
-	Version      semver.Version `json:"version"`
-	WizardURL    string         `json:"wizardURL"`
-	CliURL       string         `json:"cliURL"`
-	DownloadOnly bool           `json:"downloadOnly"`
-	Downloaded   bool           `json:"downloaded"`
+	Version semver.Version `json:"version"`
+	// RequestNonce identifies one signed authorization, not just a version.
+	// It survives watcher restarts and changes only after the target is removed.
+	RequestNonce string `json:"requestNonce,omitempty"`
+	WizardURL    string `json:"wizardURL"`
+	CliURL       string `json:"cliURL"`
+	DownloadOnly bool   `json:"downloadOnly"`
+	Downloaded   bool   `json:"downloaded"`
 }
 
 func (t *UpgradeTarget) IsValidRequest() error {
@@ -229,9 +233,30 @@ func (t *UpgradeTarget) Save() error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal target: %v", err)
 	}
-	err = os.WriteFile(commands.UPGRADE_TARGET_FILE, content, 0644)
+	// The watcher reads this file while the signed route writes it. A partial
+	// read is treated as corrupt and deleted, so replace it atomically.
+	file, err := os.CreateTemp(filepath.Dir(commands.UPGRADE_TARGET_FILE), ".upgrade-target-*")
 	if err != nil {
-		return fmt.Errorf("failed to write target file: %v", err)
+		return fmt.Errorf("create upgrade target temp file: %w", err)
+	}
+	defer os.Remove(file.Name())
+	if err := file.Chmod(0644); err != nil {
+		file.Close()
+		return fmt.Errorf("set upgrade target permissions: %w", err)
+	}
+	if _, err := file.Write(content); err != nil {
+		file.Close()
+		return fmt.Errorf("write upgrade target: %w", err)
+	}
+	if err := file.Sync(); err != nil {
+		file.Close()
+		return fmt.Errorf("sync upgrade target: %w", err)
+	}
+	if err := file.Close(); err != nil {
+		return fmt.Errorf("close upgrade target: %w", err)
+	}
+	if err := os.Rename(file.Name(), commands.UPGRADE_TARGET_FILE); err != nil {
+		return fmt.Errorf("replace upgrade target: %w", err)
 	}
 	return nil
 }
