@@ -34,6 +34,10 @@ var (
 		"os-network",
 	}
 
+	OSFrontendNamespaces = []string{
+		"os-frontend",
+	}
+
 	OSProtectedNamespaces = []string{
 		"os-protected",
 	}
@@ -91,6 +95,10 @@ func IsOSSystemNamespace(ns string) bool {
 
 func IsOSNetworkNamespace(ns string) bool {
 	return funk.Contains(OSNetworkNamespaces, ns)
+}
+
+func IsOSFrontendNamespace(ns string) bool {
+	return funk.Contains(OSFrontendNamespaces, ns)
 }
 
 func IsOSGpuNamespace(ns string) bool {

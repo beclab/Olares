@@ -111,6 +111,11 @@ func (wh *Webhook) CreateOrUpdateSandboxMutatingWebhook() error {
 						{
 							Key:      "kubernetes.io/metadata.name",
 							Operator: metav1.LabelSelectorOpNotIn,
+							Values:   security.OSFrontendNamespaces,
+						},
+						{
+							Key:      "kubernetes.io/metadata.name",
+							Operator: metav1.LabelSelectorOpNotIn,
 							Values:   security.GPUSystemNamespaces,
 						},
 						{
@@ -227,6 +232,11 @@ func (wh *Webhook) CreateOrUpdateAppNamespaceValidatingWebhook() error {
 							Key:      "kubernetes.io/metadata.name",
 							Operator: metav1.LabelSelectorOpNotIn,
 							Values:   security.OSNetworkNamespaces,
+						},
+						{
+							Key:      "kubernetes.io/metadata.name",
+							Operator: metav1.LabelSelectorOpNotIn,
+							Values:   security.OSFrontendNamespaces,
 						},
 						{
 							Key:      "kubernetes.io/metadata.name",
@@ -422,6 +432,11 @@ func (wh *Webhook) CreateOrUpdateGpuLimitMutatingWebhook() error {
 							Key:      "kubernetes.io/metadata.name",
 							Operator: metav1.LabelSelectorOpNotIn,
 							Values:   security.OSNetworkNamespaces,
+						},
+						{
+							Key:      "kubernetes.io/metadata.name",
+							Operator: metav1.LabelSelectorOpNotIn,
+							Values:   security.OSFrontendNamespaces,
 						},
 						{
 							Key:      "kubernetes.io/metadata.name",
@@ -947,6 +962,11 @@ func (wh *Webhook) CreateOrUpdateAppLabelMutatingWebhook() error {
 						{
 							Key:      "kubernetes.io/metadata.name",
 							Operator: metav1.LabelSelectorOpNotIn,
+							Values:   security.OSFrontendNamespaces,
+						},
+						{
+							Key:      "kubernetes.io/metadata.name",
+							Operator: metav1.LabelSelectorOpNotIn,
 							Values:   security.GPUSystemNamespaces,
 						},
 						{
@@ -1321,6 +1341,11 @@ func (wh *Webhook) CreateOrUpdateMacvlanInitMutatingWebhook() error {
 						{
 							Key:      "kubernetes.io/metadata.name",
 							Operator: metav1.LabelSelectorOpNotIn,
+							Values:   security.OSFrontendNamespaces,
+						},
+						{
+							Key:      "kubernetes.io/metadata.name",
+							Operator: metav1.LabelSelectorOpNotIn,
 							Values:   security.GPUSystemNamespaces,
 						},
 						{
@@ -1434,6 +1459,11 @@ func (wh *Webhook) CreateOrUpdatePodArchNodeSelectorMutatingWebhook() error {
 							Key:      "kubernetes.io/metadata.name",
 							Operator: metav1.LabelSelectorOpNotIn,
 							Values:   security.OSNetworkNamespaces,
+						},
+						{
+							Key:      "kubernetes.io/metadata.name",
+							Operator: metav1.LabelSelectorOpNotIn,
+							Values:   security.OSFrontendNamespaces,
 						},
 						{
 							Key:      "kubernetes.io/metadata.name",
