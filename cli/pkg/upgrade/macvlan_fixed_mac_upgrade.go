@@ -32,7 +32,10 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-const fixedMACStateFile = "/var/lib/olares/upgrades/overlay-gateway-v1.json"
+// fixedMACStateFile holds one-shot fixed-MAC / direct-attach upgrade progress
+// next to other overlay-gateway host state (enabled, .migrated-from-bridge).
+const fixedMACStateFile = "/var/lib/olares/overlay-gateway/fixed-mac-upgrade-v1.json"
+
 const fixedMACLabel = "applications.app.bytetrade.io/macvlan-init"
 const fixedMACNetworks = "k8s.v1.cni.cncf.io/networks"
 
@@ -67,8 +70,9 @@ func fixedMACTasks() []task.Interface {
 type upgradeFixedMAC struct{ common.KubeAction }
 
 func shellWord(s string) string { return "'" + strings.ReplaceAll(s, "'", "'\\''") + "'" }
+
 func saveFixedMACProgress(p *fixedMACProgress) error {
-	if err := os.MkdirAll(filepath.Dir(fixedMACStateFile), 0700); err != nil {
+	if err := os.MkdirAll(filepath.Dir(fixedMACStateFile), 0755); err != nil {
 		return err
 	}
 	data, err := json.MarshalIndent(p, "", "  ")
@@ -102,6 +106,7 @@ func saveFixedMACProgress(p *fixedMACProgress) error {
 	defer dir.Close()
 	return dir.Sync()
 }
+
 func loadFixedMACProgress() (*fixedMACProgress, error) {
 	b, err := os.ReadFile(fixedMACStateFile)
 	if os.IsNotExist(err) {
