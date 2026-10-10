@@ -5,6 +5,7 @@ import (
 	"bytetrade.io/web3os/bfl/pkg/constants"
 	"bytetrade.io/web3os/bfl/pkg/watchers"
 	"context"
+	"errors"
 	"fmt"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -18,17 +19,11 @@ var GVR = schema.GroupVersionResource{
 
 type Subscriber struct {
 	*watchers.Watchers
-	configurator *v1alpha1.ReverseProxyConfigurator
 }
 
 func NewSubscriber(w *watchers.Watchers) (*Subscriber, error) {
-	configurator, err := v1alpha1.NewReverseProxyConfigurator()
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize reverse proxy configurator: %w", err)
-	}
 	return &Subscriber{
-		Watchers:     w,
-		configurator: configurator,
+		Watchers: w,
 	}, nil
 }
 
@@ -70,7 +65,16 @@ func (s *Subscriber) Handler() cache.ResourceEventHandler {
 func (s *Subscriber) Do(ctx context.Context, _ interface{}, _ watchers.Action) error {
 	klog.Infof("handling reverse proxy config event")
 
-	if err := s.configurator.Configure(ctx); err != nil {
+	// A local user has no domain during onboarding. Resolve the current user
+	// for each configuration event so a later domain binding can take effect.
+	configurator, err := v1alpha1.NewReverseProxyConfigurator()
+	if errors.Is(err, v1alpha1.ErrDomainNotBound) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if err := configurator.Configure(ctx); err != nil {
 		return fmt.Errorf("failed to get reverse proxy config configmap: %w", err)
 	}
 

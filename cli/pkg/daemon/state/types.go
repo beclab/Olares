@@ -33,6 +33,9 @@ type State struct {
 	// and call Describe() to obtain a one-line explanation.
 	TerminusState TerminusState `json:"terminusState"`
 
+	// OnboardingState describes first-user setup independently of system health.
+	OnboardingState string `json:"onboardingState,omitempty"`
+
 	// TerminusName is the Olares ID of the admin user, e.g.
 	// "alice@olares.cn". It is read from the local release file when
 	// available and refreshed from the cluster once Olares is up.

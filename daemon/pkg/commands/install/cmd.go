@@ -2,7 +2,6 @@ package install
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -12,7 +11,6 @@ import (
 	"github.com/beclab/Olares/daemon/pkg/cli"
 	"github.com/beclab/Olares/daemon/pkg/cluster/state"
 	"github.com/beclab/Olares/daemon/pkg/commands"
-	"github.com/beclab/Olares/daemon/pkg/tools"
 	"github.com/nxadm/tail"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/ptr"
@@ -20,8 +18,6 @@ import (
 
 type install struct {
 	commands.Operation
-	username string
-	password string
 }
 
 var _ commands.Interface = &install{}
@@ -34,29 +30,11 @@ func New() commands.Interface {
 	}
 }
 
-func (i *install) Execute(ctx context.Context, p any) (res any, err error) {
-	param, ok := p.(*Param)
-	if !ok {
-		return nil, errors.New("invalid param")
-	}
-
-	klog.Info("install olares with user: ", param.Username)
-	i.username = param.Username
-	i.password = param.Password
-
-	if i.password == "" {
-		// create a random password
-		i.password = tools.RandomString(6)
-	}
-
+func (i *install) Execute(ctx context.Context, _ any) (res any, err error) {
 	// start installing olares async
 	cmd := commands.NewBaseCommand()
 	cmd.WithDir_(commands.COMMAND_BASE_DIR).
 		WithPid_(commands.INSTALLING_PID_FILE).
-		AddEnv_("TERMINUS_OS_USERNAME", param.Username).
-		AddEnv_("TERMINUS_OS_PASSWORD", param.Password).
-		AddEnv_("TERMINUS_OS_EMAIL", param.Email).
-		AddEnv_("TERMINUS_OS_DOMAINNAME", param.Domain).
 		AddEnv_("VERSION", commands.INSTALLED_VERSION).
 		AddEnv_("TERMINUS_BOX", "1").
 		WithWatchDog_(i.watch)
@@ -172,29 +150,15 @@ type Progress struct {
 
 var (
 	ProgressWords = []Progress{
-		// {"Start to Install Olares ...", "1%", 1},
-		// {"Precheck and Installing dependencies ...", "2%", 2},
-		// {"Installing Olares ...", "2%", 2},
-		// {"Setup your first user ...", "2%", 2},
-		// {"parse user info from env or stdin", "2%", 2},
-		// {"generate app values", "2%", 2},
-		// {"installing k8s and kubesphere", "3%", 3},
-		// {"Generating \"ca\" certificate and key", "3%", 3},
-		// {"PatchKsCoreStatus success", "6%", 6},
 		{"time synchronization is normal", "3%", 3},
 		{"k8s and kubesphere installation is complete", "10%", 10},
 		{"Installing account ...", "15%", 15},
 		{"Installing settings ...", "20%", 20},
-		{"Installing appservice ...", "25%", 25},
-		{"waiting for appservice", "30%", 30},
-		{"Installing launcher ...", "35%", 35},
-		{"LocalHost: CheckLauncherStatus success", "40%", 40},
-		{"Installing built-in apps ...", "45%", 45},
-		{"Performing the final configuration ...", "65%", 65},
+		{"Installing appservice ...", "30%", 30},
+		{"Preparing charts for user creation ...", "65%", 65},
 		{"Installing backup component ...", "70%", 70},
-		{"Waiting for Vault ...", "80%", 80},
 		{"Starting Olares ...", "90%", 90},
-		{"Installation wizard is complete", "95%", 95},
+		{"Olares system installation is complete", "95%", 95},
 		{"All done", "100%", 100},
 	}
 )

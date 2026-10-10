@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"reflect"
 	"strconv"
+	"strings"
 	"time"
 
 	"bytetrade.io/web3os/bfl/internal/log"
@@ -81,6 +82,8 @@ var (
 	ReverseProxyConfigKeyExternalNetworkOff = "external_network_off"
 )
 
+var ErrDomainNotBound = errors.New("olares domain is not bound")
+
 func NewReverseProxyConfigurator() (*ReverseProxyConfigurator, error) {
 	userOp, err := operator.NewUserOperator()
 	if err != nil {
@@ -91,8 +94,9 @@ func NewReverseProxyConfigurator() (*ReverseProxyConfigurator, error) {
 		return nil, errors.Wrap(err, "failed to get user")
 	}
 	terminusName := userOp.GetTerminusName(user)
-	if terminusName == "" {
-		return nil, errors.New("olares name of user is empty")
+	username, domain, bound := strings.Cut(terminusName, "@")
+	if !bound || username == "" || domain == "" {
+		return nil, ErrDomainNotBound
 	}
 	restConfig, err := rest.InClusterConfig()
 	if err != nil {
