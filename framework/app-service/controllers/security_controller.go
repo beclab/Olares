@@ -222,6 +222,8 @@ func (r *SecurityReconciler) reconcileNamespaceLabels(ctx context.Context, ns *c
 			ns.Labels[security.NamespaceTypeLabel] = security.Network
 			updated = true
 		}
+	} else if security.IsOSFrontendNamespace(ns.Name) {
+		// classified on its own list; ingress policy is os-frontend-np
 	} else if security.IsOSProtectedNamespace(ns.Name) {
 		// make os protected namespace can access other namespaces' network
 		if label, ok := ns.Labels[security.NamespaceTypeLabel]; !ok || label != security.Protected {
@@ -450,6 +452,15 @@ func (r *SecurityReconciler) reconcileNetworkPolicy(ctx context.Context, ns *cor
 			networkPolicy.SetName("os-protected-np")
 			networkPolicy.SetNamespace(ns.Name)
 			npFix = nil
+		} else if security.IsOSFrontendNamespace(ns.Name) {
+			networkPolicy = security.NetworkPolicies{security.NPOSFrontend.DeepCopy()}
+			networkPolicy.SetName("os-frontend-np")
+			networkPolicy.SetNamespace(ns.Name)
+			npFix = func(np *netv1.NetworkPolicy) {
+				np.Spec.Ingress = append(np.Spec.Ingress, netv1.NetworkPolicyIngressRule{
+					From: security.NodeTunnelRule(),
+				})
+			}
 		} else if security.IsOSNetworkNamespace(ns.Name) {
 			networkPolicy = security.NetworkPolicies{security.NPOSNetwork.DeepCopy()}
 			networkPolicy.SetName("os-network-np")
@@ -964,6 +975,7 @@ func (r *SecurityReconciler) namespacesShouldAllowNodeTunnel(ctx context.Context
 
 	for _, n := range []string{
 		"os-network",
+		"os-frontend",
 		"os-platform",
 		"os-framework",
 		"os-gateway",
