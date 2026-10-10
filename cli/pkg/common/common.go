@@ -272,15 +272,6 @@ const (
 	ENV_MASTER_SSH_PASSWORD         = "MASTER_SSH_PASSWORD"
 	ENV_MASTER_SSH_PRIVATE_KEY_PATH = "MASTER_SSH_PRIVATE_KEY_PATH"
 
-	FlagOSUserName      = "os-username"
-	EnvLegacyOSUserName = "TERMINUS_OS_USERNAME"
-
-	FlagOSDomainName      = "os-domainname"
-	EnvLegacyOSDomainName = "TERMINUS_OS_DOMAINNAME"
-
-	FlagOSPassword               = "os-password"
-	EnvLegacyEncryptedOSPassword = "TERMINUS_OS_PASSWORD"
-
 	FlagCDNService          = "cdn-service"
 	FlagExtract             = "extract"
 	FlagIgnoreMissingImages = "ignore-missing-images"
@@ -297,14 +288,13 @@ const (
 	FlagMiniKubeProfile       = "minikube-profile"
 	FlagLegacyMiniKubeProfile = "profile"
 
-	FlagEnableReverseProxy = "enable-reverse-proxy"
-	FlagEnablePodSwap      = "enable-pod-swap"
-	FlagSwappiness         = "swappiness"
-	FlagEnableZRAM         = "enable-zram"
-	FlagZRAMSize           = "zram-size"
-	FlagZRAMSwapPriority   = "zram-swap-priority"
-	FlagHostIP             = "host-ip"
-	FlagRegistryMirrors    = "registry-mirrors"
+	FlagEnablePodSwap    = "enable-pod-swap"
+	FlagSwappiness       = "swappiness"
+	FlagEnableZRAM       = "enable-zram"
+	FlagZRAMSize         = "zram-size"
+	FlagZRAMSwapPriority = "zram-swap-priority"
+	FlagHostIP           = "host-ip"
+	FlagRegistryMirrors  = "registry-mirrors"
 
 	FlagStorageType       = "storage-type"
 	FlagLegacyStorageType = "storage"
