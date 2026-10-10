@@ -5,9 +5,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, Isaac Lab, Isaac Sim, NVIDIA, robot simulation, reinforcement learning, GPU, WebRTC streaming, self-hosted
-app_version: "1.0.3"
-doc_version: "1.0"
-doc_updated: "2026-05-14"
+app_version: "1.0.18"
+doc_version: "1.1"
+doc_updated: "2026-10-10"
 ---
 
 # Run robot simulations with Isaac Lab
@@ -32,7 +32,7 @@ In this guide, you will learn how to:
 Before you begin, make sure:
 - Olares is running on a machine with an NVIDIA GPU.
 - The Olares host uses an AMD64 architecture if you want to use WebRTC streaming. ARM64 hosts (such as DGX Spark) support only non-streaming workloads.
-- [NVIDIA's WebRTC Streaming Client](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/installation/download.html) is installed on your local computer.
+- [NVIDIA's WebRTC Streaming Client](https://docs.isaacsim.omniverse.nvidia.com/6.1.0/installation/download.html) is installed on your local computer.
 
 :::info Host vs. local computer architecture
 The AMD64 requirement applies to the Olares host where Isaac Lab runs, not to the local computer used for streaming.
@@ -104,19 +104,11 @@ Whenever you open Isaac Lab or want to switch to a new task, prepare your termin
 
    Replace `<PID>` with the actual process ID shown in your terminal.
 
-5. Optional: Clear the existing log file before starting a new workload.
-
-   ```bash
-   > nohup.out
-   ```
-
 ## Run Isaac Lab workloads
 
 Isaac Lab workloads are started from the terminal. The command you use depends on the architecture of the Olares host where Isaac Lab is installed.
 
-Stop any existing workload before starting a new demo or task.
-
-Commands ending with `&` run in the background. A message like `[1] 580` means the workload has started. The numbers may differ in your terminal.
+Stop any existing workload before starting a new demo or task. Run one command at a time, in the foreground. Official Isaac Lab docs recommend `uv run isaaclab`. `./isaaclab.sh` still accepts the same arguments.
 
 ### Run a demo
 
@@ -128,28 +120,18 @@ Use this command when Isaac Lab runs on an AMD64 Olares host and you want to ena
 1. Start the quadruped locomotion demo:
 
    ```bash
-   LIVESTREAM=1 nohup ./isaaclab.sh -p scripts/demos/quadrupeds.py --headless &
+   uv run isaaclab -p scripts/demos/quadrupeds.py --livestream 1
    ```
 
-2. Follow the logs:
-
-   ```bash
-   tail -f nohup.out
-   ```
-
-3. Wait until the workload starts and the logs become stable.
+2. Wait until the workload starts and the logs in this terminal become stable.
 
    Warnings from Isaac Sim, Omniverse, or PyTorch may appear during startup. If no fatal error appears and the process remains running, continue to the next step.
 
-4. To stop viewing logs, press **Ctrl + C**.
-
-   This only exits `tail -f` and does not stop the workload.
-
-5. Open the WebRTC Streaming Client on your local computer, enter the `PUBLIC_IP` value, then click **Connect**.
+3. Open the WebRTC Streaming Client on your local computer, enter the `PUBLIC_IP` value, then click **Connect**.
 
    ![Connect to Streaming client](/images/manual/use-cases/isaac-lab-connect-streaming-client.png#bordered){width=90%}
 
-6. View the simulation progress.
+4. View the simulation progress.
 
    ![View simulation progress](/images/manual/use-cases/isaac-lab-view-simulation.png#bordered){width=90%}
 </template>
@@ -158,10 +140,10 @@ Use this command when Isaac Lab runs on an AMD64 Olares host and you want to ena
 
 Use this command when Isaac Lab runs on an ARM64 Olares host, such as DGX Spark.
 
-On ARM64 Olares hosts, WebRTC streaming is not supported. Use the command without `LIVESTREAM=1` and `--headless`:
+On ARM64 Olares hosts, WebRTC streaming is not supported. Do not pass `--livestream`.
 
 ```bash
-nohup ./isaaclab.sh -p scripts/demos/quadrupeds.py &
+uv run isaaclab -p scripts/demos/quadrupeds.py
 ```
 
 Because WebRTC streaming is not available on ARM64 Olares hosts, you cannot visualize the demo through the WebRTC Streaming Client.
@@ -179,28 +161,18 @@ Use this command when Isaac Lab runs on an AMD64 Olares host and you want to ena
 1. Start the reinforcement learning training task:
 
    ```bash
-   LIVESTREAM=1 nohup ./isaaclab.sh -p scripts/reinforcement_learning/rsl_rl/train.py --task=Isaac-Velocity-Rough-H1-v0 --headless &
+   uv run isaaclab train --rl_library rsl_rl --task Isaac-Velocity-Rough-H1 --livestream 1
    ```
 
-2. Follow the logs:
-
-   ```bash
-   tail -f nohup.out
-   ```
-
-3. Wait until the workload starts and the logs become stable.
+2. Wait until the workload starts and the logs in this terminal become stable.
 
    Warnings from Isaac Sim, Omniverse, or PyTorch may appear during startup. If no fatal error appears and the process remains running, continue to the next step.
 
-4. To stop viewing logs, press **Ctrl + C**.
-
-   This only exits `tail -f` and does not stop the workload.
-
-5. Open the WebRTC Streaming Client on your local computer, enter the `PUBLIC_IP` value, then click **Connect**.
+3. Open the WebRTC Streaming Client on your local computer, enter the `PUBLIC_IP` value, then click **Connect**.
 
    ![Connect to Streaming client](/images/manual/use-cases/isaac-lab-connect-streaming-client.png#bordered){width=90%}
 
-6. View the training progress.
+4. View the training progress.
    
    ![View RL training progress](/images/manual/use-cases/isaac-lab-view-RL-training.png#bordered){width=90%}
 
@@ -210,10 +182,10 @@ Use this command when Isaac Lab runs on an AMD64 Olares host and you want to ena
 
 Use this command when Isaac Lab runs on an ARM64 Olares host, such as DGX Spark.
 
-On ARM64 Olares hosts, WebRTC streaming is not supported. Use the command without `LIVESTREAM=1` and `--headless`:
+On ARM64 Olares hosts, WebRTC streaming is not supported. Do not pass `--livestream`.
 
 ```bash
-nohup ./isaaclab.sh -p scripts/reinforcement_learning/rsl_rl/train.py --task=Isaac-Velocity-Rough-H1-v0 &
+uv run isaaclab train --rl_library rsl_rl --task Isaac-Velocity-Rough-H1
 ```
 
 Because WebRTC streaming is not available on ARM64 Olares hosts, you cannot visualize the training process through the WebRTC Streaming Client.
@@ -221,11 +193,9 @@ Because WebRTC streaming is not available on ARM64 Olares hosts, you cannot visu
 </template>
 </Tabs>
 
-For more scripts, tasks, and environment configuration, refer to:
+For the training command used on this page, refer to:
 
-- [Existing RL scripts](https://isaac-sim.github.io/IsaacLab/main/source/overview/reinforcement-learning/rl_existing_scripts.html)
-- [Environments](https://isaac-sim.github.io/IsaacLab/main/source/overview/environments.html)
-- [Newton physics integration](https://isaac-sim.github.io/IsaacLab/main/source/experimental-features/newton-physics-integration/training-environments.html)
+- [Training with an RL Agent](https://isaac-sim.github.io/IsaacLab/release/3.0.0/source/how-to/run_rl_training.html)
 
 ## Run Isaac Sim
 
@@ -238,19 +208,13 @@ Stop any existing workload before starting Isaac Sim.
 
 Use this command when Isaac Sim runs on an AMD64 Olares host and you want to enable WebRTC streaming.
 
-1. Start Isaac Sim in headless streaming mode:
+1. Start Isaac Sim:
 
    ```bash
-   nohup ./_isaac_sim/runheadless.sh --/app/livestream/publicEndpointAddress=$PUBLIC_IP --/app/livestream/port=49100 &
+   /isaac-sim/runheadless.sh
    ```
 
-2. Follow the logs:
-
-   ```bash
-   tail -f nohup.out
-   ```
-
-3. Wait until the log shows that the Isaac Sim streaming app is loaded.
+2. Wait until this terminal shows that the Isaac Sim streaming app is loaded.
 
    For example:
 
@@ -258,7 +222,7 @@ Use this command when Isaac Sim runs on an AMD64 Olares host and you want to ena
    Isaac Sim Full Streaming App is loaded.
    ```
 
-4. Open the WebRTC Streaming Client on your local computer, enter the `PUBLIC_IP` value, then click **Connect**.
+3. Open the WebRTC Streaming Client on your local computer, enter the `PUBLIC_IP` value, then click **Connect**.
 
    ![Connect to Streaming client](/images/manual/use-cases/isaac-lab-connect-streaming-client.png#bordered){width=90%}
 
@@ -275,7 +239,7 @@ On ARM64 Olares hosts, WebRTC streaming is not supported. Do not use `runheadles
 Start Isaac Sim in non-graphical mode:
 
 ```bash
-nohup ./_isaac_sim/runapp.sh &
+./_isaac_sim/runapp.sh
 ```
 
 Because graphical streaming is not available on ARM64 Olares hosts, this mode is mainly for limited non-graphical usage.
@@ -285,7 +249,7 @@ Because graphical streaming is not available on ARM64 Olares hosts, this mode is
 
 ## Terminal command reference
 
-Isaac Lab and Isaac Sim commands started with `nohup ... &` run in the background. Closing the WebRTC Streaming Client does not stop the running workload.
+Commands run in the foreground. Closing the WebRTC Streaming Client does not stop the workload. Press **Ctrl + C** in the terminal to stop it.
 
 Use these commands for quick terminal management and troubleshooting:
 
@@ -293,9 +257,7 @@ Use these commands for quick terminal management and troubleshooting:
 |:-----|:--------|
 | Get the WebRTC endpoint address | `echo $PUBLIC_IP` |
 | Check GPU processes | `nvidia-smi` |
-| Stop a background process | `kill -9 <PID>` |
-| Clear old logs | `> nohup.out` |
-| Follow live logs | `tail -f nohup.out` |
+| Stop a leftover process | `kill -9 <PID>` |
 
 ## Troubleshooting
 
@@ -317,13 +279,7 @@ Check the following:
 
 3. Make sure only one WebRTC Streaming Client is connected.
 
-4. Check the logs for fatal errors:
-
-   ```bash
-   tail -f nohup.out
-   ```
-
-Look for errors such as:
+4. Read the terminal where the workload is running, and look for errors such as:
 
 ```text
 Error
@@ -351,5 +307,5 @@ If the process remains running in `nvidia-smi` and no fatal error appears in the
 
 ## Learn more
 
-- [Isaac Lab documentation](https://isaac-sim.github.io/IsaacLab/main/index.html): Official Isaac Lab documentation, including tutorials, environments, reinforcement learning workflows, and API references.
-- [Isaac Sim documentation](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/index.html): NVIDIA Isaac Sim user guide.
+- [Isaac Lab documentation](https://isaac-sim.github.io/IsaacLab/release/3.0.0/index.html): Official Isaac Lab documentation, including tutorials, environments, reinforcement learning workflows, and API references.
+- [Isaac Sim documentation](https://docs.isaacsim.omniverse.nvidia.com/6.1.0/index.html): NVIDIA Isaac Sim user guide.
