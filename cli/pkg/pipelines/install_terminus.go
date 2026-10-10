@@ -36,10 +36,6 @@ func CliInstallTerminusPipeline(ctx context.Context) error {
 		return err
 	}
 	arg.WithJuiceFS = viper.GetBool(common.FlagEnableJuiceFS)
-	if viper.IsSet(common.FlagEnableReverseProxy) {
-		val := viper.GetBool(common.FlagEnableReverseProxy)
-		arg.NetworkSettings.EnableReverseProxy = &val
-	}
 	runtime, err := common.NewKubeRuntime(*arg)
 	if err != nil {
 		return fmt.Errorf("error creating runtime: %v", err)
