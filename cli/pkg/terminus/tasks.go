@@ -2,20 +2,15 @@ package terminus
 
 import (
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io/fs"
-	"io/ioutil"
-	"net"
-	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/beclab/Olares/cli/version"
@@ -220,14 +215,13 @@ func (t *PrepareFinished) Execute(runtime connector.Runtime) error {
 
 type WriteReleaseFile struct {
 	common.KubeAction
-	WithoutName bool
 }
 
 func (t *WriteReleaseFile) Execute(runtime connector.Runtime) error {
 	if util.IsExist(common.OlaresReleaseFile) {
 		logger.Debugf("found existing release file: %s, overriding ...", common.OlaresReleaseFile)
 	}
-	return t.KubeConf.Arg.SaveReleaseInfo(t.WithoutName)
+	return t.KubeConf.Arg.SaveReleaseInfo()
 }
 
 type RemoveReleaseFile struct {
@@ -719,199 +713,6 @@ func (a *CheckTerminusStateInHost) Execute(runtime connector.Runtime) error {
 		logger.Debugf("failed to run command %v, ouput: %s, err: %s", getTerminusCMD, output, err)
 		fmt.Println("failed to check the existence of terminus, is it installed and running?")
 		os.Exit(1)
-	}
-
-	return nil
-}
-
-type DetectPublicIPAddress struct {
-	common.KubeAction
-}
-
-func (p *DetectPublicIPAddress) Execute(runtime connector.Runtime) error {
-	if util.IsOnAWSEC2() {
-		logger.Info("on AWS EC2 instance, will try to check if a public IP address is bound")
-		awsPublicIP, err := util.GetPublicIPFromAWSIMDS()
-		if err != nil {
-			return errors.Wrap(err, "failed to get public IP from AWS")
-		}
-		if awsPublicIP != nil {
-			logger.Info("retrieved public IP addresses from IMDS")
-			p.KubeConf.Arg.NetworkSettings.CloudProviderPublicIP = awsPublicIP
-			return nil
-		}
-	}
-
-	if util.IsOnTencentCVM() {
-		logger.Info("on Tencent CVM instance, will try to check if a public IP address is bound")
-		tencentPublicIP, err := util.GetPublicIPFromTencentIMDS()
-		if err != nil {
-			return errors.Wrap(err, "failed to get public IP from Tencent")
-		}
-		if tencentPublicIP != nil {
-			logger.Info("retrieved public IP addresses from IMDS")
-			p.KubeConf.Arg.NetworkSettings.CloudProviderPublicIP = tencentPublicIP
-			return nil
-		}
-	}
-
-	if util.IsOnAliyunECS() {
-		logger.Info("on Aliyun ECS instance, will try to check if a public IP address is bound")
-		aliyunPublicIP, err := util.GetPublicIPFromAliyunIMDS()
-		if err != nil {
-			return errors.Wrap(err, "failed to get public IP from Aliyun")
-		}
-		if aliyunPublicIP != nil {
-			logger.Info("retrieved public IP addresses from IMDS")
-			p.KubeConf.Arg.NetworkSettings.CloudProviderPublicIP = aliyunPublicIP
-			return nil
-		}
-	}
-
-	osPublicIPs, err := util.GetPublicIPsFromOS()
-	if err != nil {
-		return errors.Wrap(err, "failed to get public IPs from OS")
-	}
-	if len(osPublicIPs) > 0 {
-		logger.Info("detected public IP addresses on local network interface")
-		p.KubeConf.Arg.NetworkSettings.OSPublicIPs = osPublicIPs
-		return nil
-	}
-
-	if p.KubeConf.Arg.NetworkSettings.EnableReverseProxy != nil {
-		if !*p.KubeConf.Arg.NetworkSettings.EnableReverseProxy {
-			return nil
-		}
-		externalIP := getMyExternalIPAddr()
-		if externalIP == nil {
-			return errors.New("this installation is explicitly specified to disable reverse proxy but no valid public IP can be found")
-		}
-		p.KubeConf.Arg.NetworkSettings.ExternalPublicIP = externalIP
-	}
-
-	return nil
-
-}
-
-// getMyExternalIPAddr get my network outgoing ip address
-func getMyExternalIPAddr() net.IP {
-	sites := map[string]string{
-		"httpbin":    "https://httpbin.org/ip",
-		"ifconfigme": "https://ifconfig.me/all.json",
-		"externalip": "https://myexternalip.com/json",
-		"joinolares": "https://myip.joinolares.cn/ip",
-	}
-
-	type httpBin struct {
-		Origin string `json:"origin"`
-	}
-
-	type ifconfigMe struct {
-		IPAddr     string `json:"ip_addr"`
-		RemoteHost string `json:"remote_host,omitempty"`
-		UserAgent  string `json:"user_agent,omitempty"`
-		Port       int    `json:"port,omitempty"`
-		Method     string `json:"method,omitempty"`
-		Encoding   string `json:"encoding,omitempty"`
-		Via        string `json:"via,omitempty"`
-		Forwarded  string `json:"forwarded,omitempty"`
-	}
-
-	type externalIP struct {
-		IP string `json:"ip"`
-	}
-
-	var unmarshalFuncs = map[string]func(v []byte) string{
-		"httpbin": func(v []byte) string {
-			var hb httpBin
-			if err := json.Unmarshal(v, &hb); err == nil && hb.Origin != "" {
-				return hb.Origin
-			}
-			return ""
-		},
-		"ifconfigme": func(v []byte) string {
-			var ifMe ifconfigMe
-			if err := json.Unmarshal(v, &ifMe); err == nil && ifMe.IPAddr != "" {
-				return ifMe.IPAddr
-			}
-			return ""
-		},
-		"externalip": func(v []byte) string {
-			var extip externalIP
-			if err := json.Unmarshal(v, &extip); err == nil && extip.IP != "" {
-				return extip.IP
-			}
-			return ""
-		},
-		"joinolares": func(v []byte) string {
-			return strings.TrimSpace(string(v))
-		},
-	}
-
-	var mu sync.Mutex
-	ch := make(chan any, len(sites))
-	chSyncOp := func(f func()) {
-		mu.Lock()
-		defer mu.Unlock()
-		if ch != nil {
-			f()
-		}
-	}
-
-	for site := range sites {
-		go func(name string) {
-			http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-			c := http.Client{Timeout: 5 * time.Second}
-			resp, err := c.Get(sites[name])
-			if err != nil {
-				chSyncOp(func() { ch <- err })
-				return
-			}
-			defer resp.Body.Close()
-			respBytes, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				chSyncOp(func() { ch <- err })
-				return
-			}
-
-			ip := unmarshalFuncs[name](respBytes)
-			//println(name, site, ip)
-			chSyncOp(func() { ch <- ip })
-
-		}(site)
-	}
-
-	tr := time.NewTimer(time.Duration(15*len(sites)+3) * time.Second)
-	defer func() {
-		tr.Stop()
-		chSyncOp(func() {
-			close(ch)
-			ch = nil
-		})
-	}()
-
-LOOP:
-	for i := 0; i < len(sites); i++ {
-		select {
-		case r, ok := <-ch:
-			if !ok {
-				continue
-			}
-
-			switch v := r.(type) {
-			case string:
-				ip := net.ParseIP(v).To4()
-				if ip.IsGlobalUnicast() && !ip.IsPrivate() {
-					return ip
-				}
-			case error:
-				logger.Debugf("got an error when reflecting public IP %v", v)
-			}
-		case <-tr.C:
-			tr.Stop()
-			logger.Debugf("timed out while fetching public IP")
-			break LOOP
-		}
 	}
 
 	return nil

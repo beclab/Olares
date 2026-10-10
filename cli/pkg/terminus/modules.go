@@ -75,7 +75,6 @@ func (m *PreparedModule) Init() {
 
 type WriteReleaseFileModule struct {
 	common.KubeModule
-	WithoutName bool
 }
 
 func (m *WriteReleaseFileModule) Init() {
@@ -84,7 +83,7 @@ func (m *WriteReleaseFileModule) Init() {
 	m.Tasks = []task.Interface{
 		&task.LocalTask{
 			Name:   "WriteReleaseFile",
-			Action: &WriteReleaseFile{WithoutName: m.WithoutName},
+			Action: &WriteReleaseFile{},
 		},
 	}
 }
@@ -173,8 +172,7 @@ func GenerateTerminusComponentsModules(runtime connector.Runtime, manifestMap ma
 		&InstallAccountModule{},
 		&InstallSettingsModule{},
 		&InstallOsSystemModule{},
-		&InstallLauncherModule{},
-		&InstallAppsModule{},
+		&PrepareUserChartsModule{},
 	}
 	modules = append(modules, baseModules...)
 
