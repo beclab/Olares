@@ -12,7 +12,6 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/users"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/activeusers"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace/v1"
-	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils/sliceutil"
 
@@ -300,50 +299,18 @@ func (r *UserController) handleUserCreation(ctx context.Context, user *iamv1alph
 		}
 	}
 
-	// Check cluster pod capacity
-	klog.Infof("start check cluster pod capacity.....")
-	isSatisfied, err := r.checkClusterPodCapacity(ctx)
+	// The first user is created on a freshly installed system. There is no
+	// owner userspace yet, and the cluster is already occupied by system pods.
+	// Capacity and quota checks apply only when adding another user.
+	firstUser, err := r.isFirstUser(ctx, user)
 	if err != nil {
-		message := fmt.Sprintf("failed to check cluster capacity %v", err)
-		klog.Error(message)
-		updateErr := r.updateUserStatus(ctx, user, "Failed", message)
-		if updateErr != nil {
-			klog.Errorf("failed to update user status to Created %v", updateErr)
-		}
-		return ctrl.Result{}, updateErr
+		klog.Errorf("failed to check whether %s is the first user: %v", user.Name, err)
+		return ctrl.Result{}, err
 	}
-	if !isSatisfied {
-		updateErr := r.updateUserStatus(ctx, user, "Failed", "Insufficient pods can allocate in the cluster")
-		if updateErr != nil {
-			klog.Errorf("failed to update user status to Failed %v", updateErr)
-		}
-		return ctrl.Result{}, updateErr
-	}
-
-	// Validate resource limits
-	klog.Infof("start to validate resource limits.....")
-
-	err = r.validateResourceLimits(user)
-	// invalid resource limit, no need to requeue
-	if err != nil {
-		klog.Errorf("failed to validate resource limits %v", err)
-		updateErr := r.updateUserStatus(ctx, user, "Failed", err.Error())
-		if updateErr != nil {
-			klog.Errorf("failed to update user status: %v", updateErr)
-		}
-		return ctrl.Result{}, updateErr
-	}
-
-	klog.Infof("start to checkResource.....")
-
-	err = r.checkResource(user)
-	if err != nil {
-		klog.Errorf("failed to checkResource %v", err)
-		updateErr := r.updateUserStatus(ctx, user, "Failed", err.Error())
-		if updateErr != nil {
-			klog.Errorf("failed to update user status to Failed %v", updateErr)
-		}
-		return ctrl.Result{}, updateErr
+	if firstUser {
+		klog.Infof("skip cluster capacity and resource checks for first user %s", user.Name)
+	} else if result, checkErr := r.checkAdditionalUserCapacity(ctx, user); result != nil {
+		return *result, checkErr
 	}
 
 	// Create user resources
@@ -369,6 +336,90 @@ func (r *UserController) handleUserCreation(ctx context.Context, user *iamv1alph
 
 func (r *UserController) publish(topic, user, operator string) {
 	natsevent.PublishUserEventToQueue(topic, user, operator)
+}
+
+// checkAdditionalUserCapacity applies the quota gates used when adding a user
+// besides the first one. A non-nil result means creation must stop. A nil error
+// with that result means the user was marked Failed and should not be requeued.
+func (r *UserController) checkAdditionalUserCapacity(ctx context.Context, user *iamv1alpha2.User) (*ctrl.Result, error) {
+	klog.Infof("start check cluster pod capacity.....")
+	isSatisfied, err := r.checkClusterPodCapacity(ctx)
+	if err != nil {
+		message := fmt.Sprintf("failed to check cluster capacity %v", err)
+		klog.Error(message)
+		updateErr := r.updateUserStatus(ctx, user, "Failed", message)
+		if updateErr != nil {
+			klog.Errorf("failed to update user status to Failed %v", updateErr)
+		}
+		return &ctrl.Result{}, updateErr
+	}
+	if !isSatisfied {
+		updateErr := r.updateUserStatus(ctx, user, "Failed", "Insufficient pods can allocate in the cluster")
+		if updateErr != nil {
+			klog.Errorf("failed to update user status to Failed %v", updateErr)
+		}
+		return &ctrl.Result{}, updateErr
+	}
+
+	klog.Infof("start to validate resource limits.....")
+	err = r.validateResourceLimits(user)
+	if err != nil {
+		klog.Errorf("failed to validate resource limits %v", err)
+		updateErr := r.updateUserStatus(ctx, user, "Failed", err.Error())
+		if updateErr != nil {
+			klog.Errorf("failed to update user status: %v", updateErr)
+		}
+		return &ctrl.Result{}, updateErr
+	}
+
+	klog.Infof("start to checkResource.....")
+	err = r.checkResource(user)
+	if err != nil {
+		klog.Errorf("failed to checkResource %v", err)
+		updateErr := r.updateUserStatus(ctx, user, "Failed", err.Error())
+		if updateErr != nil {
+			klog.Errorf("failed to update user status to Failed %v", updateErr)
+		}
+		return &ctrl.Result{}, updateErr
+	}
+	return nil, nil
+}
+
+// isFirstUser reports whether user is the earliest User in the cluster.
+// The owner is not a User CR; this user takes the place that role used to mark.
+func (r *UserController) isFirstUser(ctx context.Context, user *iamv1alpha2.User) (bool, error) {
+	first, err := r.findFirstUser(ctx, user)
+	if err != nil {
+		return false, err
+	}
+	return first.Name == user.Name, nil
+}
+
+// findFirstUser returns the earliest User. user is included so the object
+// being reconciled counts even when the cache has not listed it yet.
+func (r *UserController) findFirstUser(ctx context.Context, user *iamv1alpha2.User) (*iamv1alpha2.User, error) {
+	var userList iamv1alpha2.UserList
+	if err := r.List(ctx, &userList); err != nil {
+		return nil, err
+	}
+	first := user.DeepCopy()
+	for i := range userList.Items {
+		candidate := userList.Items[i].DeepCopy()
+		if candidate.Name == first.Name {
+			if !candidate.CreationTimestamp.IsZero() {
+				first = candidate
+			}
+			continue
+		}
+		if userCreatedBefore(candidate, first) {
+			first = candidate
+		}
+	}
+	return first, nil
+}
+
+func userCreatedBefore(a, b *iamv1alpha2.User) bool {
+	return a.CreationTimestamp.Time.Before(b.CreationTimestamp.Time)
 }
 
 func (r *UserController) checkResource(user *iamv1alpha2.User) error {
@@ -484,31 +535,14 @@ func (r *UserController) createUserResources(ctx context.Context, user *iamv1alp
 		return err
 	}
 
-	ksClient, err := kubernetes.NewForConfig(r.KubeConfig)
+	// The first user's zone-ssl-config does not exist yet; BFL writes it during
+	// network activation. Later users copy that cert. There is no owner User CR.
+	first, err := r.isFirstUser(ctx, user)
 	if err != nil {
-		klog.Errorf("make ksClient failed %v", err)
 		return err
 	}
-
-	// copy ssl configmap to new userspace
-	var applyCm *applyCorev1.ConfigMapApplyConfiguration
-	creatorUser, err := utils.FindOwnerUser(r.Client, user)
-	if err != nil {
-		klog.Errorf("failed to find user with owner role %v", err)
-		return err
-	}
-
-	ownerUserspace := fmt.Sprintf("user-space-%s", creatorUser.Name)
-	nsName := fmt.Sprintf("user-space-%s", user.Name)
-	sslConfig, err := ksClient.CoreV1().ConfigMaps(ownerUserspace).Get(ctx, "zone-ssl-config", metav1.GetOptions{})
-	if err == nil && sslConfig != nil {
-		sslConfig.Data["ephemeral"] = "true"
-
-		applyCm = NewApplyConfigmap(nsName, sslConfig.Data)
-		_, err = ksClient.CoreV1().ConfigMaps(nsName).Apply(ctx, applyCm, metav1.ApplyOptions{
-			FieldManager: "application/apply-patch"})
-		if err != nil {
-			klog.Errorf("failed to apply configmap %v", err)
+	if !first {
+		if err = r.copyZoneSSLConfig(ctx, user); err != nil {
 			return err
 		}
 	}
@@ -527,7 +561,7 @@ func (r *UserController) createNamespace(ctx context.Context, user *iamv1alpha2.
 	// create namespace user-space-<user>
 	userspaceNs := fmt.Sprintf("user-space-%s", user.Name)
 	userSystemNs := fmt.Sprintf("user-system-%s", user.Name)
-	creatorUser, err := utils.FindOwnerUser(r.Client, user)
+	creatorName, err := r.namespaceCreator(ctx, user)
 	if err != nil {
 		klog.Error(err)
 		return err
@@ -538,7 +572,7 @@ func (r *UserController) createNamespace(ctx context.Context, user *iamv1alpha2.
 		ObjectMeta: metav1.ObjectMeta{
 			Name: userspaceNs,
 			Annotations: map[string]string{
-				creator: creatorUser.Name,
+				creator: creatorName,
 			},
 			Finalizers: []string{
 				namespaceFinalizer,
@@ -571,9 +605,67 @@ func (r *UserController) createNamespace(ctx context.Context, user *iamv1alpha2.
 	return nil
 }
 
+func (r *UserController) namespaceCreator(ctx context.Context, user *iamv1alpha2.User) (string, error) {
+	first, err := r.isFirstUser(ctx, user)
+	if err != nil {
+		return "", err
+	}
+	if first {
+		return user.Name, nil
+	}
+	creatorName := user.Annotations[users.AnnotationUserCreator]
+	if creatorName != "" && creatorName != "cli" {
+		return creatorName, nil
+	}
+	firstUser, err := r.findFirstUser(ctx, user)
+	if err != nil {
+		return "", err
+	}
+	return firstUser.Name, nil
+}
+
+func (r *UserController) copyZoneSSLConfig(ctx context.Context, user *iamv1alpha2.User) error {
+	ksClient, err := kubernetes.NewForConfig(r.KubeConfig)
+	if err != nil {
+		klog.Errorf("make ksClient failed %v", err)
+		return err
+	}
+
+	firstUser, err := r.findFirstUser(ctx, user)
+	if err != nil {
+		klog.Errorf("failed to find first user %v", err)
+		return err
+	}
+
+	ownerUserspace := fmt.Sprintf("user-space-%s", firstUser.Name)
+	nsName := fmt.Sprintf("user-space-%s", user.Name)
+	sslConfig, err := ksClient.CoreV1().ConfigMaps(ownerUserspace).Get(ctx, "zone-ssl-config", metav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			klog.Infof("owner zone-ssl-config not found, skip copy for %s", user.Name)
+			return nil
+		}
+		klog.Errorf("failed to get owner zone-ssl-config %v", err)
+		return err
+	}
+	if sslConfig.Data == nil {
+		return nil
+	}
+	sslConfig.Data["ephemeral"] = "true"
+
+	applyCm := NewApplyConfigmap(nsName, sslConfig.Data)
+	_, err = ksClient.CoreV1().ConfigMaps(nsName).Apply(ctx, applyCm, metav1.ApplyOptions{
+		FieldManager: "application/apply-patch"})
+	if err != nil {
+		klog.Errorf("failed to apply configmap %v", err)
+		return err
+	}
+	return nil
+}
+
 func (r *UserController) createUserApps(ctx context.Context, user *iamv1alpha2.User) error {
 	creator := userspace.NewCreator(r.Client, r.KubeConfig, user.Name)
-	_, _, err := creator.CreateUserApps(ctx)
+	err := creator.CreateUserApps(ctx)
 
 	if err != nil {
 		klog.Errorf("failed to create user apps %v", err)
