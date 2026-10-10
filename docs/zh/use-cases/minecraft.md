@@ -18,79 +18,81 @@ doc_updated: "2026-10-10"
 
 Olares 上的 Minecraft 托管 Java 版专用服务器，支持 Vanilla、Forge 和 Fabric。你通过控制台终端管理服务器，玩家使用兼容的 Java 版客户端连接。好友可以通过 Overlay gateway 在局域网中联机，也可以通过 LarePass VPN 远程加入。
 
-:::info 本教程对应的应用版本
-本教程对应 Minecraft 应用包 0.1.22。应用包版本与安装时选择的 Minecraft 游戏版本不同。这些功能已在测试市场提供；如果你的 Market 来源仍提供 0.1.14，请等待应用更新后，再使用下文的配置与 Clone 功能。
-:::
-
 ## 学习目标
 
 通过本教程，你将学习如何：
 
 - 安装时选择 Minecraft 游戏版本和服务器类型。
+- 通过局域网或 LarePass VPN 连接服务器。
 - 安装模组，配置正版验证、作弊命令和人数上限。
 - 使用 Clone 创建独立服务器。
-- 启用 Overlay gateway，让局域网中的玩家连接。
-- 通过局域网或 VPN 连接服务器。
 
 ## 准备工作
 
-- **Olares OS**：Olares 版本为 1.12.6 或更高。
-- **硬件与网络**：Olares 设备运行在原生的 Linux 主机上，并使用有线以太网连接。Overlay gateway 在 Wi-Fi 或 WSL 环境下无法工作。
-- **权限**：需要 Super admin 开启系统级的 Overlay gateway 服务。服务开启后，Admin 或 Member 可以为 Minecraft 启用 Overlay gateway。
-- **客户端要求**：每位玩家的电脑上已安装 Minecraft Java 版。Bedrock、主机和移动版无法直接连接。客户端版本必须与安装时选择的 Minecraft **VERSION** 一致，而不是 Market 页面显示的应用包版本。
+- Olares 1.12.6 或更高版本。
+- 每位玩家的电脑上已安装 Minecraft Java 版。Bedrock、主机和移动版无法直接连接。
+
+:::info 客户端须与服务器匹配
+客户端的 Minecraft 游戏版本必须与服务器一致。使用 Forge 或 Fabric 时，每位玩家还需要安装整合包要求的加载器和客户端模组。
+:::
 
 ## 安装 Minecraft
 
 1. 打开 Market，搜索 "Minecraft"。
    ![Market 中的 Minecraft](/images/manual/use-cases/minecraft.png#bordered)
 
-2. 点击 **Get**，然后点击 **Install**。在环境变量对话框中，参考下文选择 **VERSION** 和 **TYPE**，按模组要求配置加载器，等待安装完成。
+2. 点击 **Get**，然后点击 **Install**。选择要游玩的 Minecraft **VERSION**，原版游玩保持 **TYPE** 为 `VANILLA`。使用模组时，展开下方的游戏版本和服务器类型说明进行配置，然后等待安装完成。
 
-首次启动会下载服务器和加载器资源，根据网络情况可能需要几分钟。等待服务器就绪后再加入。从 Launchpad 打开 Minecraft，即可在控制台查看启动日志。
-
-## 配置 Minecraft
-
-### 选择游戏版本和服务器类型
+:::: details 选择游戏版本和服务器类型
 
 在安装或创建 Clone 时选择 **VERSION**。Olares 会自动选择服务器的 Java 运行时，无需手动配置。
 
-| VERSION | 服务器 Java 版本 | 主要用途 |
-|:---|:---|:---|
-| `1.12.2` | Java 8 | 较早的 Forge 模组与整合包，不支持 Fabric。 |
-| `1.16.5` | Java 8 | 为 1.16.5 制作的 Forge 或 Fabric 整合包。 |
-| `1.18.2` | Java 17 | 适用于 1.18.2 的模组与整合包。 |
-| `1.19.2` | Java 17 | 适用于 1.19.2 的模组与整合包。 |
-| `1.20.1` | Java 17 | 适用于 1.20.1 的模组与整合包。 |
-| `1.21.1` | Java 21 | 适用于 1.21.1 的模组与整合包，需核对加载器要求。 |
-| `26.2` | Java 25 | 使用固定较新版本进行原版游玩，使用模组前需确认加载器支持。 |
-| `LATEST` | Java 25 | 最新正式版，重启时游戏版本可能更新。 |
+| VERSION | 服务器 Java 版本 |
+|:---|:---|
+| `1.12.2` | Java 8 |
+| `1.16.5` | Java 8 |
+| `1.18.2` | Java 17 |
+| `1.19.2` | Java 17 |
+| `1.20.1` | Java 17 |
+| `1.21.1` | Java 21 |
+| `26.2` | Java 25 |
+| `LATEST` | Java 25 |
 
-按整合包要求选择版本。版本出现在列表中，不代表所有加载器和模组都支持它。长期运行的世界建议使用固定版本，避免使用 `LATEST`。
+选择加载器和模组支持的固定版本。Minecraft `1.12.2` 不支持 Fabric。`LATEST` 会选择最新正式版，服务器重启时游戏版本可能更新。
 
-安装时可配置以下字段：
+选择服务器类型及对应的加载器设置：
 
-- **TYPE**：`VANILLA` 为不带模组加载器的原版，`FORGE` 用于 Forge 模组，`FABRIC` 用于 Fabric 模组。默认值为 `VANILLA`。当前应用包不提供 NeoForge。
-- **FORGE_VERSION**：仅在 `FORGE` 模式下生效，默认值为 `recommended`。也可填写 `latest`，或整合包要求的准确 Forge 版本。
-- **FABRIC_LOADER_VERSION**：仅在 `FABRIC` 模式下生效，默认值为 `latest`。整合包要求固定加载器版本时，请填写准确版本。Fabric API 是需要单独安装的模组。
+| 字段 | 值 |
+|:---|:---|
+| **TYPE** | `VANILLA`（默认）、`FORGE` 或 `FABRIC` |
+| **FORGE_VERSION** | 仅用于 Forge。填写 `recommended`（默认）、`latest` 或整合包要求的版本。 |
+| **FABRIC_LOADER_VERSION** | 仅用于 Fabric。填写 `latest`（默认）或整合包要求的版本。 |
 
-**VERSION**、**TYPE** 和加载器版本在安装后不能修改。需要运行其他版本或加载器时，请使用 Clone 创建独立实例。在官方 Java 启动器的 **配置（Installations）** 页面中新建配置，选择与服务器相同的游戏版本。使用模组时，还需安装兼容的加载器及必需的客户端模组。
+这些设置及 **VERSION** 在安装后不能修改。需要其他游戏版本或加载器时，使用 [Clone](../manual/olares/market/clone-apps.md) 创建服务器。
 
 :::warning 保护已有世界
-迁移世界或重新安装前，请备份实例的整个数据目录。使用其他版本重新安装时，可能继续使用原有数据目录。升级可能转换世界数据；降级可能导致无法启动，或丢失区块、物品和实体。切换加载器或移除模组也可能造成存档不兼容。不要用低版本服务器启动已被高版本保存的世界。
+迁移世界或重新安装前，请备份实例的整个数据目录。使用其他版本重新安装时，可能继续使用原有数据目录。升级可能转换世界数据。降级可能导致无法启动，或丢失区块、物品和实体。切换加载器或移除模组也可能造成存档不兼容。不要用低版本服务器启动已被高版本保存的世界。
 :::
+::::
 
-### 安装 Forge 或 Fabric 模组
+首次启动会下载服务器和加载器资源，根据网络情况可能需要几分钟。原版游玩可直接继续[连接服务器](#连接服务器)。使用模组时，请先[安装模组](#安装-forge-或-fabric-模组)再加入。
+
+## 配置 Minecraft
+
+按需完成以下可选配置，或直接[连接服务器](#连接服务器)。
+
+### 可选：安装 Forge 或 Fabric 模组 {#安装-forge-或-fabric-模组}
 
 例如，选择 `VERSION=1.20.1`，将 `TYPE` 设为 `FORGE` 或 `FABRIC`，再填写模组要求的加载器版本。
 
 1. 在 Market 或 Settings 中停止目标 Minecraft 实例。
-2. 打开 Files，找到 `Data/<instance-name>/data`。主实例通常为 `Data/minecraft/data`。请使用实例实际的数据文件夹名称，它可能与显示标题不同。
+2. 打开 Files，找到 `Data/<app-name>/data`。主实例为 `Data/minecraft/data`。Clone 实例请使用 Market 详情页 URL 中的应用名称，具体方法参见[找到实例的数据目录](#find-the-instances-data-directory)。
 3. 如果没有 `mods` 文件夹，先创建它，再上传服务端模组的 `.jar` 文件及所需依赖。模组必须匹配所选的 Minecraft 版本和加载器。如果模组需要 Fabric API，也将其放入该文件夹。仅限客户端的模组留在客户端。
 4. 将整合包需要的配置文件放入同一 `data` 目录下的对应文件夹。仅上传整合包压缩包不会自动安装。
 5. 恢复运行实例，检查控制台日志，确认没有缺少依赖或模组不兼容的错误。
-6. 使用匹配的游戏版本、兼容的加载器和必需的客户端模组连接。部分纯服务端模组允许原版客户端加入，请以模组说明为准。
+6. 使用匹配的游戏版本、兼容的加载器和必需的客户端模组连接。客户端的具体要求以模组说明为准。
 
-### 关闭正版验证，配置私服
+### 可选：关闭正版验证，配置私服 {#关闭正版验证-配置私服}
 
 正版验证默认开启。如果要为可信玩家提供离线模式私服：
 
@@ -99,76 +101,80 @@ Olares 上的 Minecraft 托管 Java 版专用服务器，支持 Vanilla、Forge 
 3. 编辑 **ONLINE_MODE**，选择 `false`（**Disabled (trusted players only)**），点击 **Confirm**。
 4. 点击 **Apply**，等待服务器重启。
 
-此设置会关闭 Minecraft 账号验证和安全档案强制校验，支持离线模式私服。它不改变游戏客户端的许可要求，也不改变网络访问设置。玩家仍需使用匹配的游戏版本和可访问的服务器地址。
+此设置会关闭 Minecraft 账号验证和安全档案强制校验。玩家仍需使用可访问的服务器地址和兼容的客户端。
 
 :::warning 仅用于可信玩家
 离线模式不会验证玩家身份，其他人可能冒用已有玩家的名称。请限制为可信玩家访问。在线与离线模式切换会改变玩家 UUID，可能影响背包和权限，切换前请备份数据。
 :::
 
-### 开启作弊命令
+### 可选：开启作弊命令 {#开启作弊命令}
 
-在同一 **Manage environment variables** 页面中，将 **ALLOW_CHEATS** 设为 `true`，点击 **Confirm**，再点击 **Apply**。服务器会重启。默认值为 `false`。
+作弊命令默认关闭。按以下步骤开启：
 
-开启后，每个加入的玩家都能使用 `/give`、`/gamemode` 等命令，同时启用命令方块。此设置授予 2 级管理员权限；停止服务器等命令仍需在控制台执行。请仅对可信玩家开启。
+1. 进入 **Settings** > **Applications**，选择 Minecraft 实例。
+2. 在 **Environment variables** 下点击 **Manage environment variables**。
+3. 将 **ALLOW_CHEATS** 设为 `true`，点击 **Confirm**。
+4. 点击 **Apply**，等待服务器重启。
+
+开启后，每个加入的玩家都能使用 `/give`、`/gamemode` 等命令，同时启用命令方块。此设置授予 2 级管理员权限。停止服务器等命令请在控制台执行。请仅对可信玩家开启。
 
 关闭时，将 **ALLOW_CHEATS** 设为 `false` 并应用。此操作会清空玩家管理员列表，包括手动添加的管理员，并重启服务器。
 
-### 设置最大在线人数
+### 可选：设置最大在线人数 {#设置最大在线人数}
 
-默认最多允许 8 人同时在线。在 **Manage environment variables** 中，将 **MAX_PLAYERS** 修改为 `1` 到 `100` 的整数，点击 **Confirm**，再点击 **Apply**。服务器会重启并应用人数限制。更高的人数上限需要更多资源，使用模组时尤其如此。
+默认最多允许 8 人同时在线。按以下步骤修改：
 
-### 使用 Clone 创建另一台服务器
+1. 进入 **Settings** > **Applications**，选择 Minecraft 实例。
+2. 在 **Environment variables** 下点击 **Manage environment variables**。
+3. 将 **MAX_PLAYERS** 设为 `1` 到 `100` 的整数，点击 **Confirm**。
+4. 点击 **Apply**，等待服务器重启。
 
-Clone 可以在同一 Olares 设备上运行不同版本或不同模组配置的服务器。它创建具有独立配置和数据目录的新实例，不会复制原实例的世界和模组。
+更高的人数上限需要更多资源，使用模组时尤其如此。
 
-1. 先安装 Minecraft 主实例，然后在 Market 中打开 **My Olares**。
-2. 找到 Minecraft，点击 **Open** 旁的下拉箭头，选择 **Clone**。
-3. 填写唯一的 **New app title** 和 **Desktop shortcut name**，点击 **Confirm**。
-4. 在 **Configure Environment Variables** 中，为新服务器选择 **VERSION**、**TYPE** 和加载器配置，点击 **Confirm**，等待安装完成。
-5. 单独管理新实例，将它的模组上传到 `Data/<instance-name>/data/mods`。需要局域网访问时，为该实例开启 Overlay。
+## 连接服务器
 
-每个实例都有自己的 VPN 外部端口，启用 Overlay 后也有自己的地址。按下文步骤复制目标实例的连接地址。Overlay 端口仍为 `25565`，VPN 外部端口则单独分配。同时运行多个服务器会增加内存和 CPU 占用。
+等待服务器启动完成后再加入。从 Launchpad 打开实例，即可查看控制台日志。
 
-#### 使用原实例的数据
+在 Minecraft 启动器中打开 **Installations**，选择与服务器相同的游戏版本。再选择下方的连接方式，在 Minecraft 中添加服务器。
 
-你可以将已有世界复制到 Clone，继续游玩或尝试其他版本。游戏、加载器和模组版本一致时，通常可以继续使用；升级可能转换存档，模组也需支持目标版本。降级或切换加载器可能导致无法启动或丢失世界内容。你可以自行决定在 Clone 中测试兼容性，同时保留原实例作为回退。
+<tabs>
+<template #局域网>
 
-1. 在 Market > **My Olares** 中打开目标 Clone 的详情页。URL 中 `/app/<market-source>/` 后、`?` 前的部分就是 App ID。例如，`/app/market.test/minecraftb5764c?source=…` 对应 `minecraftb5764c`，其数据目录为 `Data/minecraftb5764c/data`。用同样方法确认原实例的 ID。
-2. 停止两个实例，分别备份整个数据目录，再用原实例 `data` 目录中的内容替换 Clone 的 `data` 目录内容。
-3. 核对 Clone 的模组和依赖是否支持目标版本。环境变量不会随文件复制，需要单独检查。建议保持 **ONLINE_MODE** 一致，避免玩家 UUID 和背包对应关系变化，并检查复制过来的管理员、白名单和封禁名单。
-4. 启动 Clone，检查日志，再通过它自己的地址加入，确认建筑、背包、实体和模组功能正常。出现兼容性错误时，请停止实例。
+Overlay gateway 会为服务器分配专用的本地 IP 地址。此方式要求 Olares 运行在原生 Linux 主机上，并使用有线以太网。Wi-Fi 和 WSL 不支持 Overlay gateway。
 
-:::warning 保留备份
-每个实例使用独立数据目录，游戏进度不会相互同步。回退时恢复升级前的备份，不要将升级后的世界复制回低版本服务器。
-:::
+1. 打开 **Settings** > **Network** > **Overlay gateway**。
+2. 打开 **Enable overlay gateway**。此系统级服务需由 Super admin 启用，之后 Admin 和 Member 可以为自己的应用启用网关。
+3. 在 **Applications** 中，为目标 Minecraft 实例启用 Overlay gateway。点击 **Confirm**，等待实例重启并恢复为 **Running**。
+4. 复制 **Minecraft Java** 旁显示的地址，包括端口。例如，`192.168.1.100:25565`。
 
-## 为 Minecraft 启用 Overlay gateway
+请使用页面当前显示的地址。应用重启或网络变化后，本地 IP 可能改变。
 
-Overlay gateway 会为 Minecraft 分配专用的本地 IP 地址，让同一网络中的玩家直接连接。
+</template>
+<template #LarePass-VPN>
 
-1. 打开 Olares Settings，进入 **Network** > **Overlay gateway**。
-2. 确认 **Enable overlay gateway** 开关已打开。这是系统级服务开关，如未开启，需由 Super admin 打开。
-3. 在 **Applications** 列表中找到 **Minecraft**，确认其状态为 **Running**，然后为该应用开启 Overlay gateway。
-4. 在 **Minecraft Java** 右侧复制显示的地址，例如 `192.168.50.219:25565`。
+通过 LarePass VPN，可以从其他网络连接服务器。使用 VPN 时可以保持 Overlay gateway 开启。
 
-:::info 本地 IP 地址是动态的
-Overlay gateway 动态分配本地 IP 地址，应用重启或网络变化后可能改变。请始终使用当前页面上显示的地址。
-:::
+1. 在运行 Minecraft 的电脑上启用 [LarePass VPN](../manual/get-started/local-access.md#使用-larepass-专用网络)。
 
-## 从同一局域网连接
+   ![在电脑上启用 LarePass VPN](/images/manual/get-started/larepass-vpn-desktop.png#bordered)
 
-与 Olares 设备处于同一局域网的玩家可以通过 Overlay 地址连接。
+2. 打开 **Settings** > **Applications**，选择 Minecraft 实例，再打开 **Export ports**。记下 Minecraft 的 **Exported port**，使用此值而非内部的 **Port** 值。
+3. 使用 Olares 域名和导出端口组成服务器地址。例如，Olares ID 为 `alex@olares.com` 时，使用 `alex.olares.com:<exported-port>`。将 `<exported-port>` 替换为上一步的值。
 
-1. 从 **Settings** > **Network** > **Overlay gateway** 复制 Overlay 地址，例如 `192.168.50.219:25565`。
-2. 打开 Minecraft Java 版，点击 **Multiplayer**。
+每个实例的导出端口可能不同。请使用目标实例显示的端口。
+
+</template>
+</tabs>
+
+获取地址后：
+
+1. 打开 Minecraft Java 版，点击 **Multiplayer**。
 
    ![Minecraft 多人游戏菜单](/images/manual/use-cases/minecraft-multiplayer-menu.png#bordered)
 
-3. 点击 **Add Server**。
-4. 填写服务器信息，然后点击 **Done**：
-
-   - **Server Name**：填写便于识别的名称。
-   - **Server Address**：填写刚才复制的 Overlay gateway 地址。
+2. 点击 **Add Server**。
+3. 在 **Server Name** 中填写服务器名称。
+4. 在 **Server Address** 中填写所选连接方式对应的地址，然后点击 **Done**。
 
    ![添加 Minecraft 服务器](/images/manual/use-cases/minecraft-add-server.png#bordered)
 
@@ -176,23 +182,43 @@ Overlay gateway 动态分配本地 IP 地址，应用重启或网络变化后可
 
    ![加入 Minecraft 服务器](/images/manual/use-cases/minecraft-join-server.png#bordered)
 
-## 通过 VPN 连接
+## 使用 Clone 创建另一台服务器
 
-玩家与 Olares 设备不在同一局域网时，可以使用此方法。
+[Clone](../manual/olares/market/clone-apps.md) 可以在同一 Olares 设备上运行不同版本或不同模组配置的服务器。它创建具有独立配置和数据目录的新实例，不会复制原实例的世界和模组。
 
-:::tip 可以保持 Overlay 开启
-Minecraft 的 Overlay gateway 与 VPN 连接不冲突，可以同时启用。
+1. 先安装 Minecraft 主实例，然后在 Market 中打开 **My Olares**。
+2. 找到 Minecraft，点击 **Open** 旁的下拉箭头，选择 **Clone**。
+3. 填写唯一的 **New app title** 和 **Desktop shortcut name**，点击 **Confirm**。
+4. 在 **Configure Environment Variables** 中，为新服务器选择 **VERSION**、**TYPE** 和加载器配置，点击 **Confirm**，等待安装完成。
+5. 单独管理新实例，将它的模组上传到 `Data/<app-name>/data/mods`。需要局域网访问时，为该实例开启 Overlay gateway。
+
+请使用目标实例的连接信息。Overlay gateway 地址使用端口 `25565`，VPN 连接所用的导出端口则单独分配。同时运行多个服务器会增加内存和 CPU 占用。
+
+### 找到实例的数据目录 {#find-the-instances-data-directory}
+
+1. 打开 Market，进入 **My Olares**。
+2. 选择 Minecraft 实例，打开详情页。
+3. 在页面 URL 中，找到来源名称后面的应用名称。例如，`/app/<source>/minecraftabc123` 中的应用名称为 `minecraftabc123`。
+4. 打开 Files，进入 `Data/<app-name>/data`。在此示例中，目录为 `Data/minecraftabc123/data`。
+
+即使实例使用了不同的显示标题，数据目录仍使用 URL 中的应用名称。
+
+### 复制已有世界
+
+要在另一个实例中继续游玩已有世界，请先保持游戏、加载器和模组版本一致。
+
+1. 停止两个实例，分别备份整个数据目录。
+2. 在 Files 中，用原实例 `data` 目录中的全部内容替换新实例的 `data` 目录内容，包括隐藏文件。
+3. 检查新实例的环境变量。这些设置独立于复制的文件。保持 **ONLINE_MODE** 一致，以保留玩家 UUID 和背包的对应关系。检查复制过来的管理员、白名单和封禁名单。
+4. 恢复运行新实例，使用它自己的连接信息加入。
+
+:::warning 保留备份
+两个实例使用独立的数据目录，游戏进度不会同步。修改游戏版本、加载器或模组前，请保留备份。需要回退升级时，恢复升级前的备份。不要将升级后的世界复制回低版本服务器。
 :::
-
-1. 确保已启用 [LarePass VPN](../manual/get-started/local-access.md#using-larepass-vpn)。
-2. 打开 Minecraft Java 版，点击 **Multiplayer**。
-3. 点击 **Add Server**。
-4. 打开 **Settings** > **Applications** > **Minecraft**（或目标 Clone）> **Ports**，复制该实例显示的地址与外部端口，填写到 **Server Address**。外部端口按实例分配，不要假定为 `25565`，也不要复用其他实例的地址。
-5. 保存服务器，点击 **Join Server**。
 
 ## 管理服务器
 
-Minecraft 应用没有 Web 管理界面。要查看日志或执行服务器命令，请从 Launchpad 打开应用，使用内置控制台终端。
+要查看日志或执行服务器命令，请从 Launchpad 打开 Minecraft 实例，使用控制台终端。
 
 ## 常见问题
 
@@ -213,7 +239,7 @@ Overlay gateway 动态分配本地 IP 地址。连接时，请使用 **Settings*
 请检查以下事项：
 
 - 使用的是 Minecraft Java 版。
-- 地址与外部端口来自 **Settings** > **Applications** > 目标实例 > **Ports**。
+- 地址使用 Olares 域名，以及 **Settings** > **Applications** > 目标实例 > **Export ports** 中的 **Exported port**。
 - 服务器已就绪，客户端匹配其游戏版本与模组要求。
 - LarePass VPN 已启用。
 
@@ -223,6 +249,6 @@ Overlay gateway 动态分配本地 IP 地址。连接时，请使用 **Settings*
 
 ## 了解更多
 
-- [管理应用的 Overlay 网关](/zh/manual/olares/settings/overlay-gateway.md)：为支持的应用配置局域网访问。
-- [管理应用环境变量](../manual/olares/settings/manage-app-env.md)：修改设置并通过重启应用。
+- [管理应用的 Overlay 网关](../manual/olares/settings/overlay-gateway.md)：为支持的应用配置局域网访问。
+- [管理应用环境变量](../manual/olares/settings/manage-app-env.md)：修改设置，重启后生效。
 - [克隆应用](../manual/olares/market/clone-apps.md)：创建并管理独立应用实例。
