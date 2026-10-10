@@ -1,0 +1,115 @@
+{{- $secret := (lookup "v1" "Secret" "os-frontend" "user-service-secrets") | default dict -}}
+{{- $data := (get $secret "data") | default dict -}}
+{{- $pgPassword := (get $data "pg_password") | default (randAlphaNum 16 | b64enc) -}}
+{{- $redisPassword := (get $data "redis_password") | default (randAlphaNum 16 | b64enc) -}}
+{{- $natsSecret := (lookup "v1" "Secret" "os-frontend" "user-service-nats-secret") | default dict -}}
+{{- $natsData := (get $natsSecret "data") | default dict -}}
+{{- $natsPassword := (get $natsData "nats_password") | default (randAlphaNum 16 | b64enc) -}}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: user-service-secrets
+  namespace: os-frontend
+type: Opaque
+data:
+  pg_password: '{{ $pgPassword }}'
+  redis_password: '{{ $redisPassword }}'
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: user-service-nats-secret
+  namespace: os-frontend
+type: Opaque
+data:
+  nats_password: '{{ $natsPassword }}'
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: user-service-pg
+  namespace: os-frontend
+spec:
+  app: user-service
+  appNamespace: os-frontend
+  middleware: postgres
+  postgreSQL:
+    user: user_service_os_frontend
+    password:
+      valueFrom:
+        secretKeyRef:
+          name: user-service-secrets
+          key: pg_password
+    databases:
+    - name: user-service
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: user-service-redis
+  namespace: os-frontend
+spec:
+  app: user-service
+  appNamespace: os-frontend
+  middleware: redis
+  redis:
+    password:
+      valueFrom:
+        secretKeyRef:
+          name: user-service-secrets
+          key: redis_password
+    namespace: user-service
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: user-service-nats
+  namespace: os-frontend
+spec:
+  app: user-service
+  appNamespace: os
+  middleware: nats
+  nats:
+    password:
+      valueFrom:
+        secretKeyRef:
+          name: user-service-nats-secret
+          key: nats_password
+    subjects:
+    - name: files.os-frontend
+      permission:
+        pub: allow
+        sub: allow
+    - name: notification.os-frontend
+      permission:
+        pub: allow
+        sub: allow
+    - name: vault.os-frontend
+      permission:
+        pub: allow
+        sub: allow
+    - name: application.os-frontend
+      permission:
+        pub: allow
+        sub: allow
+    - name: knowledge.os-frontend
+      permission:
+        pub: allow
+        sub: allow
+    - name: market.os-frontend
+      permission:
+        pub: allow
+        sub: allow
+    - name: backup.os-frontend
+      permission:
+        pub: allow
+        sub: allow
+    - name: intent.os-frontend
+      permission:
+        pub: allow
+        sub: allow
+    - name: download_status.os-frontend
+      permission:
+        pub: allow
+        sub: allow
+    user: user-service-os-frontend
