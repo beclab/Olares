@@ -20,6 +20,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/systemcomponents"
 	"github.com/beclab/Olares/daemon/pkg/commands"
 	"github.com/beclab/Olares/daemon/pkg/nets"
+	"github.com/beclab/Olares/daemon/pkg/onboarding"
 	"github.com/joho/godotenv"
 	corev1 "k8s.io/api/core/v1"
 	apixclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
@@ -232,57 +233,27 @@ func GetAppClientSet() (versioned.Clientset, error) {
 	return *client, nil
 }
 
-// IsTerminusInitialized reports whether the owner user finished initialization.
-// The client argument is retained for signature compatibility; user reads now
-// go through the shared informer cache.
-func IsTerminusInitialized(ctx context.Context, client dynamic.Interface) (initialized bool, failed bool, err error) {
-	users, err := listUsersRaw(ctx)
+// GetOnboardingStatus reads the cluster record rather than a personal wizard.
+func GetOnboardingStatus(ctx context.Context) (onboarding.Status, error) {
+	kube, err := GetKubeClient()
 	if err != nil {
-		klog.Error("list user error, ", err)
-		initialized = false
-		failed = false
-		return
+		return onboarding.Status{}, err
 	}
-
-	for _, u := range users {
-		role, ok := u.GetAnnotations()[bflconst.UserAnnotationOwnerRole]
-		if !ok {
-			continue
-		}
-
-		if role == RoleOwner {
-			status, ok := u.GetAnnotations()[bflconst.UserTerminusWizardStatus]
-			if !ok {
-				initialized = false
-				failed = false
-				return
-			}
-			initialized = status == string(bflconst.Completed)
-			failed = (status == string(bflconst.SystemActivateFailed) ||
-				status == string(bflconst.NetworkActivateFailed))
-			return
-		}
+	dynamic, err := GetDynamicClient()
+	if err != nil {
+		return onboarding.Status{}, err
 	}
+	return (&onboarding.Service{Kube: kube, Dynamic: dynamic}).Status(ctx)
+}
 
-	return
+func IsTerminusInitialized(ctx context.Context, _ dynamic.Interface) (bool, bool, error) {
+	status, err := GetOnboardingStatus(ctx)
+	return status.State == onboarding.Completed, status.State == onboarding.Failed, err
 }
 
 func IsTerminusInitializing(ctx context.Context) (bool, error) {
-	user, err := GetAdminUser(ctx)
-	if err != nil {
-		return false, err
-	}
-
-	if user == nil {
-		return false, nil
-	}
-
-	status, ok := user.GetAnnotations()[bflconst.UserTerminusWizardStatus]
-	if !ok {
-		return false, nil
-	}
-
-	return status != string(bflconst.Completed), nil
+	status, err := GetOnboardingStatus(ctx)
+	return status.State == onboarding.Creating || status.State == onboarding.Created || status.State == onboarding.WaitingPassword, err
 }
 
 // IsTerminusRunning reports whether every Olares system component is ready,

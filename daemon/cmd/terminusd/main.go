@@ -96,6 +96,7 @@ func main() {
 	utils.InitInformers(mainCtx)
 
 	apis := apiserver.NewServer(mainCtx, port)
+	apiserver.StartOnboarding(mainCtx)
 
 	if err := state.CheckCurrentStatus(mainCtx); err != nil {
 		klog.Error(err)
