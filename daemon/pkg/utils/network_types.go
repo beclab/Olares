@@ -26,13 +26,6 @@ type Device struct {
 	Method      string
 }
 
-type BridgeConnection struct {
-	BridgeName  string
-	SlaveName   string
-	Active      bool
-	Ipv4Address string
-}
-
 var (
 	cmdPathCache   = make(map[string]string)
 	cmdPathCacheMu sync.RWMutex

@@ -2,8 +2,6 @@ package disableoverlaygateway
 
 import (
 	"context"
-	"os"
-	"os/exec"
 
 	"github.com/beclab/Olares/daemon/pkg/commands"
 	"github.com/beclab/Olares/daemon/pkg/utils"
@@ -24,51 +22,29 @@ func New() commands.Interface {
 	}
 }
 
+// Execute withdraws the overlay gateway on this node: every application's
+// switch is cleared and the desired state is removed. The alternative name and
+// the CNI DHCP daemon stay in place; neither affects the host network, and the
+// daemon keeps renewing leases for Pods until they are recreated.
 func (d *disableOverlayGateway) Execute(ctx context.Context, p any) (res any, err error) {
-	// disable the bridge connection
-	err = utils.ResetBridgeConnection(ctx)
-	if err != nil {
-		klog.Errorf("overlay gateway disable: reset bridge connection failed: %v", err)
-		return nil, err
-	}
-
-	utils.NotifyNetworkChanged()
-
-	// turn off the CNI-DHCP service
-	cmd := exec.CommandContext(ctx, "systemctl", "disable", "--now", "cni-dhcp.service")
-	cmd.Env = os.Environ()
-	_, err = cmd.Output()
-	if err != nil {
-		klog.Errorf("overlay gateway disable: disable cni-dhcp.service failed: %v", err)
-		return nil, err
-	}
-
-	// disable the overlay gateway supported apps' option for all users
 	apps, err := utils.GetOverlayGatewaySupportedApps(ctx, "")
 	if err != nil {
 		klog.Errorf("overlay gateway disable: list supported apps failed: %v", err)
 		return nil, err
 	}
-
 	for _, app := range apps {
-		if app.Enabled {
-			// set the app's option to disable overlay gateway
-			err = utils.UpdateApplicationSettings(ctx, app.AppResourceName, "enableOverlayGateway", "false")
-			if err != nil {
-				klog.Errorf("overlay gateway disable: clear enableOverlayGateway for %s failed: %v", app.AppResourceName, err)
-				return nil, err
-			}
+		if !app.Enabled {
+			continue
+		}
+		if err := utils.UpdateApplicationSettings(ctx, app.AppResourceName, "enableOverlayGateway", "false"); err != nil {
+			klog.Errorf("overlay gateway disable: clear enableOverlayGateway for %s failed: %v", app.AppResourceName, err)
+			return nil, err
 		}
 	}
-
-	// restart the overlay gateway supported apps
-	// call restarting from the frontend
-	// go func() {
-	// 	err = utils.RestartOverlayGatewaySupportedApps(ctx, apps)
-	// 	if err != nil {
-	// 		klog.Error("restart overlay gateway supported apps error, ", err)
-	// 	}
-	// }()
-
+	if err := utils.SetOverlayGatewayDesired(false); err != nil {
+		klog.Errorf("overlay gateway disable: %v", err)
+		return nil, err
+	}
+	klog.Info("overlay gateway disabled")
 	return nil, nil
 }

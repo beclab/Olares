@@ -2,8 +2,6 @@ package enableoverlaygateway
 
 import (
 	"context"
-	"os"
-	"os/exec"
 
 	"github.com/beclab/Olares/daemon/pkg/commands"
 	"github.com/beclab/Olares/daemon/pkg/utils"
@@ -24,23 +22,20 @@ func New() commands.Interface {
 	}
 }
 
+// Execute registers the overlay gateway on this node: the wired NIC gets the
+// alternative name the underlay network attaches to, and the desired state is
+// recorded. No NetworkManager connection is touched, so the host keeps its
+// address and routes throughout.
 func (e *enableOverlayGateway) Execute(ctx context.Context, p any) (res any, err error) {
-	// turn on the CNI-DHCP service
-	cmd := exec.CommandContext(ctx, "systemctl", "enable", "--now", "cni-dhcp.service")
-	cmd.Env = os.Environ()
-	_, err = cmd.Output()
+	dev, err := utils.EnsureOverlayParentAltname(ctx)
 	if err != nil {
-		klog.Errorf("overlay gateway enable: enable cni-dhcp.service failed: %v", err)
+		klog.Errorf("overlay gateway enable: prepare overlay parent failed: %v", err)
 		return nil, err
 	}
-
-	// create the bridge connection
-	err = utils.CreateBridgeConnection(ctx)
-	utils.NotifyNetworkChanged()
-	if err != nil {
-		klog.Errorf("overlay gateway enable: create bridge connection failed: %v", err)
+	if err := utils.SetOverlayGatewayDesired(true); err != nil {
+		klog.Errorf("overlay gateway enable: %v", err)
 		return nil, err
 	}
-
+	klog.Infof("overlay gateway enabled on %s (%s)", dev, utils.OverlayParentAltname)
 	return nil, nil
 }

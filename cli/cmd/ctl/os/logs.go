@@ -59,7 +59,7 @@ type LogCollectOptions struct {
 	DmesgPrevBoots int
 }
 
-var servicesToCollectLogs = []string{"k3s", "containerd", "olaresd", "kubelet", "juicefs", "redis", "minio", "etcd", "NetworkManager"}
+var servicesToCollectLogs = []string{"k3s", "containerd", "olaresd", "kubelet", "juicefs", "redis", "minio", "etcd", "NetworkManager", "cni-dhcp"}
 
 // journalctlBin is the journalctl executable journalctlToTar runs. It is a
 // variable so tests can substitute a stub instead of requiring a host with a
