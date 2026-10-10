@@ -33,8 +33,7 @@ func (m *macosInstallPhaseBuilder) installTerminus() phase {
 		&terminus.InstallAccountModule{},
 		&terminus.InstallSettingsModule{},
 		&terminus.InstallOsSystemModule{},
-		&terminus.InstallLauncherModule{},
-		&terminus.InstallAppsModule{},
+		&terminus.PrepareUserChartsModule{},
 	}
 }
 

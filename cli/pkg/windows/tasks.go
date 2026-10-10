@@ -20,7 +20,6 @@ import (
 	"github.com/beclab/Olares/cli/pkg/utils"
 	templates "github.com/beclab/Olares/cli/pkg/windows/templates"
 	"github.com/pkg/errors"
-	"github.com/spf13/viper"
 )
 
 const (
@@ -495,15 +494,6 @@ func (i *InstallTerminus) Execute(runtime connector.Runtime) error {
 	}
 
 	var bashUrl = fmt.Sprintf("https://%s", cc.DefaultBashUrl)
-	var defaultDomainName = viper.GetString(common.FlagOSDomainName)
-	if !utils.IsValidDomain(defaultDomainName) {
-		defaultDomainName = ""
-	}
-	if defaultDomainName != "" {
-		envs = append(envs, fmt.Sprintf("export %s=%s", common.EnvLegacyOSDomainName, defaultDomainName))
-		bashUrl = fmt.Sprintf("https://%s", defaultDomainName)
-	}
-
 	var cdnService = i.KubeConf.Arg.OlaresCDNService
 	if cdnService == "" {
 		cdnService = cc.DefaultOlaresCDNService

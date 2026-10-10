@@ -19,6 +19,7 @@ const (
 	NamespaceOsMesh      = "os-mesh"
 	NamespaceOsGpu       = "os-gpu"
 	NamespaceOsNetwork   = "os-network"
+	NamespaceOsFrontend  = "os-frontend"
 
 	// NamespaceUserSpacePrefix and NamespaceUserSystemPrefix are prefixed to an
 	// Olares user name to form that user's two namespaces.

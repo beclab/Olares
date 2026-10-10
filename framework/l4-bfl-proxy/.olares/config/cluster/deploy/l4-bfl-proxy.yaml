@@ -1,0 +1,81 @@
+# Packaged into os-framework; runs before any user is created.
+# Namespace and ServiceAccount are provided by the settings chart.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: l4-bfl-proxy
+  namespace: os-network
+  labels:
+    app: l4-bfl-proxy
+    tier: bfl
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: l4-bfl-proxy
+      tier: bfl
+  template:
+    metadata:
+      labels:
+        app: l4-bfl-proxy
+        tier: bfl
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      serviceAccountName: os-network-internal
+      priorityClassName: system-cluster-critical
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/os
+                    operator: In
+                    values:
+                      - linux
+                  - key: node-role.kubernetes.io/control-plane
+                    operator: Exists
+      containers:
+        - name: proxy
+          image: beclab/l4-bfl-proxy:v0.3.48
+          imagePullPolicy: IfNotPresent
+          command:
+            - /l4-bfl-proxy
+            - -v
+            - "4"
+            - -xds-tcp-idle-timeout
+            - 1h
+            - -xds-http-stream-idle-timeout
+            - 1h
+            - -xds-connect-timeout
+            - 5s
+          env:
+            - name: NODE_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+          livenessProbe:
+            httpGet:
+              port: 18081
+              path: /healthz
+            failureThreshold: 8
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            timeoutSeconds: 10
+          readinessProbe:
+            httpGet:
+              port: 18081
+              path: /readyz
+            failureThreshold: 5
+            periodSeconds: 3
+            timeoutSeconds: 10
+          ports:
+            - containerPort: 443
+              protocol: TCP
+          resources:
+            limits:
+              cpu: "2"
+            requests:
+              cpu: 100m

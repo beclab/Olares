@@ -97,8 +97,7 @@ func (l *linuxInstallPhaseBuilder) installTerminus() phase {
 		// phase publishes no declaration, so a materialized cache would have
 		// nothing to serve.
 		&preinstall.HFCacheMaterializeModule{Skip: l.runtime.Arg.SystemInfo.IsWsl()},
-		&terminus.InstallLauncherModule{},
-		&terminus.InstallAppsModule{},
+		&terminus.PrepareUserChartsModule{},
 	}
 }
 

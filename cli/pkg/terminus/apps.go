@@ -3,182 +3,32 @@ package terminus
 import (
 	"context"
 	"fmt"
-	"os"
-	"path"
 	"time"
 
 	"github.com/beclab/Olares/cli/pkg/core/logger"
-	"github.com/beclab/Olares/cli/pkg/storage"
 
 	"github.com/beclab/Olares/cli/pkg/clientset"
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/connector"
 	"github.com/beclab/Olares/cli/pkg/core/task"
 	"github.com/beclab/Olares/cli/pkg/core/util"
-	"github.com/beclab/Olares/cli/pkg/utils"
 	"github.com/pkg/errors"
-	ctrl "sigs.k8s.io/controller-runtime"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var BuiltInApps = []string{"portfolio", "vault", "desktop", "message", "wise", "search", "appstore", "notification", "dashboard", "settings", "profile", "agent", "files", "studio"}
-
-type InstallAppsModule struct {
+// PrepareUserChartsModule makes personal charts available to app-service without
+// deploying any user's services during machine installation.
+type PrepareUserChartsModule struct {
 	common.KubeModule
 }
 
-func (i *InstallAppsModule) Init() {
-	logger.InfoInstallationProgress("Installing built-in apps ...")
-	i.Name = "Install Built-in apps"
-	i.Desc = "Install Built-in apps"
-
-	prepareAppValues := &task.LocalTask{
-		Name:   "PrepareAppValues",
-		Desc:   "Prepare app values",
-		Action: new(PrepareAppValues),
+func (m *PrepareUserChartsModule) Init() {
+	logger.InfoInstallationProgress("Preparing charts for user creation ...")
+	m.Name = "PrepareUserCharts"
+	m.Tasks = []task.Interface{
+		&task.LocalTask{Name: "CopyAppServiceHelmFiles", Action: new(CopyAppServiceHelmFiles), Retry: 5},
 	}
-
-	installApps := &task.LocalTask{
-		Name:   "InstallApps",
-		Desc:   "Install apps",
-		Action: new(InstallApps),
-		Retry:  5,
-	}
-
-	clearAppsValues := &task.LocalTask{
-		Name:   "ClearAppValues",
-		Desc:   "Clear apps values",
-		Action: new(ClearAppValues),
-	}
-
-	copyFiles := &task.LocalTask{
-		Name:   "CopyAppServiceHelmFiles",
-		Desc:   "Copy files",
-		Action: new(CopyAppServiceHelmFiles),
-		Retry:  5,
-	}
-
-	i.Tasks = []task.Interface{
-		prepareAppValues,
-		installApps,
-		clearAppsValues,
-		copyFiles,
-	}
-
-}
-
-type PrepareAppValues struct {
-	common.KubeAction
-}
-
-func (u *PrepareAppValues) Execute(runtime connector.Runtime) error {
-	client, err := clientset.NewKubeClient()
-	if err != nil {
-		return errors.Wrap(errors.WithStack(err), "kubeclient create error")
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
-	defer cancel()
-
-	ns := fmt.Sprintf("user-space-%s", u.KubeConf.Arg.User.UserName)
-
-	bfDocUrl, _ := getDocUrl(ctx, runtime)
-	bflNodeName, err := getBflPod(ctx, ns, client, runtime)
-	if err != nil {
-		return err
-	}
-	bflAnnotations, err := getBflAnnotation(ctx, ns, client, runtime)
-	if err != nil {
-		return err
-	}
-	fsType := storage.GetRootFSType()
-	gpuType := getGpuType(u.KubeConf.Arg.GPU.Enable)
-	appValues := getAppSecrets()
-
-	var values = map[string]interface{}{
-		"bfl": map[string]interface{}{
-			"nodeport":               30883,
-			"nodeport_ingress_http":  30083,
-			"nodeport_ingress_https": 30082,
-			"username":               u.KubeConf.Arg.User.UserName,
-			"admin_user":             true,
-			"url":                    bfDocUrl,
-			"nodeName":               bflNodeName,
-		},
-		"pvc": map[string]interface{}{
-			"userspace": bflAnnotations["userspace_pv"],
-		},
-		"userspace": map[string]interface{}{
-			"userData": fmt.Sprintf("%s/Home", bflAnnotations["userspace_hostpath"]),
-			"appData":  fmt.Sprintf("%s/Data", bflAnnotations["userspace_hostpath"]),
-			"appCache": bflAnnotations["appcache_hostpath"],
-			"dbdata":   bflAnnotations["dbdata_hostpath"],
-		},
-		"desktop": map[string]interface{}{
-			"nodeport": 30180,
-		},
-		"global": map[string]interface{}{
-			"bfl": map[string]interface{}{
-				"username": u.KubeConf.Arg.User.UserName,
-			},
-		},
-		"gpu":                                gpuType,
-		"fs_type":                            fsType,
-		"os":                                 appValues,
-		common.HelmValuesKeyOlaresRootFSPath: storage.OlaresRootDir,
-	}
-
-	u.ModuleCache.Set(common.CacheAppValues, values)
-
-	return nil
-}
-
-type InstallApps struct {
-	common.KubeAction
-}
-
-func (i *InstallApps) Execute(runtime connector.Runtime) error {
-	var appPath = path.Join(runtime.GetInstallerDir(), "wizard", "config", "apps")
-	appsDirEntries, err := os.ReadDir(appPath)
-	if err != nil {
-		return errors.Wrapf(err, "failed to list %s", appPath)
-	}
-	var apps []string
-	for _, entry := range appsDirEntries {
-		if entry.IsDir() {
-			apps = append(apps, entry.Name())
-		}
-	}
-
-	var ns = fmt.Sprintf("user-space-%s", i.KubeConf.Arg.User.UserName)
-	config, err := ctrl.GetConfig()
-	if err != nil {
-		return err
-	}
-	actionConfig, settings, err := utils.InitConfig(config, ns)
-	if err != nil {
-		return err
-	}
-
-	valsCache, ok := i.ModuleCache.Get(common.CacheAppValues)
-	if !ok {
-		return fmt.Errorf("app values not found")
-	}
-	vals, ok := valsCache.(map[string]interface{})
-	if !ok {
-		return fmt.Errorf("app values in cache is not map[string]interface{}")
-	}
-	var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Minute)
-	defer cancel()
-
-	for _, app := range apps {
-		if err := utils.UpgradeCharts(ctx, actionConfig, settings, app, path.Join(appPath, app), "", ns, vals, false); err != nil {
-			return fmt.Errorf("install app %s failed: %v", app, err)
-		}
-	}
-
-	return nil
 }
 
 type ClearAppValues struct {
@@ -232,51 +82,4 @@ func getAppServiceName(client clientset.Client, runtime connector.Runtime) (stri
 	}
 
 	return pods.Items[0].Name, nil
-}
-
-func getBflPod(ctx context.Context, ns string, client clientset.Client, runtime connector.Runtime) (string, error) {
-	pods, err := client.Kubernetes().CoreV1().Pods(ns).List(ctx, metav1.ListOptions{LabelSelector: "tier=bfl"})
-	if err != nil {
-		return "", errors.Wrap(errors.WithStack(err), "get bfl failed")
-	}
-
-	if len(pods.Items) == 0 {
-		return "", errors.New("bfl not found")
-	}
-
-	return pods.Items[0].Spec.NodeName, nil
-}
-
-func getDocUrl(ctx context.Context, runtime connector.Runtime) (url string, err error) {
-	var nodeip string
-	var cmd = fmt.Sprintf(`curl --connect-timeout 30 --retry 5 --retry-delay 1 --retry-max-time 10 -s http://checkip.dyndns.org/ | grep -o "[[:digit:].]\+"`)
-	nodeip, _ = runtime.GetRunner().SudoCmdContext(ctx, cmd, false, false)
-	url = fmt.Sprintf("http://%s:30883/bfl/apidocs.json", nodeip)
-	return
-}
-
-func getBflAnnotation(ctx context.Context, ns string, client clientset.Client, runtime connector.Runtime) (map[string]string, error) {
-	sts, err := client.Kubernetes().AppsV1().StatefulSets(ns).Get(ctx, "bfl", metav1.GetOptions{})
-	if err != nil {
-		return nil, errors.Wrap(errors.WithStack(err), "get bfl sts failed")
-	}
-	if sts == nil {
-		return nil, errors.New("bfl sts not found")
-	}
-
-	return sts.Annotations, nil
-}
-
-func getAppSecrets() map[string]interface{} {
-	var secrets = make(map[string]interface{})
-	for _, app := range BuiltInApps {
-		s, _ := utils.GeneratePassword(16)
-		var v = make(map[string]interface{})
-		v["appKey"] = fmt.Sprintf("bytetrade_%s_%d", app, utils.Random())
-		v["appSecret"] = s
-
-		secrets[app] = v
-	}
-
-	return secrets
 }

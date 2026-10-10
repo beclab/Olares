@@ -4,7 +4,7 @@ apiVersion: v1
 kind: Namespace
 metadata:
   annotations:
-    kubesphere.io/creator: '{{ .Values.user.name }}'
+    kubesphere.io/creator: 'olares'
   labels:
     kubesphere.io/workspace: system-workspace
   name: os-network
@@ -14,7 +14,7 @@ apiVersion: v1
 kind: Namespace
 metadata:
   annotations:
-    kubesphere.io/creator: '{{ .Values.user.name }}'
+    kubesphere.io/creator: 'olares'
   labels:
     kubesphere.io/workspace: system-workspace
     openpolicyagent.org/webhook: ignore
@@ -25,7 +25,7 @@ apiVersion: v1
 kind: Namespace
 metadata:
   annotations:
-    kubesphere.io/creator: '{{ .Values.user.name }}'
+    kubesphere.io/creator: 'olares'
   labels:
     kubesphere.io/workspace: system-workspace
     openpolicyagent.org/webhook: ignore
@@ -36,7 +36,7 @@ apiVersion: v1
 kind: Namespace
 metadata:
   annotations:
-    kubesphere.io/creator: '{{ .Values.user.name }}'
+    kubesphere.io/creator: 'olares'
   labels:
     kubesphere.io/workspace: system-workspace
     openpolicyagent.org/webhook: ignore

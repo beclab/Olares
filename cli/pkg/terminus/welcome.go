@@ -2,7 +2,6 @@ package terminus
 
 import (
 	"fmt"
-	"net"
 	"time"
 
 	"github.com/beclab/Olares/cli/pkg/common"
@@ -16,64 +15,15 @@ type WelcomeMessage struct {
 }
 
 func (t *WelcomeMessage) Execute(runtime connector.Runtime) error {
-	port := 30180
-	localIP := runtime.GetSystemInfo().GetLocalIp()
-	if si := runtime.GetSystemInfo(); si.GetNATGateway() != "" {
-		localIP = si.GetNATGateway()
-	}
-	var publicIPs []net.IP
-	networkSettings := t.KubeConf.Arg.NetworkSettings
-	publicIPs = append(publicIPs, networkSettings.OSPublicIPs...)
-	if networkSettings.CloudProviderPublicIP != nil {
-		publicIPs = append(publicIPs, networkSettings.CloudProviderPublicIP)
-	}
-	var filteredPublicIPs []net.IP
-	for _, publicIP := range publicIPs {
-		if publicIP == nil {
-			continue
-		}
-		if publicIP.String() == localIP {
-			continue
-		}
-		for _, filteredIP := range filteredPublicIPs {
-			if filteredIP.String() == publicIP.String() {
-				continue
-			}
-		}
-		filteredPublicIPs = append(filteredPublicIPs, publicIP)
-	}
-
-	logger.InfoInstallationProgress("Installation wizard is complete")
+	logger.InfoInstallationProgress("Olares system installation is complete")
+	logger.Info("No user has been created.")
+	// olaresd uses this marker to recognize completion of the CLI install.
 	logger.InfoInstallationProgress("All done")
-	fmt.Printf("\n\n\n\n------------------------------------------------\n\n")
-	logger.Info("Olares is running locally at:")
-	logger.Infof("http://%s:%d", localIP, port)
-	if len(filteredPublicIPs) > 0 {
-		fmt.Println()
-		logger.Info("and publicly accessible at:")
-		for _, publicIP := range filteredPublicIPs {
-			logger.Infof("http://%s:%d", publicIP, port)
-		}
-	} else if networkSettings.EnableReverseProxy != nil && !*networkSettings.EnableReverseProxy && networkSettings.ExternalPublicIP != nil {
-		fmt.Println()
-		logger.Info("this installation is explicitly configured to disable reverse proxy")
-		logger.Info("but no public IP address can be found from the system")
-		logger.Info("a reflected public IP as seen by internet peers is determined on a best effort basis:")
-		logger.Infof("http://%s:%d", networkSettings.ExternalPublicIP, port)
-	}
-	fmt.Println()
-	logger.Info("Open your browser and visit the above address")
-	logger.Info("with the following credentials:")
-	fmt.Println()
-	logger.Infof("Username: %s", t.KubeConf.Arg.User.UserName)
-	logger.Infof("Password: %s", t.KubeConf.Arg.User.Password)
-	fmt.Printf("\n------------------------------------------------\n\n\n\n\n")
-	fmt.Println()
 
 	// If AMD GPU on Ubuntu 22.04/24.04, print warning about reboot for ROCm
 	if si := runtime.GetSystemInfo(); si.IsUbuntu() && (si.IsUbuntuVersionEqual(connector.Ubuntu2204) || si.IsUbuntuVersionEqual(connector.Ubuntu2404)) {
 		if si.IsRyzenAIMax() || si.IsAmdGPU() {
-			logger.Warnf("\x1b[31mWarning: To enable ROCm, please reboot your machine after activation.\x1b[0m")
+			logger.Warnf("\x1b[31mWarning: To enable ROCm, please reboot your machine after installation.\x1b[0m")
 			fmt.Println()
 		}
 	}
