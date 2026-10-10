@@ -1,0 +1,6 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: os-frontend
+  labels:
+    kubesphere.io/workspace: system-workspace

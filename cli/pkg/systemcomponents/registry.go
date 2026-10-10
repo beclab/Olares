@@ -50,7 +50,6 @@ func All(cfg Config) []Component {
 	components = append(components, gateway(cfg.GatewayNamespace)...)
 	components = append(components, mesh(cfg.MeshNamespace)...)
 	components = append(components, network()...)
-	components = append(components, perUser()...)
 	return components
 }
 
@@ -202,40 +201,13 @@ func network() []Component {
 	}
 }
 
-// perUser is instantiated once for every provisioned Olares user. Only the
-// workloads listed here are checked: everything else in a user's namespaces is
-// an installed app, whose health is the app's own concern and must not fail a
-// system readiness check.
-//
-// Three of them come and go with the user's own state. The wizard is deleted by
-// BFL as soon as the user finishes activation, so it only exists on an
-// installation nobody has logged into yet. The reverse proxy agent is applied
-// while FRP or a Cloudflare tunnel is on and removed again when the user
-// switches back to a public IP. jfsnotify-proxy needs the JuiceFS backend.
-func perUser() []Component {
-	space := NamespaceUserSpacePrefix + UserPlaceholder
-	system := NamespaceUserSystemPrefix + UserPlaceholder
-	return []Component{
-		{Namespace: space, Kind: StatefulSet, Name: LauncherName},
-		{Namespace: space, Kind: Deployment, Name: "authelia-deployment"},
-		{Namespace: space, Kind: Deployment, Name: "olares-app-deployment"},
-
-		{Namespace: space, Kind: Deployment, Name: "wizard", Presence: Optional},
-		{Namespace: space, Kind: Deployment, Name: "reverse-proxy-agent", Presence: Optional},
-
-		{Namespace: system, Kind: Deployment, Name: "system-server"},
-		{Namespace: system, Kind: Deployment, Name: "tapr-images"},
-		{Namespace: system, Kind: Deployment, Name: "jfsnotify-proxy", Presence: Optional},
-	}
-}
-
 const (
 	// AppServiceName is the workload app-service runs as. The install pipeline
 	// waits for it on its own before continuing, because everything installed
 	// afterwards is reconciled by it.
 	AppServiceName = "app-service"
 
-	// LauncherName is the workload BFL runs as, one per user.
+	// LauncherName is the personal BFL workload, created after installation.
 	LauncherName = "bfl"
 )
 
@@ -250,13 +222,4 @@ func Mesh(namespace string) []Component {
 		namespace = NamespaceOsMesh
 	}
 	return mesh(namespace)
-}
-
-// Launcher returns the BFL component for a single user.
-func Launcher(user string) []Component {
-	return []Component{{
-		Namespace: NamespaceUserSpacePrefix + user,
-		Kind:      StatefulSet,
-		Name:      LauncherName,
-	}}
 }
