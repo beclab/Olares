@@ -74,7 +74,7 @@ func (m *Manager) packageModule(mod string) error {
 	switch mod {
 	case "platform":
 		distDeployType = "os-platform"
-	case "framework":
+	case "framework", "apps":
 		distDeployType = "os-framework"
 	}
 	modPath := filepath.Join(m.olaresRepoRoot, mod)

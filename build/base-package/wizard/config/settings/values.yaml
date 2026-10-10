@@ -1,6 +1,1 @@
-namespace:
-  name: 'user-space-test'
-  role: admin
-
-user:
-  name: 'test'
+{}
