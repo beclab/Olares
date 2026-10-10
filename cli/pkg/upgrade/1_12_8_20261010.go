@@ -3,6 +3,7 @@ package upgrade
 import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/beclab/Olares/cli/pkg/core/task"
+	"github.com/beclab/Olares/cli/pkg/terminus"
 )
 
 // upgrader_1_12_8_20261010 moves the overlay gateway parent from the legacy
@@ -19,7 +20,10 @@ func (u upgrader_1_12_8_20261010) Version() *semver.Version {
 }
 
 func (u upgrader_1_12_8_20261010) UpgradeSystemComponents() []task.Interface {
-	return append(u.upgraderBase.UpgradeSystemComponents(), fixedMACTasks()...)
+	tasks := []task.Interface{terminus.GenericDevicePluginTask()}
+	tasks = append(tasks, u.upgraderBase.UpgradeSystemComponents()...)
+	tasks = append(tasks, fixedMACTasks()...)
+	return tasks
 }
 
 func init() {
