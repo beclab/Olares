@@ -5,9 +5,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, Isaac Lab, Isaac Sim, NVIDIA, 机器人仿真, 强化学习, GPU, WebRTC 流式传输, 自托管
-app_version: "1.0.3"
-doc_version: "1.0"
-doc_updated: "2026-05-14"
+app_version: "1.0.18"
+doc_version: "1.1"
+doc_updated: "2026-10-10"
 ---
 
 :::warning
@@ -36,7 +36,7 @@ Isaac Lab 是 NVIDIA 开源的机器人学习框架。在 Olares 上，它以终
 在开始之前，请确保：
 - Olares 运行在配备 NVIDIA GPU 的机器上。
 - 如果要使用 WebRTC 流式传输，Olares 主机使用 AMD64 架构。ARM64 主机（如 DGX Spark）仅支持非流式传输工作负载。
-- 本地计算机上已安装 [NVIDIA WebRTC Streaming Client](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/installation/download.html)。
+- 本地计算机上已安装 [NVIDIA WebRTC Streaming Client](https://docs.isaacsim.omniverse.nvidia.com/6.1.0/installation/download.html)。
 
 :::info 主机与本地计算机架构
 AMD64 要求适用于运行 Isaac Lab 的 Olares 主机，而非用于流式传输的本地计算机。
@@ -108,19 +108,11 @@ Isaac Lab 和 Isaac Sim 服务于不同的目的：
 
    将 `<PID>` 替换为终端中显示的实际进程 ID。
 
-5. 可选：在启动新工作负载前清除现有日志文件。
-
-   ```bash
-   > nohup.out
-   ```
-
 ## 运行 Isaac Lab 工作负载
 
 Isaac Lab 工作负载从终端启动。使用的命令取决于安装 Isaac Lab 的 Olares 主机的架构。
 
-在启动新演示或任务前，停止任何现有工作负载。
-
-以 `&` 结尾的命令在后台运行。类似 `[1] 580` 的消息表示工作负载已启动。终端中的数字可能有所不同。
+在启动新演示或任务前，停止任何现有工作负载。一次只运行一条命令，并在前台执行。官方 Isaac Lab 文档推荐 `uv run isaaclab`。`./isaaclab.sh` 仍可使用相同参数。
 
 ### 运行演示
 
@@ -132,28 +124,18 @@ Isaac Lab 工作负载从终端启动。使用的命令取决于安装 Isaac Lab
 1. 启动四足运动演示：
 
    ```bash
-   LIVESTREAM=1 nohup ./isaaclab.sh -p scripts/demos/quadrupeds.py --headless &
+   uv run isaaclab -p scripts/demos/quadrupeds.py --livestream 1
    ```
 
-2. 跟踪日志：
-
-   ```bash
-   tail -f nohup.out
-   ```
-
-3. 等待工作负载启动且日志趋于稳定。
+2. 等待工作负载启动，并让本终端中的日志趋于稳定。
 
    启动期间可能会出现来自 Isaac Sim、Omniverse 或 PyTorch 的警告。如果没有出现致命错误且进程保持运行，请继续下一步。
 
-4. 要停止查看日志，请按 **Ctrl + C**。
-
-   这只会退出 `tail -f`，不会停止工作负载。
-
-5. 在本地计算机上打开 WebRTC Streaming Client，输入 `PUBLIC_IP` 值，然后点击 **连接**。
+3. 在本地计算机上打开 WebRTC Streaming Client，输入 `PUBLIC_IP` 值，然后点击 **连接**。
 
    ![连接 Streaming client](/images/manual/use-cases/isaac-lab-connect-streaming-client.png#bordered){width=90%}
 
-6. 查看仿真进度。
+4. 查看仿真进度。
 
    ![查看仿真进度](/images/manual/use-cases/isaac-lab-view-simulation.png#bordered){width=90%}
 </template>
@@ -162,10 +144,10 @@ Isaac Lab 工作负载从终端启动。使用的命令取决于安装 Isaac Lab
 
 当 Isaac Lab 运行在 ARM64 Olares 主机上（如 DGX Spark）时，使用此命令。
 
-在 ARM64 Olares 主机上，不支持 WebRTC 流式传输。使用不带 `LIVESTREAM=1` 和 `--headless` 的命令：
+在 ARM64 Olares 主机上，不支持 WebRTC 流式传输。不要加 `--livestream`。
 
 ```bash
-nohup ./isaaclab.sh -p scripts/demos/quadrupeds.py &
+uv run isaaclab -p scripts/demos/quadrupeds.py
 ```
 
 由于 ARM64 Olares 主机上不支持 WebRTC 流式传输，你无法通过 WebRTC Streaming Client 可视化演示。
@@ -183,28 +165,18 @@ nohup ./isaaclab.sh -p scripts/demos/quadrupeds.py &
 1. 启动强化学习训练任务：
 
    ```bash
-   LIVESTREAM=1 nohup ./isaaclab.sh -p scripts/reinforcement_learning/rsl_rl/train.py --task=Isaac-Velocity-Rough-H1-v0 --headless &
+   uv run isaaclab train --rl_library rsl_rl --task Isaac-Velocity-Rough-H1 --livestream 1
    ```
 
-2. 跟踪日志：
-
-   ```bash
-   tail -f nohup.out
-   ```
-
-3. 等待工作负载启动且日志趋于稳定。
+2. 等待工作负载启动，并让本终端中的日志趋于稳定。
 
    启动期间可能会出现来自 Isaac Sim、Omniverse 或 PyTorch 的警告。如果没有出现致命错误且进程保持运行，请继续下一步。
 
-4. 要停止查看日志，请按 **Ctrl + C**。
-
-   这只会退出 `tail -f`，不会停止工作负载。
-
-5. 在本地计算机上打开 WebRTC Streaming Client，输入 `PUBLIC_IP` 值，然后点击 **连接**。
+3. 在本地计算机上打开 WebRTC Streaming Client，输入 `PUBLIC_IP` 值，然后点击 **连接**。
 
    ![连接 Streaming client](/images/manual/use-cases/isaac-lab-connect-streaming-client.png#bordered){width=90%}
 
-6. 查看训练进度。
+4. 查看训练进度。
 
    ![查看 RL 训练进度](/images/manual/use-cases/isaac-lab-view-RL-training.png#bordered){width=90%}
 
@@ -214,10 +186,10 @@ nohup ./isaaclab.sh -p scripts/demos/quadrupeds.py &
 
 当 Isaac Lab 运行在 ARM64 Olares 主机上（如 DGX Spark）时，使用此命令。
 
-在 ARM64 Olares 主机上，不支持 WebRTC 流式传输。使用不带 `LIVESTREAM=1` 和 `--headless` 的命令：
+在 ARM64 Olares 主机上，不支持 WebRTC 流式传输。不要加 `--livestream`。
 
 ```bash
-nohup ./isaaclab.sh -p scripts/reinforcement_learning/rsl_rl/train.py --task=Isaac-Velocity-Rough-H1-v0 &
+uv run isaaclab train --rl_library rsl_rl --task Isaac-Velocity-Rough-H1
 ```
 
 由于 ARM64 Olares 主机上不支持 WebRTC 流式传输，你无法通过 WebRTC Streaming Client 可视化训练过程。
@@ -225,11 +197,9 @@ nohup ./isaaclab.sh -p scripts/reinforcement_learning/rsl_rl/train.py --task=Isa
 </template>
 </Tabs>
 
-有关更多脚本、任务和环境配置，请参阅：
+本页使用的训练命令见：
 
-- [现有 RL 脚本](https://isaac-sim.github.io/IsaacLab/main/source/overview/reinforcement-learning/rl_existing_scripts.html)
-- [环境](https://isaac-sim.github.io/IsaacLab/main/source/overview/environments.html)
-- [Newton 物理集成](https://isaac-sim.github.io/IsaacLab/main/source/experimental-features/newton-physics-integration/training-environments.html)
+- [使用 RL 智能体训练](https://isaac-sim.github.io/IsaacLab/release/3.0.0/source/how-to/run_rl_training.html)
 
 ## 运行 Isaac Sim
 
@@ -242,19 +212,13 @@ Isaac Lab 包含 Isaac Sim 仿真器。当你想要使用仿真器本身而不�
 
 当 Isaac Sim 运行在 AMD64 Olares 主机上且你希望启用 WebRTC 流式传输时，使用此命令。
 
-1. 以 headless 流式传输模式启动 Isaac Sim：
+1. 启动 Isaac Sim：
 
    ```bash
-   nohup ./_isaac_sim/runheadless.sh --/app/livestream/publicEndpointAddress=$PUBLIC_IP --/app/livestream/port=49100 &
+   /isaac-sim/runheadless.sh
    ```
 
-2. 跟踪日志：
-
-   ```bash
-   tail -f nohup.out
-   ```
-
-3. 等待日志显示 Isaac Sim 流式传输应用已加载。
+2. 等待本终端显示 Isaac Sim 流式传输应用已加载。
 
    例如：
 
@@ -262,7 +226,7 @@ Isaac Lab 包含 Isaac Sim 仿真器。当你想要使用仿真器本身而不�
    Isaac Sim Full Streaming App is loaded.
    ```
 
-4. 在本地计算机上打开 WebRTC Streaming Client，输入 `PUBLIC_IP` 值，然后点击 **连接**。
+3. 在本地计算机上打开 WebRTC Streaming Client，输入 `PUBLIC_IP` 值，然后点击 **连接**。
 
    ![连接 Streaming client](/images/manual/use-cases/isaac-lab-connect-streaming-client.png#bordered){width=90%}
 
@@ -279,7 +243,7 @@ Isaac Lab 包含 Isaac Sim 仿真器。当你想要使用仿真器本身而不�
 以非图形模式启动 Isaac Sim：
 
 ```bash
-nohup ./_isaac_sim/runapp.sh &
+./_isaac_sim/runapp.sh
 ```
 
 由于 ARM64 Olares 主机上不支持图形流式传输，此模式主要用于有限的非图形用途。
@@ -289,7 +253,7 @@ nohup ./_isaac_sim/runapp.sh &
 
 ## 终端命令参考
 
-使用 `nohup ... &` 启动的 Isaac Lab 和 Isaac Sim 命令在后台运行。关闭 WebRTC Streaming Client 不会停止正在运行的工作负载。
+命令在前台运行。关闭 WebRTC Streaming Client 不会停止工作负载。在终端按 **Ctrl + C** 即可停止。
 
 使用以下命令进行快速终端管理和故障排除：
 
@@ -297,9 +261,7 @@ nohup ./_isaac_sim/runapp.sh &
 |:-----|:--------|
 | 获取 WebRTC 端点地址 | `echo $PUBLIC_IP` |
 | 检查 GPU 进程 | `nvidia-smi` |
-| 停止后台进程 | `kill -9 <PID>` |
-| 清除旧日志 | `> nohup.out` |
-| 跟踪实时日志 | `tail -f nohup.out` |
+| 停止残留进程 | `kill -9 <PID>` |
 
 ## 故障排除
 
@@ -321,13 +283,7 @@ nohup ./_isaac_sim/runapp.sh &
 
 3. 确保只有一个 WebRTC Streaming Client 已连接。
 
-4. 检查日志中的致命错误：
-
-   ```bash
-   tail -f nohup.out
-   ```
-
-查找以下错误：
+4. 阅读运行工作负载的那个终端，查找以下错误：
 
 ```text
 Error
@@ -355,5 +311,5 @@ Killed
 
 ## 了解更多
 
-- [Isaac Lab 文档](https://isaac-sim.github.io/IsaacLab/main/index.html)：官方 Isaac Lab 文档，包括教程、环境、强化学习工作流和 API 参考。
-- [Isaac Sim 文档](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/index.html)：NVIDIA Isaac Sim 用户指南。
+- [Isaac Lab 文档](https://isaac-sim.github.io/IsaacLab/release/3.0.0/index.html)：官方 Isaac Lab 文档，包括教程、环境、强化学习工作流和 API 参考。
+- [Isaac Sim 文档](https://docs.isaacsim.omniverse.nvidia.com/6.1.0/index.html)：NVIDIA Isaac Sim 用户指南。
