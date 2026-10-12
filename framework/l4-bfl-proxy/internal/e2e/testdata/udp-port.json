@@ -94,7 +94,7 @@
                 "endpoint": {
                   "address": {
                     "socketAddress": {
-                      "address": "authelia-svc.user-space-alice.svc.cluster.local",
+                      "address": "authelia-svc.os-frontend.svc.cluster.local",
                       "portValue": 80
                     }
                   }
