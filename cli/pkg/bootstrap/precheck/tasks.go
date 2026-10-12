@@ -104,7 +104,7 @@ func (t *RequiredPortsCheck) Check(runtime connector.Runtime) error {
 	if !runtime.GetSystemInfo().IsLinux() {
 		return nil
 	}
-	ports := []int{80, 443, 444, 2444, 9100, 30180}
+	ports := []int{80, 82, 443, 444, 2444, 9100, 30180}
 	var unbindablePorts []int
 	for _, port := range ports {
 		l, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
