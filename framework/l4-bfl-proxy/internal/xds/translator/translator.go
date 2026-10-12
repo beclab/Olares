@@ -10,12 +10,12 @@ import (
 
 	accesslogv3 "github.com/envoyproxy/go-control-plane/envoy/config/accesslog/v3"
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
+	mutationrulesv3 "github.com/envoyproxy/go-control-plane/envoy/config/common/mutation_rules/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	rbac_configv3 "github.com/envoyproxy/go-control-plane/envoy/config/rbac/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
-	mutationrulesv3 "github.com/envoyproxy/go-control-plane/envoy/config/common/mutation_rules/v3"
 	accesslogfilev3 "github.com/envoyproxy/go-control-plane/envoy/extensions/access_loggers/file/v3"
 	extauthzv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/ext_authz/v3"
 	headermutationv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/header_mutation/v3"
@@ -170,6 +170,11 @@ const xOriginalURLValue = "%REQ(x-forwarded-proto?:SCHEME)%://%REQ(:AUTHORITY)%%
 // autheliaVerifyPathPrefix is the filter-default Authelia Legacy verify path.
 // Per-route overrides are only emitted when PathPrefix differs from this value.
 const autheliaVerifyPathPrefix = "/api/verify/"
+
+// localExtAuthzDenyCluster is the filter-level ext_authz target on the shared
+// plain-HTTP listener. It has no endpoints, so a route that forgot its own
+// Authelia override is denied. It is not any user's Authelia.
+const localExtAuthzDenyCluster = "local_ext_authz_deny"
 
 var (
 	tcpIdleTimeout        = time.Hour
@@ -469,9 +474,24 @@ func buildMultiUserHTTPSListener(port uint32, proxyProtocol bool, httpListeners 
 	var routeConfigs []*routev3.RouteConfiguration
 	var clusters []cachetypes.Resource
 
+	plainHTTP := len(httpListeners) > 0
+	for _, httpIR := range httpListeners {
+		if httpIR.TLS || httpIR.TLSCert != nil {
+			plainHTTP = false
+			break
+		}
+	}
+
 	listenerName := fmt.Sprintf("https_%d", port)
+	if plainHTTP {
+		listenerName = fmt.Sprintf("http_%d", port)
+	}
 	if proxyProtocol {
-		listenerName = fmt.Sprintf("https_pp_%d", port)
+		if plainHTTP {
+			listenerName = fmt.Sprintf("http_pp_%d", port)
+		} else {
+			listenerName = fmt.Sprintf("https_pp_%d", port)
+		}
 	}
 
 	// Defensive SNI/source de-duplication. Envoy rejects an entire listener if
@@ -645,11 +665,27 @@ func buildMultiUserHTTPSListener(port uint32, proxyProtocol bool, httpListeners 
 		}
 		routeConfigs = append(routeConfigs, routeConfig)
 
-		// Derive the per-user authelia cluster name from the well-known naming
-		// convention and verify it actually exists in the cluster map.
-		autheliaClusterName := fmt.Sprintf("authelia_backend_%s", httpIR.UserName)
-		if _, ok := clusterMap[autheliaClusterName]; !ok {
-			autheliaClusterName = ""
+		// HTTPS chains use that user's Authelia as the filter default. The shared
+		// plain-HTTP listener has no single user: its filter default is an empty
+		// cluster, and each route overrides with its own Authelia. A route that
+		// does not override is denied instead of being checked as someone else.
+		autheliaClusterName := ""
+		filterUser := ""
+		if plainHTTP {
+			autheliaClusterName = localExtAuthzDenyCluster
+			if _, ok := clusterMap[autheliaClusterName]; !ok {
+				clusterMap[autheliaClusterName] = &ir.ClusterIR{Name: autheliaClusterName}
+			}
+			if !clusterSet[autheliaClusterName] {
+				clusterSet[autheliaClusterName] = true
+				clusters = append(clusters, buildL7Cluster(clusterMap[autheliaClusterName]))
+			}
+		} else {
+			autheliaClusterName = fmt.Sprintf("authelia_backend_%s", httpIR.UserName)
+			if _, ok := clusterMap[autheliaClusterName]; !ok {
+				autheliaClusterName = ""
+			}
+			filterUser = httpIR.UserName
 		}
 
 		// Build HTTP filters.
@@ -660,7 +696,7 @@ func buildMultiUserHTTPSListener(port uint32, proxyProtocol bool, httpListeners 
 		// config change — the filter chain itself is byte-identical → no
 		// Envoy listener drain on deny_all policy switch.
 		httpFilters := []*hcmv3.HttpFilter{buildClientIdentityStripFilter()}
-		extAuthzFilter := buildExtAuthzFilter(autheliaClusterName, clusterMap, httpIR.UserName)
+		extAuthzFilter := buildExtAuthzFilter(autheliaClusterName, clusterMap, filterUser)
 		if extAuthzFilter != nil {
 			httpFilters = append(httpFilters, extAuthzFilter)
 		}
@@ -699,8 +735,8 @@ func buildMultiUserHTTPSListener(port uint32, proxyProtocol bool, httpListeners 
 					},
 				},
 			},
-			HttpFilters:                    httpFilters,
-			EarlyHeaderMutationExtensions:  buildEarlyClientIdentityStripExtensions(),
+			HttpFilters:                   httpFilters,
+			EarlyHeaderMutationExtensions: buildEarlyClientIdentityStripExtensions(),
 			UpgradeConfigs: []*hcmv3.HttpConnectionManager_UpgradeConfig{
 				{UpgradeType: "websocket"},
 				{UpgradeType: "tailscale-control-protocol"},
@@ -797,10 +833,12 @@ func buildMultiUserHTTPSListener(port uint32, proxyProtocol bool, httpListeners 
 			ConfigType: &listenerv3.ListenerFilter_TypedConfig{TypedConfig: mustAny(&proxyprotocolv3.ProxyProtocol{})},
 		})
 	}
-	listenerFilters = append(listenerFilters, &listenerv3.ListenerFilter{
-		Name:       "envoy.filters.listener.tls_inspector",
-		ConfigType: &listenerv3.ListenerFilter_TypedConfig{TypedConfig: mustAny(&tlsinspectorv3.TlsInspector{})},
-	})
+	if !plainHTTP {
+		listenerFilters = append(listenerFilters, &listenerv3.ListenerFilter{
+			Name:       "envoy.filters.listener.tls_inspector",
+			ConfigType: &listenerv3.ListenerFilter_TypedConfig{TypedConfig: mustAny(&tlsinspectorv3.TlsInspector{})},
+		})
+	}
 
 	listener := &listenerv3.Listener{
 		Name: listenerName,
@@ -998,10 +1036,15 @@ func translateRoute(routeIR *ir.HTTPRouteIR, clusterMap map[string]*ir.ClusterIR
 		// entirely. When PathPrefix matches the filter default (/api/verify/),
 		// emit an empty CheckSettings only so the filter Auth block is reused
 		// and we never ship a path-only override shell.
-		if path := routeIR.ExtAuth.PathPrefix; path != "" && path != autheliaVerifyPathPrefix && clusterMap != nil {
+		path := routeIR.ExtAuth.PathPrefix
+		override := routeIR.ExtAuth.ServiceOverride || (path != "" && path != autheliaVerifyPathPrefix)
+		if override && clusterMap != nil {
+			if path == "" {
+				path = autheliaVerifyPathPrefix
+			}
 			if c, ok := clusterMap[routeIR.ExtAuth.Cluster]; ok && c.Host != "" {
-				userName := ""
-				if routeIR.RequestHeaders != nil {
+				userName := routeIR.ExtAuth.User
+				if userName == "" && routeIR.RequestHeaders != nil {
 					userName = routeIR.RequestHeaders["X-BFL-USER"]
 				}
 				checkSettings.ServiceOverride = &extauthzv3.CheckSettings_HttpService{
@@ -1049,10 +1092,14 @@ func buildExtAuthzFilter(autheliaClusterName string, clusterMap map[string]*ir.C
 	if !ok {
 		return nil
 	}
+	host := clusterIR.Host
+	if host == "" {
+		host = "localhost"
+	}
 
 	extAuthz := &extauthzv3.ExtAuthz{
 		Services: &extauthzv3.ExtAuthz_HttpService{
-			HttpService: buildAutheliaHttpService(autheliaClusterName, clusterIR.Host, autheliaVerifyPathPrefix, userName),
+			HttpService: buildAutheliaHttpService(autheliaClusterName, host, autheliaVerifyPathPrefix, userName),
 		},
 		// AllowedHeaders is filter-level (not part of HttpService); per-route
 		// CheckSettings.http_service does not override it.
@@ -1596,6 +1643,25 @@ func buildL7Cluster(c *ir.ClusterIR) *clusterv3.Cluster {
 	if !c.UseDNS {
 		discoveryType = clusterv3.Cluster_STATIC
 	}
+	assignment := &endpointv3.ClusterLoadAssignment{ClusterName: c.Name}
+	if c.Host != "" {
+		assignment.Endpoints = []*endpointv3.LocalityLbEndpoints{{
+			LbEndpoints: []*endpointv3.LbEndpoint{{
+				HostIdentifier: &endpointv3.LbEndpoint_Endpoint{
+					Endpoint: &endpointv3.Endpoint{
+						Address: &corev3.Address{
+							Address: &corev3.Address_SocketAddress{
+								SocketAddress: &corev3.SocketAddress{
+									Address:       c.Host,
+									PortSpecifier: &corev3.SocketAddress_PortValue{PortValue: c.Port},
+								},
+							},
+						},
+					},
+				},
+			}},
+		}}
+	}
 	return &clusterv3.Cluster{
 		Name:                 c.Name,
 		ClusterDiscoveryType: &clusterv3.Cluster_Type{Type: discoveryType},
@@ -1603,25 +1669,7 @@ func buildL7Cluster(c *ir.ClusterIR) *clusterv3.Cluster {
 		CommonHttpProtocolOptions: &corev3.HttpProtocolOptions{
 			IdleTimeout: durationpb.New(clusterIdleTimeout),
 		},
-		LoadAssignment: &endpointv3.ClusterLoadAssignment{
-			ClusterName: c.Name,
-			Endpoints: []*endpointv3.LocalityLbEndpoints{{
-				LbEndpoints: []*endpointv3.LbEndpoint{{
-					HostIdentifier: &endpointv3.LbEndpoint_Endpoint{
-						Endpoint: &endpointv3.Endpoint{
-							Address: &corev3.Address{
-								Address: &corev3.Address_SocketAddress{
-									SocketAddress: &corev3.SocketAddress{
-										Address:       c.Host,
-										PortSpecifier: &corev3.SocketAddress_PortValue{PortValue: c.Port},
-									},
-								},
-							},
-						},
-					},
-				}},
-			}},
-		},
+		LoadAssignment: assignment,
 	}
 }
 

@@ -516,6 +516,103 @@ func TestBuildMultiUserHTTPSListener(t *testing.T) {
 // Two filter chains with identical SNI (e.g. the same custom domain configured
 // twice) must collapse to one so Envoy never rejects the listener for having
 // duplicate matching rules.
+func TestBuildMultiUserHTTPSListener_SharedPlainHTTP(t *testing.T) {
+	httpListeners := []*ir.HTTPListenerIR{{
+		Name:          "http_82",
+		Address:       "0.0.0.0",
+		Port:          82,
+		ProxyProtocol: true,
+		UserName:      "alice",
+		VirtualHosts: []*ir.VirtualHostIR{
+			{
+				Name:     "nonapp_desktop_alice",
+				Domains:  []string{"desktop.alice.olares.local"},
+				UserName: "alice",
+				Routes: []*ir.HTTPRouteIR{{
+					Name:       "nonapp_desktop_root_alice",
+					PathPrefix: "/",
+					Cluster:    "nonapp_desktop_alice",
+					ExtAuth: &ir.ExtAuthConfigIR{
+						Cluster:         "authelia_backend_alice",
+						PathPrefix:      "/api/verify/",
+						User:            "alice",
+						ServiceOverride: true,
+					},
+				}},
+			},
+			{
+				Name:     "nonapp_desktop_bob",
+				Domains:  []string{"desktop.bob.olares.local"},
+				UserName: "bob",
+				Routes: []*ir.HTTPRouteIR{{
+					Name:       "nonapp_desktop_root_bob",
+					PathPrefix: "/",
+					Cluster:    "nonapp_desktop_bob",
+					ExtAuth: &ir.ExtAuthConfigIR{
+						Cluster:         "authelia_backend_bob",
+						PathPrefix:      "/api/verify/",
+						User:            "bob",
+						ServiceOverride: true,
+					},
+				}},
+			},
+		},
+	}}
+	clusterMap := map[string]*ir.ClusterIR{
+		"nonapp_desktop_alice":   {Name: "nonapp_desktop_alice", Host: "edge-desktop.user-space-alice.svc.cluster.local", Port: 80, UseDNS: true},
+		"nonapp_desktop_bob":     {Name: "nonapp_desktop_bob", Host: "edge-desktop.user-space-bob.svc.cluster.local", Port: 80, UseDNS: true},
+		"authelia_backend_alice": {Name: "authelia_backend_alice", Host: "authelia-backend.user-system-alice.svc.cluster.local", Port: 9091, UseDNS: true},
+		"authelia_backend_bob":   {Name: "authelia_backend_bob", Host: "authelia-backend.user-system-bob.svc.cluster.local", Port: 9091, UseDNS: true},
+	}
+
+	listener, routeConfigs, clusters := buildMultiUserHTTPSListener(82, true, httpListeners, clusterMap, map[string]bool{})
+
+	require.NotNil(t, listener)
+	assert.Equal(t, "http_pp_82", listener.Name)
+	require.Len(t, listener.ListenerFilters, 1)
+	assert.Equal(t, "envoy.filters.listener.proxy_protocol", listener.ListenerFilters[0].Name)
+
+	require.Len(t, listener.FilterChains, 1)
+	assert.Nil(t, listener.FilterChains[0].FilterChainMatch)
+	assert.Nil(t, listener.FilterChains[0].TransportSocket)
+
+	hcm := hcmFromListener(t, listener)
+	var filterAuth extauthzv3.ExtAuthz
+	require.NoError(t, hcm.GetHttpFilters()[1].GetTypedConfig().UnmarshalTo(&filterAuth))
+	assert.Equal(t, localExtAuthzDenyCluster, filterAuth.GetHttpService().GetServerUri().GetCluster())
+	var deny *clusterv3.Cluster
+	for _, c := range clusters {
+		cl, ok := c.(*clusterv3.Cluster)
+		if ok && cl.Name == localExtAuthzDenyCluster {
+			deny = cl
+		}
+	}
+	require.NotNil(t, deny)
+	require.NotNil(t, deny.LoadAssignment)
+	assert.Empty(t, deny.LoadAssignment.Endpoints)
+
+	require.Len(t, routeConfigs, 1)
+	rc := asRouteConfig(t, routeConfigs[0])
+	got := map[string]string{}
+	for _, vh := range rc.VirtualHosts {
+		if len(vh.Domains) != 1 || !strings.HasPrefix(vh.Domains[0], "desktop.") {
+			continue
+		}
+		require.NotEmpty(t, vh.Routes)
+		perRoute := vh.Routes[0].GetTypedPerFilterConfig()["envoy.filters.http.ext_authz"]
+		require.NotNil(t, perRoute)
+		var cfg extauthzv3.ExtAuthzPerRoute
+		require.NoError(t, perRoute.UnmarshalTo(&cfg))
+		hs := cfg.GetCheckSettings().GetHttpService()
+		require.NotNil(t, hs, "domain %s", vh.Domains[0])
+		headers := hs.GetAuthorizationRequest().GetHeadersToAdd()
+		require.NotEmpty(t, headers)
+		got[vh.Domains[0]] = hs.GetServerUri().GetCluster() + " " + headers[len(headers)-1].GetValue()
+	}
+	assert.Equal(t, "authelia_backend_alice alice", got["desktop.alice.olares.local"])
+	assert.Equal(t, "authelia_backend_bob bob", got["desktop.bob.olares.local"])
+}
+
 func TestBuildMultiUserHTTPSListener_DuplicateSNIDropped(t *testing.T) {
 	mk := func() *ir.HTTPListenerIR {
 		return &ir.HTTPListenerIR{
@@ -1160,6 +1257,37 @@ func TestSubFilterLuaScript_RewritesSetCookieDomain(t *testing.T) {
 	assert.Contains(t, subFilterLuaScript, "rewrite_set_cookie_domains")
 	assert.Contains(t, subFilterLuaScript, `Domain=`)
 	assert.Contains(t, subFilterLuaScript, `headers:replace("Set-Cookie"`)
+}
+
+func TestTranslateRoute_ServiceOverrideOnVerifyPath(t *testing.T) {
+	clusterMap := map[string]*ir.ClusterIR{
+		"authelia_backend_bob": {Name: "authelia_backend_bob", Host: "authelia-backend.user-system-bob.svc.cluster.local", Port: 9091},
+	}
+	route := translateRoute(&ir.HTTPRouteIR{
+		Name:       "desktop",
+		PathPrefix: "/",
+		Cluster:    "nonapp_desktop_bob",
+		ExtAuth: &ir.ExtAuthConfigIR{
+			Cluster:         "authelia_backend_bob",
+			PathPrefix:      "/api/verify/",
+			User:            "bob",
+			ServiceOverride: true,
+		},
+	}, clusterMap)
+	require.NotNil(t, route.TypedPerFilterConfig)
+	anyCfg := route.TypedPerFilterConfig["envoy.filters.http.ext_authz"]
+	require.NotNil(t, anyCfg)
+
+	var perRoute extauthzv3.ExtAuthzPerRoute
+	require.NoError(t, anyCfg.UnmarshalTo(&perRoute))
+	hs := perRoute.GetCheckSettings().GetHttpService()
+	require.NotNil(t, hs)
+	assert.Equal(t, "/api/verify/", hs.GetPathPrefix())
+	assert.Equal(t, "authelia_backend_bob", hs.GetServerUri().GetCluster())
+	headers := hs.GetAuthorizationRequest().GetHeadersToAdd()
+	require.NotEmpty(t, headers)
+	assert.Equal(t, "X-BFL-USER", headers[len(headers)-1].GetKey())
+	assert.Equal(t, "bob", headers[len(headers)-1].GetValue())
 }
 
 func TestTranslateRoute_VerifyPathSkipsServiceOverride(t *testing.T) {
