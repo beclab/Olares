@@ -1018,6 +1018,13 @@ func translateRoute(routeIR *ir.HTTPRouteIR, clusterMap map[string]*ir.ClusterIR
 		}
 	}
 
+	if routeIR.BypassSourceCIDR {
+		if route.TypedPerFilterConfig == nil {
+			route.TypedPerFilterConfig = make(map[string]*anypb.Any)
+		}
+		route.TypedPerFilterConfig["envoy.filters.http.rbac"] = mustAny(buildAllowAllRBACPerRoute())
+	}
+
 	return route
 }
 
@@ -1174,6 +1181,26 @@ func buildRBACPerRouteFromCIDRs(cidrs []string) *rbac_filterv3.RBACPerRoute {
 							Rule: &rbac_configv3.Permission_Any{Any: true},
 						}},
 						Principals: principals,
+					},
+				},
+			},
+		},
+	}
+}
+
+func buildAllowAllRBACPerRoute() *rbac_filterv3.RBACPerRoute {
+	return &rbac_filterv3.RBACPerRoute{
+		Rbac: &rbac_filterv3.RBAC{
+			Rules: &rbac_configv3.RBAC{
+				Action: rbac_configv3.RBAC_ALLOW,
+				Policies: map[string]*rbac_configv3.Policy{
+					"allow_all": {
+						Permissions: []*rbac_configv3.Permission{{
+							Rule: &rbac_configv3.Permission_Any{Any: true},
+						}},
+						Principals: []*rbac_configv3.Principal{{
+							Identifier: &rbac_configv3.Principal_Any{Any: true},
+						}},
 					},
 				},
 			},

@@ -774,7 +774,7 @@ func getUserLanguage(userEnv *sysv1alpha1.UserEnv) string {
 // also recorded as the per-domain "owner" so the rest of the pipeline
 // associates this user's frontends with their own server_name list.
 func (p *Provider) listApplicationDetails(username string, appList []*appv1alpha1.Application) ([]string, []string, []string, map[string][]string) {
-	publicApps := []string{"headscale"}
+	var publicApps []string
 	var publicCustomDomainApps []string
 	var customDomainApps []string
 	customDomainAppsWithUsers := make(map[string][]string)
