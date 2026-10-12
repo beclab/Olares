@@ -397,6 +397,38 @@ func TestTranslate_Full(t *testing.T) {
 	assert.Equal(t, uint32(48126), stream.Port)
 }
 
+func TestTranslate_NoZone_LocalHTTPUsesUsername(t *testing.T) {
+	tr := &Translator{cfg: &Config{
+		SSLServerPort:      443,
+		SSLProxyServerPort: 444,
+		LocalHTTPProxyPort: 82,
+	}}
+
+	xds := tr.Translate(&message.Resources{
+		Users: []*message.UserInfo{{
+			Name:      "olaresid",
+			Namespace: "user-space-olaresid",
+		}},
+	})
+
+	require.Len(t, xds.HTTPListeners, 1)
+	local := xds.HTTPListeners[0]
+	assert.Equal(t, "http_82", local.Name)
+	assert.Equal(t, uint32(82), local.Port)
+
+	var desktop, profile []string
+	for _, vh := range local.VirtualHosts {
+		switch vh.Name {
+		case "nonapp_desktop_olaresid":
+			desktop = vh.Domains
+		case "profile_olaresid":
+			profile = vh.Domains
+		}
+	}
+	assert.Equal(t, []string{"desktop.olaresid.olares.local"}, desktop)
+	assert.Equal(t, []string{"olaresid.olares.local"}, profile)
+}
+
 func TestTranslate_NoCert_OneSharedLocalHTTPListener(t *testing.T) {
 	tr := &Translator{cfg: &Config{
 		SSLServerPort:      443,
