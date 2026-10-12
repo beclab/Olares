@@ -101,7 +101,7 @@ type systemServiceDef struct {
 
 var systemServices = []systemServiceDef{
 	{Name: "auth", SvcFormat: "authelia-svc.%s.svc.cluster.local", Namespace: "os-frontend"},
-	{Name: "desktop", SvcFormat: "edge-desktop.%s.svc.cluster.local"},
+	{Name: "desktop", SvcFormat: "edge-desktop.%s.svc.cluster.local", Namespace: "os-frontend"},
 	{Name: "wizard", SvcFormat: "wizard.%s.svc.cluster.local"},
 }
 
@@ -209,8 +209,12 @@ func (t *Translator) Translate(resources *message.Resources) *ir.Xds {
 		}
 		zone := userZone(user)
 		if zone == "" {
-			klog.V(4).Infof("translator: user %s has no zone, skipping", user.Name)
-			continue
+			if user.Name == "" {
+				klog.V(4).Info("translator: user has no zone and no name, skipping")
+				continue
+			}
+			// No public zone yet. Local names are still <user>.olares.local.
+			zone = user.Name + ".olares.local"
 		}
 
 		// Build wizard virtual hosts for any ephemeral users whose zone
@@ -567,7 +571,10 @@ func (t *Translator) buildUserVirtualHosts(user *message.UserInfo, zone string, 
 	var zoneAliases []string
 	zoneTokens := strings.Split(zone, ".")
 	if len(zoneTokens) > 1 {
-		zoneAliases = append(zoneAliases, fmt.Sprintf("%s.%s", zoneTokens[0], "olares.local"))
+		alias := fmt.Sprintf("%s.%s", zoneTokens[0], "olares.local")
+		if alias != zone {
+			zoneAliases = append(zoneAliases, alias)
+		}
 	}
 
 	profileVHost := &ir.VirtualHostIR{
