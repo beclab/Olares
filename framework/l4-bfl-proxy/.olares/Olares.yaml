@@ -3,5 +3,5 @@ target: prebuilt
 output:
   containers:
     - 
-      name: beclab/l4-bfl-proxy:v0.3.48-alpha-1
+      name: beclab/l4-bfl-proxy:v0.3.48-alpha-2
 # must have blank new line            
