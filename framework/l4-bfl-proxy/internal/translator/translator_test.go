@@ -373,7 +373,7 @@ func TestTranslate_Full(t *testing.T) {
 	assert.Equal(t, "http_redirect_81", httpListener.Name)
 	assert.Equal(t, ir.ProtocolHTTP, httpListener.Protocol)
 
-	require.Len(t, xds.HTTPListeners, 2)
+	require.Len(t, xds.HTTPListeners, 3)
 	https443 := xds.HTTPListeners[0]
 	// Per-zone naming: https_{port}_{user}_{sanitized-zone-domain}
 	assert.Equal(t, "https_443_alice_alice_example_com", https443.Name)
@@ -383,10 +383,94 @@ func TestTranslate_Full(t *testing.T) {
 	https444 := xds.HTTPListeners[1]
 	assert.True(t, https444.ProxyProtocol)
 
+	localHTTP := xds.HTTPListeners[2]
+	assert.Equal(t, "http_82", localHTTP.Name)
+	assert.Empty(t, localHTTP.SNIMatches)
+	assert.True(t, localHTTP.ProxyProtocol)
+	assert.False(t, localHTTP.TLS)
+	assert.False(t, desktopExtAuthOverrides(t, https443), "443 keeps the chain-level Authelia default")
+	assert.True(t, desktopExtAuthOverrides(t, localHTTP), "82 stamps each route with its own Authelia")
+
 	require.Len(t, xds.StreamListeners, 1)
 	stream := xds.StreamListeners[0]
 	assert.Equal(t, "stream_tcp_alice_48126", stream.Name)
 	assert.Equal(t, uint32(48126), stream.Port)
+}
+
+func TestTranslate_NoCert_OneSharedLocalHTTPListener(t *testing.T) {
+	tr := &Translator{cfg: &Config{
+		SSLServerPort:      443,
+		SSLProxyServerPort: 444,
+		LocalHTTPProxyPort: 82,
+	}}
+
+	resources := &message.Resources{
+		Users: []*message.UserInfo{
+			{
+				Name:              "alice",
+				Zone:              "alice.snowinning.com",
+				Namespace:         "user-space-alice",
+				ServerNameDomains: []string{"alice.snowinning.com", "alice.olares.local"},
+			},
+			{
+				Name:              "bob",
+				Zone:              "bob.snowinning.com",
+				Namespace:         "user-space-bob",
+				ServerNameDomains: []string{"bob.snowinning.com", "bob.olares.local"},
+			},
+		},
+	}
+
+	xds := tr.Translate(resources)
+
+	require.Len(t, xds.HTTPListeners, 1)
+	local := xds.HTTPListeners[0]
+	assert.Equal(t, "http_82", local.Name)
+	assert.Empty(t, local.UserName)
+	assert.False(t, local.TLS)
+	assert.Nil(t, local.TLSCert)
+	assert.True(t, local.ProxyProtocol)
+	assert.Empty(t, local.SNIMatches)
+	assert.Equal(t, uint32(82), local.Port)
+
+	desktops := map[string]*ir.HTTPRouteIR{}
+	for _, vh := range local.VirtualHosts {
+		for _, d := range vh.Domains {
+			assert.Truef(t, strings.HasSuffix(d, ".olares.local"), "domain %q", d)
+		}
+		if vh.Name == "nonapp_desktop_alice" || vh.Name == "nonapp_desktop_bob" {
+			require.NotEmpty(t, vh.Routes)
+			desktops[vh.Name] = vh.Routes[0]
+		}
+	}
+	require.Contains(t, desktops, "nonapp_desktop_alice")
+	require.Contains(t, desktops, "nonapp_desktop_bob")
+
+	alice := desktops["nonapp_desktop_alice"]
+	require.NotNil(t, alice.ExtAuth)
+	assert.True(t, alice.ExtAuth.ServiceOverride)
+	assert.Equal(t, "alice", alice.ExtAuth.User)
+	assert.Equal(t, "authelia_backend_alice", alice.ExtAuth.Cluster)
+
+	bob := desktops["nonapp_desktop_bob"]
+	require.NotNil(t, bob.ExtAuth)
+	assert.True(t, bob.ExtAuth.ServiceOverride)
+	assert.Equal(t, "bob", bob.ExtAuth.User)
+	assert.Equal(t, "authelia_backend_bob", bob.ExtAuth.Cluster)
+}
+
+func desktopExtAuthOverrides(t *testing.T, l *ir.HTTPListenerIR) bool {
+	t.Helper()
+	for _, vh := range l.VirtualHosts {
+		if vh.Name != "nonapp_desktop_alice" {
+			continue
+		}
+		require.NotEmpty(t, vh.Routes)
+		require.NotNil(t, vh.Routes[0].ExtAuth)
+		return vh.Routes[0].ExtAuth.ServiceOverride
+	}
+	t.Fatalf("desktop virtual host missing on %s", l.Name)
+	return false
 }
 
 // ---------------------------------------------------------------------------

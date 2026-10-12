@@ -142,6 +142,10 @@ func (p *proxyServer) AddTarget(*middleware.ProxyTarget) bool {
 	return true
 }
 
+// localHTTPProxyPort is the plain-HTTP PROXY-protocol listener on l4-bfl-proxy.
+// Local names have no certificate, so this hop stays HTTP.
+const localHTTPProxyPort = "82"
+
 // Next implements middleware.ProxyBalancer.
 func (p *proxyServer) Next(c echo.Context) *middleware.ProxyTarget {
 	scheme := "http://"
@@ -165,9 +169,15 @@ func (p *proxyServer) Next(c echo.Context) *middleware.ProxyTarget {
 		}
 		requestHost = strings.Join(tokens, ".")
 		c.Request().Host = requestHost
+<<<<<<< Updated upstream
 		proxyPass, err = url.Parse(scheme + requestHost + ":82")
 	} else {
 		proxyPass, err = url.Parse(scheme + c.Request().Host + ":82")
+=======
+		proxyPass, err = url.Parse(scheme + requestHost + ":" + localHTTPProxyPort)
+	} else {
+		proxyPass, err = url.Parse(scheme + c.Request().Host + ":" + localHTTPProxyPort)
+>>>>>>> Stashed changes
 	}
 	if err != nil {
 		klog.Error("parse proxy target error, ", err)
@@ -217,7 +227,11 @@ func (p *proxyServer) customDialContext(d *net.Dialer) func(ctx context.Context,
 		// Force proxying to localhost
 		klog.Info("addr: ", addr, " port: ", port, " network: ", network)
 		if port == "" {
+<<<<<<< Updated upstream
 			port = "82"
+=======
+			port = localHTTPProxyPort
+>>>>>>> Stashed changes
 		}
 		hostname, err := os.Hostname()
 		if err != nil {
@@ -259,6 +273,7 @@ func (p *proxyServer) customDialContext(d *net.Dialer) func(ctx context.Context,
 			return conn, nil
 		}
 
+<<<<<<< Updated upstream
 		// if isWs {
 		// 	klog.Info("WebSocket connection detected, using upgraded dialer, ", addr)
 		// 	return tlsDial(ctx, d, func(ctx context.Context, network, addr string) (net.Conn, error) {
@@ -266,61 +281,15 @@ func (p *proxyServer) customDialContext(d *net.Dialer) func(ctx context.Context,
 		// 	}, network, addr, &tls.Config{InsecureSkipVerify: true})
 		// }
 
+=======
+		if isWs {
+			klog.Info("WebSocket connection detected, ", addr)
+		}
+		// Plain HTTP to l4. The PROXY header is written inside proxyDial, before
+		// the HTTP request bytes. There is no TLS on this hop.
+>>>>>>> Stashed changes
 		return proxyDial(ctx, d, network, newAddr)
 	}
-}
-
-func tlsDial(ctx context.Context, netDialer *net.Dialer, dialFunc func(ctx context.Context, network, addr string) (net.Conn, error), network, addr string, config *tls.Config) (*tls.Conn, error) {
-	if netDialer.Timeout != 0 {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, netDialer.Timeout)
-		defer cancel()
-	}
-
-	if !netDialer.Deadline.IsZero() {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithDeadline(ctx, netDialer.Deadline)
-		defer cancel()
-	}
-
-	var (
-		rawConn net.Conn
-		err     error
-	)
-
-	if dialFunc != nil {
-		rawConn, err = dialFunc(ctx, network, addr)
-	} else {
-		rawConn, err = netDialer.DialContext(ctx, network, addr)
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	colonPos := strings.LastIndex(addr, ":")
-	if colonPos == -1 {
-		colonPos = len(addr)
-	}
-	hostname := addr[:colonPos]
-
-	if config == nil {
-		return nil, fmt.Errorf("tls: config is nil")
-	}
-	// If no ServerName is set, infer the ServerName
-	// from the hostname we're connecting to.
-	if config.ServerName == "" {
-		// Make a copy to avoid polluting argument or default.
-		c := config.Clone()
-		c.ServerName = hostname
-		config = c
-	}
-
-	conn := tls.Client(rawConn, config)
-	if err := conn.HandshakeContext(ctx); err != nil {
-		rawConn.Close()
-		return nil, err
-	}
-	return conn, nil
 }
 
 // addrToIPPort extracts ip and port strings from net.Addr (like "ip:port").
