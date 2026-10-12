@@ -67,7 +67,7 @@
                 "endpoint": {
                   "address": {
                     "socketAddress": {
-                      "address": "authelia-svc.user-space-bob.svc.cluster.local",
+                      "address": "authelia-svc.os-frontend.svc.cluster.local",
                       "portValue": 80
                     }
                   }

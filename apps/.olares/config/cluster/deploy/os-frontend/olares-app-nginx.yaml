@@ -1301,3 +1301,55 @@ data:
             add_header Cache-Control "public, max-age=2678400";
         }
     }
+
+  login.conf: |-
+    # Shared Login frontend, built from TermiPass packages/app (APPLICATION=LOGIN).
+    map $http_x_forwarded_proto $login_forwarded_proto {
+        default $scheme;
+        http http;
+        https https;
+    }
+
+    server {
+        listen 93;
+        root /www/login;
+        index index.html;
+        add_header X-Frame-Options SAMEORIGIN always;
+        add_header X-Content-Type-Options nosniff always;
+
+        location = /login-config.json {
+            try_files $uri =503;
+            add_header Cache-Control "no-store" always;
+        }
+
+        location = /healthz {
+            access_log off;
+            try_files /index.html =503;
+        }
+
+        # Resolve on demand: the frontend can start before the auth backend exists.
+        # Keep API paths unchanged and preserve cookies / Authorization headers.
+        location ~ ^/(api(?:/|$)|jwks\.json$|\.well-known(?:/|$)) {
+            set $login_backend authelia-backend.os-framework.svc.cluster.local:9091;
+            proxy_pass http://$login_backend;
+            proxy_http_version 1.1;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $http_host;
+            proxy_set_header X-Forwarded-Proto $login_forwarded_proto;
+            add_header Cache-Control "no-store" always;
+        }
+
+        # Shared Login does not expose a pre-login per-user BFL proxy.
+        location /bfl { return 404; }
+
+        location ~* \.(js|css|png|jpe?g|svg|woff2?|ico)$ {
+            try_files $uri =404;
+        }
+
+        location / {
+            try_files $uri $uri/ /index.html;
+            add_header Cache-Control "no-store" always;
+        }
+    }
