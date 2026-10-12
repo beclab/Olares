@@ -34,6 +34,7 @@ import (
 	"k8s.io/client-go/util/retry"
 	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
@@ -60,6 +61,7 @@ var (
 	cachedKubeClient        kubernetes.Interface
 	cachedDynamicClient     dynamic.Interface
 	cachedAppClientSet      *versioned.Clientset
+	cachedOnboardingClient  client.Client
 	cachedApixClient        apixclientset.Interface
 	cachedKubeconfigPath    string
 	cachedKubeconfigModTime time.Time
@@ -132,6 +134,7 @@ func ensureFreshLocked() {
 	cachedKubeClient = nil
 	cachedDynamicClient = nil
 	cachedAppClientSet = nil
+	cachedOnboardingClient = nil
 	cachedApixClient = nil
 	cachedKubeconfigPath = key
 	cachedKubeconfigModTime = modTime
@@ -232,17 +235,36 @@ func GetAppClientSet() (versioned.Clientset, error) {
 	return *client, nil
 }
 
+func GetOnboardingClient() (client.Client, error) {
+	clientCacheMu.Lock()
+	defer clientCacheMu.Unlock()
+	ensureFreshLocked()
+	if cachedOnboardingClient != nil {
+		return cachedOnboardingClient, nil
+	}
+	config, err := configLocked()
+	if err != nil {
+		return nil, err
+	}
+	resources, err := onboarding.NewResourceClient(config)
+	if err != nil {
+		return nil, err
+	}
+	cachedOnboardingClient = resources
+	return resources, nil
+}
+
 // GetOnboardingStatus reads the cluster record rather than a personal wizard.
 func GetOnboardingStatus(ctx context.Context) (onboarding.Status, error) {
 	kube, err := GetKubeClient()
 	if err != nil {
 		return onboarding.Status{}, err
 	}
-	dynamic, err := GetDynamicClient()
+	resources, err := GetOnboardingClient()
 	if err != nil {
 		return onboarding.Status{}, err
 	}
-	return (&onboarding.Service{Kube: kube, Dynamic: dynamic}).Status(ctx)
+	return (&onboarding.Service{Kube: kube, Resources: resources}).Status(ctx)
 }
 
 func IsTerminusInitialized(ctx context.Context, _ dynamic.Interface) (bool, bool, error) {
