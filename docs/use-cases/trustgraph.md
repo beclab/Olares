@@ -18,7 +18,7 @@ On Olares, TrustGraph stores documents in Olares-managed storage and calls model
 
 ## Prerequisites
 
-- Olares 1.12.7 or later on an amd64 device. TrustGraph requires 10 GiB of application memory and 20 GiB of disk space, in addition to the resources needed by your models.
+- Olares 1.12.7 or later on an amd64 or arm64 device. TrustGraph requires 10 GiB of application memory and 20 GiB of disk space, in addition to the resources needed by your models.
 - Access to [Olares Router](olares-router.md), with a chat model, EmbeddingGemma, and BGE Reranker v2 M3 installed and callable.
 
 ## Check model availability

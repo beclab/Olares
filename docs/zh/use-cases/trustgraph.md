@@ -22,7 +22,7 @@ TrustGraph 是开源的语义智能平台，可将源数据转为能够追溯来
 
 ## 前提条件
 
-- 运行 Olares 1.12.7 或更高版本的 amd64 设备。应用需要 10 GiB 内存和 20 GiB 磁盘空间；模型所需资源另行计算。
+- 运行 Olares 1.12.7 或更高版本的 amd64 或 arm64 设备。应用需要 10 GiB 内存和 20 GiB 磁盘空间；模型所需资源另行计算。
 - 可以访问 [Olares Router](olares-router.md)，且聊天模型、EmbeddingGemma 和 BGE Reranker v2 M3 已安装并可调用。
 
 ## 检查模型可用性
