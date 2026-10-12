@@ -219,6 +219,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   link: "/zh/use-cases/open-notebook",
                 },
                 {
+                  text: "TrustGraph",
+                  link: "/zh/use-cases/trustgraph",
+                },
+                {
                   text: "Vane (Perplexica)",
                   link: "/zh/use-cases/perplexica",
                 },
