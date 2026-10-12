@@ -152,43 +152,33 @@ func (w *applicationWatcher) loadServerConfig(ctx context.Context, nodeIp string
 		}
 	}
 
-	users, err := utils.ListUsers(ctx)
+	dynamicClient, err := utils.GetDynamicClient()
 	if err != nil {
-		err = fmt.Errorf("failed to list users: %v", err)
+		klog.Error("get dynamic client error, ", err)
+		return nil, err
+	}
+
+	terminusInfo, err := utils.GetTerminusInfo(ctx, dynamicClient)
+	if err != nil {
+		err = fmt.Errorf("failed to get terminus info: %v", err)
 		klog.Error(err.Error())
 		return nil, err
 	}
 
-	adminUser, err := utils.GetAdminUser(ctx)
-	if err != nil {
-		err = fmt.Errorf("failed to get admin user: %v", err)
-		klog.Error(err.Error())
-		return nil, err
-	}
+	domain := fmt.Sprintf("%s.olares", terminusInfo.Spec.LocalName)
+	hosts = append(hosts, intranet.DNSConfig{
+		Domain: domain,
+	})
 
-	for _, user := range users {
-		domain := fmt.Sprintf("%s.olares", user.GetName())
-		hosts = append(hosts, intranet.DNSConfig{
-			Domain: domain,
-		})
+	domain = fmt.Sprintf("desktop.%s.olares", terminusInfo.Spec.LocalName)
+	hosts = append(hosts, intranet.DNSConfig{
+		Domain: domain,
+	})
 
-		domain = fmt.Sprintf("desktop.%s.olares", user.GetName())
-		hosts = append(hosts, intranet.DNSConfig{
-			Domain: domain,
-		})
-
-		domain = fmt.Sprintf("auth.%s.olares", user.GetName())
-		hosts = append(hosts, intranet.DNSConfig{
-			Domain: domain,
-		})
-
-		if user.GetAnnotations()["bytetrade.io/is-ephemeral"] == "true" {
-			domain = fmt.Sprintf("wizard-%s.%s.olares", user.GetName(), adminUser.GetName())
-			hosts = append(hosts, intranet.DNSConfig{
-				Domain: domain,
-			})
-		}
-	}
+	domain = fmt.Sprintf("auth.%s.olares", terminusInfo.Spec.LocalName)
+	hosts = append(hosts, intranet.DNSConfig{
+		Domain: domain,
+	})
 
 	nodeIface, err := nets.GetInterfaceByIp(nodeIp)
 	if err != nil {
