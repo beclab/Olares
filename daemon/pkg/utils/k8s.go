@@ -38,7 +38,6 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	sysv1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
-	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
 	"github.com/beclab/api/manifest"
 	"github.com/beclab/api/pkg/generated/clientset/versioned"
 	nadutils "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/utils"
@@ -434,66 +433,7 @@ func MasterNodeIp(installed bool) (addr string, err error) {
 	}
 }
 
-func GetAdminUserJws(ctx context.Context) (string, error) {
-	user, err := GetAdminUser(ctx)
-	if err != nil {
-		return "", err
-	}
-
-	if user == nil {
-		return "", errors.New("user not found")
-	}
-
-	jws, ok := user.GetAnnotations()[bflconst.UserCertManagerJWSToken]
-	if !ok {
-		return "", errors.New("jws not found")
-	}
-
-	return jws, nil
-
-}
-
-func GetAdminUserTerminusName(ctx context.Context) (string, error) {
-	user, err := GetAdminUser(ctx)
-	if err != nil {
-		return "", err
-	}
-
-	if user == nil {
-		return "", errors.New("user not found")
-	}
-
-	name, ok := user.GetAnnotations()[bflconst.UserAnnotationTerminusNameKey]
-	if !ok {
-		return "", errors.New("olares name not found")
-	}
-
-	return name, nil
-
-}
-
 type Filter func(u *unstructured.Unstructured) bool
-
-func GetAdminUser(ctx context.Context) (*unstructured.Unstructured, error) {
-	u, err := ListUsers(ctx, func(u *unstructured.Unstructured) bool {
-		role, ok := u.GetAnnotations()[bflconst.UserAnnotationOwnerRole]
-		if !ok {
-			return false
-		}
-		return role == RoleOwner
-	})
-	if err != nil {
-		klog.Error("list user error, ", err)
-		return nil, err
-	}
-
-	if len(u) == 0 {
-		klog.Info("admin user not found")
-		return nil, nil
-	}
-
-	return u[0], nil
-}
 
 // ListUsers returns user CRs matching the given filters. The client argument is
 // retained for signature compatibility; reads come from the shared informer
@@ -557,28 +497,16 @@ func GetTerminusVersion(ctx context.Context, client dynamic.Interface) (*string,
 	return &terminus.Spec.Version, nil
 }
 
-func GetTerminusInstalledTime(ctx context.Context, client kubernetes.Interface) (*int64, error) {
-	// FIXME: record the time
-	adminUser, err := GetAdminUser(ctx)
+func GetTerminusInstalledTime(ctx context.Context, client dynamic.Interface) (*int64, error) {
+	terminus, err := GetTerminusInfo(ctx, client)
 	if err != nil {
-		klog.Error("get admin user error, ", err)
 		return nil, err
 	}
 
-	if adminUser == nil {
-		return nil, nil
-	}
-
-	deploy, err := client.AppsV1().Deployments("user-system-"+adminUser.GetName()).
-		Get(ctx, "system-server", metav1.GetOptions{})
-	if err != nil {
-		klog.Error("get deploy error, ", err)
-		return nil, err
-	}
-
-	return pointer.Int64(deploy.CreationTimestamp.Unix()), nil
+	return pointer.Int64(terminus.CreationTimestamp.Unix()), nil
 }
 
+// FIXME:
 func GetTerminusInitializedTime(ctx context.Context, client kubernetes.Interface) (*int64, error) {
 	deploy, err := client.AppsV1().Deployments("os-network").
 		Get(ctx, "l4-bfl-proxy", metav1.GetOptions{})
@@ -734,11 +662,22 @@ func GetApplicationUrlAll(ctx context.Context) ([]string, error) {
 	}
 	appUrlMu.Unlock()
 
+	terminusInfo, err := GetTerminusInfo(ctx, cachedDynamicClient)
+	if err != nil {
+		klog.Error("get terminus info error, ", err)
+		return nil, err
+	}
+
+	if terminusInfo == nil || terminusInfo.Spec.LocalName == "" {
+		return nil, errors.New("invalid terminus info, local name is empty")
+	}
+
 	// Owner zone is just the user's zone annotation, so read it from the user
 	// list instead of building an IAM REST client and doing a per-app lookup.
 	zoneMap := make(map[string]string, len(users))
 	for _, u := range users {
-		zoneMap[u.GetName()] = u.GetAnnotations()[iamv1alpha2.UserAnnotationZoneKey]
+		// TODO: Implement user's local zone alias
+		zoneMap[u.GetName()] = fmt.Sprintf("%s.olares.local", terminusInfo.Spec.LocalName)
 	}
 
 	urls := make([]string, 0)
