@@ -3,8 +3,6 @@ package onboarding
 import (
 	"bytes"
 	"context"
-	"crypto/md5"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -49,8 +47,8 @@ func ResetWithAuthelia(kube kubernetes.Interface) func(context.Context, string, 
 		if port == 0 {
 			return fmt.Errorf("auth-provider server port is missing")
 		}
-		// This is the existing auth-provider password wire format.
-		payload, _ := json.Marshal(map[string]string{"password": passwordWire(password)})
+		// The client already supplied the auth-provider password wire format.
+		payload, _ := json.Marshal(map[string]string{"password": password})
 		url := "http://" + net.JoinHostPort(svc.Spec.ClusterIP, strconv.Itoa(int(port))) + "/cli/api/reset/" + username + "/password"
 		req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(payload))
 		if err != nil {
@@ -70,9 +68,4 @@ func ResetWithAuthelia(kube kubernetes.Interface) func(context.Context, string, 
 		}
 		return nil
 	}
-}
-
-func passwordWire(password string) string {
-	sum := md5.Sum([]byte(password + "@Olares2025"))
-	return hex.EncodeToString(sum[:])
 }
