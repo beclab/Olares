@@ -568,9 +568,9 @@ func (p *Provider) listUsers(ctx context.Context, userList []iamv1alpha2.User, r
 		publicAppIDs, publicCustomDomainApps, _, customDomainAppsWithUsers := p.listApplicationDetails(user.Name, rawAppsMap[user.Name])
 
 		isEphemeralAnno := getAnnotation(&user, userAnnotationIsEphemeral)
-		if !isValidUser(&user) && isEphemeralAnno == "" {
-			continue
-		}
+		//if !isValidUser(&user) && isEphemeralAnno == "" {
+		//	continue
+		//}
 
 		isEphemeral := false
 		if ok, parseErr := strconv.ParseBool(isEphemeralAnno); parseErr == nil && ok {
