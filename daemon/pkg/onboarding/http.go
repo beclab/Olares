@@ -13,7 +13,7 @@ import (
 )
 
 // Handler serves only onboarding routes. Basic authentication uses the initial
-// password for this attempt, not the user's subsequent login password.
+// salted MD5 value sent when creating this user, not the new login password.
 func Handler(service func(context.Context) (*Service, error)) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /onboarding", func(w http.ResponseWriter, r *http.Request) {

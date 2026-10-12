@@ -39,14 +39,14 @@ func StartOnboarding(ctx context.Context) {
 			if role != "master" {
 				return nil, errors.New("onboarding is only available on the master")
 			}
-			dynamic, err := utils.GetDynamicClient()
+			resources, err := utils.GetOnboardingClient()
 			if err != nil {
 				return nil, err
 			}
 			mu.Lock()
 			defer mu.Unlock()
-			if service == nil || service.Kube != kube || service.Dynamic != dynamic {
-				service = &onboarding.Service{Kube: kube, Dynamic: dynamic, ResetPassword: onboarding.ResetWithAuthelia(kube)}
+			if service == nil || service.Kube != kube || service.Resources != resources {
+				service = &onboarding.Service{Kube: kube, Resources: resources, ResetPassword: onboarding.ResetWithAuthelia(kube)}
 			}
 			return service, nil
 		}

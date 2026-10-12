@@ -10,16 +10,18 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
+	sysv1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
+	iamv1 "github.com/beclab/api/iam/v1alpha2"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation"
-	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -36,8 +38,6 @@ const (
 )
 
 var (
-	Users                = schema.GroupVersionResource{Group: "iam.kubesphere.io", Version: "v1alpha2", Resource: "users"}
-	Terminus             = schema.GroupVersionResource{Group: "sys.bytetrade.io", Version: "v1alpha1", Resource: "terminus"}
 	ErrConflict          = errors.New("first user is already reserved or exists")
 	ErrIdentity          = errors.New("request identity does not match the first user")
 	ErrClosed            = errors.New("onboarding is complete")
@@ -47,6 +47,7 @@ var (
 
 type CreateRequest struct {
 	Username string `json:"username"`
+	// Password is the salted MD5 value provided by the client.
 	Password string `json:"password"`
 	DID      string `json:"did"`
 	CPU      string `json:"cpu_limit"`
@@ -63,8 +64,19 @@ type Status struct {
 type Service struct {
 	mu            sync.Mutex
 	Kube          kubernetes.Interface
-	Dynamic       dynamic.Interface
+	Resources     client.Client
 	ResetPassword func(context.Context, string, string) error
+}
+
+func NewResourceClient(config *rest.Config) (client.Client, error) {
+	scheme := runtime.NewScheme()
+	if err := iamv1.AddToScheme(scheme); err != nil {
+		return nil, err
+	}
+	if err := sysv1.AddToScheme(scheme); err != nil {
+		return nil, err
+	}
+	return client.New(config, client.Options{Scheme: scheme})
 }
 
 func (r *CreateRequest) validate() error {
@@ -108,7 +120,8 @@ func (s *Service) Create(ctx context.Context, request CreateRequest) (Status, er
 	records := s.Kube.CoreV1().Secrets(Namespace)
 	record, err := records.Get(ctx, RecordName, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
-		users, e := s.Dynamic.Resource(Users).List(ctx, metav1.ListOptions{})
+		var users iamv1.UserList
+		e := s.Resources.List(ctx, &users)
 		if e != nil {
 			return Status{}, e
 		}
@@ -140,8 +153,8 @@ func (s *Service) Create(ctx context.Context, request CreateRequest) (Status, er
 		return Status{}, ErrIdentity
 	}
 
-	users := s.Dynamic.Resource(Users)
-	u, err := users.Get(ctx, request.Username, metav1.GetOptions{})
+	u := &iamv1.User{}
+	err = s.Resources.Get(ctx, client.ObjectKey{Name: request.Username}, u)
 	createUser := apierrors.IsNotFound(err)
 	if err != nil && !createUser {
 		return Status{}, err
@@ -151,7 +164,8 @@ func (s *Service) Create(ctx context.Context, request CreateRequest) (Status, er
 	}
 	if createUser {
 		// Recheck after acquiring the reservation, including after a crash.
-		list, e := users.List(ctx, metav1.ListOptions{})
+		var list iamv1.UserList
+		e := s.Resources.List(ctx, &list)
 		if e != nil {
 			return Status{}, e
 		}
@@ -163,9 +177,10 @@ func (s *Service) Create(ctx context.Context, request CreateRequest) (Status, er
 		return Status{}, err
 	}
 	if createUser {
-		u, err = users.Create(ctx, newUser(request), metav1.CreateOptions{})
+		u = newUser(request)
+		err = s.Resources.Create(ctx, u)
 		if apierrors.IsAlreadyExists(err) {
-			u, err = users.Get(ctx, request.Username, metav1.GetOptions{})
+			err = s.Resources.Get(ctx, client.ObjectKey{Name: request.Username}, u)
 		}
 	}
 	if err != nil {
@@ -179,40 +194,32 @@ func (s *Service) Create(ctx context.Context, request CreateRequest) (Status, er
 
 func (s *Service) initializeLocalName(ctx context.Context, username string) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		resources := s.Dynamic.Resource(Terminus)
-		terminus, err := resources.Get(ctx, "terminus", metav1.GetOptions{})
-		if err != nil {
+		terminus := &sysv1.Terminus{}
+		if err := s.Resources.Get(ctx, client.ObjectKey{Name: "terminus"}, terminus); err != nil {
 			return err
 		}
-		name, _, err := unstructured.NestedString(terminus.Object, "spec", "localName")
-		if err != nil {
-			return err
-		}
-		if name != "" {
+		if terminus.Spec.LocalName != "" {
 			return nil
 		}
-		if err := unstructured.SetNestedField(terminus.Object, username, "spec", "localName"); err != nil {
+		terminus.Spec.LocalName = username
+		if err := s.Resources.Update(ctx, terminus); err != nil {
 			return err
 		}
-		updated, err := resources.Update(ctx, terminus, metav1.UpdateOptions{})
-		if err != nil {
+		saved := &sysv1.Terminus{}
+		if err := s.Resources.Get(ctx, client.ObjectKey{Name: "terminus"}, saved); err != nil {
 			return err
 		}
-		name, _, err = unstructured.NestedString(updated.Object, "spec", "localName")
-		if err != nil {
-			return err
-		}
-		if name != username {
+		if saved.Spec.LocalName != username {
 			return errors.New("Terminus CR did not retain localName; check the CRD schema")
 		}
 		return nil
 	})
 }
 
-func newUser(r CreateRequest) *unstructured.Unstructured {
-	return &unstructured.Unstructured{Object: map[string]interface{}{
-		"apiVersion": "iam.kubesphere.io/v1alpha2", "kind": "User",
-		"metadata": map[string]interface{}{"name": r.Username, "annotations": map[string]interface{}{
+func newUser(r CreateRequest) *iamv1.User {
+	return &iamv1.User{
+		TypeMeta: metav1.TypeMeta{APIVersion: iamv1.SchemeGroupVersion.String(), Kind: "User"},
+		ObjectMeta: metav1.ObjectMeta{Name: r.Username, Annotations: map[string]string{
 			UserMarker: "true", UserDID: r.DID,
 			"bytetrade.io/creator": "cli", "bytetrade.io/owner-role": "admin",
 			"bytetrade.io/terminus-name":  r.Username,
@@ -221,16 +228,17 @@ func newUser(r CreateRequest) *unstructured.Unstructured {
 			"iam.kubesphere.io/uninitialized": "true", "iam.kubesphere.io/sync-to-lldap": "true",
 			"iam.kubesphere.io/synced-to-lldap": "false", "iam.kubesphere.io/user-provider": "lldap",
 		}},
-		"spec": map[string]interface{}{
-			"displayName":     r.Username,
-			"email":           r.Username + "@olares.local",
-			"initialPassword": passwordWire(r.Password),
-			"groups":          []interface{}{"lldap_admin"},
+		Spec: iamv1.UserSpec{
+			DisplayName:     r.Username,
+			Email:           r.Username + "@olares.local",
+			InitialPassword: r.Password,
+			Groups:          []string{"lldap_admin"},
 		},
-	}}
+	}
 }
 
-// Authorize authenticates this onboarding attempt with its initial password.
+// Authorize authenticates this onboarding attempt with the initial salted MD5
+// value provided by the client. The reservation stores its bcrypt hash.
 func (s *Service) Authorize(ctx context.Context, username, password string) error {
 	record, err := s.Kube.CoreV1().Secrets(Namespace).Get(ctx, RecordName, metav1.GetOptions{})
 	if err != nil {
@@ -248,7 +256,8 @@ func (s *Service) Authorize(ctx context.Context, username, password string) erro
 func (s *Service) Status(ctx context.Context) (Status, error) {
 	record, err := s.Kube.CoreV1().Secrets(Namespace).Get(ctx, RecordName, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
-		list, e := s.Dynamic.Resource(Users).List(ctx, metav1.ListOptions{})
+		var list iamv1.UserList
+		e := s.Resources.List(ctx, &list)
 		if e != nil {
 			return Status{}, e
 		}
@@ -265,7 +274,8 @@ func (s *Service) Status(ctx context.Context) (Status, error) {
 		out.State, out.CompletedAt = Completed, at
 		return out, nil
 	}
-	u, err := s.Dynamic.Resource(Users).Get(ctx, out.Username, metav1.GetOptions{})
+	u := &iamv1.User{}
+	err = s.Resources.Get(ctx, client.ObjectKey{Name: out.Username}, u)
 	if apierrors.IsNotFound(err) {
 		out.Reason = "waiting for the first User CR"
 		return out, nil
@@ -276,9 +286,8 @@ func (s *Service) Status(ctx context.Context) (Status, error) {
 	if u.GetDeletionTimestamp() != nil || u.GetAnnotations()[UserMarker] != "true" || u.GetAnnotations()[UserDID] != string(record.Data["did"]) {
 		return Status{}, ErrConflict
 	}
-	phase, _, _ := unstructured.NestedString(u.Object, "status", "state")
-	out.Reason, _, _ = unstructured.NestedString(u.Object, "status", "reason")
-	switch phase {
+	out.Reason = u.Status.Reason
+	switch u.Status.State {
 	case "Failed":
 		out.State = Failed
 	case "Created":
