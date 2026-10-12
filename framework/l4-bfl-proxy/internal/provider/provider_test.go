@@ -288,3 +288,11 @@ func TestCustomDomainCertsForUser(t *testing.T) {
 		}
 	})
 }
+
+func TestListApplicationDetails_NoImplicitHeadscalePublicApp(t *testing.T) {
+	p := &Provider{}
+	publicApps, _, _, _ := p.listApplicationDetails("alice", nil)
+	if len(publicApps) != 0 {
+		t.Fatalf("publicApps = %v, want empty", publicApps)
+	}
+}

@@ -12,12 +12,14 @@ import (
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	extauthzv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/ext_authz/v3"
 	headermutationv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/header_mutation/v3"
+	rbacfilterv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/rbac/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	earlyheadermutationv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/early_header_mutation/header_mutation/v3"
 	ppupstreamv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/proxy_protocol/v3"
 	cachetypes "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/beclab/l4-bfl-proxy/internal/ir"
 )
@@ -1115,9 +1117,7 @@ func TestNorthSouthClientIdentityStripBeforeExtAuth(t *testing.T) {
 
 func protoCloneRouteConfig(t *testing.T, rc *routev3.RouteConfiguration) *routev3.RouteConfiguration {
 	t.Helper()
-	// Shallow field copy is enough: test only toggles RequestHeadersToRemove.
-	out := *rc
-	return &out
+	return proto.Clone(rc).(*routev3.RouteConfiguration)
 }
 
 func TestTranslate_EmptyIR(t *testing.T) {
@@ -1253,6 +1253,40 @@ func TestTranslateRoute_ProbeBypassHeaderMatch(t *testing.T) {
 	require.Len(t, route.GetMatch().GetHeaders(), 1)
 	assert.Equal(t, "user-agent", route.GetMatch().GetHeaders()[0].GetName())
 	assert.Nil(t, route.TypedPerFilterConfig, "probe bypass keeps VH-level ExtAuth disabled")
+}
+
+func TestTranslateRoute_BypassSourceCIDR(t *testing.T) {
+	route := translateRoute(&ir.HTTPRouteIR{
+		Name:      "headscale_key",
+		PathExact: "/key",
+		Cluster:   "headscale",
+		ExtAuth: &ir.ExtAuthConfigIR{
+			Cluster:    "authelia_backend_alice",
+			PathPrefix: "/api/verify/",
+		},
+		BypassSourceCIDR: true,
+	}, nil)
+
+	assert.NotNil(t, route.TypedPerFilterConfig["envoy.filters.http.ext_authz"])
+	anyCfg := route.TypedPerFilterConfig["envoy.filters.http.rbac"]
+	require.NotNil(t, anyCfg)
+	var perRoute rbacfilterv3.RBACPerRoute
+	require.NoError(t, anyCfg.UnmarshalTo(&perRoute))
+	policy := perRoute.GetRbac().GetRules().GetPolicies()["allow_all"]
+	require.NotNil(t, policy)
+	assert.True(t, policy.GetPermissions()[0].GetAny())
+	assert.True(t, policy.GetPrincipals()[0].GetAny())
+
+	route = translateRoute(&ir.HTTPRouteIR{
+		Name:      "default",
+		PathExact: "/key",
+		Cluster:   "headscale",
+		ExtAuth: &ir.ExtAuthConfigIR{
+			Cluster:    "authelia_backend_alice",
+			PathPrefix: "/api/verify/",
+		},
+	}, nil)
+	assert.NotContains(t, route.TypedPerFilterConfig, "envoy.filters.http.rbac")
 }
 
 // ---------------------------------------------------------------------------
