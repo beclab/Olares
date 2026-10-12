@@ -36,6 +36,7 @@ const (
 	userNamespacePrefix = "user-space"
 	sslServerPort       = 443
 	sslProxyServerPort  = 444
+	localHTTPProxyPort  = 82
 	xdsServerPort       = 8794
 	resyncPeriod        = 60 * time.Minute
 	metricsAddr         = "0"
@@ -133,6 +134,7 @@ func main() {
 		translator.New(providerResources, xdsIR, &translator.Config{
 			SSLServerPort:      sslServerPort,
 			SSLProxyServerPort: sslProxyServerPort,
+			LocalHTTPProxyPort: localHTTPProxyPort,
 		}),
 		xdstranslator.New(xdsIR, xdsResources),
 		xdsSrv,

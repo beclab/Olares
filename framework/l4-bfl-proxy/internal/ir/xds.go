@@ -90,6 +90,12 @@ type ExtAuthConfigIR struct {
 	PathPrefix     string
 	RequestHeaders []string
 	Disabled       bool
+	// User is the X-BFL-USER value sent with a per-route Authelia override.
+	User string
+	// ServiceOverride emits a full HttpService on this route, including the
+	// default /api/verify/ path. The shared port-82 chain has one filter-level
+	// Authelia, so each user's route must point at its own cluster.
+	ServiceOverride bool
 }
 
 type StreamListenerIR struct {
