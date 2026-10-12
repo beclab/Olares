@@ -144,9 +144,9 @@ func (p *proxyServer) AddTarget(*middleware.ProxyTarget) bool {
 
 // Next implements middleware.ProxyBalancer.
 func (p *proxyServer) Next(c echo.Context) *middleware.ProxyTarget {
-	scheme := "https://"
+	scheme := "http://"
 	if c.IsWebSocket() {
-		scheme = "wss://"
+		scheme = "ws://"
 	}
 
 	var (
@@ -165,9 +165,9 @@ func (p *proxyServer) Next(c echo.Context) *middleware.ProxyTarget {
 		}
 		requestHost = strings.Join(tokens, ".")
 		c.Request().Host = requestHost
-		proxyPass, err = url.Parse(scheme + requestHost + ":444")
+		proxyPass, err = url.Parse(scheme + requestHost + ":82")
 	} else {
-		proxyPass, err = url.Parse(scheme + c.Request().Host + ":444")
+		proxyPass, err = url.Parse(scheme + c.Request().Host + ":82")
 	}
 	if err != nil {
 		klog.Error("parse proxy target error, ", err)
@@ -190,9 +190,9 @@ func (p *proxyServer) initTransport() http.RoundTripper {
 			DualStack: true,
 		}),
 		MaxIdleConns:          100,
-		IdleConnTimeout:       10 * time.Second,
+		IdleConnTimeout:       1800 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
-		TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
+		// TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
 	}
 
 	return transport
@@ -217,7 +217,7 @@ func (p *proxyServer) customDialContext(d *net.Dialer) func(ctx context.Context,
 		// Force proxying to localhost
 		klog.Info("addr: ", addr, " port: ", port, " network: ", network)
 		if port == "" {
-			port = "444"
+			port = "82"
 		}
 		hostname, err := os.Hostname()
 		if err != nil {
@@ -228,10 +228,10 @@ func (p *proxyServer) customDialContext(d *net.Dialer) func(ctx context.Context,
 		}
 		newAddr := net.JoinHostPort(hostname, port)
 
-		isWs := false
-		if v := ctx.Value(WSKey); v != nil {
-			isWs = v.(bool)
-		}
+		// isWs := false
+		// if v := ctx.Value(WSKey); v != nil {
+		// 	isWs = v.(bool)
+		// }
 
 		proxyDial := func(ctx context.Context, netDialer *net.Dialer, network, addr string) (net.Conn, error) {
 			if netDialer == nil {
@@ -259,12 +259,12 @@ func (p *proxyServer) customDialContext(d *net.Dialer) func(ctx context.Context,
 			return conn, nil
 		}
 
-		if isWs {
-			klog.Info("WebSocket connection detected, using upgraded dialer, ", addr)
-			return tlsDial(ctx, d, func(ctx context.Context, network, addr string) (net.Conn, error) {
-				return proxyDial(ctx, d, network, newAddr)
-			}, network, addr, &tls.Config{InsecureSkipVerify: true})
-		}
+		// if isWs {
+		// 	klog.Info("WebSocket connection detected, using upgraded dialer, ", addr)
+		// 	return tlsDial(ctx, d, func(ctx context.Context, network, addr string) (net.Conn, error) {
+		// 		return proxyDial(ctx, d, network, newAddr)
+		// 	}, network, addr, &tls.Config{InsecureSkipVerify: true})
+		// }
 
 		return proxyDial(ctx, d, network, newAddr)
 	}
