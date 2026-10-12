@@ -46,4 +46,9 @@ rules:
   - "/headscale/node/rename"
   - "/headscale/policy/exit-users"
   - "/headscale/policy/exit-users/*"
+  - "/headscale/policy/subnet-router/routes"
+  - "/headscale/policy/subnet-router/access"
+  - "/headscale/olares-users"
+  - "/headscale/policy/lan-groups"
+  - "/headscale/policy/lan-groups/*"
   verbs: ["*"]
