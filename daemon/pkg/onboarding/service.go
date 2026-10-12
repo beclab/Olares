@@ -37,6 +37,7 @@ const (
 
 var (
 	Users                = schema.GroupVersionResource{Group: "iam.kubesphere.io", Version: "v1alpha2", Resource: "users"}
+	Terminus             = schema.GroupVersionResource{Group: "sys.bytetrade.io", Version: "v1alpha1", Resource: "terminus"}
 	ErrConflict          = errors.New("first user is already reserved or exists")
 	ErrIdentity          = errors.New("request identity does not match the first user")
 	ErrClosed            = errors.New("onboarding is complete")
@@ -141,7 +142,14 @@ func (s *Service) Create(ctx context.Context, request CreateRequest) (Status, er
 
 	users := s.Dynamic.Resource(Users)
 	u, err := users.Get(ctx, request.Username, metav1.GetOptions{})
-	if apierrors.IsNotFound(err) {
+	createUser := apierrors.IsNotFound(err)
+	if err != nil && !createUser {
+		return Status{}, err
+	}
+	if !createUser && (u.GetDeletionTimestamp() != nil || u.GetAnnotations()[UserMarker] != "true" || u.GetAnnotations()[UserDID] != did) {
+		return Status{}, ErrConflict
+	}
+	if createUser {
 		// Recheck after acquiring the reservation, including after a crash.
 		list, e := users.List(ctx, metav1.ListOptions{})
 		if e != nil {
@@ -150,6 +158,11 @@ func (s *Service) Create(ctx context.Context, request CreateRequest) (Status, er
 		if len(list.Items) != 0 {
 			return Status{}, ErrConflict
 		}
+	}
+	if err := s.initializeLocalName(ctx, request.Username); err != nil {
+		return Status{}, err
+	}
+	if createUser {
 		u, err = users.Create(ctx, newUser(request), metav1.CreateOptions{})
 		if apierrors.IsAlreadyExists(err) {
 			u, err = users.Get(ctx, request.Username, metav1.GetOptions{})
@@ -162,6 +175,38 @@ func (s *Service) Create(ctx context.Context, request CreateRequest) (Status, er
 		return Status{}, ErrConflict
 	}
 	return s.Status(ctx)
+}
+
+func (s *Service) initializeLocalName(ctx context.Context, username string) error {
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		resources := s.Dynamic.Resource(Terminus)
+		terminus, err := resources.Get(ctx, "terminus", metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		name, _, err := unstructured.NestedString(terminus.Object, "spec", "localName")
+		if err != nil {
+			return err
+		}
+		if name != "" {
+			return nil
+		}
+		if err := unstructured.SetNestedField(terminus.Object, username, "spec", "localName"); err != nil {
+			return err
+		}
+		updated, err := resources.Update(ctx, terminus, metav1.UpdateOptions{})
+		if err != nil {
+			return err
+		}
+		name, _, err = unstructured.NestedString(updated.Object, "spec", "localName")
+		if err != nil {
+			return err
+		}
+		if name != username {
+			return errors.New("Terminus CR did not retain localName; check the CRD schema")
+		}
+		return nil
+	})
 }
 
 func newUser(r CreateRequest) *unstructured.Unstructured {

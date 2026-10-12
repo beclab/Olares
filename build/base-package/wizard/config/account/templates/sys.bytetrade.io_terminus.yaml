@@ -58,6 +58,9 @@ spec:
               display:
                 description: the DisplayName of the terminus
                 type: string
+              localName:
+                description: the name used for local access to the cluster
+                type: string
               name:
                 description: the version name of the terminus os
                 type: string
