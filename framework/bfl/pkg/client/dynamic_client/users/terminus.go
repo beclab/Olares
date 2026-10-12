@@ -58,6 +58,9 @@ type TerminusSpec struct {
 	// the DisplayName of the terminus
 	DisplayName string `json:"display,omitempty"`
 
+	// the name used for local access to the cluster
+	LocalName string `json:"localName,omitempty"`
+
 	// the version of the terminus
 	Version string `json:"version"`
 

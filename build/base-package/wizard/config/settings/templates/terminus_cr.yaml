@@ -2,6 +2,7 @@
 
 {{ $cluster_id := randAlphaNum 16 }}
 {{ $version := "#__VERSION__" }}
+{{ $local_name := "" }}
 {{ if .Values.cluster_id }}
 {{ $cluster_id = .Values.cluster_id }}
 {{ end }}
@@ -9,6 +10,7 @@
 {{ if $cr }}
 {{ $cluster_id = (index $cr "metadata" "labels" "bytetrade.io/cluster-id") }}
 {{ $version = (index $cr "spec" "version") }}
+{{ $local_name = (get (index $cr "spec") "localName" | default "") }}
 {{ end }}
 
 ---
@@ -26,6 +28,7 @@ spec:
   name: terminus-1
   version: {{ .Values.version | default $version }}
   display: Terminus One
+  localName: {{ $local_name | quote }}
   releaseServer:
     serverType: github
     github:
