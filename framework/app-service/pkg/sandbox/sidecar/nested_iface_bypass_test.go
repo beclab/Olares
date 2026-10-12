@@ -173,6 +173,22 @@ func TestApplyNestedIfaceBypass(t *testing.T) {
 	}
 }
 
+func TestApplyNestedIfaceBypassRefreshesLegacyInitWithoutRedirectPorts(t *testing.T) {
+	pod := linkerdPod(nil, corev1.PodSpec{
+		Containers: []corev1.Container{{Name: "windows", Image: "beclab/dockurr-windows:1"}},
+		InitContainers: []corev1.Container{{
+			Name: NestedIfaceBypassInitContainerName,
+			Env:  []corev1.EnvVar{{Name: nestedIfaceBypassEnv, Value: "docker"}},
+		}},
+	})
+	if !ApplyNestedIfaceBypass(pod) {
+		t.Fatal("init without redirect ports env must be refreshed")
+	}
+	if got := nestedBypassEnvValue(pod, meshInRedirectPortsEnv); got != "16080,16443" {
+		t.Fatalf("redirect ports env=%q", got)
+	}
+}
+
 func TestGetNestedIfaceBypassInitContainerSpec(t *testing.T) {
 	c := GetNestedIfaceBypassInitContainer([]string{"docker"})
 	if c.Name != NestedIfaceBypassInitContainerName || c.Image != nestedIfaceBypassImage {
@@ -180,6 +196,15 @@ func TestGetNestedIfaceBypassInitContainerSpec(t *testing.T) {
 	}
 	if c.SecurityContext == nil || c.SecurityContext.RunAsUser == nil || *c.SecurityContext.RunAsUser != 0 {
 		t.Fatal("must run as root")
+	}
+	ports := ""
+	for _, e := range c.Env {
+		if e.Name == meshInRedirectPortsEnv {
+			ports = e.Value
+		}
+	}
+	if ports != "16080,16443" {
+		t.Fatalf("%s=%q", meshInRedirectPortsEnv, ports)
 	}
 	if !strings.Contains(NestedIfaceBypassScript(), "iptables-nft") {
 		t.Fatal("script must use iptables-nft")
