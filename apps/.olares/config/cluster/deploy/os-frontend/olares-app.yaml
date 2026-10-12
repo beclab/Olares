@@ -153,6 +153,19 @@ spec:
       port: 80
       targetPort: 92
 ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: authelia-svc
+  namespace: os-frontend
+spec:
+  selector:
+    app: olares-app
+  ports:
+    - name: login
+      port: 80
+      targetPort: 93
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -177,12 +190,15 @@ spec:
       serviceAccountName: system-frontend
       initContainers:
         - name: olares-app-init
-          image: beclab/system-frontend:v1.11.58
+          image: beclab/system-frontend:v1.12.6-alpha.1
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
             - -c
             - |
+              set -eu
+              test -s /apps/login/index.html
+              test -s /apps/login/login-config.json
               cp -r /apps/* /www/
           volumeMounts:
             - mountPath: /www
@@ -207,6 +223,7 @@ spec:
             - containerPort: 90
             - containerPort: 91
             - containerPort: 92
+            - containerPort: 93
             - containerPort: 8090
           command:
             - /bin/sh
