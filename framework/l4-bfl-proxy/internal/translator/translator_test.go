@@ -583,6 +583,80 @@ func makeSharedAppWithCustom() *message.AppInfo {
 	return a
 }
 
+func TestBuildAppVirtualHosts_HeadscalePublicRoutes(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+	user := &message.UserInfo{Name: "alice", Language: "en", DenyAll: true}
+	app := &message.AppInfo{
+		Name:      "olares-app",
+		Appid:     "olares-app",
+		IsSysApp:  true,
+		Namespace: "user-space-alice",
+		Entrances: []*message.EntranceInfo{{Name: "headscale", Host: "headscale-svc", Port: 80}},
+	}
+
+	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", false, make(map[string]*ir.ClusterIR))
+	require.Len(t, vhosts, 1)
+	require.Len(t, vhosts[0].Routes, 6)
+
+	want := []struct {
+		path    string
+		method  string
+		cluster string
+	}{
+		{"/key", "GET", "app_alice_olares-app_headscale"},
+		{"/ts2021", "GET", "app_alice_olares-app_headscale"},
+		{"/ts2021", "POST", "app_alice_olares-app_headscale"},
+		{"/api/refresh", "POST", "app_alice_olares-app_headscale"},
+		{"/api/refresh", "OPTIONS", "app_alice_olares-app_headscale"},
+	}
+	assert.Equal(t, "headscale_alice_key_get", vhosts[0].Routes[0].Name)
+	for i, expected := range want {
+		route := vhosts[0].Routes[i]
+		assert.Equal(t, expected.path, route.PathExact)
+		assert.Equal(t, expected.method, route.HeaderMatches[0].Exact)
+		assert.Equal(t, expected.cluster, route.Cluster)
+		assert.True(t, route.BypassSourceCIDR)
+		require.NotNil(t, route.ExtAuth)
+		assert.Equal(t, "authelia_backend_alice", route.ExtAuth.Cluster)
+		assert.Equal(t, autheliaVerifyPathPrefix, route.ExtAuth.PathPrefix)
+	}
+	assert.Equal(t, "/", vhosts[0].Routes[5].PathPrefix)
+	assert.False(t, vhosts[0].Routes[5].BypassSourceCIDR)
+	require.NotNil(t, vhosts[0].Routes[5].ExtAuth)
+
+	user.DenyAll = false
+	vhosts = tr.buildAppVirtualHosts(user, app, "alice.example.com", false, make(map[string]*ir.ClusterIR))
+	require.Len(t, vhosts, 1)
+	require.Len(t, vhosts[0].Routes, 1)
+	assert.False(t, vhosts[0].Routes[0].BypassSourceCIDR)
+	require.NotNil(t, vhosts[0].Routes[0].ExtAuth)
+}
+
+func TestBuildAppVirtualHosts_HeadscalePrefixDoesNotGrantPublicRoutes(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+	user := &message.UserInfo{Name: "alice", Language: "en", DenyAll: true, LocalDomainIP: "192.168.1.100"}
+	app := &message.AppInfo{
+		Name:      "third-party-app",
+		Appid:     "third-party-app",
+		Namespace: "user-space-alice",
+		Entrances: []*message.EntranceInfo{{Name: "web", Host: "third-party-svc", Port: 8080}},
+		Settings: map[string]string{
+			"defaultThirdLevelDomainConfig": `[{"entranceName":"web","thirdLevelDomain":"headscale"}]`,
+		},
+	}
+
+	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", false, make(map[string]*ir.ClusterIR))
+	require.Len(t, vhosts, 1)
+	require.Len(t, vhosts[0].Routes, 1)
+	assert.Equal(t, "headscale.alice.example.com", vhosts[0].Domains[0])
+	assert.False(t, vhosts[0].Routes[0].BypassSourceCIDR)
+	require.NotNil(t, vhosts[0].Routes[0].ExtAuth)
+
+	tr.applyDenyAllRestrictions(user, vhosts, nil)
+	assert.Contains(t, vhosts[0].SourceCIDRs, vpnCIDR)
+	assert.Contains(t, vhosts[0].SourceCIDRs, "192.168.1.100/32")
+}
+
 // Any user (admin or normal) reaches the real upstream of a v3 / shared app.
 func TestBuildAppVirtualHosts_SharedApp_OpenToAllUsers(t *testing.T) {
 	for _, name := range []string{"admin", "alice"} {

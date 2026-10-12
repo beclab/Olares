@@ -595,6 +595,30 @@ func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.A
 			routes = append(routes, t.buildFileserverRoutes(user, clusterSet)...)
 		}
 
+		if user.DenyAll &&
+			app.IsSysApp &&
+			app.Appid == "olares-app" &&
+			entrance.Name == "headscale" {
+			publicRoute := func(name, path, method, target string, upgrade bool) *ir.HTTPRouteIR {
+				return &ir.HTTPRouteIR{
+					Name:             fmt.Sprintf("headscale_%s_%s", user.Name, name),
+					PathExact:        path,
+					Cluster:          target,
+					HeaderMatches:    []ir.HeaderMatchIR{{Name: ":method", Exact: method}},
+					ExtAuth:          buildAppExtAuthConfig(user),
+					WebSocketUpgrade: upgrade,
+					BypassSourceCIDR: true,
+				}
+			}
+			routes = append(routes,
+				publicRoute("key_get", "/key", "GET", clusterName, false),
+				publicRoute("ts2021_get", "/ts2021", "GET", clusterName, true),
+				publicRoute("ts2021_post", "/ts2021", "POST", clusterName, true),
+				publicRoute("refresh_post", "/api/refresh", "POST", clusterName, false),
+				publicRoute("refresh_options", "/api/refresh", "OPTIONS", clusterName, false),
+			)
+		}
+
 		defaultRoute := &ir.HTTPRouteIR{
 			Name:             fmt.Sprintf("default_%s_%s_%s", user.Name, app.Name, entrance.Name),
 			PathPrefix:       "/",
