@@ -365,22 +365,6 @@ func refreshCurrentStatus(ctx context.Context) error {
 		return err
 	}
 
-	// A node whose release file does not name the owner learns the Olares ID
-	// from the cluster. It is resolved here rather than only once every system
-	// component is ready, because a degraded cluster is exactly when an
-	// operator reaches for a power command, and the routes that authorize one
-	// have no other way to tell whose signature they are holding.
-	if CurrentState.TerminusName == nil || *CurrentState.TerminusName == "" {
-		if terminusName, err := utils.GetAdminUserTerminusName(ctx); err != nil {
-			// Quiet: this runs on a 5s poll, and a cluster still coming up has
-			// no user record for it to find yet.
-			klog.V(4).Info("resolve the owner's olares name from the cluster, ", err)
-		} else {
-			klog.Info("resolved the owner's olares name from the cluster: ", terminusName)
-			CurrentState.TerminusName = &terminusName
-		}
-	}
-
 	pressure, err := utils.GetNodesPressure(ctx, kubeClient)
 	if err != nil {
 		klog.Error("get nodes pressure error, ", err)
@@ -392,7 +376,7 @@ func refreshCurrentStatus(ctx context.Context) error {
 	if CurrentState.InstallFinishedTime != nil {
 		CurrentState.InstalledTime = pointer.Int64(CurrentState.InstallFinishedTime.Unix())
 	} else {
-		CurrentState.InstalledTime, err = utils.GetTerminusInstalledTime(ctx, kubeClient)
+		CurrentState.InstalledTime, err = utils.GetTerminusInstalledTime(ctx, dynamicClient)
 		if err != nil {
 			klog.Error(err)
 		}
@@ -418,12 +402,7 @@ func refreshCurrentStatus(ctx context.Context) error {
 	} else if tmsrunning {
 		currentTerminusState = Uninitialized
 
-		terminusName, err := utils.GetAdminUserTerminusName(ctx)
-		if err != nil {
-			klog.Error("get user olares name error, ", err)
-		} else {
-			CurrentState.TerminusName = &terminusName
-		}
+		// there is not a terminus name when the cluster is uninitialized, so the owner cannot be resolved from the cluster yet.
 
 		terminusVerion, err := utils.GetTerminusVersion(ctx, dynamicClient)
 		if err != nil {
