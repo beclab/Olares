@@ -1005,6 +1005,35 @@ func TestBuildSystemVirtualHost_DesktopWizardVerify_AuthSkipped(t *testing.T) {
 		"auth must stamp zone-owner X-BFL-USER for Authelia Bridge (no ExtAuth)")
 }
 
+func TestBuildUserVirtualHosts_SharedLogin(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+	user := &message.UserInfo{Name: "alice", Language: "en", Namespace: "user-space-alice"}
+	clusters := make(map[string]*ir.ClusterIR)
+	vhosts := tr.buildUserVirtualHosts(user, "alice.example.com", false, clusters)
+	var auth *ir.VirtualHostIR
+	for _, vh := range vhosts {
+		if vh.Name == "nonapp_auth_alice" {
+			auth = vh
+			break
+		}
+	}
+	require.NotNil(t, auth)
+	assert.Contains(t, auth.Domains, "auth.alice.example.com")
+	assert.Contains(t, auth.Domains, "auth.alice.olares.local")
+	require.Len(t, auth.Routes, 1)
+	route := auth.Routes[0]
+	assert.Nil(t, route.ExtAuth, "the shared login page must remain reachable before authentication")
+	assert.Equal(t, "alice", route.RequestHeaders["X-BFL-USER"], "retain the existing single-user auth backend contract")
+	cluster := clusters[route.Cluster]
+	require.NotNil(t, cluster)
+	assert.Equal(t, "authelia-svc.os-frontend.svc.cluster.local", cluster.Host)
+	assert.Equal(t, uint32(80), cluster.Port)
+	assert.True(t, cluster.UseDNS)
+	// Only Login moves in this phase; wizard and desktop retain their routes.
+	assert.Equal(t, "wizard.user-space-alice.svc.cluster.local", clusters["nonapp_wizard_alice"].Host)
+	assert.Equal(t, "edge-desktop.user-space-alice.svc.cluster.local", clusters["nonapp_desktop_alice"].Host)
+}
+
 func TestBuildUserVirtualHosts_ProfileRootVerify(t *testing.T) {
 	tr := &Translator{cfg: &Config{}}
 	user := &message.UserInfo{

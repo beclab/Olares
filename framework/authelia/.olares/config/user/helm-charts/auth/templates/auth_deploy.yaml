@@ -1,39 +1,6 @@
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: authelia-deployment
-  namespace: user-space-{{ .Values.bfl.username }}
-  labels:
-    app: authelia
-    applications.app.bytetrade.io/author: bytetrade.io
-  annotations:
-    applications.app.bytetrade.io/version: '0.0.1'
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: authelia
-  template:
-    metadata:
-      labels:
-        app: authelia
-    spec:
-      priorityClassName: "system-cluster-critical"
-      initContainers:
-      - args:
-        - -it
-        - authelia-backend.user-system-{{ .Values.bfl.username }}:9091
-        image: owncloudci/wait-for:latest
-        imagePullPolicy: IfNotPresent
-        name: check-auth
-      containers:
-      - name: auth-front
-        image: beclab/login:v1.11.28
-        imagePullPolicy: IfNotPresent
-        ports:
-        - containerPort: 80
-        
+# Login is served by olares-app-deployment in os-frontend. Keep this chart
+# and release: Helm upgrades remove the old authelia-deployment while retaining
+# the existing backend aliases and provider permissions.
 ---
 apiVersion: v1
 kind: Service
@@ -41,9 +8,9 @@ metadata:
   name: authelia-svc
   namespace: user-space-{{ .Values.bfl.username }}
 spec:
-  selector:
-    app: authelia
-  type: ClusterIP
+  # Preserve legacy in-cluster callers without a per-user Login deployment.
+  type: ExternalName
+  externalName: authelia-svc.os-frontend.svc.cluster.local
   ports:
     - protocol: TCP
       name: authelia

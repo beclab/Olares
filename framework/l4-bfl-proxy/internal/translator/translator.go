@@ -95,10 +95,12 @@ var nodeRegexSharePrefixes = []string{
 type systemServiceDef struct {
 	Name      string
 	SvcFormat string
+	// Namespace overrides the user namespace for shared frontends.
+	Namespace string
 }
 
 var systemServices = []systemServiceDef{
-	{Name: "auth", SvcFormat: "authelia-svc.%s.svc.cluster.local"},
+	{Name: "auth", SvcFormat: "authelia-svc.%s.svc.cluster.local", Namespace: "os-frontend"},
 	{Name: "desktop", SvcFormat: "edge-desktop.%s.svc.cluster.local"},
 	{Name: "wizard", SvcFormat: "wizard.%s.svc.cluster.local"},
 }
@@ -806,6 +808,9 @@ func (t *Translator) buildSystemVirtualHost(user *message.UserInfo, def systemSe
 	}
 
 	clusterName := fmt.Sprintf("nonapp_%s_%s", def.Name, user.Name)
+	if def.Namespace != "" {
+		namespace = def.Namespace
+	}
 	upstreamHost := fmt.Sprintf(def.SvcFormat, namespace)
 	clusterSet[clusterName] = &ir.ClusterIR{
 		Name: clusterName, Host: upstreamHost, Port: 80, UseDNS: true,
