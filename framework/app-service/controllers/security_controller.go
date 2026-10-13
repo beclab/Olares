@@ -7,7 +7,6 @@ import (
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
-	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/security"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
@@ -271,13 +270,13 @@ func (r *SecurityReconciler) reconcileNamespaceLabels(ctx context.Context, ns *c
 		// ApplicationManager list using the deterministic
 		// SharedAppNamespace(app) ↔ AM mapping.
 		if _, exists := ns.Labels[security.NamespaceOwnerLabel]; !exists {
-			owner, err := kubesphere.GetClusterOwner(ctx)
-			if err != nil {
-				logger.Info("Failed to get cluster owner", "err", err)
-			} else {
-				ns.Labels[security.NamespaceOwnerLabel] = owner
-				updated = true
-			}
+			//owner, err := kubesphere.GetClusterOwner(ctx)
+			//TODO:hysyeah
+			owner := "olares"
+
+			ns.Labels[security.NamespaceOwnerLabel] = owner
+			updated = true
+
 		}
 
 		if label, ok := ns.Labels[security.NamespaceSharedLabel]; !ok || label != "true" {
