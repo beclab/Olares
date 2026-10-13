@@ -96,6 +96,9 @@ func (w *applicationWatcher) Watch(ctx context.Context) {
 			klog.Error("load intranet server config error, ", err)
 			return
 		}
+		if o == nil {
+			return
+		}
 
 		sig := optionsSignature(o)
 
