@@ -5,6 +5,7 @@ metadata:
   annotations:
     provider-registry-ref: {{ .Values.bfl.username }}/4ae9f19e
     provider-service-ref: http://prometheus-k8s.kubesphere-monitoring-system:9090
+    provider-owner-ref: {{ .Values.bfl.username | quote }}
 rules:
 - nonResourceURLs: 
   - "*"

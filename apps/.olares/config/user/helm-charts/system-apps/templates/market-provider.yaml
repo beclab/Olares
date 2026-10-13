@@ -5,6 +5,7 @@ metadata:
   annotations:
     provider-registry-ref: user-space-{{ .Values.bfl.username }}/market
     provider-service-ref: appstore-svc.os-framework:81
+    provider-owner-ref: {{ .Values.bfl.username | quote }}
 rules:
 - nonResourceURLs: ["*"]
   verbs: ["*"]
@@ -17,6 +18,7 @@ metadata:
   annotations:
     provider-registry-ref: {{ .Values.bfl.username }}/market
     provider-service-ref: appstore-svc.os-framework:81
+    provider-owner-ref: {{ .Values.bfl.username | quote }}
 rules:
 - nonResourceURLs: ["*"]
   verbs: ["*"]
@@ -29,6 +31,7 @@ metadata:
   annotations:
     provider-registry-ref: user-system-{{ .Values.bfl.username }}/market
     provider-service-ref: appstore-svc.os-framework:81
+    provider-owner-ref: {{ .Values.bfl.username | quote }}
 rules:
 - nonResourceURLs: ["/app-store/*"]
   verbs: ["*"]
