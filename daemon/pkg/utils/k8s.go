@@ -694,12 +694,12 @@ func GetApplicationUrlAll(ctx context.Context) ([]string, error) {
 		return nil, errors.New("invalid terminus info, local name is empty")
 	}
 
-	// Owner zone is just the user's zone annotation, so read it from the user
-	// list instead of building an IAM REST client and doing a per-app lookup.
+	// Local access uses the machine zone, even when users have no public zone.
+	localZone := fmt.Sprintf("%s.olares.local", terminusInfo.Spec.LocalName)
 	zoneMap := make(map[string]string, len(users))
 	for _, u := range users {
 		// TODO: Implement user's local zone alias
-		zoneMap[u.GetName()] = fmt.Sprintf("%s.olares.local", terminusInfo.Spec.LocalName)
+		zoneMap[u.GetName()] = localZone
 	}
 
 	urls := make([]string, 0)
@@ -710,12 +710,14 @@ func GetApplicationUrlAll(ctx context.Context) ([]string, error) {
 		app := cached.DeepCopy()
 		var entrances []appcfg.Entrance
 		var err error
-		zone, ok := zoneMap[app.Spec.Owner]
-		if !ok {
-			continue
-		}
 		if !appv1alpha1.IsShared(app) {
-			entrances, err = appcfg.GenEntranceURL(ctx, app)
+			// Only per-user apps require their owner to be an IAM user. Shared
+			// system apps belong to olares, which has no User resource.
+			zone, ok := zoneMap[app.Spec.Owner]
+			if !ok {
+				continue
+			}
+			entrances, err = localAppEntrances(app, app.Spec.Owner, zone)
 			if err != nil {
 				klog.Error("generate application entrance url error, ", err, ", ", app.Name)
 				hadError = true
@@ -734,7 +736,7 @@ func GetApplicationUrlAll(ctx context.Context) ([]string, error) {
 			}
 		} else {
 
-			entrances, err = BatchGenSharedAppEntranceURL(ctx, app)
+			entrances, err = BatchGenSharedAppEntranceURL(ctx, app, localZone)
 			if err != nil {
 				klog.Error("generate shared application entrance url error, ", err, ", ", app.Name)
 				hadError = true
@@ -982,7 +984,7 @@ func GetWorkloadNameFromPod(pod *corev1.Pod) string {
 	return podNameTokens[0]
 }
 
-func BatchGenSharedAppEntranceURL(ctx context.Context, app *appv1alpha1.Application) ([]appcfg.Entrance, error) {
+func BatchGenSharedAppEntranceURL(ctx context.Context, app *appv1alpha1.Application, localZone string) ([]appcfg.Entrance, error) {
 	if !appv1alpha1.IsShared(app) {
 		return nil, nil
 	}
@@ -997,20 +999,13 @@ func BatchGenSharedAppEntranceURL(ctx context.Context, app *appv1alpha1.Applicat
 
 	var entrances []appcfg.Entrance
 	for _, u := range users {
-		a := app.DeepCopy()
-		a.Spec.Owner = u.GetName()
-		_, err := appcfg.GenEntranceURL(ctx, a)
+		userEntrances, err := localAppEntrances(app, u.GetName(), localZone)
 		if err != nil {
-			klog.Error("generate entrance url error, ", err)
-			continue
+			return nil, fmt.Errorf("generate local entrance URLs for %s: %w", app.Name, err)
 		}
 
-		entrances = append(entrances, a.Spec.Entrances...)
-		zone := u.GetAnnotations()["bytetrade.io/zone"]
-		if zone == "" {
-			continue
-		}
-		thirdLevelURLs := app.ThirdLevelCusDomainURLs(zone, u.GetName())
+		entrances = append(entrances, userEntrances...)
+		thirdLevelURLs := app.ThirdLevelCusDomainURLs(localZone, u.GetName())
 		for _, tl := range thirdLevelURLs {
 			entrances = append(entrances, appcfg.Entrance{URL: tl})
 		}
