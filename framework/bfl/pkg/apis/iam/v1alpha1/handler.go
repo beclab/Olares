@@ -21,10 +21,8 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/atomic"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -237,29 +235,6 @@ func (h *Handler) handleResetUserPassword(req *restful.Request, resp *restful.Re
 		// only initializing in progress
 		user.Annotations[constants.UserTerminusWizardStatus] = string(constants.Completed)
 
-		// init completed, user's wizard will be closed
-		go func() {
-			kubeClient, err := runtime.NewKubeClientWithToken(token)
-			if err != nil {
-				klog.Errorf("get kubeClient failed %v", err)
-				return
-			}
-			deploy := kubeClient.Kubernetes().AppsV1().Deployments(constants.Namespace)
-			ctx := context.Background()
-			wizard, err := deploy.Get(ctx, "wizard", metav1.GetOptions{})
-			if err != nil {
-				klog.Error("find wizard deployment error, ", err)
-				return
-			}
-
-			err = deploy.Delete(ctx, wizard.Name, metav1.DeleteOptions{})
-			if err != nil && !apierrors.IsNotFound(err) {
-				klog.Error("delete deployment wizard error, ", err)
-				return
-			}
-
-			klog.Info("success to delete wizard")
-		}()
 		err = h.ctrlClient.Update(req.Request.Context(), &user)
 		if err != nil {
 			response.HandleError(resp, errors.Errorf("reset password: update user err, %v", err))
