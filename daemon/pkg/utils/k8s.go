@@ -274,7 +274,7 @@ func IsTerminusInitialized(ctx context.Context, _ dynamic.Interface) (bool, bool
 
 func IsTerminusInitializing(ctx context.Context) (bool, error) {
 	status, err := GetOnboardingStatus(ctx)
-	return status.State == onboarding.Creating || status.State == onboarding.Created || status.State == onboarding.WaitingPassword, err
+	return status.State == onboarding.Creating || status.State == onboarding.Created || status.State == onboarding.WaitActivateVault, err
 }
 
 // IsTerminusRunning reports whether every Olares system component is ready,
