@@ -721,6 +721,15 @@ func GetApplicationUrlAll(ctx context.Context) ([]string, error) {
 				hadError = true
 				continue
 			}
+			if zone != localZone {
+				localZoneEntrances, err := localAppEntrances(app, app.Spec.Owner, localZone)
+				if err != nil {
+					klog.Error("generate application localZone entrance url error, ", err, ", ", app.Name)
+					hadError = true
+					continue
+				}
+				entrances = append(entrances, localZoneEntrances)
+			}
 
 			// GenEntranceURL / BatchGenSharedAppEntranceURL only fill in the
 			// default appid-based URLs. User-customized third-level domains live
@@ -737,6 +746,16 @@ func GetApplicationUrlAll(ctx context.Context) ([]string, error) {
 				klog.Error("generate shared application entrance url error, ", err, ", ", app.Name)
 				hadError = true
 				continue
+			}
+			if zone != localZone {
+				localZoneEntrances, err := BatchGenSharedAppEntranceURL(ctx, app, localZone)
+				if err != nil {
+					klog.Error("generate localZone shared application entrance url error, ", err, ", ", app.Name)
+					hadError = true
+					continue
+				}
+				entrances = append(entrances, localZoneEntrances)
+				
 			}
 		}
 
