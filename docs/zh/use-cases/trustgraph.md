@@ -5,7 +5,7 @@ head:
   - - meta
     - name: keywords
       content: Olares, TrustGraph, 知识图谱, 文档问答, Document RAG, Graph RAG, 本地模型, 文档检索
-app_version: "0.1.20"
+app_version: "0.1.21"
 doc_version: "1.0"
 doc_updated: "2026-10-13"
 ---

@@ -5,7 +5,7 @@ head:
   - - meta
     - name: keywords
       content: Olares, TrustGraph, knowledge graph, Document RAG, Graph RAG, local models, document search
-app_version: "0.1.20"
+app_version: "0.1.21"
 doc_version: "1.0"
 doc_updated: "2026-10-13"
 ---
