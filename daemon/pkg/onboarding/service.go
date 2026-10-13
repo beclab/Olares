@@ -3,10 +3,8 @@ package onboarding
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strings"
 	"sync"
-	"time"
 
 	"golang.org/x/crypto/bcrypt"
 
@@ -25,16 +23,17 @@ import (
 )
 
 const (
-	Namespace       = "os-framework"
-	RecordName      = "olares-onboarding"
-	UserMarker      = "bytetrade.io/onboarding"
-	UserDID         = "bytetrade.io/user-did"
-	Waiting         = "waiting-for-user"
-	Creating        = "creating"
-	Created         = "created"
-	WaitingPassword = "waiting-for-reset-password"
-	Completed       = "completed"
-	Failed          = "failed"
+	Namespace         = "os-framework"
+	RecordName        = "olares-onboarding"
+	UserMarker        = "bytetrade.io/onboarding"
+	UserDID           = "bytetrade.io/user-did"
+	Waiting           = "waiting-for-user"
+	Creating          = "creating"
+	Created           = "created"
+	WaitActivateVault = "wait_activate_vault"
+
+	Completed = "completed"
+	Failed    = "failed"
 )
 
 var (
@@ -297,7 +296,7 @@ func (s *Service) Status(ctx context.Context) (Status, error) {
 			return Status{}, err
 		}
 		if ready {
-			out.State, out.Reason = WaitingPassword, ""
+			out.State, out.Reason = WaitActivateVault, ""
 		}
 	}
 	return out, nil
@@ -322,54 +321,4 @@ func (s *Service) userReady(ctx context.Context, name string) (bool, error) {
 		return false, err
 	}
 	return server.DeletionTimestamp == nil && server.Spec.Replicas != nil && *server.Spec.Replicas > 0 && server.Status.ObservedGeneration >= server.Generation && server.Status.ReadyReplicas >= *server.Spec.Replicas, nil
-}
-
-func (s *Service) Reset(ctx context.Context, username, initialPassword, password string) (Status, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if err := s.Authorize(ctx, username, initialPassword); err != nil {
-		return Status{}, err
-	}
-	if len(password) < 8 || len(password) > 72 {
-		return Status{}, errors.New("password must contain 8 to 72 bytes")
-	}
-	status, err := s.Status(ctx)
-	if err != nil {
-		return Status{}, err
-	}
-	if status.State == Completed {
-		return status, nil
-	}
-	if status.State != WaitingPassword {
-		return Status{}, ErrNotReady
-	}
-	if password == initialPassword {
-		return Status{}, ErrPasswordUnchanged
-	}
-	if s.ResetPassword == nil {
-		return Status{}, errors.New("password reset backend is unavailable")
-	}
-	if err := s.ResetPassword(ctx, status.Username, password); err != nil {
-		return Status{}, fmt.Errorf("password reset failed: %w", err)
-	}
-	// A backend failure must never mark onboarding complete. Repeating a reset
-	// after a lost response sets the same password and repairs this marker.
-	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		records := s.Kube.CoreV1().Secrets(Namespace)
-		record, e := records.Get(ctx, RecordName, metav1.GetOptions{})
-		if e != nil {
-			return e
-		}
-		if string(record.Data["username"]) != status.Username {
-			return ErrIdentity
-		}
-		record.Data["completed_at"] = []byte(time.Now().UTC().Format(time.RFC3339))
-		delete(record.Data, "password_hash")
-		_, e = records.Update(ctx, record, metav1.UpdateOptions{})
-		return e
-	})
-	if err != nil {
-		return Status{}, err
-	}
-	return s.Status(ctx)
 }
