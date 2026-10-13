@@ -61,10 +61,9 @@ type Status struct {
 }
 
 type Service struct {
-	mu            sync.Mutex
-	Kube          kubernetes.Interface
-	Resources     client.Client
-	ResetPassword func(context.Context, string, string) error
+	mu        sync.Mutex
+	Kube      kubernetes.Interface
+	Resources client.Client
 }
 
 func NewResourceClient(config *rest.Config) (client.Client, error) {
