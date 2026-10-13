@@ -1,6 +1,7 @@
 package app_service
 
 import (
+	"bytetrade.io/web3os/bfl/pkg/constants"
 	"fmt"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	"os"
@@ -18,6 +19,12 @@ type URLGenerator func(appname, appid string) string
 type URLGeneratorMultiEntrance func(appname, appid string, index int, entrances []*appv1alpha1.Entrance, appDomainConfigs []appv1alpha1.DefaultThirdLevelDomainConfig) string
 
 func AppUrlGenerator(req *restful.Request, user string) (URLGenerator, error) {
+	if local, _ := req.Attribute(constants.MyAppsIsLocalKey).(bool); local {
+		single, multi, err := localAppURLGenerators(req)
+		_ = multi
+		return single, err
+	}
+
 	host := req.Request.Host
 	clientHost := req.HeaderParameter("Client-Host") // client specific
 	if clientHost != "" {
@@ -116,6 +123,12 @@ func AppUrlGenerator(req *restful.Request, user string) (URLGenerator, error) {
 }
 
 func AppUrlGeneratorMultiEntrance(req *restful.Request, user string) (URLGeneratorMultiEntrance, error) {
+	if local, _ := req.Attribute(constants.MyAppsIsLocalKey).(bool); local {
+		single, multi, err := localAppURLGenerators(req)
+		_ = single
+		return multi, err
+	}
+
 	host := req.Request.Host
 	clientHost := req.HeaderParameter("Client-Host") // client specific
 	if clientHost != "" {

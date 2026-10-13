@@ -1,0 +1,18 @@
+# The root-domain gateway still resolves profile-service in each user namespace.
+# Keep that address while the frontend runs once in os-frontend. Requests retain
+# their credentials; the shared user-service resolves the authenticated user.
+apiVersion: v1
+kind: Service
+metadata:
+  name: profile-service
+  namespace: user-space-{{ .Values.bfl.username }}
+spec:
+  type: ExternalName
+  externalName: profile-service.os-frontend.svc.cluster.local
+  ports:
+    - name: profile-editor
+      protocol: TCP
+      port: 80
+    - name: profile-preview
+      protocol: TCP
+      port: 3000
