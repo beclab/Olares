@@ -250,7 +250,7 @@ func (r *ApplicationReconciler) addWatch(c controller.Controller, cache cache.Ca
 			}),
 		predicate.Funcs{
 			UpdateFunc: func(e event.UpdateEvent) bool {
-				return isApp(e.ObjectNew, e.ObjectOld)
+				return isApp(e.ObjectNew) || isApp(e.ObjectOld)
 			},
 			CreateFunc: func(e event.CreateEvent) bool {
 				return isApp(e.Object)
@@ -272,7 +272,7 @@ func (r *ApplicationReconciler) createApplication(ctx context.Context, req ctrl.
 	icon := getAppIcon(deployment)
 	entrancesMap, err := r.getEntranceServiceAddress(ctx, deployment, isMultiApp)
 	if err != nil {
-		ctrl.Log.Error(err, "get entrance error")
+		return fmt.Errorf("resolve application entrances: %w", err)
 	}
 	servicePortsMap, err := r.getAppPorts(ctx, deployment, isMultiApp)
 	if err != nil {
@@ -345,7 +345,7 @@ func (r *ApplicationReconciler) createApplication(ctx context.Context, req ctrl.
 	}
 	app, err := r.AppClientset.AppV1alpha1().Applications().Create(ctx, newapp, metav1.CreateOptions{})
 	if err != nil {
-		ctrl.Log.Error(err, "create application error")
+		return fmt.Errorf("create application %s: %w", newapp.Name, err)
 	} else {
 		inject := strings.EqualFold(strings.TrimSpace(settings[meshinagent.AnnotDecide]), "true")
 		if merr := r.syncCallerMeshAccess(ctx, req.Namespace, name, inject); merr != nil {
@@ -355,12 +355,6 @@ func (r *ApplicationReconciler) createApplication(ctx context.Context, req ctrl.
 	}
 	now := metav1.Now()
 	appCopy := app.DeepCopy()
-	if userspace.IsSysApp(app.Spec.Name) {
-		err = apputils.CreateSysAppMgr(app.Spec.Name, app.Spec.Owner)
-		if err != nil {
-			klog.Errorf("Failed to create applicationmanagers for system app=%s err=%v", app.Spec.Name, err)
-		}
-	}
 
 	app.Status.StatusTime = &now
 	app.Status.UpdateTime = &now
@@ -387,14 +381,24 @@ func (r *ApplicationReconciler) createApplication(ctx context.Context, req ctrl.
 
 	err = r.Status().Patch(ctx, app, client.MergeFrom(appCopy))
 	if err != nil {
-		klog.Infof("Failed to patch err=%v", err)
+		return err
+	}
+	if userspace.IsSysApp(app.Spec.Name) {
+		return apputils.CreateSysAppMgr(ctx, r.AppClientset, app)
 	}
 
-	return err
+	return nil
 }
 
 func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.Request,
 	deployment client.Object, app *appv1alpha1.Application, name string) error {
+	// Retry registration even when the workload did not change, e.g. after a
+	// transient error creating the system ApplicationManager.
+	if userspace.IsSysApp(app.Spec.Name) {
+		if err := apputils.CreateSysAppMgr(ctx, r.AppClientset, app); err != nil {
+			return err
+		}
+	}
 	// Skip full update if triggered by app modification (not deployment change),
 	// but still refresh SharedCallerDecide so settings-only patches (clear deps,
 	// Market toggle) update annotations without waiting for a workload bump.
@@ -423,7 +427,7 @@ func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.
 
 	entrancesMap, err := r.getEntranceServiceAddress(ctx, deployment, isMultiApp)
 	if err != nil {
-		ctrl.Log.Error(err, "get entrance error")
+		return fmt.Errorf("resolve application entrances: %w", err)
 	}
 	servicePortsMap, err := r.getAppPorts(ctx, deployment, isMultiApp)
 	if err != nil {
