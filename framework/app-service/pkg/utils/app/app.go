@@ -24,7 +24,6 @@ import (
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
-	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils/files"
@@ -818,10 +817,12 @@ func GetAppConfig(ctx context.Context, options *ConfigOptions) (*appcfg.Applicat
 	// path pkg/appcfg.GetAppInstallationConfig. v1/v2 and v3+per-user apps
 	// keep the installing user.
 	if appcfg.IsShared() {
-		clusterOwner, cErr := kubesphere.GetClusterOwner(ctx)
-		if cErr != nil {
-			return nil, chartPath, cErr
-		}
+		//clusterOwner, cErr := kubesphere.GetClusterOwner(ctx)
+		//if cErr != nil {
+		//	return nil, chartPath, cErr
+		//}
+		//TODO:hysyeah
+		clusterOwner := "olares"
 		appcfg.OwnerName = clusterOwner
 	} else {
 		appcfg.OwnerName = options.Owner

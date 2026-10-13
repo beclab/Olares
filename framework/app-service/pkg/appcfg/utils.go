@@ -7,7 +7,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 )
 
@@ -44,10 +43,12 @@ func GetAppInstallationConfig(app, owner string) (*ApplicationConfig, error) {
 	// pkg/utils/app::GetAppConfig for the canonical write site at install
 	// time. v3+per-user apps fall through to the regular per-user owner.
 	if appcfg.IsShared() {
-		clusterOwner, err := kubesphere.GetClusterOwner(context.TODO())
-		if err != nil {
-			return nil, err
-		}
+		//clusterOwner, err := kubesphere.GetClusterOwner(context.TODO())
+		//if err != nil {
+		//	return nil, err
+		//}
+		//TODO:hysyeah
+		clusterOwner := "olares"
 		appcfg.OwnerName = clusterOwner
 	} else {
 		appcfg.OwnerName = owner
