@@ -9,16 +9,18 @@ func init() {
 	s := server.API
 	containerd := s.App.Group("containerd")
 
-	// Node-level registry mirror config (containerd v3 certs.d/hosts.toml).
+	// Node-level registry config (containerd v3 certs.d/hosts.toml).
 	containerd.Get("/registries", handlers.RequireLocal(handlers.ListRegistries))
 
 	registry := containerd.Group("registry")
-	mirrors := registry.Group("mirrors")
-
-	mirrors.Get("/", handlers.RequireAuthorization(handlers.RequireLocal(handlers.GetRegistryMirrors)))
-	mirrors.Get("/:registry", handlers.RequireAuthorization(handlers.RequireLocal(handlers.GetRegistryMirror)))
-	mirrors.Put("/:registry", handlers.RequireAuthorization(handlers.RequireLocal(handlers.UpdateRegistryMirror)))
-	mirrors.Delete("/:registry", handlers.RequireAuthorization(handlers.RequireLocal(handlers.DeleteRegistryMirror)))
+	configs := registry.Group("configs")
+	configs.Get("/", handlers.RequireAuthorization(handlers.RequireLocal(handlers.GetRegistryConfigs)))
+	// The greedy fallback also accepts an unescaped scheme containing slashes.
+	for _, path := range []string{"/:registry", "/+"} {
+		configs.Get(path, handlers.RequireAuthorization(handlers.RequireLocal(handlers.GetRegistryConfig)))
+		configs.Put(path, handlers.RequireAuthorization(handlers.RequireLocal(handlers.UpdateRegistryConfig)))
+		configs.Delete(path, handlers.RequireAuthorization(handlers.RequireLocal(handlers.DeleteRegistryConfig)))
+	}
 
 	image := containerd.Group("images")
 	image.Get("/", handlers.RequireLocal(handlers.ListImages))
