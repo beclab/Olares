@@ -8,9 +8,8 @@ import (
 // upgrade disk-space precheck.
 const DefaultContainerdRootPath = "/var/lib/containerd"
 
-// Mirror lists the pull-through mirror endpoints for a registry. The JSON shape
-// ({"endpoint": [...]}) matches the containerd CRI Mirror type used by the
-// previous (config v2) olaresd interface, kept for API compatibility.
+// Mirror is the internal ordered endpoint view used by registry listings and
+// node mirror reconciliation. Public configuration uses RegistryConfig.
 type Mirror struct {
 	Endpoints []string `json:"endpoint" toml:"endpoint"`
 }
