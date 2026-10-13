@@ -699,7 +699,7 @@ func GetApplicationUrlAll(ctx context.Context) ([]string, error) {
 	zoneMap := make(map[string]string, len(users))
 	for _, u := range users {
 		// TODO: Implement user's local zone alias
-		zoneMap[u.GetName()] = localZone
+		zoneMap[u.GetName()] = fmt.Sprintf("%s.olares.local", u.GetName())
 	}
 
 	urls := make([]string, 0)
@@ -710,22 +710,18 @@ func GetApplicationUrlAll(ctx context.Context) ([]string, error) {
 		app := cached.DeepCopy()
 		var entrances []appcfg.Entrance
 		var err error
+		zone, _ := zoneMap[app.Spec.Owner]
+		if zone == "" {
+			zone = localZone
+		}
 		if !appv1alpha1.IsShared(app) {
-			// Only per-user apps require their owner to be an IAM user. Shared
-			// system apps belong to olares, which has no User resource.
-			zone, ok := zoneMap[app.Spec.Owner]
-			if !ok {
-				continue
-			}
 			entrances, err = localAppEntrances(app, app.Spec.Owner, zone)
 			if err != nil {
 				klog.Error("generate application entrance url error, ", err, ", ", app.Name)
 				hadError = true
 				continue
 			}
-			if zone == "" {
-				continue
-			}
+
 			// GenEntranceURL / BatchGenSharedAppEntranceURL only fill in the
 			// default appid-based URLs. User-customized third-level domains live
 			// in the "customDomain" setting, so without this the intranet (.local)
@@ -736,7 +732,7 @@ func GetApplicationUrlAll(ctx context.Context) ([]string, error) {
 			}
 		} else {
 
-			entrances, err = BatchGenSharedAppEntranceURL(ctx, app, localZone)
+			entrances, err = BatchGenSharedAppEntranceURL(ctx, app, zone)
 			if err != nil {
 				klog.Error("generate shared application entrance url error, ", err, ", ", app.Name)
 				hadError = true
