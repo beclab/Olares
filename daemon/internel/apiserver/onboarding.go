@@ -46,7 +46,7 @@ func StartOnboarding(ctx context.Context) {
 			mu.Lock()
 			defer mu.Unlock()
 			if service == nil || service.Kube != kube || service.Resources != resources {
-				service = &onboarding.Service{Kube: kube, Resources: resources, ResetPassword: onboarding.ResetWithAuthelia(kube)}
+				service = &onboarding.Service{Kube: kube, Resources: resources}
 			}
 			return service, nil
 		}
