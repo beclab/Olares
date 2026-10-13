@@ -170,6 +170,10 @@ func (w *applicationWatcher) loadServerConfig(ctx context.Context, nodeIp string
 		klog.Error(err.Error())
 		return nil, err
 	}
+	if terminusInfo == nil || terminusInfo.Spec.LocalName == "" {
+		// local name is not set yet, skip the intranet server config load
+		return nil, nil
+	}
 
 	domain := fmt.Sprintf("%s.olares", terminusInfo.Spec.LocalName)
 	hosts = append(hosts, intranet.DNSConfig{
