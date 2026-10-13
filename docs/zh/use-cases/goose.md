@@ -62,15 +62,15 @@ Goose 已默认配置 AI Router，无需为这一默认连接填写模型服务�
 
    复制输出值。这是连接你自己的 Goose 服务所需的密钥，不是模型 API 密钥，请妥善保管。
 
-5. 在 Goose Desktop 中打开 **Settings** > **goose Server**，填写：
+5. 在 Goose Desktop 中打开 **Settings**，找到 **External Backend (ACP)**，填写：
 
    | 设置项 | 值 |
    |:---|:---|
-   | **Use external server** | 开启 |
-   | **URL** | 从 Olares 设置中复制的 Goose ACP HTTPS 地址，不要追加 `/acp` 或 `/v1` |
+   | **Use external backend** | 开启 |
+   | **Backend Base URL** | 从 Olares 设置中复制的 Goose ACP HTTPS 地址，不要追加 `/acp` 或 `/v1` |
    | **Secret Key** | `printenv GOOSE_SERVER__SECRET_KEY` 的输出值 |
-   | **Remote Working Directory** | `/config/workspace` |
-   | **Certificate Fingerprint** | 首次连接时留空 |
+   | **Remote Working Directory (optional)** | `/config/workspace` |
+   | **Certificate Fingerprint (optional)** | 首次连接时留空 |
 
 6. 应用设置，然后新建对话。如果已有窗口仍使用原来的连接或工作目录，请重启 Goose Desktop。
 
@@ -146,7 +146,7 @@ Goose 已默认配置 AI Router，无需为这一默认连接填写模型服务�
 
 3. 在提示符后输入消息，也可使用上面的项目简报任务。如果终端请求批准工具调用，按提示操作。
 
-4. 按 `Ctrl+C` 退出会话。这会结束当前终端交互，Goose 服务仍可供 Desktop 客户端连接。
+4. 按 `Ctrl+C` 退出会话。如果 Goose 先中断当前请求并提示再次按键退出，再按一次 `Ctrl+C`。这会结束当前终端交互，Goose 服务仍可供 Desktop 客户端连接。
 
 如需执行一次性请求，可运行：
 

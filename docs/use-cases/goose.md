@@ -58,15 +58,15 @@ Goose is already configured to use AI Router. You do not need to enter a model p
 
    Copy the returned value. This is the connection secret for your Goose service, not an AI model API key. Keep it private.
 
-5. In Goose Desktop, open **Settings** > **goose Server** and configure:
+5. In Goose Desktop, open **Settings** and find **External Backend (ACP)**. Configure:
 
    | Setting | Value |
    |:---|:---|
-   | **Use external server** | Enabled |
-   | **URL** | The Goose ACP HTTPS URL copied from Olares Settings. Do not append `/acp` or `/v1`. |
+   | **Use external backend** | Enabled |
+   | **Backend Base URL** | The Goose ACP HTTPS URL copied from Olares Settings. Do not append `/acp` or `/v1`. |
    | **Secret Key** | The value returned by `printenv GOOSE_SERVER__SECRET_KEY` |
-   | **Remote Working Directory** | `/config/workspace` |
-   | **Certificate Fingerprint** | Leave empty for the initial connection |
+   | **Remote Working Directory (optional)** | `/config/workspace` |
+   | **Certificate Fingerprint (optional)** | Leave empty for the initial connection |
 
 6. Apply the settings and open a new chat. Restart Goose Desktop if an existing window still uses the previous connection or working directory.
 
@@ -142,7 +142,7 @@ Files under `/config/workspace` persist across normal app restarts. Keep a separ
 
 3. Enter your message at the prompt. You can use the same project brief task above. Follow the terminal prompts to approve tools when requested.
 
-4. Press `Ctrl+C` to exit the session. This ends the terminal interaction; the Goose service remains available for Desktop connections.
+4. Press `Ctrl+C` to exit the session. If Goose first interrupts the current request and asks you to press it again, press `Ctrl+C` a second time. This ends the terminal interaction; the Goose service remains available for Desktop connections.
 
 To run a single request without an interactive session:
 

@@ -4,7 +4,7 @@
 
 Validate the user journey for Goose installed from Olares Market: default AI Router access, remote Desktop connection, Terminal use, file operations, configuration changes, and persistence.
 
-Baseline: Olares 1.12.7 or later; Goose app 0.0.13; Goose server and Desktop 1.54.0. Record the actual versions before execution. These are planned test cases, not a record of completed tests. Every case initially has status **Not run**.
+Baseline: Olares 1.12.7 or later; Goose app 0.0.13; Goose server and Desktop 1.54.0. Record the actual versions before execution. These are planned test cases, not a record of completed tests. Execution results are recorded separately in [the 2026-10-13 report](results-2026-10-13.en.md).
 
 ## Test environment
 
@@ -72,4 +72,4 @@ P0 means a core workflow or access boundary; P1 means a supporting workflow or r
 
 | Case ID | Environment | Actual result | Status | Evidence / defect |
 |:---|:---|:---|:---|:---|
-| GOOSE-001–022 | To be recorded separately for each case | Not executed for this document delivery | Not run | To be attached after execution |
+| GOOSE-001–022 | Existing amd64 deployment and Windows Desktop | See the linked per-case report | Mixed results | [2026-10-13 results](results-2026-10-13.en.md) |
