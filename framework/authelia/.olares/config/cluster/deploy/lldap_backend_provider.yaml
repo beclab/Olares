@@ -21,6 +21,7 @@ metadata:
   annotations:
     provider-registry-ref: {{ .Release.Namespace }}/lldap-provider-svc
     provider-service-ref: lldap-service.os-platform:17171
+    provider-owner-ref: {{ .Values.bfl.username | quote }}
 rules:
   - nonResourceURLs:
       - "/readonly/snapshot"
