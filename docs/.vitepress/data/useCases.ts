@@ -58,7 +58,7 @@ export const useCases: UseCase[] = [
   { title: "LobeHub (LobeChat)", link: "/use-cases/lobechat", category: "AI workbench", description: "Build local custom AI assistants", descriptionZh: "构建本地自定义 AI 助手" },
   { title: "AnythingLLM", link: "/use-cases/anythingllm", category: "AI workbench", description: "Local knowledge base with RAG over your documents", descriptionZh: "基于文档 RAG 的本地知识库" },
   { title: "Open Notebook", link: "/use-cases/open-notebook", category: "AI workbench", description: "Research notebook with AI insights and podcasts", descriptionZh: "支持 AI 洞察和播客的研究笔记本" },
-  { title: "TrustGraph", link: "/use-cases/trustgraph", category: "AI workbench", description: "Query documents and explore knowledge graphs with source context", descriptionZh: "围绕文档提问，结合来源探索知识图谱" },
+  { title: "TrustGraph", link: "/use-cases/trustgraph", category: "AI workbench", description: "Ask questions about documents and explore their connections", descriptionZh: "围绕文档提问，探索内容之间的联系" },
   { title: "Vane (Perplexica)", link: "/use-cases/perplexica", category: "AI workbench", description: "Private, AI-powered search and Q&A", descriptionZh: "注重隐私的 AI 搜索与问答" },
   { title: "Dify", link: "/use-cases/dify", category: "AI workbench", description: "Build AI apps and agents with a shared workspace", descriptionZh: "在共享工作空间中构建 AI 应用与智能体" },
   { title: "Blender", link: "/use-cases/blender", category: "Creative media", description: "Create and render 3D scenes with Lares", descriptionZh: "用 Lares 操作 Blender，搭建并渲染 3D 场景" },

@@ -1,12 +1,12 @@
 ---
 outline: [2, 3]
-description: 在 Olares 上使用 TrustGraph，将文档转为可检索的知识。配置 Router 模型、处理文件、结合来源进行问答，并探索实体之间的关系。
+description: 在 Olares 上使用 TrustGraph 围绕文档内容提问。通过本地模型检索原文，并在知识图谱中探索实体之间的关系。
 head:
   - - meta
     - name: keywords
       content: Olares, TrustGraph, 知识图谱, 文档问答, Document RAG, Graph RAG, 本地模型, 文档检索
 app_version: "0.1.21"
-doc_version: "1.0"
+doc_version: "1.2"
 doc_updated: "2026-10-13"
 ---
 
@@ -16,139 +16,181 @@ doc_updated: "2026-10-13"
 
 # 使用 TrustGraph 将文档转为可检索的知识
 
-TrustGraph 是开源的语义智能平台，可将源数据转为能够追溯来源的知识。它结合文档检索和知识图谱，让你围绕文件内容提问，并查看从文档中提取的实体与关系。
+TrustGraph 是一个开源平台，可以从文档中构建和查询知识图谱。你可以围绕文件内容提问，查看生成回答时的检索过程，并探索人物、地点和主题之间的关系。
 
-在 Olares 上，TrustGraph 使用 Olares 管理的存储保存文档，通过 Router 调用模型。本案例使用本地模型处理一段实验室介绍，再进行问答和图谱探索。
+在 Olares 上，TrustGraph 通过 Router 连接本地模型。本指南使用三份虚构的项目文档，查询迁移进展，并探索从正文中提取出的事件、人物及其关系。
 
 ## 前提条件
 
-- 运行 Olares 1.12.7 或更高版本的 amd64 或 arm64 设备。应用需要 10 GiB 内存和 20 GiB 磁盘空间；模型所需资源另行计算。
-- 可以访问 [Olares Router](olares-router.md)，且聊天模型、EmbeddingGemma 和 BGE Reranker v2 M3 已安装并可调用。
+开始前，你需要：
 
-## 检查模型可用性
+- 一台运行 Olares 1.12.7 或更高版本的 amd64 或 arm64 设备，可为 TrustGraph 提供 10 GiB 内存和 20 GiB 磁盘空间。模型所需资源另行预留。
+- 能够访问 [Router](olares-router.md)，用于连接本地模型。
+- 从 Market 安装应用的管理员权限。
+- 已从 Market 安装 MinIO。
+- 从 Market 安装以下模型：
 
-TrustGraph 需要三种模型能力：聊天模型提取知识并生成回答，向量模型查找相关内容，排序模型对检索结果重新排序。
+  | 模型类型 | 模型 | 获取方式 |
+  | :--- | :--- | :--- |
+  | 聊天 | Qwen3.8-27B (llama.cpp) | 从 Market 安装 |
+  | 嵌入 | EmbeddingGemma | 从 Market 安装 |
+  | 重排序 | BGE-Reranker-v2-m3 | 从 Market 安装 |
 
-1. 从启动台打开已安装的模型应用，等待模型下载并启动完成。
-2. 从启动台打开 Router。在 **Default models** 页面，将聊天模型设为 `default-chat`，将 BGE Reranker v2 M3 设为 `default-rerank`。
-3. 确认以下模型在 Router 中可调用：
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
-   | 能力 | TrustGraph 默认流程使用的模型 |
-   | :--- | :--- |
-   | 聊天 | `default-chat`，路由到你选择的聊天模型 |
-   | 向量 | `Olares/embeddinggemma-300m`，生成 768 维向量 |
-   | 排序 | `default-rerank`，路由到 BGE Reranker v2 M3 |
+## 检查模型是否可用
 
-   TrustGraph 的流程明确指定了向量模型。修改 Router 的默认向量模型不会改变这个流程。
+TrustGraph 需要聊天模型来提取知识和回答问题，嵌入模型来查找相关内容，重排序模型来对检索结果排序。安装前，这三个模型都应能通过 Router 正常调用。
+
+1. 从启动台打开 Router，进入 **Default models** 页面。
+2. 将 Qwen3.8-27B (llama.cpp) 设为默认聊天模型，将 EmbeddingGemma 设为默认嵌入模型，将 BGE-Reranker-v2-m3 设为默认重排序模型。如果已选中这三个模型，确认选择无误，并检查三者是否都显示 **Callable**。
 
 ## 安装 TrustGraph
 
 1. 打开 Market，搜索“TrustGraph”。
+
 2. 点击 **获取**，再点击 **安装**。按提示设置 `ADMIN_PASSWORD`，密码须为 12–128 个字符且不含换行，然后等待安装完成。
+
+之后可以在 TrustGraph 中修改密码。
 
 ## 登录
 
 1. 从启动台打开 TrustGraph。
 2. 使用用户名 `admin` 和安装时设置的密码登录。
 
-管理员密码、Olares 密码和 Router API Key 是不同的凭据。通过这个登录表单进入应用时，无需填写 TrustGraph API Key。重启和升级会保留已有账号密码，安装字段不会重置密码。
-
 ## 使用 TrustGraph
+
+### 准备项目文档
+
+假设你正在了解产品发布进展。一个共享的登录服务延期了，你想知道计划发生了什么变化，以及延期的原因。相关背景分别记录在发布计划、服务目录和迁移进展中。
+
+你可以使用下面三份示例文件跟着操作，也可以换成自己的项目说明、服务文档或会议记录。建议选择涉及相同项目、服务、团队或人物的相关文档，方便探索它们之间的联系。
+
+如果使用示例，请将以下文件保存到电脑。示例文件为英文，其中的项目、人物和日期均为虚构。
+
+| 文档 | 内容 |
+| :--- | :--- |
+| [release-plan.txt](/examples/trustgraph/release-plan.txt) | 三个项目的发布日期、负责人和所需服务 |
+| [service-directory.txt](/examples/trustgraph/service-directory.txt) | 服务之间的依赖关系、所属团队和技术负责人 |
+| [migration-update.txt](/examples/trustgraph/migration-update.txt) | Identity API 调整后的迁移日期及团队协调安排 |
 
 ### 上传并处理文档
 
-上传文件后，还需提交处理。流程（flow）决定处理方式，集合（collection）用于组织处理后可检索的知识。
+流程（flow）决定 TrustGraph 如何提取知识，集合（collection）将这些知识组织起来，供跨文档查询。以下步骤使用示例文件。如果使用自己的文档，请为文档填写便于识别的标题，并将相关文件放入同一个集合。
 
-1. 在电脑上将以下内容保存为 `orion-laboratory.txt`：
+1. 在 **Welcome** 页面打开 **Document Ingestion**。点击 **+ Add Document**，选择 **File**，然后选择 `release-plan.txt`。
+2. 将 **TITLE** 填为 `November release plan`，点击 **Upload**。
+3. 选中上传的文档，点击 **Submit for Processing →**。
+4. 选择 `default` 流程。点击 **+ Create New Collection**，在 **ID** 中填写 `release-planning`，在 **NAME** 中填写 `Release planning`，然后点击 **Next →**。
+5. 在确认面板核对文档、流程和集合，点击 **Submit for Processing**。
+6. 用相同方式上传 `service-directory.txt` 和 `migration-update.txt`，标题分别填写 `Service directory` 和 `Identity API migration update`。处理每个文档时，选择 `default` 流程和已有的 `release-planning` 集合。
 
-   ```text
-   Orion laboratory is located in Suzhou. It is directed by Dr. Chen and studies hydrogen fuel cells.
-   ```
+TrustGraph 会在后台处理文档。每次提交后，请留出处理时间，再开始搜索或提问。你可以按下文步骤，在 Graph Navigator 中查找文档正文里的实体和关系。
 
-2. 在 **Welcome** 页面打开 **Document Ingestion**。点击 **+ Add Document**，选择 **File**，然后选择文本文件。
-3. 将 **TITLE** 填为 `Orion laboratory`，点击 **Upload**。
-4. 选中上传的文档，点击 **Submit for Processing →**。
-5. 选择 `default` 流程。点击 **+ Create New Collection**，在 **ID** 中填写 `orion-notes`，在 **NAME** 中填写 `Orion notes`，然后点击 **Next →**。
-6. 在确认面板核对文档、流程和集合，点击 **Submit for Processing**。
-7. 等待处理完成，再进行问答。后续步骤中，将顶部 **COL** 设为 `orion-notes`，将 **FLOW** 设为 `default`。
-
-导入页面显示文档、流程和存储之间的连接。仅看到已上传文件或提交次数，并不代表知识已经可以查询。
-
-:::tip 先用简短文本验证
-可以上传 TXT、PDF 和 DOCX 文档。首次处理 PDF 或 DOCX 时，文档解析服务可能需要下载解析模型，耗时数分钟。上传和处理是两个独立操作，请先等待处理完成，再决定是否重新提交文件。
+:::tip 处理 PDF 和 DOCX 文件
+TrustGraph 支持 TXT、PDF 和 DOCX 文件。首次处理 PDF 或 DOCX 时，需要下载解析模型，可能耗时数分钟。
 :::
 
-### 围绕文档内容提问
+### 查询文档中的信息
+
+先围绕迁移进展提出一个问题。
 
 1. 打开 **Workflows**，选择 **Document RAG Query**。
-2. 确认 **COL** 为 `orion-notes`，**FLOW** 为 `default`。
-3. 保持 **Timeline** 模式，输入以下问题，点击 **Query**：
+2. 在右上角，将 **COL** 设为 `release-planning`，将 **FLOW** 设为 `default`。
+3. 选择 **Timeline**，输入以下问题，点击 **Query**：
 
    ```text
-   Where is Orion laboratory located, and who directs it?
+   What is the new completion date for the Identity API migration, and why was it delayed?
    ```
 
-4. 检查回答是否指出所在地为 Suzhou、负责人为 Dr. Chen。查看时间线和来源链接，将检索内容与原始文档进行核对。
+4. 阅读回答，了解调整后的完成日期和延期原因。时间线中的 **Exploration** 显示检索到的文本片段数量和 ID。要将回答与原文对照，请打开电脑上的 `migration-update.txt`。
 
-   ![TrustGraph 文档问答结果及处理时间线](/images/manual/use-cases/trustgraph-query-document.png#bordered)
+   ![Document RAG 回答 Identity API 迁移问题](/images/manual/use-cases/trustgraph-query-migration.png#bordered)
 
-   你的集合名称和回答措辞可能与截图不同。
+要尝试其他视图，请选择 **Simple** 查看回答，或选择 **Full DAG** 用图的形式查看检索和生成回答的步骤，然后重新提交查询。
 
-**Simple** 只显示回答，**Timeline** 显示检索和生成回答的步骤，**Full DAG** 用可查看的图展示这些步骤。来源信息便于核验回答，但不能保证所有回答都正确。
+### 探索实体及其关系
 
-### 探索知识图谱中的关系
+通过 Graph Navigator，了解迁移事件与延期原因、发布更新的人物之间的关系。
 
-1. 打开 **Workflows**，选择 **Graph Navigator**，保持相同集合。
-2. 选择 **Full Explorer**，搜索 `Orion`，选择匹配的实体。
-3. 选择节点，查看属性并浏览相连实体，寻找实验室的所在地和负责人关系。
+1. 打开 **Workflows**，选择 **Graph Navigator**，保持 **COL** 为 `release-planning`。
+2. 选择 **Full Explorer**，点击左上方工具栏中的 **Search**，在搜索面板中搜索 `Identity API`。
+3. 选择迁移事件，例如 `Identity API database migration`。标题为 `Identity API migration update` 的结果代表来源文档。
+4. 点击相连节点，查看关系标签。例如，`is-delayed-by` 将迁移事件与数据同步问题相连，`announced-revised-finish-date-for` 将 Maya Patel 与迁移事件相连。点击节点可打开详情面板，继续探索其中的链接。
 
-   ![TrustGraph 图谱中的实体与关系](/images/manual/use-cases/trustgraph-explore-graph.png#bordered)
+   ![迁移事件与延期原因、Maya Patel 之间的关系](/images/manual/use-cases/trustgraph-migration-relationships.png#bordered)
 
-   图中显示的实体取决于集合中的文档。
+模型提取出的实体名称和关系标签可能有所不同。请根据图谱中实际出现的关系展开探索，并与迁移进展原文对照。
 
-4. 要根据图谱上下文提问，返回 **Workflows**，选择 **Graph RAG Query**，使用相同集合和流程提交同一个问题。
+### 使用 Graph RAG 查询关系
 
-Document RAG 检索相关的原始文档文本，Graph RAG 检索从文档中提取并构建的图谱知识。具体关系名称和提取结果取决于聊天模型及源文档内容。
+Document RAG 检索文本片段，Graph RAG 检索提取出的实体与关系。可以对照两种模式中的检索事件，了解它们如何为回答查找信息。
+
+先围绕在 Graph Navigator 中找到的一条关系提问。
+
+1. 返回 **Workflows**，选择 **Graph RAG Query**。
+2. 保持 **COL** 为 `release-planning`，**FLOW** 为 `default`。选择 **Split + Graph** 视图。
+3. 输入以下问题，点击 **Query**：
+
+   ```text
+   What caused the Identity API database migration to be delayed?
+   ```
+
+4. 阅读回答，探索回答中用于解释延期原因的关系。查看 **Exploration** 和 **Focus** 事件，再打开电脑上的 `migration-update.txt`，将回答与原文对照。
+
+   ![Graph RAG 检索迁移事件关系及来源上下文](/images/manual/use-cases/trustgraph-query-migration-relationship.png#bordered)
+
+要用其他视图查看同一个问题，请先切换视图，再重新提交查询。
+
+如果刚提交文档，请等后台处理完成后，再次查询。如果回答仍然没有相关关系作为依据，请参阅[为什么 Graph RAG 提示没有相关信息？](#为什么-graph-rag-提示没有相关信息)。
 
 ## 修改模型连接
 
-要为所有使用 Router 默认配置的应用切换聊天或排序模型，可在 Router 的 **Default models** 页面修改 `default-chat` 或 `default-rerank`，并确保替换后的模型可调用。
+要切换聊天或重排序模型，打开 Router 的 **Default models** 页面，修改 `default-chat` 或 `default-rerank`。其他使用该默认配置的应用也会随之切换模型。对于已有集合，请保持嵌入模型不变。
 
-需要修改模型 API URL 或 API Key 时，打开 **设置** > **应用** > **TrustGraph** > **管理环境变量**。修改 `LLM_BASE_URL` 或 `LLM_API_KEY`，然后点击 **确认** 和 **应用**。
+要连接其他模型 API，打开 **设置** > **应用** > **TrustGraph** > **管理环境变量**：
 
-同一个集合应保持向量模型一致。默认流程使用 768 维 EmbeddingGemma 向量。如果要尝试支持的 1024 维 Jina CLIP v2 模型，请创建独立流程和新集合，再重新处理文档，不要把不同维度的向量混入同一个集合。
+1. 将 `LLM_BASE_URL` 更新为新的 API URL。
+2. 如果该 API 需要密钥，更新 `LLM_API_KEY`。
+3. 点击 **确认**，再点击 **应用**。
 
 ## 常见问题
 
-### 为什么文档上传成功后还无法回答问题？
+### 为什么上传文档后还无法获得回答？
 
-确认已提交处理，聊天和向量模型可调用，查询时的集合和流程与处理时一致。首次处理 PDF 或 DOCX 时，应等待解析模型下载完成。可先用本案例的短 TXT 文件区分解析等待和模型连接问题。
+如果只上传了文件，请在 **Document Ingestion** 中选中文档，点击 **Submit for Processing**。等待后台处理后，在查询页面选择处理时使用的集合和流程。如果仍然没有可检索的内容，请检查聊天和嵌入模型是否正在运行，并可通过 Router 调用。
 
-### 为什么 Graph RAG 提示没有可用信息？
+### 为什么图谱中只有文档标题？
 
-Graph RAG 需要所选集合中已有成功抽取的知识。文件上传成功、已提交处理，并不代表知识抽取成功。
+文档标题节点以及指向 `Document` 或 `Entity` 的 `type` 关系描述的是文件本身，还没有展示正文中的项目、服务和依赖关系。
 
-1. 确认查询使用的集合和流程与处理时一致。
-2. 确认聊天和向量模型可调用。在 Control Hub 中查看 `text-completion` 和 `triples` 的日志，检查抽取失败记录。输出多次达到 token 上限、JSONL 解析失败或字符串未结束，都可能意味着模型响应不完整。
-3. 修复模型或应用配置后，将受影响文档重新提交处理。配置变更不会自动补回缺失的知识。
+在 **Document Ingestion** 中，检查三份文件是否都已提交到 `default` 流程和 `release-planning` 集合，并在 Router 中检查处理期间是否有失败的模型调用。如果处理时模型不可用导致失败，请先恢复模型连接，再重新提交受影响的文档进行处理。重试 Graph RAG 前，通过 Graph Navigator 的 **Search** 按钮查找正文中的实体。
 
-使用 Qwen 等推理模型时，较高的默认思考强度可能压缩用于输出抽取结果的容量，应选择适合结构化知识抽取的模型配置。当前应用包会明确请求低思考强度，并将抽取输出上限设为 8192 tokens。这个数值只是上限，不能保证任何文档都能完整输出；模型服务也可能有自己的限制。
+### 为什么 Graph RAG 提示没有相关信息？
 
-:::details 管理员说明：知识抽取配置
-当前版本的 TrustGraph OpenAI 处理器在启动配置中读取 `max_output`，不是 `max_output_tokens`。在 `openai` 模式下，`thinking: off` 表示不发送推理参数，并不显式关闭模型思考；`thinking: low` 会发送 `reasoning_effort: low`，模型服务需要支持这个参数。
+Graph RAG 需要使用从文档中提取的实体和关系。如果 **Exploration** 显示 `0 edges`，说明本次查询没有找到可用于回答的关系。
 
-这些设置由应用 Chart 提供，普通用户无需手动修改 ConfigMap。排查旧安装时，应确认已包含修正后的 Chart 配置，再重新提交文档处理。
-:::
+1. 提交文档后，先等待后台处理，再次查询。Graph Navigator 中已经出现的关系，可能还需要一段时间才能被 Graph RAG 检索到。
+2. 确认查询使用的集合和流程与提交文档时一致。
+3. 如果处理失败，请检查聊天和嵌入模型是否可通过 Router 调用，并解决模型或应用配置问题。然后在 **Document Ingestion** 中选中已有文档，点击 **Submit for Processing**，提交到相同的流程和集合。等待处理后，再次提问，无需重新上传文件。
 
-### 为什么模型调用提示认证错误？
+如果处理仍然失败，请检查是否有应用更新，或在 Control Hub 中查看文档处理日志。
 
-在 Router 中检查 API Key 是否过期，以及是否允许调用相关模型。需要有效 Key 时，打开 **设置** > **应用** > **TrustGraph** > **管理环境变量**，更新 `LLM_API_KEY` 并应用变更。
+### 需要调整 thinking 或 temperature 吗？
+
+本指南的操作可以先使用应用提供的设置。更换模型时，请参考模型提供方对推理强度和温度的建议。适用于某个模型的设置，不一定适用于其他模型。
+
+如果文档处理持续失败，请检查模型支持的参数和输出上限。解决问题后，重新提交受影响的文档。
+
+### 为什么自定义模型 API 提示认证错误？
+
+检查 `LLM_BASE_URL` 对应 API 的凭据要求。如果使用 Router 签发的 API Key，请在 Router 中检查其权限和有效期。然后在 **设置** > **应用** > **TrustGraph** > **管理环境变量** 中更新 `LLM_API_KEY`，点击 **确认** 和 **应用**。
 
 ### 上传失败时应该怎么处理？
 
-刷新页面并重新登录。再次上传前，检查文档是否已经创建。持续的 WebSocket 连接失败可能中断上传，应检查应用入口和运行日志。
+刷新页面并重新登录。再次上传前，先在 **Document Ingestion** 中查找文件，避免重复上传。
 
 ## 了解更多
 
-- [Olares Router](olares-router.md)：管理可调用模型、默认模型和 API 凭据。
-- [TrustGraph 文档](https://docs.trustgraph.ai/)：了解知识图谱、来源追踪及高级流程。
+- [Olares Router](olares-router.md)：管理模型、默认配置和 API 凭据。
+- [TrustGraph 文档](https://docs.trustgraph.ai/)：了解知识图谱及高级流程。
