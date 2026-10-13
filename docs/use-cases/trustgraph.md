@@ -5,8 +5,8 @@ head:
   - - meta
     - name: keywords
       content: Olares, TrustGraph, knowledge graph, Document RAG, Graph RAG, local models, document search
-app_version: "0.1.21"
-doc_version: "1.2"
+app_version: "0.1.23"
+doc_version: "1.3"
 doc_updated: "2026-10-13"
 ---
 
@@ -172,6 +172,10 @@ Graph RAG needs the entities and relationships extracted from your documents. If
 
 If processing still fails, check for an app update or review the document processing logs in Control Hub.
 
+With reasoning models such as Qwen, a high default reasoning effort can leave less output capacity for extracted facts. Choose a model configuration suitable for structured extraction. This package explicitly requests low reasoning effort and allows up to 8192 output tokens for both extraction and query generation. This is a ceiling, not a guarantee that every document will fit; model services can also impose their own limits.
+
+If Graph Navigator shows the correct relationships but Graph RAG still cannot answer, retrieval might have missed the target entity. Similar names that differ only by a number are particularly difficult for semantic retrieval. Try Document RAG for the original passage, or inspect the entity directly in Graph Navigator. Check that an answer cites information about the requested entity; a plausible answer inferred from other entities' naming patterns is not a verified result.
+
 ### Do I need to adjust thinking or temperature?
 
 For this workflow, start with the settings supplied by the app. When switching models, follow the model provider's guidance on reasoning and temperature. A setting that works for one model might not work for another.
@@ -185,6 +189,10 @@ Check the credentials required by the API configured in `LLM_BASE_URL`. If you u
 ### What should I do if an upload fails?
 
 Refresh the page and sign in again. Before uploading the file again, look for it in **Document Ingestion** to avoid creating a duplicate.
+
+### Why can the agent not find documents in another collection?
+
+The default `knowledge-query` tool targets the `default` collection. This version does not automatically make the tool follow the collection selected on the agent page or in its request, so changing **COL** might not change the tool's query scope. Use Document RAG or Graph RAG to query another collection and check the selected collection. An agent response saying that information is unavailable does not prove that ingestion failed.
 
 ## Learn more
 
