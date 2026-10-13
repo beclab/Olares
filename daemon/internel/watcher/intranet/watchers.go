@@ -55,7 +55,7 @@ func optionsSignature(o *intranet.ServerOptions) string {
 
 func (w *applicationWatcher) Watch(ctx context.Context) {
 	switch state.CurrentState.TerminusState {
-	case state.NotInstalled, state.Uninitialized, state.InitializeFailed, state.IPChanging:
+	case state.NotInstalled, state.IPChanging:
 		// Stop the intranet server if it's running
 		if w.intranetServer != nil {
 			w.intranetServer.Close()
@@ -134,21 +134,27 @@ func (w *applicationWatcher) loadServerConfig(ctx context.Context, nodeIp string
 		return nil, nil
 	}
 
-	urls, err := utils.GetApplicationUrlAll(ctx)
-	if err != nil {
-		klog.Error("get application urls error, ", err)
-		return nil, err
-	}
-
 	var hosts []intranet.DNSConfig
-	for _, url := range urls {
-		urlToken := strings.Split(url, ".")
-		if len(urlToken) > 2 {
-			domain := strings.Join([]string{urlToken[0], urlToken[1], "olares"}, ".")
 
-			hosts = append(hosts, intranet.DNSConfig{
-				Domain: domain,
-			})
+	switch state.CurrentState.TerminusState {
+	case state.Uninitialized, state.InitializeFailed:
+		// no need to load intranet server application config when the cluster is uninitialized or initialize failed
+	default:
+		urls, err := utils.GetApplicationUrlAll(ctx)
+		if err != nil {
+			klog.Error("get application urls error, ", err)
+			return nil, err
+		}
+
+		for _, url := range urls {
+			urlToken := strings.Split(url, ".")
+			if len(urlToken) > 2 {
+				domain := strings.Join([]string{urlToken[0], urlToken[1], "olares"}, ".")
+
+				hosts = append(hosts, intranet.DNSConfig{
+					Domain: domain,
+				})
+			}
 		}
 	}
 
