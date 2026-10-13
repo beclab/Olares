@@ -1,12 +1,12 @@
 ---
 outline: [2, 3]
-description: 使用 Pterodactyl Panel 在 Olares 上创建和管理 Minecraft Java 服务器，配置控制台、计划任务、访问权限和备份恢复。
+description: 使用 Pterodactyl Panel 在 Olares 上创建和管理 Terraria/TShock 服务器，配置控制台、计划任务、访问权限和备份恢复。
 head:
   - - meta
     - name: keywords
-      content: "Olares, Pterodactyl Panel, Wings, Minecraft, 游戏服务器, 备份, 服务器管理"
+      content: "Olares, Pterodactyl Panel, Wings, Terraria, TShock, 游戏服务器, 备份, 服务器管理"
 app_version: "0.0.12"
-doc_version: "1.0"
+doc_version: "2.0"
 doc_updated: "2026-10-13"
 ---
 
@@ -16,14 +16,18 @@ doc_updated: "2026-10-13"
 
 # 使用 Pterodactyl Panel 管理游戏服务器
 
-Pterodactyl Panel 是开源的游戏服务器管理应用，可通过浏览器集中管理控制台、文件、计划任务、备份和访问权限。Wings 负责运行游戏进程，并处理服务器文件与备份。
+Pterodactyl Panel 是开源的游戏服务器管理应用，可通过浏览器集中管理控制台、文件、计划任务、备份和访问权限。Wings 负责运行游戏进程，并处理服务器文件与备份。Wings 没有独立的网页管理界面；节点配置与游戏服务器管理统一在 Panel 中完成。
 
-本文以本地 Wings 节点上的独立 Minecraft Java 1.21.1 服务器为例，不导入或接管 Olares 上已有的 Minecraft 应用。
+本文以在本地 Wings 节点上新建 Terraria 1.4.5.8 + TShock 6.2.1 服务器为例。TShock 为 Terraria 提供服务器管理和插件支持。
+
+:::info Panel 可以管理哪些服务器？
+Panel 管理通过 Wings 创建的游戏服务器。从 Olares Market 独立安装的应用，包括 Minecraft，仍由 Olares 管理，不会出现在 Panel 中。安装 Panel 不会自动发现或接管这些应用。迁移前请先阅读[已有 Minecraft 应用的说明](#panel-能管理已有的-minecraft-应用吗)。
+:::
 
 ## 学习目标
 
 - 配置本地节点和游戏端口分配。
-- 使用兼容模板创建并运行 Minecraft 服务器。
+- 使用兼容模板创建并运行 Terraria/TShock 服务器。
 - 授予有限访问权限并配置例行任务。
 - 备份世界并检查恢复后的服务器。
 
@@ -31,8 +35,9 @@ Pterodactyl Panel 是开源的游戏服务器管理应用，可通过浏览器�
 
 - 已从 Market 安装 MariaDB。
 - 有权限安装应用的 Olares 账户，以及用于配置节点和服务器的 Panel 管理员账户。
-- 可访问互联网，以下载游戏运行环境和官方 Minecraft 服务器文件。
-- 与 Olares 位于同一局域网的电脑；进行玩家连接检查时，电脑上需要 Minecraft Java Edition 1.21.1。
+- 可访问互联网，以下载游戏运行环境和官方 TShock 服务器文件。
+- 管理员提供的 TShock 6.2.1 Egg 和运行镜像，已针对此 Olares Wings 集成完成适配与验证。原版 Docker 镜像和 Egg 不一定兼容，具体要求见下文。
+- 与 Olares 位于同一局域网的电脑；进行玩家连接检查时，电脑上需要 Terraria 1.4.5.8。
 
 本地 Wings 集成属于实验性功能，其 Docker 服务使用特权容器。游戏模板必须兼容 UID/GID 1000 和已开放的网络端口。为长期使用的世界部署新模板前，应先完成兼容性检查。
 
@@ -58,60 +63,57 @@ Pterodactyl Panel 是开源的游戏服务器管理应用，可通过浏览器�
 | 用途 | 地址或端口 | 使用方式 |
 | --- | --- | --- |
 | Panel | 应用入口 | 从启动台打开；入口 URL 可在**设置** > **应用** > **Pterodactyl Panel** > **入口**中查看 |
-| Minecraft | Olares 局域网 IP、TCP `43000` | 在 Minecraft Java Edition 中输入 `OLARES_LAN_IP:43000` |
+| Terraria | Olares 局域网 IP、TCP `43000` | 在 Terraria 中通过 IP 加入，分别输入 IP 和端口 `43000` |
 | 内部端口分配 | `0.0.0.0:30000` | 创建服务器时选择，不用于玩家连接 |
 | SFTP | Olares 局域网 IP、TCP `42022` | 使用 SFTP 客户端；用户名从服务器的 **Settings** > **SFTP Details** 复制 |
 
 将 `OLARES_LAN_IP` 替换为设备的实际局域网地址。Panel 的 HTTPS 入口用于浏览器管理，游戏客户端和 SFTP 客户端使用各自的协议与端口。本文覆盖局域网访问；从其他网络访问时，需要单独配置并验证通往游戏端口的网络路径。
 
-## 创建 Minecraft 服务器
+## 创建 Terraria/TShock 服务器
 
-### 导入示例模板
+### 导入兼容模板
 
 Pterodactyl 将游戏模板称为 Egg。Egg 定义运行镜像、安装脚本、启动命令和服务器变量。
 
-1. 下载 [Minecraft 1.21.1 示例 Egg](/files/use-cases/pterodactyl/vanilla-minecraft-1.21.1.json)。
+1. 向管理员获取已验证的 TShock Egg。参考版本为 [TShock 6.2.1 / Terraria 1.4.5.8](https://github.com/Pryaxis/TShock/releases/tag/v6.2.1)。
 
-2. 在管理员界面打开 **Nests** > **Import Egg**，选择 Minecraft 分类和下载的 JSON 文件，然后导入。
+2. 在管理员界面中按需创建 Terraria 分类。打开 **Nests** > **Import Egg**，选择该分类和管理员提供的 JSON 文件，然后导入。
 
-示例使用 Java 21，并以 UID/GID 1000 创建文件；初始配置为 `eula=false`。模板基于功能验证时使用的模板和参数。导入模板不会代替用户接受 Minecraft EULA。
+模板必须兼容 UID/GID 1000，将世界保存在 `worlds/`，将 TShock 配置和 SQLite 数据库保存在 `tshock/`，并监听分配的端口。附加插件放在 `plugins/`。本例保持 TShock REST API 关闭，无需额外的管理入口。
+
+上游 TShock Docker 镜像使用自己的启动入口和目录，需要适配 Wings 的启动命令和可写服务器目录。历史验证使用了适配镜像；本文没有提供可直接下载的通用 Egg。请勿替换成未经验证的原版镜像。
 
 ### 设置服务器参数
 
-1. 打开 **Servers** > **Create New**，输入服务器名称，例如 `Minecraft Friends`。
+1. 打开 **Servers** > **Create New**，输入服务器名称，例如 `Terraria Friends`。
 
 2. 在 **Server Owner** 中选择自己的账户，选择 **Olares Local Wings** 节点，并在 **Default Allocation** 中选择 `0.0.0.0:30000`。
 
-3. 选择导入的 **Vanilla Minecraft 1.21.1 (Olares)** Egg 及其 Java 21 镜像，使用以下示例参数：
+3. 选择导入的 TShock Egg 及已验证的运行镜像，使用以下小型验证服务器参数：
 
    | 字段 | 值 |
    | --- | --- |
    | CPU Limit | `100` percent |
-   | Memory | `1536` MiB |
-   | Disk Space | `2048` MiB |
+   | Memory | `1024` MiB |
+   | Disk Space | `1024` MiB |
    | Backup Limit | `2` |
-   | Server Jar File | `server.jar` |
-   | Server Version | `1.21.1` |
+   | 游戏 / TShock | `1.4.5.8` / `6.2.1` |
+   | 内部游戏端口 | `30000` |
+   | 最大玩家数 | `2` |
 
-   这些参数用于小型功能验证，不代表适用于所有世界或玩家数量的推荐容量。示例将 Java 最大堆内存限制为 1024 MiB，最多允许两名玩家。增加资源和玩家数量前，应先验证实际负载。
+   在 Egg 启动参数中配置新建小型世界。这些参数用于功能验证，不代表推荐容量。变量名称以管理员提供的 Egg 为准。
 
-4. 关闭 **Start Server when Installed**，创建服务器并等待安装完成。打开服务器的 **Files** 页面，确认已生成 `server.jar`、`server.properties` 和 `eula.txt`。
+4. 关闭 **Start Server when Installed**，创建服务器并等待安装完成。在 **Files** 中检查可写的 `worlds/`、`tshock/` 和 `plugins/` 目录。
 
-### 接受 EULA 并启动世界
+### 启动并连接世界
 
-1. 阅读 [Minecraft EULA](https://www.minecraft.net/en-us/eula)，仅在同意条款后继续。
+1. 打开 **Console**，点击 **Start**。首次启动需要生成世界，等待日志出现 `Listening on port 30000`。
 
-2. 在 **Files** 中打开 `eula.txt`，将 `eula=false` 改为 `eula=true`，然后点击 **Save Content**。
+2. 在控制台命令输入框中依次输入 `version` 和 `playing`，确认返回版本和在线玩家信息。TShock 控制台命令不需要游戏内使用的斜杠前缀。
 
-3. 打开 **Console**，点击 **Start**。首次启动会生成世界；出现 `Done` 消息后再连接玩家。
+3. 在同一局域网的电脑上打开 Terraria 1.4.5.8，选择 **Multiplayer** > **Join via IP**。选择角色，输入 `OLARES_LAN_IP`，在端口提示中输入 `43000`，确认角色能够进入世界。
 
-4. 在控制台命令输入框中输入 `list`。返回在线玩家数量，说明控制台输入已到达运行中的游戏进程。
-
-   ![Minecraft 运行中的控制台输出和资源统计](https://cdn.olares.com/images/2026/10/e6b8791ebba2f51e2cdc6e783a6f0a58.png#bordered)
-
-5. 在同一局域网的电脑上打开 Minecraft Java Edition 1.21.1，选择**多人游戏** > **添加服务器**，输入 `OLARES_LAN_IP:43000`。确认列表中能显示服务器，然后加入世界。
-
-服务器列表返回状态只能说明协议可达。成功进入世界是独立的检查项，不能由端口可达或 Panel 中的运行状态推断。
+协议握手成功只能说明服务可达。历史验证没有包含真实玩家加入；邀请玩家前需要完成此项检查。
 
 ## 管理服务器
 
@@ -119,9 +121,8 @@ Pterodactyl 将游戏模板称为 Egg。Egg 定义运行镜像、安装脚本、
 
 通过 **Console** 执行命令，通过 **Start**、**Restart** 和 **Stop** 控制生命周期。正常关服时使用 **Stop**，让游戏保存世界；仅在进程无响应时考虑强制终止。
 
-在 **Files** 中打开 `server.properties` 修改游戏设置。编辑持久化配置前先停止服务器，保存后再启动。此端口分配应保持 `server-port=30000`。将插件上传到 Vanilla 服务器，不会让它自动获得插件支持；其他游戏版本需要相应的 Egg 和运行环境。
+在 **Files** 中查看 `worlds/` 和 `tshock/`。修改 `tshock/config.json` 前先停止服务器，保存后再启动。游戏端口保持为 `30000`；启动命令中的参数可能覆盖配置文件。仅将版本兼容、已在可删除服务器上验证的插件放入 `plugins/`。
 
-![Panel 文件管理器中的服务器文件](https://cdn.olares.com/images/2026/10/3d08eb1c79172687b0622fcea9247940.png#bordered)
 
 使用 SFTP 时，从 **Settings** > **SFTP Details** 复制服务器专属用户名，连接 Olares 局域网 IP 的 `42022` 端口，并使用对应 Panel 账户的密码。传输世界前，先用一个可删除的小文本文件检查访问是否正常。不要使用普通 FTP。
 
@@ -129,9 +130,9 @@ Pterodactyl 将游戏模板称为 Egg。Egg 定义运行镜像、安装脚本、
 
 1. 打开 **Schedules** 并创建计划任务。设置清晰的名称，以及分钟、小时、日、月和星期字段。
 
-2. 添加命令任务，内容为 `say Scheduled maintenance reminder`。本例启用 **Only When Server Is Online**。
+2. 添加命令任务，内容为 `playing`。本例启用 **Only When Server Is Online**。
 
-3. 首次验证时，将五个时间字段均设为 `*`，每分钟运行一次。在 **Console** 中确认出现消息后，关闭计划任务或改为实际需要的执行频率。
+3. 首次验证时，将五个时间字段均设为 `*`，每分钟运行一次。在 **Console** 中确认出现在线玩家信息后，关闭计划任务或改为实际需要的执行频率。
 
 选择执行时间前先确认计划任务使用的时区。不要让临时的每分钟任务持续运行。
 
@@ -149,7 +150,7 @@ Panel 子用户权限控制服务器管理操作，不替代游戏内部的玩�
 
 3. 修改前保留一份已完成的备份。恢复时保持服务器离线，找到目标备份并选择 **Restore**，检查文件替换选项后确认操作。
 
-4. 等待恢复完成，再启动服务器。确认出现 `Done`，匹配版本的 Minecraft 客户端可以连接，并且所需世界状态已恢复。
+4. 等待恢复完成，再启动服务器。确认服务器监听端口 `30000`，匹配版本的 Terraria 客户端可以加入，并且所需世界状态已恢复。恢复游戏账户和权限组时，备份范围必须包含 TShock SQLite 数据库。
 
 :::warning 备份范围
 恢复可能覆盖文件。依赖备份保护重要世界前，应先在可删除的服务器上验证恢复流程。
@@ -167,11 +168,13 @@ Panel 子用户权限控制服务器管理操作，不替代游戏内部的玩�
 
 ### Panel 能管理已有的 Minecraft 应用吗？
 
-Panel 管理通过兼容 Egg 在 Wings 节点上创建的服务器，不会自动接管从 Market 单独安装的 Minecraft 应用。应将世界副本迁移到新的 Panel 服务器并完成验证，再停用原服务器。
+Panel 不能直接管理从 Market 独立安装的 Minecraft。该应用由 Olares 作为 Kubernetes 工作负载管理；Wings 则创建并控制自己的游戏容器。此集成没有让 Wings 接管现有 Olares 应用的机制。
+
+继续使用市场版时，通过 Olares 和该应用自身的界面管理即可。若要迁移到 Panel，应使用兼容 Egg 新建独立的 Minecraft 服务器，匹配游戏版本和模组、插件运行环境，停止原服务器，再复制世界和配置。验证玩家连接、世界内容和备份后，再停用原服务器。Panel 管理权限和游戏账户权限需要分别配置。这是数据迁移，不是关联或接管原应用。
 
 ### 为什么显示地址与玩家连接地址不同？
 
-Panel 可能显示内部端口分配 `0.0.0.0:30000`。玩家应使用 Olares 设备可达的局域网 IP 和对外端口 `43000`。在 Minecraft 中输入 Panel URL 或内部端口分配，不能访问对外的游戏入口。
+Panel 可能显示内部端口分配 `0.0.0.0:30000`。玩家应使用 Olares 设备可达的局域网 IP 和对外端口 `43000`。在游戏客户端中输入 Panel URL 或内部端口分配，不能访问对外的游戏入口。
 
 ### 为什么导入的 Egg 无法安装或启动？
 
@@ -184,4 +187,5 @@ Panel 可能显示内部端口分配 `0.0.0.0:30000`。玩家应使用 Olares �
 ## 了解更多
 
 - [Pterodactyl 验收检查清单](pterodactyl-test-cases.md)：管理、游戏运行、权限和恢复的可重复验证步骤。
+- [TShock 文档](https://github.com/Pryaxis/TShock/tree/v6.2.1/docs)：游戏命令、启动参数和权限。
 - [Pterodactyl 文档](https://pterodactyl.io/)：上游管理功能和 Egg 配置说明。

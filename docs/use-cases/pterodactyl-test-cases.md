@@ -6,7 +6,7 @@ head:
     - name: keywords
       content: "Olares, Pterodactyl, acceptance testing, Minecraft, Terraria, TShock, permissions, recovery"
 app_version: "0.0.12"
-doc_version: "1.0"
+doc_version: "1.1"
 doc_updated: "2026-10-13"
 ---
 
@@ -16,7 +16,7 @@ Use this checklist after installing Pterodactyl Panel from Market, changing a ga
 
 ## Scope and execution rules
 
-The checklist covers Panel administration, the local Wings node, a Minecraft Java server, and an optional Terraria/TShock server. A healthy application status, an accepted API request, or a responsive TCP port alone is not a pass for game operation or recovery.
+The checklist covers Panel administration, the local Wings node, a primary Terraria/TShock server, and a separate optional Minecraft Java server. A healthy application status, an accepted API request, or a responsive TCP port alone is not a pass for game operation or recovery.
 
 Run recovery and permission tests on disposable servers. Record the application version, game version, template, time, expected result, actual result, and evidence for every case. Do not attach passwords, access tokens, session cookies, or a complete Wings configuration to the results.
 
@@ -36,13 +36,13 @@ In the tables, Recorded means equivalent behavior was observed in a previous run
 | Panel / Wings | `1.15.1` / `1.13.3` |
 | Verified runtime architecture | `amd64`; `arm64` image availability is not runtime qualification |
 | Minecraft | Java Edition `1.21.1`, Java 21, matching client version |
-| Example resources | CPU `100%`, memory `1536 MiB`, disk `2048 MiB`, backup limit `2` |
-| Example world | New disposable world, seed `12345`, maximum two players |
+| Example resources | TShock: CPU `100%`, memory `1024 MiB`, disk `1024 MiB`, backup limit `2` |
+| Example world | New disposable small Terraria world, maximum two players |
 | Port mapping | Internal TCP `30000` → device TCP `43000`; SFTP TCP `42022` |
-| Optional TShock scenario | TShock `6.2.1`, Terraria `1.4.5.8`, a compatible template and diagnostic plugin |
+| Primary TShock scenario | TShock `6.2.1`, Terraria `1.4.5.8`, a compatible template and diagnostic plugin |
 | Accounts | Administrator, ordinary Panel account, and a server subuser with restricted permissions |
 
-The resources above are a verification profile. Do not use them as a multiplayer capacity claim. Start with the [setup guide](pterodactyl.md) for the Minecraft example template and connection instructions.
+The resources above are a verification profile. Do not use them as a multiplayer capacity claim. Start with the [setup guide](pterodactyl.md) for the Terraria/TShock template requirements and connection instructions.
 
 Only one server can own the default allocation. Run the Minecraft and Terraria scenarios sequentially, or use another port whose device exposure has already been configured.
 
@@ -63,11 +63,11 @@ Only one server can own the default allocation. Run the Minecraft and Terraria s
 | --- | --- | --- | --- |
 | PT-05 / P0 | Open **Nodes** > **Olares Local Wings** > **About**. Check the daemon version and system information. Request the Wings API once with authorized access and once without credentials. | Node details load; authorized access works; anonymous access is rejected. | Recorded; anonymous request returned `401` |
 | PT-06 / P0 | Create allocation `0.0.0.0:30000` and assign it to a disposable server. Probe the device's TCP `43000` with the matching game protocol. | The response is from the intended game server, not merely an open port. | Minecraft and Terraria protocol responses recorded |
-| PT-07 / P0 | Install the Minecraft example, check the required files and their ownership, accept the EULA yourself, and start it. | Files are usable by UID/GID 1000; startup reaches `Done`; the world exists. | Runtime installation and startup recorded; the guide's EULA-disabled import variant requires a fresh run |
-| PT-08 / P0 | From **Console**, issue `list`, then stop the server normally. Start it again. | Commands reach the game; stop saves the world and exits normally; restart loads the existing world without an out-of-memory failure. | Recorded |
+| PT-07 / P0 | Install the validated TShock template, check world/configuration directories and their ownership, and start it. | Files are usable by UID/GID 1000; startup reports `Listening on port 30000`; the world exists. | Adapted TShock installation and startup recorded; repeat with the supplied Egg and image |
+| PT-08 / P0 | From **Console**, issue `version` and `playing`, then stop the server normally. Start it again. | Commands reach the game; stop saves the world and exits normally; restart loads the existing world without an out-of-memory failure. | Console and lifecycle recorded; repeat these two example commands |
 | PT-09 / P1 | On the disposable Minecraft server, run `gamerule doDaylightCycle false`, `setworldspawn 12 80 34`, and `save-all flush`. Stop and restart it, then check the persisted world settings. | The daylight-cycle rule remains false and the spawn remains `12,80,34`. | Recorded using persisted world data |
 | PT-10 / P1 | Create a disposable text file through **Files**. Read and edit it. Upload a second file through SFTP and download it again. Compare its contents. | Allowed operations work; the downloaded file matches the original; the correct server-specific SFTP account is used. | File API and SFTP round trips recorded; repeat browser editing |
-| PT-11 / P1 | Schedule `say Scheduled maintenance reminder` once per minute, with the server online. Wait for execution, inspect the console and schedule state, then disable the schedule. | The command executes at the intended time, processing clears, and the disabled schedule stops producing messages. | Execution and cleared processing recorded; repeat disabled-state observation |
+| PT-11 / P1 | Schedule `playing` once per minute, with the server online. Wait for execution, inspect the console and schedule state, then disable the schedule. | The command executes at the intended time, processing clears, and the disabled schedule stops producing command responses. | Execution and cleared processing recorded; repeat disabled-state observation |
 | PT-12 / P1 | Check the configured CPU and memory limits against the actual running container and observe resource use while the world loads. | Limits match the server allocation; the game can start within them. | Recorded; this does not establish sustained-load capacity |
 
 ### Management and game permissions
@@ -95,7 +95,7 @@ PT-17 through PT-19 intentionally exercise data loss and replacement. Use dispos
 
 | ID / priority | Procedure | Pass criteria | Evidence status |
 | --- | --- | --- | --- |
-| PT-20 / P0 | Connect with Minecraft Java Edition 1.21.1 from the same local network and enter the world. Separately send matching and mismatched Terraria handshakes to the optional server. | Minecraft player login and gameplay work; matching Terraria receives a valid response and the mismatched protocol is rejected. | Terraria handshake acceptance/rejection recorded; real Minecraft player login required |
+| PT-20 / P0 | Join the primary world with a matching Terraria client from the same network and send matching and mismatched Terraria handshakes. For the optional Minecraft scenario, join its separate world with Java Edition 1.21.1. | Terraria player login and gameplay work; matching Terraria receives a valid response and the mismatched protocol is rejected; optional Minecraft players can join. | Terraria handshake acceptance/rejection recorded; real Terraria and Minecraft player login required |
 | PT-21 / P2 | Repeat the installation, startup, access, and recovery cases on an `arm64` Olares device with the same template versions. | The workflows pass on the actual architecture. | Required |
 | PT-22 / P2 | Before execution, define player count, duration, join pattern, world activity, and thresholds for tick performance, memory, and disconnections. Run that load and retain measurements. | Every agreed threshold is met without crashes, uncontrolled memory growth, or unexpected disconnections. | Required; no multiplayer load evidence exists |
 | PT-23 / P2 | Record a specific mod/plugin version and its required runtime. Install it on a compatible disposable server, exercise its feature, restart, and repeat backup recovery. | The selected feature works and its persistent data survives restart and recovery. | A diagnostic TShock plugin was recorded; arbitrary third-party plugins and mod packs require separate qualification |

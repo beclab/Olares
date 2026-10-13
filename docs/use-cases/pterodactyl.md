@@ -1,25 +1,29 @@
 ---
 outline: [2, 3]
-description: Create and manage a Minecraft Java server on Olares with Pterodactyl Panel, including console access, scheduled tasks, permissions, and backup recovery.
+description: Create and manage a Terraria/TShock server on Olares with Pterodactyl Panel, including console access, scheduled tasks, permissions, and backup recovery.
 head:
   - - meta
     - name: keywords
-      content: "Olares, Pterodactyl Panel, Wings, Minecraft, game server, backup, server management"
+      content: "Olares, Pterodactyl Panel, Wings, Terraria, TShock, game server, backup, server management"
 app_version: "0.0.12"
-doc_version: "1.0"
+doc_version: "2.0"
 doc_updated: "2026-10-13"
 ---
 
 # Manage game servers with Pterodactyl Panel
 
-Pterodactyl Panel is an open-source game server management application. It brings server consoles, files, scheduled tasks, backups, and access permissions into one browser interface. Wings runs the game processes and handles their files and backups.
+Pterodactyl Panel is an open-source game server management application. It brings server consoles, files, scheduled tasks, backups, and access permissions into one browser interface. Wings runs the game processes and handles their files and backups. Wings has no separate web management interface: use Panel to configure nodes and manage their servers.
 
-This guide creates a separate Minecraft Java 1.21.1 server on the local Wings node. It does not import or take over a Minecraft application that is already installed on Olares.
+This guide creates a new Terraria 1.4.5.8 server with TShock 6.2.1 on the local Wings node. TShock adds server administration and plugin support to Terraria.
+
+:::info Which servers can Panel manage?
+Panel manages game servers created through Wings. Applications installed separately from Olares Market, including Minecraft, remain managed by Olares and do not appear in Panel. Installing Panel does not discover or take over those applications. See [Existing Minecraft applications](#can-panel-manage-my-existing-minecraft-application) before planning a migration.
+:::
 
 ## Learning objectives
 
 - Configure a local node and its game port allocation.
-- Create and operate a Minecraft server with a compatible template.
+- Create and operate a Terraria/TShock server with a compatible template.
 - Grant limited access and schedule routine tasks.
 - Back up a world and check that a restored server works.
 
@@ -27,8 +31,9 @@ This guide creates a separate Minecraft Java 1.21.1 server on the local Wings no
 
 - MariaDB installed from Market.
 - An Olares account that can install applications and a Panel administrator account for node and server configuration.
-- Internet access for downloading the game runtime and official Minecraft server files.
-- A computer on the same local network as Olares, with Minecraft Java Edition 1.21.1 for a player connection check.
+- Internet access for downloading the game runtime and official TShock server files.
+- A TShock 6.2.1 Egg and runtime image already adapted and validated by your administrator for this Olares Wings integration. Stock Docker images and Eggs are not automatically compatible; see the template requirements below.
+- A computer on the same local network as Olares, with Terraria 1.4.5.8 for a player connection check.
 
 The local Wings integration is experimental. Its Docker service uses a privileged container. Game templates must be compatible with UID/GID 1000 and the available network ports. Check each new template before using it for a persistent world.
 
@@ -54,60 +59,57 @@ An allocation tells Wings which internal port a server can use. The application 
 | Purpose | Address or port | How to use it |
 | --- | --- | --- |
 | Panel | Application entrance | Open it from Launchpad; obtain its URL from **Settings** > **Applications** > **Pterodactyl Panel** > **Entrances** |
-| Minecraft | Olares LAN IP, TCP `43000` | Enter `OLARES_LAN_IP:43000` in Minecraft Java Edition |
+| Terraria | Olares LAN IP, TCP `43000` | Use Join via IP in Terraria; enter the IP and port `43000` separately |
 | Internal allocation | `0.0.0.0:30000` | Select it when creating the server; it is not the player's connection address |
 | SFTP | Olares LAN IP, TCP `42022` | Use an SFTP client with the username shown in the server's **Settings** > **SFTP Details** |
 
 Replace `OLARES_LAN_IP` with your device's actual local address. The Panel HTTPS entrance is for browser administration; game clients and SFTP clients use their own protocols and ports. This guide covers local network access. Access from another network requires a separately configured and verified route to the game port.
 
-## Create the Minecraft server
+## Create the Terraria/TShock server
 
-### Import the example template
+### Import a compatible template
 
 Pterodactyl calls a game template an Egg. An Egg defines the runtime image, installation script, startup command, and server variables.
 
-1. Download the [Minecraft 1.21.1 example Egg](/files/use-cases/pterodactyl/vanilla-minecraft-1.21.1.json).
+1. Obtain the validated TShock Egg from your administrator. The reference versions are [TShock 6.2.1 for Terraria 1.4.5.8](https://github.com/Pryaxis/TShock/releases/tag/v6.2.1).
 
-2. In the administrator area, open **Nests** > **Import Egg**. Select the Minecraft nest, choose the downloaded JSON file, and import it.
+2. In the administrator area, create a Terraria nest if needed. Open **Nests** > **Import Egg**, select that nest and the supplied JSON file, and import it.
 
-The example uses Java 21, creates files with UID/GID 1000, and starts with `eula=false`. It is based on the template and settings used for functional verification. Importing the template does not accept the Minecraft EULA.
+The template must use UID/GID 1000, persist the world in `worlds/` and TShock configuration and its SQLite database in `tshock/`, and listen on the allocated port. Additional plugins belong in `plugins/`. Keep the TShock REST API disabled for this example; it does not require another management endpoint.
+
+The upstream TShock Docker image uses its own entrypoint and directories. It requires adaptation for Wings' startup command and writable server directory. The historical verification used an adapted image; it is not a downloadable general-purpose Egg provided by this guide. Do not substitute an unverified stock image.
 
 ### Set the server configuration
 
-1. Open **Servers** > **Create New** and enter a name such as `Minecraft Friends`.
+1. Open **Servers** > **Create New** and enter a name such as `Terraria Friends`.
 
 2. Select your account in **Server Owner**, choose **Olares Local Wings**, and select `0.0.0.0:30000` in **Default Allocation**.
 
-3. Choose the imported **Vanilla Minecraft 1.21.1 (Olares)** Egg and its Java 21 image. Use these example settings:
+3. Choose the imported TShock Egg and its validated runtime image. Use these small verification-server settings:
 
    | Field | Value |
    | --- | --- |
    | CPU Limit | `100` percent |
-   | Memory | `1536` MiB |
-   | Disk Space | `2048` MiB |
+   | Memory | `1024` MiB |
+   | Disk Space | `1024` MiB |
    | Backup Limit | `2` |
-   | Server Jar File | `server.jar` |
-   | Server Version | `1.21.1` |
+   | Game / TShock | `1.4.5.8` / `6.2.1` |
+   | Internal game port | `30000` |
+   | Maximum players | `2` |
 
-   These values describe a small verification server, not a recommended capacity for every world or player count. The example limits the Java heap to 1024 MiB and allows two players. Increase resources and player limits only after checking the workload.
+   Configure a small new world in the Egg's startup settings. These values are a verification profile, not a capacity recommendation. Variable labels depend on the supplied Egg.
 
-4. Leave **Start Server when Installed** disabled, create the server, and wait for installation to finish. Open the server's **Files** page and check that `server.jar`, `server.properties`, and `eula.txt` exist.
+4. Leave **Start Server when Installed** disabled, create the server, and wait for installation to finish. Check **Files** for the writable `worlds/`, `tshock/`, and `plugins/` directories.
 
-### Accept the EULA and start the world
+### Start and connect to the world
 
-1. Read the [Minecraft EULA](https://www.minecraft.net/en-us/eula). Continue only if you agree to its terms.
+1. Open **Console** and click **Start**. Allow the first start to generate the world. Wait for the log to report `Listening on port 30000`.
 
-2. Open `eula.txt` in **Files**, change `eula=false` to `eula=true`, and click **Save Content**.
+2. Enter `version`, then `playing` in the console command field. Confirm the version and online-player response. TShock console commands do not need the in-game slash prefix.
 
-3. Open **Console** and click **Start**. Wait for the `Done` message before connecting a player. The first start generates the world.
+3. On a computer on the same network, open Terraria 1.4.5.8 and choose **Multiplayer** > **Join via IP**. Select a player, enter `OLARES_LAN_IP`, and enter port `43000` when prompted. Confirm that the player enters the world.
 
-4. Enter `list` in the console command field. A response showing the number of online players confirms that console input reached the running game process.
-
-   ![Minecraft running with live console output and resource statistics](https://cdn.olares.com/images/2026/10/e6b8791ebba2f51e2cdc6e783a6f0a58.png#bordered)
-
-5. On a computer on the same local network, open Minecraft Java Edition 1.21.1, select **Multiplayer** > **Add Server**, and enter `OLARES_LAN_IP:43000`. Check that the server appears, then join it.
-
-A server-list response confirms protocol reachability. Successfully joining the world is a separate check; it is not implied by a responsive port or a running status in Panel.
+A successful protocol handshake is only a reachability check. The historical verification did not include a real player join; perform that check before inviting players.
 
 ## Operate the server
 
@@ -115,9 +117,8 @@ A server-list response confirms protocol reachability. Successfully joining the 
 
 Use **Console** for commands and **Start**, **Restart**, and **Stop** for lifecycle control. Use **Stop** for normal shutdown so the game can save its world; reserve forced termination for an unresponsive process.
 
-In **Files**, open `server.properties` to change game settings. Stop the server before editing persistent configuration, save the change, and start it again. Keep `server-port=30000` for this allocation. Uploading plugins does not turn a Vanilla server into a plugin-compatible server; use the appropriate Egg and runtime for that game variant.
+In **Files**, inspect `worlds/` and `tshock/`. Stop the server before editing `tshock/config.json`, save the change, and start it again. Keep the game port at `30000`; command-line settings can override the configuration file. Add only version-compatible plugins to `plugins/` after testing them on a disposable server.
 
-![Server files shown in Panel's file manager](https://cdn.olares.com/images/2026/10/3d08eb1c79172687b0622fcea9247940.png#bordered)
 
 For SFTP, copy the server-specific username from **Settings** > **SFTP Details**, connect to the Olares LAN IP on port `42022`, and use the corresponding Panel account password. Check access with a small disposable text file before transferring a world. Do not use plain FTP.
 
@@ -125,9 +126,9 @@ For SFTP, copy the server-specific username from **Settings** > **SFTP Details**
 
 1. Open **Schedules** and create a schedule. Give it a descriptive name and set the minute, hour, day, month, and weekday fields for the intended time.
 
-2. Add a command task with `say Scheduled maintenance reminder`. Enable **Only When Server Is Online** for this example.
+2. Add a command task with `playing`. Enable **Only When Server Is Online** for this example.
 
-3. For an initial check, run the command once per minute by setting all five timing fields to `*`. Confirm that the message appears in **Console**, then disable the schedule or change it to the intended frequency.
+3. For an initial check, run the command once per minute by setting all five timing fields to `*`. Confirm that the player-count response appears in **Console**, then disable the schedule or change it to the intended frequency.
 
 Check the schedule's timezone before choosing an operating time. Avoid leaving a temporary per-minute schedule enabled.
 
@@ -145,7 +146,7 @@ Panel subuser permissions control server management. They do not replace the gam
 
 3. Before a change, keep a completed backup. To recover, keep the server offline, choose **Restore** for the intended backup, review the replacement options, and confirm the operation.
 
-4. After restoration finishes, start the server. Check that it reaches `Done`, that a matching Minecraft client can connect, and that the expected world state is present.
+4. After restoration finishes, start the server. Check that it listens on port `30000`, that a matching Terraria client can join, and that the expected world state is present. Include the TShock SQLite database when recovering game accounts and permission groups.
 
 :::warning Back up the correct scope
 A restore can overwrite files. Validate recovery with a disposable server before relying on it for a valued world.
@@ -163,11 +164,13 @@ Use the [Pterodactyl validation checklist](pterodactyl-test-cases.md) for detail
 
 ### Can Panel manage my existing Minecraft application?
 
-Panel manages servers created on a Wings node with a compatible Egg. It does not automatically take over a separate Minecraft application installed from Market. Migrate a copy of the world into a new Panel-managed server and validate it before retiring the original.
+Panel cannot directly manage Minecraft installed as a separate Market application. Olares manages that application as a Kubernetes workload, while Wings creates and controls its own game containers. Wings has no mechanism in this integration to adopt an existing Olares application.
+
+To keep using the Market application, continue managing it through Olares and its own interface. To move to Panel, create a separate Minecraft server with a compatible Egg, match the game version and any mod/plugin runtime, stop the original server, and copy its world and configuration into the new server. Validate player access, world contents, and backups before retiring the original. Panel and game-account permissions need separate configuration. This is a data migration, not linking or taking over the existing application.
 
 ### Why is the displayed address different from the player address?
 
-Panel can show the internal allocation `0.0.0.0:30000`. Players use the Olares device's reachable LAN IP and exposed port `43000`. Entering the Panel URL or the internal allocation in Minecraft does not select the exposed game endpoint.
+Panel can show the internal allocation `0.0.0.0:30000`. Players use the Olares device's reachable LAN IP and exposed port `43000`. Entering the Panel URL or the internal allocation in the game client does not select the exposed game endpoint.
 
 ### Why does an imported Egg fail to install or start?
 
@@ -180,4 +183,5 @@ The initialization values create the first administrator. They do not overwrite 
 ## Learn more
 
 - [Pterodactyl validation checklist](pterodactyl-test-cases.md): Repeatable checks for administration, game operation, permissions, and recovery.
+- [TShock documentation](https://github.com/Pryaxis/TShock/tree/v6.2.1/docs): Game commands, startup parameters, and permissions.
 - [Pterodactyl documentation](https://pterodactyl.io/): Upstream administration and Egg configuration.
