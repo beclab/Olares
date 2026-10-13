@@ -6,6 +6,7 @@ metadata:
   annotations:
     provider-registry-ref: user-system-{{ .Values.bfl.username }}/search3
     provider-service-ref: search3.os-framework:80
+    provider-owner-ref: {{ .Values.bfl.username | quote }}
 rules:
 - nonResourceURLs: 
   - "/document/search*"

@@ -6,6 +6,7 @@ metadata:
   annotations:
     provider-registry-ref: user-system-{{ .Values.bfl.username }}/settings
     provider-service-ref: settings-service.{{ .Release.Namespace }}
+    provider-owner-ref: {{ .Values.bfl.username | quote }}
 rules:
 - nonResourceURLs: 
   - "/api/cloud/getNFTAddress"
@@ -26,6 +27,7 @@ metadata:
   annotations:
     provider-registry-ref: user-system-{{ .Values.bfl.username }}/edge-desktop
     provider-service-ref: edge-desktop.{{ .Release.Namespace }}
+    provider-owner-ref: {{ .Values.bfl.username | quote }}
 rules:
 - nonResourceURLs: 
   - "/server/intent/send"
@@ -41,6 +43,7 @@ metadata:
   annotations:
     provider-registry-ref: {{ .Values.bfl.username }}/desktop
     provider-service-ref: edge-desktop.{{ .Release.Namespace }}
+    provider-owner-ref: {{ .Values.bfl.username | quote }}
 rules:
 - nonResourceURLs: 
   - "/server/intent/send"
@@ -54,6 +57,7 @@ metadata:
   annotations:
     provider-registry-ref: {{ .Release.Namespace }}/desktop
     provider-service-ref: edge-desktop.{{ .Release.Namespace }}
+    provider-owner-ref: {{ .Values.bfl.username | quote }}
 rules:
 - nonResourceURLs: 
   - "/server/intent/send"
@@ -66,6 +70,7 @@ metadata:
   annotations:
     provider-registry-ref: {{ .Values.bfl.username }}/dashboard
     provider-service-ref: prometheus-k8s.kubesphere-monitoring-system:9090
+    provider-owner-ref: {{ .Values.bfl.username | quote }}
 rules:
   - nonResourceURLs:
       - "*"

@@ -6,6 +6,7 @@ metadata:
   annotations:
     provider-registry-ref: user-system-{{ .Values.bfl.username }}/download
     provider-service-ref: download-svc.os-framework:8080
+    provider-owner-ref: {{ .Values.bfl.username | quote }}
 rules:
   - nonResourceURLs:
       - "/api/download*"

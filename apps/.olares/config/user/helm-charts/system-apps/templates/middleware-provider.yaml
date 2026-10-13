@@ -5,6 +5,7 @@ metadata:
   annotations:
     provider-registry-ref: user-space-{{ .Values.bfl.username }}/middleware
     provider-service-ref: middleware-service.os-platform:80
+    provider-owner-ref: {{ .Values.bfl.username | quote }}
 rules:
 - nonResourceURLs: ["*"]
   verbs: ["*"]
@@ -17,6 +18,7 @@ metadata:
   annotations:
     provider-registry-ref: {{ .Values.bfl.username }}/control-hub
     provider-service-ref: middleware-service.os-platform:80
+    provider-owner-ref: {{ .Values.bfl.username | quote }}
 rules:
 - nonResourceURLs: ["/middleware/*"]
   verbs: ["*"]

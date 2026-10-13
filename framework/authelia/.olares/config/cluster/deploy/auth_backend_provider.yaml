@@ -23,6 +23,7 @@ metadata:
   annotations:
     provider-registry-ref: {{ .Release.Namespace }}/auth-provider-svc
     provider-service-ref: auth-provider-svc.{{ .Release.Namespace }}:28080
+    provider-owner-ref: {{ .Values.bfl.username | quote }}
 rules:
   - nonResourceURLs: 
       - "/api/reset/*"
