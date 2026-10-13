@@ -42,6 +42,9 @@ func TestCreateSysAppMgrUsesWorkloadNamespace(t *testing.T) {
 			if am.Spec.AppNamespace != tt.namespace || am.Spec.AppOwner != tt.owner || am.Spec.RawAppName != "olares-app" || am.Spec.Source != "system" || am.Status.State != appv1.Running {
 				t.Fatalf("unexpected manager: %+v", am)
 			}
+			if am.Spec.Config != "{}" {
+				t.Fatalf("system config must be valid empty JSON: %q", am.Spec.Config)
+			}
 			if !reflect.DeepEqual(am.Labels, app.Labels) {
 				t.Fatalf("labels = %v, want %v", am.Labels, app.Labels)
 			}
@@ -89,6 +92,9 @@ func TestCreateSysAppMgrRepairsLabelsWithoutResettingOperation(t *testing.T) {
 	got, err := c.AppV1alpha1().ApplicationManagers().Get(ctx, am.Name, metav1.GetOptions{})
 	if err != nil {
 		t.Fatal(err)
+	}
+	if got.Spec.Config != "{}" {
+		t.Fatalf("empty existing config was not repaired: %q", got.Spec.Config)
 	}
 	if got.Labels[constants.AppSharedLabel] != "true" || got.Labels["keep"] != "yes" {
 		t.Fatalf("labels: %v", got.Labels)

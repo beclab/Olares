@@ -1,0 +1,21 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: shared-user-service-account-directory
+rules:
+  - apiGroups: ["iam.kubesphere.io"]
+    resources: ["users"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: shared-user-service-account-directory
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: shared-user-service-account-directory
+subjects:
+  - kind: ServiceAccount
+    name: system-frontend
+    namespace: os-frontend
