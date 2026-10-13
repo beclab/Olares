@@ -49,7 +49,7 @@ This feature is currently in the **Alpha** stage and is not recommended for prod
 3. Enter the host login password you prepared above, and then press **Enter**. For security, characters will not appear on the screen as you type.
 
 :::tip
-If you prefer to prepare Olares One remotely, you can use SSH or Control Hub to download and install the package before connecting the display. See [Access Olares One terminal](./access-overview.md) for the available methods.
+If you prefer to prepare Olares One remotely, you can use SSH or Control Hub to download and install the package before connecting the display. See [Access Olares One terminal](https://www.olares.com/docs/one/access-overview) for the available methods.
 :::
 
 ## Step 2: Download and install the Olares Desktop preview package
