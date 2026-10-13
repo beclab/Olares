@@ -72,7 +72,7 @@ export const oneSidebar: DefaultTheme.Sidebar = {
                 link: "/one/access-physical-console",
               },
             ]
-        },        
+        },
         {
           text: "Expand storage",
           collapsed: true,

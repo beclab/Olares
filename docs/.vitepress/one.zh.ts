@@ -72,7 +72,7 @@ export const oneSidebar: DefaultTheme.Sidebar = {
                 link: "/zh/one/access-physical-console",
               },
             ]
-        },        
+        },
         {
           text: "扩展存储",
           collapsed: true,
