@@ -250,7 +250,7 @@ func (r *ApplicationReconciler) addWatch(c controller.Controller, cache cache.Ca
 			}),
 		predicate.Funcs{
 			UpdateFunc: func(e event.UpdateEvent) bool {
-				return isApp(e.ObjectNew) || isApp(e.ObjectOld)
+				return isApp(e.ObjectNew, e.ObjectOld)
 			},
 			CreateFunc: func(e event.CreateEvent) bool {
 				return isApp(e.Object)
