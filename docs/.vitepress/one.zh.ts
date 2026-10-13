@@ -72,10 +72,6 @@ export const oneSidebar: DefaultTheme.Sidebar = {
                 link: "/zh/one/access-physical-console",
               },
             ]
-        },        
-        {
-          text: "使用直连显示器操作 Olares One",
-          link: "/zh/one/direct-display",
         },
         {
           text: "扩展存储",

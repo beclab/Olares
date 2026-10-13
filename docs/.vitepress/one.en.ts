@@ -72,10 +72,6 @@ export const oneSidebar: DefaultTheme.Sidebar = {
                 link: "/one/access-physical-console",
               },
             ]
-        },        
-        {
-          text: "Use Olares One with a direct display",
-          link: "/one/direct-display",
         },
         {
           text: "Expand storage",
