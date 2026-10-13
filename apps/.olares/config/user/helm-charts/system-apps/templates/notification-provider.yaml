@@ -6,6 +6,7 @@ metadata:
   annotations:
     provider-registry-ref: user-system-{{ .Values.bfl.username }}/notifications-server
     provider-service-ref: notifications-server.os-framework:80
+    provider-owner-ref: {{ .Values.bfl.username | quote }}
 rules:
 - nonResourceURLs: 
   - "/notification/*"

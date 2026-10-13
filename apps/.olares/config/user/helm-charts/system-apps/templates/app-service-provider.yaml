@@ -5,6 +5,7 @@ metadata:
   annotations:
     provider-registry-ref: user-system-{{ .Values.bfl.username }}/app-service
     provider-service-ref: app-service.os-framework:6755
+    provider-owner-ref: {{ .Values.bfl.username | quote }}
 rules:
 - nonResourceURLs: ["*"]
   verbs: ["*"]
@@ -18,6 +19,7 @@ metadata:
   annotations:
     provider-registry-ref: user-system-{{ .Values.bfl.username }}/app-service
     provider-service-ref: app-service.os-framework:6755
+    provider-owner-ref: {{ .Values.bfl.username | quote }}
 rules:
 - nonResourceURLs: 
   - "/app-service/*"

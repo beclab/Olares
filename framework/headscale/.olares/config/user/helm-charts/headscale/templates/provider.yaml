@@ -40,6 +40,7 @@ metadata:
   annotations:
     provider-registry-ref: user-system-{{ .Values.bfl.username }}/headscale
     provider-service-ref: headscale-server-svc.os-network:8000
+    provider-owner-ref: {{ .Values.bfl.username | quote }}
 rules:
 - nonResourceURLs: 
   - "/headscale/node"

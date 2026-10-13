@@ -6,6 +6,7 @@ metadata:
   annotations:
     provider-registry-ref: user-system-{{ .Values.bfl.username }}/hami-scheduler
     provider-service-ref: https://hami-scheduler.kube-system
+    provider-owner-ref: {{ .Values.bfl.username | quote }}
 rules:
 - nonResourceURLs: 
   - "/gpus*"
@@ -20,6 +21,7 @@ metadata:
   annotations:
     provider-registry-ref: user-system-{{ .Values.bfl.username }}/hami-webui
     provider-service-ref: hami-webui.kube-system:3000
+    provider-owner-ref: {{ .Values.bfl.username | quote }}
 rules:
 - nonResourceURLs: 
   - "/api/vgpu/v1/*"
