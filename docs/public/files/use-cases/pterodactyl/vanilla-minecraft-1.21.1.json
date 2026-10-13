@@ -1,0 +1,52 @@
+{
+  "_comment": "Adapted from Pterodactyl Panel Vanilla Minecraft Egg (MIT). Olares UID/GID 1000 example; Minecraft binaries are downloaded from Mojang, not distributed with this file.",
+  "meta": {
+    "version": "PTDL_v2",
+    "update_url": null
+  },
+  "exported_at": "2026-10-13T00:00:00+08:00",
+  "name": "Vanilla Minecraft 1.21.1 (Olares)",
+  "author": "support@pterodactyl.io",
+  "description": "Small Minecraft Java 1.21.1 example for Olares. Java heap 1024 MiB; two players; internal port 30000. Read and accept the Minecraft EULA yourself before changing eula=false.",
+  "features": [],
+  "docker_images": {
+    "Java 21": "ghcr.io/parkervcp/yolks:java_21"
+  },
+  "file_denylist": [],
+  "startup": "java -Xms256M -Xmx1024M -jar {{SERVER_JARFILE}} nogui",
+  "config": {
+    "files": "{\r\n    \"server.properties\": {\r\n        \"parser\": \"properties\",\r\n        \"find\": {\r\n            \"server-ip\": \"0.0.0.0\",\r\n            \"server-port\": \"{{server.build.default.port}}\",\r\n            \"query.port\": \"{{server.build.default.port}}\"\r\n        }\r\n    }\r\n}",
+    "startup": "{\r\n    \"done\": \")! For help, type \"\r\n}",
+    "logs": "{}",
+    "stop": "stop"
+  },
+  "scripts": {
+    "installation": {
+      "script": "set -eu\n#!/bin/ash\n# Vanilla MC Installation Script\n#\n# Server Files: /mnt/server\nmkdir -p /mnt/server\ncd /mnt/server\n\nLATEST_VERSION=`curl https://launchermeta.mojang.com/mc/game/version_manifest.json | jq -r '.latest.release'`\nLATEST_SNAPSHOT_VERSION=`curl https://launchermeta.mojang.com/mc/game/version_manifest.json | jq -r '.latest.snapshot'`\n\necho -e \"latest version is $LATEST_VERSION\"\necho -e \"latest snapshot is $LATEST_SNAPSHOT_VERSION\"\n\nif [ -z \"$VANILLA_VERSION\" ] || [ \"$VANILLA_VERSION\" == \"latest\" ]; then\n  MANIFEST_URL=$(curl -sSL https://launchermeta.mojang.com/mc/game/version_manifest.json | jq --arg VERSION $LATEST_VERSION -r '.versions | .[] | select(.id== $VERSION )|.url')\nelif [ \"$VANILLA_VERSION\" == \"snapshot\" ]; then\n  MANIFEST_URL=$(curl -sSL https://launchermeta.mojang.com/mc/game/version_manifest.json | jq --arg VERSION $LATEST_SNAPSHOT_VERSION -r '.versions | .[] | select(.id== $VERSION )|.url')\nelse\n  MANIFEST_URL=$(curl -sSL https://launchermeta.mojang.com/mc/game/version_manifest.json | jq --arg VERSION $VANILLA_VERSION -r '.versions | .[] | select(.id== $VERSION )|.url')\nfi\n\nDOWNLOAD_URL=$(curl ${MANIFEST_URL} | jq .downloads.server | jq -r '. | .url')\n\necho -e \"running: curl -o ${SERVER_JARFILE} $DOWNLOAD_URL\"\ncurl -o ${SERVER_JARFILE} $DOWNLOAD_URL\n\necho -e \"Install Complete\"\ntest -s /mnt/server/server.jar\nprintf 'eula=false\\n' > /mnt/server/eula.txt\nprintf 'server-port=30000\\nserver-ip=0.0.0.0\\nview-distance=2\\nsimulation-distance=2\\nspawn-protection=0\\nonline-mode=true\\nmax-players=2\\nlevel-seed=12345\\n' > /mnt/server/server.properties\nchown 1000:1000 /mnt/server /mnt/server/server.jar /mnt/server/eula.txt /mnt/server/server.properties\n",
+      "container": "ghcr.io/parkervcp/installers:alpine",
+      "entrypoint": "ash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Server Jar File",
+      "description": "The name of the server jarfile to run the server with.",
+      "env_variable": "SERVER_JARFILE",
+      "default_value": "server.jar",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|regex:/^([\\w\\d._-]+)(\\.jar)$/",
+      "field_type": "text"
+    },
+    {
+      "name": "Server Version",
+      "description": "The version of Minecraft Vanilla to install. Use \"latest\" to install the latest version, or use \"snapshot\" to install the latest snapshot. Go to Settings > Reinstall Server to apply.",
+      "env_variable": "VANILLA_VERSION",
+      "default_value": "1.21.1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|between:3,15",
+      "field_type": "text"
+    }
+  ]
+}

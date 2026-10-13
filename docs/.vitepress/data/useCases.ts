@@ -85,6 +85,7 @@ export const useCases: UseCase[] = [
   { title: "Minecraft", link: "/use-cases/minecraft", category: "Games", description: "Host Vanilla or modded Minecraft Java servers for friends", descriptionZh: "搭建原版或模组 Minecraft Java 服务器，与好友联机" },
   { title: "Navidrome", link: "/use-cases/navidrome", category: "Entertainment", description: "Private music streaming server", descriptionZh: "私人音乐流媒体服务器" },
   { title: "Palworld", link: "/use-cases/palworld", category: "Games", description: "Play Palworld with friends on Olares", descriptionZh: "与好友在 Olares 上联机游玩 Palworld" },
+  { title: "Pterodactyl Panel", link: "/use-cases/pterodactyl", category: "Games", description: "Manage game servers, permissions, schedules, and world backups", descriptionZh: "集中管理游戏服务器、权限、计划任务和世界备份" },
   { title: "TREK (NOMAD)", link: "/use-cases/trek", category: "Entertainment", description: "Plan trips collaboratively", descriptionZh: "协作规划行程" },
   { title: "*Arrs", link: "/use-cases/arrs", category: "Entertainment", description: "Automated media management with Sonarr, Radarr, and more", descriptionZh: "使用 Sonarr、Radarr 等实现媒体自动化管理" },
   { title: "Excalidraw", link: "/use-cases/excalidraw", category: "Productivity", description: "Hand-drawn style diagrams and whiteboarding", descriptionZh: "手绘风格的图表与白板" },

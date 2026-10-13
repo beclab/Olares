@@ -424,12 +424,23 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
           collapsed: false,
           items: [
             {
+              text: "Minecraft",
+              link: "/zh/use-cases/minecraft",
+            },
+            {
               text: "Palworld",
               link: "/zh/use-cases/palworld",
             },
             {
-              text: "Minecraft",
-              link: "/zh/use-cases/minecraft",
+              text: "Pterodactyl Panel",
+              link: "/zh/use-cases/pterodactyl",
+              collapsed: true,
+              items: [
+                {
+                  text: "验收检查清单",
+                  link: "/zh/use-cases/pterodactyl-test-cases",
+                },
+              ],
             },
             {
               text: "Steam",
