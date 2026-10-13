@@ -246,6 +246,9 @@ func (h *HelmOps) SetValues(isInstallOp bool) (values map[string]interface{}, er
 	zone, err := h.userZone()
 	if err != nil {
 		klog.Errorf("Failed to find user zone on crd err=%v", err)
+		values["user"] = map[string]interface{}{
+			"zone": fmt.Sprintf("%s.olares.local", h.app.OwnerName),
+		}
 	} else if zone != "" {
 		values["user"] = map[string]interface{}{
 			"zone": zone,
