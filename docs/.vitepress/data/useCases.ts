@@ -57,6 +57,7 @@ export const useCases: UseCase[] = [
   { title: "Open WebUI", link: "/use-cases/openwebui", category: "AI workbench", description: "Full-featured web chat for local LLMs", descriptionZh: "面向本地 LLM 的全功能 Web 聊天界面" },
   { title: "LobeHub (LobeChat)", link: "/use-cases/lobechat", category: "AI workbench", description: "Build local custom AI assistants", descriptionZh: "构建本地自定义 AI 助手" },
   { title: "AnythingLLM", link: "/use-cases/anythingllm", category: "AI workbench", description: "Local knowledge base with RAG over your documents", descriptionZh: "基于文档 RAG 的本地知识库" },
+  { title: "Local Deep Research", link: "/use-cases/local-deep-research", category: "AI workbench", description: "Research questions with cited sources through AI Router", descriptionZh: "通过 AI Router 生成带来源引用的研究报告" },
   { title: "Open Notebook", link: "/use-cases/open-notebook", category: "AI workbench", description: "Research notebook with AI insights and podcasts", descriptionZh: "支持 AI 洞察和播客的研究笔记本" },
   { title: "Vane (Perplexica)", link: "/use-cases/perplexica", category: "AI workbench", description: "Private, AI-powered search and Q&A", descriptionZh: "注重隐私的 AI 搜索与问答" },
   { title: "Dify", link: "/use-cases/dify", category: "AI workbench", description: "Build AI apps and agents with a shared workspace", descriptionZh: "在共享工作空间中构建 AI 应用与智能体" },

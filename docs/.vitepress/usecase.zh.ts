@@ -215,6 +215,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   link: "/zh/use-cases/anythingllm",
                 },
                 {
+                  text: "Local Deep Research",
+                  link: "/zh/use-cases/local-deep-research",
+                },
+                {
                   text: "Open Notebook",
                   link: "/zh/use-cases/open-notebook",
                 },
