@@ -7,7 +7,7 @@ head:
       content: Olares, TrustGraph, knowledge graph, Document RAG, Graph RAG, local models, document search
 app_version: "0.1.20"
 doc_version: "1.0"
-doc_updated: "2026-10-12"
+doc_updated: "2026-10-13"
 ---
 
 # Turn documents into searchable knowledge with TrustGraph
@@ -119,6 +119,22 @@ Keep a collection's embedding model consistent. The default flow uses 768-dimens
 ### Why does a document upload successfully but have no answers yet?
 
 Check that you submitted it for processing, that the chat and embedding models are callable, and that the query uses the same collection and flow. For the first PDF or DOCX, allow time for decoder model downloads. Begin with the short TXT example to distinguish parsing delays from model connection problems.
+
+### Why does Graph RAG report that no information is available?
+
+Graph RAG needs successfully extracted knowledge in the selected collection. Uploading a file and submitting it do not by themselves confirm that extraction succeeded.
+
+1. Check that the query uses the collection and flow selected during processing.
+2. Check that the chat and embedding models are callable. In Control Hub, inspect the `text-completion` and `triples` logs for extraction failures. Repeated output at the token limit, JSONL parsing failures, or an unterminated string can indicate an incomplete model response.
+3. After correcting the model or application configuration, submit the affected documents for processing again. Configuration changes do not automatically recreate missing knowledge.
+
+With reasoning models such as Qwen, a high default reasoning effort can leave less output capacity for extracted facts. Choose a model configuration suitable for structured extraction. In this package, extraction explicitly requests low reasoning effort and allows up to 8192 output tokens. This is a ceiling, not a guarantee that every document will fit; model services can also impose their own limits.
+
+:::details Administrator note: extraction settings
+The TrustGraph OpenAI processor reads `max_output` in its launch configuration. `max_output_tokens` is not the launch configuration field for this version. Under the `openai` variant, `thinking: off` omits the reasoning parameter; it does not explicitly disable the model's reasoning. `thinking: low` sends `reasoning_effort: low`. The model service must accept that parameter.
+
+The application chart supplies these settings. Ordinary users do not need to edit a ConfigMap. When diagnosing an older installation, ensure it includes the corrected chart configuration before resubmitting documents.
+:::
 
 ### Why do model calls report an authentication error?
 
