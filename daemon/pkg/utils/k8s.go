@@ -728,7 +728,7 @@ func GetApplicationUrlAll(ctx context.Context) ([]string, error) {
 					hadError = true
 					continue
 				}
-				entrances = append(entrances, localZoneEntrances)
+				entrances = append(entrances, localZoneEntrances...)
 			}
 
 			// GenEntranceURL / BatchGenSharedAppEntranceURL only fill in the
@@ -754,8 +754,7 @@ func GetApplicationUrlAll(ctx context.Context) ([]string, error) {
 					hadError = true
 					continue
 				}
-				entrances = append(entrances, localZoneEntrances)
-				
+				entrances = append(entrances, localZoneEntrances...)
 			}
 		}
 
