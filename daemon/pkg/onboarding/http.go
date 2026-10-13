@@ -61,31 +61,6 @@ func Handler(service func(context.Context) (*Service, error)) http.Handler {
 		status, err = s.Status(r.Context())
 		result(w, status, err)
 	})
-	mux.HandleFunc("PUT /onboarding/password", func(w http.ResponseWriter, r *http.Request) {
-		var request struct {
-			Password string `json:"password"`
-		}
-		if err := decode(w, r, &request); err != nil {
-			respond(w, 400, err.Error(), nil)
-			return
-		}
-		if len(request.Password) < 8 || len(request.Password) > 72 {
-			respond(w, 400, "password must contain 8 to 72 bytes", nil)
-			return
-		}
-		s, err := service(r.Context())
-		if err != nil {
-			respond(w, 503, "system is not ready for onboarding", nil)
-			return
-		}
-		username, password, ok := r.BasicAuth()
-		if !ok {
-			result(w, Status{}, ErrIdentity)
-			return
-		}
-		status, err := s.Reset(r.Context(), username, password, request.Password)
-		result(w, status, err)
-	})
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
 		defer cancel()

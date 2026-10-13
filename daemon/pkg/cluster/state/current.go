@@ -446,7 +446,7 @@ func refreshCurrentStatus(ctx context.Context) error {
 			return nil
 		}
 
-		initing := onboardingStatus.State == onboarding.Creating || onboardingStatus.State == onboarding.Created || onboardingStatus.State == onboarding.WaitingPassword
+		initing := onboardingStatus.State == onboarding.Creating || onboardingStatus.State == onboarding.Created || onboardingStatus.State == onboarding.WaitActivateVault
 
 		if initing {
 			currentTerminusState = Initializing
