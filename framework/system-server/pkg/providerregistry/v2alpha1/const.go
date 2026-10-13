@@ -4,4 +4,5 @@ const (
 	// provider ref format: proxy-namespce/proxy-service
 	ProviderRefAnnotation     = "provider-registry-ref"
 	ProviderServiceAnnotation = "provider-service-ref"
+	ProviderOwnerAnnotation   = "provider-owner-ref"
 )

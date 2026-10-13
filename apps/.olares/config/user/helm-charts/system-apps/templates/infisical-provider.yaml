@@ -5,6 +5,7 @@ metadata:
   annotations:
     provider-registry-ref: user-space-{{ .Values.bfl.username }}/infisical
     provider-service-ref: infisical-service.os-protected:8080
+    provider-owner-ref: {{ .Values.bfl.username | quote }}
 rules:
 - nonResourceURLs: ["/admin/*"]
   verbs: ["*"]
@@ -17,6 +18,7 @@ metadata:
   annotations:
     provider-registry-ref: {{ .Values.bfl.username }}/settings
     provider-service-ref: infisical-service.os-protected:8080
+    provider-owner-ref: {{ .Values.bfl.username | quote }}
 rules:
 - nonResourceURLs: ["/admin/*"]
   verbs: ["*"]

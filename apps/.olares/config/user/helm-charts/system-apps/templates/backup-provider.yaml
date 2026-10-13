@@ -5,6 +5,7 @@ metadata:
   annotations:
     provider-registry-ref: user-space-{{ .Values.bfl.username }}/backup
     provider-service-ref: backup-server.os-framework:8082
+    provider-owner-ref: {{ .Values.bfl.username | quote }}
 rules:
 - nonResourceURLs: ["/apis/backup*"]
   verbs: ["*"]
@@ -17,6 +18,7 @@ metadata:
   annotations:
     provider-registry-ref: {{ .Values.bfl.username }}/settings
     provider-service-ref: backup-server.os-framework:8082
+    provider-owner-ref: {{ .Values.bfl.username | quote }}
 rules:
 - nonResourceURLs: ["/apis/backup*"]
   verbs: ["*"]
