@@ -120,7 +120,6 @@ data:
     # these routes behind providers; do not bypass authorization via backends.
     map "" $legacy_monitoring { default monitoring.os-frontend.svc.cluster.local:28080; }
     map "" $legacy_infisical { default infisical.os-frontend.svc.cluster.local:28080; }
-    map "" $legacy_backup { default backup.os-frontend.svc.cluster.local:28080; }
     map "" $legacy_middleware { default middleware.os-frontend.svc.cluster.local:28080; }
     map "" $legacy_vault { default vault.os-frontend.svc.cluster.local:28080; }
     map "" $legacy_bfl { default bfl.os-frontend.svc.cluster.local:80; }
@@ -142,6 +141,22 @@ data:
       gzip_types *;
       root /www/dashboard;
 
+      # Select each user's Provider only after validating the access token.
+      auth_request_set $dashboard_user $upstream_http_x_verified_user;
+      auth_request_set $dashboard_token $upstream_http_x_verified_token;
+      proxy_hide_header X-Verified-User;
+      proxy_hide_header X-Verified-Token;
+
+      location = /_dashboard_identity {
+        internal;
+        proxy_pass http://127.0.0.1:3010/internal/proxy-identity;
+        proxy_pass_request_body off;
+        proxy_set_header Content-Length "";
+        proxy_method GET;
+        proxy_read_timeout 10s;
+      }
+
+
       location / {
         try_files $uri $uri/index.html /index.html;
         add_header Cache-Control "private,no-cache";
@@ -159,7 +174,13 @@ data:
 
       location /bfl {
         add_header 'Access-Control-Allow-Headers' 'x-api-nonce,x-api-ts,x-api-ver,x-api-source';
-        proxy_pass http://$legacy_bfl;
+        auth_request /_dashboard_identity;
+        proxy_set_header X-Authorization $dashboard_token;
+        proxy_set_header Cookie "";
+        proxy_set_header Authorization "";
+        proxy_set_header X-Bfl-User "";
+        proxy_set_header Authelia-Nonce "";
+        proxy_pass http://bfl.user-system-$dashboard_user.svc.cluster.local:28080;
         proxy_set_header            Host $host;
         proxy_set_header            X-real-ip $remote_addr;
         proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -168,7 +189,13 @@ data:
       }
 
       location /kapis {
-        proxy_pass http://$legacy_monitoring;
+        auth_request /_dashboard_identity;
+        proxy_set_header X-Authorization $dashboard_token;
+        proxy_set_header Cookie "";
+        proxy_set_header Authorization "";
+        proxy_set_header X-Bfl-User "";
+        proxy_set_header Authelia-Nonce "";
+        proxy_pass http://monitoring.user-space-$dashboard_user.svc.cluster.local:28080;
         proxy_set_header X-Forwarded-Host $http_host;
       }
 
@@ -177,6 +204,11 @@ data:
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Host $host;
+      }
+
+      # Never expose internal auth response headers via the generic service proxy.
+      location ~* ^/(?:user-service/)?internal(?:/|$) {
+        return 404;
       }
 
       location /user-service {
@@ -202,12 +234,24 @@ data:
       }
 
       location /api {
-        proxy_pass http://$legacy_monitoring;
+        auth_request /_dashboard_identity;
+        proxy_set_header X-Authorization $dashboard_token;
+        proxy_set_header Cookie "";
+        proxy_set_header Authorization "";
+        proxy_set_header X-Bfl-User "";
+        proxy_set_header Authelia-Nonce "";
+        proxy_pass http://monitoring.user-space-$dashboard_user.svc.cluster.local:28080;
         proxy_set_header X-Forwarded-Host $http_host;
       }
 
       location /capi {
-        proxy_pass http://$legacy_monitoring;
+        auth_request /_dashboard_identity;
+        proxy_set_header X-Authorization $dashboard_token;
+        proxy_set_header Cookie "";
+        proxy_set_header Authorization "";
+        proxy_set_header X-Bfl-User "";
+        proxy_set_header Authelia-Nonce "";
+        proxy_pass http://monitoring.user-space-$dashboard_user.svc.cluster.local:28080;
         proxy_set_header            Host $host;
         proxy_set_header            X-real-ip $remote_addr;
         proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -234,7 +278,13 @@ data:
       # }
 
       location ~ /(kapis/terminal|api/v1/watch|apis/apps/v1/watch) {
-        proxy_pass http://$legacy_monitoring;
+        auth_request /_dashboard_identity;
+        proxy_set_header X-Authorization $dashboard_token;
+        proxy_set_header Cookie "auth_token=$dashboard_token";
+        proxy_set_header Authorization "";
+        proxy_set_header X-Bfl-User "";
+        proxy_set_header Authelia-Nonce "";
+        proxy_pass http://monitoring.user-space-$dashboard_user.svc.cluster.local:28080;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "Upgrade";
@@ -261,6 +311,23 @@ data:
       gzip_types *;
       root /www/control-hub;
 
+      # Resolve identity from the access token before selecting any user Provider.
+      # The shared deployment supplies the cluster DNS resolver in nginx.conf.
+      auth_request_set $control_hub_user $upstream_http_x_verified_user;
+      auth_request_set $control_hub_token $upstream_http_x_verified_token;
+      proxy_hide_header X-Verified-User;
+      proxy_hide_header X-Verified-Token;
+
+      location = /_control_hub_identity {
+        internal;
+        proxy_pass http://127.0.0.1:3010/internal/proxy-identity;
+        proxy_pass_request_body off;
+        proxy_set_header Content-Length "";
+        proxy_method GET;
+        proxy_read_timeout 10s;
+      }
+
+
       location / {
         try_files $uri $uri/index.html /index.html;
         add_header Cache-Control "private,no-cache";
@@ -270,7 +337,13 @@ data:
 
       location /bfl {
         add_header 'Access-Control-Allow-Headers' 'x-api-nonce,x-api-ts,x-api-ver,x-api-source';
-        proxy_pass http://$legacy_bfl;
+        auth_request /_control_hub_identity;
+        proxy_set_header X-Authorization $control_hub_token;
+        proxy_set_header Cookie "";
+        proxy_set_header Authorization "";
+        proxy_set_header X-Bfl-User "";
+        proxy_set_header Authelia-Nonce "";
+        proxy_pass http://bfl.user-system-$control_hub_user.svc.cluster.local:28080;
         proxy_set_header            Host $host;
         proxy_set_header            X-real-ip $remote_addr;
         proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -279,13 +352,30 @@ data:
       }
 
       location /kapis {
-        proxy_pass http://$legacy_monitoring;
+        auth_request /_control_hub_identity;
+        proxy_set_header X-Authorization $control_hub_token;
+        proxy_set_header Cookie "";
+        proxy_set_header Authorization "";
+        proxy_set_header X-Bfl-User "";
+        proxy_set_header Authelia-Nonce "";
+        proxy_pass http://monitoring.user-space-$control_hub_user.svc.cluster.local:28080;
         proxy_set_header X-Forwarded-Host $http_host;
       }
 
       location /api {
-        proxy_pass http://$legacy_monitoring;
+        auth_request /_control_hub_identity;
+        proxy_set_header X-Authorization $control_hub_token;
+        proxy_set_header Cookie "";
+        proxy_set_header Authorization "";
+        proxy_set_header X-Bfl-User "";
+        proxy_set_header Authelia-Nonce "";
+        proxy_pass http://monitoring.user-space-$control_hub_user.svc.cluster.local:28080;
         proxy_set_header X-Forwarded-Host $http_host;
+      }
+
+      # Never expose internal auth response headers via the generic service proxy.
+      location ~* ^/(?:user-service/)?internal(?:/|$) {
+        return 404;
       }
 
       location /user-service {
@@ -297,12 +387,24 @@ data:
       }
 
       location /current_user {
-        proxy_pass http://$legacy_monitoring;
+        auth_request /_control_hub_identity;
+        proxy_set_header X-Authorization $control_hub_token;
+        proxy_set_header Cookie "";
+        proxy_set_header Authorization "";
+        proxy_set_header X-Bfl-User "";
+        proxy_set_header Authelia-Nonce "";
+        proxy_pass http://monitoring.user-space-$control_hub_user.svc.cluster.local:28080;
         proxy_set_header X-Forwarded-Host $http_host;
       }
 
       location /capi {
-        proxy_pass http://$legacy_monitoring;
+        auth_request /_control_hub_identity;
+        proxy_set_header X-Authorization $control_hub_token;
+        proxy_set_header Cookie "";
+        proxy_set_header Authorization "";
+        proxy_set_header X-Bfl-User "";
+        proxy_set_header Authelia-Nonce "";
+        proxy_pass http://monitoring.user-space-$control_hub_user.svc.cluster.local:28080;
         proxy_set_header            Host $host;
         proxy_set_header            X-real-ip $remote_addr;
         proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -330,7 +432,13 @@ data:
 
       location /middleware {
         add_header 'Access-Control-Allow-Headers' 'x-api-nonce,x-api-ts,x-api-ver,x-api-source';
-        proxy_pass http://$legacy_middleware;
+        auth_request /_control_hub_identity;
+        proxy_set_header X-Authorization $control_hub_token;
+        proxy_set_header Cookie "";
+        proxy_set_header Authorization "";
+        proxy_set_header X-Bfl-User "";
+        proxy_set_header Authelia-Nonce "";
+        proxy_pass http://middleware.user-space-$control_hub_user.svc.cluster.local:28080;
         proxy_set_header            Host $host;
         proxy_set_header            X-real-ip $remote_addr;
         proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -339,8 +447,16 @@ data:
         add_header X-Frame-Options SAMEORIGIN;
       }
 
-      location ~ /(kapis/terminal|api/v1/watch|apis/apps/v1/watch) {
-        proxy_pass http://$legacy_monitoring;
+      location ~ /(kapis/terminal|api/v1/watch|apis/apps/v1/watch|api/v1/namespaces/[^/]+/pods/[^/]+/exec) {
+        auth_request /_control_hub_identity;
+        proxy_set_header X-Authorization $control_hub_token;
+        # The monitoring WebSocket proxy reads auth_token from Cookie.
+        # Rebuild it from the verified token so both hops use the same identity.
+        proxy_set_header Cookie "auth_token=$control_hub_token";
+        proxy_set_header Authorization "";
+        proxy_set_header X-Bfl-User "";
+        proxy_set_header Authelia-Nonce "";
+        proxy_pass http://monitoring.user-space-$control_hub_user.svc.cluster.local:28080;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "Upgrade";
@@ -361,6 +477,12 @@ data:
     }
 
 
+
+    # Authenticated identity supplied by the ingress, never taken from the URL.
+    map $http_x_bfl_user $desktop_monitoring {
+        default "";
+        ~^[a-z0-9]([a-z0-9-]*[a-z0-9])?$ monitoring.user-space-$http_x_bfl_user.svc.cluster.local:28080;
+    }
 
     server {
         listen 91;
@@ -389,7 +511,8 @@ data:
         }
 
         location /kapis {
-            proxy_pass http://$legacy_monitoring;
+            if ($desktop_monitoring = "") { return 401; }
+            proxy_pass http://$desktop_monitoring;
             proxy_set_header X-Forwarded-Host $http_host;
         }
 
@@ -762,9 +885,6 @@ data:
         }
     }
   market.conf: |-
-    upstream AppstoreBackendServer {
-      server market-provider-svc.os-framework:28080;
-    }
     server {
         listen 90;
         gzip off;
@@ -792,7 +912,8 @@ data:
         location /app-store/ {
             add_header 'Access-Control-Allow-Headers' 'x-api-nonce,x-api-ts,x-api-ver,x-api-source X-Authorization';
             proxy_http_version 1.1;
-            proxy_pass http://AppstoreBackendServer;
+            # Resolve the per-user Market Provider from the verified access token.
+            proxy_pass http://127.0.0.1:3010/market-backend/app-store/;
             proxy_set_header            Host $host;
             proxy_set_header            X-real-ip $remote_addr;
             proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -808,12 +929,36 @@ data:
             proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
         }
 
+        location /api/backend {
+            proxy_pass http://127.0.0.1:3010;
+
+            proxy_set_header            Host $host;
+            proxy_set_header            X-real-ip $remote_addr;
+            proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+
         location /api/users {
             proxy_pass http://127.0.0.1:3010;
 
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Host $host;
+        }
+
+        location /api/compute-resources {
+            proxy_pass http://127.0.0.1:3010;
+
+            proxy_set_header            Host $host;
+            proxy_set_header            X-real-ip $remote_addr;
+            proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+
+        location ~ ^/api/apps/.+/compute-resources/bindings {
+            proxy_pass http://127.0.0.1:3010;
+
+            proxy_set_header            Host $host;
+            proxy_set_header            X-real-ip $remote_addr;
+            proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
         }
 
         location /server {
@@ -980,7 +1125,7 @@ data:
 
 
         location /kapis {
-            proxy_pass http://$legacy_monitoring;
+            proxy_pass http://127.0.0.1:3010;
             proxy_set_header X-Forwarded-Host $http_host;
             # rewrite ^/server(.*)$ $1 break;
 
@@ -1014,7 +1159,7 @@ data:
         }
 
         location /apis/backup {
-            proxy_pass http://$legacy_backup;
+            proxy_pass http://127.0.0.1:3010;
            add_header Accept "application/json, text/plain, */*";
            add_header Content-Type "application/json; charset=utf-8";
             proxy_set_header X-Forwarded-Host $http_host;
@@ -1211,6 +1356,29 @@ data:
         gzip_comp_level 6;
         gzip_types *;
         root /www/vault;
+
+        # The shared frontend must select a user's services from a verified token.
+        auth_request_set $vault_user $upstream_http_x_verified_user;
+        auth_request_set $vault_token $upstream_http_x_verified_token;
+        proxy_hide_header X-Verified-User;
+        proxy_hide_header X-Verified-Token;
+
+        location = /_vault_identity {
+            internal;
+            proxy_pass http://127.0.0.1:3010/internal/proxy-identity;
+            proxy_pass_request_body off;
+            proxy_set_header Content-Length "";
+            proxy_method GET;
+            proxy_read_timeout 10s;
+        }
+
+        # Keep the existing BFL response contract through the user-aware service.
+        location = /bfl/info/v1/olares-info {
+            proxy_pass http://127.0.0.1:3010/api/olares-info;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
         location / {
             try_files $uri $uri/index.html /index.html;
             add_header Cache-Control "private,no-cache";
@@ -1219,7 +1387,13 @@ data:
         }
         location /bfl/ {
             add_header Access-Control-Allow-Headers "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization";
-            proxy_pass http://$legacy_bfl;
+            auth_request /_vault_identity;
+            proxy_set_header X-Authorization $vault_token;
+            proxy_set_header Cookie "";
+            proxy_set_header Authorization "";
+            proxy_set_header X-Bfl-User "";
+            proxy_set_header Authelia-Nonce "";
+            proxy_pass http://bfl.user-system-$vault_user.svc.cluster.local:28080;
             proxy_set_header            Host $host;
             proxy_set_header            X-real-ip $remote_addr;
             proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -1227,7 +1401,13 @@ data:
         }
         location /server {
             add_header Access-Control-Allow-Headers "x-authorization";
-            proxy_pass http://$legacy_vault;
+            auth_request /_vault_identity;
+            proxy_set_header X-Authorization $vault_token;
+            proxy_set_header Cookie "";
+            proxy_set_header Authorization "";
+            proxy_set_header X-Bfl-User "";
+            proxy_set_header Authelia-Nonce "";
+            proxy_pass http://vault.user-space-$vault_user.svc.cluster.local:28080;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Host $http_host;
