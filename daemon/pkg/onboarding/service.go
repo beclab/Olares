@@ -3,8 +3,10 @@ package onboarding
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
 
@@ -27,21 +29,21 @@ const (
 	RecordName        = "olares-onboarding"
 	UserMarker        = "bytetrade.io/onboarding"
 	UserDID           = "bytetrade.io/user-did"
+	userWizardStatus  = "bytetrade.io/wizard-status"
+	waitResetPassword = "wait_reset_password"
 	Waiting           = "waiting-for-user"
 	Creating          = "creating"
 	Created           = "created"
 	WaitActivateVault = "wait_activate_vault"
-
-	Completed = "completed"
-	Failed    = "failed"
+	WaitingPassword   = "waiting-for-reset-password"
+	Completed         = "completed"
+	Failed            = "failed"
 )
 
 var (
-	ErrConflict          = errors.New("first user is already reserved or exists")
-	ErrIdentity          = errors.New("request identity does not match the first user")
-	ErrClosed            = errors.New("onboarding is complete")
-	ErrNotReady          = errors.New("first user services are not ready")
-	ErrPasswordUnchanged = errors.New("new password must differ from the initial password")
+	ErrConflict = errors.New("first user is already reserved or exists")
+	ErrIdentity = errors.New("request identity does not match the first user")
+	ErrClosed   = errors.New("onboarding is complete")
 )
 
 type CreateRequest struct {
@@ -219,6 +221,7 @@ func newUser(r CreateRequest) *iamv1.User {
 		TypeMeta: metav1.TypeMeta{APIVersion: iamv1.SchemeGroupVersion.String(), Kind: "User"},
 		ObjectMeta: metav1.ObjectMeta{Name: r.Username, Annotations: map[string]string{
 			UserMarker: "true", UserDID: r.DID,
+			userWizardStatus:       WaitActivateVault,
 			"bytetrade.io/creator": "cli", "bytetrade.io/owner-role": "admin",
 			"bytetrade.io/terminus-name":  r.Username,
 			"bytetrade.io/user-cpu-limit": r.CPU, "bytetrade.io/user-memory-limit": r.Memory,
@@ -289,13 +292,33 @@ func (s *Service) Status(ctx context.Context) (Status, error) {
 	case "Failed":
 		out.State = Failed
 	case "Created":
-		out.State = Created
+		activation := u.GetAnnotations()[userWizardStatus]
+		if activation == Completed {
+			at, err := s.recordCompletion(ctx, record)
+			if err != nil {
+				return Status{}, err
+			}
+			out.State, out.CompletedAt, out.Reason = Completed, at, ""
+			return out, nil
+		}
+
 		ready, err := s.userReady(ctx, out.Username)
 		if err != nil {
 			return Status{}, err
 		}
-		if ready {
-			out.State, out.Reason = WaitActivateVault, ""
+		if !ready {
+			out.Reason = "waiting for the first user services"
+			return out, nil
+		}
+		out.Reason = ""
+		switch activation {
+		case "", WaitActivateVault:
+			out.State = WaitActivateVault
+		case waitResetPassword:
+			out.State = WaitingPassword
+		default:
+			out.State = Failed
+			out.Reason = fmt.Sprintf("unexpected user activation state: %s", activation)
 		}
 	}
 	return out, nil
@@ -320,4 +343,30 @@ func (s *Service) userReady(ctx context.Context, name string) (bool, error) {
 		return false, err
 	}
 	return server.DeletionTimestamp == nil && server.Spec.Replicas != nil && *server.Spec.Replicas > 0 && server.Status.ObservedGeneration >= server.Generation && server.Status.ReadyReplicas >= *server.Spec.Replicas, nil
+}
+
+// Keep the machine's completion record after BFL finishes user activation,
+// so restarting olaresd or later deleting the first user cannot reopen setup.
+func (s *Service) recordCompletion(ctx context.Context, expected *corev1.Secret) (string, error) {
+	var completedAt string
+	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		records := s.Kube.CoreV1().Secrets(Namespace)
+		record, e := records.Get(ctx, RecordName, metav1.GetOptions{})
+		if e != nil {
+			return e
+		}
+		if record.UID != expected.UID || string(record.Data["username"]) != string(expected.Data["username"]) || string(record.Data["did"]) != string(expected.Data["did"]) {
+			return ErrConflict
+		}
+		completedAt = string(record.Data["completed_at"])
+		if completedAt != "" {
+			return nil
+		}
+		completedAt = time.Now().UTC().Format(time.RFC3339)
+		record.Data["completed_at"] = []byte(completedAt)
+		delete(record.Data, "password_hash")
+		_, e = records.Update(ctx, record, metav1.UpdateOptions{})
+		return e
+	})
+	return completedAt, err
 }

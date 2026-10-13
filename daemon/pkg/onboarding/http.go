@@ -49,6 +49,10 @@ func Handler(service func(context.Context) (*Service, error)) http.Handler {
 			result(w, status, nil)
 			return
 		}
+		if status.State == Completed {
+			result(w, Status{}, ErrClosed)
+			return
+		}
 		username, password, ok := r.BasicAuth()
 		if !ok {
 			result(w, Status{}, ErrIdentity)
@@ -89,13 +93,11 @@ func result(w http.ResponseWriter, status Status, err error) {
 		return
 	}
 	switch {
-	case errors.Is(err, ErrPasswordUnchanged):
-		respond(w, 400, err.Error(), nil)
 	case errors.Is(err, ErrIdentity):
 		respond(w, 401, err.Error(), nil)
 	case errors.Is(err, ErrClosed):
 		respond(w, 410, err.Error(), nil)
-	case errors.Is(err, ErrConflict), errors.Is(err, ErrNotReady):
+	case errors.Is(err, ErrConflict):
 		respond(w, 409, err.Error(), nil)
 	case apierrors.IsNotFound(err):
 		respond(w, 404, "onboarding has not started", nil)
