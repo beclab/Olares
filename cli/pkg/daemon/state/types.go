@@ -33,6 +33,10 @@ type State struct {
 	// and call Describe() to obtain a one-line explanation.
 	TerminusState TerminusState `json:"terminusState"`
 
+	// InstallationMode advertises the install request contract before installation.
+	// "system-only" means /command/install does not accept user provisioning input.
+	InstallationMode string `json:"installationMode,omitempty"`
+
 	// OnboardingState describes first-user setup independently of system health.
 	OnboardingState string `json:"onboardingState,omitempty"`
 

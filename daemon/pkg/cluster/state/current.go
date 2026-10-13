@@ -32,6 +32,7 @@ var StateTrigger chan struct{}
 var TerminusStateMu sync.Mutex
 
 func init() {
+	CurrentState.InstallationMode = "system-only"
 	CurrentState.TerminusState = Checking
 	CurrentState.TerminusdState = Initialize
 	StateTrigger = make(chan struct{})

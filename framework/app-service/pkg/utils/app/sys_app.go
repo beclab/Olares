@@ -39,6 +39,11 @@ func CreateSysAppMgr(ctx context.Context, client versioned.Interface, app *v1alp
 		desired.Spec.AppNamespace = app.Spec.Namespace
 		desired.Spec.AppOwner = app.Spec.Owner
 		desired.Spec.Source = "system"
+		// Admission webhooks decode Config even for platform registrations.
+		// No chart permissions are declared, but the JSON must still be valid.
+		if desired.Spec.Config == "" {
+			desired.Spec.Config = "{}"
+		}
 		desired.Spec.Type = v1alpha1.App
 		for _, key := range []string{constants.AppApiVersionLabel, constants.AppSharedLabel} {
 			if value, ok := app.Labels[key]; ok {
