@@ -39,7 +39,7 @@ spec:
                     operator: Exists
       containers:
         - name: proxy
-          image: beclab/l4-bfl-proxy:v0.3.48-alpha-2
+          image: beclab/l4-bfl-proxy:v0.3.48-alpha-3
           imagePullPolicy: IfNotPresent
           command:
             - /l4-bfl-proxy
