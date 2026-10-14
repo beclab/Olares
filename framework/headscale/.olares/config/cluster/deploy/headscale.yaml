@@ -81,8 +81,7 @@ rules:
   - apiGroups: ["iam.kubesphere.io"]
     resources: ["users"]
     verbs: ["get", "list"]
-  # The API wrapper authenticates app-service policy requests and Tailscale
-  # bootstrap requests using separate service accounts and audiences.
+  # The API wrapper authenticates Tailscale bootstrap requests with TokenReview.
   - apiGroups: ["authentication.k8s.io"]
     resources: ["tokenreviews"]
     verbs: ["create"]
@@ -310,7 +309,6 @@ spec:
     - Ingress
   ingress:
     # Each user's olares-app forwards Headscale control traffic on 8080.
-    # Keep 9000 temporarily for compatibility with direct wrapper callers.
     - from:
         - namespaceSelector:
             matchLabels:
@@ -321,8 +319,6 @@ spec:
       ports:
         - protocol: TCP
           port: 8080
-        - protocol: TCP
-          port: 9000
     # The authenticated /server provider runs in vault-server. It is the
     # effective caller that requests a pre-auth key from the wrapper.
     - from:
@@ -347,8 +343,7 @@ spec:
       ports:
         - protocol: TCP
           port: 8000
-    # app-service is the only writer of the application-owned port set. The
-    # wrapper additionally verifies its Kubernetes service-account token.
+    # app-service is the only writer of the application-owned port set.
     - from:
         - namespaceSelector:
             matchLabels:
@@ -358,7 +353,7 @@ spec:
               tier: app-service
       ports:
         - protocol: TCP
-          port: 8000
+          port: 8001
 
 ---
 apiVersion: networking.k8s.io/v1
@@ -867,7 +862,7 @@ spec:
               mountPath: /etc/nginx/conf.d
               readOnly: true
         - name: headscale-api-wrapper
-          image: beclab/headscale-api-wrapper:v0.2.4
+          image: beclab/headscale-api-wrapper:v0.2.5
           imagePullPolicy: IfNotPresent
           command: [/bin/sh, -ec]
           args:
@@ -886,18 +881,15 @@ spec:
             - name: management
               containerPort: 8000
               protocol: TCP
+            - name: policy
+              containerPort: 8001
+              protocol: TCP
             - name: authkey
               containerPort: 9000
               protocol: TCP
           env:
             - name: TOKEN_VERIFY_URL
               value: http://lldap-service.os-platform:17170/auth/token/verify
-            - name: POLICY_CLIENT_NAMESPACE
-              value: os-framework
-            - name: POLICY_CLIENT_SERVICE_ACCOUNT
-              value: os-internal
-            - name: POLICY_TOKEN_AUDIENCE
-              value: headscale-policy
             - name: SUBNET_ROUTES_FILE
               value: /var/lib/headscale/bootstrap/subnet-routes
             # Keep these aligned with the fixed Linux installation defaults.
@@ -972,7 +964,10 @@ spec:
       protocol: TCP
       port: 8000
       targetPort: management
-
+    - name: policy
+      protocol: TCP
+      port: 8001
+      targetPort: policy
 ---
 apiVersion: v1
 kind: Service
