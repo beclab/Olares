@@ -102,6 +102,10 @@ With NVIDIA power management enabled, you can now set the GPU mode using `ioport
 
    In the `Pwr:Usage/Cap` column, check the value for `Cap`. It should be `150W` for performance mode (`3`) or `50W` for quiet mode (`0`).
 
+   :::info Performance mode boosts up to 175W
+   In performance mode, `nvidia-smi` shows a power limit of `150W` when the GPU is idle. Under full load, the limit dynamically rises to `175W`.
+   :::
+
    **Example output:**
 
    ```text
