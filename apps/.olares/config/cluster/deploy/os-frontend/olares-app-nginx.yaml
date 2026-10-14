@@ -1507,6 +1507,18 @@ data:
             try_files /index.html =503;
         }
 
+        # Match before the general Auth API route. user-service verifies the
+        # session and forwards only the authenticated user's password change to BFL.
+        location ~ ^/api/users/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?/password$ {
+            limit_except PUT { deny all; }
+            proxy_pass http://127.0.0.1:3010;
+            proxy_read_timeout 20s;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            add_header Cache-Control "no-store" always;
+        }
+
         # Resolve on demand: the frontend can start before the auth backend exists.
         # Keep API paths unchanged and preserve cookies / Authorization headers.
         location ~ ^/(api(?:/|$)|jwks\.json$|\.well-known(?:/|$)) {
@@ -1521,7 +1533,7 @@ data:
             add_header Cache-Control "no-store" always;
         }
 
-        # Shared Login does not expose a pre-login per-user BFL proxy.
+        # No general BFL access through the login entrance.
         location /bfl { return 404; }
 
         location ~* \.(js|css|png|jpe?g|svg|woff2?|ico)$ {

@@ -43,3 +43,29 @@ subjects:
 - kind: User
   apiGroup: rbac.authorization.k8s.io
   name: {{ .Values.bfl.username }}
+
+---
+# End-user authorization only: never grant the shared frontend SA password writes.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Values.bfl.username }}:self-password-bfl
+  annotations:
+    provider-registry-ref: user-system-{{ .Values.bfl.username }}/bfl
+    provider-service-ref: bfl.{{ .Release.Namespace }}
+rules:
+- nonResourceURLs: ["/bfl/iam/v1alpha1/users/{{ .Values.bfl.username }}/password"]
+  verbs: ["update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: user:{{ .Values.bfl.username }}:self-password-bfl
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Values.bfl.username }}:self-password-bfl
+subjects:
+- kind: User
+  apiGroup: rbac.authorization.k8s.io
+  name: {{ .Values.bfl.username }}
