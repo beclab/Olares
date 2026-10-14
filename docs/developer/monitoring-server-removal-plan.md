@@ -78,7 +78,7 @@ TermiPass 原本的本地 `main` 比 `origin/main` 跟踪引用落后 941 个提
 
 1. `GET /capi/app/myapps`：复用 app-process 的现有 handler/service，保持旧接口的非 BFL envelope 响应。当前树内没找到直接消费者，但在拆除前保留兼容。
 2. `GET /capi/system/ifs`：从 BFL 直连 olaresd `/system/ifs`，透传 query，将 `TERMINUSD_HOST` 作为显式 BFL 配置注入，并设置超时。
-3. `GET /capi/app/detail`：精确复制 `user`、`runtime`、`clusterRole`、`systemNamespaces` 的 wire shape；`globalrole` 继续把 owner/admin 映射为 `platform-admin`。`localeManifest` 只有在 Phase 0 确认消费者不依赖后才能删，否则先返回空对象保持契约。
+3. `GET /capi/app/detail`：返回 `user`、`runtime`、`systemNamespaces`；`globalrole` 继续把 owner/admin 映射为 `platform-admin`。消费者确认不再需要后，响应中删除 `clusterRole`、`localeManifest`、`gitopsEngine`；`clusterRole` 仍仅作为 BFL 内部过滤 `globalRules` 的依据，不再对外暴露。
 4. `GET /capi/monitoring.kubesphere.io/v1alpha3/:type`：复用 monitor 模块的 KubeSphere client，移植 metric rename、split-series collapse 和 `*_utilisation` 计算。range query 必须按时间戳对齐，缺失/零分母返回 0，不按数组下标相除。
 5. `GET /capi/namespaces/group`：用 owner-role 找主账号，按 `-<owner>` 后缀分组，识别 label 或 `-shared` 的 shared namespace；只有管理员可看 Shared/System 组。
 

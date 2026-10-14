@@ -150,12 +150,9 @@ func unwrapData(body []byte) ([]byte, error) {
 }
 
 type appDetailResponse struct {
-	LocaleManifest   map[string]any `json:"localeManifest"`
-	User             userDetail     `json:"user"`
-	Runtime          string         `json:"runtime"`
-	ClusterRole      string         `json:"clusterRole"`
-	GitOpsEngine     string         `json:"gitopsEngine"`
-	SystemNamespaces []string       `json:"systemNamespaces"`
+	User             userDetail `json:"user"`
+	Runtime          string     `json:"runtime"`
+	SystemNamespaces []string   `json:"systemNamespaces"`
 }
 
 type userDetail struct {
@@ -183,10 +180,7 @@ func (h *handler) appDetail(req *restful.Request, resp *restful.Response) {
 
 	clusterRole := h.clusterRole(req.Request.Context())
 	detail := appDetailResponse{
-		LocaleManifest:   map[string]any{},
 		Runtime:          h.containerRuntime(req.Request.Context()),
-		ClusterRole:      clusterRole,
-		GitOpsEngine:     "argocd",
 		SystemNamespaces: append([]string(nil), systemNamespaces...),
 		User: userDetail{
 			Email:           user.Spec.Email,

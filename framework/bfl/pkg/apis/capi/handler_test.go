@@ -54,3 +54,19 @@ func TestClusterRolePattern(t *testing.T) {
 		}
 	}
 }
+
+func TestAppDetailResponseOmitsRemovedFields(t *testing.T) {
+	payload, err := json.Marshal(appDetailResponse{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var response map[string]any
+	if err := json.Unmarshal(payload, &response); err != nil {
+		t.Fatal(err)
+	}
+	for _, field := range []string{"clusterRole", "localeManifest", "gitopsEngine"} {
+		if _, exists := response[field]; exists {
+			t.Errorf("app detail response still contains removed field %q", field)
+		}
+	}
+}
