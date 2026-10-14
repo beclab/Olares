@@ -1,0 +1,9 @@
+Service directory
+
+This is a fictional example for learning TrustGraph.
+
+Identity API provides customer sign-in. The Identity team owns Identity API, and Maya Patel is its technical lead. Identity API is undergoing a database migration and will be unavailable to the November releases until the migration finishes.
+
+Billing API provides subscription management and subscription records. The Billing team owns Billing API, and Noah Garcia is its technical lead. Billing API depends on Identity API to authorize requests. Billing API cannot serve the November releases until the Identity API migration finishes.
+
+Search API provides search for public help articles. The Search team owns Search API, and Leo Martin is its technical lead. Search API operates independently of Identity API and Billing API.
