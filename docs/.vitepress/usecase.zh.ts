@@ -434,13 +434,6 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "Pterodactyl Panel",
               link: "/zh/use-cases/pterodactyl",
-              collapsed: true,
-              items: [
-                {
-                  text: "验收检查清单",
-                  link: "/zh/use-cases/pterodactyl-test-cases",
-                },
-              ],
             },
             {
               text: "Steam",

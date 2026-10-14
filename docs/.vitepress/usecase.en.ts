@@ -434,13 +434,6 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "Pterodactyl Panel",
               link: "/use-cases/pterodactyl",
-              collapsed: true,
-              items: [
-                {
-                  text: "Validation checklist",
-                  link: "/use-cases/pterodactyl-test-cases",
-                },
-              ],
             },
             {
               text: "Steam",

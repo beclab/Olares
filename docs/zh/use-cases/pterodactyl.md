@@ -6,8 +6,8 @@ head:
     - name: keywords
       content: "Olares, Pterodactyl Panel, Wings, Terraria, TShock, 游戏服务器, 备份, 服务器管理"
 app_version: "0.0.12"
-doc_version: "2.0"
-doc_updated: "2026-10-13"
+doc_version: "2.1"
+doc_updated: "2026-10-14"
 ---
 
 :::warning
@@ -36,7 +36,6 @@ Panel 管理通过 Wings 创建的游戏服务器。从 Olares Market 独立安�
 - 已从 Market 安装 MariaDB。
 - 有权限安装应用的 Olares 账户，以及用于配置节点和服务器的 Panel 管理员账户。
 - 可访问互联网，以下载游戏运行环境和官方 TShock 服务器文件。
-- 管理员提供的 TShock 6.2.1 Egg 和运行镜像，已针对此 Olares Wings 集成完成适配与验证。原版 Docker 镜像和 Egg 不一定兼容，具体要求见下文。
 - 与 Olares 位于同一局域网的电脑；进行玩家连接检查时，电脑上需要 Terraria 1.4.5.8。
 
 本地 Wings 集成属于实验性功能，其 Docker 服务使用特权容器。游戏模板必须兼容 UID/GID 1000 和已开放的网络端口。为长期使用的世界部署新模板前，应先完成兼容性检查。
@@ -75,13 +74,31 @@ Panel 管理通过 Wings 创建的游戏服务器。从 Olares Market 独立安�
 
 Pterodactyl 将游戏模板称为 Egg。Egg 定义运行镜像、安装脚本、启动命令和服务器变量。
 
-1. 向管理员获取已验证的 TShock Egg。参考版本为 [TShock 6.2.1 / Terraria 1.4.5.8](https://github.com/Pryaxis/TShock/releases/tag/v6.2.1)。
+根据设备的 CPU 架构选择 JSON 文件。Intel、AMD 的 x86-64 设备使用 amd64；aarch64 设备使用 ARM64。
 
-2. 在管理员界面中按需创建 Terraria 分类。打开 **Nests** > **Import Egg**，选择该分类和管理员提供的 JSON 文件，然后导入。
+| 架构 | 国内下载 | 国外备用下载 |
+| --- | --- | --- |
+| amd64 | [TShock 6.2.1 Egg](https://cdn.olares.cn/apps/demos/egg-tshock-6.2.1-olares-amd64.json) | [下载](https://cdn.olares.com/apps/demos/egg-tshock-6.2.1-olares-amd64.json) |
+| ARM64 | [TShock 6.2.1 Egg](https://cdn.olares.cn/apps/demos/egg-tshock-6.2.1-olares-arm64.json) | [下载](https://cdn.olares.com/apps/demos/egg-tshock-6.2.1-olares-arm64.json) |
 
-模板必须兼容 UID/GID 1000，将世界保存在 `worlds/`，将 TShock 配置和 SQLite 数据库保存在 `tshock/`，并监听分配的端口。附加插件放在 `plugins/`。本例保持 TShock REST API 关闭，无需额外的管理入口。
+1. 下载与设备架构匹配的 Egg JSON 文件。
 
-上游 TShock Docker 镜像使用自己的启动入口和目录，需要适配 Wings 的启动命令和可写服务器目录。历史验证使用了适配镜像；本文没有提供可直接下载的通用 Egg。请勿替换成未经验证的原版镜像。
+2. 在管理员界面中按需创建 Terraria 分类。打开 **Nests** > **Import Egg**，选择该分类和下载的 JSON 文件，然后导入。
+
+Egg 会自动下载并校验官方 [TShock 6.2.1 / Terraria 1.4.5.8 发行包](https://github.com/Pryaxis/TShock/releases/tag/v6.2.1)，使用转存到 Docker Hub beclab 的公开镜像和固定 tag。无需自行构建镜像或上传游戏程序。
+
+| 用途 | 固定镜像地址 |
+| --- | --- |
+| .NET 9 运行环境 | `beclab/parkervcp-yolks:sha256-cb0eb2542645dd54bd1c965cc0b7e71249b9f125f9812b21e1191abe7bf8e099` |
+| 安装工具 | `beclab/parkervcp-installers:sha256-a4fbf7119883a179a47b5e5fa1a60e7e0925f9b2ccbaf0548cfb261705304056` |
+
+安装脚本将发行包解压到服务器卷中的临时目录，避免 Wings 的小容量 `/tmp` 文件系统限制，并在结束后清理该目录。运行文件使用 UID/GID 1000。世界保存在 `worlds/`，TShock 配置和 SQLite 数据库保存在 `tshock/`，附加插件放在 `plugins/`。本例保持 TShock REST API 关闭。
+
+:::info 验证范围
+amd64 Egg 已通过 Panel 导入服务导入，并由 Olares 上的 Wings 完成安装。已验证启动、网页控制台命令、停止、重启、对外游戏协议和 Wings 备份恢复。beclab 转存镜像的配置和未压缩文件层标识与源镜像一致；转存后的 amd64 运行镜像和安装镜像也已在 Olares 上完成拉取与启动检查。
+
+ARM64 镜像架构、官方发行包及校验和已核对，但尚未在 ARM64 Olares 设备上运行验证。真实玩家加入、多人负载和第三方插件兼容性仍未验证。
+:::
 
 ### 设置服务器参数
 
@@ -89,7 +106,7 @@ Pterodactyl 将游戏模板称为 Egg。Egg 定义运行镜像、安装脚本、
 
 2. 在 **Server Owner** 中选择自己的账户，选择 **Olares Local Wings** 节点，并在 **Default Allocation** 中选择 `0.0.0.0:30000`。
 
-3. 选择导入的 TShock Egg 及已验证的运行镜像，使用以下小型验证服务器参数：
+3. 选择与设备架构匹配的 TShock Egg 及其列出的 .NET 9 运行镜像，使用以下小型验证服务器参数：
 
    | 字段 | 值 |
    | --- | --- |
@@ -101,13 +118,13 @@ Pterodactyl 将游戏模板称为 Egg。Egg 定义运行镜像、安装脚本、
    | 内部游戏端口 | `30000` |
    | 最大玩家数 | `2` |
 
-   在 Egg 启动参数中配置新建小型世界。这些参数用于功能验证，不代表推荐容量。变量名称以管理员提供的 Egg 为准。
+   本例保持 **Tshock Version** 为 `v6.2.1`、**World Size** 为 `1`、**World Name** 为 `OlaresFriends`、**Max Players** 为 `2`。这些参数用于功能验证，不代表推荐容量。
 
 4. 关闭 **Start Server when Installed**，创建服务器并等待安装完成。在 **Files** 中检查可写的 `worlds/`、`tshock/` 和 `plugins/` 目录。
 
 ### 启动并连接世界
 
-1. 打开 **Console**，点击 **Start**。首次启动需要生成世界，等待日志出现 `Listening on port 30000`。
+1. 打开 **Console**，点击 **Start**。首次启动需要生成世界，等待日志出现 `Server started`。
 
 2. 在控制台命令输入框中依次输入 `version` 和 `playing`，确认返回版本和在线玩家信息。TShock 控制台命令不需要游戏内使用的斜杠前缀。
 
@@ -162,7 +179,7 @@ Panel 子用户权限控制服务器管理操作，不替代游戏内部的玩�
 
 邀请玩家前，确认服务器能够启动、接受控制台命令、在正常重启后保留世界，并能从已完成的备份中恢复。完成真实玩家加入检查，并只授予用户所需权限。
 
-详细验收步骤、预期结果、已有证据和覆盖限制见 [Pterodactyl 验收检查清单](pterodactyl-test-cases.md)。基础检查通过不代表已验证多人容量或任意模组、插件的兼容性。
+管理流程检查通过不代表已验证多人容量或任意模组、插件的兼容性。
 
 ## 常见问题
 
@@ -186,6 +203,5 @@ Panel 可能显示内部端口分配 `0.0.0.0:30000`。玩家应使用 Olares �
 
 ## 了解更多
 
-- [Pterodactyl 验收检查清单](pterodactyl-test-cases.md)：管理、游戏运行、权限和恢复的可重复验证步骤。
 - [TShock 文档](https://github.com/Pryaxis/TShock/tree/v6.2.1/docs)：游戏命令、启动参数和权限。
 - [Pterodactyl 文档](https://pterodactyl.io/)：上游管理功能和 Egg 配置说明。

@@ -6,8 +6,8 @@ head:
     - name: keywords
       content: "Olares, Pterodactyl Panel, Wings, Terraria, TShock, game server, backup, server management"
 app_version: "0.0.12"
-doc_version: "2.0"
-doc_updated: "2026-10-13"
+doc_version: "2.1"
+doc_updated: "2026-10-14"
 ---
 
 # Manage game servers with Pterodactyl Panel
@@ -32,7 +32,6 @@ Panel manages game servers created through Wings. Applications installed separat
 - MariaDB installed from Market.
 - An Olares account that can install applications and a Panel administrator account for node and server configuration.
 - Internet access for downloading the game runtime and official TShock server files.
-- A TShock 6.2.1 Egg and runtime image already adapted and validated by your administrator for this Olares Wings integration. Stock Docker images and Eggs are not automatically compatible; see the template requirements below.
 - A computer on the same local network as Olares, with Terraria 1.4.5.8 for a player connection check.
 
 The local Wings integration is experimental. Its Docker service uses a privileged container. Game templates must be compatible with UID/GID 1000 and the available network ports. Check each new template before using it for a persistent world.
@@ -71,13 +70,31 @@ Replace `OLARES_LAN_IP` with your device's actual local address. The Panel HTTPS
 
 Pterodactyl calls a game template an Egg. An Egg defines the runtime image, installation script, startup command, and server variables.
 
-1. Obtain the validated TShock Egg from your administrator. The reference versions are [TShock 6.2.1 for Terraria 1.4.5.8](https://github.com/Pryaxis/TShock/releases/tag/v6.2.1).
+Choose the JSON for your device's CPU architecture. Intel and AMD x86-64 devices use amd64; aarch64 devices use ARM64.
 
-2. In the administrator area, create a Terraria nest if needed. Open **Nests** > **Import Egg**, select that nest and the supplied JSON file, and import it.
+| Architecture | Download | China mirror |
+| --- | --- | --- |
+| amd64 | [TShock 6.2.1 Egg](https://cdn.olares.com/apps/demos/egg-tshock-6.2.1-olares-amd64.json) | [Download](https://cdn.olares.cn/apps/demos/egg-tshock-6.2.1-olares-amd64.json) |
+| ARM64 | [TShock 6.2.1 Egg](https://cdn.olares.com/apps/demos/egg-tshock-6.2.1-olares-arm64.json) | [Download](https://cdn.olares.cn/apps/demos/egg-tshock-6.2.1-olares-arm64.json) |
 
-The template must use UID/GID 1000, persist the world in `worlds/` and TShock configuration and its SQLite database in `tshock/`, and listen on the allocated port. Additional plugins belong in `plugins/`. Keep the TShock REST API disabled for this example; it does not require another management endpoint.
+1. Download the matching Egg JSON file.
 
-The upstream TShock Docker image uses its own entrypoint and directories. It requires adaptation for Wings' startup command and writable server directory. The historical verification used an adapted image; it is not a downloadable general-purpose Egg provided by this guide. Do not substitute an unverified stock image.
+2. In the administrator area, create a Terraria nest if needed. Open **Nests** > **Import Egg**, select that nest and the downloaded JSON file, and import it.
+
+The Egg downloads and verifies the official [TShock 6.2.1 release for Terraria 1.4.5.8](https://github.com/Pryaxis/TShock/releases/tag/v6.2.1). It uses public Docker Hub images mirrored under beclab with fixed tags. You do not need to build an image or upload game binaries yourself.
+
+| Purpose | Fixed image reference |
+| --- | --- |
+| .NET 9 runtime | `beclab/parkervcp-yolks:sha256-cb0eb2542645dd54bd1c965cc0b7e71249b9f125f9812b21e1191abe7bf8e099` |
+| Installation tools | `beclab/parkervcp-installers:sha256-a4fbf7119883a179a47b5e5fa1a60e7e0925f9b2ccbaf0548cfb261705304056` |
+
+The installer stages the release archive in the server volume rather than Wings' small `/tmp` filesystem, then removes its staging directory. Runtime files use UID/GID 1000. Worlds are stored in `worlds/`, TShock configuration and its SQLite database in `tshock/`, and additional plugins in `plugins/`. The example keeps the TShock REST API disabled.
+
+:::info Verification scope
+The amd64 Egg was imported through Panel's import service and installed by Wings on Olares. Startup, browser console commands, shutdown, restart, the exposed game protocol, and Wings backup recovery were verified. The beclab mirrors match the original image configurations and uncompressed layer identifiers; the mirrored amd64 runtime and installer were also pulled and started on Olares.
+
+ARM64 image manifests, the official release archive, and its checksum were checked, but the ARM64 Egg has not been tested on an ARM64 Olares device. Real player joins, multiplayer load, and third-party plugin compatibility remain unverified.
+:::
 
 ### Set the server configuration
 
@@ -85,7 +102,7 @@ The upstream TShock Docker image uses its own entrypoint and directories. It req
 
 2. Select your account in **Server Owner**, choose **Olares Local Wings**, and select `0.0.0.0:30000` in **Default Allocation**.
 
-3. Choose the imported TShock Egg and its validated runtime image. Use these small verification-server settings:
+3. Choose the imported architecture-specific TShock Egg and its listed .NET 9 runtime image. Use these small verification-server settings:
 
    | Field | Value |
    | --- | --- |
@@ -97,13 +114,13 @@ The upstream TShock Docker image uses its own entrypoint and directories. It req
    | Internal game port | `30000` |
    | Maximum players | `2` |
 
-   Configure a small new world in the Egg's startup settings. These values are a verification profile, not a capacity recommendation. Variable labels depend on the supplied Egg.
+   Keep **Tshock Version** at `v6.2.1`, **World Size** at `1`, **World Name** at `OlaresFriends`, and **Max Players** at `2` for this example. These values are a verification profile, not a capacity recommendation.
 
 4. Leave **Start Server when Installed** disabled, create the server, and wait for installation to finish. Check **Files** for the writable `worlds/`, `tshock/`, and `plugins/` directories.
 
 ### Start and connect to the world
 
-1. Open **Console** and click **Start**. Allow the first start to generate the world. Wait for the log to report `Listening on port 30000`.
+1. Open **Console** and click **Start**. Allow the first start to generate the world. Wait for the log to report `Server started`.
 
 2. Enter `version`, then `playing` in the console command field. Confirm the version and online-player response. TShock console commands do not need the in-game slash prefix.
 
@@ -158,7 +175,7 @@ Game-server backups cover that server's files. They do not back up Panel's users
 
 Before inviting players, check that the server starts, accepts a console command, retains its world after a normal restart, and can recover from a completed backup. Perform a real player join check and grant users only the permissions they need.
 
-Use the [Pterodactyl validation checklist](pterodactyl-test-cases.md) for detailed acceptance cases, expected results, recorded evidence, and coverage limits. Basic checks do not establish multiplayer capacity or compatibility with arbitrary mods and plugins.
+These management checks do not establish multiplayer capacity or compatibility with arbitrary mods and plugins.
 
 ## FAQs
 
@@ -182,6 +199,5 @@ The initialization values create the first administrator. They do not overwrite 
 
 ## Learn more
 
-- [Pterodactyl validation checklist](pterodactyl-test-cases.md): Repeatable checks for administration, game operation, permissions, and recovery.
 - [TShock documentation](https://github.com/Pryaxis/TShock/tree/v6.2.1/docs): Game commands, startup parameters, and permissions.
 - [Pterodactyl documentation](https://pterodactyl.io/): Upstream administration and Egg configuration.
