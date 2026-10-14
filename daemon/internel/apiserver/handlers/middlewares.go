@@ -95,7 +95,7 @@ func (h *Handlers) RequireAuthorizationOrOwnerSignature(next fiber.Handler) fibe
 	}
 }
 
-func (h *Handlers) RequireOwner(next func(ctx *fiber.Ctx) error) func(ctx *fiber.Ctx) error {
+func (h *Handlers) requireOwner(next func(ctx *fiber.Ctx) error, allowAnonymous bool) func(ctx *fiber.Ctx) error {
 	return func(ctx *fiber.Ctx) error {
 		userData, ok := ctx.Context().UserValue(client.USER_CONTEXT).(*utils.ValidToken)
 		if ok && userData != nil {
@@ -131,6 +131,10 @@ func (h *Handlers) RequireOwner(next func(ctx *fiber.Ctx) error) func(ctx *fiber
 
 		if envOlaresID == "" {
 			if isInstalled, err := state.IsTerminusInstalled(); err != nil {
+				if allowAnonymous {
+					return next(ctx)
+				}
+
 				return h.ErrJSON(ctx, http.StatusInternalServerError, fmt.Sprintf("failed to check if Olares is installed: %v", err))
 			} else if !isInstalled {
 				// Nothing is installed, so there is no owner to be yet: this is
@@ -150,6 +154,14 @@ func (h *Handlers) RequireOwner(next func(ctx *fiber.Ctx) error) func(ctx *fiber
 
 		return next(ctx)
 	}
+}
+
+func (h *Handlers) RequireOwner(next func(ctx *fiber.Ctx) error) func(ctx *fiber.Ctx) error {
+	return h.requireOwner(next, false)
+}
+
+func (h *Handlers) RequireSuperAdminIfExists(next func(ctx *fiber.Ctx) error) func(ctx *fiber.Ctx) error {
+	return h.requireOwner(next, true)
 }
 
 func (h *Handlers) RunCommand(next func(ctx *fiber.Ctx, cmd commands.Interface) error,

@@ -31,7 +31,7 @@ func init() {
 			handlers.RunCommand(handlers.PostTerminusInit, install.New)))
 
 	cmd.Post("/uninstall", handlers.RequireSignature(
-		handlers.RequireOwner(
+		handlers.RequireSuperAdminIfExists(
 			handlers.WaitServerRunning(
 				handlers.RunCommand(handlers.PostTerminusUninstall, uninstall.New)))))
 
@@ -48,12 +48,12 @@ func init() {
 		handlers.RequireOwner(handlers.ConfirmOlaresUpgrade)))
 
 	cmd.Post("/reboot", handlers.RequireSignature(
-		handlers.RequireOwner(
+		handlers.RequireSuperAdminIfExists(
 			handlers.WaitServerRunning(
 				handlers.RunCommand(handlers.PostReboot, reboot.New)))))
 
 	cmd.Post("/shutdown", handlers.RequireSignature(
-		handlers.RequireOwner(
+		handlers.RequireSuperAdminIfExists(
 			handlers.WaitServerRunning(
 				handlers.RunCommand(handlers.PostShutdown, shutdown.New)))))
 
@@ -67,7 +67,7 @@ func init() {
 	// cluster a credential good for every route that user can reach — a far
 	// wider grant than the one operation being carried out.
 	cmd.Post("/power-node", handlers.RequireSignature(
-		handlers.RequireOwner(handlers.PostPowerNode)))
+		handlers.RequireSuperAdminIfExists(handlers.PostPowerNode)))
 
 	// The same hop for every other cluster operation. Types that registered
 	// themselves as needing a signature are admitted the same way power-node
@@ -80,7 +80,7 @@ func init() {
 	// worker serves power-node and nothing else, so that one's request JSON
 	// cannot grow; see clusterop.ClusterOperationPath.
 	cmd.Post("/cluster-operation", handlers.RequireSignatureForRegisteredClusterOp(
-		handlers.RequireOwner(handlers.PostClusterOperationNode)))
+		handlers.RequireSuperAdminIfExists(handlers.PostClusterOperationNode)))
 
 	// Wi-Fi setup is available without a signature, including before activation.
 	cmd.Post("/connect-wifi", handlers.WaitServerRunning(
@@ -129,7 +129,7 @@ func init() {
 				handlers.RunCommand(handlers.PostUmountSmbInCluster, umountsmb.New)))))
 
 	cmd.Post("/ssh-password", handlers.RequireSignature(
-		handlers.RequireOwner(
+		handlers.RequireSuperAdminIfExists(
 			handlers.WaitServerRunning(
 				handlers.RunCommand(handlers.PostSSHPassword, sshpassword.New)))))
 
