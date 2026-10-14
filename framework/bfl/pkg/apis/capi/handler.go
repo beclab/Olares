@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"bytetrade.io/web3os/bfl/internal/log"
 	"bytetrade.io/web3os/bfl/pkg/apis"
 	"bytetrade.io/web3os/bfl/pkg/apiserver/authn"
 	"bytetrade.io/web3os/bfl/pkg/apiserver/runtime"
@@ -194,6 +195,7 @@ func (h *handler) appDetail(req *restful.Request, resp *restful.Response) {
 	if identity.Token != "" {
 		detail.User.GlobalRules = h.globalRules(req.Request.Context(), identity.Token, identity.Username, clusterRole)
 	}
+	log.Infow("appDetail response", "username", identity.Username, "detail", detail)
 	writeJSON(resp, http.StatusOK, detail)
 }
 
