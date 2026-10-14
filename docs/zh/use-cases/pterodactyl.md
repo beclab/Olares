@@ -1,12 +1,12 @@
 ---
 outline: [2, 3]
-description: 使用 Pterodactyl Panel 在 Olares 上创建和管理 Terraria/TShock 服务器，配置控制台、计划任务、访问权限和备份恢复。
+description: 使用 Pterodactyl Panel 在 Olares 上创建 Terraria 游戏服务器，与好友联机，并管理服务器文件、访问权限、定时存档和备份。
 head:
   - - meta
     - name: keywords
       content: "Olares, Pterodactyl Panel, Wings, Terraria, TShock, 游戏服务器, 备份, 服务器管理"
 app_version: "0.0.12"
-doc_version: "2.1"
+doc_version: "2.2"
 doc_updated: "2026-10-14"
 ---
 
@@ -16,29 +16,38 @@ doc_updated: "2026-10-14"
 
 # 使用 Pterodactyl Panel 管理游戏服务器
 
-Pterodactyl Panel 是开源的游戏服务器管理应用，可通过浏览器集中管理控制台、文件、计划任务、备份和访问权限。Wings 负责运行游戏进程，并处理服务器文件与备份。Wings 没有独立的网页管理界面；节点配置与游戏服务器管理统一在 Panel 中完成。
+Pterodactyl Panel 是一款开源的游戏服务器管理应用。在 Olares 上，你可以通过浏览器启动和停止服务器、管理文件、邀请好友协助管理，以及备份游戏世界。
 
-本文以在本地 Wings 节点上新建 Terraria 1.4.5.8 + TShock 6.2.1 服务器为例。TShock 为 Terraria 提供服务器管理和插件支持。
+本文以 Terraria（泰拉瑞亚）为例。这是一款沙盒冒险游戏，玩家可以在同一个世界里探索、建造和战斗。你将在 Olares 上运行游戏服务器，再从自己电脑上的 Terraria 进入这个世界。
 
-:::info Panel 可以管理哪些服务器？
-Panel 管理通过 Wings 创建的游戏服务器。从 Olares Market 独立安装的应用，包括 Minecraft，仍由 Olares 管理，不会出现在 Panel 中。安装 Panel 不会自动发现或接管这些应用。迁移前请先阅读[已有 Minecraft 应用的说明](#panel-能管理已有的-minecraft-应用吗)。
+## 认识各个组件
+
+配置过程中会遇到以下名称：
+
+| 名称 | 在本文中的作用 |
+| --- | --- |
+| Terraria | 你和好友玩的游戏。每位玩家在自己的电脑上运行游戏，连接到 Olares 上的同一个服务器。 |
+| TShock | 为 Terraria 服务器增加管理命令、玩家权限和插件支持。本文创建的服务器会安装 TShock。 |
+| Pterodactyl Panel | 创建和管理服务器的网页界面。 |
+| Wings | Pterodactyl 在 Olares 上运行的后台服务，接收 Panel 的指令并运行游戏服务器。你通过 Panel 管理它。 |
+| TShock Egg | 导入 Panel 的 JSON 模板，告诉 Panel 如何安装和启动带有 TShock 的 Terraria 服务器，包括使用哪个运行镜像和哪些设置。 |
+
+你在 Panel 中导入 Egg 并创建服务器，Wings 负责在 Olares 上运行它。玩家通过 Terraria 进入游戏，你则通过 Panel 管理服务器。
+
+:::info 已从 Market 安装 Minecraft？
+Panel 管理通过 Wings 创建的服务器。从 Market 安装的 Minecraft 可以继续通过 Olares 管理。迁移方式见[已有 Minecraft 应用的说明](#panel-能管理已有的-minecraft-应用吗)。
 :::
-
-## 学习目标
-
-- 配置本地节点和游戏端口分配。
-- 使用兼容模板创建并运行 Terraria/TShock 服务器。
-- 授予有限访问权限并配置例行任务。
-- 备份世界并检查恢复后的服务器。
 
 ## 前提条件
 
 - 已从 Market 安装 MariaDB。
-- 有权限安装应用的 Olares 账户，以及用于配置节点和服务器的 Panel 管理员账户。
-- 可访问互联网，以下载游戏运行环境和官方 TShock 服务器文件。
-- 与 Olares 位于同一局域网的电脑；进行玩家连接检查时，电脑上需要 Terraria 1.4.5.8。
+- 有权限安装应用的 Olares 账户。
+- 可访问互联网，以下载服务器软件。
+- 与 Olares 位于同一局域网的电脑，已安装 Terraria 1.4.5.8。TShock 6.2.1 支持此游戏版本。
 
-本地 Wings 集成属于实验性功能，其 Docker 服务使用特权容器。游戏模板必须兼容 UID/GID 1000 和已开放的网络端口。为长期使用的世界部署新模板前，应先完成兼容性检查。
+:::info 实验性集成
+本地 Wings 集成属于实验性功能。请使用下文提供的 Olares 模板，其中已包含本例所需的设置和运行镜像。
+:::
 
 ## 安装 Pterodactyl Panel
 
@@ -49,157 +58,190 @@ Panel 管理通过 Wings 创建的游戏服务器。从 Olares Market 独立安�
 
 ## 配置本地节点
 
+节点是运行 Wings 和游戏服务器的机器。本文中，节点就是你的 Olares 设备，在 Panel 中显示为 **Olares Local Wings**。
+
 1. 从启动台打开 Pterodactyl Panel，使用安装时设置的用户名和密码登录。
 
-2. 进入管理员界面，打开 **Nodes** > **Olares Local Wings** > **About**。确认 **Daemon Version** 和 **System Information** 已加载。如果始终无法显示，应先排查节点连接，再创建服务器。
+2. 进入管理员界面，打开 **Nodes** > **Olares Local Wings** > **About**。等待 **Daemon Version** 和 **System Information** 加载完成，再创建服务器。
 
-   ![本地 Wings 节点显示版本和可用资源](https://cdn.olares.com/images/2026/10/7e42f94f2ec59d6abab793d424308add.png#bordered)
+   ![本地 Wings 节点显示版本和可用资源](/images/manual/use-cases/pterodactyl-local-node.png#bordered)
 
 3. 打开 **Allocation**，创建 IP 地址为 `0.0.0.0`、端口为 `30000` 的端口分配。
 
-端口分配指定 Wings 内部供服务器使用的端口。应用将该端口映射到 Olares 设备的 TCP `43000`。仅在 Panel 中增加一个端口分配，不会同时在设备上开放新的端口。
+   <!-- ![创建游戏端口分配](/images/manual/use-cases/pterodactyl-create-allocation.png#bordered) -->
 
-| 用途 | 地址或端口 | 使用方式 |
-| --- | --- | --- |
-| Panel | 应用入口 | 从启动台打开；入口 URL 可在**设置** > **应用** > **Pterodactyl Panel** > **入口**中查看 |
-| Terraria | Olares 局域网 IP、TCP `43000` | 在 Terraria 中通过 IP 加入，分别输入 IP 和端口 `43000` |
-| 内部端口分配 | `0.0.0.0:30000` | 创建服务器时选择，不用于玩家连接 |
-| SFTP | Olares 局域网 IP、TCP `42022` | 使用 SFTP 客户端；用户名从服务器的 **Settings** > **SFTP Details** 复制 |
+端口分配指定 Wings 内部供服务器使用的端口。应用将该端口映射到 Olares 设备的 TCP `43000`。
 
-将 `OLARES_LAN_IP` 替换为设备的实际局域网地址。Panel 的 HTTPS 入口用于浏览器管理，游戏客户端和 SFTP 客户端使用各自的协议与端口。本文覆盖局域网访问；从其他网络访问时，需要单独配置并验证通往游戏端口的网络路径。
+玩家使用 Olares 设备的局域网 IP 地址和端口 `43000` 加入游戏，通过 Panel 的网页地址管理服务器。
 
-## 创建 Terraria/TShock 服务器
+## 创建 Terraria 服务器
 
-### 导入兼容模板
+### 下载并导入 Egg
 
-Pterodactyl 将游戏模板称为 Egg。Egg 定义运行镜像、安装脚本、启动命令和服务器变量。
+根据 Olares 设备的 CPU 架构选择 Egg。Intel、AMD 的 x86-64 设备使用 amd64，采用 aarch64 处理器的设备使用 ARM64。
 
-根据设备的 CPU 架构选择 JSON 文件。Intel、AMD 的 x86-64 设备使用 amd64；aarch64 设备使用 ARM64。
-
-| 架构 | 国内下载 | 国外备用下载 |
-| --- | --- | --- |
-| amd64 | [TShock 6.2.1 Egg](https://cdn.olares.cn/apps/demos/egg-tshock-6.2.1-olares-amd64.json) | [下载](https://cdn.olares.com/apps/demos/egg-tshock-6.2.1-olares-amd64.json) |
-| ARM64 | [TShock 6.2.1 Egg](https://cdn.olares.cn/apps/demos/egg-tshock-6.2.1-olares-arm64.json) | [下载](https://cdn.olares.com/apps/demos/egg-tshock-6.2.1-olares-arm64.json) |
-
-1. 下载与设备架构匹配的 Egg JSON 文件。
-
-2. 在管理员界面中按需创建 Terraria 分类。打开 **Nests** > **Import Egg**，选择该分类和下载的 JSON 文件，然后导入。
-
-Egg 会自动下载并校验官方 [TShock 6.2.1 / Terraria 1.4.5.8 发行包](https://github.com/Pryaxis/TShock/releases/tag/v6.2.1)，使用转存到 Docker Hub beclab 的公开镜像和固定 tag。无需自行构建镜像或上传游戏程序。
-
-| 用途 | 固定镜像地址 |
+| 架构 | 下载 |
 | --- | --- |
-| .NET 9 运行环境 | `beclab/parkervcp-yolks:sha256-cb0eb2542645dd54bd1c965cc0b7e71249b9f125f9812b21e1191abe7bf8e099` |
-| 安装工具 | `beclab/parkervcp-installers:sha256-a4fbf7119883a179a47b5e5fa1a60e7e0925f9b2ccbaf0548cfb261705304056` |
+| amd64 | [TShock 6.2.1 Egg](https://cdn.olares.cn/apps/demos/egg-tshock-6.2.1-olares-amd64.json) |
+| ARM64 | [TShock 6.2.1 Egg](https://cdn.olares.cn/apps/demos/egg-tshock-6.2.1-olares-arm64.json) |
 
-安装脚本将发行包解压到服务器卷中的临时目录，避免 Wings 的小容量 `/tmp` 文件系统限制，并在结束后清理该目录。运行文件使用 UID/GID 1000。世界保存在 `worlds/`，TShock 配置和 SQLite 数据库保存在 `tshock/`，附加插件放在 `plugins/`。本例保持 TShock REST API 关闭。
-
-:::info 验证范围
-amd64 Egg 已通过 Panel 导入服务导入，并由 Olares 上的 Wings 完成安装。已验证启动、网页控制台命令、停止、重启、对外游戏协议和 Wings 备份恢复。beclab 转存镜像的配置和未压缩文件层标识与源镜像一致；转存后的 amd64 运行镜像和安装镜像也已在 Olares 上完成拉取与启动检查。
-
-ARM64 镜像架构、官方发行包及校验和已核对，但尚未在 ARM64 Olares 设备上运行验证。真实玩家加入、多人负载和第三方插件兼容性仍未验证。
+:::info ARM64 支持
+ARM64 模板属于实验性功能。请先在 ARM64 Olares 设备上创建新世界试用。
 :::
+
+1. 从上表下载与设备架构匹配的 Egg JSON 文件。
+
+2. 在管理员界面中打开 **Nests**。Nest 用于将相关模板归为一组。需要添加 Terraria 分类时，点击 **Create New**，将名称设为 `Terraria`。
+
+   ![Nests 页面中的 Create New 和 Import Egg 按钮](/images/manual/use-cases/pterodactyl-nests.png#bordered)
+
+3. 点击 **Import Egg**，选择 Terraria 分类和下载的 JSON 文件，然后导入。
+
+   <!-- ![将 TShock Egg 导入 Terraria 分类](/images/manual/use-cases/pterodactyl-import-egg.png#bordered) -->
+
+Egg 已包含镜像设置。创建服务器时，Wings 会自动下载镜像，并安装适用于 Terraria 1.4.5.8 的 TShock 6.2.1。
 
 ### 设置服务器参数
 
-1. 打开 **Servers** > **Create New**，输入服务器名称，例如 `Terraria Friends`。
+1. 在管理员界面的左侧导航中打开 **Users**，根据用户名找到自己的 Panel 账户，复制该账户显示的邮箱地址。
 
-2. 在 **Server Owner** 中选择自己的账户，选择 **Olares Local Wings** 节点，并在 **Default Allocation** 中选择 `0.0.0.0:30000`。
+   <!-- ![在 Users 中查看 Panel 账户的邮箱地址](/images/manual/use-cases/pterodactyl-find-account-email.png#bordered) -->
 
-3. 选择与设备架构匹配的 TShock Egg 及其列出的 .NET 9 运行镜像，使用以下小型验证服务器参数：
+2. 打开 **Servers** > **Create New**，输入服务器名称，例如 `Terraria Friends`。
+
+3. 在 **Server Owner** 中输入刚才复制的邮箱地址，再从搜索结果中选择自己的账户。
+
+   <!-- ![使用邮箱地址搜索并选择服务器所有者](/images/manual/use-cases/pterodactyl-select-server-owner.png#bordered) -->
+
+4. 在 **Node** 中选择 **Olares Local Wings**，在 **Default Allocation** 中选择 `0.0.0.0:30000`。 游戏使用此端口分配中的 `30000` 端口。
+
+5. 选择已导入的 Egg。amd64 对应 **TShock 6.2.1 (Olares)**，ARM64 对应 **TShock 6.2.1 (Olares ARM64)**。保留其中列出的 .NET 9 运行镜像，为示例世界设置以下资源：
 
    | 字段 | 值 |
    | --- | --- |
-   | CPU Limit | `100` percent |
+   | CPU Limit | `100`% |
    | Memory | `1024` MiB |
    | Disk Space | `1024` MiB |
    | Backup Limit | `2` |
-   | 游戏 / TShock | `1.4.5.8` / `6.2.1` |
-   | 内部游戏端口 | `30000` |
-   | 最大玩家数 | `2` |
 
-   本例保持 **Tshock Version** 为 `v6.2.1`、**World Size** 为 `1`、**World Name** 为 `OlaresFriends`、**Max Players** 为 `2`。这些参数用于功能验证，不代表推荐容量。
+   :::tip 调整服务器资源
+   使用更大的世界、增加玩家人数或安装更多插件时，请根据服务器需求提高 CPU、内存和磁盘配额。
+   :::
 
-4. 关闭 **Start Server when Installed**，创建服务器并等待安装完成。在 **Files** 中检查可写的 `worlds/`、`tshock/` 和 `plugins/` 目录。
+6. 保留以下 Egg 启动设置，创建一个可供两名玩家游玩的小型世界：
 
-### 启动并连接世界
+   | 字段 | 值 | 用途 |
+   | --- | --- | --- |
+   | Tshock Version | `v6.2.1` | 安装 TShock 6.2.1。 |
+   | World Size | `1` | 创建小型世界。 |
+   | World Name | `OlaresFriends` | 设置世界及其存档文件的名称。 |
+   | Max Players | `2` | 最多允许两名玩家加入。 |
+
+   <!-- ![配置 TShock 服务器资源和启动参数](/images/manual/use-cases/pterodactyl-configure-server.png#bordered) -->
+
+7. 关闭 **Start Server when Installed**，创建服务器并等待安装完成。在 **Files** 中可以找到 `worlds/`、`tshock/` 和 `plugins/` 目录。世界文件会在首次启动时生成。
+
+### 启动并进入世界
+
+本文覆盖局域网联机。从其他网络连接时，需要网络管理员配置通往游戏端口的网络路径。
 
 1. 打开 **Console**，点击 **Start**。首次启动需要生成世界，等待日志出现 `Server started`。
 
-2. 在控制台命令输入框中依次输入 `version` 和 `playing`，确认返回版本和在线玩家信息。TShock 控制台命令不需要游戏内使用的斜杠前缀。
+   <!-- ![控制台显示 Terraria 服务器已启动](/images/manual/use-cases/pterodactyl-start-server.png#bordered) -->
 
-3. 在同一局域网的电脑上打开 Terraria 1.4.5.8，选择 **Multiplayer** > **Join via IP**。选择角色，输入 `OLARES_LAN_IP`，在端口提示中输入 `43000`，确认角色能够进入世界。
+2. 在控制台命令输入框中依次输入 `version` 和 `playing`，查看版本和在线玩家信息。在控制台中直接输入命令名称即可。
 
-协议握手成功只能说明服务可达。历史验证没有包含真实玩家加入；邀请玩家前需要完成此项检查。
+3. 在同一局域网的电脑上打开 Terraria 1.4.5.8，选择 **Multiplayer** > **Join via IP**，然后选择自己的角色。
+
+4. 输入 Olares 设备的局域网 IP 地址，在端口提示中输入 `43000`。连接成功后，角色会进入共享世界。同一局域网的好友可以使用相同的 IP 地址和端口加入。
+
+   <!-- ![Terraria 角色进入共享世界](/images/manual/use-cases/pterodactyl-join-world.png#bordered) -->
 
 ## 管理服务器
 
 ### 使用控制台和文件管理
 
-通过 **Console** 执行命令，通过 **Start**、**Restart** 和 **Stop** 控制生命周期。正常关服时使用 **Stop**，让游戏保存世界；仅在进程无响应时考虑强制终止。
+通过 **Console** 发送游戏命令，通过 **Start**、**Restart** 和 **Stop** 按钮控制服务器。正常关服时使用 **Stop**，让游戏保存世界。
 
-在 **Files** 中查看 `worlds/` 和 `tshock/`。修改 `tshock/config.json` 前先停止服务器，保存后再启动。游戏端口保持为 `30000`；启动命令中的参数可能覆盖配置文件。仅将版本兼容、已在可删除服务器上验证的插件放入 `plugins/`。
+在 **Files** 中浏览 `worlds/` 中的世界文件和 `tshock/` 中的 TShock 设置。修改 `tshock/config.json` 时，先停止服务器，编辑并保存文件，再重新启动。内部游戏端口保持为 `30000`，与端口分配一致。
 
+使用 SFTP 客户端传输文件：
 
-使用 SFTP 时，从 **Settings** > **SFTP Details** 复制服务器专属用户名，连接 Olares 局域网 IP 的 `42022` 端口，并使用对应 Panel 账户的密码。传输世界前，先用一个可删除的小文本文件检查访问是否正常。不要使用普通 FTP。
+1. 打开服务器的 **Settings** > **SFTP Details**，复制服务器专属用户名。
 
-### 配置例行命令
+2. 在 SFTP 客户端中选择 SFTP，输入 Olares 设备的局域网 IP 地址和端口 `42022`。
 
-1. 打开 **Schedules** 并创建计划任务。设置清晰的名称，以及分钟、小时、日、月和星期字段。
+3. 输入复制的用户名和你的 Panel 账户密码，然后连接。
 
-2. 添加命令任务，内容为 `playing`。本例启用 **Only When Server Is Online**。
+附加 TShock 插件放在 `plugins/` 中。选择与你的 TShock 版本兼容的插件，并先在另一台服务器上试用，再添加到与好友共用的世界。
 
-3. 首次验证时，将五个时间字段均设为 `*`，每分钟运行一次。在 **Console** 中确认出现在线玩家信息后，关闭计划任务或改为实际需要的执行频率。
+### 定时保存世界
 
-选择执行时间前先确认计划任务使用的时区。不要让临时的每分钟任务持续运行。
+你可以让 Panel 每 30 分钟发送一次 TShock 的 `save` 命令，保存游戏世界。
+
+1. 打开 **Schedules**，点击 **Create schedule**。
+
+   ![创建计划任务的表单](/images/manual/use-cases/pterodactyl-create-schedule.png#bordered)
+
+2. 在 **Schedule Name** 中输入 `Save world`。将 **Minute** 设为 `*/30`，将 **Hour**、**Day of Month**、**Month** 和 **Day of Week** 均设为 `*`。
+
+3. 启用 **Only When Server Is Online** 和 **Schedule Enabled**，然后保存计划任务。
+
+4. 添加一项命令任务，将命令设为 `save`。保存任务，并保持计划任务启用。
+
+   <!-- ![设置每 30 分钟保存世界的计划任务](/images/manual/use-cases/pterodactyl-schedule-save.png#bordered) -->
+
+这会保存当前世界文件。要保留可供日后恢复的独立副本，请[创建备份](#创建和恢复备份)。
 
 ### 授予有限访问权限
 
-打开服务器的 **Users**，添加子用户。仅授予职责所需权限，例如查看控制台或执行指定文件操作。使用独立的浏览器会话登录该账户，分别验证一项允许操作和一项禁止操作。
+要让好友协助管理服务器，打开 **Users**，将对方添加为子用户。选择对方所需的权限，例如查看控制台或管理文件。一起玩的好友通过 Terraria 加入游戏。
 
-Panel 子用户权限控制服务器管理操作，不替代游戏内部的玩家权限或插件权限组。
+在 Panel 中设置服务器管理权限，在 TShock 中设置游戏内的玩家权限。
 
 ### 创建和恢复备份
 
 1. 停止服务器，等待状态变为离线。
 
-2. 打开 **Backups**，点击 **Create backup**，使用包含用途或日期的备份名称。等待备份完成；已提交请求或正在排队不代表备份已完成。
+2. 打开 **Backups**，点击 **Create backup**，使用包含用途或日期的备份名称。将 `tshock/` 目录纳入备份，以保留 TShock 设置、游戏账户和权限组。等待备份完成后，再修改服务器。
 
-3. 修改前保留一份已完成的备份。恢复时保持服务器离线，找到目标备份并选择 **Restore**，检查文件替换选项后确认操作。
+   <!-- ![Panel 中已完成的游戏服务器备份](/images/manual/use-cases/pterodactyl-create-backup.png#bordered) -->
 
-4. 等待恢复完成，再启动服务器。确认服务器监听端口 `30000`，匹配版本的 Terraria 客户端可以加入，并且所需世界状态已恢复。恢复游戏账户和权限组时，备份范围必须包含 TShock SQLite 数据库。
+3. 需要恢复时，停止服务器，找到目标备份并选择 **Restore**，查看将被替换的文件，然后确认。
+
+4. 等待恢复完成，再启动服务器并通过 Terraria 加入。此时世界应恢复为备份时的状态。
 
 :::warning 备份范围
-恢复可能覆盖文件。依赖备份保护重要世界前，应先在可删除的服务器上验证恢复流程。
+恢复备份可能覆盖较新的游戏进度。恢复前，请为需要保留的世界另存一份副本。
 
-游戏服务器备份覆盖该服务器的文件，不包含 Panel 的用户、节点、计划任务或数据库。卸载 Panel 前，应单独导出数据库，并备份包含加密密钥的应用数据。仅保留应用数据，不保证重新安装后中间件数据库仍然存在。
+游戏服务器备份保存该服务器的文件。卸载 Panel 前，如需保留 Panel 的用户、节点和计划任务，还应导出 Panel 数据库，并备份包含加密密钥的应用数据。
 :::
-
-## 检查部署结果
-
-邀请玩家前，确认服务器能够启动、接受控制台命令、在正常重启后保留世界，并能从已完成的备份中恢复。完成真实玩家加入检查，并只授予用户所需权限。
-
-管理流程检查通过不代表已验证多人容量或任意模组、插件的兼容性。
 
 ## 常见问题
 
 ### Panel 能管理已有的 Minecraft 应用吗？
 
-Panel 不能直接管理从 Market 独立安装的 Minecraft。该应用由 Olares 作为 Kubernetes 工作负载管理；Wings 则创建并控制自己的游戏容器。此集成没有让 Wings 接管现有 Olares 应用的机制。
+从 Market 安装的 Minecraft 通过 Olares 和 Minecraft 应用自身的界面管理。Panel 管理通过 Wings 创建的服务器。
 
-继续使用市场版时，通过 Olares 和该应用自身的界面管理即可。若要迁移到 Panel，应使用兼容 Egg 新建独立的 Minecraft 服务器，匹配游戏版本和模组、插件运行环境，停止原服务器，再复制世界和配置。验证玩家连接、世界内容和备份后，再停用原服务器。Panel 管理权限和游戏账户权限需要分别配置。这是数据迁移，不是关联或接管原应用。
+要迁移到 Panel，需使用兼容 Egg 新建独立的 Minecraft 服务器，匹配游戏版本和模组、插件运行环境，停止原服务器，再复制世界和配置。确认玩家可以连接、世界内容正确且备份可用后，再停用原服务器。新服务器的 Panel 访问权限和游戏账户权限需要分别配置。
 
 ### 为什么显示地址与玩家连接地址不同？
 
-Panel 可能显示内部端口分配 `0.0.0.0:30000`。玩家应使用 Olares 设备可达的局域网 IP 和对外端口 `43000`。在游戏客户端中输入 Panel URL 或内部端口分配，不能访问对外的游戏入口。
+Panel 可能显示内部端口分配 `0.0.0.0:30000`。玩家应使用 Olares 设备可达的局域网 IP 和对外端口 `43000`。
 
 ### 为什么导入的 Egg 无法安装或启动？
 
-检查运行环境版本、下载连接、启动命令、文件所有者和端口设置。此集成使用 UID/GID 1000 运行 Wings 和游戏进程。若模板将文件留给其他用户所有，可能需要适配。安装日志与游戏控制台日志应分别检查。
+选择与 Olares 设备 CPU 架构匹配的 Egg，并保留其中列出的运行镜像。下载或安装出错时，查看安装日志。点击 **Start** 后出错时，查看 **Console**。
+
+### 可以用这个 Egg 重装或升级服务器吗？
+
+此 Egg 仅安装 TShock 6.2.1。如果发现已有的 `TShock.Server` 文件，安装程序会停止并提示 `Existing installation: back up and upgrade explicitly`。
+
+先备份世界和 `tshock/` 目录，再使用支持目标版本的 Egg 准备独立服务器。确认新服务器能够加载世界存档的副本后，再让玩家迁移过去。
 
 ### 修改安装参数能重置已有管理员吗？
 
-初始化参数用于创建首个管理员，不会覆盖已经存在的管理员。应使用 Panel 的账户恢复流程；通过邮件恢复账户需要可用的 SMTP 配置。
+安装参数用于创建首个管理员账户。重置已有账户时，请使用 Panel 的账户恢复流程。配置 SMTP 后，可以通过邮件恢复账户。
 
 ## 了解更多
 
