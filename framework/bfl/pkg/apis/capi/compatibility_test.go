@@ -3,7 +3,58 @@ package capi
 import (
 	"encoding/json"
 	"testing"
+	"time"
+
+	"bytetrade.io/web3os/bfl/pkg/constants"
+	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+func TestNamespaceObjectsPreserveKubeSphereOrder(t *testing.T) {
+	created := func(value string) metav1.Time {
+		parsed, err := time.Parse(time.RFC3339, value)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return metav1.NewTime(parsed)
+	}
+	namespaces := []corev1.Namespace{
+		{ObjectMeta: metav1.ObjectMeta{Name: "older", CreationTimestamp: created("2026-10-14T01:00:00Z")}},
+		{ObjectMeta: metav1.ObjectMeta{Name: "alpha", CreationTimestamp: created("2026-10-14T02:00:00Z")}},
+		{ObjectMeta: metav1.ObjectMeta{Name: "zeta", CreationTimestamp: created("2026-10-14T02:00:00Z"), Labels: map[string]string{"example": "value"}}},
+		{ObjectMeta: metav1.ObjectMeta{Name: "devops-project", CreationTimestamp: created("2026-10-14T03:00:00Z"), Labels: map[string]string{namespaceWorkspaceLabel: devopsProjectWorkspace}}},
+	}
+
+	items, err := namespaceObjects(namespaces)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"zeta", "alpha", "older"}
+	if len(items) != len(want) {
+		t.Fatalf("namespace count = %d, want %d", len(items), len(want))
+	}
+	for i := range want {
+		if got := nestedString(items[i], "metadata", "name"); got != want[i] {
+			t.Fatalf("namespace[%d] = %q, want %q", i, got, want[i])
+		}
+	}
+	if got := nestedString(items[0], "metadata", "labels", "example"); got != "value" {
+		t.Fatalf("converted namespace label = %q, want value", got)
+	}
+}
+
+func TestNamespaceUsersUseTypedUserMetadata(t *testing.T) {
+	users := []iamv1alpha2.User{
+		{ObjectMeta: metav1.ObjectMeta{Name: "alice", Annotations: map[string]string{constants.UserAnnotationOwnerRole: constants.RoleOwner}}},
+		{ObjectMeta: metav1.ObjectMeta{Name: "bob", Annotations: map[string]string{constants.UserAnnotationOwnerRole: constants.RoleNormal}}},
+	}
+
+	got := namespaceUsers(users)
+	if len(got) != 2 || got[0].Name != "alice" || got[0].OwnerRole != constants.RoleOwner || got[1].Name != "bob" {
+		t.Fatalf("namespaceUsers() = %#v", got)
+	}
+}
 
 func TestBuildNamespaceGroups(t *testing.T) {
 	ns := func(name string, labels map[string]any) map[string]any {

@@ -80,7 +80,7 @@ TermiPass 原本的本地 `main` 比 `origin/main` 跟踪引用落后 941 个提
 2. `GET /capi/system/ifs`：从 BFL 直连 olaresd `/system/ifs`，透传 query，将 `TERMINUSD_HOST` 作为显式 BFL 配置注入，并设置超时。
 3. `GET /capi/app/detail`：返回 `user`、`runtime`、`systemNamespaces`；`globalrole` 继续把 owner/admin 映射为 `platform-admin`。消费者确认不再需要后，响应中删除 `clusterRole`、`localeManifest`、`gitopsEngine`；`clusterRole` 仍仅作为 BFL 内部过滤 `globalRules` 的依据，不再对外暴露。
 4. `GET /capi/monitoring.kubesphere.io/v1alpha3/:type`：复用 monitor 模块的 KubeSphere client，移植 metric rename、split-series collapse 和 `*_utilisation` 计算。range query 必须按时间戳对齐，缺失/零分母返回 0，不按数组下标相除。
-5. `GET /capi/namespaces/group`：用 owner-role 找主账号，按 `-<owner>` 后缀分组，识别 label 或 `-shared` 的 shared namespace；只有管理员可看 Shared/System 组。
+5. `GET /capi/namespaces/group`：通过 client-go 直接读取 Namespace 和 User CR，不再依赖用户 token 调 KubeSphere HTTP API。Namespace 保留原 `kubesphere.io/workspace!=kubesphere.io/devopsproject` selector，并在 BFL 内按创建时间降序、同时间名称降序复刻 `sortBy=createTime`；用 owner-role 找主账号，按 `-<owner>` 后缀分组，识别 label 或 `-shared` 的 shared namespace。只有管理员读取完整 User 列表并可看 Shared/System 组；普通用户不读取其他 User，只返回自己的 namespace。
 
 测试：
 
