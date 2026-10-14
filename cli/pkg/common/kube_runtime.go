@@ -17,14 +17,13 @@
 package common
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
-
-	"github.com/joho/godotenv"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
@@ -33,7 +32,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/core/common"
 	"github.com/beclab/Olares/cli/pkg/core/connector"
 	"github.com/beclab/Olares/cli/pkg/core/logger"
-	"github.com/beclab/Olares/cli/pkg/core/util"
+	"github.com/beclab/Olares/cli/pkg/releasefile"
 	kresource "k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/ptr"
 )
@@ -192,12 +191,7 @@ func (a *Argument) SaveReleaseInfo() error {
 		ENV_OLARES_VERSION:  a.OlaresVersion,
 	}
 
-	if !util.IsExist(filepath.Dir(OlaresReleaseFile)) {
-		if err := os.MkdirAll(filepath.Dir(OlaresReleaseFile), 0755); err != nil {
-			return fmt.Errorf("failed to create directory %s: %v", filepath.Dir(OlaresReleaseFile), err)
-		}
-	}
-	return godotenv.Write(releaseInfoMap, OlaresReleaseFile)
+	return releasefile.Update(context.Background(), releaseInfoMap)
 }
 
 func (a *Argument) GetWslUserPath() string {

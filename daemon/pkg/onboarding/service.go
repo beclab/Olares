@@ -10,6 +10,7 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
+	"github.com/beclab/Olares/cli/pkg/releasefile"
 	sysv1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
 	iamv1 "github.com/beclab/api/iam/v1alpha2"
 	corev1 "k8s.io/api/core/v1"
@@ -188,6 +189,9 @@ func (s *Service) Create(ctx context.Context, request CreateRequest) (Status, er
 	}
 	if u.GetDeletionTimestamp() != nil || u.GetAnnotations()[UserMarker] != "true" || u.GetAnnotations()[UserDID] != did {
 		return Status{}, ErrConflict
+	}
+	if err := releasefile.Update(ctx, map[string]string{"OLARES_NAME": request.Username + "@olares.local"}); err != nil {
+		return Status{}, fmt.Errorf("write first user to release file: %w", err)
 	}
 	return s.Status(ctx)
 }
