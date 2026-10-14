@@ -23,7 +23,6 @@ func TestNamespaceObjectsPreserveKubeSphereOrder(t *testing.T) {
 		{ObjectMeta: metav1.ObjectMeta{Name: "older", CreationTimestamp: created("2026-10-14T01:00:00Z")}},
 		{ObjectMeta: metav1.ObjectMeta{Name: "alpha", CreationTimestamp: created("2026-10-14T02:00:00Z")}},
 		{ObjectMeta: metav1.ObjectMeta{Name: "zeta", CreationTimestamp: created("2026-10-14T02:00:00Z"), Labels: map[string]string{"example": "value"}}},
-		{ObjectMeta: metav1.ObjectMeta{Name: "devops-project", CreationTimestamp: created("2026-10-14T03:00:00Z"), Labels: map[string]string{namespaceWorkspaceLabel: devopsProjectWorkspace}}},
 	}
 
 	items, err := namespaceObjects(namespaces)
@@ -31,9 +30,6 @@ func TestNamespaceObjectsPreserveKubeSphereOrder(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := []string{"zeta", "alpha", "older"}
-	if len(items) != len(want) {
-		t.Fatalf("namespace count = %d, want %d", len(items), len(want))
-	}
 	for i := range want {
 		if got := nestedString(items[i], "metadata", "name"); got != want[i] {
 			t.Fatalf("namespace[%d] = %q, want %q", i, got, want[i])

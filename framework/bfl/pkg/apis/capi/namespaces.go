@@ -18,11 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-const (
-	namespaceWorkspaceLabel = "kubesphere.io/workspace"
-	devopsProjectWorkspace  = "kubesphere.io/devopsproject"
-)
-
 type namespaceUser struct {
 	Name      string
 	OwnerRole string
@@ -75,18 +70,6 @@ func (h *handler) listNamespaceObjects(ctx context.Context) ([]map[string]any, e
 }
 
 func namespaceObjects(namespaces []corev1.Namespace) ([]map[string]any, error) {
-	// The legacy KubeSphere endpoint accepts
-	// kubesphere.io/workspace!=kubesphere.io/devopsproject even though the
-	// comparison value contains a slash and is invalid in a native Kubernetes
-	// label selector. Apply the same comparison after the client-go list.
-	filtered := namespaces[:0:0]
-	for i := range namespaces {
-		if namespaces[i].Labels[namespaceWorkspaceLabel] != devopsProjectWorkspace {
-			filtered = append(filtered, namespaces[i])
-		}
-	}
-	namespaces = filtered
-
 	// KubeSphere's sortBy=createTime orders newest objects first and uses the
 	// name as a descending tie breaker. Preserve that response order.
 	sort.SliceStable(namespaces, func(i, j int) bool {
