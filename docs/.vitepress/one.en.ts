@@ -174,6 +174,10 @@ export const oneSidebar: DefaultTheme.Sidebar = {
               {
                 text: "Install Ubuntu Desktop on Olares One",
                 link: "/one/install-ubuntu-desktop",
+              },
+              {
+                text: "Configure GPU mode on Ubuntu",
+                link: "/one/configure-gpu-mode",
               }
             ]
         },                

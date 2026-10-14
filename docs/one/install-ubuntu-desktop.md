@@ -110,5 +110,6 @@ Olares One should start automatically.
 
 ## Resources
 
+- [Configure the GPU mode on Ubuntu](configure-gpu-mode.md)
 - [Install Ubuntu Server on Olares One](install-ubuntu-server.md)
 - [Ubuntu Desktop documentation](https://documentation.ubuntu.com/desktop/en/latest/)
