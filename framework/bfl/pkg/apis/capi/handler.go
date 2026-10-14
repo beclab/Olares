@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"regexp"
 	"strings"
 	"time"
 
@@ -178,7 +177,7 @@ func (h *handler) appDetail(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	clusterRole := h.clusterRole(req.Request.Context())
+	clusterRole := "host"
 	detail := appDetailResponse{
 		Runtime:          h.containerRuntime(req.Request.Context()),
 		SystemNamespaces: append([]string(nil), systemNamespaces...),
@@ -187,7 +186,7 @@ func (h *handler) appDetail(req *restful.Request, resp *restful.Response) {
 			Lang:            user.Spec.Lang,
 			Username:        user.Name,
 			GlobalRole:      globalRole(user.Annotations[constants.UserAnnotationOwnerRole]),
-			GrantedClusters: parseStringList(user.Annotations["iam.kubesphere.io/granted-clusters"]),
+			GrantedClusters: []string{},
 			LastLoginTime:   user.Status.LastLoginTime,
 			GlobalRules:     map[string][]string{},
 		},
@@ -229,21 +228,6 @@ func (h *handler) containerRuntime(ctx context.Context) string {
 		return "docker"
 	}
 	return runtimeVersion
-}
-
-var clusterRolePattern = regexp.MustCompile(`(?m)clusterRole:\s*(host|member)\s*$`)
-
-func (h *handler) clusterRole(ctx context.Context) string {
-	configMap, err := h.kubeClient.Kubernetes().CoreV1().ConfigMaps(constants.KubeSphereNamespace).
-		Get(ctx, constants.KubeSphereConfigName, metav1.GetOptions{})
-	if err != nil {
-		return "host"
-	}
-	matches := clusterRolePattern.FindStringSubmatch(configMap.Data["kubesphere.yaml"])
-	if len(matches) != 2 {
-		return "host"
-	}
-	return matches[1]
 }
 
 func (h *handler) globalRules(ctx context.Context, token, username, clusterRole string) map[string][]string {

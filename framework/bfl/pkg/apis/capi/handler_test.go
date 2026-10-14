@@ -43,18 +43,6 @@ func TestUnwrapData(t *testing.T) {
 	}
 }
 
-func TestClusterRolePattern(t *testing.T) {
-	for input, want := range map[string]string{
-		"clusterRole: host\n":                    "host",
-		"multicluster:\n  clusterRole: member\n": "member",
-	} {
-		match := clusterRolePattern.FindStringSubmatch(input)
-		if len(match) != 2 || match[1] != want {
-			t.Fatalf("pattern(%q) = %#v, want %q", input, match, want)
-		}
-	}
-}
-
 func TestAppDetailResponseOmitsRemovedFields(t *testing.T) {
 	payload, err := json.Marshal(appDetailResponse{})
 	if err != nil {
