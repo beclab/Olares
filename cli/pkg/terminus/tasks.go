@@ -219,7 +219,7 @@ type WriteReleaseFile struct {
 
 func (t *WriteReleaseFile) Execute(runtime connector.Runtime) error {
 	if util.IsExist(common.OlaresReleaseFile) {
-		logger.Debugf("found existing release file: %s, overriding ...", common.OlaresReleaseFile)
+		logger.Debugf("found existing release file: %s, updating entries ...", common.OlaresReleaseFile)
 	}
 	return t.KubeConf.Arg.SaveReleaseInfo()
 }

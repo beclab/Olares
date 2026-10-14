@@ -40,9 +40,9 @@ type State struct {
 	// OnboardingState describes first-user setup independently of system health.
 	OnboardingState string `json:"onboardingState,omitempty"`
 
-	// TerminusName is the Olares ID of the admin user, e.g.
-	// "alice@olares.cn". It is read from the local release file when
-	// available and refreshed from the cluster once Olares is up.
+	// TerminusName identifies the first user recorded in the local release file.
+	// New installations store username@olares.local; existing values are retained.
+	// It remains available when the cluster cannot be reached.
 	TerminusName *string `json:"terminusName,omitempty"`
 
 	// TerminusVersion is the installed Olares version (semver), e.g.
