@@ -174,6 +174,10 @@ export const oneSidebar: DefaultTheme.Sidebar = {
               {
                 text: "在 Olares One 上安装 Ubuntu Desktop",
                 link: "/zh/one/install-ubuntu-desktop",
+              },
+              {
+                text: "在 Ubuntu 上配置 GPU 模式",
+                link: "/zh/one/configure-gpu-mode",
               }
             ]
         },                 
