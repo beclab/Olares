@@ -9,7 +9,7 @@ import (
 
 	"bytetrade.io/web3os/bfl/internal/log"
 	"bytetrade.io/web3os/bfl/pkg/api/response"
-	apiRuntime "bytetrade.io/web3os/bfl/pkg/apiserver/runtime"
+	"bytetrade.io/web3os/bfl/pkg/apiserver/authn"
 	"bytetrade.io/web3os/bfl/pkg/constants"
 	"bytetrade.io/web3os/bfl/pkg/utils"
 
@@ -74,24 +74,13 @@ func authenticate(req *restful.Request, resp *restful.Response, chain *restful.F
 	if needAuth {
 		log.Debugw("request headers", "requestURL", req.Request.URL, "headers", req.Request.Header)
 
-		user := req.HeaderParameter(constants.HeaderBflUserKey)
-		if user == "" {
-			tokenStr := req.HeaderParameter(constants.UserAuthorizationTokenKey)
-			if tokenStr == "" {
-				response.HandleUnauthorized(resp, response.NewTokenValidationError("user not found"))
-				return
-			}
-
-			claims, err := apiRuntime.ParseToken(tokenStr)
-			if err != nil {
-				response.HandleUnauthorized(resp, response.NewTokenValidationError("parse token", err))
-				return
-			}
-
-			user = claims.Username
+		identity, err := authn.Authenticate(req.Request)
+		if err != nil {
+			response.HandleUnauthorized(resp, response.NewTokenValidationError("authenticate request", err))
+			return
 		}
 
-		req.SetAttribute(constants.UserContextAttribute, user)
+		req.SetAttribute(constants.UserContextAttribute, identity.Username)
 	}
 
 	chain.ProcessFilter(req, resp)

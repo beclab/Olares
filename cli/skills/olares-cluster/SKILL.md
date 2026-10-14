@@ -39,6 +39,7 @@ Load the shared [platform model](../olares-shared/references/olares-platform.md)
 ## The identity-vs-server-decides principle (cross-cutting)
 
 - Identity is the active profile; there is no per-invocation profile override.
+- ControlHub's K8s/KubeSphere-compatible routes are served and scoped by the active user's BFL.
 - The server decides visibility and authorization. `cluster context` is identity display, not a permission preflight.
 - Surface a 403 as authoritative. The exception is `exec`, whose namespace safety gate is described in its reference.
 

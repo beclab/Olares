@@ -7,6 +7,7 @@ import (
 	"bytetrade.io/web3os/bfl/internal/log"
 	"bytetrade.io/web3os/bfl/pkg/api/response"
 	backendv1 "bytetrade.io/web3os/bfl/pkg/apis/backend/v1"
+	"bytetrade.io/web3os/bfl/pkg/apis/capi"
 
 	iamV1alpha1 "bytetrade.io/web3os/bfl/pkg/apis/iam/v1alpha1"
 	monitov1alpha1 "bytetrade.io/web3os/bfl/pkg/apis/monitor/v1alpha1"
@@ -14,6 +15,7 @@ import (
 	"bytetrade.io/web3os/bfl/pkg/apiserver/runtime"
 	v1alpha1client "bytetrade.io/web3os/bfl/pkg/client/clientset/v1alpha1"
 	"bytetrade.io/web3os/bfl/pkg/constants"
+	ksproxy "bytetrade.io/web3os/bfl/pkg/proxy"
 
 	restfulspec "github.com/emicklei/go-restful-openapi/v2"
 	"github.com/emicklei/go-restful/v3"
@@ -91,7 +93,11 @@ func (s *APIServer) PrepareRun() error {
 	}
 	log.Infow("registered module", "paths", modulePaths)
 
-	s.Server.Handler = s.container
+	handler, err := ksproxy.New(s.container, s.kubeClient, constants.KubeSphereAPIHost)
+	if err != nil {
+		return err
+	}
+	s.Server.Handler = handler
 
 	return nil
 }
@@ -117,6 +123,7 @@ func (s *APIServer) installModuleAPI() {
 	urlruntime.Must(backendv1.AddContainer(s.container))
 	urlruntime.Must(settingsV1alpha1.AddContainer(s.container))
 	urlruntime.Must(monitov1alpha1.AddContainer(s.container))
+	urlruntime.Must(capi.AddContainer(s.container))
 }
 
 func enrichSwaggerObject(swo *spec.Swagger) {

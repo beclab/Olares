@@ -24,6 +24,8 @@ Use `olares-cli dashboard <verb> --help` for syntax.
 
 > **Mental model:** dashboard answers *"what's the resource usage and health"*. For inventory and lifecycle, route elsewhere. When the metrics reveal a problem (resource pressure, an app that's `running` but slow/unreachable), hand off to [`../olares-doctor/SKILL.md`](../olares-doctor/SKILL.md) for root-cause diagnosis.
 
+Dashboard's `/capi` and KubeSphere-compatible routes are served by the active user's BFL. Treat authorization and cross-user visibility as server-enforced behavior; do not reproduce namespace filtering in the client.
+
 ## Fast paths
 
 | Task | Read | First command |

@@ -302,6 +302,10 @@ spec:
               fieldPath: metadata.namespace
         - name: BACKUP_SERVER
           value: backup-server.os-framework:8082
+        - name: TERMINUSD_HOST
+          value: master-node:18088
+        - name: BFL_PROXY_MAX_STREAMS
+          value: "8"
         - name: L4_PROXY_IMAGE_VERSION
           value: v0.3.48
         - name: L4_PROXY_SERVICE_ACCOUNT
@@ -355,5 +359,3 @@ spec:
     protocol: TCP
   selector:
     tier: bfl
-
-

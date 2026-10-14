@@ -138,7 +138,7 @@ func (id ID) MarketURL(localPrefix string) string {
 
 // DashboardURL returns the per-user dashboard BFF base URL, e.g.
 // "https://dashboard.alice.olares.com". The dashboard SPA itself is served
-// here, and its Koa-based ks-apiserver-proxy backend is reachable at the
+// here, and the per-user BFL compatibility backend is reachable at the
 // same origin under `/capi/*` (custom aggregation), `/(k)?api(s)?/*`
 // (wildcard kubesphere proxy), `/user-service/*` (BFL) and `/hami/*`
 // (HAMI vGPU). Same edge auth chain as the other per-user URLs —
@@ -171,7 +171,7 @@ func (id ID) DashboardURL(localPrefix string) string {
 // Same edge auth chain as the other per-user URLs — X-Authorization is
 // honored and 401/403 are recoverable via /api/refresh. Per-user
 // resource scoping (which namespaces / workspaces a user can see) is
-// enforced server-side by the ControlHub backend; CLI code must NOT
+// enforced server-side by the per-user BFL backend; CLI code must NOT
 // attempt to filter or gate based on locally cached role/identity (see
 // olares-cluster SKILL.md). olares-cli's `cluster` command tree talks
 // to this URL.

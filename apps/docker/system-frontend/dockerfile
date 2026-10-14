@@ -1,4 +1,4 @@
-FROM nginx:stable-alpine
+FROM mirrors.olares.cn/library/nginx:stable-alpine
 
 COPY packages/app/dist/apps/ /apps/
 COPY docker/system-frontend/nginx/*.conf /apps/nginxs/
