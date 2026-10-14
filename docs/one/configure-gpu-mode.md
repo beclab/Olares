@@ -30,6 +30,10 @@ The `.run` installer installs the NVIDIA driver and includes the `nvidia-powerd`
    wget https://us.download.nvidia.com/XFree86/Linux-x86_64/595.84/NVIDIA-Linux-x86_64-595.84.run
    ```
 
+   :::info Driver version
+   This guide uses driver version `595.84`, which is tested on Olares One. Other versions are untested, and the `nvidia-powerd` service may fail to start on some of them.
+   :::
+
 2. Make the installer executable:
 
    ```bash

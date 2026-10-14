@@ -34,6 +34,10 @@ NVIDIA 驱动负责让 Ubuntu 与独立 GPU 通信。启用 NVIDIA 电源管理�
    wget https://us.download.nvidia.com/XFree86/Linux-x86_64/595.84/NVIDIA-Linux-x86_64-595.84.run
    ```
 
+   :::info 驱动版本
+   本指南使用驱动版本 `595.84`，已在 Olares One 上测试通过。其他版本未经过测试，`nvidia-powerd` 服务在部分版本上可能无法启动。
+   :::
+
 2. 添加可执行权限：
 
    ```bash
