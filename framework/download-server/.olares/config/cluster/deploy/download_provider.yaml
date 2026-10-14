@@ -24,7 +24,6 @@ metadata:
   annotations:
     provider-registry-ref: {{ .Release.Namespace }}/download-provider-svc
     provider-service-ref: download-provider-svc.{{ .Release.Namespace }}:28080
-    provider-owner-ref: {{ .Values.bfl.username | quote }}
 rules:
   - nonResourceURLs:
       - "/api/download*"

@@ -23,7 +23,6 @@ metadata:
   annotations:
     provider-registry-ref: {{ .Release.Namespace }}/files-provider-svc
     provider-service-ref: files-provider-svc.{{ .Release.Namespace }}:28080
-    provider-owner-ref: {{ .Values.bfl.username | quote }}
 rules:
   - nonResourceURLs:
       - "/api/resources/*"
