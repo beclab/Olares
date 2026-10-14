@@ -114,5 +114,6 @@ Olares One 应自动开机。
 
 ## 资源
 
+- [在 Ubuntu 上配置 GPU 模式](configure-gpu-mode.md)
 - [在 Olares One 上安装 Ubuntu Server](install-ubuntu-server.md)
 - [Ubuntu Desktop 文档](https://documentation.ubuntu.com/desktop/en/latest/)
