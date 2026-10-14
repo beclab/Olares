@@ -21,7 +21,7 @@ Use this guide to configure the GPU mode on Olares One running Ubuntu.
 The NVIDIA driver allows Ubuntu to communicate with the discrete GPU. Install it before enabling NVIDIA power management or switching the GPU mode.
 
 :::info Use the NVIDIA .run installer
-The `.run` installer installs the NVIDIA driver and includes the `nvidia-powerd` service needed for power management. Drivers installed through `apt` may not include this service.
+The `.run` installer installs the NVIDIA driver and includes the `nvidia-powerd` service needed for power management. Drivers installed through `apt` do not include this service.
 :::
 
 1. In the Ubuntu terminal on your Olares One, download the NVIDIA driver installer:
@@ -42,7 +42,7 @@ The `.run` installer installs the NVIDIA driver and includes the `nvidia-powerd`
    sudo ./NVIDIA-Linux-x86_64-595.84.run
    ```
 
-4. Follow the prompts shown by the installer until the installation finishes and the terminal prompt returns.
+4. Follow the prompts shown by the installer until the installation completes.
 
 ## Step 2: Enable NVIDIA power management
 

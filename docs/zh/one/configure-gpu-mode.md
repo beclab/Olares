@@ -25,7 +25,7 @@ head:
 NVIDIA 驱动负责让 Ubuntu 与独立 GPU 通信。启用 NVIDIA 电源管理和切换 GPU 模式前，需要先安装驱动。
 
 :::info 使用 NVIDIA .run 安装程序
-`.run` 安装程序会安装 NVIDIA 驱动，并包含电源管理所需的 `nvidia-powerd` 服务。通过 `apt` 安装的驱动可能不包含该服务。
+`.run` 安装程序会安装 NVIDIA 驱动，并包含电源管理所需的 `nvidia-powerd` 服务。通过 `apt` 安装的驱动不包含该服务。
 :::
 
 1. 在 Olares One 的 Ubuntu 终端中，下载 NVIDIA 驱动安装程序：
@@ -46,7 +46,7 @@ NVIDIA 驱动负责让 Ubuntu 与独立 GPU 通信。启用 NVIDIA 电源管理�
    sudo ./NVIDIA-Linux-x86_64-595.84.run
    ```
 
-   按照安装程序中的提示操作，直到安装完成并返回终端提示符。
+4. 按照安装程序中的提示操作，直到安装完成。
 
 ## 步骤 2：启用 NVIDIA 电源管理
 
