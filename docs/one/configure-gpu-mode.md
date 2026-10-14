@@ -11,10 +11,6 @@ head:
 
 Use this guide to configure the GPU mode on Olares One running Ubuntu.
 
-:::warning Olares One and Ubuntu only
-These commands are designed for Olares One running Ubuntu. Do not run them on another computer. Olares currently provides this configuration procedure for Ubuntu only. No additional GPU mode adjustment is expected to be required in Windows after you complete the procedure in Ubuntu.
-:::
-
 ## Prerequisites
 
 - Your Olares One is powered on and running Ubuntu.
@@ -106,7 +102,7 @@ With NVIDIA power management enabled, you can now set the GPU mode using `ioport
 
    In the `Pwr:Usage/Cap` column, check the value for `Cap`. It should be `150W` for performance mode (`3`) or `50W` for quiet mode (`0`).
 
-   Example output:
+   **Example output:**
 
    ```text
    +-----------------------------------------------------------------------------------------+
