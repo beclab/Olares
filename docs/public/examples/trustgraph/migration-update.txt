@@ -1,0 +1,9 @@
+Identity API migration update
+
+This is a fictional example for learning TrustGraph.
+
+On November 10, 2026, Maya Patel announced that the Identity API database migration would finish on November 19 instead of November 12. The Identity team needs the extra time to resolve a data synchronization issue.
+
+The Billing team must wait for the Identity API migration to finish before Billing API can serve the November releases. Noah Garcia will coordinate Billing API readiness with Maya Patel.
+
+Search API remains available throughout the migration. The Search team has no work scheduled as part of this migration.

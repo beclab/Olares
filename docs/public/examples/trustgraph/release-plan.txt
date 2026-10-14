@@ -1,0 +1,9 @@
+November release plan
+
+This is a fictional example for learning TrustGraph.
+
+Customer Portal is scheduled to launch on November 16, 2026. The Customer Experience team owns Customer Portal, and its project lead is Sofia Chen. Customer Portal requires Identity API for customer sign-in and Billing API for subscription management. Both services must be ready before Customer Portal can launch.
+
+Subscription Reports is scheduled to launch on November 18, 2026. The Analytics team owns Subscription Reports, and its project lead is Daniel Kim. Subscription Reports requires Billing API to retrieve subscription records before launch.
+
+Help Center is scheduled to launch on November 16, 2026. The Support team owns Help Center, and its project lead is Emma Wilson. Help Center uses Search API to find public help articles. Help Center does not require customer sign-in or billing data and has no dependency on Identity API or Billing API.
