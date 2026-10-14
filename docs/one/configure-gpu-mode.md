@@ -112,22 +112,10 @@ With NVIDIA power management enabled, you can now set the GPU mode using `ioport
    | Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
    |                                         |                        |               MIG M. |
    |=========================================+========================+======================|
-   |   0  NVIDIA GeForce RTX 5090 ...    Off |   00000000:02:00.0 Off |                  N/A |
+   |   0  NVIDIA GeForce RTX 5090 ...  Off |   00000000:02:00.0 Off |                  N/A |
    | N/A   41C    P8              7W /  150W |    9706MiB /  24463MiB |      0%      Default |
    |                                         |                        |                  N/A |
    +-----------------------------------------+------------------------+----------------------+
-
-   +-----------------------------------------------------------------------------------------+
-   | Processes:                                                                              |
-   |  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
-   |        ID   ID                                                               Usage      |
-   |=========================================================================================|
-   |    0   N/A  N/A           21749      C   /usr/local/bin/speakrs-engine           342MiB |
-   |    0   N/A  N/A           28146      C   python3                                 318MiB |
-   |    0   N/A  N/A           36525      C   python3                                 328MiB |
-   |    0   N/A  N/A           40064      C   audio-python                            254MiB |
-   |    0   N/A  N/A           44063      C   audio-python                            276MiB |
-   +-----------------------------------------------------------------------------------------+
    ```
 
 ## Resources

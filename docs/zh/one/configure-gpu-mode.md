@@ -15,10 +15,6 @@ head:
 
 按照本指南，在运行 Ubuntu 的 Olares One 上配置 GPU 模式。
 
-:::warning 仅适用于 Olares One 和 Ubuntu
-这些命令适用于运行 Ubuntu 的 Olares One。请勿在其他计算机上执行。Olares 目前仅提供 Ubuntu 下的配置方法。在 Ubuntu 中完成配置后，Windows 理论上不需要再次调整 GPU 模式。
-:::
-
 ## 前提条件
 
 - Olares One 已开机并运行 Ubuntu。
@@ -50,7 +46,7 @@ NVIDIA 驱动负责让 Ubuntu 与独立 GPU 通信。启用 NVIDIA 电源管理�
    sudo ./NVIDIA-Linux-x86_64-595.84.run
    ```
 
-   按照安装程序中的提示操作，直到安装完成并返回终端提示符。安装驱动时，显示画面可能会短暂闪烁。
+   按照安装程序中的提示操作，直到安装完成并返回终端提示符。
 
 ## 步骤 2：启用 NVIDIA 电源管理
 
@@ -108,7 +104,23 @@ NVIDIA 驱动负责让 Ubuntu 与独立 GPU 通信。启用 NVIDIA 电源管理�
    nvidia-smi
    ```
 
-   查看 `Pwr:Usage/Cap` 列中 `/` 后面的数值。性能模式（`3`）应为 `150W`，安静模式（`0`）应为 `50W`。
+   在 `Pwr:Usage/Cap` 列中查看 `Cap` 的值。性能模式（`3`）应为 `150W`，安静模式（`0`）应为 `50W`。
+
+   **示例输出：**
+
+   ```text
+   +-----------------------------------------------------------------------------------------+
+   | NVIDIA-SMI 595.84                 Driver Version: 595.84         CUDA Version: 13.2     |
+   +-----------------------------------------+------------------------+----------------------+
+   | GPU  Name                 Persistence-M | Bus-Id        Disp.A | Volatile Uncorr. ECC |
+   | Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+   |                                         |                      |               MIG M. |
+   |=========================================+========================+======================|
+   |   0  NVIDIA GeForce RTX 5090 ...  Off |   00000000:02:00.0 Off |                  N/A |
+   | N/A   41C    P8               7W /  150W |   9706MiB /  24463MiB |      0%      Default |
+   |                                         |                      |                    N/A |
+   +-----------------------------------------+------------------------+----------------------+
+   ```
 
 ## 资源
 
