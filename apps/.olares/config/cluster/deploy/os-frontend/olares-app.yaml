@@ -202,7 +202,7 @@ spec:
       serviceAccountName: system-frontend
       initContainers:
         - name: olares-app-init
-          image: beclab/system-frontend:v1.12.6-alpha.2
+          image: beclab/system-frontend:v1.12.6-alpha.3
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -255,7 +255,7 @@ spec:
             - name: olares-app-routes
               mountPath: /etc/nginx/conf.d
         - name: user-service
-          image: beclab/user-service:v0.1.21-alpha.2
+          image: beclab/user-service:v0.1.21-alpha.3
           imagePullPolicy: IfNotPresent
           readinessProbe:
             tcpSocket:
