@@ -7,7 +7,6 @@ metadata:
   annotations:
     provider-registry-ref: {{ $namespace }}/integration-provider-svc
     provider-service-ref: integration-provider-svc.{{ $namespace }}:28080
-    provider-owner-ref: {{ .Values.bfl.username | quote }}
 rules:
   - nonResourceURLs: ["/api/account/*"]
     verbs: ["*"]
@@ -20,7 +19,6 @@ metadata:
   annotations:
     provider-registry-ref: {{ $namespace }}/integration-provider-svc
     provider-service-ref: integration-provider-svc.{{ $namespace }}:28080
-    provider-owner-ref: {{ .Values.bfl.username | quote }}
 rules:
   - nonResourceURLs: ["/api/cookie/*"]
     verbs: ["*"]
