@@ -30,7 +30,7 @@ TermiPass 原本的本地 `main` 比 `origin/main` 跟踪引用落后 941 个提
 - Phase 5 的 CLI 所有权文案已更新，远端定向 Go 测试通过。
 - terminus 已在远端完成新增/修改包的 test、race、vet 和 build；全量测试只有本文记录的 certmanager 外部 401 基线例外。
 - TermiPass 已在远端顺序完成 icon subset、Desktop、Settings、Dashboard 和 ControlHub 构建；修改后的三份 nginx 配置已用节点缓存的 `nginx:stable-alpine3.17-slim` 镜像执行真实 `nginx -t` 并通过。全仓 lint 仍有 83 个与本次 nginx-only diff 无关的既有错误。
-- 197 已用 nerdctl 从完整 `Dockerfile.api` 构建并运行 `beclab/bfl:monitoring-server-removal-2429d8c2d`（manifest `sha256:e8f2b531081238d11dcec882423fafa0c62031ae1cf7545ecc96dd9e23fad1a6`），BFL 临时 hostPath 二进制挂载已移除。Dockerfile 的构建与运行基础镜像均改走 `mirrors.olares.cn`，Go 模块代理为 `https://goproxy.cn,direct`。真实 `/capi/app/detail` 响应已确认只保留 `user`、`runtime`、`systemNamespaces`，不再包含 `clusterRole`、`localeManifest`、`gitopsEngine`；返回前会以结构化 `appDetail response` 日志记录用户名和完整响应对象，197 已触发请求并确认日志输出。
+- 197 已用 nerdctl 从完整 `Dockerfile.api` 构建并运行 `beclab/bfl:monitoring-server-removal-43bcb100c`（manifest `sha256:52275fd2a797aa193865ca104ced768f6a9e71bb275934a8a5417dca3acd390c`），BFL 临时 hostPath 二进制挂载已移除。Dockerfile 的构建与运行基础镜像均改走 `mirrors.olares.cn`，Go 模块代理为 `https://goproxy.cn,direct`。真实 `/capi/app/detail` 响应已确认只保留 `user`、`runtime`、`systemNamespaces`，不再包含 `clusterRole`、`localeManifest`、`gitopsEngine`；返回前会以结构化 `appDetail response` 日志记录用户名和完整响应对象，197 已触发请求并确认日志输出。`globalRules` 已改为使用 client-go 读取 KubeSphere IAM CR，不再依赖用户 token 或 ks-apiserver-proxy HTTP 接口；只传 `X-BFL-USER: olaresid` 的验收结果与切换前 HTTP 实现基线 `diff` 完全一致，规范化 JSON 的 SHA-256 均为 `7f13a3f72f846637d269b54c42dbd1526df34fb8b875eb5388f5307babdc4dcf`。
 - 197 已按正式 workflow 的应用清单串行构建十个前端产物；删除 `/current_user` 后重新用 nerdctl 构建并运行 `beclab/system-frontend:monitoring-server-removal-d40efeef9`（manifest `sha256:b51b65201fa8ef81902b4a37c733065e645d8917367a670ec39dff55fc317b56`）。system-frontend 的两个临时 hostPath 挂载已移除；Dockerfile 基础镜像改为 `mirrors.olares.cn/library/nginx:stable-alpine`。
 - terminus 随仓 system-frontend 副本已同步到 197；三份 nginx 文件与本地 SHA-256 一致，并在运行中的同命名空间 Nginx 容器内通过独立临时配置执行 `nginx -t`。当前线上候选镜像仍由 TermiPass 权威源构建，无需因等价副本补丁重复替换。
 - 197 测试集群已完成镜像化流量切换。运行中镜像内十个应用的 `index.html`、实际 nginx 配置、`nginx -t` 与四个无 token 鉴权探针均验证通过并确认请求进入新 BFL。更新后的 `nginx -T` 已确认不含 `/current_user`、`SettingsServer` 或 `monitoring:28080`；请求 `/current_user` 会落入 Control Hub 的 SPA fallback 并返回 `text/html`，不再代理到 monitoring。`/middleware` 仍保持原 upstream。
@@ -225,6 +225,20 @@ system-frontend 多架构镜像继续由 TermiPass GitHub Actions workflow 构�
 | instant/range monitoring | 必测 | 必测 | 必测 |
 | terminal/watch/exec WebSocket | 必测 | 必测 | 必测授权边界 |
 | CLI dashboard/cluster | 必测 | 必测 | 必测 |
+
+`globalRules` client-go 切换验收：先保存旧 HTTP 实现的 `.user.globalRules` 为 `/tmp/globalrules-http.json`，部署新 BFL 后仅携带 `X-BFL-USER` 请求 `/capi/app/detail`，将新结果规范化后进行逐字节比较：
+
+```bash
+kubectl -n user-space-olaresid exec deploy/olares-app-deployment -c olares-app -- \
+  wget -q -O /tmp/app-detail-client-go \
+  --header='X-BFL-USER: olaresid' http://127.0.0.1:82/capi/app/detail
+kubectl -n user-space-olaresid exec deploy/olares-app-deployment -c olares-app -- \
+  cat /tmp/app-detail-client-go | jq -S '.user.globalRules' > /tmp/globalrules-client-go.json
+diff -u /tmp/globalrules-http.json /tmp/globalrules-client-go.json
+sha256sum /tmp/globalrules-http.json /tmp/globalrules-client-go.json
+```
+
+197 实测 `diff` 无输出，两个文件的 SHA-256 均为 `7f13a3f72f846637d269b54c42dbd1526df34fb8b875eb5388f5307babdc4dcf`；新请求未携带访问 token，证明结果不再依赖原 KubeSphere HTTP 链路。
 
 最终完成标准：
 
