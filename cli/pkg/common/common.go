@@ -18,6 +18,8 @@ package common
 
 import (
 	"os"
+
+	"github.com/beclab/Olares/cli/pkg/releasefile"
 )
 
 const (
@@ -137,7 +139,7 @@ const (
 	TerminusStateFilePrepared  = ".prepared"
 	TerminusStateFileInstalled = ".installed"
 	MasterHostConfigFile       = "master.conf"
-	OlaresReleaseFile          = "/etc/olares/release"
+	OlaresReleaseFile          = releasefile.Path
 )
 
 const (
