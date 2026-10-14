@@ -109,7 +109,7 @@ spec:
             value: os_framework_vault
       containers:
       - name: vault-server
-        image: beclab/vault-server:v1.12.4
+        image: beclab/vault-server:v1.12.6-alpha.3
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3000
@@ -156,7 +156,7 @@ spec:
         - name: vault-attach
           mountPath: /padloc/packages/server/attachments
       - name: vault-admin
-        image: beclab/vault-admin:v1.6.23
+        image: beclab/vault-admin:v1.12.6-alpha.3
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3010
