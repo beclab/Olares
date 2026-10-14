@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"sort"
 	"strings"
 	"time"
 
@@ -22,24 +21,13 @@ import (
 
 	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
 	"github.com/emicklei/go-restful/v3"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/dynamic"
 )
 
 const (
 	terminusdHostEnv = "TERMINUSD_HOST"
 	defaultOlaresd   = "master-node:18088"
-
-	roleTemplateRulesAnnotation = "iam.kubesphere.io/role-template-rules"
-)
-
-var (
-	globalRoleBindingGVR = schema.GroupVersionResource{Group: "iam.kubesphere.io", Version: "v1alpha2", Resource: "globalrolebindings"}
-	globalRoleGVR        = schema.GroupVersionResource{Group: "iam.kubesphere.io", Version: "v1alpha2", Resource: "globalroles"}
 )
 
 var systemNamespaces = []string{
@@ -64,7 +52,6 @@ type handler struct {
 	base       apis.Base
 	appService *app_service.Client
 	kubeClient v1alpha1client.ClientInterface
-	iamClient  dynamic.Interface
 	httpClient *http.Client
 	ksBaseURL  string
 	olaresdURL string
@@ -75,14 +62,9 @@ func newHandler() (*handler, error) {
 	if err != nil {
 		return nil, fmt.Errorf("create capi kube client: %w", err)
 	}
-	iamClient, err := dynamic.NewForConfig(kubeClient.Config())
-	if err != nil {
-		return nil, fmt.Errorf("create capi IAM client: %w", err)
-	}
 	return &handler{
 		appService: app_service.NewAppServiceClient(),
 		kubeClient: kubeClient,
-		iamClient:  iamClient,
 		httpClient: &http.Client{Timeout: 10 * time.Second},
 		ksBaseURL:  normalizeHTTPBase(constants.KubeSphereAPIHost),
 		olaresdURL: normalizeHTTPBase(envOrDefault(terminusdHostEnv, defaultOlaresd)),
@@ -210,7 +192,9 @@ func (h *handler) appDetail(req *restful.Request, resp *restful.Response) {
 			GlobalRules:     map[string][]string{},
 		},
 	}
-	detail.User.GlobalRules = h.globalRules(req.Request.Context(), identity.Username, clusterRole)
+	if identity.Token != "" {
+		detail.User.GlobalRules = h.globalRules(req.Request.Context(), identity.Token, identity.Username, clusterRole)
+	}
 	log.Infow("appDetail response", "username", identity.Username, "detail", detail)
 	writeJSON(resp, http.StatusOK, detail)
 }
@@ -220,17 +204,6 @@ func globalRole(ownerRole string) string {
 		return "platform-admin"
 	}
 	return ownerRole
-}
-
-func parseStringList(value string) []string {
-	if value == "" {
-		return []string{}
-	}
-	var values []string
-	if json.Unmarshal([]byte(value), &values) == nil {
-		return values
-	}
-	return []string{value}
 }
 
 func (h *handler) containerRuntime(ctx context.Context) string {
@@ -248,77 +221,20 @@ func (h *handler) containerRuntime(ctx context.Context) string {
 	return runtimeVersion
 }
 
-func (h *handler) globalRules(ctx context.Context, username, clusterRole string) map[string][]string {
-	rules, err := globalRulesFromClient(ctx, h.iamClient, username, clusterRole)
-	if err != nil {
-		log.Warnf("get global rules for %s: %v", username, err)
+func (h *handler) globalRules(ctx context.Context, token, username, clusterRole string) map[string][]string {
+	var roles []struct {
+		Metadata struct {
+			Annotations map[string]string `json:"annotations"`
+		} `json:"metadata"`
+	}
+	path := "/kapis/iam.kubesphere.io/v1alpha2/users/" + url.PathEscape(username) + "/globalroles"
+	if err := h.getKSJSON(ctx, token, path, nil, &roles); err != nil {
 		return map[string][]string{}
 	}
-	return rules
-}
-
-func globalRulesFromClient(ctx context.Context, iamClient dynamic.Interface, username, clusterRole string) (map[string][]string, error) {
 	result := make(map[string][]string)
-	bindings, err := iamClient.Resource(globalRoleBindingGVR).List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return result, fmt.Errorf("list global role bindings: %w", err)
-	}
-
-	roleName := ""
-	for i := range bindings.Items {
-		subjects, _, _ := unstructured.NestedSlice(bindings.Items[i].Object, "subjects")
-		for _, rawSubject := range subjects {
-			subject, ok := rawSubject.(map[string]any)
-			if !ok || subject["name"] != username {
-				continue
-			}
-			roleName, _, _ = unstructured.NestedString(bindings.Items[i].Object, "roleRef", "name")
-			break
-		}
-		if roleName != "" {
-			break
-		}
-	}
-	if roleName == "" {
-		return result, nil
-	}
-
-	globalRole, err := iamClient.Resource(globalRoleGVR).Get(ctx, roleName, metav1.GetOptions{})
-	if err != nil {
-		return result, fmt.Errorf("get global role %s: %w", roleName, err)
-	}
-	var templateNames []string
-	if raw := globalRole.GetAnnotations()[iamv1alpha2.AggregationRolesAnnotation]; raw != "" {
-		if err := json.Unmarshal([]byte(raw), &templateNames); err != nil {
-			return result, nil
-		}
-	}
-
-	templates := make([]*unstructured.Unstructured, 0, len(templateNames))
-	for _, templateName := range templateNames {
-		role, err := iamClient.Resource(globalRoleGVR).Get(ctx, templateName, metav1.GetOptions{})
-		if apierrors.IsNotFound(err) {
-			continue
-		}
-		if err != nil {
-			return result, fmt.Errorf("get aggregated global role %s: %w", templateName, err)
-		}
-		templates = append(templates, role)
-	}
-	// KubeSphere's users/{user}/globalroles endpoint sorts aggregated roles by
-	// creation time descending, then name descending when timestamps match.
-	sort.SliceStable(templates, func(i, j int) bool {
-		left, right := templates[i], templates[j]
-		leftCreatedAt, rightCreatedAt := left.GetCreationTimestamp(), right.GetCreationTimestamp()
-		if leftCreatedAt.Equal(&rightCreatedAt) {
-			return left.GetName() > right.GetName()
-		}
-		return leftCreatedAt.After(rightCreatedAt.Time)
-	})
-
-	for _, role := range templates {
+	for _, role := range roles {
 		var rules map[string]any
-		if json.Unmarshal([]byte(role.GetAnnotations()[roleTemplateRulesAnnotation]), &rules) != nil {
+		if json.Unmarshal([]byte(role.Metadata.Annotations["iam.kubesphere.io/role-template-rules"]), &rules) != nil {
 			continue
 		}
 		for key, raw := range rules {
@@ -332,7 +248,7 @@ func globalRulesFromClient(ctx context.Context, iamClient dynamic.Interface, use
 			}
 		}
 	}
-	return result, nil
+	return result
 }
 
 func toStrings(value any) []string {
