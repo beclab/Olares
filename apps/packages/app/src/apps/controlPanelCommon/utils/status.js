@@ -202,6 +202,7 @@ export const getPodStatusAndRestartCount = (pod) => {
 	} = pod.status || {};
 	let status = phase;
 	let restarts = 0;
+	let sidecarRestarts = 0;
 	let initializing = false;
 	let readyCondition;
 
@@ -210,8 +211,17 @@ export const getPodStatusAndRestartCount = (pod) => {
 	}
 
 	if (!isEmpty(initContainerStatuses)) {
-		initContainerStatuses.forEach((container, index) => {
+		const initContainerSpecs = get(pod, 'spec.initContainers', []);
+		initContainerStatuses.some((container, index) => {
 			restarts += Number(container.restartCount);
+			const spec = initContainerSpecs.find(
+				(item) => item.name === container.name
+			);
+			// Native sidecar: restartable init container that keeps running.
+			if (spec && spec.restartPolicy === 'Always' && container.started) {
+				sidecarRestarts += Number(container.restartCount);
+				return;
+			}
 			const waiting = get(container, 'state.waiting');
 			const terminated = get(container, 'state.terminated');
 			if (terminated && terminated.exitCode === 0) {
@@ -219,9 +229,9 @@ export const getPodStatusAndRestartCount = (pod) => {
 			}
 
 			if (terminated) {
-				if (isEmpty(terminated.reason)) {
+				if (!isEmpty(terminated.reason)) {
 					status = `Init:${terminated.reason}`;
-				} else if (terminated.signal !== 0) {
+				} else if (terminated.signal) {
 					status = `Init:Signal:${terminated.signal}`;
 				} else {
 					status = `Init:ExitCode:${terminated.exitCode}`;
@@ -229,23 +239,23 @@ export const getPodStatusAndRestartCount = (pod) => {
 				initializing = true;
 			} else if (
 				waiting &&
-				terminated &&
-				!isEmpty(terminated.reason) &&
+				!isEmpty(waiting.reason) &&
 				waiting.reason !== 'PodInitializing'
 			) {
-				status = `Init:${terminated.reason}`;
+				status = `Init:${waiting.reason}`;
 				initializing = true;
 			} else {
 				const len = get(pod, 'spec.initContainers.length');
 				status = `Init:${index}/${len}`;
 				initializing = true;
 			}
+			return true;
 		});
 	}
 
 	if (!initializing && !isEmpty(containerStatuses)) {
 		let hasRunning = false;
-		restarts = 0;
+		restarts = sidecarRestarts;
 		containerStatuses.forEach((container) => {
 			restarts += Number(container.restartCount);
 
@@ -257,10 +267,9 @@ export const getPodStatusAndRestartCount = (pod) => {
 			} else if (terminated && terminated.reason) {
 				status = terminated.reason;
 			} else if (terminated && !terminated.reason) {
-				status =
-					terminated.singal !== 0
-						? `Signal:${terminated.singal}`
-						: `ExitCode:${terminated.exitCode}`;
+				status = terminated.signal
+					? `Signal:${terminated.signal}`
+					: `ExitCode:${terminated.exitCode}`;
 			} else if (
 				container.ready &&
 				container.state &&
