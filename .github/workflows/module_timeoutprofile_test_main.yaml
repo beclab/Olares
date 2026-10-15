@@ -1,0 +1,28 @@
+name: Timeout Profile Unit Tests
+on:
+  push:
+    branches:
+      - "main"
+    paths:
+      - 'framework/timeoutprofile/**'
+      - '.github/workflows/module_timeoutprofile_test_main.yaml'
+  pull_request:
+    branches:
+      - "main"
+    paths:
+      - 'framework/timeoutprofile/**'
+      - '.github/workflows/module_timeoutprofile_test_main.yaml'
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: framework/timeoutprofile/go.mod
+          cache: false
+      - name: Run catalog tests (race detector)
+        run: go test -race -count=1 ./...
+        working-directory: framework/timeoutprofile
