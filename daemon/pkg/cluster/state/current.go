@@ -83,15 +83,16 @@ func CheckCurrentStatus(ctx context.Context) error {
 
 func refreshCurrentStatus(ctx context.Context) error {
 	TerminusStateMu.Lock()
-	name, err := utils.GetOlaresNameFromReleaseFile()
+	release, err := utils.GetDataFromReleaseFile()
 	if err != nil {
-		klog.Error("get olares name from release file error, ", err)
-	} else if name != "" {
-		// Only when the file actually names one. A node that joined an
-		// existing cluster has no OLARES_NAME — that file is written where the
-		// activation happened — and assigning the empty string here would
-		// erase the ID resolved from the cluster below on every pass.
-		CurrentState.TerminusName = &name
+		klog.Error("read olares release file error, ", err)
+	} else {
+		if name := release["OLARES_NAME"]; name != "" {
+			CurrentState.TerminusName = &name
+		}
+		if did := release["OLARES_DID"]; did != "" {
+			CurrentState.PrimaryUserDID = &did
+		}
 	}
 
 	var currentTerminusState TerminusState = CurrentState.TerminusState
