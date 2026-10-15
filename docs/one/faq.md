@@ -40,7 +40,7 @@ Olares One operates quietly even under load. In lab testing, the device generate
 ### What is the power consumption?
 
 The device consumes 30W in standby. Under load, the GPU power depends on your selected mode:
-* **Silent Mode**: GPU 95W
+* **Silent Mode**: GPU 50W
 * **Performance Mode**: GPU 175W
 
 When the CPU is fully utilized on its own, power consumption reaches 120W. During combined maximum load, the system balances power distribution with the CPU operating at 55W and the GPU at 175W. The thermal design sustains these performance levels.
