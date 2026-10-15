@@ -78,6 +78,7 @@ export const useCases: UseCase[] = [
   { title: "Xinference", link: "/use-cases/xinference", category: "Model services", description: "Deploy and serve models on Olares", descriptionZh: "在 Olares 上部署和提供模型服务" },
   { title: "Isaac Lab", link: "/use-cases/isaac-lab", category: "Embodied AI", description: "GPU-accelerated robot simulation training", descriptionZh: "GPU 加速的机器人仿真训练" },
   { title: "macOS", link: "/use-cases/macos", category: "Virtual machine", description: "Run a macOS VM with browser-based VNC", descriptionZh: "通过浏览器 VNC 运行 macOS 虚拟机" },
+  { title: "QEMU Server", link: "/use-cases/qemu", category: "Virtual machine", description: "Run independent Linux servers with SSH and VPN access", descriptionZh: "运行独立 Linux 服务器，通过 SSH 与 VPN 连接" },
   { title: "Windows", link: "/use-cases/windows", category: "Virtual machine", description: "Run a Windows VM with VNC or Remote Desktop", descriptionZh: "通过 VNC 或远程桌面运行 Windows 虚拟机" },
   { title: "Immich", link: "/use-cases/immich", category: "Entertainment", description: "Back up and organize photos with AI search", descriptionZh: "备份整理照片，支持 AI 搜索" },
   { title: "Jellyfin", link: "/use-cases/jellyfin", category: "Entertainment", description: "Private media streaming server", descriptionZh: "私人流媒体服务器" },

@@ -348,6 +348,14 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/zh/use-cases/macos",
             },
             {
+              text: "QEMU Server",
+              link: "/zh/use-cases/qemu",
+              collapsed: true,
+              items: [
+                { text: "验收检查", link: "/zh/use-cases/qemu-validation" },
+              ],
+            },
+            {
               text: "Windows",
               link: "/zh/use-cases/windows",
               collapsed: true,
