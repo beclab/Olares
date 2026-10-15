@@ -45,6 +45,9 @@ type State struct {
 	// It remains available when the cluster cannot be reached.
 	TerminusName *string `json:"terminusName,omitempty"`
 
+	// PrimaryUserDID is the first user's DID recorded in the local release file.
+	PrimaryUserDID *string `json:"primaryUserDID,omitempty"`
+
 	// TerminusVersion is the installed Olares version (semver), e.g.
 	// "1.12.0".
 	TerminusVersion *string `json:"terminusVersion,omitempty"`

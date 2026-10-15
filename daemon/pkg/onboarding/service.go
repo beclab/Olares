@@ -190,7 +190,10 @@ func (s *Service) Create(ctx context.Context, request CreateRequest) (Status, er
 	if u.GetDeletionTimestamp() != nil || u.GetAnnotations()[UserMarker] != "true" || u.GetAnnotations()[UserDID] != did {
 		return Status{}, ErrConflict
 	}
-	if err := releasefile.Update(ctx, map[string]string{"OLARES_NAME": request.Username + "@olares.local"}); err != nil {
+	if err := releasefile.Update(ctx, map[string]string{
+		"OLARES_NAME": request.Username + "@olares.local",
+		"OLARES_DID":  request.DID,
+	}); err != nil {
 		return Status{}, fmt.Errorf("write first user to release file: %w", err)
 	}
 	return s.Status(ctx)
