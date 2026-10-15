@@ -134,7 +134,7 @@ metadata:
 data:
   config.yaml.tpl: |
     # The renderer replaces this with the public shared Headscale URL after
-    # the unified Olares DNS zone is bound.
+    # the primary Olares DNS zone is bound.
     server_url: __HEADSCALE_SERVER_URL__
     listen_addr: 0.0.0.0:8080
     metrics_listen_addr: 0.0.0.0:9090
@@ -272,7 +272,7 @@ data:
         cache 5
         reload 2s
 
-        # Headscale sends only the exact per-user split zones rendered at Pod
+        # Headscale sends only the exact Olares split zones rendered at Pod
         # startup. Every query that reaches this resolver therefore belongs to
         # this Olares instance and resolves to its shared ingress node. The L4
         # proxy selects the actual user/application using SNI or Host.
@@ -498,14 +498,25 @@ spec:
               }
 
               if test -n "${OLARES_DNS_ZONE}"; then
-                if normalized_zone="$(valid_zone "${OLARES_DNS_ZONE}")"; then
-                  echo "using global Olares split DNS zone: ${normalized_zone}"
-                  printf '%s\n' "${normalized_zone}" > "${zones}"
-                  headscale_server_url="https://headscale.${normalized_zone}"
-                else
+                # Comma-separated; the first zone names the Headscale URL.
+                printf '%s\n' "${OLARES_DNS_ZONE}" | tr ',' '\n' \
+                  | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' > "${raw_zones}"
+                primary_zone=""
+                while IFS= read -r zone; do
+                  test -n "${zone}" || continue
+                  if ! normalized_zone="$(valid_zone "${zone}")"; then
+                    echo "invalid Olares DNS zone annotation: ${OLARES_DNS_ZONE}" >&2
+                    exit 1
+                  fi
+                  printf '%s\n' "${normalized_zone}" >> "${zones}"
+                  test -n "${primary_zone}" || primary_zone="${normalized_zone}"
+                done < "${raw_zones}"
+                if test -z "${primary_zone}"; then
                   echo "invalid Olares DNS zone annotation: ${OLARES_DNS_ZONE}" >&2
                   exit 1
                 fi
+                echo "using global Olares split DNS zones, primary: ${primary_zone}"
+                headscale_server_url="https://headscale.${primary_zone}"
               else
                 echo "global Olares DNS zone is absent; using per-user DNS zones"
 
