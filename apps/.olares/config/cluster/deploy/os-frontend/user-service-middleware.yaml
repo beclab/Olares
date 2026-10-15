@@ -75,41 +75,42 @@ spec:
         secretKeyRef:
           name: user-service-nats-secret
           key: nats_password
+    # Shared service authorization covers each user; subscriptions remain exact per user.
     subjects:
-    - name: files.os-frontend
+    - name: files.*
       permission:
-        pub: allow
+        pub: deny
         sub: allow
-    - name: notification.os-frontend
+    - name: notification.*
       permission:
-        pub: allow
+        pub: deny
         sub: allow
-    - name: vault.os-frontend
+    - name: vault.*
       permission:
-        pub: allow
+        pub: deny
         sub: allow
-    - name: application.os-frontend
+    - name: application.*
       permission:
-        pub: allow
+        pub: deny
         sub: allow
-    - name: knowledge.os-frontend
+    - name: knowledge.*
       permission:
-        pub: allow
+        pub: deny
         sub: allow
-    - name: market.os-frontend
+    - name: market.*
       permission:
-        pub: allow
+        pub: deny
         sub: allow
-    - name: backup.os-frontend
+    - name: backup.*
       permission:
-        pub: allow
+        pub: deny
         sub: allow
-    - name: intent.os-frontend
+    - name: intent.*
       permission:
-        pub: allow
+        pub: deny
         sub: allow
-    - name: download_status.os-frontend
+    - name: download_status.*
       permission:
-        pub: allow
+        pub: deny
         sub: allow
     user: user-service-os-frontend
