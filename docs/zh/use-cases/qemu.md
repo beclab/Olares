@@ -30,7 +30,6 @@ QEMU Server 可以在 Olares 上运行 Linux 虚拟机。你可以用它运行�
 ### 安装应用
 
 1. 打开应用市场，搜索“QEMU Server”。
-   <!-- ![应用市场中的 QEMU Server](/images/manual/use-cases/qemu.png#bordered) -->
 
 2. 点击**获取**，然后点击**安装**。按提示填写以下配置，本例使用 Ubuntu 24.04 LTS。
 
@@ -50,11 +49,15 @@ QEMU Server 可以在 Olares 上运行 Linux 虚拟机。你可以用它运行�
 
 1. 从启动台打开 QEMU Server，查看系统镜像下载和初始化进度。
 
-   <!-- ![Linux 镜像下载和初始化进度](/images/manual/use-cases/qemu-initialization.png#bordered) -->
+   ![Linux 镜像下载和初始化进度](/images/manual/use-cases/qemu-initialization.png#bordered)
+
+   下载时间取决于镜像大小和网络状况。如果下载失败，打开 **设置** > **应用** > **QEMU Server**，点击**暂停**，再点击**恢复**，利用已下载的数据继续重试。
 
 2. 等待下载和初始化完成。页面显示服务器就绪后，即可通过 SSH 或浏览器控制台连接。
 
-   下载时间取决于镜像大小和网络状况。如果下载失败，打开 **设置** > **应用** > **QEMU Server**，点击**暂停**，再点击**恢复**，利用已下载的数据继续重试。
+   ![Linux 系统初始化完成](/images/manual/use-cases/qemu-initialization-finished.png#bordered)
+
+### 获取用户名和密码
 
 Ubuntu 的用户名为 `ubuntu`，密码是你在安装时设置的密码。不同发行版使用的用户名如下：
 
@@ -99,14 +102,16 @@ Overlay 网关为服务器分配独立的局域网 IP，SSH 使用端口 `22`。
 
    ![在电脑上启用 LarePass VPN](/images/manual/get-started/larepass-vpn-desktop.png#bordered)
 
-2. 打开 **设置** > **应用**，选择 QEMU Server 实例，再打开**导出端口**。记下 SSH 对应的**导出端口**值，不要使用内部的**端口**值。
+2. 打开 **设置** > **应用**，选择 QEMU Server 实例，再打开**导出端口**。记下 SSH 对应的**导出端口**值，例如本例中的 `48113`。
+
+   ![QEMU Server 的 SSH 导出端口](/images/manual/use-cases/qemu-export-ports.png#bordered){width=70%}
 
 3. 使用 Olares ID 对应的域名作为主机地址。例如，Olares ID 为 `laresprime@olares.com` 时，使用 `laresprime.olares.com`。
 
-4. 打开终端或 PowerShell，使用 `-p` 指定导出端口。例如，域名为 `laresprime.olares.com`、导出端口为 `43022` 时，运行：
+4. 打开终端或 PowerShell，使用 `-p` 指定导出端口。例如，域名为 `laresprime.olares.com`、导出端口为 `48113` 时，运行：
 
    ```bash
-   ssh -p 43022 ubuntu@laresprime.olares.com
+   ssh -p 48113 ubuntu@laresprime.olares.com
    ```
 
 5. 按提示输入 Linux 密码。
@@ -117,13 +122,15 @@ Overlay 网关为服务器分配独立的局域网 IP，SSH 使用端口 `22`。
 
 浏览器控制台适合临时操作，也可以在 SSH 无法连接时用来查看启动信息。
 
-1. 从启动台打开 QEMU Server，再打开应用页面中的控制台。
+1. 从启动台打开 QEMU Server，然后点击 **Open console**。
 
-   <!-- ![打开 QEMU Server 浏览器控制台](/images/manual/use-cases/qemu-browser-console.png#bordered) -->
+   ![打开 QEMU Server 浏览器控制台](/images/manual/use-cases/qemu-browser-console.png#bordered)
 
-2. 在登录提示处输入 `ubuntu`，再输入安装时设置的密码。使用其他发行版时，填写[初始化 Linux](#初始化-linux)中对应的用户名。
+2. 在登录提示处输入 `ubuntu`，再输入安装时设置的密码。使用其他发行版时，填写[获取用户名和密码](#获取用户名和密码)中对应的用户名。
 
 登录后，就可以在浏览器中运行 Linux 命令。
+
+![QEMU Server 浏览器控制台中的 Linux 命令行](/images/manual/use-cases/qemu-console-terminal.png#bordered)
 
 ## 在电脑和 Linux 之间传输文件
 
@@ -173,6 +180,9 @@ Overlay 网关为服务器分配独立的局域网 IP，SSH 使用端口 `22`。
 1. 打开 **设置** > **应用**，选择需要调整的实例。
 2. 在**环境变量**中点击**管理环境变量**。
 3. 修改 **CPU_CORES**、**MEMORY_GB** 或 **DISK_SIZE_GB**，可用范围见[安装应用](#安装应用)。
+
+   ![修改 QEMU Server 资源配置](/images/manual/use-cases/qemu-resource-settings.png#bordered)
+
 4. 确认修改后，点击**应用**。
 5. 从启动台打开实例，等待 Linux 就绪后重新连接。
 
@@ -188,9 +198,9 @@ df -h /
 
 ## 保存数据
 
-系统盘保存在当前实例的 Olares App Data 中。保存在系统盘上的软件、文件和服务数据会在应用重启、资源调整后保留。各克隆实例使用独立存储。
+虚拟机的系统盘以 `server.qcow2` 文件的形式保存在 Olares 文件管理器的 **Application** > **Data** > **qemu** > **storage** 中。保存在该系统盘上的软件、文件和服务数据会在应用重启、资源调整后保留。每个克隆实例都有独立的系统盘。
 
-<!-- ![Olares App Data 中的 QEMU Server 系统盘](/images/manual/use-cases/qemu-app-data.png#bordered) -->
+![Olares App Data 中的 QEMU Server 系统盘](/images/manual/use-cases/qemu-app-data.png#bordered)
 
 :::warning 删除实例前先备份
 请为重要文件保留独立备份。卸载实例并删除应用数据会移除该实例的系统盘。

@@ -26,7 +26,6 @@ This guide uses Ubuntu as the first server, then shows how to add a separate Deb
 ### Install the app
 
 1. Open Market and search for "QEMU Server".
-   <!-- ![QEMU Server in Market](/images/manual/use-cases/qemu.png#bordered) -->
 
 2. Click **Get**, then **Install**. When prompted, configure the following fields. This example uses Ubuntu 24.04 LTS.
 
@@ -46,11 +45,15 @@ This guide uses Ubuntu as the first server, then shows how to add a separate Deb
 
 1. Open QEMU Server from Launchpad to view the system image download and initialization progress.
 
-   <!-- ![Linux image download and initialization progress](/images/manual/use-cases/qemu-initialization.png#bordered) -->
+   ![Linux image download and initialization progress](/images/manual/use-cases/qemu-initialization.png#bordered)
+
+   Download time depends on the image size and your network. If the download fails, open **Settings** > **Applications** > **QEMU Server**, click **Stop**, then **Resume** to retry using the data already downloaded.
 
 2. Wait for the download and initialization to finish. When the page shows that the server is ready, you can connect through SSH or the browser console.
 
-   Download time depends on the image size and your network. If the download fails, open **Settings** > **Applications** > **QEMU Server**, click **Stop**, then **Resume** to retry using the data already downloaded.
+   ![Linux image initialized](/images/manual/use-cases/qemu-initialization-finished.png#bordered)
+
+### Get your username and password
 
 For Ubuntu, use the username `ubuntu` and the password you set during installation. The username depends on your selected distribution:
 
@@ -95,14 +98,16 @@ LarePass VPN lets you connect from another network using your Olares domain and 
 
    ![Enable LarePass VPN on a computer](/images/manual/get-started/larepass-vpn-desktop.png#bordered)
 
-2. Open **Settings** > **Applications**, select your QEMU Server instance, and open **Export ports**. Note the **Exported port** for SSH, rather than the internal **Port** value.
+2. Open **Settings** > **Applications**, select your QEMU Server instance, and open **Export ports**. Note the **Exported port** for SSH, such as `48113` in this example.
+
+   ![QEMU Server exported SSH port](/images/manual/use-cases/qemu-export-ports.png#bordered){width=70%}
 
 3. Use the domain for your Olares ID as the host. For example, for `laresprime@olares.com`, use `laresprime.olares.com`.
 
-4. Open Terminal or PowerShell and connect with `-p` followed by the exported port. For example, if your domain is `laresprime.olares.com` and the exported port is `43022`:
+4. Open Terminal or PowerShell and connect with `-p` followed by the exported port. For example, if your domain is `laresprime.olares.com` and the exported port is `48113`:
 
    ```bash
-   ssh -p 43022 ubuntu@laresprime.olares.com
+   ssh -p 48113 ubuntu@laresprime.olares.com
    ```
 
 5. Enter your Linux password when prompted.
@@ -113,13 +118,15 @@ For an SSH client such as Xshell, enter your Olares domain as the host and the e
 
 Use the browser console for quick tasks or to view startup messages when SSH is unavailable.
 
-1. Open QEMU Server from Launchpad, then open its console.
+1. Open QEMU Server from Launchpad, then click **Open console**.
 
-   <!-- ![Open the QEMU Server browser console](/images/manual/use-cases/qemu-browser-console.png#bordered) -->
+   ![Open the QEMU Server browser console](/images/manual/use-cases/qemu-browser-console.png#bordered)
 
-2. At the login prompt, enter `ubuntu` and the password you set during installation. For another distribution, use its username from [Initialize Linux](#initialize-linux).
+2. At the login prompt, enter `ubuntu` and the password you set during installation. For another distribution, use its username from [Get your username and password](#get-your-username-and-password).
 
 You can now run Linux commands in the browser.
+
+![Linux shell in the QEMU Server browser console](/images/manual/use-cases/qemu-console-terminal.png#bordered)
 
 ## Transfer files between your computer and Linux
 
@@ -169,6 +176,9 @@ You can change resource settings as your workload grows. Save your work and back
 1. Open **Settings** > **Applications** and select the instance.
 2. Under **Environment variables**, click **Manage environment variables**.
 3. Edit **CPU_CORES**, **MEMORY_GB**, or **DISK_SIZE_GB** within the ranges listed in [Install the app](#install-the-app).
+
+   ![Edit QEMU Server resource settings](/images/manual/use-cases/qemu-resource-settings.png#bordered)
+
 4. Confirm your changes and click **Apply**.
 5. Open the instance from Launchpad, wait for Linux to be ready, then reconnect.
 
@@ -184,9 +194,9 @@ A smaller **DISK_SIZE_GB** value leaves the existing disk unchanged. To use a sm
 
 ## Keep your data
 
-The system disk is stored in the instance's Olares App Data. Installed software, files, and services saved on that disk remain available after app restarts and resource changes. Each clone has separate storage.
+The VM’s system disk is stored as `server.qcow2` in Olares Files under **Application** > **Data** > **qemu** > **storage**. Installed software, files, and service data saved on this disk are preserved across app restarts and resource changes. Each clone has its own system disk.
 
-<!-- ![QEMU Server system disk in Olares App Data](/images/manual/use-cases/qemu-app-data.png#bordered) -->
+![QEMU Server system disk in Olares App Data](/images/manual/use-cases/qemu-app-data.png#bordered)
 
 :::warning Back up before removing an instance
 Keep a separate backup of important files. Uninstalling an instance and deleting its application data removes its system disk.
