@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+<defs>
+  <radialGradient id="paper" cx="32%" cy="15%" r="110%"><stop stop-color="#ffffff"/><stop offset=".5" stop-color="#f5f6f7"/><stop offset="1" stop-color="#ebedf0"/></radialGradient>
+  <pattern id="dots" width="9" height="9" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r=".75" fill="#858c96" opacity=".24"/></pattern>
+  <radialGradient id="dotFade" cx="35%" cy="35%" r="80%"><stop stop-color="#555"/><stop offset="1" stop-color="#fff"/></radialGradient>
+  <mask id="textureMask"><rect width="1200" height="630" fill="url(#dotFade)"/></mask>
+
+
+</defs>
+<rect width="1200" height="630" fill="url(#paper)"/>
+<rect width="1200" height="630" fill="url(#dots)" mask="url(#textureMask)"/>
+<path d="M400 0H1200V260Q800 120 400 0Z" fill="#fff" opacity=".35"/>
+<rect x="0" y="618" width="1200" height="12" fill="#171717"/>
+</svg>

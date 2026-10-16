@@ -6,6 +6,9 @@ import _ from "lodash";
 import { redirects, temporaryRedirects } from "./theme/redirects";
 import fs from 'node:fs';
 import path from 'node:path';
+import { createSocialImages } from './og/generate.mjs';
+
+const socialImages = createSocialImages(path.resolve(__dirname, 'og'));
 //import defaultConfig from 'vitepress-versioning-plugin';
 
 // Paths collected during transformPageData so sitemap.transformItems can
@@ -268,8 +271,7 @@ export default defineVersionedConfig2(withMermaid({
       return;
     }
 
-    // Locale is needed for canonical, hreflang, and OG tags. Compute it once
-    // before any of those blocks so every consumer sees the same value.
+    // Locale is shared by the canonical and hreflang blocks.
     const isZh = pageData.relativePath.startsWith('zh/');
 
     // Self-referencing canonical for every indexable doc page. Built from the
@@ -316,50 +318,12 @@ export default defineVersionedConfig2(withMermaid({
         pageData.frontmatter.head.push(['link', { rel: 'alternate', hreflang: alt.hreflang, href: alt.href }]);
       }
     }
+  },
 
-    // Keep og:url identical to the canonical URL. A mismatch between the two
-    // sends conflicting signals to crawlers and social scrapers about the
-    // page's authoritative address.
-    const siteName = isZh ? 'Olares 文档' : 'Olares Docs';
-    const defaultDescription = isZh
-      ? '让人们重新拥有自己的数据'
-      : 'Let people own their data again';
-    const ogTitle = pageData.title
-      ? `${pageData.title} | ${siteName}`
-      : siteName;
-    const ogDescription =
-      pageData.description?.trim() || defaultDescription;
-    // Same brand OG asset as marketing (from Olares One / Shopify, 1200×630).
-    const ogImage = 'https://www.olares.com/docs/olares-og.jpg';
-    const ogLocale = isZh ? 'zh_CN' : 'en_US';
-    for (const [property, content] of [
-      ['og:url', canonicalHref],
-      ['og:title', ogTitle],
-      ['og:description', ogDescription],
-      ['og:image', ogImage],
-      ['og:image:width', '1200'],
-      ['og:image:height', '630'],
-      ['og:image:type', 'image/jpeg'],
-      ['og:type', 'website'],
-      ['og:site_name', siteName],
-      ['og:locale', ogLocale],
-    ] as const) {
-      pageData.frontmatter.head.push([
-        'meta',
-        { property, content },
-      ]);
-    }
-    for (const [name, content] of [
-      ['twitter:card', 'summary_large_image'],
-      ['twitter:title', ogTitle],
-      ['twitter:description', ogDescription],
-      ['twitter:image', ogImage],
-    ] as const) {
-      pageData.frontmatter.head.push([
-        'meta',
-        { name, content },
-      ]);
-    }
+  // Runs for every rendered page, including noindex and archived pages.
+  // Generate directly into outDir at buildEnd, after Vite has copied public/.
+  transformHead({ pageData, siteConfig }) {
+    return socialImages.head(pageData, siteConfig.site.base, process.env.DOCS_SITE_URL);
   },
 
   // Archived versioned builds noindex every page, so their sitemap would be
@@ -395,7 +359,8 @@ export default defineVersionedConfig2(withMermaid({
   // runs generateSitemap immediately before buildEnd) instead of rebuilding the
   // entries, so it inherits transformItems' filtering, the git-derived lastmod
   // values, and the xhtml:link alternates VitePress computes from `locales`.
-  buildEnd: async ({ outDir, site }) => {
+  buildEnd: async ({ outDir, site, cacheDir }) => {
+    socialImages.write(outDir, cacheDir);
     // Archived builds disable the sitemap entirely, so there is nothing to
     // split and waiting below would time out.
     if (isArchivedVersionBuild) return;
