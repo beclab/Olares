@@ -62,6 +62,7 @@ export const useCases: UseCase[] = [
   { title: "TrustGraph", link: "/use-cases/trustgraph", category: "AI workbench", description: "Ask questions about documents and explore their connections", descriptionZh: "围绕文档提问，探索内容之间的联系" },
   { title: "Vane (Perplexica)", link: "/use-cases/perplexica", category: "AI workbench", description: "Private, AI-powered search and Q&A", descriptionZh: "注重隐私的 AI 搜索与问答" },
   { title: "Dify", link: "/use-cases/dify", category: "AI workbench", description: "Build AI apps and agents with a shared workspace", descriptionZh: "在共享工作空间中构建 AI 应用与智能体" },
+  { title: "Unsloth", link: "/use-cases/unsloth", category: "AI workbench", description: "Run, fine-tune, and export open models locally", descriptionZh: "在本地运行、微调和导出开源模型" },
   { title: "Blender", link: "/use-cases/blender", category: "Creative media", description: "Create and render 3D scenes with Lares", descriptionZh: "用 Lares 操作 Blender，搭建并渲染 3D 场景" },
   { title: "ComfyUI", link: "/use-cases/comfyui", category: "Creative media", description: "Node-based AI image generation", descriptionZh: "节点式 AI 图像生成" },
   { title: "Concat", link: "/use-cases/concat", category: "Creative media", description: "Edit videos in your browser or through MCP", descriptionZh: "在浏览器中剪辑视频，或通过 MCP 对话式编辑" },
