@@ -7,7 +7,7 @@ head:
       content: "Olares, Local Deep Research, AI research, AI Router, SearXNG, citations, research reports, local models"
 app_version: "0.0.12"
 doc_version: "1.0"
-doc_updated: "2026-10-15"
+doc_updated: "2026-10-16"
 ---
 
 # Research a topic with cited sources using Local Deep Research
@@ -30,7 +30,7 @@ Before you begin, you need:
 
 - An Olares device running Olares 1.12.7 or later, with sufficient memory and disk space.
 - Access to [Router](olares-router.md) for local model connections.
-- SearXNG installed from Market.
+- [SearXNG](searxng.md) installed from Market and running.
 - The following model:
 
   | Model type | Model | How to get it |
@@ -48,16 +48,15 @@ Local Deep Research calls the chat model through Router's `default-chat` route.
 
 ## Prepare the SearXNG connection
 
-Local Deep Research searches the web through SearXNG. The installation form in the next step requires the SearXNG URL.
+Local Deep Research searches the web through SearXNG. You need the SearXNG URL to install Local Deep Research.
 
-1. Open Olares **Settings**, go to **Applications** > **SearXNG** > **Entrances** > **SearXNG**, and then copy the **Endpoint** URL.
-2. Open SearXNG from the Launchpad, search for `how heat pumps work`, and then ensure that the page contains actual results.
+Open Olares **Settings**, go to **Applications** > **SearXNG** > **Entrances** > **SearXNG**, and then copy the **Endpoint** URL.
 
 ## Install Local Deep Research
 
 1. Open Market and search for "Local Deep Research".
 2. Click **Get**, then click **Install**.
-3. In **SEARXNG_URL**, enter the SearXNG URL you copied, and click **Confirm**.
+3. When prompted, enter the SearXNG URL you copied and click **Confirm**.
 4. Wait for the installation to complete.
 
 ## Create a user account

@@ -7,7 +7,7 @@ head:
       content: "Olares, Local Deep Research, AI 研究, AI Router, SearXNG, 来源引用, 研究报告, 本地模型"
 app_version: "0.0.12"
 doc_version: "1.0"
-doc_updated: "2026-10-15"
+doc_updated: "2026-10-16"
 ---
 
 :::warning
@@ -34,7 +34,7 @@ Local Deep Research 是一个结合网页搜索与语言模型的开源 AI 研�
 
 - 一台运行 Olares 1.12.7 或更高版本、具有足够内存和磁盘空间的 Olares 设备。
 - 能够访问 [Router](olares-router.md)，用于连接本地模型。
-- 已从 Market 安装 SearXNG。
+- 已从 Market 安装 [SearXNG](searxng.md)，且应用正在运行。
 - 安装以下模型：
 
   | 模型类型 | 模型 | 获取方式 |
@@ -52,16 +52,15 @@ Local Deep Research 通过 Router 的 `default-chat` 路由调用聊天模型。
 
 ## 准备 SearXNG 连接
 
-Local Deep Research 通过 SearXNG 搜索网页。下一步的安装表单需要填写 SearXNG 地址。
+Local Deep Research 通过 SearXNG 搜索网页。安装 Local Deep Research 时需要填写 SearXNG 地址。
 
-1. 打开 Olares **设置**，进入 **应用** > **SearXNG** > **入口** > **SearXNG**，复制**端点**地址。保留设置中显示的协议，不要在末尾添加 `/search`。
-2. 从启动台打开 SearXNG，搜索 `how heat pumps work`，确认页面包含实际搜索结果，而不是只有搜索引擎错误提示。
+打开 Olares **设置**，进入 **应用** > **SearXNG** > **入口** > **SearXNG**，复制**端点**地址。
 
 ## 安装 Local Deep Research
 
 1. 打开 Market，搜索“Local Deep Research”。
 2. 点击 **获取**，再点击 **安装**。
-3. 在 `SEARXNG_URL` 中填入复制的 SearXNG 地址，点击 **确认**。
+3. 出现提示时，填入复制的 SearXNG 地址，点击 **确认**。
 4. 等待安装完成。
 
 ## 创建用户账号
