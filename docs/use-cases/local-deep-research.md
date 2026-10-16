@@ -89,12 +89,12 @@ Your password protects the encrypted account database. There is no password reco
 
    | Setting | Value |
    |:---|:---|
-   | **Model Provider** | OpenAI-Compatible Endpoint |
-   | **Language Model** | `default-chat` |
-   | **Search Engine** | SearXNG |
-   | **Search Iterations** | `1` |
-   | **Questions Per Iteration** | `1` |
-   | **Search Strategy** | Source-Based |
+   | <nobr>**Model Provider**</nobr> | OpenAI-Compatible Endpoint |
+   | <nobr>**Language Model**</nobr> | `default-chat` |
+   | <nobr>**Search Engine**</nobr> | SearXNG |
+   | <nobr>**Search Iterations**</nobr> | `1` |
+   | <nobr>**Questions Per Iteration**</nobr> | `1` |
+   | <nobr>**Search Strategy**</nobr> | Source-Based |
 
    :::info
    You cannot edit the model or endpoint fields here, because they are set by the application's environment variables. To change them, go to **Settings** > **Applications** > **Local Deep Research** > **Manage environment variables**.

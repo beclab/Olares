@@ -93,12 +93,12 @@ Local Deep Research 通过 SearXNG 搜索网页。下一步的安装表单需要
 
    | 设置项 | 值 |
    | :--- | :--- |
-   | **Model Provider** | OpenAI-Compatible Endpoint |
-   | **Language Model** | `default-chat` |
-   | **Search Engine** | SearXNG |
-   | **Search Iterations** | `1` |
-   | **Questions Per Iteration** | `1` |
-   | **Search Strategy** | Source-Based |
+   | <nobr>**Model Provider**</nobr> | OpenAI-Compatible Endpoint |
+   | <nobr>**Language Model**</nobr> | `default-chat` |
+   | <nobr>**Search Engine**</nobr> | SearXNG |
+   | <nobr>**Search Iterations**</nobr> | `1` |
+   | <nobr>**Questions Per Iteration**</nobr> | `1` |
+   | <nobr>**Search Strategy**</nobr> | Source-Based |
 
    :::info
    你无法在此编辑模型或接口地址字段，因为它们由应用的环境变量决定。如需修改，请前往 **设置** > **应用** > **Local Deep Research** > **管理环境变量**。
