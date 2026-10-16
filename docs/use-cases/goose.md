@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Run Goose on Olares with AI Router, connect Goose Desktop, and turn project notes into a Markdown brief. Use Goose Terminal for conversations and file tasks in your browser.
+description: Run Goose as your local AI agent on Olares. Chat through Goose Terminal in your browser or connect Goose Desktop on your computer.
 head:
   - - meta
     - name: keywords
@@ -10,79 +10,75 @@ doc_version: "1.0"
 doc_updated: "2026-10-13"
 ---
 
-# Turn project notes into a brief with Goose on Olares
+# Run Goose as your local AI agent on Olares
 
-Goose is an open-source AI agent that can read files, edit documents, and run commands through natural language. On Olares, the agent runs on your Olares device while you interact with it through Goose Desktop on your computer or Goose Terminal in your browser.
+Goose is an open-source, general-purpose AI agent for research, writing, coding, automation, and more. It connects to 70+ extensions through MCP for databases, APIs, browsers, and other services. On Olares, Goose runs on your Olares device with local models through Router, and you interact with it through Goose Terminal in your browser or Goose Desktop on your computer.
 
-The app uses AI Router's default chat model out of the box. This example creates a project brief in Goose's persistent workspace, so you can complete a file task without first granting access to your personal directories.
+The app uses Router's default chat model by default. This example creates a project brief in Goose's persistent workspace, so you can complete a file task without first granting access to your personal directories.
 
 ## Learning objectives
 
 In this guide, you will learn how to:
 
-- Connect Goose Desktop to the Goose service on Olares.
-- Create and verify a Markdown document through a conversation.
-- Use Goose Terminal and enable access to existing files when needed.
+- Create and verify a Markdown document in Goose Terminal.
+- Connect Goose Desktop to the Goose service on Olares and continue the conversation there.
+- Enable access to existing files when needed.
 
 ## Prerequisites
 
+Before you begin, you need:
+
 - Olares 1.12.7 or later.
-- [AI Router](olares-router.md) with a working default chat model that supports tool use.
+- Access to [Router](olares-router.md) for local model connections.
+- The following model installed from Market:
+
+  | Model type | Model | How to get it |
+  | :--- | :--- | :--- |
+  | Chat | Qwen3.8-27B (llama.cpp) | Install from Market |
+
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## Install Goose
 
 1. Open Market and search for "Goose".
-   <!-- ![Goose in Market](/images/manual/use-cases/goose.png#bordered) -->
-
 2. Click **Get**, then **Install**, and wait for installation to complete.
 
-Goose is already configured to use AI Router. You do not need to enter a model provider's API key for this default connection. Model availability and performance depend on the model configured in AI Router.
+## Use Goose Terminal
 
-## Configure Goose Desktop
+Goose Terminal opens in your browser and connects to the Goose service directly. No client installation or connection setup is needed.
 
-1. Install Goose Desktop on your computer using the [official installation guide](https://goose-docs.ai/docs/getting-started/installation/). Use version 1.54.0 to match the server covered by this guide.
+### Run a single request
 
-2. Enable LarePass VPN on your computer to connect to Olares.
+Use `goose run -t` when a single prompt is enough for the task.
 
-   :::tip On the same local network?
-   You can also use Olares local access. See [Access Olares services locally](../manual/best-practices/local-access.md) for domain and Windows setup details. The steps below use the HTTPS entrance URL.
-   :::
-
-3. In Olares, open **Settings** > **Applications** > **Goose**. Under **Entrances**, select **Goose ACP** and copy its HTTPS URL. This entrance connects a client to the agent; it is not a browser chat page.
-
-4. Open Goose Terminal from Launchpad and run:
+1. Open Goose Terminal from Launchpad.
+2. Run `goose run -t` followed by your prompt:
 
    ```bash
-   printenv GOOSE_SERVER__SECRET_KEY
+   goose run -t "Your_Prompt"
    ```
 
-   Copy the returned value. This is the connection secret for your Goose service, not an AI model API key. Keep it private.
+   For example, ask a question:
 
-5. In Goose Desktop, open **Settings** and find **External Backend (ACP)**. Configure:
-
-   | Setting | Value |
-   |:---|:---|
-   | **Use external backend** | Enabled |
-   | **Backend Base URL** | The Goose ACP HTTPS URL copied from Olares Settings. Do not append `/acp` or `/v1`. |
-   | **Secret Key** | The value returned by `printenv GOOSE_SERVER__SECRET_KEY` |
-   | **Remote Working Directory (optional)** | `/config/workspace` |
-   | **Certificate Fingerprint (optional)** | Leave empty for the initial connection |
-
-6. Apply the settings and open a new chat. Restart Goose Desktop if an existing window still uses the previous connection or working directory.
-
-7. Send the following message and confirm that Goose replies:
-
-   ```text
-   Reply with exactly: Goose is ready.
+   ```bash
+   goose run -t "What is the difference between Goose Terminal and Goose Desktop? Answer in three sentences."
    ```
 
-With the external server enabled, model requests and agent commands run from Olares. A file path on your computer is not automatically available to the remote agent. The connection fields follow Goose's [remote server configuration](https://goose-docs.ai/docs/guides/remote-goose-server/).
+3. Goose displays the answer in the terminal and exits.
 
-## Create a project brief
+### Start a conversation
 
-### Generate the document
+Use an interactive session when you want a back-and-forth conversation.
 
-1. In the connected chat, send:
+1. Open Goose Terminal from Launchpad.
+2. Start an interactive session in the workspace:
+
+   ```bash
+   cd /config/workspace
+   goose session
+   ```
+
+3. Send the following prompt to create a sample project brief:
 
    ```text
    Work only in /config/workspace/goose-demo. Create that directory if needed.
@@ -98,74 +94,95 @@ With the external server enabled, model requests and agent commands run from Ola
    Finally, report the absolute paths of both files and summarize what you created.
    ```
 
-2. Review any tool approval request before allowing Goose to write files. Wait for the task to finish.
-
-3. Confirm that the response reports `/config/workspace/goose-demo/notes.md` and `/config/workspace/goose-demo/brief.md`.
-
-The brief should contain the project goal, both deliverables, the target date, and the unresolved ownership question. Wording can vary with the model; the facts should remain unchanged.
-
-### Verify the result
-
-1. Open Goose Terminal from Launchpad and inspect the saved files:
+4. Follow the terminal prompts to approve tools when requested.
+5. Verify the result in the same terminal:
 
    ```bash
    ls -l /config/workspace/goose-demo
    cat /config/workspace/goose-demo/brief.md
    ```
 
-2. Compare the brief with the original notes. Confirm that Goose wrote an actual file rather than only displaying a proposed document in the chat.
+   The brief should contain the project goal, both deliverables, the target date, and the unresolved ownership question. Wording can vary with the model. The facts should remain unchanged.
 
-3. Return to the same chat and ask:
+6. Press `Ctrl+C` to exit the session. If Goose asks you to press it again, press `Ctrl+C` a second time. This ends the terminal interaction.
 
-   ```text
-   Read /config/workspace/goose-demo/brief.md. Add a Next actions section
-   proposing how to resolve the ownership question. Label your suggestions
-   as proposals and preserve the existing project facts.
-   ```
-
-4. Read the file again in Goose Terminal and review the changes.
-
-Files under `/config/workspace` persist across normal app restarts. Keep a separate backup for documents you need to retain.
-
-## Use Goose Terminal
-
-### Start a conversation
-
-1. Open Goose Terminal from Launchpad.
-
-2. Start an interactive session in the workspace:
-
-   ```bash
-   cd /config/workspace
-   goose session
-   ```
-
-3. Enter your message at the prompt. You can use the same project brief task above. Follow the terminal prompts to approve tools when requested.
-
-4. Press `Ctrl+C` to exit the session. If Goose first interrupts the current request and asks you to press it again, press `Ctrl+C` a second time. This ends the terminal interaction; the Goose service remains available for Desktop connections.
-
-To run a single request without an interactive session:
-
-```bash
-cd /config/workspace
-goose run -t "Read goose-demo/brief.md and summarize its open questions. Do not change any files."
-```
+:::info File location
+Goose stores the files in the `/config/workspace` directory on your Olares device. Files there persist across normal app restarts. Keep a separate backup for documents you need to retain.
+:::
 
 ### Find and resume a session
 
-List saved sessions:
+Sessions are saved on the Goose service. You can list them and resume any session later, in Goose Terminal or Goose Desktop.
 
-```bash
-goose session list
-```
+- To list saved sessions, run `goose session list`.
+- To resume a session, run `goose session --resume --session-id SESSION_ID` with the ID shown in the list.
 
-Resume a session using the ID shown in the list:
+   :::tip
+   Two active sessions can overwrite each other's changes when they edit the same file. Exit one session before editing the same file in another.
+   :::
 
-```bash
-goose session --resume --session-id SESSION_ID
-```
+## Use Goose Desktop
 
-Replace `SESSION_ID` with an actual session ID. Avoid editing the same files from two active sessions at once.
+Goose Desktop runs on your computer and connects to the Goose service on Olares through the Goose ACP entrance.
+
+### Prepare connection details
+
+1. Open Goose Terminal from Launchpad and run:
+
+   ```bash
+   printenv GOOSE_SERVER__SECRET_KEY
+   ```
+
+2. Copy the returned value. For example, `vLGGuX84xGm6TtUcIniZGSLPMvu5RZKoQePoJI4cXnU6U8U2fNXbSMdnv4kZfioA`.
+
+   This is the connection secret between Goose Desktop and the Goose service, not an AI model API key. Keep it private.
+
+3. Open Olares **Settings**, go to **Applications** > **Goose** > **Entrances** > **Goose ACP**, and then copy the **Endpoint** URL. For example, `https://615b32570.primelares.olares.com`.
+4. Go to **Applications** > **Router** > **Entrances** > **Router**, set the **Authentication level** to **Public**, and then click **Submit**.
+
+### Connect to the Goose service
+
+:::warning Same local network required
+Your computer must be on the same local network as your Olares device.
+:::
+
+1. Install Goose Desktop on your computer using the [official installation guide](https://goose-docs.ai/docs/getting-started/installation/).
+2. Open Goose Desktop and select **Connect to a Provider** > **Add a custom provider** > **Configure manually**.
+3. In the **Add Custom Provider** window, configure the following settings:
+
+   | Field | Value |
+   |:---|:---|
+   | <nobr>**Provider Type**</nobr> | OpenAI Compatible |
+   | <nobr>**Display Name**</nobr> | `olares-router` |
+   | <nobr>**API URL**</nobr> | The Router API address, that is `https://router.primelares.olares.com/v1` |
+   | <nobr>**Available Models**</nobr> | `default-chat` |
+
+4. Click **Create Provider**.
+5. Select the privacy option as needed, and click **Get Started**.
+6. In Goose Desktop, select **Settings** from the left sidebar, and go to **Agent**.
+7. Locate **External Backend (ACP)**, toggle on **Use external backend**, and configure the following settings:
+
+   | Setting | Value |
+   |:---|:---|
+   | <nobr>**Backend Base URL**</nobr> | The Goose ACP HTTPS URL copied from Olares Settings. Do not append `/acp` or `/v1`. |
+   | <nobr>**Remote Working Directory**</nobr> | `/config/workspace`<br><br>**Note**: Although Goose Desktop marks this field as optional, you must set it here. The agent needs a server-side directory to work in. |
+   | <nobr>**Secret Key**</nobr> | The value returned by `printenv GOOSE_SERVER__SECRET_KEY` |
+
+   :::info Keep in mind
+   With the external server enabled, model requests and agent commands run on your Olares device, not your computer. The agent cannot see files on your computer, so use server paths such as `/config/workspace/goose-demo/brief.md` in your prompts. The connection fields follow Goose's [remote server configuration](https://goose-docs.ai/docs/guides/remote-goose-server/).
+   :::
+
+8. Select **Back** in the top left.
+9. Under the chat box, select your current model, that is `default-chat` and the workspace is your specified one.
+10. Send the following message and confirm that Goose replies:
+
+      ```text
+      Reply with exactly: Goose is ready.
+      ```
+
+### Continue a Terminal session
+
+The session you created in Goose Terminal also appears in Goose Desktop as a **CLI Session** entry under **CHATS** in the left sidebar. Open it and you can continue the conversation where you left off, with the same workspace and files.
 
 ## Configure access and models
 
@@ -179,8 +196,8 @@ Home and External directory access are optional. To use existing files:
 
    | Variable | Default | Directory available to Goose when enabled |
    |:---|:---|:---|
-   | `ALLOW_HOME_DIR_ACCESS` | `false` | Home at `/config/Home` |
-   | `ALLOW_EXTERNAL_DIR_ACCESS` | `false` | External at `/config/External` |
+   | <nobr>`ALLOW_HOME_DIR_ACCESS`</nobr> | `false` | Home at `/config/Home` |
+   | <nobr>`ALLOW_EXTERNAL_DIR_ACCESS`</nobr> | `false` | External at `/config/External` |
 
 3. Save the changes, wait for Goose to return to **Running**, and reconnect your client or reopen Goose Terminal.
 
@@ -190,21 +207,21 @@ Enabling access exposes the selected directory to the agent, rather than only a 
 
 ### Use another model provider
 
-The default model connection is AI Router. To use a third-party provider, edit the app's environment variables in Olares Settings. These settings control the server used by both the connected Desktop client and Goose Terminal.
+The default model connection is Router. To use a third-party provider, edit the app's environment variables in Olares Settings. These settings control the server used by both the connected Desktop client and Goose Terminal.
 
 For an OpenAI-compatible provider, configure:
 
 | Variable | Value |
 |:---|:---|
-| `GOOSE_PROVIDER` | `openai` |
-| `GOOSE_MODEL` | The exact model ID supplied by your provider |
-| `OPENAI_HOST` | The provider's server root URL, such as `https://api.openai.com`, without `/v1` |
-| `OPENAI_BASE_PATH` | `v1/chat/completions`, or the chat completions path specified by your provider |
-| `OPENAI_API_KEY` | Your provider's API key |
+| <nobr>`GOOSE_PROVIDER`</nobr> | `openai` |
+| <nobr>`GOOSE_MODEL`</nobr> | The exact model ID supplied by your provider |
+| <nobr>`OPENAI_HOST`</nobr> | The provider's server root URL, such as `https://api.openai.com`, without `/v1` |
+| <nobr>`OPENAI_BASE_PATH`</nobr> | `v1/chat/completions`, or the chat completions path specified by your provider |
+| <nobr>`OPENAI_API_KEY`</nobr> | Your provider's API key |
 
 Save the changes, wait for Goose to return to **Running**, and start a new chat. For Anthropic, set `GOOSE_PROVIDER` to `anthropic`, enter its model ID in `GOOSE_MODEL`, and set `ANTHROPIC_API_KEY`.
 
-To return to AI Router, set `GOOSE_PROVIDER` to `custom_olares_router` and `GOOSE_MODEL` to `default-chat`. Remove third-party credentials you no longer need. Changing provider settings in a client does not replace environment variables configured on the Olares server.
+To return to Router, set `GOOSE_PROVIDER` to `custom_olares_router` and `GOOSE_MODEL` to `default-chat`. Remove third-party credentials you no longer need. Changing provider settings in a client does not replace environment variables configured on the Olares server.
 
 ## FAQs
 
@@ -214,7 +231,7 @@ Confirm that Goose is running, LarePass VPN is enabled, and the client uses the 
 
 ### Why does a model request return 503?
 
-Check that AI Router's default chat model is ready. If the error says the model is already serving its configured number of requests, wait for the current request to finish before retrying. Avoid sending another request from Desktop or Terminal at the same time.
+Check that Router's default chat model is ready. If the error says the model is already serving its configured number of requests, wait for the current request to finish before retrying. Avoid sending another request from Desktop or Terminal at the same time.
 
 ### Why are conversations named New Chat?
 
