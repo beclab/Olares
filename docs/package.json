@@ -5,9 +5,12 @@
     "prebuild": "npm run sync-redirects",
     "dev": "vitepress dev",
     "build": "vitepress build",
-    "preview": "vitepress preview"
+    "preview": "vitepress preview",
+    "test:og": "node --test .vitepress/og/og.test.mjs"
   },
   "devDependencies": {
+    "@resvg/resvg-js": "2.6.2",
+    "fontkit": "2.0.4",
     "mermaid": "11.14.0",
     "terser": "^5.14.2",
     "vitepress": "1.6.4",
