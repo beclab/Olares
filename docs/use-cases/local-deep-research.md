@@ -12,18 +12,17 @@ doc_updated: "2026-10-15"
 
 # Research a topic with cited sources using Local Deep Research
 
-Local Deep Research is an open-source AI research assistant that combines web search with a language model. It develops follow-up questions, gathers sources, and turns its findings into a report with citations. On Olares, it uses Router for model access and SearXNG for web search, while account databases and research history remain in application storage.
+Local Deep Research is an open-source AI research assistant that combines web search with a language model. Give it a question, and it develops follow-up questions, gathers sources, and turns its findings into a report with citations.
 
-The example in this guide explains how heat pumps work. It uses Quick Summary with one search iteration, so you can check the complete workflow before starting a longer investigation.
+On Olares, it uses Router for model access and SearXNG for web search. This guide researches how heat pumps work using Quick Summary with one search iteration, so you can see the complete workflow before starting a longer investigation.
 
 ## Learning objectives
 
 In this guide, you will learn how to:
 
-- Configure model access and web search.
-- Create an application account and run a research question.
-- Check citations, reopen saved research, and export a report.
-- Validate the setup and identify model or search failures.
+- Prepare the model and search connections.
+- Create a user account and run a research question.
+- Check citations and export a report.
 
 ## Prerequisites
 
@@ -72,20 +71,7 @@ Local Deep Research searches the web through SearXNG. The installation form in t
 Your password protects the encrypted account database. There is no password recovery for that database. Store the password securely before adding research or documents you need to keep.
 :::
 
-## Use Local Deep Research
-
-### Choose a research mode
-
-A research mode controls how thoroughly Local Deep Research investigates a question. Start with Quick Summary. Confirm that the selected model and search engine work before increasing the scope.
-
-
-| Mode | Use it for |
-|:---|:---|
-| **Quick Summary** | An initial answer and a short setup check |
-| **Detailed Report** | A longer investigation organized into multiple sections |
-| **Chat Mode** | Follow-up questions in an experimental conversational workflow |
-
-### Run your first research question
+## Run your first research question
 
 1. On the **New Research** page, enter the following message in **Research Query**:
 
@@ -94,6 +80,11 @@ A research mode controls how thoroughly Local Deep Research investigates a quest
    ```
 
 2. Select **Quick Summary**.
+
+   :::tip Research modes
+   **Quick Summary** returns an initial answer and works as a short setup check. **Detailed Report** runs a longer investigation organized into sections. **Chat Mode** is an experimental conversational workflow for follow-up questions. Start with Quick Summary and confirm that the selected model and search engine work before increasing the scope.
+   :::
+
 3. Locate the **Advanced Options** section, and configure the following settings:
 
    | Setting | Value |
@@ -106,86 +97,58 @@ A research mode controls how thoroughly Local Deep Research investigates a quest
    | **Search Strategy** | Source-Based |
 
    :::info
-   Model and endpoint fields supplied through application environment settings can appear locked here. This is expected. Change those values in Olares Settings instead.
+   You cannot edit the model or endpoint fields here, because they are set by the application's environment variables. To change them, go to **Settings** > **Applications** > **Local Deep Research** > **Manage environment variables**.
    :::
 
-4. Click **Start Research**. Track the progress page while the model generates questions, searches for sources, and prepares the report.
+4. Click **Start Research**. You can track the progress of the research while the model generates questions, searches for sources, and prepares the report.
 5. When processing finishes, click **View Results**.
 
-   ![Research in progress with the View Results button](/images/manual/use-cases/local-deep-research-query-1.png#bordered)
+## Review and export the report
 
-One iteration can search both your original question and a generated follow-up question. Increasing iterations expands the investigation and adds model calls and search requests.
-
-### Review and export the report
-
-1. Read the report and check that it contains an answer, not an error message or troubleshooting report.
-2. Open a citation and compare the claim with the source. Check the publication date, publisher, and whether the cited page supports the statement.
-3. Click **Back to History**, then reopen the research to check that it was saved.
-4. To save a text copy, click **Export** > **Markdown**.
-5. To save a document for reading or sharing, click **Download PDF**. Open the downloaded file and check the report and references.
+1. Read the report and confirm that it answers your question.
+2. Open a citation and check that the source page supports the report's claim.
+3. To save a copy, click **Export** and choose a format such as **Markdown**.
+4. To save a document for reading or sharing, click **Download PDF**.
 
    ![Research report with citations and source list](/images/manual/use-cases/local-deep-research-report.png#bordered)
 
-A citation makes a claim traceable. It does not establish that the claim is correct. Review the underlying sources before using the report for a decision.
+## (Optional) Use a specific model
 
-## Validate your setup
+By default, Local Deep Research calls the model through Router's `default-chat` route. To use a specific Router model instead:
 
-### Check the core workflow
+1. Go to the **LLM** page in Router, find the model, ensure it shows **Callable**, and then click the **View connection example** icon.
+2. In **How to call this model**, copy the complete identifier, including its provider prefix. For example, `Olares/unsloth/Qwen3.6-27B-MTP-GGUF:UD-Q4_K_XL`.
+3. Open Olares **Settings** > **Applications** > **Local Deep Research** > **Manage environment variables**, and set `LDR_LLM_MODEL` to the copied identifier.
+4. Click **Apply**. The application restarts.
+5. Open Local Deep Research and sign in again.
 
-Use the heat-pump question above for these checks. The checks below cover the Quick Summary workflow. They do not validate every research mode or document-indexing option. Judge the actual report content, rather than the progress percentage alone.
+## FAQs
 
-| Test | Action | Expected result |
-|:---|:---|:---|
-| Account access | Sign out, then sign in with your application account | The account opens successfully |
-| Model and search connection | Run the one-iteration Quick Summary | A substantive answer with citations is produced, and no authentication error appears |
-| Source review | Open citations for several key claims | Sources are accessible and support the cited claims |
-| Saved history | Reload the report, then reopen it from **History** | The query, report, and references are retained |
-| Markdown export | Download and open the Markdown file | The file contains the report and source references |
-| PDF export | Download and open the PDF | The document opens and its report and references are readable |
+### Why do I see a `401`, invalid API key, or other model authentication error?
 
-In a reference run with Qwen3.6-27B MTP (llama.cpp) through Router, the heat-pump example completed in about 130 seconds and saved eight sources. History, Markdown export, and a two-page PDF were checked successfully. Completion time, source count, and document length vary with the model, search results, and settings. These figures are observations, not pass criteria. Source review remains a separate check.
+Check the provider credentials in Router. Leaving the application's key empty is correct for the default Olares Router connection. Select another working Router model when needed.
 
-### Try other research questions
+### Why is the model not found?
 
-These are additional examples for evaluating your own setup. They are not benchmark results or guaranteed answers.
+Copy the complete callable identifier from Router. Do not assume a raw local model name or another instance's identifier is valid.
 
-| Type | Example question | What to check |
-|:---|:---|:---|
-| Technology comparison | Compare PostgreSQL and MySQL for a transactional web application. Discuss concurrency, indexing, and replication, using official documentation where possible. | Balanced comparison, identifiable versions, and claims supported by current documentation |
-| Historical explanation | What factors contributed to the fall of the Western Roman Empire? Separate scholarly explanations from disputed claims and cite sources. | Multiple causes, uncertainty acknowledged, and sources support the interpretation |
-| Scientific explanation | Why do lithium-ion batteries lose capacity over time? Distinguish calendar aging from cycle aging and cite authoritative sources. | Clear distinction between mechanisms, suitable technical sources, and no unsupported numerical claims |
+### Why does the search return no sources?
 
-To request Chinese output, add `Answer in Chinese and retain source citations` to your question. Compare the sources as well as the fluency of the answer.
+Check `SEARXNG_URL` and try the question in SearXNG itself. Inspect search-engine errors and retry after a delay if an upstream engine is rate-limited.
 
-## Change the model connection
+### Why does the report contain an error even when progress shows completion?
 
-To choose a specific Router model, open that model in Router and copy its model identifier from **How to call this model**. Use the complete Router identifier, including its provider prefix. A raw model name displayed by the model application's Launchpad page might omit this prefix.
+Read the report and research log. Resolve the model or search error and run the question again. A completed progress indicator is not proof of a successful answer.
 
-Open **Settings** > **Applications** > **Local Deep Research**, find the application environment variables, and set `LDR_LLM_MODEL` to the copied identifier. For example, a Router instance serving the model used in the reference run exposes:
+### Why are the model fields locked in the research form?
 
-```text
-Olares/unsloth/Qwen3.6-27B-MTP-GGUF:UD-Q4_K_XL
-```
+Edit the application environment variables in Olares Settings, then wait for the settings to apply.
 
-Use this example only when that model is available in your Router. Keep the endpoint override and API key empty to continue calling through Router. Wait for the application to finish applying the settings, then sign in again if prompted.
+### Why am I asked to log in after a restart?
 
-For a different OpenAI-compatible service, set its model name, API base URL including `/v1`, and API key if required. A provider's API key authenticates model requests. It does not replace your Local Deep Research account password.
-
-## Troubleshoot common issues
-
-| Symptom | What to check |
-|:---|:---|
-| `401`, invalid API key, or a model authentication error | Check the provider credentials in Router. Leaving the application's key empty is correct for the default Olares Router connection. Select another working Router model when needed. |
-| Model not found | Copy the complete callable identifier from Router. Do not assume a raw local model name or another instance's identifier is valid. |
-| Search returns no sources | Check `SEARXNG_URL` and try the question in SearXNG itself. Inspect search-engine errors and retry after a delay if an upstream engine is rate-limited. |
-| Progress shows completion but the report contains an error | Read the report and research log. Resolve the model or search error and run the question again. A completed progress indicator is not proof of a successful answer. |
-| Model fields are locked in the research form | Edit the application environment variables in Olares Settings, then wait for the settings to apply. |
-| You are asked to log in after a restart | Sign in with the application account. A new login prompt does not by itself mean saved research was deleted. |
-
-Web research sends your question to the selected search services. A cloud model also receives the content used for inference. Using a local model keeps model inference on Olares, but does not make public web search offline.
+Sign in with your user account. A new login prompt does not by itself mean saved research was deleted.
 
 ## Learn more
 
 - [Use Olares Router as your AI gateway](olares-router.md): Understand model identifiers, access, and provider configuration.
 - [Run local LLMs on Olares](llm-base-apps.md): Set up a local model for Router.
-- [Shared applications](../manual/olares/market/shared-apps.md): Understand shared application access on Olares.
