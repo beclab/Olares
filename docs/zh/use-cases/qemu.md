@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: 在 Olares 上使用 QEMU Server 运行 Linux 服务器，通过局域网或 LarePass VPN 连接，调整资源，并通过 Clone 创建不同发行版的独立实例。
+description: 在 Olares 上使用 QEMU Server 运行 Linux 服务器，通过 SSH 连接，调整 CPU、内存和磁盘容量，并为不同任务创建独立服务器。
 head:
   - - meta
     - name: keywords
@@ -16,199 +16,219 @@ doc_updated: "2026-10-16"
 
 # 使用 QEMU Server 运行 Linux 服务器
 
-QEMU Server 通过 QEMU 和 KVM 硬件加速，在 Olares 上运行 Linux 虚拟机。你可以使用 SSH 和浏览器控制台管理服务器，运行命令行工具、开发环境和后台服务。
+QEMU Server 可以在 Olares 上运行 Linux 虚拟机。你可以用它运行命令行工具、搭建开发环境或部署服务，并通过 SSH 或浏览器控制台管理服务器。
 
-每个安装实例都有独立的系统盘和资源配置。例如，你可以保留用于开发的 Ubuntu，再通过 Clone 创建独立的 Debian、Rocky Linux 或 Fedora 服务器。
-
-## 学习目标
-
-在本指南中，你将学习如何：
-
-- 安装 Linux 服务器并查看初始化进度。
-- 通过同一局域网或 LarePass VPN 连接。
-- 使用克隆功能创建其他发行版。
-- 调整资源并检查数据持久化。
+本指南先以 Ubuntu 为例创建服务器，再介绍如何通过克隆功能添加一台独立的 Debian 服务器。每个实例都有自己的系统盘和资源配置。
 
 ## 前提条件
 
-- 一台 amd64 或 ARM64 架构的 Olares 设备，已启用硬件虚拟化，并且具有可用的 `/dev/kvm`。虚拟机架构与宿主机一致。
-- 足够的可用 CPU、内存和存储空间。除分配给 Linux 的内存外，每个实例还需要为 QEMU 预留约 1 GiB 内存。
+- 一台 amd64 或 ARM64 架构、已启用硬件虚拟化的 Olares 设备。
+- 足够的可用 CPU、内存和存储空间，用于运行 Linux 服务器。除了分配给 Linux 的内存，还需为 QEMU 额外预留 1 GiB 内存。
 
-## 安装 QEMU Server
+## 安装和配置 QEMU Server
+
+### 安装应用
 
 1. 打开应用市场，搜索“QEMU Server”。
    <!-- ![应用市场中的 QEMU Server](/images/manual/use-cases/qemu.png#bordered) -->
 
-2. 点击**获取**，然后点击**安装**。按提示设置以下环境变量，然后等待安装完成：
-    - **DISTRIBUTION：** 选择 Ubuntu 24.04/26.04 LTS、Debian 12/13、Rocky Linux 9/10 或 Fedora 43/44。
-    - **CPU_CORES：** 输入 1–8 个虚拟 CPU 核心，例如 `2`。它们与其他工作负载共享宿主机资源，不代表独占物理核心。
-    - **MEMORY_GB：** 输入 1–32 GiB 的 Linux 内存，例如 `2`。
-    - **DISK_SIZE_GB：** 输入 16–512 GiB 的虚拟磁盘容量，例如 `40`。
-    - **INITIAL_PASSWORD：** 设置 Linux 账户密码，长度为 8–128 个字符。
+2. 点击**获取**，然后点击**安装**。按提示填写以下配置，本例使用 Ubuntu 24.04 LTS。
 
-以上示例仅供参考，不是安装默认值，请在配置表单中自行填写。可选的 CDN 覆盖设置保持不变，即可使用 Olares 配置的 CDN。
+   | 字段 | 填写内容 |
+   | :--- | :--- |
+   | **DISTRIBUTION** | 选择 Ubuntu 24.04 LTS。其他选项见[可以选择哪些 Linux 发行版？](#可以选择哪些-linux-发行版) |
+   | **CPU_CORES** | 分配 1–8 个虚拟 CPU 核心，例如 `2`。 |
+   | **MEMORY_GB** | 为 Linux 分配 1–32 GiB 内存，例如 `2`。 |
+   | **DISK_SIZE_GB** | 设置 16–512 GiB 磁盘容量，例如 `40`。 |
+   | **INITIAL_PASSWORD** | 设置 Linux 账户密码，长度为 8–128 个字符。 |
 
-## 等待 Linux 初始化
+   根据设备的可用资源填写。
 
-从启动台 打开 QEMU Server。页面会显示系统镜像下载、校验、磁盘准备和初始化进度。请等待服务器就绪后再连接。Olares 中应用显示运行中，并不代表 Linux 已完成下载和初始化。
+3. 点击**确认**，等待应用安装完成。
 
-系统镜像从 Olares CDN 下载，所需时间取决于镜像大小和网络状况。下载中断后会保留部分数据，重试时继续下载。如果页面提示下载失败，重启应用后重新查看进度。
+### 初始化 Linux
 
-根据发行版使用对应账户，密码为安装时自行设置的密码：
+1. 从启动台打开 QEMU Server，查看系统镜像下载和初始化进度。
 
-| 发行版 | SSH 用户名 |
+   <!-- ![Linux 镜像下载和初始化进度](/images/manual/use-cases/qemu-initialization.png#bordered) -->
+
+2. 等待下载和初始化完成。页面显示服务器就绪后，即可通过 SSH 或浏览器控制台连接。
+
+   下载时间取决于镜像大小和网络状况。如果下载失败，打开 **设置** > **应用** > **QEMU Server**，点击**暂停**，再点击**恢复**，利用已下载的数据继续重试。
+
+Ubuntu 的用户名为 `ubuntu`，密码是你在安装时设置的密码。不同发行版使用的用户名如下：
+
+| 发行版 | 用户名 |
 | :--- | :--- |
 | Ubuntu | `ubuntu` |
 | Debian | `debian` |
 | Rocky Linux | `rocky` |
 | Fedora | `fedora` |
 
-以上账户支持 `sudo`，初始登录账户不是 `root`。
+SSH、浏览器控制台和文件传输均使用这组账户信息。各账户都可以通过 `sudo` 执行管理命令。
 
 ## 使用 SSH 连接
 
-根据电脑与 Olares 的网络位置选择连接方式。两种方式连接的是同一个 Linux 系统，使用相同的账户和密码。
+电脑与 Olares 在同一局域网时，使用 [Overlay 网关](../manual/olares/settings/overlay-gateway.md)连接。在其他网络下，使用 [LarePass VPN](../manual/larepass/private-network.md)。以下示例使用 Ubuntu 账户，连接其他发行版时，请将 `ubuntu` 替换为对应的用户名。
 
-| 方式 | SSH 主机地址 | SSH 端口 | 使用条件 |
-| :--- | :--- | :--- | :--- |
-| 同一局域网：Overlay 网关 | 分配给当前应用实例的独立 IP | `22` | 已为此实例启用 Overlay 网关，且电脑可以访问该局域网地址。 |
-| 不同网络：LarePass VPN | 通过 VPN 可访问的 Olares 设备地址 | 当前实例分配到的 SSH 外部端口 | 电脑已启用 LarePass VPN。 |
+### 同一局域网：通过 Overlay 网关连接
 
-以下 IP 和端口均为示例，请替换成设备和应用实际显示的值。浏览器中的应用页面 URL 不能直接作为 SSH 地址。
+Overlay 网关为服务器分配独立的局域网 IP，SSH 使用端口 `22`。使用这种方式，需要将 Olares 直接安装在 Linux 上，并通过网线连接网络。你的电脑可以使用同一局域网中的 Wi-Fi。
 
-<tabs>
-<template #同一局域网>
+1. 打开 **设置** > **网络** > **Overlay 网关**。如果系统级服务尚未开启，请让超级管理员启用 Overlay 网关。
 
-### 通过 Overlay 网关连接
+2. 在 **应用** 中，为 QEMU Server 实例开启网关并点击**确认**。实例会重启，请等待 Linux 再次完成初始化。
 
-Overlay 网关为每个应用实例分配独立的局域网 IP。SSH 直接连接该 IP，使用默认端口 22。
+3. 复制该实例显示的局域网 IP。重启或网络变化后，IP 可能改变，请使用页面上的当前地址。
 
-Olares 必须运行在原生 Linux 宿主机上，并使用有线以太网连接，WSL 不支持此功能。电脑可以使用 Wi-Fi，但必须能够访问分配的局域网 IP；访客网络隔离或不同 VLAN 可能阻止连接。
-
-1. 打开 **设置** > **网络** > **Overlay 网关**。如果系统级服务未启用，请由超级管理员开启。
-
-2. 在 **应用** 中，为需要连接的 QEMU Server 实例开启 Overlay 网关，并确认操作。运行中的实例会重启，请等待 Linux 再次就绪。
-
-3. 复制该实例显示的局域网 IP，例如 `192.168.1.51`。
-
-4. 在终端、PowerShell 或其他 SSH 客户端中连接。以 Ubuntu 为例：
+4. 打开终端或 PowerShell，将以下命令中的 `192.168.1.51` 替换为复制的 IP，然后运行：
 
    ```bash
    ssh ubuntu@192.168.1.51
    ```
 
-5. 按提示输入 Linux 密码。使用 Xshell 时，选择 SSH 协议，主机填写该实例的 IP，端口填写 `22`。
+5. 按提示输入 Linux 密码。
 
-每个 Clone 实例具有不同的 Overlay IP，因此它们都可以使用端口 22，不会因端口相同而冲突。
+使用 Xshell 等 SSH 客户端时，选择 SSH 协议，主机填写实例的局域网 IP，端口填写 `22`，再输入相同的用户名和密码。
 
-</template>
-<template #不同网络>
+### 远程访问：通过 LarePass VPN 连接
 
-### 通过 LarePass VPN 连接
+在其他网络下，可以通过 LarePass VPN，使用 Olares 域名和实例的 SSH 导出端口连接服务器。
 
-离开 Olares 所在局域网后，使用 LarePass VPN 建立到 Olares 的网络连接。此时使用 Olares 设备地址和当前实例的 SSH 外部端口，无需先开启 Overlay 网关。
-
-1. 在电脑上打开 LarePass，使用具有设备访问权限的 Olares ID 登录，并启用 VPN。
+1. 在电脑上打开 LarePass，使用 Olares ID 登录。点击左上角头像，启用 VPN 连接。
 
    ![在电脑上启用 LarePass VPN](/images/manual/get-started/larepass-vpn-desktop.png#bordered)
 
-2. 获取通过 VPN 可以访问的 Olares 设备地址。这里需要的是设备地址，不是应用的网页入口，也不是其他实例的地址。
+2. 打开 **设置** > **应用**，选择 QEMU Server 实例，再打开**导出端口**。记下 SSH 对应的**导出端口**值，不要使用内部的**端口**值。
 
-3. 打开 **设置** > **应用** > **QEMU Server** > **端口**。如果连接 Clone，请选择对应实例的应用名称，找到其 SSH 外部端口。
+3. 使用 Olares ID 对应的域名作为主机地址。例如，Olares ID 为 `laresprime@olares.com` 时，使用 `laresprime.olares.com`。
 
-4. 使用设备地址和外部端口连接。例如，可达设备地址为 `192.168.1.10`，SSH 外部端口为 `43022`：
+4. 打开终端或 PowerShell，使用 `-p` 指定导出端口。例如，域名为 `laresprime.olares.com`、导出端口为 `43022` 时，运行：
 
    ```bash
-   ssh -p 43022 ubuntu@192.168.1.10
+   ssh -p 43022 ubuntu@laresprime.olares.com
    ```
 
-5. 输入 Linux 密码。使用 Xshell 时，将相同的设备地址和外部端口分别填入主机与端口字段。
+5. 按提示输入 Linux 密码。
 
-请使用 设置中显示的外部端口，不要直接替换成 22 或应用内部服务端口。同一台 Olares 上的不同实例使用不同的 SSH 外部端口。公网网页入口并不等于公网 SSH 入口；此流程通过 LarePass VPN 访问。实际速度取决于网络状况和 VPN 路由。
-
-</template>
-</tabs>
-
-:::tip SSH 端口写法
-macOS、Linux 和 Windows OpenSSH 使用 `-p` 指定自定义端口，例如 `ssh -p 43022 ubuntu@192.168.1.10`。不要在主机名后直接拼接 `:43022`，也不要添加 `http://` 或 `https://`。
-:::
+使用 Xshell 等 SSH 客户端时，主机填写 Olares 域名，端口填写 SSH 导出端口，再输入相同的 Linux 用户名和密码。
 
 ## 使用浏览器控制台
 
-从 QEMU Server 应用页面打开控制台，使用 Linux 账户登录。控制台适合查看启动输出，或在 SSH 暂时不可用时进行操作。这里提供的是 Linux 服务器控制台，不是图形桌面。
+浏览器控制台适合临时操作，也可以在 SSH 无法连接时用来查看启动信息。
 
-## 使用 Clone 创建其他发行版
+1. 从启动台打开 QEMU Server，再打开应用页面中的控制台。
 
-Clone 使用相同应用模板创建全新、独立的安装实例，不会复制现有虚拟机的系统盘、已安装软件、文件或 Linux 账户。原服务器继续作为独立实例保留。
+   <!-- ![打开 QEMU Server 浏览器控制台](/images/manual/use-cases/qemu-browser-console.png#bordered) -->
 
-以下以保留 Ubuntu、另建 Debian 服务器为例：
+2. 在登录提示处输入 `ubuntu`，再输入安装时设置的密码。使用其他发行版时，填写[初始化 Linux](#初始化-linux)中对应的用户名。
 
-1. 打开应用市场，进入 **我的 Olares**。
+登录后，就可以在浏览器中运行 Linux 命令。
 
-2. 找到已安装的 QEMU Server，打开 **打开** 旁的下拉菜单，选择 **克隆**。
+## 在电脑和 Linux 之间传输文件
 
-3. 在 **克隆应用** 中，将 **新应用名称** 设置为容易区分的名称，例如 `Debian Services`，并设置 **桌面快捷方式名称**，然后点击 **确认**。
+使用 SFTP 客户端，可以向服务器上传文件，也可以将服务器中的文件下载到电脑。以下以 FileZilla Client 为例。
 
-4. 在 **配置环境变量** 中，将 `DISTRIBUTION` 选择为 Debian 13，填写新实例的 CPU、内存、磁盘容量和密码，然后确认。
+1. 在电脑上安装 [FileZilla Client](https://filezilla-project.org/download.php?type=client)。使用与 SSH 相同的网络连接方式，远程访问时保持 LarePass VPN 开启。
+2. 打开 FileZilla，进入 **File（文件）** > **Site Manager（站点管理器）**，点击 **New site（新站点）**，将站点命名为 `Ubuntu on Olares`。
+3. 填写连接信息：
 
-5. 打开新实例，等待镜像下载和初始化完成，使用 `debian` 用户及其独立密码登录。
+   | 字段 | 填写内容 |
+   | :--- | :--- |
+   | **Protocol（协议）** | 选择 SFTP。 |
+   | **Host（主机）** | 局域网连接填写实例的 Overlay IP。VPN 连接填写 Olares 域名，例如 `laresprime.olares.com`。 |
+   | **Port（端口）** | 局域网连接填写 `22`。VPN 连接填写 **设置** > **应用** > **QEMU Server** > **导出端口** 中的 SSH 导出端口。 |
+   | **Logon Type（登录类型）** | 选择 **Ask for password（询问密码）**。 |
+   | **User（用户）** | 填写 `ubuntu`，或所选发行版对应的用户名。 |
 
-6. 需要局域网访问时，为 Clone 单独开启 Overlay 网关；需要 VPN 访问时，查询该实例自己的 SSH 外部端口。
+4. 点击 **Connect（连接）**，按提示输入 Linux 密码。连接后，左侧显示电脑上的文件，右侧显示服务器上的文件。
+5. 上传文件时，在左侧打开文件所在的文件夹，在右侧打开 `/home/ubuntu`，再将文件从左侧拖到右侧。其他发行版请使用对应用户的主目录，例如 `/home/debian`。
+6. 下载文件时，先在左侧选择保存位置，再将右侧的文件拖到左侧。等待传输完成后，即可在目标文件夹中找到文件。
 
-建议记录每个实例的名称、发行版、用户名和连接信息，例如：
+上传到 `/home/ubuntu` 的文件，也可以通过 SSH 或浏览器控制台在同一路径下访问。Olares 文件管理器中的文件夹不会自动挂载到虚拟机内。
 
-| 实例 | 发行版 | 用户名 | 同一局域网连接 | VPN 连接 |
-| :--- | :--- | :--- | :--- | :--- |
-| Ubuntu Dev | Ubuntu 24.04 LTS | `ubuntu` | 自己的 Overlay IP，端口 22 | 设备地址，Ubuntu 实例的外部端口 |
-| Debian Services | Debian 13 | `debian` | 另一个 Overlay IP，端口 22 | 相同设备地址，Debian 实例的外部端口 |
+## 通过克隆创建另一台服务器
 
-现有系统盘不能通过修改配置直接切换发行版。需要其他发行版或版本时，请创建新的独立实例。Clone 会额外消耗宿主机资源，所有实例的合计资源需求应在设备可用容量之内。
+克隆会创建全新的 Linux 系统，拥有独立的磁盘、配置和密码，不会复制现有服务器的文件或已安装软件。你可以用它尝试其他发行版，或将开发环境与日常服务分开。
+
+以下以保留 Ubuntu、添加一台 Debian 服务器为例：
+
+1. 打开应用市场，进入**我的 Olares**。
+2. 找到 QEMU Server，打开**打开**按钮旁的下拉菜单，选择**克隆**。
+3. 填写**新应用名称**，例如 `Debian Services`，以及**桌面快捷方式名称**，然后点击**确认**。
+4. 在**配置环境变量**中，将 **DISTRIBUTION** 设为 Debian 13。设置新服务器的 CPU、内存、磁盘容量和密码，然后点击**确认**。
+5. 从启动台打开新实例，等待初始化完成。
+6. 按照[使用 SSH 连接](#使用-ssh-连接)中的步骤，以 `debian` 用户和新密码登录。局域网连接需要为这个实例单独启用 Overlay 网关，并使用它的 IP。VPN 连接则使用它自己的 SSH 导出端口。
+
+原有 Ubuntu 服务器的文件和设置会保留。请确保设备有足够的可用资源同时运行两台服务器。
+
+:::tip 为每个实例选择发行版
+修改 **DISTRIBUTION** 不会替换已有系统盘中的 Linux。要使用其他发行版或版本，请创建新实例。
+:::
 
 ## 调整 CPU、内存和磁盘容量
 
-1. 备份重要数据，并结束正在进行的工作。应用资源修改会重启虚拟机，断开 SSH 会话。
+你可以根据工作负载调整资源。应用修改会重启服务器并断开 SSH 连接，请先保存正在进行的工作，并备份重要数据。
 
-2. 打开 **设置** > **应用**，选择需要修改的实例。
+1. 打开 **设置** > **应用**，选择需要调整的实例。
+2. 在**环境变量**中点击**管理环境变量**。
+3. 修改 **CPU_CORES**、**MEMORY_GB** 或 **DISK_SIZE_GB**，可用范围见[安装应用](#安装应用)。
+4. 确认修改后，点击**应用**。
+5. 从启动台打开实例，等待 Linux 就绪后重新连接。
 
-3. 在 **环境变量** 中点击 **管理环境变量**。
+增大 **DISK_SIZE_GB** 后，重启过程会扩展虚拟磁盘及支持自动扩容的根文件系统。要查看 Linux 中的可用空间，运行：
 
-4. 在支持范围内修改 `CPU_CORES`、`MEMORY_GB` 或 `DISK_SIZE_GB`，确认修改后点击 **应用**。
+```bash
+df -h /
+```
 
-5. 等待 Linux 就绪，重新连接并检查资源：
-
-   ```bash
-   nproc
-   free -h
-   lsblk
-   df -h /
-   ```
-
-增加磁盘容量后，重启过程会扩展虚拟磁盘及支持自动扩容的根文件系统。由于分区和文件系统元数据也占用空间，根文件系统容量小于整块磁盘容量。Linux 显示的可用内存也可能略低于配置值。
-
-:::warning 不支持缩小磁盘
-填写小于现有磁盘的容量时，应用会保留原有的大磁盘，并显示警告，不会回收空间。需要更小的磁盘时，请备份数据后创建容量更小的独立实例。
+:::warning 磁盘容量不能缩小
+将 **DISK_SIZE_GB** 设为更小的值不会改变现有磁盘。需要更小的磁盘时，请先备份文件，再将它们迁移到使用目标容量的新实例中。
 :::
 
-## 了解数据持久化
+## 保存数据
 
-虚拟机系统盘保存在当前实例的 Olares App Data 中。写入系统盘的 Linux 软件包、用户文件和服务数据会在应用重启、资源调整后保留。各 Clone 实例使用独立存储。
+系统盘保存在当前实例的 Olares App Data 中。保存在系统盘上的软件、文件和服务数据会在应用重启、资源调整后保留。各克隆实例使用独立存储。
 
-系统盘不会自动将 Olares Files 中的文件夹挂载到 Linux。可以通过 SFTP、SCP 等基于 SSH 的工具传输文件，或另行配置网络共享。持久化不等于备份，请单独备份重要数据。卸载实例并删除应用数据会移除该虚拟机的系统盘。
+<!-- ![Olares App Data 中的 QEMU Server 系统盘](/images/manual/use-cases/qemu-app-data.png#bordered) -->
 
-## 排查连接问题
+:::warning 删除实例前先备份
+请为重要文件保留独立备份。卸载实例并删除应用数据会移除该实例的系统盘。
+:::
 
-| 现象 | 检查内容 |
+## 常见问题
+
+### 可以选择哪些 Linux 发行版？
+
+安装时，可以在 **DISTRIBUTION** 中选择以下发行版：
+
+| 发行版 | 可选版本 |
 | :--- | :--- |
-| 无法解析主机名 | 移除主机名后的 `:端口`，使用 `-p` 指定自定义 SSH 端口。 |
-| 局域网连接超时 | 检查当前实例的 Overlay IP、网关状态、Olares 有线连接，以及局域网路由和隔离规则。 |
-| 远程连接超时 | 确认 LarePass VPN 已启用、设备地址可达，且 SSH 外部端口属于目标实例。 |
-| 密码被拒绝 | 检查发行版对应的用户名和当前 Linux 密码。在 Linux 内改过密码后，应使用新密码，而非安装时的初始密码。 |
-| 应用运行中但 SSH 不可用 | 打开应用页面，等待 Linux 初始化；必要时使用浏览器控制台检查启动状态。 |
-| 镜像下载失败 | 重启应用，使用保留的部分数据重试下载。 |
+| Ubuntu | 24.04 LTS、26.04 LTS |
+| Debian | 12、13 |
+| Rocky Linux | 9、10 |
+| Fedora | 43、44 |
+
+安装后想尝试其他发行版，可以[通过克隆创建另一台服务器](#通过克隆创建另一台服务器)。
+
+### QEMU Server 提示 KVM 不可用怎么办？
+
+QEMU Server 需要运行 Olares 的主机提供硬件虚拟化能力。如果你在自己的 x86 电脑上部署 Olares，请检查 BIOS/UEFI 中是否启用了 Intel VT-x 或 AMD-V/SVM。如果 Olares 本身运行在虚拟机内，还需要由宿主机提供嵌套虚拟化。具体方法可参考 Ubuntu 的 [KVM 支持检查指南](https://ubuntu.com/server/docs/how-to/virtualisation/libvirt/)和[嵌套虚拟化指南](https://ubuntu.com/server/docs/how-to/virtualisation/enable-nested-virtualisation/)。
+
+### 为什么无法连接服务器？
+
+| 问题 | 处理方法 |
+| :--- | :--- |
+| 无法解析主机名 | 检查主机地址，不要包含 `http://` 或 `https://`。SSH 命令中使用 `-p` 指定端口。 |
+| 局域网连接超时 | 检查实例当前的 Overlay IP 和网关状态。Olares 需使用有线以太网，电脑所在网络需允许访问该 IP。访客 Wi-Fi 的隔离设置可能阻止连接。 |
+| VPN 连接超时 | 确认 LarePass VPN 已启用，并使用 Olares 域名和目标实例的 SSH 导出端口。 |
+| 密码被拒绝 | 使用发行版对应的用户名和当前 Linux 密码。如果在 Linux 内修改过密码，请使用新密码。 |
+| 应用运行中，但 SSH 无法连接 | 打开应用页面，等待 Linux 初始化完成。也可以通过浏览器控制台查看启动信息。 |
 
 ## 了解更多
 
-- [验证 QEMU Server 安装](qemu-validation.md)：可重复执行的验收用例及验证覆盖范围。
-- [克隆应用](../manual/olares/market/clone-apps.md)：管理多个应用实例。
-- [管理 Overlay 网关](../manual/olares/settings/overlay-gateway.md)：使用条件、权限与网络设置。
+- [克隆应用](../manual/olares/market/clone-apps.md)：运行多个应用实例。
+- [管理 Overlay 网关](../manual/olares/settings/overlay-gateway.md)：为应用配置局域网访问。
 - [管理应用环境变量](../manual/olares/settings/manage-app-env.md)：修改实例配置。
+- [在 Olares 设备上运行 Windows 虚拟机](windows.md)：通过浏览器或远程桌面使用 Windows 应用。
+- [在 Olares 设备上运行 macOS 虚拟机](macos.md)：安装 macOS，并通过浏览器或 VNC 客户端连接。

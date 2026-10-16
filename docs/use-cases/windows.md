@@ -202,3 +202,4 @@ After Windows installation, you can change the display language using the standa
 
 - [Enable Intel integrated GPU passthrough for Windows VM](./windows-intel-gpu-passthrough.md)
 - [Run a macOS VM on your Olares device](./macos.md)
+- [Run Linux VMs with QEMU Server](qemu.md): Create Linux servers and manage them through SSH or a browser console.

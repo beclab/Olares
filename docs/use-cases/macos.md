@@ -222,3 +222,4 @@ To address it, open your LarePass desktop client and ensure that the VPN connect
 
 - [dockur/macos GitHub repository](https://github.com/dockur/macos)
 - [Run a Windows VM on your Olares device](./windows.md)
+- [Run Linux VMs with QEMU Server](qemu.md): Create Linux servers and manage them through SSH or a browser console.
