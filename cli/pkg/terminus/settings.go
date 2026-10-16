@@ -38,15 +38,6 @@ func (p *SetSettingsValues) Execute(runtime connector.Runtime) error {
 		s3SecretKey = p.KubeConf.Arg.Storage.StorageSecretKey
 	}
 
-	selfhosted := true
-	if p.KubeConf.Arg.NetworkSettings.EnableReverseProxy != nil {
-		selfhosted = *p.KubeConf.Arg.NetworkSettings.EnableReverseProxy
-	} else {
-		if p.KubeConf.Arg.NetworkSettings.CloudProviderPublicIP != nil {
-			selfhosted = false
-		}
-	}
-
 	terminusdInstalled := "0"
 	if !runtime.GetSystemInfo().IsDarwin() {
 		terminusdInstalled = "1"
@@ -54,13 +45,10 @@ func (p *SetSettingsValues) Execute(runtime connector.Runtime) error {
 
 	var settingsFile = path.Join(runtime.GetInstallerDir(), "wizard", "config", "settings", settingstemplates.SettingsValue.Name())
 	var data = util.Data{
-		"UserName":           p.KubeConf.Arg.User.UserName,
 		"S3SessionToken":     s3SessionToken,
 		"S3AccessKey":        s3AccessKey,
 		"S3SecretKey":        s3SecretKey,
 		"ClusterID":          p.KubeConf.Arg.Storage.StorageClusterId,
-		"DomainName":         p.KubeConf.Arg.User.DomainName,
-		"SelfHosted":         selfhosted,
 		"TerminusdInstalled": terminusdInstalled,
 	}
 
@@ -114,12 +102,6 @@ func (m *InstallSettingsModule) Init() {
 	logger.InfoInstallationProgress("Installing settings ...")
 	m.Name = "InstallSettings"
 
-	detectPublicIPAddress := &task.LocalTask{
-		Name:   "DetectPublicIPAddress",
-		Action: new(DetectPublicIPAddress),
-		Retry:  3,
-	}
-
 	setSettingsValues := &task.LocalTask{
 		Name:   "SetSettingsValues",
 		Action: new(SetSettingsValues),
@@ -133,7 +115,6 @@ func (m *InstallSettingsModule) Init() {
 	}
 
 	m.Tasks = []task.Interface{
-		detectPublicIPAddress,
 		setSettingsValues,
 		installSettings,
 	}

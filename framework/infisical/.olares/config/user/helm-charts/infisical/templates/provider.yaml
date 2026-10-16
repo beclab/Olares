@@ -36,6 +36,7 @@ metadata:
   annotations:
     provider-registry-ref: user-system-{{ .Values.bfl.username }}/secret
     provider-service-ref: infisical-service.os-protected:8080
+    provider-owner-ref: {{ .Values.bfl.username | quote }}
 rules:
 - nonResourceURLs: 
   - /RetrieveSecret?workspace=settings
@@ -54,6 +55,7 @@ metadata:
   annotations:
     provider-registry-ref: user-system-{{ .Values.bfl.username }}/secret
     provider-service-ref: infisical-service.os-protected:8080
+    provider-owner-ref: {{ .Values.bfl.username | quote }}
 rules:
 - nonResourceURLs: 
   - /RetrieveSecret?workspace=dashboard

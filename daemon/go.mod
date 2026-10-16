@@ -22,7 +22,7 @@ require (
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
 	github.com/beclab/Olares/cli v0.0.0-20251230161135-5264df60cc33
 	github.com/beclab/Olares/framework/app-service v0.0.0-20260528090802-b69f2bf96b82
-	github.com/beclab/api v0.0.27-0.20260929062526-d281261cdff4
+	github.com/beclab/api v0.0.27-0.20261012054558-5bf33ba22b5b
 	github.com/containerd/containerd v1.7.29
 	github.com/distribution/distribution/v3 v3.0.0
 	github.com/dustin/go-humanize v1.0.1
@@ -145,6 +145,7 @@ require (
 	github.com/go-openapi/jsonreference v0.21.0 // indirect
 	github.com/go-openapi/swag v0.23.1 // indirect
 	github.com/gobwas/glob v0.2.4-0.20181002190808-e7a84e9525fe // indirect
+	github.com/gofrs/flock v0.13.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect

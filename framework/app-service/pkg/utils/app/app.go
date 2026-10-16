@@ -24,7 +24,6 @@ import (
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
-	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils/files"
@@ -69,6 +68,7 @@ var protectedNamespace = []string{
 	"user-system-",
 	"os-platform",
 	"os-framework",
+	"os-frontend",
 	"os-network",
 }
 
@@ -345,54 +345,6 @@ func GetDeployedReleaseVersion(actionConfig *action.Configuration, appName strin
 	return release.Chart.Metadata.Version, release.Version, nil
 }
 
-// CreateSysAppMgr create an applicationmanager for the system application.
-func CreateSysAppMgr(app, owner string) error {
-	client, err := utils.GetClient()
-	if err != nil {
-		return err
-	}
-	appNamespace, _ := utils.AppNamespace(app, owner, "user-space")
-	now := metav1.Now()
-	appMgr := &v1alpha1.ApplicationManager{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: fmt.Sprintf("%s-%s", appNamespace, app),
-		},
-		Spec: v1alpha1.ApplicationManagerSpec{
-			OpType:       v1alpha1.InstallOp,
-			AppName:      app,
-			RawAppName:   app,
-			AppNamespace: appNamespace,
-			AppOwner:     owner,
-			Source:       "system",
-			Type:         "app",
-		},
-	}
-
-	a, err := client.AppV1alpha1().ApplicationManagers().Get(context.TODO(), appMgr.Name, metav1.GetOptions{})
-	if err != nil && !apierrors.IsNotFound(err) {
-		return err
-	}
-	if apierrors.IsNotFound(err) {
-		a, err = client.AppV1alpha1().ApplicationManagers().Create(context.TODO(), appMgr, metav1.CreateOptions{})
-		if err != nil && !apierrors.IsAlreadyExists(err) {
-			return err
-		}
-	}
-
-	appMgrCopy := a.DeepCopy()
-	status := v1alpha1.ApplicationManagerStatus{
-		OpType:       v1alpha1.InstallOp,
-		State:        v1alpha1.Running,
-		OpGeneration: int64(0),
-		Message:      "sys app install completed",
-		UpdateTime:   &now,
-		StatusTime:   &now,
-	}
-	appMgrCopy.Status = status
-	_, err = client.AppV1alpha1().ApplicationManagers().Update(context.TODO(), appMgrCopy, metav1.UpdateOptions{})
-	return err
-}
-
 // GetAppMgrStatus returns status of an applicationmanager.
 func GetAppMgrStatus(name string) (*v1alpha1.ApplicationManagerStatus, error) {
 	client, err := utils.GetClient()
@@ -444,6 +396,17 @@ func ResolveAppMgrName(ctx context.Context, app, owner string) (name string, isS
 	versioned, err := utils.GetClient()
 	if err != nil {
 		return "", false, err
+	}
+	// Shared system apps use their platform namespace (for example os-frontend),
+	// rather than the market convention of {app}-shared.
+	if userspace.IsSysApp(app) {
+		am, findErr := utils.FindAppManager(ctx, versioned, app, owner)
+		if findErr != nil && !apierrors.IsNotFound(findErr) {
+			return "", false, findErr
+		}
+		if findErr == nil {
+			return am.Name, appcfg.IsShared(am), nil
+		}
 	}
 	sharedName := SharedAppMgrName(app)
 	if _, getErr := versioned.AppV1alpha1().ApplicationManagers().Get(ctx, sharedName, metav1.GetOptions{}); getErr == nil {
@@ -847,10 +810,12 @@ func GetAppConfig(ctx context.Context, options *ConfigOptions) (*appcfg.Applicat
 	// path pkg/appcfg.GetAppInstallationConfig. v1/v2 and v3+per-user apps
 	// keep the installing user.
 	if appcfg.IsShared() {
-		clusterOwner, cErr := kubesphere.GetClusterOwner(ctx)
-		if cErr != nil {
-			return nil, chartPath, cErr
-		}
+		//clusterOwner, cErr := kubesphere.GetClusterOwner(ctx)
+		//if cErr != nil {
+		//	return nil, chartPath, cErr
+		//}
+		//TODO:hysyeah
+		clusterOwner := "olares"
 		appcfg.OwnerName = clusterOwner
 	} else {
 		appcfg.OwnerName = options.Owner

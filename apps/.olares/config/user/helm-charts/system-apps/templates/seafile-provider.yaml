@@ -6,6 +6,7 @@ metadata:
   annotations:
     provider-registry-ref: {{ .Values.bfl.username }}/desktop
     provider-service-ref: seafile.os-framework.os-framework:80
+    provider-owner-ref: {{ .Values.bfl.username | quote }}
 rules:
 - nonResourceURLs: 
   - "/seahub/*"

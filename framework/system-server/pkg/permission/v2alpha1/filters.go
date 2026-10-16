@@ -117,7 +117,7 @@ func WithAuthorization(
 		var service string
 		for _, attrs := range allAttrs {
 			// Authorize
-			s, authorized, reason, err := authz.Authorize(req.Context(), attrs)
+			o, s, authorized, reason, err := authz.Authorize(req.Context(), attrs)
 			if err != nil {
 				msg := fmt.Sprintf("Authorization error (user=%s, verb=%s, resource=%s, subresource=%s)", u.GetName(), attrs.GetVerb(), attrs.GetResource(), attrs.GetSubresource())
 				klog.Errorf("%s: %s", msg, err)
@@ -134,6 +134,23 @@ func WithAuthorization(
 
 			if s != "" {
 				service = s
+			}
+
+			if o != "" {
+				u, ok := request.UserFrom(req.Context())
+				if ok {
+					if isSA, saNamespace, _ := utils.IsServiceAccount(u.GetName()); isSA && saNamespace == "os-frontend" {
+						// reset the user to the owner of the provider service
+						u = &user.DefaultInfo{
+							Name:   o,
+							UID:    u.GetUID(),
+							Groups: u.GetGroups(),
+							Extra:  u.GetExtra(),
+						}
+						req = req.WithContext(request.WithUser(req.Context(), u))
+					}
+
+				}
 			}
 		}
 

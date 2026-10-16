@@ -65,15 +65,6 @@ func (h *Handler) handleUserInfo(req *restful.Request, resp *restful.Response) {
 	}
 	role = userOp.GetUserAnnotation(user, constants.UserAnnotationOwnerRole)
 	createdUser = userOp.GetUserAnnotation(user, constants.AnnotationUserCreator)
-	if createdUser == "cli" {
-		u, err := userOp.GetOwnerUser()
-		if err != nil {
-			log.Errorf("failed to find owner user: %v", err)
-			response.HandleError(resp, errors.Errorf("failed to find owner user: %v", err))
-			return
-		}
-		createdUser = u.Name
-	}
 
 	level := userOp.GetUserAnnotation(user, constants.UserLauncherAccessLevel)
 	if level != "" {

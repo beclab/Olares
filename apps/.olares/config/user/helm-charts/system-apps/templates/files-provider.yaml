@@ -5,6 +5,7 @@ metadata:
   annotations:
     provider-registry-ref: user-space-{{ .Values.bfl.username }}/files
     provider-service-ref: files-service.os-framework:80
+    provider-owner-ref: {{ .Values.bfl.username | quote }}
 rules:
 - nonResourceURLs: ["*"]
   verbs: ["*"]
@@ -17,6 +18,7 @@ metadata:
   annotations:
     provider-registry-ref: {{ .Values.bfl.username }}/files
     provider-service-ref: files-service.os-framework:80
+    provider-owner-ref: {{ .Values.bfl.username | quote }}
 rules:
 - nonResourceURLs: ["*"]
   verbs: ["*"]
@@ -29,6 +31,7 @@ metadata:
   annotations:
     provider-registry-ref: {{ .Values.bfl.username }}/settings
     provider-service-ref: files-service.os-framework:80
+    provider-owner-ref: {{ .Values.bfl.username | quote }}
 rules:
 - nonResourceURLs: 
   - "/api/resources/*"
@@ -43,6 +46,7 @@ metadata:
   annotations:
     provider-registry-ref: user-system-{{ .Values.bfl.username }}/files
     provider-service-ref: files-service.os-framework:80
+    provider-owner-ref: {{ .Values.bfl.username | quote }}
 rules:
 - nonResourceURLs: 
   - "/provider/query_file"
@@ -65,6 +69,7 @@ metadata:
   annotations:
     provider-registry-ref: user-system-{{ .Values.bfl.username }}/media-server-service
     provider-service-ref: media-server-service.os-framework:9090
+    provider-owner-ref: {{ .Values.bfl.username | quote }}
 rules:
 - nonResourceURLs: 
   - "/System/Configuration/encoding"

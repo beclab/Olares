@@ -95,11 +95,13 @@ var nodeRegexSharePrefixes = []string{
 type systemServiceDef struct {
 	Name      string
 	SvcFormat string
+	// Namespace overrides the user namespace for shared frontends.
+	Namespace string
 }
 
 var systemServices = []systemServiceDef{
-	{Name: "auth", SvcFormat: "authelia-svc.%s.svc.cluster.local"},
-	{Name: "desktop", SvcFormat: "edge-desktop.%s.svc.cluster.local"},
+	{Name: "auth", SvcFormat: "authelia-svc.%s.svc.cluster.local", Namespace: "os-frontend"},
+	{Name: "desktop", SvcFormat: "edge-desktop.%s.svc.cluster.local", Namespace: "os-frontend"},
 	{Name: "wizard", SvcFormat: "wizard.%s.svc.cluster.local"},
 }
 
@@ -111,6 +113,7 @@ var fileserverPatchApps = map[string]bool{
 type Config struct {
 	SSLServerPort      int
 	SSLProxyServerPort int
+	LocalHTTPProxyPort int
 }
 
 type Translator struct {
@@ -186,11 +189,17 @@ func (t *Translator) Translate(resources *message.Resources) *ir.Xds {
 	// zone wildcard (*.alice.zone) and force Envoy to reject the listener.
 	ephemeralsByZone := make(map[string][]*message.UserInfo)
 	for _, u := range resources.Users {
-		if u.IsEphemeral && u.SSL != nil {
-			ephemeralsByZone[u.SSL.Zone] = append(ephemeralsByZone[u.SSL.Zone], u)
+		if !u.IsEphemeral {
+			continue
 		}
+		z := userZone(u)
+		if z == "" {
+			continue
+		}
+		ephemeralsByZone[z] = append(ephemeralsByZone[z], u)
 	}
 
+	var sharedLocal []*ir.VirtualHostIR
 	for _, user := range resources.Users {
 		if user.IsEphemeral {
 			// Ephemeral users are merged into the owner's filter chain below.
@@ -198,52 +207,63 @@ func (t *Translator) Translate(resources *message.Resources) *ir.Xds {
 			// *.zone wildcard → Envoy "overlapping matching rules" error.
 			continue
 		}
-		if user.SSL == nil || user.SSL.CertData == "" {
-			klog.V(4).Infof("translator: user %s has no SSL config, skipping HTTPS listeners", user.Name)
-			continue
+		zone := userZone(user)
+		if zone == "" {
+			if user.Name == "" {
+				klog.V(4).Info("translator: user has no zone and no name, skipping")
+				continue
+			}
+			// No public zone yet. Local names are still <user>.olares.local.
+			zone = user.Name + ".olares.local"
 		}
 
 		// Build wizard virtual hosts for any ephemeral users whose zone
 		// matches this owner's zone, to be merged into the owner's HCM.
 		var ephemeralVHosts []*ir.VirtualHostIR
-		for _, ephUser := range ephemeralsByZone[user.SSL.Zone] {
-			if wvh := t.buildEphemeralWizardVHost(ephUser, user.SSL.Zone, clusterSet); wvh != nil {
+		for _, ephUser := range ephemeralsByZone[zone] {
+			if wvh := t.buildEphemeralWizardVHost(ephUser, zone, clusterSet); wvh != nil {
 				ephemeralVHosts = append(ephemeralVHosts, wvh)
 			}
 		}
 
-		zone := user.SSL.Zone
 		vhosts := t.buildUserVirtualHosts(user, zone, false, clusterSet)
 		vhosts = append(vhosts, ephemeralVHosts...)
 		t.applyDenyAllRestrictions(user, vhosts, ephemeralVHosts)
 
-		// HTTPS listeners on port 443 and 444 (with proxy_protocol)
-		for _, portCfg := range []struct {
-			port          uint32
-			proxyProtocol bool
-		}{
-			{uint32(t.cfg.SSLServerPort), false},
-			{uint32(t.cfg.SSLProxyServerPort), true},
-		} {
-			listeners := t.buildUserFilterChains(user, vhosts, portCfg.port, portCfg.proxyProtocol)
-			xds.HTTPListeners = append(xds.HTTPListeners, listeners...)
-		}
+		if user.SSL == nil || user.SSL.CertData == "" {
+			klog.V(4).Infof("translator: user %s has no SSL config, skipping HTTPS listeners", user.Name)
+		} else {
+			// HTTPS listeners on port 443 and 444 (with proxy_protocol).
+			for _, portCfg := range []struct {
+				port          uint32
+				proxyProtocol bool
+			}{
+				{uint32(t.cfg.SSLServerPort), false},
+				{uint32(t.cfg.SSLProxyServerPort), true},
+			} {
+				listeners := t.buildUserFilterChains(user, vhosts, portCfg.port, portCfg.proxyProtocol)
+				xds.HTTPListeners = append(xds.HTTPListeners, listeners...)
+			}
 
-		// TLS secrets
-		xds.Secrets = append(xds.Secrets, &ir.SecretIR{
-			Name:     fmt.Sprintf("main-tls-%s", user.Name),
-			CertData: user.SSL.CertData,
-			KeyData:  user.SSL.KeyData,
-		})
-		for _, cert := range user.CustomDomainCerts {
 			xds.Secrets = append(xds.Secrets, &ir.SecretIR{
-				Name:     fmt.Sprintf("custom-tls-%s-%s", user.Name, cert.Domain),
-				CertData: cert.CertData,
-				KeyData:  cert.KeyData,
+				Name:     fmt.Sprintf("main-tls-%s", user.Name),
+				CertData: user.SSL.CertData,
+				KeyData:  user.SSL.KeyData,
 			})
+			for _, cert := range user.CustomDomainCerts {
+				xds.Secrets = append(xds.Secrets, &ir.SecretIR{
+					Name:     fmt.Sprintf("custom-tls-%s-%s", user.Name, cert.Domain),
+					CertData: cert.CertData,
+					KeyData:  cert.KeyData,
+				})
+			}
 		}
 
-		// Authelia cluster per user
+		if local := filterLocalDomains(vhosts); len(local) > 0 {
+			sharedLocal = append(sharedLocal, local...)
+		}
+
+		// Authelia cluster per user. Local HTTP still runs ExtAuth for desktop.
 		autheliaClName := fmt.Sprintf("%s_%s", autheliaClusterPrefix, user.Name)
 		clusterSet[autheliaClName] = &ir.ClusterIR{
 			Name:   autheliaClName,
@@ -251,6 +271,10 @@ func (t *Translator) Translate(resources *message.Resources) *ir.Xds {
 			Port:   autheliaPort,
 			UseDNS: true,
 		}
+	}
+
+	if localListener := t.buildSharedLocalHTTPListener(sharedLocal); localListener != nil {
+		xds.HTTPListeners = append(xds.HTTPListeners, localListener)
 	}
 
 	// Stream listeners (TCP/UDP) for all users' apps — route directly to services
@@ -329,6 +353,95 @@ func (t *Translator) applyDenyAllRestrictions(user *message.UserInfo, vhosts []*
 			vh.SourceCIDRs = restrictCIDRs
 		}
 	}
+}
+
+func userZone(u *message.UserInfo) string {
+	if u == nil {
+		return ""
+	}
+	if u.SSL != nil && u.SSL.Zone != "" {
+		return u.SSL.Zone
+	}
+	return u.Zone
+}
+
+func (t *Translator) localHTTPPort() uint32 {
+	if t.cfg != nil && t.cfg.LocalHTTPProxyPort > 0 {
+		return uint32(t.cfg.LocalHTTPProxyPort)
+	}
+	return 82
+}
+
+// buildSharedLocalHTTPListener is the single plain-HTTP listener on port 82.
+// Every user's .olares.local virtual host shares one filter chain. Host
+// matching is done by the route config. Each ExtAuth route carries its own
+// Authelia cluster. This listener has no user of its own, so the chain does
+// not point at anyone's Authelia. Public zone names stay on 443/444.
+func (t *Translator) buildSharedLocalHTTPListener(vhosts []*ir.VirtualHostIR) *ir.HTTPListenerIR {
+	localVhosts := scopeLocalExtAuth(vhosts)
+	if len(localVhosts) == 0 {
+		return nil
+	}
+	port := t.localHTTPPort()
+	return &ir.HTTPListenerIR{
+		Name:          fmt.Sprintf("http_%d", port),
+		Address:       "0.0.0.0",
+		Port:          port,
+		ProxyProtocol: true,
+		VirtualHosts:  localVhosts,
+		DefaultResponse: &ir.DirectResponseIR{
+			Status:      421,
+			Body:        "<h1><a href='https://www.olares.com/'>Olares</a></h1>",
+			ContentType: "text/html",
+		},
+		PingRoute: true,
+	}
+}
+
+// scopeLocalExtAuth deep-copies virtual hosts and marks each ExtAuth route so
+// the xDS layer emits that user's Authelia cluster. The copy keeps the HTTPS
+// chains on 443/444 sharing the filter-level Authelia default.
+func scopeLocalExtAuth(vhosts []*ir.VirtualHostIR) []*ir.VirtualHostIR {
+	out := make([]*ir.VirtualHostIR, 0, len(vhosts))
+	for _, vh := range vhosts {
+		if vh == nil {
+			continue
+		}
+		cp := vh.DeepCopy()
+		for _, route := range cp.Routes {
+			if route.ExtAuth == nil || route.ExtAuth.Disabled {
+				continue
+			}
+			route.ExtAuth.ServiceOverride = true
+			if route.ExtAuth.User == "" {
+				route.ExtAuth.User = cp.UserName
+			}
+		}
+		out = append(out, cp)
+	}
+	return out
+}
+
+func filterLocalDomains(vhosts []*ir.VirtualHostIR) []*ir.VirtualHostIR {
+	var out []*ir.VirtualHostIR
+	for _, vh := range vhosts {
+		if vh == nil {
+			continue
+		}
+		var domains []string
+		for _, d := range vh.Domains {
+			if strings.HasSuffix(d, ".olares.local") {
+				domains = append(domains, d)
+			}
+		}
+		if len(domains) == 0 {
+			continue
+		}
+		cp := *vh
+		cp.Domains = domains
+		out = append(out, &cp)
+	}
+	return out
 }
 
 // buildUserFilterChains produces one or more HTTPListenerIR entries for a
@@ -458,7 +571,10 @@ func (t *Translator) buildUserVirtualHosts(user *message.UserInfo, zone string, 
 	var zoneAliases []string
 	zoneTokens := strings.Split(zone, ".")
 	if len(zoneTokens) > 1 {
-		zoneAliases = append(zoneAliases, fmt.Sprintf("%s.%s", zoneTokens[0], "olares.local"))
+		alias := fmt.Sprintf("%s.%s", zoneTokens[0], "olares.local")
+		if alias != zone {
+			zoneAliases = append(zoneAliases, alias)
+		}
 	}
 
 	profileVHost := &ir.VirtualHostIR{
@@ -806,6 +922,9 @@ func (t *Translator) buildSystemVirtualHost(user *message.UserInfo, def systemSe
 	}
 
 	clusterName := fmt.Sprintf("nonapp_%s_%s", def.Name, user.Name)
+	if def.Namespace != "" {
+		namespace = def.Namespace
+	}
 	upstreamHost := fmt.Sprintf(def.SvcFormat, namespace)
 	clusterSet[clusterName] = &ir.ClusterIR{
 		Name: clusterName, Host: upstreamHost, Port: 80, UseDNS: true,

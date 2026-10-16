@@ -5,6 +5,7 @@ metadata:
   annotations:
     provider-registry-ref: user-system-{{ .Values.bfl.username }}/authelia-backend-provider
     provider-service-ref: authelia-backend.os-framework:9091
+    provider-owner-ref: {{ .Values.bfl.username | quote }}
 rules:
 - nonResourceURLs: ["*"]
   verbs: ["*"]
@@ -17,6 +18,7 @@ metadata:
   annotations:
     provider-registry-ref: {{ .Values.bfl.username }}/auth
     provider-service-ref: authelia-backend.os-framework:9091
+    provider-owner-ref: {{ .Values.bfl.username | quote }}
 rules:
 - nonResourceURLs: ["*"]
   verbs: ["*"]

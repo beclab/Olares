@@ -45,10 +45,11 @@ func newNonResourceWithServiceRBACAuthorizor(informerFactory versionedinformers.
 type authorizingVisitor struct {
 	requestAttributes authorizer.Attributes
 
-	allowed bool
-	reason  string
-	errors  []error
-	service string
+	allowed       bool
+	reason        string
+	errors        []error
+	service       string
+	providerOwner string
 }
 
 func (v *authorizingVisitor) visit(source fmt.Stringer, role *rbacv1.ClusterRole, rule *rbacv1.PolicyRule, err error) bool {
@@ -58,6 +59,10 @@ func (v *authorizingVisitor) visit(source fmt.Stringer, role *rbacv1.ClusterRole
 			v.reason = fmt.Sprintf("RBAC: allowed by %s", source.String())
 			if service, ok := role.Annotations[providerv2alpha1.ProviderServiceAnnotation]; ok {
 				v.service = service
+			}
+
+			if providerOwner, ok := role.Annotations[providerv2alpha1.ProviderOwnerAnnotation]; ok {
+				v.providerOwner = providerOwner
 			}
 
 			klog.V(5).Infof("RBAC: allowed by %s with service %q", source.String(), v.service)
@@ -75,12 +80,12 @@ func (v *authorizingVisitor) visit(source fmt.Stringer, role *rbacv1.ClusterRole
 	return true
 }
 
-func (r *nonResourceWithServiceRBACAuthorizor) Authorize(ctx context.Context, requestAttributes authorizer.Attributes) (string, authorizer.Decision, string, error) {
+func (r *nonResourceWithServiceRBACAuthorizor) Authorize(ctx context.Context, requestAttributes authorizer.Attributes) (string, string, authorizer.Decision, string, error) {
 	ruleCheckingVisitor := &authorizingVisitor{requestAttributes: requestAttributes}
 
 	r.resolver.VisitRulesFor(ctx, requestAttributes.GetUser(), requestAttributes.GetResource(), ruleCheckingVisitor.visit)
 	if ruleCheckingVisitor.allowed {
-		return ruleCheckingVisitor.service, authorizer.DecisionAllow, ruleCheckingVisitor.reason, nil
+		return ruleCheckingVisitor.providerOwner, ruleCheckingVisitor.service, authorizer.DecisionAllow, ruleCheckingVisitor.reason, nil
 	}
 
 	// Build a detailed log of the denial.
@@ -126,7 +131,7 @@ func (r *nonResourceWithServiceRBACAuthorizor) Authorize(ctx context.Context, re
 	if len(ruleCheckingVisitor.errors) > 0 {
 		reason = fmt.Sprintf("RBAC: %v", utilerrors.NewAggregate(ruleCheckingVisitor.errors))
 	}
-	return "", authorizer.DecisionNoOpinion, reason, nil
+	return "", "", authorizer.DecisionNoOpinion, reason, nil
 }
 
 func (rr *nonResourceWithServiceRuleResolver) VisitRulesFor(ctx context.Context, user user.Info, host string, visitor func(source fmt.Stringer, role *rbacv1.ClusterRole, rule *rbacv1.PolicyRule, err error) bool) {
@@ -231,20 +236,20 @@ func ProviderServiceFrom(ctx context.Context) (string, bool) {
 }
 
 type Authorizer interface {
-	Authorize(ctx context.Context, a authorizer.Attributes) (service string, authorized authorizer.Decision, reason string, err error)
+	Authorize(ctx context.Context, a authorizer.Attributes) (providerOwner, service string, authorized authorizer.Decision, reason string, err error)
 }
 
 type unionAuthzHandler []Authorizer
 
 // Authorizes against a chain of authorizer.Authorizer objects and returns nil if successful and returns error if unsuccessful
-func (authzHandler unionAuthzHandler) Authorize(ctx context.Context, a authorizer.Attributes) (string, authorizer.Decision, string, error) {
+func (authzHandler unionAuthzHandler) Authorize(ctx context.Context, a authorizer.Attributes) (string, string, authorizer.Decision, string, error) {
 	var (
 		errlist    []error
 		reasonlist []string
 	)
 
 	for _, currAuthzHandler := range authzHandler {
-		service, decision, reason, err := currAuthzHandler.Authorize(ctx, a)
+		providerOwner, service, decision, reason, err := currAuthzHandler.Authorize(ctx, a)
 
 		if err != nil {
 			errlist = append(errlist, err)
@@ -254,20 +259,20 @@ func (authzHandler unionAuthzHandler) Authorize(ctx context.Context, a authorize
 		}
 		switch decision {
 		case authorizer.DecisionAllow, authorizer.DecisionDeny:
-			return service, decision, reason, err
+			return providerOwner, service, decision, reason, err
 		case authorizer.DecisionNoOpinion:
 			// continue to the next authorizer
 		}
 	}
 
-	return "", authorizer.DecisionNoOpinion, strings.Join(reasonlist, "\n"), utilerrors.NewAggregate(errlist)
+	return "", "", authorizer.DecisionNoOpinion, strings.Join(reasonlist, "\n"), utilerrors.NewAggregate(errlist)
 }
 
 type wrapAuthorizer struct {
 	authorizer authorizer.Authorizer
 }
 
-func (t wrapAuthorizer) Authorize(ctx context.Context, a authorizer.Attributes) (service string, authorized authorizer.Decision, reason string, err error) {
+func (t wrapAuthorizer) Authorize(ctx context.Context, a authorizer.Attributes) (providerOwner string, service string, authorized authorizer.Decision, reason string, err error) {
 	authorized, reason, err = t.authorizer.Authorize(ctx, a)
 	return
 }

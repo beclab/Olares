@@ -55,7 +55,7 @@ func optionsSignature(o *intranet.ServerOptions) string {
 
 func (w *applicationWatcher) Watch(ctx context.Context) {
 	switch state.CurrentState.TerminusState {
-	case state.NotInstalled, state.Uninitialized, state.InitializeFailed, state.IPChanging:
+	case state.NotInstalled, state.IPChanging:
 		// Stop the intranet server if it's running
 		if w.intranetServer != nil {
 			w.intranetServer.Close()
@@ -96,6 +96,9 @@ func (w *applicationWatcher) Watch(ctx context.Context) {
 			klog.Error("load intranet server config error, ", err)
 			return
 		}
+		if o == nil {
+			return
+		}
 
 		sig := optionsSignature(o)
 
@@ -134,61 +137,61 @@ func (w *applicationWatcher) loadServerConfig(ctx context.Context, nodeIp string
 		return nil, nil
 	}
 
-	urls, err := utils.GetApplicationUrlAll(ctx)
-	if err != nil {
-		klog.Error("get application urls error, ", err)
-		return nil, err
-	}
-
 	var hosts []intranet.DNSConfig
-	for _, url := range urls {
-		urlToken := strings.Split(url, ".")
-		if len(urlToken) > 2 {
-			domain := strings.Join([]string{urlToken[0], urlToken[1], "olares"}, ".")
 
-			hosts = append(hosts, intranet.DNSConfig{
-				Domain: domain,
-			})
+	switch state.CurrentState.TerminusState {
+	case state.Uninitialized, state.InitializeFailed:
+		// no need to load intranet server application config when the cluster is uninitialized or initialize failed
+	default:
+		urls, err := utils.GetApplicationUrlAll(ctx)
+		if err != nil {
+			klog.Error("get application urls error, ", err)
+			return nil, err
+		}
+
+		for _, url := range urls {
+			urlToken := strings.Split(url, ".")
+			if len(urlToken) > 2 {
+				domain := strings.Join([]string{urlToken[0], urlToken[1], "olares"}, ".")
+
+				hosts = append(hosts, intranet.DNSConfig{
+					Domain: domain,
+				})
+			}
 		}
 	}
 
-	users, err := utils.ListUsers(ctx)
+	dynamicClient, err := utils.GetDynamicClient()
 	if err != nil {
-		err = fmt.Errorf("failed to list users: %v", err)
-		klog.Error(err.Error())
+		klog.Error("get dynamic client error, ", err)
 		return nil, err
 	}
 
-	adminUser, err := utils.GetAdminUser(ctx)
+	terminusInfo, err := utils.GetTerminusInfo(ctx, dynamicClient)
 	if err != nil {
-		err = fmt.Errorf("failed to get admin user: %v", err)
+		err = fmt.Errorf("failed to get terminus info: %v", err)
 		klog.Error(err.Error())
 		return nil, err
 	}
-
-	for _, user := range users {
-		domain := fmt.Sprintf("%s.olares", user.GetName())
-		hosts = append(hosts, intranet.DNSConfig{
-			Domain: domain,
-		})
-
-		domain = fmt.Sprintf("desktop.%s.olares", user.GetName())
-		hosts = append(hosts, intranet.DNSConfig{
-			Domain: domain,
-		})
-
-		domain = fmt.Sprintf("auth.%s.olares", user.GetName())
-		hosts = append(hosts, intranet.DNSConfig{
-			Domain: domain,
-		})
-
-		if user.GetAnnotations()["bytetrade.io/is-ephemeral"] == "true" {
-			domain = fmt.Sprintf("wizard-%s.%s.olares", user.GetName(), adminUser.GetName())
-			hosts = append(hosts, intranet.DNSConfig{
-				Domain: domain,
-			})
-		}
+	if terminusInfo == nil || terminusInfo.Spec.LocalName == "" {
+		// local name is not set yet, skip the intranet server config load
+		return nil, nil
 	}
+
+	domain := fmt.Sprintf("%s.olares", terminusInfo.Spec.LocalName)
+	hosts = append(hosts, intranet.DNSConfig{
+		Domain: domain,
+	})
+
+	domain = fmt.Sprintf("desktop.%s.olares", terminusInfo.Spec.LocalName)
+	hosts = append(hosts, intranet.DNSConfig{
+		Domain: domain,
+	})
+
+	domain = fmt.Sprintf("auth.%s.olares", terminusInfo.Spec.LocalName)
+	hosts = append(hosts, intranet.DNSConfig{
+		Domain: domain,
+	})
 
 	nodeIface, err := nets.GetInterfaceByIp(nodeIp)
 	if err != nil {

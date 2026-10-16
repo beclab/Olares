@@ -20,26 +20,6 @@ func NewCmdInstallOs() *cobra.Command {
 		},
 	}
 	flagSetter := config.NewFlagSetterFor(cmd)
-	flagSetter.Add(common.FlagOSUserName,
-		"",
-		"",
-		"Set the username for the Olares instance, if not set, will be prompted for input",
-	).WithEnv(common.EnvLegacyOSUserName)
-	flagSetter.Add(common.FlagOSDomainName,
-		"",
-		"",
-		"Set the domain name for the Olares instance, if not set, will be prompted for input",
-	).WithEnv(common.EnvLegacyOSDomainName)
-	flagSetter.Add(common.FlagOSPassword,
-		"",
-		"",
-		"Set the inital password for the first user of the Olares instance, if not set, a randomly generated password will be used",
-	)
-	flagSetter.Add(common.FlagEnableReverseProxy,
-		"",
-		false,
-		"Enable reverse proxy, if not set, will be dynamically enabled if public IP is not detected, and disabled otherwise",
-	)
 	flagSetter.Add(common.FlagEnableJuiceFS,
 		"",
 		false,

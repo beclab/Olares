@@ -7,7 +7,6 @@ import (
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
-	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/security"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
@@ -222,6 +221,8 @@ func (r *SecurityReconciler) reconcileNamespaceLabels(ctx context.Context, ns *c
 			ns.Labels[security.NamespaceTypeLabel] = security.Network
 			updated = true
 		}
+	} else if security.IsOSFrontendNamespace(ns.Name) {
+		// classified on its own list; ingress policy is os-frontend-np
 	} else if security.IsOSProtectedNamespace(ns.Name) {
 		// make os protected namespace can access other namespaces' network
 		if label, ok := ns.Labels[security.NamespaceTypeLabel]; !ok || label != security.Protected {
@@ -269,13 +270,13 @@ func (r *SecurityReconciler) reconcileNamespaceLabels(ctx context.Context, ns *c
 		// ApplicationManager list using the deterministic
 		// SharedAppNamespace(app) ↔ AM mapping.
 		if _, exists := ns.Labels[security.NamespaceOwnerLabel]; !exists {
-			owner, err := kubesphere.GetClusterOwner(ctx)
-			if err != nil {
-				logger.Info("Failed to get cluster owner", "err", err)
-			} else {
-				ns.Labels[security.NamespaceOwnerLabel] = owner
-				updated = true
-			}
+			//owner, err := kubesphere.GetClusterOwner(ctx)
+			//TODO:hysyeah
+			owner := "olares"
+
+			ns.Labels[security.NamespaceOwnerLabel] = owner
+			updated = true
+
 		}
 
 		if label, ok := ns.Labels[security.NamespaceSharedLabel]; !ok || label != "true" {
@@ -450,6 +451,15 @@ func (r *SecurityReconciler) reconcileNetworkPolicy(ctx context.Context, ns *cor
 			networkPolicy.SetName("os-protected-np")
 			networkPolicy.SetNamespace(ns.Name)
 			npFix = nil
+		} else if security.IsOSFrontendNamespace(ns.Name) {
+			networkPolicy = security.NetworkPolicies{security.NPOSFrontend.DeepCopy()}
+			networkPolicy.SetName("os-frontend-np")
+			networkPolicy.SetNamespace(ns.Name)
+			npFix = func(np *netv1.NetworkPolicy) {
+				np.Spec.Ingress = append(np.Spec.Ingress, netv1.NetworkPolicyIngressRule{
+					From: security.NodeTunnelRule(),
+				})
+			}
 		} else if security.IsOSNetworkNamespace(ns.Name) {
 			networkPolicy = security.NetworkPolicies{security.NPOSNetwork.DeepCopy()}
 			networkPolicy.SetName("os-network-np")
@@ -964,6 +974,7 @@ func (r *SecurityReconciler) namespacesShouldAllowNodeTunnel(ctx context.Context
 
 	for _, n := range []string{
 		"os-network",
+		"os-frontend",
 		"os-platform",
 		"os-framework",
 		"os-gateway",

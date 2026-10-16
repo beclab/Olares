@@ -20,6 +20,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/systemcomponents"
 	"github.com/beclab/Olares/daemon/pkg/commands"
 	"github.com/beclab/Olares/daemon/pkg/nets"
+	"github.com/beclab/Olares/daemon/pkg/onboarding"
 	"github.com/joho/godotenv"
 	corev1 "k8s.io/api/core/v1"
 	apixclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
@@ -33,11 +34,11 @@ import (
 	"k8s.io/client-go/util/retry"
 	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	sysv1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
-	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
 	"github.com/beclab/api/manifest"
 	"github.com/beclab/api/pkg/generated/clientset/versioned"
 	nadutils "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/utils"
@@ -60,6 +61,7 @@ var (
 	cachedKubeClient        kubernetes.Interface
 	cachedDynamicClient     dynamic.Interface
 	cachedAppClientSet      *versioned.Clientset
+	cachedOnboardingClient  client.Client
 	cachedApixClient        apixclientset.Interface
 	cachedKubeconfigPath    string
 	cachedKubeconfigModTime time.Time
@@ -132,6 +134,7 @@ func ensureFreshLocked() {
 	cachedKubeClient = nil
 	cachedDynamicClient = nil
 	cachedAppClientSet = nil
+	cachedOnboardingClient = nil
 	cachedApixClient = nil
 	cachedKubeconfigPath = key
 	cachedKubeconfigModTime = modTime
@@ -232,57 +235,46 @@ func GetAppClientSet() (versioned.Clientset, error) {
 	return *client, nil
 }
 
-// IsTerminusInitialized reports whether the owner user finished initialization.
-// The client argument is retained for signature compatibility; user reads now
-// go through the shared informer cache.
-func IsTerminusInitialized(ctx context.Context, client dynamic.Interface) (initialized bool, failed bool, err error) {
-	users, err := listUsersRaw(ctx)
+func GetOnboardingClient() (client.Client, error) {
+	clientCacheMu.Lock()
+	defer clientCacheMu.Unlock()
+	ensureFreshLocked()
+	if cachedOnboardingClient != nil {
+		return cachedOnboardingClient, nil
+	}
+	config, err := configLocked()
 	if err != nil {
-		klog.Error("list user error, ", err)
-		initialized = false
-		failed = false
-		return
+		return nil, err
 	}
-
-	for _, u := range users {
-		role, ok := u.GetAnnotations()[bflconst.UserAnnotationOwnerRole]
-		if !ok {
-			continue
-		}
-
-		if role == RoleOwner {
-			status, ok := u.GetAnnotations()[bflconst.UserTerminusWizardStatus]
-			if !ok {
-				initialized = false
-				failed = false
-				return
-			}
-			initialized = status == string(bflconst.Completed)
-			failed = (status == string(bflconst.SystemActivateFailed) ||
-				status == string(bflconst.NetworkActivateFailed))
-			return
-		}
+	resources, err := onboarding.NewResourceClient(config)
+	if err != nil {
+		return nil, err
 	}
+	cachedOnboardingClient = resources
+	return resources, nil
+}
 
-	return
+// GetOnboardingStatus reads the cluster record rather than a personal wizard.
+func GetOnboardingStatus(ctx context.Context) (onboarding.Status, error) {
+	kube, err := GetKubeClient()
+	if err != nil {
+		return onboarding.Status{}, err
+	}
+	resources, err := GetOnboardingClient()
+	if err != nil {
+		return onboarding.Status{}, err
+	}
+	return (&onboarding.Service{Kube: kube, Resources: resources}).Status(ctx)
+}
+
+func IsTerminusInitialized(ctx context.Context, _ dynamic.Interface) (bool, bool, error) {
+	status, err := GetOnboardingStatus(ctx)
+	return status.State == onboarding.Completed, status.State == onboarding.Failed, err
 }
 
 func IsTerminusInitializing(ctx context.Context) (bool, error) {
-	user, err := GetAdminUser(ctx)
-	if err != nil {
-		return false, err
-	}
-
-	if user == nil {
-		return false, nil
-	}
-
-	status, ok := user.GetAnnotations()[bflconst.UserTerminusWizardStatus]
-	if !ok {
-		return false, nil
-	}
-
-	return status != string(bflconst.Completed), nil
+	status, err := GetOnboardingStatus(ctx)
+	return status.State == onboarding.Creating || status.State == onboarding.Created || status.State == onboarding.WaitActivateVault || status.State == onboarding.WaitingPassword, err
 }
 
 // IsTerminusRunning reports whether every Olares system component is ready,
@@ -463,66 +455,7 @@ func MasterNodeIp(installed bool) (addr string, err error) {
 	}
 }
 
-func GetAdminUserJws(ctx context.Context) (string, error) {
-	user, err := GetAdminUser(ctx)
-	if err != nil {
-		return "", err
-	}
-
-	if user == nil {
-		return "", errors.New("user not found")
-	}
-
-	jws, ok := user.GetAnnotations()[bflconst.UserCertManagerJWSToken]
-	if !ok {
-		return "", errors.New("jws not found")
-	}
-
-	return jws, nil
-
-}
-
-func GetAdminUserTerminusName(ctx context.Context) (string, error) {
-	user, err := GetAdminUser(ctx)
-	if err != nil {
-		return "", err
-	}
-
-	if user == nil {
-		return "", errors.New("user not found")
-	}
-
-	name, ok := user.GetAnnotations()[bflconst.UserAnnotationTerminusNameKey]
-	if !ok {
-		return "", errors.New("olares name not found")
-	}
-
-	return name, nil
-
-}
-
 type Filter func(u *unstructured.Unstructured) bool
-
-func GetAdminUser(ctx context.Context) (*unstructured.Unstructured, error) {
-	u, err := ListUsers(ctx, func(u *unstructured.Unstructured) bool {
-		role, ok := u.GetAnnotations()[bflconst.UserAnnotationOwnerRole]
-		if !ok {
-			return false
-		}
-		return role == RoleOwner
-	})
-	if err != nil {
-		klog.Error("list user error, ", err)
-		return nil, err
-	}
-
-	if len(u) == 0 {
-		klog.Info("admin user not found")
-		return nil, nil
-	}
-
-	return u[0], nil
-}
 
 // ListUsers returns user CRs matching the given filters. The client argument is
 // retained for signature compatibility; reads come from the shared informer
@@ -586,28 +519,16 @@ func GetTerminusVersion(ctx context.Context, client dynamic.Interface) (*string,
 	return &terminus.Spec.Version, nil
 }
 
-func GetTerminusInstalledTime(ctx context.Context, client kubernetes.Interface) (*int64, error) {
-	// FIXME: record the time
-	adminUser, err := GetAdminUser(ctx)
+func GetTerminusInstalledTime(ctx context.Context, client dynamic.Interface) (*int64, error) {
+	terminus, err := GetTerminusInfo(ctx, client)
 	if err != nil {
-		klog.Error("get admin user error, ", err)
 		return nil, err
 	}
 
-	if adminUser == nil {
-		return nil, nil
-	}
-
-	deploy, err := client.AppsV1().Deployments("user-system-"+adminUser.GetName()).
-		Get(ctx, "system-server", metav1.GetOptions{})
-	if err != nil {
-		klog.Error("get deploy error, ", err)
-		return nil, err
-	}
-
-	return pointer.Int64(deploy.CreationTimestamp.Unix()), nil
+	return pointer.Int64(terminus.CreationTimestamp.Unix()), nil
 }
 
+// FIXME:
 func GetTerminusInitializedTime(ctx context.Context, client kubernetes.Interface) (*int64, error) {
 	deploy, err := client.AppsV1().Deployments("os-network").
 		Get(ctx, "l4-bfl-proxy", metav1.GetOptions{})
@@ -763,11 +684,22 @@ func GetApplicationUrlAll(ctx context.Context) ([]string, error) {
 	}
 	appUrlMu.Unlock()
 
-	// Owner zone is just the user's zone annotation, so read it from the user
-	// list instead of building an IAM REST client and doing a per-app lookup.
+	terminusInfo, err := GetTerminusInfo(ctx, cachedDynamicClient)
+	if err != nil {
+		klog.Error("get terminus info error, ", err)
+		return nil, err
+	}
+
+	if terminusInfo == nil || terminusInfo.Spec.LocalName == "" {
+		return nil, errors.New("invalid terminus info, local name is empty")
+	}
+
+	// Local access uses the machine zone, even when users have no public zone.
+	localZone := fmt.Sprintf("%s.olares.local", terminusInfo.Spec.LocalName)
 	zoneMap := make(map[string]string, len(users))
 	for _, u := range users {
-		zoneMap[u.GetName()] = u.GetAnnotations()[iamv1alpha2.UserAnnotationZoneKey]
+		// TODO: Implement user's local zone alias
+		zoneMap[u.GetName()] = fmt.Sprintf("%s.olares.local", u.GetName())
 	}
 
 	urls := make([]string, 0)
@@ -778,20 +710,27 @@ func GetApplicationUrlAll(ctx context.Context) ([]string, error) {
 		app := cached.DeepCopy()
 		var entrances []appcfg.Entrance
 		var err error
-		zone, ok := zoneMap[app.Spec.Owner]
-		if !ok {
-			continue
+		zone, _ := zoneMap[app.Spec.Owner]
+		if zone == "" {
+			zone = localZone
 		}
 		if !appv1alpha1.IsShared(app) {
-			entrances, err = appcfg.GenEntranceURL(ctx, app)
+			entrances, err = localAppEntrances(app, app.Spec.Owner, zone)
 			if err != nil {
 				klog.Error("generate application entrance url error, ", err, ", ", app.Name)
 				hadError = true
 				continue
 			}
-			if zone == "" {
-				continue
+			if zone != localZone {
+				localZoneEntrances, err := localAppEntrances(app, app.Spec.Owner, localZone)
+				if err != nil {
+					klog.Error("generate application localZone entrance url error, ", err, ", ", app.Name)
+					hadError = true
+					continue
+				}
+				entrances = append(entrances, localZoneEntrances...)
 			}
+
 			// GenEntranceURL / BatchGenSharedAppEntranceURL only fill in the
 			// default appid-based URLs. User-customized third-level domains live
 			// in the "customDomain" setting, so without this the intranet (.local)
@@ -802,11 +741,20 @@ func GetApplicationUrlAll(ctx context.Context) ([]string, error) {
 			}
 		} else {
 
-			entrances, err = BatchGenSharedAppEntranceURL(ctx, app)
+			entrances, err = BatchGenSharedAppEntranceURL(ctx, app, zone)
 			if err != nil {
 				klog.Error("generate shared application entrance url error, ", err, ", ", app.Name)
 				hadError = true
 				continue
+			}
+			if zone != localZone {
+				localZoneEntrances, err := BatchGenSharedAppEntranceURL(ctx, app, localZone)
+				if err != nil {
+					klog.Error("generate localZone shared application entrance url error, ", err, ", ", app.Name)
+					hadError = true
+					continue
+				}
+				entrances = append(entrances, localZoneEntrances...)
 			}
 		}
 
@@ -1050,7 +998,7 @@ func GetWorkloadNameFromPod(pod *corev1.Pod) string {
 	return podNameTokens[0]
 }
 
-func BatchGenSharedAppEntranceURL(ctx context.Context, app *appv1alpha1.Application) ([]appcfg.Entrance, error) {
+func BatchGenSharedAppEntranceURL(ctx context.Context, app *appv1alpha1.Application, localZone string) ([]appcfg.Entrance, error) {
 	if !appv1alpha1.IsShared(app) {
 		return nil, nil
 	}
@@ -1065,20 +1013,13 @@ func BatchGenSharedAppEntranceURL(ctx context.Context, app *appv1alpha1.Applicat
 
 	var entrances []appcfg.Entrance
 	for _, u := range users {
-		a := app.DeepCopy()
-		a.Spec.Owner = u.GetName()
-		_, err := appcfg.GenEntranceURL(ctx, a)
+		userEntrances, err := localAppEntrances(app, u.GetName(), localZone)
 		if err != nil {
-			klog.Error("generate entrance url error, ", err)
-			continue
+			return nil, fmt.Errorf("generate local entrance URLs for %s: %w", app.Name, err)
 		}
 
-		entrances = append(entrances, a.Spec.Entrances...)
-		zone := u.GetAnnotations()["bytetrade.io/zone"]
-		if zone == "" {
-			continue
-		}
-		thirdLevelURLs := app.ThirdLevelCusDomainURLs(zone, u.GetName())
+		entrances = append(entrances, userEntrances...)
+		thirdLevelURLs := app.ThirdLevelCusDomainURLs(localZone, u.GetName())
 		for _, tl := range thirdLevelURLs {
 			entrances = append(entrances, appcfg.Entrance{URL: tl})
 		}

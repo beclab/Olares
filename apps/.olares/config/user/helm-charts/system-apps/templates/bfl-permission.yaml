@@ -12,3 +12,60 @@ subjects:
   name: system-frontend
   namespace: {{ .Release.Namespace }}
 
+
+---
+# The shared frontend reads the current user's apps through their BFL provider.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Values.bfl.username }}:shared-desktop-bfl
+  annotations:
+    provider-registry-ref: user-system-{{ .Values.bfl.username }}/bfl
+    provider-service-ref: bfl.{{ .Release.Namespace }}
+rules:
+- nonResourceURLs: ["/bfl/backend/v1/myapps"]
+  verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: backend:{{ .Values.bfl.username }}:shared-desktop-bfl
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Values.bfl.username }}:shared-desktop-bfl
+subjects:
+- kind: ServiceAccount
+  name: system-frontend
+  namespace: os-frontend
+# With X-Authorization the provider authenticates the end user before the SA.
+# Grant only this user's own provider endpoint, not another user's app list.
+- kind: User
+  apiGroup: rbac.authorization.k8s.io
+  name: {{ .Values.bfl.username }}
+
+---
+# End-user authorization only: never grant the shared frontend SA password writes.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Values.bfl.username }}:self-password-bfl
+  annotations:
+    provider-registry-ref: user-system-{{ .Values.bfl.username }}/bfl
+    provider-service-ref: bfl.{{ .Release.Namespace }}
+rules:
+- nonResourceURLs: ["/bfl/iam/v1alpha1/users/{{ .Values.bfl.username }}/password"]
+  verbs: ["update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: user:{{ .Values.bfl.username }}:self-password-bfl
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Values.bfl.username }}:self-password-bfl
+subjects:
+- kind: User
+  apiGroup: rbac.authorization.k8s.io
+  name: {{ .Values.bfl.username }}

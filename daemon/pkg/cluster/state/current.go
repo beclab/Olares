@@ -13,6 +13,7 @@ import (
 	"github.com/beclab/Olares/daemon/internel/watcher"
 	"github.com/beclab/Olares/daemon/pkg/commands"
 	"github.com/beclab/Olares/daemon/pkg/nets"
+	"github.com/beclab/Olares/daemon/pkg/onboarding"
 	"github.com/beclab/Olares/daemon/pkg/utils"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
@@ -31,6 +32,7 @@ var StateTrigger chan struct{}
 var TerminusStateMu sync.Mutex
 
 func init() {
+	CurrentState.InstallationMode = "system-only"
 	CurrentState.TerminusState = Checking
 	CurrentState.TerminusdState = Initialize
 	StateTrigger = make(chan struct{})
@@ -81,15 +83,16 @@ func CheckCurrentStatus(ctx context.Context) error {
 
 func refreshCurrentStatus(ctx context.Context) error {
 	TerminusStateMu.Lock()
-	name, err := utils.GetOlaresNameFromReleaseFile()
+	release, err := utils.GetDataFromReleaseFile()
 	if err != nil {
-		klog.Error("get olares name from release file error, ", err)
-	} else if name != "" {
-		// Only when the file actually names one. A node that joined an
-		// existing cluster has no OLARES_NAME — that file is written where the
-		// activation happened — and assigning the empty string here would
-		// erase the ID resolved from the cluster below on every pass.
-		CurrentState.TerminusName = &name
+		klog.Error("read olares release file error, ", err)
+	} else {
+		if name := release["OLARES_NAME"]; name != "" {
+			CurrentState.TerminusName = &name
+		}
+		if did := release["OLARES_DID"]; did != "" {
+			CurrentState.PrimaryUserDID = &did
+		}
 	}
 
 	var currentTerminusState TerminusState = CurrentState.TerminusState
@@ -364,22 +367,6 @@ func refreshCurrentStatus(ctx context.Context) error {
 		return err
 	}
 
-	// A node whose release file does not name the owner learns the Olares ID
-	// from the cluster. It is resolved here rather than only once every system
-	// component is ready, because a degraded cluster is exactly when an
-	// operator reaches for a power command, and the routes that authorize one
-	// have no other way to tell whose signature they are holding.
-	if CurrentState.TerminusName == nil || *CurrentState.TerminusName == "" {
-		if terminusName, err := utils.GetAdminUserTerminusName(ctx); err != nil {
-			// Quiet: this runs on a 5s poll, and a cluster still coming up has
-			// no user record for it to find yet.
-			klog.V(4).Info("resolve the owner's olares name from the cluster, ", err)
-		} else {
-			klog.Info("resolved the owner's olares name from the cluster: ", terminusName)
-			CurrentState.TerminusName = &terminusName
-		}
-	}
-
 	pressure, err := utils.GetNodesPressure(ctx, kubeClient)
 	if err != nil {
 		klog.Error("get nodes pressure error, ", err)
@@ -391,7 +378,7 @@ func refreshCurrentStatus(ctx context.Context) error {
 	if CurrentState.InstallFinishedTime != nil {
 		CurrentState.InstalledTime = pointer.Int64(CurrentState.InstallFinishedTime.Unix())
 	} else {
-		CurrentState.InstalledTime, err = utils.GetTerminusInstalledTime(ctx, kubeClient)
+		CurrentState.InstalledTime, err = utils.GetTerminusInstalledTime(ctx, dynamicClient)
 		if err != nil {
 			klog.Error(err)
 		}
@@ -410,18 +397,14 @@ func refreshCurrentStatus(ctx context.Context) error {
 		return nil
 	}
 
+	CurrentState.OnboardingState = ""
 	if tmsrunning, err := utils.IsTerminusRunning(ctx, kubeClient); err != nil {
 		currentTerminusState = SystemError
 		return err
 	} else if tmsrunning {
 		currentTerminusState = Uninitialized
 
-		terminusName, err := utils.GetAdminUserTerminusName(ctx)
-		if err != nil {
-			klog.Error("get user olares name error, ", err)
-		} else {
-			CurrentState.TerminusName = &terminusName
-		}
+		// there is not a terminus name when the cluster is uninitialized, so the owner cannot be resolved from the cluster yet.
 
 		terminusVerion, err := utils.GetTerminusVersion(ctx, dynamicClient)
 		if err != nil {
@@ -430,20 +413,19 @@ func refreshCurrentStatus(ctx context.Context) error {
 			CurrentState.TerminusVersion = terminusVerion
 		}
 
-		inited, failed, err := utils.IsTerminusInitialized(ctx, dynamicClient)
+		onboardingStatus, err := utils.GetOnboardingStatus(ctx)
 		if err != nil {
 			currentTerminusState = SystemError
-			klog.Error("check olares initialized error, ", err)
-
-			// check status error, report state as system error
-			return nil
+			return err
 		}
+		CurrentState.OnboardingState = onboardingStatus.State
+		inited := onboardingStatus.State == onboarding.Completed
+		failed := onboardingStatus.State == onboarding.Failed
 
 		if inited {
 			currentTerminusState = TerminusRunning
-			CurrentState.InitializedTime, err = utils.GetTerminusInitializedTime(ctx, kubeClient)
-			if err != nil {
-				klog.Error(err)
+			if at, err := time.Parse(time.RFC3339, onboardingStatus.CompletedAt); err == nil {
+				CurrentState.InitializedTime = pointer.Int64(at.Unix())
 			}
 
 			restarting, err := utils.SystemStartLessThan(1 * time.Minute) // uptime less then 1 minutes
@@ -466,10 +448,7 @@ func refreshCurrentStatus(ctx context.Context) error {
 			return nil
 		}
 
-		initing, err := utils.IsTerminusInitializing(ctx)
-		if err != nil {
-			return err
-		}
+		initing := onboardingStatus.State == onboarding.Creating || onboardingStatus.State == onboarding.Created || onboardingStatus.State == onboarding.WaitActivateVault || onboardingStatus.State == onboarding.WaitingPassword
 
 		if initing {
 			currentTerminusState = Initializing

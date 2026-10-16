@@ -568,9 +568,9 @@ func (p *Provider) listUsers(ctx context.Context, userList []iamv1alpha2.User, r
 		publicAppIDs, publicCustomDomainApps, _, customDomainAppsWithUsers := p.listApplicationDetails(user.Name, rawAppsMap[user.Name])
 
 		isEphemeralAnno := getAnnotation(&user, userAnnotationIsEphemeral)
-		if !isValidUser(&user) && isEphemeralAnno == "" {
-			continue
-		}
+		//if !isValidUser(&user) && isEphemeralAnno == "" {
+		//	continue
+		//}
 
 		isEphemeral := false
 		if ok, parseErr := strconv.ParseBool(isEphemeralAnno); parseErr == nil && ok {
@@ -639,15 +639,14 @@ func (p *Provider) listUsers(ctx context.Context, userList []iamv1alpha2.User, r
 		language := getUserLanguage(getUserEnvByName(user.Name))
 		sslConfig, err := p.getSSLConfig(ctx, user.Name)
 		if err != nil {
-			if apierrors.IsNotFound(err) {
-				klog.V(4).Infof("provider: user %s has no SSL configmap yet, skipping", user.Name)
-				continue
+			if !apierrors.IsNotFound(err) {
+				return nil, err
 			}
-			return nil, err
-		}
-		if err := tlsutil.ValidateKeyPair(sslConfig.CertData, sslConfig.KeyData); err != nil {
-			klog.Warningf("provider: user %s SSL cert/key invalid, skipping HTTPS: %v", user.Name, err)
-			continue
+			klog.V(4).Infof("provider: user %s has no SSL configmap yet, local HTTP only", user.Name)
+			sslConfig = nil
+		} else if err := tlsutil.ValidateKeyPair(sslConfig.CertData, sslConfig.KeyData); err != nil {
+			klog.Warningf("provider: user %s SSL cert/key invalid, local HTTP only: %v", user.Name, err)
+			sslConfig = nil
 		}
 		fileserverNodes, err := p.getFileserverNodesForUser(ctx, user.Name, fsGlobal)
 		if err != nil {
