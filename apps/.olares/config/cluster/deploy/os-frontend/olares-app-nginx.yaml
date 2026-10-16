@@ -1061,13 +1061,44 @@ data:
         proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
       }
 
-      location /api/olares-info {
+      location = /api/olares-info {
         proxy_pass http://127.0.0.1:3010;
 
         proxy_set_header            Host $host;
         proxy_set_header            X-real-ip $remote_addr;
         proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
       }
+
+      # A caller may select a user's public information, never a private BFL path.
+      location ~ "^/api/olares-info/(?<profile_info_user>[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)$" {
+        limit_except GET OPTIONS { deny all; }
+        if ($request_method = OPTIONS) { return 204; }
+        # This endpoint ignores credentials; also support credentialed WebView XHR.
+        proxy_hide_header Access-Control-Allow-Origin;
+        proxy_hide_header Access-Control-Allow-Credentials;
+        proxy_hide_header Access-Control-Allow-Methods;
+        proxy_hide_header Access-Control-Allow-Headers;
+        add_header Access-Control-Allow-Origin $http_origin always;
+        add_header Access-Control-Allow-Credentials "true" always;
+        add_header Access-Control-Allow-Methods "GET, HEAD, OPTIONS" always;
+        add_header Access-Control-Allow-Headers $http_access_control_request_headers always;
+        add_header Vary "Origin" always;
+        proxy_pass http://bfl.user-space-$profile_info_user.svc.cluster.local:80/bfl/info/v1/olares-info;
+        proxy_read_timeout 10s;
+        proxy_pass_request_body off;
+        proxy_set_header Content-Length "";
+        proxy_set_header Cookie "";
+        proxy_set_header Authorization "";
+        proxy_set_header X-Authorization "";
+        proxy_set_header X-Bfl-User "";
+        proxy_set_header Authelia-Nonce "";
+        proxy_set_header            Host $host;
+        proxy_set_header            X-real-ip $remote_addr;
+        proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+        add_header Cache-Control "no-store" always;
+      }
+
+      location /api/olares-info/ { return 404; }
 
       location /api/terminus-info {
         proxy_pass http://127.0.0.1:3010;
@@ -1531,6 +1562,58 @@ data:
             proxy_set_header X-Forwarded-Host $http_host;
             proxy_set_header X-Forwarded-Proto $login_forwarded_proto;
             add_header Cache-Control "no-store" always;
+        }
+
+        location = /bfl/info/v1/olares-info {
+            proxy_pass http://127.0.0.1:3010/api/olares-info;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $http_host;
+            proxy_set_header X-Forwarded-Proto $login_forwarded_proto;
+        }
+
+        # A caller may select a user's public information, never a private BFL path.
+        location ~ "^/bfl/info/v1/olares-info/(?<login_info_user>[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)$" {
+            limit_except GET OPTIONS { deny all; }
+            if ($request_method = OPTIONS) { return 204; }
+            # This endpoint ignores credentials; also support credentialed WebView XHR.
+            proxy_hide_header Access-Control-Allow-Origin;
+            proxy_hide_header Access-Control-Allow-Credentials;
+            proxy_hide_header Access-Control-Allow-Methods;
+            proxy_hide_header Access-Control-Allow-Headers;
+            add_header Access-Control-Allow-Origin $http_origin always;
+            add_header Access-Control-Allow-Credentials "true" always;
+            add_header Access-Control-Allow-Methods "GET, HEAD, OPTIONS" always;
+            add_header Access-Control-Allow-Headers $http_access_control_request_headers always;
+            add_header Vary "Origin" always;
+            proxy_pass http://bfl.user-space-$login_info_user.svc.cluster.local:80/bfl/info/v1/olares-info;
+            proxy_read_timeout 10s;
+            proxy_pass_request_body off;
+            proxy_set_header Content-Length "";
+            proxy_set_header Cookie "";
+            proxy_set_header Authorization "";
+            proxy_set_header X-Authorization "";
+            proxy_set_header X-Bfl-User "";
+            proxy_set_header Authelia-Nonce "";
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $http_host;
+            proxy_set_header X-Forwarded-Proto $login_forwarded_proto;
+            add_header Cache-Control "no-store" always;
+        }
+
+        location /bfl/info/v1/olares-info/ { return 404; }
+
+        # Cluster metrics still require an authenticated user.
+        location = /bfl/monitor/v1alpha1/cluster {
+            proxy_pass http://127.0.0.1:3010/api/users/monitor/cluster;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $http_host;
+            proxy_set_header X-Forwarded-Proto $login_forwarded_proto;
         }
 
         # No general BFL access through the login entrance.
