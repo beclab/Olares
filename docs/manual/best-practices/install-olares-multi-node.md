@@ -1,25 +1,15 @@
 ---
 outline: [2, 3]
-description: Expand Olares into a multi-node cluster using Olares One, NVIDIA DGX Spark, or other compatible Linux devices.
+description: Expand an existing Olares system into a multi-node cluster using compatible Linux devices.
 head:
   - - meta
     - name: keywords
-      content: Olares One, NVIDIA DGX Spark, multi-node cluster, JuiceFS, worker node, master node
+      content: Olares, multi-node cluster, JuiceFS, worker node, master node
 ---
 
-# Set up a multi-node Olares cluster <Badge type="warning" text="Preview" />
+# Set up a multi-node Olares cluster
 
 For workloads that require more computing resources and distributed storage, you can add a worker device to an existing single-node Olares system to form a multi-node cluster.
-
-This workflow applies to Olares One, NVIDIA DGX Spark, and other Linux devices that meet the Olares system requirements. This guide uses an Olares One as the master and an NVIDIA DGX Spark as the worker.
-
-:::warning Preview feature
-This workflow requires Olares 1.12.7, which is not yet available as a stable release. Do not use these steps with Olares 1.12.6.
-
-To set up a cluster with two Olares One devices on Olares 1.12.6, follow the [current manual setup procedure](../../one/connect-two-olares-one.md).
-
-Do not use these steps to upgrade an existing multi-node cluster. Follow the update guidance for your Olares version instead.
-:::
 
 ## Learning objectives
 

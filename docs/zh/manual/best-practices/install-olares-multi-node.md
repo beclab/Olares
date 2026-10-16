@@ -1,27 +1,19 @@
 ---
 outline: [2, 3]
-description: 使用 Olares One、NVIDIA DGX Spark 或其他兼容的 Linux 设备，将单节点 Olares 扩展为多节点集群。
+description: 使用兼容的 Linux 设备，将现有 Olares 系统扩展为多节点集群。
 head:
   - - meta
     - name: keywords
-      content: Olares One, NVIDIA DGX Spark, 多节点集群, JuiceFS, 工作节点, 主节点
+      content: Olares, 多节点集群, JuiceFS, 工作节点, 主节点
 ---
 
 :::warning
 本文档由 AI 自动翻译，可能存在表述差异。如需核对，请参考[英文原文](../../../manual/best-practices/install-olares-multi-node.md)。
 :::
 
-# 设置多节点 Olares 集群 <Badge type="warning" text="Preview" />
+# 设置多节点 Olares 集群
 
-对于需要更多计算资源和分布式存储的工作负载，你可以为现有单节点 Olares 添加工作节点，组成多节点集群。此流程适用于 Olares One、NVIDIA DGX Spark，以及其他满足 Olares 系统要求的 Linux 设备。本文以 Olares One 作为主节点、NVIDIA DGX Spark 作为工作节点进行演示。
-
-:::warning 预览功能
-此流程需要使用尚未正式发布的 Olares 1.12.7。请勿在 Olares 1.12.6 上执行以下步骤。
-
-如需在 Olares 1.12.6 上使用两台 Olares One 组建集群，请参阅[当前手动设置流程](../../one/connect-two-olares-one.md)。
-
-不要使用本文步骤升级现有多节点集群。请按照当前 Olares 版本对应的更新指南操作。
-:::
+对于需要更多计算资源和分布式存储的工作负载，你可以为现有单节点 Olares 添加工作节点，组成多节点集群。
 
 ## 学习目标
 
