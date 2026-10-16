@@ -25,7 +25,7 @@ For the resource tests, start with 1 vCPU, 2 GiB RAM, and a 20 GiB disk. These a
 ## Installation and console
 
 | ID | Procedure | Expected result |
-| --- | --- | --- |
+| :--- | :--- | :--- |
 | QEMU-01 | Install each distribution from Market with an explicitly entered password. Open the application and wait for initialization. Run `cat /etc/os-release` after login. | The page reaches the ready state. Linux identifies the selected distribution and release. |
 | QEMU-02 | Open the browser console and sign in with the distribution's account and installation password. | Boot output and a usable shell are available. The account can use `sudo`. |
 | QEMU-03 | During an active image download, restart the application once, then reopen its page. | Download resumes using retained data when supported by the server. Verification and initialization eventually complete. |
@@ -33,7 +33,7 @@ For the resource tests, start with 1 vCPU, 2 GiB RAM, and a 20 GiB disk. These a
 ## SSH access
 
 | ID | Procedure | Expected result |
-| --- | --- | --- |
+| :--- | :--- | :--- |
 | QEMU-04 | From the same LAN, enable Overlay gateway for the instance. Copy its assigned IP and connect with SSH on port 22. Run `cat /etc/os-release`. | Password authentication succeeds and the session reaches the intended Linux instance. |
 | QEMU-05 | Move the computer to another network. Enable LarePass VPN. Obtain the Olares device address and this instance's external SSH port from Settings. Connect with `ssh -p PORT USER@DEVICE_ADDRESS`, replacing the capitalized values. | Authentication succeeds without relying on same-LAN access. The selected distribution is shown. |
 | QEMU-06 | Repeat the SSH login using macOS or Linux OpenSSH and Windows OpenSSH or Xshell. | All clients reach the same instance using the appropriate host, port, username, and password. |
@@ -57,7 +57,7 @@ printf 'qemu-persistence-check\n' > ~/qemu-persistence-check.txt
 ```
 
 | ID | Procedure | Expected result |
-| --- | --- | --- |
+| :--- | :--- | :--- |
 | QEMU-07 | Set CPU to 2 and RAM to 3 GiB in the instance's environment variables. Apply and reconnect after initialization. | `nproc` reports 2. Memory increases to approximately the configured capacity. The boot ID changes. |
 | QEMU-08 | Increase disk capacity from 20 to 24 GiB. Apply, reconnect, and inspect `lsblk` and `df -h /`. | The virtual disk is 24 GiB. The root filesystem grows; its capacity remains below the whole disk capacity. Files remain readable. |
 | QEMU-09 | Set CPU back to 1, RAM back to 2 GiB, and request a 16 GiB disk. Apply and reconnect. | CPU and RAM decrease. The disk remains 24 GiB and the page shows the unsupported-shrink warning. |
@@ -68,14 +68,19 @@ Check the marker with `cat ~/qemu-persistence-check.txt` after every restart. Re
 ## Clone and instance isolation
 
 1. Keep the Ubuntu instance and its marker file from the previous checks. Record its machine ID and connection details.
+
 2. In Market, open **My Olares**, choose **Clone** from the instance's menu, and create `Debian Services` with Debian 13, separate resource settings, and its own password.
+
 3. Open the clone and wait until ready. Connect as `debian` and inspect `/etc/os-release` and `/etc/machine-id`.
+
 4. Enable Overlay gateway for both instances, one after the other. Reopen the gateway page after each change.
+
 5. Connect to both instances through their respective Overlay IPs on port 22. Then connect over VPN using each instance's external SSH port.
+
 6. Create a uniquely named file in the clone. Restart only the clone and check both systems again.
 
 | ID | Expected result |
-| --- | --- |
+| :--- | :--- |
 | QEMU-11 | The original remains Ubuntu and the clone runs Debian. Their machine IDs differ. The clone is a fresh installation and does not contain files copied from the original disk. |
 | QEMU-12 | Both instances remain listed in Overlay gateway with different IP addresses. Each accepts SSH on port 22. Enabling the second does not remove the first. |
 | QEMU-13 | VPN connections use the same Olares device address and different external SSH ports. Each session reaches the correct distribution. |
@@ -86,7 +91,7 @@ Check the marker with `cat ~/qemu-persistence-check.txt` after every restart. Re
 The recorded regression for QEMU Server 0.0.27 used Olares 1.12.7 on amd64. The following results describe that run; use the cases above to validate your own environment.
 
 | Distribution | Filesystem | Root capacity before → after expansion | Recorded result |
-| --- | --- | --- | --- |
+| :--- | :--- | :--- | :--- |
 | Ubuntu 24.04 LTS | ext4 | 18.33 → 22.21 GiB | Installation, authenticated internal SSH, console transport, resource changes, and persistence passed. |
 | Debian 13 | ext4 | 19.49 → 23.42 GiB | The same checks passed; interrupted download recovery also passed. |
 | Rocky Linux 10 | XFS | 18.38 → 22.38 GiB | Installation, authenticated internal SSH, console transport, resource changes, and persistence passed. |

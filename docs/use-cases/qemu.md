@@ -16,6 +16,15 @@ QEMU Server runs a Linux virtual machine on Olares with KVM hardware acceleratio
 
 Each installation has its own system disk and resource settings. You can keep Ubuntu for development and create a separate Debian, Rocky Linux, or Fedora server with Clone.
 
+## Learning objectives
+
+In this guide, you will learn how to:
+
+- Install a Linux server and monitor initialization.
+- Connect over the same LAN or through LarePass VPN.
+- Create another distribution with Clone.
+- Adjust resources and check persistent storage.
+
 ## Prerequisites
 
 - An amd64 or ARM64 Olares device with hardware virtualization enabled and a usable `/dev/kvm` device. The guest architecture follows the host architecture.
@@ -26,19 +35,14 @@ Each installation has its own system disk and resource settings. You can keep Ub
 1. Open Market and search for "QEMU Server".
    <!-- ![QEMU Server in Market](/images/manual/use-cases/qemu.png#bordered) -->
 
-2. Click **Get**, complete the required configuration when prompted, then click **Install**, and wait for installation to complete.
+2. Click **Get**, then **Install**. When prompted, set the following environment variables, and wait for installation to complete:
+    - **DISTRIBUTION:** Select Ubuntu 24.04/26.04 LTS, Debian 12/13, Rocky Linux 9/10, or Fedora 43/44.
+    - **CPU_CORES:** Enter 1–8 virtual CPU cores, such as `2`. These share host resources and are not dedicated physical cores.
+    - **MEMORY_GB:** Enter 1–32 GiB of guest memory, such as `2`.
+    - **DISK_SIZE_GB:** Enter 16–512 GiB of virtual disk capacity, such as `40`.
+    - **INITIAL_PASSWORD:** Set the Linux account password using 8–128 characters.
 
-Use these settings for a new server. The example values are suggestions; enter your own values in the installation form.
-
-| Setting | Accepted values | Example | Purpose |
-| --- | --- | --- | --- |
-| `DISTRIBUTION` | Ubuntu 24.04/26.04 LTS, Debian 12/13, Rocky Linux 9/10, Fedora 43/44 | Ubuntu 24.04 LTS | Select the operating system for this installation. |
-| `CPU_CORES` | 1–8 | 2 | Number of virtual CPU cores. These are shared host resources, not dedicated physical cores. |
-| `MEMORY_GB` | 1–32 | 2 | Guest memory in GiB. |
-| `DISK_SIZE_GB` | 16–512 | 40 | Virtual system disk capacity in GiB. |
-| `INITIAL_PASSWORD` | 8–128 characters | Your own strong password | Initial Linux account password. |
-
-The application also supports an optional CDN override. Leave it unchanged to use the configured Olares CDN.
+The example values are suggestions, not installation defaults. Enter your own values in the configuration form. Leave the optional CDN override unchanged to use the configured Olares CDN.
 
 ## Wait for Linux initialization
 
@@ -49,7 +53,7 @@ Images download from the Olares CDN. Download time depends on the image size and
 Use the account for your selected distribution and the password you entered during installation:
 
 | Distribution | SSH username |
-| --- | --- |
+| :--- | :--- |
 | Ubuntu | `ubuntu` |
 | Debian | `debian` |
 | Rocky Linux | `rocky` |
@@ -62,7 +66,7 @@ These accounts support `sudo`. The initial account is not `root`.
 Choose the method that matches your network. Both methods connect to the same Linux system with the same account and password.
 
 | Method | SSH host | SSH port | Requirements |
-| --- | --- | --- | --- |
+| :--- | :--- | :--- | :--- |
 | Same LAN: Overlay gateway | The IP assigned to this application instance | `22` | Overlay gateway enabled for this instance; your computer can reach that LAN address. |
 | Different network: LarePass VPN | The Olares device address reachable through VPN | The external SSH port assigned to this instance | LarePass VPN enabled on your computer. |
 
@@ -78,8 +82,11 @@ Overlay gateway gives each instance a dedicated local IP. Your SSH connection us
 Olares must run on a native Linux host with wired Ethernet for Overlay gateway. WSL is not supported. Your computer can use Wi-Fi, provided its network can reach the assigned local IP; guest Wi-Fi isolation or separate VLANs can block access.
 
 1. Open **Settings** > **Network** > **Overlay gateway**. Ask the Super admin to enable the system-level service if it is off.
+
 2. Under **Applications**, enable the QEMU Server instance you want to access and confirm the change. A running instance restarts. Wait for Linux to become ready again.
+
 3. Copy the local IP shown for that instance. For example, `192.168.1.51`.
+
 4. Connect from Terminal, PowerShell, or another SSH client. For Ubuntu:
 
    ```bash
@@ -102,7 +109,9 @@ LarePass VPN connects your computer to Olares when you are away. This method use
    ![Enable LarePass VPN on a computer](/images/manual/get-started/larepass-vpn-desktop.png#bordered)
 
 2. Obtain the Olares device address reachable through your VPN connection. Use the device address, rather than an application's web entrance or an address copied from an unrelated instance.
+
 3. Open **Settings** > **Applications** > **QEMU Server** > **Ports**. For a clone, select its own application title. Find the external port for SSH.
+
 4. Connect using both values. For example, if the reachable device address is `192.168.1.10` and the external SSH port is `43022`:
 
    ```bash
@@ -131,16 +140,21 @@ Clone creates a fresh, independent installation using the same application templ
 For example, create a Debian server alongside an existing Ubuntu server:
 
 1. Open Market and select **My Olares**.
+
 2. Find the installed QEMU Server application. Open the drop-down menu beside **Open** and select **Clone**.
+
 3. In **Clone app**, set **New app title** to a recognizable name, such as `Debian Services`, and set **Desktop shortcut name**. Click **Confirm**.
+
 4. In **Configure Environment Variables**, select Debian 13 for `DISTRIBUTION`. Enter CPU, memory, disk capacity, and a password for the new instance, then confirm.
+
 5. Open the new instance and wait for its image download and initialization. Sign in as `debian` using its own password.
+
 6. Enable Overlay gateway separately for the clone to use local access, or find its own external SSH port for VPN access.
 
 Keep a record of each title, distribution, username, and connection address. For example:
 
 | Instance | Distribution | Username | Same-LAN connection | VPN connection |
-| --- | --- | --- | --- | --- |
+| :--- | :--- | :--- | :--- | :--- |
 | Ubuntu Dev | Ubuntu 24.04 LTS | `ubuntu` | Its Overlay IP, port 22 | Device address, Ubuntu instance's external port |
 | Debian Services | Debian 13 | `debian` | A different Overlay IP, port 22 | Same device address, Debian instance's external port |
 
@@ -149,9 +163,13 @@ The distribution cannot be changed on an existing system disk. Use a new indepen
 ## Adjust CPU, memory, and disk capacity
 
 1. Back up important data and finish active work. Applying resource changes restarts the VM and disconnects SSH sessions.
+
 2. Open **Settings** > **Applications** and select the instance.
+
 3. Under **Environment variables**, click **Manage environment variables**.
+
 4. Edit `CPU_CORES`, `MEMORY_GB`, or `DISK_SIZE_GB` within the supported ranges. Confirm your changes and click **Apply**.
+
 5. Wait until Linux is ready. Reconnect and check the resources:
 
    ```bash
@@ -176,7 +194,7 @@ The VM disk does not automatically expose your Olares Files folders inside Linux
 ## Troubleshoot connections
 
 | Symptom | Check |
-| --- | --- |
+| :--- | :--- |
 | Cannot resolve hostname | Remove `:port` from the hostname; use `-p` for a custom SSH port. |
 | Connection times out on the LAN | Confirm the instance's current Overlay IP, gateway state, Ethernet connection on Olares, and LAN routing or isolation rules. |
 | Connection times out remotely | Confirm LarePass VPN is enabled, the device address is reachable, and the external SSH port belongs to this instance. |

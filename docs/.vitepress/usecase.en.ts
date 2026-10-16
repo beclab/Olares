@@ -350,10 +350,6 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "QEMU Server",
               link: "/use-cases/qemu",
-              collapsed: true,
-              items: [
-                { text: "Acceptance checks", link: "/use-cases/qemu-validation" },
-              ],
             },
             {
               text: "Windows",
