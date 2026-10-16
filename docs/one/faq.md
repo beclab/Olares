@@ -40,7 +40,7 @@ Olares One operates quietly even under load. In lab testing, the device generate
 ### What is the power consumption?
 
 The device consumes 30W in standby. Under load, the GPU power depends on your selected mode:
-* **Silent Mode**: GPU 95W
+* **Silent Mode**: GPU 50W
 * **Performance Mode**: GPU 175W
 
 When the CPU is fully utilized on its own, power consumption reaches 120W. During combined maximum load, the system balances power distribution with the CPU operating at 55W and the GPU at 175W. The thermal design sustains these performance levels.
@@ -66,7 +66,7 @@ Olares OS simplifies local AI with one-click deployment and workflow integration
 ### Is it possible to upgrade or expand the hardware?
 
 Yes. You can modify the hardware through several internal slots and expansion ports:
-* **Storage**: The motherboard includes two PCIe SSD slots, one PCIe 4.0 and one PCIe 5.0. The preinstalled 2TB SSD occupies the PCIe 4.0 slot. The second slot remains available for system storage expansion via LVM or for a dual-boot configuration.
+* **Storage**: The motherboard includes two PCIe SSD slots, one PCIe 4.0 and one PCIe 5.0. The preinstalled 2TB SSD occupies the PCIe 5.0 slot. The PCIe 4.0 slot remains available for system storage expansion via LVM or for a dual-boot configuration.
 * **Memory**: The RAM capacity can be upgraded to a maximum of 128GB.
 * **External graphics**: You can connect a compatible Thunderbolt external graphics device. See [Can I use an eGPU with Olares One?](#can-i-use-an-egpu-with-olares-one)
 * **External displays**: The Thunderbolt 5 port supports docking stations with up to two external monitors at up to 8K resolution. The built-in RTX 5090 Mobile handles video output.

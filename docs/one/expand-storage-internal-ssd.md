@@ -21,10 +21,10 @@ Unlike external drives which are mounted as separate folders, this method uses L
   :::
 
 The Olares One motherboard includes two PCIe SSD slots:
-* Slot 1 (PCIe 4.0): Occupied by the preinstalled 2TB system SSD.
-* Slot 2 (PCIe 5.0): Available for expansion.
+* PCIe 5.0 slot: Occupied by the preinstalled 2TB system SSD.
+* PCIe 4.0 slot: Available for expansion.
 
-You can use this second slot to expand your current system storage.
+You can use the PCIe 4.0 slot to expand your current system storage.
 
 ## Prerequisites
 **Hardware**
