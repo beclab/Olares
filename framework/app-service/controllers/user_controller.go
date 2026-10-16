@@ -9,6 +9,7 @@ import (
 	"time"
 
 	natsevent "github.com/beclab/Olares/framework/app-service/pkg/event"
+	"github.com/beclab/Olares/framework/app-service/pkg/podhealth"
 	"github.com/beclab/Olares/framework/app-service/pkg/users"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/activeusers"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace/v1"
@@ -54,6 +55,14 @@ const (
 	userIndexAna       = "bytetrade.io/user-index"
 	interval           = time.Second
 	timeout            = 15 * time.Second
+)
+
+// userPodsReadyInterval and userPodsReadyTimeout bound the wait for every pod
+// in the user's namespaces to become ready. The timeout is a var so tests can
+// shorten it.
+var (
+	userPodsReadyInterval = time.Second
+	userPodsReadyTimeout  = 15 * time.Minute
 )
 
 // UserController reconciles a User object
@@ -324,6 +333,14 @@ func (r *UserController) handleUserCreation(ctx context.Context, user *iamv1alph
 		return ctrl.Result{}, updateErr
 	}
 	klog.Infof("create user resource success: %s", user.Name)
+	if err = r.waitForUserPodsReady(ctx, user); err != nil {
+		klog.Errorf("user %s pods not ready: %v", user.Name, err)
+		updateErr := r.updateUserStatus(ctx, user, "Failed", fmt.Sprintf("Pods not ready: %v", err))
+		if updateErr != nil {
+			klog.Errorf("failed to update user status: %v", updateErr)
+		}
+		return ctrl.Result{}, updateErr
+	}
 	updateErr := r.updateUserStatus(ctx, user, "Created", "Created user success")
 	if updateErr != nil {
 		klog.Errorf("failed to update user status to Created %v", updateErr)
@@ -332,6 +349,56 @@ func (r *UserController) handleUserCreation(ctx context.Context, user *iamv1alph
 		r.publish("Create", user.Name, user.Annotations[users.AnnotationUserCreator])
 	}
 	return ctrl.Result{}, updateErr
+}
+
+// waitForUserPodsReady polls until every pod in the user's namespaces is
+// serving, or userPodsReadyTimeout elapses. A list error stops the poll, the
+// same way checkLauncher does.
+func (r *UserController) waitForUserPodsReady(ctx context.Context, user *iamv1alpha2.User) error {
+	var lastReason string
+	err := utilwait.PollImmediate(userPodsReadyInterval, userPodsReadyTimeout, func() (bool, error) {
+		ready, reason, err := r.userPodsReady(ctx, user)
+		if err != nil {
+			return true, err
+		}
+		if ready {
+			return true, nil
+		}
+		if reason != lastReason {
+			klog.Infof("user %s pods not ready yet: %s", user.Name, reason)
+			lastReason = reason
+		}
+		return false, nil
+	})
+	if err != nil && lastReason != "" {
+		return fmt.Errorf("%s: %w", lastReason, err)
+	}
+	return err
+}
+
+// userPodsReady reports whether every pod in user-space-<name> and
+// user-system-<name> is serving. An empty namespace is not ready: the charts
+// return before their controllers have created the pods.
+func (r *UserController) userPodsReady(ctx context.Context, user *iamv1alpha2.User) (bool, string, error) {
+	namespaces := []string{
+		fmt.Sprintf("user-space-%s", user.Name),
+		fmt.Sprintf("user-system-%s", user.Name),
+	}
+	for _, ns := range namespaces {
+		var pods corev1.PodList
+		if err := r.List(ctx, &pods, client.InNamespace(ns)); err != nil {
+			return false, "", err
+		}
+		if len(pods.Items) == 0 {
+			return false, fmt.Sprintf("no pod in %s yet", ns), nil
+		}
+		for i := range pods.Items {
+			if err := podhealth.AssertPodReady(&pods.Items[i]); err != nil {
+				return false, err.Error(), nil
+			}
+		}
+	}
+	return true, "", nil
 }
 
 func (r *UserController) publish(topic, user, operator string) {
