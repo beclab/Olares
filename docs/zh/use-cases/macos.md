@@ -226,3 +226,4 @@ macOS 虚拟机继续在你的 Olares 设备上运行，并保持就绪状态供
 
 - [dockur/macos GitHub 仓库](https://github.com/dockur/macos)
 - [在你的 Olares 设备上运行 Windows 虚拟机](./windows.md)
+- [使用 QEMU Server 运行 Linux 虚拟机](qemu.md)：创建 Linux 服务器，通过 SSH 或浏览器控制台管理。

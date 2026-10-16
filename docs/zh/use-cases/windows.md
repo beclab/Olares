@@ -206,3 +206,4 @@ Windows VM 会继续在您的 Olares 设备上运行，并随时准备让您重�
 
 - [为 Windows VM 启用 Intel 集成显卡直通](./windows-intel-gpu-passthrough.md)
 - [在 Olares 设备上运行 macOS VM](./macos.md)
+- [使用 QEMU Server 运行 Linux 虚拟机](qemu.md)：创建 Linux 服务器，通过 SSH 或浏览器控制台管理。
