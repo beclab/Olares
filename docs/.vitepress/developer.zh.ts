@@ -412,6 +412,27 @@ export const developerSidebar: DefaultTheme.Sidebar = {
           ],
         },
         {
+          text: "支付",
+          link: "/zh/developer/payment/",
+          collapsed: false,
+          items: [
+            { text: "快速上手", link: "/zh/developer/payment/quickstart" },
+            {
+              text: "API 参考",
+              link: "/zh/developer/payment/api-reference/",
+              collapsed: false,
+              items: [
+                { text: "支付", link: "/zh/developer/payment/api-reference/payments" },
+                { text: "退款", link: "/zh/developer/payment/api-reference/refunds" },
+                { text: "收款", link: "/zh/developer/payment/api-reference/receiving" },
+                { text: "账户与连通", link: "/zh/developer/payment/api-reference/account" },
+              ],
+            },
+            { text: "Webhook", link: "/zh/developer/payment/webhooks" },
+            { text: "用 AI agent 构建", link: "/zh/developer/payment/ai-agents" },
+          ],
+        },
+        {
           text: "参与贡献",
           items: [
             /*
