@@ -30,12 +30,7 @@ head:
 
 ## 开始之前
 
-- 出厂 SSH 用户名和密码均为 `olares`。激活后，请使用 LarePass Vault 中保存的密码。
-
-  :::warning 重置默认 SSH 密码
-  如果仍使用默认密码，请在**设置** > **我的 Olares** > **我的硬件** > **重置 SSH 登录密码**中重置，即使你主要使用 Control Hub 终端。请参阅[通过 SSH 访问 Olares One](./access-terminal-ssh.md#重置-ssh-密码)。
-  :::
-
+- 出厂 SSH 用户名和密码均为 `olares`。设备激活后，请使用 LarePass Vault 中保存的 SSH 密码。请参阅[通过 SSH 访问 Olares One](./access-terminal-ssh.md#步骤-2从-vault-获取登录密码)。
 - SSH 访问权限允许你控制系统，请妥善保管登录凭据。
 
 ## 前提条件
