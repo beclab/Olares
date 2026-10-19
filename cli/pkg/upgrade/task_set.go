@@ -735,6 +735,23 @@ func upgradeKubernetesPrometheusRule() []task.Interface {
 	}
 }
 
+// applyPrometheusAction applies embedded prometheus Prometheus manifest
+type applyPrometheusAction struct {
+	common.KubeAction
+}
+
+func (a *applyPrometheusAction) Execute(runtime connector.Runtime) error {
+	kubectlpath, err := util.GetCommand(common.CommandKubectl)
+	if err != nil {
+		return errors.Wrap(errors.WithStack(err), "kubectl not found")
+	}
+	manifest := path.Join(runtime.GetInstallerDir(), cc.BuildFilesCacheDir, cc.BuildDir, "prometheus", "prometheus", "prometheus-prometheus.yaml")
+	if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("%s apply -f %s", kubectlpath, manifest), false, true); err != nil {
+		return errors.Wrap(errors.WithStack(err), "apply prometheus failed")
+	}
+	return nil
+}
+
 // upgradeIntelGPUPlugin reuses the install-time Intel GPU stack tasks
 // (labels, optional dGPU drivers, NFD, device plugin, xpumd). Individual
 // tasks are gated by HasAnyIntelGPU / HasQualifyingIntelDGPU so non-Intel
