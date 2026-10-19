@@ -18,7 +18,7 @@ export function imageBaseUrl(base = '/', override) {
 
 // Text is converted to outlines, so rendering never depends on system fonts.
 export function createRenderer(assetDir) {
-  const inter = openSync(path.join(assetDir, 'fonts/Inter.ttf'));
+  const manrope = openSync(path.join(assetDir, 'fonts/Manrope.ttf'));
   const noto = openSync(path.join(assetDir, 'fonts/NotoSansSC.ttf'));
   const fontSets = new Map();
   const logo = fs.readFileSync(path.join(assetDir, 'logo.svg'), 'utf8')
@@ -28,8 +28,12 @@ export function createRenderer(assetDir) {
     .replace(/<svg[^>]*>/, '').replace(/<\/svg>\s*$/, '');
 
   function shape(text, size, weight = 500, spacing = 0) {
-    if (!fontSets.has(weight)) fontSets.set(weight, [inter.getVariation({ wght: weight, opsz: 14 }), noto.getVariation({ wght: weight })]);
-    const fonts = fontSets.get(weight);
+    const { latin, cjk } = typeof weight === 'number' ? { latin: weight, cjk: weight } : weight;
+    const key = `${latin}/${cjk}`;
+    if (!fontSets.has(key)) {
+      fontSets.set(key, [manrope.getVariation({ wght: latin }), noto.getVariation({ wght: cjk })]);
+    }
+    const fonts = fontSets.get(key);
     const runs = [];
     for (const char of text) {
       const font = fonts.find(f => f.hasGlyphForCodePoint(char.codePointAt(0)));
@@ -84,9 +88,9 @@ export function createRenderer(assetDir) {
 
   function layoutTitle(rawTitle, lang) {
     const title = rawTitle.replace(/\s+/g, ' ').trim();
-    const weight = 600;
+    const weight = { latin: 650, cjk: 550 };
     for (let size = 64; size >= 36; size -= 2) {
-      const spacing = -1.5;
+      const spacing = lang === 'zh' ? 0 : -0.6;
       const measured = new Map();
       const width = text => {
         if (!measured.has(text)) measured.set(text, shape(text, size, weight, spacing).width);
@@ -143,7 +147,7 @@ export function createRenderer(assetDir) {
 }
 
 export function createSocialImages(assetDir) {
-  const inputs = ['generate.mjs', 'background.svg', 'logo.svg', 'fonts/Inter.ttf', 'fonts/NotoSansSC.ttf'];
+  const inputs = ['generate.mjs', 'background.svg', 'logo.svg', 'fonts/Manrope.ttf', 'fonts/NotoSansSC.ttf'];
   const revision = hash(Buffer.concat(inputs.map(file => fs.readFileSync(path.join(assetDir, file)))));
   const jobs = new Map();
   let renderer;
