@@ -19,7 +19,8 @@
 # the Olares session identity.
 # ACL groups reserve independently controlled subnet-route and exit-node access.
 # Membership starts empty and is maintained only by the authenticated control
-# path; deployment must not create users or infer authorization from IAM data.
+# path. Headscale users are reconciled from LLDAP, but synchronization never
+# grants policy membership or other authorization.
 # Shared-node state and the bootstrap handoff use control-plane-node storage so
 # Pod replacement preserves the Tailscale identity and route configuration.
 # Enrollment keys are fetched on startup and are never stored in this directory.
@@ -36,6 +37,14 @@
 {{- else }}
 {{- $pgPassword = randAlphaNum 32 | b64enc }}
 {{- end }}
+{{- $natsSecretName := "headscale-user-sync-nats-secret" }}
+{{- $existingNatsSecret := lookup "v1" "Secret" $resourceNamespace $natsSecretName }}
+{{- $natsPassword := "" }}
+{{- if $existingNatsSecret }}
+{{- $natsPassword = index $existingNatsSecret "data" "nats_password" }}
+{{- else }}
+{{- $natsPassword = randAlphaNum 32 | b64enc }}
+{{- end }}
 
 ---
 apiVersion: v1
@@ -48,6 +57,18 @@ metadata:
 type: Opaque
 data:
   pg_password: {{ $pgPassword | quote }}
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $natsSecretName }}
+  namespace: {{ $resourceNamespace }}
+  labels:
+    app: headscale
+type: Opaque
+data:
+  nats_password: {{ $natsPassword | quote }}
 
 ---
 apiVersion: v1
@@ -122,6 +143,39 @@ spec:
           key: pg_password
     databases:
       - name: headscale
+
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: headscale-user-sync-nats
+  namespace: os-network
+  labels:
+    app: headscale
+spec:
+  app: headscale-user-sync
+  appNamespace: os
+  middleware: nats
+  nats:
+    user: os-headscale-user-sync
+    password:
+      valueFrom:
+        secretKeyRef:
+          name: {{ $natsSecretName }}
+          key: nats_password
+    subjects:
+      # Enables the standard JetStream API permissions added by tapr without
+      # granting publication to the account lifecycle subjects.
+      - name: headscale-user-sync.control
+        permission:
+          pub: allow
+          sub: deny
+    refs:
+      - appName: app-service
+        appNamespace: os
+        subjects:
+          - name: users
+            sub: allow
 
 ---
 apiVersion: v1
@@ -391,6 +445,39 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
+  name: headscale-nats-ingress
+  namespace: os-platform
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-10"
+    helm.sh/hook-delete-policy: before-hook-creation
+  labels:
+    app: headscale
+    app.kubernetes.io/managed-by: app-service
+    app.kubernetes.io/component: route-control
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: nats
+      app.kubernetes.io/instance: nats
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: os-network
+          podSelector:
+            matchLabels:
+              app: headscale
+      ports:
+        - protocol: TCP
+          port: 4222
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
   name: headscale-lldap-ingress
   namespace: os-platform
   annotations:
@@ -418,6 +505,8 @@ spec:
       ports:
         - protocol: TCP
           port: 17170
+        - protocol: TCP
+          port: 17171
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -718,8 +807,8 @@ spec:
                         bootstrap_policy="$(/busybox/cat <<'POLICY_EOF'
                     {
                       // Membership is maintained through authenticated
-                      // control-plane updates. Deployment does not create
-                      // Headscale users or grant user capabilities.
+                      // control-plane updates. LLDAP synchronization creates
+                      // identities but never grants user capabilities.
                       "groups": {
                         "group:admins": [],
                         "group:self-mesh": [],
@@ -873,7 +962,7 @@ spec:
               mountPath: /etc/nginx/conf.d
               readOnly: true
         - name: headscale-api-wrapper
-          image: beclab/headscale-api-wrapper:v0.2.5
+          image: beclab/headscale-api-wrapper:v0.2.6
           imagePullPolicy: IfNotPresent
           command: [/bin/sh, -ec]
           args:
@@ -901,6 +990,23 @@ spec:
           env:
             - name: TOKEN_VERIFY_URL
               value: http://lldap-service.os-platform:17170/auth/token/verify
+            - name: LLDAP_READONLY_URL
+              value: http://lldap-service.os-platform:17171
+            - name: HEADSCALE_USER_SYNC_INTERVAL
+              value: 30s
+            - name: NATS_URL
+              value: nats://nats.os-platform:4222
+            - name: NATS_USERNAME
+              value: os-headscale-user-sync
+            - name: NATS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $natsSecretName }}
+                  key: nats_password
+            - name: NATS_STREAM
+              value: os-stream
+            - name: NATS_DURABLE
+              value: headscale-users
             - name: SUBNET_ROUTES_FILE
               value: /var/lib/headscale/bootstrap/subnet-routes
             # Keep these aligned with the fixed Linux installation defaults.
