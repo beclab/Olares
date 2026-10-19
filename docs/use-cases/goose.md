@@ -12,7 +12,7 @@ doc_updated: "2026-10-13"
 
 # Run Goose as your local AI agent on Olares
 
-Goose is an open-source, general-purpose AI agent for research, writing, coding, automation, and more. It connects to 70+ extensions through MCP for databases, APIs, browsers, and other services. On Olares, Goose runs on your Olares device with local models through Router, and you interact with it through Goose Terminal in your browser or Goose Desktop on your computer.
+Goose is an open-source, general-purpose AI agent for research, writing, coding, automation, and more. On Olares, Goose runs on your Olares device with local models through Router, and you interact with it through Goose Terminal in your browser or Goose Desktop on your computer.
 
 The app uses Router's default chat model by default. This example creates a project brief in Goose's persistent workspace, so you can complete a file task without first granting access to your personal directories.
 
@@ -199,7 +199,7 @@ Home and External directory access are optional. To use existing files:
    | <nobr>`ALLOW_HOME_DIR_ACCESS`</nobr> | `false` | Home at `/config/Home` |
    | <nobr>`ALLOW_EXTERNAL_DIR_ACCESS`</nobr> | `false` | External at `/config/External` |
 
-3. Save the changes, wait for Goose to return to **Running**, and reconnect your client or reopen Goose Terminal.
+3. Save the changes, wait for Goose to return to **Running**, and reconnect Goose Desktop or reopen Goose Terminal.
 
 4. Give Goose the exact path of the files to process. Start with copies of your documents and review the output before applying it to originals.
 
@@ -207,7 +207,7 @@ Enabling access exposes the selected directory to the agent, rather than only a 
 
 ### Use another model provider
 
-The default model connection is Router. To use a third-party provider, edit the app's environment variables in Olares Settings. These settings control the server used by both the connected Desktop client and Goose Terminal.
+The default model connection is Router. To use a third-party provider, edit the app's environment variables in Olares Settings. These settings control the server used by both Goose Desktop and Goose Terminal.
 
 For an OpenAI-compatible provider, configure:
 
@@ -221,17 +221,17 @@ For an OpenAI-compatible provider, configure:
 
 Save the changes, wait for Goose to return to **Running**, and start a new chat. For Anthropic, set `GOOSE_PROVIDER` to `anthropic`, enter its model ID in `GOOSE_MODEL`, and set `ANTHROPIC_API_KEY`.
 
-To return to Router, set `GOOSE_PROVIDER` to `custom_olares_router` and `GOOSE_MODEL` to `default-chat`. Remove third-party credentials you no longer need. Changing provider settings in a client does not replace environment variables configured on the Olares server.
+To return to Router, set `GOOSE_PROVIDER` to `custom_olares_router` and `GOOSE_MODEL` to `default-chat`. Remove third-party credentials you no longer need. Changing provider settings in Goose Desktop does not replace environment variables configured on the Olares server.
 
 ## FAQs
 
-### Why does the client fail to connect?
+### Why does Goose Desktop fail to connect?
 
-Confirm that Goose is running, LarePass VPN is enabled, and the client uses the Goose ACP URL copied from Olares Settings. Use the connection secret from Goose Terminal. A secret rejection indicates that the client value does not match the server value.
+Confirm that Goose is running, and Goose Desktop uses the Goose ACP URL copied from Olares Settings. Use the connection secret from Goose Terminal. A secret rejection indicates that the value in Goose Desktop does not match the server value.
 
 ### Why does a model request return 503?
 
-Check that Router's default chat model is ready. If the error says the model is already serving its configured number of requests, wait for the current request to finish before retrying. Avoid sending another request from Desktop or Terminal at the same time.
+Check that Router's default chat model is ready. If the error says the model is already serving its configured number of requests, wait for the current request to finish before retrying. Avoid sending another request from Goose Desktop or Goose Terminal at the same time.
 
 ### Why are conversations named New Chat?
 
@@ -239,9 +239,9 @@ Automatic AI session titles are disabled by default. You can rename a session ma
 
 ### Why can Goose not find my files?
 
-Use a path on Olares, such as `/config/workspace/goose-demo/brief.md`. For Home or External files, enable the corresponding directory access first and use `/config/Home` or `/config/External`. A path on the client computer is not a server path.
+Use a path on Olares, such as `/config/workspace/goose-demo/brief.md`. For Home or External files, enable the corresponding directory access first and use `/config/Home` or `/config/External`. A path on your computer is not a server path.
 
 ## Learn more
 
 - [Olares Router](olares-router.md): Set up and manage models used by Goose.
-- [Goose installation guide](https://goose-docs.ai/docs/getting-started/installation/): Install the Desktop client for your operating system.
+- [Goose installation guide](https://goose-docs.ai/docs/getting-started/installation/): Install Goose Desktop for your operating system.
