@@ -95,7 +95,7 @@ Your existing, activated unit serves as the master node. JuiceFS provides shared
 
 2. Check the SSH address and username shown. Enter `y` to confirm, or follow the prompt to change the username. The default is `olares`.
 3. Enter the SSH password. The command checks SSH sign-in and `sudo` access on the master. If authentication fails, it prompts for the username and password again. Press `Enter` to keep the suggested username, or enter a different one. If the connection still fails, check the address, SSH service, and firewall settings.
-4. Copy the generated command. You will run it on the worker node in the next step. It includes the master's CDN setting and a join script URL for its Olares version. Use this URL rather than downloading a script manually.
+4. Copy the generated command. You will run it on the worker node in the next step.
 
    Example output:
 
@@ -110,7 +110,7 @@ Your existing, activated unit serves as the master node. JuiceFS provides shared
    ```
 
 :::danger Protect the join command
-`MASTER_AUTH_INFO` is Base64-encoded, not encrypted. Anyone with the command can recover the master's SSH credentials. Share it only with the intended worker administrator. Do not post it in a public channel or repository.
+The generated `MASTER_AUTH_INFO` value is Base64-encoded, not encrypted. Anyone who has the command can recover the master's SSH credentials. Share it only with the administrator of the intended worker, and never post it in a public channel or repository.
 :::
 
 ## Step 2: Set up the worker node
@@ -127,7 +127,7 @@ Uninstall any existing Olares system on the worker, including the factory-instal
    ssh olares@<worker-ip-address>
    ```
 
-2. On the worker, paste and run the complete command you generated in Step 1. The command follows this pattern:
+2. On the worker, paste and run the complete command from [Generate the worker join command](#generate-the-worker-join-command). The command follows this pattern:
 
    ```bash
    export MASTER_AUTH_INFO='<encoded-master-connection-information>' \

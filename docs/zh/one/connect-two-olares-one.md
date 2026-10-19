@@ -62,7 +62,7 @@ head:
    在 LarePass 中，前往**设置** > **系统** > 你的设备 > **节点** > **网络** > **内网 IP**，查看地址。使用 LarePass Vault 中保存的 SSH 密码。
 
    ```bash
-   ssh olares@<master-ip-address>
+   ssh olares@<主节点 IP 地址>
    ```
 
 2. 停止 Olares：
@@ -99,22 +99,22 @@ head:
 
 2. 检查显示的 SSH 地址和用户名。输入 `y` 确认，或按提示修改用户名。默认用户名为 `olares`。
 3. 输入 SSH 密码。命令会在主节点本机检查 SSH 登录和 `sudo` 权限。如果认证失败，会再次提示输入用户名和密码。按 `Enter` 保留提示中的用户名，或输入其他用户名。如果仍无法连接，请检查地址、SSH 服务和防火墙设置。
-4. 复制生成的命令，下一步在工作节点上运行。命令包含主节点的 CDN 配置，以及匹配其 Olares 版本的加入脚本地址。请使用生成的地址，无需手动下载脚本。
+4. 复制生成的命令。下一步需要在工作节点上运行它。
 
    输出示例：
 
    ```plain
-   SSH login and sudo access verified for <username>@<master-ip-address>:22.
+   SSH login and sudo access verified for <用户名>@<主节点 IP 地址>:22.
 
    Run the following command on the worker node:
 
-   export MASTER_AUTH_INFO='<encoded-auth-info>' OLARES_SYSTEM_CDN_SERVICE='<olares-cdn-url>' && curl -fsSL '<join-script-url>' | bash
+   export MASTER_AUTH_INFO='<编码后的认证信息>' OLARES_SYSTEM_CDN_SERVICE='<Olares CDN 地址>' && curl -fsSL '<加入脚本地址>' | bash
 
    MASTER_AUTH_INFO is Base64-encoded, not encrypted. Anyone holding this command can recover the master's SSH credentials, so share it only with the intended worker administrator.
    ```
 
 :::danger 保护加入命令
-`MASTER_AUTH_INFO` 只经过 Base64 编码，并未加密。拿到命令的人可以还原主节点的 SSH 凭据。请只将命令提供给目标工作节点的管理员，不要发布到公开群聊或代码仓库。
+生成的 `MASTER_AUTH_INFO` 只经过 Base64 编码，并未加密。拿到命令的人可以还原主节点的 SSH 凭据。请只将命令提供给目标工作节点的管理员，切勿发布到公开群聊或代码仓库。
 :::
 
 ## 步骤 2：设置工作节点
@@ -128,15 +128,15 @@ head:
 1. 使用局域网 IP 地址连接工作节点：
 
    ```bash
-   ssh olares@<worker-ip-address>
+   ssh olares@<工作节点 IP 地址>
    ```
 
-2. 在工作节点上，粘贴并运行步骤 1 生成的完整命令。命令格式如下：
+2. 在工作节点上，粘贴并运行[生成工作节点加入命令](#生成工作节点加入命令)中得到的完整命令。命令格式如下：
 
    ```bash
-   export MASTER_AUTH_INFO='<encoded-master-connection-information>' \
-     OLARES_SYSTEM_CDN_SERVICE='<olares-cdn-url>' \
-     && curl -fsSL '<join-script-url>' | bash
+   export MASTER_AUTH_INFO='<编码后的主节点连接信息>' \
+     OLARES_SYSTEM_CDN_SERVICE='<Olares CDN 地址>' \
+     && curl -fsSL '<加入脚本地址>' | bash
    ```
 
    请完整使用系统生成的命令，不要复制上面的占位示例。
@@ -171,7 +171,7 @@ head:
 ```plain
 [Job] Add Worker Node To The Cluster execute successfully!!! (...)
 
-This node joined the Olares cluster at <master-ip-address> as "<worker-node-name>".
+This node joined the Olares cluster at <主节点 IP 地址> as "<工作节点名称>".
 Verify it on the master with: sudo /usr/local/bin/kubectl get nodes
 ```
 
