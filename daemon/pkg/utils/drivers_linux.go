@@ -437,7 +437,7 @@ func UmountOrRecordBrokenMounts(ctx context.Context, baseDir string) error {
 			if r := checkMount(m.Path, time.Second); r.Broken {
 
 				switch m.Type {
-				case "cifs", "nfs":
+				case "cifs", "nfs", "nfs4":
 					// record the broken mount record, and notify via the files API
 					currentBrokenMounts = append(currentBrokenMounts, m.Path)
 				default:
@@ -665,7 +665,7 @@ func MountedPath(ctx context.Context) ([]mountedPath, error) {
 			paths = append(paths, mountedPath{m.Path, HDD, false, hdds[idx].IDSerial, hdds[idx].IDSerialShort, hdds[idx].PartitionUUID, "", false, IsManagedMount(m.Path)})
 		case m.Type == "cifs":
 			paths = append(paths, mountedPath{m.Path, SMB, IsBrokenMount(m.Path), "", "", "", m.Device, isReadOnly(&m), IsManagedMount(m.Path)})
-		case m.Type == "nfs":
+		case m.Type == "nfs", m.Type == "nfs4":
 			paths = append(paths, mountedPath{m.Path, NFS, IsBrokenMount(m.Path), "", "", "", m.Device, isReadOnly(&m), IsManagedMount(m.Path)})
 		}
 
