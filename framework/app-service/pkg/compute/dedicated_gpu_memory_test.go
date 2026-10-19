@@ -125,6 +125,72 @@ func TestInstallCapacityFitsSizesDiscreteCardsByGPUQuota(t *testing.T) {
 	}
 }
 
+func TestDedicatedVRAMMultiCardPlacement(t *testing.T) {
+	for _, mode := range []string{utils.NvidiaCardType, utils.IntelGPUType, utils.AMDGPUType} {
+		t.Run(mode, func(t *testing.T) {
+			for _, tc := range []struct {
+				name       string
+				multiCards bool
+				multiNodes bool
+				crossNode  bool
+				cardMemory int64
+				wantScope  string
+				wantOK     bool
+			}{
+				{"single card only", false, false, false, 16 * gib, AvailabilityScopeCard, false},
+				{"multiple cards on one node", true, false, false, 16 * gib, AvailabilityScopeSingleNode, true},
+				{"cross node disabled", true, false, true, 16 * gib, AvailabilityScopeSingleNode, false},
+				{"multiple nodes imply multiple cards", false, true, true, 16 * gib, AvailabilityScopeCrossNode, true},
+				{"aggregate memory insufficient", true, false, false, 8 * gib, AvailabilityScopeSingleNode, false},
+			} {
+				t.Run(tc.name, func(t *testing.T) {
+					req := RequirementFromMode(appcfg.ResourceMode{
+						Mode:              mode,
+						SupportMultiCards: tc.multiCards,
+						SupportMultiNodes: tc.multiNodes,
+						ResourceRequirement: appcfg.ResourceRequirement{
+							RequiredGPU: "24Gi", LimitedGPU: "24Gi", RequiredMemory: "2Gi", LimitedMemory: "2Gi",
+						},
+					})
+					first := exclusiveDevice(mode, tc.cardMemory)
+					second := exclusiveDevice(mode, tc.cardMemory)
+					second.ID = "card1"
+					nodes := []Node{singleDeviceNode(first)}
+					if tc.crossNode {
+						second.NodeName = "n2"
+						nodes = append(nodes, singleDeviceNode(second))
+					} else {
+						nodes[0].Devices = append(nodes[0].Devices, second)
+					}
+					if got := installCapacityFits(req, nodes); got != tc.wantOK {
+						t.Fatalf("install capacity fits = %v, want %v", got, tc.wantOK)
+					}
+					view := listAvailableForLaunch(req, nodes, PressureSnapshot{})
+					if view.Scope != tc.wantScope || view.Schedulable != tc.wantOK {
+						t.Fatalf("availability = %#v, want scope=%s schedulable=%v", view, tc.wantScope, tc.wantOK)
+					}
+					app := &appcfg.ApplicationConfig{AppName: "trainer", OwnerName: "alice"}
+					allocations, ok := PickAllocations(app, req, nodes, PressureSnapshot{})
+					if ok != tc.wantOK {
+						t.Fatalf("auto-pick = %v, want %v", ok, tc.wantOK)
+					}
+					if ok && (len(allocations) != 2 || allocations[0].Memory != 0 || allocations[1].Memory != 0) {
+						t.Fatalf("expected two whole-card allocations, got %#v", allocations)
+					}
+					selections := []BindingSelection{
+						{NodeName: first.NodeName, DeviceID: first.ID},
+						{NodeName: second.NodeName, DeviceID: second.ID},
+					}
+					bound, validation := bindAllocations(app, req, selections, nodes, PressureSnapshot{})
+					if validation.OK != tc.wantOK || (validation.OK && len(bound) != 2) {
+						t.Fatalf("manual binding = %#v, allocations=%#v, want valid=%v", validation, bound, tc.wantOK)
+					}
+				})
+			}
+		})
+	}
+}
+
 // The node/device availability view feeds both the resume picker and install's
 // auto-pick, so it has to reach the same verdict as the capacity check: a
 // discrete card too small for the declared VRAM is not-enough, not available.

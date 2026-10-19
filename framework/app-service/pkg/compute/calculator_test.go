@@ -195,6 +195,39 @@ func TestValidateBindingSelectionTopologyAndMemorySlice(t *testing.T) {
 	}
 }
 
+func TestUnifiedMemorySliceBindingValidatesSubmittedQuota(t *testing.T) {
+	for _, mode := range []string{utils.GB10ChipType, utils.IntelType, utils.AMDType, utils.MooreSocType} {
+		t.Run(mode, func(t *testing.T) {
+			req := Requirement{Mode: mode, RequiredMemory: 24 * gi, LimitedMemory: 48 * gi}
+			nodes := []Node{computeNode("node", mode, 96*gi, SupportTypeMemorySlice)}
+			for _, tc := range []struct {
+				name   string
+				memory int64
+				wantOK bool
+			}{
+				{"omitted", 0, false},
+				{"negative", -gi, false},
+				{"below requirement", gi, false},
+				{"at requirement", 24 * gi, true},
+				{"at available capacity", 96 * gi, true},
+				{"above available capacity", 128 * gi, false},
+			} {
+				t.Run(tc.name, func(t *testing.T) {
+					selections := []BindingSelection{{NodeName: "node", DeviceID: "node-device", Memory: tc.memory}}
+					app := &appcfg.ApplicationConfig{AppName: "app", OwnerName: "owner"}
+					allocations, validation := bindAllocations(app, req, selections, nodes, PressureSnapshot{})
+					if validation.OK != tc.wantOK {
+						t.Fatalf("validation=%+v, want OK=%v", validation, tc.wantOK)
+					}
+					if validation.OK && (len(allocations) != 1 || allocations[0].Memory != tc.memory) {
+						t.Fatalf("allocation does not match validated quota: %+v", allocations)
+					}
+				})
+			}
+		})
+	}
+}
+
 // Install and resume must agree that a time-slice selection costs the node only
 // what the app declared, not the physical memory of every card it was given.
 // The two paths compute pressure independently, so both are asserted here.
@@ -401,6 +434,73 @@ func TestAvailabilityNonNvidiaNodeBecomesNotAvailableUnderPressure(t *testing.T)
 	}
 }
 
+func TestDedicatedVRAMAvailabilityChecksNodePressure(t *testing.T) {
+	for _, mode := range []string{utils.IntelGPUType, utils.AMDGPUType, utils.NvidiaCardType} {
+		for _, scope := range []string{AvailabilityScopeCard, AvailabilityScopeSingleNode} {
+			t.Run(mode+"/"+scope, func(t *testing.T) {
+				req := Requirement{
+					Mode: mode, RequiredCPU: 1000, RequiredMemory: 2 * gi, LimitedMemory: 2 * gi,
+					RequiredGPU: 12 * gi, LimitedGPU: 12 * gi,
+				}
+				nodes := []Node{computeNode("gpu-a", mode, 16*gi, SupportTypeExclusive)}
+				selections := []BindingSelection{{NodeName: "gpu-a", DeviceID: "gpu-a-device"}}
+				if scope == AvailabilityScopeSingleNode {
+					req.SupportMultiCards = true
+					req.RequiredGPU, req.LimitedGPU = 24*gi, 24*gi
+					second := nodes[0].Devices[0]
+					second.ID = "gpu-b-device"
+					nodes[0].Devices = append(nodes[0].Devices, second)
+					selections = append(selections, BindingSelection{NodeName: "gpu-a", DeviceID: second.ID})
+				}
+				for _, tc := range []struct {
+					name           string
+					cpuUtilization float64
+					memoryFree     int64
+					ignorePressure bool
+					pressureAdded  *AddedResources
+					wantAvailable  bool
+				}{
+					{name: "healthy", memoryFree: 24 * gi, wantAvailable: true},
+					{name: "cpu pressure", cpuUtilization: 0.9, memoryFree: 24 * gi},
+					{name: "memory pressure", memoryFree: gi},
+					{name: "capacity-only preflight", memoryFree: gi, ignorePressure: true, wantAvailable: true},
+					{name: "preflight pressure budget", memoryFree: 24 * gi, pressureAdded: &AddedResources{Memory: 24 * gi}},
+				} {
+					t.Run(tc.name, func(t *testing.T) {
+						pressure := PressureSnapshot{UsageByNode: map[string]prometheus.NodeResourceUsage{
+							"gpu-a": {CPUCapacity: 8000, CPUUtilization: tc.cpuUtilization, MemoryCapacity: 32 * gi, MemoryAvailable: tc.memoryFree},
+						}}
+						view := listAvailableForLaunchWithOptions(req, nodes, pressure, allocationOptions{
+							checkPressure: !tc.ignorePressure, pressureAdded: tc.pressureAdded,
+						})
+						wantStatus := NodeStatusNotAvailable
+						if tc.wantAvailable {
+							wantStatus = NodeStatusAvailable
+						}
+						if view.Scope != scope || view.Schedulable != tc.wantAvailable || len(view.Nodes) != 1 || view.Nodes[0].Status != wantStatus {
+							t.Fatalf("availability = %#v, want scope=%s schedulable=%v status=%s", view, scope, tc.wantAvailable, wantStatus)
+						}
+						for _, device := range view.Nodes[0].Devices {
+							if device.Operable != tc.wantAvailable {
+								t.Fatalf("device operable = %v, want %v", device.Operable, tc.wantAvailable)
+							}
+						}
+						if !tc.ignorePressure && tc.pressureAdded == nil {
+							app := &appcfg.ApplicationConfig{AppName: "trainer", OwnerName: "alice"}
+							if _, ok := PickAllocations(app, req, nodes, pressure); ok != view.Schedulable {
+								t.Fatalf("auto-pick = %v, want availability schedulable=%v", ok, view.Schedulable)
+							}
+							if validation := ValidateBindingSelection(req, selections, nodes, pressure); validation.OK != view.Schedulable {
+								t.Fatalf("resume validation = %#v, want availability schedulable=%v", validation, view.Schedulable)
+							}
+						}
+					})
+				}
+			})
+		}
+	}
+}
+
 func TestValidateBindingSelectionNonNvidiaRequiresSingleSelection(t *testing.T) {
 	req := Requirement{
 		Mode:           utils.AMDType,
@@ -524,7 +624,7 @@ func TestPickAllocationsReturnsFailureWhenPressureRejectsFittingDevice(t *testin
 
 // TestPickSingleAllocationGB10MemorySlice guards the GB10 single-card
 // allocation path: a GB10 node's device is decoded with the MemorySlice
-// support type by default (shareModeToSupportType), so PickAllocations must
+// support type by default (resolveSupportType), so PickAllocations must
 // offer MemorySlice in its support-type order. GB10 shares the non-nvidia
 // [Exclusive, MemorySlice] order; dropping MemorySlice from it would filter
 // every GB10 candidate out and surface as "no available compute resource for

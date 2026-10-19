@@ -703,9 +703,21 @@ type EnvKeyValue struct {
 	Value string
 }
 
+// GPUResources is what the gpu-limit webhook injects for the app's compute
+// mode. An empty Resource injects nothing.
+type GPUResources struct {
+	// Resource is the per-container device count resource, set to 1.
+	Resource string
+	// MemoryResource carries Memory, the per-container memory limit in the
+	// form the device plugin expects. Either being empty skips it.
+	MemoryResource string
+	Memory         *string
+	RuntimeClass   string
+}
+
 // CreatePatchForDeployment add gpu env for deployment and returns patch bytes.
-func CreatePatchForDeployment(tpl *corev1.PodTemplateSpec, injectAll bool, injectContainer []string, gpuTypeKey string, gpumem *string, envKeyValues []EnvKeyValue) ([]byte, error) {
-	patches, err := addGpuResourceLimits(tpl, injectAll, injectContainer, gpuTypeKey, gpumem)
+func CreatePatchForDeployment(tpl *corev1.PodTemplateSpec, injectAll bool, injectContainer []string, gpu GPUResources, envKeyValues []EnvKeyValue) ([]byte, error) {
+	patches, err := addGpuResourceLimits(tpl, injectAll, injectContainer, gpu)
 	if err != nil {
 		return []byte{}, err
 	}
@@ -737,8 +749,8 @@ func CreateCleanupPatchForDeployment(tpl *corev1.PodTemplateSpec) ([]byte, error
 }
 
 // gpuResourceKeys lists every extended-resource key the gpu-limit
-// webhook may have injected on a prior install. Keep in sync with
-// addGpuResourceLimits / getGPUResourceTypeKey.
+// webhook may have injected on a prior install. Keep in sync with the
+// ExtendedResource / MemoryResource columns of compute's mode capability table.
 var gpuResourceKeys = []string{
 	constants.NvidiaGPU,
 	constants.NvidiaGPUMem,
@@ -793,28 +805,25 @@ func removeGpuResources(tpl *corev1.PodTemplateSpec) []patchOp {
 	return patches
 }
 
-func addGpuResourceLimits(tpl *corev1.PodTemplateSpec, injectAll bool, injectContainer []string, typeKey string, gpumem *string) (patch []patchOp, err error) {
+func addGpuResourceLimits(tpl *corev1.PodTemplateSpec, injectAll bool, injectContainer []string, gpu GPUResources) (patch []patchOp, err error) {
+	typeKey := gpu.Resource
 	if typeKey == "" {
 		klog.Warning("No gpu type selected, skip adding resource limits")
 		return patch, nil
 	}
 
-	// add runtime class for nvidia gpu, HAMi runtime class is "nvidia"
-	if typeKey == constants.NvidiaGPU {
+	if gpu.RuntimeClass != "" {
+		op := constants.PatchOpAdd
 		if tpl.Spec.RuntimeClassName != nil {
-			patch = append(patch, patchOp{
-				Op:    constants.PatchOpReplace,
-				Path:  runtimeClassPath,
-				Value: "nvidia",
-			})
-		} else {
-			patch = append(patch, patchOp{
-				Op:    constants.PatchOpAdd,
-				Path:  runtimeClassPath,
-				Value: "nvidia",
-			})
+			op = constants.PatchOpReplace
 		}
+		patch = append(patch, patchOp{
+			Op:    op,
+			Path:  runtimeClassPath,
+			Value: gpu.RuntimeClass,
+		})
 	}
+	injectMemory := gpu.MemoryResource != "" && gpu.Memory != nil && *gpu.Memory != ""
 
 	for i := range tpl.Spec.Containers {
 		container := tpl.Spec.Containers[i]
@@ -827,8 +836,8 @@ func addGpuResourceLimits(tpl *corev1.PodTemplateSpec, injectAll bool, injectCon
 				typeKey: "1",
 			}
 
-			if gpumem != nil && *gpumem != "" && typeKey == constants.NvidiaGPU {
-				limitsValues[constants.NvidiaGPUMem] = *gpumem
+			if injectMemory {
+				limitsValues[gpu.MemoryResource] = *gpu.Memory
 			}
 
 			patch = append(patch, patchOp{
@@ -850,8 +859,8 @@ func addGpuResourceLimits(tpl *corev1.PodTemplateSpec, injectAll bool, injectCon
 				t["limits"][k.String()] = v.String()
 			}
 			t["limits"][typeKey] = "1"
-			if gpumem != nil && *gpumem != "" && typeKey == constants.NvidiaGPU {
-				t["limits"][constants.NvidiaGPUMem] = *gpumem
+			if injectMemory {
+				t["limits"][gpu.MemoryResource] = *gpu.Memory
 			}
 			patch = append(patch, patchOp{
 				Op:    constants.PatchOpReplace,

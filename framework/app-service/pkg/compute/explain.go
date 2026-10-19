@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
@@ -17,7 +16,7 @@ import (
 // reproducing the cluster state.
 
 func describeRequirement(req Requirement) string {
-	if req.Mode == utils.NvidiaCardType {
+	if CapabilityFor(req.Mode).MultiCard {
 		return fmt.Sprintf("mode=%s requireVram=%s limitVram=%s multiCards=%t multiNodes=%t",
 			req.Mode, humanBytes(req.RequiredGPU), humanBytes(req.LimitedGPU),
 			req.SupportMultiCards, req.SupportMultiNodes)
@@ -75,7 +74,7 @@ func describeNodeOption(req Requirement, node NodeOption, pressure PressureSnaps
 // single-card one on its largest card — so the note follows suit. When pressure
 // is what turned the node down, the separate overPressure marker says so.
 func nodeStatusNote(req Requirement, status string) string {
-	aggregate := req.Mode == utils.NvidiaCardType && (req.SupportMultiCards || req.SupportMultiNodes)
+	aggregate := aggregatesCards(req)
 	switch status {
 	case NodeStatusNotEnough:
 		if aggregate {
