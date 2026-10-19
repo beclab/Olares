@@ -38,6 +38,10 @@ Descriptions come from the page's `description`, with the localized site tagline
 as a fallback. Optional `ogDescription` overrides the image text only (an empty
 string hides it). The full page description remains in Open Graph/Twitter metadata.
 
+Titles use Manrope at weight 650 for Latin text and Noto Sans SC at weight 550
+for Chinese text. Chinese pages use 0 px title tracking; English pages use
+-0.6 px. Descriptions use the same font families at weight 400.
+
 Titles use the full 1056 px text width, with a 184 px height budget, and wrap
 into up to three lines, shrinking from 64 px when necessary. Descriptions use
 29 px text in a separate area, at least 36 px below the title, with up to three lines. Overlong
@@ -53,11 +57,11 @@ Run focused checks with `npm run test:og`, and validate integration with
 
 ## Fonts and logo
 
-Inter and Noto Sans SC are unmodified variable fonts from the Google Fonts
-repository, downloaded 2026-10-16. Their complete SIL OFL 1.1 licenses and
-copyright notices are preserved beside the font files in `fonts/`:
+Manrope and Noto Sans SC are unmodified variable fonts from the Google Fonts
+repository. Manrope was downloaded on 2026-10-19; Noto Sans SC on 2026-10-16.
+Their complete SIL OFL 1.1 licenses and copyright notices are preserved beside the font files in `fonts/`:
 
-- https://github.com/google/fonts/tree/main/ofl/inter
+- https://github.com/google/fonts/tree/main/ofl/manrope
 - https://github.com/google/fonts/tree/main/ofl/notosanssc
 
 The license allows commercial use and embedding. Keep these license files when
