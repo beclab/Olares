@@ -119,7 +119,7 @@ func TestBindingSelectionResolvesDeviceOnMultiModeNode(t *testing.T) {
 	}
 
 	reqIntel := Requirement{Mode: utils.IntelType, RequiredMemory: 4 * gi, LimitedMemory: 4 * gi}
-	if res := ValidateBindingSelection(reqIntel, []BindingSelection{{NodeName: "olares-one", DeviceID: "olares-one-intel-0"}}, nodes, PressureSnapshot{}); !res.OK {
+	if res := ValidateBindingSelection(reqIntel, []BindingSelection{{NodeName: "olares-one", DeviceID: "olares-one-intel-0", Memory: 4 * gi}}, nodes, PressureSnapshot{}); !res.OK {
 		t.Fatalf("intel device should be valid for an intel request, got %+v", res)
 	}
 

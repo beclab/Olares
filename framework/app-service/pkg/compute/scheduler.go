@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"slices"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
@@ -139,8 +140,9 @@ func RequirementFromMode(mode appcfg.ResourceMode) Requirement {
 		limMem = reqMem
 	}
 	reqDisk := parseQuantityBytes(source.RequiredDisk)
-	supportMultiNodes := mode.Mode == utils.NvidiaCardType && mode.SupportMultiNodes
-	supportMultiCards := mode.Mode == utils.NvidiaCardType && (mode.SupportMultiCards || supportMultiNodes)
+	multiCard := CapabilityFor(mode.Mode).MultiCard
+	supportMultiNodes := multiCard && mode.SupportMultiNodes
+	supportMultiCards := multiCard && (mode.SupportMultiCards || supportMultiNodes)
 	return Requirement{
 		Mode:              mode.Mode,
 		RequiredCPU:       reqCPU,
@@ -241,7 +243,7 @@ func pickLaunchSelection(req Requirement, availability *AvailabilityResult, pres
 		// the full candidate set at the same verbosity, so repeating it here
 		// would only double the volume. What it cannot say is that the pick
 		// then failed — which happens even when the view reports schedulable,
-		// because node status ignores pressure for nvidia while the fit check
+		// because node status ignores pressure for multi-card modes while the fit check
 		// applies it. V(2) rather than Info because preflight runs this against
 		// a simulated cluster and treats a failed pick as a normal answer; the
 		// callers for which it really is a failure log it themselves.
@@ -279,7 +281,8 @@ func usableCPUNodeMemory(capacity int64) int64 {
 }
 
 func installCapacityFits(req Requirement, nodes []Node) bool {
-	if req.Mode == utils.NvidiaCardType && req.SupportMultiNodes {
+	multiCard := CapabilityFor(req.Mode).MultiCard
+	if multiCard && req.SupportMultiNodes {
 		var total int64
 		for _, node := range nodes {
 			for _, device := range node.Devices {
@@ -288,7 +291,7 @@ func installCapacityFits(req Requirement, nodes []Node) bool {
 		}
 		return total >= req.RequiredGPU
 	}
-	if req.Mode == utils.NvidiaCardType && req.SupportMultiCards {
+	if multiCard && req.SupportMultiCards {
 		for _, node := range nodes {
 			var total int64
 			for _, device := range node.Devices {
@@ -315,7 +318,7 @@ func installCapacityFits(req Requirement, nodes []Node) bool {
 }
 
 // pickSingleSelection places the app on one device, which is the unit of
-// scheduling for every mode except multi-card nvidia.
+// scheduling unless the request aggregates cards (aggregatesCards).
 func pickSingleSelection(req Requirement, nodes []NodeOption, pressure PressureSnapshot, opts allocationOptions) ([]BindingSelection, bool) {
 	for _, level := range []string{FitLevelLimit, FitLevelRequired} {
 		for _, supportType := range supportTypeOrder(req.Mode) {
@@ -342,7 +345,7 @@ func pickSingleSelection(req Requirement, nodes []NodeOption, pressure PressureS
 	return nil, false
 }
 
-// pickAggregateSelection places a multi-card nvidia app across several cards,
+// pickAggregateSelection places a multi-card app across several cards,
 // either within a single node or — when the app declares multi-node support —
 // across the whole cluster.
 func pickAggregateSelection(req Requirement, nodes []NodeOption, pressure PressureSnapshot, opts allocationOptions, crossNode bool) ([]BindingSelection, bool) {
@@ -427,7 +430,7 @@ func deviceFitsLevelWithPressure(req Requirement, node Node, device Device, pres
 	if available <= 0 {
 		return false, 0
 	}
-	if available < required && !(allowPartial && req.Mode == utils.NvidiaCardType) {
+	if available < required && !(allowPartial && CapabilityFor(req.Mode).MultiCard) {
 		return false, available
 	}
 	if allocationWouldPressure(req, node, pressure, level, pressureOptions) {
@@ -460,8 +463,8 @@ func levelAddedResources(req Requirement, level string, options allocationOption
 }
 
 // targetForMode is the amount of device memory the app needs from a single
-// device at the given fit level. Dedicated-VRAM modes (nvidia / amd-gpu /
-// intel-gpu) are sized by the manifest's GPU-memory quota, which is the only
+// device at the given fit level. DedicatedVRAM modes are sized by the
+// manifest's GPU-memory quota, which is the only
 // quantity that describes their separate memory pool; the unified-memory modes
 // have no such quota and are sized by the pod memory request, which for them
 // covers the VRAM too because it is the same RAM.
@@ -474,14 +477,14 @@ func levelAddedResources(req Requirement, level string, options allocationOption
 // and fits anywhere" — see the Exclusive guard in
 // validateResolvedBindingSelection.
 func targetForMode(req Requirement, level string) int64 {
-	if utils.HasDedicatedGPUMemory(req.Mode) {
+	if CapabilityFor(req.Mode).DedicatedVRAM {
 		return targetGPU(req, level)
 	}
 	return levelMemory(req, level)
 }
 
 func requiredTargetForMode(req Requirement) int64 {
-	if utils.HasDedicatedGPUMemory(req.Mode) {
+	if CapabilityFor(req.Mode).DedicatedVRAM {
 		return req.RequiredGPU
 	}
 	return req.RequiredMemory
@@ -549,18 +552,17 @@ func isWholeCardSupportType(supportType string) bool {
 	return supportType == SupportTypeExclusive || supportType == SupportTypeTimeSlice
 }
 
+// supportTypeOrder is the order in which the picker tries devices by support
+// type: whole-device placement first, then a memory slice, then a time slice
+// for the modes that offer one. Exclusive and MemorySlice are listed for every
+// mode because the order only ranks devices; a type no device carries matches
+// nothing.
 func supportTypeOrder(mode string) []string {
-	if mode == utils.NvidiaCardType {
-		return []string{SupportTypeExclusive, SupportTypeMemorySlice, SupportTypeTimeSlice}
+	order := []string{SupportTypeExclusive, SupportTypeMemorySlice}
+	if slices.Contains(CapabilityFor(mode).SupportTypes, SupportTypeTimeSlice) {
+		order = append(order, SupportTypeTimeSlice)
 	}
-	// Every non-nvidia mode (nvidia-gb10 plus the unified-memory accelerators:
-	// cpu / apple-m / intel / amd / moore-soc / discrete GPUs) only ever
-	// carries Exclusive or MemorySlice devices — TimeSlice is nvidia-only.
-	// Listing Exclusive first keeps the scheduler's preference for whole-device
-	// placement before it falls back to a memory slice, and including
-	// MemorySlice is what lets GB10 (decoded as MemorySlice by default) and the
-	// memory-slicing accelerators be scheduled at all.
-	return []string{SupportTypeExclusive, SupportTypeMemorySlice}
+	return order
 }
 
 func deviceAvailableMemory(device Device) int64 {

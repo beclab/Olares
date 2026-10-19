@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -167,28 +168,27 @@ func TestComputeResourcesPreflightLimitsRequestSizeAndCount(t *testing.T) {
 	}
 }
 
-func TestComputePreflightDemandNormalizesMultiNodeToMultiCard(t *testing.T) {
-	wire := ComputePreflightDemand{
-		ID: "app", Application: "app", Owner: "alice", Mode: utils.NvidiaCardType,
-		RequiredCPU: "0", RequiredGPU: "8Gi", LimitedGPU: "8Gi",
-		RequiredMemory: "1Gi", LimitedMemory: "1Gi", RequiredDisk: "0",
-		SupportMultiNodes: true,
-	}
-	demand, err := wire.toCompute()
-	if err != nil {
-		t.Fatalf("convert: %v", err)
-	}
-	if !demand.Requirement.SupportMultiNodes || !demand.Requirement.SupportMultiCards {
-		t.Fatalf("multi-node must imply multi-card: %#v", demand.Requirement)
-	}
-
-	wire.Mode = utils.CPUType
-	demand, err = wire.toCompute()
-	if err != nil {
-		t.Fatalf("convert cpu: %v", err)
-	}
-	if demand.Requirement.SupportMultiNodes || demand.Requirement.SupportMultiCards {
-		t.Fatalf("non-nvidia mode must ignore multi-card flags: %#v", demand.Requirement)
+func TestComputePreflightDemandNormalizesMultiCardFlags(t *testing.T) {
+	for _, mode := range []string{utils.NvidiaCardType, utils.IntelGPUType, utils.AMDGPUType, utils.GB10ChipType, utils.IntelType, utils.AMDType, utils.CPUType} {
+		for _, multiNodes := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/multiNodes=%t", mode, multiNodes), func(t *testing.T) {
+				wire := ComputePreflightDemand{
+					ID: "app", Application: "app", Owner: "alice", Mode: mode,
+					RequiredCPU: "0", RequiredGPU: "8Gi", LimitedGPU: "8Gi",
+					RequiredMemory: "1Gi", LimitedMemory: "1Gi", RequiredDisk: "0",
+					SupportMultiCards: !multiNodes,
+					SupportMultiNodes: multiNodes,
+				}
+				demand, err := wire.toCompute()
+				if err != nil {
+					t.Fatalf("convert: %v", err)
+				}
+				wantMultiCard := mode == utils.NvidiaCardType || mode == utils.IntelGPUType || mode == utils.AMDGPUType
+				if demand.Requirement.SupportMultiCards != wantMultiCard || demand.Requirement.SupportMultiNodes != (wantMultiCard && multiNodes) {
+					t.Fatalf("unexpected multi-card flags: %#v", demand.Requirement)
+				}
+			})
+		}
 	}
 }
 
