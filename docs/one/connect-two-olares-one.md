@@ -26,12 +26,7 @@ By the end of this guide, you will learn how to:
 
 ## Before you begin
 
-- The factory SSH username and password are both `olares`. After activation, use the password saved in LarePass Vault.
-
-  :::warning Reset default SSH password
-  If you still use the default password, reset it in **Settings** > **My Olares** > **My hardware** > **Reset SSH login password**, even if you primarily use the Control Hub terminal. See [Access Olares One via SSH](./access-terminal-ssh.md#reset-ssh-password).
-  :::
-
+- The factory SSH username and password are both `olares`. For activated devices, use the SSH password saved in LarePass Vault. See [Access Olares One via SSH](./access-terminal-ssh.md#step-2-get-the-login-password-from-vault).
 - SSH access grants powerful control over the system. Keep your credentials secure.
 
 ## Prerequisites
