@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"sync"
 	"time"
 
@@ -90,9 +89,6 @@ func (r *CreateRequest) validate() error {
 	if len(r.Password) < 8 || len(r.Password) > 72 {
 		return errors.New("password must contain 8 to 72 bytes")
 	}
-	if !strings.HasPrefix(r.DID, "did:") || len(r.DID) > 1024 || strings.ContainsAny(r.DID, " \t\r\n") {
-		return errors.New("invalid did")
-	}
 	if r.CPU == "" {
 		r.CPU = "4"
 	}
@@ -109,7 +105,7 @@ func (r *CreateRequest) validate() error {
 }
 
 // Create reserves one user in the cluster before creating the User. Retries
-// by the same DID and password resume this reservation; another DID cannot take it.
+// by the same username, optional DID and password resume this reservation.
 // The Secret survives daemon restarts and is removed by a full uninstall.
 func (s *Service) Create(ctx context.Context, request CreateRequest) (Status, error) {
 	s.mu.Lock()
@@ -224,10 +220,10 @@ func (s *Service) initializeLocalName(ctx context.Context, username string) erro
 }
 
 func newUser(r CreateRequest) *iamv1.User {
-	return &iamv1.User{
+	u := &iamv1.User{
 		TypeMeta: metav1.TypeMeta{APIVersion: iamv1.SchemeGroupVersion.String(), Kind: "User"},
 		ObjectMeta: metav1.ObjectMeta{Name: r.Username, Annotations: map[string]string{
-			UserMarker: "true", UserDID: r.DID,
+			UserMarker:             "true",
 			userWizardStatus:       WaitActivateVault,
 			"bytetrade.io/creator": "cli", "bytetrade.io/owner-role": "admin",
 			"bytetrade.io/terminus-name":  r.Username,
@@ -243,6 +239,10 @@ func newUser(r CreateRequest) *iamv1.User {
 			Groups:          []string{"lldap_admin"},
 		},
 	}
+	if r.DID != "" {
+		u.Annotations[UserDID] = r.DID
+	}
+	return u
 }
 
 // Authorize authenticates this onboarding attempt with the initial salted MD5

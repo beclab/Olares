@@ -158,7 +158,7 @@ func (h *Handler) handleBindingUserZone(req *restful.Request, resp *restful.Resp
 	}
 
 	userPatches = append(userPatches, func(u *iamV1alpha2.User) {
-		u.Annotations[constants.UserTerminusWizardStatus] = string(constants.WaitResetPassword)
+		u.Annotations[constants.UserTerminusWizardStatus] = string(constants.Completed)
 	})
 
 	if err = op.UpdateUser(user, userPatches); err != nil {
