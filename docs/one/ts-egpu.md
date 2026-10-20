@@ -78,7 +78,7 @@ Before posting, collect the diagnostics for your operating system and attach the
 
 ### Olares OS
 
-1. Download <a href="/downloads/one/egpu/collect-egpu-info.sh" download>`collect-egpu-info.sh`</a>.
+1. Download <a href="/docs/downloads/one/egpu/collect-egpu-info.sh" download>`collect-egpu-info.sh`</a>.
 2. Open a terminal in the download directory and run:
 
    ```bash

@@ -61,9 +61,9 @@ nvidia-smi
 1. 在不连接 eGPU 的情况下启动 Olares One。
 2. 将以下三个文件下载到同一目录：
 
-   - <a href="/downloads/one/egpu/fix-egpu-link.sh" download>`fix-egpu-link.sh`</a>
-   - <a href="/downloads/one/egpu/egpu-gen1-fix.service" download>`egpu-gen1-fix.service`</a>
-   - <a href="/downloads/one/egpu/99-egpu-gen1-fix.rules" download>`99-egpu-gen1-fix.rules`</a>
+   - <a href="/docs/downloads/one/egpu/fix-egpu-link.sh" download>`fix-egpu-link.sh`</a>
+   - <a href="/docs/downloads/one/egpu/egpu-gen1-fix.service" download>`egpu-gen1-fix.service`</a>
+   - <a href="/docs/downloads/one/egpu/99-egpu-gen1-fix.rules" download>`99-egpu-gen1-fix.rules`</a>
 
 3. 在下载目录中打开终端，确认系统可以使用 `setpci`：
 
