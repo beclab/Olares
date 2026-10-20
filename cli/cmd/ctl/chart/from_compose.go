@@ -74,7 +74,7 @@ Examples:
 	fs.StringVar(&o.Title, "title", "", "human-facing app title (default: name)")
 	fs.StringVar(&o.Type, "type", "app", "OlaresManifest type: app | recommend | middleware")
 	fs.StringArrayVar(&o.Profiles, "profile", nil, "compose profile to activate (repeatable)")
-	fs.BoolVar(&o.NoInterpolate, "no-interpolate", false, "keep ${VAR} references verbatim instead of resolving them from the current environment")
+	fs.BoolVar(&o.NoInterpolate, "no-interpolate", false, "keep ${VAR} references in service environment values verbatim instead of resolving them from the current environment; ports, volumes and other fields still resolve, so ${VAR:-default} takes its default")
 	fs.BoolVar(&o.newSchema, "new-schema", false, "deprecated no-op: the 0.12.0 schema (spec.accelerator) is always emitted")
 	_ = fs.MarkHidden("new-schema")
 	_ = cmd.MarkFlagRequired("name")

@@ -32,7 +32,7 @@ services:
 olares-cli chart from-compose --name myapp -f compose.yml --title "My App"
 ```
 
-If upstream's file writes ports or volumes as `${VAR:-default}`, read [from-compose](olares-chart-from-compose.md) before reaching for `--no-interpolate`.
+When upstream's file reads secrets as `${VAR}`, add `--no-interpolate` so nothing from your shell is baked in; each `${VAR}` it keeps still needs a real value ([from-compose](olares-chart-from-compose.md)).
 
 ## 3. The edits every such app needs
 
