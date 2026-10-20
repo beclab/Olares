@@ -114,7 +114,7 @@ Replace any bundled `postgres`/`redis`/`mongodb`/`mysql`/`mariadb`/`minio`/`rabb
 
 ## 4. Entrances & ports
 
-The stub has one auto-detected entrance with `openMethod: default` and the default icon. Its fields — `openMethod` (open in a new browser tab vs. inside the Desktop), `icon`, `authLevel`, `invisible` — plus `ports[]`, outbound ports and the `options.apiTimeout` request cap are in [entrances](olares-chart-entrances.md).
+The stub has one auto-detected entrance with `openMethod: default` and the default icon. Its fields — `openMethod` (open in a new browser tab vs. inside the Desktop), `icon`, `authLevel`, `invisible` — plus `ports[]`, outbound ports and the entrance request cap are in [entrances](olares-chart-entrances.md).
 
 ## After refining
 
