@@ -56,7 +56,7 @@ metadata:
   appid: myapp                # app identifier; set = name. from-compose scaffolds it
   title: My App               # stub title=name is OK for local deploy
   description: One-line summary
-  icon: https://app.cdn.olares.com/appstore/default/defaulticon.webp  # default OK for local deploy
+  icon: https://app.cdn.olares.com/appstore/default/defaulticon.webp  # default OK for local deploy; "official icon" → pinned upstream URL, see entrances
   version: 0.0.1              # Chart Version — MUST equal Chart.yaml `version`; bump on each (re)upload
   categories:
   - Utilities                 # stub OK for local deploy; lint does not enum-check
