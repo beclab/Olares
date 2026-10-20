@@ -55,6 +55,12 @@ Source the token from an environment variable or secret manager. Never paste it 
 
 The `VERSION` column is the cached Olares backend version. `profile list --refresh-version` refreshes it. The leading `*` marks the selected profile. A `SOURCE` column appears only when some profile is platform-issued.
 
+`profile list -o json` gives the same data as an array, one object per profile: `name`, `olaresId`, `status`, `version` (`""` until detected), `source` and `current`. Scripts and agents read this rather than parsing columns:
+
+```bash
+olares-cli profile list -o json | jq -r '.[] | select(.current) | .olaresId'
+```
+
 ## Platform-issued profiles
 
 An application that declares `permission.loginOlaresCLI` gets a credential mounted into its container, and the CLI turns that mount into a profile on its own. `profile list` marks it `platform(<app>)` in the `SOURCE` column.
