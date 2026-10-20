@@ -14,7 +14,10 @@ import (
 
 var validChartName = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`)
 
-var minWorkloadOptionsManifestVersion = semver.MustParse("0.13.0")
+var (
+	minWorkloadOptionsManifestVersion = semver.MustParse("0.16.0")
+	maxOlaresManifestVersion          = semver.MustParse("0.16.0")
+)
 
 var (
 	errInvalidSubChartName = fmt.Errorf(
@@ -90,7 +93,8 @@ func ValidateKnownAPIVersion(api string) error {
 func ValidateAppConfiguration(c *AppConfiguration) error {
 	structErr := validation.ValidateStruct(c,
 		validation.Field(&c.ConfigVersion,
-			validation.Required.Error("olaresManifest.version is required")),
+			validation.Required.Error("olaresManifest.version is required"),
+			validation.By(validateOlaresManifestVersionCeiling)),
 		validation.Field(&c.APIVersion,
 			validation.When(c.APIVersion != "",
 				validation.In(validAPIVersions...).Error("not supported version"),
@@ -125,6 +129,18 @@ func ValidateAppConfiguration(c *AppConfiguration) error {
 		validateSharedAppRequirements(c),
 		validateV3Configuration(c),
 	)
+}
+
+func validateOlaresManifestVersionCeiling(value any) error {
+	version, _ := value.(string)
+	v, err := semver.NewVersion(version)
+	if err != nil {
+		return fmt.Errorf("olaresManifest.version is invalid: %q", version)
+	}
+	if v.GreaterThan(maxOlaresManifestVersion) {
+		return fmt.Errorf("olaresManifest.version must be <= %s", maxOlaresManifestVersion)
+	}
+	return nil
 }
 
 func workloadOptionsCheckApplies(version string) bool {
