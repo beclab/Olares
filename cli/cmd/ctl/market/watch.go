@@ -204,6 +204,11 @@ type watchTarget struct {
 	// then a no-op).
 	requireNewerThanBaseline bool
 	baselineStatusTime       int64
+
+	// probePods reads the app's own pods while the row is in flight
+	// (install / upgrade), because a crashlooping container keeps the row
+	// in `installing` / `initializing` for minutes.
+	probePods bool
 }
 
 func newWatchTarget(op watchOp, appName, source string) watchTarget {
@@ -212,6 +217,10 @@ func newWatchTarget(op watchOp, appName, source string) watchTarget {
 		appName:     appName,
 		source:      strings.TrimSpace(source),
 		matchOpType: true,
+	}
+	switch op {
+	case watchInstall, watchUpgrade:
+		t.probePods = true
 	}
 	switch op {
 	case watchInstall:
@@ -371,13 +380,18 @@ func newWatchTarget(op watchOp, appName, source string) watchTarget {
 type watchTimeoutError struct {
 	target watchTarget
 	last   *statusRow
+	pods   string
 }
 
 func (e *watchTimeoutError) Error() string {
 	if e.last != nil {
-		return fmt.Sprintf("%s '%s' watch timed out (last state: %s, op: %s); timeout is not failure and the operation may still be progressing; inspect with `olares-cli market status %s`",
+		msg := fmt.Sprintf("%s '%s' watch timed out (last state: %s, op: %s); timeout is not failure and the operation may still be progressing; inspect with `olares-cli market status %s`",
 			e.target.op, e.target.appName,
 			valueOrUnknown(e.last.State), valueOrUnknown(e.last.OpType), e.target.appName)
+		if e.pods != "" {
+			msg += "; app containers: " + e.pods
+		}
+		return msg
 	}
 	return fmt.Sprintf("%s '%s' watch timed out (no status reported by the backend); timeout is not failure; inspect with `olares-cli market status %s`",
 		e.target.op, e.target.appName, e.target.appName)
@@ -428,7 +442,13 @@ func waitForTerminal(parentCtx context.Context, mc *MarketClient, opts *MarketOp
 		last         *statusRow
 		seen         bool
 		consecErrors int
+		pods         *podWatch
 	)
+	if t.probePods {
+		if probe := opts.podProber(); probe != nil {
+			pods = &podWatch{probe: probe, appName: t.appName, failFast: opts.FailOnCrashLoop}
+		}
+	}
 
 	for {
 		if err := ctx.Err(); err != nil {
@@ -438,7 +458,7 @@ func waitForTerminal(parentCtx context.Context, mc *MarketClient, opts *MarketOp
 			return statusRow{}, err
 		}
 		if time.Now().After(deadline) {
-			return statusRow{}, &watchTimeoutError{target: t, last: last}
+			return statusRow{}, &watchTimeoutError{target: t, last: last, pods: pods.summary()}
 		}
 
 		resp, err := mc.GetMarketState(ctx)
@@ -536,6 +556,9 @@ func waitForTerminal(parentCtx context.Context, mc *MarketClient, opts *MarketOp
 			}
 			if t.matchesOpType(row) && t.failureSet[row.State] && t.passesBaseline(row) {
 				return row, &watchFailureError{target: t, row: row}
+			}
+			if crash := pods.poll(ctx, opts, time.Now()); crash != nil {
+				return row, &watchCrashLoopError{target: t, row: row, signal: *crash}
 			}
 		}
 
@@ -690,6 +713,11 @@ func runWithWatch(opts *MarketOptions, mc *MarketClient, accepted OperationResul
 			failed.Progress = fail.row.Progress
 			failed.FinalState = fail.row.State
 			failed.FinalOpType = fail.row.OpType
+		}
+		var crash *watchCrashLoopError
+		if errors.As(err, &crash) {
+			failed.State = crash.row.State
+			failed.Progress = crash.row.Progress
 		}
 		var to *watchTimeoutError
 		if errors.As(err, &to) && to.last != nil {
