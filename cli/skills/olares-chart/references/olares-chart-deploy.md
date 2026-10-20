@@ -78,11 +78,13 @@ The `--watch` market row (`downloading` / `initializing`) is a **coarse** signal
 
 **The runtime diagnosis itself lives in [`../../olares-doctor/SKILL.md`](../../olares-doctor/SKILL.md)** — it owns the symptom→root-cause routing (stalled image pull, crashlooping / non-starting container, `running`-but-unreachable) shared by catalog and dev apps. Doctor diagnoses the root cause; **for a chart you author, it points back here** — the fix is a manifest/template edit (§4b below), then re-lint + re-deploy.
 
+### A crash while the row still says `installing` / `initializing`
+
+An in-flight app accepts neither `install` nor `upgrade`, so after fixing the chart, clear the row first: `uninstall` for `pending` / `downloading` / `installing`, `cancel` for the rest — see [recover](olares-chart-recover.md).
+
 ### `running` is not the same as serving
 
-`running` only says app-service scaled the workload up: an app whose first write to a userspace mount was refused still reads `running` and answers 403. Before calling it deployed, read the app's own evidence — `cluster pod list -n <ns>` for READY, `cluster container logs <ns>/<pod>/<container>` for its startup and first-request lines, and `settings apps list` for the real host in its `URL` column (**never compute it**; `entrances list` leaves that column empty) — then request that host. Anything unreachable from there is doctor's routing, above.
-
-**`cluster pod exec` requires Olares >= 1.12.7** — it is the direct way to read a mount's owner or curl the app on localhost, and it is gated. The baseline this skill scaffolds against is `>= 1.12.6`, where the commands above are the entire verification surface.
+`running` only says app-service scaled the workload up. Before calling it deployed, prove it serves and opens from the Desktop: [verify](olares-chart-verify.md).
 
 ## 4. Diagnose: deploy-pipeline logs (chart-specific), then the app's runtime via doctor
 
@@ -110,28 +112,13 @@ Once the app's container is the problem (it pulled, scheduled, and started but m
 | `Permission denied` / EACCES writing data, or data not persisting (uid != 1000) | the run identity (uid 1000) guidance |
 | Admission denied: untrusted image runs as root | force uid 1000, or move the root work into a `beclab/` permissions initContainer — the run identity (uid 1000) guidance |
 
-### 4c. Upgrade recovery: `stopped` after upgrade
+### 4c. Upgrade recovery: `stopped` or `upgradeFailed`
 
-An upgrade can leave the **market row** in `state=stopped` while the **workload** is actually `Running`. Two paths land in `stopped`: upgrading an **already-stopped** app re-renders the chart at `replicas=0` and intentionally returns to `stopped` (by design); and **canceling an in-flight** op (`initializing` / `upgrading` / `applyingEnv` / `resuming`) only *stops* the app — so if a crashing initContainer was fixed and the workload later came up on its own, the row can read `stopped` while the pod is `1/1 Running`:
-
-```bash
-olares-cli market status <app> -s upload   # state=stopped
-olares-cli cluster application status <ns> # Deployment 1/1 Running
-```
-
-This is **not** a failure — the market row just needs to be resumed. Recovery:
-
-```bash
-olares-cli market resume <app> --watch
-```
-
-`resume` scales the workloads back up and waits for startup (`stopped → resuming → running`). If the pod is already running it completes quickly and flips the market row to `running`.
-
-If an upgrade instead left the app in **`upgradeFailed`** (the upgrade itself errored, not a `stopped` row), recover by fixing the chart, **bumping the version**, re-packaging + re-uploading, and re-running `market upgrade <app> -s upload --version <NEW> --watch` — `upgradeFailed` is an upgradable state. The bump is mandatory whenever the chart changed, because the old version cannot be re-uploaded; a same-version upgrade is only for retrying the stored chart after a transient failure. Do **not** fall back to `install`: app-service rejects `install` from `upgradeFailed`, which only re-wedges the row.
+A row that settled in `stopped` while the pod is `1/1 Running` needs `market resume`, not a fix; `upgradeFailed` needs a bumped `upgrade`, never `install`. Both are in [recover](olares-chart-recover.md).
 
 ## 5. Decide: fix the chart, or report back
 
-- **Problem is in the chart** (wrong image ref, missing/incorrect env, bad volume mount, entrance host/port, undeclared `permission` for a userspace mount, **uid/permission mismatch on userspace volumes**, ...): edit the manifest/templates per the Manifest refinement areas and the run identity (uid 1000) guidance, re-run `chart lint`, bump and re-upload per §2, and the auto-loop continues. **Re-apply with the right verb:** app gone or `installFailed` → `market install -s upload --version <NEW>`; already in a settled state (`running` / `stopped` / `upgradeFailed` / `applyEnvFailed` / `stopFailed`) → `market upgrade -s upload --version <NEW>`. `install` against an existing app is rejected by app-service and leaves the row wedged; `upgrade` is the recovery path.
+- **Problem is in the chart** (wrong image ref, missing/incorrect env, bad volume mount, entrance host/port, undeclared `permission` for a userspace mount, **uid/permission mismatch on userspace volumes**, ...): edit the manifest/templates per the Manifest refinement areas and the run identity (uid 1000) guidance, re-run `chart lint`, bump and re-upload per §2, and the auto-loop continues. **Re-apply with the right verb:** app gone or `installFailed` → `market install -s upload --version <NEW>`; already in a settled state (`running` / `stopped` / `upgradeFailed` / `applyEnvFailed` / `stopFailed`) → `market upgrade -s upload --version <NEW>`; still in flight → clear it first (§3, crash while installing). `install` against an existing app is rejected by app-service and leaves the row wedged; `upgrade` is the recovery path.
 - **Problem is not in the chart, or unclear:** break out of the auto-loop — summarize the failing state and the relevant log excerpts in plain language, suggest likely causes, and **ask the developer how to proceed.** Do not silently retry install in a loop — install/auth failures are deterministic (see olares-market / olares-shared error tables). The lone exception is the post-upload hydration `404` in section 3, which is transient and meant to be retried once hydration completes.
 
 ## 6. Clean up the test install

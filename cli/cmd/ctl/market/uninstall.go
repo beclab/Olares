@@ -28,6 +28,15 @@ var inFlightCancelableStates = map[string]bool{
 	stateResuming:  true,
 }
 
+// installTeardownStates are the in-flight states whose cancel deletes the
+// partial install, so the only way forward is a fresh install; the other
+// in-flight states cancel to `stopped`, which upgrade accepts.
+var installTeardownStates = map[string]bool{
+	"pending":     true,
+	"downloading": true,
+	"installing":  true,
+}
+
 // uninstallRejectingStates are the settled states whose entry in
 // app-service's OperationAllowedInState
 // (framework/app-service/pkg/appstate/state_transition.go) permits InstallOp

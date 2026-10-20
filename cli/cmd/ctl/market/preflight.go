@@ -348,6 +348,18 @@ func preflightUpgrade(ctx context.Context, opts *MarketOptions, mc *MarketClient
 	}
 
 	if !isUpgradable(row.State) {
+		if installTeardownStates[row.State] {
+			return nil, fmt.Errorf(
+				"cannot upgrade '%s' in state '%s': its install is still in flight, and upgrade is only allowed from %s — wait with 'olares-cli market status %s --watch'; if its pods are crash-looping the install will not settle on its own: 'olares-cli market uninstall %s' cancels and removes it, then re-run 'olares-cli market install %s' with the fixed version",
+				appName, row.State, upgradableStateList(), appName, appName, appName,
+			)
+		}
+		if inFlightCancelableStates[row.State] {
+			return nil, fmt.Errorf(
+				"cannot upgrade '%s' in state '%s': an operation is still in flight, and upgrade is only allowed from %s — wait with 'olares-cli market status %s --watch', or 'olares-cli market cancel %s' to stop the app and then upgrade from 'stopped'",
+				appName, row.State, upgradableStateList(), appName, appName,
+			)
+		}
 		return nil, fmt.Errorf(
 			"cannot upgrade '%s' in state '%s': upgrade is only allowed from %s; current state may be transient (in-flight install / uninstall) — re-run 'olares-cli market status %s' to confirm",
 			appName, row.State, upgradableStateList(), appName,

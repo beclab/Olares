@@ -318,7 +318,17 @@ func TestPreflightUpgrade(t *testing.T) {
 			setup: func(f *fakeMarketBackend) {
 				f.stateRows["market.olares"] = fakeStateRow{name: "firefox", state: "installing", version: "1.0.11"}
 			},
-			wantErrSub: "in state 'installing'",
+			wantErrSub: "'olares-cli market uninstall firefox' cancels and removes it",
+		},
+		{
+			name:    "in-flight initializing → points at cancel then upgrade",
+			appName: "firefox",
+			target:  "1.0.12",
+			source:  "market.olares",
+			setup: func(f *fakeMarketBackend) {
+				f.stateRows["market.olares"] = fakeStateRow{name: "firefox", state: "initializing", version: "1.0.11"}
+			},
+			wantErrSub: "'olares-cli market cancel firefox' to stop the app and then upgrade from 'stopped'",
 		},
 		{
 			name:    "upgradeFailed retry path is allowed",
