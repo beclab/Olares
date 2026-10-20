@@ -1174,3 +1174,34 @@ func TestBuildUserVirtualHosts_ProfileRootVerify(t *testing.T) {
 	assert.Equal(t, autheliaVerifyPathPrefix, profile.Routes[0].ExtAuth.PathPrefix)
 	assert.Nil(t, profile.Routes[0].RequestHeaders, "profile must not stamp outbound zone-owner X-BFL-USER")
 }
+
+// Task, sync and external storage routes must select the authenticated account's
+// node provider even when their public hostname belongs to the cluster owner.
+func TestBuildFileserverRoutesUseAuthenticatedAccountProvider(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+	user := &message.UserInfo{Name: "owner", FileserverNodes: []*message.FileserverNodeInfo{
+		{NodeName: "olares-worker", IsMaster: true},
+		{NodeName: "second-node"},
+	}}
+	routes := tr.buildFileserverRoutes(user, make(map[string]*ir.ClusterIR))
+	for _, route := range routes {
+		require.NotNil(t, route.ExtAuth, route.Name)
+		assert.False(t, route.ExtAuth.Disabled, route.Name)
+		assert.Equal(t, autheliaVerifyPathPrefix, route.ExtAuth.PathPrefix, route.Name)
+		node := route.RequestHeaders["X-Terminus-Node"]
+		assert.NotEmpty(t, node)
+		assert.Equal(t, "files-"+node+".user-system-%REQ(X-BFL-USER)%.svc.cluster.local", route.RequestHeaders["X-Provider-Proxy"], route.Name)
+		assert.NotContains(t, route.RequestHeaders, "X-BFL-USER", "must not replace the authenticated user with the URL owner")
+	}
+	for _, prefix := range []string{"/api/task/olares-worker/", "/api/repos/"} {
+		var found bool
+		for _, route := range routes {
+			if route.PathPrefix == prefix {
+				found = true
+				assert.Equal(t, "files_owner_olares-worker", route.Cluster)
+				assert.Equal(t, "files-olares-worker.user-system-%REQ(X-BFL-USER)%.svc.cluster.local", route.RequestHeaders["X-Provider-Proxy"])
+			}
+		}
+		assert.True(t, found, prefix)
+	}
+}
