@@ -134,4 +134,4 @@ olares-cli market delete <app> --version <ver>         # remove chart from uploa
 
 ## Next step
 
-Done once a successful install reaches `running` (+ cleanup, or leave it installed if the developer wants to keep using it). For a public listing, proceed to the [`../../olares-publish/SKILL.md`](../../olares-publish/SKILL.md) skill — market-ready polish, multi-arch, then the PR to `beclab/apps`.
+Done once a successful install reaches `running` **and** passes [verify](olares-chart-verify.md) — the entrance is running, visible, opens the way it was asked to, and answers (+ cleanup, or leave it installed if the developer wants to keep using it). For a public listing, proceed to the [`../../olares-publish/SKILL.md`](../../olares-publish/SKILL.md) skill — market-ready polish, multi-arch, then the PR to `beclab/apps`.
