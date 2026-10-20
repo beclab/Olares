@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -749,8 +750,9 @@ func CreateCleanupPatchForDeployment(tpl *corev1.PodTemplateSpec) ([]byte, error
 }
 
 // gpuResourceKeys lists every extended-resource key the gpu-limit
-// webhook may have injected on a prior install. Keep in sync with the
-// ExtendedResource / MemoryResource columns of compute's mode capability table.
+// webhook may have injected on a prior install: every ExtendedResource /
+// MemoryResource of compute's mode capability table, plus keys that a mode
+// no longer uses (gpu.intel.com/xe for discrete Intel before HAMi).
 var gpuResourceKeys = []string{
 	constants.NvidiaGPU,
 	constants.NvidiaGPUMem,
@@ -758,6 +760,12 @@ var gpuResourceKeys = []string{
 	constants.AMDAPU,
 	constants.IntelIGPU,
 	constants.IntelGPU,
+	constants.IntelVGPU,
+	constants.IntelVGPUMem,
+}
+
+func IsGPUResourceKey(key string) bool {
+	return slices.Contains(gpuResourceKeys, key)
 }
 
 // jsonPointerEscape escapes a string per RFC 6901 so it is safe to use
@@ -850,10 +858,7 @@ func addGpuResourceLimits(tpl *corev1.PodTemplateSpec, injectAll bool, injectCon
 			t := make(map[string]map[string]string)
 			t["limits"] = map[string]string{}
 			for k, v := range container.Resources.Limits {
-				if k.String() == constants.NvidiaGPU ||
-					k.String() == constants.NvidiaGPUMem ||
-					k.String() == constants.AMDAPU {
-					// unset all previous gpu limits
+				if IsGPUResourceKey(k.String()) {
 					continue
 				}
 				t["limits"][k.String()] = v.String()
@@ -867,6 +872,17 @@ func addGpuResourceLimits(tpl *corev1.PodTemplateSpec, injectAll bool, injectCon
 				Path:  fmt.Sprintf(resourcePath, i),
 				Value: t["limits"],
 			})
+		}
+
+		// An extended resource request must equal its limit, so a request
+		// left over from an earlier mode would block the pod.
+		for _, key := range gpuResourceKeys {
+			if _, ok := container.Resources.Requests[corev1.ResourceName(key)]; ok {
+				patch = append(patch, patchOp{
+					Op:   constants.PatchOpRemove,
+					Path: fmt.Sprintf("/spec/template/spec/containers/%d/resources/requests/%s", i, jsonPointerEscape(key)),
+				})
+			}
 		}
 	}
 

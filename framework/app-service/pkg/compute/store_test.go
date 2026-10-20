@@ -3,6 +3,7 @@ package compute
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"sort"
 	"testing"
 	"time"
@@ -151,15 +152,33 @@ func TestBuildNodeResourceDiscreteRegisterAnnotation(t *testing.T) {
 	intel := k8sNode("intel-dgpu", "32Gi", map[string]string{
 		utils.NodeGPUTypeLabelPrefix + utils.IntelGPUType: "true",
 	})
+	const cardA, cardB = "intel-1a2b3c4d-0000-03-00.0", "intel-1a2b3c4d-0000-83-00.0"
 	intel.Annotations = map[string]string{
-		constants.NodeIntelRegisterKey: "dgpu,card0,xe,Intel® Arc™ A770 Graphics,Xe-HPG,Alchemist,17179869184",
+		constants.NodeIntelRegisterKey: "dgpu,card0,xe,Intel® Arc™ Pro B70 Graphics,Xe2,Battlemage,34359738368",
+		constants.NodeIntelHAMIRegisterKey: cardA + ",50,32768,100,Intel® Arc™ Pro B70 Graphics,0,true,0,vxpu,0:" +
+			cardB + ",50,32768,100,Intel® Arc™ Pro B70 Graphics,1,true,1,vxpu,0:",
+		constants.NodeIntelHandshakeKey: "Reported 2026-10-20 00:00:00",
+		constants.NodeIntelCardsKey: `[{"uuid":"` + cardA + `","card":"card0","bdf":"0000:03:00.0","supportTypes":["Exclusive","MemorySlice"]},` +
+			`{"uuid":"` + cardB + `","card":"card1","bdf":"0000:83:00.0","supportTypes":["Exclusive"]}]`,
+		shareModeAnnotationKey(cardA): "1",
 	}
 	in := buildNodeResource(intel)
-	if len(in.Devices) != 1 {
-		t.Fatalf("expected one intel discrete device, got %+v", in.Devices)
+	if len(in.Devices) != 2 {
+		t.Fatalf("expected two intel discrete devices, got %+v", in.Devices)
 	}
-	if in.Devices[0].ID != "intel-dgpu-intel-gpu-card0" || in.Devices[0].CardModel != "Intel® Arc™ A770 Graphics" || in.Devices[0].Memory != 17179869184 {
+	if in.Devices[0].ID != cardA || in.Devices[0].CardModel != "Intel® Arc™ Pro B70 Graphics" || in.Devices[0].Memory != 32*gi {
 		t.Fatalf("unexpected intel discrete device %+v", in.Devices[0])
+	}
+	if in.Devices[0].SupportType != SupportTypeMemorySlice {
+		t.Fatalf("card A share mode 1 should be MemorySlice, got %s", in.Devices[0].SupportType)
+	}
+	if !reflect.DeepEqual(in.Devices[1].AvailableSupportTypes, []string{SupportTypeExclusive}) {
+		t.Fatalf("card B without libvxpu should offer Exclusive only, got %v", in.Devices[1].AvailableSupportTypes)
+	}
+
+	delete(intel.Annotations, constants.NodeIntelHAMIRegisterKey)
+	if devices := buildNodeResource(intel).Devices; len(devices) != 0 {
+		t.Fatalf("a node with only the legacy register is not ready for HAMi, got %+v", devices)
 	}
 
 	amd := k8sNode("amd-dgpu", "64Gi", map[string]string{
@@ -234,7 +253,7 @@ func TestDecodeHAMINvidiaDevicesNodeLiveness(t *testing.T) {
 				// heartbeating.
 				node.Status.Conditions[0].Status = corev1.ConditionUnknown
 			}
-			devices := decodeHAMINvidiaDevices(node, utils.NvidiaCardType)
+			devices := decodeHAMIDevices(node, utils.NvidiaCardType)
 			if len(devices) != 1 {
 				t.Fatalf("expected exactly one decoded card, got %+v", devices)
 			}
@@ -301,7 +320,7 @@ func TestPoweredOffNvidiaNodeIsNotPicked(t *testing.T) {
 // alone: kubelet has stopped heartbeating, so the node is dropped from both
 // flows no matter what its cards claim. The dead node's card is deliberately
 // left healthy — a shape the cluster cannot actually produce, since
-// decodeHAMINvidiaDevices folds node liveness into every card — so that the
+// decodeHAMIDevices folds node liveness into every card — so that the
 // test fails if the decision ever starts depending on the devices again.
 func TestNotReadyNodeIsHiddenFromResumePicker(t *testing.T) {
 	req := Requirement{Mode: utils.NvidiaCardType, RequiredGPU: 8 * gi, LimitedGPU: 8 * gi}

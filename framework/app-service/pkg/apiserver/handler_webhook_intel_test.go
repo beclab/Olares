@@ -1,11 +1,14 @@
 package apiserver
 
 import (
+	"context"
 	"reflect"
 	"testing"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/compute"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
+	"github.com/beclab/Olares/framework/app-service/pkg/webhook"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -92,5 +95,27 @@ func TestSelectIntelDriverResource(t *testing.T) {
 				t.Errorf("distinct = %v, want %v", distinct, tc.wantDistinct)
 			}
 		})
+	}
+}
+
+func TestDiscreteIntelUsesHAMIResource(t *testing.T) {
+	h := &Handler{}
+	got, err := h.resolveIntelDriverResource(context.Background(), utils.IntelGPUType)
+	if err != nil {
+		t.Fatalf("resolveIntelDriverResource: %v", err)
+	}
+	if got != constants.IntelVGPU {
+		t.Fatalf("intel-gpu resource = %q, want %q", got, constants.IntelVGPU)
+	}
+}
+
+func TestCapabilityResourcesAreStripped(t *testing.T) {
+	for _, mode := range []string{utils.CPUType, utils.NvidiaCardType, utils.GB10ChipType, utils.AppleMChipType, utils.IntelType, utils.AMDType, utils.IntelGPUType, utils.AMDGPUType, utils.MooreSocType} {
+		c := compute.CapabilityFor(mode)
+		for _, key := range []string{c.ExtendedResource, c.MemoryResource} {
+			if key != "" && !webhook.IsGPUResourceKey(key) {
+				t.Errorf("mode %s resource %s is missing from the webhook's GPU resource keys", mode, key)
+			}
+		}
 	}
 }
