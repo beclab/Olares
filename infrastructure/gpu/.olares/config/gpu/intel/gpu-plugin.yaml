@@ -16,6 +16,11 @@ rules:
   - apiGroups: [""]
     resources: ["nodes"]
     verbs: ["get", "patch"]
+  # HAMi mode reads the scheduler's decision from pod annotations at Allocate
+  # and marks the pod allocated.
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "patch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -87,6 +92,7 @@ spec:
         - -shared-dev-num=50
         - -health-management
         - -sriov-report=pf
+        - -hami
         - -v=4
         env:
         - name: NODE_NAME
@@ -97,7 +103,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.hostIP
-        image: beclab/intel-device-plugin:1.1.2
+        image: beclab/intel-device-plugin:1.2.0
         imagePullPolicy: IfNotPresent
         name: intel-gpu-plugin
         resources:
@@ -135,6 +141,8 @@ spec:
           name: sysfsaccel
         - mountPath: /var/lib/levelzero
           name: levelzerosocket
+        - mountPath: /usr/local/vxpu
+          name: vxpu
       nodeSelector:
         intel.feature.node.kubernetes.io/gpu: "true"
         kubernetes.io/arch: amd64
@@ -160,6 +168,12 @@ spec:
         name: sysfsaccel
       - emptyDir: {}
         name: levelzerosocket
+      # The plugin installs libvxpu here and Allocate mounts it into workloads
+      # from the host, so the path must be identical inside and outside.
+      - hostPath:
+          path: /usr/local/vxpu
+          type: DirectoryOrCreate
+        name: vxpu
   updateStrategy:
     rollingUpdate:
       maxSurge: 0
