@@ -10,33 +10,18 @@ import (
 	"github.com/Masterminds/semver/v3"
 )
 
-// isUpgradableStates is the verbatim mirror of the SPA's
-// `isUpgradableAppStates` set in apps/.../constant/config.ts:
-//
-//	APP_STATUS.RUNNING            -> "running"
-//	APP_STATUS.STOP.COMPLETED     -> "stopped"
-//	APP_STATUS.STOP.FAILED        -> "stopFailed"
-//	APP_STATUS.UPGRADE.FAILED     -> "upgradeFailed"
-//	APP_STATUS.ENV.APPLY_FAILED   -> "applyEnvFailed"
-//
-// These are the only five states the SPA's `canUpgrade()` predicate
-// (also config.ts) will accept before showing the "Upgrade" button.
-// The CLI's `market upgrade` preflight refuses every other state up
-// front so the call never reaches the backend in a knowingly-bad
-// state — exactly the same surface area the user sees in the Market
-// UI. Keep this map in lockstep with the SPA: any reshuffle of the
-// SPA's upgradable states must be reflected here and in
-// TestIsUpgradableState.
+// isUpgradableStates is what both backends accept for an upgrade: Market's
+// gate also admits stopFailed and upgradingCancelFailed, and the SPA's
+// canUpgrade also offers stopFailed and applyEnvFailed, but app-service
+// rejects all three, so the call would only fail one hop later.
 var isUpgradableStates = map[string]struct{}{
-	"running":        {},
-	"stopped":        {},
-	"stopFailed":     {},
-	"upgradeFailed":  {},
-	"applyEnvFailed": {},
+	"running":       {},
+	"stopped":       {},
+	"upgradeFailed": {},
 }
 
 // isUpgradable reports whether an app currently in `state` can have
-// `market upgrade` issued against it per the SPA's `canUpgrade` gate.
+// `market upgrade` issued against it; see isUpgradableStates.
 // Empty / unknown states return false (same as the SPA's button being
 // hidden) so the preflight bails with an actionable error rather than
 // firing an upgrade we know the backend will reject.
@@ -48,12 +33,10 @@ func isUpgradable(state string) bool {
 	return ok
 }
 
-// upgradableStateList returns the SPA's allowed states in a stable
-// human-friendly order, used to render preflight errors like
-// "allowed states: running, stopped, stopFailed, upgradeFailed,
-// applyEnvFailed".
+// upgradableStateList returns isUpgradableStates in a stable order for
+// preflight errors.
 func upgradableStateList() string {
-	return "running, stopped, stopFailed, upgradeFailed, applyEnvFailed"
+	return "running, stopped, upgradeFailed"
 }
 
 // installedAppRow captures the subset of /market/state fields the
@@ -352,6 +335,23 @@ func preflightUpgrade(ctx context.Context, opts *MarketOptions, mc *MarketClient
 			return nil, fmt.Errorf(
 				"cannot upgrade '%s' in state '%s': its install is still in flight, and upgrade is only allowed from %s — wait with 'olares-cli market status %s --watch'; if its pods are crash-looping the install will not settle on its own: 'olares-cli market uninstall %s' cancels and removes it, then re-run 'olares-cli market install %s' with the fixed version",
 				appName, row.State, upgradableStateList(), appName, appName, appName,
+			)
+		}
+		switch row.State {
+		case "applyingEnv":
+			return nil, fmt.Errorf(
+				"cannot upgrade '%s' in state 'applyingEnv': an env change is still in flight and cannot be cancelled — wait with 'olares-cli market status %s --watch'; it ends in 'running' (upgrade then) or 'applyEnvFailed'",
+				appName, appName,
+			)
+		case "applyEnvFailed":
+			return nil, fmt.Errorf(
+				"cannot upgrade '%s' in state 'applyEnvFailed': upgrade is only allowed from %s — re-apply a working env with 'olares-cli settings apps env set %s --var KEY=VALUE' (it returns to 'running'), or 'olares-cli market uninstall %s'",
+				appName, upgradableStateList(), appName, appName,
+			)
+		case "stopFailed":
+			return nil, fmt.Errorf(
+				"cannot upgrade '%s' in state 'stopFailed': upgrade is only allowed from %s — retry 'olares-cli market stop %s' and upgrade from 'stopped', or 'olares-cli market uninstall %s'",
+				appName, upgradableStateList(), appName, appName,
 			)
 		}
 		if inFlightCancelableStates[row.State] {

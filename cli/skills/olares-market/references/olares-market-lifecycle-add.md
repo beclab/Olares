@@ -29,10 +29,10 @@ olares-cli market upgrade firefox --version 1.5.0 --watch
 
 ### Pre-flight gates (run BEFORE the PUT request)
 
-Mirrors the SPA's `canUpgrade()`. Bails locally with a self-contained error (formatted via `failOp`, so `-o json` carries it in `.message` and `-q` still surfaces the exit code):
+Bails locally with a self-contained error (formatted via `failOp`, so `-o json` carries it in `.message` and `-q` still surfaces the exit code):
 
 1. **Row exists** — state row found via `Name` or `RawName` (clones included)
-2. **State is upgradable** — `running` / `stopped` / `stopFailed` / `upgradeFailed` / `applyEnvFailed`
+2. **State is upgradable** — only states both Market and app-service accept, per the shared **application state machine**; other states get a message naming the way out
 3. **Newer chart available** — `targetVersion > installedVersion` (semver compare). **Exception for `-s upload`:** `targetVersion == installedVersion` is allowed, because app-service gates on `>= deployed`. Use it to retry an upgrade that failed for a transient reason — but read [which chart a version actually deploys](#which-chart-a-version-actually-deploys) before relying on which bytes land. It cannot deploy an edited chart either way: a published version's bytes are immutable and re-uploading one is refused (see [the immutability rule](olares-market-chart-publish.md#safety-constraints)), so recovering an `upgradeFailed` app with a *fixed* chart means bumping the version. A true downgrade (`target < installed`) is still rejected for every source.
 4. **Catalog row not withdrawn** — `app_simple_info.app_labels` must not contain `suspend` or `remove` (the only two labels `isAppSuspended` checks; mirrors the SPA hiding the Upgrade button). On a transient catalog-probe error this gate soft-fails (warns, lets the upgrade proceed)
 

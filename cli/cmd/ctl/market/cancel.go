@@ -19,7 +19,8 @@ const (
 	stateResuming = "resuming"
 	// stateUpgrading mirrors the SPA's APP_STATUS.UPGRADE.DEFAULT: the
 	// per-user state-row value while an upgrade is in flight.
-	stateUpgrading = "upgrading"
+	stateUpgrading   = "upgrading"
+	stateApplyingEnv = "applyingEnv"
 )
 
 type inFlightCancelGate struct {
@@ -38,12 +39,19 @@ var cancelGateByState = map[string]inFlightCancelGate{
 	stateUpgrading: {minVersion: "1.12.7", reason: "canceling an upgrading app"},
 }
 
+// Market's cancel whitelist has never held applyingEnv, though app-service
+// would accept it; the request is a bare 404 on every backend.
+var errApplyingEnvNotCancelable = errors.New("an app applying an env change cannot be cancelled or uninstalled until it settles — wait for it with 'olares-cli market status --watch'; it ends in 'running' or 'applyEnvFailed'")
+
 // gateInFlightCancel enforces the per-state backend floor from
 // cancelGateByState, and is a no-op for unlisted states. Fail-closed on
 // older / undetectable backends via cmdutil.RequireMinVersion: an older
 // backend answers such a cancel with a bare 404 ("App not found or current
 // state does not allow operation"), so the CLI rejects it up front instead.
 func gateInFlightCancel(ctx context.Context, f *cmdutil.Factory, state string) error {
+	if strings.TrimSpace(state) == stateApplyingEnv {
+		return errApplyingEnvNotCancelable
+	}
 	gate, ok := cancelGateByState[strings.TrimSpace(state)]
 	if !ok {
 		return nil
@@ -171,9 +179,8 @@ func runCancel(opts *MarketOptions, appName string) error {
 			source = strings.TrimSpace(row.Source)
 		}
 		version = strings.TrimSpace(row.Version)
-		// Cancelling a resuming / upgrading app arrived in 1.12.7; reject
-		// it fail-closed on older/undetectable backends. Other in-flight
-		// states are unaffected (gateInFlightCancel no-ops for them).
+		// Cancelling a resuming / upgrading app arrived in 1.12.7, and an
+		// applyingEnv app cannot be cancelled at all; see gateInFlightCancel.
 		if err := gateInFlightCancel(ctx, opts.factory, row.State); err != nil {
 			return opts.failOp("cancel", appName, err)
 		}
