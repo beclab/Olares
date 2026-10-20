@@ -92,7 +92,7 @@ Used by: `chart` (replace a bundled db, wire to `.Values.<mw>.*`, declare an `op
 
 ## Olares version & semver model
 
-Olares releases follow [semver](https://docs.olares.com/developer/install/versioning.html) — `Major.Minor.Patch[-PreRelease]` (stable `1.12.6`, RC `1.12.0-rc.0`, daily `1.12.0-20241201`).
+Olares releases follow [semver](https://www.olares.com/docs/developer/install/versioning) — `Major.Minor.Patch[-PreRelease]` (stable `1.12.6`, RC `1.12.0-rc.0`, daily `1.12.0-20241201`).
 
 - The running version lives in the `Terminus` CR `spec.version` and is injected into every chart as `.Values.sysVersion`.
 - **"At least" comparisons strip the prerelease/build segment**, so a daily build `1.12.6-20260327` still counts as `>= 1.12.6`. Always use the `-0` suffix in constraints (`>=1.12.6-0`) or prerelease/daily/RC builds fail to match.

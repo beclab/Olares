@@ -31,7 +31,7 @@ func renderListing(t *testing.T, cfg *cliconfig.MultiProfileConfig) string {
 	if err != nil {
 		t.Fatalf("create listing: %v", err)
 	}
-	if err := runList(context.Background(), nil, false, out); err != nil {
+	if err := runList(context.Background(), nil, false, false, out); err != nil {
 		out.Close()
 		t.Fatalf("runList: %v", err)
 	}

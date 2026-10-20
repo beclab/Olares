@@ -129,6 +129,7 @@ Examples:
 	opts.addCascadeFlag(cmd)
 	opts.addDeleteDataFlag(cmd)
 	opts.addWatchFlags(cmd)
+	explainNoSourceFlag(cmd)
 	return cmd
 }
 

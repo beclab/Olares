@@ -296,6 +296,14 @@ func (o *MarketOptions) addWatchFlags(cmd *cobra.Command) {
 		"polling interval against /market/state when --watch is set (e.g. 1s for tight CI feedback, 5s for slow networks); no-op without --watch")
 }
 
+// explainNoSourceFlag is for the verbs that act on whichever installed row
+// matches the name, so callers reaching for -s learn to drop it.
+func explainNoSourceFlag(cmd *cobra.Command) {
+	cmdutil.ExplainMissingFlag(cmd,
+		fmt.Sprintf("'%s' takes no --source; it acts on the installed app whichever source it came from, so drop the flag", cmd.Name()),
+		"s", "source")
+}
+
 // addPodWatchFlags is for install / upgrade only: their watch is the one
 // that can sit on an in-flight row while the app's pods crash.
 func (o *MarketOptions) addPodWatchFlags(cmd *cobra.Command) {

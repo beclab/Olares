@@ -149,6 +149,7 @@ func NewDefaultCommand() *cobra.Command {
 	cmds.AddCommand(cluster.NewClusterCommand(factory))
 
 	wireUnknownVerbRefusals(cmds)
+	cmds.SetFlagErrorFunc(cmdutil.FlagErrorWithContext)
 	wireManagedIdentity(cmds)
 	skipPreRunsForGroupHelp(cmds)
 	return cmds
