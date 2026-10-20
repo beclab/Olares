@@ -95,10 +95,10 @@ The daemon provides an authenticated REST API (using signature-based auth):
 | Method | Endpoint                                  | Description                         |
 |--------|-------------------------------------------|-------------------------------------|
 | GET    | `/containerd/registries`                  | List registries                     |
-| GET    | `/containerd/registry/mirrors/`           | List registry mirrors               |
-| GET    | `/containerd/registry/mirrors/:registry`  | Get specific registry mirror        |
-| PUT    | `/containerd/registry/mirrors/:registry`  | Update registry mirror              |
-| DELETE | `/containerd/registry/mirrors/:registry`  | Delete registry mirror              |
+| GET    | `/containerd/registry/configs/`           | List saved registry configurations  |
+| GET    | `/containerd/registry/configs/:registry`  | Get registry configuration          |
+| PUT    | `/containerd/registry/configs/:registry`  | Update supplied configuration entries |
+| DELETE | `/containerd/registry/configs/:registry`  | Delete complete registry configuration |
 
 **Image Management**
 
@@ -168,3 +168,146 @@ To add a new command API:
    ``` 
    sudo systemctl restart olaresd
    ```
+### Registry configuration
+
+Olaresd manages registry settings on the node receiving the request. Settings
+must apply the configuration to every node that may run the application. These
+routes require authorization and apply only to the local node:
+
+- `GET /containerd/registry/configs/`: return saved configurations keyed by
+  registry hostname, including registries without mirrors or downloaded images.
+- `GET /containerd/registry/configs/:registry`: return `server`, `skip_verify`,
+  `has_auth`, and the ordered mirror list `endpoint`. Passwords/tokens and the
+  Authorization header are never returned.
+- `PUT /containerd/registry/configs/:registry`: create or update the supplied
+  configuration entries and return the resulting complete configuration.
+- `DELETE /containerd/registry/configs/:registry`: remove the complete registry
+  configuration, including upstream, mirrors, and credentials.
+
+The path parameter is normalized to a hostname with an optional port. URL-style
+input such as `https://gitlab.example.com:5050` is accepted: its scheme is stripped
+and the registry namespace becomes `gitlab.example.com:5050`. URL-encode the path
+parameter when sending a full address (for example, `encodeURIComponent(registry)`);
+unescaped scheme URLs are also accepted by olaresd. Repository paths, userinfo,
+query strings and fragments are rejected after normalization. The input scheme
+does not set the upstream protocol: use the `server` body entry for HTTP/HTTPS;
+omitting `server` still preserves its current value or defaults to HTTPS.
+All configuration is managed through these routes; the old
+`/containerd/registry/mirrors` routes have been removed. The existing Settings
+frontend needs to switch to the config routes. Clearing mirrors must use
+`PUT {"endpoint":[]}`, rather than DELETE, to preserve upstream credentials/TLS.
+
+A complete GitLab example request body is:
+
+```json
+{
+  "server": "https://gitlab.example.com",
+  "skip_verify": false,
+  "auth": {"username": "alice", "password": "<read_registry token>"},
+  "endpoint": ["https://mirror.example.com"]
+}
+```
+
+Each top-level entry has independent update semantics:
+
+- Omit an entry to preserve its current value. A request containing only
+  `{"auth":{"username":"alice","password":"<new token>"}}` preserves the server,
+  TLS setting, and mirrors. A request containing only `endpoint` preserves auth.
+- `server`: a supplied string replaces the upstream URL. An empty string resets
+  it to the canonical HTTPS endpoint; `null` is rejected. The hostname must match
+  the registry (Docker Hub uses `registry-1.docker.io`); HTTP may be explicit.
+- `skip_verify`: a supplied boolean replaces the value, including explicit
+  `false`. `null` is rejected.
+- `auth`: supply the complete username/password-or-token pair to replace it,
+  send `null` to remove credentials, or omit it to retain them. Credentials are
+  write-only; `has_auth` in responses indicates whether they are configured.
+  A supplied credential object must pass an upstream login check before any
+  changes are saved. Omitting `auth` or sending `auth:null` skips this check.
+- `endpoint`: a supplied list replaces all mirrors in priority order, highest
+  first. `[]` or `null` clears mirrors. Retained hosts keep their existing TLS,
+  headers, capabilities, and path settings; newly added hosts default to
+  `pull` and `resolve`. Duplicate or invalid endpoints are rejected before saving.
+
+For a new registry, omitted entries default to its canonical HTTPS server,
+`skip_verify:false`, no credentials, and `endpoint:[]`. A GET for an unconfigured
+registry returns the same defaults without creating a file. `PUT {}` leaves the
+configuration untouched. Invalid updates leave the previous hosts file intact.
+
+Credential validation uses the resulting server and TLS settings, contacts
+`/v2/` directly without mirrors, and handles Basic or Bearer authentication with
+a 15-second total timeout. It does not download an image or verify access to a
+particular repository. Existing upstream CA/client certificate settings are
+honored. If verification fails, neither credentials nor any other supplied
+configuration entries are saved.
+
+Validation errors use the standard error envelope with these codes:
+
+- `400`: the registry rejects the credentials/access, or its TLS file settings
+  cannot be loaded.
+- `422`: credentials cannot be verified (the registry permits anonymous access,
+  offers no supported challenge, or returns an invalid authentication URL or an
+  HTTPS-to-HTTP authentication downgrade).
+- `502`: connection/TLS/authentication-service failure or an unexpected response.
+- `504`: validation timed out.
+
+Redirects are not followed. Bearer credentials are sent to the authentication
+service selected by the configured registry's `WWW-Authenticate` challenge,
+including services on other hostnames or ports, without a platform allowlist.
+The realm must be an absolute HTTP/HTTPS URL without userinfo or a fragment.
+HTTPS registries require an HTTPS authentication service; explicit HTTP
+registries may use HTTP or HTTPS authentication services.
+Remote error bodies, passwords and temporary tokens are not returned to callers.
+
+A successful PUT/GET response uses the standard olaresd response envelope:
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "server": "https://gitlab.example.com",
+    "skip_verify": false,
+    "has_auth": true,
+    "endpoint": ["https://mirror.example.com"]
+  }
+}
+```
+
+The collection GET uses the same configuration objects under registry keys:
+`{"code":200,"message":"success","data":{"gitlab.example.com":{...}}}`.
+An empty collection is `{}` in `data`; empty mirror lists are always `[]`.
+
+Hosts configuration is written atomically to
+`/etc/containerd/certs.d/<registry>/hosts.toml`. Existing mirror order and retained
+hosts' TLS, headers, and capabilities are preserved. Clearing mirror endpoints
+no longer deletes separately configured upstream credentials. Configured
+registries appear in `/containerd/registries` before any image has been pulled.
+
+Registry credentials are stored only in the upstream's `hosts.toml` Authorization
+header as `Basic base64(username:password-or-token)`. Hosts files have mode `0600`.
+Containerd reads hosts configuration on every pull; adding, updating, or removing
+credentials does not write CRI auth drop-ins or restart containerd. Olares ships
+containerd 2.1.3, which also passes hosts headers to Bearer token requests. This
+supports GitLab's standard Basic-authenticated token exchange, using an account
+password or an access token with `read_registry` permission. Accounts with 2FA
+must use an access token. Host configuration is loaded again on the next pull.
+
+App-service's metadata inspection and image-service pre-pull use the same
+containerd hosts resolver for **all** registries. They keep original image names
+and honor per-host TLS, HTTP, path overrides, capabilities, mirror order and
+upstream fallback. Basic credentials from a hosts header also participate in
+Basic/Bearer challenge authentication. Changes are read on the next request,
+without an app-service/image-service restart. CronWorkflow admission keeps the
+original registry namespace (normalizing shorthand Docker references only), so
+node-local containerd applies the same registry configuration to workflow Pods.
+
+Settings still needs to expose an add/edit registry form and call these routes;
+this change supplies the olaresd and app-service backend support. Integration
+validation should use a private GitLab/Gitea/GHCR repository, both image metadata
+inspection and pre-pull, and a Pod with `imagePullPolicy: Always` on each node.
+
+Requirement references:
+[Market Source registry scenarios](https://w8wvyn24o5.feishu.cn/wiki/Ex7hwdGFrijJnlkDKescJo5Yn2d),
+[Registry UI requirements](https://w8wvyn24o5.feishu.cn/wiki/Z99ewwRlRi2uK4kVi5lcx3IJnmd),
+[containerd registry hosts](https://github.com/containerd/containerd/blob/v2.1.3/docs/hosts.md),
+[GitLab registry authentication](https://docs.gitlab.com/user/packages/container_registry/authenticate_with_container_registry/).
