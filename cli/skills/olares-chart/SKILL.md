@@ -83,7 +83,8 @@ For deploying to your own Olares, **metadata can stay a stub** as long as `lint`
 | Handle passwords, API keys or generated keys | [secrets](references/olares-chart-secrets.md) |
 | Set manifest/chart versions and dependencies | [versioning](references/olares-chart-versioning.md) |
 | Validate after a chart change | [lint](references/olares-chart-lint.md) |
-| Prove the chart on the target Olares | [deploy](references/olares-chart-deploy.md) |
+| Prove the chart on the target Olares | [deploy](references/olares-chart-deploy.md), then [verify](references/olares-chart-verify.md) |
+| Install/upgrade rejected because the row is in flight, or the row settled in `stopped` / `upgradeFailed` | [recover](references/olares-chart-recover.md) |
 
 The manifest reference covers four concerns separately: storage, entrances/ports, workloads/replicas and metadata. Together with image, run identity, env, secrets, versioning, validation and deployment, these are the 11 concerns every port checks.
 
