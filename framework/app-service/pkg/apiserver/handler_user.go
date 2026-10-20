@@ -103,7 +103,7 @@ func (h *Handler) createUser(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	klog.Infof("userReq: %#v", userReq)
+	klog.Infof("creating user %s with role %s", userReq.Name, userReq.OwnerRole)
 
 	//// Basic field validation
 	if userReq.Name == "" || userReq.Password == "" {
@@ -139,13 +139,13 @@ func (h *Handler) createUser(req *restful.Request, resp *restful.Response) {
 			return
 		}
 		domainName := olares.Spec.Settings["domainName"]
-		if domainName == "" {
-			api.HandleError(resp, req, errors.New("empty domainName"))
-			return
-		}
-		olaresName = users.NewOlaresName(username, domainName)
+		olaresName = subAccountOlaresName(username, domainName)
 	}
 
+	isEphemeral := "true"
+	if !strings.Contains(string(olaresName), "@") {
+		isEphemeral = "false"
+	}
 	user := iamv1alpha2.User{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: iamv1alpha2.SchemeGroupVersion.String(),
@@ -158,7 +158,7 @@ func (h *Handler) createUser(req *restful.Request, resp *restful.Response) {
 				users.AnnotationUserCreator:         owner,
 				users.UserAnnotationUninitialized:   "true",
 				users.UserAnnotationOwnerRole:       userReq.OwnerRole,
-				users.UserAnnotationIsEphemeral:     "true", // add is-ephemeral flag, 'true' it means need temporary domain
+				users.UserAnnotationIsEphemeral:     isEphemeral,
 				users.UserAnnotationTerminusNameKey: string(olaresName),
 				users.UserLauncherAuthPolicy:        "two_factor",
 				users.UserLauncherAccessLevel:       "1",
