@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Install and activate a new or uninitialized Olares device from the host terminal with Olares CLI.
+description: Install and activate a new or uninitialized Olares device from the device terminal with Olares CLI.
 head:
   - - meta
     - name: keywords
@@ -9,7 +9,7 @@ head:
 
 # Install and activate Olares from the command line
 
-Use this guide to install and activate a new or uninitialized Olares device, such as Olares One, from the host terminal.
+Use this guide to install and activate a new or uninitialized Olares device, such as Olares One, from the device terminal.
 
 :::warning Use the standard setup unless you need command-line activation
 This workflow requires host administrator access and your 12-word mnemonic phrase. Do not share the command, terminal output, screenshots, or shell history because they can expose the phrase and account credentials.
@@ -68,7 +68,7 @@ Determine your CLI preparation steps based on your Olares version.
 
     :::warning Use the standalone CLI
     The built-in `olares-cli` included in v1.12.5 and earlier systems do not have the activation feature. You must download a standalone daily build CLI to perform the activation. Review the following requirements for using the tool:
-    - **Do not overwrite system files**: A strict version correspondence exists between the system's built-in `olares-cli`, `olaresd`, and the cluster version. Therefore, never move or copy the downloaded standalone CLI to overwrite the system `/usr/bin/olares-cli` file. Doing so breaks this version chain and impacts future system upgrades.
+    - **Do not overwrite system files**: A strict version correspondence exists between the system's built-in `olares-cli`, `olaresd`, and the cluster version. Therefore, never move or copy the downloaded standalone CLI to overwrite the system `/usr/local/bin/olares-cli` file. Doing so breaks this version chain and impacts future system upgrades.
     - **Execution path differences**: Run `./olares-cli` to execute the standalone version downloaded to the current directory. Do not run `olares-cli` directly, because it executes the built-in system version which lacks the activation feature.
     :::
 

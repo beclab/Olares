@@ -1,9 +1,9 @@
 ---
-description: View Olares One hardware details in Settings, and manage power mode, CPU frequency limit, and automatic startup.
+description: View Olares One hardware details and manage power mode, CPU frequency, automatic startup, and the SSH login password.
 head:
   - - meta
     - name: keywords
-      content: Olares One, hardware settings, power mode, CPU frequency, automatic startup, My hardware
+      content: Olares One, hardware settings, power mode, CPU frequency, automatic startup, SSH login password, My hardware
 ---
 
 # Manage hardware settings
@@ -36,3 +36,14 @@ Requires Olares OS 1.12.6 or later and EC firmware 1.03 or later. If either prer
 
 To check your current EC firmware version or update EC firmware, see [Manage BIOS and EC](update-firmware.md).
 :::
+
+## Reset SSH password
+
+To use your own SSH password instead of the one generated during activation, reset it in Settings:
+
+1. At the bottom of the **My hardware** page, click **Reset SSH login password**.
+   ![Reset SSH login password](/images/one/ssh-reset-password-in-settings.png#bordered){width=70%}
+
+2. Enter a new SSH password that meets all strength requirements, then click **OK**.
+3. Open the LarePass app and scan the QR code shown on the screen.
+4. Tap **Confirm** in LarePass to finish. The new SSH password is saved to Vault.

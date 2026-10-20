@@ -49,6 +49,9 @@ export const developerSidebar: DefaultTheme.Sidebar = {
       text: "Olares CLI",
       link: "/developer/cli-overview",
       items: [
+        { text: "Use Olares CLI with AI agents",       link: "/developer/cli-install" },
+        { text: "Olares CLI Agent Skills",             link: "/developer/cli-agent-skills" },
+        { text: "Common Olares CLI commands",          link: "/developer/install/cli/olares-cli" },
         {
           text: "Cluster management",
           link: "/developer/install/",
@@ -109,15 +112,6 @@ export const developerSidebar: DefaultTheme.Sidebar = {
             //     },
             //   ],
             // },
-          ],
-        },
-        {
-          text: "Use with AI agents",
-          collapsed: false,
-          items: [
-            { text: "Install olares-cli",            link: "/developer/cli-install" },
-            { text: "Log in to Olares",             link: "/developer/cli-log-in" },
-            { text: "Install and use Agent Skills",  link: "/developer/cli-agent-skills" },
           ],
         },
       ],

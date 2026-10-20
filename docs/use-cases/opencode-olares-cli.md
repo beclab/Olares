@@ -1,4 +1,5 @@
 ---
+title: Manage Olares with OpenCode and Olares CLI
 outline: [2, 3]
 description: Use the Olares CLI skills in OpenCode so your coding agent can manage files and apps on your Olares device.
 head:

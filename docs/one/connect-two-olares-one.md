@@ -1,4 +1,5 @@
 ---
+title: Connect two Olares One devices as a cluster
 outline: [2, 3]
 description: Connect two Olares One devices by enabling JuiceFS on an existing master, generating a worker join command, and checking the cluster.
 head:

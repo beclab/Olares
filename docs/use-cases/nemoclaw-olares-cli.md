@@ -1,4 +1,5 @@
 ---
+title: Manage Olares with NemoClaw and Olares CLI
 outline: [2, 3]
 description: Use the Olares CLI skills in NemoClaw to manage files and apps on your Olares device through natural language.
 head:

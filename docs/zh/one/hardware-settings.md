@@ -1,9 +1,9 @@
 ---
-description: 在设置中查看 Olares One 硬件详情，并管理工作模式、CPU 频率限制和自动开机。
+description: 在设置中查看 Olares One 硬件详情，并管理工作模式、CPU 频率、自动开机和 SSH 登录密码。
 head:
   - - meta
     - name: keywords
-      content: Olares One, 硬件设置, 工作模式, CPU 频率, 自动开机, 硬件
+      content: Olares One, 硬件设置, 工作模式, CPU 频率, 自动开机, SSH 登录密码, 硬件
 ---
 
 # 管理硬件设置
@@ -36,3 +36,14 @@ Olares One 支持两种性能档位：
 
 如需查看当前 EC 固件版本或升级 EC 固件，可参考[管理 BIOS 和 EC](update-firmware.md)。
 :::
+
+## 重置 SSH 密码
+
+如需使用自定义 SSH 密码，而不是激活时自动生成的密码，可在设置中重置：
+
+1. 在**硬件**页面底部，点击**重置 SSH 登录密码**。
+   ![重置 SSH 登录密码](/images/one/ssh-reset-password-in-settings.png#bordered){width=70%}
+
+2. 输入符合强度要求的新 SSH 密码，然后点击**确定**。
+3. 打开 LarePass，扫描屏幕上显示的二维码。
+4. 在 LarePass 中点击**确认**完成操作。新密码会自动保存到 Vault。

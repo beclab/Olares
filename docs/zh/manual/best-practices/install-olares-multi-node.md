@@ -1,4 +1,5 @@
 ---
+title: 使用 Linux 设备搭建多节点 Olares 集群
 outline: [2, 3]
 description: 使用兼容的 Linux 设备，将现有 Olares 系统扩展为多节点集群。
 head:

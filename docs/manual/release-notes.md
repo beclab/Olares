@@ -72,9 +72,8 @@ For the highlights and walk-through of Olares v1.12.6, see the [Olares 1.12.6 bl
 ### New docs
 
 - Added [Olares CLI overview](/developer/cli-overview), an introduction to managing Olares from the command line.
-  - Added [Install Olares CLI](/developer/cli-install), covering how to install `olares-cli` locally or inside an agent app.
-  - Added [Log in with Olares CLI](/developer/cli-log-in), explaining how to authenticate `olares-cli` with your Olares ID.
-  - Added [Olares CLI agent skills](/developer/cli-agent-skills), describing how to use built-in skills for cluster management, apps, settings, and more.
+  - Added [Use Olares CLI with AI agents](/developer/cli-install), covering installation, login, and the first AI agent task.
+  - Added [Olares CLI Agent Skills](/developer/cli-agent-skills), describing the built-in skills for cluster management, apps, settings, and more.
 - Added [Install and activate Olares from the command line](/manual/best-practices/activate-olares-using-cli), for setting up a device with Olares CLI.
 - Added [Manage shared AI models with the Common directory](/manual/olares/files/files-common), explaining how to use the Common directory for models shared across apps.
 - Added [Compress and extract files](/manual/olares/files/compress-extract-files), covering ZIP, 7z, TAR, and password-protected archives in Olares Files.
@@ -110,8 +109,8 @@ For the highlights and walk-through of Olares v1.12.6, see the [Olares 1.12.6 bl
 ### Deprecated docs
 
 - Added a deprecation notice to the Ollama use-case guide because the standalone Ollama app was removed from Market in Olares 1.12.6.
-- Retired the Olares CLI reference pages. The deprecated pages have been superseded by the new [Olares CLI overview](/developer/cli-overview), [Install Olares CLI](/developer/cli-install), [Log in with Olares CLI](/developer/cli-log-in), and [Olares CLI agent skills](/developer/cli-agent-skills) guides.
-- Retired all Studio documentation. Studio is no longer available in Market. Use the [Olares CLI agent skills](/developer/cli-agent-skills) guide and the [App submission guide](/developer/develop/submit-apps) for the new packaging and porting workflow.
+- Retired the Olares CLI reference pages. The deprecated pages have been superseded by the [Olares CLI overview](/developer/cli-overview), [Use Olares CLI with AI agents](/developer/cli-install), and [Olares CLI Agent Skills](/developer/cli-agent-skills).
+- Retired all Studio documentation. Studio is no longer available in Market. Use [Olares CLI Agent Skills](/developer/cli-agent-skills) and the [App submission guide](/developer/develop/submit-apps) for the new packaging and porting workflow.
 - The **Allow subnet routing** feature is temporarily disabled in Olares 1.12.6, and the related documentation has been removed from [Configure VPN access to Olares](/manual/olares/settings/remote-access#allow-subnet-routing). The feature will return in a future release.
 - Retired the DeerFlow use-case guide. The DeerFlow app was replaced by [DeerFlow 2.0](/use-cases/deerflow2).
 

@@ -1,4 +1,5 @@
 ---
+title: 使用 OpenCode 和 Olares CLI 管理 Olares
 outline: [2, 3]
 description: 在 OpenCode 中使用 Olares CLI 技能，让你的编码 Agent 通过自然语言管理 Olares 设备上的文件和应用。
 head:

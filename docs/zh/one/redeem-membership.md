@@ -29,7 +29,7 @@ Olares Space 是一个安全的连接平台，在扩展本地设备功能的同�
 
 ## 登录 Olares Space
 
-1. 访问 https://www.olares.com/space。
+1. 访问 [Olares Space](https://www.olares.com/space)。
 
     ![Olares Space 登录页面](/images/one/olares-space-login.png#bordered)
 

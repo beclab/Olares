@@ -169,13 +169,13 @@ All project work happens in the `/opt/data` directory. Files stored there persis
 
 ## Manage Olares with Olares CLI
 
-Codex authentication only grants access to the selected model service. To ask Codex to install Olares apps, inspect cluster status, or perform other Olares management tasks, authenticate Olares CLI separately:
+The Codex app on Olares already includes Olares CLI and Agent Skills. Codex authentication only grants access to the selected model service. To ask Codex to install Olares apps, inspect cluster status, or perform other Olares management tasks, authenticate Olares CLI separately:
 
 ```bash
 olares-cli profile login --olares-id <your-olares-id>
 ```
 
-Complete two-factor authentication when prompted. For more details, see [Log in to Olares CLI](/developer/cli-log-in.md).
+Complete two-factor authentication when prompted. For more details, see [Log in to Olares](/developer/cli-install#log-in-to-olares).
 
 ## Switch connections or sign out
 
@@ -248,4 +248,3 @@ Restart the Codex CLI session and try again.
 - [Codex CLI documentation](https://developers.openai.com/codex/cli): Learn about Codex CLI workflows and commands.
 - [Codex authentication](https://developers.openai.com/codex/auth): Review ChatGPT, API key, and headless login options.
 - [Host local large language models with Engine Base apps](llm-base-apps.md): Deploy local models with Engine Base apps and connect them through Router.
-- [Install Olares CLI](/developer/cli-install.md): Set up Olares management commands and agent skills.
