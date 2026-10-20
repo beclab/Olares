@@ -856,6 +856,10 @@ func (t *Translator) buildFileserverRoutes(user *message.UserInfo, clusterSet ma
 	for _, node := range user.FileserverNodes {
 		proxyCluster := fmt.Sprintf("files_%s_%s", user.Name, node.NodeName)
 		proxyHost := fmt.Sprintf(fileserverHostFormat, node.NodeName, user.Name)
+		// The shared domain selects the cluster, not the signed-in account.
+		// Envoy expands this after ExtAuth supplies the verified session user;
+		// system-server then checks that user's node role and selects its backend.
+		providerHost := fmt.Sprintf(fileserverHostFormat, node.NodeName, "%REQ(X-BFL-USER)%")
 		clusterSet[proxyCluster] = &ir.ClusterIR{
 			Name: proxyCluster, Host: proxyHost, Port: 28080, UseDNS: true,
 		}
@@ -867,7 +871,7 @@ func (t *Translator) buildFileserverRoutes(user *message.UserInfo, clusterSet ma
 				Cluster:    proxyCluster,
 				RequestHeaders: map[string]string{
 					"X-Terminus-Node":  node.NodeName,
-					"X-Provider-Proxy": proxyHost,
+					"X-Provider-Proxy": providerHost,
 				},
 				ExtAuth:          extAuthCfg,
 				WebSocketUpgrade: true,
@@ -881,7 +885,7 @@ func (t *Translator) buildFileserverRoutes(user *message.UserInfo, clusterSet ma
 				Cluster:   proxyCluster,
 				RequestHeaders: map[string]string{
 					"X-Terminus-Node":  node.NodeName,
-					"X-Provider-Proxy": proxyHost,
+					"X-Provider-Proxy": providerHost,
 				},
 				ExtAuth:          extAuthCfg,
 				WebSocketUpgrade: true,
@@ -896,7 +900,10 @@ func (t *Translator) buildFileserverRoutes(user *message.UserInfo, clusterSet ma
 			continue
 		}
 		proxyCluster := fmt.Sprintf("files_%s_%s", user.Name, node.NodeName)
-		proxyHost := fmt.Sprintf(fileserverHostFormat, node.NodeName, user.Name)
+		// The shared domain selects the cluster, not the signed-in account.
+		// Envoy expands this after ExtAuth supplies the verified session user;
+		// system-server then checks that user's node role and selects its backend.
+		providerHost := fmt.Sprintf(fileserverHostFormat, node.NodeName, "%REQ(X-BFL-USER)%")
 		for _, pfx := range masterLocationPrefixes {
 			routes = append(routes, &ir.HTTPRouteIR{
 				Name:       fmt.Sprintf("files_master_%s_%s", user.Name, sanitizeName(pfx)),
@@ -904,7 +911,7 @@ func (t *Translator) buildFileserverRoutes(user *message.UserInfo, clusterSet ma
 				Cluster:    proxyCluster,
 				RequestHeaders: map[string]string{
 					"X-Terminus-Node":  node.NodeName,
-					"X-Provider-Proxy": proxyHost,
+					"X-Provider-Proxy": providerHost,
 				},
 				ExtAuth:          extAuthCfg,
 				WebSocketUpgrade: true,
