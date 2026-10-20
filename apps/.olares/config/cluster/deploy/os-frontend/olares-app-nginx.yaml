@@ -639,6 +639,7 @@ data:
         }
         location /api/resources/AppData {
             proxy_pass http://files-provider-svc.os-framework:28080;
+            proxy_set_header X-Provider-Proxy files-service.os-framework:80;
             # rewrite ^/server(.*)$ $1 break;
             # Add original-request-related headers
             proxy_set_header X-Real-IP $remote_addr;
@@ -653,6 +654,7 @@ data:
         }
         location /api/raw/AppData {
             proxy_pass http://files-provider-svc.os-framework:28080;
+            proxy_set_header X-Provider-Proxy files-service.os-framework:80;
             # rewrite ^/server(.*)$ $1 break;
             # Add original-request-related headers
             proxy_set_header X-Real-IP $remote_addr;
@@ -667,6 +669,7 @@ data:
         }
         location /api/raw {
             proxy_pass http://files-provider-svc.os-framework:28080;
+            proxy_set_header X-Provider-Proxy files-service.os-framework:80;
             # rewrite ^/server(.*)$ $1 break;
             # Add original-request-related headers
             add_header Accept-Ranges bytes;
@@ -683,6 +686,7 @@ data:
 
         location /api/md5 {
             proxy_pass http://files-provider-svc.os-framework:28080;
+            proxy_set_header X-Provider-Proxy files-service.os-framework:80;
             # rewrite ^/server(.*)$ $1 break;
             # Add original-request-related headers
             proxy_set_header X-Real-IP $remote_addr;
@@ -698,6 +702,7 @@ data:
 
         location /api/paste {
             proxy_pass http://files-provider-svc.os-framework:28080;
+            proxy_set_header X-Provider-Proxy files-service.os-framework:80;
             # rewrite ^/server(.*)$ $1 break;
             # Add original-request-related headers
             proxy_set_header X-Real-IP $remote_addr;
@@ -713,6 +718,7 @@ data:
 
         location /api/cache {
             proxy_pass http://files-provider-svc.os-framework:28080;
+            proxy_set_header X-Provider-Proxy files-service.os-framework:80;
             # rewrite ^/server(.*)$ $1 break;
             # Add original-request-related headers
             proxy_set_header X-Real-IP $remote_addr;
@@ -728,6 +734,7 @@ data:
 
         location /provider {
             proxy_pass http://files-provider-svc.os-framework:28080;
+            proxy_set_header X-Provider-Proxy files-service.os-framework:80;
             # rewrite ^/server(.*)$ $1 break;
             # Add original-request-related headers
             proxy_set_header X-Real-IP $remote_addr;
@@ -741,8 +748,32 @@ data:
             proxy_send_timeout 60s;
         }
 
+        location /api/preview/ {
+            # Browser preflights carry no token; only the image GET reaches the provider.
+            if ($request_method = OPTIONS) {
+                add_header Access-Control-Allow-Origin "*" always;
+                add_header Access-Control-Allow-Methods "GET, HEAD, OPTIONS" always;
+                add_header Access-Control-Allow-Headers "x-authorization,cache-control,pragma" always;
+                add_header Access-Control-Max-Age 600 always;
+                return 204;
+            }
+            proxy_pass http://files-provider-svc.os-framework:28080;
+            proxy_set_header X-Provider-Proxy files-service.os-framework:80;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $http_host;
+            add_header Accept-Ranges bytes;
+            client_body_timeout 600s;
+            client_max_body_size 4000M;
+            proxy_request_buffering off;
+            keepalive_timeout 750s;
+            proxy_read_timeout 600s;
+            proxy_send_timeout 600s;
+        }
+
         location /api {
             proxy_pass http://files-provider-svc.os-framework:28080;
+            proxy_set_header X-Provider-Proxy files-service.os-framework:80;
             # rewrite ^/server(.*)$ $1 break;
             # Add original-request-related headers
             proxy_set_header X-Real-IP $remote_addr;
@@ -759,6 +790,7 @@ data:
 
         location /share_link {
             proxy_pass http://files-provider-svc.os-framework:28080;
+            proxy_set_header X-Provider-Proxy files-service.os-framework:80;
             # rewrite ^/server(.*)$ $1 break;
             # Add original-request-related headers
             proxy_set_header X-Real-IP $remote_addr;
@@ -775,6 +807,7 @@ data:
 
         location /upload {
             proxy_pass http://files-provider-svc.os-framework:28080;
+            proxy_set_header X-Provider-Proxy files-service.os-framework:80;
             # rewrite ^/server(.*)$ $1 break;
             # Add original-request-related headers
             proxy_set_header X-Real-IP $remote_addr;
@@ -808,6 +841,7 @@ data:
             add_header Access-Control-Allow-Methods "PUT, GET, DELETE, POST, OPTIONS";
 
             proxy_pass http://files-provider-svc.os-framework:28080;
+            proxy_set_header X-Provider-Proxy files-service.os-framework:80;
             # rewrite ^/server(.*)$ $1 break;
             # Add original-request-related headers
             proxy_set_header X-Real-IP $remote_addr;
@@ -849,6 +883,7 @@ data:
             expires 30d;
             add_header Cache-Control "public, max-age=2592000";
             proxy_pass http://files-provider-svc.os-framework:28080;
+            proxy_set_header X-Provider-Proxy files-service.os-framework:80;
             # rewrite ^/server(.*)$ $1 break;
             # Add original-request-related headers
             proxy_set_header X-Real-IP $remote_addr;
@@ -870,6 +905,7 @@ data:
         location ~ ^/resources/Home/Pictures/(.*.(png|jpg|svg|gif|jpeg))$
         {
             proxy_pass http://files-provider-svc.os-framework:28080/api/raw/drive/Home/Pictures/$1;
+            proxy_set_header X-Provider-Proxy files-service.os-framework:80;
             add_header Cache-Control "public, max-age=2592000";
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -1439,6 +1475,9 @@ data:
             proxy_set_header X-Bfl-User "";
             proxy_set_header Authelia-Nonce "";
             proxy_pass http://vault.user-space-$vault_user.svc.cluster.local:28080;
+            # The shared domain identifies the device, not the account's provider.
+            # system-server still checks the verified user's /server permissions.
+            proxy_set_header X-Provider-Proxy vault-server.os-framework:3000;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Host $http_host;
