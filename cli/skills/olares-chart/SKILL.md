@@ -78,6 +78,7 @@ For deploying to your own Olares, **metadata can stay a stub** as long as `lint`
 | Build or select every workload image | [image](references/olares-chart-image.md) |
 | Decide process uid, then mounted-volume ownership — two independent questions, see below | [run identity](references/olares-chart-run-as-user.md) |
 | Map persistence, entrances, metadata and workload replicas | [manifest](references/olares-chart-manifest.md) |
+| Decide how the app opens (new browser tab vs. inside the Desktop), its icon, ports and request timeout | [entrances](references/olares-chart-entrances.md) |
 | Map configuration and platform values | [environment](references/olares-chart-env.md), then [defaults](references/olares-chart-env-defaults.md) or [system values](references/olares-chart-system-values.md) only when needed |
 | Handle passwords, API keys or generated keys | [secrets](references/olares-chart-secrets.md) |
 | Set manifest/chart versions and dependencies | [versioning](references/olares-chart-versioning.md) |
@@ -151,7 +152,8 @@ Skip references that would mislead:
 - **Cluster upload requires `spec.supportArch` to intersect at least one current node architecture.** Query `olares-cli cluster node list`; ensure the referenced images support the same target architecture. If upload reports `architecture_incompatible`, fix and repackage before retrying. If it reports `cluster_arch_unavailable`, keep the package/version unchanged and wait for node discovery to recover.
 - **Declared `.Values.userspace.appData`/`appCache`/`userData` mounts MUST have the matching `permission` field**, or the app-data cross-check fails.
 - **`hostPath` volumes + rolling updates are incompatible** — replace host mounts with the userspace volumes above.
-- **The entrance proxy caps every request at `options.apiTimeout` seconds (default 15s)** — long LLM streams / big uploads / slow reports get cut at the entrance (504 / closed connection) even when the pod is healthy. Set `options.apiTimeout: 0` to disable, or a large bounded value; a *negative* value is not "unlimited" (it falls back to 15s). See the Manifest refinement areas.
+- **The entrance proxy caps every request at `options.apiTimeout` seconds (default 15s)** — long LLM streams / big uploads / slow reports get cut at the entrance (504 / closed connection) even when the pod is healthy. Set `options.apiTimeout: 0` to disable, or a large bounded value; a *negative* value is not "unlimited" (it falls back to 15s). See [entrances](references/olares-chart-entrances.md).
+- **`openMethod` has exactly four values: `""`, `default`, `iframe`, `window`.** "Open in a separate / new browser tab" is `window`; the other three open inside the Desktop. See [entrances](references/olares-chart-entrances.md).
 
 ## Safety and escalation
 
