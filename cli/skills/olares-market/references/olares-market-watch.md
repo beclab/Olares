@@ -8,7 +8,7 @@ A one-shot mutation returns as soon as the server acknowledges it, and the serve
 
 | Verb | Terminal-success buckets | Idempotent shortcut |
 |---|---|---|
-| `install` | `running` | — (no watcher shortcut; requires `OpType=install`) |
+| `install` | `running` (requires `OpType=install`); any `stopped` row is app-service giving up on it and reports failure | — (no watcher shortcut) |
 | `upgrade` | `running` (matchOpType=upgrade), or `stopped` with a `statusTime` newer than the pre-request baseline — see below | — (handled by pre-flight) |
 | `uninstall` | `uninstalled`, row disappears (or `*Canceled` when an in-flight app was auto-canceled) | App already uninstalled → returns immediately; in-flight apps are canceled first, then uninstalled if still present |
 | `clone` | `running` on the new clone name | — |
@@ -71,9 +71,6 @@ A long `installing` / `initializing` is NOT a failure — app-service polls a lo
 | Symptom | Cause | Fix |
 |---|---|---|
 | `environment variable requirements not met` + `Missing required values: KEY1, KEY2` (install) | App declares required envs | Re-run with `--env KEY=VALUE` per missing var |
-| `cannot upgrade 'X' in state 'Y': its install is still in flight` | Pre-flight gate 2 on `pending` / `downloading` / `installing` | Wait; if its pods crash it will not settle — `market uninstall X`, then `install` the fixed version |
-| `cannot upgrade 'X' in state 'Y': an operation is still in flight` | Pre-flight gate 2 on `initializing` / `upgrading` / `applyingEnv` / `resuming` | Wait, or `market cancel X` (lands in `stopped`) and upgrade from there |
-| `install --watch` / `upgrade --watch` reports `stopped watching: pod ... CrashLoopBackOff` | `--fail-on-crashloop` saw a container that will not recover; the operation is **still in flight** | Read the `--previous` logs it names, fix, then clear the row as the message says |
 | `target version '1.2.3' is already installed — nothing to do` | Pre-flight gate 3 | Nothing to upgrade. **Does NOT fire for `-s upload`** — a same-version upgrade is allowed there as a retry of the stored chart |
 | `chart is marked 'suspend' or 'remove' in source 'X' ...` | Pre-flight gate 4 (`app_simple_info.app_labels` contains `suspend` or `remove`) | Upstream withdrew the app; the SPA hides its Upgrade button too. Contact the app maintainer |
 | `app 'X' is not cloneable` | `clone` against an app that is neither multi-instance nor a template | Check `market get X -o json` for `allowMultipleInstall` / `templateOnly` |
