@@ -183,6 +183,13 @@ type watchTarget struct {
 	// only statusTime separates it from the landed row.
 	upgradeStoppedTerminal bool
 
+	// installStoppedFailure fails an install on any `stopped` row. An install
+	// is only accepted when the app has no settled row, so `stopped` is
+	// app-service giving up on it: a startup crash or a scheduling rejection,
+	// named by Status.Reason. The rejection path also rewrites OpType to
+	// `stop`, which is why this does not go through matchOpType.
+	installStoppedFailure bool
+
 	// requireNewerThanBaseline gates BOTH success and failure on the row's
 	// statusTime being strictly newer than baselineStatusTime. This is the
 	// crux of the restart watcher: a completed restart rests at
@@ -230,6 +237,7 @@ func newWatchTarget(op watchOp, appName, source string) watchTarget {
 		// did not happen, so the user-facing exit code should be
 		// non-zero even though the backend reached a "clean" state.
 		t.failureSet = unionStateSets(operationFailedStates, canceledStates)
+		t.installStoppedFailure = true
 	case watchUpgrade:
 		t.successSet = map[string]bool{"running": true}
 		t.failureSet = unionStateSets(operationFailedStates, canceledStates)
@@ -405,6 +413,10 @@ type watchFailureError struct {
 }
 
 func (e *watchFailureError) Error() string {
+	if e.target.installStoppedFailure && e.row.State == appStateStopped {
+		return fmt.Sprintf("install '%s' failed: app-service stopped it (reason=%s) — the app is still installed; read why with `olares-cli cluster pod list -n <namespace>` and `olares-cli cluster container logs <namespace>/<pod>/<container> --previous`, then either upgrade to a fixed version and `olares-cli market resume %s`, or `olares-cli market uninstall %s` and install again",
+			e.target.appName, valueOrUnknown(e.row.Reason), e.target.appName, e.target.appName)
+	}
 	parts := []string{fmt.Sprintf("state=%s", e.row.State)}
 	if e.row.OpType != "" {
 		parts = append(parts, "op="+e.row.OpType)
@@ -540,6 +552,9 @@ func waitForTerminal(parentCtx context.Context, mc *MarketClient, opts *MarketOp
 					return row, &watchFailureError{target: t, row: row}
 				}
 				return row, nil
+			}
+			if t.installStoppedFailure && row.State == appStateStopped {
+				return row, &watchFailureError{target: t, row: row}
 			}
 			if t.successSet[row.State] && t.passesBaseline(row) {
 				switch {

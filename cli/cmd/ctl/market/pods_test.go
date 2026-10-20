@@ -127,3 +127,30 @@ func TestWaitForTerminalPodProbeErrorFallsBackToTheMarketRow(t *testing.T) {
 		t.Fatalf("row=%+v err=%v, want running", row, err)
 	}
 }
+
+func TestWaitForTerminalInstallStoppedByAppServiceIsAFailure(t *testing.T) {
+	for _, last := range []statusRow{
+		{State: "stopped", OpType: "install", Reason: "StartUpFailed", Message: "app myapp stop completed"},
+		{State: "stopped", OpType: "stop", Reason: "Unschedulable"},
+	} {
+		srv := newFakeStateServer(t, "myapp", "market.olares", []statusRow{
+			{State: "installing", OpType: "install"},
+			{State: "stopping", OpType: last.OpType, Reason: last.Reason},
+			last,
+		})
+		mc := newTestMarketClient(t, srv.srv.URL)
+		opts := quietOpts(5*time.Second, 5*time.Millisecond)
+		opts.podProbe = func(context.Context, string) ([]podSignal, error) { return nil, nil }
+
+		_, err := waitForTerminal(context.Background(), mc, opts, newWatchTarget(watchInstall, "myapp", "market.olares"))
+		var fail *watchFailureError
+		if !errors.As(err, &fail) {
+			t.Fatalf("%s: expected watchFailureError, got %T: %v", last.Reason, err, err)
+		}
+		for _, want := range []string{"reason=" + last.Reason, "still installed", "market resume myapp", "market uninstall myapp"} {
+			if !strings.Contains(err.Error(), want) {
+				t.Fatalf("error %q does not mention %q", err, want)
+			}
+		}
+	}
+}
