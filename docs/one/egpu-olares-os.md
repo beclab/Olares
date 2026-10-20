@@ -61,9 +61,9 @@ This workaround is provided by Olares and is not an official NVIDIA fix. Install
 1. Start Olares One without the eGPU connected.
 2. Download all three files to the same directory:
 
-   - <a href="/downloads/one/egpu/fix-egpu-link.sh" download>`fix-egpu-link.sh`</a>
-   - <a href="/downloads/one/egpu/egpu-gen1-fix.service" download>`egpu-gen1-fix.service`</a>
-   - <a href="/downloads/one/egpu/99-egpu-gen1-fix.rules" download>`99-egpu-gen1-fix.rules`</a>
+   - <a href="/docs/downloads/one/egpu/fix-egpu-link.sh" download>`fix-egpu-link.sh`</a>
+   - <a href="/docs/downloads/one/egpu/egpu-gen1-fix.service" download>`egpu-gen1-fix.service`</a>
+   - <a href="/docs/downloads/one/egpu/99-egpu-gen1-fix.rules" download>`99-egpu-gen1-fix.rules`</a>
 
 3. Open a terminal in that directory and check that `setpci` is available:
 

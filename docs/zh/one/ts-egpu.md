@@ -78,7 +78,7 @@ eGPU 设备，或 dock、enclosure 与显卡：
 
 ### Olares OS
 
-1. 下载 <a href="/downloads/one/egpu/collect-egpu-info.sh" download>`collect-egpu-info.sh`</a>。
+1. 下载 <a href="/docs/downloads/one/egpu/collect-egpu-info.sh" download>`collect-egpu-info.sh`</a>。
 2. 在下载目录中打开终端并运行：
 
    ```bash
