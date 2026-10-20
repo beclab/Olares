@@ -9,7 +9,7 @@ output:
     - 
       name: beclab/node-exporter:0.0.12
     - 
-      name: prom/prometheus:v2.34.0
+      name: prom/prometheus:v2.54.0
 
    
 
