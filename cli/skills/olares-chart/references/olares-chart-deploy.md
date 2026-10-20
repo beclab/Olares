@@ -15,7 +15,7 @@ flowchart TD
   pkg --> up["market upload"]
   up --> exists{"app already exists on this Olares?"}
   exists -->|"no (first deploy / installFailed / uninstalled)"| inst["market install -s upload --watch --watch-timeout 1m -o json"]
-  exists -->|"yes (running / stopped / upgradeFailed / applyEnvFailed / stopFailed)"| upg["market upgrade -s upload --version NEW --watch --watch-timeout 1m -o json"]
+  exists -->|"yes (running / stopped / upgradeFailed)"| upg["market upgrade -s upload --version NEW --watch --watch-timeout 1m -o json"]
   inst -->|running| done["deployed -> cleanup or keep"]
   upg -->|running| done
   upg -->|failed/stuck| diag
@@ -54,7 +54,7 @@ Upload only stores the chart; installing it is what proves it runs:
 olares-cli market install <app> -s upload --version <version> --watch --fail-on-crashloop --watch-timeout 1m -o json
 ```
 
-- **`install` is for an app that does NOT yet exist on this Olares** (first deploy, or after `uninstall`, or retrying an `installFailed`). If the app already exists in a settled state (`running` / `stopped` / `upgradeFailed` / `applyEnvFailed` / `stopFailed`), `install` is rejected by app-service — **re-apply with `upgrade` instead** (next bullet). When in doubt, `olares-cli market get <app> -s upload -o json` and read `.state`.
+- **`install` is for an app that does NOT yet exist on this Olares** (first deploy, or after `uninstall`, or retrying an `installFailed`). If the app already exists, `install` is rejected by app-service — **re-apply with `upgrade` instead** (next bullet). When in doubt, `olares-cli market get <app> -s upload -o json` and read `.state`.
 - **Re-apply an edited chart to an already-deployed app → bump the version, then `upgrade` to it:**
   ```bash
   olares-cli market upgrade <app> -s upload --version <NEW version> --watch --fail-on-crashloop --watch-timeout 1m -o json
@@ -118,7 +118,7 @@ A row that settled in `stopped` while the pod is `1/1 Running` needs `market res
 
 ## 5. Decide: fix the chart, or report back
 
-- **Problem is in the chart** (wrong image ref, missing/incorrect env, bad volume mount, entrance host/port, undeclared `permission` for a userspace mount, **uid/permission mismatch on userspace volumes**, ...): edit the manifest/templates per the Manifest refinement areas and the run identity (uid 1000) guidance, re-run `chart lint`, bump and re-upload per §2, and the auto-loop continues. **Re-apply with the right verb:** app gone or `installFailed` → `market install -s upload --version <NEW>`; already in a settled state (`running` / `stopped` / `upgradeFailed` / `applyEnvFailed` / `stopFailed`) → `market upgrade -s upload --version <NEW>`; still in flight → clear it first (§3, crash while installing). `install` against an existing app is rejected by app-service and leaves the row wedged; `upgrade` is the recovery path.
+- **Problem is in the chart** (wrong image ref, missing/incorrect env, bad volume mount, entrance host/port, undeclared `permission` for a userspace mount, **uid/permission mismatch on userspace volumes**, ...): edit the manifest/templates per the Manifest refinement areas and the run identity (uid 1000) guidance, re-run `chart lint`, bump and re-upload per §2, and the auto-loop continues. **Re-apply with the right verb:** app gone or `installFailed` → `market install -s upload --version <NEW>`; `running` / `stopped` / `upgradeFailed` → `market upgrade -s upload --version <NEW>` (any other state: the shared **application state machine** says which verb it takes); still in flight → clear it first (§3, crash while installing). `install` against an existing app is rejected by app-service and leaves the row wedged; `upgrade` is the recovery path.
 - **Problem is not in the chart, or unclear:** break out of the auto-loop — summarize the failing state and the relevant log excerpts in plain language, suggest likely causes, and **ask the developer how to proceed.** Do not silently retry install in a loop — install/auth failures are deterministic (see olares-market / olares-shared error tables). The lone exception is the post-upload hydration `404` in section 3, which is transient and meant to be retried once hydration completes.
 
 ## 6. Clean up the test install

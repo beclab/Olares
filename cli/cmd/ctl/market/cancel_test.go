@@ -2,6 +2,7 @@ package market
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 
@@ -29,10 +30,17 @@ func TestGateInFlightCancel(t *testing.T) {
 		// before touching the factory), so even an empty override cannot
 		// make them fail.
 		viper.Set(cmdutil.FlagOlaresVersion, "1.12.5")
-		for _, state := range []string{"installing", "downloading", "pending", "initializing", "applyingEnv", ""} {
+		for _, state := range []string{"installing", "downloading", "pending", "initializing", ""} {
 			if err := gateInFlightCancel(context.Background(), &cmdutil.Factory{}, state); err != nil {
 				t.Fatalf("state %q must not be gated, got error: %v", state, err)
 			}
+		}
+	})
+
+	t.Run("applyingEnv is never cancelable", func(t *testing.T) {
+		viper.Set(cmdutil.FlagOlaresVersion, "1.12.7")
+		if err := gateInFlightCancel(context.Background(), &cmdutil.Factory{}, stateApplyingEnv); !errors.Is(err, errApplyingEnvNotCancelable) {
+			t.Fatalf("applyingEnv must be refused before reaching Market, got %v", err)
 		}
 	})
 

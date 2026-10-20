@@ -40,9 +40,9 @@ app-service rejects any operation not allowed in the current state (`OperationAl
 | `downloadFailed` | `install` |
 | `installFailed` | `install`, `uninstall` |
 | `upgradeFailed` | `upgrade`, `uninstall` |
-| `applyEnvFailed` | `env`, `uninstall` |
-| `stopFailed` | `stop`, `upgrade`, `uninstall` |
-| `resumeFailed` | `resume`, `upgrade`, `env`, `uninstall` |
+| `applyEnvFailed` | `env`, `stop`, `uninstall` |
+| `stopFailed` | `stop`, `uninstall` |
+| `resumeFailed` | `resume`, `env`, `uninstall` |
 | `uninstallFailed` | `uninstall` |
 | `pendingCancelFailed` / `downloadingCancelFailed` | `cancel` |
 | `installingCancelFailed` / `upgradingCancelFailed` / `applyingEnvCancelFailed` | `cancel`, `uninstall` |
@@ -50,7 +50,10 @@ app-service rejects any operation not allowed in the current state (`OperationAl
 
 Key consequences: an **in-flight** app accepts only `cancel` (never a direct `uninstall` — the CLI auto-cancels first); `install` against an already-existing settled app is rejected (use `upgrade`).
 
-> **This table is app-service's gate, not the whole story for `cancel`.** Requests reach app-service through Market, which keeps its own whitelist of states a cancel may operate on; both have to allow it. Market's whitelist grew `resuming` and `upgrading` in 1.12.7, so on older backends a cancel for those two states is refused by Market with a 404 (`App not found or current state does not allow operation`) even though app-service itself would accept it.
+> **This table is app-service's gate; Market keeps its own in front of it, and both have to allow an operation.** A refusal by Market is a 404 (`App not found or current state does not allow operation`).
+>
+> - **`cancel`:** Market's whitelist grew `resuming` and `upgrading` in 1.12.7, so older backends refuse those two. It has never included `applyingEnv`: an env change in flight cannot be cancelled on any version — wait for `running` or `applyEnvFailed`.
+> - **`upgrade`:** only `running`, `stopped` and `upgradeFailed` pass both gates. Market also admits `stopFailed`, which app-service then rejects.
 
 Used by: `market` (verb pre-flight gating), `chart` (install-vs-upgrade verb choice), `doctor` ("why was my operation rejected?").
 
@@ -111,7 +114,7 @@ Used by: `market` (don't poll on progress), `doctor` (where real pull progress a
 
 - **A scheduling failure does not become `installFailed`.** When a pod can't be scheduled (stays `Pending`), app-service tears the install down through `Stopping -> stopped`, not `installFailed`. A watcher that only looks for `*Failed` will miss it — a fresh install that ends in `stopped` is a red flag, not a success.
 - **Admission and scheduling fail in different places, and only one of them reaches this state machine.** A request the API server refuses outright — a resource request over a quota or a `LimitRange`, a validating webhook denial, a malformed spec — never produces a pod, so no row ever enters the teardown path above; the operation is refused up front and the app keeps whatever state it had. Scheduling failure is the later case: the pod exists, no node can host it, and the row takes `Stopping -> stopped`. When diagnosing "my install went nowhere", first establish whether a pod was ever created; the two look identical from the state row alone.
-- **`cancel` is teardown-vs-stop depending on phase.** Canceling `pending` / `downloading` / `installing` **tears the partial install down (namespace deleted)** — functionally equivalent to uninstalled. Canceling `initializing` / `upgrading` / `applyingEnv` / `resuming` only **stops** the app (it lands in `stopped`, still installed). `market uninstall` relies on this split when it auto-orchestrates an in-flight uninstall.
+- **`cancel` is teardown-vs-stop depending on phase.** Canceling `pending` / `downloading` / `installing` **tears the partial install down (namespace deleted)** — functionally equivalent to uninstalled. Canceling `initializing` / `upgrading` / `resuming` only **stops** the app (it lands in `stopped`, still installed). `market uninstall` relies on this split when it auto-orchestrates an in-flight uninstall.
 - **`stopped` alone cannot tell a cancelled upgrade from a finished one** — `status.reason` can, but only through two specific values. `reason` is populated on every transition and mostly mirrors `state`, so its presence carries no information and testing it for emptiness is wrong. The two values that say something `state` cannot are `upgradeCancelByUser` and `upgradeCancelBySystem` (the backend TTL fired); match those, not `reason != ""`. An upgrade of an already-`stopped` app legitimately re-renders at `replicas=0` and returns to `stopped` carrying an ordinary reason.
 - **A cancelled upgrade leaves the running app and the row's version disagreeing, and both readings are correct.** What is deployed is still the previous version — the upgrade never completed. What the row reports is the *target* version, which is written when the upgrade starts and is not rolled back on cancel. So "the app is on its previous version" and "the version field shows the new one" are both true; they are different facts, and the version field is not a discriminator for cancellation.
 

@@ -21,9 +21,9 @@ func TestIsUpgradableState(t *testing.T) {
 		// SPA allowlist (5 states):
 		{"running", true},
 		{"stopped", true},
-		{"stopFailed", true},
+		{"stopFailed", false},
 		{"upgradeFailed", true},
-		{"applyEnvFailed", true},
+		{"applyEnvFailed", false},
 
 		// Everything else must be denied — sample from the broader
 		// backend state machine so a future expansion of the SPA
