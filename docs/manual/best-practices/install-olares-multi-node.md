@@ -1,4 +1,5 @@
 ---
+title: Set up a multi-node Olares cluster on Linux
 outline: [2, 3]
 description: Expand an existing Olares system into a multi-node cluster using compatible Linux devices.
 head:

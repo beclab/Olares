@@ -1,4 +1,5 @@
 ---
+title: 将两台 Olares One 连接为集群
 outline: [2, 3]
 description: 在现有 Olares One 上启用 JuiceFS，生成工作节点加入命令，将两台设备组成集群并检查节点状态。
 head:

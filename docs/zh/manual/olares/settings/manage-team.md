@@ -45,7 +45,7 @@ Olares 支持多用户。作为管理员，你可以创建并管理团队成员�
 
 :::tip
 新用户无需本地安装 Olares 即可通过激活向导激活用户。
-详细说明请参阅[加入 Olares 集群](../../get-started/join-olares.md){target="_blank"}。
+详细说明请参阅[加入 Olares 集群](../../get-started/join-olares){target="_blank"}。
 :::
 
 ## 删除用户
