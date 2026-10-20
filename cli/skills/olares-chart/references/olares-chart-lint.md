@@ -24,6 +24,7 @@ olares-cli chart lint ./myapp
 olares-cli chart lint ./myapp-1.0.0.tgz
 olares-cli chart lint ./myapp --skip-resource --skip-app-data
 olares-cli chart lint ./myapp --auto-owner=false --owner alice --admin root
+olares-cli chart lint ./myapp -o json   # {"path":...,"ok":true}; a failure is the error envelope on stderr
 ```
 
 ## What it checks
