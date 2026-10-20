@@ -37,6 +37,8 @@ Porting an app is **not** a fixed `from-compose → lint → deploy` pipeline �
 
 **First move (not a pipeline):** locate where the app already sits on the packaging and deployment state tables → drive the concerns to ready, looping as constraints surface → deploy to your Olares.
 
+**Upstream publishes one image with a web UI and no bundled database?** That is the common case; take the [quickstart](references/olares-chart-quickstart.md) and come back to the tables below only for what it sends you to.
+
 ## Axis 1 — Packaging (the image)
 
 Olares **pulls images from a registry and never builds from source**, so every workload must reference a publicly pullable, node-arch-correct image. Image work is **agent-driven**: resolve the **target Olares node's architecture** with `olares-cli cluster node list`, then ask which registry the developer uses (Docker Hub / ghcr), check docker is usable and logged in, and **build + push yourself** — only `docker login` stays manual, and only when not already authenticated ([references/olares-chart-image.md](references/olares-chart-image.md)). Build for the target node's arch (single-arch), never the development host's implicit/default arch; multi-arch is only for publishing.
