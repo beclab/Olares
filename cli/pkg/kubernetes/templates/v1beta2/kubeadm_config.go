@@ -301,13 +301,6 @@ func GetKubeletConfiguration(runtime connector.Runtime, kubeConf *common.KubeCon
 			"nodefs.available":  "5%",
 			"imagefs.available": "5%",
 		},
-		"evictionSoft": map[string]string{
-			"memory.available": "10%",
-		},
-		"evictionSoftGracePeriod": map[string]string{
-			"memory.available": "2m",
-		},
-		"evictionMaxPodGracePeriod":        120,
 		"evictionPressureTransitionPeriod": "30s",
 		"featureGates":                     FeatureGatesDefaultConfiguration,
 		"runtimeRequestTimeout":            "5m",
