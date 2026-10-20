@@ -51,6 +51,21 @@ The upstream repository already hosts its icon; point at it instead of re-hostin
 
 **Do not upload the icon anywhere for a local deploy.** `imghost.olares.com` is a web page a person uses during [`../../olares-publish/SKILL.md`](../../olares-publish/SKILL.md); scripting it — reading its bundle for an endpoint or an embedded key — is outside the task and is the developer's call, not the agent's. If the upstream has no usable icon, keep the default and say so.
 
+## Behind the Olares sign-in
+
+`authLevel: private` (the scaffold's default) puts the Olares login in front of the entrance: nobody reaches the app without signing in to this Olares first. Many self-hosted apps add their own login on top, and some refuse to start without one when they listen on `0.0.0.0` — the pod crashloops with a message about auth, a password or a secret key.
+
+1. Find upstream's switch in its docs or env reference: "disable auth", "auth required", "single-user mode", "trusted proxy" / "trusted header". Set it in the workload `env`, and say in the final report that the app's own login is off because Olares signs the user in.
+2. If upstream has no such switch, keep its login. Required credentials then come from the user or are generated per [secrets](olares-chart-secrets.md); never commit a fixed password.
+3. Whatever the app compares origins against — a public URL, CORS allowed origins, CSRF trusted origins, cookie domain — is its entrance host. Template it, never compute it:
+   ```yaml
+   - name: APP_PUBLIC_URL
+     value: "https://{{ .Values.domain.myapp }}"   # the entrance name, not the app name
+   ```
+   A custom route adds a second origin; see [custom URL](olares-chart-custom-domain.md).
+
+`authLevel: public` removes the Olares login; only choose it when the app is meant for people without an account on this Olares, and then keep the app's own login on.
+
 ## Non-HTTP services and outbound ports
 
 - **Non-HTTP services** (game server, SMTP, RDP, …) are exposed via `ports[]`, not entrances:

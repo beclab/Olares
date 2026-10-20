@@ -80,7 +80,7 @@ For deploying to your own Olares, **metadata can stay a stub** as long as `lint`
 | Build or select every workload image | [image](references/olares-chart-image.md) |
 | Decide process uid, then mounted-volume ownership — two independent questions, see below | [run identity](references/olares-chart-run-as-user.md) |
 | Map persistence, entrances, metadata and workload replicas | [manifest](references/olares-chart-manifest.md) |
-| Decide how the app opens (new browser tab vs. inside the Desktop), its icon, ports and request timeout | [entrances](references/olares-chart-entrances.md) |
+| Decide how the app opens (new browser tab vs. inside the Desktop), its icon, its own login behind the Olares sign-in, CORS / public URL, ports and request timeout | [entrances](references/olares-chart-entrances.md) |
 | Map configuration and platform values | [environment](references/olares-chart-env.md), then [defaults](references/olares-chart-env-defaults.md) or [system values](references/olares-chart-system-values.md) only when needed |
 | Handle passwords, API keys or generated keys | [secrets](references/olares-chart-secrets.md) |
 | Set manifest/chart versions and dependencies | [versioning](references/olares-chart-versioning.md) |

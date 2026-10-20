@@ -41,7 +41,7 @@ When upstream's file reads secrets as `${VAR}`, add `--no-interpolate` so nothin
 | Data directory → `.Values.userspace.appData` plus `permission.appData: true`; delete the kompose PVC | templates, manifest | [manifest](olares-chart-manifest.md) |
 | Process uid, and who owns the data directory | deployment | [run identity](olares-chart-run-as-user.md) |
 | Variables the app refuses to start without (secret keys, base URL) | Secret + `env` | [secrets](olares-chart-secrets.md), [environment](olares-chart-env.md) |
-| Its own login, when Olares already signs the user in | `env` | [entrances](olares-chart-entrances.md) |
+| Its own login, when Olares already signs the user in | `env` | [entrances](olares-chart-entrances.md#behind-the-olares-sign-in) |
 | How it opens (`openMethod`), title, icon | manifest `entrances[]`, `metadata.icon` | [entrances](olares-chart-entrances.md) |
 | `spec.supportArch` with the arch from step 1 | manifest | [image](olares-chart-image.md) |
 
