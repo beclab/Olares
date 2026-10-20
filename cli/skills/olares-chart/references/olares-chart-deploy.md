@@ -51,27 +51,27 @@ olares-cli market upload ./<app>-<version>.tgz   # use the new <version> in the 
 Upload only stores the chart; installing it is what proves it runs:
 
 ```bash
-olares-cli market install <app> -s upload --version <version> --watch --watch-timeout 1m -o json
+olares-cli market install <app> -s upload --version <version> --watch --fail-on-crashloop --watch-timeout 1m -o json
 ```
 
 - **`install` is for an app that does NOT yet exist on this Olares** (first deploy, or after `uninstall`, or retrying an `installFailed`). If the app already exists in a settled state (`running` / `stopped` / `upgradeFailed` / `applyEnvFailed` / `stopFailed`), `install` is rejected by app-service — **re-apply with `upgrade` instead** (next bullet). When in doubt, `olares-cli market get <app> -s upload -o json` and read `.state`.
 - **Re-apply an edited chart to an already-deployed app → bump the version, then `upgrade` to it:**
   ```bash
-  olares-cli market upgrade <app> -s upload --version <NEW version> --watch --watch-timeout 1m -o json
+  olares-cli market upgrade <app> -s upload --version <NEW version> --watch --fail-on-crashloop --watch-timeout 1m -o json
   ```
   Bump `metadata.version` (= `Chart.yaml` `version`), re-package, and re-upload, then upgrade to the new number. This is the canonical loop for iterating on an installed app and for recovering one stuck in `upgradeFailed`, and there is no shortcut around the bump: the stored bytes for a published version cannot be replaced. The upload source does waive the CLI's strict-newer gate on `upgrade` (app-service gates on `>= deployed`), but a same-version upgrade re-applies the chart already stored — useful as a retry, useless for shipping an edit. A *lower* version is always rejected.
 - Parse `.finalState`: `running` = deployed. A short `--watch-timeout` is not failure; if the row is still `downloading`, wait/poll because image pull can be legitimately long. Once it leaves `downloading`, a 1m window without STATE movement or any `*Failed` state means stop passively watching and diagnose. The lifecycle state machine is the platform **application state machine**; verb-level watch behavior is in the market watch reference, and an `environment variable requirements not met` rejection means re-run with `--env KEY=VALUE` for each name under `Missing required values:`.
 - **Hydration race — `HTTP 404: App not found` right after upload is transient, NOT a chart problem.** `upload` lands the package in Market's embedded DCR immediately, but the app only becomes installable after the market backend indexes ("hydrates") it a few seconds later. Installing in that window 404s. This is the one install failure you *should* retry: wait for hydration, then re-run the same `install`. The chart didn't change here, so there's nothing to re-`upload` or bump — the chart is already stored and re-uploading the same bytes wouldn't speed up hydration. Confirm hydration finished via the `appstore-backend` log (`isAppHydrationComplete RETURNING TRUE ... appID=<app>` → `Added new app to latest: <app>` → `new_app_ready`), or poll `olares-cli market get <app> -s upload` until it resolves:
   ```bash
   until olares-cli market get <app> -s upload -o json 2>/dev/null | grep -q '"name"'; do sleep 2; done
-  olares-cli market install <app> -s upload --version <version> --watch --watch-timeout 1m -o json
+  olares-cli market install <app> -s upload --version <version> --watch --fail-on-crashloop --watch-timeout 1m -o json
   ```
 
 ### Don't just wait — diagnose the app's own pods in parallel
 
 The `--watch` market row (`downloading` / `initializing`) is a **coarse** signal, and a crashlooping main container is not fast-failed for several minutes (the 5-minute `hasUnrecoverablePod` grace). Treat parallel workload inspection as a required part of the deploy loop:
 
-1. Start `market install ... --watch` or `market upgrade ... --watch`.
+1. Start `market install ... --watch --fail-on-crashloop` or `market upgrade ... --watch --fail-on-crashloop`; both print the app's restarting containers as they appear and stop on a crash loop.
 2. As soon as the app namespace/workload appears, inspect its Pod status and container logs in parallel.
 3. Keep waiting only for recoverable progress such as image pulling, scheduling, or container creation.
 4. On `CrashLoopBackOff`, `CreateContainerConfigError`, `RunContainerError`, an admission rejection, or a fatal application log, stop the passive market wait immediately — direct runtime evidence is the trigger for diagnosis, not a market timeout. Capture the Pod state, events, current logs, and previous-container logs when available, then diagnose and fix the chart.
