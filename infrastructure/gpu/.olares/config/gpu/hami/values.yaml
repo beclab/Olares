@@ -4,7 +4,7 @@ nameOverride: ""
 fullnameOverride: ""
 namespaceOverride: ""
 imagePullSecrets: []
-version: "v2.6.28"
+version: "v2.6.29"
 
 # Nvidia GPU Parameters
 resourceName: "nvidia.com/gpu"
@@ -215,6 +215,14 @@ devices:
       - mthreads.com/vgpu
   nvidia:
     gpuCorePolicy: default
+  intel:
+    enabled: true
+    # MiB booked per container on top of its memory quota; a pod overrides it
+    # with the gpu.bytetrade.io/vxpu-memory-reserve annotation.
+    memoryReserve: 256
+    customresources:
+      - intel.com/vgpu
+      - intel.com/vgpumem
   ascend:
     enabled: false
     image: ""

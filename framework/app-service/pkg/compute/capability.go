@@ -27,6 +27,11 @@ const (
 type DeviceRegister struct {
 	Annotation string
 	Decoder    registerDecoder
+	// Handshake is the registerHAMI liveness annotation paired with Annotation.
+	Handshake string
+	// Cards optionally names a JSON annotation that narrows each card's
+	// support types (see decodeRegisteredCardInfo).
+	Cards string
 }
 
 // ModeCapability is everything app-service decides per accelerator mode.
@@ -52,7 +57,12 @@ type ModeCapability struct {
 	// MultiCard: one app may aggregate several devices, on one node or across
 	// nodes, when its manifest declares supportMultiCards / supportMultiNodes.
 	MultiCard bool
-	Register  DeviceRegister
+	// MemorySliceReserve is device memory, in bytes, HAMi books per
+	// memory-slice binding on top of its quota, for allocations the memory
+	// hook cannot count. A card's free memory is reduced by it once per
+	// existing binding and once for the binding being placed.
+	MemorySliceReserve int64
+	Register           DeviceRegister
 }
 
 var modeCapabilities = map[string]ModeCapability{
@@ -67,7 +77,7 @@ var modeCapabilities = map[string]ModeCapability{
 		DedicatedVRAM:    true,
 		RuntimeClass:     hamiRuntimeClass,
 		MultiCard:        true,
-		Register:         DeviceRegister{Annotation: constants.NodeNvidiaRegistryKey, Decoder: registerHAMI},
+		Register:         nvidiaRegister,
 	},
 	utils.GB10ChipType: {
 		SupportTypes:     []string{SupportTypeMemorySlice, SupportTypeExclusive},
@@ -75,7 +85,7 @@ var modeCapabilities = map[string]ModeCapability{
 		ExtendedResource: constants.NvidiaGPU,
 		MemoryResource:   constants.NvidiaGPUMem,
 		RuntimeClass:     hamiRuntimeClass,
-		Register:         DeviceRegister{Annotation: constants.NodeNvidiaRegistryKey, Decoder: registerHAMI},
+		Register:         nvidiaRegister,
 	},
 	utils.AppleMChipType: {
 		SupportTypes: []string{SupportTypeExclusive},
@@ -89,11 +99,19 @@ var modeCapabilities = map[string]ModeCapability{
 		ExtendedResource: constants.AMDGPU,
 	},
 	utils.IntelGPUType: {
-		SupportTypes:     []string{SupportTypeExclusive},
-		ExtendedResource: constants.IntelGPU,
-		DedicatedVRAM:    true,
-		MultiCard:        true,
-		Register:         DeviceRegister{Annotation: constants.NodeIntelRegisterKey, Decoder: registerTuple},
+		SupportTypes:       []string{SupportTypeExclusive, SupportTypeMemorySlice},
+		HAMI:               true,
+		ExtendedResource:   constants.IntelVGPU,
+		MemoryResource:     constants.IntelVGPUMem,
+		DedicatedVRAM:      true,
+		MultiCard:          true,
+		MemorySliceReserve: intelMemorySliceReserve,
+		Register: DeviceRegister{
+			Annotation: constants.NodeIntelHAMIRegisterKey,
+			Decoder:    registerHAMI,
+			Handshake:  constants.NodeIntelHandshakeKey,
+			Cards:      constants.NodeIntelCardsKey,
+		},
 	},
 	utils.AMDGPUType: {
 		SupportTypes:     []string{SupportTypeExclusive},
@@ -114,6 +132,15 @@ var unknownModeCapability = ModeCapability{
 }
 
 const hamiRuntimeClass = "nvidia"
+
+var nvidiaRegister = DeviceRegister{
+	Annotation: constants.NodeNvidiaRegistryKey,
+	Decoder:    registerHAMI,
+	Handshake:  constants.NodeHandshakeKey,
+}
+
+// intelMemorySliceReserve matches the default of HAMi's intel.memoryReserve.
+const intelMemorySliceReserve = 256 * mib
 
 // CapabilityFor returns the capability row for a mode. The SupportTypes slice
 // is a copy, so callers may modify it.
