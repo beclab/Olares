@@ -81,4 +81,11 @@ The upstream repository already hosts its icon; point at it instead of re-hostin
 
 ## Long-running requests: `options.apiTimeout`
 
-The per-app **entrance proxy** caps every request at `options.apiTimeout` **seconds** — **default 15s**, so anything slower (LLM streaming, big uploads, slow report generation) is cut at the entrance (504 / closed connection) regardless of the app or browser. Set `options.apiTimeout: 0` to disable the cap, or a large value (e.g. `3600`) for a bounded one. **Only `0` disables it** — a *negative* value is not "no timeout"; the sidecar treats it (like an unset field) as the 15s default. It is an install-time **manifest** field (not an install-time env), so for `templateOnly` env-driven charts you must edit it in the chart manifest and re-package.
+What cuts a slow request (LLM streaming, a big upload, a slow report) at the entrance depends on the target's Olares version (the platform **Olares version & semver model** says how to read it):
+
+| Olares | Cap | Per-app setting |
+|---|---|---|
+| 1.12.7 and later | 5 minutes for every entrance request, counting a streamed response to its end | none — `options.apiTimeout` is accepted and ignored |
+| 1.12.6 | `options.apiTimeout` seconds, default **15s**, enforced by a per-app sidecar | `0` disables it, a large value bounds it; a negative value means the 15s default |
+
+So on 1.12.7 do not add `apiTimeout` to fix a timeout: a request that needs longer than 5 minutes has to become a background job the page polls. Keep `apiTimeout` only for a chart that must also run on 1.12.6; it is a **manifest** field, not an install-time env, so a `templateOnly` chart changes it by re-packaging.

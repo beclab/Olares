@@ -155,7 +155,7 @@ Skip references that would mislead:
 - **Cluster upload requires `spec.supportArch` to intersect at least one current node architecture.** Query `olares-cli cluster node list`; ensure the referenced images support the same target architecture. If upload reports `architecture_incompatible`, fix and repackage before retrying. If it reports `cluster_arch_unavailable`, keep the package/version unchanged and wait for node discovery to recover.
 - **Declared `.Values.userspace.appData`/`appCache`/`userData` mounts MUST have the matching `permission` field**, or the app-data cross-check fails.
 - **`hostPath` volumes + rolling updates are incompatible** — replace host mounts with the userspace volumes above.
-- **The entrance proxy caps every request at `options.apiTimeout` seconds (default 15s)** — long LLM streams / big uploads / slow reports get cut at the entrance (504 / closed connection) even when the pod is healthy. Set `options.apiTimeout: 0` to disable, or a large bounded value; a *negative* value is not "unlimited" (it falls back to 15s). See [entrances](references/olares-chart-entrances.md).
+- **A slow request is cut at the entrance even when the pod is healthy:** after 5 minutes on 1.12.7, with no per-app setting, and after `options.apiTimeout` (default 15s) on 1.12.6. See [entrances](references/olares-chart-entrances.md#long-running-requests-optionsapitimeout).
 - **`openMethod` has exactly four values: `""`, `default`, `iframe`, `window`.** "Open in a separate / new browser tab" is `window`; the other three open inside the Desktop. See [entrances](references/olares-chart-entrances.md).
 
 ## Safety and escalation

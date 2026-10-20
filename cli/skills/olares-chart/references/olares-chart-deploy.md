@@ -108,7 +108,7 @@ Once the app's container is the problem (it pulled, scheduled, and started but m
 |---|---|
 | Image can't be pulled / wrong CPU arch (`ImagePullBackOff`, `no match for platform`, `exec format error`) | rebuild a pullable, node-arch image — the Image capability |
 | Main container `Completed` (exit 0) with **empty logs**, or app reads a bogus port/host (k8s service-link env collision) | `spec.template.spec.enableServiceLinks: false` — the Env area |
-| Frontend 504 / connection closed at ~15s on a long request, app pod healthy (entrance proxy `options.apiTimeout` defaults to 15s) | `options.apiTimeout: 0` or a large value — the Manifest refinement areas |
+| Frontend 504 / connection closed on a long request, app pod healthy | the entrance request cap, which differs by Olares version — [entrances](olares-chart-entrances.md#long-running-requests-optionsapitimeout) |
 | `Permission denied` / EACCES writing data, or data not persisting (uid != 1000) | the run identity (uid 1000) guidance |
 | Admission denied: untrusted image runs as root | force uid 1000, or move the root work into a `beclab/` permissions initContainer — the run identity (uid 1000) guidance |
 
