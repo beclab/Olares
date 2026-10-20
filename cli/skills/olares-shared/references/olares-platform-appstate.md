@@ -91,6 +91,7 @@ Used by: `market` (a `pending` row is expected during batch installs), `doctor` 
 - **Fast-fail during `installing` / `initializing`:** `WaitForStartUp` / `WaitForLaunch` bail early (instead of polling the full 30m/1h TTL) when `hasUnrecoverablePod` reports a condition that persists past a **5-minute grace** (`unrecoverableGrace`):
   - hard, never-self-healing pod errors: `ImagePullBackOff`, `ErrImagePull`, `InvalidImageName`, `CreateContainerConfigError`, `Unschedulable`;
   - `CrashLoopBackOff` with `RestartCount >= 5` (`crashLoopRestartThreshold`).
+- **A fast-fail lands in `stopped`, not `installFailed`,** with the app still installed and `reason` naming why: `StartUpFailed` (installing), `InitFailed` (initializing), `Unschedulable` / `HamiUnschedulable` (no room to place it). `install --watch` reports it as a failure. The row's `message` is overwritten by the stop, so the cause is in the pod logs, not the row.
 - A crash that has NOT yet crossed that threshold/grace does not fast-fail — the row legitimately stays `initializing` for several minutes while the container is already crashlooping.
 
 Used by: `market` (the "running ≠ healthy" verification ladder), `doctor` (a `running` app with a broken entrance is a runtime-health case, not an install failure).
