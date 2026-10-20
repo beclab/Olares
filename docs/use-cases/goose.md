@@ -138,13 +138,13 @@ Goose Desktop runs on your computer and connects to the Goose service on Olares 
    This is the connection secret between Goose Desktop and the Goose service, not an AI model API key. Keep it private.
 
 3. Open Olares **Settings**, go to **Applications** > **Goose** > **Entrances** > **Goose ACP**, and then copy the **Endpoint** URL. For example, `https://615b32570.primelares.olares.com`.
-4. Go to **Applications** > **Router** > **Entrances** > **Router**, set the **Authentication level** to **Public**, and then click **Submit**.
+4. Open Router from Launchpad, go to the **API keys** page, and create a key for `goose` with access to the **default-chat** model. Copy the key value. It is shown only once, so keep it safe.
+5. In Router, go to the **LLM** page, find the model assigned as `default-chat`, and click **View connection example** on the right.
+6. Select how your computer connects:
+   - If your computer is on the same local network as your Olares device, select **Device in LAN** and copy the Router URL.
+   - If your computer connects over the internet, select **Remote** and copy the Router URL. Then open Olares **Settings** > **Applications** > **Router** > **Entrances** > **Router**, set **Authentication level** to **Public**, and click **Submit**.
 
 ### Connect to the Goose service
-
-:::warning Same local network required
-Your computer must be on the same local network as your Olares device.
-:::
 
 1. Install Goose Desktop on your computer using the [official installation guide](https://goose-docs.ai/docs/getting-started/installation/).
 2. Open Goose Desktop and select **Connect to a Provider** > **Add a custom provider** > **Configure manually**.
@@ -152,10 +152,12 @@ Your computer must be on the same local network as your Olares device.
 
    | Field | Value |
    |:---|:---|
-   | <nobr>**Provider Type**</nobr> | OpenAI Compatible |
-   | <nobr>**Display Name**</nobr> | `olares-router` |
-   | <nobr>**API URL**</nobr> | The Router API address, that is `https://router.primelares.olares.com/v1` |
-   | <nobr>**Available Models**</nobr> | `default-chat` |
+   | <nobr>**Provider Type**</nobr> | Select **OpenAI Compatible**. |
+   | <nobr>**Display Name**</nobr> | Enter a name for easy identification, such as `olares-router`. |
+   | <nobr>**API URL**</nobr> | Enter the Router URL you copied earlier. |
+   | <nobr>**This provider requires an API key**</nobr> | Select this option. |
+   | <nobr>**API Key**</nobr> | Enter the `goose` API key you created in Router. |
+   | <nobr>**Available Models**</nobr> | Enter `default-chat`. |
 
 4. Click **Create Provider**.
 5. Select the privacy option as needed, and click **Get Started**.
@@ -165,16 +167,12 @@ Your computer must be on the same local network as your Olares device.
    | Setting | Value |
    |:---|:---|
    | <nobr>**Backend Base URL**</nobr> | The Goose ACP HTTPS URL copied from Olares Settings. Do not append `/acp` or `/v1`. |
-   | <nobr>**Remote Working Directory**</nobr> | `/config/workspace`<br><br>**Note**: Although Goose Desktop marks this field as optional, you must set it here. The agent needs a server-side directory to work in. |
    | <nobr>**Secret Key**</nobr> | The value returned by `printenv GOOSE_SERVER__SECRET_KEY` |
 
-   :::info Keep in mind
-   With the external server enabled, model requests and agent commands run on your Olares device, not your computer. The agent cannot see files on your computer, so use server paths such as `/config/workspace/goose-demo/brief.md` in your prompts. The connection fields follow Goose's [remote server configuration](https://goose-docs.ai/docs/guides/remote-goose-server/).
-   :::
-
 8. Select **Back** in the top left.
-9. Under the chat box, select your current model, that is `default-chat` and the workspace is your specified one.
-10. Send the following message and confirm that Goose replies:
+9. Open a new chat. Under the chat box, confirm the model is `default-chat`, then select a working directory.
+10. Restart Goose Desktop.
+11. Send the following message and confirm that Goose replies:
 
       ```text
       Reply with exactly: Goose is ready.
@@ -191,7 +189,6 @@ The session you created in Goose Terminal also appears in Goose Desktop as a **C
 Home and External directory access are optional. To use existing files:
 
 1. Open **Settings** > **Applications** > **Goose** and edit the app's environment variables.
-
 2. Enable the directory you need:
 
    | Variable | Default | Directory available to Goose when enabled |
@@ -200,7 +197,6 @@ Home and External directory access are optional. To use existing files:
    | <nobr>`ALLOW_EXTERNAL_DIR_ACCESS`</nobr> | `false` | External at `/config/External` |
 
 3. Save the changes, wait for Goose to return to **Running**, and reconnect Goose Desktop or reopen Goose Terminal.
-
 4. Give Goose the exact path of the files to process. Start with copies of your documents and review the output before applying it to originals.
 
 Enabling access exposes the selected directory to the agent, rather than only a single file mentioned in a prompt. You can disable access again through the same environment variable settings.
@@ -233,9 +229,16 @@ Confirm that Goose is running, and Goose Desktop uses the Goose ACP URL copied f
 
 Check that Router's default chat model is ready. If the error says the model is already serving its configured number of requests, wait for the current request to finish before retrying. Avoid sending another request from Goose Desktop or Goose Terminal at the same time.
 
-### Why are conversations named New Chat?
+### The model returned an empty response. Please resend your message to continue.
 
-Automatic AI session titles are disabled by default. You can rename a session manually. To enable automatic titles, set `GOOSE_DISABLE_SESSION_NAMING` to `false` in the app's environment variables. Title generation sends additional model requests, which can compete with chat requests on a model with limited concurrency.
+This error has two common causes:
+
+- External Backend (ACP) is not enabled or configured. In Goose Desktop, open **Settings** > **Agent** and check the External Backend (ACP) settings.
+- The Router entrance rejects the request. If your computer connects over the internet, open Olares **Settings** > **Applications** > **Router** > **Entrances** > **Router**, set **Authentication level** to **Public**, and click **Submit**.
+
+### Couldn't send message. Sign in to your provider, then try again.
+
+The custom provider has no API key. In Goose Desktop, open the provider settings, enter the `goose` API key you created in Router, and save. Then open a new chat and send the message again.
 
 ### Why can Goose not find my files?
 
