@@ -3,6 +3,7 @@ package clusterexec
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -108,11 +109,33 @@ func handshakeError(err error, resp *http.Response) error {
 			return fmt.Errorf("exec endpoint not found (HTTP 404): the pod or container may not exist")
 		default:
 			if resp.StatusCode != http.StatusSwitchingProtocols {
-				return fmt.Errorf("exec WebSocket not established (HTTP %d): this Olares version may not support `cluster exec`; please upgrade Olares", resp.StatusCode)
+				return fmt.Errorf("exec WebSocket not established (HTTP %d)%s: the container must exist and be running — check READY and STATUS with `olares-cli cluster pod list -n <namespace>`; a crash-looping container cannot be exec'd, read `olares-cli cluster container logs <namespace>/<pod>/<container> --previous` instead",
+					resp.StatusCode, handshakeDetail(resp))
 			}
 		}
 	}
 	return fmt.Errorf("exec handshake failed: %w", err)
+}
+
+// handshakeDetail is the server's own reason for refusing the upgrade, when
+// it sent one; the version gate has already run, so the status code alone
+// says little.
+func handshakeDetail(resp *http.Response) string {
+	if resp.Body == nil {
+		return ""
+	}
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
+	detail := strings.TrimSpace(string(body))
+	var envelope struct {
+		Message string `json:"message"`
+	}
+	if json.Unmarshal(body, &envelope) == nil && envelope.Message != "" {
+		detail = envelope.Message
+	}
+	if detail == "" {
+		return ""
+	}
+	return ": " + strings.Join(strings.Fields(detail), " ")
 }
 
 // RunOneShot runs the command with no TTY and stdin closed, accumulating
