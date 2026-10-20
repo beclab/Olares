@@ -141,7 +141,11 @@ func (h *Handler) handleBindingUserZone(req *restful.Request, resp *restful.Resp
 
 	userPatches := []func(*iamV1alpha2.User){
 		func(u *iamV1alpha2.User) {
-			u.Annotations[constants.UserAnnotationTerminusNameKey] = string(constants.NewTerminusName(u.Name, domain))
+			if domain == "" || domain == "olares.local" {
+				u.Annotations[constants.UserAnnotationTerminusNameKey] = u.Name
+			} else {
+				u.Annotations[constants.UserAnnotationTerminusNameKey] = string(constants.NewTerminusName(u.Name, domain))
+			}
 		},
 	}
 

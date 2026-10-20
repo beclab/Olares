@@ -44,6 +44,10 @@ type TerminusInfo struct {
 }
 
 type OlaresInfo struct {
+	// ClusterName identifies the shared cluster, not the login user.
+	// VaultURL is only exposed while this user is waiting to activate Vault.
+	ClusterName        string                 `json:"clusterName,omitempty"`
+	VaultURL           string                 `json:"vaultUrl,omitempty"`
 	OlaresID           string                 `json:"olaresId"`
 	WizardStatus       constants.WizardStatus `json:"wizardStatus"`
 	EnableReverseProxy bool                   `json:"enableReverseProxy"`
