@@ -57,7 +57,7 @@ func (h *Handler) handleUserInfo(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	terminusName = userOp.GetTerminusName(user)
+	terminusName = normalizeLocalOlaresID(userOp.GetTerminusName(user))
 
 	isEphemeral, zone, err = userOp.GetUserDomainType(user)
 	if err != nil {
@@ -299,13 +299,19 @@ func (h *Handler) handleOlaresInfo(req *restful.Request, resp *restful.Response)
 	}
 
 	tInfo := OlaresInfo{}
-	tInfo.OlaresID = userOp.GetTerminusName(user)
+	tInfo.OlaresID = normalizeLocalOlaresID(userOp.GetTerminusName(user))
 
 	status := userOp.GetTerminusStatus(user)
 	if status == "" {
 		tInfo.WizardStatus = constants.WaitActivateVault
 	} else {
 		tInfo.WizardStatus = constants.WizardStatus(status)
+	}
+
+	tInfo.ClusterName, tInfo.VaultURL, err = clusterConnectionInfo(req.Request.Context(), tInfo.OlaresID, tInfo.WizardStatus)
+	if err != nil {
+		response.HandleError(resp, errors.Errorf("olares info: get cluster connection info err: %v", err))
+		return
 	}
 
 	selfhosted, terminusd, osVersion, err := userOp.SelfhostedAndOsVersion()
