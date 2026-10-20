@@ -76,9 +76,8 @@ Olares v1.12.6 的亮点和详细介绍请参见 [Olares 1.12.6 发布博客](ht
 ### 新增文档
 
 - 新增 [Olares CLI](/zh/developer/cli-overview)，介绍如何通过命令行管理 Olares。
-  - 新增[安装 olares-cli](/zh/developer/cli-install)，说明如何在本地或 Agent 应用内安装 `olares-cli`。
-  - 新增[登录 Olares](/zh/developer/cli-log-in)，说明如何使用 Olares ID 认证 `olares-cli`。
-  - 新增[安装与使用 Agent Skills](/zh/developer/cli-agent-skills)，介绍集群管理、应用、设置等内置技能的使用方法。
+  - 新增[通过 AI Agent 使用 Olares CLI](/zh/developer/cli-install)，说明如何完成安装、登录和第一个 AI Agent 任务。
+  - 新增 [Olares CLI Agent Skills](/zh/developer/cli-agent-skills)，介绍集群管理、应用、设置等内置 Skills。
 - 新增[通过命令行安装并激活 Olares](/zh/manual/best-practices/activate-olares-using-cli)，介绍如何使用 Olares CLI 设置设备。
 - 新增[使用公共目录管理共享 AI 模型](/zh/manual/olares/files/files-common)，说明如何使用 Common 目录在应用间共享模型。
 - 新增[压缩与解压缩文件](/zh/manual/olares/files/compress-extract-files)，涵盖 Olares Files 中 ZIP、7z、TAR 和加密压缩包的操作。
@@ -114,8 +113,8 @@ Olares v1.12.6 的亮点和详细介绍请参见 [Olares 1.12.6 发布博客](ht
 ### 已下架文档
 
 - “通过 Ollama 下载和运行本地 AI 模型”已添加下架说明，因为独立 Ollama 应用已在 Olares 1.12.6 中从应用市场移除。
-- Olares CLI 参考页面已下架。旧页面已被新的 [Olares CLI](/zh/developer/cli-overview)、[安装 olares-cli](/zh/developer/cli-install)、[登录 Olares](/zh/developer/cli-log-in) 和[安装与使用 Agent Skills](/zh/developer/cli-agent-skills) 指南取代。
-- 所有 Studio 相关文档已下架。Studio 已不再上架应用市场。新的打包和移植流程请参见[安装与使用 Agent Skills](/zh/developer/cli-agent-skills) 和[应用提交指南](/zh/developer/develop/submit-apps)。
+- Olares CLI 参考页面已下架。旧页面已由以下文档取代：[Olares CLI](/zh/developer/cli-overview)、[通过 AI Agent 使用 Olares CLI](/zh/developer/cli-install)和 [Olares CLI Agent Skills](/zh/developer/cli-agent-skills)。
+- 所有 Studio 相关文档已下架。Studio 已不再上架应用市场。新的打包和移植流程请参见 [Olares CLI Agent Skills](/zh/developer/cli-agent-skills)和[应用提交指南](/zh/developer/develop/submit-apps)。
 - **允许子网路由** 功能在 Olares 1.12.6 中暂时下架，[配置 VPN 访问 Olares](/zh/manual/olares/settings/remote-access#allow-subnet-routing) 中的相关内容已移除。该功能会在后续版本中恢复。
 - DeerFlow 指南已下架。DeerFlow 应用已被 [DeerFlow 2.0](/zh/use-cases/deerflow2) 取代。
 

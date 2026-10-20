@@ -8,8 +8,8 @@ head:
     - name: keywords
       content: Olares, Hermes, Hermes Agent, autonomous AI, self-improving AI, Discord bot, self-hosted
 app_version: "1.3.46"
-doc_version: "3.0"
-doc_updated: "2026-09-24"
+doc_version: "3.1"
+doc_updated: "2026-10-20"
 ---
 
 # Set up a self-directed AI agent with Hermes
@@ -104,8 +104,8 @@ Run a quick setup to connect Hermes Agent to your local model.
     | Context length in tokens | Enter the exact context size from Router's **Model card > Engine args**, such as `104448` for `-c 104448`. Hermes requires at least `65536` tokens. The value must not exceed the engine configuration. |
     | Display name |  Enter a name to identify this model, such as `router-chat`.|
     | Select terminal backend | Select **Local - run directly on this machine**. |
-    | Select platforms to configure | Press **ESC** to skip for now. |
-    | Tools for CLI | Press **ESC** to skip for now. |
+    | Select platforms to configure | Press **Enter** to skip for now. |
+    | Tools for CLI | Press **Enter** to skip for now. |
     | Choose a provider | Select **Skip - keep defaults / configure later**. |
     | Select Search Provider | Select **Skip - keep defaults / configure later**. |
 

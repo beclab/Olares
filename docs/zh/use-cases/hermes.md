@@ -8,8 +8,8 @@ head:
     - name: keywords
       content: Olares, Hermes, Hermes Agent, 自主 AI, 自我进化 AI, Discord 机器人, 自托管
 app_version: "1.3.46"
-doc_version: "3.0"
-doc_updated: "2026-09-24"
+doc_version: "3.1"
+doc_updated: "2026-10-20"
 ---
 
 # 用 Hermes 搭建一个自主工作的 AI 助手
@@ -101,8 +101,8 @@ Olares 支持克隆应用。如果你想同时运行多个独立的 AI 助手，
     | Context length in tokens | 填写 Router 的 **Model card > Engine args** 中的精确上下文大小。例如，`-c 104448` 对应填写 `104448`。Hermes 要求至少 `65536` token，且填写值不能超过引擎实际配置。 |
     | Display name | 输入一个便于识别该模型的名称，例如 `router-chat`。|
     | Select terminal backend | 选择 **Local - run directly on this machine**。 |
-    | Select platforms to configure | 按 **ESC** 暂时跳过。 |
-    | Tools for CLI | 按 **ESC** 暂时跳过。 |
+    | Select platforms to configure | 按**回车**键暂时跳过。 |
+    | Tools for CLI | 按**回车**键暂时跳过。 |
     | Choose a provider | 选择 **Skip - keep defaults / configure later**。 |
     | Select Search Provider | 选择 **Skip - keep defaults / configure later**。 |
 

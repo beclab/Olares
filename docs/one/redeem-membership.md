@@ -25,7 +25,7 @@ Olares Space is a secure connectivity platform that extends the capabilities of 
 
 ## Log in to Olares Space
 
-1. Go to https://www.olares.com/space.
+1. Go to [Olares Space](https://www.olares.com/space).
 
     ![Olares Space login page](/images/one/olares-space-login.png#bordered)
 

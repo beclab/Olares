@@ -54,6 +54,8 @@ head:
 
 <!--@include: ./reusables-reset-ssh.md#reset-ssh-upon-activation-->
 
+如需修改已保存的密码，请参阅[重置 SSH 密码](./hardware-settings.md#重置-ssh-密码)。
+
 ### 步骤 3：通过 SSH 连接
 
 Olares One 的默认用户名是 `olares`。
@@ -106,6 +108,3 @@ Olares One 的默认用户名是 `olares`。
 :::tip 改用本地 IP 地址连接
 如果在 **Settings** > **VPN** 中启用了 **Subnet routes**，Olares One 本地网络上的所有设备都将通过 VPN 可达。这样即使从不同网络访问，你也可以使用本地 IP 地址（`192.168.x.x`）而不是 Tailscale IP（`100.64.x.x`）进行 SSH 连接。
 :::
-
-## 重置 SSH 密码
-<!--@include: ./reusables-reset-ssh.md#reset-ssh-in-settings-->

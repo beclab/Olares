@@ -181,13 +181,13 @@ Codex 的标准浏览器登录流程会将凭据返回到 `localhost:1455` 上�
 
 ## 使用 Olares CLI 管理 Olares
 
-Codex 认证只授予对所选模型服务的访问权限。如果要让 Codex 安装 Olares 应用、检查集群状态或执行其他 Olares 管理任务，还需要单独登录 Olares CLI：
+Olares 上的 Codex 应用已内置 Olares CLI 和 Agent Skills。Codex 认证只授予对所选模型服务的访问权限。如果要让 Codex 安装 Olares 应用、检查集群状态或执行其他 Olares 管理任务，还需要单独登录 Olares CLI：
 
 ```bash
 olares-cli profile login --olares-id <your-olares-id>
 ```
 
-根据提示完成双重认证。更多信息，请参阅[登录 Olares CLI](/zh/developer/cli-log-in.md)。
+根据提示完成双重认证。更多信息，请参阅[登录 Olares](/zh/developer/cli-install#登录-olares)。
 
 ## 切换连接或退出登录
 
@@ -260,4 +260,3 @@ curl -fsSL https://chatgpt.com/codex/install.sh | CODEX_INSTALL_DIR=/opt/data/.l
 - [Codex CLI 文档](https://developers.openai.com/codex/cli)：了解 Codex CLI 工作流和命令。
 - [Codex 认证](https://developers.openai.com/codex/auth)：了解 ChatGPT、API 密钥和无头登录方式。
 - [使用 Engine Base 应用托管本地大语言模型](llm-base-apps-1.12.6.md)：通过 Model Console 部署和管理模型。
-- [安装 Olares CLI](/zh/developer/cli-install.md)：设置 Olares 管理命令和 Agent 技能。

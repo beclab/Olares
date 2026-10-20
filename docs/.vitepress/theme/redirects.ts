@@ -127,9 +127,6 @@ export const redirects = {
     '/developer/install/cli/olares-logs': '/developer/install/cli/logs',
     '/developer/install/cli/olares-backups': '/developer/install/cli/backups',
 
-    // Removed: legacy alphabetical host-mode command reference → CLI overview.
-    '/developer/install/cli/olares-cli': '/developer/cli-overview',
-
     // Rename: /zh/developer/install/cli/olares-* → /zh/developer/install/cli/*
     '/zh/developer/install/cli/olares-info': '/zh/developer/install/cli/info',
     '/zh/developer/install/cli/olares-start': '/zh/developer/install/cli/start',
@@ -141,8 +138,9 @@ export const redirects = {
     '/zh/developer/install/cli/olares-logs': '/zh/developer/install/cli/logs',
     '/zh/developer/install/cli/olares-backups': '/zh/developer/install/cli/backups',
 
-    // Removed: legacy alphabetical host-mode command reference → CLI overview.
-    '/zh/developer/install/cli/olares-cli': '/zh/developer/cli-overview',
+    // Consolidated Olares CLI onboarding: login now lives in the AI agent tutorial.
+    '/developer/cli-log-in': '/developer/cli-install#log-in-to-olares',
+    '/zh/developer/cli-log-in': '/zh/developer/cli-install#登录-olares',
 
     // Refactor: /zh/manual/concepts/** → /zh/developer/concepts/**
     '/zh/manual/system-architecture': '/zh/developer/concepts/system-architecture',
