@@ -91,6 +91,28 @@ func TestUnknownVerbSuggestsTheVerbThatWasMeant(t *testing.T) {
 	}
 }
 
+func TestFlagErrorNamesWhatTheCallerGotWrong(t *testing.T) {
+	root := NewDefaultCommand()
+	root.SetOut(io.Discard)
+	root.SetErr(io.Discard)
+
+	for _, tc := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"cluster", "pod", "describe", "foo", "-n", "bar"}, `unknown verb "describe" for "olares-cli cluster pod"`},
+		{[]string{"market", "stop", "foo", "-s", "upload"}, "'stop' takes no --source"},
+		{[]string{"market", "uninstall", "foo", "--source", "upload"}, "'uninstall' takes no --source"},
+		{[]string{"market", "stop", "foo", "--bogus"}, "`olares-cli market stop --help` lists the flags it has"},
+	} {
+		root.SetArgs(tc.args)
+		err := root.Execute()
+		if err == nil || !strings.Contains(err.Error(), tc.want) {
+			t.Errorf("`olares-cli %s`: got %v, want %q", strings.Join(tc.args, " "), err, tc.want)
+		}
+	}
+}
+
 func commandGroups(root *cobra.Command) []commandGroup {
 	var groups []commandGroup
 	var walk func(*cobra.Command)

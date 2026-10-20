@@ -9,7 +9,7 @@ Two distinct concerns: an image that **won't pull** (blocks an install), and loc
 Symptom on a pod: `ImagePullBackOff`, `ErrImagePull`, `InvalidImageName`, or a runtime arch error (`no match for platform`, `exec format error`). These are hard, never-self-healing conditions — app-service fast-fails them after the 5-minute grace.
 
 ```bash
-olares-cli cluster pod list -n <ns> -o json     # state.waiting.reason on the failing container
+olares-cli cluster pod list -n <ns>             # STATUS = ErrImagePull / ImagePullBackOff on the failing pod
 olares-cli cluster pod events <ns>/<pod>        # "Failed to pull image ...": the registry/auth/arch detail
 ```
 

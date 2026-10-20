@@ -13,7 +13,7 @@ olares-cli market status <app> -o json                 # state=running ?
 
 # 2. Pod readiness — is the container actually Ready, restarts stable?
 olares-cli cluster application status <ns>             # Deployment X/Y Ready
-olares-cli cluster pod list -n <ns> -o json            # ready=true, restartCount stable
+olares-cli cluster pod list -n <ns>                    # READY x/x, RESTARTS stable
 
 # 3. App logs — fatal errors, panics, repeated restarts behind a still-open socket.
 olares-cli cluster pod logs <ns>/<pod> -c <main-container> --tail 200

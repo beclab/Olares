@@ -117,13 +117,14 @@ type PodEnvResourceFieldRef struct {
 }
 
 type PodStatus struct {
-	Phase             string                  `json:"phase,omitempty"`
-	HostIP            string                  `json:"hostIP,omitempty"`
-	PodIP             string                  `json:"podIP,omitempty"`
-	StartTime         string                  `json:"startTime,omitempty"`
-	QOSClass          string                  `json:"qosClass,omitempty"`
-	ContainerStatuses []PodContainerStatus    `json:"containerStatuses,omitempty"`
-	Conditions        []PodStatusCondition    `json:"conditions,omitempty"`
+	Phase                 string               `json:"phase,omitempty"`
+	HostIP                string               `json:"hostIP,omitempty"`
+	PodIP                 string               `json:"podIP,omitempty"`
+	StartTime             string               `json:"startTime,omitempty"`
+	QOSClass              string               `json:"qosClass,omitempty"`
+	InitContainerStatuses []PodContainerStatus `json:"initContainerStatuses,omitempty"`
+	ContainerStatuses     []PodContainerStatus `json:"containerStatuses,omitempty"`
+	Conditions            []PodStatusCondition `json:"conditions,omitempty"`
 }
 
 // PodContainerStatus is the minimal containerStatus shape used to
@@ -177,6 +178,8 @@ func (p Pod) totalRestarts() int {
 
 // statusReason picks the most user-actionable label for the STATUS
 // column:
+//   - An init container that is stuck or failed wins, as Init:<reason>,
+//     because the app containers cannot start until it succeeds.
 //   - Any container in waiting state with a non-empty reason wins
 //     (that's what `kubectl` does — surfaces ImagePullBackOff /
 //     CrashLoopBackOff ahead of the otherwise-Pending phase).
@@ -184,6 +187,21 @@ func (p Pod) totalRestarts() int {
 //     Succeeded / Failed / Unknown).
 //   - Otherwise empty so callers print "-".
 func (p Pod) statusReason() string {
+	for _, c := range p.Status.InitContainerStatuses {
+		if w, ok := c.State["waiting"].(map[string]interface{}); ok {
+			if reason, ok := w["reason"].(string); ok && reason != "" && reason != "PodInitializing" {
+				return "Init:" + reason
+			}
+		}
+		if t, ok := c.State["terminated"].(map[string]interface{}); ok {
+			if code, ok := t["exitCode"].(float64); ok && code != 0 {
+				if reason, ok := t["reason"].(string); ok && reason != "" {
+					return "Init:" + reason
+				}
+				return "Init:Error"
+			}
+		}
+	}
 	for _, c := range p.Status.ContainerStatuses {
 		if w, ok := c.State["waiting"].(map[string]interface{}); ok {
 			if reason, ok := w["reason"].(string); ok && reason != "" {
@@ -207,4 +225,3 @@ func (p Pod) statusReason() string {
 func (p Pod) age(now time.Time) string {
 	return clusteropts.Age(p.Metadata.CreationTimestamp, now)
 }
-
