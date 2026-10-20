@@ -63,9 +63,10 @@ type Status struct {
 }
 
 type Service struct {
-	mu        sync.Mutex
-	Kube      kubernetes.Interface
-	Resources client.Client
+	mu            sync.Mutex
+	Kube          kubernetes.Interface
+	Resources     client.Client
+	updateRelease func(context.Context, map[string]string) error
 }
 
 func NewResourceClient(config *rest.Config) (client.Client, error) {
@@ -105,7 +106,8 @@ func (r *CreateRequest) validate() error {
 }
 
 // Create reserves one user in the cluster before creating the User. Retries
-// by the same username, optional DID and password resume this reservation.
+// by the same username and password resume this reservation. The optional DID
+// is user metadata and may be set or changed later during binding.
 // The Secret survives daemon restarts and is removed by a full uninstall.
 func (s *Service) Create(ctx context.Context, request CreateRequest) (Status, error) {
 	s.mu.Lock()
@@ -113,7 +115,6 @@ func (s *Service) Create(ctx context.Context, request CreateRequest) (Status, er
 	if err := request.validate(); err != nil {
 		return Status{}, err
 	}
-	did := request.DID
 	records := s.Kube.CoreV1().Secrets(Namespace)
 	record, err := records.Get(ctx, RecordName, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
@@ -131,7 +132,7 @@ func (s *Service) Create(ctx context.Context, request CreateRequest) (Status, er
 		}
 		record, err = records.Create(ctx, &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{Name: RecordName, Namespace: Namespace},
-			Data:       map[string][]byte{"username": []byte(request.Username), "did": []byte(did), "password_hash": hash},
+			Data:       map[string][]byte{"username": []byte(request.Username), "password_hash": hash},
 		}, metav1.CreateOptions{})
 		if apierrors.IsAlreadyExists(err) {
 			record, err = records.Get(ctx, RecordName, metav1.GetOptions{})
@@ -140,7 +141,7 @@ func (s *Service) Create(ctx context.Context, request CreateRequest) (Status, er
 	if err != nil {
 		return Status{}, err
 	}
-	if string(record.Data["did"]) != did || string(record.Data["username"]) != request.Username {
+	if string(record.Data["username"]) != request.Username {
 		return Status{}, ErrConflict
 	}
 	if string(record.Data["completed_at"]) != "" {
@@ -156,7 +157,7 @@ func (s *Service) Create(ctx context.Context, request CreateRequest) (Status, er
 	if err != nil && !createUser {
 		return Status{}, err
 	}
-	if !createUser && (u.GetDeletionTimestamp() != nil || u.GetAnnotations()[UserMarker] != "true" || u.GetAnnotations()[UserDID] != did) {
+	if !createUser && (u.GetDeletionTimestamp() != nil || u.GetAnnotations()[UserMarker] != "true") {
 		return Status{}, ErrConflict
 	}
 	if createUser {
@@ -183,16 +184,30 @@ func (s *Service) Create(ctx context.Context, request CreateRequest) (Status, er
 	if err != nil {
 		return Status{}, err
 	}
-	if u.GetDeletionTimestamp() != nil || u.GetAnnotations()[UserMarker] != "true" || u.GetAnnotations()[UserDID] != did {
+	if u.GetDeletionTimestamp() != nil || u.GetAnnotations()[UserMarker] != "true" {
 		return Status{}, ErrConflict
 	}
-	if err := releasefile.Update(ctx, map[string]string{
-		"OLARES_NAME": request.Username + "@olares.local",
-		"OLARES_DID":  request.DID,
-	}); err != nil {
-		return Status{}, fmt.Errorf("write first user to release file: %w", err)
+	if err := s.writeUserRelease(ctx, u); err != nil {
+		return Status{}, err
 	}
 	return s.Status(ctx)
+}
+
+func (s *Service) writeUserRelease(ctx context.Context, u *iamv1.User) error {
+	entries := map[string]string{"OLARES_NAME": u.Name + "@olares.local"}
+	// An older Create request can still hold an empty DID after BFL binds it.
+	// Leave the persisted DID intact until a non-empty value is available.
+	if did := u.GetAnnotations()[UserDID]; did != "" {
+		entries["OLARES_DID"] = did
+	}
+	updateRelease := s.updateRelease
+	if updateRelease == nil {
+		updateRelease = releasefile.Update
+	}
+	if err := updateRelease(ctx, entries); err != nil {
+		return fmt.Errorf("write first user to release file: %w", err)
+	}
+	return nil
 }
 
 func (s *Service) initializeLocalName(ctx context.Context, username string) error {
@@ -291,7 +306,7 @@ func (s *Service) Status(ctx context.Context) (Status, error) {
 	if err != nil {
 		return Status{}, err
 	}
-	if u.GetDeletionTimestamp() != nil || u.GetAnnotations()[UserMarker] != "true" || u.GetAnnotations()[UserDID] != string(record.Data["did"]) {
+	if u.GetDeletionTimestamp() != nil || u.GetAnnotations()[UserMarker] != "true" {
 		return Status{}, ErrConflict
 	}
 	out.Reason = u.Status.Reason
@@ -301,6 +316,11 @@ func (s *Service) Status(ctx context.Context) (Status, error) {
 	case "Created":
 		activation := u.GetAnnotations()[userWizardStatus]
 		if activation == Completed {
+			// Binding may have supplied the DID after Create returned. Persist
+			// it before closing onboarding, so a failed write can be retried.
+			if err := s.writeUserRelease(ctx, u); err != nil {
+				return Status{}, err
+			}
 			at, err := s.recordCompletion(ctx, record)
 			if err != nil {
 				return Status{}, err
@@ -362,7 +382,7 @@ func (s *Service) recordCompletion(ctx context.Context, expected *corev1.Secret)
 		if e != nil {
 			return e
 		}
-		if record.UID != expected.UID || string(record.Data["username"]) != string(expected.Data["username"]) || string(record.Data["did"]) != string(expected.Data["did"]) {
+		if record.UID != expected.UID || string(record.Data["username"]) != string(expected.Data["username"]) {
 			return ErrConflict
 		}
 		completedAt = string(record.Data["completed_at"])
