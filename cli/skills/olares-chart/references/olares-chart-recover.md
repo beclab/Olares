@@ -4,14 +4,15 @@
 
 ## A crash while the row still says `installing` / `initializing`
 
-A crashlooping pod keeps the row in flight for minutes (the 5-minute `hasUnrecoverablePod` grace), and an in-flight app accepts neither `install` nor `upgrade` (`stop` 404s too). Do not wait out the grace — fix the chart, bump, re-package and re-upload, then clear the in-flight row:
+A crashlooping pod keeps the row in flight for minutes (the fast-fail grace in the shared **application state machine**), and an in-flight app accepts neither `install` nor `upgrade` (`stop` 404s too). Do not wait out the grace — fix the chart, bump, re-package and re-upload, then clear the row by the state it is in:
 
 | Row state | Clear it with | Then |
 |---|---|---|
 | `pending` / `downloading` / `installing` | `olares-cli market uninstall <app> --watch` — cancels first; this cancel tears the partial install down | `market install <app> -s upload --version <NEW> --watch` |
-| `initializing` / `upgrading` / `applyingEnv` / `resuming` | `olares-cli market cancel <app> --watch` — the app lands in `stopped` | `market upgrade <app> -s upload --version <NEW> --watch` |
+| `initializing` / `upgrading` / `resuming` | `olares-cli market cancel <app> --watch` — the app lands in `stopped` | `market upgrade <app> -s upload --version <NEW> --watch`, then `market resume <app> --watch`: an upgrade from `stopped` stays `stopped` |
+| `stopped` after the install, `reason` `StartUpFailed` / `InitFailed` / `Unschedulable` (app-service gave up; `install --watch` reports it) | nothing to clear — the app is installed and stopped | the same upgrade and resume; or `market uninstall` and `install` the new version |
 
-`market upgrade` rejected with "still in flight" prints the same choice for the state it saw.
+`applyingEnv` cannot be cancelled; wait for it to end in `running` or `applyEnvFailed`.
 
 ## `stopped` after upgrade
 
