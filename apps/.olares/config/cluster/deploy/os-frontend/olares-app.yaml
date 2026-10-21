@@ -202,7 +202,7 @@ spec:
       serviceAccountName: system-frontend
       initContainers:
         - name: olares-app-init
-          image: beclab/system-frontend:v1.12.6-alpha.3
+          image: beclab/system-frontend:v1.12.6-alpha.4
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
