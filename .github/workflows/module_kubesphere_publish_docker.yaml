@@ -1,4 +1,4 @@
-name: Publish Kubesphere to Dockerhub
+name: Publish to Dockerhub (ks-apiserver)
 
 on:
   workflow_dispatch:
