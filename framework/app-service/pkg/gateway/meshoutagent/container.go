@@ -15,8 +15,6 @@ const (
 	meshOutAgentImageEnv = "MESH_OUT_AGENT_IMAGE"
 	// DefaultImage is the mesh-out-agent product image (engine: nginx alpine-slim) (digest pin in charts).
 	DefaultImage      = "beclab/mesh-out-agent:1.30.0-r4"
-	systemServerHost  = "system-server.user-system"
-	systemServerPort  = "28080"
 	InitContainerName = "olares-mesh-out-agent-iptables"
 	ConfVolumeName    = "olares-mesh-out-agent-conf"
 	ConfMountPath     = "/etc/nginx"
@@ -46,8 +44,6 @@ func ContainerSpec() corev1.Container {
 		},
 		Env: []corev1.EnvVar{
 			{Name: FailClosedEnv, Value: "true"},
-			{Name: "MESH_OUT_SYSTEM_SERVER_HOST", Value: systemServerHost},
-			{Name: "MESH_OUT_SYSTEM_SERVER_PORT", Value: systemServerPort},
 		},
 		VolumeMounts: []corev1.VolumeMount{
 			{Name: SATokenVolumeName, MountPath: SATokenMountPath, ReadOnly: true},

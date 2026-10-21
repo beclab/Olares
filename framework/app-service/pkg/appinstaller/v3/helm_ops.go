@@ -108,12 +108,6 @@ func (h *HelmOpsV3) Install() error {
 		}
 	}
 
-	if err = h.RegisterOrUnregisterAppProvider(v1.Register); err != nil {
-		klog.Errorf("Failed to register app provider err=%v", err)
-		h.Uninstall()
-		return err
-	}
-
 	return nil
 }
 

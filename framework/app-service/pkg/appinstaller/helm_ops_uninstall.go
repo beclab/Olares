@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"net/http/httputil"
 	"time"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
@@ -13,7 +12,6 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/tapr"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 
-	"github.com/emicklei/go-restful/v3"
 	"github.com/go-resty/resty/v2"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/storage/driver"
@@ -111,22 +109,6 @@ func (h *HelmOps) Uninstall_(client kubernetes.Interface, actionConfig *action.C
 		if t, ok := p.([]appcfg.ProviderPermission); ok {
 			perm = append(perm, t...)
 		}
-	}
-
-	permCfg, err := apputils.ProviderPermissionsConvertor(perm).ToPermissionCfg(h.ctx, h.app.OwnerName, h.options.MarketSource)
-	if err != nil {
-		klog.Errorf("Failed to convert app permissions for %s: %v", h.app.AppName, err)
-		return err
-	}
-
-	err = h.unregisterAppPerm(h.app.ServiceAccountName, h.app.OwnerName, permCfg)
-	if err != nil {
-		klog.Warningf("Failed to unregister app err=%v", err)
-	}
-
-	err = h.RegisterOrUnregisterAppProvider(Unregister)
-	if err != nil {
-		klog.Warningf("Failed to unregister app provider err=%v", err)
 	}
 
 	// Also covers the install-failure path, which tears down through the same
@@ -247,47 +229,6 @@ func (h *HelmOps) DeleteNamespace(client kubernetes.Interface, namespace string)
 		}
 		return err
 	}
-	return nil
-}
-
-func (h *HelmOps) unregisterAppPerm(sa *string, ownerName string, perm []appcfg.PermissionCfg) error {
-	requires := make([]appcfg.PermissionRequire, 0, len(perm))
-	for _, p := range perm {
-		requires = append(requires, appcfg.PermissionRequire{
-			ProviderName:      p.ProviderName,
-			ProviderNamespace: appcfg.ProviderPermissionNamespace(p.ProviderPermission, ownerName),
-			ServiceAccount:    sa,
-			ProviderAppName:   p.AppName,
-			ProviderDomain:    p.Domain,
-		})
-	}
-
-	register := appcfg.PermissionRegister{
-		App:   h.app.AppName,
-		AppID: h.app.AppID,
-		Perm:  requires,
-	}
-
-	url := fmt.Sprintf("http://%s/permission/v2alpha1/unregister", h.systemServerHost())
-	client := resty.New()
-
-	resp, err := client.SetTimeout(2*time.Second).R().
-		SetHeader(restful.HEADER_ContentType, restful.MIME_JSON).
-		SetAuthToken(h.token).
-		SetBody(register).Post(url)
-	if err != nil {
-		return err
-	}
-
-	if resp.StatusCode() != 200 {
-		dump, e := httputil.DumpRequest(resp.Request.RawRequest, true)
-		if e == nil {
-			klog.Errorf("Failed to get response body=%s url=%s", string(dump), url)
-		}
-
-		return errors.New(string(resp.Body()))
-	}
-
 	return nil
 }
 

@@ -3,8 +3,8 @@ package v2
 import (
 	"errors"
 	"fmt"
+
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
-	v1 "github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
 	"github.com/beclab/Olares/framework/app-service/pkg/errcode"
 	"github.com/beclab/Olares/framework/app-service/pkg/helm"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
@@ -81,11 +81,6 @@ func (h *HelmOpsV2) Upgrade() error {
 	err = h.UpdatePolicy()
 	if err != nil {
 		klog.Errorf("Failed to update policy for app %s err=%v", h.App().AppName, err)
-		return err
-	}
-
-	if err = h.RegisterOrUnregisterAppProvider(v1.Register); err != nil {
-		klog.Errorf("Failed to register app provider err=%v", err)
 		return err
 	}
 

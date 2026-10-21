@@ -1,16 +1,12 @@
 package notification
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/nats-io/nats.go"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"olares.com/backup-server/pkg/client"
 	"olares.com/backup-server/pkg/util"
 	"olares.com/backup-server/pkg/util/log"
 )
@@ -36,10 +32,6 @@ type dataSender struct {
 	conn    *nats.Conn
 	subject string
 	enabled bool
-}
-
-type Notification struct {
-	Factory client.Factory
 }
 
 func NewSender() {
@@ -110,41 +102,4 @@ func (d *dataSender) Send(user string, data interface{}) {
 		log.Infof("NATS publish succeed, subject: %s", subject)
 	}
 
-}
-
-func (n *Notification) Send(ctx context.Context, eventType, user, msg string, data interface{}) error {
-	appKey, appSecret, err := n.getUserAppKey(ctx, user)
-	if err != nil {
-		return err
-	}
-
-	client := NewEventClient(appKey, appSecret, "system-server.user-system-"+user)
-
-	return client.CreateEvent(eventType, msg, data)
-}
-
-func (n *Notification) getUserAppKey(ctx context.Context, user string) (appKey, appSecret string, err error) {
-	dynamicClient, err := n.Factory.DynamicClient()
-	if err != nil {
-		return
-	}
-	namespace := "user-system-" + user
-	data, err := dynamicClient.Resource(AppPermGVR).Namespace(namespace).Get(ctx, "bfl", metav1.GetOptions{})
-	if err != nil {
-		log.Errorf("get bfl application permission error: %v", err)
-		return
-	}
-
-	var appPerm ApplicationPermission
-
-	err = runtime.DefaultUnstructuredConverter.FromUnstructured(data.Object, &appPerm)
-	if err != nil {
-		log.Errorf("convert bfl application permission error: %v ", err)
-		return
-	}
-
-	appKey = appPerm.Spec.Key
-	appSecret = appPerm.Spec.Secret
-
-	return
 }

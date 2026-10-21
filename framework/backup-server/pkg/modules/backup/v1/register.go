@@ -24,11 +24,7 @@ func AddContainer(cfg *config.Config, container *restful.Container) error {
 	var factory = client.ClientFactory()
 	notification.NewSender()
 
-	notification := &notification.Notification{
-		Factory: factory,
-	}
-
-	handler := New(cfg, factory, handlers.NewHandler(factory, notification))
+	handler := New(cfg, factory, handlers.NewHandler(factory))
 
 	ws.Route(ws.GET("/ready").
 		To(handler.ready).
