@@ -17,13 +17,14 @@ const (
 	NamespaceSharedLabel = "bytetrade.io/ns-shared"
 	// NamespaceInClusterCallerLabel marks opted-in caller namespaces whose meshed
 	// proxies must reach the linkerd control plane during startup.
-	NamespaceInClusterCallerLabel = "gateway.olares.io/in-cluster-caller"
-	NamespaceMiddlewareLabel      = "bytetrade.io/ns-middleware"
-	System                        = "system"
-	Network                       = "network"
-	Internal                      = "user-internal"
-	Protected                     = "protected"
-	UserSpace                     = "user-space"
+	NamespaceInClusterCallerLabel   = "gateway.olares.io/in-cluster-caller"
+	NamespaceMiddlewareLabel        = "bytetrade.io/ns-middleware"
+	NamespaceRequestMiddlewareLabel = "bytetrade.io/ns-request-middleware"
+	System                          = "system"
+	Network                         = "network"
+	Internal                        = "user-internal"
+	Protected                       = "protected"
+	UserSpace                       = "user-space"
 )
 
 var (
@@ -514,6 +515,13 @@ var (
 							NamespaceSelector: &metav1.LabelSelector{
 								MatchLabels: map[string]string{
 									NamespaceSharedLabel: "true",
+								},
+							},
+						},
+						{
+							NamespaceSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									NamespaceRequestMiddlewareLabel: "true",
 								},
 							},
 						},

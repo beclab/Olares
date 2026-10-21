@@ -409,7 +409,8 @@ func (h *HelmOps) SetValues(isInstallOp bool) (values map[string]interface{}, er
 
 func (h *HelmOps) TaprApply(values map[string]interface{}, namespace string) error {
 	if namespace == "" {
-		namespace = fmt.Sprintf("%s-%s", "user-system", h.app.OwnerName)
+		// TODO: apps in 1.12.7 should be migrated to use h.app.Namespace directly
+		namespace = h.app.Namespace
 	}
 
 	if err := tapr.Apply(h.app.Middleware, h.kubeConfig, h.app.AppName, h.app.Namespace,
