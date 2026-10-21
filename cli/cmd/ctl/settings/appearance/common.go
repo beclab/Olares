@@ -138,7 +138,7 @@ func doMutateEnvelope(ctx context.Context, d Doer, method, path string, body, ou
 	return bflenvelope.Data(method, path, env, out)
 }
 
-// imageClient posts images to tapr's images-uploader.
+// imageClient posts images to the shared user-service upload endpoint.
 //
 // It rides SettingsURL, not DesktopURL: /images is proxied only by the
 // settings and profile-editor ingresses (apps/docker/system-frontend/
