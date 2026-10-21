@@ -6,10 +6,10 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"k8s.io/klog/v2"
-	"net/http/httputil"
 	"strconv"
 	"time"
+
+	"k8s.io/klog/v2"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/client/clientset"
@@ -24,8 +24,6 @@ import (
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/api/pkg/generated/clientset/versioned"
 
-	"github.com/emicklei/go-restful/v3"
-	"github.com/go-resty/resty/v2"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/cli"
 	helmrelease "helm.sh/helm/v3/pkg/release"
@@ -414,70 +412,6 @@ func (h *HelmOps) AddLabelToNamespaceForDependClusterApp() error {
 
 func (h *HelmOps) userZone() (string, error) {
 	return kubesphere.GetUserZone(h.ctx, h.app.OwnerName)
-}
-
-func (h *HelmOps) registerAppPerm(sa *string, ownerName string, perm []appcfg.PermissionCfg) (*appcfg.RegisterResp, error) {
-	requires := make([]appcfg.PermissionRequire, 0, len(perm))
-	for _, p := range perm {
-		requires = append(requires, appcfg.PermissionRequire{
-			ProviderAppName:   p.AppName,
-			ProviderNamespace: appcfg.ProviderPermissionNamespace(p.ProviderPermission, ownerName),
-			ServiceAccount:    sa,
-			ProviderName:      p.ProviderName,
-			ProviderDomain:    p.Domain,
-		})
-	}
-	register := appcfg.PermissionRegister{
-		App:   h.app.AppName,
-		AppID: h.app.AppID,
-		Perm:  requires,
-	}
-
-	url := fmt.Sprintf("http://%s/permission/v2alpha1/register", h.systemServerHost())
-	client := resty.New()
-
-	body, err := json.Marshal(register)
-	if err != nil {
-		klog.Errorf("Failed to marshal register request body: %v", err)
-		return nil, err
-	}
-
-	klog.Infof("Sending app register request with body=%s url=%s", utils.PrettyJSON(string(body)), url)
-
-	resp, err := client.SetTimeout(2*time.Second).R().
-		SetHeader(restful.HEADER_ContentType, restful.MIME_JSON).
-		SetAuthToken(h.token).
-		SetBody(body).Post(url)
-	if err != nil {
-		klog.Errorf("Failed to make register request: %v", err)
-		return nil, err
-	}
-
-	if resp.StatusCode() != 200 {
-		dump, e := httputil.DumpRequest(resp.Request.RawRequest, true)
-		if e == nil {
-			klog.Errorf("Failed to get response body=%s url=%s", string(dump), url)
-		}
-
-		return nil, errors.New(string(resp.Body()))
-	}
-
-	var regResp appcfg.RegisterResp
-	err = json.Unmarshal(resp.Body(), &regResp)
-	if err != nil {
-		klog.Errorf("Failed to unmarshal response body=%s err=%v", string(resp.Body()), err)
-		return nil, err
-	}
-
-	return &regResp, nil
-}
-
-func (h *HelmOps) systemServerHost() string {
-	if systemServerHost != "" {
-		return systemServerHost
-	}
-
-	return fmt.Sprintf("system-server.user-system-%s", h.app.OwnerName)
 }
 
 func (h *HelmOps) selectNode() (node string, appCache, userspace string, err error) {
@@ -976,12 +910,6 @@ func (h *HelmOps) Install() error {
 		}
 	}
 
-	if err = h.RegisterOrUnregisterAppProvider(Register); err != nil {
-		klog.Errorf("Failed to register app provider err=%v", err)
-		h.Uninstall()
-		return err
-	}
-
 	if h.app.Type == appv1alpha1.Middleware.String() {
 		return nil
 	}
@@ -1101,59 +1029,4 @@ func (h *HelmOps) Client() *clientset.ClientSet {
 
 func (h *HelmOps) Options() *Opt {
 	return &h.options
-}
-
-func (h *HelmOps) RegisterOrUnregisterAppProvider(operation ProviderOperation) error {
-	var providers []*appcfg.ProviderCfg
-	appEntrances, err := h.app.GetEntrances(h.ctx)
-	if err != nil {
-		klog.Errorf("Failed to get app entrances for app %s: %v", h.app.AppName, err)
-		return err
-	}
-	for _, provider := range h.app.Provider {
-		providerEntrance, ok := appEntrances[provider.Entrance]
-		if !ok {
-			err = fmt.Errorf("entrance %s not found for the provider of app %s", provider.Entrance, h.app.AppName)
-			klog.Error(err)
-			return err
-		}
-
-		domain := providerEntrance.URL
-		service := fmt.Sprintf("%s.%s:%d", providerEntrance.Host, h.app.Namespace, providerEntrance.Port)
-
-		providers = append(providers, &appcfg.ProviderCfg{
-			Service:  service,
-			Domain:   domain,
-			Provider: provider,
-		})
-	}
-
-	if len(providers) > 0 {
-		register := appcfg.ProviderRegisterRequest{
-			AppName:      h.app.AppName,
-			AppNamespace: h.app.Namespace,
-			Providers:    providers,
-		}
-
-		url := fmt.Sprintf("http://%s/provider/v2alpha1/%s", h.systemServerHost(), operation)
-		client := resty.New()
-
-		resp, err := client.SetTimeout(2*time.Second).R().
-			SetHeader(restful.HEADER_ContentType, restful.MIME_JSON).
-			SetAuthToken(h.token).
-			SetBody(register).Post(url)
-		if err != nil {
-			return err
-		}
-
-		if resp.StatusCode() != 200 {
-			dump, e := httputil.DumpRequest(resp.Request.RawRequest, true)
-			if e == nil {
-				klog.Errorf("Failed to get response body=%s url=%s", string(dump), url)
-			}
-
-			return errors.New(string(resp.Body()))
-		}
-	}
-	return nil
 }

@@ -94,11 +94,6 @@ func (h *HelmOps) upgrade() error {
 		return err
 	}
 
-	if err = h.RegisterOrUnregisterAppProvider(Register); err != nil {
-		klog.Errorf("Failed to register app provider err=%v", err)
-		return err
-	}
-
 	klog.Infof("App %s upgraded successfully", h.app.AppName)
 	return nil
 }
