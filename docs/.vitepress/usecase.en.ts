@@ -113,6 +113,13 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                 {
                   text: "Hermes Agent",
                   link: "/use-cases/hermes",
+                  collapsed: true,
+                  items: [
+                    {
+                      text: "Manage LAN computers over SSH",
+                      link: "/use-cases/hermes-ssh",
+                    },
+                  ],
                 },
                 {
                   text: "OpenCode",
