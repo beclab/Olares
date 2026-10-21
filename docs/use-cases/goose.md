@@ -49,7 +49,7 @@ Goose Terminal opens in your browser and connects to the Goose service directly.
 
 ### Run a single request
 
-Use `goose run -t` when a single prompt is enough for the task.
+Use `goose run -t` to send a single prompt without starting an interactive conversation.
 
 1. Open Goose Terminal from Launchpad.
 2. Run `goose run -t` followed by your prompt, replacing `Your_Prompt` with your question or task:
@@ -64,7 +64,7 @@ Use `goose run -t` when a single prompt is enough for the task.
    goose run -t "What is the difference between Goose Terminal and Goose Desktop? Answer in three sentences."
    ```
 
-3. Goose displays the answer in the terminal and exits.
+3. Goose displays the answer and returns to the terminal prompt. To ask follow-up questions in an ongoing conversation, see **Start a conversation** below.
 
 ### Start a conversation
 
@@ -170,7 +170,7 @@ Goose Desktop runs on your computer and connects to the Goose service on Olares 
    | <nobr>**Backend Base URL**</nobr> | The **Endpoint** URL of the Goose ACP entrance you copied in **Prepare connection details**. Do not append `/acp` or `/v1`. |
    | <nobr>**Secret Key**</nobr> | The connection secret you saved in **Prepare connection details**. |
 
-8. Select **Back** in the top left.
+8. Restart Goose Desktop, then start a new chat.
 9. Open a new chat. Under the chat box, confirm the model is `default-chat`, then select a working directory.
 10. Restart Goose Desktop.
 11. Send the following message and confirm that Goose replies:
