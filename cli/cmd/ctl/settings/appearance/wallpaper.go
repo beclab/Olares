@@ -24,8 +24,8 @@ import (
 // Current values are shown by `appearance get`.
 const wallpaperPath = "/api/wallpaper"
 
-// imageUploadPath is served by tapr's images-uploader, not user-service,
-// and is reachable only on the settings ingress — see imageClient.
+// imageUploadPath is served by user-service through the settings ingress.
+// Keep the existing upload protocol for older servers — see imageClient.
 const imageUploadPath = "/images/upload/v1"
 
 // wallpaperConfig mirrors user-service's Wallpaper type.
@@ -84,7 +84,7 @@ type surface struct {
 	register string
 	// remove drops an uploaded image from the gallery.
 	remove string
-	// uploadPolicy is the `policy` form field the images-uploader needs.
+	// uploadPolicy is the `policy` form field the image upload endpoint needs.
 	// Login backgrounds must be public: the greeter fetches them before
 	// the user is authenticated.
 	uploadPolicy string
@@ -490,7 +490,7 @@ func runWallpaperStyleSet(ctx context.Context, f *cmdutil.Factory, s surface, mo
 	return nil
 }
 
-// uploadedImage is the images-uploader's response payload.
+// uploadedImage is the /images/upload/v1 response payload.
 type uploadedImage struct {
 	ImageURL string `json:"imageUrl"`
 	Size     int64  `json:"size"`

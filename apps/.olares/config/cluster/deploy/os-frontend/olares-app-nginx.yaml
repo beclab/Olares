@@ -1050,7 +1050,7 @@ data:
       }
 
       location /images {
-            proxy_pass http://127.0.0.1:15080;
+            proxy_pass http://127.0.0.1:3010;
 
 
             # Add original-request-related headers
@@ -1273,7 +1273,7 @@ data:
         }
 
         location /images {
-            proxy_pass http://127.0.0.1:15080;
+            proxy_pass http://127.0.0.1:3010;
 
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -1575,6 +1575,25 @@ data:
         location = /healthz {
             access_log off;
             try_files /index.html =503;
+        }
+
+        # Published image bytes are selected by a server-owned publication record.
+        location ^~ /images/public/ {
+            limit_except GET OPTIONS { deny all; }
+            proxy_hide_header Access-Control-Allow-Origin;
+            proxy_hide_header Access-Control-Allow-Credentials;
+            add_header Access-Control-Allow-Origin $http_origin always;
+            add_header Access-Control-Allow-Credentials "true" always;
+            add_header Access-Control-Allow-Methods "GET, HEAD, OPTIONS" always;
+            add_header Access-Control-Allow-Headers $http_access_control_request_headers always;
+            if ($request_method = OPTIONS) { return 204; }
+            proxy_pass http://127.0.0.1:3010;
+            proxy_set_header Host $host;
+            proxy_set_header Cookie "";
+            proxy_set_header Authorization "";
+            proxy_set_header X-Authorization "";
+            proxy_set_header X-Bfl-User "";
+            proxy_read_timeout 20s;
         }
 
         # Match before the general Auth API route. user-service verifies the
