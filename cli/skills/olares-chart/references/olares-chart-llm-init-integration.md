@@ -9,9 +9,9 @@
 3. For serving, set `ENGINE_KIND` to the chosen engine and give the engine container the same `ENGINE_ARGS`. Leave `ENGINE_KIND` empty only when the chart needs download-only behavior.
 4. Mount the App Common Hugging Face cache at `/cache/hf/hub` and a per-pod run-state volume at `/run/llm-init`. Ensure UID 1000 can write both.
 5. Make the consumer wait until `GET /readyz` succeeds or until the supported `/run/llm-init/model_path` sentinel is present, then read the resolved path.
-6. Use the upstream `llm-init` documentation for the complete environment, source, engine, and API contract.
+6. Use the [Model Console repository](https://github.com/beclab/model-console) for the complete environment, source, engine, and API contract. Model Console is the product and repository name; the image, binary, and container keep the `llm-init` name.
 
-The four official generation charts expose convenience groups for `MODEL_SUPPORTS`: `vision`, `tools`, `thinking`, and `none`. Raw `llm-init` does not expand those groups. Its optional `MODEL_SUPPORTS` value is a comma-separated list of validated `supports_*` keys, such as `supports_reasoning,supports_tool_choice`; an unknown key fails startup.
+The four official generation charts expose convenience groups for `MODEL_SUPPORTS`: `vision`, `tools`, `thinking`, and `none`. Raw `llm-init` does not expand those groups. Its optional `MODEL_SUPPORTS` value is a comma-separated list of `supports_*` keys, such as `supports_reasoning,supports_tool_choice`; an unknown key is kept, logged as a warning, and recorded under `extensions._unknown_flag` in the model spec rather than failing startup.
 
 ## Serving and download-only
 
@@ -66,9 +66,8 @@ For every `hf://` source, set deployment-level `HF_ENDPOINT` and `HF_TOKEN` as n
 
 Mount `.Values.userspace.appCommon` with `permission.appCommon: true` so `/cache/hf/hub` is shared across applications. The cache and `/run/llm-init` run-state volume must preserve POSIX rename behavior and be writable by UID 1000. The engine or consumer should mount downloaded model data read-only when it does not need to modify it.
 
-## Canonical `llm-init` documentation
+## Canonical Model Console references
 
-- [README](https://github.com/beclab/llm-init)
-- [`MODEL_SOURCE` contract](https://github.com/beclab/llm-init/blob/main/docs/model-source.md)
-- [model-spec file and API contract](https://github.com/beclab/llm-init/blob/main/docs/model-spec-file.md)
-- [`ENGINE_ARGS` contract](https://github.com/beclab/llm-init/blob/main/docs/engine-args.md)
+- [README](https://github.com/beclab/model-console#readme): responsibilities, the standardized APIs, and `GET /api/model-spec`
+- [Environment template](https://github.com/beclab/model-console/blob/main/deploy/compose/.env.example): the documented variables, including `MODEL_SOURCE`, `ENGINE_ARGS`, and `MODEL_SUPPORTS`
+- [Kubernetes](https://github.com/beclab/model-console/tree/main/deploy/k8s) and [Compose](https://github.com/beclab/model-console/tree/main/deploy/compose) reference deployments, one per engine

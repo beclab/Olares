@@ -20,6 +20,7 @@ const liveModelEntry = `{
   "created": 1755600000,
   "owned_by": "Olares",
   "qualified_id": "Olares/SenseVoiceSmall",
+  "creative": {"media":"image","operations":["edit"]},
   "mode": "audio",
   "supports": ["stt", "vad"],
   "readiness": "ready"
@@ -36,9 +37,12 @@ func TestModelObjectDecodesEveryFieldOnTheWire(t *testing.T) {
 		Created:     1755600000,
 		OwnedBy:     "Olares",
 		QualifiedID: "Olares/SenseVoiceSmall",
-		Mode:        "audio",
-		Supports:    []string{"stt", "vad"},
-		Readiness:   "ready",
+		Creative: &creativeModelProjection{
+			Media: "image", Operations: []string{"edit"},
+		},
+		Mode:      "audio",
+		Supports:  []string{"stt", "vad"},
+		Readiness: "ready",
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("decoded entry:\n got %+v\nwant %+v", got, want)
@@ -155,6 +159,49 @@ func TestRenderModelsListShowsModeSupportsAndReadiness(t *testing.T) {
 	if !strings.Contains(lines[2], "embedding") || !strings.Contains(lines[2], "-") ||
 		!strings.Contains(lines[2], "unknown") {
 		t.Errorf("second row lost a field: %s", lines[2])
+	}
+}
+
+// A FlowStudio scene's id is the workflow's UUID, so the NAME column alone
+// leaves a reader unable to tell one scene from another. The label Router
+// sends is what closes that, and it earns a column only on a list that has
+// one — on an all-cloud list every cell would repeat the id beside it.
+func TestRenderModelsListNamesASceneOnlyWhenItsIdDoesNot(t *testing.T) {
+	var buf bytes.Buffer
+	items := []modelObject{
+		{ID: "FlowStudio/7b1e1f4a-0000-4000-8000-000000000001", Mode: "image_generation",
+			Name: "Ghibli Portrait", Readiness: "unknown", OwnedBy: "FlowStudio"},
+		{ID: "OpenAI/gpt-4o", Mode: "chat", Name: "gpt-4o", Readiness: "ready", OwnedBy: "OpenAI"},
+	}
+	if err := renderModelsList(&buf, items, false); err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	lines := strings.Split(strings.TrimRight(buf.String(), "\n"), "\n")
+	if !strings.Contains(lines[0], "CALLED") {
+		t.Fatalf("header has no column for the label: %s", lines[0])
+	}
+	if !strings.Contains(buf.String(), "Ghibli Portrait") {
+		t.Errorf("the scene's label did not survive the render:\n%s", buf.String())
+	}
+	// A name that only repeats the id is not one, and a cell holding it would
+	// read as two different facts that happen to agree.
+	for _, m := range []modelObject{
+		{ID: "OpenAI/gpt-4o", Name: "gpt-4o"},
+		{ID: "OpenAI/gpt-4o", Name: "OpenAI/gpt-4o"},
+		{ID: "OpenAI/gpt-4o", Name: "  "},
+		{ID: "OpenAI/gpt-4o"},
+	} {
+		if got := modelLabelOf(&m); got != "" {
+			t.Errorf("%q beside id %q reads as a label: %q", m.Name, m.ID, got)
+		}
+	}
+
+	var cloud bytes.Buffer
+	if err := renderModelsList(&cloud, items[1:], false); err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	if strings.Contains(cloud.String(), "CALLED") {
+		t.Errorf("a list with nothing to label still grew the column:\n%s", cloud.String())
 	}
 }
 

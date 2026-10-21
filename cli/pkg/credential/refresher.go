@@ -4,8 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
+	"path/filepath"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/beclab/Olares/cli/internal/lockfile"
@@ -176,13 +179,9 @@ func (r *Refresher) refresh(ctx context.Context, in refreshInput) (string, error
 
 	// Cross-process serialization. Bound the wait so a stuck peer can't
 	// hang us indefinitely.
-	lockPath, err := refreshLockPath(olaresID)
-	if err != nil {
-		return "", fmt.Errorf("derive refresh lock path: %w", err)
-	}
 	lockCtx, cancel := context.WithTimeout(ctx, r.flockTimeout)
 	defer cancel()
-	release, err := lockfile.Acquire(lockCtx, lockPath)
+	release, err := acquireRefreshLock(lockCtx, olaresID)
 	if err != nil {
 		// Bubble the original ctx error if that's why we failed (so a
 		// caller-side cancel surfaces as context.Canceled, not as a
@@ -297,7 +296,15 @@ func (r *Refresher) refresh(ctx context.Context, in refreshInput) (string, error
 	// the mount is the platform's copy and the only one it can revoke, and a
 	// second copy in the keychain would outlive the grant it came from.
 	if err := r.store.Set(newStored); err != nil {
-		return "", fmt.Errorf("persist refreshed token: %w", err)
+		if !in.managed {
+			return "", fmt.Errorf("persist refreshed token: %w", err)
+		}
+		// The stored copy of a managed entry is only a cache of the mount,
+		// and a sandbox that cannot write the config dir still has the token
+		// in hand. The next command refreshes from the mount again.
+		fmt.Fprintf(os.Stderr,
+			"warning: could not cache the refreshed token for %s: %v (the next command refreshes again)\n",
+			olaresID, err)
 	}
 	return tok.AccessToken, nil
 }
@@ -352,5 +359,35 @@ func (r *Refresher) alreadyFresh(olaresID, currentAccessToken string, managed bo
 // across processes. One lock per identity, not one global lock: two profiles
 // rotating their own tokens have no reason to wait on each other.
 func refreshLockPath(olaresID string) (string, error) {
-	return cliconfig.LockPath(lockfile.Sanitize(olaresID) + ".refresh.lock")
+	return cliconfig.LockPath(refreshLockName(olaresID))
+}
+
+func refreshLockName(olaresID string) string {
+	return lockfile.Sanitize(olaresID) + ".refresh.lock"
+}
+
+// acquireRefreshLock takes the lock under the config dir, or under the
+// system temp dir when the config dir cannot be written — an agent sandbox
+// typically allows its workspace and $TMPDIR and nothing else. Processes that
+// land on different sides of that split do not serialize against each other,
+// which is no worse than having no lock to take at all.
+func acquireRefreshLock(ctx context.Context, olaresID string) (func() error, error) {
+	primary, err := refreshLockPath(olaresID)
+	if err != nil {
+		return nil, fmt.Errorf("derive refresh lock path: %w", err)
+	}
+	release, err := lockfile.Acquire(ctx, primary)
+	if err == nil || !unwritable(err) {
+		return release, err
+	}
+	return lockfile.Acquire(ctx, fallbackRefreshLockPath(olaresID))
+}
+
+func fallbackRefreshLockPath(olaresID string) string {
+	dir := fmt.Sprintf("olares-cli-%d", os.Getuid())
+	return filepath.Join(os.TempDir(), dir, "locks", refreshLockName(olaresID))
+}
+
+func unwritable(err error) bool {
+	return errors.Is(err, fs.ErrPermission) || errors.Is(err, syscall.EROFS)
 }

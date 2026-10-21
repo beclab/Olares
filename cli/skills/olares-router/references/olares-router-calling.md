@@ -22,6 +22,16 @@ So there are two steps, not five: pass `--api-key sk-...`, or `OLARES_ROUTER_API
 
 Reach for a key when the call needs something the identity cannot carry: a model allowlist, a budget of its own, or an origin the platform cannot vouch for — anything outside Olares, which is where the header is added.
 
+### Inside an application, the host says who is calling
+
+The profile identity is stamped by the Olares edge, and a command running **inside** the cluster did not cross it. Router then reads the calling application's `x-caller-appid` instead, and the call is from the application — which for a shared-chart app means the chart's owner, not the person at the keyboard. Nothing fails: the work runs, the usage row is written, and a provider that keeps a per-user library files the result under somebody else.
+
+An application that hosts an agent proxies Router in process and stamps the logged-in person, and it tells the commands it runs where by setting `OLARES_ROUTER_DATA_PLANE_URL` to that proxy's `/v1` root — Lares sets it to `$LARES_LLM_BASE_URL`. With it set, every `router call` verb goes through the proxy and is from the person; `router key current` shows `CALLS USE  the host application's proxy`. Two things stay as they were: a named key (`--api-key`, `OLARES_ROUTER_API_KEY`) still goes to Router directly as that key, and the streaming sockets (`listen` and `responses --stream`) still dial Router, since a proxy that forwards requests does not forward sockets.
+
+**Where the variable is not set, do not generate from in-cluster with `router call`** — that is where the wrong caller does visible damage. Use the host application's own skill and base URL instead.
+
+A sandbox that can write only its workspace and `$TMPDIR` still works: the refresh lock falls back to the temp dir, and a platform-issued (managed) token that cannot be cached is used for the one command and refreshed from the mount by the next.
+
 Two refusals are specific to this and mean different things:
 
 - `missing_credentials` — the Router being called predates v2.2.1 and does not read `X-BFL-USER` on `/v1`. Upgrade the Router application, or pass a key.
@@ -36,6 +46,8 @@ Router anchors a stored response and a media generation on `(user, key)`, so a j
 ## Choosing the model
 
 `--model` takes a qualified `<provider>/<model>` as `router model list` prints it, or any route name — an alias, a group, or a `default-*` category.
+
+A FlowStudio scene's model half is the workflow's UUID, and that UUID **is** the id: it cannot follow a rename without orphaning every allowlist and quota entry pointing at it. The author's label travels beside it instead, as `name` on the row — `router call models` shows it in the `CALLED` column and `-o json` carries it. Read the label from there; do not call FlowStudio to map a UUID to a title.
 
 Leaving `--model` off names the default category for that kind of work: `default-chat` for chat, `default-stt` for transcription, `default-tts` for speech, and so on for every verb. Router decides what a category answers with by reconciling it against what is installed; nothing is set by hand and nothing falls back per call. `router route list --kind default` prints where each category currently stands, and a category nothing serves is refused rather than approximated.
 
