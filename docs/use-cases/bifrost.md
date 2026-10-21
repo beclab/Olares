@@ -6,8 +6,8 @@ head:
     - name: keywords
       content: Olares, Bifrost, AI gateway, LLM proxy
 app_version: "1.0.11"
-doc_version: "2.0"
-doc_updated: "2026-08-05"
+doc_version: "2.1"
+doc_updated: "2026-08-28"
 ---
 
 # Set up Bifrost as an AI model gateway
@@ -69,6 +69,27 @@ In Bifrost, a model provider represents the engine hosting your AI models. You c
 
 3. Click **Add**.
 
+### Add OrcaRouter as a model provider
+
+[OrcaRouter](https://www.orcarouter.ai) is an OpenAI-compatible AI gateway built for both models and agents. Like OpenRouter, it exposes a provider/model namespace across many models, but it also combines adaptive routing, automatic failover, zero-markup inference, observability, guardrails, and agent-tool governance behind the same endpoint. Adding OrcaRouter as a provider in Bifrost gives your Olares apps access to that stack without configuring each upstream model individually.
+
+1. Open Bifrost from the Launchpad, go to **Models** > **Model Providers** > **Add provider**, and then select **Custom provider**.
+2. In the **Add Custom Provider** panel, configure the following settings:
+
+   - **Name**: such as `orcarouter`
+   - **Base Format**: Select **OpenAI**.
+   - **Base URL**: Enter `https://api.orcarouter.ai`, excluding the `/v1` suffix.
+   - **Allow Private Network**: Leave it disabled; OrcaRouter is a cloud gateway.
+   - **Is Keyless**: Disable it. Enter your OrcaRouter API key in the **API Key** field. The key starts with `sk-orca-`.
+
+3. Click **Add**.
+
+The models OrcaRouter serves are then available under the Bifrost endpoint, and you can route them to clients such as OpenCode and Open WebUI as shown below.
+
+:::note
+OrcaRouter also runs gateway-level, zero-trust security for AI agents on the same endpoint — screening every prompt/response and governing every tool call on a default-deny basis, with no application code changes.
+:::
+
 ## Get the Bifrost endpoint
 
 Client applications connect to Bifrost through the Bifrost endpoint URL, not the model provider URLs you configured earlier.
@@ -112,6 +133,8 @@ In OpenCode, register Bifrost as a custom provider and add your example model un
 4. Go to **Settings** > **Models** > **Olares Bifrost**, and then verify the model you added is enabled.
 
    ![Added models enabled in OpenCode](/images/manual/use-cases/bifrost-opencode-add-model-enabled1.png#bordered){width=70%}
+
+When you added OrcaRouter as a provider, its models are served through the same Bifrost endpoint. In OpenCode, select the OrcaRouter-managed model the same way you would any other Bifrost model.
 
 ### Step 2: Chat and verify
 
