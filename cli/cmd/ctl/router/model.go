@@ -59,7 +59,7 @@ var providerModelModes = []string{
 	"chat", "embedding", "rerank", "moderation",
 	"audio", "tts", "translate", "image_generation", "responses", "ocr",
 	"search", "scrape", "video_generation",
-	"music_generation", "model3d_generation",
+	"music_generation", "model3d_generation", "realtime",
 }
 
 // NewModelCommand assembles the model noun: one place for every model this
@@ -211,13 +211,14 @@ func runModelImport(ctx context.Context, f *cmdutil.Factory, ref string, names [
 
 func newModelAddCommand(f *cmdutil.Factory) *cobra.Command {
 	var (
-		output       string
-		provider     string
-		mode         string
-		contextSize  int
-		maxOutTokens int
-		supports     []string
-		pricing      []string
+		output        string
+		provider      string
+		mode          string
+		contextSize   int
+		maxOutTokens  int
+		supports      []string
+		pricing       []string
+		voiceProtocol string
 	)
 	cmd := &cobra.Command{
 		Use:   "add <model-name> --provider <provider>",
@@ -261,6 +262,9 @@ Examples:
 			if c.Flags().Changed("context-size") {
 				req.ContextSize = &contextSize
 			}
+			if voiceProtocol != "" {
+				req.VoiceService = &voiceService{Protocol: voiceProtocol, Billing: "child-models"}
+			}
 			if c.Flags().Changed("max-output-tokens") {
 				req.MaxOutputTokens = &maxOutTokens
 			}
@@ -273,6 +277,7 @@ Examples:
 	cmd.Flags().IntVar(&maxOutTokens, "max-output-tokens", 0, "upper bound on generated tokens")
 	cmd.Flags().StringArrayVar(&supports, "supports", nil, "capability as key=true|false; repeatable (`router model get` prints a row's keys)")
 	cmd.Flags().StringArrayVar(&pricing, "pricing", nil, "price as key=value; repeatable")
+	cmd.Flags().StringVar(&voiceProtocol, "voice-service", "", "declare a realtime model as a composite voice upstream speaking this protocol (lares-realtime-v1); usage is billed on the upstream's own model calls")
 	addOutputFlag(cmd, &output)
 	return cmd
 }
@@ -284,6 +289,13 @@ type addModelRequest struct {
 	Pricing         map[string]string `json:"pricing,omitempty"`
 	ContextSize     *int              `json:"context_size,omitempty"`
 	MaxOutputTokens *int              `json:"max_output_tokens,omitempty"`
+	// VoiceService declares a composite voice upstream such as Lares (Router ADR-83).
+	VoiceService *voiceService `json:"voice_service,omitempty"`
+}
+
+type voiceService struct {
+	Protocol string `json:"protocol"`
+	Billing  string `json:"billing"`
 }
 
 func runModelAdd(ctx context.Context, f *cmdutil.Factory, ref string, req addModelRequest, supports, pricing []string, outputRaw string) error {
