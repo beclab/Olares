@@ -56,6 +56,40 @@ func RefuseUnknownVerb(c *cobra.Command, args []string) error {
 	return unknownVerb(c, args[0])
 }
 
+const flagHintAnnotationPrefix = "olares-cli/flag-hint/"
+
+// ExplainMissingFlag attaches the answer to a flag callers reach for on a
+// command that deliberately does not have it, so the refusal says why
+// instead of only that the flag is unknown.
+func ExplainMissingFlag(c *cobra.Command, explanation string, names ...string) {
+	if c.Annotations == nil {
+		c.Annotations = make(map[string]string)
+	}
+	for _, name := range names {
+		c.Annotations[flagHintAnnotationPrefix+name] = explanation
+	}
+}
+
+// FlagErrorWithContext answers a flag the command does not have. In a command
+// group the mistake is the word before the flag: the verb was not found, so
+// the group parsed flags that belong to no verb. On a leaf it names the
+// command whose --help lists the flags it does have.
+func FlagErrorWithContext(c *cobra.Command, err error) error {
+	var notExist *pflag.NotExistError
+	if !errors.As(err, &notExist) {
+		return err
+	}
+	if c.HasSubCommands() {
+		if args := c.Flags().Args(); len(args) > 0 && args[0] != "help" {
+			return unknownVerb(c, args[0])
+		}
+	}
+	if hint := c.Annotations[flagHintAnnotationPrefix+notExist.GetSpecifiedName()]; hint != "" {
+		return fmt.Errorf("%w: %s", err, hint)
+	}
+	return fmt.Errorf("%w\n`%s --help` lists the flags it has", err, c.CommandPath())
+}
+
 func unknownVerb(c *cobra.Command, verb string) error {
 	if c.SuggestionsMinimumDistance <= 0 {
 		c.SuggestionsMinimumDistance = 2

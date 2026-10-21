@@ -13,9 +13,9 @@ import (
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
-// inFlightCancelableStates mirrors app-service's CancelableStates: while the
-// app is mid-operation, app-service rejects a direct uninstall and only
-// accepts a cancel. `market uninstall` orchestrates around this (cancel
+// inFlightCancelableStates are the in-flight states that both Market's cancel
+// whitelist and app-service accept: while the app is mid-operation,
+// app-service rejects a direct uninstall and only accepts a cancel. `market uninstall` orchestrates around this (cancel
 // first, then finish with a real uninstall if the cancel only stopped the
 // app) so "uninstall == fully remove" holds regardless of state.
 var inFlightCancelableStates = map[string]bool{
@@ -24,8 +24,16 @@ var inFlightCancelableStates = map[string]bool{
 	"installing":   true,
 	"initializing": true,
 	stateUpgrading: true,
-	"applyingEnv":  true,
 	stateResuming:  true,
+}
+
+// installTeardownStates are the in-flight states whose cancel deletes the
+// partial install, so the only way forward is a fresh install; the other
+// in-flight states cancel to `stopped`, which upgrade accepts.
+var installTeardownStates = map[string]bool{
+	"pending":     true,
+	"downloading": true,
+	"installing":  true,
 }
 
 // uninstallRejectingStates are the settled states whose entry in
@@ -120,6 +128,7 @@ Examples:
 	opts.addCascadeFlag(cmd)
 	opts.addDeleteDataFlag(cmd)
 	opts.addWatchFlags(cmd)
+	explainNoSourceFlag(cmd)
 	return cmd
 }
 
@@ -188,6 +197,9 @@ func runUninstall(opts *MarketOptions, cmd *cobra.Command, appName string) error
 	// removal from the CLI (cancel first, then a real uninstall if the cancel
 	// only stopped the app) so "uninstall == fully remove" holds regardless
 	// of state.
+	if row != nil && curState == stateApplyingEnv {
+		return opts.failOp("uninstall", appName, errApplyingEnvNotCancelable)
+	}
 	if row != nil && inFlightCancelableStates[curState] {
 		return runUninstallViaCancel(opts, mc, appName, source, version, cascade, curState, atLeast126)
 	}

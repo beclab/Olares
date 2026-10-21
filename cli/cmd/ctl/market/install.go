@@ -66,6 +66,7 @@ Examples:
 	opts.addEnvFlag(cmd)
 	opts.addComputeModeFlag(cmd)
 	opts.addWatchFlags(cmd)
+	opts.addPodWatchFlags(cmd)
 	return cmd
 }
 

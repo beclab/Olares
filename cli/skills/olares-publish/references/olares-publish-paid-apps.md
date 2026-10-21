@@ -1,7 +1,7 @@
 # Paid apps: price.yaml, on-chain RSA, Merchant
 
 > **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) first and follow its paid-listing flow order.
-> A paid app is a **public-Market** app plus pricing + license enforcement. Everything in the public-distribution path still applies; this file adds only the paid extras. Official docs: [Publish paid applications](https://docs.olares.com/developer/develop/paid-apps.html).
+> A paid app is a **public-Market** app plus pricing + license enforcement. Everything in the public-distribution path still applies; this file adds only the paid extras. Official docs: [Publish paid applications](https://www.olares.com/docs/developer/develop/paid-apps).
 
 ## What "paid" adds to a normal market app
 

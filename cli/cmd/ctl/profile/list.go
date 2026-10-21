@@ -2,8 +2,10 @@ package profile
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"text/tabwriter"
 	"time"
@@ -38,20 +40,46 @@ import (
 // claims (username / groups / mfa / jid). The OlaresID column is the local
 // authoritative identity.
 func NewListCommand(f *cmdutil.Factory) *cobra.Command {
-	return &cobra.Command{
+	var output string
+	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "list all profiles with login status, current marker, and cached backend version",
-		Args:  cobra.NoArgs,
+		Long: `List all profiles with login status, current marker, and cached backend version.
+
+-o json prints an array, one object per profile: name, olaresId, status,
+version ("" when not detected yet), source (local / platform /
+platform(<app>)) and current (true for the active profile).`,
+		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
 			// --refresh-version is inherited from the `profile` parent's
 			// persistent flags; treat a read error as "no refresh".
 			refresh, _ := c.Flags().GetBool(cmdutil.FlagRefreshVersion)
-			return runList(c.Context(), f, refresh, os.Stdout)
+			return runList(c.Context(), f, refresh, cmdutil.OutputIsJSON(output), os.Stdout)
 		},
 	}
+	cmd.Flags().StringVarP(&output, "output", "o", "table", "output format: table, json")
+	return cmd
 }
 
-func runList(ctx context.Context, f *cmdutil.Factory, refresh bool, out *os.File) error {
+type profileRow struct {
+	Name     string `json:"name"`
+	OlaresID string `json:"olaresId"`
+	Status   string `json:"status"`
+	Version  string `json:"version"`
+	Source   string `json:"source"`
+	Current  bool   `json:"current"`
+}
+
+func writeProfilesJSON(out io.Writer, rows []profileRow) error {
+	if rows == nil {
+		rows = []profileRow{}
+	}
+	enc := json.NewEncoder(out)
+	enc.SetIndent("", "  ")
+	return enc.Encode(rows)
+}
+
+func runList(ctx context.Context, f *cmdutil.Factory, refresh, asJSON bool, out io.Writer) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -71,6 +99,9 @@ func runList(ctx context.Context, f *cmdutil.Factory, refresh bool, out *os.File
 	if err != nil {
 		return err
 	}
+	if len(cfg.Profiles) == 0 && asJSON {
+		return writeProfilesJSON(out, nil)
+	}
 	if len(cfg.Profiles) == 0 {
 		fmt.Fprintln(out, "no profiles configured.")
 		fmt.Fprintln(out, "run `olares-cli profile login --olares-id <id>` or `olares-cli profile import --olares-id <id> --refresh-token <tok>` to add one.")
@@ -81,6 +112,22 @@ func runList(ctx context.Context, f *cmdutil.Factory, refresh bool, out *os.File
 
 	current := cfg.Current()
 	now := time.Now()
+
+	if asJSON {
+		rows := make([]profileRow, 0, len(cfg.Profiles))
+		for i := range cfg.Profiles {
+			p := &cfg.Profiles[i]
+			rows = append(rows, profileRow{
+				Name:     p.DisplayName(),
+				OlaresID: p.OlaresID,
+				Status:   profileStatus(store, p, now),
+				Version:  p.BackendVersion,
+				Source:   sourceCell(p),
+				Current:  current != nil && current.OlaresID == p.OlaresID,
+			})
+		}
+		return writeProfilesJSON(out, rows)
+	}
 
 	// The SOURCE column appears only when there is something to say in it.
 	// Every profile on a host install is local, and a column that always

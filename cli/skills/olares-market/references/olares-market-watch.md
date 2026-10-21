@@ -8,7 +8,7 @@ A one-shot mutation returns as soon as the server acknowledges it, and the serve
 
 | Verb | Terminal-success buckets | Idempotent shortcut |
 |---|---|---|
-| `install` | `running` | — (no watcher shortcut; requires `OpType=install`) |
+| `install` | `running` (requires `OpType=install`); any `stopped` row is app-service giving up on it and reports failure | — (no watcher shortcut) |
 | `upgrade` | `running` (matchOpType=upgrade), or `stopped` with a `statusTime` newer than the pre-request baseline — see below | — (handled by pre-flight) |
 | `uninstall` | `uninstalled`, row disappears (or `*Canceled` when an in-flight app was auto-canceled) | App already uninstalled → returns immediately; in-flight apps are canceled first, then uninstalled if still present |
 | `clone` | `running` on the new clone name | — |
@@ -60,6 +60,8 @@ When STATE is `downloading`, the app is pulling images and may legitimately stay
 
 ## Stuck in installing / initializing
 
+`install --watch` and `upgrade --watch` also read the app's own pods every few seconds and print a line per container that restarts or is stuck (`pod <p> container <c>: CrashLoopBackOff (restarts=4)`); under `-o json` those lines are suppressed, and a timeout's `.message` carries the latest ones instead. Add `--fail-on-crashloop` to end the watch on `CrashLoopBackOff` / `CreateContainerConfigError` / `RunContainerError` rather than waiting minutes for app-service's grace period. Image pulls never trigger it. A profile that cannot list pods gets one warning and the row-only watch.
+
 A long `installing` / `initializing` is NOT a failure — app-service polls a long TTL before giving up, and two non-obvious traps make `--watch` misleading here (a soft-hang is never fast-failed; a scheduling failure ends in `stopped`, not `installFailed` — both are in the shared **application state machine**). Operational discipline: let a **short window** (~1m, post-download) run; if STATE hasn't moved, **stop watching passively and diagnose**.
 
 **Hand stuck/won't-start installs to [`../../olares-doctor/SKILL.md`](../../olares-doctor/SKILL.md)** — it owns the symptom→root-cause routing (queue vs stalled download vs scheduling failure vs soft-hang), the namespace resolution, and the exact pod/log/event commands. This reference does not duplicate that triage.
@@ -69,7 +71,6 @@ A long `installing` / `initializing` is NOT a failure — app-service polls a lo
 | Symptom | Cause | Fix |
 |---|---|---|
 | `environment variable requirements not met` + `Missing required values: KEY1, KEY2` (install) | App declares required envs | Re-run with `--env KEY=VALUE` per missing var |
-| `app 'X' is not in an upgradable state (current: Y)` | Pre-flight gate 2 | Wait for terminal state, or run `cancel` first |
 | `target version '1.2.3' is already installed — nothing to do` | Pre-flight gate 3 | Nothing to upgrade. **Does NOT fire for `-s upload`** — a same-version upgrade is allowed there as a retry of the stored chart |
 | `chart is marked 'suspend' or 'remove' in source 'X' ...` | Pre-flight gate 4 (`app_simple_info.app_labels` contains `suspend` or `remove`) | Upstream withdrew the app; the SPA hides its Upgrade button too. Contact the app maintainer |
 | `app 'X' is not cloneable` | `clone` against an app that is neither multi-instance nor a template | Check `market get X -o json` for `allowMultipleInstall` / `templateOnly` |

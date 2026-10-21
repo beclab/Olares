@@ -96,7 +96,7 @@ A 256x256 PNG rarely approaches 512 KB. If one does, re-export as WEBP — the p
 
 ## Step 5: wire it into the manifest
 
-Upload to [imghost.olares.com](https://imghost.olares.com/) (pick **app icon**) or host it yourself, then put the URL in `metadata.icon` **and** in each `entrances[].icon` — the same URL is fine unless entrances genuinely differ:
+The developer uploads it at [imghost.olares.com](https://imghost.olares.com/) (pick **app icon**) or hosts it themselves. imghost is a page for a person: hand the file over and wait for the URL, rather than scripting the page, reading its bundle for an endpoint, or reusing a key found there. Then put the URL in `metadata.icon` **and** in each `entrances[].icon` — the same URL is fine unless entrances genuinely differ:
 
 ```yaml
 metadata:

@@ -59,6 +59,7 @@ Examples:
 	describeLifecycleJSON(cmd)
 	opts.addComputeBindingFlag(cmd)
 	opts.addWatchFlags(cmd)
+	explainNoSourceFlag(cmd)
 	return cmd
 }
 

@@ -35,7 +35,7 @@ Both fast-fail only on hard pod conditions that persist past a 5-minute grace; s
 
 ```bash
 olares-cli cluster application status <ns>          # workload readiness at a glance
-olares-cli cluster pod list -n <ns> -o json         # status.containerStatuses[].{ready,restartCount,state}
+olares-cli cluster pod list -n <ns>                 # READY, STATUS, RESTARTS
 olares-cli cluster pod events <ns>/<pod>            # scheduling / pull / mount events
 ```
 

@@ -1,7 +1,7 @@
 # Submit: PR to beclab/apps
 
 > **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) first and follow its public-listing flow order.
-> This is the final step for a public Market listing. Official docs: [Submit applications](https://docs.olares.com/developer/develop/submit-apps.html), [Distribute index](https://docs.olares.com/developer/develop/distribute-index.html).
+> This is the final step for a public Market listing. Official docs: [Submit applications](https://www.olares.com/docs/developer/develop/submit-apps), [Distribute index](https://www.olares.com/docs/developer/develop/distribute-index).
 
 ## Before you start
 
@@ -43,7 +43,7 @@ Before submission, finalize the user-facing English fields with the [Manifest co
    - <github-username>
    - <collaborator-username>   # optional
    ```
-   Listed owners can independently submit changes for this app. See [distribute-index](https://docs.olares.com/developer/develop/distribute-index.html).
+   Listed owners can independently submit changes for this app. See [distribute-index](https://www.olares.com/docs/developer/develop/distribute-index).
 
 6. Confirm the OAC root contains **no control files** (`.suspend`, `.remove`) — those are only for SUSPEND/REMOVE lifecycle PRs.
 
@@ -113,7 +113,7 @@ After merge, the app appears in Olares Market (`market.olares` source) after a s
 
 ## Lifecycle after first publish
 
-All post-publish actions are PRs to `beclab/apps:main`. See [Manage the app lifecycle](https://docs.olares.com/developer/develop/manage-apps.html).
+All post-publish actions are PRs to `beclab/apps:main`. See [Manage the app lifecycle](https://www.olares.com/docs/developer/develop/manage-apps).
 
 | Action | PR type | Key rules |
 |---|---|---|
@@ -131,7 +131,7 @@ Before any lifecycle PR: sync the fork and rebase onto latest `main` to reduce c
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| Invalid categories | stub `Utilities` only, or wrong enum value | Add both 1.11 + 1.12 category values per [manifest docs](https://docs.olares.com/developer/develop/package/manifest.html#categories) |
+| Invalid categories | stub `Utilities` only, or wrong enum value | Add both 1.11 + 1.12 category values per [manifest docs](https://www.olares.com/docs/developer/develop/package/manifest#categories) |
 | Name/version mismatch in title | PR title folder or version != chart | Align PR title with folder name and `Chart.yaml` / `metadata.version` |
 | File scope violation | Changed files outside chart folder | Restrict PR to the OAC folder only |
 | Duplicate PR | Another open PR for the same app | Close the duplicate or wait for the other to merge |

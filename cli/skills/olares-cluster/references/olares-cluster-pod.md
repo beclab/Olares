@@ -40,8 +40,13 @@ Inspect Pods visible to the active profile. **Cross-namespace by default** — l
 # Cross-ns listing.
 olares-cli cluster pod list
 
-# Scope to a namespace.
+# Scope to a namespace. The table is the status view: READY, STATUS (waiting
+# reason, Init:<reason> for an init container), RESTARTS.
 olares-cli cluster pod list -n user-system-alice
+
+# -o json is every pod's full spec, sidecars included; select what you need.
+olares-cli cluster pod list -n user-system-alice -o json \
+  | jq '.items[] | {name: .metadata.name, containers: [.status.containerStatuses[] | {name, restartCount, state}]}'
 
 # Watch a single pod every 2s.
 olares-cli cluster pod get user-system-alice/my-pod -w
