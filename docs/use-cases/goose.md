@@ -20,8 +20,8 @@ The app uses Router's default chat model by default. This example creates a proj
 
 In this guide, you will learn how to:
 
-- Create and verify a Markdown document in Goose Terminal.
-- Connect Goose Desktop to the Goose service on Olares and continue the conversation there.
+- Run Goose in Goose Terminal.
+- Connect Goose Desktop to the Goose service on Olares.
 - Enable access to existing files when needed.
 
 ## Prerequisites
@@ -52,7 +52,7 @@ Goose Terminal opens in your browser and connects to the Goose service directly.
 Use `goose run -t` when a single prompt is enough for the task.
 
 1. Open Goose Terminal from Launchpad.
-2. Run `goose run -t` followed by your prompt:
+2. Run `goose run -t` followed by your prompt, replacing `Your_Prompt` with your question or task:
 
    ```bash
    goose run -t "Your_Prompt"
@@ -78,7 +78,8 @@ Use an interactive session when you want a back-and-forth conversation.
    goose session
    ```
 
-3. Send the following prompt to create a sample project brief:
+3. The first time you run this command, Goose asks whether to share anonymous usage data. Choose **Yes** or **No** to continue.
+4. Send the following prompt to create a sample project brief:
 
    ```text
    Work only in /config/workspace/goose-demo. Create that directory if needed.
@@ -94,8 +95,8 @@ Use an interactive session when you want a back-and-forth conversation.
    Finally, report the absolute paths of both files and summarize what you created.
    ```
 
-4. Follow the terminal prompts to approve tools when requested.
-5. Verify the result in the same terminal:
+5. Follow the terminal prompts to approve tools when requested.
+6. Verify the result in the same terminal:
 
    ```bash
    ls -l /config/workspace/goose-demo
@@ -104,7 +105,7 @@ Use an interactive session when you want a back-and-forth conversation.
 
    The brief should contain the project goal, both deliverables, the target date, and the unresolved ownership question. Wording can vary with the model. The facts should remain unchanged.
 
-6. Press `Ctrl+C` to exit the session. If Goose asks you to press it again, press `Ctrl+C` a second time. This ends the terminal interaction.
+7. Press `Ctrl+C` to exit the session. If Goose asks you to press it again, press `Ctrl+C` a second time. This ends the terminal interaction.
 
 :::info File location
 Goose stores the files in the `/config/workspace` directory on your Olares device. Files there persist across normal app restarts. Keep a separate backup for documents you need to retain.
@@ -133,7 +134,7 @@ Goose Desktop runs on your computer and connects to the Goose service on Olares 
    printenv GOOSE_SERVER__SECRET_KEY
    ```
 
-2. Copy the returned value. For example, `vLGGuX84xGm6TtUcIniZGSLPMvu5RZKoQePoJI4cXnU6U8U2fNXbSMdnv4kZfioA`.
+2. Copy the returned value and save it for the Goose Desktop setup later.
 
    This is the connection secret between Goose Desktop and the Goose service, not an AI model API key. Keep it private.
 
@@ -166,8 +167,8 @@ Goose Desktop runs on your computer and connects to the Goose service on Olares 
 
    | Setting | Value |
    |:---|:---|
-   | <nobr>**Backend Base URL**</nobr> | The Goose ACP HTTPS URL copied from Olares Settings. Do not append `/acp` or `/v1`. |
-   | <nobr>**Secret Key**</nobr> | The value returned by `printenv GOOSE_SERVER__SECRET_KEY` |
+   | <nobr>**Backend Base URL**</nobr> | The **Endpoint** URL of the Goose ACP entrance you copied in **Prepare connection details**. Do not append `/acp` or `/v1`. |
+   | <nobr>**Secret Key**</nobr> | The connection secret you saved in **Prepare connection details**. |
 
 8. Select **Back** in the top left.
 9. Open a new chat. Under the chat box, confirm the model is `default-chat`, then select a working directory.
@@ -189,7 +190,7 @@ The session you created in Goose Terminal also appears in Goose Desktop as a **C
 Home and External directory access are optional. To use existing files:
 
 1. Open **Settings** > **Applications** > **Goose** and edit the app's environment variables.
-2. Enable the directory you need:
+2. Set the access variable to `true` for the directory you need:
 
    | Variable | Default | Directory available to Goose when enabled |
    |:---|:---|:---|
