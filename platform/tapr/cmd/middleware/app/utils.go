@@ -13,7 +13,6 @@ import (
 	"bytetrade.io/web3os/tapr/pkg/workload/nats"
 	"bytetrade.io/web3os/tapr/pkg/workload/rabbitmq"
 	rediscluster "bytetrade.io/web3os/tapr/pkg/workload/redis-cluster"
-	"bytetrade.io/web3os/tapr/pkg/workload/zinc"
 
 	"github.com/gofiber/fiber/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -67,7 +66,7 @@ func (s *Server) getMiddlewareInfo(ctx *fiber.Ctx, mwReq *MiddlewareReq, m *aprv
 		// 	}
 		// }
 
-		resp.Host = citus.CitusMasterServiceName + "." + mwReq.Namespace
+		resp.Host = citus.CitusServiceDomain
 		resp.Databases = make(map[string]string)
 		for _, db := range m.Spec.PostgreSQL.Databases {
 			resp.Databases[db.Name] = citus.GetDatabaseName(m.Spec.AppNamespace, db.Name)
@@ -115,32 +114,15 @@ func (s *Server) getMiddlewareInfo(ctx *fiber.Ctx, mwReq *MiddlewareReq, m *aprv
 		}
 
 		resp.Databases = make(map[string]string)
-		resp.Host = rediscluster.RedisClusterService + "." + mwReq.Namespace
+		resp.Host = rediscluster.RedisClusterServiceDomain
 		resp.Databases[m.Spec.Redis.Namespace] = rediscluster.GetDatabaseName(m.Spec.AppNamespace, m.Spec.Redis.Namespace)
-
-		return resp, nil
-	case aprv1.TypeZinc:
-		resp.UserName = m.Spec.Zinc.User
-		resp.Password, err = m.Spec.Zinc.Password.GetVarValue(ctx.UserContext(), s.k8sClientSet, mwReq.Namespace)
-		if err != nil {
-			klog.Error("get middleware password error, ", err)
-			return nil, err
-		}
-
-		resp.Port = 80
-		resp.Host = "zinc-server-svc." + mwReq.Namespace
-
-		resp.Indexes = make(map[string]string)
-		for _, index := range m.Spec.Zinc.Indexes {
-			resp.Indexes[index.Name] = zinc.GetIndexName(m.Spec.AppNamespace, index.Name)
-		}
 
 		return resp, nil
 	case aprv1.TypeNats:
 		resp.UserName = m.Spec.Nats.User
 		resp.Password, err = m.Spec.Nats.Password.GetVarValue(ctx.UserContext(), s.k8sClientSet, mwReq.Namespace)
 		resp.Port = 4222
-		resp.Host = "nats." + mwReq.Namespace
+		resp.Host = nats.NatsServiceDomain
 		resp.Subjects = make(map[string]string)
 		for _, subject := range m.Spec.Nats.Subjects {
 			resp.Subjects[subject.Name] = nats.MakeRealSubjectName(subject.Name, m.Spec.AppNamespace)
