@@ -2,14 +2,14 @@
 connectionVersion: "1.12.7"
 connectionLatestPath: /zh/use-cases/hermes
 outline: [2,3]
-description: 在 Olares 上安装 Hermes Agent，将其接入 Discord，使用 Olares 技能，并通过 Gateway API 与其他应用打通。
+description: 在 Olares 上安装 Hermes Agent，接入本地模型和 Discord，通过 SSH 管理局域网内的多台主机，并通过 Gateway API 与其他应用连接。
 head:
   - - meta
     - name: keywords
-      content: Olares, Hermes, Hermes Agent, 自主 AI, 自我进化 AI, Discord 机器人, 自托管
-app_version: "1.3.46"
-doc_version: "3.1"
-doc_updated: "2026-10-20"
+      content: Olares, Hermes, Hermes Agent, 自主 AI, 自我进化 AI, Discord 机器人, 自托管, SSH, 内网主机管理
+app_version: "1.3.49"
+doc_version: "3.2"
+doc_updated: "2026-10-21"
 ---
 
 # 用 Hermes 搭建一个自主工作的 AI 助手
@@ -27,6 +27,7 @@ Hermes Agent 是一个能够自主执行任务的 AI 助手。接入本地模型
 - 直接在文本用户界面中与它对话
 - 接入 Discord，实现远程聊天
 - 使用 Olares 技能，让助手帮你管理文件和应用程序
+- 通过 SSH 在内网主机上执行命令、运行脚本，并协调多台主机上的任务
 - 开启 Gateway API，将 Hermes Agent 与 Open WebUI 等应用对接
 
 ## 前提条件
@@ -236,6 +237,187 @@ Hermes Agent 可以直接使用预装的 Olares CLI 技能，帮你管理 Olares
 4. 根据提示输入你的 Olares 登录密码。注意：输入的内容是隐藏的。
 5. 现在你可以进入 TUI 聊天界面，让助手与 Olares 环境互动了。例如，让它从应用市场安装一个应用。
 
+## 通过 SSH 管理内网主机
+
+除了管理 Olares 中的文件和应用，你还可以让 Hermes 通过 SSH 连接局域网内的其他主机，执行远程命令、运行脚本、处理服务运维任务，或协调多台主机上的操作。每次在对话中指定目标主机和任务即可，无需在配置中固定一个 IP 地址。可执行的操作取决于远端账号的权限。
+
+在 Hermes 设置中，将终端后端保持为 **Local**。这里的 Local 指 Hermes 应用容器：助手先在容器中运行 `ssh`，再由 SSH 在目标主机上执行命令。这个场景直接使用标准 SSH 命令，不需要开启 Gateway API 或额外开发 SSH 工具。
+
+### 连接前的准备
+
+确认以下条件：
+
+- Olares 设备能通过网络访问目标主机的 SSH 端口，默认端口为 `22`。
+- 目标主机已启用 SSH 服务，并允许你使用指定账号登录。
+- Hermes 已连接可用的模型，终端后端选择 **Local**。
+
+下面以 Linux 主机 `ubuntu@192.168.1.50` 为例。请将用户名、IP 地址和端口替换为你自己的配置。
+
+:::tip 网络连接从哪里发起？
+SSH 连接由 Olares 上的 Hermes 容器发起。即使你从 Mac 打开 Hermes，也不代表容器自动获得了 Mac 所在网络的访问能力。在本次验证环境中，无需为容器开启 hostNetwork 或特权权限即可访问内网主机。跨网段、访客网络或防火墙规则仍可能阻止连接。
+:::
+
+### 使用密码登录
+
+目标主机允许密码认证时，可以先在 Hermes CLI 中手动登录，无需提前配置密钥。
+
+1. 从启动台打开 Hermes CLI。如果当前处于聊天界面，输入 `/exit` 返回命令行。
+
+2. 准备持久化的 SSH 目录，然后发起连接：
+
+   ```bash
+   mkdir -p /opt/data/.ssh
+   chmod 700 /opt/data/.ssh
+   ssh -o PubkeyAuthentication=no \
+     -o PreferredAuthentications=password,keyboard-interactive \
+     -o UserKnownHostsFile=/opt/data/.ssh/known_hosts \
+     ubuntu@192.168.1.50
+   ```
+
+   如果使用其他 SSH 端口，加入 `-p 端口号`。首次连接时，先向目标主机管理员核对主机指纹，确认一致后再输入 `yes`。
+
+3. 出现 `ubuntu@192.168.1.50's password:` 提示时，输入远端账号的密码并按 **Enter**。输入内容不会显示。登录成功后，可以执行该账号有权限运行的命令；完成后输入 `exit` 退出远端会话。
+
+这个示例用于你在 Hermes CLI 中交互登录。普通 SSH 命令不会自动回答后台任务中的密码提示；需要让助手独立执行任务时，建议按下面的步骤配置密钥登录。不要把密码直接写进命令、脚本或聊天提示词。
+
+### 配置密钥登录
+
+密钥登录适合由助手执行的自动化任务。完成一次公钥授权后，Hermes 可以使用私钥连接目标主机，无需每次输入账号密码。
+
+#### 第 1 步：在持久化目录中准备密钥
+
+1. 从启动台打开 Hermes CLI。如果当前处于聊天界面，输入 `/exit` 返回命令行。
+
+2. 创建 SSH 目录，并生成一对密钥：
+
+   ```bash
+   mkdir -p /opt/data/.ssh
+   chmod 700 /opt/data/.ssh
+   ssh-keygen -t ed25519 -C "hermes-lan" -f /opt/data/.ssh/id_ed25519
+   ```
+
+   如果已经存在同名密钥，请保留原密钥，或换一个文件名，不要覆盖。自动执行的任务无法交互输入密钥口令；为此生成专用自动化密钥时，可在两次口令提示中直接按 **Enter**，将口令留空。
+
+3. 设置私钥权限，并查看公钥：
+
+   ```bash
+   chmod 600 /opt/data/.ssh/id_ed25519
+   cat /opt/data/.ssh/id_ed25519.pub
+   ```
+
+   复制输出的完整公钥行。私钥保留在应用中，不要粘贴到聊天消息里。
+
+`/opt/data` 是 Hermes 的持久化数据目录，应用重启或容器重建后，目录中的密钥仍会保留。卸载应用或删除应用数据前，请先备份密钥。克隆应用使用独立的数据目录，需要单独配置 SSH 密钥。
+
+:::tip 使用已有 PEM 私钥
+在文件管理器中进入**数据** > **hermesagent** > **home**，显示隐藏文件，然后将已有私钥上传到 `.ssh` 目录，例如命名为 `lan-host.pem`。在 Hermes CLI 中运行：
+
+```bash
+chmod 600 /opt/data/.ssh/lan-host.pem
+```
+
+后续命令中的私钥路径改为 `/opt/data/.ssh/lan-host.pem` 即可。SSH 不要求私钥文件必须使用 `.pem` 扩展名。
+
+如果需要新建 PEM 格式的 RSA 密钥，可以运行：
+
+```bash
+ssh-keygen -t rsa -b 3072 -m PEM -f /opt/data/.ssh/lan-host.pem
+```
+
+随后将生成的 `lan-host.pem.pub` 公钥添加到目标主机。
+:::
+
+#### 第 2 步：在目标主机上添加公钥
+
+1. 在目标主机上，以 Hermes 将要使用的账号登录，例如 `ubuntu`。打开终端，准备该账号的 SSH 目录：
+
+   ```bash
+   mkdir -p "$HOME/.ssh"
+   chmod 700 "$HOME/.ssh"
+   touch "$HOME/.ssh/authorized_keys"
+   chmod 600 "$HOME/.ssh/authorized_keys"
+   ```
+
+2. 用文本编辑器打开 `$HOME/.ssh/authorized_keys`，将上一步复制的公钥追加为单独一行，然后保存。保留文件中原有的公钥，并确认目录和文件归当前登录账号所有。
+
+3. 查看目标主机的 SSH 主机密钥指纹，供首次连接时核对：
+
+   ```bash
+   ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub
+   ```
+
+#### 第 3 步：验证 SSH 连接
+
+1. 返回 Hermes CLI，先手动连接一次：
+
+   ```bash
+   ssh -i /opt/data/.ssh/id_ed25519 \
+     -o IdentitiesOnly=yes \
+     -o UserKnownHostsFile=/opt/data/.ssh/known_hosts \
+     ubuntu@192.168.1.50 'hostname; id'
+   ```
+
+   首次连接会提示确认主机指纹。与目标主机上显示的指纹核对一致后，再输入 `yes`。如果 SSH 使用其他端口，在命令中加入 `-p 端口号`。
+
+2. 再验证不需要交互输入的连接方式：
+
+   ```bash
+   ssh -i /opt/data/.ssh/id_ed25519 \
+     -o IdentitiesOnly=yes \
+     -o BatchMode=yes \
+     -o StrictHostKeyChecking=yes \
+     -o UserKnownHostsFile=/opt/data/.ssh/known_hosts \
+     -o ConnectTimeout=10 \
+     ubuntu@192.168.1.50 'hostname; id'
+   ```
+
+   命令应直接返回目标主机名和登录账号信息，不再要求输入密码。`BatchMode=yes` 会在无法自动认证时直接返回错误，避免任务停在密码提示处。
+
+私钥和 `known_hosts` 都使用绝对路径，避免助手运行命令时，因主目录不同而找不到文件。主机指纹也保存在 `/opt/data/.ssh/known_hosts` 中，应用重启后无需重新确认。
+
+### 用自然语言安排远程任务
+
+在 Hermes 的 TUI 或 Dashboard 中发起对话，明确告诉助手目标地址、账号和密钥路径。例如：
+
+```text
+通过 SSH 连接 ubuntu@192.168.1.50，使用私钥
+/opt/data/.ssh/id_ed25519 和主机指纹文件
+/opt/data/.ssh/known_hosts，保留严格主机指纹校验，
+使用批处理模式，连接超时设为 10 秒。
+连接后，先确认目标主机和当前账号，然后根据我接下来给出的要求
+执行远程命令或运行指定脚本。执行前说明操作步骤和影响范围，
+完成后汇总结果；遇到权限不足或连接失败时，说明原因。
+```
+
+连接另一台主机时，先为它完成公钥授权和首次连接验证，再在对话中更换目标地址。你可以给不同主机使用不同的私钥，不需要修改 Hermes 的终端后端。
+
+多台主机都配置好后，可以在同一次对话中安排多机任务。例如，将下面的占位内容替换为你的实际任务：
+
+```text
+在 ubuntu@192.168.1.50 和 olares@192.168.1.60 上完成以下任务：
+【填写任务目标、需要执行的命令或脚本，以及主机之间的执行顺序】。
+两台主机都使用 /opt/data/.ssh/id_ed25519，主机指纹文件为
+/opt/data/.ssh/known_hosts，保留严格主机指纹校验。
+先分别确认目标主机和登录账号，再按照指定顺序执行。
+按主机名和 IP 地址整理每一步的结果；某台主机失败时，
+先报告失败原因和已完成的操作，再由我决定是否继续后续步骤。
+```
+
+:::info 远端 sudo 权限
+远端命令的权限取决于 SSH 登录账号。需要提权时，可以要求助手使用 `sudo -n`：如果该账号已获准免密码执行对应命令，就会直接执行；否则返回错误，不会等待输入密码。不要把 sudo 密码写进提示词。
+
+这与在 Hermes 容器内使用 sudo 是两回事。容器本身以普通用户运行，并不妨碍 SSH 账号在远端使用已获准的 sudo 权限。
+:::
+
+### 常见连接问题
+
+| 现象 | 检查方法 |
+|:---|:---|
+| 连接超时或被拒绝 | 检查 IP、SSH 端口、服务状态、防火墙，以及 Olares 到目标主机的网络路由。开启 Olares 应用入口不能解决出站 SSH 的连通性问题。 |
+| `Permission denied (publickey)` | 核对远端用户名、该账号 `authorized_keys` 中的公钥和私钥路径。私钥权限应为 `600`，`.ssh` 目录权限应为 `700`。 |
+| `Host key verification failed` | 使用同一个 `known_hosts` 路径手动完成首次连接。如果已保存的指纹发生变化，先在目标主机上确认原因，再更新记录，不要关闭指纹校验。 |
+| `sudo: a password is required` | 当前账号没有免密码执行该命令的权限。改用账号有权执行的只读命令，或请目标主机管理员配置所需权限。 |
+
 ## 将 Hermes Agent 接入其他应用
 
 Hermes Agent 提供了兼容 OpenAI 的 API，你可以将其接入 Open WebUI 或 Hermes Workspace 等其他应用。
@@ -250,7 +432,7 @@ Hermes Agent 提供了兼容 OpenAI 的 API，你可以将其接入 Open WebUI �
 3. 点 **确认**。
 4. 找到 **HERMES_API_SERVER_KEY**，点击 <i class="material-symbols-outlined">edit_square</i>，填写一个密钥。密钥需要满足以下要求：
 
-    - 长度至少 8 个字符
+    - 长度至少 16 个字符
     - 只能包含字母、数字和常见符号
     - 不能是常见的占位符，比如你的 API 密钥
   
@@ -334,7 +516,7 @@ https://{Hermes-Gateway-API-URL}/health
 1. 打开设置，进入**应用** > **Hermes Agent** > **管理环境变量**。
 2. 为 `HERMES_API_SERVER_KEY` 设置一个新值，需满足以下条件：
 
-    - 长度至少 8 个字符
+    - 长度至少 16 个字符
     - 只能包含字母、数字和常见符号
     - 不能是常见的占位符，比如你的 API 密钥
     
@@ -350,7 +532,7 @@ https://{Hermes-Gateway-API-URL}/health
 - 最佳实践和优化技巧，见[技巧与最佳实践](https://hermes-agent.nousresearch.com/docs/zh-Hans/guides/tips)
 
 :::info 关于 sudo 命令的说明
-Olares 环境里的 Hermes CLI 不支持 `sudo` 命令。官方文档中需要 `sudo` 权限的步骤，请忽略。
+Hermes 容器以普通用户运行，不适用需要在容器内执行本地 `sudo` 的操作说明。通过 SSH 执行的命令取决于远端账号的权限，详见[通过 SSH 管理内网主机](#通过-ssh-管理内网主机)。
 :::
 
 ## 了解更多
