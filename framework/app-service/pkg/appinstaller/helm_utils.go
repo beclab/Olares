@@ -333,21 +333,6 @@ func (h *HelmOps) SetValues(isInstallOp bool) (values map[string]interface{}, er
 			}
 
 		case []appcfg.ProviderPermission:
-			permCfgs, err := apputils.ProviderPermissionsConvertor(perm).ToPermissionCfg(h.ctx, h.app.OwnerName, h.options.MarketSource)
-			if err != nil {
-				klog.Errorf("Failed to convert app permissions for %s: %v", h.app.AppName, err)
-				return values, err
-			}
-			appReg, err := h.registerAppPerm(h.app.ServiceAccountName, h.app.OwnerName, permCfgs)
-			if err != nil {
-				klog.Errorf("Failed to register err=%v", err)
-				return values, err
-			}
-
-			values["os"] = map[string]interface{}{
-				"appKey":    appReg.Data.AppKey,
-				"appSecret": appReg.Data.AppSecret,
-			}
 		}
 	}
 	values["userspace"] = userspace

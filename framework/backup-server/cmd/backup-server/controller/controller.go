@@ -145,11 +145,7 @@ func run(factory client.Factory) error {
 	integration.NewIntegrationManager(factory)
 	notification.NewSender()
 
-	notification := &notification.Notification{
-		Factory: factory,
-	}
-
-	var handler = handlers.NewHandler(factory, notification)
+	var handler = handlers.NewHandler(factory)
 
 	worker.NewWorkerPool(context.TODO(), handler)
 

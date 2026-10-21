@@ -3,6 +3,7 @@ package v2
 import (
 	"context"
 	"errors"
+
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
@@ -104,11 +105,6 @@ func (h *HelmOpsV2) Install() error {
 		return err
 	}
 
-	if err = h.RegisterOrUnregisterAppProvider(v1.Register); err != nil {
-		klog.Errorf("Failed to register app provider err=%v", err)
-		clear()
-		return err
-	}
 	if h.App().Type == appv1alpha1.Middleware.String() {
 		return nil
 	}
