@@ -36,7 +36,7 @@ olares-cli chart from-compose --name myapp -f base.yml -f override.yml      # me
 | `--title` | human title (default = name) |
 | `--type` | `app` (default) / `recommend` / `middleware` |
 | `--profile` (repeatable) | activate a compose profile |
-| `--no-interpolate` | keep `${VAR}` verbatim instead of resolving it from your shell. Without it, a variable that is unset in your environment resolves to an empty string and is baked into the chart |
+| `--no-interpolate` | keep `${VAR}` verbatim in service `environment` values instead of resolving it from your shell; ports, volumes, image and the other structural fields still resolve, so `"${PORT:-8088}:8088"` becomes `8088:8088`. Without it, an environment variable that is unset in your shell resolves to an empty string and is baked into the chart — a required secret then crashes the first install. A verbatim `${VAR}` is not a Kubernetes reference either: replace each one with a value, a Secret, or an `envs[]` entry |
 | `--new-schema` | **deprecated no-op** — the scaffold always emits the canonical `apiVersion: v3` + `olaresManifest.version: 0.12.0` manifest (resources under `spec.accelerator[mode=cpu]`; the flat `spec.requiredCpu/...` envelope is the equivalent no-mode form — see the Accelerator sizing §A.1) |
 
 ## Reading the output

@@ -36,7 +36,16 @@ func composeToK8s(opt kobject.ConvertOptions) ([]runtime.Object, kobject.Kompose
 	if err != nil {
 		return nil, komposeObject, err
 	}
-	komposeObject, err = l.LoadFile(opt.InputFiles, opt.Profiles, opt.NoInterpolate)
+	inputFiles := opt.InputFiles
+	if opt.NoInterpolate {
+		escaped, cleanup, err := escapeEnvironmentInterpolation(opt.InputFiles)
+		if err != nil {
+			return nil, komposeObject, err
+		}
+		defer cleanup()
+		inputFiles = escaped
+	}
+	komposeObject, err = l.LoadFile(inputFiles, opt.Profiles, false)
 	if err != nil {
 		return nil, komposeObject, err
 	}

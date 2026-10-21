@@ -37,6 +37,8 @@ Porting an app is **not** a fixed `from-compose → lint → deploy` pipeline �
 
 **First move (not a pipeline):** locate where the app already sits on the packaging and deployment state tables → drive the concerns to ready, looping as constraints surface → deploy to your Olares.
 
+**Upstream publishes one image with a web UI and no bundled database?** That is the common case; take the [quickstart](references/olares-chart-quickstart.md) and come back to the tables below only for what it sends you to.
+
 ## Axis 1 — Packaging (the image)
 
 Olares **pulls images from a registry and never builds from source**, so every workload must reference a publicly pullable, node-arch-correct image. Image work is **agent-driven**: resolve the **target Olares node's architecture** with `olares-cli cluster node list`, then ask which registry the developer uses (Docker Hub / ghcr), check docker is usable and logged in, and **build + push yourself** — only `docker login` stays manual, and only when not already authenticated ([references/olares-chart-image.md](references/olares-chart-image.md)). Build for the target node's arch (single-arch), never the development host's implicit/default arch; multi-arch is only for publishing.
@@ -78,11 +80,13 @@ For deploying to your own Olares, **metadata can stay a stub** as long as `lint`
 | Build or select every workload image | [image](references/olares-chart-image.md) |
 | Decide process uid, then mounted-volume ownership — two independent questions, see below | [run identity](references/olares-chart-run-as-user.md) |
 | Map persistence, entrances, metadata and workload replicas | [manifest](references/olares-chart-manifest.md) |
+| Decide how the app opens (new browser tab vs. inside the Desktop), its icon, its own login behind the Olares sign-in, CORS / public URL, ports and request timeout | [entrances](references/olares-chart-entrances.md) |
 | Map configuration and platform values | [environment](references/olares-chart-env.md), then [defaults](references/olares-chart-env-defaults.md) or [system values](references/olares-chart-system-values.md) only when needed |
 | Handle passwords, API keys or generated keys | [secrets](references/olares-chart-secrets.md) |
 | Set manifest/chart versions and dependencies | [versioning](references/olares-chart-versioning.md) |
 | Validate after a chart change | [lint](references/olares-chart-lint.md) |
-| Prove the chart on the target Olares | [deploy](references/olares-chart-deploy.md) |
+| Prove the chart on the target Olares | [deploy](references/olares-chart-deploy.md), then [verify](references/olares-chart-verify.md) |
+| Install/upgrade rejected because the row is in flight, or the row settled in `stopped` / `upgradeFailed` | [recover](references/olares-chart-recover.md) |
 
 The manifest reference covers four concerns separately: storage, entrances/ports, workloads/replicas and metadata. Together with image, run identity, env, secrets, versioning, validation and deployment, these are the 11 concerns every port checks.
 
@@ -151,7 +155,8 @@ Skip references that would mislead:
 - **Cluster upload requires `spec.supportArch` to intersect at least one current node architecture.** Query `olares-cli cluster node list`; ensure the referenced images support the same target architecture. If upload reports `architecture_incompatible`, fix and repackage before retrying. If it reports `cluster_arch_unavailable`, keep the package/version unchanged and wait for node discovery to recover.
 - **Declared `.Values.userspace.appData`/`appCache`/`userData` mounts MUST have the matching `permission` field**, or the app-data cross-check fails.
 - **`hostPath` volumes + rolling updates are incompatible** — replace host mounts with the userspace volumes above.
-- **The entrance proxy caps every request at `options.apiTimeout` seconds (default 15s)** — long LLM streams / big uploads / slow reports get cut at the entrance (504 / closed connection) even when the pod is healthy. Set `options.apiTimeout: 0` to disable, or a large bounded value; a *negative* value is not "unlimited" (it falls back to 15s). See the Manifest refinement areas.
+- **A slow request is cut at the entrance even when the pod is healthy:** after 5 minutes on 1.12.7, with no per-app setting, and after `options.apiTimeout` (default 15s) on 1.12.6. See [entrances](references/olares-chart-entrances.md#long-running-requests-optionsapitimeout).
+- **`openMethod` has exactly four values: `""`, `default`, `iframe`, `window`.** "Open in a separate / new browser tab" is `window`; the other three open inside the Desktop. See [entrances](references/olares-chart-entrances.md).
 
 ## Safety and escalation
 

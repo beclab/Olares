@@ -56,7 +56,7 @@ metadata:
   appid: myapp                # app identifier; set = name. from-compose scaffolds it
   title: My App               # stub title=name is OK for local deploy
   description: One-line summary
-  icon: https://app.cdn.olares.com/appstore/default/defaulticon.webp  # default OK for local deploy
+  icon: https://app.cdn.olares.com/appstore/default/defaulticon.webp  # default OK for local deploy; "official icon" → pinned upstream URL, see entrances
   version: 0.0.1              # Chart Version — MUST equal Chart.yaml `version`; bump on each (re)upload
   categories:
   - Utilities                 # stub OK for local deploy; lint does not enum-check
@@ -114,31 +114,7 @@ Replace any bundled `postgres`/`redis`/`mongodb`/`mysql`/`mariadb`/`minio`/`rabb
 
 ## 4. Entrances & ports
 
-The stub has one auto-detected entrance. Adjust:
-
-```yaml
-entrances:
-- name: myapp
-  host: myapp-svc        # an existing Service name in templates/
-  port: 8080             # the Service port
-  title: My App
-  authLevel: private     # public | private | internal
-  invisible: false       # true for internal-only services
-```
-
-- **One entrance per user-facing HTTP service.** Add entries for additional UIs; set `invisible: true` (or omit the entrance) for internal-only services.
-- **No web UI at all** (a CLI tool, an MCP server, an API daemon)? Don't force a fake entrance — apply the headless archetype: a web terminal as the visible entrance + the service port as an invisible internal entrance (the headless archetype).
-- **Non-HTTP services** (game server, SMTP, RDP, …) are exposed via `ports[]`, not entrances:
-  ```yaml
-  ports:
-  - name: game
-    host: game-svc
-    port: 7777
-    protocol: udp
-    exposePort: 47777    # cluster-unique; avoid reserved 22/80/81/443/444/2379/18088
-  ```
-- **Outbound non-HTTP** (e.g. the app sends SMTP): `options.allowedOutboundPorts: [465, 587]`.
-- **Long-running HTTP requests** (LLM streaming, big uploads, slow report generation): the per-app **entrance proxy** caps every request at `options.apiTimeout` **seconds** — **default 15s**, so anything slower is cut at the entrance (504 / closed connection) regardless of the app or browser. Set `options.apiTimeout: 0` to disable the cap, or a large value (e.g. `3600`) for a bounded one. **Only `0` disables it** — a *negative* value is not "no timeout"; the sidecar treats it (like an unset field) as the 15s default. It is an install-time **manifest** field (not an install-time env), so for `templateOnly` env-driven charts you must edit it in the chart manifest and re-package.
+The stub has one auto-detected entrance with `openMethod: default` and the default icon. Its fields — `openMethod` (open in a new browser tab vs. inside the Desktop), `icon`, `authLevel`, `invisible` — plus `ports[]`, outbound ports and the entrance request cap are in [entrances](olares-chart-entrances.md).
 
 ## After refining
 

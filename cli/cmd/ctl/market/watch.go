@@ -183,6 +183,13 @@ type watchTarget struct {
 	// only statusTime separates it from the landed row.
 	upgradeStoppedTerminal bool
 
+	// installStoppedFailure fails an install on any `stopped` row. An install
+	// is only accepted when the app has no settled row, so `stopped` is
+	// app-service giving up on it: a startup crash or a scheduling rejection,
+	// named by Status.Reason. The rejection path also rewrites OpType to
+	// `stop`, which is why this does not go through matchOpType.
+	installStoppedFailure bool
+
 	// requireNewerThanBaseline gates BOTH success and failure on the row's
 	// statusTime being strictly newer than baselineStatusTime. This is the
 	// crux of the restart watcher: a completed restart rests at
@@ -204,6 +211,11 @@ type watchTarget struct {
 	// then a no-op).
 	requireNewerThanBaseline bool
 	baselineStatusTime       int64
+
+	// probePods reads the app's own pods while the row is in flight
+	// (install / upgrade), because a crashlooping container keeps the row
+	// in `installing` / `initializing` for minutes.
+	probePods bool
 }
 
 func newWatchTarget(op watchOp, appName, source string) watchTarget {
@@ -214,6 +226,10 @@ func newWatchTarget(op watchOp, appName, source string) watchTarget {
 		matchOpType: true,
 	}
 	switch op {
+	case watchInstall, watchUpgrade:
+		t.probePods = true
+	}
+	switch op {
 	case watchInstall:
 		t.successSet = map[string]bool{"running": true}
 		// During install, any *Failed terminates as failure; *Canceled
@@ -221,6 +237,7 @@ func newWatchTarget(op watchOp, appName, source string) watchTarget {
 		// did not happen, so the user-facing exit code should be
 		// non-zero even though the backend reached a "clean" state.
 		t.failureSet = unionStateSets(operationFailedStates, canceledStates)
+		t.installStoppedFailure = true
 	case watchUpgrade:
 		t.successSet = map[string]bool{"running": true}
 		t.failureSet = unionStateSets(operationFailedStates, canceledStates)
@@ -371,13 +388,18 @@ func newWatchTarget(op watchOp, appName, source string) watchTarget {
 type watchTimeoutError struct {
 	target watchTarget
 	last   *statusRow
+	pods   string
 }
 
 func (e *watchTimeoutError) Error() string {
 	if e.last != nil {
-		return fmt.Sprintf("%s '%s' watch timed out (last state: %s, op: %s); timeout is not failure and the operation may still be progressing; inspect with `olares-cli market status %s`",
+		msg := fmt.Sprintf("%s '%s' watch timed out (last state: %s, op: %s); timeout is not failure and the operation may still be progressing; inspect with `olares-cli market status %s`",
 			e.target.op, e.target.appName,
 			valueOrUnknown(e.last.State), valueOrUnknown(e.last.OpType), e.target.appName)
+		if e.pods != "" {
+			msg += "; app containers: " + e.pods
+		}
+		return msg
 	}
 	return fmt.Sprintf("%s '%s' watch timed out (no status reported by the backend); timeout is not failure; inspect with `olares-cli market status %s`",
 		e.target.op, e.target.appName, e.target.appName)
@@ -391,6 +413,10 @@ type watchFailureError struct {
 }
 
 func (e *watchFailureError) Error() string {
+	if e.target.installStoppedFailure && e.row.State == appStateStopped {
+		return fmt.Sprintf("install '%s' failed: app-service stopped it (reason=%s) — the app is still installed; read why with `olares-cli cluster pod list -n <namespace>` and `olares-cli cluster container logs <namespace>/<pod>/<container> --previous`, then either upgrade to a fixed version and `olares-cli market resume %s`, or `olares-cli market uninstall %s` and install again",
+			e.target.appName, valueOrUnknown(e.row.Reason), e.target.appName, e.target.appName)
+	}
 	parts := []string{fmt.Sprintf("state=%s", e.row.State)}
 	if e.row.OpType != "" {
 		parts = append(parts, "op="+e.row.OpType)
@@ -428,7 +454,13 @@ func waitForTerminal(parentCtx context.Context, mc *MarketClient, opts *MarketOp
 		last         *statusRow
 		seen         bool
 		consecErrors int
+		pods         *podWatch
 	)
+	if t.probePods {
+		if probe := opts.podProber(); probe != nil {
+			pods = &podWatch{probe: probe, appName: t.appName, failFast: opts.FailOnCrashLoop}
+		}
+	}
 
 	for {
 		if err := ctx.Err(); err != nil {
@@ -438,7 +470,7 @@ func waitForTerminal(parentCtx context.Context, mc *MarketClient, opts *MarketOp
 			return statusRow{}, err
 		}
 		if time.Now().After(deadline) {
-			return statusRow{}, &watchTimeoutError{target: t, last: last}
+			return statusRow{}, &watchTimeoutError{target: t, last: last, pods: pods.summary()}
 		}
 
 		resp, err := mc.GetMarketState(ctx)
@@ -521,6 +553,9 @@ func waitForTerminal(parentCtx context.Context, mc *MarketClient, opts *MarketOp
 				}
 				return row, nil
 			}
+			if t.installStoppedFailure && row.State == appStateStopped {
+				return row, &watchFailureError{target: t, row: row}
+			}
 			if t.successSet[row.State] && t.passesBaseline(row) {
 				switch {
 				case t.matchesOpType(row):
@@ -536,6 +571,9 @@ func waitForTerminal(parentCtx context.Context, mc *MarketClient, opts *MarketOp
 			}
 			if t.matchesOpType(row) && t.failureSet[row.State] && t.passesBaseline(row) {
 				return row, &watchFailureError{target: t, row: row}
+			}
+			if crash := pods.poll(ctx, opts, time.Now()); crash != nil {
+				return row, &watchCrashLoopError{target: t, row: row, signal: *crash}
 			}
 		}
 
@@ -690,6 +728,11 @@ func runWithWatch(opts *MarketOptions, mc *MarketClient, accepted OperationResul
 			failed.Progress = fail.row.Progress
 			failed.FinalState = fail.row.State
 			failed.FinalOpType = fail.row.OpType
+		}
+		var crash *watchCrashLoopError
+		if errors.As(err, &crash) {
+			failed.State = crash.row.State
+			failed.Progress = crash.row.Progress
 		}
 		var to *watchTimeoutError
 		if errors.As(err, &to) && to.last != nil {

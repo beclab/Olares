@@ -10,7 +10,7 @@ Symptom: the app's container keeps restarting (CrashLoopBackOff), exits non-zero
 During `initializing`, app-service polls entrance TCP reachability and only declares failure once `hasUnrecoverablePod` sees `CrashLoopBackOff` with `RestartCount >= 5` **persisting past a 5-minute grace**. So the market row legitimately stays `initializing` for minutes while the container is already crashlooping — **the fast signal is the pod, not the row.** Resolve the namespace (`<app>-<owner>` / `<app>-shared`; see finding an app's namespace) and watch the **main** container directly:
 
 ```bash
-olares-cli cluster pod list -n <ns> -o json    # status.containerStatuses[].{ready,restartCount,state.waiting.reason}
+olares-cli cluster pod list -n <ns>          # STATUS = waiting reason (Init:<reason> for an init container), RESTARTS
 ```
 
 `restartCount` climbing or `state.waiting.reason == CrashLoopBackOff` on the main container = start diagnosing now.

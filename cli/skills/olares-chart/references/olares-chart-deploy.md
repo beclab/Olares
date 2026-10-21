@@ -15,7 +15,7 @@ flowchart TD
   pkg --> up["market upload"]
   up --> exists{"app already exists on this Olares?"}
   exists -->|"no (first deploy / installFailed / uninstalled)"| inst["market install -s upload --watch --watch-timeout 1m -o json"]
-  exists -->|"yes (running / stopped / upgradeFailed / applyEnvFailed / stopFailed)"| upg["market upgrade -s upload --version NEW --watch --watch-timeout 1m -o json"]
+  exists -->|"yes (running / stopped / upgradeFailed)"| upg["market upgrade -s upload --version NEW --watch --watch-timeout 1m -o json"]
   inst -->|running| done["deployed -> cleanup or keep"]
   upg -->|running| done
   upg -->|failed/stuck| diag
@@ -51,38 +51,40 @@ olares-cli market upload ./<app>-<version>.tgz   # use the new <version> in the 
 Upload only stores the chart; installing it is what proves it runs:
 
 ```bash
-olares-cli market install <app> -s upload --version <version> --watch --watch-timeout 1m -o json
+olares-cli market install <app> -s upload --version <version> --watch --fail-on-crashloop --watch-timeout 1m -o json
 ```
 
-- **`install` is for an app that does NOT yet exist on this Olares** (first deploy, or after `uninstall`, or retrying an `installFailed`). If the app already exists in a settled state (`running` / `stopped` / `upgradeFailed` / `applyEnvFailed` / `stopFailed`), `install` is rejected by app-service — **re-apply with `upgrade` instead** (next bullet). When in doubt, `olares-cli market get <app> -s upload -o json` and read `.state`.
+- **`install` is for an app that does NOT yet exist on this Olares** (first deploy, or after `uninstall`, or retrying an `installFailed`). If the app already exists, `install` is rejected by app-service — **re-apply with `upgrade` instead** (next bullet). When in doubt, `olares-cli market get <app> -s upload -o json` and read `.state`.
 - **Re-apply an edited chart to an already-deployed app → bump the version, then `upgrade` to it:**
   ```bash
-  olares-cli market upgrade <app> -s upload --version <NEW version> --watch --watch-timeout 1m -o json
+  olares-cli market upgrade <app> -s upload --version <NEW version> --watch --fail-on-crashloop --watch-timeout 1m -o json
   ```
   Bump `metadata.version` (= `Chart.yaml` `version`), re-package, and re-upload, then upgrade to the new number. This is the canonical loop for iterating on an installed app and for recovering one stuck in `upgradeFailed`, and there is no shortcut around the bump: the stored bytes for a published version cannot be replaced. The upload source does waive the CLI's strict-newer gate on `upgrade` (app-service gates on `>= deployed`), but a same-version upgrade re-applies the chart already stored — useful as a retry, useless for shipping an edit. A *lower* version is always rejected.
 - Parse `.finalState`: `running` = deployed. A short `--watch-timeout` is not failure; if the row is still `downloading`, wait/poll because image pull can be legitimately long. Once it leaves `downloading`, a 1m window without STATE movement or any `*Failed` state means stop passively watching and diagnose. The lifecycle state machine is the platform **application state machine**; verb-level watch behavior is in the market watch reference, and an `environment variable requirements not met` rejection means re-run with `--env KEY=VALUE` for each name under `Missing required values:`.
 - **Hydration race — `HTTP 404: App not found` right after upload is transient, NOT a chart problem.** `upload` lands the package in Market's embedded DCR immediately, but the app only becomes installable after the market backend indexes ("hydrates") it a few seconds later. Installing in that window 404s. This is the one install failure you *should* retry: wait for hydration, then re-run the same `install`. The chart didn't change here, so there's nothing to re-`upload` or bump — the chart is already stored and re-uploading the same bytes wouldn't speed up hydration. Confirm hydration finished via the `appstore-backend` log (`isAppHydrationComplete RETURNING TRUE ... appID=<app>` → `Added new app to latest: <app>` → `new_app_ready`), or poll `olares-cli market get <app> -s upload` until it resolves:
   ```bash
   until olares-cli market get <app> -s upload -o json 2>/dev/null | grep -q '"name"'; do sleep 2; done
-  olares-cli market install <app> -s upload --version <version> --watch --watch-timeout 1m -o json
+  olares-cli market install <app> -s upload --version <version> --watch --fail-on-crashloop --watch-timeout 1m -o json
   ```
 
 ### Don't just wait — diagnose the app's own pods in parallel
 
 The `--watch` market row (`downloading` / `initializing`) is a **coarse** signal, and a crashlooping main container is not fast-failed for several minutes (the 5-minute `hasUnrecoverablePod` grace). Treat parallel workload inspection as a required part of the deploy loop:
 
-1. Start `market install ... --watch` or `market upgrade ... --watch`.
+1. Start `market install ... --watch --fail-on-crashloop` or `market upgrade ... --watch --fail-on-crashloop`; both print the app's restarting containers as they appear and stop on a crash loop.
 2. As soon as the app namespace/workload appears, inspect its Pod status and container logs in parallel.
 3. Keep waiting only for recoverable progress such as image pulling, scheduling, or container creation.
 4. On `CrashLoopBackOff`, `CreateContainerConfigError`, `RunContainerError`, an admission rejection, or a fatal application log, stop the passive market wait immediately — direct runtime evidence is the trigger for diagnosis, not a market timeout. Capture the Pod state, events, current logs, and previous-container logs when available, then diagnose and fix the chart.
 
 **The runtime diagnosis itself lives in [`../../olares-doctor/SKILL.md`](../../olares-doctor/SKILL.md)** — it owns the symptom→root-cause routing (stalled image pull, crashlooping / non-starting container, `running`-but-unreachable) shared by catalog and dev apps. Doctor diagnoses the root cause; **for a chart you author, it points back here** — the fix is a manifest/template edit (§4b below), then re-lint + re-deploy.
 
+### A crash while the row still says `installing` / `initializing`
+
+An in-flight app accepts neither `install` nor `upgrade`, so after fixing the chart, clear the row first: `uninstall` for `pending` / `downloading` / `installing`, `cancel` for the rest — see [recover](olares-chart-recover.md).
+
 ### `running` is not the same as serving
 
-`running` only says app-service scaled the workload up: an app whose first write to a userspace mount was refused still reads `running` and answers 403. Before calling it deployed, read the app's own evidence — `cluster pod list -n <ns>` for READY, `cluster container logs <ns>/<pod>/<container>` for its startup and first-request lines, and `settings apps list` for the real host in its `URL` column (**never compute it**; `entrances list` leaves that column empty) — then request that host. Anything unreachable from there is doctor's routing, above.
-
-**`cluster pod exec` requires Olares >= 1.12.7** — it is the direct way to read a mount's owner or curl the app on localhost, and it is gated. The baseline this skill scaffolds against is `>= 1.12.6`, where the commands above are the entire verification surface.
+`running` only says app-service scaled the workload up. Before calling it deployed, prove it serves and opens from the Desktop: [verify](olares-chart-verify.md).
 
 ## 4. Diagnose: deploy-pipeline logs (chart-specific), then the app's runtime via doctor
 
@@ -106,32 +108,17 @@ Once the app's container is the problem (it pulled, scheduled, and started but m
 |---|---|
 | Image can't be pulled / wrong CPU arch (`ImagePullBackOff`, `no match for platform`, `exec format error`) | rebuild a pullable, node-arch image — the Image capability |
 | Main container `Completed` (exit 0) with **empty logs**, or app reads a bogus port/host (k8s service-link env collision) | `spec.template.spec.enableServiceLinks: false` — the Env area |
-| Frontend 504 / connection closed at ~15s on a long request, app pod healthy (entrance proxy `options.apiTimeout` defaults to 15s) | `options.apiTimeout: 0` or a large value — the Manifest refinement areas |
+| Frontend 504 / connection closed on a long request, app pod healthy | the entrance request cap, which differs by Olares version — [entrances](olares-chart-entrances.md#long-running-requests-optionsapitimeout) |
 | `Permission denied` / EACCES writing data, or data not persisting (uid != 1000) | the run identity (uid 1000) guidance |
 | Admission denied: untrusted image runs as root | force uid 1000, or move the root work into a `beclab/` permissions initContainer — the run identity (uid 1000) guidance |
 
-### 4c. Upgrade recovery: `stopped` after upgrade
+### 4c. Upgrade recovery: `stopped` or `upgradeFailed`
 
-An upgrade can leave the **market row** in `state=stopped` while the **workload** is actually `Running`. Two paths land in `stopped`: upgrading an **already-stopped** app re-renders the chart at `replicas=0` and intentionally returns to `stopped` (by design); and **canceling an in-flight** op (`initializing` / `upgrading` / `applyingEnv` / `resuming`) only *stops* the app — so if a crashing initContainer was fixed and the workload later came up on its own, the row can read `stopped` while the pod is `1/1 Running`:
-
-```bash
-olares-cli market status <app> -s upload   # state=stopped
-olares-cli cluster application status <ns> # Deployment 1/1 Running
-```
-
-This is **not** a failure — the market row just needs to be resumed. Recovery:
-
-```bash
-olares-cli market resume <app> --watch
-```
-
-`resume` scales the workloads back up and waits for startup (`stopped → resuming → running`). If the pod is already running it completes quickly and flips the market row to `running`.
-
-If an upgrade instead left the app in **`upgradeFailed`** (the upgrade itself errored, not a `stopped` row), recover by fixing the chart, **bumping the version**, re-packaging + re-uploading, and re-running `market upgrade <app> -s upload --version <NEW> --watch` — `upgradeFailed` is an upgradable state. The bump is mandatory whenever the chart changed, because the old version cannot be re-uploaded; a same-version upgrade is only for retrying the stored chart after a transient failure. Do **not** fall back to `install`: app-service rejects `install` from `upgradeFailed`, which only re-wedges the row.
+A row that settled in `stopped` while the pod is `1/1 Running` needs `market resume`, not a fix; `upgradeFailed` needs a bumped `upgrade`, never `install`. Both are in [recover](olares-chart-recover.md).
 
 ## 5. Decide: fix the chart, or report back
 
-- **Problem is in the chart** (wrong image ref, missing/incorrect env, bad volume mount, entrance host/port, undeclared `permission` for a userspace mount, **uid/permission mismatch on userspace volumes**, ...): edit the manifest/templates per the Manifest refinement areas and the run identity (uid 1000) guidance, re-run `chart lint`, bump and re-upload per §2, and the auto-loop continues. **Re-apply with the right verb:** app gone or `installFailed` → `market install -s upload --version <NEW>`; already in a settled state (`running` / `stopped` / `upgradeFailed` / `applyEnvFailed` / `stopFailed`) → `market upgrade -s upload --version <NEW>`. `install` against an existing app is rejected by app-service and leaves the row wedged; `upgrade` is the recovery path.
+- **Problem is in the chart** (wrong image ref, missing/incorrect env, bad volume mount, entrance host/port, undeclared `permission` for a userspace mount, **uid/permission mismatch on userspace volumes**, ...): edit the manifest/templates per the Manifest refinement areas and the run identity (uid 1000) guidance, re-run `chart lint`, bump and re-upload per §2, and the auto-loop continues. **Re-apply with the right verb:** app gone or `installFailed` → `market install -s upload --version <NEW>`; `running` / `stopped` / `upgradeFailed` → `market upgrade -s upload --version <NEW>` (any other state: the shared **application state machine** says which verb it takes); still in flight → clear it first (§3, crash while installing). `install` against an existing app is rejected by app-service and leaves the row wedged; `upgrade` is the recovery path.
 - **Problem is not in the chart, or unclear:** break out of the auto-loop — summarize the failing state and the relevant log excerpts in plain language, suggest likely causes, and **ask the developer how to proceed.** Do not silently retry install in a loop — install/auth failures are deterministic (see olares-market / olares-shared error tables). The lone exception is the post-upload hydration `404` in section 3, which is transient and meant to be retried once hydration completes.
 
 ## 6. Clean up the test install
@@ -147,4 +134,4 @@ olares-cli market delete <app> --version <ver>         # remove chart from uploa
 
 ## Next step
 
-Done once a successful install reaches `running` (+ cleanup, or leave it installed if the developer wants to keep using it). For a public listing, proceed to the [`../../olares-publish/SKILL.md`](../../olares-publish/SKILL.md) skill — market-ready polish, multi-arch, then the PR to `beclab/apps`.
+Done once a successful install reaches `running` **and** passes [verify](olares-chart-verify.md) — the entrance is running, visible, opens the way it was asked to, and answers (+ cleanup, or leave it installed if the developer wants to keep using it). For a public listing, proceed to the [`../../olares-publish/SKILL.md`](../../olares-publish/SKILL.md) skill — market-ready polish, multi-arch, then the PR to `beclab/apps`.

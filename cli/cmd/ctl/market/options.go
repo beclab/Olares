@@ -12,6 +12,7 @@ import (
 	"golang.org/x/term"
 
 	"github.com/beclab/Olares/cli/pkg/clierr"
+	"github.com/beclab/Olares/cli/pkg/clusterclient"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
@@ -74,6 +75,12 @@ type MarketOptions struct {
 	Watch         bool
 	WatchTimeout  time.Duration
 	WatchInterval time.Duration
+
+	// FailOnCrashLoop ends an install / upgrade watch as soon as one of the
+	// app's containers is in a state it will not leave on its own.
+	FailOnCrashLoop bool
+
+	podProbe podProber
 }
 
 // newMarketOptions seeds MarketOptions with the factory the parent command
@@ -287,6 +294,41 @@ func (o *MarketOptions) addWatchFlags(cmd *cobra.Command) {
 		"maximum total wall-clock to wait when --watch is set (e.g. 15m, 1h); no-op without --watch. Bump for image-pull-heavy installs (Stable Diffusion / Ollama: 30m–1h)")
 	cmd.Flags().DurationVar(&o.WatchInterval, "watch-interval", 2*time.Second,
 		"polling interval against /market/state when --watch is set (e.g. 1s for tight CI feedback, 5s for slow networks); no-op without --watch")
+}
+
+// explainNoSourceFlag is for the verbs that act on whichever installed row
+// matches the name, so callers reaching for -s learn to drop it.
+func explainNoSourceFlag(cmd *cobra.Command) {
+	cmdutil.ExplainMissingFlag(cmd,
+		fmt.Sprintf("'%s' takes no --source; it acts on the installed app whichever source it came from, so drop the flag", cmd.Name()),
+		"s", "source")
+}
+
+// addPodWatchFlags is for install / upgrade only: their watch is the one
+// that can sit on an in-flight row while the app's pods crash.
+func (o *MarketOptions) addPodWatchFlags(cmd *cobra.Command) {
+	cmd.Flags().BoolVar(&o.FailOnCrashLoop, "fail-on-crashloop", false,
+		"with --watch, fail as soon as an app container is in CrashLoopBackOff / CreateContainerConfigError / RunContainerError instead of waiting for the market row; the operation itself keeps running")
+}
+
+// podProber returns the probe --watch uses to read the app's pods, or nil
+// when the profile cannot build one; the watch then follows the market row
+// alone.
+func (o *MarketOptions) podProber() podProber {
+	if o.podProbe != nil || o.factory == nil {
+		return o.podProbe
+	}
+	ctx := context.Background()
+	rp, err := o.factory.ResolveProfile(ctx)
+	if err != nil {
+		return nil
+	}
+	hc, err := o.factory.HTTPClient(ctx)
+	if err != nil {
+		return nil
+	}
+	o.podProbe = newClusterPodProber(clusterclient.NewClient(hc, rp))
+	return o.podProbe
 }
 
 // prepare resolves the active profile and returns a ready-to-use MarketClient

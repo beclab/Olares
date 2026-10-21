@@ -36,7 +36,7 @@ The classic case — **initialize an app's admin username and password** — is 
 
 ## Declaration fields
 
-Each entry under `envs:` supports these fields ([app-env-vars.md](https://docs.olares.com/developer/develop/app-env-vars.html)):
+Each entry under `envs:` supports these fields ([app-env-vars.md](https://www.olares.com/docs/developer/develop/app-env-vars)):
 
 | Field | Meaning |
 |---|---|

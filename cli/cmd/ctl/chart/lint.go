@@ -1,15 +1,19 @@
 package chart
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 
 	pkgchart "github.com/beclab/Olares/cli/pkg/chart"
+	"github.com/beclab/Olares/cli/pkg/cmdutil"
 	oac "github.com/beclab/Olares/framework/oac"
 	"github.com/spf13/cobra"
 )
 
 type lintOpts struct {
+	Output string
+
 	Owner     string
 	Admin     string
 	AutoOwner bool
@@ -56,6 +60,7 @@ Examples:
 		},
 	}
 	fs := cmd.Flags()
+	fs.StringVarP(&o.Output, "output", "o", "text", "output format: text, json (a failure under json is the error envelope on stderr)")
 	fs.StringVar(&o.Owner, "owner", "", "set .Values.bfl.username for the helm dry-run (overridden by --auto-owner)")
 	fs.StringVar(&o.Admin, "admin", "", "set .Values.admin for the helm dry-run (overridden by --auto-owner)")
 	fs.BoolVar(&o.AutoOwner, "auto-owner", true, "lint under both owner==admin and owner!=admin scenarios; ignores --owner/--admin when on")
@@ -83,6 +88,12 @@ func runLint(input string, o *lintOpts) error {
 
 	if err := oac.Lint(chartDir, buildOACOptions(o)...); err != nil {
 		return err
+	}
+	if cmdutil.OutputIsJSON(o.Output) {
+		return json.NewEncoder(os.Stdout).Encode(struct {
+			Path string `json:"path"`
+			OK   bool   `json:"ok"`
+		}{input, true})
 	}
 	fmt.Fprintf(os.Stdout, "%s: OK\n", input)
 	return nil

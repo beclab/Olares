@@ -31,7 +31,7 @@ Load the shared [platform model](../olares-shared/references/olares-platform.md)
 
 | Task | Read | First command |
 |---|---|---|
-| See whether an app's pods are up | [pod operations](references/olares-cluster-pod.md) | `olares-cli cluster pod list -n <namespace> -o json`, then read each `.status.phase` |
+| See whether an app's pods are up | [pod operations](references/olares-cluster-pod.md) | `olares-cli cluster pod list -n <namespace>` — READY, STATUS (the waiting reason, `Init:` for an init container) and RESTARTS; `-o json` returns each pod's full spec, so pipe it to `jq` for one field |
 | Read a container's logs | [pod operations](references/olares-cluster-pod.md) | `olares-cli cluster pod logs <pod> -n <namespace>` |
 | Find what this profile can see at all | this file | `olares-cli cluster context -o json` |
 | Restart a workload | [workload operations](references/olares-cluster-workload.md) | `olares-cli cluster workload restart <name> -n <namespace>` |

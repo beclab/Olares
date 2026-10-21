@@ -74,6 +74,7 @@ Examples:
 	describeLifecycleJSON(cmd)
 	opts.addVersionFlag(cmd)
 	opts.addWatchFlags(cmd)
+	opts.addPodWatchFlags(cmd)
 	return cmd
 }
 

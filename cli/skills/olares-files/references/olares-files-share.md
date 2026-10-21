@@ -99,8 +99,8 @@ olares-cli files share rm <share-id>
 ### Create a Public share and reply with the URL
 
 ```bash
-# Derive the share host from the active profile's Olares ID (everything after '@').
-USER_HOST=$(olares-cli profile list | awk '/^\*/{print $2}' | sed 's/.*@//')
+# Derive the user hostname from the active profile's Olares ID: alice@olares.com -> alice.olares.com.
+USER_HOST=$(olares-cli profile list -o json | jq -r '.[] | select(.current) | .olaresId' | sed 's/@/./')
 SHARE_ID=$(olares-cli files share public drive/Home/Photos/ --expire-days 7 --password "$PW" -o json | jq -r '.id')
 echo "Share link: https://share.${USER_HOST}/sharable-link/${SHARE_ID}/"
 ```

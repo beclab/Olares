@@ -66,7 +66,7 @@ Pass the same per-engine `<ENGINE>_REQUIRED_GPU_MEMORY` env with either compute 
 
 For `nvidia`, the value sizes `nvidia.com/gpumem`. For `nvidia-gb10`, it sizes pod memory instead; GB10 has no separate GPU-memory quota.
 
-The published manifests already set `options.apiTimeout: 0`. Clone them directly; no chart edit is required for long generations.
+The published manifests already set `options.apiTimeout: 0`, which lifts the 1.12.6 entrance cap; on 1.12.7 the field is ignored and the 5-minute cap applies to any request through the entrance. Clone them directly; no chart edit is required.
 
 ## 5. Clone and watch
 
