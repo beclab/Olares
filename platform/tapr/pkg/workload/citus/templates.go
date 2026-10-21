@@ -24,6 +24,7 @@ const (
 	DefaultPGAdminUser       = "olares"
 	PGClusterBackup          = "citus-backup"
 	PGClusterRestore         = "citus-restore"
+	CitusServiceDomain       = "citus-0.citus-headless.os-platform.svc.cluster.local"
 )
 
 var (

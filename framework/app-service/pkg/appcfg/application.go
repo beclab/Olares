@@ -363,6 +363,25 @@ func (c *ApplicationConfig) ComputeResourceModes() []ResourceMode {
 	}}
 }
 
+func (c *ApplicationConfig) RequestMiddlware() bool {
+	if c.Middleware != nil {
+		if c.Middleware.Postgres != nil ||
+			c.Middleware.Redis != nil ||
+			c.Middleware.MongoDB != nil ||
+			c.Middleware.Nats != nil ||
+			c.Middleware.Minio != nil ||
+			c.Middleware.RabbitMQ != nil ||
+			c.Middleware.Elasticsearch != nil ||
+			c.Middleware.MariaDB != nil ||
+			c.Middleware.MySQL != nil ||
+			c.Middleware.Argo != nil ||
+			c.Middleware.ClickHouse != nil {
+			return true
+		}
+	}
+	return false
+}
+
 // legacyComputeMode picks the synthesized mode for a legacy manifest:
 //
 //   - If SelectedGpuType is set, use it verbatim. This covers the path

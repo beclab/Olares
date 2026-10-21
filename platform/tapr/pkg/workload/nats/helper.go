@@ -26,9 +26,10 @@ import (
 )
 
 const (
-	ConfigMapName = "nats-cfg"
-	ConfigMapKey  = "nats.conf"
-	Allow         = "allow"
+	ConfigMapName     = "nats-cfg"
+	ConfigMapKey      = "nats.conf"
+	Allow             = "allow"
+	NatsServiceDomain = "nats.os-platform.svc.cluster.local"
 )
 
 var (

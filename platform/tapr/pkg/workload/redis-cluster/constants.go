@@ -6,9 +6,10 @@ import (
 )
 
 const (
-	RedisClusterService     = "redis-cluster-proxy"
-	RedisclusterProxyConfig = "predixy-configs"
-	RedisProxy              = "redis-cluster-proxy"
+	RedisClusterService       = "redis-cluster-proxy"
+	RedisclusterProxyConfig   = "predixy-configs"
+	RedisProxy                = "redis-cluster-proxy"
+	RedisClusterServiceDomain = "redis-cluster-proxy.os-platform.svc.cluster.local"
 )
 
 var (
