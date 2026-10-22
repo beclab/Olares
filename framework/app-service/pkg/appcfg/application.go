@@ -104,7 +104,6 @@ type ApplicationConfig struct {
 	Images               []string
 	AllowMultipleInstall bool
 	RawAppName           string
-	PodsSelectors        []metav1.LabelSelector
 	HardwareRequirement  Hardware
 	SharedEntrances      []Entrance
 	SelectedGpuType      string
