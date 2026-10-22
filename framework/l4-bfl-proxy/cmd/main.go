@@ -104,6 +104,12 @@ func main() {
 		klog.Fatalf("setup provider failed: %v", err)
 	}
 
+	fsReconciler := provider.NewFileserverReconciler(mgr.GetCache())
+	fsReconciler.OnReconciled = prov.NotifyChanged
+	if err := fsReconciler.SetupWithManager(ctx); err != nil {
+		klog.Fatalf("setup fileserver reconciler failed: %v", err)
+	}
+
 	xdsSrv := server.New(xdsResources, &server.Config{
 		Address: "127.0.0.1",
 		Port:    xdsServerPort,
@@ -123,6 +129,7 @@ func main() {
 
 	runners := []runner.Runner{
 		prov,
+		fsReconciler,
 		translator.New(providerResources, xdsIR, &translator.Config{
 			SSLServerPort:      sslServerPort,
 			SSLProxyServerPort: sslProxyServerPort,

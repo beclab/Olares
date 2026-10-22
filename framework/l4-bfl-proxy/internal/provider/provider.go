@@ -108,11 +108,6 @@ func (p *Provider) SetupWithManager(ctx context.Context) error {
 		return fmt.Errorf("get service informer: %w", err)
 	}
 
-	nodeInformer, err := p.cache.GetInformer(ctx, &corev1.Node{})
-	if err != nil {
-		return fmt.Errorf("get node informer: %w", err)
-	}
-
 	userEnvInformer, err := p.cache.GetInformer(ctx, &sysv1alpha1.UserEnv{})
 	if err != nil {
 		return fmt.Errorf("get userEnv informer: %w", err)
@@ -169,7 +164,7 @@ func (p *Provider) SetupWithManager(ctx context.Context) error {
 			if !ok {
 				return false
 			}
-			return isFileServerPod(pod) || podHasHTTPProbe(pod)
+			return !isFileServerPod(pod) && podHasHTTPProbe(pod)
 		},
 		Handler: baseHandler,
 	}); err != nil {
@@ -184,10 +179,6 @@ func (p *Provider) SetupWithManager(ctx context.Context) error {
 		Handler: baseHandler,
 	}); err != nil {
 		return fmt.Errorf("add service event handler: %w", err)
-	}
-
-	if _, err = nodeInformer.AddEventHandler(baseHandler); err != nil {
-		return fmt.Errorf("add node event handler: %w", err)
 	}
 
 	if _, err = userEnvInformer.AddEventHandler(toolscache.FilteringResourceEventHandler{
@@ -221,6 +212,9 @@ func (p *Provider) Start(ctx context.Context) error {
 	klog.Info("provider: stopped...")
 	return nil
 }
+
+// NotifyChanged schedules a snapshot rebuild after Files endpoint changes.
+func (p *Provider) NotifyChanged() { p.notifyChanged() }
 
 func (p *Provider) notifyChanged() {
 	if !p.synced.Load() {
@@ -408,7 +402,8 @@ func (p *Provider) getFileserverGlobalData(ctx context.Context) (*fileserverGlob
 	podMap := make(map[string]*corev1.Pod, len(podList.Items))
 	for i := range podList.Items {
 		pod := &podList.Items[i]
-		if pod.Labels["app"] == "files" && pod.Status.PodIP != "" {
+		if isFileServerPod(pod) && pod.Spec.NodeName != "" && pod.Status.PodIP != "" &&
+			pod.DeletionTimestamp == nil && pod.Status.Phase != corev1.PodFailed && pod.Status.Phase != corev1.PodSucceeded {
 			podMap[pod.Spec.NodeName] = pod
 		}
 	}
