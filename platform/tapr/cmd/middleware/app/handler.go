@@ -538,7 +538,7 @@ func (s *Server) handleListMiddlewaresAll(ctx *fiber.Ctx) error {
 				Password:  pwd,
 				Nodes:     pgc.Spec.Replicas,
 				Proxy: Proxy{
-					Endpoint: fmt.Sprintf("%s.%s:5432", "citus-master-svc", fmt.Sprintf("user-system-%s", username.(string))),
+					Endpoint: fmt.Sprintf("%s.%s:5432", citus.CitusServiceDomain),
 				},
 			}
 			clusterResp = append(clusterResp, &cres)
