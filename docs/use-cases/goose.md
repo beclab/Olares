@@ -12,9 +12,7 @@ doc_updated: "2026-10-21"
 
 # Run Goose as your local AI agent on Olares
 
-Goose is an open-source, general-purpose AI agent for research, writing, coding, automation, and more. On Olares, Goose runs on your Olares device with local models through Router, and you interact with it through Goose Terminal in your browser or Goose Desktop on your computer.
-
-The app uses Router's default chat model by default. This example creates a project brief in Goose's persistent workspace, so you can complete a file task without first granting access to your personal directories.
+Goose is an open-source, general-purpose AI agent for research, writing, coding, automation, and more. On Olares, Goose runs on your device with local models through Router, using the default chat model. You interact with it through Goose Terminal in your browser or Goose Desktop on your computer.
 
 ## Learning objectives
 
@@ -66,8 +64,6 @@ Use `goose run -t` to send a single prompt without starting an interactive conve
 
 3. Goose displays the answer and returns to the terminal prompt.
 
-   To ask follow-up questions in an ongoing conversation, see [Start a conversation](#start-a-conversation).
-
 ### Start a conversation
 
 Use an interactive session when you want a back-and-forth conversation.
@@ -81,7 +77,7 @@ Use an interactive session when you want a back-and-forth conversation.
    ```
 
 3. The first time you run this command, Goose asks whether to share anonymous usage data. Choose **Yes** or **No** to continue.
-4. Send the following prompt to create a sample project brief:
+4. Send your prompt. The following example creates a sample project brief in `/config/workspace/goose-demo`:
 
    ```text
    Work only in /config/workspace/goose-demo. Create that directory if needed.
@@ -101,6 +97,15 @@ Use an interactive session when you want a back-and-forth conversation.
 6. Verify the result in the same terminal:
 
    ```bash
+   # List the directory to confirm the files exist
+   ls -l /path/to/directory
+   # View the file to check its content
+   cat /path/to/file
+   ```
+
+   For this example:
+
+   ```bash
    ls -l /config/workspace/goose-demo
    cat /config/workspace/goose-demo/brief.md
    ```
@@ -110,7 +115,7 @@ Use an interactive session when you want a back-and-forth conversation.
 7. Press `Ctrl+C` to exit the session. If Goose asks you to press it again, press `Ctrl+C` a second time. This ends the terminal interaction.
 
 :::info File location
-Goose stores the files in the `/config/workspace` directory on your Olares device. Files there persist across normal app restarts. Keep a separate backup for documents you need to retain.
+Goose stores the files in the `/config/workspace` directory on your Olares device. Restarting the app does not delete these files. For important documents, keep another copy in Files.
 :::
 
 ### Find and resume a session
@@ -186,11 +191,9 @@ If your computer is not on the same local network as your Olares device, turn on
 
 The session you created in Goose Terminal also appears in Goose Desktop as a **CLI Session** entry under **CHATS** in the left sidebar. Open it and you can continue the conversation where you left off, with the same workspace and files.
 
-## Configure access and models
+## Work with Home or External files
 
-### Work with Home or External files
-
-Home and External directory access are optional. To use existing files:
+By default, Goose only accesses its own workspace directory. To let Goose work with files in your Home or External directories, enable access first:
 
 1. Open Olares **Settings**, and go to **Applications** > **Goose** > **Manage environment variables**.
 2. Set the access variable to `true` for the directory you need:
@@ -201,7 +204,7 @@ Home and External directory access are optional. To use existing files:
    | <nobr>`ALLOW_EXTERNAL_DIR_ACCESS`</nobr> | `false` | External at `/config/External` |
 
 3. Click **Apply**, and wait for Goose to return to **Running**.
-4. Reconnect Goose Desktop or reopen Goose Terminal.
+4. Restart Goose Desktop or Goose Terminal.
 5. Give Goose the exact path of the files to process.
 
    :::warning
@@ -212,23 +215,42 @@ Home and External directory access are optional. To use existing files:
    Enabling a variable exposes the whole directory to the agent, not only a single file mentioned in a prompt. To revoke access, set the variable back to `false` and apply the changes.
    :::
 
-### Use another model provider
+## Use another model provider
 
 The default model connection is Router. To use a third-party provider, edit the app's environment variables in Olares Settings. These settings control the server used by both Goose Desktop and Goose Terminal.
 
-For an OpenAI-compatible provider, configure:
+1. Open Olares **Settings**, and go to **Applications** > **Goose** > **Manage environment variables**.
+2. For an OpenAI-compatible provider, set the following variables:
 
-| Variable | Value |
-|:---|:---|
-| <nobr>`GOOSE_PROVIDER`</nobr> | `openai` |
-| <nobr>`GOOSE_MODEL`</nobr> | The exact model ID supplied by your provider |
-| <nobr>`OPENAI_HOST`</nobr> | The provider's server root URL, such as `https://api.openai.com`, without `/v1` |
-| <nobr>`OPENAI_BASE_PATH`</nobr> | `v1/chat/completions`, or the chat completions path specified by your provider |
-| <nobr>`OPENAI_API_KEY`</nobr> | Your provider's API key |
+   | Variable | Value |
+   |:---|:---|
+   | <nobr>`GOOSE_PROVIDER`</nobr> | `openai` |
+   | <nobr>`GOOSE_MODEL`</nobr> | The exact model ID supplied by your provider |
+   | <nobr>`OPENAI_HOST`</nobr> | The provider's server root URL, such as `https://api.openai.com`, without `/v1` |
+   | <nobr>`OPENAI_BASE_PATH`</nobr> | `v1/chat/completions`, or the chat completions path specified by your provider |
+   | <nobr>`OPENAI_API_KEY`</nobr> | Your provider's API key |
 
-Save the changes, wait for Goose to return to **Running**, and start a new chat. For Anthropic, set `GOOSE_PROVIDER` to `anthropic`, enter its model ID in `GOOSE_MODEL`, and set `ANTHROPIC_API_KEY`.
+3. For Anthropic, set the following variables:
 
-To return to Router, set `GOOSE_PROVIDER` to `custom_olares_router` and `GOOSE_MODEL` to `default-chat`. Remove third-party credentials you no longer need. Changing provider settings in Goose Desktop does not replace environment variables configured on the Olares server.
+   | Variable | Value |
+   |:---|:---|
+   | <nobr>`GOOSE_PROVIDER`</nobr> | `anthropic` |
+   | <nobr>`GOOSE_MODEL`</nobr> | The exact model ID supplied by your provider |
+   | <nobr>`ANTHROPIC_API_KEY`</nobr> | Your provider's API key |
+
+4. Click **Apply**, and wait for Goose to return to **Running**.
+5. Restart Goose Desktop or Goose Terminal.
+6. To return to Router:
+
+   a. Set `GOOSE_PROVIDER` to `custom_olares_router`.
+
+   b. Set `GOOSE_MODEL` to `default-chat`.
+   
+   c. Remove the third-party credentials.
+
+:::tip
+To change the model for both Goose Desktop and Goose Terminal, edit the environment variables on the Olares server. Provider settings in Goose Desktop do not affect this configuration.
+:::
 
 ## FAQs
 
@@ -244,7 +266,7 @@ Check that Router's default chat model is ready. If the error says the model is 
 
 External Backend (ACP) is not enabled or configured. In Goose Desktop, open **Settings** > **Agent** and check the External Backend (ACP) settings.
 
-### Why can Goose not find my files?
+### Why can Goose not find my files on Olares?
 
 Use a path on Olares, such as `/config/workspace/goose-demo/brief.md`. For Home or External files, enable the corresponding directory access first and use `/config/Home` or `/config/External`. A path on your computer is not a server path.
 
