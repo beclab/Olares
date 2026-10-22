@@ -1,9 +1,10 @@
 package gateway
 
 import (
-	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"testing"
+	"time"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -80,6 +81,53 @@ func TestBuildSpecForEntrance(t *testing.T) {
 	}
 	if spec.Upstream.ServiceName != "demo-svc" || spec.Upstream.Port != 8080 {
 		t.Errorf("upstream = %+v, want demo-svc:8080", spec.Upstream)
+	}
+	if spec.ResponseTimeout != nil {
+		t.Errorf("responseTimeout = %v, want nil", spec.ResponseTimeout)
+	}
+}
+
+func TestBuildSpecForEntranceCopiesTimeoutsTotal(t *testing.T) {
+	total := metav1.Duration{Duration: 45 * time.Second}
+	app := &appv1alpha1.Application{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "demo",
+			Labels: map[string]string{
+				constants.AppApiVersionLabel: "v3",
+				constants.AppSharedLabel:     constants.AppSharedTrue,
+			},
+		},
+		Spec: appv1alpha1.ApplicationSpec{
+			Appid:     "demo1234",
+			Name:      "demo",
+			Namespace: "demo-shared",
+			SharedEntrances: []appv1alpha1.Entrance{
+				{
+					Name: "web",
+					Host: "demo-svc",
+					Port: 8080,
+					Timeouts: &appv1alpha1.EntranceTimeouts{
+						Total: &total,
+					},
+				},
+			},
+		},
+	}
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Name: "demo-svc", Namespace: "demo-shared"},
+		Spec:       corev1.ServiceSpec{Ports: []corev1.ServicePort{{Port: 8080, Protocol: corev1.ProtocolTCP}}},
+	}
+	spec, err := BuildSpecForEntrance(app, app.Spec.SharedEntrances[0], 0, len(app.Spec.SharedEntrances), svc, "olares.com",
+		srrv1alpha1.EntranceClassShared)
+	if err != nil {
+		t.Fatalf("BuildSpecForEntrance: %v", err)
+	}
+	if spec.ResponseTimeout == nil || spec.ResponseTimeout.Duration != 45*time.Second {
+		t.Fatalf("responseTimeout = %v, want 45s", spec.ResponseTimeout)
+	}
+	spec.ResponseTimeout.Duration = time.Hour
+	if app.Spec.SharedEntrances[0].Timeouts.Total.Duration != 45*time.Second {
+		t.Fatal("BuildSpecForEntrance mutated entrance timeouts.total")
 	}
 }
 

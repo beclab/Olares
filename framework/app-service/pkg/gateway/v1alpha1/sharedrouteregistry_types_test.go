@@ -2,6 +2,7 @@ package v1alpha1
 
 import (
 	"testing"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -21,13 +22,15 @@ func TestAddToSchemeRegistersTypes(t *testing.T) {
 }
 
 func TestDeepCopyRoundTrip(t *testing.T) {
+	total := metav1.Duration{Duration: 45 * time.Second}
 	in := &SharedRouteRegistry{
 		ObjectMeta: metav1.ObjectMeta{Name: "shared-demo", Namespace: "demo-shared"},
 		Spec: SharedRouteRegistrySpec{
-			RouteMode:     RouteModeGateway,
-			EntranceClass: EntranceClassShared,
-			HostPatterns:  []string{"a.example.com", "b.example.com"},
-			Upstream:      UpstreamRef{ServiceName: "demo", Port: 8080},
+			RouteMode:       RouteModeGateway,
+			EntranceClass:   EntranceClassShared,
+			HostPatterns:    []string{"a.example.com", "b.example.com"},
+			Upstream:        UpstreamRef{ServiceName: "demo", Port: 8080},
+			ResponseTimeout: &total,
 		},
 		Status: SharedRouteRegistryStatus{
 			Conditions: []metav1.Condition{{Type: "Ready", Status: metav1.ConditionTrue}},
@@ -44,6 +47,10 @@ func TestDeepCopyRoundTrip(t *testing.T) {
 	out.Spec.EntranceClass = EntranceClassApplication
 	if in.Spec.EntranceClass != EntranceClassShared {
 		t.Errorf("EntranceClass changed on source object: %q", in.Spec.EntranceClass)
+	}
+	out.Spec.ResponseTimeout.Duration = time.Hour
+	if in.Spec.ResponseTimeout.Duration != 45*time.Second {
+		t.Error("ResponseTimeout not deep-copied")
 	}
 	out.Status.Conditions[0].Type = "mutated"
 	if in.Status.Conditions[0].Type == "mutated" {

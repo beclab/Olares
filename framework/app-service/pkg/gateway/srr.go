@@ -140,12 +140,17 @@ func BuildSpecForEntrance(app *appv1alpha1.Application, entrance appv1alpha1.Ent
 		return srrv1alpha1.SharedRouteRegistrySpec{}, fmt.Errorf("service %s/%s has no usable TCP port", svc.Namespace, svc.Name)
 	}
 
-	return srrv1alpha1.SharedRouteRegistrySpec{
+	spec := srrv1alpha1.SharedRouteRegistrySpec{
 		RouteMode:     srrv1alpha1.RouteModeGateway,
 		EntranceClass: class,
 		HostPatterns:  norms,
 		Upstream:      upstream,
-	}, nil
+	}
+	if entrance.Timeouts != nil && entrance.Timeouts.Total != nil {
+		total := *entrance.Timeouts.Total
+		spec.ResponseTimeout = &total
+	}
+	return spec, nil
 }
 
 // applicationEntranceHostPatterns returns SRR hostPatterns for an application

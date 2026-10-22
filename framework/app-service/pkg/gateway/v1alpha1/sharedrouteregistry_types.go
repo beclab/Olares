@@ -82,6 +82,12 @@ type SharedRouteRegistrySpec struct {
 
 	// Upstream points at the backing Service in the same namespace.
 	Upstream UpstreamRef `json:"upstream"`
+
+	// ResponseTimeout is the optional entrance timeouts.total projected onto
+	// this SRR. When set, route control uses it as the HTTPRoute request and
+	// backendRequest timeout (explicit wins over platform default and floor).
+	// +optional
+	ResponseTimeout *metav1.Duration `json:"responseTimeout,omitempty"`
 }
 
 // SharedRouteRegistryStatus reports the shared-route reconcile outcome.

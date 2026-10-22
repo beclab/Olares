@@ -8,19 +8,31 @@ import (
 	"strings"
 	"time"
 
+	"github.com/beclab/Olares/framework/timeoutprofile"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
 )
 
-const (
-	DefaultSharedBackendResponseTimeout = 10 * time.Minute
-	MinResponseTimeout                  = DefaultSharedBackendResponseTimeout
-	MaxResponseTimeout                  = 24 * time.Hour
-	EnvDefaultResponseTimeout           = "SHARED_BACKEND_RESPONSE_TIMEOUT"
-	defaultTimeoutGatewayString         = "600s"
+// Platform Shared (east-west EG) timeouts come from the timeout catalog so this
+// hop stays aligned with the rest of the platform.
+var (
+	DefaultSharedBackendResponseTimeout = timeoutprofile.Default().Profile(timeoutprofile.Interactive).EdgeIdle
+	MinResponseTimeout                  = timeoutprofile.Default().Bounds.TotalMin
+	MaxResponseTimeout                  = timeoutprofile.Default().Bounds.TotalMax
+	defaultTimeoutGatewayString         = mustSeconds(DefaultSharedBackendResponseTimeout)
 )
 
+const EnvDefaultResponseTimeout = "SHARED_BACKEND_RESPONSE_TIMEOUT"
+
 var configSecondsPattern = regexp.MustCompile(`^(\d+)s?$`)
+
+func mustSeconds(d time.Duration) string {
+	s, err := FormatSeconds(d)
+	if err != nil {
+		panic(err)
+	}
+	return s
+}
 
 // ParseSeconds parses a duration configured in whole seconds (e.g. "600" or "600s").
 func ParseSeconds(s string) (time.Duration, error) {
@@ -53,14 +65,6 @@ func FormatSeconds(d time.Duration) (string, error) {
 	return fmt.Sprintf("%ds", d/time.Second), nil
 }
 
-// ClampResponseTimeout raises values below the platform default to 600s.
-func ClampResponseTimeout(d time.Duration) time.Duration {
-	if d < DefaultSharedBackendResponseTimeout {
-		return DefaultSharedBackendResponseTimeout
-	}
-	return d
-}
-
 func DefaultTimeout() time.Duration {
 	v := strings.TrimSpace(os.Getenv(EnvDefaultResponseTimeout))
 	if v == "" {
@@ -75,32 +79,42 @@ func DefaultTimeout() time.Duration {
 		klog.Warningf("invalid %s=%q, using default %s: %v", EnvDefaultResponseTimeout, v, defaultTimeoutGatewayString, err)
 		return DefaultSharedBackendResponseTimeout
 	}
-	if clamped := ClampResponseTimeout(d); clamped != d {
-		klog.Warningf("%s=%q below minimum %s, using %s", EnvDefaultResponseTimeout, v, defaultTimeoutGatewayString, defaultTimeoutGatewayString)
-		return clamped
-	}
 	return d
 }
 
+// EffectiveResponseTimeout returns the Gateway API seconds string for HTTPRoute
+// request/backendRequest timeouts.
+//
+// When manifest (entrance timeouts.total) is set and in bounds, it wins over
+// the platform default and any EG floor. Otherwise the effective value is
+// max(defaultTimeout, egConfigured) within [MinResponseTimeout, MaxResponseTimeout].
 func EffectiveResponseTimeout(defaultTimeout time.Duration, manifest *metav1.Duration, egConfigured time.Duration) (string, error) {
 	if err := ValidateResponseTimeout(defaultTimeout); err != nil {
 		return defaultTimeoutGatewayString, fmt.Errorf("invalid default timeout: %w", err)
 	}
-	effective := defaultTimeout
 
-	for _, candidate := range []time.Duration{candidateDuration(manifest), egConfigured} {
-		if candidate <= 0 {
-			continue
-		}
-		if err := ValidateResponseTimeout(candidate); err != nil {
-			return defaultTimeoutGatewayString, fmt.Errorf("invalid timeout %s: %w", candidate, err)
-		}
-		if candidate > effective {
-			effective = candidate
+	if m := candidateDuration(manifest); m > 0 {
+		if err := ValidateResponseTimeout(m); err != nil {
+			klog.Warningf("invalid entrance timeouts.total=%s, falling back to platform/floor: %v", m, err)
+		} else {
+			formatted, err := FormatSeconds(m)
+			if err != nil {
+				return defaultTimeoutGatewayString, fmt.Errorf("format manifest timeout: %w", err)
+			}
+			return formatted, nil
 		}
 	}
 
-	effective = ClampResponseTimeout(effective)
+	effective := defaultTimeout
+	if egConfigured > 0 {
+		if err := ValidateResponseTimeout(egConfigured); err != nil {
+			return defaultTimeoutGatewayString, fmt.Errorf("invalid timeout %s: %w", egConfigured, err)
+		}
+		if egConfigured > effective {
+			effective = egConfigured
+		}
+	}
+
 	formatted, err := FormatSeconds(effective)
 	if err != nil {
 		return defaultTimeoutGatewayString, fmt.Errorf("format effective timeout: %w", err)
@@ -109,6 +123,9 @@ func EffectiveResponseTimeout(defaultTimeout time.Duration, manifest *metav1.Dur
 }
 
 func ValidateResponseTimeout(d time.Duration) error {
+	if d < MinResponseTimeout {
+		return fmt.Errorf("timeout %s is below min %s", d, MinResponseTimeout)
+	}
 	if d > MaxResponseTimeout {
 		return fmt.Errorf("timeout %s exceeds max %s", d, MaxResponseTimeout)
 	}
