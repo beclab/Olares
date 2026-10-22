@@ -157,6 +157,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   link: "/zh/use-cases/codex-cli",
                 },
                 {
+                  text: "Goose",
+                  link: "/zh/use-cases/goose",
+                },
+                {
                   text: "Pool CLI",
                   link: "/zh/use-cases/pool-cli",
                 },                
