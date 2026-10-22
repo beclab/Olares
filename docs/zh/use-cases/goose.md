@@ -20,7 +20,8 @@ Goose 是一个开源的通用 AI 智能体，可用于研究、写作、编程�
 
 - 在 Goose Terminal 中运行 Goose。
 - 将 Goose Desktop 连接到 Olares 上的 Goose 服务。
-- 按需开放已有文件的访问权限。
+- 可选：开放 Home 或 External 文件的访问权限。
+- 可选：将 Goose 连接到其他模型服务商。
 
 ## 前提条件
 
@@ -146,8 +147,9 @@ Goose Desktop 运行在你的电脑上，通过 Goose ACP 入口连接到 Olares
    这是 Goose Desktop 与 Goose 服务之间的连接密钥，不是模型 API 密钥，请妥善保管。
 
 3. 打开 Olares **设置**，进入**应用** > **Goose** > **入口** > **Goose ACP**，复制 **Endpoint** URL。
-4. 在 Router 中进入 **LLM** 页面，找到被指定为 `default-chat` 的模型，点击右侧的 **View connection example**。
-5. 根据电脑的连接方式选择：
+4. 打开 Router，进入 **API keys** 页面，为 `goose` 创建一个可访问 **default-chat** 模型的密钥。复制密钥值，它只显示一次，请妥善保管。
+5. 在 Router 中进入 **LLM** 页面，找到被指定为 `default-chat` 的模型，点击右侧的 **View connection example**。
+6. 根据电脑的连接方式选择：
    - 如果电脑与 Olares 设备在同一局域网，选择 **Device in LAN**，复制 Router URL。
    - 如果电脑通过互联网连接，选择 **Remote**，复制 Router URL。
 
@@ -166,6 +168,8 @@ Goose Desktop 运行在你的电脑上，通过 Goose ACP 入口连接到 Olares
    | **Provider Type** | 选择 **OpenAI Compatible**。 |
    | **Display Name** | 填写便于识别的名称，例如 `olares-router`。 |
    | **API URL** | 填写之前复制的 Router URL。 |
+   | **This provider requires an API key** | 勾选此选项。 |
+   | **API Key** | 填写在 Router 中为 `goose` 创建的 API 密钥。 |
    | **Available Models** | 填写 `default-chat`。 |
 
 4. 点击 **Create Provider**。
@@ -180,7 +184,7 @@ Goose Desktop 运行在你的电脑上，通过 Goose ACP 入口连接到 Olares
    | **Secret Key** | 在**准备连接信息**中保存的连接密钥。 |
 
 8. 重启 Goose Desktop。
-9. 新建对话。在聊天框下方确认模型为 `default-chat`，然后选择一个工作目录。
+9. 新建对话。在聊天框下方确认模型为 `default-chat`，工作目录为 `/config/workspace`。
 10. 发送以下消息，确认 Goose 回复：
 
       ```text

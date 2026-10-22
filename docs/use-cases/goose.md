@@ -20,7 +20,8 @@ In this guide, you will learn how to:
 
 - Run Goose in Goose Terminal.
 - Connect Goose Desktop to the Goose service on Olares.
-- Enable access to existing files when needed.
+- Optional: Enable access to Home or External files.
+- Optional: Connect Goose to another model provider.
 
 ## Prerequisites
 
@@ -145,9 +146,10 @@ Goose Desktop runs on your computer and connects to the Goose service on Olares 
 
    This is the connection secret between Goose Desktop and the Goose service, not an AI model API key. Keep it private.
 
-3. Open Olares **Settings**, go to **Applications** > **Goose** > **Entrances** > **Goose ACP**, and then copy the **Endpoint** URL.
-4. In Router, go to the **LLM** page, find the model assigned as `default-chat`, and click **View connection example** on the right.
-5. Select how your computer connects:
+3. Open Olares Settings, go to **Applications** > **Goose** > **Entrances** > **Goose ACP**, and then copy the **Endpoint** URL.
+4. Open Router from Launchpad, go to the **API keys** page, and create a key for `goose` with access to the **default-chat** model. Copy the key value. It is shown only once, so keep it safe.
+5. In Router, go to the **LLM** page, find the model assigned as `default-chat`, and click **View connection example** on the right.
+6. Select how your computer connects:
    - If your computer is on the same local network as your Olares device, select **Device in LAN** and copy the Router URL.
    - If your computer connects over the internet, select **Remote** and copy the Router URL.
 
@@ -166,6 +168,8 @@ If your computer is not on the same local network as your Olares device, turn on
    | <nobr>**Provider Type**</nobr> | Select **OpenAI Compatible**. |
    | <nobr>**Display Name**</nobr> | Enter a name for easy identification, such as `olares-router`. |
    | <nobr>**API URL**</nobr> | Enter the Router URL you copied earlier. |
+   | <nobr>**This provider requires an API key**</nobr> | Select this option. |
+   | <nobr>**API Key**</nobr> | Enter the `goose` API key you created in Router. |
    | <nobr>**Available Models**</nobr> | Enter `default-chat`. |
 
 4. Click **Create Provider**.
@@ -180,7 +184,7 @@ If your computer is not on the same local network as your Olares device, turn on
    | <nobr>**Secret Key**</nobr> | The connection secret you saved in **Prepare connection details**. |
 
 8. Restart Goose Desktop.
-9. Open a new chat. Under the chat box, confirm the model is `default-chat`, then select a working directory.
+9. Open a new chat. Under the chat box, confirm the model is `default-chat` and the working directory is `/config/workspace`.
 10. Send the following message and confirm that Goose replies:
 
       ```text
