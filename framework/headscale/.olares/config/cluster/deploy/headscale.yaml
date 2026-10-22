@@ -373,6 +373,20 @@ spec:
       ports:
         - protocol: TCP
           port: 8080
+    # Shared frontend: Nginx forwards control traffic; user-service verifies
+    # access tokens for Settings management requests before calling the wrapper.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: os-frontend
+          podSelector:
+            matchLabels:
+              app: olares-app
+      ports:
+        - protocol: TCP
+          port: 8080
+        - protocol: TCP
+          port: 8000
     # The authenticated /server provider runs in vault-server. It is the
     # effective caller that requests a pre-auth key from the wrapper.
     - from:

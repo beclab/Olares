@@ -1,0 +1,26 @@
+# The protected namespace's default policy does not admit shared frontends.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: user-service-secret-ingress
+  namespace: os-protected
+  labels:
+    app.kubernetes.io/managed-by: app-service
+    app.kubernetes.io/component: route-control
+spec:
+  podSelector:
+    matchLabels:
+      app: infisical
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: os-frontend
+          podSelector:
+            matchLabels:
+              app: olares-app
+      ports:
+        - protocol: TCP
+          port: 8080

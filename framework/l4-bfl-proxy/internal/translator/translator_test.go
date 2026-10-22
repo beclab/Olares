@@ -1145,9 +1145,9 @@ func TestBuildUserVirtualHosts_SharedLogin(t *testing.T) {
 	assert.Equal(t, "authelia-svc.os-frontend.svc.cluster.local", cluster.Host)
 	assert.Equal(t, uint32(80), cluster.Port)
 	assert.True(t, cluster.UseDNS)
-	// Only Login moves in this phase; wizard and desktop retain their routes.
+	// Login and Desktop use shared frontends; Wizard retains its user route.
 	assert.Equal(t, "wizard.user-space-alice.svc.cluster.local", clusters["nonapp_wizard_alice"].Host)
-	assert.Equal(t, "edge-desktop.user-space-alice.svc.cluster.local", clusters["nonapp_desktop_alice"].Host)
+	assert.Equal(t, "edge-desktop.os-frontend.svc.cluster.local", clusters["nonapp_desktop_alice"].Host)
 }
 
 func TestBuildUserVirtualHosts_ProfileRootVerify(t *testing.T) {
@@ -1210,4 +1210,49 @@ func TestBuildFileserverRoutesUseNodePodAndVerifiedIdentity(t *testing.T) {
 		}
 		assert.True(t, found, prefix)
 	}
+}
+
+func TestShareFileserverRoutesUseNodePodsAndExistingEntranceAuth(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+	user := &message.UserInfo{Name: "owner", FileserverNodes: []*message.FileserverNodeInfo{
+		{NodeName: "master", PodIP: "10.233.1.1", IsMaster: true},
+		{NodeName: "worker", PodIP: "10.233.1.2"},
+	}}
+	clusters := make(map[string]*ir.ClusterIR)
+	routes := tr.buildShareFileserverRoutes(user, clusters)
+	require.NotEmpty(t, routes)
+	prefixes := make(map[string]*ir.HTTPRouteIR)
+	for _, route := range routes {
+		prefixes[route.PathPrefix] = route
+		require.NotNil(t, route.ExtAuth)
+		assert.Equal(t, buildAppExtAuthConfig(user), route.ExtAuth, "preserve the share entrance's existing verification rules")
+		assert.NotContains(t, route.RequestHeaders, "X-BFL-USER", "do not replace the verified caller with the zone owner")
+		assert.Equal(t, "%REQ(:AUTHORITY)%", route.RequestHeaders["X-Forwarded-Host"])
+		assert.Equal(t, "", route.RequestHeaders["X-Internal-Share-Token"])
+	}
+	worker := prefixes["/upload/upload-link/worker/"]
+	require.NotNil(t, worker)
+	assert.Equal(t, "10.233.1.2", clusters[worker.Cluster].Host)
+	require.NotNil(t, prefixes["/api/resources/share/"])
+	assert.Equal(t, "10.233.1.1", clusters[prefixes["/api/resources/share/"].Cluster].Host)
+	for _, path := range []string{"/api/resources/cache/worker/", "/api/resources/external/worker/", "/api/task/worker/", "/api/repos/", "/api/mount/worker/"} {
+		assert.NotContains(t, prefixes, path, "private API must not become a share-entrance node route")
+	}
+}
+
+func TestShareEntranceInstallsFileserverRoutes(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+	user := &message.UserInfo{Name: "owner", FileserverNodes: []*message.FileserverNodeInfo{{NodeName: "worker", PodIP: "10.233.1.2"}}}
+	app := &message.AppInfo{Name: "share", Appid: "share", Namespace: "os-frontend", Owner: "owner", Entrances: []*message.EntranceInfo{{Name: "web", Host: "share", Port: 80}}}
+	vhosts := tr.buildAppVirtualHosts(user, app, "owner.example.com", false, make(map[string]*ir.ClusterIR))
+	require.NotEmpty(t, vhosts)
+	found := false
+	for _, vh := range vhosts {
+		for _, route := range vh.Routes {
+			if route.PathPrefix == "/upload/upload-link/worker/" {
+				found = true
+			}
+		}
+	}
+	assert.True(t, found, "share entrance must install node routes before the frontend catch-all")
 }

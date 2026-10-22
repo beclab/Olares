@@ -107,6 +107,7 @@ var systemServices = []systemServiceDef{
 var fileserverPatchApps = map[string]bool{
 	"files":    true,
 	"settings": true,
+	"share":    true,
 }
 
 type Config struct {
@@ -700,14 +701,16 @@ func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.A
 			Language:              user.Language,
 			UserZone:              zone,
 			UserName:              user.Name,
-			// Only the (files,settings apps) vhost needs Envoy-level CORS
+			// Files, Settings and Share file routes need Envoy-level CORS
 			IsFileserver: fileserverPatchApps[prefix],
 			Priority:     systemAppPriority(app.Name),
 		}
 
 		var routes []*ir.HTTPRouteIR
 
-		if fileserverPatchApps[prefix] {
+		if prefix == "share" {
+			routes = append(routes, t.buildShareFileserverRoutes(user, clusterSet)...)
+		} else if fileserverPatchApps[prefix] {
 			routes = append(routes, t.buildFileserverRoutes(user, clusterSet)...)
 		}
 
@@ -909,6 +912,29 @@ func (t *Translator) buildFileserverRoutes(user *message.UserInfo, clusterSet ma
 		}
 	}
 
+	return routes
+}
+
+// Share uses the same entrance-specific Authelia verification as its existing
+// catch-all, not user-service's mandatory-login identity subrequest. Files still
+// checks share tokens/passwords. Only share and transfer paths get node routes;
+// private file-management paths must not be added to the public entrance.
+func (t *Translator) buildShareFileserverRoutes(user *message.UserInfo, clusterSet map[string]*ir.ClusterIR) []*ir.HTTPRouteIR {
+	var routes []*ir.HTTPRouteIR
+	for _, route := range t.buildFileserverRoutes(user, clusterSet) {
+		shared := route.PathRegex != ""
+		for _, prefix := range []string{"/api/resources/share/", "/api/preview/share/", "/api/tree/share/", "/api/raw/share/", "/upload/upload-link/", "/upload/file-uploaded-bytes/", "/videos/"} {
+			shared = shared || strings.HasPrefix(route.PathPrefix, prefix)
+		}
+		if !shared {
+			continue
+		}
+		route.Name = "share_" + route.Name
+		route.RequestHeaders["X-Forwarded-Host"] = "%REQ(:AUTHORITY)%"
+		route.RequestHeaders["X-Provider-Proxy"] = ""
+		route.RequestHeaders["X-Internal-Share-Token"] = ""
+		routes = append(routes, route)
+	}
 	return routes
 }
 
