@@ -96,13 +96,13 @@ func TestFileserverReconcilerRefreshesPodEndpoints(t *testing.T) {
 	c.podInformer.handler.OnUpdate(&old, replacement)
 	refresh()
 	assert.Equal(t, "10.233.2.9", readIP())
-	terminating := old.DeepCopy()
+	terminating := replacement.DeepCopy()
 	now := metav1.Now()
 	terminating.DeletionTimestamp = &now
-	c.pods.Items = append(c.pods.Items, *terminating)
+	c.pods.Items = []corev1.Pod{*terminating}
 	c.podInformer.handler.OnUpdate(&old, terminating)
 	refresh()
-	assert.Equal(t, "10.233.2.9", readIP(), "terminating old pod must not replace the new endpoint")
+	assert.Equal(t, "10.233.2.9", readIP(), "deletion marking must not remove the existing route")
 	c.pods.Items = nil
 	c.podInformer.handler.OnDelete(toolscache.DeletedFinalStateUnknown{Obj: replacement})
 	refresh()
@@ -155,4 +155,26 @@ func TestFileserverReconcilerNewNodeAndPod(t *testing.T) {
 	require.Len(t, nodes, 1)
 	assert.Equal(t, "new-worker", nodes[0].NodeName)
 	assert.Equal(t, "10.233.3.8", nodes[0].PodIP)
+}
+
+// Keep diagnosable endpoints even while the Pod is unhealthy or terminating.
+// Only an actual deletion (or absence of an IP) removes its endpoint.
+func TestFileserverEndpointsRemainAcrossPodStates(t *testing.T) {
+	for _, phase := range []corev1.PodPhase{corev1.PodPending, corev1.PodRunning, corev1.PodFailed, corev1.PodSucceeded, corev1.PodUnknown} {
+		t.Run(string(phase), func(t *testing.T) {
+			now := metav1.Now()
+			pod := corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"app": "files"}, DeletionTimestamp: &now},
+				Spec:       corev1.PodSpec{NodeName: "worker"},
+				Status:     corev1.PodStatus{PodIP: "10.233.1.9", Phase: phase},
+			}
+			c := &filesEndpointCache{pods: corev1.PodList{Items: []corev1.Pod{pod}}}
+			p := New(c, nil, &Config{})
+			gd, err := p.getFileserverGlobalData(context.Background())
+			require.NoError(t, err)
+			nodes := fileserverNodes(gd)
+			require.Len(t, nodes, 1)
+			assert.Equal(t, "10.233.1.9", nodes[0].PodIP)
+		})
+	}
 }

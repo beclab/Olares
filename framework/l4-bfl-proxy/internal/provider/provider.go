@@ -164,7 +164,7 @@ func (p *Provider) SetupWithManager(ctx context.Context) error {
 			if !ok {
 				return false
 			}
-			return !isFileServerPod(pod) && podHasHTTPProbe(pod)
+			return podHasHTTPProbe(pod)
 		},
 		Handler: baseHandler,
 	}); err != nil {
@@ -402,8 +402,7 @@ func (p *Provider) getFileserverGlobalData(ctx context.Context) (*fileserverGlob
 	podMap := make(map[string]*corev1.Pod, len(podList.Items))
 	for i := range podList.Items {
 		pod := &podList.Items[i]
-		if isFileServerPod(pod) && pod.Spec.NodeName != "" && pod.Status.PodIP != "" &&
-			pod.DeletionTimestamp == nil && pod.Status.Phase != corev1.PodFailed && pod.Status.Phase != corev1.PodSucceeded {
+		if isFileServerPod(pod) && pod.Status.PodIP != "" {
 			podMap[pod.Spec.NodeName] = pod
 		}
 	}
