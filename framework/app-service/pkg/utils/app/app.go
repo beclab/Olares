@@ -1098,7 +1098,6 @@ func toApplicationConfig(opt *ConfigOptions, chart string, cfg *appcfg.AppConfig
 		Internal:             cfg.Spec.RunAsInternal,
 		SubCharts:            cfg.Spec.SubCharts,
 		ServiceAccountName:   cfg.Permission.ServiceAccount,
-		Provider:             cfg.Provider,
 		Type:                 cfg.ConfigType,
 		Envs:                 cfg.Envs,
 		Images:               cfg.Options.Images,
