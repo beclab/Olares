@@ -199,7 +199,7 @@ The session you created in Goose Terminal also appears in Goose Desktop as a **C
 
 By default, Goose only accesses its own workspace directory. To let Goose work with files in your Home or External directories, enable access first:
 
-1. Open Olares **Settings**, and go to **Applications** > **Goose** > **Manage environment variables**.
+1. Open Olares Settings, and go to **Applications** > **Goose** > **Manage environment variables**.
 2. Set the access variable to `true` for the directory you need:
 
    | Variable | Default | Directory available to Goose when enabled |
@@ -223,7 +223,7 @@ By default, Goose only accesses its own workspace directory. To let Goose work w
 
 The default model connection is Router. To use a third-party provider, edit the app's environment variables in Olares Settings. These settings control the server used by both Goose Desktop and Goose Terminal.
 
-1. Open Olares **Settings**, and go to **Applications** > **Goose** > **Manage environment variables**.
+1. Open Olares Settings, and go to **Applications** > **Goose** > **Manage environment variables**.
 2. For an OpenAI-compatible provider, set the following variables:
 
    | Variable | Value |

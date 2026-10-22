@@ -146,7 +146,7 @@ Goose Desktop 运行在你的电脑上，通过 Goose ACP 入口连接到 Olares
 
    这是 Goose Desktop 与 Goose 服务之间的连接密钥，不是模型 API 密钥，请妥善保管。
 
-3. 打开 Olares **设置**，进入**应用** > **Goose** > **入口** > **Goose ACP**，复制 **Endpoint** URL。
+3. 打开 Olares 设置，进入**应用** > **Goose** > **入口** > **Goose ACP**，复制 **Endpoint** URL。
 4. 打开 Router，进入 **API keys** 页面，为 `goose` 创建一个可访问 **default-chat** 模型的密钥。复制密钥值，它只显示一次，请妥善保管。
 5. 在 Router 中进入 **LLM** 页面，找到被指定为 `default-chat` 的模型，点击右侧的 **View connection example**。
 6. 根据电脑的连接方式选择：
@@ -199,7 +199,7 @@ Goose Desktop 运行在你的电脑上，通过 Goose ACP 入口连接到 Olares
 
 默认情况下，Goose 只能访问自己的工作目录。要让 Goose 处理 Home 或 External 目录中的文件，请先开启访问：
 
-1. 打开 Olares **设置**，进入**应用** > **Goose** > **管理环境变量**。
+1. 打开 Olares 设置，进入**应用** > **Goose** > **管理环境变量**。
 2. 将所需目录的访问变量设为 `true`：
 
    | 环境变量 | 默认值 | 开启后 Goose 可访问的目录 |
@@ -223,7 +223,7 @@ Goose Desktop 运行在你的电脑上，通过 Goose ACP 入口连接到 Olares
 
 默认的模型连接是 Router。如需使用第三方模型服务商，在 Olares 设置中修改应用环境变量。这些设置同时控制 Goose Desktop 和 Goose Terminal 使用的服务端。
 
-1. 打开 Olares **设置**，进入**应用** > **Goose** > **管理环境变量**。
+1. 打开 Olares 设置，进入**应用** > **Goose** > **管理环境变量**。
 2. 对于兼容 OpenAI 的服务商，设置以下变量：
 
    | 环境变量 | 值 |
