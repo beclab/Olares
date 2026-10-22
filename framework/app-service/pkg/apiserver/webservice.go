@@ -166,31 +166,6 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
 		Returns(http.StatusOK, "Success to get", nil))
 
-	// handler_system
-	ws.Route(ws.POST("/system/service/enable/sync").
-		To(handler.enableServiceSync).
-		Doc("enable user's system service 'Sync' ").
-		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
-		Returns(http.StatusOK, "Success to enable", nil))
-
-	ws.Route(ws.POST("/system/service/disable/sync").
-		To(handler.disableServiceSync).
-		Doc("disable user's system service 'Sync' ").
-		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
-		Returns(http.StatusOK, "Success to disable", nil))
-
-	ws.Route(ws.POST("/system/service/enable/backup").
-		To(handler.enableServiceBackup).
-		Doc("enable user's system service 'Backup' ").
-		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
-		Returns(http.StatusOK, "Success to enable", nil))
-
-	ws.Route(ws.POST("/system/service/disable/backup").
-		To(handler.disableServiceBackup).
-		Doc("disable user's system service 'Backup' ").
-		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
-		Returns(http.StatusOK, "Success to disable", nil))
-
 	// handler_settings
 	ws.Route(ws.POST("/applications/{"+ParamAppName+"}/setup").
 		To(handler.setupApp).
@@ -392,13 +367,6 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 		Returns(http.StatusOK, "Success to inject", nil)).
 		Consumes(restful.MIME_JSON)
 
-	ws.Route(ws.POST("/provider-registry/validate").
-		To(handler.providerRegistryValidate).
-		Doc("validating webhook for validate app install namespace").
-		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
-		Returns(http.StatusOK, "provider registry validated success", nil)).
-		Consumes(restful.MIME_JSON)
-
 	ws.Route(ws.POST("/user/validate").
 		To(handler.userValidate).
 		Doc("validating webhook for validate user creation").
@@ -570,12 +538,6 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 		Doc("get an app image info").
 		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
 		Returns(http.StatusOK, "success to get an app image info", nil))
-
-	ws.Route(ws.GET("/perms").
-		To(handler.applicationPermissionList).
-		Doc("get app permissions list").
-		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
-		Returns(http.StatusOK, "success to get an apps permissions list", nil))
 
 	ws.Route(ws.GET("/perms/{"+ParamAppName+"}").
 		To(handler.getApplicationPermission).

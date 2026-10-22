@@ -99,7 +99,6 @@ type ApplicationConfig struct {
 	Internal             bool
 	SubCharts            []Chart
 	ServiceAccountName   *string
-	Provider             []Provider
 	Type                 string
 	Envs                 []manifestsysv1alpha1.AppEnvVar
 	Images               []string

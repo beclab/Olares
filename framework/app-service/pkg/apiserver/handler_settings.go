@@ -18,7 +18,6 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/client/clientset"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
-	"github.com/beclab/Olares/framework/app-service/pkg/provider"
 	"github.com/beclab/Olares/framework/app-service/pkg/tapr"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
@@ -1037,56 +1036,6 @@ type applicationPermission struct {
 	Permissions []permission `json:"permissions"`
 }
 
-// Deprecated
-func (h *Handler) applicationPermissionList(req *restful.Request, resp *restful.Response) {
-	owner := req.Attribute(constants.UserContextAttribute).(string)
-	//token := req.HeaderParameter(constants.AuthorizationTokenKey)
-	client, err := dynamic.NewForConfig(h.kubeConfig)
-	if err != nil {
-		api.HandleError(resp, req, err)
-		return
-	}
-	ret := make([]applicationPermission, 0)
-	apClient := provider.NewApplicationPermissionRequest(client)
-	aps, err := apClient.List(req.Request.Context(), metav1.NamespaceAll, metav1.ListOptions{})
-	if err != nil {
-		api.HandleError(resp, req, err)
-		return
-	}
-	for _, ap := range aps.Items {
-		if ap.Object == nil {
-			continue
-		}
-		app, _, _ := unstructured.NestedString(ap.Object, "spec", "app")
-		perms, _, _ := unstructured.NestedSlice(ap.Object, "spec", "permissions")
-		klog.Infof("perms Type: %T, perms: %v", perms, perms)
-		permissions := make([]permission, 0)
-		for _, p := range perms {
-			if perm, ok := p.(map[string]interface{}); ok {
-				ops := make([]string, 0)
-				for _, op := range perm["ops"].([]interface{}) {
-					if opStr, ok := op.(string); ok {
-						ops = append(ops, opStr)
-					}
-				}
-				permissions = append(permissions, permission{
-					DataType: perm["dataType"].(string),
-					Group:    perm["group"].(string),
-					Version:  perm["version"].(string),
-					Ops:      ops,
-				})
-			}
-
-		}
-		ret = append(ret, applicationPermission{
-			App:         app,
-			Owner:       owner,
-			Permissions: permissions,
-		})
-	}
-	resp.WriteAsJson(ret)
-}
-
 func (h *Handler) getApplicationPermission(req *restful.Request, resp *restful.Response) {
 	app := req.PathParameter(ParamAppName)
 	owner := req.Attribute(constants.UserContextAttribute).(string)
@@ -1127,14 +1076,8 @@ func (h *Handler) getApplicationPermission(req *restful.Request, resp *restful.R
 	var ret *applicationPermission
 	permissions := appinstaller.ParseAppPermission(appConfig.Permission)
 	for _, ap := range permissions {
-		if perms, ok := ap.([]appcfg.ProviderPermission); ok {
+		if _, ok := ap.([]appcfg.ProviderPermission); ok {
 			permissions := make([]permission, 0)
-			for _, p := range perms {
-				permissions = append(permissions, permission{
-					DataType: p.ProviderName,
-					Group:    p.AppName,
-				})
-			}
 			ret = &applicationPermission{
 				App:         am.Spec.AppName,
 				Owner:       owner,
