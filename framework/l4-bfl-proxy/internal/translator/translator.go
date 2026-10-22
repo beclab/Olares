@@ -18,7 +18,6 @@ const (
 	vpnCIDR                  = "100.64.0.0/16"
 	autheliaClusterPrefix    = "authelia_backend"
 	autheliaHostFormat       = "authelia-backend.user-system-%s.svc.cluster.local"
-	fileserverHostFormat     = "files-%s.user-system-%s.svc.cluster.local"
 	autheliaPort             = uint32(9091)
 	autheliaVerifyPathPrefix = "/api/verify/"
 
@@ -855,13 +854,10 @@ func (t *Translator) buildFileserverRoutes(user *message.UserInfo, clusterSet ma
 	// of later nodes' scoped routes and caused exactly that misrouting.
 	for _, node := range user.FileserverNodes {
 		proxyCluster := fmt.Sprintf("files_%s_%s", user.Name, node.NodeName)
-		proxyHost := fmt.Sprintf(fileserverHostFormat, node.NodeName, user.Name)
-		// The shared domain selects the cluster, not the signed-in account.
-		// Envoy expands this after ExtAuth supplies the verified session user;
-		// system-server then checks that user's node role and selects its backend.
-		providerHost := fmt.Sprintf(fileserverHostFormat, node.NodeName, "%REQ(X-BFL-USER)%")
+		// L4 selects the Files pod on this node. Target its HTTP listener directly;
+		// neither a shared Service nor the Files backend should dispatch it again.
 		clusterSet[proxyCluster] = &ir.ClusterIR{
-			Name: proxyCluster, Host: proxyHost, Port: 28080, UseDNS: true,
+			Name: proxyCluster, Host: node.PodIP, Port: 80, UseDNS: false,
 		}
 
 		for _, pfx := range nodeLocationPrefixes {
@@ -870,8 +866,7 @@ func (t *Translator) buildFileserverRoutes(user *message.UserInfo, clusterSet ma
 				PathPrefix: fmt.Sprintf("%s%s/", pfx, node.NodeName),
 				Cluster:    proxyCluster,
 				RequestHeaders: map[string]string{
-					"X-Terminus-Node":  node.NodeName,
-					"X-Provider-Proxy": providerHost,
+					"X-Terminus-Node": node.NodeName,
 				},
 				ExtAuth:          extAuthCfg,
 				WebSocketUpgrade: true,
@@ -884,8 +879,7 @@ func (t *Translator) buildFileserverRoutes(user *message.UserInfo, clusterSet ma
 				PathRegex: fmt.Sprintf("^%s%s_.*", pfx, node.NodeName),
 				Cluster:   proxyCluster,
 				RequestHeaders: map[string]string{
-					"X-Terminus-Node":  node.NodeName,
-					"X-Provider-Proxy": providerHost,
+					"X-Terminus-Node": node.NodeName,
 				},
 				ExtAuth:          extAuthCfg,
 				WebSocketUpgrade: true,
@@ -900,18 +894,13 @@ func (t *Translator) buildFileserverRoutes(user *message.UserInfo, clusterSet ma
 			continue
 		}
 		proxyCluster := fmt.Sprintf("files_%s_%s", user.Name, node.NodeName)
-		// The shared domain selects the cluster, not the signed-in account.
-		// Envoy expands this after ExtAuth supplies the verified session user;
-		// system-server then checks that user's node role and selects its backend.
-		providerHost := fmt.Sprintf(fileserverHostFormat, node.NodeName, "%REQ(X-BFL-USER)%")
 		for _, pfx := range masterLocationPrefixes {
 			routes = append(routes, &ir.HTTPRouteIR{
 				Name:       fmt.Sprintf("files_master_%s_%s", user.Name, sanitizeName(pfx)),
 				PathPrefix: pfx,
 				Cluster:    proxyCluster,
 				RequestHeaders: map[string]string{
-					"X-Terminus-Node":  node.NodeName,
-					"X-Provider-Proxy": providerHost,
+					"X-Terminus-Node": node.NodeName,
 				},
 				ExtAuth:          extAuthCfg,
 				WebSocketUpgrade: true,
