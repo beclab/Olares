@@ -18,7 +18,6 @@ const (
 	CitusVolumeName          = "pgdata"
 	CitusBackupVolumeName    = "pgbackup"
 	CitusHeadlessServiceName = "citus-headless"
-	CitusMasterServiceName   = "citus-master-svc"
 	PGClusterName            = "citus"
 	PGClusterNamespace       = constants.PlatformNamespace
 	DefaultPGAdminUser       = "olares"
