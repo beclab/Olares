@@ -367,15 +367,8 @@ func (c *ApplicationConfig) RequestMiddlware() bool {
 	if c.Middleware != nil {
 		if c.Middleware.Postgres != nil ||
 			c.Middleware.Redis != nil ||
-			c.Middleware.MongoDB != nil ||
 			c.Middleware.Nats != nil ||
-			c.Middleware.Minio != nil ||
-			c.Middleware.RabbitMQ != nil ||
-			c.Middleware.Elasticsearch != nil ||
-			c.Middleware.MariaDB != nil ||
-			c.Middleware.MySQL != nil ||
-			c.Middleware.Argo != nil ||
-			c.Middleware.ClickHouse != nil {
+			c.Middleware.Argo != nil {
 			return true
 		}
 	}
