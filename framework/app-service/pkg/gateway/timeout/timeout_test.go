@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/beclab/Olares/framework/timeoutprofile"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -40,12 +41,18 @@ func TestParseSeconds(t *testing.T) {
 	}
 }
 
-func TestClampResponseTimeout(t *testing.T) {
-	if got := ClampResponseTimeout(31 * time.Second); got != DefaultSharedBackendResponseTimeout {
-		t.Fatalf("ClampResponseTimeout(31s)=%s, want %s", got, DefaultSharedBackendResponseTimeout)
+func TestCatalogAlignedDefaults(t *testing.T) {
+	cat := timeoutprofile.Default()
+	interactive := cat.Profile(timeoutprofile.Interactive)
+	if DefaultSharedBackendResponseTimeout != interactive.EdgeIdle {
+		t.Fatalf("DefaultSharedBackendResponseTimeout=%s, want catalog EdgeIdle %s",
+			DefaultSharedBackendResponseTimeout, interactive.EdgeIdle)
 	}
-	if got := ClampResponseTimeout(12 * time.Minute); got != 12*time.Minute {
-		t.Fatalf("ClampResponseTimeout(12m)=%s, want 12m", got)
+	if MinResponseTimeout != cat.Bounds.TotalMin {
+		t.Fatalf("MinResponseTimeout=%s, want %s", MinResponseTimeout, cat.Bounds.TotalMin)
+	}
+	if MaxResponseTimeout != cat.Bounds.TotalMax {
+		t.Fatalf("MaxResponseTimeout=%s, want %s", MaxResponseTimeout, cat.Bounds.TotalMax)
 	}
 }
 
@@ -66,6 +73,14 @@ func TestDefaultTimeout(t *testing.T) {
 		}
 	})
 
+	t.Run("use env above TotalMin below default", func(t *testing.T) {
+		t.Setenv(EnvDefaultResponseTimeout, "45")
+		got := DefaultTimeout()
+		if got != 45*time.Second {
+			t.Fatalf("DefaultTimeout() = %s, want 45s", got)
+		}
+	})
+
 	t.Run("fallback when env is empty", func(t *testing.T) {
 		t.Setenv(EnvDefaultResponseTimeout, "")
 		got := DefaultTimeout()
@@ -74,8 +89,8 @@ func TestDefaultTimeout(t *testing.T) {
 		}
 	})
 
-	t.Run("clamp when env below minimum", func(t *testing.T) {
-		t.Setenv(EnvDefaultResponseTimeout, "31")
+	t.Run("fallback when env below TotalMin", func(t *testing.T) {
+		t.Setenv(EnvDefaultResponseTimeout, "10")
 		got := DefaultTimeout()
 		if got != DefaultSharedBackendResponseTimeout {
 			t.Fatalf("DefaultTimeout() = %s, want %s", got, DefaultSharedBackendResponseTimeout)
@@ -97,19 +112,21 @@ func TestDefaultTimeout(t *testing.T) {
 			t.Fatalf("DefaultTimeout() = %s, want %s", got, DefaultSharedBackendResponseTimeout)
 		}
 	})
-
-	t.Run("clamp when env is ten seconds", func(t *testing.T) {
-		t.Setenv(EnvDefaultResponseTimeout, "10")
-		got := DefaultTimeout()
-		if got != DefaultSharedBackendResponseTimeout {
-			t.Fatalf("DefaultTimeout() = %s, want %s", got, DefaultSharedBackendResponseTimeout)
-		}
-	})
 }
 
 func TestEffectiveResponseTimeout(t *testing.T) {
-	t.Run("max compose default manifest eg", func(t *testing.T) {
-		got, err := EffectiveResponseTimeout(10*time.Minute, &metav1.Duration{Duration: 20 * time.Minute}, 30*time.Minute)
+	t.Run("explicit total wins over default and floor", func(t *testing.T) {
+		got, err := EffectiveResponseTimeout(10*time.Minute, &metav1.Duration{Duration: 45 * time.Second}, 30*time.Minute)
+		if err != nil {
+			t.Fatalf("EffectiveResponseTimeout() err = %v", err)
+		}
+		if got != "45s" {
+			t.Fatalf("EffectiveResponseTimeout() = %q, want 45s", got)
+		}
+	})
+
+	t.Run("explicit total longer than default", func(t *testing.T) {
+		got, err := EffectiveResponseTimeout(10*time.Minute, &metav1.Duration{Duration: 30 * time.Minute}, 0)
 		if err != nil {
 			t.Fatalf("EffectiveResponseTimeout() err = %v", err)
 		}
@@ -118,8 +135,18 @@ func TestEffectiveResponseTimeout(t *testing.T) {
 		}
 	})
 
-	t.Run("clamp below minimum", func(t *testing.T) {
-		got, err := EffectiveResponseTimeout(45*time.Second, nil, 0)
+	t.Run("no manifest uses max of default and floor", func(t *testing.T) {
+		got, err := EffectiveResponseTimeout(10*time.Minute, nil, 30*time.Minute)
+		if err != nil {
+			t.Fatalf("EffectiveResponseTimeout() err = %v", err)
+		}
+		if got != "1800s" {
+			t.Fatalf("EffectiveResponseTimeout() = %q, want 1800s", got)
+		}
+	})
+
+	t.Run("no manifest keeps platform default", func(t *testing.T) {
+		got, err := EffectiveResponseTimeout(DefaultSharedBackendResponseTimeout, nil, 0)
 		if err != nil {
 			t.Fatalf("EffectiveResponseTimeout() err = %v", err)
 		}
@@ -128,7 +155,17 @@ func TestEffectiveResponseTimeout(t *testing.T) {
 		}
 	})
 
-	t.Run("above max still returns safe default", func(t *testing.T) {
+	t.Run("invalid explicit falls back to max default floor", func(t *testing.T) {
+		got, err := EffectiveResponseTimeout(10*time.Minute, &metav1.Duration{Duration: 10 * time.Second}, 20*time.Minute)
+		if err != nil {
+			t.Fatalf("EffectiveResponseTimeout() err = %v", err)
+		}
+		if got != "1200s" {
+			t.Fatalf("EffectiveResponseTimeout() = %q, want 1200s", got)
+		}
+	})
+
+	t.Run("above max default still returns safe default", func(t *testing.T) {
 		got, err := EffectiveResponseTimeout(MaxResponseTimeout+time.Second, nil, 0)
 		if err == nil {
 			t.Fatal("EffectiveResponseTimeout() err = nil, want error")
@@ -148,15 +185,21 @@ func TestEffectiveTimeoutSecondsFormat(t *testing.T) {
 		manifest   *metav1.Duration
 		eg         time.Duration
 		wantResult string
+		wantErr    bool
 	}{
-		{name: "below minimum clamped", def: 30 * time.Second, wantResult: "600s"},
+		{name: "below TotalMin rejected", def: 10 * time.Second, wantResult: "600s", wantErr: true},
+		{name: "TotalMin boundary", def: MinResponseTimeout, wantResult: "30s"},
 		{name: "ten minutes", def: 10 * time.Minute, wantResult: "600s"},
 		{name: "twelve minutes", def: 12 * time.Minute, wantResult: "720s"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			got, err := EffectiveResponseTimeout(tc.def, tc.manifest, tc.eg)
-			if err != nil {
+			if tc.wantErr {
+				if err == nil {
+					t.Fatal("err=nil, want error")
+				}
+			} else if err != nil {
 				t.Fatalf("EffectiveResponseTimeout() err = %v", err)
 			}
 			if got != tc.wantResult {
@@ -175,8 +218,9 @@ func TestValidateResponseTimeout(t *testing.T) {
 		d       time.Duration
 		wantErr bool
 	}{
-		{name: "min platform default", d: MinResponseTimeout, wantErr: false},
-		{name: "below platform default allowed", d: 31 * time.Second, wantErr: false},
+		{name: "TotalMin", d: MinResponseTimeout, wantErr: false},
+		{name: "below TotalMin", d: MinResponseTimeout - time.Second, wantErr: true},
+		{name: "45s allowed", d: 45 * time.Second, wantErr: false},
 		{name: "max boundary", d: MaxResponseTimeout, wantErr: false},
 		{name: "above max", d: MaxResponseTimeout + time.Second, wantErr: true},
 	}

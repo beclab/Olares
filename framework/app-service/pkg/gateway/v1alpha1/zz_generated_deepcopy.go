@@ -31,6 +31,10 @@ func (in *SharedRouteRegistrySpec) DeepCopyInto(out *SharedRouteRegistrySpec) {
 		copy(out.HostPatterns, in.HostPatterns)
 	}
 	in.Upstream.DeepCopyInto(&out.Upstream)
+	if in.ResponseTimeout != nil {
+		out.ResponseTimeout = new(metav1.Duration)
+		*out.ResponseTimeout = *in.ResponseTimeout
+	}
 }
 
 // DeepCopy returns a deep copy of SharedRouteRegistrySpec.

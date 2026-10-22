@@ -109,6 +109,12 @@ spec:
                     portName:
                       description: Optional named port; mutually exclusive with port.
                       type: string
+                responseTimeout:
+                  description: |-
+                    Optional entrance timeouts.total projected onto this SRR.
+                    When set, HTTPRoute request/backendRequest use this value
+                    (explicit wins over platform default and floor).
+                  type: string
             status:
               type: object
               properties:

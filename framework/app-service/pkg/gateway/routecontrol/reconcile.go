@@ -248,7 +248,7 @@ func applyHTTPRoute(ctx context.Context, c client.Client, gw GatewayRef, srr *sr
 	current.SetGroupVersionKind(schema.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "HTTPRoute"})
 	getErr := c.Get(ctx, types.NamespacedName{Namespace: srr.Namespace, Name: name}, current)
 	egConfigured := probeExternalSharedRouteTimeout(ctx, c, gw, srr, current, getErr)
-	effective, err := gatewaytimeout.EffectiveResponseTimeout(gatewaytimeout.DefaultTimeout(), nil, egConfigured)
+	effective, err := gatewaytimeout.EffectiveResponseTimeout(gatewaytimeout.DefaultTimeout(), srr.Spec.ResponseTimeout, egConfigured)
 	if err != nil {
 		klog.Warningf("effective timeout fell back to %q for srr=%s/%s: %v", effective, srr.Namespace, srr.Name, err)
 	}

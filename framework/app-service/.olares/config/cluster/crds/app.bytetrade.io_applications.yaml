@@ -118,6 +118,22 @@ spec:
                     port:
                       format: int32
                       type: integer
+                    timeouts:
+                      description: |-
+                        Optional per-entrance idle/total timeout overrides.
+                        Bounds are enforced by app-service.
+                      type: object
+                      properties:
+                        idle:
+                          description: No-byte idle limit (e.g. "900s").
+                          type: string
+                        total:
+                          description: End-to-end response/stream limit (e.g. "3600s").
+                          type: string
+                    maxBodySize:
+                      description: |-
+                        Optional upload size limit (Kubernetes quantity, e.g. "100Mi").
+                      type: string
                     skip:
                       type: boolean
                     title:
@@ -219,6 +235,22 @@ spec:
                     port:
                       format: int32
                       type: integer
+                    timeouts:
+                      description: |-
+                        Optional per-entrance idle/total timeout overrides.
+                        Bounds are enforced by app-service.
+                      type: object
+                      properties:
+                        idle:
+                          description: No-byte idle limit (e.g. "900s").
+                          type: string
+                        total:
+                          description: End-to-end response/stream limit (e.g. "3600s").
+                          type: string
+                    maxBodySize:
+                      description: |-
+                        Optional upload size limit (Kubernetes quantity, e.g. "100Mi").
+                      type: string
                     skip:
                       type: boolean
                     title:
