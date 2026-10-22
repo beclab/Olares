@@ -9,6 +9,14 @@
 {{ $files_postgres_password = randAlphaNum 16 | b64enc }}
 {{- end -}}
 
+{{- $files_secret_key := "" -}}
+{{ if $files_secret -}}
+{{ $files_secret_key = (index $files_secret "data" "files_secret_key") | default "" }}
+{{- end -}}
+{{ if not $files_secret_key -}}
+{{ $files_secret_key = randAlphaNum 32 | b64enc }}
+{{- end -}}
+
 {{- $files_redis_password := "" -}}
 {{ if $files_secret -}}
 {{ $files_redis_password = (index $files_secret "data" "files_redis_password") }}
@@ -169,6 +177,11 @@ spec:
           ports:
             - containerPort: 445
           env:
+            - name: FILES_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: files-secrets
+                  key: files_secret_key
 {{ if .Values.sharedlib }}        
             - name: NODE_IP
               valueFrom:
@@ -239,6 +252,11 @@ spec:
           ports:
             - containerPort: 8110
           env:
+            - name: FILES_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: files-secrets
+                  key: files_secret_key
 {{ if .Values.sharedlib }}        
             - name: NODE_IP
               valueFrom:
@@ -483,6 +501,7 @@ type: Opaque
 data:
   files_postgres_password: {{ $files_postgres_password }}
   files_redis_password: {{ $files_redis_password }}
+  files_secret_key: {{ $files_secret_key }}
 
 ---
 apiVersion: v1
