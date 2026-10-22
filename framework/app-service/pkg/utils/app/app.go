@@ -84,7 +84,6 @@ var forbidNamespace = []string{
 }
 
 var ErrAppNotFoundInChartRepo = errors.New("app not found in chart repo")
-var ErrProviderNotFound = errors.New("provider not found")
 
 // UpdateAppState update application status state.
 func UpdateAppState(ctx context.Context, am *v1alpha1.ApplicationManager, state string) error {
@@ -1008,14 +1007,6 @@ func toApplicationConfig(opt *ConfigOptions, chart string, cfg *appcfg.AppConfig
 		permission = append(permission, appcfg.ExternalDataRW)
 	}
 
-	if len(cfg.Permission.Provider) > 0 {
-		var perm []appcfg.ProviderPermission
-		for _, s := range cfg.Permission.Provider {
-			perm = append(perm, appcfg.ProviderPermission(s))
-		}
-		permission = append(permission, perm)
-	}
-
 	legacyReq, err := parseLegacyAppRequirement(cfg, opt.SelectedGpu)
 	if err != nil {
 		return nil, chart, err
@@ -1055,10 +1046,6 @@ func toApplicationConfig(opt *ConfigOptions, chart string, cfg *appcfg.AppConfig
 
 	if appcfg.APIVersion(cfg.APIVersion) == appcfg.V2 {
 		// V2: additional validation for app config
-	}
-	podSelectors := make([]metav1.LabelSelector, 0)
-	for _, p := range cfg.Permission.Provider {
-		podSelectors = append(podSelectors, p.PodSelectors...)
 	}
 
 	appConfig := &appcfg.ApplicationConfig{
@@ -1102,7 +1089,6 @@ func toApplicationConfig(opt *ConfigOptions, chart string, cfg *appcfg.AppConfig
 		Envs:                 cfg.Envs,
 		Images:               cfg.Options.Images,
 		AllowMultipleInstall: cfg.Options.AllowMultipleInstall,
-		PodsSelectors:        podSelectors,
 		HardwareRequirement:  cfg.Spec.Hardware,
 		SharedEntrances:      cfg.SharedEntrances,
 		SelectedGpuType:      opt.SelectedGpu,

@@ -326,17 +326,6 @@ func (wh *Webhook) PatchLinkerdAdminProbesOnly(
 	return patchBytes, true, nil
 }
 
-func (wh *Webhook) shouldInjectEnvoySidecar(ctx context.Context, injectPolicy bool, appConfig *appcfg.ApplicationConfig, pod *corev1.Pod) bool {
-	// R1 does not blanket-retire outbound oes when Linkerd is ready
-	// (ShouldSkipEnvoySidecar stays false until L2-c). Shared-caller skip is
-	// applied in CreatePatch via ShouldSkipOesForSharedCaller.
-	_ = ctx
-	if appConfig == nil {
-		return injectPolicy
-	}
-	return injectPolicy || len(appConfig.PodsSelectors) == 0 || wh.isSelected(appConfig.PodsSelectors, pod)
-}
-
 func (wh *Webhook) shouldSkipInboundEntranceSidecar(ctx context.Context, appConfig *appcfg.ApplicationConfig, ns, entranceName string) (bool, error) {
 	if appConfig == nil || wh == nil || wh.kubeClient == nil {
 		return false, nil
