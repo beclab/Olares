@@ -5,8 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"strings"
+
+	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
@@ -1002,8 +1003,7 @@ func (h *Handler) runAsUserInject(ctx context.Context, pod *corev1.Pod, namespac
 	}
 	// The user's own space and the system namespaces host platform
 	// workloads (bfl and friends) that must not be reshaped.
-	if strings.HasPrefix(namespace, constants.OwnerNamespacePrefix+"-") ||
-		strings.HasPrefix(namespace, "user-system-") {
+	if strings.HasPrefix(namespace, constants.OwnerNamespacePrefix+"-") {
 		return pod, nil
 	}
 
@@ -1100,8 +1100,7 @@ func (h *Handler) cliCredentialInject(pod *corev1.Pod, namespace string) (*corev
 	if pod == nil {
 		return pod, nil
 	}
-	if strings.HasPrefix(namespace, constants.OwnerNamespacePrefix+"-") ||
-		strings.HasPrefix(namespace, "user-system-") {
+	if strings.HasPrefix(namespace, constants.OwnerNamespacePrefix+"-") {
 		return pod, nil
 	}
 
@@ -1550,7 +1549,7 @@ func (h *Handler) validateUser(ctx context.Context, req *admissionv1.AdmissionRe
 }
 
 func isInPrivateNamespace(namespace string) bool {
-	return strings.HasPrefix(namespace, "user-space-") || strings.HasPrefix(namespace, "user-system-")
+	return strings.HasPrefix(namespace, "user-space-")
 }
 
 func (h *Handler) applicationManagerValidate(req *restful.Request, resp *restful.Response) {

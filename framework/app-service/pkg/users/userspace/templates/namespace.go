@@ -50,30 +50,6 @@ func NewUserspace(user string) *Userspace {
 	}
 }
 
-func NewUserSystem(user string) *Userspace {
-	name := "user-system-" + user
-
-	return &Userspace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-
-			Annotations: map[string]string{
-				"kubesphere.io/creator": user,
-			},
-
-			Labels: map[string]string{
-				"kubernetes.io/metadata.name": name,
-				"kubesphere.io/namespace":     name,
-				"kubesphere.io/workspace":     "system-workspace",
-			},
-
-			Finalizers: []string{
-				"finalizers.kubesphere.io/namespaces",
-			},
-		},
-	}
-}
-
 /*
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding

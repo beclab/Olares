@@ -65,7 +65,6 @@ var protectedNamespace = []string{
 	"kubesphere-monitoring-system",
 	"kubesphere-system",
 	"user-space-",
-	"user-system-",
 	"os-platform",
 	"os-framework",
 	"os-frontend",

@@ -9,7 +9,6 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/helm"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
-	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace/templates"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
@@ -105,21 +104,6 @@ func (d *Deleter) deleteNamespace(ctx context.Context) error {
 		err = d.Client.Delete(ctx, &ns)
 		if err != nil && !apierrors.IsNotFound(err) {
 			klog.Errorf("failed to delete user-space namespace: %s, %v", userspaceNs, err)
-			return err
-		}
-	}
-
-	userSystem := templates.NewUserSystem(d.user)
-
-	err = d.Client.Get(ctx, types.NamespacedName{Name: userSystem.Name}, &ns)
-	if err != nil && !apierrors.IsNotFound(err) {
-		klog.Errorf("failed to get user-system namespace: %s, %v", userSystem.Name, err)
-		return err
-	}
-	if err == nil {
-		err = d.Client.Delete(ctx, &ns)
-		if err != nil && !apierrors.IsNotFound(err) {
-			klog.Errorf("failed to delete user-system namespace: %s, %v", userSystem.Name, err)
 			return err
 		}
 	}

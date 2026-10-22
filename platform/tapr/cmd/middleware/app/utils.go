@@ -15,7 +15,6 @@ import (
 	rediscluster "bytetrade.io/web3os/tapr/pkg/workload/redis-cluster"
 
 	"github.com/gofiber/fiber/v2"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
 )
 
@@ -32,40 +31,8 @@ func (s *Server) getMiddlewareInfo(ctx *fiber.Ctx, mwReq *MiddlewareReq, m *aprv
 			return nil, err
 		}
 
-		klog.Info("find pg cluster service, ", citus.CitusMasterServiceName)
-		svc, err := s.k8sClientSet.CoreV1().Services(mwReq.Namespace).Get(ctx.UserContext(), citus.CitusMasterServiceName, metav1.GetOptions{})
-		if err != nil {
-			klog.Error("get pg cluster service error, ", err)
-			return nil, err
-		}
-
 		// default 5432
 		resp.Port = 5432
-		for _, port := range svc.Spec.Ports {
-			if port.Name == "citus" {
-				resp.Port = port.Port
-			}
-		}
-
-		// klog.Info("match pods by service selecor, ", svc.Spec.Selector)
-		// pods, err := s.k8sClientSet.CoreV1().Pods(citus.PGClusterNamespace).List(ctx.UserContext(), metav1.ListOptions{
-		// 	LabelSelector: metav1.FormatLabelSelector(metav1.SetAsLabelSelector(labels.Set(svc.Spec.Selector))),
-		// })
-
-		// if err != nil {
-		// 	klog.Error("find pods error, ", err)
-		// 	return nil, err
-		// }
-
-		// for _, p := range pods.Items {
-		// 	if strings.HasSuffix(p.Name, "-0") {
-		// 		// first pods in sts is master
-		// 		resp.Host = p.Name + "." + svc.Name + "." + mwReq.Namespace
-
-		// 		return resp, nil
-		// 	}
-		// }
-
 		resp.Host = citus.CitusServiceDomain
 		resp.Databases = make(map[string]string)
 		for _, db := range m.Spec.PostgreSQL.Databases {
@@ -99,20 +66,7 @@ func (s *Server) getMiddlewareInfo(ctx *fiber.Ctx, mwReq *MiddlewareReq, m *aprv
 			return nil, err
 		}
 
-		klog.Info("find redis cluster service, ", rediscluster.RedisClusterService)
-		svc, err := s.k8sClientSet.CoreV1().Services(mwReq.Namespace).Get(ctx.UserContext(), rediscluster.RedisClusterService, metav1.GetOptions{})
-		if err != nil {
-			klog.Error("get redis cluster service error, ", err)
-			return nil, err
-		}
-
 		resp.Port = 6379
-		for _, port := range svc.Spec.Ports {
-			if port.Name == "proxy" {
-				resp.Port = port.Port
-			}
-		}
-
 		resp.Databases = make(map[string]string)
 		resp.Host = rediscluster.RedisClusterServiceDomain
 		resp.Databases[m.Spec.Redis.Namespace] = rediscluster.GetDatabaseName(m.Spec.AppNamespace, m.Spec.Redis.Namespace)

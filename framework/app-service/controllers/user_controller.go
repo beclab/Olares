@@ -376,13 +376,11 @@ func (r *UserController) waitForUserPodsReady(ctx context.Context, user *iamv1al
 	return err
 }
 
-// userPodsReady reports whether every pod in user-space-<name> and
-// user-system-<name> is serving. An empty namespace is not ready: the charts
+// userPodsReady reports whether every pod in user-space-<name> is serving. An empty namespace is not ready: the charts
 // return before their controllers have created the pods.
 func (r *UserController) userPodsReady(ctx context.Context, user *iamv1alpha2.User) (bool, string, error) {
 	namespaces := []string{
 		fmt.Sprintf("user-space-%s", user.Name),
-		fmt.Sprintf("user-system-%s", user.Name),
 	}
 	for _, ns := range namespaces {
 		var pods corev1.PodList
@@ -521,21 +519,16 @@ func (r *UserController) handleUserDeletion(ctx context.Context, user *iamv1alph
 		klog.Errorf("failed to cleanup user resources: %v", err)
 		return err
 	}
-	// wait for user-space, user-system namespace to be deleted
+	// wait for user-space namespace to be deleted
 	userspaceNs := fmt.Sprintf("user-space-%s", user.Name)
-	userSystemNs := fmt.Sprintf("user-system-%s", user.Name)
-	userspaceExist, userSystemExist := true, true
+	userspaceExist := true
 	err = utilwait.PollImmediate(2*time.Second, 5*time.Minute, func() (done bool, err error) {
 		var ns corev1.Namespace
 		err = r.Get(ctx, types.NamespacedName{Name: userspaceNs}, &ns)
 		if apierrors.IsNotFound(err) {
 			userspaceExist = false
 		}
-		err = r.Get(ctx, types.NamespacedName{Name: userSystemNs}, &ns)
-		if apierrors.IsNotFound(err) {
-			userSystemExist = false
-		}
-		if !userspaceExist && !userSystemExist {
+		if !userspaceExist {
 			return true, nil
 		}
 		return false, nil
@@ -627,7 +620,6 @@ func (r *UserController) createNamespace(ctx context.Context, user *iamv1alpha2.
 
 	// create namespace user-space-<user>
 	userspaceNs := fmt.Sprintf("user-space-%s", user.Name)
-	userSystemNs := fmt.Sprintf("user-system-%s", user.Name)
 	creatorName, err := r.namespaceCreator(ctx, user)
 	if err != nil {
 		klog.Error(err)
@@ -649,24 +641,6 @@ func (r *UserController) createNamespace(ctx context.Context, user *iamv1alpha2.
 	err = r.Create(ctx, &ns)
 	if err != nil && !apierrors.IsAlreadyExists(err) {
 		klog.Errorf("failed to create user-space namespace %v", err)
-		return err
-	}
-
-	// create user-system namespace
-	userSystemNamespace := corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: userSystemNs,
-			Annotations: map[string]string{
-				"kubesphere.io/creator": "",
-			},
-			Finalizers: []string{
-				namespaceFinalizer,
-			},
-		},
-	}
-	err = r.Create(ctx, &userSystemNamespace)
-	if err != nil && !apierrors.IsAlreadyExists(err) {
-		klog.Errorf("failed to create user-system namespace %v", err)
 		return err
 	}
 	return nil

@@ -592,7 +592,7 @@ func (c *ApplicationConfig) ResolveRequirement(selectedGpu string) (*AppRequirem
 // cannot be defined on non-local types.
 func ProviderPermissionNamespace(p *ProviderPermission, ownerName string) string {
 	if p.Namespace != "" {
-		if p.Namespace == "user-space" || p.Namespace == "user-system" {
+		if p.Namespace == "user-space" {
 			return fmt.Sprintf("%s-%s", p.Namespace, ownerName)
 		} else {
 			return p.Namespace

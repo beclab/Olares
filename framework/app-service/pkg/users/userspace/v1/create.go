@@ -151,7 +151,6 @@ func (c *Creator) createNamespace(ctx context.Context) error {
 
 	// create namespace user-space-<user>
 	userspaceNs := fmt.Sprintf("user-space-%s", c.user)
-	userSystemNs := fmt.Sprintf("user-system-%s", c.user)
 
 	// create user-space namespace
 	ns := corev1.Namespace{
@@ -172,23 +171,6 @@ func (c *Creator) createNamespace(ctx context.Context) error {
 		return err
 	}
 
-	// create user-system namespace
-	userSystemNamespace := corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: userSystemNs,
-			Annotations: map[string]string{
-				"kubesphere.io/creator": "",
-			},
-			Finalizers: []string{
-				"finalizers.kubesphere.io/namespaces",
-			},
-		},
-	}
-	err = c.Create(ctx, &userSystemNamespace)
-	if err != nil && !apierrors.IsAlreadyExists(err) {
-		klog.Errorf("failed to create user-system namespace %v", err)
-		return err
-	}
 	return nil
 }
 

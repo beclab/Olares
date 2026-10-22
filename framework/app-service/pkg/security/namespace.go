@@ -51,7 +51,7 @@ var (
 
 // IsUserInternalNamespaces returns true if namespace is user level namespace for a user application, false otherwise.
 func IsUserInternalNamespaces(ns string) (bool, string) {
-	for _, prefix := range []string{"user-space-", "user-system-"} {
+	for _, prefix := range []string{"user-space-"} {
 		if strings.HasPrefix(ns, prefix) {
 			strToken := strings.Split(ns, "-")
 			if len(strToken) >= 3 {
@@ -66,16 +66,6 @@ func IsUserInternalNamespaces(ns string) (bool, string) {
 // IsUserSpaceNamespaces return true if namespace is user space namespace, false otherwise.
 func IsUserSpaceNamespaces(ns string) bool {
 	if !strings.HasPrefix(ns, "user-space-") {
-		return false
-	}
-
-	strToken := strings.Split(ns, "-")
-	return len(strToken) >= 3
-}
-
-// IsUserSystemNamespaces return true if namespace is user system namespace, false otherwise.
-func IsUserSystemNamespaces(ns string) bool {
-	if !strings.HasPrefix(ns, "user-system-") {
 		return false
 	}
 

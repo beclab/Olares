@@ -21,7 +21,6 @@ import (
 	sysv1alpha1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
 	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
 
-	authv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -31,7 +30,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
-	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -216,22 +214,7 @@ func GetServerServiceAccountToken() (string, error) {
 }
 
 func GetUserServiceAccountToken(ctx context.Context, client kubernetes.Interface, user string) (string, error) {
-	namespace := fmt.Sprintf("user-system-%s", user)
-	tr := &authv1.TokenRequest{
-		Spec: authv1.TokenRequestSpec{
-			Audiences:         []string{"https://kubernetes.default.svc.cluster.local"},
-			ExpirationSeconds: ptr.To[int64](86400), // one day
-		},
-	}
-
-	token, err := client.CoreV1().ServiceAccounts(namespace).
-		CreateToken(ctx, "user-backend", tr, metav1.CreateOptions{})
-	if err != nil {
-		klog.Errorf("Failed to create token for user %s in namespace %s: %v", user, namespace, err)
-		return "", err
-	}
-
-	return token.Status.Token, nil
+	return "", errors.New("GetUserServiceAccountToken is not implemented yet")
 }
 
 func GetTerminusVersion(ctx context.Context, config *rest.Config) (*sysv1alpha1.Terminus, error) {

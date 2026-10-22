@@ -3,10 +3,11 @@ package utils
 import (
 	"context"
 	"fmt"
-	"github.com/Masterminds/semver/v3"
-	"k8s.io/klog/v2"
 	"os"
 	"strings"
+
+	"github.com/Masterminds/semver/v3"
+	"k8s.io/klog/v2"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
@@ -56,8 +57,6 @@ func AppNamespace(app, owner, ns string) (string, error) {
 
 	if strings.HasPrefix(ns, "user-space") {
 		app = "user-space"
-	} else if strings.HasPrefix(ns, "user-system") {
-		app = "user-system"
 	} else {
 		if ns != "" {
 			return ns, nil

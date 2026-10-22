@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/podhealth"
@@ -39,7 +40,7 @@ func suspendOrResumeApp(ctx context.Context, cli client.Client, am *appv1alpha1.
 		}
 		check := func(appName, deployName string) bool {
 			if targetNamespace == fmt.Sprintf("user-space-%s", am.Spec.AppOwner) ||
-				targetNamespace == fmt.Sprintf("user-system-%s", am.Spec.AppOwner) ||
+				targetNamespace == "os-frontend" ||
 				targetNamespace == "os-platform" ||
 				targetNamespace == "os-framework" {
 				if appName == deployName {
