@@ -255,7 +255,7 @@ spec:
             - name: olares-app-routes
               mountPath: /etc/nginx/conf.d
         - name: user-service
-          image: beclab/user-service:v0.1.21-alpha.4
+          image: beclab/user-service:v0.1.21-alpha.5
           imagePullPolicy: IfNotPresent
           readinessProbe:
             tcpSocket:
