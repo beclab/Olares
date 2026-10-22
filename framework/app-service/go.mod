@@ -8,7 +8,8 @@ require (
 	github.com/apecloud/kubeblocks v1.0.0
 	github.com/argoproj/argo-workflows/v3 v3.7.10
 	github.com/beclab/Olares/framework/oac v0.0.0-20261020082448-869e3c1834d8
-	github.com/beclab/api v0.0.27-0.20260929062526-d281261cdff4
+	github.com/beclab/Olares/framework/timeoutprofile v0.0.0-20261022131539-cf32be0fbd4e
+	github.com/beclab/api v0.0.27-0.20261015142744-c6b02f329f09
 	github.com/beclab/lldap-client v0.0.11
 	github.com/containerd/containerd v1.7.29
 	github.com/containers/image/v5 v5.36.1
