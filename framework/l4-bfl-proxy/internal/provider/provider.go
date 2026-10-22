@@ -108,6 +108,11 @@ func (p *Provider) SetupWithManager(ctx context.Context) error {
 		return fmt.Errorf("get service informer: %w", err)
 	}
 
+	nodeInformer, err := p.cache.GetInformer(ctx, &corev1.Node{})
+	if err != nil {
+		return fmt.Errorf("get node informer: %w", err)
+	}
+
 	userEnvInformer, err := p.cache.GetInformer(ctx, &sysv1alpha1.UserEnv{})
 	if err != nil {
 		return fmt.Errorf("get userEnv informer: %w", err)
@@ -181,6 +186,10 @@ func (p *Provider) SetupWithManager(ctx context.Context) error {
 		return fmt.Errorf("add service event handler: %w", err)
 	}
 
+	if _, err = nodeInformer.AddEventHandler(baseHandler); err != nil {
+		return fmt.Errorf("add node event handler: %w", err)
+	}
+
 	if _, err = userEnvInformer.AddEventHandler(toolscache.FilteringResourceEventHandler{
 		FilterFunc: func(obj interface{}) bool {
 			userEnv, ok := obj.(*sysv1alpha1.UserEnv)
@@ -221,11 +230,6 @@ func (p *Provider) notifyChanged() {
 	case p.debounceCh <- struct{}{}:
 	default:
 	}
-}
-
-// NotifyChanged is the exported version of notifyChanged, used as a callback
-func (p *Provider) NotifyChanged() {
-	p.notifyChanged()
 }
 
 func (p *Provider) debounceLoop(ctx context.Context) {
@@ -412,36 +416,20 @@ func (p *Provider) getFileserverGlobalData(ctx context.Context) (*fileserverGlob
 	return &fileserverGlobalData{podMap: podMap, masterNodes: masterNodes}, nil
 }
 
-func (p *Provider) getFileserverNodesForUser(ctx context.Context, username string, gd *fileserverGlobalData) ([]*message.FileserverNodeInfo, error) {
-	serviceNamespace := fmt.Sprintf("user-system-%s", username)
-	var nodes []*message.FileserverNodeInfo
+// fileserverNodes derives routes from Files pods and Nodes, independently of
+// any user-specific Service, Role or RoleBinding. L4 routes directly to each
+// node's Files pod IP; X-Terminus-Node is retained as request metadata.
+func fileserverNodes(gd *fileserverGlobalData) []*message.FileserverNodeInfo {
+	nodes := make([]*message.FileserverNodeInfo, 0, len(gd.podMap))
 	for nodeName, pod := range gd.podMap {
-		svcKey := client.ObjectKey{
-			Namespace: serviceNamespace,
-			Name:      fmt.Sprintf("files-%s", nodeName),
-		}
-		var svc corev1.Service
-		if err := p.cache.Get(ctx, svcKey, &svc); err != nil {
-			if apierrors.IsNotFound(err) {
-				// Service not yet created by fileserver-reconciler; skip this node for now.
-				klog.V(4).Infof("provider: files proxy service %s not found, skipping node %s", svcKey, nodeName)
-				continue
-			}
-			return nil, fmt.Errorf("get files proxy service %s: %w", svcKey, err)
-		}
-
 		nodes = append(nodes, &message.FileserverNodeInfo{
 			NodeName: nodeName,
 			PodIP:    pod.Status.PodIP,
 			IsMaster: gd.masterNodes[nodeName],
 		})
 	}
-
-	sort.Slice(nodes, func(i, j int) bool {
-		return nodes[i].NodeName < nodes[j].NodeName
-	})
-
-	return nodes, nil
+	sort.Slice(nodes, func(i, j int) bool { return nodes[i].NodeName < nodes[j].NodeName })
+	return nodes
 }
 
 // buildAppInfos translates Application CRs into the AppInfo shape the
@@ -648,10 +636,7 @@ func (p *Provider) listUsers(ctx context.Context, userList []iamv1alpha2.User, r
 			klog.Warningf("provider: user %s SSL cert/key invalid, local HTTP only: %v", user.Name, err)
 			sslConfig = nil
 		}
-		fileserverNodes, err := p.getFileserverNodesForUser(ctx, user.Name, fsGlobal)
-		if err != nil {
-			return nil, err
-		}
+		fileserverNodes := fileserverNodes(fsGlobal)
 		masterNodeCIDR, err := p.getMasterNodeCIDR(ctx)
 		if err != nil {
 			return nil, err

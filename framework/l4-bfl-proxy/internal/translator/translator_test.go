@@ -1041,8 +1041,8 @@ func TestBuildFileserverRoutes_NodeScopedBeforeMasterGeneric(t *testing.T) {
 	user := &message.UserInfo{
 		Name: "testip162",
 		FileserverNodes: []*message.FileserverNodeInfo{
-			{NodeName: "olares", IsMaster: true},
-			{NodeName: "olares-work", IsMaster: false},
+			{NodeName: "olares", PodIP: "10.233.1.1", IsMaster: true},
+			{NodeName: "olares-work", PodIP: "10.233.1.2", IsMaster: false},
 		},
 	}
 
@@ -1175,22 +1175,28 @@ func TestBuildUserVirtualHosts_ProfileRootVerify(t *testing.T) {
 	assert.Nil(t, profile.Routes[0].RequestHeaders, "profile must not stamp outbound zone-owner X-BFL-USER")
 }
 
-// Task, sync and external storage routes must select the authenticated account's
-// node provider even when their public hostname belongs to the cluster owner.
-func TestBuildFileserverRoutesUseAuthenticatedAccountProvider(t *testing.T) {
+// L4 selects the Files pod itself, without stamping the URL owner over the
+// identity supplied by ExtAuth or asking the backend to dispatch by node header.
+func TestBuildFileserverRoutesUseNodePodAndVerifiedIdentity(t *testing.T) {
 	tr := &Translator{cfg: &Config{}}
 	user := &message.UserInfo{Name: "owner", FileserverNodes: []*message.FileserverNodeInfo{
-		{NodeName: "olares-worker", IsMaster: true},
-		{NodeName: "second-node"},
+		{NodeName: "olares-worker", PodIP: "10.233.1.1", IsMaster: true},
+		{NodeName: "second-node", PodIP: "10.233.1.2"},
 	}}
-	routes := tr.buildFileserverRoutes(user, make(map[string]*ir.ClusterIR))
+	clusters := make(map[string]*ir.ClusterIR)
+	routes := tr.buildFileserverRoutes(user, clusters)
 	for _, route := range routes {
 		require.NotNil(t, route.ExtAuth, route.Name)
 		assert.False(t, route.ExtAuth.Disabled, route.Name)
 		assert.Equal(t, autheliaVerifyPathPrefix, route.ExtAuth.PathPrefix, route.Name)
 		node := route.RequestHeaders["X-Terminus-Node"]
 		assert.NotEmpty(t, node)
-		assert.Equal(t, "files-"+node+".user-system-%REQ(X-BFL-USER)%.svc.cluster.local", route.RequestHeaders["X-Provider-Proxy"], route.Name)
+		assert.NotContains(t, route.RequestHeaders, "X-Provider-Proxy", route.Name)
+		cluster := clusters[route.Cluster]
+		require.NotNil(t, cluster, route.Name)
+		assert.Equal(t, map[string]string{"olares-worker": "10.233.1.1", "second-node": "10.233.1.2"}[node], cluster.Host)
+		assert.EqualValues(t, 80, cluster.Port)
+		assert.False(t, cluster.UseDNS, "pod IP endpoints must use static discovery")
 		assert.NotContains(t, route.RequestHeaders, "X-BFL-USER", "must not replace the authenticated user with the URL owner")
 	}
 	for _, prefix := range []string{"/api/task/olares-worker/", "/api/repos/"} {
@@ -1199,7 +1205,7 @@ func TestBuildFileserverRoutesUseAuthenticatedAccountProvider(t *testing.T) {
 			if route.PathPrefix == prefix {
 				found = true
 				assert.Equal(t, "files_owner_olares-worker", route.Cluster)
-				assert.Equal(t, "files-olares-worker.user-system-%REQ(X-BFL-USER)%.svc.cluster.local", route.RequestHeaders["X-Provider-Proxy"])
+				assert.NotContains(t, route.RequestHeaders, "X-Provider-Proxy")
 			}
 		}
 		assert.True(t, found, prefix)
