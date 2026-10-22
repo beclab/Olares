@@ -118,13 +118,13 @@ data:
     # These provider services have no shared replacement yet. Resolve them on
     # demand so they do not block installation before any user exists. Keep
     # these routes behind providers; do not bypass authorization via backends.
-    map "" $legacy_monitoring { default monitoring.os-frontend.svc.cluster.local:28080; }
-    map "" $legacy_infisical { default infisical.os-frontend.svc.cluster.local:28080; }
-    map "" $legacy_middleware { default middleware.os-frontend.svc.cluster.local:28080; }
-    map "" $legacy_vault { default vault.os-frontend.svc.cluster.local:28080; }
-    map "" $legacy_bfl { default bfl.os-frontend.svc.cluster.local:80; }
     map "" $legacy_auth_frontend { default authelia-svc.os-frontend.svc.cluster.local:80; }
   dashboard-control-hub.conf: |-
+    map $http_upgrade $monitoring_connection_upgrade {
+        default upgrade;
+        '' close;
+    }
+
     # upstream Analytics {
     #     server analytics-server.os-framework:3010;
     # }
@@ -141,7 +141,7 @@ data:
       gzip_types *;
       root /www/dashboard;
 
-      # Select each user's Provider only after validating the access token.
+      # Terminal, exec and watch connect directly to the monitoring backend.
       auth_request_set $dashboard_user $upstream_http_x_verified_user;
       auth_request_set $dashboard_token $upstream_http_x_verified_token;
       proxy_hide_header X-Verified-User;
@@ -173,14 +173,8 @@ data:
       }
 
       location /bfl {
+        proxy_pass http://127.0.0.1:3010/proxy/bfl/bfl;
         add_header 'Access-Control-Allow-Headers' 'x-api-nonce,x-api-ts,x-api-ver,x-api-source';
-        auth_request /_dashboard_identity;
-        proxy_set_header X-Authorization $dashboard_token;
-        proxy_set_header Cookie "";
-        proxy_set_header Authorization "";
-        proxy_set_header X-Bfl-User "";
-        proxy_set_header Authelia-Nonce "";
-        proxy_pass http://bfl.user-system-$dashboard_user.svc.cluster.local:28080;
         proxy_set_header            Host $host;
         proxy_set_header            X-real-ip $remote_addr;
         proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -190,13 +184,23 @@ data:
 
       location /kapis {
         auth_request /_dashboard_identity;
+        proxy_set_header X-Bfl-User $dashboard_user;
         proxy_set_header X-Authorization $dashboard_token;
-        proxy_set_header Cookie "";
+        proxy_set_header Cookie "auth_token=$dashboard_token";
         proxy_set_header Authorization "";
-        proxy_set_header X-Bfl-User "";
+        proxy_set_header X-Provider-Proxy "";
         proxy_set_header Authelia-Nonce "";
-        proxy_pass http://monitoring.user-space-$dashboard_user.svc.cluster.local:28080;
+        proxy_pass http://monitoring-server.os-framework:80;
+        proxy_set_header Host $host;
         proxy_set_header X-Forwarded-Host $http_host;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $monitoring_connection_upgrade;
+        proxy_set_header Sec-WebSocket-Protocol $http_sec_websocket_protocol;
+        proxy_buffering off;
+        proxy_request_buffering off;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
       }
 
       location /hami/ {
@@ -235,27 +239,44 @@ data:
 
       location /api {
         auth_request /_dashboard_identity;
+        proxy_set_header X-Bfl-User $dashboard_user;
         proxy_set_header X-Authorization $dashboard_token;
-        proxy_set_header Cookie "";
+        proxy_set_header Cookie "auth_token=$dashboard_token";
         proxy_set_header Authorization "";
-        proxy_set_header X-Bfl-User "";
+        proxy_set_header X-Provider-Proxy "";
         proxy_set_header Authelia-Nonce "";
-        proxy_pass http://monitoring.user-space-$dashboard_user.svc.cluster.local:28080;
+        proxy_pass http://monitoring-server.os-framework:80;
+        proxy_set_header Host $host;
         proxy_set_header X-Forwarded-Host $http_host;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $monitoring_connection_upgrade;
+        proxy_set_header Sec-WebSocket-Protocol $http_sec_websocket_protocol;
+        proxy_buffering off;
+        proxy_request_buffering off;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
       }
 
       location /capi {
         auth_request /_dashboard_identity;
+        proxy_set_header X-Bfl-User $dashboard_user;
         proxy_set_header X-Authorization $dashboard_token;
-        proxy_set_header Cookie "";
+        proxy_set_header Cookie "auth_token=$dashboard_token";
         proxy_set_header Authorization "";
-        proxy_set_header X-Bfl-User "";
+        proxy_set_header X-Provider-Proxy "";
         proxy_set_header Authelia-Nonce "";
-        proxy_pass http://monitoring.user-space-$dashboard_user.svc.cluster.local:28080;
-        proxy_set_header            Host $host;
-        proxy_set_header            X-real-ip $remote_addr;
-        proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_pass http://monitoring-server.os-framework:80;
+        proxy_set_header Host $host;
         proxy_set_header X-Forwarded-Host $http_host;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $monitoring_connection_upgrade;
+        proxy_set_header Sec-WebSocket-Protocol $http_sec_websocket_protocol;
+        proxy_buffering off;
+        proxy_request_buffering off;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
       }
 
       # location = /js/api/send {
@@ -272,22 +293,28 @@ data:
       #   proxy_pass http://Analytics;
       #   proxy_http_version 1.1;
       #   proxy_set_header Upgrade $http_upgrade;
-      #   proxy_set_header Connection "Upgrade";
+      #   proxy_set_header Connection $monitoring_connection_upgrade;
       #   proxy_set_header Host $host;
       #   rewrite ^/analytics_service(.*)$ $1 break;
       # }
 
-      location ~ /(kapis/terminal|api/v1/watch|apis/apps/v1/watch) {
+      location ~ /(kapis/terminal|api/v1/watch|apis/apps/v1/watch|api/v1/namespaces/[^/]+/pods/[^/]+/exec) {
         auth_request /_dashboard_identity;
         proxy_set_header X-Authorization $dashboard_token;
         proxy_set_header Cookie "auth_token=$dashboard_token";
         proxy_set_header Authorization "";
-        proxy_set_header X-Bfl-User "";
+        proxy_set_header X-Bfl-User $dashboard_user;
+        proxy_set_header X-Provider-Proxy "";
         proxy_set_header Authelia-Nonce "";
-        proxy_pass http://monitoring.user-space-$dashboard_user.svc.cluster.local:28080;
+        proxy_pass http://monitoring-server.os-framework:80;
+        proxy_buffering off;
+        proxy_request_buffering off;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+        proxy_set_header Sec-WebSocket-Protocol $http_sec_websocket_protocol;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "Upgrade";
+        proxy_set_header Connection $monitoring_connection_upgrade;
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-Host $http_host;
       }
@@ -311,7 +338,7 @@ data:
       gzip_types *;
       root /www/control-hub;
 
-      # Resolve identity from the access token before selecting any user Provider.
+      # Terminal, exec and watch connect directly to the monitoring backend.
       # The shared deployment supplies the cluster DNS resolver in nginx.conf.
       auth_request_set $control_hub_user $upstream_http_x_verified_user;
       auth_request_set $control_hub_token $upstream_http_x_verified_token;
@@ -336,14 +363,8 @@ data:
       }
 
       location /bfl {
+        proxy_pass http://127.0.0.1:3010/proxy/bfl/bfl;
         add_header 'Access-Control-Allow-Headers' 'x-api-nonce,x-api-ts,x-api-ver,x-api-source';
-        auth_request /_control_hub_identity;
-        proxy_set_header X-Authorization $control_hub_token;
-        proxy_set_header Cookie "";
-        proxy_set_header Authorization "";
-        proxy_set_header X-Bfl-User "";
-        proxy_set_header Authelia-Nonce "";
-        proxy_pass http://bfl.user-system-$control_hub_user.svc.cluster.local:28080;
         proxy_set_header            Host $host;
         proxy_set_header            X-real-ip $remote_addr;
         proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -353,24 +374,44 @@ data:
 
       location /kapis {
         auth_request /_control_hub_identity;
+        proxy_set_header X-Bfl-User $control_hub_user;
         proxy_set_header X-Authorization $control_hub_token;
-        proxy_set_header Cookie "";
+        proxy_set_header Cookie "auth_token=$control_hub_token";
         proxy_set_header Authorization "";
-        proxy_set_header X-Bfl-User "";
+        proxy_set_header X-Provider-Proxy "";
         proxy_set_header Authelia-Nonce "";
-        proxy_pass http://monitoring.user-space-$control_hub_user.svc.cluster.local:28080;
+        proxy_pass http://monitoring-server.os-framework:80;
+        proxy_set_header Host $host;
         proxy_set_header X-Forwarded-Host $http_host;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $monitoring_connection_upgrade;
+        proxy_set_header Sec-WebSocket-Protocol $http_sec_websocket_protocol;
+        proxy_buffering off;
+        proxy_request_buffering off;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
       }
 
       location /api {
         auth_request /_control_hub_identity;
+        proxy_set_header X-Bfl-User $control_hub_user;
         proxy_set_header X-Authorization $control_hub_token;
-        proxy_set_header Cookie "";
+        proxy_set_header Cookie "auth_token=$control_hub_token";
         proxy_set_header Authorization "";
-        proxy_set_header X-Bfl-User "";
+        proxy_set_header X-Provider-Proxy "";
         proxy_set_header Authelia-Nonce "";
-        proxy_pass http://monitoring.user-space-$control_hub_user.svc.cluster.local:28080;
+        proxy_pass http://monitoring-server.os-framework:80;
+        proxy_set_header Host $host;
         proxy_set_header X-Forwarded-Host $http_host;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $monitoring_connection_upgrade;
+        proxy_set_header Sec-WebSocket-Protocol $http_sec_websocket_protocol;
+        proxy_buffering off;
+        proxy_request_buffering off;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
       }
 
       # Never expose internal auth response headers via the generic service proxy.
@@ -388,27 +429,44 @@ data:
 
       location /current_user {
         auth_request /_control_hub_identity;
+        proxy_set_header X-Bfl-User $control_hub_user;
         proxy_set_header X-Authorization $control_hub_token;
-        proxy_set_header Cookie "";
+        proxy_set_header Cookie "auth_token=$control_hub_token";
         proxy_set_header Authorization "";
-        proxy_set_header X-Bfl-User "";
+        proxy_set_header X-Provider-Proxy "";
         proxy_set_header Authelia-Nonce "";
-        proxy_pass http://monitoring.user-space-$control_hub_user.svc.cluster.local:28080;
+        proxy_pass http://monitoring-server.os-framework:80;
+        proxy_set_header Host $host;
         proxy_set_header X-Forwarded-Host $http_host;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $monitoring_connection_upgrade;
+        proxy_set_header Sec-WebSocket-Protocol $http_sec_websocket_protocol;
+        proxy_buffering off;
+        proxy_request_buffering off;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
       }
 
       location /capi {
         auth_request /_control_hub_identity;
+        proxy_set_header X-Bfl-User $control_hub_user;
         proxy_set_header X-Authorization $control_hub_token;
-        proxy_set_header Cookie "";
+        proxy_set_header Cookie "auth_token=$control_hub_token";
         proxy_set_header Authorization "";
-        proxy_set_header X-Bfl-User "";
+        proxy_set_header X-Provider-Proxy "";
         proxy_set_header Authelia-Nonce "";
-        proxy_pass http://monitoring.user-space-$control_hub_user.svc.cluster.local:28080;
-        proxy_set_header            Host $host;
-        proxy_set_header            X-real-ip $remote_addr;
-        proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_pass http://monitoring-server.os-framework:80;
+        proxy_set_header Host $host;
         proxy_set_header X-Forwarded-Host $http_host;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $monitoring_connection_upgrade;
+        proxy_set_header Sec-WebSocket-Protocol $http_sec_websocket_protocol;
+        proxy_buffering off;
+        proxy_request_buffering off;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
       }
 
       # location = /js/api/send {
@@ -425,20 +483,14 @@ data:
       #   proxy_pass http://Analytics;
       #   proxy_http_version 1.1;
       #   proxy_set_header Upgrade $http_upgrade;
-      #   proxy_set_header Connection "Upgrade";
+      #   proxy_set_header Connection $monitoring_connection_upgrade;
       #   proxy_set_header Host $host;
       #   rewrite ^/analytics_service(.*)$ $1 break;
       # }
 
       location /middleware {
+        proxy_pass http://127.0.0.1:3010/proxy/middleware/middleware;
         add_header 'Access-Control-Allow-Headers' 'x-api-nonce,x-api-ts,x-api-ver,x-api-source';
-        auth_request /_control_hub_identity;
-        proxy_set_header X-Authorization $control_hub_token;
-        proxy_set_header Cookie "";
-        proxy_set_header Authorization "";
-        proxy_set_header X-Bfl-User "";
-        proxy_set_header Authelia-Nonce "";
-        proxy_pass http://middleware.user-space-$control_hub_user.svc.cluster.local:28080;
         proxy_set_header            Host $host;
         proxy_set_header            X-real-ip $remote_addr;
         proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -450,16 +502,22 @@ data:
       location ~ /(kapis/terminal|api/v1/watch|apis/apps/v1/watch|api/v1/namespaces/[^/]+/pods/[^/]+/exec) {
         auth_request /_control_hub_identity;
         proxy_set_header X-Authorization $control_hub_token;
-        # The monitoring WebSocket proxy reads auth_token from Cookie.
-        # Rebuild it from the verified token so both hops use the same identity.
+        # The monitoring backend reads auth_token from Cookie.
+        # Rebuild it from the verified token so headers and Cookie use the same identity.
         proxy_set_header Cookie "auth_token=$control_hub_token";
         proxy_set_header Authorization "";
-        proxy_set_header X-Bfl-User "";
+        proxy_set_header X-Bfl-User $control_hub_user;
+        proxy_set_header X-Provider-Proxy "";
         proxy_set_header Authelia-Nonce "";
-        proxy_pass http://monitoring.user-space-$control_hub_user.svc.cluster.local:28080;
+        proxy_pass http://monitoring-server.os-framework:80;
+        proxy_buffering off;
+        proxy_request_buffering off;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+        proxy_set_header Sec-WebSocket-Protocol $http_sec_websocket_protocol;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "Upgrade";
+        proxy_set_header Connection $monitoring_connection_upgrade;
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-Host $http_host;
       }
@@ -478,11 +536,6 @@ data:
 
 
 
-    # Authenticated identity supplied by the ingress, never taken from the URL.
-    map $http_x_bfl_user $desktop_monitoring {
-        default "";
-        ~^[a-z0-9]([a-z0-9-]*[a-z0-9])?$ monitoring.user-space-$http_x_bfl_user.svc.cluster.local:28080;
-    }
 
     server {
         listen 91;
@@ -510,10 +563,38 @@ data:
             proxy_set_header X-Forwarded-Host $host;
         }
 
+        auth_request_set $desktop_user $upstream_http_x_verified_user;
+        auth_request_set $desktop_token $upstream_http_x_verified_token;
+        proxy_hide_header X-Verified-User;
+        proxy_hide_header X-Verified-Token;
+        location = /_desktop_identity {
+          internal;
+          proxy_pass http://127.0.0.1:3010/internal/proxy-identity;
+          proxy_pass_request_body off;
+          proxy_set_header Content-Length "";
+          proxy_method GET;
+          proxy_read_timeout 10s;
+        }
+
         location /kapis {
-            if ($desktop_monitoring = "") { return 401; }
-            proxy_pass http://$desktop_monitoring;
-            proxy_set_header X-Forwarded-Host $http_host;
+          auth_request /_desktop_identity;
+          proxy_set_header X-Bfl-User $desktop_user;
+          proxy_set_header X-Authorization $desktop_token;
+          proxy_set_header Cookie "auth_token=$desktop_token";
+          proxy_set_header Authorization "";
+          proxy_set_header X-Provider-Proxy "";
+          proxy_set_header Authelia-Nonce "";
+          proxy_pass http://monitoring-server.os-framework:80;
+          proxy_set_header Host $host;
+          proxy_set_header X-Forwarded-Host $http_host;
+          proxy_http_version 1.1;
+          proxy_set_header Upgrade $http_upgrade;
+          proxy_set_header Connection $monitoring_connection_upgrade;
+          proxy_set_header Sec-WebSocket-Protocol $http_sec_websocket_protocol;
+          proxy_buffering off;
+          proxy_request_buffering off;
+          proxy_read_timeout 3600s;
+          proxy_send_timeout 3600s;
         }
 
         location /api/logout {
@@ -631,6 +712,21 @@ data:
         client_max_body_size 2000M;
         keepalive_timeout 2700s;
         root /www/files;
+
+        auth_request_set $files_user $upstream_http_x_verified_user;
+        auth_request_set $files_token $upstream_http_x_verified_token;
+        proxy_hide_header X-Verified-User;
+        proxy_hide_header X-Verified-Token;
+        location = /_files_identity {
+            internal;
+            proxy_pass http://127.0.0.1:3010/internal/proxy-identity;
+            proxy_pass_request_body off;
+            proxy_set_header Content-Length "";
+            proxy_method GET;
+            proxy_read_timeout 10s;
+        }
+
+
         location / {
             try_files $uri $uri/index.html /index.html;
             add_header Cache-Control "private,no-cache";
@@ -638,8 +734,18 @@ data:
             expires 0;
         }
         location /api/resources/AppData {
-            proxy_pass http://files-provider-svc.os-framework:28080;
-            proxy_set_header X-Provider-Proxy files-service.os-framework:80;
+            auth_request /_files_identity;
+            proxy_set_header X-Bfl-User $files_user;
+            proxy_set_header X-Authorization $files_token;
+            proxy_set_header Cookie "auth_token=$files_token";
+            proxy_set_header Authorization "";
+            proxy_set_header Authelia-Nonce "";
+            proxy_set_header X-Provider-Proxy "";
+            proxy_set_header X-Internal-Share-Token "";
+            proxy_set_header Host $host;
+            proxy_http_version 1.1;
+            proxy_buffering off;
+            proxy_pass http://files-service.os-framework:80;
             # rewrite ^/server(.*)$ $1 break;
             # Add original-request-related headers
             proxy_set_header X-Real-IP $remote_addr;
@@ -653,8 +759,18 @@ data:
             proxy_send_timeout 60s;
         }
         location /api/raw/AppData {
-            proxy_pass http://files-provider-svc.os-framework:28080;
-            proxy_set_header X-Provider-Proxy files-service.os-framework:80;
+            auth_request /_files_identity;
+            proxy_set_header X-Bfl-User $files_user;
+            proxy_set_header X-Authorization $files_token;
+            proxy_set_header Cookie "auth_token=$files_token";
+            proxy_set_header Authorization "";
+            proxy_set_header Authelia-Nonce "";
+            proxy_set_header X-Provider-Proxy "";
+            proxy_set_header X-Internal-Share-Token "";
+            proxy_set_header Host $host;
+            proxy_http_version 1.1;
+            proxy_buffering off;
+            proxy_pass http://files-service.os-framework:80;
             # rewrite ^/server(.*)$ $1 break;
             # Add original-request-related headers
             proxy_set_header X-Real-IP $remote_addr;
@@ -668,8 +784,18 @@ data:
             proxy_send_timeout 1800s;
         }
         location /api/raw {
-            proxy_pass http://files-provider-svc.os-framework:28080;
-            proxy_set_header X-Provider-Proxy files-service.os-framework:80;
+            auth_request /_files_identity;
+            proxy_set_header X-Bfl-User $files_user;
+            proxy_set_header X-Authorization $files_token;
+            proxy_set_header Cookie "auth_token=$files_token";
+            proxy_set_header Authorization "";
+            proxy_set_header Authelia-Nonce "";
+            proxy_set_header X-Provider-Proxy "";
+            proxy_set_header X-Internal-Share-Token "";
+            proxy_set_header Host $host;
+            proxy_http_version 1.1;
+            proxy_buffering off;
+            proxy_pass http://files-service.os-framework:80;
             # rewrite ^/server(.*)$ $1 break;
             # Add original-request-related headers
             add_header Accept-Ranges bytes;
@@ -685,8 +811,18 @@ data:
         }
 
         location /api/md5 {
-            proxy_pass http://files-provider-svc.os-framework:28080;
-            proxy_set_header X-Provider-Proxy files-service.os-framework:80;
+            auth_request /_files_identity;
+            proxy_set_header X-Bfl-User $files_user;
+            proxy_set_header X-Authorization $files_token;
+            proxy_set_header Cookie "auth_token=$files_token";
+            proxy_set_header Authorization "";
+            proxy_set_header Authelia-Nonce "";
+            proxy_set_header X-Provider-Proxy "";
+            proxy_set_header X-Internal-Share-Token "";
+            proxy_set_header Host $host;
+            proxy_http_version 1.1;
+            proxy_buffering off;
+            proxy_pass http://files-service.os-framework:80;
             # rewrite ^/server(.*)$ $1 break;
             # Add original-request-related headers
             proxy_set_header X-Real-IP $remote_addr;
@@ -701,8 +837,18 @@ data:
         }
 
         location /api/paste {
-            proxy_pass http://files-provider-svc.os-framework:28080;
-            proxy_set_header X-Provider-Proxy files-service.os-framework:80;
+            auth_request /_files_identity;
+            proxy_set_header X-Bfl-User $files_user;
+            proxy_set_header X-Authorization $files_token;
+            proxy_set_header Cookie "auth_token=$files_token";
+            proxy_set_header Authorization "";
+            proxy_set_header Authelia-Nonce "";
+            proxy_set_header X-Provider-Proxy "";
+            proxy_set_header X-Internal-Share-Token "";
+            proxy_set_header Host $host;
+            proxy_http_version 1.1;
+            proxy_buffering off;
+            proxy_pass http://files-service.os-framework:80;
             # rewrite ^/server(.*)$ $1 break;
             # Add original-request-related headers
             proxy_set_header X-Real-IP $remote_addr;
@@ -717,8 +863,18 @@ data:
         }
 
         location /api/cache {
-            proxy_pass http://files-provider-svc.os-framework:28080;
-            proxy_set_header X-Provider-Proxy files-service.os-framework:80;
+            auth_request /_files_identity;
+            proxy_set_header X-Bfl-User $files_user;
+            proxy_set_header X-Authorization $files_token;
+            proxy_set_header Cookie "auth_token=$files_token";
+            proxy_set_header Authorization "";
+            proxy_set_header Authelia-Nonce "";
+            proxy_set_header X-Provider-Proxy "";
+            proxy_set_header X-Internal-Share-Token "";
+            proxy_set_header Host $host;
+            proxy_http_version 1.1;
+            proxy_buffering off;
+            proxy_pass http://files-service.os-framework:80;
             # rewrite ^/server(.*)$ $1 break;
             # Add original-request-related headers
             proxy_set_header X-Real-IP $remote_addr;
@@ -733,8 +889,18 @@ data:
         }
 
         location /provider {
-            proxy_pass http://files-provider-svc.os-framework:28080;
-            proxy_set_header X-Provider-Proxy files-service.os-framework:80;
+            auth_request /_files_identity;
+            proxy_set_header X-Bfl-User $files_user;
+            proxy_set_header X-Authorization $files_token;
+            proxy_set_header Cookie "auth_token=$files_token";
+            proxy_set_header Authorization "";
+            proxy_set_header Authelia-Nonce "";
+            proxy_set_header X-Provider-Proxy "";
+            proxy_set_header X-Internal-Share-Token "";
+            proxy_set_header Host $host;
+            proxy_http_version 1.1;
+            proxy_buffering off;
+            proxy_pass http://files-service.os-framework:80;
             # rewrite ^/server(.*)$ $1 break;
             # Add original-request-related headers
             proxy_set_header X-Real-IP $remote_addr;
@@ -749,7 +915,7 @@ data:
         }
 
         location /api/preview/ {
-            # Browser preflights carry no token; only the image GET reaches the provider.
+            # Browser preflights carry no token; only the image GET reaches Files.
             if ($request_method = OPTIONS) {
                 add_header Access-Control-Allow-Origin "*" always;
                 add_header Access-Control-Allow-Methods "GET, HEAD, OPTIONS" always;
@@ -757,8 +923,18 @@ data:
                 add_header Access-Control-Max-Age 600 always;
                 return 204;
             }
-            proxy_pass http://files-provider-svc.os-framework:28080;
-            proxy_set_header X-Provider-Proxy files-service.os-framework:80;
+            auth_request /_files_identity;
+            proxy_set_header X-Bfl-User $files_user;
+            proxy_set_header X-Authorization $files_token;
+            proxy_set_header Cookie "auth_token=$files_token";
+            proxy_set_header Authorization "";
+            proxy_set_header Authelia-Nonce "";
+            proxy_set_header X-Provider-Proxy "";
+            proxy_set_header X-Internal-Share-Token "";
+            proxy_set_header Host $host;
+            proxy_http_version 1.1;
+            proxy_buffering off;
+            proxy_pass http://files-service.os-framework:80;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Host $http_host;
@@ -772,8 +948,18 @@ data:
         }
 
         location /api {
-            proxy_pass http://files-provider-svc.os-framework:28080;
-            proxy_set_header X-Provider-Proxy files-service.os-framework:80;
+            auth_request /_files_identity;
+            proxy_set_header X-Bfl-User $files_user;
+            proxy_set_header X-Authorization $files_token;
+            proxy_set_header Cookie "auth_token=$files_token";
+            proxy_set_header Authorization "";
+            proxy_set_header Authelia-Nonce "";
+            proxy_set_header X-Provider-Proxy "";
+            proxy_set_header X-Internal-Share-Token "";
+            proxy_set_header Host $host;
+            proxy_http_version 1.1;
+            proxy_buffering off;
+            proxy_pass http://files-service.os-framework:80;
             # rewrite ^/server(.*)$ $1 break;
             # Add original-request-related headers
             proxy_set_header X-Real-IP $remote_addr;
@@ -789,8 +975,18 @@ data:
         }
 
         location /share_link {
-            proxy_pass http://files-provider-svc.os-framework:28080;
-            proxy_set_header X-Provider-Proxy files-service.os-framework:80;
+            auth_request /_files_identity;
+            proxy_set_header X-Bfl-User $files_user;
+            proxy_set_header X-Authorization $files_token;
+            proxy_set_header Cookie "auth_token=$files_token";
+            proxy_set_header Authorization "";
+            proxy_set_header Authelia-Nonce "";
+            proxy_set_header X-Provider-Proxy "";
+            proxy_set_header X-Internal-Share-Token "";
+            proxy_set_header Host $host;
+            proxy_http_version 1.1;
+            proxy_buffering off;
+            proxy_pass http://files-service.os-framework:80;
             # rewrite ^/server(.*)$ $1 break;
             # Add original-request-related headers
             proxy_set_header X-Real-IP $remote_addr;
@@ -806,8 +1002,18 @@ data:
         }
 
         location /upload {
-            proxy_pass http://files-provider-svc.os-framework:28080;
-            proxy_set_header X-Provider-Proxy files-service.os-framework:80;
+            auth_request /_files_identity;
+            proxy_set_header X-Bfl-User $files_user;
+            proxy_set_header X-Authorization $files_token;
+            proxy_set_header Cookie "auth_token=$files_token";
+            proxy_set_header Authorization "";
+            proxy_set_header Authelia-Nonce "";
+            proxy_set_header X-Provider-Proxy "";
+            proxy_set_header X-Internal-Share-Token "";
+            proxy_set_header Host $host;
+            proxy_http_version 1.1;
+            proxy_buffering off;
+            proxy_pass http://files-service.os-framework:80;
             # rewrite ^/server(.*)$ $1 break;
             # Add original-request-related headers
             proxy_set_header X-Real-IP $remote_addr;
@@ -840,8 +1046,18 @@ data:
             add_header Access-Control-Allow-Headers "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization";
             add_header Access-Control-Allow-Methods "PUT, GET, DELETE, POST, OPTIONS";
 
-            proxy_pass http://files-provider-svc.os-framework:28080;
-            proxy_set_header X-Provider-Proxy files-service.os-framework:80;
+            auth_request /_files_identity;
+            proxy_set_header X-Bfl-User $files_user;
+            proxy_set_header X-Authorization $files_token;
+            proxy_set_header Cookie "auth_token=$files_token";
+            proxy_set_header Authorization "";
+            proxy_set_header Authelia-Nonce "";
+            proxy_set_header X-Provider-Proxy "";
+            proxy_set_header X-Internal-Share-Token "";
+            proxy_set_header Host $host;
+            proxy_http_version 1.1;
+            proxy_buffering off;
+            proxy_pass http://files-service.os-framework:80;
             # rewrite ^/server(.*)$ $1 break;
             # Add original-request-related headers
             proxy_set_header X-Real-IP $remote_addr;
@@ -882,8 +1098,18 @@ data:
         location /api/raw/Home/ {
             expires 30d;
             add_header Cache-Control "public, max-age=2592000";
-            proxy_pass http://files-provider-svc.os-framework:28080;
-            proxy_set_header X-Provider-Proxy files-service.os-framework:80;
+            auth_request /_files_identity;
+            proxy_set_header X-Bfl-User $files_user;
+            proxy_set_header X-Authorization $files_token;
+            proxy_set_header Cookie "auth_token=$files_token";
+            proxy_set_header Authorization "";
+            proxy_set_header Authelia-Nonce "";
+            proxy_set_header X-Provider-Proxy "";
+            proxy_set_header X-Internal-Share-Token "";
+            proxy_set_header Host $host;
+            proxy_http_version 1.1;
+            proxy_buffering off;
+            proxy_pass http://files-service.os-framework:80;
             # rewrite ^/server(.*)$ $1 break;
             # Add original-request-related headers
             proxy_set_header X-Real-IP $remote_addr;
@@ -904,8 +1130,18 @@ data:
         }
         location ~ ^/resources/Home/Pictures/(.*.(png|jpg|svg|gif|jpeg))$
         {
-            proxy_pass http://files-provider-svc.os-framework:28080/api/raw/drive/Home/Pictures/$1;
-            proxy_set_header X-Provider-Proxy files-service.os-framework:80;
+            auth_request /_files_identity;
+            proxy_set_header X-Bfl-User $files_user;
+            proxy_set_header X-Authorization $files_token;
+            proxy_set_header Cookie "auth_token=$files_token";
+            proxy_set_header Authorization "";
+            proxy_set_header Authelia-Nonce "";
+            proxy_set_header X-Provider-Proxy "";
+            proxy_set_header X-Internal-Share-Token "";
+            proxy_set_header Host $host;
+            proxy_http_version 1.1;
+            proxy_buffering off;
+            proxy_pass http://files-service.os-framework:80/api/raw/drive/Home/Pictures/$1;
             add_header Cache-Control "public, max-age=2592000";
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -1191,14 +1427,38 @@ data:
         }
 
 
-        location /kapis {
-            proxy_pass http://127.0.0.1:3010;
-            proxy_set_header X-Forwarded-Host $http_host;
-            # rewrite ^/server(.*)$ $1 break;
+        auth_request_set $settings_user $upstream_http_x_verified_user;
+        auth_request_set $settings_token $upstream_http_x_verified_token;
+        proxy_hide_header X-Verified-User;
+        proxy_hide_header X-Verified-Token;
+        location = /_settings_identity {
+          internal;
+          proxy_pass http://127.0.0.1:3010/internal/proxy-identity;
+          proxy_pass_request_body off;
+          proxy_set_header Content-Length "";
+          proxy_method GET;
+          proxy_read_timeout 10s;
+        }
 
-            # Add original-request-related headers
-            # proxy_set_header X-Real-IP $remote_addr;
-            # proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        location /kapis {
+          auth_request /_settings_identity;
+          proxy_set_header X-Bfl-User $settings_user;
+          proxy_set_header X-Authorization $settings_token;
+          proxy_set_header Cookie "auth_token=$settings_token";
+          proxy_set_header Authorization "";
+          proxy_set_header X-Provider-Proxy "";
+          proxy_set_header Authelia-Nonce "";
+          proxy_pass http://monitoring-server.os-framework:80;
+          proxy_set_header Host $host;
+          proxy_set_header X-Forwarded-Host $http_host;
+          proxy_http_version 1.1;
+          proxy_set_header Upgrade $http_upgrade;
+          proxy_set_header Connection $monitoring_connection_upgrade;
+          proxy_set_header Sec-WebSocket-Protocol $http_sec_websocket_protocol;
+          proxy_buffering off;
+          proxy_request_buffering off;
+          proxy_read_timeout 3600s;
+          proxy_send_timeout 3600s;
         }
 
         location /market-backend {
@@ -1233,7 +1493,18 @@ data:
         }
 
         location /api/resources {
-           proxy_pass http://files-provider-svc.os-framework:28080;
+           auth_request /_settings_identity;
+           proxy_set_header X-Bfl-User $settings_user;
+           proxy_set_header X-Authorization $settings_token;
+           proxy_set_header Cookie "auth_token=$settings_token";
+           proxy_set_header Authorization "";
+           proxy_set_header Authelia-Nonce "";
+           proxy_set_header X-Provider-Proxy "";
+           proxy_set_header X-Internal-Share-Token "";
+           proxy_set_header Host $host;
+           proxy_http_version 1.1;
+           proxy_buffering off;
+           proxy_pass http://files-service.os-framework:80;
            # rewrite ^/server(.*)$ $1 break;
 
            # Add original-request-related headers
@@ -1268,7 +1539,8 @@ data:
         }
 
         location /admin {
-            proxy_pass http://$legacy_infisical;
+            proxy_pass http://127.0.0.1:3010/proxy/secret/admin;
+            proxy_set_header Host $host;
             proxy_set_header X-Forwarded-Host $http_host;
         }
 
@@ -1280,18 +1552,20 @@ data:
             proxy_set_header X-Forwarded-Host $http_host;
         }
 
-        location /vault {
-            add_header Access-Control-Allow-Headers "x-authorization";
-
-            proxy_pass http://$legacy_vault;
-
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Host $http_host;
-        }
 
         location /api/nodes/ {
-            proxy_pass http://files-provider-svc.os-framework:28080;
+            auth_request /_settings_identity;
+            proxy_set_header X-Bfl-User $settings_user;
+            proxy_set_header X-Authorization $settings_token;
+            proxy_set_header Cookie "auth_token=$settings_token";
+            proxy_set_header Authorization "";
+            proxy_set_header Authelia-Nonce "";
+            proxy_set_header X-Provider-Proxy "";
+            proxy_set_header X-Internal-Share-Token "";
+            proxy_set_header Host $host;
+            proxy_http_version 1.1;
+            proxy_buffering off;
+            proxy_pass http://files-service.os-framework:80;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Host $http_host;
@@ -1328,13 +1602,19 @@ data:
             expires 0;
         }
         location /api {
-            proxy_pass http://files-provider-svc.os-framework:28080;
+            # Preserve the identity/credentials supplied by the existing L4 entrance.
+            # Share tokens/passwords remain validated by Files; no login subrequest.
+            proxy_set_header X-Provider-Proxy "";
+            proxy_set_header X-Internal-Share-Token "";
+            proxy_set_header Host $host;
+            proxy_http_version 1.1;
+            proxy_buffering off;
+            proxy_pass http://files-service.os-framework:80;
             # rewrite ^/server(.*)$ $1 break;
             # Add original-request-related headers
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Host $http_host;
-            proxy_set_header Host $host;
             add_header Accept-Ranges bytes;
             client_body_timeout 600s;
             client_max_body_size 4000M;
@@ -1345,13 +1625,19 @@ data:
         }
 
         location /upload {
-            proxy_pass http://files-provider-svc.os-framework:28080;
+            # Preserve the identity/credentials supplied by the existing L4 entrance.
+            # Share tokens/passwords remain validated by Files; no login subrequest.
+            proxy_set_header X-Provider-Proxy "";
+            proxy_set_header X-Internal-Share-Token "";
+            proxy_set_header Host $host;
+            proxy_http_version 1.1;
+            proxy_buffering off;
+            proxy_pass http://files-service.os-framework:80;
             # rewrite ^/server(.*)$ $1 break;
             # Add original-request-related headers
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Host $http_host;
-            proxy_set_header Host $host;
             add_header Accept-Ranges bytes;
             client_body_timeout 600s;
             client_max_body_size 4000M;
@@ -1362,13 +1648,19 @@ data:
         }
 
         location /videos {
-            proxy_pass http://files-provider-svc.os-framework:28080/videos;
+            # Preserve the identity/credentials supplied by the existing L4 entrance.
+            # Share tokens/passwords remain validated by Files; no login subrequest.
+            proxy_set_header X-Provider-Proxy "";
+            proxy_set_header X-Internal-Share-Token "";
+            proxy_set_header Host $host;
+            proxy_http_version 1.1;
+            proxy_buffering off;
+            proxy_pass http://files-service.os-framework:80/videos;
             # rewrite ^/server(.*)$ $1 break;
             # Add original-request-related headers
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Host $http_host;
-            proxy_set_header Host $host;
             add_header Accept-Ranges bytes;
             client_body_timeout 600s;
             client_max_body_size 4000M;
@@ -1397,14 +1689,28 @@ data:
             proxy_send_timeout 60s;
         }
 
-        location /bfl/ {
-            add_header Access-Control-Allow-Headers "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization";
-            proxy_pass http://$legacy_bfl;
-            proxy_set_header            Host $host;
-            proxy_set_header            X-real-ip $remote_addr;
-            proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
-            add_header X-Frame-Options SAMEORIGIN;
+        # The client selects this public profile using the owner returned by Files.
+        location ~ "^/bfl/info/v1/olares-info/(?<share_profile_user>[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)$" {
+            limit_except GET OPTIONS { deny all; }
+            if ($request_method = OPTIONS) { return 204; }
+            proxy_pass http://bfl.user-space-$share_profile_user.svc.cluster.local:80/bfl/info/v1/olares-info;
+            proxy_pass_request_body off;
+            proxy_set_header Content-Length "";
+            proxy_set_header Cookie "";
+            proxy_set_header Authorization "";
+            proxy_set_header X-Authorization "";
+            proxy_set_header X-Bfl-User "";
+            proxy_set_header X-Provider-Proxy "";
+            proxy_set_header Authelia-Nonce "";
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $http_host;
+            proxy_read_timeout 10s;
+            add_header Cache-Control "no-store" always;
         }
+
+        location /bfl { return 404; }
 
         location ~ ^/(assets|js|css|fonts|img)/.*.(js|css|png|jpg|svg|woff|woff2)$
         {
@@ -1424,21 +1730,6 @@ data:
         gzip_types *;
         root /www/vault;
 
-        # The shared frontend must select a user's services from a verified token.
-        auth_request_set $vault_user $upstream_http_x_verified_user;
-        auth_request_set $vault_token $upstream_http_x_verified_token;
-        proxy_hide_header X-Verified-User;
-        proxy_hide_header X-Verified-Token;
-
-        location = /_vault_identity {
-            internal;
-            proxy_pass http://127.0.0.1:3010/internal/proxy-identity;
-            proxy_pass_request_body off;
-            proxy_set_header Content-Length "";
-            proxy_method GET;
-            proxy_read_timeout 10s;
-        }
-
         # Keep the existing BFL response contract through the user-aware service.
         location = /bfl/info/v1/olares-info {
             proxy_pass http://127.0.0.1:3010/api/olares-info;
@@ -1453,31 +1744,17 @@ data:
             expires 0;
         }
         location /bfl/ {
+            proxy_pass http://127.0.0.1:3010/proxy/bfl/bfl/;
             add_header Access-Control-Allow-Headers "access-control-allow-headers,access-control-allow-methods,access-control-allow-origin,content-type,x-auth,x-unauth-error,x-authorization";
-            auth_request /_vault_identity;
-            proxy_set_header X-Authorization $vault_token;
-            proxy_set_header Cookie "";
-            proxy_set_header Authorization "";
-            proxy_set_header X-Bfl-User "";
-            proxy_set_header Authelia-Nonce "";
-            proxy_pass http://bfl.user-system-$vault_user.svc.cluster.local:28080;
             proxy_set_header            Host $host;
             proxy_set_header            X-real-ip $remote_addr;
             proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
             add_header X-Frame-Options SAMEORIGIN;
         }
         location /server {
+            proxy_pass http://127.0.0.1:3010/proxy/vaultRpc/server;
+            proxy_set_header Host $host;
             add_header Access-Control-Allow-Headers "x-authorization";
-            auth_request /_vault_identity;
-            proxy_set_header X-Authorization $vault_token;
-            proxy_set_header Cookie "";
-            proxy_set_header Authorization "";
-            proxy_set_header X-Bfl-User "";
-            proxy_set_header Authelia-Nonce "";
-            proxy_pass http://vault.user-space-$vault_user.svc.cluster.local:28080;
-            # The shared domain identifies the device, not the account's provider.
-            # system-server still checks the verified user's /server permissions.
-            proxy_set_header X-Provider-Proxy vault-server.os-framework:3000;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Host $http_host;
