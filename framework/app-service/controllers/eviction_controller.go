@@ -88,7 +88,7 @@ func (r *EvictionManagerController) Reconcile(ctx context.Context, req ctrl.Requ
 	podName := pod.GetName()
 	podNamespace := pod.GetNamespace()
 
-	if podNamespace == "" || ignoredNs.Has(podNamespace) || strings.HasPrefix(podNamespace, "user-space") || strings.HasPrefix(podNamespace, "user-system") {
+	if podNamespace == "" || ignoredNs.Has(podNamespace) || strings.HasPrefix(podNamespace, "user-space") {
 		return ctrl.Result{}, nil
 	}
 

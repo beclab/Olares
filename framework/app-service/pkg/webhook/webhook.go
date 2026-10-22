@@ -20,7 +20,6 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway/meshinagent"
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway/meshoutagent"
 	"github.com/beclab/Olares/framework/app-service/pkg/mesh"
-	"github.com/beclab/Olares/framework/app-service/pkg/provider"
 	"github.com/beclab/Olares/framework/app-service/pkg/sandbox/sidecar"
 	"github.com/beclab/Olares/framework/app-service/pkg/security"
 	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
@@ -34,7 +33,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -44,7 +42,6 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/ptr"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
@@ -925,40 +922,6 @@ func genPatchesForEnv(op string, containerIdx, envIdx int, name, value string) (
 		},
 	})
 	return patch
-}
-
-func (wh *Webhook) getAppKeySecret(namespace string) (string, string, error) {
-	config, err := ctrl.GetConfig()
-	if err != nil {
-		return "", "", err
-	}
-	client, err := dynamic.NewForConfig(config)
-	if err != nil {
-		return "", "", err
-	}
-	_, appConfig, isShared, _, err := wh.GetAppConfig(namespace)
-	if err != nil {
-		klog.Errorf("Failed to get app config err=%v", err)
-		return "", "", err
-	}
-
-	if isShared {
-		// shared namespace, no need to get appkey/secret
-		return "", "", nil
-	}
-
-	apClient := provider.NewApplicationPermissionRequest(client)
-	ap, err := apClient.Get(context.TODO(), "user-system-"+appConfig.OwnerName, appConfig.AppName, metav1.GetOptions{})
-	if err != nil {
-		return "", "", err
-	}
-	var appKey, appSecret string
-	if ap != nil {
-		appKey, _, _ = unstructured.NestedString(ap.Object, "spec", "key")
-		appSecret, _, _ = unstructured.NestedString(ap.Object, "spec", "secret")
-		return appKey, appSecret, nil
-	}
-	return "", "", errors.New("nil applicationpermission object")
 }
 
 func (wh *Webhook) isSelected(podSelectors []metav1.LabelSelector, pod *corev1.Pod) bool {

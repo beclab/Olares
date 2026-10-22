@@ -50,7 +50,7 @@ func (h *HelmOps) UninstallAll() error {
 		return err
 	}
 
-	h.ClearMiddlewareRequests(fmt.Sprintf("%s-%s", "user-system", h.app.OwnerName))
+	h.ClearMiddlewareRequests(h.app.Namespace)
 
 	// Host-path cache/data is shared with pod mounts; wait for the release's
 	// pods to fully terminate before deleting their backing directories.

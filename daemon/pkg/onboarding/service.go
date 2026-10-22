@@ -362,14 +362,8 @@ func (s *Service) userReady(ctx context.Context, name string) (bool, error) {
 	if bfl.DeletionTimestamp != nil || bfl.Spec.Replicas == nil || *bfl.Spec.Replicas < 1 || bfl.Status.ObservedGeneration < bfl.Generation || bfl.Status.ReadyReplicas < *bfl.Spec.Replicas {
 		return false, nil
 	}
-	server, err := s.Kube.AppsV1().Deployments("user-system-"+name).Get(ctx, "system-server", metav1.GetOptions{})
-	if apierrors.IsNotFound(err) {
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-	return server.DeletionTimestamp == nil && server.Spec.Replicas != nil && *server.Spec.Replicas > 0 && server.Status.ObservedGeneration >= server.Generation && server.Status.ReadyReplicas >= *server.Spec.Replicas, nil
+
+	return true, nil
 }
 
 // Keep the machine's completion record after BFL finishes user activation,

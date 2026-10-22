@@ -281,41 +281,6 @@ var (
 		},
 	} // end NPOSProtected
 
-	// NPUserSystem is a network policy template for user-system namespace.
-	NPUserSystem = netv1.NetworkPolicy{
-		ObjectMeta: metav1.ObjectMeta{},
-		Spec: netv1.NetworkPolicySpec{
-			PodSelector: metav1.LabelSelector{},
-			Ingress: []netv1.NetworkPolicyIngressRule{
-				{
-					From: []netv1.NetworkPolicyPeer{
-						{
-							NamespaceSelector: &metav1.LabelSelector{
-								MatchLabels: map[string]string{
-									NamespaceOwnerLabel: "",
-								},
-							},
-						},
-						{
-							NamespaceSelector: &metav1.LabelSelector{
-								MatchLabels: map[string]string{
-									NamespaceTypeLabel: System,
-								},
-							},
-						},
-						{
-							NamespaceSelector: &metav1.LabelSelector{
-								MatchLabels: map[string]string{
-									NamespaceSharedLabel: "true",
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	} // end NPUserSystem
-
 	// NPUserSpace is a network policy template for user space namespace.
 	NPUserSpace = netv1.NetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{},

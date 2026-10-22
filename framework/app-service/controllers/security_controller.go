@@ -230,14 +230,6 @@ func (r *SecurityReconciler) reconcileNamespaceLabels(ctx context.Context, ns *c
 			updated = true
 		}
 	} else if ok, owner := security.IsUserInternalNamespaces(ns.Name); ok {
-		// only user-system-<owner> namespace can access other namespaces' network
-		if security.IsUserSystemNamespaces(ns.Name) {
-			if label, ok := ns.Labels[security.NamespaceTypeLabel]; !ok || label != security.Internal {
-				ns.Labels[security.NamespaceTypeLabel] = security.Internal
-				updated = true
-			}
-		}
-
 		if security.IsUserSpaceNamespaces(ns.Name) {
 			if label, ok := ns.Labels[security.NamespaceTypeLabel]; !ok || label != security.UserSpace {
 				ns.Labels[security.NamespaceTypeLabel] = security.UserSpace
@@ -478,21 +470,6 @@ func (r *SecurityReconciler) reconcileNetworkPolicy(ctx context.Context, ns *cor
 			networkPolicy.SetName("os-network-np")
 			networkPolicy.SetNamespace(ns.Name)
 			npFix = func(np *netv1.NetworkPolicy) {
-				np.Spec.Ingress = append(np.Spec.Ingress, netv1.NetworkPolicyIngressRule{
-					From: security.NodeTunnelRule(),
-				})
-			}
-		} else if security.IsUserSystemNamespaces(ns.Name) {
-			networkPolicy = security.NetworkPolicies{security.NPUserSystem.DeepCopy()}
-			networkPolicy.SetName("user-system-np")
-			networkPolicy.SetNamespace(ns.Name)
-			npFix = func(np *netv1.NetworkPolicy) {
-				owner := ns.Labels[security.NamespaceOwnerLabel]
-				logger.Info("update network policy", "name", networkPolicy.Name(), "owner", owner)
-				np.Spec.Ingress[0].From[0].NamespaceSelector.MatchLabels[security.NamespaceOwnerLabel] = owner
-				// hostNetwork l4-bfl-proxy (os-network) sources from the node
-				// tunnel/IP, not a pod IP. Same NodeTunnelRule as user-space-np; pinning
-				// user pods to the gateway node only works on a single node.
 				np.Spec.Ingress = append(np.Spec.Ingress, netv1.NetworkPolicyIngressRule{
 					From: security.NodeTunnelRule(),
 				})
@@ -1010,11 +987,6 @@ func (r *SecurityReconciler) namespacesShouldAllowNodeTunnel(ctx context.Context
 				Name: "user-space-" + u.GetName(),
 			},
 		})
-		reqs = append(reqs, reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Name: "user-system-" + u.GetName(),
-			},
-		})
 	}
 
 	return reqs, nil
@@ -1115,7 +1087,6 @@ func isNodeChanged(obj ...metav1.Object) bool {
 
 func getAppNameFromNPName(ns string, owner string) string {
 	if !strings.HasPrefix(ns, "user-space") &&
-		!strings.HasPrefix(ns, "user-system") &&
 		strings.HasSuffix(ns, "-"+owner) {
 		return ns[:len(ns)-len(owner)-1]
 	}
