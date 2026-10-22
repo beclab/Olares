@@ -1,95 +1,86 @@
 ---
 outline: [2, 3]
-description: 在 Olares 上使用 Goose 和 AI Router，连接 Goose Desktop，将项目笔记整理成 Markdown 简报。也可通过浏览器中的 Goose Terminal 进行对话和文件处理。
+description: 在 Olares 上把 Goose 用作本地 AI 智能体。通过浏览器中的 Goose Terminal 对话，或从电脑上的 Goose Desktop 连接。
 head:
   - - meta
     - name: keywords
       content: "Olares, Goose, AI 智能体, AI Router, Goose Desktop, 终端, 文件自动化"
 app_version: "0.0.13"
 doc_version: "1.0"
-doc_updated: "2026-10-13"
+doc_updated: "2026-10-22"
 ---
 
-:::warning
-本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../use-cases/goose.md)为准。
-:::
+# 在 Olares 上把 Goose 用作本地 AI 智能体
 
-# 使用 Goose 在 Olares 上将项目笔记整理成简报
-
-Goose 是一个开源 AI 智能体，可通过自然语言读取文件、编辑文档和执行命令。在 Olares 上，智能体运行于你的 Olares 设备，你可以通过电脑上的 Goose Desktop 或浏览器中的 Goose Terminal 与它交互。
-
-应用默认使用 AI Router 的默认聊天模型。本示例在 Goose 的持久化工作目录中生成项目简报，无需先开放个人目录访问权限即可完成文件任务。
+Goose 是一个开源的通用 AI 智能体，可用于研究、写作、编程、自动化，以及更多场景。在 Olares 上，Goose 运行在你的设备上，通过 Router 使用本地模型，默认使用 default-chat 聊天模型。你可以通过浏览器中的 Goose Terminal 或电脑上的 Goose Desktop 与它交互。
 
 ## 学习目标
 
 通过本指南，你将学会：
 
+- 在 Goose Terminal 中运行 Goose。
 - 将 Goose Desktop 连接到 Olares 上的 Goose 服务。
-- 通过对话创建 Markdown 文档，并验证保存结果。
-- 使用 Goose Terminal，并按需开放已有文件的访问权限。
+- 按需开放已有文件的访问权限。
 
 ## 前提条件
 
+开始之前，你需要：
+
 - Olares 1.12.7 或更高版本。
-- [AI Router](olares-router.md) 已配置可正常使用且支持工具调用的默认聊天模型。
+- 可正常使用 [Router](olares-router.md) 进行本地模型连接。
+- 已从 Market 安装以下模型：
+
+  | 模型类型 | 模型 | 获取方式 |
+  | :--- | :--- | :--- |
+  | 聊天 | Qwen3.8-27B (llama.cpp) | 从 Market 安装 |
+
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## 安装 Goose
 
 1. 打开 Market，搜索“Goose”。
-   <!-- ![Market 中的 Goose](/images/manual/use-cases/goose.png#bordered) -->
-
 2. 点击**获取**，然后点击**安装**，等待安装完成。
 
-Goose 已默认配置 AI Router，无需为这一默认连接填写模型服务商的 API 密钥。模型是否可用以及响应性能取决于 AI Router 中的模型配置。
+## 使用 Goose Terminal
 
-## 配置 Goose Desktop
+Goose Terminal 在浏览器中打开，直接连接 Goose 服务，无需安装客户端，也无需配置连接。
 
-1. 按照[官方安装指南](https://goose-docs.ai/docs/getting-started/installation/)在电脑上安装 Goose Desktop。使用 1.54.0 版本，与本指南对应的服务端保持一致。
+### 运行一次性请求
 
-2. 在电脑上开启 LarePass VPN，以连接 Olares。
+使用 `goose run -t` 发送单个 prompt，无需进入交互式对话。
 
-   :::tip 电脑与 Olares 在同一局域网？
-   也可以使用 Olares 本地访问。域名和 Windows 配置方法请参阅[在本地访问 Olares 服务](../manual/best-practices/local-access.md)。下文使用入口的 HTTPS 地址。
-   :::
-
-3. 在 Olares 中打开**设置** > **应用** > **Goose**，在**入口**中选择 **Goose ACP**，复制其 HTTPS 地址。此入口用于连接客户端，不是浏览器聊天页面。
-
-4. 从 Launchpad 打开 Goose Terminal，运行：
+1. 从 Launchpad 打开 Goose Terminal。
+2. 运行 `goose run -t`，后跟你的 prompt，并将 `Your_Prompt` 替换为你的问题或任务：
 
    ```bash
-   printenv GOOSE_SERVER__SECRET_KEY
+   goose run -t "Your_Prompt"
    ```
 
-   复制输出值。这是连接你自己的 Goose 服务所需的密钥，不是模型 API 密钥，请妥善保管。
+   例如，提问：
 
-5. 在 Goose Desktop 中打开 **Settings**，找到 **External Backend (ACP)**，填写：
-
-   | 设置项 | 值 |
-   |:---|:---|
-   | **Use external backend** | 开启 |
-   | **Backend Base URL** | 从 Olares 设置中复制的 Goose ACP HTTPS 地址，不要追加 `/acp` 或 `/v1` |
-   | **Secret Key** | `printenv GOOSE_SERVER__SECRET_KEY` 的输出值 |
-   | **Remote Working Directory (optional)** | `/config/workspace` |
-   | **Certificate Fingerprint (optional)** | 首次连接时留空 |
-
-6. 应用设置，然后新建对话。如果已有窗口仍使用原来的连接或工作目录，请重启 Goose Desktop。
-
-7. 发送以下消息，确认 Goose 能正常回复：
-
-   ```text
-   请仅回复：Goose 已就绪。
+   ```bash
+   goose run -t "Goose Terminal 和 Goose Desktop 有什么区别？请用三句话回答。"
    ```
 
-启用外部服务端后，模型请求和智能体命令均从 Olares 发起。电脑上的文件路径不会自动映射到远程智能体。连接字段的说明可参阅 Goose 的[远程服务端配置指南](https://goose-docs.ai/docs/guides/remote-goose-server/)。
+3. Goose 显示回答后返回终端提示符。
 
-## 创建项目简报
+### 开始对话
 
-### 生成文档
+想要来回多轮对话时，使用交互式会话。
 
-1. 在已连接的对话中发送：
+1. 从 Launchpad 打开 Goose Terminal。
+2. 在工作目录中启动交互式会话：
+
+   ```bash
+   cd /config/workspace
+   goose session
+   ```
+
+3. 首次运行此命令时，Goose 会询问是否分享匿名使用数据。选择 **Yes** 或 **No** 继续。
+4. 发送你的 prompt。以下示例在 `/config/workspace/goose-demo` 中创建一个示例项目简报：
 
    ```text
-   仅在 /config/workspace/goose-demo 中操作，如果目录不存在，请创建。
+   仅在 /config/workspace/goose-demo 中操作，如目录不存在请创建。
    创建 notes.md，包含以下事实：
    - 项目：优化客户首次使用流程
    - 目标：缩短完成首次配置所需的时间
@@ -99,136 +90,187 @@ Goose 已默认配置 AI Router，无需为这一默认连接填写模型服务�
    然后读取 notes.md，生成 brief.md，包含以下章节：
    项目概述、交付物、目标日期、待确认事项。
    保留所有事实，不要编造负责人或时间安排。
-   最后返回两个文件的绝对路径，并概述已完成的工作。
+   最后返回两个文件的绝对路径，并概述你创建的内容。
    ```
 
-2. 如果 Goose 请求批准工具调用，先确认操作内容，再允许写入文件。等待任务完成。
+5. 如终端提示批准工具，按提示操作。
+6. 在同一终端中验证结果：
 
-3. 确认回复中包含 `/config/workspace/goose-demo/notes.md` 和 `/config/workspace/goose-demo/brief.md`。
+   ```bash
+   # 列出目录，确认文件存在
+   ls -l /path/to/directory
+   # 查看文件内容
+   cat /path/to/file
+   ```
 
-简报应包含项目目标、两项交付物、目标日期，以及尚未确定负责人的问题。模型生成的措辞可能不同，但事实应保持一致。
-
-### 验证结果
-
-1. 从 Launchpad 打开 Goose Terminal，检查已保存的文件：
+   本例中：
 
    ```bash
    ls -l /config/workspace/goose-demo
    cat /config/workspace/goose-demo/brief.md
    ```
 
-2. 将简报与原始笔记对照，确认 Goose 实际写入了文件，而不只是把建议内容显示在对话中。
+   简报应包含项目目标、两项交付物、目标日期，以及尚未确定负责人的问题。模型生成的措辞可能不同，但事实应保持一致。
 
-3. 返回同一对话，继续发送：
+7. 按 `Ctrl+C` 退出会话。如果 Goose 提示再次按键，再按一次 `Ctrl+C`。这会结束当前终端交互。
 
-   ```text
-   读取 /config/workspace/goose-demo/brief.md，追加“后续行动”章节，
-   提出如何确认故障排查指南负责人的建议。将建议明确标注为提议，
-   保留现有项目事实。
-   ```
-
-4. 在 Goose Terminal 中再次读取文件，检查修改结果。
-
-`/config/workspace` 中的文件会在应用正常重启后保留。对需要长期保存的文档，请另行备份。
-
-## 使用 Goose Terminal
-
-### 开始对话
-
-1. 从 Launchpad 打开 Goose Terminal。
-
-2. 在工作目录中启动交互式会话：
-
-   ```bash
-   cd /config/workspace
-   goose session
-   ```
-
-3. 在提示符后输入消息，也可使用上面的项目简报任务。如果终端请求批准工具调用，按提示操作。
-
-4. 按 `Ctrl+C` 退出会话。如果 Goose 先中断当前请求并提示再次按键退出，再按一次 `Ctrl+C`。这会结束当前终端交互，Goose 服务仍可供 Desktop 客户端连接。
-
-如需执行一次性请求，可运行：
-
-```bash
-cd /config/workspace
-goose run -t "读取 goose-demo/brief.md，概括待确认事项，不要修改任何文件。"
-```
+:::info 文件位置
+Goose 将文件保存在 Olares 设备的 `/config/workspace` 目录中。重启应用不会删除这些文件。重要文档请在 Files 中另行保存一份。
+:::
 
 ### 查找并恢复会话
 
-列出已保存的会话：
+会话保存在 Goose 服务上。你可以列出会话，并在之后于 Goose Terminal 或 Goose Desktop 中恢复任意会话。
 
-```bash
-goose session list
-```
+- 列出已保存的会话，运行 `goose session list`。
+- 恢复会话，运行 `goose session --resume --session-id SESSION_ID`，ID 取自列表。
 
-使用列表中的会话 ID 恢复会话：
+   :::tip
+   两个同时运行的会话编辑同一文件时可能互相覆盖修改。在另一个会话中编辑同一文件前，请先退出其中一个。
+   :::
 
-```bash
-goose session --resume --session-id SESSION_ID
-```
+## 使用 Goose Desktop
 
-将 `SESSION_ID` 替换为实际会话 ID。避免在两个正在运行的会话中同时编辑相同文件。
+Goose Desktop 运行在你的电脑上，通过 Goose ACP 入口连接到 Olares 上的 Goose 服务。
 
-## 配置目录访问和模型
+### 准备连接信息
 
-### 处理 Home 或 External 中的文件
+1. 从 Launchpad 打开 Goose Terminal，运行：
 
-Home 和 External 目录访问为可选项。如需处理已有文件：
+   ```bash
+   printenv GOOSE_SERVER__SECRET_KEY
+   ```
 
-1. 打开**设置** > **应用** > **Goose**，编辑应用环境变量。
+2. 复制返回值并保存，稍后配置 Goose Desktop 时使用。
 
-2. 开启所需目录的访问权限：
+   这是 Goose Desktop 与 Goose 服务之间的连接密钥，不是模型 API 密钥，请妥善保管。
+
+3. 打开 Olares **设置**，进入**应用** > **Goose** > **入口** > **Goose ACP**，复制 **Endpoint** URL。
+4. 在 Router 中进入 **LLM** 页面，找到被指定为 `default-chat` 的模型，点击右侧的 **View connection example**。
+5. 根据电脑的连接方式选择：
+   - 如果电脑与 Olares 设备在同一局域网，选择 **Device in LAN**，复制 Router URL。
+   - 如果电脑通过互联网连接，选择 **Remote**，复制 Router URL。
+
+### 连接到 Goose 服务
+
+:::tip
+如果电脑与 Olares 设备不在同一局域网，连接前请先开启 LarePass VPN。
+:::
+
+1. 按照[官方安装指南](https://goose-docs.ai/docs/getting-started/installation/)在电脑上安装 Goose Desktop。
+2. 打开 Goose Desktop，选择 **Connect to a Provider** > **Add a custom provider** > **Configure manually**。
+3. 在 **Add Custom Provider** 窗口中配置以下设置：
+
+   | 设置项 | 值 |
+   |:---|:---|
+   | **Provider Type** | 选择 **OpenAI Compatible**。 |
+   | **Display Name** | 填写便于识别的名称，例如 `olares-router`。 |
+   | **API URL** | 填写之前复制的 Router URL。 |
+   | **Available Models** | 填写 `default-chat`。 |
+
+4. 点击 **Create Provider**。
+5. 按需选择隐私选项，然后点击 **Get Started**。
+6. 在 Goose Desktop 中，从左侧边栏进入 **Settings** > **Agent**。
+7. 找到 **External Backend (ACP)**，开启 **Use external backend**，并配置以下设置：
+
+   | 设置项 | 值 |
+   |:---|:---|
+   | **Backend Base URL** | 在**准备连接信息**中复制的 Goose ACP **Endpoint** URL，不要追加 `/acp` 或 `/v1`。 |
+   | **Remote Working Directory** (optional) | `/config/workspace`<br><br>**Note**：虽然 Goose Desktop 将此字段标记为可选，但这里必须填写。智能体需要一个服务端目录来工作。 |
+   | **Secret Key** | 在**准备连接信息**中保存的连接密钥。 |
+
+8. 重启 Goose Desktop。
+9. 新建对话。在聊天框下方确认模型为 `default-chat`，然后选择一个工作目录。
+10. 发送以下消息，确认 Goose 回复：
+
+      ```text
+      请仅回复：Goose is ready。
+      ```
+
+### 继续 Terminal 中的会话
+
+你在 Goose Terminal 中创建的会话也会以 **CLI Session** 条目出现在 Goose Desktop 左侧边栏的 **CHATS** 下。打开它即可从上次中断处继续对话，工作目录和文件保持不变。
+
+## 处理 Home 或 External 中的文件
+
+默认情况下，Goose 只能访问自己的工作目录。要让 Goose 处理 Home 或 External 目录中的文件，请先开启访问：
+
+1. 打开 Olares **设置**，进入**应用** > **Goose** > **管理环境变量**。
+2. 将所需目录的访问变量设为 `true`：
 
    | 环境变量 | 默认值 | 开启后 Goose 可访问的目录 |
    |:---|:---|:---|
    | `ALLOW_HOME_DIR_ACCESS` | `false` | Home：`/config/Home` |
    | `ALLOW_EXTERNAL_DIR_ACCESS` | `false` | External：`/config/External` |
 
-3. 保存修改，等待 Goose 恢复为**运行中**，然后重新连接客户端或打开 Goose Terminal。
+3. 点击**应用**，等待 Goose 恢复为**运行中**。
+4. 重启 Goose Desktop 或 Goose Terminal。
+5. 向 Goose 提供待处理文件的准确路径。
 
-4. 向 Goose 提供待处理文件的准确路径。建议先处理文档副本，确认输出后再用于原文件。
+   :::warning
+   智能体可以修改已开放目录中的文件。建议先处理文档副本，确认输出后再用于原文件。
+   :::
 
-开启访问后，所选目录会开放给智能体，而不仅是提示词中指定的某个文件。你可以通过同一环境变量设置再次关闭访问。
+   :::info 访问范围
+   开启变量后，整个目录都会开放给智能体，而不仅是提示词中提到的单个文件。如需收回访问权限，将该变量改回 `false` 并应用修改。
+   :::
 
-### 使用其他模型服务商
+## 使用其他模型服务商
 
-应用默认使用 AI Router。如需使用第三方模型服务商，请在 Olares 设置中修改应用环境变量。已连接的 Desktop 客户端和 Goose Terminal 都会使用这些服务端设置。
+默认的模型连接是 Router。如需使用第三方模型服务商，在 Olares 设置中修改应用环境变量。这些设置同时控制 Goose Desktop 和 Goose Terminal 使用的服务端。
 
-对于兼容 OpenAI 的服务商，配置：
+1. 打开 Olares **设置**，进入**应用** > **Goose** > **管理环境变量**。
+2. 对于兼容 OpenAI 的服务商，设置以下变量：
 
-| 环境变量 | 值 |
-|:---|:---|
-| `GOOSE_PROVIDER` | `openai` |
-| `GOOSE_MODEL` | 服务商提供的准确模型 ID |
-| `OPENAI_HOST` | 服务商的根地址，例如 `https://api.openai.com`，不包含 `/v1` |
-| `OPENAI_BASE_PATH` | `v1/chat/completions`，或服务商指定的聊天补全请求路径 |
-| `OPENAI_API_KEY` | 服务商的 API 密钥 |
+   | 环境变量 | 值 |
+   |:---|:---|
+   | `GOOSE_PROVIDER` | `openai` |
+   | `GOOSE_MODEL` | 服务商提供的准确模型 ID |
+   | `OPENAI_HOST` | 服务商的服务器根地址，例如 `https://api.openai.com`，不包含 `/v1` |
+   | `OPENAI_BASE_PATH` | `v1/chat/completions`，或服务商指定的聊天补全路径 |
+   | `OPENAI_API_KEY` | 服务商的 API 密钥 |
 
-保存后，等待 Goose 恢复为**运行中**，再开始新对话。使用 Anthropic 时，将 `GOOSE_PROVIDER` 设置为 `anthropic`，在 `GOOSE_MODEL` 中填写模型 ID，并设置 `ANTHROPIC_API_KEY`。
+3. 对于 Anthropic，设置以下变量：
 
-如需切回 AI Router，将 `GOOSE_PROVIDER` 设置为 `custom_olares_router`，将 `GOOSE_MODEL` 设置为 `default-chat`，并移除不再需要的第三方密钥。客户端的服务商设置不会覆盖 Olares 服务端已经配置的环境变量。
+   | 环境变量 | 值 |
+   |:---|:---|
+   | `GOOSE_PROVIDER` | `anthropic` |
+   | `GOOSE_MODEL` | 服务商提供的准确模型 ID |
+   | `ANTHROPIC_API_KEY` | 服务商的 API 密钥 |
+
+4. 点击**应用**，等待 Goose 恢复为**运行中**。
+5. 重启 Goose Desktop 或 Goose Terminal。
+6. 切回 Router：
+
+   a. 将 `GOOSE_PROVIDER` 设为 `custom_olares_router`。
+
+   b. 将 `GOOSE_MODEL` 设为 `default-chat`。
+
+   c. 移除第三方密钥。
+
+:::tip
+如需同时更改 Goose Desktop 和 Goose Terminal 使用的模型，请编辑 Olares 服务端的环境变量。Goose Desktop 中的服务商设置不影响此配置。
+:::
 
 ## 常见问题
 
-### 客户端为什么无法连接？
+### Goose Desktop 为什么连接失败？
 
-确认 Goose 正在运行、电脑已开启 LarePass VPN，并且客户端填写的是从 Olares 设置中复制的 Goose ACP 地址。连接密钥应使用 Goose Terminal 中查询到的值。如果提示密钥被拒绝，说明客户端填写的值与服务端不一致。
+确认 Goose 正在运行，且 Goose Desktop 使用的是从 Olares 设置中复制的 Goose ACP 地址。连接密钥使用 Goose Terminal 中查询到的值。如果提示密钥被拒绝，说明 Goose Desktop 中填写的值与服务端不一致。
 
 ### 模型请求为什么返回 503？
 
-先确认 AI Router 的默认聊天模型已就绪。如果错误提示模型正在处理其允许数量的请求，请等待当前请求完成后再试。避免同时从 Desktop 和 Terminal 发送请求。
+先确认 Router 的默认聊天模型已就绪。如果错误提示模型正在处理其允许数量的请求，请等待当前请求完成后再试。避免同时从 Goose Desktop 和 Goose Terminal 发送请求。
 
-### 为什么对话名称都是 New Chat？
+### 模型返回了空响应。请重新发送消息以继续。
 
-自动生成 AI 会话标题默认关闭，你可以手动重命名会话。如需开启，将应用环境变量 `GOOSE_DISABLE_SESSION_NAMING` 设置为 `false`。标题生成会额外调用模型，可能与聊天请求争用并发有限的模型资源。
+未开启或未配置 External Backend (ACP)。在 Goose Desktop 中打开 **Settings** > **Agent**，检查 External Backend (ACP) 设置。
 
-### Goose 为什么找不到文件？
+### Goose 为什么在 Olares 上找不到我的文件？
 
-请使用 Olares 上的路径，例如 `/config/workspace/goose-demo/brief.md`。处理 Home 或 External 文件前，先开启对应目录访问，再使用 `/config/Home` 或 `/config/External` 路径。电脑上的路径不是服务端路径。
+使用 Olares 上的路径，例如 `/config/workspace/goose-demo/brief.md`。处理 Home 或 External 文件前，先开启对应目录的访问，再使用 `/config/Home` 或 `/config/External` 路径。电脑上的路径不是服务端路径。
 
 ## 了解更多
 
 - [Olares Router](olares-router.md)：配置和管理 Goose 使用的模型。
-- [Goose 官方安装指南](https://goose-docs.ai/docs/getting-started/installation/)：安装适用于你电脑操作系统的 Desktop 客户端。
+- [Goose 安装指南](https://goose-docs.ai/docs/getting-started/installation/)：安装适用于你的操作系统的 Goose Desktop。

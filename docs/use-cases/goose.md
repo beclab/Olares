@@ -7,7 +7,7 @@ head:
       content: "Olares, Goose, AI agent, AI Router, Goose Desktop, terminal, file automation"
 app_version: "0.0.13"
 doc_version: "1.0"
-doc_updated: "2026-10-21"
+doc_updated: "2026-10-22"
 ---
 
 # Run Goose as your local AI agent on Olares
@@ -145,7 +145,7 @@ Goose Desktop runs on your computer and connects to the Goose service on Olares 
 
    This is the connection secret between Goose Desktop and the Goose service, not an AI model API key. Keep it private.
 
-3. Open Olares **Settings**, go to **Applications** > **Goose** > **Entrances** > **Goose ACP**, and then copy the **Endpoint** URL. For example, `https://615b32570.primelares.olares.com`.
+3. Open Olares **Settings**, go to **Applications** > **Goose** > **Entrances** > **Goose ACP**, and then copy the **Endpoint** URL.
 4. In Router, go to the **LLM** page, find the model assigned as `default-chat`, and click **View connection example** on the right.
 5. Select how your computer connects:
    - If your computer is on the same local network as your Olares device, select **Device in LAN** and copy the Router URL.
