@@ -241,6 +241,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   text: "Dify",
                   link: "/use-cases/dify",
                 },
+                {
+                  text: "Unsloth",
+                  link: "/use-cases/unsloth",
+                },
               ],
             },
             {
