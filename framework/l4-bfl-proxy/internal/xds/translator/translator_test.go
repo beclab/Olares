@@ -445,7 +445,7 @@ func TestBuildMultiUserHTTPSListener(t *testing.T) {
 			Name: "profile_service_alice", Host: "profile-service.user-space-alice.svc.cluster.local", Port: 3000, UseDNS: true,
 		},
 		"authelia_backend_alice": {
-			Name: "authelia_backend_alice", Host: "authelia-backend.user-system-alice.svc.cluster.local", Port: 9091, UseDNS: true,
+			Name: "authelia_backend_alice", Host: "authelia-backend.os-framework.svc.cluster.local", Port: 9091, UseDNS: true,
 		},
 	}
 
@@ -561,8 +561,8 @@ func TestBuildMultiUserHTTPSListener_SharedPlainHTTP(t *testing.T) {
 	clusterMap := map[string]*ir.ClusterIR{
 		"nonapp_desktop_alice":   {Name: "nonapp_desktop_alice", Host: "edge-desktop.user-space-alice.svc.cluster.local", Port: 80, UseDNS: true},
 		"nonapp_desktop_bob":     {Name: "nonapp_desktop_bob", Host: "edge-desktop.user-space-bob.svc.cluster.local", Port: 80, UseDNS: true},
-		"authelia_backend_alice": {Name: "authelia_backend_alice", Host: "authelia-backend.user-system-alice.svc.cluster.local", Port: 9091, UseDNS: true},
-		"authelia_backend_bob":   {Name: "authelia_backend_bob", Host: "authelia-backend.user-system-bob.svc.cluster.local", Port: 9091, UseDNS: true},
+		"authelia_backend_alice": {Name: "authelia_backend_alice", Host: "authelia-backend.os-framework.svc.cluster.local", Port: 9091, UseDNS: true},
+		"authelia_backend_bob":   {Name: "authelia_backend_bob", Host: "authelia-backend.os-framework.svc.cluster.local", Port: 9091, UseDNS: true},
 	}
 
 	listener, routeConfigs, clusters := buildMultiUserHTTPSListener(82, true, httpListeners, clusterMap, map[string]bool{})
@@ -1009,7 +1009,7 @@ func TestTranslate_HTTPSListeners(t *testing.T) {
 		},
 		Clusters: []*ir.ClusterIR{
 			{Name: "profile_service_alice", Host: "profile-service.user-space-alice.svc.cluster.local", Port: 3000, UseDNS: true},
-			{Name: "authelia_backend_alice", Host: "authelia-backend.user-system-alice.svc.cluster.local", Port: 9091, UseDNS: true},
+			{Name: "authelia_backend_alice", Host: "authelia-backend.os-framework.svc.cluster.local", Port: 9091, UseDNS: true},
 		},
 	}
 
@@ -1173,7 +1173,7 @@ func TestNorthSouthClientIdentityStripBeforeExtAuth(t *testing.T) {
 		}},
 		Clusters: []*ir.ClusterIR{
 			{Name: "profile_service_alice", Host: "profile-service.user-space-alice.svc.cluster.local", Port: 3000, UseDNS: true},
-			{Name: "authelia_backend_alice", Host: "authelia-backend.user-system-alice.svc.cluster.local", Port: 9091, UseDNS: true},
+			{Name: "authelia_backend_alice", Host: "authelia-backend.os-framework.svc.cluster.local", Port: 9091, UseDNS: true},
 		},
 	}
 	snap := (&XdsTranslator{}).Translate(xdsIR)
@@ -1261,7 +1261,7 @@ func TestSubFilterLuaScript_RewritesSetCookieDomain(t *testing.T) {
 
 func TestTranslateRoute_ServiceOverrideOnVerifyPath(t *testing.T) {
 	clusterMap := map[string]*ir.ClusterIR{
-		"authelia_backend_bob": {Name: "authelia_backend_bob", Host: "authelia-backend.user-system-bob.svc.cluster.local", Port: 9091},
+		"authelia_backend_bob": {Name: "authelia_backend_bob", Host: "authelia-backend.os-framework.svc.cluster.local", Port: 9091},
 	}
 	route := translateRoute(&ir.HTTPRouteIR{
 		Name:       "desktop",
@@ -1292,7 +1292,7 @@ func TestTranslateRoute_ServiceOverrideOnVerifyPath(t *testing.T) {
 
 func TestTranslateRoute_VerifyPathSkipsServiceOverride(t *testing.T) {
 	clusterMap := map[string]*ir.ClusterIR{
-		"authelia_backend_alice": {Name: "authelia_backend_alice", Host: "authelia-backend.user-system-alice.svc.cluster.local", Port: 9091},
+		"authelia_backend_alice": {Name: "authelia_backend_alice", Host: "authelia-backend.os-framework.svc.cluster.local", Port: 9091},
 	}
 	route := translateRoute(&ir.HTTPRouteIR{
 		Name:       "app",
@@ -1319,7 +1319,7 @@ func TestTranslateRoute_VerifyPathSkipsServiceOverride(t *testing.T) {
 
 func TestBuildExtAuthzFilter_DefaultVerifyPath(t *testing.T) {
 	clusterMap := map[string]*ir.ClusterIR{
-		"authelia_backend_alice": {Name: "authelia_backend_alice", Host: "authelia-backend.user-system-alice.svc.cluster.local", Port: 9091},
+		"authelia_backend_alice": {Name: "authelia_backend_alice", Host: "authelia-backend.os-framework.svc.cluster.local", Port: 9091},
 	}
 	filter := buildExtAuthzFilter("authelia_backend_alice", clusterMap, "alice")
 	require.NotNil(t, filter)
@@ -1334,7 +1334,7 @@ func TestBuildExtAuthzFilter_DefaultVerifyPath(t *testing.T) {
 
 func TestTranslateRoute_NonDefaultPathKeepsFullOverride(t *testing.T) {
 	clusterMap := map[string]*ir.ClusterIR{
-		"authelia_backend_alice": {Name: "authelia_backend_alice", Host: "authelia-backend.user-system-alice.svc.cluster.local", Port: 9091},
+		"authelia_backend_alice": {Name: "authelia_backend_alice", Host: "authelia-backend.os-framework.svc.cluster.local", Port: 9091},
 	}
 	route := translateRoute(&ir.HTTPRouteIR{
 		Name:       "legacy",

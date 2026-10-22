@@ -40,7 +40,7 @@
                 "endpoint": {
                   "address": {
                     "socketAddress": {
-                      "address": "authelia-backend.user-system-admin.svc.cluster.local",
+                      "address": "authelia-backend.os-framework.svc.cluster.local",
                       "portValue": 9091
                     }
                   }
@@ -202,7 +202,7 @@
                 "endpoint": {
                   "address": {
                     "socketAddress": {
-                      "address": "authelia-backend.user-system-alice.svc.cluster.local",
+                      "address": "authelia-backend.os-framework.svc.cluster.local",
                       "portValue": 9091
                     }
                   }
@@ -364,7 +364,7 @@
                 "endpoint": {
                   "address": {
                     "socketAddress": {
-                      "address": "authelia-backend.user-system-bob.svc.cluster.local",
+                      "address": "authelia-backend.os-framework.svc.cluster.local",
                       "portValue": 9091
                     }
                   }
@@ -842,7 +842,7 @@
                       "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz",
                       "httpService": {
                         "serverUri": {
-                          "uri": "http://authelia-backend.user-system-admin.svc.cluster.local",
+                          "uri": "http://authelia-backend.os-framework.svc.cluster.local",
                           "cluster": "authelia_backend_admin",
                           "timeout": "15s"
                         },
@@ -1088,7 +1088,7 @@
                       "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz",
                       "httpService": {
                         "serverUri": {
-                          "uri": "http://authelia-backend.user-system-alice.svc.cluster.local",
+                          "uri": "http://authelia-backend.os-framework.svc.cluster.local",
                           "cluster": "authelia_backend_alice",
                           "timeout": "15s"
                         },
@@ -1334,7 +1334,7 @@
                       "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz",
                       "httpService": {
                         "serverUri": {
-                          "uri": "http://authelia-backend.user-system-bob.svc.cluster.local",
+                          "uri": "http://authelia-backend.os-framework.svc.cluster.local",
                           "cluster": "authelia_backend_bob",
                           "timeout": "15s"
                         },
@@ -1600,7 +1600,7 @@
                       "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz",
                       "httpService": {
                         "serverUri": {
-                          "uri": "http://authelia-backend.user-system-admin.svc.cluster.local",
+                          "uri": "http://authelia-backend.os-framework.svc.cluster.local",
                           "cluster": "authelia_backend_admin",
                           "timeout": "15s"
                         },
@@ -1846,7 +1846,7 @@
                       "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz",
                       "httpService": {
                         "serverUri": {
-                          "uri": "http://authelia-backend.user-system-alice.svc.cluster.local",
+                          "uri": "http://authelia-backend.os-framework.svc.cluster.local",
                           "cluster": "authelia_backend_alice",
                           "timeout": "15s"
                         },
@@ -2092,7 +2092,7 @@
                       "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz",
                       "httpService": {
                         "serverUri": {
-                          "uri": "http://authelia-backend.user-system-bob.svc.cluster.local",
+                          "uri": "http://authelia-backend.os-framework.svc.cluster.local",
                           "cluster": "authelia_backend_bob",
                           "timeout": "15s"
                         },
@@ -2338,7 +2338,7 @@
                   "checkSettings": {
                     "httpService": {
                       "serverUri": {
-                        "uri": "http://authelia-backend.user-system-admin.svc.cluster.local",
+                        "uri": "http://authelia-backend.os-framework.svc.cluster.local",
                         "cluster": "authelia_backend_admin",
                         "timeout": "15s"
                       },
@@ -2458,7 +2458,7 @@
                   "checkSettings": {
                     "httpService": {
                       "serverUri": {
-                        "uri": "http://authelia-backend.user-system-admin.svc.cluster.local",
+                        "uri": "http://authelia-backend.os-framework.svc.cluster.local",
                         "cluster": "authelia_backend_admin",
                         "timeout": "15s"
                       },
@@ -2619,7 +2619,7 @@
                   "checkSettings": {
                     "httpService": {
                       "serverUri": {
-                        "uri": "http://authelia-backend.user-system-admin.svc.cluster.local",
+                        "uri": "http://authelia-backend.os-framework.svc.cluster.local",
                         "cluster": "authelia_backend_admin",
                         "timeout": "15s"
                       },
@@ -2772,7 +2772,7 @@
                   "checkSettings": {
                     "httpService": {
                       "serverUri": {
-                        "uri": "http://authelia-backend.user-system-alice.svc.cluster.local",
+                        "uri": "http://authelia-backend.os-framework.svc.cluster.local",
                         "cluster": "authelia_backend_alice",
                         "timeout": "15s"
                       },
@@ -2892,7 +2892,7 @@
                   "checkSettings": {
                     "httpService": {
                       "serverUri": {
-                        "uri": "http://authelia-backend.user-system-alice.svc.cluster.local",
+                        "uri": "http://authelia-backend.os-framework.svc.cluster.local",
                         "cluster": "authelia_backend_alice",
                         "timeout": "15s"
                       },
@@ -3053,7 +3053,7 @@
                   "checkSettings": {
                     "httpService": {
                       "serverUri": {
-                        "uri": "http://authelia-backend.user-system-alice.svc.cluster.local",
+                        "uri": "http://authelia-backend.os-framework.svc.cluster.local",
                         "cluster": "authelia_backend_alice",
                         "timeout": "15s"
                       },
@@ -3206,7 +3206,7 @@
                   "checkSettings": {
                     "httpService": {
                       "serverUri": {
-                        "uri": "http://authelia-backend.user-system-bob.svc.cluster.local",
+                        "uri": "http://authelia-backend.os-framework.svc.cluster.local",
                         "cluster": "authelia_backend_bob",
                         "timeout": "15s"
                       },
@@ -3326,7 +3326,7 @@
                   "checkSettings": {
                     "httpService": {
                       "serverUri": {
-                        "uri": "http://authelia-backend.user-system-bob.svc.cluster.local",
+                        "uri": "http://authelia-backend.os-framework.svc.cluster.local",
                         "cluster": "authelia_backend_bob",
                         "timeout": "15s"
                       },
@@ -3487,7 +3487,7 @@
                   "checkSettings": {
                     "httpService": {
                       "serverUri": {
-                        "uri": "http://authelia-backend.user-system-bob.svc.cluster.local",
+                        "uri": "http://authelia-backend.os-framework.svc.cluster.local",
                         "cluster": "authelia_backend_bob",
                         "timeout": "15s"
                       },
