@@ -93,7 +93,7 @@ jobs:
             fi
           fi
 
-          checkout_ref="${REF:-${BRANCH:-main}}"
+          checkout_ref="${REF:-${BRANCH}}"
           echo "npm_version=$npm_ver" >> "$GITHUB_OUTPUT"
           echo "binary_version=$bin_ver" >> "$GITHUB_OUTPUT"
           echo "checkout_ref=$checkout_ref" >> "$GITHUB_OUTPUT"
