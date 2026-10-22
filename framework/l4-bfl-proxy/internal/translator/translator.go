@@ -17,7 +17,7 @@ import (
 const (
 	vpnCIDR                  = "100.64.0.0/16"
 	autheliaClusterPrefix    = "authelia_backend"
-	autheliaHostFormat       = "authelia-backend.user-system-%s.svc.cluster.local"
+	autheliaBackendHost      = "authelia-backend.os-framework.svc.cluster.local"
 	autheliaPort             = uint32(9091)
 	autheliaVerifyPathPrefix = "/api/verify/"
 
@@ -262,11 +262,12 @@ func (t *Translator) Translate(resources *message.Resources) *ir.Xds {
 			sharedLocal = append(sharedLocal, local...)
 		}
 
-		// Authelia cluster per user. Local HTTP still runs ExtAuth for desktop.
+		// Keep per-user ExtAuth contexts while dialing the shared backend directly.
+		// User-system services are backed by the removed system-server proxy.
 		autheliaClName := fmt.Sprintf("%s_%s", autheliaClusterPrefix, user.Name)
 		clusterSet[autheliaClName] = &ir.ClusterIR{
 			Name:   autheliaClName,
-			Host:   fmt.Sprintf(autheliaHostFormat, user.Name),
+			Host:   autheliaBackendHost,
 			Port:   autheliaPort,
 			UseDNS: true,
 		}
