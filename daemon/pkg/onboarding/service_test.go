@@ -38,11 +38,6 @@ func newTestService(t *testing.T) (*Service, map[string]string) {
 			Spec:       appsv1.StatefulSetSpec{Replicas: &replicas},
 			Status:     appsv1.StatefulSetStatus{ObservedGeneration: 1, ReadyReplicas: 1},
 		},
-		&appsv1.Deployment{
-			ObjectMeta: metav1.ObjectMeta{Name: "system-server", Namespace: "user-system-owner", Generation: 1},
-			Spec:       appsv1.DeploymentSpec{Replicas: &replicas},
-			Status:     appsv1.DeploymentStatus{ObservedGeneration: 1, ReadyReplicas: 1},
-		},
 	)
 	release := make(map[string]string)
 	return &Service{Kube: kube, Resources: resources, updateRelease: func(_ context.Context, entries map[string]string) error {

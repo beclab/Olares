@@ -462,8 +462,6 @@ func (s *Server) handleListMiddlewares(ctx *fiber.Ctx) error {
 }
 func (s *Server) handleListMiddlewaresAll(ctx *fiber.Ctx) error {
 	var clusterResp []*MiddlewareClusterResp
-	username := ctx.Context().UserValueBytes(constants.UsernameCtxKey)
-
 	// Redis
 	klog.Info("list redis cluster crd")
 	if drcs, err := rediscluster.ListKvRocks(s.RedixLister); err == nil {
@@ -480,7 +478,7 @@ func (s *Server) handleListMiddlewaresAll(ctx *fiber.Ctx) error {
 				},
 				Password: pwd,
 				Proxy: Proxy{
-					Endpoint: fmt.Sprintf("%s.%s:6379", rediscluster.RedisClusterService, fmt.Sprintf("user-system-%s", username.(string))),
+					Endpoint: fmt.Sprintf("%s:6379", rediscluster.RedisClusterServiceDomain),
 				},
 			}
 			clusterResp = append(clusterResp, &cres)

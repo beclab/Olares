@@ -115,42 +115,6 @@ func (s *Server) ServerRun() {
 				controllers.FetchUserPrivateKey(clientSet,
 					controllers.FetchUserOrganizationId(clientSet, routes.ListSecret)))))
 
-	// api for settings
-	// check app secrets permission
-	app.Get("/admin/permission/:appid",
-		middleware.GetUserInfo(s.KubeConfig,
-			tokenIssuer.IssueInfisicalToken(
-				controllers.FetchUserPrivateKey(clientSet,
-					controllers.FetchUserOrganizationId(clientSet, routes.CheckAppSecretPerm)))))
-
-	// list app secrets
-	app.Get("/admin/secret/:appid",
-		middleware.GetUserInfo(s.KubeConfig,
-			tokenIssuer.IssueInfisicalToken(
-				controllers.FetchUserPrivateKey(clientSet,
-					controllers.FetchUserOrganizationId(clientSet, routes.ListAppSecret)))))
-
-	// create app secrets
-	app.Post("/admin/secret/:appid",
-		middleware.GetUserInfo(s.KubeConfig,
-			tokenIssuer.IssueInfisicalToken(
-				controllers.FetchUserPrivateKey(clientSet,
-					controllers.FetchUserOrganizationId(clientSet, routes.CreateAppSecret)))))
-
-	// delete app secrets
-	app.Delete("/admin/secret/:appid",
-		middleware.GetUserInfo(s.KubeConfig,
-			tokenIssuer.IssueInfisicalToken(
-				controllers.FetchUserPrivateKey(clientSet,
-					controllers.FetchUserOrganizationId(clientSet, routes.DeleteAppSecret)))))
-
-	// update app secrets
-	app.Put("/admin/secret/:appid",
-		middleware.GetUserInfo(s.KubeConfig,
-			tokenIssuer.IssueInfisicalToken(
-				controllers.FetchUserPrivateKey(clientSet,
-					controllers.FetchUserOrganizationId(clientSet, routes.UpdateAppSecret)))))
-
 	// user callback
 	app.Post("/user/create", func(ctx *fiber.Ctx) error {
 		return routes.CreateUser(s.getPostgresUserAndPwd, ctx)

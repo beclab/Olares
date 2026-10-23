@@ -437,8 +437,6 @@ func MakeRealNameForRefSubjectName(refNamespace, app, subject, ownerName string)
 	refAppNs := ""
 	if strings.HasPrefix(refNamespace, "user-space") {
 		refAppNs = fmt.Sprintf("user-space-%s", ownerName)
-	} else if strings.HasPrefix(refNamespace, "user-system") {
-		refAppNs = fmt.Sprintf("user-system-%s", ownerName)
 	} else {
 		refAppNs = refNamespace
 	}

@@ -27,7 +27,7 @@ func (s *Subscriber) HandleEvent() cache.ResourceEventHandler {
 				return false
 			}
 
-			if strings.HasPrefix(app.Spec.Namespace, "user-space-") || strings.HasPrefix(app.Spec.Namespace, "user-system-") {
+			if strings.HasPrefix(app.Spec.Namespace, "user-space-") {
 				return false
 			}
 
