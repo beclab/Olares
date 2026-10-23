@@ -76,7 +76,9 @@ The upstream repository already hosts its icon; point at it instead of re-hostin
     port: 7777
     protocol: udp
     exposePort: 47777    # cluster-unique; avoid reserved 22/80/81/443/444/2379/18088
+    addToTailscaleAcl: true   # optional: let the owner's LarePass VPN devices reach it
   ```
+  Clients connect to the node on `exposePort`; the platform forwards to `host:port`. Omit `exposePort` to have one allocated at install; it is kept across upgrades by port name. A workload that announces its own address (a WebRTC SFU writing ICE candidates, a game server) reads the exposed number from `.Values.exposePorts.<name>`, never from `port`. Pinning `exposePort` instead makes a second user's install of the same app fail, since every exposed port is unique in the cluster.
 - **Outbound non-HTTP** (e.g. the app sends SMTP): `options.allowedOutboundPorts: [465, 587]`.
 
 ## Long-running requests: `options.apiTimeout`

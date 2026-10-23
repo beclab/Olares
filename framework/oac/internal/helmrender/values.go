@@ -53,9 +53,10 @@ func BuildValues(owner, admin string, entrances []olm.EntranceInfo) map[string]i
 			"subjects": map[string]interface{}{},
 			"refs":     map[string]interface{}{},
 		},
-		"svcs":    map[string]interface{}{},
-		"cluster": map[string]interface{}{},
-		"GPU":     map[string]interface{}{},
+		"svcs":        map[string]interface{}{},
+		"exposePorts": map[string]interface{}{},
+		"cluster":     map[string]interface{}{},
+		"GPU":         map[string]interface{}{},
 		"oidc": map[string]interface{}{
 			"client": map[string]interface{}{},
 			"issuer": "issuer",

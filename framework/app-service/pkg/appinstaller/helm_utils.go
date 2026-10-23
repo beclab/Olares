@@ -130,6 +130,8 @@ func BuildBaseHelmValues(ctx context.Context, kubeConfig *rest.Config, appConfig
 		values["workloads"] = buildWorkloadsValues(&replicas, -1)
 	}
 
+	values["exposePorts"] = buildExposePortsValues(appConfig.Ports)
+
 	if dryRun {
 		// Placeholder values for keys that require HelmOps context, have side
 		// effects, or are otherwise hard to obtain during the image-download
@@ -169,6 +171,30 @@ func BuildBaseHelmValues(ctx context.Context, kubeConfig *rest.Config, appConfig
 	}
 
 	return values, nil
+}
+
+// buildExposePortsValues renders .Values.exposePorts, the host port the
+// platform exposes for each manifest `ports[]` entry, keyed by port name:
+//
+//	{
+//	  "<port-name>": <exposePort>,
+//	  ...
+//	}
+//
+// An exposePort left out of the manifest is allocated by SetExposePorts,
+// so without this the chart cannot know it. A workload that advertises its
+// own address needs that number rather than its container port: a WebRTC
+// SFU writing ICE candidates, a game server announcing itself to clients.
+//
+// Install and upgrade allocate before rendering, so the value is final
+// there. The image-download dry-run renders before allocation and sees 0
+// for any port the manifest did not pin.
+func buildExposePortsValues(ports []appcfg.ServicePort) map[string]interface{} {
+	out := make(map[string]interface{}, len(ports))
+	for _, p := range ports {
+		out[p.Name] = p.ExposePort
+	}
+	return out
 }
 
 // buildWorkloadsValues renders the .Values.workloads sub-tree from the
