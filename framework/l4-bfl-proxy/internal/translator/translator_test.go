@@ -1170,6 +1170,11 @@ func TestBuildUserVirtualHosts_ProfileRootVerify(t *testing.T) {
 	}
 	require.NotNil(t, profile, "profile VH required")
 	require.Len(t, profile.Routes, 1)
+	profileBackend := clusterSet[profile.Routes[0].Cluster]
+	require.NotNil(t, profileBackend)
+	assert.Equal(t, "profile-service.os-frontend.svc.cluster.local", profileBackend.Host)
+	assert.EqualValues(t, 3000, profileBackend.Port)
+	assert.True(t, profileBackend.UseDNS)
 	require.NotNil(t, profile.Routes[0].ExtAuth, "zone root profile must attach ExtAuth")
 	assert.Equal(t, autheliaVerifyPathPrefix, profile.Routes[0].ExtAuth.PathPrefix)
 	assert.Nil(t, profile.Routes[0].RequestHeaders, "profile must not stamp outbound zone-owner X-BFL-USER")
