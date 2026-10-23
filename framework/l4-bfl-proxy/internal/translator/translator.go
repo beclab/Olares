@@ -562,7 +562,7 @@ func (t *Translator) buildUserVirtualHosts(user *message.UserInfo, zone string, 
 
 	// Profile/root server
 	profileCluster := fmt.Sprintf("profile_service_%s", user.Name)
-	profileHost := fmt.Sprintf("profile-service.%s.svc.cluster.local", namespace)
+	profileHost := "profile-service.os-frontend.svc.cluster.local"
 	clusterSet[profileCluster] = &ir.ClusterIR{
 		Name: profileCluster, Host: profileHost, Port: 3000, UseDNS: true,
 	}
