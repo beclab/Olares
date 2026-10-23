@@ -48,7 +48,7 @@ func (s *Subscriber) HandleEvent() cache.ResourceEventHandler {
 				return false
 			}
 
-			if strings.HasPrefix(ns.Name, "user-space-") || strings.HasPrefix(ns.Name, "user-system-") {
+			if strings.HasPrefix(ns.Name, "user-space-") {
 				return false
 			}
 

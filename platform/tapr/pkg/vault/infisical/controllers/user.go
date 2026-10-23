@@ -7,12 +7,8 @@ import (
 	"net/http"
 	"time"
 
-	"bytetrade.io/web3os/tapr/pkg/constants"
 	"bytetrade.io/web3os/tapr/pkg/vault/infisical"
 	"github.com/gofiber/fiber/v2"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/klog/v2"
 )
@@ -167,94 +163,33 @@ func (user *userController) DeleteUser(
 			return err
 		}
 
+		// FIXME: delete the workspace and secret of the workspace
 		// delete the workspace and secret of the workspace
-		token := c.Context().UserValueBytes(constants.UserAuthTokenCtxKey)
-		if token == nil {
-			return errors.New("no auth token")
-		}
+		// token := c.Context().UserValueBytes(constants.UserAuthTokenCtxKey)
+		// if token == nil {
+		// 	return errors.New("no auth token")
+		// }
 
-		username := c.Context().UserValueBytes([]byte(constants.UsernameCtxKey)).(string)
-		orgId := c.Context().UserValueBytes([]byte(constants.UserOrganizationIdCtxKey)).(string)
+		// username := c.Context().UserValueBytes([]byte(constants.UsernameCtxKey)).(string)
+		// orgId := c.Context().UserValueBytes([]byte(constants.UserOrganizationIdCtxKey)).(string)
 
-		workspaces, err := user.getWorkspaces(c.UserContext(), token.(string), orgId, username)
-		if err != nil {
-			klog.Warning("list app permissions error, ", err, ", ", username)
-		}
+		// workspaces, err := user.getWorkspaces(c.UserContext(), token.(string), orgId, username)
+		// if err != nil {
+		// 	klog.Warning("list app permissions error, ", err, ", ", username)
+		// }
 
-		if len(workspaces) == 0 {
-			klog.Warning("no workspaces found for user,  ", username)
-			return nil
-		}
+		// if len(workspaces) == 0 {
+		// 	klog.Warning("no workspaces found for user,  ", username)
+		// 	return nil
+		// }
 
-		for _, workspace := range workspaces {
-			err := user.Clientset().workspaceClient.DeleteWorkspace(token.(string), workspace.workspaceId)
-			if err != nil {
-				klog.Warning(err)
-			}
-		}
+		// for _, workspace := range workspaces {
+		// 	err := user.Clientset().workspaceClient.DeleteWorkspace(token.(string), workspace.workspaceId)
+		// 	if err != nil {
+		// 		klog.Warning(err)
+		// 	}
+		// }
 	}
 
 	return nil
-}
-
-func (u *userController) getWorkspaces(ctx context.Context, token, orgId, username string) ([]*struct{ workspaceName, workspaceId string }, error) {
-	namespace := fmt.Sprintf("user-system-%s", username)
-	permList, err := u.DynamicClient().Resource(appPermResource).Namespace(namespace).List(ctx, metav1.ListOptions{})
-	if err != nil {
-		klog.Error("list app permissions error, ", err, ", ", namespace)
-		return nil, err
-	}
-
-	if len(permList.Items) == 0 {
-		return nil, nil
-	}
-
-	var workspaces []*struct{ workspaceName, workspaceId string }
-	var errs []error
-	for _, data := range permList.Items {
-		var appperm ApplicationPermission
-		err := runtime.DefaultUnstructuredConverter.FromUnstructured(data.Object, &appperm)
-		if err != nil {
-			klog.Error("convert application permission error, ", err)
-			return nil, err
-		}
-
-		for _, pr := range appperm.Spec.Permission {
-			if pr.DataType == "secret" &&
-				pr.Group == "secret.infisical" &&
-				pr.Version == "v1" {
-				if len(pr.Ops) > 0 {
-					// assume one workspace per app
-					op := DecodeOps(pr.Ops[0])
-					if workspaceName, ok := op.Params["workspace"]; ok {
-						userWorkspace := UserWorkspaceName(workspaceName, username)
-						workspaceId, err := u.Clientset().GetWorkspace(token, orgId, userWorkspace)
-						if err != nil {
-							if !u.Clientset().IsNotFound(err) {
-								return nil, err
-							}
-							errs = append(errs, err)
-						}
-
-						w := &struct {
-							workspaceName string
-							workspaceId   string
-						}{
-							userWorkspace,
-							workspaceId,
-						}
-
-						workspaces = append(workspaces, w)
-					}
-				} // end of if ops
-			} // end of if secret
-		} // end of perms loop
-
-	} // end of items loop
-
-	if len(errs) > 0 {
-		return workspaces, utilerrors.NewAggregate(errs)
-	}
-
-	return workspaces, nil
 }
