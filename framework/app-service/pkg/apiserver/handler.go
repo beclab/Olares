@@ -12,6 +12,7 @@ import (
 	lister_v1alpha1 "github.com/beclab/api/pkg/generated/listers/app.bytetrade.io/v1alpha1"
 
 	// upgrade removed from direct usage in handlers
+	lifecycleapi "github.com/beclab/Olares/framework/app-service/pkg/applifecycle/apiserver"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace/v1"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	"github.com/beclab/Olares/framework/app-service/pkg/webhook"
@@ -38,15 +39,30 @@ type Handler struct {
 	opController       *OpController
 	preflightCollector preflightSnapshotCollector
 	preflightIsAdmin   func(context.Context, string) (bool, error)
+
+	// opDispatcher is the seam through which state-machine-aware
+	// (v2) HTTP handlers deliver a synthetic TriggerOp to the
+	// applifecycle Runner. Set to a non-nil implementation
+	// (usually *lifecycleapi.RunnerDispatcher) once main.go wires
+	// up the Runner; nil in tests and in the legacy hot path
+	// (which reaches past the state machine to write Status
+	// directly). See pkg/applifecycle/apiserver/doc.go for
+	// the reasoning.
+	//
+	// v2 handlers MUST guard on opDispatcher != nil and fall
+	// through to the legacy path when it is nil, so wiring can
+	// be flipped incrementally without a big-bang cutover.
+	opDispatcher lifecycleapi.OpDispatcher
 }
 
 type handlerBuilder struct {
-	ctx        context.Context
-	ksHost     string
-	kubeConfig *rest.Config
-	ctrlClient client.Client
-	informer   externalversions.SharedInformerFactory
-	err        error
+	ctx          context.Context
+	ksHost       string
+	kubeConfig   *rest.Config
+	ctrlClient   client.Client
+	informer     externalversions.SharedInformerFactory
+	opDispatcher lifecycleapi.OpDispatcher
+	err          error
 }
 
 func (b *handlerBuilder) WithKubesphereConfig(ksHost string) *handlerBuilder {
@@ -66,6 +82,20 @@ func (b *handlerBuilder) WithKubernetesConfig(config *rest.Config) *handlerBuild
 
 func (b *handlerBuilder) WithCtrlClient(client client.Client) *handlerBuilder {
 	b.ctrlClient = client
+	return b
+}
+
+// WithOpDispatcher registers the applifecycle Runner adapter that
+// v2 HTTP handlers use to deliver TriggerOp actions. Optional: when
+// nil (the default), v2 handlers fall through to the legacy Status-
+// write path so wiring can be flipped one binary at a time.
+//
+// Wiring invariant (enforced by main.go): the dispatcher's
+// underlying Requeuer MUST be the same instance the Runner uses
+// internally for CallWorkload callbacks, so a single workqueue
+// drives every reconcile.
+func (b *handlerBuilder) WithOpDispatcher(d lifecycleapi.OpDispatcher) *handlerBuilder {
+	b.opDispatcher = d
 	return b
 }
 
@@ -178,6 +208,7 @@ func (b *handlerBuilder) Build() (*Handler, error) {
 		preflightIsAdmin: func(ctx context.Context, user string) (bool, error) {
 			return kubesphere.IsAdmin(ctx, b.kubeConfig, user)
 		},
+		opDispatcher: b.opDispatcher,
 	}, nil
 
 }

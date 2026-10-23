@@ -9,12 +9,11 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
-	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
+	"github.com/beclab/Olares/framework/app-service/pkg/applifecycle/domain"
 	"github.com/beclab/Olares/framework/app-service/pkg/client/clientset"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
@@ -413,38 +412,35 @@ func (h *Handler) setupAppEntranceDomain(req *restful.Request, resp *restful.Res
 			api.HandleError(resp, req, err)
 			return
 		}
-		if !appstate.IsOperationAllowed(appMgr.Status.State, v1alpha1.UpgradeOp) {
+		if blockIfRequestPending(resp, req, appMgr, v1alpha1.UpgradeOp) {
+			return
+		}
+		if !domain.DefaultTable.AllowsOp(appMgr.Status.State, v1alpha1.UpgradeOp) {
 			err = fmt.Errorf("%s operation is not allowed for %s state", v1alpha1.UpgradeOp, appMgr.Status.State)
 			api.HandleBadRequest(resp, req, err)
 			return
 		}
 
+		if h.opDispatcher == nil {
+			api.HandleError(resp, req, fmt.Errorf("setup domain: opDispatcher is not wired"))
+			return
+		}
+
 		appMgrCopy := appMgr.DeepCopy()
+		if appMgrCopy.Annotations == nil {
+			appMgrCopy.Annotations = map[string]string{}
+		}
+		appMgrCopy.Spec.OpType = v1alpha1.UpgradeOp
 		appMgrCopy.Annotations[api.AppTokenKey] = token
+		api.SnapshotPreUpgradeState(appMgrCopy.Annotations, appMgr.Status.State)
+		appMgrCopy.Annotations, _ = stampDurableOperationRequest(appMgrCopy.Annotations)
 
 		err = h.ctrlClient.Patch(req.Request.Context(), appMgrCopy, client.MergeFrom(appMgr))
 		if err != nil {
 			api.HandleError(resp, req, err)
 			return
 		}
-
-		now := metav1.Now()
-		opID := strconv.FormatInt(time.Now().Unix(), 10)
-
-		status := v1alpha1.ApplicationManagerStatus{
-			OpType:     v1alpha1.UpgradeOp,
-			OpID:       opID,
-			State:      v1alpha1.Upgrading,
-			Message:    fmt.Sprintf("app %s was upgrade via setup domain by user %s", appMgrCopy.Spec.AppName, appMgrCopy.Spec.AppOwner),
-			StatusTime: &now,
-			UpdateTime: &now,
-		}
-
-		_, err = apputils.UpdateAppMgrStatus(appMgr.Name, status)
-		if err != nil {
-			api.HandleError(resp, req, err)
-			return
-		}
+		h.opDispatcher.Trigger(appMgr.Name, domain.TriggerOp{Op: v1alpha1.UpgradeOp})
 	}
 	// Respond with the caller's effective view so the UI sees their own
 	// customDomain entries (the global Spec.Settings is admin-only for v3).

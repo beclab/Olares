@@ -640,12 +640,13 @@ func (h *HelmOps) WaitForStartUp() (bool, error) {
 		case <-timer.C:
 			startedUp, err := h.isStartUp()
 			klog.Infof("wait for app %s start up", h.app.AppName)
+			// Deliberately does NOT write AM.Status here. The Runner is the
+			// sole writer; it lands Initializing from the handler that owns
+			// the WorkloadReady this return produces. Writing it in-line
+			// flips the AM out of Installing before that WorkloadReady is
+			// routed, so the engine dispatches it against Initializing with
+			// an unset initializing.phase and wedges on a hard error.
 			if startedUp {
-				name, _ := apputils.FmtAppMgrName(h.app.AppName, h.app.OwnerName, h.app.Namespace)
-				err := apputils.UpdateAppMgrState(h.ctx, name, appv1alpha1.Initializing)
-				if err != nil {
-					klog.Errorf("update appmgr state failed %v", err)
-				}
 				return true, nil
 			}
 			if errors.Is(err, errcode.ErrPodPending) || errors.Is(err, errcode.ErrServerSidePodPending) {

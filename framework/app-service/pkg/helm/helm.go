@@ -9,6 +9,7 @@ import (
 
 	"github.com/pkg/errors"
 	"helm.sh/helm/v3/pkg/action"
+	"helm.sh/helm/v3/pkg/chart"
 	helmLoader "helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/cli"
 	"helm.sh/helm/v3/pkg/downloader"
@@ -120,6 +121,30 @@ func UpgradeCharts(ctx context.Context, actionConfig *action.Configuration, sett
 		client.RepoURL = repoURL
 	}
 	r, err := runUpgrade(ctx, []string{appName, chartName}, client, settings, vals)
+	if err != nil {
+		return err
+	}
+	logReleaseUpgrade(r)
+	return nil
+}
+
+// UpgradeReleaseCharts applies values to an existing release using the chart
+// stored in that release. Unlike UpgradeCharts, it never reads a chart from
+// disk or a repository.
+func UpgradeReleaseCharts(ctx context.Context, actionConfig *action.Configuration,
+	appName, namespace string, releaseChart *chart.Chart, vals map[string]interface{}) error {
+	if releaseChart == nil {
+		return errors.Errorf("no chart on current release of %s", appName)
+	}
+	ctrl.Log.Info("helm action config", "reachable", actionConfig.KubeClient.IsReachable())
+	client := action.NewUpgrade(actionConfig)
+	client.Namespace = namespace
+	client.Timeout = 300 * time.Second
+	client.MaxHistory = 10
+	client.Recreate = false
+	client.ReuseValues = true
+
+	r, err := client.RunWithContext(ctx, appName, releaseChart, vals)
 	if err != nil {
 		return err
 	}

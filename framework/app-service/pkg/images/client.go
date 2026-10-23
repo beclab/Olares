@@ -170,7 +170,20 @@ func GetDownloadProgress(ctx context.Context, cli client.Client, am *appv1alpha1
 		}
 		return 0, false, e
 	}
-	return aggregateDownloadProgress(&im, parseImageList(am)), true, nil
+	return DownloadPercent(&im, am), true, nil
+}
+
+// DownloadPercent is the single download-progress formula: sum
+// offset/total per node across every ref, then take the slowest
+// node. A ref with no Condition total falls back to the image-list
+// annotation size, then to a fixed estimate — same as
+// PollDownloadProgress. Used by GetDownloadProgress, the poll loop,
+// and applifecycle's Progress adapter so those paths cannot drift.
+func DownloadPercent(im *appv1alpha1.ImageManager, am *appv1alpha1.ApplicationManager) float64 {
+	if im == nil {
+		return 0
+	}
+	return aggregateDownloadProgress(im, parseImageList(am))
 }
 
 // parseImageList decodes the per-app image list annotation and normalizes each
@@ -178,6 +191,9 @@ func GetDownloadProgress(ctx context.Context, cli client.Client, am *appv1alpha1
 // status conditions).
 func parseImageList(am *appv1alpha1.ApplicationManager) []Image {
 	imageList := make([]Image, 0)
+	if am == nil {
+		return imageList
+	}
 	if err := json.Unmarshal([]byte(am.Annotations[constants.ApplicationImageLabel]), &imageList); err != nil {
 		klog.Errorf("failed unmarshal to images %v", err)
 	}
@@ -264,7 +280,7 @@ func (imc *ImageManagerClient) updateProgress(ctx context.Context, am *appv1alph
 			OpID:   am.Status.OpID,
 			State: func() string {
 				if isUpgrade {
-					return appv1alpha1.Upgrading.String()
+					return appv1alpha1.UpgradeDownloading.String()
 				}
 				return appv1alpha1.Downloading.String()
 			}(),

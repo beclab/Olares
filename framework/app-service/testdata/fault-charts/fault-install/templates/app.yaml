@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: faultinstall
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.workloads.faultinstall.replicaCount }}
+  selector:
+    matchLabels:
+      app: fault-install
+  template:
+    metadata:
+      labels:
+        app: fault-install
+    spec:
+      containers:
+        - name: fault-install
+          image: docker.io/beclab/harveyff-adguardhome:v0.107.77
+          args: ["--web-addr", "0.0.0.0:80", "--no-check-update"]
+---
+apiVersion: example.com/v1
+kind: NoSuch
+metadata:
+  name: install-boom
+  namespace: {{ .Release.Namespace }}
+spec:
+  reason: install-boom

@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gpull
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.workloads.gpull.replicaCount }}
+  selector:
+    matchLabels:
+      app: gpull
+  template:
+    metadata:
+      labels:
+        app: gpull
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/control-plane
+                operator: Exists
+      containers:
+        - name: gpull
+          image: docker.io/library/python:3.12-slim
+          command: ["sh", "-c", "sleep 50 && python -m http.server 80"]
+          ports:
+            - name: http
+              containerPort: 80
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gpull-svc
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app: gpull
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80

@@ -6,19 +6,18 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"strconv"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
-	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
+	"github.com/beclab/Olares/framework/app-service/pkg/applifecycle/domain"
 	"github.com/beclab/Olares/framework/app-service/pkg/compute"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	"github.com/emicklei/go-restful/v3"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type ComputeResourcesResponse struct {
@@ -193,6 +192,35 @@ type stopPlan struct {
 	blocked   []BlockedBoundApp
 }
 
+type boundStopClass int
+
+const (
+	boundStopSubmit boundStopClass = iota
+	boundStopAlready
+	boundStopBlocked
+)
+
+// classifyBoundStop decides whether a bound app can take a new StopOp.
+// Status lags Spec until the Runner copies the request id, so an
+// unconsumed Upgrade, Uninstall, or ApplyEnv blocks the device switch
+// instead of being overwritten.
+func classifyBoundStop(am *appv1alpha1.ApplicationManager) (boundStopClass, string) {
+	if am == nil {
+		return boundStopBlocked, "stop-operation-not-allowed"
+	}
+	if am.Status.State == appv1alpha1.Stopping || am.Status.State == appv1alpha1.Stopped ||
+		domain.OperationRequestPending(am, appv1alpha1.StopOp) {
+		return boundStopAlready, ""
+	}
+	if _, pending := domain.UnconsumedOperation(am); pending {
+		return boundStopBlocked, "unconsumed-operation"
+	}
+	if !domain.DefaultTable.AllowsOp(am.Status.State, appv1alpha1.StopOp) {
+		return boundStopBlocked, "stop-operation-not-allowed"
+	}
+	return boundStopSubmit, ""
+}
+
 // planStopForBoundApps inspects each unique (appName, owner) pair from
 // `bindings` and classifies it as either stoppable or blocked. It does not
 // mutate any cluster state, so callers can safely abort if anything is
@@ -219,9 +247,11 @@ func (h *Handler) planStopForBoundApps(ctx context.Context, bindings []compute.A
 			return plan, err
 		}
 
-		// Stopping / Stopped apps are already done from a state perspective;
-		// we just need to make sure their allocations get cleared below.
-		if am.Status.State == appv1alpha1.Stopping || am.Status.State == appv1alpha1.Stopped {
+		switch class, reason := classifyBoundStop(&am); class {
+		case boundStopAlready:
+			// Stopping / Stopped, or a StopOp accepted onto Spec but not
+			// yet copied into Status. The Runner will move it, so do not
+			// submit another. Allocations are still cleared below.
 			plan.stoppable = append(plan.stoppable, stoppableApp{
 				appName:              binding.AppName,
 				owner:                binding.Owner,
@@ -230,14 +260,14 @@ func (h *Handler) planStopForBoundApps(ctx context.Context, bindings []compute.A
 				previousAppMgrStatus: am.Status.State,
 			})
 			continue
-		}
-
-		if !appstate.IsOperationAllowed(am.Status.State, appv1alpha1.StopOp) {
+		case boundStopBlocked:
+			// An unconsumed Upgrade, Uninstall, or ApplyEnv still shows
+			// Status as Running. Refuse the switch instead of erasing it.
 			plan.blocked = append(plan.blocked, BlockedBoundApp{
 				AppName: binding.AppName,
 				Owner:   binding.Owner,
 				State:   am.Status.State.String(),
-				Reason:  "stop-operation-not-allowed",
+				Reason:  reason,
 			})
 			continue
 		}
@@ -268,29 +298,28 @@ func (h *Handler) planStopForBoundApps(ctx context.Context, bindings []compute.A
 func (h *Handler) commitStopForBoundApps(ctx context.Context, apps []stoppableApp) ([]StoppedBoundApp, error) {
 	stopped := make([]StoppedBoundApp, 0, len(apps))
 	for _, a := range apps {
-		if a.previousAppMgrStatus != appv1alpha1.Stopping && a.previousAppMgrStatus != appv1alpha1.Stopped {
-			if a.manager.Annotations == nil {
-				a.manager.Annotations = make(map[string]string)
+		class, _ := classifyBoundStop(a.manager)
+		if class == boundStopBlocked {
+			return stopped, fmt.Errorf("compute device stop: app %s owner %s has an unconsumed operation", a.appName, a.owner)
+		}
+		if class == boundStopSubmit {
+			if h.opDispatcher == nil {
+				return stopped, fmt.Errorf("compute device stop: opDispatcher is not wired")
 			}
-			a.manager.Annotations[api.AppStopAllKey] = fmt.Sprintf("%t", a.managesSharedServer)
-			a.manager.Spec.OpType = appv1alpha1.StopOp
-			if err := h.ctrlClient.Update(ctx, a.manager); err != nil {
+			base := a.manager.DeepCopy()
+			patched := base.DeepCopy()
+			if patched.Annotations == nil {
+				patched.Annotations = make(map[string]string)
+			}
+			patched.Spec.OpType = appv1alpha1.StopOp
+			patched.Annotations[api.AppStopAllKey] = fmt.Sprintf("%t", a.managesSharedServer)
+			patched.Annotations[api.AppStopReasonKey] = constants.AppStopByUser
+			patched.Annotations[api.AppStopMessageKey] = fmt.Sprintf("app %s was stopped before compute device mode switch", a.appName)
+			patched.Annotations, _ = stampDurableOperationRequest(patched.Annotations)
+			if err := h.ctrlClient.Patch(ctx, patched, client.MergeFrom(base)); err != nil {
 				return stopped, err
 			}
-			now := metav1.Now()
-			opID := strconv.FormatInt(now.Unix(), 10)
-			status := appv1alpha1.ApplicationManagerStatus{
-				OpType:     appv1alpha1.StopOp,
-				OpID:       opID,
-				State:      appv1alpha1.Stopping,
-				Reason:     constants.AppStopByUser,
-				Message:    fmt.Sprintf("app %s was stopped before compute device mode switch", a.appName),
-				StatusTime: &now,
-				UpdateTime: &now,
-			}
-			if _, err := apputils.UpdateAppMgrStatus(a.managerName, status); err != nil {
-				return stopped, err
-			}
+			h.opDispatcher.Trigger(a.managerName, domain.TriggerOp{Op: appv1alpha1.StopOp})
 		}
 
 		// SuspendingApp will also call DeleteAllocationsForComputeTarget once
