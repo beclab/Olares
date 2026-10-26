@@ -308,6 +308,26 @@ func (t *NvidiaCardArchChecker) Check(runtime connector.Runtime) error {
 	if strings.TrimSpace(model) == "" {
 		return nil
 	}
+	if arch == "Unknown" {
+		// Prechecks run before OS dependency installation. A stale pci.ids can
+		// hide the chip codename of a supported card, so refresh only when needed.
+		logger.Info("NVIDIA card architecture is unknown; refreshing the PCI ID database ...")
+		// Bound the entire process group, including update-pciids' downloader.
+		// A context timeout on the shell alone can leave curl/wget running.
+		if _, err := runtime.GetRunner().SudoCmd("timeout --kill-after=5s 30s update-pciids", false, false); err != nil {
+			return fmt.Errorf("cannot determine architecture of NVIDIA card %s: PCI ID database refresh failed: %w; ensure pciutils is installed, run `sudo update-pciids`, and retry", model, err)
+		}
+		model, arch, err = utils.DetectNvidiaModelAndArch(runtime)
+		if err != nil {
+			return fmt.Errorf("failed to detect NVIDIA card after refreshing the PCI ID database: %w", err)
+		}
+		if strings.TrimSpace(model) == "" {
+			return fmt.Errorf("NVIDIA card was no longer detected after refreshing the PCI ID database; check `lspci -nn -d 10de:` and retry")
+		}
+		if arch == "Unknown" {
+			return fmt.Errorf("cannot determine architecture of NVIDIA card %s even after refreshing the PCI ID database; check `lspci -nn -d 10de:` and verify that this GPU is supported by the current Olares CLI", model)
+		}
+	}
 	if !slices.Contains(supportedArchs, arch) {
 		return fmt.Errorf("unsupported NVIDIA card %s of architecture: %s, Olares only supports the following architectures: %s", model, arch, strings.Join(supportedArchs, ", "))
 	}
