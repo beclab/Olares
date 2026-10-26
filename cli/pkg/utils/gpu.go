@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"regexp"
 	"runtime"
 	"strings"
 
@@ -342,6 +343,10 @@ func DetectNovaBoundGPUs(execRuntime connector.Runtime) (driver string, devices 
 	return "", nil, nil
 }
 
+// Match a chip codename after the vendor, rather than prefixes anywhere in the
+// line: for example, the "GA" in "VGA" does not identify an Ampere GPU.
+var nvidiaChipPattern = regexp.MustCompile(`(?i)\bNVIDIA Corporation\s+(AD|GB|GH|GA|TU|GV|GP|GM|GK|GF)[0-9]{2,3}[A-Z0-9]*\b`)
+
 func DetectNvidiaModelAndArch(execRuntime connector.Runtime) (model string, architecture string, err error) {
 	if execRuntime.GetSystemInfo().IsDarwin() {
 		return "", "", nil
@@ -355,13 +360,13 @@ func DetectNvidiaModelAndArch(execRuntime connector.Runtime) (model string, arch
 	if out == "" {
 		return "", "", nil
 	}
-	// try to extract codename in square brackets e.g. "AD106 [GeForce RTX 4060 Ti]"
-	// examples: "NVIDIA Corporation AD106 [GeForce RTX 4060 Ti]"
 	model = out
 	architecture = "Unknown"
-	upper := strings.ToUpper(out)
-	// codename appears as two letters followed by digits, within the line, often right before '['
-	// detect common prefixes: AD(Ada), GB(Blackwell), GH(Hopper), GA(Ampere), TU(Turing), GV(Volta), GP(Pascal), GM(Maxwell), GK(Kepler), GF(Fermi)
+	chip := nvidiaChipPattern.FindStringSubmatch(out)
+	var prefix string
+	if len(chip) > 1 {
+		prefix = strings.ToUpper(chip[1])
+	}
 	codePrefixes := []struct {
 		Prefix string
 		Arch   string
@@ -378,7 +383,7 @@ func DetectNvidiaModelAndArch(execRuntime connector.Runtime) (model string, arch
 		{"GF", "Fermi"},
 	}
 	for _, p := range codePrefixes {
-		if strings.Contains(upper, p.Prefix) {
+		if prefix == p.Prefix {
 			architecture = p.Arch
 			break
 		}
