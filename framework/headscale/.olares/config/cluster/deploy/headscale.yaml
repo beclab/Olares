@@ -214,7 +214,7 @@ data:
         private_key_path: /var/lib/headscale/derp_server_private.key
         automatically_add_embedded_derp_region: false
       urls:
-        - https://controlplane.tailscale.com/derpmap/default
+        - https://api.olares.com/controlplane/derpmap/default
       paths: []
       auto_update_enabled: true
       update_frequency: 3h
@@ -1148,9 +1148,15 @@ spec:
             - |
               # Seed the expected first allocation. The Tailscale postStart hook
               # replaces it with the address reported by tailscaled.
+              # Replace the root-owned Corefile left by a previous start.
+              corefile_tmp=$(mktemp /etc/coredns-runtime/Corefile.XXXXXX)
+              trap 'rm -f "${corefile_tmp}"' EXIT
               sed 's/__TAILSCALE_DNS_IP__/100.64.0.1/g' \
                 /etc/coredns-template/Corefile \
-                > /etc/coredns-runtime/Corefile
+                > "${corefile_tmp}"
+              chmod 0644 "${corefile_tmp}"
+              mv -f "${corefile_tmp}" /etc/coredns-runtime/Corefile
+              trap - EXIT
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
