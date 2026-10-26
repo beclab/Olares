@@ -1,0 +1,91 @@
+apiVersion: app.bytetrade.io/v1alpha1
+kind: Application
+metadata:
+  name: getloodvectordb
+  namespace: "{{ .Values.userspace }}"
+spec:
+  metadata:
+    title: Getlood VectorDB
+    description: High-performance vector database for AI embeddings powered by Qdrant
+    icon: https://file.bttcdn.com/appstore/getlood/getloodvectordb.webp
+    appid: getloodvectordb
+    version: 1.0.0
+    categories:
+      - AI
+      - Database
+      - Infrastructure
+    author: Getlood
+    website: https://getlood.com
+    sourceCode: https://github.com/qdrant/qdrant
+    submitter: Getlood
+    language:
+      - en
+    requiredMemory: 2Gi
+    requiredDisk: 50Gi
+    requiredCpu: 1000m
+    supportClient:
+      edge: "N/A"
+
+  entrances:
+    - name: api
+      host: api
+      port: 6333
+      title: Getlood VectorDB API
+      authLevel: private
+      invisible: false
+    - name: dashboard
+      host: dashboard
+      port: 6333
+      title: Getlood VectorDB Dashboard
+      authLevel: private
+      invisible: false
+
+  permission:
+    appData: true
+    appCache: true
+    sysData:
+      - dataType: legacy_api
+        appName: getloodvectordb
+        port: 6333
+        group: api.getloodvectordb
+        version: v1
+        ops:
+          - POST
+          - GET
+          - PUT
+          - DELETE
+
+  deployment:
+    - name: getloodvectordb-qdrant
+      image: qdrant/qdrant:latest
+      replicas: 1
+      ports:
+        - name: http
+          containerPort: 6333
+          protocol: TCP
+        - name: grpc
+          containerPort: 6334
+          protocol: TCP
+      volumeMounts:
+        - name: appdata
+          mountPath: /qdrant/storage
+      env:
+        - name: QDRANT__SERVICE__HTTP_PORT
+          value: "6333"
+        - name: QDRANT__SERVICE__GRPC_PORT
+          value: "6334"
+        - name: QDRANT__STORAGE__STORAGE_PATH
+          value: "/qdrant/storage"
+        - name: QDRANT__STORAGE__SNAPSHOTS_PATH
+          value: "/qdrant/storage/snapshots"
+        - name: QDRANT__STORAGE__OPTIMIZERS__DEFAULT_SEGMENT_NUMBER
+          value: "4"
+        - name: QDRANT__STORAGE__PERFORMANCE__MAX_SEARCH_THREADS
+          value: "4"
+      resources:
+        requests:
+          cpu: 500m
+          memory: 1Gi
+        limits:
+          cpu: 2000m
+          memory: 4Gi
