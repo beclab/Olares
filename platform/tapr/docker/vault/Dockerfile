@@ -15,7 +15,7 @@ RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o secret-vault cmd/vault/main.go
 
 
 # To run js tools
-FROM node:16.13.1-buster-slim
+FROM node:26.12.1-trixie-slim
 WORKDIR /
 COPY --from=builder /workspace/secret-vault .
 COPY tools tools
