@@ -266,8 +266,8 @@ spec:
               mountPath: /data/External
               mountPropagation: Bidirectional
 {{ end }}
-          ports:
-            - containerPort: 8080
+          # The backend listens on 127.0.0.1:8080 only (FB_ADDRESS); every
+          # request, probes included, goes through the nginx sidecar.
           resources:
             requests:
               cpu: 100m
@@ -275,13 +275,13 @@ spec:
           startupProbe:
             httpGet:
               path: /healthz
-              port: 8080
+              port: 80
             periodSeconds: 5
             failureThreshold: 60
           livenessProbe:
             httpGet:
               path: /healthz
-              port: 8080
+              port: 80
             periodSeconds: 20
             timeoutSeconds: 5
             failureThreshold: 6
@@ -291,11 +291,14 @@ spec:
                 secretKeyRef:
                   name: files-secrets
                   key: files_secret_key
-{{ if .Values.sharedlib }}        
+            - name: FB_ADDRESS
+              value: "127.0.0.1"
+            # files matches mount state reports against this node's IP.
             - name: NODE_IP
               valueFrom:
                 fieldRef:
                   fieldPath: status.hostIP
+{{ if .Values.sharedlib }}        
             - name: NODE_NAME
               valueFrom:
                 fieldRef:
@@ -719,6 +722,11 @@ data:
       gzip_types *;
       client_max_body_size 100M;
       root /app;
+
+      # liveness of the backend, which only listens on loopback
+      location = /healthz {
+          proxy_pass http://127.0.0.1:8080/healthz;
+      }
 
       # normal routes
       # serve given url and default to index.html if not found
